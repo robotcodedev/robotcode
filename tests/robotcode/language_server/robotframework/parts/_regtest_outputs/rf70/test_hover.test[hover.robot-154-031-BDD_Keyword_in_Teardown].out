@@ -1,0 +1,9 @@
+data: !GeneratedTestData
+  character: 31
+  line: 154
+  name: BDD Keyword in Teardown
+result: !Hover
+  contents:
+    kind: markdown
+    value: '### Keyword *Log*'
+  range: null

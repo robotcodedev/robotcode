@@ -1,0 +1,77 @@
+data: !GeneratedTestData
+  character: 35
+  line: 40
+  name: multiple variables
+result:
+- !Location
+  range:
+    end:
+      character: 7
+      line: 22
+    start:
+      character: 2
+      line: 22
+  uri: tests/references.robot
+- !Location
+  range:
+    end:
+      character: 43
+      line: 32
+    start:
+      character: 38
+      line: 32
+  uri: tests/references.robot
+- !Location
+  range:
+    end:
+      character: 54
+      line: 34
+    start:
+      character: 49
+      line: 34
+  uri: tests/references.robot
+- !Location
+  range:
+    end:
+      character: 21
+      line: 36
+    start:
+      character: 16
+      line: 36
+  uri: tests/references.robot
+- !Location
+  range:
+    end:
+      character: 32
+      line: 38
+    start:
+      character: 27
+      line: 38
+  uri: tests/references.robot
+- !Location
+  range:
+    end:
+      character: 40
+      line: 40
+    start:
+      character: 35
+      line: 40
+  uri: tests/references.robot
+- !Location
+  range:
+    end:
+      character: 35
+      line: 150
+    start:
+      character: 30
+      line: 150
+  uri: tests/references.robot
+- !Location
+  range:
+    end:
+      character: 44
+      line: 159
+    start:
+      character: 39
+      line: 159
+  uri: tests/references.robot

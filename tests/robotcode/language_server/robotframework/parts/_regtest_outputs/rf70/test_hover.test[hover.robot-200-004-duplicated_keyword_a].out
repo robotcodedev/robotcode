@@ -1,0 +1,9 @@
+data: !GeneratedTestData
+  character: 4
+  line: 200
+  name: duplicated keyword a
+result: !Hover
+  contents:
+    kind: markdown
+    value: '### Keyword *A Resource Keyword A*'
+  range: null

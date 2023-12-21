@@ -1,0 +1,9 @@
+data: !GeneratedTestData
+  character: 61
+  line: 183
+  name: BDD Given keyword in run keyword with namespace
+result: !Hover
+  contents:
+    kind: markdown
+    value: '### Keyword *Log*'
+  range: null

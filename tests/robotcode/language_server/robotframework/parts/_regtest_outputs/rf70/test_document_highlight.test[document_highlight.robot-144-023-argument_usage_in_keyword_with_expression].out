@@ -1,0 +1,59 @@
+data: !GeneratedTestData
+  character: 23
+  line: 144
+  name: argument usage in keyword with expression
+result:
+- !DocumentHighlight
+  kind: 1
+  range:
+    end:
+      character: 22
+      line: 132
+    start:
+      character: 21
+      line: 132
+- !DocumentHighlight
+  kind: 1
+  range:
+    end:
+      character: 35
+      line: 132
+    start:
+      character: 34
+      line: 132
+- !DocumentHighlight
+  kind: 1
+  range:
+    end:
+      character: 14
+      line: 136
+    start:
+      character: 13
+      line: 136
+- !DocumentHighlight
+  kind: 1
+  range:
+    end:
+      character: 25
+      line: 143
+    start:
+      character: 24
+      line: 143
+- !DocumentHighlight
+  kind: 1
+  range:
+    end:
+      character: 24
+      line: 144
+    start:
+      character: 23
+      line: 144
+- !DocumentHighlight
+  kind: 1
+  range:
+    end:
+      character: 25
+      line: 146
+    start:
+      character: 24
+      line: 146

@@ -1,0 +1,9 @@
+data: !GeneratedTestData
+  character: 5
+  line: 75
+  name: Keyword from Library
+result: !Hover
+  contents:
+    kind: markdown
+    value: '### Keyword *Log*'
+  range: null

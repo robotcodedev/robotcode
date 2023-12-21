@@ -1,0 +1,9 @@
+data: !GeneratedTestData
+  character: 4
+  line: 95
+  name: Keyword from resource
+result: !Hover
+  contents:
+    kind: markdown
+    value: '### Keyword *do something in a resource*'
+  range: null

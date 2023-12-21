@@ -1,0 +1,50 @@
+data: !GeneratedTestData
+  character: 77
+  line: 111
+  name: another keyword argument
+result:
+- !Location
+  range:
+    end:
+      character: 60
+      line: 23
+    start:
+      character: 48
+      line: 23
+  uri: resources/firstresource.resource
+- !Location
+  range:
+    end:
+      character: 78
+      line: 70
+    start:
+      character: 66
+      line: 70
+  uri: tests/document_highlight.robot
+- !Location
+  range:
+    end:
+      character: 78
+      line: 143
+    start:
+      character: 66
+      line: 143
+  uri: tests/goto.robot
+- !Location
+  range:
+    end:
+      character: 78
+      line: 235
+    start:
+      character: 66
+      line: 235
+  uri: tests/hover.robot
+- !Location
+  range:
+    end:
+      character: 78
+      line: 111
+    start:
+      character: 66
+      line: 111
+  uri: tests/references.robot

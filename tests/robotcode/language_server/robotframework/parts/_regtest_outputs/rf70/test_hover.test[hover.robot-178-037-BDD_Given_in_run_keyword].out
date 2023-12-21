@@ -1,0 +1,9 @@
+data: !GeneratedTestData
+  character: 37
+  line: 178
+  name: BDD Given in run keyword
+result: !Hover
+  contents:
+    kind: markdown
+    value: '### Keyword *Log*'
+  range: null

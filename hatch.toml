@@ -65,7 +65,7 @@ python = "3.8"
 
 [[envs.devel.matrix]]
 python = ["3.8", "3.9", "3.10", "3.11", "3.12"]
-rf = ["rf41", "rf50", "rf60", "rf61"]
+rf = ["rf41", "rf50", "rf60", "rf61", "rf70"]
 
 [envs.devel.overrides]
 matrix.rf.dependencies = [
@@ -81,10 +81,13 @@ matrix.rf.dependencies = [
   { value = "robotframework>=6.1, <7.0", if = [
     "rf61",
   ] },
+  { value = "robotframework==7.0rc1", if = [
+    "rf70",
+  ] },
 ]
 
 [[envs.test.matrix]]
-rf = ["rf41", "rf50", "rf60", "rf61"]
+rf = ["rf41", "rf50", "rf60", "rf61", "rf70"]
 
 [envs.test.overrides]
 matrix.rf.dependencies = [
@@ -99,6 +102,9 @@ matrix.rf.dependencies = [
   ] },
   { value = "robotframework>=6.1, <7.0", if = [
     "rf61",
+  ] },
+  { value = "robotframework==7.0rc1", if = [
+    "rf70",
   ] },
 ]
 
@@ -123,7 +129,9 @@ fmt = ["black .", "ruff --fix .", "style", "npx eslint --fix ."]
 all = ["style", "typing"]
 
 [envs.lint.overrides]
-platform.windows.scripts = ["typing-py=mypy --no-incremental --cache-dir nul {args:.}"]
+platform.windows.scripts = [
+  "typing-py=mypy --no-incremental --cache-dir nul {args:.}",
+]
 
 [envs.pages]
 python = "3.11"

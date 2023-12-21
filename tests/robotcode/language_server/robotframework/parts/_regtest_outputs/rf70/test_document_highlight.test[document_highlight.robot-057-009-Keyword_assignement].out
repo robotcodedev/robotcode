@@ -1,0 +1,41 @@
+data: !GeneratedTestData
+  character: 9
+  line: 57
+  name: Keyword assignement
+result:
+- !DocumentHighlight
+  kind: 1
+  range:
+    end:
+      character: 12
+      line: 57
+    start:
+      character: 6
+      line: 57
+- !DocumentHighlight
+  kind: 1
+  range:
+    end:
+      character: 31
+      line: 59
+    start:
+      character: 25
+      line: 59
+- !DocumentHighlight
+  kind: 1
+  range:
+    end:
+      character: 12
+      line: 60
+    start:
+      character: 6
+      line: 60
+- !DocumentHighlight
+  kind: 1
+  range:
+    end:
+      character: 31
+      line: 63
+    start:
+      character: 25
+      line: 63

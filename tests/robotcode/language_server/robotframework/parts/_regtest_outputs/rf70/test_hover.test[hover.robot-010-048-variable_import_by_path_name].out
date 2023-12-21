@@ -1,0 +1,5 @@
+data: !GeneratedTestData
+  character: 48
+  line: 10
+  name: variable import by path name
+result: null

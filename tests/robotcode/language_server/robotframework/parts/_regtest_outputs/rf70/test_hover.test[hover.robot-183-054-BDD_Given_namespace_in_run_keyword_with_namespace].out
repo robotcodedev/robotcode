@@ -1,0 +1,15 @@
+data: !GeneratedTestData
+  character: 54
+  line: 183
+  name: BDD Given namespace in run keyword with namespace
+result: !Hover
+  contents:
+    kind: markdown
+    value: '### Library *BuiltIn*'
+  range:
+    end:
+      character: 58
+      line: 183
+    start:
+      character: 51
+      line: 183

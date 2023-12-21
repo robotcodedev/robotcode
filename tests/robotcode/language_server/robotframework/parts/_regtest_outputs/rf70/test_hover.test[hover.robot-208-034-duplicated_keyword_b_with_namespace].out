@@ -1,0 +1,9 @@
+data: !GeneratedTestData
+  character: 34
+  line: 208
+  name: duplicated keyword b with namespace
+result: !Hover
+  contents:
+    kind: markdown
+    value: '### Keyword *a resource keyword B*'
+  range: null

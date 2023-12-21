@@ -1,0 +1,149 @@
+data: !GeneratedTestData
+  character: 21
+  line: 9
+  name: Variable in resource import path
+result:
+- !Location
+  range:
+    end:
+      character: 24
+      line: 5
+    start:
+      character: 18
+      line: 5
+  uri: tests/code_action_show_documentation.robot
+- !Location
+  range:
+    end:
+      character: 24
+      line: 7
+    start:
+      character: 18
+      line: 7
+  uri: tests/code_action_show_documentation.robot
+- !Location
+  range:
+    end:
+      character: 24
+      line: 10
+    start:
+      character: 18
+      line: 10
+  uri: tests/code_action_show_documentation.robot
+- !Location
+  range:
+    end:
+      character: 24
+      line: 2
+    start:
+      character: 18
+      line: 2
+  uri: tests/document_highlight.robot
+- !Location
+  range:
+    end:
+      character: 24
+      line: 4
+    start:
+      character: 18
+      line: 4
+  uri: tests/document_highlight.robot
+- !Location
+  range:
+    end:
+      character: 24
+      line: 6
+    start:
+      character: 18
+      line: 6
+  uri: tests/document_highlight.robot
+- !Location
+  range:
+    end:
+      character: 26
+      line: 4
+    start:
+      character: 20
+      line: 4
+  uri: tests/goto.robot
+- !Location
+  range:
+    end:
+      character: 21
+      line: 20
+    start:
+      character: 15
+      line: 20
+  uri: tests/goto.robot
+- !Location
+  range:
+    end:
+      character: 26
+      line: 7
+    start:
+      character: 20
+      line: 7
+  uri: tests/hover.robot
+- !Location
+  range:
+    end:
+      character: 26
+      line: 10
+    start:
+      character: 20
+      line: 10
+  uri: tests/hover.robot
+- !Location
+  range:
+    end:
+      character: 26
+      line: 13
+    start:
+      character: 20
+      line: 13
+  uri: tests/hover.robot
+- !Location
+  range:
+    end:
+      character: 19
+      line: 89
+    start:
+      character: 13
+      line: 89
+  uri: tests/hover.robot
+- !Location
+  range:
+    end:
+      character: 24
+      line: 3
+    start:
+      character: 18
+      line: 3
+  uri: tests/references.robot
+- !Location
+  range:
+    end:
+      character: 24
+      line: 6
+    start:
+      character: 18
+      line: 6
+  uri: tests/references.robot
+- !Location
+  range:
+    end:
+      character: 24
+      line: 9
+    start:
+      character: 18
+      line: 9
+  uri: tests/references.robot
+- !Location
+  range:
+    end:
+      character: 19
+      line: 18
+    start:
+      character: 13
+      line: 18
+  uri: tests/variables.robot

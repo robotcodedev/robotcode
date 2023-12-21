@@ -1,0 +1,9 @@
+data: !GeneratedTestData
+  character: 5
+  line: 214
+  name: a keyword with emoji
+result: !Hover
+  contents:
+    kind: markdown
+    value: "### Keyword *\U0001F916\U0001F916*"
+  range: null

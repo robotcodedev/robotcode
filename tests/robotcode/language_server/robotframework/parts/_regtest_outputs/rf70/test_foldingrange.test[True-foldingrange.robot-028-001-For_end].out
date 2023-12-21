@@ -1,0 +1,12 @@
+data: !GeneratedTestData
+  character: 1
+  line: 28
+  name: For end
+result:
+- !FoldingRange
+  collapsed_text: null
+  end_character: null
+  end_line: 28
+  kind: for
+  start_character: null
+  start_line: 12

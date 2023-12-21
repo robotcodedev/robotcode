@@ -89,6 +89,7 @@ async def protocol(request: pytest.FixtureRequest) -> AsyncIterator[RobotLanguag
     }
 
     protocol._initialized(InitializedParams())
+
     try:
         yield protocol
     finally:

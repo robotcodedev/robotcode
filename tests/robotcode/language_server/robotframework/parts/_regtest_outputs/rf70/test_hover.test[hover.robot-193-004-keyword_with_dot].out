@@ -1,0 +1,9 @@
+data: !GeneratedTestData
+  character: 4
+  line: 193
+  name: keyword with dot
+result: !Hover
+  contents:
+    kind: markdown
+    value: '### Keyword *do.sell fish*'
+  range: null
