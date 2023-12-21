@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [0.68.1](https://github.com/d-biehl/robotcode/compare/v0.68.0..v0.68.1) - 2023-12-21
+
+### Bug Fixes
+
+- **robotcode:** Add missing robotcode-plugin dependency ([570232d](https://github.com/d-biehl/robotcode/commit/570232d6c7fa5c9bb2492515c4006d830481e151))
+- **robotcode:** Catch OSError's if we can't create the default robot.toml config file ([6dd5f9e](https://github.com/d-biehl/robotcode/commit/6dd5f9ef69f4d9914e34feccb8566fbfca79b260))
+
+
 ## [0.68.0](https://github.com/d-biehl/robotcode/compare/v0.67.0..v0.68.0) - 2023-12-20
 
 ### Bug Fixes
