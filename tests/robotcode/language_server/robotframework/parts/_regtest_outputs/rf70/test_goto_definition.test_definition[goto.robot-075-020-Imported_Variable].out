@@ -2,4 +2,27 @@ data: !GeneratedTestData
   character: 20
   line: 75
   name: Imported Variable
-result: null
+result:
+- !LocationLink
+  origin_selection_range:
+    end:
+      character: 27
+      line: 75
+    start:
+      character: 13
+      line: 75
+  target_range:
+    end:
+      character: 0
+      line: 0
+    start:
+      character: 0
+      line: 0
+  target_selection_range:
+    end:
+      character: 0
+      line: 0
+    start:
+      character: 0
+      line: 0
+  target_uri: myvariables.py

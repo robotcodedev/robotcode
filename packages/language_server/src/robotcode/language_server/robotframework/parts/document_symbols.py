@@ -10,14 +10,14 @@ from robotcode.core.utils.logging import LoggingDescriptor
 from ...common.decorators import language_id
 from ...common.text_document import TextDocument
 from ..utils.ast_utils import Token, range_from_node, range_from_token, tokenize_variables
-from ..utils.async_ast import AsyncVisitor
+from ..utils.async_ast import Visitor
 from .protocol_part import RobotLanguageServerProtocolPart
 
 if TYPE_CHECKING:
     from ..protocol import RobotLanguageServerProtocol
 
 
-class _Visitor(AsyncVisitor):
+class _Visitor(Visitor):
     def __init__(self, parent: RobotDocumentSymbolsProtocolPart) -> None:
         super().__init__()
         self.parent = parent
@@ -25,25 +25,23 @@ class _Visitor(AsyncVisitor):
         self.result: List[DocumentSymbol] = []
         self.current_symbol: Optional[DocumentSymbol] = None
 
-    async def generic_visit_current_symbol(self, node: ast.AST, symbol: DocumentSymbol) -> None:
+    def generic_visit_current_symbol(self, node: ast.AST, symbol: DocumentSymbol) -> None:
         old = self.current_symbol
         self.current_symbol = symbol
         try:
-            await self.generic_visit(node)
+            self.generic_visit(node)
         finally:
             self.current_symbol = old
 
     @classmethod
-    async def find_from(
-        cls, model: ast.AST, parent: RobotDocumentSymbolsProtocolPart
-    ) -> Optional[List[DocumentSymbol]]:
+    def find_from(cls, model: ast.AST, parent: RobotDocumentSymbolsProtocolPart) -> Optional[List[DocumentSymbol]]:
         finder = cls(parent)
 
-        await finder.visit(model)
+        finder.visit(model)
 
         return finder.result if finder.result else None
 
-    async def visit_Section(self, node: ast.AST) -> None:  # noqa: N802
+    def visit_Section(self, node: ast.AST) -> None:  # noqa: N802
         from robot.parsing.model.blocks import Section
         from robot.parsing.model.statements import SectionHeader
 
@@ -66,9 +64,9 @@ class _Visitor(AsyncVisitor):
 
         self.result.append(symbol)
 
-        await self.generic_visit_current_symbol(node, symbol)
+        self.generic_visit_current_symbol(node, symbol)
 
-    async def visit_TestCase(self, node: ast.AST) -> None:  # noqa: N802
+    def visit_TestCase(self, node: ast.AST) -> None:  # noqa: N802
         from robot.parsing.model.blocks import TestCase
 
         testcase = cast(TestCase, node)
@@ -80,9 +78,9 @@ class _Visitor(AsyncVisitor):
             symbol = DocumentSymbol(name=testcase.name, kind=SymbolKind.METHOD, range=r, selection_range=r, children=[])
             self.current_symbol.children.append(symbol)
 
-            await self.generic_visit_current_symbol(node, symbol)
+            self.generic_visit_current_symbol(node, symbol)
 
-    async def visit_Keyword(self, node: ast.AST) -> None:  # noqa: N802
+    def visit_Keyword(self, node: ast.AST) -> None:  # noqa: N802
         from robot.parsing.model.blocks import Keyword
 
         keyword = cast(Keyword, node)
@@ -96,9 +94,9 @@ class _Visitor(AsyncVisitor):
             )
             self.current_symbol.children.append(symbol)
 
-            await self.generic_visit_current_symbol(node, symbol)
+            self.generic_visit_current_symbol(node, symbol)
 
-    async def visit_Arguments(self, node: ast.AST) -> None:  # noqa: N802
+    def visit_Arguments(self, node: ast.AST) -> None:  # noqa: N802
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.statements import Arguments
 
@@ -134,7 +132,7 @@ class _Visitor(AsyncVisitor):
             None,
         )
 
-    async def visit_KeywordCall(self, node: ast.AST) -> None:  # noqa: N802
+    def visit_KeywordCall(self, node: ast.AST) -> None:  # noqa: N802
         from robot.errors import VariableError
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.statements import KeywordCall
@@ -162,7 +160,7 @@ class _Visitor(AsyncVisitor):
                 except VariableError:
                     pass
 
-    async def visit_ForHeader(self, node: ast.AST) -> None:  # noqa: N802
+    def visit_ForHeader(self, node: ast.AST) -> None:  # noqa: N802
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.statements import ForHeader
 
@@ -180,7 +178,7 @@ class _Visitor(AsyncVisitor):
                     if symbol.name not in map(lambda v: v.name, self.current_symbol.children):
                         self.current_symbol.children.append(symbol)
 
-    async def visit_KeywordName(self, node: ast.AST) -> None:  # noqa: N802
+    def visit_KeywordName(self, node: ast.AST) -> None:  # noqa: N802
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.statements import KeywordName
 
@@ -205,7 +203,7 @@ class _Visitor(AsyncVisitor):
                     if symbol.name not in map(lambda v: v.name, self.current_symbol.children):
                         self.current_symbol.children.append(symbol)
 
-    async def visit_Variable(self, node: ast.AST) -> None:  # noqa: N802
+    def visit_Variable(self, node: ast.AST) -> None:  # noqa: N802
         from robot.api.parsing import Token as RobotToken
         from robot.parsing.model.statements import Variable
         from robot.variables import search_variable
@@ -242,4 +240,4 @@ class RobotDocumentSymbolsProtocolPart(RobotLanguageServerProtocolPart):
     async def collect(
         self, sender: Any, document: TextDocument
     ) -> Optional[Union[List[DocumentSymbol], List[SymbolInformation], None]]:
-        return await _Visitor.find_from(self.parent.documents_cache.get_model(document), self)
+        return _Visitor.find_from(self.parent.documents_cache.get_model(document), self)

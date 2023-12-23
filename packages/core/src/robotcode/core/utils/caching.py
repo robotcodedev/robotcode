@@ -1,5 +1,5 @@
 from collections import defaultdict
-from threading import Lock
+from threading import RLock
 from typing import Any, Callable, Dict, List, Optional, Tuple, TypeVar, cast
 
 _T = TypeVar("_T")
@@ -15,7 +15,7 @@ class CacheEntry:
     def __init__(self) -> None:
         self.data: Any = None
         self.has_data: bool = False
-        self.lock = Lock()
+        self.lock = RLock()
 
 
 class SimpleLRUCache:
@@ -26,7 +26,7 @@ class SimpleLRUCache:
         self._order: Optional[List[Tuple[Any, ...]]] = None
         if self.max_items:
             self._order = []
-        self._lock = Lock()
+        self._lock = RLock()
 
     def has(self, *args: Any, **kwargs: Any) -> bool:
         key = self._make_key(*args, **kwargs)
