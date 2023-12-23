@@ -27,7 +27,6 @@ from typing import (
 )
 
 from robotcode.core.async_tools import (
-    Lock,
     async_tasking_event,
 )
 from robotcode.core.lsp.types import (
@@ -167,7 +166,7 @@ class Workspace(LanguageServerProtocolPart, HasExtendCapabilities):
         self.root_uri = root_uri
 
         self.root_path = root_path
-        self._workspace_folders_lock = Lock()
+        self._workspace_folders_lock = threading.RLock()
         self._workspace_folders: List[WorkspaceFolder] = (
             [WorkspaceFolder(w.name, Uri(w.uri), w.uri) for w in workspace_folders]
             if workspace_folders is not None
@@ -182,7 +181,8 @@ class Workspace(LanguageServerProtocolPart, HasExtendCapabilities):
 
     @property
     def workspace_folders(self) -> List[WorkspaceFolder]:
-        return self._workspace_folders
+        with self._workspace_folders_lock:
+            return self._workspace_folders
 
     @_logger.call
     def server_shutdown(self, sender: Any) -> None:
@@ -438,7 +438,7 @@ class Workspace(LanguageServerProtocolPart, HasExtendCapabilities):
     async def _workspace_did_change_workspace_folders(
         self, event: WorkspaceFoldersChangeEvent, *args: Any, **kwargs: Any
     ) -> None:
-        async with self._workspace_folders_lock:
+        with self._workspace_folders_lock:
             to_remove: List[WorkspaceFolder] = []
             for removed in event.removed:
                 to_remove += [w for w in self._workspace_folders if w.uri == removed.uri]

@@ -61,7 +61,7 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
     @language_id("robotframework")
     @_logger.call
     async def collect(self, sender: Any, document: TextDocument, position: Position) -> Optional[Hover]:
-        model = await self.parent.documents_cache.get_model(document)
+        model = self.parent.documents_cache.get_model(document)
 
         result_nodes = await get_nodes_at_position(model, position)
 
@@ -82,9 +82,9 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
         return None
 
     async def _hover_default(self, nodes: List[ast.AST], document: TextDocument, position: Position) -> Optional[Hover]:
-        namespace = await self.parent.documents_cache.get_namespace(document)
+        namespace = self.parent.documents_cache.get_namespace(document)
 
-        all_variable_refs = await namespace.get_variable_references()
+        all_variable_refs = namespace.get_variable_references()
         if all_variable_refs:
             text = None
             highlight_range = None
@@ -101,10 +101,10 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
                     if variable.has_value or variable.resolvable:
                         try:
                             value = reprlib.repr(
-                                await namespace.imports_manager.resolve_variable(
+                                namespace.imports_manager.resolve_variable(
                                     variable.name,
                                     str(document.uri.to_path().parent),
-                                    await namespace.get_resolvable_variables(nodes, position),
+                                    namespace.get_resolvable_variables(nodes, position),
                                 )
                             )
                         except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
@@ -130,7 +130,7 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
                     range=highlight_range,
                 )
 
-        all_kw_refs = await namespace.get_keyword_references()
+        all_kw_refs = namespace.get_keyword_references()
         if all_kw_refs:
             result: List[Tuple[Range, str]] = []
 
@@ -154,7 +154,7 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
                         range=found_range,
                     )
 
-        all_namespace_refs = await namespace.get_namespace_references()
+        all_namespace_refs = namespace.get_namespace_references()
         if all_namespace_refs:
             for ns, ns_refs in all_namespace_refs.items():
                 found_range = (

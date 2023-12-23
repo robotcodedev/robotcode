@@ -265,7 +265,7 @@ class RobotCodeActionRefactorProtocolPart(RobotLanguageServerProtocolPart, Model
         if range.start == range.end:
             return None
 
-        model = await self.parent.documents_cache.get_model(document, False)
+        model = self.parent.documents_cache.get_model(document, False)
         start_nodes = await get_nodes_at_position(model, range.start)
 
         enabled = False
@@ -411,7 +411,7 @@ class RobotCodeActionRefactorProtocolPart(RobotLanguageServerProtocolPart, Model
                 CodeActionTriggerKind.AUTOMATIC,
             ]
         ):
-            model = await self.parent.documents_cache.get_model(document, False)
+            model = self.parent.documents_cache.get_model(document, False)
             node = await get_node_at_position(model, range.start)
 
             if not isinstance(node, KeywordCall) or node.assign:
@@ -457,7 +457,7 @@ class RobotCodeActionRefactorProtocolPart(RobotLanguageServerProtocolPart, Model
         if document is None:
             return None
 
-        model = await self.parent.documents_cache.get_model(document, False)
+        model = self.parent.documents_cache.get_model(document, False)
         nodes = await get_nodes_at_position(model, range.start)
         if not nodes:
             return None
@@ -477,9 +477,9 @@ class RobotCodeActionRefactorProtocolPart(RobotLanguageServerProtocolPart, Model
 
         var_name = "new_variable"
         counter = 0
-        namespace = await self.parent.documents_cache.get_namespace(document)
+        namespace = self.parent.documents_cache.get_namespace(document)
         while True:
-            if await namespace.find_variable(f"${{{var_name}}}", nodes, range.start, ignore_error=True) is None:
+            if namespace.find_variable(f"${{{var_name}}}", nodes, range.start, ignore_error=True) is None:
                 break
             counter += 1
             var_name = f"new_variable_{counter}"
@@ -515,7 +515,7 @@ class RobotCodeActionRefactorProtocolPart(RobotLanguageServerProtocolPart, Model
         if range.start == range.end:
             return None
 
-        model = await self.parent.documents_cache.get_model(document, False)
+        model = self.parent.documents_cache.get_model(document, False)
         start_nodes = await get_nodes_at_position(model, range.start)
 
         enabled = False
@@ -557,15 +557,15 @@ class RobotCodeActionRefactorProtocolPart(RobotLanguageServerProtocolPart, Model
         lines = document.get_lines()
         spaces = "".join(itertools.takewhile(str.isspace, lines[data.range.start.line]))
 
-        model = await self.parent.documents_cache.get_model(document, False)
-        namespace = await self.parent.documents_cache.get_namespace(document)
+        model = self.parent.documents_cache.get_model(document, False)
+        namespace = self.parent.documents_cache.get_namespace(document)
 
         orig_keyword_name = "New Keyword"
         keyword_name = orig_keyword_name
 
         kw_counter = 0
         while True:
-            kw = await namespace.find_keyword(keyword_name, raise_keyword_error=False)
+            kw = namespace.find_keyword(keyword_name, raise_keyword_error=False)
             if kw is None:
                 break
             kw_counter += 1
@@ -581,8 +581,8 @@ class RobotCodeActionRefactorProtocolPart(RobotLanguageServerProtocolPart, Model
         if block is None:
             return None
 
-        variable_references = await namespace.get_variable_references()
-        local_variable_assignments = await namespace.get_local_variable_assignments()
+        variable_references = namespace.get_variable_references()
+        local_variable_assignments = namespace.get_local_variable_assignments()
 
         block_range = range_from_node(block, skip_non_data=True, allow_comments=True)
         argument_variables = {

@@ -50,9 +50,9 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart):
     async def collect(
         self, document: TextDocument, position: Position
     ) -> Union[Location, List[Location], List[LocationLink], None]:
-        namespace = await self.parent.documents_cache.get_namespace(document)
+        namespace = self.parent.documents_cache.get_namespace(document)
 
-        all_variable_refs = await namespace.get_variable_references()
+        all_variable_refs = namespace.get_variable_references()
 
         if all_variable_refs:
             result = []
@@ -79,7 +79,7 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart):
             if result:
                 return result
 
-        all_kw_refs = await namespace.get_keyword_references()
+        all_kw_refs = namespace.get_keyword_references()
         if all_kw_refs:
             result = []
 
@@ -105,7 +105,7 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart):
             if result:
                 return result
 
-        all_namespace_refs = await namespace.get_namespace_references()
+        all_namespace_refs = namespace.get_namespace_references()
         if all_namespace_refs:
             result = []
 

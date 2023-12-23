@@ -29,9 +29,9 @@ class RobotDocumentHighlightProtocolPart(RobotLanguageServerProtocolPart):
         document: TextDocument,
         position: Position,
     ) -> Optional[List[DocumentHighlight]]:
-        namespace = await self.parent.documents_cache.get_namespace(document)
+        namespace = self.parent.documents_cache.get_namespace(document)
 
-        all_variable_refs = await namespace.get_variable_references()
+        all_variable_refs = namespace.get_variable_references()
         if all_variable_refs:
             for var, var_refs in all_variable_refs.items():
                 for r in var_refs:
@@ -45,7 +45,7 @@ class RobotDocumentHighlightProtocolPart(RobotLanguageServerProtocolPart):
                             *(DocumentHighlight(e.range, DocumentHighlightKind.TEXT) for e in var_refs),
                         ]
 
-        all_kw_refs = await namespace.get_keyword_references()
+        all_kw_refs = namespace.get_keyword_references()
         if all_kw_refs:
             for kw, kw_refs in all_kw_refs.items():
                 for r in kw_refs:
@@ -59,7 +59,7 @@ class RobotDocumentHighlightProtocolPart(RobotLanguageServerProtocolPart):
                             *(DocumentHighlight(e.range, DocumentHighlightKind.TEXT) for e in kw_refs),
                         ]
 
-        all_namespace_refs = await namespace.get_namespace_references()
+        all_namespace_refs = namespace.get_namespace_references()
         if all_namespace_refs:
             for ns, ns_refs in all_namespace_refs.items():
                 found_range = (

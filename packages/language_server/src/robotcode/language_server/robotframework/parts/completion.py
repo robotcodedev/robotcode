@@ -141,8 +141,8 @@ class RobotCompletionProtocolPart(RobotLanguageServerProtocolPart):
     async def collect(
         self, sender: Any, document: TextDocument, position: Position, context: Optional[CompletionContext]
     ) -> Union[List[CompletionItem], CompletionList, None]:
-        namespace = await self.parent.documents_cache.get_namespace(document)
-        model = await self.parent.documents_cache.get_model(document, False)
+        namespace = self.parent.documents_cache.get_namespace(document)
+        model = self.parent.documents_cache.get_model(document, False)
 
         config = await self.get_config(document)
 
@@ -161,8 +161,8 @@ class RobotCompletionProtocolPart(RobotLanguageServerProtocolPart):
             if document_uri is not None:
                 document = self.parent.documents.get(document_uri)
                 if document is not None:
-                    namespace = await self.parent.documents_cache.get_namespace(document)
-                    model = await self.parent.documents_cache.get_model(document, False)
+                    namespace = self.parent.documents_cache.get_namespace(document)
+                    model = self.parent.documents_cache.get_model(document, False)
                     if namespace is not None:
                         config = await self.get_config(document)
 
@@ -359,7 +359,7 @@ class CompletionCollector(ModelHelperMixin):
                                 lib_doc = next(
                                     (
                                         ld.library_doc
-                                        for ld in (await self.namespace.get_libraries()).values()
+                                        for ld in (self.namespace.get_libraries()).values()
                                         if str(id(ld.library_doc)) == lib_id
                                     ),
                                     None,
@@ -377,11 +377,11 @@ class CompletionCollector(ModelHelperMixin):
                                 )
                         elif (name := data.get("name", None)) is not None:
                             try:
-                                lib_doc = await self.namespace.imports_manager.get_libdoc_for_library_import(
+                                lib_doc = self.namespace.imports_manager.get_libdoc_for_library_import(
                                     name,
                                     (),
                                     str(document.uri.to_path().parent),
-                                    variables=await self.namespace.get_resolvable_variables(),
+                                    variables=self.namespace.get_resolvable_variables(),
                                 )
 
                                 if lib_doc is not None:
@@ -400,7 +400,7 @@ class CompletionCollector(ModelHelperMixin):
                                 lib_doc = next(
                                     (
                                         ld.library_doc
-                                        for ld in (await self.namespace.get_resources()).values()
+                                        for ld in (self.namespace.get_resources()).values()
                                         if str(id(ld.library_doc)) == res_id
                                     ),
                                     None,
@@ -420,10 +420,10 @@ class CompletionCollector(ModelHelperMixin):
 
                         elif (name := data.get("name", None)) is not None:
                             try:
-                                lib_doc = await self.namespace.imports_manager.get_libdoc_for_resource_import(
+                                lib_doc = self.namespace.imports_manager.get_libdoc_for_resource_import(
                                     name,
                                     str(document.uri.to_path().parent),
-                                    variables=await self.namespace.get_resolvable_variables(),
+                                    variables=self.namespace.get_resolvable_variables(),
                                 )
 
                                 if lib_doc is not None:
@@ -440,7 +440,7 @@ class CompletionCollector(ModelHelperMixin):
                         if kw_id is not None:
                             try:
                                 kw_doc = next(
-                                    (kw for kw in await self.namespace.get_keywords() if str(id(kw)) == kw_id),
+                                    (kw for kw in self.namespace.get_keywords() if str(id(kw)) == kw_id),
                                     None,
                                 )
 
@@ -457,7 +457,7 @@ class CompletionCollector(ModelHelperMixin):
         return completion_item
 
     async def create_headers_completion_items(self, range: Optional[Range]) -> List[CompletionItem]:
-        doc_type = await self.parent.documents_cache.get_document_type(self.document)
+        doc_type = self.parent.documents_cache.get_document_type(self.document)
 
         if self.namespace.languages is None:
             if doc_type in [DocumentType.RESOURCE, DocumentType.INIT]:
@@ -553,12 +553,12 @@ class CompletionCollector(ModelHelperMixin):
                 ),
                 filter_text=s.name[2:-1] if range is not None else None,
             )
-            for s in (await self.namespace.get_variable_matchers(list(reversed(nodes)), position)).values()
+            for s in (self.namespace.get_variable_matchers(list(reversed(nodes)), position)).values()
             if s.name is not None and (s.name_token is None or not position.is_in_range(range_from_token(s.name_token)))
         ]
 
     async def create_settings_completion_items(self, range: Optional[Range]) -> List[CompletionItem]:
-        doc_type = await self.parent.documents_cache.get_document_type(self.document)
+        doc_type = self.parent.documents_cache.get_document_type(self.document)
 
         settings_class: Type[Settings] = SuiteFileSettings
         if doc_type == DocumentType.RESOURCE:
@@ -808,7 +808,7 @@ class CompletionCollector(ModelHelperMixin):
                 if lib_name_index >= 0:
                     namespace_name = token.value[0 : lib_name_index - r.start.character]
 
-                    libraries = await self.namespace.get_libraries()
+                    libraries = self.namespace.get_libraries()
 
                     namespace_matcher = KeywordMatcher(namespace_name, is_namespace=True)
                     namespace_name = next(
@@ -854,7 +854,7 @@ class CompletionCollector(ModelHelperMixin):
 
                     resources = {
                         k: v
-                        for k, v in (await self.namespace.get_resources()).items()
+                        for k, v in self.namespace.get_resources().items()
                         if namespace_matcher == KeywordMatcher(v.name, is_namespace=True)
                     }
 
@@ -902,7 +902,7 @@ class CompletionCollector(ModelHelperMixin):
         if namespace_matcher is not None:
             namespace_matcher = KeywordMatcher(namespace_matcher.name)
 
-        for kw in await self.namespace.get_keywords():
+        for kw in self.namespace.get_keywords():
             if kw.is_error_handler:
                 continue
             if (
@@ -938,7 +938,7 @@ class CompletionCollector(ModelHelperMixin):
         if valid_namespace and namespace_matcher is not None:
             return result
 
-        for k, v in (await self.namespace.get_libraries()).items():
+        for k, v in (self.namespace.get_libraries()).items():
             result.append(
                 CompletionItem(
                     label=k,
@@ -961,7 +961,7 @@ class CompletionCollector(ModelHelperMixin):
                 )
             )
 
-        for k, v in (await self.namespace.get_resources()).items():
+        for k, v in self.namespace.get_resources().items():
             result.append(
                 CompletionItem(
                     label=v.name,
@@ -1607,10 +1607,10 @@ class CompletionCollector(ModelHelperMixin):
             )
 
             try:
-                complete_list = await self.namespace.imports_manager.complete_library_import(
+                complete_list = self.namespace.imports_manager.complete_library_import(
                     first_part if first_part else None,
                     str(self.document.uri.to_path().parent),
-                    await self.namespace.get_resolvable_variables(nodes_at_position, position),
+                    self.namespace.get_resolvable_variables(nodes_at_position, position),
                 )
                 if not complete_list:
                     return None
@@ -1672,7 +1672,7 @@ class CompletionCollector(ModelHelperMixin):
                 return None
 
             try:
-                libdoc = await self.namespace.get_imported_library_libdoc(
+                libdoc = self.namespace.get_imported_library_libdoc(
                     import_node.name, import_node.args, import_node.alias
                 )
                 if libdoc is not None:
@@ -1792,10 +1792,10 @@ class CompletionCollector(ModelHelperMixin):
         )
 
         try:
-            complete_list = await self.namespace.imports_manager.complete_resource_import(
+            complete_list = self.namespace.imports_manager.complete_resource_import(
                 first_part if first_part else None,
                 str(self.document.uri.to_path().parent),
-                await self.namespace.get_resolvable_variables(nodes_at_position, position),
+                self.namespace.get_resolvable_variables(nodes_at_position, position),
             )
             if not complete_list:
                 return None
@@ -1912,10 +1912,10 @@ class CompletionCollector(ModelHelperMixin):
             )
 
             try:
-                complete_list = await self.namespace.imports_manager.complete_variables_import(
+                complete_list = self.namespace.imports_manager.complete_variables_import(
                     first_part if first_part else None,
                     str(self.document.uri.to_path().parent),
-                    await self.namespace.get_resolvable_variables(nodes_at_position, position),
+                    self.namespace.get_resolvable_variables(nodes_at_position, position),
                 )
                 if not complete_list:
                     return None
@@ -1972,7 +1972,7 @@ class CompletionCollector(ModelHelperMixin):
                 return None
 
             try:
-                libdoc = await self.namespace.get_imported_variables_libdoc(import_node.name, import_node.args)
+                libdoc = self.namespace.get_imported_variables_libdoc(import_node.name, import_node.args)
                 if libdoc is not None:
                     init = next((v for v in libdoc.inits.values()), None)
                     if init:
@@ -2027,7 +2027,7 @@ class CompletionCollector(ModelHelperMixin):
         if keyword_token is None or position.character < range_from_token(keyword_token).end.character:
             return None
 
-        keyword_doc_and_token = await self.get_keyworddoc_and_token_from_position(
+        keyword_doc_and_token = self.get_keyworddoc_and_token_from_position(
             keyword_token.value,
             keyword_token,
             [t for t in kw_node.get_tokens(Token.ARGUMENT)],

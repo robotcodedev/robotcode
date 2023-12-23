@@ -94,7 +94,7 @@ class RobotCodeLensProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixi
         if not (await self.parent.workspace.get_configuration_async(AnalysisConfig, document.uri)).references_code_lens:
             return None
 
-        return await _Visitor.find_from(await self.parent.documents_cache.get_model(document), self, document)
+        return await _Visitor.find_from(self.parent.documents_cache.get_model(document), self, document)
 
     @language_id("robotframework")
     async def resolve(self, sender: Any, code_lens: CodeLens) -> Optional[CodeLens]:
@@ -108,16 +108,16 @@ class RobotCodeLensProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixi
         if not (await self.parent.workspace.get_configuration_async(AnalysisConfig, document.uri)).references_code_lens:
             return None
 
-        namespace = await self.parent.documents_cache.get_namespace(document)
+        namespace = self.parent.documents_cache.get_namespace(document)
 
         name = code_lens.data["name"]
         line = code_lens.data["line"]
 
         if self.parent.diagnostics.workspace_loaded_event.is_set():
-            kw_doc = self.get_keyword_definition_at_line(await namespace.get_library_doc(), name, line)
+            kw_doc = self.get_keyword_definition_at_line(namespace.get_library_doc(), name, line)
 
             if kw_doc is not None and not kw_doc.is_error_handler:
-                if not await self.parent.robot_references.has_cached_keyword_references(
+                if not self.parent.robot_references.has_cached_keyword_references(
                     document, kw_doc, include_declaration=False
                 ):
                     code_lens.command = Command(
@@ -130,7 +130,7 @@ class RobotCodeLensProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixi
                         if document is None or kw_doc is None:
                             return  #  type: ignore[unreachable]
 
-                        await self.parent.robot_references.find_keyword_references(
+                        self.parent.robot_references.find_keyword_references(
                             document, kw_doc, include_declaration=False
                         )
 
@@ -147,7 +147,7 @@ class RobotCodeLensProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixi
 
                         self._running_task.add(key)
                 else:
-                    references = await self.parent.robot_references.find_keyword_references(
+                    references = self.parent.robot_references.find_keyword_references(
                         document, kw_doc, include_declaration=False
                     )
                     code_lens.command = Command(

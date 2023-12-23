@@ -143,3 +143,7 @@ class event_iterator(EventDescriptorBase[_TParams, _TResult, EventIterator[_TPar
 class event(EventDescriptorBase[_TParams, _TResult, Event[_TParams, _TResult]]):  # noqa: N801
     def __init__(self, _func: Callable[_TParams, _TResult]) -> None:
         super().__init__(_func, Event[_TParams, _TResult])
+
+
+# TODO implement this as something with concurrent.futures.Future
+tasking_event = event

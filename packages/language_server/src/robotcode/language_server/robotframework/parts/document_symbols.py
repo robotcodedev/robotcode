@@ -242,4 +242,4 @@ class RobotDocumentSymbolsProtocolPart(RobotLanguageServerProtocolPart):
     async def collect(
         self, sender: Any, document: TextDocument
     ) -> Optional[Union[List[DocumentSymbol], List[SymbolInformation], None]]:
-        return await _Visitor.find_from(await self.parent.documents_cache.get_model(document), self)
+        return await _Visitor.find_from(self.parent.documents_cache.get_model(document), self)

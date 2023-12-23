@@ -126,8 +126,8 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
             CodeActionTriggerKind.INVOKED,
             CodeActionTriggerKind.AUTOMATIC,
         ]:
-            model = await self.parent.documents_cache.get_model(document, False)
-            namespace = await self.parent.documents_cache.get_namespace(document)
+            model = self.parent.documents_cache.get_model(document, False)
+            namespace = self.parent.documents_cache.get_namespace(document)
 
             for diagnostic in (
                 d
@@ -148,7 +148,7 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
                     if bdd_token is not None and token is not None:
                         keyword_token = token
 
-                    lib_entry, kw_namespace = await self.get_namespace_info_from_keyword_token(namespace, keyword_token)
+                    lib_entry, kw_namespace = self.get_namespace_info_from_keyword_token(namespace, keyword_token)
 
                     if lib_entry is not None and lib_entry.library_doc.type == "LIBRARY":
                         disabled = CodeActionDisabledType("Keyword is from a library")
@@ -193,7 +193,7 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
         if document is None:
             return None
 
-        model = await self.parent.documents_cache.get_model(document, False)
+        model = self.parent.documents_cache.get_model(document, False)
         node = await get_node_at_position(model, data.range.start)
 
         if isinstance(node, (KeywordCall, Fixture, TestTemplate, Template)):
@@ -203,13 +203,13 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
 
             keyword_token = tokens[-1]
 
-            namespace = await self.parent.documents_cache.get_namespace(document)
+            namespace = self.parent.documents_cache.get_namespace(document)
 
             bdd_token, token = self.split_bdd_prefix(namespace, keyword_token)
             if bdd_token is not None and token is not None:
                 keyword_token = token
 
-            lib_entry, kw_namespace = await self.get_namespace_info_from_keyword_token(namespace, keyword_token)
+            lib_entry, kw_namespace = self.get_namespace_info_from_keyword_token(namespace, keyword_token)
 
             if lib_entry is not None and lib_entry.library_doc.type == "LIBRARY":
                 return None
@@ -254,8 +254,8 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
         return None
 
     async def _apply_create_keyword(self, document: TextDocument, insert_text: str) -> Tuple[WorkspaceEdit, Range]:
-        model = await self.parent.documents_cache.get_model(document, False)
-        namespace = await self.parent.documents_cache.get_namespace(document)
+        model = self.parent.documents_cache.get_model(document, False)
+        namespace = self.parent.documents_cache.get_namespace(document)
 
         insert_text, insert_range = await self.create_insert_keyword_workspace_edit(
             document, model, namespace, insert_text
@@ -373,7 +373,7 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
                     diagnostic.range.start.line == diagnostic.range.end.line
                     and diagnostic.range.start.character < diagnostic.range.end.character
                 ):
-                    model = await self.parent.documents_cache.get_model(document, False)
+                    model = self.parent.documents_cache.get_model(document, False)
                     nodes = await get_nodes_at_position(model, range.start)
 
                     if not any(n for n in nodes if isinstance(n, (Keyword, TestCase))):
@@ -421,7 +421,7 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
             if document is None:
                 return None
 
-            model = await self.parent.documents_cache.get_model(document, False)
+            model = self.parent.documents_cache.get_model(document, False)
             nodes = await get_nodes_at_position(model, data.range.start)
 
             if not any(n for n in nodes if isinstance(n, (Keyword, TestCase))):
@@ -518,7 +518,7 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
             if document is None:
                 return None
 
-            model = await self.parent.documents_cache.get_model(document, False)
+            model = self.parent.documents_cache.get_model(document, False)
             nodes = await get_nodes_at_position(model, data.range.start)
 
             node = nodes[-1] if nodes else None
@@ -627,7 +627,7 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
                     if not text:
                         continue
 
-                    model = await self.parent.documents_cache.get_model(document, False)
+                    model = self.parent.documents_cache.get_model(document, False)
                     nodes = await get_nodes_at_position(model, range.start)
 
                     if not any(n for n in nodes if isinstance(n, Keyword)):
@@ -667,7 +667,7 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
             if not text:
                 return None
 
-            model = await self.parent.documents_cache.get_model(document, False)
+            model = self.parent.documents_cache.get_model(document, False)
             nodes = await get_nodes_at_position(model, data.range.start)
 
             keyword = next((n for n in nodes if isinstance(n, Keyword)), None)

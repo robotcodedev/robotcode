@@ -70,7 +70,7 @@ class RobotSignatureHelpProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
         self, sender: Any, document: TextDocument, position: Position, context: Optional[SignatureHelpContext] = None
     ) -> Optional[SignatureHelp]:
         result_node = await get_node_at_position(
-            await self.parent.documents_cache.get_model(document, False), position, include_end=True
+            self.parent.documents_cache.get_model(document, False), position, include_end=True
         )
         if result_node is None:
             return None
@@ -109,9 +109,9 @@ class RobotSignatureHelpProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
         if keyword_token is None:
             return None
 
-        namespace = await self.parent.documents_cache.get_namespace(document)
+        namespace = self.parent.documents_cache.get_namespace(document)
 
-        keyword_doc_and_token = await self.get_keyworddoc_and_token_from_position(
+        keyword_doc_and_token = self.get_keyworddoc_and_token_from_position(
             keyword_token.value,
             keyword_token,
             [t for t in kw_node.get_tokens(RobotToken.ARGUMENT)],
@@ -212,18 +212,16 @@ class RobotSignatureHelpProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
 
         lib_doc: Optional[LibraryDoc] = None
         try:
-            namespace = await self.parent.documents_cache.get_namespace(document)
+            namespace = self.parent.documents_cache.get_namespace(document)
 
-            lib_doc = await namespace.get_imported_library_libdoc(
-                library_node.name, library_node.args, library_node.alias
-            )
+            lib_doc = namespace.get_imported_library_libdoc(library_node.name, library_node.args, library_node.alias)
 
             if lib_doc is None or lib_doc.errors:
-                lib_doc = await namespace.imports_manager.get_libdoc_for_library_import(
+                lib_doc = namespace.imports_manager.get_libdoc_for_library_import(
                     str(library_node.name),
                     (),
                     str(document.uri.to_path().parent),
-                    variables=await namespace.get_resolvable_variables(),
+                    variables=namespace.get_resolvable_variables(),
                 )
 
         except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
@@ -278,16 +276,16 @@ class RobotSignatureHelpProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
 
         lib_doc: Optional[LibraryDoc] = None
         try:
-            namespace = await self.parent.documents_cache.get_namespace(document)
+            namespace = self.parent.documents_cache.get_namespace(document)
 
-            lib_doc = await namespace.get_imported_variables_libdoc(variables_node.name, variables_node.args)
+            lib_doc = namespace.get_imported_variables_libdoc(variables_node.name, variables_node.args)
 
             if lib_doc is None or lib_doc.errors:
-                lib_doc = await namespace.imports_manager.get_libdoc_for_variables_import(
+                lib_doc = namespace.imports_manager.get_libdoc_for_variables_import(
                     str(variables_node.name),
                     (),
                     str(document.uri.to_path().parent),
-                    variables=await namespace.get_resolvable_variables(),
+                    variables=namespace.get_resolvable_variables(),
                 )
 
         except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):

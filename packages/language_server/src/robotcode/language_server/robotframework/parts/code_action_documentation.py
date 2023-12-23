@@ -274,9 +274,9 @@ class RobotCodeActionDocumentationProtocolPart(RobotLanguageServerProtocolPart, 
             TestTemplate,
         )
 
-        namespace = await self.parent.documents_cache.get_namespace(document)
+        namespace = self.parent.documents_cache.get_namespace(document)
 
-        model = await self.parent.documents_cache.get_model(document, False)
+        model = self.parent.documents_cache.get_model(document, False)
         node = await get_node_at_position(model, range.start)
 
         if context.only and isinstance(node, (LibraryImport, ResourceImport)):
@@ -295,7 +295,7 @@ class RobotCodeActionDocumentationProtocolPart(RobotLanguageServerProtocolPart, 
         if isinstance(node, (KeywordCall, Fixture, TestTemplate, Template)):
             # only source actions
 
-            result = await self.get_keyworddoc_and_token_from_position(
+            result = self.get_keyworddoc_and_token_from_position(
                 node.value
                 if isinstance(node, (TestTemplate, Template))
                 else node.keyword
@@ -324,7 +324,7 @@ class RobotCodeActionDocumentationProtocolPart(RobotLanguageServerProtocolPart, 
                             entry = next(
                                 (
                                     v
-                                    for v in (await namespace.get_libraries()).values()
+                                    for v in (namespace.get_libraries()).values()
                                     if v.library_doc.digest == kw_doc.parent_digest
                                 ),
                                 None,
@@ -334,13 +334,13 @@ class RobotCodeActionDocumentationProtocolPart(RobotLanguageServerProtocolPart, 
                             entry = next(
                                 (
                                     v
-                                    for v in (await namespace.get_resources()).values()
+                                    for v in (namespace.get_resources()).values()
                                     if v.library_doc.digest == kw_doc.parent_digest
                                 ),
                                 None,
                             )
 
-                            self_libdoc = await namespace.get_library_doc()
+                            self_libdoc = namespace.get_library_doc()
                             if entry is None and self_libdoc.digest == kw_doc.parent_digest:
                                 entry = LibraryEntry(
                                     self_libdoc.name,
@@ -407,8 +407,8 @@ class RobotCodeActionDocumentationProtocolPart(RobotLanguageServerProtocolPart, 
         robot_variables = resolve_robot_variables(
             str(namespace.imports_manager.folder.to_path()),
             str(base_dir),
-            await namespace.imports_manager.get_resolvable_command_line_variables(),
-            variables=await namespace.get_resolvable_variables(),
+            namespace.imports_manager.get_resolvable_command_line_variables(),
+            variables=namespace.get_resolvable_variables(),
         )
         try:
             name = robot_variables.replace_string(name, ignore_errors=False)

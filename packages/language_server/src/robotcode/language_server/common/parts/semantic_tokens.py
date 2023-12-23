@@ -184,11 +184,11 @@ class SemanticTokensProtocolPart(LanguageServerProtocolPart, HasExtendCapabiliti
 
         return None
 
-    async def refresh(self) -> None:
+    def refresh(self) -> None:
         if (
             self.parent.client_capabilities is not None
             and self.parent.client_capabilities.workspace is not None
             and self.parent.client_capabilities.workspace.semantic_tokens is not None
             and self.parent.client_capabilities.workspace.semantic_tokens.refresh_support
         ):
-            await self.parent.send_request_async("workspace/semanticTokens/refresh")
+            self.parent.send_request("workspace/semanticTokens/refresh")

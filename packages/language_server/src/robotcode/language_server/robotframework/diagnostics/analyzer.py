@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import ast
-import asyncio
 import itertools
 import os
 from collections import defaultdict
@@ -48,7 +47,7 @@ from robotcode.robot.utils.ast import (
     tokenize_variables,
 )
 
-from ..utils.async_ast import AsyncVisitor
+from ..utils.async_ast import Visitor
 from .entities import (
     ArgumentDefinition,
     CommandLineVariableDefinition,
@@ -82,7 +81,7 @@ class AnalyzerResult:
     namespace_references: Dict[LibraryEntry, Set[Location]]
 
 
-class Analyzer(AsyncVisitor, ModelHelperMixin):
+class Analyzer(Visitor, ModelHelperMixin):
     def __init__(
         self,
         model: ast.AST,
@@ -107,11 +106,11 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
         self._local_variable_assignments: Dict[VariableDefinition, Set[Range]] = defaultdict(set)
         self._namespace_references: Dict[LibraryEntry, Set[Location]] = defaultdict(set)
 
-    async def run(self) -> AnalyzerResult:
+    def run(self) -> AnalyzerResult:
         self._diagnostics = []
         self._keyword_references = defaultdict(set)
 
-        await self.visit(self.model)
+        self.visit(self.model)
 
         return AnalyzerResult(
             self._diagnostics,
@@ -147,7 +146,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
         else:
             yield token
 
-    async def visit_Variable(self, node: Variable) -> None:  # noqa: N802
+    def visit_Variable(self, node: Variable) -> None:  # noqa: N802
         name_token = node.get_token(Token.VARIABLE)
         if name_token is None:
             return
@@ -171,7 +170,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
             var_def = next(
                 (
                     v
-                    for v in await self.namespace.get_own_variables()
+                    for v in self.namespace.get_own_variables()
                     if v.name_token is not None and range_from_token(v.name_token) == r
                 ),
                 None,
@@ -180,7 +179,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
             if var_def is None:
                 return
 
-            cmd_line_var = await self.namespace.find_variable(
+            cmd_line_var = self.namespace.find_variable(
                 name, skip_commandline_variables=False, position=r.start, ignore_error=True
             )
             if isinstance(cmd_line_var, CommandLineVariableDefinition):
@@ -190,7 +189,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
             if var_def not in self._variable_references:
                 self._variable_references[var_def] = set()
 
-    async def visit(self, node: ast.AST) -> None:
+    def visit(self, node: ast.AST) -> None:
         self.node_stack.append(node)
         try:
             severity = (
@@ -216,7 +215,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                         if isinstance(node, Arguments) and token.value == "@{}":
                             continue
 
-                        async for var_token, var in self.iter_variables_from_token(
+                        for var_token, var in self.iter_variables_from_token(
                             token,
                             self.namespace,
                             self.node_stack,
@@ -252,7 +251,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
 
                                     suite_var = None
                                     if isinstance(var, CommandLineVariableDefinition):
-                                        suite_var = await self.namespace.find_variable(
+                                        suite_var = self.namespace.find_variable(
                                             var.name,
                                             skip_commandline_variables=True,
                                             ignore_error=True,
@@ -289,7 +288,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                 and isinstance(node, self.get_expression_statement_types())
                 and (token := node.get_token(Token.ARGUMENT)) is not None
             ):
-                async for var_token, var in self.iter_expression_variables_from_token(
+                for var_token, var in self.iter_expression_variables_from_token(
                     token,
                     self.namespace,
                     self.node_stack,
@@ -315,7 +314,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                                 )
 
                                 if isinstance(var, CommandLineVariableDefinition):
-                                    suite_var = await self.namespace.find_variable(
+                                    suite_var = self.namespace.find_variable(
                                         var.name,
                                         skip_commandline_variables=True,
                                         ignore_error=True,
@@ -325,7 +324,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                                             Location(self.namespace.document.document_uri, range_from_token(var_token))
                                         )
 
-            await super().visit(node)
+            super().visit(node)
         finally:
             self.node_stack = self.node_stack[:-1]
 
@@ -367,7 +366,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
             )
         )
 
-    async def _analyze_keyword_call(
+    def _analyze_keyword_call(
         self,
         keyword: Optional[str],
         node: ast.AST,
@@ -395,9 +394,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
             result = self.finder.find_keyword(keyword, raise_keyword_error=False)
 
             if keyword is not None:
-                lib_entry, kw_namespace = await self.get_namespace_info_from_keyword_token(
-                    self.namespace, keyword_token
-                )
+                lib_entry, kw_namespace = self.get_namespace_info_from_keyword_token(self.namespace, keyword_token)
 
                 if lib_entry and kw_namespace:
                     r = range_from_token(keyword_token)
@@ -421,7 +418,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                     entries = [lib_entry]
                     if self.finder.multiple_keywords_result is not None:
                         entries = next(
-                            (v for k, v in (await self.namespace.get_namespaces()).items() if k == kw_namespace),
+                            (v for k, v in (self.namespace.get_namespaces()).items() if k == kw_namespace),
                             entries,
                         )
                     for entry in entries:
@@ -529,7 +526,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                                 resolve_variables_until=result.args_to_process,
                                 resolve_named=not result.is_any_run_keyword(),
                             )
-                    except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
+                    except (SystemExit, KeyboardInterrupt):
                         raise
                     except BaseException as e:
                         self.append_diagnostics(
@@ -542,7 +539,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                             code=type(e).__qualname__,
                         )
 
-        except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
+        except (SystemExit, KeyboardInterrupt):
             raise
         except BaseException as e:
             self.append_diagnostics(
@@ -568,7 +565,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
             ]:
                 tokens = argument_tokens
                 if tokens and (token := tokens[0]):
-                    async for var_token, var in self.iter_expression_variables_from_token(
+                    for var_token, var in self.iter_expression_variables_from_token(
                         token,
                         self.namespace,
                         self.node_stack,
@@ -590,7 +587,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                                 )
 
                                 if isinstance(var, CommandLineVariableDefinition):
-                                    suite_var = await self.namespace.find_variable(
+                                    suite_var = self.namespace.find_variable(
                                         var.name,
                                         skip_commandline_variables=True,
                                         ignore_error=True,
@@ -614,18 +611,18 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                             )
 
         if result is not None and analyse_run_keywords:
-            await self._analyse_run_keyword(result, node, argument_tokens)
+            self._analyse_run_keyword(result, node, argument_tokens)
 
         return result
 
-    async def _analyse_run_keyword(
+    def _analyse_run_keyword(
         self, keyword_doc: Optional[KeywordDoc], node: ast.AST, argument_tokens: List[Token]
     ) -> List[Token]:
         if keyword_doc is None or not keyword_doc.is_any_run_keyword():
             return argument_tokens
 
         if keyword_doc.is_run_keyword() and len(argument_tokens) > 0:
-            await self._analyze_keyword_call(
+            self._analyze_keyword_call(
                 unescape(argument_tokens[0].value),
                 node,
                 argument_tokens[0],
@@ -639,7 +636,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
         if keyword_doc.is_run_keyword_with_condition() and len(argument_tokens) > (
             cond_count := keyword_doc.run_keyword_condition_count()
         ):
-            await self._analyze_keyword_call(
+            self._analyze_keyword_call(
                 unescape(argument_tokens[cond_count].value),
                 node,
                 argument_tokens[cond_count],
@@ -673,7 +670,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                     args = argument_tokens
                     argument_tokens = []
 
-                await self._analyze_keyword_call(
+                self._analyze_keyword_call(
                     unescape(t.value),
                     node,
                     t,
@@ -703,14 +700,14 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
             if result is not None and result.is_any_run_keyword():
                 argument_tokens = argument_tokens[2:]
 
-                argument_tokens = await self._analyse_run_keyword(result, node, argument_tokens)
+                argument_tokens = self._analyse_run_keyword(result, node, argument_tokens)
             else:
                 kwt = argument_tokens[1]
                 argument_tokens = argument_tokens[2:]
 
                 args = skip_args()
 
-                await self._analyze_keyword_call(
+                self._analyze_keyword_call(
                     unescape(kwt.value),
                     node,
                     kwt,
@@ -727,7 +724,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
 
                     args = skip_args()
 
-                    result = await self._analyze_keyword_call(
+                    result = self._analyze_keyword_call(
                         unescape(kwt.value),
                         node,
                         kwt,
@@ -736,7 +733,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                     )
 
                     if result is not None and result.is_any_run_keyword():
-                        argument_tokens = await self._analyse_run_keyword(result, node, argument_tokens)
+                        argument_tokens = self._analyse_run_keyword(result, node, argument_tokens)
 
                     break
 
@@ -746,7 +743,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
 
                     args = skip_args()
 
-                    result = await self._analyze_keyword_call(
+                    result = self._analyze_keyword_call(
                         unescape(kwt.value),
                         node,
                         kwt,
@@ -755,13 +752,13 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                     )
 
                     if result is not None and result.is_any_run_keyword():
-                        argument_tokens = await self._analyse_run_keyword(result, node, argument_tokens)
+                        argument_tokens = self._analyse_run_keyword(result, node, argument_tokens)
                 else:
                     break
 
         return argument_tokens
 
-    async def visit_Fixture(self, node: Fixture) -> None:  # noqa: N802
+    def visit_Fixture(self, node: Fixture) -> None:  # noqa: N802
         keyword_token = node.get_token(Token.NAME)
 
         # TODO: calculate possible variables in NAME
@@ -771,7 +768,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
             and keyword_token.value is not None
             and keyword_token.value.upper() not in ("", "NONE")
         ):
-            await self._analyze_keyword_call(
+            self._analyze_keyword_call(
                 node.name,
                 node,
                 keyword_token,
@@ -780,30 +777,30 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                 ignore_errors_if_contains_variables=True,
             )
 
-        await self.generic_visit(node)
+        self.generic_visit(node)
 
-    async def visit_TestTemplate(self, node: TestTemplate) -> None:  # noqa: N802
+    def visit_TestTemplate(self, node: TestTemplate) -> None:  # noqa: N802
         keyword_token = node.get_token(Token.NAME)
 
         if keyword_token is not None and keyword_token.value.upper() not in ("", "NONE"):
-            await self._analyze_keyword_call(
+            self._analyze_keyword_call(
                 node.value, node, keyword_token, [], analyse_run_keywords=False, allow_variables=True
             )
 
         self.test_template = node
-        await self.generic_visit(node)
+        self.generic_visit(node)
 
-    async def visit_Template(self, node: Template) -> None:  # noqa: N802
+    def visit_Template(self, node: Template) -> None:  # noqa: N802
         keyword_token = node.get_token(Token.NAME)
 
         if keyword_token is not None and keyword_token.value.upper() not in ("", "NONE"):
-            await self._analyze_keyword_call(
+            self._analyze_keyword_call(
                 node.value, node, keyword_token, [], analyse_run_keywords=False, allow_variables=True
             )
         self.template = node
-        await self.generic_visit(node)
+        self.generic_visit(node)
 
-    async def visit_KeywordCall(self, node: KeywordCall) -> None:  # noqa: N802
+    def visit_KeywordCall(self, node: KeywordCall) -> None:  # noqa: N802
         keyword_token = node.get_token(Token.KEYWORD)
 
         if node.assign and keyword_token is None:
@@ -814,9 +811,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                 code=Error.KEYWORD_NAME_EMPTY,
             )
         else:
-            await self._analyze_keyword_call(
-                node.keyword, node, keyword_token, [e for e in node.get_tokens(Token.ARGUMENT)]
-            )
+            self._analyze_keyword_call(node.keyword, node, keyword_token, [e for e in node.get_tokens(Token.ARGUMENT)])
 
         if not self.current_testcase_or_keyword_name:
             self.append_diagnostics(
@@ -827,9 +822,9 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                 code=Error.CODE_UNREACHABLE,
             )
 
-        await self.generic_visit(node)
+        self.generic_visit(node)
 
-    async def visit_TestCase(self, node: TestCase) -> None:  # noqa: N802
+    def visit_TestCase(self, node: TestCase) -> None:  # noqa: N802
         if not node.name:
             name_token = node.header.get_token(Token.TESTCASE_NAME)
             self.append_diagnostics(
@@ -841,15 +836,15 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
 
         self.current_testcase_or_keyword_name = node.name
         try:
-            await self.generic_visit(node)
+            self.generic_visit(node)
         finally:
             self.current_testcase_or_keyword_name = None
             self.template = None
 
-    async def visit_Keyword(self, node: Keyword) -> None:  # noqa: N802
+    def visit_Keyword(self, node: Keyword) -> None:  # noqa: N802
         if node.name:
             name_token = node.header.get_token(Token.KEYWORD_NAME)
-            kw_doc = self.get_keyword_definition_at_token(await self.namespace.get_library_doc(), name_token)
+            kw_doc = self.get_keyword_definition_at_token(self.namespace.get_library_doc(), name_token)
 
             if kw_doc is not None and kw_doc not in self._keyword_references:
                 self._keyword_references[kw_doc] = set()
@@ -876,7 +871,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
 
         self.current_testcase_or_keyword_name = node.name
         try:
-            await self.generic_visit(node)
+            self.generic_visit(node)
         finally:
             self.current_testcase_or_keyword_name = None
 
@@ -902,7 +897,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
         temp.append(var.after)
         return "".join(temp), ()
 
-    async def visit_TemplateArguments(self, node: TemplateArguments) -> None:  # noqa: N802
+    def visit_TemplateArguments(self, node: TemplateArguments) -> None:  # noqa: N802
         template = self.template or self.test_template
         if template is not None and template.value is not None and template.value.upper() not in ("", "NONE"):
             argument_tokens = node.get_tokens(Token.ARGUMENT)
@@ -920,7 +915,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                             resolve_variables_until=result.args_to_process,
                             resolve_named=not result.is_any_run_keyword(),
                         )
-                except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
+                except (SystemExit, KeyboardInterrupt):
                     raise
                 except BaseException as e:
                     self.append_diagnostics(
@@ -938,9 +933,9 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                     code=d.code,
                 )
 
-        await self.generic_visit(node)
+        self.generic_visit(node)
 
-    async def visit_ForceTags(self, node: Statement) -> None:  # noqa: N802
+    def visit_ForceTags(self, node: Statement) -> None:  # noqa: N802
         if get_robot_version() >= (6, 0):
             tag = node.get_token(Token.FORCE_TAGS)
             if tag is not None and tag.value.upper() == "FORCE TAGS":
@@ -952,7 +947,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                     code=Error.DEPRECATED_FORCE_TAG,
                 )
 
-    async def visit_TestTags(self, node: Statement) -> None:  # noqa: N802
+    def visit_TestTags(self, node: Statement) -> None:  # noqa: N802
         if get_robot_version() >= (6, 0):
             tag = node.get_token(Token.FORCE_TAGS)
             if tag is not None and tag.value.upper() == "FORCE TAGS":
@@ -964,7 +959,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                     code=Error.DEPRECATED_FORCE_TAG,
                 )
 
-    async def visit_Tags(self, node: Statement) -> None:  # noqa: N802
+    def visit_Tags(self, node: Statement) -> None:  # noqa: N802
         if get_robot_version() >= (6, 0):
             for tag in node.get_tokens(Token.ARGUMENT):
                 if tag.value and tag.value.startswith("-"):
@@ -979,7 +974,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                         code=Error.DEPRECATED_HYPHEN_TAG,
                     )
 
-    async def visit_ReturnSetting(self, node: Statement) -> None:  # noqa: N802
+    def visit_ReturnSetting(self, node: Statement) -> None:  # noqa: N802
         if get_robot_version() >= (7, 0):
             token = node.get_token(Token.RETURN_SETTING)
             if token is not None and token.error:
@@ -1000,7 +995,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
                 code=Error.IMPORT_REQUIRES_VALUE,
             )
 
-    async def visit_VariablesImport(self, node: VariablesImport) -> None:  # noqa: N802
+    def visit_VariablesImport(self, node: VariablesImport) -> None:  # noqa: N802
         if get_robot_version() >= (6, 1):
             self._check_import_name(node.name, node, "Variables")
 
@@ -1008,14 +1003,14 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
         if name_token is None:
             return
 
-        entries = await self.namespace.get_import_entries()
+        entries = self.namespace.get_import_entries()
         if entries and self.namespace.document:
             for v in entries.values():
                 if v.import_source == self.namespace.source and v.import_range == range_from_token(name_token):
                     if v not in self._namespace_references:
                         self._namespace_references[v] = set()
 
-    async def visit_ResourceImport(self, node: ResourceImport) -> None:  # noqa: N802
+    def visit_ResourceImport(self, node: ResourceImport) -> None:  # noqa: N802
         if get_robot_version() >= (6, 1):
             self._check_import_name(node.name, node, "Resource")
 
@@ -1023,14 +1018,14 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
         if name_token is None:
             return
 
-        entries = await self.namespace.get_import_entries()
+        entries = self.namespace.get_import_entries()
         if entries and self.namespace.document:
             for v in entries.values():
                 if v.import_source == self.namespace.source and v.import_range == range_from_token(name_token):
                     if v not in self._namespace_references:
                         self._namespace_references[v] = set()
 
-    async def visit_LibraryImport(self, node: LibraryImport) -> None:  # noqa: N802
+    def visit_LibraryImport(self, node: LibraryImport) -> None:  # noqa: N802
         if get_robot_version() >= (6, 1):
             self._check_import_name(node.name, node, "Library")
 
@@ -1038,7 +1033,7 @@ class Analyzer(AsyncVisitor, ModelHelperMixin):
         if name_token is None:
             return
 
-        entries = await self.namespace.get_import_entries()
+        entries = self.namespace.get_import_entries()
         if entries and self.namespace.document:
             for v in entries.values():
                 if v.import_source == self.namespace.source and v.import_range == range_from_token(name_token):

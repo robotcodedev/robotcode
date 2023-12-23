@@ -3,7 +3,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Optional
 
-from robotcode.core.async_itertools import async_next
 from robotcode.core.lsp.types import Position, Range, TextDocumentIdentifier
 from robotcode.core.utils.dataclasses import CamelSnakeMixin
 from robotcode.core.utils.logging import LoggingDescriptor
@@ -57,8 +56,8 @@ class RobotDebuggingUtilsProtocolPart(RobotLanguageServerProtocolPart, ModelHelp
         if document is None:
             return None
 
-        namespace = await self.parent.documents_cache.get_namespace(document)
-        model = await self.parent.documents_cache.get_model(document, False)
+        namespace = self.parent.documents_cache.get_namespace(document)
+        model = self.parent.documents_cache.get_model(document, False)
 
         nodes = await get_nodes_at_position(model, position)
         node = nodes[-1]
@@ -68,10 +67,10 @@ class RobotDebuggingUtilsProtocolPart(RobotLanguageServerProtocolPart, ModelHelp
 
         token = get_tokens_at_position(node, position)[-1]
 
-        token_and_var = await async_next(
+        token_and_var = next(
             (
                 (t, v)
-                async for t, v in self.iter_variables_from_token(token, namespace, nodes, position)
+                for t, v in self.iter_variables_from_token(token, namespace, nodes, position)
                 if position in range_from_token(t)
             ),
             None,
@@ -83,12 +82,10 @@ class RobotDebuggingUtilsProtocolPart(RobotLanguageServerProtocolPart, ModelHelp
             and (token := node.get_token(RobotToken.ARGUMENT)) is not None
             and position in range_from_token(token)
         ):
-            token_and_var = await async_next(
+            token_and_var = next(
                 (
                     (var_token, var)
-                    async for var_token, var in self.iter_expression_variables_from_token(
-                        token, namespace, nodes, position
-                    )
+                    for var_token, var in self.iter_expression_variables_from_token(token, namespace, nodes, position)
                     if position in range_from_token(var_token)
                 ),
                 None,

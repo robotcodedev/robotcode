@@ -2025,7 +2025,6 @@ def get_variables_doc(
 ) -> VariablesDoc:
     from robot.libdocpkg.robotbuilder import KeywordDocBuilder
     from robot.output import LOGGER
-    from robot.running.handlers import _PythonHandler, _PythonInitHandler
     from robot.utils.importer import Importer
     from robot.variables.filesetter import PythonImporter, YamlImporter
 
@@ -2095,58 +2094,31 @@ def get_variables_doc(
 
             if python_import:
                 if get_variables is not None:
+                    if get_robot_version() >= (7, 0):
+                        # TODO: variables initializer for RF7
+                        # from robot.running.librarykeyword import StaticKeywordCreator, LibraryInitCreator
 
-                    class VarHandler(_PythonHandler):
-                        def _get_name(self, handler_name: Any, handler_method: Any) -> Any:
-                            return get_variables.__name__ if get_variables is not None else ""
+                        # class MyStaticKeywordCreator(StaticKeywordCreator):
+                        #     def __init__(self, name: str, library: TestLibrary):
+                        #         super().__init__(name, library)
+                        pass
+                    else:
+                        from robot.running.handlers import _PythonHandler
 
-                        def _get_initial_handler(self, library: Any, name: Any, method: Any) -> Any:
-                            return None
+                        class VarHandler(_PythonHandler):
+                            def _get_name(self, handler_name: Any, handler_method: Any) -> Any:
+                                return get_variables.__name__ if get_variables is not None else ""
 
-                    vars_initializer = VarHandler(libdoc, get_variables.__name__, get_variables)
+                            def _get_initial_handler(self, library: Any, name: Any, method: Any) -> Any:
+                                return None
 
-                    libdoc.inits = KeywordStore(
-                        keywords=[
-                            KeywordDoc(
-                                name=libdoc.name,
-                                arguments=[ArgumentInfo.from_robot(a) for a in kw[0].args],
-                                doc=kw[0].doc,
-                                source=kw[0].source,
-                                line_no=kw[0].lineno if kw[0].lineno is not None else -1,
-                                col_offset=-1,
-                                end_col_offset=-1,
-                                end_line_no=-1,
-                                type="variables",
-                                libname=libdoc.name,
-                                libtype=libdoc.type,
-                                longname=f"{libdoc.name}.{kw[0].name}",
-                                is_initializer=True,
-                                arguments_spec=ArgumentSpec.from_robot_argument_spec(kw[1].arguments),
-                            )
-                            for kw in [
-                                (KeywordDocBuilder().build_keyword(k), k)
-                                for k in [KeywordWrapper(vars_initializer, libdoc.source or "")]
-                            ]
-                        ]
-                    )
-                else:
-                    get_variables = getattr(libcode, "__init__", None) or getattr(libcode, "__init__", None)
-
-                    class InitVarHandler(_PythonInitHandler):
-                        def _get_name(self, handler_name: Any, handler_method: Any) -> Any:
-                            return get_variables.__name__ if get_variables is not None else ""
-
-                        def _get_initial_handler(self, library: Any, name: Any, method: Any) -> Any:
-                            return None
-
-                    if get_variables is not None:
-                        vars_initializer = InitVarHandler(libdoc, get_variables.__name__, get_variables, None)
+                        vars_initializer = VarHandler(libdoc, get_variables.__name__, get_variables)
 
                         libdoc.inits = KeywordStore(
                             keywords=[
                                 KeywordDoc(
                                     name=libdoc.name,
-                                    arguments=[],
+                                    arguments=[ArgumentInfo.from_robot(a) for a in kw[0].args],
                                     doc=kw[0].doc,
                                     source=kw[0].source,
                                     line_no=kw[0].lineno if kw[0].lineno is not None else -1,
@@ -2158,6 +2130,7 @@ def get_variables_doc(
                                     libtype=libdoc.type,
                                     longname=f"{libdoc.name}.{kw[0].name}",
                                     is_initializer=True,
+                                    arguments_spec=ArgumentSpec.from_robot_argument_spec(kw[1].arguments),
                                 )
                                 for kw in [
                                     (KeywordDocBuilder().build_keyword(k), k)
@@ -2165,6 +2138,49 @@ def get_variables_doc(
                                 ]
                             ]
                         )
+                else:
+                    if get_robot_version() >= (7, 0):
+                        # TODO: variables initializer for RF7
+
+                        pass
+                    else:
+                        from robot.running.handlers import _PythonInitHandler
+
+                        get_variables = getattr(libcode, "__init__", None) or getattr(libcode, "__init__", None)
+
+                        class InitVarHandler(_PythonInitHandler):
+                            def _get_name(self, handler_name: Any, handler_method: Any) -> Any:
+                                return get_variables.__name__ if get_variables is not None else ""
+
+                            def _get_initial_handler(self, library: Any, name: Any, method: Any) -> Any:
+                                return None
+
+                        if get_variables is not None:
+                            vars_initializer = InitVarHandler(libdoc, get_variables.__name__, get_variables, None)
+
+                            libdoc.inits = KeywordStore(
+                                keywords=[
+                                    KeywordDoc(
+                                        name=libdoc.name,
+                                        arguments=[],
+                                        doc=kw[0].doc,
+                                        source=kw[0].source,
+                                        line_no=kw[0].lineno if kw[0].lineno is not None else -1,
+                                        col_offset=-1,
+                                        end_col_offset=-1,
+                                        end_line_no=-1,
+                                        type="variables",
+                                        libname=libdoc.name,
+                                        libtype=libdoc.type,
+                                        longname=f"{libdoc.name}.{kw[0].name}",
+                                        is_initializer=True,
+                                    )
+                                    for kw in [
+                                        (KeywordDocBuilder().build_keyword(k), k)
+                                        for k in [KeywordWrapper(vars_initializer, libdoc.source or "")]
+                                    ]
+                                ]
+                            )
             try:
                 # TODO: add type information of the value including dict key names and member names
                 libdoc.variables = [

@@ -7,7 +7,7 @@ import threading
 import weakref
 from typing import Any, Awaitable, Callable, Dict, Final, List, Optional, TypeVar, Union, cast
 
-from robotcode.core.async_tools import async_event, create_sub_task
+from robotcode.core.event import event
 from robotcode.core.lsp.types import DocumentUri, Position, Range
 from robotcode.core.uri import Uri
 from robotcode.core.utils.logging import LoggingDescriptor
@@ -191,18 +191,18 @@ class TextDocument:
 
             return self._lines
 
-    @async_event
+    @event
     async def cache_invalidate(sender) -> None:  # NOSONAR
         ...
 
-    @async_event
-    async def cache_invalidated(sender) -> None:  # NOSONAR
+    @event
+    def cache_invalidated(sender) -> None:  # NOSONAR
         ...
 
     def _invalidate_cache(self) -> None:
-        create_sub_task(self.cache_invalidate(self))
+        self.cache_invalidate(self)
         self._cache.clear()
-        create_sub_task(self.cache_invalidated(self))
+        self.cache_invalidated(self)
 
     def invalidate_cache(self) -> None:
         with self._lock:
@@ -228,7 +228,7 @@ class TextDocument:
 
     def get_cache_value(
         self,
-        entry: Union[Callable[[TextDocument], Awaitable[_T]], Callable[..., Awaitable[_T]]],
+        entry: Callable[[TextDocument], _T],
     ) -> Optional[_T]:
         reference = self.__get_cache_reference(entry)
 
@@ -238,7 +238,7 @@ class TextDocument:
 
         return cast(Optional[_T], e.data)
 
-    def get_cache_sync(
+    def get_cache(
         self,
         entry: Union[Callable[[TextDocument], _T], Callable[..., _T]],
         *args: Any,
@@ -255,7 +255,7 @@ class TextDocument:
 
             return cast(_T, e.data)
 
-    async def get_cache(
+    async def get_cache_async(
         self,
         entry: Union[Callable[[TextDocument], Awaitable[_T]], Callable[..., Awaitable[_T]]],
         *args: Any,

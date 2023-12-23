@@ -63,8 +63,8 @@ class RobotInlayHintProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMix
         if config is None or not config.parameter_names and not config.namespaces:
             return None
 
-        model = await self.parent.documents_cache.get_model(document, False)
-        namespace = await self.parent.documents_cache.get_namespace(document)
+        model = self.parent.documents_cache.get_model(document, False)
+        namespace = self.parent.documents_cache.get_namespace(document)
 
         result: List[InlayHint] = []
 
@@ -91,7 +91,7 @@ class RobotInlayHintProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMix
         namespace: Namespace,
         config: InlayHintsConfig,
     ) -> Optional[List[InlayHint]]:
-        kw_result = await self.get_keyworddoc_and_token_from_position(
+        kw_result = self.get_keyworddoc_and_token_from_position(
             keyword_token.value,
             keyword_token,
             arguments,
@@ -172,13 +172,13 @@ class RobotInlayHintProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMix
                     )
 
         if keyword_token is not None and config.namespaces:
-            lib_entry, kw_namespace = await self.get_namespace_info_from_keyword_token(namespace, keyword_token)
+            lib_entry, kw_namespace = self.get_namespace_info_from_keyword_token(namespace, keyword_token)
             if lib_entry is None and kw_namespace is None:
                 if kw_doc.libtype == "LIBRARY":
                     lib = next(
                         (
                             lib
-                            for lib in (await namespace.get_libraries()).values()
+                            for lib in (namespace.get_libraries()).values()
                             if lib.name == kw_doc.libname and kw_doc in lib.library_doc.keywords.keywords
                         ),
                         None,
@@ -187,7 +187,7 @@ class RobotInlayHintProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMix
                     lib = next(
                         (
                             lib
-                            for lib in (await namespace.get_resources()).values()
+                            for lib in (namespace.get_resources()).values()
                             if lib.name == kw_doc.libname and kw_doc in lib.library_doc.keywords.keywords
                         ),
                         None,
@@ -294,18 +294,16 @@ class RobotInlayHintProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMix
 
         lib_doc: Optional[LibraryDoc] = None
         try:
-            namespace = await self.parent.documents_cache.get_namespace(document)
+            namespace = self.parent.documents_cache.get_namespace(document)
 
-            lib_doc = await namespace.get_imported_library_libdoc(
-                library_node.name, library_node.args, library_node.alias
-            )
+            lib_doc = namespace.get_imported_library_libdoc(library_node.name, library_node.args, library_node.alias)
 
             if lib_doc is None or lib_doc.errors:
-                lib_doc = await namespace.imports_manager.get_libdoc_for_library_import(
+                lib_doc = namespace.imports_manager.get_libdoc_for_library_import(
                     str(library_node.name),
                     (),
                     str(document.uri.to_path().parent),
-                    variables=await namespace.get_resolvable_variables(),
+                    variables=namespace.get_resolvable_variables(),
                 )
 
         except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
@@ -339,19 +337,19 @@ class RobotInlayHintProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMix
 
         lib_doc: Optional[LibraryDoc] = None
         try:
-            namespace = await self.parent.documents_cache.get_namespace(document)
+            namespace = self.parent.documents_cache.get_namespace(document)
 
-            lib_doc = await namespace.get_imported_variables_libdoc(
+            lib_doc = namespace.get_imported_variables_libdoc(
                 library_node.name,
                 library_node.args,
             )
 
             if lib_doc is None or lib_doc.errors:
-                lib_doc = await namespace.imports_manager.get_libdoc_for_variables_import(
+                lib_doc = namespace.imports_manager.get_libdoc_for_variables_import(
                     str(library_node.name),
                     (),
                     str(document.uri.to_path().parent),
-                    variables=await namespace.get_resolvable_variables(),
+                    variables=namespace.get_resolvable_variables(),
                 )
 
         except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):

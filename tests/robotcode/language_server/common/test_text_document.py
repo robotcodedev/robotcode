@@ -204,21 +204,21 @@ third
 
     document = TextDocument(document_uri="file:///test.robot", language_id="robotframework", version=1, text=text)
 
-    assert await document.get_cache(get_data, "data") == "1data"
+    assert await document.get_cache_async(get_data, "data") == "1data"
 
     prefix = "2"
-    assert await document.get_cache(get_data, "data1") == "1data"
+    assert await document.get_cache_async(get_data, "data1") == "1data"
 
     await document.remove_cache_entry(get_data)
 
-    assert await document.get_cache(get_data, "data2") == "2data2"
+    assert await document.get_cache_async(get_data, "data2") == "2data2"
 
     prefix = "3"
-    assert await document.get_cache(get_data, "data3") == "2data2"
+    assert await document.get_cache_async(get_data, "data3") == "2data2"
 
     document.invalidate_cache()
 
-    assert await document.get_cache(get_data, "data3") == "3data3"
+    assert await document.get_cache_async(get_data, "data3") == "3data3"
 
 
 @pytest.mark.asyncio()
@@ -238,21 +238,21 @@ third
 
     dummy = Dummy()
 
-    assert await document.get_cache(dummy.get_data, "data") == "1data"
+    assert await document.get_cache_async(dummy.get_data, "data") == "1data"
 
     prefix = "2"
-    assert await document.get_cache(dummy.get_data, "data1") == "1data"
+    assert await document.get_cache_async(dummy.get_data, "data1") == "1data"
 
     await document.remove_cache_entry(dummy.get_data)
 
-    assert await document.get_cache(dummy.get_data, "data2") == "2data2"
+    assert await document.get_cache_async(dummy.get_data, "data2") == "2data2"
 
     prefix = "3"
-    assert await document.get_cache(dummy.get_data, "data3") == "2data2"
+    assert await document.get_cache_async(dummy.get_data, "data3") == "2data2"
 
     document.invalidate_cache()
 
-    assert await document.get_cache(dummy.get_data, "data3") == "3data3"
+    assert await document.get_cache_async(dummy.get_data, "data3") == "3data3"
 
     del dummy
 

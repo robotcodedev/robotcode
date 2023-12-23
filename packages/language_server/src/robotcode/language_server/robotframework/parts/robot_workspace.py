@@ -69,7 +69,7 @@ class RobotWorkspaceProtocolPart(RobotLanguageServerProtocolPart):
                 if path.suffix in [ROBOT_FILE_EXTENSION, RESOURCE_FILE_EXTENSION]:
                     document = self.parent.documents.get_or_open_document(path)
                     if not document.opened_in_editor:
-                        await (await self.parent.documents_cache.get_namespace(document)).ensure_initialized()
+                        self.parent.documents_cache.get_namespace(document).ensure_initialized()
 
             except InvalidUriError:
                 pass
@@ -162,7 +162,7 @@ class RobotWorkspaceProtocolPart(RobotLanguageServerProtocolPart):
                             document = self.parent.documents.get_or_open_document(f, "robotframework")
 
                             if not document.opened_in_editor:
-                                await (await self.parent.documents_cache.get_namespace(document)).ensure_initialized()
+                                self.parent.documents_cache.get_namespace(document).ensure_initialized()
 
                                 if config.analysis.diagnostic_mode == DiagnosticsMode.WORKSPACE:
                                     result.append(
@@ -194,4 +194,4 @@ class RobotWorkspaceProtocolPart(RobotLanguageServerProtocolPart):
     @threaded()
     async def robot_cache_clear(self) -> None:
         for folder in self.parent.workspace.workspace_folders:
-            (await self.parent.documents_cache.get_imports_manager_for_workspace_folder(folder)).clear_cache()
+            self.parent.documents_cache.get_imports_manager_for_workspace_folder(folder).clear_cache()

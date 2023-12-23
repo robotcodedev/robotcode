@@ -34,11 +34,11 @@ class RobotSelectionRangeProtocolPart(RobotLanguageServerProtocolPart, ModelHelp
     async def collect(
         self, sender: Any, document: TextDocument, positions: List[Position]
     ) -> Optional[List[SelectionRange]]:
-        namespace = await self.parent.documents_cache.get_namespace(document)
+        namespace = self.parent.documents_cache.get_namespace(document)
 
         results: List[SelectionRange] = []
         for position in positions:
-            nodes = await get_nodes_at_position(await self.parent.documents_cache.get_model(document, True), position)
+            nodes = await get_nodes_at_position(self.parent.documents_cache.get_model(document, True), position)
 
             if not nodes:
                 break
@@ -55,7 +55,7 @@ class RobotSelectionRangeProtocolPart(RobotLanguageServerProtocolPart, ModelHelp
                         token = tokens[-1]
                         if token is not None:
                             current_range = SelectionRange(range_from_token(token), current_range)
-                            async for var_token, _ in self.iter_variables_from_token(
+                            for var_token, _ in self.iter_variables_from_token(
                                 token, namespace, nodes, position, return_not_found=True
                             ):
                                 var_token_range = range_from_token(var_token)

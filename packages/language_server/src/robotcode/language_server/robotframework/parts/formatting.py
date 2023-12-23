@@ -103,7 +103,7 @@ class RobotFormattingProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
 
             robotidy_version = create_version_from_str(__version__)
 
-            model = await self.parent.documents_cache.get_model(document, False)
+            model = self.parent.documents_cache.get_model(document, False)
 
             if robotidy_version >= (3, 0):
                 from robotidy.api import get_robotidy
@@ -199,7 +199,7 @@ class RobotFormattingProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
             SeparatorNormalizer,
         )
 
-        model = cast(File, await self.parent.documents_cache.get_model(document, False))
+        model = cast(File, self.parent.documents_cache.get_model(document, False))
 
         Cleaner().visit(model)
         NewlineNormalizer(self.line_separator, self.short_test_name_length).visit(model)

@@ -1,11 +1,10 @@
 from __future__ import annotations
 
 import ast
-import asyncio
 import enum
 import itertools
-import logging
 import re
+import threading
 import time
 import weakref
 from collections import OrderedDict, defaultdict
@@ -13,7 +12,6 @@ from itertools import chain
 from pathlib import Path
 from typing import (
     Any,
-    AsyncIterator,
     Dict,
     Iterable,
     Iterator,
@@ -30,12 +28,12 @@ from robot.errors import VariableError
 from robot.libraries import STDLIBS
 from robot.parsing.lexer.tokens import Token
 from robot.parsing.model.blocks import Keyword, SettingSection, TestCase, VariableSection
-from robot.parsing.model.statements import Arguments, KeywordCall, KeywordName, Statement, Variable
+from robot.parsing.model.statements import Arguments, Statement
 from robot.parsing.model.statements import LibraryImport as RobotLibraryImport
 from robot.parsing.model.statements import ResourceImport as RobotResourceImport
 from robot.parsing.model.statements import VariablesImport as RobotVariablesImport
 from robot.variables.search import is_scalar_assign, is_variable, search_variable
-from robotcode.core.async_tools import Lock, async_event
+from robotcode.core.event import event
 from robotcode.core.lsp.types import (
     CodeDescription,
     Diagnostic,
@@ -121,7 +119,7 @@ class VariablesVisitor(Visitor):
         if isinstance(node, VariableSection):
             self.generic_visit(node)
 
-    def visit_Variable(self, node: Variable) -> None:  # noqa: N802
+    def visit_Variable(self, node: Statement) -> None:  # noqa: N802
         name_token = node.get_token(Token.VARIABLE)
         if name_token is None:
             return
@@ -136,14 +134,13 @@ class VariablesVisitor(Visitor):
             if name.endswith("="):
                 name = name[:-1].rstrip()
 
-            has_value = bool(node.value)
-            value = tuple(
-                s.replace("${CURDIR}", str(Path(self.source).parent).replace("\\", "\\\\")) for s in node.value
-            )
+            values = node.get_values(Token.ARGUMENT)
+            has_value = bool(values)
+            value = tuple(s.replace("${CURDIR}", str(Path(self.source).parent).replace("\\", "\\\\")) for s in values)
 
             self._results.append(
                 VariableDefinition(
-                    name=node.name,
+                    name=name,
                     name_token=strip_variable_token(
                         Token(name_token.type, name, name_token.lineno, name_token.col_offset, name_token.error)
                     ),
@@ -189,7 +186,7 @@ class BlockVariableVisitor(Visitor):
         finally:
             self.current_kw_doc = None
 
-    def visit_KeywordName(self, node: KeywordName) -> None:  # noqa: N802
+    def visit_KeywordName(self, node: Statement) -> None:  # noqa: N802
         from .model_helper import ModelHelperMixin
 
         name_token = node.get_token(Token.KEYWORD_NAME)
@@ -234,7 +231,7 @@ class BlockVariableVisitor(Visitor):
             None,
         )
 
-    def visit_Arguments(self, node: Arguments) -> None:  # noqa: N802
+    def visit_Arguments(self, node: Statement) -> None:  # noqa: N802
         args: List[str] = []
 
         arguments = node.get_tokens(Token.ARGUMENT)
@@ -289,7 +286,7 @@ class BlockVariableVisitor(Visitor):
             except VariableError:
                 pass
 
-    def visit_KeywordCall(self, node: KeywordCall) -> None:  # noqa: N802
+    def visit_KeywordCall(self, node: Statement) -> None:  # noqa: N802
         # TODO  analyze "Set Local/Global/Suite Variable"
 
         for assign_token in node.get_tokens(Token.ASSIGN):
@@ -515,17 +512,17 @@ class Namespace:
         self._resources_matchers: Optional[Dict[KeywordMatcher, ResourceEntry]] = None
         self._variables: OrderedDict[str, VariablesEntry] = OrderedDict()
         self._initialized = False
-        self._initialize_lock = Lock()
+        self._initialize_lock = threading.RLock()
         self._analyzed = False
-        self._analyze_lock = Lock()
+        self._analyze_lock = threading.RLock()
         self._library_doc: Optional[LibraryDoc] = None
-        self._library_doc_lock = Lock()
+        self._library_doc_lock = threading.RLock()
         self._imports: Optional[List[Import]] = None
         self._import_entries: OrderedDict[Import, LibraryEntry] = OrderedDict()
         self._own_variables: Optional[List[VariableDefinition]] = None
-        self._own_variables_lock = Lock()
+        self._own_variables_lock = threading.RLock()
         self._global_variables: Optional[List[VariableDefinition]] = None
-        self._global_variables_lock = Lock()
+        self._global_variables_lock = threading.RLock()
 
         self._diagnostics: List[Diagnostic] = []
         self._keyword_references: Dict[KeywordDoc, Set[Location]] = {}
@@ -534,9 +531,9 @@ class Namespace:
         self._namespace_references: Dict[LibraryEntry, Set[Location]] = {}
 
         self._imported_keywords: Optional[List[KeywordDoc]] = None
-        self._imported_keywords_lock = Lock()
+        self._imported_keywords_lock = threading.RLock()
         self._keywords: Optional[List[KeywordDoc]] = None
-        self._keywords_lock = Lock()
+        self._keywords_lock = threading.RLock()
 
         # TODO: how to get the search order from model
         self.search_order: Tuple[str, ...] = ()
@@ -552,37 +549,37 @@ class Namespace:
 
         self._ignored_lines: Optional[List[int]] = None
 
-    @async_event
-    async def has_invalidated(sender) -> None:  # NOSONAR
+    @event
+    def has_invalidated(sender) -> None:  # NOSONAR
         ...
 
-    @async_event
-    async def has_initialized(sender) -> None:  # NOSONAR
+    @event
+    def has_initialized(sender) -> None:  # NOSONAR
         ...
 
-    @async_event
-    async def has_imports_changed(sender) -> None:  # NOSONAR
+    @event
+    def has_imports_changed(sender) -> None:  # NOSONAR
         ...
 
-    @async_event
-    async def has_analysed(sender) -> None:  # NOSONAR
+    @event
+    def has_analysed(sender) -> None:  # NOSONAR
         ...
 
     @property
     def document(self) -> Optional[TextDocument]:
         return self._document() if self._document is not None else None
 
-    async def imports_changed(self, sender: Any, uri: DocumentUri) -> None:  # NOSONAR
+    def imports_changed(self, sender: Any, uri: DocumentUri) -> None:  # NOSONAR
         if self.document is not None:
             self.document.set_data(Namespace.DataEntry, None)
 
-        await self.invalidate()
+        self.invalidate()
 
     @_logger.call
-    async def libraries_changed(self, sender: Any, libraries: List[LibraryDoc]) -> None:
+    def libraries_changed(self, sender: Any, libraries: List[LibraryDoc]) -> None:
         invalidate = False
 
-        async with self._initialize_lock, self._library_doc_lock, self._analyze_lock:
+        with self._initialize_lock, self._library_doc_lock, self._analyze_lock:
             for p in libraries:
                 if any(e for e in self._libraries.values() if e.library_doc == p):
                     invalidate = True
@@ -592,13 +589,13 @@ class Namespace:
             if self.document is not None:
                 self.document.set_data(Namespace.DataEntry, None)
 
-            await self.invalidate()
+            self.invalidate()
 
     @_logger.call
-    async def resources_changed(self, sender: Any, resources: List[LibraryDoc]) -> None:
+    def resources_changed(self, sender: Any, resources: List[LibraryDoc]) -> None:
         invalidate = False
 
-        async with self._initialize_lock, self._library_doc_lock, self._analyze_lock:
+        with self._initialize_lock, self._library_doc_lock, self._analyze_lock:
             for p in resources:
                 if any(e for e in self._resources.values() if e.library_doc.source == p.source):
                     invalidate = True
@@ -608,13 +605,13 @@ class Namespace:
             if self.document is not None:
                 self.document.set_data(Namespace.DataEntry, None)
 
-            await self.invalidate()
+            self.invalidate()
 
     @_logger.call
-    async def variables_changed(self, sender: Any, variables: List[LibraryDoc]) -> None:
+    def variables_changed(self, sender: Any, variables: List[LibraryDoc]) -> None:
         invalidate = False
 
-        async with self._initialize_lock, self._library_doc_lock, self._analyze_lock:
+        with self._initialize_lock, self._library_doc_lock, self._analyze_lock:
             for p in variables:
                 if any(e for e in self._variables.values() if e.library_doc.source == p.source):
                     invalidate = True
@@ -624,13 +621,13 @@ class Namespace:
             if self.document is not None:
                 self.document.set_data(Namespace.DataEntry, None)
 
-            await self.invalidate()
+            self.invalidate()
 
-    async def is_initialized(self) -> bool:
-        async with self._initialize_lock:
+    def is_initialized(self) -> bool:
+        with self._initialize_lock:
             return self._initialized
 
-    async def _invalidate(self) -> None:
+    def _invalidate(self) -> None:
         self._initialized = False
 
         self._namespaces = None
@@ -654,84 +651,84 @@ class Namespace:
         self._in_initialize = False
         self._ignored_lines = None
 
-        await self._reset_global_variables()
+        self._reset_global_variables()
 
     @_logger.call
-    async def invalidate(self) -> None:
-        async with self._initialize_lock, self._library_doc_lock, self._analyze_lock:
-            await self._invalidate()
-        await self.has_invalidated(self)
+    def invalidate(self) -> None:
+        with self._initialize_lock, self._library_doc_lock, self._analyze_lock:
+            self._invalidate()
+        self.has_invalidated(self)
 
     @_logger.call
-    async def get_diagnostisc(self) -> List[Diagnostic]:
-        await self.ensure_initialized()
+    def get_diagnostisc(self) -> List[Diagnostic]:
+        self.ensure_initialized()
 
-        await self._analyze()
+        self._analyze()
 
         return self._diagnostics
 
     @_logger.call
-    async def get_keyword_references(self) -> Dict[KeywordDoc, Set[Location]]:
-        await self.ensure_initialized()
+    def get_keyword_references(self) -> Dict[KeywordDoc, Set[Location]]:
+        self.ensure_initialized()
 
-        await self._analyze()
+        self._analyze()
 
         return self._keyword_references
 
-    async def get_variable_references(self) -> Dict[VariableDefinition, Set[Location]]:
-        await self.ensure_initialized()
+    def get_variable_references(self) -> Dict[VariableDefinition, Set[Location]]:
+        self.ensure_initialized()
 
-        await self._analyze()
+        self._analyze()
 
         return self._variable_references
 
-    async def get_local_variable_assignments(self) -> Dict[VariableDefinition, Set[Range]]:
-        await self.ensure_initialized()
+    def get_local_variable_assignments(self) -> Dict[VariableDefinition, Set[Range]]:
+        self.ensure_initialized()
 
-        await self._analyze()
+        self._analyze()
 
         return self._local_variable_assignments
 
-    async def get_namespace_references(self) -> Dict[LibraryEntry, Set[Location]]:
-        await self.ensure_initialized()
+    def get_namespace_references(self) -> Dict[LibraryEntry, Set[Location]]:
+        self.ensure_initialized()
 
-        await self._analyze()
+        self._analyze()
 
         return self._namespace_references
 
-    async def get_import_entries(self) -> OrderedDict[Import, LibraryEntry]:
-        await self.ensure_initialized()
+    def get_import_entries(self) -> OrderedDict[Import, LibraryEntry]:
+        self.ensure_initialized()
 
         return self._import_entries
 
-    async def get_libraries(self) -> OrderedDict[str, LibraryEntry]:
-        await self.ensure_initialized()
+    def get_libraries(self) -> OrderedDict[str, LibraryEntry]:
+        self.ensure_initialized()
 
         return self._libraries
 
-    async def get_namespaces(self) -> Dict[KeywordMatcher, List[LibraryEntry]]:
+    def get_namespaces(self) -> Dict[KeywordMatcher, List[LibraryEntry]]:
         if self._namespaces is None:
             self._namespaces = defaultdict(list)
 
-            for v in (await self.get_libraries()).values():
+            for v in (self.get_libraries()).values():
                 self._namespaces[KeywordMatcher(v.alias or v.name or v.import_name, is_namespace=True)].append(v)
-            for v in (await self.get_resources()).values():
+            for v in (self.get_resources()).values():
                 self._namespaces[KeywordMatcher(v.alias or v.name or v.import_name, is_namespace=True)].append(v)
         return self._namespaces
 
-    async def get_resources(self) -> OrderedDict[str, ResourceEntry]:
-        await self.ensure_initialized()
+    def get_resources(self) -> OrderedDict[str, ResourceEntry]:
+        self.ensure_initialized()
 
         return self._resources
 
-    async def get_imported_variables(self) -> OrderedDict[str, VariablesEntry]:
-        await self.ensure_initialized()
+    def get_imported_variables(self) -> OrderedDict[str, VariablesEntry]:
+        self.ensure_initialized()
 
         return self._variables
 
     @_logger.call
-    async def get_library_doc(self) -> LibraryDoc:
-        async with self._library_doc_lock:
+    def get_library_doc(self) -> LibraryDoc:
+        with self._library_doc_lock:
             if self._library_doc is None:
                 self._library_doc = self.imports_manager.get_libdoc_from_model(
                     self.model,
@@ -752,11 +749,11 @@ class Namespace:
         imported_keywords: Optional[List[KeywordDoc]] = None
 
     @_logger.call(condition=lambda self: not self._initialized)
-    async def ensure_initialized(self) -> bool:
+    def ensure_initialized(self) -> bool:
         run_initialize = False
         imports_changed = False
 
-        async with self._initialize_lock:
+        with self._initialize_lock:
             if not self._initialized:
                 if self._in_initialize:
                     self._logger.critical(lambda: f"already initialized {self.document}")
@@ -793,10 +790,10 @@ class Namespace:
                             data_entry.imported_keywords.copy() if data_entry.imported_keywords else None
                         )
                     else:
-                        variables = await self.get_resolvable_variables()
+                        variables = self.get_resolvable_variables()
 
-                        await self._import_default_libraries(variables)
-                        await self._import_imports(
+                        self._import_default_libraries(variables)
+                        self._import_imports(
                             imports, str(Path(self.source).parent), top_level=True, variables=variables
                         )
 
@@ -813,29 +810,26 @@ class Namespace:
                                 ),
                             )
 
-                    await self._reset_global_variables()
+                    self._reset_global_variables()
 
                     self._initialized = True
                     run_initialize = True
 
-                except BaseException as e:
-                    if not isinstance(e, asyncio.CancelledError):
-                        self._logger.exception(e, level=logging.DEBUG)
-
+                except BaseException:
                     if self.document is not None:
                         self.document.remove_data(Namespace)
                         self.document.remove_data(Namespace.DataEntry)
 
-                    await self._invalidate()
+                    self._invalidate()
                     raise
                 finally:
                     self._in_initialize = False
 
         if run_initialize:
-            await self.has_initialized(self)
+            self.has_initialized(self)
 
             if imports_changed:
-                await self.has_imports_changed(self)
+                self.has_imports_changed(self)
 
         return self._initialized
 
@@ -851,8 +845,8 @@ class Namespace:
         return self._imports
 
     @_logger.call
-    async def get_own_variables(self) -> List[VariableDefinition]:
-        async with self._own_variables_lock:
+    def get_own_variables(self) -> List[VariableDefinition]:
+        with self._own_variables_lock:
             if self._own_variables is None:
                 self._own_variables = VariablesVisitor().get(self.source, self.model)
 
@@ -868,20 +862,20 @@ class Namespace:
         return cls._builtin_variables
 
     @_logger.call
-    async def get_command_line_variables(self) -> List[VariableDefinition]:
-        return await self.imports_manager.get_command_line_variables()
+    def get_command_line_variables(self) -> List[VariableDefinition]:
+        return self.imports_manager.get_command_line_variables()
 
-    async def _reset_global_variables(self) -> None:
-        async with self._global_variables_lock:
+    def _reset_global_variables(self) -> None:
+        with self._global_variables_lock:
             self._global_variables = None
 
-    async def get_global_variables(self) -> List[VariableDefinition]:
-        async with self._global_variables_lock:
+    def get_global_variables(self) -> List[VariableDefinition]:
+        with self._global_variables_lock:
             if self._global_variables is None:
                 self._global_variables = list(
                     itertools.chain(
-                        await self.get_command_line_variables(),
-                        await self.get_own_variables(),
+                        self.get_command_line_variables(),
+                        self.get_own_variables(),
                         *(e.variables for e in self._resources.values()),
                         *(e.variables for e in self._variables.values()),
                         self.get_builtin_variables(),
@@ -890,12 +884,12 @@ class Namespace:
 
             return self._global_variables
 
-    async def yield_variables(
+    def yield_variables(
         self,
         nodes: Optional[List[ast.AST]] = None,
         position: Optional[Position] = None,
         skip_commandline_variables: bool = False,
-    ) -> AsyncIterator[Tuple[VariableMatcher, VariableDefinition]]:
+    ) -> Iterator[Tuple[VariableMatcher, VariableDefinition]]:
         yielded: Dict[VariableMatcher, VariableDefinition] = {}
 
         test_or_keyword_nodes = list(
@@ -907,7 +901,7 @@ class Namespace:
             *[
                 (
                     BlockVariableVisitor(
-                        await self.get_library_doc(),
+                        self.get_library_doc(),
                         self.source,
                         position,
                         isinstance(test_or_keyword_nodes[-1], Arguments) if nodes else False,
@@ -916,7 +910,7 @@ class Namespace:
                 if test_or_keyword is not None
                 else []
             ],
-            await self.get_global_variables(),
+            self.get_global_variables(),
         ):
             if var.matcher not in yielded.keys():
                 if skip_commandline_variables and isinstance(var, CommandLineVariableDefinition):
@@ -926,24 +920,24 @@ class Namespace:
 
                 yield var.matcher, var
 
-    async def get_resolvable_variables(
+    def get_resolvable_variables(
         self, nodes: Optional[List[ast.AST]] = None, position: Optional[Position] = None
     ) -> Dict[str, Any]:
         return {
             v.name: v.value
-            async for k, v in self.yield_variables(nodes, position, skip_commandline_variables=True)
+            for k, v in self.yield_variables(nodes, position, skip_commandline_variables=True)
             if v.has_value
         }
 
-    async def get_variable_matchers(
+    def get_variable_matchers(
         self, nodes: Optional[List[ast.AST]] = None, position: Optional[Position] = None
     ) -> Dict[VariableMatcher, VariableDefinition]:
-        await self.ensure_initialized()
+        self.ensure_initialized()
 
-        return {m: v async for m, v in self.yield_variables(nodes, position)}
+        return {m: v for m, v in self.yield_variables(nodes, position)}
 
     @_logger.call
-    async def find_variable(
+    def find_variable(
         self,
         name: str,
         nodes: Optional[List[ast.AST]] = None,
@@ -951,7 +945,7 @@ class Namespace:
         skip_commandline_variables: bool = False,
         ignore_error: bool = False,
     ) -> Optional[VariableDefinition]:
-        await self.ensure_initialized()
+        self.ensure_initialized()
 
         if name[:2] == "%{" and name[-1] == "}":
             var_name, _, default_value = name[2:-1].partition("=")
@@ -962,7 +956,7 @@ class Namespace:
         try:
             matcher = VariableMatcher(name)
 
-            async for m, v in self.yield_variables(
+            for m, v in self.yield_variables(
                 nodes,
                 position,
                 skip_commandline_variables=skip_commandline_variables,
@@ -975,7 +969,7 @@ class Namespace:
 
         return None
 
-    async def _import_imports(
+    def _import_imports(
         self,
         imports: Iterable[Import],
         base_dir: str,
@@ -985,7 +979,7 @@ class Namespace:
         source: Optional[str] = None,
         parent_import: Optional[Import] = None,
     ) -> None:
-        async def _import(
+        def _import(
             value: Import, variables: Optional[Dict[str, Any]] = None
         ) -> Tuple[Optional[LibraryEntry], Optional[Dict[str, Any]]]:
             result: Optional[LibraryEntry] = None
@@ -994,7 +988,7 @@ class Namespace:
                     if value.name is None:
                         raise NameSpaceError("Library setting requires value.")
 
-                    result = await self._get_library_entry(
+                    result = self._get_library_entry(
                         value.name, value.args, value.alias, base_dir, sentinel=value, variables=variables
                     )
                     result.import_range = value.range
@@ -1019,7 +1013,7 @@ class Namespace:
                     if value.name is None:
                         raise NameSpaceError("Resource setting requires value.")
 
-                    source = await self.imports_manager.find_resource(value.name, base_dir, variables=variables)
+                    source = self.imports_manager.find_resource(value.name, base_dir, variables=variables)
 
                     if self.source == source:
                         if parent_import:
@@ -1039,9 +1033,7 @@ class Namespace:
                                 code=Error.POSSIBLE_CIRCULAR_IMPORT,
                             )
                     else:
-                        result = await self._get_resource_entry(
-                            value.name, base_dir, sentinel=value, variables=variables
-                        )
+                        result = self._get_resource_entry(value.name, base_dir, sentinel=value, variables=variables)
                         result.import_range = value.range
                         result.import_source = value.source
 
@@ -1068,7 +1060,7 @@ class Namespace:
                     if value.name is None:
                         raise NameSpaceError("Variables setting requires value.")
 
-                    result = await self._get_variables_entry(
+                    result = self._get_variables_entry(
                         value.name, value.args, base_dir, sentinel=value, variables=variables
                     )
 
@@ -1138,7 +1130,7 @@ class Namespace:
                                 code=err.type_name,
                             )
 
-            except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
+            except (SystemExit, KeyboardInterrupt):
                 raise
             except BaseException as e:
                 if top_level:
@@ -1150,7 +1142,7 @@ class Namespace:
                         code=type(e).__qualname__,
                     )
             finally:
-                await self._reset_global_variables()
+                self._reset_global_variables()
 
             return result, variables
 
@@ -1159,9 +1151,9 @@ class Namespace:
         try:
             for imp in imports:
                 if variables is None:
-                    variables = await self.get_resolvable_variables()
+                    variables = self.get_resolvable_variables()
 
-                entry, variables = await _import(imp, variables=variables)
+                entry, variables = _import(imp, variables=variables)
 
                 if entry is not None:
                     if isinstance(entry, ResourceEntry):
@@ -1174,7 +1166,7 @@ class Namespace:
                         if already_imported_resources is None and entry.library_doc.source != self.source:
                             self._resources[entry.import_name] = entry
                             try:
-                                await self._import_imports(
+                                self._import_imports(
                                     entry.imports,
                                     str(Path(entry.library_doc.source).parent),
                                     top_level=False,
@@ -1182,7 +1174,7 @@ class Namespace:
                                     source=entry.library_doc.source,
                                     parent_import=imp if top_level else parent_import,
                                 )
-                            except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
+                            except (SystemExit, KeyboardInterrupt):
                                 raise
                             except BaseException as e:
                                 if top_level:
@@ -1320,13 +1312,13 @@ class Namespace:
                 f"{self.document if top_level else source} in {time.monotonic() - current_time}s"
             )
 
-    async def _import_default_libraries(self, variables: Optional[Dict[str, Any]] = None) -> None:
-        async def _import_lib(library: str, variables: Optional[Dict[str, Any]] = None) -> Optional[LibraryEntry]:
+    def _import_default_libraries(self, variables: Optional[Dict[str, Any]] = None) -> None:
+        def _import_lib(library: str, variables: Optional[Dict[str, Any]] = None) -> Optional[LibraryEntry]:
             try:
-                return await self._get_library_entry(
+                return self._get_library_entry(
                     library, (), None, str(Path(self.source).parent), is_default_library=True, variables=variables
                 )
-            except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
+            except (SystemExit, KeyboardInterrupt):
                 raise
             except BaseException as e:
                 self.append_diagnostics(
@@ -1341,14 +1333,14 @@ class Namespace:
         self._logger.debug(lambda: f"start import default libraries for document {self.document}")
         try:
             for library in DEFAULT_LIBRARIES:
-                e = await _import_lib(library, variables or await self.get_resolvable_variables())
+                e = _import_lib(library, variables or self.get_resolvable_variables())
                 if e is not None:
                     self._libraries[e.alias or e.name or e.import_name] = e
         finally:
             self._logger.debug(lambda: f"end import default libraries for document {self.document}")
 
     @_logger.call
-    async def _get_library_entry(
+    def _get_library_entry(
         self,
         name: str,
         args: Tuple[Any, ...],
@@ -1359,21 +1351,21 @@ class Namespace:
         sentinel: Any = None,
         variables: Optional[Dict[str, Any]] = None,
     ) -> LibraryEntry:
-        library_doc = await self.imports_manager.get_libdoc_for_library_import(
+        library_doc = self.imports_manager.get_libdoc_for_library_import(
             name,
             args,
             base_dir=base_dir,
             sentinel=None if is_default_library else sentinel,
-            variables=variables or await self.get_resolvable_variables(),
+            variables=variables or self.get_resolvable_variables(),
         )
 
         return LibraryEntry(name=library_doc.name, import_name=name, library_doc=library_doc, args=args, alias=alias)
 
     @_logger.call
-    async def get_imported_library_libdoc(
+    def get_imported_library_libdoc(
         self, name: str, args: Tuple[str, ...] = (), alias: Optional[str] = None
     ) -> Optional[LibraryDoc]:
-        await self.ensure_initialized()
+        self.ensure_initialized()
 
         return next(
             (
@@ -1385,14 +1377,14 @@ class Namespace:
         )
 
     @_logger.call
-    async def _get_resource_entry(
+    def _get_resource_entry(
         self, name: str, base_dir: str, *, sentinel: Any = None, variables: Optional[Dict[str, Any]] = None
     ) -> ResourceEntry:
-        namespace, library_doc = await self.imports_manager.get_namespace_and_libdoc_for_resource_import(
+        namespace, library_doc = self.imports_manager.get_namespace_and_libdoc_for_resource_import(
             name,
             base_dir,
             sentinel=sentinel,
-            variables=variables or await self.get_resolvable_variables(),
+            variables=variables or self.get_resolvable_variables(),
         )
 
         return ResourceEntry(
@@ -1400,12 +1392,12 @@ class Namespace:
             import_name=name,
             library_doc=library_doc,
             imports=namespace.get_imports(),
-            variables=await namespace.get_own_variables(),
+            variables=namespace.get_own_variables(),
         )
 
     @_logger.call
-    async def get_imported_resource_libdoc(self, name: str) -> Optional[LibraryDoc]:
-        await self.ensure_initialized()
+    def get_imported_resource_libdoc(self, name: str) -> Optional[LibraryDoc]:
+        self.ensure_initialized()
 
         return next(
             (
@@ -1417,7 +1409,7 @@ class Namespace:
         )
 
     @_logger.call
-    async def _get_variables_entry(
+    def _get_variables_entry(
         self,
         name: str,
         args: Tuple[Any, ...],
@@ -1426,12 +1418,12 @@ class Namespace:
         sentinel: Any = None,
         variables: Optional[Dict[str, Any]] = None,
     ) -> VariablesEntry:
-        library_doc = await self.imports_manager.get_libdoc_for_variables_import(
+        library_doc = self.imports_manager.get_libdoc_for_variables_import(
             name,
             args,
             base_dir=base_dir,
             sentinel=sentinel,
-            variables=variables or await self.get_resolvable_variables(),
+            variables=variables or self.get_resolvable_variables(),
         )
 
         return VariablesEntry(
@@ -1439,8 +1431,8 @@ class Namespace:
         )
 
     @_logger.call
-    async def get_imported_variables_libdoc(self, name: str, args: Tuple[str, ...] = ()) -> Optional[LibraryDoc]:
-        await self.ensure_initialized()
+    def get_imported_variables_libdoc(self, name: str, args: Tuple[str, ...] = ()) -> Optional[LibraryDoc]:
+        self.ensure_initialized()
 
         return next(
             (
@@ -1451,8 +1443,8 @@ class Namespace:
             None,
         )
 
-    async def get_imported_keywords(self) -> List[KeywordDoc]:
-        async with self._imported_keywords_lock:
+    def get_imported_keywords(self) -> List[KeywordDoc]:
+        with self._imported_keywords_lock:
             if self._imported_keywords is None:
                 self._imported_keywords = list(
                     itertools.chain(
@@ -1464,31 +1456,31 @@ class Namespace:
             return self._imported_keywords
 
     @_logger.call
-    async def iter_all_keywords(self) -> AsyncIterator[KeywordDoc]:
+    def iter_all_keywords(self) -> Iterator[KeywordDoc]:
         import itertools
 
-        libdoc = await self.get_library_doc()
+        libdoc = self.get_library_doc()
 
         for doc in itertools.chain(
-            await self.get_imported_keywords(),
+            self.get_imported_keywords(),
             libdoc.keywords if libdoc is not None else [],
         ):
             yield doc
 
     @_logger.call
-    async def get_keywords(self) -> List[KeywordDoc]:
-        async with self._keywords_lock:
+    def get_keywords(self) -> List[KeywordDoc]:
+        with self._keywords_lock:
             if self._keywords is None:
                 current_time = time.monotonic()
                 self._logger.debug("start collecting keywords")
                 try:
                     i = 0
 
-                    await self.ensure_initialized()
+                    self.ensure_initialized()
 
                     result: Dict[KeywordMatcher, KeywordDoc] = {}
 
-                    async for doc in self.iter_all_keywords():
+                    for doc in self.iter_all_keywords():
                         i += 1
                         result[doc.matcher] = doc
 
@@ -1524,12 +1516,12 @@ class Namespace:
         )
 
     @_logger.call(condition=lambda self: not self._analyzed)
-    async def _analyze(self) -> None:
+    def _analyze(self) -> None:
         import time
 
         from .analyzer import Analyzer
 
-        async with self._analyze_lock:
+        with self._analyze_lock:
             if not self._analyzed:
                 canceled = False
 
@@ -1537,10 +1529,10 @@ class Namespace:
                 start_time = time.monotonic()
 
                 try:
-                    result = await Analyzer(
+                    result = Analyzer(
                         self.model,
                         self,
-                        await self.create_finder(),
+                        self.create_finder(),
                         self.get_ignored_lines(self.document) if self.document is not None else [],
                     ).run()
 
@@ -1550,7 +1542,7 @@ class Namespace:
                     self._local_variable_assignments = result.local_variable_assignments
                     self._namespace_references = result.namespace_references
 
-                    lib_doc = await self.get_library_doc()
+                    lib_doc = self.get_library_doc()
 
                     if lib_doc.errors is not None:
                         for err in lib_doc.errors:
@@ -1570,11 +1562,11 @@ class Namespace:
                                 source=DIAGNOSTICS_SOURCE_NAME,
                                 code=err.type_name,
                             )
-
-                except asyncio.CancelledError:
-                    canceled = True
-                    self._logger.debug("analyzing canceled")
-                    raise
+                # TODO: implement CancelationToken
+                # except asyncio.CancelledError:
+                #     canceled = True
+                #     self._logger.debug("analyzing canceled")
+                #     raise
                 finally:
                     self._analyzed = not canceled
 
@@ -1584,28 +1576,28 @@ class Namespace:
                         else f"end analyzed {self.document} failed in {time.monotonic() - start_time}s"
                     )
 
-                await self.has_analysed(self)
+                self.has_analysed(self)
 
-    async def get_finder(self) -> KeywordFinder:
+    def get_finder(self) -> KeywordFinder:
         if self._finder is None:
-            self._finder = await self.create_finder()
+            self._finder = self.create_finder()
         return self._finder
 
-    async def create_finder(self) -> KeywordFinder:
-        await self.ensure_initialized()
-        return KeywordFinder(self, await self.get_library_doc())
+    def create_finder(self) -> KeywordFinder:
+        self.ensure_initialized()
+        return KeywordFinder(self, self.get_library_doc())
 
     @_logger.call(condition=lambda self, name, **kwargs: self._finder is not None and name not in self._finder._cache)
-    async def find_keyword(
+    def find_keyword(
         self, name: Optional[str], *, raise_keyword_error: bool = True, handle_bdd_style: bool = True
     ) -> Optional[KeywordDoc]:
-        finder = self._finder if self._finder is not None else await self.get_finder()
+        finder = self._finder if self._finder is not None else self.get_finder()
 
         return finder.find_keyword(name, raise_keyword_error=raise_keyword_error, handle_bdd_style=handle_bdd_style)
 
     @classmethod
     def get_ignored_lines(cls, document: TextDocument) -> List[int]:
-        return document.get_cache_sync(cls.__get_ignored_lines)
+        return document.get_cache(cls.__get_ignored_lines)
 
     @staticmethod
     def __get_ignored_lines(document: TextDocument) -> List[int]:

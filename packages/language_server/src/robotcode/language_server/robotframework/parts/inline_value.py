@@ -47,9 +47,9 @@ class RobotInlineValueProtocolPart(RobotLanguageServerProtocolPart, ModelHelperM
 
         # TODO make this configurable
 
-        namespace = await self.parent.documents_cache.get_namespace(document)
+        namespace = self.parent.documents_cache.get_namespace(document)
 
-        model = await self.parent.documents_cache.get_model(document, False)
+        model = self.parent.documents_cache.get_model(document, False)
 
         real_range = Range(range.start, min(range.end, context.stopped_location.end))
 
@@ -73,7 +73,7 @@ class RobotInlineValueProtocolPart(RobotLanguageServerProtocolPart, ModelHelperM
             ),
         ):
             if token.type == RobotToken.ARGUMENT and isinstance(node, self.get_expression_statement_types()):
-                async for t, var in self.iter_expression_variables_from_token(
+                for t, var in self.iter_expression_variables_from_token(
                     token,
                     namespace,
                     nodes,
@@ -82,7 +82,7 @@ class RobotInlineValueProtocolPart(RobotLanguageServerProtocolPart, ModelHelperM
                     if var.name != "${CURDIR}":
                         result.append(InlineValueEvaluatableExpression(range_from_token(t), var.name))
 
-            async for t, var in self.iter_variables_from_token(
+            for t, var in self.iter_variables_from_token(
                 token,
                 namespace,
                 nodes,

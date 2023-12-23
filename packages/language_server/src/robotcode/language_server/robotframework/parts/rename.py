@@ -15,7 +15,6 @@ from typing import (
     cast,
 )
 
-from robotcode.core.async_itertools import async_next
 from robotcode.core.lsp.types import (
     AnnotatedTextEdit,
     ChangeAnnotation,
@@ -84,7 +83,7 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin)
         new_name: str,
     ) -> Optional[WorkspaceEdit]:
         result_nodes = await get_nodes_at_position(
-            await self.parent.documents_cache.get_model(document), position, include_end=True
+            self.parent.documents_cache.get_model(document), position, include_end=True
         )
 
         if not result_nodes:
@@ -113,7 +112,7 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin)
         position: Position,
     ) -> Optional[PrepareRenameResult]:
         result_nodes = await get_nodes_at_position(
-            await self.parent.documents_cache.get_model(document), position, include_end=True
+            self.parent.documents_cache.get_model(document), position, include_end=True
         )
 
         if not result_nodes:
@@ -176,7 +175,7 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin)
         if result is not None:
             var, _ = result
 
-            references = await self.parent.robot_references.find_variable_references(
+            references = self.parent.robot_references.find_variable_references(
                 document,
                 var,
                 include_declaration=var.type
@@ -208,7 +207,7 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin)
     ) -> Optional[Tuple[VariableDefinition, Token]]:
         from robot.parsing.lexer.tokens import Token as RobotToken
 
-        namespace = await self.parent.documents_cache.get_namespace(document)
+        namespace = self.parent.documents_cache.get_namespace(document)
 
         if not nodes:
             return None
@@ -223,10 +222,10 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin)
         token_and_var: Optional[Tuple[VariableDefinition, Token]] = None
 
         for token in tokens:
-            token_and_var = await async_next(
+            token_and_var = next(
                 (
                     (var, var_token)
-                    async for var_token, var in self.iter_variables_from_token(token, namespace, nodes, position)
+                    for var_token, var in self.iter_variables_from_token(token, namespace, nodes, position)
                     if position in range_from_token(var_token)
                 ),
                 None,
@@ -238,12 +237,10 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin)
             and (token := node.get_token(RobotToken.ARGUMENT)) is not None
             and position in range_from_token(token)
         ):
-            token_and_var = await async_next(
+            token_and_var = next(
                 (
                     (var, var_token)
-                    async for var_token, var in self.iter_expression_variables_from_token(
-                        token, namespace, nodes, position
-                    )
+                    for var_token, var in self.iter_expression_variables_from_token(token, namespace, nodes, position)
                     if position in range_from_token(var_token)
                 ),
                 None,
@@ -277,7 +274,7 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin)
         if result is not None:
             kw_doc, _ = result
 
-            references = await self.parent.robot_references.find_keyword_references(
+            references = self.parent.robot_references.find_keyword_references(
                 document, kw_doc, include_declaration=kw_doc.is_resource_keyword
             )
             changes: List[Union[TextDocumentEdit, CreateFile, RenameFile, DeleteFile]] = []
@@ -313,10 +310,10 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin)
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.statements import KeywordCall
 
-        namespace = await self.parent.documents_cache.get_namespace(document)
+        namespace = self.parent.documents_cache.get_namespace(document)
 
         kw_node = cast(KeywordCall, node)
-        result = await self.get_keyworddoc_and_token_from_position(
+        result = self.get_keyworddoc_and_token_from_position(
             kw_node.keyword,
             cast(Token, kw_node.get_token(RobotToken.KEYWORD)),
             [cast(Token, t) for t in kw_node.get_tokens(RobotToken.ARGUMENT)],
@@ -328,7 +325,7 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin)
             keyword_doc, keyword_token = result
 
             if (
-                await namespace.find_keyword(
+                namespace.find_keyword(
                     keyword_token.value,
                     raise_keyword_error=False,
                     handle_bdd_style=False,
@@ -337,7 +334,7 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin)
             ):
                 keyword_token = self.strip_bdd_prefix(namespace, keyword_token)
 
-            lib_entry, kw_namespace = await self.get_namespace_info_from_keyword_token(namespace, keyword_token)
+            lib_entry, kw_namespace = self.get_namespace_info_from_keyword_token(namespace, keyword_token)
 
             kw_range = range_from_token(keyword_token)
 
@@ -385,7 +382,7 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin)
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.statements import KeywordName
 
-        namespace = await self.parent.documents_cache.get_namespace(document)
+        namespace = self.parent.documents_cache.get_namespace(document)
 
         kw_node = cast(KeywordName, node)
 
@@ -394,7 +391,7 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin)
         if not name_token:
             return None
 
-        doc = await namespace.get_library_doc()
+        doc = namespace.get_library_doc()
         if doc is not None:
             keyword = next(
                 (v for v in doc.keywords.keywords if v.name == name_token.value and v.line_no == kw_node.lineno),
@@ -422,7 +419,7 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin)
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.statements import Fixture
 
-        namespace = await self.parent.documents_cache.get_namespace(document)
+        namespace = self.parent.documents_cache.get_namespace(document)
 
         fixture_node = cast(Fixture, node)
 
@@ -430,7 +427,7 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin)
         if name_token is None or name_token.value is None or name_token.value.upper() in ("", "NONE"):
             return None
 
-        result = await self.get_keyworddoc_and_token_from_position(
+        result = self.get_keyworddoc_and_token_from_position(
             fixture_node.name,
             name_token,
             [cast(Token, t) for t in fixture_node.get_tokens(RobotToken.ARGUMENT)],
@@ -442,7 +439,7 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin)
             keyword_doc, keyword_token = result
 
             if (
-                await namespace.find_keyword(
+                namespace.find_keyword(
                     keyword_token.value,
                     raise_keyword_error=False,
                     handle_bdd_style=False,
@@ -451,7 +448,7 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin)
             ):
                 keyword_token = self.strip_bdd_prefix(namespace, keyword_token)
 
-            lib_entry, kw_namespace = await self.get_namespace_info_from_keyword_token(namespace, keyword_token)
+            lib_entry, kw_namespace = self.get_namespace_info_from_keyword_token(namespace, keyword_token)
 
             kw_range = range_from_token(keyword_token)
 
@@ -491,10 +488,10 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin)
             if keyword_token is None or keyword_token.value is None or keyword_token.value.upper() in ("", "NONE"):
                 return None
 
-            namespace = await self.parent.documents_cache.get_namespace(document)
+            namespace = self.parent.documents_cache.get_namespace(document)
 
             if (
-                await namespace.find_keyword(
+                namespace.find_keyword(
                     keyword_token.value,
                     raise_keyword_error=False,
                     handle_bdd_style=False,
@@ -504,13 +501,13 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin)
                 keyword_token = self.strip_bdd_prefix(namespace, keyword_token)
 
             if position.is_in_range(range_from_token(keyword_token), False):
-                keyword_doc = await namespace.find_keyword(template_node.value)
+                keyword_doc = namespace.find_keyword(template_node.value)
 
                 if keyword_doc is not None:
                     (
                         lib_entry,
                         kw_namespace,
-                    ) = await self.get_namespace_info_from_keyword_token(namespace, keyword_token)
+                    ) = self.get_namespace_info_from_keyword_token(namespace, keyword_token)
 
                     kw_range = range_from_token(keyword_token)
 
@@ -608,7 +605,7 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin)
         token = tokens[-1]
 
         if token.type in [RobotToken.ARGUMENT] and token.value:
-            references = await self.parent.robot_references.find_tag_references(document, token.value)
+            references = self.parent.robot_references.find_tag_references(document, token.value)
 
             changes: List[Union[TextDocumentEdit, CreateFile, RenameFile, DeleteFile]] = []
 

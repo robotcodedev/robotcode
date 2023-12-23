@@ -338,7 +338,7 @@ def handle_regtest_result(regtest, result, xfail):
                 # add quotes around lines in diff:
                 current = map(repr, current)
                 tobe = map(repr, tobe)
-            collected = list(difflib.unified_diff(current, tobe, "current", "tobe", lineterm=""))
+            collected = list(difflib.unified_diff(tobe, current, "tobe", "current", lineterm=""))
 
             msg = "\nregression test output differences for {}:\n".format(nodeid)
             msg_diff = ">   " + "\n>   ".join(collected)

@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 import ast
-import asyncio
 import itertools
 import multiprocessing as mp
 import os
 import shutil
 import sys
+import threading
 import weakref
 import zlib
 from abc import ABC, abstractmethod
@@ -18,7 +18,6 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
-    Coroutine,
     Dict,
     List,
     Mapping,
@@ -27,10 +26,10 @@ from typing import (
     final,
 )
 
-from robotcode.core.async_cache import AsyncSimpleLRUCache
-from robotcode.core.async_tools import Lock, async_tasking_event, create_sub_task
+from robotcode.core.event import event
 from robotcode.core.lsp.types import DocumentUri, FileChangeType, FileEvent
 from robotcode.core.uri import Uri
+from robotcode.core.utils.caching import SimpleLRUCache
 from robotcode.core.utils.dataclasses import as_json, from_json
 from robotcode.core.utils.glob_path import Pattern, iter_files
 from robotcode.core.utils.logging import LoggingDescriptor
@@ -106,7 +105,7 @@ class _ImportEntry(ABC):
         self.parent = parent
         self.references: weakref.WeakSet[Any] = weakref.WeakSet()
         self.file_watchers: List[FileWatcherEntry] = []
-        self._lock = Lock()
+        self._lock = threading.RLock()
 
     @staticmethod
     def __remove_filewatcher(workspace: Workspace, entry: FileWatcherEntry) -> None:
@@ -114,7 +113,7 @@ class _ImportEntry(ABC):
 
     def __del__(self) -> None:
         try:
-            if self.file_watchers is not None and asyncio.get_running_loop():
+            if self.file_watchers is not None:
                 for watcher in self.file_watchers:
                     _ImportEntry.__remove_filewatcher(self.parent.parent_protocol.workspace, watcher)
         except RuntimeError:
@@ -127,24 +126,24 @@ class _ImportEntry(ABC):
         self.file_watchers = []
 
     @abstractmethod
-    async def check_file_changed(self, changes: List[FileEvent]) -> Optional[FileChangeType]:
+    def check_file_changed(self, changes: List[FileEvent]) -> Optional[FileChangeType]:
         ...
 
     @final
-    async def invalidate(self) -> None:
-        async with self._lock:
-            await self._invalidate()
+    def invalidate(self) -> None:
+        with self._lock:
+            self._invalidate()
 
     @abstractmethod
-    async def _invalidate(self) -> None:
+    def _invalidate(self) -> None:
         ...
 
     @abstractmethod
-    async def _update(self) -> None:
+    def _update(self) -> None:
         ...
 
     @abstractmethod
-    async def is_valid(self) -> bool:
+    def is_valid(self) -> bool:
         ...
 
 
@@ -156,7 +155,7 @@ class _LibrariesEntry(_ImportEntry):
         args: Tuple[Any, ...],
         working_dir: str,
         base_dir: str,
-        get_libdoc_coroutine: Callable[[str, Tuple[Any, ...], str, str], Coroutine[Any, Any, LibraryDoc]],
+        get_libdoc_coroutine: Callable[[str, Tuple[Any, ...], str, str], LibraryDoc],
         ignore_reference: bool = False,
     ) -> None:
         super().__init__(parent)
@@ -174,8 +173,8 @@ class _LibrariesEntry(_ImportEntry):
             f"args={self.args!r}, file_watchers={self.file_watchers!r}, id={id(self)!r}"
         )
 
-    async def check_file_changed(self, changes: List[FileEvent]) -> Optional[FileChangeType]:
-        async with self._lock:
+    def check_file_changed(self, changes: List[FileEvent]) -> Optional[FileChangeType]:
+        with self._lock:
             if self._lib_doc is None:
                 return None
 
@@ -207,14 +206,14 @@ class _LibrariesEntry(_ImportEntry):
                         and any(path_is_relative_to(path, Path(e).resolve()) for e in self._lib_doc.python_path)
                     )
                 ):
-                    await self._invalidate()
+                    self._invalidate()
 
                     return change.type
 
             return None
 
-    async def _update(self) -> None:
-        self._lib_doc = await self._get_libdoc_coroutine(self.name, self.args, self.working_dir, self.base_dir)
+    def _update(self) -> None:
+        self._lib_doc = self._get_libdoc_coroutine(self.name, self.args, self.working_dir, self.base_dir)
 
         source_or_origin = (
             self._lib_doc.source
@@ -260,21 +259,21 @@ class _LibrariesEntry(_ImportEntry):
                 )
             )
 
-    async def _invalidate(self) -> None:
+    def _invalidate(self) -> None:
         if self._lib_doc is None and len(self.file_watchers) == 0:
             return
 
         self._remove_file_watcher()
         self._lib_doc = None
 
-    async def is_valid(self) -> bool:
-        async with self._lock:
+    def is_valid(self) -> bool:
+        with self._lock:
             return self._lib_doc is not None
 
-    async def get_libdoc(self) -> LibraryDoc:
-        async with self._lock:
+    def get_libdoc(self) -> LibraryDoc:
+        with self._lock:
             if self._lib_doc is None:
-                await self._update()
+                self._update()
 
             assert self._lib_doc is not None
 
@@ -294,7 +293,7 @@ class _ResourcesEntry(_ImportEntry):
         self,
         name: str,
         parent: ImportsManager,
-        get_document_coroutine: Callable[[], Coroutine[Any, Any, TextDocument]],
+        get_document_coroutine: Callable[[], TextDocument],
     ) -> None:
         super().__init__(parent)
         self.name = name
@@ -305,8 +304,8 @@ class _ResourcesEntry(_ImportEntry):
     def __repr__(self) -> str:
         return f"{type(self).__qualname__}(name={self.name!r}, file_watchers={self.file_watchers!r}, id={id(self)!r}"
 
-    async def check_file_changed(self, changes: List[FileEvent]) -> Optional[FileChangeType]:
-        async with self._lock:
+    def check_file_changed(self, changes: List[FileEvent]) -> Optional[FileChangeType]:
+        with self._lock:
             for change in changes:
                 uri = Uri(change.uri)
                 if uri.scheme != "file":
@@ -318,14 +317,14 @@ class _ResourcesEntry(_ImportEntry):
                     and (path.resolve() == self._document.uri.to_path().resolve())
                     or self._document is None
                 ):
-                    await self._invalidate()
+                    self._invalidate()
 
                     return change.type
 
             return None
 
-    async def _update(self) -> None:
-        self._document = await self._get_document_coroutine()
+    def _update(self) -> None:
+        self._document = self._get_document_coroutine()
 
         if self._document._version is None:
             self.file_watchers.append(
@@ -335,7 +334,7 @@ class _ResourcesEntry(_ImportEntry):
                 )
             )
 
-    async def _invalidate(self) -> None:
+    def _invalidate(self) -> None:
         if self._document is None and len(self.file_watchers) == 0:
             return
 
@@ -344,37 +343,37 @@ class _ResourcesEntry(_ImportEntry):
         self._document = None
         self._lib_doc = None
 
-    async def is_valid(self) -> bool:
-        async with self._lock:
+    def is_valid(self) -> bool:
+        with self._lock:
             return self._document is not None
 
-    async def get_document(self) -> TextDocument:
-        async with self._lock:
-            await self._get_document()
+    def get_document(self) -> TextDocument:
+        with self._lock:
+            self._get_document()
 
         assert self._document is not None
 
         return self._document
 
-    async def _get_document(self) -> TextDocument:
+    def _get_document(self) -> TextDocument:
         if self._document is None:
-            await self._update()
+            self._update()
 
         assert self._document is not None
 
         return self._document
 
-    async def get_namespace(self) -> Namespace:
-        async with self._lock:
-            return await self._get_namespace()
+    def get_namespace(self) -> Namespace:
+        with self._lock:
+            return self._get_namespace()
 
-    async def _get_namespace(self) -> Namespace:
-        return await self.parent.parent_protocol.documents_cache.get_resource_namespace(await self._get_document())
+    def _get_namespace(self) -> Namespace:
+        return self.parent.parent_protocol.documents_cache.get_resource_namespace(self._get_document())
 
-    async def get_libdoc(self) -> LibraryDoc:
-        async with self._lock:
+    def get_libdoc(self) -> LibraryDoc:
+        with self._lock:
             if self._lib_doc is None:
-                self._lib_doc = await (await self._get_namespace()).get_library_doc()
+                self._lib_doc = self._get_namespace().get_library_doc()
 
             return self._lib_doc
 
@@ -396,7 +395,7 @@ class _VariablesEntry(_ImportEntry):
         working_dir: str,
         base_dir: str,
         parent: ImportsManager,
-        get_variables_doc_coroutine: Callable[[str, Tuple[Any, ...], str, str], Coroutine[Any, Any, VariablesDoc]],
+        get_variables_doc_coroutine: Callable[[str, Tuple[Any, ...], str, str], VariablesDoc],
     ) -> None:
         super().__init__(parent)
         self.name = name
@@ -412,8 +411,8 @@ class _VariablesEntry(_ImportEntry):
             f"args={self.args!r}, file_watchers={self.file_watchers!r}, id={id(self)!r}"
         )
 
-    async def check_file_changed(self, changes: List[FileEvent]) -> Optional[FileChangeType]:
-        async with self._lock:
+    def check_file_changed(self, changes: List[FileEvent]) -> Optional[FileChangeType]:
+        with self._lock:
             if self._lib_doc is None:
                 return None
 
@@ -424,14 +423,14 @@ class _VariablesEntry(_ImportEntry):
 
                 path = uri.to_path()
                 if self._lib_doc.source and path.exists() and path.samefile(Path(self._lib_doc.source)):
-                    await self._invalidate()
+                    self._invalidate()
 
                     return change.type
 
             return None
 
-    async def _update(self) -> None:
-        self._lib_doc = await self._get_variables_doc_coroutine(self.name, self.args, self.working_dir, self.base_dir)
+    def _update(self) -> None:
+        self._lib_doc = self._get_variables_doc_coroutine(self.name, self.args, self.working_dir, self.base_dir)
 
         if self._lib_doc is not None:
             self.file_watchers.append(
@@ -441,7 +440,7 @@ class _VariablesEntry(_ImportEntry):
                 )
             )
 
-    async def _invalidate(self) -> None:
+    def _invalidate(self) -> None:
         if self._lib_doc is None and len(self.file_watchers) == 0:
             return
 
@@ -449,14 +448,14 @@ class _VariablesEntry(_ImportEntry):
 
         self._lib_doc = None
 
-    async def is_valid(self) -> bool:
-        async with self._lock:
+    def is_valid(self) -> bool:
+        with self._lock:
             return self._lib_doc is not None
 
-    async def get_libdoc(self) -> VariablesDoc:
-        async with self._lock:
+    def get_libdoc(self) -> VariablesDoc:
+        with self._lock:
             if self._lib_doc is None:
-                await self._update()
+                self._update()
 
             assert self._lib_doc is not None
 
@@ -526,28 +525,38 @@ class ImportsManager:
 
         self.ignored_libraries_patters = [Pattern(s) for s in config.analysis.cache.ignored_libraries]
         self.ignored_variables_patters = [Pattern(s) for s in config.analysis.cache.ignored_variables]
-        self._libaries_lock = Lock()
+        self._libaries_lock = threading.RLock()
         self._libaries: OrderedDict[_LibrariesEntryKey, _LibrariesEntry] = OrderedDict()
-        self._resources_lock = Lock()
+        self._resources_lock = threading.RLock()
         self._resources: OrderedDict[_ResourcesEntryKey, _ResourcesEntry] = OrderedDict()
-        self._variables_lock = Lock()
+        self._variables_lock = threading.RLock()
         self._variables: OrderedDict[_VariablesEntryKey, _VariablesEntry] = OrderedDict()
         self.file_watchers: List[FileWatcherEntry] = []
         self.parent_protocol.documents.did_create_uri.add(self._do_imports_changed)
         self.parent_protocol.documents.did_change.add(self.resource_document_changed)
         self._command_line_variables: Optional[List[VariableDefinition]] = None
-        self._command_line_variables_lock = Lock()
+        self._command_line_variables_lock = threading.RLock()
         self._resolvable_command_line_variables: Optional[Dict[str, Any]] = None
-        self._resolvable_command_line_variables_lock = Lock()
+        self._resolvable_command_line_variables_lock = threading.RLock()
 
         self._environment = dict(os.environ)
         if self.parent_protocol.profile.env:
             self._environment.update(self.parent_protocol.profile.env)
         self._environment.update(self.config.robot.env)
 
-        self._library_files_cache = AsyncSimpleLRUCache()
-        self._resource_files_cache = AsyncSimpleLRUCache()
-        self._variables_files_cache = AsyncSimpleLRUCache()
+        self._library_files_cache = SimpleLRUCache()
+        self._resource_files_cache = SimpleLRUCache()
+        self._variables_files_cache = SimpleLRUCache()
+
+        self._executor_lock = threading.RLock()
+        self._executor: Optional[ProcessPoolExecutor] = None
+
+    def __del__(self) -> None:
+        try:
+            if self._executor is not None:
+                self._executor.shutdown(wait=False)
+        except RuntimeError:
+            pass
 
     @property
     def environment(self) -> Mapping[str, str]:
@@ -559,10 +568,10 @@ class ImportsManager:
             self._logger.debug(lambda: f"Cleared cache {self.cache_path}")
 
     @_logger.call
-    async def get_command_line_variables(self) -> List[VariableDefinition]:
+    def get_command_line_variables(self) -> List[VariableDefinition]:
         from robot.utils.text import split_args_from_name_or_path
 
-        async with self._command_line_variables_lock:
+        with self._command_line_variables_lock:
             if self._command_line_variables is None:
                 command_line_vars: List[VariableDefinition] = []
 
@@ -580,7 +589,7 @@ class ImportsManager:
                 ]:
                     name, args = split_args_from_name_or_path(str(variable_file))
                     try:
-                        lib_doc = await self.get_libdoc_for_variables_import(
+                        lib_doc = self.get_libdoc_for_variables_import(
                             name.replace("\\", "\\\\"),
                             tuple(args),
                             str(self.folder.to_path()),
@@ -612,7 +621,7 @@ class ImportsManager:
                                     self._logger.error(
                                         lambda: f"{error.type_name}: {error.message} in {error.source}:{error.line_no}"
                                     )
-                    except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
+                    except (SystemExit, KeyboardInterrupt):
                         raise
                     except BaseException as e:
                         # TODO add diagnostics
@@ -622,57 +631,55 @@ class ImportsManager:
 
             return self._command_line_variables or []
 
-    async def get_resolvable_command_line_variables(self) -> Dict[str, Any]:
-        async with self._resolvable_command_line_variables_lock:
+    def get_resolvable_command_line_variables(self) -> Dict[str, Any]:
+        with self._resolvable_command_line_variables_lock:
             if self._resolvable_command_line_variables is None:
                 self._resolvable_command_line_variables = {
-                    v.name: v.value for v in (await self.get_command_line_variables()) if v.has_value
+                    v.name: v.value for v in (self.get_command_line_variables()) if v.has_value
                 }
 
             return self._resolvable_command_line_variables
 
-    @async_tasking_event
-    async def libraries_changed(sender, libraries: List[LibraryDoc]) -> None:  # NOSONAR
+    @event
+    def libraries_changed(sender, libraries: List[LibraryDoc]) -> None:  # NOSONAR
         ...
 
-    @async_tasking_event
-    async def resources_changed(sender, resources: List[LibraryDoc]) -> None:  # NOSONAR
+    @event
+    def resources_changed(sender, resources: List[LibraryDoc]) -> None:  # NOSONAR
         ...
 
-    @async_tasking_event
-    async def variables_changed(sender, variables: List[LibraryDoc]) -> None:  # NOSONAR
+    @event
+    def variables_changed(sender, variables: List[LibraryDoc]) -> None:  # NOSONAR
         ...
 
-    @async_tasking_event
-    async def imports_changed(sender, uri: DocumentUri) -> None:  # NOSONAR
+    @event
+    def imports_changed(sender, uri: DocumentUri) -> None:  # NOSONAR
         ...
 
     def _do_imports_changed(self, sender: Any, uri: DocumentUri) -> None:  # NOSONAR
-        create_sub_task(self.imports_changed(self, uri), loop=self.parent_protocol.diagnostics.diagnostics_loop)
+        self.imports_changed(self, uri)
 
     @language_id("robotframework")
     def resource_document_changed(self, sender: Any, document: TextDocument) -> None:
-        create_sub_task(
-            self.__resource_document_changed(document), loop=self.parent_protocol.diagnostics.diagnostics_loop
-        )
+        self.__resource_document_changed(document)
 
-    async def __resource_document_changed(self, document: TextDocument) -> None:
+    def __resource_document_changed(self, document: TextDocument) -> None:
         resource_changed: List[LibraryDoc] = []
 
-        async with self._resources_lock:
+        with self._resources_lock:
             for r_entry in self._resources.values():
                 lib_doc: Optional[LibraryDoc] = None
                 try:
-                    if not await r_entry.is_valid():
+                    if not r_entry.is_valid():
                         continue
 
-                    uri = (await r_entry.get_document()).uri
+                    uri = r_entry.get_document().uri
                     result = uri == document.uri
                     if result:
-                        lib_doc = await r_entry.get_libdoc()
-                        await r_entry.invalidate()
+                        lib_doc = r_entry.get_libdoc()
+                        r_entry.invalidate()
 
-                except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
+                except (SystemExit, KeyboardInterrupt):
                     raise
                 except BaseException:
                     result = True
@@ -681,44 +688,44 @@ class ImportsManager:
                     resource_changed.append(lib_doc)
 
         if resource_changed:
-            await self.resources_changed(self, resource_changed)
+            self.resources_changed(self, resource_changed)
 
     @_logger.call
-    async def did_change_watched_files(self, sender: Any, changes: List[FileEvent]) -> None:
+    def did_change_watched_files(self, sender: Any, changes: List[FileEvent]) -> None:
         libraries_changed: List[Tuple[_LibrariesEntryKey, FileChangeType, Optional[LibraryDoc]]] = []
         resource_changed: List[Tuple[_ResourcesEntryKey, FileChangeType, Optional[LibraryDoc]]] = []
         variables_changed: List[Tuple[_VariablesEntryKey, FileChangeType, Optional[LibraryDoc]]] = []
 
         lib_doc: Optional[LibraryDoc]
 
-        async with self._libaries_lock:
+        with self._libaries_lock:
             for l_key, l_entry in self._libaries.items():
                 lib_doc = None
-                if await l_entry.is_valid():
-                    lib_doc = await l_entry.get_libdoc()
-                result = await l_entry.check_file_changed(changes)
+                if l_entry.is_valid():
+                    lib_doc = l_entry.get_libdoc()
+                result = l_entry.check_file_changed(changes)
                 if result is not None:
                     libraries_changed.append((l_key, result, lib_doc))
 
         try:
-            async with self._resources_lock:
+            with self._resources_lock:
                 for r_key, r_entry in self._resources.items():
                     lib_doc = None
-                    if await r_entry.is_valid():
-                        lib_doc = await r_entry.get_libdoc()
-                    result = await r_entry.check_file_changed(changes)
+                    if r_entry.is_valid():
+                        lib_doc = r_entry.get_libdoc()
+                    result = r_entry.check_file_changed(changes)
                     if result is not None:
                         resource_changed.append((r_key, result, lib_doc))
         except BaseException as e:
             self._logger.exception(e)
             raise
 
-        async with self._variables_lock:
+        with self._variables_lock:
             for v_key, v_entry in self._variables.items():
                 lib_doc = None
-                if await v_entry.is_valid():
-                    lib_doc = await v_entry.get_libdoc()
-                result = await v_entry.check_file_changed(changes)
+                if v_entry.is_valid():
+                    lib_doc = v_entry.get_libdoc()
+                result = v_entry.check_file_changed(changes)
                 if result is not None:
                     variables_changed.append((v_key, result, lib_doc))
 
@@ -727,103 +734,77 @@ class ImportsManager:
                 if t == FileChangeType.DELETED:
                     self.__remove_library_entry(l, self._libaries[l], True)
 
-            await self.libraries_changed(self, [v for (_, _, v) in libraries_changed if v is not None])
+            self.libraries_changed(self, [v for (_, _, v) in libraries_changed if v is not None])
 
         if resource_changed:
             for r, t, _ in resource_changed:
                 if t == FileChangeType.DELETED:
                     self.__remove_resource_entry(r, self._resources[r], True)
 
-            await self.resources_changed(self, [v for (_, _, v) in resource_changed if v is not None])
+            self.resources_changed(self, [v for (_, _, v) in resource_changed if v is not None])
 
         if variables_changed:
             for v, t, _ in variables_changed:
                 if t == FileChangeType.DELETED:
                     self.__remove_variables_entry(v, self._variables[v], True)
 
-            await self.variables_changed(self, [v for (_, _, v) in variables_changed if v is not None])
+            self.variables_changed(self, [v for (_, _, v) in variables_changed if v is not None])
 
     def __remove_library_entry(self, entry_key: _LibrariesEntryKey, entry: _LibrariesEntry, now: bool = False) -> None:
-        async def remove(k: _LibrariesEntryKey, e: _LibrariesEntry) -> None:
-            try:
-                if len(e.references) == 0 or now:
-                    self._logger.debug(lambda: f"Remove Library Entry {k}")
-                    async with self._libaries_lock:
-                        if len(e.references) == 0:
-                            e1 = self._libaries.get(k, None)
-                            if e1 == e:
-                                self._libaries.pop(k, None)
-
-                                await e.invalidate()
-                    self._logger.debug(lambda: f"Library Entry {k} removed")
-            finally:
-                await self._library_files_cache.clear()
-
         try:
-            if asyncio.get_running_loop():
-                create_sub_task(remove(entry_key, entry))
-        except RuntimeError:
-            pass
+            if len(entry.references) == 0 or now:
+                self._logger.debug(lambda: f"Remove Library Entry {entry_key}")
+                with self._libaries_lock:
+                    if len(entry.references) == 0:
+                        e1 = self._libaries.get(entry_key, None)
+                        if e1 == entry:
+                            self._libaries.pop(entry_key, None)
+
+                            entry.invalidate()
+                self._logger.debug(lambda: f"Library Entry {entry_key} removed")
+        finally:
+            self._library_files_cache.clear()
 
     def __remove_resource_entry(self, entry_key: _ResourcesEntryKey, entry: _ResourcesEntry, now: bool = False) -> None:
-        async def remove(k: _ResourcesEntryKey, e: _ResourcesEntry) -> None:
-            try:
-                if len(e.references) == 0 or now:
-                    self._logger.debug(lambda: f"Remove Resource Entry {k}")
-                    async with self._resources_lock:
-                        if len(e.references) == 0 or now:
-                            e1 = self._resources.get(k, None)
-                            if e1 == e:
-                                self._resources.pop(k, None)
-
-                                await e.invalidate()
-                    self._logger.debug(lambda: f"Resource Entry {k} removed")
-            finally:
-                await self._resource_files_cache.clear()
-
         try:
-            if asyncio.get_running_loop():
-                create_sub_task(remove(entry_key, entry))
+            if len(entry.references) == 0 or now:
+                self._logger.debug(lambda: f"Remove Resource Entry {entry_key}")
+                with self._resources_lock:
+                    if len(entry.references) == 0 or now:
+                        e1 = self._resources.get(entry_key, None)
+                        if e1 == entry:
+                            self._resources.pop(entry_key, None)
 
-        except RuntimeError:
-            pass
+                            entry.invalidate()
+                self._logger.debug(lambda: f"Resource Entry {entry_key} removed")
+        finally:
+            self._resource_files_cache.clear()
 
     def __remove_variables_entry(
         self, entry_key: _VariablesEntryKey, entry: _VariablesEntry, now: bool = False
     ) -> None:
-        async def remove(k: _VariablesEntryKey, e: _VariablesEntry) -> None:
-            try:
-                if len(e.references) == 0 or now:
-                    self._logger.debug(lambda: f"Remove Variables Entry {k}")
-                    async with self._variables_lock:
-                        if len(e.references) == 0:
-                            e1 = self._variables.get(k, None)
-                            if e1 == e:
-                                self._variables.pop(k, None)
-
-                                await e.invalidate()
-                    self._logger.debug(lambda: f"Variables Entry {k} removed")
-            finally:
-                await self._variables_files_cache.clear()
-
         try:
-            if asyncio.get_running_loop():
-                create_sub_task(remove(entry_key, entry))
-        except RuntimeError:
-            pass
+            if len(entry.references) == 0 or now:
+                self._logger.debug(lambda: f"Remove Variables Entry {entry_key}")
+                with self._variables_lock:
+                    if len(entry.references) == 0:
+                        e1 = self._variables.get(entry_key, None)
+                        if e1 == entry:
+                            self._variables.pop(entry_key, None)
 
-    async def get_library_meta(
+                            entry.invalidate()
+                self._logger.debug(lambda: f"Variables Entry {entry_key} removed")
+        finally:
+            self._variables_files_cache.clear()
+
+    def get_library_meta(
         self,
         name: str,
         base_dir: str = ".",
         variables: Optional[Dict[str, Optional[Any]]] = None,
     ) -> Tuple[Optional[LibraryMetaData], str]:
         try:
-            import_name = await self.find_library(
-                name,
-                base_dir=base_dir,
-                variables=variables,
-            )
+            import_name = self.find_library(name, base_dir=base_dir, variables=variables)
 
             result: Optional[LibraryMetaData] = None
             module_spec: Optional[ModuleSpec] = None
@@ -877,7 +858,7 @@ class ImportsManager:
 
         return None, import_name
 
-    async def get_variables_meta(
+    def get_variables_meta(
         self,
         name: str,
         base_dir: str = ".",
@@ -886,7 +867,7 @@ class ImportsManager:
         resolve_command_line_vars: bool = True,
     ) -> Tuple[Optional[LibraryMetaData], str]:
         try:
-            import_name = await self.find_variables(
+            import_name = self.find_variables(
                 name,
                 base_dir=base_dir,
                 variables=variables,
@@ -946,10 +927,10 @@ class ImportsManager:
 
         return None, name
 
-    async def find_library(self, name: str, base_dir: str, variables: Optional[Dict[str, Any]] = None) -> str:
-        return await self._library_files_cache.get(self._find_library, name, base_dir, variables)
+    def find_library(self, name: str, base_dir: str, variables: Optional[Dict[str, Any]] = None) -> str:
+        return self._library_files_cache.get(self._find_library, name, base_dir, variables)
 
-    async def _find_library(self, name: str, base_dir: str, variables: Optional[Dict[str, Any]] = None) -> str:
+    def _find_library(self, name: str, base_dir: str, variables: Optional[Dict[str, Any]] = None) -> str:
         from robot.libraries import STDLIBS
         from robot.variables.search import contains_variable
 
@@ -958,7 +939,7 @@ class ImportsManager:
                 name,
                 str(self.folder.to_path()),
                 base_dir,
-                await self.get_resolvable_command_line_variables(),
+                self.get_resolvable_command_line_variables(),
                 variables,
             )
 
@@ -972,13 +953,13 @@ class ImportsManager:
 
         return result
 
-    async def find_resource(
+    def find_resource(
         self, name: str, base_dir: str, file_type: str = "Resource", variables: Optional[Dict[str, Any]] = None
     ) -> str:
-        return await self._resource_files_cache.get(self.__find_resource, name, base_dir, file_type, variables)
+        return self._resource_files_cache.get(self.__find_resource, name, base_dir, file_type, variables)
 
     @_logger.call
-    async def __find_resource(
+    def __find_resource(
         self, name: str, base_dir: str, file_type: str = "Resource", variables: Optional[Dict[str, Any]] = None
     ) -> str:
         from robot.variables.search import contains_variable
@@ -988,14 +969,14 @@ class ImportsManager:
                 name,
                 str(self.folder.to_path()),
                 base_dir,
-                await self.get_resolvable_command_line_variables(),
+                self.get_resolvable_command_line_variables(),
                 variables,
                 file_type,
             )
 
         return str(find_file_ex(name, base_dir, file_type))
 
-    async def find_variables(
+    def find_variables(
         self,
         name: str,
         base_dir: str,
@@ -1003,12 +984,12 @@ class ImportsManager:
         resolve_variables: bool = True,
         resolve_command_line_vars: bool = True,
     ) -> str:
-        return await self._variables_files_cache.get(
+        return self._variables_files_cache.get(
             self.__find_variables, name, base_dir, variables, resolve_command_line_vars
         )
 
     @_logger.call
-    async def __find_variables(
+    def __find_variables(
         self,
         name: str,
         base_dir: str,
@@ -1023,7 +1004,7 @@ class ImportsManager:
                 name,
                 str(self.folder.to_path()),
                 base_dir,
-                await self.get_resolvable_command_line_variables() if resolve_command_line_vars else None,
+                self.get_resolvable_command_line_variables() if resolve_command_line_vars else None,
                 variables,
             )
 
@@ -1035,8 +1016,16 @@ class ImportsManager:
 
         return str(find_file_ex(name, base_dir, "Variables"))
 
+    @property
+    def executor(self) -> ProcessPoolExecutor:
+        with self._executor_lock:
+            if self._executor is None:
+                self._executor = ProcessPoolExecutor(mp_context=mp.get_context("spawn"))
+
+        return self._executor
+
     @_logger.call
-    async def get_libdoc_for_library_import(
+    def get_libdoc_for_library_import(
         self,
         name: str,
         args: Tuple[Any, ...],
@@ -1044,18 +1033,14 @@ class ImportsManager:
         sentinel: Any = None,
         variables: Optional[Dict[str, Any]] = None,
     ) -> LibraryDoc:
-        source = await self.find_library(
+        source = self.find_library(
             name,
             base_dir,
             variables,
         )
 
-        async def _get_libdoc(name: str, args: Tuple[Any, ...], working_dir: str, base_dir: str) -> LibraryDoc:
-            meta, source = await self.get_library_meta(
-                name,
-                base_dir,
-                variables,
-            )
+        def _get_libdoc(name: str, args: Tuple[Any, ...], working_dir: str, base_dir: str) -> LibraryDoc:
+            meta, source = self.get_library_meta(name, base_dir, variables)
 
             self._logger.debug(lambda: f"Load Library {source}{args!r}")
 
@@ -1091,23 +1076,11 @@ class ImportsManager:
                     args,
                     working_dir,
                     base_dir,
-                    await self.get_resolvable_command_line_variables(),
+                    self.get_resolvable_command_line_variables(),
                     variables,
                 ).result(LOAD_LIBRARY_TIME_OUT)
-                # result = await asyncio.wait_for(
-                #     asyncio.get_running_loop().run_in_executor(
-                #         executor,
-                #         get_library_doc,
-                #         name,
-                #         args,
-                #         working_dir,
-                #         base_dir,
-                #         await self.get_resolvable_command_line_variables(),
-                #         variables,
-                #     ),
-                #     LOAD_LIBRARY_TIME_OUT,
-                # )
-            except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
+
+            except (SystemExit, KeyboardInterrupt):
                 raise
             except BaseException as e:
                 self._logger.exception(e)
@@ -1144,12 +1117,12 @@ class ImportsManager:
             args,
             str(self.folder.to_path()),
             base_dir,
-            await self.get_resolvable_command_line_variables(),
+            self.get_resolvable_command_line_variables(),
             variables,
         )
         entry_key = _LibrariesEntryKey(source, resolved_args)
 
-        async with self._libaries_lock:
+        with self._libaries_lock:
             if entry_key not in self._libaries:
                 self._libaries[entry_key] = _LibrariesEntry(
                     self,
@@ -1167,7 +1140,7 @@ class ImportsManager:
             entry.references.add(sentinel)
             weakref.finalize(sentinel, self.__remove_library_entry, entry_key, entry)
 
-        return await entry.get_libdoc()
+        return entry.get_libdoc()
 
     @_logger.call
     def get_libdoc_from_model(
@@ -1183,7 +1156,7 @@ class ImportsManager:
         )
 
     @_logger.call
-    async def get_libdoc_for_variables_import(
+    def get_libdoc_for_variables_import(
         self,
         name: str,
         args: Tuple[Any, ...],
@@ -1193,7 +1166,7 @@ class ImportsManager:
         resolve_variables: bool = True,
         resolve_command_line_vars: bool = True,
     ) -> VariablesDoc:
-        source = await self.find_variables(
+        source = self.find_variables(
             name,
             base_dir,
             variables,
@@ -1201,8 +1174,8 @@ class ImportsManager:
             resolve_command_line_vars=resolve_command_line_vars,
         )
 
-        async def _get_libdoc(name: str, args: Tuple[Any, ...], working_dir: str, base_dir: str) -> VariablesDoc:
-            meta, source = await self.get_variables_meta(
+        def _get_libdoc(name: str, args: Tuple[Any, ...], working_dir: str, base_dir: str) -> VariablesDoc:
+            meta, source = self.get_variables_meta(
                 name,
                 base_dir,
                 variables,
@@ -1236,20 +1209,16 @@ class ImportsManager:
 
             executor = ProcessPoolExecutor(max_workers=1, mp_context=mp.get_context("spawn"))
             try:
-                result = await asyncio.wait_for(
-                    asyncio.get_running_loop().run_in_executor(
-                        executor,
-                        get_variables_doc,
-                        name,
-                        args,
-                        str(self.folder.to_path()),
-                        base_dir,
-                        await self.get_resolvable_command_line_variables() if resolve_command_line_vars else None,
-                        variables,
-                    ),
-                    LOAD_LIBRARY_TIME_OUT,
-                )
-            except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
+                result = executor.submit(
+                    get_variables_doc,
+                    name,
+                    args,
+                    str(self.folder.to_path()),
+                    base_dir,
+                    self.get_resolvable_command_line_variables() if resolve_command_line_vars else None,
+                    variables,
+                ).result(LOAD_LIBRARY_TIME_OUT)
+            except (SystemExit, KeyboardInterrupt):
                 raise
             except BaseException as e:
                 self._logger.exception(e)
@@ -1286,12 +1255,12 @@ class ImportsManager:
             args,
             str(self.folder.to_path()),
             base_dir,
-            await self.get_resolvable_command_line_variables() if resolve_command_line_vars else None,
+            self.get_resolvable_command_line_variables() if resolve_command_line_vars else None,
             variables,
         )
         entry_key = _VariablesEntryKey(source, resolved_args)
 
-        async with self._variables_lock:
+        with self._variables_lock:
             if entry_key not in self._variables:
                 self._variables[entry_key] = _VariablesEntry(
                     name, resolved_args, str(self.folder.to_path()), base_dir, self, _get_libdoc
@@ -1303,15 +1272,15 @@ class ImportsManager:
             entry.references.add(sentinel)
             weakref.finalize(sentinel, self.__remove_variables_entry, entry_key, entry)
 
-        return await entry.get_libdoc()
+        return entry.get_libdoc()
 
     @_logger.call
-    async def _get_entry_for_resource_import(
+    def _get_entry_for_resource_import(
         self, name: str, base_dir: str, sentinel: Any = None, variables: Optional[Dict[str, Any]] = None
     ) -> _ResourcesEntry:
-        source = await self.find_resource(name, base_dir, variables=variables)
+        source = self.find_resource(name, base_dir, variables=variables)
 
-        async def _get_document() -> TextDocument:
+        def _get_document() -> TextDocument:
             self._logger.debug(lambda: f"Load resource {name} from source {source}")
 
             source_path = Path(source).resolve()
@@ -1326,7 +1295,7 @@ class ImportsManager:
 
         entry_key = _ResourcesEntryKey(source)
 
-        async with self._resources_lock:
+        with self._resources_lock:
             if entry_key not in self._resources:
                 self._resources[entry_key] = _ResourcesEntry(name, self, _get_document)
 
@@ -1338,73 +1307,73 @@ class ImportsManager:
 
         return entry
 
-    async def get_namespace_and_libdoc_for_resource_import(
+    def get_namespace_and_libdoc_for_resource_import(
         self,
         name: str,
         base_dir: str,
         sentinel: Any = None,
         variables: Optional[Dict[str, Any]] = None,
     ) -> Tuple["Namespace", LibraryDoc]:
-        entry = await self._get_entry_for_resource_import(name, base_dir, sentinel, variables)
+        entry = self._get_entry_for_resource_import(name, base_dir, sentinel, variables)
 
-        return await entry.get_namespace(), await entry.get_libdoc()
+        return entry.get_namespace(), entry.get_libdoc()
 
-    async def get_namespace_for_resource_import(
+    def get_namespace_for_resource_import(
         self,
         name: str,
         base_dir: str,
         sentinel: Any = None,
         variables: Optional[Dict[str, Any]] = None,
     ) -> "Namespace":
-        entry = await self._get_entry_for_resource_import(name, base_dir, sentinel, variables)
+        entry = self._get_entry_for_resource_import(name, base_dir, sentinel, variables)
 
-        return await entry.get_namespace()
+        return entry.get_namespace()
 
-    async def get_libdoc_for_resource_import(
+    def get_libdoc_for_resource_import(
         self, name: str, base_dir: str, sentinel: Any = None, variables: Optional[Dict[str, Any]] = None
     ) -> LibraryDoc:
-        entry = await self._get_entry_for_resource_import(name, base_dir, sentinel, variables)
+        entry = self._get_entry_for_resource_import(name, base_dir, sentinel, variables)
 
-        return await entry.get_libdoc()
+        return entry.get_libdoc()
 
-    async def complete_library_import(
+    def complete_library_import(
         self, name: Optional[str], base_dir: str = ".", variables: Optional[Dict[str, Any]] = None
     ) -> List[CompleteResult]:
         return complete_library_import(
             name,
             str(self.folder.to_path()),
             base_dir,
-            await self.get_resolvable_command_line_variables(),
+            self.get_resolvable_command_line_variables(),
             variables,
         )
 
-    async def complete_resource_import(
+    def complete_resource_import(
         self, name: Optional[str], base_dir: str = ".", variables: Optional[Dict[str, Any]] = None
     ) -> Optional[List[CompleteResult]]:
         return complete_resource_import(
             name,
             str(self.folder.to_path()),
             base_dir,
-            await self.get_resolvable_command_line_variables(),
+            self.get_resolvable_command_line_variables(),
             variables,
         )
 
-    async def complete_variables_import(
+    def complete_variables_import(
         self, name: Optional[str], base_dir: str = ".", variables: Optional[Dict[str, Any]] = None
     ) -> Optional[List[CompleteResult]]:
         return complete_variables_import(
             name,
             str(self.folder.to_path()),
             base_dir,
-            await self.get_resolvable_command_line_variables(),
+            self.get_resolvable_command_line_variables(),
             variables,
         )
 
-    async def resolve_variable(self, name: str, base_dir: str = ".", variables: Optional[Dict[str, Any]] = None) -> Any:
+    def resolve_variable(self, name: str, base_dir: str = ".", variables: Optional[Dict[str, Any]] = None) -> Any:
         return resolve_variable(
             name,
             str(self.folder.to_path()),
             base_dir,
-            await self.get_resolvable_command_line_variables(),
+            self.get_resolvable_command_line_variables(),
             variables,
         )

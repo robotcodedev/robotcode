@@ -160,8 +160,8 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
 
     @language_id("robotframework")
     @_logger.call
-    async def namespace_invalidated(self, sender: Any, namespace: Namespace) -> None:
-        await self.parent.semantic_tokens.refresh()
+    def namespace_invalidated(self, sender: Any, namespace: Namespace) -> None:
+        self.parent.semantic_tokens.refresh()
 
     @classmethod
     def generate_mapping(cls) -> Dict[str, Tuple[Enum, Optional[Set[Enum]]]]:
@@ -320,7 +320,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
             elif token.type in [Token.KEYWORD, ROBOT_KEYWORD_INNER] or (
                 token.type == Token.NAME and isinstance(node, (Fixture, Template, TestTemplate))
             ):
-                if await namespace.find_keyword(token.value, raise_keyword_error=False, handle_bdd_style=False) is None:
+                if namespace.find_keyword(token.value, raise_keyword_error=False, handle_bdd_style=False) is None:
                     bdd_len = 0
 
                     if get_robot_version() < (6, 0):
@@ -359,9 +359,9 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
 
                 kw_namespace: Optional[str] = None
                 kw: str = token.value
-                kw_doc = await namespace.find_keyword(token.value, raise_keyword_error=False)
+                kw_doc = namespace.find_keyword(token.value, raise_keyword_error=False)
 
-                lib_entry, kw_namespace = await cls.get_namespace_info_from_keyword_token(namespace, token)
+                lib_entry, kw_namespace = cls.get_namespace_info_from_keyword_token(namespace, token)
                 if lib_entry is not None and kw_doc:
                     if kw_doc.parent != lib_entry.library_doc:
                         kw_namespace = None
@@ -552,7 +552,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
                 async for b in self.generate_run_kw_tokens(
                     namespace,
                     builtin_library_doc,
-                    await namespace.find_keyword(unescape(token.value), raise_keyword_error=False),
+                    namespace.find_keyword(unescape(token.value), raise_keyword_error=False),
                     Token(ROBOT_KEYWORD_INNER, token.value, token.lineno, token.col_offset, token.error),
                     arguments[1:],
                     node,
@@ -572,7 +572,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
                     async for b in self.generate_run_kw_tokens(
                         namespace,
                         builtin_library_doc,
-                        await namespace.find_keyword(unescape(token.value), raise_keyword_error=False),
+                        namespace.find_keyword(unescape(token.value), raise_keyword_error=False),
                         Token(ROBOT_KEYWORD_INNER, token.value, token.lineno, token.col_offset, token.error),
                         arguments[1:],
                         node,
@@ -608,7 +608,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
                     async for e in self.generate_run_kw_tokens(
                         namespace,
                         builtin_library_doc,
-                        await namespace.find_keyword(unescape(token.value), raise_keyword_error=False),
+                        namespace.find_keyword(unescape(token.value), raise_keyword_error=False),
                         Token(ROBOT_KEYWORD_INNER, token.value, token.lineno, token.col_offset, token.error),
                         args,
                         node,
@@ -646,7 +646,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
                                 arguments = arguments[1:]
                             continue
 
-                        inner_kw_doc = await namespace.find_keyword(unescape(token.value), raise_keyword_error=False)
+                        inner_kw_doc = namespace.find_keyword(unescape(token.value), raise_keyword_error=False)
 
                         if inner_kw_doc is not None and inner_kw_doc.is_run_keyword_if():
                             yield Token(
@@ -704,7 +704,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
                 name, value = split_from_equals(token.value)
                 if value is not None:
                     if kw_doc is None:
-                        kw_doc = await namespace.find_keyword(kw_token.value)
+                        kw_doc = namespace.find_keyword(kw_token.value)
 
                     if kw_doc and any(
                         v for v in kw_doc.arguments if v.kind == KeywordArgumentKind.VAR_NAMED or v.name == name
@@ -736,7 +736,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
             async for node in async_ast.iter_nodes(model):
                 if isinstance(node, Statement):
                     if isinstance(node, LibraryImport) and node.name:
-                        lib_doc = await namespace.get_imported_library_libdoc(node.name, node.args, node.alias)
+                        lib_doc = namespace.get_imported_library_libdoc(node.name, node.args, node.alias)
                         kw_doc = lib_doc.inits.keywords[0] if lib_doc and lib_doc.inits else None
                         if lib_doc is not None:
                             for token in node.tokens:
@@ -769,7 +769,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
                                 yield token, node
                             continue
                     if isinstance(node, VariablesImport) and node.name:
-                        lib_doc = await namespace.get_imported_variables_libdoc(node.name, node.args)
+                        lib_doc = namespace.get_imported_variables_libdoc(node.name, node.args)
                         kw_doc = lib_doc.inits.keywords[0] if lib_doc and lib_doc.inits else None
                         if lib_doc is not None:
                             for token in node.tokens:
@@ -825,7 +825,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
                                     if matcher in ALL_RUN_KEYWORDS_MATCHERS:
                                         kw = name
                             if kw:
-                                kw_doc = await namespace.find_keyword(kw_token.value)
+                                kw_doc = namespace.find_keyword(kw_token.value)
                                 if kw_doc is not None and kw_doc.is_any_run_keyword():
                                     async for kw_res in self.generate_run_kw_tokens(
                                         namespace,
@@ -907,13 +907,13 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
     async def _collect(
         self, document: TextDocument, range: Optional[Range]
     ) -> Union[SemanticTokens, SemanticTokensPartialResult, None]:
-        model = await self.parent.documents_cache.get_model(document, False)
-        namespace = await self.parent.documents_cache.get_namespace(document)
+        model = self.parent.documents_cache.get_model(document, False)
+        namespace = self.parent.documents_cache.get_namespace(document)
 
         builtin_library_doc = next(
             (
                 library.library_doc
-                for library in (await namespace.get_libraries()).values()
+                for library in namespace.get_libraries().values()
                 if library.name == BUILTIN_LIBRARY_NAME
                 and library.import_name == BUILTIN_LIBRARY_NAME
                 and library.import_range == Range.zero()

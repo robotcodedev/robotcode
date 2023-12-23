@@ -7,7 +7,6 @@ from io import StringIO
 from tokenize import TokenError, generate_tokens
 from typing import (
     Any,
-    AsyncIterator,
     Iterator,
     List,
     Optional,
@@ -52,7 +51,7 @@ from .namespace import (
 
 class ModelHelperMixin:
     @classmethod
-    async def get_run_keyword_keyworddoc_and_token_from_position(
+    def get_run_keyword_keyworddoc_and_token_from_position(
         cls,
         keyword_doc: Optional[KeywordDoc],
         argument_tokens: List[Token],
@@ -63,7 +62,7 @@ class ModelHelperMixin:
             return None, argument_tokens
 
         if keyword_doc.is_run_keyword() and len(argument_tokens) > 0:
-            result = await cls.get_keyworddoc_and_token_from_position(
+            result = cls.get_keyworddoc_and_token_from_position(
                 unescape(argument_tokens[0].value),
                 argument_tokens[0],
                 argument_tokens[1:],
@@ -75,7 +74,7 @@ class ModelHelperMixin:
         if keyword_doc.is_run_keyword_with_condition() and len(argument_tokens) > (
             cond_count := keyword_doc.run_keyword_condition_count()
         ):
-            result = await cls.get_keyworddoc_and_token_from_position(
+            result = cls.get_keyworddoc_and_token_from_position(
                 unescape(argument_tokens[cond_count].value),
                 argument_tokens[cond_count],
                 argument_tokens[cond_count + 1 :],
@@ -103,9 +102,7 @@ class ModelHelperMixin:
                     else:
                         args = []
 
-                result = await cls.get_keyworddoc_and_token_from_position(
-                    unescape(t.value), t, args, namespace, position
-                )
+                result = cls.get_keyworddoc_and_token_from_position(unescape(t.value), t, args, namespace, position)
                 if result is not None and result[0] is not None:
                     return result, []
 
@@ -126,14 +123,14 @@ class ModelHelperMixin:
                         break
                     argument_tokens = argument_tokens[1:]
 
-            inner_keyword_doc = await namespace.find_keyword(argument_tokens[1].value, raise_keyword_error=False)
+            inner_keyword_doc = namespace.find_keyword(argument_tokens[1].value, raise_keyword_error=False)
 
             if position.is_in_range(range_from_token(argument_tokens[1])):
                 return (inner_keyword_doc, argument_tokens[1]), argument_tokens[2:]
 
             argument_tokens = argument_tokens[2:]
 
-            inner_keyword_doc_and_args = await cls.get_run_keyword_keyworddoc_and_token_from_position(
+            inner_keyword_doc_and_args = cls.get_run_keyword_keyworddoc_and_token_from_position(
                 inner_keyword_doc, argument_tokens, namespace, position
             )
 
@@ -146,14 +143,14 @@ class ModelHelperMixin:
 
             while argument_tokens:
                 if argument_tokens[0].value == "ELSE" and len(argument_tokens) > 1:
-                    inner_keyword_doc = await namespace.find_keyword(unescape(argument_tokens[1].value))
+                    inner_keyword_doc = namespace.find_keyword(unescape(argument_tokens[1].value))
 
                     if position.is_in_range(range_from_token(argument_tokens[1])):
                         return (inner_keyword_doc, argument_tokens[1]), argument_tokens[2:]
 
                     argument_tokens = argument_tokens[2:]
 
-                    inner_keyword_doc_and_args = await cls.get_run_keyword_keyworddoc_and_token_from_position(
+                    inner_keyword_doc_and_args = cls.get_run_keyword_keyworddoc_and_token_from_position(
                         inner_keyword_doc, argument_tokens, namespace, position
                     )
 
@@ -166,14 +163,14 @@ class ModelHelperMixin:
 
                     break
                 if argument_tokens[0].value == "ELSE IF" and len(argument_tokens) > 2:
-                    inner_keyword_doc = await namespace.find_keyword(unescape(argument_tokens[2].value))
+                    inner_keyword_doc = namespace.find_keyword(unescape(argument_tokens[2].value))
 
                     if position.is_in_range(range_from_token(argument_tokens[2])):
                         return (inner_keyword_doc, argument_tokens[2]), argument_tokens[3:]
 
                     argument_tokens = argument_tokens[3:]
 
-                    inner_keyword_doc_and_args = await cls.get_run_keyword_keyworddoc_and_token_from_position(
+                    inner_keyword_doc_and_args = cls.get_run_keyword_keyworddoc_and_token_from_position(
                         inner_keyword_doc, argument_tokens, namespace, position
                     )
 
@@ -189,7 +186,7 @@ class ModelHelperMixin:
         return None, argument_tokens
 
     @classmethod
-    async def get_keyworddoc_and_token_from_position(
+    def get_keyworddoc_and_token_from_position(
         cls,
         keyword_name: Optional[str],
         keyword_token: Token,
@@ -198,7 +195,7 @@ class ModelHelperMixin:
         position: Position,
         analyse_run_keywords: bool = True,
     ) -> Optional[Tuple[Optional[KeywordDoc], Token]]:
-        keyword_doc = await namespace.find_keyword(keyword_name, raise_keyword_error=False)
+        keyword_doc = namespace.find_keyword(keyword_name, raise_keyword_error=False)
         if keyword_doc is None:
             return None
 
@@ -207,7 +204,7 @@ class ModelHelperMixin:
 
         if analyse_run_keywords:
             return (
-                await cls.get_run_keyword_keyworddoc_and_token_from_position(
+                cls.get_run_keyword_keyworddoc_and_token_from_position(
                     keyword_doc, argument_tokens, namespace, position
                 )
             )[0]
@@ -215,7 +212,7 @@ class ModelHelperMixin:
         return None
 
     @classmethod
-    async def get_namespace_info_from_keyword_token(
+    def get_namespace_info_from_keyword_token(
         cls, namespace: Namespace, keyword_token: Token
     ) -> Tuple[Optional[LibraryEntry], Optional[str]]:
         lib_entry: Optional[LibraryEntry] = None
@@ -223,7 +220,7 @@ class ModelHelperMixin:
 
         for lib, keyword in iter_over_keyword_names_and_owners(keyword_token.value):
             if lib is not None:
-                lib_entries = next((v for k, v in (await namespace.get_namespaces()).items() if k == lib), None)
+                lib_entries = next((v for k, v in (namespace.get_namespaces()).items() if k == lib), None)
                 if lib_entries is not None:
                     kw_namespace = lib
                     lib_entry = next(
@@ -243,20 +240,20 @@ class ModelHelperMixin:
     )
 
     @staticmethod
-    async def iter_expression_variables_from_token(
+    def iter_expression_variables_from_token(
         expression: Token,
         namespace: Namespace,
         nodes: Optional[List[ast.AST]],
         position: Optional[Position] = None,
         skip_commandline_variables: bool = False,
         return_not_found: bool = False,
-    ) -> AsyncIterator[Tuple[Token, VariableDefinition]]:
+    ) -> Iterator[Tuple[Token, VariableDefinition]]:
         variable_started = False
         try:
             for toknum, tokval, (_, tokcol), _, _ in generate_tokens(StringIO(expression.value).readline):
                 if variable_started:
                     if toknum == python_token.NAME:
-                        var = await namespace.find_variable(
+                        var = namespace.find_variable(
                             f"${{{tokval}}}",
                             nodes,
                             position,
@@ -350,7 +347,7 @@ class ModelHelperMixin:
                 yield t
 
     @classmethod
-    async def iter_variables_from_token(
+    def iter_variables_from_token(
         cls,
         token: Token,
         namespace: Namespace,
@@ -358,23 +355,23 @@ class ModelHelperMixin:
         position: Optional[Position] = None,
         skip_commandline_variables: bool = False,
         return_not_found: bool = False,
-    ) -> AsyncIterator[Tuple[Token, VariableDefinition]]:
+    ) -> Iterator[Tuple[Token, VariableDefinition]]:
         def is_number(name: str) -> bool:
             if name.startswith("$"):
                 finder = NumberFinder()
                 return bool(finder.find(name) != NOT_FOUND)
             return False
 
-        async def iter_token(
+        def iter_token(
             to: Token, ignore_errors: bool = False
-        ) -> AsyncIterator[Union[Token, Tuple[Token, VariableDefinition]]]:
+        ) -> Iterator[Union[Token, Tuple[Token, VariableDefinition]]]:
             for sub_token in cls._tokenize_variables(to, ignore_errors=ignore_errors):
                 if sub_token.type == Token.VARIABLE:
                     base = sub_token.value[2:-1]
                     if base and not (base[0] == "{" and base[-1] == "}"):
                         yield sub_token
                     elif base:
-                        async for v in cls.iter_expression_variables_from_token(
+                        for v in cls.iter_expression_variables_from_token(
                             Token(
                                 sub_token.type,
                                 base[1:-1],
@@ -402,7 +399,7 @@ class ModelHelperMixin:
                         return
 
                     if contains_variable(base, "$@&%"):
-                        async for sub_token_or_var in iter_token(
+                        for sub_token_or_var in iter_token(
                             Token(
                                 to.type,
                                 base,
@@ -430,11 +427,11 @@ class ModelHelperMixin:
                 token.error,
             )
 
-        async for token_or_var in iter_token(token, ignore_errors=True):
+        for token_or_var in iter_token(token, ignore_errors=True):
             if isinstance(token_or_var, Token):
                 sub_token = token_or_var
                 name = sub_token.value
-                var = await namespace.find_variable(
+                var = namespace.find_variable(
                     name,
                     nodes,
                     position,
@@ -458,7 +455,7 @@ class ModelHelperMixin:
                     if match is not None:
                         base_name, _ = match.groups()
                         name = f"{name[0]}{{{base_name.strip()}}}"
-                        var = await namespace.find_variable(
+                        var = namespace.find_variable(
                             name,
                             nodes,
                             position,
