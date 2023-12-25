@@ -12,6 +12,7 @@ from typing import (
     cast,
 )
 
+from robot.parsing.model.statements import Statement
 from robotcode.core.async_tools import async_event, create_sub_task
 from robotcode.core.lsp.types import FileEvent, Location, Position, Range, ReferenceContext, WatchKind
 from robotcode.core.uri import Uri
@@ -19,6 +20,7 @@ from robotcode.core.utils.caching import SimpleLRUCache
 from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.core.utils.threading import threaded
 from robotcode.robot.utils import get_robot_version
+from robotcode.robot.utils.ast import get_nodes_at_position, get_tokens_at_position, iter_nodes, range_from_token
 
 from ...common.decorators import language_id
 from ...common.text_document import TextDocument
@@ -35,13 +37,6 @@ from ..diagnostics.library_doc import (
     LibraryDoc,
 )
 from ..diagnostics.model_helper import ModelHelperMixin
-from ..utils.ast_utils import (
-    HasTokens,
-    get_nodes_at_position,
-    get_tokens_at_position,
-    iter_nodes,
-    range_from_token,
-)
 from ..utils.match import normalize
 from .protocol_part import RobotLanguageServerProtocolPart
 
@@ -109,7 +104,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
     async def collect(
         self, sender: Any, document: TextDocument, position: Position, context: ReferenceContext
     ) -> Optional[List[Location]]:
-        result_nodes = await get_nodes_at_position(self.parent.documents_cache.get_model(document), position)
+        result_nodes = get_nodes_at_position(self.parent.documents_cache.get_model(document), position)
 
         if not result_nodes:
             return None
@@ -559,11 +554,11 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
     ) -> Optional[List[Location]]:
         from robot.parsing.lexer.tokens import Token as RobotToken
 
-        tokens = get_tokens_at_position(cast(HasTokens, node), position)
+        tokens = get_tokens_at_position(cast(Statement, node), position)
         if not tokens:
             return None
 
-        token = get_tokens_at_position(cast(HasTokens, node), position)[-1]
+        token = get_tokens_at_position(cast(Statement, node), position)[-1]
 
         if token.type in [RobotToken.ARGUMENT] and token.value:
             return self.find_tag_references(document, token.value)

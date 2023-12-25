@@ -316,7 +316,7 @@ class CompletionCollector(ModelHelperMixin):
     ) -> Union[List[CompletionItem], CompletionList, None]:
         start = time.monotonic()
         try:
-            result_nodes = await get_nodes_at_position(self.model, position, include_end=True)
+            result_nodes = get_nodes_at_position(self.model, position, include_end=True)
 
             result_nodes.reverse()
 
@@ -1065,7 +1065,7 @@ class CompletionCollector(ModelHelperMixin):
 
         elif position.character == 0:
             if not nodes_at_position and position.line > 0:
-                nodes_at_line_before = await get_nodes_at_position(self.model, Position(position.line - 1, 0))
+                nodes_at_line_before = get_nodes_at_position(self.model, Position(position.line - 1, 0))
                 if nodes_at_line_before and any(isinstance(n, SettingSection) for n in nodes_at_line_before):
                     return [
                         *await self.create_settings_completion_items(None),

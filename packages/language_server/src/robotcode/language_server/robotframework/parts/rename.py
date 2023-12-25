@@ -1,20 +1,10 @@
 from __future__ import annotations
 
 import ast
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Awaitable,
-    Callable,
-    List,
-    Optional,
-    Tuple,
-    Type,
-    TypeVar,
-    Union,
-    cast,
-)
+from typing import TYPE_CHECKING, Any, Awaitable, Callable, List, Optional, Tuple, Type, TypeVar, Union, cast
 
+from robot.parsing.lexer.tokens import Token
+from robot.parsing.model.statements import Statement
 from robotcode.core.lsp.types import (
     AnnotatedTextEdit,
     ChangeAnnotation,
@@ -29,6 +19,7 @@ from robotcode.core.lsp.types import (
     WorkspaceEdit,
 )
 from robotcode.core.utils.logging import LoggingDescriptor
+from robotcode.robot.utils.ast import get_nodes_at_position, get_tokens_at_position, range_from_token
 
 from ...common.decorators import language_id
 from ...common.parts.rename import CantRenameError
@@ -36,13 +27,11 @@ from ...common.text_document import TextDocument
 from ..diagnostics.entities import VariableDefinition, VariableDefinitionType
 from ..diagnostics.library_doc import KeywordDoc
 from ..diagnostics.model_helper import ModelHelperMixin
-from ..utils.ast_utils import HasTokens, Token, get_nodes_at_position, get_tokens_at_position, range_from_token
 from .protocol_part import RobotLanguageServerProtocolPart
 
 if TYPE_CHECKING:
-    from robotcode.language_server.robotframework.protocol import (
-        RobotLanguageServerProtocol,
-    )
+    from robotcode.language_server.robotframework.protocol import RobotLanguageServerProtocol
+
 
 _RenameMethod = Callable[[ast.AST, TextDocument, Position, str], Awaitable[Optional[WorkspaceEdit]]]
 _PrepareRenameMethod = Callable[[ast.AST, TextDocument, Position], Awaitable[Optional[PrepareRenameResult]]]
@@ -82,7 +71,7 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin)
         position: Position,
         new_name: str,
     ) -> Optional[WorkspaceEdit]:
-        result_nodes = await get_nodes_at_position(
+        result_nodes = get_nodes_at_position(
             self.parent.documents_cache.get_model(document), position, include_end=True
         )
 
@@ -111,7 +100,7 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin)
         document: TextDocument,
         position: Position,
     ) -> Optional[PrepareRenameResult]:
-        result_nodes = await get_nodes_at_position(
+        result_nodes = get_nodes_at_position(
             self.parent.documents_cache.get_model(document), position, include_end=True
         )
 
@@ -214,7 +203,7 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin)
 
         node = nodes[-1]
 
-        if not isinstance(node, HasTokens):
+        if not isinstance(node, Statement):
             return None
 
         tokens = get_tokens_at_position(node, position)
@@ -567,7 +556,7 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin)
     ) -> Optional[PrepareRenameResult]:
         from robot.parsing.lexer.tokens import Token as RobotToken
 
-        tokens = get_tokens_at_position(cast(HasTokens, node), position)
+        tokens = get_tokens_at_position(cast(Statement, node), position)
         if not tokens:
             return None
 
@@ -598,7 +587,7 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin)
     ) -> Optional[WorkspaceEdit]:
         from robot.parsing.lexer.tokens import Token as RobotToken
 
-        tokens = get_tokens_at_position(cast(HasTokens, node), position)
+        tokens = get_tokens_at_position(cast(Statement, node), position)
         if not tokens:
             return None
 

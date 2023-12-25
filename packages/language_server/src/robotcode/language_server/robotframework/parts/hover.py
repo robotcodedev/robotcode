@@ -17,16 +17,12 @@ from typing import (
 
 from robotcode.core.lsp.types import Hover, MarkupContent, MarkupKind, Position, Range
 from robotcode.core.utils.logging import LoggingDescriptor
+from robotcode.robot.utils.ast import get_nodes_at_position, range_from_node, range_from_token
 from robotcode.robot.utils.markdownformatter import MarkDownFormatter
 
 from ...common.decorators import language_id
 from ...common.text_document import TextDocument
 from ..diagnostics.model_helper import ModelHelperMixin
-from ..utils.ast_utils import (
-    get_nodes_at_position,
-    range_from_node,
-    range_from_token,
-)
 from .protocol_part import RobotLanguageServerProtocolPart
 
 if TYPE_CHECKING:
@@ -63,7 +59,7 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
     async def collect(self, sender: Any, document: TextDocument, position: Position) -> Optional[Hover]:
         model = self.parent.documents_cache.get_model(document)
 
-        result_nodes = await get_nodes_at_position(model, position)
+        result_nodes = get_nodes_at_position(model, position)
 
         if not result_nodes:
             return None

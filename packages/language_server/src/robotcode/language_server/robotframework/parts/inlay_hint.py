@@ -4,16 +4,16 @@ import ast
 import asyncio
 from typing import TYPE_CHECKING, Any, Awaitable, Callable, List, Optional, Type, cast
 
+from robot.parsing.lexer.tokens import Token
 from robotcode.core.lsp.types import InlayHint, InlayHintKind, Range
 from robotcode.core.utils.logging import LoggingDescriptor
+from robotcode.robot.utils.ast import iter_nodes, range_from_node, range_from_token
 
 from ...common.decorators import language_id
 from ...common.text_document import TextDocument
 from ..configuration import InlayHintsConfig
 from ..diagnostics.library_doc import KeywordArgumentKind, KeywordDoc, LibraryDoc
 from ..diagnostics.namespace import Namespace
-from ..utils.ast_utils import Token, range_from_node, range_from_token
-from ..utils.async_ast import iter_nodes
 
 if TYPE_CHECKING:
     from ..protocol import RobotLanguageServerProtocol
@@ -68,7 +68,7 @@ class RobotInlayHintProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMix
 
         result: List[InlayHint] = []
 
-        async for node in iter_nodes(model):
+        for node in iter_nodes(model):
             node_range = range_from_node(node)
             if node_range.end < range.start:
                 continue

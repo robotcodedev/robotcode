@@ -33,18 +33,13 @@ from typing import (
     cast,
 )
 
+from robot.parsing.lexer.tokens import Token
 from robotcode.core.lsp.types import Position, Range
 from robotcode.robot.utils import get_robot_version
+from robotcode.robot.utils.ast import get_variable_token, range_from_token, strip_variable_token
 from robotcode.robot.utils.markdownformatter import MarkDownFormatter
 
-from ..utils.ast_utils import (
-    HasError,
-    HasErrors,
-    Token,
-    get_variable_token,
-    range_from_token,
-    strip_variable_token,
-)
+from ..utils.ast_utils import HasError, HasErrors
 from ..utils.match import normalize, normalize_namespace
 from .entities import (
     ArgumentDefinition,

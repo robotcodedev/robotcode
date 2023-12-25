@@ -2,16 +2,7 @@ from __future__ import annotations
 
 import ast
 import itertools
-from typing import (
-    Any,
-    AsyncIterator,
-    Iterator,
-    List,
-    Optional,
-    Sequence,
-    Set,
-    Tuple,
-)
+from typing import Any, Iterator, List, Optional, Sequence, Set, Tuple
 
 from robotcode.core.lsp.types import Position, Range
 
@@ -206,20 +197,20 @@ def get_tokens_at_position(node: Statement, position: Position, include_end: boo
     ]
 
 
-def iter_nodes_at_position(node: ast.AST, position: Position, include_end: bool = False) -> AsyncIterator[ast.AST]:
+def iter_nodes_at_position(node: ast.AST, position: Position, include_end: bool = False) -> Iterator[ast.AST]:
     return (
         n
-        async for n in visitors.iter_nodes(node)
+        for n in iter_nodes(node)
         if position.is_in_range(range := range_from_node(n), include_end) or include_end and range.end == position
     )
 
 
-async def get_nodes_at_position(node: ast.AST, position: Position, include_end: bool = False) -> List[ast.AST]:
-    return [n async for n in iter_nodes_at_position(node, position, include_end)]
+def get_nodes_at_position(node: ast.AST, position: Position, include_end: bool = False) -> List[ast.AST]:
+    return [n for n in iter_nodes_at_position(node, position, include_end)]
 
 
-async def get_node_at_position(node: ast.AST, position: Position, include_end: bool = False) -> Optional[ast.AST]:
-    result_nodes = await get_nodes_at_position(node, position, include_end)
+def get_node_at_position(node: ast.AST, position: Position, include_end: bool = False) -> Optional[ast.AST]:
+    result_nodes = get_nodes_at_position(node, position, include_end)
     if not result_nodes:
         return None
 

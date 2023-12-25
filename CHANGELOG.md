@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [unreleased]
+
+### Refactor
+
+- **langserver:** Remove async from robotcode langserver analytics ([1ff1e44](https://github.com/d-biehl/robotcode/commit/1ff1e44d91f64671e108b35f8fe9f7005a72be5d))
+- **langserver:** Remove AsyncVisitor code ([c9aaa60](https://github.com/d-biehl/robotcode/commit/c9aaa6088a86c67b8dec5cb9794efe6c339cc6a5))
+- **robotcode:** Move threaded decorator to the new core.utils.threading module ([96b897b](https://github.com/d-biehl/robotcode/commit/96b897b63bdc13aaa0e383a12e74399e0f8caa86))
+- Remove some unneeded code ([65e1775](https://github.com/d-biehl/robotcode/commit/65e1775fd380b7e6b67a88c327f8961929e9cafb))
+
+
+### Testing
+
+- Add RFW 7.0 to devel and test matrix ([cd35020](https://github.com/d-biehl/robotcode/commit/cd3502086b1505b53a89047d27ca097d3dfce07b))
+- Try to stablize regression tests ([19419b3](https://github.com/d-biehl/robotcode/commit/19419b3c10f0a7e079d6b6b7466516f4ec756f88))
+- Enable RFW 7.0 tests in github workflow ([6a39f66](https://github.com/d-biehl/robotcode/commit/6a39f66f6113ef8e1437a3bf2ae10d3de6fe0203))
+- Another try to stabilize regression tests ([91d4d48](https://github.com/d-biehl/robotcode/commit/91d4d482fdcecc65270f98f715760576ea9f7544))
+
+
 ## [0.68.1](https://github.com/d-biehl/robotcode/compare/v0.68.0..v0.68.1) - 2023-12-21
 
 ### Bug Fixes

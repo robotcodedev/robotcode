@@ -4,11 +4,12 @@ import ast
 import asyncio
 from typing import TYPE_CHECKING, Any, List, Optional
 
+from robot.parsing.lexer.tokens import Token
 from robotcode.core.async_tools import create_sub_task
 from robotcode.core.lsp.types import Diagnostic, DiagnosticSeverity, DiagnosticTag, Position, Range
 from robotcode.core.uri import Uri
 from robotcode.core.utils.logging import LoggingDescriptor
-from robotcode.language_server.robotframework.utils.ast_utils import HasError, HasErrors, iter_nodes
+from robotcode.robot.utils.ast import iter_nodes, range_from_node, range_from_token
 
 from ...common.decorators import language_id
 from ...common.parts.diagnostics import DiagnosticsResult
@@ -16,12 +17,7 @@ from ...common.text_document import TextDocument
 from ..configuration import AnalysisConfig
 from ..diagnostics.entities import ArgumentDefinition
 from ..diagnostics.namespace import Namespace
-from ..utils.ast_utils import (
-    HeaderAndBodyBlock,
-    Token,
-    range_from_node,
-    range_from_token,
-)
+from ..utils.ast_utils import HasError, HasErrors, HeaderAndBodyBlock
 
 if TYPE_CHECKING:
     from ..protocol import RobotLanguageServerProtocol

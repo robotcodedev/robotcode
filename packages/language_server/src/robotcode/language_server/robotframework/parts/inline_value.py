@@ -3,21 +3,16 @@ from __future__ import annotations
 import ast
 from typing import TYPE_CHECKING, Any, Iterator, List, Optional, Tuple
 
+from robot.parsing.lexer.tokens import Token
+from robot.parsing.model.statements import Statement
 from robotcode.core.async_itertools import async_dropwhile, async_takewhile
 from robotcode.core.lsp.types import InlineValue, InlineValueContext, InlineValueEvaluatableExpression, Range
 from robotcode.core.utils.logging import LoggingDescriptor
+from robotcode.robot.utils.ast import get_nodes_at_position, iter_nodes, range_from_node, range_from_token
 
 from ...common.decorators import language_id
 from ...common.text_document import TextDocument
 from ..diagnostics.model_helper import ModelHelperMixin
-from ..utils.ast_utils import (
-    HasTokens,
-    Token,
-    get_nodes_at_position,
-    iter_nodes,
-    range_from_node,
-    range_from_token,
-)
 from .protocol_part import RobotLanguageServerProtocolPart
 
 if TYPE_CHECKING:
@@ -53,12 +48,12 @@ class RobotInlineValueProtocolPart(RobotLanguageServerProtocolPart, ModelHelperM
 
         real_range = Range(range.start, min(range.end, context.stopped_location.end))
 
-        nodes = await get_nodes_at_position(model, context.stopped_location.start)
+        nodes = get_nodes_at_position(model, context.stopped_location.start)
 
         def get_tokens() -> Iterator[Tuple[Token, ast.AST]]:
             for n in iter_nodes(model):
                 r = range_from_node(n)
-                if (r.start in real_range or r.end in real_range) and isinstance(n, HasTokens):
+                if (r.start in real_range or r.end in real_range) and isinstance(n, Statement):
                     for t in n.tokens:
                         yield t, n
                 if r.start > real_range.end:

@@ -3,19 +3,15 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Optional
 
+from robot.parsing.model.statements import Statement
 from robotcode.core.lsp.types import Position, Range, TextDocumentIdentifier
 from robotcode.core.utils.dataclasses import CamelSnakeMixin
 from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.core.utils.threading import threaded
 from robotcode.jsonrpc2.protocol import rpc_method
+from robotcode.robot.utils.ast import get_nodes_at_position, get_tokens_at_position, range_from_token
 
 from ..diagnostics.model_helper import ModelHelperMixin
-from ..utils.ast_utils import (
-    HasTokens,
-    get_nodes_at_position,
-    get_tokens_at_position,
-    range_from_token,
-)
 from .protocol_part import RobotLanguageServerProtocolPart
 
 if TYPE_CHECKING:
@@ -59,10 +55,10 @@ class RobotDebuggingUtilsProtocolPart(RobotLanguageServerProtocolPart, ModelHelp
         namespace = self.parent.documents_cache.get_namespace(document)
         model = self.parent.documents_cache.get_model(document, False)
 
-        nodes = await get_nodes_at_position(model, position)
+        nodes = get_nodes_at_position(model, position)
         node = nodes[-1]
 
-        if not isinstance(node, HasTokens):
+        if not isinstance(node, Statement):
             return None
 
         token = get_tokens_at_position(node, position)[-1]

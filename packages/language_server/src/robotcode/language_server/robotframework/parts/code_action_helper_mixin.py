@@ -9,12 +9,11 @@ from robotcode.core.lsp.types import (
     Position,
     Range,
 )
-from robotcode.language_server.common.text_document import TextDocument
-from robotcode.language_server.robotframework.diagnostics.namespace import Namespace
-from robotcode.language_server.robotframework.utils.ast_utils import (
-    range_from_node,
-)
-from robotcode.language_server.robotframework.utils.async_ast import Visitor
+from robotcode.robot.utils.ast import range_from_node
+
+from ...common.text_document import TextDocument
+from ..diagnostics.namespace import Namespace
+from ..utils.async_ast import Visitor
 
 SHOW_DOCUMENT_SELECT_AND_RENAME_COMMAND = "_robotcode.codeActionShowDocumentSelectAndRename"
 

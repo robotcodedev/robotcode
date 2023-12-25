@@ -2,19 +2,14 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, List, Optional
 
+from robot.parsing.model.statements import Statement
 from robotcode.core.lsp.types import Position, SelectionRange
 from robotcode.core.utils.logging import LoggingDescriptor
+from robotcode.robot.utils.ast import get_nodes_at_position, get_tokens_at_position, range_from_node, range_from_token
 
 from ...common.decorators import language_id
 from ...common.text_document import TextDocument
 from ..diagnostics.model_helper import ModelHelperMixin
-from ..utils.ast_utils import (
-    HasTokens,
-    get_nodes_at_position,
-    get_tokens_at_position,
-    range_from_node,
-    range_from_token,
-)
 from .protocol_part import RobotLanguageServerProtocolPart
 
 if TYPE_CHECKING:
@@ -38,7 +33,7 @@ class RobotSelectionRangeProtocolPart(RobotLanguageServerProtocolPart, ModelHelp
 
         results: List[SelectionRange] = []
         for position in positions:
-            nodes = await get_nodes_at_position(self.parent.documents_cache.get_model(document, True), position)
+            nodes = get_nodes_at_position(self.parent.documents_cache.get_model(document, True), position)
 
             if not nodes:
                 break
@@ -49,7 +44,7 @@ class RobotSelectionRangeProtocolPart(RobotLanguageServerProtocolPart, ModelHelp
 
             if current_range is not None:
                 node = nodes[-1]
-                if node is not None and isinstance(node, HasTokens):
+                if node is not None and isinstance(node, Statement):
                     tokens = get_tokens_at_position(node, position, True)
                     if tokens:
                         token = tokens[-1]

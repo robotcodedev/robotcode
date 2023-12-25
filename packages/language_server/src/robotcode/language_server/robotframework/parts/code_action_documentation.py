@@ -17,40 +17,23 @@ from threading import Thread
 from typing import TYPE_CHECKING, Any, List, Optional, Tuple, Union, cast
 from urllib.parse import parse_qs, urlparse
 
-from robotcode.core.lsp.types import (
-    CodeAction,
-    CodeActionContext,
-    CodeActionKind,
-    Command,
-    Range,
-)
+from robot.parsing.lexer.tokens import Token
+from robotcode.core.lsp.types import CodeAction, CodeActionContext, CodeActionKind, Command, Range
 from robotcode.core.uri import Uri
 from robotcode.core.utils.dataclasses import CamelSnakeMixin
 from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.core.utils.net import find_free_port
 from robotcode.core.utils.threading import threaded
 from robotcode.jsonrpc2.protocol import rpc_method
+from robotcode.robot.utils.ast import get_node_at_position, range_from_token
 
 from ...common.decorators import code_action_kinds, language_id
 from ...common.text_document import TextDocument
-from ..configuration import (
-    DocumentationServerConfig,
-)
+from ..configuration import DocumentationServerConfig
 from ..diagnostics.entities import LibraryEntry
-from ..diagnostics.library_doc import (
-    get_library_doc,
-    get_robot_library_html_doc_str,
-    resolve_robot_variables,
-)
+from ..diagnostics.library_doc import get_library_doc, get_robot_library_html_doc_str, resolve_robot_variables
 from ..diagnostics.model_helper import ModelHelperMixin
-from ..diagnostics.namespace import (
-    Namespace,
-)
-from ..utils.ast_utils import (
-    Token,
-    get_node_at_position,
-    range_from_token,
-)
+from ..diagnostics.namespace import Namespace
 from .protocol_part import RobotLanguageServerProtocolPart
 
 if TYPE_CHECKING:
@@ -277,7 +260,7 @@ class RobotCodeActionDocumentationProtocolPart(RobotLanguageServerProtocolPart, 
         namespace = self.parent.documents_cache.get_namespace(document)
 
         model = self.parent.documents_cache.get_model(document, False)
-        node = await get_node_at_position(model, range.start)
+        node = get_node_at_position(model, range.start)
 
         if context.only and isinstance(node, (LibraryImport, ResourceImport)):
             if CodeActionKind.SOURCE.value in context.only and range in range_from_token(

@@ -2,18 +2,10 @@ from __future__ import annotations
 
 import ast
 import asyncio
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Awaitable,
-    Callable,
-    Optional,
-    Sequence,
-    Tuple,
-    Type,
-    cast,
-)
+from typing import TYPE_CHECKING, Any, Awaitable, Callable, Optional, Sequence, Tuple, Type, cast
 
+from robot.parsing.lexer.tokens import Token
+from robot.parsing.model.statements import Statement
 from robotcode.core.lsp.types import (
     MarkupContent,
     MarkupKind,
@@ -24,12 +16,12 @@ from robotcode.core.lsp.types import (
     SignatureInformation,
 )
 from robotcode.core.utils.logging import LoggingDescriptor
+from robotcode.robot.utils.ast import get_node_at_position, get_tokens_at_position, range_from_token
 
 from ...common.decorators import language_id, retrigger_characters, trigger_characters
 from ...common.text_document import TextDocument
 from ..diagnostics.library_doc import KeywordDoc, LibraryDoc
 from ..diagnostics.model_helper import ModelHelperMixin
-from ..utils.ast_utils import Statement, Token, get_node_at_position, get_tokens_at_position, range_from_token
 from .protocol_part import RobotLanguageServerProtocolPart
 
 if TYPE_CHECKING:
@@ -69,7 +61,7 @@ class RobotSignatureHelpProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
     async def collect(
         self, sender: Any, document: TextDocument, position: Position, context: Optional[SignatureHelpContext] = None
     ) -> Optional[SignatureHelp]:
-        result_node = await get_node_at_position(
+        result_node = get_node_at_position(
             self.parent.documents_cache.get_model(document, False), position, include_end=True
         )
         if result_node is None:

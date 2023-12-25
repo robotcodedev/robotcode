@@ -17,6 +17,7 @@ from typing import (
     cast,
 )
 
+from robot.parsing.lexer.tokens import Token
 from robotcode.core.event import tasking_event
 from robotcode.core.lsp.types import MessageType
 from robotcode.core.uri import Uri
@@ -30,7 +31,6 @@ from ..configuration import RobotCodeConfig, RobotConfig
 from ..diagnostics.imports_manager import ImportsManager
 from ..diagnostics.namespace import DocumentType, Namespace
 from ..languages import Languages
-from ..utils.ast_utils import Token
 from .protocol_part import RobotLanguageServerProtocolPart
 
 if TYPE_CHECKING:

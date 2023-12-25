@@ -6,13 +6,13 @@ from typing import TYPE_CHECKING, Any, List, Optional, Set, Tuple, cast
 from robotcode.core.async_tools import create_sub_task
 from robotcode.core.lsp.types import CodeLens, Command
 from robotcode.core.utils.logging import LoggingDescriptor
+from robotcode.robot.utils.ast import range_from_token
 
 from ...common.decorators import language_id
 from ...common.text_document import TextDocument
 from ..configuration import AnalysisConfig
 from ..diagnostics.library_doc import KeywordDoc
 from ..diagnostics.model_helper import ModelHelperMixin
-from ..utils.ast_utils import range_from_token
 from ..utils.async_ast import Visitor
 from .protocol_part import RobotLanguageServerProtocolPart
 

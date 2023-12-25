@@ -2,9 +2,25 @@ from __future__ import annotations
 
 from collections import defaultdict
 from dataclasses import dataclass
-from string import Template
+from string import Template as StringTemplate
 from typing import TYPE_CHECKING, Any, List, Mapping, Optional, Tuple, Union, cast
 
+from robot.parsing.lexer.tokens import Token
+from robot.parsing.model.blocks import Keyword, TestCase, VariableSection
+from robot.parsing.model.statements import (
+    Arguments,
+    Documentation,
+    Fixture,
+    KeywordCall,
+    KeywordName,
+    Statement,
+    Template,
+    TestCaseName,
+    TestTemplate,
+    Variable,
+)
+from robot.utils.escaping import split_from_equals
+from robot.variables.search import contains_variable
 from robotcode.core.lsp.types import (
     AnnotatedTextEdit,
     ChangeAnnotation,
@@ -23,14 +39,8 @@ from robotcode.core.lsp.types import (
 from robotcode.core.utils.dataclasses import as_dict, from_dict
 from robotcode.core.utils.inspect import iter_methods
 from robotcode.core.utils.logging import LoggingDescriptor
-
-from ...common.decorators import code_action_kinds, language_id
-from ...common.text_document import TextDocument
-from ..diagnostics.errors import DIAGNOSTICS_SOURCE_NAME, Error
-from ..diagnostics.model_helper import ModelHelperMixin
-from ..utils.ast_utils import (
+from robotcode.robot.utils.ast import (
     FirstAndLastRealStatementFinder,
-    Token,
     get_node_at_position,
     get_nodes_at_position,
     get_tokens_at_position,
@@ -38,6 +48,11 @@ from ..utils.ast_utils import (
     range_from_node,
     range_from_token,
 )
+
+from ...common.decorators import code_action_kinds, language_id
+from ...common.text_document import TextDocument
+from ..diagnostics.errors import DIAGNOSTICS_SOURCE_NAME, Error
+from ..diagnostics.model_helper import ModelHelperMixin
 from .code_action_helper_mixin import (
     SHOW_DOCUMENT_SELECT_AND_RENAME_COMMAND,
     CodeActionDataBase,
@@ -55,7 +70,7 @@ class CodeActionData(CodeActionDataBase):
     diagnostics_code: Optional[Union[int, str]] = None
 
 
-KEYWORD_WITH_ARGS_TEMPLATE = Template(
+KEYWORD_WITH_ARGS_TEMPLATE = StringTemplate(
     """\
 ${name}
     [Arguments]    ${args}
@@ -64,7 +79,7 @@ ${name}
 """
 )
 
-KEYWORD_TEMPLATE = Template(
+KEYWORD_TEMPLATE = StringTemplate(
     """\
 ${name}
     # TODO: implement keyword "${name}".
@@ -113,13 +128,6 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
     async def code_action_create_keyword(
         self, document: TextDocument, range: Range, context: CodeActionContext
     ) -> Optional[List[Union[Command, CodeAction]]]:
-        from robot.parsing.model.statements import (
-            Fixture,
-            KeywordCall,
-            Template,
-            TestTemplate,
-        )
-
         result: List[Union[Command, CodeAction]] = []
 
         if (context.only and CodeActionKind.QUICK_FIX in context.only) or context.trigger_kind in [
@@ -135,7 +143,7 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
                 if d.source == DIAGNOSTICS_SOURCE_NAME and d.code == Error.KEYWORD_NOT_FOUND
             ):
                 disabled = None
-                node = await get_node_at_position(model, diagnostic.range.start)
+                node = get_node_at_position(model, diagnostic.range.start)
 
                 if isinstance(node, (KeywordCall, Fixture, TestTemplate, Template)):
                     tokens = get_tokens_at_position(node, diagnostic.range.start)
@@ -179,22 +187,12 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
     async def resolve_code_action_create_keyword(
         self, code_action: CodeAction, data: CodeActionData
     ) -> Optional[CodeAction]:
-        from robot.parsing.lexer import Token as RobotToken
-        from robot.parsing.model.statements import (
-            Fixture,
-            KeywordCall,
-            Template,
-            TestTemplate,
-        )
-        from robot.utils.escaping import split_from_equals
-        from robot.variables.search import contains_variable
-
         document = self.parent.documents.get(data.document_uri)
         if document is None:
             return None
 
         model = self.parent.documents_cache.get_model(document, False)
-        node = await get_node_at_position(model, data.range.start)
+        node = get_node_at_position(model, data.range.start)
 
         if isinstance(node, (KeywordCall, Fixture, TestTemplate, Template)):
             tokens = get_tokens_at_position(node, data.range.start)
@@ -224,7 +222,7 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
 
             arguments = []
 
-            for t in node.get_tokens(RobotToken.ARGUMENT):
+            for t in node.get_tokens(Token.ARGUMENT):
                 name, value = split_from_equals(cast(Token, t).value)
                 if value is not None and not contains_variable(name, "$@&%"):
                     arguments.append(f"${{{name}}}")
@@ -355,9 +353,6 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
     async def code_action_create_local_variable(
         self, document: TextDocument, range: Range, context: CodeActionContext
     ) -> Optional[List[Union[Command, CodeAction]]]:
-        from robot.parsing.model.blocks import Keyword, TestCase
-        from robot.parsing.model.statements import Documentation, Fixture, Statement, Template, TestCaseName
-
         result: List[Union[Command, CodeAction]] = []
 
         if (context.only and CodeActionKind.QUICK_FIX in context.only) or context.trigger_kind in [
@@ -374,7 +369,7 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
                     and diagnostic.range.start.character < diagnostic.range.end.character
                 ):
                     model = self.parent.documents_cache.get_model(document, False)
-                    nodes = await get_nodes_at_position(model, range.start)
+                    nodes = get_nodes_at_position(model, range.start)
 
                     if not any(n for n in nodes if isinstance(n, (Keyword, TestCase))):
                         continue
@@ -413,16 +408,13 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
     async def resolve_code_action_create_local_variable(
         self, code_action: CodeAction, data: CodeActionData
     ) -> Optional[CodeAction]:
-        from robot.parsing.model.blocks import Keyword, TestCase
-        from robot.parsing.model.statements import Documentation, Fixture, Statement, Template
-
         if data.range.start.line == data.range.end.line and data.range.start.character <= data.range.end.character:
             document = self.parent.documents.get(data.document_uri)
             if document is None:
                 return None
 
             model = self.parent.documents_cache.get_model(document, False)
-            nodes = await get_nodes_at_position(model, data.range.start)
+            nodes = get_nodes_at_position(model, data.range.start)
 
             if not any(n for n in nodes if isinstance(n, (Keyword, TestCase))):
                 return None
@@ -510,16 +502,13 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
     async def resolve_code_action_create_suite_variable(
         self, code_action: CodeAction, data: CodeActionData
     ) -> Optional[CodeAction]:
-        from robot.parsing.model.blocks import VariableSection
-        from robot.parsing.model.statements import Variable
-
         if data.range.start.line == data.range.end.line and data.range.start.character <= data.range.end.character:
             document = self.parent.documents.get(data.document_uri)
             if document is None:
                 return None
 
             model = self.parent.documents_cache.get_model(document, False)
-            nodes = await get_nodes_at_position(model, data.range.start)
+            nodes = get_nodes_at_position(model, data.range.start)
 
             node = nodes[-1] if nodes else None
 
@@ -603,8 +592,6 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
     async def code_action_add_argument(
         self, document: TextDocument, range: Range, context: CodeActionContext
     ) -> Optional[List[Union[Command, CodeAction]]]:
-        from robot.parsing.model.blocks import Keyword
-
         result: List[Union[Command, CodeAction]] = []
 
         if (context.only and CodeActionKind.QUICK_FIX in context.only) or context.trigger_kind in [
@@ -628,7 +615,7 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
                         continue
 
                     model = self.parent.documents_cache.get_model(document, False)
-                    nodes = await get_nodes_at_position(model, range.start)
+                    nodes = get_nodes_at_position(model, range.start)
 
                     if not any(n for n in nodes if isinstance(n, Keyword)):
                         continue
@@ -654,10 +641,6 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
     async def resolve_code_action_add_argument(
         self, code_action: CodeAction, data: CodeActionData
     ) -> Optional[CodeAction]:
-        from robot.parsing.lexer.tokens import Token
-        from robot.parsing.model.blocks import Keyword
-        from robot.parsing.model.statements import Arguments, Documentation, KeywordName, Statement
-
         if data.range.start.line == data.range.end.line and data.range.start.character <= data.range.end.character:
             document = self.parent.documents.get(data.document_uri)
             if document is None:
@@ -668,7 +651,7 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
                 return None
 
             model = self.parent.documents_cache.get_model(document, False)
-            nodes = await get_nodes_at_position(model, data.range.start)
+            nodes = get_nodes_at_position(model, data.range.start)
 
             keyword = next((n for n in nodes if isinstance(n, Keyword)), None)
             if keyword is None:

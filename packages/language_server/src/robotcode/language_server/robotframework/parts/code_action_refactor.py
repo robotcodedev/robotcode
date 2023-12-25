@@ -27,18 +27,18 @@ from robotcode.core.utils.dataclasses import as_dict, from_dict
 from robotcode.core.utils.inspect import iter_methods
 from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.robot.utils import get_robot_version
+from robotcode.robot.utils.ast import (
+    get_node_at_position,
+    get_nodes_at_position,
+    iter_nodes,
+    range_from_node,
+    range_from_token,
+)
 
 from ...common.decorators import code_action_kinds, language_id
 from ...common.text_document import TextDocument
 from ..diagnostics.model_helper import ModelHelperMixin
-from ..utils import ast_utils
-from ..utils.ast_utils import (
-    BodyBlock,
-    get_node_at_position,
-    get_nodes_at_position,
-    range_from_node,
-    range_from_token,
-)
+from ..utils.ast_utils import BodyBlock
 from .code_action_helper_mixin import SHOW_DOCUMENT_SELECT_AND_RENAME_COMMAND, CodeActionDataBase, CodeActionHelperMixin
 from .protocol_part import RobotLanguageServerProtocolPart
 
@@ -169,7 +169,7 @@ class RobotCodeActionRefactorProtocolPart(RobotLanguageServerProtocolPart, Model
         result = []
 
         blocks: List[BodyBlock] = []
-        for node in ast_utils.iter_nodes(model):
+        for node in iter_nodes(model):
             if isinstance(node, Block) and isinstance(node, BodyBlock):
                 blocks.append(node)
 
@@ -213,7 +213,7 @@ class RobotCodeActionRefactorProtocolPart(RobotLanguageServerProtocolPart, Model
         results = []
 
         for block in [model, *blocks]:
-            sub = [n for n in result if n in ast_utils.iter_nodes(block, False)]
+            sub = [n for n in result if n in iter_nodes(block, False)]
             if sub:
                 results.append(sub)
 
@@ -266,7 +266,7 @@ class RobotCodeActionRefactorProtocolPart(RobotLanguageServerProtocolPart, Model
             return None
 
         model = self.parent.documents_cache.get_model(document, False)
-        start_nodes = await get_nodes_at_position(model, range.start)
+        start_nodes = get_nodes_at_position(model, range.start)
 
         enabled = False
         insert_range = None
@@ -412,7 +412,7 @@ class RobotCodeActionRefactorProtocolPart(RobotLanguageServerProtocolPart, Model
             ]
         ):
             model = self.parent.documents_cache.get_model(document, False)
-            node = await get_node_at_position(model, range.start)
+            node = get_node_at_position(model, range.start)
 
             if not isinstance(node, KeywordCall) or node.assign:
                 return None
@@ -458,7 +458,7 @@ class RobotCodeActionRefactorProtocolPart(RobotLanguageServerProtocolPart, Model
             return None
 
         model = self.parent.documents_cache.get_model(document, False)
-        nodes = await get_nodes_at_position(model, range.start)
+        nodes = get_nodes_at_position(model, range.start)
         if not nodes:
             return None
         node = nodes[-1]
@@ -516,7 +516,7 @@ class RobotCodeActionRefactorProtocolPart(RobotLanguageServerProtocolPart, Model
             return None
 
         model = self.parent.documents_cache.get_model(document, False)
-        start_nodes = await get_nodes_at_position(model, range.start)
+        start_nodes = get_nodes_at_position(model, range.start)
 
         enabled = False
         insert_range = None
@@ -576,7 +576,7 @@ class RobotCodeActionRefactorProtocolPart(RobotLanguageServerProtocolPart, Model
         if kw_counter > 100:
             return None
 
-        start_nodes = await get_nodes_at_position(model, data.range.start)
+        start_nodes = get_nodes_at_position(model, data.range.start)
         block = next((n for n in start_nodes if isinstance(n, (Keyword, TestCase))), None)
         if block is None:
             return None

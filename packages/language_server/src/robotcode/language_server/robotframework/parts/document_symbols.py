@@ -4,12 +4,13 @@ import ast
 import itertools
 from typing import TYPE_CHECKING, Any, List, Optional, Union, cast
 
+from robot.parsing.lexer.tokens import Token
 from robotcode.core.lsp.types import DocumentSymbol, SymbolInformation, SymbolKind
 from robotcode.core.utils.logging import LoggingDescriptor
+from robotcode.robot.utils.ast import range_from_node, range_from_token, tokenize_variables
 
 from ...common.decorators import language_id
 from ...common.text_document import TextDocument
-from ..utils.ast_utils import Token, range_from_node, range_from_token, tokenize_variables
 from ..utils.async_ast import Visitor
 from .protocol_part import RobotLanguageServerProtocolPart
 
