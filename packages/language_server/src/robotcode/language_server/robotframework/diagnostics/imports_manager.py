@@ -38,8 +38,8 @@ from robotcode.language_server.common.decorators import language_id
 from robotcode.language_server.common.parts.workspace import FileWatcherEntry, Workspace
 from robotcode.language_server.common.text_document import TextDocument
 from robotcode.language_server.robotframework.configuration import CacheSaveLocation, RobotCodeConfig
-from robotcode.language_server.robotframework.utils.robot_path import find_file_ex
 from robotcode.robot.utils import get_robot_version, get_robot_version_str
+from robotcode.robot.utils.robot_path import find_file_ex
 
 from ...__version__ import __version__
 from .entities import CommandLineVariableDefinition, VariableDefinition

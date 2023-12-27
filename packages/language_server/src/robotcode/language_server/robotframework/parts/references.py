@@ -21,6 +21,7 @@ from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.core.utils.threading import threaded
 from robotcode.robot.utils import get_robot_version
 from robotcode.robot.utils.ast import get_nodes_at_position, get_tokens_at_position, iter_nodes, range_from_token
+from robotcode.robot.utils.match import normalize
 
 from ...common.decorators import language_id
 from ...common.text_document import TextDocument
@@ -37,7 +38,6 @@ from ..diagnostics.library_doc import (
     LibraryDoc,
 )
 from ..diagnostics.model_helper import ModelHelperMixin
-from ..utils.match import normalize
 from .protocol_part import RobotLanguageServerProtocolPart
 
 if TYPE_CHECKING:

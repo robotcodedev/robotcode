@@ -11,7 +11,6 @@ from typing import TYPE_CHECKING, Any, Dict, Final, List, Optional, cast
 
 from robotcode.core.async_tools import (
     Event,
-    Lock,
     async_event,
     async_tasking_event,
     async_tasking_event_iterator,
@@ -114,9 +113,9 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
     def __init__(self, protocol: LanguageServerProtocol) -> None:
         super().__init__(protocol)
 
-        self.workspace_loaded_event = Event()
+        self.workspace_loaded_event = threading.Event()
 
-        self._workspace_load_lock = Lock()
+        self._workspace_load_lock = threading.RLock()
         self._workspace_loaded = False
 
         self._workspace_diagnostics_task: Optional[asyncio.Task[Any]] = None
@@ -256,7 +255,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
         ...
 
     async def ensure_workspace_loaded(self) -> None:
-        async with self._workspace_load_lock:
+        with self._workspace_load_lock:
             if not self._workspace_loaded and not self.workspace_loaded_event.is_set():
                 self._logger.debug("load workspace documents")
                 try:

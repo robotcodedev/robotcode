@@ -6,10 +6,10 @@ from typing import TYPE_CHECKING, Any, List, Optional
 from robot.parsing.model.blocks import If, Keyword, TestCase
 from robotcode.core.lsp.types import FoldingRange
 from robotcode.core.utils.logging import LoggingDescriptor
+from robotcode.robot.utils.visitor import Visitor
 
 from ...common.decorators import language_id
 from ...common.text_document import TextDocument
-from ..utils.async_ast import Visitor
 from .protocol_part import RobotLanguageServerProtocolPart
 
 if TYPE_CHECKING:

@@ -51,6 +51,7 @@ from robotcode.core.lsp.types import (
 from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.robot.utils import get_robot_version
 from robotcode.robot.utils.ast import iter_over_keyword_names_and_owners, token_in_range
+from robotcode.robot.utils.visitor import iter_nodes
 
 from ...common.decorators import language_id
 from ...common.text_document import TextDocument, range_to_utf16
@@ -64,7 +65,6 @@ from ..diagnostics.library_doc import (
 )
 from ..diagnostics.model_helper import ModelHelperMixin
 from ..diagnostics.namespace import DEFAULT_BDD_PREFIXES, Namespace
-from ..utils import async_ast
 from .protocol_part import RobotLanguageServerProtocolPart
 
 if get_robot_version() >= (5, 0):
@@ -733,7 +733,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
         last_col = 0
 
         async def get_tokens() -> AsyncIterator[Tuple[Token, ast.AST]]:
-            async for node in async_ast.iter_nodes(model):
+            async for node in iter_nodes(model):
                 if isinstance(node, Statement):
                     if isinstance(node, LibraryImport) and node.name:
                         lib_doc = namespace.get_imported_library_libdoc(node.name, node.args, node.alias)

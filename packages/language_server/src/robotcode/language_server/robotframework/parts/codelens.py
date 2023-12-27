@@ -7,13 +7,13 @@ from robotcode.core.async_tools import create_sub_task
 from robotcode.core.lsp.types import CodeLens, Command
 from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.robot.utils.ast import range_from_token
+from robotcode.robot.utils.visitor import Visitor
 
 from ...common.decorators import language_id
 from ...common.text_document import TextDocument
 from ..configuration import AnalysisConfig
 from ..diagnostics.library_doc import KeywordDoc
 from ..diagnostics.model_helper import ModelHelperMixin
-from ..utils.async_ast import Visitor
 from .protocol_part import RobotLanguageServerProtocolPart
 
 if TYPE_CHECKING:

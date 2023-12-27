@@ -54,12 +54,12 @@ from robotcode.robot.utils.ast import (
     strip_variable_token,
     tokenize_variables,
 )
+from robotcode.robot.utils.match import eq_namespace
+from robotcode.robot.utils.variables import BUILTIN_VARIABLES
+from robotcode.robot.utils.visitor import Visitor
 
 from ...common.text_document import TextDocument
 from ..languages import Languages
-from ..utils.async_ast import Visitor
-from ..utils.match import eq_namespace
-from ..utils.variables import BUILTIN_VARIABLES
 from .entities import (
     ArgumentDefinition,
     BuiltInVariableDefinition,
@@ -660,7 +660,7 @@ class Namespace:
         self.has_invalidated(self)
 
     @_logger.call
-    def get_diagnostisc(self) -> List[Diagnostic]:
+    def get_diagnostics(self) -> List[Diagnostic]:
         self.ensure_initialized()
 
         self._analyze()

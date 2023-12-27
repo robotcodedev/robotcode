@@ -42,8 +42,8 @@ class RobotRoboCopDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
 
         self.source_name = "robocop"
 
-        if robocop_installed():
-            parent.diagnostics.collect.add(self.collect_diagnostics)
+        # if robocop_installed():
+        #     parent.diagnostics.collect.add(self.collect_diagnostics)
 
     def get_config(self, document: TextDocument) -> Optional[RoboCopConfig]:
         folder = self.parent.workspace.get_workspace_folder(document.uri)

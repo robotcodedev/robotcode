@@ -46,8 +46,8 @@ from robotcode.robot.utils.ast import (
     strip_variable_token,
     tokenize_variables,
 )
+from robotcode.robot.utils.visitor import Visitor
 
-from ..utils.async_ast import Visitor
 from .entities import (
     ArgumentDefinition,
     CommandLineVariableDefinition,

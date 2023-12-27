@@ -132,7 +132,7 @@ class InvalidVariableError(Exception):
 class VariableMatcher:
     def __init__(self, name: str) -> None:
         from robot.variables.search import search_variable
-        from robotcode.language_server.robotframework.utils.match import normalize
+        from robotcode.robot.utils.match import normalize
 
         self.name = name
 

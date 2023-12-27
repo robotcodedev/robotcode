@@ -8,10 +8,10 @@ from robot.parsing.lexer.tokens import Token
 from robotcode.core.lsp.types import DocumentSymbol, SymbolInformation, SymbolKind
 from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.robot.utils.ast import range_from_node, range_from_token, tokenize_variables
+from robotcode.robot.utils.visitor import Visitor
 
 from ...common.decorators import language_id
 from ...common.text_document import TextDocument
-from ..utils.async_ast import Visitor
 from .protocol_part import RobotLanguageServerProtocolPart
 
 if TYPE_CHECKING:

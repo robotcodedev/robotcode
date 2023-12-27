@@ -10,6 +10,7 @@ from robotcode.core.lsp.types import Diagnostic, DiagnosticSeverity, DiagnosticT
 from robotcode.core.uri import Uri
 from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.robot.utils.ast import iter_nodes, range_from_node, range_from_token
+from robotcode.robot.utils.stubs import HasError, HasErrors, HeaderAndBodyBlock
 
 from ...common.decorators import language_id
 from ...common.parts.diagnostics import DiagnosticsResult
@@ -17,7 +18,6 @@ from ...common.text_document import TextDocument
 from ..configuration import AnalysisConfig
 from ..diagnostics.entities import ArgumentDefinition
 from ..diagnostics.namespace import Namespace
-from ..utils.ast_utils import HasError, HasErrors, HeaderAndBodyBlock
 
 if TYPE_CHECKING:
     from ..protocol import RobotLanguageServerProtocol
@@ -33,10 +33,10 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
 
         self.source_name = "robotcode.diagnostics"
 
-        parent.diagnostics.collect.add(self.collect_token_errors)
-        parent.diagnostics.collect.add(self.collect_model_errors)
+        # parent.diagnostics.collect.add(self.collect_token_errors)
+        # parent.diagnostics.collect.add(self.collect_model_errors)
 
-        parent.diagnostics.collect.add(self.collect_namespace_diagnostics)
+        # parent.diagnostics.collect.add(self.collect_namespace_diagnostics)
 
         # parent.diagnostics.collect.add(self.collect_unused_keyword_references)
         # parent.diagnostics.collect.add(self.collect_unused_variable_references)
@@ -75,7 +75,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
         try:
             namespace = self.parent.documents_cache.get_namespace(document)
 
-            return DiagnosticsResult(self.collect_namespace_diagnostics, namespace.get_diagnostisc())
+            return DiagnosticsResult(self.collect_namespace_diagnostics, namespace.get_diagnostics())
         except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
             raise
         except BaseException as e:

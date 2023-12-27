@@ -5,8 +5,6 @@ from typing import Any, AsyncIterator, Callable, Dict, Iterator, Optional, Type,
 
 from robot.parsing.model.statements import Statement
 
-__all__ = ["iter_fields", "iter_child_nodes", "AsyncVisitor"]
-
 
 def _patch_robot() -> None:
     if hasattr(Statement, "_fields"):
@@ -90,23 +88,6 @@ class VisitorFinder(ABC):
         if result is cls.__NOT_SET:
             result = cls.__cls_finder_cache__[node_cls] = cls.__find_visitor(node_cls)
         return result  # type: ignore[return-value]
-
-
-class AsyncVisitor(VisitorFinder):
-    async def visit(self, node: ast.AST) -> None:
-        visitor = self._find_visitor(type(node)) or self.__class__.generic_visit
-        await visitor(self, node)
-
-    async def generic_visit(self, node: ast.AST) -> None:
-        for value in iter_field_values(node):
-            if value is None:
-                continue
-            if isinstance(value, ast.AST):
-                await self.visit(value)
-            elif isinstance(value, list):
-                for item in value:
-                    if isinstance(item, ast.AST):
-                        await self.visit(item)
 
 
 class Visitor(VisitorFinder):

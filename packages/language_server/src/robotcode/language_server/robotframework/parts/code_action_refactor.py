@@ -34,11 +34,11 @@ from robotcode.robot.utils.ast import (
     range_from_node,
     range_from_token,
 )
+from robotcode.robot.utils.stubs import BodyBlock
 
 from ...common.decorators import code_action_kinds, language_id
 from ...common.text_document import TextDocument
 from ..diagnostics.model_helper import ModelHelperMixin
-from ..utils.ast_utils import BodyBlock
 from .code_action_helper_mixin import SHOW_DOCUMENT_SELECT_AND_RENAME_COMMAND, CodeActionDataBase, CodeActionHelperMixin
 from .protocol_part import RobotLanguageServerProtocolPart
 

@@ -40,7 +40,7 @@ async def test(
     def split(location: Location) -> Location:
         return Location("/".join(location.uri.split("/")[-2:]), location.range)
 
-    await protocol.diagnostics.workspace_loaded_event.wait(1200)
+    protocol.diagnostics.workspace_loaded_event.wait(1200)
 
     result = await asyncio.wait_for(
         protocol.robot_references.collect(

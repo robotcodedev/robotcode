@@ -10,7 +10,8 @@ from robot.errors import VariableError
 from robot.parsing.lexer.tokens import Token
 from robot.parsing.model.statements import EmptyLine, Statement
 
-from . import get_robot_version, visitors
+from . import get_robot_version
+from .visitor import Visitor
 
 if get_robot_version() < (7, 0):
     from robot.variables.search import VariableIterator
@@ -43,7 +44,7 @@ def range_from_token(token: Token) -> Range:
     )
 
 
-class FirstAndLastRealStatementFinder(visitors.Visitor):
+class FirstAndLastRealStatementFinder(Visitor):
     def __init__(self) -> None:
         super().__init__()
         self.first_statement: Optional[ast.AST] = None
