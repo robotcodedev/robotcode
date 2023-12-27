@@ -6,4 +6,10 @@ result: !Hover
   contents:
     kind: markdown
     value: "### Keyword *\U0001F916\U0001F916*"
-  range: null
+  range:
+    end:
+      character: 6
+      line: 214
+    start:
+      character: 4
+      line: 214

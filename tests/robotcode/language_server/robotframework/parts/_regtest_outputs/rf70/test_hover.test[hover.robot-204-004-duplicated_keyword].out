@@ -6,4 +6,10 @@ result: !Hover
   contents:
     kind: markdown
     value: '### Keyword *duplicated keyword*'
-  range: null
+  range:
+    end:
+      character: 22
+      line: 204
+    start:
+      character: 4
+      line: 204

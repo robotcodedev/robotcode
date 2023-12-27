@@ -6,4 +6,10 @@ result: !Hover
   contents:
     kind: markdown
     value: '### Keyword *Log*'
-  range: null
+  range:
+    end:
+      character: 29
+      line: 104
+    start:
+      character: 26
+      line: 104

@@ -6,4 +6,10 @@ result: !Hover
   contents:
     kind: markdown
     value: '### Keyword *Run Keyword*'
-  range: null
+  range:
+    end:
+      character: 15
+      line: 242
+    start:
+      character: 4
+      line: 242

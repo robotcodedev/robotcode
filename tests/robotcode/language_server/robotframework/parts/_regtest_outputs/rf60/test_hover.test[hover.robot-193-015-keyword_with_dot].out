@@ -6,4 +6,10 @@ result: !Hover
   contents:
     kind: markdown
     value: '### Keyword *do.sell fish*'
-  range: null
+  range:
+    end:
+      character: 16
+      line: 193
+    start:
+      character: 4
+      line: 193

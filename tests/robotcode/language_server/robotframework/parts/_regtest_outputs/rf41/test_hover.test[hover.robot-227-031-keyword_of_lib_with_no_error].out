@@ -6,4 +6,10 @@ result: !Hover
   contents:
     kind: markdown
     value: '### Keyword *A Library Keyword*'
-  range: null
+  range:
+    end:
+      character: 32
+      line: 227
+    start:
+      character: 15
+      line: 227

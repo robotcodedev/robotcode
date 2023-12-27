@@ -147,7 +147,7 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
                     doc = "\n\n---\n\n".join(i[1] for i in result)
                     return Hover(
                         contents=MarkupContent(kind=MarkupKind.MARKDOWN, value=doc),
-                        range=found_range,
+                        range=r,
                     )
 
         all_namespace_refs = namespace.get_namespace_references()
