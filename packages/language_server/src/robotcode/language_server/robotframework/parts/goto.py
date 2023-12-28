@@ -116,7 +116,7 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart):
                     if found_range is not None:
                         libdoc = ns.library_doc
 
-                        if found_range == ns.import_range:
+                        if found_range == ns.import_range and str(document.uri.to_path()) == ns.import_source:
                             if libdoc.source:
                                 result.append(
                                     LocationLink(
@@ -126,6 +126,7 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart):
                                         target_selection_range=ns.library_doc.range,
                                     )
                                 )
+                                return result
                         else:
                             if ns.import_source:
                                 result.append(
