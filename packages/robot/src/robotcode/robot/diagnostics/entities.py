@@ -2,12 +2,13 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import TYPE_CHECKING, Any, Callable, List, Optional, Tuple, TypeVar, cast
 
-from robot.parsing.lexer.tokens import Token
 from robotcode.core.lsp.types import Position, Range
 from robotcode.robot.utils.ast import range_from_token
 
+from robot.parsing.lexer.tokens import Token
+
 if TYPE_CHECKING:
-    from .library_doc import KeywordDoc, LibraryDoc
+    from robotcode.robot.diagnostics.library_doc import KeywordDoc, LibraryDoc
 
 _F = TypeVar("_F", bound=Callable[..., Any])
 
@@ -131,8 +132,9 @@ class InvalidVariableError(Exception):
 
 class VariableMatcher:
     def __init__(self, name: str) -> None:
-        from robot.variables.search import search_variable
         from robotcode.robot.utils.match import normalize
+
+        from robot.variables.search import search_variable
 
         self.name = name
 

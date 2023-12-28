@@ -13,6 +13,7 @@ from typing import (
     Optional,
     Type,
     TypeVar,
+    Union,
     cast,
 )
 
@@ -74,12 +75,15 @@ class EventResultIteratorBase(Generic[_TParams, _TResult]):
         *__args: _TParams.args,
         callback_filter: Optional[Callable[[Callable[..., Any]], bool]] = None,
         **__kwargs: _TParams.kwargs,
-    ) -> Iterator[_TResult]:
+    ) -> Iterator[Union[_TResult, BaseException]]:
         for method in filter(
             lambda x: callback_filter(x) if callback_filter is not None else True,
             set(self),
         ):
-            yield method(*__args, **__kwargs)
+            try:
+                yield method(*__args, **__kwargs)
+            except BaseException as e:
+                yield e
 
 
 class EventIterator(EventResultIteratorBase[_TParams, _TResult]):
@@ -88,7 +92,7 @@ class EventIterator(EventResultIteratorBase[_TParams, _TResult]):
         *__args: _TParams.args,
         callback_filter: Optional[Callable[[Callable[..., Any]], bool]] = None,
         **__kwargs: _TParams.kwargs,
-    ) -> Iterator[_TResult]:
+    ) -> Iterator[Union[_TResult, BaseException]]:
         return self._notify(*__args, callback_filter=callback_filter, **__kwargs)
 
 
@@ -98,7 +102,7 @@ class Event(EventResultIteratorBase[_TParams, _TResult]):
         *__args: _TParams.args,
         callback_filter: Optional[Callable[[Callable[..., Any]], bool]] = None,
         **__kwargs: _TParams.kwargs,
-    ) -> List[_TResult]:
+    ) -> List[Union[_TResult, BaseException]]:
         return list(self._notify(*__args, callback_filter=callback_filter, **__kwargs))
 
 

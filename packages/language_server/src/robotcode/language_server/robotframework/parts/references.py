@@ -19,24 +19,24 @@ from robotcode.core.uri import Uri
 from robotcode.core.utils.caching import SimpleLRUCache
 from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.core.utils.threading import threaded
+from robotcode.robot.diagnostics.entities import (
+    LibraryEntry,
+    LocalVariableDefinition,
+    ResourceEntry,
+    VariableDefinition,
+)
+from robotcode.robot.diagnostics.library_doc import (
+    RESOURCE_FILE_EXTENSION,
+    ROBOT_FILE_EXTENSION,
+    KeywordDoc,
+    LibraryDoc,
+)
 from robotcode.robot.utils import get_robot_version
 from robotcode.robot.utils.ast import get_nodes_at_position, get_tokens_at_position, iter_nodes, range_from_token
 from robotcode.robot.utils.match import normalize
 
 from ...common.decorators import language_id
 from ...common.text_document import TextDocument
-from ..diagnostics.entities import (
-    LibraryEntry,
-    LocalVariableDefinition,
-    ResourceEntry,
-    VariableDefinition,
-)
-from ..diagnostics.library_doc import (
-    RESOURCE_FILE_EXTENSION,
-    ROBOT_FILE_EXTENSION,
-    KeywordDoc,
-    LibraryDoc,
-)
 from ..diagnostics.model_helper import ModelHelperMixin
 from .protocol_part import RobotLanguageServerProtocolPart
 
@@ -274,7 +274,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
 
         return []
 
-    async def has_cached_keyword_references(
+    def has_cached_keyword_references(
         self, document: TextDocument, kw_doc: KeywordDoc, include_declaration: bool = True
     ) -> bool:
         return self._keyword_reference_cache.has(document, kw_doc, include_declaration, False)

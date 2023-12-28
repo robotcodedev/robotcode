@@ -49,13 +49,7 @@ from robotcode.core.lsp.types import (
     SemanticTokenTypes,
 )
 from robotcode.core.utils.logging import LoggingDescriptor
-from robotcode.robot.utils import get_robot_version
-from robotcode.robot.utils.ast import iter_over_keyword_names_and_owners, token_in_range
-from robotcode.robot.utils.visitor import iter_nodes
-
-from ...common.decorators import language_id
-from ...common.text_document import TextDocument, range_to_utf16
-from ..diagnostics.library_doc import (
+from robotcode.robot.diagnostics.library_doc import (
     ALL_RUN_KEYWORDS_MATCHERS,
     BUILTIN_LIBRARY_NAME,
     KeywordArgumentKind,
@@ -63,6 +57,12 @@ from ..diagnostics.library_doc import (
     KeywordMatcher,
     LibraryDoc,
 )
+from robotcode.robot.utils import get_robot_version
+from robotcode.robot.utils.ast import iter_over_keyword_names_and_owners, token_in_range
+from robotcode.robot.utils.visitor import iter_nodes
+
+from ...common.decorators import language_id
+from ...common.text_document import TextDocument, range_to_utf16
 from ..diagnostics.model_helper import ModelHelperMixin
 from ..diagnostics.namespace import DEFAULT_BDD_PREFIXES, Namespace
 from .protocol_part import RobotLanguageServerProtocolPart

@@ -25,13 +25,17 @@ from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.core.utils.net import find_free_port
 from robotcode.core.utils.threading import threaded
 from robotcode.jsonrpc2.protocol import rpc_method
+from robotcode.robot.diagnostics.entities import LibraryEntry
+from robotcode.robot.diagnostics.library_doc import (
+    get_library_doc,
+    get_robot_library_html_doc_str,
+    resolve_robot_variables,
+)
 from robotcode.robot.utils.ast import get_node_at_position, range_from_token
 
 from ...common.decorators import code_action_kinds, language_id
 from ...common.text_document import TextDocument
 from ..configuration import DocumentationServerConfig
-from ..diagnostics.entities import LibraryEntry
-from ..diagnostics.library_doc import get_library_doc, get_robot_library_html_doc_str, resolve_robot_variables
 from ..diagnostics.model_helper import ModelHelperMixin
 from ..diagnostics.namespace import Namespace
 from .protocol_part import RobotLanguageServerProtocolPart

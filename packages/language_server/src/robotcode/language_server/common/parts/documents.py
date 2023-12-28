@@ -114,6 +114,9 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart):
         for e in self.on_read_document_text(
             self, uri, callback_filter=language_id_filter(language_id) if isinstance(language_id, str) else language_id
         ):
+            if isinstance(e, BaseException):
+                raise RuntimeError(f"Can't read document text from {uri}: {e}") from e
+
             if e is not None:
                 return self._normalize_line_endings(e)
 

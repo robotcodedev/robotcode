@@ -25,7 +25,7 @@ from robotcode.language_server.robotframework.configuration import (
     AnalysisConfig,
     RobotCodeConfig,
 )
-from robotcode.language_server.robotframework.diagnostics.library_doc import (
+from robotcode.robot.diagnostics.library_doc import (
     RESOURCE_FILE_EXTENSION,
     ROBOT_FILE_EXTENSION,
 )

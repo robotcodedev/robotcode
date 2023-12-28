@@ -1,9 +1,6 @@
-from __future__ import annotations
-
-from asyncio import CancelledError
 from typing import TYPE_CHECKING, Any, Final, List, Optional
 
-from robotcode.core.async_tools import async_tasking_event
+from robotcode.core.event import event
 from robotcode.core.lsp.types import (
     Hover,
     HoverOptions,
@@ -31,11 +28,11 @@ if TYPE_CHECKING:
 class HoverProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
     _logger: Final = LoggingDescriptor()
 
-    def __init__(self, parent: LanguageServerProtocol) -> None:
+    def __init__(self, parent: "LanguageServerProtocol") -> None:
         super().__init__(parent)
 
-    @async_tasking_event
-    async def collect(sender, document: TextDocument, position: Position) -> Optional[Hover]:  # NOSONAR
+    @event
+    def collect(sender, document: TextDocument, position: Position) -> Optional[Hover]:
         ...
 
     def extend_capabilities(self, capabilities: ServerCapabilities) -> None:
@@ -44,7 +41,7 @@ class HoverProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
 
     @rpc_method(name="textDocument/hover", param_type=HoverParams)
     @threaded()
-    async def _text_document_hover(
+    def _text_document_hover(
         self,
         text_document: TextDocumentIdentifier,
         position: Position,
@@ -57,15 +54,14 @@ class HoverProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
         if document is None:
             return None
 
-        for result in await self.collect(
+        for result in self.collect(
             self,
             document,
             document.position_from_utf16(position),
             callback_filter=language_id_filter(document),
         ):
             if isinstance(result, BaseException):
-                if not isinstance(result, CancelledError):
-                    self._logger.exception(result, exc_info=result)
+                self._logger.exception(result, exc_info=result)
             else:
                 if result is not None:
                     results.append(result)

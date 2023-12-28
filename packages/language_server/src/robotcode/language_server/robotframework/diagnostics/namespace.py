@@ -47,20 +47,7 @@ from robotcode.core.lsp.types import (
 )
 from robotcode.core.uri import Uri
 from robotcode.core.utils.logging import LoggingDescriptor
-from robotcode.robot.utils import get_robot_version
-from robotcode.robot.utils.ast import (
-    range_from_node,
-    range_from_token,
-    strip_variable_token,
-    tokenize_variables,
-)
-from robotcode.robot.utils.match import eq_namespace
-from robotcode.robot.utils.variables import BUILTIN_VARIABLES
-from robotcode.robot.utils.visitor import Visitor
-
-from ...common.text_document import TextDocument
-from ..languages import Languages
-from .entities import (
+from robotcode.robot.diagnostics.entities import (
     ArgumentDefinition,
     BuiltInVariableDefinition,
     CommandLineVariableDefinition,
@@ -77,9 +64,7 @@ from .entities import (
     VariablesEntry,
     VariablesImport,
 )
-from .errors import DIAGNOSTICS_SOURCE_NAME, Error
-from .imports_manager import ImportsManager
-from .library_doc import (
+from robotcode.robot.diagnostics.library_doc import (
     BUILTIN_LIBRARY_NAME,
     DEFAULT_LIBRARIES,
     KeywordDoc,
@@ -87,6 +72,21 @@ from .library_doc import (
     KeywordMatcher,
     LibraryDoc,
 )
+from robotcode.robot.utils import get_robot_version
+from robotcode.robot.utils.ast import (
+    range_from_node,
+    range_from_token,
+    strip_variable_token,
+    tokenize_variables,
+)
+from robotcode.robot.utils.match import eq_namespace
+from robotcode.robot.utils.variables import BUILTIN_VARIABLES
+from robotcode.robot.utils.visitor import Visitor
+
+from ...common.text_document import TextDocument
+from ..languages import Languages
+from .errors import DIAGNOSTICS_SOURCE_NAME, Error
+from .imports_manager import ImportsManager
 
 EXTRACT_COMMENT_PATTERN = re.compile(r".*(?:^ *|\t+| {2,})#(?P<comment>.*)$")
 ROBOTCODE_PATTERN = re.compile(r"(?P<marker>\brobotcode\b)\s*:\s*(?P<rule>\b\w+\b)")

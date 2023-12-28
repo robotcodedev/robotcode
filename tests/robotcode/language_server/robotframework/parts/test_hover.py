@@ -1,4 +1,3 @@
-import asyncio
 from pathlib import Path
 from typing import Optional
 
@@ -55,13 +54,10 @@ async def test(
     test_document: TextDocument,
     data: GeneratedTestData,
 ) -> None:
-    result = await asyncio.wait_for(
-        protocol.robot_hover.collect(
-            protocol.hover,
-            test_document,
-            Position(line=data.line, character=data.character),
-        ),
-        60,
+    result = protocol.robot_hover.collect(
+        protocol.hover,
+        test_document,
+        Position(line=data.line, character=data.character),
     )
 
     regtest.write(yaml.dump({"data": data, "result": split(result)}))

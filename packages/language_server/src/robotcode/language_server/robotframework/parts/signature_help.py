@@ -16,11 +16,11 @@ from robotcode.core.lsp.types import (
     SignatureInformation,
 )
 from robotcode.core.utils.logging import LoggingDescriptor
+from robotcode.robot.diagnostics.library_doc import KeywordDoc, LibraryDoc
 from robotcode.robot.utils.ast import get_node_at_position, get_tokens_at_position, range_from_token
 
 from ...common.decorators import language_id, retrigger_characters, trigger_characters
 from ...common.text_document import TextDocument
-from ..diagnostics.library_doc import KeywordDoc, LibraryDoc
 from ..diagnostics.model_helper import ModelHelperMixin
 from .protocol_part import RobotLanguageServerProtocolPart
 

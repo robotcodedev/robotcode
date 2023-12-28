@@ -9,6 +9,7 @@ from robotcode.core.async_tools import create_sub_task
 from robotcode.core.lsp.types import Diagnostic, DiagnosticSeverity, DiagnosticTag, Position, Range
 from robotcode.core.uri import Uri
 from robotcode.core.utils.logging import LoggingDescriptor
+from robotcode.robot.diagnostics.entities import ArgumentDefinition
 from robotcode.robot.utils.ast import iter_nodes, range_from_node, range_from_token
 from robotcode.robot.utils.stubs import HasError, HasErrors, HeaderAndBodyBlock
 
@@ -16,7 +17,6 @@ from ...common.decorators import language_id
 from ...common.parts.diagnostics import DiagnosticsResult
 from ...common.text_document import TextDocument
 from ..configuration import AnalysisConfig
-from ..diagnostics.entities import ArgumentDefinition
 from ..diagnostics.namespace import Namespace
 
 if TYPE_CHECKING:

@@ -63,6 +63,8 @@ from robotcode.core.lsp.types import (
     TextEdit,
 )
 from robotcode.core.utils.logging import LoggingDescriptor
+from robotcode.robot.diagnostics.entities import VariableDefinitionType
+from robotcode.robot.diagnostics.library_doc import CompleteResultKind, KeywordArgumentKind, KeywordDoc, KeywordMatcher
 from robotcode.robot.utils import get_robot_version
 from robotcode.robot.utils.ast import (
     get_nodes_at_position,
@@ -76,8 +78,6 @@ from robotcode.robot.utils.ast import (
 from ...common.decorators import language_id, trigger_characters
 from ...common.text_document import TextDocument
 from ..configuration import CompletionConfig
-from ..diagnostics.entities import VariableDefinitionType
-from ..diagnostics.library_doc import CompleteResultKind, KeywordArgumentKind, KeywordDoc, KeywordMatcher
 from ..diagnostics.model_helper import ModelHelperMixin
 from ..diagnostics.namespace import DocumentType, Namespace
 from .protocol_part import RobotLanguageServerProtocolPart

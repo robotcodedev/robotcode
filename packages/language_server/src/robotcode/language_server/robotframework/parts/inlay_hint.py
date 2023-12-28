@@ -7,12 +7,12 @@ from typing import TYPE_CHECKING, Any, Awaitable, Callable, List, Optional, Type
 from robot.parsing.lexer.tokens import Token
 from robotcode.core.lsp.types import InlayHint, InlayHintKind, Range
 from robotcode.core.utils.logging import LoggingDescriptor
+from robotcode.robot.diagnostics.library_doc import KeywordArgumentKind, KeywordDoc, LibraryDoc
 from robotcode.robot.utils.ast import iter_nodes, range_from_node, range_from_token
 
 from ...common.decorators import language_id
 from ...common.text_document import TextDocument
 from ..configuration import InlayHintsConfig
-from ..diagnostics.library_doc import KeywordArgumentKind, KeywordDoc, LibraryDoc
 from ..diagnostics.namespace import Namespace
 
 if TYPE_CHECKING:

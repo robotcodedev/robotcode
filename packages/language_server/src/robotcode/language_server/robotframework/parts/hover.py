@@ -1,12 +1,9 @@
-from __future__ import annotations
-
 import ast
 import asyncio
 import reprlib
 from typing import (
     TYPE_CHECKING,
     Any,
-    Awaitable,
     Callable,
     List,
     Optional,
@@ -15,6 +12,9 @@ from typing import (
     cast,
 )
 
+from robot.parsing.lexer.tokens import Token
+from robot.parsing.model.blocks import TestCase, TestCaseSection
+from robot.parsing.model.statements import Documentation, Tags
 from robotcode.core.lsp.types import Hover, MarkupContent, MarkupKind, Position, Range
 from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.robot.utils.ast import get_nodes_at_position, range_from_node, range_from_token
@@ -28,13 +28,13 @@ from .protocol_part import RobotLanguageServerProtocolPart
 if TYPE_CHECKING:
     from ..protocol import RobotLanguageServerProtocol
 
-_HoverMethod = Callable[[ast.AST, List[ast.AST], TextDocument, Position], Awaitable[Optional[Hover]]]
+_HoverMethod = Callable[[ast.AST, List[ast.AST], TextDocument, Position], Optional[Hover]]
 
 
 class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
     _logger = LoggingDescriptor()
 
-    def __init__(self, parent: RobotLanguageServerProtocol) -> None:
+    def __init__(self, parent: "RobotLanguageServerProtocol") -> None:
         super().__init__(parent)
 
         parent.hover.collect.add(self.collect)
@@ -56,7 +56,7 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
 
     @language_id("robotframework")
     @_logger.call
-    async def collect(self, sender: Any, document: TextDocument, position: Position) -> Optional[Hover]:
+    def collect(self, sender: Any, document: TextDocument, position: Position) -> Optional[Hover]:
         model = self.parent.documents_cache.get_model(document)
 
         result_nodes = get_nodes_at_position(model, position)
@@ -64,20 +64,20 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
         if not result_nodes:
             return None
 
-        result = await self._hover_default(result_nodes, document, position)
+        result = self._hover_default(result_nodes, document, position)
         if result:
             return result
 
         for result_node in reversed(result_nodes):
             method = self._find_method(type(result_node))
             if method is not None:
-                result = await method(result_node, result_nodes, document, position)
+                result = method(result_node, result_nodes, document, position)
                 if result is not None:
                     return result
 
         return None
 
-    async def _hover_default(self, nodes: List[ast.AST], document: TextDocument, position: Position) -> Optional[Hover]:
+    def _hover_default(self, nodes: List[ast.AST], document: TextDocument, position: Position) -> Optional[Hover]:
         namespace = self.parent.documents_cache.get_namespace(document)
 
         all_variable_refs = namespace.get_variable_references()
@@ -171,19 +171,15 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
 
         return None
 
-    async def hover_TestCase(  # noqa: N802
+    def hover_TestCase(  # noqa: N802
         self, node: ast.AST, nodes: List[ast.AST], document: TextDocument, position: Position
     ) -> Optional[Hover]:
-        from robot.parsing.lexer.tokens import Token as RobotToken
-        from robot.parsing.model.blocks import TestCase, TestCaseSection
-        from robot.parsing.model.statements import Documentation, Tags
-
         test_case = cast(TestCase, node)
 
         if not position.is_in_range(range_from_node(test_case.header)):
             return None
 
-        name_token = cast(RobotToken, test_case.header.get_token(RobotToken.TESTCASE_NAME))
+        name_token = test_case.header.get_token(Token.TESTCASE_NAME)
         if name_token is None:
             return None
 

@@ -19,13 +19,13 @@ from robotcode.core.lsp.types import (
     WorkspaceEdit,
 )
 from robotcode.core.utils.logging import LoggingDescriptor
+from robotcode.robot.diagnostics.entities import VariableDefinition, VariableDefinitionType
+from robotcode.robot.diagnostics.library_doc import KeywordDoc
 from robotcode.robot.utils.ast import get_nodes_at_position, get_tokens_at_position, range_from_token
 
 from ...common.decorators import language_id
 from ...common.parts.rename import CantRenameError
 from ...common.text_document import TextDocument
-from ..diagnostics.entities import VariableDefinition, VariableDefinitionType
-from ..diagnostics.library_doc import KeywordDoc
 from ..diagnostics.model_helper import ModelHelperMixin
 from .protocol_part import RobotLanguageServerProtocolPart
 

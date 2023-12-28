@@ -33,15 +33,8 @@ from typing import (
     cast,
 )
 
-from robot.parsing.lexer.tokens import Token
 from robotcode.core.lsp.types import Position, Range
-from robotcode.robot.utils import get_robot_version
-from robotcode.robot.utils.ast import get_variable_token, range_from_token, strip_variable_token
-from robotcode.robot.utils.markdownformatter import MarkDownFormatter
-from robotcode.robot.utils.match import normalize, normalize_namespace
-from robotcode.robot.utils.stubs import HasError, HasErrors
-
-from .entities import (
+from robotcode.robot.diagnostics.entities import (
     ArgumentDefinition,
     ImportedVariableDefinition,
     LibraryArgumentDefinition,
@@ -49,6 +42,13 @@ from .entities import (
     SourceEntity,
     single_call,
 )
+from robotcode.robot.utils import get_robot_version
+from robotcode.robot.utils.ast import get_variable_token, range_from_token, strip_variable_token
+from robotcode.robot.utils.markdownformatter import MarkDownFormatter
+from robotcode.robot.utils.match import normalize, normalize_namespace
+from robotcode.robot.utils.stubs import HasError, HasErrors
+
+from robot.parsing.lexer.tokens import Token
 
 RUN_KEYWORD_NAMES = [
     "Run Keyword",

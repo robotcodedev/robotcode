@@ -37,6 +37,17 @@ from robotcode.core.lsp.types import (
     Range,
 )
 from robotcode.core.uri import Uri
+from robotcode.robot.diagnostics.entities import (
+    ArgumentDefinition,
+    CommandLineVariableDefinition,
+    EnvironmentVariableDefinition,
+    LibraryEntry,
+    LocalVariableDefinition,
+    VariableDefinition,
+    VariableDefinitionType,
+    VariableNotFoundDefinition,
+)
+from robotcode.robot.diagnostics.library_doc import KeywordDoc, is_embedded_keyword
 from robotcode.robot.utils import get_robot_version
 from robotcode.robot.utils.ast import (
     is_not_variable_token,
@@ -48,18 +59,7 @@ from robotcode.robot.utils.ast import (
 )
 from robotcode.robot.utils.visitor import Visitor
 
-from .entities import (
-    ArgumentDefinition,
-    CommandLineVariableDefinition,
-    EnvironmentVariableDefinition,
-    LibraryEntry,
-    LocalVariableDefinition,
-    VariableDefinition,
-    VariableDefinitionType,
-    VariableNotFoundDefinition,
-)
 from .errors import DIAGNOSTICS_SOURCE_NAME, Error
-from .library_doc import KeywordDoc, is_embedded_keyword
 from .model_helper import ModelHelperMixin
 from .namespace import (
     KeywordFinder,
