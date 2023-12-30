@@ -75,3 +75,12 @@ result:
       character: 11
       line: 1
   uri: tests/signature_help.robot
+- !Location
+  range:
+    end:
+      character: 22
+      line: 2
+    start:
+      character: 11
+      line: 2
+  uri: tests/symbols.robot

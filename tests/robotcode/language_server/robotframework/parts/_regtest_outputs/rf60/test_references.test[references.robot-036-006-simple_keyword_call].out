@@ -1608,6 +1608,24 @@ result:
 - !Location
   range:
     end:
+      character: 11
+      line: 23
+    start:
+      character: 8
+      line: 23
+  uri: tests/symbols.robot
+- !Location
+  range:
+    end:
+      character: 11
+      line: 30
+    start:
+      character: 8
+      line: 30
+  uri: tests/symbols.robot
+- !Location
+  range:
+    end:
       character: 7
       line: 28
     start:

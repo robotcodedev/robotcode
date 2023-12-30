@@ -1,0 +1,25 @@
+data: !GeneratedTestData
+  character: 1
+  line: 9
+  name: test cases
+result: !DocumentSymbol
+  children: []
+  deprecated: null
+  detail: null
+  kind: 3
+  name: Test Cases
+  range:
+    end:
+      character: 19
+      line: 32
+    start:
+      character: 0
+      line: 9
+  selection_range:
+    end:
+      character: 19
+      line: 32
+    start:
+      character: 0
+      line: 9
+  tags: null

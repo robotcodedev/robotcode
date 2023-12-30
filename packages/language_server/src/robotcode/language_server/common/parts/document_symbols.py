@@ -1,11 +1,10 @@
-from __future__ import annotations
-
-from asyncio import CancelledError
+from concurrent.futures import CancelledError
 from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
     Final,
+    Iterable,
     List,
     Optional,
     Protocol,
@@ -15,7 +14,7 @@ from typing import (
     runtime_checkable,
 )
 
-from robotcode.core.async_tools import async_tasking_event
+from robotcode.core.event import event
 from robotcode.core.lsp.types import (
     DocumentSymbol,
     DocumentSymbolClientCapabilitiesSymbolKindType,
@@ -56,14 +55,14 @@ def symbol_information_label(label: str) -> Callable[[_F], _F]:
 class DocumentSymbolsProtocolPart(LanguageServerProtocolPart):
     _logger: Final = LoggingDescriptor()
 
-    def __init__(self, parent: LanguageServerProtocol) -> None:
+    def __init__(self, parent: "LanguageServerProtocol") -> None:
         super().__init__(parent)
         self.hierarchical_document_symbol_support = False
         self.symbol_kind: Optional[DocumentSymbolClientCapabilitiesSymbolKindType] = None
         self.tag_support: Optional[DocumentSymbolClientCapabilitiesTagSupportType] = None
 
-    @async_tasking_event
-    async def collect(
+    @event
+    def collect(
         sender, document: TextDocument  # NOSONAR
     ) -> Optional[Union[List[DocumentSymbol], List[SymbolInformation], None]]:
         ...
@@ -97,7 +96,7 @@ class DocumentSymbolsProtocolPart(LanguageServerProtocolPart):
 
     @rpc_method(name="textDocument/documentSymbol", param_type=DocumentSymbolParams)
     @threaded
-    async def _text_document_symbol(
+    def _text_document_symbol(
         self, text_document: TextDocumentIdentifier, *args: Any, **kwargs: Any
     ) -> Optional[Union[List[DocumentSymbol], List[SymbolInformation], None]]:
         document_symbols: List[DocumentSymbol] = []
@@ -107,16 +106,16 @@ class DocumentSymbolsProtocolPart(LanguageServerProtocolPart):
         if document is None:
             return None
 
-        for result in await self.collect(self, document, callback_filter=language_id_filter(document)):
+        for result in self.collect(self, document, callback_filter=language_id_filter(document)):
             if isinstance(result, BaseException):
                 if not isinstance(result, CancelledError):
                     self._logger.exception(result, exc_info=result)
             else:
                 if result is not None:
                     if all(isinstance(e, DocumentSymbol) for e in result):
-                        document_symbols.extend(result)
+                        document_symbols.extend(cast(Iterable[DocumentSymbol], result))
                     elif all(isinstance(e, SymbolInformation) for e in result):
-                        symbol_informations.extend(result)
+                        symbol_informations.extend(cast(Iterable[SymbolInformation], result))
                     else:
                         self._logger.warning(
                             "Result contains DocumentSymbol and SymbolInformation results, result is skipped."

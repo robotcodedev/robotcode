@@ -1,0 +1,25 @@
+data: !GeneratedTestData
+  character: 15
+  line: 21
+  name: loop var
+result: !DocumentSymbol
+  children: []
+  deprecated: null
+  detail: null
+  kind: 13
+  name: ${loop_var}
+  range:
+    end:
+      character: 20
+      line: 21
+    start:
+      character: 9
+      line: 21
+  selection_range:
+    end:
+      character: 20
+      line: 21
+    start:
+      character: 9
+      line: 21
+  tags: null

@@ -1,9 +1,7 @@
-from __future__ import annotations
-
-from asyncio import CancelledError
+from concurrent.futures import CancelledError
 from typing import TYPE_CHECKING, Any, Final, List, Optional
 
-from robotcode.core.async_tools import async_tasking_event
+from robotcode.core.event import event
 from robotcode.core.lsp.types import (
     DocumentHighlight,
     DocumentHighlightOptions,
@@ -26,22 +24,20 @@ if TYPE_CHECKING:
 class DocumentHighlightProtocolPart(LanguageServerProtocolPart):
     _logger: Final = LoggingDescriptor()
 
-    def __init__(self, parent: LanguageServerProtocol) -> None:
+    def __init__(self, parent: "LanguageServerProtocol") -> None:
         super().__init__(parent)
 
     def extend_capabilities(self, capabilities: ServerCapabilities) -> None:
         if len(self.collect):
             capabilities.document_highlight_provider = DocumentHighlightOptions(work_done_progress=True)
 
-    @async_tasking_event
-    async def collect(
-        sender, document: TextDocument, position: Position  # NOSONAR
-    ) -> Optional[List[DocumentHighlight]]:
+    @event
+    def collect(sender, document: TextDocument, position: Position) -> Optional[List[DocumentHighlight]]:  # NOSONAR
         ...
 
     @rpc_method(name="textDocument/documentHighlight", param_type=DocumentHighlightParams)
     @threaded
-    async def _text_document_document_highlight(
+    def _text_document_document_highlight(
         self,
         text_document: TextDocumentIdentifier,
         position: Position,
@@ -54,7 +50,7 @@ class DocumentHighlightProtocolPart(LanguageServerProtocolPart):
         if document is None:
             return None
 
-        for result in await self.collect(
+        for result in self.collect(
             self, document, document.position_from_utf16(position), callback_filter=language_id_filter(document)
         ):
             if isinstance(result, BaseException):

@@ -1,9 +1,8 @@
-from __future__ import annotations
-
 from typing import TYPE_CHECKING, Any, List, Optional, cast
 
 from robotcode.core.lsp.types import DocumentHighlight, DocumentHighlightKind, Position, Range
 from robotcode.core.utils.logging import LoggingDescriptor
+from robotcode.core.utils.threading import check_thread_canceled
 from robotcode.language_server.common.decorators import language_id
 from robotcode.language_server.common.text_document import TextDocument
 
@@ -16,14 +15,14 @@ from .protocol_part import RobotLanguageServerProtocolPart
 class RobotDocumentHighlightProtocolPart(RobotLanguageServerProtocolPart):
     _logger = LoggingDescriptor()
 
-    def __init__(self, parent: RobotLanguageServerProtocol) -> None:
+    def __init__(self, parent: "RobotLanguageServerProtocol") -> None:
         super().__init__(parent)
 
         parent.document_highlight.collect.add(self.collect)
 
     @language_id("robotframework")
     @_logger.call
-    async def collect(
+    def collect(
         self,
         sender: Any,
         document: TextDocument,
@@ -34,6 +33,8 @@ class RobotDocumentHighlightProtocolPart(RobotLanguageServerProtocolPart):
         all_variable_refs = namespace.get_variable_references()
         if all_variable_refs:
             for var, var_refs in all_variable_refs.items():
+                check_thread_canceled()
+
                 for r in var_refs:
                     if (var.source == namespace.source and position in var.name_range) or position in r.range:
                         return [
@@ -48,6 +49,8 @@ class RobotDocumentHighlightProtocolPart(RobotLanguageServerProtocolPart):
         all_kw_refs = namespace.get_keyword_references()
         if all_kw_refs:
             for kw, kw_refs in all_kw_refs.items():
+                check_thread_canceled()
+
                 for r in kw_refs:
                     if (kw.source == namespace.source and position in kw.range) or position in r.range:
                         return [
@@ -62,6 +65,7 @@ class RobotDocumentHighlightProtocolPart(RobotLanguageServerProtocolPart):
         all_namespace_refs = namespace.get_namespace_references()
         if all_namespace_refs:
             for ns, ns_refs in all_namespace_refs.items():
+                check_thread_canceled()
                 found_range = (
                     ns.import_range
                     if ns.import_source == namespace.source

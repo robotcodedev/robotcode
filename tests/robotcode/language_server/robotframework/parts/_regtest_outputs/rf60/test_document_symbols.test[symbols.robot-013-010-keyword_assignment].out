@@ -1,0 +1,25 @@
+data: !GeneratedTestData
+  character: 10
+  line: 13
+  name: keyword assignment
+result: !DocumentSymbol
+  children: []
+  deprecated: null
+  detail: null
+  kind: 13
+  name: ${kw_result}
+  range:
+    end:
+      character: 16
+      line: 13
+    start:
+      character: 4
+      line: 13
+  selection_range:
+    end:
+      character: 16
+      line: 13
+    start:
+      character: 4
+      line: 13
+  tags: null

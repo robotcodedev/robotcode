@@ -1,0 +1,25 @@
+data: !GeneratedTestData
+  character: 15
+  line: 34
+  name: comments section
+result: !DocumentSymbol
+  children: []
+  deprecated: null
+  detail: null
+  kind: 3
+  name: Comments
+  range:
+    end:
+      character: 16
+      line: 34
+    start:
+      character: 0
+      line: 34
+  selection_range:
+    end:
+      character: 16
+      line: 34
+    start:
+      character: 0
+      line: 34
+  tags: null

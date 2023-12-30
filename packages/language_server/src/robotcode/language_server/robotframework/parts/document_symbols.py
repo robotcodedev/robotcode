@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import ast
 import itertools
 from typing import TYPE_CHECKING, Any, List, Optional, Union, cast
@@ -16,6 +14,22 @@ from .protocol_part import RobotLanguageServerProtocolPart
 
 if TYPE_CHECKING:
     from ..protocol import RobotLanguageServerProtocol
+
+
+class RobotDocumentSymbolsProtocolPart(RobotLanguageServerProtocolPart):
+    _logger = LoggingDescriptor()
+
+    def __init__(self, parent: "RobotLanguageServerProtocol") -> None:
+        super().__init__(parent)
+
+        parent.document_symbols.collect.add(self.collect)
+
+    @language_id("robotframework")
+    @_logger.call
+    def collect(
+        self, sender: Any, document: TextDocument
+    ) -> Optional[Union[List[DocumentSymbol], List[SymbolInformation], None]]:
+        return _Visitor.find_from(self.parent.documents_cache.get_model(document), self)
 
 
 class _Visitor(Visitor):
@@ -179,6 +193,42 @@ class _Visitor(Visitor):
                     if symbol.name not in map(lambda v: v.name, self.current_symbol.children):
                         self.current_symbol.children.append(symbol)
 
+    def visit_ExceptHeader(self, node: ast.AST) -> None:  # noqa: N802
+        from robot.parsing.lexer.tokens import Token as RobotToken
+        from robot.parsing.model.statements import ExceptHeader
+
+        n = cast(ExceptHeader, node)
+        variables = n.get_tokens(RobotToken.VARIABLE)
+
+        if self.current_symbol is not None and self.current_symbol.children is not None:
+            for variable in variables:
+                variable_token = self.get_variable_token(variable)
+                if variable_token is not None:
+                    r = range_from_token(variable_token)
+                    symbol = DocumentSymbol(
+                        name=variable_token.value, kind=SymbolKind.VARIABLE, range=r, selection_range=r
+                    )
+                    if symbol.name not in map(lambda v: v.name, self.current_symbol.children):
+                        self.current_symbol.children.append(symbol)
+
+    def visit_Var(self, node: ast.AST) -> None:  # noqa: N802
+        from robot.parsing.lexer.tokens import Token as RobotToken
+        from robot.parsing.model.statements import Var
+
+        n = cast(Var, node)
+        variables = n.get_tokens(RobotToken.VARIABLE)
+
+        if self.current_symbol is not None and self.current_symbol.children is not None:
+            for variable in variables:
+                variable_token = self.get_variable_token(variable)
+                if variable_token is not None:
+                    r = range_from_token(variable_token)
+                    symbol = DocumentSymbol(
+                        name=variable_token.value, kind=SymbolKind.VARIABLE, range=r, selection_range=r
+                    )
+                    if symbol.name not in map(lambda v: v.name, self.current_symbol.children):
+                        self.current_symbol.children.append(symbol)
+
     def visit_KeywordName(self, node: ast.AST) -> None:  # noqa: N802
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.statements import KeywordName
@@ -226,19 +276,3 @@ class _Visitor(Visitor):
             r = range_from_node(variable)
             symbol = DocumentSymbol(name=name, kind=SymbolKind.VARIABLE, range=r, selection_range=r)
             self.current_symbol.children.append(symbol)
-
-
-class RobotDocumentSymbolsProtocolPart(RobotLanguageServerProtocolPart):
-    _logger = LoggingDescriptor()
-
-    def __init__(self, parent: RobotLanguageServerProtocol) -> None:
-        super().__init__(parent)
-
-        parent.document_symbols.collect.add(self.collect)
-
-    @language_id("robotframework")
-    @_logger.call
-    async def collect(
-        self, sender: Any, document: TextDocument
-    ) -> Optional[Union[List[DocumentSymbol], List[SymbolInformation], None]]:
-        return _Visitor.find_from(self.parent.documents_cache.get_model(document), self)

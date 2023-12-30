@@ -1,4 +1,3 @@
-import asyncio
 from pathlib import Path
 
 import pytest
@@ -33,13 +32,8 @@ async def test(
     test_document: TextDocument,
     data: GeneratedTestData,
 ) -> None:
-    result = await asyncio.wait_for(
-        protocol.robot_document_highlight.collect(
-            protocol.robot_document_highlight,
-            test_document,
-            Position(line=data.line, character=data.character),
-        ),
-        60,
+    result = protocol.robot_document_highlight.collect(
+        protocol.robot_document_highlight, test_document, Position(line=data.line, character=data.character)
     )
     regtest.write(
         yaml.dump(
