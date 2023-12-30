@@ -141,7 +141,8 @@ class RobotCodeLensProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixi
                         task = create_sub_task(find_refs(), loop=self.parent.diagnostics.diagnostics_loop)
 
                         def done(task: Any) -> None:
-                            self._running_task.remove(key)
+                            if key in self._running_task:
+                                self._running_task.remove(key)
 
                         task.add_done_callback(done)
 

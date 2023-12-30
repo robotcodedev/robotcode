@@ -1,4 +1,3 @@
-import asyncio
 from pathlib import Path
 
 import pytest
@@ -26,21 +25,14 @@ from .test_goto_implementation import split
     ids=generate_test_id,
     scope="module",
 )
-@pytest.mark.usefixtures("protocol")
-@pytest.mark.asyncio()
-async def test_definition(
+def test_definition(
     regtest: RegTestFixtureEx,
     protocol: RobotLanguageServerProtocol,
     test_document: TextDocument,
     data: GeneratedTestData,
 ) -> None:
-    result = await asyncio.wait_for(
-        protocol.robot_goto.collect_definition(
-            protocol.robot_goto,
-            test_document,
-            Position(line=data.line, character=data.character),
-        ),
-        60,
+    result = protocol.robot_goto.collect_definition(
+        protocol.robot_goto, test_document, Position(line=data.line, character=data.character)
     )
 
     regtest.write(yaml.dump({"data": data, "result": split(result)}))

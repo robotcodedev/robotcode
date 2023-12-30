@@ -12,6 +12,7 @@ from typing import (
 from robotcode.core.lsp.types import Location, LocationLink, Position, Range
 from robotcode.core.uri import Uri
 from robotcode.core.utils.logging import LoggingDescriptor
+from robotcode.core.utils.threading import check_thread_canceled
 from robotcode.robot.utils.ast import range_from_token
 
 from ...common.decorators import language_id
@@ -33,19 +34,19 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart):
 
     @language_id("robotframework")
     @_logger.call
-    async def collect_definition(
+    def collect_definition(
         self, sender: Any, document: TextDocument, position: Position
     ) -> Union[Location, List[Location], List[LocationLink], None]:
-        return await self.collect(document, position)
+        return self.collect(document, position)
 
     @language_id("robotframework")
     @_logger.call
-    async def collect_implementation(
+    def collect_implementation(
         self, sender: Any, document: TextDocument, position: Position
     ) -> Union[Location, List[Location], List[LocationLink], None]:
-        return await self.collect(document, position)
+        return self.collect(document, position)
 
-    async def collect(
+    def collect(
         self, document: TextDocument, position: Position
     ) -> Union[Location, List[Location], List[LocationLink], None]:
         namespace = self.parent.documents_cache.get_namespace(document)
@@ -56,6 +57,8 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart):
             result = []
 
             for variable, var_refs in all_variable_refs.items():
+                check_thread_canceled()
+
                 found_range = (
                     variable.name_range
                     if variable.source == namespace.source and position.is_in_range(variable.name_range, False)
@@ -82,6 +85,8 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart):
             result = []
 
             for kw, kw_refs in all_kw_refs.items():
+                check_thread_canceled()
+
                 found_range = (
                     kw.name_range
                     if kw.source == namespace.source and position.is_in_range(kw.name_range, False)
@@ -105,6 +110,8 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart):
 
         all_namespace_refs = namespace.get_namespace_references()
         if all_namespace_refs:
+            check_thread_canceled()
+
             result = []
 
             for ns, ns_refs in all_namespace_refs.items():

@@ -5,7 +5,7 @@ import inspect
 import io
 import threading
 import weakref
-from typing import Any, Awaitable, Callable, Dict, Final, List, Optional, TypeVar, Union, cast
+from typing import Any, Callable, Dict, Final, List, Optional, TypeVar, Union, cast
 
 from robotcode.core.event import event
 from robotcode.core.lsp.types import DocumentUri, Position, Range
@@ -255,26 +255,7 @@ class TextDocument:
 
             return cast(_T, e.data)
 
-    async def get_cache_async(
-        self,
-        entry: Union[Callable[[TextDocument], Awaitable[_T]], Callable[..., Awaitable[_T]]],
-        *args: Any,
-        **kwargs: Any,
-    ) -> _T:
-        reference = self.__get_cache_reference(entry)
-
-        e = self._cache[reference]
-
-        with e.lock:
-            if not e.has_data:
-                e.data = await entry(self, *args, **kwargs)
-                e.has_data = True
-
-            return cast(_T, e.data)
-
-    async def remove_cache_entry(
-        self, entry: Union[Callable[[TextDocument], Awaitable[_T]], Callable[..., Awaitable[_T]]]
-    ) -> None:
+    def remove_cache_entry(self, entry: Union[Callable[[TextDocument], _T], Callable[..., _T]]) -> None:
         self.__remove_cache_entry(self.__get_cache_reference(entry, add_remove=False))
 
     def set_data(self, key: Any, data: Any) -> None:

@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from asyncio import CancelledError
+from concurrent.futures import CancelledError
 from typing import TYPE_CHECKING, Any, Final, List, Optional, Union
 
-from robotcode.core.async_tools import async_tasking_event
+from robotcode.core.event import event
 from robotcode.core.lsp.types import (
     DefinitionParams,
     Location,
@@ -13,7 +13,7 @@ from robotcode.core.lsp.types import (
     TextDocumentIdentifier,
 )
 from robotcode.core.utils.logging import LoggingDescriptor
-from robotcode.core.utils.threading import threaded
+from robotcode.core.utils.threading import check_thread_canceled, threaded
 from robotcode.jsonrpc2.protocol import rpc_method
 from robotcode.language_server.common.decorators import language_id_filter
 from robotcode.language_server.common.has_extend_capabilities import HasExtendCapabilities
@@ -31,8 +31,8 @@ class DefinitionProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
         super().__init__(parent)
         self.link_support = False
 
-    @async_tasking_event
-    async def collect(
+    @event
+    def collect(
         sender, document: TextDocument, position: Position  # NOSONAR
     ) -> Union[Location, List[Location], List[LocationLink], None]:
         ...
@@ -50,7 +50,7 @@ class DefinitionProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
 
     @rpc_method(name="textDocument/definition", param_type=DefinitionParams)
     @threaded()
-    async def _text_document_definition(
+    def _text_document_definition(
         self, text_document: TextDocumentIdentifier, position: Position, *args: Any, **kwargs: Any
     ) -> Optional[Union[Location, List[Location], List[LocationLink]]]:
         locations: List[Location] = []
@@ -60,9 +60,11 @@ class DefinitionProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
         if document is None:
             return None
 
-        for result in await self.collect(
+        for result in self.collect(
             self, document, document.position_from_utf16(position), callback_filter=language_id_filter(document)
         ):
+            check_thread_canceled()
+
             if isinstance(result, BaseException):
                 if not isinstance(result, CancelledError):
                     self._logger.exception(result, exc_info=result)

@@ -1,5 +1,4 @@
 import pytest
-from robotcode.core.async_tools import check_canceled
 from robotcode.core.lsp.types import Position, Range
 from robotcode.language_server.common.text_document import (
     InvalidRangeError,
@@ -7,8 +6,7 @@ from robotcode.language_server.common.text_document import (
 )
 
 
-@pytest.mark.asyncio()
-async def test_apply_full_change_should_work() -> None:
+def test_apply_full_change_should_work() -> None:
     text = """first"""
     new_text = """changed"""
     document = TextDocument(document_uri="file:///test.robot", language_id="robotframework", version=1, text=text)
@@ -19,8 +17,7 @@ async def test_apply_full_change_should_work() -> None:
     assert document.text() == new_text
 
 
-@pytest.mark.asyncio()
-async def test_apply_apply_incremental_change_at_begining_should_work() -> None:
+def test_apply_apply_incremental_change_at_begining_should_work() -> None:
     text = """first"""
     new_text = """changed"""
     document = TextDocument(document_uri="file:///test.robot", language_id="robotframework", version=1, text=text)
@@ -33,8 +30,7 @@ async def test_apply_apply_incremental_change_at_begining_should_work() -> None:
     assert document.text() == new_text + text
 
 
-@pytest.mark.asyncio()
-async def test_apply_apply_incremental_change_at_end_should_work() -> None:
+def test_apply_apply_incremental_change_at_end_should_work() -> None:
     text = """first"""
     new_text = """changed"""
 
@@ -48,8 +44,7 @@ async def test_apply_apply_incremental_change_at_end_should_work() -> None:
     assert document.text() == text + new_text
 
 
-@pytest.mark.asyncio()
-async def test_save_and_revert_should_work() -> None:
+def test_save_and_revert_should_work() -> None:
     text = """first"""
     new_text = """changed"""
 
@@ -81,8 +76,7 @@ async def test_save_and_revert_should_work() -> None:
     assert document.version == 2
 
 
-@pytest.mark.asyncio()
-async def test_apply_apply_incremental_change_in_the_middle_should_work() -> None:
+def test_apply_apply_incremental_change_in_the_middle_should_work() -> None:
     text = """\
 first line
 second line
@@ -103,8 +97,7 @@ third"""
     assert document.text() == expected
 
 
-@pytest.mark.asyncio()
-async def test_apply_apply_incremental_change_with_start_line_eq_len_lines_should_work() -> None:
+def test_apply_apply_incremental_change_with_start_line_eq_len_lines_should_work() -> None:
     text = """\
 first line
 second line
@@ -121,8 +114,7 @@ third"""
     assert document.text() == text + new_text
 
 
-@pytest.mark.asyncio()
-async def test_apply_apply_incremental_change_with_wrong_range_should_raise_invalidrangerrror() -> None:
+def test_apply_apply_incremental_change_with_wrong_range_should_raise_invalidrangerrror() -> None:
     text = """first"""
     new_text = """changed"""
 
@@ -135,8 +127,7 @@ async def test_apply_apply_incremental_change_with_wrong_range_should_raise_inva
         )
 
 
-@pytest.mark.asyncio()
-async def test_apply_none_change_should_work() -> None:
+def test_apply_none_change_should_work() -> None:
     text = """first"""
 
     document = TextDocument(document_uri="file:///test.robot", language_id="robotframework", version=1, text=text)
@@ -147,8 +138,7 @@ async def test_apply_none_change_should_work() -> None:
     assert document.text() == text
 
 
-@pytest.mark.asyncio()
-async def test_lines_should_give_the_lines_of_the_document() -> None:
+def test_lines_should_give_the_lines_of_the_document() -> None:
     text = """\
 first
 second
@@ -163,8 +153,7 @@ third
     assert document.get_lines() == text.splitlines(True)
 
 
-@pytest.mark.asyncio()
-async def test_document_get_set_clear_data_should_work() -> None:
+def test_document_get_set_clear_data_should_work() -> None:
     text = """\
 first
 second
@@ -190,8 +179,7 @@ third
     assert document.get_data(key, None) is None
 
 
-@pytest.mark.asyncio()
-async def test_document_get_set_cache_with_function_should_work() -> None:
+def test_document_get_set_cache_with_function_should_work() -> None:
     text = """\
 first
 second
@@ -199,30 +187,29 @@ third
 """
     prefix = "1"
 
-    async def get_data(document: TextDocument, data: str) -> str:
+    def get_data(document: TextDocument, data: str) -> str:
         return prefix + data
 
     document = TextDocument(document_uri="file:///test.robot", language_id="robotframework", version=1, text=text)
 
-    assert await document.get_cache_async(get_data, "data") == "1data"
+    assert document.get_cache(get_data, "data") == "1data"
 
     prefix = "2"
-    assert await document.get_cache_async(get_data, "data1") == "1data"
+    assert document.get_cache(get_data, "data1") == "1data"
 
-    await document.remove_cache_entry(get_data)
+    document.remove_cache_entry(get_data)
 
-    assert await document.get_cache_async(get_data, "data2") == "2data2"
+    assert document.get_cache(get_data, "data2") == "2data2"
 
     prefix = "3"
-    assert await document.get_cache_async(get_data, "data3") == "2data2"
+    assert document.get_cache(get_data, "data3") == "2data2"
 
     document.invalidate_cache()
 
-    assert await document.get_cache_async(get_data, "data3") == "3data3"
+    assert document.get_cache(get_data, "data3") == "3data3"
 
 
-@pytest.mark.asyncio()
-async def test_document_get_set_cache_with_method_should_work() -> None:
+def test_document_get_set_cache_with_method_should_work() -> None:
     text = """\
 first
 second
@@ -233,29 +220,27 @@ third
     prefix = "1"
 
     class Dummy:
-        async def get_data(self, document: TextDocument, data: str) -> str:
+        def get_data(self, document: TextDocument, data: str) -> str:
             return prefix + data
 
     dummy = Dummy()
 
-    assert await document.get_cache_async(dummy.get_data, "data") == "1data"
+    assert document.get_cache(dummy.get_data, "data") == "1data"
 
     prefix = "2"
-    assert await document.get_cache_async(dummy.get_data, "data1") == "1data"
+    assert document.get_cache(dummy.get_data, "data1") == "1data"
 
-    await document.remove_cache_entry(dummy.get_data)
+    document.remove_cache_entry(dummy.get_data)
 
-    assert await document.get_cache_async(dummy.get_data, "data2") == "2data2"
+    assert document.get_cache(dummy.get_data, "data2") == "2data2"
 
     prefix = "3"
-    assert await document.get_cache_async(dummy.get_data, "data3") == "2data2"
+    assert document.get_cache(dummy.get_data, "data3") == "2data2"
 
     document.invalidate_cache()
 
-    assert await document.get_cache_async(dummy.get_data, "data3") == "3data3"
+    assert document.get_cache(dummy.get_data, "data3") == "3data3"
 
     del dummy
-
-    await check_canceled()
 
     assert len(document._cache) == 0

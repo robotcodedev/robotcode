@@ -17,6 +17,7 @@ from robot.parsing.model.blocks import TestCase, TestCaseSection
 from robot.parsing.model.statements import Documentation, Tags
 from robotcode.core.lsp.types import Hover, MarkupContent, MarkupKind, Position, Range
 from robotcode.core.utils.logging import LoggingDescriptor
+from robotcode.core.utils.threading import check_thread_canceled
 from robotcode.robot.utils.ast import get_nodes_at_position, range_from_node, range_from_token
 from robotcode.robot.utils.markdownformatter import MarkDownFormatter
 
@@ -69,6 +70,8 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
             return result
 
         for result_node in reversed(result_nodes):
+            check_thread_canceled()
+
             method = self._find_method(type(result_node))
             if method is not None:
                 result = method(result_node, result_nodes, document, position)
@@ -86,6 +89,8 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
             highlight_range = None
 
             for variable, var_refs in all_variable_refs.items():
+                check_thread_canceled()
+
                 found_range = (
                     variable.name_range
                     if variable.source == namespace.source and position.is_in_range(variable.name_range, False)
@@ -131,6 +136,8 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
             result: List[Tuple[Range, str]] = []
 
             for kw, kw_refs in all_kw_refs.items():
+                check_thread_canceled()
+
                 found_range = (
                     kw.name_range
                     if kw.source == namespace.source and position.is_in_range(kw.name_range, False)
@@ -153,6 +160,8 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
         all_namespace_refs = namespace.get_namespace_references()
         if all_namespace_refs:
             for ns, ns_refs in all_namespace_refs.items():
+                check_thread_canceled()
+
                 found_range = (
                     ns.import_range
                     if ns.import_source == namespace.source and position.is_in_range(ns.import_range, False)

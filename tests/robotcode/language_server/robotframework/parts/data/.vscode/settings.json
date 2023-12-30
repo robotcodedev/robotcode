@@ -34,12 +34,12 @@
         "**/lib/alibrary.py",
         "LibraryWithErrors"
     ],
-    // "robotcode.extraArgs": [
-    //     "--log",
-    //     "--log-level",
-    //     "TRACE",
-    //     "--log-calls"
-    // ],
+    "robotcode.extraArgs": [
+        "--log",
+        "--log-level",
+        "DEBUG",
+        // "--log-calls"
+    ],
     "robotcode.robot.variableFiles": [
         "${EXECDIR}/resources/testvars.yml"
     ],

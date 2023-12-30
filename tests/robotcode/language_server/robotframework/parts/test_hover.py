@@ -46,9 +46,7 @@ def split(hover: Optional[Hover]) -> Optional[Hover]:
     ids=generate_test_id,
     scope="module",
 )
-@pytest.mark.usefixtures("protocol")
-@pytest.mark.asyncio()
-async def test(
+def test(
     regtest: RegTestFixtureEx,
     protocol: RobotLanguageServerProtocol,
     test_document: TextDocument,

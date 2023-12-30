@@ -1,3 +1,4 @@
+from concurrent.futures import CancelledError
 from typing import TYPE_CHECKING, Any, Final, List, Optional
 
 from robotcode.core.event import event
@@ -10,7 +11,7 @@ from robotcode.core.lsp.types import (
     TextDocumentIdentifier,
 )
 from robotcode.core.utils.logging import LoggingDescriptor
-from robotcode.core.utils.threading import threaded
+from robotcode.core.utils.threading import check_thread_canceled, threaded
 from robotcode.jsonrpc2.protocol import rpc_method
 from robotcode.language_server.common.decorators import language_id_filter
 from robotcode.language_server.common.has_extend_capabilities import (
@@ -60,8 +61,11 @@ class HoverProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
             document.position_from_utf16(position),
             callback_filter=language_id_filter(document),
         ):
+            check_thread_canceled()
+
             if isinstance(result, BaseException):
-                self._logger.exception(result, exc_info=result)
+                if not isinstance(result, CancelledError):
+                    self._logger.exception(result, exc_info=result)
             else:
                 if result is not None:
                     results.append(result)

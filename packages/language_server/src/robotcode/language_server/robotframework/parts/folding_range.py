@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any, List, Optional
 from robot.parsing.model.blocks import If, Keyword, TestCase
 from robotcode.core.lsp.types import FoldingRange
 from robotcode.core.utils.logging import LoggingDescriptor
+from robotcode.core.utils.threading import check_thread_canceled
 from robotcode.robot.utils.visitor import Visitor
 
 from ...common.decorators import language_id
@@ -37,6 +38,7 @@ class _Visitor(Visitor):
         self.current_if: List[ast.AST] = []
 
     def visit(self, node: ast.AST) -> None:
+        check_thread_canceled()
         super().visit(node)
 
     @classmethod
@@ -123,5 +125,5 @@ class RobotFoldingRangeProtocolPart(RobotLanguageServerProtocolPart):
 
     @language_id("robotframework")
     @_logger.call
-    async def collect(self, sender: Any, document: TextDocument) -> Optional[List[FoldingRange]]:
+    def collect(self, sender: Any, document: TextDocument) -> Optional[List[FoldingRange]]:
         return _Visitor.find_from(self.parent.documents_cache.get_model(document, False), self)

@@ -1,4 +1,3 @@
-import asyncio
 from pathlib import Path
 from typing import Any, Iterable, Iterator, Tuple, Union
 
@@ -63,16 +62,14 @@ def generate_foldingrange_test_id(params: Any) -> Any:
     ids=generate_foldingrange_test_id,
     scope="module",
 )
-@pytest.mark.asyncio()
-async def test(
+def test(
     regtest: RegTestFixtureEx,
     protocol: RobotLanguageServerProtocol,
     test_document: TextDocument,
     data: GeneratedTestData,
 ) -> None:
-    result = await asyncio.wait_for(
-        protocol.robot_folding_ranges.collect(protocol.robot_folding_ranges, test_document), 60
-    )
+    result = protocol.robot_folding_ranges.collect(protocol.robot_folding_ranges, test_document)
+
     if result is not None:
         result = [
             r

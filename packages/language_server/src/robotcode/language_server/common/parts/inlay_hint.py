@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from asyncio import CancelledError
 from typing import TYPE_CHECKING, Any, Final, List, Optional
 
@@ -28,7 +26,7 @@ from .protocol_part import LanguageServerProtocolPart
 class InlayHintProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
     _logger: Final = LoggingDescriptor()
 
-    def __init__(self, parent: LanguageServerProtocol) -> None:
+    def __init__(self, parent: "LanguageServerProtocol") -> None:
         super().__init__(parent)
 
     @async_tasking_event
