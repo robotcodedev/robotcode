@@ -17,9 +17,6 @@ from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.core.utils.threading import threaded
 from robotcode.jsonrpc2.protocol import rpc_method
 from robotcode.language_server.common.decorators import language_id_filter
-from robotcode.language_server.common.has_extend_capabilities import (
-    HasExtendCapabilities,
-)
 from robotcode.language_server.common.text_document import TextDocument
 
 if TYPE_CHECKING:
@@ -28,7 +25,7 @@ if TYPE_CHECKING:
 from .protocol_part import LanguageServerProtocolPart
 
 
-class LinkedEditingRangeProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
+class LinkedEditingRangeProtocolPart(LanguageServerProtocolPart):
     _logger: Final = LoggingDescriptor()
 
     def __init__(self, parent: LanguageServerProtocol) -> None:
@@ -43,7 +40,7 @@ class LinkedEditingRangeProtocolPart(LanguageServerProtocolPart, HasExtendCapabi
         ...
 
     @rpc_method(name="textDocument/linkedEditingRange", param_type=LinkedEditingRangeParams)
-    @threaded()
+    @threaded
     async def _text_document_linked_editing_range(
         self,
         text_document: TextDocumentIdentifier,

@@ -14,9 +14,6 @@ from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.core.utils.threading import check_thread_canceled, threaded
 from robotcode.jsonrpc2.protocol import rpc_method
 from robotcode.language_server.common.decorators import language_id_filter
-from robotcode.language_server.common.has_extend_capabilities import (
-    HasExtendCapabilities,
-)
 from robotcode.language_server.common.parts.protocol_part import (
     LanguageServerProtocolPart,
 )
@@ -26,7 +23,7 @@ if TYPE_CHECKING:
     from robotcode.language_server.common.protocol import LanguageServerProtocol
 
 
-class HoverProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
+class HoverProtocolPart(LanguageServerProtocolPart):
     _logger: Final = LoggingDescriptor()
 
     def __init__(self, parent: "LanguageServerProtocol") -> None:
@@ -41,7 +38,7 @@ class HoverProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
             capabilities.hover_provider = HoverOptions(work_done_progress=True)
 
     @rpc_method(name="textDocument/hover", param_type=HoverParams)
-    @threaded()
+    @threaded
     def _text_document_hover(
         self,
         text_document: TextDocumentIdentifier,

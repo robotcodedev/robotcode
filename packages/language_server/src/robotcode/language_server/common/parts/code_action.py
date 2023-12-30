@@ -19,7 +19,6 @@ from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.core.utils.threading import threaded
 from robotcode.jsonrpc2.protocol import rpc_method
 from robotcode.language_server.common.decorators import CODE_ACTION_KINDS_ATTR, HasCodeActionKinds, language_id_filter
-from robotcode.language_server.common.has_extend_capabilities import HasExtendCapabilities
 from robotcode.language_server.common.parts.protocol_part import LanguageServerProtocolPart
 from robotcode.language_server.common.text_document import TextDocument
 
@@ -27,7 +26,7 @@ if TYPE_CHECKING:
     from robotcode.language_server.common.protocol import LanguageServerProtocol
 
 
-class CodeActionProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
+class CodeActionProtocolPart(LanguageServerProtocolPart):
     _logger: Final = LoggingDescriptor()
 
     def __init__(self, parent: LanguageServerProtocol) -> None:
@@ -61,7 +60,7 @@ class CodeActionProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
             )
 
     @rpc_method(name="textDocument/codeAction", param_type=CodeActionParams)
-    @threaded()
+    @threaded
     async def _text_document_code_action(
         self,
         text_document: TextDocumentIdentifier,
@@ -102,7 +101,7 @@ class CodeActionProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
         return results
 
     @rpc_method(name="codeAction/resolve", param_type=CodeAction)
-    @threaded()
+    @threaded
     async def _text_document_code_action_resolve(
         self,
         params: CodeAction,

@@ -22,9 +22,6 @@ from robotcode.language_server.common.decorators import (
     LANGUAGE_ID_ATTR,
     language_id_filter,
 )
-from robotcode.language_server.common.has_extend_capabilities import (
-    HasExtendCapabilities,
-)
 from robotcode.language_server.common.parts.protocol_part import (
     LanguageServerProtocolPart,
 )
@@ -34,7 +31,7 @@ if TYPE_CHECKING:
     from robotcode.language_server.common.protocol import LanguageServerProtocol  # pragma: no cover
 
 
-class InlineValueProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
+class InlineValueProtocolPart(LanguageServerProtocolPart):
     _logger: Final = LoggingDescriptor()
 
     def __init__(self, parent: LanguageServerProtocol) -> None:
@@ -62,7 +59,7 @@ class InlineValueProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
             )
 
     @rpc_method(name="textDocument/inlineValue", param_type=InlineValueParams)
-    @threaded()
+    @threaded
     async def _text_document_inline_value(
         self,
         text_document: TextDocumentIdentifier,

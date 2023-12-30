@@ -16,7 +16,6 @@ from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.core.utils.threading import threaded
 from robotcode.jsonrpc2.protocol import rpc_method
 from robotcode.language_server.common.decorators import language_id_filter
-from robotcode.language_server.common.has_extend_capabilities import HasExtendCapabilities
 from robotcode.language_server.common.text_document import TextDocument
 
 from .protocol_part import LanguageServerProtocolPart
@@ -25,7 +24,7 @@ if TYPE_CHECKING:
     from robotcode.language_server.common.protocol import LanguageServerProtocol
 
 
-class CodeLensProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
+class CodeLensProtocolPart(LanguageServerProtocolPart):
     _logger: Final = LoggingDescriptor()
 
     def __init__(self, parent: LanguageServerProtocol) -> None:
@@ -45,7 +44,7 @@ class CodeLensProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
             capabilities.code_lens_provider = CodeLensOptions(resolve_provider=True if len(self.resolve) > 0 else None)
 
     @rpc_method(name="textDocument/codeLens", param_type=CodeLensParams)
-    @threaded()
+    @threaded
     async def _text_document_code_lens(
         self, text_document: TextDocumentIdentifier, *args: Any, **kwargs: Any
     ) -> Optional[List[CodeLens]]:
@@ -71,7 +70,7 @@ class CodeLensProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
         return results
 
     @rpc_method(name="codeLens/resolve", param_type=CodeLens)
-    @threaded()
+    @threaded
     async def _code_lens_resolve(self, params: CodeLens, *args: Any, **kwargs: Any) -> CodeLens:
         results: List[CodeLens] = []
 

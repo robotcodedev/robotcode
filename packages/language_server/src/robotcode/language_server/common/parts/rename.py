@@ -22,9 +22,6 @@ from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.core.utils.threading import threaded
 from robotcode.jsonrpc2.protocol import JsonRPCErrorException, rpc_method
 from robotcode.language_server.common.decorators import language_id_filter
-from robotcode.language_server.common.has_extend_capabilities import (
-    HasExtendCapabilities,
-)
 from robotcode.language_server.common.text_document import TextDocument
 
 if TYPE_CHECKING:
@@ -37,7 +34,7 @@ class CantRenameError(Exception):
     pass
 
 
-class RenameProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
+class RenameProtocolPart(LanguageServerProtocolPart):
     _logger: Final = LoggingDescriptor()
 
     def __init__(self, parent: LanguageServerProtocol) -> None:
@@ -62,7 +59,7 @@ class RenameProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
         ...
 
     @rpc_method(name="textDocument/rename", param_type=RenameParams)
-    @threaded()
+    @threaded
     async def _text_document_rename(
         self,
         text_document: TextDocumentIdentifier,
@@ -129,7 +126,7 @@ class RenameProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
         return result
 
     @rpc_method(name="textDocument/prepareRename", param_type=PrepareRenameParams)
-    @threaded()
+    @threaded
     async def _text_document_prepare_rename(
         self,
         text_document: TextDocumentIdentifier,

@@ -89,7 +89,7 @@ class RobotWorkspaceProtocolPart(RobotLanguageServerProtocolPart):
         config = await self.parent.workspace.get_configuration_async(AnalysisConfig, uri)
         return config.progress_mode
 
-    @threaded()
+    @threaded
     async def _load_workspace_documents(self, sender: Any) -> List[WorkspaceDocumentsResult]:
         start = time.monotonic()
         try:
@@ -191,7 +191,7 @@ class RobotWorkspaceProtocolPart(RobotLanguageServerProtocolPart):
             self._logger.info(lambda: f"Workspace loaded {len(result)} documents in {time.monotonic() - start}s")
 
     @rpc_method(name="robot/cache/clear")
-    @threaded()
+    @threaded
     async def robot_cache_clear(self) -> None:
         for folder in self.parent.workspace.workspace_folders:
             self.parent.documents_cache.get_imports_manager_for_workspace_folder(folder).clear_cache()

@@ -38,7 +38,6 @@ from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.core.utils.threading import threaded
 from robotcode.jsonrpc2.protocol import JsonRPCErrorException, rpc_method
 from robotcode.language_server.common.decorators import language_id_filter
-from robotcode.language_server.common.has_extend_capabilities import HasExtendCapabilities
 from robotcode.language_server.common.parts.protocol_part import LanguageServerProtocolPart
 from robotcode.language_server.common.text_document import TextDocument
 
@@ -107,7 +106,7 @@ def _cancel_all_tasks(loop: asyncio.AbstractEventLoop) -> None:
             )
 
 
-class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
+class DiagnosticsProtocolPart(LanguageServerProtocolPart):
     _logger: Final = LoggingDescriptor()
 
     def __init__(self, protocol: LanguageServerProtocol) -> None:
@@ -279,7 +278,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
             await self.refresh()
 
     @_logger.call
-    @threaded()
+    @threaded
     def on_did_close(self, sender: Any, document: TextDocument) -> None:
         create_sub_task(self._close_diagnostics_for_document(document), loop=self.diagnostics_loop)
 
@@ -500,7 +499,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
         self.create_document_diagnostics_task(document, True)
 
     @rpc_method(name="textDocument/diagnostic", param_type=DocumentDiagnosticParams)
-    @threaded()
+    @threaded
     async def _text_document_diagnostic(
         self,
         text_document: TextDocumentIdentifier,
@@ -536,7 +535,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
         return data
 
     @rpc_method(name="workspace/diagnostic", param_type=WorkspaceDiagnosticParams)
-    @threaded()
+    @threaded
     async def _workspace_diagnostic(
         self,
         identifier: Optional[str],

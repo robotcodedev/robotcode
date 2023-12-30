@@ -40,8 +40,8 @@ from robotcode.jsonrpc2.protocol import (
     rpc_method,
 )
 from robotcode.jsonrpc2.server import JsonRPCServer
+from robotcode.language_server.common.parts.protocol_part import LanguageServerProtocolPart
 
-from .has_extend_capabilities import HasExtendCapabilities
 from .parts.code_action import CodeActionProtocolPart
 from .parts.code_lens import CodeLensProtocolPart
 from .parts.commands import CommandsProtocolPart
@@ -67,7 +67,7 @@ from .parts.signature_help import SignatureHelpProtocolPart
 from .parts.window import WindowProtocolPart
 from .parts.workspace import Workspace
 
-__all__ = ["LanguageServerException", "LanguageServerProtocol", "HasExtendCapabilities"]
+__all__ = ["LanguageServerException", "LanguageServerProtocol"]
 
 
 class LanguageServerException(JsonRPCException):
@@ -172,7 +172,7 @@ class LanguageServerProtocol(JsonRPCProtocol):
         base_capabilities = replace(self._base_capabilities)
 
         for p in self.registry.parts:
-            if isinstance(p, HasExtendCapabilities):
+            if isinstance(p, LanguageServerProtocolPart):
                 p.extend_capabilities(base_capabilities)
 
         return base_capabilities

@@ -16,7 +16,6 @@ from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.core.utils.threading import check_thread_canceled, threaded
 from robotcode.jsonrpc2.protocol import rpc_method
 from robotcode.language_server.common.decorators import language_id_filter
-from robotcode.language_server.common.has_extend_capabilities import HasExtendCapabilities
 from robotcode.language_server.common.parts.protocol_part import LanguageServerProtocolPart
 from robotcode.language_server.common.text_document import TextDocument
 
@@ -24,7 +23,7 @@ if TYPE_CHECKING:
     from robotcode.language_server.common.protocol import LanguageServerProtocol
 
 
-class DefinitionProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
+class DefinitionProtocolPart(LanguageServerProtocolPart):
     _logger: Final = LoggingDescriptor()
 
     def __init__(self, parent: LanguageServerProtocol) -> None:
@@ -49,7 +48,7 @@ class DefinitionProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
             capabilities.definition_provider = True
 
     @rpc_method(name="textDocument/definition", param_type=DefinitionParams)
-    @threaded()
+    @threaded
     def _text_document_definition(
         self, text_document: TextDocumentIdentifier, position: Position, *args: Any, **kwargs: Any
     ) -> Optional[Union[Location, List[Location], List[LocationLink]]]:

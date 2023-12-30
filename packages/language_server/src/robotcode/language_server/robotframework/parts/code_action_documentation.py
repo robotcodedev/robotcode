@@ -422,7 +422,7 @@ class RobotCodeActionDocumentationProtocolPart(RobotLanguageServerProtocolPart, 
         return f"{base_url}/?&{params}{f'#{target}' if target else ''}"
 
     @rpc_method(name="robot/documentationServer/convertUri", param_type=ConvertUriParams)
-    @threaded()
+    @threaded
     async def _convert_uri(self, uri: str, *args: Any, **kwargs: Any) -> Optional[str]:
         real_uri = Uri(uri)
 

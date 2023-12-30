@@ -24,7 +24,6 @@ from robotcode.language_server.common.decorators import (
     HasTriggerCharacters,
     language_id_filter,
 )
-from robotcode.language_server.common.has_extend_capabilities import HasExtendCapabilities
 from robotcode.language_server.common.text_document import TextDocument
 
 from .protocol_part import LanguageServerProtocolPart
@@ -33,7 +32,7 @@ if TYPE_CHECKING:
     from robotcode.language_server.common.protocol import LanguageServerProtocol
 
 
-class SignatureHelpProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
+class SignatureHelpProtocolPart(LanguageServerProtocolPart):
     _logger: Final = LoggingDescriptor()
 
     def __init__(self, parent: LanguageServerProtocol) -> None:
@@ -73,7 +72,7 @@ class SignatureHelpProtocolPart(LanguageServerProtocolPart, HasExtendCapabilitie
             )
 
     @rpc_method(name="textDocument/signatureHelp", param_type=SignatureHelpParams)
-    @threaded()
+    @threaded
     async def _text_document_signature_help(
         self,
         text_document: TextDocumentIdentifier,

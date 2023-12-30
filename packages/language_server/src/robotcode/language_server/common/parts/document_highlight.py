@@ -16,7 +16,6 @@ from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.core.utils.threading import threaded
 from robotcode.jsonrpc2.protocol import rpc_method
 from robotcode.language_server.common.decorators import language_id_filter
-from robotcode.language_server.common.has_extend_capabilities import HasExtendCapabilities
 from robotcode.language_server.common.parts.protocol_part import LanguageServerProtocolPart
 from robotcode.language_server.common.text_document import TextDocument
 
@@ -24,7 +23,7 @@ if TYPE_CHECKING:
     from robotcode.language_server.common.protocol import LanguageServerProtocol
 
 
-class DocumentHighlightProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
+class DocumentHighlightProtocolPart(LanguageServerProtocolPart):
     _logger: Final = LoggingDescriptor()
 
     def __init__(self, parent: LanguageServerProtocol) -> None:
@@ -41,7 +40,7 @@ class DocumentHighlightProtocolPart(LanguageServerProtocolPart, HasExtendCapabil
         ...
 
     @rpc_method(name="textDocument/documentHighlight", param_type=DocumentHighlightParams)
-    @threaded()
+    @threaded
     async def _text_document_document_highlight(
         self,
         text_document: TextDocumentIdentifier,

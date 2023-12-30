@@ -75,7 +75,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         await self.clear_cache()
 
     @language_id("robotframework")
-    @threaded()
+    @threaded
     def document_did_change(self, sender: Any, document: TextDocument) -> None:
         create_sub_task(self.clear_cache(), loop=self.parent.loop)
 

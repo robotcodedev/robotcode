@@ -37,7 +37,7 @@ class RobotDebuggingUtilsProtocolPart(RobotLanguageServerProtocolPart, ModelHelp
         super().__init__(parent)
 
     @rpc_method(name="robot/debugging/getEvaluatableExpression", param_type=EvaluatableExpressionParams)
-    @threaded()
+    @threaded
     @_logger.call
     async def _get_evaluatable_expression(
         self,

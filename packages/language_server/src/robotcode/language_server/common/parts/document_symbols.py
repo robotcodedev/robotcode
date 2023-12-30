@@ -30,7 +30,6 @@ from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.core.utils.threading import threaded
 from robotcode.jsonrpc2.protocol import rpc_method
 from robotcode.language_server.common.decorators import language_id_filter
-from robotcode.language_server.common.has_extend_capabilities import HasExtendCapabilities
 from robotcode.language_server.common.parts.protocol_part import LanguageServerProtocolPart
 from robotcode.language_server.common.text_document import TextDocument
 
@@ -54,7 +53,7 @@ def symbol_information_label(label: str) -> Callable[[_F], _F]:
     return decorator
 
 
-class DocumentSymbolsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
+class DocumentSymbolsProtocolPart(LanguageServerProtocolPart):
     _logger: Final = LoggingDescriptor()
 
     def __init__(self, parent: LanguageServerProtocol) -> None:
@@ -97,7 +96,7 @@ class DocumentSymbolsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilit
                     capabilities.document_symbol_provider = True
 
     @rpc_method(name="textDocument/documentSymbol", param_type=DocumentSymbolParams)
-    @threaded()
+    @threaded
     async def _text_document_symbol(
         self, text_document: TextDocumentIdentifier, *args: Any, **kwargs: Any
     ) -> Optional[Union[List[DocumentSymbol], List[SymbolInformation], None]]:

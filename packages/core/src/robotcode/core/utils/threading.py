@@ -1,7 +1,7 @@
 import inspect
 from concurrent.futures import CancelledError, Future
 from threading import Thread, current_thread, local
-from typing import Any, Callable, Dict, Generic, Optional, Tuple, TypeVar, cast
+from typing import Any, Callable, Dict, Generic, Optional, Tuple, TypeVar, cast, overload
 
 _F = TypeVar("_F", bound=Callable[..., Any])
 _TResult = TypeVar("_TResult")
@@ -22,10 +22,23 @@ class FutureEx(Future, Generic[_TResult]):  # type: ignore[type-arg]
         return cast(_TResult, super().result(timeout))
 
 
-def threaded(enabled: bool = True) -> Callable[[_F], _F]:
+@overload
+def threaded(__func: _F) -> _F:
+    ...
+
+
+@overload
+def threaded(*, enabled: bool = True) -> Callable[[_F], _F]:
+    ...
+
+
+def threaded(__func: _F = None, *, enabled: bool = True) -> Callable[[_F], _F]:
     def decorator(func: _F) -> _F:
         setattr(func, __THREADED_MARKER, enabled)
         return func
+
+    if __func is not None:
+        return decorator(__func)
 
     return decorator
 

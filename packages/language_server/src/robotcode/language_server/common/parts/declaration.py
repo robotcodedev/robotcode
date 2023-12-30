@@ -3,7 +3,7 @@ from __future__ import annotations
 from asyncio import CancelledError
 from typing import TYPE_CHECKING, Any, Final, List, Optional, Union
 
-from robotcode.core.async_tools import async_tasking_event
+from robotcode.core.event import event
 from robotcode.core.lsp.types import (
     DeclarationParams,
     Location,
@@ -13,12 +13,9 @@ from robotcode.core.lsp.types import (
     TextDocumentIdentifier,
 )
 from robotcode.core.utils.logging import LoggingDescriptor
-from robotcode.core.utils.threading import threaded
+from robotcode.core.utils.threading import check_thread_canceled, threaded
 from robotcode.jsonrpc2.protocol import rpc_method
 from robotcode.language_server.common.decorators import language_id_filter
-from robotcode.language_server.common.has_extend_capabilities import (
-    HasExtendCapabilities,
-)
 from robotcode.language_server.common.parts.protocol_part import LanguageServerProtocolPart
 from robotcode.language_server.common.text_document import TextDocument
 
@@ -26,15 +23,15 @@ if TYPE_CHECKING:
     from robotcode.language_server.common.protocol import LanguageServerProtocol
 
 
-class DeclarationProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
+class DeclarationProtocolPart(LanguageServerProtocolPart):
     _logger: Final = LoggingDescriptor()
 
     def __init__(self, parent: LanguageServerProtocol) -> None:
         super().__init__(parent)
         self.link_support = False
 
-    @async_tasking_event
-    async def collect(
+    @event
+    def collect(
         sender, document: TextDocument, position: Position  # NOSONAR
     ) -> Union[Location, List[Location], List[LocationLink], None]:
         ...
@@ -51,8 +48,8 @@ class DeclarationProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
             capabilities.declaration_provider = True
 
     @rpc_method(name="textDocument/declaration", param_type=DeclarationParams)
-    @threaded()
-    async def _text_document_declaration(
+    @threaded
+    def _text_document_declaration(
         self,
         text_document: TextDocumentIdentifier,
         position: Position,
@@ -66,7 +63,9 @@ class DeclarationProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities)
         if document is None:
             return None
 
-        for result in await self.collect(self, document, position, callback_filter=language_id_filter(document)):
+        for result in self.collect(self, document, position, callback_filter=language_id_filter(document)):
+            check_thread_canceled()
+
             if isinstance(result, BaseException):
                 if not isinstance(result, CancelledError):
                     self._logger.exception(result, exc_info=result)

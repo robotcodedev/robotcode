@@ -30,7 +30,6 @@ from robotcode.language_server.common.decorators import (
     HasTriggerCharacters,
     language_id_filter,
 )
-from robotcode.language_server.common.has_extend_capabilities import HasExtendCapabilities
 from robotcode.language_server.common.parts.protocol_part import LanguageServerProtocolPart
 from robotcode.language_server.common.text_document import TextDocument
 
@@ -38,7 +37,7 @@ if TYPE_CHECKING:
     from robotcode.language_server.common.protocol import LanguageServerProtocol
 
 
-class CompletionProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
+class CompletionProtocolPart(LanguageServerProtocolPart):
     _logger: Final = LoggingDescriptor()
 
     def __init__(self, parent: LanguageServerProtocol) -> None:
@@ -84,7 +83,7 @@ class CompletionProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
             )
 
     @rpc_method(name="textDocument/completion", param_type=CompletionParams)
-    @threaded()
+    @threaded
     async def _text_document_completion(
         self,
         text_document: TextDocumentIdentifier,
@@ -155,7 +154,7 @@ class CompletionProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
             item.text_edit.replace = document.range_to_utf16(item.text_edit.replace)
 
     @rpc_method(name="completionItem/resolve", param_type=CompletionItem)
-    @threaded()
+    @threaded
     async def _completion_item_resolve(
         self,
         params: CompletionItem,

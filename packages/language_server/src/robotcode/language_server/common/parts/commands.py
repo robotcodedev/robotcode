@@ -18,7 +18,6 @@ from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.core.utils.threading import threaded
 from robotcode.jsonrpc2.protocol import JsonRPCErrorException, rpc_method
 from robotcode.language_server.common.decorators import get_command_id, is_command
-from robotcode.language_server.common.has_extend_capabilities import HasExtendCapabilities
 from robotcode.language_server.common.parts.protocol_part import LanguageServerProtocolPart
 
 if TYPE_CHECKING:
@@ -34,7 +33,7 @@ class CommandEntry:
     callback: _FUNC_TYPE
 
 
-class CommandsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
+class CommandsProtocolPart(LanguageServerProtocolPart):
     _logger: Final = LoggingDescriptor()
 
     PREFIX: Final = f"{uuid.uuid4()}"
@@ -72,7 +71,7 @@ class CommandsProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
         capabilities.execute_command_provider = ExecuteCommandOptions(list(self.commands.keys()))
 
     @rpc_method(name="workspace/executeCommand", param_type=ExecuteCommandParams)
-    @threaded()
+    @threaded
     async def _workspace_execute_command(
         self, command: str, arguments: Optional[List[LSPAny]], *args: Any, **kwargs: Any
     ) -> Optional[LSPAny]:

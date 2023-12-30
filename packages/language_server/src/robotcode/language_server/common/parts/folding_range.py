@@ -13,7 +13,6 @@ from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.core.utils.threading import threaded
 from robotcode.jsonrpc2.protocol import rpc_method
 from robotcode.language_server.common.decorators import language_id_filter
-from robotcode.language_server.common.has_extend_capabilities import HasExtendCapabilities
 from robotcode.language_server.common.parts.protocol_part import LanguageServerProtocolPart
 from robotcode.language_server.common.text_document import TextDocument
 
@@ -21,7 +20,7 @@ if TYPE_CHECKING:
     from robotcode.language_server.common.protocol import LanguageServerProtocol  # pragma: no cover
 
 
-class FoldingRangeProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
+class FoldingRangeProtocolPart(LanguageServerProtocolPart):
     _logger: Final = LoggingDescriptor()
 
     def __init__(self, parent: "LanguageServerProtocol") -> None:
@@ -36,7 +35,7 @@ class FoldingRangeProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities
             capabilities.folding_range_provider = True
 
     @rpc_method(name="textDocument/foldingRange", param_type=FoldingRangeParams)
-    @threaded()
+    @threaded
     def _text_document_folding_range(
         self, text_document: TextDocumentIdentifier, *args: Any, **kwargs: Any
     ) -> Optional[List[FoldingRange]]:

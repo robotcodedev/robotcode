@@ -14,7 +14,6 @@ from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.core.utils.threading import threaded
 from robotcode.jsonrpc2.protocol import rpc_method
 from robotcode.language_server.common.decorators import language_id_filter
-from robotcode.language_server.common.has_extend_capabilities import HasExtendCapabilities
 from robotcode.language_server.common.text_document import TextDocument
 
 if TYPE_CHECKING:
@@ -23,7 +22,7 @@ if TYPE_CHECKING:
 from .protocol_part import LanguageServerProtocolPart
 
 
-class InlayHintProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
+class InlayHintProtocolPart(LanguageServerProtocolPart):
     _logger: Final = LoggingDescriptor()
 
     def __init__(self, parent: "LanguageServerProtocol") -> None:
@@ -45,7 +44,7 @@ class InlayHintProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
                 capabilities.inlay_hint_provider = InlayHintOptions()
 
     @rpc_method(name="textDocument/inlayHint", param_type=InlayHintParams)
-    @threaded()
+    @threaded
     async def _text_document_inlay_hint(
         self,
         text_document: TextDocumentIdentifier,
@@ -82,7 +81,7 @@ class InlayHintProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
         return None
 
     @rpc_method(name="inlayHint/resolve", param_type=InlayHint)
-    @threaded()
+    @threaded
     async def _inlay_hint_resolve(
         self,
         params: InlayHint,

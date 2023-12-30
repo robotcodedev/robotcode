@@ -69,9 +69,6 @@ from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.core.utils.path import path_is_relative_to
 from robotcode.core.utils.threading import threaded
 from robotcode.jsonrpc2.protocol import rpc_method
-from robotcode.language_server.common.has_extend_capabilities import (
-    HasExtendCapabilities,
-)
 
 from .protocol_part import LanguageServerProtocolPart
 
@@ -152,7 +149,7 @@ _TConfig = TypeVar("_TConfig", bound=ConfigBase)
 _F = TypeVar("_F", bound=Callable[..., Any])
 
 
-class Workspace(LanguageServerProtocolPart, HasExtendCapabilities):
+class Workspace(LanguageServerProtocolPart):
     _logger: Final = LoggingDescriptor()
 
     def __init__(
@@ -253,7 +250,7 @@ class Workspace(LanguageServerProtocolPart, HasExtendCapabilities):
         ...
 
     @rpc_method(name="workspace/didChangeConfiguration", param_type=DidChangeConfigurationParams)
-    @threaded()
+    @threaded
     async def _workspace_did_change_configuration(self, settings: Dict[str, Any], *args: Any, **kwargs: Any) -> None:
         self.settings = settings
         await self.did_change_configuration(self, settings)
@@ -283,7 +280,7 @@ class Workspace(LanguageServerProtocolPart, HasExtendCapabilities):
         ...
 
     @rpc_method(name="workspace/willCreateFiles", param_type=CreateFilesParams)
-    @threaded()
+    @threaded
     async def _workspace_will_create_files(
         self, files: List[FileCreate], *args: Any, **kwargs: Any
     ) -> Optional[WorkspaceEdit]:
@@ -301,31 +298,31 @@ class Workspace(LanguageServerProtocolPart, HasExtendCapabilities):
         return WorkspaceEdit(changes=result)
 
     @rpc_method(name="workspace/didCreateFiles", param_type=CreateFilesParams)
-    @threaded()
+    @threaded
     async def _workspace_did_create_files(self, files: List[FileCreate], *args: Any, **kwargs: Any) -> None:
         await self.did_create_files(self, [f.uri for f in files])
 
     @rpc_method(name="workspace/willRenameFiles", param_type=RenameFilesParams)
-    @threaded()
+    @threaded
     async def _workspace_will_rename_files(self, files: List[FileRename], *args: Any, **kwargs: Any) -> None:
         await self.will_rename_files(self, [(f.old_uri, f.new_uri) for f in files])
 
         # TODO: return WorkspaceEdit
 
     @rpc_method(name="workspace/didRenameFiles", param_type=RenameFilesParams)
-    @threaded()
+    @threaded
     async def _workspace_did_rename_files(self, files: List[FileRename], *args: Any, **kwargs: Any) -> None:
         await self.did_rename_files(self, [(f.old_uri, f.new_uri) for f in files])
 
     @rpc_method(name="workspace/willDeleteFiles", param_type=DeleteFilesParams)
-    @threaded()
+    @threaded
     async def _workspace_will_delete_files(self, files: List[FileDelete], *args: Any, **kwargs: Any) -> None:
         await self.will_delete_files(self, [f.uri for f in files])
 
         # TODO: return WorkspaceEdit
 
     @rpc_method(name="workspace/didDeleteFiles", param_type=DeleteFilesParams)
-    @threaded()
+    @threaded
     async def _workspace_did_delete_files(self, files: List[FileDelete], *args: Any, **kwargs: Any) -> None:
         await self.did_delete_files(self, [f.uri for f in files])
 
@@ -434,7 +431,7 @@ class Workspace(LanguageServerProtocolPart, HasExtendCapabilities):
         name="workspace/didChangeWorkspaceFolders",
         param_type=DidChangeWorkspaceFoldersParams,
     )
-    @threaded()
+    @threaded
     async def _workspace_did_change_workspace_folders(
         self, event: WorkspaceFoldersChangeEvent, *args: Any, **kwargs: Any
     ) -> None:
@@ -457,7 +454,7 @@ class Workspace(LanguageServerProtocolPart, HasExtendCapabilities):
         ...
 
     @rpc_method(name="workspace/didChangeWatchedFiles", param_type=DidChangeWatchedFilesParams)
-    @threaded()
+    @threaded
     async def _workspace_did_change_watched_files(self, changes: List[FileEvent], *args: Any, **kwargs: Any) -> None:
         changes = [e for e in changes if not e.uri.endswith("/globalStorage")]
         if changes:

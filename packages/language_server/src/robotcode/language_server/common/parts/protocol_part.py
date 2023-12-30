@@ -1,7 +1,6 @@
-from __future__ import annotations
-
 from typing import TYPE_CHECKING
 
+from robotcode.core.lsp.types import ServerCapabilities
 from robotcode.jsonrpc2.protocol import GenericJsonRPCProtocolPart
 
 if TYPE_CHECKING:
@@ -9,5 +8,8 @@ if TYPE_CHECKING:
 
 
 class LanguageServerProtocolPart(GenericJsonRPCProtocolPart["LanguageServerProtocol"]):
-    def __init__(self, parent: LanguageServerProtocol) -> None:
+    def __init__(self, parent: "LanguageServerProtocol") -> None:
         super().__init__(parent)
+
+    def extend_capabilities(self, capabilities: ServerCapabilities) -> None:
+        pass

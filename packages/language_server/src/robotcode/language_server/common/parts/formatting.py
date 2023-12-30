@@ -20,9 +20,6 @@ from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.core.utils.threading import threaded
 from robotcode.jsonrpc2.protocol import rpc_method
 from robotcode.language_server.common.decorators import language_id_filter
-from robotcode.language_server.common.has_extend_capabilities import (
-    HasExtendCapabilities,
-)
 from robotcode.language_server.common.parts.protocol_part import (
     LanguageServerProtocolPart,
 )
@@ -32,7 +29,7 @@ if TYPE_CHECKING:
     from robotcode.language_server.common.protocol import LanguageServerProtocol
 
 
-class FormattingProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
+class FormattingProtocolPart(LanguageServerProtocolPart):
     _logger: Final = LoggingDescriptor()
 
     def __init__(self, parent: LanguageServerProtocol) -> None:
@@ -64,7 +61,7 @@ class FormattingProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
             capabilities.document_range_formatting_provider = DocumentRangeFormattingOptions(work_done_progress=True)
 
     @rpc_method(name="textDocument/formatting", param_type=DocumentFormattingParams)
-    @threaded()
+    @threaded
     async def _text_document_formatting(
         self,
         params: DocumentFormattingParams,
@@ -100,7 +97,7 @@ class FormattingProtocolPart(LanguageServerProtocolPart, HasExtendCapabilities):
         return None
 
     @rpc_method(name="textDocument/rangeFormatting", param_type=DocumentRangeFormattingParams)
-    @threaded()
+    @threaded
     async def _text_document_range_formatting(
         self,
         params: DocumentFormattingParams,
