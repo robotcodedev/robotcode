@@ -10,15 +10,15 @@ result: !DocumentSymbol
   name: a keywords
   range:
     end:
-      character: 40
-      line: 41
+      character: 56
+      line: 43
     start:
       character: 0
       line: 39
   selection_range:
     end:
-      character: 40
-      line: 41
+      character: 56
+      line: 43
     start:
       character: 0
       line: 39

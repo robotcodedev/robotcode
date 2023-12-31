@@ -1,8 +1,12 @@
 import ast
 import itertools
-from typing import TYPE_CHECKING, Any, List, Optional, Union, cast
+from typing import TYPE_CHECKING, Any, List, Optional, Union
 
+from robot.errors import VariableError
 from robot.parsing.lexer.tokens import Token
+from robot.parsing.model.blocks import Keyword, Section, TestCase
+from robot.parsing.model.statements import Statement
+from robot.variables import search_variable
 from robotcode.core.lsp.types import DocumentSymbol, SymbolInformation, SymbolKind
 from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.robot.utils.ast import range_from_node, range_from_token, tokenize_variables
@@ -29,7 +33,7 @@ class RobotDocumentSymbolsProtocolPart(RobotLanguageServerProtocolPart):
     def collect(
         self, sender: Any, document: TextDocument
     ) -> Optional[Union[List[DocumentSymbol], List[SymbolInformation], None]]:
-        return _Visitor.find_from(self.parent.documents_cache.get_model(document), self)
+        return _Visitor.find_from(self.parent.documents_cache.get_model(document, False), self)
 
 
 class _Visitor(Visitor):
@@ -56,22 +60,14 @@ class _Visitor(Visitor):
 
         return finder.result if finder.result else None
 
-    def visit_Section(self, node: ast.AST) -> None:  # noqa: N802
-        from robot.parsing.model.blocks import Section
-        from robot.parsing.model.statements import SectionHeader
-
-        section = cast(Section, node)
-        if section.header is None:
+    def visit_Section(self, node: Section) -> None:  # noqa: N802
+        if not node.header or not node.header.name:
             return
 
-        header = cast(SectionHeader, section.header)
-        if not header.name:
-            return
-
-        r = range_from_node(section)
+        r = range_from_node(node)
         symbol = DocumentSymbol(
-            name=header.name.replace("*", "").strip(),
-            kind=SymbolKind.NAMESPACE,
+            name=node.header.name,
+            kind=SymbolKind.MODULE,
             range=r,
             selection_range=r,
             children=[],
@@ -81,45 +77,33 @@ class _Visitor(Visitor):
 
         self.generic_visit_current_symbol(node, symbol)
 
-    def visit_TestCase(self, node: ast.AST) -> None:  # noqa: N802
-        from robot.parsing.model.blocks import TestCase
-
-        testcase = cast(TestCase, node)
-        if testcase.name is None:
+    def visit_TestCase(self, node: TestCase) -> None:  # noqa: N802
+        if node.name is None:
             return
 
         if self.current_symbol is not None and self.current_symbol.children is not None:
-            r = range_from_node(testcase)
-            symbol = DocumentSymbol(name=testcase.name, kind=SymbolKind.METHOD, range=r, selection_range=r, children=[])
+            r = range_from_node(node)
+            symbol = DocumentSymbol(name=node.name, kind=SymbolKind.METHOD, range=r, selection_range=r, children=[])
             self.current_symbol.children.append(symbol)
 
             self.generic_visit_current_symbol(node, symbol)
 
-    def visit_Keyword(self, node: ast.AST) -> None:  # noqa: N802
-        from robot.parsing.model.blocks import Keyword
-
-        keyword = cast(Keyword, node)
-        if keyword.name is None:
+    def visit_Keyword(self, node: Keyword) -> None:  # noqa: N802
+        if node.name is None:
             return
 
         if self.current_symbol is not None and self.current_symbol.children is not None:
-            r = range_from_node(keyword)
-            symbol = DocumentSymbol(
-                name=keyword.name, kind=SymbolKind.FUNCTION, range=r, selection_range=r, children=[]
-            )
+            r = range_from_node(node)
+            symbol = DocumentSymbol(name=node.name, kind=SymbolKind.FUNCTION, range=r, selection_range=r, children=[])
             self.current_symbol.children.append(symbol)
 
             self.generic_visit_current_symbol(node, symbol)
 
-    def visit_Arguments(self, node: ast.AST) -> None:  # noqa: N802
-        from robot.parsing.lexer.tokens import Token as RobotToken
-        from robot.parsing.model.statements import Arguments
-
-        n = cast(Arguments, node)
-        arguments = n.get_tokens(RobotToken.ARGUMENT)
+    def visit_Arguments(self, node: Statement) -> None:  # noqa: N802
+        arguments = node.get_tokens(Token.ARGUMENT)
 
         if self.current_symbol is not None and self.current_symbol.children is not None:
-            for argument_token in (cast(RobotToken, e) for e in arguments):
+            for argument_token in arguments:
                 if argument_token.value == "@{}":
                     continue
 
@@ -133,29 +117,22 @@ class _Visitor(Visitor):
                         self.current_symbol.children.append(symbol)
 
     def get_variable_token(self, token: Token) -> Optional[Token]:
-        from robot.parsing.lexer.tokens import Token as RobotToken
-
         return next(
             (
                 v
                 for v in itertools.dropwhile(
-                    lambda t: t.type in RobotToken.NON_DATA_TOKENS,
+                    lambda t: t.type in Token.NON_DATA_TOKENS,
                     tokenize_variables(token, ignore_errors=True),
                 )
-                if v.type == RobotToken.VARIABLE
+                if v.type == Token.VARIABLE
             ),
             None,
         )
 
-    def visit_KeywordCall(self, node: ast.AST) -> None:  # noqa: N802
-        from robot.errors import VariableError
-        from robot.parsing.lexer.tokens import Token as RobotToken
-        from robot.parsing.model.statements import KeywordCall
-
+    def visit_KeywordCall(self, node: Statement) -> None:  # noqa: N802
         # TODO  analyse "Set Local/Global/Suite Variable"
 
-        keyword_call = cast(KeywordCall, node)
-        for assign_token in keyword_call.get_tokens(RobotToken.ASSIGN):
+        for assign_token in node.get_tokens(Token.ASSIGN):
             if assign_token is None:
                 continue
 
@@ -175,12 +152,8 @@ class _Visitor(Visitor):
                 except VariableError:
                     pass
 
-    def visit_ForHeader(self, node: ast.AST) -> None:  # noqa: N802
-        from robot.parsing.lexer.tokens import Token as RobotToken
-        from robot.parsing.model.statements import ForHeader
-
-        n = cast(ForHeader, node)
-        variables = n.get_tokens(RobotToken.VARIABLE)
+    def visit_ForHeader(self, node: Statement) -> None:  # noqa: N802
+        variables = node.get_tokens(Token.VARIABLE)
 
         if self.current_symbol is not None and self.current_symbol.children is not None:
             for variable in variables:
@@ -193,12 +166,8 @@ class _Visitor(Visitor):
                     if symbol.name not in map(lambda v: v.name, self.current_symbol.children):
                         self.current_symbol.children.append(symbol)
 
-    def visit_ExceptHeader(self, node: ast.AST) -> None:  # noqa: N802
-        from robot.parsing.lexer.tokens import Token as RobotToken
-        from robot.parsing.model.statements import ExceptHeader
-
-        n = cast(ExceptHeader, node)
-        variables = n.get_tokens(RobotToken.VARIABLE)
+    def visit_ExceptHeader(self, node: Statement) -> None:  # noqa: N802
+        variables = node.get_tokens(Token.VARIABLE)
 
         if self.current_symbol is not None and self.current_symbol.children is not None:
             for variable in variables:
@@ -211,12 +180,8 @@ class _Visitor(Visitor):
                     if symbol.name not in map(lambda v: v.name, self.current_symbol.children):
                         self.current_symbol.children.append(symbol)
 
-    def visit_Var(self, node: ast.AST) -> None:  # noqa: N802
-        from robot.parsing.lexer.tokens import Token as RobotToken
-        from robot.parsing.model.statements import Var
-
-        n = cast(Var, node)
-        variables = n.get_tokens(RobotToken.VARIABLE)
+    def visit_Var(self, node: Statement) -> None:  # noqa: N802
+        variables = node.get_tokens(Token.VARIABLE)
 
         if self.current_symbol is not None and self.current_symbol.children is not None:
             for variable in variables:
@@ -229,20 +194,14 @@ class _Visitor(Visitor):
                     if symbol.name not in map(lambda v: v.name, self.current_symbol.children):
                         self.current_symbol.children.append(symbol)
 
-    def visit_KeywordName(self, node: ast.AST) -> None:  # noqa: N802
-        from robot.parsing.lexer.tokens import Token as RobotToken
-        from robot.parsing.model.statements import KeywordName
-
-        n = cast(KeywordName, node)
-        nt = n.get_token(RobotToken.KEYWORD_NAME)
-        if nt is None:
+    def visit_KeywordName(self, node: Statement) -> None:  # noqa: N802
+        name_token = node.get_token(Token.KEYWORD_NAME)
+        if name_token is None:
             return
-
-        name_token = cast(Token, nt)
 
         if self.current_symbol is not None and self.current_symbol.children is not None:
             for variable in filter(
-                lambda e: e.type == RobotToken.VARIABLE,
+                lambda e: e.type == Token.VARIABLE,
                 tokenize_variables(name_token, identifiers="$", ignore_errors=True),
             ):
                 variable_token = self.get_variable_token(variable)
@@ -254,14 +213,8 @@ class _Visitor(Visitor):
                     if symbol.name not in map(lambda v: v.name, self.current_symbol.children):
                         self.current_symbol.children.append(symbol)
 
-    def visit_Variable(self, node: ast.AST) -> None:  # noqa: N802
-        from robot.api.parsing import Token as RobotToken
-        from robot.parsing.model.statements import Variable
-        from robot.variables import search_variable
-
-        variable = cast(Variable, node)
-
-        name_token = variable.get_token(RobotToken.VARIABLE)
+    def visit_Variable(self, node: Statement) -> None:  # noqa: N802
+        name_token = node.get_token(Token.VARIABLE)
         name = name_token.value
 
         if name is not None:
@@ -273,6 +226,6 @@ class _Visitor(Visitor):
                 name = name[:-1].rstrip()
 
         if self.current_symbol is not None and self.current_symbol.children is not None:
-            r = range_from_node(variable)
+            r = range_from_node(node)
             symbol = DocumentSymbol(name=name, kind=SymbolKind.VARIABLE, range=r, selection_range=r)
             self.current_symbol.children.append(symbol)

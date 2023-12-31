@@ -10,15 +10,15 @@ result: !DocumentSymbol
   name: first
   range:
     end:
-      character: 19
-      line: 32
+      character: 1
+      line: 33
     start:
       character: 0
       line: 11
   selection_range:
     end:
-      character: 19
-      line: 32
+      character: 1
+      line: 33
     start:
       character: 0
       line: 11

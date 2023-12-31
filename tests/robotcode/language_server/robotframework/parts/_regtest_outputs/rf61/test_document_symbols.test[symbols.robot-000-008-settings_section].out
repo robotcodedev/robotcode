@@ -6,19 +6,19 @@ result: !DocumentSymbol
   children: []
   deprecated: null
   detail: null
-  kind: 3
+  kind: 2
   name: Settings
   range:
     end:
-      character: 22
-      line: 2
+      character: 1
+      line: 3
     start:
       character: 0
       line: 0
   selection_range:
     end:
-      character: 22
-      line: 2
+      character: 1
+      line: 3
     start:
       character: 0
       line: 0
