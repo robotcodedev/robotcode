@@ -83,15 +83,15 @@ def is_thread_cancelled() -> bool:
     return local_future is not None and local_future.cancelation_requested.is_set()
 
 
-def check_thread_canceled(seconds: Optional[float] = None) -> None:
+def check_thread_canceled(at_least_seconds: Optional[float] = None) -> None:
     local_future = _local_storage._local_future
     if local_future is None:
         return
 
-    if seconds is None or seconds <= 0:
+    if at_least_seconds is None or at_least_seconds <= 0:
         if not local_future.cancelation_requested.is_set():
             return
-    elif not local_future.cancelation_requested.wait(seconds):
+    elif not local_future.cancelation_requested.wait(at_least_seconds):
         return
 
     name = current_thread().name
