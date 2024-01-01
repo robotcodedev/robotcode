@@ -62,7 +62,7 @@ def find_keyword_sections(node: ast.AST) -> Optional[List[ast.AST]]:
 
 
 class CodeActionHelperMixin:
-    async def create_insert_keyword_workspace_edit(
+    def create_insert_keyword_workspace_edit(
         self, document: TextDocument, model: ast.AST, namespace: Namespace, insert_text: str
     ) -> Tuple[str, Range]:
         keyword_sections = find_keyword_sections(model)

@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from collections import defaultdict
 from dataclasses import dataclass
 from string import Template as StringTemplate
@@ -91,7 +89,7 @@ ${name}
 class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin, CodeActionHelperMixin):
     _logger = LoggingDescriptor()
 
-    def __init__(self, parent: RobotLanguageServerProtocol) -> None:
+    def __init__(self, parent: "RobotLanguageServerProtocol") -> None:
         super().__init__(parent)
 
         parent.code_action.collect.add(self.collect)
@@ -101,12 +99,12 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
 
     @language_id("robotframework")
     @code_action_kinds([CodeActionKind.QUICK_FIX])
-    async def collect(
+    def collect(
         self, sender: Any, document: TextDocument, range: Range, context: CodeActionContext
     ) -> Optional[List[Union[Command, CodeAction]]]:
         result = []
         for method in iter_methods(self, lambda m: m.__name__.startswith("code_action_")):
-            code_actions = await method(document, range, context)
+            code_actions = method(document, range, context)
             if code_actions:
                 result.extend(code_actions)
 
@@ -115,17 +113,17 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
 
         return None
 
-    async def resolve(self, sender: Any, code_action: CodeAction) -> Optional[CodeAction]:
+    def resolve(self, sender: Any, code_action: CodeAction) -> Optional[CodeAction]:
         if code_action.data is not None and isinstance(code_action.data, Mapping):
             type = code_action.data.get("type", None)
             if type == "quickfix":
                 method_name = code_action.data.get("method")
                 method = next(iter_methods(self, lambda m: m.__name__ == f"resolve_code_action_{method_name}"))
-                await method(code_action, data=from_dict(code_action.data, CodeActionData))
+                method(code_action, data=from_dict(code_action.data, CodeActionData))
 
         return None
 
-    async def code_action_create_keyword(
+    def code_action_create_keyword(
         self, document: TextDocument, range: Range, context: CodeActionContext
     ) -> Optional[List[Union[Command, CodeAction]]]:
         result: List[Union[Command, CodeAction]] = []
@@ -184,9 +182,7 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
 
         return result if result else None
 
-    async def resolve_code_action_create_keyword(
-        self, code_action: CodeAction, data: CodeActionData
-    ) -> Optional[CodeAction]:
+    def resolve_code_action_create_keyword(self, code_action: CodeAction, data: CodeActionData) -> Optional[CodeAction]:
         document = self.parent.documents.get(data.document_uri)
         if document is None:
             return None
@@ -240,7 +236,7 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
             else:
                 dest_document = document
 
-            code_action.edit, select_range = await self._apply_create_keyword(dest_document, insert_text)
+            code_action.edit, select_range = self._apply_create_keyword(dest_document, insert_text)
 
             code_action.command = Command(
                 SHOW_DOCUMENT_SELECT_AND_RENAME_COMMAND,
@@ -251,13 +247,11 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
 
         return None
 
-    async def _apply_create_keyword(self, document: TextDocument, insert_text: str) -> Tuple[WorkspaceEdit, Range]:
+    def _apply_create_keyword(self, document: TextDocument, insert_text: str) -> Tuple[WorkspaceEdit, Range]:
         model = self.parent.documents_cache.get_model(document, False)
         namespace = self.parent.documents_cache.get_namespace(document)
 
-        insert_text, insert_range = await self.create_insert_keyword_workspace_edit(
-            document, model, namespace, insert_text
-        )
+        insert_text, insert_range = self.create_insert_keyword_workspace_edit(document, model, namespace, insert_text)
 
         we = WorkspaceEdit(
             document_changes=[
@@ -276,7 +270,7 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
 
         return we, selection_range
 
-    async def code_action_disable_robotcode_diagnostics_for_line(
+    def code_action_disable_robotcode_diagnostics_for_line(
         self, document: TextDocument, range: Range, context: CodeActionContext
     ) -> Optional[List[Union[Command, CodeAction]]]:
         if (
@@ -313,7 +307,7 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
 
         return None
 
-    async def resolve_code_action_disable_robotcode_diagnostics_for_line(
+    def resolve_code_action_disable_robotcode_diagnostics_for_line(
         self, code_action: CodeAction, data: CodeActionData
     ) -> Optional[CodeAction]:
         if data.range.start.line == data.range.end.line and data.range.start.character <= data.range.end.character:
@@ -350,7 +344,7 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
 
         return None
 
-    async def code_action_create_local_variable(
+    def code_action_create_local_variable(
         self, document: TextDocument, range: Range, context: CodeActionContext
     ) -> Optional[List[Union[Command, CodeAction]]]:
         result: List[Union[Command, CodeAction]] = []
@@ -405,7 +399,7 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
 
         return result if result else None
 
-    async def resolve_code_action_create_local_variable(
+    def resolve_code_action_create_local_variable(
         self, code_action: CodeAction, data: CodeActionData
     ) -> Optional[CodeAction]:
         if data.range.start.line == data.range.end.line and data.range.start.character <= data.range.end.character:
@@ -457,7 +451,7 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
 
         return None
 
-    async def code_action_create_suite_variable(
+    def code_action_create_suite_variable(
         self, document: TextDocument, range: Range, context: CodeActionContext
     ) -> Optional[List[Union[Command, CodeAction]]]:
         result: List[Union[Command, CodeAction]] = []
@@ -499,7 +493,7 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
 
         return result if result else None
 
-    async def resolve_code_action_create_suite_variable(
+    def resolve_code_action_create_suite_variable(
         self, code_action: CodeAction, data: CodeActionData
     ) -> Optional[CodeAction]:
         if data.range.start.line == data.range.end.line and data.range.start.character <= data.range.end.character:
@@ -589,7 +583,7 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
             return code_action
         return None
 
-    async def code_action_add_argument(
+    def code_action_add_argument(
         self, document: TextDocument, range: Range, context: CodeActionContext
     ) -> Optional[List[Union[Command, CodeAction]]]:
         result: List[Union[Command, CodeAction]] = []
@@ -638,9 +632,7 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
 
         return result if result else None
 
-    async def resolve_code_action_add_argument(
-        self, code_action: CodeAction, data: CodeActionData
-    ) -> Optional[CodeAction]:
+    def resolve_code_action_add_argument(self, code_action: CodeAction, data: CodeActionData) -> Optional[CodeAction]:
         if data.range.start.line == data.range.end.line and data.range.start.character <= data.range.end.character:
             document = self.parent.documents.get(data.document_uri)
             if document is None:

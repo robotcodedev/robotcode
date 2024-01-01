@@ -14,7 +14,7 @@
     },
     "robotcode.languageServer.extraArgs": [
         // "--debugpy",
-        //"--debugpy-wait-for-client",
+        // "--debugpy-wait-for-client",
         // "--log",
     ],
     "robotcode.robocop.enabled": false,
@@ -34,12 +34,12 @@
         "**/lib/alibrary.py",
         "LibraryWithErrors"
     ],
-    "robotcode.extraArgs": [
-        "--log",
-        "--log-level",
-        "DEBUG",
-        // "--log-calls"
-    ],
+    // "robotcode.extraArgs": [
+    //     "--log",
+    //     "--log-level",
+    //     "DEBUG",
+    //     // "--log-calls"
+    // ],
     "robotcode.robot.variableFiles": [
         "${EXECDIR}/resources/testvars.yml"
     ],

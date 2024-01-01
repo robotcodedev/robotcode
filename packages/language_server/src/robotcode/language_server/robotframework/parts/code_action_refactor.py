@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import ast
 import itertools
 from dataclasses import dataclass
@@ -97,7 +95,7 @@ ${spaces}END
 class RobotCodeActionRefactorProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin, CodeActionHelperMixin):
     _logger = LoggingDescriptor()
 
-    def __init__(self, parent: RobotLanguageServerProtocol) -> None:
+    def __init__(self, parent: "RobotLanguageServerProtocol") -> None:
         super().__init__(parent)
 
         parent.code_action.collect.add(self.collect)
@@ -107,12 +105,12 @@ class RobotCodeActionRefactorProtocolPart(RobotLanguageServerProtocolPart, Model
 
     @language_id("robotframework")
     @code_action_kinds([CODE_ACTION_KIND_REFACTOR_EXTRACT_FUNCTION, CODE_ACTION_KIND_SURROUND_WITH])
-    async def collect(
+    def collect(
         self, sender: Any, document: TextDocument, range: Range, context: CodeActionContext
     ) -> Optional[List[Union[Command, CodeAction]]]:
         result = []
         for method in iter_methods(self, lambda m: m.__name__.startswith("code_action_")):
-            code_actions = await method(document, range, context)
+            code_actions = method(document, range, context)
             if code_actions:
                 result.extend(code_actions)
 
@@ -121,13 +119,13 @@ class RobotCodeActionRefactorProtocolPart(RobotLanguageServerProtocolPart, Model
 
         return None
 
-    async def resolve(self, sender: Any, code_action: CodeAction) -> Optional[CodeAction]:
+    def resolve(self, sender: Any, code_action: CodeAction) -> Optional[CodeAction]:
         if code_action.data is not None and isinstance(code_action.data, Mapping):
             type = code_action.data.get("type", None)
             if type == "refactor":
                 method_name = code_action.data.get("method")
                 method = next(iter_methods(self, lambda m: m.__name__ == f"resolve_code_action_{method_name}"))
-                await method(code_action, data=from_dict(code_action.data, CodeActionData))
+                method(code_action, data=from_dict(code_action.data, CodeActionData))
 
         return None
 
@@ -257,7 +255,7 @@ class RobotCodeActionRefactorProtocolPart(RobotLanguageServerProtocolPart, Model
 
         return result
 
-    async def code_action_surround(
+    def code_action_surround(
         self, document: TextDocument, range: Range, context: CodeActionContext
     ) -> Optional[List[Union[Command, CodeAction]]]:
         from robot.parsing.model.blocks import Keyword, TestCase
@@ -321,7 +319,7 @@ class RobotCodeActionRefactorProtocolPart(RobotLanguageServerProtocolPart, Model
             ),
         ]
 
-    async def resolve_code_action_surround(self, code_action: CodeAction, data: CodeActionData) -> Optional[CodeAction]:
+    def resolve_code_action_surround(self, code_action: CodeAction, data: CodeActionData) -> Optional[CodeAction]:
         insert_range = data.range
 
         if not insert_range:
@@ -392,7 +390,7 @@ class RobotCodeActionRefactorProtocolPart(RobotLanguageServerProtocolPart, Model
 
         return code_action
 
-    async def code_action_assign_result_to_variable(
+    def code_action_assign_result_to_variable(
         self, document: TextDocument, range: Range, context: CodeActionContext
     ) -> Optional[List[Union[Command, CodeAction]]]:
         from robot.parsing.lexer import Token as RobotToken
@@ -436,7 +434,7 @@ class RobotCodeActionRefactorProtocolPart(RobotLanguageServerProtocolPart, Model
 
         return None
 
-    async def resolve_code_action_assign_result_to_variable(
+    def resolve_code_action_assign_result_to_variable(
         self, code_action: CodeAction, data: CodeActionData
     ) -> Optional[CodeAction]:
         from robot.parsing.lexer import Token as RobotToken
@@ -507,7 +505,7 @@ class RobotCodeActionRefactorProtocolPart(RobotLanguageServerProtocolPart, Model
 
         return code_action
 
-    async def code_action_extract_keyword(
+    def code_action_extract_keyword(
         self, document: TextDocument, range: Range, context: CodeActionContext
     ) -> Optional[List[Union[Command, CodeAction]]]:
         from robot.parsing.model.blocks import Keyword, TestCase
@@ -545,7 +543,7 @@ class RobotCodeActionRefactorProtocolPart(RobotLanguageServerProtocolPart, Model
             ),
         ]
 
-    async def resolve_code_action_extract_keyword(
+    def resolve_code_action_extract_keyword(
         self, code_action: CodeAction, data: CodeActionData
     ) -> Optional[CodeAction]:
         from robot.parsing.model.blocks import Keyword, TestCase
@@ -642,7 +640,7 @@ class RobotCodeActionRefactorProtocolPart(RobotLanguageServerProtocolPart, Model
         if assigned_variables:
             keyword_text += "\n    RETURN    " + "    ".join(n.name for n in assigned_variables.keys())
 
-        keyword_text, keyword_range = await self.create_insert_keyword_workspace_edit(
+        keyword_text, keyword_range = self.create_insert_keyword_workspace_edit(
             document, model, namespace, keyword_text
         )
 

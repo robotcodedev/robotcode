@@ -1,10 +1,8 @@
-from __future__ import annotations
-
-from asyncio import CancelledError
+from concurrent.futures import CancelledError
 from itertools import chain
 from typing import TYPE_CHECKING, Any, Final, List, Optional, Union, cast
 
-from robotcode.core.async_tools import async_tasking_event
+from robotcode.core.event import event
 from robotcode.core.lsp.types import (
     CodeAction,
     CodeActionContext,
@@ -16,7 +14,7 @@ from robotcode.core.lsp.types import (
     TextDocumentIdentifier,
 )
 from robotcode.core.utils.logging import LoggingDescriptor
-from robotcode.core.utils.threading import threaded
+from robotcode.core.utils.threading import check_thread_canceled, threaded
 from robotcode.jsonrpc2.protocol import rpc_method
 from robotcode.language_server.common.decorators import CODE_ACTION_KINDS_ATTR, HasCodeActionKinds, language_id_filter
 from robotcode.language_server.common.parts.protocol_part import LanguageServerProtocolPart
@@ -29,17 +27,17 @@ if TYPE_CHECKING:
 class CodeActionProtocolPart(LanguageServerProtocolPart):
     _logger: Final = LoggingDescriptor()
 
-    def __init__(self, parent: LanguageServerProtocol) -> None:
+    def __init__(self, parent: "LanguageServerProtocol") -> None:
         super().__init__(parent)
 
-    @async_tasking_event
-    async def collect(
+    @event
+    def collect(
         sender, document: TextDocument, range: Range, context: CodeActionContext  # NOSONAR
     ) -> Optional[List[Union[Command, CodeAction]]]:
         ...
 
-    @async_tasking_event
-    async def resolve(sender, code_action: CodeAction) -> Optional[CodeAction]:  # NOSONAR
+    @event
+    def resolve(sender, code_action: CodeAction) -> Optional[CodeAction]:  # NOSONAR
         ...
 
     def extend_capabilities(self, capabilities: ServerCapabilities) -> None:
@@ -61,7 +59,7 @@ class CodeActionProtocolPart(LanguageServerProtocolPart):
 
     @rpc_method(name="textDocument/codeAction", param_type=CodeActionParams)
     @threaded
-    async def _text_document_code_action(
+    def _text_document_code_action(
         self,
         text_document: TextDocumentIdentifier,
         range: Range,
@@ -81,13 +79,11 @@ class CodeActionProtocolPart(LanguageServerProtocolPart):
                 for r in c.related_information:
                     r.location.range = document.range_from_utf16(r.location.range)
 
-        for result in await self.collect(
-            self,
-            document,
-            document.range_from_utf16(range),
-            context,
-            callback_filter=language_id_filter(document),
+        for result in self.collect(
+            self, document, document.range_from_utf16(range), context, callback_filter=language_id_filter(document)
         ):
+            check_thread_canceled()
+
             if isinstance(result, BaseException):
                 if not isinstance(result, CancelledError):
                     self._logger.exception(result, exc_info=result)
@@ -102,7 +98,7 @@ class CodeActionProtocolPart(LanguageServerProtocolPart):
 
     @rpc_method(name="codeAction/resolve", param_type=CodeAction)
     @threaded
-    async def _text_document_code_action_resolve(
+    def _text_document_code_action_resolve(
         self,
         params: CodeAction,
         *args: Any,
@@ -110,7 +106,9 @@ class CodeActionProtocolPart(LanguageServerProtocolPart):
     ) -> CodeAction:
         results: List[CodeAction] = []
 
-        for result in await self.resolve(self, params):
+        for result in self.resolve(self, params):
+            check_thread_canceled()
+
             if isinstance(result, BaseException):
                 if not isinstance(result, CancelledError):
                     self._logger.exception(result, exc_info=result)

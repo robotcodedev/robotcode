@@ -243,7 +243,7 @@ class RobotCodeActionDocumentationProtocolPart(RobotLanguageServerProtocolPart, 
         ]
     )
     @_logger.call
-    async def collect(
+    def collect(
         self,
         sender: Any,
         document: TextDocument,
@@ -270,11 +270,8 @@ class RobotCodeActionDocumentationProtocolPart(RobotLanguageServerProtocolPart, 
             if CodeActionKind.SOURCE.value in context.only and range in range_from_token(
                 node.get_token(RobotToken.NAME)
             ):
-                url = await self.build_url(
-                    node.name,
-                    node.args if isinstance(node, LibraryImport) else (),
-                    document,
-                    namespace,
+                url = self.build_url(
+                    node.name, node.args if isinstance(node, LibraryImport) else (), document, namespace
                 )
 
                 return [self.open_documentation_code_action(url)]
@@ -338,26 +335,14 @@ class RobotCodeActionDocumentationProtocolPart(RobotLanguageServerProtocolPart, 
                         if entry is None:
                             return None
 
-                        url = await self.build_url(
-                            entry.import_name,
-                            entry.args,
-                            document,
-                            namespace,
-                            kw_doc.name,
-                        )
+                        url = self.build_url(entry.import_name, entry.args, document, namespace, kw_doc.name)
 
                         return [self.open_documentation_code_action(url)]
 
         if isinstance(node, KeywordName):
             name_token = node.get_token(RobotToken.KEYWORD_NAME)
             if name_token is not None and range in range_from_token(name_token):
-                url = await self.build_url(
-                    str(document.uri.to_path().name),
-                    (),
-                    document,
-                    namespace,
-                    name_token.value,
-                )
+                url = self.build_url(str(document.uri.to_path().name), (), document, namespace, name_token.value)
 
                 return [self.open_documentation_code_action(url)]
 
@@ -374,7 +359,7 @@ class RobotCodeActionDocumentationProtocolPart(RobotLanguageServerProtocolPart, 
             ),
         )
 
-    async def build_url(
+    def build_url(
         self,
         name: str,
         args: Tuple[Any, ...],
@@ -423,7 +408,7 @@ class RobotCodeActionDocumentationProtocolPart(RobotLanguageServerProtocolPart, 
 
     @rpc_method(name="robot/documentationServer/convertUri", param_type=ConvertUriParams)
     @threaded
-    async def _convert_uri(self, uri: str, *args: Any, **kwargs: Any) -> Optional[str]:
+    def _convert_uri(self, uri: str, *args: Any, **kwargs: Any) -> Optional[str]:
         real_uri = Uri(uri)
 
         folder = self.parent.workspace.get_workspace_folder(real_uri)
