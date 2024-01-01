@@ -1,11 +1,8 @@
-from __future__ import annotations
-
-import asyncio
-from asyncio import CancelledError
+from concurrent.futures import CancelledError
 from itertools import chain
 from typing import TYPE_CHECKING, Any, Final, List, Optional, Union, cast
 
-from robotcode.core.async_tools import async_tasking_event
+from robotcode.core.event import event
 from robotcode.core.lsp.types import (
     CompletionContext,
     CompletionItem,
@@ -21,7 +18,7 @@ from robotcode.core.lsp.types import (
     TextEdit,
 )
 from robotcode.core.utils.logging import LoggingDescriptor
-from robotcode.core.utils.threading import threaded
+from robotcode.core.utils.threading import check_thread_canceled, threaded
 from robotcode.jsonrpc2.protocol import rpc_method
 from robotcode.language_server.common.decorators import (
     ALL_COMMIT_CHARACTERS_ATTR,
@@ -40,17 +37,17 @@ if TYPE_CHECKING:
 class CompletionProtocolPart(LanguageServerProtocolPart):
     _logger: Final = LoggingDescriptor()
 
-    def __init__(self, parent: LanguageServerProtocol) -> None:
+    def __init__(self, parent: "LanguageServerProtocol") -> None:
         super().__init__(parent)
 
-    @async_tasking_event
-    async def collect(
+    @event
+    def collect(
         sender, document: TextDocument, position: Position, context: Optional[CompletionContext]  # NOSONAR
     ) -> Union[List[CompletionItem], CompletionList, None]:
         ...
 
-    @async_tasking_event
-    async def resolve(sender, completion_item: CompletionItem) -> Optional[CompletionItem]:  # NOSONAR
+    @event
+    def resolve(sender, completion_item: CompletionItem) -> Optional[CompletionItem]:  # NOSONAR
         ...
 
     def extend_capabilities(self, capabilities: ServerCapabilities) -> None:
@@ -84,7 +81,7 @@ class CompletionProtocolPart(LanguageServerProtocolPart):
 
     @rpc_method(name="textDocument/completion", param_type=CompletionParams)
     @threaded
-    async def _text_document_completion(
+    def _text_document_completion(
         self,
         text_document: TextDocumentIdentifier,
         position: Position,
@@ -95,7 +92,7 @@ class CompletionProtocolPart(LanguageServerProtocolPart):
         results: List[Union[List[CompletionItem], CompletionList]] = []
 
         if context is not None and context.trigger_kind == CompletionTriggerKind.TRIGGER_CHARACTER:
-            await asyncio.sleep(0.25)
+            check_thread_canceled(0.25)
 
         document = self.parent.documents.get(text_document.uri)
         if document is None:
@@ -103,13 +100,9 @@ class CompletionProtocolPart(LanguageServerProtocolPart):
 
         p = document.position_from_utf16(position)
 
-        for result in await self.collect(
-            self,
-            document,
-            p,
-            context,
-            callback_filter=language_id_filter(document),
-        ):
+        for result in self.collect(self, document, p, context, callback_filter=language_id_filter(document)):
+            check_thread_canceled()
+
             if isinstance(result, BaseException):
                 if not isinstance(result, CancelledError):
                     self._logger.exception(result, exc_info=result)
@@ -121,6 +114,8 @@ class CompletionProtocolPart(LanguageServerProtocolPart):
             return None
 
         for result in results:
+            check_thread_canceled()
+
             if isinstance(result, CompletionList):
                 for item in result.items:
                     if item.text_edit is not None:
@@ -155,7 +150,7 @@ class CompletionProtocolPart(LanguageServerProtocolPart):
 
     @rpc_method(name="completionItem/resolve", param_type=CompletionItem)
     @threaded
-    async def _completion_item_resolve(
+    def _completion_item_resolve(
         self,
         params: CompletionItem,
         *args: Any,
@@ -163,7 +158,7 @@ class CompletionProtocolPart(LanguageServerProtocolPart):
     ) -> CompletionItem:
         results: List[CompletionItem] = []
 
-        for result in await self.resolve(self, params):
+        for result in self.resolve(self, params):
             if isinstance(result, BaseException):
                 if not isinstance(result, CancelledError):
                     self._logger.exception(result, exc_info=result)

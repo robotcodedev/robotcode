@@ -1,6 +1,6 @@
 import inspect
 from concurrent.futures import CancelledError, Future
-from threading import Thread, current_thread, local
+from threading import Event, Thread, current_thread, local
 from typing import Any, Callable, Dict, Generic, Optional, Tuple, TypeVar, cast, overload
 
 _F = TypeVar("_F", bound=Callable[..., Any])
@@ -12,10 +12,10 @@ __THREADED_MARKER = "__threaded__"
 class FutureEx(Future, Generic[_TResult]):  # type: ignore[type-arg]
     def __init__(self) -> None:
         super().__init__()
-        self.cancelation_requested = False
+        self.cancelation_requested = Event()
 
     def cancel(self) -> bool:
-        self.cancelation_requested = True
+        self.cancelation_requested.set()
         return super().cancel()
 
     def result(self, timeout: Optional[float] = None) -> _TResult:
@@ -66,23 +66,36 @@ def _run_callable_in_thread_handler(
     _local_storage._local_future = future
     future.set_running_or_notify_cancel()
     try:
-        future.set_result(callable(*args, **kwargs))
+        result = callable(*args, **kwargs)
     except Exception as e:
         # TODO: add traceback to exception e.traceback = format_exc()
-
-        future.set_exception(e)
+        if not future.cancelled():
+            future.set_exception(e)
+    else:
+        if not future.cancelled():
+            future.set_result(result)
     finally:
         _local_storage._local_future = None
 
 
 def is_thread_cancelled() -> bool:
-    return _local_storage._local_future is not None and _local_storage._local_future.cancelation_requested
+    local_future = _local_storage._local_future
+    return local_future is not None and local_future.cancelation_requested.is_set()
 
 
-def check_thread_canceled() -> None:
-    if _local_storage._local_future is not None and _local_storage._local_future.cancelation_requested:
-        name = current_thread().name
-        raise CancelledError(f"Thread {name+' ' if name else ' '}Cancelled")
+def check_thread_canceled(seconds: Optional[float] = None) -> None:
+    local_future = _local_storage._local_future
+    if local_future is None:
+        return
+
+    if seconds is None or seconds <= 0:
+        if not local_future.cancelation_requested.is_set():
+            return
+    elif not local_future.cancelation_requested.wait(seconds):
+        return
+
+    name = current_thread().name
+    raise CancelledError(f"Thread {name+' ' if name else ' '}cancelled")
 
 
 def run_callable_in_thread(callable: Callable[..., _TResult], *args: Any, **kwargs: Any) -> FutureEx[_TResult]:

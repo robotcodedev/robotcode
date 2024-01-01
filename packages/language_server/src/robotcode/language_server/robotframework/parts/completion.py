@@ -1,16 +1,13 @@
-from __future__ import annotations
-
 import ast
-import asyncio
 import builtins
 import itertools
 import os
 import time
+from concurrent.futures import CancelledError
+from itertools import chain
 from typing import (
     TYPE_CHECKING,
     Any,
-    AsyncIterator,
-    Awaitable,
     Callable,
     ClassVar,
     Dict,
@@ -48,7 +45,6 @@ from robot.parsing.model.statements import (
     VariablesImport,
 )
 from robot.utils.escaping import split_from_equals
-from robotcode.core.async_itertools import async_chain, async_chain_iterator
 from robotcode.core.lsp.types import (
     Command,
     CompletionContext,
@@ -103,19 +99,19 @@ DEFAULT_HEADER_STYLE_51 = "*** {name} ***"
 class RobotCompletionProtocolPart(RobotLanguageServerProtocolPart):
     _logger = LoggingDescriptor()
 
-    def __init__(self, parent: RobotLanguageServerProtocol) -> None:
+    def __init__(self, parent: "RobotLanguageServerProtocol") -> None:
         super().__init__(parent)
 
         parent.completion.collect.add(self.collect)
         parent.completion.resolve.add(self.resolve)
 
-    async def get_config(self, document: TextDocument) -> CompletionConfig:
+    def get_config(self, document: TextDocument) -> CompletionConfig:
         if (folder := self.parent.workspace.get_workspace_folder(document.uri)) is not None:
-            return await self.parent.workspace.get_configuration_async(CompletionConfig, folder.uri)
+            return self.parent.workspace.get_configuration(CompletionConfig, folder.uri)
 
         return CompletionConfig()
 
-    async def get_header_style(self, config: CompletionConfig) -> str:
+    def get_header_style(self, config: CompletionConfig) -> str:
         if config.header_style is not None:
             return config.header_style
 
@@ -138,16 +134,16 @@ class RobotCompletionProtocolPart(RobotLanguageServerProtocolPart):
     # @all_commit_characters(['\n'])
     @language_id("robotframework")
     @_logger.call
-    async def collect(
+    def collect(
         self, sender: Any, document: TextDocument, position: Position, context: Optional[CompletionContext]
     ) -> Union[List[CompletionItem], CompletionList, None]:
         namespace = self.parent.documents_cache.get_namespace(document)
         model = self.parent.documents_cache.get_model(document, False)
 
-        config = await self.get_config(document)
+        config = self.get_config(document)
 
-        return await CompletionCollector(
-            self.parent, document, model, namespace, await self.get_header_style(config), config
+        return CompletionCollector(
+            self.parent, document, model, namespace, self.get_header_style(config), config
         ).collect(
             position,
             context,
@@ -155,7 +151,7 @@ class RobotCompletionProtocolPart(RobotLanguageServerProtocolPart):
 
     @language_id("robotframework")
     @_logger.call
-    async def resolve(self, sender: Any, completion_item: CompletionItem) -> CompletionItem:
+    def resolve(self, sender: Any, completion_item: CompletionItem) -> CompletionItem:
         if completion_item.data is not None:
             document_uri = completion_item.data.get("document_uri", None)
             if document_uri is not None:
@@ -164,10 +160,10 @@ class RobotCompletionProtocolPart(RobotLanguageServerProtocolPart):
                     namespace = self.parent.documents_cache.get_namespace(document)
                     model = self.parent.documents_cache.get_model(document, False)
                     if namespace is not None:
-                        config = await self.get_config(document)
+                        config = self.get_config(document)
 
-                        return await CompletionCollector(
-                            self.parent, document, model, namespace, await self.get_header_style(config), config
+                        return CompletionCollector(
+                            self.parent, document, model, namespace, self.get_header_style(config), config
                         ).resolve(completion_item)
 
         return completion_item
@@ -175,7 +171,7 @@ class RobotCompletionProtocolPart(RobotLanguageServerProtocolPart):
 
 _CompleteMethod = Callable[
     [Any, ast.AST, List[ast.AST], Position, Optional[CompletionContext]],
-    Awaitable[Optional[Optional[List[CompletionItem]]]],
+    Optional[List[CompletionItem]],
 ]
 
 HEADERS = ["Test Case", "Setting", "Variable", "Keyword", "Comment", "Task"]
@@ -271,7 +267,7 @@ class CompletionCollector(ModelHelperMixin):
 
     def __init__(
         self,
-        parent: RobotLanguageServerProtocol,
+        parent: "RobotLanguageServerProtocol",
         document: TextDocument,
         model: ast.AST,
         namespace: Namespace,
@@ -311,7 +307,7 @@ class CompletionCollector(ModelHelperMixin):
 
         cls._method_cache[visitor_cls] = methods
 
-    async def collect(
+    def collect(
         self, position: Position, context: Optional[CompletionContext]
     ) -> Union[List[CompletionItem], CompletionList, None]:
         start = time.monotonic()
@@ -320,18 +316,18 @@ class CompletionCollector(ModelHelperMixin):
 
             result_nodes.reverse()
 
-            async def iter_results() -> AsyncIterator[List[CompletionItem]]:
+            def iter_results() -> Iterator[List[CompletionItem]]:
                 for result_node in result_nodes:
                     for method in self._find_methods(type(result_node)):
-                        r = await method(self, result_node, result_nodes, position, context)
+                        r = method(self, result_node, result_nodes, position, context)
                         if r is not None:
                             yield r
 
-                r = await self.complete_default(result_nodes, position, context)
+                r = self.complete_default(result_nodes, position, context)
                 if r is not None:
                     yield r
 
-            items = [e async for e in async_chain_iterator(iter_results())]
+            items = [e for e in chain(*iter_results())]
             result = CompletionList(is_incomplete=False, items=items)
             if not result.items:
                 return None
@@ -341,7 +337,7 @@ class CompletionCollector(ModelHelperMixin):
                 lambda: f"Collect completion for {self.document.uri} took {time.monotonic() - start:.2f} seconds"
             )
 
-    async def resolve(self, completion_item: CompletionItem) -> CompletionItem:
+    def resolve(self, completion_item: CompletionItem) -> CompletionItem:
         data = cast(CompletionItemData, completion_item.data)
 
         if data is not None:
@@ -369,7 +365,7 @@ class CompletionCollector(ModelHelperMixin):
                                         kind=MarkupKind.MARKDOWN, value=lib_doc.to_markdown(False)
                                     )
 
-                            except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
+                            except (SystemExit, KeyboardInterrupt, CancelledError):
                                 raise
                             except BaseException as e:
                                 completion_item.documentation = MarkupContent(
@@ -411,7 +407,7 @@ class CompletionCollector(ModelHelperMixin):
                                         kind=MarkupKind.MARKDOWN, value=lib_doc.to_markdown(False)
                                     )
 
-                            except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
+                            except (SystemExit, KeyboardInterrupt, CancelledError):
                                 raise
                             except BaseException as e:
                                 completion_item.documentation = MarkupContent(
@@ -449,14 +445,14 @@ class CompletionCollector(ModelHelperMixin):
                                         kind=MarkupKind.MARKDOWN, value=kw_doc.to_markdown()
                                     )
 
-                            except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
+                            except (SystemExit, KeyboardInterrupt, CancelledError):
                                 raise
                             except BaseException:
                                 pass
 
         return completion_item
 
-    async def create_headers_completion_items(self, range: Optional[Range]) -> List[CompletionItem]:
+    def create_headers_completion_items(self, range: Optional[Range]) -> List[CompletionItem]:
         doc_type = self.parent.documents_cache.get_document_type(self.document)
 
         if self.namespace.languages is None:
@@ -509,7 +505,7 @@ class CompletionCollector(ModelHelperMixin):
             for s in ((self.header_style.format(name=k), k) for k in (v.title() for v in headers))
         ]
 
-    async def create_environment_variables_completion_items(self, range: Optional[Range]) -> List[CompletionItem]:
+    def create_environment_variables_completion_items(self, range: Optional[Range]) -> List[CompletionItem]:
         return [
             CompletionItem(
                 label=s,
@@ -537,7 +533,7 @@ class CompletionCollector(ModelHelperMixin):
         VariableDefinitionType.ENVIRONMENT_VARIABLE: "039",
     }
 
-    async def create_variables_completion_items(
+    def create_variables_completion_items(
         self, range: Range, nodes: List[ast.AST], position: Position
     ) -> List[CompletionItem]:
         return [
@@ -557,7 +553,7 @@ class CompletionCollector(ModelHelperMixin):
             if s.name is not None and (s.name_token is None or not position.is_in_range(range_from_token(s.name_token)))
         ]
 
-    async def create_settings_completion_items(self, range: Optional[Range]) -> List[CompletionItem]:
+    def create_settings_completion_items(self, range: Optional[Range]) -> List[CompletionItem]:
         doc_type = self.parent.documents_cache.get_document_type(self.document)
 
         settings_class: Type[Settings] = SuiteFileSettings
@@ -596,7 +592,7 @@ class CompletionCollector(ModelHelperMixin):
             for setting in settings
         ]
 
-    async def create_keyword_snippet_completion_items(self, range: Optional[Range]) -> List[CompletionItem]:
+    def create_keyword_snippet_completion_items(self, range: Optional[Range]) -> List[CompletionItem]:
         line_end = "\n"
         return [
             CompletionItem(
@@ -610,7 +606,7 @@ class CompletionCollector(ModelHelperMixin):
             for snippet_name, snippet_value in get_snippets().items()
         ]
 
-    async def create_testcase_settings_completion_items(self, range: Optional[Range]) -> List[CompletionItem]:
+    def create_testcase_settings_completion_items(self, range: Optional[Range]) -> List[CompletionItem]:
         settings = {*TestCaseSettings.names, *TestCaseSettings.aliases.keys()}
 
         if self.namespace.languages is not None:
@@ -641,7 +637,7 @@ class CompletionCollector(ModelHelperMixin):
             for setting in settings
         ]
 
-    async def create_bdd_prefix_completion_items(
+    def create_bdd_prefix_completion_items(
         self, range: Optional[Range], at_top: bool = False, with_space: bool = True
     ) -> List[CompletionItem]:
         prefixes = {"Given", "When", "Then", "And", "But"}
@@ -663,7 +659,7 @@ class CompletionCollector(ModelHelperMixin):
             for prefix in prefixes
         ]
 
-    async def create_keyword_settings_completion_items(self, range: Optional[Range]) -> List[CompletionItem]:
+    def create_keyword_settings_completion_items(self, range: Optional[Range]) -> List[CompletionItem]:
         settings = {*KeywordSettings.names, *KeywordSettings.aliases.keys()}
 
         if self.namespace.languages is not None:
@@ -744,7 +740,7 @@ class CompletionCollector(ModelHelperMixin):
 
         return result
 
-    async def create_keyword_completion_items(
+    def create_keyword_completion_items(
         self,
         token: Optional[Token],
         position: Position,
@@ -1006,7 +1002,7 @@ class CompletionCollector(ModelHelperMixin):
                 with_space = False
                 bdd_range = range_from_token(bdd_token)
 
-            result += await self.create_bdd_prefix_completion_items(bdd_range, at_top, with_space)
+            result += self.create_bdd_prefix_completion_items(bdd_range, at_top, with_space)
 
         if add_reserverd and not (has_bdd or only_bdd):
             for k in get_reserved_keywords():
@@ -1035,7 +1031,7 @@ class CompletionCollector(ModelHelperMixin):
             None,
         )
 
-    async def complete_default(
+    def complete_default(
         self,
         nodes_at_position: List[ast.AST],
         position: Position,
@@ -1053,7 +1049,7 @@ class CompletionCollector(ModelHelperMixin):
                     and (position.is_in_range(r))
                     and (only_stars or value.startswith("*") or position.character == 0)
                 ):
-                    return await self.create_headers_completion_items(r)
+                    return self.create_headers_completion_items(r)
                 if len(statement_node.tokens) > 1 and only_stars:
                     r1 = range_from_token(statement_node.tokens[1])
                     ws = whitespace_at_begin_of_token(statement_node.tokens[1])
@@ -1061,18 +1057,18 @@ class CompletionCollector(ModelHelperMixin):
                         r1.end.character = r1.start.character + ws
                         if position.is_in_range(r1):
                             r.end = r1.end
-                            return await self.create_headers_completion_items(r)
+                            return self.create_headers_completion_items(r)
 
         elif position.character == 0:
             if not nodes_at_position and position.line > 0:
                 nodes_at_line_before = get_nodes_at_position(self.model, Position(position.line - 1, 0))
                 if nodes_at_line_before and any(isinstance(n, SettingSection) for n in nodes_at_line_before):
                     return [
-                        *await self.create_settings_completion_items(None),
-                        *await self.create_headers_completion_items(None),
+                        *self.create_settings_completion_items(None),
+                        *self.create_headers_completion_items(None),
                     ]
 
-            return await self.create_headers_completion_items(None)
+            return self.create_headers_completion_items(None)
 
         if len(nodes_at_position) > 1 and isinstance(nodes_at_position[0], Statement):
             node = nodes_at_position[0]
@@ -1134,12 +1130,12 @@ class CompletionCollector(ModelHelperMixin):
                     ),
                 )
                 if token_at_position.value[open_brace_index - 1] == "%":
-                    return await self.create_environment_variables_completion_items(range)
-                return await self.create_variables_completion_items(range, nodes_at_position, position)
+                    return self.create_environment_variables_completion_items(range)
+                return self.create_variables_completion_items(range, nodes_at_position, position)
 
         return None
 
-    async def complete_SettingSection(  # noqa: N802
+    def complete_SettingSection(  # noqa: N802
         self,
         node: ast.AST,
         nodes_at_position: List[ast.AST],
@@ -1162,11 +1158,11 @@ class CompletionCollector(ModelHelperMixin):
                 token = statement_node.tokens[0]
                 r = range_from_token(token)
                 if position.is_in_range(r):
-                    return await self.create_settings_completion_items(r)
+                    return self.create_settings_completion_items(r)
 
         return None
 
-    async def _complete_TestCase_or_Keyword(  # noqa: N802
+    def _complete_TestCase_or_Keyword(  # noqa: N802
         self,
         node: ast.AST,
         nodes_at_position: List[ast.AST],
@@ -1175,7 +1171,7 @@ class CompletionCollector(ModelHelperMixin):
         in_template: bool,
         create_items: Callable[
             [bool, bool, Optional[Range], Optional[Token], Position],
-            Awaitable[Union[List[CompletionItem], CompletionList, None]],
+            Union[List[CompletionItem], CompletionList, None],
         ],
     ) -> Union[List[CompletionItem], CompletionList, None]:
         index = 0
@@ -1210,7 +1206,7 @@ class CompletionCollector(ModelHelperMixin):
                 r.start.character += 2 if ws_b and ws_b[0] != "\t" else 1
 
                 if position.is_in_range(r):
-                    return await create_items(
+                    return create_items(
                         in_assign,
                         in_template,
                         range_from_token(statement_node.tokens[index + 1])
@@ -1234,7 +1230,7 @@ class CompletionCollector(ModelHelperMixin):
 
                 r = range_from_token(token)
                 if position.is_in_range(r):
-                    return await create_items(in_assign, in_template, r, token, position)
+                    return create_items(in_assign, in_template, r, token, position)
 
                 if len(statement_node.tokens) > index + 1:
                     second_token = statement_node.tokens[index + 1]
@@ -1244,7 +1240,7 @@ class CompletionCollector(ModelHelperMixin):
 
                     r.end.character += 1
                     if position.is_in_range(r):
-                        return await create_items(
+                        return create_items(
                             in_assign,
                             in_template,
                             r,
@@ -1254,22 +1250,22 @@ class CompletionCollector(ModelHelperMixin):
 
         return None
 
-    async def complete_TestCase(  # noqa: N802
+    def complete_TestCase(  # noqa: N802
         self,
         node: ast.AST,
         nodes_at_position: List[ast.AST],
         position: Position,
         context: Optional[CompletionContext],
     ) -> Union[List[CompletionItem], CompletionList, None]:
-        async def create_items(
+        def create_items(
             in_assign: bool, in_template: bool, r: Optional[Range], token: Optional[Token], pos: Position
         ) -> Union[List[CompletionItem], CompletionList, None]:
             return [
                 e
-                async for e in async_chain(
-                    [] if in_assign else await self.create_keyword_snippet_completion_items(r),
-                    [] if in_assign else await self.create_testcase_settings_completion_items(r),
-                    [] if in_template else await self.create_keyword_completion_items(token, pos),
+                for e in chain(
+                    [] if in_assign else self.create_keyword_snippet_completion_items(r),
+                    [] if in_assign else self.create_testcase_settings_completion_items(r),
+                    [] if in_template else self.create_keyword_completion_items(token, pos),
                 )
             ]
 
@@ -1303,32 +1299,30 @@ class CompletionCollector(ModelHelperMixin):
 
         in_template = check_in_template()
 
-        return await self._complete_TestCase_or_Keyword(
-            node, nodes_at_position, position, context, in_template, create_items
-        )
+        return self._complete_TestCase_or_Keyword(node, nodes_at_position, position, context, in_template, create_items)
 
-    async def complete_Keyword(  # noqa: N802
+    def complete_Keyword(  # noqa: N802
         self,
         node: ast.AST,
         nodes_at_position: List[ast.AST],
         position: Position,
         context: Optional[CompletionContext],
     ) -> Union[List[CompletionItem], CompletionList, None]:
-        async def create_items(
+        def create_items(
             in_assign: bool, in_template: bool, r: Optional[Range], token: Optional[Token], pos: Position
         ) -> Union[List[CompletionItem], CompletionList, None]:
             return [
                 e
-                async for e in async_chain(
-                    [] if in_assign else await self.create_keyword_snippet_completion_items(r),
-                    [] if in_assign else await self.create_keyword_settings_completion_items(r),
-                    [] if in_template else await self.create_keyword_completion_items(token, pos),
+                for e in chain(
+                    [] if in_assign else self.create_keyword_snippet_completion_items(r),
+                    [] if in_assign else self.create_keyword_settings_completion_items(r),
+                    [] if in_template else self.create_keyword_completion_items(token, pos),
                 )
             ]
 
-        return await self._complete_TestCase_or_Keyword(node, nodes_at_position, position, context, False, create_items)
+        return self._complete_TestCase_or_Keyword(node, nodes_at_position, position, context, False, create_items)
 
-    async def _complete_SuiteSetup_or_SuiteTeardown_or_TestTemplate(  # noqa: N802
+    def _complete_SuiteSetup_or_SuiteTeardown_or_TestTemplate(  # noqa: N802
         self,
         node: ast.AST,
         nodes_at_position: List[ast.AST],
@@ -1347,7 +1341,7 @@ class CompletionCollector(ModelHelperMixin):
             r.start.character += 2 if ws_b and ws_b[0] != "\t" else 1
 
             if position.is_in_range(r):
-                return await self.create_keyword_completion_items(
+                return self.create_keyword_completion_items(
                     statement_node.tokens[2] if r.end == position and len(statement_node.tokens) > 2 else None,
                     position,
                     add_reserverd=False,
@@ -1362,7 +1356,7 @@ class CompletionCollector(ModelHelperMixin):
 
             r = range_from_token(token)
             if position.is_in_range(r):
-                return await self.create_keyword_completion_items(
+                return self.create_keyword_completion_items(
                     token,
                     position,
                     add_reserverd=False,
@@ -1378,7 +1372,7 @@ class CompletionCollector(ModelHelperMixin):
 
             r.end.character += 1
             if position.is_in_range(r):
-                return await self.create_keyword_completion_items(
+                return self.create_keyword_completion_items(
                     token,
                     position,
                     add_reserverd=False,
@@ -1388,62 +1382,52 @@ class CompletionCollector(ModelHelperMixin):
 
         return None
 
-    async def complete_SuiteSetup(  # noqa: N802
+    def complete_SuiteSetup(  # noqa: N802
         self,
         node: ast.AST,
         nodes_at_position: List[ast.AST],
         position: Position,
         context: Optional[CompletionContext],
     ) -> Union[List[CompletionItem], CompletionList, None]:
-        return await self._complete_SuiteSetup_or_SuiteTeardown_or_TestTemplate(
-            node, nodes_at_position, position, context
-        )
+        return self._complete_SuiteSetup_or_SuiteTeardown_or_TestTemplate(node, nodes_at_position, position, context)
 
-    async def complete_SuiteTeardown(  # noqa: N802
+    def complete_SuiteTeardown(  # noqa: N802
         self,
         node: ast.AST,
         nodes_at_position: List[ast.AST],
         position: Position,
         context: Optional[CompletionContext],
     ) -> Union[List[CompletionItem], CompletionList, None]:
-        return await self._complete_SuiteSetup_or_SuiteTeardown_or_TestTemplate(
-            node, nodes_at_position, position, context
-        )
+        return self._complete_SuiteSetup_or_SuiteTeardown_or_TestTemplate(node, nodes_at_position, position, context)
 
-    async def complete_TestSetup(  # noqa: N802
+    def complete_TestSetup(  # noqa: N802
         self,
         node: ast.AST,
         nodes_at_position: List[ast.AST],
         position: Position,
         context: Optional[CompletionContext],
     ) -> Union[List[CompletionItem], CompletionList, None]:
-        return await self._complete_SuiteSetup_or_SuiteTeardown_or_TestTemplate(
-            node, nodes_at_position, position, context
-        )
+        return self._complete_SuiteSetup_or_SuiteTeardown_or_TestTemplate(node, nodes_at_position, position, context)
 
-    async def complete_TestTeardown(  # noqa: N802
+    def complete_TestTeardown(  # noqa: N802
         self,
         node: ast.AST,
         nodes_at_position: List[ast.AST],
         position: Position,
         context: Optional[CompletionContext],
     ) -> Union[List[CompletionItem], CompletionList, None]:
-        return await self._complete_SuiteSetup_or_SuiteTeardown_or_TestTemplate(
-            node, nodes_at_position, position, context
-        )
+        return self._complete_SuiteSetup_or_SuiteTeardown_or_TestTemplate(node, nodes_at_position, position, context)
 
-    async def complete_TestTemplate(  # noqa: N802
+    def complete_TestTemplate(  # noqa: N802
         self,
         node: ast.AST,
         nodes_at_position: List[ast.AST],
         position: Position,
         context: Optional[CompletionContext],
     ) -> Union[List[CompletionItem], CompletionList, None]:
-        return await self._complete_SuiteSetup_or_SuiteTeardown_or_TestTemplate(
-            node, nodes_at_position, position, context
-        )
+        return self._complete_SuiteSetup_or_SuiteTeardown_or_TestTemplate(node, nodes_at_position, position, context)
 
-    async def complete_Setup_or_Teardown_or_Template(  # noqa: N802
+    def complete_Setup_or_Teardown_or_Template(  # noqa: N802
         self,
         node: ast.AST,
         nodes_at_position: List[ast.AST],
@@ -1463,7 +1447,7 @@ class CompletionCollector(ModelHelperMixin):
             r.start.character += 2 if ws_b and ws_b[0] != "\t" else 1
 
             if position.is_in_range(r):
-                return await self.create_keyword_completion_items(
+                return self.create_keyword_completion_items(
                     statement_node.tokens[3] if r.end == position and len(statement_node.tokens) > 3 else None,
                     position,
                     add_reserverd=False,
@@ -1478,7 +1462,7 @@ class CompletionCollector(ModelHelperMixin):
 
             r = range_from_token(token)
             if position.is_in_range(r):
-                return await self.create_keyword_completion_items(
+                return self.create_keyword_completion_items(
                     token, position, add_reserverd=False, add_none=True, in_template=isinstance(node, Template)
                 )
 
@@ -1490,7 +1474,7 @@ class CompletionCollector(ModelHelperMixin):
 
             r.end.character += 1
             if position.is_in_range(r):
-                return await self.create_keyword_completion_items(
+                return self.create_keyword_completion_items(
                     token,
                     position,
                     add_reserverd=False,
@@ -1500,34 +1484,34 @@ class CompletionCollector(ModelHelperMixin):
 
         return None
 
-    async def complete_Setup(  # noqa: N802
+    def complete_Setup(  # noqa: N802
         self,
         node: ast.AST,
         nodes_at_position: List[ast.AST],
         position: Position,
         context: Optional[CompletionContext],
     ) -> Union[List[CompletionItem], CompletionList, None]:
-        return await self.complete_Setup_or_Teardown_or_Template(node, nodes_at_position, position, context)
+        return self.complete_Setup_or_Teardown_or_Template(node, nodes_at_position, position, context)
 
-    async def complete_Teardown(  # noqa: N802
+    def complete_Teardown(  # noqa: N802
         self,
         node: ast.AST,
         nodes_at_position: List[ast.AST],
         position: Position,
         context: Optional[CompletionContext],
     ) -> Union[List[CompletionItem], CompletionList, None]:
-        return await self.complete_Setup_or_Teardown_or_Template(node, nodes_at_position, position, context)
+        return self.complete_Setup_or_Teardown_or_Template(node, nodes_at_position, position, context)
 
-    async def complete_Template(  # noqa: N802
+    def complete_Template(  # noqa: N802
         self,
         node: ast.AST,
         nodes_at_position: List[ast.AST],
         position: Position,
         context: Optional[CompletionContext],
     ) -> Union[List[CompletionItem], CompletionList, None]:
-        return await self.complete_Setup_or_Teardown_or_Template(node, nodes_at_position, position, context)
+        return self.complete_Setup_or_Teardown_or_Template(node, nodes_at_position, position, context)
 
-    async def complete_LibraryImport(  # noqa: N802
+    def complete_LibraryImport(  # noqa: N802
         self,
         node: ast.AST,
         nodes_at_position: List[ast.AST],
@@ -1544,7 +1528,7 @@ class CompletionCollector(ModelHelperMixin):
 
         import_token_index = import_node.tokens.index(import_token)
 
-        async def complete_import() -> Optional[List[CompletionItem]]:
+        def complete_import() -> Optional[List[CompletionItem]]:
             if len(import_node.tokens) > import_token_index + 2:
                 name_token = import_node.tokens[import_token_index + 2]
                 if not position.is_in_range(r := range_from_token(name_token)):
@@ -1614,7 +1598,7 @@ class CompletionCollector(ModelHelperMixin):
                 )
                 if not complete_list:
                     return None
-            except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
+            except (SystemExit, KeyboardInterrupt, CancelledError):
                 raise
             except BaseException as e:
                 self._logger.exception(e)
@@ -1648,7 +1632,7 @@ class CompletionCollector(ModelHelperMixin):
                 for e in complete_list
             ]
 
-        async def complete_arguments() -> Optional[List[CompletionItem]]:
+        def complete_arguments() -> Optional[List[CompletionItem]]:
             if (t := import_node.get_token(Token.NAME)) is None or position <= range_from_token(t).extend(
                 end_character=1
             ).end:
@@ -1683,14 +1667,14 @@ class CompletionCollector(ModelHelperMixin):
                             init, kw_node.tokens[name_token_index:], token_at_position, position
                         )
 
-            except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
+            except (SystemExit, KeyboardInterrupt, CancelledError):
                 raise
             except BaseException as e:
                 self._logger.exception(e)
 
             return None
 
-        async def complete_with_name() -> Optional[List[CompletionItem]]:
+        def complete_with_name() -> Optional[List[CompletionItem]]:
             with_name_token = next((v for v in import_node.tokens if v.type == Token.WITH_NAME), None)
             if with_name_token is not None and position < range_from_token(with_name_token).start:
                 return None
@@ -1713,13 +1697,13 @@ class CompletionCollector(ModelHelperMixin):
                     ]
             return []
 
-        result = await complete_import() or []
-        result.extend(await complete_arguments() or [])
-        result.extend(await complete_with_name() or [])
+        result = complete_import() or []
+        result.extend(complete_arguments() or [])
+        result.extend(complete_with_name() or [])
 
         return result
 
-    async def complete_ResourceImport(  # noqa: N802
+    def complete_ResourceImport(  # noqa: N802
         self,
         node: ast.AST,
         nodes_at_position: List[ast.AST],
@@ -1799,7 +1783,7 @@ class CompletionCollector(ModelHelperMixin):
             )
             if not complete_list:
                 return None
-        except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
+        except (SystemExit, KeyboardInterrupt, CancelledError):
             raise
         except BaseException:
             return None
@@ -1832,7 +1816,7 @@ class CompletionCollector(ModelHelperMixin):
             for e in complete_list
         ]
 
-    async def complete_VariablesImport(  # noqa: N802
+    def complete_VariablesImport(  # noqa: N802
         self,
         node: ast.AST,
         nodes_at_position: List[ast.AST],
@@ -1850,7 +1834,7 @@ class CompletionCollector(ModelHelperMixin):
 
         import_token_index = import_node.tokens.index(import_token)
 
-        async def complete_import() -> Optional[List[CompletionItem]]:
+        def complete_import() -> Optional[List[CompletionItem]]:
             if len(import_node.tokens) > import_token_index + 2:
                 name_token = import_node.tokens[import_token_index + 2]
                 if not position.is_in_range(r := range_from_token(name_token)):
@@ -1919,7 +1903,7 @@ class CompletionCollector(ModelHelperMixin):
                 )
                 if not complete_list:
                     return None
-            except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
+            except (SystemExit, KeyboardInterrupt, CancelledError):
                 raise
             except BaseException:
                 return None
@@ -1952,7 +1936,7 @@ class CompletionCollector(ModelHelperMixin):
                 for e in complete_list
             ]
 
-        async def complete_arguments() -> Optional[List[CompletionItem]]:
+        def complete_arguments() -> Optional[List[CompletionItem]]:
             if (t := import_node.get_token(Token.NAME)) is None or position <= range_from_token(t).extend(
                 end_character=1
             ).end:
@@ -1981,20 +1965,20 @@ class CompletionCollector(ModelHelperMixin):
                             init, kw_node.tokens[name_token_index:], token_at_position, position
                         )
 
-            except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
+            except (SystemExit, KeyboardInterrupt, CancelledError):
                 raise
             except BaseException as e:
                 self._logger.exception(e)
 
             return None
 
-        result = await complete_import() or []
+        result = complete_import() or []
         # TODO this is not supported in robotframework, but it would be nice to have
-        result.extend(await complete_arguments() or [])
+        result.extend(complete_arguments() or [])
 
         return result
 
-    async def _complete_KeywordCall_or_Fixture(  # noqa: N802
+    def _complete_KeywordCall_or_Fixture(  # noqa: N802
         self,
         keyword_name_token_type: str,
         node: ast.AST,
@@ -2297,16 +2281,16 @@ class CompletionCollector(ModelHelperMixin):
 
         return result
 
-    async def complete_KeywordCall(  # noqa: N802
+    def complete_KeywordCall(  # noqa: N802
         self,
         node: ast.AST,
         nodes_at_position: List[ast.AST],
         position: Position,
         context: Optional[CompletionContext],
     ) -> Union[List[CompletionItem], CompletionList, None]:
-        return await self._complete_KeywordCall_or_Fixture(Token.KEYWORD, node, nodes_at_position, position, context)
+        return self._complete_KeywordCall_or_Fixture(Token.KEYWORD, node, nodes_at_position, position, context)
 
-    async def complete_Fixture(  # noqa: N802
+    def complete_Fixture(  # noqa: N802
         self,
         node: ast.AST,
         nodes_at_position: List[ast.AST],
@@ -2317,9 +2301,9 @@ class CompletionCollector(ModelHelperMixin):
         if name_token is None or name_token.value is None or name_token.value.upper() in ("", "NONE"):
             return None
 
-        return await self._complete_KeywordCall_or_Fixture(Token.NAME, node, nodes_at_position, position, context)
+        return self._complete_KeywordCall_or_Fixture(Token.NAME, node, nodes_at_position, position, context)
 
-    async def create_tags_completion_items(self, range: Optional[Range]) -> List[CompletionItem]:
+    def create_tags_completion_items(self, range: Optional[Range]) -> List[CompletionItem]:
         built_in_tags = {
             "robot:continue-on-failure",
             "robot:stop-on-failure",
@@ -2352,7 +2336,7 @@ class CompletionCollector(ModelHelperMixin):
             for tag in built_in_tags
         ]
 
-    async def _complete_ForceTags_or_KeywordTags_or_DefaultTags_Tags(  # noqa: N802
+    def _complete_ForceTags_or_KeywordTags_or_DefaultTags_Tags(  # noqa: N802
         self,
         node: ast.AST,
         nodes_at_position: List[ast.AST],
@@ -2366,56 +2350,48 @@ class CompletionCollector(ModelHelperMixin):
             return None
 
         if tokens[-1].type == Token.ARGUMENT:
-            return await self.create_tags_completion_items(range_from_token(tokens[-1]))
+            return self.create_tags_completion_items(range_from_token(tokens[-1]))
 
         if len(tokens) > 1 and tokens[-2].type == Token.ARGUMENT:
-            return await self.create_tags_completion_items(range_from_token(tokens[-2]))
+            return self.create_tags_completion_items(range_from_token(tokens[-2]))
 
         if whitespace_at_begin_of_token(tokens[-1]) >= 2:
-            return await self.create_tags_completion_items(None)
+            return self.create_tags_completion_items(None)
 
         return None
 
-    async def complete_ForceTags(  # noqa: N802
+    def complete_ForceTags(  # noqa: N802
         self,
         node: ast.AST,
         nodes_at_position: List[ast.AST],
         position: Position,
         context: Optional[CompletionContext],
     ) -> Union[List[CompletionItem], CompletionList, None]:
-        return await self._complete_ForceTags_or_KeywordTags_or_DefaultTags_Tags(
-            node, nodes_at_position, position, context
-        )
+        return self._complete_ForceTags_or_KeywordTags_or_DefaultTags_Tags(node, nodes_at_position, position, context)
 
-    async def complete_KeywordTags(  # noqa: N802
+    def complete_KeywordTags(  # noqa: N802
         self,
         node: ast.AST,
         nodes_at_position: List[ast.AST],
         position: Position,
         context: Optional[CompletionContext],
     ) -> Union[List[CompletionItem], CompletionList, None]:
-        return await self._complete_ForceTags_or_KeywordTags_or_DefaultTags_Tags(
-            node, nodes_at_position, position, context
-        )
+        return self._complete_ForceTags_or_KeywordTags_or_DefaultTags_Tags(node, nodes_at_position, position, context)
 
-    async def complete_DefaultTags(  # noqa: N802
+    def complete_DefaultTags(  # noqa: N802
         self,
         node: ast.AST,
         nodes_at_position: List[ast.AST],
         position: Position,
         context: Optional[CompletionContext],
     ) -> Union[List[CompletionItem], CompletionList, None]:
-        return await self._complete_ForceTags_or_KeywordTags_or_DefaultTags_Tags(
-            node, nodes_at_position, position, context
-        )
+        return self._complete_ForceTags_or_KeywordTags_or_DefaultTags_Tags(node, nodes_at_position, position, context)
 
-    async def complete_Tags(  # noqa: N802
+    def complete_Tags(  # noqa: N802
         self,
         node: ast.AST,
         nodes_at_position: List[ast.AST],
         position: Position,
         context: Optional[CompletionContext],
     ) -> Union[List[CompletionItem], CompletionList, None]:
-        return await self._complete_ForceTags_or_KeywordTags_or_DefaultTags_Tags(
-            node, nodes_at_position, position, context
-        )
+        return self._complete_ForceTags_or_KeywordTags_or_DefaultTags_Tags(node, nodes_at_position, position, context)
