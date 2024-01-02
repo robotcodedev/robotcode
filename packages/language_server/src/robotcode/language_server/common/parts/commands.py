@@ -1,10 +1,8 @@
-from __future__ import annotations
-
 import inspect
 import typing
 import uuid
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Awaitable, Callable, Dict, Final, List, Optional, cast
+from typing import TYPE_CHECKING, Any, Callable, Dict, Final, List, Optional, cast
 
 from robotcode.core.concurrent import threaded
 from robotcode.core.lsp.types import (
@@ -24,7 +22,7 @@ if TYPE_CHECKING:
     from robotcode.language_server.common.protocol import LanguageServerProtocol
 
 
-_FUNC_TYPE = Callable[..., Awaitable[Optional[LSPAny]]]
+_FUNC_TYPE = Callable[..., Optional[LSPAny]]
 
 
 @dataclass
@@ -38,7 +36,7 @@ class CommandsProtocolPart(LanguageServerProtocolPart):
 
     PREFIX: Final = f"{uuid.uuid4()}"
 
-    def __init__(self, parent: LanguageServerProtocol) -> None:
+    def __init__(self, parent: "LanguageServerProtocol") -> None:
         super().__init__(parent)
         self.commands: Dict[str, CommandEntry] = {}
 
@@ -72,7 +70,7 @@ class CommandsProtocolPart(LanguageServerProtocolPart):
 
     @rpc_method(name="workspace/executeCommand", param_type=ExecuteCommandParams)
     @threaded
-    async def _workspace_execute_command(
+    def _workspace_execute_command(
         self, command: str, arguments: Optional[List[LSPAny]], *args: Any, **kwargs: Any
     ) -> Optional[LSPAny]:
         self._logger.debug(lambda: f"execute command {command}")
@@ -91,4 +89,4 @@ class CommandsProtocolPart(LanguageServerProtocolPart):
                 if i < len(arguments):
                     command_args.append(from_dict(arguments[i], type_hints[i]))
 
-        return await entry.callback(*command_args)
+        return entry.callback(*command_args)
