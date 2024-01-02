@@ -91,19 +91,22 @@ def is_current_thread_cancelled() -> bool:
     return local_future is not None and local_future.cancelation_requested
 
 
-def check_current_thread_canceled(at_least_seconds: Optional[float] = None) -> None:
+def check_current_thread_canceled(at_least_seconds: Optional[float] = None, raise_exception: bool = True) -> bool:
     local_future = _local_storage._local_future
     if local_future is None:
-        return
+        return False
 
     if at_least_seconds is None or at_least_seconds <= 0:
         if not local_future.cancelation_requested:
-            return
+            return False
     elif not local_future.cancelation_requested_event.wait(at_least_seconds):
-        return
+        return False
 
-    name = current_thread().name
-    raise CancelledError(f"Thread {name+' ' if name else ' '}cancelled")
+    if raise_exception:
+        name = current_thread().name
+        raise CancelledError(f"Thread {name+' ' if name else ' '}cancelled")
+
+    return True
 
 
 _running_callables_lock = RLock()

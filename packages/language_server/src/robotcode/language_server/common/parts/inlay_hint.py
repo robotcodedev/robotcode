@@ -105,4 +105,4 @@ class InlayHintProtocolPart(LanguageServerProtocolPart):
             and self.parent.client_capabilities.workspace.inlay_hint is not None
             and self.parent.client_capabilities.workspace.inlay_hint.refresh_support
         ):
-            self.parent.send_request("workspace/inlayHint/refresh").result()
+            self.parent.send_request("workspace/inlayHint/refresh").result(30)
