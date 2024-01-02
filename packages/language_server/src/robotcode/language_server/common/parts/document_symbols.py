@@ -14,6 +14,7 @@ from typing import (
     runtime_checkable,
 )
 
+from robotcode.core.concurrent import threaded
 from robotcode.core.event import event
 from robotcode.core.lsp.types import (
     DocumentSymbol,
@@ -26,7 +27,6 @@ from robotcode.core.lsp.types import (
     TextDocumentIdentifier,
 )
 from robotcode.core.utils.logging import LoggingDescriptor
-from robotcode.core.utils.threading import threaded
 from robotcode.jsonrpc2.protocol import rpc_method
 from robotcode.language_server.common.decorators import language_id_filter
 from robotcode.language_server.common.parts.protocol_part import LanguageServerProtocolPart

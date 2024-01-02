@@ -2,6 +2,7 @@ from concurrent.futures import CancelledError
 from itertools import chain
 from typing import TYPE_CHECKING, Any, Final, List, Optional, Union, cast
 
+from robotcode.core.concurrent import check_current_thread_canceled, threaded
 from robotcode.core.event import event
 from robotcode.core.lsp.types import (
     CompletionContext,
@@ -18,7 +19,6 @@ from robotcode.core.lsp.types import (
     TextEdit,
 )
 from robotcode.core.utils.logging import LoggingDescriptor
-from robotcode.core.utils.threading import check_thread_canceled, threaded
 from robotcode.jsonrpc2.protocol import rpc_method
 from robotcode.language_server.common.decorators import (
     ALL_COMMIT_CHARACTERS_ATTR,
@@ -92,7 +92,7 @@ class CompletionProtocolPart(LanguageServerProtocolPart):
         results: List[Union[List[CompletionItem], CompletionList]] = []
 
         if context is not None and context.trigger_kind == CompletionTriggerKind.TRIGGER_CHARACTER:
-            check_thread_canceled(0.25)
+            check_current_thread_canceled(0.25)
 
         document = self.parent.documents.get(text_document.uri)
         if document is None:
@@ -101,7 +101,7 @@ class CompletionProtocolPart(LanguageServerProtocolPart):
         p = document.position_from_utf16(position)
 
         for result in self.collect(self, document, p, context, callback_filter=language_id_filter(document)):
-            check_thread_canceled()
+            check_current_thread_canceled()
 
             if isinstance(result, BaseException):
                 if not isinstance(result, CancelledError):
@@ -114,7 +114,7 @@ class CompletionProtocolPart(LanguageServerProtocolPart):
             return None
 
         for result in results:
-            check_thread_canceled()
+            check_current_thread_canceled()
 
             if isinstance(result, CompletionList):
                 for item in result.items:

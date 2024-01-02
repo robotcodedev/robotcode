@@ -17,6 +17,7 @@ from robotcode.core.async_tools import (
     check_canceled,
     create_sub_task,
 )
+from robotcode.core.concurrent import threaded
 from robotcode.core.lsp.types import (
     Diagnostic,
     DiagnosticOptions,
@@ -35,7 +36,6 @@ from robotcode.core.lsp.types import (
 )
 from robotcode.core.uri import Uri
 from robotcode.core.utils.logging import LoggingDescriptor
-from robotcode.core.utils.threading import threaded
 from robotcode.jsonrpc2.protocol import JsonRPCErrorException, rpc_method
 from robotcode.language_server.common.decorators import language_id_filter
 from robotcode.language_server.common.parts.protocol_part import LanguageServerProtocolPart

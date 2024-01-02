@@ -38,10 +38,10 @@ from robotcode.core.async_tools import (
     create_sub_task,
     run_coroutine_in_thread,
 )
+from robotcode.core.concurrent import is_threaded_callable, run_in_thread
 from robotcode.core.utils.dataclasses import as_json, from_dict
 from robotcode.core.utils.inspect import ensure_coroutine, iter_methods
 from robotcode.core.utils.logging import LoggingDescriptor
-from robotcode.core.utils.threading import is_threaded_callable, run_callable_in_thread
 
 __all__ = [
     "JsonRPCErrors",
@@ -742,7 +742,7 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
                             ensure_coroutine(cast(Callable[..., Any], e.method)), *params[0], **params[1]
                         )
                     else:
-                        task = asyncio.wrap_future(run_callable_in_thread(e.method, *params[0], **params[1]))
+                        task = asyncio.wrap_future(run_in_thread(e.method, *params[0], **params[1]))
                 else:
                     task = create_sub_task(
                         ensure_coroutine(e.method)(*params[0], **params[1]),

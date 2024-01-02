@@ -1,8 +1,8 @@
 from typing import TYPE_CHECKING, Any, List, Optional, cast
 
+from robotcode.core.concurrent import check_current_thread_canceled
 from robotcode.core.lsp.types import DocumentHighlight, DocumentHighlightKind, Position, Range
 from robotcode.core.utils.logging import LoggingDescriptor
-from robotcode.core.utils.threading import check_thread_canceled
 from robotcode.language_server.common.decorators import language_id
 from robotcode.language_server.common.text_document import TextDocument
 
@@ -33,7 +33,7 @@ class RobotDocumentHighlightProtocolPart(RobotLanguageServerProtocolPart):
         all_variable_refs = namespace.get_variable_references()
         if all_variable_refs:
             for var, var_refs in all_variable_refs.items():
-                check_thread_canceled()
+                check_current_thread_canceled()
 
                 for r in var_refs:
                     if (var.source == namespace.source and position in var.name_range) or position in r.range:
@@ -49,7 +49,7 @@ class RobotDocumentHighlightProtocolPart(RobotLanguageServerProtocolPart):
         all_kw_refs = namespace.get_keyword_references()
         if all_kw_refs:
             for kw, kw_refs in all_kw_refs.items():
-                check_thread_canceled()
+                check_current_thread_canceled()
 
                 for r in kw_refs:
                     if (kw.source == namespace.source and position in kw.range) or position in r.range:
@@ -65,7 +65,7 @@ class RobotDocumentHighlightProtocolPart(RobotLanguageServerProtocolPart):
         all_namespace_refs = namespace.get_namespace_references()
         if all_namespace_refs:
             for ns, ns_refs in all_namespace_refs.items():
-                check_thread_canceled()
+                check_current_thread_canceled()
                 found_range = (
                     ns.import_range
                     if ns.import_source == namespace.source

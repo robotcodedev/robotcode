@@ -9,10 +9,10 @@ from typing import (
     cast,
 )
 
+from robotcode.core.concurrent import check_current_thread_canceled
 from robotcode.core.lsp.types import Location, LocationLink, Position, Range
 from robotcode.core.uri import Uri
 from robotcode.core.utils.logging import LoggingDescriptor
-from robotcode.core.utils.threading import check_thread_canceled
 from robotcode.robot.utils.ast import range_from_token
 
 from ...common.decorators import language_id
@@ -57,7 +57,7 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart):
             result = []
 
             for variable, var_refs in all_variable_refs.items():
-                check_thread_canceled()
+                check_current_thread_canceled()
 
                 found_range = (
                     variable.name_range
@@ -85,7 +85,7 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart):
             result = []
 
             for kw, kw_refs in all_kw_refs.items():
-                check_thread_canceled()
+                check_current_thread_canceled()
 
                 found_range = (
                     kw.name_range
@@ -110,7 +110,7 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart):
 
         all_namespace_refs = namespace.get_namespace_references()
         if all_namespace_refs:
-            check_thread_canceled()
+            check_current_thread_canceled()
 
             result = []
 

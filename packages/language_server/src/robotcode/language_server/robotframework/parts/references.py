@@ -14,11 +14,11 @@ from typing import (
 
 from robot.parsing.model.statements import Statement
 from robotcode.core.async_tools import async_event, create_sub_task
+from robotcode.core.concurrent import threaded
 from robotcode.core.lsp.types import FileEvent, Location, Position, Range, ReferenceContext, WatchKind
 from robotcode.core.uri import Uri
 from robotcode.core.utils.caching import SimpleLRUCache
 from robotcode.core.utils.logging import LoggingDescriptor
-from robotcode.core.utils.threading import threaded
 from robotcode.robot.diagnostics.entities import (
     LibraryEntry,
     LocalVariableDefinition,

@@ -4,10 +4,10 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Optional
 
 from robot.parsing.model.statements import Statement
+from robotcode.core.concurrent import threaded
 from robotcode.core.lsp.types import Position, Range, TextDocumentIdentifier
 from robotcode.core.utils.dataclasses import CamelSnakeMixin
 from robotcode.core.utils.logging import LoggingDescriptor
-from robotcode.core.utils.threading import threaded
 from robotcode.jsonrpc2.protocol import rpc_method
 from robotcode.robot.utils.ast import get_nodes_at_position, get_tokens_at_position, range_from_token
 

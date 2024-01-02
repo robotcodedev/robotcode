@@ -18,12 +18,12 @@ from typing import TYPE_CHECKING, Any, List, Optional, Tuple, Union, cast
 from urllib.parse import parse_qs, urlparse
 
 from robot.parsing.lexer.tokens import Token
+from robotcode.core.concurrent import threaded
 from robotcode.core.lsp.types import CodeAction, CodeActionContext, CodeActionKind, Command, Range
 from robotcode.core.uri import Uri
 from robotcode.core.utils.dataclasses import CamelSnakeMixin
 from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.core.utils.net import find_free_port
-from robotcode.core.utils.threading import threaded
 from robotcode.jsonrpc2.protocol import rpc_method
 from robotcode.robot.diagnostics.entities import LibraryEntry
 from robotcode.robot.diagnostics.library_doc import (

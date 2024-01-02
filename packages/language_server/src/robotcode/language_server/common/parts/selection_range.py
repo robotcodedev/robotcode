@@ -4,6 +4,7 @@ from asyncio import CancelledError
 from typing import TYPE_CHECKING, Any, Final, List, Optional
 
 from robotcode.core.async_tools import async_tasking_event
+from robotcode.core.concurrent import threaded
 from robotcode.core.lsp.types import (
     Position,
     SelectionRange,
@@ -13,7 +14,6 @@ from robotcode.core.lsp.types import (
     TextDocumentIdentifier,
 )
 from robotcode.core.utils.logging import LoggingDescriptor
-from robotcode.core.utils.threading import threaded
 from robotcode.jsonrpc2.protocol import rpc_method
 from robotcode.language_server.common.decorators import language_id_filter
 from robotcode.language_server.common.text_document import TextDocument

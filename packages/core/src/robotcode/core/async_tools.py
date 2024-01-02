@@ -31,8 +31,8 @@ from typing import (
     cast,
 )
 
+from .concurrent import is_threaded_callable
 from .utils.inspect import ensure_coroutine
-from .utils.threading import is_threaded_callable
 
 _T = TypeVar("_T")
 
