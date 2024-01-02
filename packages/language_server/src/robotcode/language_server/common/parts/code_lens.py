@@ -1,11 +1,8 @@
-from __future__ import annotations
-
-import asyncio
-from asyncio import CancelledError
+from concurrent.futures import CancelledError
 from typing import TYPE_CHECKING, Any, Final, List, Optional
 
-from robotcode.core.async_tools import async_tasking_event, create_sub_task
-from robotcode.core.concurrent import threaded
+from robotcode.core.concurrent import FutureEx, check_current_thread_canceled, threaded
+from robotcode.core.event import event
 from robotcode.core.lsp.types import (
     CodeLens,
     CodeLensOptions,
@@ -27,16 +24,17 @@ if TYPE_CHECKING:
 class CodeLensProtocolPart(LanguageServerProtocolPart):
     _logger: Final = LoggingDescriptor()
 
-    def __init__(self, parent: LanguageServerProtocol) -> None:
+    def __init__(self, parent: "LanguageServerProtocol") -> None:
         super().__init__(parent)
-        self.refresh_task: Optional[asyncio.Task[Any]] = None
+        self.refresh_task: Optional[FutureEx[Any]] = None
+        self._refresh_timeout = 5
 
-    @async_tasking_event
-    async def collect(sender, document: TextDocument) -> Optional[List[CodeLens]]:  # NOSONAR
+    @event
+    def collect(sender, document: TextDocument) -> Optional[List[CodeLens]]:  # NOSONAR
         ...
 
-    @async_tasking_event
-    async def resolve(sender, code_lens: CodeLens) -> Optional[CodeLens]:  # NOSONAR
+    @event
+    def resolve(sender, code_lens: CodeLens) -> Optional[CodeLens]:  # NOSONAR
         ...
 
     def extend_capabilities(self, capabilities: ServerCapabilities) -> None:
@@ -45,7 +43,7 @@ class CodeLensProtocolPart(LanguageServerProtocolPart):
 
     @rpc_method(name="textDocument/codeLens", param_type=CodeLensParams)
     @threaded
-    async def _text_document_code_lens(
+    def _text_document_code_lens(
         self, text_document: TextDocumentIdentifier, *args: Any, **kwargs: Any
     ) -> Optional[List[CodeLens]]:
         results: List[CodeLens] = []
@@ -53,7 +51,9 @@ class CodeLensProtocolPart(LanguageServerProtocolPart):
         if document is None:
             return None
 
-        for result in await self.collect(self, document, callback_filter=language_id_filter(document)):
+        for result in self.collect(self, document, callback_filter=language_id_filter(document)):
+            check_current_thread_canceled()
+
             if isinstance(result, BaseException):
                 if not isinstance(result, CancelledError):
                     self._logger.exception(result, exc_info=result)
@@ -64,17 +64,19 @@ class CodeLensProtocolPart(LanguageServerProtocolPart):
         if not results:
             return None
 
-        for result in results:
-            result.range = document.range_to_utf16(result.range)
+        for r in results:
+            r.range = document.range_to_utf16(r.range)
 
         return results
 
     @rpc_method(name="codeLens/resolve", param_type=CodeLens)
     @threaded
-    async def _code_lens_resolve(self, params: CodeLens, *args: Any, **kwargs: Any) -> CodeLens:
+    def _code_lens_resolve(self, params: CodeLens, *args: Any, **kwargs: Any) -> CodeLens:
         results: List[CodeLens] = []
 
-        for result in await self.resolve(self, params):
+        for result in self.resolve(self, params):
+            check_current_thread_canceled()
+
             if isinstance(result, BaseException):
                 if not isinstance(result, CancelledError):
                     self._logger.exception(result, exc_info=result)
@@ -88,19 +90,7 @@ class CodeLensProtocolPart(LanguageServerProtocolPart):
 
         return params
 
-    async def __do_refresh(self, now: bool = False) -> None:
-        if not now:
-            await asyncio.sleep(1)
-
-        await self.__refresh()
-
-    async def refresh(self, now: bool = False) -> None:
-        if self.refresh_task is not None and not self.refresh_task.done():
-            self.refresh_task.get_loop().call_soon_threadsafe(self.refresh_task.cancel)
-
-        self.refresh_task = create_sub_task(self.__do_refresh(now), loop=self.parent.diagnostics.diagnostics_loop)
-
-    async def __refresh(self) -> None:
+    def refresh(self) -> None:
         if not (
             self.parent.client_capabilities is not None
             and self.parent.client_capabilities.workspace is not None
@@ -109,4 +99,4 @@ class CodeLensProtocolPart(LanguageServerProtocolPart):
         ):
             return
 
-        await self.parent.send_request_async("workspace/codeLens/refresh")
+        self.parent.send_request("workspace/codeLens/refresh").result(self._refresh_timeout)

@@ -13,8 +13,9 @@ from typing import (
 )
 
 from robot.parsing.model.statements import Statement
-from robotcode.core.async_tools import async_event, create_sub_task
+from robotcode.core.async_tools import create_sub_task
 from robotcode.core.concurrent import threaded
+from robotcode.core.event import event
 from robotcode.core.lsp.types import FileEvent, Location, Position, Range, ReferenceContext, WatchKind
 from robotcode.core.uri import Uri
 from robotcode.core.utils.caching import SimpleLRUCache
@@ -60,8 +61,8 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         parent.references.collect.add(self.collect)
         parent.documents.did_change.add(self.document_did_change)
 
-    @async_event
-    async def cache_cleared(sender) -> None:  # NOSONAR
+    @event
+    def cache_cleared(sender) -> None:  # NOSONAR
         ...
 
     def server_initialized(self, sender: Any) -> None:
@@ -83,7 +84,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         self._keyword_reference_cache.clear()
         self._variable_reference_cache.clear()
 
-        await self.cache_cleared(self)
+        self.cache_cleared(self)
 
     def _find_method(self, cls: Type[Any]) -> Optional[_ReferencesMethod]:
         if cls is ast.AST:

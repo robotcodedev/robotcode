@@ -26,8 +26,9 @@
     // "robotcode.debug.outputMessages": true
     //"python.analysis.diagnosticMode": "workspace"
     //"robotcode.robot.paths": ["./tests", "./tests1"]
-    "robotcode.analysis.diagnosticMode": "workspace",
-    "robotcode.analysis.progressMode": "detailed",
+    "robotcode.analysis.referencesCodeLens": true,
+    "robotcode.analysis.diagnosticMode": "openFilesOnly",
+    "robotcode.analysis.progressMode": "off",
     "robotcode.analysis.cache.saveLocation": "workspaceFolder",
     "robotcode.analysis.cache.ignoredLibraries": [
         //"robot.libraries.Remote",

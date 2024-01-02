@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import concurrent.futures
 import functools
 import inspect
 import json
@@ -38,7 +37,7 @@ from robotcode.core.async_tools import (
     create_sub_task,
     run_coroutine_in_thread,
 )
-from robotcode.core.concurrent import is_threaded_callable, run_in_thread
+from robotcode.core.concurrent import FutureEx, is_threaded_callable, run_in_thread
 from robotcode.core.utils.dataclasses import as_json, from_dict
 from robotcode.core.utils.inspect import ensure_coroutine, iter_methods
 from robotcode.core.utils.logging import LoggingDescriptor
@@ -344,7 +343,7 @@ class RpcRegistry:
 
 
 class SendedRequestEntry:
-    def __init__(self, future: concurrent.futures.Future[Any], result_type: Optional[Type[Any]]) -> None:
+    def __init__(self, future: FutureEx[Any], result_type: Optional[Type[Any]]) -> None:
         self.future = future
         self.result_type = result_type
 
@@ -563,8 +562,8 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
         method: str,
         params: Optional[Any] = None,
         return_type_or_converter: Optional[Type[_TResult]] = None,
-    ) -> concurrent.futures.Future[_TResult]:
-        result: concurrent.futures.Future[_TResult] = concurrent.futures.Future()
+    ) -> FutureEx[_TResult]:
+        result: FutureEx[_TResult] = FutureEx()
 
         with self._sended_request_lock:
             self._sended_request_count += 1

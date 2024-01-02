@@ -1,9 +1,7 @@
-from __future__ import annotations
-
 import ast
 from typing import TYPE_CHECKING, Any, List, Optional, Set, Tuple, cast
 
-from robotcode.core.async_tools import create_sub_task
+from robotcode.core.concurrent import run_in_thread
 from robotcode.core.lsp.types import CodeLens, Command
 from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.robot.diagnostics.library_doc import KeywordDoc
@@ -17,9 +15,108 @@ from ..diagnostics.model_helper import ModelHelperMixin
 from .protocol_part import RobotLanguageServerProtocolPart
 
 if TYPE_CHECKING:
-    from ..protocol import (
-        RobotLanguageServerProtocol,
-    )
+    from ..protocol import RobotLanguageServerProtocol
+
+
+class RobotCodeLensProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
+    _logger = LoggingDescriptor()
+
+    def __init__(self, parent: "RobotLanguageServerProtocol") -> None:
+        super().__init__(parent)
+
+        parent.code_lens.collect.add(self.collect)
+        parent.code_lens.resolve.add(self.resolve)
+
+        self._running_task: Set[Tuple[TextDocument, KeywordDoc]] = set()
+
+        parent.diagnostics.on_workspace_loaded.add(self.codelens_refresh)
+        parent.robot_references.cache_cleared.add(self.codelens_refresh)
+
+    @language_id("robotframework")
+    def codelens_refresh(self, sender: Any) -> None:  # NOSONAR
+        self.parent.code_lens.refresh()
+
+    @language_id("robotframework")
+    def collect(self, sender: Any, document: TextDocument) -> Optional[List[CodeLens]]:
+        if not (self.parent.workspace.get_configuration(AnalysisConfig, document.uri)).references_code_lens:
+            return None
+
+        return _Visitor.find_from(self.parent.documents_cache.get_model(document), self, document)
+
+    @language_id("robotframework")
+    def resolve(self, sender: Any, code_lens: CodeLens) -> Optional[CodeLens]:
+        if code_lens.data is None:
+            return code_lens
+
+        document = self.parent.documents.get(code_lens.data.get("uri", None))
+        if document is None:
+            return None
+
+        if not (self.parent.workspace.get_configuration(AnalysisConfig, document.uri)).references_code_lens:
+            return None
+
+        namespace = self.parent.documents_cache.get_namespace(document)
+
+        name = code_lens.data["name"]
+        line = code_lens.data["line"]
+
+        if self.parent.diagnostics.workspace_loaded_event.is_set():
+            kw_doc = self.get_keyword_definition_at_line(namespace.get_library_doc(), name, line)
+
+            if kw_doc is not None and not kw_doc.is_error_handler:
+                if not self.parent.robot_references.has_cached_keyword_references(
+                    document, kw_doc, include_declaration=False
+                ):
+                    code_lens.command = Command(
+                        "...",
+                        "editor.action.showReferences",
+                        [str(document.uri), code_lens.range.start, []],
+                    )
+
+                    def find_refs() -> None:
+                        if document is None or kw_doc is None:
+                            return  #  type: ignore[unreachable]
+
+                        self.parent.robot_references.find_keyword_references(
+                            document, kw_doc, include_declaration=False
+                        )
+
+                        self.parent.code_lens.refresh()
+
+                    key = (document, kw_doc)
+                    if key not in self._running_task:
+                        task = run_in_thread(find_refs)
+
+                        def done(task: Any) -> None:
+                            if key in self._running_task:
+                                self._running_task.discard(key)
+
+                        task.add_done_callback(done)
+
+                        self._running_task.add(key)
+                else:
+                    references = self.parent.robot_references.find_keyword_references(
+                        document, kw_doc, include_declaration=False
+                    )
+                    code_lens.command = Command(
+                        f"{len(references)} references",
+                        "editor.action.showReferences",
+                        [str(document.uri), code_lens.range.start, references],
+                    )
+            else:
+                code_lens.command = Command(
+                    "0 references",
+                    "editor.action.showReferences",
+                    [str(document.uri), code_lens.range.start, []],
+                )
+        else:
+            code_lens.command = Command(
+                "...",
+                "editor.action.showReferences",
+                [str(document.uri), code_lens.range.start, []],
+            )
+
+        return code_lens
 
 
 class _Visitor(Visitor):
@@ -69,104 +166,3 @@ class _Visitor(Visitor):
                 },
             )
         )
-
-
-class RobotCodeLensProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
-    _logger = LoggingDescriptor()
-
-    def __init__(self, parent: RobotLanguageServerProtocol) -> None:
-        super().__init__(parent)
-
-        parent.code_lens.collect.add(self.collect)
-        parent.code_lens.resolve.add(self.resolve)
-
-        self._running_task: Set[Tuple[TextDocument, KeywordDoc]] = set()
-
-        parent.diagnostics.on_workspace_loaded.add(self.codelens_refresh)
-        parent.robot_references.cache_cleared.add(self.codelens_refresh)
-
-    @language_id("robotframework")
-    async def codelens_refresh(self, sender: Any) -> None:  # NOSONAR
-        await self.parent.code_lens.refresh()
-
-    @language_id("robotframework")
-    async def collect(self, sender: Any, document: TextDocument) -> Optional[List[CodeLens]]:
-        if not (await self.parent.workspace.get_configuration_async(AnalysisConfig, document.uri)).references_code_lens:
-            return None
-
-        return _Visitor.find_from(self.parent.documents_cache.get_model(document), self, document)
-
-    @language_id("robotframework")
-    async def resolve(self, sender: Any, code_lens: CodeLens) -> Optional[CodeLens]:
-        if code_lens.data is None:
-            return code_lens
-
-        document = self.parent.documents.get(code_lens.data.get("uri", None))
-        if document is None:
-            return None
-
-        if not (await self.parent.workspace.get_configuration_async(AnalysisConfig, document.uri)).references_code_lens:
-            return None
-
-        namespace = self.parent.documents_cache.get_namespace(document)
-
-        name = code_lens.data["name"]
-        line = code_lens.data["line"]
-
-        if self.parent.diagnostics.workspace_loaded_event.is_set():
-            kw_doc = self.get_keyword_definition_at_line(namespace.get_library_doc(), name, line)
-
-            if kw_doc is not None and not kw_doc.is_error_handler:
-                if not self.parent.robot_references.has_cached_keyword_references(
-                    document, kw_doc, include_declaration=False
-                ):
-                    code_lens.command = Command(
-                        "...",
-                        "editor.action.showReferences",
-                        [str(document.uri), code_lens.range.start, []],
-                    )
-
-                    async def find_refs() -> None:
-                        if document is None or kw_doc is None:
-                            return  #  type: ignore[unreachable]
-
-                        self.parent.robot_references.find_keyword_references(
-                            document, kw_doc, include_declaration=False
-                        )
-
-                        await self.parent.code_lens.refresh()
-
-                    key = (document, kw_doc)
-                    if key not in self._running_task:
-                        task = create_sub_task(find_refs(), loop=self.parent.diagnostics.diagnostics_loop)
-
-                        def done(task: Any) -> None:
-                            if key in self._running_task:
-                                self._running_task.remove(key)
-
-                        task.add_done_callback(done)
-
-                        self._running_task.add(key)
-                else:
-                    references = self.parent.robot_references.find_keyword_references(
-                        document, kw_doc, include_declaration=False
-                    )
-                    code_lens.command = Command(
-                        f"{len(references)} references",
-                        "editor.action.showReferences",
-                        [str(document.uri), code_lens.range.start, references],
-                    )
-            else:
-                code_lens.command = Command(
-                    "0 references",
-                    "editor.action.showReferences",
-                    [str(document.uri), code_lens.range.start, []],
-                )
-        else:
-            code_lens.command = Command(
-                "...",
-                "editor.action.showReferences",
-                [str(document.uri), code_lens.range.start, []],
-            )
-
-        return code_lens

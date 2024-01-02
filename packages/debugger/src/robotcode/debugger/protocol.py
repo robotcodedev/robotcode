@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import concurrent.futures
 import inspect
 import json
 import threading
@@ -21,6 +20,7 @@ from typing import (
     Union,
 )
 
+from robotcode.core.concurrent import FutureEx
 from robotcode.core.utils.dataclasses import as_dict, as_json, from_dict
 from robotcode.core.utils.inspect import ensure_coroutine
 from robotcode.core.utils.logging import LoggingDescriptor
@@ -293,12 +293,8 @@ class DebugAdapterProtocol(JsonRPCProtocolBase):
         )
 
     @_logger.call
-    def send_request(
-        self,
-        request: Request,
-        return_type: Optional[Type[TResult]] = None,
-    ) -> concurrent.futures.Future[TResult]:
-        result: concurrent.futures.Future[TResult] = concurrent.futures.Future()
+    def send_request(self, request: Request, return_type: Optional[Type[TResult]] = None) -> FutureEx[TResult]:
+        result: FutureEx[TResult] = FutureEx()
 
         with self._sended_request_lock:
             self._sended_request[request.seq] = SendedRequestEntry(result, return_type)
@@ -309,9 +305,7 @@ class DebugAdapterProtocol(JsonRPCProtocolBase):
 
     @_logger.call
     def send_request_async(
-        self,
-        request: Request,
-        return_type: Optional[Type[TResult]] = None,
+        self, request: Request, return_type: Optional[Type[TResult]] = None
     ) -> asyncio.Future[TResult]:
         return asyncio.wrap_future(self.send_request(request, return_type))
 

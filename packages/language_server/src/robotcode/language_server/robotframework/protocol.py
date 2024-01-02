@@ -18,7 +18,7 @@ from .configuration import RobotConfig
 from .parts.code_action_documentation import RobotCodeActionDocumentationProtocolPart
 from .parts.code_action_quick_fixes import RobotCodeActionQuickFixesProtocolPart
 from .parts.code_action_refactor import RobotCodeActionRefactorProtocolPart
-from .parts.codelens import RobotCodeLensProtocolPart
+from .parts.code_lens import RobotCodeLensProtocolPart
 from .parts.completion import RobotCompletionProtocolPart
 from .parts.debugging_utils import RobotDebuggingUtilsProtocolPart
 from .parts.diagnostics import RobotDiagnosticsProtocolPart

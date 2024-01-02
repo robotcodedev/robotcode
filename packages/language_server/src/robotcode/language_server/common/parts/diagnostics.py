@@ -18,6 +18,7 @@ from robotcode.core.async_tools import (
     create_sub_task,
 )
 from robotcode.core.concurrent import threaded
+from robotcode.core.event import event
 from robotcode.core.lsp.types import (
     Diagnostic,
     DiagnosticOptions,
@@ -241,8 +242,8 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
     async def load_workspace_documents(sender) -> Optional[List[WorkspaceDocumentsResult]]:  # NOSONAR
         ...
 
-    @async_tasking_event
-    async def on_workspace_loaded(sender) -> None:  # NOSONAR
+    @event
+    def on_workspace_loaded(sender) -> None:  # NOSONAR
         ...
 
     @async_event
@@ -262,7 +263,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
                 finally:
                     self._workspace_loaded = True
                     self.workspace_loaded_event.set()
-                    await self.on_workspace_loaded(self)
+                    self.on_workspace_loaded(self)
                     await self.force_refresh_all()
 
     async def force_refresh_all(self, refresh: bool = True) -> None:
