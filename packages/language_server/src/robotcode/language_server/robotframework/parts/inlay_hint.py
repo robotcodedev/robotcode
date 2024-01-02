@@ -1,10 +1,8 @@
-from __future__ import annotations
-
 import ast
-import asyncio
-from typing import TYPE_CHECKING, Any, Awaitable, Callable, List, Optional, Type, cast
+from typing import TYPE_CHECKING, Any, Callable, List, Optional, Type, cast
 
 from robot.parsing.lexer.tokens import Token
+from robotcode.core.concurrent import check_current_thread_canceled
 from robotcode.core.lsp.types import InlayHint, InlayHintKind, Range
 from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.robot.diagnostics.library_doc import KeywordArgumentKind, KeywordDoc, LibraryDoc
@@ -22,24 +20,24 @@ from ..diagnostics.model_helper import ModelHelperMixin
 from .protocol_part import RobotLanguageServerProtocolPart
 
 _HandlerMethod = Callable[
-    [TextDocument, Range, ast.AST, ast.AST, Namespace, InlayHintsConfig], Awaitable[Optional[List[InlayHint]]]
+    [TextDocument, Range, ast.AST, ast.AST, Namespace, InlayHintsConfig], Optional[List[InlayHint]]
 ]
 
 
 class RobotInlayHintProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
     _logger = LoggingDescriptor()
 
-    def __init__(self, parent: RobotLanguageServerProtocol) -> None:
+    def __init__(self, parent: "RobotLanguageServerProtocol") -> None:
         super().__init__(parent)
 
         parent.inlay_hint.collect.add(self.collect)
 
-    async def get_config(self, document: TextDocument) -> Optional[InlayHintsConfig]:
+    def get_config(self, document: TextDocument) -> Optional[InlayHintsConfig]:
         folder = self.parent.workspace.get_workspace_folder(document.uri)
         if folder is None:
             return None
 
-        return await self.parent.workspace.get_configuration_async(InlayHintsConfig, folder.uri)
+        return self.parent.workspace.get_configuration(InlayHintsConfig, folder.uri)
 
     def _find_method(self, cls: Type[Any]) -> Optional[_HandlerMethod]:
         if cls is ast.AST:
@@ -58,8 +56,8 @@ class RobotInlayHintProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMix
 
     @language_id("robotframework")
     @_logger.call
-    async def collect(self, sender: Any, document: TextDocument, range: Range) -> Optional[List[InlayHint]]:
-        config = await self.get_config(document)
+    def collect(self, sender: Any, document: TextDocument, range: Range) -> Optional[List[InlayHint]]:
+        config = self.get_config(document)
         if config is None or not config.parameter_names and not config.namespaces:
             return None
 
@@ -69,6 +67,8 @@ class RobotInlayHintProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMix
         result: List[InlayHint] = []
 
         for node in iter_nodes(model):
+            check_current_thread_canceled()
+
             node_range = range_from_node(node)
             if node_range.end < range.start:
                 continue
@@ -78,13 +78,13 @@ class RobotInlayHintProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMix
 
             method = self._find_method(type(node))
             if method is not None:
-                r = await method(document, range, node, model, namespace, config)
+                r = method(document, range, node, model, namespace, config)
                 if r is not None:
                     result.extend(r)
 
         return result
 
-    async def _handle_keywordcall_fixture_template(
+    def _handle_keywordcall_fixture_template(
         self,
         keyword_token: Token,
         arguments: List[Token],
@@ -107,9 +107,9 @@ class RobotInlayHintProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMix
         if kw_doc is None:
             return None
 
-        return await self._get_inlay_hint(keyword_token, kw_doc, arguments, namespace, config)
+        return self._get_inlay_hint(keyword_token, kw_doc, arguments, namespace, config)
 
-    async def _get_inlay_hint(
+    def _get_inlay_hint(
         self,
         keyword_token: Optional[Token],
         kw_doc: KeywordDoc,
@@ -197,7 +197,7 @@ class RobotInlayHintProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMix
 
         return result
 
-    async def handle_KeywordCall(  # noqa: N802
+    def handle_KeywordCall(  # noqa: N802
         self,
         document: TextDocument,
         range: Range,
@@ -215,9 +215,9 @@ class RobotInlayHintProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMix
             return None
 
         arguments = keyword_call.get_tokens(RobotToken.ARGUMENT)
-        return await self._handle_keywordcall_fixture_template(keyword_token, arguments, namespace, config)
+        return self._handle_keywordcall_fixture_template(keyword_token, arguments, namespace, config)
 
-    async def handle_Fixture(  # noqa: N802
+    def handle_Fixture(  # noqa: N802
         self,
         document: TextDocument,
         range: Range,
@@ -235,9 +235,9 @@ class RobotInlayHintProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMix
             return None
 
         arguments = fixture.get_tokens(RobotToken.ARGUMENT)
-        return await self._handle_keywordcall_fixture_template(keyword_token, arguments, namespace, config)
+        return self._handle_keywordcall_fixture_template(keyword_token, arguments, namespace, config)
 
-    async def handle_TestTemplate(  # noqa: N802
+    def handle_TestTemplate(  # noqa: N802
         self,
         document: TextDocument,
         range: Range,
@@ -254,9 +254,9 @@ class RobotInlayHintProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMix
         if keyword_token is None or not keyword_token.value:
             return None
 
-        return await self._handle_keywordcall_fixture_template(keyword_token, [], namespace, config)
+        return self._handle_keywordcall_fixture_template(keyword_token, [], namespace, config)
 
-    async def handle_Template(  # noqa: N802
+    def handle_Template(  # noqa: N802
         self,
         document: TextDocument,
         range: Range,
@@ -273,9 +273,9 @@ class RobotInlayHintProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMix
         if keyword_token is None or not keyword_token.value:
             return None
 
-        return await self._handle_keywordcall_fixture_template(keyword_token, [], namespace, config)
+        return self._handle_keywordcall_fixture_template(keyword_token, [], namespace, config)
 
-    async def handle_LibraryImport(  # noqa: N802
+    def handle_LibraryImport(  # noqa: N802
         self,
         document: TextDocument,
         range: Range,
@@ -306,19 +306,20 @@ class RobotInlayHintProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMix
                     variables=namespace.get_resolvable_variables(),
                 )
 
-        except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
+        except (SystemExit, KeyboardInterrupt):
             raise
-        except BaseException:
+        except BaseException as e:
+            self._logger.exception(e)
             return None
 
         arguments = library_node.get_tokens(RobotToken.ARGUMENT)
 
         for kw_doc in lib_doc.inits:
-            return await self._get_inlay_hint(None, kw_doc, arguments, namespace, config)
+            return self._get_inlay_hint(None, kw_doc, arguments, namespace, config)
 
         return None
 
-    async def handle_VariablesImport(  # noqa: N802
+    def handle_VariablesImport(  # noqa: N802
         self,
         document: TextDocument,
         range: Range,
@@ -352,14 +353,15 @@ class RobotInlayHintProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMix
                     variables=namespace.get_resolvable_variables(),
                 )
 
-        except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
+        except (SystemExit, KeyboardInterrupt):
             raise
-        except BaseException:
+        except BaseException as e:
+            self._logger.exception(e)
             return None
 
         arguments = library_node.get_tokens(RobotToken.ARGUMENT)
 
         for kw_doc in lib_doc.inits:
-            return await self._get_inlay_hint(None, kw_doc, arguments, namespace, config)
+            return self._get_inlay_hint(None, kw_doc, arguments, namespace, config)
 
         return None

@@ -1,8 +1,8 @@
-from asyncio import CancelledError
+from concurrent.futures import CancelledError
 from typing import TYPE_CHECKING, Any, Final, List, Optional
 
-from robotcode.core.async_tools import async_tasking_event
 from robotcode.core.concurrent import threaded
+from robotcode.core.event import event
 from robotcode.core.lsp.types import (
     InlayHint,
     InlayHintOptions,
@@ -28,12 +28,12 @@ class InlayHintProtocolPart(LanguageServerProtocolPart):
     def __init__(self, parent: "LanguageServerProtocol") -> None:
         super().__init__(parent)
 
-    @async_tasking_event
-    async def collect(sender, document: TextDocument, range: Range) -> Optional[List[InlayHint]]:  # NOSONAR
+    @event
+    def collect(sender, document: TextDocument, range: Range) -> Optional[List[InlayHint]]:  # NOSONAR
         ...
 
-    @async_tasking_event
-    async def resolve(sender, hint: InlayHint) -> Optional[InlayHint]:  # NOSONAR
+    @event
+    def resolve(sender, hint: InlayHint) -> Optional[InlayHint]:  # NOSONAR
         ...
 
     def extend_capabilities(self, capabilities: ServerCapabilities) -> None:
@@ -45,7 +45,7 @@ class InlayHintProtocolPart(LanguageServerProtocolPart):
 
     @rpc_method(name="textDocument/inlayHint", param_type=InlayHintParams)
     @threaded
-    async def _text_document_inlay_hint(
+    def _text_document_inlay_hint(
         self,
         text_document: TextDocumentIdentifier,
         range: Range,
@@ -58,7 +58,7 @@ class InlayHintProtocolPart(LanguageServerProtocolPart):
         if document is None:
             return None
 
-        for result in await self.collect(
+        for result in self.collect(
             self,
             document,
             document.range_from_utf16(range),
@@ -72,8 +72,8 @@ class InlayHintProtocolPart(LanguageServerProtocolPart):
                     results.extend(result)
 
         if results:
-            for result in results:
-                result.position = document.position_to_utf16(result.position)
+            for r in results:
+                r.position = document.position_to_utf16(r.position)
                 # TODO: resolve
 
             return results
@@ -82,13 +82,13 @@ class InlayHintProtocolPart(LanguageServerProtocolPart):
 
     @rpc_method(name="inlayHint/resolve", param_type=InlayHint)
     @threaded
-    async def _inlay_hint_resolve(
+    def _inlay_hint_resolve(
         self,
         params: InlayHint,
         *args: Any,
         **kwargs: Any,
     ) -> Optional[InlayHint]:
-        for result in await self.resolve(self, params):
+        for result in self.resolve(self, params):
             if isinstance(result, BaseException):
                 if not isinstance(result, CancelledError):
                     self._logger.exception(result, exc_info=result)
@@ -98,11 +98,11 @@ class InlayHintProtocolPart(LanguageServerProtocolPart):
 
         return params
 
-    async def refresh(self) -> None:
+    def refresh(self) -> None:
         if (
             self.parent.client_capabilities is not None
             and self.parent.client_capabilities.workspace is not None
             and self.parent.client_capabilities.workspace.inlay_hint is not None
             and self.parent.client_capabilities.workspace.inlay_hint.refresh_support
         ):
-            await self.parent.send_request_async("workspace/inlayHint/refresh")
+            self.parent.send_request("workspace/inlayHint/refresh").result()
