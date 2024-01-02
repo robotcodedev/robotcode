@@ -126,7 +126,8 @@ def run_in_thread(callable: Callable[..., _TResult], *args: Any, **kwargs: Any) 
         )
         _running_callables[future] = thread
         future.add_done_callback(_remove_future_from_running_callables)
-
+    # TODO: don't set daemon=True because it can be deprecated in future pyhton versions
+    thread.daemon = True
     thread.start()
 
     return future

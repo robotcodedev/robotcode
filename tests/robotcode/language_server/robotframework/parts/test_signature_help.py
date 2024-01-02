@@ -1,4 +1,3 @@
-import asyncio
 import dataclasses
 from pathlib import Path
 
@@ -31,21 +30,17 @@ from .pytest_regtestex import RegTestFixtureEx
     scope="module",
 )
 @pytest.mark.usefixtures("protocol")
-@pytest.mark.asyncio()
-async def test(
+def test(
     regtest: RegTestFixtureEx,
     protocol: RobotLanguageServerProtocol,
     test_document: TextDocument,
     data: GeneratedTestData,
 ) -> None:
-    result = await asyncio.wait_for(
-        protocol.robot_signature_help.collect(
-            protocol.robot_signature_help,
-            test_document,
-            Position(line=data.line, character=data.character),
-            SignatureHelpContext(trigger_kind=SignatureHelpTriggerKind.INVOKED, is_retrigger=False),
-        ),
-        60,
+    result = protocol.robot_signature_help.collect(
+        protocol.robot_signature_help,
+        test_document,
+        Position(line=data.line, character=data.character),
+        SignatureHelpContext(trigger_kind=SignatureHelpTriggerKind.INVOKED, is_retrigger=False),
     )
 
     regtest.write(

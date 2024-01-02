@@ -1,4 +1,3 @@
-import asyncio
 from pathlib import Path
 
 import pytest
@@ -30,8 +29,7 @@ from .pytest_regtestex import RegTestFixtureEx
     scope="module",
 )
 @pytest.mark.usefixtures("protocol")
-@pytest.mark.asyncio()
-async def test(
+def test(
     regtest: RegTestFixtureEx,
     protocol: RobotLanguageServerProtocol,
     test_document: TextDocument,
@@ -42,14 +40,11 @@ async def test(
 
     protocol.diagnostics.workspace_loaded_event.wait(1200)
 
-    result = await asyncio.wait_for(
-        protocol.robot_references.collect(
-            protocol.robot_references,
-            test_document,
-            Position(line=data.line, character=data.character),
-            ReferenceContext(include_declaration=True),
-        ),
-        120,
+    result = protocol.robot_references.collect(
+        protocol.robot_references,
+        test_document,
+        Position(line=data.line, character=data.character),
+        ReferenceContext(include_declaration=True),
     )
     regtest.write(
         yaml.dump(

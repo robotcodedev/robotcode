@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from typing import TYPE_CHECKING, Any, List, Optional
 
 from robot.parsing.model.statements import Statement
@@ -19,16 +17,14 @@ if TYPE_CHECKING:
 class RobotSelectionRangeProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
     _logger = LoggingDescriptor()
 
-    def __init__(self, parent: RobotLanguageServerProtocol) -> None:
+    def __init__(self, parent: "RobotLanguageServerProtocol") -> None:
         super().__init__(parent)
 
         parent.selection_range.collect.add(self.collect)
 
     @language_id("robotframework")
     @_logger.call
-    async def collect(
-        self, sender: Any, document: TextDocument, positions: List[Position]
-    ) -> Optional[List[SelectionRange]]:
+    def collect(self, sender: Any, document: TextDocument, positions: List[Position]) -> Optional[List[SelectionRange]]:
         namespace = self.parent.documents_cache.get_namespace(document)
 
         results: List[SelectionRange] = []

@@ -1,6 +1,6 @@
 import contextlib
 import uuid
-from typing import TYPE_CHECKING, Any, AsyncIterator, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, Iterator, List, Optional
 
 from robotcode.core.lsp.types import (
     URI,
@@ -116,13 +116,13 @@ class WindowProtocolPart(LanguageServerProtocolPart):
     def show_log_message(self, message: str, type: MessageType = MessageType.INFO) -> None:
         self.parent.send_notification("window/logMessage", LogMessageParams(type=type, message=message))
 
-    async def show_message_request(
+    def show_message_request(
         self,
         message: str,
         actions: List[str] = [],
         type: MessageType = MessageType.INFO,
     ) -> Optional[str]:
-        r = await self.parent.send_request_async(
+        r = self.parent.send_request(
             "window/showMessageRequest",
             ShowMessageRequestParams(
                 type=type,
@@ -130,10 +130,10 @@ class WindowProtocolPart(LanguageServerProtocolPart):
                 actions=[MessageActionItem(title=a) for a in actions],
             ),
             MessageActionItem,
-        )
+        ).result(30)
         return r.title if r is not None else None
 
-    async def show_document(
+    def show_document(
         self,
         uri: URI,
         external: Optional[bool] = None,
@@ -145,15 +145,15 @@ class WindowProtocolPart(LanguageServerProtocolPart):
             if doc is not None:
                 selection = doc.range_to_utf16(selection)
 
-        r = await self.parent.send_request_async(
+        r = self.parent.send_request(
             "window/showDocument",
             ShowDocumentParams(uri=uri, external=external, take_focus=take_focus, selection=selection),
             ShowDocumentResult,
-        )
+        ).result(30)
         return r.success if r is not None else False
 
-    @contextlib.asynccontextmanager
-    async def progress(
+    @contextlib.contextmanager
+    def progress(
         self,
         message: Optional[str] = None,
         max: Optional[int] = None,
@@ -164,10 +164,10 @@ class WindowProtocolPart(LanguageServerProtocolPart):
         *,
         start: bool = True,
         progress_token: Optional[ProgressToken] = None,
-    ) -> AsyncIterator[Progress]:
+    ) -> Iterator[Progress]:
         p = Progress(
             self,
-            await self.create_progress() if progress_token is None else progress_token,
+            self.create_progress() if progress_token is None else progress_token,
             message,
             max,
         )
@@ -185,21 +185,21 @@ class WindowProtocolPart(LanguageServerProtocolPart):
         finally:
             p.end()
 
-    async def create_progress(self) -> Optional[ProgressToken]:
+    def create_progress(self) -> Optional[ProgressToken]:
         if (
             self.parent.client_capabilities
             and self.parent.client_capabilities.window
             and self.parent.client_capabilities.window.work_done_progress
         ):
             token = str(uuid.uuid4())
-            await self.parent.send_request_async("window/workDoneProgress/create", WorkDoneProgressCreateParams(token))
+            self.parent.send_request("window/workDoneProgress/create", WorkDoneProgressCreateParams(token)).result(30)
             self.__progress_tokens[token] = False
             return token
 
         return None
 
     @rpc_method(name="window/workDoneProgress/cancel", param_type=WorkDoneProgressCancelParams)
-    async def _window_work_done_progress_cancel(
+    def _window_work_done_progress_cancel(
         self,
         token: ProgressToken,
         *args: Any,

@@ -26,10 +26,8 @@ from typing import (
     runtime_checkable,
 )
 
-from robotcode.core.async_tools import (
-    async_tasking_event,
-)
 from robotcode.core.concurrent import threaded
+from robotcode.core.event import event
 from robotcode.core.lsp.types import (
     ApplyWorkspaceEditParams,
     ApplyWorkspaceEditResult,
@@ -105,12 +103,12 @@ class FileWatcherEntry:
         self.parent: Optional[FileWatcherEntry] = None
         self.finalizer: Any = None
 
-    @async_tasking_event
-    async def child_callbacks(sender, changes: List[FileEvent]) -> None:  # NOSONAR
+    @event
+    def child_callbacks(sender, changes: List[FileEvent]) -> None:  # NOSONAR
         ...
 
-    async def call_childrens(self, sender: Any, changes: List[FileEvent]) -> None:
-        await self.child_callbacks(sender, changes)
+    def call_childrens(self, sender: Any, changes: List[FileEvent]) -> None:
+        self.child_callbacks(sender, changes)
 
     def __str__(self) -> str:
         return self.id
@@ -245,46 +243,46 @@ class Workspace(LanguageServerProtocolPart):
     def settings(self, value: Dict[str, Any]) -> None:
         self._settings = value
 
-    @async_tasking_event
-    async def did_change_configuration(sender, settings: Dict[str, Any]) -> None:  # NOSONAR
+    @event
+    def did_change_configuration(sender, settings: Dict[str, Any]) -> None:  # NOSONAR
         ...
 
     @rpc_method(name="workspace/didChangeConfiguration", param_type=DidChangeConfigurationParams)
     @threaded
-    async def _workspace_did_change_configuration(self, settings: Dict[str, Any], *args: Any, **kwargs: Any) -> None:
+    def _workspace_did_change_configuration(self, settings: Dict[str, Any], *args: Any, **kwargs: Any) -> None:
         self.settings = settings
-        await self.did_change_configuration(self, settings)
+        self.did_change_configuration(self, settings)
 
-    @async_tasking_event
-    async def will_create_files(sender, files: List[str]) -> Optional[Mapping[str, List[TextEdit]]]:  # NOSONAR
+    @event
+    def will_create_files(sender, files: List[str]) -> Optional[Mapping[str, List[TextEdit]]]:  # NOSONAR
         ...
 
-    @async_tasking_event
-    async def did_create_files(sender, files: List[str]) -> None:  # NOSONAR
+    @event
+    def did_create_files(sender, files: List[str]) -> None:  # NOSONAR
         ...
 
-    @async_tasking_event
-    async def will_rename_files(sender, files: List[Tuple[str, str]]) -> None:  # NOSONAR
+    @event
+    def will_rename_files(sender, files: List[Tuple[str, str]]) -> None:  # NOSONAR
         ...
 
-    @async_tasking_event
-    async def did_rename_files(sender, files: List[Tuple[str, str]]) -> None:  # NOSONAR
+    @event
+    def did_rename_files(sender, files: List[Tuple[str, str]]) -> None:  # NOSONAR
         ...
 
-    @async_tasking_event
-    async def will_delete_files(sender, files: List[str]) -> None:  # NOSONAR
+    @event
+    def will_delete_files(sender, files: List[str]) -> None:  # NOSONAR
         ...
 
-    @async_tasking_event
-    async def did_delete_files(sender, files: List[str]) -> None:  # NOSONAR
+    @event
+    def did_delete_files(sender, files: List[str]) -> None:  # NOSONAR
         ...
 
     @rpc_method(name="workspace/willCreateFiles", param_type=CreateFilesParams)
     @threaded
-    async def _workspace_will_create_files(
+    def _workspace_will_create_files(
         self, files: List[FileCreate], *args: Any, **kwargs: Any
     ) -> Optional[WorkspaceEdit]:
-        results = await self.will_create_files(self, [f.uri for f in files])
+        results = self.will_create_files(self, [f.uri for f in files])
         if len(results) == 0:
             return None
 
@@ -299,32 +297,32 @@ class Workspace(LanguageServerProtocolPart):
 
     @rpc_method(name="workspace/didCreateFiles", param_type=CreateFilesParams)
     @threaded
-    async def _workspace_did_create_files(self, files: List[FileCreate], *args: Any, **kwargs: Any) -> None:
-        await self.did_create_files(self, [f.uri for f in files])
+    def _workspace_did_create_files(self, files: List[FileCreate], *args: Any, **kwargs: Any) -> None:
+        self.did_create_files(self, [f.uri for f in files])
 
     @rpc_method(name="workspace/willRenameFiles", param_type=RenameFilesParams)
     @threaded
-    async def _workspace_will_rename_files(self, files: List[FileRename], *args: Any, **kwargs: Any) -> None:
-        await self.will_rename_files(self, [(f.old_uri, f.new_uri) for f in files])
+    def _workspace_will_rename_files(self, files: List[FileRename], *args: Any, **kwargs: Any) -> None:
+        self.will_rename_files(self, [(f.old_uri, f.new_uri) for f in files])
 
         # TODO: return WorkspaceEdit
 
     @rpc_method(name="workspace/didRenameFiles", param_type=RenameFilesParams)
     @threaded
-    async def _workspace_did_rename_files(self, files: List[FileRename], *args: Any, **kwargs: Any) -> None:
-        await self.did_rename_files(self, [(f.old_uri, f.new_uri) for f in files])
+    def _workspace_did_rename_files(self, files: List[FileRename], *args: Any, **kwargs: Any) -> None:
+        self.did_rename_files(self, [(f.old_uri, f.new_uri) for f in files])
 
     @rpc_method(name="workspace/willDeleteFiles", param_type=DeleteFilesParams)
     @threaded
-    async def _workspace_will_delete_files(self, files: List[FileDelete], *args: Any, **kwargs: Any) -> None:
-        await self.will_delete_files(self, [f.uri for f in files])
+    def _workspace_will_delete_files(self, files: List[FileDelete], *args: Any, **kwargs: Any) -> None:
+        self.will_delete_files(self, [f.uri for f in files])
 
         # TODO: return WorkspaceEdit
 
     @rpc_method(name="workspace/didDeleteFiles", param_type=DeleteFilesParams)
     @threaded
-    async def _workspace_did_delete_files(self, files: List[FileDelete], *args: Any, **kwargs: Any) -> None:
-        await self.did_delete_files(self, [f.uri for f in files])
+    def _workspace_did_delete_files(self, files: List[FileDelete], *args: Any, **kwargs: Any) -> None:
+        self.did_delete_files(self, [f.uri for f in files])
 
     def get_configuration_async(
         self,
@@ -432,7 +430,7 @@ class Workspace(LanguageServerProtocolPart):
         param_type=DidChangeWorkspaceFoldersParams,
     )
     @threaded
-    async def _workspace_did_change_workspace_folders(
+    def _workspace_did_change_workspace_folders(
         self, event: WorkspaceFoldersChangeEvent, *args: Any, **kwargs: Any
     ) -> None:
         with self._workspace_folders_lock:
@@ -449,16 +447,16 @@ class Workspace(LanguageServerProtocolPart):
             for a in event.added:
                 self._workspace_folders.append(WorkspaceFolder(a.name, Uri(a.uri), a.uri))
 
-    @async_tasking_event
-    async def did_change_watched_files(sender, changes: List[FileEvent]) -> None:  # NOSONAR
+    @event
+    def did_change_watched_files(sender, changes: List[FileEvent]) -> None:  # NOSONAR
         ...
 
     @rpc_method(name="workspace/didChangeWatchedFiles", param_type=DidChangeWatchedFilesParams)
     @threaded
-    async def _workspace_did_change_watched_files(self, changes: List[FileEvent], *args: Any, **kwargs: Any) -> None:
+    def _workspace_did_change_watched_files(self, changes: List[FileEvent], *args: Any, **kwargs: Any) -> None:
         changes = [e for e in changes if not e.uri.endswith("/globalStorage")]
         if changes:
-            await self.did_change_watched_files(self, changes)
+            self.did_change_watched_files(self, changes)
 
     def add_file_watcher(
         self,
@@ -560,7 +558,7 @@ class Workspace(LanguageServerProtocolPart):
                     self.parent.unregister_capability(entry.id, "workspace/didChangeWatchedFiles")
                 # TODO: implement own filewatcher if not supported by language server client
 
-    async def apply_edit(self, edit: WorkspaceEdit, label: Optional[str] = None) -> ApplyWorkspaceEditResult:
+    def apply_edit(self, edit: WorkspaceEdit, label: Optional[str] = None) -> ApplyWorkspaceEditResult:
         if edit.changes:
             for uri, changes in edit.changes.items():
                 if changes:
@@ -575,11 +573,11 @@ class Workspace(LanguageServerProtocolPart):
                     for e in doc_change.edits:
                         e.range = doc.range_to_utf16(e.range)
 
-        r = await self.parent.send_request_async(
+        r = self.parent.send_request(
             "workspace/applyEdit",
             ApplyWorkspaceEditParams(edit, label),
             return_type=ApplyWorkspaceEditResult,
-        )
+        ).result(30)
 
         assert r is not None
 

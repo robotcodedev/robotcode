@@ -162,7 +162,7 @@ class RobotLanguageServerProtocol(LanguageServerProtocol):
 
         self._logger.info(lambda: f"initialized with {self.options!r}")
 
-    async def _on_did_change_configuration(self, sender: Any, settings: Dict[str, Any]) -> None:
+    def _on_did_change_configuration(self, sender: Any, settings: Dict[str, Any]) -> None:
         pass
 
     def server_initialized(self, sender: Any) -> None:

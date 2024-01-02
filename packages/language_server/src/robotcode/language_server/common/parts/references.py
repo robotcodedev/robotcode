@@ -1,10 +1,8 @@
-from __future__ import annotations
-
-from asyncio import CancelledError
+from concurrent.futures import CancelledError
 from typing import TYPE_CHECKING, Any, Final, List, Optional
 
-from robotcode.core.async_tools import async_tasking_event
 from robotcode.core.concurrent import threaded
+from robotcode.core.event import event
 from robotcode.core.lsp.types import (
     Location,
     Position,
@@ -28,22 +26,22 @@ from .protocol_part import LanguageServerProtocolPart
 class ReferencesProtocolPart(LanguageServerProtocolPart):
     _logger: Final = LoggingDescriptor()
 
-    def __init__(self, parent: LanguageServerProtocol) -> None:
+    def __init__(self, parent: "LanguageServerProtocol") -> None:
         super().__init__(parent)
 
     def extend_capabilities(self, capabilities: ServerCapabilities) -> None:
         if len(self.collect):
             capabilities.references_provider = ReferenceOptions(work_done_progress=True)
 
-    @async_tasking_event
-    async def collect(
+    @event
+    def collect(
         sender, document: TextDocument, position: Position, context: ReferenceContext  # NOSONAR
     ) -> Optional[List[Location]]:
         ...
 
     @rpc_method(name="textDocument/references", param_type=ReferenceParams)
     @threaded
-    async def _text_document_references(
+    def _text_document_references(
         self,
         text_document: TextDocumentIdentifier,
         position: Position,
@@ -51,7 +49,7 @@ class ReferencesProtocolPart(LanguageServerProtocolPart):
         *args: Any,
         **kwargs: Any,
     ) -> Optional[List[Location]]:
-        await self.parent.diagnostics.ensure_workspace_loaded()
+        self.parent.diagnostics.ensure_workspace_loaded()
 
         locations: List[Location] = []
 
@@ -59,7 +57,7 @@ class ReferencesProtocolPart(LanguageServerProtocolPart):
         if document is None:
             return None
 
-        for result in await self.collect(
+        for result in self.collect(
             self,
             document,
             document.position_from_utf16(position),

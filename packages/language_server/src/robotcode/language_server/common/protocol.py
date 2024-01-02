@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import asyncio
 from concurrent.futures import Future
+from threading import Event
 from typing import Any, ClassVar, Final, List, NamedTuple, Optional, Set, Union
 
-from robotcode.core.async_tools import Event
 from robotcode.core.event import event
 from robotcode.core.lsp.types import (
     CancelParams,

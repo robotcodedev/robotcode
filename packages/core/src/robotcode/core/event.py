@@ -73,6 +73,7 @@ class EventResultIteratorBase(Generic[_TParams, _TResult]):
     def _notify(
         self,
         *__args: _TParams.args,
+        return_exceptions: Optional[bool] = True,
         callback_filter: Optional[Callable[[Callable[..., Any]], bool]] = None,
         **__kwargs: _TParams.kwargs,
     ) -> Iterator[Union[_TResult, BaseException]]:
@@ -83,7 +84,10 @@ class EventResultIteratorBase(Generic[_TParams, _TResult]):
             try:
                 yield method(*__args, **__kwargs)
             except BaseException as e:
-                yield e
+                if return_exceptions:
+                    yield e
+                else:
+                    raise
 
 
 class EventIterator(EventResultIteratorBase[_TParams, _TResult]):

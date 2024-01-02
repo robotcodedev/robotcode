@@ -561,7 +561,7 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
         self,
         method: str,
         params: Optional[Any] = None,
-        return_type_or_converter: Optional[Type[_TResult]] = None,
+        return_type: Optional[Type[_TResult]] = None,
     ) -> FutureEx[_TResult]:
         result: FutureEx[_TResult] = FutureEx()
 
@@ -569,7 +569,7 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
             self._sended_request_count += 1
             id = self._sended_request_count
 
-            self._sended_request[id] = SendedRequestEntry(result, return_type_or_converter)
+            self._sended_request[id] = SendedRequestEntry(result, return_type)
 
         request = JsonRPCRequest(id=id, method=method, params=params)
         self.send_message(request)
@@ -580,9 +580,9 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
         self,
         method: str,
         params: Optional[Any] = None,
-        return_type: Optional[Type[_TResult]] = None,
+        return_type_or_converter: Optional[Type[_TResult]] = None,
     ) -> asyncio.Future[_TResult]:
-        return asyncio.wrap_future(self.send_request(method, params, return_type))
+        return asyncio.wrap_future(self.send_request(method, params, return_type_or_converter))
 
     @__logger.call
     def send_notification(self, method: str, params: Any) -> None:

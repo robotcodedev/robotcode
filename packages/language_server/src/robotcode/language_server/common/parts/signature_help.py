@@ -1,11 +1,9 @@
-from __future__ import annotations
-
-from asyncio import CancelledError
+from concurrent.futures import CancelledError
 from itertools import chain
 from typing import TYPE_CHECKING, Any, Final, List, Optional, cast
 
-from robotcode.core.async_tools import async_tasking_event
-from robotcode.core.concurrent import threaded
+from robotcode.core.concurrent import check_current_thread_canceled, threaded
+from robotcode.core.event import event
 from robotcode.core.lsp.types import (
     Position,
     ServerCapabilities,
@@ -35,11 +33,11 @@ if TYPE_CHECKING:
 class SignatureHelpProtocolPart(LanguageServerProtocolPart):
     _logger: Final = LoggingDescriptor()
 
-    def __init__(self, parent: LanguageServerProtocol) -> None:
+    def __init__(self, parent: "LanguageServerProtocol") -> None:
         super().__init__(parent)
 
-    @async_tasking_event
-    async def collect(
+    @event
+    def collect(
         sender, document: TextDocument, position: Position, context: Optional[SignatureHelpContext] = None  # NOSONAR
     ) -> Optional[SignatureHelp]:
         ...
@@ -73,7 +71,7 @@ class SignatureHelpProtocolPart(LanguageServerProtocolPart):
 
     @rpc_method(name="textDocument/signatureHelp", param_type=SignatureHelpParams)
     @threaded
-    async def _text_document_signature_help(
+    def _text_document_signature_help(
         self,
         text_document: TextDocumentIdentifier,
         position: Position,
@@ -87,13 +85,15 @@ class SignatureHelpProtocolPart(LanguageServerProtocolPart):
         if document is None:
             return None
 
-        for result in await self.collect(
+        for result in self.collect(
             self,
             document,
             document.position_from_utf16(position),
             context,
             callback_filter=language_id_filter(document),
         ):
+            check_current_thread_canceled()
+
             if isinstance(result, BaseException):
                 if not isinstance(result, CancelledError):
                     self._logger.exception(result, exc_info=result)

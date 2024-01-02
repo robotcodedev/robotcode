@@ -1,7 +1,5 @@
-from __future__ import annotations
-
 import ast
-import asyncio
+from concurrent.futures import CancelledError
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -13,7 +11,6 @@ from typing import (
 )
 
 from robot.parsing.model.statements import Statement
-from robotcode.core.async_tools import create_sub_task
 from robotcode.core.concurrent import threaded
 from robotcode.core.event import event
 from robotcode.core.lsp.types import FileEvent, Location, Position, Range, ReferenceContext, WatchKind
@@ -50,7 +47,7 @@ _ReferencesMethod = Callable[[ast.AST, TextDocument, Position, ReferenceContext]
 class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
     _logger = LoggingDescriptor()
 
-    def __init__(self, parent: RobotLanguageServerProtocol) -> None:
+    def __init__(self, parent: "RobotLanguageServerProtocol") -> None:
         super().__init__(parent)
 
         self._keyword_reference_cache = SimpleLRUCache(max_items=None)
@@ -72,15 +69,15 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
             WatchKind.CREATE | WatchKind.DELETE,
         )
 
-    async def do_on_file_changed(self, sender: Any, files: List[FileEvent]) -> None:
-        await self.clear_cache()
+    def do_on_file_changed(self, sender: Any, files: List[FileEvent]) -> None:
+        self.clear_cache()
 
     @language_id("robotframework")
     @threaded
     def document_did_change(self, sender: Any, document: TextDocument) -> None:
-        create_sub_task(self.clear_cache(), loop=self.parent.loop)
+        self.clear_cache()
 
-    async def clear_cache(self) -> None:
+    def clear_cache(self) -> None:
         self._keyword_reference_cache.clear()
         self._variable_reference_cache.clear()
 
@@ -102,7 +99,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
 
     @language_id("robotframework")
     @_logger.call
-    async def collect(
+    def collect(
         self, sender: Any, document: TextDocument, position: Position, context: ReferenceContext
     ) -> Optional[List[Location]]:
         result_nodes = get_nodes_at_position(self.parent.documents_cache.get_model(document), position)
@@ -112,7 +109,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
 
         result_node = result_nodes[-1]
 
-        result = await self._references_default(result_nodes, document, position, context)
+        result = self._references_default(result_nodes, document, position, context)
         if result:
             return result
 
@@ -132,24 +129,16 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         *args: Any,
         **kwargs: Any,
     ) -> List[Location]:
-        # await self.parent.diagnostics.ensure_workspace_loaded()
-
         result: List[Location] = []
 
-        # tasks = []
         for doc in self.parent.documents.documents:
-            # if doc.language_id == "robotframework":
             result.extend(func(doc, *args, **kwargs))
             if result and stop_at_first:
                 break
 
-            # tasks.append(run_coroutine_in_thread(func, doc, *args, **kwargs))
-
-        # result = await asyncio.gather(*tasks)
-
         return result
 
-    async def _references_default(
+    def _references_default(
         self, nodes: List[ast.AST], document: TextDocument, position: Position, context: ReferenceContext
     ) -> Optional[List[Location]]:
         namespace = self.parent.documents_cache.get_namespace(document)
@@ -268,7 +257,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
                 result |= refs[kw_doc]
 
             return list(result)
-        except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
+        except (SystemExit, KeyboardInterrupt, CancelledError):
             raise
         except BaseException as e:
             self._logger.exception(e)

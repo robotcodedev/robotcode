@@ -1,11 +1,9 @@
-from __future__ import annotations
-
 import ast
-import asyncio
+from concurrent.futures import CancelledError
 from typing import TYPE_CHECKING, Any, List, Optional
 
 from robot.parsing.lexer.tokens import Token
-from robotcode.core.async_tools import create_sub_task
+from robotcode.core.concurrent import threaded
 from robotcode.core.lsp.types import Diagnostic, DiagnosticSeverity, DiagnosticTag, Position, Range
 from robotcode.core.uri import Uri
 from robotcode.core.utils.logging import LoggingDescriptor
@@ -28,26 +26,29 @@ from .protocol_part import RobotLanguageServerProtocolPart
 class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
     _logger = LoggingDescriptor()
 
-    def __init__(self, parent: RobotLanguageServerProtocol) -> None:
+    def __init__(self, parent: "RobotLanguageServerProtocol") -> None:
         super().__init__(parent)
 
         self.source_name = "robotcode.diagnostics"
 
-        # parent.diagnostics.collect.add(self.collect_token_errors)
-        # parent.diagnostics.collect.add(self.collect_model_errors)
+        parent.diagnostics.collect.add(self.collect_token_errors)
+        parent.diagnostics.collect.add(self.collect_model_errors)
 
-        # parent.diagnostics.collect.add(self.collect_namespace_diagnostics)
+        parent.diagnostics.collect.add(self.collect_namespace_diagnostics)
 
-        # parent.diagnostics.collect.add(self.collect_unused_keyword_references)
-        # parent.diagnostics.collect.add(self.collect_unused_variable_references)
+        parent.diagnostics.collect.add(self.collect_unused_keyword_references)
+        parent.diagnostics.collect.add(self.collect_unused_variable_references)
 
         parent.documents_cache.namespace_invalidated.add(self.namespace_invalidated)
 
-    async def namespace_invalidated_task(self, namespace: Namespace) -> None:
+    @language_id("robotframework")
+    @threaded
+    @_logger.call
+    def namespace_invalidated(self, sender: Any, namespace: Namespace) -> None:
         if namespace.document is not None:
             refresh = namespace.document.opened_in_editor
 
-            await self.parent.diagnostics.force_refresh_document(namespace.document, False)
+            self.parent.diagnostics.force_refresh_document(namespace.document, False)
 
             if namespace.is_initialized():
                 resources = (namespace.get_resources()).values()
@@ -56,19 +57,14 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
                         doc = self.parent.documents.get(Uri.from_path(r.library_doc.source).normalized())
                         if doc is not None:
                             refresh |= doc.opened_in_editor
-                            await self.parent.diagnostics.force_refresh_document(doc, False)
+                            self.parent.diagnostics.force_refresh_document(doc, False)
 
             if refresh:
-                await self.parent.diagnostics.refresh()
+                self.parent.diagnostics.refresh()
 
     @language_id("robotframework")
     @_logger.call
-    def namespace_invalidated(self, sender: Any, namespace: Namespace) -> None:
-        create_sub_task(self.namespace_invalidated_task(namespace), loop=self.parent.diagnostics.diagnostics_loop)
-
-    @language_id("robotframework")
-    @_logger.call
-    async def collect_namespace_diagnostics(self, sender: Any, document: TextDocument) -> DiagnosticsResult:
+    def collect_namespace_diagnostics(self, sender: Any, document: TextDocument) -> DiagnosticsResult:
         return document.get_cache(self._collect_namespace_diagnostics)
 
     def _collect_namespace_diagnostics(self, document: TextDocument) -> DiagnosticsResult:
@@ -76,7 +72,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
             namespace = self.parent.documents_cache.get_namespace(document)
 
             return DiagnosticsResult(self.collect_namespace_diagnostics, namespace.get_diagnostics())
-        except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
+        except (CancelledError, SystemExit, KeyboardInterrupt):
             raise
         except BaseException as e:
             self._logger.exception(e)
@@ -134,7 +130,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
 
     @language_id("robotframework")
     @_logger.call
-    async def collect_token_errors(self, sender: Any, document: TextDocument) -> DiagnosticsResult:
+    def collect_token_errors(self, sender: Any, document: TextDocument) -> DiagnosticsResult:
         return document.get_cache(self._collect_token_errors)
 
     def _collect_token_errors(self, document: TextDocument) -> DiagnosticsResult:
@@ -171,7 +167,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
                                 code=type(e).__qualname__,
                             )
                         )
-        except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
+        except (CancelledError, SystemExit, KeyboardInterrupt):
             raise
         except BaseException as e:
             return DiagnosticsResult(
@@ -200,7 +196,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
 
     @language_id("robotframework")
     @_logger.call
-    async def collect_model_errors(self, sender: Any, document: TextDocument) -> DiagnosticsResult:
+    def collect_model_errors(self, sender: Any, document: TextDocument) -> DiagnosticsResult:
         return document.get_cache(self._collect_model_errors)
 
     def _collect_model_errors(self, document: TextDocument) -> DiagnosticsResult:
@@ -220,7 +216,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
 
             return DiagnosticsResult(self.collect_model_errors, result)
 
-        except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
+        except (CancelledError, SystemExit, KeyboardInterrupt):
             raise
         except BaseException as e:
             return DiagnosticsResult(
@@ -247,7 +243,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
 
     @language_id("robotframework")
     @_logger.call
-    async def collect_unused_keyword_references(self, sender: Any, document: TextDocument) -> DiagnosticsResult:
+    def collect_unused_keyword_references(self, sender: Any, document: TextDocument) -> DiagnosticsResult:
         if not self.parent.diagnostics.workspace_loaded_event.is_set():
             return DiagnosticsResult(self.collect_unused_keyword_references, None)
 
@@ -278,7 +274,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
                     )
 
             return DiagnosticsResult(self.collect_unused_keyword_references, result)
-        except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
+        except (CancelledError, SystemExit, KeyboardInterrupt):
             raise
         except BaseException as e:
             return DiagnosticsResult(
@@ -305,7 +301,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
 
     @language_id("robotframework")
     @_logger.call
-    async def collect_unused_variable_references(self, sender: Any, document: TextDocument) -> DiagnosticsResult:
+    def collect_unused_variable_references(self, sender: Any, document: TextDocument) -> DiagnosticsResult:
         if not self.parent.diagnostics.workspace_loaded_event.is_set():
             return DiagnosticsResult(self.collect_unused_variable_references, None)
 
@@ -338,7 +334,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
                     )
 
             return DiagnosticsResult(self.collect_unused_variable_references, result)
-        except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
+        except (CancelledError, SystemExit, KeyboardInterrupt):
             raise
         except BaseException as e:
             return DiagnosticsResult(

@@ -1,10 +1,8 @@
-from __future__ import annotations
-
-import asyncio
 import time
+from concurrent.futures import CancelledError
+from threading import Event
 from typing import TYPE_CHECKING, Any, List, Optional
 
-from robotcode.core.async_tools import Event
 from robotcode.core.concurrent import threaded
 from robotcode.core.lsp.types import (
     FileChangeType,
@@ -45,7 +43,7 @@ class CantReadDocumentError(Exception):
 class RobotWorkspaceProtocolPart(RobotLanguageServerProtocolPart):
     _logger = LoggingDescriptor()
 
-    def __init__(self, parent: RobotLanguageServerProtocol) -> None:
+    def __init__(self, parent: "RobotLanguageServerProtocol") -> None:
         super().__init__(parent)
         self.parent.documents.on_read_document_text.add(self._on_read_document_text)
         self.parent.diagnostics.load_workspace_documents.add(self._load_workspace_documents)
@@ -61,7 +59,7 @@ class RobotWorkspaceProtocolPart(RobotLanguageServerProtocolPart):
             WatchKind.CREATE,
         )
 
-    async def on_file_changed(self, sender: Any, files: List[FileEvent]) -> None:  #
+    def on_file_changed(self, sender: Any, files: List[FileEvent]) -> None:  #
         for fe in [f for f in files if f.type == FileChangeType.CREATED]:
             doc_uri = Uri(fe.uri)
             try:
@@ -81,24 +79,24 @@ class RobotWorkspaceProtocolPart(RobotLanguageServerProtocolPart):
         with FileReader(uri.to_path()) as reader:
             return str(reader.read())
 
-    async def on_get_diagnostics_mode(self, sender: Any, uri: Uri) -> Optional[DiagnosticsMode]:
-        config = await self.parent.workspace.get_configuration_async(AnalysisConfig, uri)
+    def on_get_diagnostics_mode(self, sender: Any, uri: Uri) -> Optional[DiagnosticsMode]:
+        config = self.parent.workspace.get_configuration(AnalysisConfig, uri)
         return config.diagnostic_mode
 
-    async def on_get_analysis_progress_mode(self, sender: Any, uri: Uri) -> Optional[AnalysisProgressMode]:
-        config = await self.parent.workspace.get_configuration_async(AnalysisConfig, uri)
+    def on_get_analysis_progress_mode(self, sender: Any, uri: Uri) -> Optional[AnalysisProgressMode]:
+        config = self.parent.workspace.get_configuration(AnalysisConfig, uri)
         return config.progress_mode
 
     @threaded
-    async def _load_workspace_documents(self, sender: Any) -> List[WorkspaceDocumentsResult]:
+    def _load_workspace_documents(self, sender: Any) -> List[WorkspaceDocumentsResult]:
         start = time.monotonic()
         try:
             result: List[WorkspaceDocumentsResult] = []
 
             for folder in self.parent.workspace.workspace_folders:
-                config = await self.parent.workspace.get_configuration_async(RobotCodeConfig, folder.uri)
+                config = self.parent.workspace.get_configuration(RobotCodeConfig, folder.uri)
 
-                async with self.parent.window.progress("Collect sources", cancellable=False):
+                with self.parent.window.progress("Collect sources", cancellable=False):
                     files = list(
                         iter_files(
                             folder.uri.to_path(),
@@ -109,7 +107,7 @@ class RobotWorkspaceProtocolPart(RobotLanguageServerProtocolPart):
                     )
 
                 canceled = False
-                async with self.parent.window.progress(
+                with self.parent.window.progress(
                     "Load workspace",
                     cancellable=True,
                     current=0,
@@ -174,7 +172,7 @@ class RobotWorkspaceProtocolPart(RobotLanguageServerProtocolPart):
                                         )
                                     )
 
-                        except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
+                        except (SystemExit, KeyboardInterrupt, CancelledError):
                             raise
                         except BaseException as e:
                             ex = e
@@ -192,6 +190,6 @@ class RobotWorkspaceProtocolPart(RobotLanguageServerProtocolPart):
 
     @rpc_method(name="robot/cache/clear")
     @threaded
-    async def robot_cache_clear(self) -> None:
+    def robot_cache_clear(self) -> None:
         for folder in self.parent.workspace.workspace_folders:
             self.parent.documents_cache.get_imports_manager_for_workspace_folder(folder).clear_cache()

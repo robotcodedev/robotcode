@@ -1,8 +1,6 @@
-from __future__ import annotations
-
 import ast
-import asyncio
-from typing import TYPE_CHECKING, Any, Awaitable, Callable, Optional, Sequence, Tuple, Type, cast
+from concurrent.futures import CancelledError
+from typing import TYPE_CHECKING, Any, Callable, Optional, Sequence, Tuple, Type, cast
 
 from robot.parsing.lexer.tokens import Token
 from robot.parsing.model.statements import Statement
@@ -28,14 +26,14 @@ if TYPE_CHECKING:
     from ..protocol import RobotLanguageServerProtocol
 
 _SignatureHelpMethod = Callable[
-    [ast.AST, TextDocument, Position, Optional[SignatureHelpContext]], Awaitable[Optional[SignatureHelp]]
+    [ast.AST, TextDocument, Position, Optional[SignatureHelpContext]], Optional[SignatureHelp]
 ]
 
 
 class RobotSignatureHelpProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
     _logger = LoggingDescriptor()
 
-    def __init__(self, parent: RobotLanguageServerProtocol) -> None:
+    def __init__(self, parent: "RobotLanguageServerProtocol") -> None:
         super().__init__(parent)
 
         parent.signature_help.collect.add(self.collect)
@@ -58,7 +56,7 @@ class RobotSignatureHelpProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
     @trigger_characters([" ", "\t"])
     @retrigger_characters([" ", "\t"])
     @_logger.call
-    async def collect(
+    def collect(
         self, sender: Any, document: TextDocument, position: Position, context: Optional[SignatureHelpContext] = None
     ) -> Optional[SignatureHelp]:
         result_node = get_node_at_position(
@@ -71,9 +69,9 @@ class RobotSignatureHelpProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
         if method is None:
             return None
 
-        return await method(result_node, document, position, context)
+        return method(result_node, document, position, context)
 
-    async def _signature_help_KeywordCall_or_Fixture(  # noqa: N802
+    def _signature_help_KeywordCall_or_Fixture(  # noqa: N802
         self,
         keyword_name_token_type: str,
         node: ast.AST,
@@ -165,14 +163,14 @@ class RobotSignatureHelpProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
             active_parameter=argument_index,
         )
 
-    async def signature_help_KeywordCall(  # noqa: N802
+    def signature_help_KeywordCall(  # noqa: N802
         self, node: ast.AST, document: TextDocument, position: Position, context: Optional[SignatureHelpContext] = None
     ) -> Optional[SignatureHelp]:
         from robot.parsing.lexer.tokens import Token as RobotToken
 
-        return await self._signature_help_KeywordCall_or_Fixture(RobotToken.KEYWORD, node, document, position, context)
+        return self._signature_help_KeywordCall_or_Fixture(RobotToken.KEYWORD, node, document, position, context)
 
-    async def signature_help_Fixture(  # noqa: N802
+    def signature_help_Fixture(  # noqa: N802
         self, node: ast.AST, document: TextDocument, position: Position, context: Optional[SignatureHelpContext] = None
     ) -> Optional[SignatureHelp]:
         from robot.parsing.lexer.tokens import Token as RobotToken
@@ -182,9 +180,9 @@ class RobotSignatureHelpProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
         if name_token is None or name_token.value is None or name_token.value.upper() in ("", "NONE"):
             return None
 
-        return await self._signature_help_KeywordCall_or_Fixture(RobotToken.NAME, node, document, position, context)
+        return self._signature_help_KeywordCall_or_Fixture(RobotToken.NAME, node, document, position, context)
 
-    async def signature_help_LibraryImport(  # noqa: N802
+    def signature_help_LibraryImport(  # noqa: N802
         self,
         node: ast.AST,
         document: TextDocument,
@@ -216,7 +214,7 @@ class RobotSignatureHelpProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
                     variables=namespace.get_resolvable_variables(),
                 )
 
-        except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
+        except (CancelledError, SystemExit, KeyboardInterrupt):
             raise
         except BaseException:
             return None
@@ -247,7 +245,7 @@ class RobotSignatureHelpProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
 
         return None
 
-    async def signature_help_VariablesImport(  # noqa: N802
+    def signature_help_VariablesImport(  # noqa: N802
         self,
         node: ast.AST,
         document: TextDocument,
@@ -280,7 +278,7 @@ class RobotSignatureHelpProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
                     variables=namespace.get_resolvable_variables(),
                 )
 
-        except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
+        except (CancelledError, SystemExit, KeyboardInterrupt):
             raise
         except BaseException:
             return None
