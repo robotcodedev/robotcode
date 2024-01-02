@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from concurrent.futures import CancelledError
 from typing import TYPE_CHECKING, Any, Final, List, Optional, Union
 
@@ -26,7 +24,7 @@ if TYPE_CHECKING:
 class DefinitionProtocolPart(LanguageServerProtocolPart):
     _logger: Final = LoggingDescriptor()
 
-    def __init__(self, parent: LanguageServerProtocol) -> None:
+    def __init__(self, parent: "LanguageServerProtocol") -> None:
         super().__init__(parent)
         self.link_support = False
 

@@ -1,9 +1,7 @@
-from __future__ import annotations
-
-import asyncio
 import io
 import os
 import re
+from concurrent.futures import CancelledError
 from typing import TYPE_CHECKING, Any, List, Optional, cast
 
 from robotcode.core.lsp.types import (
@@ -24,9 +22,7 @@ from ..diagnostics.model_helper import ModelHelperMixin
 from .protocol_part import RobotLanguageServerProtocolPart
 
 if TYPE_CHECKING:
-    from robotcode.language_server.robotframework.protocol import (
-        RobotLanguageServerProtocol,
-    )
+    from robotcode.language_server.robotframework.protocol import RobotLanguageServerProtocol
 
 
 def robotidy_installed() -> bool:
@@ -40,7 +36,7 @@ def robotidy_installed() -> bool:
 class RobotFormattingProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
     _logger = LoggingDescriptor()
 
-    def __init__(self, parent: RobotLanguageServerProtocol) -> None:
+    def __init__(self, parent: "RobotLanguageServerProtocol") -> None:
         super().__init__(parent)
 
         parent.formatting.format.add(self.format)
@@ -54,29 +50,29 @@ class RobotFormattingProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         self.short_test_name_length = 18
         self.setting_and_variable_name_length = 14
 
-    async def get_config(self, document: TextDocument) -> RoboTidyConfig:
+    def get_config(self, document: TextDocument) -> RoboTidyConfig:
         folder = self.parent.workspace.get_workspace_folder(document.uri)
         if folder is None:
             return RoboTidyConfig()
 
-        return await self.parent.workspace.get_configuration_async(RoboTidyConfig, folder.uri)
+        return self.parent.workspace.get_configuration(RoboTidyConfig, folder.uri)
 
     @language_id("robotframework")
     @_logger.call
-    async def format(
+    def format(
         self,
         sender: Any,
         document: TextDocument,
         options: FormattingOptions,
         **further_options: Any,
     ) -> Optional[List[TextEdit]]:
-        config = await self.get_config(document)
+        config = self.get_config(document)
 
         if (config.enabled or get_robot_version() >= (5, 0)) and robotidy_installed():
-            return await self.format_robot_tidy(document, options, config=config, **further_options)
+            return self.format_robot_tidy(document, options, config=config, **further_options)
 
         if get_robot_version() < (5, 0):
-            return await self.format_internal(document, options, **further_options)
+            return self.format_internal(document, options, **further_options)
 
         self.parent.window.show_message(
             "RobotFramework formatter is not available, please install 'robotframework-tidy'.",
@@ -87,7 +83,7 @@ class RobotFormattingProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
 
     RE_LINEBREAKS = re.compile(r"\r\n|\r|\n")
 
-    async def format_robot_tidy(
+    def format_robot_tidy(
         self,
         document: TextDocument,
         options: FormattingOptions,
@@ -99,7 +95,7 @@ class RobotFormattingProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
 
         try:
             if config is None:
-                config = await self.get_config(document)
+                config = self.get_config(document)
 
             robotidy_version = create_version_from_str(__version__)
 
@@ -181,14 +177,14 @@ class RobotFormattingProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
                 )
             ]
 
-        except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
+        except (SystemExit, KeyboardInterrupt, CancelledError):
             raise
         except BaseException as e:
             self._logger.exception(e)
             self.parent.window.show_message(f"Executing `robotidy` failed: {e}", MessageType.ERROR)
         return None
 
-    async def format_internal(
+    def format_internal(
         self, document: TextDocument, options: FormattingOptions, **further_options: Any
     ) -> Optional[List[TextEdit]]:
         from robot.parsing.model.blocks import File
@@ -227,7 +223,7 @@ class RobotFormattingProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
             ]
 
     @language_id("robotframework")
-    async def format_range(
+    def format_range(
         self,
         sender: Any,
         document: TextDocument,
@@ -235,8 +231,8 @@ class RobotFormattingProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         options: FormattingOptions,
         **further_options: Any,
     ) -> Optional[List[TextEdit]]:
-        config = await self.get_config(document)
+        config = self.get_config(document)
         if config.enabled and robotidy_installed():
-            return await self.format_robot_tidy(document, options, range=range, config=config, **further_options)
+            return self.format_robot_tidy(document, options, range=range, config=config, **further_options)
 
         return None

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import os
 import re
 import threading
@@ -148,7 +147,7 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart):
                 text=self.read_document_text(uri, language_id),
                 version=version,
             )
-        except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
+        except (SystemExit, KeyboardInterrupt):
             raise
         except BaseException as e:
             raise CantReadDocumentError(f"Error reading document '{path}': {e!s}") from e

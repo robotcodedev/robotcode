@@ -1,10 +1,8 @@
-from __future__ import annotations
-
-from asyncio import CancelledError
+from concurrent.futures import CancelledError
 from typing import TYPE_CHECKING, Any, Final, List, Optional
 
-from robotcode.core.async_tools import async_tasking_event
-from robotcode.core.concurrent import threaded
+from robotcode.core.concurrent import check_current_thread_canceled, threaded
+from robotcode.core.event import event
 from robotcode.core.lsp.types import (
     DocumentFormattingOptions,
     DocumentFormattingParams,
@@ -32,11 +30,11 @@ if TYPE_CHECKING:
 class FormattingProtocolPart(LanguageServerProtocolPart):
     _logger: Final = LoggingDescriptor()
 
-    def __init__(self, parent: LanguageServerProtocol) -> None:
+    def __init__(self, parent: "LanguageServerProtocol") -> None:
         super().__init__(parent)
 
-    @async_tasking_event
-    async def format(
+    @event
+    def format(
         sender,
         document: TextDocument,
         options: FormattingOptions,
@@ -44,8 +42,8 @@ class FormattingProtocolPart(LanguageServerProtocolPart):
     ) -> Optional[List[TextEdit]]:
         ...
 
-    @async_tasking_event
-    async def format_range(
+    @event
+    def format_range(
         sender,
         document: TextDocument,
         range: Range,
@@ -62,7 +60,7 @@ class FormattingProtocolPart(LanguageServerProtocolPart):
 
     @rpc_method(name="textDocument/formatting", param_type=DocumentFormattingParams)
     @threaded
-    async def _text_document_formatting(
+    def _text_document_formatting(
         self,
         params: DocumentFormattingParams,
         text_document: TextDocumentIdentifier,
@@ -77,13 +75,15 @@ class FormattingProtocolPart(LanguageServerProtocolPart):
         if document is None:
             return None
 
-        for result in await self.format(
+        for result in self.format(
             self,
             document,
             options,
             callback_filter=language_id_filter(document),
             **kwargs,
         ):
+            check_current_thread_canceled()
+
             if isinstance(result, BaseException):
                 if not isinstance(result, CancelledError):
                     self._logger.exception(result, exc_info=result)
@@ -98,7 +98,7 @@ class FormattingProtocolPart(LanguageServerProtocolPart):
 
     @rpc_method(name="textDocument/rangeFormatting", param_type=DocumentRangeFormattingParams)
     @threaded
-    async def _text_document_range_formatting(
+    def _text_document_range_formatting(
         self,
         params: DocumentFormattingParams,
         text_document: TextDocumentIdentifier,
@@ -113,7 +113,7 @@ class FormattingProtocolPart(LanguageServerProtocolPart):
         if document is None:
             return None
 
-        for result in await self.format_range(
+        for result in self.format_range(
             self,
             document,
             range,
@@ -121,6 +121,8 @@ class FormattingProtocolPart(LanguageServerProtocolPart):
             callback_filter=language_id_filter(document),
             **kwargs,
         ):
+            check_current_thread_canceled()
+
             if isinstance(result, BaseException):
                 if not isinstance(result, CancelledError):
                     self._logger.exception(result, exc_info=result)
