@@ -11,7 +11,7 @@ from typing import (
 )
 
 from robot.parsing.model.statements import Statement
-from robotcode.core.concurrent import threaded
+from robotcode.core.concurrent import check_current_thread_canceled, threaded
 from robotcode.core.event import event
 from robotcode.core.lsp.types import FileEvent, Location, Position, Range, ReferenceContext, WatchKind
 from robotcode.core.uri import Uri
@@ -132,6 +132,8 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         result: List[Location] = []
 
         for doc in self.parent.documents.documents:
+            check_current_thread_canceled()
+
             result.extend(func(doc, *args, **kwargs))
             if result and stop_at_first:
                 break

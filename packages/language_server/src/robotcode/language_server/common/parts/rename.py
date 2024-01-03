@@ -1,10 +1,8 @@
-from __future__ import annotations
-
-from asyncio import CancelledError
+from concurrent.futures import CancelledError
 from typing import TYPE_CHECKING, Any, Final, List, Optional
 
-from robotcode.core.async_tools import async_tasking_event
-from robotcode.core.concurrent import threaded
+from robotcode.core.concurrent import check_current_thread_canceled, threaded
+from robotcode.core.event import event
 from robotcode.core.lsp.types import (
     ErrorCodes,
     Position,
@@ -37,7 +35,7 @@ class CantRenameError(Exception):
 class RenameProtocolPart(LanguageServerProtocolPart):
     _logger: Final = LoggingDescriptor()
 
-    def __init__(self, parent: LanguageServerProtocol) -> None:
+    def __init__(self, parent: "LanguageServerProtocol") -> None:
         super().__init__(parent)
 
     def extend_capabilities(self, capabilities: ServerCapabilities) -> None:
@@ -46,21 +44,19 @@ class RenameProtocolPart(LanguageServerProtocolPart):
                 prepare_provider=len(self.collect_prepare) > 0, work_done_progress=True
             )
 
-    @async_tasking_event
-    async def collect(
+    @event
+    def collect(
         sender, document: TextDocument, position: Position, new_name: str  # NOSONAR
     ) -> Optional[WorkspaceEdit]:
         ...
 
-    @async_tasking_event
-    async def collect_prepare(
-        sender, document: TextDocument, position: Position  # NOSONAR
-    ) -> Optional[PrepareRenameResult]:
+    @event
+    def collect_prepare(sender, document: TextDocument, position: Position) -> Optional[PrepareRenameResult]:  # NOSONAR
         ...
 
     @rpc_method(name="textDocument/rename", param_type=RenameParams)
     @threaded
-    async def _text_document_rename(
+    def _text_document_rename(
         self,
         text_document: TextDocumentIdentifier,
         position: Position,
@@ -74,13 +70,15 @@ class RenameProtocolPart(LanguageServerProtocolPart):
         if document is None:
             return None
 
-        for result in await self.collect(
+        for result in self.collect(
             self,
             document,
             document.position_from_utf16(position),
             new_name,
             callback_filter=language_id_filter(document),
         ):
+            check_current_thread_canceled()
+
             if isinstance(result, BaseException):
                 if not isinstance(result, CancelledError):
                     self._logger.exception(result, exc_info=result)
@@ -92,6 +90,8 @@ class RenameProtocolPart(LanguageServerProtocolPart):
             return None
 
         for we in edits:
+            check_current_thread_canceled()
+
             if we.changes:
                 for uri, changes in we.changes.items():
                     if changes:
@@ -108,6 +108,8 @@ class RenameProtocolPart(LanguageServerProtocolPart):
 
         result = WorkspaceEdit()
         for we in edits:
+            check_current_thread_canceled()
+
             if we.changes:
                 if result.changes is None:
                     result.changes = {}
@@ -127,7 +129,7 @@ class RenameProtocolPart(LanguageServerProtocolPart):
 
     @rpc_method(name="textDocument/prepareRename", param_type=PrepareRenameParams)
     @threaded
-    async def _text_document_prepare_rename(
+    def _text_document_prepare_rename(
         self,
         text_document: TextDocumentIdentifier,
         position: Position,
@@ -140,9 +142,11 @@ class RenameProtocolPart(LanguageServerProtocolPart):
         if document is None:
             return None
 
-        for result in await self.collect_prepare(
+        for result in self.collect_prepare(
             self, document, document.position_from_utf16(position), callback_filter=language_id_filter(document)
         ):
+            check_current_thread_canceled()
+
             if isinstance(result, BaseException):
                 if isinstance(result, CantRenameError):
                     raise JsonRPCErrorException(ErrorCodes.INVALID_PARAMS, str(result))
