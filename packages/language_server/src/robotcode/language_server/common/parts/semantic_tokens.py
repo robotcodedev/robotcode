@@ -1,11 +1,9 @@
-from __future__ import annotations
-
-from asyncio import CancelledError
+from concurrent.futures import CancelledError
 from enum import Enum
 from typing import TYPE_CHECKING, Any, Final, List, Union
 
-from robotcode.core.async_tools import async_tasking_event
-from robotcode.core.concurrent import threaded
+from robotcode.core.concurrent import check_current_thread_canceled, threaded
+from robotcode.core.event import event
 from robotcode.core.lsp.types import (
     Range,
     SemanticTokenModifiers,
@@ -37,19 +35,19 @@ from .protocol_part import LanguageServerProtocolPart
 class SemanticTokensProtocolPart(LanguageServerProtocolPart):
     _logger: Final = LoggingDescriptor()
 
-    def __init__(self, parent: LanguageServerProtocol) -> None:
+    def __init__(self, parent: "LanguageServerProtocol") -> None:
         super().__init__(parent)
         self.token_types: List[Enum] = list(SemanticTokenTypes)
         self.token_modifiers: List[Enum] = list(SemanticTokenModifiers)
 
-    @async_tasking_event
-    async def collect_full(
+    @event
+    def collect_full(
         sender, document: TextDocument, **kwargs: Any  # NOSONAR
     ) -> Union[SemanticTokens, SemanticTokensPartialResult, None]:
         ...
 
-    @async_tasking_event
-    async def collect_full_delta(
+    @event
+    def collect_full_delta(
         sender,
         document: TextDocument,
         previous_result_id: str,
@@ -57,8 +55,8 @@ class SemanticTokensProtocolPart(LanguageServerProtocolPart):
     ) -> Union[SemanticTokens, SemanticTokensDelta, SemanticTokensDeltaPartialResult, None]:
         ...
 
-    @async_tasking_event
-    async def collect_range(
+    @event
+    def collect_range(
         sender, document: TextDocument, range: Range, **kwargs: Any  # NOSONAR
     ) -> Union[SemanticTokens, SemanticTokensPartialResult, None]:
         ...
@@ -80,7 +78,7 @@ class SemanticTokensProtocolPart(LanguageServerProtocolPart):
 
     @rpc_method(name="textDocument/semanticTokens/full", param_type=SemanticTokensParams)
     @threaded
-    async def _text_document_semantic_tokens_full(
+    def _text_document_semantic_tokens_full(
         self, text_document: TextDocumentIdentifier, *args: Any, **kwargs: Any
     ) -> Union[SemanticTokens, SemanticTokensPartialResult, None]:
         results: List[Union[SemanticTokens, SemanticTokensPartialResult]] = []
@@ -89,12 +87,9 @@ class SemanticTokensProtocolPart(LanguageServerProtocolPart):
         if document is None:
             return None
 
-        for result in await self.collect_full(
-            self,
-            document,
-            callback_filter=language_id_filter(document),
-            **kwargs,
-        ):
+        for result in self.collect_full(self, document, callback_filter=language_id_filter(document), **kwargs):
+            check_current_thread_canceled()
+
             if isinstance(result, BaseException):
                 if not isinstance(result, CancelledError):
                     self._logger.exception(result, exc_info=result)
@@ -113,7 +108,7 @@ class SemanticTokensProtocolPart(LanguageServerProtocolPart):
         param_type=SemanticTokensDeltaParams,
     )
     @threaded
-    async def _text_document_semantic_tokens_full_delta(
+    def _text_document_semantic_tokens_full_delta(
         self,
         text_document: TextDocumentIdentifier,
         previous_result_id: str,
@@ -126,13 +121,10 @@ class SemanticTokensProtocolPart(LanguageServerProtocolPart):
         if document is None:
             return None
 
-        for result in await self.collect_full_delta(
-            self,
-            document,
-            previous_result_id,
-            callback_filter=language_id_filter(document),
-            **kwargs,
+        for result in self.collect_full_delta(
+            self, document, previous_result_id, callback_filter=language_id_filter(document), **kwargs
         ):
+            check_current_thread_canceled()
             if isinstance(result, BaseException):
                 if not isinstance(result, CancelledError):
                     self._logger.exception(result, exc_info=result)
@@ -148,7 +140,7 @@ class SemanticTokensProtocolPart(LanguageServerProtocolPart):
 
     @rpc_method(name="textDocument/semanticTokens/range", param_type=SemanticTokensRangeParams)
     @threaded
-    async def _text_document_semantic_tokens_range(
+    def _text_document_semantic_tokens_range(
         self,
         text_document: TextDocumentIdentifier,
         range: Range,
@@ -161,13 +153,8 @@ class SemanticTokensProtocolPart(LanguageServerProtocolPart):
         if document is None:
             return None
 
-        for result in await self.collect_range(
-            self,
-            document,
-            range,
-            callback_filter=language_id_filter(document),
-            **kwargs,
-        ):
+        for result in self.collect_range(self, document, range, callback_filter=language_id_filter(document), **kwargs):
+            check_current_thread_canceled()
             if isinstance(result, BaseException):
                 if not isinstance(result, CancelledError):
                     self._logger.exception(result, exc_info=result)
@@ -188,4 +175,4 @@ class SemanticTokensProtocolPart(LanguageServerProtocolPart):
             and self.parent.client_capabilities.workspace.semantic_tokens is not None
             and self.parent.client_capabilities.workspace.semantic_tokens.refresh_support
         ):
-            self.parent.send_request("workspace/semanticTokens/refresh")
+            self.parent.send_request("workspace/semanticTokens/refresh").result(30)
