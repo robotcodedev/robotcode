@@ -173,6 +173,15 @@ class Workspace(LanguageServerProtocolPart):
         self._file_watchers_lock = threading.RLock()
 
         self.parent.on_shutdown.add(self.server_shutdown)
+        self.parent.on_initialize.add(self.server_initialize)
+
+    def server_initialize(self, sender: Any, initialization_options: Optional[Any] = None) -> None:
+        if (
+            initialization_options is not None
+            and isinstance(initialization_options, dict)
+            and "settings" in initialization_options
+        ):
+            self.settings = initialization_options["settings"]
 
     @property
     def workspace_folders(self) -> List[WorkspaceFolder]:

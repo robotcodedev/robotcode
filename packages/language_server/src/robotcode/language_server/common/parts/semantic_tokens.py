@@ -1,8 +1,8 @@
 from concurrent.futures import CancelledError
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Final, List, Union
+from typing import TYPE_CHECKING, Any, Final, List, Optional, Union
 
-from robotcode.core.concurrent import check_current_thread_canceled, threaded
+from robotcode.core.concurrent import FutureEx, check_current_thread_canceled, run_in_thread, threaded
 from robotcode.core.event import event
 from robotcode.core.lsp.types import (
     Range,
@@ -37,6 +37,9 @@ class SemanticTokensProtocolPart(LanguageServerProtocolPart):
 
     def __init__(self, parent: "LanguageServerProtocol") -> None:
         super().__init__(parent)
+        self.refresh_task: Optional[FutureEx[Any]] = None
+        self._refresh_timeout = 5
+
         self.token_types: List[Enum] = list(SemanticTokenTypes)
         self.token_modifiers: List[Enum] = list(SemanticTokenModifiers)
 
@@ -168,11 +171,20 @@ class SemanticTokensProtocolPart(LanguageServerProtocolPart):
 
         return None
 
-    def refresh(self) -> None:
+    def refresh(self, now: bool = True) -> None:
+        if self.refresh_task is not None and not self.refresh_task.done():
+            self.refresh_task.cancel()
+
+        self.refresh_task = run_in_thread(self._refresh, now)
+
+    def _refresh(self, now: bool = True) -> None:
         if (
             self.parent.client_capabilities is not None
             and self.parent.client_capabilities.workspace is not None
             and self.parent.client_capabilities.workspace.semantic_tokens is not None
             and self.parent.client_capabilities.workspace.semantic_tokens.refresh_support
         ):
-            self.parent.send_request("workspace/semanticTokens/refresh").result(30)
+            if not now:
+                check_current_thread_canceled(1)
+
+            self.parent.send_request("workspace/semanticTokens/refresh").result(self._refresh_timeout)

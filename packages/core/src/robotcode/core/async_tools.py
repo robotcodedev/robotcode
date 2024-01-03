@@ -519,29 +519,6 @@ class Lock:
             self._wake_up_first()
 
 
-class RLock(Lock):
-    def __init__(self) -> None:
-        super().__init__()
-        self._task: Optional[asyncio.Task[Any]] = None
-        self._depth = 0
-
-    async def acquire(self) -> bool:
-        if self._task is None or self._task != asyncio.current_task():
-            await super().acquire()
-            self._task = asyncio.current_task()
-            assert self._depth == 0
-        self._depth += 1
-
-        return True
-
-    def release(self) -> None:
-        if self._depth > 0:
-            self._depth -= 1
-        if self._depth == 0:
-            super().release()
-            self._task = None
-
-
 _global_futures_set: Set[asyncio.Future[Any]] = set()
 
 

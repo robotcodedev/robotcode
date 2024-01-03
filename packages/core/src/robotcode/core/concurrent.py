@@ -3,6 +3,8 @@ from concurrent.futures import CancelledError, Future
 from threading import Event, RLock, Thread, current_thread, local
 from typing import Any, Callable, Dict, Generic, List, Optional, Tuple, TypeVar, cast, overload
 
+from typing_extensions import ParamSpec
+
 _F = TypeVar("_F", bound=Callable[..., Any])
 _TResult = TypeVar("_TResult")
 
@@ -118,7 +120,10 @@ def _remove_future_from_running_callables(future: FutureEx[Any]) -> None:
         _running_callables.pop(future, None)
 
 
-def run_in_thread(callable: Callable[..., _TResult], *args: Any, **kwargs: Any) -> FutureEx[_TResult]:
+_P = ParamSpec("_P")
+
+
+def run_in_thread(callable: Callable[_P, _TResult], *args: _P.args, **kwargs: _P.kwargs) -> FutureEx[_TResult]:
     future: FutureEx[_TResult] = FutureEx()
     with _running_callables_lock:
         thread = Thread(

@@ -1,7 +1,7 @@
 from asyncio import CancelledError
 from typing import TYPE_CHECKING, Any, Final, List, Optional
 
-from robotcode.core.concurrent import check_current_thread_canceled, threaded
+from robotcode.core.concurrent import FutureEx, check_current_thread_canceled, run_in_thread, threaded
 from robotcode.core.event import event
 from robotcode.core.lsp.types import (
     DocumentSelector,
@@ -31,6 +31,8 @@ class InlineValueProtocolPart(LanguageServerProtocolPart):
 
     def __init__(self, parent: "LanguageServerProtocol") -> None:
         super().__init__(parent)
+        self.refresh_task: Optional[FutureEx[Any]] = None
+        self._refresh_timeout = 5
 
     @event
     def collect(
@@ -88,11 +90,20 @@ class InlineValueProtocolPart(LanguageServerProtocolPart):
 
         return results
 
-    def refresh(self) -> None:
+    def refresh(self, now: bool = True) -> None:
+        if self.refresh_task is not None and not self.refresh_task.done():
+            self.refresh_task.cancel()
+
+        self.refresh_task = run_in_thread(self._refresh, now)
+
+    def _refresh(self, now: bool = True) -> None:
         if (
             self.parent.client_capabilities
             and self.parent.client_capabilities.workspace
             and self.parent.client_capabilities.workspace.inline_value
             and self.parent.client_capabilities.workspace.inline_value.refresh_support
         ):
-            self.parent.send_request("workspace/inlineValue/refresh").result(30)
+            if not now:
+                check_current_thread_canceled(1)
+
+            self.parent.send_request("workspace/inlineValue/refresh").result(self._refresh_timeout)

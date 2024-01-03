@@ -33,11 +33,11 @@ from typing import (
 )
 
 from robotcode.core.async_tools import (
-    async_event,
     create_sub_task,
     run_coroutine_in_thread,
 )
 from robotcode.core.concurrent import FutureEx, is_threaded_callable, run_in_thread
+from robotcode.core.event import event
 from robotcode.core.utils.dataclasses import as_json, from_dict
 from robotcode.core.utils.inspect import ensure_coroutine, iter_methods
 from robotcode.core.utils.logging import LoggingDescriptor
@@ -374,12 +374,12 @@ class JsonRPCProtocolBase(asyncio.Protocol, ABC):
     def loop(self) -> Optional[asyncio.AbstractEventLoop]:
         return self._loop
 
-    @async_event
-    async def on_connection_made(sender, transport: asyncio.BaseTransport) -> None:
+    @event
+    def on_connection_made(sender, transport: asyncio.BaseTransport) -> None:
         ...
 
-    @async_event
-    async def on_connection_lost(sender, exc: Optional[BaseException]) -> None:
+    @event
+    def on_connection_lost(sender, exc: Optional[BaseException]) -> None:
         ...
 
     def connection_made(self, transport: asyncio.BaseTransport) -> None:
@@ -390,10 +390,10 @@ class JsonRPCProtocolBase(asyncio.Protocol, ABC):
         if isinstance(transport, asyncio.WriteTransport):
             self.write_transport = transport
 
-        create_sub_task(self.on_connection_made(self, transport))
+        self.on_connection_made(self, transport)
 
     def connection_lost(self, exc: Optional[BaseException]) -> None:
-        create_sub_task(self.on_connection_lost(self, exc))
+        self.on_connection_lost(self, exc)
         self._loop = None
 
     def eof_received(self) -> Optional[bool]:
@@ -451,6 +451,7 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
         self._received_request: OrderedDict[Union[str, int, None], ReceivedRequestEntry] = OrderedDict()
         self._received_request_lock = threading.RLock()
         self._signature_cache: Dict[Callable[..., Any], inspect.Signature] = {}
+        self._running_handle_message_tasks: Set[asyncio.Future[Any]] = set()
 
     @staticmethod
     def _generate_json_rpc_messages_from_dict(
@@ -494,15 +495,10 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
             self.send_error(JsonRPCErrors.PARSE_ERROR, f"{type(e).__name__}: {e}")
 
     def _handle_messages(self, iterator: Iterator[JsonRPCMessage]) -> None:
-        def done(f: asyncio.Future[Any]) -> None:
-            if f.done() and not f.cancelled():
-                ex = f.exception()
-
-                if ex is None or isinstance(ex, asyncio.CancelledError):
-                    return
-
         for m in iterator:
-            create_sub_task(self.handle_message(m)).add_done_callback(done)
+            task = asyncio.create_task(self.handle_message(m))
+            self._running_handle_message_tasks.add(task)
+            task.add_done_callback(self._running_handle_message_tasks.discard)
 
     @__logger.call
     async def handle_message(self, message: JsonRPCMessage) -> None:

@@ -64,7 +64,7 @@ class DAPClient:
         self.close()
 
     @_logger.call
-    async def on_connection_lost(self, sender: Any, exc: Optional[BaseException]) -> None:
+    def on_connection_lost(self, sender: Any, exc: Optional[BaseException]) -> None:
         if sender == self._protocol:
             self._protocol = None
 

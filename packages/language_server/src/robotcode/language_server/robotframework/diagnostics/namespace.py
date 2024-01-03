@@ -4,12 +4,12 @@ import ast
 import enum
 import itertools
 import re
-import threading
 import time
 import weakref
 from collections import OrderedDict, defaultdict
 from itertools import chain
 from pathlib import Path
+from threading import RLock
 from typing import (
     Any,
     Dict,
@@ -512,17 +512,17 @@ class Namespace:
         self._resources_matchers: Optional[Dict[KeywordMatcher, ResourceEntry]] = None
         self._variables: OrderedDict[str, VariablesEntry] = OrderedDict()
         self._initialized = False
-        self._initialize_lock = threading.RLock()
+        self._initialize_lock = RLock()
         self._analyzed = False
-        self._analyze_lock = threading.RLock()
+        self._analyze_lock = RLock()
         self._library_doc: Optional[LibraryDoc] = None
-        self._library_doc_lock = threading.RLock()
+        self._library_doc_lock = RLock()
         self._imports: Optional[List[Import]] = None
         self._import_entries: OrderedDict[Import, LibraryEntry] = OrderedDict()
         self._own_variables: Optional[List[VariableDefinition]] = None
-        self._own_variables_lock = threading.RLock()
+        self._own_variables_lock = RLock()
         self._global_variables: Optional[List[VariableDefinition]] = None
-        self._global_variables_lock = threading.RLock()
+        self._global_variables_lock = RLock()
 
         self._diagnostics: List[Diagnostic] = []
         self._keyword_references: Dict[KeywordDoc, Set[Location]] = {}
@@ -531,9 +531,9 @@ class Namespace:
         self._namespace_references: Dict[LibraryEntry, Set[Location]] = {}
 
         self._imported_keywords: Optional[List[KeywordDoc]] = None
-        self._imported_keywords_lock = threading.RLock()
+        self._imported_keywords_lock = RLock()
         self._keywords: Optional[List[KeywordDoc]] = None
-        self._keywords_lock = threading.RLock()
+        self._keywords_lock = RLock()
 
         # TODO: how to get the search order from model
         self.search_order: Tuple[str, ...] = ()
@@ -707,6 +707,8 @@ class Namespace:
         return self._libraries
 
     def get_namespaces(self) -> Dict[KeywordMatcher, List[LibraryEntry]]:
+        self.ensure_initialized()
+
         if self._namespaces is None:
             self._namespaces = defaultdict(list)
 

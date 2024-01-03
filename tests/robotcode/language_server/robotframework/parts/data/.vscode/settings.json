@@ -16,6 +16,7 @@
         // "--debugpy",
         // "--debugpy-wait-for-client",
         // "--log",
+        // "--log-level", "TRACE",
     ],
     "robotcode.robocop.enabled": false,
     // "robotcode.debug.groupOutput": false,

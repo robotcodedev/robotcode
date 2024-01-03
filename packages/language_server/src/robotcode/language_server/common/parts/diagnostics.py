@@ -100,6 +100,8 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
 
         self.client_supports_pull = False
 
+        self._refresh_timeout = 5
+
     def server_initialized(self, sender: Any) -> None:
         self._workspace_diagnostics_task = run_in_thread(self.run_workspace_diagnostics)
 
@@ -221,6 +223,8 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
                     "Analyse workspace", cancellable=False, current=0, max=len(documents) + 1, start=False
                 ) as progress:
                     for i, document in enumerate(documents):
+                        check_current_thread_canceled()
+
                         mode = self.get_diagnostics_mode(document.uri)
                         if mode == DiagnosticsMode.OFF:
                             self.get_diagnostics_data(document).version = document.version
@@ -418,23 +422,20 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
 
         return DiagnosticsMode.OPENFILESONLY
 
-    def __do_refresh(self, now: bool = False) -> None:
-        if not now:
-            check_current_thread_canceled(1)
-
-        self.__refresh()
-
     def refresh(self, now: bool = False) -> None:
         if self.refresh_task is not None and not self.refresh_task.done():
             self.refresh_task.cancel()
 
-        self.refresh_task = run_in_thread(self.__do_refresh, now)
+        self.refresh_task = run_in_thread(self._refresh, now)
 
-    def __refresh(self) -> None:
+    def _refresh(self, now: bool = False) -> None:
         if (
             self.parent.client_capabilities
             and self.parent.client_capabilities.workspace
             and self.parent.client_capabilities.workspace.diagnostics
             and self.parent.client_capabilities.workspace.diagnostics.refresh_support
         ):
-            self.parent.send_request("workspace/diagnostic/refresh").result(30)
+            if not now:
+                check_current_thread_canceled(1)
+
+            self.parent.send_request("workspace/diagnostic/refresh").result(self._refresh_timeout)

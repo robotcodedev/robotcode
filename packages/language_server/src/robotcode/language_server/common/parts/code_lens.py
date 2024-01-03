@@ -1,7 +1,7 @@
 from concurrent.futures import CancelledError
 from typing import TYPE_CHECKING, Any, Final, List, Optional
 
-from robotcode.core.concurrent import FutureEx, check_current_thread_canceled, threaded
+from robotcode.core.concurrent import FutureEx, check_current_thread_canceled, run_in_thread, threaded
 from robotcode.core.event import event
 from robotcode.core.lsp.types import (
     CodeLens,
@@ -90,13 +90,20 @@ class CodeLensProtocolPart(LanguageServerProtocolPart):
 
         return params
 
-    def refresh(self) -> None:
-        if not (
+    def refresh(self, now: bool = True) -> None:
+        if self.refresh_task is not None and not self.refresh_task.done():
+            self.refresh_task.cancel()
+
+        self.refresh_task = run_in_thread(self._refresh, now)
+
+    def _refresh(self, now: bool = True) -> None:
+        if (
             self.parent.client_capabilities is not None
             and self.parent.client_capabilities.workspace is not None
             and self.parent.client_capabilities.workspace.code_lens is not None
             and self.parent.client_capabilities.workspace.code_lens.refresh_support
         ):
-            return
+            if not now:
+                check_current_thread_canceled(1)
 
-        self.parent.send_request("workspace/codeLens/refresh").result(self._refresh_timeout)
+            self.parent.send_request("workspace/codeLens/refresh").result(self._refresh_timeout)

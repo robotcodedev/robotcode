@@ -192,7 +192,7 @@ class WindowProtocolPart(LanguageServerProtocolPart):
             and self.parent.client_capabilities.window.work_done_progress
         ):
             token = str(uuid.uuid4())
-            self.parent.send_request("window/workDoneProgress/create", WorkDoneProgressCreateParams(token)).result(30)
+            self.parent.send_request("window/workDoneProgress/create", WorkDoneProgressCreateParams(token))
             self.__progress_tokens[token] = False
             return token
 

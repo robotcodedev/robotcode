@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import ast
 import itertools
 import multiprocessing as mp
@@ -26,6 +24,7 @@ from typing import (
     final,
 )
 
+from robotcode.core.concurrent import run_in_thread
 from robotcode.core.event import event
 from robotcode.core.lsp.types import DocumentUri, FileChangeType, FileEvent
 from robotcode.core.uri import Uri
@@ -100,7 +99,7 @@ class _LibrariesEntryKey(_EntryKey):
 class _ImportEntry(ABC):
     def __init__(
         self,
-        parent: ImportsManager,
+        parent: "ImportsManager",
     ) -> None:
         self.parent = parent
         self.references: weakref.WeakSet[Any] = weakref.WeakSet()
@@ -150,7 +149,7 @@ class _ImportEntry(ABC):
 class _LibrariesEntry(_ImportEntry):
     def __init__(
         self,
-        parent: ImportsManager,
+        parent: "ImportsManager",
         name: str,
         args: Tuple[Any, ...],
         working_dir: str,
@@ -292,7 +291,7 @@ class _ResourcesEntry(_ImportEntry):
     def __init__(
         self,
         name: str,
-        parent: ImportsManager,
+        parent: "ImportsManager",
         get_document_coroutine: Callable[[], TextDocument],
     ) -> None:
         super().__init__(parent)
@@ -363,11 +362,11 @@ class _ResourcesEntry(_ImportEntry):
 
         return self._document
 
-    def get_namespace(self) -> Namespace:
+    def get_namespace(self) -> "Namespace":
         with self._lock:
             return self._get_namespace()
 
-    def _get_namespace(self) -> Namespace:
+    def _get_namespace(self) -> "Namespace":
         return self.parent.parent_protocol.documents_cache.get_resource_namespace(self._get_document())
 
     def get_libdoc(self) -> LibraryDoc:
@@ -394,7 +393,7 @@ class _VariablesEntry(_ImportEntry):
         args: Tuple[Any, ...],
         working_dir: str,
         base_dir: str,
-        parent: ImportsManager,
+        parent: "ImportsManager",
         get_variables_doc_coroutine: Callable[[str, Tuple[Any, ...], str, str], VariablesDoc],
     ) -> None:
         super().__init__(parent)
@@ -490,7 +489,7 @@ class LibraryMetaData:
 class ImportsManager:
     _logger = LoggingDescriptor()
 
-    def __init__(self, parent_protocol: RobotLanguageServerProtocol, folder: Uri, config: RobotCodeConfig) -> None:
+    def __init__(self, parent_protocol: "RobotLanguageServerProtocol", folder: Uri, config: RobotCodeConfig) -> None:
         super().__init__()
         self.parent_protocol = parent_protocol
 
@@ -661,7 +660,7 @@ class ImportsManager:
 
     @language_id("robotframework")
     def resource_document_changed(self, sender: Any, document: TextDocument) -> None:
-        self.__resource_document_changed(document)
+        run_in_thread(self.__resource_document_changed, document)
 
     def __resource_document_changed(self, document: TextDocument) -> None:
         resource_changed: List[LibraryDoc] = []

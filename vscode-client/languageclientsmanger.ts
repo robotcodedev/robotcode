@@ -413,14 +413,15 @@ export class LanguageClientsManager {
           vscode.workspace.workspaceFolders?.length === 1
             ? [{ scheme: "file", language: "robotframework" }]
             : [{ scheme: "file", language: "robotframework", pattern: `${workspaceFolder.uri.fsPath}/**/*` }],
-        // synchronize: {
-        //   configurationSection: [CONFIG_SECTION],
-        // },
+        synchronize: {
+          configurationSection: [CONFIG_SECTION],
+        },
         initializationOptions: {
           storageUri: this.extensionContext?.storageUri?.toString(),
           globalStorageUri: this.extensionContext?.globalStorageUri?.toString(),
           pythonPath: config.get<string[]>("robot.pythonPath", []),
           env: config.get<object>("robot.env", []),
+          settings: { robotcode: config },
         },
         revealOutputChannelOn: RevealOutputChannelOn.Never, // TODO: should we make this configurable?
         initializationFailedHandler: (error: ResponseError<InitializeError> | Error | undefined) => {
