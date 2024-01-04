@@ -90,7 +90,10 @@ class AsyncEventResultIteratorBase(Generic[_TCallable, _TResult]):
             yield r
 
     async def _notify(
-        self, *args: Any, callback_filter: Optional[Callable[[_TCallable], bool]] = None, **kwargs: Any
+        self,
+        *args: Any,
+        callback_filter: Optional[Callable[[_TCallable], bool]] = None,
+        **kwargs: Any,
     ) -> AsyncIterator[_TResult]:
         for method in filter(
             lambda x: callback_filter(x) if callback_filter is not None else True,
@@ -118,7 +121,11 @@ _TEvent = TypeVar("_TEvent")
 
 class AsyncEventDescriptorBase(Generic[_TCallable, _TResult, _TEvent]):
     def __init__(
-        self, _func: _TCallable, factory: Callable[..., _TEvent], *factory_args: Any, **factory_kwargs: Any
+        self,
+        _func: _TCallable,
+        factory: Callable[..., _TEvent],
+        *factory_args: Any,
+        **factory_kwargs: Any,
     ) -> None:
         self._func = _func
         self.__factory = factory
@@ -137,7 +144,11 @@ class AsyncEventDescriptorBase(Generic[_TCallable, _TResult, _TEvent]):
 
         name = f"__async_event_{self._func.__name__}__"
         if not hasattr(obj, name):
-            setattr(obj, name, self.__factory(*self.__factory_args, **self.__factory_kwargs))
+            setattr(
+                obj,
+                name,
+                self.__factory(*self.__factory_args, **self.__factory_kwargs),
+            )
 
         return cast("_TEvent", getattr(obj, name))
 
@@ -210,7 +221,9 @@ class AsyncTaskingEventIterator(AsyncTaskingEventResultIteratorBase[_TCallable, 
         return self._notify(*args, **kwargs)
 
 
-def _get_name_prefix(descriptor: AsyncEventDescriptorBase[Any, Any, Any]) -> str:
+def _get_name_prefix(
+    descriptor: AsyncEventDescriptorBase[Any, Any, Any],
+) -> str:
     if descriptor._owner is None:
         return type(descriptor).__qualname__
 
@@ -227,13 +240,19 @@ class async_tasking_event_iterator(  # noqa: N801
 ):
     def __init__(self, _func: _TCallable) -> None:
         super().__init__(
-            _func, AsyncTaskingEventIterator[_TCallable, Any], task_name_prefix=lambda: _get_name_prefix(self)
+            _func,
+            AsyncTaskingEventIterator[_TCallable, Any],
+            task_name_prefix=lambda: _get_name_prefix(self),
         )
 
 
 class async_tasking_event(AsyncEventDescriptorBase[_TCallable, Any, AsyncTaskingEvent[_TCallable, Any]]):  # noqa: N801
     def __init__(self, _func: _TCallable) -> None:
-        super().__init__(_func, AsyncTaskingEvent[_TCallable, Any], task_name_prefix=lambda: _get_name_prefix(self))
+        super().__init__(
+            _func,
+            AsyncTaskingEvent[_TCallable, Any],
+            task_name_prefix=lambda: _get_name_prefix(self),
+        )
 
 
 async def check_canceled() -> bool:
@@ -418,7 +437,10 @@ class Lock:
         await self.acquire()
 
     async def __aexit__(
-        self, exc_type: Optional[Type[BaseException]], exc_val: Optional[BaseException], exc_tb: Optional[TracebackType]
+        self,
+        exc_type: Optional[Type[BaseException]],
+        exc_val: Optional[BaseException],
+        exc_tb: Optional[TracebackType],
     ) -> None:
         self.release()
 
@@ -568,7 +590,10 @@ def get_current_future_info() -> Optional[FutureInfo]:
 
 
 def create_sub_task(
-    coro: Coroutine[Any, Any, _T], *, name: Optional[str] = None, loop: Optional[asyncio.AbstractEventLoop] = None
+    coro: Coroutine[Any, Any, _T],
+    *,
+    name: Optional[str] = None,
+    loop: Optional[asyncio.AbstractEventLoop] = None,
 ) -> asyncio.Task[_T]:
     ct = get_current_future_info()
 
@@ -578,7 +603,9 @@ def create_sub_task(
         else:
 
             async def create_task(
-                lo: asyncio.AbstractEventLoop, c: Coroutine[Any, Any, _T], n: Optional[str]
+                lo: asyncio.AbstractEventLoop,
+                c: Coroutine[Any, Any, _T],
+                n: Optional[str],
             ) -> asyncio.Task[_T]:
                 return create_sub_task(c, name=n, loop=lo)
 
@@ -593,7 +620,9 @@ def create_sub_task(
     return result
 
 
-def create_sub_future(loop: Optional[asyncio.AbstractEventLoop] = None) -> asyncio.Future[Any]:
+def create_sub_future(
+    loop: Optional[asyncio.AbstractEventLoop] = None,
+) -> asyncio.Future[Any]:
     ct = get_current_future_info()
 
     if loop is None:

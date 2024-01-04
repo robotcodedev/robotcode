@@ -2,7 +2,16 @@ import inspect
 import typing
 import uuid
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Callable, Dict, Final, List, Optional, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Dict,
+    Final,
+    List,
+    Optional,
+    cast,
+)
 
 from robotcode.core.concurrent import threaded
 from robotcode.core.lsp.types import (
@@ -15,8 +24,13 @@ from robotcode.core.lsp.types import (
 from robotcode.core.utils.dataclasses import from_dict
 from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.jsonrpc2.protocol import JsonRPCErrorException, rpc_method
-from robotcode.language_server.common.decorators import get_command_id, is_command
-from robotcode.language_server.common.parts.protocol_part import LanguageServerProtocolPart
+from robotcode.language_server.common.decorators import (
+    get_command_id,
+    is_command,
+)
+from robotcode.language_server.common.parts.protocol_part import (
+    LanguageServerProtocolPart,
+)
 
 if TYPE_CHECKING:
     from robotcode.language_server.common.protocol import LanguageServerProtocol
@@ -71,7 +85,11 @@ class CommandsProtocolPart(LanguageServerProtocolPart):
     @rpc_method(name="workspace/executeCommand", param_type=ExecuteCommandParams)
     @threaded
     def _workspace_execute_command(
-        self, command: str, arguments: Optional[List[LSPAny]], *args: Any, **kwargs: Any
+        self,
+        command: str,
+        arguments: Optional[List[LSPAny]],
+        *args: Any,
+        **kwargs: Any,
     ) -> Optional[LSPAny]:
         self._logger.debug(lambda: f"execute command {command}")
 

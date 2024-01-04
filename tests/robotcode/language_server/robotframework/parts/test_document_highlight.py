@@ -31,7 +31,9 @@ def test(
     data: GeneratedTestData,
 ) -> None:
     result = protocol.robot_document_highlight.collect(
-        protocol.robot_document_highlight, test_document, Position(line=data.line, character=data.character)
+        protocol.robot_document_highlight,
+        test_document,
+        Position(line=data.line, character=data.character),
     )
     regtest.write(
         yaml.dump(

@@ -13,11 +13,15 @@ from robotcode.core.lsp.types import (
 from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.jsonrpc2.protocol import rpc_method
 from robotcode.language_server.common.decorators import language_id_filter
-from robotcode.language_server.common.parts.protocol_part import LanguageServerProtocolPart
+from robotcode.language_server.common.parts.protocol_part import (
+    LanguageServerProtocolPart,
+)
 from robotcode.language_server.common.text_document import TextDocument
 
 if TYPE_CHECKING:
-    from robotcode.language_server.common.protocol import LanguageServerProtocol  # pragma: no cover
+    from robotcode.language_server.common.protocol import (
+        LanguageServerProtocol,
+    )
 
 
 class FoldingRangeProtocolPart(LanguageServerProtocolPart):

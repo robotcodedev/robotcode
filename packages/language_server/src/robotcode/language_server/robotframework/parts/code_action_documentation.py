@@ -19,7 +19,13 @@ from urllib.parse import parse_qs, urlparse
 
 from robot.parsing.lexer.tokens import Token
 from robotcode.core.concurrent import threaded
-from robotcode.core.lsp.types import CodeAction, CodeActionContext, CodeActionKind, Command, Range
+from robotcode.core.lsp.types import (
+    CodeAction,
+    CodeActionContext,
+    CodeActionKind,
+    Command,
+    Range,
+)
 from robotcode.core.uri import Uri
 from robotcode.core.utils.dataclasses import CamelSnakeMixin
 from robotcode.core.utils.logging import LoggingDescriptor
@@ -41,9 +47,7 @@ from ..diagnostics.namespace import Namespace
 from .protocol_part import RobotLanguageServerProtocolPart
 
 if TYPE_CHECKING:
-    from ..protocol import (
-        RobotLanguageServerProtocol,
-    )
+    from ..protocol import RobotLanguageServerProtocol
 
 
 @dataclass(repr=False)
@@ -237,11 +241,7 @@ class RobotCodeActionDocumentationProtocolPart(RobotLanguageServerProtocolPart, 
                 self._server_thread.start()
 
     @language_id("robotframework")
-    @code_action_kinds(
-        [
-            CodeActionKind.SOURCE,
-        ]
-    )
+    @code_action_kinds([CodeActionKind.SOURCE])
     @_logger.call
     def collect(
         self,
@@ -271,7 +271,10 @@ class RobotCodeActionDocumentationProtocolPart(RobotLanguageServerProtocolPart, 
                 node.get_token(RobotToken.NAME)
             ):
                 url = self.build_url(
-                    node.name, node.args if isinstance(node, LibraryImport) else (), document, namespace
+                    node.name,
+                    node.args if isinstance(node, LibraryImport) else (),
+                    document,
+                    namespace,
                 )
 
                 return [self.open_documentation_code_action(url)]
@@ -335,14 +338,26 @@ class RobotCodeActionDocumentationProtocolPart(RobotLanguageServerProtocolPart, 
                         if entry is None:
                             return None
 
-                        url = self.build_url(entry.import_name, entry.args, document, namespace, kw_doc.name)
+                        url = self.build_url(
+                            entry.import_name,
+                            entry.args,
+                            document,
+                            namespace,
+                            kw_doc.name,
+                        )
 
                         return [self.open_documentation_code_action(url)]
 
         if isinstance(node, KeywordName):
             name_token = node.get_token(RobotToken.KEYWORD_NAME)
             if name_token is not None and range in range_from_token(name_token):
-                url = self.build_url(str(document.uri.to_path().name), (), document, namespace, name_token.value)
+                url = self.build_url(
+                    str(document.uri.to_path().name),
+                    (),
+                    document,
+                    namespace,
+                    name_token.value,
+                )
 
                 return [self.open_documentation_code_action(url)]
 
@@ -352,11 +367,7 @@ class RobotCodeActionDocumentationProtocolPart(RobotLanguageServerProtocolPart, 
         return CodeAction(
             "Open Documentation",
             kind=CodeActionKind.SOURCE,
-            command=Command(
-                "Open Documentation",
-                "robotcode.showDocumentation",
-                [url],
-            ),
+            command=Command("Open Documentation", "robotcode.showDocumentation", [url]),
         )
 
     def build_url(

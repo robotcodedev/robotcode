@@ -37,10 +37,7 @@ def iter_nodes(node: ast.AST, descendants: bool = True) -> Iterator[ast.AST]:
 def range_from_token(token: Token) -> Range:
     return Range(
         start=Position(line=token.lineno - 1, character=token.col_offset),
-        end=Position(
-            line=token.lineno - 1,
-            character=token.end_col_offset,
-        ),
+        end=Position(line=token.lineno - 1, character=token.end_col_offset),
     )
 
 
@@ -105,12 +102,18 @@ def _get_non_data_range_from_node(
             None,
         )
         if start_token is not None and end_token is not None:
-            return Range(start=range_from_token(start_token).start, end=range_from_token(end_token).end)
+            return Range(
+                start=range_from_token(start_token).start,
+                end=range_from_token(end_token).end,
+            )
     return None
 
 
 def range_from_node(
-    node: ast.AST, skip_non_data: bool = False, only_start: bool = False, allow_comments: bool = False
+    node: ast.AST,
+    skip_non_data: bool = False,
+    only_start: bool = False,
+    allow_comments: bool = False,
 ) -> Range:
     if skip_non_data:
         if isinstance(node, Statement) and node.tokens:
@@ -223,7 +226,11 @@ def _tokenize_no_variables(token: Token) -> Iterator[Token]:
 
 
 def tokenize_variables(
-    token: Token, identifiers: str = "$@&%", ignore_errors: bool = False, *, extra_types: Optional[Set[str]] = None
+    token: Token,
+    identifiers: str = "$@&%",
+    ignore_errors: bool = False,
+    *,
+    extra_types: Optional[Set[str]] = None,
 ) -> Iterator[Token]:
     if token.type not in {
         *Token.ALLOW_VARIABLES,
@@ -273,7 +280,9 @@ else:
             yield Token(token.type, after, lineno, col_offset)
 
 
-def iter_over_keyword_names_and_owners(full_name: str) -> Iterator[Tuple[Optional[str], ...]]:
+def iter_over_keyword_names_and_owners(
+    full_name: str,
+) -> Iterator[Tuple[Optional[str], ...]]:
     yield None, full_name
 
     tokens = full_name.split(".")
@@ -293,7 +302,12 @@ def strip_variable_token(token: Token) -> Token:
 
         stripped_value = value.lstrip()
         stripped_offset = len(value) - len(stripped_value)
-        return Token(token.type, stripped_value.rstrip(), token.lineno, token.col_offset + 2 + stripped_offset)
+        return Token(
+            token.type,
+            stripped_value.rstrip(),
+            token.lineno,
+            token.col_offset + 2 + stripped_offset,
+        )
 
     return token
 

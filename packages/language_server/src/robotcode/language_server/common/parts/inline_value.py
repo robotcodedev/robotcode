@@ -1,7 +1,12 @@
 from asyncio import CancelledError
 from typing import TYPE_CHECKING, Any, Final, List, Optional
 
-from robotcode.core.concurrent import FutureEx, check_current_thread_canceled, run_in_thread, threaded
+from robotcode.core.concurrent import (
+    FutureEx,
+    check_current_thread_canceled,
+    run_in_thread,
+    threaded,
+)
 from robotcode.core.event import event
 from robotcode.core.lsp.types import (
     DocumentSelector,
@@ -16,14 +21,19 @@ from robotcode.core.lsp.types import (
 )
 from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.jsonrpc2.protocol import rpc_method
-from robotcode.language_server.common.decorators import LANGUAGE_ID_ATTR, language_id_filter
+from robotcode.language_server.common.decorators import (
+    LANGUAGE_ID_ATTR,
+    language_id_filter,
+)
 from robotcode.language_server.common.parts.protocol_part import (
     LanguageServerProtocolPart,
 )
 from robotcode.language_server.common.text_document import TextDocument
 
 if TYPE_CHECKING:
-    from robotcode.language_server.common.protocol import LanguageServerProtocol  # pragma: no cover
+    from robotcode.language_server.common.protocol import (
+        LanguageServerProtocol,
+    )
 
 
 class InlineValueProtocolPart(LanguageServerProtocolPart):
@@ -71,7 +81,11 @@ class InlineValueProtocolPart(LanguageServerProtocolPart):
             return None
 
         for result in self.collect(
-            self, document, document.range_from_utf16(range), context, callback_filter=language_id_filter(document)
+            self,
+            document,
+            document.range_from_utf16(range),
+            context,
+            callback_filter=language_id_filter(document),
         ):
             check_current_thread_canceled()
 

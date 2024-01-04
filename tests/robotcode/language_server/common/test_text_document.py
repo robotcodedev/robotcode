@@ -9,7 +9,12 @@ from robotcode.language_server.common.text_document import (
 def test_apply_full_change_should_work() -> None:
     text = """first"""
     new_text = """changed"""
-    document = TextDocument(document_uri="file:///test.robot", language_id="robotframework", version=1, text=text)
+    document = TextDocument(
+        document_uri="file:///test.robot",
+        language_id="robotframework",
+        version=1,
+        text=text,
+    )
     assert document.text() == text
 
     document.apply_full_change(1, new_text)
@@ -20,11 +25,21 @@ def test_apply_full_change_should_work() -> None:
 def test_apply_apply_incremental_change_at_begining_should_work() -> None:
     text = """first"""
     new_text = """changed"""
-    document = TextDocument(document_uri="file:///test.robot", language_id="robotframework", version=1, text=text)
+    document = TextDocument(
+        document_uri="file:///test.robot",
+        language_id="robotframework",
+        version=1,
+        text=text,
+    )
     assert document.text() == text
 
     document.apply_incremental_change(
-        1, Range(start=Position(line=0, character=0), end=Position(line=0, character=0)), new_text
+        1,
+        Range(
+            start=Position(line=0, character=0),
+            end=Position(line=0, character=0),
+        ),
+        new_text,
     )
 
     assert document.text() == new_text + text
@@ -34,11 +49,21 @@ def test_apply_apply_incremental_change_at_end_should_work() -> None:
     text = """first"""
     new_text = """changed"""
 
-    document = TextDocument(document_uri="file:///test.robot", language_id="robotframework", version=1, text=text)
+    document = TextDocument(
+        document_uri="file:///test.robot",
+        language_id="robotframework",
+        version=1,
+        text=text,
+    )
     assert document.text() == text
 
     document.apply_incremental_change(
-        1, Range(start=Position(line=0, character=len(text)), end=Position(line=0, character=len(text))), new_text
+        1,
+        Range(
+            start=Position(line=0, character=len(text)),
+            end=Position(line=0, character=len(text)),
+        ),
+        new_text,
     )
 
     assert document.text() == text + new_text
@@ -48,13 +73,23 @@ def test_save_and_revert_should_work() -> None:
     text = """first"""
     new_text = """changed"""
 
-    document = TextDocument(document_uri="file:///test.robot", language_id="robotframework", version=1, text=text)
+    document = TextDocument(
+        document_uri="file:///test.robot",
+        language_id="robotframework",
+        version=1,
+        text=text,
+    )
     assert document.text() == text
 
     assert not document.revert(None)
 
     document.apply_incremental_change(
-        2, Range(start=Position(line=0, character=len(text)), end=Position(line=0, character=len(text))), new_text
+        2,
+        Range(
+            start=Position(line=0, character=len(text)),
+            end=Position(line=0, character=len(text)),
+        ),
+        new_text,
     )
 
     assert document.text() == text + new_text
@@ -67,7 +102,12 @@ def test_save_and_revert_should_work() -> None:
     assert document.version == 1
 
     document.apply_incremental_change(
-        2, Range(start=Position(line=0, character=len(text)), end=Position(line=0, character=len(text))), new_text
+        2,
+        Range(
+            start=Position(line=0, character=len(text)),
+            end=Position(line=0, character=len(text)),
+        ),
+        new_text,
     )
 
     document.save(None, None)
@@ -87,11 +127,21 @@ first line
 second changed line
 third"""
 
-    document = TextDocument(document_uri="file:///test.robot", language_id="robotframework", version=1, text=text)
+    document = TextDocument(
+        document_uri="file:///test.robot",
+        language_id="robotframework",
+        version=1,
+        text=text,
+    )
     assert document.text() == text
 
     document.apply_incremental_change(
-        1, Range(start=Position(line=1, character=7), end=Position(line=1, character=7)), new_text
+        1,
+        Range(
+            start=Position(line=1, character=7),
+            end=Position(line=1, character=7),
+        ),
+        new_text,
     )
 
     assert document.text() == expected
@@ -104,11 +154,21 @@ second line
 third"""
     new_text = """changed """
 
-    document = TextDocument(document_uri="file:///test.robot", language_id="robotframework", version=1, text=text)
+    document = TextDocument(
+        document_uri="file:///test.robot",
+        language_id="robotframework",
+        version=1,
+        text=text,
+    )
     assert document.text() == text
 
     document.apply_incremental_change(
-        1, Range(start=Position(line=3, character=7), end=Position(line=3, character=8)), new_text
+        1,
+        Range(
+            start=Position(line=3, character=7),
+            end=Position(line=3, character=8),
+        ),
+        new_text,
     )
 
     assert document.text() == text + new_text
@@ -118,19 +178,34 @@ def test_apply_apply_incremental_change_with_wrong_range_should_raise_invalidran
     text = """first"""
     new_text = """changed"""
 
-    document = TextDocument(document_uri="file:///test.robot", language_id="robotframework", version=1, text=text)
+    document = TextDocument(
+        document_uri="file:///test.robot",
+        language_id="robotframework",
+        version=1,
+        text=text,
+    )
     assert document.text() == text
 
     with pytest.raises(InvalidRangeError):
         document.apply_incremental_change(
-            1, Range(start=Position(line=4, character=len(text)), end=Position(line=0, character=len(text))), new_text
+            1,
+            Range(
+                start=Position(line=4, character=len(text)),
+                end=Position(line=0, character=len(text)),
+            ),
+            new_text,
         )
 
 
 def test_apply_none_change_should_work() -> None:
     text = """first"""
 
-    document = TextDocument(document_uri="file:///test.robot", language_id="robotframework", version=1, text=text)
+    document = TextDocument(
+        document_uri="file:///test.robot",
+        language_id="robotframework",
+        version=1,
+        text=text,
+    )
     assert document.text() == text
 
     document.apply_none_change()
@@ -145,7 +220,12 @@ second
 third
 """
 
-    document = TextDocument(document_uri="file:///test.robot", language_id="robotframework", version=1, text=text)
+    document = TextDocument(
+        document_uri="file:///test.robot",
+        language_id="robotframework",
+        version=1,
+        text=text,
+    )
     assert document.text() == text
 
     document.apply_none_change()
@@ -166,7 +246,12 @@ third
     key = WeakReferencable()
     data = "some data"
 
-    document = TextDocument(document_uri="file:///test.robot", language_id="robotframework", version=1, text=text)
+    document = TextDocument(
+        document_uri="file:///test.robot",
+        language_id="robotframework",
+        version=1,
+        text=text,
+    )
     document.set_data(key, data)
 
     assert document.get_data(key) == data
@@ -190,7 +275,12 @@ third
     def get_data(document: TextDocument, data: str) -> str:
         return prefix + data
 
-    document = TextDocument(document_uri="file:///test.robot", language_id="robotframework", version=1, text=text)
+    document = TextDocument(
+        document_uri="file:///test.robot",
+        language_id="robotframework",
+        version=1,
+        text=text,
+    )
 
     assert document.get_cache(get_data, "data") == "1data"
 
@@ -215,7 +305,12 @@ first
 second
 third
 """
-    document = TextDocument(document_uri="file:///test.robot", language_id="robotframework", version=1, text=text)
+    document = TextDocument(
+        document_uri="file:///test.robot",
+        language_id="robotframework",
+        version=1,
+        text=text,
+    )
 
     prefix = "1"
 

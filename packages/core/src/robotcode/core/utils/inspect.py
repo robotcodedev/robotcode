@@ -30,7 +30,9 @@ def is_lambda(v: Any) -> bool:
     return isinstance(v, _lambda_type) and v.__name__ == _lambda_name
 
 
-def ensure_coroutine(func: Callable[..., Any]) -> Callable[..., Coroutine[Any, Any, Any]]:
+def ensure_coroutine(
+    func: Callable[..., Any],
+) -> Callable[..., Coroutine[Any, Any, Any]]:
     async def wrapper(*fargs: Any, **fkwargs: Any) -> Any:
         return func(*fargs, **fkwargs)
 

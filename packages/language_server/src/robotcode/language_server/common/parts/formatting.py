@@ -96,7 +96,10 @@ class FormattingProtocolPart(LanguageServerProtocolPart):
 
         return None
 
-    @rpc_method(name="textDocument/rangeFormatting", param_type=DocumentRangeFormattingParams)
+    @rpc_method(
+        name="textDocument/rangeFormatting",
+        param_type=DocumentRangeFormattingParams,
+    )
     @threaded
     def _text_document_range_formatting(
         self,

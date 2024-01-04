@@ -32,11 +32,12 @@ from typing import (
     runtime_checkable,
 )
 
-from robotcode.core.async_tools import (
-    create_sub_task,
-    run_coroutine_in_thread,
+from robotcode.core.async_tools import create_sub_task, run_coroutine_in_thread
+from robotcode.core.concurrent import (
+    FutureEx,
+    is_threaded_callable,
+    run_in_thread,
 )
-from robotcode.core.concurrent import FutureEx, is_threaded_callable, run_in_thread
 from robotcode.core.event import event
 from robotcode.core.utils.dataclasses import as_json, from_dict
 from robotcode.core.utils.inspect import ensure_coroutine, iter_methods
@@ -176,7 +177,10 @@ def rpc_method(_func: _F) -> _F:
 
 @overload
 def rpc_method(
-    *, name: Optional[str] = None, param_type: Optional[Type[Any]] = None, cancelable: bool = True
+    *,
+    name: Optional[str] = None,
+    param_type: Optional[Type[Any]] = None,
+    cancelable: bool = True,
 ) -> Callable[[_F], _F]:
     ...
 
@@ -229,7 +233,7 @@ class RpcRegistry:
     def __set_name__(self, owner: Any, name: str) -> None:
         self.__owner = owner
 
-    def __get__(self, obj: Any, obj_type: Type[Any]) -> "RpcRegistry":
+    def __get__(self, obj: Any, obj_type: Type[Any]) -> RpcRegistry:
         if obj is None and obj_type == self.__owner:
             return self
 
@@ -315,7 +319,11 @@ class RpcRegistry:
         return self.__methods
 
     def add_method(
-        self, name: str, func: Callable[..., Any], param_type: Optional[Type[Any]] = None, cancelable: bool = True
+        self,
+        name: str,
+        func: Callable[..., Any],
+        param_type: Optional[Type[Any]] = None,
+        cancelable: bool = True,
     ) -> None:
         self.__ensure_initialized()
 
@@ -349,7 +357,12 @@ class SendedRequestEntry:
 
 
 class ReceivedRequestEntry:
-    def __init__(self, future: asyncio.Future[Any], request: JsonRPCRequest, cancelable: bool) -> None:
+    def __init__(
+        self,
+        future: asyncio.Future[Any],
+        request: JsonRPCRequest,
+        cancelable: bool,
+    ) -> None:
         self.future = future
         self.request = request
         self.cancelable = cancelable
@@ -367,7 +380,7 @@ class JsonRPCProtocolBase(asyncio.Protocol, ABC):
     def __init__(self) -> None:
         self.read_transport: Optional[asyncio.ReadTransport] = None
         self.write_transport: Optional[asyncio.WriteTransport] = None
-        self._message_buf = bytes()
+        self._message_buf = b""
         self._loop: Optional[asyncio.AbstractEventLoop] = None
 
     @property
@@ -430,7 +443,7 @@ class JsonRPCProtocolBase(asyncio.Protocol, ABC):
                 return
 
             body, data = body[:length], body[length:]
-            self._message_buf = bytes()
+            self._message_buf = b""
 
             self._handle_body(body, charset)
 
@@ -455,7 +468,7 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
 
     @staticmethod
     def _generate_json_rpc_messages_from_dict(
-        data: Union[Dict[Any, Any], List[Dict[Any, Any]]]
+        data: Union[Dict[Any, Any], List[Dict[Any, Any]]],
     ) -> Iterator[JsonRPCMessage]:
         def inner(d: Dict[Any, Any]) -> JsonRPCMessage:
             if "jsonrpc" in d:
@@ -527,12 +540,7 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
         if data is not None:
             error_obj.data = data
 
-        self.send_message(
-            JsonRPCError(
-                id=id,
-                error=error_obj,
-            )
-        )
+        self.send_message(JsonRPCError(id=id, error=error_obj))
 
     @__logger.call
     def send_message(self, message: JsonRPCMessage) -> None:
@@ -633,7 +641,11 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
         try:
             if not entry.future.done():
                 entry.future.set_exception(
-                    JsonRPCErrorException(message.error.code, message.error.message, message.error.data)
+                    JsonRPCErrorException(
+                        message.error.code,
+                        message.error.message,
+                        message.error.data,
+                    )
                 )
             else:
                 self.__logger.warning(lambda: f"Error Response for {message} is already done.")
@@ -645,7 +657,10 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
                 entry.future.set_exception(e)
 
     def _convert_params(
-        self, callable: Callable[..., Any], params_type: Optional[Type[Any]], params: Any
+        self,
+        callable: Callable[..., Any],
+        params_type: Optional[Type[Any]],
+        params: Any,
     ) -> Tuple[List[Any], Dict[str, Any]]:
         if params is None:
             return [], {}
@@ -734,7 +749,9 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
                 if is_threaded_method:
                     if e.is_coroutine:
                         task = run_coroutine_in_thread(
-                            ensure_coroutine(cast(Callable[..., Any], e.method)), *params[0], **params[1]
+                            ensure_coroutine(cast(Callable[..., Any], e.method)),
+                            *params[0],
+                            **params[1],
                         )
                     else:
                         task = asyncio.wrap_future(run_in_thread(e.method, *params[0], **params[1]))
@@ -766,25 +783,45 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
 
             if entry.cancel_requested:
                 self.__logger.debug(lambda: f"request {message!r} canceled")
-                self.send_error(JsonRPCErrors.REQUEST_CANCELLED, "Request canceled.", id=message.id)
+                self.send_error(
+                    JsonRPCErrors.REQUEST_CANCELLED,
+                    "Request canceled.",
+                    id=message.id,
+                )
             else:
                 if not t.cancelled():
                     ex = t.exception()
                     if ex is not None:
                         self.__logger.exception(ex, exc_info=ex)
-                        raise JsonRPCErrorException(JsonRPCErrors.INTERNAL_ERROR, f"{type(ex).__name__}: {ex}") from ex
+                        raise JsonRPCErrorException(
+                            JsonRPCErrors.INTERNAL_ERROR,
+                            f"{type(ex).__name__}: {ex}",
+                        ) from ex
 
                 self.send_response(message.id, t.result())
         except asyncio.CancelledError:
             self.__logger.debug(lambda: f"request message {message!r} canceled")
-            self.send_error(JsonRPCErrors.REQUEST_CANCELLED, "Request canceled.", id=message.id)
+            self.send_error(
+                JsonRPCErrors.REQUEST_CANCELLED,
+                "Request canceled.",
+                id=message.id,
+            )
         except (SystemExit, KeyboardInterrupt):
             raise
         except JsonRPCErrorException as e:
-            self.send_error(e.code, e.message or f"{type(e).__name__}: {e}", id=message.id, data=e.data)
+            self.send_error(
+                e.code,
+                e.message or f"{type(e).__name__}: {e}",
+                id=message.id,
+                data=e.data,
+            )
         except BaseException as e:
             self.__logger.exception(e)
-            self.send_error(JsonRPCErrors.INTERNAL_ERROR, f"{type(e).__name__}: {e}", id=message.id)
+            self.send_error(
+                JsonRPCErrors.INTERNAL_ERROR,
+                f"{type(e).__name__}: {e}",
+                id=message.id,
+            )
 
     def cancel_request(self, id: Union[int, str, None]) -> None:
         with self._received_request_lock:
@@ -813,7 +850,9 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
             else:
                 if is_threaded_callable(e.method):
                     task = run_coroutine_in_thread(
-                        ensure_coroutine(cast(Callable[..., Any], e.method)), *params[0], **params[1]
+                        ensure_coroutine(cast(Callable[..., Any], e.method)),
+                        *params[0],
+                        **params[1],
                     )
                 else:
                     task = create_sub_task(

@@ -22,7 +22,12 @@ from typing import (
 )
 
 import tomli_w
-from robotcode.core.utils.dataclasses import TypeValidationError, ValidateMixin, as_dict, validate_types
+from robotcode.core.utils.dataclasses import (
+    TypeValidationError,
+    ValidateMixin,
+    as_dict,
+    validate_types,
+)
 from robotcode.core.utils.safe_eval import safe_eval
 from typing_extensions import Self
 
@@ -260,7 +265,10 @@ class BaseOptions(ValidateMixin):
                     if value is None or value == Flag.DEFAULT:
                         continue
 
-                    append_name(field, bool(value) != field.metadata.get("robot_flag_default", True))
+                    append_name(
+                        field,
+                        bool(value) != field.metadata.get("robot_flag_default", True),
+                    )
 
                     continue
 
@@ -292,7 +300,11 @@ class BaseOptions(ValidateMixin):
     def _verified_value(name: str, value: Any, types: Union[type, Tuple[type, ...]], target: Any) -> Any:
         errors = validate_types(types, value)
         if errors:
-            raise TypeValidationError("Dataclass Type Validation Error", target=target, errors={name: errors})
+            raise TypeValidationError(
+                "Dataclass Type Validation Error",
+                target=target,
+                errors={name: errors},
+            )
         return value
 
     def add_options(self, config: "BaseOptions", combine_extras: bool = False) -> None:
@@ -305,7 +317,10 @@ class BaseOptions(ValidateMixin):
                     continue
 
                 new = self._verified_value(
-                    f.name, getattr(config, f.name), type_hints[f.name[EXTEND_PREFIX_LEN:]], config
+                    f.name,
+                    getattr(config, f.name),
+                    type_hints[f.name[EXTEND_PREFIX_LEN:]],
+                    config,
                 )
                 if new is None:
                     continue
@@ -447,7 +462,16 @@ class CommonOptions(BaseOptions):
         robot_name="expandkeywords",
         robot_priority=500,
     )
-    flatten_keywords: Optional[List[Union[str, Literal["for", "while", "iteration"], NamePattern, TagPattern]]] = field(
+    flatten_keywords: Optional[
+        List[
+            Union[
+                str,
+                Literal["for", "while", "iteration"],
+                NamePattern,
+                TagPattern,
+            ]
+        ]
+    ] = field(
         description="""\
             Flattens matching keywords in the generated log file.
             Matching keywords get all log messages from their
@@ -613,7 +637,14 @@ class CommonOptions(BaseOptions):
         robot_short_name="P",
     )
     remove_keywords: Optional[
-        List[Union[str, Literal["all", "passed", "for", "wuks"], NamePattern, TagPattern]]
+        List[
+            Union[
+                str,
+                Literal["all", "passed", "for", "wuks"],
+                NamePattern,
+                TagPattern,
+            ]
+        ]
     ] = field(
         description="""\
             Remove keyword data from the generated log file.
@@ -909,7 +940,7 @@ class CommonExtraOptions(BaseOptions):
             matched using same rules as with --include.
 
             corresponds to the `-e --exclude tag *` option of _robot_
-            """,
+            """
     )
     extend_expand_keywords: Optional[List[Union[str, NamePattern, TagPattern]]] = field(
         description="""\
@@ -927,10 +958,17 @@ class CommonExtraOptions(BaseOptions):
             ```
 
             corresponds to the `--expandkeywords name:<pattern>|tag:<pattern> *` option of _robot_
-            """,
+            """
     )
     extend_flatten_keywords: Optional[
-        List[Union[str, Literal["for", "while", "iteration"], NamePattern, TagPattern]]
+        List[
+            Union[
+                str,
+                Literal["for", "while", "iteration"],
+                NamePattern,
+                TagPattern,
+            ]
+        ]
     ] = field(
         description="""\
             Appends entries to the --flattenkeywords option.
@@ -950,7 +988,7 @@ class CommonExtraOptions(BaseOptions):
             `--removekeywords tag:<pattern>`
 
             corresponds to the `--flattenkeywords for|while|iteration|name:<pattern>|tag:<pattern> *` option of _robot_
-            """,
+            """
     )
     extend_includes: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
@@ -970,7 +1008,7 @@ class CommonExtraOptions(BaseOptions):
             ```
 
             corresponds to the `-i --include tag *` option of _robot_
-            """,
+            """
     )
     extend_metadata: Optional[Dict[str, Union[str, StringExpression]]] = field(
         description="""\
@@ -981,7 +1019,7 @@ class CommonExtraOptions(BaseOptions):
             as --doc. Example: --metadata Version:1.2
 
             corresponds to the `-M --metadata name:value *` option of _robot_
-            """,
+            """
     )
     extend_parse_include: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
@@ -995,7 +1033,7 @@ class CommonExtraOptions(BaseOptions):
             all files in that directory, recursively.
 
             corresponds to the `-I --parseinclude pattern *` option of _robot_
-            """,
+            """
     )
     extend_pre_rebot_modifiers: Optional[Dict[str, List[Union[str, StringExpression]]]] = field(
         description="""\
@@ -1006,7 +1044,7 @@ class CommonExtraOptions(BaseOptions):
             arguments the same way as with --listener.
 
             corresponds to the `--prerebotmodifier modifier *` option of _robot_
-            """,
+            """
     )
     extend_python_path: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
@@ -1027,10 +1065,17 @@ class CommonExtraOptions(BaseOptions):
             ```
 
             corresponds to the `-P --pythonpath path *` option of _robot_
-            """,
+            """
     )
     extend_remove_keywords: Optional[
-        List[Union[str, Literal["all", "passed", "for", "wuks"], NamePattern, TagPattern]]
+        List[
+            Union[
+                str,
+                Literal["all", "passed", "for", "wuks"],
+                NamePattern,
+                TagPattern,
+            ]
+        ]
     ] = field(
         description="""\
             Appends entries to the --removekeywords option.
@@ -1075,7 +1120,7 @@ class CommonExtraOptions(BaseOptions):
             ```
 
             corresponds to the `--removekeywords all|passed|for|wuks|name:<pattern>|tag:<pattern> *` option of _robot_
-            """,
+            """
     )
     extend_set_tag: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
@@ -1084,7 +1129,7 @@ class CommonExtraOptions(BaseOptions):
             Sets given tag(s) to all executed tests.
 
             corresponds to the `-G --settag tag *` option of _robot_
-            """,
+            """
     )
     extend_suites: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
@@ -1099,7 +1144,7 @@ class CommonExtraOptions(BaseOptions):
             selects suite `Y` only if its parent is `X`.
 
             corresponds to the `-s --suite name *` option of _robot_
-            """,
+            """
     )
     extend_tag_doc: Optional[Dict[str, Union[str, StringExpression]]] = field(
         description="""\
@@ -1119,7 +1164,7 @@ class CommonExtraOptions(BaseOptions):
             ```
 
             corresponds to the `--tagdoc pattern:doc *` option of _robot_
-            """,
+            """
     )
     extend_tag_stat_combine: Optional[List[Union[str, Dict[str, str]]]] = field(
         description="""\
@@ -1139,7 +1184,7 @@ class CommonExtraOptions(BaseOptions):
             ```
 
             corresponds to the `--tagstatcombine tags:name *` option of _robot_
-            """,
+            """
     )
     extend_tag_stat_exclude: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
@@ -1150,7 +1195,7 @@ class CommonExtraOptions(BaseOptions):
             similarly as --exclude is used with --include.
 
             corresponds to the `--tagstatexclude tag *` option of _robot_
-            """,
+            """
     )
     extend_tag_stat_include: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
@@ -1161,7 +1206,7 @@ class CommonExtraOptions(BaseOptions):
             Given tag can be a pattern like with --include.
 
             corresponds to the `--tagstatinclude tag *` option of _robot_
-            """,
+            """
     )
     extend_tag_stat_link: Optional[Dict[str, Union[str, StringExpression]]] = field(
         description="""\
@@ -1181,7 +1226,7 @@ class CommonExtraOptions(BaseOptions):
             ```
 
             corresponds to the `--tagstatlink pattern:link:title *` option of _robot_
-            """,
+            """
     )
     extend_tasks: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
@@ -1190,7 +1235,7 @@ class CommonExtraOptions(BaseOptions):
             Alias to --test. Especially applicable with --rpa.
 
             corresponds to the `--task name *` option of _robot_
-            """,
+            """
     )
     extend_tests: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
@@ -1204,7 +1249,7 @@ class CommonExtraOptions(BaseOptions):
             in brackets.
 
             corresponds to the `-t --test name *` option of _robot_
-            """,
+            """
     )
 
 
@@ -1589,7 +1634,7 @@ class RobotExtraOptions(BaseOptions):
             a custom language file.
 
             corresponds to the `--language lang *` option of _rebot_
-            """,
+            """
     )
     extend_listeners: Optional[Dict[str, List[Union[str, StringExpression]]]] = field(
         description="""\
@@ -1608,7 +1653,7 @@ class RobotExtraOptions(BaseOptions):
             ```
 
             corresponds to the `--listener listener *` option of _rebot_
-            """,
+            """
     )
     extend_parsers: Optional[Dict[str, List[Union[str, StringExpression]]]] = field(
         description="""\
@@ -1618,7 +1663,7 @@ class RobotExtraOptions(BaseOptions):
             arguments the same way as with --listener.
 
             corresponds to the `--parser parser *` option of _rebot_
-            """,
+            """
     )
     extend_pre_run_modifiers: Optional[Dict[str, List[Union[str, StringExpression]]]] = field(
         description="""\
@@ -1629,7 +1674,7 @@ class RobotExtraOptions(BaseOptions):
             same way as with --listener.
 
             corresponds to the `--prerunmodifier modifier *` option of _rebot_
-            """,
+            """
     )
     extend_skip: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
@@ -1639,7 +1684,7 @@ class RobotExtraOptions(BaseOptions):
             a pattern.
 
             corresponds to the `--skip tag *` option of _rebot_
-            """,
+            """
     )
     extend_skip_on_failure: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
@@ -1649,7 +1694,7 @@ class RobotExtraOptions(BaseOptions):
             Tag can be a pattern
 
             corresponds to the `--skiponfailure tag *` option of _rebot_
-            """,
+            """
     )
     extend_variables: Optional[Dict[str, Union[str, StringExpression]]] = field(
         description="""\
@@ -1669,7 +1714,7 @@ class RobotExtraOptions(BaseOptions):
             ```
 
             corresponds to the `-v --variable name:value *` option of _rebot_
-            """,
+            """
     )
     extend_variable_files: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
@@ -1687,7 +1732,7 @@ class RobotExtraOptions(BaseOptions):
             ```
 
             corresponds to the `-V --variablefile path *` option of _rebot_
-            """,
+            """
     )
 
 
@@ -1889,7 +1934,7 @@ class LibDocExtraOptions(BaseOptions):
             and resources.
 
             corresponds to the `-P --pythonpath path *` option of _libdoc_
-            """,
+            """
     )
 
 
@@ -2002,7 +2047,7 @@ class TestDocExtraOptions(BaseOptions):
             Exclude tests by tags.
 
             corresponds to the `-e --exclude tag *` option of _testdoc_
-            """,
+            """
     )
     extend_includes: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
@@ -2011,7 +2056,7 @@ class TestDocExtraOptions(BaseOptions):
             Include tests by tags.
 
             corresponds to the `-i --include tag *` option of _testdoc_
-            """,
+            """
     )
     extend_metadata: Optional[Dict[str, Union[str, StringExpression]]] = field(
         description="""\
@@ -2020,7 +2065,7 @@ class TestDocExtraOptions(BaseOptions):
             Set/override metadata of the top level suite.
 
             corresponds to the `-M --metadata name:value *` option of _testdoc_
-            """,
+            """
     )
     extend_set_tag: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
@@ -2029,7 +2074,7 @@ class TestDocExtraOptions(BaseOptions):
             Set given tag(s) to all test cases.
 
             corresponds to the `-G --settag tag *` option of _testdoc_
-            """,
+            """
     )
     extend_suites: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
@@ -2038,7 +2083,7 @@ class TestDocExtraOptions(BaseOptions):
             Include suites by name.
 
             corresponds to the `-s --suite name *` option of _testdoc_
-            """,
+            """
     )
     extend_tests: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
@@ -2047,7 +2092,7 @@ class TestDocExtraOptions(BaseOptions):
             Include tests by name.
 
             corresponds to the `-t --test name *` option of _testdoc_
-            """,
+            """
     )
 
 
@@ -2107,7 +2152,7 @@ class RobotBaseProfile(CommonOptions, CommonExtraOptions, RobotOptions, RobotExt
             TEST_VAR = "test"
             SECRET = "password"
             ```
-            """,
+            """
     )
 
     rebot: Optional[RebotProfile] = field(
@@ -2141,13 +2186,13 @@ class RobotExtraBaseProfile(RobotBaseProfile):
     extend_args: Optional[List[str]] = field(
         description="""\
             Append extra arguments to be passed to _robot_.
-            """,
+            """
     )
 
     extend_env: Optional[Dict[str, str]] = field(
         description="""\
             Append extra environment variables to be set before tests.
-            """,
+            """
     )
 
     extend_paths: Union[str, List[str], None] = field(
@@ -2172,7 +2217,7 @@ class RobotProfile(RobotExtraBaseProfile):
         description="""\
             The profile should be detached.
             Detached means it is not inherited from the main profile.
-            """,
+            """
     )
 
     enabled: Union[bool, Condition, None] = field(
@@ -2216,22 +2261,18 @@ class RobotConfig(RobotExtraBaseProfile):
             ```toml
             default_profiles = ["default", "Firefox"]
             ```
-            """,
+            """
     )
-    profiles: Optional[Dict[str, RobotProfile]] = field(
-        description="Execution profiles.",
-    )
+    profiles: Optional[Dict[str, RobotProfile]] = field(description="Execution profiles.")
 
-    extend_profiles: Optional[Dict[str, RobotProfile]] = field(
-        description="Extra execution profiles.",
-    )
+    extend_profiles: Optional[Dict[str, RobotProfile]] = field(description="Extra execution profiles.")
 
-    tool: Any = field(
-        description="Tool configurations.",
-    )
+    tool: Any = field(description="Tool configurations.")
 
     def select_profiles(
-        self, *names: str, verbose_callback: Optional[Callable[..., None]] = None
+        self,
+        *names: str,
+        verbose_callback: Optional[Callable[..., None]] = None,
     ) -> Dict[str, RobotProfile]:
         result: Dict[str, RobotProfile] = {}
 
@@ -2246,7 +2287,7 @@ class RobotConfig(RobotExtraBaseProfile):
             )
 
             if verbose_callback and default_profile:
-                verbose_callback(f"Using default profiles: {', '.join( default_profile)}.")
+                verbose_callback(f"Using default profiles: {', '.join(default_profile)}.")
 
             names = (*(default_profile or ()),)
 
@@ -2261,7 +2302,11 @@ class RobotConfig(RobotExtraBaseProfile):
 
         return result
 
-    def combine_profiles(self, *names: str, verbose_callback: Optional[Callable[..., None]] = None) -> RobotBaseProfile:
+    def combine_profiles(
+        self,
+        *names: str,
+        verbose_callback: Optional[Callable[..., None]] = None,
+    ) -> RobotBaseProfile:
         type_hints = get_type_hints(RobotBaseProfile)
         base_field_names = [f.name for f in dataclasses.fields(RobotBaseProfile)]
 
@@ -2298,7 +2343,10 @@ class RobotConfig(RobotExtraBaseProfile):
             for f in dataclasses.fields(profile):
                 if f.name.startswith("extend_"):
                     new = self._verified_value(
-                        f.name, getattr(profile, f.name), type_hints[f.name[EXTEND_PREFIX_LEN:]], profile
+                        f.name,
+                        getattr(profile, f.name),
+                        type_hints[f.name[EXTEND_PREFIX_LEN:]],
+                        profile,
                     )
                     if new is None:
                         continue
@@ -2308,7 +2356,11 @@ class RobotConfig(RobotExtraBaseProfile):
                         setattr(result, f.name[EXTEND_PREFIX_LEN:], new)
                     else:
                         if isinstance(old, dict):
-                            setattr(result, f.name[EXTEND_PREFIX_LEN:], {**old, **new})
+                            setattr(
+                                result,
+                                f.name[EXTEND_PREFIX_LEN:],
+                                {**old, **new},
+                            )
                         elif isinstance(old, list):
                             setattr(result, f.name[EXTEND_PREFIX_LEN:], [*old, *new])
                         elif isinstance(old, tuple):
@@ -2323,7 +2375,12 @@ class RobotConfig(RobotExtraBaseProfile):
                 if getattr(profile, f"extend_{f.name}", None) is not None:
                     continue
 
-                new = self._verified_value(f.name, getattr(profile, f.name), type_hints[f.name], profile)
+                new = self._verified_value(
+                    f.name,
+                    getattr(profile, f.name),
+                    type_hints[f.name],
+                    profile,
+                )
                 if new is not None:
                     setattr(result, f.name, new)
 

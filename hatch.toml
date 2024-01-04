@@ -109,6 +109,7 @@ matrix.rf.dependencies = [
 ]
 
 [envs.lint]
+python = "3.8"
 #skip-install = true
 #extra-dependencies = ["tomli>=2.0.0"]
 extra-dependencies = [

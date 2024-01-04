@@ -3,17 +3,17 @@ from typing import Tuple, Union
 import click
 from robotcode.analyze.config import AnalyzerConfig
 from robotcode.plugin import Application, pass_application
-from robotcode.robot.config.loader import load_config_from_path, load_robot_config_from_path
+from robotcode.robot.config.loader import (
+    load_config_from_path,
+    load_robot_config_from_path,
+)
 from robotcode.robot.config.utils import get_config_files
 
 from .__version__ import __version__
 
 
 @click.command(
-    context_settings={
-        "allow_extra_args": True,
-        "ignore_unknown_options": True,
-    },
+    context_settings={"allow_extra_args": True, "ignore_unknown_options": True},
     add_help_option=True,
 )
 @click.version_option(
@@ -23,17 +23,17 @@ from .__version__ import __version__
 )
 @click.argument("paths", nargs=-1, type=click.Path(exists=True, dir_okay=True))
 @pass_application
-def analyze(
-    app: Application,
-    paths: Tuple[str],
-) -> Union[str, int, None]:
+def analyze(app: Application, paths: Tuple[str]) -> Union[str, int, None]:
     """TODO: Analyzes a Robot Framework project."""
 
     config_files, root_folder, _ = get_config_files(paths, app.config.config_files, verbose_callback=app.verbose)
 
     try:
         analizer_config = load_config_from_path(
-            AnalyzerConfig, *config_files, tool_name="robotcode-analyze", robot_toml_tool_name="robotcode-analyze"
+            AnalyzerConfig,
+            *config_files,
+            tool_name="robotcode-analyze",
+            robot_toml_tool_name="robotcode-analyze",
         ).evaluated()
 
         robot_config = (

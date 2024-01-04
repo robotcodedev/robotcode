@@ -45,10 +45,7 @@ def test_safe_eval_should_not_allow_builtin_names(expression: str) -> None:
 
 @pytest.mark.parametrize(
     ("expression", "result"),
-    [
-        ("'PATH' in environ", True),
-        (r"bool(re.match('\\d+', '1234'))", True),
-    ],
+    [("'PATH' in environ", True), (r"bool(re.match('\\d+', '1234'))", True)],
 )
 def test_safe_eval_simple_should_support_custom_globals(expression: str, result: Any) -> None:
     assert safe_eval(expression, {"environ": dict(os.environ), "re": re}) == result

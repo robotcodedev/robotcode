@@ -3,7 +3,18 @@ import sys
 from dataclasses import dataclass
 from enum import Enum, unique
 from pathlib import Path
-from typing import IO, Any, AnyStr, Callable, Iterable, Optional, Sequence, TypeVar, Union, cast
+from typing import (
+    IO,
+    Any,
+    AnyStr,
+    Callable,
+    Iterable,
+    Optional,
+    Sequence,
+    TypeVar,
+    Union,
+    cast,
+)
 
 import click
 import pluggy
@@ -79,7 +90,10 @@ class Application:
 
     @property
     def colored(self) -> bool:
-        return self.config.colored_output in [ColoredOutput.AUTO, ColoredOutput.YES]
+        return self.config.colored_output in [
+            ColoredOutput.AUTO,
+            ColoredOutput.YES,
+        ]
 
     def verbose(
         self,
@@ -115,7 +129,10 @@ class Application:
         )
 
     def print_data(
-        self, data: Any, remove_defaults: bool = True, default_output_format: Optional[OutputFormat] = None
+        self,
+        data: Any,
+        remove_defaults: bool = True,
+        default_output_format: Optional[OutputFormat] = None,
     ) -> None:
         format = self.config.output_format or default_output_format or OutputFormat.TEXT
 
@@ -131,7 +148,11 @@ class Application:
 
         if text is None:
             if format in [OutputFormat.JSON, OutputFormat.JSON_INDENT]:
-                text = as_json(data, indent=format == OutputFormat.JSON_INDENT, compact=format == OutputFormat.TEXT)
+                text = as_json(
+                    data,
+                    indent=format == OutputFormat.JSON_INDENT,
+                    compact=format == OutputFormat.TEXT,
+                )
             else:
                 text = str(data)
 
@@ -238,7 +259,10 @@ class Application:
             )
             click.echo(text, color=color if color is not None else self.colored)
         else:
-            click.echo_via_pager(text_or_generator, color=color if color is not None else self.colored)
+            click.echo_via_pager(
+                text_or_generator,
+                color=color if color is not None else self.colored,
+            )
 
     def keyboard_interrupt(self) -> None:
         self.verbose("Aborted!", file=sys.stderr)

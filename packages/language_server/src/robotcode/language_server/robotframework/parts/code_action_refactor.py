@@ -37,7 +37,11 @@ from robotcode.robot.utils.stubs import BodyBlock
 from ...common.decorators import code_action_kinds, language_id
 from ...common.text_document import TextDocument
 from ..diagnostics.model_helper import ModelHelperMixin
-from .code_action_helper_mixin import SHOW_DOCUMENT_SELECT_AND_RENAME_COMMAND, CodeActionDataBase, CodeActionHelperMixin
+from .code_action_helper_mixin import (
+    SHOW_DOCUMENT_SELECT_AND_RENAME_COMMAND,
+    CodeActionDataBase,
+    CodeActionHelperMixin,
+)
 from .protocol_part import RobotLanguageServerProtocolPart
 
 if TYPE_CHECKING:
@@ -104,9 +108,18 @@ class RobotCodeActionRefactorProtocolPart(RobotLanguageServerProtocolPart, Model
         self.parent.commands.register_all(self)
 
     @language_id("robotframework")
-    @code_action_kinds([CODE_ACTION_KIND_REFACTOR_EXTRACT_FUNCTION, CODE_ACTION_KIND_SURROUND_WITH])
+    @code_action_kinds(
+        [
+            CODE_ACTION_KIND_REFACTOR_EXTRACT_FUNCTION,
+            CODE_ACTION_KIND_SURROUND_WITH,
+        ]
+    )
     def collect(
-        self, sender: Any, document: TextDocument, range: Range, context: CodeActionContext
+        self,
+        sender: Any,
+        document: TextDocument,
+        range: Range,
+        context: CodeActionContext,
     ) -> Optional[List[Union[Command, CodeAction]]]:
         result = []
         for method in iter_methods(self, lambda m: m.__name__.startswith("code_action_")):
@@ -115,7 +128,7 @@ class RobotCodeActionRefactorProtocolPart(RobotLanguageServerProtocolPart, Model
                 result.extend(code_actions)
 
         if result:
-            return list(sorted(result, key=lambda ca: ca.title))
+            return sorted(result, key=lambda ca: ca.title)
 
         return None
 
@@ -124,8 +137,16 @@ class RobotCodeActionRefactorProtocolPart(RobotLanguageServerProtocolPart, Model
             type = code_action.data.get("type", None)
             if type == "refactor":
                 method_name = code_action.data.get("method")
-                method = next(iter_methods(self, lambda m: m.__name__ == f"resolve_code_action_{method_name}"))
-                method(code_action, data=from_dict(code_action.data, CodeActionData))
+                method = next(
+                    iter_methods(
+                        self,
+                        lambda m: m.__name__ == f"resolve_code_action_{method_name}",
+                    )
+                )
+                method(
+                    code_action,
+                    data=from_dict(code_action.data, CodeActionData),
+                )
 
         return None
 
@@ -224,16 +245,7 @@ class RobotCodeActionRefactorProtocolPart(RobotLanguageServerProtocolPart, Model
         if any(
             n
             for n in result
-            if isinstance(
-                n,
-                (
-                    IfHeader,
-                    ElseIfHeader,
-                    ElseHeader,
-                    ForHeader,
-                    End,
-                ),
-            )
+            if isinstance(n, (IfHeader, ElseIfHeader, ElseHeader, ForHeader, End))
             or get_robot_version() >= (5, 0)
             and isinstance(n, (WhileHeader, TryHeader, ExceptHeader, FinallyHeader))
         ):
@@ -287,7 +299,13 @@ class RobotCodeActionRefactorProtocolPart(RobotLanguageServerProtocolPart, Model
                 "Surround with TRY...EXCEPT",
                 kind=CODE_ACTION_KIND_SURROUND_WITH,
                 data=as_dict(
-                    CodeActionData("refactor", "surround", document.document_uri, insert_range, SurroundType.TRY_EXCEPT)
+                    CodeActionData(
+                        "refactor",
+                        "surround",
+                        document.document_uri,
+                        insert_range,
+                        SurroundType.TRY_EXCEPT,
+                    )
                 )
                 if insert_range
                 else None,
@@ -298,7 +316,11 @@ class RobotCodeActionRefactorProtocolPart(RobotLanguageServerProtocolPart, Model
                 kind=CODE_ACTION_KIND_SURROUND_WITH,
                 data=as_dict(
                     CodeActionData(
-                        "refactor", "surround", document.document_uri, insert_range, SurroundType.TRY_FINALLY
+                        "refactor",
+                        "surround",
+                        document.document_uri,
+                        insert_range,
+                        SurroundType.TRY_FINALLY,
                     )
                 )
                 if insert_range
@@ -310,7 +332,11 @@ class RobotCodeActionRefactorProtocolPart(RobotLanguageServerProtocolPart, Model
                 kind=CODE_ACTION_KIND_SURROUND_WITH,
                 data=as_dict(
                     CodeActionData(
-                        "refactor", "surround", document.document_uri, insert_range, SurroundType.TRY_EXCEPT_FINALLY
+                        "refactor",
+                        "surround",
+                        document.document_uri,
+                        insert_range,
+                        SurroundType.TRY_EXCEPT_FINALLY,
                     )
                 )
                 if insert_range
@@ -377,9 +403,7 @@ class RobotCodeActionRefactorProtocolPart(RobotLanguageServerProtocolPart, Model
                     ],
                 )
             ],
-            change_annotations={
-                "surround": ChangeAnnotation("surround", False),
-            },
+            change_annotations={"surround": ChangeAnnotation("surround", False)},
         )
 
         code_action.command = Command(
@@ -403,11 +427,7 @@ class RobotCodeActionRefactorProtocolPart(RobotLanguageServerProtocolPart, Model
 
         if range.start.line == range.end.line and (
             (context.only and CodeActionKind.REFACTOR_EXTRACT in context.only)
-            or context.trigger_kind
-            in [
-                CodeActionTriggerKind.INVOKED,
-                CodeActionTriggerKind.AUTOMATIC,
-            ]
+            or context.trigger_kind in [CodeActionTriggerKind.INVOKED, CodeActionTriggerKind.AUTOMATIC]
         ):
             model = self.parent.documents_cache.get_model(document, False)
             node = get_node_at_position(model, range.start)
@@ -428,7 +448,14 @@ class RobotCodeActionRefactorProtocolPart(RobotLanguageServerProtocolPart, Model
                 CodeAction(
                     "Assign keyword result to variable",
                     kind=CODE_ACTION_KIND_REFACTOR_EXTRACT_VARIABLE,
-                    data=as_dict(CodeActionData("refactor", "assign_result_to_variable", document.document_uri, range)),
+                    data=as_dict(
+                        CodeActionData(
+                            "refactor",
+                            "assign_result_to_variable",
+                            document.document_uri,
+                            range,
+                        )
+                    ),
                 )
             ]
 
@@ -489,7 +516,13 @@ class RobotCodeActionRefactorProtocolPart(RobotLanguageServerProtocolPart, Model
             document_changes=[
                 TextDocumentEdit(
                     OptionalVersionedTextDocumentIdentifier(str(document.uri), document.version),
-                    [AnnotatedTextEdit("assign_result_to_variable", Range(start, start), f"${{{var_name}}}    ")],
+                    [
+                        AnnotatedTextEdit(
+                            "assign_result_to_variable",
+                            Range(start, start),
+                            f"${{{var_name}}}    ",
+                        )
+                    ],
                 )
             ],
             change_annotations={"assign_result_to_variable": ChangeAnnotation("Assign result to variable", False)},
@@ -536,11 +569,18 @@ class RobotCodeActionRefactorProtocolPart(RobotLanguageServerProtocolPart, Model
             CodeAction(
                 "Extract keyword",
                 kind=CODE_ACTION_KIND_REFACTOR_EXTRACT_FUNCTION,
-                data=as_dict(CodeActionData("refactor", "extract_keyword", document.document_uri, insert_range))
+                data=as_dict(
+                    CodeActionData(
+                        "refactor",
+                        "extract_keyword",
+                        document.document_uri,
+                        insert_range,
+                    )
+                )
                 if insert_range
                 else None,
                 disabled=disabled,
-            ),
+            )
         ]
 
     def resolve_code_action_extract_keyword(
@@ -611,7 +651,7 @@ class RobotCodeActionRefactorProtocolPart(RobotLanguageServerProtocolPart, Model
             )
         }
 
-        argument_variables_text = "    ".join(n.name for n in argument_variables.keys())
+        argument_variables_text = "    ".join(n.name for n in argument_variables)
         keyword_text = f"{keyword_name}\n"
         if argument_variables_text:
             keyword_text += f"    [Arguments]    {argument_variables_text}\n"
@@ -638,7 +678,7 @@ class RobotCodeActionRefactorProtocolPart(RobotLanguageServerProtocolPart, Model
             keyword_text += "    " + l
 
         if assigned_variables:
-            keyword_text += "\n    RETURN    " + "    ".join(n.name for n in assigned_variables.keys())
+            keyword_text += "\n    RETURN    " + "    ".join(n.name for n in assigned_variables)
 
         keyword_text, keyword_range = self.create_insert_keyword_workspace_edit(
             document, model, namespace, keyword_text
@@ -646,7 +686,7 @@ class RobotCodeActionRefactorProtocolPart(RobotLanguageServerProtocolPart, Model
 
         assigned_variables_text = ""
         if assigned_variables:
-            assigned_variables_text += "    ".join(n.name for n in assigned_variables.keys()) + "    "
+            assigned_variables_text += "    ".join(n.name for n in assigned_variables) + "    "
 
         keyword_call_text = f"{spaces}{assigned_variables_text}{keyword_name}"
         if argument_variables_text:
@@ -676,8 +716,14 @@ class RobotCodeActionRefactorProtocolPart(RobotLanguageServerProtocolPart, Model
             [
                 document.document_uri,
                 Range(
-                    Position(data.range.start.line, len(spaces) + len(assigned_variables_text)),
-                    Position(data.range.start.line, len(spaces) + len(assigned_variables_text) + len(keyword_name)),
+                    Position(
+                        data.range.start.line,
+                        len(spaces) + len(assigned_variables_text),
+                    ),
+                    Position(
+                        data.range.start.line,
+                        len(spaces) + len(assigned_variables_text) + len(keyword_name),
+                    ),
                 ),
             ],
         )

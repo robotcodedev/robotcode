@@ -7,9 +7,17 @@ from robot.parsing.lexer.tokens import Token
 from robot.parsing.model.blocks import Keyword, Section, TestCase
 from robot.parsing.model.statements import Statement
 from robot.variables import search_variable
-from robotcode.core.lsp.types import DocumentSymbol, SymbolInformation, SymbolKind
+from robotcode.core.lsp.types import (
+    DocumentSymbol,
+    SymbolInformation,
+    SymbolKind,
+)
 from robotcode.core.utils.logging import LoggingDescriptor
-from robotcode.robot.utils.ast import range_from_node, range_from_token, tokenize_variables
+from robotcode.robot.utils.ast import (
+    range_from_node,
+    range_from_token,
+    tokenize_variables,
+)
 from robotcode.robot.utils.visitor import Visitor
 
 from ...common.decorators import language_id
@@ -83,7 +91,13 @@ class _Visitor(Visitor):
 
         if self.current_symbol is not None and self.current_symbol.children is not None:
             r = range_from_node(node)
-            symbol = DocumentSymbol(name=node.name, kind=SymbolKind.METHOD, range=r, selection_range=r, children=[])
+            symbol = DocumentSymbol(
+                name=node.name,
+                kind=SymbolKind.METHOD,
+                range=r,
+                selection_range=r,
+                children=[],
+            )
             self.current_symbol.children.append(symbol)
 
             self.generic_visit_current_symbol(node, symbol)
@@ -94,7 +108,13 @@ class _Visitor(Visitor):
 
         if self.current_symbol is not None and self.current_symbol.children is not None:
             r = range_from_node(node)
-            symbol = DocumentSymbol(name=node.name, kind=SymbolKind.FUNCTION, range=r, selection_range=r, children=[])
+            symbol = DocumentSymbol(
+                name=node.name,
+                kind=SymbolKind.FUNCTION,
+                range=r,
+                selection_range=r,
+                children=[],
+            )
             self.current_symbol.children.append(symbol)
 
             self.generic_visit_current_symbol(node, symbol)
@@ -112,7 +132,12 @@ class _Visitor(Visitor):
                 if argument is not None:
                     r = range_from_token(argument)
 
-                    symbol = DocumentSymbol(name=argument.value, kind=SymbolKind.VARIABLE, range=r, selection_range=r)
+                    symbol = DocumentSymbol(
+                        name=argument.value,
+                        kind=SymbolKind.VARIABLE,
+                        range=r,
+                        selection_range=r,
+                    )
                     if symbol.name not in map(lambda v: v.name, self.current_symbol.children):
                         self.current_symbol.children.append(symbol)
 
@@ -144,7 +169,10 @@ class _Visitor(Visitor):
                         r = range_from_token(variable_token)
 
                         symbol = DocumentSymbol(
-                            name=variable_token.value, kind=SymbolKind.VARIABLE, range=r, selection_range=r
+                            name=variable_token.value,
+                            kind=SymbolKind.VARIABLE,
+                            range=r,
+                            selection_range=r,
                         )
                         if symbol.name not in map(lambda v: v.name, self.current_symbol.children):
                             self.current_symbol.children.append(symbol)
@@ -161,7 +189,10 @@ class _Visitor(Visitor):
                 if variable_token is not None:
                     r = range_from_token(variable_token)
                     symbol = DocumentSymbol(
-                        name=variable_token.value, kind=SymbolKind.VARIABLE, range=r, selection_range=r
+                        name=variable_token.value,
+                        kind=SymbolKind.VARIABLE,
+                        range=r,
+                        selection_range=r,
                     )
                     if symbol.name not in map(lambda v: v.name, self.current_symbol.children):
                         self.current_symbol.children.append(symbol)
@@ -175,7 +206,10 @@ class _Visitor(Visitor):
                 if variable_token is not None:
                     r = range_from_token(variable_token)
                     symbol = DocumentSymbol(
-                        name=variable_token.value, kind=SymbolKind.VARIABLE, range=r, selection_range=r
+                        name=variable_token.value,
+                        kind=SymbolKind.VARIABLE,
+                        range=r,
+                        selection_range=r,
                     )
                     if symbol.name not in map(lambda v: v.name, self.current_symbol.children):
                         self.current_symbol.children.append(symbol)
@@ -189,7 +223,10 @@ class _Visitor(Visitor):
                 if variable_token is not None:
                     r = range_from_token(variable_token)
                     symbol = DocumentSymbol(
-                        name=variable_token.value, kind=SymbolKind.VARIABLE, range=r, selection_range=r
+                        name=variable_token.value,
+                        kind=SymbolKind.VARIABLE,
+                        range=r,
+                        selection_range=r,
                     )
                     if symbol.name not in map(lambda v: v.name, self.current_symbol.children):
                         self.current_symbol.children.append(symbol)
@@ -208,7 +245,10 @@ class _Visitor(Visitor):
                 if variable_token is not None:
                     r = range_from_token(variable_token)
                     symbol = DocumentSymbol(
-                        name=variable_token.value, kind=SymbolKind.VARIABLE, range=r, selection_range=r
+                        name=variable_token.value,
+                        kind=SymbolKind.VARIABLE,
+                        range=r,
+                        selection_range=r,
                     )
                     if symbol.name not in map(lambda v: v.name, self.current_symbol.children):
                         self.current_symbol.children.append(symbol)

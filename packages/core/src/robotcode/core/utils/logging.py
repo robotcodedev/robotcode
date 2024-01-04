@@ -40,7 +40,9 @@ def _repr(o: Any) -> str:
     # return repr(o)
 
 
-def get_class_that_defined_method(meth: Callable[..., Any]) -> Optional[Type[Any]]:
+def get_class_that_defined_method(
+    meth: Callable[..., Any],
+) -> Optional[Type[Any]]:
     if inspect.ismethod(meth):
         for c in inspect.getmro(meth.__self__.__class__):
             if c.__dict__.get(meth.__name__) is meth:
@@ -191,7 +193,13 @@ class LoggingDescriptor:
         **kwargs: Any,
     ) -> None:
         if self.is_enabled_for(level) and condition is not None and condition() or condition is None:
-            self.logger.log(level, msg() if callable(msg) else msg, *args, stacklevel=stacklevel, **kwargs)
+            self.logger.log(
+                level,
+                msg() if callable(msg) else msg,
+                *args,
+                stacklevel=stacklevel,
+                **kwargs,
+            )
 
     def debug(
         self,
@@ -201,7 +209,14 @@ class LoggingDescriptor:
         stacklevel: int = 3,
         **kwargs: Any,
     ) -> None:
-        return self.log(logging.DEBUG, msg, condition, *args, stacklevel=stacklevel, **kwargs)
+        return self.log(
+            logging.DEBUG,
+            msg,
+            condition,
+            *args,
+            stacklevel=stacklevel,
+            **kwargs,
+        )
 
     def info(
         self,
@@ -221,7 +236,14 @@ class LoggingDescriptor:
         stacklevel: int = 3,
         **kwargs: Any,
     ) -> None:
-        return self.log(logging.WARNING, msg, condition, *args, stacklevel=stacklevel, **kwargs)
+        return self.log(
+            logging.WARNING,
+            msg,
+            condition,
+            *args,
+            stacklevel=stacklevel,
+            **kwargs,
+        )
 
     def error(
         self,
@@ -231,7 +253,14 @@ class LoggingDescriptor:
         stacklevel: int = 3,
         **kwargs: Any,
     ) -> None:
-        return self.log(logging.ERROR, msg, condition, *args, stacklevel=stacklevel, **kwargs)
+        return self.log(
+            logging.ERROR,
+            msg,
+            condition,
+            *args,
+            stacklevel=stacklevel,
+            **kwargs,
+        )
 
     def trace(
         self,
@@ -286,7 +315,14 @@ class LoggingDescriptor:
         stacklevel: int = 3,
         **kwargs: Any,
     ) -> None:
-        return self.log(logging.CRITICAL, msg, condition, *args, stacklevel=stacklevel, **kwargs)
+        return self.log(
+            logging.CRITICAL,
+            msg,
+            condition,
+            *args,
+            stacklevel=stacklevel,
+            **kwargs,
+        )
 
     def is_enabled_for(self, level: int) -> bool:
         return self.logger.isEnabledFor(level)
@@ -371,7 +407,11 @@ class LoggingDescriptor:
                     level=level,
                     prefix=prefix,
                     condition=condition,
-                    states={CallState.ENTERING: entering, CallState.EXITING: exiting, CallState.EXCEPTION: exception},
+                    states={
+                        CallState.ENTERING: entering,
+                        CallState.EXITING: exiting,
+                        CallState.EXCEPTION: exception,
+                    },
                 )
             )
 
@@ -446,11 +486,13 @@ class LoggingDescriptor:
 
                 def build_exit_message(res: Any, duration: Optional[float]) -> str:
                     return "{0}(...) -> {1}{2}".format(
-                        func_name(), _repr(res), f" duration: {duration}" if duration is not None else ""
+                        func_name(),
+                        _repr(res),
+                        f" duration: {duration}" if duration is not None else "",
                     )
 
                 def build_exception_message(exception: BaseException) -> str:
-                    return "{0}(...) -> {1}: {2}".format(func_name(), type(exception).__qualname__, exception)
+                    return f"{func_name()}(...) -> {type(exception).__qualname__}: {exception}"
 
                 _log(build_enter_message, state=CallState.ENTERING)
 
@@ -488,6 +530,9 @@ class LoggingDescriptor:
             return func
 
         if _func is None:
-            return cast(Callable[[_F], _F], _decorator if type(self)._call_tracing_enabled else _empty__decorator)
+            return cast(
+                Callable[[_F], _F],
+                _decorator if type(self)._call_tracing_enabled else _empty__decorator,
+            )
 
         return _decorator(_func) if type(self)._call_tracing_enabled else _empty__decorator(_func)

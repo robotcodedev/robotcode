@@ -31,7 +31,16 @@ class _Parts:
         yield from astuple(self)
 
     def __hash__(self) -> int:
-        return hash((self.scheme, self.netloc, self.path, self.params, self.query, self.fragment))
+        return hash(
+            (
+                self.scheme,
+                self.netloc,
+                self.path,
+                self.params,
+                self.query,
+                self.fragment,
+            )
+        )
 
 
 class Uri(Mapping[str, str]):

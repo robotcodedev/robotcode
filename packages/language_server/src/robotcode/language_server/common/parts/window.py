@@ -147,7 +147,12 @@ class WindowProtocolPart(LanguageServerProtocolPart):
 
         r = self.parent.send_request(
             "window/showDocument",
-            ShowDocumentParams(uri=uri, external=external, take_focus=take_focus, selection=selection),
+            ShowDocumentParams(
+                uri=uri,
+                external=external,
+                take_focus=take_focus,
+                selection=selection,
+            ),
             ShowDocumentResult,
         ).result(30)
         return r.success if r is not None else False
@@ -192,19 +197,20 @@ class WindowProtocolPart(LanguageServerProtocolPart):
             and self.parent.client_capabilities.window.work_done_progress
         ):
             token = str(uuid.uuid4())
-            self.parent.send_request("window/workDoneProgress/create", WorkDoneProgressCreateParams(token))
+            self.parent.send_request(
+                "window/workDoneProgress/create",
+                WorkDoneProgressCreateParams(token),
+            )
             self.__progress_tokens[token] = False
             return token
 
         return None
 
-    @rpc_method(name="window/workDoneProgress/cancel", param_type=WorkDoneProgressCancelParams)
-    def _window_work_done_progress_cancel(
-        self,
-        token: ProgressToken,
-        *args: Any,
-        **kwargs: Any,
-    ) -> None:
+    @rpc_method(
+        name="window/workDoneProgress/cancel",
+        param_type=WorkDoneProgressCancelParams,
+    )
+    def _window_work_done_progress_cancel(self, token: ProgressToken, *args: Any, **kwargs: Any) -> None:
         if token in self.__progress_tokens:
             self.__progress_tokens[token] = True
 
@@ -272,11 +278,7 @@ class WindowProtocolPart(LanguageServerProtocolPart):
                 ),
             )
 
-    def progress_end(
-        self,
-        token: Optional[ProgressToken],
-        message: Optional[str] = None,
-    ) -> None:
+    def progress_end(self, token: Optional[ProgressToken], message: Optional[str] = None) -> None:
         if (
             token is not None
             and self.parent.client_capabilities

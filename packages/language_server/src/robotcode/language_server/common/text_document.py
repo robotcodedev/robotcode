@@ -5,7 +5,17 @@ import inspect
 import io
 import threading
 import weakref
-from typing import Any, Callable, Dict, Final, List, Optional, TypeVar, Union, cast
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Final,
+    List,
+    Optional,
+    TypeVar,
+    Union,
+    cast,
+)
 
 from robotcode.core.event import event
 from robotcode.core.lsp.types import DocumentUri, Position, Range
@@ -51,11 +61,17 @@ def position_to_utf16(lines: List[str], position: Position) -> Position:
 
 
 def range_from_utf16(lines: List[str], range: Range) -> Range:
-    return Range(start=position_from_utf16(lines, range.start), end=position_from_utf16(lines, range.end))
+    return Range(
+        start=position_from_utf16(lines, range.start),
+        end=position_from_utf16(lines, range.end),
+    )
 
 
 def range_to_utf16(lines: List[str], range: Range) -> Range:
-    return Range(start=position_to_utf16(lines, range.start), end=position_to_utf16(lines, range.end))
+    return Range(
+        start=position_to_utf16(lines, range.start),
+        end=position_to_utf16(lines, range.end),
+    )
 
 
 class InvalidRangeError(Exception):
@@ -226,10 +242,7 @@ class TextDocument:
 
         return weakref.ref(entry, self.__remove_cache_entry if add_remove else None)
 
-    def get_cache_value(
-        self,
-        entry: Callable[[TextDocument], _T],
-    ) -> Optional[_T]:
+    def get_cache_value(self, entry: Callable[[TextDocument], _T]) -> Optional[_T]:
         reference = self.__get_cache_reference(entry)
 
         e = self._cache.get(reference, None)

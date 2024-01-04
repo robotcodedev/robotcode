@@ -16,8 +16,14 @@ from robotcode.core.lsp.types import (
 )
 from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.jsonrpc2.protocol import rpc_method
-from robotcode.language_server.common.decorators import CODE_ACTION_KINDS_ATTR, HasCodeActionKinds, language_id_filter
-from robotcode.language_server.common.parts.protocol_part import LanguageServerProtocolPart
+from robotcode.language_server.common.decorators import (
+    CODE_ACTION_KINDS_ATTR,
+    HasCodeActionKinds,
+    language_id_filter,
+)
+from robotcode.language_server.common.parts.protocol_part import (
+    LanguageServerProtocolPart,
+)
 from robotcode.language_server.common.text_document import TextDocument
 
 if TYPE_CHECKING:
@@ -32,7 +38,10 @@ class CodeActionProtocolPart(LanguageServerProtocolPart):
 
     @event
     def collect(
-        sender, document: TextDocument, range: Range, context: CodeActionContext  # NOSONAR
+        sender,
+        document: TextDocument,
+        range: Range,
+        context: CodeActionContext,  # NOSONAR
     ) -> Optional[List[Union[Command, CodeAction]]]:
         ...
 
@@ -80,7 +89,11 @@ class CodeActionProtocolPart(LanguageServerProtocolPart):
                     r.location.range = document.range_from_utf16(r.location.range)
 
         for result in self.collect(
-            self, document, document.range_from_utf16(range), context, callback_filter=language_id_filter(document)
+            self,
+            document,
+            document.range_from_utf16(range),
+            context,
+            callback_filter=language_id_filter(document),
         ):
             check_current_thread_canceled()
 
@@ -98,12 +111,7 @@ class CodeActionProtocolPart(LanguageServerProtocolPart):
 
     @rpc_method(name="codeAction/resolve", param_type=CodeAction)
     @threaded
-    def _text_document_code_action_resolve(
-        self,
-        params: CodeAction,
-        *args: Any,
-        **kwargs: Any,
-    ) -> CodeAction:
+    def _text_document_code_action_resolve(self, params: CodeAction, *args: Any, **kwargs: Any) -> CodeAction:
         results: List[CodeAction] = []
 
         for result in self.resolve(self, params):

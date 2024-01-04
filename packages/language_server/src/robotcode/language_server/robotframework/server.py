@@ -1,7 +1,10 @@
 from typing import Optional
 
 from robotcode.core.types import ServerMode, TcpParams
-from robotcode.language_server.common.server import TCP_DEFAULT_PORT, LanguageServerBase
+from robotcode.language_server.common.server import (
+    TCP_DEFAULT_PORT,
+    LanguageServerBase,
+)
 from robotcode.robot.config.model import RobotBaseProfile
 
 from .protocol import RobotLanguageServerProtocol

@@ -1,6 +1,15 @@
 import ast
 from concurrent.futures import CancelledError
-from typing import TYPE_CHECKING, Any, Callable, Optional, Sequence, Tuple, Type, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Optional,
+    Sequence,
+    Tuple,
+    Type,
+    cast,
+)
 
 from robot.parsing.lexer.tokens import Token
 from robot.parsing.model.statements import Statement
@@ -15,9 +24,17 @@ from robotcode.core.lsp.types import (
 )
 from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.robot.diagnostics.library_doc import KeywordDoc, LibraryDoc
-from robotcode.robot.utils.ast import get_node_at_position, get_tokens_at_position, range_from_token
+from robotcode.robot.utils.ast import (
+    get_node_at_position,
+    get_tokens_at_position,
+    range_from_token,
+)
 
-from ...common.decorators import language_id, retrigger_characters, trigger_characters
+from ...common.decorators import (
+    language_id,
+    retrigger_characters,
+    trigger_characters,
+)
 from ...common.text_document import TextDocument
 from ..diagnostics.model_helper import ModelHelperMixin
 from .protocol_part import RobotLanguageServerProtocolPart
@@ -26,7 +43,8 @@ if TYPE_CHECKING:
     from ..protocol import RobotLanguageServerProtocol
 
 _SignatureHelpMethod = Callable[
-    [ast.AST, TextDocument, Position, Optional[SignatureHelpContext]], Optional[SignatureHelp]
+    [ast.AST, TextDocument, Position, Optional[SignatureHelpContext]],
+    Optional[SignatureHelp],
 ]
 
 
@@ -57,10 +75,16 @@ class RobotSignatureHelpProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
     @retrigger_characters([" ", "\t"])
     @_logger.call
     def collect(
-        self, sender: Any, document: TextDocument, position: Position, context: Optional[SignatureHelpContext] = None
+        self,
+        sender: Any,
+        document: TextDocument,
+        position: Position,
+        context: Optional[SignatureHelpContext] = None,
     ) -> Optional[SignatureHelp]:
         result_node = get_node_at_position(
-            self.parent.documents_cache.get_model(document, False), position, include_end=True
+            self.parent.documents_cache.get_model(document, False),
+            position,
+            include_end=True,
         )
         if result_node is None:
             return None
@@ -90,7 +114,11 @@ class RobotSignatureHelpProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
 
         token_at_position = tokens_at_position[-1]
 
-        if token_at_position.type not in [RobotToken.ARGUMENT, RobotToken.EOL, RobotToken.SEPARATOR]:
+        if token_at_position.type not in [
+            RobotToken.ARGUMENT,
+            RobotToken.EOL,
+            RobotToken.SEPARATOR,
+        ]:
             return None
 
         keyword_doc_and_token: Optional[Tuple[Optional[KeywordDoc], Token]] = None
@@ -164,14 +192,22 @@ class RobotSignatureHelpProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
         )
 
     def signature_help_KeywordCall(  # noqa: N802
-        self, node: ast.AST, document: TextDocument, position: Position, context: Optional[SignatureHelpContext] = None
+        self,
+        node: ast.AST,
+        document: TextDocument,
+        position: Position,
+        context: Optional[SignatureHelpContext] = None,
     ) -> Optional[SignatureHelp]:
         from robot.parsing.lexer.tokens import Token as RobotToken
 
         return self._signature_help_KeywordCall_or_Fixture(RobotToken.KEYWORD, node, document, position, context)
 
     def signature_help_Fixture(  # noqa: N802
-        self, node: ast.AST, document: TextDocument, position: Position, context: Optional[SignatureHelpContext] = None
+        self,
+        node: ast.AST,
+        document: TextDocument,
+        position: Position,
+        context: Optional[SignatureHelpContext] = None,
     ) -> Optional[SignatureHelp]:
         from robot.parsing.lexer.tokens import Token as RobotToken
         from robot.parsing.model.statements import Fixture
@@ -229,7 +265,11 @@ class RobotSignatureHelpProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
 
         token_at_position = tokens_at_position[-1]
 
-        if token_at_position.type not in [RobotToken.ARGUMENT, RobotToken.EOL, RobotToken.SEPARATOR]:
+        if token_at_position.type not in [
+            RobotToken.ARGUMENT,
+            RobotToken.EOL,
+            RobotToken.SEPARATOR,
+        ]:
             return None
 
         if not lib_doc.inits:
@@ -289,7 +329,11 @@ class RobotSignatureHelpProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
 
         token_at_position = tokens_at_position[-1]
 
-        if token_at_position.type not in [RobotToken.ARGUMENT, RobotToken.EOL, RobotToken.SEPARATOR]:
+        if token_at_position.type not in [
+            RobotToken.ARGUMENT,
+            RobotToken.EOL,
+            RobotToken.SEPARATOR,
+        ]:
             return None
 
         if not lib_doc.inits:

@@ -138,7 +138,11 @@ class EventDescriptorBase(Generic[_TParams, _TResult, _TEvent]):
 
         name = f"__event_{self._func.__name__}__"
         if not hasattr(obj, name):
-            setattr(obj, name, self.__factory(*self.__factory_args, **self.__factory_kwargs))
+            setattr(
+                obj,
+                name,
+                self.__factory(*self.__factory_args, **self.__factory_kwargs),
+            )
 
         return cast("_TEvent", getattr(obj, name))
 

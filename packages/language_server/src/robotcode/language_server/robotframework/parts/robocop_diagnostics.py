@@ -141,12 +141,15 @@ class RobotRoboCopDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
                 self.parent.documents_cache.get_model(document, False),
                 str(document.uri.to_path()),
                 document.text(),
-            )
+            )  # type: ignore[no-untyped-call]
 
             for issue in issues:
                 d = Diagnostic(
                     range=Range(
-                        start=Position(line=max(0, issue.line - 1), character=max(0, issue.col - 1)),
+                        start=Position(
+                            line=max(0, issue.line - 1),
+                            character=max(0, issue.col - 1),
+                        ),
                         end=Position(
                             line=max(0, issue.end_line - 1),
                             character=max(0, issue.end_col - 1),

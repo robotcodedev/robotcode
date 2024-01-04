@@ -16,9 +16,19 @@ from robot.parsing.lexer.tokens import Token
 from robot.parsing.model.blocks import TestCase, TestCaseSection
 from robot.parsing.model.statements import Documentation, Tags
 from robotcode.core.concurrent import check_current_thread_canceled
-from robotcode.core.lsp.types import Hover, MarkupContent, MarkupKind, Position, Range
+from robotcode.core.lsp.types import (
+    Hover,
+    MarkupContent,
+    MarkupKind,
+    Position,
+    Range,
+)
 from robotcode.core.utils.logging import LoggingDescriptor
-from robotcode.robot.utils.ast import get_nodes_at_position, range_from_node, range_from_token
+from robotcode.robot.utils.ast import (
+    get_nodes_at_position,
+    range_from_node,
+    range_from_token,
+)
 from robotcode.robot.utils.markdownformatter import MarkDownFormatter
 
 from ...common.decorators import language_id
@@ -94,7 +104,13 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
                 found_range = (
                     variable.name_range
                     if variable.source == namespace.source and position.is_in_range(variable.name_range, False)
-                    else cast(Optional[Range], next((r.range for r in var_refs if position.is_in_range(r.range)), None))
+                    else cast(
+                        Optional[Range],
+                        next(
+                            (r.range for r in var_refs if position.is_in_range(r.range)),
+                            None,
+                        ),
+                    )
                 )
 
                 if found_range is not None:
@@ -108,7 +124,11 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
                                     namespace.get_resolvable_variables(nodes, position),
                                 )
                             )
-                        except (asyncio.CancelledError, SystemExit, KeyboardInterrupt):
+                        except (
+                            asyncio.CancelledError,
+                            SystemExit,
+                            KeyboardInterrupt,
+                        ):
                             raise
                         except BaseException:
                             self._logger.exception("Error resolving variable: {e}")
@@ -124,10 +144,7 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
             if text:
                 text = "| | | |\n|:--|:--|:--|\n" + text
                 return Hover(
-                    contents=MarkupContent(
-                        kind=MarkupKind.MARKDOWN,
-                        value=text,
-                    ),
+                    contents=MarkupContent(kind=MarkupKind.MARKDOWN, value=text),
                     range=highlight_range,
                 )
 
@@ -142,7 +159,11 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
                     kw.name_range
                     if kw.source == namespace.source and position.is_in_range(kw.name_range, False)
                     else cast(
-                        Optional[Range], next((r.range for r in kw_refs if position.is_in_range(r.range, False)), None)
+                        Optional[Range],
+                        next(
+                            (r.range for r in kw_refs if position.is_in_range(r.range, False)),
+                            None,
+                        ),
                     )
                 )
 
@@ -168,20 +189,31 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
                     else ns.alias_range
                     if ns.import_source == namespace.source and position.is_in_range(ns.alias_range, False)
                     else cast(
-                        Optional[Range], next((r.range for r in ns_refs if position.is_in_range(r.range, False)), None)
+                        Optional[Range],
+                        next(
+                            (r.range for r in ns_refs if position.is_in_range(r.range, False)),
+                            None,
+                        ),
                     )
                 )
 
                 if found_range is not None:
                     return Hover(
-                        contents=MarkupContent(kind=MarkupKind.MARKDOWN, value=ns.library_doc.to_markdown()),
+                        contents=MarkupContent(
+                            kind=MarkupKind.MARKDOWN,
+                            value=ns.library_doc.to_markdown(),
+                        ),
                         range=found_range,
                     )
 
         return None
 
     def hover_TestCase(  # noqa: N802
-        self, node: ast.AST, nodes: List[ast.AST], document: TextDocument, position: Position
+        self,
+        node: ast.AST,
+        nodes: List[ast.AST],
+        document: TextDocument,
+        position: Position,
     ) -> Optional[Hover]:
         test_case = cast(TestCase, node)
 
@@ -210,9 +242,6 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
             txt += f"{', '.join(tags.values)}\n"
 
         return Hover(
-            contents=MarkupContent(
-                kind=MarkupKind.MARKDOWN,
-                value=MarkDownFormatter().format(txt),
-            ),
+            contents=MarkupContent(kind=MarkupKind.MARKDOWN, value=MarkDownFormatter().format(txt)),
             range=range_from_token(name_token),
         )

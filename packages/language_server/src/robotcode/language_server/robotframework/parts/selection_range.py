@@ -3,7 +3,12 @@ from typing import TYPE_CHECKING, Any, List, Optional
 from robot.parsing.model.statements import Statement
 from robotcode.core.lsp.types import Position, SelectionRange
 from robotcode.core.utils.logging import LoggingDescriptor
-from robotcode.robot.utils.ast import get_nodes_at_position, get_tokens_at_position, range_from_node, range_from_token
+from robotcode.robot.utils.ast import (
+    get_nodes_at_position,
+    get_tokens_at_position,
+    range_from_node,
+    range_from_token,
+)
 
 from ...common.decorators import language_id
 from ...common.text_document import TextDocument
@@ -47,7 +52,11 @@ class RobotSelectionRangeProtocolPart(RobotLanguageServerProtocolPart, ModelHelp
                         if token is not None:
                             current_range = SelectionRange(range_from_token(token), current_range)
                             for var_token, _ in self.iter_variables_from_token(
-                                token, namespace, nodes, position, return_not_found=True
+                                token,
+                                namespace,
+                                nodes,
+                                position,
+                                return_not_found=True,
                             ):
                                 var_token_range = range_from_token(var_token)
 

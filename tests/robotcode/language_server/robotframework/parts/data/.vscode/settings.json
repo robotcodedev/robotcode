@@ -29,7 +29,7 @@
     //"robotcode.robot.paths": ["./tests", "./tests1"]
     "robotcode.analysis.referencesCodeLens": true,
     "robotcode.analysis.diagnosticMode": "workspace",
-    "robotcode.analysis.progressMode": "detailed",
+    "robotcode.analysis.progressMode": "simple",
     "robotcode.analysis.findUnusedReferences": true,
     "robotcode.analysis.cache.saveLocation": "workspaceFolder",
     "robotcode.analysis.cache.ignoredLibraries": [

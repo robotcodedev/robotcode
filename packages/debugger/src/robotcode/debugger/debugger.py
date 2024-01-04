@@ -72,7 +72,9 @@ from .dap_types import (
 )
 
 if get_robot_version() >= (7, 0):
-    from robot.running.invalidkeyword import InvalidKeywordRunner as UserKeywordHandler
+    from robot.running.invalidkeyword import (
+        InvalidKeywordRunner as UserKeywordHandler,
+    )
 else:
     from robot.running.userkeyword import UserKeywordHandler
 
@@ -245,10 +247,10 @@ else:
         def __init__(self) -> None:
             self.steps: List[Any] = []
 
-        def start_keyword(self, data: "running.Keyword", result: "result.Keyword") -> None:
+        def start_keyword(self, data: running.Keyword, result: result.Keyword) -> None:
             self.steps.append(data)
 
-        def end_keyword(self, data: "running.Keyword", result: "result.Keyword") -> None:
+        def end_keyword(self, data: running.Keyword, result: result.Keyword) -> None:
             self.steps.pop()
 
 
@@ -336,7 +338,10 @@ class Debugger:
     def state(self, value: State) -> None:
         # if state is changed, do nothing and wait a little bit to avoid busy loop
 
-        if self._state == State.Paused and value not in [State.Paused, State.CallKeyword]:
+        if self._state == State.Paused and value not in [
+            State.Paused,
+            State.CallKeyword,
+        ]:
             self._variables_cache.clear()
             self._variables_object_cache.clear()
             self._evaluate_cache.clear()
@@ -396,7 +401,10 @@ class Debugger:
                 self.send_event(
                     self,
                     ContinuedEvent(
-                        body=ContinuedEventBody(thread_id=self.main_thread.ident, all_threads_continued=True)
+                        body=ContinuedEventBody(
+                            thread_id=self.main_thread.ident,
+                            all_threads_continued=True,
+                        )
                     ),
                 )
 
@@ -428,7 +436,10 @@ class Debugger:
             raise InvalidThreadIdError(thread_id)
 
         with self.condition:
-            if self.full_stack_frames and self.full_stack_frames[0].type in ["TEST", "SUITE"]:
+            if self.full_stack_frames and self.full_stack_frames[0].type in [
+                "TEST",
+                "SUITE",
+            ]:
                 self.requested_state = RequestedState.StepIn
             else:
                 self.requested_state = RequestedState.Next
@@ -451,7 +462,10 @@ class Debugger:
             self.condition.notify_all()
 
     def step_in(
-        self, thread_id: int, target_id: Optional[int] = None, granularity: Optional[SteppingGranularity] = None
+        self,
+        thread_id: int,
+        target_id: Optional[int] = None,
+        granularity: Optional[SteppingGranularity] = None,
     ) -> None:
         if self.main_thread is None or thread_id != self.main_thread.ident:
             raise InvalidThreadIdError(thread_id)
@@ -508,10 +522,16 @@ class Debugger:
             self.breakpoints.pop(path)
         elif path:
             self.breakpoints[path] = result = BreakpointsEntry(
-                tuple(breakpoints) if breakpoints else (), tuple(lines) if lines else ()
+                tuple(breakpoints) if breakpoints else (),
+                tuple(lines) if lines else (),
             )
             return [
-                Breakpoint(id=id(v), source=Source(path=str(path)), verified=True, line=v.line)
+                Breakpoint(
+                    id=id(v),
+                    source=Source(path=str(path)),
+                    verified=True,
+                    line=v.line,
+                )
                 for v in result.breakpoints
             ]
 
@@ -590,7 +610,12 @@ class Debugger:
                             hit = False
                             try:
                                 vars = EXECUTION_CONTEXTS.current.variables.current
-                                hit = bool(internal_evaluate_expression(vars.replace_string(point.condition), vars))
+                                hit = bool(
+                                    internal_evaluate_expression(
+                                        vars.replace_string(point.condition),
+                                        vars,
+                                    )
+                                )
                             except (SystemExit, KeyboardInterrupt):
                                 raise
                             except BaseException:
@@ -647,7 +672,13 @@ class Debugger:
                             ),
                         )
 
-    def process_end_state(self, status: str, filter_id: Set[str], description: str, text: Optional[str]) -> None:
+    def process_end_state(
+        self,
+        status: str,
+        filter_id: Set[str],
+        description: str,
+        text: Optional[str],
+    ) -> None:
         if self.state == State.Stopped:
             return
 
@@ -709,7 +740,10 @@ class Debugger:
                         self.send_event(
                             self,
                             ContinuedEvent(
-                                body=ContinuedEventBody(thread_id=self.main_thread.ident, all_threads_continued=True)
+                                body=ContinuedEventBody(
+                                    thread_id=self.main_thread.ident,
+                                    all_threads_continued=True,
+                                )
                             ),
                         )
                     continue
@@ -718,14 +752,14 @@ class Debugger:
 
     def start_output_group(self, name: str, attributes: Dict[str, Any], type: Optional[str] = None) -> None:
         if self.group_output:
-            source = attributes.get("source", None)
-            line_no = attributes.get("lineno", None)
+            source = attributes.get("source")
+            line_no = attributes.get("lineno")
 
             self.send_event(
                 self,
                 OutputEvent(
                     body=OutputEventBody(
-                        output=f"\u001b[38;5;14m{(type +' ') if type else ''}\u001b[0m{name}\n",
+                        output=f"\u001b[38;5;14m{(type + ' ') if type else ''}\u001b[0m{name}\n",
                         category=OutputCategory.CONSOLE,
                         group=OutputGroup.START,
                         source=Source(path=str(self.map_path_to_client(source))) if source else None,
@@ -737,8 +771,8 @@ class Debugger:
 
     def end_output_group(self, name: str, attributes: Dict[str, Any], type: Optional[str] = None) -> None:
         if self.group_output:
-            source = attributes.get("source", None)
-            line_no = attributes.get("lineno", None)
+            source = attributes.get("source")
+            line_no = attributes.get("lineno")
 
             self.send_event(
                 self,
@@ -791,7 +825,7 @@ class Debugger:
 
         self.full_stack_frames.appendleft(result)
 
-        if type in ["KEYWORD"] and source is None and line is None and column is None:
+        if type == "KEYWORD" and source is None and line is None and column is None:
             return result
 
         if type in ["SUITE", "TEST"]:
@@ -819,7 +853,7 @@ class Debugger:
     ) -> None:
         self.full_stack_frames.popleft()
 
-        if type in ["KEYWORD"] and source is None and line is None and column is None:
+        if type == "KEYWORD" and source is None and line is None and column is None:
             return
 
         if type in ["SUITE", "TEST"]:
@@ -839,7 +873,7 @@ class Debugger:
             self.debug_logger = DebugLogger()
             LOGGER.register_logger(self.debug_logger)
 
-        source = attributes.get("source", None)
+        source = attributes.get("source")
         line_no = attributes.get("lineno", 1)
         longname = attributes.get("longname", "")
         status = attributes.get("status", "")
@@ -865,7 +899,12 @@ class Debugger:
 
                 self.wait_for_running()
             elif entry.source:
-                self.process_start_state(entry.source, entry.line if entry.line is not None else 0, entry.type, status)
+                self.process_start_state(
+                    entry.source,
+                    entry.line if entry.line is not None else 0,
+                    entry.type,
+                    status,
+                )
 
                 self.wait_for_running()
 
@@ -879,19 +918,19 @@ class Debugger:
                         status,
                         {"failed_suite"},
                         "Suite failed.",
-                        f"Suite failed{f': {v}' if (v:=attributes.get('message', None)) else ''}",
+                        f"Suite failed{f': {v}' if (v := attributes.get('message')) else ''}",
                     )
 
                 self.wait_for_running()
 
-        source = attributes.get("source", None)
+        source = attributes.get("source")
         line_no = attributes.get("lineno", 1)
         type = "SUITE"
 
         self.remove_stackframe_entry(name, type, source, line_no)
 
     def start_test(self, name: str, attributes: Dict[str, Any]) -> None:
-        source = attributes.get("source", None)
+        source = attributes.get("source")
         line_no = attributes.get("lineno", 1)
         longname = attributes.get("longname", "")
         status = attributes.get("status", "")
@@ -901,7 +940,12 @@ class Debugger:
         entry = self.add_stackframe_entry(name, type, source, line_no, longname=longname)
 
         if self.debug and entry.source:
-            self.process_start_state(entry.source, entry.line if entry.line is not None else 0, entry.type, status)
+            self.process_start_state(
+                entry.source,
+                entry.line if entry.line is not None else 0,
+                entry.type,
+                status,
+            )
 
             self.wait_for_running()
 
@@ -914,12 +958,12 @@ class Debugger:
                     status,
                     {"failed_test"},
                     "Test failed.",
-                    f"Test failed{f': {v}' if (v:=attributes.get('message', None)) else ''}",
+                    f"Test failed{f': {v}' if (v := attributes.get('message')) else ''}",
                 )
 
                 self.wait_for_running()
 
-        source = attributes.get("source", None)
+        source = attributes.get("source")
         line_no = attributes.get("lineno", 1)
         longname = attributes.get("longname", "")
         type = "TEST"
@@ -928,11 +972,11 @@ class Debugger:
 
     def start_keyword(self, name: str, attributes: Dict[str, Any]) -> None:
         status = attributes.get("status", "")
-        source = attributes.get("source", None)
-        line_no = attributes.get("lineno", None)
+        source = attributes.get("source")
+        line_no = attributes.get("lineno")
         type = attributes.get("type", "KEYWORD")
-        libname = attributes.get("libname", None)
-        kwname = attributes.get("kwname", None)
+        libname = attributes.get("libname")
+        kwname = attributes.get("kwname")
 
         handler: Any = None
         if type in ["KEYWORD", "SETUP", "TEARDOWN"]:
@@ -944,10 +988,17 @@ class Debugger:
                 pass
 
         entry = self.add_stackframe_entry(
-            kwname, type, source, line_no, handler=handler, libname=libname, kwname=kwname, longname=name
+            str(kwname),
+            type,
+            source,
+            line_no,
+            handler=handler,
+            libname=libname,
+            kwname=kwname,
+            longname=name,
         )
 
-        if status == "NOT RUN" and type not in ["IF"]:
+        if status == "NOT RUN" and type != "IF":
             return
 
         if self.debug and entry.source and entry.line is not None:
@@ -1004,7 +1055,10 @@ class Debugger:
             return False
 
         for pattern in branch.patterns:
-            if matcher(error, EXECUTION_CONTEXTS.current.variables.replace_string(pattern)):
+            if matcher(
+                error,
+                EXECUTION_CONTEXTS.current.variables.replace_string(pattern),
+            ):
                 return True
 
         return False
@@ -1024,7 +1078,7 @@ class Debugger:
         return True
 
     def end_keyword(self, name: str, attributes: Dict[str, Any]) -> None:
-        type = attributes.get("type", None)
+        type = attributes.get("type")
         if self.debug:
             status = attributes.get("status", "")
 
@@ -1046,10 +1100,10 @@ class Debugger:
 
                 self.wait_for_running()
 
-        source = attributes.get("source", None)
-        line_no = attributes.get("lineno", None)
+        source = attributes.get("source")
+        line_no = attributes.get("lineno")
         type = attributes.get("type", "KEYWORD")
-        kwname = attributes.get("kwname", None)
+        kwname = attributes.get("kwname")
 
         handler: Any = None
         if type in ["KEYWORD", "SETUP", "TEARDOWN"]:
@@ -1060,7 +1114,7 @@ class Debugger:
             except BaseException:
                 pass
 
-        self.remove_stackframe_entry(kwname, type, source, line_no, handler=handler)
+        self.remove_stackframe_entry(str(kwname), type, source, line_no, handler=handler)
 
     def set_main_thread(self, thread: threading.Thread) -> None:
         self.main_thread = thread
@@ -1068,7 +1122,12 @@ class Debugger:
     def get_threads(self) -> List[Thread]:
         main_thread = self.main_thread or threading.main_thread()
 
-        return [Thread(id=main_thread.ident if main_thread.ident else 0, name=main_thread.name or "")]
+        return [
+            Thread(
+                id=main_thread.ident if main_thread.ident else 0,
+                name=main_thread.name or "",
+            )
+        ]
 
     WINDOW_PATH_REGEX: ClassVar = re.compile(r"^(([a-z]:[\\/])|(\\\\)).*$", re.RegexFlag.IGNORECASE)
 
@@ -1106,7 +1165,10 @@ class Debugger:
 
     def source_from_entry(self, entry: StackFrameEntry) -> Optional[Source]:
         if entry.source is not None and entry.is_file:
-            return Source(path=str(self.map_path_to_client(entry.source)), presentation_hint="normal")
+            return Source(
+                path=str(self.map_path_to_client(entry.source)),
+                presentation_hint="normal",
+            )
 
         return None
 
@@ -1171,7 +1233,13 @@ class Debugger:
 
     RE_FILE_LINE_MATCHER = re.compile(r".+\sin\sfile\s'(?P<file>.*)'\son\sline\s(?P<line>\d+):.*")
 
-    def _send_log_event(self, timestamp: str, level: str, msg: str, category: Union[OutputCategory, str]) -> None:
+    def _send_log_event(
+        self,
+        timestamp: str,
+        level: str,
+        msg: str,
+        category: Union[OutputCategory, str],
+    ) -> None:
         current_frame = self.full_stack_frames[0] if self.full_stack_frames else None
         source = (
             Source(path=str(self.map_path_to_client(current_frame.source)))
@@ -1239,7 +1307,7 @@ class Debugger:
                         variables_reference=entry.local_id(),
                     )
                 )
-                if context.variables._test is not None and entry.type in ["KEYWORD"]:
+                if context.variables._test is not None and entry.type == "KEYWORD":
                     result.append(
                         Scope(
                             name="Test",
@@ -1248,7 +1316,10 @@ class Debugger:
                             variables_reference=entry.test_id(),
                         )
                     )
-                if context.variables._suite is not None and entry.type in ["TEST", "KEYWORD"]:
+                if context.variables._suite is not None and entry.type in [
+                    "TEST",
+                    "KEYWORD",
+                ]:
                     result.append(
                         Scope(
                             name="Suite",
@@ -1389,7 +1460,8 @@ class Debugger:
                         result[repr(i)] = self._create_variable(repr(k), v)
                         if i >= 500:
                             result["Unable to handle"] = self._create_variable(
-                                "Unable to handle", "Maximum number of items (500) reached."
+                                "Unable to handle",
+                                "Maximum number of items (500) reached.",
                             )
                             break
 
@@ -1483,7 +1555,11 @@ class Debugger:
                         if splitted:
 
                             def run_kw() -> Any:
-                                kw = Keyword(name=splitted[0], args=tuple(splitted[1:]), assign=tuple(variables))
+                                kw = Keyword(
+                                    name=splitted[0],
+                                    args=tuple(splitted[1:]),
+                                    assign=tuple(variables),
+                                )
                                 return kw.run(evaluate_context)
 
                             result = self.run_in_robot_thread(run_kw)
@@ -1659,7 +1735,11 @@ class Debugger:
         return SetVariableResult(value=repr(value), type=repr(type(value)))
 
     def set_variable(
-        self, variables_reference: int, name: str, value: str, format: Optional[ValueFormat] = None
+        self,
+        variables_reference: int,
+        name: str,
+        value: str,
+        format: Optional[ValueFormat] = None,
     ) -> SetVariableResult:
         entry = next(
             (
@@ -1697,7 +1777,12 @@ class Debugger:
 
         if filter_options is not None:
             for option in filter_options:
-                if option.filter_id in ["failed_keyword", "uncaught_failed_keyword", "failed_test", "failed_suite"]:
+                if option.filter_id in [
+                    "failed_keyword",
+                    "uncaught_failed_keyword",
+                    "failed_test",
+                    "failed_suite",
+                ]:
                     entry = ExceptionBreakpointsEntry(
                         tuple(filters),
                         tuple(filter_options) if filter_options is not None else None,
@@ -1712,7 +1797,11 @@ class Debugger:
         return result or None
 
     def completions(
-        self, text: str, column: int, line: Optional[int] = None, frame_id: Optional[int] = None
+        self,
+        text: str,
+        column: int,
+        line: Optional[int] = None,
+        frame_id: Optional[int] = None,
     ) -> List[CompletionItem]:
         if self.expression_mode:
             return []

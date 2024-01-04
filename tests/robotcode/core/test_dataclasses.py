@@ -77,7 +77,12 @@ from robotcode.core.lsp.types import (
     WorkspaceSymbolClientCapabilitiesSymbolKindType,
     WorkspaceSymbolClientCapabilitiesTagSupportType,
 )
-from robotcode.core.utils.dataclasses import as_json, from_json, to_camel_case, to_snake_case
+from robotcode.core.utils.dataclasses import (
+    as_json,
+    from_json,
+    to_camel_case,
+    to_snake_case,
+)
 
 
 class EnumData(Enum):
@@ -155,7 +160,10 @@ class ComplexItemWithConfigEncodeCase(ComplexItem):
 @pytest.mark.parametrize(
     ("expr", "expected"),
     [
-        (ComplexItemWithConfigEncodeCase([], {}), '{"listField": [], "dictField": {}}'),
+        (
+            ComplexItemWithConfigEncodeCase([], {}),
+            '{"listField": [], "dictField": {}}',
+        ),
         (
             ComplexItemWithConfigEncodeCase([1, "2", 3], {"a": "hello", 1: True}),
             '{"listField": [1, "2", 3], "dictField": {"a": "hello", "1": true}}',
@@ -202,8 +210,16 @@ def test_encode_with_optional_field_and_none_as_default_value() -> None:
         ("[]", Union[int, str, List[int]], []),
         ('"first"', EnumData, EnumData.FIRST),
         ('"second"', EnumData, EnumData.SECOND),
-        ('["first", "second"]', List[EnumData], [EnumData.FIRST, EnumData.SECOND]),
-        ('["first", "second", "ninety"]', List[Union[EnumData, str]], [EnumData.FIRST, EnumData.SECOND, "ninety"]),
+        (
+            '["first", "second"]',
+            List[EnumData],
+            [EnumData.FIRST, EnumData.SECOND],
+        ),
+        (
+            '["first", "second", "ninety"]',
+            List[Union[EnumData, str]],
+            [EnumData.FIRST, EnumData.SECOND, "ninety"],
+        ),
     ],
 )
 def test_decode_simple(expr: Any, type: Any, expected: str) -> None:
@@ -217,8 +233,16 @@ def test_decode_simple(expr: Any, type: Any, expected: str) -> None:
         ('{"a": 1}', dict, {"a": 1}),
         ('{"a": 1}', Dict[str, int], {"a": 1}),
         ('{"a": 1, "b": 2}', Dict[str, int], {"a": 1, "b": 2}),
-        ('{"a": 1, "b": null}', Dict[str, Union[int, str, None]], {"a": 1, "b": None}),
-        ('{"a": {}, "b": {"a": 2}}', Dict[str, Dict[str, Any]], {"a": {}, "b": {"a": 2}}),
+        (
+            '{"a": 1, "b": null}',
+            Dict[str, Union[int, str, None]],
+            {"a": 1, "b": None},
+        ),
+        (
+            '{"a": {}, "b": {"a": 2}}',
+            Dict[str, Dict[str, Any]],
+            {"a": {}, "b": {"a": 2}},
+        ),
     ],
 )
 def test_decode_dict(expr: Any, type: Any, expected: str) -> None:
@@ -309,13 +333,21 @@ class SimpleItemWithOptionalFields:
 @pytest.mark.parametrize(
     ("expr", "type", "expected"),
     [
-        ('{"first": 1}', SimpleItemWithOptionalFields, SimpleItemWithOptionalFields(first=1)),
+        (
+            '{"first": 1}',
+            SimpleItemWithOptionalFields,
+            SimpleItemWithOptionalFields(first=1),
+        ),
         (
             '{"first": 1, "third": "Hello"}',
             SimpleItemWithOptionalFields,
             SimpleItemWithOptionalFields(first=1, third="Hello"),
         ),
-        ('{"first": 1, "forth": 1.0}', SimpleItemWithOptionalFields, SimpleItemWithOptionalFields(first=1, forth=1.0)),
+        (
+            '{"first": 1, "forth": 1.0}',
+            SimpleItemWithOptionalFields,
+            SimpleItemWithOptionalFields(first=1, forth=1.0),
+        ),
     ],
 )
 def test_decode_simple_item_with_optional_field(expr: Any, type: Any, expected: str) -> None:
@@ -337,8 +369,16 @@ class ComplexItemWithUnionType:
 @pytest.mark.parametrize(
     ("expr", "type", "expected"),
     [
-        ('{"a_union_field":{"a":1, "b":2}}', ComplexItemWithUnionType, ComplexItemWithUnionType(SimpleItem(1, 2))),
-        ('{"a_union_field":{"d":1, "e":2}}', ComplexItemWithUnionType, ComplexItemWithUnionType(SimpleItem1(1, 2))),
+        (
+            '{"a_union_field":{"a":1, "b":2}}',
+            ComplexItemWithUnionType,
+            ComplexItemWithUnionType(SimpleItem(1, 2)),
+        ),
+        (
+            '{"a_union_field":{"d":1, "e":2}}',
+            ComplexItemWithUnionType,
+            ComplexItemWithUnionType(SimpleItem1(1, 2)),
+        ),
         (
             '{"a_union_field":{"d":1, "e":2, "f": 3}}',
             ComplexItemWithUnionType,
@@ -364,13 +404,17 @@ class ComplexItemWithUnionTypeWithSameProperties:
 
 def test_decode_with_union_and_some_same_keys() -> None:
     assert from_json(
-        '{"a_union_field": {"a": 1, "b":2, "c":3}}', ComplexItemWithUnionTypeWithSameProperties
+        '{"a_union_field": {"a": 1, "b":2, "c":3}}',
+        ComplexItemWithUnionTypeWithSameProperties,
     ) == ComplexItemWithUnionTypeWithSameProperties(SimpleItem2(1, 2, 3))
 
 
 def test_decode_with_union_and_same_keys_should_raise_typeerror() -> None:
     with pytest.raises(TypeError):
-        from_json('{"a_union_field": {"a": 1, "b":2}}', ComplexItemWithUnionTypeWithSameProperties)
+        from_json(
+            '{"a_union_field": {"a": 1, "b":2}}',
+            ComplexItemWithUnionTypeWithSameProperties,
+        )
 
 
 def test_decode_with_union_and_no_keys_should_raise_typeerror() -> None:
@@ -380,7 +424,10 @@ def test_decode_with_union_and_no_keys_should_raise_typeerror() -> None:
 
 def test_decode_with_union_and_no_match_should_raise_typeerror() -> None:
     with pytest.raises(TypeError):
-        from_json('{"a_union_field": {"x": 1, "y":2}}', ComplexItemWithUnionTypeWithSameProperties)
+        from_json(
+            '{"a_union_field": {"x": 1, "y":2}}',
+            ComplexItemWithUnionTypeWithSameProperties,
+        )
 
 
 @dataclass
@@ -394,7 +441,11 @@ class SimpleItem3:
     ("expr", "type", "expected"),
     [
         ('{"a":1, "b": 2}', (SimpleItem, SimpleItem3), SimpleItem(1, 2)),
-        ('{"a":1, "b": 2, "c": 3}', (SimpleItem, SimpleItem3), SimpleItem3(1, 2, 3)),
+        (
+            '{"a":1, "b": 2, "c": 3}',
+            (SimpleItem, SimpleItem3),
+            SimpleItem3(1, 2, 3),
+        ),
     ],
 )
 def test_decode_with_some_same_fields(expr: Any, type: Any, expected: str) -> None:
@@ -433,7 +484,8 @@ def test_decode_union_with_simple_and_complex_types(expr: Any, type: Any, expect
 def test_decode_union_with_unknown_keys_should_raise_typeerror() -> None:
     with pytest.raises(TypeError):
         from_json(
-            '{"a_union_field": {"d":1, "ef":2}}', ComplexItemWithUnionTypeWithSimpleAndComplexTypes
+            '{"a_union_field": {"d":1, "ef":2}}',
+            ComplexItemWithUnionTypeWithSimpleAndComplexTypes,
         ) == ComplexItemWithUnionTypeWithSimpleAndComplexTypes(SimpleItem(1, 2))
 
 
@@ -441,12 +493,28 @@ def test_decode_union_with_unknown_keys_should_raise_typeerror() -> None:
     ("expr", "type", "expected"),
     [
         ('{"a":1, "b":2, "c":3}', SimpleItem, SimpleItem(1, 2)),
-        ('{"a":1, "b":2, "c":3}', SimpleItemWithOnlyOptionalFields, SimpleItemWithOnlyOptionalFields(1, 2)),
-        ('{"a":1}', SimpleItemWithOnlyOptionalFields, SimpleItemWithOnlyOptionalFields(1)),
-        ("{}", SimpleItemWithOnlyOptionalFields, SimpleItemWithOnlyOptionalFields()),
+        (
+            '{"a":1, "b":2, "c":3}',
+            SimpleItemWithOnlyOptionalFields,
+            SimpleItemWithOnlyOptionalFields(1, 2),
+        ),
+        (
+            '{"a":1}',
+            SimpleItemWithOnlyOptionalFields,
+            SimpleItemWithOnlyOptionalFields(1),
+        ),
+        (
+            "{}",
+            SimpleItemWithOnlyOptionalFields,
+            SimpleItemWithOnlyOptionalFields(),
+        ),
         ("{}", SimpleItemWithNoFields, SimpleItemWithNoFields()),
         ('{"a": 1}', SimpleItemWithNoFields, SimpleItemWithNoFields()),
-        ('{"a":1, "b":2, "c": 3}', (SimpleItemWithNoFields, SimpleItem), SimpleItem(1, 2)),
+        (
+            '{"a":1, "b":2, "c": 3}',
+            (SimpleItemWithNoFields, SimpleItem),
+            SimpleItem(1, 2),
+        ),
     ],
 )
 def test_decode_non_strict_should_work(expr: Any, type: Any, expected: str) -> None:
@@ -457,12 +525,28 @@ def test_decode_non_strict_should_work(expr: Any, type: Any, expected: str) -> N
     ("expr", "type", "expected"),
     [
         ('{"a":1, "b":2}', SimpleItem, SimpleItem(1, 2)),
-        ('{"a":1, "b":2}', SimpleItemWithOnlyOptionalFields, SimpleItemWithOnlyOptionalFields(1, 2)),
-        ('{"a":1}', SimpleItemWithOnlyOptionalFields, SimpleItemWithOnlyOptionalFields(1)),
-        ("{}", SimpleItemWithOnlyOptionalFields, SimpleItemWithOnlyOptionalFields()),
+        (
+            '{"a":1, "b":2}',
+            SimpleItemWithOnlyOptionalFields,
+            SimpleItemWithOnlyOptionalFields(1, 2),
+        ),
+        (
+            '{"a":1}',
+            SimpleItemWithOnlyOptionalFields,
+            SimpleItemWithOnlyOptionalFields(1),
+        ),
+        (
+            "{}",
+            SimpleItemWithOnlyOptionalFields,
+            SimpleItemWithOnlyOptionalFields(),
+        ),
         ("{}", SimpleItemWithNoFields, SimpleItemWithNoFields()),
         ("{}", (SimpleItemWithNoFields, SimpleItem), SimpleItemWithNoFields()),
-        ('{"a":1, "b":2}', (SimpleItemWithNoFields, SimpleItem), SimpleItem(1, 2)),
+        (
+            '{"a":1, "b":2}',
+            (SimpleItemWithNoFields, SimpleItem),
+            SimpleItem(1, 2),
+        ),
     ],
 )
 def test_decode_strict_should_work(expr: Any, type: Any, expected: str) -> None:
@@ -984,14 +1068,20 @@ def test_really_complex_data() -> None:
             ),
             text_document=TextDocumentClientCapabilities(
                 synchronization=TextDocumentSyncClientCapabilities(
-                    dynamic_registration=True, will_save=True, will_save_wait_until=True, did_save=True
+                    dynamic_registration=True,
+                    will_save=True,
+                    will_save_wait_until=True,
+                    did_save=True,
                 ),
                 completion=CompletionClientCapabilities(
                     dynamic_registration=True,
                     completion_item=CompletionClientCapabilitiesCompletionItemType(
                         snippet_support=True,
                         commit_characters_support=True,
-                        documentation_format=[MarkupKind.MARKDOWN, MarkupKind.PLAIN_TEXT],
+                        documentation_format=[
+                            MarkupKind.MARKDOWN,
+                            MarkupKind.PLAIN_TEXT,
+                        ],
                         deprecated_support=True,
                         preselect_support=True,
                         tag_support=CompletionClientCapabilitiesCompletionItemTypeTagSupportType(
@@ -999,10 +1089,17 @@ def test_really_complex_data() -> None:
                         ),
                         insert_replace_support=True,
                         resolve_support=CompletionClientCapabilitiesCompletionItemTypeResolveSupportType(
-                            properties=["documentation", "detail", "additionalTextEdits"]
+                            properties=[
+                                "documentation",
+                                "detail",
+                                "additionalTextEdits",
+                            ]
                         ),
                         insert_text_mode_support=CompletionClientCapabilitiesCompletionItemTypeInsertTextModeSupportType(
-                            value_set=[InsertTextMode.AS_IS, InsertTextMode.ADJUST_INDENTATION]
+                            value_set=[
+                                InsertTextMode.AS_IS,
+                                InsertTextMode.ADJUST_INDENTATION,
+                            ]
                         ),
                     ),
                     completion_item_kind=CompletionClientCapabilitiesCompletionItemKindType(
@@ -1037,12 +1134,16 @@ def test_really_complex_data() -> None:
                     context_support=True,
                 ),
                 hover=HoverClientCapabilities(
-                    dynamic_registration=True, content_format=[MarkupKind.MARKDOWN, MarkupKind.PLAIN_TEXT]
+                    dynamic_registration=True,
+                    content_format=[MarkupKind.MARKDOWN, MarkupKind.PLAIN_TEXT],
                 ),
                 signature_help=SignatureHelpClientCapabilities(
                     dynamic_registration=True,
                     signature_information=SignatureHelpClientCapabilitiesSignatureInformationType(
-                        documentation_format=[MarkupKind.MARKDOWN, MarkupKind.PLAIN_TEXT],
+                        documentation_format=[
+                            MarkupKind.MARKDOWN,
+                            MarkupKind.PLAIN_TEXT,
+                        ],
                         parameter_information=SignatureHelpClientCapabilitiesSignatureInformationTypeParameterInformationType(
                             label_offset_support=True
                         ),
@@ -1129,21 +1230,27 @@ def test_really_complex_data() -> None:
                 publish_diagnostics=PublishDiagnosticsClientCapabilities(
                     related_information=True,
                     tag_support=PublishDiagnosticsClientCapabilitiesTagSupportType(
-                        value_set=[DiagnosticTag.UNNECESSARY, DiagnosticTag.DEPRECATED]
+                        value_set=[
+                            DiagnosticTag.UNNECESSARY,
+                            DiagnosticTag.DEPRECATED,
+                        ]
                     ),
                     version_support=False,
                     code_description_support=True,
                     data_support=True,
                 ),
                 folding_range=FoldingRangeClientCapabilities(
-                    dynamic_registration=True, range_limit=5000, line_folding_only=True
+                    dynamic_registration=True,
+                    range_limit=5000,
+                    line_folding_only=True,
                 ),
                 selection_range=SelectionRangeClientCapabilities(dynamic_registration=True),
                 linked_editing_range=LinkedEditingRangeClientCapabilities(dynamic_registration=True),
                 call_hierarchy=CallHierarchyClientCapabilities(dynamic_registration=True),
                 semantic_tokens=SemanticTokensClientCapabilities(
                     requests=SemanticTokensClientCapabilitiesRequestsType(
-                        range=True, full=SemanticTokensClientCapabilitiesRequestsTypeFullType1(delta=True)
+                        range=True,
+                        full=SemanticTokensClientCapabilitiesRequestsTypeFullType1(delta=True),
                     ),
                     token_types=[
                         "namespace",

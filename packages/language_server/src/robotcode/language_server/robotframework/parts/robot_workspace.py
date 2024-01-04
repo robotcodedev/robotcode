@@ -4,11 +4,7 @@ from threading import Event
 from typing import TYPE_CHECKING, Any, List, Optional
 
 from robotcode.core.concurrent import threaded
-from robotcode.core.lsp.types import (
-    FileChangeType,
-    FileEvent,
-    WatchKind,
-)
+from robotcode.core.lsp.types import FileChangeType, FileEvent, WatchKind
 from robotcode.core.uri import InvalidUriError, Uri
 from robotcode.core.utils.glob_path import iter_files
 from robotcode.core.utils.logging import LoggingDescriptor
@@ -64,7 +60,10 @@ class RobotWorkspaceProtocolPart(RobotLanguageServerProtocolPart):
             doc_uri = Uri(fe.uri)
             try:
                 path = doc_uri.to_path()
-                if path.suffix in [ROBOT_FILE_EXTENSION, RESOURCE_FILE_EXTENSION]:
+                if path.suffix in [
+                    ROBOT_FILE_EXTENSION,
+                    RESOURCE_FILE_EXTENSION,
+                ]:
                     document = self.parent.documents.get_or_open_document(path)
                     if not document.opened_in_editor:
                         self.parent.documents_cache.get_namespace(document).ensure_initialized()

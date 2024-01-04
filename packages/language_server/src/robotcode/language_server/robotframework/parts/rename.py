@@ -1,5 +1,16 @@
 import ast
-from typing import TYPE_CHECKING, Any, Callable, List, Optional, Tuple, Type, TypeVar, Union, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    List,
+    Optional,
+    Tuple,
+    Type,
+    TypeVar,
+    Union,
+    cast,
+)
 
 from robot.parsing.lexer.tokens import Token
 from robot.parsing.model.statements import Statement
@@ -17,9 +28,16 @@ from robotcode.core.lsp.types import (
     WorkspaceEdit,
 )
 from robotcode.core.utils.logging import LoggingDescriptor
-from robotcode.robot.diagnostics.entities import VariableDefinition, VariableDefinitionType
+from robotcode.robot.diagnostics.entities import (
+    VariableDefinition,
+    VariableDefinitionType,
+)
 from robotcode.robot.diagnostics.library_doc import KeywordDoc
-from robotcode.robot.utils.ast import get_nodes_at_position, get_tokens_at_position, range_from_token
+from robotcode.robot.utils.ast import (
+    get_nodes_at_position,
+    get_tokens_at_position,
+    range_from_token,
+)
 
 from ...common.decorators import language_id
 from ...common.parts.rename import CantRenameError
@@ -28,7 +46,9 @@ from ..diagnostics.model_helper import ModelHelperMixin
 from .protocol_part import RobotLanguageServerProtocolPart
 
 if TYPE_CHECKING:
-    from robotcode.language_server.robotframework.protocol import RobotLanguageServerProtocol
+    from robotcode.language_server.robotframework.protocol import (
+        RobotLanguageServerProtocol,
+    )
 
 
 _RenameMethod = Callable[[ast.AST, TextDocument, Position, str], Optional[WorkspaceEdit]]
@@ -70,7 +90,9 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin)
         new_name: str,
     ) -> Optional[WorkspaceEdit]:
         result_nodes = get_nodes_at_position(
-            self.parent.documents_cache.get_model(document), position, include_end=True
+            self.parent.documents_cache.get_model(document),
+            position,
+            include_end=True,
         )
 
         if not result_nodes:
@@ -92,14 +114,11 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin)
 
     @language_id("robotframework")
     @_logger.call
-    def collect_prepare(
-        self,
-        sender: Any,
-        document: TextDocument,
-        position: Position,
-    ) -> Optional[PrepareRenameResult]:
+    def collect_prepare(self, sender: Any, document: TextDocument, position: Position) -> Optional[PrepareRenameResult]:
         result_nodes = get_nodes_at_position(
-            self.parent.documents_cache.get_model(document), position, include_end=True
+            self.parent.documents_cache.get_model(document),
+            position,
+            include_end=True,
         )
 
         if not result_nodes:
@@ -287,7 +306,11 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin)
         return self._prepare_rename_keyword(self._find_KeywordCall(node, document, position))
 
     def rename_KeywordCall(  # noqa: N802
-        self, node: ast.AST, document: TextDocument, position: Position, new_name: str
+        self,
+        node: ast.AST,
+        document: TextDocument,
+        position: Position,
+        new_name: str,
     ) -> Optional[WorkspaceEdit]:
         return self._rename_keyword(document, new_name, self._find_KeywordCall(node, document, position))
 
@@ -321,7 +344,10 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin)
             ):
                 keyword_token = self.strip_bdd_prefix(namespace, keyword_token)
 
-            lib_entry, kw_namespace = self.get_namespace_info_from_keyword_token(namespace, keyword_token)
+            (
+                lib_entry,
+                kw_namespace,
+            ) = self.get_namespace_info_from_keyword_token(namespace, keyword_token)
 
             kw_range = range_from_token(keyword_token)
 
@@ -359,7 +385,11 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin)
         return self._prepare_rename_keyword(self._find_KeywordName(node, document, position))
 
     def rename_KeywordName(  # noqa: N802
-        self, node: ast.AST, document: TextDocument, position: Position, new_name: str
+        self,
+        node: ast.AST,
+        document: TextDocument,
+        position: Position,
+        new_name: str,
     ) -> Optional[WorkspaceEdit]:
         return self._rename_keyword(document, new_name, self._find_KeywordName(node, document, position))
 
@@ -396,7 +426,11 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin)
         return self._prepare_rename_keyword(self._find_Fixture(node, document, position))
 
     def rename_Fixture(  # noqa: N802
-        self, node: ast.AST, document: TextDocument, position: Position, new_name: str
+        self,
+        node: ast.AST,
+        document: TextDocument,
+        position: Position,
+        new_name: str,
     ) -> Optional[WorkspaceEdit]:
         return self._rename_keyword(document, new_name, self._find_Fixture(node, document, position))
 
@@ -435,7 +469,10 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin)
             ):
                 keyword_token = self.strip_bdd_prefix(namespace, keyword_token)
 
-            lib_entry, kw_namespace = self.get_namespace_info_from_keyword_token(namespace, keyword_token)
+            (
+                lib_entry,
+                kw_namespace,
+            ) = self.get_namespace_info_from_keyword_token(namespace, keyword_token)
 
             kw_range = range_from_token(keyword_token)
 
@@ -527,7 +564,11 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin)
         return self._prepare_rename_keyword(self._find_Template_or_TestTemplate(node, document, position))
 
     def rename_TestTemplate(  # noqa: N802
-        self, node: ast.AST, document: TextDocument, position: Position, new_name: str
+        self,
+        node: ast.AST,
+        document: TextDocument,
+        position: Position,
+        new_name: str,
     ) -> Optional[WorkspaceEdit]:
         return self._rename_keyword(
             document,
@@ -541,7 +582,11 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin)
         return self._prepare_rename_keyword(self._find_Template_or_TestTemplate(node, document, position))
 
     def rename_Template(  # noqa: N802
-        self, node: ast.AST, document: TextDocument, position: Position, new_name: str
+        self,
+        node: ast.AST,
+        document: TextDocument,
+        position: Position,
+        new_name: str,
     ) -> Optional[WorkspaceEdit]:
         return self._rename_keyword(
             document,
@@ -560,7 +605,7 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin)
 
         token = tokens[-1]
 
-        if token.type in [RobotToken.ARGUMENT] and token.value:
+        if token.type == RobotToken.ARGUMENT and token.value:
             return PrepareRenameResultType1(range_from_token(token), token.value)
 
         return None
@@ -581,7 +626,11 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin)
         return self._prepare_rename_tags(node, document, position)
 
     def _rename_tags(
-        self, node: ast.AST, document: TextDocument, position: Position, new_name: str
+        self,
+        node: ast.AST,
+        document: TextDocument,
+        position: Position,
+        new_name: str,
     ) -> Optional[WorkspaceEdit]:
         from robot.parsing.lexer.tokens import Token as RobotToken
 
@@ -591,7 +640,7 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin)
 
         token = tokens[-1]
 
-        if token.type in [RobotToken.ARGUMENT] and token.value:
+        if token.type == RobotToken.ARGUMENT and token.value:
             references = self.parent.robot_references.find_tag_references(document, token.value)
 
             changes: List[Union[TextDocumentEdit, CreateFile, RenameFile, DeleteFile]] = []
@@ -612,16 +661,28 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin)
         return None
 
     def rename_ForceTags(  # noqa: N802
-        self, node: ast.AST, document: TextDocument, position: Position, new_name: str
+        self,
+        node: ast.AST,
+        document: TextDocument,
+        position: Position,
+        new_name: str,
     ) -> Optional[WorkspaceEdit]:
         return self._rename_tags(node, document, position, new_name)
 
     def rename_DefaultTags(  # noqa: N802
-        self, node: ast.AST, document: TextDocument, position: Position, new_name: str
+        self,
+        node: ast.AST,
+        document: TextDocument,
+        position: Position,
+        new_name: str,
     ) -> Optional[WorkspaceEdit]:
         return self._rename_tags(node, document, position, new_name)
 
     def rename_Tags(  # noqa: N802
-        self, node: ast.AST, document: TextDocument, position: Position, new_name: str
+        self,
+        node: ast.AST,
+        document: TextDocument,
+        position: Position,
+        new_name: str,
     ) -> Optional[WorkspaceEdit]:
         return self._rename_tags(node, document, position, new_name)

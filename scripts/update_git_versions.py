@@ -38,7 +38,10 @@ def main() -> None:
 
     replace_in_file(
         Path("package.json"),
-        re.compile(r"""(\"version\"\s*:\s*['"])([0-9]+\.[0-9]+\.[0-9]+.*)(['"])""", re.MULTILINE),
+        re.compile(
+            r"""(\"version\"\s*:\s*['"])([0-9]+\.[0-9]+\.[0-9]+.*)(['"])""",
+            re.MULTILINE,
+        ),
         rf"\g<1>{version or ''}\g<3>",
     )
 

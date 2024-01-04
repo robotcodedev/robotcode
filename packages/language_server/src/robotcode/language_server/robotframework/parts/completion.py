@@ -60,7 +60,12 @@ from robotcode.core.lsp.types import (
 )
 from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.robot.diagnostics.entities import VariableDefinitionType
-from robotcode.robot.diagnostics.library_doc import CompleteResultKind, KeywordArgumentKind, KeywordDoc, KeywordMatcher
+from robotcode.robot.diagnostics.library_doc import (
+    CompleteResultKind,
+    KeywordArgumentKind,
+    KeywordDoc,
+    KeywordMatcher,
+)
 from robotcode.robot.utils import get_robot_version
 from robotcode.robot.utils.ast import (
     get_nodes_at_position,
@@ -81,7 +86,9 @@ from .protocol_part import RobotLanguageServerProtocolPart
 if get_robot_version() >= (6, 1):
     from robot.parsing.lexer.settings import SuiteFileSettings
 else:
-    from robot.parsing.lexer.settings import TestCaseFileSettings as SuiteFileSettings
+    from robot.parsing.lexer.settings import (
+        TestCaseFileSettings as SuiteFileSettings,
+    )
 
 if TYPE_CHECKING:
     from ..protocol import RobotLanguageServerProtocol
@@ -129,13 +136,17 @@ class RobotCompletionProtocolPart(RobotLanguageServerProtocolPart):
             "{",
             "=",
             os.sep,
-        ],
+        ]
     )
     # @all_commit_characters(['\n'])
     @language_id("robotframework")
     @_logger.call
     def collect(
-        self, sender: Any, document: TextDocument, position: Position, context: Optional[CompletionContext]
+        self,
+        sender: Any,
+        document: TextDocument,
+        position: Position,
+        context: Optional[CompletionContext],
     ) -> Union[List[CompletionItem], CompletionList, None]:
         namespace = self.parent.documents_cache.get_namespace(document)
         model = self.parent.documents_cache.get_model(document, False)
@@ -143,11 +154,13 @@ class RobotCompletionProtocolPart(RobotLanguageServerProtocolPart):
         config = self.get_config(document)
 
         return CompletionCollector(
-            self.parent, document, model, namespace, self.get_header_style(config), config
-        ).collect(
-            position,
-            context,
-        )
+            self.parent,
+            document,
+            model,
+            namespace,
+            self.get_header_style(config),
+            config,
+        ).collect(position, context)
 
     @language_id("robotframework")
     @_logger.call
@@ -163,7 +176,12 @@ class RobotCompletionProtocolPart(RobotLanguageServerProtocolPart):
                         config = self.get_config(document)
 
                         return CompletionCollector(
-                            self.parent, document, model, namespace, self.get_header_style(config), config
+                            self.parent,
+                            document,
+                            model,
+                            namespace,
+                            self.get_header_style(config),
+                            config,
                         ).resolve(completion_item)
 
         return completion_item
@@ -185,15 +203,34 @@ def get_snippets() -> Dict[str, List[str]]:
     global __snippets
     if __snippets is None:
         __snippets = {
-            "FOR": [r"FOR  \${${1}}  ${2|IN,IN ENUMERATE,IN RANGE,IN ZIP|}  ${3:arg}", "$0", "END", ""],
+            "FOR": [
+                r"FOR  \${${1}}  ${2|IN,IN ENUMERATE,IN RANGE,IN ZIP|}  ${3:arg}",
+                "$0",
+                "END",
+                "",
+            ],
             "IF": [r"IF  \${${1}}", "    $0", "END", ""],
         }
 
         if get_robot_version() >= (5, 0):
             __snippets.update(
                 {
-                    "TRYEX": ["TRY", "    $0", r"EXCEPT  message", "    ", "END", ""],
-                    "TRYEXAS": ["TRY", "    $0", r"EXCEPT  message    AS    \${ex}", "    ", "END", ""],
+                    "TRYEX": [
+                        "TRY",
+                        "    $0",
+                        r"EXCEPT  message",
+                        "    ",
+                        "END",
+                        "",
+                    ],
+                    "TRYEXAS": [
+                        "TRY",
+                        "    $0",
+                        r"EXCEPT  message    AS    \${ex}",
+                        "    ",
+                        "END",
+                        "",
+                    ],
                     "WHILE": [r"WHILE  ${1:expression}", "    $0", "END", ""],
                 }
             )
@@ -215,14 +252,7 @@ def get_reserved_keywords() -> List[str]:
     global __reserved_keywords
 
     if __reserved_keywords is None:
-        __reserved_keywords = [
-            "FOR",
-            "END",
-            "IF",
-            "ELSE",
-            "ELIF",
-            "ELSE IF",
-        ]
+        __reserved_keywords = ["FOR", "END", "IF", "ELSE", "ELIF", "ELSE IF"]
         if get_robot_version() >= (5, 0):
             __reserved_keywords += [
                 "TRY",
@@ -234,9 +264,7 @@ def get_reserved_keywords() -> List[str]:
                 "RETURN",
             ]
         if get_robot_version() >= (7, 0):
-            __reserved_keywords += [
-                "VAR",
-            ]
+            __reserved_keywords += ["VAR"]
 
         __reserved_keywords = sorted(__reserved_keywords)
     return __reserved_keywords
@@ -362,14 +390,20 @@ class CompletionCollector(ModelHelperMixin):
                                 )
                                 if lib_doc is not None:
                                     completion_item.documentation = MarkupContent(
-                                        kind=MarkupKind.MARKDOWN, value=lib_doc.to_markdown(False)
+                                        kind=MarkupKind.MARKDOWN,
+                                        value=lib_doc.to_markdown(False),
                                     )
 
-                            except (SystemExit, KeyboardInterrupt, CancelledError):
+                            except (
+                                SystemExit,
+                                KeyboardInterrupt,
+                                CancelledError,
+                            ):
                                 raise
                             except BaseException as e:
                                 completion_item.documentation = MarkupContent(
-                                    kind=MarkupKind.MARKDOWN, value=f"Error:\n{e}"
+                                    kind=MarkupKind.MARKDOWN,
+                                    value=f"Error:\n{e}",
                                 )
                         elif (name := data.get("name", None)) is not None:
                             try:
@@ -382,7 +416,8 @@ class CompletionCollector(ModelHelperMixin):
 
                                 if lib_doc is not None:
                                     completion_item.documentation = MarkupContent(
-                                        kind=MarkupKind.MARKDOWN, value=lib_doc.to_markdown(False)
+                                        kind=MarkupKind.MARKDOWN,
+                                        value=lib_doc.to_markdown(False),
                                     )
 
                             except (SystemExit, KeyboardInterrupt):
@@ -390,7 +425,7 @@ class CompletionCollector(ModelHelperMixin):
                             except BaseException:
                                 pass
 
-                    elif comp_type in [CompleteResultKind.RESOURCE.name]:
+                    elif comp_type == CompleteResultKind.RESOURCE.name:
                         if (res_id := data.get("id", None)) is not None:
                             try:
                                 lib_doc = next(
@@ -404,14 +439,20 @@ class CompletionCollector(ModelHelperMixin):
 
                                 if lib_doc is not None:
                                     completion_item.documentation = MarkupContent(
-                                        kind=MarkupKind.MARKDOWN, value=lib_doc.to_markdown(False)
+                                        kind=MarkupKind.MARKDOWN,
+                                        value=lib_doc.to_markdown(False),
                                     )
 
-                            except (SystemExit, KeyboardInterrupt, CancelledError):
+                            except (
+                                SystemExit,
+                                KeyboardInterrupt,
+                                CancelledError,
+                            ):
                                 raise
                             except BaseException as e:
                                 completion_item.documentation = MarkupContent(
-                                    kind=MarkupKind.MARKDOWN, value=f"Error:\n{e}"
+                                    kind=MarkupKind.MARKDOWN,
+                                    value=f"Error:\n{e}",
                                 )
 
                         elif (name := data.get("name", None)) is not None:
@@ -424,14 +465,15 @@ class CompletionCollector(ModelHelperMixin):
 
                                 if lib_doc is not None:
                                     completion_item.documentation = MarkupContent(
-                                        kind=MarkupKind.MARKDOWN, value=lib_doc.to_markdown(False)
+                                        kind=MarkupKind.MARKDOWN,
+                                        value=lib_doc.to_markdown(False),
                                     )
 
                             except (SystemExit, KeyboardInterrupt):
                                 raise
                             except BaseException:
                                 pass
-                    elif comp_type in [CompleteResultKind.KEYWORD.name]:
+                    elif comp_type == CompleteResultKind.KEYWORD.name:
                         kw_id = data.get("id", None)
                         if kw_id is not None:
                             try:
@@ -442,10 +484,15 @@ class CompletionCollector(ModelHelperMixin):
 
                                 if kw_doc is not None:
                                     completion_item.documentation = MarkupContent(
-                                        kind=MarkupKind.MARKDOWN, value=kw_doc.to_markdown()
+                                        kind=MarkupKind.MARKDOWN,
+                                        value=kw_doc.to_markdown(),
                                     )
 
-                            except (SystemExit, KeyboardInterrupt, CancelledError):
+                            except (
+                                SystemExit,
+                                KeyboardInterrupt,
+                                CancelledError,
+                            ):
                                 raise
                             except BaseException:
                                 pass
@@ -495,12 +542,7 @@ class CompletionCollector(ModelHelperMixin):
                 else None,
                 sort_text=f"100_{s[1]}",
                 insert_text_format=InsertTextFormat.PLAIN_TEXT,
-                text_edit=TextEdit(
-                    range=range,
-                    new_text=s[0],
-                )
-                if range is not None
-                else None,
+                text_edit=TextEdit(range=range, new_text=s[0]) if range is not None else None,
             )
             for s in ((self.header_style.format(name=k), k) for k in (v.title() for v in headers))
         ]
@@ -513,12 +555,7 @@ class CompletionCollector(ModelHelperMixin):
                 detail="Variable",
                 sort_text=f"035_{s}",
                 insert_text_format=InsertTextFormat.PLAIN_TEXT,
-                text_edit=TextEdit(
-                    range=range,
-                    new_text=s,
-                )
-                if range is not None
-                else None,
+                text_edit=TextEdit(range=range, new_text=s) if range is not None else None,
             )
             for s in self.namespace.imports_manager.environment.keys()
         ]
@@ -543,10 +580,7 @@ class CompletionCollector(ModelHelperMixin):
                 detail=f"{s.type.value}",
                 sort_text=f"{self._VARIABLE_COMPLETION_SORT_TEXT_PREFIX.get(s.type, '035')}_{s.name[2:-1]}",
                 insert_text_format=InsertTextFormat.PLAIN_TEXT,
-                text_edit=TextEdit(
-                    range=range,
-                    new_text=s.name[2:-1],
-                ),
+                text_edit=TextEdit(range=range, new_text=s.name[2:-1]),
                 filter_text=s.name[2:-1] if range is not None else None,
             )
             for s in (self.namespace.get_variable_matchers(list(reversed(nodes)), position)).values()
@@ -638,7 +672,10 @@ class CompletionCollector(ModelHelperMixin):
         ]
 
     def create_bdd_prefix_completion_items(
-        self, range: Optional[Range], at_top: bool = False, with_space: bool = True
+        self,
+        range: Optional[Range],
+        at_top: bool = False,
+        with_space: bool = True,
     ) -> List[CompletionItem]:
         prefixes = {"Given", "When", "Then", "And", "But"}
 
@@ -1085,7 +1122,7 @@ class CompletionCollector(ModelHelperMixin):
                     return None
 
             token_at_position_index = tokens_at_position.index(token_at_position)
-            while token_at_position.type in [Token.EOL]:
+            while token_at_position.type == Token.EOL:
                 token_at_position_index -= 1
                 if token_at_position_index < 0:
                     break
@@ -1112,7 +1149,10 @@ class CompletionCollector(ModelHelperMixin):
                 variable_end = token_at_position.value.find("}", open_brace_index + 1)
                 contains_spezial = any(
                     a
-                    for a in itertools.takewhile(lambda b: b != "}", token_at_position.value[open_brace_index + 1 :])
+                    for a in itertools.takewhile(
+                        lambda b: b != "}",
+                        token_at_position.value[open_brace_index + 1 :],
+                    )
                     if a in "+-*/"
                 )
                 range = Range(
@@ -1240,13 +1280,7 @@ class CompletionCollector(ModelHelperMixin):
 
                     r.end.character += 1
                     if position.is_in_range(r):
-                        return create_items(
-                            in_assign,
-                            in_template,
-                            r,
-                            token,
-                            position,
-                        )
+                        return create_items(in_assign, in_template, r, token, position)
 
         return None
 
@@ -1258,7 +1292,11 @@ class CompletionCollector(ModelHelperMixin):
         context: Optional[CompletionContext],
     ) -> Union[List[CompletionItem], CompletionList, None]:
         def create_items(
-            in_assign: bool, in_template: bool, r: Optional[Range], token: Optional[Token], pos: Position
+            in_assign: bool,
+            in_template: bool,
+            r: Optional[Range],
+            token: Optional[Token],
+            pos: Position,
         ) -> Union[List[CompletionItem], CompletionList, None]:
             return [
                 e
@@ -1299,7 +1337,14 @@ class CompletionCollector(ModelHelperMixin):
 
         in_template = check_in_template()
 
-        return self._complete_TestCase_or_Keyword(node, nodes_at_position, position, context, in_template, create_items)
+        return self._complete_TestCase_or_Keyword(
+            node,
+            nodes_at_position,
+            position,
+            context,
+            in_template,
+            create_items,
+        )
 
     def complete_Keyword(  # noqa: N802
         self,
@@ -1309,7 +1354,11 @@ class CompletionCollector(ModelHelperMixin):
         context: Optional[CompletionContext],
     ) -> Union[List[CompletionItem], CompletionList, None]:
         def create_items(
-            in_assign: bool, in_template: bool, r: Optional[Range], token: Optional[Token], pos: Position
+            in_assign: bool,
+            in_template: bool,
+            r: Optional[Range],
+            token: Optional[Token],
+            pos: Position,
         ) -> Union[List[CompletionItem], CompletionList, None]:
             return [
                 e
@@ -1463,7 +1512,11 @@ class CompletionCollector(ModelHelperMixin):
             r = range_from_token(token)
             if position.is_in_range(r):
                 return self.create_keyword_completion_items(
-                    token, position, add_reserverd=False, add_none=True, in_template=isinstance(node, Template)
+                    token,
+                    position,
+                    add_reserverd=False,
+                    add_none=True,
+                    in_template=isinstance(node, Template),
                 )
 
         if len(statement_node.tokens) > 4:
@@ -1613,11 +1666,15 @@ class CompletionCollector(ModelHelperMixin):
                 CompletionItem(
                     label=e.label,
                     kind=CompletionItemKind.MODULE
-                    if e.kind in [CompleteResultKind.MODULE, CompleteResultKind.MODULE_INTERNAL]
+                    if e.kind
+                    in [
+                        CompleteResultKind.MODULE,
+                        CompleteResultKind.MODULE_INTERNAL,
+                    ]
                     else CompletionItemKind.FILE
-                    if e.kind in [CompleteResultKind.FILE]
+                    if e.kind == CompleteResultKind.FILE
                     else CompletionItemKind.FOLDER
-                    if e.kind in [CompleteResultKind.FOLDER]
+                    if e.kind == CompleteResultKind.FOLDER
                     else None,
                     detail=e.kind.value,
                     sort_text=f"030_{e}",
@@ -1638,7 +1695,10 @@ class CompletionCollector(ModelHelperMixin):
             ).end:
                 return None
 
-            with_name_token = next((v for v in import_node.tokens if v.type == Token.WITH_NAME), None)
+            with_name_token = next(
+                (v for v in import_node.tokens if v.type == Token.WITH_NAME),
+                None,
+            )
             if with_name_token is not None and position >= range_from_token(with_name_token).start:
                 return None
 
@@ -1664,7 +1724,10 @@ class CompletionCollector(ModelHelperMixin):
                     if init:
                         name_token_index = import_node.tokens.index(name_token)
                         return self._complete_keyword_arguments_at_position(
-                            init, kw_node.tokens[name_token_index:], token_at_position, position
+                            init,
+                            kw_node.tokens[name_token_index:],
+                            token_at_position,
+                            position,
                         )
 
             except (SystemExit, KeyboardInterrupt, CancelledError):
@@ -1675,7 +1738,10 @@ class CompletionCollector(ModelHelperMixin):
             return None
 
         def complete_with_name() -> Optional[List[CompletionItem]]:
-            with_name_token = next((v for v in import_node.tokens if v.type == Token.WITH_NAME), None)
+            with_name_token = next(
+                (v for v in import_node.tokens if v.type == Token.WITH_NAME),
+                None,
+            )
             if with_name_token is not None and position < range_from_token(with_name_token).start:
                 return None
 
@@ -1797,11 +1863,11 @@ class CompletionCollector(ModelHelperMixin):
             CompletionItem(
                 label=e.label,
                 kind=CompletionItemKind.FILE
-                if e.kind in [CompleteResultKind.RESOURCE]
+                if e.kind == CompleteResultKind.RESOURCE
                 else CompletionItemKind.FILE
-                if e.kind in [CompleteResultKind.FILE]
+                if e.kind == CompleteResultKind.FILE
                 else CompletionItemKind.FOLDER
-                if e.kind in [CompleteResultKind.FOLDER]
+                if e.kind == CompleteResultKind.FOLDER
                 else None,
                 detail=e.kind.value,
                 sort_text=f"030_{e}",
@@ -1917,11 +1983,11 @@ class CompletionCollector(ModelHelperMixin):
                 CompletionItem(
                     label=e.label,
                     kind=CompletionItemKind.FILE
-                    if e.kind in [CompleteResultKind.VARIABLES]
+                    if e.kind == CompleteResultKind.VARIABLES
                     else CompletionItemKind.FILE
-                    if e.kind in [CompleteResultKind.FILE]
+                    if e.kind == CompleteResultKind.FILE
                     else CompletionItemKind.FOLDER
-                    if e.kind in [CompleteResultKind.FOLDER]
+                    if e.kind == CompleteResultKind.FOLDER
                     else None,
                     detail=e.kind.value,
                     sort_text=f"030_{e}",
@@ -1962,7 +2028,10 @@ class CompletionCollector(ModelHelperMixin):
                     if init:
                         name_token_index = import_node.tokens.index(name_token)
                         return self._complete_keyword_arguments_at_position(
-                            init, kw_node.tokens[name_token_index:], token_at_position, position
+                            init,
+                            kw_node.tokens[name_token_index:],
+                            token_at_position,
+                            position,
                         )
 
             except (SystemExit, KeyboardInterrupt, CancelledError):
@@ -1999,7 +2068,11 @@ class CompletionCollector(ModelHelperMixin):
 
         token_at_position = tokens_at_position[-1]
 
-        if token_at_position.type not in [Token.ARGUMENT, Token.EOL, Token.SEPARATOR]:
+        if token_at_position.type not in [
+            Token.ARGUMENT,
+            Token.EOL,
+            Token.SEPARATOR,
+        ]:
             return None
 
         if len(tokens_at_position) > 1 and tokens_at_position[-2].type == Token.KEYWORD:
@@ -2031,21 +2104,30 @@ class CompletionCollector(ModelHelperMixin):
         keyword_token_index = kw_node.tokens.index(keyword_token)
 
         return self._complete_keyword_arguments_at_position(
-            keyword_doc, kw_node.tokens[keyword_token_index:], token_at_position, position
+            keyword_doc,
+            kw_node.tokens[keyword_token_index:],
+            token_at_position,
+            position,
         )
 
     TRUE_STRINGS = {"TRUE", "YES", "ON", "1"}
     FALSE_STRINGS = {"FALSE", "NO", "OFF", "0", "NONE", ""}
 
     def _complete_keyword_arguments_at_position(
-        self, keyword_doc: KeywordDoc, tokens: Tuple[Token, ...], token_at_position: Token, position: Position
+        self,
+        keyword_doc: KeywordDoc,
+        tokens: Tuple[Token, ...],
+        token_at_position: Token,
+        position: Position,
     ) -> Optional[List[CompletionItem]]:
         if keyword_doc.is_any_run_keyword():
             return None
 
-        argument_index, kw_arguments, argument_token = self.get_argument_info_at_position(
-            keyword_doc, tokens, token_at_position, position
-        )
+        (
+            argument_index,
+            kw_arguments,
+            argument_token,
+        ) = self.get_argument_info_at_position(keyword_doc, tokens, token_at_position, position)
 
         complete_argument_names = True
         complete_argument_values = True
@@ -2137,7 +2219,10 @@ class CompletionCollector(ModelHelperMixin):
                                     label=b_snippet[0],
                                     kind=CompletionItemKind.CONSTANT,
                                     detail=f"{type_info.name}({b_snippet[1]})",
-                                    documentation=MarkupContent(MarkupKind.MARKDOWN, type_info.to_markdown()),
+                                    documentation=MarkupContent(
+                                        MarkupKind.MARKDOWN,
+                                        type_info.to_markdown(),
+                                    ),
                                     sort_text=f"01_000_{int(not b_snippet[1])}_{b_snippet[0]}",
                                     insert_text_format=InsertTextFormat.PLAIN_TEXT,
                                     text_edit=TextEdit(
@@ -2155,10 +2240,7 @@ class CompletionCollector(ModelHelperMixin):
                             documentation=MarkupContent(MarkupKind.MARKDOWN, type_info.to_markdown()),
                             sort_text="50_000_None",
                             insert_text_format=InsertTextFormat.PLAIN_TEXT,
-                            text_edit=TextEdit(
-                                range=completion_range,
-                                new_text="None",
-                            ),
+                            text_edit=TextEdit(range=completion_range, new_text="None"),
                         )
                     )
                     result.append(
@@ -2169,10 +2251,7 @@ class CompletionCollector(ModelHelperMixin):
                             documentation=MarkupContent(MarkupKind.MARKDOWN, type_info.to_markdown()),
                             sort_text="50_001_None",
                             insert_text_format=InsertTextFormat.PLAIN_TEXT,
-                            text_edit=TextEdit(
-                                range=completion_range,
-                                new_text="${None}",
-                            ),
+                            text_edit=TextEdit(range=completion_range, new_text="${None}"),
                         )
                     )
                 if type_info.members:
@@ -2188,10 +2267,7 @@ class CompletionCollector(ModelHelperMixin):
                                 ),
                                 sort_text=f"09_{i:03}_{member_index:03}_{member.name}",
                                 insert_text_format=InsertTextFormat.PLAIN_TEXT,
-                                text_edit=TextEdit(
-                                    range=completion_range,
-                                    new_text=member.name,
-                                ),
+                                text_edit=TextEdit(range=completion_range, new_text=member.name),
                             )
                         )
                 if type_info.items:
@@ -2216,13 +2292,13 @@ class CompletionCollector(ModelHelperMixin):
                                     label=snippet,
                                     kind=CompletionItemKind.STRUCT,
                                     detail=type_info.name,
-                                    documentation=MarkupContent(MarkupKind.MARKDOWN, type_info.to_markdown()),
+                                    documentation=MarkupContent(
+                                        MarkupKind.MARKDOWN,
+                                        type_info.to_markdown(),
+                                    ),
                                     sort_text=f"08_{i:03}_{snippet}",
                                     insert_text_format=InsertTextFormat.SNIPPET,
-                                    text_edit=TextEdit(
-                                        range=completion_range,
-                                        new_text=snippet,
-                                    ),
+                                    text_edit=TextEdit(range=completion_range, new_text=snippet),
                                 )
                             )
 
@@ -2230,7 +2306,7 @@ class CompletionCollector(ModelHelperMixin):
             known_names = []
 
             if (argument_token or token_at_position).type == Token.ARGUMENT and position == range_from_token(
-                (argument_token or token_at_position)
+                argument_token or token_at_position
             ).start:
                 completion_range = Range(position, position)
 
@@ -2252,9 +2328,21 @@ class CompletionCollector(ModelHelperMixin):
             preselected = -1
             if known_names and before_is_named:
                 n = known_names[-1]
-                preselected = next((i for i, e in enumerate(kw_arguments) if e.name == n), -1) + 1
+                preselected = (
+                    next(
+                        (i for i, e in enumerate(kw_arguments) if e.name == n),
+                        -1,
+                    )
+                    + 1
+                )
                 if preselected >= len(kw_arguments):
-                    preselected = next((i for i, e in enumerate(kw_arguments) if e.name == n), -1) - 1
+                    preselected = (
+                        next(
+                            (i for i, e in enumerate(kw_arguments) if e.name == n),
+                            -1,
+                        )
+                        - 1
+                    )
 
             result += [
                 CompletionItem(

@@ -21,7 +21,8 @@ from .pytest_regtestex import RegTestFixtureEx
 
 
 def split(
-    values: Optional[Union[List[DocumentSymbol], List[SymbolInformation]]], data: GeneratedTestData
+    values: Optional[Union[List[DocumentSymbol], List[SymbolInformation]]],
+    data: GeneratedTestData,
 ) -> Iterator[Optional[Union[DocumentSymbol, SymbolInformation]]]:
     p = Position(data.line, data.character)
 
@@ -36,7 +37,11 @@ def split(
         elif isinstance(value, SymbolInformation):
             if p in value.location.range:
                 yield dataclasses.replace(
-                    value, location=dataclasses.replace(value.location, uri=Uri(value.location.uri).to_path().name)
+                    value,
+                    location=dataclasses.replace(
+                        value.location,
+                        uri=Uri(value.location.uri).to_path().name,
+                    ),
                 )
 
 
@@ -53,16 +58,18 @@ def test(
     test_document: TextDocument,
     data: GeneratedTestData,
 ) -> None:
-    result = protocol.robot_document_symbols.collect(
-        protocol.hover,
-        test_document,
-    )
+    result = protocol.robot_document_symbols.collect(protocol.hover, test_document)
 
     regtest.write(
         yaml.dump(
             {
                 "data": data,
-                "result": next(reversed([l for l in split(result, data) if l is not None]), None) if result else result,
+                "result": next(
+                    reversed([l for l in split(result, data) if l is not None]),
+                    None,
+                )
+                if result
+                else result,
             }
         )
     )

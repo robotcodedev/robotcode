@@ -4,11 +4,7 @@ import ast
 from dataclasses import dataclass
 from typing import List, Optional, Tuple
 
-from robotcode.core.lsp.types import (
-    DocumentUri,
-    Position,
-    Range,
-)
+from robotcode.core.lsp.types import DocumentUri, Position, Range
 from robotcode.robot.utils.ast import range_from_node
 from robotcode.robot.utils.visitor import Visitor
 
@@ -63,7 +59,11 @@ def find_keyword_sections(node: ast.AST) -> Optional[List[ast.AST]]:
 
 class CodeActionHelperMixin:
     def create_insert_keyword_workspace_edit(
-        self, document: TextDocument, model: ast.AST, namespace: Namespace, insert_text: str
+        self,
+        document: TextDocument,
+        model: ast.AST,
+        namespace: Namespace,
+        insert_text: str,
     ) -> Tuple[str, Range]:
         keyword_sections = find_keyword_sections(model)
         keyword_section = keyword_sections[-1] if keyword_sections else None

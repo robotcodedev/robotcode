@@ -75,7 +75,9 @@ async def _debug_adapter_server_(
     from .server import DebugAdapterServer
 
     async with DebugAdapterServer(
-        mode=mode, tcp_params=TcpParams(addresses or "127.0.0.1", port), pipe_name=pipe_name
+        mode=mode,
+        tcp_params=TcpParams(addresses or "127.0.0.1", port),
+        pipe_name=pipe_name,
     ) as server:
         if on_config_done_callback is not None:
             server.protocol.received_configuration_done_callback = functools.partial(on_config_done_callback, server)
@@ -105,7 +107,14 @@ async def start_debugpy_async(
 
         def connect_debugpy(server: "DebugAdapterServer") -> None:
             server.protocol.send_event(
-                Event(event="debugpyStarted", body={"port": port, "addresses": addresses, "processId": os.getpid()})
+                Event(
+                    event="debugpyStarted",
+                    body={
+                        "port": port,
+                        "addresses": addresses,
+                        "processId": os.getpid(),
+                    },
+                )
             )
 
             if wait_for_debugpy_client:
@@ -141,11 +150,21 @@ async def run_debugger(
 
     if debug and debugpy:
         app.verbose("Try to start debugpy session.")
-        await start_debugpy_async(debugpy_port, addresses, debugpy_wait_for_client, wait_for_client_timeout)
+        await start_debugpy_async(
+            debugpy_port,
+            addresses,
+            debugpy_wait_for_client,
+            wait_for_client_timeout,
+        )
 
     app.verbose("Start robotcode debugger thread.")
     server_future = run_coroutine_in_thread(
-        _debug_adapter_server_, config_done_callback, mode, addresses, port, pipe_name
+        _debug_adapter_server_,
+        config_done_callback,
+        mode,
+        addresses,
+        port,
+        pipe_name,
     )
 
     server = await wait_for_server()

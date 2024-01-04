@@ -35,7 +35,10 @@ class ReferencesProtocolPart(LanguageServerProtocolPart):
 
     @event
     def collect(
-        sender, document: TextDocument, position: Position, context: ReferenceContext  # NOSONAR
+        sender,
+        document: TextDocument,
+        position: Position,
+        context: ReferenceContext,  # NOSONAR
     ) -> Optional[List[Location]]:
         ...
 

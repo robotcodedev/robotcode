@@ -3,7 +3,11 @@ from pathlib import Path
 from typing import Iterator, Tuple
 
 import pytest
-from robotcode.robot.config.loader import DiscoverdBy, find_project_root, get_config_files_from_folder
+from robotcode.robot.config.loader import (
+    DiscoverdBy,
+    find_project_root,
+    get_config_files_from_folder,
+)
 
 
 @pytest.fixture()
@@ -18,7 +22,10 @@ def temp_project(tmp_path: Path) -> Iterator[Path]:
 
 @pytest.mark.parametrize(
     ("path_str", "discovered_by"),
-    {("pyproject.toml", DiscoverdBy.PYPROJECT_TOML), ("robot.toml", DiscoverdBy.ROBOT_TOML)},
+    {
+        ("pyproject.toml", DiscoverdBy.PYPROJECT_TOML),
+        ("robot.toml", DiscoverdBy.ROBOT_TOML),
+    },
 )
 def test_find_project_root_from_root_from_toml_works(
     temp_project: Path, path_str: str, discovered_by: DiscoverdBy
@@ -31,7 +38,10 @@ def test_find_project_root_from_root_from_toml_works(
     assert discovery_by == discovered_by
 
 
-@pytest.mark.parametrize(("path_str", "discovered_by"), {(".git", DiscoverdBy.GIT), (".hg", DiscoverdBy.HG)})
+@pytest.mark.parametrize(
+    ("path_str", "discovered_by"),
+    {(".git", DiscoverdBy.GIT), (".hg", DiscoverdBy.HG)},
+)
 def test_find_project_root_from_root_from_vcs_dirs_works(
     temp_project: Path, path_str: str, discovered_by: DiscoverdBy
 ) -> None:
@@ -55,7 +65,9 @@ def test_find_project_from_sub_dir_robot_toml_works(temp_project: Path) -> None:
     assert discovery_by == DiscoverdBy.ROBOT_TOML
 
 
-def test_find_project_from_sub_dir_file_robot_toml_works(temp_project: Path) -> None:
+def test_find_project_from_sub_dir_file_robot_toml_works(
+    temp_project: Path,
+) -> None:
     root_robot_toml = temp_project / "robot.toml"
     root_robot_toml.touch()
 
@@ -69,7 +81,9 @@ def test_find_project_from_sub_dir_file_robot_toml_works(temp_project: Path) -> 
     assert discovery_by == DiscoverdBy.ROBOT_TOML
 
 
-def test_find_project_from_sub_dir_file_robot_toml_no_root_found(temp_project: Path) -> None:
+def test_find_project_from_sub_dir_file_robot_toml_no_root_found(
+    temp_project: Path,
+) -> None:
     sub_dir = temp_project / "subdir"
     sub_dir.mkdir()
     file = sub_dir / "file.robot"
@@ -80,7 +94,9 @@ def test_find_project_from_sub_dir_file_robot_toml_no_root_found(temp_project: P
     assert discovery_by == DiscoverdBy.NOT_FOUND
 
 
-def test_find_project_from_several_sub_dirs_and_files_robot_toml_works(temp_project: Path) -> None:
+def test_find_project_from_several_sub_dirs_and_files_robot_toml_works(
+    temp_project: Path,
+) -> None:
     root_robot_toml = temp_project / "robot.toml"
     root_robot_toml.touch()
 

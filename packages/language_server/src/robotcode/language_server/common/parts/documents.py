@@ -101,17 +101,29 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart):
             elif document is not None and not document.opened_in_editor:
                 if change.type == FileChangeType.DELETED:
                     self.close_document(document, True)
-                    self.did_close(self, document, callback_filter=language_id_filter(document))
+                    self.did_close(
+                        self,
+                        document,
+                        callback_filter=language_id_filter(document),
+                    )
 
                 elif change.type == FileChangeType.CHANGED:
                     document.apply_full_change(
-                        None, self.read_document_text(document.uri, language_id_filter(document)), save=True
+                        None,
+                        self.read_document_text(document.uri, language_id_filter(document)),
+                        save=True,
                     )
-                    self.did_change(self, document, callback_filter=language_id_filter(document))
+                    self.did_change(
+                        self,
+                        document,
+                        callback_filter=language_id_filter(document),
+                    )
 
     def read_document_text(self, uri: Uri, language_id: Union[str, Callable[[Any], bool], None]) -> str:
         for e in self.on_read_document_text(
-            self, uri, callback_filter=language_id_filter(language_id) if isinstance(language_id, str) else language_id
+            self,
+            uri,
+            callback_filter=language_id_filter(language_id) if isinstance(language_id, str) else language_id,
         ):
             if isinstance(e, BaseException):
                 raise RuntimeError(f"Can't read document text from {uri}: {e}") from e
@@ -132,7 +144,10 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart):
 
     @_logger.call
     def get_or_open_document(
-        self, path: Union[str, os.PathLike[Any]], language_id: Optional[str] = None, version: Optional[int] = None
+        self,
+        path: Union[str, os.PathLike[Any]],
+        language_id: Optional[str] = None,
+        version: Optional[int] = None,
     ) -> TextDocument:
         uri = Uri.from_path(path).normalized()
 
@@ -182,7 +197,10 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart):
 
     def get(self, _uri: Union[DocumentUri, Uri]) -> Optional[TextDocument]:
         with self._lock:
-            return self._documents.get(str(Uri(_uri).normalized() if not isinstance(_uri, Uri) else _uri), None)
+            return self._documents.get(
+                str(Uri(_uri).normalized() if not isinstance(_uri, Uri) else _uri),
+                None,
+            )
 
     def __len__(self) -> int:
         return self._documents.__len__()
@@ -216,7 +234,10 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart):
     ) -> TextDocument:
         with self._lock:
             document = self._create_document(
-                document_uri=document_uri, language_id=language_id, text=text, version=version
+                document_uri=document_uri,
+                language_id=language_id,
+                text=text,
+                version=version,
             )
 
             self._documents[document_uri] = document
@@ -294,7 +315,11 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart):
     @rpc_method(name="textDocument/willSave", param_type=WillSaveTextDocumentParams)
     @_logger.call
     def _text_document_will_save(
-        self, text_document: TextDocumentIdentifier, reason: TextDocumentSaveReason, *args: Any, **kwargs: Any
+        self,
+        text_document: TextDocumentIdentifier,
+        reason: TextDocumentSaveReason,
+        *args: Any,
+        **kwargs: Any,
     ) -> None:
         # TODO: implement
         pass
@@ -302,10 +327,17 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart):
     @rpc_method(name="textDocument/didSave", param_type=DidSaveTextDocumentParams)
     @_logger.call
     def _text_document_did_save(
-        self, text_document: TextDocumentIdentifier, text: Optional[str] = None, *args: Any, **kwargs: Any
+        self,
+        text_document: TextDocumentIdentifier,
+        text: Optional[str] = None,
+        *args: Any,
+        **kwargs: Any,
     ) -> None:
         document = self.get(str(Uri(text_document.uri).normalized()))
-        self._logger.warning(lambda: f"Document {text_document.uri} is not opened.", condition=lambda: document is None)
+        self._logger.warning(
+            lambda: f"Document {text_document.uri} is not opened.",
+            condition=lambda: document is None,
+        )
 
         if document is not None:
             if text is not None:
@@ -314,14 +346,25 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart):
                 text_changed = document.text() != normalized_text
                 if text_changed:
                     document.save(None, text)
-                    self.did_change(self, document, callback_filter=language_id_filter(document))
+                    self.did_change(
+                        self,
+                        document,
+                        callback_filter=language_id_filter(document),
+                    )
 
             self.did_save(self, document, callback_filter=language_id_filter(document))
 
-    @rpc_method(name="textDocument/willSaveWaitUntil", param_type=WillSaveTextDocumentParams)
+    @rpc_method(
+        name="textDocument/willSaveWaitUntil",
+        param_type=WillSaveTextDocumentParams,
+    )
     @_logger.call
     def _text_document_will_save_wait_until(
-        self, text_document: TextDocumentIdentifier, reason: TextDocumentSaveReason, *args: Any, **kwargs: Any
+        self,
+        text_document: TextDocumentIdentifier,
+        reason: TextDocumentSaveReason,
+        *args: Any,
+        **kwargs: Any,
     ) -> List[TextEdit]:
         return []
 
@@ -340,9 +383,15 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart):
 
         sync_kind = (
             self.parent.capabilities.text_document_sync
-            if isinstance(self.parent.capabilities.text_document_sync, TextDocumentSyncKind)
+            if isinstance(
+                self.parent.capabilities.text_document_sync,
+                TextDocumentSyncKind,
+            )
             else self.parent.capabilities.text_document_sync.change
-            if isinstance(self.parent.capabilities.text_document_sync, TextDocumentSyncOptions)
+            if isinstance(
+                self.parent.capabilities.text_document_sync,
+                TextDocumentSyncOptions,
+            )
             else None
         )
         for content_change in content_changes:
@@ -351,12 +400,17 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart):
             elif sync_kind == TextDocumentSyncKind.FULL and isinstance(
                 content_change, TextDocumentContentChangeEventType2
             ):
-                document.apply_full_change(text_document.version, self._normalize_line_endings(content_change.text))
+                document.apply_full_change(
+                    text_document.version,
+                    self._normalize_line_endings(content_change.text),
+                )
             elif sync_kind == TextDocumentSyncKind.INCREMENTAL and isinstance(
                 content_change, TextDocumentContentChangeEventType1
             ):
                 document.apply_incremental_change(
-                    text_document.version, content_change.range, self._normalize_line_endings(content_change.text)
+                    text_document.version,
+                    content_change.range,
+                    self._normalize_line_endings(content_change.text),
                 )
             else:
                 raise LanguageServerDocumentError(

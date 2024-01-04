@@ -57,7 +57,10 @@ class SimpleLRUCache:
 
     @staticmethod
     def _make_key(*args: Any, **kwargs: Any) -> Tuple[Any, ...]:
-        return (tuple(_freeze(v) for v in args), hash(frozenset({k: _freeze(v) for k, v in kwargs.items()})))
+        return (
+            tuple(_freeze(v) for v in args),
+            hash(frozenset({k: _freeze(v) for k, v in kwargs.items()})),
+        )
 
     def clear(self) -> None:
         with self._lock:

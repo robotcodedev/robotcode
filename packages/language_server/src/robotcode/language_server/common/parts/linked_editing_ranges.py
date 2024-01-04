@@ -37,7 +37,10 @@ class LinkedEditingRangeProtocolPart(LanguageServerProtocolPart):
     def collect(sender, document: TextDocument, position: Position) -> Optional[LinkedEditingRanges]:  # NOSONAR
         ...
 
-    @rpc_method(name="textDocument/linkedEditingRange", param_type=LinkedEditingRangeParams)
+    @rpc_method(
+        name="textDocument/linkedEditingRange",
+        param_type=LinkedEditingRangeParams,
+    )
     @threaded
     def _text_document_linked_editing_range(
         self,
@@ -54,7 +57,10 @@ class LinkedEditingRangeProtocolPart(LanguageServerProtocolPart):
             return None
 
         for result in self.collect(
-            self, document, document.position_from_utf16(position), callback_filter=language_id_filter(document)
+            self,
+            document,
+            document.position_from_utf16(position),
+            callback_filter=language_id_filter(document),
         ):
             check_current_thread_canceled()
 

@@ -74,10 +74,7 @@ def to_camel_case(s: str) -> str:
         if not s:
             result = s
         else:
-            result = str(s[0]).lower() + _RE_CAMEL_CASE_2.sub(
-                lambda matched: str(matched.group(1)).upper(),
-                s[1:],
-            )
+            result = str(s[0]).lower() + _RE_CAMEL_CASE_2.sub(lambda matched: str(matched.group(1)).upper(), s[1:])
         __to_snake_camel_cache[s] = result
     return cast(str, result)
 
@@ -157,7 +154,7 @@ __handlers_cache: Dict[Type[Any], Callable[[Any, bool, bool], Any]] = {}
 
 
 def get_dataclass_fields(t: Type[Any]) -> Tuple[dataclasses.Field, ...]:  # type: ignore
-    fields = __dataclasses_cache.get(t, None)
+    fields = __dataclasses_cache.get(t)
     if fields is None:
         fields = __dataclasses_cache[t] = dataclasses.fields(t)
         return fields
@@ -330,13 +327,27 @@ def __from_dict_handle_mapping(value: Any, t: Type[Any], strict: bool) -> Tuple[
     return None, False
 
 
-__from_dict_handlers: List[Tuple[Callable[[Type[Any]], bool], Callable[[Any, Type[Any], bool], Tuple[Any, bool]]]] = [
-    (lambda t: t in {int, bool, float, str, NONETYPE}, __from_dict_handle_basic_types),
+__from_dict_handlers: List[
+    Tuple[
+        Callable[[Type[Any]], bool],
+        Callable[[Any, Type[Any], bool], Tuple[Any, bool]],
+    ]
+] = [
+    (
+        lambda t: t in {int, bool, float, str, NONETYPE},
+        __from_dict_handle_basic_types,
+    ),
     (lambda t: _get_origin_cached(t) is Union, __from_dict_handle_union),
     (lambda t: _get_origin_cached(t) is Literal, __from_dict_handle_literal),
     (__is_enum, __from_dict_handle_enum),
-    (lambda t: is_subclass_cached(_get_origin_cached(t) or t, Sequence), __from_dict_handle_sequence),
-    (lambda t: is_subclass_cached(_get_origin_cached(t) or t, Mapping), __from_dict_handle_mapping),
+    (
+        lambda t: is_subclass_cached(_get_origin_cached(t) or t, Sequence),
+        __from_dict_handle_sequence,
+    ),
+    (
+        lambda t: is_subclass_cached(_get_origin_cached(t) or t, Mapping),
+        __from_dict_handle_mapping,
+    ),
     (lambda t: t is Any or t is Ellipsis, lambda v, _t, _: (v, True)),  # type: ignore
 ]
 
@@ -346,7 +357,7 @@ __non_default_parameters_cache: Dict[Type[Any], Set[str]] = {}
 
 
 def __get_non_default_parameter(t: Type[Any], signature: inspect.Signature) -> Set[str]:
-    r = __non_default_parameters_cache.get(t, None)
+    r = __non_default_parameters_cache.get(t)
     if r is None:
         r = __non_default_parameters_cache[t] = {
             k for k, v in signature.parameters.items() if v.default == inspect.Parameter.empty
@@ -358,7 +369,7 @@ __signature_keys_cache: Dict[Type[Any], Set[str]] = {}
 
 
 def __get_signature_keys_cached(t: Type[Any], signature: inspect.Signature) -> Set[str]:
-    r = __signature_keys_cache.get(t, None)
+    r = __signature_keys_cache.get(t)
     if r is None:
         r = __signature_keys_cache[t] = set(signature.parameters.keys())
     return r
@@ -427,7 +438,7 @@ def from_dict(
 
             same_keys = cased_value.keys() & sig_keys
 
-            if strict and any(k for k in cased_value.keys() if k not in sig_keys):
+            if strict and any(k for k in cased_value if k not in sig_keys):
                 continue
 
             if not all(k in same_keys for k in non_default_parameters):
@@ -442,7 +453,7 @@ def from_dict(
             elif match_same_keys is not None and len(match_same_keys) == len(same_keys):
                 raise TypeError(
                     f"Value {value!r} matches to more then one types of "
-                    f"{repr(types[0].__name__) if len(types)==1 else ' | '.join(repr(e.__name__) for e in types)}."
+                    f"{repr(types[0].__name__) if len(types) == 1 else ' | '.join(repr(e.__name__) for e in types)}."
                 )
 
         if (
@@ -492,12 +503,7 @@ def from_json(
     return from_dict(json.loads(s), types, strict=strict)
 
 
-def as_dict(
-    value: Any,
-    *,
-    remove_defaults: bool = False,
-    encode: bool = True,
-) -> Dict[str, Any]:
+def as_dict(value: Any, *, remove_defaults: bool = False, encode: bool = True) -> Dict[str, Any]:
     if not dataclasses.is_dataclass(value):
         raise TypeError("as_dict() should be called on dataclass instances")
 
@@ -510,7 +516,7 @@ def _handle_basic_types(value: Any, _remove_defaults: bool, _encode: bool) -> An
 
 def _handle_dataclass(value: Any, remove_defaults: bool, encode: bool) -> Dict[str, Any]:
     t = type(value)
-    fields = __dataclasses_cache.get(t, None)
+    fields = __dataclasses_cache.get(t)
     if fields is None:
         fields = dataclasses.fields(t)
         __dataclasses_cache[t] = fields
@@ -553,10 +559,7 @@ __as_dict_handlers: List[Tuple[Callable[[Any], bool], Callable[[Any, bool, bool]
         lambda value: type(value) in {int, bool, float, str, NONETYPE},
         _handle_basic_types,
     ),
-    (
-        lambda value: dataclasses.is_dataclass(value),
-        _handle_dataclass,
-    ),
+    (dataclasses.is_dataclass, _handle_dataclass),
     (lambda value: isinstance(value, enum.Enum), _as_dict_handle_enum),
     (
         lambda value: (isinstance(value, tuple) and hasattr(value, "_fields")),
@@ -566,24 +569,14 @@ __as_dict_handlers: List[Tuple[Callable[[Any], bool], Callable[[Any, bool, bool]
         lambda value: isinstance(value, (list, tuple, set, frozenset)),
         _as_dict_handle_sequence,
     ),
-    (
-        lambda value: isinstance(value, dict),
-        _as_dict_handle_dict,
-    ),
-    (
-        lambda _value: True,
-        _as_dict_handle_unknown_type,
-    ),
+    (lambda value: isinstance(value, dict), _as_dict_handle_dict),
+    (lambda _value: True, _as_dict_handle_unknown_type),
 ]
 
 
-def _as_dict_inner(
-    value: Any,
-    remove_defaults: bool,
-    encode: bool,
-) -> Any:
+def _as_dict_inner(value: Any, remove_defaults: bool, encode: bool) -> Any:
     t = type(value)
-    func = __handlers_cache.get(t, None)
+    func = __handlers_cache.get(t)
     if func is None:
         if t in __handlers_cache:
             return __handlers_cache[t](value, remove_defaults, encode)

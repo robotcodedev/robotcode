@@ -4,11 +4,21 @@ from typing import TYPE_CHECKING, Any, List, Optional
 
 from robot.parsing.lexer.tokens import Token
 from robotcode.core.concurrent import threaded
-from robotcode.core.lsp.types import Diagnostic, DiagnosticSeverity, DiagnosticTag, Position, Range
+from robotcode.core.lsp.types import (
+    Diagnostic,
+    DiagnosticSeverity,
+    DiagnosticTag,
+    Position,
+    Range,
+)
 from robotcode.core.uri import Uri
 from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.robot.diagnostics.entities import ArgumentDefinition
-from robotcode.robot.utils.ast import iter_nodes, range_from_node, range_from_token
+from robotcode.robot.utils.ast import (
+    iter_nodes,
+    range_from_node,
+    range_from_token,
+)
 from robotcode.robot.utils.stubs import HasError, HasErrors, HeaderAndBodyBlock
 
 from ...common.decorators import language_id
@@ -81,10 +91,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
                 [
                     Diagnostic(
                         range=Range(
-                            start=Position(
-                                line=0,
-                                character=0,
-                            ),
+                            start=Position(line=0, character=0),
                             end=Position(
                                 line=len(document.get_lines()),
                                 character=len((document.get_lines())[-1] or ""),
@@ -99,7 +106,11 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
             )
 
     def _create_error_from_node(
-        self, node: ast.AST, msg: str, source: Optional[str] = None, only_start: bool = True
+        self,
+        node: ast.AST,
+        msg: str,
+        source: Optional[str] = None,
+        only_start: bool = True,
     ) -> Diagnostic:
         from robot.parsing.model.statements import Statement
 
@@ -140,9 +151,10 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
         result: List[Diagnostic] = []
         try:
             for token in self.parent.documents_cache.get_tokens(document):
-                if token.type in [Token.ERROR, Token.FATAL_ERROR] and not Namespace.should_ignore(
-                    document, range_from_token(token)
-                ):
+                if token.type in [
+                    Token.ERROR,
+                    Token.FATAL_ERROR,
+                ] and not Namespace.should_ignore(document, range_from_token(token)):
                     result.append(self._create_error_from_token(token))
 
                 try:
@@ -175,10 +187,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
                 [
                     Diagnostic(
                         range=Range(
-                            start=Position(
-                                line=0,
-                                character=0,
-                            ),
+                            start=Position(line=0, character=0),
                             end=Position(
                                 line=len(document.get_lines()),
                                 character=len((document.get_lines())[-1] or ""),
@@ -224,10 +233,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
                 [
                     Diagnostic(
                         range=Range(
-                            start=Position(
-                                line=0,
-                                character=0,
-                            ),
+                            start=Position(line=0, character=0),
                             end=Position(
                                 line=len(document.get_lines()),
                                 character=len((document.get_lines())[-1] or ""),
@@ -282,10 +288,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
                 [
                     Diagnostic(
                         range=Range(
-                            start=Position(
-                                line=0,
-                                character=0,
-                            ),
+                            start=Position(line=0, character=0),
                             end=Position(
                                 line=len(document.get_lines()),
                                 character=len((document.get_lines())[-1] or ""),
@@ -342,10 +345,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
                 [
                     Diagnostic(
                         range=Range(
-                            start=Position(
-                                line=0,
-                                character=0,
-                            ),
+                            start=Position(line=0, character=0),
                             end=Position(
                                 line=len(document.get_lines()),
                                 character=len((document.get_lines())[-1] or ""),

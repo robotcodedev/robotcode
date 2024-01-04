@@ -19,13 +19,19 @@ from robotcode.core.lsp.types import (
 from robotcode.core.utils.dataclasses import as_dict
 from robotcode.language_server.common.parts.diagnostics import DiagnosticsMode
 from robotcode.language_server.common.text_document import TextDocument
-from robotcode.language_server.robotframework.configuration import AnalysisConfig, RobotCodeConfig, RobotConfig
+from robotcode.language_server.robotframework.configuration import (
+    AnalysisConfig,
+    RobotCodeConfig,
+    RobotConfig,
+)
 from robotcode.language_server.robotframework.protocol import (
     RobotLanguageServerProtocol,
 )
 from robotcode.language_server.robotframework.server import RobotLanguageServer
 
-from tests.robotcode.language_server.robotframework.tools import generate_test_id
+from tests.robotcode.language_server.robotframework.tools import (
+    generate_test_id,
+)
 
 from .pytest_regtestex import RegTestFixtureEx
 
@@ -38,7 +44,9 @@ def event_loop() -> Iterator[asyncio.AbstractEventLoop]:
 
 
 @pytest_asyncio.fixture(scope="session", ids=generate_test_id)
-async def protocol(request: pytest.FixtureRequest) -> AsyncIterator[RobotLanguageServerProtocol]:
+async def protocol(
+    request: pytest.FixtureRequest,
+) -> AsyncIterator[RobotLanguageServerProtocol]:
     root_path = Path(Path(__file__).absolute().parent, "data")
     robotcode_cache_path = root_path / ".robotcode_cache"
 
@@ -54,9 +62,7 @@ async def protocol(request: pytest.FixtureRequest) -> AsyncIterator[RobotLanguag
         )
     )
 
-    initialization_options = {
-        "python_path": ["./lib", "./resources"],
-    }
+    initialization_options = {"python_path": ["./lib", "./resources"]}
 
     protocol = RobotLanguageServerProtocol(server)
     protocol._initialize(
@@ -77,9 +83,7 @@ async def protocol(request: pytest.FixtureRequest) -> AsyncIterator[RobotLanguag
                 robot=RobotConfig(
                     python_path=["./lib", "./resources"],
                     env={"ENV_VAR": "1"},
-                    variables={
-                        "CMD_VAR": "1",
-                    },
+                    variables={"CMD_VAR": "1"},
                 ),
                 analysis=AnalysisConfig(diagnostic_mode=DiagnosticsMode.OFF),
             ),
@@ -97,12 +101,17 @@ async def protocol(request: pytest.FixtureRequest) -> AsyncIterator[RobotLanguag
 
 
 @pytest.fixture(scope="module")
-async def test_document(request: pytest.FixtureRequest) -> AsyncIterator[TextDocument]:
+async def test_document(
+    request: pytest.FixtureRequest,
+) -> AsyncIterator[TextDocument]:
     data_path = Path(request.param)
     data = data_path.read_text("utf-8")
 
     document = TextDocument(
-        document_uri=data_path.absolute().as_uri(), language_id="robotframework", version=1, text=data
+        document_uri=data_path.absolute().as_uri(),
+        language_id="robotframework",
+        version=1,
+        text=data,
     )
     try:
         yield document
@@ -112,6 +121,4 @@ async def test_document(request: pytest.FixtureRequest) -> AsyncIterator[TextDoc
 
 @pytest.fixture()
 def regtest(request: pytest.FixtureRequest) -> RegTestFixtureEx:
-    item = request.node
-
-    return RegTestFixtureEx(request, item.nodeid)
+    return RegTestFixtureEx(request)

@@ -14,7 +14,9 @@ from robotcode.core.lsp.types import (
 from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.jsonrpc2.protocol import rpc_method
 from robotcode.language_server.common.decorators import language_id_filter
-from robotcode.language_server.common.parts.protocol_part import LanguageServerProtocolPart
+from robotcode.language_server.common.parts.protocol_part import (
+    LanguageServerProtocolPart,
+)
 from robotcode.language_server.common.text_document import TextDocument
 
 if TYPE_CHECKING:
@@ -35,7 +37,10 @@ class DocumentHighlightProtocolPart(LanguageServerProtocolPart):
     def collect(sender, document: TextDocument, position: Position) -> Optional[List[DocumentHighlight]]:  # NOSONAR
         ...
 
-    @rpc_method(name="textDocument/documentHighlight", param_type=DocumentHighlightParams)
+    @rpc_method(
+        name="textDocument/documentHighlight",
+        param_type=DocumentHighlightParams,
+    )
     @threaded
     def _text_document_document_highlight(
         self,
@@ -51,7 +56,10 @@ class DocumentHighlightProtocolPart(LanguageServerProtocolPart):
             return None
 
         for result in self.collect(
-            self, document, document.position_from_utf16(position), callback_filter=language_id_filter(document)
+            self,
+            document,
+            document.position_from_utf16(position),
+            callback_filter=language_id_filter(document),
         ):
             if isinstance(result, BaseException):
                 if not isinstance(result, CancelledError):

@@ -150,7 +150,7 @@ class LinkFormatter:
         return "".join(f(t) for f, t in zip(formatters, tokens))
 
     def _format_link(self, text: str) -> str:
-        link, content = [t.strip() for t in text.split("|", 1)]
+        link, content = (t.strip() for t in text.split("|", 1))
         if self._is_image(content):
             content = self._get_image(content, link)
         elif self._is_image(link):
@@ -171,7 +171,7 @@ class LinkFormatter:
         if "|" not in text:
             return text
 
-        link, content = [t.strip() for t in text.split("|", 1)]
+        link, content = (t.strip() for t in text.split("|", 1))
         if self._is_image(content):
             return self._get_image(content, link)
 

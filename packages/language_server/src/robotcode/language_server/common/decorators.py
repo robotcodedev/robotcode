@@ -1,4 +1,12 @@
-from typing import Any, Callable, List, Protocol, TypeVar, Union, runtime_checkable
+from typing import (
+    Any,
+    Callable,
+    List,
+    Protocol,
+    TypeVar,
+    Union,
+    runtime_checkable,
+)
 
 from robotcode.core.lsp.types import CodeActionKind
 
@@ -68,7 +76,9 @@ class HasAllCommitCharacters(Protocol):
 CODE_ACTION_KINDS_ATTR = "__code_action_kinds__"
 
 
-def code_action_kinds(kinds: List[Union[CodeActionKind, str]]) -> Callable[[_F], _F]:
+def code_action_kinds(
+    kinds: List[Union[CodeActionKind, str]],
+) -> Callable[[_F], _F]:
     def decorator(func: _F) -> _F:
         setattr(func, CODE_ACTION_KINDS_ATTR, kinds)
         return func
@@ -81,7 +91,9 @@ class HasCodeActionKinds(Protocol):
     __code_action_kinds__: List[str]
 
 
-def language_id_filter(language_id_or_document: Union[str, TextDocument]) -> Callable[[Any], bool]:
+def language_id_filter(
+    language_id_or_document: Union[str, TextDocument],
+) -> Callable[[Any], bool]:
     def filter(c: Any) -> bool:
         return not hasattr(c, LANGUAGE_ID_ATTR) or (
             (

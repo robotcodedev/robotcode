@@ -38,7 +38,10 @@ class SignatureHelpProtocolPart(LanguageServerProtocolPart):
 
     @event
     def collect(
-        sender, document: TextDocument, position: Position, context: Optional[SignatureHelpContext] = None  # NOSONAR
+        sender,
+        document: TextDocument,
+        position: Position,
+        context: Optional[SignatureHelpContext] = None,  # NOSONAR
     ) -> Optional[SignatureHelp]:
         ...
 

@@ -24,7 +24,11 @@ from robotcode.core.concurrent import FutureEx
 from robotcode.core.utils.dataclasses import as_dict, as_json, from_dict
 from robotcode.core.utils.inspect import ensure_coroutine
 from robotcode.core.utils.logging import LoggingDescriptor
-from robotcode.jsonrpc2.protocol import JsonRPCException, JsonRPCProtocolBase, SendedRequestEntry
+from robotcode.jsonrpc2.protocol import (
+    JsonRPCException,
+    JsonRPCProtocolBase,
+    SendedRequestEntry,
+)
 
 from .dap_types import (
     ErrorBody,
@@ -38,13 +42,10 @@ from .dap_types import (
 
 
 class DebugAdapterErrorResponseError(JsonRPCException):
-    def __init__(
-        self,
-        error: ErrorResponse,
-    ) -> None:
+    def __init__(self, error: ErrorResponse) -> None:
         super().__init__(
             f'{error.message} (seq={error.request_seq} command="{error.command}")'
-            f'{f": {error.body.error}" if error.body is not None and error.body.error  else ""}',
+            f'{f": {error.body.error}" if error.body is not None and error.body.error else ""}'
         )
         self.error = error
 
@@ -59,7 +60,7 @@ class DebugAdapterRPCErrorException(JsonRPCException):
         error_message: Optional[Message] = None,
     ) -> None:
         super().__init__(
-            f'{(message+" ") if message else ""}(seq={request_seq} command="{command}")'
+            f'{(message + " ") if message else ""}(seq={request_seq} command="{command}")'
             f'{f": {error_message}" if error_message else ""}'
         )
         self.message = message
@@ -114,7 +115,7 @@ class DebugAdapterProtocol(JsonRPCProtocolBase):
 
     @staticmethod
     def _generate_json_rpc_messages_from_dict(
-        data: Union[Dict[Any, Any], List[Dict[Any, Any]]]
+        data: Union[Dict[Any, Any], List[Dict[Any, Any]]],
     ) -> Iterator[ProtocolMessage]:
         def inner(d: Dict[Any, Any]) -> ProtocolMessage:
             result = from_dict(d, (Request, Response, Event))
@@ -163,7 +164,9 @@ class DebugAdapterProtocol(JsonRPCProtocolBase):
 
     @staticmethod
     def _convert_params(
-        callable: Callable[..., Any], param_type: Optional[Type[Any]], params: Any
+        callable: Callable[..., Any],
+        param_type: Optional[Type[Any]],
+        params: Any,
     ) -> Tuple[List[Any], Dict[str, Any]]:
         if params is None:
             return [], {}
@@ -220,7 +223,9 @@ class DebugAdapterProtocol(JsonRPCProtocolBase):
         raise DebugAdapterRPCErrorException(
             f"Unknown Command '{message.command}'",
             error_message=Message(
-                format='Unknown command "{command}"', variables={"command": str(message.command)}, show_user=True
+                format='Unknown command "{command}"',
+                variables={"command": str(message.command)},
+                show_user=True,
             ),
         )
 
@@ -230,12 +235,16 @@ class DebugAdapterProtocol(JsonRPCProtocolBase):
 
         with self._received_request_lock:
             if e is None or not callable(e.method):
-                result = asyncio.create_task(self.handle_unknown_command(message), name="handle_unknown_command")
+                result = asyncio.create_task(
+                    self.handle_unknown_command(message),
+                    name="handle_unknown_command",
+                )
             else:
                 params = self._convert_params(e.method, e.param_type, message.arguments)
 
                 result = asyncio.create_task(
-                    ensure_coroutine(e.method)(*params[0], **params[1]), name=e.method.__name__
+                    ensure_coroutine(e.method)(*params[0], **params[1]),
+                    name=e.method.__name__,
                 )
 
             self._received_request[message.seq] = result
@@ -289,7 +298,13 @@ class DebugAdapterProtocol(JsonRPCProtocolBase):
         message: Optional[str] = None,
     ) -> None:
         self.send_message(
-            Response(request_seq=request_seq, command=command, success=success, message=message, body=result)
+            Response(
+                request_seq=request_seq,
+                command=command,
+                success=success,
+                message=message,
+                body=result,
+            )
         )
 
     @_logger.call
@@ -336,7 +351,10 @@ class DebugAdapterProtocol(JsonRPCProtocolBase):
         if entry is None:
             error = f"Invalid response. Could not find id '{message.request_seq}' in request list {message!r}"
             self._logger.warning(error)
-            self.send_error("invalid response", error_message=Message(format=error, show_user=True))
+            self.send_error(
+                "invalid response",
+                error_message=Message(format=error, show_user=True),
+            )
             return
 
         try:

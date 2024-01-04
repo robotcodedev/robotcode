@@ -2,8 +2,14 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple
 
-from robotcode.language_server.common.parts.diagnostics import AnalysisProgressMode, DiagnosticsMode
-from robotcode.language_server.common.parts.workspace import ConfigBase, config_section
+from robotcode.language_server.common.parts.diagnostics import (
+    AnalysisProgressMode,
+    DiagnosticsMode,
+)
+from robotcode.language_server.common.parts.workspace import (
+    ConfigBase,
+    config_section,
+)
 
 
 @config_section("robotcode.languageServer")

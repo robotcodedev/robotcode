@@ -41,8 +41,18 @@ def main() -> None:
 
     vsix_path = Path(dist_path, f"robotcode-{current_version}.vsix")
 
-    run("npx vsce publish", f"npx vsce publish -i {vsix_path}", shell=True, timeout=600)
-    run("npx ovsx publish", f"npx ovsx publish {vsix_path}", shell=True, timeout=600)
+    run(
+        "npx vsce publish",
+        f"npx vsce publish -i {vsix_path}",
+        shell=True,
+        timeout=600,
+    )
+    run(
+        "npx ovsx publish",
+        f"npx ovsx publish {vsix_path}",
+        shell=True,
+        timeout=600,
+    )
 
     run(
         "hatch publish",

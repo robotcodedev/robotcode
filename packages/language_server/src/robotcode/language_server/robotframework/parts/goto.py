@@ -1,13 +1,6 @@
 from __future__ import annotations
 
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    List,
-    Optional,
-    Union,
-    cast,
-)
+from typing import TYPE_CHECKING, Any, List, Optional, Union, cast
 
 from robotcode.core.concurrent import check_current_thread_canceled
 from robotcode.core.lsp.types import Location, LocationLink, Position, Range
@@ -20,7 +13,9 @@ from ...common.text_document import TextDocument
 from .protocol_part import RobotLanguageServerProtocolPart
 
 if TYPE_CHECKING:
-    from robotcode.language_server.robotframework.protocol import RobotLanguageServerProtocol
+    from robotcode.language_server.robotframework.protocol import (
+        RobotLanguageServerProtocol,
+    )
 
 
 class RobotGotoProtocolPart(RobotLanguageServerProtocolPart):
@@ -62,7 +57,13 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart):
                 found_range = (
                     variable.name_range
                     if variable.source == namespace.source and position.is_in_range(variable.name_range, False)
-                    else cast(Optional[Range], next((r.range for r in var_refs if position.is_in_range(r.range)), None))
+                    else cast(
+                        Optional[Range],
+                        next(
+                            (r.range for r in var_refs if position.is_in_range(r.range)),
+                            None,
+                        ),
+                    )
                 )
 
                 if found_range is not None and variable.source:
@@ -91,7 +92,11 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart):
                     kw.name_range
                     if kw.source == namespace.source and position.is_in_range(kw.name_range, False)
                     else cast(
-                        Optional[Range], next((r.range for r in kw_refs if position.is_in_range(r.range, False)), None)
+                        Optional[Range],
+                        next(
+                            (r.range for r in kw_refs if position.is_in_range(r.range, False)),
+                            None,
+                        ),
                     )
                 )
 
@@ -116,7 +121,10 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart):
 
             for ns, ns_refs in all_namespace_refs.items():
                 for found_range in [
-                    next((r.range for r in ns_refs if position.is_in_range(r.range, False)), None),
+                    next(
+                        (r.range for r in ns_refs if position.is_in_range(r.range, False)),
+                        None,
+                    ),
                     ns.alias_range if position.is_in_range(ns.alias_range, False) else None,
                     ns.import_range if position.is_in_range(ns.import_range, False) else None,
                 ]:

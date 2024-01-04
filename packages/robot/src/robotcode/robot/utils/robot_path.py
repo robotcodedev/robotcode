@@ -28,7 +28,11 @@ def find_file_ex(
     default = file_type or "File"
 
     file_type = (
-        {"Library": "Test library", "Variables": "Variable file", "Resource": "Resource file"}.get(file_type, default)
+        {
+            "Library": "Test library",
+            "Variables": "Variable file",
+            "Resource": "Resource file",
+        }.get(file_type, default)
         if file_type
         else default
     )

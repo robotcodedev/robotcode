@@ -3453,7 +3453,8 @@ class CodeLens(CamelSnakeMixin):
     source text, like the number of references, a way to run tests, etc.
 
     A code lens is _unresolved_ when no command is associated to it. For performance
-    reasons the creation of a code lens and resolving should be done in two stages."""
+    reasons the creation of a code lens and resolving should be done in two stages.
+    """
 
     range: Range
     """The range in which this code lens is valid. Should only span a single line."""
@@ -3944,27 +3945,15 @@ class Range(CamelSnakeMixin):
     @staticmethod
     def zero() -> Range:
         return Range(
-            start=Position(
-                line=0,
-                character=0,
-            ),
-            end=Position(
-                line=0,
-                character=0,
-            ),
+            start=Position(line=0, character=0),
+            end=Position(line=0, character=0),
         )
 
     @staticmethod
     def invalid() -> Range:
         return Range(
-            start=Position(
-                line=-1,
-                character=-1,
-            ),
-            end=Position(
-                line=-1,
-                character=-1,
-            ),
+            start=Position(line=-1, character=-1),
+            end=Position(line=-1, character=-1),
         )
 
     def extend(
@@ -4835,7 +4824,11 @@ class ServerCapabilities(CamelSnakeMixin):
     # Since: 3.16.0
 
     linked_editing_range_provider: Optional[
-        Union[bool, LinkedEditingRangeOptions, LinkedEditingRangeRegistrationOptions]
+        Union[
+            bool,
+            LinkedEditingRangeOptions,
+            LinkedEditingRangeRegistrationOptions,
+        ]
     ] = None
     """The server provides linked editing range support.
 
@@ -7164,7 +7157,10 @@ The InlineValue types combines all inline value types into one type.
 # Since: 3.17.0
 
 
-DocumentDiagnosticReport = Union[RelatedFullDocumentDiagnosticReport, RelatedUnchangedDocumentDiagnosticReport]
+DocumentDiagnosticReport = Union[
+    RelatedFullDocumentDiagnosticReport,
+    RelatedUnchangedDocumentDiagnosticReport,
+]
 """The result of a document diagnostic pull request. A report can
 either be a full report containing all diagnostics for the
 requested document or an unchanged report indicating that nothing
@@ -7198,7 +7194,8 @@ ChangeAnnotationIdentifier = str
 
 
 WorkspaceDocumentDiagnosticReport = Union[
-    WorkspaceFullDocumentDiagnosticReport, WorkspaceUnchangedDocumentDiagnosticReport
+    WorkspaceFullDocumentDiagnosticReport,
+    WorkspaceUnchangedDocumentDiagnosticReport,
 ]
 """A workspace diagnostic document report.
 

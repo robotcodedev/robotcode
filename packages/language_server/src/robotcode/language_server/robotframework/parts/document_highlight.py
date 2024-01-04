@@ -1,13 +1,20 @@
 from typing import TYPE_CHECKING, Any, List, Optional, cast
 
 from robotcode.core.concurrent import check_current_thread_canceled
-from robotcode.core.lsp.types import DocumentHighlight, DocumentHighlightKind, Position, Range
+from robotcode.core.lsp.types import (
+    DocumentHighlight,
+    DocumentHighlightKind,
+    Position,
+    Range,
+)
 from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.language_server.common.decorators import language_id
 from robotcode.language_server.common.text_document import TextDocument
 
 if TYPE_CHECKING:
-    from robotcode.language_server.robotframework.protocol import RobotLanguageServerProtocol
+    from robotcode.language_server.robotframework.protocol import (
+        RobotLanguageServerProtocol,
+    )
 
 from .protocol_part import RobotLanguageServerProtocolPart
 
@@ -22,12 +29,7 @@ class RobotDocumentHighlightProtocolPart(RobotLanguageServerProtocolPart):
 
     @language_id("robotframework")
     @_logger.call
-    def collect(
-        self,
-        sender: Any,
-        document: TextDocument,
-        position: Position,
-    ) -> Optional[List[DocumentHighlight]]:
+    def collect(self, sender: Any, document: TextDocument, position: Position) -> Optional[List[DocumentHighlight]]:
         namespace = self.parent.documents_cache.get_namespace(document)
 
         all_variable_refs = namespace.get_variable_references()
@@ -39,7 +41,12 @@ class RobotDocumentHighlightProtocolPart(RobotLanguageServerProtocolPart):
                     if (var.source == namespace.source and position in var.name_range) or position in r.range:
                         return [
                             *(
-                                [DocumentHighlight(var.name_range, DocumentHighlightKind.TEXT)]
+                                [
+                                    DocumentHighlight(
+                                        var.name_range,
+                                        DocumentHighlightKind.TEXT,
+                                    )
+                                ]
                                 if var.source == namespace.source
                                 else []
                             ),
@@ -71,29 +78,23 @@ class RobotDocumentHighlightProtocolPart(RobotLanguageServerProtocolPart):
                     if ns.import_source == namespace.source
                     and (position.is_in_range(ns.alias_range, False) or position.is_in_range(ns.import_range, False))
                     else cast(
-                        Optional[Range], next((r.range for r in ns_refs if position.is_in_range(r.range, False)), None)
+                        Optional[Range],
+                        next(
+                            (r.range for r in ns_refs if position.is_in_range(r.range, False)),
+                            None,
+                        ),
                     )
                 )
 
                 if found_range is not None:
                     return [
                         *(
-                            [
-                                DocumentHighlight(
-                                    ns.import_range,
-                                    DocumentHighlightKind.TEXT,
-                                )
-                            ]
+                            [DocumentHighlight(ns.import_range, DocumentHighlightKind.TEXT)]
                             if ns.import_source == namespace.source and ns.import_range
                             else []
                         ),
                         *(
-                            [
-                                DocumentHighlight(
-                                    ns.alias_range,
-                                    DocumentHighlightKind.TEXT,
-                                )
-                            ]
+                            [DocumentHighlight(ns.alias_range, DocumentHighlightKind.TEXT)]
                             if ns.import_source == namespace.source and ns.alias_range
                             else []
                         ),

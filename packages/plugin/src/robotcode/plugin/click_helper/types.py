@@ -23,7 +23,12 @@ T = TypeVar("T", bound=Enum)
 class EnumChoice(click.Choice, Generic[T]):
     """A click.Choice that accepts Enum values."""
 
-    def __init__(self, choices: Type[T], case_sensitive: bool = True, excluded: Optional[Set[T]] = None) -> None:
+    def __init__(
+        self,
+        choices: Type[T],
+        case_sensitive: bool = True,
+        excluded: Optional[Set[T]] = None,
+    ) -> None:
         super().__init__(
             choices if excluded is None else (set(choices).difference(excluded)),  # type: ignore
             case_sensitive,
@@ -74,7 +79,12 @@ class AddressesPort(NamedTuple):
 class AddressPortParamType(click.ParamType):
     name = "[<address>:]<port>"
 
-    def convert(self, value: Any, param: Optional[click.Parameter], ctx: Optional[click.Context]) -> Any:
+    def convert(
+        self,
+        value: Any,
+        param: Optional[click.Parameter],
+        ctx: Optional[click.Context],
+    ) -> Any:
         splitted = value.split(":")
         if len(splitted) == 1 and splitted[0]:
             try:

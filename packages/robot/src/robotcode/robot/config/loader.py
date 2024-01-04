@@ -79,7 +79,10 @@ def load_config_from_pyproject_toml_str(config_type: Type[_ConfigType], tool_nam
 
 
 def _load_config_data_from_path(
-    config_type: Type[_ConfigType], tool_name: str, robot_toml_tool_name: Optional[str], __path: Path
+    config_type: Type[_ConfigType],
+    tool_name: str,
+    robot_toml_tool_name: Optional[str],
+    __path: Path,
 ) -> _ConfigType:
     try:
         if __path.name == PYPROJECT_TOML:
@@ -87,7 +90,9 @@ def _load_config_data_from_path(
 
         if __path.name == ROBOT_TOML or __path.name == LOCAL_ROBOT_TOML or __path.suffix == ".toml":
             return load_config_from_robot_toml_str(
-                config_type, __path.read_text("utf-8"), tool_name=robot_toml_tool_name
+                config_type,
+                __path.read_text("utf-8"),
+                tool_name=robot_toml_tool_name,
             )
         raise TypeError("Unknown config file type.")
 
@@ -115,18 +120,25 @@ def load_config_from_path(
     for __path in __paths:
         result.add_options(
             _load_config_data_from_path(
-                config_type, tool_name, robot_toml_tool_name, __path if isinstance(__path, Path) else __path[0]
+                config_type,
+                tool_name,
+                robot_toml_tool_name,
+                __path if isinstance(__path, Path) else __path[0],
             )
         )
 
     return result
 
 
-def load_robot_config_from_path(*__paths: Union[Path, Tuple[Path, ConfigType]]) -> RobotConfig:
+def load_robot_config_from_path(
+    *__paths: Union[Path, Tuple[Path, ConfigType]],
+) -> RobotConfig:
     return load_config_from_path(RobotConfig, *__paths, tool_name="robot")
 
 
-def find_project_root(*sources: Union[str, Path]) -> Tuple[Optional[Path], DiscoverdBy]:
+def find_project_root(
+    *sources: Union[str, Path],
+) -> Tuple[Optional[Path], DiscoverdBy]:
     if not sources:
         sources = (str(Path.cwd().absolute()),)
 
@@ -158,7 +170,9 @@ def find_project_root(*sources: Union[str, Path]) -> Tuple[Optional[Path], Disco
     return None, DiscoverdBy.NOT_FOUND
 
 
-def get_config_files_from_folder(folder: Path) -> Sequence[Tuple[Path, ConfigType]]:
+def get_config_files_from_folder(
+    folder: Path,
+) -> Sequence[Tuple[Path, ConfigType]]:
     result = []
 
     pyproject_toml = folder / PYPROJECT_TOML

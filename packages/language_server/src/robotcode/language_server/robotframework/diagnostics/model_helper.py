@@ -43,10 +43,7 @@ from robotcode.robot.utils.ast import (
     whitespace_from_begin_of_token,
 )
 
-from .namespace import (
-    DEFAULT_BDD_PREFIXES,
-    Namespace,
-)
+from .namespace import DEFAULT_BDD_PREFIXES, Namespace
 
 
 class ModelHelperMixin:
@@ -146,12 +143,18 @@ class ModelHelperMixin:
                     inner_keyword_doc = namespace.find_keyword(unescape(argument_tokens[1].value))
 
                     if position.is_in_range(range_from_token(argument_tokens[1])):
-                        return (inner_keyword_doc, argument_tokens[1]), argument_tokens[2:]
+                        return (
+                            inner_keyword_doc,
+                            argument_tokens[1],
+                        ), argument_tokens[2:]
 
                     argument_tokens = argument_tokens[2:]
 
                     inner_keyword_doc_and_args = cls.get_run_keyword_keyworddoc_and_token_from_position(
-                        inner_keyword_doc, argument_tokens, namespace, position
+                        inner_keyword_doc,
+                        argument_tokens,
+                        namespace,
+                        position,
                     )
 
                     if inner_keyword_doc_and_args[0] is not None:
@@ -166,12 +169,18 @@ class ModelHelperMixin:
                     inner_keyword_doc = namespace.find_keyword(unescape(argument_tokens[2].value))
 
                     if position.is_in_range(range_from_token(argument_tokens[2])):
-                        return (inner_keyword_doc, argument_tokens[2]), argument_tokens[3:]
+                        return (
+                            inner_keyword_doc,
+                            argument_tokens[2],
+                        ), argument_tokens[3:]
 
                     argument_tokens = argument_tokens[3:]
 
                     inner_keyword_doc_and_args = cls.get_run_keyword_keyworddoc_and_token_from_position(
-                        inner_keyword_doc, argument_tokens, namespace, position
+                        inner_keyword_doc,
+                        argument_tokens,
+                        namespace,
+                        position,
                     )
 
                     if inner_keyword_doc_and_args[0] is not None:
@@ -220,7 +229,10 @@ class ModelHelperMixin:
 
         for lib, keyword in iter_over_keyword_names_and_owners(keyword_token.value):
             if lib is not None:
-                lib_entries = next((v for k, v in (namespace.get_namespaces()).items() if k == lib), None)
+                lib_entries = next(
+                    (v for k, v in (namespace.get_namespaces()).items() if k == lib),
+                    None,
+                )
                 if lib_entries is not None:
                     kw_namespace = lib
                     lib_entry = next(
@@ -270,14 +282,17 @@ class ModelHelperMixin:
                         if var is not None:
                             yield sub_token, var
                         elif return_not_found:
-                            yield sub_token, VariableNotFoundDefinition(
-                                sub_token.lineno,
-                                sub_token.col_offset,
-                                sub_token.lineno,
-                                sub_token.end_col_offset,
-                                namespace.source,
-                                tokval,
+                            yield (
                                 sub_token,
+                                VariableNotFoundDefinition(
+                                    sub_token.lineno,
+                                    sub_token.col_offset,
+                                    sub_token.lineno,
+                                    sub_token.end_col_offset,
+                                    namespace.source,
+                                    tokval,
+                                    sub_token,
+                                ),
                             )
                     variable_started = False
                 if tokval == "$":
@@ -286,7 +301,9 @@ class ModelHelperMixin:
             pass
 
     @staticmethod
-    def remove_index_from_variable_token(token: Token) -> Tuple[Token, Optional[Token]]:
+    def remove_index_from_variable_token(
+        token: Token,
+    ) -> Tuple[Token, Optional[Token]]:
         def escaped(i: int) -> bool:
             return bool(token.value[-i - 3 : -i - 2] == "\\")
 
@@ -342,7 +359,12 @@ class ModelHelperMixin:
                 if var is not None:
                     yield var
                 if rest is not None:
-                    yield from cls._tokenize_variables(rest, identifiers, ignore_errors, extra_types=extra_types)
+                    yield from cls._tokenize_variables(
+                        rest,
+                        identifiers,
+                        ignore_errors,
+                        extra_types=extra_types,
+                    )
             else:
                 yield t
 
@@ -387,14 +409,17 @@ class ModelHelperMixin:
                         ):
                             yield v
                     elif base == "" and return_not_found:
-                        yield sub_token, VariableNotFoundDefinition(
-                            sub_token.lineno,
-                            sub_token.col_offset,
-                            sub_token.lineno,
-                            sub_token.end_col_offset,
-                            namespace.source,
-                            sub_token.value,
+                        yield (
                             sub_token,
+                            VariableNotFoundDefinition(
+                                sub_token.lineno,
+                                sub_token.col_offset,
+                                sub_token.lineno,
+                                sub_token.end_col_offset,
+                                namespace.source,
+                                sub_token.value,
+                                sub_token,
+                            ),
                         )
                         return
 
@@ -462,7 +487,12 @@ class ModelHelperMixin:
                             skip_commandline_variables=skip_commandline_variables,
                             ignore_error=True,
                         )
-                        sub_sub_token = Token(sub_token.type, name, sub_token.lineno, sub_token.col_offset)
+                        sub_sub_token = Token(
+                            sub_token.type,
+                            name,
+                            sub_token.lineno,
+                            sub_token.col_offset,
+                        )
                         if var is not None:
                             yield strip_variable_token(sub_sub_token), var
                             continue
@@ -472,24 +502,30 @@ class ModelHelperMixin:
                             if contains_variable(sub_token.value[2:-1]):
                                 continue
                             else:
-                                yield strip_variable_token(sub_sub_token), VariableNotFoundDefinition(
-                                    sub_sub_token.lineno,
-                                    sub_sub_token.col_offset,
-                                    sub_sub_token.lineno,
-                                    sub_sub_token.end_col_offset,
-                                    namespace.source,
-                                    name,
-                                    sub_sub_token,
+                                yield (
+                                    strip_variable_token(sub_sub_token),
+                                    VariableNotFoundDefinition(
+                                        sub_sub_token.lineno,
+                                        sub_sub_token.col_offset,
+                                        sub_sub_token.lineno,
+                                        sub_sub_token.end_col_offset,
+                                        namespace.source,
+                                        name,
+                                        sub_sub_token,
+                                    ),
                                 )
                 if return_not_found:
-                    yield strip_variable_token(sub_token), VariableNotFoundDefinition(
-                        sub_token.lineno,
-                        sub_token.col_offset,
-                        sub_token.lineno,
-                        sub_token.end_col_offset,
-                        namespace.source,
-                        sub_token.value,
-                        sub_token,
+                    yield (
+                        strip_variable_token(sub_token),
+                        VariableNotFoundDefinition(
+                            sub_token.lineno,
+                            sub_token.col_offset,
+                            sub_token.lineno,
+                            sub_token.end_col_offset,
+                            namespace.source,
+                            sub_token.value,
+                            sub_token,
+                        ),
                     )
             else:
                 yield token_or_var
@@ -734,7 +770,11 @@ class ModelHelperMixin:
                 (
                     i
                     for i, v in enumerate(kw_arguments)
-                    if v.kind in [KeywordArgumentKind.POSITIONAL_ONLY, KeywordArgumentKind.POSITIONAL_OR_NAMED]
+                    if v.kind
+                    in [
+                        KeywordArgumentKind.POSITIONAL_ONLY,
+                        KeywordArgumentKind.POSITIONAL_OR_NAMED,
+                    ]
                     and i == argument_index
                 ),
                 -1,
@@ -744,11 +784,13 @@ class ModelHelperMixin:
             else:
                 if need_named:
                     argument_index = next(
-                        (i for i, v in enumerate(kw_arguments) if v.kind == KeywordArgumentKind.VAR_NAMED), -1
+                        (i for i, v in enumerate(kw_arguments) if v.kind == KeywordArgumentKind.VAR_NAMED),
+                        -1,
                     )
                 else:
                     argument_index = next(
-                        (i for i, v in enumerate(kw_arguments) if v.kind == KeywordArgumentKind.VAR_POSITIONAL), -1
+                        (i for i, v in enumerate(kw_arguments) if v.kind == KeywordArgumentKind.VAR_POSITIONAL),
+                        -1,
                     )
 
         if argument_index >= len(kw_arguments):

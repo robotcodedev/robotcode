@@ -1,7 +1,6 @@
 import threading
 import uuid
 import weakref
-from concurrent.futures import Future
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -21,7 +20,7 @@ from typing import (
     cast,
 )
 
-from robotcode.core.concurrent import threaded
+from robotcode.core.concurrent import FutureEx, threaded
 from robotcode.core.event import event
 from robotcode.core.lsp.types import (
     ApplyWorkspaceEditParams,
@@ -54,9 +53,7 @@ from robotcode.core.lsp.types import (
     WorkspaceFoldersChangeEvent,
     WorkspaceFoldersServerCapabilities,
 )
-from robotcode.core.lsp.types import (
-    WorkspaceFolder as TypesWorkspaceFolder,
-)
+from robotcode.core.lsp.types import WorkspaceFolder as TypesWorkspaceFolder
 from robotcode.core.uri import Uri
 from robotcode.core.utils.dataclasses import CamelSnakeMixin, from_dict
 from robotcode.core.utils.logging import LoggingDescriptor
@@ -249,7 +246,10 @@ class Workspace(LanguageServerProtocolPart):
     def did_change_configuration(sender, settings: Dict[str, Any]) -> None:  # NOSONAR
         ...
 
-    @rpc_method(name="workspace/didChangeConfiguration", param_type=DidChangeConfigurationParams)
+    @rpc_method(
+        name="workspace/didChangeConfiguration",
+        param_type=DidChangeConfigurationParams,
+    )
     @threaded
     def _workspace_did_change_configuration(self, settings: Dict[str, Any], *args: Any, **kwargs: Any) -> None:
         self.settings = settings
@@ -340,16 +340,21 @@ class Workspace(LanguageServerProtocolPart):
         section: Type[_TConfig],
         scope_uri: Union[str, Uri, None] = None,
         request: bool = True,
-    ) -> Future[_TConfig]:
-        result_future: Future[_TConfig] = Future()
+    ) -> FutureEx[_TConfig]:
+        result_future: FutureEx[_TConfig] = FutureEx()
 
         scope = self.get_workspace_folder(scope_uri) if scope_uri is not None else None
 
         if (scope, section.__config_section__) in self._settings_cache:
-            result_future.set_result(cast(_TConfig, self._settings_cache[(scope, section.__config_section__)]))
+            result_future.set_result(
+                cast(
+                    _TConfig,
+                    self._settings_cache[(scope, section.__config_section__)],
+                )
+            )
             return result_future
 
-        def _get_configuration_done(f: Future[Optional[Any]]) -> None:
+        def _get_configuration_done(f: FutureEx[Optional[Any]]) -> None:
             try:
                 if result_future.cancelled():
                     return
@@ -382,7 +387,7 @@ class Workspace(LanguageServerProtocolPart):
         section: Optional[str],
         scope_uri: Union[str, Uri, None] = None,
         request: bool = True,
-    ) -> Future[Optional[Any]]:
+    ) -> FutureEx[Optional[Any]]:
         if (
             self.parent.client_capabilities
             and self.parent.client_capabilities.workspace
@@ -409,7 +414,7 @@ class Workspace(LanguageServerProtocolPart):
             else:
                 result = {}
                 break
-        result_future: Future[Optional[Any]] = Future()
+        result_future: FutureEx[Optional[Any]] = FutureEx()
         result_future.set_result([result])
         return result_future
 
@@ -458,7 +463,10 @@ class Workspace(LanguageServerProtocolPart):
     def did_change_watched_files(sender, changes: List[FileEvent]) -> None:  # NOSONAR
         ...
 
-    @rpc_method(name="workspace/didChangeWatchedFiles", param_type=DidChangeWatchedFilesParams)
+    @rpc_method(
+        name="workspace/didChangeWatchedFiles",
+        param_type=DidChangeWatchedFilesParams,
+    )
     @threaded
     def _workspace_did_change_watched_files(self, changes: List[FileEvent], *args: Any, **kwargs: Any) -> None:
         changes = [e for e in changes if not e.uri.endswith("/globalStorage")]
@@ -493,7 +501,10 @@ class Workspace(LanguageServerProtocolPart):
 
             entry = FileWatcherEntry(id=str(uuid.uuid4()), callback=callback, watchers=_watchers)
 
-            current_entry = next((e for e in self._file_watchers if e.watchers == _watchers), None)
+            current_entry = next(
+                (e for e in self._file_watchers if e.watchers == _watchers),
+                None,
+            )
 
             if current_entry is not None:
                 if callback not in self.did_change_watched_files:
@@ -513,7 +524,7 @@ class Workspace(LanguageServerProtocolPart):
                     and self.parent.client_capabilities.workspace.did_change_watched_files.dynamic_registration
                 ):
 
-                    def _done(f: Future[None]) -> None:
+                    def _done(f: FutureEx[None]) -> None:
                         if f.cancelled():
                             return
                         exception = f.exception()

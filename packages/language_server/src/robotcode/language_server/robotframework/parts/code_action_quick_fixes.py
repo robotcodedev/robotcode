@@ -1,7 +1,16 @@
 from collections import defaultdict
 from dataclasses import dataclass
 from string import Template as StringTemplate
-from typing import TYPE_CHECKING, Any, List, Mapping, Optional, Tuple, Union, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    List,
+    Mapping,
+    Optional,
+    Tuple,
+    Union,
+    cast,
+)
 
 from robot.parsing.lexer.tokens import Token
 from robot.parsing.model.blocks import Keyword, TestCase, VariableSection
@@ -100,7 +109,11 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
     @language_id("robotframework")
     @code_action_kinds([CodeActionKind.QUICK_FIX])
     def collect(
-        self, sender: Any, document: TextDocument, range: Range, context: CodeActionContext
+        self,
+        sender: Any,
+        document: TextDocument,
+        range: Range,
+        context: CodeActionContext,
     ) -> Optional[List[Union[Command, CodeAction]]]:
         result = []
         for method in iter_methods(self, lambda m: m.__name__.startswith("code_action_")):
@@ -109,7 +122,7 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
                 result.extend(code_actions)
 
         if result:
-            return list(sorted(result, key=lambda ca: ca.title))
+            return sorted(result, key=lambda ca: ca.title)
 
         return None
 
@@ -118,8 +131,16 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
             type = code_action.data.get("type", None)
             if type == "quickfix":
                 method_name = code_action.data.get("method")
-                method = next(iter_methods(self, lambda m: m.__name__ == f"resolve_code_action_{method_name}"))
-                method(code_action, data=from_dict(code_action.data, CodeActionData))
+                method = next(
+                    iter_methods(
+                        self,
+                        lambda m: m.__name__ == f"resolve_code_action_{method_name}",
+                    )
+                )
+                method(
+                    code_action,
+                    data=from_dict(code_action.data, CodeActionData),
+                )
 
         return None
 
@@ -154,7 +175,10 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
                     if bdd_token is not None and token is not None:
                         keyword_token = token
 
-                    lib_entry, kw_namespace = self.get_namespace_info_from_keyword_token(namespace, keyword_token)
+                    (
+                        lib_entry,
+                        kw_namespace,
+                    ) = self.get_namespace_info_from_keyword_token(namespace, keyword_token)
 
                     if lib_entry is not None and lib_entry.library_doc.type == "LIBRARY":
                         disabled = CodeActionDisabledType("Keyword is from a library")
@@ -172,7 +196,12 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
                             f"Create Keyword `{text}`",
                             kind=CodeActionKind.QUICK_FIX,
                             data=as_dict(
-                                CodeActionData("quickfix", "create_keyword", document.document_uri, diagnostic.range)
+                                CodeActionData(
+                                    "quickfix",
+                                    "create_keyword",
+                                    document.document_uri,
+                                    diagnostic.range,
+                                )
                             ),
                             diagnostics=[diagnostic],
                             disabled=disabled,
@@ -203,7 +232,10 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
             if bdd_token is not None and token is not None:
                 keyword_token = token
 
-            lib_entry, kw_namespace = self.get_namespace_info_from_keyword_token(namespace, keyword_token)
+            (
+                lib_entry,
+                kw_namespace,
+            ) = self.get_namespace_info_from_keyword_token(namespace, keyword_token)
 
             if lib_entry is not None and lib_entry.library_doc.type == "LIBRARY":
                 return None
@@ -223,7 +255,7 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
                 if value is not None and not contains_variable(name, "$@&%"):
                     arguments.append(f"${{{name}}}")
                 else:
-                    arguments.append(f"${{arg{len(arguments)+1}}}")
+                    arguments.append(f"${{arg{len(arguments) + 1}}}")
 
             insert_text = (
                 KEYWORD_WITH_ARGS_TEMPLATE.substitute(name=text, args="    ".join(arguments))
@@ -297,7 +329,11 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
                         kind=CodeActionKind.QUICK_FIX,
                         data=as_dict(
                             CodeActionData(
-                                "quickfix", "disable_robotcode_diagnostics_for_line", document.document_uri, range, k
+                                "quickfix",
+                                "disable_robotcode_diagnostics_for_line",
+                                document.document_uri,
+                                range,
+                                k,
                             )
                         ),
                         diagnostics=v,
@@ -330,7 +366,13 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
                 document_changes=[
                     TextDocumentEdit(
                         OptionalVersionedTextDocumentIdentifier(str(document.uri), document.version),
-                        [AnnotatedTextEdit("disable_robotcode_diagnostics_for_line", insert_range, insert_text)],
+                        [
+                            AnnotatedTextEdit(
+                                "disable_robotcode_diagnostics_for_line",
+                                insert_range,
+                                insert_text,
+                            )
+                        ],
                     )
                 ],
                 change_annotations={
@@ -428,12 +470,21 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
 
             insert_text = f"{spaces}${{{text}}}    Set Variable    value\n"
             node_range = range_from_node(node)
-            insert_range = Range(start=Position(node_range.start.line, 0), end=Position(node_range.start.line, 0))
+            insert_range = Range(
+                start=Position(node_range.start.line, 0),
+                end=Position(node_range.start.line, 0),
+            )
             code_action.edit = WorkspaceEdit(
                 document_changes=[
                     TextDocumentEdit(
                         OptionalVersionedTextDocumentIdentifier(str(document.uri), document.version),
-                        [AnnotatedTextEdit("create_local_variable", insert_range, insert_text)],
+                        [
+                            AnnotatedTextEdit(
+                                "create_local_variable",
+                                insert_range,
+                                insert_text,
+                            )
+                        ],
                     )
                 ],
                 change_annotations={"create_local_variable": ChangeAnnotation("Create Local variable", False)},
@@ -514,7 +565,10 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
 
             if any(n for n in nodes if isinstance(n, (VariableSection))) and isinstance(node, Variable):
                 node_range = range_from_node(node)
-                insert_range = Range(start=Position(node_range.start.line, 0), end=Position(node_range.start.line, 0))
+                insert_range = Range(
+                    start=Position(node_range.start.line, 0),
+                    end=Position(node_range.start.line, 0),
+                )
             else:
                 finder = FindSectionsVisitor()
                 finder.visit(model)
@@ -527,7 +581,10 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
                     if end_lineno is None:
                         return None
 
-                    insert_range = Range(start=Position(end_lineno, 0), end=Position(end_lineno, 0))
+                    insert_range = Range(
+                        start=Position(end_lineno, 0),
+                        end=Position(end_lineno, 0),
+                    )
                 else:
                     insert_range_prefix = "\n\n*** Variables ***\n"
                     if finder.setting_sections:
@@ -535,12 +592,18 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
                         insert_range_suffix = "\n\n"
                         section = finder.setting_sections[-1]
 
-                        _, last_stmt = FirstAndLastRealStatementFinder.find_from(section)
+                        (
+                            _,
+                            last_stmt,
+                        ) = FirstAndLastRealStatementFinder.find_from(section)
                         end_lineno = last_stmt.end_lineno if last_stmt else section.end_lineno
                         if end_lineno is None:
                             return None
 
-                        insert_range = Range(start=Position(end_lineno, 0), end=Position(end_lineno, 0))
+                        insert_range = Range(
+                            start=Position(end_lineno, 0),
+                            end=Position(end_lineno, 0),
+                        )
                     else:
                         insert_range_prefix = "*** Variables ***\n"
                         insert_range_suffix = "\n\n"
@@ -561,7 +624,13 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
                 document_changes=[
                     TextDocumentEdit(
                         OptionalVersionedTextDocumentIdentifier(str(document.uri), document.version),
-                        [AnnotatedTextEdit("create_suite_variable", insert_range, insert_text)],
+                        [
+                            AnnotatedTextEdit(
+                                "create_suite_variable",
+                                insert_range,
+                                insert_text,
+                            )
+                        ],
                     )
                 ],
                 change_annotations={"create_suite_variable": ChangeAnnotation("Create suite variable", False)},
@@ -672,7 +741,10 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
 
                 insert_text = f"{spaces}[Arguments]    ${{{text}}}=\n"
                 node_range = range_from_node(first_stmt)
-                insert_range = Range(start=Position(node_range.start.line, 0), end=Position(node_range.start.line, 0))
+                insert_range = Range(
+                    start=Position(node_range.start.line, 0),
+                    end=Position(node_range.start.line, 0),
+                )
             else:
                 insert_text = f"    ${{{text}}}="
                 argument_tokens = arguments.get_tokens(Token.ARGUMENT)

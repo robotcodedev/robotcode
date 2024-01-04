@@ -6,7 +6,16 @@ from collections import defaultdict
 from dataclasses import dataclass
 from io import IOBase
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, MutableMapping, Optional, Tuple, Union
+from typing import (
+    Any,
+    Dict,
+    Iterable,
+    List,
+    MutableMapping,
+    Optional,
+    Tuple,
+    Union,
+)
 
 import click
 import robot.running.model as running_model
@@ -29,7 +38,12 @@ from robotcode.core.lsp.types import (
 from robotcode.core.uri import Uri
 from robotcode.core.utils.cli import show_hidden_arguments
 from robotcode.core.utils.dataclasses import from_json
-from robotcode.plugin import Application, OutputFormat, UnknownError, pass_application
+from robotcode.plugin import (
+    Application,
+    OutputFormat,
+    UnknownError,
+    pass_application,
+)
 from robotcode.plugin.click_helper.types import add_options
 from robotcode.robot.utils import get_robot_version
 
@@ -59,7 +73,7 @@ def _patch() -> None:
                 TestDefaults,
             )
         else:
-            from robot.running.builder.settings import (  #  pyright: ignore[reportMissingImports]
+            from robot.running.builder.settings import (  # pyright: ignore[reportMissingImports]
                 Defaults as TestDefaults,
             )
 
@@ -421,7 +435,11 @@ def build_diagnostics(messages: List[Message]) -> Dict[str, List[Diagnostic]]:
                 text=match.group("message").strip(),
             )
         elif match := RE_PARSING_FAILED_MATCHER.match(message.message):
-            add_diagnostic(message, match.group("file"), text=match.group("message").strip())
+            add_diagnostic(
+                message,
+                match.group("file"),
+                text=match.group("message").strip(),
+            )
         else:
             add_diagnostic(message)
 
@@ -513,10 +531,7 @@ def handle_options(
 
 
 @discover.command(
-    context_settings={
-        "allow_extra_args": True,
-        "ignore_unknown_options": True,
-    },
+    context_settings={"allow_extra_args": True, "ignore_unknown_options": True},
     add_help_option=True,
     epilog='Use "-- --help" to see `robot` help.',
 )
@@ -585,10 +600,7 @@ def all(
 
 
 @discover.command(
-    context_settings={
-        "allow_extra_args": True,
-        "ignore_unknown_options": True,
-    },
+    context_settings={"allow_extra_args": True, "ignore_unknown_options": True},
     add_help_option=True,
     epilog='Use "-- --help" to see `robot` help.',
 )
@@ -631,14 +643,18 @@ def tests(
     ```
     """
 
-    suite, collector, diagnostics = handle_options(app, by_longname, exclude_by_longname, robot_options_and_args)
+    _suite, collector, diagnostics = handle_options(app, by_longname, exclude_by_longname, robot_options_and_args)
 
     if collector.all.children:
         if app.config.output_format is None or app.config.output_format == OutputFormat.TEXT:
 
             def print(items: List[TestItem]) -> Iterable[str]:
                 for item in items:
-                    yield click.style(f"{item.longname}", bold=True, fg="green" if show_tags else None)
+                    yield click.style(
+                        f"{item.longname}",
+                        bold=True,
+                        fg="green" if show_tags else None,
+                    )
                     yield click.style(
                         f" ({item.source if full_paths else item.rel_source}"
                         f":{item.range.start.line + 1 if item.range is not None else 1}){os.linesep}"
@@ -655,10 +671,7 @@ def tests(
 
 
 @discover.command(
-    context_settings={
-        "allow_extra_args": True,
-        "ignore_unknown_options": True,
-    },
+    context_settings={"allow_extra_args": True, "ignore_unknown_options": True},
     add_help_option=True,
     epilog='Use "-- --help" to see `robot` help.',
 )
@@ -685,7 +698,7 @@ def suites(
     ```
     """
 
-    suite, collector, diagnostics = handle_options(app, by_longname, exclude_by_longname, robot_options_and_args)
+    _suite, collector, diagnostics = handle_options(app, by_longname, exclude_by_longname, robot_options_and_args)
 
     if collector.all.children:
         if app.config.output_format is None or app.config.output_format == OutputFormat.TEXT:
@@ -707,10 +720,7 @@ class TagsResult:
 
 
 @discover.command(
-    context_settings={
-        "allow_extra_args": True,
-        "ignore_unknown_options": True,
-    },
+    context_settings={"allow_extra_args": True, "ignore_unknown_options": True},
     add_help_option=True,
     epilog='Use "-- --help" to see `robot` help.',
 )
@@ -769,7 +779,11 @@ def tags(
 
             def print(tags: Dict[str, List[TestItem]]) -> Iterable[str]:
                 for tag, items in sorted(tags.items()):
-                    yield click.style(f"{tag}{os.linesep}", bold=show_tests, fg="green" if show_tests else None)
+                    yield click.style(
+                        f"{tag}{os.linesep}",
+                        bold=show_tests,
+                        fg="green" if show_tests else None,
+                    )
                     if show_tests:
                         for t in items:
                             yield click.style(f"    {t.longname}", bold=True) + click.style(
@@ -798,13 +812,9 @@ class Info:
     system_version: str
 
 
-@discover.command(
-    add_help_option=True,
-)
+@discover.command(add_help_option=True)
 @pass_application
-def info(
-    app: Application,
-) -> None:
+def info(app: Application) -> None:
     """\
     Shows some informations about the current *robot* environment.
 

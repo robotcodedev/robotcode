@@ -1,4 +1,4 @@
-# mypy: disable-error-code="no-untyped-def"
+# mypy: disable-error-code="no-untyped-def,no-untyped-call"
 # this is a modified version of [pytest-regtest](https://gitlab.com/uweschmitt/pytest-regtest)
 # which is licensed under the MIT license
 # author: Uwe Schmitt (https://gitlab.com/uweschmitt)
@@ -12,6 +12,7 @@ import sys
 import tempfile
 from hashlib import sha512
 from io import StringIO
+from pathlib import Path
 
 import pytest
 from _pytest._code.code import ExceptionInfo, TerminalRepr
@@ -54,8 +55,14 @@ def _std_replacements(request):
     regexp = os.path.join(tempfile.gettempdir(), "tmp[_a-zA-Z0-9]+")
 
     yield regexp, "<tmpdir_from_tempfile_module>"
-    yield os.path.realpath(tempfile.gettempdir()) + os.path.sep, "<tmpdir_from_tempfile_module>/"
-    yield os.path.realpath(tempfile.gettempdir()), "<tmpdir_from_tempfile_module>"
+    yield (
+        os.path.realpath(tempfile.gettempdir()) + os.path.sep,
+        "<tmpdir_from_tempfile_module>/",
+    )
+    yield (
+        os.path.realpath(tempfile.gettempdir()),
+        "<tmpdir_from_tempfile_module>",
+    )
     if tempfile.tempdir:
         yield tempfile.tempdir + os.path.sep, "<tmpdir_from_tempfile_module>/"
         yield tempfile.tempdir, "<tmpdir_from_tempfile_module>"
@@ -150,33 +157,28 @@ def pytest_configure(config):
 
 
 class RegTestFixture:
-    def __init__(self, request, nodeid):
+    def __init__(self, request: pytest.FixtureRequest):
         self.request = request
-        self.nodeid = nodeid
+        self.nodeid = request.node.nodeid
 
-        self.test_folder = request.fspath.dirname
+        self.test_folder = request.path.parent
         self.buffer = StringIO()
-        self.identifier = None
 
     @property
-    def old_output_file_name(self):
-        file_name, __, test_function = self.nodeid.partition("::")
-        file_name = os.path.basename(file_name)
+    def old_output_file_name(self) -> Path:
+        name, __, test_function = self.nodeid.partition("::")
+        file_name = Path(name)
 
         test_function = test_function.replace("/", "--")
         if len(test_function) > 100:
             test_function = sha512(test_function.encode("utf-8")).hexdigest()[:10]
 
-        stem, __ = os.path.splitext(file_name)
-        if self.identifier is not None:
-            return stem + "." + test_function + "__" + self.identifier + ".out"
-
-        return stem + "." + test_function + ".out"
+        return Path(f"{file_name.stem}.{test_function}.out")
 
     @property
-    def output_file_name(self):
-        file_name, __, test_function = self.nodeid.partition("::")
-        file_name = os.path.basename(file_name)
+    def output_file_name(self) -> Path:
+        name, __, test_function = self.nodeid.partition("::")
+        file_name = Path(name)
 
         for c in "/\\:*\"'?<>|":
             test_function = test_function.replace(c, "-")
@@ -186,24 +188,21 @@ class RegTestFixture:
             test_function = test_function[:88] + "__" + sha512(test_function.encode("utf-8")).hexdigest()[:10]
 
         test_function = test_function.replace(" ", "_")
-        stem, __ = os.path.splitext(file_name)
-        if self.identifier is not None:
-            return stem + "." + test_function + "__" + self.identifier + ".out"
 
-        return stem + "." + test_function + ".out"
+        return Path(f"{file_name.stem}.{test_function}.out")
 
     @property
-    def old_result_file(self):
-        return os.path.join(self.test_folder, "_regtest_outputs", self.old_output_file_name)
+    def old_result_file(self) -> Path:
+        return Path(self.test_folder, "_regtest_outputs", self.old_output_file_name)
 
     @property
-    def result_file(self):
-        return os.path.join(self.test_folder, "_regtest_outputs", self.output_file_name)
+    def result_file(self) -> Path:
+        return Path(self.test_folder, "_regtest_outputs", self.output_file_name)
 
-    def write(self, what):
+    def write(self, what: str) -> None:
         self.buffer.write(what)
 
-    def flush(self):
+    def flush(self) -> None:
         pass
 
     @property
@@ -248,9 +247,7 @@ class RegTestFixture:
 
 @pytest.fixture(scope="session")
 def regtest(request: pytest.FixtureRequest):
-    item = request.node
-
-    return RegTestFixture(request, item.nodeid)
+    return RegTestFixture(request)
 
 
 @pytest.hookimpl(hookwrapper=True)
@@ -326,10 +323,10 @@ def handle_regtest_result(regtest, result, xfail):
             else:
                 result.outcome = "failed"
 
-            nodeid = regtest.nodeid + ("" if regtest.identifier is None else "__" + regtest.identifier)
+            nodeid = regtest.nodeid
             if Config.nodiff:
                 result.longrepr = CollectErrorRepr(
-                    ["regression test for {} failed\n".format(nodeid)],
+                    [f"regression test for {nodeid} failed\n"],
                     [dict(red=True, bold=True)],
                 )
                 return
@@ -340,7 +337,7 @@ def handle_regtest_result(regtest, result, xfail):
                 tobe = map(repr, tobe)
             collected = list(difflib.unified_diff(tobe, current, "tobe", "current", lineterm=""))
 
-            msg = "\nregression test output differences for {}:\n".format(nodeid)
+            msg = f"\nregression test output differences for {nodeid}:\n"
             msg_diff = ">   " + "\n>   ".join(collected)
             result.longrepr = CollectErrorRepr([msg, msg_diff + "\n"], [dict(), dict(red=True, bold=True)])
 

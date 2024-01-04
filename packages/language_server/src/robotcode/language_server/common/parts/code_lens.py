@@ -1,7 +1,12 @@
 from concurrent.futures import CancelledError
 from typing import TYPE_CHECKING, Any, Final, List, Optional
 
-from robotcode.core.concurrent import FutureEx, check_current_thread_canceled, run_in_thread, threaded
+from robotcode.core.concurrent import (
+    FutureEx,
+    check_current_thread_canceled,
+    run_in_thread,
+    threaded,
+)
 from robotcode.core.event import event
 from robotcode.core.lsp.types import (
     CodeLens,

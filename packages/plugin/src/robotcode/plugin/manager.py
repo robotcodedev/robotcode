@@ -20,7 +20,9 @@ class PluginManager:
         )
 
     @property
-    def config_classes(self) -> List[List[Tuple[str, Type[specs.TConfigClass]]]]:
+    def config_classes(
+        self,
+    ) -> List[List[Tuple[str, Type[specs.TConfigClass]]]]:
         return cast(
             List[List[Tuple[str, Type[specs.TConfigClass]]]],
             self._plugin_manager.hook.register_config_classes(),

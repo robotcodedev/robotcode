@@ -14,6 +14,7 @@ def main() -> None:
         "pip --disable-pip-version-check install -U -t ./bundled/libs --no-cache-dir --implementation py "
         "--only-binary=:all: --no-binary=:none: -r ./bundled_requirements.txt",
         shell=True,
+        check=False,
     ).check_returncode()
 
     packages = [f"-e {path}" for path in Path("./packages").iterdir() if (path / "pyproject.toml").exists()]
@@ -22,6 +23,7 @@ def main() -> None:
         "pip --disable-pip-version-check "
         f"install -U -t ./bundled/libs --no-cache-dir --implementation py --no-deps {' '.join(packages)} -e .",
         shell=True,
+        check=False,
     ).check_returncode()
 
 

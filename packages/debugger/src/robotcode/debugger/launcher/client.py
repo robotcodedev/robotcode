@@ -14,7 +14,7 @@ from ..protocol import DebugAdapterProtocol
 class DAPClientProtocol(DebugAdapterProtocol):
     _logger = LoggingDescriptor()
 
-    def __init__(self, parent: DebugAdapterProtocol, client: "DAPClient") -> None:
+    def __init__(self, parent: DebugAdapterProtocol, client: DAPClient) -> None:
         super().__init__()
         self.parent = parent
         self.client = client
@@ -41,7 +41,11 @@ class DAPClientError(Exception):
 class DAPClient:
     _logger = LoggingDescriptor()
 
-    def __init__(self, parent: DebugAdapterProtocol, tcp_params: TcpParams = TcpParams(None, 0)) -> None:
+    def __init__(
+        self,
+        parent: DebugAdapterProtocol,
+        tcp_params: TcpParams = TcpParams(None, 0),
+    ) -> None:
         self.parent = parent
         self.tcp_params = tcp_params
         self._protocol: Optional[DAPClientProtocol] = None
@@ -80,7 +84,10 @@ class DAPClient:
                             host = self.tcp_params.host  # type: ignore
                     else:
                         host = "127.0.0.1"
-                    self._transport, protocol = await asyncio.get_running_loop().create_connection(
+                    (
+                        self._transport,
+                        protocol,
+                    ) = await asyncio.get_running_loop().create_connection(
                         self._create_protocol,
                         host=host,
                         port=self.tcp_params.port,

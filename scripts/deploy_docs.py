@@ -31,6 +31,7 @@ def main() -> None:
         "mike deploy --push --update-aliases "
         f'--title "v{version.major}.{version.minor}.x ({alias})" {version.major}.{version.minor} {alias}',
         shell=True,
+        check=False,
     ).check_returncode()
 
 

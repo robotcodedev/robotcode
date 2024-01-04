@@ -35,7 +35,7 @@ def _next_id() -> int:
 @dataclass
 class ProtocolMessage(Model):
     type: Union[Literal["request", "response", "event"], str]
-    seq: int = field(default_factory=lambda: _next_id())
+    seq: int = field(default_factory=_next_id)
 
 
 @dataclass
@@ -148,10 +148,7 @@ class StoppedReason(Enum):
 
 @dataclass
 class StoppedEventBody(Model):
-    reason: Union[
-        StoppedReason,
-        str,
-    ]
+    reason: Union[StoppedReason, str]
     description: Optional[str] = None
     thread_id: Optional[int] = None
     preserve_focus_hint: Optional[bool] = None
@@ -919,7 +916,11 @@ class VariablePresentationHint(Model):
         ]
     ] = None
 
-    visibility: Union[Literal["public", "private", "protected", "internal", "final"], str, None] = None
+    visibility: Union[
+        Literal["public", "private", "protected", "internal", "final"],
+        str,
+        None,
+    ] = None
 
 
 @dataclass

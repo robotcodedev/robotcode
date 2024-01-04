@@ -28,7 +28,12 @@ from .pytest_regtestex import RegTestFixtureEx
 
 @pytest.mark.parametrize(
     ("test_document", "data"),
-    generate_tests_from_source_document(Path(Path(__file__).parent, "data/tests/code_action_show_documentation.robot")),
+    generate_tests_from_source_document(
+        Path(
+            Path(__file__).parent,
+            "data/tests/code_action_show_documentation.robot",
+        )
+    ),
     indirect=["test_document"],
     ids=generate_test_id,
     scope="module",
@@ -47,9 +52,14 @@ def test(
     result = protocol.robot_code_action_documentation.collect(
         protocol.robot_code_action_documentation,
         test_document,
-        Range(Position(line=data.line, character=data.character), Position(line=data.line, character=data.character)),
+        Range(
+            Position(line=data.line, character=data.character),
+            Position(line=data.line, character=data.character),
+        ),
         CodeActionContext(
-            diagnostics=[], only=[CodeActionKind.SOURCE.value], trigger_kind=CodeActionTriggerKind.INVOKED
+            diagnostics=[],
+            only=[CodeActionKind.SOURCE.value],
+            trigger_kind=CodeActionTriggerKind.INVOKED,
         ),
     )
     regtest.write(
@@ -57,7 +67,11 @@ def test(
             {
                 "data": data,
                 "result": sorted(
-                    (split(v) for v in result), key=lambda v: (v.title, v.kind if isinstance(v, CodeAction) else None)
+                    (split(v) for v in result),
+                    key=lambda v: (
+                        v.title,
+                        v.kind if isinstance(v, CodeAction) else None,
+                    ),
                 )
                 if result
                 else result,

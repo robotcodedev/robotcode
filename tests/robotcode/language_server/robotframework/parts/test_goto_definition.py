@@ -32,7 +32,9 @@ def test_definition(
     data: GeneratedTestData,
 ) -> None:
     result = protocol.robot_goto.collect_definition(
-        protocol.robot_goto, test_document, Position(line=data.line, character=data.character)
+        protocol.robot_goto,
+        test_document,
+        Position(line=data.line, character=data.character),
     )
 
     regtest.write(yaml.dump({"data": data, "result": split(result)}))

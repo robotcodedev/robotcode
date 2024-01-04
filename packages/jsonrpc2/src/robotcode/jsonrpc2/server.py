@@ -225,13 +225,16 @@ class JsonRPCServer(Generic[TProtocol], abc.ABC):
             #  create_pipe_connection method
             if sys.platform == "win32" and hasattr(self.loop, "create_pipe_connection"):
                 if TYPE_CHECKING:
-                    from asyncio.streams import StreamReaderProtocol  # noqa: F401
                     from asyncio.windows_events import ProactorEventLoop
 
                 self.loop.run_until_complete(
                     cast("ProactorEventLoop", self.loop).create_pipe_connection(
-                        lambda: cast("StreamReaderProtocol", self.create_protocol()), pipe_name
-                    ),
+                        lambda: cast(
+                            "asyncio.StreamReaderProtocol",
+                            self.create_protocol(),
+                        ),
+                        pipe_name,
+                    )
                 )
             else:
                 self.loop.run_until_complete(self.loop.create_unix_connection(self.create_protocol, pipe_name))
@@ -254,11 +257,11 @@ class JsonRPCServer(Generic[TProtocol], abc.ABC):
             #  create_pipe_connection method
             if sys.platform == "win32" and hasattr(self.loop, "start_serving_pipe"):
                 if TYPE_CHECKING:
-                    from asyncio.streams import StreamReaderProtocol  # noqa: F401
                     from asyncio.windows_events import ProactorEventLoop
 
                 await cast("ProactorEventLoop", self.loop).start_serving_pipe(
-                    lambda: cast("StreamReaderProtocol", self.create_protocol()), pipe_name
+                    lambda: cast("asyncio.StreamReaderProtocol", self.create_protocol()),
+                    pipe_name,
                 )
 
             else:

@@ -7,7 +7,12 @@ from enum import Enum
 from threading import Event, RLock
 from typing import TYPE_CHECKING, Any, Dict, Final, List, Optional, cast
 
-from robotcode.core.concurrent import FutureEx, check_current_thread_canceled, run_in_thread, threaded
+from robotcode.core.concurrent import (
+    FutureEx,
+    check_current_thread_canceled,
+    run_in_thread,
+    threaded,
+)
 from robotcode.core.event import event
 from robotcode.core.lsp.types import (
     Diagnostic,
@@ -29,7 +34,9 @@ from robotcode.core.uri import Uri
 from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.jsonrpc2.protocol import JsonRPCErrorException, rpc_method
 from robotcode.language_server.common.decorators import language_id_filter
-from robotcode.language_server.common.parts.protocol_part import LanguageServerProtocolPart
+from robotcode.language_server.common.parts.protocol_part import (
+    LanguageServerProtocolPart,
+)
 from robotcode.language_server.common.text_document import TextDocument
 
 if TYPE_CHECKING:
@@ -129,7 +136,9 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
         ...
 
     @event
-    def load_workspace_documents(sender) -> Optional[List[WorkspaceDocumentsResult]]:  # NOSONAR
+    def load_workspace_documents(
+        sender,
+    ) -> Optional[List[WorkspaceDocumentsResult]]:  # NOSONAR
         ...
 
     @event
@@ -220,7 +229,11 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
 
                 start = time.monotonic()
                 with self.parent.window.progress(
-                    "Analyse workspace", cancellable=False, current=0, max=len(documents) + 1, start=False
+                    "Analyse workspace",
+                    cancellable=False,
+                    current=0,
+                    max=len(documents) + 1,
+                    start=False,
                 ) as progress:
                     for i, document in enumerate(documents):
                         check_current_thread_canceled()
@@ -267,10 +280,17 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
                 raise
             except BaseException as e:
                 ex = e
-                self._logger.exception(lambda: f"Error in workspace diagnostics loop: {ex}", exc_info=e)
+                self._logger.exception(
+                    lambda: f"Error in workspace diagnostics loop: {ex}",
+                    exc_info=e,
+                )
 
     def create_document_diagnostics_task(
-        self, document: TextDocument, single: bool, debounce: bool = True, send_diagnostics: bool = True
+        self,
+        document: TextDocument,
+        single: bool,
+        debounce: bool = True,
+        send_diagnostics: bool = True,
     ) -> FutureEx[Any]:
         def done(t: FutureEx[Any]) -> None:
             self._logger.debug(lambda: f"diagnostics for {document} {'canceled' if t.cancelled() else 'ended'}")
@@ -288,7 +308,13 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
                 future.cancel()
 
             data.version = document.version
-            data.future = run_in_thread(self._get_diagnostics_for_document, document, data, debounce, send_diagnostics)
+            data.future = run_in_thread(
+                self._get_diagnostics_for_document,
+                document,
+                data,
+                debounce,
+                send_diagnostics,
+            )
 
             data.future.add_done_callback(done)
 
@@ -296,7 +322,11 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
 
     @_logger.call
     def _get_diagnostics_for_document(
-        self, document: TextDocument, data: DiagnosticsData, debounce: bool = True, send_diagnostics: bool = True
+        self,
+        document: TextDocument,
+        data: DiagnosticsData,
+        debounce: bool = True,
+        send_diagnostics: bool = True,
     ) -> None:
         self._logger.debug(lambda: f"Get diagnostics for {document}")
 
@@ -306,7 +336,10 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
         collected_keys: List[Any] = []
         try:
             for result in self.collect(
-                self, document, callback_filter=language_id_filter(document), return_exceptions=True
+                self,
+                document,
+                callback_filter=language_id_filter(document),
+                return_exceptions=True,
             ):
                 check_current_thread_canceled()
 
@@ -370,12 +403,17 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
         try:
             if not self.parent.is_initialized.is_set():
                 raise JsonRPCErrorException(
-                    LSPErrorCodes.SERVER_CANCELLED, "Server not initialized.", DiagnosticServerCancellationData(True)
+                    LSPErrorCodes.SERVER_CANCELLED,
+                    "Server not initialized.",
+                    DiagnosticServerCancellationData(True),
                 )
 
             document = self.parent.documents.get(text_document.uri)
             if document is None:
-                raise JsonRPCErrorException(LSPErrorCodes.SERVER_CANCELLED, f"Document {text_document!r} not found.")
+                raise JsonRPCErrorException(
+                    LSPErrorCodes.SERVER_CANCELLED,
+                    f"Document {text_document!r} not found.",
+                )
 
             self.create_document_diagnostics_task(document, True)
 

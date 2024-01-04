@@ -34,10 +34,19 @@ from robotcode.core.utils.glob_path import Pattern, iter_files
 from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.core.utils.path import path_is_relative_to
 from robotcode.language_server.common.decorators import language_id
-from robotcode.language_server.common.parts.workspace import FileWatcherEntry, Workspace
+from robotcode.language_server.common.parts.workspace import (
+    FileWatcherEntry,
+    Workspace,
+)
 from robotcode.language_server.common.text_document import TextDocument
-from robotcode.language_server.robotframework.configuration import CacheSaveLocation, RobotCodeConfig
-from robotcode.robot.diagnostics.entities import CommandLineVariableDefinition, VariableDefinition
+from robotcode.language_server.robotframework.configuration import (
+    CacheSaveLocation,
+    RobotCodeConfig,
+)
+from robotcode.robot.diagnostics.entities import (
+    CommandLineVariableDefinition,
+    VariableDefinition,
+)
 from robotcode.robot.diagnostics.library_doc import (
     ROBOT_LIBRARY_PACKAGE,
     CompleteResult,
@@ -65,7 +74,9 @@ from robotcode.robot.utils.robot_path import find_file_ex
 from ...__version__ import __version__
 
 if TYPE_CHECKING:
-    from robotcode.language_server.robotframework.protocol import RobotLanguageServerProtocol
+    from robotcode.language_server.robotframework.protocol import (
+        RobotLanguageServerProtocol,
+    )
 
     from .namespace import Namespace
 
@@ -97,10 +108,7 @@ class _LibrariesEntryKey(_EntryKey):
 
 
 class _ImportEntry(ABC):
-    def __init__(
-        self,
-        parent: "ImportsManager",
-    ) -> None:
+    def __init__(self, parent: "ImportsManager") -> None:
         self.parent = parent
         self.references: weakref.WeakSet[Any] = weakref.WeakSet()
         self.file_watchers: List[FileWatcherEntry] = []
@@ -243,7 +251,8 @@ class _LibrariesEntry(_ImportEntry):
         if source_or_origin is not None:
             self.file_watchers.append(
                 self.parent.parent_protocol.workspace.add_file_watchers(
-                    self.parent.did_change_watched_files, [str(Path(source_or_origin).parent.joinpath("**"))]
+                    self.parent.did_change_watched_files,
+                    [str(Path(source_or_origin).parent.joinpath("**"))],
                 )
             )
 
@@ -489,7 +498,12 @@ class LibraryMetaData:
 class ImportsManager:
     _logger = LoggingDescriptor()
 
-    def __init__(self, parent_protocol: "RobotLanguageServerProtocol", folder: Uri, config: RobotCodeConfig) -> None:
+    def __init__(
+        self,
+        parent_protocol: "RobotLanguageServerProtocol",
+        folder: Uri,
+        config: RobotCodeConfig,
+    ) -> None:
         super().__init__()
         self.parent_protocol = parent_protocol
 
@@ -575,7 +589,17 @@ class ImportsManager:
                 command_line_vars: List[VariableDefinition] = []
 
                 command_line_vars += [
-                    CommandLineVariableDefinition(0, 0, 0, 0, "", f"${{{k}}}", None, has_value=True, value=v)
+                    CommandLineVariableDefinition(
+                        0,
+                        0,
+                        0,
+                        0,
+                        "",
+                        f"${{{k}}}",
+                        None,
+                        has_value=True,
+                        value=v,
+                    )
                     for k, v in {
                         **{k1: v1 for k1, v1 in (self.parent_protocol.profile.variables or {}).items()},
                         **self.config.robot.variables,
@@ -749,7 +773,12 @@ class ImportsManager:
 
             self.variables_changed(self, [v for (_, _, v) in variables_changed if v is not None])
 
-    def __remove_library_entry(self, entry_key: _LibrariesEntryKey, entry: _LibrariesEntry, now: bool = False) -> None:
+    def __remove_library_entry(
+        self,
+        entry_key: _LibrariesEntryKey,
+        entry: _LibrariesEntry,
+        now: bool = False,
+    ) -> None:
         try:
             if len(entry.references) == 0 or now:
                 self._logger.debug(lambda: f"Remove Library Entry {entry_key}")
@@ -764,7 +793,12 @@ class ImportsManager:
         finally:
             self._library_files_cache.clear()
 
-    def __remove_resource_entry(self, entry_key: _ResourcesEntryKey, entry: _ResourcesEntry, now: bool = False) -> None:
+    def __remove_resource_entry(
+        self,
+        entry_key: _ResourcesEntryKey,
+        entry: _ResourcesEntry,
+        now: bool = False,
+    ) -> None:
         try:
             if len(entry.references) == 0 or now:
                 self._logger.debug(lambda: f"Remove Resource Entry {entry_key}")
@@ -780,7 +814,10 @@ class ImportsManager:
             self._resource_files_cache.clear()
 
     def __remove_variables_entry(
-        self, entry_key: _VariablesEntryKey, entry: _VariablesEntry, now: bool = False
+        self,
+        entry_key: _VariablesEntryKey,
+        entry: _VariablesEntry,
+        now: bool = False,
     ) -> None:
         try:
             if len(entry.references) == 0 or now:
@@ -926,10 +963,20 @@ class ImportsManager:
 
         return None, name
 
-    def find_library(self, name: str, base_dir: str, variables: Optional[Dict[str, Any]] = None) -> str:
+    def find_library(
+        self,
+        name: str,
+        base_dir: str,
+        variables: Optional[Dict[str, Any]] = None,
+    ) -> str:
         return self._library_files_cache.get(self._find_library, name, base_dir, variables)
 
-    def _find_library(self, name: str, base_dir: str, variables: Optional[Dict[str, Any]] = None) -> str:
+    def _find_library(
+        self,
+        name: str,
+        base_dir: str,
+        variables: Optional[Dict[str, Any]] = None,
+    ) -> str:
         from robot.libraries import STDLIBS
         from robot.variables.search import contains_variable
 
@@ -953,13 +1000,21 @@ class ImportsManager:
         return result
 
     def find_resource(
-        self, name: str, base_dir: str, file_type: str = "Resource", variables: Optional[Dict[str, Any]] = None
+        self,
+        name: str,
+        base_dir: str,
+        file_type: str = "Resource",
+        variables: Optional[Dict[str, Any]] = None,
     ) -> str:
         return self._resource_files_cache.get(self.__find_resource, name, base_dir, file_type, variables)
 
     @_logger.call
     def __find_resource(
-        self, name: str, base_dir: str, file_type: str = "Resource", variables: Optional[Dict[str, Any]] = None
+        self,
+        name: str,
+        base_dir: str,
+        file_type: str = "Resource",
+        variables: Optional[Dict[str, Any]] = None,
     ) -> str:
         from robot.variables.search import contains_variable
 
@@ -984,7 +1039,11 @@ class ImportsManager:
         resolve_command_line_vars: bool = True,
     ) -> str:
         return self._variables_files_cache.get(
-            self.__find_variables, name, base_dir, variables, resolve_command_line_vars
+            self.__find_variables,
+            name,
+            base_dir,
+            variables,
+            resolve_command_line_vars,
         )
 
     @_logger.call
@@ -1032,11 +1091,7 @@ class ImportsManager:
         sentinel: Any = None,
         variables: Optional[Dict[str, Any]] = None,
     ) -> LibraryDoc:
-        source = self.find_library(
-            name,
-            base_dir,
-            variables,
-        )
+        source = self.find_library(name, base_dir, variables)
 
         def _get_libdoc(name: str, args: Tuple[Any, ...], working_dir: str, base_dir: str) -> LibraryDoc:
             meta, source = self.get_library_meta(name, base_dir, variables)
@@ -1051,11 +1106,11 @@ class ImportsManager:
                         try:
                             saved_meta = from_json(meta_file.read_text("utf-8"), LibraryMetaData)
                             if saved_meta == meta:
-                                spec_path = Path(self.lib_doc_cache_path, meta.filepath_base + ".spec.json")
-                                return from_json(
-                                    spec_path.read_text("utf-8"),
-                                    LibraryDoc,
+                                spec_path = Path(
+                                    self.lib_doc_cache_path,
+                                    meta.filepath_base + ".spec.json",
                                 )
+                                return from_json(spec_path.read_text("utf-8"), LibraryDoc)
                         except (SystemExit, KeyboardInterrupt):
                             raise
                         except BaseException as e:
@@ -1091,8 +1146,14 @@ class ImportsManager:
                 self._logger.warning(lambda: f"stdout captured at loading library {name}{args!r}:\n{result.stdout}")
             try:
                 if meta is not None:
-                    meta_file = Path(self.lib_doc_cache_path, meta.filepath_base + ".meta.json")
-                    spec_file = Path(self.lib_doc_cache_path, meta.filepath_base + ".spec.json")
+                    meta_file = Path(
+                        self.lib_doc_cache_path,
+                        meta.filepath_base + ".meta.json",
+                    )
+                    spec_file = Path(
+                        self.lib_doc_cache_path,
+                        meta.filepath_base + ".spec.json",
+                    )
                     spec_file.parent.mkdir(parents=True, exist_ok=True)
 
                     try:
@@ -1151,7 +1212,11 @@ class ImportsManager:
         append_model_errors: bool = True,
     ) -> LibraryDoc:
         return get_model_doc(
-            model=model, source=source, model_type=model_type, scope=scope, append_model_errors=append_model_errors
+            model=model,
+            source=source,
+            model_type=model_type,
+            scope=scope,
+            append_model_errors=append_model_errors,
         )
 
     @_logger.call
@@ -1183,18 +1248,21 @@ class ImportsManager:
 
             self._logger.debug(lambda: f"Load variables {source}{args!r}")
             if meta is not None:
-                meta_file = Path(self.variables_doc_cache_path, meta.filepath_base + ".meta.json")
+                meta_file = Path(
+                    self.variables_doc_cache_path,
+                    meta.filepath_base + ".meta.json",
+                )
                 if meta_file.exists():
                     try:
                         spec_path = None
                         try:
                             saved_meta = from_json(meta_file.read_text("utf-8"), LibraryMetaData)
                             if saved_meta == meta:
-                                spec_path = Path(self.variables_doc_cache_path, meta.filepath_base + ".spec.json")
-                                return from_json(
-                                    spec_path.read_text("utf-8"),
-                                    VariablesDoc,
+                                spec_path = Path(
+                                    self.variables_doc_cache_path,
+                                    meta.filepath_base + ".spec.json",
                                 )
+                                return from_json(spec_path.read_text("utf-8"), VariablesDoc)
                         except (SystemExit, KeyboardInterrupt):
                             raise
                         except BaseException as e:
@@ -1230,8 +1298,14 @@ class ImportsManager:
 
             try:
                 if meta is not None:
-                    meta_file = Path(self.variables_doc_cache_path, meta.filepath_base + ".meta.json")
-                    spec_file = Path(self.variables_doc_cache_path, meta.filepath_base + ".spec.json")
+                    meta_file = Path(
+                        self.variables_doc_cache_path,
+                        meta.filepath_base + ".meta.json",
+                    )
+                    spec_file = Path(
+                        self.variables_doc_cache_path,
+                        meta.filepath_base + ".spec.json",
+                    )
                     spec_file.parent.mkdir(parents=True, exist_ok=True)
 
                     try:
@@ -1262,7 +1336,12 @@ class ImportsManager:
         with self._variables_lock:
             if entry_key not in self._variables:
                 self._variables[entry_key] = _VariablesEntry(
-                    name, resolved_args, str(self.folder.to_path()), base_dir, self, _get_libdoc
+                    name,
+                    resolved_args,
+                    str(self.folder.to_path()),
+                    base_dir,
+                    self,
+                    _get_libdoc,
                 )
 
         entry = self._variables[entry_key]
@@ -1275,7 +1354,11 @@ class ImportsManager:
 
     @_logger.call
     def _get_entry_for_resource_import(
-        self, name: str, base_dir: str, sentinel: Any = None, variables: Optional[Dict[str, Any]] = None
+        self,
+        name: str,
+        base_dir: str,
+        sentinel: Any = None,
+        variables: Optional[Dict[str, Any]] = None,
     ) -> _ResourcesEntry:
         source = self.find_resource(name, base_dir, variables=variables)
 
@@ -1329,14 +1412,21 @@ class ImportsManager:
         return entry.get_namespace()
 
     def get_libdoc_for_resource_import(
-        self, name: str, base_dir: str, sentinel: Any = None, variables: Optional[Dict[str, Any]] = None
+        self,
+        name: str,
+        base_dir: str,
+        sentinel: Any = None,
+        variables: Optional[Dict[str, Any]] = None,
     ) -> LibraryDoc:
         entry = self._get_entry_for_resource_import(name, base_dir, sentinel, variables)
 
         return entry.get_libdoc()
 
     def complete_library_import(
-        self, name: Optional[str], base_dir: str = ".", variables: Optional[Dict[str, Any]] = None
+        self,
+        name: Optional[str],
+        base_dir: str = ".",
+        variables: Optional[Dict[str, Any]] = None,
     ) -> List[CompleteResult]:
         return complete_library_import(
             name,
@@ -1347,7 +1437,10 @@ class ImportsManager:
         )
 
     def complete_resource_import(
-        self, name: Optional[str], base_dir: str = ".", variables: Optional[Dict[str, Any]] = None
+        self,
+        name: Optional[str],
+        base_dir: str = ".",
+        variables: Optional[Dict[str, Any]] = None,
     ) -> Optional[List[CompleteResult]]:
         return complete_resource_import(
             name,
@@ -1358,7 +1451,10 @@ class ImportsManager:
         )
 
     def complete_variables_import(
-        self, name: Optional[str], base_dir: str = ".", variables: Optional[Dict[str, Any]] = None
+        self,
+        name: Optional[str],
+        base_dir: str = ".",
+        variables: Optional[Dict[str, Any]] = None,
     ) -> Optional[List[CompleteResult]]:
         return complete_variables_import(
             name,
@@ -1368,7 +1464,12 @@ class ImportsManager:
             variables,
         )
 
-    def resolve_variable(self, name: str, base_dir: str = ".", variables: Optional[Dict[str, Any]] = None) -> Any:
+    def resolve_variable(
+        self,
+        name: str,
+        base_dir: str = ".",
+        variables: Optional[Dict[str, Any]] = None,
+    ) -> Any:
         return resolve_variable(
             name,
             str(self.folder.to_path()),

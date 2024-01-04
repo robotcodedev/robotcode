@@ -2,20 +2,40 @@ import os
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar, Dict, Final, List, Optional, Set
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    ClassVar,
+    Dict,
+    Final,
+    List,
+    Optional,
+    Set,
+)
 
 from robotcode.core.lsp.types import InitializeError
 from robotcode.core.utils.dataclasses import CamelSnakeMixin, from_dict
 from robotcode.core.utils.logging import LoggingDescriptor
-from robotcode.jsonrpc2.protocol import JsonRPCErrorException, JsonRPCErrors, ProtocolPartDescriptor
-from robotcode.language_server.common.parts.document_symbols import symbol_information_label
-from robotcode.language_server.common.protocol import LanguageDefinition, LanguageServerProtocol
+from robotcode.jsonrpc2.protocol import (
+    JsonRPCErrorException,
+    JsonRPCErrors,
+    ProtocolPartDescriptor,
+)
+from robotcode.language_server.common.parts.document_symbols import (
+    symbol_information_label,
+)
+from robotcode.language_server.common.protocol import (
+    LanguageDefinition,
+    LanguageServerProtocol,
+)
 from robotcode.robot.config.model import RobotBaseProfile
 from robotcode.robot.utils import get_robot_version
 
 from ..__version__ import __version__
 from .configuration import RobotConfig
-from .parts.code_action_documentation import RobotCodeActionDocumentationProtocolPart
+from .parts.code_action_documentation import (
+    RobotCodeActionDocumentationProtocolPart,
+)
 from .parts.code_action_quick_fixes import RobotCodeActionQuickFixesProtocolPart
 from .parts.code_action_refactor import RobotCodeActionRefactorProtocolPart
 from .parts.code_lens import RobotCodeLensProtocolPart
@@ -108,7 +128,13 @@ class RobotLanguageServerProtocol(LanguageServerProtocol):
     short_name = "RobotCode"
     version = __version__
 
-    file_extensions: ClassVar[Set[str]] = {"robot", "resource", "py", "yaml", "yml"}
+    file_extensions: ClassVar[Set[str]] = {
+        "robot",
+        "resource",
+        "py",
+        "yaml",
+        "yml",
+    }
 
     languages: ClassVar[List[LanguageDefinition]] = [
         LanguageDefinition(
@@ -124,7 +150,11 @@ class RobotLanguageServerProtocol(LanguageServerProtocol):
         LanguageDefinition(id="markdown", extensions=[".md"]),
     ]
 
-    def __init__(self, server: "RobotLanguageServer", profile: Optional[RobotBaseProfile] = None):
+    def __init__(
+        self,
+        server: "RobotLanguageServer",
+        profile: Optional[RobotBaseProfile] = None,
+    ):
         super().__init__(server)
         self.profile = profile if profile is not None else RobotBaseProfile()
         self.options = Options()
@@ -155,7 +185,9 @@ class RobotLanguageServerProtocol(LanguageServerProtocol):
             check_robotframework()
         except RobotCodeError as e:
             raise JsonRPCErrorException(
-                JsonRPCErrors.INTERNAL_ERROR, f"Can't start language server: {e}", InitializeError(retry=False)
+                JsonRPCErrors.INTERNAL_ERROR,
+                f"Can't start language server: {e}",
+                InitializeError(retry=False),
             ) from e
 
         self.workspace.did_change_configuration.add(self._on_did_change_configuration)

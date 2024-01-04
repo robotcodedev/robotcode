@@ -10,6 +10,7 @@ def main() -> None:
     run(
         "pip --disable-pip-version-check install -U -r ./bundled_requirements.txt",
         shell=True,
+        check=False,
     ).check_returncode()
 
     packages = [f"-e {path}" for path in Path("./packages").iterdir() if (path / "pyproject.toml").exists()]
@@ -17,6 +18,7 @@ def main() -> None:
     run(
         f"pip --disable-pip-version-check install --no-deps -U {' '.join(packages)}",
         shell=True,
+        check=False,
     ).check_returncode()
 
 

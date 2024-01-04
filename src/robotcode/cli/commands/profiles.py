@@ -2,7 +2,12 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 import click
-from robotcode.plugin import Application, OutputFormat, UnknownError, pass_application
+from robotcode.plugin import (
+    Application,
+    OutputFormat,
+    UnknownError,
+    pass_application,
+)
 from robotcode.robot.config.loader import (
     DiscoverdBy,
     load_robot_config_from_path,
@@ -11,24 +16,28 @@ from robotcode.robot.config.model import EvaluationError, RobotProfile
 from robotcode.robot.config.utils import get_config_files
 
 
-@click.group(
-    invoke_without_command=False,
-)
+@click.group(invoke_without_command=False)
 def profiles() -> None:
     """Shows information on defined profiles."""
 
 
 @profiles.command
 @click.option(
-    "-n", "--no-evaluate", "no_evaluate", is_flag=True, default=False, help="Don't evaluate expressions in the profile."
+    "-n",
+    "--no-evaluate",
+    "no_evaluate",
+    is_flag=True,
+    default=False,
+    help="Don't evaluate expressions in the profile.",
 )
-@click.argument("paths", type=click.Path(exists=True, path_type=Path), nargs=-1, required=False)
+@click.argument(
+    "paths",
+    type=click.Path(exists=True, path_type=Path),
+    nargs=-1,
+    required=False,
+)
 @pass_application
-def show(
-    app: Application,
-    no_evaluate: bool,
-    paths: List[Path],
-) -> None:
+def show(app: Application, no_evaluate: bool, paths: List[Path]) -> None:
     """Shows the given profile configuration."""
     try:
         config_files, _, _ = get_config_files(paths, app.config.config_files, verbose_callback=app.verbose)
@@ -40,27 +49,29 @@ def show(
         if not no_evaluate:
             config = config.evaluated()
 
-        app.print_data(config, remove_defaults=True, default_output_format=OutputFormat.TOML)
+        app.print_data(
+            config,
+            remove_defaults=True,
+            default_output_format=OutputFormat.TOML,
+        )
 
     except (TypeError, ValueError, OSError) as e:
         raise UnknownError(str(e)) from e
 
 
 @profiles.command
-@click.argument("paths", type=click.Path(exists=True, path_type=Path), nargs=-1, required=False)
+@click.argument(
+    "paths",
+    type=click.Path(exists=True, path_type=Path),
+    nargs=-1,
+    required=False,
+)
 @pass_application
-def list(
-    app: Application,
-    paths: List[Path],
-) -> None:
+def list(app: Application, paths: List[Path]) -> None:
     """Lists the defined profiles in the current configuration."""
 
     try:
-        config_files, _, discovered_by = get_config_files(
-            paths,
-            app.config.config_files,
-            verbose_callback=app.verbose,
-        )
+        config_files, _, discovered_by = get_config_files(paths, app.config.config_files, verbose_callback=app.verbose)
 
         config = load_robot_config_from_path(*config_files)
         selected_profiles = [
@@ -102,15 +113,21 @@ def list(
                     v[k] = " ".join(lines[:1]) + (" ..." if len(lines) > 1 else "")
 
             header = ""
-            max_name = max(0, len("Name"), *(len(profile["name"]) for profile in result["profiles"]))
+            max_name = max(
+                0,
+                len("Name"),
+                *(len(profile["name"]) for profile in result["profiles"]),
+            )
             max_description = max(
-                0, len("Description"), *(len(profile["description"]) for profile in result["profiles"])
+                0,
+                len("Description"),
+                *(len(profile["description"]) for profile in result["profiles"]),
             )
             header += (
-                f'| Active | Selected | Enabled | Name{(max_name-len("Name"))*" "} '
-                f'| Description{(max_description-len("Description"))*" "} |\n'
+                f'| Active | Selected | Enabled | Name{(max_name - len("Name")) * " "} '
+                f'| Description{(max_description - len("Description")) * " "} |\n'
             )
-            header += f"|:------:|:--------:|:-------:|:{max_name*'-'}-|:{max_description*'-'}-|\n"
+            header += f"|:------:|:--------:|:-------:|:{max_name * '-'}-|:{max_description * '-'}-|\n"
             for selected, enabled, name, description in (
                 (v["selected"], v["enabled"], v["name"], v["description"]) for v in result["profiles"]
             ):
@@ -118,8 +135,8 @@ def list(
                     f'|   {"*" if selected and enabled else " "}    '
                     f'|    {"*" if selected else " "}     '
                     f'|    {"*" if enabled else " "}    '
-                    f'| {name}{(max_name-len(name))*" "} '
-                    f'| {description if description else ""}{(max_description-len(description))*" "} |\n'
+                    f'| {name}{(max_name - len(name)) * " "} '
+                    f'| {description if description else ""}{(max_description - len(description)) * " "} |\n'
                 )
 
             app.echo_as_markdown(header)

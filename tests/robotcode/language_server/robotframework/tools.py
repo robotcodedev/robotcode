@@ -41,9 +41,19 @@ def generate_tests_from_source_document(
                     else:
                         yield path, GeneratedTestData(name, current_line, start)
                         if end - start > 2:
-                            yield path, GeneratedTestData(name, current_line, int(start + (end - start) / 2))
+                            yield (
+                                path,
+                                GeneratedTestData(
+                                    name,
+                                    current_line,
+                                    int(start + (end - start) / 2),
+                                ),
+                            )
 
-                        yield path, GeneratedTestData(name, current_line, end - 1)
+                        yield (
+                            path,
+                            GeneratedTestData(name, current_line, end - 1),
+                        )
         else:
             current_line = line
 

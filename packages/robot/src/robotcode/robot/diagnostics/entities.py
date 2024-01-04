@@ -1,6 +1,15 @@
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Callable, List, Optional, Tuple, TypeVar, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    List,
+    Optional,
+    Tuple,
+    TypeVar,
+    cast,
+)
 
 from robotcode.core.lsp.types import Position, Range
 from robotcode.robot.utils.ast import range_from_token
@@ -46,7 +55,15 @@ class SourceEntity:
 
     @single_call
     def __hash__(self) -> int:
-        return hash((self.line_no, self.col_offset, self.end_line_no, self.end_col_offset, self.source))
+        return hash(
+            (
+                self.line_no,
+                self.col_offset,
+                self.end_line_no,
+                self.end_col_offset,
+                self.source,
+            )
+        )
 
 
 @dataclass
@@ -89,26 +106,14 @@ class LibraryImport(Import):
 
     @single_call
     def __hash__(self) -> int:
-        return hash(
-            (
-                type(self),
-                self.name,
-                self.args,
-                self.alias,
-            )
-        )
+        return hash((type(self), self.name, self.args, self.alias))
 
 
 @dataclass
 class ResourceImport(Import):
     @single_call
     def __hash__(self) -> int:
-        return hash(
-            (
-                type(self),
-                self.name,
-            )
-        )
+        return hash((type(self), self.name))
 
 
 @dataclass
@@ -117,13 +122,7 @@ class VariablesImport(Import):
 
     @single_call
     def __hash__(self) -> int:
-        return hash(
-            (
-                type(self),
-                self.name,
-                self.args,
-            )
-        )
+        return hash((type(self), self.name, self.args))
 
 
 class InvalidVariableError(Exception):
@@ -215,14 +214,8 @@ class VariableDefinition(SourceEntity):
     @property
     def range(self) -> Range:
         return Range(
-            start=Position(
-                line=self.line_no - 1,
-                character=self.col_offset,
-            ),
-            end=Position(
-                line=self.end_line_no - 1,
-                character=self.end_col_offset,
-            ),
+            start=Position(line=self.line_no - 1, character=self.col_offset),
+            end=Position(line=self.end_line_no - 1, character=self.end_col_offset),
         )
 
 
@@ -322,9 +315,9 @@ class LibraryEntry:
     library_doc: "LibraryDoc" = field(compare=False)
     args: Tuple[Any, ...] = ()
     alias: Optional[str] = None
-    import_range: Range = field(default_factory=lambda: Range.zero())
+    import_range: Range = field(default_factory=Range.zero)
     import_source: Optional[str] = None
-    alias_range: Range = field(default_factory=lambda: Range.zero())
+    alias_range: Range = field(default_factory=Range.zero)
 
     def __str__(self) -> str:
         result = self.import_name
@@ -357,7 +350,15 @@ class ResourceEntry(LibraryEntry):
 
     @single_call
     def __hash__(self) -> int:
-        return hash((type(self), self.name, self.import_name, self.import_range, self.import_source))
+        return hash(
+            (
+                type(self),
+                self.name,
+                self.import_name,
+                self.import_range,
+                self.import_source,
+            )
+        )
 
 
 @dataclass
@@ -366,4 +367,13 @@ class VariablesEntry(LibraryEntry):
 
     @single_call
     def __hash__(self) -> int:
-        return hash((type(self), self.name, self.import_name, self.args, self.import_range, self.import_source))
+        return hash(
+            (
+                type(self),
+                self.name,
+                self.import_name,
+                self.args,
+                self.import_range,
+                self.import_source,
+            )
+        )

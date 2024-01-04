@@ -5,8 +5,16 @@ from robot.parsing.lexer.tokens import Token
 from robotcode.core.concurrent import check_current_thread_canceled
 from robotcode.core.lsp.types import InlayHint, InlayHintKind, Range
 from robotcode.core.utils.logging import LoggingDescriptor
-from robotcode.robot.diagnostics.library_doc import KeywordArgumentKind, KeywordDoc, LibraryDoc
-from robotcode.robot.utils.ast import iter_nodes, range_from_node, range_from_token
+from robotcode.robot.diagnostics.library_doc import (
+    KeywordArgumentKind,
+    KeywordDoc,
+    LibraryDoc,
+)
+from robotcode.robot.utils.ast import (
+    iter_nodes,
+    range_from_node,
+    range_from_token,
+)
 
 from ...common.decorators import language_id
 from ...common.text_document import TextDocument
@@ -20,7 +28,8 @@ from ..diagnostics.model_helper import ModelHelperMixin
 from .protocol_part import RobotLanguageServerProtocolPart
 
 _HandlerMethod = Callable[
-    [TextDocument, Range, ast.AST, ast.AST, Namespace, InlayHintsConfig], Optional[List[InlayHint]]
+    [TextDocument, Range, ast.AST, ast.AST, Namespace, InlayHintsConfig],
+    Optional[List[InlayHint]],
 ]
 
 
@@ -156,9 +165,7 @@ class RobotInlayHintProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMix
                         continue
 
                     arg = kw_arguments[index]
-                    if i >= len(kw_arguments) and arg.kind not in [
-                        KeywordArgumentKind.VAR_POSITIONAL,
-                    ]:
+                    if i >= len(kw_arguments) and arg.kind != KeywordArgumentKind.VAR_POSITIONAL:
                         break
 
                     prefix = ""
@@ -168,11 +175,18 @@ class RobotInlayHintProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMix
                         prefix = "**"
 
                     result.append(
-                        InlayHint(range_from_token(arguments[i]).start, f"{prefix}{arg.name}=", InlayHintKind.PARAMETER)
+                        InlayHint(
+                            range_from_token(arguments[i]).start,
+                            f"{prefix}{arg.name}=",
+                            InlayHintKind.PARAMETER,
+                        )
                     )
 
         if keyword_token is not None and config.namespaces:
-            lib_entry, kw_namespace = self.get_namespace_info_from_keyword_token(namespace, keyword_token)
+            (
+                lib_entry,
+                kw_namespace,
+            ) = self.get_namespace_info_from_keyword_token(namespace, keyword_token)
             if lib_entry is None and kw_namespace is None:
                 if kw_doc.libtype == "LIBRARY":
                     lib = next(
@@ -193,7 +207,12 @@ class RobotInlayHintProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMix
                         None,
                     )
                 if lib is not None:
-                    result.append(InlayHint(range_from_token(keyword_token).start, f"{lib.alias or lib.name}."))
+                    result.append(
+                        InlayHint(
+                            range_from_token(keyword_token).start,
+                            f"{lib.alias or lib.name}.",
+                        )
+                    )
 
         return result
 
@@ -340,10 +359,7 @@ class RobotInlayHintProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMix
         try:
             namespace = self.parent.documents_cache.get_namespace(document)
 
-            lib_doc = namespace.get_imported_variables_libdoc(
-                library_node.name,
-                library_node.args,
-            )
+            lib_doc = namespace.get_imported_variables_libdoc(library_node.name, library_node.args)
 
             if lib_doc is None or lib_doc.errors:
                 lib_doc = namespace.imports_manager.get_libdoc_for_variables_import(

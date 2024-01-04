@@ -20,7 +20,7 @@ from .pytest_regtestex import RegTestFixtureEx
 
 
 def split(
-    result: Union[Location, LocationLink, List[Location], List[LocationLink], None]
+    result: Union[Location, LocationLink, List[Location], List[LocationLink], None],
 ) -> Union[Location, LocationLink, List[Location], List[LocationLink], None]:
     if result is None:
         return None

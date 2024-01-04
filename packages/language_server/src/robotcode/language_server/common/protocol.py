@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import asyncio
-from concurrent.futures import Future
 from threading import Event
 from typing import Any, ClassVar, Final, List, NamedTuple, Optional, Set, Union
 
+from robotcode.core.concurrent import FutureEx
 from robotcode.core.event import event
 from robotcode.core.lsp.types import (
     CancelParams,
@@ -40,7 +40,9 @@ from robotcode.jsonrpc2.protocol import (
     rpc_method,
 )
 from robotcode.jsonrpc2.server import JsonRPCServer
-from robotcode.language_server.common.parts.protocol_part import LanguageServerProtocolPart
+from robotcode.language_server.common.parts.protocol_part import (
+    LanguageServerProtocolPart,
+)
 
 from .parts.code_action import CodeActionProtocolPart
 from .parts.code_lens import CodeLensProtocolPart
@@ -181,7 +183,10 @@ class LanguageServerProtocol(JsonRPCProtocol):
 
     def start_parent_process_watcher(self) -> None:
         if self.parent_process_id and self.loop:
-            self.loop.call_later(self.PARENT_PROCESS_WATCHER_INTERVAL, self._parent_process_watcher)
+            self.loop.call_later(
+                self.PARENT_PROCESS_WATCHER_INTERVAL,
+                self._parent_process_watcher,
+            )
 
     def _parent_process_watcher(self) -> None:
         if not self.parent_process_id:
@@ -216,10 +221,15 @@ class LanguageServerProtocol(JsonRPCProtocol):
 
         self.client_capabilities = capabilities
 
-        self._workspace = Workspace(self, root_uri=root_uri, root_path=root_path, workspace_folders=workspace_folders)
+        self._workspace = Workspace(
+            self,
+            root_uri=root_uri,
+            root_path=root_path,
+            workspace_folders=workspace_folders,
+        )
 
         folders = (
-            ", ".join((f"'{v.name}'" for v in self._workspace.workspace_folders))
+            ", ".join(f"'{v.name}'" for v in self._workspace.workspace_folders)
             if self._workspace.workspace_folders
             else ""
         )
@@ -243,7 +253,9 @@ class LanguageServerProtocol(JsonRPCProtocol):
                 raise
             except BaseException as e:
                 raise JsonRPCErrorException(
-                    JsonRPCErrors.INTERNAL_ERROR, f"Can't start language server: {e}", InitializeError(retry=False)
+                    JsonRPCErrors.INTERNAL_ERROR,
+                    f"Can't start language server: {e}",
+                    InitializeError(retry=False),
                 ) from e
 
             return InitializeResult(
@@ -303,22 +315,28 @@ class LanguageServerProtocol(JsonRPCProtocol):
     def _cancel_request(self, id: Union[int, str], **kwargs: Any) -> None:
         self.cancel_request(id)
 
-    def register_capability(self, id: str, method: str, register_options: Optional[Any]) -> Future[None]:
+    def register_capability(self, id: str, method: str, register_options: Optional[Any]) -> FutureEx[None]:
         return self.register_capabilities([Registration(id=id, method=method, register_options=register_options)])
 
-    def register_capabilities(self, registrations: List[Registration]) -> Future[None]:
+    def register_capabilities(self, registrations: List[Registration]) -> FutureEx[None]:
         if not registrations:
-            result: Future[None] = Future()
+            result: FutureEx[None] = FutureEx()
             result.set_result(None)
             return result
-        return self.send_request("client/registerCapability", RegistrationParams(registrations=registrations))
+        return self.send_request(
+            "client/registerCapability",
+            RegistrationParams(registrations=registrations),
+        )
 
-    def unregister_capability(self, id: str, method: str) -> Future[None]:
+    def unregister_capability(self, id: str, method: str) -> FutureEx[None]:
         return self.unregister_capabilities([Unregistration(id=id, method=method)])
 
-    def unregister_capabilities(self, unregisterations: List[Unregistration]) -> Future[None]:
+    def unregister_capabilities(self, unregisterations: List[Unregistration]) -> FutureEx[None]:
         if not unregisterations:
-            result: Future[None] = Future()
+            result: FutureEx[None] = FutureEx()
             result.set_result(None)
             return result
-        return self.send_request("client/unregisterCapability", UnregistrationParams(unregisterations=unregisterations))
+        return self.send_request(
+            "client/unregisterCapability",
+            UnregistrationParams(unregisterations=unregisterations),
+        )

@@ -22,7 +22,9 @@ from ..diagnostics.model_helper import ModelHelperMixin
 from .protocol_part import RobotLanguageServerProtocolPart
 
 if TYPE_CHECKING:
-    from robotcode.language_server.robotframework.protocol import RobotLanguageServerProtocol
+    from robotcode.language_server.robotframework.protocol import (
+        RobotLanguageServerProtocol,
+    )
 
 
 def robotidy_installed() -> bool:
@@ -168,10 +170,7 @@ class RobotFormattingProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
                 TextEdit(
                     range=Range(
                         start=Position(line=0, character=0),
-                        end=Position(
-                            line=len(document.get_lines()),
-                            character=0,
-                        ),
+                        end=Position(line=len(document.get_lines()), character=0),
                     ),
                     new_text=new.text,
                 )
@@ -185,7 +184,10 @@ class RobotFormattingProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         return None
 
     def format_internal(
-        self, document: TextDocument, options: FormattingOptions, **further_options: Any
+        self,
+        document: TextDocument,
+        options: FormattingOptions,
+        **further_options: Any,
     ) -> Optional[List[TextEdit]]:
         from robot.parsing.model.blocks import File
         from robot.tidypkg import (  # pyright: ignore [reportMissingImports]
@@ -213,10 +215,7 @@ class RobotFormattingProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
                 TextEdit(
                     range=Range(
                         start=Position(line=0, character=0),
-                        end=Position(
-                            line=len(document.get_lines()),
-                            character=0,
-                        ),
+                        end=Position(line=len(document.get_lines()), character=0),
                     ),
                     new_text=s.getvalue(),
                 )

@@ -28,7 +28,7 @@ class LibDocEx(LibDoc):
             raise Information(
                 "Dry run, not executing any commands. "
                 f"Would execute libdoc with the following options and arguments:\n"
-                f'{line_end.join((*(f"{k} = {v!r}" for k, v in options.items()) ,*arguments))}'
+                f'{line_end.join((*(f"{k} = {v!r}" for k, v in options.items()), *arguments))}'
             )
 
         return options, arguments
@@ -41,10 +41,7 @@ class LibDocEx(LibDoc):
 
 
 @click.command(
-    context_settings={
-        "allow_extra_args": True,
-        "ignore_unknown_options": True,
-    },
+    context_settings={"allow_extra_args": True, "ignore_unknown_options": True},
     add_help_option=True,
     epilog='Use "-- --help" to see the `libdoc` help.',
 )
@@ -56,10 +53,7 @@ class LibDocEx(LibDoc):
 )
 @click.argument("robot_options_and_args", nargs=-1, type=click.Path())
 @pass_application
-def libdoc(
-    app: Application,
-    robot_options_and_args: Tuple[str, ...],
-) -> None:
+def libdoc(app: Application, robot_options_and_args: Tuple[str, ...]) -> None:
     """Runs `libdoc` with the selected configuration, profiles, options and arguments.
 
     The options and arguments are passed to `libdoc` as is.

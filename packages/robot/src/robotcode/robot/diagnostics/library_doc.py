@@ -43,7 +43,11 @@ from robotcode.robot.diagnostics.entities import (
     single_call,
 )
 from robotcode.robot.utils import get_robot_version
-from robotcode.robot.utils.ast import get_variable_token, range_from_token, strip_variable_token
+from robotcode.robot.utils.ast import (
+    get_variable_token,
+    range_from_token,
+    strip_variable_token,
+)
 from robotcode.robot.utils.markdownformatter import MarkDownFormatter
 from robotcode.robot.utils.match import normalize, normalize_namespace
 from robotcode.robot.utils.stubs import HasError, HasErrors
@@ -103,7 +107,12 @@ REST_EXTENSIONS = {".rst", ".rest"}
 JSON_EXTENSIONS = {".json", ".rsrc"}
 
 ALLOWED_RESOURCE_FILE_EXTENSIONS = (
-    {ROBOT_FILE_EXTENSION, RESOURCE_FILE_EXTENSION, *REST_EXTENSIONS, *JSON_EXTENSIONS}
+    {
+        ROBOT_FILE_EXTENSION,
+        RESOURCE_FILE_EXTENSION,
+        *REST_EXTENSIONS,
+        *JSON_EXTENSIONS,
+    }
     if get_robot_version() >= (6, 1)
     else {ROBOT_FILE_EXTENSION, RESOURCE_FILE_EXTENSION, *REST_EXTENSIONS}
 )
@@ -121,7 +130,11 @@ def convert_from_rest(text: str) -> str:
     try:
         from docutils.core import publish_parts
 
-        parts = publish_parts(text, writer_name="html5", settings_overrides={"syntax_highlight": "none"})
+        parts = publish_parts(
+            text,
+            writer_name="html5",
+            settings_overrides={"syntax_highlight": "none"},
+        )
 
         return str(parts["html_body"])
 
@@ -149,7 +162,12 @@ def is_embedded_keyword(name: str) -> bool:
 
 
 class KeywordMatcher:
-    def __init__(self, name: str, can_have_embedded: bool = True, is_namespace: bool = False) -> None:
+    def __init__(
+        self,
+        name: str,
+        can_have_embedded: bool = True,
+        is_namespace: bool = False,
+    ) -> None:
         self.name = name
         self._can_have_embedded = can_have_embedded and not is_namespace
         self._is_namespace = is_namespace
@@ -182,7 +200,7 @@ class KeywordMatcher:
 
         return self._embedded_arguments
 
-    def __eq__(self, o: Any) -> bool:
+    def __eq__(self, o: object) -> bool:
         if isinstance(o, KeywordMatcher):
             if self._is_namespace != o._is_namespace:
                 return False
@@ -208,7 +226,7 @@ class KeywordMatcher:
         return hash(
             (self.embedded_arguments.name, tuple(self.embedded_arguments.args))
             if self.embedded_arguments
-            else (self.normalized_name, self._is_namespace),
+            else (self.normalized_name, self._is_namespace)
         )
 
     def __str__(self) -> str:
@@ -277,10 +295,10 @@ class TypeDoc:
     def to_markdown(self, header_level: int = 2) -> str:
         result = ""
 
-        result += f"##{'#'*header_level} {self.name} ({self.type})\n\n"
+        result += f"##{'#' * header_level} {self.name} ({self.type})\n\n"
 
         if self.doc:
-            result += f"###{'#'*header_level} Documentation:\n\n"
+            result += f"###{'#' * header_level} Documentation:\n\n"
             result += "\n\n"
 
             if self.doc_format == ROBOT_DOC_FORMAT:
@@ -291,17 +309,17 @@ class TypeDoc:
                 result += self.doc
 
         if self.members:
-            result += f"\n\n###{'#'*header_level} Allowed Values:\n\n"
+            result += f"\n\n###{'#' * header_level} Allowed Values:\n\n"
             result += "- " + "\n- ".join(f"`{m.name}`" for m in self.members)
 
         if self.items:
-            result += f"\n\n###{'#'*header_level} Dictionary Structure:\n\n"
+            result += f"\n\n###{'#' * header_level} Dictionary Structure:\n\n"
             result += "```\n{"
             result += "\n ".join(f"'{m.key}': <{m.type}> {'# optional' if not m.required else ''}" for m in self.items)
             result += "\n}\n```"
 
         if self.accepts:
-            result += f"\n\n###{'#'*header_level} Converted Types:\n\n"
+            result += f"\n\n###{'#' * header_level} Converted Types:\n\n"
             result += "- " + "\n- ".join(self.accepts)
 
         return result
@@ -515,7 +533,10 @@ class ArgumentSpec:
                     resolve_args_until=resolve_variables_until,
                     dict_to_kwargs=dict_to_kwargs,
                 )
-            return cast(Tuple[List[Any], List[Tuple[str, Any]]], resolver.resolve(arguments, variables))
+            return cast(
+                Tuple[List[Any], List[Tuple[str, Any]]],
+                resolver.resolve(arguments, variables),
+            )
 
         class MyNamedArgumentResolver(NamedArgumentResolver):
             def _raise_positional_after_named(self) -> None:
@@ -646,19 +667,20 @@ class KeywordDoc(SourceEntity):
         return Range(
             start=Position(
                 line=self.line_no - 1 if self.line_no > 0 else 0,
-                character=self.col_offset if self.col_offset >= 0 else 0,
+                character=max(self.col_offset, 0),
             ),
             end=Position(
-                line=self.end_line_no - 1 if self.end_line_no >= 0 else self.line_no if self.line_no > 0 else 0,
-                character=self.end_col_offset
-                if self.end_col_offset >= 0
-                else self.col_offset
-                if self.col_offset >= 0
-                else 0,
+                line=self.end_line_no - 1 if self.end_line_no >= 0 else max(0, self.line_no),
+                character=self.end_col_offset if self.end_col_offset >= 0 else max(self.col_offset, 0),
             ),
         )
 
-    def to_markdown(self, add_signature: bool = True, header_level: int = 2, add_type: bool = True) -> str:
+    def to_markdown(
+        self,
+        add_signature: bool = True,
+        header_level: int = 2,
+        add_type: bool = True,
+    ) -> str:
         result = ""
 
         if add_signature:
@@ -668,7 +690,7 @@ class KeywordDoc(SourceEntity):
             if result:
                 result += "\n\n"
 
-            result += f"##{'#'*header_level} Documentation:\n"
+            result += f"##{'#' * header_level} Documentation:\n"
 
             if self.doc_format == ROBOT_DOC_FORMAT:
                 result += MarkDownFormatter().format(self.doc)
@@ -682,17 +704,17 @@ class KeywordDoc(SourceEntity):
     def _get_signature(self, header_level: int, add_type: bool = True) -> str:
         if add_type:
             result = (
-                f"#{'#'*header_level} "
+                f"#{'#' * header_level} "
                 f"{(self.libtype or 'Library').capitalize() if self.is_initializer else 'Keyword'} *{self.name}*\n"
             )
         else:
             if not self.is_initializer:
-                result = f"\n\n#{'#'*header_level} {self.name}\n"
+                result = f"\n\n#{'#' * header_level} {self.name}\n"
             else:
                 result = ""
 
         if self.arguments:
-            result += f"\n##{'#'*header_level} Arguments: \n"
+            result += f"\n##{'#' * header_level} Arguments: \n"
 
             result += "\n| | | | |"
             result += "\n|:--|:--|:--|:--|"
@@ -701,7 +723,10 @@ class KeywordDoc(SourceEntity):
 
             for a in self.arguments:
                 prefix = ""
-                if a.kind in [KeywordArgumentKind.NAMED_ONLY_MARKER, KeywordArgumentKind.POSITIONAL_ONLY_MARKER]:
+                if a.kind in [
+                    KeywordArgumentKind.NAMED_ONLY_MARKER,
+                    KeywordArgumentKind.POSITIONAL_ONLY_MARKER,
+                ]:
                     continue
 
                 if a.kind == KeywordArgumentKind.VAR_POSITIONAL:
@@ -745,7 +770,11 @@ class KeywordDoc(SourceEntity):
             + ", ".join(
                 str(a)
                 for a in self.arguments
-                if a.kind not in [KeywordArgumentKind.POSITIONAL_ONLY_MARKER, KeywordArgumentKind.NAMED_ONLY_MARKER]
+                if a.kind
+                not in [
+                    KeywordArgumentKind.POSITIONAL_ONLY_MARKER,
+                    KeywordArgumentKind.NAMED_ONLY_MARKER,
+                ]
             )
             + ")"
         )
@@ -756,7 +785,11 @@ class KeywordDoc(SourceEntity):
             + ", ".join(
                 a.signature(full_signatures is None or i in full_signatures)
                 for i, a in enumerate(self.arguments)
-                if a.kind not in [KeywordArgumentKind.POSITIONAL_ONLY_MARKER, KeywordArgumentKind.NAMED_ONLY_MARKER]
+                if a.kind
+                not in [
+                    KeywordArgumentKind.POSITIONAL_ONLY_MARKER,
+                    KeywordArgumentKind.NAMED_ONLY_MARKER,
+                ]
             )
             + ")"
         )
@@ -774,12 +807,12 @@ class KeywordDoc(SourceEntity):
         return self.libname == BUILTIN_LIBRARY_NAME and self.name in RUN_KEYWORD_NAMES
 
     def is_run_keyword_with_condition(self) -> bool:
-        return self.libname == BUILTIN_LIBRARY_NAME and self.name in RUN_KEYWORD_WITH_CONDITION_NAMES.keys()
+        return self.libname == BUILTIN_LIBRARY_NAME and self.name in RUN_KEYWORD_WITH_CONDITION_NAMES
 
     def run_keyword_condition_count(self) -> int:
         return (
             RUN_KEYWORD_WITH_CONDITION_NAMES[self.name]
-            if self.libname == BUILTIN_LIBRARY_NAME and self.name in RUN_KEYWORD_WITH_CONDITION_NAMES.keys()
+            if self.libname == BUILTIN_LIBRARY_NAME and self.name in RUN_KEYWORD_WITH_CONDITION_NAMES
             else 0
         )
 
@@ -813,7 +846,12 @@ class KeywordDoc(SourceEntity):
 
 
 class KeywordError(Exception):
-    def __init__(self, *args: Any, multiple_keywords: Optional[List[KeywordDoc]] = None, **kwargs: Any) -> None:
+    def __init__(
+        self,
+        *args: Any,
+        multiple_keywords: Optional[List[KeywordDoc]] = None,
+        **kwargs: Any,
+    ) -> None:
         super().__init__(*args, **kwargs)
         self.multiple_keywords = multiple_keywords
 
@@ -830,7 +868,7 @@ class KeywordStore:
             self.__matchers = {v.matcher: v for v in self.keywords}
         return self.__matchers
 
-    def __getitem__(self, key: str) -> "KeywordDoc":
+    def __getitem__(self, key: str) -> KeywordDoc:
         items = [(k, v) for k, v in self._matchers.items() if k == key]
 
         if not items:
@@ -852,7 +890,10 @@ class KeywordStore:
             file_info = "File"
         error = [f"{file_info} contains multiple keywords matching name '{key}':"]
         names = sorted(k.name for k, v in items)
-        raise KeywordError("\n    ".join(error + names), multiple_keywords=[v for _, v in items])
+        raise KeywordError(
+            "\n    ".join(error + names),
+            multiple_keywords=[v for _, v in items],
+        )
 
     def __contains__(self, __x: object) -> bool:
         return any(k == __x for k in self._matchers.keys())
@@ -1009,12 +1050,17 @@ class LibraryDoc:
         return Range(
             start=Position(line=self.line_no - 1 if self.line_no >= 0 else 0, character=0),
             end=Position(
-                line=self.end_line_no - 1 if self.end_line_no >= 0 else self.line_no if self.line_no >= 0 else 0,
+                line=self.end_line_no - 1 if self.end_line_no >= 0 else max(self.line_no, 0),
                 character=0,
             ),
         )
 
-    def to_markdown(self, add_signature: bool = True, only_doc: bool = True, header_level: int = 2) -> str:
+    def to_markdown(
+        self,
+        add_signature: bool = True,
+        only_doc: bool = True,
+        header_level: int = 2,
+    ) -> str:
         with io.StringIO(newline="\n") as result:
 
             def write_lines(*args: str) -> None:
@@ -1025,15 +1071,12 @@ class LibraryDoc:
                     write_lines(i.to_markdown(header_level=header_level), "", "---")
 
             write_lines(
-                f"#{'#'*header_level} {(self.type.capitalize()) if self.type else 'Unknown'} *{self.name}*",
+                f"#{'#' * header_level} {(self.type.capitalize()) if self.type else 'Unknown'} *{self.name}*",
                 "",
             )
 
             if self.version or self.scope:
-                write_lines(
-                    "|  |  |",
-                    "| :--- | :--- |",
-                )
+                write_lines("|  |  |", "| :--- | :--- |")
 
                 if self.version:
                     write_lines(f"| **Library Version:** | {self.version} |")
@@ -1043,7 +1086,7 @@ class LibraryDoc:
                 write_lines("", "")
 
             if self.doc:
-                write_lines(f"##{'#'*header_level} Introduction", "")
+                write_lines(f"##{'#' * header_level} Introduction", "")
 
                 if self.doc_format == ROBOT_DOC_FORMAT:
                     doc = MarkDownFormatter().format(self.doc)
@@ -1093,7 +1136,7 @@ class LibraryDoc:
         result = ""
         if any(v for v in self.inits.values() if v.arguments):
             result += "\n---\n\n"
-            result += f"\n##{'#'*header_level} Importing\n\n"
+            result += f"\n##{'#' * header_level} Importing\n\n"
 
             first = True
 
@@ -1106,7 +1149,7 @@ class LibraryDoc:
 
         if self.keywords:
             result += "\n---\n\n"
-            result += f"\n##{'#'*header_level} Keywords\n\n"
+            result += f"\n##{'#' * header_level} Keywords\n\n"
 
             first = True
 
@@ -1168,7 +1211,12 @@ class VariablesDoc(LibraryDoc):
 
     variables: List[ImportedVariableDefinition] = field(default_factory=list)
 
-    def to_markdown(self, add_signature: bool = True, only_doc: bool = True, header_level: int = 2) -> str:
+    def to_markdown(
+        self,
+        add_signature: bool = True,
+        only_doc: bool = True,
+        header_level: int = 2,
+    ) -> str:
         result = super().to_markdown(add_signature, only_doc, header_level)
 
         if self.variables:
@@ -1342,7 +1390,9 @@ __RE_MESSAGE = re.compile(r"^Traceback.*$", re.MULTILINE)
 __RE_TRACEBACK = re.compile(r'^ +File +"(.*)", +line +(\d+).*$', re.MULTILINE)
 
 
-def get_message_and_traceback_from_exception_text(text: str) -> MessageAndTraceback:
+def get_message_and_traceback_from_exception_text(
+    text: str,
+) -> MessageAndTraceback:
     splitted = __RE_MESSAGE.split(text, 1)
 
     return MessageAndTraceback(
@@ -1353,7 +1403,11 @@ def get_message_and_traceback_from_exception_text(text: str) -> MessageAndTraceb
     )
 
 
-def error_from_exception(ex: BaseException, default_source: Optional[str], default_line_no: Optional[int]) -> Error:
+def error_from_exception(
+    ex: BaseException,
+    default_source: Optional[str],
+    default_line_no: Optional[int],
+) -> Error:
     message_and_traceback = get_message_and_traceback_from_exception_text(str(ex))
     if message_and_traceback.traceback:
         tr = message_and_traceback.traceback[-1]
@@ -1379,7 +1433,7 @@ def error_from_exception(ex: BaseException, default_source: Optional[str], defau
 
 
 @dataclass
-class _Variable(object):
+class _Variable:
     name: str
     value: Iterable[str]
     source: Optional[str] = None
@@ -1610,9 +1664,7 @@ def get_library_doc(
         def write(self, message: str, level: str, html: bool = False) -> None:
             self.messages.append((message, level, html))
 
-    def import_test_library(
-        name: str,
-    ) -> Union[Any, Tuple[Any, str]]:
+    def import_test_library(name: str) -> Union[Any, Tuple[Any, str]]:
         with OutputCapturer(library_import=True):
             importer = Importer("test library", LOGGER)
             return importer.import_class_or_module(name, return_source=True)
@@ -1659,7 +1711,7 @@ def get_library_doc(
 
         # skip antigravity easter egg
         # see https://python-history.blogspot.com/2010/06/import-antigravity.html
-        if import_name.lower() in ["antigravity"] or import_name.lower().endswith("antigravity.py"):
+        if import_name.lower() == "antigravity" or import_name.lower().endswith("antigravity.py"):
             raise IgnoreEasterEggLibraryWarning(f"Ignoring import for python easter egg '{import_name}'.")
 
         errors: List[Error] = []
@@ -1882,7 +1934,9 @@ def get_library_doc(
                 )
 
                 if get_robot_version() >= (6, 1):
-                    from robot.libdocpkg.datatypes import TypeDoc as RobotTypeDoc
+                    from robot.libdocpkg.datatypes import (
+                        TypeDoc as RobotTypeDoc,
+                    )
                     from robot.running.arguments.argumentspec import TypeInfo
 
                     def _yield_type_info(info: TypeInfo) -> Iterable[TypeInfo]:
@@ -1899,7 +1953,10 @@ def get_library_doc(
                                 for type_info in _yield_type_info(arg.type):
                                     if type_info.type is not None:
                                         if get_robot_version() < (7, 0):
-                                            type_doc = RobotTypeDoc.for_type(type_info.type, custom_converters)
+                                            type_doc = RobotTypeDoc.for_type(
+                                                type_info.type,
+                                                custom_converters,
+                                            )
                                         else:
                                             type_doc = RobotTypeDoc.for_type(type_info, custom_converters)
                                         if type_doc:
@@ -1922,7 +1979,10 @@ def get_library_doc(
                             libtype=libdoc.type,
                             doc_format=libdoc.doc_format,
                         )
-                        for td in _get_type_docs([kw[0] for kw in keyword_docs + init_keywords], lib.converters)
+                        for td in _get_type_docs(
+                            [kw[0] for kw in keyword_docs + init_keywords],
+                            lib.converters,
+                        )
                     ]
 
             except (SystemExit, KeyboardInterrupt):
@@ -2051,7 +2111,7 @@ def get_variables_doc(
 
                 # skip antigravity easter egg
                 # see https://python-history.blogspot.com/2010/06/import-antigravity.html
-                if import_name.lower() in ["antigravity"] or import_name.lower().endswith("antigravity.py"):
+                if import_name.lower() == "antigravity" or import_name.lower().endswith("antigravity.py"):
                     raise IgnoreEasterEggLibraryWarning(f"Ignoring import for python easter egg '{import_name}'.")
 
                 class MyPythonImporter(PythonImporter):
@@ -2068,7 +2128,9 @@ def get_variables_doc(
 
                 if get_robot_version() >= (5, 0):
                     libcode, source = module_importer.import_class_or_module(
-                        import_name, instantiate_with_args=(), return_source=True
+                        import_name,
+                        instantiate_with_args=(),
+                        return_source=True,
                     )
                 else:
                     source = import_name
@@ -2129,7 +2191,12 @@ def get_variables_doc(
                                 )
                                 for kw in [
                                     (KeywordDocBuilder().build_keyword(k), k)
-                                    for k in [KeywordWrapper(vars_initializer, libdoc.source or "")]
+                                    for k in [
+                                        KeywordWrapper(
+                                            vars_initializer,
+                                            libdoc.source or "",
+                                        )
+                                    ]
                                 ]
                             ]
                         )
@@ -2151,7 +2218,12 @@ def get_variables_doc(
                                 return None
 
                         if get_variables is not None:
-                            vars_initializer = InitVarHandler(libdoc, get_variables.__name__, get_variables, None)
+                            vars_initializer = InitVarHandler(
+                                libdoc,
+                                get_variables.__name__,
+                                get_variables,
+                                None,
+                            )
 
                             libdoc.inits = KeywordStore(
                                 keywords=[
@@ -2171,8 +2243,16 @@ def get_variables_doc(
                                         is_initializer=True,
                                     )
                                     for kw in [
-                                        (KeywordDocBuilder().build_keyword(k), k)
-                                        for k in [KeywordWrapper(vars_initializer, libdoc.source or "")]
+                                        (
+                                            KeywordDocBuilder().build_keyword(k),
+                                            k,
+                                        )
+                                        for k in [
+                                            KeywordWrapper(
+                                                vars_initializer,
+                                                libdoc.source or "",
+                                            )
+                                        ]
                                     ]
                                 ]
                             )
@@ -2526,7 +2606,9 @@ def get_model_doc(
         from robot.running.usererrorhandler import UserErrorHandler
         from robot.running.userkeyword import UserLibrary
     else:
-        from robot.running.invalidkeyword import InvalidKeyword as UserErrorHandler
+        from robot.running.invalidkeyword import (
+            InvalidKeyword as UserErrorHandler,
+        )
         from robot.running.resourcemodel import ResourceFile
 
     errors: List[Error] = []
@@ -2540,12 +2622,26 @@ def get_model_doc(
 
         error = node.error if isinstance(node, HasError) else None
         if error is not None:
-            errors.append(Error(message=error, type_name="ModelError", source=source, line_no=node.lineno))
+            errors.append(
+                Error(
+                    message=error,
+                    type_name="ModelError",
+                    source=source,
+                    line_no=node.lineno,
+                )
+            )
         if append_model_errors:
             node_errors = node.errors if isinstance(node, HasErrors) else None
             if node_errors is not None:
                 for e in node_errors:
-                    errors.append(Error(message=e, type_name="ModelError", source=source, line_no=node.lineno))
+                    errors.append(
+                        Error(
+                            message=e,
+                            type_name="ModelError",
+                            source=source,
+                            line_no=node.lineno,
+                        )
+                    )
 
     def get_keyword_name_token_from_line(line: int) -> Optional[Token]:
         for keyword_name in keyword_name_nodes:
@@ -2554,12 +2650,17 @@ def get_model_doc(
 
         return None
 
-    def get_argument_definitions_from_line(line: int) -> List[ArgumentDefinition]:
+    def get_argument_definitions_from_line(
+        line: int,
+    ) -> List[ArgumentDefinition]:
         keyword_node = next((k for k in keywords_nodes if k.lineno == line), None)
         if keyword_node is None:
             return []
 
-        arguments_node = next((n for n in ast.walk(keyword_node) if isinstance(n, Arguments)), None)
+        arguments_node = next(
+            (n for n in ast.walk(keyword_node) if isinstance(n, Arguments)),
+            None,
+        )
         if arguments_node is None:
             return []
 
@@ -2613,7 +2714,7 @@ def get_model_doc(
                 self.current_kw = kw
                 try:
                     handler = super()._create_handler(kw)
-                    setattr(handler, "errors", None)
+                    handler.errors = None
                 except DataError as e:
                     err = Error(
                         message=str(e),
@@ -2627,7 +2728,7 @@ def get_model_doc(
                     handler.source = kw.source
                     handler.lineno = kw.lineno
 
-                    setattr(handler, "errors", [err])
+                    handler.errors = [err]
 
                 return handler
 
@@ -2646,7 +2747,7 @@ def get_model_doc(
     )
 
     def get_kw_errors(kw: Any) -> Any:
-        r = getattr(kw, "errors") if hasattr(kw, "errors") else None
+        r = kw.errors if hasattr(kw, "errors") else None
         if get_robot_version() >= (7, 0) and kw.error:
             if not r:
                 r = []

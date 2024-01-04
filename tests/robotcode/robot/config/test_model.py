@@ -1,7 +1,11 @@
 from typing import Any, Dict
 
 import pytest
-from robotcode.core.utils.dataclasses import TypeValidationError, as_dict, from_dict
+from robotcode.core.utils.dataclasses import (
+    TypeValidationError,
+    as_dict,
+    from_dict,
+)
 from robotcode.robot.config.model import RobotConfig
 
 
@@ -15,7 +19,9 @@ from robotcode.robot.config.model import RobotConfig
         ({"args": 1, "output_dir": 1}),
     ],
 )
-def test_robot_config_cannot_assign_invalid_args(kwargs: Dict[str, Any]) -> None:
+def test_robot_config_cannot_assign_invalid_args(
+    kwargs: Dict[str, Any],
+) -> None:
     with pytest.raises(TypeValidationError):
         RobotConfig(**kwargs)
 

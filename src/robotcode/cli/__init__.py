@@ -5,7 +5,12 @@ from typing import List, Optional
 import click
 from robotcode.core.utils.cli import show_hidden_arguments
 from robotcode.core.utils.logging import LoggingDescriptor
-from robotcode.plugin import Application, ColoredOutput, OutputFormat, pass_application
+from robotcode.plugin import (
+    Application,
+    ColoredOutput,
+    OutputFormat,
+    pass_application,
+)
 from robotcode.plugin.click_helper.aliases import AliasedGroup
 from robotcode.plugin.click_helper.types import EnumChoice
 from robotcode.plugin.manager import PluginManager
@@ -52,7 +57,13 @@ from .commands import config, profiles
     help="Set the output format.",
     show_default=True,
 )
-@click.option("-d", "--dry", is_flag=True, show_envvar=True, help="Dry run, do not execute any commands.")
+@click.option(
+    "-d",
+    "--dry",
+    is_flag=True,
+    show_envvar=True,
+    help="Dry run, do not execute any commands.",
+)
 @click.option(
     "--color / --no-color",
     "color",
@@ -74,12 +85,7 @@ from .commands import config, profiles
     help="Enables verbose mode.",
     show_envvar=True,
 )
-@click.option(
-    "--log",
-    is_flag=True,
-    help="Enables logging.",
-    show_envvar=True,
-)
+@click.option("--log", is_flag=True, help="Enables logging.", show_envvar=True)
 @click.option(
     "--log-level",
     type=click.Choice(["TRACE", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]),
@@ -90,7 +96,13 @@ from .commands import config, profiles
 )
 @click.option(
     "--log-filename",
-    type=click.Path(file_okay=True, dir_okay=False, writable=True, exists=False, path_type=str),
+    type=click.Path(
+        file_okay=True,
+        dir_okay=False,
+        writable=True,
+        exists=False,
+        path_type=str,
+    ),
     help="Write log output to a file instead to console.",
     default=None,
     show_default=True,
@@ -195,10 +207,17 @@ def robotcode(
         if log_calls:
             LoggingDescriptor.set_call_tracing(True)
 
-        logging.basicConfig(level=log_level, format="%(name)s:%(levelname)s: %(message)s", filename=log_filename)
+        logging.basicConfig(
+            level=log_level,
+            format="%(name)s:%(levelname)s: %(message)s",
+            filename=log_filename,
+        )
 
     if debugpy:
-        from robotcode.core.utils.debugpy import start_debugpy, wait_for_debugpy_connected
+        from robotcode.core.utils.debugpy import (
+            start_debugpy,
+            wait_for_debugpy_connected,
+        )
 
         app.verbose(f"Try to start a debugpy session on port {debugpy_port}")
 

@@ -102,7 +102,11 @@ class _Visitor(Visitor):
         if node.orelse is not None and node.body[-1]:
             self.__append(node, kind="if", end_node=node.body[-1])
         elif node.orelse is None and node.type == "ELSE":
-            self.__append(node, kind="if", end_node=self.current_if[-1] if self.current_if else None)
+            self.__append(
+                node,
+                kind="if",
+                end_node=self.current_if[-1] if self.current_if else None,
+            )
         else:
             self.__append(node, kind="if")
 

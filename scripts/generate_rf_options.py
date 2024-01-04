@@ -126,8 +126,14 @@ def generate(
 
         return result
 
-    def get_type(name: str, value: Any, option: Dict[str, str], is_flag: bool = False, extra: bool = False) -> str:
-        if not option.get("param", None):
+    def get_type(
+        name: str,
+        value: Any,
+        option: Dict[str, str],
+        is_flag: bool = False,
+        extra: bool = False,
+    ) -> str:
+        if not option.get("param"):
             if is_flag:
                 return "Union[bool, Flag, None]"
 
@@ -145,8 +151,8 @@ def generate(
         if base_type == "str":
             base_type = "Union[str, StringExpression]"
 
-        if param := option.get("param", None):
-            if len((param_splitted := param.split("|"))) > 1:
+        if param := option.get("param"):
+            if len(param_splitted := param.split("|")) > 1:
                 has_literal = [x for x in param_splitted if ":" not in x]
                 has_pattern = [x for x in param_splitted if ":" in x]
                 base_type = (
@@ -165,10 +171,10 @@ def generate(
                     + ("]" if has_literal and has_pattern or len(has_pattern) > 1 else "")
                 )
 
-            elif len((param_splitted := param.split(":"))) > 1:
+            elif len(param_splitted := param.split(":")) > 1:
                 return f"Optional[Dict[str, {base_type}]]"
 
-        if option.get("star", None):
+        if option.get("star"):
             return f"Optional[List[{base_type}]]"
 
         return f"Optional[{base_type}]"
@@ -189,7 +195,7 @@ def generate(
                     result.update({k: v})
 
                 name = ("extend_" if extend else "") + to_snake_case(
-                    name_corrections.get(long_name, None) or internal_options[long_name]["option"]
+                    name_corrections.get(long_name) or internal_options[long_name]["option"]
                 )
                 output.append(
                     f"    {name}"
@@ -245,7 +251,14 @@ output.append("@dataclass")
 output.append("class RobotExtraOptions(BaseOptions):")
 output.append('    """Extra options for _robot_ command."""')
 output.append("")
-generate(output, ROBOT_USAGE, RobotSettings._extra_cli_opts, extra_cmd_options, extra=True, tool="rebot")
+generate(
+    output,
+    ROBOT_USAGE,
+    RobotSettings._extra_cli_opts,
+    extra_cmd_options,
+    extra=True,
+    tool="rebot",
+)
 
 output.append("")
 output.append("")
@@ -253,7 +266,14 @@ output.append("@dataclass")
 output.append("class RebotOptions(BaseOptions):")
 output.append('    """Options for _rebot_ command."""')
 output.append("")
-extra_cmd_options = generate(output, REBOT_USAGE, RebotSettings._extra_cli_opts, None, extra=False, tool="rebot")
+extra_cmd_options = generate(
+    output,
+    REBOT_USAGE,
+    RebotSettings._extra_cli_opts,
+    None,
+    extra=False,
+    tool="rebot",
+)
 
 
 libdoc_options: Dict[str, Tuple[str, Any]] = {
@@ -280,7 +300,14 @@ output.append("@dataclass")
 output.append("class LibDocExtraOptions(BaseOptions):")
 output.append('    """Extra options for _libdoc_ command."""')
 output.append("")
-generate(output, LIBDOC_USAGE, libdoc_options, extra_cmd_options, extra=True, tool="libdoc")
+generate(
+    output,
+    LIBDOC_USAGE,
+    libdoc_options,
+    extra_cmd_options,
+    extra=True,
+    tool="libdoc",
+)
 
 
 testdoc_options: Dict[str, Tuple[str, Any]] = {
@@ -303,7 +330,14 @@ output.append("@dataclass")
 output.append("class TestDocExtraOptions(BaseOptions):")
 output.append('    """Extra options for _testdoc_ command."""')
 output.append("")
-generate(output, TESTDOC_USAGE, testdoc_options, extra_cmd_options, extra=True, tool="testdoc")
+generate(
+    output,
+    TESTDOC_USAGE,
+    testdoc_options,
+    extra_cmd_options,
+    extra=True,
+    tool="testdoc",
+)
 
 model_file = Path("packages/robot/src/robotcode/robot/config/model.py")
 original_lines = model_file.read_text().splitlines()

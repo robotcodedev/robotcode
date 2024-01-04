@@ -27,12 +27,23 @@ from typing import (
 from robot.errors import VariableError
 from robot.libraries import STDLIBS
 from robot.parsing.lexer.tokens import Token
-from robot.parsing.model.blocks import Keyword, SettingSection, TestCase, VariableSection
+from robot.parsing.model.blocks import (
+    Keyword,
+    SettingSection,
+    TestCase,
+    VariableSection,
+)
 from robot.parsing.model.statements import Arguments, Statement
 from robot.parsing.model.statements import LibraryImport as RobotLibraryImport
 from robot.parsing.model.statements import ResourceImport as RobotResourceImport
-from robot.parsing.model.statements import VariablesImport as RobotVariablesImport
-from robot.variables.search import is_scalar_assign, is_variable, search_variable
+from robot.parsing.model.statements import (
+    VariablesImport as RobotVariablesImport,
+)
+from robot.variables.search import (
+    is_scalar_assign,
+    is_variable,
+    search_variable,
+)
 from robotcode.core.event import event
 from robotcode.core.lsp.types import (
     CodeDescription,
@@ -136,13 +147,25 @@ class VariablesVisitor(Visitor):
 
             values = node.get_values(Token.ARGUMENT)
             has_value = bool(values)
-            value = tuple(s.replace("${CURDIR}", str(Path(self.source).parent).replace("\\", "\\\\")) for s in values)
+            value = tuple(
+                s.replace(
+                    "${CURDIR}",
+                    str(Path(self.source).parent).replace("\\", "\\\\"),
+                )
+                for s in values
+            )
 
             self._results.append(
                 VariableDefinition(
                     name=name,
                     name_token=strip_variable_token(
-                        Token(name_token.type, name, name_token.lineno, name_token.col_offset, name_token.error)
+                        Token(
+                            name_token.type,
+                            name,
+                            name_token.lineno,
+                            name_token.col_offset,
+                            name_token.error,
+                        )
                     ),
                     line_no=node.lineno,
                     col_offset=node.col_offset,
@@ -158,7 +181,11 @@ class VariablesVisitor(Visitor):
 
 class BlockVariableVisitor(Visitor):
     def __init__(
-        self, library_doc: LibraryDoc, source: str, position: Optional[Position] = None, in_args: bool = True
+        self,
+        library_doc: LibraryDoc,
+        source: str,
+        position: Optional[Position] = None,
+        in_args: bool = True,
     ) -> None:
         super().__init__()
         self.library_doc = library_doc
@@ -675,14 +702,18 @@ class Namespace:
 
         return self._keyword_references
 
-    def get_variable_references(self) -> Dict[VariableDefinition, Set[Location]]:
+    def get_variable_references(
+        self,
+    ) -> Dict[VariableDefinition, Set[Location]]:
         self.ensure_initialized()
 
         self._analyze()
 
         return self._variable_references
 
-    def get_local_variable_assignments(self) -> Dict[VariableDefinition, Set[Range]]:
+    def get_local_variable_assignments(
+        self,
+    ) -> Dict[VariableDefinition, Set[Range]]:
         self.ensure_initialized()
 
         self._analyze()
@@ -736,8 +767,7 @@ class Namespace:
                     self.model,
                     self.source,
                     model_type="RESOURCE",
-                    append_model_errors=self.document_type is not None
-                    and self.document_type in [DocumentType.RESOURCE],
+                    append_model_errors=self.document_type is not None and self.document_type == DocumentType.RESOURCE,
                 )
 
             return self._library_doc
@@ -796,7 +826,10 @@ class Namespace:
 
                         self._import_default_libraries(variables)
                         self._import_imports(
-                            imports, str(Path(self.source).parent), top_level=True, variables=variables
+                            imports,
+                            str(Path(self.source).parent),
+                            top_level=True,
+                            variables=variables,
                         )
 
                         if self.document is not None:
@@ -895,7 +928,10 @@ class Namespace:
         yielded: Dict[VariableMatcher, VariableDefinition] = {}
 
         test_or_keyword_nodes = list(
-            itertools.dropwhile(lambda v: not isinstance(v, (TestCase, Keyword)), nodes if nodes else [])
+            itertools.dropwhile(
+                lambda v: not isinstance(v, (TestCase, Keyword)),
+                nodes if nodes else [],
+            )
         )
         test_or_keyword = test_or_keyword_nodes[0] if test_or_keyword_nodes else None
 
@@ -914,7 +950,7 @@ class Namespace:
             ],
             self.get_global_variables(),
         ):
-            if var.matcher not in yielded.keys():
+            if var.matcher not in yielded:
                 if skip_commandline_variables and isinstance(var, CommandLineVariableDefinition):
                     continue
 
@@ -923,7 +959,9 @@ class Namespace:
                 yield var.matcher, var
 
     def get_resolvable_variables(
-        self, nodes: Optional[List[ast.AST]] = None, position: Optional[Position] = None
+        self,
+        nodes: Optional[List[ast.AST]] = None,
+        position: Optional[Position] = None,
     ) -> Dict[str, Any]:
         return {
             v.name: v.value
@@ -932,7 +970,9 @@ class Namespace:
         }
 
     def get_variable_matchers(
-        self, nodes: Optional[List[ast.AST]] = None, position: Optional[Position] = None
+        self,
+        nodes: Optional[List[ast.AST]] = None,
+        position: Optional[Position] = None,
     ) -> Dict[VariableMatcher, VariableDefinition]:
         self.ensure_initialized()
 
@@ -952,7 +992,14 @@ class Namespace:
         if name[:2] == "%{" and name[-1] == "}":
             var_name, _, default_value = name[2:-1].partition("=")
             return EnvironmentVariableDefinition(
-                0, 0, 0, 0, "", f"%{{{var_name}}}", None, default_value=default_value or None
+                0,
+                0,
+                0,
+                0,
+                "",
+                f"%{{{var_name}}}",
+                None,
+                default_value=default_value or None,
             )
 
         try:
@@ -991,7 +1038,12 @@ class Namespace:
                         raise NameSpaceError("Library setting requires value.")
 
                     result = self._get_library_entry(
-                        value.name, value.args, value.alias, base_dir, sentinel=value, variables=variables
+                        value.name,
+                        value.args,
+                        value.alias,
+                        base_dir,
+                        sentinel=value,
+                        variables=variables,
                     )
                     result.import_range = value.range
                     result.import_source = value.source
@@ -1026,7 +1078,10 @@ class Namespace:
                                 source=DIAGNOSTICS_SOURCE_NAME,
                                 related_information=[
                                     DiagnosticRelatedInformation(
-                                        location=Location(str(Uri.from_path(value.source)), value.range),
+                                        location=Location(
+                                            str(Uri.from_path(value.source)),
+                                            value.range,
+                                        ),
                                         message=f"'{Path(self.source).name}' is also imported here.",
                                     )
                                 ]
@@ -1035,7 +1090,12 @@ class Namespace:
                                 code=Error.POSSIBLE_CIRCULAR_IMPORT,
                             )
                     else:
-                        result = self._get_resource_entry(value.name, base_dir, sentinel=value, variables=variables)
+                        result = self._get_resource_entry(
+                            value.name,
+                            base_dir,
+                            sentinel=value,
+                            variables=variables,
+                        )
                         result.import_range = value.range
                         result.import_source = value.source
 
@@ -1063,7 +1123,11 @@ class Namespace:
                         raise NameSpaceError("Variables setting requires value.")
 
                     result = self._get_variables_entry(
-                        value.name, value.args, base_dir, sentinel=value, variables=variables
+                        value.name,
+                        value.args,
+                        base_dir,
+                        sentinel=value,
+                        variables=variables,
                     )
 
                     result.import_range = value.range
@@ -1090,17 +1154,19 @@ class Namespace:
                                                 start=Position(
                                                     line=err.line_no - 1
                                                     if err.line_no is not None
-                                                    else result.library_doc.line_no
-                                                    if result.library_doc.line_no >= 0
-                                                    else 0,
+                                                    else max(
+                                                        result.library_doc.line_no,
+                                                        0,
+                                                    ),
                                                     character=0,
                                                 ),
                                                 end=Position(
                                                     line=err.line_no - 1
                                                     if err.line_no is not None
-                                                    else result.library_doc.line_no
-                                                    if result.library_doc.line_no >= 0
-                                                    else 0,
+                                                    else max(
+                                                        result.library_doc.line_no,
+                                                        0,
+                                                    ),
                                                     character=0,
                                                 ),
                                             ),
@@ -1113,7 +1179,8 @@ class Namespace:
                                 code=Error.IMPORT_CONTAINS_ERRORS,
                             )
                         for err in filter(
-                            lambda e: e.source is None or not Path(e.source).is_absolute(), result.library_doc.errors
+                            lambda e: e.source is None or not Path(e.source).is_absolute(),
+                            result.library_doc.errors,
                         ):
                             self.append_diagnostics(
                                 range=value.range,
@@ -1318,7 +1385,12 @@ class Namespace:
         def _import_lib(library: str, variables: Optional[Dict[str, Any]] = None) -> Optional[LibraryEntry]:
             try:
                 return self._get_library_entry(
-                    library, (), None, str(Path(self.source).parent), is_default_library=True, variables=variables
+                    library,
+                    (),
+                    None,
+                    str(Path(self.source).parent),
+                    is_default_library=True,
+                    variables=variables,
                 )
             except (SystemExit, KeyboardInterrupt):
                 raise
@@ -1361,7 +1433,13 @@ class Namespace:
             variables=variables or self.get_resolvable_variables(),
         )
 
-        return LibraryEntry(name=library_doc.name, import_name=name, library_doc=library_doc, args=args, alias=alias)
+        return LibraryEntry(
+            name=library_doc.name,
+            import_name=name,
+            library_doc=library_doc,
+            args=args,
+            alias=alias,
+        )
 
     @_logger.call
     def get_imported_library_libdoc(
@@ -1380,9 +1458,17 @@ class Namespace:
 
     @_logger.call
     def _get_resource_entry(
-        self, name: str, base_dir: str, *, sentinel: Any = None, variables: Optional[Dict[str, Any]] = None
+        self,
+        name: str,
+        base_dir: str,
+        *,
+        sentinel: Any = None,
+        variables: Optional[Dict[str, Any]] = None,
     ) -> ResourceEntry:
-        namespace, library_doc = self.imports_manager.get_namespace_and_libdoc_for_resource_import(
+        (
+            namespace,
+            library_doc,
+        ) = self.imports_manager.get_namespace_and_libdoc_for_resource_import(
             name,
             base_dir,
             sentinel=sentinel,
@@ -1429,7 +1515,11 @@ class Namespace:
         )
 
         return VariablesEntry(
-            name=library_doc.name, import_name=name, library_doc=library_doc, args=args, variables=library_doc.variables
+            name=library_doc.name,
+            import_name=name,
+            library_doc=library_doc,
+            args=args,
+            variables=library_doc.variables,
         )
 
     @_logger.call
@@ -1493,7 +1583,7 @@ class Namespace:
                 else:
                     self._logger.debug(
                         lambda: f"end collecting {len(self._keywords) if self._keywords else 0}"
-                        f" keywords in {time.monotonic()-current_time}s analyze {i} keywords"
+                        f" keywords in {time.monotonic() - current_time}s analyze {i} keywords"
                     )
 
             return self._keywords
@@ -1514,7 +1604,17 @@ class Namespace:
             return
 
         self._diagnostics.append(
-            Diagnostic(range, message, severity, code, code_description, source, tags, related_information, data)
+            Diagnostic(
+                range,
+                message,
+                severity,
+                code,
+                code_description,
+                source,
+                tags,
+                related_information,
+                data,
+            )
         )
 
     @_logger.call(condition=lambda self: not self._analyzed)
@@ -1591,11 +1691,19 @@ class Namespace:
 
     @_logger.call(condition=lambda self, name, **kwargs: self._finder is not None and name not in self._finder._cache)
     def find_keyword(
-        self, name: Optional[str], *, raise_keyword_error: bool = True, handle_bdd_style: bool = True
+        self,
+        name: Optional[str],
+        *,
+        raise_keyword_error: bool = True,
+        handle_bdd_style: bool = True,
     ) -> Optional[KeywordDoc]:
         finder = self._finder if self._finder is not None else self.get_finder()
 
-        return finder.find_keyword(name, raise_keyword_error=raise_keyword_error, handle_bdd_style=handle_bdd_style)
+        return finder.find_keyword(
+            name,
+            raise_keyword_error=raise_keyword_error,
+            handle_bdd_style=handle_bdd_style,
+        )
 
     @classmethod
     def get_ignored_lines(cls, document: TextDocument) -> List[int]:
@@ -1616,7 +1724,10 @@ class Namespace:
 
     @classmethod
     def should_ignore(cls, document: Optional[TextDocument], range: Range) -> bool:
-        return cls.__should_ignore(cls.get_ignored_lines(document) if document is not None else [], range)
+        return cls.__should_ignore(
+            cls.get_ignored_lines(document) if document is not None else [],
+            range,
+        )
 
     def _should_ignore(self, range: Range) -> bool:
         if self._ignored_lines is None:
@@ -1652,7 +1763,12 @@ class KeywordFinder:
         self.diagnostics: List[DiagnosticsEntry] = []
         self.multiple_keywords_result: Optional[List[KeywordDoc]] = None
         self._cache: Dict[
-            Tuple[Optional[str], bool], Tuple[Optional[KeywordDoc], List[DiagnosticsEntry], Optional[List[KeywordDoc]]]
+            Tuple[Optional[str], bool],
+            Tuple[
+                Optional[KeywordDoc],
+                List[DiagnosticsEntry],
+                Optional[List[KeywordDoc]],
+            ],
         ] = {}
         self.handle_bdd_style = True
         self._all_keywords: Optional[List[LibraryEntry]] = None
@@ -1664,7 +1780,11 @@ class KeywordFinder:
         self.multiple_keywords_result = None
 
     def find_keyword(
-        self, name: Optional[str], *, raise_keyword_error: bool = False, handle_bdd_style: bool = True
+        self,
+        name: Optional[str],
+        *,
+        raise_keyword_error: bool = False,
+        handle_bdd_style: bool = True,
     ) -> Optional[KeywordDoc]:
         try:
             self.reset_diagnostics()
@@ -1698,7 +1818,11 @@ class KeywordFinder:
                 result = None
                 self.diagnostics.append(DiagnosticsEntry(str(e), DiagnosticSeverity.ERROR, Error.KEYWORD_ERROR))
 
-            self._cache[(name, self.handle_bdd_style)] = (result, self.diagnostics, self.multiple_keywords_result)
+            self._cache[(name, self.handle_bdd_style)] = (
+                result,
+                self.diagnostics,
+                self.multiple_keywords_result,
+            )
 
             return result
         except CancelSearchError:
@@ -1707,12 +1831,20 @@ class KeywordFinder:
     def _find_keyword(self, name: Optional[str]) -> Optional[KeywordDoc]:
         if not name:
             self.diagnostics.append(
-                DiagnosticsEntry("Keyword name cannot be empty.", DiagnosticSeverity.ERROR, Error.KEYWORD_ERROR)
+                DiagnosticsEntry(
+                    "Keyword name cannot be empty.",
+                    DiagnosticSeverity.ERROR,
+                    Error.KEYWORD_ERROR,
+                )
             )
             raise CancelSearchError
         if not isinstance(name, str):
             self.diagnostics.append(  # type: ignore
-                DiagnosticsEntry("Keyword name must be a string.", DiagnosticSeverity.ERROR, Error.KEYWORD_ERROR)
+                DiagnosticsEntry(
+                    "Keyword name must be a string.",
+                    DiagnosticSeverity.ERROR,
+                    Error.KEYWORD_ERROR,
+                )
             )
             raise CancelSearchError
 
@@ -1754,13 +1886,7 @@ class KeywordFinder:
         try:
             return self.self_library_doc.keywords.get(name, None)
         except KeywordError as e:
-            self.diagnostics.append(
-                DiagnosticsEntry(
-                    str(e),
-                    DiagnosticSeverity.ERROR,
-                    Error.KEYWORD_ERROR,
-                )
-            )
+            self.diagnostics.append(DiagnosticsEntry(str(e), DiagnosticSeverity.ERROR, Error.KEYWORD_ERROR))
             raise CancelSearchError from e
 
     def _yield_owner_and_kw_names(self, full_name: str) -> Iterator[Tuple[str, ...]]:
@@ -1790,7 +1916,12 @@ class KeywordFinder:
 
     def find_keywords(self, owner_name: str, name: str) -> List[Tuple[LibraryEntry, KeywordDoc]]:
         if self._all_keywords is None:
-            self._all_keywords = list(chain(self.namespace._libraries.values(), self.namespace._resources.values()))
+            self._all_keywords = list(
+                chain(
+                    self.namespace._libraries.values(),
+                    self.namespace._resources.values(),
+                )
+            )
 
         if get_robot_version() >= (6, 0):
             result: List[Tuple[LibraryEntry, KeywordDoc]] = []
@@ -1814,7 +1945,10 @@ class KeywordFinder:
             self.multiple_keywords_result.extend(kw)
 
     def _create_multiple_keywords_found_message(
-        self, name: str, found: Sequence[Tuple[Optional[LibraryEntry], KeywordDoc]], implicit: bool = True
+        self,
+        name: str,
+        found: Sequence[Tuple[Optional[LibraryEntry], KeywordDoc]],
+        implicit: bool = True,
     ) -> str:
         self._add_to_multiple_keywords_result([k for _, k in found])
 
@@ -1871,7 +2005,9 @@ class KeywordFinder:
         return False
 
     def _is_better_match(
-        self, candidate: Tuple[Optional[LibraryEntry], KeywordDoc], other: Tuple[Optional[LibraryEntry], KeywordDoc]
+        self,
+        candidate: Tuple[Optional[LibraryEntry], KeywordDoc],
+        other: Tuple[Optional[LibraryEntry], KeywordDoc],
     ) -> bool:
         return (
             other[1].matcher.embedded_arguments.match(candidate[1].name) is not None
@@ -1979,7 +2115,9 @@ class KeywordFinder:
         raise CancelSearchError
 
     def _filter_stdlib_runner(
-        self, entry1: Tuple[Optional[LibraryEntry], KeywordDoc], entry2: Tuple[Optional[LibraryEntry], KeywordDoc]
+        self,
+        entry1: Tuple[Optional[LibraryEntry], KeywordDoc],
+        entry2: Tuple[Optional[LibraryEntry], KeywordDoc],
     ) -> List[Tuple[Optional[LibraryEntry], KeywordDoc]]:
         stdlibs_without_remote = STDLIBS - {"Remote"}
         if entry1[0] is not None and entry1[0].name in stdlibs_without_remote:
@@ -2000,7 +2138,9 @@ class KeywordFinder:
         return [custom]
 
     def _create_custom_and_standard_keyword_conflict_warning_message(
-        self, custom: Tuple[Optional[LibraryEntry], KeywordDoc], standard: Tuple[Optional[LibraryEntry], KeywordDoc]
+        self,
+        custom: Tuple[Optional[LibraryEntry], KeywordDoc],
+        standard: Tuple[Optional[LibraryEntry], KeywordDoc],
     ) -> str:
         custom_with_name = standard_with_name = ""
         if custom[0] is not None and custom[0].alias is not None:

@@ -19,7 +19,9 @@ from .types import FC
 
 
 def server_options(
-    default_server_mode: ServerMode, default_port: int, allowed_server_modes: Optional[Set[ServerMode]] = None
+    default_server_mode: ServerMode,
+    default_port: int,
+    allowed_server_modes: Optional[Set[ServerMode]] = None,
 ) -> Sequence[FC]:
     result: List[FC] = []
 

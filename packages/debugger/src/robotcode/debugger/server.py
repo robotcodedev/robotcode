@@ -197,7 +197,10 @@ class DebugAdapterServerProtocol(DebugAdapterProtocol):
     ) -> None:
         if pathMappings:
             Debugger.instance().path_mappings = [
-                PathMapping(local_root=v.get("localRoot", None), remote_root=v.get("remoteRoot", None))
+                PathMapping(
+                    local_root=v.get("localRoot", None),
+                    remote_root=v.get("remoteRoot", None),
+                )
                 for v in pathMappings
             ]
         Debugger.instance().attached = True
@@ -220,7 +223,12 @@ class DebugAdapterServerProtocol(DebugAdapterProtocol):
             self._terminated = True
 
     @rpc_method(name="terminate", param_type=TerminateArguments)
-    async def _terminate(self, arguments: Optional[TerminateArguments] = None, *args: Any, **kwargs: Any) -> None:
+    async def _terminate(
+        self,
+        arguments: Optional[TerminateArguments] = None,
+        *args: Any,
+        **kwargs: Any,
+    ) -> None:
         import signal
 
         if not self._sigint_signaled:
@@ -237,7 +245,12 @@ class DebugAdapterServerProtocol(DebugAdapterProtocol):
             signal.raise_signal(signal.SIGTERM)
 
     @rpc_method(name="disconnect", param_type=DisconnectArguments)
-    async def _disconnect(self, arguments: Optional[DisconnectArguments] = None, *args: Any, **kwargs: Any) -> None:
+    async def _disconnect(
+        self,
+        arguments: Optional[DisconnectArguments] = None,
+        *args: Any,
+        **kwargs: Any,
+    ) -> None:
         if (
             (not (await self.exited) or not (await self.terminated))
             and arguments is not None
@@ -255,14 +268,20 @@ class DebugAdapterServerProtocol(DebugAdapterProtocol):
     ) -> SetBreakpointsResponseBody:
         return SetBreakpointsResponseBody(
             breakpoints=Debugger.instance().set_breakpoints(
-                arguments.source, arguments.breakpoints, arguments.lines, arguments.source_modified
+                arguments.source,
+                arguments.breakpoints,
+                arguments.lines,
+                arguments.source_modified,
             )
         )
 
     @_logger.call
     @rpc_method(name="configurationDone", param_type=ConfigurationDoneArguments)
     async def _configuration_done(
-        self, arguments: Optional[ConfigurationDoneArguments] = None, *args: Any, **kwargs: Any
+        self,
+        arguments: Optional[ConfigurationDoneArguments] = None,
+        *args: Any,
+        **kwargs: Any,
     ) -> None:
         self._received_configuration_done = True
         self._received_configuration_done_event.set()
@@ -304,7 +323,10 @@ class DebugAdapterServerProtocol(DebugAdapterProtocol):
     @rpc_method(name="stackTrace", param_type=StackTraceArguments)
     async def _stack_trace(self, arguments: StackTraceArguments, *args: Any, **kwargs: Any) -> StackTraceResponseBody:
         result = Debugger.instance().get_stack_trace(
-            arguments.thread_id, arguments.start_frame, arguments.levels, arguments.format
+            arguments.thread_id,
+            arguments.start_frame,
+            arguments.levels,
+            arguments.format,
         )
         return StackTraceResponseBody(stack_frames=result.stack_frames, total_frames=result.total_frames)
 
@@ -370,12 +392,20 @@ class DebugAdapterServerProtocol(DebugAdapterProtocol):
             indexed_variables=result.indexed_variables,
         )
 
-    @rpc_method(name="setExceptionBreakpoints", param_type=SetExceptionBreakpointsArguments)
+    @rpc_method(
+        name="setExceptionBreakpoints",
+        param_type=SetExceptionBreakpointsArguments,
+    )
     async def _set_exception_breakpoints(
-        self, arguments: SetExceptionBreakpointsArguments, *args: Any, **kwargs: Any
+        self,
+        arguments: SetExceptionBreakpointsArguments,
+        *args: Any,
+        **kwargs: Any,
     ) -> Optional[SetExceptionBreakpointsResponseBody]:
         result = Debugger.instance().set_exception_breakpoints(
-            arguments.filters, arguments.filter_options, arguments.exception_options
+            arguments.filters,
+            arguments.filter_options,
+            arguments.exception_options,
         )
         return SetExceptionBreakpointsResponseBody(breakpoints=result) if result else None
 
@@ -401,11 +431,7 @@ class DebugAdapterServer(JsonRPCServer[DebugAdapterServerProtocol]):
         tcp_params: TcpParams = TcpParams(None, TCP_DEFAULT_PORT),
         pipe_name: Optional[str] = None,
     ):
-        super().__init__(
-            mode=mode,
-            tcp_params=tcp_params,
-            pipe_name=pipe_name,
-        )
+        super().__init__(mode=mode, tcp_params=tcp_params, pipe_name=pipe_name)
         self.protocol = DebugAdapterServerProtocol()
 
     def create_protocol(self) -> DebugAdapterServerProtocol:

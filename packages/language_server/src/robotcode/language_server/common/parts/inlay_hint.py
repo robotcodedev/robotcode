@@ -1,7 +1,12 @@
 from concurrent.futures import CancelledError
 from typing import TYPE_CHECKING, Any, Final, List, Optional
 
-from robotcode.core.concurrent import FutureEx, check_current_thread_canceled, run_in_thread, threaded
+from robotcode.core.concurrent import (
+    FutureEx,
+    check_current_thread_canceled,
+    run_in_thread,
+    threaded,
+)
 from robotcode.core.event import event
 from robotcode.core.lsp.types import (
     InlayHint,
@@ -84,12 +89,7 @@ class InlayHintProtocolPart(LanguageServerProtocolPart):
 
     @rpc_method(name="inlayHint/resolve", param_type=InlayHint)
     @threaded
-    def _inlay_hint_resolve(
-        self,
-        params: InlayHint,
-        *args: Any,
-        **kwargs: Any,
-    ) -> Optional[InlayHint]:
+    def _inlay_hint_resolve(self, params: InlayHint, *args: Any, **kwargs: Any) -> Optional[InlayHint]:
         for result in self.resolve(self, params):
             if isinstance(result, BaseException):
                 if not isinstance(result, CancelledError):

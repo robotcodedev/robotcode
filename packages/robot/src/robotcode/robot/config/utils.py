@@ -3,11 +3,18 @@ from typing import Callable, Optional, Sequence, Tuple, Union
 
 import platformdirs
 
-from .loader import ConfigType, DiscoverdBy, find_project_root, get_config_files_from_folder, get_default_config
+from .loader import (
+    ConfigType,
+    DiscoverdBy,
+    find_project_root,
+    get_config_files_from_folder,
+    get_default_config,
+)
 
 
 def get_user_config_file(
-    create: bool = True, verbose_callback: Optional[Callable[[str], None]] = None
+    create: bool = True,
+    verbose_callback: Optional[Callable[[str], None]] = None,
 ) -> Optional[Path]:
     result = Path(platformdirs.user_config_dir("robotcode", appauthor=False), "robot.toml")
     if result.is_file():
@@ -58,16 +65,17 @@ def get_config_files(
 
         if verbose_callback:
             if result:
-                verbose_callback(
-                    "Found configuration files:\n    " + "\n    ".join(str(f[0]) for f in result),
-                )
+                verbose_callback("Found configuration files:\n    " + "\n    ".join(str(f[0]) for f in result))
             else:
                 verbose_callback("No configuration files found.")
 
     user_config = get_user_config_file(verbose_callback=verbose_callback)
 
     return (
-        [*([(user_config, ConfigType.USER_DEFAULT_CONFIG_TOML)] if user_config else []), *result],
+        [
+            *([(user_config, ConfigType.USER_DEFAULT_CONFIG_TOML)] if user_config else []),
+            *result,
+        ],
         root_folder,
         discovered_by,
     )

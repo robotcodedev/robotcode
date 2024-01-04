@@ -4,11 +4,11 @@ import click
 from robotcode.core.types import ServerMode
 from robotcode.core.utils.cli import show_hidden_arguments
 from robotcode.plugin import Application, UnknownError, pass_application
-from robotcode.plugin.click_helper.options import resolve_server_options, server_options
-from robotcode.plugin.click_helper.types import (
-    AddressesPort,
-    add_options,
+from robotcode.plugin.click_helper.options import (
+    resolve_server_options,
+    server_options,
 )
+from robotcode.plugin.click_helper.types import AddressesPort, add_options
 
 from ..__version__ import __version__
 from .run import run_launcher
@@ -16,10 +16,7 @@ from .run import run_launcher
 LAUNCHER_DEFAULT_PORT = 6611
 
 
-@click.command(
-    add_help_option=True,
-    hidden=show_hidden_arguments(),
-)
+@click.command(add_help_option=True, hidden=show_hidden_arguments())
 @add_options(*server_options(ServerMode.STDIO, default_port=LAUNCHER_DEFAULT_PORT))
 @click.version_option(version=__version__, prog_name="RobotCode Launcher")
 @pass_application
@@ -40,7 +37,17 @@ def debug_launch(
     """Launches a robotcode debug session."""
 
     mode, port, bind, pipe_name = resolve_server_options(
-        ctx, app, mode, port, bind, pipe_name, tcp, socket, stdio, pipe, pipe_server
+        ctx,
+        app,
+        mode,
+        port,
+        bind,
+        pipe_name,
+        tcp,
+        socket,
+        stdio,
+        pipe,
+        pipe_server,
     )
 
     try:

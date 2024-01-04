@@ -197,13 +197,19 @@ class LauncherDebugAdapterProtocol(DebugAdapterProtocol):
             robotcode_run_args += ["--tcp", str(port)]
 
         if debuggerTimeout is not None:
-            robotcode_run_args += ["--wait-for-client-timeout", str(debuggerTimeout)]
+            robotcode_run_args += [
+                "--wait-for-client-timeout",
+                str(debuggerTimeout),
+            ]
 
         if attachPython and not no_debug:
             robotcode_run_args += ["--debugpy"]
 
             if attachPythonPort is not None and attachPythonPort != DEBUGPY_DEFAULT_PORT:
-                robotcode_run_args += ["--debugpy-port", str(attachPythonPort or 0)]
+                robotcode_run_args += [
+                    "--debugpy-port",
+                    str(attachPythonPort or 0),
+                ]
 
         if outputMessages:
             robotcode_run_args += ["--output-messages"]
@@ -287,15 +293,12 @@ class LauncherDebugAdapterProtocol(DebugAdapterProtocol):
                 ),
                 return_type=RunInTerminalResponseBody,
             )
-        elif console is None or console in ["internalConsole"]:
+        elif console is None or console == "internalConsole":
             run_env: Dict[str, Optional[str]] = dict(os.environ)
             run_env.update(env)
 
             await asyncio.get_event_loop().subprocess_exec(
-                lambda: OutputProtocol(self),
-                *run_args,
-                cwd=cwd,
-                env=run_env,
+                lambda: OutputProtocol(self), *run_args, cwd=cwd, env=run_env
             )
 
         else:
@@ -334,7 +337,12 @@ class LauncherDebugAdapterProtocol(DebugAdapterProtocol):
         await self.client.protocol.send_request_async(AttachRequest(arguments=AttachRequestArguments()))
 
     @rpc_method(name="disconnect", param_type=DisconnectArguments)
-    async def _disconnect(self, arguments: Optional[DisconnectArguments] = None, *args: Any, **kwargs: Any) -> None:
+    async def _disconnect(
+        self,
+        arguments: Optional[DisconnectArguments] = None,
+        *args: Any,
+        **kwargs: Any,
+    ) -> None:
         if self.connected:
             if not self.client.protocol.terminated:
                 await self.client.protocol.send_request_async(DisconnectRequest(arguments=arguments))
@@ -344,7 +352,12 @@ class LauncherDebugAdapterProtocol(DebugAdapterProtocol):
 
     @_logger.call
     @rpc_method(name="terminate", param_type=TerminateArguments)
-    async def _terminate(self, arguments: Optional[TerminateArguments] = None, *args: Any, **kwargs: Any) -> None:
+    async def _terminate(
+        self,
+        arguments: Optional[TerminateArguments] = None,
+        *args: Any,
+        **kwargs: Any,
+    ) -> None:
         if self.client.connected:
             await self.client.protocol.send_request_async(TerminateRequest(arguments=arguments))
         else:
@@ -369,11 +382,7 @@ class LauncherServer(JsonRPCServer[LauncherDebugAdapterProtocol]):
         pipe_name: Optional[str] = None,
         debugger_script: Optional[str] = None,
     ):
-        super().__init__(
-            mode=mode,
-            tcp_params=tcp_params,
-            pipe_name=pipe_name,
-        )
+        super().__init__(mode=mode, tcp_params=tcp_params, pipe_name=pipe_name)
         self.debugger_script = debugger_script
         self.protocol: Optional[LauncherDebugAdapterProtocol] = None
 

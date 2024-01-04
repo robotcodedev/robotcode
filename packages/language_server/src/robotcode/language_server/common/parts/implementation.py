@@ -31,7 +31,9 @@ class ImplementationProtocolPart(LanguageServerProtocolPart):
 
     @event
     def collect(
-        sender, document: TextDocument, position: Position  # NOSONAR
+        sender,
+        document: TextDocument,
+        position: Position,  # NOSONAR
     ) -> Union[Location, List[Location], List[LocationLink], None]:
         ...
 
@@ -49,7 +51,11 @@ class ImplementationProtocolPart(LanguageServerProtocolPart):
     @rpc_method(name="textDocument/implementation", param_type=ImplementationParams)
     @threaded
     def _text_document_implementation(
-        self, text_document: TextDocumentIdentifier, position: Position, *args: Any, **kwargs: Any
+        self,
+        text_document: TextDocumentIdentifier,
+        position: Position,
+        *args: Any,
+        **kwargs: Any,
     ) -> Optional[Union[Location, List[Location], List[LocationLink]]]:
         locations: List[Location] = []
         location_links: List[LocationLink] = []

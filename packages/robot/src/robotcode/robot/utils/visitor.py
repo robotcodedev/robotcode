@@ -1,7 +1,16 @@
 import ast
 from abc import ABC
 from collections import defaultdict
-from typing import Any, AsyncIterator, Callable, Dict, Iterator, Optional, Type, Union
+from typing import (
+    Any,
+    AsyncIterator,
+    Callable,
+    Dict,
+    Iterator,
+    Optional,
+    Type,
+    Union,
+)
 
 from robot.parsing.model.statements import Statement
 

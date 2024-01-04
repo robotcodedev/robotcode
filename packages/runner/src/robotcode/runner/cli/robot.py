@@ -18,7 +18,13 @@ from ..__version__ import __version__
 
 
 class RobotFrameworkEx(RobotFramework):
-    def __init__(self, app: Application, paths: List[str], dry: bool, root_folder: Optional[Path]) -> None:
+    def __init__(
+        self,
+        app: Application,
+        paths: List[str],
+        dry: bool,
+        root_folder: Optional[Path],
+    ) -> None:
         super().__init__()
         self.app = app
         self.paths = paths
@@ -51,7 +57,7 @@ class RobotFrameworkEx(RobotFramework):
             raise Information(
                 "Dry run, not executing any commands. "
                 f"Would execute robot with the following options and arguments:\n"
-                f'{line_end.join((*(f"{k} = {v!r}" for k, v in options.items()) ,*arguments))}'
+                f'{line_end.join((*(f"{k} = {v!r}" for k, v in options.items()), *arguments))}'
             )
 
         return options, arguments
@@ -60,7 +66,12 @@ class RobotFrameworkEx(RobotFramework):
 # mypy: disable-error-code="arg-type"
 
 ROBOT_OPTIONS: Set[click.Command] = {
-    click.option("--by-longname", type=str, multiple=True, help="Select tests/tasks or suites by longname."),
+    click.option(
+        "--by-longname",
+        type=str,
+        multiple=True,
+        help="Select tests/tasks or suites by longname.",
+    ),
     click.option(
         "--exclude-by-longname",
         type=str,
@@ -108,7 +119,10 @@ def handle_robot_options(
 
     if by_longname:
         sep = ";" if any(True for l in by_longname if ":" in l) else ":"
-        cmd_options += ("--prerunmodifier", f"robotcode.modifiers.ByLongName{sep}{sep.join(by_longname)}")
+        cmd_options += (
+            "--prerunmodifier",
+            f"robotcode.modifiers.ByLongName{sep}{sep.join(by_longname)}",
+        )
 
     if exclude_by_longname:
         sep = ";" if any(True for l in exclude_by_longname if ":" in l) else ":"
@@ -133,10 +147,7 @@ def handle_robot_options(
 @click.command(
     cls=AliasedCommand,
     aliases=["run"],
-    context_settings={
-        "allow_extra_args": True,
-        "ignore_unknown_options": True,
-    },
+    context_settings={"allow_extra_args": True, "ignore_unknown_options": True},
     add_help_option=True,
     epilog='Use "-- --help" to see `robot` help.',
 )
@@ -179,9 +190,6 @@ def robot(
                 else [profile.paths],
                 app.config.dry,
                 root_folder,
-            ).execute_cli(
-                (*cmd_options, *robot_options_and_args),
-                exit=False,
-            ),
+            ).execute_cli((*cmd_options, *robot_options_and_args), exit=False),
         )
     )

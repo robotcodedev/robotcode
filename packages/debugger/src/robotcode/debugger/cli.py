@@ -4,11 +4,11 @@ from typing import Optional, Sequence, Tuple
 import click
 from robotcode.core.types import ServerMode
 from robotcode.plugin import Application, UnknownError, pass_application
-from robotcode.plugin.click_helper.options import resolve_server_options, server_options
-from robotcode.plugin.click_helper.types import (
-    AddressesPort,
-    add_options,
+from robotcode.plugin.click_helper.options import (
+    resolve_server_options,
+    server_options,
 )
+from robotcode.plugin.click_helper.types import AddressesPort, add_options
 
 from .__version__ import __version__
 
@@ -17,13 +17,15 @@ DEBUGPY_DEFAULT_PORT = 5678
 
 
 @click.command(
-    context_settings={
-        "allow_extra_args": True,
-        "ignore_unknown_options": True,
-    },
+    context_settings={"allow_extra_args": True, "ignore_unknown_options": True},
     add_help_option=True,
 )
-@click.option("--debug / --no-debug", default=True, help="Enable/disable debug mode", show_default=True)
+@click.option(
+    "--debug / --no-debug",
+    default=True,
+    help="Enable/disable debug mode",
+    show_default=True,
+)
 @click.option(
     "--stop-on-entry / --no-stop-on-entry",
     is_flag=True,
@@ -138,7 +140,17 @@ def debug(
     from .run import run_debugger
 
     mode, port, bind, pipe_name = resolve_server_options(
-        ctx, app, mode, port, bind, pipe_name, tcp, None, None, None, pipe_server
+        ctx,
+        app,
+        mode,
+        port,
+        bind,
+        pipe_name,
+        tcp,
+        None,
+        None,
+        None,
+        pipe_server,
     )
 
     app.verbose(f"Debug Mode: {debug}")

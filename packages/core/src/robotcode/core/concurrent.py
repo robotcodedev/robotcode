@@ -1,7 +1,18 @@
 import inspect
 from concurrent.futures import CancelledError, Future
 from threading import Event, RLock, Thread, current_thread, local
-from typing import Any, Callable, Dict, Generic, List, Optional, Tuple, TypeVar, cast, overload
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Generic,
+    List,
+    Optional,
+    Tuple,
+    TypeVar,
+    cast,
+    overload,
+)
 
 from typing_extensions import ParamSpec
 
@@ -70,7 +81,10 @@ _local_storage = _Local()
 
 
 def _run_callable_in_thread_handler(
-    future: FutureEx[_TResult], callable: Callable[..., _TResult], args: Tuple[Any, ...], kwargs: Dict[str, Any]
+    future: FutureEx[_TResult],
+    callable: Callable[..., _TResult],
+    args: Tuple[Any, ...],
+    kwargs: Dict[str, Any],
 ) -> None:
     if not future.set_running_or_notify_cancel():
         return
@@ -106,7 +120,7 @@ def check_current_thread_canceled(at_least_seconds: Optional[float] = None, rais
 
     if raise_exception:
         name = current_thread().name
-        raise CancelledError(f"Thread {name+' ' if name else ' '}cancelled")
+        raise CancelledError(f"Thread {name + ' ' if name else ' '}cancelled")
 
     return True
 
@@ -127,7 +141,9 @@ def run_in_thread(callable: Callable[_P, _TResult], *args: _P.args, **kwargs: _P
     future: FutureEx[_TResult] = FutureEx()
     with _running_callables_lock:
         thread = Thread(
-            target=_run_callable_in_thread_handler, args=(future, callable, args, kwargs), name=str(callable)
+            target=_run_callable_in_thread_handler,
+            args=(future, callable, args, kwargs),
+            name=str(callable),
         )
         _running_callables[future] = thread
         future.add_done_callback(_remove_future_from_running_callables)

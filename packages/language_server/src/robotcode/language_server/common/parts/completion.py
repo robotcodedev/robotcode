@@ -27,7 +27,9 @@ from robotcode.language_server.common.decorators import (
     HasTriggerCharacters,
     language_id_filter,
 )
-from robotcode.language_server.common.parts.protocol_part import LanguageServerProtocolPart
+from robotcode.language_server.common.parts.protocol_part import (
+    LanguageServerProtocolPart,
+)
 from robotcode.language_server.common.text_document import TextDocument
 
 if TYPE_CHECKING:
@@ -42,7 +44,10 @@ class CompletionProtocolPart(LanguageServerProtocolPart):
 
     @event
     def collect(
-        sender, document: TextDocument, position: Position, context: Optional[CompletionContext]  # NOSONAR
+        sender,
+        document: TextDocument,
+        position: Position,
+        context: Optional[CompletionContext],  # NOSONAR
     ) -> Union[List[CompletionItem], CompletionList, None]:
         ...
 
@@ -100,7 +105,13 @@ class CompletionProtocolPart(LanguageServerProtocolPart):
 
         p = document.position_from_utf16(position)
 
-        for result in self.collect(self, document, p, context, callback_filter=language_id_filter(document)):
+        for result in self.collect(
+            self,
+            document,
+            p,
+            context,
+            callback_filter=language_id_filter(document),
+        ):
             check_current_thread_canceled()
 
             if isinstance(result, BaseException):
@@ -150,12 +161,7 @@ class CompletionProtocolPart(LanguageServerProtocolPart):
 
     @rpc_method(name="completionItem/resolve", param_type=CompletionItem)
     @threaded
-    def _completion_item_resolve(
-        self,
-        params: CompletionItem,
-        *args: Any,
-        **kwargs: Any,
-    ) -> CompletionItem:
+    def _completion_item_resolve(self, params: CompletionItem, *args: Any, **kwargs: Any) -> CompletionItem:
         results: List[CompletionItem] = []
 
         for result in self.resolve(self, params):

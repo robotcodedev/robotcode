@@ -14,7 +14,9 @@ from robotcode.core.lsp.types import (
 from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.jsonrpc2.protocol import rpc_method
 from robotcode.language_server.common.decorators import language_id_filter
-from robotcode.language_server.common.parts.protocol_part import LanguageServerProtocolPart
+from robotcode.language_server.common.parts.protocol_part import (
+    LanguageServerProtocolPart,
+)
 from robotcode.language_server.common.text_document import TextDocument
 
 if TYPE_CHECKING:
@@ -30,7 +32,9 @@ class DefinitionProtocolPart(LanguageServerProtocolPart):
 
     @event
     def collect(
-        sender, document: TextDocument, position: Position  # NOSONAR
+        sender,
+        document: TextDocument,
+        position: Position,  # NOSONAR
     ) -> Union[Location, List[Location], List[LocationLink], None]:
         ...
 
@@ -48,7 +52,11 @@ class DefinitionProtocolPart(LanguageServerProtocolPart):
     @rpc_method(name="textDocument/definition", param_type=DefinitionParams)
     @threaded
     def _text_document_definition(
-        self, text_document: TextDocumentIdentifier, position: Position, *args: Any, **kwargs: Any
+        self,
+        text_document: TextDocumentIdentifier,
+        position: Position,
+        *args: Any,
+        **kwargs: Any,
     ) -> Optional[Union[Location, List[Location], List[LocationLink]]]:
         locations: List[Location] = []
         location_links: List[LocationLink] = []
@@ -58,7 +66,10 @@ class DefinitionProtocolPart(LanguageServerProtocolPart):
             return None
 
         for result in self.collect(
-            self, document, document.position_from_utf16(position), callback_filter=language_id_filter(document)
+            self,
+            document,
+            document.position_from_utf16(position),
+            callback_filter=language_id_filter(document),
         ):
             check_current_thread_canceled()
 

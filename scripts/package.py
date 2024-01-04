@@ -27,9 +27,14 @@ def main() -> None:
 
     packages = [f"{path}" for path in Path("./packages").iterdir() if (path / "pyproject.toml").exists()]
     for package in packages:
-        run(f"hatch -e build build {dist_path}", shell=True, cwd=package).check_returncode()
+        run(
+            f"hatch -e build build {dist_path}",
+            shell=True,
+            cwd=package,
+            check=False,
+        ).check_returncode()
 
-    run(f"hatch -e build build {dist_path}", shell=True).check_returncode()
+    run(f"hatch -e build build {dist_path}", shell=True, check=False).check_returncode()
 
     shutil.rmtree("./bundled/libs", ignore_errors=True)
 
@@ -37,16 +42,20 @@ def main() -> None:
         "pip --disable-pip-version-check install -U -t ./bundled/libs --no-cache-dir --implementation py "
         "--only-binary=:all: --no-binary=:none: -r ./bundled_requirements.txt",
         shell=True,
+        check=False,
     ).check_returncode()
 
     run(
         "pip --disable-pip-version-check "
         f"install -U -t ./bundled/libs --no-cache-dir --implementation py --no-deps {' '.join(packages)} .",
         shell=True,
+        check=False,
     ).check_returncode()
 
     run(
-        f"npx vsce package {'--pre-release' if get_version().prerelease else ''} -o ./dist", shell=True
+        f"npx vsce package {'--pre-release' if get_version().prerelease else ''} -o ./dist",
+        shell=True,
+        check=False,
     ).check_returncode()
 
 

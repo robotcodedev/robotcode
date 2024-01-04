@@ -5,11 +5,11 @@ from typing import Final, Optional, Sequence, Union
 import click
 from robotcode.core.types import ServerMode, TcpParams
 from robotcode.plugin import Application, UnknownError, pass_application
-from robotcode.plugin.click_helper.options import resolve_server_options, server_options
-from robotcode.plugin.click_helper.types import (
-    AddressesPort,
-    add_options,
+from robotcode.plugin.click_helper.options import (
+    resolve_server_options,
+    server_options,
 )
+from robotcode.plugin.click_helper.types import AddressesPort, add_options
 from robotcode.robot.config.loader import load_robot_config_from_path
 from robotcode.robot.config.model import RobotBaseProfile
 from robotcode.robot.config.utils import get_config_files
@@ -29,14 +29,15 @@ def run_server(
     from .robotframework.server import RobotLanguageServer
 
     with RobotLanguageServer(
-        mode=mode, tcp_params=TcpParams(addresses or "127.0.0.1", port), pipe_name=pipe_name, profile=profile
+        mode=mode,
+        tcp_params=TcpParams(addresses or "127.0.0.1", port),
+        pipe_name=pipe_name,
+        profile=profile,
     ) as server:
         server.run()
 
 
-@click.command(
-    add_help_option=True,
-)
+@click.command(add_help_option=True)
 @add_options(
     *server_options(
         ServerMode.STDIO,

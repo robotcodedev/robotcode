@@ -2,7 +2,12 @@ from concurrent.futures import CancelledError
 from enum import Enum
 from typing import TYPE_CHECKING, Any, Final, List, Optional, Union
 
-from robotcode.core.concurrent import FutureEx, check_current_thread_canceled, run_in_thread, threaded
+from robotcode.core.concurrent import (
+    FutureEx,
+    check_current_thread_canceled,
+    run_in_thread,
+    threaded,
+)
 from robotcode.core.event import event
 from robotcode.core.lsp.types import (
     Range,
@@ -45,7 +50,9 @@ class SemanticTokensProtocolPart(LanguageServerProtocolPart):
 
     @event
     def collect_full(
-        sender, document: TextDocument, **kwargs: Any  # NOSONAR
+        sender,
+        document: TextDocument,
+        **kwargs: Any,  # NOSONAR
     ) -> Union[SemanticTokens, SemanticTokensPartialResult, None]:
         ...
 
@@ -55,12 +62,15 @@ class SemanticTokensProtocolPart(LanguageServerProtocolPart):
         document: TextDocument,
         previous_result_id: str,
         **kwargs: Any,  # NOSONAR
-    ) -> Union[SemanticTokens, SemanticTokensDelta, SemanticTokensDeltaPartialResult, None]:
+    ) -> Union[SemanticTokens, SemanticTokensDelta, SemanticTokensDeltaPartialResult, None,]:
         ...
 
     @event
     def collect_range(
-        sender, document: TextDocument, range: Range, **kwargs: Any  # NOSONAR
+        sender,
+        document: TextDocument,
+        range: Range,
+        **kwargs: Any,  # NOSONAR
     ) -> Union[SemanticTokens, SemanticTokensPartialResult, None]:
         ...
 
@@ -90,7 +100,12 @@ class SemanticTokensProtocolPart(LanguageServerProtocolPart):
         if document is None:
             return None
 
-        for result in self.collect_full(self, document, callback_filter=language_id_filter(document), **kwargs):
+        for result in self.collect_full(
+            self,
+            document,
+            callback_filter=language_id_filter(document),
+            **kwargs,
+        ):
             check_current_thread_canceled()
 
             if isinstance(result, BaseException):
@@ -117,15 +132,25 @@ class SemanticTokensProtocolPart(LanguageServerProtocolPart):
         previous_result_id: str,
         *args: Any,
         **kwargs: Any,
-    ) -> Union[SemanticTokens, SemanticTokensDelta, SemanticTokensDeltaPartialResult, None]:
-        results: List[Union[SemanticTokens, SemanticTokensDelta, SemanticTokensDeltaPartialResult]] = []
+    ) -> Union[SemanticTokens, SemanticTokensDelta, SemanticTokensDeltaPartialResult, None,]:
+        results: List[
+            Union[
+                SemanticTokens,
+                SemanticTokensDelta,
+                SemanticTokensDeltaPartialResult,
+            ]
+        ] = []
 
         document = self.parent.documents.get(text_document.uri)
         if document is None:
             return None
 
         for result in self.collect_full_delta(
-            self, document, previous_result_id, callback_filter=language_id_filter(document), **kwargs
+            self,
+            document,
+            previous_result_id,
+            callback_filter=language_id_filter(document),
+            **kwargs,
         ):
             check_current_thread_canceled()
             if isinstance(result, BaseException):
@@ -141,7 +166,10 @@ class SemanticTokensProtocolPart(LanguageServerProtocolPart):
 
         return None
 
-    @rpc_method(name="textDocument/semanticTokens/range", param_type=SemanticTokensRangeParams)
+    @rpc_method(
+        name="textDocument/semanticTokens/range",
+        param_type=SemanticTokensRangeParams,
+    )
     @threaded
     def _text_document_semantic_tokens_range(
         self,
@@ -156,7 +184,13 @@ class SemanticTokensProtocolPart(LanguageServerProtocolPart):
         if document is None:
             return None
 
-        for result in self.collect_range(self, document, range, callback_filter=language_id_filter(document), **kwargs):
+        for result in self.collect_range(
+            self,
+            document,
+            range,
+            callback_filter=language_id_filter(document),
+            **kwargs,
+        ):
             check_current_thread_canceled()
             if isinstance(result, BaseException):
                 if not isinstance(result, CancelledError):

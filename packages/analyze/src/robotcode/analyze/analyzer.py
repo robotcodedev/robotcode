@@ -6,7 +6,12 @@ from .config import AnalyzerConfig
 
 
 class Analyzer:
-    def __init__(self, config: AnalyzerConfig, robot_config: RobotConfig, root_folder: Path):
+    def __init__(
+        self,
+        config: AnalyzerConfig,
+        robot_config: RobotConfig,
+        root_folder: Path,
+    ):
         self.config = config
         self.robot_config = robot_config
         self.root_folder = root_folder

@@ -6,35 +6,50 @@ from typing import Any, Dict, List, Optional
 
 import click
 from robotcode.core.utils.dataclasses import encode_case_for_field_name
-from robotcode.plugin import Application, OutputFormat, UnknownError, pass_application
+from robotcode.plugin import (
+    Application,
+    OutputFormat,
+    UnknownError,
+    pass_application,
+)
 from robotcode.plugin.manager import PluginManager
 from robotcode.robot.config.loader import (
     DiscoverdBy,
     find_project_root,
     load_robot_config_from_path,
 )
-from robotcode.robot.config.model import LibDocProfile, RebotProfile, RobotConfig, RobotProfile, TestDocProfile
+from robotcode.robot.config.model import (
+    LibDocProfile,
+    RebotProfile,
+    RobotConfig,
+    RobotProfile,
+    TestDocProfile,
+)
 from robotcode.robot.config.utils import get_config_files
 
 
-@click.group(
-    invoke_without_command=False,
-)
+@click.group(invoke_without_command=False)
 def config() -> None:
     """Shows information about the configuration."""
 
 
 @config.command
 @click.option(
-    "-s", "--single", "single", is_flag=True, default=False, help="Shows single files, not the combined config."
+    "-s",
+    "--single",
+    "single",
+    is_flag=True,
+    default=False,
+    help="Shows single files, not the combined config.",
 )
-@click.argument("paths", type=click.Path(exists=True, path_type=Path), nargs=-1, required=False)
+@click.argument(
+    "paths",
+    type=click.Path(exists=True, path_type=Path),
+    nargs=-1,
+    required=False,
+)
 @pass_application
-def show(
-    app: Application,
-    single: bool,
-    paths: List[Path],
-) -> None:
+def show(app: Application, single: bool, paths: List[Path]) -> None:
     """\
     Shows the current configuration.
 
@@ -56,20 +71,33 @@ def show(
             for file, _ in config_files:
                 config = load_robot_config_from_path(file)
                 click.secho(f"File: {file}")
-                app.print_data(config, remove_defaults=True, default_output_format=OutputFormat.TOML)
+                app.print_data(
+                    config,
+                    remove_defaults=True,
+                    default_output_format=OutputFormat.TOML,
+                )
 
             return
 
         config = load_robot_config_from_path(*config_files)
 
-        app.print_data(config, remove_defaults=True, default_output_format=OutputFormat.TOML)
+        app.print_data(
+            config,
+            remove_defaults=True,
+            default_output_format=OutputFormat.TOML,
+        )
 
     except (TypeError, ValueError, OSError) as e:
         raise UnknownError(str(e)) from e
 
 
 @config.command
-@click.argument("paths", type=click.Path(exists=True, path_type=Path), nargs=-1, required=False)
+@click.argument(
+    "paths",
+    type=click.Path(exists=True, path_type=Path),
+    nargs=-1,
+    required=False,
+)
 @click.argument("user", type=bool, default=False)
 @pass_application
 def files(app: Application, paths: List[Path], user: bool = False) -> None:
@@ -90,9 +118,7 @@ def files(app: Application, paths: List[Path], user: bool = False) -> None:
     try:
         config_files, _, discovered_by = get_config_files(paths, app.config.config_files, verbose_callback=app.verbose)
 
-        result: Dict[str, Any] = {
-            "files": [{"path": str(file), "type": type} for file, type in config_files],
-        }
+        result: Dict[str, Any] = {"files": [{"path": str(file), "type": type} for file, type in config_files]}
 
         messages = []
         if discovered_by == DiscoverdBy.NOT_FOUND:
@@ -113,12 +139,14 @@ def files(app: Application, paths: List[Path], user: bool = False) -> None:
 
 
 @config.command
-@click.argument("paths", type=click.Path(exists=True, path_type=Path), nargs=-1, required=False)
+@click.argument(
+    "paths",
+    type=click.Path(exists=True, path_type=Path),
+    nargs=-1,
+    required=False,
+)
 @pass_application
-def root(
-    app: Application,
-    paths: List[Path],
-) -> None:
+def root(app: Application, paths: List[Path]) -> None:
     """\
     Searches for the root folder of the project and prints them.
 
@@ -139,7 +167,10 @@ def root(
         raise click.ClickException("Cannot detect root folder. 😥")
 
     result: Dict[str, Any] = {
-        "root": {"path": str(root_folder) if root_folder is not None else None, "discoverdBy": discovered_by}
+        "root": {
+            "path": str(root_folder) if root_folder is not None else None,
+            "discoverdBy": discovered_by,
+        }
     }
 
     messages = []
@@ -292,7 +323,11 @@ def desc(app: Application, name: Optional[List[str]] = None) -> None:
         app.print_data(
             {
                 "descriptions": [
-                    {"name": field, "type": value["type"], "description": value["description"]}
+                    {
+                        "name": field,
+                        "type": value["type"],
+                        "description": value["description"],
+                    }
                     for field, value in config_fields
                 ]
             }

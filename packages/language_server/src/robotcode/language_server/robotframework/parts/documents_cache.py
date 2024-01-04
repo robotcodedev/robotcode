@@ -58,7 +58,9 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
         if get_robot_version() < (6, 0):
             return None
 
-        from robot.conf.languages import Languages as RobotLanguages  # pyright: ignore[reportMissingImports]
+        from robot.conf.languages import (
+            Languages as RobotLanguages,
+        )
 
         uri: Union[Uri, str]
 
@@ -106,7 +108,11 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
         if get_robot_version() < (6, 0):
             return (None, None)
 
-        from robot.conf.languages import Languages as RobotLanguages  # pyright: ignore[reportMissingImports]
+        from robot.conf.languages import (
+            Languages as RobotLanguages,
+        )
+
+        # pyright: ignore[reportMissingImports]
         from robot.parsing.model.blocks import File
 
         workspace_langs = self.get_workspace_languages(document)
@@ -173,12 +179,21 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
         return document.get_cache(self.__get_general_tokens)
 
     def __internal_get_tokens(
-        self, source: Any, data_only: bool = False, tokenize_variables: bool = False, lang: Any = None
+        self,
+        source: Any,
+        data_only: bool = False,
+        tokenize_variables: bool = False,
+        lang: Any = None,
     ) -> Any:
         import robot.api
 
         if get_robot_version() >= (6, 0):
-            return robot.api.get_tokens(source, data_only=data_only, tokenize_variables=tokenize_variables, lang=lang)
+            return robot.api.get_tokens(
+                source,
+                data_only=data_only,
+                tokenize_variables=tokenize_variables,
+                lang=lang,
+            )
 
         return robot.api.get_tokens(source, data_only=data_only, tokenize_variables=tokenize_variables)
 
@@ -193,19 +208,29 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
 
         if get_robot_version() >= (6, 0):
             return robot.api.get_resource_tokens(
-                source, data_only=data_only, tokenize_variables=tokenize_variables, lang=lang
+                source,
+                data_only=data_only,
+                tokenize_variables=tokenize_variables,
+                lang=lang,
             )
 
         return robot.api.get_resource_tokens(source, data_only=data_only, tokenize_variables=tokenize_variables)
 
     def __internal_get_init_tokens(
-        self, source: Any, data_only: bool = False, tokenize_variables: bool = False, lang: Any = None
+        self,
+        source: Any,
+        data_only: bool = False,
+        tokenize_variables: bool = False,
+        lang: Any = None,
     ) -> Any:
         import robot.api
 
         if get_robot_version() >= (6, 0):
             return robot.api.get_init_tokens(
-                source, data_only=data_only, tokenize_variables=tokenize_variables, lang=lang
+                source,
+                data_only=data_only,
+                tokenize_variables=tokenize_variables,
+                lang=lang,
             )
 
         return robot.api.get_init_tokens(source, data_only=data_only, tokenize_variables=tokenize_variables)
@@ -228,11 +253,7 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
 
         return self.__get_tokens_internal(document, get)
 
-    def __get_tokens_internal(
-        self,
-        document: TextDocument,
-        get: Callable[[str], List[Token]],
-    ) -> List[Token]:
+    def __get_tokens_internal(self, document: TextDocument, get: Callable[[str], List[Token]]) -> List[Token]:
         return get(document.text())
 
     def get_resource_tokens(self, document: TextDocument, data_only: bool = False) -> List[Token]:
@@ -294,7 +315,12 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
 
         raise UnknownFileTypeError(f"Unknown file type '{document.uri}'.")
 
-    def __get_model(self, document: TextDocument, tokens: Iterable[Any], document_type: DocumentType) -> ast.AST:
+    def __get_model(
+        self,
+        document: TextDocument,
+        tokens: Iterable[Any],
+        document_type: DocumentType,
+    ) -> ast.AST:
         from robot.parsing.parser.parser import _get_model
 
         def get_tokens(source: str, data_only: bool = False, lang: Any = None) -> Iterator[Token]:
@@ -306,14 +332,17 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
         else:
             model = _get_model(get_tokens, document.uri.to_path(), False, None)
 
-        setattr(model, "source", str(document.uri.to_path()))
-        setattr(model, "model_type", document_type)
+        model.source = str(document.uri.to_path())
+        model.model_type = document_type
 
         return cast(ast.AST, model)
 
     def get_general_model(self, document: TextDocument, data_only: bool = True) -> ast.AST:
         if data_only:
-            return document.get_cache(self.__get_general_model_data_only, self.get_general_tokens(document, True))
+            return document.get_cache(
+                self.__get_general_model_data_only,
+                self.get_general_tokens(document, True),
+            )
         return document.get_cache(self.__get_general_model, self.get_general_tokens(document))
 
     def __get_general_model_data_only(self, document: TextDocument, tokens: Iterable[Any]) -> ast.AST:
@@ -324,7 +353,10 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
 
     def get_resource_model(self, document: TextDocument, data_only: bool = True) -> ast.AST:
         if data_only:
-            return document.get_cache(self.__get_resource_model_data_only, self.get_resource_tokens(document, True))
+            return document.get_cache(
+                self.__get_resource_model_data_only,
+                self.get_resource_tokens(document, True),
+            )
 
         return document.get_cache(self.__get_resource_model, self.get_resource_tokens(document))
 
@@ -336,7 +368,10 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
 
     def get_init_model(self, document: TextDocument, data_only: bool = True) -> ast.AST:
         if data_only:
-            return document.get_cache(self.__get_init_model_data_only, self.get_init_tokens(document, True))
+            return document.get_cache(
+                self.__get_init_model_data_only,
+                self.get_init_tokens(document, True),
+            )
         return document.get_cache(self.__get_init_model, self.get_init_tokens(document))
 
     def __get_init_model_data_only(self, document: TextDocument, tokens: Iterable[Any]) -> ast.AST:
@@ -378,25 +413,15 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
         if document is not None:
             document.invalidate_cache()
 
-            self.namespace_invalidated(
-                self,
-                sender,
-                callback_filter=language_id_filter(document),
-            )
+            self.namespace_invalidated(self, sender, callback_filter=language_id_filter(document))
 
     def __document_cache_invalidated(self, sender: TextDocument) -> None:
         namespace: Optional[Namespace] = sender.get_cache_value(self.__get_namespace)
         if namespace is not None:
-            self.namespace_invalidated(
-                self,
-                namespace,
-                callback_filter=language_id_filter(sender),
-            )
+            self.namespace_invalidated(self, namespace, callback_filter=language_id_filter(sender))
 
     def __get_namespace_for_document_type(
-        self,
-        document: TextDocument,
-        document_type: Optional[DocumentType],
+        self, document: TextDocument, document_type: Optional[DocumentType]
     ) -> Namespace:
         if document_type is not None and document_type == DocumentType.INIT:
             model = self.get_init_model(document)
@@ -412,7 +437,13 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
         languages, workspace_languages = self.build_languages_from_model(document, model)
 
         result = Namespace(
-            imports_manager, model, str(document.uri.to_path()), document, document_type, languages, workspace_languages
+            imports_manager,
+            model,
+            str(document.uri.to_path()),
+            document,
+            document_type,
+            languages,
+            workspace_languages,
         )
         result.has_invalidated.add(self.__invalidate_namespace)
         result.has_imports_changed.add(self.__invalidate_namespace)

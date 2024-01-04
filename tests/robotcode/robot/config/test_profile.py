@@ -110,7 +110,10 @@ def test_if_profile_is_not_defined_an_error_is_raised() -> None:
     """
     config = load_robot_config_from_robot_toml_str(data)
 
-    with pytest.raises(ValueError, match="Can't find any profiles matching the pattern 'nonexistent'."):
+    with pytest.raises(
+        ValueError,
+        match="Can't find any profiles matching the pattern 'nonexistent'.",
+    ):
         config.combine_profiles("nonexistent")
 
 
@@ -274,7 +277,12 @@ def test_profiles_tag_stat_combine_generates_correct() -> None:
         """
     config = load_robot_config_from_robot_toml_str(data)
     cmd_line = config.combine_profiles().evaluated().build_command_line()
-    assert cmd_line == ["--tagstatcombine", "tag1:tag2", "--tagstatcombine", "tag3:tag4"]
+    assert cmd_line == [
+        "--tagstatcombine",
+        "tag1:tag2",
+        "--tagstatcombine",
+        "tag3:tag4",
+    ]
 
 
 def test_profiles_flatten_keywords_supports_literals_and_patterns() -> None:

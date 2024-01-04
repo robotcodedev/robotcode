@@ -47,7 +47,10 @@ from robotcode.robot.diagnostics.entities import (
     VariableDefinitionType,
     VariableNotFoundDefinition,
 )
-from robotcode.robot.diagnostics.library_doc import KeywordDoc, is_embedded_keyword
+from robotcode.robot.diagnostics.library_doc import (
+    KeywordDoc,
+    is_embedded_keyword,
+)
 from robotcode.robot.utils import get_robot_version
 from robotcode.robot.utils.ast import (
     is_not_variable_token,
@@ -61,10 +64,7 @@ from robotcode.robot.utils.visitor import Visitor
 
 from .errors import DIAGNOSTICS_SOURCE_NAME, Error
 from .model_helper import ModelHelperMixin
-from .namespace import (
-    KeywordFinder,
-    Namespace,
-)
+from .namespace import KeywordFinder, Namespace
 
 if get_robot_version() < (7, 0):
     from robot.variables.search import VariableIterator
@@ -140,7 +140,14 @@ class Analyzer(Visitor, ModelHelperMixin):
                 i = len(argument.value)
 
                 for t in self.yield_argument_name_and_rest(
-                    node, Token(token.type, token.value[i:], token.lineno, token.col_offset + i, token.error)
+                    node,
+                    Token(
+                        token.type,
+                        token.value[i:],
+                        token.lineno,
+                        token.col_offset + i,
+                        token.error,
+                    ),
                 ):
                     yield t
         else:
@@ -163,7 +170,13 @@ class Analyzer(Visitor, ModelHelperMixin):
 
             r = range_from_token(
                 strip_variable_token(
-                    Token(name_token.type, name, name_token.lineno, name_token.col_offset, name_token.error)
+                    Token(
+                        name_token.type,
+                        name,
+                        name_token.lineno,
+                        name_token.col_offset,
+                        name_token.error,
+                    )
                 )
             )
 
@@ -180,7 +193,10 @@ class Analyzer(Visitor, ModelHelperMixin):
                 return
 
             cmd_line_var = self.namespace.find_variable(
-                name, skip_commandline_variables=False, position=r.start, ignore_error=True
+                name,
+                skip_commandline_variables=False,
+                position=r.start,
+                ignore_error=True,
             )
             if isinstance(cmd_line_var, CommandLineVariableDefinition):
                 if self.namespace.document is not None:
@@ -200,7 +216,7 @@ class Analyzer(Visitor, ModelHelperMixin):
 
             if isinstance(node, KeywordCall) and node.keyword:
                 kw_doc = self.finder.find_keyword(node.keyword, raise_keyword_error=False)
-                if kw_doc is not None and kw_doc.longname in ["BuiltIn.Comment"]:
+                if kw_doc is not None and kw_doc.longname == "BuiltIn.Comment":
                     severity = DiagnosticSeverity.HINT
 
             if isinstance(node, Statement) and not isinstance(node, (TestTemplate, Template)):
@@ -245,7 +261,11 @@ class Analyzer(Visitor, ModelHelperMixin):
 
                                 if self.namespace.document is not None:
                                     if isinstance(var, EnvironmentVariableDefinition):
-                                        var_token.value, _, _ = var_token.value.partition("=")
+                                        (
+                                            var_token.value,
+                                            _,
+                                            _,
+                                        ) = var_token.value.partition("=")
 
                                     var_range = range_from_token(var_token)
 
@@ -256,21 +276,29 @@ class Analyzer(Visitor, ModelHelperMixin):
                                             skip_commandline_variables=True,
                                             ignore_error=True,
                                         )
-                                        if suite_var is not None and suite_var.type not in [
-                                            VariableDefinitionType.VARIABLE
-                                        ]:
+                                        if suite_var is not None and suite_var.type != VariableDefinitionType.VARIABLE:
                                             suite_var = None
 
                                     if var.name_range != var_range:
                                         self._variable_references[var].add(
-                                            Location(self.namespace.document.document_uri, var_range)
+                                            Location(
+                                                self.namespace.document.document_uri,
+                                                var_range,
+                                            )
                                         )
                                         if suite_var is not None:
                                             self._variable_references[suite_var].add(
-                                                Location(self.namespace.document.document_uri, var_range)
+                                                Location(
+                                                    self.namespace.document.document_uri,
+                                                    var_range,
+                                                )
                                             )
-                                        if token1.type in [Token.ASSIGN] and isinstance(
-                                            var, (LocalVariableDefinition, ArgumentDefinition)
+                                        if token1.type == Token.ASSIGN and isinstance(
+                                            var,
+                                            (
+                                                LocalVariableDefinition,
+                                                ArgumentDefinition,
+                                            ),
                                         ):
                                             self._local_variable_assignments[var].add(var_range)
 
@@ -310,7 +338,10 @@ class Analyzer(Visitor, ModelHelperMixin):
 
                             if var.name_range != var_range:
                                 self._variable_references[var].add(
-                                    Location(self.namespace.document.document_uri, range_from_token(var_token))
+                                    Location(
+                                        self.namespace.document.document_uri,
+                                        range_from_token(var_token),
+                                    )
                                 )
 
                                 if isinstance(var, CommandLineVariableDefinition):
@@ -319,9 +350,12 @@ class Analyzer(Visitor, ModelHelperMixin):
                                         skip_commandline_variables=True,
                                         ignore_error=True,
                                     )
-                                    if suite_var is not None and suite_var.type in [VariableDefinitionType.VARIABLE]:
+                                    if suite_var is not None and suite_var.type == VariableDefinitionType.VARIABLE:
                                         self._variable_references[suite_var].add(
-                                            Location(self.namespace.document.document_uri, range_from_token(var_token))
+                                            Location(
+                                                self.namespace.document.document_uri,
+                                                range_from_token(var_token),
+                                            )
                                         )
 
             super().visit(node)
@@ -382,7 +416,14 @@ class Analyzer(Visitor, ModelHelperMixin):
             if not allow_variables and not is_not_variable_token(keyword_token):
                 return None
 
-            if self.finder.find_keyword(keyword_token.value, raise_keyword_error=False, handle_bdd_style=False) is None:
+            if (
+                self.finder.find_keyword(
+                    keyword_token.value,
+                    raise_keyword_error=False,
+                    handle_bdd_style=False,
+                )
+                is None
+            ):
                 keyword_token = self.strip_bdd_prefix(self.namespace, keyword_token)
 
             kw_range = range_from_token(keyword_token)
@@ -394,7 +435,10 @@ class Analyzer(Visitor, ModelHelperMixin):
             result = self.finder.find_keyword(keyword, raise_keyword_error=False)
 
             if keyword is not None:
-                lib_entry, kw_namespace = self.get_namespace_info_from_keyword_token(self.namespace, keyword_token)
+                (
+                    lib_entry,
+                    kw_namespace,
+                ) = self.get_namespace_info_from_keyword_token(self.namespace, keyword_token)
 
                 if lib_entry and kw_namespace:
                     r = range_from_token(keyword_token)
@@ -460,19 +504,11 @@ class Analyzer(Visitor, ModelHelperMixin):
                                     ),
                                     range=Range(
                                         start=Position(
-                                            line=err.line_no - 1
-                                            if err.line_no is not None
-                                            else result.line_no
-                                            if result.line_no >= 0
-                                            else 0,
+                                            line=err.line_no - 1 if err.line_no is not None else max(result.line_no, 0),
                                             character=0,
                                         ),
                                         end=Position(
-                                            line=err.line_no - 1
-                                            if err.line_no is not None
-                                            else result.line_no
-                                            if result.line_no >= 0
-                                            else 0,
+                                            line=err.line_no - 1 if err.line_no is not None else max(result.line_no, 0),
                                             character=0,
                                         ),
                                     ),
@@ -565,7 +601,10 @@ class Analyzer(Visitor, ModelHelperMixin):
             ]:
                 tokens = argument_tokens
                 if tokens and (token := tokens[0]):
-                    for var_token, var in self.iter_expression_variables_from_token(
+                    for (
+                        var_token,
+                        var,
+                    ) in self.iter_expression_variables_from_token(
                         token,
                         self.namespace,
                         self.node_stack,
@@ -583,7 +622,10 @@ class Analyzer(Visitor, ModelHelperMixin):
                         else:
                             if self.namespace.document is not None:
                                 self._variable_references[var].add(
-                                    Location(self.namespace.document.document_uri, range_from_token(var_token))
+                                    Location(
+                                        self.namespace.document.document_uri,
+                                        range_from_token(var_token),
+                                    )
                                 )
 
                                 if isinstance(var, CommandLineVariableDefinition):
@@ -592,9 +634,12 @@ class Analyzer(Visitor, ModelHelperMixin):
                                         skip_commandline_variables=True,
                                         ignore_error=True,
                                     )
-                                    if suite_var is not None and suite_var.type in [VariableDefinitionType.VARIABLE]:
+                                    if suite_var is not None and suite_var.type == VariableDefinitionType.VARIABLE:
                                         self._variable_references[suite_var].add(
-                                            Location(self.namespace.document.document_uri, range_from_token(var_token))
+                                            Location(
+                                                self.namespace.document.document_uri,
+                                                range_from_token(var_token),
+                                            )
                                         )
             if result.argument_definitions:
                 for arg in argument_tokens:
@@ -607,7 +652,10 @@ class Analyzer(Visitor, ModelHelperMixin):
                         if arg_def is not None:
                             name_token = Token(Token.ARGUMENT, name, arg.lineno, arg.col_offset)
                             self._variable_references[arg_def].add(
-                                Location(self.namespace.document.document_uri, range_from_token(name_token))
+                                Location(
+                                    self.namespace.document.document_uri,
+                                    range_from_token(name_token),
+                                )
                             )
 
         if result is not None and analyse_run_keywords:
@@ -616,7 +664,10 @@ class Analyzer(Visitor, ModelHelperMixin):
         return result
 
     def _analyse_run_keyword(
-        self, keyword_doc: Optional[KeywordDoc], node: ast.AST, argument_tokens: List[Token]
+        self,
+        keyword_doc: Optional[KeywordDoc],
+        node: ast.AST,
+        argument_tokens: List[Token],
     ) -> List[Token]:
         if keyword_doc is None or not keyword_doc.is_any_run_keyword():
             return argument_tokens
@@ -782,9 +833,17 @@ class Analyzer(Visitor, ModelHelperMixin):
     def visit_TestTemplate(self, node: TestTemplate) -> None:  # noqa: N802
         keyword_token = node.get_token(Token.NAME)
 
-        if keyword_token is not None and keyword_token.value.upper() not in ("", "NONE"):
+        if keyword_token is not None and keyword_token.value.upper() not in (
+            "",
+            "NONE",
+        ):
             self._analyze_keyword_call(
-                node.value, node, keyword_token, [], analyse_run_keywords=False, allow_variables=True
+                node.value,
+                node,
+                keyword_token,
+                [],
+                analyse_run_keywords=False,
+                allow_variables=True,
             )
 
         self.test_template = node
@@ -793,9 +852,17 @@ class Analyzer(Visitor, ModelHelperMixin):
     def visit_Template(self, node: Template) -> None:  # noqa: N802
         keyword_token = node.get_token(Token.NAME)
 
-        if keyword_token is not None and keyword_token.value.upper() not in ("", "NONE"):
+        if keyword_token is not None and keyword_token.value.upper() not in (
+            "",
+            "NONE",
+        ):
             self._analyze_keyword_call(
-                node.value, node, keyword_token, [], analyse_run_keywords=False, allow_variables=True
+                node.value,
+                node,
+                keyword_token,
+                [],
+                analyse_run_keywords=False,
+                allow_variables=True,
             )
         self.template = node
         self.generic_visit(node)
@@ -811,7 +878,12 @@ class Analyzer(Visitor, ModelHelperMixin):
                 code=Error.KEYWORD_NAME_EMPTY,
             )
         else:
-            self._analyze_keyword_call(node.keyword, node, keyword_token, [e for e in node.get_tokens(Token.ARGUMENT)])
+            self._analyze_keyword_call(
+                node.keyword,
+                node,
+                keyword_token,
+                [e for e in node.get_tokens(Token.ARGUMENT)],
+            )
 
         if not self.current_testcase_or_keyword_name:
             self.append_diagnostics(

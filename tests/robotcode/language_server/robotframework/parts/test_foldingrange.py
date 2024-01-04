@@ -23,7 +23,8 @@ from .pytest_regtestex import RegTestFixtureEx
 
 
 def prepend_protocol_data(
-    protocol: Iterable[Any], data: Iterable[Union[Tuple[Any, Path, GeneratedTestData], Any]]
+    protocol: Iterable[Any],
+    data: Iterable[Union[Tuple[Any, Path, GeneratedTestData], Any]],
 ) -> Iterator[Union[Tuple[Any, Path, GeneratedTestData], Any]]:
     for p in protocol:
         for d in data:
@@ -47,12 +48,12 @@ def generate_foldingrange_test_id(params: Any) -> Any:
         [
             ClientCapabilities(
                 text_document=TextDocumentClientCapabilities(
-                    folding_range=FoldingRangeClientCapabilities(line_folding_only=True),
+                    folding_range=FoldingRangeClientCapabilities(line_folding_only=True)
                 )
             ),
             ClientCapabilities(
                 text_document=TextDocumentClientCapabilities(
-                    folding_range=FoldingRangeClientCapabilities(line_folding_only=False),
+                    folding_range=FoldingRangeClientCapabilities(line_folding_only=False)
                 )
             ),
         ],

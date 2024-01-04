@@ -108,7 +108,7 @@ class ListenerV2:
             Debugger.instance().start_output_group(
                 f"{name}({', '.join(repr(v) for v in attributes.get('args', []))})",
                 attributes,
-                attributes.get("type", None),
+                attributes.get("type"),
             )
 
         Debugger.instance().start_keyword(name, attributes)
@@ -117,9 +117,9 @@ class ListenerV2:
         Debugger.instance().end_keyword(name, attributes)
 
         if attributes["type"] in ["KEYWORD", "SETUP", "TEARDOWN"]:
-            Debugger.instance().end_output_group(name, attributes, attributes.get("type", None))
+            Debugger.instance().end_output_group(name, attributes, attributes.get("type"))
 
-            if attributes["status"] == "FAIL" and attributes.get("source", None):
+            if attributes["status"] == "FAIL" and attributes.get("source"):
                 if self.failed_keywords is None:
                     self.failed_keywords = []
 
@@ -262,7 +262,9 @@ class ListenerV3:
     def start_suite(self, data: running.TestSuite, result: result.TestSuite) -> None:
         """Called when a suite starts."""
 
-        def enqueue(item: Union[running.TestSuite, running.TestCase]) -> Iterator[str]:
+        def enqueue(
+            item: Union[running.TestSuite, running.TestCase],
+        ) -> Iterator[str]:
             if isinstance(item, running.TestSuite):
                 yield f"{Path(item.source).resolve() if item.source is not None else ''};{item.longname}"
 
@@ -279,13 +281,7 @@ class ListenerV3:
 
         items = list(reversed(list(enqueue(cast(running.model.TestSuite, data)))))
 
-        Debugger.instance().send_event(
-            self,
-            Event(
-                event="robotEnqueued",
-                body={"items": items},
-            ),
-        )
+        Debugger.instance().send_event(self, Event(event="robotEnqueued", body={"items": items}))
 
         self._event_sended = True
 
@@ -327,7 +323,10 @@ class ListenerV3:
                     p = next((i for i in data_item.tests if i.id == r.id), None) if data_item else None
                     report_status(p, r, message)
 
-        if suite_data.teardown and suite_result.teardown.status in ["FAIL", "SKIP"]:
+        if suite_data.teardown and suite_result.teardown.status in [
+            "FAIL",
+            "SKIP",
+        ]:
             report_status(suite_data, suite_result, message=suite_result.message)
 
     def start_test(self, data: running.TestCase, result: result.TestCase) -> None:

@@ -41,12 +41,16 @@ class RenameProtocolPart(LanguageServerProtocolPart):
     def extend_capabilities(self, capabilities: ServerCapabilities) -> None:
         if len(self.collect):
             capabilities.rename_provider = RenameOptions(
-                prepare_provider=len(self.collect_prepare) > 0, work_done_progress=True
+                prepare_provider=len(self.collect_prepare) > 0,
+                work_done_progress=True,
             )
 
     @event
     def collect(
-        sender, document: TextDocument, position: Position, new_name: str  # NOSONAR
+        sender,
+        document: TextDocument,
+        position: Position,
+        new_name: str,  # NOSONAR
     ) -> Optional[WorkspaceEdit]:
         ...
 
@@ -143,7 +147,10 @@ class RenameProtocolPart(LanguageServerProtocolPart):
             return None
 
         for result in self.collect_prepare(
-            self, document, document.position_from_utf16(position), callback_filter=language_id_filter(document)
+            self,
+            document,
+            document.position_from_utf16(position),
+            callback_filter=language_id_filter(document),
         ):
             check_current_thread_canceled()
 

@@ -75,7 +75,7 @@ class RobotCodeLensProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixi
 
                     def find_refs() -> None:
                         if document is None or kw_doc is None:
-                            return  #  type: ignore[unreachable]
+                            return  # type: ignore[unreachable]
 
                         self.parent.robot_references.find_keyword_references(
                             document, kw_doc, include_declaration=False
@@ -132,7 +132,10 @@ class _Visitor(Visitor):
 
     @classmethod
     def find_from(
-        cls, model: ast.AST, parent: RobotCodeLensProtocolPart, document: TextDocument
+        cls,
+        model: ast.AST,
+        parent: RobotCodeLensProtocolPart,
+        document: TextDocument,
     ) -> Optional[List[CodeLens]]:
         finder = cls(parent, document)
 

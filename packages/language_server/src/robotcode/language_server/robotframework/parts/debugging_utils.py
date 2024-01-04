@@ -9,7 +9,11 @@ from robotcode.core.lsp.types import Position, Range, TextDocumentIdentifier
 from robotcode.core.utils.dataclasses import CamelSnakeMixin
 from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.jsonrpc2.protocol import rpc_method
-from robotcode.robot.utils.ast import get_nodes_at_position, get_tokens_at_position, range_from_token
+from robotcode.robot.utils.ast import (
+    get_nodes_at_position,
+    get_tokens_at_position,
+    range_from_token,
+)
 
 from ..diagnostics.model_helper import ModelHelperMixin
 from .protocol_part import RobotLanguageServerProtocolPart
@@ -36,7 +40,10 @@ class RobotDebuggingUtilsProtocolPart(RobotLanguageServerProtocolPart, ModelHelp
     def __init__(self, parent: RobotLanguageServerProtocol) -> None:
         super().__init__(parent)
 
-    @rpc_method(name="robot/debugging/getEvaluatableExpression", param_type=EvaluatableExpressionParams)
+    @rpc_method(
+        name="robot/debugging/getEvaluatableExpression",
+        param_type=EvaluatableExpressionParams,
+    )
     @threaded
     @_logger.call
     async def _get_evaluatable_expression(
