@@ -45,6 +45,7 @@ from robot.parsing.model.statements import (
     VariablesImport,
 )
 from robot.utils.escaping import split_from_equals
+
 from robotcode.core.lsp.types import (
     Command,
     CompletionContext,

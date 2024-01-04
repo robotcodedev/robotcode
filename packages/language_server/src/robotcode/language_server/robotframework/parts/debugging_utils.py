@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Optional
 
 from robot.parsing.model.statements import Statement
+
 from robotcode.core.concurrent import threaded
 from robotcode.core.lsp.types import Position, Range, TextDocumentIdentifier
 from robotcode.core.utils.dataclasses import CamelSnakeMixin

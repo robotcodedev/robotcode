@@ -6,6 +6,7 @@ import click
 from robot.errors import DataError, Information
 from robot.libdoc import USAGE, LibDoc
 from robot.version import get_full_version
+
 from robotcode.plugin import Application, pass_application
 from robotcode.robot.config.loader import load_robot_config_from_path
 from robotcode.robot.config.model import LibDocProfile

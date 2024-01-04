@@ -1,6 +1,7 @@
 from typing import Tuple, Union
 
 import click
+
 from robotcode.analyze.config import AnalyzerConfig
 from robotcode.plugin import Application, pass_application
 from robotcode.robot.config.loader import (

@@ -26,6 +26,7 @@ from robot.parsing.model.statements import (
 )
 from robot.utils.escaping import split_from_equals, unescape
 from robot.variables.search import contains_variable, search_variable
+
 from robotcode.core.lsp.types import (
     CodeDescription,
     Diagnostic,

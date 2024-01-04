@@ -6,6 +6,7 @@ from typing import AsyncIterator, Iterator
 
 import pytest
 import pytest_asyncio
+
 from robotcode.core.lsp.types import (
     ClientCapabilities,
     FoldingRangeClientCapabilities,
@@ -28,7 +29,6 @@ from robotcode.language_server.robotframework.protocol import (
     RobotLanguageServerProtocol,
 )
 from robotcode.language_server.robotframework.server import RobotLanguageServer
-
 from tests.robotcode.language_server.robotframework.tools import (
     generate_test_id,
 )
@@ -119,6 +119,6 @@ async def test_document(
         del document
 
 
-@pytest.fixture()
+@pytest.fixture
 def regtest(request: pytest.FixtureRequest) -> RegTestFixtureEx:
     return RegTestFixtureEx(request)

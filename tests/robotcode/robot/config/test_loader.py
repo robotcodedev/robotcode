@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Iterator, Tuple
 
 import pytest
+
 from robotcode.robot.config.loader import (
     DiscoverdBy,
     find_project_root,
@@ -10,7 +11,7 @@ from robotcode.robot.config.loader import (
 )
 
 
-@pytest.fixture()
+@pytest.fixture
 def temp_project(tmp_path: Path) -> Iterator[Path]:
     old_cwd = os.getcwd()
     os.chdir(tmp_path)

@@ -18,6 +18,7 @@ from typing import (
 )
 
 from robot.parsing.lexer.tokens import Token
+
 from robotcode.core.event import tasking_event
 from robotcode.core.lsp.types import MessageType
 from robotcode.core.uri import Uri

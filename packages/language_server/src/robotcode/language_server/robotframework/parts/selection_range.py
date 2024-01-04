@@ -1,6 +1,7 @@
 from typing import TYPE_CHECKING, Any, List, Optional
 
 from robot.parsing.model.statements import Statement
+
 from robotcode.core.lsp.types import Position, SelectionRange
 from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.robot.utils.ast import (

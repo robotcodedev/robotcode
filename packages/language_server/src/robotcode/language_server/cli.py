@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Final, Optional, Sequence, Union
 
 import click
+
 from robotcode.core.types import ServerMode, TcpParams
 from robotcode.plugin import Application, UnknownError, pass_application
 from robotcode.plugin.click_helper.options import (

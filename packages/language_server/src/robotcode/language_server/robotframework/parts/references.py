@@ -3,6 +3,7 @@ from concurrent.futures import CancelledError
 from typing import TYPE_CHECKING, Any, Callable, List, Optional, Type, cast
 
 from robot.parsing.model.statements import Statement
+
 from robotcode.core.concurrent import check_current_thread_canceled, threaded
 from robotcode.core.event import event
 from robotcode.core.lsp.types import (

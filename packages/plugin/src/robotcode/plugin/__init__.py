@@ -19,6 +19,7 @@ from typing import (
 import click
 import pluggy
 import tomli_w
+
 from robotcode.core.utils.dataclasses import as_dict, as_json
 
 __all__ = [

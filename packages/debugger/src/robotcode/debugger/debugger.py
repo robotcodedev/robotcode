@@ -38,6 +38,7 @@ from robot.output import LOGGER
 from robot.running import EXECUTION_CONTEXTS, Keyword, TestCase, TestSuite
 from robot.utils import NormalizedDict
 from robot.variables import evaluate_expression
+
 from robotcode.core.event import event
 from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.robot.utils import get_robot_version

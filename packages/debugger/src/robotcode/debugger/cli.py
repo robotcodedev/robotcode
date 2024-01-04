@@ -2,6 +2,7 @@ import asyncio
 from typing import Optional, Sequence, Tuple
 
 import click
+
 from robotcode.core.types import ServerMode
 from robotcode.plugin import Application, UnknownError, pass_application
 from robotcode.plugin.click_helper.options import (

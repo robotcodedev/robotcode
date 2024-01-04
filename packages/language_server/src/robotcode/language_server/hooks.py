@@ -1,6 +1,7 @@
 from typing import List
 
 import click
+
 from robotcode.plugin import hookimpl
 
 from .cli import language_server

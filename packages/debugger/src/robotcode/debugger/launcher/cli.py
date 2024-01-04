@@ -1,6 +1,7 @@
 from typing import Optional, Sequence
 
 import click
+
 from robotcode.core.types import ServerMode
 from robotcode.core.utils.cli import show_hidden_arguments
 from robotcode.plugin import Application, UnknownError, pass_application

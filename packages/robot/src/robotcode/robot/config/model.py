@@ -22,6 +22,8 @@ from typing import (
 )
 
 import tomli_w
+from typing_extensions import Self
+
 from robotcode.core.utils.dataclasses import (
     TypeValidationError,
     ValidateMixin,
@@ -29,7 +31,6 @@ from robotcode.core.utils.dataclasses import (
     validate_types,
 )
 from robotcode.core.utils.safe_eval import safe_eval
-from typing_extensions import Self
 
 EXTEND_PREFIX_LEN = len("extend_")
 

@@ -44,6 +44,7 @@ from robot.variables.search import (
     is_variable,
     search_variable,
 )
+
 from robotcode.core.event import event
 from robotcode.core.lsp.types import (
     CodeDescription,

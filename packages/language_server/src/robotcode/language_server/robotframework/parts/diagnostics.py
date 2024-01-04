@@ -3,6 +3,7 @@ from concurrent.futures import CancelledError
 from typing import TYPE_CHECKING, Any, List, Optional
 
 from robot.parsing.lexer.tokens import Token
+
 from robotcode.core.concurrent import threaded
 from robotcode.core.lsp.types import (
     Diagnostic,

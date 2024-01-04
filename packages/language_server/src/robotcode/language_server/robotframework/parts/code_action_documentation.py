@@ -18,6 +18,7 @@ from typing import TYPE_CHECKING, Any, List, Optional, Tuple, Union, cast
 from urllib.parse import parse_qs, urlparse
 
 from robot.parsing.lexer.tokens import Token
+
 from robotcode.core.concurrent import threaded
 from robotcode.core.lsp.types import (
     CodeAction,

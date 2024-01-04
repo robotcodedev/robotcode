@@ -6,6 +6,7 @@ from typing import Any, Iterator, Tuple, Union
 
 import pytest
 import yaml
+
 from robotcode.core.utils.dataclasses import CamelSnakeMixin, as_dict
 
 TEST_EXPRESSION_LINE = re.compile(r"^\#\s*(?P<todo>TODO)?\s*(?P<position>\^+)\s+(?P<name>.*)")

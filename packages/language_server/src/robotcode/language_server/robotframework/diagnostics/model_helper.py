@@ -21,6 +21,7 @@ from robot.parsing.lexer.tokens import Token
 from robot.utils.escaping import split_from_equals, unescape
 from robot.variables.finders import NOT_FOUND, NumberFinder
 from robot.variables.search import contains_variable, search_variable
+
 from robotcode.core.lsp.types import Position
 from robotcode.robot.diagnostics.entities import (
     LibraryEntry,

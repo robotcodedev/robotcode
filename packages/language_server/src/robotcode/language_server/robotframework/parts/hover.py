@@ -15,6 +15,7 @@ from typing import (
 from robot.parsing.lexer.tokens import Token
 from robot.parsing.model.blocks import TestCase, TestCaseSection
 from robot.parsing.model.statements import Documentation, Tags
+
 from robotcode.core.concurrent import check_current_thread_canceled
 from robotcode.core.lsp.types import (
     Hover,

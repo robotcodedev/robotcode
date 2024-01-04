@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import List, Optional
 
 import click
+
 from robotcode.core.utils.cli import show_hidden_arguments
 from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.plugin import (

@@ -3,6 +3,7 @@ from enum import Enum
 from typing import Any, Dict, List, Literal, Optional, Union
 
 import pytest
+
 from robotcode.core.lsp.types import (
     CallHierarchyClientCapabilities,
     ClientCapabilities,

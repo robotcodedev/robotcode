@@ -3,12 +3,12 @@ from typing import Optional
 
 import pytest
 import yaml
+
 from robotcode.core.lsp.types import Hover, MarkupContent, Position
 from robotcode.language_server.common.text_document import TextDocument
 from robotcode.language_server.robotframework.protocol import (
     RobotLanguageServerProtocol,
 )
-
 from tests.robotcode.language_server.robotframework.tools import (
     GeneratedTestData,
     generate_test_id,

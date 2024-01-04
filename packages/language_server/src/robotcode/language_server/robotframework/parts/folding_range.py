@@ -4,6 +4,7 @@ import ast
 from typing import TYPE_CHECKING, Any, List, Optional
 
 from robot.parsing.model.blocks import If, Keyword, TestCase
+
 from robotcode.core.concurrent import check_current_thread_canceled
 from robotcode.core.lsp.types import FoldingRange
 from robotcode.core.utils.logging import LoggingDescriptor

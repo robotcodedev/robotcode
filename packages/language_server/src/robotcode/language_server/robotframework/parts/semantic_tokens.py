@@ -36,6 +36,7 @@ from robot.parsing.model.statements import (
 )
 from robot.utils.escaping import split_from_equals, unescape
 from robot.variables.search import is_variable
+
 from robotcode.core.concurrent import check_current_thread_canceled
 from robotcode.core.lsp.types import (
     Position,

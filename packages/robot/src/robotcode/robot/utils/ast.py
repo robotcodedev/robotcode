@@ -4,11 +4,10 @@ import ast
 import itertools
 from typing import Any, Iterator, List, Optional, Sequence, Set, Tuple
 
-from robotcode.core.lsp.types import Position, Range
-
 from robot.errors import VariableError
 from robot.parsing.lexer.tokens import Token
 from robot.parsing.model.statements import EmptyLine, Statement
+from robotcode.core.lsp.types import Position, Range
 
 from . import get_robot_version
 from .visitor import Visitor

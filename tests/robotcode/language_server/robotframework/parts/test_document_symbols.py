@@ -4,13 +4,13 @@ from typing import Iterator, List, Optional, Union
 
 import pytest
 import yaml
+
 from robotcode.core.lsp.types import DocumentSymbol, Position, SymbolInformation
 from robotcode.core.uri import Uri
 from robotcode.language_server.common.text_document import TextDocument
 from robotcode.language_server.robotframework.protocol import (
     RobotLanguageServerProtocol,
 )
-
 from tests.robotcode.language_server.robotframework.tools import (
     GeneratedTestData,
     generate_test_id,

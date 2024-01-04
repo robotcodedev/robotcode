@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import click
+
 from robotcode.core.utils.dataclasses import encode_case_for_field_name
 from robotcode.plugin import (
     Application,

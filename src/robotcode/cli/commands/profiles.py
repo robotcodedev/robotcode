@@ -2,6 +2,7 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 import click
+
 from robotcode.plugin import (
     Application,
     OutputFormat,

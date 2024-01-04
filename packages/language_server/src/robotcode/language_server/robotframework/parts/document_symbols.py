@@ -7,6 +7,7 @@ from robot.parsing.lexer.tokens import Token
 from robot.parsing.model.blocks import Keyword, Section, TestCase
 from robot.parsing.model.statements import Statement
 from robot.variables import search_variable
+
 from robotcode.core.lsp.types import (
     DocumentSymbol,
     SymbolInformation,

@@ -1,6 +1,7 @@
 from typing import Any, List, Tuple, Type
 
 import click
+
 from robotcode.plugin import hookimpl
 
 from .cli import analyze

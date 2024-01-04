@@ -11,10 +11,9 @@ from typing import (
     cast,
 )
 
+from robot.parsing.lexer.tokens import Token
 from robotcode.core.lsp.types import Position, Range
 from robotcode.robot.utils.ast import range_from_token
-
-from robot.parsing.lexer.tokens import Token
 
 if TYPE_CHECKING:
     from robotcode.robot.diagnostics.library_doc import KeywordDoc, LibraryDoc
@@ -131,9 +130,8 @@ class InvalidVariableError(Exception):
 
 class VariableMatcher:
     def __init__(self, name: str) -> None:
-        from robotcode.robot.utils.match import normalize
-
         from robot.variables.search import search_variable
+        from robotcode.robot.utils.match import normalize
 
         self.name = name
 

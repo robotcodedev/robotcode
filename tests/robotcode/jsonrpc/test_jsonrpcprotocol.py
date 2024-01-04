@@ -2,6 +2,7 @@ import asyncio
 from typing import Any, Dict, List, Optional, cast
 
 import pytest
+
 from robotcode.core.lsp.types import MessageActionItem
 from robotcode.core.utils.dataclasses import as_dict, as_json
 from robotcode.jsonrpc2.protocol import (
@@ -34,7 +35,7 @@ class DummyJsonRPCProtocol(JsonRPCProtocol):
         await asyncio.sleep(0)
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_receive_a_request_message_should_work() -> None:
     protocol = DummyJsonRPCProtocol(None)
 
@@ -49,7 +50,7 @@ async def test_receive_a_request_message_should_work() -> None:
     assert protocol.handled_messages == [message]
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_receive_a_request_message_should_work_with_string_id() -> None:
     protocol = DummyJsonRPCProtocol(None)
 
@@ -64,7 +65,7 @@ async def test_receive_a_request_message_should_work_with_string_id() -> None:
     assert protocol.handled_messages == [message]
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_receive_a_batch_request_should_work() -> None:
     protocol = DummyJsonRPCProtocol(None)
 
@@ -83,7 +84,7 @@ async def test_receive_a_batch_request_should_work() -> None:
     assert protocol.handled_messages == message
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_receive_invalid_jsonmessage_should_throw_send_an_error() -> None:
     protocol = DummyJsonRPCProtocol(None)
 
@@ -96,8 +97,8 @@ async def test_receive_invalid_jsonmessage_should_throw_send_an_error() -> None:
     assert protocol.sended_message.error.code == JsonRPCErrors.PARSE_ERROR
 
 
-@pytest.mark.asyncio()
-async def test_receive_a_request_with_invalid_protocol_version_should_send_an_error() -> (None):
+@pytest.mark.asyncio
+async def test_receive_a_request_with_invalid_protocol_version_should_send_an_error() -> None:
     protocol = DummyJsonRPCProtocol(None)
 
     message = JsonRPCRequest(id=1, method="doSomething", params={})
@@ -111,7 +112,7 @@ async def test_receive_a_request_with_invalid_protocol_version_should_send_an_er
     assert protocol.sended_message.error.code == JsonRPCErrors.PARSE_ERROR
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_receive_an_error_should_work() -> None:
     protocol = DummyJsonRPCProtocol(None)
 
@@ -128,7 +129,7 @@ async def test_receive_an_error_should_work() -> None:
     assert protocol.handled_messages == [message]
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_receive_response_should_work() -> None:
     protocol = DummyJsonRPCProtocol(None)
 
@@ -148,7 +149,7 @@ async def test_receive_response_should_work() -> None:
     assert a == ["dummy", "data"]
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_receive_invalid_id_in_response_should_send_an_error() -> None:
     protocol = DummyJsonRPCProtocol(None)
 
@@ -162,8 +163,8 @@ async def test_receive_invalid_id_in_response_should_send_an_error() -> None:
     assert isinstance(protocol.sended_message, JsonRPCError)
 
 
-@pytest.mark.asyncio()
-async def test_send_request_receive_response_should_work_without_param_type_work() -> (None):
+@pytest.mark.asyncio
+async def test_send_request_receive_response_should_work_without_param_type_work() -> None:
     protocol = DummyJsonRPCProtocol(None)
 
     r: Any = protocol.send_request("dummy/method", ["dummy", "data"])
@@ -183,7 +184,7 @@ async def test_send_request_receive_response_should_work_without_param_type_work
     assert a == {"title": "hi there"}
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_receive_response_should_work_with_dataclass() -> None:
     protocol = DummyJsonRPCProtocol(None)
 
@@ -203,7 +204,7 @@ async def test_receive_response_should_work_with_dataclass() -> None:
     assert a == MessageActionItem(title="hi there")
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_receive_response_should_work_with_generic_list() -> None:
     protocol = DummyJsonRPCProtocol(None)
 
@@ -223,8 +224,8 @@ async def test_receive_response_should_work_with_generic_list() -> None:
     assert a == [MessageActionItem(title="hi there")]
 
 
-@pytest.mark.asyncio()
-async def test_receive_response_with_generic_dict_should_return_unchanged() -> (None):
+@pytest.mark.asyncio
+async def test_receive_response_with_generic_dict_should_return_unchanged() -> None:
     protocol = DummyJsonRPCProtocol(None)
 
     r = protocol.send_request("dummy/method", ["dummy", "data"], List[Dict[str, Any]])

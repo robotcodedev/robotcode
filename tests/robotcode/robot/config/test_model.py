@@ -1,6 +1,7 @@
 from typing import Any, Dict
 
 import pytest
+
 from robotcode.core.utils.dataclasses import (
     TypeValidationError,
     as_dict,

@@ -3,6 +3,7 @@ import re
 from typing import Any
 
 import pytest
+
 from robotcode.core.utils.safe_eval import safe_eval
 
 

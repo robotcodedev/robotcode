@@ -7,6 +7,7 @@ import click
 from robot.errors import DataError, Information
 from robot.run import USAGE, RobotFramework
 from robot.version import get_full_version
+
 from robotcode.plugin import Application, pass_application
 from robotcode.plugin.click_helper.aliases import AliasedCommand
 from robotcode.plugin.click_helper.types import add_options

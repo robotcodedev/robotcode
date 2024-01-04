@@ -23,14 +23,10 @@ class Signatures:
         """This is the constructor of the class."""
         self.l = l
 
-    def do_something(
-        self, i: int, b: bool, l: Optional[List[int]] = None
-    ) -> Tuple[Any, ...]:
+    def do_something(self, i: int, b: bool, l: Optional[List[int]] = None) -> Tuple[Any, ...]:
         """This is a method of the class."""
         return (self.l, i, b)
 
-    def do_something_with_enum(
-        self, i: int, b: bool, l: TestEnum = TestEnum.A
-    ) -> Tuple[Any, ...]:
+    def do_something_with_enum(self, i: int, b: bool, l: TestEnum = TestEnum.A) -> Tuple[Any, ...]:
         """This is a method of the class."""
         return (self.l, i, b)

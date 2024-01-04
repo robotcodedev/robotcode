@@ -13,6 +13,7 @@ from typing import (
 
 from robot.parsing.lexer.tokens import Token
 from robot.parsing.model.statements import Statement
+
 from robotcode.core.lsp.types import (
     MarkupContent,
     MarkupKind,

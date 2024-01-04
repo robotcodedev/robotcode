@@ -2,6 +2,7 @@ import ast
 from typing import TYPE_CHECKING, Any, Callable, List, Optional, Type, cast
 
 from robot.parsing.lexer.tokens import Token
+
 from robotcode.core.concurrent import check_current_thread_canceled
 from robotcode.core.lsp.types import InlayHint, InlayHintKind, Range
 from robotcode.core.utils.logging import LoggingDescriptor

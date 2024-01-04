@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, Any, Iterator, List, Optional, Tuple
 
 from robot.parsing.lexer.tokens import Token
 from robot.parsing.model.statements import Statement
+
 from robotcode.core.lsp.types import (
     InlineValue,
     InlineValueContext,

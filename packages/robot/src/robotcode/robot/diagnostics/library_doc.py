@@ -33,6 +33,7 @@ from typing import (
     cast,
 )
 
+from robot.parsing.lexer.tokens import Token
 from robotcode.core.lsp.types import Position, Range
 from robotcode.robot.diagnostics.entities import (
     ArgumentDefinition,
@@ -51,8 +52,6 @@ from robotcode.robot.utils.ast import (
 from robotcode.robot.utils.markdownformatter import MarkDownFormatter
 from robotcode.robot.utils.match import normalize, normalize_namespace
 from robotcode.robot.utils.stubs import HasError, HasErrors
-
-from robot.parsing.lexer.tokens import Token
 
 RUN_KEYWORD_NAMES = [
     "Run Keyword",

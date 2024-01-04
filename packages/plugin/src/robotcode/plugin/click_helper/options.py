@@ -1,6 +1,7 @@
 from typing import List, Optional, Sequence, Set, Tuple
 
 import click
+
 from robotcode.core.types import ServerMode
 from robotcode.plugin import Application
 from robotcode.plugin.click_helper.types import (

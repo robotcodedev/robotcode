@@ -14,6 +14,7 @@ from typing import (
 )
 
 import click
+
 from robotcode.core.async_tools import (
     run_coroutine_from_thread_async,
     run_coroutine_in_thread,

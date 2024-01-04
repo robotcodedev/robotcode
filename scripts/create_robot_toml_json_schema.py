@@ -5,6 +5,7 @@ from dataclasses import fields, is_dataclass
 from typing import Any, Callable, Optional
 
 import apischema
+
 from robotcode.robot.config.model import RobotConfig
 
 if __name__ == "__main__":

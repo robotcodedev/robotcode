@@ -28,6 +28,7 @@ from robot.running.builder import TestSuiteBuilder
 from robot.running.builder.builders import SuiteStructureParser
 from robot.utils import NormalizedDict, normalize
 from robot.utils.filereader import FileReader
+
 from robotcode.core.lsp.types import (
     Diagnostic,
     DiagnosticSeverity,
@@ -826,6 +827,7 @@ def info(app: Application) -> None:
     """
 
     from robot.version import get_version as get_version
+
     from robotcode.core.utils.dataclasses import as_dict
 
     from ...__version__ import __version__

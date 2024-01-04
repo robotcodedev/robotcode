@@ -7,6 +7,7 @@ from robot.libdoc import USAGE as LIBDOC_USAGE
 from robot.rebot import USAGE as REBOT_USAGE
 from robot.run import USAGE as ROBOT_USAGE
 from robot.testdoc import USAGE as TESTDOC_USAGE
+
 from robotcode.core.utils.dataclasses import to_snake_case
 
 EXAMPLES_RE = re.compile(r"(?P<spaces>^\s*)Examples:\s*(?P<rest>.*)", re.MULTILINE)
