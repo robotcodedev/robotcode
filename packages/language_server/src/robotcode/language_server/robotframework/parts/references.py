@@ -207,28 +207,35 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
     def find_variable_references_in_file(
         self, doc: TextDocument, variable: VariableDefinition, include_declaration: bool = True
     ) -> List[Location]:
-        namespace = self.parent.documents_cache.get_namespace(doc)
+        try:
+            namespace = self.parent.documents_cache.get_namespace(doc)
 
-        if (
-            variable.source
-            and variable.source != str(doc.uri.to_path())
-            and not any(e for e in (namespace.get_resources()).values() if e.library_doc.source == variable.source)
-            and not any(
-                e for e in namespace.get_imported_variables().values() if e.library_doc.source == variable.source
-            )
-            and not any(e for e in namespace.get_command_line_variables() if e.source == variable.source)
-        ):
-            return []
+            if (
+                variable.source
+                and variable.source != str(doc.uri.to_path())
+                and not any(e for e in (namespace.get_resources()).values() if e.library_doc.source == variable.source)
+                and not any(
+                    e for e in namespace.get_imported_variables().values() if e.library_doc.source == variable.source
+                )
+                and not any(e for e in namespace.get_command_line_variables() if e.source == variable.source)
+            ):
+                return []
 
-        result = set()
-        if include_declaration and variable.source:
-            result.add(Location(str(Uri.from_path(variable.source)), variable.name_range))
+            result = set()
+            if include_declaration and variable.source:
+                result.add(Location(str(Uri.from_path(variable.source)), variable.name_range))
 
-        refs = namespace.get_variable_references()
-        if variable in refs:
-            result |= refs[variable]
+            refs = namespace.get_variable_references()
+            if variable in refs:
+                result |= refs[variable]
 
-        return list(result)
+            return list(result)
+        except (SystemExit, KeyboardInterrupt, CancelledError):
+            raise
+        except BaseException as e:
+            self._logger.exception(e)
+
+        return []
 
     @_logger.call
     def find_keyword_references_in_file(

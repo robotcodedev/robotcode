@@ -1,15 +1,12 @@
-from __future__ import annotations
-
-import asyncio
 import threading
 import uuid
 import weakref
 from concurrent.futures import Future
-from dataclasses import dataclass
 from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
+    ClassVar,
     Coroutine,
     Dict,
     Final,
@@ -17,13 +14,11 @@ from typing import (
     Mapping,
     NamedTuple,
     Optional,
-    Protocol,
     Tuple,
     Type,
     TypeVar,
     Union,
     cast,
-    runtime_checkable,
 )
 
 from robotcode.core.concurrent import threaded
@@ -125,6 +120,9 @@ class WorkspaceFolder:
         self.document_uri = document_uri
 
 
+_F = TypeVar("_F", bound=Callable[..., Any])
+
+
 def config_section(name: str) -> Callable[[_F], _F]:
     def decorator(func: _F) -> _F:
         setattr(func, "__config_section__", name)
@@ -133,18 +131,12 @@ def config_section(name: str) -> Callable[[_F], _F]:
     return decorator
 
 
-@runtime_checkable
-class HasConfigSection(Protocol):
-    __config_section__: str
-
-
-@dataclass
+# @dataclass
 class ConfigBase(CamelSnakeMixin):
-    pass
+    __config_section__: ClassVar[str]
 
 
 _TConfig = TypeVar("_TConfig", bound=ConfigBase)
-_F = TypeVar("_F", bound=Callable[..., Any])
 
 
 class Workspace(LanguageServerProtocolPart):
@@ -152,7 +144,7 @@ class Workspace(LanguageServerProtocolPart):
 
     def __init__(
         self,
-        parent: LanguageServerProtocol,
+        parent: "LanguageServerProtocol",
         root_uri: Optional[str],
         root_path: Optional[str],
         workspace_folders: Optional[List[TypesWorkspaceFolder]] = None,
@@ -174,6 +166,7 @@ class Workspace(LanguageServerProtocolPart):
 
         self.parent.on_shutdown.add(self.server_shutdown)
         self.parent.on_initialize.add(self.server_initialize)
+        self._settings_cache: Dict[Tuple[Optional[WorkspaceFolder], str], ConfigBase] = {}
 
     def server_initialize(self, sender: Any, initialization_options: Optional[Any] = None) -> None:
         if (
@@ -260,6 +253,7 @@ class Workspace(LanguageServerProtocolPart):
     @threaded
     def _workspace_did_change_configuration(self, settings: Dict[str, Any], *args: Any, **kwargs: Any) -> None:
         self.settings = settings
+        self._settings_cache.clear()
         self.did_change_configuration(self, settings)
 
     @event
@@ -333,14 +327,6 @@ class Workspace(LanguageServerProtocolPart):
     def _workspace_did_delete_files(self, files: List[FileDelete], *args: Any, **kwargs: Any) -> None:
         self.did_delete_files(self, [f.uri for f in files])
 
-    def get_configuration_async(
-        self,
-        section: Type[_TConfig],
-        scope_uri: Union[str, Uri, None] = None,
-        request: bool = True,
-    ) -> asyncio.Future[_TConfig]:
-        return asyncio.wrap_future(self.get_configuration_future(section, scope_uri, request))
-
     def get_configuration(
         self,
         section: Type[_TConfig],
@@ -357,6 +343,12 @@ class Workspace(LanguageServerProtocolPart):
     ) -> Future[_TConfig]:
         result_future: Future[_TConfig] = Future()
 
+        scope = self.get_workspace_folder(scope_uri) if scope_uri is not None else None
+
+        if (scope, section.__config_section__) in self._settings_cache:
+            result_future.set_result(cast(_TConfig, self._settings_cache[(scope, section.__config_section__)]))
+            return result_future
+
         def _get_configuration_done(f: Future[Optional[Any]]) -> None:
             try:
                 if result_future.cancelled():
@@ -371,12 +363,14 @@ class Workspace(LanguageServerProtocolPart):
                     return
 
                 result = f.result()
-                result_future.set_result(from_dict(result[0] if result else {}, section))
+                r = from_dict(result[0] if result else {}, section)
+                self._settings_cache[(scope, section.__config_section__)] = r
+                result_future.set_result(r)
             except Exception as e:
                 result_future.set_exception(e)
 
         self.get_configuration_raw(
-            section=cast(HasConfigSection, section).__config_section__,
+            section=section.__config_section__,
             scope_uri=scope_uri,
             request=request,
         ).add_done_callback(_get_configuration_done)
@@ -452,6 +446,10 @@ class Workspace(LanguageServerProtocolPart):
 
             for r in to_remove:
                 self._workspace_folders.remove(r)
+
+                settings_to_remove = [k for k in self._settings_cache.keys() if k[0] == r]
+                for k in settings_to_remove:
+                    self._settings_cache.pop(k, None)
 
             for a in event.added:
                 self._workspace_folders.append(WorkspaceFolder(a.name, Uri(a.uri), a.uri))

@@ -2,7 +2,7 @@ import asyncio
 import dataclasses
 import shutil
 from pathlib import Path
-from typing import AsyncIterator, Iterator, cast
+from typing import AsyncIterator, Iterator
 
 import pytest
 import pytest_asyncio
@@ -18,7 +18,6 @@ from robotcode.core.lsp.types import (
 )
 from robotcode.core.utils.dataclasses import as_dict
 from robotcode.language_server.common.parts.diagnostics import DiagnosticsMode
-from robotcode.language_server.common.parts.workspace import HasConfigSection
 from robotcode.language_server.common.text_document import TextDocument
 from robotcode.language_server.robotframework.configuration import AnalysisConfig, RobotCodeConfig, RobotConfig
 from robotcode.language_server.robotframework.protocol import (
@@ -73,7 +72,7 @@ async def protocol(request: pytest.FixtureRequest) -> AsyncIterator[RobotLanguag
     )
 
     protocol.workspace.settings = {
-        cast(HasConfigSection, RobotCodeConfig).__config_section__: as_dict(
+        RobotCodeConfig.__config_section__: as_dict(
             RobotCodeConfig(
                 robot=RobotConfig(
                     python_path=["./lib", "./resources"],
