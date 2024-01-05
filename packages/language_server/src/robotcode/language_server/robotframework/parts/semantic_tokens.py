@@ -37,7 +37,7 @@ from robot.parsing.model.statements import (
 from robot.utils.escaping import split_from_equals, unescape
 from robot.variables.search import is_variable
 
-from robotcode.core.concurrent import check_current_thread_canceled
+from robotcode.core.concurrent import check_current_task_canceled
 from robotcode.core.lsp.types import (
     Position,
     Range,
@@ -974,7 +974,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
 
         def get_tokens() -> Iterator[Tuple[Token, ast.AST]]:
             for node in iter_nodes(model):
-                check_current_thread_canceled()
+                check_current_task_canceled()
 
                 if isinstance(node, Statement):
                     if isinstance(node, LibraryImport) and node.name:

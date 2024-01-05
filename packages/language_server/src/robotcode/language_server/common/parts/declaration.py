@@ -1,7 +1,7 @@
 from asyncio import CancelledError
 from typing import TYPE_CHECKING, Any, Final, List, Optional, Union
 
-from robotcode.core.concurrent import check_current_thread_canceled
+from robotcode.core.concurrent import check_current_task_canceled
 from robotcode.core.event import event
 from robotcode.core.lsp.types import (
     DeclarationParams,
@@ -70,7 +70,7 @@ class DeclarationProtocolPart(LanguageServerProtocolPart):
             position,
             callback_filter=language_id_filter(document),
         ):
-            check_current_thread_canceled()
+            check_current_task_canceled()
 
             if isinstance(result, BaseException):
                 if not isinstance(result, CancelledError):

@@ -2,7 +2,7 @@ from concurrent.futures import CancelledError
 from enum import Enum
 from typing import TYPE_CHECKING, Any, Final, List, Optional, Union
 
-from robotcode.core.concurrent import FutureEx, check_current_thread_canceled, run_in_thread
+from robotcode.core.concurrent import Task, check_current_task_canceled, run_as_task
 from robotcode.core.event import event
 from robotcode.core.lsp.types import (
     Range,
@@ -37,7 +37,7 @@ class SemanticTokensProtocolPart(LanguageServerProtocolPart):
 
     def __init__(self, parent: "LanguageServerProtocol") -> None:
         super().__init__(parent)
-        self.refresh_task: Optional[FutureEx[Any]] = None
+        self.refresh_task: Optional[Task[Any]] = None
         self._refresh_timeout = 5
 
         self.token_types: List[Enum] = list(SemanticTokenTypes)
@@ -100,7 +100,7 @@ class SemanticTokensProtocolPart(LanguageServerProtocolPart):
             callback_filter=language_id_filter(document),
             **kwargs,
         ):
-            check_current_thread_canceled()
+            check_current_task_canceled()
 
             if isinstance(result, BaseException):
                 if not isinstance(result, CancelledError):
@@ -142,7 +142,7 @@ class SemanticTokensProtocolPart(LanguageServerProtocolPart):
             callback_filter=language_id_filter(document),
             **kwargs,
         ):
-            check_current_thread_canceled()
+            check_current_task_canceled()
             if isinstance(result, BaseException):
                 if not isinstance(result, CancelledError):
                     self._logger.exception(result, exc_info=result)
@@ -177,7 +177,7 @@ class SemanticTokensProtocolPart(LanguageServerProtocolPart):
             callback_filter=language_id_filter(document),
             **kwargs,
         ):
-            check_current_thread_canceled()
+            check_current_task_canceled()
             if isinstance(result, BaseException):
                 if not isinstance(result, CancelledError):
                     self._logger.exception(result, exc_info=result)
@@ -195,7 +195,7 @@ class SemanticTokensProtocolPart(LanguageServerProtocolPart):
         if self.refresh_task is not None and not self.refresh_task.done():
             self.refresh_task.cancel()
 
-        self.refresh_task = run_in_thread(self._refresh, now)
+        self.refresh_task = run_as_task(self._refresh, now)
 
     def _refresh(self, now: bool = True) -> None:
         if (
@@ -205,6 +205,6 @@ class SemanticTokensProtocolPart(LanguageServerProtocolPart):
             and self.parent.client_capabilities.workspace.semantic_tokens.refresh_support
         ):
             if not now:
-                check_current_thread_canceled(1)
+                check_current_task_canceled(1)
 
             self.parent.send_request("workspace/semanticTokens/refresh").result(self._refresh_timeout)

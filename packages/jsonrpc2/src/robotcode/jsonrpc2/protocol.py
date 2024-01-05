@@ -33,7 +33,7 @@ from typing import (
 )
 
 from robotcode.core.async_tools import run_coroutine_in_thread
-from robotcode.core.concurrent import FutureEx, run_in_thread
+from robotcode.core.concurrent import Task, run_as_task
 from robotcode.core.event import event
 from robotcode.core.utils.dataclasses import as_json, from_dict
 from robotcode.core.utils.inspect import ensure_coroutine, iter_methods
@@ -352,7 +352,7 @@ class RpcRegistry:
 
 
 class SendedRequestEntry:
-    def __init__(self, future: FutureEx[Any], result_type: Optional[Type[Any]]) -> None:
+    def __init__(self, future: Task[Any], result_type: Optional[Type[Any]]) -> None:
         self.future = future
         self.result_type = result_type
 
@@ -567,8 +567,8 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
         method: str,
         params: Optional[Any] = None,
         return_type: Optional[Type[_TResult]] = None,
-    ) -> FutureEx[_TResult]:
-        result: FutureEx[_TResult] = FutureEx()
+    ) -> Task[_TResult]:
+        result: Task[_TResult] = Task()
 
         with self._sended_request_lock:
             self._sended_request_count += 1
@@ -753,7 +753,7 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
                             **params[1],
                         )
                     else:
-                        task = asyncio.wrap_future(run_in_thread(e.method, *params[0], **params[1]))
+                        task = asyncio.wrap_future(run_as_task(e.method, *params[0], **params[1]))
                 else:
                     task = asyncio.create_task(e.method(*params[0], **params[1]), name=message.method)
 
@@ -850,7 +850,7 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
                             ensure_coroutine(cast(Callable[..., Any], e.method)), *params[0], **params[1]
                         )
                     else:
-                        task = asyncio.wrap_future(run_in_thread(e.method, *params[0], **params[1]))
+                        task = asyncio.wrap_future(run_as_task(e.method, *params[0], **params[1]))
                 else:
                     task = asyncio.create_task(e.method(*params[0], **params[1]), name=message.method)
 

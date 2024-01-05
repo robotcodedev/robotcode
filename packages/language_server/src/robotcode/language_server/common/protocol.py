@@ -4,7 +4,7 @@ import asyncio
 from threading import Event
 from typing import Any, ClassVar, Final, List, NamedTuple, Optional, Set, Union
 
-from robotcode.core.concurrent import FutureEx
+from robotcode.core.concurrent import Task
 from robotcode.core.event import event
 from robotcode.core.lsp.types import (
     CancelParams,
@@ -315,12 +315,12 @@ class LanguageServerProtocol(JsonRPCProtocol):
     def _cancel_request(self, id: Union[int, str], **kwargs: Any) -> None:
         self.cancel_request(id)
 
-    def register_capability(self, id: str, method: str, register_options: Optional[Any]) -> FutureEx[None]:
+    def register_capability(self, id: str, method: str, register_options: Optional[Any]) -> Task[None]:
         return self.register_capabilities([Registration(id=id, method=method, register_options=register_options)])
 
-    def register_capabilities(self, registrations: List[Registration]) -> FutureEx[None]:
+    def register_capabilities(self, registrations: List[Registration]) -> Task[None]:
         if not registrations:
-            result: FutureEx[None] = FutureEx()
+            result: Task[None] = Task()
             result.set_result(None)
             return result
         return self.send_request(
@@ -328,12 +328,12 @@ class LanguageServerProtocol(JsonRPCProtocol):
             RegistrationParams(registrations=registrations),
         )
 
-    def unregister_capability(self, id: str, method: str) -> FutureEx[None]:
+    def unregister_capability(self, id: str, method: str) -> Task[None]:
         return self.unregister_capabilities([Unregistration(id=id, method=method)])
 
-    def unregister_capabilities(self, unregisterations: List[Unregistration]) -> FutureEx[None]:
+    def unregister_capabilities(self, unregisterations: List[Unregistration]) -> Task[None]:
         if not unregisterations:
-            result: FutureEx[None] = FutureEx()
+            result: Task[None] = Task()
             result.set_result(None)
             return result
         return self.send_request(

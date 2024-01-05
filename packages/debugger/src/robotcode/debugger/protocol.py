@@ -20,7 +20,7 @@ from typing import (
     Union,
 )
 
-from robotcode.core.concurrent import FutureEx
+from robotcode.core.concurrent import Task
 from robotcode.core.utils.dataclasses import as_dict, as_json, from_dict
 from robotcode.core.utils.inspect import ensure_coroutine
 from robotcode.core.utils.logging import LoggingDescriptor
@@ -308,8 +308,8 @@ class DebugAdapterProtocol(JsonRPCProtocolBase):
         )
 
     @_logger.call
-    def send_request(self, request: Request, return_type: Optional[Type[TResult]] = None) -> FutureEx[TResult]:
-        result: FutureEx[TResult] = FutureEx()
+    def send_request(self, request: Request, return_type: Optional[Type[TResult]] = None) -> Task[TResult]:
+        result: Task[TResult] = Task()
 
         with self._sended_request_lock:
             self._sended_request[request.seq] = SendedRequestEntry(result, return_type)

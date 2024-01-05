@@ -16,7 +16,7 @@ from robot.parsing.lexer.tokens import Token
 from robot.parsing.model.blocks import TestCase, TestCaseSection
 from robot.parsing.model.statements import Documentation, Tags
 
-from robotcode.core.concurrent import check_current_thread_canceled
+from robotcode.core.concurrent import check_current_task_canceled
 from robotcode.core.lsp.types import (
     Hover,
     MarkupContent,
@@ -81,7 +81,7 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
             return result
 
         for result_node in reversed(result_nodes):
-            check_current_thread_canceled()
+            check_current_task_canceled()
 
             method = self._find_method(type(result_node))
             if method is not None:
@@ -100,7 +100,7 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
             highlight_range = None
 
             for variable, var_refs in all_variable_refs.items():
-                check_current_thread_canceled()
+                check_current_task_canceled()
 
                 found_range = (
                     variable.name_range
@@ -154,7 +154,7 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
             result: List[Tuple[Range, str]] = []
 
             for kw, kw_refs in all_kw_refs.items():
-                check_current_thread_canceled()
+                check_current_task_canceled()
 
                 found_range = (
                     kw.name_range
@@ -182,7 +182,7 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
         all_namespace_refs = namespace.get_namespace_references()
         if all_namespace_refs:
             for ns, ns_refs in all_namespace_refs.items():
-                check_current_thread_canceled()
+                check_current_task_canceled()
 
                 found_range = (
                     ns.import_range

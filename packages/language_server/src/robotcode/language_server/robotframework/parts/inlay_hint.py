@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING, Any, Callable, List, Optional, Type, cast
 
 from robot.parsing.lexer.tokens import Token
 
-from robotcode.core.concurrent import check_current_thread_canceled
+from robotcode.core.concurrent import check_current_task_canceled
 from robotcode.core.lsp.types import InlayHint, InlayHintKind, Range
 from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.robot.diagnostics.library_doc import (
@@ -77,7 +77,7 @@ class RobotInlayHintProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMix
         result: List[InlayHint] = []
 
         for node in iter_nodes(model):
-            check_current_thread_canceled()
+            check_current_task_canceled()
 
             node_range = range_from_node(node)
             if node_range.end < range.start:

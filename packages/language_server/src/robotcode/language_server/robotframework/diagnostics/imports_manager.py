@@ -24,7 +24,7 @@ from typing import (
     final,
 )
 
-from robotcode.core.concurrent import run_in_thread
+from robotcode.core.concurrent import run_as_task
 from robotcode.core.event import event
 from robotcode.core.lsp.types import DocumentUri, FileChangeType, FileEvent
 from robotcode.core.uri import Uri
@@ -684,7 +684,7 @@ class ImportsManager:
 
     @language_id("robotframework")
     def resource_document_changed(self, sender: Any, document: TextDocument) -> None:
-        run_in_thread(self.__resource_document_changed, document)
+        run_as_task(self.__resource_document_changed, document)
 
     def __resource_document_changed(self, document: TextDocument) -> None:
         resource_changed: List[LibraryDoc] = []

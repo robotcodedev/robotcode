@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any, List, Optional
 
 from robot.parsing.model.blocks import If, Keyword, TestCase
 
-from robotcode.core.concurrent import check_current_thread_canceled
+from robotcode.core.concurrent import check_current_task_canceled
 from robotcode.core.lsp.types import FoldingRange
 from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.robot.utils.visitor import Visitor
@@ -39,7 +39,7 @@ class _Visitor(Visitor):
         self.current_if: List[ast.AST] = []
 
     def visit(self, node: ast.AST) -> None:
-        check_current_thread_canceled()
+        check_current_task_canceled()
         super().visit(node)
 
     @classmethod

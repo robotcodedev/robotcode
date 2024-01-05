@@ -20,7 +20,7 @@ from typing import (
     cast,
 )
 
-from robotcode.core.concurrent import FutureEx, threaded
+from robotcode.core.concurrent import Task, threaded
 from robotcode.core.event import event
 from robotcode.core.lsp.types import (
     ApplyWorkspaceEditParams,
@@ -331,8 +331,8 @@ class Workspace(LanguageServerProtocolPart):
         section: Type[_TConfig],
         scope_uri: Union[str, Uri, None] = None,
         request: bool = True,
-    ) -> FutureEx[_TConfig]:
-        result_future: FutureEx[_TConfig] = FutureEx()
+    ) -> Task[_TConfig]:
+        result_future: Task[_TConfig] = Task()
 
         scope = self.get_workspace_folder(scope_uri) if scope_uri is not None else None
 
@@ -345,7 +345,7 @@ class Workspace(LanguageServerProtocolPart):
             )
             return result_future
 
-        def _get_configuration_done(f: FutureEx[Optional[Any]]) -> None:
+        def _get_configuration_done(f: Task[Optional[Any]]) -> None:
             try:
                 if result_future.cancelled():
                     return
@@ -378,7 +378,7 @@ class Workspace(LanguageServerProtocolPart):
         section: Optional[str],
         scope_uri: Union[str, Uri, None] = None,
         request: bool = True,
-    ) -> FutureEx[Optional[Any]]:
+    ) -> Task[Optional[Any]]:
         if (
             self.parent.client_capabilities
             and self.parent.client_capabilities.workspace
@@ -405,7 +405,7 @@ class Workspace(LanguageServerProtocolPart):
             else:
                 result = {}
                 break
-        result_future: FutureEx[Optional[Any]] = FutureEx()
+        result_future: Task[Optional[Any]] = Task()
         result_future.set_result([result])
         return result_future
 
@@ -509,7 +509,7 @@ class Workspace(LanguageServerProtocolPart):
                     and self.parent.client_capabilities.workspace.did_change_watched_files.dynamic_registration
                 ):
 
-                    def _done(f: FutureEx[None]) -> None:
+                    def _done(f: Task[None]) -> None:
                         if f.cancelled():
                             return
                         exception = f.exception()

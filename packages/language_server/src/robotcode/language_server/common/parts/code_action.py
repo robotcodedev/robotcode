@@ -2,7 +2,7 @@ from concurrent.futures import CancelledError
 from itertools import chain
 from typing import TYPE_CHECKING, Any, Final, List, Optional, Union, cast
 
-from robotcode.core.concurrent import check_current_thread_canceled
+from robotcode.core.concurrent import check_current_task_canceled
 from robotcode.core.event import event
 from robotcode.core.lsp.types import (
     CodeAction,
@@ -94,7 +94,7 @@ class CodeActionProtocolPart(LanguageServerProtocolPart):
             context,
             callback_filter=language_id_filter(document),
         ):
-            check_current_thread_canceled()
+            check_current_task_canceled()
 
             if isinstance(result, BaseException):
                 if not isinstance(result, CancelledError):
@@ -113,7 +113,7 @@ class CodeActionProtocolPart(LanguageServerProtocolPart):
         results: List[CodeAction] = []
 
         for result in self.resolve(self, params):
-            check_current_thread_canceled()
+            check_current_task_canceled()
 
             if isinstance(result, BaseException):
                 if not isinstance(result, CancelledError):

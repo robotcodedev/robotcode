@@ -22,7 +22,7 @@ _TResult = TypeVar("_TResult")
 __THREADED_MARKER = "__robotcode_threaded"
 
 
-class FutureEx(Future, Generic[_TResult]):  # type: ignore[type-arg]
+class Task(Future, Generic[_TResult]):  # type: ignore[type-arg]
     def __init__(self) -> None:
         super().__init__()
         self.cancelation_requested_event = Event()
@@ -38,7 +38,7 @@ class FutureEx(Future, Generic[_TResult]):  # type: ignore[type-arg]
     def result(self, timeout: Optional[float] = None) -> _TResult:
         return cast(_TResult, super().result(timeout))
 
-    def add_done_callback(self, fn: Callable[["FutureEx[Any]"], Any]) -> None:
+    def add_done_callback(self, fn: Callable[["Task[Any]"], Any]) -> None:
         super().add_done_callback(fn)  # type: ignore[arg-type]
 
 
@@ -74,14 +74,14 @@ def is_threaded_callable(callable: Callable[..., Any]) -> bool:
 class _Local(local):
     def __init__(self) -> None:
         super().__init__()
-        self._local_future: Optional[FutureEx[Any]] = None
+        self._local_future: Optional[Task[Any]] = None
 
 
 _local_storage = _Local()
 
 
-def _run_callable_in_thread_handler(
-    future: FutureEx[_TResult],
+def _run_task_in_thread_handler(
+    future: Task[_TResult],
     callable: Callable[..., _TResult],
     args: Tuple[Any, ...],
     kwargs: Dict[str, Any],
@@ -102,12 +102,12 @@ def _run_callable_in_thread_handler(
         _local_storage._local_future = None
 
 
-def is_current_thread_cancelled() -> bool:
+def is_current_task_cancelled() -> bool:
     local_future = _local_storage._local_future
     return local_future is not None and local_future.cancelation_requested
 
 
-def check_current_thread_canceled(at_least_seconds: Optional[float] = None, raise_exception: bool = True) -> bool:
+def check_current_task_canceled(at_least_seconds: Optional[float] = None, raise_exception: bool = True) -> bool:
     local_future = _local_storage._local_future
     if local_future is None:
         return False
@@ -125,28 +125,28 @@ def check_current_thread_canceled(at_least_seconds: Optional[float] = None, rais
     return True
 
 
-_running_callables_lock = RLock()
-_running_callables: Dict[FutureEx[Any], Thread] = {}
+_running_tasks_lock = RLock()
+_running_tasks: Dict[Task[Any], Thread] = {}
 
 
-def _remove_future_from_running_callables(future: FutureEx[Any]) -> None:
-    with _running_callables_lock:
-        _running_callables.pop(future, None)
+def _remove_future_from_running_tasks(future: Task[Any]) -> None:
+    with _running_tasks_lock:
+        _running_tasks.pop(future, None)
 
 
 _P = ParamSpec("_P")
 
 
-def run_in_thread(callable: Callable[_P, _TResult], *args: _P.args, **kwargs: _P.kwargs) -> FutureEx[_TResult]:
-    future: FutureEx[_TResult] = FutureEx()
-    with _running_callables_lock:
+def run_as_task(callable: Callable[_P, _TResult], *args: _P.args, **kwargs: _P.kwargs) -> Task[_TResult]:
+    future: Task[_TResult] = Task()
+    with _running_tasks_lock:
         thread = Thread(
-            target=_run_callable_in_thread_handler,
+            target=_run_task_in_thread_handler,
             args=(future, callable, args, kwargs),
             name=str(callable),
         )
-        _running_callables[future] = thread
-        future.add_done_callback(_remove_future_from_running_callables)
+        _running_tasks[future] = thread
+        future.add_done_callback(_remove_future_from_running_tasks)
     # TODO: don't set daemon=True because it can be deprecated in future pyhton versions
     thread.daemon = True
     thread.start()
@@ -154,10 +154,10 @@ def run_in_thread(callable: Callable[_P, _TResult], *args: _P.args, **kwargs: _P
     return future
 
 
-def cancel_running_callables(timeout: Optional[float] = None) -> None:
+def _cancel_all_running_tasks(timeout: Optional[float] = None) -> None:
     threads: List[Thread] = []
-    with _running_callables_lock:
-        for future, thread in _running_callables.items():
+    with _running_tasks_lock:
+        for future, thread in _running_tasks.items():
             if not future.cancelation_requested:
                 future.cancel()
                 threads.append(thread)

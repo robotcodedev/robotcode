@@ -1,7 +1,7 @@
 import ast
 from typing import TYPE_CHECKING, Any, List, Optional, Set, Tuple, cast
 
-from robotcode.core.concurrent import run_in_thread
+from robotcode.core.concurrent import run_as_task
 from robotcode.core.lsp.types import CodeLens, Command
 from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.robot.diagnostics.library_doc import KeywordDoc
@@ -85,7 +85,7 @@ class RobotCodeLensProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixi
 
                     key = (document, kw_doc)
                     if key not in self._running_task:
-                        task = run_in_thread(find_refs)
+                        task = run_as_task(find_refs)
 
                         def done(task: Any) -> None:
                             if key in self._running_task:

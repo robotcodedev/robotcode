@@ -1,7 +1,7 @@
 from concurrent.futures import CancelledError
 from typing import TYPE_CHECKING, Any, Final, List, Optional
 
-from robotcode.core.concurrent import check_current_thread_canceled
+from robotcode.core.concurrent import check_current_task_canceled
 from robotcode.core.event import event
 from robotcode.core.lsp.types import (
     ErrorCodes,
@@ -80,7 +80,7 @@ class RenameProtocolPart(LanguageServerProtocolPart):
             new_name,
             callback_filter=language_id_filter(document),
         ):
-            check_current_thread_canceled()
+            check_current_task_canceled()
 
             if isinstance(result, BaseException):
                 if not isinstance(result, CancelledError):
@@ -93,7 +93,7 @@ class RenameProtocolPart(LanguageServerProtocolPart):
             return None
 
         for we in edits:
-            check_current_thread_canceled()
+            check_current_task_canceled()
 
             if we.changes:
                 for uri, changes in we.changes.items():
@@ -111,7 +111,7 @@ class RenameProtocolPart(LanguageServerProtocolPart):
 
         result = WorkspaceEdit()
         for we in edits:
-            check_current_thread_canceled()
+            check_current_task_canceled()
 
             if we.changes:
                 if result.changes is None:
@@ -150,7 +150,7 @@ class RenameProtocolPart(LanguageServerProtocolPart):
             document.position_from_utf16(position),
             callback_filter=language_id_filter(document),
         ):
-            check_current_thread_canceled()
+            check_current_task_canceled()
 
             if isinstance(result, BaseException):
                 if isinstance(result, CantRenameError):

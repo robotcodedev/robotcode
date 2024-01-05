@@ -1,7 +1,7 @@
 from concurrent.futures import CancelledError
 from typing import TYPE_CHECKING, Any, Final, List, Optional
 
-from robotcode.core.concurrent import check_current_thread_canceled
+from robotcode.core.concurrent import check_current_task_canceled
 from robotcode.core.event import event
 from robotcode.core.lsp.types import (
     DocumentFormattingOptions,
@@ -81,7 +81,7 @@ class FormattingProtocolPart(LanguageServerProtocolPart):
             callback_filter=language_id_filter(document),
             **kwargs,
         ):
-            check_current_thread_canceled()
+            check_current_task_canceled()
 
             if isinstance(result, BaseException):
                 if not isinstance(result, CancelledError):
@@ -119,7 +119,7 @@ class FormattingProtocolPart(LanguageServerProtocolPart):
             callback_filter=language_id_filter(document),
             **kwargs,
         ):
-            check_current_thread_canceled()
+            check_current_task_canceled()
 
             if isinstance(result, BaseException):
                 if not isinstance(result, CancelledError):

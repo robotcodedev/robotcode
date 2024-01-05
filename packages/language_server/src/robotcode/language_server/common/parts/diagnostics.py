@@ -7,12 +7,7 @@ from enum import Enum
 from threading import Event, RLock
 from typing import TYPE_CHECKING, Any, Dict, Final, List, Optional, cast
 
-from robotcode.core.concurrent import (
-    FutureEx,
-    check_current_thread_canceled,
-    run_in_thread,
-    threaded,
-)
+from robotcode.core.concurrent import Task, check_current_task_canceled, run_as_task
 from robotcode.core.event import event
 from robotcode.core.lsp.types import (
     Diagnostic,
@@ -77,7 +72,7 @@ class DiagnosticsData:
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
     entries: Dict[Any, Optional[List[Diagnostic]]] = field(default_factory=dict)
     version: Optional[int] = None
-    future: Optional[FutureEx[Any]] = None
+    future: Optional[Task[Any]] = None
     force: bool = False
 
 
@@ -92,7 +87,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
         self._workspace_load_lock = RLock()
         self._workspace_loaded = False
 
-        self._workspace_diagnostics_task: Optional[FutureEx[Any]] = None
+        self._workspace_diagnostics_task: Optional[Task[Any]] = None
 
         self.parent.on_initialized.add(self.server_initialized)
 
@@ -103,14 +98,14 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
         self.in_get_workspace_diagnostics = Event()
         self.in_get_workspace_diagnostics
 
-        self.refresh_task: Optional[FutureEx[Any]] = None
+        self.refresh_task: Optional[Task[Any]] = None
 
         self.client_supports_pull = False
 
         self._refresh_timeout = 5
 
     def server_initialized(self, sender: Any) -> None:
-        self._workspace_diagnostics_task = run_in_thread(self.run_workspace_diagnostics)
+        self._workspace_diagnostics_task = run_as_task(self.run_workspace_diagnostics)
 
         if not self.client_supports_pull:
             self.parent.documents.did_open.add(self.update_document_diagnostics)
@@ -178,9 +173,8 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
             self.refresh()
 
     @_logger.call
-    @threaded
     def on_did_close(self, sender: Any, document: TextDocument) -> None:
-        run_in_thread(self._close_diagnostics_for_document, document)
+        run_as_task(self._close_diagnostics_for_document, document)
 
     def _close_diagnostics_for_document(self, document: TextDocument) -> None:
         if self.get_diagnostics_mode(document.uri) == DiagnosticsMode.WORKSPACE:
@@ -205,7 +199,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
         self.ensure_workspace_loaded()
 
         while True:
-            check_current_thread_canceled()
+            check_current_task_canceled()
 
             try:
                 documents = [
@@ -220,7 +214,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
                 ]
 
                 if len(documents) == 0:
-                    check_current_thread_canceled(1)
+                    check_current_task_canceled(1)
                     continue
 
                 self._logger.info(lambda: f"start collecting workspace diagnostics for {len(documents)} documents")
@@ -236,7 +230,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
                     start=False,
                 ) as progress:
                     for i, document in enumerate(documents):
-                        check_current_thread_canceled()
+                        check_current_task_canceled()
 
                         mode = self.get_diagnostics_mode(document.uri)
                         if mode == DiagnosticsMode.OFF:
@@ -269,7 +263,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
                         )
 
                 if not done_something:
-                    check_current_thread_canceled(1)
+                    check_current_task_canceled(1)
 
                 self._logger.info(
                     lambda: f"collecting workspace diagnostics for {len(documents)} "
@@ -291,8 +285,8 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
         single: bool,
         debounce: bool = True,
         send_diagnostics: bool = True,
-    ) -> FutureEx[Any]:
-        def done(t: FutureEx[Any]) -> None:
+    ) -> Task[Any]:
+        def done(t: Task[Any]) -> None:
             self._logger.debug(lambda: f"diagnostics for {document} {'canceled' if t.cancelled() else 'ended'}")
 
         data = self.get_diagnostics_data(document)
@@ -308,7 +302,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
                 future.cancel()
 
             data.version = document.version
-            data.future = run_in_thread(
+            data.future = run_as_task(
                 self._get_diagnostics_for_document,
                 document,
                 data,
@@ -331,7 +325,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
         self._logger.debug(lambda: f"Get diagnostics for {document}")
 
         if debounce:
-            check_current_thread_canceled(0.75)
+            check_current_task_canceled(0.75)
 
         collected_keys: List[Any] = []
         try:
@@ -341,7 +335,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
                 callback_filter=language_id_filter(document),
                 return_exceptions=True,
             ):
-                check_current_thread_canceled()
+                check_current_task_canceled()
 
                 if isinstance(result, BaseException):
                     if not isinstance(result, CancelledError):
@@ -462,7 +456,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
         if self.refresh_task is not None and not self.refresh_task.done():
             self.refresh_task.cancel()
 
-        self.refresh_task = run_in_thread(self._refresh, now)
+        self.refresh_task = run_as_task(self._refresh, now)
 
     def _refresh(self, now: bool = False) -> None:
         if (
@@ -472,6 +466,6 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
             and self.parent.client_capabilities.workspace.diagnostics.refresh_support
         ):
             if not now:
-                check_current_thread_canceled(1)
+                check_current_task_canceled(1)
 
             self.parent.send_request("workspace/diagnostic/refresh").result(self._refresh_timeout)
