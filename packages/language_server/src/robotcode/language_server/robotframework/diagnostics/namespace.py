@@ -578,26 +578,26 @@ class Namespace:
         self._ignored_lines: Optional[List[int]] = None
 
     @event
-    def has_invalidated(sender) -> None:  # NOSONAR
+    def has_invalidated(sender) -> None:
         ...
 
     @event
-    def has_initialized(sender) -> None:  # NOSONAR
+    def has_initialized(sender) -> None:
         ...
 
     @event
-    def has_imports_changed(sender) -> None:  # NOSONAR
+    def has_imports_changed(sender) -> None:
         ...
 
     @event
-    def has_analysed(sender) -> None:  # NOSONAR
+    def has_analysed(sender) -> None:
         ...
 
     @property
     def document(self) -> Optional[TextDocument]:
         return self._document() if self._document is not None else None
 
-    def imports_changed(self, sender: Any, uri: DocumentUri) -> None:  # NOSONAR
+    def imports_changed(self, sender: Any, uri: DocumentUri) -> None:
         if self.document is not None:
             self.document.set_data(Namespace.DataEntry, None)
 

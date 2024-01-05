@@ -38,7 +38,7 @@ class ReferencesProtocolPart(LanguageServerProtocolPart):
         sender,
         document: TextDocument,
         position: Position,
-        context: ReferenceContext,  # NOSONAR
+        context: ReferenceContext,
     ) -> Optional[List[Location]]:
         ...
 

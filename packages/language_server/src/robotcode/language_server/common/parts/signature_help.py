@@ -41,7 +41,7 @@ class SignatureHelpProtocolPart(LanguageServerProtocolPart):
         sender,
         document: TextDocument,
         position: Position,
-        context: Optional[SignatureHelpContext] = None,  # NOSONAR
+        context: Optional[SignatureHelpContext] = None,
     ) -> Optional[SignatureHelp]:
         ...
 

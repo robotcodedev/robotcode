@@ -208,11 +208,11 @@ class TextDocument:
             return self._lines
 
     @event
-    async def cache_invalidate(sender) -> None:  # NOSONAR
+    async def cache_invalidate(sender) -> None:
         ...
 
     @event
-    def cache_invalidated(sender) -> None:  # NOSONAR
+    def cache_invalidated(sender) -> None:
         ...
 
     def _invalidate_cache(self) -> None:

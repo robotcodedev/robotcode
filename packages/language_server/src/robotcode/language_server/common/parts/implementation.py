@@ -33,7 +33,7 @@ class ImplementationProtocolPart(LanguageServerProtocolPart):
     def collect(
         sender,
         document: TextDocument,
-        position: Position,  # NOSONAR
+        position: Position,
     ) -> Union[Location, List[Location], List[LocationLink], None]:
         ...
 

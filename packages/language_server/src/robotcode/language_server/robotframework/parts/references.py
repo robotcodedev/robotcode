@@ -67,7 +67,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         parent.documents.did_change.add(self.document_did_change)
 
     @event
-    def cache_cleared(sender) -> None:  # NOSONAR
+    def cache_cleared(sender) -> None:
         ...
 
     def server_initialized(self, sender: Any) -> None:

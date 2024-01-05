@@ -33,7 +33,7 @@ class RobotCodeLensProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixi
         parent.robot_references.cache_cleared.add(self.codelens_refresh)
 
     @language_id("robotframework")
-    def codelens_refresh(self, sender: Any) -> None:  # NOSONAR
+    def codelens_refresh(self, sender: Any) -> None:
         self.parent.code_lens.refresh()
 
     @language_id("robotframework")

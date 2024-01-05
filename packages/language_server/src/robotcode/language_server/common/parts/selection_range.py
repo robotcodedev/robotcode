@@ -33,7 +33,7 @@ class SelectionRangeProtocolPart(LanguageServerProtocolPart):
             capabilities.selection_range_provider = SelectionRangeOptions(work_done_progress=True)
 
     @event
-    def collect(sender, document: TextDocument, positions: List[Position]) -> Optional[List[SelectionRange]]:  # NOSONAR
+    def collect(sender, document: TextDocument, positions: List[Position]) -> Optional[List[SelectionRange]]:
         ...
 
     @rpc_method(name="textDocument/selectionRange", param_type=SelectionRangeParams, threaded=True)

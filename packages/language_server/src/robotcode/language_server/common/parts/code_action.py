@@ -41,12 +41,12 @@ class CodeActionProtocolPart(LanguageServerProtocolPart):
         sender,
         document: TextDocument,
         range: Range,
-        context: CodeActionContext,  # NOSONAR
+        context: CodeActionContext,
     ) -> Optional[List[Union[Command, CodeAction]]]:
         ...
 
     @event
-    def resolve(sender, code_action: CodeAction) -> Optional[CodeAction]:  # NOSONAR
+    def resolve(sender, code_action: CodeAction) -> Optional[CodeAction]:
         ...
 
     def extend_capabilities(self, capabilities: ServerCapabilities) -> None:

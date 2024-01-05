@@ -34,7 +34,7 @@ class DocumentHighlightProtocolPart(LanguageServerProtocolPart):
             capabilities.document_highlight_provider = DocumentHighlightOptions(work_done_progress=True)
 
     @event
-    def collect(sender, document: TextDocument, position: Position) -> Optional[List[DocumentHighlight]]:  # NOSONAR
+    def collect(sender, document: TextDocument, position: Position) -> Optional[List[DocumentHighlight]]:
         ...
 
     @rpc_method(name="textDocument/documentHighlight", param_type=DocumentHighlightParams, threaded=True)

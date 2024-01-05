@@ -132,25 +132,25 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
             self.client_supports_pull = True
 
     @event
-    def collect(sender, document: TextDocument) -> Optional[DiagnosticsResult]:  # NOSONAR
+    def collect(sender, document: TextDocument) -> Optional[DiagnosticsResult]:
         ...
 
     @event
     def load_workspace_documents(
         sender,
-    ) -> Optional[List[WorkspaceDocumentsResult]]:  # NOSONAR
+    ) -> Optional[List[WorkspaceDocumentsResult]]:
         ...
 
     @event
-    def on_workspace_loaded(sender) -> None:  # NOSONAR
+    def on_workspace_loaded(sender) -> None:
         ...
 
     @event
-    def on_get_analysis_progress_mode(sender, uri: Uri) -> Optional[AnalysisProgressMode]:  # NOSONAR
+    def on_get_analysis_progress_mode(sender, uri: Uri) -> Optional[AnalysisProgressMode]:
         ...
 
     @event
-    def on_get_diagnostics_mode(sender, uri: Uri) -> Optional[DiagnosticsMode]:  # NOSONAR
+    def on_get_diagnostics_mode(sender, uri: Uri) -> Optional[DiagnosticsMode]:
         ...
 
     def ensure_workspace_loaded(self) -> None:

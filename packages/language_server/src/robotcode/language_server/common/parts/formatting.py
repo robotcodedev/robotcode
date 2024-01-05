@@ -38,7 +38,7 @@ class FormattingProtocolPart(LanguageServerProtocolPart):
         sender,
         document: TextDocument,
         options: FormattingOptions,
-        **further_options: Any,  # NOSONAR
+        **further_options: Any,
     ) -> Optional[List[TextEdit]]:
         ...
 
@@ -48,7 +48,7 @@ class FormattingProtocolPart(LanguageServerProtocolPart):
         document: TextDocument,
         range: Range,
         options: FormattingOptions,
-        **further_options: Any,  # NOSONAR
+        **further_options: Any,
     ) -> Optional[List[TextEdit]]:
         ...
 

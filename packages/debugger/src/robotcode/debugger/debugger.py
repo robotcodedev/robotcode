@@ -312,7 +312,6 @@ class Debugger:
         self.stop_on_entry = False
         self._debug = True
         self.terminated = False
-        self.terminated_requested = False
         self.attached = False
         self.path_mappings: List[PathMapping] = []
         self.server_loop: Optional[asyncio.AbstractEventLoop] = None
@@ -382,9 +381,6 @@ class Debugger:
     @robot_output_file.setter
     def robot_output_file(self, value: Optional[str]) -> None:
         self._robot_output_file = value
-
-    def terminate_requested(self) -> None:
-        self.terminated_requested = True
 
     def terminate(self) -> None:
         self.terminated = True
@@ -504,7 +500,7 @@ class Debugger:
             self.condition.notify_all()
 
     @event
-    def send_event(sender: Any, event: Event) -> None:  # NOSONAR
+    def send_event(sender: Any, event: Event) -> None:
         ...
 
     def set_breakpoints(

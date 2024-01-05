@@ -30,11 +30,11 @@ class CodeLensProtocolPart(LanguageServerProtocolPart):
         self._refresh_timeout = 5
 
     @event
-    def collect(sender, document: TextDocument) -> Optional[List[CodeLens]]:  # NOSONAR
+    def collect(sender, document: TextDocument) -> Optional[List[CodeLens]]:
         ...
 
     @event
-    def resolve(sender, code_lens: CodeLens) -> Optional[CodeLens]:  # NOSONAR
+    def resolve(sender, code_lens: CodeLens) -> Optional[CodeLens]:
         ...
 
     def extend_capabilities(self, capabilities: ServerCapabilities) -> None:

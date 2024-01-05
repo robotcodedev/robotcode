@@ -96,7 +96,7 @@ class FileWatcherEntry:
         self.finalizer: Any = None
 
     @event
-    def child_callbacks(sender, changes: List[FileEvent]) -> None:  # NOSONAR
+    def child_callbacks(sender, changes: List[FileEvent]) -> None:
         ...
 
     def call_childrens(self, sender: Any, changes: List[FileEvent]) -> None:
@@ -243,7 +243,7 @@ class Workspace(LanguageServerProtocolPart):
         self._settings = value
 
     @event
-    def did_change_configuration(sender, settings: Dict[str, Any]) -> None:  # NOSONAR
+    def did_change_configuration(sender, settings: Dict[str, Any]) -> None:
         ...
 
     @rpc_method(name="workspace/didChangeConfiguration", param_type=DidChangeConfigurationParams)
@@ -253,27 +253,27 @@ class Workspace(LanguageServerProtocolPart):
         self.did_change_configuration(self, settings)
 
     @event
-    def will_create_files(sender, files: List[str]) -> Optional[Mapping[str, List[TextEdit]]]:  # NOSONAR
+    def will_create_files(sender, files: List[str]) -> Optional[Mapping[str, List[TextEdit]]]:
         ...
 
     @event
-    def did_create_files(sender, files: List[str]) -> None:  # NOSONAR
+    def did_create_files(sender, files: List[str]) -> None:
         ...
 
     @event
-    def will_rename_files(sender, files: List[Tuple[str, str]]) -> None:  # NOSONAR
+    def will_rename_files(sender, files: List[Tuple[str, str]]) -> None:
         ...
 
     @event
-    def did_rename_files(sender, files: List[Tuple[str, str]]) -> None:  # NOSONAR
+    def did_rename_files(sender, files: List[Tuple[str, str]]) -> None:
         ...
 
     @event
-    def will_delete_files(sender, files: List[str]) -> None:  # NOSONAR
+    def will_delete_files(sender, files: List[str]) -> None:
         ...
 
     @event
-    def did_delete_files(sender, files: List[str]) -> None:  # NOSONAR
+    def did_delete_files(sender, files: List[str]) -> None:
         ...
 
     @rpc_method(name="workspace/willCreateFiles", param_type=CreateFilesParams, threaded=True)
@@ -449,7 +449,7 @@ class Workspace(LanguageServerProtocolPart):
         # TODO: do we need an event for this?
 
     @event
-    def did_change_watched_files(sender, changes: List[FileEvent]) -> None:  # NOSONAR
+    def did_change_watched_files(sender, changes: List[FileEvent]) -> None:
         ...
 
     @rpc_method(name="workspace/didChangeWatchedFiles", param_type=DidChangeWatchedFilesParams)

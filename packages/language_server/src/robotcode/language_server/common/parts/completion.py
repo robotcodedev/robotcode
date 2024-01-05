@@ -47,12 +47,12 @@ class CompletionProtocolPart(LanguageServerProtocolPart):
         sender,
         document: TextDocument,
         position: Position,
-        context: Optional[CompletionContext],  # NOSONAR
+        context: Optional[CompletionContext],
     ) -> Union[List[CompletionItem], CompletionList, None]:
         ...
 
     @event
-    def resolve(sender, completion_item: CompletionItem) -> Optional[CompletionItem]:  # NOSONAR
+    def resolve(sender, completion_item: CompletionItem) -> Optional[CompletionItem]:
         ...
 
     def extend_capabilities(self, capabilities: ServerCapabilities) -> None:

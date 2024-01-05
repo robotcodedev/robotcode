@@ -66,7 +66,7 @@ class DocumentSymbolsProtocolPart(LanguageServerProtocolPart):
     @event
     def collect(
         sender,
-        document: TextDocument,  # NOSONAR
+        document: TextDocument,
     ) -> Optional[Union[List[DocumentSymbol], List[SymbolInformation], None]]:
         ...
 

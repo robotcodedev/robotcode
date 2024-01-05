@@ -47,7 +47,7 @@ class SemanticTokensProtocolPart(LanguageServerProtocolPart):
     def collect_full(
         sender,
         document: TextDocument,
-        **kwargs: Any,  # NOSONAR
+        **kwargs: Any,
     ) -> Union[SemanticTokens, SemanticTokensPartialResult, None]:
         ...
 
@@ -56,7 +56,7 @@ class SemanticTokensProtocolPart(LanguageServerProtocolPart):
         sender,
         document: TextDocument,
         previous_result_id: str,
-        **kwargs: Any,  # NOSONAR
+        **kwargs: Any,
     ) -> Union[SemanticTokens, SemanticTokensDelta, SemanticTokensDeltaPartialResult, None,]:
         ...
 
@@ -65,7 +65,7 @@ class SemanticTokensProtocolPart(LanguageServerProtocolPart):
         sender,
         document: TextDocument,
         range: Range,
-        **kwargs: Any,  # NOSONAR
+        **kwargs: Any,
     ) -> Union[SemanticTokens, SemanticTokensPartialResult, None]:
         ...
 

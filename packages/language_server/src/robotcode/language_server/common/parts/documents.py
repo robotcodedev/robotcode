@@ -168,31 +168,31 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart):
             raise CantReadDocumentError(f"Error reading document '{path}': {e!s}") from e
 
     @event
-    def on_read_document_text(sender, uri: Uri) -> Optional[str]:  # NOSONAR
+    def on_read_document_text(sender, uri: Uri) -> Optional[str]:
         ...
 
     @event
-    def did_create_uri(sender, uri: DocumentUri) -> None:  # NOSONAR
+    def did_create_uri(sender, uri: DocumentUri) -> None:
         ...
 
     @event
-    def did_create(sender, document: TextDocument) -> None:  # NOSONAR
+    def did_create(sender, document: TextDocument) -> None:
         ...
 
     @event
-    def did_open(sender, document: TextDocument) -> None:  # NOSONAR
+    def did_open(sender, document: TextDocument) -> None:
         ...
 
     @event
-    def did_close(sender, document: TextDocument) -> None:  # NOSONAR
+    def did_close(sender, document: TextDocument) -> None:
         ...
 
     @event
-    def did_change(sender, document: TextDocument) -> None:  # NOSONAR
+    def did_change(sender, document: TextDocument) -> None:
         ...
 
     @event
-    def did_save(sender, document: TextDocument) -> None:  # NOSONAR
+    def did_save(sender, document: TextDocument) -> None:
         ...
 
     def get(self, _uri: Union[DocumentUri, Uri]) -> Optional[TextDocument]:

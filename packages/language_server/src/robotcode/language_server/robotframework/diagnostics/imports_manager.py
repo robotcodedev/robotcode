@@ -664,22 +664,22 @@ class ImportsManager:
             return self._resolvable_command_line_variables
 
     @event
-    def libraries_changed(sender, libraries: List[LibraryDoc]) -> None:  # NOSONAR
+    def libraries_changed(sender, libraries: List[LibraryDoc]) -> None:
         ...
 
     @event
-    def resources_changed(sender, resources: List[LibraryDoc]) -> None:  # NOSONAR
+    def resources_changed(sender, resources: List[LibraryDoc]) -> None:
         ...
 
     @event
-    def variables_changed(sender, variables: List[LibraryDoc]) -> None:  # NOSONAR
+    def variables_changed(sender, variables: List[LibraryDoc]) -> None:
         ...
 
     @event
-    def imports_changed(sender, uri: DocumentUri) -> None:  # NOSONAR
+    def imports_changed(sender, uri: DocumentUri) -> None:
         ...
 
-    def _do_imports_changed(self, sender: Any, uri: DocumentUri) -> None:  # NOSONAR
+    def _do_imports_changed(self, sender: Any, uri: DocumentUri) -> None:
         self.imports_changed(self, uri)
 
     @language_id("robotframework")

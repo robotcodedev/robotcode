@@ -406,7 +406,7 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
         return self.__get_namespace_for_document_type(document, DocumentType.GENERAL)
 
     @tasking_event
-    def namespace_invalidated(sender, namespace: Namespace) -> None:  # NOSONAR
+    def namespace_invalidated(sender, namespace: Namespace) -> None:
         ...
 
     def __invalidate_namespace(self, sender: Namespace) -> None:

@@ -35,11 +35,11 @@ class InlayHintProtocolPart(LanguageServerProtocolPart):
         self._refresh_timeout = 5
 
     @event
-    def collect(sender, document: TextDocument, range: Range) -> Optional[List[InlayHint]]:  # NOSONAR
+    def collect(sender, document: TextDocument, range: Range) -> Optional[List[InlayHint]]:
         ...
 
     @event
-    def resolve(sender, hint: InlayHint) -> Optional[InlayHint]:  # NOSONAR
+    def resolve(sender, hint: InlayHint) -> Optional[InlayHint]:
         ...
 
     def extend_capabilities(self, capabilities: ServerCapabilities) -> None:

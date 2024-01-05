@@ -293,7 +293,7 @@ class LanguageServerProtocol(JsonRPCProtocol):
 
         try:
             self.cancel_all_received_request()
-        except BaseException as e:  # NOSONAR
+        except BaseException as e:
             self.__logger.exception(e)
 
         self.on_shutdown(self)

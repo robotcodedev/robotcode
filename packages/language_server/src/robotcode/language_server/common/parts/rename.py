@@ -50,12 +50,12 @@ class RenameProtocolPart(LanguageServerProtocolPart):
         sender,
         document: TextDocument,
         position: Position,
-        new_name: str,  # NOSONAR
+        new_name: str,
     ) -> Optional[WorkspaceEdit]:
         ...
 
     @event
-    def collect_prepare(sender, document: TextDocument, position: Position) -> Optional[PrepareRenameResult]:  # NOSONAR
+    def collect_prepare(sender, document: TextDocument, position: Position) -> Optional[PrepareRenameResult]:
         ...
 
     @rpc_method(name="textDocument/rename", param_type=RenameParams, threaded=True)
