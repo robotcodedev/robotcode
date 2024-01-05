@@ -1,7 +1,7 @@
 from concurrent.futures import CancelledError
 from typing import TYPE_CHECKING, Any, Final, List, Optional
 
-from robotcode.core.concurrent import check_current_thread_canceled, threaded
+from robotcode.core.concurrent import check_current_thread_canceled
 from robotcode.core.event import event
 from robotcode.core.lsp.types import (
     Hover,
@@ -37,8 +37,7 @@ class HoverProtocolPart(LanguageServerProtocolPart):
         if len(self.collect):
             capabilities.hover_provider = HoverOptions(work_done_progress=True)
 
-    @rpc_method(name="textDocument/hover", param_type=HoverParams)
-    @threaded
+    @rpc_method(name="textDocument/hover", param_type=HoverParams, threaded=True)
     def _text_document_hover(
         self,
         text_document: TextDocumentIdentifier,

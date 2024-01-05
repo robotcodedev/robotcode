@@ -1,7 +1,7 @@
 from concurrent.futures import CancelledError
 from typing import TYPE_CHECKING, Any, Final, List, Optional
 
-from robotcode.core.concurrent import threaded
+from robotcode.core.concurrent import check_current_thread_canceled
 from robotcode.core.event import event
 from robotcode.core.lsp.types import (
     DocumentHighlight,
@@ -37,11 +37,7 @@ class DocumentHighlightProtocolPart(LanguageServerProtocolPart):
     def collect(sender, document: TextDocument, position: Position) -> Optional[List[DocumentHighlight]]:  # NOSONAR
         ...
 
-    @rpc_method(
-        name="textDocument/documentHighlight",
-        param_type=DocumentHighlightParams,
-    )
-    @threaded
+    @rpc_method(name="textDocument/documentHighlight", param_type=DocumentHighlightParams, threaded=True)
     def _text_document_document_highlight(
         self,
         text_document: TextDocumentIdentifier,
@@ -61,6 +57,8 @@ class DocumentHighlightProtocolPart(LanguageServerProtocolPart):
             document.position_from_utf16(position),
             callback_filter=language_id_filter(document),
         ):
+            check_current_thread_canceled()
+
             if isinstance(result, BaseException):
                 if not isinstance(result, CancelledError):
                     self._logger.exception(result, exc_info=result)

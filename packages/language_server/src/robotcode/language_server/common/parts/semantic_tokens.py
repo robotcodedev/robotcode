@@ -2,12 +2,7 @@ from concurrent.futures import CancelledError
 from enum import Enum
 from typing import TYPE_CHECKING, Any, Final, List, Optional, Union
 
-from robotcode.core.concurrent import (
-    FutureEx,
-    check_current_thread_canceled,
-    run_in_thread,
-    threaded,
-)
+from robotcode.core.concurrent import FutureEx, check_current_thread_canceled, run_in_thread
 from robotcode.core.event import event
 from robotcode.core.lsp.types import (
     Range,
@@ -89,8 +84,7 @@ class SemanticTokensProtocolPart(LanguageServerProtocolPart):
                 range=True if len(self.collect_range) else None,
             )
 
-    @rpc_method(name="textDocument/semanticTokens/full", param_type=SemanticTokensParams)
-    @threaded
+    @rpc_method(name="textDocument/semanticTokens/full", param_type=SemanticTokensParams, threaded=True)
     def _text_document_semantic_tokens_full(
         self, text_document: TextDocumentIdentifier, *args: Any, **kwargs: Any
     ) -> Union[SemanticTokens, SemanticTokensPartialResult, None]:
@@ -121,11 +115,7 @@ class SemanticTokensProtocolPart(LanguageServerProtocolPart):
 
         return None
 
-    @rpc_method(
-        name="textDocument/semanticTokens/full/delta",
-        param_type=SemanticTokensDeltaParams,
-    )
-    @threaded
+    @rpc_method(name="textDocument/semanticTokens/full/delta", param_type=SemanticTokensDeltaParams, threaded=True)
     def _text_document_semantic_tokens_full_delta(
         self,
         text_document: TextDocumentIdentifier,
@@ -166,11 +156,7 @@ class SemanticTokensProtocolPart(LanguageServerProtocolPart):
 
         return None
 
-    @rpc_method(
-        name="textDocument/semanticTokens/range",
-        param_type=SemanticTokensRangeParams,
-    )
-    @threaded
+    @rpc_method(name="textDocument/semanticTokens/range", param_type=SemanticTokensRangeParams, threaded=True)
     def _text_document_semantic_tokens_range(
         self,
         text_document: TextDocumentIdentifier,

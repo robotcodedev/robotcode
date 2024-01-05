@@ -5,7 +5,6 @@ from robotcode.core.concurrent import (
     FutureEx,
     check_current_thread_canceled,
     run_in_thread,
-    threaded,
 )
 from robotcode.core.event import event
 from robotcode.core.lsp.types import (
@@ -65,8 +64,7 @@ class InlineValueProtocolPart(LanguageServerProtocolPart):
                 document_selector=document_filters if document_filters else None,
             )
 
-    @rpc_method(name="textDocument/inlineValue", param_type=InlineValueParams)
-    @threaded
+    @rpc_method(name="textDocument/inlineValue", param_type=InlineValueParams, threaded=True)
     def _text_document_inline_value(
         self,
         text_document: TextDocumentIdentifier,

@@ -187,8 +187,7 @@ class RobotWorkspaceProtocolPart(RobotLanguageServerProtocolPart):
         finally:
             self._logger.info(lambda: f"Workspace loaded {len(result)} documents in {time.monotonic() - start}s")
 
-    @rpc_method(name="robot/cache/clear")
-    @threaded
+    @rpc_method(name="robot/cache/clear", threaded=True)
     def robot_cache_clear(self) -> None:
         for folder in self.parent.workspace.workspace_folders:
             self.parent.documents_cache.get_imports_manager_for_workspace_folder(folder).clear_cache()

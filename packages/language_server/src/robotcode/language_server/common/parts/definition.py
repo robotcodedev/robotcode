@@ -1,7 +1,7 @@
 from concurrent.futures import CancelledError
 from typing import TYPE_CHECKING, Any, Final, List, Optional, Union
 
-from robotcode.core.concurrent import check_current_thread_canceled, threaded
+from robotcode.core.concurrent import check_current_thread_canceled
 from robotcode.core.event import event
 from robotcode.core.lsp.types import (
     DefinitionParams,
@@ -49,8 +49,7 @@ class DefinitionProtocolPart(LanguageServerProtocolPart):
         if len(self.collect):
             capabilities.definition_provider = True
 
-    @rpc_method(name="textDocument/definition", param_type=DefinitionParams)
-    @threaded
+    @rpc_method(name="textDocument/definition", param_type=DefinitionParams, threaded=True)
     def _text_document_definition(
         self,
         text_document: TextDocumentIdentifier,

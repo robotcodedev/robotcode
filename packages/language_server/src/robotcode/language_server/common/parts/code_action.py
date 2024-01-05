@@ -2,7 +2,7 @@ from concurrent.futures import CancelledError
 from itertools import chain
 from typing import TYPE_CHECKING, Any, Final, List, Optional, Union, cast
 
-from robotcode.core.concurrent import check_current_thread_canceled, threaded
+from robotcode.core.concurrent import check_current_thread_canceled
 from robotcode.core.event import event
 from robotcode.core.lsp.types import (
     CodeAction,
@@ -66,8 +66,7 @@ class CodeActionProtocolPart(LanguageServerProtocolPart):
                 resolve_provider=len(self.resolve) > 0,
             )
 
-    @rpc_method(name="textDocument/codeAction", param_type=CodeActionParams)
-    @threaded
+    @rpc_method(name="textDocument/codeAction", param_type=CodeActionParams, threaded=True)
     def _text_document_code_action(
         self,
         text_document: TextDocumentIdentifier,
@@ -109,8 +108,7 @@ class CodeActionProtocolPart(LanguageServerProtocolPart):
 
         return results
 
-    @rpc_method(name="codeAction/resolve", param_type=CodeAction)
-    @threaded
+    @rpc_method(name="codeAction/resolve", param_type=CodeAction, threaded=True)
     def _text_document_code_action_resolve(self, params: CodeAction, *args: Any, **kwargs: Any) -> CodeAction:
         results: List[CodeAction] = []
 

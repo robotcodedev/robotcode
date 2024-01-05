@@ -1,7 +1,7 @@
 from concurrent.futures import CancelledError
 from typing import TYPE_CHECKING, Any, Final, List, Optional
 
-from robotcode.core.concurrent import check_current_thread_canceled, threaded
+from robotcode.core.concurrent import check_current_thread_canceled
 from robotcode.core.event import event
 from robotcode.core.lsp.types import (
     Location,
@@ -42,8 +42,7 @@ class ReferencesProtocolPart(LanguageServerProtocolPart):
     ) -> Optional[List[Location]]:
         ...
 
-    @rpc_method(name="textDocument/references", param_type=ReferenceParams)
-    @threaded
+    @rpc_method(name="textDocument/references", param_type=ReferenceParams, threaded=True)
     def _text_document_references(
         self,
         text_document: TextDocumentIdentifier,

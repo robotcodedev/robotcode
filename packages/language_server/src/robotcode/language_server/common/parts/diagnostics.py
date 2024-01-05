@@ -390,8 +390,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
     def update_document_diagnostics(self, sender: Any, document: TextDocument) -> None:
         self.create_document_diagnostics_task(document, True)
 
-    @rpc_method(name="textDocument/diagnostic", param_type=DocumentDiagnosticParams)
-    @threaded
+    @rpc_method(name="textDocument/diagnostic", param_type=DocumentDiagnosticParams, threaded=True)
     def _text_document_diagnostic(
         self,
         text_document: TextDocumentIdentifier,
@@ -431,8 +430,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
 
         return data
 
-    @rpc_method(name="workspace/diagnostic", param_type=WorkspaceDiagnosticParams)
-    @threaded
+    @rpc_method(name="workspace/diagnostic", param_type=WorkspaceDiagnosticParams, threaded=True)
     def _workspace_diagnostic(
         self,
         identifier: Optional[str],

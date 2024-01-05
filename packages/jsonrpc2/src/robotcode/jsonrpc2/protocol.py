@@ -32,12 +32,8 @@ from typing import (
     runtime_checkable,
 )
 
-from robotcode.core.async_tools import create_sub_task, run_coroutine_in_thread
-from robotcode.core.concurrent import (
-    FutureEx,
-    is_threaded_callable,
-    run_in_thread,
-)
+from robotcode.core.async_tools import run_coroutine_in_thread
+from robotcode.core.concurrent import FutureEx, run_in_thread
 from robotcode.core.event import event
 from robotcode.core.utils.dataclasses import as_json, from_dict
 from robotcode.core.utils.inspect import ensure_coroutine, iter_methods
@@ -150,6 +146,7 @@ class RpcMethodEntry:
     method: Callable[..., Any]
     param_type: Optional[Type[Any]]
     cancelable: bool
+    threaded: bool
 
     _is_coroutine: Optional[bool] = field(default=None, init=False)
 
@@ -181,6 +178,7 @@ def rpc_method(
     name: Optional[str] = None,
     param_type: Optional[Type[Any]] = None,
     cancelable: bool = True,
+    threaded: bool = False,
 ) -> Callable[[_F], _F]:
     ...
 
@@ -191,6 +189,7 @@ def rpc_method(
     name: Optional[str] = None,
     param_type: Optional[Type[Any]] = None,
     cancelable: bool = True,
+    threaded: bool = False,
 ) -> Callable[[_F], _F]:
     def _decorator(func: _F) -> Callable[[_F], _F]:
         if inspect.isclass(_func):
@@ -207,7 +206,7 @@ def rpc_method(
         if real_name is None or not real_name:
             raise ValueError("name is empty.")
 
-        cast(RpcMethod, f).__rpc_method__ = RpcMethodEntry(real_name, f, param_type, cancelable)
+        cast(RpcMethod, f).__rpc_method__ = RpcMethodEntry(real_name, f, param_type, cancelable, threaded)
         return func
 
     if _func is None:
@@ -274,6 +273,7 @@ class RpcRegistry:
                     method,
                     rpc_method.__rpc_method__.param_type,
                     rpc_method.__rpc_method__.cancelable,
+                    rpc_method.__rpc_method__.threaded,
                 )
                 for method, rpc_method in map(
                     lambda m1: (m1, cast(RpcMethod, m1)),
@@ -324,10 +324,11 @@ class RpcRegistry:
         func: Callable[..., Any],
         param_type: Optional[Type[Any]] = None,
         cancelable: bool = True,
+        threaded: bool = False,
     ) -> None:
         self.__ensure_initialized()
 
-        self.__methods[name] = RpcMethodEntry(name, func, param_type, cancelable)
+        self.__methods[name] = RpcMethodEntry(name, func, param_type, cancelable, threaded)
 
     def remove_method(self, name: str) -> Optional[RpcMethodEntry]:
         self.__ensure_initialized()
@@ -741,12 +742,10 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
 
             params = self._convert_params(e.method, e.param_type, message.params)
 
-            is_threaded_method = is_threaded_callable(e.method)
-
-            if not is_threaded_method and not e.is_coroutine:
+            if not e.threaded and not e.is_coroutine:
                 self.send_response(message.id, e.method(*params[0], **params[1]))
             else:
-                if is_threaded_method:
+                if e.threaded:
                     if e.is_coroutine:
                         task = run_coroutine_in_thread(
                             ensure_coroutine(cast(Callable[..., Any], e.method)),
@@ -756,10 +755,7 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
                     else:
                         task = asyncio.wrap_future(run_in_thread(e.method, *params[0], **params[1]))
                 else:
-                    task = create_sub_task(
-                        ensure_coroutine(e.method)(*params[0], **params[1]),
-                        name=message.method,
-                    )
+                    task = asyncio.create_task(e.method(*params[0], **params[1]), name=message.method)
 
                 with self._received_request_lock:
                     self._received_request[message.id] = ReceivedRequestEntry(task, message, e.cancelable)
@@ -845,20 +841,18 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
         try:
             params = self._convert_params(e.method, e.param_type, message.params)
 
-            if not e.is_coroutine:
+            if not e.threaded and not e.is_coroutine:
                 e.method(*params[0], **params[1])
             else:
-                if is_threaded_callable(e.method):
-                    task = run_coroutine_in_thread(
-                        ensure_coroutine(cast(Callable[..., Any], e.method)),
-                        *params[0],
-                        **params[1],
-                    )
+                if e.threaded:
+                    if e.is_coroutine:
+                        task = run_coroutine_in_thread(
+                            ensure_coroutine(cast(Callable[..., Any], e.method)), *params[0], **params[1]
+                        )
+                    else:
+                        task = asyncio.wrap_future(run_in_thread(e.method, *params[0], **params[1]))
                 else:
-                    task = create_sub_task(
-                        ensure_coroutine(e.method)(*params[0], **params[1]),
-                        name=message.method,
-                    )
+                    task = asyncio.create_task(e.method(*params[0], **params[1]), name=message.method)
 
                 await task
         except asyncio.CancelledError:

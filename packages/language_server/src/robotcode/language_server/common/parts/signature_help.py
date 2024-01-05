@@ -2,7 +2,7 @@ from concurrent.futures import CancelledError
 from itertools import chain
 from typing import TYPE_CHECKING, Any, Final, List, Optional, cast
 
-from robotcode.core.concurrent import check_current_thread_canceled, threaded
+from robotcode.core.concurrent import check_current_thread_canceled
 from robotcode.core.event import event
 from robotcode.core.lsp.types import (
     Position,
@@ -72,8 +72,7 @@ class SignatureHelpProtocolPart(LanguageServerProtocolPart):
                 retrigger_characters=retrigger_chars if retrigger_chars else None,
             )
 
-    @rpc_method(name="textDocument/signatureHelp", param_type=SignatureHelpParams)
-    @threaded
+    @rpc_method(name="textDocument/signatureHelp", param_type=SignatureHelpParams, threaded=True)
     def _text_document_signature_help(
         self,
         text_document: TextDocumentIdentifier,

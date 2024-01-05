@@ -97,7 +97,7 @@ class DocumentSymbolsProtocolPart(LanguageServerProtocolPart):
                 else:
                     capabilities.document_symbol_provider = True
 
-    @rpc_method(name="textDocument/documentSymbol", param_type=DocumentSymbolParams)
+    @rpc_method(name="textDocument/documentSymbol", param_type=DocumentSymbolParams, threaded=True)
     @threaded
     def _text_document_symbol(
         self, text_document: TextDocumentIdentifier, *args: Any, **kwargs: Any

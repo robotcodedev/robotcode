@@ -1,7 +1,7 @@
 from concurrent.futures import CancelledError
 from typing import TYPE_CHECKING, Any, Final, List, Optional
 
-from robotcode.core.concurrent import check_current_thread_canceled, threaded
+from robotcode.core.concurrent import check_current_thread_canceled
 from robotcode.core.event import event
 from robotcode.core.lsp.types import (
     Position,
@@ -36,8 +36,7 @@ class SelectionRangeProtocolPart(LanguageServerProtocolPart):
     def collect(sender, document: TextDocument, positions: List[Position]) -> Optional[List[SelectionRange]]:  # NOSONAR
         ...
 
-    @rpc_method(name="textDocument/selectionRange", param_type=SelectionRangeParams)
-    @threaded
+    @rpc_method(name="textDocument/selectionRange", param_type=SelectionRangeParams, threaded=True)
     def _text_document_selection_range(
         self,
         text_document: TextDocumentIdentifier,

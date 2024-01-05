@@ -13,7 +13,6 @@ from typing import (
     cast,
 )
 
-from robotcode.core.concurrent import threaded
 from robotcode.core.lsp.types import (
     ErrorCodes,
     ExecuteCommandOptions,
@@ -82,8 +81,7 @@ class CommandsProtocolPart(LanguageServerProtocolPart):
     def extend_capabilities(self, capabilities: ServerCapabilities) -> None:
         capabilities.execute_command_provider = ExecuteCommandOptions(list(self.commands.keys()))
 
-    @rpc_method(name="workspace/executeCommand", param_type=ExecuteCommandParams)
-    @threaded
+    @rpc_method(name="workspace/executeCommand", param_type=ExecuteCommandParams, threaded=True)
     def _workspace_execute_command(
         self,
         command: str,

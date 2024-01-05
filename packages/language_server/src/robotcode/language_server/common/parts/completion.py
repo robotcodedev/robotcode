@@ -2,7 +2,7 @@ from concurrent.futures import CancelledError
 from itertools import chain
 from typing import TYPE_CHECKING, Any, Final, List, Optional, Union, cast
 
-from robotcode.core.concurrent import check_current_thread_canceled, threaded
+from robotcode.core.concurrent import check_current_thread_canceled
 from robotcode.core.event import event
 from robotcode.core.lsp.types import (
     CompletionContext,
@@ -84,8 +84,7 @@ class CompletionProtocolPart(LanguageServerProtocolPart):
                 completion_item=CompletionOptionsCompletionItemType(label_details_support=True),
             )
 
-    @rpc_method(name="textDocument/completion", param_type=CompletionParams)
-    @threaded
+    @rpc_method(name="textDocument/completion", param_type=CompletionParams, threaded=True)
     def _text_document_completion(
         self,
         text_document: TextDocumentIdentifier,
@@ -159,8 +158,7 @@ class CompletionProtocolPart(LanguageServerProtocolPart):
             item.text_edit.insert = document.range_to_utf16(item.text_edit.insert)
             item.text_edit.replace = document.range_to_utf16(item.text_edit.replace)
 
-    @rpc_method(name="completionItem/resolve", param_type=CompletionItem)
-    @threaded
+    @rpc_method(name="completionItem/resolve", param_type=CompletionItem, threaded=True)
     def _completion_item_resolve(self, params: CompletionItem, *args: Any, **kwargs: Any) -> CompletionItem:
         results: List[CompletionItem] = []
 

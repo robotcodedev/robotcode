@@ -1,12 +1,7 @@
 from concurrent.futures import CancelledError
 from typing import TYPE_CHECKING, Any, Final, List, Optional
 
-from robotcode.core.concurrent import (
-    FutureEx,
-    check_current_thread_canceled,
-    run_in_thread,
-    threaded,
-)
+from robotcode.core.concurrent import FutureEx, check_current_thread_canceled, run_in_thread
 from robotcode.core.event import event
 from robotcode.core.lsp.types import (
     CodeLens,
@@ -46,8 +41,7 @@ class CodeLensProtocolPart(LanguageServerProtocolPart):
         if len(self.collect):
             capabilities.code_lens_provider = CodeLensOptions(resolve_provider=True if len(self.resolve) > 0 else None)
 
-    @rpc_method(name="textDocument/codeLens", param_type=CodeLensParams)
-    @threaded
+    @rpc_method(name="textDocument/codeLens", param_type=CodeLensParams, threaded=True)
     def _text_document_code_lens(
         self, text_document: TextDocumentIdentifier, *args: Any, **kwargs: Any
     ) -> Optional[List[CodeLens]]:
@@ -74,8 +68,7 @@ class CodeLensProtocolPart(LanguageServerProtocolPart):
 
         return results
 
-    @rpc_method(name="codeLens/resolve", param_type=CodeLens)
-    @threaded
+    @rpc_method(name="codeLens/resolve", param_type=CodeLens, threaded=True)
     def _code_lens_resolve(self, params: CodeLens, *args: Any, **kwargs: Any) -> CodeLens:
         results: List[CodeLens] = []
 

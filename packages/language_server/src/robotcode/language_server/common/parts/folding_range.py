@@ -1,7 +1,6 @@
 from concurrent.futures import CancelledError
 from typing import TYPE_CHECKING, Any, Final, List, Optional
 
-from robotcode.core.concurrent import threaded
 from robotcode.core.event import event
 from robotcode.core.lsp.types import (
     FoldingRange,
@@ -38,8 +37,7 @@ class FoldingRangeProtocolPart(LanguageServerProtocolPart):
         if len(self.collect):
             capabilities.folding_range_provider = True
 
-    @rpc_method(name="textDocument/foldingRange", param_type=FoldingRangeParams)
-    @threaded
+    @rpc_method(name="textDocument/foldingRange", param_type=FoldingRangeParams, threaded=True)
     def _text_document_folding_range(
         self, text_document: TextDocumentIdentifier, *args: Any, **kwargs: Any
     ) -> Optional[List[FoldingRange]]:

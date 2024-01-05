@@ -206,10 +206,7 @@ class WindowProtocolPart(LanguageServerProtocolPart):
 
         return None
 
-    @rpc_method(
-        name="window/workDoneProgress/cancel",
-        param_type=WorkDoneProgressCancelParams,
-    )
+    @rpc_method(name="window/workDoneProgress/cancel", param_type=WorkDoneProgressCancelParams)
     def _window_work_done_progress_cancel(self, token: ProgressToken, *args: Any, **kwargs: Any) -> None:
         if token in self.__progress_tokens:
             self.__progress_tokens[token] = True

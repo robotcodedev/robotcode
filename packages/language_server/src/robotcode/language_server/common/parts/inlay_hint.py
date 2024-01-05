@@ -5,7 +5,6 @@ from robotcode.core.concurrent import (
     FutureEx,
     check_current_thread_canceled,
     run_in_thread,
-    threaded,
 )
 from robotcode.core.event import event
 from robotcode.core.lsp.types import (
@@ -50,8 +49,7 @@ class InlayHintProtocolPart(LanguageServerProtocolPart):
             else:
                 capabilities.inlay_hint_provider = InlayHintOptions()
 
-    @rpc_method(name="textDocument/inlayHint", param_type=InlayHintParams)
-    @threaded
+    @rpc_method(name="textDocument/inlayHint", param_type=InlayHintParams, threaded=True)
     def _text_document_inlay_hint(
         self,
         text_document: TextDocumentIdentifier,
@@ -87,8 +85,7 @@ class InlayHintProtocolPart(LanguageServerProtocolPart):
 
         return None
 
-    @rpc_method(name="inlayHint/resolve", param_type=InlayHint)
-    @threaded
+    @rpc_method(name="inlayHint/resolve", param_type=InlayHint, threaded=True)
     def _inlay_hint_resolve(self, params: InlayHint, *args: Any, **kwargs: Any) -> Optional[InlayHint]:
         for result in self.resolve(self, params):
             if isinstance(result, BaseException):

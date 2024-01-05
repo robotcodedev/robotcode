@@ -1,7 +1,7 @@
 from concurrent.futures import CancelledError
 from typing import TYPE_CHECKING, Any, Final, List, Optional
 
-from robotcode.core.concurrent import check_current_thread_canceled, threaded
+from robotcode.core.concurrent import check_current_thread_canceled
 from robotcode.core.event import event
 from robotcode.core.lsp.types import (
     DocumentFormattingOptions,
@@ -58,8 +58,7 @@ class FormattingProtocolPart(LanguageServerProtocolPart):
         if len(self.format_range):
             capabilities.document_range_formatting_provider = DocumentRangeFormattingOptions(work_done_progress=True)
 
-    @rpc_method(name="textDocument/formatting", param_type=DocumentFormattingParams)
-    @threaded
+    @rpc_method(name="textDocument/formatting", param_type=DocumentFormattingParams, threaded=True)
     def _text_document_formatting(
         self,
         params: DocumentFormattingParams,
@@ -96,11 +95,7 @@ class FormattingProtocolPart(LanguageServerProtocolPart):
 
         return None
 
-    @rpc_method(
-        name="textDocument/rangeFormatting",
-        param_type=DocumentRangeFormattingParams,
-    )
-    @threaded
+    @rpc_method(name="textDocument/rangeFormatting", param_type=DocumentRangeFormattingParams, threaded=True)
     def _text_document_range_formatting(
         self,
         params: DocumentFormattingParams,

@@ -19,7 +19,6 @@ from urllib.parse import parse_qs, urlparse
 
 from robot.parsing.lexer.tokens import Token
 
-from robotcode.core.concurrent import threaded
 from robotcode.core.lsp.types import (
     CodeAction,
     CodeActionContext,
@@ -418,8 +417,7 @@ class RobotCodeActionDocumentationProtocolPart(RobotLanguageServerProtocolPart, 
 
         return f"{base_url}/?&{params}{f'#{target}' if target else ''}"
 
-    @rpc_method(name="robot/documentationServer/convertUri", param_type=ConvertUriParams)
-    @threaded
+    @rpc_method(name="robot/documentationServer/convertUri", param_type=ConvertUriParams, threaded=True)
     def _convert_uri(self, uri: str, *args: Any, **kwargs: Any) -> Optional[str]:
         real_uri = Uri(uri)
 

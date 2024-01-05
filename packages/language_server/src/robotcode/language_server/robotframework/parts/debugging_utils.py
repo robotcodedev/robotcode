@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING, Any, Optional
 
 from robot.parsing.model.statements import Statement
 
-from robotcode.core.concurrent import threaded
 from robotcode.core.lsp.types import Position, Range, TextDocumentIdentifier
 from robotcode.core.utils.dataclasses import CamelSnakeMixin
 from robotcode.core.utils.logging import LoggingDescriptor
@@ -41,11 +40,7 @@ class RobotDebuggingUtilsProtocolPart(RobotLanguageServerProtocolPart, ModelHelp
     def __init__(self, parent: RobotLanguageServerProtocol) -> None:
         super().__init__(parent)
 
-    @rpc_method(
-        name="robot/debugging/getEvaluatableExpression",
-        param_type=EvaluatableExpressionParams,
-    )
-    @threaded
+    @rpc_method(name="robot/debugging/getEvaluatableExpression", param_type=EvaluatableExpressionParams, threaded=True)
     @_logger.call
     async def _get_evaluatable_expression(
         self,

@@ -1,7 +1,7 @@
 from concurrent.futures import CancelledError
 from typing import TYPE_CHECKING, Any, Final, List, Optional
 
-from robotcode.core.concurrent import check_current_thread_canceled, threaded
+from robotcode.core.concurrent import check_current_thread_canceled
 from robotcode.core.event import event
 from robotcode.core.lsp.types import (
     ErrorCodes,
@@ -58,8 +58,7 @@ class RenameProtocolPart(LanguageServerProtocolPart):
     def collect_prepare(sender, document: TextDocument, position: Position) -> Optional[PrepareRenameResult]:  # NOSONAR
         ...
 
-    @rpc_method(name="textDocument/rename", param_type=RenameParams)
-    @threaded
+    @rpc_method(name="textDocument/rename", param_type=RenameParams, threaded=True)
     def _text_document_rename(
         self,
         text_document: TextDocumentIdentifier,
@@ -131,8 +130,7 @@ class RenameProtocolPart(LanguageServerProtocolPart):
 
         return result
 
-    @rpc_method(name="textDocument/prepareRename", param_type=PrepareRenameParams)
-    @threaded
+    @rpc_method(name="textDocument/prepareRename", param_type=PrepareRenameParams, threaded=True)
     def _text_document_prepare_rename(
         self,
         text_document: TextDocumentIdentifier,

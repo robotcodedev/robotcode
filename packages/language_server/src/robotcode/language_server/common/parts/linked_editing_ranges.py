@@ -1,7 +1,7 @@
 from concurrent.futures import CancelledError
 from typing import TYPE_CHECKING, Any, Final, List, Optional
 
-from robotcode.core.concurrent import check_current_thread_canceled, threaded
+from robotcode.core.concurrent import check_current_thread_canceled
 from robotcode.core.event import event
 from robotcode.core.lsp.types import (
     LinkedEditingRangeOptions,
@@ -37,11 +37,7 @@ class LinkedEditingRangeProtocolPart(LanguageServerProtocolPart):
     def collect(sender, document: TextDocument, position: Position) -> Optional[LinkedEditingRanges]:  # NOSONAR
         ...
 
-    @rpc_method(
-        name="textDocument/linkedEditingRange",
-        param_type=LinkedEditingRangeParams,
-    )
-    @threaded
+    @rpc_method(name="textDocument/linkedEditingRange", param_type=LinkedEditingRangeParams, threaded=True)
     def _text_document_linked_editing_range(
         self,
         text_document: TextDocumentIdentifier,

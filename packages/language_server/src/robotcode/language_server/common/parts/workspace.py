@@ -246,11 +246,7 @@ class Workspace(LanguageServerProtocolPart):
     def did_change_configuration(sender, settings: Dict[str, Any]) -> None:  # NOSONAR
         ...
 
-    @rpc_method(
-        name="workspace/didChangeConfiguration",
-        param_type=DidChangeConfigurationParams,
-    )
-    @threaded
+    @rpc_method(name="workspace/didChangeConfiguration", param_type=DidChangeConfigurationParams)
     def _workspace_did_change_configuration(self, settings: Dict[str, Any], *args: Any, **kwargs: Any) -> None:
         self.settings = settings
         self._settings_cache.clear()
@@ -280,8 +276,7 @@ class Workspace(LanguageServerProtocolPart):
     def did_delete_files(sender, files: List[str]) -> None:  # NOSONAR
         ...
 
-    @rpc_method(name="workspace/willCreateFiles", param_type=CreateFilesParams)
-    @threaded
+    @rpc_method(name="workspace/willCreateFiles", param_type=CreateFilesParams, threaded=True)
     def _workspace_will_create_files(
         self, files: List[FileCreate], *args: Any, **kwargs: Any
     ) -> Optional[WorkspaceEdit]:
@@ -303,27 +298,23 @@ class Workspace(LanguageServerProtocolPart):
     def _workspace_did_create_files(self, files: List[FileCreate], *args: Any, **kwargs: Any) -> None:
         self.did_create_files(self, [f.uri for f in files])
 
-    @rpc_method(name="workspace/willRenameFiles", param_type=RenameFilesParams)
-    @threaded
+    @rpc_method(name="workspace/willRenameFiles", param_type=RenameFilesParams, threaded=True)
     def _workspace_will_rename_files(self, files: List[FileRename], *args: Any, **kwargs: Any) -> None:
         self.will_rename_files(self, [(f.old_uri, f.new_uri) for f in files])
 
         # TODO: return WorkspaceEdit
 
-    @rpc_method(name="workspace/didRenameFiles", param_type=RenameFilesParams)
-    @threaded
+    @rpc_method(name="workspace/didRenameFiles", param_type=RenameFilesParams, threaded=True)
     def _workspace_did_rename_files(self, files: List[FileRename], *args: Any, **kwargs: Any) -> None:
         self.did_rename_files(self, [(f.old_uri, f.new_uri) for f in files])
 
-    @rpc_method(name="workspace/willDeleteFiles", param_type=DeleteFilesParams)
-    @threaded
+    @rpc_method(name="workspace/willDeleteFiles", param_type=DeleteFilesParams, threaded=True)
     def _workspace_will_delete_files(self, files: List[FileDelete], *args: Any, **kwargs: Any) -> None:
         self.will_delete_files(self, [f.uri for f in files])
 
         # TODO: return WorkspaceEdit
 
-    @rpc_method(name="workspace/didDeleteFiles", param_type=DeleteFilesParams)
-    @threaded
+    @rpc_method(name="workspace/didDeleteFiles", param_type=DeleteFilesParams, threaded=True)
     def _workspace_did_delete_files(self, files: List[FileDelete], *args: Any, **kwargs: Any) -> None:
         self.did_delete_files(self, [f.uri for f in files])
 
@@ -433,11 +424,7 @@ class Workspace(LanguageServerProtocolPart):
 
         return None
 
-    @rpc_method(
-        name="workspace/didChangeWorkspaceFolders",
-        param_type=DidChangeWorkspaceFoldersParams,
-    )
-    @threaded
+    @rpc_method(name="workspace/didChangeWorkspaceFolders", param_type=DidChangeWorkspaceFoldersParams)
     def _workspace_did_change_workspace_folders(
         self, event: WorkspaceFoldersChangeEvent, *args: Any, **kwargs: Any
     ) -> None:
@@ -459,15 +446,13 @@ class Workspace(LanguageServerProtocolPart):
             for a in event.added:
                 self._workspace_folders.append(WorkspaceFolder(a.name, Uri(a.uri), a.uri))
 
+        # TODO: do we need an event for this?
+
     @event
     def did_change_watched_files(sender, changes: List[FileEvent]) -> None:  # NOSONAR
         ...
 
-    @rpc_method(
-        name="workspace/didChangeWatchedFiles",
-        param_type=DidChangeWatchedFilesParams,
-    )
-    @threaded
+    @rpc_method(name="workspace/didChangeWatchedFiles", param_type=DidChangeWatchedFilesParams)
     def _workspace_did_change_watched_files(self, changes: List[FileEvent], *args: Any, **kwargs: Any) -> None:
         changes = [e for e in changes if not e.uri.endswith("/globalStorage")]
         if changes:
@@ -576,7 +561,9 @@ class Workspace(LanguageServerProtocolPart):
                     self.parent.unregister_capability(entry.id, "workspace/didChangeWatchedFiles")
                 # TODO: implement own filewatcher if not supported by language server client
 
-    def apply_edit(self, edit: WorkspaceEdit, label: Optional[str] = None) -> ApplyWorkspaceEditResult:
+    def apply_edit(
+        self, edit: WorkspaceEdit, label: Optional[str] = None, timeout: Optional[float] = None
+    ) -> ApplyWorkspaceEditResult:
         if edit.changes:
             for uri, changes in edit.changes.items():
                 if changes:
@@ -595,7 +582,7 @@ class Workspace(LanguageServerProtocolPart):
             "workspace/applyEdit",
             ApplyWorkspaceEditParams(edit, label),
             return_type=ApplyWorkspaceEditResult,
-        ).result(30)
+        ).result(timeout)
 
         assert r is not None
 
