@@ -7,7 +7,7 @@ name = "robotcode-robot"
 description = 'Support classes for RobotCode for handling Robot Framework projects.'
 readme = { "file" = "README.md", "content-type" = "text/markdown" }
 requires-python = ">=3.8"
-license = "Apache-2.0"
+license = {text = "Apache-2.0"}
 keywords = []
 authors = [{ name = "Daniel Biehl", email = "dbiehl@live.de" }]
 classifiers = [
@@ -28,7 +28,7 @@ classifiers = [
 dependencies = [
   "robotframework>=4.1.0",
   "tomli>=1.1.0; python_version < '3.11'",
-  "platformdirs<3.12.0,>=3.2.0",
+  "platformdirs>=3.2.0,<4.2.0",
   "robotcode-core==0.68.1",
 ]
 dynamic = ["version"]

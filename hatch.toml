@@ -48,9 +48,11 @@ extra-dependencies = [
   "robotframework @ git+https://github.com/robotframework/robotframework.git",
 ]
 
-[envs.py312_latest]
-python = "3.12"
-extra-dependencies = ["robotframework==6.1.1"]
+[envs.pypy]
+python = "pypy3.10"
+extra-dependencies = [
+  "robotframework==6.0",
+]
 
 [envs.rfdevel]
 python = "3.11"

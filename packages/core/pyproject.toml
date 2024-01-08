@@ -7,7 +7,7 @@ name = "robotcode-core"
 description = 'Some core classes for RobotCode'
 readme = { "file" = "README.md", "content-type" = "text/markdown" }
 requires-python = ">=3.8"
-license = "Apache-2.0"
+license = {text = "Apache-2.0"}
 keywords = []
 authors = [{ name = "Daniel Biehl", email = "dbiehl@live.de" }]
 classifiers = [
@@ -52,3 +52,46 @@ only-include = ["src"]
 [tool.hatch.envs.build]
 detached = true
 python = "38"
+
+[tool.mypy]
+python_version = "3.8"
+strict = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_return_any = true
+warn_unused_configs = true
+warn_unreachable = true
+implicit_reexport = false
+implicit_optional = true
+disallow_untyped_decorators = false
+disallow_subclassing_any = false
+exclude = [
+  '^\.mypy_cache/',
+  '^\.venv/',
+  '^\.hatch/',
+  "^build/",
+  "^dist/",
+  "^out/",
+  "^playground/",
+  "^scripts/",
+  "^bundled/libs/",
+]
+mypy_path = [
+  "typings",
+  "src",
+]
+explicit_package_bases = true
+namespace_packages = true
+# allow_untyped_calls = true
+
+
+[[tool.mypy.overrides]]
+module = [
+  "robot.*",
+  "robotremoteserver.*",
+  "debugpy.*",
+  "robotidy.*",
+  "robocop.*",
+  "pluggy",
+]
+ignore_missing_imports = true

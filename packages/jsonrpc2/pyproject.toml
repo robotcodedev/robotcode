@@ -7,7 +7,7 @@ name = "robotcode-jsonrpc2"
 description = 'JSONRPC Server for RobotCode'
 readme = { "file" = "README.md", "content-type" = "text/markdown" }
 requires-python = ">=3.8"
-license = "Apache-2.0"
+license = {text = "Apache-2.0"}
 keywords = []
 authors = [{ name = "Daniel Biehl", email = "dbiehl@live.de" }]
 classifiers = [
