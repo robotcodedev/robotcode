@@ -684,9 +684,9 @@ class ImportsManager:
 
     @language_id("robotframework")
     def resource_document_changed(self, sender: Any, document: TextDocument) -> None:
-        run_as_task(self.__resource_document_changed, document)
+        run_as_task(self._resource_document_changed, document)
 
-    def __resource_document_changed(self, document: TextDocument) -> None:
+    def _resource_document_changed(self, document: TextDocument) -> None:
         resource_changed: List[LibraryDoc] = []
 
         with self._resources_lock:

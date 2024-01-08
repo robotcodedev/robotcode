@@ -110,6 +110,7 @@ class TextDocument:
         self._orig_version = version
         self._lines: Optional[List[str]] = None
         self._cache: Dict[weakref.ref[Any], CacheEntry] = collections.defaultdict(CacheEntry)
+        self._data_lock = threading.RLock()
         self._data: weakref.WeakKeyDictionary[Any, Any] = weakref.WeakKeyDictionary()
         self.opened_in_editor = False
 
@@ -225,7 +226,8 @@ class TextDocument:
             self._invalidate_cache()
 
     def _invalidate_data(self) -> None:
-        self._data.clear()
+        with self._data_lock:
+            self._data.clear()
 
     def invalidate_data(self) -> None:
         with self._lock:
@@ -272,16 +274,19 @@ class TextDocument:
         self.__remove_cache_entry(self.__get_cache_reference(entry, add_remove=False))
 
     def set_data(self, key: Any, data: Any) -> None:
-        self._data[key] = data
+        with self._data_lock:
+            self._data[key] = data
 
     def remove_data(self, key: Any) -> None:
-        try:
-            self._data.pop(key)
-        except KeyError:
-            pass
+        with self._data_lock:
+            try:
+                self._data.pop(key)
+            except KeyError:
+                pass
 
     def get_data(self, key: Any, default: Optional[Any] = None) -> Any:
-        return self._data.get(key, default)
+        with self._data_lock:
+            return self._data.get(key, default)
 
     def _clear(self) -> None:
         self._lines = None

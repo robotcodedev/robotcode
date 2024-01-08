@@ -34,8 +34,6 @@ def test(
     def split(location: Location) -> Location:
         return Location("/".join(location.uri.split("/")[-2:]), location.range)
 
-    protocol.diagnostics.workspace_loaded_event.wait(1200)
-
     result = protocol.robot_references.collect(
         protocol.robot_references,
         test_document,

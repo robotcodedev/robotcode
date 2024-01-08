@@ -147,7 +147,7 @@ export async function activateAsync(context: vscode.ExtensionContext): Promise<v
 function displayProgress<R>(promise: Promise<R>): Thenable<R> {
   const progressOptions: vscode.ProgressOptions = {
     location: vscode.ProgressLocation.Window,
-    title: "RobotCode extension loading ...",
+    title: "$(robotcode-robot) loading ...",
   };
   return vscode.window.withProgress(progressOptions, () => promise);
 }

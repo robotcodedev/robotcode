@@ -19,7 +19,7 @@ from typing import (
 
 from robot.parsing.lexer.tokens import Token
 
-from robotcode.core.event import tasking_event
+from robotcode.core.event import event
 from robotcode.core.lsp.types import MessageType
 from robotcode.core.uri import Uri
 from robotcode.core.utils.logging import LoggingDescriptor
@@ -405,7 +405,7 @@ class DocumentsCache(RobotLanguageServerProtocolPart):
     def __get_general_namespace(self, document: TextDocument) -> Namespace:
         return self.__get_namespace_for_document_type(document, DocumentType.GENERAL)
 
-    @tasking_event
+    @event
     def namespace_invalidated(sender, namespace: Namespace) -> None:
         ...
 

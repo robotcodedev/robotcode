@@ -42,7 +42,7 @@ from robotcode.robot.utils.ast import get_node_at_position, range_from_token
 from ...common.decorators import code_action_kinds, language_id
 from ...common.text_document import TextDocument
 from ..configuration import DocumentationServerConfig
-from ..diagnostics.model_helper import ModelHelperMixin
+from ..diagnostics.model_helper import ModelHelper
 from ..diagnostics.namespace import Namespace
 from .protocol_part import RobotLanguageServerProtocolPart
 
@@ -190,7 +190,7 @@ class DualStackServer(ThreadingHTTPServer):
         return super().server_bind()
 
 
-class RobotCodeActionDocumentationProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
+class RobotCodeActionDocumentationProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
     _logger = LoggingDescriptor()
 
     def __init__(self, parent: RobotLanguageServerProtocol) -> None:

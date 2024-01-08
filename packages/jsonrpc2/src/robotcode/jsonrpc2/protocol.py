@@ -868,15 +868,12 @@ TProtocol = TypeVar("TProtocol", bound=JsonRPCProtocol)
 
 class GenericJsonRPCProtocolPart(Generic[TProtocol]):
     def __init__(self, parent: TProtocol) -> None:
-        self._parent = weakref.ref(parent)
+        self._parent = parent
         parent.registry.add_class_part_instance(self)
 
     @property
     def parent(self) -> TProtocol:
-        result = self._parent()
-        if result is None:
-            raise JsonRPCException("WeakRef is dead.")
-        return result
+        return self._parent
 
 
 class JsonRPCProtocolPart(GenericJsonRPCProtocolPart[JsonRPCProtocol]):

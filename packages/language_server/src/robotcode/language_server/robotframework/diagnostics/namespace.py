@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import ast
 import enum
 import itertools
@@ -7,9 +5,9 @@ import re
 import time
 import weakref
 from collections import OrderedDict, defaultdict
+from concurrent.futures import CancelledError
 from itertools import chain
 from pathlib import Path
-from threading import RLock
 from typing import (
     Any,
     Dict,
@@ -45,6 +43,7 @@ from robot.variables.search import (
     search_variable,
 )
 
+from robotcode.core.concurrent import RLock
 from robotcode.core.event import event
 from robotcode.core.lsp.types import (
     CodeDescription,
@@ -215,12 +214,12 @@ class BlockVariableVisitor(Visitor):
             self.current_kw_doc = None
 
     def visit_KeywordName(self, node: Statement) -> None:  # noqa: N802
-        from .model_helper import ModelHelperMixin
+        from .model_helper import ModelHelper
 
         name_token = node.get_token(Token.KEYWORD_NAME)
 
         if name_token is not None and name_token.value:
-            keyword = ModelHelperMixin.get_keyword_definition_at_token(self.library_doc, name_token)
+            keyword = ModelHelper.get_keyword_definition_at_token(self.library_doc, name_token)
             self.current_kw_doc = keyword
 
             for variable_token in filter(
@@ -533,24 +532,25 @@ class Namespace:
         self.languages = languages
         self.workspace_languages = workspace_languages
 
-        self._libraries: OrderedDict[str, LibraryEntry] = OrderedDict()
+        self._libraries: Dict[str, LibraryEntry] = OrderedDict()
         self._namespaces: Optional[Dict[KeywordMatcher, List[LibraryEntry]]] = None
         self._libraries_matchers: Optional[Dict[KeywordMatcher, LibraryEntry]] = None
-        self._resources: OrderedDict[str, ResourceEntry] = OrderedDict()
+        self._resources: Dict[str, ResourceEntry] = OrderedDict()
         self._resources_matchers: Optional[Dict[KeywordMatcher, ResourceEntry]] = None
-        self._variables: OrderedDict[str, VariablesEntry] = OrderedDict()
+        self._variables: Dict[str, VariablesEntry] = OrderedDict()
         self._initialized = False
-        self._initialize_lock = RLock()
+        self._invalid = False
+        self._initialize_lock = RLock(default_timeout=120, name="Namespace.initialize")
         self._analyzed = False
-        self._analyze_lock = RLock()
+        self._analyze_lock = RLock(default_timeout=120, name="Namespace.analyze")
         self._library_doc: Optional[LibraryDoc] = None
-        self._library_doc_lock = RLock()
+        self._library_doc_lock = RLock(default_timeout=120, name="Namespace.library_doc")
         self._imports: Optional[List[Import]] = None
-        self._import_entries: OrderedDict[Import, LibraryEntry] = OrderedDict()
+        self._import_entries: Dict[Import, LibraryEntry] = OrderedDict()
         self._own_variables: Optional[List[VariableDefinition]] = None
-        self._own_variables_lock = RLock()
+        self._own_variables_lock = RLock(default_timeout=120, name="Namespace.own_variables")
         self._global_variables: Optional[List[VariableDefinition]] = None
-        self._global_variables_lock = RLock()
+        self._global_variables_lock = RLock(default_timeout=120, name="Namespace.global_variables")
 
         self._diagnostics: List[Diagnostic] = []
         self._keyword_references: Dict[KeywordDoc, Set[Location]] = {}
@@ -559,9 +559,9 @@ class Namespace:
         self._namespace_references: Dict[LibraryEntry, Set[Location]] = {}
 
         self._imported_keywords: Optional[List[KeywordDoc]] = None
-        self._imported_keywords_lock = RLock()
+        self._imported_keywords_lock = RLock(default_timeout=120, name="Namespace.imported_keywords")
         self._keywords: Optional[List[KeywordDoc]] = None
-        self._keywords_lock = RLock()
+        self._keywords_lock = RLock(default_timeout=120, name="Namespace.keywords")
 
         # TODO: how to get the search order from model
         self.search_order: Tuple[str, ...] = ()
@@ -605,13 +605,15 @@ class Namespace:
 
     @_logger.call
     def libraries_changed(self, sender: Any, libraries: List[LibraryDoc]) -> None:
+        if not self.initialized or self.invalid:
+            return
+
         invalidate = False
 
-        with self._initialize_lock, self._library_doc_lock, self._analyze_lock:
-            for p in libraries:
-                if any(e for e in self._libraries.values() if e.library_doc == p):
-                    invalidate = True
-                    break
+        for p in libraries:
+            if any(e for e in self._libraries.values() if e.library_doc == p):
+                invalidate = True
+                break
 
         if invalidate:
             if self.document is not None:
@@ -621,13 +623,15 @@ class Namespace:
 
     @_logger.call
     def resources_changed(self, sender: Any, resources: List[LibraryDoc]) -> None:
+        if not self.initialized or self.invalid:
+            return
+
         invalidate = False
 
-        with self._initialize_lock, self._library_doc_lock, self._analyze_lock:
-            for p in resources:
-                if any(e for e in self._resources.values() if e.library_doc.source == p.source):
-                    invalidate = True
-                    break
+        for p in resources:
+            if any(e for e in self._resources.values() if e.library_doc.source == p.source):
+                invalidate = True
+                break
 
         if invalidate:
             if self.document is not None:
@@ -637,13 +641,15 @@ class Namespace:
 
     @_logger.call
     def variables_changed(self, sender: Any, variables: List[LibraryDoc]) -> None:
+        if not self.initialized or self.invalid:
+            return
+
         invalidate = False
 
-        with self._initialize_lock, self._library_doc_lock, self._analyze_lock:
-            for p in variables:
-                if any(e for e in self._variables.values() if e.library_doc.source == p.source):
-                    invalidate = True
-                    break
+        for p in variables:
+            if any(e for e in self._variables.values() if e.library_doc.source == p.source):
+                invalidate = True
+                break
 
         if invalidate:
             if self.document is not None:
@@ -656,34 +662,11 @@ class Namespace:
             return self._initialized
 
     def _invalidate(self) -> None:
-        self._initialized = False
-
-        self._namespaces = None
-        self._libraries = OrderedDict()
-        self._libraries_matchers = None
-        self._resources = OrderedDict()
-        self._resources_matchers = None
-        self._variables = OrderedDict()
-        self._imports = None
-        self._import_entries = OrderedDict()
-        self._own_variables = None
-        self._imported_keywords = None
-        self._keywords = None
-        self._library_doc = None
-        self._analyzed = False
-        self._diagnostics = []
-        self._keyword_references = {}
-        self._variable_references = {}
-        self._namespace_references = {}
-        self._finder = None
-        self._in_initialize = False
-        self._ignored_lines = None
-
-        self._reset_global_variables()
+        self._invalid = True
 
     @_logger.call
     def invalidate(self) -> None:
-        with self._initialize_lock, self._library_doc_lock, self._analyze_lock:
+        with self._initialize_lock:
             self._invalidate()
         self.has_invalidated(self)
 
@@ -691,7 +674,7 @@ class Namespace:
     def get_diagnostics(self) -> List[Diagnostic]:
         self.ensure_initialized()
 
-        self._analyze()
+        self.analyze()
 
         return self._diagnostics
 
@@ -699,7 +682,7 @@ class Namespace:
     def get_keyword_references(self) -> Dict[KeywordDoc, Set[Location]]:
         self.ensure_initialized()
 
-        self._analyze()
+        self.analyze()
 
         return self._keyword_references
 
@@ -708,7 +691,7 @@ class Namespace:
     ) -> Dict[VariableDefinition, Set[Location]]:
         self.ensure_initialized()
 
-        self._analyze()
+        self.analyze()
 
         return self._variable_references
 
@@ -717,23 +700,23 @@ class Namespace:
     ) -> Dict[VariableDefinition, Set[Range]]:
         self.ensure_initialized()
 
-        self._analyze()
+        self.analyze()
 
         return self._local_variable_assignments
 
     def get_namespace_references(self) -> Dict[LibraryEntry, Set[Location]]:
         self.ensure_initialized()
 
-        self._analyze()
+        self.analyze()
 
         return self._namespace_references
 
-    def get_import_entries(self) -> OrderedDict[Import, LibraryEntry]:
+    def get_import_entries(self) -> Dict[Import, LibraryEntry]:
         self.ensure_initialized()
 
         return self._import_entries
 
-    def get_libraries(self) -> OrderedDict[str, LibraryEntry]:
+    def get_libraries(self) -> Dict[str, LibraryEntry]:
         self.ensure_initialized()
 
         return self._libraries
@@ -750,12 +733,12 @@ class Namespace:
                 self._namespaces[KeywordMatcher(v.alias or v.name or v.import_name, is_namespace=True)].append(v)
         return self._namespaces
 
-    def get_resources(self) -> OrderedDict[str, ResourceEntry]:
+    def get_resources(self) -> Dict[str, ResourceEntry]:
         self.ensure_initialized()
 
         return self._resources
 
-    def get_imported_variables(self) -> OrderedDict[str, VariablesEntry]:
+    def get_imported_variables(self) -> Dict[str, VariablesEntry]:
         self.ensure_initialized()
 
         return self._variables
@@ -774,11 +757,11 @@ class Namespace:
             return self._library_doc
 
     class DataEntry(NamedTuple):
-        libraries: OrderedDict[str, LibraryEntry] = OrderedDict()
-        resources: OrderedDict[str, ResourceEntry] = OrderedDict()
-        variables: OrderedDict[str, VariablesEntry] = OrderedDict()
+        libraries: Dict[str, LibraryEntry] = OrderedDict()
+        resources: Dict[str, ResourceEntry] = OrderedDict()
+        variables: Dict[str, VariablesEntry] = OrderedDict()
         diagnostics: List[Diagnostic] = []
-        import_entries: OrderedDict[Import, LibraryEntry] = OrderedDict()
+        import_entries: Dict[Import, LibraryEntry] = OrderedDict()
         imported_keywords: Optional[List[KeywordDoc]] = None
 
     @_logger.call(condition=lambda self: not self._initialized)
@@ -872,6 +855,10 @@ class Namespace:
     @property
     def initialized(self) -> bool:
         return self._initialized
+
+    @property
+    def invalid(self) -> bool:
+        return self._invalid
 
     @_logger.call
     def get_imports(self) -> List[Import]:
@@ -1619,7 +1606,7 @@ class Namespace:
         )
 
     @_logger.call(condition=lambda self: not self._analyzed)
-    def _analyze(self) -> None:
+    def analyze(self) -> None:
         import time
 
         from .analyzer import Analyzer
@@ -1666,10 +1653,10 @@ class Namespace:
                                 code=err.type_name,
                             )
                 # TODO: implement CancelationToken
-                # except asyncio.CancelledError:
-                #     canceled = True
-                #     self._logger.debug("analyzing canceled")
-                #     raise
+                except CancelledError:
+                    canceled = True
+                    self._logger.debug("analyzing canceled")
+                    raise
                 finally:
                     self._analyzed = not canceled
 
@@ -1681,12 +1668,12 @@ class Namespace:
 
                 self.has_analysed(self)
 
-    def get_finder(self) -> KeywordFinder:
+    def get_finder(self) -> "KeywordFinder":
         if self._finder is None:
             self._finder = self.create_finder()
         return self._finder
 
-    def create_finder(self) -> KeywordFinder:
+    def create_finder(self) -> "KeywordFinder":
         self.ensure_initialized()
         return KeywordFinder(self, self.get_library_doc())
 

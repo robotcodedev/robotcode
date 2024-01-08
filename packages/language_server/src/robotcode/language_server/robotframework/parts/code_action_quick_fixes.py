@@ -60,7 +60,7 @@ from robotcode.robot.utils.ast import (
 from ...common.decorators import code_action_kinds, language_id
 from ...common.text_document import TextDocument
 from ..diagnostics.errors import DIAGNOSTICS_SOURCE_NAME, Error
-from ..diagnostics.model_helper import ModelHelperMixin
+from ..diagnostics.model_helper import ModelHelper
 from .code_action_helper_mixin import (
     SHOW_DOCUMENT_SELECT_AND_RENAME_COMMAND,
     CodeActionDataBase,
@@ -96,7 +96,7 @@ ${name}
 )
 
 
-class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin, CodeActionHelperMixin):
+class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, ModelHelper, CodeActionHelperMixin):
     _logger = LoggingDescriptor()
 
     def __init__(self, parent: "RobotLanguageServerProtocol") -> None:

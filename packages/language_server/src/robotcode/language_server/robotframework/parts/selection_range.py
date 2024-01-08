@@ -13,14 +13,14 @@ from robotcode.robot.utils.ast import (
 
 from ...common.decorators import language_id
 from ...common.text_document import TextDocument
-from ..diagnostics.model_helper import ModelHelperMixin
+from ..diagnostics.model_helper import ModelHelper
 from .protocol_part import RobotLanguageServerProtocolPart
 
 if TYPE_CHECKING:
     from ..protocol import RobotLanguageServerProtocol
 
 
-class RobotSelectionRangeProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
+class RobotSelectionRangeProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
     _logger = LoggingDescriptor()
 
     def __init__(self, parent: "RobotLanguageServerProtocol") -> None:

@@ -1,20 +1,107 @@
+import contextlib
 import inspect
+import threading
 from concurrent.futures import CancelledError, Future
-from threading import Event, RLock, Thread, current_thread, local
+from types import TracebackType
 from typing import (
     Any,
     Callable,
     Dict,
     Generic,
+    Iterator,
     List,
     Optional,
+    Protocol,
     Tuple,
+    Type,
     TypeVar,
     cast,
     overload,
 )
 
-from typing_extensions import ParamSpec
+from typing_extensions import ParamSpec, Self
+
+
+class Lockable(Protocol):
+    def acquire(self, blocking: bool = True, timeout: float = -1) -> bool:
+        ...
+
+    def release(self) -> None:
+        ...
+
+    def __enter__(self) -> bool:
+        ...
+
+    def __exit__(
+        self, exc_type: Optional[Type[BaseException]], exc_val: Optional[BaseException], exc_tb: Optional[TracebackType]
+    ) -> None:
+        ...
+
+    def __str__(self) -> str:
+        ...
+
+
+class LockBase:
+    def __init__(
+        self,
+        lock: Lockable,
+        default_timeout: Optional[float] = None,
+        name: Optional[str] = None,
+    ) -> None:
+        self._default_timeout = default_timeout
+        self.name = name
+        self._lock = threading.RLock()
+
+    def acquire(self, blocking: bool = True, timeout: Optional[float] = None) -> bool:
+        timeout = timeout if timeout is not None else self._default_timeout or -1
+        aquired = self._lock.acquire(blocking, timeout=timeout)
+        if not aquired and blocking and timeout > 0:
+            raise RuntimeError(
+                f"Could not acquire {self.__class__.__qualname__} {self.name+' ' if self.name else ' '}in {timeout}s."
+            )
+        return aquired
+
+    def release(self) -> None:
+        return self._lock.release()
+
+    def __enter__(self) -> bool:
+        return self.acquire()
+
+    def __exit__(
+        self, exc_type: Optional[Type[BaseException]], exc_val: Optional[BaseException], exc_tb: Optional[TracebackType]
+    ) -> None:
+        return self.release()
+
+    def __str__(self) -> str:
+        return self._lock.__str__()
+
+    @contextlib.contextmanager
+    def __call__(self, *, timeout: Optional[float] = None) -> Iterator["Self"]:
+        aquired = self.acquire(timeout=timeout)
+        try:
+            yield self
+        finally:
+            if aquired:
+                self.release()
+
+
+class RLock(LockBase):
+    def __init__(
+        self,
+        default_timeout: Optional[float] = None,
+        name: Optional[str] = None,
+    ) -> None:
+        super().__init__(threading.RLock(), default_timeout=default_timeout, name=name)
+
+
+class Lock(LockBase):
+    def __init__(
+        self,
+        default_timeout: Optional[float] = None,
+        name: Optional[str] = None,
+    ) -> None:
+        super().__init__(threading.Lock(), default_timeout=default_timeout, name=name)
+
 
 _F = TypeVar("_F", bound=Callable[..., Any])
 _TResult = TypeVar("_TResult")
@@ -25,7 +112,7 @@ __THREADED_MARKER = "__robotcode_threaded"
 class Task(Future, Generic[_TResult]):  # type: ignore[type-arg]
     def __init__(self) -> None:
         super().__init__()
-        self.cancelation_requested_event = Event()
+        self.cancelation_requested_event = threading.Event()
 
     @property
     def cancelation_requested(self) -> bool:
@@ -43,16 +130,16 @@ class Task(Future, Generic[_TResult]):  # type: ignore[type-arg]
 
 
 @overload
-def threaded(__func: _F) -> _F:
+def threaded_task(__func: _F) -> _F:
     ...
 
 
 @overload
-def threaded(*, enabled: bool = True) -> Callable[[_F], _F]:
+def threaded_task(*, enabled: bool = True) -> Callable[[_F], _F]:
     ...
 
 
-def threaded(__func: _F = None, *, enabled: bool = True) -> Callable[[_F], _F]:
+def threaded_task(__func: _F = None, *, enabled: bool = True) -> Callable[[_F], _F]:
     def decorator(func: _F) -> _F:
         setattr(func, __THREADED_MARKER, enabled)
         return func
@@ -71,7 +158,7 @@ def is_threaded_callable(callable: Callable[..., Any]) -> bool:
     )
 
 
-class _Local(local):
+class _Local(threading.local):
     def __init__(self) -> None:
         super().__init__()
         self._local_future: Optional[Task[Any]] = None
@@ -119,14 +206,14 @@ def check_current_task_canceled(at_least_seconds: Optional[float] = None, raise_
         return False
 
     if raise_exception:
-        name = current_thread().name
+        name = threading.current_thread().name
         raise CancelledError(f"Thread {name + ' ' if name else ' '}cancelled")
 
     return True
 
 
 _running_tasks_lock = RLock()
-_running_tasks: Dict[Task[Any], Thread] = {}
+_running_tasks: Dict[Task[Any], threading.Thread] = {}
 
 
 def _remove_future_from_running_tasks(future: Task[Any]) -> None:
@@ -140,7 +227,7 @@ _P = ParamSpec("_P")
 def run_as_task(callable: Callable[_P, _TResult], *args: _P.args, **kwargs: _P.kwargs) -> Task[_TResult]:
     future: Task[_TResult] = Task()
     with _running_tasks_lock:
-        thread = Thread(
+        thread = threading.Thread(
             target=_run_task_in_thread_handler,
             args=(future, callable, args, kwargs),
             name=str(callable),
@@ -155,12 +242,12 @@ def run_as_task(callable: Callable[_P, _TResult], *args: _P.args, **kwargs: _P.k
 
 
 def _cancel_all_running_tasks(timeout: Optional[float] = None) -> None:
-    threads: List[Thread] = []
+    threads: List[threading.Thread] = []
     with _running_tasks_lock:
         for future, thread in _running_tasks.items():
             if not future.cancelation_requested:
                 future.cancel()
                 threads.append(thread)
     for thread in threads:
-        if thread is not current_thread():
+        if thread is not threading.current_thread():
             thread.join(timeout=timeout)

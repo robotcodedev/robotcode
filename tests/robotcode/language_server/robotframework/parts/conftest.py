@@ -1,11 +1,9 @@
-import asyncio
 import dataclasses
 import shutil
 from pathlib import Path
-from typing import AsyncIterator, Iterator
+from typing import Iterator
 
 import pytest
-import pytest_asyncio
 
 from robotcode.core.lsp.types import (
     ClientCapabilities,
@@ -35,24 +33,17 @@ from tests.robotcode.language_server.robotframework.tools import (
 
 from .pytest_regtestex import RegTestFixtureEx
 
+root_path = Path(Path(__file__).absolute().parent, "data")
+robotcode_cache_path = root_path / ".robotcode_cache"
 
-@pytest.fixture(scope="session")
-def event_loop() -> Iterator[asyncio.AbstractEventLoop]:
-    loop = asyncio.new_event_loop()
-    yield loop
-    loop.close()
+if robotcode_cache_path.exists():
+    shutil.rmtree(robotcode_cache_path, ignore_errors=True)
 
 
-@pytest_asyncio.fixture(scope="session", ids=generate_test_id)
-async def protocol(
+@pytest.fixture(scope="module", ids=generate_test_id)
+def protocol(
     request: pytest.FixtureRequest,
-) -> AsyncIterator[RobotLanguageServerProtocol]:
-    root_path = Path(Path(__file__).absolute().parent, "data")
-    robotcode_cache_path = root_path / ".robotcode_cache"
-
-    if robotcode_cache_path.exists():
-        shutil.rmtree(robotcode_cache_path, ignore_errors=True)
-
+) -> Iterator[RobotLanguageServerProtocol]:
     server = RobotLanguageServer()
 
     client_capas = ClientCapabilities(
@@ -93,6 +84,16 @@ async def protocol(
 
     protocol._initialized(InitializedParams())
 
+    # diagnostics_end = threading.Event()
+
+    # def on_diagnostics_end(sender: Any) -> None:
+    #     diagnostics_end.set()
+
+    # protocol.diagnostics.on_workspace_diagnostics_end.add(on_diagnostics_end)
+
+    # diagnostics_end.wait(120)
+    # protocol.diagnostics.cancel_workspace_diagnostics_task(None)
+
     try:
         yield protocol
     finally:
@@ -100,19 +101,12 @@ async def protocol(
         server.close()
 
 
-@pytest.fixture(scope="module")
-async def test_document(
-    request: pytest.FixtureRequest,
-) -> AsyncIterator[TextDocument]:
+@pytest.fixture(scope="session")
+def test_document(request: pytest.FixtureRequest, protocol: RobotLanguageServerProtocol) -> Iterator[TextDocument]:
     data_path = Path(request.param)
-    data = data_path.read_text("utf-8")
 
-    document = TextDocument(
-        document_uri=data_path.absolute().as_uri(),
-        language_id="robotframework",
-        version=1,
-        text=data,
-    )
+    document = protocol.documents.get_or_open_document(data_path, "robotframework")
+
     try:
         yield document
     finally:

@@ -34,7 +34,7 @@ from robotcode.robot.utils.markdownformatter import MarkDownFormatter
 
 from ...common.decorators import language_id
 from ...common.text_document import TextDocument
-from ..diagnostics.model_helper import ModelHelperMixin
+from ..diagnostics.model_helper import ModelHelper
 from .protocol_part import RobotLanguageServerProtocolPart
 
 if TYPE_CHECKING:
@@ -43,7 +43,7 @@ if TYPE_CHECKING:
 _HoverMethod = Callable[[ast.AST, List[ast.AST], TextDocument, Position], Optional[Hover]]
 
 
-class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
+class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
     _logger = LoggingDescriptor()
 
     def __init__(self, parent: "RobotLanguageServerProtocol") -> None:

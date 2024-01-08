@@ -1,8 +1,9 @@
+import threading
 from concurrent.futures import CancelledError
 from enum import Enum
 from typing import TYPE_CHECKING, Any, Final, List, Optional, Union
 
-from robotcode.core.concurrent import Task, check_current_task_canceled, run_as_task
+from robotcode.core.concurrent import check_current_task_canceled
 from robotcode.core.event import event
 from robotcode.core.lsp.types import (
     Range,
@@ -37,11 +38,12 @@ class SemanticTokensProtocolPart(LanguageServerProtocolPart):
 
     def __init__(self, parent: "LanguageServerProtocol") -> None:
         super().__init__(parent)
-        self.refresh_task: Optional[Task[Any]] = None
-        self._refresh_timeout = 5
 
         self.token_types: List[Enum] = list(SemanticTokenTypes)
         self.token_modifiers: List[Enum] = list(SemanticTokenModifiers)
+
+        self.refresh_timer_lock = threading.RLock()
+        self.refresh_timer: Optional[threading.Timer] = None
 
     @event
     def collect_full(
@@ -191,20 +193,27 @@ class SemanticTokensProtocolPart(LanguageServerProtocolPart):
 
         return None
 
-    def refresh(self, now: bool = True) -> None:
-        if self.refresh_task is not None and not self.refresh_task.done():
-            self.refresh_task.cancel()
+    def refresh(self, now: bool = False) -> None:
+        with self.refresh_timer_lock:
+            if self.refresh_timer is not None:
+                self.refresh_timer.cancel()
+                self.refresh_timer = None
 
-        self.refresh_task = run_as_task(self._refresh, now)
+            if not now:
+                self.refresh_timer = threading.Timer(1, self._refresh)
+                self.refresh_timer.start()
+                return
 
-    def _refresh(self, now: bool = True) -> None:
+        self._refresh()
+
+    def _refresh(self) -> None:
+        with self.refresh_timer_lock:
+            self.refresh_timer = None
+
         if (
             self.parent.client_capabilities is not None
             and self.parent.client_capabilities.workspace is not None
             and self.parent.client_capabilities.workspace.semantic_tokens is not None
             and self.parent.client_capabilities.workspace.semantic_tokens.refresh_support
         ):
-            if not now:
-                check_current_task_canceled(1)
-
-            self.parent.send_request("workspace/semanticTokens/refresh").result(self._refresh_timeout)
+            self.parent.send_request("workspace/semanticTokens/refresh")

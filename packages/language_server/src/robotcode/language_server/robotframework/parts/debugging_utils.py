@@ -15,7 +15,7 @@ from robotcode.robot.utils.ast import (
     range_from_token,
 )
 
-from ..diagnostics.model_helper import ModelHelperMixin
+from ..diagnostics.model_helper import ModelHelper
 from .protocol_part import RobotLanguageServerProtocolPart
 
 if TYPE_CHECKING:
@@ -34,7 +34,7 @@ class EvaluatableExpression(CamelSnakeMixin):
     expression: Optional[str]
 
 
-class RobotDebuggingUtilsProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
+class RobotDebuggingUtilsProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
     _logger = LoggingDescriptor()
 
     def __init__(self, parent: RobotLanguageServerProtocol) -> None:

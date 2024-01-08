@@ -8,6 +8,7 @@ from itertools import dropwhile, takewhile
 from typing import (
     TYPE_CHECKING,
     Any,
+    ClassVar,
     Dict,
     FrozenSet,
     Iterator,
@@ -48,7 +49,6 @@ from robotcode.core.lsp.types import (
     SemanticTokensPartialResult,
     SemanticTokenTypes,
 )
-from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.robot.diagnostics.library_doc import (
     ALL_RUN_KEYWORDS_MATCHERS,
     BUILTIN_LIBRARY_NAME,
@@ -66,7 +66,7 @@ from robotcode.robot.utils.ast import (
 
 from ...common.decorators import language_id
 from ...common.text_document import TextDocument, range_to_utf16
-from ..diagnostics.model_helper import ModelHelperMixin
+from ..diagnostics.model_helper import ModelHelper
 from ..diagnostics.namespace import DEFAULT_BDD_PREFIXES, Namespace
 from .protocol_part import RobotLanguageServerProtocolPart
 
@@ -149,9 +149,7 @@ class SemTokenInfo:
         )
 
 
-class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
-    _logger = LoggingDescriptor()
-
+class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
     def __init__(self, parent: "RobotLanguageServerProtocol") -> None:
         super().__init__(parent)
         parent.semantic_tokens.token_types += list(RobotSemTokenTypes)
@@ -164,9 +162,9 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
         parent.documents_cache.namespace_invalidated.add(self.namespace_invalidated)
 
     @language_id("robotframework")
-    @_logger.call
     def namespace_invalidated(self, sender: Any, namespace: Namespace) -> None:
-        self.parent.semantic_tokens.refresh()
+        if namespace.document is not None and namespace.document.opened_in_editor:
+            self.parent.semantic_tokens.refresh()
 
     @classmethod
     def generate_mapping(cls) -> Dict[str, Tuple[Enum, Optional[Set[Enum]]]]:
@@ -315,21 +313,21 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
 
         return result
 
-    __mapping: Optional[Dict[str, Tuple[Enum, Optional[Set[Enum]]]]] = None
+    _mapping: ClassVar[Optional[Dict[str, Tuple[Enum, Optional[Set[Enum]]]]]] = None
 
     @classmethod
     def mapping(cls) -> Dict[str, Tuple[Enum, Optional[Set[Enum]]]]:
-        if cls.__mapping is None:
-            cls.__mapping = cls.generate_mapping()
-        return cls.__mapping
+        if cls._mapping is None:
+            cls._mapping = cls.generate_mapping()
+        return cls._mapping
 
-    ESCAPE_REGEX = re.compile(
+    ESCAPE_REGEX: ClassVar["re.Pattern[str]"] = re.compile(
         r"(?P<t>[^\\]+)|(?P<x>\\(?:[\\nrt]|x[0-9A-Fa-f]{2}|u[0-9a-fA-F]{4}|U[0-9a-fA-F]{8}))|(?P<e>\\(?:[^\\nrt\\xuU]|[\\xuU][^0-9a-fA-F]))",
         re.MULTILINE | re.DOTALL,
     )
-    BDD_TOKEN_REGEX = re.compile(r"^(Given|When|Then|And|But)\s", flags=re.IGNORECASE)
+    BDD_TOKEN_REGEX: ClassVar["re.Pattern[str]"] = re.compile(r"^(Given|When|Then|And|But)\s", flags=re.IGNORECASE)
 
-    BUILTIN_MATCHER = KeywordMatcher("BuiltIn", is_namespace=True)
+    BUILTIN_MATCHER: ClassVar[KeywordMatcher] = KeywordMatcher("BuiltIn", is_namespace=True)
 
     @classmethod
     def generate_sem_sub_tokens(
@@ -471,7 +469,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
                 (
                     lib_entry,
                     kw_namespace,
-                ) = cls.get_namespace_info_from_keyword_token(namespace, token)
+                ) = ModelHelper.get_namespace_info_from_keyword_token(namespace, token)
                 if lib_entry is not None and kw_doc:
                     if kw_doc.parent != lib_entry.library_doc:
                         kw_namespace = None
@@ -677,7 +675,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
                         token.error,
                     )
 
-            for sub_token in self._tokenize_variables(
+            for sub_token in ModelHelper.tokenize_variables(
                 token,
                 ignore_errors=True,
                 identifiers="$" if token.type == Token.KEYWORD_NAME else "$@&%",
@@ -959,7 +957,6 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
 
             yield token, node
 
-    @_logger.call
     def _collect_internal(
         self,
         document: TextDocument,
@@ -1098,7 +1095,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
                             kw: Optional[str] = None
 
                             for _, name in iter_over_keyword_names_and_owners(
-                                self.strip_bdd_prefix(namespace, kw_token).value
+                                ModelHelper.strip_bdd_prefix(namespace, kw_token).value
                             ):
                                 if name is not None:
                                     matcher = KeywordMatcher(name)
@@ -1137,7 +1134,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
             lambda t: range is None or token_in_range(t[0], range),
             dropwhile(
                 lambda t: range is not None and not token_in_range(t[0], range),
-                ((t, n) for t, n in get_tokens() if t.type not in [Token.SEPARATOR, Token.EOL, Token.EOS]),
+                [(t, n) for t, n in get_tokens() if t.type not in [Token.SEPARATOR, Token.EOL, Token.EOS]],
             ),
         ):
             for token in self.generate_sem_tokens(robot_token, robot_node, namespace, builtin_library_doc):
@@ -1178,7 +1175,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
                 data.append(
                     reduce(
                         operator.or_,
-                        (2 ** self.parent.semantic_tokens.token_modifiers.index(e) for e in token.sem_modifiers),
+                        [2 ** self.parent.semantic_tokens.token_modifiers.index(e) for e in token.sem_modifiers],
                     )
                     if token.sem_modifiers
                     else 0
@@ -1186,7 +1183,6 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
 
         return SemanticTokens(data=data)
 
-    @_logger.call
     def _collect(
         self, document: TextDocument, range: Optional[Range]
     ) -> Union[SemanticTokens, SemanticTokensPartialResult, None]:
@@ -1207,21 +1203,18 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
         return self._collect_internal(document, model, range, namespace, builtin_library_doc)
 
     @language_id("robotframework")
-    @_logger.call
     def collect_full(
         self, sender: Any, document: TextDocument, **kwargs: Any
     ) -> Union[SemanticTokens, SemanticTokensPartialResult, None]:
         return self._collect(document, None)
 
     @language_id("robotframework")
-    @_logger.call
     def collect_range(
         self, sender: Any, document: TextDocument, range: Range, **kwargs: Any
     ) -> Union[SemanticTokens, SemanticTokensPartialResult, None]:
         return self._collect(document, range)
 
     @language_id("robotframework")
-    @_logger.call
     def collect_full_delta(
         self,
         sender: Any,

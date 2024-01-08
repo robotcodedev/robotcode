@@ -25,7 +25,7 @@ from ..diagnostics.namespace import Namespace
 if TYPE_CHECKING:
     from ..protocol import RobotLanguageServerProtocol
 
-from ..diagnostics.model_helper import ModelHelperMixin
+from ..diagnostics.model_helper import ModelHelper
 from .protocol_part import RobotLanguageServerProtocolPart
 
 _HandlerMethod = Callable[
@@ -34,7 +34,7 @@ _HandlerMethod = Callable[
 ]
 
 
-class RobotInlayHintProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
+class RobotInlayHintProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
     _logger = LoggingDescriptor()
 
     def __init__(self, parent: "RobotLanguageServerProtocol") -> None:

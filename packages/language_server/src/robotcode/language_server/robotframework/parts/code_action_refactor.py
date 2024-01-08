@@ -36,7 +36,7 @@ from robotcode.robot.utils.stubs import BodyBlock
 
 from ...common.decorators import code_action_kinds, language_id
 from ...common.text_document import TextDocument
-from ..diagnostics.model_helper import ModelHelperMixin
+from ..diagnostics.model_helper import ModelHelper
 from .code_action_helper_mixin import (
     SHOW_DOCUMENT_SELECT_AND_RENAME_COMMAND,
     CodeActionDataBase,
@@ -96,7 +96,7 @@ ${spaces}END
 )
 
 
-class RobotCodeActionRefactorProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin, CodeActionHelperMixin):
+class RobotCodeActionRefactorProtocolPart(RobotLanguageServerProtocolPart, ModelHelper, CodeActionHelperMixin):
     _logger = LoggingDescriptor()
 
     def __init__(self, parent: "RobotLanguageServerProtocol") -> None:

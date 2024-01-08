@@ -111,6 +111,7 @@ class LanguageServerProtocol(JsonRPCProtocol):
 
     name: Optional[str] = None
     short_name: Optional[str] = None
+    progress_title: Optional[str] = None
     version: Optional[str] = None
 
     file_extensions: ClassVar[Set[str]] = set()

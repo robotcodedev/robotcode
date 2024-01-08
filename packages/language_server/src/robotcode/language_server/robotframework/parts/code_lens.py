@@ -11,14 +11,14 @@ from robotcode.robot.utils.visitor import Visitor
 from ...common.decorators import language_id
 from ...common.text_document import TextDocument
 from ..configuration import AnalysisConfig
-from ..diagnostics.model_helper import ModelHelperMixin
+from ..diagnostics.model_helper import ModelHelper
 from .protocol_part import RobotLanguageServerProtocolPart
 
 if TYPE_CHECKING:
     from ..protocol import RobotLanguageServerProtocol
 
 
-class RobotCodeLensProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
+class RobotCodeLensProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
     _logger = LoggingDescriptor()
 
     def __init__(self, parent: "RobotLanguageServerProtocol") -> None:
@@ -28,23 +28,36 @@ class RobotCodeLensProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixi
         parent.code_lens.resolve.add(self.resolve)
 
         self._running_task: Set[Tuple[TextDocument, KeywordDoc]] = set()
+        self._enabled: Optional[bool] = None
 
-        parent.diagnostics.on_workspace_loaded.add(self.codelens_refresh)
-        parent.robot_references.cache_cleared.add(self.codelens_refresh)
+    @property
+    def enabled(self) -> bool:
+        if self._enabled is None:
+            self._enabled = any(
+                self.parent.workspace.get_configuration(AnalysisConfig, f.uri).references_code_lens
+                for f in self.parent.workspace.workspace_folders
+            )
+            if self._enabled:
+                self.parent.diagnostics.on_workspace_diagnostics_collect.add(self.codelens_refresh)
+                self.parent.robot_references.cache_cleared.add(self.codelens_refresh)
 
-    @language_id("robotframework")
+        return self._enabled
+
     def codelens_refresh(self, sender: Any) -> None:
-        self.parent.code_lens.refresh()
+        if self.enabled:
+            self.parent.code_lens.refresh()
 
     @language_id("robotframework")
     def collect(self, sender: Any, document: TextDocument) -> Optional[List[CodeLens]]:
-        if not (self.parent.workspace.get_configuration(AnalysisConfig, document.uri)).references_code_lens:
-            return None
-
-        return _Visitor.find_from(self.parent.documents_cache.get_model(document), self, document)
+        if self.enabled and self.parent.workspace.get_configuration(AnalysisConfig, document.uri).references_code_lens:
+            return _Visitor.find_from(self.parent.documents_cache.get_model(document), self, document)
+        return None
 
     @language_id("robotframework")
     def resolve(self, sender: Any, code_lens: CodeLens) -> Optional[CodeLens]:
+        if not self.enabled:
+            return None
+
         if code_lens.data is None:
             return code_lens
 

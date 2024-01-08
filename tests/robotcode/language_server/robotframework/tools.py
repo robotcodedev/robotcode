@@ -70,6 +70,19 @@ def generate_test_id(params: Any) -> Any:
     return params
 
 
+def generate_test_id_with_path(base_path: Path, params: Any) -> Any:
+    if isinstance(params, GeneratedTestData):
+        return f"{params.line:03}-{params.character:03}-{params.name}"
+    if dataclasses.is_dataclass(params):
+        return repr(params)
+    if isinstance(params, Path):
+        if base_path:
+            return str(params.relative_to(base_path))
+        return params.name
+
+    return params
+
+
 def dump_enum(dumper: yaml.Dumper, data: Enum) -> yaml.Node:
     return dumper.represent_scalar(f"!{type(data).__qualname__}", str(data.name))
 

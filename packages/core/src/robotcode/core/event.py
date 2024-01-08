@@ -31,16 +31,16 @@ class EventResultIteratorBase(Generic[_TParams, _TResult]):
 
         self._listeners: MutableSet[weakref.ref[Any]] = set()
 
-    def add(self, callback: Callable[_TParams, _TResult]) -> None:
-        def remove_listener(ref: Any) -> None:
-            with self._lock:
-                self._listeners.remove(ref)
+    def __remove_listener(self, ref: Any) -> None:
+        with self._lock:
+            self._listeners.remove(ref)
 
+    def add(self, callback: Callable[_TParams, _TResult]) -> None:
         with self._lock:
             if inspect.ismethod(callback):
-                self._listeners.add(weakref.WeakMethod(callback, remove_listener))
+                self._listeners.add(weakref.WeakMethod(callback, self.__remove_listener))
             else:
-                self._listeners.add(weakref.ref(callback, remove_listener))
+                self._listeners.add(weakref.ref(callback, self.__remove_listener))
 
     def remove(self, callback: Callable[_TParams, _TResult]) -> None:
         with self._lock:
@@ -155,7 +155,3 @@ class event_iterator(EventDescriptorBase[_TParams, _TResult, EventIterator[_TPar
 class event(EventDescriptorBase[_TParams, _TResult, Event[_TParams, _TResult]]):  # noqa: N801
     def __init__(self, _func: Callable[_TParams, _TResult]) -> None:
         super().__init__(_func, Event[_TParams, _TResult])
-
-
-# TODO implement this as something with concurrent.futures.Future
-tasking_event = event

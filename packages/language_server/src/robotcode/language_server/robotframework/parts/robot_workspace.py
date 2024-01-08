@@ -1,9 +1,7 @@
 import time
-from concurrent.futures import CancelledError
 from threading import Event
 from typing import TYPE_CHECKING, Any, List, Optional
 
-from robotcode.core.concurrent import threaded
 from robotcode.core.lsp.types import FileChangeType, FileEvent, WatchKind
 from robotcode.core.uri import InvalidUriError, Uri
 from robotcode.core.utils.glob_path import iter_files
@@ -41,8 +39,8 @@ class RobotWorkspaceProtocolPart(RobotLanguageServerProtocolPart):
 
     def __init__(self, parent: "RobotLanguageServerProtocol") -> None:
         super().__init__(parent)
-        self.parent.documents.on_read_document_text.add(self._on_read_document_text)
-        self.parent.diagnostics.load_workspace_documents.add(self._load_workspace_documents)
+        self.parent.documents.on_read_document_text.add(self.on_read_document_text)
+        self.parent.diagnostics.load_workspace_documents.add(self.load_workspace_documents)
         self.parent.diagnostics.on_get_diagnostics_mode.add(self.on_get_diagnostics_mode)
         self.parent.diagnostics.on_get_analysis_progress_mode.add(self.on_get_analysis_progress_mode)
         self.parent.on_initialized.add(self.server_initialized)
@@ -72,7 +70,7 @@ class RobotWorkspaceProtocolPart(RobotLanguageServerProtocolPart):
                 pass
 
     @language_id("robotframework")
-    def _on_read_document_text(self, sender: Any, uri: Uri) -> Optional[str]:
+    def on_read_document_text(self, sender: Any, uri: Uri) -> Optional[str]:
         from robot.utils import FileReader
 
         with FileReader(uri.to_path()) as reader:
@@ -86,8 +84,7 @@ class RobotWorkspaceProtocolPart(RobotLanguageServerProtocolPart):
         config = self.parent.workspace.get_configuration(AnalysisConfig, uri)
         return config.progress_mode
 
-    @threaded
-    def _load_workspace_documents(self, sender: Any) -> List[WorkspaceDocumentsResult]:
+    def load_workspace_documents(self, sender: Any) -> List[WorkspaceDocumentsResult]:
         start = time.monotonic()
         try:
             result: List[WorkspaceDocumentsResult] = []
@@ -107,11 +104,7 @@ class RobotWorkspaceProtocolPart(RobotLanguageServerProtocolPart):
 
                 canceled = False
                 with self.parent.window.progress(
-                    "Load workspace",
-                    cancellable=True,
-                    current=0,
-                    max=len(files),
-                    start=False,
+                    "Load workspace", current=0, max=len(files), start=False, cancellable=False
                 ) as progress:
                     try:
                         for i, f in enumerate(files):
@@ -135,47 +128,6 @@ class RobotWorkspaceProtocolPart(RobotLanguageServerProtocolPart):
                                 self._logger.critical(lambda: f"Can't load document {f}: {ex}")
                     finally:
                         self.documents_loaded.set()
-
-                    for i, f in enumerate(files):
-                        try:
-                            if progress.is_canceled:
-                                canceled = True
-                                break
-
-                            name = f.relative_to(folder.uri.to_path())
-
-                            if config.analysis.progress_mode != AnalysisProgressMode.OFF:
-                                progress.begin()
-                                progress.report(
-                                    f"Initialize {name!s}"
-                                    if config.analysis.progress_mode == AnalysisProgressMode.DETAILED
-                                    else None,
-                                    current=i,
-                                )
-
-                            if not f.exists():
-                                continue
-
-                            document = self.parent.documents.get_or_open_document(f, "robotframework")
-
-                            if not document.opened_in_editor:
-                                self.parent.documents_cache.get_namespace(document).ensure_initialized()
-
-                                if config.analysis.diagnostic_mode == DiagnosticsMode.WORKSPACE:
-                                    result.append(
-                                        WorkspaceDocumentsResult(
-                                            str(name)
-                                            if config.analysis.progress_mode == AnalysisProgressMode.DETAILED
-                                            else None,
-                                            document,
-                                        )
-                                    )
-
-                        except (SystemExit, KeyboardInterrupt, CancelledError):
-                            raise
-                        except BaseException as e:
-                            ex = e
-                            self._logger.critical(lambda: f"Can't initialize document {f}: {ex}")
 
             if canceled:
                 return []

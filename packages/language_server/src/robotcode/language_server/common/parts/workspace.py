@@ -20,7 +20,7 @@ from typing import (
     cast,
 )
 
-from robotcode.core.concurrent import Task, threaded
+from robotcode.core.concurrent import Task
 from robotcode.core.event import event
 from robotcode.core.lsp.types import (
     ApplyWorkspaceEditParams,
@@ -293,8 +293,7 @@ class Workspace(LanguageServerProtocolPart):
 
         return WorkspaceEdit(changes=result)
 
-    @rpc_method(name="workspace/didCreateFiles", param_type=CreateFilesParams)
-    @threaded
+    @rpc_method(name="workspace/didCreateFiles", param_type=CreateFilesParams, threaded=True)
     def _workspace_did_create_files(self, files: List[FileCreate], *args: Any, **kwargs: Any) -> None:
         self.did_create_files(self, [f.uri for f in files])
 
@@ -452,7 +451,7 @@ class Workspace(LanguageServerProtocolPart):
     def did_change_watched_files(sender, changes: List[FileEvent]) -> None:
         ...
 
-    @rpc_method(name="workspace/didChangeWatchedFiles", param_type=DidChangeWatchedFilesParams)
+    @rpc_method(name="workspace/didChangeWatchedFiles", param_type=DidChangeWatchedFilesParams, threaded=True)
     def _workspace_did_change_watched_files(self, changes: List[FileEvent], *args: Any, **kwargs: Any) -> None:
         changes = [e for e in changes if not e.uri.endswith("/globalStorage")]
         if changes:

@@ -21,7 +21,7 @@ from robotcode.robot.utils.ast import (
 
 from ...common.decorators import language_id
 from ...common.text_document import TextDocument
-from ..diagnostics.model_helper import ModelHelperMixin
+from ..diagnostics.model_helper import ModelHelper
 from .protocol_part import RobotLanguageServerProtocolPart
 
 if TYPE_CHECKING:
@@ -30,7 +30,7 @@ if TYPE_CHECKING:
     )
 
 
-class RobotInlineValueProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
+class RobotInlineValueProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
     _logger = LoggingDescriptor()
 
     def __init__(self, parent: "RobotLanguageServerProtocol") -> None:

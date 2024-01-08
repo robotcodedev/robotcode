@@ -585,6 +585,7 @@ export class TestControllerManager {
     discoverArgs: string[],
     extraArgs: string[],
     stdioData?: string,
+    prune?: boolean,
     token?: vscode.CancellationToken,
   ): Promise<RobotCodeDiscoverResult> {
     if (!(await this.languageClientsManager.isValidRobotEnvironmentInFolder(folder))) {
@@ -626,11 +627,17 @@ export class TestControllerManager {
       token,
     )) as RobotCodeDiscoverResult;
 
+    const added_uris = new Set<string>();
+
     if (result?.diagnostics) {
       for (const key of Object.keys(result?.diagnostics ?? {})) {
         const diagnostics = result.diagnostics[key];
+
+        const uri = vscode.Uri.parse(key);
+        added_uris.add(uri.toString());
+
         this.diagnosticCollection.set(
-          vscode.Uri.parse(key),
+          uri,
           diagnostics.map((v) => {
             const r = new vscode.Diagnostic(toVsCodeRange(v.range), v.message, diagnosticsSeverityToVsCode(v.severity));
             r.source = v.source;
@@ -641,8 +648,18 @@ export class TestControllerManager {
       }
     }
 
+    if (prune) {
+      this.diagnosticCollection.forEach((uri, _diagnostics, collection) => {
+        if (vscode.workspace.getWorkspaceFolder(uri) === folder) {
+          if (!added_uris.has(uri.toString())) collection.delete(uri);
+        }
+      });
+    }
+
     return result;
   }
+
+  private readonly lastDiscoverResults = new WeakMap<vscode.WorkspaceFolder, RobotCodeDiscoverResult>();
 
   public async getTestsFromWorkspaceFolder(
     folder: vscode.WorkspaceFolder,
@@ -672,23 +689,27 @@ export class TestControllerManager {
         }
       }
 
-      this.diagnosticCollection.forEach((uri, _diagnostics, collection) => {
-        if (vscode.workspace.getWorkspaceFolder(uri) === folder) {
-          collection.delete(uri);
-        }
-      });
-
       const result = await this.discoverTests(
         folder,
         ["discover", "--no-diagnostics", "--read-from-stdin", "all"],
         [],
         JSON.stringify(o),
+        true,
         token,
       );
 
+      this.lastDiscoverResults.set(folder, result);
+
       return result?.items;
     } catch (e) {
-      console.error(e);
+      if (e instanceof Error) {
+        if (e.name === "AbortError") {
+          if (this.lastDiscoverResults.has(folder)) {
+            return this.lastDiscoverResults.get(folder)?.items;
+          }
+        }
+      }
+
       return [
         {
           name: folder.name,
@@ -741,12 +762,16 @@ export class TestControllerManager {
           testItem?.longname,
         ],
         JSON.stringify(o),
+        false,
         token,
       );
 
       return result?.items;
     } catch (e) {
-      console.error(e);
+      if (e instanceof Error) {
+        if (e.name === "AbortError") return undefined;
+      }
+      this.outputChannel.appendLine(`Error while getting tests from document: ${e?.toString() || "Unknown Error"}`);
 
       return undefined;
     }
@@ -822,10 +847,9 @@ export class TestControllerManager {
         if (token?.isCancellationRequested) return;
 
         if (this.robotTestItems.get(folder) === undefined || !this.robotTestItems.get(folder)?.valid) {
-          this.robotTestItems.set(
-            folder,
-            new WorkspaceFolderEntry(true, await this.getTestsFromWorkspaceFolder(folder, token)),
-          );
+          const items = await this.getTestsFromWorkspaceFolder(folder, token);
+          if (items === undefined) continue;
+          this.robotTestItems.set(folder, new WorkspaceFolderEntry(true, items));
         }
 
         const tests = this.robotTestItems.get(folder)?.items;

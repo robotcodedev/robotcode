@@ -47,7 +47,7 @@ from robotcode.robot.utils.ast import (
 from .namespace import DEFAULT_BDD_PREFIXES, Namespace
 
 
-class ModelHelperMixin:
+class ModelHelper:
     @classmethod
     def get_run_keyword_keyworddoc_and_token_from_position(
         cls,
@@ -346,7 +346,7 @@ class ModelHelperMixin:
         return (var, rest)
 
     @classmethod
-    def _tokenize_variables(
+    def tokenize_variables(
         cls,
         token: Token,
         identifiers: str = "$@&%",
@@ -360,7 +360,7 @@ class ModelHelperMixin:
                 if var is not None:
                     yield var
                 if rest is not None:
-                    yield from cls._tokenize_variables(
+                    yield from cls.tokenize_variables(
                         rest,
                         identifiers,
                         ignore_errors,
@@ -388,7 +388,7 @@ class ModelHelperMixin:
         def iter_token(
             to: Token, ignore_errors: bool = False
         ) -> Iterator[Union[Token, Tuple[Token, VariableDefinition]]]:
-            for sub_token in cls._tokenize_variables(to, ignore_errors=ignore_errors):
+            for sub_token in cls.tokenize_variables(to, ignore_errors=ignore_errors):
                 if sub_token.type == Token.VARIABLE:
                     base = sub_token.value[2:-1]
                     if base and not (base[0] == "{" and base[-1] == "}"):

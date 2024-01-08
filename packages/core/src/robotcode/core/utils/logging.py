@@ -498,8 +498,8 @@ class LoggingDescriptor:
 
                 result = None
                 try:
-                    start_time: float = 0
-                    end_time: float = 0
+                    start_time: float = 0.0
+                    end_time: float = 0.0
                     if timed:
                         start_time = time.monotonic()
 

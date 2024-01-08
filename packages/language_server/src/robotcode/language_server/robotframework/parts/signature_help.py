@@ -37,7 +37,7 @@ from ...common.decorators import (
     trigger_characters,
 )
 from ...common.text_document import TextDocument
-from ..diagnostics.model_helper import ModelHelperMixin
+from ..diagnostics.model_helper import ModelHelper
 from .protocol_part import RobotLanguageServerProtocolPart
 
 if TYPE_CHECKING:
@@ -49,7 +49,7 @@ _SignatureHelpMethod = Callable[
 ]
 
 
-class RobotSignatureHelpProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
+class RobotSignatureHelpProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
     _logger = LoggingDescriptor()
 
     def __init__(self, parent: "RobotLanguageServerProtocol") -> None:

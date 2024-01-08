@@ -192,6 +192,9 @@ class RobotLanguageServerProtocol(LanguageServerProtocol):
 
         self.workspace.did_change_configuration.add(self._on_did_change_configuration)
 
+        if self.client_info is not None and self.client_info.name == "Visual Studio Code":
+            self.progress_title = "$(robotcode-robot)"
+
         self._logger.info(lambda: f"initialized with {self.options!r}")
 
     def _on_did_change_configuration(self, sender: Any, settings: Dict[str, Any]) -> None:

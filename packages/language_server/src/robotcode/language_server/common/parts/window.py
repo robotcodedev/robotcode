@@ -245,7 +245,11 @@ class WindowProtocolPart(LanguageServerProtocolPart):
             self.send_progress(
                 token,
                 WorkDoneProgressBegin(
-                    title=title or self.parent.short_name or self.parent.name or self._default_title,
+                    title=title
+                    or self.parent.progress_title
+                    or self.parent.short_name
+                    or self.parent.name
+                    or self._default_title,
                     message=message,
                     percentage=percentage,
                     cancellable=cancellable,

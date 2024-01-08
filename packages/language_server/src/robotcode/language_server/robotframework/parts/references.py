@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Any, Callable, List, Optional, Type, cast
 
 from robot.parsing.model.statements import Statement
 
-from robotcode.core.concurrent import check_current_task_canceled, threaded
+from robotcode.core.concurrent import check_current_task_canceled
 from robotcode.core.event import event
 from robotcode.core.lsp.types import (
     FileEvent,
@@ -40,7 +40,7 @@ from robotcode.robot.utils.match import normalize
 
 from ...common.decorators import language_id
 from ...common.text_document import TextDocument
-from ..diagnostics.model_helper import ModelHelperMixin
+from ..diagnostics.model_helper import ModelHelper
 from .protocol_part import RobotLanguageServerProtocolPart
 
 if TYPE_CHECKING:
@@ -52,7 +52,7 @@ _ReferencesMethod = Callable[
 ]
 
 
-class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
+class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
     _logger = LoggingDescriptor()
 
     def __init__(self, parent: "RobotLanguageServerProtocol") -> None:
@@ -81,7 +81,6 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         self.clear_cache()
 
     @language_id("robotframework")
-    @threaded
     def document_did_change(self, sender: Any, document: TextDocument) -> None:
         self.clear_cache()
 
@@ -114,6 +113,8 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMi
         position: Position,
         context: ReferenceContext,
     ) -> Optional[List[Location]]:
+        self.parent.diagnostics.ensure_workspace_loaded()
+
         result_nodes = get_nodes_at_position(self.parent.documents_cache.get_model(document), position)
 
         if not result_nodes:

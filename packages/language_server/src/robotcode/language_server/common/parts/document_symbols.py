@@ -14,7 +14,6 @@ from typing import (
     runtime_checkable,
 )
 
-from robotcode.core.concurrent import threaded
 from robotcode.core.event import event
 from robotcode.core.lsp.types import (
     DocumentSymbol,
@@ -98,7 +97,6 @@ class DocumentSymbolsProtocolPart(LanguageServerProtocolPart):
                     capabilities.document_symbol_provider = True
 
     @rpc_method(name="textDocument/documentSymbol", param_type=DocumentSymbolParams, threaded=True)
-    @threaded
     def _text_document_symbol(
         self, text_document: TextDocumentIdentifier, *args: Any, **kwargs: Any
     ) -> Optional[Union[List[DocumentSymbol], List[SymbolInformation], None]]:

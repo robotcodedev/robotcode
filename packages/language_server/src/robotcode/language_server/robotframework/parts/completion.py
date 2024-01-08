@@ -80,7 +80,7 @@ from robotcode.robot.utils.ast import (
 from ...common.decorators import language_id, trigger_characters
 from ...common.text_document import TextDocument
 from ..configuration import CompletionConfig
-from ..diagnostics.model_helper import ModelHelperMixin
+from ..diagnostics.model_helper import ModelHelper
 from ..diagnostics.namespace import DocumentType, Namespace
 from .protocol_part import RobotLanguageServerProtocolPart
 
@@ -238,9 +238,9 @@ def get_snippets() -> Dict[str, List[str]]:
         if get_robot_version() >= (7, 0):
             __snippets.update(
                 {
-                    "VAR ${}": [r"VAR    \${${0}}"],
-                    "VAR @{}": [r"VAR    @{${0}}"],
-                    "VAR &{}": [r"VAR    &{${0}}"],
+                    "VAR ${}": [r"VAR    \${${1}}    ${0}"],
+                    "VAR @{}": [r"VAR    @{${1}}    ${0}"],
+                    "VAR &{}": [r"VAR    &{${1}}    ${0}"],
                 }
             )
     return __snippets
@@ -291,7 +291,7 @@ class CompletionItemImportData(CompletionItemData):
     id: str
 
 
-class CompletionCollector(ModelHelperMixin):
+class CompletionCollector(ModelHelper):
     _logger = LoggingDescriptor()
 
     def __init__(

@@ -42,8 +42,8 @@ class RobotRoboCopDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
 
         self.source_name = "robocop"
 
-        # if robocop_installed():
-        #     parent.diagnostics.collect.add(self.collect_diagnostics)
+        if robocop_installed():
+            parent.diagnostics.collect.add(self.collect_diagnostics)
 
     def get_config(self, document: TextDocument) -> Optional[RoboCopConfig]:
         folder = self.parent.workspace.get_workspace_folder(document.uri)
@@ -54,7 +54,7 @@ class RobotRoboCopDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
 
     @language_id("robotframework")
     @_logger.call
-    async def collect_diagnostics(self, sender: Any, document: TextDocument) -> DiagnosticsResult:
+    def collect_diagnostics(self, sender: Any, document: TextDocument) -> DiagnosticsResult:
         workspace_folder = self.parent.workspace.get_workspace_folder(document.uri)
         if workspace_folder is not None:
             extension_config = self.get_config(document)

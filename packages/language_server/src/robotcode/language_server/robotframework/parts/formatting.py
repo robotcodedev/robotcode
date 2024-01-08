@@ -18,7 +18,7 @@ from robotcode.robot.utils import get_robot_version
 from ...common.decorators import language_id
 from ...common.text_document import TextDocument
 from ..configuration import RoboTidyConfig
-from ..diagnostics.model_helper import ModelHelperMixin
+from ..diagnostics.model_helper import ModelHelper
 from .protocol_part import RobotLanguageServerProtocolPart
 
 if TYPE_CHECKING:
@@ -35,7 +35,7 @@ def robotidy_installed() -> bool:
     return True
 
 
-class RobotFormattingProtocolPart(RobotLanguageServerProtocolPart, ModelHelperMixin):
+class RobotFormattingProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
     _logger = LoggingDescriptor()
 
     def __init__(self, parent: "RobotLanguageServerProtocol") -> None:

@@ -27,6 +27,7 @@ from robot.parsing.model.statements import (
 from robot.utils.escaping import split_from_equals, unescape
 from robot.variables.search import contains_variable, search_variable
 
+from robotcode.core.concurrent import check_current_task_canceled
 from robotcode.core.lsp.types import (
     CodeDescription,
     Diagnostic,
@@ -64,7 +65,7 @@ from robotcode.robot.utils.ast import (
 from robotcode.robot.utils.visitor import Visitor
 
 from .errors import DIAGNOSTICS_SOURCE_NAME, Error
-from .model_helper import ModelHelperMixin
+from .model_helper import ModelHelper
 from .namespace import KeywordFinder, Namespace
 
 if get_robot_version() < (7, 0):
@@ -82,7 +83,7 @@ class AnalyzerResult:
     namespace_references: Dict[LibraryEntry, Set[Location]]
 
 
-class Analyzer(Visitor, ModelHelperMixin):
+class Analyzer(Visitor, ModelHelper):
     def __init__(
         self,
         model: ast.AST,
@@ -206,7 +207,14 @@ class Analyzer(Visitor, ModelHelperMixin):
             if var_def not in self._variable_references:
                 self._variable_references[var_def] = set()
 
+    def generic_visit(self, node: ast.AST) -> None:
+        check_current_task_canceled()
+
+        super().generic_visit(node)
+
     def visit(self, node: ast.AST) -> None:
+        check_current_task_canceled()
+
         self.node_stack.append(node)
         try:
             severity = (
