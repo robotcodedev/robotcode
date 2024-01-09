@@ -1,3 +1,4 @@
+import functools
 import itertools
 import time
 import uuid
@@ -75,6 +76,7 @@ class DiagnosticsData:
     version: Optional[int] = None
     future: Optional[Task[Any]] = None
     force: bool = False
+    single: bool = False
 
 
 class DiagnosticsProtocolPart(LanguageServerProtocolPart):
@@ -174,6 +176,10 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
     def on_workspace_diagnostics_end(sender: Any) -> None:
         ...
 
+    @event
+    def on_workspace_diagnostics_break(sender: Any) -> None:
+        ...
+
     def ensure_workspace_loaded(self) -> None:
         with self._workspace_load_lock:
             if not self._workspace_loaded and not self.workspace_loaded_event.is_set():
@@ -246,9 +252,12 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
                         doc
                         for doc in self.parent.documents.documents
                         if (
-                            (data := self.get_diagnostics_data(doc)).force
-                            or doc.version != data.version
-                            or data.future is None
+                            (
+                                (data := self.get_diagnostics_data(doc)).force
+                                or doc.version != data.version
+                                or data.future is None
+                            )
+                            and not data.single
                         )
                     ],
                     key=lambda d: not d.opened_in_editor,
@@ -276,6 +285,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
                         check_current_task_canceled()
 
                         if self._break_diagnostics_loop_event.is_set():
+                            self.on_workspace_diagnostics_break(self)
                             break
 
                         done_something = True
@@ -333,6 +343,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
                         check_current_task_canceled()
 
                         if self._break_diagnostics_loop_event.is_set():
+                            self.on_workspace_diagnostics_break(self)
                             break
 
                         mode = self.get_diagnostics_mode(document.uri)
@@ -393,6 +404,14 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
             finally:
                 self.on_workspace_diagnostics_end(self)
 
+    def _diagnostics_task_done(self, document: TextDocument, data: DiagnosticsData, t: Task[Any]) -> None:
+        self._logger.debug(lambda: f"diagnostics for {document} task {'canceled' if t.cancelled() else 'ended'}")
+
+        data.force = data.single
+        data.single = False
+        if data.force:
+            self.break_workspace_diagnostics_loop()
+
     def create_document_diagnostics_task(
         self,
         document: TextDocument,
@@ -400,16 +419,13 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
         debounce: bool = True,
         send_diagnostics: bool = True,
     ) -> Task[Any]:
-        def done(t: Task[Any]) -> None:
-            self._logger.debug(lambda: f"diagnostics for {document} {'canceled' if t.cancelled() else 'ended'}")
-
         data = self.get_diagnostics_data(document)
 
         if data.force or document.version != data.version or data.future is None:
             future = data.future
 
             data.force = False
-
+            data.single = single
             if future is not None and not future.done():
                 self._logger.debug(lambda: f"try to cancel diagnostics for {document}")
 
@@ -424,7 +440,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
                 send_diagnostics,
             )
 
-            data.future.add_done_callback(done)
+            data.future.add_done_callback(functools.partial(self._diagnostics_task_done, document, data))
 
         return data.future
 

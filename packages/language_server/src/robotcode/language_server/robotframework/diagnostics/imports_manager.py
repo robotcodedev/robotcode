@@ -20,6 +20,7 @@ from typing import (
     List,
     Mapping,
     Optional,
+    Set,
     Tuple,
     final,
 )
@@ -564,6 +565,11 @@ class ImportsManager:
         self._executor_lock = threading.RLock()
         self._executor: Optional[ProcessPoolExecutor] = None
 
+        self._resource_document_changed_timer_lock = threading.RLock()
+        self._resource_document_changed_timer: Optional[threading.Timer] = None
+        self._resource_document_changed_timer_interval = 1
+        self._resource_document_changed_documents: Set[TextDocument] = set()
+
     def __del__(self) -> None:
         try:
             if self._executor is not None:
@@ -684,9 +690,32 @@ class ImportsManager:
 
     @language_id("robotframework")
     def resource_document_changed(self, sender: Any, document: TextDocument) -> None:
-        run_as_task(self._resource_document_changed, document)
+        with self._resource_document_changed_timer_lock:
+            if document in self._resource_document_changed_documents:
+                return
 
-    def _resource_document_changed(self, document: TextDocument) -> None:
+            if self._resource_document_changed_timer is not None:
+                self._resource_document_changed_timer.cancel()
+                self._resource_document_changed_timer = None
+
+            self._resource_document_changed_documents.add(document)
+
+            self._resource_document_changed_timer = threading.Timer(
+                self._resource_document_changed_timer_interval, self.__resource_documents_changed
+            )
+            self._resource_document_changed_timer.start()
+
+    def __resource_documents_changed(self) -> None:
+        with self._resource_document_changed_timer_lock:
+            self._resource_document_changed_timer = None
+
+            documents = self._resource_document_changed_documents
+            self._resource_document_changed_documents = set()
+
+        for document in documents:
+            run_as_task(self.__resource_document_changed, document).result()
+
+    def __resource_document_changed(self, document: TextDocument) -> None:
         resource_changed: List[LibraryDoc] = []
 
         with self._resources_lock:

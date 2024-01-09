@@ -41,6 +41,7 @@ from robotcode.robot.utils.match import normalize
 from ...common.decorators import language_id
 from ...common.text_document import TextDocument
 from ..diagnostics.model_helper import ModelHelper
+from ..diagnostics.namespace import Namespace
 from .protocol_part import RobotLanguageServerProtocolPart
 
 if TYPE_CHECKING:
@@ -65,6 +66,8 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
 
         parent.references.collect.add(self.collect)
         parent.documents.did_change.add(self.document_did_change)
+        parent.documents_cache.namespace_invalidated(self.namespace_invalidated)
+        parent.diagnostics.on_workspace_diagnostics_break.add(self.on_workspace_diagnostics_break)
 
     @event
     def cache_cleared(sender) -> None:
@@ -82,6 +85,12 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
 
     @language_id("robotframework")
     def document_did_change(self, sender: Any, document: TextDocument) -> None:
+        self.clear_cache()
+
+    def namespace_invalidated(self, sender: Any, namespace: Namespace) -> None:
+        self.clear_cache()
+
+    def on_workspace_diagnostics_break(self, sender: Any) -> None:
         self.clear_cache()
 
     def clear_cache(self) -> None:
