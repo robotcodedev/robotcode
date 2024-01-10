@@ -5,10 +5,10 @@ import uuid
 from concurrent.futures import CancelledError
 from dataclasses import dataclass, field
 from enum import Enum
-from threading import Event, Lock, RLock, Timer
+from threading import Event, Timer
 from typing import TYPE_CHECKING, Any, Dict, Final, List, Optional, cast
 
-from robotcode.core.concurrent import Task, check_current_task_canceled, run_as_task
+from robotcode.core.concurrent import Lock, RLock, Task, check_current_task_canceled, run_as_task
 from robotcode.core.event import event
 from robotcode.core.lsp.types import (
     Diagnostic,
@@ -77,6 +77,7 @@ class DiagnosticsData:
     future: Optional[Task[Any]] = None
     force: bool = False
     single: bool = False
+    skipped_entries: bool = False
 
 
 class DiagnosticsProtocolPart(LanguageServerProtocolPart):
@@ -111,14 +112,15 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
 
         self._current_diagnostics_task_lock = RLock()
         self._current_diagnostics_task: Optional[Task[Any]] = None
+        self._diagnostics_task_timeout = 300
 
     def server_initialized(self, sender: Any) -> None:
-        self._workspace_diagnostics_task = run_as_task(self.run_workspace_diagnostics)
-
         if not self.client_supports_pull:
             self.parent.documents.did_open.add(self.update_document_diagnostics)
             self.parent.documents.did_change.add(self.update_document_diagnostics)
             self.parent.documents.did_save.add(self.update_document_diagnostics)
+
+        self._workspace_diagnostics_task = run_as_task(self.run_workspace_diagnostics)
 
     def extend_capabilities(self, capabilities: ServerCapabilities) -> None:
         if (
@@ -230,7 +232,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
 
     def break_workspace_diagnostics_loop(self) -> None:
         self._break_diagnostics_loop_event.set()
-        with self._current_diagnostics_task_lock:
+        with self._current_diagnostics_task_lock(timeout=self._diagnostics_task_timeout * 2):
             if self._current_diagnostics_task is not None and not self._current_diagnostics_task.done():
                 self._current_diagnostics_task.cancel()
 
@@ -256,6 +258,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
                                 (data := self.get_diagnostics_data(doc)).force
                                 or doc.version != data.version
                                 or data.future is None
+                                or data.skipped_entries
                             )
                             and not data.single
                         )
@@ -267,11 +270,16 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
                     check_current_task_canceled(1)
                     continue
 
-                self._logger.info(lambda: f"start collecting workspace diagnostics for {len(documents)} documents")
+                self._logger.debug(lambda: f"start collecting workspace diagnostics for {len(documents)} documents")
 
                 done_something = False
 
                 self.on_workspace_diagnostics_analyze(self)
+
+                if self._break_diagnostics_loop_event.is_set():
+                    self._logger.debug("break workspace diagnostics loop 1")
+                    self.on_workspace_diagnostics_break(self)
+                    continue
 
                 start = time.monotonic()
                 with self.parent.window.progress(
@@ -282,9 +290,11 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
                     start=False,
                 ) as progress:
                     for i, document in enumerate(documents):
+                        self._logger.debug(lambda: f"Analyze {document}")
                         check_current_task_canceled()
 
                         if self._break_diagnostics_loop_event.is_set():
+                            self._logger.debug("break workspace diagnostics loop 2")
                             self.on_workspace_diagnostics_break(self)
                             break
 
@@ -312,7 +322,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
                                     callback_filter=language_id_filter(document),
                                     return_exceptions=True,
                                 )
-                            self._current_diagnostics_task.result(300)
+                            self._current_diagnostics_task.result(self._diagnostics_task_timeout)
                         except CancelledError:
                             self._logger.debug(lambda: f"Analyzing {document} cancelled")
                         except BaseException as e:
@@ -325,24 +335,44 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
                             with self._current_diagnostics_task_lock:
                                 self._current_diagnostics_task = None
 
-                self._logger.info(
+                self._logger.debug(
                     lambda: f"Analyzing workspace for {len(documents)} " f"documents takes {time.monotonic() - start}s"
                 )
 
+                if self._break_diagnostics_loop_event.is_set():
+                    self._logger.debug("break workspace diagnostics loop 3")
+                    self.on_workspace_diagnostics_break(self)
+                    continue
+
                 self.on_workspace_diagnostics_collect(self)
+
+                documents_to_collect = [
+                    doc
+                    for doc in documents
+                    if doc.opened_in_editor or self.get_diagnostics_mode(document.uri) == DiagnosticsMode.WORKSPACE
+                ]
+
+                for document in set(documents) - set(documents_to_collect):
+                    self.get_diagnostics_data(document).force = False
+                    self.get_diagnostics_data(document).version = document.version
+                    self.get_diagnostics_data(document).skipped_entries = False
+                    self.get_diagnostics_data(document).single = False
+                    self.get_diagnostics_data(document).future = Task()
 
                 start = time.monotonic()
                 with self.parent.window.progress(
                     "Collect Diagnostics",
                     cancellable=False,
                     current=0,
-                    max=len(documents),
+                    max=len(documents_to_collect),
                     start=False,
                 ) as progress:
-                    for i, document in enumerate(documents):
+                    for i, document in enumerate(documents_to_collect):
+                        self._logger.debug(lambda: f"Collect diagnostics for {document}")
                         check_current_task_canceled()
 
                         if self._break_diagnostics_loop_event.is_set():
+                            self._logger.debug("break workspace diagnostics loop 4")
                             self.on_workspace_diagnostics_break(self)
                             break
 
@@ -350,6 +380,8 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
                         if mode == DiagnosticsMode.OFF:
                             self.get_diagnostics_data(document).force = False
                             self.get_diagnostics_data(document).version = document.version
+                            self.get_diagnostics_data(document).skipped_entries = False
+                            self.get_diagnostics_data(document).single = False
                             self.get_diagnostics_data(document).future = Task()
                             continue
 
@@ -366,7 +398,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
                             progress.report(f"Collect {name}", current=i + 1)
                         elif analysis_mode == AnalysisProgressMode.SIMPLE:
                             progress.begin()
-                            progress.report(f"Collect {i+1}/{len(documents)}", current=i + 1)
+                            progress.report(f"Collect {i+1}/{len(documents_to_collect)}", current=i + 1)
 
                         try:
                             with self._current_diagnostics_task_lock:
@@ -374,7 +406,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
                                     document,
                                     False,
                                     False,
-                                    mode == DiagnosticsMode.WORKSPACE,
+                                    mode == DiagnosticsMode.WORKSPACE or document.opened_in_editor,
                                 )
                             self._current_diagnostics_task.result(300)
                         except CancelledError:
@@ -392,8 +424,8 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
                 if not done_something:
                     check_current_task_canceled(1)
 
-                self._logger.info(
-                    lambda: f"collecting workspace diagnostics for {len(documents)} "
+                self._logger.debug(
+                    lambda: f"collecting workspace diagnostics for {len(documents_to_collect)} "
                     f"documents takes {time.monotonic() - start}s"
                 )
 
@@ -404,13 +436,9 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
             finally:
                 self.on_workspace_diagnostics_end(self)
 
-    def _diagnostics_task_done(self, document: TextDocument, data: DiagnosticsData, t: Task[Any]) -> None:
-        self._logger.debug(lambda: f"diagnostics for {document} task {'canceled' if t.cancelled() else 'ended'}")
-
-        data.force = data.single
-        data.single = False
-        if data.force:
-            self.break_workspace_diagnostics_loop()
+    def _diagnostics_task_done(self, document: TextDocument, data: DiagnosticsData, task: Task[Any]) -> None:
+        if task.done() and not task.cancelled():
+            data.single = False
 
     def create_document_diagnostics_task(
         self,
@@ -421,11 +449,12 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
     ) -> Task[Any]:
         data = self.get_diagnostics_data(document)
 
-        if data.force or document.version != data.version or data.future is None:
+        if data.force or document.version != data.version or data.future is None or data.skipped_entries:
+            data.single = single
+            data.force = False
+
             future = data.future
 
-            data.force = False
-            data.single = single
             if future is not None and not future.done():
                 self._logger.debug(lambda: f"try to cancel diagnostics for {document}")
 
@@ -441,6 +470,8 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
             )
 
             data.future.add_done_callback(functools.partial(self._diagnostics_task_done, document, data))
+        else:
+            self._logger.debug(lambda: f"skip diagnostics for {document}")
 
         return data.future
 
@@ -457,7 +488,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
         if debounce:
             check_current_task_canceled(0.75)
 
-        skipped_collectors = False
+        data.skipped_entries = False
         collected_keys: List[Any] = []
         try:
             for result in self.collect(
@@ -477,7 +508,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
 
                 data.id = str(uuid.uuid4())
                 if result.skipped:
-                    skipped_collectors = True
+                    data.skipped_entries = True
 
                 if result.diagnostics is not None:
                     for d in result.diagnostics:
@@ -488,7 +519,9 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
                             if doc is not None:
                                 r.location.range = doc.range_to_utf16(r.location.range)
 
-                data.entries[result.key] = result.diagnostics
+                if not result.skipped:
+                    data.entries[result.key] = result.diagnostics
+
                 if result.diagnostics is not None:
                     collected_keys.append(result.key)
 
@@ -503,7 +536,6 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
         finally:
             for k in set(data.entries.keys()) - set(collected_keys):
                 data.entries.pop(k)
-            data.force = skipped_collectors
 
     def publish_diagnostics(self, document: TextDocument, diagnostics: List[Diagnostic]) -> None:
         self.parent.send_notification(
@@ -515,8 +547,11 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
             ),
         )
 
+    def _update_document_diagnostics(self, document: TextDocument) -> None:
+        self.create_document_diagnostics_task(document, True).result(self._diagnostics_task_timeout)
+
     def update_document_diagnostics(self, sender: Any, document: TextDocument) -> None:
-        self.create_document_diagnostics_task(document, True)
+        run_as_task(self._update_document_diagnostics, document)
 
     @rpc_method(name="textDocument/diagnostic", param_type=DocumentDiagnosticParams, threaded=True)
     def _text_document_diagnostic(
@@ -543,7 +578,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
                     f"Document {text_document!r} not found.",
                 )
 
-            self.create_document_diagnostics_task(document, True)
+            self.create_document_diagnostics_task(document, True).result(300)
 
             return RelatedFullDocumentDiagnosticReport([])
         except CancelledError:
@@ -551,11 +586,11 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
             raise
 
     def get_diagnostics_data(self, document: TextDocument) -> DiagnosticsData:
-        data: DiagnosticsData = document.get_data(self, None)
+        data: DiagnosticsData = document.get_data(DiagnosticsProtocolPart, None)
 
         if data is None:
             data = DiagnosticsData(str(uuid.uuid4()))  # type: ignore
-            document.set_data(self, data)
+            document.set_data(DiagnosticsProtocolPart, data)
 
         return data
 

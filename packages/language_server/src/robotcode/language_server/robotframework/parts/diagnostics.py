@@ -281,13 +281,13 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
     @language_id("robotframework")
     @_logger.call
     def collect_unused_keyword_references(self, sender: Any, document: TextDocument) -> DiagnosticsResult:
-        if not self._collect_unused_references_event.is_set():
-            return DiagnosticsResult(self.collect_unused_keyword_references, None, True)
-
         config = self.parent.workspace.get_configuration(AnalysisConfig, document.uri)
 
         if not config.find_unused_references:
             return DiagnosticsResult(self.collect_unused_keyword_references, [])
+
+        if not self._collect_unused_references_event.is_set():
+            return DiagnosticsResult(self.collect_unused_keyword_references, None, True)
 
         return self._collect_unused_keyword_references(document)
 
@@ -338,13 +338,13 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
     @language_id("robotframework")
     @_logger.call
     def collect_unused_variable_references(self, sender: Any, document: TextDocument) -> DiagnosticsResult:
-        if not self._collect_unused_references_event.is_set():
-            return DiagnosticsResult(self.collect_unused_variable_references, None, True)
-
         config = self.parent.workspace.get_configuration(AnalysisConfig, document.uri)
 
         if not config.find_unused_references:
             return DiagnosticsResult(self.collect_unused_variable_references, [])
+
+        if not self._collect_unused_references_event.is_set():
+            return DiagnosticsResult(self.collect_unused_variable_references, None, True)
 
         return self._collect_unused_variable_references(document)
 

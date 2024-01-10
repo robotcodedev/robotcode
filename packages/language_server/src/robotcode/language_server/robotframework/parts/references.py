@@ -153,7 +153,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
     ) -> List[Location]:
         result: List[Location] = []
 
-        for doc in self.parent.documents.documents:
+        for doc in filter(lambda d: d.language_id == "robotframework", self.parent.documents.documents):
             check_current_task_canceled()
 
             result.extend(func(doc, *args, **kwargs))

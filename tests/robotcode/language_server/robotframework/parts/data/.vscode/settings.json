@@ -15,10 +15,11 @@
     "robotcode.languageServer.extraArgs": [
         // "--debugpy",
         // "--debugpy-wait-for-client",
-        // "--log",
-        // "--log-level", "TRACE",
+        "--log",
+        "--log-level", "INFO",
     ],
-    "robotcode.robocop.enabled": true,
+    "robotcode.robocop.enabled": false,
+    "robotcode.robocop.exclude": ["E0303"],
     // "robotcode.debug.groupOutput": false,
     // "robotcode.robot.args": [
     //     "-L", "TRACE"
@@ -27,10 +28,10 @@
     // "robotcode.debug.outputMessages": true
     //"python.analysis.diagnosticMode": "workspace"
     //"robotcode.robot.paths": ["./tests", "./tests1"]
-    "robotcode.analysis.referencesCodeLens": true,
+    "robotcode.analysis.referencesCodeLens": false,
     "robotcode.analysis.diagnosticMode": "openFilesOnly",
-    "robotcode.analysis.progressMode": "off",
-    "robotcode.analysis.findUnusedReferences": false,
+    "robotcode.analysis.progressMode": "simple",
+    "robotcode.analysis.findUnusedReferences": true,
     "robotcode.analysis.cache.saveLocation": "workspaceFolder",
     "robotcode.analysis.cache.ignoredLibraries": [
         //"robot.libraries.Remote",
@@ -38,6 +39,8 @@
         "LibraryWithErrors"
     ],
     // "robotcode.extraArgs": [
+    //     "--debugpy",
+    //     "--debugpy-wait-for-client",
     //     "--log",
     //     "--log-level",
     //     "DEBUG",
