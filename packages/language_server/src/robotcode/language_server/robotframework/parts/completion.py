@@ -1318,6 +1318,13 @@ class CompletionCollector(ModelHelper):
                 return True
 
             if any(
+                template
+                for template in testcase_node.body
+                if isinstance(template, Template) and template.get_value(Token.NAME) == "NONE"
+            ):
+                return False
+
+            if any(
                 file
                 for file in nodes_at_position
                 if isinstance(file, File)

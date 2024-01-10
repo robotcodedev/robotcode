@@ -201,11 +201,12 @@ def get_tokens_at_position(node: Statement, position: Position, include_end: boo
 
 
 def iter_nodes_at_position(node: ast.AST, position: Position, include_end: bool = False) -> Iterator[ast.AST]:
-    return (
-        n
-        for n in iter_nodes(node)
-        if position.is_in_range(range := range_from_node(n), include_end) or include_end and range.end == position
-    )
+    if position.is_in_range(range_from_node(node), include_end):
+        yield node
+
+    for n in iter_nodes(node):
+        if position.is_in_range(range := range_from_node(n), include_end) or include_end and range.end == position:
+            yield n
 
 
 def get_nodes_at_position(node: ast.AST, position: Position, include_end: bool = False) -> List[ast.AST]:
