@@ -2,14 +2,49 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
-## [unreleased]
+## [0.68.2](https://github.com/d-biehl/robotcode/compare/v0.68.1..v0.68.2) - 2024-01-10
+
+### Bug Fixes
+
+- **langserver:** Correct highlight ranges for hover ([d0e4091](https://github.com/d-biehl/robotcode/commit/d0e40919ace8ae3d08a3256695212f2723950ffd))
+- **langserver:** Goto and implementation sometimes return to many wrong results on import statements ([3798c5e](https://github.com/d-biehl/robotcode/commit/3798c5ef06ef8b02994b6dbc2ba71ea37fe1b542))
+- **langserver:** Preventing extensive calls to 'workspace/configuration' through caching ([77db502](https://github.com/d-biehl/robotcode/commit/77db5024fb7a5fa56fb895e5a3d9a371910c7bf5))
+- **langserver:** Langserver that sometimes hangs, 'loop is not running'  or 'lock take to long' messages ([37d8119](https://github.com/d-biehl/robotcode/commit/37d8119408bd31bb8e0e7381b2509a3cd47cdcbc))
+
+  Rewrote and refactor diagnostics and refreshing part to use normal threads and not async. This should also bring a better performance for bigger projects, but maybe this needs some more optimizations.
+
+- **langserver:** Speedup diagnostics, unused references and codelenses updates ([e13641e](https://github.com/d-biehl/robotcode/commit/e13641e80cd296fd1463152d70e90e234223d9da))
+- **langserver:** Stabilize workspace diagnostics ([185b551](https://github.com/d-biehl/robotcode/commit/185b551a88e3b823290da9916d1052dec04dda96))
+
 
 ### Refactor
 
 - **langserver:** Remove async from robotcode langserver analytics ([1ff1e44](https://github.com/d-biehl/robotcode/commit/1ff1e44d91f64671e108b35f8fe9f7005a72be5d))
 - **langserver:** Remove AsyncVisitor code ([c9aaa60](https://github.com/d-biehl/robotcode/commit/c9aaa6088a86c67b8dec5cb9794efe6c339cc6a5))
+- **langserver:** Implement cancelable threads and remove async code from definition, implementations, hover, folding ([2fae8e3](https://github.com/d-biehl/robotcode/commit/2fae8e35a54ef0173a7f13cd7016a724587d9958))
+- **langserver:** Remove HasExtendCapabilities protocol and implement the method directly, extend threaded decorator ([b76eb0f](https://github.com/d-biehl/robotcode/commit/b76eb0f4fcdd649232bfddcf7060423c385af92d))
+- **langserver:** Remove async code from document_highlight and document_symbols, add regression tests for document_symbols ([755daf7](https://github.com/d-biehl/robotcode/commit/755daf72d1e9ff2a98dbf73e91de28e0a4ade3ac))
+- **langserver:** Move local import to global imports in document_symbols ([135b0d4](https://github.com/d-biehl/robotcode/commit/135b0d4dc1979471a389b3efbf75278325e10139))
+- **langserver:** Remove async code from code actions ([87cb416](https://github.com/d-biehl/robotcode/commit/87cb416ae2daf390ef49ca0e8016c691faa3ecfe))
+- **langserver:** Remove async code from completions ([5009202](https://github.com/d-biehl/robotcode/commit/5009202eeef47bb67ebac0d21d58244c24f3ae35))
+- **langserver:** Some parameter renaming ([a2bddf9](https://github.com/d-biehl/robotcode/commit/a2bddf94eb69bd2e3238d13484ff3c46df0cc1e2))
+- **langserver:** Move core.utils.threading to core.concurrent and rename some function ([faee359](https://github.com/d-biehl/robotcode/commit/faee359d0c7e45b7c1d0b44b1b6c1d247fb1d6fe))
+- **langserver:** Remove async code from code lens ([204624c](https://github.com/d-biehl/robotcode/commit/204624cc3fa1662babc929b5067497e820d660d1))
+- **langserver:** Remove async code from commands ([58f185b](https://github.com/d-biehl/robotcode/commit/58f185bd0636a3c1f640372771a66e8b2a33cc06))
+- **langserver:** Remove async code from formatting and some import corrections ([2f25c78](https://github.com/d-biehl/robotcode/commit/2f25c7805fe1e81589aedf7ee3f420db36ed88c4))
+- **langserver:** Remove async code from inlay hints ([7535bfa](https://github.com/d-biehl/robotcode/commit/7535bfa68c493e566ee39ef51370e04eda809b5f))
+- **langserver:** Remove async code from inline value ([4e1b23c](https://github.com/d-biehl/robotcode/commit/4e1b23cf3fe43d7a602f0c8983879d4e25444ed0))
+- **langserver:** Remove async code from diagnostics, selection range, workspace, signature help ([0c38843](https://github.com/d-biehl/robotcode/commit/0c38843b28cfa5175d65b3eafec3c455afcc3d2f))
+- **langserver:** Remove async code from rename ([15e409d](https://github.com/d-biehl/robotcode/commit/15e409dcb67e2fbe0fc6a3479ad1a0f090b3830d))
+- **langserver:** Remove async code from semantic tokens ([3adddd1](https://github.com/d-biehl/robotcode/commit/3adddd12f75664dc98988402c2597965be7a4bf3))
+- **langserver:** Correct refresh handling and remove some unneeded code ([3f3944f](https://github.com/d-biehl/robotcode/commit/3f3944f630ac6117cdb8a16d7078f9e8ab47e6cc))
+- **langserver:** Remove threaded decorator from rpc methods and introduce a threaded property for the rpc_method decorator ([b478ae3](https://github.com/d-biehl/robotcode/commit/b478ae3da563fd9af7409c234b55efabb412f8a7))
+- **langserver:** Rename core.concurrent.FutureEx to Task ([d75eb9a](https://github.com/d-biehl/robotcode/commit/d75eb9aa7005514c01b3ced5924191ed7cd780ab))
 - **robotcode:** Move threaded decorator to the new core.utils.threading module ([96b897b](https://github.com/d-biehl/robotcode/commit/96b897b63bdc13aaa0e383a12e74399e0f8caa86))
 - Remove some unneeded code ([65e1775](https://github.com/d-biehl/robotcode/commit/65e1775fd380b7e6b67a88c327f8961929e9cafb))
+- Move most of langserver...ast_utils to robotcode.robot.utils.ast ([bc96805](https://github.com/d-biehl/robotcode/commit/bc96805dc8fb813ac4b2fe4e65da79897bf275c4))
+- Move language_server.robotframework.utils to robotcode.robot package ([6fe4dc0](https://github.com/d-biehl/robotcode/commit/6fe4dc03408a2fb9c6c21c8db8954f6cb04c825f))
+- Move some diagnostics code from langserver package to robot package ([4b3e65c](https://github.com/d-biehl/robotcode/commit/4b3e65cad56b7029860a35a4e16f496930a4b504))
 
 
 ### Testing
@@ -630,11 +665,6 @@ All notable changes to this project will be documented in this file. See [conven
 - Removed old `robotcode.debugger` script in favor of using `robotcode debug` cli command ([e69b10a](https://github.com/d-biehl/robotcode/commit/e69b10afce725c796a53b40abc866e2a7b44d655))
 
 
-### Styling
-
-- Unneeded flake8 comments removed ([ca2eb58](https://github.com/d-biehl/robotcode/commit/ca2eb58c31bf685353c2de9565237141dbad4f26))
-
-
 ## [0.47.5](https://github.com/d-biehl/robotcode/compare/v0.47.4..v0.47.5) - 2023-07-20
 
 ### Bug Fixes
@@ -649,22 +679,12 @@ All notable changes to this project will be documented in this file. See [conven
 - Don't update tests if editing `__init__.robot` files ([d6d1785](https://github.com/d-biehl/robotcode/commit/d6d178536b807bda04e790bd0a8d62f36e710042))
 
 
-### Styling
-
-- Reformat source code with new eslint settings ([8f323e1](https://github.com/d-biehl/robotcode/commit/8f323e11fe213852cb1ee47279e2d946251f297b))
-
-
 ## [0.47.3](https://github.com/d-biehl/robotcode/compare/v0.47.2..v0.47.3) - 2023-07-18
 
 ### Bug Fixes
 
 - Reset changlog ([e39b6ce](https://github.com/d-biehl/robotcode/commit/e39b6ce25183f4353830db8abc8b04ee19ffbbeb))
 - Move to commitizen to create new releases, this is only a dummy release.. ([07b6e4c](https://github.com/d-biehl/robotcode/commit/07b6e4c96b63b821368c47094c55192b03f33279))
-
-
-### Styling
-
-- Remove unneeded #type: ignores for click ([0f52d2e](https://github.com/d-biehl/robotcode/commit/0f52d2ec3b88c38126e30d203bff9eb6cef8b04b))
 
 
 ## [0.47.2](https://github.com/d-biehl/robotcode/compare/v0.47.1..v0.47.2) - 2023-07-17
