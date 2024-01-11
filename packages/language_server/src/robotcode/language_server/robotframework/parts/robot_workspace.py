@@ -132,9 +132,6 @@ class RobotWorkspaceProtocolPart(RobotLanguageServerProtocolPart):
             if canceled:
                 return []
 
-            if config.analysis.max_project_file_count > 0 and len(files) > config.analysis.max_project_file_count:
-                result = result[: config.analysis.max_project_file_count]
-
             return result
         finally:
             self._logger.info(lambda: f"Workspace loaded {len(result)} documents in {time.monotonic() - start}s")
