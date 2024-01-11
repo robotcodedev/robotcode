@@ -53,10 +53,15 @@ export async function activateAsync(context: vscode.ExtensionContext): Promise<v
       }
       const uri = vscode.Uri.parse(url);
       const external_uri = await vscode.env.asExternalUri(uri);
-      await vscode.commands.executeCommand("simpleBrowser.api.open", external_uri.toString(true), {
-        preserveFocus: true,
-        viewColumn: vscode.ViewColumn.Beside,
-      });
+
+      await vscode.commands.executeCommand(
+        "simpleBrowser.api.open",
+        external_uri.with({ path: uri.path, fragment: uri.fragment, query: uri.query }).toString(true),
+        {
+          preserveFocus: true,
+          viewColumn: vscode.ViewColumn.Beside,
+        },
+      );
     }),
     vscode.commands.registerCommand(
       "_robotcode.codeActionShowDocumentSelectAndRename",
