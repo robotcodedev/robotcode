@@ -1941,8 +1941,9 @@ def get_library_doc(
                     def _yield_type_info(info: TypeInfo) -> Iterable[TypeInfo]:
                         if not info.is_union:
                             yield info
-                        for nested in info.nested:
-                            yield from _yield_type_info(nested)
+                        if info.nested:
+                            for nested in info.nested:
+                                yield from _yield_type_info(nested)
 
                     def _get_type_docs(keywords: List[Any], custom_converters: List[Any]) -> Set[RobotTypeDoc]:
                         type_docs: Dict[RobotTypeDoc, Set[str]] = {}
