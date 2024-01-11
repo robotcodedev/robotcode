@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [0.68.3](https://github.com/d-biehl/robotcode/compare/v0.68.2..v0.68.3) - 2024-01-11
+
+### Bug Fixes
+
+- **langserver:** Completion in templated test cases should not show keywords and such things ([621c70a](https://github.com/d-biehl/robotcode/commit/621c70ab36cee35a468b7741e82778eb02355a4a))
+- **langserver:** Generate libdoc spec generation for RFW 7 ([e259c86](https://github.com/d-biehl/robotcode/commit/e259c869fecbd09379863e214bec778dd902724c))
+- **vscode:** Open a result file or view documention does not work in CodeSpaces ([0020ddf](https://github.com/d-biehl/robotcode/commit/0020ddf00c82a3ee325cb4d9a588dcdccaf32c19))
+
+
 ## [0.68.2](https://github.com/d-biehl/robotcode/compare/v0.68.1..v0.68.2) - 2024-01-10
 
 ### Bug Fixes
