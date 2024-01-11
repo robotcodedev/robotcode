@@ -358,7 +358,7 @@ class Workspace(LanguageServerProtocolPart):
                     return
 
                 result = f.result()
-                r = from_dict(result[0] if result else {}, section)
+                r = from_dict(result[0] if result and result[0] else {}, section)
                 self._settings_cache[(scope, section.__config_section__)] = r
                 result_future.set_result(r)
             except Exception as e:
