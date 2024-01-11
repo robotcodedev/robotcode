@@ -28,6 +28,7 @@ from typing import (
 from robotcode.core.concurrent import run_as_task
 from robotcode.core.event import event
 from robotcode.core.lsp.types import DocumentUri, FileChangeType, FileEvent
+from robotcode.core.text_document import TextDocument
 from robotcode.core.uri import Uri
 from robotcode.core.utils.caching import SimpleLRUCache
 from robotcode.core.utils.dataclasses import as_json, from_json
@@ -39,7 +40,6 @@ from robotcode.language_server.common.parts.workspace import (
     FileWatcherEntry,
     Workspace,
 )
-from robotcode.language_server.common.text_document import TextDocument
 from robotcode.language_server.robotframework.configuration import (
     CacheSaveLocation,
     RobotCodeConfig,

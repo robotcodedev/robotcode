@@ -49,6 +49,7 @@ from robotcode.core.lsp.types import (
     SemanticTokensPartialResult,
     SemanticTokenTypes,
 )
+from robotcode.core.text_document import TextDocument, range_to_utf16
 from robotcode.robot.diagnostics.library_doc import (
     ALL_RUN_KEYWORDS_MATCHERS,
     BUILTIN_LIBRARY_NAME,
@@ -65,7 +66,6 @@ from robotcode.robot.utils.ast import (
 )
 
 from ...common.decorators import language_id
-from ...common.text_document import TextDocument, range_to_utf16
 from ..diagnostics.model_helper import ModelHelper
 from ..diagnostics.namespace import DEFAULT_BDD_PREFIXES, Namespace
 from .protocol_part import RobotLanguageServerProtocolPart

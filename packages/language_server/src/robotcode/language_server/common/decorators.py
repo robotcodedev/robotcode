@@ -9,8 +9,7 @@ from typing import (
 )
 
 from robotcode.core.lsp.types import CodeActionKind
-
-from .text_document import TextDocument
+from robotcode.core.text_document import TextDocument
 
 _F = TypeVar("_F", bound=Callable[..., Any])
 
@@ -23,6 +22,22 @@ def language_id(id: str, *ids: str) -> Callable[[_F], _F]:
         return func
 
     return decorator
+
+
+def language_id_filter(
+    language_id_or_document: Union[str, TextDocument],
+) -> Callable[[Any], bool]:
+    def filter(c: Any) -> bool:
+        return not hasattr(c, LANGUAGE_ID_ATTR) or (
+            (
+                language_id_or_document.language_id
+                if isinstance(language_id_or_document, TextDocument)
+                else language_id_or_document
+            )
+            in getattr(c, LANGUAGE_ID_ATTR)
+        )
+
+    return filter
 
 
 TRIGGER_CHARACTERS_ATTR = "__trigger_characters__"
@@ -89,22 +104,6 @@ def code_action_kinds(
 @runtime_checkable
 class HasCodeActionKinds(Protocol):
     __code_action_kinds__: List[str]
-
-
-def language_id_filter(
-    language_id_or_document: Union[str, TextDocument],
-) -> Callable[[Any], bool]:
-    def filter(c: Any) -> bool:
-        return not hasattr(c, LANGUAGE_ID_ATTR) or (
-            (
-                language_id_or_document.language_id
-                if isinstance(language_id_or_document, TextDocument)
-                else language_id_or_document
-            )
-            in getattr(c, LANGUAGE_ID_ATTR)
-        )
-
-    return filter
 
 
 COMMAND_ID_ATTR = "__command_name__"

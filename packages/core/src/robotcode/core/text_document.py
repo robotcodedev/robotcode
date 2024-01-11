@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import collections
 import inspect
 import io
@@ -16,6 +14,8 @@ from typing import (
     Union,
     cast,
 )
+
+from typing_extensions import Self
 
 from robotcode.core.event import event
 from robotcode.core.lsp.types import DocumentUri, Position, Range
@@ -244,7 +244,7 @@ class TextDocument:
 
         return weakref.ref(entry, self.__remove_cache_entry if add_remove else None)
 
-    def get_cache_value(self, entry: Callable[[TextDocument], _T]) -> Optional[_T]:
+    def get_cache_value(self, entry: Callable[[Self], _T]) -> Optional[_T]:
         reference = self.__get_cache_reference(entry)
 
         e = self._cache.get(reference, None)
@@ -255,7 +255,7 @@ class TextDocument:
 
     def get_cache(
         self,
-        entry: Union[Callable[[TextDocument], _T], Callable[..., _T]],
+        entry: Union[Callable[[Self], _T], Callable[..., _T]],
         *args: Any,
         **kwargs: Any,
     ) -> _T:
@@ -270,7 +270,7 @@ class TextDocument:
 
             return cast(_T, e.data)
 
-    def remove_cache_entry(self, entry: Union[Callable[[TextDocument], _T], Callable[..., _T]]) -> None:
+    def remove_cache_entry(self, entry: Union[Callable[[Self], _T], Callable[..., _T]]) -> None:
         self.__remove_cache_entry(self.__get_cache_reference(entry, add_remove=False))
 
     def set_data(self, key: Any, data: Any) -> None:

@@ -10,13 +10,13 @@ from robotcode.core.lsp.types import (
     Position,
     Range,
 )
+from robotcode.core.text_document import TextDocument
 from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.core.utils.version import Version, create_version_from_str
 
 from ...common.decorators import language_id
 from ...common.parts.diagnostics import DiagnosticsResult
 from ...common.parts.workspace import WorkspaceFolder
-from ...common.text_document import TextDocument
 from ..configuration import RoboCopConfig
 from .protocol_part import RobotLanguageServerProtocolPart
 

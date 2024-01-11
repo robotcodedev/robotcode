@@ -44,6 +44,7 @@ from robotcode.core.lsp.types import (
     TextDocumentEdit,
     WorkspaceEdit,
 )
+from robotcode.core.text_document import TextDocument
 from robotcode.core.utils.dataclasses import as_dict, from_dict
 from robotcode.core.utils.inspect import iter_methods
 from robotcode.core.utils.logging import LoggingDescriptor
@@ -58,7 +59,6 @@ from robotcode.robot.utils.ast import (
 )
 
 from ...common.decorators import code_action_kinds, language_id
-from ...common.text_document import TextDocument
 from ..diagnostics.errors import DIAGNOSTICS_SOURCE_NAME, Error
 from ..diagnostics.model_helper import ModelHelper
 from .code_action_helper_mixin import (

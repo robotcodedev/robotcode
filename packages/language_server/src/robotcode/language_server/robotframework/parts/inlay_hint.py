@@ -5,6 +5,7 @@ from robot.parsing.lexer.tokens import Token
 
 from robotcode.core.concurrent import check_current_task_canceled
 from robotcode.core.lsp.types import InlayHint, InlayHintKind, Range
+from robotcode.core.text_document import TextDocument
 from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.robot.diagnostics.library_doc import (
     KeywordArgumentKind,
@@ -18,7 +19,6 @@ from robotcode.robot.utils.ast import (
 )
 
 from ...common.decorators import language_id
-from ...common.text_document import TextDocument
 from ..configuration import InlayHintsConfig
 from ..diagnostics.namespace import Namespace
 

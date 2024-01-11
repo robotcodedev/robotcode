@@ -38,11 +38,11 @@ from robotcode.core.lsp.types import (
     WatchKind,
     WillSaveTextDocumentParams,
 )
+from robotcode.core.text_document import TextDocument
 from robotcode.core.uri import Uri
 from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.jsonrpc2.protocol import JsonRPCException, rpc_method
 from robotcode.language_server.common.decorators import language_id_filter
-from robotcode.language_server.common.text_document import TextDocument
 
 from .protocol_part import LanguageServerProtocolPart
 

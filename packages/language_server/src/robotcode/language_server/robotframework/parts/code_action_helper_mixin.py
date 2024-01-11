@@ -5,10 +5,10 @@ from dataclasses import dataclass
 from typing import List, Optional, Tuple
 
 from robotcode.core.lsp.types import DocumentUri, Position, Range
+from robotcode.core.text_document import TextDocument
 from robotcode.robot.utils.ast import range_from_node
 from robotcode.robot.utils.visitor import Visitor
 
-from ...common.text_document import TextDocument
 from ..diagnostics.namespace import Namespace
 
 SHOW_DOCUMENT_SELECT_AND_RENAME_COMMAND = "_robotcode.codeActionShowDocumentSelectAndRename"

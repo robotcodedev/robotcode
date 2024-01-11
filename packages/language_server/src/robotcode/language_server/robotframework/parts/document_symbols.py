@@ -13,6 +13,7 @@ from robotcode.core.lsp.types import (
     SymbolInformation,
     SymbolKind,
 )
+from robotcode.core.text_document import TextDocument
 from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.robot.utils.ast import (
     range_from_node,
@@ -22,7 +23,6 @@ from robotcode.robot.utils.ast import (
 from robotcode.robot.utils.visitor import Visitor
 
 from ...common.decorators import language_id
-from ...common.text_document import TextDocument
 from .protocol_part import RobotLanguageServerProtocolPart
 
 if TYPE_CHECKING:

@@ -28,6 +28,7 @@ from robotcode.core.lsp.types import (
     TextDocumentEdit,
     WorkspaceEdit,
 )
+from robotcode.core.text_document import TextDocument
 from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.robot.diagnostics.entities import (
     VariableDefinition,
@@ -42,7 +43,6 @@ from robotcode.robot.utils.ast import (
 
 from ...common.decorators import language_id
 from ...common.parts.rename import CantRenameError
-from ...common.text_document import TextDocument
 from ..diagnostics.model_helper import ModelHelper
 from .protocol_part import RobotLanguageServerProtocolPart
 

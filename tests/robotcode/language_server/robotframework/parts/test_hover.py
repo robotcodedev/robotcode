@@ -5,7 +5,7 @@ import pytest
 import yaml
 
 from robotcode.core.lsp.types import Hover, MarkupContent, Position
-from robotcode.language_server.common.text_document import TextDocument
+from robotcode.core.text_document import TextDocument
 from robotcode.language_server.robotframework.protocol import (
     RobotLanguageServerProtocol,
 )

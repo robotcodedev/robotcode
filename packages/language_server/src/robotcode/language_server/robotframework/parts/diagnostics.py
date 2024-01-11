@@ -13,6 +13,7 @@ from robotcode.core.lsp.types import (
     Position,
     Range,
 )
+from robotcode.core.text_document import TextDocument
 from robotcode.core.uri import Uri
 from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.robot.diagnostics.entities import (
@@ -30,7 +31,6 @@ from robotcode.robot.utils.stubs import HasError, HasErrors, HeaderAndBodyBlock
 
 from ...common.decorators import language_id
 from ...common.parts.diagnostics import DiagnosticsResult
-from ...common.text_document import TextDocument
 from ..configuration import AnalysisConfig
 from ..diagnostics.namespace import Namespace
 

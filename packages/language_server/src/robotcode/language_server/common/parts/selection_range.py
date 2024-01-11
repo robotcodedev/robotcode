@@ -11,10 +11,10 @@ from robotcode.core.lsp.types import (
     ServerCapabilities,
     TextDocumentIdentifier,
 )
+from robotcode.core.text_document import TextDocument
 from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.jsonrpc2.protocol import rpc_method
 from robotcode.language_server.common.decorators import language_id_filter
-from robotcode.language_server.common.text_document import TextDocument
 
 if TYPE_CHECKING:
     from robotcode.language_server.common.protocol import LanguageServerProtocol

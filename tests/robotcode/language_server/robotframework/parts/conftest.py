@@ -15,9 +15,9 @@ from robotcode.core.lsp.types import (
     TextDocumentClientCapabilities,
     WorkspaceFolder,
 )
+from robotcode.core.text_document import TextDocument
 from robotcode.core.utils.dataclasses import as_dict
 from robotcode.language_server.common.parts.diagnostics import DiagnosticsMode
-from robotcode.language_server.common.text_document import TextDocument
 from robotcode.language_server.robotframework.configuration import (
     AnalysisConfig,
     RobotCodeConfig,

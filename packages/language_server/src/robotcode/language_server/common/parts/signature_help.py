@@ -13,6 +13,7 @@ from robotcode.core.lsp.types import (
     SignatureHelpParams,
     TextDocumentIdentifier,
 )
+from robotcode.core.text_document import TextDocument
 from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.jsonrpc2.protocol import rpc_method
 from robotcode.language_server.common.decorators import (
@@ -22,7 +23,6 @@ from robotcode.language_server.common.decorators import (
     HasTriggerCharacters,
     language_id_filter,
 )
-from robotcode.language_server.common.text_document import TextDocument
 
 from .protocol_part import LanguageServerProtocolPart
 

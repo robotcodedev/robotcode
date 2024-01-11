@@ -21,17 +21,17 @@ from robot.parsing.lexer.tokens import Token
 
 from robotcode.core.event import event
 from robotcode.core.lsp.types import MessageType
+from robotcode.core.text_document import TextDocument
 from robotcode.core.uri import Uri
 from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.robot.utils import get_robot_version
+from robotcode.robot.utils.stubs import Languages
 
 from ...common.decorators import language_id_filter
 from ...common.parts.workspace import WorkspaceFolder
-from ...common.text_document import TextDocument
 from ..configuration import RobotCodeConfig, RobotConfig
 from ..diagnostics.imports_manager import ImportsManager
 from ..diagnostics.namespace import DocumentType, Namespace
-from ..languages import Languages
 from .protocol_part import RobotLanguageServerProtocolPart
 
 if TYPE_CHECKING:

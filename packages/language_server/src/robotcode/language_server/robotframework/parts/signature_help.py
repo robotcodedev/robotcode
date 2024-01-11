@@ -23,6 +23,7 @@ from robotcode.core.lsp.types import (
     SignatureHelpContext,
     SignatureInformation,
 )
+from robotcode.core.text_document import TextDocument
 from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.robot.diagnostics.library_doc import KeywordDoc, LibraryDoc
 from robotcode.robot.utils.ast import (
@@ -36,7 +37,6 @@ from ...common.decorators import (
     retrigger_characters,
     trigger_characters,
 )
-from ...common.text_document import TextDocument
 from ..diagnostics.model_helper import ModelHelper
 from .protocol_part import RobotLanguageServerProtocolPart
 

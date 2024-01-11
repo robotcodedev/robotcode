@@ -59,6 +59,7 @@ from robotcode.core.lsp.types import (
     Range,
     TextEdit,
 )
+from robotcode.core.text_document import TextDocument
 from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.robot.diagnostics.entities import VariableDefinitionType
 from robotcode.robot.diagnostics.library_doc import (
@@ -78,7 +79,6 @@ from robotcode.robot.utils.ast import (
 )
 
 from ...common.decorators import language_id, trigger_characters
-from ...common.text_document import TextDocument
 from ..configuration import CompletionConfig
 from ..diagnostics.model_helper import ModelHelper
 from ..diagnostics.namespace import DocumentType, Namespace

@@ -7,11 +7,11 @@ from robot.parsing.model.blocks import If, Keyword, TestCase
 
 from robotcode.core.concurrent import check_current_task_canceled
 from robotcode.core.lsp.types import FoldingRange
+from robotcode.core.text_document import TextDocument
 from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.robot.utils.visitor import Visitor
 
 from ...common.decorators import language_id
-from ...common.text_document import TextDocument
 from .protocol_part import RobotLanguageServerProtocolPart
 
 if TYPE_CHECKING:

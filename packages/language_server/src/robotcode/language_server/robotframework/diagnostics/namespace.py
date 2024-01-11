@@ -56,6 +56,7 @@ from robotcode.core.lsp.types import (
     Position,
     Range,
 )
+from robotcode.core.text_document import TextDocument
 from robotcode.core.uri import Uri
 from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.robot.diagnostics.entities import (
@@ -91,11 +92,10 @@ from robotcode.robot.utils.ast import (
     tokenize_variables,
 )
 from robotcode.robot.utils.match import eq_namespace
+from robotcode.robot.utils.stubs import Languages
 from robotcode.robot.utils.variables import BUILTIN_VARIABLES
 from robotcode.robot.utils.visitor import Visitor
 
-from ...common.text_document import TextDocument
-from ..languages import Languages
 from .errors import DIAGNOSTICS_SOURCE_NAME, Error
 from .imports_manager import ImportsManager
 
