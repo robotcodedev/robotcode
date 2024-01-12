@@ -97,10 +97,10 @@ result:
   range:
     end:
       character: 0
-      line: 3007
+      line: 3011
     start:
       character: 0
-      line: 3006
+      line: 3010
   uri: libraries/BuiltIn.py
 - !Location
   range:

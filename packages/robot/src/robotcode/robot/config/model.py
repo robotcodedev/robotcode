@@ -514,6 +514,17 @@ class CommonOptions(BaseOptions):
         robot_priority=500,
         robot_short_name="i",
     )
+    legacy_output: Union[bool, Flag, None] = field(
+        description="""\
+            Create XML output file in format compatible with
+            Robot Framework 6.x and earlier.
+
+            corresponds to the `--legacyoutput` option of _robot_
+            """,
+        robot_name="legacyoutput",
+        robot_priority=500,
+        robot_is_flag=True,
+    )
     log: Optional[Union[str, StringExpression]] = field(
         description="""\
             HTML log file. Can be disabled by giving a special
@@ -941,7 +952,7 @@ class CommonExtraOptions(BaseOptions):
             matched using same rules as with --include.
 
             corresponds to the `-e --exclude tag *` option of _robot_
-            """
+            """,
     )
     extend_expand_keywords: Optional[List[Union[str, NamePattern, TagPattern]]] = field(
         description="""\
@@ -959,7 +970,7 @@ class CommonExtraOptions(BaseOptions):
             ```
 
             corresponds to the `--expandkeywords name:<pattern>|tag:<pattern> *` option of _robot_
-            """
+            """,
     )
     extend_flatten_keywords: Optional[
         List[
@@ -989,7 +1000,7 @@ class CommonExtraOptions(BaseOptions):
             `--removekeywords tag:<pattern>`
 
             corresponds to the `--flattenkeywords for|while|iteration|name:<pattern>|tag:<pattern> *` option of _robot_
-            """
+            """,
     )
     extend_includes: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
@@ -1009,7 +1020,7 @@ class CommonExtraOptions(BaseOptions):
             ```
 
             corresponds to the `-i --include tag *` option of _robot_
-            """
+            """,
     )
     extend_metadata: Optional[Dict[str, Union[str, StringExpression]]] = field(
         description="""\
@@ -1020,7 +1031,7 @@ class CommonExtraOptions(BaseOptions):
             as --doc. Example: --metadata Version:1.2
 
             corresponds to the `-M --metadata name:value *` option of _robot_
-            """
+            """,
     )
     extend_parse_include: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
@@ -1034,7 +1045,7 @@ class CommonExtraOptions(BaseOptions):
             all files in that directory, recursively.
 
             corresponds to the `-I --parseinclude pattern *` option of _robot_
-            """
+            """,
     )
     extend_pre_rebot_modifiers: Optional[Dict[str, List[Union[str, StringExpression]]]] = field(
         description="""\
@@ -1045,7 +1056,7 @@ class CommonExtraOptions(BaseOptions):
             arguments the same way as with --listener.
 
             corresponds to the `--prerebotmodifier modifier *` option of _robot_
-            """
+            """,
     )
     extend_python_path: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
@@ -1066,7 +1077,7 @@ class CommonExtraOptions(BaseOptions):
             ```
 
             corresponds to the `-P --pythonpath path *` option of _robot_
-            """
+            """,
     )
     extend_remove_keywords: Optional[
         List[
@@ -1121,7 +1132,7 @@ class CommonExtraOptions(BaseOptions):
             ```
 
             corresponds to the `--removekeywords all|passed|for|wuks|name:<pattern>|tag:<pattern> *` option of _robot_
-            """
+            """,
     )
     extend_set_tag: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
@@ -1130,7 +1141,7 @@ class CommonExtraOptions(BaseOptions):
             Sets given tag(s) to all executed tests.
 
             corresponds to the `-G --settag tag *` option of _robot_
-            """
+            """,
     )
     extend_suites: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
@@ -1145,7 +1156,7 @@ class CommonExtraOptions(BaseOptions):
             selects suite `Y` only if its parent is `X`.
 
             corresponds to the `-s --suite name *` option of _robot_
-            """
+            """,
     )
     extend_tag_doc: Optional[Dict[str, Union[str, StringExpression]]] = field(
         description="""\
@@ -1165,7 +1176,7 @@ class CommonExtraOptions(BaseOptions):
             ```
 
             corresponds to the `--tagdoc pattern:doc *` option of _robot_
-            """
+            """,
     )
     extend_tag_stat_combine: Optional[List[Union[str, Dict[str, str]]]] = field(
         description="""\
@@ -1185,7 +1196,7 @@ class CommonExtraOptions(BaseOptions):
             ```
 
             corresponds to the `--tagstatcombine tags:name *` option of _robot_
-            """
+            """,
     )
     extend_tag_stat_exclude: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
@@ -1196,7 +1207,7 @@ class CommonExtraOptions(BaseOptions):
             similarly as --exclude is used with --include.
 
             corresponds to the `--tagstatexclude tag *` option of _robot_
-            """
+            """,
     )
     extend_tag_stat_include: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
@@ -1207,7 +1218,7 @@ class CommonExtraOptions(BaseOptions):
             Given tag can be a pattern like with --include.
 
             corresponds to the `--tagstatinclude tag *` option of _robot_
-            """
+            """,
     )
     extend_tag_stat_link: Optional[Dict[str, Union[str, StringExpression]]] = field(
         description="""\
@@ -1227,7 +1238,7 @@ class CommonExtraOptions(BaseOptions):
             ```
 
             corresponds to the `--tagstatlink pattern:link:title *` option of _robot_
-            """
+            """,
     )
     extend_tasks: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
@@ -1236,7 +1247,7 @@ class CommonExtraOptions(BaseOptions):
             Alias to --test. Especially applicable with --rpa.
 
             corresponds to the `--task name *` option of _robot_
-            """
+            """,
     )
     extend_tests: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
@@ -1250,7 +1261,7 @@ class CommonExtraOptions(BaseOptions):
             in brackets.
 
             corresponds to the `-t --test name *` option of _robot_
-            """
+            """,
     )
 
 
@@ -1635,7 +1646,7 @@ class RobotExtraOptions(BaseOptions):
             a custom language file.
 
             corresponds to the `--language lang *` option of _rebot_
-            """
+            """,
     )
     extend_listeners: Optional[Dict[str, List[Union[str, StringExpression]]]] = field(
         description="""\
@@ -1654,7 +1665,7 @@ class RobotExtraOptions(BaseOptions):
             ```
 
             corresponds to the `--listener listener *` option of _rebot_
-            """
+            """,
     )
     extend_parsers: Optional[Dict[str, List[Union[str, StringExpression]]]] = field(
         description="""\
@@ -1664,7 +1675,7 @@ class RobotExtraOptions(BaseOptions):
             arguments the same way as with --listener.
 
             corresponds to the `--parser parser *` option of _rebot_
-            """
+            """,
     )
     extend_pre_run_modifiers: Optional[Dict[str, List[Union[str, StringExpression]]]] = field(
         description="""\
@@ -1675,7 +1686,7 @@ class RobotExtraOptions(BaseOptions):
             same way as with --listener.
 
             corresponds to the `--prerunmodifier modifier *` option of _rebot_
-            """
+            """,
     )
     extend_skip: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
@@ -1685,7 +1696,7 @@ class RobotExtraOptions(BaseOptions):
             a pattern.
 
             corresponds to the `--skip tag *` option of _rebot_
-            """
+            """,
     )
     extend_skip_on_failure: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
@@ -1695,7 +1706,7 @@ class RobotExtraOptions(BaseOptions):
             Tag can be a pattern
 
             corresponds to the `--skiponfailure tag *` option of _rebot_
-            """
+            """,
     )
     extend_variables: Optional[Dict[str, Union[str, StringExpression]]] = field(
         description="""\
@@ -1715,7 +1726,7 @@ class RobotExtraOptions(BaseOptions):
             ```
 
             corresponds to the `-v --variable name:value *` option of _rebot_
-            """
+            """,
     )
     extend_variable_files: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
@@ -1733,7 +1744,7 @@ class RobotExtraOptions(BaseOptions):
             ```
 
             corresponds to the `-V --variablefile path *` option of _rebot_
-            """
+            """,
     )
 
 
@@ -1935,7 +1946,7 @@ class LibDocExtraOptions(BaseOptions):
             and resources.
 
             corresponds to the `-P --pythonpath path *` option of _libdoc_
-            """
+            """,
     )
 
 
@@ -2048,7 +2059,7 @@ class TestDocExtraOptions(BaseOptions):
             Exclude tests by tags.
 
             corresponds to the `-e --exclude tag *` option of _testdoc_
-            """
+            """,
     )
     extend_includes: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
@@ -2057,7 +2068,7 @@ class TestDocExtraOptions(BaseOptions):
             Include tests by tags.
 
             corresponds to the `-i --include tag *` option of _testdoc_
-            """
+            """,
     )
     extend_metadata: Optional[Dict[str, Union[str, StringExpression]]] = field(
         description="""\
@@ -2066,7 +2077,7 @@ class TestDocExtraOptions(BaseOptions):
             Set/override metadata of the top level suite.
 
             corresponds to the `-M --metadata name:value *` option of _testdoc_
-            """
+            """,
     )
     extend_set_tag: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
@@ -2075,7 +2086,7 @@ class TestDocExtraOptions(BaseOptions):
             Set given tag(s) to all test cases.
 
             corresponds to the `-G --settag tag *` option of _testdoc_
-            """
+            """,
     )
     extend_suites: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
@@ -2084,7 +2095,7 @@ class TestDocExtraOptions(BaseOptions):
             Include suites by name.
 
             corresponds to the `-s --suite name *` option of _testdoc_
-            """
+            """,
     )
     extend_tests: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
@@ -2093,7 +2104,7 @@ class TestDocExtraOptions(BaseOptions):
             Include tests by name.
 
             corresponds to the `-t --test name *` option of _testdoc_
-            """
+            """,
     )
 
 

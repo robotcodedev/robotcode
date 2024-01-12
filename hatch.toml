@@ -83,7 +83,7 @@ matrix.rf.dependencies = [
   { value = "robotframework>=6.1, <7.0", if = [
     "rf61",
   ] },
-  { value = "robotframework==7.0rc1", if = [
+  { value = "robotframework>=7.0, <7.1", if = [
     "rf70",
   ] },
 ]
@@ -105,7 +105,7 @@ matrix.rf.dependencies = [
   { value = "robotframework>=6.1, <7.0", if = [
     "rf61",
   ] },
-  { value = "robotframework==7.0rc1", if = [
+  { value = "robotframework>=7.0, <7.1", if = [
     "rf70",
   ] },
 ]

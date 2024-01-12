@@ -685,6 +685,27 @@
             "null"
           ]
         },
+        "legacy-output": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "enum": [
+                "on",
+                "off",
+                "default"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Create XML output file in format compatible with\nRobot Framework 6.x and earlier.\n\ncorresponds to the `--legacyoutput` option of _robot_\n",
+          "title": "Legacy output"
+        },
         "log": {
           "anyOf": [
             {
@@ -2207,6 +2228,27 @@
             "array",
             "null"
           ]
+        },
+        "legacy-output": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "enum": [
+                "on",
+                "off",
+                "default"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Create XML output file in format compatible with\nRobot Framework 6.x and earlier.\n\ncorresponds to the `--legacyoutput` option of _robot_\n",
+          "title": "Legacy output"
         },
         "libdoc": {
           "anyOf": [
@@ -4024,6 +4066,27 @@
             "array",
             "null"
           ]
+        },
+        "legacy-output": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "enum": [
+                "on",
+                "off",
+                "default"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Create XML output file in format compatible with\nRobot Framework 6.x and earlier.\n\ncorresponds to the `--legacyoutput` option of _robot_\n",
+          "title": "Legacy output"
         },
         "libdoc": {
           "anyOf": [
