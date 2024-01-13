@@ -1,7 +1,7 @@
 {
   "name": "robotcode",
-  "displayName": "Robot Code",
-  "description": "RobotFramework support for Visual Studio Code",
+  "displayName": "Robot Code - Robot Framework Support",
+  "description": "Robot Framework IntelliSense, linting, test execution and debugging, code formatting, refactoring, and many more",
   "icon": "images/icon.png",
   "publisher": "d-biehl",
   "version": "0.68.3",
