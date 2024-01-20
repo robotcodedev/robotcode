@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [0.68.4](https://github.com/d-biehl/robotcode/compare/v0.68.3..v0.68.4) - 2024-01-20
+
+### Bug Fixes
+
+- **langserver:** Start langserver should not raise a TypeError if startet with no config ([5eca367](https://github.com/d-biehl/robotcode/commit/5eca367f87d27fd0bfe99023f21db7e137af2c37))
+
+
+### Documentation
+
+- Change description of package ([f6a4f79](https://github.com/d-biehl/robotcode/commit/f6a4f79df13b72b36cb5958f467ac3c2d75eae66))
+- Create CONTRIBUTING.md and review CODE_OF_CONDUCT.md ([a107b95](https://github.com/d-biehl/robotcode/commit/a107b95b3fc40b76abfe74972b5f0e254cbfabe4))
+
+
+### Refactor
+
+- **langserver:** Remove unused maxProjectFileCount setting ([4f4ad31](https://github.com/d-biehl/robotcode/commit/4f4ad318d67fe784db13fece70fbd79e3ccedb00))
+- **langserver:** Move TextDocument from langserver to core package, some other simple refactorings ([d60977b](https://github.com/d-biehl/robotcode/commit/d60977bb9ccab4b09a6e69b2ba71dd7a2ae5d2f1))
+- Move diagnostics helper code to robotcode.robot package ([c94edb3](https://github.com/d-biehl/robotcode/commit/c94edb306132daddccd6fd9e64343914aafa868a))
+
+
 ## [0.68.3](https://github.com/d-biehl/robotcode/compare/v0.68.2..v0.68.3) - 2024-01-11
 
 ### Bug Fixes

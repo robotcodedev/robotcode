@@ -5,6 +5,18 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Debug Node",
+            "type": "robotcode",
+            "request": "launch",
+            "presentation": {
+                "hidden": true
+            },
+            "purpose": "test-profile",
+            "env": {
+                "ROBOT_FRAMEWORK_BROWSER_NODE_DEBUG_OPTIONS": "--inspect"
+            },
+        },
+        {
             "name": "RobotCode: Run Current",
             "type": "robotcode",
             "request": "launch",
