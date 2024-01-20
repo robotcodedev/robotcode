@@ -96,9 +96,11 @@ def language_server(
             pipe_name=pipe_name,
             profile=profile,
         )
-    except SystemExit:
+    except SystemExit as e:
+        app.verbose(f"Server exited with code {e.code}", err=e.code != 0)
         raise
     except KeyboardInterrupt:
         app.keyboard_interrupt()
     except Exception as e:
+        app.verbose(f"Unknown error: {e}", err=True)
         raise UnknownError(str(e)) from e

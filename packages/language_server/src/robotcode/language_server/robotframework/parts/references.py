@@ -6,6 +6,7 @@ from robot.parsing.model.statements import Statement
 
 from robotcode.core.concurrent import check_current_task_canceled
 from robotcode.core.event import event
+from robotcode.core.language import language_id
 from robotcode.core.lsp.types import (
     FileEvent,
     Location,
@@ -30,6 +31,8 @@ from robotcode.robot.diagnostics.library_doc import (
     KeywordDoc,
     LibraryDoc,
 )
+from robotcode.robot.diagnostics.model_helper import ModelHelper
+from robotcode.robot.diagnostics.namespace import Namespace
 from robotcode.robot.utils import get_robot_version
 from robotcode.robot.utils.ast import (
     get_nodes_at_position,
@@ -39,9 +42,6 @@ from robotcode.robot.utils.ast import (
 )
 from robotcode.robot.utils.match import normalize
 
-from ...common.decorators import language_id
-from ..diagnostics.model_helper import ModelHelper
-from ..diagnostics.namespace import Namespace
 from .protocol_part import RobotLanguageServerProtocolPart
 
 if TYPE_CHECKING:
@@ -66,7 +66,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
 
         parent.references.collect.add(self.collect)
         parent.documents.did_change.add(self.document_did_change)
-        parent.documents_cache.namespace_invalidated(self.namespace_invalidated)
+
         parent.diagnostics.on_workspace_diagnostics_break.add(self.on_workspace_diagnostics_break)
 
     @event
@@ -79,6 +79,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
             f"**/*.{{{ROBOT_FILE_EXTENSION[1:]},{RESOURCE_FILE_EXTENSION[1:]}}}",
             WatchKind.CREATE | WatchKind.DELETE,
         )
+        self.parent.documents_cache.namespace_invalidated(self.namespace_invalidated)
 
     def do_on_file_changed(self, sender: Any, files: List[FileEvent]) -> None:
         self.clear_cache()
@@ -87,6 +88,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
     def document_did_change(self, sender: Any, document: TextDocument) -> None:
         self.clear_cache()
 
+    @language_id("robotframework")
     def namespace_invalidated(self, sender: Any, namespace: Namespace) -> None:
         self.clear_cache()
 

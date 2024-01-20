@@ -233,7 +233,7 @@ extra_cmd_options = generate(output, ROBOT_USAGE, RobotSettings._cli_opts, None,
 output.append("")
 output.append("")
 output.append("@dataclass")
-output.append("class CommonExtraOptions(BaseOptions):")
+output.append("class CommonExtendOptions(BaseOptions):")
 output.append('    """Extra common options for all _robot_ commands."""')
 output.append("")
 generate(output, ROBOT_USAGE, RobotSettings._cli_opts, extra_cmd_options, extra=True)
@@ -249,7 +249,7 @@ extra_cmd_options = generate(output, ROBOT_USAGE, RobotSettings._extra_cli_opts,
 output.append("")
 output.append("")
 output.append("@dataclass")
-output.append("class RobotExtraOptions(BaseOptions):")
+output.append("class RobotExtendOptions(BaseOptions):")
 output.append('    """Extra options for _robot_ command."""')
 output.append("")
 generate(
@@ -298,7 +298,7 @@ extra_cmd_options = generate(output, LIBDOC_USAGE, libdoc_options, None, extra=F
 output.append("")
 output.append("")
 output.append("@dataclass")
-output.append("class LibDocExtraOptions(BaseOptions):")
+output.append("class LibDocExtendOptions(BaseOptions):")
 output.append('    """Extra options for _libdoc_ command."""')
 output.append("")
 generate(
@@ -328,7 +328,7 @@ extra_cmd_options = generate(output, TESTDOC_USAGE, testdoc_options, None, extra
 output.append("")
 output.append("")
 output.append("@dataclass")
-output.append("class TestDocExtraOptions(BaseOptions):")
+output.append("class TestDocExtendOptions(BaseOptions):")
 output.append('    """Extra options for _testdoc_ command."""')
 output.append("")
 generate(

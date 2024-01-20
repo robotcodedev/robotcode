@@ -13,7 +13,8 @@ from typing import (
 
 from robot.parsing.lexer.tokens import Token
 from robotcode.core.lsp.types import Position, Range
-from robotcode.robot.utils.ast import range_from_token
+
+from ..utils.ast import range_from_token
 
 if TYPE_CHECKING:
     from robotcode.robot.diagnostics.library_doc import KeywordDoc, LibraryDoc

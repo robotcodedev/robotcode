@@ -19,6 +19,7 @@ from urllib.parse import parse_qs, urlparse
 
 from robot.parsing.lexer.tokens import Token
 
+from robotcode.core.language import language_id
 from robotcode.core.lsp.types import (
     CodeAction,
     CodeActionContext,
@@ -38,12 +39,12 @@ from robotcode.robot.diagnostics.library_doc import (
     get_robot_library_html_doc_str,
     resolve_robot_variables,
 )
+from robotcode.robot.diagnostics.model_helper import ModelHelper
+from robotcode.robot.diagnostics.namespace import Namespace
 from robotcode.robot.utils.ast import get_node_at_position, range_from_token
 
-from ...common.decorators import code_action_kinds, language_id
+from ...common.decorators import code_action_kinds
 from ..configuration import DocumentationServerConfig
-from ..diagnostics.model_helper import ModelHelper
-from ..diagnostics.namespace import Namespace
 from .protocol_part import RobotLanguageServerProtocolPart
 
 if TYPE_CHECKING:
@@ -388,7 +389,7 @@ class RobotCodeActionDocumentationProtocolPart(RobotLanguageServerProtocolPart, 
                 pass
 
         robot_variables = resolve_robot_variables(
-            str(namespace.imports_manager.folder.to_path()),
+            str(namespace.imports_manager.root_folder),
             str(base_dir),
             namespace.imports_manager.get_resolvable_command_line_variables(),
             variables=namespace.get_resolvable_variables(),

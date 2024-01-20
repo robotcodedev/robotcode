@@ -32,7 +32,8 @@ from robotcode.core.utils.dataclasses import (
 )
 from robotcode.core.utils.safe_eval import safe_eval
 
-EXTEND_PREFIX_LEN = len("extend_")
+EXTEND_PREFIX = "extend_"
+EXTEND_PREFIX_LEN = len(EXTEND_PREFIX)
 
 
 class Flag(str, Enum):
@@ -308,12 +309,12 @@ class BaseOptions(ValidateMixin):
             )
         return value
 
-    def add_options(self, config: "BaseOptions", combine_extras: bool = False) -> None:
+    def add_options(self, config: "BaseOptions", combine_extends: bool = False) -> None:
         type_hints = get_type_hints(type(self))
         base_field_names = [f.name for f in dataclasses.fields(self)]
 
         for f in dataclasses.fields(config):
-            if f.name.startswith("extend_"):
+            if f.name.startswith(EXTEND_PREFIX):
                 if f.name not in base_field_names:
                     continue
 
@@ -326,7 +327,7 @@ class BaseOptions(ValidateMixin):
                 if new is None:
                     continue
 
-                old_field_name = f.name if combine_extras else f.name[EXTEND_PREFIX_LEN:]
+                old_field_name = f.name if combine_extends else f.name[EXTEND_PREFIX_LEN:]
 
                 old = getattr(self, old_field_name)
                 if old is None:
@@ -352,11 +353,11 @@ class BaseOptions(ValidateMixin):
             if f.name not in base_field_names:
                 continue
 
-            if combine_extras:
-                if "extend_" + f.name in base_field_names and getattr(config, f.name, None) is not None:
-                    setattr(self, "extend_" + f.name, None)
+            if combine_extends:
+                if EXTEND_PREFIX + f.name in base_field_names and getattr(config, f.name, None) is not None:
+                    setattr(self, EXTEND_PREFIX + f.name, None)
 
-            if getattr(config, f"extend_{f.name}", None) is not None and not combine_extras:
+            if getattr(config, f"{EXTEND_PREFIX}_{f.name}", None) is not None and not combine_extends:
                 continue
 
             new = self._verified_value(f.name, getattr(config, f.name), type_hints[f.name], config)
@@ -940,7 +941,7 @@ class CommonOptions(BaseOptions):
 
 
 @dataclass
-class CommonExtraOptions(BaseOptions):
+class CommonExtendOptions(BaseOptions):
     """Extra common options for all _robot_ commands."""
 
     extend_excludes: Optional[List[Union[str, StringExpression]]] = field(
@@ -1634,7 +1635,7 @@ class RobotOptions(BaseOptions):
 
 
 @dataclass
-class RobotExtraOptions(BaseOptions):
+class RobotExtendOptions(BaseOptions):
     """Extra options for _robot_ command."""
 
     extend_languages: Optional[List[Union[str, StringExpression]]] = field(
@@ -1935,7 +1936,7 @@ class LibDocOptions(BaseOptions):
 
 
 @dataclass
-class LibDocExtraOptions(BaseOptions):
+class LibDocExtendOptions(BaseOptions):
     """Extra options for _libdoc_ command."""
 
     extend_python_path: Optional[List[Union[str, StringExpression]]] = field(
@@ -2049,7 +2050,7 @@ class TestDocOptions(BaseOptions):
 
 
 @dataclass
-class TestDocExtraOptions(BaseOptions):
+class TestDocExtendOptions(BaseOptions):
     """Extra options for _testdoc_ command."""
 
     extend_excludes: Optional[List[Union[str, StringExpression]]] = field(
@@ -2112,22 +2113,22 @@ class TestDocExtraOptions(BaseOptions):
 
 
 @dataclass
-class RebotProfile(RebotOptions, CommonOptions, CommonExtraOptions):
+class RebotProfile(RebotOptions, CommonOptions, CommonExtendOptions):
     """Profile for _rebot_ command."""
 
 
 @dataclass
-class LibDocProfile(LibDocOptions, LibDocExtraOptions):
+class LibDocProfile(LibDocOptions, LibDocExtendOptions):
     """Profile for _libdoc_ command."""
 
 
 @dataclass
-class TestDocProfile(TestDocOptions, TestDocExtraOptions):
+class TestDocProfile(TestDocOptions, TestDocExtendOptions):
     """Profile for _testdoc_ command."""
 
 
 @dataclass
-class RobotBaseProfile(CommonOptions, CommonExtraOptions, RobotOptions, RobotExtraOptions):
+class RobotBaseProfile(CommonOptions, CommonExtendOptions, RobotOptions, RobotExtendOptions):
     """Base profile for Robot Framework."""
 
     args: Optional[List[str]] = field(
@@ -2353,7 +2354,7 @@ class RobotConfig(RobotExtraBaseProfile):
                 result = RobotBaseProfile()
 
             for f in dataclasses.fields(profile):
-                if f.name.startswith("extend_"):
+                if f.name.startswith(EXTEND_PREFIX):
                     new = self._verified_value(
                         f.name,
                         getattr(profile, f.name),
@@ -2384,7 +2385,7 @@ class RobotConfig(RobotExtraBaseProfile):
                 if f.name not in base_field_names:
                     continue
 
-                if getattr(profile, f"extend_{f.name}", None) is not None:
+                if getattr(profile, f"{EXTEND_PREFIX}_{f.name}", None) is not None:
                     continue
 
                 new = self._verified_value(

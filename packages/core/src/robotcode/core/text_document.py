@@ -209,7 +209,7 @@ class TextDocument:
             return self._lines
 
     @event
-    async def cache_invalidate(sender) -> None:
+    def cache_invalidate(sender) -> None:
         ...
 
     @event
@@ -238,7 +238,7 @@ class TextDocument:
             if ref in self._cache:
                 self._cache.pop(ref)
 
-    def __get_cache_reference(self, entry: Callable[..., Any], /, *, add_remove: bool = True) -> weakref.ref[Any]:
+    def __get_cache_reference(self, entry: Callable[..., Any], /, *, add_remove: bool = True) -> "weakref.ref[Any]":
         if inspect.ismethod(entry):
             return weakref.WeakMethod(entry, self.__remove_cache_entry if add_remove else None)
 

@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, Any, Callable, List, Optional, Type, cast
 from robot.parsing.lexer.tokens import Token
 
 from robotcode.core.concurrent import check_current_task_canceled
+from robotcode.core.language import language_id
 from robotcode.core.lsp.types import InlayHint, InlayHintKind, Range
 from robotcode.core.text_document import TextDocument
 from robotcode.core.utils.logging import LoggingDescriptor
@@ -12,20 +13,20 @@ from robotcode.robot.diagnostics.library_doc import (
     KeywordDoc,
     LibraryDoc,
 )
+from robotcode.robot.diagnostics.namespace import Namespace
 from robotcode.robot.utils.ast import (
     iter_nodes,
     range_from_node,
     range_from_token,
 )
 
-from ...common.decorators import language_id
 from ..configuration import InlayHintsConfig
-from ..diagnostics.namespace import Namespace
 
 if TYPE_CHECKING:
     from ..protocol import RobotLanguageServerProtocol
 
-from ..diagnostics.model_helper import ModelHelper
+from robotcode.robot.diagnostics.model_helper import ModelHelper
+
 from .protocol_part import RobotLanguageServerProtocolPart
 
 _HandlerMethod = Callable[

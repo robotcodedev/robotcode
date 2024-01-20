@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, Any, Final, List, Optional, cast
 
 from robotcode.core.concurrent import check_current_task_canceled
 from robotcode.core.event import event
+from robotcode.core.language import language_id_filter
 from robotcode.core.lsp.types import (
     Position,
     ServerCapabilities,
@@ -21,7 +22,6 @@ from robotcode.language_server.common.decorators import (
     TRIGGER_CHARACTERS_ATTR,
     HasRetriggerCharacters,
     HasTriggerCharacters,
-    language_id_filter,
 )
 
 from .protocol_part import LanguageServerProtocolPart

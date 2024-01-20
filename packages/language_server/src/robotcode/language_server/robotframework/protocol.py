@@ -10,32 +10,21 @@ from typing import (
     Final,
     List,
     Optional,
-    Set,
 )
 
+from robotcode.core.language import LanguageDefinition
 from robotcode.core.lsp.types import InitializeError
 from robotcode.core.utils.dataclasses import CamelSnakeMixin, from_dict
 from robotcode.core.utils.logging import LoggingDescriptor
-from robotcode.jsonrpc2.protocol import (
-    JsonRPCErrorException,
-    JsonRPCErrors,
-    ProtocolPartDescriptor,
-)
-from robotcode.language_server.common.parts.document_symbols import (
-    symbol_information_label,
-)
-from robotcode.language_server.common.protocol import (
-    LanguageDefinition,
-    LanguageServerProtocol,
-)
+from robotcode.jsonrpc2.protocol import JsonRPCErrorException, JsonRPCErrors, ProtocolPartDescriptor
+from robotcode.language_server.common.parts.document_symbols import symbol_information_label
+from robotcode.language_server.common.protocol import LanguageServerProtocol
 from robotcode.robot.config.model import RobotBaseProfile
+from robotcode.robot.diagnostics.workspace_config import RobotConfig
 from robotcode.robot.utils import get_robot_version
 
 from ..__version__ import __version__
-from .configuration import RobotConfig
-from .parts.code_action_documentation import (
-    RobotCodeActionDocumentationProtocolPart,
-)
+from .parts.code_action_documentation import RobotCodeActionDocumentationProtocolPart
 from .parts.code_action_quick_fixes import RobotCodeActionQuickFixesProtocolPart
 from .parts.code_action_refactor import RobotCodeActionRefactorProtocolPart
 from .parts.code_lens import RobotCodeLensProtocolPart
@@ -44,7 +33,7 @@ from .parts.debugging_utils import RobotDebuggingUtilsProtocolPart
 from .parts.diagnostics import RobotDiagnosticsProtocolPart
 from .parts.document_highlight import RobotDocumentHighlightProtocolPart
 from .parts.document_symbols import RobotDocumentSymbolsProtocolPart
-from .parts.documents_cache import DocumentsCache
+from .parts.documents_cache import DocumentsCachePart
 from .parts.folding_range import RobotFoldingRangeProtocolPart
 from .parts.formatting import RobotFormattingProtocolPart
 from .parts.goto import RobotGotoProtocolPart
@@ -88,7 +77,7 @@ def check_robotframework() -> None:
 
 
 @dataclass
-class Options(CamelSnakeMixin):
+class RobotInitializationOptions(CamelSnakeMixin):
     storage_uri: Optional[str] = None
     global_storage_uri: Optional[str] = None
     python_path: List[str] = field(default_factory=list)
@@ -99,7 +88,7 @@ class Options(CamelSnakeMixin):
 class RobotLanguageServerProtocol(LanguageServerProtocol):
     _logger: Final = LoggingDescriptor()
 
-    documents_cache = ProtocolPartDescriptor(DocumentsCache)
+    # documents_cache = ProtocolPartDescriptor(DocumentsCachePart)
     robot_workspace = ProtocolPartDescriptor(RobotWorkspaceProtocolPart)
     robot_diagnostics = ProtocolPartDescriptor(RobotDiagnosticsProtocolPart)
     robot_folding_ranges = ProtocolPartDescriptor(RobotFoldingRangeProtocolPart)
@@ -128,7 +117,7 @@ class RobotLanguageServerProtocol(LanguageServerProtocol):
     short_name = "RobotCode"
     version = __version__
 
-    file_extensions: ClassVar[Set[str]] = {
+    file_extensions: ClassVar = {
         "robot",
         "resource",
         "py",
@@ -140,6 +129,7 @@ class RobotLanguageServerProtocol(LanguageServerProtocol):
         LanguageDefinition(
             id="robotframework",
             extensions=[".robot", ".resource"],
+            extensions_ignore_case=True,
             aliases=["Robot Framework", "robotframework"],
         ),
         # LanguageDefinition(
@@ -147,7 +137,7 @@ class RobotLanguageServerProtocol(LanguageServerProtocol):
         #     extensions=[".feature", ".md"],
         #     aliases=["feature", "gherkin", "Gherkin", "cucumber"],
         # ),
-        LanguageDefinition(id="markdown", extensions=[".md"]),
+        # LanguageDefinition(id="markdown", extensions=[".md"]),
     ]
 
     def __init__(
@@ -156,23 +146,24 @@ class RobotLanguageServerProtocol(LanguageServerProtocol):
         profile: Optional[RobotBaseProfile] = None,
     ):
         super().__init__(server)
-        self.profile = profile if profile is not None else RobotBaseProfile()
-        self.options = Options()
+        self.robot_profile = profile if profile is not None else RobotBaseProfile()
+        self.robot_initialization_options = RobotInitializationOptions()
         self.on_initialize.add(self._on_initialize)
         self.on_initialized.add(self.server_initialized)
+        self._documents_cache: Optional[DocumentsCachePart] = None
 
     @_logger.call
     def _on_initialize(self, sender: Any, initialization_options: Optional[Any] = None) -> None:
         if initialization_options is not None:
-            self.options = from_dict(initialization_options, Options)
+            self.robot_initialization_options = from_dict(initialization_options, RobotInitializationOptions)
 
-        if self.options.env:
-            for k, v in self.options.env.items():
+        if self.robot_initialization_options.env:
+            for k, v in self.robot_initialization_options.env.items():
                 os.environ[k] = v
 
-        if self.options.python_path:
+        if self.robot_initialization_options.python_path:
             for folder in self.workspace.workspace_folders:
-                for p in self.options.python_path:
+                for p in self.robot_initialization_options.python_path:
                     pa = Path(p)
                     if not pa.is_absolute():
                         pa = Path(folder.uri.to_path(), pa)
@@ -195,19 +186,28 @@ class RobotLanguageServerProtocol(LanguageServerProtocol):
         if self.client_info is not None and self.client_info.name == "Visual Studio Code":
             self.progress_title = "$(robotcode-robot)"
 
-        self._logger.info(lambda: f"initialized with {self.options!r}")
+        self._documents_cache = DocumentsCachePart(self)
+
+        self._logger.info(lambda: f"initialized with {self.robot_initialization_options!r}")
+
+    @property
+    def documents_cache(self) -> DocumentsCachePart:
+        if self._documents_cache is None:
+            raise RuntimeError("DocumentsCachePart not initialized")
+
+        return self._documents_cache
 
     def _on_did_change_configuration(self, sender: Any, settings: Dict[str, Any]) -> None:
         pass
 
     def server_initialized(self, sender: Any) -> None:
         for folder in self.workspace.workspace_folders:
-            config: RobotConfig = self.workspace.get_configuration(RobotConfig, folder.uri, request=False)
+            config: RobotConfig = self.workspace.get_configuration(RobotConfig, folder.uri)
 
-            for k, v in (self.profile.env or {}).items():
+            for k, v in (self.robot_profile.env or {}).items():
                 os.environ[k] = v
 
-            for p in self.profile.python_path or []:
+            for p in self.robot_profile.python_path or []:
                 pa = Path(str(p))
                 if not pa.is_absolute():
                     pa = Path(folder.uri.to_path(), pa)

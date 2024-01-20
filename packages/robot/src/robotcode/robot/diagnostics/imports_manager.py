@@ -26,7 +26,10 @@ from typing import (
 )
 
 from robotcode.core.concurrent import run_as_task
+from robotcode.core.documents_manager import DocumentsManager
 from robotcode.core.event import event
+from robotcode.core.filewatcher import FileWatcherEntry, FileWatcherManagerBase, FileWatcherManagerDummy
+from robotcode.core.language import language_id
 from robotcode.core.lsp.types import DocumentUri, FileChangeType, FileEvent
 from robotcode.core.text_document import TextDocument
 from robotcode.core.uri import Uri
@@ -35,20 +38,15 @@ from robotcode.core.utils.dataclasses import as_json, from_json
 from robotcode.core.utils.glob_path import Pattern, iter_files
 from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.core.utils.path import path_is_relative_to
-from robotcode.language_server.common.decorators import language_id
-from robotcode.language_server.common.parts.workspace import (
-    FileWatcherEntry,
-    Workspace,
-)
-from robotcode.language_server.robotframework.configuration import (
-    CacheSaveLocation,
-    RobotCodeConfig,
-)
-from robotcode.robot.diagnostics.entities import (
+
+from ..__version__ import __version__
+from ..utils import get_robot_version, get_robot_version_str
+from ..utils.robot_path import find_file_ex
+from .entities import (
     CommandLineVariableDefinition,
     VariableDefinition,
 )
-from robotcode.robot.diagnostics.library_doc import (
+from .library_doc import (
     ROBOT_LIBRARY_PACKAGE,
     CompleteResult,
     LibraryDoc,
@@ -69,16 +67,9 @@ from robotcode.robot.diagnostics.library_doc import (
     resolve_args,
     resolve_variable,
 )
-from robotcode.robot.utils import get_robot_version, get_robot_version_str
-from robotcode.robot.utils.robot_path import find_file_ex
-
-from ...__version__ import __version__
 
 if TYPE_CHECKING:
-    from robotcode.language_server.robotframework.protocol import (
-        RobotLanguageServerProtocol,
-    )
-
+    from .document_cache_helper import DocumentsCacheHelper
     from .namespace import Namespace
 
 
@@ -115,22 +106,16 @@ class _ImportEntry(ABC):
         self.file_watchers: List[FileWatcherEntry] = []
         self._lock = threading.RLock()
 
-    @staticmethod
-    def __remove_filewatcher(workspace: Workspace, entry: FileWatcherEntry) -> None:
-        workspace.remove_file_watcher_entry(entry)
-
     def __del__(self) -> None:
         try:
-            if self.file_watchers is not None:
-                for watcher in self.file_watchers:
-                    _ImportEntry.__remove_filewatcher(self.parent.parent_protocol.workspace, watcher)
+            self._remove_file_watcher()
         except RuntimeError:
             pass
 
     def _remove_file_watcher(self) -> None:
-        if self.file_watchers is not None:
+        if self.file_watchers:
             for watcher in self.file_watchers:
-                self.parent.parent_protocol.workspace.remove_file_watcher_entry(watcher)
+                self.parent.file_watcher_manager.remove_file_watcher_entry(watcher)
         self.file_watchers = []
 
     @abstractmethod
@@ -234,7 +219,7 @@ class _LibrariesEntry(_ImportEntry):
         # we are a module, so add the module path into file watchers
         if self._lib_doc.module_spec is not None and self._lib_doc.module_spec.submodule_search_locations is not None:
             self.file_watchers.append(
-                self.parent.parent_protocol.workspace.add_file_watchers(
+                self.parent.file_watcher_manager.add_file_watchers(
                     self.parent.did_change_watched_files,
                     [
                         str(Path(location).resolve().joinpath("**"))
@@ -251,7 +236,7 @@ class _LibrariesEntry(_ImportEntry):
         # we are a file, so put the parent path to filewatchers
         if source_or_origin is not None:
             self.file_watchers.append(
-                self.parent.parent_protocol.workspace.add_file_watchers(
+                self.parent.file_watcher_manager.add_file_watchers(
                     self.parent.did_change_watched_files,
                     [str(Path(source_or_origin).parent.joinpath("**"))],
                 )
@@ -262,7 +247,7 @@ class _LibrariesEntry(_ImportEntry):
         # we are not found, so put the pythonpath to filewatchers
         if self._lib_doc.python_path is not None:
             self.file_watchers.append(
-                self.parent.parent_protocol.workspace.add_file_watchers(
+                self.parent.file_watcher_manager.add_file_watchers(
                     self.parent.did_change_watched_files,
                     [str(Path(s).joinpath("**")) for s in self._lib_doc.python_path],
                 )
@@ -302,11 +287,11 @@ class _ResourcesEntry(_ImportEntry):
         self,
         name: str,
         parent: "ImportsManager",
-        get_document_coroutine: Callable[[], TextDocument],
+        get_document_callback: Callable[[], TextDocument],
     ) -> None:
         super().__init__(parent)
         self.name = name
-        self._get_document_coroutine = get_document_coroutine
+        self._get_document_callback = get_document_callback
         self._document: Optional[TextDocument] = None
         self._lib_doc: Optional[LibraryDoc] = None
 
@@ -333,11 +318,11 @@ class _ResourcesEntry(_ImportEntry):
             return None
 
     def _update(self) -> None:
-        self._document = self._get_document_coroutine()
+        self._document = self._get_document_callback()
 
         if self._document._version is None:
             self.file_watchers.append(
-                self.parent.parent_protocol.workspace.add_file_watchers(
+                self.parent.file_watcher_manager.add_file_watchers(
                     self.parent.did_change_watched_files,
                     [str(self._document.uri.to_path())],
                 )
@@ -377,7 +362,7 @@ class _ResourcesEntry(_ImportEntry):
             return self._get_namespace()
 
     def _get_namespace(self) -> "Namespace":
-        return self.parent.parent_protocol.documents_cache.get_resource_namespace(self._get_document())
+        return self.parent.get_namespace_for_resource(self._get_document())
 
     def get_libdoc(self) -> LibraryDoc:
         with self._lock:
@@ -443,7 +428,7 @@ class _VariablesEntry(_ImportEntry):
 
         if self._lib_doc is not None:
             self.file_watchers.append(
-                self.parent.parent_protocol.workspace.add_file_watchers(
+                self.parent.file_watcher_manager.add_file_watchers(
                     self.parent.did_change_watched_files,
                     [str(self._lib_doc.source)],
                 )
@@ -501,22 +486,33 @@ class ImportsManager:
 
     def __init__(
         self,
-        parent_protocol: "RobotLanguageServerProtocol",
-        folder: Uri,
-        config: RobotCodeConfig,
+        documents_manager: DocumentsManager,
+        file_watcher_manager: Optional[FileWatcherManagerBase],
+        document_cache_helper: "DocumentsCacheHelper",
+        root_folder: Path,
+        variables: Dict[str, str],
+        variable_files: List[str],
+        environment: Optional[Dict[str, str]],
+        ignored_libraries: List[str],
+        ignored_variables: List[str],
+        cache_base_path: Optional[Path],
     ) -> None:
         super().__init__()
-        self.parent_protocol = parent_protocol
 
-        self.folder = folder
+        self.documents_manager = documents_manager
+        self.documents_manager.did_create_uri.add(self.possible_imports_modified)
+        self.documents_manager.did_change.add(self.possible_resource_document_modified)
 
-        cache_base_path = self.folder.to_path()
-        if (
-            config.analysis.cache.save_location == CacheSaveLocation.WORKSPACE_STORAGE
-            and isinstance(self.parent_protocol.initialization_options, dict)
-            and "storageUri" in self.parent_protocol.initialization_options
-        ):
-            cache_base_path = Uri(self.parent_protocol.initialization_options["storageUri"]).to_path()
+        self.file_watcher_manager: FileWatcherManagerBase = (
+            file_watcher_manager if file_watcher_manager is not None else FileWatcherManagerDummy()
+        )
+
+        self.document_cache_helper = document_cache_helper
+
+        self.root_folder = root_folder
+
+        if cache_base_path is None:
+            cache_base_path = root_folder
 
         self._logger.trace(lambda: f"use {cache_base_path} as base for caching")
 
@@ -535,10 +531,11 @@ class ImportsManager:
             / "variables"
         )
 
-        self.config = config
+        self.cmd_variables = variables
+        self.cmd_variable_files = variable_files
 
-        self.ignored_libraries_patters = [Pattern(s) for s in config.analysis.cache.ignored_libraries]
-        self.ignored_variables_patters = [Pattern(s) for s in config.analysis.cache.ignored_variables]
+        self.ignored_libraries_patters = [Pattern(s) for s in ignored_libraries]
+        self.ignored_variables_patters = [Pattern(s) for s in ignored_variables]
         self._libaries_lock = threading.RLock()
         self._libaries: OrderedDict[_LibrariesEntryKey, _LibrariesEntry] = OrderedDict()
         self._resources_lock = threading.RLock()
@@ -546,17 +543,14 @@ class ImportsManager:
         self._variables_lock = threading.RLock()
         self._variables: OrderedDict[_VariablesEntryKey, _VariablesEntry] = OrderedDict()
         self.file_watchers: List[FileWatcherEntry] = []
-        self.parent_protocol.documents.did_create_uri.add(self._do_imports_changed)
-        self.parent_protocol.documents.did_change.add(self.resource_document_changed)
         self._command_line_variables: Optional[List[VariableDefinition]] = None
         self._command_line_variables_lock = threading.RLock()
         self._resolvable_command_line_variables: Optional[Dict[str, Any]] = None
         self._resolvable_command_line_variables_lock = threading.RLock()
 
         self._environment = dict(os.environ)
-        if self.parent_protocol.profile.env:
-            self._environment.update(self.parent_protocol.profile.env)
-        self._environment.update(self.config.robot.env)
+        if environment:
+            self._environment.update(environment)
 
         self._library_files_cache = SimpleLRUCache()
         self._resource_files_cache = SimpleLRUCache()
@@ -580,6 +574,9 @@ class ImportsManager:
     @property
     def environment(self) -> Mapping[str, str]:
         return self._environment
+
+    def get_namespace_for_resource(self, document: TextDocument) -> "Namespace":
+        return self.document_cache_helper.get_resource_namespace(document)
 
     def clear_cache(self) -> None:
         if self.cache_path.exists():
@@ -606,22 +603,16 @@ class ImportsManager:
                         has_value=True,
                         value=v,
                     )
-                    for k, v in {
-                        **{k1: v1 for k1, v1 in (self.parent_protocol.profile.variables or {}).items()},
-                        **self.config.robot.variables,
-                    }.items()
+                    for k, v in self.cmd_variables.items()
                 ]
 
-                for variable_file in [
-                    *(self.parent_protocol.profile.variable_files or []),
-                    *self.config.robot.variable_files,
-                ]:
+                for variable_file in self.cmd_variable_files:
                     name, args = split_args_from_name_or_path(str(variable_file))
                     try:
                         lib_doc = self.get_libdoc_for_variables_import(
                             name.replace("\\", "\\\\"),
                             tuple(args),
-                            str(self.folder.to_path()),
+                            str(self.root_folder),
                             self,
                             resolve_variables=False,
                             resolve_command_line_vars=False,
@@ -685,11 +676,11 @@ class ImportsManager:
     def imports_changed(sender, uri: DocumentUri) -> None:
         ...
 
-    def _do_imports_changed(self, sender: Any, uri: DocumentUri) -> None:
+    def possible_imports_modified(self, sender: Any, uri: DocumentUri) -> None:
         self.imports_changed(self, uri)
 
     @language_id("robotframework")
-    def resource_document_changed(self, sender: Any, document: TextDocument) -> None:
+    def possible_resource_document_modified(self, sender: Any, document: TextDocument) -> None:
         with self._resource_document_changed_timer_lock:
             if document in self._resource_document_changed_documents:
                 return
@@ -1012,7 +1003,7 @@ class ImportsManager:
         if contains_variable(name, "$@&%"):
             return find_library(
                 name,
-                str(self.folder.to_path()),
+                str(self.root_folder),
                 base_dir,
                 self.get_resolvable_command_line_variables(),
                 variables,
@@ -1050,7 +1041,7 @@ class ImportsManager:
         if contains_variable(name, "$@&%"):
             return find_file(
                 name,
-                str(self.folder.to_path()),
+                str(self.root_folder),
                 base_dir,
                 self.get_resolvable_command_line_variables(),
                 variables,
@@ -1089,7 +1080,7 @@ class ImportsManager:
         if resolve_variables and contains_variable(name, "$@&%"):
             return find_variables(
                 name,
-                str(self.folder.to_path()),
+                str(self.root_folder),
                 base_dir,
                 self.get_resolvable_command_line_variables() if resolve_command_line_vars else None,
                 variables,
@@ -1204,7 +1195,7 @@ class ImportsManager:
 
         resolved_args = resolve_args(
             args,
-            str(self.folder.to_path()),
+            str(self.root_folder),
             base_dir,
             self.get_resolvable_command_line_variables(),
             variables,
@@ -1217,7 +1208,7 @@ class ImportsManager:
                     self,
                     name,
                     args,
-                    str(self.folder.to_path()),
+                    str(self.root_folder),
                     base_dir,
                     _get_libdoc,
                     ignore_reference=sentinel is None,
@@ -1309,7 +1300,7 @@ class ImportsManager:
                     get_variables_doc,
                     name,
                     args,
-                    str(self.folder.to_path()),
+                    str(self.root_folder),
                     base_dir,
                     self.get_resolvable_command_line_variables() if resolve_command_line_vars else None,
                     variables,
@@ -1355,7 +1346,7 @@ class ImportsManager:
 
         resolved_args = resolve_args(
             args,
-            str(self.folder.to_path()),
+            str(self.root_folder),
             base_dir,
             self.get_resolvable_command_line_variables() if resolve_command_line_vars else None,
             variables,
@@ -1367,7 +1358,7 @@ class ImportsManager:
                 self._variables[entry_key] = _VariablesEntry(
                     name,
                     resolved_args,
-                    str(self.folder.to_path()),
+                    str(self.root_folder),
                     base_dir,
                     self,
                     _get_libdoc,
@@ -1402,7 +1393,7 @@ class ImportsManager:
                     f"Supported extensions are {', '.join(repr(s) for s in RESOURCE_EXTENSIONS)}."
                 )
 
-            return self.parent_protocol.documents.get_or_open_document(source_path)
+            return self.documents_manager.get_or_open_document(source_path)
 
         entry_key = _ResourcesEntryKey(source)
 
@@ -1459,7 +1450,7 @@ class ImportsManager:
     ) -> List[CompleteResult]:
         return complete_library_import(
             name,
-            str(self.folder.to_path()),
+            str(self.root_folder),
             base_dir,
             self.get_resolvable_command_line_variables(),
             variables,
@@ -1473,7 +1464,7 @@ class ImportsManager:
     ) -> Optional[List[CompleteResult]]:
         return complete_resource_import(
             name,
-            str(self.folder.to_path()),
+            str(self.root_folder),
             base_dir,
             self.get_resolvable_command_line_variables(),
             variables,
@@ -1487,7 +1478,7 @@ class ImportsManager:
     ) -> Optional[List[CompleteResult]]:
         return complete_variables_import(
             name,
-            str(self.folder.to_path()),
+            str(self.root_folder),
             base_dir,
             self.get_resolvable_command_line_variables(),
             variables,
@@ -1501,7 +1492,7 @@ class ImportsManager:
     ) -> Any:
         return resolve_variable(
             name,
-            str(self.folder.to_path()),
+            str(self.root_folder),
             base_dir,
             self.get_resolvable_command_line_variables(),
             variables,

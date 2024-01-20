@@ -21,21 +21,10 @@ from robot.parsing.lexer.tokens import Token
 from robot.utils.escaping import split_from_equals, unescape
 from robot.variables.finders import NOT_FOUND, NumberFinder
 from robot.variables.search import contains_variable, search_variable
-
 from robotcode.core.lsp.types import Position
-from robotcode.robot.diagnostics.entities import (
-    LibraryEntry,
-    VariableDefinition,
-    VariableNotFoundDefinition,
-)
-from robotcode.robot.diagnostics.library_doc import (
-    ArgumentInfo,
-    KeywordArgumentKind,
-    KeywordDoc,
-    LibraryDoc,
-)
-from robotcode.robot.utils import get_robot_version
-from robotcode.robot.utils.ast import (
+
+from ..utils import get_robot_version
+from ..utils.ast import (
     iter_over_keyword_names_and_owners,
     range_from_token,
     strip_variable_token,
@@ -43,7 +32,17 @@ from robotcode.robot.utils.ast import (
     whitespace_at_begin_of_token,
     whitespace_from_begin_of_token,
 )
-
+from .entities import (
+    LibraryEntry,
+    VariableDefinition,
+    VariableNotFoundDefinition,
+)
+from .library_doc import (
+    ArgumentInfo,
+    KeywordArgumentKind,
+    KeywordDoc,
+    LibraryDoc,
+)
 from .namespace import DEFAULT_BDD_PREFIXES, Namespace
 
 

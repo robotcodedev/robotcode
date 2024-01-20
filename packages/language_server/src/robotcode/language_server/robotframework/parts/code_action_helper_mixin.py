@@ -6,10 +6,9 @@ from typing import List, Optional, Tuple
 
 from robotcode.core.lsp.types import DocumentUri, Position, Range
 from robotcode.core.text_document import TextDocument
+from robotcode.robot.diagnostics.namespace import Namespace
 from robotcode.robot.utils.ast import range_from_node
 from robotcode.robot.utils.visitor import Visitor
-
-from ..diagnostics.namespace import Namespace
 
 SHOW_DOCUMENT_SELECT_AND_RENAME_COMMAND = "_robotcode.codeActionShowDocumentSelectAndRename"
 

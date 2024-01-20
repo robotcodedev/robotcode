@@ -3,6 +3,7 @@ from typing import TYPE_CHECKING, Any, Final, List, Optional
 
 from robotcode.core.concurrent import check_current_task_canceled
 from robotcode.core.event import event
+from robotcode.core.language import language_id_filter
 from robotcode.core.lsp.types import (
     Location,
     Position,
@@ -15,7 +16,6 @@ from robotcode.core.lsp.types import (
 from robotcode.core.text_document import TextDocument
 from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.jsonrpc2.protocol import rpc_method
-from robotcode.language_server.common.decorators import language_id_filter
 
 if TYPE_CHECKING:
     from robotcode.language_server.common.protocol import LanguageServerProtocol

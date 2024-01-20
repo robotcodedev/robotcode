@@ -1,15 +1,9 @@
 from dataclasses import dataclass, field
-from enum import Enum
-from typing import Any, Dict, List, Optional, Tuple
+from typing import List, Optional, Tuple
 
-from robotcode.language_server.common.parts.diagnostics import (
-    AnalysisProgressMode,
-    DiagnosticsMode,
-)
-from robotcode.language_server.common.parts.workspace import (
-    ConfigBase,
-    config_section,
-)
+from robotcode.core.workspace import ConfigBase, config_section
+from robotcode.language_server.common.parts.diagnostics import AnalysisProgressMode, DiagnosticsMode
+from robotcode.robot.diagnostics.workspace_config import CacheConfig, RobotConfig
 
 
 @config_section("robotcode.languageServer")
@@ -18,43 +12,6 @@ class LanguageServerConfig(ConfigBase):
     mode: str = "stdio"
     tcp_port: int = 0
     args: Tuple[str, ...] = field(default_factory=tuple)
-
-
-class RpaMode(Enum):
-    DEFAULT = "default"
-    RPA = "rpa"
-    NORPA = "norpa"
-
-
-class CacheSaveLocation(Enum):
-    WORKSPACE_FOLDER = "workspaceFolder"
-    WORKSPACE_STORAGE = "workspaceStorage"
-
-
-@config_section("robotcode.robot")
-@dataclass
-class RobotConfig(ConfigBase):
-    args: List[str] = field(default_factory=list)
-    python_path: List[str] = field(default_factory=list)
-    env: Dict[str, str] = field(default_factory=dict)
-    variables: Dict[str, Any] = field(default_factory=dict)
-    variable_files: List[str] = field(default_factory=list)
-    paths: List[str] = field(default_factory=list)
-    output_dir: Optional[str] = None
-    output_file: Optional[str] = None
-    log_file: Optional[str] = None
-    debug_file: Optional[str] = None
-    log_level: Optional[str] = None
-    mode: Optional[RpaMode] = None
-    languages: Optional[List[str]] = None
-    parsers: Optional[List[str]] = None
-
-    def get_rpa_mode(self) -> Optional[bool]:
-        if self.mode == RpaMode.RPA:
-            return True
-        if self.mode == RpaMode.NORPA:
-            return False
-        return None
 
 
 @config_section("robotcode.completion")
@@ -87,24 +44,6 @@ class WorkspaceConfig(ConfigBase):
     exclude_patterns: List[str] = field(default_factory=list)
 
 
-@config_section("robotcode.analysis.cache")
-@dataclass
-class Cache(ConfigBase):
-    save_location: CacheSaveLocation = CacheSaveLocation.WORKSPACE_STORAGE
-    ignored_libraries: List[str] = field(default_factory=list)
-    ignored_variables: List[str] = field(default_factory=list)
-
-
-@config_section("robotcode.analysis")
-@dataclass
-class AnalysisConfig(ConfigBase):
-    diagnostic_mode: DiagnosticsMode = DiagnosticsMode.OPENFILESONLY
-    progress_mode: AnalysisProgressMode = AnalysisProgressMode.OFF
-    references_code_lens: bool = False
-    find_unused_references: bool = False
-    cache: Cache = field(default_factory=Cache)
-
-
 @config_section("robotcode.documentationServer")
 @dataclass
 class DocumentationServerConfig(ConfigBase):
@@ -117,6 +56,16 @@ class DocumentationServerConfig(ConfigBase):
 class InlayHintsConfig(ConfigBase):
     parameter_names: bool = True
     namespaces: bool = True
+
+
+@config_section("robotcode.analysis")
+@dataclass
+class AnalysisConfig(ConfigBase):
+    diagnostic_mode: DiagnosticsMode = DiagnosticsMode.OPENFILESONLY
+    progress_mode: AnalysisProgressMode = AnalysisProgressMode.OFF
+    references_code_lens: bool = False
+    find_unused_references: bool = False
+    cache: CacheConfig = field(default_factory=CacheConfig)
 
 
 @config_section("robotcode")

@@ -1,6 +1,6 @@
 {
   "name": "robotcode",
-  "displayName": "Robot Code - Robot Framework Support",
+  "displayName": "RobotCode - Robot Framework Support",
   "description": "Robot Framework IntelliSense, linting, test execution and debugging, code formatting, refactoring, and many more",
   "icon": "images/icon.png",
   "publisher": "d-biehl",
@@ -541,7 +541,7 @@
             "items": {
               "type": "string"
             },
-            "markdownDescription": "Specifies the library names that should not be cached. This is useful if you have a dynamic or hybrid library that has different keywords depending on the arguments. You can specify a glob pattern that matches the library name or the source file. \n\nExamples:\n- `**/mylibfolder/mylib.py`\n- `MyLib`\n- `mylib.subpackage.subpackage` \n\nFor robot framework internal libraries, you have to specify the full module name like `robot.libraries.Remote`.\n\nIf you change this setting, you may need to run the command `Robot Code: Clear Cache and Restart Language Servers`.",
+            "markdownDescription": "Specifies the library names that should not be cached. This is useful if you have a dynamic or hybrid library that has different keywords depending on the arguments. You can specify a glob pattern that matches the library name or the source file. \n\nExamples:\n- `**/mylibfolder/mylib.py`\n- `MyLib`\n- `mylib.subpackage.subpackage` \n\nFor robot framework internal libraries, you have to specify the full module name like `robot.libraries.Remote`.\n\nIf you change this setting, you may need to run the command `RobotCode: Clear Cache and Restart Language Servers`.",
             "scope": "resource"
           },
           "robotcode.analysis.cache.ignoredVariables": {
@@ -550,7 +550,7 @@
             "items": {
               "type": "string"
             },
-            "markdownDescription": "Specifies the variable files that should not be cached. This is useful if you have a dynamic or hybrid variable files that has different variables depending on the arguments. You can specify a glob pattern that matches the variable module name or the source file. \n\nExamples:\n- `**/variables/myvars.py`\n- `MyVariables`\n- `myvars.subpackage.subpackage` \n\nIf you change this setting, you may need to run the command `Robot Code: Clear Cache and Restart Language Servers`.",
+            "markdownDescription": "Specifies the variable files that should not be cached. This is useful if you have a dynamic or hybrid variable files that has different variables depending on the arguments. You can specify a glob pattern that matches the variable module name or the source file. \n\nExamples:\n- `**/variables/myvars.py`\n- `MyVariables`\n- `myvars.subpackage.subpackage` \n\nIf you change this setting, you may need to run the command `RobotCode: Clear Cache and Restart Language Servers`.",
             "scope": "resource"
           },
           "robotcode.run.openOutputAfterRun": {

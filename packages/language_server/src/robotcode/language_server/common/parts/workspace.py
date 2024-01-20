@@ -5,23 +5,20 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
-    ClassVar,
-    Coroutine,
     Dict,
     Final,
     List,
     Mapping,
-    NamedTuple,
     Optional,
     Tuple,
     Type,
-    TypeVar,
     Union,
     cast,
 )
 
 from robotcode.core.concurrent import Task
 from robotcode.core.event import event
+from robotcode.core.filewatcher import FileWatcher, FileWatcherEntry, FileWatcherManagerBase
 from robotcode.core.lsp.types import (
     ApplyWorkspaceEditParams,
     ApplyWorkspaceEditResult,
@@ -33,7 +30,6 @@ from robotcode.core.lsp.types import (
     DidChangeWatchedFilesParams,
     DidChangeWatchedFilesRegistrationOptions,
     DidChangeWorkspaceFoldersParams,
-    DocumentUri,
     FileCreate,
     FileDelete,
     FileEvent,
@@ -55,9 +51,11 @@ from robotcode.core.lsp.types import (
 )
 from robotcode.core.lsp.types import WorkspaceFolder as TypesWorkspaceFolder
 from robotcode.core.uri import Uri
-from robotcode.core.utils.dataclasses import CamelSnakeMixin, from_dict
+from robotcode.core.utils.dataclasses import from_dict
 from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.core.utils.path import path_is_relative_to
+from robotcode.core.workspace import ConfigBase, TConfig, WorkspaceFolder
+from robotcode.core.workspace import Workspace as CoreWorkspace
 from robotcode.jsonrpc2.protocol import rpc_method
 
 from .protocol_part import LanguageServerProtocolPart
@@ -65,78 +63,8 @@ from .protocol_part import LanguageServerProtocolPart
 if TYPE_CHECKING:
     from robotcode.language_server.common.protocol import LanguageServerProtocol
 
-__all__ = [
-    "WorkspaceFolder",
-    "Workspace",
-    "ConfigBase",
-    "config_section",
-    "FileWatcherEntry",
-]
 
-
-class FileWatcher(NamedTuple):
-    glob_pattern: str
-    kind: Optional[WatchKind] = None
-
-
-class FileWatcherEntry:
-    def __init__(
-        self,
-        id: str,
-        callback: Union[
-            Callable[[Any, List[FileEvent]], None],
-            Callable[[Any, List[FileEvent]], Coroutine[Any, Any, None]],
-        ],
-        watchers: List[FileWatcher],
-    ) -> None:
-        self.id = id
-        self.callback = callback
-        self.watchers = watchers
-        self.parent: Optional[FileWatcherEntry] = None
-        self.finalizer: Any = None
-
-    @event
-    def child_callbacks(sender, changes: List[FileEvent]) -> None:
-        ...
-
-    def call_childrens(self, sender: Any, changes: List[FileEvent]) -> None:
-        self.child_callbacks(sender, changes)
-
-    def __str__(self) -> str:
-        return self.id
-
-    def __repr__(self) -> str:
-        return f"{type(self).__qualname__}(id={self.id!r}, watchers={self.watchers!r})"
-
-
-class WorkspaceFolder:
-    def __init__(self, name: str, uri: Uri, document_uri: DocumentUri) -> None:
-        super().__init__()
-        self.name = name
-        self.uri = uri
-        self.document_uri = document_uri
-
-
-_F = TypeVar("_F", bound=Callable[..., Any])
-
-
-def config_section(name: str) -> Callable[[_F], _F]:
-    def decorator(func: _F) -> _F:
-        setattr(func, "__config_section__", name)
-        return func
-
-    return decorator
-
-
-# @dataclass
-class ConfigBase(CamelSnakeMixin):
-    __config_section__: ClassVar[str]
-
-
-_TConfig = TypeVar("_TConfig", bound=ConfigBase)
-
-
-class Workspace(LanguageServerProtocolPart):
+class Workspace(LanguageServerProtocolPart, CoreWorkspace, FileWatcherManagerBase):
     _logger: Final = LoggingDescriptor()
 
     def __init__(
@@ -147,22 +75,24 @@ class Workspace(LanguageServerProtocolPart):
         workspace_folders: Optional[List[TypesWorkspaceFolder]] = None,
     ):
         super().__init__(parent)
-        self.root_uri = root_uri
 
         self.root_path = root_path
-        self._workspace_folders_lock = threading.RLock()
-        self._workspace_folders: List[WorkspaceFolder] = (
-            [WorkspaceFolder(w.name, Uri(w.uri), w.uri) for w in workspace_folders]
-            if workspace_folders is not None
-            else []
+
+        if root_path is not None and root_uri is None:
+            root_uri = str(Uri.from_path(root_path))
+
+        CoreWorkspace.__init__(
+            self,
+            Uri(root_uri) if root_uri else None,
+            [WorkspaceFolder(w.name, Uri(w.uri)) for w in workspace_folders] if workspace_folders is not None else [],
         )
-        self._settings: Dict[str, Any] = {}
 
         self._file_watchers: weakref.WeakSet[FileWatcherEntry] = weakref.WeakSet()
         self._file_watchers_lock = threading.RLock()
 
         self.parent.on_shutdown.add(self.server_shutdown)
         self.parent.on_initialize.add(self.server_initialize)
+
         self._settings_cache: Dict[Tuple[Optional[WorkspaceFolder], str], ConfigBase] = {}
 
     def server_initialize(self, sender: Any, initialization_options: Optional[Any] = None) -> None:
@@ -319,26 +249,24 @@ class Workspace(LanguageServerProtocolPart):
 
     def get_configuration(
         self,
-        section: Type[_TConfig],
+        section: Type[TConfig],
         scope_uri: Union[str, Uri, None] = None,
-        request: bool = True,
-    ) -> _TConfig:
-        return self.get_configuration_future(section, scope_uri, request).result(30)
+    ) -> TConfig:
+        return self.get_configuration_future(section, scope_uri).result(30)
 
     def get_configuration_future(
         self,
-        section: Type[_TConfig],
+        section: Type[TConfig],
         scope_uri: Union[str, Uri, None] = None,
-        request: bool = True,
-    ) -> Task[_TConfig]:
-        result_future: Task[_TConfig] = Task()
+    ) -> Task[TConfig]:
+        result_future: Task[TConfig] = Task()
 
         scope = self.get_workspace_folder(scope_uri) if scope_uri is not None else None
 
         if (scope, section.__config_section__) in self._settings_cache:
             result_future.set_result(
                 cast(
-                    _TConfig,
+                    TConfig,
                     self._settings_cache[(scope, section.__config_section__)],
                 )
             )
@@ -367,7 +295,6 @@ class Workspace(LanguageServerProtocolPart):
         self.get_configuration_raw(
             section=section.__config_section__,
             scope_uri=scope_uri,
-            request=request,
         ).add_done_callback(_get_configuration_done)
 
         return result_future
@@ -376,13 +303,12 @@ class Workspace(LanguageServerProtocolPart):
         self,
         section: Optional[str],
         scope_uri: Union[str, Uri, None] = None,
-        request: bool = True,
     ) -> Task[Optional[Any]]:
         if (
             self.parent.client_capabilities
             and self.parent.client_capabilities.workspace
             and self.parent.client_capabilities.workspace.configuration
-            and request
+            and self.parent.running_thread != threading.current_thread()
         ):
             return self.parent.send_request(
                 "workspace/configuration",
@@ -443,7 +369,7 @@ class Workspace(LanguageServerProtocolPart):
                     self._settings_cache.pop(k, None)
 
             for a in event.added:
-                self._workspace_folders.append(WorkspaceFolder(a.name, Uri(a.uri), a.uri))
+                self._workspace_folders.append(WorkspaceFolder(a.name, Uri(a.uri)))
 
         # TODO: do we need an event for this?
 
@@ -457,24 +383,10 @@ class Workspace(LanguageServerProtocolPart):
         if changes:
             self.did_change_watched_files(self, changes)
 
-    def add_file_watcher(
-        self,
-        callback: Union[
-            Callable[[Any, List[FileEvent]], None],
-            Callable[[Any, List[FileEvent]], Coroutine[Any, Any, None]],
-        ],
-        glob_pattern: str,
-        kind: Optional[WatchKind] = None,
-    ) -> FileWatcherEntry:
-        return self.add_file_watchers(callback, [(glob_pattern, kind)])
-
     @_logger.call
     def add_file_watchers(
         self,
-        callback: Union[
-            Callable[[Any, List[FileEvent]], None],
-            Callable[[Any, List[FileEvent]], Coroutine[Any, Any, None]],
-        ],
+        callback: Callable[[Any, List[FileEvent]], None],
         watchers: List[Union[FileWatcher, str, Tuple[str, Optional[WatchKind]]]],
     ) -> FileWatcherEntry:
         with self._file_watchers_lock:

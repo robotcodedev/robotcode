@@ -21,15 +21,13 @@ from robotcode.language_server.common.parts.diagnostics import DiagnosticsMode
 from robotcode.language_server.robotframework.configuration import (
     AnalysisConfig,
     RobotCodeConfig,
-    RobotConfig,
 )
 from robotcode.language_server.robotframework.protocol import (
     RobotLanguageServerProtocol,
 )
 from robotcode.language_server.robotframework.server import RobotLanguageServer
-from tests.robotcode.language_server.robotframework.tools import (
-    generate_test_id,
-)
+from robotcode.robot.diagnostics.workspace_config import RobotConfig
+from tests.robotcode.language_server.robotframework.tools import generate_test_id
 
 from .pytest_regtestex import RegTestFixtureEx
 

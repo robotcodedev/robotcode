@@ -46,6 +46,7 @@ from robot.parsing.model.statements import (
 )
 from robot.utils.escaping import split_from_equals
 
+from robotcode.core.language import language_id
 from robotcode.core.lsp.types import (
     Command,
     CompletionContext,
@@ -68,6 +69,8 @@ from robotcode.robot.diagnostics.library_doc import (
     KeywordDoc,
     KeywordMatcher,
 )
+from robotcode.robot.diagnostics.model_helper import ModelHelper
+from robotcode.robot.diagnostics.namespace import DocumentType, Namespace
 from robotcode.robot.utils import get_robot_version
 from robotcode.robot.utils.ast import (
     get_nodes_at_position,
@@ -78,10 +81,8 @@ from robotcode.robot.utils.ast import (
     whitespace_from_begin_of_token,
 )
 
-from ...common.decorators import language_id, trigger_characters
+from ...common.decorators import trigger_characters
 from ..configuration import CompletionConfig
-from ..diagnostics.model_helper import ModelHelper
-from ..diagnostics.namespace import DocumentType, Namespace
 from .protocol_part import RobotLanguageServerProtocolPart
 
 if get_robot_version() >= (6, 1):

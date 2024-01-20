@@ -26,7 +26,6 @@ from robot.parsing.model.statements import (
 )
 from robot.utils.escaping import split_from_equals, unescape
 from robot.variables.search import contains_variable, search_variable
-
 from robotcode.core.concurrent import check_current_task_canceled
 from robotcode.core.lsp.types import (
     CodeDescription,
@@ -39,7 +38,18 @@ from robotcode.core.lsp.types import (
     Range,
 )
 from robotcode.core.uri import Uri
-from robotcode.robot.diagnostics.entities import (
+
+from ..utils import get_robot_version
+from ..utils.ast import (
+    is_not_variable_token,
+    range_from_node,
+    range_from_node_or_token,
+    range_from_token,
+    strip_variable_token,
+    tokenize_variables,
+)
+from ..utils.visitor import Visitor
+from .entities import (
     ArgumentDefinition,
     CommandLineVariableDefinition,
     EnvironmentVariableDefinition,
@@ -49,22 +59,11 @@ from robotcode.robot.diagnostics.entities import (
     VariableDefinitionType,
     VariableNotFoundDefinition,
 )
-from robotcode.robot.diagnostics.library_doc import (
+from .errors import DIAGNOSTICS_SOURCE_NAME, Error
+from .library_doc import (
     KeywordDoc,
     is_embedded_keyword,
 )
-from robotcode.robot.utils import get_robot_version
-from robotcode.robot.utils.ast import (
-    is_not_variable_token,
-    range_from_node,
-    range_from_node_or_token,
-    range_from_token,
-    strip_variable_token,
-    tokenize_variables,
-)
-from robotcode.robot.utils.visitor import Visitor
-
-from .errors import DIAGNOSTICS_SOURCE_NAME, Error
 from .model_helper import ModelHelper
 from .namespace import KeywordFinder, Namespace
 
@@ -83,7 +82,7 @@ class AnalyzerResult:
     namespace_references: Dict[LibraryEntry, Set[Location]]
 
 
-class Analyzer(Visitor, ModelHelper):
+class NamespaceAnalyzer(Visitor, ModelHelper):
     def __init__(
         self,
         model: ast.AST,

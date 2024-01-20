@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any, List, Optional
 from robot.parsing.lexer.tokens import Token
 
 from robotcode.core.concurrent import check_current_task_canceled
+from robotcode.core.language import language_id
 from robotcode.core.lsp.types import (
     Diagnostic,
     DiagnosticSeverity,
@@ -16,12 +17,14 @@ from robotcode.core.lsp.types import (
 from robotcode.core.text_document import TextDocument
 from robotcode.core.uri import Uri
 from robotcode.core.utils.logging import LoggingDescriptor
+from robotcode.language_server.robotframework.configuration import AnalysisConfig
 from robotcode.robot.diagnostics.entities import (
     ArgumentDefinition,
     CommandLineVariableDefinition,
     EnvironmentVariableDefinition,
     LibraryArgumentDefinition,
 )
+from robotcode.robot.diagnostics.namespace import Namespace
 from robotcode.robot.utils.ast import (
     iter_nodes,
     range_from_node,
@@ -29,10 +32,7 @@ from robotcode.robot.utils.ast import (
 )
 from robotcode.robot.utils.stubs import HasError, HasErrors, HeaderAndBodyBlock
 
-from ...common.decorators import language_id
 from ...common.parts.diagnostics import DiagnosticsResult
-from ..configuration import AnalysisConfig
-from ..diagnostics.namespace import Namespace
 
 if TYPE_CHECKING:
     from ..protocol import RobotLanguageServerProtocol
@@ -48,21 +48,25 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
 
         self.source_name = "robotcode.diagnostics"
 
-        parent.diagnostics.analyze.add(self.analyze)
+        self.parent.on_initialized.add(self._on_initialized)
 
-        parent.diagnostics.collect.add(self.collect_token_errors)
-        parent.diagnostics.collect.add(self.collect_model_errors)
+        self.parent.diagnostics.collect.add(self.collect_token_errors)
+        self.parent.diagnostics.collect.add(self.collect_model_errors)
 
-        parent.diagnostics.collect.add(self.collect_namespace_diagnostics)
+        self.parent.diagnostics.collect.add(self.collect_namespace_diagnostics)
 
         self.parent.diagnostics.collect.add(self.collect_unused_keyword_references)
         self.parent.diagnostics.collect.add(self.collect_unused_variable_references)
 
-        parent.documents_cache.namespace_invalidated.add(self.namespace_invalidated)
-
         self._collect_unused_references_event = threading.Event()
-        parent.diagnostics.on_workspace_diagnostics_analyze.add(self._on_workspace_diagnostics_analyze)
-        parent.diagnostics.on_workspace_diagnostics_collect.add(self._on_workspace_diagnostics_collect)
+
+        self.parent.diagnostics.on_workspace_diagnostics_analyze.add(self._on_workspace_diagnostics_analyze)
+        self.parent.diagnostics.on_workspace_diagnostics_collect.add(self._on_workspace_diagnostics_collect)
+
+    def _on_initialized(self, sender: Any) -> None:
+        self.parent.diagnostics.analyze.add(self.analyze)
+
+        self.parent.documents_cache.namespace_invalidated.add(self.namespace_invalidated)
 
     def _on_workspace_diagnostics_analyze(self, sender: Any) -> None:
         self._collect_unused_references_event.clear()

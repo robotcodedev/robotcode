@@ -17,6 +17,7 @@ from robot.parsing.model.blocks import TestCase, TestCaseSection
 from robot.parsing.model.statements import Documentation, Tags
 
 from robotcode.core.concurrent import check_current_task_canceled
+from robotcode.core.language import language_id
 from robotcode.core.lsp.types import (
     Hover,
     MarkupContent,
@@ -25,7 +26,8 @@ from robotcode.core.lsp.types import (
     Range,
 )
 from robotcode.core.text_document import TextDocument
-from robotcode.core.utils.logging import LoggingDescriptor
+from robotcode.core.utils.logging import TRACE, LoggingDescriptor
+from robotcode.robot.diagnostics.model_helper import ModelHelper
 from robotcode.robot.utils.ast import (
     get_nodes_at_position,
     range_from_node,
@@ -33,8 +35,6 @@ from robotcode.robot.utils.ast import (
 )
 from robotcode.robot.utils.markdownformatter import MarkDownFormatter
 
-from ...common.decorators import language_id
-from ..diagnostics.model_helper import ModelHelper
 from .protocol_part import RobotLanguageServerProtocolPart
 
 if TYPE_CHECKING:
@@ -132,7 +132,7 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
                         ):
                             raise
                         except BaseException:
-                            self._logger.exception("Error resolving variable: {e}")
+                            self._logger.exception("Error resolving variable: {e}", level=TRACE)
                             value = ""
                     else:
                         value = ""

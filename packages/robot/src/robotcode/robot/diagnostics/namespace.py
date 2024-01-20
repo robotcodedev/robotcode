@@ -42,7 +42,6 @@ from robot.variables.search import (
     is_variable,
     search_variable,
 )
-
 from robotcode.core.concurrent import RLock
 from robotcode.core.event import event
 from robotcode.core.lsp.types import (
@@ -59,7 +58,19 @@ from robotcode.core.lsp.types import (
 from robotcode.core.text_document import TextDocument
 from robotcode.core.uri import Uri
 from robotcode.core.utils.logging import LoggingDescriptor
-from robotcode.robot.diagnostics.entities import (
+
+from ..utils import get_robot_version
+from ..utils.ast import (
+    range_from_node,
+    range_from_token,
+    strip_variable_token,
+    tokenize_variables,
+)
+from ..utils.match import eq_namespace
+from ..utils.stubs import Languages
+from ..utils.variables import BUILTIN_VARIABLES
+from ..utils.visitor import Visitor
+from .entities import (
     ArgumentDefinition,
     BuiltInVariableDefinition,
     CommandLineVariableDefinition,
@@ -76,7 +87,9 @@ from robotcode.robot.diagnostics.entities import (
     VariablesEntry,
     VariablesImport,
 )
-from robotcode.robot.diagnostics.library_doc import (
+from .errors import DIAGNOSTICS_SOURCE_NAME, Error
+from .imports_manager import ImportsManager
+from .library_doc import (
     BUILTIN_LIBRARY_NAME,
     DEFAULT_LIBRARIES,
     KeywordDoc,
@@ -84,20 +97,6 @@ from robotcode.robot.diagnostics.library_doc import (
     KeywordMatcher,
     LibraryDoc,
 )
-from robotcode.robot.utils import get_robot_version
-from robotcode.robot.utils.ast import (
-    range_from_node,
-    range_from_token,
-    strip_variable_token,
-    tokenize_variables,
-)
-from robotcode.robot.utils.match import eq_namespace
-from robotcode.robot.utils.stubs import Languages
-from robotcode.robot.utils.variables import BUILTIN_VARIABLES
-from robotcode.robot.utils.visitor import Visitor
-
-from .errors import DIAGNOSTICS_SOURCE_NAME, Error
-from .imports_manager import ImportsManager
 
 EXTRACT_COMMENT_PATTERN = re.compile(r".*(?:^ *|\t+| {2,})#(?P<comment>.*)$")
 ROBOTCODE_PATTERN = re.compile(r"(?P<marker>\brobotcode\b)\s*:\s*(?P<rule>\b\w+\b)")
@@ -598,6 +597,7 @@ class Namespace:
         return self._document() if self._document is not None else None
 
     def imports_changed(self, sender: Any, uri: DocumentUri) -> None:
+        # TODO: optimise this by checking our imports
         if self.document is not None:
             self.document.set_data(Namespace.DataEntry, None)
 
@@ -1609,7 +1609,7 @@ class Namespace:
     def analyze(self) -> None:
         import time
 
-        from .analyzer import Analyzer
+        from .namespace_analyzer import NamespaceAnalyzer
 
         with self._analyze_lock:
             if not self._analyzed:
@@ -1619,7 +1619,7 @@ class Namespace:
                 start_time = time.monotonic()
 
                 try:
-                    result = Analyzer(
+                    result = NamespaceAnalyzer(
                         self.model,
                         self,
                         self.create_finder(),

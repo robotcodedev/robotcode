@@ -1,8 +1,7 @@
-from __future__ import annotations
-
 import io
 from typing import TYPE_CHECKING, Any, List, Optional
 
+from robotcode.core.language import language_id
 from robotcode.core.lsp.types import (
     CodeDescription,
     Diagnostic,
@@ -13,17 +12,14 @@ from robotcode.core.lsp.types import (
 from robotcode.core.text_document import TextDocument
 from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.core.utils.version import Version, create_version_from_str
+from robotcode.core.workspace import WorkspaceFolder
 
-from ...common.decorators import language_id
 from ...common.parts.diagnostics import DiagnosticsResult
-from ...common.parts.workspace import WorkspaceFolder
 from ..configuration import RoboCopConfig
 from .protocol_part import RobotLanguageServerProtocolPart
 
 if TYPE_CHECKING:
-    from robotcode.language_server.robotframework.protocol import (
-        RobotLanguageServerProtocol,
-    )
+    from ..protocol import RobotLanguageServerProtocol
 
 
 def robocop_installed() -> bool:
@@ -37,7 +33,7 @@ def robocop_installed() -> bool:
 class RobotRoboCopDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
     _logger = LoggingDescriptor()
 
-    def __init__(self, parent: RobotLanguageServerProtocol) -> None:
+    def __init__(self, parent: "RobotLanguageServerProtocol") -> None:
         super().__init__(parent)
 
         self.source_name = "robocop"
@@ -97,6 +93,7 @@ class RobotRoboCopDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
             if extension_config.configurations:
                 config.configure = extension_config.configurations
 
+            # TODO: do we need this?
             class MyRobocop(Robocop):
                 def run_check(self, ast_model, filename, source=None):  # type: ignore
                     if robocop_version >= (4, 0):

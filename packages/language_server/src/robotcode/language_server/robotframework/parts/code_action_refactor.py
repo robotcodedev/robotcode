@@ -5,6 +5,7 @@ from enum import Enum
 from string import Template
 from typing import TYPE_CHECKING, Any, List, Mapping, Optional, Union
 
+from robotcode.core.language import language_id
 from robotcode.core.lsp.types import (
     AnnotatedTextEdit,
     ChangeAnnotation,
@@ -25,6 +26,7 @@ from robotcode.core.text_document import TextDocument
 from robotcode.core.utils.dataclasses import as_dict, from_dict
 from robotcode.core.utils.inspect import iter_methods
 from robotcode.core.utils.logging import LoggingDescriptor
+from robotcode.robot.diagnostics.model_helper import ModelHelper
 from robotcode.robot.utils import get_robot_version
 from robotcode.robot.utils.ast import (
     get_node_at_position,
@@ -35,8 +37,7 @@ from robotcode.robot.utils.ast import (
 )
 from robotcode.robot.utils.stubs import BodyBlock
 
-from ...common.decorators import code_action_kinds, language_id
-from ..diagnostics.model_helper import ModelHelper
+from ...common.decorators import code_action_kinds
 from .code_action_helper_mixin import (
     SHOW_DOCUMENT_SELECT_AND_RENAME_COMMAND,
     CodeActionDataBase,

@@ -3,19 +3,17 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, List, Optional, Union, cast
 
 from robotcode.core.concurrent import check_current_task_canceled
+from robotcode.core.language import language_id
 from robotcode.core.lsp.types import Location, LocationLink, Position, Range
 from robotcode.core.text_document import TextDocument
 from robotcode.core.uri import Uri
 from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.robot.utils.ast import range_from_token
 
-from ...common.decorators import language_id
 from .protocol_part import RobotLanguageServerProtocolPart
 
 if TYPE_CHECKING:
-    from robotcode.language_server.robotframework.protocol import (
-        RobotLanguageServerProtocol,
-    )
+    from ..protocol import RobotLanguageServerProtocol
 
 
 class RobotGotoProtocolPart(RobotLanguageServerProtocolPart):

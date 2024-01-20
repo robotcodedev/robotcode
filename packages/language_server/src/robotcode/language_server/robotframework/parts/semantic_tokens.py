@@ -39,6 +39,7 @@ from robot.utils.escaping import split_from_equals, unescape
 from robot.variables.search import is_variable
 
 from robotcode.core.concurrent import check_current_task_canceled
+from robotcode.core.language import language_id
 from robotcode.core.lsp.types import (
     Position,
     Range,
@@ -58,6 +59,8 @@ from robotcode.robot.diagnostics.library_doc import (
     KeywordMatcher,
     LibraryDoc,
 )
+from robotcode.robot.diagnostics.model_helper import ModelHelper
+from robotcode.robot.diagnostics.namespace import DEFAULT_BDD_PREFIXES, Namespace
 from robotcode.robot.utils import get_robot_version
 from robotcode.robot.utils.ast import (
     iter_nodes,
@@ -65,18 +68,13 @@ from robotcode.robot.utils.ast import (
     token_in_range,
 )
 
-from ...common.decorators import language_id
-from ..diagnostics.model_helper import ModelHelper
-from ..diagnostics.namespace import DEFAULT_BDD_PREFIXES, Namespace
 from .protocol_part import RobotLanguageServerProtocolPart
 
 if get_robot_version() >= (5, 0):
     from robot.parsing.model.statements import ExceptHeader, WhileHeader
 
 if TYPE_CHECKING:
-    from robotcode.language_server.robotframework.protocol import (
-        RobotLanguageServerProtocol,
-    )
+    from ..protocol import RobotLanguageServerProtocol
 
 
 ROBOT_KEYWORD_INNER = "KEYWORD_INNER"
@@ -159,7 +157,10 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
         # parent.semantic_tokens.collect_range.add(self.collect_range)
         # parent.semantic_tokens.collect_full_delta.add(self.collect_full_delta)
 
-        parent.documents_cache.namespace_invalidated.add(self.namespace_invalidated)
+        self.parent.on_initialized.add(self._on_initialized)
+
+    def _on_initialized(self, sender: Any) -> None:
+        self.parent.documents_cache.namespace_invalidated.add(self.namespace_invalidated)
 
     @language_id("robotframework")
     def namespace_invalidated(self, sender: Any, namespace: Namespace) -> None:
@@ -321,13 +322,13 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
             cls._mapping = cls.generate_mapping()
         return cls._mapping
 
-    ESCAPE_REGEX: ClassVar["re.Pattern[str]"] = re.compile(
+    ESCAPE_REGEX: ClassVar = re.compile(
         r"(?P<t>[^\\]+)|(?P<x>\\(?:[\\nrt]|x[0-9A-Fa-f]{2}|u[0-9a-fA-F]{4}|U[0-9a-fA-F]{8}))|(?P<e>\\(?:[^\\nrt\\xuU]|[\\xuU][^0-9a-fA-F]))",
         re.MULTILINE | re.DOTALL,
     )
-    BDD_TOKEN_REGEX: ClassVar["re.Pattern[str]"] = re.compile(r"^(Given|When|Then|And|But)\s", flags=re.IGNORECASE)
+    BDD_TOKEN_REGEX: ClassVar = re.compile(r"^(Given|When|Then|And|But)\s", flags=re.IGNORECASE)
 
-    BUILTIN_MATCHER: ClassVar[KeywordMatcher] = KeywordMatcher("BuiltIn", is_namespace=True)
+    BUILTIN_MATCHER: ClassVar = KeywordMatcher("BuiltIn", is_namespace=True)
 
     @classmethod
     def generate_sem_sub_tokens(

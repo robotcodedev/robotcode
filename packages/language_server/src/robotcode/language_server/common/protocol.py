@@ -1,11 +1,11 @@
-from __future__ import annotations
-
 import asyncio
+import threading
 from threading import Event
-from typing import Any, ClassVar, Final, List, NamedTuple, Optional, Set, Union
+from typing import Any, ClassVar, Final, List, Optional, Set, Union
 
 from robotcode.core.concurrent import Task
 from robotcode.core.event import event
+from robotcode.core.language import LanguageDefinition
 from robotcode.core.lsp.types import (
     CancelParams,
     ClientCapabilities,
@@ -40,9 +40,6 @@ from robotcode.jsonrpc2.protocol import (
     rpc_method,
 )
 from robotcode.jsonrpc2.server import JsonRPCServer
-from robotcode.language_server.common.parts.protocol_part import (
-    LanguageServerProtocolPart,
-)
 
 from .parts.code_action import CodeActionProtocolPart
 from .parts.code_lens import CodeLensProtocolPart
@@ -61,6 +58,7 @@ from .parts.implementation import ImplementationProtocolPart
 from .parts.inlay_hint import InlayHintProtocolPart
 from .parts.inline_value import InlineValueProtocolPart
 from .parts.linked_editing_ranges import LinkedEditingRangeProtocolPart
+from .parts.protocol_part import LanguageServerProtocolPart
 from .parts.references import ReferencesProtocolPart
 from .parts.rename import RenameProtocolPart
 from .parts.selection_range import SelectionRangeProtocolPart
@@ -74,12 +72,6 @@ __all__ = ["LanguageServerException", "LanguageServerProtocol"]
 
 class LanguageServerException(JsonRPCException):
     pass
-
-
-class LanguageDefinition(NamedTuple):
-    id: str
-    extensions: List[str]
-    aliases: Optional[List[str]] = None
 
 
 class LanguageServerProtocol(JsonRPCProtocol):
@@ -119,6 +111,7 @@ class LanguageServerProtocol(JsonRPCProtocol):
 
     def __init__(self, server: JsonRPCServer[Any]):
         super().__init__()
+        self.running_thread = threading.current_thread()
         self.server = server
         self.parent_process_id: Optional[int] = None
         self.initialization_options: Any = None
@@ -274,11 +267,18 @@ class LanguageServerProtocol(JsonRPCProtocol):
     def on_initialize(sender, initialization_options: Optional[Any] = None) -> None:  # pragma: no cover, NOSONAR
         ...
 
-    @rpc_method(name="initialized", param_type=InitializedParams)
+    @rpc_method(name="initialized", param_type=InitializedParams, threaded=True)
     def _initialized(self, params: InitializedParams, *args: Any, **kwargs: Any) -> None:
+        if self.is_initialized.is_set():
+            return
+
         self.on_initialized(self)
 
         self.is_initialized.set()
+
+    def ensure_initialized(self) -> None:
+        if not self.is_initialized.wait(60):
+            raise RuntimeError("Language server not initialized")
 
     @event
     def on_initialized(sender) -> None:  # pragma: no cover, NOSONAR

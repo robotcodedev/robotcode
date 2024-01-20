@@ -8,6 +8,7 @@ from robot.parsing.model.blocks import Keyword, Section, TestCase
 from robot.parsing.model.statements import Statement
 from robot.variables import search_variable
 
+from robotcode.core.language import language_id
 from robotcode.core.lsp.types import (
     DocumentSymbol,
     SymbolInformation,
@@ -22,7 +23,6 @@ from robotcode.robot.utils.ast import (
 )
 from robotcode.robot.utils.visitor import Visitor
 
-from ...common.decorators import language_id
 from .protocol_part import RobotLanguageServerProtocolPart
 
 if TYPE_CHECKING:

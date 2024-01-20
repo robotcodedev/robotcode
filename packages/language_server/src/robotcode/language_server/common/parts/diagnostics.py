@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, Any, Dict, Final, List, Optional, cast
 
 from robotcode.core.concurrent import Lock, RLock, Task, check_current_task_canceled, run_as_task
 from robotcode.core.event import event
+from robotcode.core.language import language_id_filter
 from robotcode.core.lsp.types import (
     Diagnostic,
     DiagnosticOptions,
@@ -30,7 +31,6 @@ from robotcode.core.text_document import TextDocument
 from robotcode.core.uri import Uri
 from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.jsonrpc2.protocol import JsonRPCErrorException, rpc_method
-from robotcode.language_server.common.decorators import language_id_filter
 from robotcode.language_server.common.parts.protocol_part import (
     LanguageServerProtocolPart,
 )
@@ -98,6 +98,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
         self.parent.on_exit.add(self.cancel_workspace_diagnostics_task)
         self.parent.on_shutdown.add(self.cancel_workspace_diagnostics_task)
 
+        self.parent.documents.on_document_cache_invalidated.add(self._on_document_cache_invalidated)
         self.parent.documents.did_close.add(self.on_did_close)
 
         self.in_get_workspace_diagnostics = Event()
@@ -183,6 +184,8 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
         ...
 
     def ensure_workspace_loaded(self) -> None:
+        self.parent.ensure_initialized()
+
         with self._workspace_load_lock:
             if not self._workspace_loaded and not self.workspace_loaded_event.is_set():
                 self._logger.debug("load workspace documents")
@@ -193,6 +196,10 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
                     self.workspace_loaded_event.set()
                     self.on_workspace_loaded(self)
                     self.force_refresh_all()
+
+    def _on_document_cache_invalidated(self, sender: Any, document: TextDocument) -> None:
+        # TODO: find documents that needed to be refreshed
+        self.force_refresh_all()
 
     def force_refresh_all(self, refresh: bool = True) -> None:
         for doc in self.parent.documents.documents:
@@ -207,11 +214,11 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
             self.refresh()
 
     @_logger.call
-    def on_did_close(self, sender: Any, document: TextDocument) -> None:
-        run_as_task(self._close_diagnostics_for_document, document)
+    def on_did_close(self, sender: Any, document: TextDocument, full_close: bool) -> None:
+        run_as_task(self._close_diagnostics_for_document, document, full_close)
 
-    def _close_diagnostics_for_document(self, document: TextDocument) -> None:
-        if self.get_diagnostics_mode(document.uri) == DiagnosticsMode.WORKSPACE:
+    def _close_diagnostics_for_document(self, document: TextDocument, full_close: bool) -> None:
+        if not full_close and self.get_diagnostics_mode(document.uri) == DiagnosticsMode.WORKSPACE:
             return
 
         try:
@@ -563,6 +570,9 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
         **kwargs: Any,
     ) -> DocumentDiagnosticReport:
         self._logger.debug("textDocument/diagnostic")
+
+        self.parent.ensure_initialized()
+
         try:
             if not self.parent.is_initialized.is_set():
                 raise JsonRPCErrorException(

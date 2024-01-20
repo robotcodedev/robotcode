@@ -9,13 +9,13 @@ from robotcode.core.lsp.types import Position, Range, TextDocumentIdentifier
 from robotcode.core.utils.dataclasses import CamelSnakeMixin
 from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.jsonrpc2.protocol import rpc_method
+from robotcode.robot.diagnostics.model_helper import ModelHelper
 from robotcode.robot.utils.ast import (
     get_nodes_at_position,
     get_tokens_at_position,
     range_from_token,
 )
 
-from ..diagnostics.model_helper import ModelHelper
 from .protocol_part import RobotLanguageServerProtocolPart
 
 if TYPE_CHECKING:
