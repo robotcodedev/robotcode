@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [0.68.5](https://github.com/d-biehl/robotcode/compare/v0.68.4..v0.68.5) - 2024-01-21
+
+### Bug Fixes
+
+- **langserver:** Filewatcher does not work ([5b72148](https://github.com/d-biehl/robotcode/commit/5b7214824eb51bab6d1adaec97f177f152fde0bf))
+
+
 ## [0.68.4](https://github.com/d-biehl/robotcode/compare/v0.68.3..v0.68.4) - 2024-01-20
 
 ### Bug Fixes
