@@ -21,6 +21,7 @@ from typing import (
 from robot.parsing.lexer.tokens import Token
 from robotcode.core.documents_manager import DocumentsManager
 from robotcode.core.event import event
+from robotcode.core.filewatcher import FileWatcherManagerBase
 from robotcode.core.language import language_id_filter
 from robotcode.core.text_document import TextDocument
 from robotcode.core.uri import Uri
@@ -46,11 +47,14 @@ class DocumentsCacheHelper:
         self,
         workspace: Workspace,
         documents_manager: DocumentsManager,
+        file_watcher_manager: FileWatcherManagerBase,
         robot_profile: Optional[RobotBaseProfile],
     ) -> None:
         self.workspace = workspace
-        self.robot_profile = robot_profile or RobotBaseProfile()
         self.documents_manager = documents_manager
+        self.file_watcher_manager = file_watcher_manager
+
+        self.robot_profile = robot_profile or RobotBaseProfile()
 
         self._imports_managers_lock = threading.RLock()
         self._imports_managers: weakref.WeakKeyDictionary[WorkspaceFolder, ImportsManager] = weakref.WeakKeyDictionary()
@@ -473,7 +477,7 @@ class DocumentsCacheHelper:
 
         return ImportsManager(
             self.documents_manager,
-            None,
+            self.file_watcher_manager,
             self,
             root_uri.to_path(),
             variables,

@@ -26,7 +26,7 @@ class DocumentsCachePart(RobotLanguageServerProtocolPart, DocumentsCacheHelper):
 
     def __init__(self, parent: "RobotLanguageServerProtocol") -> None:
         super().__init__(parent)
-        DocumentsCacheHelper.__init__(self, parent.workspace, parent.documents, parent.robot_profile)
+        DocumentsCacheHelper.__init__(self, parent.workspace, parent.documents, parent.workspace, parent.robot_profile)
 
         self._imports_managers_lock = threading.RLock()
         self._imports_managers: weakref.WeakKeyDictionary[WorkspaceFolder, ImportsManager] = weakref.WeakKeyDictionary()
