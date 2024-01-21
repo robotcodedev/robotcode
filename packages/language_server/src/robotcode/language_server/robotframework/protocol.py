@@ -12,6 +12,7 @@ from typing import (
     Optional,
 )
 
+from robotcode.core.event import event
 from robotcode.core.language import LanguageDefinition
 from robotcode.core.lsp.types import InitializeError
 from robotcode.core.utils.dataclasses import CamelSnakeMixin, from_dict
@@ -38,6 +39,7 @@ from .parts.folding_range import RobotFoldingRangeProtocolPart
 from .parts.formatting import RobotFormattingProtocolPart
 from .parts.goto import RobotGotoProtocolPart
 from .parts.hover import RobotHoverProtocolPart
+from .parts.http_server import HttpServerProtocolPart
 from .parts.inlay_hint import RobotInlayHintProtocolPart
 from .parts.inline_value import RobotInlineValueProtocolPart
 from .parts.references import RobotReferencesProtocolPart
@@ -112,6 +114,8 @@ class RobotLanguageServerProtocol(LanguageServerProtocol):
     robot_code_action_refactor = ProtocolPartDescriptor(RobotCodeActionRefactorProtocolPart)
 
     robot_debugging_utils = ProtocolPartDescriptor(RobotDebuggingUtilsProtocolPart)
+
+    http_server = ProtocolPartDescriptor(HttpServerProtocolPart)
 
     name = "RobotCode Language Server"
     short_name = "RobotCode"
@@ -200,6 +204,10 @@ class RobotLanguageServerProtocol(LanguageServerProtocol):
     def _on_did_change_configuration(self, sender: Any, settings: Dict[str, Any]) -> None:
         pass
 
+    @event
+    def on_robot_initialized(sender) -> None:
+        ...
+
     def server_initialized(self, sender: Any) -> None:
         for folder in self.workspace.workspace_folders:
             config: RobotConfig = self.workspace.get_configuration(RobotConfig, folder.uri)
@@ -230,3 +238,5 @@ class RobotLanguageServerProtocol(LanguageServerProtocol):
                         absolute_path = str(pa.absolute())
                         if absolute_path not in sys.path:
                             sys.path.insert(0, absolute_path)
+
+        self.on_robot_initialized(self)

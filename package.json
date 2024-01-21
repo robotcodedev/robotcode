@@ -746,6 +746,11 @@
             "default": 3199,
             "description": "Defines the endport for searching a free port for the documentation server."
           },
+          "robotcode.documentationServer.startOnDemand": {
+            "type": "boolean",
+            "default": true,
+            "description": "Starts the internal HTTP server only if needed."
+          },
           "robotcode.completion.filterDefaultLanguage": {
             "type": "boolean",
             "default": false,
