@@ -1926,7 +1926,13 @@ def get_library_doc(
                             )
                             if not kw[1].is_error_handler
                             else None,
-                            return_type=str(kw[1].args.return_type) if get_robot_version() >= (7, 0) else None,
+                            return_type=(
+                                str(kw[1].args.return_type)
+                                if kw[1].args.return_type is not None and kw[1].args.return_type != type(None)
+                                else None
+                            )
+                            if get_robot_version() >= (7, 0)
+                            else None,
                         )
                         for kw in keyword_docs
                     ],
