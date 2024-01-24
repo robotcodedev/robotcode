@@ -2155,7 +2155,7 @@ class RobotBaseProfile(CommonOptions, CommonExtendOptions, RobotOptions, RobotEx
             Corresponds to the `paths` argument of __robot__.
             """
     )
-    env: Optional[Dict[str, str]] = field(
+    env: Optional[Dict[str, Union[str, StringExpression]]] = field(
         description="""\
             Define environment variables to be set before running tests.
 
@@ -2202,7 +2202,7 @@ class RobotExtraBaseProfile(RobotBaseProfile):
             """
     )
 
-    extend_env: Optional[Dict[str, str]] = field(
+    extend_env: Optional[Dict[str, Union[str, StringExpression]]] = field(
         description="""\
             Append extra environment variables to be set before tests.
             """

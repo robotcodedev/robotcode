@@ -462,7 +462,7 @@ class DocumentsCacheHelper:
         robot_config = self.workspace.get_configuration(RobotConfig, root_uri)
 
         cache_config = self.workspace.get_configuration(CacheConfig, root_uri)
-        environment = self.robot_profile.env or {}
+        environment = {k: str(v) for k, v in (self.robot_profile.env or {}).items()}
         if robot_config.env:
             environment.update(robot_config.env)
 

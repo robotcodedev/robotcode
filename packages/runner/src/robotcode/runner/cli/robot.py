@@ -108,11 +108,17 @@ def handle_robot_options(
         robot_arguments, app.config.config_files, verbose_callback=app.verbose
     )
     try:
-        profile = (
-            load_robot_config_from_path(*config_files)
-            .combine_profiles(*(app.config.profiles or []), verbose_callback=app.verbose)
-            .evaluated()
+        profile = load_robot_config_from_path(*config_files).combine_profiles(
+            *(app.config.profiles or []), verbose_callback=app.verbose
         )
+
+        if profile.env:
+            for k, v in profile.env.items():
+                os.environ[k] = str(v)
+                app.verbose(lambda: f"Set environment variable {k} to {v}")
+
+        profile = profile.evaluated()
+
     except (TypeError, ValueError) as e:
         raise click.ClickException(str(e)) from e
 
@@ -131,11 +137,6 @@ def handle_robot_options(
             "--prerunmodifier",
             f"robotcode.modifiers.ExcludedByLongName{sep}{sep.join(exclude_by_longname)}",
         )
-
-    if profile.env:
-        for k, v in profile.env.items():
-            os.environ[k] = v
-            app.verbose(lambda: f"Set environment variable {k} to {v}")
 
     app.verbose(
         lambda: "Executing robot with following options:\n    "
