@@ -38,9 +38,24 @@ export function toVsCodeRange(range: Range): vscode.Range {
 export const SUPPORTED_LANGUAGES = ["robotframework"];
 export const SUPPORTED_SUITE_FILE_EXTENSIONS = [".robot"];
 
+export interface Keyword {
+  name: string;
+  id?: string;
+  signature?: string;
+  documentation?: string;
+}
+
+export interface DocumentImport {
+  name: string;
+  alias?: string;
+  id?: string;
+  type?: string;
+  documentation?: string;
+  keywords?: Keyword[];
+}
+
 export interface EvaluatableExpression {
   range: Range;
-
   expression?: string;
 }
 
@@ -646,54 +661,43 @@ export class LanguageClientsManager {
 
   public async convertToDocumentationUri(
     uri: vscode.Uri,
-    token?: vscode.CancellationToken,
+    token?: vscode.CancellationToken | undefined,
   ): Promise<vscode.Uri | undefined> {
     const client = await this.getLanguageClientForResource(uri);
 
     if (!client) return;
 
     return (
-      (token
-        ? vscode.Uri.parse(
-            await client.sendRequest<string>(
-              "robot/documentationServer/convertUri",
-              {
-                uri: uri.toString(),
-              },
-              token,
-            ),
-          )
-        : vscode.Uri.parse(
-            await client.sendRequest<string>("robot/documentationServer/convertUri", {
-              uri: uri.toString(),
-            }),
-          )) ?? undefined
+      vscode.Uri.parse(
+        await client.sendRequest<string>(
+          "robot/documentationServer/convertUri",
+          {
+            uri: uri.toString(),
+          },
+          token ?? new vscode.CancellationTokenSource().token,
+        ),
+      ) ?? undefined
     );
   }
 
   public async getEvaluatableExpression(
     document: vscode.TextDocument,
     position: Position,
-    token?: vscode.CancellationToken,
+    token?: vscode.CancellationToken | undefined,
   ): Promise<EvaluatableExpression | undefined> {
     const client = await this.getLanguageClientForResource(document.uri);
 
     if (!client) return;
 
     return (
-      (token
-        ? await client.sendRequest<EvaluatableExpression | undefined>(
-            "robot/debugging/getEvaluatableExpression",
-            {
-              textDocument: { uri: document.uri.toString() },
-              position,
-            },
-            token,
-          )
-        : await client.sendRequest<EvaluatableExpression | undefined>("robot/debugging/getEvaluatableExpression", {
-            textDocument: { uri: document.uri.toString() },
-            position,
-          })) ?? undefined
+      (await client.sendRequest<EvaluatableExpression | undefined>(
+        "robot/debugging/getEvaluatableExpression",
+        {
+          textDocument: { uri: document.uri.toString() },
+          position,
+        },
+        token ?? new vscode.CancellationTokenSource().token,
+      )) ?? undefined
     );
   }
 
@@ -701,34 +705,25 @@ export class LanguageClientsManager {
     document: vscode.TextDocument,
     viewPort: vscode.Range,
     context: vscode.InlineValueContext,
-    token?: vscode.CancellationToken,
+    token?: vscode.CancellationToken | undefined,
   ): Promise<InlineValue[]> {
     const client = await this.getLanguageClientForResource(document.uri);
 
     if (!client) return [];
 
     return (
-      (token
-        ? await client.sendRequest<InlineValue[]>(
-            "robot/debugging/getInlineValues",
-            {
-              textDocument: { uri: document.uri.toString() },
-              viewPort: { start: viewPort.start, end: viewPort.end },
-              context: {
-                frameId: context.frameId,
-                stoppedLocation: { start: context.stoppedLocation.start, end: context.stoppedLocation.end },
-              },
-            },
-            token,
-          )
-        : await client.sendRequest<InlineValue[]>("robot/debugging/getInlineValues", {
-            textDocument: { uri: document.uri.toString() },
-            viewPort: { start: viewPort.start, end: viewPort.end },
-            context: {
-              frameId: context.frameId,
-              stoppedLocation: { start: context.stoppedLocation.start, end: context.stoppedLocation.end },
-            },
-          })) ?? []
+      (await client.sendRequest<InlineValue[]>(
+        "robot/debugging/getInlineValues",
+        {
+          textDocument: { uri: document.uri.toString() },
+          viewPort: { start: viewPort.start, end: viewPort.end },
+          context: {
+            frameId: context.frameId,
+            stoppedLocation: { start: context.stoppedLocation.start, end: context.stoppedLocation.end },
+          },
+        },
+        token ?? new vscode.CancellationTokenSource().token,
+      )) ?? []
     );
   }
 
@@ -768,5 +763,66 @@ export class LanguageClientsManager {
       }
     }
     this.statusBarItem.hide();
+  }
+
+  public async getDocumentImports(
+    document: vscode.TextDocument,
+    token?: vscode.CancellationToken | undefined,
+  ): Promise<DocumentImport[]> {
+    const client = await this.getLanguageClientForResource(document.uri);
+
+    if (!client) return [];
+
+    return (
+      (await client.sendRequest<DocumentImport[]>(
+        "robot/keywordsview/getDocumentImports",
+        {
+          textDocument: { uri: document.uri.toString() },
+        },
+        token ?? new vscode.CancellationTokenSource().token,
+      )) ?? []
+    );
+  }
+
+  public async getDocumentKeywords(
+    document: vscode.TextDocument,
+    token?: vscode.CancellationToken | undefined,
+  ): Promise<Keyword[]> {
+    const client = await this.getLanguageClientForResource(document.uri);
+
+    if (!client) return [];
+
+    return (
+      (await client.sendRequest<Keyword[]>(
+        "robot/keywordsview/getDocumentKeywords",
+        {
+          textDocument: { uri: document.uri.toString() },
+        },
+        token ?? new vscode.CancellationTokenSource().token,
+      )) ?? []
+    );
+  }
+
+  public async getDocumentionUrl(
+    document: vscode.TextDocument,
+    importId?: string | undefined,
+    keywordId?: string | undefined,
+    token?: vscode.CancellationToken | undefined,
+  ): Promise<string | undefined> {
+    const client = await this.getLanguageClientForResource(document.uri);
+
+    if (!client) return undefined;
+
+    return (
+      (await client.sendRequest<string | undefined>(
+        "robot/keywordsview/getDocumentationUrl",
+        {
+          textDocument: { uri: document.uri.toString() },
+          importId: importId,
+          keywordId: keywordId,
+        },
+        token ?? new vscode.CancellationTokenSource().token,
+      )) ?? undefined
+    );
   }
 }

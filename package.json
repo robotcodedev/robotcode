@@ -83,6 +83,17 @@
         }
       }
     },
+    "views": {
+      "explorer": [
+        {
+          "id": "robotcode.keywordsTreeView",
+          "name": "Keywords",
+          "contextualTitle": "Robot Framework",
+          "icon": "icons/svg/robot_light.svg",
+          "when": "resourceLangId == robotframework"
+        }
+      ]
+    },
     "tomlValidation": [
       {
         "fileMatch": "robot.toml",
@@ -335,7 +346,7 @@
         "args": {
           "text": "    "
         },
-        "when": "editorLangId == robotframework && editorTextFocus && config.robotcode.editor.4SpacesTab && !editorHasSelection && !inSnippetMode && !suggestWidgetVisible && !inlineSuggestionVisible"
+        "when": "editorTextFocus && editorLangId == robotframework && config.robotcode.editor.4SpacesTab && !editorHasSelection && !inSnippetMode && !suggestWidgetVisible && !inlineSuggestionVisible"
       }
     ],
     "configuration": [
@@ -807,6 +818,24 @@
         "title": "Select Execution Profiles",
         "category": "RobotCode",
         "command": "robotcode.selectExecutionProfiles"
+      },
+      {
+        "title": "Refresh",
+        "command": "robotcode.keywordsTreeView.refresh",
+        "enablement": "resourceLangId == robotframework && view == robotcode.keywordsTreeView",
+        "icon": "$(refresh)"
+      },
+      {
+        "title": "Insert Keyword",
+        "command": "robotcode.keywordsTreeView.insertKeyword",
+        "enablement": "resourceLangId == robotframework && view == robotcode.keywordsTreeView",
+        "icon": "$(insert)"
+      },
+      {
+        "title": "Show Documentation",
+        "command": "robotcode.keywordsTreeView.showDocumentation",
+        "enablement": "resourceLangId == robotframework && view == robotcode.keywordsTreeView",
+        "icon": "$(book)"
       }
     ],
     "menus": {
@@ -832,6 +861,29 @@
           "command": "robotcode.debugCurrentFile",
           "group": "robotcode@2",
           "when": "resourceLangId == robotframework && resourceExtname == .robot && !isInDiffEditor"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "robotcode.keywordsTreeView.refresh",
+          "when": "view == robotcode.keywordsTreeView",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "robotcode.keywordsTreeView.insertKeyword",
+          "when": "view == robotcode.keywordsTreeView && viewItem == keyword",
+          "group": "inline"
+        },
+        {
+          "command": "robotcode.keywordsTreeView.showDocumentation",
+          "when": "view == robotcode.keywordsTreeView",
+          "group": "inline"
+        },
+        {
+          "command": "robotcode.keywordsTreeView.showDocumentation",
+          "when": "view == robotcode.keywordsTreeView"
         }
       ]
     },

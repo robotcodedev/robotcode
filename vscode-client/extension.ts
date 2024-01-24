@@ -3,6 +3,7 @@ import { DebugManager } from "./debugmanager";
 import { LanguageClientsManager } from "./languageclientsmanger";
 import { PythonManager } from "./pythonmanger";
 import { TestControllerManager } from "./testcontrollermanager";
+import { KeywordsTreeViewProvider } from "./keywordsTreeViewProvider";
 
 class TerminalLink extends vscode.TerminalLink {
   constructor(
@@ -112,6 +113,10 @@ export async function activateAsync(context: vscode.ExtensionContext): Promise<v
         await languageClientManger.openUriInDocumentationView(vscode.Uri.file(link.path));
       },
     }),
+    vscode.window.registerTreeDataProvider(
+      "robotcode.keywordsTreeView",
+      new KeywordsTreeViewProvider(languageClientManger, outputChannel),
+    ),
   );
 
   await languageClientManger.refresh();
