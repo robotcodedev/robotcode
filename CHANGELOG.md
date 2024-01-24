@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [0.69.0](https://github.com/d-biehl/robotcode/compare/v0.68.5..v0.69.0) - 2024-01-24
+
+### Bug Fixes
+
+- **langserver:** Display the return type in hover only when it is explicitly defined ([3fa09a7](https://github.com/d-biehl/robotcode/commit/3fa09a7cccee5170b400626876ca6f1bdcb984d8))
+- **runner:** Environment vars are evaluated to late ([f74ea4a](https://github.com/d-biehl/robotcode/commit/f74ea4ac4f98aa04a1c342434b8b0e19559f4ea6))
+
+
+### Features
+
+- **langserver:** Start the internal HTTP server only on demand ([2254156](https://github.com/d-biehl/robotcode/commit/2254156c2109cd4fb80a12d615e2b79d78bcda5f))
+
+  You can disable this behaviour with the new option `robotcode.documentationServer.startOnDemand`.
+
+- **vscode:** New keywords tree view in the explorer sidebar ([c0495e6](https://github.com/d-biehl/robotcode/commit/c0495e680e0d046a9e4937451e9a6b04ac28b268))
+
+
 ## [0.68.5](https://github.com/d-biehl/robotcode/compare/v0.68.4..v0.68.5) - 2024-01-21
 
 ### Bug Fixes
