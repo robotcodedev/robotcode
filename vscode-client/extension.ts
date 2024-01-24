@@ -113,10 +113,8 @@ export async function activateAsync(context: vscode.ExtensionContext): Promise<v
         await languageClientManger.openUriInDocumentationView(vscode.Uri.file(link.path));
       },
     }),
-    vscode.window.registerTreeDataProvider(
-      "robotcode.keywordsTreeView",
-      new KeywordsTreeViewProvider(languageClientManger, outputChannel),
-    ),
+
+    new KeywordsTreeViewProvider(context, languageClientManger, outputChannel),
   );
 
   await languageClientManger.refresh();

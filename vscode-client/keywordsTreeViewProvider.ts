@@ -4,31 +4,39 @@ import { TreeItemCollapsibleState, TreeItemLabel } from "vscode";
 import { Mutex } from "./utils";
 
 class ItemBase extends vscode.TreeItem {
+  private _document: WeakRef<vscode.TextDocument>;
+
+  public get document(): vscode.TextDocument | undefined {
+    return this._document.deref();
+  }
+
   public constructor(
+    document: vscode.TextDocument,
     public readonly label: string | TreeItemLabel,
     public readonly collapsibleState?: TreeItemCollapsibleState,
   ) {
     super(label, collapsibleState);
+    this._document = new WeakRef(document);
   }
 }
 
 const SYMBOL_NAMESPACE = new vscode.ThemeIcon("symbol-namespace");
 const SYMBOL_FUNCTION = new vscode.ThemeIcon("symbol-function");
 
-class KeywordItem extends vscode.TreeItem {
+class KeywordItem extends ItemBase {
   public readonly iconPath = SYMBOL_FUNCTION;
   public readonly contextValue = "keyword";
   //public readonly command: vscode.Command;
 
   public constructor(
-    public readonly document: vscode.TextDocument,
+    document: vscode.TextDocument,
     public readonly parent: ImportItem | undefined,
     public readonly label: string | TreeItemLabel,
     public readonly id: string | undefined,
     public readonly description?: string,
     public readonly tooltip?: string | vscode.MarkdownString | undefined,
   ) {
-    super(label, TreeItemCollapsibleState.None);
+    super(document, label, TreeItemCollapsibleState.None);
     // this.command = {
     //   command: "robotcode.keywordsTreeView.openItem",
     //   title: "open",
@@ -37,12 +45,12 @@ class KeywordItem extends vscode.TreeItem {
   }
 }
 
-class ImportItem extends vscode.TreeItem {
+class ImportItem extends ItemBase {
   public readonly iconPath = SYMBOL_NAMESPACE;
   public readonly contextValue = "import";
 
   public constructor(
-    public readonly document: vscode.TextDocument,
+    document: vscode.TextDocument,
     public readonly label: string | TreeItemLabel,
     public readonly id: string | undefined,
     public readonly description?: string,
@@ -50,7 +58,7 @@ class ImportItem extends vscode.TreeItem {
     public keywords: KeywordItem[] = [],
     collapsibleState?: TreeItemCollapsibleState,
   ) {
-    super(label, collapsibleState || TreeItemCollapsibleState.Collapsed);
+    super(document, label, collapsibleState || TreeItemCollapsibleState.Collapsed);
   }
 }
 
@@ -59,7 +67,9 @@ class DocumentData {
   keywords: KeywordItem[] = [];
 }
 
-export class KeywordsTreeViewProvider implements vscode.TreeDataProvider<ItemBase> {
+export class KeywordsTreeViewProvider
+  implements vscode.TreeDataProvider<ItemBase>, vscode.TreeDragAndDropController<ItemBase>
+{
   private _disposables: vscode.Disposable;
 
   private _cancelationSource: vscode.CancellationTokenSource | undefined;
@@ -67,9 +77,18 @@ export class KeywordsTreeViewProvider implements vscode.TreeDataProvider<ItemBas
   private _currentDocumentData: DocumentData | undefined;
 
   constructor(
+    context: vscode.ExtensionContext,
     public languageClientsManager: LanguageClientsManager,
     public outputChannel: vscode.OutputChannel,
   ) {
+    const view = vscode.window.createTreeView("robotcode.keywordsTreeView", {
+      treeDataProvider: this,
+      showCollapseAll: true,
+      //canSelectMany: true,
+      dragAndDropController: this,
+    });
+    context.subscriptions.push(view);
+    view.badge = { tooltip: "Robot Framework Keywords", value: 23 };
     this._disposables = vscode.Disposable.from(
       vscode.window.onDidChangeActiveTextEditor(async (_editor) => {
         await this.refresh();
@@ -84,10 +103,6 @@ export class KeywordsTreeViewProvider implements vscode.TreeDataProvider<ItemBas
         await this.refresh();
       }),
 
-      // vscode.commands.registerCommand("robotcode.keywordsTreeView.openItem", async (...args) => {
-      //   console.log("openItem", args);
-      //   //await this.refresh(true);
-      // }),
       vscode.commands.registerCommand("robotcode.keywordsTreeView.refresh", async () => {
         await this.refresh(true);
       }),
@@ -108,8 +123,12 @@ export class KeywordsTreeViewProvider implements vscode.TreeDataProvider<ItemBas
         let url: string | undefined = undefined;
 
         if (item instanceof KeywordItem) {
+          if (item.document === undefined) return;
+
           url = await this.languageClientsManager.getDocumentionUrl(item.document, item.parent?.id, item.id);
         } else if (item instanceof ImportItem) {
+          if (item.document === undefined) return;
+
           url = await this.languageClientsManager.getDocumentionUrl(item.document, item.id);
         }
 
@@ -123,6 +142,21 @@ export class KeywordsTreeViewProvider implements vscode.TreeDataProvider<ItemBas
       () => undefined,
       () => undefined,
     );
+  }
+  readonly dropMimeTypes: readonly string[] = [];
+  readonly dragMimeTypes: readonly string[] = ["text/plain"];
+
+  // eslint-disable-next-line class-methods-use-this
+  handleDrag(
+    source: readonly ItemBase[],
+    dataTransfer: vscode.DataTransfer,
+    _token: vscode.CancellationToken,
+  ): void | Thenable<void> {
+    for (const item of source) {
+      if (item instanceof KeywordItem) {
+        dataTransfer.set("text/plain", new vscode.DataTransferItem(item.label as string));
+      }
+    }
   }
 
   dispose(): void {
