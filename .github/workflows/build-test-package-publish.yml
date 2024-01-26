@@ -34,11 +34,11 @@ jobs:
         robot-version: ["rf41", "rf50", "rf60", "rf61", "rf70"]
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Setup python ${{ matrix.python-version }} environment
         id: setup-python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
 
@@ -54,7 +54,7 @@ jobs:
 
       - name: Upload Test Results
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: test-results-os-${{ matrix.os }}-py-${{ matrix.python-version }}-${{ matrix.robot-version }}
           path: test-results
@@ -86,12 +86,12 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Setup Node.js environment
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
-          node-version: "16"
+          node-version: "18"
           cache: "npm"
           cache-dependency-path: package-lock.json
 
@@ -100,7 +100,7 @@ jobs:
 
       - name: setup python environment
         id: setup-python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: "3.8"
 
@@ -122,7 +122,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -131,7 +131,7 @@ jobs:
 
       - name: setup python environment
         id: setup-python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: "3.8"
 
@@ -142,9 +142,9 @@ jobs:
         run: python -m pip install --upgrade hatch
 
       - name: Setup Node.js environment
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
-          node-version: "16"
+          node-version: "18"
           cache: "npm"
           cache-dependency-path: package-lock.json
 
@@ -163,19 +163,19 @@ jobs:
         run: hatch run build:package
 
       - name: Upload VSCode package
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: vscode-package
           path: dist/robotcode*.vsix
 
       - name: Upload python package
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: python-package
           path: dist/*.tar.gz
 
       - name: Upload python wheel package
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: wheel-package
           path: dist/*.whl
@@ -185,7 +185,7 @@ jobs:
     needs: package
     if: success() && startsWith( github.ref, 'refs/tags/v')
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -193,7 +193,7 @@ jobs:
 
       - name: setup python environment
         id: setup-python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: "3.8"
 
@@ -207,9 +207,9 @@ jobs:
         run: hatch env create build
 
       - name: Setup Node.js environment
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
-          node-version: "16"
+          node-version: "18"
           cache: "npm"
           cache-dependency-path: package-lock.json
 

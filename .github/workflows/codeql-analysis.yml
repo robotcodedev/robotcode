@@ -33,7 +33,7 @@ jobs:
 
       - name: setup python environment
         id: setup-python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: "3.8"
 
@@ -49,10 +49,10 @@ jobs:
           echo "CODEQL_PYTHON=$(hatch -q run which python)" >> $GITHUB_ENV
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v2
+        uses: github/codeql-action/init@v3
         with:
           languages: ${{ matrix.language }}
           setup-python-dependencies: false
 
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v2
+        uses: github/codeql-action/analyze@v3
