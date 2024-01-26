@@ -73,9 +73,7 @@ from .dap_types import (
 )
 
 if get_robot_version() >= (7, 0):
-    from robot.running.invalidkeyword import (
-        InvalidKeywordRunner as UserKeywordHandler,
-    )
+    from robot.running import UserKeyword as UserKeywordHandler
 else:
     from robot.running.userkeyword import UserKeywordHandler
 
@@ -166,7 +164,7 @@ class StackFrameEntry:
         source: Optional[str],
         line: Optional[int],
         column: Optional[int] = None,
-        handler: Any = None,
+        handler: Optional[UserKeywordHandler] = None,
         is_file: bool = True,
         libname: Optional[str] = None,
         kwname: Optional[str] = None,
@@ -247,6 +245,12 @@ else:
     class DebugLogger(LoggerApi):  # type: ignore[no-redef]
         def __init__(self) -> None:
             self.steps: List[Any] = []
+
+        def start_try(self, data: "running.Try", result: "result.Try") -> None:
+            self.steps.append(data)
+
+        def end_try(self, data: "running.Try", result: "result.Try") -> None:
+            self.steps.pop()
 
         def start_keyword(self, data: running.Keyword, result: result.Keyword) -> None:
             self.steps.append(data)
@@ -967,6 +971,16 @@ class Debugger:
 
         self.remove_stackframe_entry(longname, type, source, line_no)
 
+    if get_robot_version() >= (7, 0):
+
+        def get_current_keyword_handler(self, name: str) -> UserKeywordHandler:
+            return EXECUTION_CONTEXTS.current.namespace.get_runner(name).keyword
+
+    else:
+
+        def get_current_keyword_handler(self, name: str) -> UserKeywordHandler:
+            return EXECUTION_CONTEXTS.current.namespace.get_runner(name)._handler
+
     def start_keyword(self, name: str, attributes: Dict[str, Any]) -> None:
         status = attributes.get("status", "")
         source = attributes.get("source")
@@ -978,7 +992,7 @@ class Debugger:
         handler: Any = None
         if type in ["KEYWORD", "SETUP", "TEARDOWN"]:
             try:
-                handler = EXECUTION_CONTEXTS.current.namespace.get_runner(name)._handler
+                handler = self.get_current_keyword_handler(name)
             except (SystemExit, KeyboardInterrupt):
                 raise
             except BaseException:
@@ -1060,18 +1074,33 @@ class Debugger:
 
         return False
 
+    if get_robot_version() >= (7, 0):
+
+        def _get_step_data(self, step: Any) -> Any:
+            return step
+
+    else:
+
+        def _get_step_data(self, step: Any) -> Any:
+            return step.data
+
     def is_not_caugthed_by_except(self, message: Optional[str]) -> bool:
         if not message:
             return True
 
-        if get_robot_version() >= (5, 0) and self.debug_logger:
-            from robot.running.model import Try
+        if self.debug_logger:
+            if get_robot_version() >= (5, 0):
+                from robot.running.model import Try
 
-            if self.debug_logger.steps:
-                for branch in [f.data for f in reversed(self.debug_logger.steps) if isinstance(f.data, Try)]:
-                    for except_branch in branch.except_branches:
-                        if self._should_run_except(except_branch, message):
-                            return False
+                if self.debug_logger.steps:
+                    for branch in [
+                        self._get_step_data(f)
+                        for f in reversed(self.debug_logger.steps)
+                        if isinstance(self._get_step_data(f), Try)
+                    ]:
+                        for except_branch in branch.except_branches:
+                            if self._should_run_except(except_branch, message):
+                                return False
         return True
 
     def end_keyword(self, name: str, attributes: Dict[str, Any]) -> None:
@@ -1105,7 +1134,7 @@ class Debugger:
         handler: Any = None
         if type in ["KEYWORD", "SETUP", "TEARDOWN"]:
             try:
-                handler = EXECUTION_CONTEXTS.current.namespace.get_runner(name)._handler
+                handler = self.get_current_keyword_handler(name)
             except (SystemExit, KeyboardInterrupt):
                 raise
             except BaseException:
@@ -1369,6 +1398,16 @@ class Debugger:
 
         return Variable(name=name, value=repr(value), type=repr(type(value)))
 
+    if get_robot_version() >= (7, 0):
+
+        def get_handler_args(self, handler: UserKeywordHandler) -> Any:
+            return handler.args
+
+    else:
+
+        def get_handler_args(self, handler: UserKeywordHandler) -> Any:
+            return handler.arguments
+
     def get_variables(
         self,
         variables_reference: int,
@@ -1436,8 +1475,8 @@ class Debugger:
                                 }
                             )
 
-                            if entry.handler is not None and entry.handler.arguments:
-                                for argument in entry.handler.arguments.argument_names:
+                            if entry.handler is not None and self.get_handler_args(entry.handler):
+                                for argument in self.get_handler_args(entry.handler).argument_names:
                                     name = f"${{{argument}}}"
                                     try:
                                         value = vars[name]
@@ -1493,6 +1532,16 @@ class Debugger:
     IS_VARIABLE_ASSIGNMENT_RE: ClassVar = re.compile(r"^[$@&%]\{.*\}=?$")
     SPLIT_LINE: ClassVar = re.compile(r"(?= {2,}| ?\t)\s*")
     CURRDIR: ClassVar = re.compile(r"(?i)\$\{CURDIR\}")
+
+    if get_robot_version() >= (7, 0):
+
+        def _run_keyword(self, kw: Keyword, context: Any) -> Any:
+            return kw.run(context.steps[-1][1], context)
+
+    else:
+
+        def _run_keyword(self, kw: Keyword, context: Any) -> Any:
+            return kw.run(context)
 
     def evaluate(
         self,
@@ -1557,7 +1606,7 @@ class Debugger:
                                     args=tuple(splitted[1:]),
                                     assign=tuple(variables),
                                 )
-                                return kw.run(evaluate_context)
+                                return self._run_keyword(kw, evaluate_context)
 
                             result = self.run_in_robot_thread(run_kw)
 
@@ -1611,7 +1660,7 @@ class Debugger:
                             for kw in test.body:
                                 with LOGGER.delayed_logging:
                                     try:
-                                        result = kw.run(evaluate_context)
+                                        result = self._run_keyword(kw, evaluate_context)
                                     except (SystemExit, KeyboardInterrupt):
                                         raise
                                     except BaseException as e:
@@ -1793,6 +1842,22 @@ class Debugger:
 
         return result or None
 
+    if get_robot_version() >= (7, 0):
+
+        def _get_keywords_from_lib(self, lib: Any) -> Any:
+            return lib.keywords
+
+        def _get_short_doc_from_kw(self, kw: Any) -> Any:
+            return kw.short_doc
+
+    else:
+
+        def _get_keywords_from_lib(self, lib: Any) -> Any:
+            return lib.handlers
+
+        def _get_short_doc_from_kw(self, kw: Any) -> Any:
+            return kw.shortdoc
+
     def completions(
         self,
         text: str,
@@ -1824,14 +1889,14 @@ class Debugger:
                     type=CompletionItemType.MODULE,
                 )
             )
-            for kw in library.handlers:
+            for kw in self._get_keywords_from_lib(library):
                 result.append(
                     CompletionItem(
                         label=kw.name,
                         text=kw.name,
                         sort_text=f"001_{kw.name}",
                         type=CompletionItemType.FUNCTION,
-                        detail=kw.shortdoc,
+                        detail=self._get_short_doc_from_kw(kw),
                     )
                 )
 
@@ -1844,14 +1909,14 @@ class Debugger:
                     type=CompletionItemType.MODULE,
                 )
             )
-            for kw in resource.handlers:
+            for kw in self._get_keywords_from_lib(resource):
                 result.append(
                     CompletionItem(
                         label=kw.name,
                         text=kw.name,
                         sort_text=f"001_{kw.name}",
                         type=CompletionItemType.FUNCTION,
-                        detail=kw.shortdoc,
+                        detail=self._get_short_doc_from_kw(kw),
                     )
                 )
 
