@@ -89,9 +89,11 @@ class RobotWorkspaceProtocolPart(RobotLanguageServerProtocolPart):
 
                                 progress.begin()
                                 progress.report(
-                                    f"Load {name!s}"
-                                    if config.analysis.progress_mode == AnalysisProgressMode.DETAILED
-                                    else None,
+                                    (
+                                        f"Load {name!s}"
+                                        if config.analysis.progress_mode == AnalysisProgressMode.DETAILED
+                                        else None
+                                    ),
                                     current=i,
                                 )
                         except (SystemExit, KeyboardInterrupt):

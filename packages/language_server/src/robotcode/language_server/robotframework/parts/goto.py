@@ -70,9 +70,9 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart):
                             origin_selection_range=found_range,
                             target_uri=str(Uri.from_path(variable.source)),
                             target_range=variable.range,
-                            target_selection_range=range_from_token(variable.name_token)
-                            if variable.name_token
-                            else variable.range,
+                            target_selection_range=(
+                                range_from_token(variable.name_token) if variable.name_token else variable.range
+                            ),
                         )
                     )
 

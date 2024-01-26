@@ -173,8 +173,7 @@ class Workspace(LanguageServerProtocolPart, CoreWorkspace, FileWatcherManagerBas
         self._settings = value
 
     @event
-    def did_change_configuration(sender, settings: Dict[str, Any]) -> None:
-        ...
+    def did_change_configuration(sender, settings: Dict[str, Any]) -> None: ...
 
     @rpc_method(name="workspace/didChangeConfiguration", param_type=DidChangeConfigurationParams)
     def _workspace_did_change_configuration(self, settings: Dict[str, Any], *args: Any, **kwargs: Any) -> None:
@@ -183,28 +182,22 @@ class Workspace(LanguageServerProtocolPart, CoreWorkspace, FileWatcherManagerBas
         self.did_change_configuration(self, settings)
 
     @event
-    def will_create_files(sender, files: List[str]) -> Optional[Mapping[str, List[TextEdit]]]:
-        ...
+    def will_create_files(sender, files: List[str]) -> Optional[Mapping[str, List[TextEdit]]]: ...
 
     @event
-    def did_create_files(sender, files: List[str]) -> None:
-        ...
+    def did_create_files(sender, files: List[str]) -> None: ...
 
     @event
-    def will_rename_files(sender, files: List[Tuple[str, str]]) -> None:
-        ...
+    def will_rename_files(sender, files: List[Tuple[str, str]]) -> None: ...
 
     @event
-    def did_rename_files(sender, files: List[Tuple[str, str]]) -> None:
-        ...
+    def did_rename_files(sender, files: List[Tuple[str, str]]) -> None: ...
 
     @event
-    def will_delete_files(sender, files: List[str]) -> None:
-        ...
+    def will_delete_files(sender, files: List[str]) -> None: ...
 
     @event
-    def did_delete_files(sender, files: List[str]) -> None:
-        ...
+    def did_delete_files(sender, files: List[str]) -> None: ...
 
     @rpc_method(name="workspace/willCreateFiles", param_type=CreateFilesParams, threaded=True)
     def _workspace_will_create_files(
@@ -374,8 +367,7 @@ class Workspace(LanguageServerProtocolPart, CoreWorkspace, FileWatcherManagerBas
         # TODO: do we need an event for this?
 
     @event
-    def did_change_watched_files(sender, changes: List[FileEvent]) -> None:
-        ...
+    def did_change_watched_files(sender, changes: List[FileEvent]) -> None: ...
 
     @rpc_method(name="workspace/didChangeWatchedFiles", param_type=DidChangeWatchedFilesParams, threaded=True)
     def _workspace_did_change_watched_files(self, changes: List[FileEvent], *args: Any, **kwargs: Any) -> None:

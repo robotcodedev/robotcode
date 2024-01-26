@@ -153,13 +153,19 @@ class RobotRoboCopDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
                         ),
                     ),
                     message=issue.desc,
-                    severity=DiagnosticSeverity.INFORMATION
-                    if issue.severity == RuleSeverity.INFO
-                    else DiagnosticSeverity.WARNING
-                    if issue.severity == RuleSeverity.WARNING
-                    else DiagnosticSeverity.ERROR
-                    if issue.severity == RuleSeverity.ERROR
-                    else DiagnosticSeverity.HINT,
+                    severity=(
+                        DiagnosticSeverity.INFORMATION
+                        if issue.severity == RuleSeverity.INFO
+                        else (
+                            DiagnosticSeverity.WARNING
+                            if issue.severity == RuleSeverity.WARNING
+                            else (
+                                DiagnosticSeverity.ERROR
+                                if issue.severity == RuleSeverity.ERROR
+                                else DiagnosticSeverity.HINT
+                            )
+                        )
+                    ),
                     source=self.source_name,
                     code=f"{issue.name}-{issue.severity.value}{issue.rule_id}",
                     code_description=self.get_code_description(robocop_version, issue),

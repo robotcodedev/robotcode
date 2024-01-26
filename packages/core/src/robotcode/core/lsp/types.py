@@ -6405,9 +6405,9 @@ class SignatureHelpClientCapabilitiesSignatureInformationType(CamelSnakeMixin):
     """Client supports the following content formats for the documentation
     property. The order describes the preferred format of the client."""
 
-    parameter_information: Optional[
-        SignatureHelpClientCapabilitiesSignatureInformationTypeParameterInformationType
-    ] = None
+    parameter_information: Optional[SignatureHelpClientCapabilitiesSignatureInformationTypeParameterInformationType] = (
+        None
+    )
     """Client capabilities specific to parameter information."""
 
     active_parameter_support: Optional[bool] = None

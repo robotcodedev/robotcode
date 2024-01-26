@@ -31,12 +31,10 @@ class InlayHintProtocolPart(LanguageServerProtocolPart):
         self.refresh_timer: Optional[threading.Timer] = None
 
     @event
-    def collect(sender, document: TextDocument, range: Range) -> Optional[List[InlayHint]]:
-        ...
+    def collect(sender, document: TextDocument, range: Range) -> Optional[List[InlayHint]]: ...
 
     @event
-    def resolve(sender, hint: InlayHint) -> Optional[InlayHint]:
-        ...
+    def resolve(sender, hint: InlayHint) -> Optional[InlayHint]: ...
 
     def extend_capabilities(self, capabilities: ServerCapabilities) -> None:
         if len(self.collect):

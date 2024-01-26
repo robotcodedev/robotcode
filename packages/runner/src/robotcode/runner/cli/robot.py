@@ -185,11 +185,11 @@ def robot(
             int,
             RobotFrameworkEx(
                 app,
-                [*(app.config.default_paths if app.config.default_paths else ())]
-                if profile.paths is None
-                else profile.paths
-                if isinstance(profile.paths, list)
-                else [profile.paths],
+                (
+                    [*(app.config.default_paths if app.config.default_paths else ())]
+                    if profile.paths is None
+                    else profile.paths if isinstance(profile.paths, list) else [profile.paths]
+                ),
                 app.config.dry,
                 root_folder,
             ).execute_cli((*cmd_options, *robot_options_and_args), exit=False),

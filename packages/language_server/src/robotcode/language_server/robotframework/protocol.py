@@ -207,8 +207,7 @@ class RobotLanguageServerProtocol(LanguageServerProtocol):
         pass
 
     @event
-    def on_robot_initialized(sender) -> None:
-        ...
+    def on_robot_initialized(sender) -> None: ...
 
     def server_initialized(self, sender: Any) -> None:
         for folder in self.workspace.workspace_folders:

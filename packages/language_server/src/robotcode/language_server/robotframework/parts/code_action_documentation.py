@@ -87,11 +87,11 @@ class RobotCodeActionDocumentationProtocolPart(RobotLanguageServerProtocolPart, 
             # only source actions
 
             result = self.get_keyworddoc_and_token_from_position(
-                node.value
-                if isinstance(node, (TestTemplate, Template))
-                else node.keyword
-                if isinstance(node, KeywordCall)
-                else node.name,
+                (
+                    node.value
+                    if isinstance(node, (TestTemplate, Template))
+                    else node.keyword if isinstance(node, KeywordCall) else node.name
+                ),
                 cast(
                     Token,
                     node.get_token(RobotToken.KEYWORD if isinstance(node, KeywordCall) else RobotToken.NAME),

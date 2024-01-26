@@ -30,8 +30,7 @@ class HoverProtocolPart(LanguageServerProtocolPart):
         super().__init__(parent)
 
     @event
-    def collect(sender, document: TextDocument, position: Position) -> Optional[Hover]:
-        ...
+    def collect(sender, document: TextDocument, position: Position) -> Optional[Hover]: ...
 
     def extend_capabilities(self, capabilities: ServerCapabilities) -> None:
         if len(self.collect):

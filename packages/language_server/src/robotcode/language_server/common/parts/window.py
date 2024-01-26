@@ -61,9 +61,11 @@ class Progress:
         self.parent.progress_begin(
             self.token,
             message if message is not None else self.message,
-            int(current * 100 / self.max)
-            if percentage is None and current is not None and self.max is not None
-            else percentage,
+            (
+                int(current * 100 / self.max)
+                if percentage is None and current is not None and self.max is not None
+                else percentage
+            ),
             cancellable,
             title,
         )
@@ -88,9 +90,11 @@ class Progress:
         self.parent.progress_report(
             self.token,
             message if message is not None else self.message,
-            int(current * 100 / self.max)
-            if percentage is None and current is not None and self.max is not None
-            else percentage,
+            (
+                int(current * 100 / self.max)
+                if percentage is None and current is not None and self.max is not None
+                else percentage
+            ),
             cancellable,
             title,
         )

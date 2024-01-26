@@ -66,15 +66,17 @@ def test(
         yaml.dump(
             {
                 "data": data,
-                "result": sorted(
-                    (split(v) for v in result),
-                    key=lambda v: (
-                        v.title,
-                        v.kind if isinstance(v, CodeAction) else None,
-                    ),
-                )
-                if result
-                else result,
+                "result": (
+                    sorted(
+                        (split(v) for v in result),
+                        key=lambda v: (
+                            v.title,
+                            v.kind if isinstance(v, CodeAction) else None,
+                        ),
+                    )
+                    if result
+                    else result
+                ),
             }
         )
     )

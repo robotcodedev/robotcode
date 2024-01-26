@@ -187,14 +187,16 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
                 found_range = (
                     ns.import_range
                     if ns.import_source == namespace.source and position.is_in_range(ns.import_range, False)
-                    else ns.alias_range
-                    if ns.import_source == namespace.source and position.is_in_range(ns.alias_range, False)
-                    else cast(
-                        Optional[Range],
-                        next(
-                            (r.range for r in ns_refs if position.is_in_range(r.range, False)),
-                            None,
-                        ),
+                    else (
+                        ns.alias_range
+                        if ns.import_source == namespace.source and position.is_in_range(ns.alias_range, False)
+                        else cast(
+                            Optional[Range],
+                            next(
+                                (r.range for r in ns_refs if position.is_in_range(r.range, False)),
+                                None,
+                            ),
+                        )
                     )
                 )
 

@@ -34,8 +34,7 @@ class LinkedEditingRangeProtocolPart(LanguageServerProtocolPart):
             capabilities.linked_editing_range_provider = LinkedEditingRangeOptions(work_done_progress=True)
 
     @event
-    def collect(sender, document: TextDocument, position: Position) -> Optional[LinkedEditingRanges]:
-        ...
+    def collect(sender, document: TextDocument, position: Position) -> Optional[LinkedEditingRanges]: ...
 
     @rpc_method(name="textDocument/linkedEditingRange", param_type=LinkedEditingRangeParams, threaded=True)
     def _text_document_linked_editing_range(

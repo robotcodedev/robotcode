@@ -142,9 +142,7 @@ class Application:
             text = tomli_w.dumps(
                 as_dict(data, remove_defaults=remove_defaults)
                 if dataclasses.is_dataclass(data)
-                else data
-                if isinstance(data, dict)
-                else {data: data}
+                else data if isinstance(data, dict) else {data: data}
             )
 
         if text is None:

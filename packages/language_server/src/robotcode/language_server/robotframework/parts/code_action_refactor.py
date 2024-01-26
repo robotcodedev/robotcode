@@ -299,49 +299,55 @@ class RobotCodeActionRefactorProtocolPart(RobotLanguageServerProtocolPart, Model
             CodeAction(
                 "Surround with TRY...EXCEPT",
                 kind=CODE_ACTION_KIND_SURROUND_WITH,
-                data=as_dict(
-                    CodeActionData(
-                        "refactor",
-                        "surround",
-                        document.document_uri,
-                        insert_range,
-                        SurroundType.TRY_EXCEPT,
+                data=(
+                    as_dict(
+                        CodeActionData(
+                            "refactor",
+                            "surround",
+                            document.document_uri,
+                            insert_range,
+                            SurroundType.TRY_EXCEPT,
+                        )
                     )
-                )
-                if insert_range
-                else None,
+                    if insert_range
+                    else None
+                ),
                 disabled=disabled,
             ),
             CodeAction(
                 "Surround with TRY...FINALLY",
                 kind=CODE_ACTION_KIND_SURROUND_WITH,
-                data=as_dict(
-                    CodeActionData(
-                        "refactor",
-                        "surround",
-                        document.document_uri,
-                        insert_range,
-                        SurroundType.TRY_FINALLY,
+                data=(
+                    as_dict(
+                        CodeActionData(
+                            "refactor",
+                            "surround",
+                            document.document_uri,
+                            insert_range,
+                            SurroundType.TRY_FINALLY,
+                        )
                     )
-                )
-                if insert_range
-                else None,
+                    if insert_range
+                    else None
+                ),
                 disabled=disabled,
             ),
             CodeAction(
                 "Surround with TRY...EXCEPT..FINALLY",
                 kind=CODE_ACTION_KIND_SURROUND_WITH,
-                data=as_dict(
-                    CodeActionData(
-                        "refactor",
-                        "surround",
-                        document.document_uri,
-                        insert_range,
-                        SurroundType.TRY_EXCEPT_FINALLY,
+                data=(
+                    as_dict(
+                        CodeActionData(
+                            "refactor",
+                            "surround",
+                            document.document_uri,
+                            insert_range,
+                            SurroundType.TRY_EXCEPT_FINALLY,
+                        )
                     )
-                )
-                if insert_range
-                else None,
+                    if insert_range
+                    else None
+                ),
                 disabled=disabled,
             ),
         ]
@@ -570,16 +576,18 @@ class RobotCodeActionRefactorProtocolPart(RobotLanguageServerProtocolPart, Model
             CodeAction(
                 "Extract keyword",
                 kind=CODE_ACTION_KIND_REFACTOR_EXTRACT_FUNCTION,
-                data=as_dict(
-                    CodeActionData(
-                        "refactor",
-                        "extract_keyword",
-                        document.document_uri,
-                        insert_range,
+                data=(
+                    as_dict(
+                        CodeActionData(
+                            "refactor",
+                            "extract_keyword",
+                            document.document_uri,
+                            insert_range,
+                        )
                     )
-                )
-                if insert_range
-                else None,
+                    if insert_range
+                    else None
+                ),
                 disabled=disabled,
             )
         ]

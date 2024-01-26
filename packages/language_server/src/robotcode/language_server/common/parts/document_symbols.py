@@ -66,8 +66,7 @@ class DocumentSymbolsProtocolPart(LanguageServerProtocolPart):
     def collect(
         sender,
         document: TextDocument,
-    ) -> Optional[Union[List[DocumentSymbol], List[SymbolInformation], None]]:
-        ...
+    ) -> Optional[Union[List[DocumentSymbol], List[SymbolInformation], None]]: ...
 
     def extend_capabilities(self, capabilities: ServerCapabilities) -> None:
         if (

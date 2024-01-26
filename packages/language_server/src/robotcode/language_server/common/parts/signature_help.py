@@ -42,8 +42,7 @@ class SignatureHelpProtocolPart(LanguageServerProtocolPart):
         document: TextDocument,
         position: Position,
         context: Optional[SignatureHelpContext] = None,
-    ) -> Optional[SignatureHelp]:
-        ...
+    ) -> Optional[SignatureHelp]: ...
 
     def extend_capabilities(self, capabilities: ServerCapabilities) -> None:
         if len(self.collect):

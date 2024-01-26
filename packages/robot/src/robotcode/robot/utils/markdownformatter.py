@@ -17,8 +17,7 @@ class Formatter(ABC):
         return self._handles(line.strip() if self._strip_lines else line)
 
     @abstractmethod
-    def _handles(self, line: str) -> bool:
-        ...
+    def _handles(self, line: str) -> bool: ...
 
     def add(self, line: str) -> None:
         self._lines.append(line.strip() if self._strip_lines else line)
@@ -29,8 +28,7 @@ class Formatter(ABC):
         return result
 
     @abstractmethod
-    def format(self, lines: List[str]) -> str:
-        ...
+    def format(self, lines: List[str]) -> str: ...
 
 
 class MarkDownFormatter:
@@ -80,15 +78,13 @@ class SingleLineFormatter(Formatter):
         return bool(not self._lines and self.match(line))
 
     @abstractmethod
-    def match(self, line: str) -> Optional[re.Match[str]]:
-        ...
+    def match(self, line: str) -> Optional[re.Match[str]]: ...
 
     def format(self, lines: List[str]) -> str:
         return self.format_line(lines[0])
 
     @abstractmethod
-    def format_line(self, line: str) -> str:
-        ...
+    def format_line(self, line: str) -> str: ...
 
 
 class HeaderFormatter(SingleLineFormatter):

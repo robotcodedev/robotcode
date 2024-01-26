@@ -44,12 +44,14 @@ def test(
         yaml.dump(
             {
                 "data": data,
-                "result": sorted(
-                    (split(v) for v in result),
-                    key=lambda v: (v.uri, v.range.start, v.range.end),
-                )
-                if result
-                else result,
+                "result": (
+                    sorted(
+                        (split(v) for v in result),
+                        key=lambda v: (v.uri, v.range.start, v.range.end),
+                    )
+                    if result
+                    else result
+                ),
             }
         )
     )

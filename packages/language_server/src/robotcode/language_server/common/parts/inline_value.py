@@ -46,8 +46,7 @@ class InlineValueProtocolPart(LanguageServerProtocolPart):
         document: TextDocument,
         range: Range,
         context: InlineValueContext,  # pragma: no cover, NOSONAR
-    ) -> Optional[List[InlineValue]]:
-        ...
+    ) -> Optional[List[InlineValue]]: ...
 
     def extend_capabilities(self, capabilities: ServerCapabilities) -> None:
         if len(self.collect):

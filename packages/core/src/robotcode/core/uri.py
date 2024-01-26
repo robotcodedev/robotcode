@@ -47,8 +47,7 @@ class Uri(Mapping[str, str]):
     _parts: _Parts
 
     @overload
-    def __init__(self, uri_str: str):
-        ...
+    def __init__(self, uri_str: str): ...
 
     @overload
     def __init__(
@@ -60,8 +59,7 @@ class Uri(Mapping[str, str]):
         params: Optional[str] = None,
         query: Optional[str] = None,
         fragment: Optional[str] = None,
-    ):
-        ...
+    ): ...
 
     def __init__(
         self,

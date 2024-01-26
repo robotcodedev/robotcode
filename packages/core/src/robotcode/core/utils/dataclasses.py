@@ -482,9 +482,7 @@ def from_dict(
                 (
                     (getattr(e, "__name__", None) or str(e) if e is not type(None) else "None")
                     if _get_origin_cached(e) is not Literal
-                    else repr(e).replace("typing.", "")
-                    if e is not None
-                    else "None"
+                    else repr(e).replace("typing.", "") if e is not None else "None"
                 )
                 for e in types
             )
@@ -521,9 +519,9 @@ def _handle_dataclass(value: Any, remove_defaults: bool, encode: bool) -> Dict[s
         fields = dataclasses.fields(t)
         __dataclasses_cache[t] = fields
     return {
-        encode_case_for_field_name(t, f)
-        if encode
-        else f.name: _as_dict_inner(getattr(value, f.name), remove_defaults, encode)
+        encode_case_for_field_name(t, f) if encode else f.name: _as_dict_inner(
+            getattr(value, f.name), remove_defaults, encode
+        )
         for f in fields
         if not remove_defaults or getattr(value, f.name) != f.default
     }

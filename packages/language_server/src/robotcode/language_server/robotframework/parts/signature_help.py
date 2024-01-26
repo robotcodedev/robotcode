@@ -173,12 +173,14 @@ class RobotSignatureHelpProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
             parameters=[
                 ParameterInformation(
                     label=p.signature(),
-                    documentation=MarkupContent(
-                        kind=MarkupKind.MARKDOWN,
-                        value="\n\n---\n\n".join([t.to_markdown() for t in keyword_doc.parent.get_types(p.types)]),
-                    )
-                    if p.types and keyword_doc.parent is not None
-                    else None,
+                    documentation=(
+                        MarkupContent(
+                            kind=MarkupKind.MARKDOWN,
+                            value="\n\n---\n\n".join([t.to_markdown() for t in keyword_doc.parent.get_types(p.types)]),
+                        )
+                        if p.types and keyword_doc.parent is not None
+                        else None
+                    ),
                 )
                 for i, p in enumerate(kw_arguments)
             ],

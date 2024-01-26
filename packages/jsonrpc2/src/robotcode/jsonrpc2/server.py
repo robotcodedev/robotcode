@@ -91,11 +91,11 @@ class JsonRPCServer(Generic[TProtocol], abc.ABC):
         elif self.mode == ServerMode.SOCKET:
             self.start_socket(
                 self.tcp_params.port,
-                self.tcp_params.host
-                if isinstance(self.tcp_params.host, str)
-                else self.tcp_params.host[0]
-                if self.tcp_params.host
-                else None,
+                (
+                    self.tcp_params.host
+                    if isinstance(self.tcp_params.host, str)
+                    else self.tcp_params.host[0] if self.tcp_params.host else None
+                ),
             )
         else:
             raise JsonRPCException(f"Unknown server mode {self.mode}")
@@ -166,8 +166,7 @@ class JsonRPCServer(Generic[TProtocol], abc.ABC):
         self.close()
 
     @abc.abstractmethod
-    def create_protocol(self) -> TProtocol:
-        ...
+    def create_protocol(self) -> TProtocol: ...
 
     stdio_executor: Optional[ThreadPoolExecutor] = None
 

@@ -70,8 +70,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
         parent.diagnostics.on_workspace_diagnostics_break.add(self.on_workspace_diagnostics_break)
 
     @event
-    def cache_cleared(sender) -> None:
-        ...
+    def cache_cleared(sender) -> None: ...
 
     def server_initialized(self, sender: Any) -> None:
         self.parent.workspace.add_file_watcher(
@@ -592,17 +591,19 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
             (statements.Tags, statements.ForceTags, statements.DefaultTags)
             if get_robot_version() < (6, 0)
             else (
-                statements.Tags,
-                statements.ForceTags,
-                statements.DefaultTags,
-                statements.KeywordTags,
-            )
-            if get_robot_version() < (7, 0)
-            else (
-                statements.Tags,
-                statements.TestTags,
-                statements.DefaultTags,
-                statements.KeywordTags,
+                (
+                    statements.Tags,
+                    statements.ForceTags,
+                    statements.DefaultTags,
+                    statements.KeywordTags,
+                )
+                if get_robot_version() < (7, 0)
+                else (
+                    statements.Tags,
+                    statements.TestTags,
+                    statements.DefaultTags,
+                    statements.KeywordTags,
+                )
             )
         )
 

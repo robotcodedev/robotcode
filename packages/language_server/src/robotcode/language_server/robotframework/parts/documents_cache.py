@@ -31,9 +31,9 @@ class DocumentsCachePart(RobotLanguageServerProtocolPart, DocumentsCacheHelper):
         self._imports_managers_lock = threading.RLock()
         self._imports_managers: weakref.WeakKeyDictionary[WorkspaceFolder, ImportsManager] = weakref.WeakKeyDictionary()
         self._default_imports_manager: Optional[ImportsManager] = None
-        self._workspace_languages: weakref.WeakKeyDictionary[
-            WorkspaceFolder, Optional[Languages]
-        ] = weakref.WeakKeyDictionary()
+        self._workspace_languages: weakref.WeakKeyDictionary[WorkspaceFolder, Optional[Languages]] = (
+            weakref.WeakKeyDictionary()
+        )
 
     def calc_cache_path(self, folder_uri: Uri) -> Path:
         cache_config = self.parent.workspace.get_configuration(CacheConfig, folder_uri)

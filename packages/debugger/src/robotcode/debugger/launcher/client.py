@@ -52,8 +52,7 @@ class DAPClient:
         self._transport: Optional[asyncio.BaseTransport] = None
 
     @event
-    def on_closed(sender) -> None:
-        ...
+    def on_closed(sender) -> None: ...
 
     @_logger.call
     def close(self) -> None:

@@ -39,12 +39,10 @@ class CodeActionProtocolPart(LanguageServerProtocolPart):
         document: TextDocument,
         range: Range,
         context: CodeActionContext,
-    ) -> Optional[List[Union[Command, CodeAction]]]:
-        ...
+    ) -> Optional[List[Union[Command, CodeAction]]]: ...
 
     @event
-    def resolve(sender, code_action: CodeAction) -> Optional[CodeAction]:
-        ...
+    def resolve(sender, code_action: CodeAction) -> Optional[CodeAction]: ...
 
     def extend_capabilities(self, capabilities: ServerCapabilities) -> None:
         if len(self.collect):

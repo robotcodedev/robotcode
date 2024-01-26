@@ -119,8 +119,7 @@ class _ImportEntry(ABC):
         self.file_watchers = []
 
     @abstractmethod
-    def check_file_changed(self, changes: List[FileEvent]) -> Optional[FileChangeType]:
-        ...
+    def check_file_changed(self, changes: List[FileEvent]) -> Optional[FileChangeType]: ...
 
     @final
     def invalidate(self) -> None:
@@ -128,16 +127,13 @@ class _ImportEntry(ABC):
             self._invalidate()
 
     @abstractmethod
-    def _invalidate(self) -> None:
-        ...
+    def _invalidate(self) -> None: ...
 
     @abstractmethod
-    def _update(self) -> None:
-        ...
+    def _update(self) -> None: ...
 
     @abstractmethod
-    def is_valid(self) -> bool:
-        ...
+    def is_valid(self) -> bool: ...
 
 
 class _LibrariesEntry(_ImportEntry):
@@ -211,9 +207,7 @@ class _LibrariesEntry(_ImportEntry):
         source_or_origin = (
             self._lib_doc.source
             if self._lib_doc.source is not None
-            else self._lib_doc.module_spec.origin
-            if self._lib_doc.module_spec is not None
-            else None
+            else self._lib_doc.module_spec.origin if self._lib_doc.module_spec is not None else None
         )
 
         # we are a module, so add the module path into file watchers
@@ -661,20 +655,16 @@ class ImportsManager:
             return self._resolvable_command_line_variables
 
     @event
-    def libraries_changed(sender, libraries: List[LibraryDoc]) -> None:
-        ...
+    def libraries_changed(sender, libraries: List[LibraryDoc]) -> None: ...
 
     @event
-    def resources_changed(sender, resources: List[LibraryDoc]) -> None:
-        ...
+    def resources_changed(sender, resources: List[LibraryDoc]) -> None: ...
 
     @event
-    def variables_changed(sender, variables: List[LibraryDoc]) -> None:
-        ...
+    def variables_changed(sender, variables: List[LibraryDoc]) -> None: ...
 
     @event
-    def imports_changed(sender, uri: DocumentUri) -> None:
-        ...
+    def imports_changed(sender, uri: DocumentUri) -> None: ...
 
     def possible_imports_modified(self, sender: Any, uri: DocumentUri) -> None:
         self.imports_changed(self, uri)

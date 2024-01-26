@@ -31,12 +31,10 @@ class CodeLensProtocolPart(LanguageServerProtocolPart):
         self.refresh_timer: Optional[threading.Timer] = None
 
     @event
-    def collect(sender, document: TextDocument) -> Optional[List[CodeLens]]:
-        ...
+    def collect(sender, document: TextDocument) -> Optional[List[CodeLens]]: ...
 
     @event
-    def resolve(sender, code_lens: CodeLens) -> Optional[CodeLens]:
-        ...
+    def resolve(sender, code_lens: CodeLens) -> Optional[CodeLens]: ...
 
     def extend_capabilities(self, capabilities: ServerCapabilities) -> None:
         if len(self.collect):

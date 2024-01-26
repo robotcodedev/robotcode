@@ -39,8 +39,7 @@ class FormattingProtocolPart(LanguageServerProtocolPart):
         document: TextDocument,
         options: FormattingOptions,
         **further_options: Any,
-    ) -> Optional[List[TextEdit]]:
-        ...
+    ) -> Optional[List[TextEdit]]: ...
 
     @event
     def format_range(
@@ -49,8 +48,7 @@ class FormattingProtocolPart(LanguageServerProtocolPart):
         range: Range,
         options: FormattingOptions,
         **further_options: Any,
-    ) -> Optional[List[TextEdit]]:
-        ...
+    ) -> Optional[List[TextEdit]]: ...
 
     def extend_capabilities(self, capabilities: ServerCapabilities) -> None:
         if len(self.format):

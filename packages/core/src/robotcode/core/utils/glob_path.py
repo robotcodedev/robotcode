@@ -142,9 +142,9 @@ def iter_files(
     yield from _iter_files_recursive_re(
         path=path,
         patterns=[] if patterns is None else [p if isinstance(p, Pattern) else Pattern(p) for p in patterns],
-        ignore_patterns=[]
-        if ignore_patterns is None
-        else [p if isinstance(p, Pattern) else Pattern(p) for p in ignore_patterns],
+        ignore_patterns=(
+            [] if ignore_patterns is None else [p if isinstance(p, Pattern) else Pattern(p) for p in ignore_patterns]
+        ),
         include_hidden=include_hidden,
         absolute=absolute,
         _base_path=path,

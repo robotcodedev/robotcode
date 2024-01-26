@@ -59,9 +59,9 @@ class DocumentsCacheHelper:
         self._imports_managers_lock = threading.RLock()
         self._imports_managers: weakref.WeakKeyDictionary[WorkspaceFolder, ImportsManager] = weakref.WeakKeyDictionary()
         self._default_imports_manager: Optional[ImportsManager] = None
-        self._workspace_languages: weakref.WeakKeyDictionary[
-            WorkspaceFolder, Optional[Languages]
-        ] = weakref.WeakKeyDictionary()
+        self._workspace_languages: weakref.WeakKeyDictionary[WorkspaceFolder, Optional[Languages]] = (
+            weakref.WeakKeyDictionary()
+        )
 
     def get_languages_for_document(self, document_or_uri: Union[TextDocument, Uri, str]) -> Optional[Languages]:
         if get_robot_version() < (6, 0):
@@ -416,8 +416,7 @@ class DocumentsCacheHelper:
         return self.__get_namespace_for_document_type(document, DocumentType.GENERAL)
 
     @event
-    def namespace_invalidated(sender, namespace: Namespace) -> None:
-        ...
+    def namespace_invalidated(sender, namespace: Namespace) -> None: ...
 
     def __invalidate_namespace(self, sender: Namespace) -> None:
         document = sender.document

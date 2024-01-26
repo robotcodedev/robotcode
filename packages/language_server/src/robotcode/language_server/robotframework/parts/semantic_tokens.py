@@ -638,9 +638,11 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
                             token.lineno,
                             token.col_offset,
                         ),
-                        RobotSemTokenTypes.NAMED_ARGUMENT
-                        if isinstance(node, Variable)
-                        else SemanticTokenTypes.PARAMETER,
+                        (
+                            RobotSemTokenTypes.NAMED_ARGUMENT
+                            if isinstance(node, Variable)
+                            else SemanticTokenTypes.PARAMETER
+                        ),
                     )
                     yield SemTokenInfo.from_token(
                         Token(
@@ -1082,9 +1084,11 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
                     if isinstance(node, (KeywordCall, Fixture)):
                         kw_token = cast(
                             Token,
-                            node.get_token(Token.KEYWORD)
-                            if isinstance(node, KeywordCall)
-                            else node.get_token(Token.NAME),
+                            (
+                                node.get_token(Token.KEYWORD)
+                                if isinstance(node, KeywordCall)
+                                else node.get_token(Token.NAME)
+                            ),
                         )
 
                         for node_token in node.tokens:
@@ -1222,5 +1226,10 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
         document: TextDocument,
         previous_result_id: str,
         **kwargs: Any,
-    ) -> Union[SemanticTokens, SemanticTokensDelta, SemanticTokensDeltaPartialResult, None,]:
+    ) -> Union[
+        SemanticTokens,
+        SemanticTokensDelta,
+        SemanticTokensDeltaPartialResult,
+        None,
+    ]:
         return None

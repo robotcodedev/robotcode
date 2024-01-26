@@ -25,8 +25,7 @@ class FileWatcherEntry:
         self.finalizer: Any = None
 
     @event
-    def child_callbacks(sender, changes: List[FileEvent]) -> None:
-        ...
+    def child_callbacks(sender, changes: List[FileEvent]) -> None: ...
 
     def call_childrens(self, sender: Any, changes: List[FileEvent]) -> None:
         self.child_callbacks(sender, changes)
@@ -52,12 +51,10 @@ class FileWatcherManagerBase(ABC):
         self,
         callback: Callable[[Any, List[FileEvent]], None],
         watchers: List[Union[FileWatcher, str, Tuple[str, Optional[WatchKind]]]],
-    ) -> FileWatcherEntry:
-        ...
+    ) -> FileWatcherEntry: ...
 
     @abstractmethod
-    def remove_file_watcher_entry(self, entry: FileWatcherEntry) -> None:
-        ...
+    def remove_file_watcher_entry(self, entry: FileWatcherEntry) -> None: ...
 
 
 class FileWatcherManagerDummy(FileWatcherManagerBase):

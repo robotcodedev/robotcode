@@ -47,21 +47,25 @@ def test(
         yaml.dump(
             {
                 "data": data,
-                "result": dataclasses.replace(
-                    result,
-                    signatures=[
-                        dataclasses.replace(
-                            s,
-                            documentation=None,
-                            parameters=[dataclasses.replace(p, documentation=None) for p in s.parameters]
-                            if s.parameters
-                            else s.parameters,
-                        )
-                        for s in result.signatures
-                    ],
-                )
-                if result
-                else None,
+                "result": (
+                    dataclasses.replace(
+                        result,
+                        signatures=[
+                            dataclasses.replace(
+                                s,
+                                documentation=None,
+                                parameters=(
+                                    [dataclasses.replace(p, documentation=None) for p in s.parameters]
+                                    if s.parameters
+                                    else s.parameters
+                                ),
+                            )
+                            for s in result.signatures
+                        ],
+                    )
+                    if result
+                    else None
+                ),
             }
         )
     )

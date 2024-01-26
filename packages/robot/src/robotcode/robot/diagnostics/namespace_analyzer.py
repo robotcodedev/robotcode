@@ -555,9 +555,7 @@ class NamespaceAnalyzer(Visitor, ModelHelper):
                                         Uri.from_path(
                                             err.source
                                             if err.source is not None
-                                            else result.source
-                                            if result.source is not None
-                                            else "/<unknown>"
+                                            else result.source if result.source is not None else "/<unknown>"
                                         )
                                     ),
                                     range=Range(

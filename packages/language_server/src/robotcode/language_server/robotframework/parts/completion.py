@@ -539,9 +539,9 @@ class CompletionCollector(ModelHelper):
                 kind=CompletionItemKind.CLASS,
                 detail="Header",
                 # this is to get the english version in the documentation
-                documentation=self.namespace.languages.headers.get(s[1])
-                if self.namespace.languages is not None
-                else None,
+                documentation=(
+                    self.namespace.languages.headers.get(s[1]) if self.namespace.languages is not None else None
+                ),
                 sort_text=f"100_{s[1]}",
                 insert_text_format=InsertTextFormat.PLAIN_TEXT,
                 text_edit=TextEdit(range=range, new_text=s[0]) if range is not None else None,
@@ -618,9 +618,9 @@ class CompletionCollector(ModelHelper):
                 label=setting,
                 kind=CompletionItemKind.KEYWORD,
                 detail="Setting",
-                documentation=self.namespace.languages.settings.get(setting)
-                if self.namespace.languages is not None
-                else None,
+                documentation=(
+                    self.namespace.languages.settings.get(setting) if self.namespace.languages is not None else None
+                ),
                 sort_text=f"090_{setting}",
                 insert_text_format=InsertTextFormat.PLAIN_TEXT,
                 text_edit=TextEdit(range=range, new_text=setting) if range is not None else None,
@@ -662,9 +662,9 @@ class CompletionCollector(ModelHelper):
             CompletionItem(
                 label=f"[{setting}]",
                 kind=CompletionItemKind.KEYWORD,
-                documentation=self.namespace.languages.settings.get(setting)
-                if self.namespace.languages is not None
-                else None,
+                documentation=(
+                    self.namespace.languages.settings.get(setting) if self.namespace.languages is not None else None
+                ),
                 detail="Setting",
                 sort_text=f"070_{setting}",
                 insert_text_format=InsertTextFormat.PLAIN_TEXT,
@@ -691,9 +691,9 @@ class CompletionCollector(ModelHelper):
                 detail="BDD Prefix",
                 sort_text=f"000_{prefix}" if at_top else f"080_{prefix}",
                 insert_text_format=InsertTextFormat.PLAIN_TEXT,
-                text_edit=TextEdit(range=range, new_text=prefix + (" " if with_space else ""))
-                if range is not None
-                else None,
+                text_edit=(
+                    TextEdit(range=range, new_text=prefix + (" " if with_space else "")) if range is not None else None
+                ),
             )
             for prefix in prefixes
         ]
@@ -718,9 +718,9 @@ class CompletionCollector(ModelHelper):
             CompletionItem(
                 label=f"[{setting}]",
                 kind=CompletionItemKind.KEYWORD,
-                documentation=self.namespace.languages.settings.get(setting)
-                if self.namespace.languages is not None
-                else None,
+                documentation=(
+                    self.namespace.languages.settings.get(setting) if self.namespace.languages is not None else None
+                ),
                 detail="Setting",
                 sort_text=f"070_{setting}",
                 insert_text_format=InsertTextFormat.PLAIN_TEXT,
@@ -865,17 +865,21 @@ class CompletionCollector(ModelHelper):
                                     detail=f"{CompleteResultKind.KEYWORD.value} "
                                     f"{f'({kw.libname})' if kw.libname is not None else ''}",
                                     sort_text=f"019_{kw.name}",
-                                    insert_text_format=InsertTextFormat.PLAIN_TEXT
-                                    if not kw.is_embedded
-                                    else InsertTextFormat.SNIPPET,
-                                    text_edit=TextEdit(
-                                        range=r,
-                                        new_text=kw.name
-                                        if not kw.is_embedded
-                                        else self.get_keyword_snipped_text(kw, in_template),
-                                    )
-                                    if r is not None
-                                    else None,
+                                    insert_text_format=(
+                                        InsertTextFormat.PLAIN_TEXT if not kw.is_embedded else InsertTextFormat.SNIPPET
+                                    ),
+                                    text_edit=(
+                                        TextEdit(
+                                            range=r,
+                                            new_text=(
+                                                kw.name
+                                                if not kw.is_embedded
+                                                else self.get_keyword_snipped_text(kw, in_template)
+                                            ),
+                                        )
+                                        if r is not None
+                                        else None
+                                    ),
                                     data=CompletionKeywordData(
                                         document_uri=str(self.document.uri),
                                         type=CompleteResultKind.KEYWORD.name,
@@ -908,14 +912,18 @@ class CompletionCollector(ModelHelper):
                                         detail=f"{CompleteResultKind.KEYWORD.value} "
                                         f"{f'({kw.libname})' if kw.libname is not None else ''}",
                                         sort_text=f"019_{kw.name}",
-                                        insert_text_format=InsertTextFormat.PLAIN_TEXT
-                                        if not kw.is_embedded
-                                        else InsertTextFormat.SNIPPET,
+                                        insert_text_format=(
+                                            InsertTextFormat.PLAIN_TEXT
+                                            if not kw.is_embedded
+                                            else InsertTextFormat.SNIPPET
+                                        ),
                                         text_edit=TextEdit(
                                             range=r,
-                                            new_text=kw.name
-                                            if not kw.is_embedded
-                                            else self.get_keyword_snipped_text(kw, in_template),
+                                            new_text=(
+                                                kw.name
+                                                if not kw.is_embedded
+                                                else self.get_keyword_snipped_text(kw, in_template)
+                                            ),
                                         ),
                                         data=CompletionKeywordData(
                                             document_uri=str(self.document.uri),
@@ -1162,13 +1170,17 @@ class CompletionCollector(ModelHelper):
                         line=position.line,
                         character=token_at_position.col_offset + open_brace_index + 1,
                     ),
-                    end=position
-                    if contains_spezial or variable_end < 0
-                    else Position(
-                        line=position.line,
-                        character=(token_at_position.col_offset + variable_end)
-                        if not contains_spezial
-                        else token_at_position.end_col_offset,
+                    end=(
+                        position
+                        if contains_spezial or variable_end < 0
+                        else Position(
+                            line=position.line,
+                            character=(
+                                (token_at_position.col_offset + variable_end)
+                                if not contains_spezial
+                                else token_at_position.end_col_offset
+                            ),
+                        )
                     ),
                 )
                 if token_at_position.value[open_brace_index - 1] == "%":
@@ -1251,12 +1263,16 @@ class CompletionCollector(ModelHelper):
                     return create_items(
                         in_assign,
                         in_template,
-                        range_from_token(statement_node.tokens[index + 1])
-                        if r.end == position and len(statement_node.tokens) > index + 1
-                        else None,
-                        statement_node.tokens[index + 1]
-                        if r.end == position and len(statement_node.tokens) > index + 1
-                        else None,
+                        (
+                            range_from_token(statement_node.tokens[index + 1])
+                            if r.end == position and len(statement_node.tokens) > index + 1
+                            else None
+                        ),
+                        (
+                            statement_node.tokens[index + 1]
+                            if r.end == position and len(statement_node.tokens) > index + 1
+                            else None
+                        ),
                         position,
                     )
 
@@ -1674,17 +1690,19 @@ class CompletionCollector(ModelHelper):
             return [
                 CompletionItem(
                     label=e.label,
-                    kind=CompletionItemKind.MODULE
-                    if e.kind
-                    in [
-                        CompleteResultKind.MODULE,
-                        CompleteResultKind.MODULE_INTERNAL,
-                    ]
-                    else CompletionItemKind.FILE
-                    if e.kind == CompleteResultKind.FILE
-                    else CompletionItemKind.FOLDER
-                    if e.kind == CompleteResultKind.FOLDER
-                    else None,
+                    kind=(
+                        CompletionItemKind.MODULE
+                        if e.kind
+                        in [
+                            CompleteResultKind.MODULE,
+                            CompleteResultKind.MODULE_INTERNAL,
+                        ]
+                        else (
+                            CompletionItemKind.FILE
+                            if e.kind == CompleteResultKind.FILE
+                            else CompletionItemKind.FOLDER if e.kind == CompleteResultKind.FOLDER else None
+                        )
+                    ),
                     detail=e.kind.value,
                     sort_text=f"030_{e}",
                     insert_text_format=InsertTextFormat.PLAIN_TEXT,
@@ -1871,13 +1889,15 @@ class CompletionCollector(ModelHelper):
         return [
             CompletionItem(
                 label=e.label,
-                kind=CompletionItemKind.FILE
-                if e.kind == CompleteResultKind.RESOURCE
-                else CompletionItemKind.FILE
-                if e.kind == CompleteResultKind.FILE
-                else CompletionItemKind.FOLDER
-                if e.kind == CompleteResultKind.FOLDER
-                else None,
+                kind=(
+                    CompletionItemKind.FILE
+                    if e.kind == CompleteResultKind.RESOURCE
+                    else (
+                        CompletionItemKind.FILE
+                        if e.kind == CompleteResultKind.FILE
+                        else CompletionItemKind.FOLDER if e.kind == CompleteResultKind.FOLDER else None
+                    )
+                ),
                 detail=e.kind.value,
                 sort_text=f"030_{e}",
                 insert_text_format=InsertTextFormat.PLAIN_TEXT,
@@ -1991,13 +2011,15 @@ class CompletionCollector(ModelHelper):
             return [
                 CompletionItem(
                     label=e.label,
-                    kind=CompletionItemKind.FILE
-                    if e.kind == CompleteResultKind.VARIABLES
-                    else CompletionItemKind.FILE
-                    if e.kind == CompleteResultKind.FILE
-                    else CompletionItemKind.FOLDER
-                    if e.kind == CompleteResultKind.FOLDER
-                    else None,
+                    kind=(
+                        CompletionItemKind.FILE
+                        if e.kind == CompleteResultKind.VARIABLES
+                        else (
+                            CompletionItemKind.FILE
+                            if e.kind == CompleteResultKind.FILE
+                            else CompletionItemKind.FOLDER if e.kind == CompleteResultKind.FOLDER else None
+                        )
+                    ),
                     detail=e.kind.value,
                     sort_text=f"030_{e}",
                     insert_text_format=InsertTextFormat.PLAIN_TEXT,
@@ -2281,15 +2303,17 @@ class CompletionCollector(ModelHelper):
                         )
                 if type_info.items:
                     snippets = [
-                        "{"
-                        + ", ".join(
-                            (f'"{m.key}"' + ": ${" + str(i + 1) + "}")
-                            for i, m in enumerate(type_info.items)
-                            if m.required
-                        )
-                        + "}"
-                        if any(m.required for m in type_info.items) and any(not m.required for m in type_info.items)
-                        else "",
+                        (
+                            "{"
+                            + ", ".join(
+                                (f'"{m.key}"' + ": ${" + str(i + 1) + "}")
+                                for i, m in enumerate(type_info.items)
+                                if m.required
+                            )
+                            + "}"
+                            if any(m.required for m in type_info.items) and any(not m.required for m in type_info.items)
+                            else ""
+                        ),
                         "{"
                         + ", ".join((f'"{m.key}"' + ": ${" + str(i + 1) + "}") for i, m in enumerate(type_info.items))
                         + "}",

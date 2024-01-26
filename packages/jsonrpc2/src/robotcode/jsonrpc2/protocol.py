@@ -168,8 +168,7 @@ _F = TypeVar("_F", bound=Callable[..., Any])
 
 
 @overload
-def rpc_method(_func: _F) -> _F:
-    ...
+def rpc_method(_func: _F) -> _F: ...
 
 
 @overload
@@ -179,8 +178,7 @@ def rpc_method(
     param_type: Optional[Type[Any]] = None,
     cancelable: bool = True,
     threaded: bool = False,
-) -> Callable[[_F], _F]:
-    ...
+) -> Callable[[_F], _F]: ...
 
 
 def rpc_method(
@@ -389,12 +387,10 @@ class JsonRPCProtocolBase(asyncio.Protocol, ABC):
         return self._loop
 
     @event
-    def on_connection_made(sender, transport: asyncio.BaseTransport) -> None:
-        ...
+    def on_connection_made(sender, transport: asyncio.BaseTransport) -> None: ...
 
     @event
-    def on_connection_lost(sender, exc: Optional[BaseException]) -> None:
-        ...
+    def on_connection_lost(sender, exc: Optional[BaseException]) -> None: ...
 
     def connection_made(self, transport: asyncio.BaseTransport) -> None:
         super().connection_made(transport)
@@ -449,8 +445,7 @@ class JsonRPCProtocolBase(asyncio.Protocol, ABC):
             self._handle_body(body, charset)
 
     @abstractmethod
-    def _handle_body(self, body: bytes, charset: str) -> None:
-        ...
+    def _handle_body(self, body: bytes, charset: str) -> None: ...
 
 
 class JsonRPCProtocol(JsonRPCProtocolBase):

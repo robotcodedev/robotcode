@@ -145,9 +145,7 @@ class LoggingDescriptor:
                     else (
                         ("" if self.__owner is None else self.__owner.__module__ + "." + self.__owner.__qualname__)
                         if self.__owner is not None
-                        else get_unwrapped_func(self.__func).__module__
-                        if self.__func is not None
-                        else "<unknown>"
+                        else get_unwrapped_func(self.__func).__module__ if self.__func is not None else "<unknown>"
                     )
                     + self.__postfix
                 )
@@ -363,8 +361,7 @@ class LoggingDescriptor:
         cls._call_tracing_default_level = level
 
     @overload
-    def call(self, _func: _F) -> _F:
-        ...
+    def call(self, _func: _F) -> _F: ...
 
     @overload
     def call(
@@ -377,8 +374,7 @@ class LoggingDescriptor:
         exiting: bool = False,
         exception: bool = False,
         timed: bool = False,
-    ) -> Callable[[_F], _F]:
-        ...
+    ) -> Callable[[_F], _F]: ...
 
     def call(
         self,

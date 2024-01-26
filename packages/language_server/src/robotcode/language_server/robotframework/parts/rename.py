@@ -365,15 +365,17 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
             ):
                 return (
                     keyword_doc,
-                    RobotToken(
-                        keyword_token.type,
-                        keyword_token.value[len(kw_namespace) + 1 :],
-                        keyword_token.lineno,
-                        keyword_token.col_offset + len(kw_namespace) + 1,
-                        keyword_token.error,
-                    )
-                    if lib_entry and kw_namespace
-                    else keyword_token,
+                    (
+                        RobotToken(
+                            keyword_token.type,
+                            keyword_token.value[len(kw_namespace) + 1 :],
+                            keyword_token.lineno,
+                            keyword_token.col_offset + len(kw_namespace) + 1,
+                            keyword_token.error,
+                        )
+                        if lib_entry and kw_namespace
+                        else keyword_token
+                    ),
                 )
 
         return None
@@ -486,15 +488,17 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
             if position in kw_range and keyword_doc is not None and not keyword_doc.is_error_handler:
                 return (
                     keyword_doc,
-                    RobotToken(
-                        keyword_token.type,
-                        keyword_token.value[len(kw_namespace) + 1 :],
-                        keyword_token.lineno,
-                        keyword_token.col_offset + len(kw_namespace) + 1,
-                        keyword_token.error,
-                    )
-                    if lib_entry and kw_namespace
-                    else keyword_token,
+                    (
+                        RobotToken(
+                            keyword_token.type,
+                            keyword_token.value[len(kw_namespace) + 1 :],
+                            keyword_token.lineno,
+                            keyword_token.col_offset + len(kw_namespace) + 1,
+                            keyword_token.error,
+                        )
+                        if lib_entry and kw_namespace
+                        else keyword_token
+                    ),
                 )
 
         return None
@@ -545,15 +549,17 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
                     if not keyword_doc.is_error_handler:
                         return (
                             keyword_doc,
-                            RobotToken(
-                                keyword_token.type,
-                                keyword_token.value[len(kw_namespace) + 1 :],
-                                keyword_token.lineno,
-                                keyword_token.col_offset + len(kw_namespace) + 1,
-                                keyword_token.error,
-                            )
-                            if lib_entry and kw_namespace
-                            else keyword_token,
+                            (
+                                RobotToken(
+                                    keyword_token.type,
+                                    keyword_token.value[len(kw_namespace) + 1 :],
+                                    keyword_token.lineno,
+                                    keyword_token.col_offset + len(kw_namespace) + 1,
+                                    keyword_token.error,
+                                )
+                                if lib_entry and kw_namespace
+                                else keyword_token
+                            ),
                         )
         return None
 

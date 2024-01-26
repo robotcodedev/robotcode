@@ -114,9 +114,11 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart, DocumentsManager):
                 document = self._create_document(
                     text_document.uri,
                     normalized_text,
-                    text_document.language_id
-                    if text_document.language_id
-                    else self.detect_language_id(text_document.uri),
+                    (
+                        text_document.language_id
+                        if text_document.language_id
+                        else self.detect_language_id(text_document.uri)
+                    ),
                     text_document.version,
                 )
 
@@ -221,12 +223,14 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart, DocumentsManager):
                 self.parent.capabilities.text_document_sync,
                 TextDocumentSyncKind,
             )
-            else self.parent.capabilities.text_document_sync.change
-            if isinstance(
-                self.parent.capabilities.text_document_sync,
-                TextDocumentSyncOptions,
+            else (
+                self.parent.capabilities.text_document_sync.change
+                if isinstance(
+                    self.parent.capabilities.text_document_sync,
+                    TextDocumentSyncOptions,
+                )
+                else None
             )
-            else None
         )
         for content_change in content_changes:
             if sync_kind is None or sync_kind == TextDocumentSyncKind.NONE_:

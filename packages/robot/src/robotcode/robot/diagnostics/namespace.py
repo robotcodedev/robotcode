@@ -466,16 +466,16 @@ class ImportVisitor(Visitor):
                     alias_token=alias_token,
                     line_no=node.lineno,
                     col_offset=node.col_offset,
-                    end_line_no=last_data_token.lineno
-                    if last_data_token is not None
-                    else node.end_lineno
-                    if node.end_lineno is not None
-                    else -1,
-                    end_col_offset=last_data_token.end_col_offset
-                    if last_data_token is not None
-                    else node.end_col_offset
-                    if node.end_col_offset is not None
-                    else -1,
+                    end_line_no=(
+                        last_data_token.lineno
+                        if last_data_token is not None
+                        else node.end_lineno if node.end_lineno is not None else -1
+                    ),
+                    end_col_offset=(
+                        last_data_token.end_col_offset
+                        if last_data_token is not None
+                        else node.end_col_offset if node.end_col_offset is not None else -1
+                    ),
                     source=self.source,
                 )
             )
@@ -491,16 +491,16 @@ class ImportVisitor(Visitor):
                     name_token=name if name is not None else None,
                     line_no=node.lineno,
                     col_offset=node.col_offset,
-                    end_line_no=last_data_token.lineno
-                    if last_data_token is not None
-                    else node.end_lineno
-                    if node.end_lineno is not None
-                    else -1,
-                    end_col_offset=last_data_token.end_col_offset
-                    if last_data_token is not None
-                    else node.end_col_offset
-                    if node.end_col_offset is not None
-                    else -1,
+                    end_line_no=(
+                        last_data_token.lineno
+                        if last_data_token is not None
+                        else node.end_lineno if node.end_lineno is not None else -1
+                    ),
+                    end_col_offset=(
+                        last_data_token.end_col_offset
+                        if last_data_token is not None
+                        else node.end_col_offset if node.end_col_offset is not None else -1
+                    ),
                     source=self.source,
                 )
             )
@@ -517,16 +517,16 @@ class ImportVisitor(Visitor):
                     args=node.args,
                     line_no=node.lineno,
                     col_offset=node.col_offset,
-                    end_line_no=last_data_token.lineno
-                    if last_data_token is not None
-                    else node.end_lineno
-                    if node.end_lineno is not None
-                    else -1,
-                    end_col_offset=last_data_token.end_col_offset
-                    if last_data_token is not None
-                    else node.end_col_offset
-                    if node.end_col_offset is not None
-                    else -1,
+                    end_line_no=(
+                        last_data_token.lineno
+                        if last_data_token is not None
+                        else node.end_lineno if node.end_lineno is not None else -1
+                    ),
+                    end_col_offset=(
+                        last_data_token.end_col_offset
+                        if last_data_token is not None
+                        else node.end_col_offset if node.end_col_offset is not None else -1
+                    ),
                     source=self.source,
                 )
             )
@@ -610,20 +610,16 @@ class Namespace:
         self._ignored_lines: Optional[List[int]] = None
 
     @event
-    def has_invalidated(sender) -> None:
-        ...
+    def has_invalidated(sender) -> None: ...
 
     @event
-    def has_initialized(sender) -> None:
-        ...
+    def has_initialized(sender) -> None: ...
 
     @event
-    def has_imports_changed(sender) -> None:
-        ...
+    def has_imports_changed(sender) -> None: ...
 
     @event
-    def has_analysed(sender) -> None:
-        ...
+    def has_analysed(sender) -> None: ...
 
     @property
     def document(self) -> Optional[TextDocument]:
@@ -959,16 +955,18 @@ class Namespace:
         for var in chain(
             *[
                 (
-                    BlockVariableVisitor(
-                        self.get_library_doc(),
-                        self.get_global_variables(),
-                        self.source,
-                        position,
-                        isinstance(test_or_keyword_nodes[-1], Arguments) if nodes else False,
-                    ).get(test_or_keyword)
+                    (
+                        BlockVariableVisitor(
+                            self.get_library_doc(),
+                            self.get_global_variables(),
+                            self.source,
+                            position,
+                            isinstance(test_or_keyword_nodes[-1], Arguments) if nodes else False,
+                        ).get(test_or_keyword)
+                    )
+                    if test_or_keyword is not None
+                    else []
                 )
-                if test_or_keyword is not None
-                else []
             ],
             self.get_global_variables(),
         ):
@@ -1098,17 +1096,19 @@ class Namespace:
                                 message="Possible circular import.",
                                 severity=DiagnosticSeverity.INFORMATION,
                                 source=DIAGNOSTICS_SOURCE_NAME,
-                                related_information=[
-                                    DiagnosticRelatedInformation(
-                                        location=Location(
-                                            str(Uri.from_path(value.source)),
-                                            value.range,
-                                        ),
-                                        message=f"'{Path(self.source).name}' is also imported here.",
-                                    )
-                                ]
-                                if value.source
-                                else None,
+                                related_information=(
+                                    [
+                                        DiagnosticRelatedInformation(
+                                            location=Location(
+                                                str(Uri.from_path(value.source)),
+                                                value.range,
+                                            ),
+                                            message=f"'{Path(self.source).name}' is also imported here.",
+                                        )
+                                    ]
+                                    if value.source
+                                    else None
+                                ),
                                 code=Error.POSSIBLE_CIRCULAR_IMPORT,
                             )
                     else:
@@ -1174,20 +1174,24 @@ class Namespace:
                                             uri=str(Uri.from_path(err.source)),
                                             range=Range(
                                                 start=Position(
-                                                    line=err.line_no - 1
-                                                    if err.line_no is not None
-                                                    else max(
-                                                        result.library_doc.line_no,
-                                                        0,
+                                                    line=(
+                                                        err.line_no - 1
+                                                        if err.line_no is not None
+                                                        else max(
+                                                            result.library_doc.line_no,
+                                                            0,
+                                                        )
                                                     ),
                                                     character=0,
                                                 ),
                                                 end=Position(
-                                                    line=err.line_no - 1
-                                                    if err.line_no is not None
-                                                    else max(
-                                                        result.library_doc.line_no,
-                                                        0,
+                                                    line=(
+                                                        err.line_no - 1
+                                                        if err.line_no is not None
+                                                        else max(
+                                                            result.library_doc.line_no,
+                                                            0,
+                                                        )
                                                     ),
                                                     character=0,
                                                 ),
@@ -1295,17 +1299,21 @@ class Namespace:
                                         message=f"Resource {entry} already imported.",
                                         severity=DiagnosticSeverity.INFORMATION,
                                         source=DIAGNOSTICS_SOURCE_NAME,
-                                        related_information=[
-                                            DiagnosticRelatedInformation(
-                                                location=Location(
-                                                    uri=str(Uri.from_path(already_imported_resources.import_source)),
-                                                    range=already_imported_resources.import_range,
-                                                ),
-                                                message="",
-                                            )
-                                        ]
-                                        if already_imported_resources.import_source
-                                        else None,
+                                        related_information=(
+                                            [
+                                                DiagnosticRelatedInformation(
+                                                    location=Location(
+                                                        uri=str(
+                                                            Uri.from_path(already_imported_resources.import_source)
+                                                        ),
+                                                        range=already_imported_resources.import_range,
+                                                    ),
+                                                    message="",
+                                                )
+                                            ]
+                                            if already_imported_resources.import_source
+                                            else None
+                                        ),
                                         code=Error.RESOURCE_ALREADY_IMPORTED,
                                     )
 
@@ -1327,17 +1335,19 @@ class Namespace:
                                 message=f'Variables "{entry}" already imported.',
                                 severity=DiagnosticSeverity.INFORMATION,
                                 source=DIAGNOSTICS_SOURCE_NAME,
-                                related_information=[
-                                    DiagnosticRelatedInformation(
-                                        location=Location(
-                                            uri=str(Uri.from_path(already_imported_variables[0].import_source)),
-                                            range=already_imported_variables[0].import_range,
-                                        ),
-                                        message="",
-                                    )
-                                ]
-                                if already_imported_variables[0].import_source
-                                else None,
+                                related_information=(
+                                    [
+                                        DiagnosticRelatedInformation(
+                                            location=Location(
+                                                uri=str(Uri.from_path(already_imported_variables[0].import_source)),
+                                                range=already_imported_variables[0].import_range,
+                                            ),
+                                            message="",
+                                        )
+                                    ]
+                                    if already_imported_variables[0].import_source
+                                    else None
+                                ),
                                 code=Error.VARIABLES_ALREADY_IMPORTED,
                             )
 
@@ -1352,17 +1362,19 @@ class Namespace:
                                 ' because it would override the "BuiltIn" library.',
                                 severity=DiagnosticSeverity.INFORMATION,
                                 source=DIAGNOSTICS_SOURCE_NAME,
-                                related_information=[
-                                    DiagnosticRelatedInformation(
-                                        location=Location(
-                                            uri=str(Uri.from_path(entry.import_source)),
-                                            range=entry.import_range,
-                                        ),
-                                        message="",
-                                    )
-                                ]
-                                if entry.import_source
-                                else None,
+                                related_information=(
+                                    [
+                                        DiagnosticRelatedInformation(
+                                            location=Location(
+                                                uri=str(Uri.from_path(entry.import_source)),
+                                                range=entry.import_range,
+                                            ),
+                                            message="",
+                                        )
+                                    ]
+                                    if entry.import_source
+                                    else None
+                                ),
                                 code=Error.LIBRARY_OVERRIDES_BUILTIN,
                             )
                             continue
@@ -1381,17 +1393,19 @@ class Namespace:
                                 message=f'Library "{entry}" already imported.',
                                 severity=DiagnosticSeverity.INFORMATION,
                                 source=DIAGNOSTICS_SOURCE_NAME,
-                                related_information=[
-                                    DiagnosticRelatedInformation(
-                                        location=Location(
-                                            uri=str(Uri.from_path(already_imported_library[0].import_source)),
-                                            range=already_imported_library[0].import_range,
-                                        ),
-                                        message="",
-                                    )
-                                ]
-                                if already_imported_library[0].import_source
-                                else None,
+                                related_information=(
+                                    [
+                                        DiagnosticRelatedInformation(
+                                            location=Location(
+                                                uri=str(Uri.from_path(already_imported_library[0].import_source)),
+                                                range=already_imported_library[0].import_range,
+                                            ),
+                                            message="",
+                                        )
+                                    ]
+                                    if already_imported_library[0].import_source
+                                    else None
+                                ),
                                 code=Error.LIBRARY_ALREADY_IMPORTED,
                             )
 
@@ -1695,9 +1709,11 @@ class Namespace:
                     self._analyzed = not canceled
 
                     self._logger.debug(
-                        lambda: f"end analyzed {self.document} succeed in {time.monotonic() - start_time}s"
-                        if self._analyzed
-                        else f"end analyzed {self.document} failed in {time.monotonic() - start_time}s"
+                        lambda: (
+                            f"end analyzed {self.document} succeed in {time.monotonic() - start_time}s"
+                            if self._analyzed
+                            else f"end analyzed {self.document} failed in {time.monotonic() - start_time}s"
+                        )
                     )
 
                 self.has_analysed(self)

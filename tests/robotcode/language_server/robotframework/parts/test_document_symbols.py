@@ -64,12 +64,14 @@ def test(
         yaml.dump(
             {
                 "data": data,
-                "result": next(
-                    reversed([l for l in split(result, data) if l is not None]),
-                    None,
-                )
-                if result
-                else result,
+                "result": (
+                    next(
+                        reversed([l for l in split(result, data) if l is not None]),
+                        None,
+                    )
+                    if result
+                    else result
+                ),
             }
         )
     )

@@ -48,12 +48,10 @@ class CompletionProtocolPart(LanguageServerProtocolPart):
         document: TextDocument,
         position: Position,
         context: Optional[CompletionContext],
-    ) -> Union[List[CompletionItem], CompletionList, None]:
-        ...
+    ) -> Union[List[CompletionItem], CompletionList, None]: ...
 
     @event
-    def resolve(sender, completion_item: CompletionItem) -> Optional[CompletionItem]:
-        ...
+    def resolve(sender, completion_item: CompletionItem) -> Optional[CompletionItem]: ...
 
     def extend_capabilities(self, capabilities: ServerCapabilities) -> None:
         if len(self.collect):

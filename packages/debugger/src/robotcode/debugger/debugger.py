@@ -504,8 +504,7 @@ class Debugger:
             self.condition.notify_all()
 
     @event
-    def send_event(sender: Any, event: Event) -> None:
-        ...
+    def send_event(sender: Any, event: Event) -> None: ...
 
     def set_breakpoints(
         self,

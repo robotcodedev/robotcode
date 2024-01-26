@@ -280,12 +280,14 @@ class Collector(SuiteVisitor):
                 uri=str(Uri.from_path(absolute_path)) if absolute_path else None,
                 source=str(suite.source),
                 rel_source=get_rel_source(suite.source),
-                range=Range(
-                    start=Position(line=0, character=0),
-                    end=Position(line=0, character=0),
-                )
-                if suite.source and Path(suite.source).is_file()
-                else None,
+                range=(
+                    Range(
+                        start=Position(line=0, character=0),
+                        end=Position(line=0, character=0),
+                    )
+                    if suite.source and Path(suite.source).is_file()
+                    else None
+                ),
                 children=[],
                 error=suite.error_message if isinstance(suite, ErroneousTestSuite) else None,
             )
@@ -462,11 +464,11 @@ def handle_options(
 
         options, arguments = RobotFrameworkEx(
             app,
-            [*(app.config.default_paths if app.config.default_paths else ())]
-            if profile.paths is None
-            else profile.paths
-            if isinstance(profile.paths, list)
-            else [profile.paths],
+            (
+                [*(app.config.default_paths if app.config.default_paths else ())]
+                if profile.paths is None
+                else profile.paths if isinstance(profile.paths, list) else [profile.paths]
+            ),
             app.config.dry,
             root_folder,
         ).parse_arguments((*cmd_options, *robot_options_and_args))

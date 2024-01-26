@@ -397,11 +397,15 @@ class ArgumentInfo:
             name=robot_arg.name,
             default_value=robot_arg_repr(robot_arg),
             str_repr=str(arg),
-            types=robot_arg.types_reprs
-            if get_robot_version() < (7, 0)
-            else ([str(robot_arg.type)] if not robot_arg.type.is_union else [str(t) for t in robot_arg.type.nested])
-            if robot_arg.type
-            else None,
+            types=(
+                robot_arg.types_reprs
+                if get_robot_version() < (7, 0)
+                else (
+                    ([str(robot_arg.type)] if not robot_arg.type.is_union else [str(t) for t in robot_arg.type.nested])
+                    if robot_arg.type
+                    else None
+                )
+            ),
             kind=KeywordArgumentKind[robot_arg.kind],
             required=robot_arg.required,
         )
@@ -1273,9 +1277,9 @@ def get_module_spec(module_name: str) -> Optional[ModuleSpec]:
         return ModuleSpec(  # type: ignore
             name=result.name,
             origin=result.origin,
-            submodule_search_locations=list(result.submodule_search_locations)
-            if result.submodule_search_locations
-            else None,
+            submodule_search_locations=(
+                list(result.submodule_search_locations) if result.submodule_search_locations else None
+            ),
             member_name=member_name,
         )
     return None
@@ -1396,9 +1400,11 @@ def get_message_and_traceback_from_exception_text(
 
     return MessageAndTraceback(
         message=splitted[0].strip(),
-        traceback=[SourceAndLineInfo(t.group(1), int(t.group(2))) for t in __RE_TRACEBACK.finditer(splitted[1])]
-        if len(splitted) > 1
-        else [],
+        traceback=(
+            [SourceAndLineInfo(t.group(1), int(t.group(2))) for t in __RE_TRACEBACK.finditer(splitted[1])]
+            if len(splitted) > 1
+            else []
+        ),
     )
 
 
@@ -1723,20 +1729,20 @@ def get_library_doc(
         except BaseException as e:
             return LibraryDoc(
                 name=name,
-                source=source or module_spec.origin
-                if module_spec is not None and module_spec.origin
-                else import_name
-                if is_library_by_path(import_name)
-                else None,
+                source=(
+                    source or module_spec.origin
+                    if module_spec is not None and module_spec.origin
+                    else import_name if is_library_by_path(import_name) else None
+                ),
                 module_spec=module_spec,
                 errors=[
                     error_from_exception(
                         e,
-                        source or module_spec.origin
-                        if module_spec is not None and module_spec.origin
-                        else import_name
-                        if is_library_by_path(import_name)
-                        else None,
+                        (
+                            source or module_spec.origin
+                            if module_spec is not None and module_spec.origin
+                            else import_name if is_library_by_path(import_name) else None
+                        ),
                         1 if source is not None or module_spec is not None and module_spec.origin is not None else None,
                     )
                 ],
@@ -1798,11 +1804,13 @@ def get_library_doc(
         libdoc = LibraryDoc(
             name=library_name,
             source=real_source,
-            module_spec=module_spec
-            if module_spec is not None
-            and module_spec.origin != real_source
-            and module_spec.submodule_search_locations is None
-            else None,
+            module_spec=(
+                module_spec
+                if module_spec is not None
+                and module_spec.origin != real_source
+                and module_spec.submodule_search_locations is None
+                else None
+            ),
             python_path=sys.path,
             line_no=lib.lineno if lib is not None else -1,
             doc=str(lib.doc) if lib is not None else "",
@@ -1921,18 +1929,22 @@ def get_library_doc(
                             is_registered_run_keyword=RUN_KW_REGISTER.is_run_keyword(libdoc.name, kw[0].name),
                             args_to_process=get_args_to_process(libdoc.name, kw[0].name),
                             deprecated=kw[0].deprecated,
-                            arguments_spec=ArgumentSpec.from_robot_argument_spec(
-                                kw[1].arguments if get_robot_version() < (7, 0) else kw[1].args
-                            )
-                            if not kw[1].is_error_handler
-                            else None,
-                            return_type=(
-                                str(kw[1].args.return_type)
-                                if kw[1].args.return_type is not None and kw[1].args.return_type != type(None)
+                            arguments_spec=(
+                                ArgumentSpec.from_robot_argument_spec(
+                                    kw[1].arguments if get_robot_version() < (7, 0) else kw[1].args
+                                )
+                                if not kw[1].is_error_handler
                                 else None
-                            )
-                            if get_robot_version() >= (7, 0)
-                            else None,
+                            ),
+                            return_type=(
+                                (
+                                    str(kw[1].args.return_type)
+                                    if kw[1].args.return_type is not None and kw[1].args.return_type != type(None)
+                                    else None
+                                )
+                                if get_robot_version() >= (7, 0)
+                                else None
+                            ),
                         )
                         for kw in keyword_docs
                     ],
@@ -2273,9 +2285,9 @@ def get_variables_doc(
                         source=source or (module_spec.origin if module_spec is not None else None) or "",
                         name=name if get_robot_version() < (7, 0) else f"${{{name}}}",
                         name_token=None,
-                        value=NativeValue(value)
-                        if value is None or isinstance(value, (int, float, bool, str))
-                        else None,
+                        value=(
+                            NativeValue(value) if value is None or isinstance(value, (int, float, bool, str)) else None
+                        ),
                         has_value=value is None or isinstance(value, (int, float, bool, str)),
                         value_is_native=value is None or isinstance(value, (int, float, bool, str)),
                     )
@@ -2287,11 +2299,11 @@ def get_variables_doc(
                 libdoc.errors = [
                     error_from_exception(
                         e,
-                        source or module_spec.origin
-                        if module_spec is not None and module_spec.origin
-                        else import_name
-                        if is_variables_by_path(import_name)
-                        else None,
+                        (
+                            source or module_spec.origin
+                            if module_spec is not None and module_spec.origin
+                            else import_name if is_variables_by_path(import_name) else None
+                        ),
                         1 if source is not None or module_spec is not None and module_spec.origin is not None else None,
                     )
                 ]
@@ -2307,11 +2319,11 @@ def get_variables_doc(
             errors=[
                 error_from_exception(
                     e,
-                    source or module_spec.origin
-                    if module_spec is not None and module_spec.origin
-                    else import_name
-                    if is_variables_by_path(import_name)
-                    else None,
+                    (
+                        source or module_spec.origin
+                        if module_spec is not None and module_spec.origin
+                        else import_name if is_variables_by_path(import_name) else None
+                    ),
                     1 if source is not None or module_spec is not None and module_spec.origin is not None else None,
                 )
             ],
@@ -2788,9 +2800,9 @@ def get_model_doc(
                 is_embedded=is_embedded_keyword(kw[0].name),
                 errors=get_kw_errors(kw[1]),
                 is_error_handler=isinstance(kw[1], UserErrorHandler),
-                error_handler_message=str(cast(UserErrorHandler, kw[1]).error)
-                if isinstance(kw[1], UserErrorHandler)
-                else None,
+                error_handler_message=(
+                    str(cast(UserErrorHandler, kw[1]).error) if isinstance(kw[1], UserErrorHandler) else None
+                ),
                 arguments_spec=ArgumentSpec.from_robot_argument_spec(
                     kw[1].arguments if get_robot_version() < (7, 0) else kw[1].args
                 ),

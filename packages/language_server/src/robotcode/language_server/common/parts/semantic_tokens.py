@@ -50,8 +50,7 @@ class SemanticTokensProtocolPart(LanguageServerProtocolPart):
         sender,
         document: TextDocument,
         **kwargs: Any,
-    ) -> Union[SemanticTokens, SemanticTokensPartialResult, None]:
-        ...
+    ) -> Union[SemanticTokens, SemanticTokensPartialResult, None]: ...
 
     @event
     def collect_full_delta(
@@ -59,8 +58,12 @@ class SemanticTokensProtocolPart(LanguageServerProtocolPart):
         document: TextDocument,
         previous_result_id: str,
         **kwargs: Any,
-    ) -> Union[SemanticTokens, SemanticTokensDelta, SemanticTokensDeltaPartialResult, None,]:
-        ...
+    ) -> Union[
+        SemanticTokens,
+        SemanticTokensDelta,
+        SemanticTokensDeltaPartialResult,
+        None,
+    ]: ...
 
     @event
     def collect_range(
@@ -68,8 +71,7 @@ class SemanticTokensProtocolPart(LanguageServerProtocolPart):
         document: TextDocument,
         range: Range,
         **kwargs: Any,
-    ) -> Union[SemanticTokens, SemanticTokensPartialResult, None]:
-        ...
+    ) -> Union[SemanticTokens, SemanticTokensPartialResult, None]: ...
 
     def extend_capabilities(self, capabilities: ServerCapabilities) -> None:
         if len(self.collect_full) or len(self.collect_range):
@@ -78,11 +80,11 @@ class SemanticTokensProtocolPart(LanguageServerProtocolPart):
                     token_types=[e.value for e in self.token_types],
                     token_modifiers=[e.value for e in self.token_modifiers],
                 ),
-                full=SemanticTokensOptionsFullType1(delta=True if len(self.collect_full_delta) else None)
-                if len(self.collect_full) and len(self.collect_full_delta)
-                else True
-                if len(self.collect_full)
-                else None,
+                full=(
+                    SemanticTokensOptionsFullType1(delta=True if len(self.collect_full_delta) else None)
+                    if len(self.collect_full) and len(self.collect_full_delta)
+                    else True if len(self.collect_full) else None
+                ),
                 range=True if len(self.collect_range) else None,
             )
 
@@ -124,7 +126,12 @@ class SemanticTokensProtocolPart(LanguageServerProtocolPart):
         previous_result_id: str,
         *args: Any,
         **kwargs: Any,
-    ) -> Union[SemanticTokens, SemanticTokensDelta, SemanticTokensDeltaPartialResult, None,]:
+    ) -> Union[
+        SemanticTokens,
+        SemanticTokensDelta,
+        SemanticTokensDeltaPartialResult,
+        None,
+    ]:
         results: List[
             Union[
                 SemanticTokens,

@@ -39,8 +39,7 @@ class ReferencesProtocolPart(LanguageServerProtocolPart):
         document: TextDocument,
         position: Position,
         context: ReferenceContext,
-    ) -> Optional[List[Location]]:
-        ...
+    ) -> Optional[List[Location]]: ...
 
     @rpc_method(name="textDocument/references", param_type=ReferenceParams, threaded=True)
     def _text_document_references(

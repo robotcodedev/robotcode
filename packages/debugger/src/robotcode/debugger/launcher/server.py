@@ -283,11 +283,11 @@ class LauncherDebugAdapterProtocol(DebugAdapterProtocol):
                         cwd=cwd,
                         args=[*robotcode_run_args, *run_args],
                         env=env,
-                        kind=RunInTerminalKind.INTEGRATED
-                        if console == "integratedTerminal"
-                        else RunInTerminalKind.EXTERNAL
-                        if console == "externalTerminal"
-                        else None,
+                        kind=(
+                            RunInTerminalKind.INTEGRATED
+                            if console == "integratedTerminal"
+                            else RunInTerminalKind.EXTERNAL if console == "externalTerminal" else None
+                        ),
                         title=name,
                     )
                 ),

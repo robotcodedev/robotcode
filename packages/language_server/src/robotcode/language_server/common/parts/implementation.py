@@ -34,8 +34,7 @@ class ImplementationProtocolPart(LanguageServerProtocolPart):
         sender,
         document: TextDocument,
         position: Position,
-    ) -> Union[Location, List[Location], List[LocationLink], None]:
-        ...
+    ) -> Union[Location, List[Location], List[LocationLink], None]: ...
 
     def extend_capabilities(self, capabilities: ServerCapabilities) -> None:
         if (
