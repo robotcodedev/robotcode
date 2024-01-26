@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [0.70.0](https://github.com/d-biehl/robotcode/compare/v0.69.0..v0.70.0) - 2024-01-26
+
+### Bug Fixes
+
+- **analyzer:** Correct resolving variables declared with the new VAR statement and a scope ([a259ec6](https://github.com/d-biehl/robotcode/commit/a259ec6bbc1c8ae4ae2d5169e4f7df184292cc82))
+- **debugger:** Fix some things in debugger to better support Robot Framework version 7.0 ([a81695c](https://github.com/d-biehl/robotcode/commit/a81695c617c41d6e257c5fafee92fd746431a698))
+- **langserver:** Correct minimum robot version in version check ([f33c80a](https://github.com/d-biehl/robotcode/commit/f33c80a730b49667ef5f463733bd32880f44e145))
+
+
+### Features
+
+- **vscode:** Simple drag'n drop keywords from keywords view to text editor ([6093387](https://github.com/d-biehl/robotcode/commit/60933878cb5c9b7ed2e46caab67ee32e073dc366))
+
+
 ## [0.69.0](https://github.com/d-biehl/robotcode/compare/v0.68.5..v0.69.0) - 2024-01-24
 
 ### Bug Fixes
