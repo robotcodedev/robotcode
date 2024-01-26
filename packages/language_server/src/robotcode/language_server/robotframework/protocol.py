@@ -75,8 +75,8 @@ def check_robotframework() -> None:
             "RobotFramework not installed in current Python environment, please install it."
         ) from e
 
-    if get_robot_version() < (4, 0):
-        raise RobotVersionDontMatchError("Wrong RobotFramework version. Expect version >= 4.0")
+    if get_robot_version() < (4, 1):
+        raise RobotVersionDontMatchError("Wrong RobotFramework version. Expect version >= 4.1")
 
 
 @dataclass
