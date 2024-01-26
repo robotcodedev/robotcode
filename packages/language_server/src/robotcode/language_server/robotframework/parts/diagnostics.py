@@ -20,8 +20,8 @@ from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.language_server.robotframework.configuration import AnalysisConfig
 from robotcode.robot.diagnostics.entities import (
     ArgumentDefinition,
-    CommandLineVariableDefinition,
     EnvironmentVariableDefinition,
+    GlobalVariableDefinition,
     LibraryArgumentDefinition,
 )
 from robotcode.robot.diagnostics.namespace import Namespace
@@ -362,7 +362,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
                 check_current_task_canceled()
 
                 if isinstance(
-                    var, (LibraryArgumentDefinition, EnvironmentVariableDefinition, CommandLineVariableDefinition)
+                    var, (LibraryArgumentDefinition, EnvironmentVariableDefinition, GlobalVariableDefinition)
                 ):
                     continue
 

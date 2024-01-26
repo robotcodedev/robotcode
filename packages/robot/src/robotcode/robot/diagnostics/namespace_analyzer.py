@@ -5,8 +5,9 @@ import itertools
 import os
 from collections import defaultdict
 from dataclasses import dataclass
-from typing import Any, Dict, Iterator, List, Optional, Set, Tuple, Union
+from typing import Any, Dict, Iterator, List, Optional, Set, Tuple, Type, Union
 
+import robot.parsing.model.statements
 from robot.parsing.lexer.tokens import Token
 from robot.parsing.model.blocks import Keyword, TestCase
 from robot.parsing.model.statements import (
@@ -206,10 +207,59 @@ class NamespaceAnalyzer(Visitor, ModelHelper):
             if var_def not in self._variable_references:
                 self._variable_references[var_def] = set()
 
+    def visit_Var(self, node: Statement) -> None:  # noqa: N802
+        name_token = node.get_token(Token.VARIABLE)
+        if name_token is None:
+            return
+
+        name = name_token.value
+
+        if name is not None:
+            match = search_variable(name, ignore_errors=True)
+            if not match.is_assign(allow_assign_mark=True):
+                return
+
+            if name.endswith("="):
+                name = name[:-1].rstrip()
+
+            r = range_from_token(
+                strip_variable_token(
+                    Token(
+                        name_token.type,
+                        name,
+                        name_token.lineno,
+                        name_token.col_offset,
+                        name_token.error,
+                    )
+                )
+            )
+            # r.start.character = 0
+            # r.end.character = 0
+
+            var_def = self.namespace.find_variable(
+                name,
+                skip_commandline_variables=False,
+                nodes=self.node_stack,
+                position=range_from_token(node.get_token(Token.VAR)).start,
+                ignore_error=True,
+            )
+            if var_def is not None:
+                if var_def.name_range != r:
+                    if self.namespace.document is not None:
+                        self._variable_references[var_def].add(Location(self.namespace.document.document_uri, r))
+                else:
+                    if self.namespace.document is not None:
+                        self._variable_references[var_def] = set()
+
     def generic_visit(self, node: ast.AST) -> None:
         check_current_task_canceled()
 
         super().generic_visit(node)
+
+    if get_robot_version() < (7, 0):
+        variable_statements: Tuple[Type[Any], ...] = (Variable,)
+    else:
+        variable_statements = (Variable, robot.parsing.model.statements.Var)
 
     def visit(self, node: ast.AST) -> None:
         check_current_task_canceled()
@@ -231,7 +281,7 @@ class NamespaceAnalyzer(Visitor, ModelHelper):
                 for token1 in (
                     t
                     for t in node.tokens
-                    if not (isinstance(node, Variable) and t.type == Token.VARIABLE)
+                    if not (isinstance(node, self.variable_statements) and t.type == Token.VARIABLE)
                     and t.error is None
                     and contains_variable(t.value, "$@&%")
                 ):

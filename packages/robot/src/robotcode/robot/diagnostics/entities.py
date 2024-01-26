@@ -173,7 +173,9 @@ class VariableMatcher:
 class VariableDefinitionType(Enum):
     VARIABLE = "suite variable"
     LOCAL_VARIABLE = "local variable"
+    TEST_VARIABLE = "test variable"
     ARGUMENT = "argument"
+    GLOBAL_VARIABLE = "global variable"
     COMMAND_LINE_VARIABLE = "global variable [command line]"
     BUILTIN_VARIABLE = "builtin variable"
     IMPORTED_VARIABLE = "suite variable [imported]"
@@ -219,8 +221,26 @@ class VariableDefinition(SourceEntity):
 
 
 @dataclass
+class TestVariableDefinition(VariableDefinition):
+    type: VariableDefinitionType = VariableDefinitionType.TEST_VARIABLE
+
+    @single_call
+    def __hash__(self) -> int:
+        return hash((type(self), self.name, self.type, self.range, self.source))
+
+
+@dataclass
 class LocalVariableDefinition(VariableDefinition):
     type: VariableDefinitionType = VariableDefinitionType.LOCAL_VARIABLE
+
+    @single_call
+    def __hash__(self) -> int:
+        return hash((type(self), self.name, self.type, self.range, self.source))
+
+
+@dataclass
+class GlobalVariableDefinition(VariableDefinition):
+    type: VariableDefinitionType = VariableDefinitionType.GLOBAL_VARIABLE
 
     @single_call
     def __hash__(self) -> int:
@@ -238,13 +258,13 @@ class BuiltInVariableDefinition(VariableDefinition):
 
 
 @dataclass
-class CommandLineVariableDefinition(VariableDefinition):
+class CommandLineVariableDefinition(GlobalVariableDefinition):
     type: VariableDefinitionType = VariableDefinitionType.COMMAND_LINE_VARIABLE
     resolvable: bool = True
 
     @single_call
     def __hash__(self) -> int:
-        return hash((type(self), self.name, self.type))
+        return hash((type(self), self.name, self.type, self.range, self.source))
 
 
 @dataclass

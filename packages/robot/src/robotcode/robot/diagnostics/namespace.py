@@ -20,6 +20,7 @@ from typing import (
     Set,
     Tuple,
     Union,
+    cast,
 )
 
 from robot.errors import VariableError
@@ -75,6 +76,7 @@ from .entities import (
     BuiltInVariableDefinition,
     CommandLineVariableDefinition,
     EnvironmentVariableDefinition,
+    GlobalVariableDefinition,
     Import,
     InvalidVariableError,
     LibraryEntry,
@@ -82,6 +84,7 @@ from .entities import (
     LocalVariableDefinition,
     ResourceEntry,
     ResourceImport,
+    TestVariableDefinition,
     VariableDefinition,
     VariableMatcher,
     VariablesEntry,
@@ -182,18 +185,21 @@ class BlockVariableVisitor(Visitor):
     def __init__(
         self,
         library_doc: LibraryDoc,
+        global_variables: List[VariableDefinition],
         source: str,
         position: Optional[Position] = None,
         in_args: bool = True,
     ) -> None:
         super().__init__()
         self.library_doc = library_doc
+        self.global_variables = global_variables
         self.source = source
         self.position = position
         self.in_args = in_args
 
         self._results: Dict[str, VariableDefinition] = {}
         self.current_kw_doc: Optional[KeywordDoc] = None
+        self._var_statements_vars: List[VariableDefinition] = []
 
     def get(self, model: ast.AST) -> List[VariableDefinition]:
         self._results = {}
@@ -384,15 +390,32 @@ class BlockVariableVisitor(Visitor):
                 )
 
     def visit_Var(self, node: Statement) -> None:  # noqa: N802
+        from robot.parsing.model.statements import Var
+
         variable = node.get_token(Token.VARIABLE)
         if variable is None:
             return
         try:
-            if not is_variable(variable.value):
+            var_name = variable.value
+            if var_name.endswith("="):
+                var_name = var_name[:-1].rstrip()
+
+            if not is_variable(var_name):
                 return
 
-            self._results[variable.value] = LocalVariableDefinition(
-                name=variable.value,
+            scope = cast(Var, node).scope
+
+            if scope in ("SUITE",):
+                var_type = VariableDefinition
+            elif scope in ("TEST", "TASK"):
+                var_type = TestVariableDefinition
+            elif scope in ("GLOBAL",):
+                var_type = GlobalVariableDefinition
+            else:
+                var_type = LocalVariableDefinition
+
+            var = var_type(
+                name=var_name,
                 name_token=strip_variable_token(variable),
                 line_no=variable.lineno,
                 col_offset=variable.col_offset,
@@ -400,6 +423,16 @@ class BlockVariableVisitor(Visitor):
                 end_col_offset=variable.end_col_offset,
                 source=self.source,
             )
+
+            self._var_statements_vars.append(var)
+
+            if var_name not in self._results or type(self._results[var_name]) != type(var):
+                if isinstance(var, LocalVariableDefinition) or not any(
+                    l for l in self.global_variables if l.matcher == var.matcher
+                ):
+                    self._results[var_name] = var
+                else:
+                    self._results.pop(var_name, None)
 
         except VariableError:
             pass
@@ -928,6 +961,7 @@ class Namespace:
                 (
                     BlockVariableVisitor(
                         self.get_library_doc(),
+                        self.get_global_variables(),
                         self.source,
                         position,
                         isinstance(test_or_keyword_nodes[-1], Arguments) if nodes else False,
