@@ -72,7 +72,7 @@ jobs:
 
     steps:
       - name: Download Artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@4
         with:
           path: artifacts
 
@@ -216,15 +216,15 @@ jobs:
       - name: install node modules
         run: npm install --also=dev
 
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: vscode-package
           path: dist
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: python-package
           path: dist
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: wheel-package
           path: dist
