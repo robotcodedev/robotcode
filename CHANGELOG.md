@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [0.71.0](https://github.com/d-biehl/robotcode/compare/v0.70.0..v0.71.0) - 2024-01-27
+
+### Features
+
+- **analyzer:** Introduce `robotcode.analysis.robot.globalLibrarySearchOrder` setting to specify a global search for libs and resources ([9d34ed4](https://github.com/d-biehl/robotcode/commit/9d34ed4c9e826465e52f54ebcfee483fb6a740b3))
+
+  Implemented this, because analyse `Set Library Search Order` is to hard.
+
+
+
 ## [0.70.0](https://github.com/d-biehl/robotcode/compare/v0.69.0..v0.70.0) - 2024-01-26
 
 ### Bug Fixes
