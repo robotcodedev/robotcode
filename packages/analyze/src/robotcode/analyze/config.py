@@ -50,3 +50,10 @@ class AnalyzerConfig(BaseOptions):
             - `myvars.subpackage.subpackage`
             """,
     )
+
+    global_library_search_order: List[str] = field(
+        default_factory=list,
+        description="""\
+            TODO
+        """,
+    )

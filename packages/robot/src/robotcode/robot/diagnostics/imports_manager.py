@@ -489,6 +489,7 @@ class ImportsManager:
         environment: Optional[Dict[str, str]],
         ignored_libraries: List[str],
         ignored_variables: List[str],
+        global_library_search_order: List[str],
         cache_base_path: Optional[Path],
     ) -> None:
         super().__init__()
@@ -530,6 +531,9 @@ class ImportsManager:
 
         self.ignored_libraries_patters = [Pattern(s) for s in ignored_libraries]
         self.ignored_variables_patters = [Pattern(s) for s in ignored_variables]
+
+        self.global_library_search_order = global_library_search_order
+
         self._libaries_lock = threading.RLock()
         self._libaries: OrderedDict[_LibrariesEntryKey, _LibrariesEntry] = OrderedDict()
         self._resources_lock = threading.RLock()

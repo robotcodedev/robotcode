@@ -33,7 +33,7 @@ from ..utils import get_robot_version
 from ..utils.stubs import Languages
 from .imports_manager import ImportsManager
 from .namespace import DocumentType, Namespace
-from .workspace_config import CacheConfig, RobotConfig
+from .workspace_config import AnalysisRobotConfig, CacheConfig, RobotConfig
 
 
 class UnknownFileTypeError(Exception):
@@ -474,6 +474,7 @@ class DocumentsCacheHelper:
             *robot_config.variable_files,
         ]
 
+        analysis_config = self.workspace.get_configuration(AnalysisRobotConfig, root_uri)
         return ImportsManager(
             self.documents_manager,
             self.file_watcher_manager,
@@ -484,6 +485,7 @@ class DocumentsCacheHelper:
             environment,
             cache_config.ignored_libraries,
             cache_config.ignored_variables,
+            analysis_config.global_library_search_order,
             cache_base_path,
         )
 

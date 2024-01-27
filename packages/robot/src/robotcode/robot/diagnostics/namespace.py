@@ -596,7 +596,7 @@ class Namespace:
         self._keywords_lock = RLock(default_timeout=120, name="Namespace.keywords")
 
         # TODO: how to get the search order from model
-        self.search_order: Tuple[str, ...] = ()
+        self._search_order: Optional[Tuple[str, ...]] = None
 
         self._finder: Optional[KeywordFinder] = None
 
@@ -624,6 +624,13 @@ class Namespace:
     @property
     def document(self) -> Optional[TextDocument]:
         return self._document() if self._document is not None else None
+
+    @property
+    def search_order(self) -> Tuple[str, ...]:
+        if self._search_order is None:
+            return tuple(self.imports_manager.global_library_search_order)
+
+        return self._search_order
 
     def imports_changed(self, sender: Any, uri: DocumentUri) -> None:
         # TODO: optimise this by checking our imports
