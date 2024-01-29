@@ -1,7 +1,6 @@
 import collections
 import inspect
 import io
-import threading
 import weakref
 from typing import (
     Any,
@@ -17,6 +16,7 @@ from typing import (
 
 from typing_extensions import Self
 
+from robotcode.core.concurrent import RLock
 from robotcode.core.event import event
 from robotcode.core.lsp.types import DocumentUri, Position, Range
 from robotcode.core.uri import Uri
@@ -85,7 +85,7 @@ class CacheEntry:
     def __init__(self) -> None:
         self.data: Any = None
         self.has_data: bool = False
-        self.lock = threading.RLock()
+        self.lock = RLock(name="Document.CacheEntry.lock", default_timeout=120)
 
 
 class TextDocument:
@@ -100,7 +100,7 @@ class TextDocument:
     ) -> None:
         super().__init__()
 
-        self._lock = threading.RLock()
+        self._lock = RLock(name=f"Document.lock '{document_uri}'", default_timeout=120)
         self.document_uri = document_uri
         self.uri = Uri(self.document_uri).normalized()
         self.language_id = language_id
@@ -110,7 +110,7 @@ class TextDocument:
         self._orig_version = version
         self._lines: Optional[List[str]] = None
         self._cache: Dict[weakref.ref[Any], CacheEntry] = collections.defaultdict(CacheEntry)
-        self._data_lock = threading.RLock()
+        self._data_lock = RLock(name=f"Document.data_lock '{document_uri}'", default_timeout=120)
         self._data: weakref.WeakKeyDictionary[Any, Any] = weakref.WeakKeyDictionary()
         self.opened_in_editor = False
 

@@ -1,6 +1,5 @@
 import os
 import re
-import threading
 from pathlib import Path
 from typing import (
     Any,
@@ -13,6 +12,7 @@ from typing import (
     Union,
 )
 
+from .concurrent import RLock
 from .event import event
 from .language import LanguageDefinition, language_id_filter
 from .lsp.types import DocumentUri
@@ -32,7 +32,7 @@ class DocumentsManager:
         self.languages = languages
 
         self._documents: Dict[DocumentUri, TextDocument] = {}
-        self._lock = threading.RLock()
+        self._lock = RLock(name="DocumentsManager.lock", default_timeout=120)
 
     @property
     def documents(self) -> List[TextDocument]:
