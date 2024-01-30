@@ -88,7 +88,7 @@ export class KeywordsTreeViewProvider
       dragAndDropController: this,
     });
     context.subscriptions.push(view);
-    view.badge = { tooltip: "Robot Framework Keywords", value: 23 };
+
     this._disposables = vscode.Disposable.from(
       vscode.window.onDidChangeActiveTextEditor(async (_editor) => {
         await this.refresh();
