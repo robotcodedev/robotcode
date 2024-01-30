@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [0.71.1](https://github.com/d-biehl/robotcode/compare/v0.71.0..v0.71.1) - 2024-01-30
+
+### Bug Fixes
+
+- **diagnostics:** Library doc are now correctly unloaded when they are no longer needed ([df6762a](https://github.com/d-biehl/robotcode/commit/df6762af293b18def1c565ac0856f8b0f3f1295b))
+- **vscode:** Remove unneeded "test" badge on the explorer icon ([4f012b4](https://github.com/d-biehl/robotcode/commit/4f012b44dc4bd0c54de75a510e7512b649f9b8a8))
+
+
+### Performance
+
+- **langserver:** Remove unneeded double caching of library imports ([3de0882](https://github.com/d-biehl/robotcode/commit/3de08823a559cc141b7b530384cb5924c8ce7b54))
+
+
+### Refactor
+
+- **core:** Add locks with default_timouts in documents actions ([5eab74e](https://github.com/d-biehl/robotcode/commit/5eab74e799ef70a47f9e45a15035424b19bfd3bb))
+
+
 ## [0.71.0](https://github.com/d-biehl/robotcode/compare/v0.70.0..v0.71.0) - 2024-01-27
 
 ### Features
