@@ -3,24 +3,23 @@
 {
   "name": "robotcode devcontainer",
   "image": "mcr.microsoft.com/devcontainers/base:jammy",
-	// Features to add to the dev container. More info: https://containers.dev/features.
-	"features": {
-		"ghcr.io/devcontainers/features/common-utils:2": {
-			"installZsh": true,
-			"configureZshAsDefaultShell": true,
-			"installOhMyZsh": true,
-			"installOhMyZshConfig": true,
-			"upgradePackages": true
-		},
-		"ghcr.io/devcontainers/features/node:1": {},
-		"ghcr.io/devcontainers/features/python:1": {
-			"version": "os-provided",
-			"installTools": true,
-			"optimize": true
-		}
-		// "ghcr.io/devcontainers/features/desktop-lite:1": {}
-	},
-
+  // Features to add to the dev container. More info: https://containers.dev/features.
+  "features": {
+    "ghcr.io/devcontainers/features/common-utils:2": {
+      "installZsh": true,
+      "configureZshAsDefaultShell": true,
+      "installOhMyZsh": true,
+      "installOhMyZshConfig": true,
+      "upgradePackages": true
+    },
+    "ghcr.io/devcontainers/features/node:1": {},
+    "ghcr.io/devcontainers/features/python:1": {
+      "version": "os-provided",
+      "installTools": true,
+      "optimize": true
+    }
+    // "ghcr.io/devcontainers/features/desktop-lite:1": {}
+  },
   // Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
   //"build": {
   //   "dockerfile": "Dockerfile"
@@ -43,7 +42,8 @@
         "gruntfuggly.todo-tree",
         "charliermarsh.ruff",
         "ms-python.black-formatter",
-        "ms-python.mypy-type-checker"
+        "ms-python.mypy-type-checker",
+        "ms-python.debugpy"
       ],
       "settings": {
         "python.testing.pytestArgs": [
@@ -67,25 +67,30 @@
           "**/.hatch": true,
           "**/.ruff_cache": true
         },
-        "python.linting.flake8Enabled": false,
-        "python.linting.mypyEnabled": true,
         "python.terminal.activateEnvInCurrentTerminal": true,
-        "python.formatting.provider": "black",
         "python.analysis.completeFunctionParens": true,
-        "python.linting.mypyArgs": [
-          "--show-column-numbers"
-        ],
         "prettier.printWidth": 120,
         "prettier.tabWidth": 4,
-        "eslint.alwaysShowStatus": true,
         "eslint.format.enable": true,
         "eslint.lintTask.enable": true,
         "git.followTagsWhenSync": true,
         "git.enableSmartCommit": true,
         "python.analysis.diagnosticMode": "workspace",
+        "python.venvPath": "${workspaceFolder}/.hatch",
         "ruff.importStrategy": "fromEnvironment",
-        "python.linting.enabled": true,
-        "python.venvPath": "${workspaceFolder}/.hatch"
+        "evenBetterToml.schema.associations": {
+          "^(.*(/|\\\\)\\.?robot\\.toml|\\.?robot\\.toml)$": "http://localhost:8000/etc/robot.toml.json"
+        },
+        "yaml.schemas": {
+          "https://squidfunk.github.io/mkdocs-material/schema.json": "mkdocs.yml"
+        },
+        "mypy-type-checker.importStrategy": "fromEnvironment",
+        "debugpy.debugJustMyCode": false,
+        "black-formatter.importStrategy": "fromEnvironment",
+        "black-formatter.args": [
+          "--config",
+          "${workspaceFolder}./pyproject.toml"
+        ]
       }
     }
   }
