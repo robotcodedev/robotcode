@@ -451,7 +451,6 @@ class DocumentsCacheHelper:
             workspace_languages,
         )
         result.has_invalidated.add(self.__invalidate_namespace)
-        result.has_imports_changed.add(self.__invalidate_namespace)
 
         return result
 

@@ -616,9 +616,6 @@ class Namespace:
     def has_initialized(sender) -> None: ...
 
     @event
-    def has_imports_changed(sender) -> None: ...
-
-    @event
     def has_analysed(sender) -> None: ...
 
     @property
@@ -634,9 +631,6 @@ class Namespace:
 
     def imports_changed(self, sender: Any, uri: DocumentUri) -> None:
         # TODO: optimise this by checking our imports
-        if self.document is not None:
-            self.document.set_data(Namespace.DataEntry, None)
-
         self.invalidate()
 
     @_logger.call
@@ -652,9 +646,6 @@ class Namespace:
                 break
 
         if invalidate:
-            if self.document is not None:
-                self.document.set_data(Namespace.DataEntry, None)
-
             self.invalidate()
 
     @_logger.call
@@ -670,9 +661,6 @@ class Namespace:
                 break
 
         if invalidate:
-            if self.document is not None:
-                self.document.set_data(Namespace.DataEntry, None)
-
             self.invalidate()
 
     @_logger.call
@@ -688,9 +676,6 @@ class Namespace:
                 break
 
         if invalidate:
-            if self.document is not None:
-                self.document.set_data(Namespace.DataEntry, None)
-
             self.invalidate()
 
     def is_initialized(self) -> bool:
@@ -802,73 +787,29 @@ class Namespace:
 
     @_logger.call(condition=lambda self: not self._initialized)
     def ensure_initialized(self) -> bool:
-        run_initialize = False
-        imports_changed = False
-
         with self._initialize_lock:
             if not self._initialized:
-                if self._in_initialize:
-                    self._logger.critical(lambda: f"already initialized {self.document}")
 
-                self._in_initialize = True
-
+                succeed = False
                 try:
-                    self._logger.debug(lambda: f"ensure_initialized -> initialize {self.document}")
+                    self._logger.debug(lambda: f"initialize {self.document}")
 
                     imports = self.get_imports()
 
-                    data_entry: Optional[Namespace.DataEntry] = None
-                    if self.document is not None:
-                        # check or save several data in documents data cache,
-                        # if imports are different, then the data is invalid
-                        old_imports: Optional[List[Import]] = self.document.get_data(Namespace)
-                        if old_imports is None:
-                            self.document.set_data(Namespace, imports)
-                        elif old_imports != imports:
-                            imports_changed = True
+                    variables = self.get_resolvable_variables()
 
-                            self.document.set_data(Namespace, imports)
-                            self.document.set_data(Namespace.DataEntry, None)
-                        else:
-                            data_entry = self.document.get_data(Namespace.DataEntry)
-
-                    if data_entry is not None:
-                        self._libraries = data_entry.libraries.copy()
-                        self._resources = data_entry.resources.copy()
-                        self._variables = data_entry.variables.copy()
-                        self._diagnostics = data_entry.diagnostics.copy()
-                        self._import_entries = data_entry.import_entries.copy()
-                        self._imported_keywords = (
-                            data_entry.imported_keywords.copy() if data_entry.imported_keywords else None
-                        )
-                    else:
-                        variables = self.get_resolvable_variables()
-
-                        self._import_default_libraries(variables)
-                        self._import_imports(
-                            imports,
-                            str(Path(self.source).parent),
-                            top_level=True,
-                            variables=variables,
-                        )
-
-                        if self.document is not None:
-                            self.document.set_data(
-                                Namespace.DataEntry,
-                                Namespace.DataEntry(
-                                    self._libraries.copy(),
-                                    self._resources.copy(),
-                                    self._variables.copy(),
-                                    self._diagnostics.copy(),
-                                    self._import_entries.copy(),
-                                    self._imported_keywords.copy() if self._imported_keywords else None,
-                                ),
-                            )
+                    self._import_default_libraries(variables)
+                    self._import_imports(
+                        imports,
+                        str(Path(self.source).parent),
+                        top_level=True,
+                        variables=variables,
+                    )
 
                     self._reset_global_variables()
 
                     self._initialized = True
-                    run_initialize = True
+                    succeed = True
 
                 except BaseException:
                     if self.document is not None:
@@ -877,14 +818,9 @@ class Namespace:
 
                     self._invalidate()
                     raise
-                finally:
-                    self._in_initialize = False
 
-        if run_initialize:
-            self.has_initialized(self)
-
-            if imports_changed:
-                self.has_imports_changed(self)
+                if succeed:
+                    self.has_initialized(self)
 
         return self._initialized
 
@@ -1069,7 +1005,7 @@ class Namespace:
                         value.args,
                         value.alias,
                         base_dir,
-                        sentinel=value,
+                        sentinel=self,
                         variables=variables,
                     )
                     result.import_range = value.range
