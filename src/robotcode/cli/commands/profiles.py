@@ -67,8 +67,9 @@ def show(app: Application, no_evaluate: bool, paths: List[Path]) -> None:
     nargs=-1,
     required=False,
 )
+@click.option("-h", "--show-hidden", is_flag=True, default=False, help="Show hidden profiles.")
 @pass_application
-def list(app: Application, paths: List[Path]) -> None:
+def list(app: Application, paths: List[Path], show_hidden: bool = False) -> None:
     """Lists the defined profiles in the current configuration."""
 
     try:
@@ -86,15 +87,19 @@ def list(app: Application, paths: List[Path]) -> None:
                 raise ValueError(f"Cannot evaluate profile '{name}'.enabled: {e}") from e
 
         result: Dict[str, Any] = {
-            "profiles": [
-                {
-                    "name": k,
-                    "enabled": check_enabled(k, v),
-                    "description": v.description or "",
-                    "selected": True if k in selected_profiles else False,
-                }
-                for k, v in (config.profiles or {}).items()
-            ]
+            "profiles": sorted(
+                [
+                    {
+                        "name": k,
+                        "enabled": check_enabled(k, v),
+                        "description": v.description or "",
+                        "selected": True if k in selected_profiles else False,
+                    }
+                    for k, v in (config.profiles or {}).items()
+                    if show_hidden or not k.startswith("_")
+                ],
+                key=lambda v: str(v.get("name", "")),
+            )
         }
 
         messages = []
