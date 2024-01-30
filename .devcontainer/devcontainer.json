@@ -28,7 +28,7 @@
   // Use 'forwardPorts' to make a list of ports inside the container available locally.
   // "forwardPorts": [],
   // Use 'postCreateCommand' to run commands after the container is created.
-  "postCreateCommand": "bash -i -c 'npm install --also-dev && pipx install hatch && hatch config set dirs.env.virtual .hatch && hatch env create devel'",
+  "postCreateCommand": "bash -i -c 'sudo apt update -y && sudo apt upgrade -y && sudo apt install gdb -y && npm install --also-dev && pipx install hatch && hatch config set dirs.env.virtual .hatch && hatch env create devel'",
   // Configure tool-specific properties.
   // "customizations": {},
   // Uncomment to connect as root instead. More info: https://aka.ms/dev-je+-containers-non-root.
