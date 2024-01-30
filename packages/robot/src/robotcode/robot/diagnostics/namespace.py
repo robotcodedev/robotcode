@@ -1058,7 +1058,6 @@ class Namespace:
                         result = self._get_resource_entry(
                             value.name,
                             base_dir,
-                            sentinel=value,
                             variables=variables,
                         )
                         result.import_range = value.range
@@ -1091,7 +1090,6 @@ class Namespace:
                         value.name,
                         value.args,
                         base_dir,
-                        sentinel=value,
                         variables=variables,
                     )
 
@@ -1441,7 +1439,6 @@ class Namespace:
         name: str,
         base_dir: str,
         *,
-        sentinel: Any = None,
         variables: Optional[Dict[str, Any]] = None,
     ) -> ResourceEntry:
         (
@@ -1450,7 +1447,7 @@ class Namespace:
         ) = self.imports_manager.get_namespace_and_libdoc_for_resource_import(
             name,
             base_dir,
-            sentinel=sentinel,
+            sentinel=self,
             variables=variables or self.get_resolvable_variables(),
         )
 
@@ -1482,14 +1479,13 @@ class Namespace:
         args: Tuple[Any, ...],
         base_dir: str,
         *,
-        sentinel: Any = None,
         variables: Optional[Dict[str, Any]] = None,
     ) -> VariablesEntry:
         library_doc = self.imports_manager.get_libdoc_for_variables_import(
             name,
             args,
             base_dir=base_dir,
-            sentinel=sentinel,
+            sentinel=self,
             variables=variables or self.get_resolvable_variables(),
         )
 
