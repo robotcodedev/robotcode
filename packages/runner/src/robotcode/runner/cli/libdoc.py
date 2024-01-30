@@ -70,15 +70,12 @@ def libdoc(app: Application, robot_options_and_args: Tuple[str, ...]) -> None:
         robot_arguments, app.config.config_files, verbose_callback=app.verbose
     )
     try:
-        profile = load_robot_config_from_path(*config_files).combine_profiles(
-            *(app.config.profiles or []), verbose_callback=app.verbose
+        profile = (
+            load_robot_config_from_path(*config_files)
+            .combine_profiles(*(app.config.profiles or []), verbose_callback=app.verbose)
+            .evaluated_with_env()
         )
 
-        if profile.env:
-            for k, v in profile.env.items():
-                os.environ[k] = str(v)
-                app.verbose(lambda: f"Set environment variable {k} to {v}")
-        profile = profile.evaluated()
     except (TypeError, ValueError) as e:
         raise click.ClickException(str(e)) from e
 

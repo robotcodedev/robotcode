@@ -30,16 +30,18 @@ def analyze(app: Application, paths: Tuple[str]) -> Union[str, int, None]:
     config_files, root_folder, _ = get_config_files(paths, app.config.config_files, verbose_callback=app.verbose)
 
     try:
+        robot_config = (
+            load_robot_config_from_path(*config_files)
+            .combine_profiles(*(app.config.profiles or []))
+            .evaluated_with_env()
+        )
+
         analyzer_config = load_config_from_path(
             AnalyzerConfig,
             *config_files,
             tool_name="robotcode-analyze",
             robot_toml_tool_name="robotcode-analyze",
         ).evaluated()
-
-        robot_config = (
-            load_robot_config_from_path(*config_files).combine_profiles(*(app.config.profiles or [])).evaluated()
-        )
 
     except (TypeError, ValueError) as e:
         raise click.ClickException(str(e)) from e

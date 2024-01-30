@@ -48,7 +48,7 @@ def show(app: Application, no_evaluate: bool, paths: List[Path]) -> None:
         )
 
         if not no_evaluate:
-            config = config.evaluated()
+            config = config.evaluated_with_env()
 
         app.print_data(
             config,

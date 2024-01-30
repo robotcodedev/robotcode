@@ -364,7 +364,10 @@ class BaseOptions(ValidateMixin):
             if new is not None:
                 setattr(self, f.name, new)
 
-    def evaluated(self) -> Self:
+    def evaluated(self, verbose_callback: Optional[Callable[[Union[str, Callable[[], Any]]], None]] = None) -> Self:
+        if verbose_callback is not None:
+            verbose_callback("Evaluating options")
+
         result = dataclasses.replace(self)
         for f in dataclasses.fields(result):
             try:
@@ -2191,6 +2194,17 @@ class RobotBaseProfile(CommonOptions, CommonExtendOptions, RobotOptions, RobotEx
         with Path(path).open("w", encoding="utf-8") as f:
             f.write(tomli_w.dumps(as_dict(self, remove_defaults=True)))
 
+    def evaluated_with_env(
+        self, verbose_callback: Optional[Callable[[Union[str, Callable[[], Any]]], None]] = None
+    ) -> Self:
+        if self.env:
+            for k, v in self.env.items():
+                os.environ[k] = str(v)
+                if verbose_callback:
+                    verbose_callback(lambda: f"Set environment variable {k} to {v}")
+
+        return self.evaluated(verbose_callback)
+
 
 @dataclass
 class RobotExtraBaseProfile(RobotBaseProfile):
@@ -2285,7 +2299,7 @@ class RobotConfig(RobotExtraBaseProfile):
     def select_profiles(
         self,
         *names: str,
-        verbose_callback: Optional[Callable[..., None]] = None,
+        verbose_callback: Optional[Callable[[Union[str, Callable[[], Any]]], None]] = None,
     ) -> Dict[str, RobotProfile]:
         result: Dict[str, RobotProfile] = {}
 
@@ -2316,9 +2330,7 @@ class RobotConfig(RobotExtraBaseProfile):
         return result
 
     def combine_profiles(
-        self,
-        *names: str,
-        verbose_callback: Optional[Callable[..., None]] = None,
+        self, *names: str, verbose_callback: Optional[Callable[[Union[str, Callable[[], Any]]], None]] = None
     ) -> RobotBaseProfile:
         type_hints = get_type_hints(RobotBaseProfile)
         base_field_names = [f.name for f in dataclasses.fields(RobotBaseProfile)]

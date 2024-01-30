@@ -213,9 +213,6 @@ class RobotLanguageServerProtocol(LanguageServerProtocol):
         for folder in self.workspace.workspace_folders:
             config: RobotConfig = self.workspace.get_configuration(RobotConfig, folder.uri)
 
-            for k, v in (self.robot_profile.env or {}).items():
-                os.environ[k] = str(v)
-
             for p in self.robot_profile.python_path or []:
                 pa = Path(str(p))
                 if not pa.is_absolute():

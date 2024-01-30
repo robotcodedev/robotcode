@@ -80,7 +80,7 @@ def language_server(
         profile = (
             load_robot_config_from_path(*config_files)
             .combine_profiles(*(app.config.profiles or []), verbose_callback=app.verbose)
-            .evaluated()
+            .evaluated_with_env()
         )
     except (TypeError, ValueError) as e:
         app.echo(str(e), err=True)

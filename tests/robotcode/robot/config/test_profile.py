@@ -306,3 +306,46 @@ def test_profiles_flatten_keywords_supports_literals_and_patterns() -> None:
         "--flattenkeywords",
         "foritem",
     ]
+
+
+def test_set_and_evaluates_environment_var_correctly() -> None:
+    os.environ.pop("ENV_TEST_VAR", None)
+    os.environ.pop("ENV_TEST_VAR_CALCULATED", None)
+    data = """\
+        [env]
+        ENV_TEST_VAR = "test"
+        ENV_TEST_VAR_CALCULATED = { expr = "1+2"}
+
+        [variables]
+        TEST_VAR = { expr = "environ.get('ENV_TEST_VAR')"}
+        TEST_VAR_CALCULATED = { expr = "environ.get('ENV_TEST_VAR_CALCULATED')"}
+        """
+    config = load_robot_config_from_robot_toml_str(data)
+    evaluated = config.combine_profiles().evaluated_with_env()
+    assert evaluated.variables
+    assert evaluated.variables["TEST_VAR"] == "test"
+    assert evaluated.variables["TEST_VAR_CALCULATED"] == "3"
+
+
+def test_set_and_evaluates_environment_var_correctly_with_vars_overridden_in_profile() -> None:
+    os.environ.pop("ENV_TEST_VAR", None)
+    os.environ.pop("ENV_TEST_VAR_CALCULATED", None)
+    data = """\
+        [env]
+        ENV_TEST_VAR = "test"
+        ENV_TEST_VAR_CALCULATED = { expr = "1+2"}
+
+        [variables]
+        TEST_VAR = { expr = "environ.get('ENV_TEST_VAR')"}
+        TEST_VAR_CALCULATED = { expr = "environ.get('ENV_TEST_VAR_CALCULATED')"}
+
+        [profiles.test.extend-env]
+        ENV_TEST_VAR = "test overridden"
+        ENV_TEST_VAR_CALCULATED = { expr = "3*3"}
+
+        """
+    config = load_robot_config_from_robot_toml_str(data)
+    evaluated = config.combine_profiles("test").evaluated_with_env()
+    assert evaluated.variables
+    assert evaluated.variables["TEST_VAR"] == "test overridden"
+    assert evaluated.variables["TEST_VAR_CALCULATED"] == "9"

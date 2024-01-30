@@ -100,15 +100,15 @@ class Application:
         self,
         message: Union[str, Callable[[], Any], None],
         file: Optional[IO[AnyStr]] = None,
-        nl: bool = True,
-        err: bool = True,
+        nl: Optional[bool] = True,
+        err: Optional[bool] = True,
     ) -> None:
         if self.config.verbose:
             click.secho(
                 message() if callable(message) else message,
                 file=file,
-                nl=nl,
-                err=err,
+                nl=nl if nl is not None else True,
+                err=err if err is not None else True,
                 color=self.colored,
                 fg="bright_black",
             )
