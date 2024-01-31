@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, cast
 
 import click
 
@@ -48,7 +48,7 @@ def show(app: Application, no_evaluate: bool, paths: List[Path]) -> None:
         )
 
         if not no_evaluate:
-            config = config.evaluated_with_env()
+            config = config.evaluated_with_env(verbose_callback=app.verbose)
 
         app.print_data(
             config,
@@ -68,8 +68,9 @@ def show(app: Application, no_evaluate: bool, paths: List[Path]) -> None:
     required=False,
 )
 @click.option("-h", "--show-hidden", is_flag=True, default=False, help="Show hidden profiles.")
+@click.option("-sp", "--sort-by-precedence", is_flag=True, default=False, help="Sort by precedence.")
 @pass_application
-def list(app: Application, paths: List[Path], show_hidden: bool = False) -> None:
+def list(app: Application, paths: List[Path], show_hidden: bool = False, sort_by_precedence: bool = False) -> None:
     """Lists the defined profiles in the current configuration."""
 
     try:
@@ -94,12 +95,17 @@ def list(app: Application, paths: List[Path], show_hidden: bool = False) -> None
                         "enabled": check_enabled(k, v),
                         "description": v.description or "",
                         "selected": True if k in selected_profiles else False,
+                        "precedence": v.precedence,
                     }
                     for k, v in (config.profiles or {}).items()
-                    if show_hidden or not k.startswith("_")
+                    if show_hidden or not k.startswith("_") and not v.hidden
                 ],
-                key=lambda v: str(v.get("name", "")),
-            )
+                key=(
+                    (lambda v: cast(Any, str(v.get("name", ""))))
+                    if not sort_by_precedence
+                    else (lambda v: cast(Any, v.get("precedence", 0) or 0))
+                ),
+            ),
         }
 
         messages = []
@@ -130,17 +136,18 @@ def list(app: Application, paths: List[Path], show_hidden: bool = False) -> None
                 *(len(profile["description"]) for profile in result["profiles"]),
             )
             header += (
-                f'| Active | Selected | Enabled | Name{(max_name - len("Name")) * " "} '
+                f'| Active | Selected | Enabled | Precedence | Name{(max_name - len("Name")) * " "} '
                 f'| Description{(max_description - len("Description")) * " "} |\n'
             )
-            header += f"|:------:|:--------:|:-------:|:{max_name * '-'}-|:{max_description * '-'}-|\n"
-            for selected, enabled, name, description in (
-                (v["selected"], v["enabled"], v["name"], v["description"]) for v in result["profiles"]
+            header += f"|:------:|:------:|:--------:|:-------:|:{max_name * '-'}-|:{max_description * '-'}-|\n"
+            for selected, enabled, name, description, precedence in (
+                (v["selected"], v["enabled"], v["name"], v["description"], v["precedence"]) for v in result["profiles"]
             ):
                 header += (
                     f'|   {"*" if selected and enabled else " "}    '
                     f'|    {"*" if selected else " "}     '
                     f'|    {"*" if enabled else " "}    '
+                    f'|    {precedence if precedence else " "}    '
                     f'| {name}{(max_name - len(name)) * " "} '
                     f'| {description if description else ""}{(max_description - len(description)) * " "} |\n'
                 )

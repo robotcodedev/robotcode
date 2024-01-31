@@ -45,7 +45,8 @@
 				// "--no-pager",
 				//"config", "info", "list",
 				// "analyze",
-				"profiles", "list"
+				"-p", "ci",
+				"profiles", "show"
 				// "discover", "tests", "--tags"
 				// "."
 			]

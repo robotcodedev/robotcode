@@ -99,7 +99,7 @@ def field(
     return dataclasses.field(*args, **kwargs)
 
 
-class EvaluationError(Exception):
+class EvaluationError(ValueError):
     """Evaluation error."""
 
     def __init__(self, expression: str, message: str):
@@ -155,7 +155,7 @@ class Expression:
         try:
             return safe_eval(self.expr, SAFE_GLOBALS)
         except Exception as e:
-            raise EvaluationError(self.expr, str(e)) from e
+            raise EvaluationError(self.expr, f"{type(e).__name__}: {e}") from e
 
 
 @dataclass
@@ -163,7 +163,11 @@ class StringExpression(Expression):
     """Expression to evaluate to a string."""
 
     def evaluate(self) -> str:
-        return str(super().evaluate())
+        result = super().evaluate()
+        if result is None:
+            return ""
+
+        return str(result)
 
     def __str__(self) -> str:
         return self.evaluate()
@@ -2201,24 +2205,36 @@ class RobotBaseProfile(CommonOptions, CommonExtendOptions, RobotOptions, RobotEx
             for k, v in self.env.items():
                 os.environ[k] = str(v)
                 if verbose_callback:
-                    verbose_callback(lambda: f"Set environment variable {k} to {v}")
+                    verbose_callback(lambda: f"Set environment variable `{k}` to `{v}`")
 
         return self.evaluated(verbose_callback)
 
 
 @dataclass
-class RobotExtraBaseProfile(RobotBaseProfile):
+class RobotExtendBaseProfile(RobotBaseProfile):
     """Base profile for Robot Framework with Extras."""
 
     extend_args: Optional[List[str]] = field(
         description="""\
             Append extra arguments to be passed to _robot_.
+
+            Examples:
+            ```toml
+            extend-args = ["-t", "abc"]
+            ```
             """
     )
 
     extend_env: Optional[Dict[str, Union[str, StringExpression]]] = field(
         description="""\
-            Append extra environment variables to be set before tests.
+            Append extra environment variables to be set before run.
+
+            Examples:
+            ```toml
+            [extend-env]
+            EXTRA_VAR = "value"
+
+            ```
             """
     )
 
@@ -2228,14 +2244,14 @@ class RobotExtraBaseProfile(RobotBaseProfile):
 
             Examples:
             ```toml
-            paths = ["tests"]
+            extend-paths = ["tests"]
             ```
             """
     )
 
 
 @dataclass
-class RobotProfile(RobotExtraBaseProfile):
+class RobotProfile(RobotExtendBaseProfile):
     """Robot Framework configuration profile."""
 
     description: Optional[str] = field(description="Description of the profile.")
@@ -2265,15 +2281,42 @@ class RobotProfile(RobotExtraBaseProfile):
             """
     )
 
+    hidden: Union[bool, Condition, None] = field(
+        description="""\
+            The profile should be hidden.
+            Hidden means it is not shown in the list of available profiles.
+
+            Examples:
+            ```toml
+            hidden = true
+            ```
+
+            ```toml
+            hidden = { if = 'environ.get("CI") == "true"' }
+            ```
+            """
+    )
+
     precedence: Optional[int] = field(
         description="""\
         Precedence of the profile. Lower values are executed first. If not set the order is undefined.
         """
     )
 
+    inherits: Union[str, StringExpression, List[Union[str, StringExpression]], None] = field(
+        description="""\
+            Profiles to inherit from.
+
+            Examples:
+            ```toml
+            inherits = ["default", "Firefox"]
+            ```
+            """
+    )
+
 
 @dataclass
-class RobotConfig(RobotExtraBaseProfile):
+class RobotConfig(RobotExtendBaseProfile):
     """Robot Framework configuration."""
 
     default_profiles: Union[str, List[str], None] = field(
@@ -2318,14 +2361,32 @@ class RobotConfig(RobotExtraBaseProfile):
 
             names = (*(default_profile or ()),)
 
-        for name in names:
+        def select(name: str) -> None:
+            if not name:
+                return
+
+            nonlocal result
+
+            if verbose_callback:
+                verbose_callback(f"Selecting profiles matching '{name}'.")
+
             profile_names = [p for p in profiles.keys() if fnmatch.fnmatchcase(p, name)]
 
             if not profile_names:
                 raise ValueError(f"Can't find any profiles matching the pattern '{name}'.")
 
             for v in profile_names:
-                result.update({v: profiles[v]})
+                p = profiles[v]
+                result.update({v: p})
+                if p.inherits:
+                    if isinstance(p.inherits, list):
+                        for i in p.inherits:
+                            select(str(i))
+                    else:
+                        select(str(p.inherits))
+
+        for name in names:
+            select(name)
 
         return result
 
@@ -2334,6 +2395,12 @@ class RobotConfig(RobotExtraBaseProfile):
     ) -> RobotBaseProfile:
         type_hints = get_type_hints(RobotBaseProfile)
         base_field_names = [f.name for f in dataclasses.fields(RobotBaseProfile)]
+
+        if self.env:
+            for k, v in self.env.items():
+                os.environ[k] = str(v)
+                if verbose_callback:
+                    verbose_callback(lambda: f"Set environment variable `{k}` to `{v}`")
 
         result = RobotBaseProfile(
             **{
@@ -2346,7 +2413,7 @@ class RobotConfig(RobotExtraBaseProfile):
         selected_profiles = self.select_profiles(*names, verbose_callback=verbose_callback)
         if verbose_callback:
             if selected_profiles:
-                verbose_callback(f"Select profiles: {', '.join(selected_profiles.keys())}")
+                verbose_callback(f"Selected profiles: {', '.join(selected_profiles.keys())}")
             else:
                 verbose_callback("No profiles selected.")
 
@@ -2361,6 +2428,12 @@ class RobotConfig(RobotExtraBaseProfile):
 
             if verbose_callback:
                 verbose_callback(f'Using profile "{profile_name}".')
+
+            if profile.env:
+                for k, v in profile.env.items():
+                    os.environ[k] = str(v)
+                    if verbose_callback:
+                        verbose_callback(lambda: f"Set environment variable `{k}` to `{v}`")
 
             if profile.detached:
                 result = RobotBaseProfile()

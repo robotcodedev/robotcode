@@ -1466,7 +1466,14 @@
         },
         "env": {
           "additionalProperties": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "default": null,
           "description": "Define environment variables to be set before running tests.\n\nExamples:\n```toml\n[env]\nTEST_VAR = \"test\"\nSECRET = \"password\"\n```\n",
@@ -1561,7 +1568,7 @@
         },
         "extend-args": {
           "default": null,
-          "description": "Append extra arguments to be passed to _robot_.\n",
+          "description": "Append extra arguments to be passed to _robot_.\n\nExamples:\n```toml\nextend-args = [\"-t\", \"abc\"]\n```\n",
           "items": {
             "type": "string"
           },
@@ -1573,10 +1580,17 @@
         },
         "extend-env": {
           "additionalProperties": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "default": null,
-          "description": "Append extra environment variables to be set before tests.\n",
+          "description": "Append extra environment variables to be set before run.\n\nExamples:\n```toml\n[extend-env]\nEXTRA_VAR = \"value\"\n\n```\n",
           "title": "Extend env",
           "type": [
             "object",
@@ -1789,7 +1803,7 @@
             }
           ],
           "default": null,
-          "description": "Append extra entries to the paths argument.\n\nExamples:\n```toml\npaths = [\"tests\"]\n```\n",
+          "description": "Append extra entries to the paths argument.\n\nExamples:\n```toml\nextend-paths = [\"tests\"]\n```\n",
           "title": "Extend paths"
         },
         "extend-pre-rebot-modifiers": {
@@ -3315,7 +3329,14 @@
         },
         "env": {
           "additionalProperties": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "default": null,
           "description": "Define environment variables to be set before running tests.\n\nExamples:\n```toml\n[env]\nTEST_VAR = \"test\"\nSECRET = \"password\"\n```\n",
@@ -3410,7 +3431,7 @@
         },
         "extend-args": {
           "default": null,
-          "description": "Append extra arguments to be passed to _robot_.\n",
+          "description": "Append extra arguments to be passed to _robot_.\n\nExamples:\n```toml\nextend-args = [\"-t\", \"abc\"]\n```\n",
           "items": {
             "type": "string"
           },
@@ -3422,10 +3443,17 @@
         },
         "extend-env": {
           "additionalProperties": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/definitions/StringExpression"
+              }
+            ]
           },
           "default": null,
-          "description": "Append extra environment variables to be set before tests.\n",
+          "description": "Append extra environment variables to be set before run.\n\nExamples:\n```toml\n[extend-env]\nEXTRA_VAR = \"value\"\n\n```\n",
           "title": "Extend env",
           "type": [
             "object",
@@ -3638,7 +3666,7 @@
             }
           ],
           "default": null,
-          "description": "Append extra entries to the paths argument.\n\nExamples:\n```toml\npaths = [\"tests\"]\n```\n",
+          "description": "Append extra entries to the paths argument.\n\nExamples:\n```toml\nextend-paths = [\"tests\"]\n```\n",
           "title": "Extend paths"
         },
         "extend-pre-rebot-modifiers": {
@@ -4029,6 +4057,22 @@
             "null"
           ]
         },
+        "hidden": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "$ref": "#/definitions/Condition"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The profile should be hidden.\nHidden means it is not shown in the list of available profiles.\n\nExamples:\n```toml\nhidden = true\n```\n\n```toml\nhidden = { if = 'environ.get(\"CI\") == \"true\"' }\n```\n",
+          "title": "Hidden"
+        },
         "includes": {
           "default": null,
           "description": "Select tests by tag. Similarly as name with --test,\ntag is case and space insensitive and it is possible\nto use patterns with `*`, `?` and `[]` as wildcards.\nTags and patterns can also be combined together with\n`AND`, `OR`, and `NOT` operators.\n\nExamples:\n\n```\n--include foo --include bar*\n--include fooANDbar*\n```\n\ncorresponds to the `-i --include tag *` option of _robot_\n",
@@ -4047,6 +4091,35 @@
             "array",
             "null"
           ]
+        },
+        "inherits": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "$ref": "#/definitions/StringExpression"
+            },
+            {
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "$ref": "#/definitions/StringExpression"
+                  }
+                ]
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Profiles to inherit from.\n\nExamples:\n```toml\ninherits = [\"default\", \"Firefox\"]\n```\n",
+          "title": "Inherits"
         },
         "languages": {
           "default": null,
