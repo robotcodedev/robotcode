@@ -117,16 +117,31 @@ class Application:
         self,
         message: Union[str, Callable[[], Any], None],
         file: Optional[IO[AnyStr]] = None,
-        nl: bool = True,
-        err: bool = False,
+        nl: Optional[bool] = True,
+        err: Optional[bool] = True,
     ) -> None:
         click.secho(
-            f"WARNING: {message() if callable(message) else message}",
+            f"[ {click.style('WARN', fg='yellow')} ] {message() if callable(message) else message}",
             file=file,
-            nl=nl,
-            err=err,
+            nl=nl if nl is not None else True,
+            err=err if err is not None else True,
             color=self.colored,
             fg="bright_yellow",
+        )
+
+    def error(
+        self,
+        message: Union[str, Callable[[], Any], None],
+        file: Optional[IO[AnyStr]] = None,
+        nl: Optional[bool] = True,
+        err: Optional[bool] = True,
+    ) -> None:
+        click.secho(
+            f"[ {click.style('ERROR', fg='red')} ] {message() if callable(message) else message}",
+            file=file,
+            nl=nl if nl is not None else True,
+            err=err if err is not None else True,
+            color=self.colored,
         )
 
     def print_data(

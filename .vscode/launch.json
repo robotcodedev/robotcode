@@ -46,7 +46,7 @@
 				//"config", "info", "list",
 				// "analyze",
 				"-p", "ci",
-				"profiles", "show"
+				"profiles", "list", "-h"
 				// "discover", "tests", "--tags"
 				// "."
 			]

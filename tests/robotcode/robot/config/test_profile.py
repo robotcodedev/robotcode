@@ -113,7 +113,7 @@ def test_if_profile_is_not_defined_an_error_is_raised() -> None:
 
     with pytest.raises(
         ValueError,
-        match="Can't find any profiles matching the pattern 'nonexistent'.",
+        match="Can't find any configuration profiles matching the pattern 'nonexistent'.",
     ):
         config.combine_profiles("nonexistent")
 

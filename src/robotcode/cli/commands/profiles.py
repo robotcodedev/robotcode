@@ -13,7 +13,6 @@ from robotcode.robot.config.loader import (
     DiscoverdBy,
     load_robot_config_from_path,
 )
-from robotcode.robot.config.model import EvaluationError, RobotProfile
 from robotcode.robot.config.utils import get_config_files
 
 
@@ -44,11 +43,11 @@ def show(app: Application, no_evaluate: bool, paths: List[Path]) -> None:
         config_files, _, _ = get_config_files(paths, app.config.config_files, verbose_callback=app.verbose)
 
         config = load_robot_config_from_path(*config_files).combine_profiles(
-            *(app.config.profiles or []), verbose_callback=app.verbose
+            *(app.config.profiles or []), verbose_callback=app.verbose, error_callback=app.error
         )
 
         if not no_evaluate:
-            config = config.evaluated_with_env(verbose_callback=app.verbose)
+            config = config.evaluated_with_env(verbose_callback=app.verbose, error_callback=app.error)
 
         app.print_data(
             config,
@@ -77,24 +76,21 @@ def list(app: Application, paths: List[Path], show_hidden: bool = False, sort_by
         config_files, _, discovered_by = get_config_files(paths, app.config.config_files, verbose_callback=app.verbose)
 
         config = load_robot_config_from_path(*config_files)
-        selected_profiles = [
-            k for k in config.select_profiles(*(app.config.profiles or []), verbose_callback=app.verbose).keys()
-        ]
 
-        def check_enabled(name: str, profile: RobotProfile) -> bool:
-            try:
-                return profile.enabled is None or bool(profile.enabled)
-            except EvaluationError as e:
-                raise ValueError(f"Cannot evaluate profile '{name}'.enabled: {e}") from e
+        _, selected_profiles, enabled_names = config.combine_profiles_ex(
+            *(app.config.profiles or []), verbose_callback=app.verbose, error_callback=app.error
+        )
+
+        selected_names = [k for k in selected_profiles.keys()]
 
         result: Dict[str, Any] = {
             "profiles": sorted(
                 [
                     {
                         "name": k,
-                        "enabled": check_enabled(k, v),
+                        "enabled": k in enabled_names,
                         "description": v.description or "",
-                        "selected": True if k in selected_profiles else False,
+                        "selected": True if k in selected_names else False,
                         "precedence": v.precedence,
                     }
                     for k, v in (config.profiles or {}).items()
@@ -140,12 +136,12 @@ def list(app: Application, paths: List[Path], show_hidden: bool = False, sort_by
                 f'| Description{(max_description - len("Description")) * " "} |\n'
             )
             header += f"|:------:|:------:|:--------:|:-------:|:{max_name * '-'}-|:{max_description * '-'}-|\n"
-            for selected, enabled, name, description, precedence in (
+            for selected_profiles, enabled, name, description, precedence in (
                 (v["selected"], v["enabled"], v["name"], v["description"], v["precedence"]) for v in result["profiles"]
             ):
                 header += (
-                    f'|   {"*" if selected and enabled else " "}    '
-                    f'|    {"*" if selected else " "}     '
+                    f'|   {"*" if selected_profiles and enabled else " "}    '
+                    f'|    {"*" if selected_profiles else " "}     '
                     f'|    {"*" if enabled else " "}    '
                     f'|    {precedence if precedence else " "}    '
                     f'| {name}{(max_name - len(name)) * " "} '

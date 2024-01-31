@@ -32,7 +32,7 @@ def analyze(app: Application, paths: Tuple[str]) -> Union[str, int, None]:
     try:
         robot_config = (
             load_robot_config_from_path(*config_files)
-            .combine_profiles(*(app.config.profiles or []))
+            .combine_profiles(*(app.config.profiles or []), verbose_callback=app.verbose, error_callback=app.error)
             .evaluated_with_env()
         )
 

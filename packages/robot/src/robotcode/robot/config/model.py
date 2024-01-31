@@ -368,7 +368,11 @@ class BaseOptions(ValidateMixin):
             if new is not None:
                 setattr(self, f.name, new)
 
-    def evaluated(self, verbose_callback: Optional[Callable[[Union[str, Callable[[], Any]]], None]] = None) -> Self:
+    def evaluated(
+        self,
+        verbose_callback: Optional[Callable[[Union[str, Callable[[], Any]]], None]] = None,
+        error_callback: Optional[Callable[[Union[str, Callable[[], Any]]], None]] = None,
+    ) -> Self:
         if verbose_callback is not None:
             verbose_callback("Evaluating options")
 
@@ -395,7 +399,11 @@ class BaseOptions(ValidateMixin):
                         },
                     )
             except EvaluationError as e:
-                raise ValueError(f"Evaluation of '{f.name}' failed: {e!s}") from e
+                message = f"Evaluation of '{f.name}' failed: {type(e).__name__}: {e}"
+                if error_callback is None:
+                    raise ValueError(message) from e
+                error_callback(message)
+
         return result
 
 
@@ -2199,7 +2207,9 @@ class RobotBaseProfile(CommonOptions, CommonExtendOptions, RobotOptions, RobotEx
             f.write(tomli_w.dumps(as_dict(self, remove_defaults=True)))
 
     def evaluated_with_env(
-        self, verbose_callback: Optional[Callable[[Union[str, Callable[[], Any]]], None]] = None
+        self,
+        verbose_callback: Optional[Callable[[Union[str, Callable[[], Any]]], None]] = None,
+        error_callback: Optional[Callable[[Union[str, Callable[[], Any]]], None]] = None,
     ) -> Self:
         if self.env:
             for k, v in self.env.items():
@@ -2207,7 +2217,7 @@ class RobotBaseProfile(CommonOptions, CommonExtendOptions, RobotOptions, RobotEx
                 if verbose_callback:
                     verbose_callback(lambda: f"Set environment variable `{k}` to `{v}`")
 
-        return self.evaluated(verbose_callback)
+        return self.evaluated(verbose_callback, error_callback)
 
 
 @dataclass
@@ -2343,6 +2353,7 @@ class RobotConfig(RobotExtendBaseProfile):
         self,
         *names: str,
         verbose_callback: Optional[Callable[[Union[str, Callable[[], Any]]], None]] = None,
+        error_callback: Optional[Callable[[Union[str, Callable[[], Any]]], None]] = None,
     ) -> Dict[str, RobotProfile]:
         result: Dict[str, RobotProfile] = {}
 
@@ -2373,7 +2384,12 @@ class RobotConfig(RobotExtendBaseProfile):
             profile_names = [p for p in profiles.keys() if fnmatch.fnmatchcase(p, name)]
 
             if not profile_names:
-                raise ValueError(f"Can't find any profiles matching the pattern '{name}'.")
+                message = f"Can't find any configuration profiles matching the pattern '{name}'."
+                if error_callback is None:
+                    raise ValueError(message)
+
+                error_callback(message)
+                return
 
             for v in profile_names:
                 p = profiles[v]
@@ -2391,8 +2407,20 @@ class RobotConfig(RobotExtendBaseProfile):
         return result
 
     def combine_profiles(
-        self, *names: str, verbose_callback: Optional[Callable[[Union[str, Callable[[], Any]]], None]] = None
+        self,
+        *names: str,
+        verbose_callback: Optional[Callable[[Union[str, Callable[[], Any]]], None]] = None,
+        error_callback: Optional[Callable[[Union[str, Callable[[], Any]]], None]] = None,
     ) -> RobotBaseProfile:
+        return self.combine_profiles_ex(*names, verbose_callback=verbose_callback, error_callback=error_callback)[0]
+
+    def combine_profiles_ex(
+        self,
+        *names: str,
+        verbose_callback: Optional[Callable[[Union[str, Callable[[], Any]]], None]] = None,
+        error_callback: Optional[Callable[[Union[str, Callable[[], Any]]], None]] = None,
+    ) -> Tuple[RobotBaseProfile, Dict[str, RobotProfile], List[str]]:
+        enabled_profiles = []
         type_hints = get_type_hints(RobotBaseProfile)
         base_field_names = [f.name for f in dataclasses.fields(RobotBaseProfile)]
 
@@ -2410,7 +2438,9 @@ class RobotConfig(RobotExtendBaseProfile):
             }
         )
 
-        selected_profiles = self.select_profiles(*names, verbose_callback=verbose_callback)
+        selected_profiles = self.select_profiles(
+            *names, verbose_callback=verbose_callback, error_callback=error_callback
+        )
         if verbose_callback:
             if selected_profiles:
                 verbose_callback(f"Selected profiles: {', '.join(selected_profiles.keys())}")
@@ -2424,10 +2454,18 @@ class RobotConfig(RobotExtendBaseProfile):
                         verbose_callback(f'Skipping profile "{profile_name}" because it\'s disabled.')
                     continue
             except EvaluationError as e:
-                raise ValueError(f'Error evaluating "enabled" condition for profile "{profile_name}": {e}') from e
+                message = f'Error evaluating "enabled" condition for profile "{profile_name}": {e}'
+
+                if error_callback is None:
+                    raise ValueError(message) from e
+
+                error_callback(message)
+                continue
 
             if verbose_callback:
                 verbose_callback(f'Using profile "{profile_name}".')
+
+            enabled_profiles.append(profile_name)
 
             if profile.env:
                 for k, v in profile.env.items():
@@ -2482,4 +2520,4 @@ class RobotConfig(RobotExtendBaseProfile):
                 if new is not None:
                     setattr(result, f.name, new)
 
-        return result
+        return result, selected_profiles, enabled_profiles
