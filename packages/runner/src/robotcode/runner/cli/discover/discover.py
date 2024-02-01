@@ -459,6 +459,7 @@ def handle_options(
         app, by_longname, exclude_by_longname, robot_options_and_args
     )
 
+    diagnostics_logger = DiagnosticsLogger()
     try:
         _patch()
 
@@ -471,7 +472,7 @@ def handle_options(
             ),
             app.config.dry,
             root_folder,
-        ).parse_arguments((*cmd_options, *robot_options_and_args))
+        ).parse_arguments((*cmd_options, "--runemptysuite", *robot_options_and_args))
 
         settings = RobotSettings(options)
 
@@ -480,7 +481,6 @@ def handle_options(
         else:
             LOGGER.unregister_console_logger()
 
-        diagnostics_logger = DiagnosticsLogger()
         LOGGER.register_logger(diagnostics_logger)
 
         if get_robot_version() >= (5, 0):
@@ -519,6 +519,7 @@ def handle_options(
         suite.configure(**settings.suite_config)
 
         collector = Collector()
+
         suite.visit(collector)
 
         return suite, collector, build_diagnostics(diagnostics_logger.messages)
@@ -527,7 +528,7 @@ def handle_options(
         app.echo(str(err))
         app.exit(INFO_PRINTED)
     except DataError as err:
-        LOGGER.error(err)
+        app.error(str(err))
         app.exit(DATA_ERROR)
 
     raise UnknownError("Unexpected error happened.")
