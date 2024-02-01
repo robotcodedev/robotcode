@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [0.72.0](https://github.com/d-biehl/robotcode/compare/v0.71.1..v0.72.0) - 2024-02-01
+
+### Bug Fixes
+
+- **profiles:** Enhanced error handling if invalid profile is given ([c3d8b07](https://github.com/d-biehl/robotcode/commit/c3d8b0732cf689953abee2ca007e16f9f7759930))
+
+
+### Features
+
+- **profiles:** Enhanced handling of environment variables in profile settings ([37fdbb3](https://github.com/d-biehl/robotcode/commit/37fdbb3108360e20eb44235d0a3130df32d69ff5))
+
+  This update allows the setting, overriding, and utilization of system environment variables in expressions and conditions within the robot.toml configuration files. This enhancement increases the flexibility and adaptability of profile configurations.
+
+- **profiles:** Profiles prefixed with an underscore (`_`) are now automatically hidden in `profiles list` command ([97bf390](https://github.com/d-biehl/robotcode/commit/97bf3901652892cca71f5a92d98adb151cdfb772))
+- **profiles:** A profile can now be hidden and inherit from other profiles ([9cd2ffb](https://github.com/d-biehl/robotcode/commit/9cd2ffb16ecf139c5c8f2c3cdda2a82cc529b7b5))
+- **vscode:** Show profiles from robot.toml in test explorer as test profile ([fcb32a7](https://github.com/d-biehl/robotcode/commit/fcb32a7a0e7ea40e87e0b459db2cdfd582837b0e))
+
+
 ## [0.71.1](https://github.com/d-biehl/robotcode/compare/v0.71.0..v0.71.1) - 2024-01-30
 
 ### Bug Fixes
