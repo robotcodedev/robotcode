@@ -4,6 +4,7 @@
 import { red, yellow, blue } from "ansi-colors";
 import * as vscode from "vscode";
 import { DebugManager } from "./debugmanager";
+import * as fs from "fs";
 
 import {
   ClientState,
@@ -142,7 +143,7 @@ export class TestControllerManager {
   private readonly refreshMutex = new Mutex();
   private readonly debugSessions = new Set<vscode.DebugSession>();
   private readonly didChangedTimer = new Map<string, DidChangeEntry>();
-  private fileChangeTimer: DidChangeEntry | undefined;
+  private refreshWorkspaceChangeTimer: DidChangeEntry | undefined;
   private diagnosticCollection = vscode.languages.createDiagnosticCollection("robotCode discovery");
 
   constructor(
@@ -166,12 +167,17 @@ export class TestControllerManager {
       (_) => undefined,
     );
 
-    const fileWatcher = vscode.workspace.createFileSystemWatcher(
-      `**/*.{${this.languageClientsManager.fileExtensions.join(",")}}`,
-    );
-    fileWatcher.onDidCreate((uri) => this.refreshUri(uri, "create"));
-    fileWatcher.onDidDelete((uri) => this.refreshUri(uri, "delete"));
-    fileWatcher.onDidChange((uri) => this.refreshUri(uri, "change"));
+    const fileWatcher = vscode.workspace.createFileSystemWatcher(`**/[!._]*`);
+
+    fileWatcher.onDidCreate((uri) => {
+      this.refreshUri(uri, "create");
+    });
+    fileWatcher.onDidDelete((uri) => {
+      this.refreshUri(uri, "delete");
+    });
+    fileWatcher.onDidChange((uri) => {
+      this.refreshUri(uri, "change");
+    });
 
     this._disposables = vscode.Disposable.from(
       this.diagnosticCollection,
@@ -730,7 +736,7 @@ export class TestControllerManager {
 
       const result = await this.discoverTests(
         folder,
-        ["discover", "--no-diagnostics", "--read-from-stdin", "all"],
+        ["discover", "--read-from-stdin", "all"],
         [],
         JSON.stringify(o),
         true,
@@ -792,7 +798,7 @@ export class TestControllerManager {
 
       const result = await this.discoverTests(
         folder,
-        ["discover", "--no-diagnostics", "--read-from-stdin", "tests"],
+        ["discover", "--read-from-stdin", "tests"],
         [
           ...(robotWorkspaceItem?.needs_parse_include && testItem.rel_source
             ? ["--parse-include", testItem.rel_source]
@@ -1023,18 +1029,31 @@ export class TestControllerManager {
   }
 
   private refreshUri(uri?: vscode.Uri, reason?: string) {
-    if (vscode.workspace.textDocuments.find((d) => d.uri.toString() === uri?.toString())) return;
-
-    this.outputChannel.appendLine(`refresh uri ${uri ? uri.toString() : "unknown"} because: ${reason ?? "unknown"}`);
-
     if (uri) {
-      const testItem = this.findTestItemByUri(uri.toString());
-      if (testItem) {
-        this.refreshItem(testItem).then(
-          (_) => undefined,
-          (_) => undefined,
-        );
+      if (uri?.scheme !== "file") return;
+
+      const exists = fs.existsSync(uri.fsPath);
+      const isFileAndExists = exists && fs.statSync(uri.fsPath).isFile();
+
+      if (
+        isFileAndExists &&
+        !this.languageClientsManager.fileExtensions.some((ext) => uri?.path.toLowerCase().endsWith(`.${ext}`))
+      )
         return;
+
+      if (isFileAndExists && vscode.workspace.textDocuments.find((d) => d.uri.toString() === uri?.toString())) return;
+
+      this.outputChannel.appendLine(`refresh uri ${uri ? uri.toString() : "unknown"} because: ${reason ?? "unknown"}`);
+
+      if (exists) {
+        const testItem = this.findTestItemByUri(uri.toString());
+        if (testItem) {
+          this.refreshItem(testItem).then(
+            (_) => undefined,
+            (_) => undefined,
+          );
+          return;
+        }
       }
 
       const workspace = vscode.workspace.getWorkspaceFolder(uri);
@@ -1042,14 +1061,14 @@ export class TestControllerManager {
 
       if (this.didChangedTimer.has(uri.toString())) return;
 
-      if (this.fileChangeTimer) {
-        this.fileChangeTimer.cancel();
-        this.fileChangeTimer = undefined;
+      if (this.refreshWorkspaceChangeTimer) {
+        this.refreshWorkspaceChangeTimer.cancel();
+        this.refreshWorkspaceChangeTimer = undefined;
       }
 
       const cancelationTokenSource = new vscode.CancellationTokenSource();
 
-      this.fileChangeTimer = new DidChangeEntry(
+      this.refreshWorkspaceChangeTimer = new DidChangeEntry(
         setTimeout(() => {
           this.refreshWorkspace(workspace, reason, cancelationTokenSource.token).then(
             () => undefined,
@@ -1059,9 +1078,9 @@ export class TestControllerManager {
         cancelationTokenSource,
       );
     } else {
-      if (this.fileChangeTimer) {
-        this.fileChangeTimer.cancel();
-        this.fileChangeTimer = undefined;
+      if (this.refreshWorkspaceChangeTimer) {
+        this.refreshWorkspaceChangeTimer.cancel();
+        this.refreshWorkspaceChangeTimer = undefined;
       }
 
       this.refresh().then(
