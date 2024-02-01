@@ -266,7 +266,7 @@ export class TestControllerManager {
       vscode.commands.registerCommand("robotcode.debugCurrentFile", async (...args) => {
         await vscode.commands.executeCommand("testing.debugCurrentFile", ...args);
       }),
-      vscode.commands.registerCommand("robotcode.selectExecutionProfiles", async () => {
+      vscode.commands.registerCommand("robotcode.selectConfigurationProfiles", async () => {
         await this.configureRunProfile();
       }),
       vscode.workspace.onDidChangeConfiguration(async (event) => {
@@ -465,7 +465,11 @@ export class TestControllerManager {
       }
 
       const options = result.profiles.map((p) => {
-        return { label: p.name, description: p.description, picked: p.selected };
+        return {
+          label: truncateAndReplaceNewlines(p.name.trim()),
+          description: truncateAndReplaceNewlines(p.description.trim()),
+          picked: p.selected,
+        };
       });
 
       const profiles = await vscode.window.showQuickPick([...options], {

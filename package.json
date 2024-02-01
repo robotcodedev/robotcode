@@ -824,9 +824,9 @@
         "command": "robotcode.clearCacheRestartLanguageServers"
       },
       {
-        "title": "Select Execution Profiles",
+        "title": "Select Configuration Profiles",
         "category": "RobotCode",
-        "command": "robotcode.selectExecutionProfiles"
+        "command": "robotcode.selectConfigurationProfiles"
       },
       {
         "title": "Refresh",
