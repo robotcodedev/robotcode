@@ -12,7 +12,7 @@ import {
   SUPPORTED_LANGUAGES,
   SUPPORTED_SUITE_FILE_EXTENSIONS,
 } from "./languageclientsmanger";
-import { filterAsync, Mutex, sleep, WeakValueMap } from "./utils";
+import { filterAsync, Mutex, sleep, truncateAndReplaceNewlines, WeakValueMap } from "./utils";
 import { CONFIG_SECTION } from "./config";
 import { Range, Diagnostic, DiagnosticSeverity } from "vscode-languageclient/node";
 
@@ -189,6 +189,10 @@ export class TestControllerManager {
             break;
           }
         }
+        this.updateRunProfiles().then(
+          (_) => undefined,
+          (_) => undefined,
+        );
       }),
       vscode.workspace.onDidCloseTextDocument((document) => this.refreshDocument(document)),
       vscode.workspace.onDidSaveTextDocument((document) => this.refreshDocument(document)),
@@ -281,7 +285,7 @@ export class TestControllerManager {
   }
 
   private async updateRunProfiles(): Promise<void> {
-    await this.runProfilesMutex.dispatch(() => {
+    await this.runProfilesMutex.dispatch(async () => {
       for (const a of this.runProfiles) {
         a.dispose();
       }
@@ -292,7 +296,7 @@ export class TestControllerManager {
       for (const folder of vscode.workspace.workspaceFolders ?? []) {
         const folderTag = this.getFolderTag(folder);
 
-        const folderName = multiFolders ? ` (${folder.name})` : "";
+        const folderName = multiFolders ? ` [${folder.name}]` : "";
 
         const runProfile = this.testController.createRunProfile(
           "Run" + folderName,
@@ -334,7 +338,9 @@ export class TestControllerManager {
 
         configurations?.forEach((config, index) => {
           if (config.type === "robotcode" && config.purpose == "test-profile") {
-            const name = ((config.name || `Profile ${index}`) as string) + folderName;
+            const name =
+              (config.name ? truncateAndReplaceNewlines((config.name as string).trim()) : `Profile ${index}`) +
+              folderName;
 
             const runProfile = this.testController.createRunProfile(
               "Run " + name,
@@ -356,6 +362,35 @@ export class TestControllerManager {
 
             this.runProfiles.push(debugProfile);
           }
+        });
+
+        const profiles = await this.getRobotCodeProfiles(folder);
+
+        profiles.profiles.forEach((profile, index) => {
+          const name =
+            (truncateAndReplaceNewlines(profile.name.trim()) || `Profile ${index}`) +
+            (profile.description ? ` - ${truncateAndReplaceNewlines(profile.description.trim())} ` : "") +
+            folderName;
+
+          const runProfile = this.testController.createRunProfile(
+            "Run " + name,
+            vscode.TestRunProfileKind.Run,
+            async (request, token) => this.runTests(request, token, [profile.name]),
+            false,
+            folderTag,
+          );
+
+          this.runProfiles.push(runProfile);
+
+          const debugProfile = this.testController.createRunProfile(
+            "Debug " + name,
+            vscode.TestRunProfileKind.Debug,
+            async (request, token) => this.runTests(request, token, [profile.name]),
+            false,
+            folderTag,
+          );
+
+          this.runProfiles.push(debugProfile);
         });
       }
     });

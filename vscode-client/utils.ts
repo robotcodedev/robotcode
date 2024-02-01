@@ -213,3 +213,14 @@ export async function filterAsync<T>(arr: readonly T[], predicate: (value: T) =>
     [],
   );
 }
+
+export function truncateAndReplaceNewlines(str: string, maxLength: number = 50): string {
+  // Ersetzt alle Zeilenumbrüche durch Leerzeichen
+  const processedString = str.replace(/\r\n|\n|\r/g, " ");
+
+  // Kürzt den String, falls er länger als maxLength ist
+  if (processedString.length > maxLength) {
+    return processedString.substring(0, maxLength - 3) + "...";
+  }
+  return processedString;
+}
