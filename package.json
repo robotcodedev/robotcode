@@ -106,7 +106,7 @@
     ],
     "configurationDefaults": {
       "[robotframework]": {
-        "editor.wordBasedSuggestions": false,
+        "editor.wordBasedSuggestions": "off",
         "editor.semanticHighlighting.enabled": true,
         "editor.inlayHints.enabled": "offUnlessPressed",
         "editor.quickSuggestionsDelay": 100,

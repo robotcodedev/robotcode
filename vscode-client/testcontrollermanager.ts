@@ -6,13 +6,7 @@ import * as vscode from "vscode";
 import { DebugManager } from "./debugmanager";
 import * as fs from "fs";
 
-import {
-  ClientState,
-  LanguageClientsManager,
-  toVsCodeRange,
-  SUPPORTED_LANGUAGES,
-  SUPPORTED_SUITE_FILE_EXTENSIONS,
-} from "./languageclientsmanger";
+import { ClientState, LanguageClientsManager, toVsCodeRange } from "./languageclientsmanger";
 import { filterAsync, Mutex, sleep, truncateAndReplaceNewlines, WeakValueMap } from "./utils";
 import { CONFIG_SECTION } from "./config";
 import { Range, Diagnostic, DiagnosticSeverity } from "vscode-languageclient/node";
@@ -553,8 +547,9 @@ export class TestControllerManager {
   }
 
   public refreshDocument(document: vscode.TextDocument): void {
-    if (!SUPPORTED_LANGUAGES.includes(document.languageId)) return;
-    if (!SUPPORTED_SUITE_FILE_EXTENSIONS.some((ext) => document.uri.path.toLowerCase().endsWith(ext))) return;
+    if (!this.languageClientsManager.supportedLanguages.includes(document.languageId)) return;
+    if (!this.languageClientsManager.fileExtensions.some((ext) => document.uri.path.toLowerCase().endsWith(`.${ext}`)))
+      return;
     if (document.uri.path.toLowerCase().endsWith("__init__.robot")) return;
 
     const uri_str = document.uri.toString();
@@ -712,7 +707,7 @@ export class TestControllerManager {
   ): Promise<RobotTestItem[] | undefined> {
     // TODO do not use hardcoded file extensions
     const robotFiles = await vscode.workspace.findFiles(
-      new vscode.RelativePattern(folder, "**/*.robot"),
+      new vscode.RelativePattern(folder, `**/*.{${this.languageClientsManager.fileExtensions.join(",")}}`),
       undefined,
       1,
       token,
@@ -727,10 +722,10 @@ export class TestControllerManager {
 
       for (const document of vscode.workspace.textDocuments) {
         if (
-          SUPPORTED_LANGUAGES.includes(document.languageId) &&
+          this.languageClientsManager.supportedLanguages.includes(document.languageId) &&
           vscode.workspace.getWorkspaceFolder(document.uri) === folder
         ) {
-          o[document.fileName] = document.getText();
+          o[document.uri.toString()] = document.getText();
         }
       }
 
@@ -785,10 +780,10 @@ export class TestControllerManager {
       const o: { [key: string]: string } = {};
       for (const document of vscode.workspace.textDocuments) {
         if (
-          SUPPORTED_LANGUAGES.includes(document.languageId) &&
+          this.languageClientsManager.supportedLanguages.includes(document.languageId) &&
           vscode.workspace.getWorkspaceFolder(document.uri) === folder
         ) {
-          o[document.fileName] = document.getText();
+          o[document.uri.toString()] = document.getText();
         }
       }
 

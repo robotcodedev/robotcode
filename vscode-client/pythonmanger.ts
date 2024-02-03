@@ -233,10 +233,12 @@ export class PythonManager {
 
       process.stdout.on("data", (data) => {
         stdout += data;
+        // this.outputChannel.appendLine(data as string);
       });
 
       process.stderr.on("data", (data) => {
         stderr += data;
+        this.outputChannel.appendLine(data as string);
       });
 
       process.on("error", (err) => {

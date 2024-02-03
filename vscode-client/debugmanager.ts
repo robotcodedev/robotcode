@@ -64,7 +64,7 @@ class RobotCodeDebugConfigurationProvider implements vscode.DebugConfigurationPr
       if (
         editor &&
         SUPPORTED_LANGUAGES.includes(editor.document.languageId) &&
-        (editor.document.fileName.endsWith(".robot") || editor.document.fileName.endsWith(".feature"))
+        editor.document.fileName.endsWith(".robot")
       ) {
         const result = await vscode.window.showQuickPick(
           DEBUG_CONFIGURATIONS.map((v) => v),

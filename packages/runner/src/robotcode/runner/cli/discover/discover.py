@@ -59,7 +59,8 @@ class ErroneousTestSuite(running_model.TestSuite):
 __patched = False
 
 
-_stdin_data: Optional[Dict[str, str]] = None
+_stdin_data: Optional[Dict[Uri, str]] = None
+_app: Optional[Application] = None
 
 
 def _patch() -> None:
@@ -187,8 +188,9 @@ def _patch() -> None:
 
     def get_file(self: FileReader, source: Union[str, Path, IOBase], accept_text: bool) -> Any:
         path = self._get_path(source, accept_text)
+
         if path:
-            if _stdin_data is not None and (data := _stdin_data.get(str(path))) is not None:
+            if _stdin_data is not None and (data := _stdin_data.get(Uri.from_path(path))) is not None:
                 if data is not None:
                     return old_get_file(self, data, True)
 
@@ -380,10 +382,14 @@ def discover(app: Application, show_diagnostics: bool, read_from_stdin: bool) ->
     robotcode --profile regression discover tests
     ```
     """
+    global _app
+    _app = app
     app.show_diagnostics = show_diagnostics or app.config.log_enabled
     if read_from_stdin:
         global _stdin_data
-        _stdin_data = from_json(sys.stdin.buffer.read(), Dict[str, str], strict=True)
+        _stdin_data = {
+            Uri(k).normalized(): v for k, v in from_json(sys.stdin.buffer.read(), Dict[str, str], strict=True).items()
+        }
         app.verbose(f"Read data from stdin: {_stdin_data!r}")
 
 

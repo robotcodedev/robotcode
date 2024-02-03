@@ -36,7 +36,6 @@ export function toVsCodeRange(range: Range): vscode.Range {
 }
 
 export const SUPPORTED_LANGUAGES = ["robotframework"];
-export const SUPPORTED_SUITE_FILE_EXTENSIONS = [".robot"];
 
 export interface Keyword {
   name: string;
@@ -102,6 +101,15 @@ interface DiscoverInfoResult {
   [key: string]: string | undefined;
 }
 
+interface RobotCodeContributions {
+  contributes?: {
+    robotCode?: {
+      fileExtensions?: string[];
+      languageIds?: string[];
+    };
+  };
+}
+
 export class LanguageClientsManager {
   private clientsMutex = new Mutex();
   private _pythonValidPythonAndRobotEnvMutex = new Mutex();
@@ -120,9 +128,43 @@ export class LanguageClientsManager {
     return this._onClientStateChangedEmitter.event;
   }
 
+  private _supportedLanguages?: string[];
+
+  public get supportedLanguages(): string[] {
+    if (this._supportedLanguages === undefined) {
+      this._supportedLanguages = ["robotframework"];
+
+      vscode.extensions.all.forEach((extension) => {
+        if (this._supportedLanguages !== undefined && extension.packageJSON !== undefined) {
+          const ext = (extension.packageJSON as RobotCodeContributions)?.contributes?.robotCode?.languageIds;
+
+          if (ext !== undefined) {
+            this._supportedLanguages.push(...ext);
+          }
+        }
+      });
+    }
+    return this._supportedLanguages;
+  }
+
+  private _fileExtensions?: string[];
+
   // eslint-disable-next-line class-methods-use-this
   public get fileExtensions(): string[] {
-    return ["robot", "resource"];
+    if (this._fileExtensions === undefined) {
+      this._fileExtensions = ["robot", "resource"];
+
+      vscode.extensions.all.forEach((extension) => {
+        if (this._fileExtensions !== undefined && extension.packageJSON !== undefined) {
+          const ext = (extension.packageJSON as RobotCodeContributions)?.contributes?.robotCode?.fileExtensions;
+
+          if (ext !== undefined) {
+            this._fileExtensions.push(...ext);
+          }
+        }
+      });
+    }
+    return this._fileExtensions;
   }
 
   constructor(
@@ -375,7 +417,7 @@ export class LanguageClientsManager {
   }
 
   public async getLanguageClientForDocument(document: vscode.TextDocument): Promise<LanguageClient | undefined> {
-    if (!SUPPORTED_LANGUAGES.includes(document.languageId)) return;
+    if (!this.supportedLanguages.includes(document.languageId)) return;
 
     return this.getLanguageClientForResource(document.uri);
   }
@@ -613,7 +655,7 @@ export class LanguageClientsManager {
     }
 
     for (const document of vscode.workspace.textDocuments) {
-      if (SUPPORTED_LANGUAGES.includes(document.languageId)) {
+      if (this.supportedLanguages.includes(document.languageId)) {
         const workspaceFolder = vscode.workspace.getWorkspaceFolder(document.uri);
         if (workspaceFolder) {
           folders.add(workspaceFolder);
@@ -728,7 +770,7 @@ export class LanguageClientsManager {
   }
 
   private async updateStatusbarItem(editor: vscode.TextEditor | undefined) {
-    if (editor && SUPPORTED_LANGUAGES.includes(editor.document.languageId)) {
+    if (editor && this.supportedLanguages.includes(editor.document.languageId)) {
       try {
         const folder = vscode.workspace.getWorkspaceFolder(editor.document.uri);
         if (folder) {
