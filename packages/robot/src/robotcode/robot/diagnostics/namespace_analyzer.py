@@ -1088,7 +1088,7 @@ class NamespaceAnalyzer(Visitor, ModelHelper):
                 )
 
     def visit_Tags(self, node: Statement) -> None:  # noqa: N802
-        if get_robot_version() >= (6, 0):
+        if (6, 0) < get_robot_version() < (7, 0):
             for tag in node.get_tokens(Token.ARGUMENT):
                 if tag.value and tag.value.startswith("-"):
                     self.append_diagnostics(
