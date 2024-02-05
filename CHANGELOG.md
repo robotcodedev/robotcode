@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [0.73.1](https://github.com/d-biehl/robotcode/compare/v0.73.0..v0.73.1) - 2024-02-05
+
+### Bug Fixes
+
+- **langserver:** Don't show deprecation message for tags starting with an hyphen in RF7 ([d510a65](https://github.com/d-biehl/robotcode/commit/d510a653078bbcc6ee1527041c0ce8240c2fbb72))
+
+  fixes [BUG] #212
+
+
+
 ## [0.73.0](https://github.com/d-biehl/robotcode/compare/v0.72.0..v0.73.0) - 2024-02-05
 
 ### Bug Fixes
