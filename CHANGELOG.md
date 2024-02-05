@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [0.73.0](https://github.com/d-biehl/robotcode/compare/v0.72.0..v0.73.0) - 2024-02-05
+
+### Bug Fixes
+
+- **discover:** Don't show an error if no tests or suite are found ([f57b065](https://github.com/d-biehl/robotcode/commit/f57b065dd6ecda58176f2af5cb945daed7d1a3ea))
+- **vscode:** Trim and shorten long names and descriptions in `Select Configuration Profiles` command ([8abcb67](https://github.com/d-biehl/robotcode/commit/8abcb67cc697e0fcf3986b551727338887daeeff))
+- **vscode:** Stabilized recreation of test explorer items if folders are deleted ([370ff84](https://github.com/d-biehl/robotcode/commit/370ff847e644ff99d7563a5fbc04b81864dcb5f6))
+
+
+### Features
+
+- **vscode:** Introduce robotcode contribution point for vscode extensions plugins ([6519687](https://github.com/d-biehl/robotcode/commit/6519687823cc7d955b4ea30439b4c436f5828b4c))
+
+
 ## [0.72.0](https://github.com/d-biehl/robotcode/compare/v0.71.1..v0.72.0) - 2024-02-01
 
 ### Bug Fixes

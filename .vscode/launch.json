@@ -45,8 +45,11 @@
 				// "--no-pager",
 				//"config", "info", "list",
 				// "analyze",
-				"-p", "ci",
-				"profiles", "list", "-h"
+				"-p",
+				"ci",
+				"profiles",
+				"list",
+				"-h"
 				// "discover", "tests", "--tags"
 				// "."
 			]
@@ -152,6 +155,19 @@
 			"request": "launch",
 			"args": [
 				"--extensionDevelopmentPath=${workspaceFolder}",
+			],
+			"outFiles": [
+				"${workspaceFolder}/out/**/*.js"
+			],
+			"preLaunchTask": "npm: compile"
+		},
+		{
+			"name": "Run Extension With Gherkin",
+			"type": "extensionHost",
+			"request": "launch",
+			"args": [
+				"--extensionDevelopmentPath=${workspaceFolder}",
+				"--extensionDevelopmentPath=${workspaceFolder}/../robotframework-gherkin-parser",
 			],
 			"outFiles": [
 				"${workspaceFolder}/out/**/*.js"

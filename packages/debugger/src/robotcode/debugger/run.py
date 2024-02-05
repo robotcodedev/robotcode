@@ -75,6 +75,9 @@ async def _debug_adapter_server_(
 ) -> None:
     from .server import DebugAdapterServer
 
+    current_thread = threading.current_thread
+    setattr(current_thread, "pydev_do_not_trace", True)
+
     async with DebugAdapterServer(
         mode=mode,
         tcp_params=TcpParams(addresses or "127.0.0.1", port),
