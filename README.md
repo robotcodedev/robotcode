@@ -29,7 +29,7 @@ to [Visual Studio Code](https://code.visualstudio.com/), including [features](#f
 
 * Python 3.8 or above
 * Robotframework 4.1 and above
-* VSCode version 1.74 and above
+* VSCode version 1.82 and above
 
 
 ## Features
