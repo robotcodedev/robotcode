@@ -190,7 +190,7 @@ def _patch() -> None:
         path = self._get_path(source, accept_text)
 
         if path and Path(path).is_absolute():
-            if _stdin_data is not None and (data := _stdin_data.get(Uri.from_path(path))) is not None:
+            if _stdin_data is not None and (data := _stdin_data.get(Uri.from_path(path).normalized())) is not None:
                 if data is not None:
                     return old_get_file(self, data, True)
 
