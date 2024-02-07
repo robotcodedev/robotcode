@@ -189,7 +189,7 @@ def _patch() -> None:
     def get_file(self: FileReader, source: Union[str, Path, IOBase], accept_text: bool) -> Any:
         path = self._get_path(source, accept_text)
 
-        if path:
+        if path and Path(path).is_absolute():
             if _stdin_data is not None and (data := _stdin_data.get(Uri.from_path(path))) is not None:
                 if data is not None:
                     return old_get_file(self, data, True)
