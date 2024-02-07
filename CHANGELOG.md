@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [0.73.3](https://github.com/d-biehl/robotcode/compare/v0.73.2..v0.73.3) - 2024-02-07
+
+### Bug Fixes
+
+- **discover:** Update run buttons doesn't work on typing ([5f8a890](https://github.com/d-biehl/robotcode/commit/5f8a8903660f97a2fcc10219ce5962045800febb))
+
+
 ## [0.73.2](https://github.com/d-biehl/robotcode/compare/v0.73.1..v0.73.2) - 2024-02-07
 
 ### Bug Fixes
