@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [0.73.2](https://github.com/d-biehl/robotcode/compare/v0.73.1..v0.73.2) - 2024-02-07
+
+### Bug Fixes
+
+- **discover:** Discover files when robot arguments with relative files are now read correctly ([d12c67c](https://github.com/d-biehl/robotcode/commit/d12c67c5ff9a0ebc4a80d507d15666079406d869))
+
+
+### Documentation
+
+- Update versions in README ([d6c6f09](https://github.com/d-biehl/robotcode/commit/d6c6f097bad4ffa17e77ba251b6b01e124557ee6))
+
+
 ## [0.73.1](https://github.com/d-biehl/robotcode/compare/v0.73.0..v0.73.1) - 2024-02-05
 
 ### Bug Fixes
