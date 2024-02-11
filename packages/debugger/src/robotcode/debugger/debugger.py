@@ -1508,8 +1508,11 @@ class Debugger:
 
             if value is not None:
                 c = 0
+
+                padding = len(str(len(value)))
+
                 for i, v in enumerate(value, start or 0):
-                    result[str(i)] = self._create_variable(str(i), v)
+                    result[str(i)] = self._create_variable(str(i).zfill(padding), v)
                     c += 1
                     if count is not None and c >= count:
                         break
