@@ -351,7 +351,7 @@
     ],
     "configuration": [
       {
-        "title": "RobotCode",
+        "title": "General",
         "type": "object",
         "properties": {
           "robotcode.extraArgs": {
@@ -377,39 +377,70 @@
             "default": "",
             "description": "Specifies the python executable to be used for RobotCode. If no path is specified, try to get it from \"python\" extension.",
             "scope": "resource"
-          },
+          }
+        }
+      },
+      {
+        "title": "Editing",
+        "type": "object",
+        "properties": {
           "robotcode.editor.4SpacesTab": {
             "type": "boolean",
             "default": true,
             "description": "If actived insert 4 spaces if TAB is pressed."
           },
-          "robotcode.languageServer.mode": {
+          "robotcode.completion.filterDefaultLanguage": {
+            "type": "boolean",
+            "default": false,
+            "markdownDescription": "Filter default language (English) for completion if there is another language defined.",
+            "scope": "resource"
+          },
+          "robotcode.completion.headerStyle": {
             "type": "string",
-            "default": "pipe",
-            "description": "Specifies the mode the language server is started.",
+            "default": null,
+            "markdownDescription": "Defines the header style format. If not defined ```*** {name} ***``` is used.",
+            "scope": "resource"
+          },
+          "robotcode.inlayHints.parameterNames": {
+            "type": "boolean",
+            "default": true,
+            "markdownDescription": "Enable/disable inlay hints for parameter names.",
+            "scope": "resource"
+          },
+          "robotcode.inlayHints.namespaces": {
+            "type": "boolean",
+            "default": true,
+            "markdownDescription": "Enable/disable inlay hints for namespaces.",
+            "scope": "resource"
+          }
+        }
+      },
+      {
+        "title": "Run",
+        "type": "object",
+        "properties": {
+          "robotcode.run.openOutputAfterRun": {
+            "type": "string",
             "enum": [
-              "stdio",
-              "pipe",
-              "socket",
-              "tcp"
+              "none",
+              "report",
+              "log"
             ],
+            "enumDescriptions": [
+              "Do not open anyting",
+              "Open the report html file.",
+              "Open the log.html file."
+            ],
+            "default": "none",
+            "description": "Defines if the report or log file should be opened after a run.",
             "scope": "resource"
-          },
-          "robotcode.languageServer.tcpPort": {
-            "type": "number",
-            "default": 0,
-            "description": "If the port is specified, connect to the language server previously started at the given port.",
-            "scope": "resource"
-          },
-          "robotcode.languageServer.extraArgs": {
-            "type": "array",
-            "default": [],
-            "items": {
-              "type": "string"
-            },
-            "markdownDescription": "Specifies extra arguments to be passed to the `robotcode language-server` command line tool (i.e.: [`--log`, `--log-level=TRACE`, `--log-calls`]).",
-            "scope": "resource"
-          },
+          }
+        }
+      },
+      {
+        "title": "Debug",
+        "type": "object",
+        "properties": {
           "robotcode.debugLauncher.mode": {
             "type": "string",
             "default": "stdio",
@@ -447,6 +478,70 @@
             "markdownDescription": "Specifies the arguments to be passed to the debug adapter.",
             "scope": "resource"
           },
+          "robotcode.debug.defaultConfiguration": {
+            "type": "object",
+            "default": {},
+            "description": "Specifies the default configuration to run or debug robot tests.",
+            "scope": "resource"
+          },
+          "robotcode.debug.attachPython": {
+            "type": "boolean",
+            "description": "Attach also the python debugger if a robot test starts.",
+            "default": false,
+            "scope": "resource"
+          },
+          "robotcode.debug.outputMessages": {
+            "type": "boolean",
+            "description": "Output messages from robotframework in debug console.",
+            "default": false,
+            "scope": "resource"
+          },
+          "robotcode.debug.outputLog": {
+            "type": "boolean",
+            "description": "Output log messages from robotframework in debug console.",
+            "default": true,
+            "scope": "resource"
+          },
+          "robotcode.debug.outputTimestamps": {
+            "type": "boolean",
+            "description": "Include timestamps in log and output messages.",
+            "default": false,
+            "scope": "resource"
+          },
+          "robotcode.debug.groupOutput": {
+            "type": "boolean",
+            "description": "Group start and stop suite/test/keyword messages in debug console.",
+            "default": false,
+            "scope": "resource"
+          },
+          "robotcode.debug.useExternalDebugpy": {
+            "type": "boolean",
+            "description": "Use the debugpy in python environment, not from the python extension.",
+            "default": false,
+            "scope": "resource"
+          },
+          "robotcode.debug.defaultConsole": {
+            "type": "string",
+            "enum": [
+              "internalConsole",
+              "integratedTerminal",
+              "externalTerminal"
+            ],
+            "default": "integratedTerminal",
+            "enumDescriptions": [
+              "No terminal (pipes the output to the client debug console).",
+              "Use terminal integrated in client.",
+              "External terminal (configured in user settings)."
+            ],
+            "description": "Default setting for where to launch the debug target: internal console, integrated terminal, or external terminal.",
+            "scope": "resource"
+          }
+        }
+      },
+      {
+        "title": "Robot",
+        "type": "object",
+        "properties": {
           "robotcode.robot.args": {
             "type": "array",
             "default": [],
@@ -531,7 +626,13 @@
             "markdownDescription": "Specifies robot execution mode. Corresponds to the `--rpa` or `--norpa` option of __robot__.",
             "default": "default",
             "scope": "resource"
-          },
+          }
+        }
+      },
+      {
+        "title": "Analysis",
+        "type": "object",
+        "properties": {
           "robotcode.analysis.cache.saveLocation": {
             "type": "string",
             "enum": [
@@ -573,131 +674,6 @@
             "markdownDescription": "Specifies a global [search order](https://robotframework.org/robotframework/latest/RobotFrameworkUserGuide.html#specifying-explicit-priority-between-libraries-and-resources) for libraries and resources. This is handy when you have libraries containing keywords with the same name. RobotCode is unable to analyze the library search order in a file specified with [`Set Library Search Order`](https://robotframework.org/robotframework/latest/libraries/BuiltIn.html#Set%20Library%20Search%20Order), so you can define a global order here. Just make sure to call the `Set Library Search Order` keyword somewhere in your robot file or internally in your library.",
             "scope": "resource"
           },
-          "robotcode.run.openOutputAfterRun": {
-            "type": "string",
-            "enum": [
-              "none",
-              "report",
-              "log"
-            ],
-            "enumDescriptions": [
-              "Do not open anyting",
-              "Open the report html file.",
-              "Open the log.html file."
-            ],
-            "default": "none",
-            "description": "Defines if the report or log file should be opened after a run.",
-            "scope": "resource"
-          },
-          "robotcode.debug.defaultConfiguration": {
-            "type": "object",
-            "default": {},
-            "description": "Specifies the default configuration to run or debug robot tests.",
-            "scope": "resource"
-          },
-          "robotcode.debug.attachPython": {
-            "type": "boolean",
-            "description": "Attach also the python debugger if a robot test starts.",
-            "default": false,
-            "scope": "resource"
-          },
-          "robotcode.debug.outputMessages": {
-            "type": "boolean",
-            "description": "Output messages from robotframework in debug console.",
-            "default": false,
-            "scope": "resource"
-          },
-          "robotcode.debug.outputLog": {
-            "type": "boolean",
-            "description": "Output log messages from robotframework in debug console.",
-            "default": true,
-            "scope": "resource"
-          },
-          "robotcode.debug.outputTimestamps": {
-            "type": "boolean",
-            "description": "Include timestamps in log and output messages.",
-            "default": false,
-            "scope": "resource"
-          },
-          "robotcode.debug.groupOutput": {
-            "type": "boolean",
-            "description": "Group start and stop suite/test/keyword messages in debug console.",
-            "default": false,
-            "scope": "resource"
-          },
-          "robotcode.debug.useExternalDebugpy": {
-            "type": "boolean",
-            "description": "Use the debugpy in python environment, not from the python extension.",
-            "default": false,
-            "scope": "resource"
-          },
-          "robotcode.debug.defaultConsole": {
-            "type": "string",
-            "enum": [
-              "internalConsole",
-              "integratedTerminal",
-              "externalTerminal"
-            ],
-            "default": "integratedTerminal",
-            "enumDescriptions": [
-              "No terminal (pipes the output to the client debug console).",
-              "Use terminal integrated in client.",
-              "External terminal (configured in user settings)."
-            ],
-            "description": "Default setting for where to launch the debug target: internal console, integrated terminal, or external terminal.",
-            "scope": "resource"
-          },
-          "robotcode.robocop.enabled": {
-            "type": "boolean",
-            "default": true,
-            "markdownDescription": "Enables 'robocop' code analysis, if installed. See [robocop](https://github.com/MarketSquare/robotframework-robocop)",
-            "scope": "resource"
-          },
-          "robotcode.robocop.include": {
-            "type": "array",
-            "default": [],
-            "items": {
-              "type": "string"
-            },
-            "description": "Include specified 'robocop' rules. You can define rule by its name or id. Glob patterns are supported",
-            "scope": "resource"
-          },
-          "robotcode.robocop.exclude": {
-            "type": "array",
-            "default": [],
-            "items": {
-              "type": "string"
-            },
-            "description": "Exlude specified 'robocop' rules. You can define rule by its name or id. Glob patterns are supported",
-            "scope": "resource"
-          },
-          "robotcode.robocop.configurations": {
-            "type": "array",
-            "default": [],
-            "items": {
-              "type": "string"
-            },
-            "description": "Configure 'robocop' checker with parameter value.",
-            "scope": "resource"
-          },
-          "robotcode.robotidy.enabled": {
-            "type": "boolean",
-            "default": true,
-            "markdownDescription": "Enables 'robotidy' code formatting, if installed. See [robotidy](https://github.com/MarketSquare/robotframework-tidy)",
-            "scope": "resource"
-          },
-          "robotcode.robotidy.ignoreGitDir": {
-            "type": "boolean",
-            "default": true,
-            "markdownDescription": "Ignore .git directories when searching for the default configuration file. Corresponds to the `--ignore-git-dir` of _robotidy_ See [robotidy](https://github.com/MarketSquare/robotframework-tidy)",
-            "scope": "resource"
-          },
-          "robotcode.robotidy.config": {
-            "type": "string",
-            "default": "",
-            "markdownDescription": "Read configuration from FILE path. Corresponds to the `--config` of _robotidy_ See [robotidy](https://github.com/MarketSquare/robotframework-tidy)",
-            "scope": "resource"
-          },
           "robotcode.analysis.findUnusedReferences": {
             "type": "boolean",
             "default": false,
@@ -733,6 +709,80 @@
             "description": "Progress mode for diagnostics.",
             "scope": "resource"
           },
+          "robotcode.analysis.referencesCodeLens": {
+            "type": "boolean",
+            "default": false,
+            "description": "Enable/disable references CodeLens for RobotFramework files."
+          }
+        }
+      },
+      {
+        "title": "Linting - Robocop",
+        "type": "object",
+        "properties": {
+          "robotcode.robocop.enabled": {
+            "type": "boolean",
+            "default": true,
+            "markdownDescription": "Enables 'robocop' code analysis, if installed. See [robocop](https://github.com/MarketSquare/robotframework-robocop)",
+            "scope": "resource"
+          },
+          "robotcode.robocop.include": {
+            "type": "array",
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "description": "Include specified 'robocop' rules. You can define rule by its name or id. Glob patterns are supported",
+            "scope": "resource"
+          },
+          "robotcode.robocop.exclude": {
+            "type": "array",
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "description": "Exlude specified 'robocop' rules. You can define rule by its name or id. Glob patterns are supported",
+            "scope": "resource"
+          },
+          "robotcode.robocop.configurations": {
+            "type": "array",
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "description": "Configure 'robocop' checker with parameter value.",
+            "scope": "resource"
+          }
+        }
+      },
+      {
+        "title": "Formatting - Tidy",
+        "type": "object",
+        "properties": {
+          "robotcode.robotidy.enabled": {
+            "type": "boolean",
+            "default": true,
+            "markdownDescription": "Enables 'robotidy' code formatting, if installed. See [robotidy](https://github.com/MarketSquare/robotframework-tidy)",
+            "scope": "resource"
+          },
+          "robotcode.robotidy.ignoreGitDir": {
+            "type": "boolean",
+            "default": true,
+            "markdownDescription": "Ignore .git directories when searching for the default configuration file. Corresponds to the `--ignore-git-dir` of _robotidy_ See [robotidy](https://github.com/MarketSquare/robotframework-tidy)",
+            "scope": "resource"
+          },
+          "robotcode.robotidy.config": {
+            "type": "string",
+            "default": "",
+            "markdownDescription": "Read configuration from FILE path. Corresponds to the `--config` of _robotidy_ See [robotidy](https://github.com/MarketSquare/robotframework-tidy)",
+            "scope": "resource"
+          }
+        }
+      },
+      {
+        "title": "Workspace",
+        "type": "object",
+        "properties": {
           "robotcode.workspace.excludePatterns": {
             "type": "array",
             "default": [
@@ -750,12 +800,46 @@
             },
             "description": "Specifies glob patterns for excluding files and folders from analysing by the language server.",
             "scope": "resource"
+          }
+        }
+      },
+      {
+        "title": "Language Server",
+        "type": "object",
+        "properties": {
+          "robotcode.languageServer.mode": {
+            "type": "string",
+            "default": "pipe",
+            "description": "Specifies the mode the language server is started.",
+            "enum": [
+              "stdio",
+              "pipe",
+              "socket",
+              "tcp"
+            ],
+            "scope": "resource"
           },
-          "robotcode.analysis.referencesCodeLens": {
-            "type": "boolean",
-            "default": false,
-            "description": "Enable/disable references CodeLens for RobotFramework files."
+          "robotcode.languageServer.tcpPort": {
+            "type": "number",
+            "default": 0,
+            "description": "If the port is specified, connect to the language server previously started at the given port.",
+            "scope": "resource"
           },
+          "robotcode.languageServer.extraArgs": {
+            "type": "array",
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "markdownDescription": "Specifies extra arguments to be passed to the `robotcode language-server` command line tool (i.e.: [`--log`, `--log-level=TRACE`, `--log-calls`]).",
+            "scope": "resource"
+          }
+        }
+      },
+      {
+        "title": "Documentation",
+        "type": "object",
+        "properties": {
           "robotcode.documentationServer.startPort": {
             "type": "integer",
             "default": 3100,
@@ -770,30 +854,6 @@
             "type": "boolean",
             "default": true,
             "description": "Starts the internal HTTP server only if needed."
-          },
-          "robotcode.completion.filterDefaultLanguage": {
-            "type": "boolean",
-            "default": false,
-            "markdownDescription": "Filter default language (English) for completion if there is another language defined.",
-            "scope": "resource"
-          },
-          "robotcode.completion.headerStyle": {
-            "type": "string",
-            "default": null,
-            "markdownDescription": "Defines the header style format. If not defined ```*** {name} ***``` is used.",
-            "scope": "resource"
-          },
-          "robotcode.inlayHints.parameterNames": {
-            "type": "boolean",
-            "default": true,
-            "markdownDescription": "Enable/disable inlay hints for parameter names.",
-            "scope": "resource"
-          },
-          "robotcode.inlayHints.namespaces": {
-            "type": "boolean",
-            "default": true,
-            "markdownDescription": "Enable/disable inlay hints for namespaces.",
-            "scope": "resource"
           }
         }
       }
