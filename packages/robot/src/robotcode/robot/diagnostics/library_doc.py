@@ -2118,14 +2118,19 @@ def get_variables_doc(
             if import_name.lower().endswith((".yaml", ".yml")):
                 source = import_name
                 importer = YamlImporter()
+                stem = Path(import_name).stem
             elif get_robot_version() >= (6, 1) and import_name.lower().endswith(".json"):
                 source = import_name
                 importer = JsonImporter()
+                stem = Path(import_name).stem
             else:
                 python_import = True
 
                 if not is_variables_by_path(import_name):
+                    stem = import_name
                     module_spec = get_module_spec(import_name)
+                else:
+                    stem = Path(import_name).stem
 
                 # skip antigravity easter egg
                 # see https://python-history.blogspot.com/2010/06/import-antigravity.html

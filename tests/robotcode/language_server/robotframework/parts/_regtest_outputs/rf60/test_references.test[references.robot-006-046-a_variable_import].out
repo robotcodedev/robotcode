@@ -24,11 +24,11 @@ result:
 - !Location
   range:
     end:
-      character: 24
-      line: 9
+      character: 26
+      line: 10
     start:
-      character: 13
-      line: 9
+      character: 12
+      line: 10
   uri: tests/duplicated_resources.robot
 - !Location
   range:

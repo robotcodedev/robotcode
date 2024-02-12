@@ -1292,8 +1292,8 @@ class Namespace:
                                 code=Error.VARIABLES_ALREADY_IMPORTED,
                             )
 
-                        if (entry.alias or entry.name or entry.import_name) not in self._variables:
-                            self._variables[entry.alias or entry.name or entry.import_name] = entry
+                        if entry.library_doc is not None and entry.library_doc.source_or_origin:
+                            self._variables[entry.library_doc.source_or_origin] = entry
 
                     elif isinstance(entry, LibraryEntry):
                         if top_level and entry.name == BUILTIN_LIBRARY_NAME and entry.alias is None:

@@ -543,7 +543,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
         namespace = self.parent.documents_cache.get_namespace(doc)
 
         result: List[Location] = []
-        for lib_entry in (namespace.get_imported_variables()).values():
+        for lib_entry in namespace.get_imported_variables().values():
             if lib_entry.import_source == str(doc.uri.to_path()) and lib_entry.library_doc.source == library_doc.source:
                 result.append(Location(str(doc.uri), lib_entry.import_range))
 
