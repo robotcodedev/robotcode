@@ -1022,6 +1022,7 @@ class Debugger:
         "BuiltIn.Run Keyword And Warn On Failure",
         "BuiltIn.Wait Until Keyword Succeeds",
         "BuiltIn.Run Keyword And Continue On Failure",
+        "BuiltIn.Run Keyword And Return Status",
     ]
 
     def is_not_caughted_by_keyword(self) -> bool:
