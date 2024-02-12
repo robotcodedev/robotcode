@@ -16,27 +16,28 @@ def get_user_config_file(
     create: bool = True,
     verbose_callback: Optional[Callable[[str], None]] = None,
 ) -> Optional[Path]:
-    result = Path(platformdirs.user_config_dir("robotcode", appauthor=False), "robot.toml")
-    if result.is_file():
-        if verbose_callback:
-            verbose_callback(f"Found user configuration file:\n    {result}")
-        return result
-
-    if not create:
-        if verbose_callback:
-            verbose_callback("User configuration file not found, but create is set to False.")
-        return None
-
-    if verbose_callback:
-        verbose_callback(f"User configuration file not found, try to create it at:\n    {result}")
     try:
+        result = Path(platformdirs.user_config_dir("robotcode", appauthor=False), "robot.toml")
+        if result.is_file():
+            if verbose_callback:
+                verbose_callback(f"Found user configuration file:\n    {result}")
+            return result
+
+        if not create:
+            if verbose_callback:
+                verbose_callback("User configuration file not found, but create is set to False.")
+            return None
+
+        if verbose_callback:
+            verbose_callback(f"User configuration file not found, try to create it at:\n    {result}")
+
         get_default_config().save(result)
+
+        return result
     except OSError as e:
         if verbose_callback:
             verbose_callback(f"Cannot create user configuration file `{result}`:\n    {e}")
         return None
-
-    return result
 
 
 def get_config_files(
@@ -73,7 +74,11 @@ def get_config_files(
 
     return (
         [
-            *([(user_config, ConfigType.USER_DEFAULT_CONFIG_TOML)] if user_config else []),
+            *(
+                [(user_config, ConfigType.USER_DEFAULT_CONFIG_TOML)]
+                if user_config
+                else [(Path("__no_user_config__.toml"), ConfigType.DEFAULT_CONFIG_TOML)]
+            ),
             *result,
         ],
         root_folder,

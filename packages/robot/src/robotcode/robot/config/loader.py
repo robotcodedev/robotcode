@@ -34,6 +34,7 @@ class ConfigType(str, Enum):
     ROBOT_TOML = "robot.toml (project file)"
     LOCAL_ROBOT_TOML = ".robot.toml (local file)"
     USER_DEFAULT_CONFIG_TOML = "robot.toml (user default config)"
+    DEFAULT_CONFIG_TOML = "(default config)"
     CUSTOM_TOML = ".toml (custom file)"
 
 
@@ -118,6 +119,12 @@ def load_config_from_path(
     result = config_type()
 
     for __path in __paths:
+        if isinstance(__path, tuple):
+            path, c_type = __path
+            if path.name == "__no_user_config__.toml" and c_type == ConfigType.DEFAULT_CONFIG_TOML:
+                result.add_options(get_default_config())
+                continue
+
         result.add_options(
             _load_config_data_from_path(
                 config_type,
