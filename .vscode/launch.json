@@ -7,7 +7,7 @@
 	"configurations": [
 		{
 			"name": "Python: Debug in terminal",
-			"type": "python",
+			"type": "debugpy",
 			"request": "launch",
 			"purpose": [
 				"debug-in-terminal"
@@ -16,7 +16,7 @@
 		},
 		{
 			"name": "Python: RobotCode",
-			"type": "python",
+			"type": "debugpy",
 			"request": "launch",
 			"module": "robotcode.cli",
 			"justMyCode": false,
@@ -56,14 +56,14 @@
 		},
 		{
 			"name": "Python: Attach using Process Id",
-			"type": "python",
+			"type": "debugpy",
 			"request": "attach",
 			"processId": "${command:pickProcess}",
 			"justMyCode": false
 		},
 		{
 			"name": "Python: Current File",
-			"type": "python",
+			"type": "debugpy",
 			"request": "launch",
 			"program": "${file}",
 			"console": "integratedTerminal",
@@ -72,7 +72,7 @@
 		},
 		{
 			"name": "Python: Attach to 5678",
-			"type": "python",
+			"type": "debugpy",
 			"request": "attach",
 			"connect": {
 				"host": "localhost",
@@ -84,7 +84,7 @@
 		},
 		{
 			"name": "Python: Attach Prompt",
-			"type": "python",
+			"type": "debugpy",
 			"request": "attach",
 			"connect": {
 				"host": "localhost",
@@ -93,7 +93,7 @@
 		},
 		{
 			"name": "Python: Pytest All Test",
-			"type": "python",
+			"type": "debugpy",
 			"request": "launch",
 			"module": "pytest",
 			"args": [
@@ -105,7 +105,7 @@
 		},
 		{
 			"name": "Python: Pytest Some Test",
-			"type": "python",
+			"type": "debugpy",
 			"request": "launch",
 			"module": "pytest",
 			"args": [
@@ -127,7 +127,7 @@
 		},
 		{
 			"name": "Python: Pytest Current File",
-			"type": "python",
+			"type": "debugpy",
 			"request": "launch",
 			"module": "pytest",
 			"args": [
@@ -139,7 +139,7 @@
 		},
 		{
 			"name": "Python: robotcode language_server",
-			"type": "python",
+			"type": "debugpy",
 			"request": "launch",
 			"module": "robotcode.cli",
 			"justMyCode": false,
@@ -190,7 +190,7 @@
 		},
 		{
 			"name": "Python: Debug Tests",
-			"type": "python",
+			"type": "debugpy",
 			"request": "launch",
 			"program": "${file}",
 			"purpose": [
@@ -201,7 +201,7 @@
 		},
 		{
 			"name": "Python: Remote-Attach",
-			"type": "python",
+			"type": "debugpy",
 			"request": "attach",
 			"connect": {
 				"host": "localhost",

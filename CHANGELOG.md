@@ -2,6 +2,27 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [0.74.0](https://github.com/d-biehl/robotcode/compare/v0.73.3..v0.74.0) - 2024-02-12
+
+### Bug Fixes
+
+- **debugger:** Filling zeros are now added to the name of an element so that elements are sorted correctly in the variable view at debugging time ([456ab2c](https://github.com/d-biehl/robotcode/commit/456ab2c0a30a490e3324d0376cd7fe651a1c2c4a))
+- **debugger:** Add `BuiltIn.Run Keyword And Return Status` to the list of keywords that caught exceptions on inner keywords ([add8297](https://github.com/d-biehl/robotcode/commit/add8297e851f1226dd980fa543bb4c9f124ad441))
+- **langserver:** Correct importing variables with the same filename ([e1ac0cb](https://github.com/d-biehl/robotcode/commit/e1ac0cb5ed439fce3e8c9c2dad19ded4c1726eb4))
+
+  closes [BUG] Variables from variable files are often displayed as not found #214
+
+- **robot:** Handle OSErrors if creating/reading user robot.toml ([470b438](https://github.com/d-biehl/robotcode/commit/470b438778f2c82c31de08e39b75d7663a5fe504))
+
+  should fix: #187
+
+
+
+### Features
+
+- **vscode:** Organize vscode settings in groups ([9bbe68b](https://github.com/d-biehl/robotcode/commit/9bbe68bcd9ba718d8293c27ee3e64a6d9cd792a4))
+
+
 ## [0.73.3](https://github.com/d-biehl/robotcode/compare/v0.73.2..v0.73.3) - 2024-02-07
 
 ### Bug Fixes
