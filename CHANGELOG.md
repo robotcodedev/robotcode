@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [0.75.0](https://github.com/d-biehl/robotcode/compare/v0.74.0..v0.75.0) - 2024-02-13
+
+### Bug Fixes
+
+- **debugger:** Correct wrong lineno informations from robot in listener start_(test/suite/keyword) lineno is `None` ([b4f9c5c](https://github.com/d-biehl/robotcode/commit/b4f9c5c67f41d7be1170c9da022cd5421a0d20ef))
+
+  If RobotFramework executes a test case, keyword or so, where the line number is not set internally, i.e. `None`, it generates an empty string for the line number in the listener instead of also passing `None`. This rarely happens, but it does occur.
+
+- **debugger:** Fix some small glitches when robot is terminated but the Vscode is not fast enough to notice it ;-) ([5fdb0d7](https://github.com/d-biehl/robotcode/commit/5fdb0d7f7ab92a131172d38e252810e82e39bad6))
+
+
+### Features
+
+- **vscode:** Debugger now uses the new `Python Debugger` extension as default debugger for python ([aab6b6d](https://github.com/d-biehl/robotcode/commit/aab6b6dc3d6f07ce35ddd292605c24df525475be))
+
+  Microsoft rewrites the debugger extension for python and this will be the new standard extension for debugging python code. see [here](https://marketplace.visualstudio.com/items?itemName=ms-python.debugpy)
+
+
+
 ## [0.74.0](https://github.com/d-biehl/robotcode/compare/v0.73.3..v0.74.0) - 2024-02-12
 
 ### Bug Fixes
