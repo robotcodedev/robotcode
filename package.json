@@ -1319,12 +1319,11 @@
           },
           {
             "name": "RobotCode: Python",
-            "type": "python",
+            "type": "debugpy",
             "request": "attach",
             "presentation": {
               "hidden": true
-            },
-            "justMyCode": true
+            }
           }
         ],
         "configurationSnippets": [
@@ -1438,7 +1437,8 @@
     "test": "node ./out/test/runTest.js"
   },
   "extensionDependencies": [
-    "ms-python.python"
+    "ms-python.python",
+    "ms-python.debugpy"
   ],
   "dependencies": {
     "ansi-colors": "^4.1.3",

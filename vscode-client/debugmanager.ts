@@ -577,7 +577,7 @@ export class DebugManager {
       const debugConfiguration: vscode.DebugConfiguration = {
         ...pythonConfiguration,
         ...{
-          type: "python",
+          type: "debugpy",
           name: `Python ${session.name}`,
           request: "attach",
           connect: {
