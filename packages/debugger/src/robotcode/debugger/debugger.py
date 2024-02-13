@@ -874,7 +874,11 @@ class Debugger:
             LOGGER.register_logger(self.debug_logger)
 
         source = attributes.get("source")
-        line_no = attributes.get("lineno", 1)
+        line_no_dummy = attributes.get("lineno", 1)
+        if isinstance(line_no_dummy, str):
+            line_no = int(line_no_dummy) if line_no_dummy else None
+        else:
+            line_no = line_no_dummy
         longname = attributes.get("longname", "")
         status = attributes.get("status", "")
         type = "SUITE"
@@ -931,7 +935,11 @@ class Debugger:
 
     def start_test(self, name: str, attributes: Dict[str, Any]) -> None:
         source = attributes.get("source")
-        line_no = attributes.get("lineno", 1)
+        line_no_dummy = attributes.get("lineno", 1)
+        if isinstance(line_no_dummy, str):
+            line_no = int(line_no_dummy) if line_no_dummy else None
+        else:
+            line_no = line_no_dummy
         longname = attributes.get("longname", "")
         status = attributes.get("status", "")
 
@@ -983,7 +991,11 @@ class Debugger:
     def start_keyword(self, name: str, attributes: Dict[str, Any]) -> None:
         status = attributes.get("status", "")
         source = attributes.get("source")
-        line_no = attributes.get("lineno")
+        line_no_dummy = attributes.get("lineno", 1)
+        if isinstance(line_no_dummy, str):
+            line_no = int(line_no_dummy) if line_no_dummy else None
+        else:
+            line_no = line_no_dummy
         type = attributes.get("type", "KEYWORD")
         libname = attributes.get("libname")
         kwname = attributes.get("kwname")
