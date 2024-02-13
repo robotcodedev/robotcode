@@ -1583,6 +1583,9 @@ class Debugger:
         if evaluate_context is None:
             evaluate_context = EXECUTION_CONTEXTS.current
 
+        if stack_frame is None and evaluate_context is None:
+            return EvaluateResult(result="Unable to evaluate expression. No context available.", type="FatalError")
+
         result: Any = None
         try:
             if stack_frame is not None and stack_frame.source is not None:
