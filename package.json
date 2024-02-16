@@ -1442,13 +1442,14 @@
   ],
   "dependencies": {
     "ansi-colors": "^4.1.3",
-    "vscode-languageclient": "^9.0.1"
+    "vscode-languageclient": "^9.0.1",
+    "@vscode/python-extension": "^1.0.5"
   },
   "devDependencies": {
     "@types/node": "^18.17.1",
     "@types/vscode": "^1.82.0",
-    "@typescript-eslint/eslint-plugin": "^6.19.1",
-    "@typescript-eslint/parser": "^6.19.1",
+    "@typescript-eslint/eslint-plugin": "^7.0.1",
+    "@typescript-eslint/parser": "^7.0.1",
     "@vscode/test-electron": "^2.3.9",
     "@vscode/vsce": "^2.23.0",
     "eslint": "^8.56.0",
@@ -1458,10 +1459,10 @@
     "eslint-plugin-node": "^11.1.0",
     "eslint-plugin-prettier": "^5.1.3",
     "ovsx": "^0.8.3",
-    "prettier": "^3.2.4",
+    "prettier": "^3.2.5",
     "ts-loader": "^9.5.1",
     "typescript": "^5.3.3",
-    "webpack": "^5.90.0",
+    "webpack": "^5.90.2",
     "webpack-cli": "^5.1.4"
   }
 }

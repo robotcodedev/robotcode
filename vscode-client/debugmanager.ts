@@ -108,7 +108,7 @@ class RobotCodeDebugConfigurationProvider implements vscode.DebugConfigurationPr
         // empty
       }
 
-      if (!debugConfiguration.python) debugConfiguration.python = this.pythonManager.getPythonCommand(folder);
+      if (!debugConfiguration.python) debugConfiguration.python = await this.pythonManager.getPythonCommand(folder);
 
       debugConfiguration.robotPythonPath = [
         ...config.get<string[]>("robot.pythonPath", []),
@@ -181,7 +181,7 @@ class RobotCodeDebugConfigurationProvider implements vscode.DebugConfigurationPr
       }
 
       if (debugConfiguration.attachPython && !config.get<boolean>("debug.useExternalDebugpy")) {
-        const debugpyPath = await this.pythonManager.pythonExtension?.exports.debug.getDebuggerPackagePath();
+        const debugpyPath = await this.pythonManager.getDebuggerPackagePath();
 
         if (debugpyPath) {
           const env = (debugConfiguration.env as { [Key: string]: unknown }) ?? {};
@@ -223,7 +223,7 @@ class RobotCodeDebugAdapterDescriptorFactory implements vscode.DebugAdapterDescr
 
       switch (mode) {
         case "stdio": {
-          const pythonCommand = this.pythonManager.getPythonCommand(session.workspaceFolder);
+          const pythonCommand = await this.pythonManager.getPythonCommand(session.workspaceFolder);
 
           if (pythonCommand === undefined) {
             throw new Error("Can't get a valid python command.");
@@ -256,7 +256,12 @@ class RobotCodeDebugAdapterDescriptorFactory implements vscode.DebugAdapterDescr
               config.get("debugLauncher.tcpPort", DEBUG_ADAPTER_DEFAULT_TCP_PORT) ?? DEBUG_ADAPTER_DEFAULT_TCP_PORT,
             )) ?? DEBUG_ADAPTER_DEFAULT_TCP_PORT;
 
-          this.spawnDebugLauncher(session, config, ["debug-launch", "--tcp", `${host}:${port}`, ...debugLauncherArgs]);
+          await this.spawnDebugLauncher(session, config, [
+            "debug-launch",
+            "--tcp",
+            `${host}:${port}`,
+            ...debugLauncherArgs,
+          ]);
 
           while (!(await isPortOpen(port, host))) {
             await sleep(1000);
@@ -272,7 +277,7 @@ class RobotCodeDebugAdapterDescriptorFactory implements vscode.DebugAdapterDescr
           const pipeName = randomBytes(16).toString("hex");
           const pipePath = platform === "win32" ? join("\\\\.\\pipe\\", pipeName) : join(tmpdir(), pipeName);
 
-          const p = this.spawnDebugLauncher(session, config, [
+          const p = await this.spawnDebugLauncher(session, config, [
             "debug-launch",
             "--pipe-server",
             pipePath,
@@ -301,12 +306,12 @@ class RobotCodeDebugAdapterDescriptorFactory implements vscode.DebugAdapterDescr
     }
   }
 
-  private spawnDebugLauncher(
+  private async spawnDebugLauncher(
     session: vscode.DebugSession,
     config: vscode.WorkspaceConfiguration,
     launchArgs: string[],
   ) {
-    const pythonCommand = this.pythonManager.getPythonCommand(session.workspaceFolder);
+    const pythonCommand = await this.pythonManager.getPythonCommand(session.workspaceFolder);
 
     if (pythonCommand === undefined) {
       throw new Error("Can't get a valid python command.");

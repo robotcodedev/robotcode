@@ -2,66 +2,10 @@ import { spawn, spawnSync } from "child_process";
 import * as path from "path";
 import * as vscode from "vscode";
 import { CONFIG_SECTION } from "./config";
+import { PythonExtension, ActiveEnvironmentPathChangeEvent } from "@vscode/python-extension";
 
-interface PythonExtensionApi {
-  /**
-   * Promise indicating whether all parts of the extension have completed loading or not.
-   * @type {Promise<void>}
-   * @memberof IExtensionApi
-   */
-  ready: Promise<void>;
-  jupyter: {
-    registerHooks(): void;
-  };
-  debug: {
-    /**
-     * Generate an array of strings for commands to pass to the Python executable to launch the debugger for remote debugging.
-     * Users can append another array of strings of what they want to execute along with relevant arguments to Python.
-     * E.g `['/Users/..../pythonVSCode/pythonFiles/lib/python/debugpy', '--listen', 'localhost:57039', '--wait-for-client']`
-     * @param {string} host
-     * @param {number} port
-     * @param {boolean} [waitUntilDebuggerAttaches=true]
-     * @returns {Promise<string[]>}
-     */
-    getRemoteLauncherCommand(host: string, port: number, waitUntilDebuggerAttaches: boolean): Promise<string[]>;
-
-    /**
-     * Gets the path to the debugger package used by the extension.
-     * @returns {Promise<string>}
-     */
-    getDebuggerPackagePath(): Promise<string | undefined>;
-  };
-  /**
-   * Return internal settings within the extension which are stored in VSCode storage
-   */
-  settings: {
-    /**
-     * An event that is emitted when execution details (for a resource) change. For instance, when interpreter configuration changes.
-     */
-    readonly onDidChangeExecutionDetails: vscode.Event<vscode.Uri | undefined>;
-    /**
-     * Returns all the details the consumer needs to execute code within the selected environment,
-     * corresponding to the specified resource taking into account any workspace-specific settings
-     * for the workspace to which this resource belongs.
-     * @param {Resource} [resource] A resource for which the setting is asked for.
-     * * When no resource is provided, the setting scoped to the first workspace folder is returned.
-     * * If no folder is present, it returns the global setting.
-     * @returns {({ execCommand: string[] | undefined })}
-     */
-    getExecutionDetails(resource?: vscode.Uri | undefined): {
-      /**
-       * E.g of execution commands returned could be,
-       * * `['<path to the interpreter set in settings>']`
-       * * `['<path to the interpreter selected by the extension when setting is not set>']`
-       * * `['conda', 'run', 'python']` which is used to run from within Conda environments.
-       * or something similar for some other Python environments.
-       *
-       * @type {(string[] | undefined)} When return value is `undefined`, it means no interpreter is set.
-       * Otherwise, join the items returned using space to construct the full execution command.
-       */
-      execCommand: string[] | undefined;
-    };
-  };
+export interface ActivePythonEnvironmentChangedEvent {
+  readonly resource: vscode.WorkspaceFolder | undefined;
 }
 
 export class PythonManager {
@@ -81,12 +25,19 @@ export class PythonManager {
     return this._pythonVersionScript;
   }
 
+  private readonly _onActivePythonEnvironmentChangedEmitter =
+    new vscode.EventEmitter<ActivePythonEnvironmentChangedEvent>();
+  public get onActivePythonEnvironmentChanged(): vscode.Event<ActivePythonEnvironmentChangedEvent> {
+    return this._onActivePythonEnvironmentChangedEmitter.event;
+  }
+
   _pythonLanguageServerMain: string;
   _checkRobotVersionMain: string;
   _robotCodeMain: string;
   _pythonVersionScript = "import sys; print(sys.version_info[:2]>=(3,8))";
 
-  _pythonExtension: vscode.Extension<PythonExtensionApi> | undefined;
+  _pythonExtension: PythonExtension | undefined;
+  private _disposables: vscode.Disposable | undefined;
 
   constructor(
     public readonly extensionContext: vscode.ExtensionContext,
@@ -103,36 +54,43 @@ export class PythonManager {
     this._robotCodeMain = this.extensionContext.asAbsolutePath(path.join("bundled", "tool", "robotcode"));
   }
 
-  async dispose(): Promise<void> {
-    // empty
+  dispose(): void {
+    if (this._disposables !== undefined) this._disposables.dispose();
   }
 
-  get pythonExtension(): vscode.Extension<PythonExtensionApi> | undefined {
-    if (!this._pythonExtension) {
-      this.outputChannel.appendLine("Try to activate python extension");
-      try {
-        this._pythonExtension = vscode.extensions.getExtension("ms-python.python")!;
+  private doActiveEnvironmentPathChanged(event: ActiveEnvironmentPathChangeEvent): void {
+    this.outputChannel.appendLine(
+      `ActiveEnvironmentPathChanged: ${event.resource?.uri.toString() ?? "unknown"} ${event.id}`,
+    );
+    this._onActivePythonEnvironmentChangedEmitter.fire({ resource: event.resource });
+  }
 
-        this._pythonExtension.activate().then(
-          (_) => undefined,
-          (_) => undefined,
-        );
+  async getPythonExtension(): Promise<PythonExtension | undefined> {
+    if (this._pythonExtension === undefined) {
+      this.outputChannel.appendLine("Try to activate python extension");
+
+      try {
+        this._pythonExtension = await PythonExtension.api();
 
         this.outputChannel.appendLine("Python Extension is active");
+        await this._pythonExtension.ready;
+      } catch (ex: unknown) {
+        this.outputChannel.appendLine(`can't activate python extension ${ex?.toString() ?? ""}`);
+      }
 
-        this._pythonExtension.exports.ready.then(
-          (_) => undefined,
-          (_) => undefined,
+      if (this._pythonExtension !== undefined) {
+        this._disposables = vscode.Disposable.from(
+          this._pythonExtension.environments.onDidChangeActiveEnvironmentPath((event) =>
+            this.doActiveEnvironmentPathChanged(event),
+          ),
         );
-      } catch (ex) {
-        this.outputChannel.appendLine("can't activate python extension");
       }
     }
     return this._pythonExtension;
   }
 
   // eslint-disable-next-line class-methods-use-this
-  public getPythonCommand(folder: vscode.WorkspaceFolder | undefined): string | undefined {
+  public async getPythonCommand(folder: vscode.WorkspaceFolder | undefined): Promise<string | undefined> {
     const config = vscode.workspace.getConfiguration(CONFIG_SECTION, folder);
     let result: string | undefined;
 
@@ -141,12 +99,15 @@ export class PythonManager {
     if (configPython !== undefined && configPython !== "") {
       result = configPython;
     } else {
-      const pythonExtensionPythonPath: string[] | undefined =
-        this.pythonExtension?.exports?.settings?.getExecutionDetails(folder?.uri)?.execCommand;
+      const pythonExtension = await this.getPythonExtension();
 
-      if (pythonExtensionPythonPath !== undefined) {
-        result = pythonExtensionPythonPath.join(" ");
+      const environmentPath = pythonExtension?.environments.getActiveEnvironmentPath(folder);
+      if (environmentPath === undefined) {
+        return undefined;
       }
+
+      const env = await pythonExtension?.environments.resolveEnvironment(environmentPath);
+      result = env?.executable.uri?.fsPath;
     }
 
     return result;
@@ -178,6 +139,21 @@ export class PythonManager {
     return false;
   }
 
+  public async getDebuggerPackagePath(): Promise<string | undefined> {
+    // TODO: this is not enabled in debugpy extension yet
+    // const debugpy = vscode.extensions.getExtension("ms-python.debugpy");
+    // if (debugpy !== undefined) {
+    //   if (!debugpy.isActive) {
+    //     await debugpy.activate();
+    //   }
+    //   const path = (debugpy.exports as PythonExtension)?.debug.getDebuggerPackagePath();
+    //   if (path !== undefined) {
+    //     return path;
+    //   }
+    // }
+    return (await this.getPythonExtension())?.debug.getDebuggerPackagePath();
+  }
+
   public async executeRobotCode(
     folder: vscode.WorkspaceFolder,
     args: string[],
@@ -187,7 +163,7 @@ export class PythonManager {
     const config = vscode.workspace.getConfiguration(CONFIG_SECTION, folder);
     const robotCodeExtraArgs = config.get<string[]>("extraArgs", []);
 
-    const pythonCommand = this.getPythonCommand(folder);
+    const pythonCommand = await this.getPythonCommand(folder);
     if (pythonCommand === undefined) throw new Error("Can't find python executable.");
 
     const final_args = [
