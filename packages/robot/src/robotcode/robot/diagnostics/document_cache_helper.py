@@ -40,6 +40,10 @@ class UnknownFileTypeError(Exception):
     pass
 
 
+class _CacheEntry:
+    pass
+
+
 class DocumentsCacheHelper:
     _logger = LoggingDescriptor()
 
@@ -50,6 +54,8 @@ class DocumentsCacheHelper:
         file_watcher_manager: FileWatcherManagerBase,
         robot_profile: Optional[RobotBaseProfile],
     ) -> None:
+        self.INITIALIZED_NAMESPACE = _CacheEntry()
+
         self.workspace = workspace
         self.documents_manager = documents_manager
         self.file_watcher_manager = file_watcher_manager
@@ -425,6 +431,20 @@ class DocumentsCacheHelper:
 
             self.namespace_invalidated(self, sender, callback_filter=language_id_filter(document))
 
+    def __namespace_initialized(self, sender: Namespace) -> None:
+        if sender.document is not None:
+            self._logger.critical(
+                lambda: f"Save initialized Namespace: {sender.document.uri if sender.document else None}"
+            )
+            sender.document.set_data(self.INITIALIZED_NAMESPACE, sender)
+
+    def get_initialized_namespace(self, document: TextDocument) -> Namespace:
+        result: Optional[Namespace] = document.get_data(self.INITIALIZED_NAMESPACE)
+        if result is None:
+            self._logger.critical(lambda: f"There is not initialized Namespace: {document.uri if document else None}")
+            result = self.get_namespace(document)
+        return result
+
     def __get_namespace_for_document_type(
         self, document: TextDocument, document_type: Optional[DocumentType]
     ) -> Namespace:
@@ -451,6 +471,7 @@ class DocumentsCacheHelper:
             workspace_languages,
         )
         result.has_invalidated.add(self.__invalidate_namespace)
+        result.has_initialized.add(self.__namespace_initialized)
 
         return result
 
