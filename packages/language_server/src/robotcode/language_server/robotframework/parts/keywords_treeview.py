@@ -161,7 +161,7 @@ class RobotKeywordsTreeViewPart(RobotLanguageServerProtocolPart, ModelHelper):
 
         if entry is not None:
             return self.parent.robot_code_action_documentation.build_url(
-                entry.name, entry.args, document, namespace, keyword_name
+                entry.import_name, entry.args, document, namespace, keyword_name
             )
 
         return None

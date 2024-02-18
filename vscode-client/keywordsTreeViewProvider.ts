@@ -206,7 +206,7 @@ export class KeywordsTreeViewProvider
                 currentDoc,
                 lib_or_res.alias ?? lib_or_res.name,
                 lib_or_res.id,
-                lib_or_res.type?.toUpperCase(),
+                lib_or_res.type?.toUpperCase() + (lib_or_res.alias ? ` (${lib_or_res.name})` : ""),
                 toMarkdown(lib_or_res.documentation),
               );
               result.keywords =
