@@ -1,7 +1,9 @@
 import contextlib
 import re
+import subprocess
 import sys
 from pathlib import Path
+from typing import Any
 
 if __name__ == "__main__" and not __package__:
     file = Path(__file__).resolve()
@@ -25,6 +27,16 @@ def replace_in_file(filename: Path, pattern: "re.Pattern[str]", to: str) -> None
     filename.write_text(new)
 
 
+def run(title: str, *args: Any, **kwargs: Any) -> None:
+    try:
+        print(f"running {title}")
+        subprocess.run(*args, **kwargs)
+    except (SystemExit, KeyboardInterrupt):
+        raise
+    except BaseException as e:
+        print(f"{title} failed: {e}", file=sys.stderr)
+
+
 def main() -> None:
     version = get_version()
     version_files = list(Path("packages").rglob("__version__.py"))
@@ -36,13 +48,20 @@ def main() -> None:
             rf"\g<1>{version or ''}\g<3>",
         )
 
-    replace_in_file(
-        Path("package.json"),
-        re.compile(
-            r"""(\"version\"\s*:\s*['"])([0-9]+\.[0-9]+\.[0-9]+.*)(['"])""",
-            re.MULTILINE,
-        ),
-        rf"\g<1>{version or ''}\g<3>",
+    # replace_in_file(
+    #     Path("package.json"),
+    #     re.compile(
+    #         r"""(\"version\"\s*:\s*['"])([0-9]+\.[0-9]+\.[0-9]+.*)(['"])""",
+    #         re.MULTILINE,
+    #     ),
+    #     rf"\g<1>{version or ''}\g<3>",
+    # )
+
+    run(
+        "npm version",
+        f"npm --no-git-tag-version version {version}",
+        shell=True,
+        timeout=600,
     )
 
     pyproject_files = list(Path("packages").rglob("pyproject.toml"))
