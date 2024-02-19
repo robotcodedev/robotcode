@@ -17,6 +17,7 @@
   "bugs": {
     "url": "https://github.com/d-biehl/robotcode/issues"
   },
+  "qna": "https://github.com/d-biehl/robotcode/discussions/categories/q-a",
   "engines": {
     "vscode": "^1.82.0"
   },
