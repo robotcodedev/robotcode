@@ -997,7 +997,7 @@ class Namespace:
         top_level: bool = False,
         source: Optional[str] = None,
         parent_import: Optional[Import] = None,
-    ) -> Tuple[Optional[LibraryEntry], Optional[Dict[str, Any]]]:
+    ) -> Optional[LibraryEntry]:
         result: Optional[LibraryEntry] = None
         try:
             if isinstance(value, LibraryImport):
@@ -1181,7 +1181,7 @@ class Namespace:
         finally:
             self._reset_global_variables()
 
-        return result, variables
+        return result
 
     def _import_imports(
         self,
@@ -1193,7 +1193,7 @@ class Namespace:
         source: Optional[str] = None,
         parent_import: Optional[Import] = None,
         depth: int = 0,
-    ) -> None:
+    ) -> Optional[Dict[str, Any]]:
 
         current_time = time.monotonic()
         self._logger.debug(lambda: f"{'  '*depth}start imports for {self.document if top_level else source}")
@@ -1202,7 +1202,7 @@ class Namespace:
                 if variables is None:
                     variables = self.get_resolvable_variables()
 
-                entry, variables = self._import(
+                entry = self._import(
                     imp,
                     variables=variables,
                     base_dir=base_dir,
@@ -1225,7 +1225,7 @@ class Namespace:
                                 variables = self.get_resolvable_variables()
 
                             try:
-                                self._import_imports(
+                                variables = self._import_imports(
                                     entry.imports,
                                     str(Path(entry.library_doc.source).parent),
                                     top_level=False,
@@ -1387,6 +1387,8 @@ class Namespace:
                 lambda: f"{'  '*depth}end imports for "
                 f"{self.document if top_level else source} in {time.monotonic() - current_time}s"
             )
+
+        return variables
 
     def _import_default_libraries(self, variables: Optional[Dict[str, Any]] = None) -> None:
         def _import_lib(library: str, variables: Optional[Dict[str, Any]] = None) -> Optional[LibraryEntry]:
