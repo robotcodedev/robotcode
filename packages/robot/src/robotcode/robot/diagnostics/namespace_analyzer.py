@@ -1131,12 +1131,22 @@ class NamespaceAnalyzer(Visitor, ModelHelper):
         if name_token is None:
             return
 
+        found = False
         entries = self.namespace.get_import_entries()
         if entries and self.namespace.document:
             for v in entries.values():
                 if v.import_source == self.namespace.source and v.import_range == range_from_token(name_token):
-                    if v not in self._namespace_references:
-                        self._namespace_references[v] = set()
+                    for k in self._namespace_references:
+                        if type(k) == type(v) and k.library_doc.source_or_origin == v.library_doc.source_or_origin:
+                            self._namespace_references[k].add(
+                                Location(self.namespace.document.document_uri, v.import_range)
+                            )
+                            found = True
+                            break
+                    if not found:
+                        if v not in self._namespace_references:
+                            self._namespace_references[v] = set()
+                    break
 
     def visit_ResourceImport(self, node: ResourceImport) -> None:  # noqa: N802
         if get_robot_version() >= (6, 1):
@@ -1146,12 +1156,22 @@ class NamespaceAnalyzer(Visitor, ModelHelper):
         if name_token is None:
             return
 
+        found = False
         entries = self.namespace.get_import_entries()
         if entries and self.namespace.document:
             for v in entries.values():
                 if v.import_source == self.namespace.source and v.import_range == range_from_token(name_token):
-                    if v not in self._namespace_references:
-                        self._namespace_references[v] = set()
+                    for k in self._namespace_references:
+                        if type(k) == type(v) and k.library_doc.source_or_origin == v.library_doc.source_or_origin:
+                            self._namespace_references[k].add(
+                                Location(self.namespace.document.document_uri, v.import_range)
+                            )
+                            found = True
+                            break
+                    if not found:
+                        if v not in self._namespace_references:
+                            self._namespace_references[v] = set()
+                    break
 
     def visit_LibraryImport(self, node: LibraryImport) -> None:  # noqa: N802
         if get_robot_version() >= (6, 1):
@@ -1161,9 +1181,19 @@ class NamespaceAnalyzer(Visitor, ModelHelper):
         if name_token is None:
             return
 
+        found = False
         entries = self.namespace.get_import_entries()
         if entries and self.namespace.document:
             for v in entries.values():
                 if v.import_source == self.namespace.source and v.import_range == range_from_token(name_token):
-                    if v not in self._namespace_references:
-                        self._namespace_references[v] = set()
+                    for k in self._namespace_references:
+                        if type(k) == type(v) and k.library_doc.source_or_origin == v.library_doc.source_or_origin:
+                            self._namespace_references[k].add(
+                                Location(self.namespace.document.document_uri, v.import_range)
+                            )
+                            found = True
+                            break
+                    if not found:
+                        if v not in self._namespace_references:
+                            self._namespace_references[v] = set()
+                    break
