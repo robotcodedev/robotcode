@@ -109,6 +109,8 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
         self.refresh_timer_lock = RLock()
         self.refresh_timer: Optional[Timer] = None
 
+        self.break_diagnostics_timer_lock = RLock()
+        self.break_diagnostics_timer: Optional[Timer] = None
         self._break_diagnostics_loop_event = Event()
 
         self._current_diagnostics_task_lock = RLock()
@@ -226,7 +228,20 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
         if self._workspace_diagnostics_task is not None and not self._workspace_diagnostics_task.done():
             self._workspace_diagnostics_task.cancel()
 
-    def break_workspace_diagnostics_loop(self) -> None:
+    def break_workspace_diagnostics_loop(self, now: bool = False) -> None:
+        with self.break_diagnostics_timer_lock:
+            if self.break_diagnostics_timer is not None:
+                self.break_diagnostics_timer.cancel()
+                self.break_diagnostics_timer = None
+
+            if not now:
+                self.break_diagnostics_timer = Timer(1, self._break_workspace_diagnostics_loop)
+                self.break_diagnostics_timer.start()
+                return
+
+        self._break_workspace_diagnostics_loop()
+
+    def _break_workspace_diagnostics_loop(self) -> None:
         self._break_diagnostics_loop_event.set()
         with self._current_diagnostics_task_lock(timeout=self._diagnostics_task_timeout * 2):
             if self._current_diagnostics_task is not None and not self._current_diagnostics_task.done():

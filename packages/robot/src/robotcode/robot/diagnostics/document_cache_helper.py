@@ -433,7 +433,7 @@ class DocumentsCacheHelper:
 
     def __namespace_initialized(self, sender: Namespace) -> None:
         if sender.document is not None:
-            self._logger.critical(
+            self._logger.debug(
                 lambda: f"Save initialized Namespace: {sender.document.uri if sender.document else None}"
             )
             sender.document.set_data(self.INITIALIZED_NAMESPACE, sender)
@@ -441,7 +441,7 @@ class DocumentsCacheHelper:
     def get_initialized_namespace(self, document: TextDocument) -> Namespace:
         result: Optional[Namespace] = document.get_data(self.INITIALIZED_NAMESPACE)
         if result is None:
-            self._logger.critical(lambda: f"There is not initialized Namespace: {document.uri if document else None}")
+            self._logger.debug(lambda: f"There is no initialized Namespace: {document.uri if document else None}")
             result = self.get_namespace(document)
         return result
 

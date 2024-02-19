@@ -561,9 +561,9 @@ class ImportsManager:
         if environment:
             self._environment.update(environment)
 
-        self._library_files_cache = SimpleLRUCache()
-        self._resource_files_cache = SimpleLRUCache()
-        self._variables_files_cache = SimpleLRUCache()
+        self._library_files_cache = SimpleLRUCache(1024)
+        self._resource_files_cache = SimpleLRUCache(1024)
+        self._variables_files_cache = SimpleLRUCache(1024)
 
         self._executor_lock = RLock(default_timeout=120, name="ImportsManager._executor_lock")
         self._executor: Optional[ProcessPoolExecutor] = None
@@ -1400,13 +1400,17 @@ class ImportsManager:
     ) -> VariablesDoc:
         source = self.find_variables(name, base_dir, variables, resolve_variables, resolve_command_line_vars)
 
-        resolved_args = resolve_args(
-            args,
-            str(self.root_folder),
-            base_dir,
-            self.get_resolvable_command_line_variables() if resolve_command_line_vars else None,
-            variables,
-        )
+        if args:
+            resolved_args = resolve_args(
+                args,
+                str(self.root_folder),
+                base_dir,
+                self.get_resolvable_command_line_variables() if resolve_command_line_vars else None,
+                variables,
+            )
+        else:
+            resolved_args = ()
+
         entry_key = _VariablesEntryKey(source, resolved_args)
 
         with self._variables_lock:

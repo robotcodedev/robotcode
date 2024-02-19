@@ -684,10 +684,17 @@ class Namespace:
 
     def _invalidate(self) -> None:
         self._invalid = True
+        self.imports_manager.imports_changed.remove(self.imports_changed)
+        self.imports_manager.libraries_changed.remove(self.libraries_changed)
+        self.imports_manager.resources_changed.remove(self.resources_changed)
+        self.imports_manager.variables_changed.remove(self.variables_changed)
 
     @_logger.call
     def invalidate(self) -> None:
         with self._initialize_lock:
+            if self._invalid:
+                return
+
             self._invalidate()
         self.has_invalidated(self)
 
@@ -981,6 +988,201 @@ class Namespace:
 
         return None
 
+    def _import(
+        self,
+        value: Import,
+        variables: Optional[Dict[str, Any]],
+        base_dir: str,
+        *,
+        top_level: bool = False,
+        source: Optional[str] = None,
+        parent_import: Optional[Import] = None,
+    ) -> Tuple[Optional[LibraryEntry], Optional[Dict[str, Any]]]:
+        result: Optional[LibraryEntry] = None
+        try:
+            if isinstance(value, LibraryImport):
+                if value.name is None:
+                    raise NameSpaceError("Library setting requires value.")
+
+                result = self._get_library_entry(
+                    value.name,
+                    value.args,
+                    value.alias,
+                    base_dir,
+                    sentinel=self,
+                    variables=variables,
+                )
+                result.import_range = value.range
+                result.import_source = value.source
+                result.alias_range = value.alias_range
+
+                self._import_entries[value] = result
+
+                if (
+                    top_level
+                    and result.library_doc.errors is None
+                    and (len(result.library_doc.keywords) == 0 and not bool(result.library_doc.has_listener))
+                ):
+                    self.append_diagnostics(
+                        range=value.range,
+                        message=f"Imported library '{value.name}' contains no keywords.",
+                        severity=DiagnosticSeverity.WARNING,
+                        source=DIAGNOSTICS_SOURCE_NAME,
+                        code=Error.LIBRARY_CONTAINS_NO_KEYWORDS,
+                    )
+            elif isinstance(value, ResourceImport):
+                if value.name is None:
+                    raise NameSpaceError("Resource setting requires value.")
+
+                source = self.imports_manager.find_resource(value.name, base_dir, variables=variables)
+
+                if self.source == source:
+                    if parent_import:
+                        self.append_diagnostics(
+                            range=parent_import.range,
+                            message="Possible circular import.",
+                            severity=DiagnosticSeverity.INFORMATION,
+                            source=DIAGNOSTICS_SOURCE_NAME,
+                            related_information=(
+                                [
+                                    DiagnosticRelatedInformation(
+                                        location=Location(
+                                            str(Uri.from_path(value.source)),
+                                            value.range,
+                                        ),
+                                        message=f"'{Path(self.source).name}' is also imported here.",
+                                    )
+                                ]
+                                if value.source
+                                else None
+                            ),
+                            code=Error.POSSIBLE_CIRCULAR_IMPORT,
+                        )
+                else:
+                    result = self._get_resource_entry(
+                        value.name,
+                        base_dir,
+                        variables=variables,
+                    )
+                    result.import_range = value.range
+                    result.import_source = value.source
+
+                    self._import_entries[value] = result
+
+                    if top_level and (
+                        not result.library_doc.errors
+                        and top_level
+                        and not result.imports
+                        and not result.variables
+                        and not result.library_doc.keywords
+                    ):
+                        self.append_diagnostics(
+                            range=value.range,
+                            message=f"Imported resource file '{value.name}' is empty.",
+                            severity=DiagnosticSeverity.WARNING,
+                            source=DIAGNOSTICS_SOURCE_NAME,
+                            code=Error.RESOURCE_EMPTY,
+                        )
+
+            elif isinstance(value, VariablesImport):
+                if value.name is None:
+                    raise NameSpaceError("Variables setting requires value.")
+
+                result = self._get_variables_entry(
+                    value.name,
+                    value.args,
+                    base_dir,
+                    variables=variables,
+                )
+
+                result.import_range = value.range
+                result.import_source = value.source
+
+                self._import_entries[value] = result
+            else:
+                raise DiagnosticsError("Unknown import type.")
+
+            if top_level and result is not None:
+                if result.library_doc.source is not None and result.library_doc.errors:
+                    if any(err.source and Path(err.source).is_absolute() for err in result.library_doc.errors):
+                        self.append_diagnostics(
+                            range=value.range,
+                            message="Import definition contains errors.",
+                            severity=DiagnosticSeverity.ERROR,
+                            source=DIAGNOSTICS_SOURCE_NAME,
+                            related_information=[
+                                DiagnosticRelatedInformation(
+                                    location=Location(
+                                        uri=str(Uri.from_path(err.source)),
+                                        range=Range(
+                                            start=Position(
+                                                line=(
+                                                    err.line_no - 1
+                                                    if err.line_no is not None
+                                                    else max(
+                                                        result.library_doc.line_no,
+                                                        0,
+                                                    )
+                                                ),
+                                                character=0,
+                                            ),
+                                            end=Position(
+                                                line=(
+                                                    err.line_no - 1
+                                                    if err.line_no is not None
+                                                    else max(
+                                                        result.library_doc.line_no,
+                                                        0,
+                                                    )
+                                                ),
+                                                character=0,
+                                            ),
+                                        ),
+                                    ),
+                                    message=err.message,
+                                )
+                                for err in result.library_doc.errors
+                                if err.source is not None
+                            ],
+                            code=Error.IMPORT_CONTAINS_ERRORS,
+                        )
+                    for err in filter(
+                        lambda e: e.source is None or not Path(e.source).is_absolute(),
+                        result.library_doc.errors,
+                    ):
+                        self.append_diagnostics(
+                            range=value.range,
+                            message=err.message,
+                            severity=DiagnosticSeverity.ERROR,
+                            source=DIAGNOSTICS_SOURCE_NAME,
+                            code=err.type_name,
+                        )
+                elif result.library_doc.errors is not None:
+                    for err in result.library_doc.errors:
+                        self.append_diagnostics(
+                            range=value.range,
+                            message=err.message,
+                            severity=DiagnosticSeverity.ERROR,
+                            source=DIAGNOSTICS_SOURCE_NAME,
+                            code=err.type_name,
+                        )
+
+        except (SystemExit, KeyboardInterrupt):
+            raise
+        except BaseException as e:
+            if top_level:
+                self.append_diagnostics(
+                    range=value.range,
+                    message=str(e),
+                    severity=DiagnosticSeverity.ERROR,
+                    source=DIAGNOSTICS_SOURCE_NAME,
+                    code=type(e).__qualname__,
+                )
+        finally:
+            self._reset_global_variables()
+
+        return result, variables
+
     def _import_imports(
         self,
         imports: Iterable[Import],
@@ -990,206 +1192,24 @@ class Namespace:
         variables: Optional[Dict[str, Any]] = None,
         source: Optional[str] = None,
         parent_import: Optional[Import] = None,
+        depth: int = 0,
     ) -> None:
-        def _import(
-            value: Import, variables: Optional[Dict[str, Any]] = None
-        ) -> Tuple[Optional[LibraryEntry], Optional[Dict[str, Any]]]:
-            result: Optional[LibraryEntry] = None
-            try:
-                if isinstance(value, LibraryImport):
-                    if value.name is None:
-                        raise NameSpaceError("Library setting requires value.")
-
-                    result = self._get_library_entry(
-                        value.name,
-                        value.args,
-                        value.alias,
-                        base_dir,
-                        sentinel=self,
-                        variables=variables,
-                    )
-                    result.import_range = value.range
-                    result.import_source = value.source
-                    result.alias_range = value.alias_range
-
-                    self._import_entries[value] = result
-
-                    if (
-                        top_level
-                        and result.library_doc.errors is None
-                        and (len(result.library_doc.keywords) == 0 and not bool(result.library_doc.has_listener))
-                    ):
-                        self.append_diagnostics(
-                            range=value.range,
-                            message=f"Imported library '{value.name}' contains no keywords.",
-                            severity=DiagnosticSeverity.WARNING,
-                            source=DIAGNOSTICS_SOURCE_NAME,
-                            code=Error.LIBRARY_CONTAINS_NO_KEYWORDS,
-                        )
-                elif isinstance(value, ResourceImport):
-                    if value.name is None:
-                        raise NameSpaceError("Resource setting requires value.")
-
-                    source = self.imports_manager.find_resource(value.name, base_dir, variables=variables)
-
-                    if self.source == source:
-                        if parent_import:
-                            self.append_diagnostics(
-                                range=parent_import.range,
-                                message="Possible circular import.",
-                                severity=DiagnosticSeverity.INFORMATION,
-                                source=DIAGNOSTICS_SOURCE_NAME,
-                                related_information=(
-                                    [
-                                        DiagnosticRelatedInformation(
-                                            location=Location(
-                                                str(Uri.from_path(value.source)),
-                                                value.range,
-                                            ),
-                                            message=f"'{Path(self.source).name}' is also imported here.",
-                                        )
-                                    ]
-                                    if value.source
-                                    else None
-                                ),
-                                code=Error.POSSIBLE_CIRCULAR_IMPORT,
-                            )
-                    else:
-                        result = self._get_resource_entry(
-                            value.name,
-                            base_dir,
-                            variables=variables,
-                        )
-                        result.import_range = value.range
-                        result.import_source = value.source
-
-                        self._import_entries[value] = result
-                        if result.variables:
-                            variables = None
-
-                        if top_level and (
-                            not result.library_doc.errors
-                            and top_level
-                            and not result.imports
-                            and not result.variables
-                            and not result.library_doc.keywords
-                        ):
-                            self.append_diagnostics(
-                                range=value.range,
-                                message=f"Imported resource file '{value.name}' is empty.",
-                                severity=DiagnosticSeverity.WARNING,
-                                source=DIAGNOSTICS_SOURCE_NAME,
-                                code=Error.RESOURCE_EMPTY,
-                            )
-
-                elif isinstance(value, VariablesImport):
-                    if value.name is None:
-                        raise NameSpaceError("Variables setting requires value.")
-
-                    result = self._get_variables_entry(
-                        value.name,
-                        value.args,
-                        base_dir,
-                        variables=variables,
-                    )
-
-                    result.import_range = value.range
-                    result.import_source = value.source
-
-                    self._import_entries[value] = result
-                    variables = None
-                else:
-                    raise DiagnosticsError("Unknown import type.")
-
-                if top_level and result is not None:
-                    if result.library_doc.source is not None and result.library_doc.errors:
-                        if any(err.source and Path(err.source).is_absolute() for err in result.library_doc.errors):
-                            self.append_diagnostics(
-                                range=value.range,
-                                message="Import definition contains errors.",
-                                severity=DiagnosticSeverity.ERROR,
-                                source=DIAGNOSTICS_SOURCE_NAME,
-                                related_information=[
-                                    DiagnosticRelatedInformation(
-                                        location=Location(
-                                            uri=str(Uri.from_path(err.source)),
-                                            range=Range(
-                                                start=Position(
-                                                    line=(
-                                                        err.line_no - 1
-                                                        if err.line_no is not None
-                                                        else max(
-                                                            result.library_doc.line_no,
-                                                            0,
-                                                        )
-                                                    ),
-                                                    character=0,
-                                                ),
-                                                end=Position(
-                                                    line=(
-                                                        err.line_no - 1
-                                                        if err.line_no is not None
-                                                        else max(
-                                                            result.library_doc.line_no,
-                                                            0,
-                                                        )
-                                                    ),
-                                                    character=0,
-                                                ),
-                                            ),
-                                        ),
-                                        message=err.message,
-                                    )
-                                    for err in result.library_doc.errors
-                                    if err.source is not None
-                                ],
-                                code=Error.IMPORT_CONTAINS_ERRORS,
-                            )
-                        for err in filter(
-                            lambda e: e.source is None or not Path(e.source).is_absolute(),
-                            result.library_doc.errors,
-                        ):
-                            self.append_diagnostics(
-                                range=value.range,
-                                message=err.message,
-                                severity=DiagnosticSeverity.ERROR,
-                                source=DIAGNOSTICS_SOURCE_NAME,
-                                code=err.type_name,
-                            )
-                    elif result.library_doc.errors is not None:
-                        for err in result.library_doc.errors:
-                            self.append_diagnostics(
-                                range=value.range,
-                                message=err.message,
-                                severity=DiagnosticSeverity.ERROR,
-                                source=DIAGNOSTICS_SOURCE_NAME,
-                                code=err.type_name,
-                            )
-
-            except (SystemExit, KeyboardInterrupt):
-                raise
-            except BaseException as e:
-                if top_level:
-                    self.append_diagnostics(
-                        range=value.range,
-                        message=str(e),
-                        severity=DiagnosticSeverity.ERROR,
-                        source=DIAGNOSTICS_SOURCE_NAME,
-                        code=type(e).__qualname__,
-                    )
-            finally:
-                self._reset_global_variables()
-
-            return result, variables
 
         current_time = time.monotonic()
-        self._logger.debug(lambda: f"start imports for {self.document if top_level else source}")
+        self._logger.debug(lambda: f"{'  '*depth}start imports for {self.document if top_level else source}")
         try:
             for imp in imports:
                 if variables is None:
                     variables = self.get_resolvable_variables()
 
-                entry, variables = _import(imp, variables=variables)
+                entry, variables = self._import(
+                    imp,
+                    variables=variables,
+                    base_dir=base_dir,
+                    top_level=top_level,
+                    source=source,
+                    parent_import=parent_import,
+                )
 
                 if entry is not None:
                     if isinstance(entry, ResourceEntry):
@@ -1201,6 +1221,9 @@ class Namespace:
 
                         if already_imported_resources is None and entry.library_doc.source != self.source:
                             self._resources[entry.import_name] = entry
+                            if entry.variables:
+                                variables = self.get_resolvable_variables()
+
                             try:
                                 self._import_imports(
                                     entry.imports,
@@ -1209,6 +1232,7 @@ class Namespace:
                                     variables=variables,
                                     source=entry.library_doc.source,
                                     parent_import=imp if top_level else parent_import,
+                                    depth=depth + 1,
                                 )
                             except (SystemExit, KeyboardInterrupt):
                                 raise
@@ -1221,56 +1245,59 @@ class Namespace:
                                         source=DIAGNOSTICS_SOURCE_NAME,
                                         code=type(e).__qualname__,
                                     )
-                        else:
-                            if top_level:
-                                if entry.library_doc.source == self.source:
-                                    self.append_diagnostics(
-                                        range=entry.import_range,
-                                        message="Recursive resource import.",
-                                        severity=DiagnosticSeverity.INFORMATION,
-                                        source=DIAGNOSTICS_SOURCE_NAME,
-                                        code=Error.RECURSIVE_IMPORT,
-                                    )
-                                elif (
-                                    already_imported_resources is not None
-                                    and already_imported_resources.library_doc.source
-                                ):
-                                    self.append_diagnostics(
-                                        range=entry.import_range,
-                                        message=f"Resource {entry} already imported.",
-                                        severity=DiagnosticSeverity.INFORMATION,
-                                        source=DIAGNOSTICS_SOURCE_NAME,
-                                        related_information=(
-                                            [
-                                                DiagnosticRelatedInformation(
-                                                    location=Location(
-                                                        uri=str(
-                                                            Uri.from_path(already_imported_resources.import_source)
-                                                        ),
-                                                        range=already_imported_resources.import_range,
-                                                    ),
-                                                    message="",
-                                                )
-                                            ]
-                                            if already_imported_resources.import_source
-                                            else None
-                                        ),
-                                        code=Error.RESOURCE_ALREADY_IMPORTED,
-                                    )
+                        elif top_level:
+                            if entry.library_doc.source == self.source:
+                                self.append_diagnostics(
+                                    range=entry.import_range,
+                                    message="Recursive resource import.",
+                                    severity=DiagnosticSeverity.INFORMATION,
+                                    source=DIAGNOSTICS_SOURCE_NAME,
+                                    code=Error.RECURSIVE_IMPORT,
+                                )
+                            elif (
+                                already_imported_resources is not None and already_imported_resources.library_doc.source
+                            ):
+                                self.append_diagnostics(
+                                    range=entry.import_range,
+                                    message=f"Resource {entry} already imported.",
+                                    severity=DiagnosticSeverity.INFORMATION,
+                                    source=DIAGNOSTICS_SOURCE_NAME,
+                                    related_information=(
+                                        [
+                                            DiagnosticRelatedInformation(
+                                                location=Location(
+                                                    uri=str(Uri.from_path(already_imported_resources.import_source)),
+                                                    range=already_imported_resources.import_range,
+                                                ),
+                                                message="",
+                                            )
+                                        ]
+                                        if already_imported_resources.import_source
+                                        else None
+                                    ),
+                                    code=Error.RESOURCE_ALREADY_IMPORTED,
+                                )
 
                     elif isinstance(entry, VariablesEntry):
-                        already_imported_variables = [
-                            e
-                            for e in self._variables.values()
-                            if e.library_doc.source == entry.library_doc.source
-                            and e.alias == entry.alias
-                            and e.args == entry.args
-                        ]
+                        already_imported_variables = next(
+                            (
+                                e
+                                for e in self._variables.values()
+                                if e.library_doc.source == entry.library_doc.source
+                                and e.alias == entry.alias
+                                and e.args == entry.args
+                            ),
+                            None,
+                        )
                         if (
-                            top_level
-                            and already_imported_variables
-                            and already_imported_variables[0].library_doc.source
+                            already_imported_variables is None
+                            and entry.library_doc is not None
+                            and entry.library_doc.source_or_origin
                         ):
+                            self._variables[entry.library_doc.source_or_origin] = entry
+                            if entry.variables:
+                                variables = self.get_resolvable_variables()
+                        elif top_level and already_imported_variables and already_imported_variables.library_doc.source:
                             self.append_diagnostics(
                                 range=entry.import_range,
                                 message=f'Variables "{entry}" already imported.',
@@ -1280,20 +1307,17 @@ class Namespace:
                                     [
                                         DiagnosticRelatedInformation(
                                             location=Location(
-                                                uri=str(Uri.from_path(already_imported_variables[0].import_source)),
-                                                range=already_imported_variables[0].import_range,
+                                                uri=str(Uri.from_path(already_imported_variables.import_source)),
+                                                range=already_imported_variables.import_range,
                                             ),
                                             message="",
                                         )
                                     ]
-                                    if already_imported_variables[0].import_source
+                                    if already_imported_variables.import_source
                                     else None
                                 ),
                                 code=Error.VARIABLES_ALREADY_IMPORTED,
                             )
-
-                        if entry.library_doc is not None and entry.library_doc.source_or_origin:
-                            self._variables[entry.library_doc.source_or_origin] = entry
 
                     elif isinstance(entry, LibraryEntry):
                         if top_level and entry.name == BUILTIN_LIBRARY_NAME and entry.alias is None:
@@ -1320,15 +1344,23 @@ class Namespace:
                             )
                             continue
 
-                        already_imported_library = [
-                            e
-                            for e in self._libraries.values()
-                            if e.library_doc.source == entry.library_doc.source
-                            and e.library_doc.member_name == entry.library_doc.member_name
-                            and e.alias == entry.alias
-                            and e.args == entry.args
-                        ]
-                        if top_level and already_imported_library and already_imported_library[0].library_doc.source:
+                        already_imported_library = next(
+                            (
+                                e
+                                for e in self._libraries.values()
+                                if e.library_doc.source == entry.library_doc.source
+                                and e.library_doc.member_name == entry.library_doc.member_name
+                                and e.alias == entry.alias
+                                and e.args == entry.args
+                            ),
+                            None,
+                        )
+                        if (
+                            already_imported_library is None
+                            and (entry.alias or entry.name or entry.import_name) not in self._libraries
+                        ):
+                            self._libraries[entry.alias or entry.name or entry.import_name] = entry
+                        elif top_level and already_imported_library and already_imported_library.library_doc.source:
                             self.append_diagnostics(
                                 range=entry.import_range,
                                 message=f'Library "{entry}" already imported.',
@@ -1338,23 +1370,21 @@ class Namespace:
                                     [
                                         DiagnosticRelatedInformation(
                                             location=Location(
-                                                uri=str(Uri.from_path(already_imported_library[0].import_source)),
-                                                range=already_imported_library[0].import_range,
+                                                uri=str(Uri.from_path(already_imported_library.import_source)),
+                                                range=already_imported_library.import_range,
                                             ),
                                             message="",
                                         )
                                     ]
-                                    if already_imported_library[0].import_source
+                                    if already_imported_library.import_source
                                     else None
                                 ),
                                 code=Error.LIBRARY_ALREADY_IMPORTED,
                             )
 
-                        if (entry.alias or entry.name or entry.import_name) not in self._libraries:
-                            self._libraries[entry.alias or entry.name or entry.import_name] = entry
         finally:
             self._logger.debug(
-                lambda: "end import imports for "
+                lambda: f"{'  '*depth}end imports for "
                 f"{self.document if top_level else source} in {time.monotonic() - current_time}s"
             )
 
@@ -1383,8 +1413,11 @@ class Namespace:
 
         self._logger.debug(lambda: f"start import default libraries for document {self.document}")
         try:
+            if variables is None:
+                variables = self.get_resolvable_variables()
+
             for library in DEFAULT_LIBRARIES:
-                e = _import_lib(library, variables or self.get_resolvable_variables())
+                e = _import_lib(library, variables)
                 if e is not None:
                     self._libraries[e.alias or e.name or e.import_name] = e
         finally:
@@ -1402,12 +1435,15 @@ class Namespace:
         sentinel: Any = None,
         variables: Optional[Dict[str, Any]] = None,
     ) -> LibraryEntry:
+        if variables is None:
+            variables = self.get_resolvable_variables()
+
         library_doc = self.imports_manager.get_libdoc_for_library_import(
             name,
             args,
             base_dir=base_dir,
             sentinel=None if is_default_library else sentinel,
-            variables=variables or self.get_resolvable_variables(),
+            variables=variables,
         )
 
         return LibraryEntry(
@@ -1441,14 +1477,11 @@ class Namespace:
         *,
         variables: Optional[Dict[str, Any]] = None,
     ) -> ResourceEntry:
-        (
-            namespace,
-            library_doc,
-        ) = self.imports_manager.get_namespace_and_libdoc_for_resource_import(
-            name,
-            base_dir,
-            sentinel=self,
-            variables=variables or self.get_resolvable_variables(),
+        if variables is None:
+            variables = self.get_resolvable_variables()
+
+        (namespace, library_doc) = self.imports_manager.get_namespace_and_libdoc_for_resource_import(
+            name, base_dir, sentinel=self, variables=variables
         )
 
         return ResourceEntry(
@@ -1481,12 +1514,15 @@ class Namespace:
         *,
         variables: Optional[Dict[str, Any]] = None,
     ) -> VariablesEntry:
+        if variables is None:
+            variables = self.get_resolvable_variables()
+
         library_doc = self.imports_manager.get_libdoc_for_variables_import(
             name,
             args,
             base_dir=base_dir,
             sentinel=self,
-            variables=variables or self.get_resolvable_variables(),
+            variables=variables,
         )
 
         return VariablesEntry(
@@ -1601,6 +1637,8 @@ class Namespace:
         with self._analyze_lock:
             if not self._analyzed:
                 canceled = False
+
+                self.ensure_initialized()
 
                 self._logger.debug(lambda: f"start analyze {self.document}")
                 start_time = time.monotonic()

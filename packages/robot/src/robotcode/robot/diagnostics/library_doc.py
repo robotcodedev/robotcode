@@ -33,7 +33,38 @@ from typing import (
     cast,
 )
 
+import robot.running.testlibraries
+from robot.errors import DataError, VariableError
+from robot.libdocpkg import LibraryDocumentation
+from robot.libdocpkg.htmlwriter import LibdocHtmlWriter
+from robot.libdocpkg.robotbuilder import KeywordDocBuilder
+from robot.libraries import STDLIBS
+from robot.output.logger import LOGGER
+from robot.output.loggerhelper import AbstractLogger
 from robot.parsing.lexer.tokens import Token
+from robot.parsing.lexer.tokens import Token as RobotToken
+from robot.parsing.model.blocks import Keyword
+from robot.parsing.model.statements import Arguments, KeywordName
+from robot.running.arguments.argumentresolver import (
+    ArgumentResolver,
+    DictToKwargs,
+    NamedArgumentResolver,
+    VariableReplacer,
+)
+from robot.running.arguments.argumentspec import ArgInfo
+from robot.running.arguments.argumentspec import (
+    ArgumentSpec as RobotArgumentSpec,
+)
+from robot.running.arguments.embedded import EmbeddedArguments
+from robot.running.builder.transformers import ResourceBuilder
+from robot.running.outputcapture import OutputCapturer
+from robot.running.runkwregister import RUN_KW_REGISTER
+from robot.utils.importer import Importer
+from robot.utils.robotpath import find_file as robot_find_file
+from robot.variables import Variables
+from robot.variables.filesetter import PythonImporter, YamlImporter
+from robot.variables.finders import VariableFinder
+from robot.variables.search import contains_variable
 from robotcode.core.lsp.types import Position, Range
 from robotcode.robot.diagnostics.entities import (
     ArgumentDefinition,
@@ -52,6 +83,30 @@ from robotcode.robot.utils.ast import (
 from robotcode.robot.utils.markdownformatter import MarkDownFormatter
 from robotcode.robot.utils.match import normalize, normalize_namespace
 from robotcode.robot.utils.stubs import HasError, HasErrors
+
+if get_robot_version() < (7, 0):
+    from robot.running.handlers import _PythonHandler, _PythonInitHandler
+    from robot.running.model import ResourceFile
+    from robot.running.usererrorhandler import UserErrorHandler
+    from robot.running.userkeyword import UserLibrary
+
+    robot_notset = ArgInfo.NOTSET
+
+if get_robot_version() >= (6, 1):
+    from robot.libdocpkg.datatypes import (
+        TypeDoc as RobotTypeDoc,
+    )
+    from robot.running.arguments.argumentspec import TypeInfo
+    from robot.variables.filesetter import JsonImporter
+
+if get_robot_version() >= (7, 0):
+    from robot.running.invalidkeyword import InvalidKeyword
+    from robot.running.invalidkeyword import (
+        InvalidKeyword as UserErrorHandler,
+    )
+    from robot.running.resourcemodel import ResourceFile
+    from robot.utils import NOT_SET as robot_notset  # type: ignore[no-redef] # noqa: N811
+
 
 RUN_KEYWORD_NAMES = [
     "Run Keyword",
@@ -144,9 +199,6 @@ def convert_from_rest(text: str) -> str:
 
 
 def is_embedded_keyword(name: str) -> bool:
-    from robot.errors import DataError, VariableError
-    from robot.running.arguments.embedded import EmbeddedArguments
-
     try:
         if get_robot_version() >= (6, 0):
             if EmbeddedArguments.from_name(name):
@@ -182,9 +234,6 @@ class KeywordMatcher:
 
     @property
     def embedded_arguments(self) -> Any:
-        from robot.errors import DataError, VariableError
-        from robot.running.arguments.embedded import EmbeddedArguments
-
         if self._embedded_arguments is None:
             if self._can_have_embedded:
                 try:
@@ -351,13 +400,6 @@ class KeywordArgumentKind(Enum):
 
 
 def robot_arg_repr(arg: Any) -> Optional[str]:
-    from robot.running.arguments.argumentspec import ArgInfo
-
-    if get_robot_version() >= (7, 0):
-        from robot.utils import NOT_SET as robot_notset  # noqa: N811
-    else:
-        robot_notset = ArgInfo.NOTSET
-
     robot_arg = cast(ArgInfo, arg)
 
     if robot_arg.default is robot_notset:
@@ -389,8 +431,6 @@ class ArgumentInfo:
 
     @staticmethod
     def from_robot(arg: Any) -> ArgumentInfo:
-        from robot.running.arguments.argumentspec import ArgInfo
-
         robot_arg = cast(ArgInfo, arg)
 
         return ArgumentInfo(
@@ -484,16 +524,6 @@ class ArgumentSpec:
         dict_to_kwargs: bool = False,
         validate: bool = True,
     ) -> Tuple[List[Any], List[Tuple[str, Any]]]:
-        from robot.running.arguments.argumentresolver import (
-            ArgumentResolver,
-            DictToKwargs,
-            NamedArgumentResolver,
-            VariableReplacer,
-        )
-        from robot.running.arguments.argumentspec import (
-            ArgumentSpec as RobotArgumentSpec,
-        )
-
         if not hasattr(self, "__robot_arguments"):
             if get_robot_version() < (7, 0):
                 self.__robot_arguments = RobotArgumentSpec(
@@ -1352,16 +1382,17 @@ class KeywordWrapper:
         except BaseException:
             return ""
 
-    @property
-    def is_error_handler(self) -> bool:
-        if get_robot_version() < (7, 0):
-            from robot.running.usererrorhandler import UserErrorHandler
+    if get_robot_version() < (7, 0):
 
+        @property
+        def is_error_handler(self) -> bool:
             return isinstance(self.kw, UserErrorHandler)
 
-        from robot.running.invalidkeyword import InvalidKeyword
+    else:
 
-        return isinstance(self.kw, InvalidKeyword)
+        @property
+        def is_error_handler(self) -> bool:
+            return isinstance(self.kw, InvalidKeyword)
 
     @property
     def error_handler_message(self) -> Optional[str]:
@@ -1454,7 +1485,6 @@ __default_variables: Any = None
 
 
 def _get_default_variables() -> Any:
-    from robot.variables import Variables
 
     global __default_variables
     if __default_variables is None:
@@ -1464,6 +1494,7 @@ def _get_default_variables() -> Any:
             "${/}": os.sep,
             "${:}": os.pathsep,
             "${\\n}": os.linesep,
+            "${EMPTY}": "",
             "${SPACE}": " ",
             "${True}": True,
             "${False}": False,
@@ -1504,7 +1535,6 @@ def resolve_robot_variables(
     command_line_variables: Optional[Dict[str, Optional[Any]]] = None,
     variables: Optional[Dict[str, Optional[Any]]] = None,
 ) -> Any:
-    from robot.variables import Variables
 
     result: Variables = _get_default_variables().copy()
 
@@ -1541,15 +1571,17 @@ def resolve_variable(
     command_line_variables: Optional[Dict[str, Optional[Any]]] = None,
     variables: Optional[Dict[str, Optional[Any]]] = None,
 ) -> Any:
-    from robot.variables.finders import VariableFinder
 
     _update_env(working_dir)
 
-    robot_variables = resolve_robot_variables(working_dir, base_dir, command_line_variables, variables)
-    if get_robot_version() >= (6, 1):
-        return VariableFinder(robot_variables).find(name.replace("\\", "\\\\"))
+    if contains_variable(name, "$@&%"):
+        robot_variables = resolve_robot_variables(working_dir, base_dir, command_line_variables, variables)
+        if get_robot_version() >= (6, 1):
+            return VariableFinder(robot_variables).find(name.replace("\\", "\\\\"))
 
-    return VariableFinder(robot_variables.store).find(name.replace("\\", "\\\\"))
+        return VariableFinder(robot_variables.store).find(name.replace("\\", "\\\\"))
+
+    return name.replace("\\", "\\\\")
 
 
 @contextmanager
@@ -1581,18 +1613,18 @@ def _find_library_internal(
     command_line_variables: Optional[Dict[str, Optional[Any]]] = None,
     variables: Optional[Dict[str, Optional[Any]]] = None,
 ) -> Tuple[str, Any]:
-    from robot.errors import DataError
-    from robot.libraries import STDLIBS
-    from robot.utils.robotpath import find_file as robot_find_file
 
     _update_env(working_dir)
 
-    robot_variables = resolve_robot_variables(working_dir, base_dir, command_line_variables, variables)
+    robot_variables = None
 
-    try:
-        name = robot_variables.replace_string(name, ignore_errors=False)
-    except DataError as error:
-        raise DataError(f"Replacing variables from setting 'Library' failed: {error}")
+    if contains_variable(name, "$@&%"):
+        robot_variables = resolve_robot_variables(working_dir, base_dir, command_line_variables, variables)
+
+        try:
+            name = robot_variables.replace_string(name, ignore_errors=False)
+        except DataError as error:
+            raise DataError(f"Replacing variables from setting 'Library' failed: {error}")
 
     if name in STDLIBS:
         result = ROBOT_LIBRARY_PACKAGE + "." + name
@@ -1622,9 +1654,6 @@ def get_robot_library_html_doc_str(
     base_dir: str = ".",
     theme: Optional[str] = None,
 ) -> str:
-    from robot.libdocpkg import LibraryDocumentation
-    from robot.libdocpkg.htmlwriter import LibdocHtmlWriter
-
     _update_env(working_dir)
 
     if Path(name).suffix.lower() in ALLOWED_RESOURCE_FILE_EXTENSIONS:
@@ -1652,15 +1681,6 @@ def get_library_doc(
     command_line_variables: Optional[Dict[str, Optional[Any]]] = None,
     variables: Optional[Dict[str, Optional[Any]]] = None,
 ) -> LibraryDoc:
-    import robot.running.testlibraries
-    from robot.libdocpkg.robotbuilder import KeywordDocBuilder
-    from robot.libraries import STDLIBS
-    from robot.output import LOGGER
-    from robot.output.loggerhelper import AbstractLogger
-    from robot.running.outputcapture import OutputCapturer
-    from robot.running.runkwregister import RUN_KW_REGISTER
-    from robot.utils import Importer
-
     class Logger(AbstractLogger):
         def __init__(self) -> None:
             super().__init__()
@@ -1951,10 +1971,6 @@ def get_library_doc(
                 )
 
                 if get_robot_version() >= (6, 1):
-                    from robot.libdocpkg.datatypes import (
-                        TypeDoc as RobotTypeDoc,
-                    )
-                    from robot.running.arguments.argumentspec import TypeInfo
 
                     def _yield_type_info(info: TypeInfo) -> Iterable[TypeInfo]:
                         if not info.is_union:
@@ -2028,25 +2044,24 @@ def _find_variables_internal(
     base_dir: str = ".",
     command_line_variables: Optional[Dict[str, Optional[Any]]] = None,
     variables: Optional[Dict[str, Optional[Any]]] = None,
-) -> Tuple[str, Any]:
-    from robot.errors import DataError
-    from robot.utils.robotpath import find_file as robot_find_file
+) -> str:
 
     _update_env(working_dir)
 
-    robot_variables = resolve_robot_variables(working_dir, base_dir, command_line_variables, variables)
+    if contains_variable(name, "$@&%"):
+        robot_variables = resolve_robot_variables(working_dir, base_dir, command_line_variables, variables)
 
-    try:
-        name = robot_variables.replace_string(name, ignore_errors=False)
-    except DataError as error:
-        raise DataError(f"Replacing variables from setting 'Variables' failed: {error}")
+        try:
+            name = robot_variables.replace_string(name, ignore_errors=False)
+        except DataError as error:
+            raise DataError(f"Replacing variables from setting 'Variables' failed: {error}")
 
     result = name
 
     if is_variables_by_path(result):
         result = robot_find_file(result, base_dir or ".", "Variables")
 
-    return (result, robot_variables)
+    return result
 
 
 def resolve_args(
@@ -2076,7 +2091,7 @@ def find_variables(
     variables: Optional[Dict[str, Optional[Any]]] = None,
 ) -> str:
     if get_robot_version() >= (5, 0):
-        return _find_variables_internal(name, working_dir, base_dir, command_line_variables, variables)[0]
+        return _find_variables_internal(name, working_dir, base_dir, command_line_variables, variables)
 
     return find_file(
         name,
@@ -2096,13 +2111,6 @@ def get_variables_doc(
     command_line_variables: Optional[Dict[str, Optional[Any]]] = None,
     variables: Optional[Dict[str, Optional[Any]]] = None,
 ) -> VariablesDoc:
-    from robot.libdocpkg.robotbuilder import KeywordDocBuilder
-    from robot.output import LOGGER
-    from robot.utils.importer import Importer
-    from robot.variables.filesetter import PythonImporter, YamlImporter
-
-    if get_robot_version() >= (6, 1):
-        from robot.variables.filesetter import JsonImporter
 
     import_name: str = name
     stem = Path(name).stem
@@ -2183,7 +2191,6 @@ def get_variables_doc(
                         #         super().__init__(name, library)
                         pass
                     else:
-                        from robot.running.handlers import _PythonHandler
 
                         class VarHandler(_PythonHandler):
                             def _get_name(self, handler_name: Any, handler_method: Any) -> Any:
@@ -2229,8 +2236,6 @@ def get_variables_doc(
 
                         pass
                     else:
-                        from robot.running.handlers import _PythonInitHandler
-
                         get_variables = getattr(libcode, "__init__", None) or getattr(libcode, "__init__", None)
 
                         class InitVarHandler(_PythonInitHandler):
@@ -2344,16 +2349,14 @@ def find_file(
     variables: Optional[Dict[str, Optional[Any]]] = None,
     file_type: str = "Resource",
 ) -> str:
-    from robot.errors import DataError
-    from robot.utils.robotpath import find_file as robot_find_file
-
     _update_env(working_dir)
 
-    robot_variables = resolve_robot_variables(working_dir, base_dir, command_line_variables, variables)
-    try:
-        name = robot_variables.replace_string(name, ignore_errors=False)
-    except DataError as error:
-        raise DataError(f"Replacing variables from setting '{file_type}' failed: {error}")
+    if contains_variable(name, "$@&%"):
+        robot_variables = resolve_robot_variables(working_dir, base_dir, command_line_variables, variables)
+        try:
+            name = robot_variables.replace_string(name, ignore_errors=False)
+        except DataError as error:
+            raise DataError(f"Replacing variables from setting '{file_type}' failed: {error}")
 
     return cast(str, robot_find_file(name, base_dir or ".", file_type))
 
@@ -2616,24 +2619,6 @@ def get_model_doc(
     scope: str = "GLOBAL",
     append_model_errors: bool = True,
 ) -> LibraryDoc:
-    from robot.errors import DataError, VariableError
-    from robot.libdocpkg.robotbuilder import KeywordDocBuilder
-    from robot.output.logger import LOGGER
-    from robot.parsing.lexer.tokens import Token as RobotToken
-    from robot.parsing.model.blocks import Keyword
-    from robot.parsing.model.statements import Arguments, KeywordName
-    from robot.running.builder.transformers import ResourceBuilder
-
-    if get_robot_version() < (7, 0):
-        from robot.running.model import ResourceFile
-        from robot.running.usererrorhandler import UserErrorHandler
-        from robot.running.userkeyword import UserLibrary
-    else:
-        from robot.running.invalidkeyword import (
-            InvalidKeyword as UserErrorHandler,
-        )
-        from robot.running.resourcemodel import ResourceFile
-
     errors: List[Error] = []
     keyword_name_nodes: List[KeywordName] = []
     keywords_nodes: List[Keyword] = []
