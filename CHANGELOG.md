@@ -2,6 +2,37 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [0.76.0](https://github.com/d-biehl/robotcode/compare/v0.75.0..v0.76.0) - 2024-02-19
+
+### Bug Fixes
+
+- **langserver:** Add duplicated imports to references ([e603628](https://github.com/d-biehl/robotcode/commit/e603628f599c361e13b2f09acf236c30d3822496))
+- **langserver:** Correct variable handling from resource imports ([619eee4](https://github.com/d-biehl/robotcode/commit/619eee4c879fcc586b8b8be396cb141c0488cdf4))
+- **vscode:** Correct resolving resource documentation in keywords treeview ([2935bb8](https://github.com/d-biehl/robotcode/commit/2935bb8b139f88d48217d902fd69bd0233e17dcb))
+
+
+### Features
+
+- **langserver:** Introduce new setting `robotcode.analysis.cache.ignoreArgumentsForLibrary` ([bb55ff4](https://github.com/d-biehl/robotcode/commit/bb55ff4e73c2221a2e811c2644538501982906cb))
+
+  This is usefull if you have library that get's variables from a python file that contains complex data like big dictionaries or complex objects that robotcode can't handle.
+
+- **marketplace:** Create a Q&A discussion category on github ([605377d](https://github.com/d-biehl/robotcode/commit/605377dce9facf12c0d7db296e620a42d7a3e87b))
+
+  as a second way to ask questions and collect answers about robotcode I created a discussion group on the RobotCode github repository
+
+- **vscode:** Use the official python extension api to get informations about python environments ([c032814](https://github.com/d-biehl/robotcode/commit/c032814bbf1a51a9a9ece79fef51cbcac4a0aa53))
+
+  closes [ENHANCEMENT] Integrate new Python Extension API #215
+
+
+
+### Performance
+
+- **analyzer:** Optimization of the analysis of imports, accelerated by a factor of 3 ([321b88d](https://github.com/d-biehl/robotcode/commit/321b88d33e083bfcef650a491afb518edc811ffe))
+- **langserver:** Try to use the last initialized namespace for completions to be a bit more responsive ([2c6fe37](https://github.com/d-biehl/robotcode/commit/2c6fe37c2e8be9d13aca9eca0d07ff4ee1b85456))
+
+
 ## [0.75.0](https://github.com/d-biehl/robotcode/compare/v0.74.0..v0.75.0) - 2024-02-13
 
 ### Bug Fixes
