@@ -505,6 +505,7 @@ class DocumentsCacheHelper:
             environment,
             cache_config.ignored_libraries,
             cache_config.ignored_variables,
+            cache_config.ignore_arguments_for_library,
             analysis_config.global_library_search_order,
             cache_base_path,
         )

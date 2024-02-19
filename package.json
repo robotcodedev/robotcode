@@ -666,13 +666,22 @@
             "markdownDescription": "Specifies the variable files that should not be cached. This is useful if you have a dynamic or hybrid variable files that has different variables depending on the arguments. You can specify a glob pattern that matches the variable module name or the source file. \n\nExamples:\n- `**/variables/myvars.py`\n- `MyVariables`\n- `myvars.subpackage.subpackage` \n\nIf you change this setting, you may need to run the command `RobotCode: Clear Cache and Restart Language Servers`.",
             "scope": "resource"
           },
+          "robotcode.analysis.cache.ignoreArgumentsForLibrary": {
+            "type": "array",
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "markdownDescription": "Specifies a list of libraries for which arguments will be ignored during analysis. This is usefull if you have library that gets variables from a python file as arguments that contains complex data like big dictionaries or complex objects that **RobotCode** can't handle. You can specify a glob pattern that matches the library name or the source file. \n\nExamples:\n- `**/mylibfolder/mylib.py`\n- `MyLib`\n- `mylib.subpackage.subpackage` \n\nIf you change this setting, you may need to run the command `RobotCode: Clear Cache and Restart Language Servers`.\n\n _Ensure your library functions correctly without arguments e.g. by defining default values for all arguments._",
+            "scope": "resource"
+          },
           "robotcode.analysis.robot.globalLibrarySearchOrder": {
             "type": "array",
             "default": [],
             "items": {
               "type": "string"
             },
-            "markdownDescription": "Specifies a global [search order](https://robotframework.org/robotframework/latest/RobotFrameworkUserGuide.html#specifying-explicit-priority-between-libraries-and-resources) for libraries and resources. This is handy when you have libraries containing keywords with the same name. RobotCode is unable to analyze the library search order in a file specified with [`Set Library Search Order`](https://robotframework.org/robotframework/latest/libraries/BuiltIn.html#Set%20Library%20Search%20Order), so you can define a global order here. Just make sure to call the `Set Library Search Order` keyword somewhere in your robot file or internally in your library.",
+            "markdownDescription": "Specifies a global [search order](https://robotframework.org/robotframework/latest/RobotFrameworkUserGuide.html#specifying-explicit-priority-between-libraries-and-resources) for libraries and resources. This is usefull when you have libraries containing keywords with the same name. **RobotCode** is unable to analyze the library search order in a file specified with [`Set Library Search Order`](https://robotframework.org/robotframework/latest/libraries/BuiltIn.html#Set%20Library%20Search%20Order), so you can define a global order here. Just make sure to call the `Set Library Search Order` keyword somewhere in your robot file or internally in your library.",
             "scope": "resource"
           },
           "robotcode.analysis.findUnusedReferences": {

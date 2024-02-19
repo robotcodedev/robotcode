@@ -496,6 +496,7 @@ class ImportsManager:
         environment: Optional[Dict[str, str]],
         ignored_libraries: List[str],
         ignored_variables: List[str],
+        ignore_arguments_for_library: List[str],
         global_library_search_order: List[str],
         cache_base_path: Optional[Path],
     ) -> None:
@@ -538,6 +539,7 @@ class ImportsManager:
 
         self.ignored_libraries_patters = [Pattern(s) for s in ignored_libraries]
         self.ignored_variables_patters = [Pattern(s) for s in ignored_variables]
+        self.ignore_arguments_for_library_patters = [Pattern(s) for s in ignore_arguments_for_library]
 
         self.global_library_search_order = global_library_search_order
 
@@ -864,7 +866,8 @@ class ImportsManager:
         name: str,
         base_dir: str = ".",
         variables: Optional[Dict[str, Optional[Any]]] = None,
-    ) -> Tuple[Optional[LibraryMetaData], str]:
+    ) -> Tuple[Optional[LibraryMetaData], str, bool]:
+        ignore_arguments = False
         try:
             import_name = self.find_library(name, base_dir=base_dir, variables=variables)
 
@@ -886,6 +889,12 @@ class ImportsManager:
                     )
 
             if result is not None:
+                ignore_arguments = any(
+                    (p.matches(result.name) if result.name is not None else False)
+                    or (p.matches(result.origin) if result.origin is not None else False)
+                    for p in self.ignore_arguments_for_library_patters
+                )
+
                 if any(
                     (p.matches(result.name) if result.name is not None else False)
                     or (p.matches(result.origin) if result.origin is not None else False)
@@ -895,7 +904,7 @@ class ImportsManager:
                         lambda: f"Ignore library {result.name or '' if result is not None else ''}"
                         f" {result.origin or '' if result is not None else ''} for caching."
                     )
-                    return None, import_name
+                    return None, import_name, ignore_arguments
 
                 if result.origin is not None:
                     result.mtimes = {result.origin: Path(result.origin).stat().st_mtime_ns}
@@ -912,13 +921,13 @@ class ImportsManager:
                         }
                     )
 
-            return result, import_name
+            return result, import_name, ignore_arguments
         except (SystemExit, KeyboardInterrupt):
             raise
         except BaseException:
             pass
 
-        return None, import_name
+        return None, import_name, ignore_arguments
 
     def get_variables_meta(
         self,
@@ -1131,7 +1140,7 @@ class ImportsManager:
         base_dir: str,
         variables: Optional[Dict[str, Any]] = None,
     ) -> LibraryDoc:
-        meta, source = self.get_library_meta(name, base_dir, variables)
+        meta, source, ignore_arguments = self.get_library_meta(name, base_dir, variables)
 
         self._logger.debug(lambda: f"Load Library {source}{args!r}")
 
@@ -1171,7 +1180,7 @@ class ImportsManager:
             result = executor.submit(
                 get_library_doc,
                 name,
-                args,
+                args if not ignore_arguments else (),
                 working_dir,
                 base_dir,
                 self.get_resolvable_command_line_variables(),
