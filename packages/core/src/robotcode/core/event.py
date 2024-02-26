@@ -65,7 +65,7 @@ class EventResultIteratorBase(Generic[_TParams, _TResult]):
         return len(self._listeners) > 0
 
     def __iter__(self) -> Iterator[Callable[_TParams, _TResult]]:
-        for r in self._listeners:
+        for r in list(self._listeners):
             c = r()
             if c is not None:
                 yield c
