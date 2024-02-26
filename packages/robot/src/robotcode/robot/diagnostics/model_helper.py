@@ -290,7 +290,7 @@ class ModelHelper:
                                     sub_token.lineno,
                                     sub_token.end_col_offset,
                                     namespace.source,
-                                    tokval,
+                                    f"${{{tokval}}}",
                                     sub_token,
                                 ),
                             )
