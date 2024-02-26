@@ -51,7 +51,7 @@ class RobotKeywordsTreeViewPart(RobotLanguageServerProtocolPart, ModelHelper):
 
     @rpc_method(name="robot/keywordsview/getDocumentImports", param_type=GetDocumentImportsParams, threaded=True)
     @_logger.call
-    async def _get_document_imports(
+    def _get_document_imports(
         self,
         text_document: TextDocumentIdentifier,
         *args: Any,
@@ -103,7 +103,7 @@ class RobotKeywordsTreeViewPart(RobotLanguageServerProtocolPart, ModelHelper):
 
     @rpc_method(name="robot/keywordsview/getDocumentKeywords", param_type=GetDocumentImportsParams, threaded=True)
     @_logger.call
-    async def _get_document_keywords(
+    def _get_document_keywords(
         self,
         text_document: TextDocumentIdentifier,
         *args: Any,
@@ -122,7 +122,7 @@ class RobotKeywordsTreeViewPart(RobotLanguageServerProtocolPart, ModelHelper):
 
     @rpc_method(name="robot/keywordsview/getDocumentationUrl", param_type=GetDocumentationUrl, threaded=True)
     @_logger.call
-    async def _get_documentation_url(
+    def _get_documentation_url(
         self,
         text_document: TextDocumentIdentifier,
         import_id: Optional[str] = None,
