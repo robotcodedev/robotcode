@@ -2,11 +2,13 @@ import collections
 import inspect
 import io
 import weakref
+from contextlib import contextmanager
 from typing import (
     Any,
     Callable,
     Dict,
     Final,
+    Iterator,
     List,
     Optional,
     TypeVar,
@@ -143,13 +145,12 @@ class TextDocument:
 
     @_logger.call
     def apply_none_change(self) -> None:
-        with self._lock:
+        with self._cache_invalidating():
             self._lines = None
-            self._invalidate_cache()
 
     @_logger.call
     def apply_full_change(self, version: Optional[int], text: Optional[str], *, save: bool = False) -> None:
-        with self._lock:
+        with self._cache_invalidating():
             if version is not None:
                 self._version = version
             if text is not None:
@@ -157,11 +158,10 @@ class TextDocument:
                 self._lines = None
             if save:
                 self._orig_text = self._text
-            self._invalidate_cache()
 
     @_logger.call
     def apply_incremental_change(self, version: Optional[int], range: Range, text: str) -> None:
-        with self._lock:
+        with self._cache_invalidating():
             try:
                 if version is not None:
                     self._version = version
@@ -193,7 +193,6 @@ class TextDocument:
                     self._text = new_text.getvalue()
             finally:
                 self._lines = None
-                self._invalidate_cache()
 
     def __get_lines(self) -> List[str]:
         if self._lines is None:
@@ -214,13 +213,21 @@ class TextDocument:
     @event
     def cache_invalidated(sender) -> None: ...
 
+    @contextmanager
+    def _cache_invalidating(self) -> Iterator[None]:
+        self.cache_invalidate()
+        try:
+            with self._lock:
+                yield
+        finally:
+            self._invalidate_cache()
+            self.cache_invalidated(self)
+
     def _invalidate_cache(self) -> None:
-        self.cache_invalidate(self)
         self._cache.clear()
-        self.cache_invalidated(self)
 
     def invalidate_cache(self) -> None:
-        with self._lock:
+        with self._cache_invalidating():
             self._invalidate_cache()
 
     def _invalidate_data(self) -> None:
@@ -288,12 +295,11 @@ class TextDocument:
 
     def _clear(self) -> None:
         self._lines = None
-        self._invalidate_cache()
         self._invalidate_data()
 
     @_logger.call
     def clear(self) -> None:
-        with self._lock:
+        with self._cache_invalidating():
             self._clear()
 
     def position_from_utf16(self, position: Position) -> Position:
