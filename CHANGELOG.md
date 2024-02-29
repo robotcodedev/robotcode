@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [0.76.1](https://github.com/d-biehl/robotcode/compare/v0.76.0..v0.76.1) - 2024-02-29
+
+### Bug Fixes
+
+- **core:** Avoid iterator changes during Event.notify when adding or removing new event handlers ([ccc5faf](https://github.com/d-biehl/robotcode/commit/ccc5fafe40b1e9cbec828f3e976189ba35b0100d))
+- **core:** Send cache_invalidate events before and after locking to avoid deadlocks ([5f06377](https://github.com/d-biehl/robotcode/commit/5f06377bfdd436dd0d1867ab6817cec7521454dc))
+- **langserver:** Sometimes an exception in evaluating variables in expressions occurs ([bd9bcfd](https://github.com/d-biehl/robotcode/commit/bd9bcfde91e61261e4580552e1a3d2c92200d3c5))
+- **langserver:** Change keywords treeview rpc methods to non async ([f85621a](https://github.com/d-biehl/robotcode/commit/f85621ac7f9ccdf22b54e8528a788eea2fd6fbf5))
+
+
+### Performance
+
+- **langserver:** Optimize analysing and collecting diagnostics ([065db06](https://github.com/d-biehl/robotcode/commit/065db067b2d80259edd2267e08f40690a5f22a41))
+
+
 ## [0.76.0](https://github.com/d-biehl/robotcode/compare/v0.75.0..v0.76.0) - 2024-02-19
 
 ### Bug Fixes
