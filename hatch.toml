@@ -127,8 +127,8 @@ features = ["all"]
 [envs.lint.scripts]
 typing-py = "mypy --no-incremental --cache-dir /dev/null {args:.}"
 typing = ["typing-py", "npm run compile"]
-style = ["ruff .", "black --check --diff .", "npx eslint ."]
-fmt = ["black .", "ruff --fix .", "style", "npx eslint --fix ."]
+style = ["ruff check .", "black --check --diff .", "npx eslint ."]
+fmt = ["black .", "ruff check --fix .", "style", "npx eslint --fix ."]
 all = ["style", "typing"]
 
 [envs.lint.overrides]
