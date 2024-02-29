@@ -195,11 +195,10 @@ class VariableDefinition(SourceEntity):
     value: Any = field(default=None, compare=False)
     value_is_native: bool = field(default=False, compare=False)
 
-    @property
-    def matcher(self) -> VariableMatcher:
-        if not hasattr(self, "__matcher"):
-            self.__matcher = VariableMatcher(self.name)
-        return self.__matcher
+    matcher: VariableMatcher = field(init=False, compare=False)
+
+    def __post_init__(self) -> None:
+        self.matcher = VariableMatcher(self.name)
 
     @single_call
     def __hash__(self) -> int:

@@ -584,6 +584,9 @@ class Namespace:
         self._global_variables: Optional[List[VariableDefinition]] = None
         self._global_variables_lock = RLock(default_timeout=120, name="Namespace.global_variables")
 
+        self._suite_variables: Optional[Dict[str, Any]] = None
+        self._suite_variables_lock = RLock(default_timeout=120, name="Namespace.global_variables")
+
         self._diagnostics: List[Diagnostic] = []
         self._keyword_references: Dict[KeywordDoc, Set[Location]] = {}
         self._variable_references: Dict[VariableDefinition, Set[Location]] = {}
@@ -600,10 +603,10 @@ class Namespace:
 
         self._finder: Optional[KeywordFinder] = None
 
-        self.imports_manager.imports_changed.add(self.imports_changed)
-        self.imports_manager.libraries_changed.add(self.libraries_changed)
-        self.imports_manager.resources_changed.add(self.resources_changed)
-        self.imports_manager.variables_changed.add(self.variables_changed)
+        self.imports_manager.imports_changed.add(self._on_imports_changed)
+        self.imports_manager.libraries_changed.add(self._on_libraries_changed)
+        self.imports_manager.resources_changed.add(self._on_resources_changed)
+        self.imports_manager.variables_changed.add(self._on_variables_changed)
 
         self._in_initialize = False
 
@@ -618,6 +621,15 @@ class Namespace:
     @event
     def has_analysed(sender) -> None: ...
 
+    @event
+    def library_import_changed(sender) -> None: ...
+
+    @event
+    def resource_import_changed(sender) -> None: ...
+
+    @event
+    def variables_import_changed(sender) -> None: ...
+
     @property
     def document(self) -> Optional[TextDocument]:
         return self._document() if self._document is not None else None
@@ -629,12 +641,12 @@ class Namespace:
 
         return self._search_order
 
-    def imports_changed(self, sender: Any, uri: DocumentUri) -> None:
+    def _on_imports_changed(self, sender: Any, uri: DocumentUri) -> None:
         # TODO: optimise this by checking our imports
         self.invalidate()
 
     @_logger.call
-    def libraries_changed(self, sender: Any, libraries: List[LibraryDoc]) -> None:
+    def _on_libraries_changed(self, sender: Any, libraries: List[LibraryDoc]) -> None:
         if not self.initialized or self.invalid:
             return
 
@@ -649,7 +661,7 @@ class Namespace:
             self.invalidate()
 
     @_logger.call
-    def resources_changed(self, sender: Any, resources: List[LibraryDoc]) -> None:
+    def _on_resources_changed(self, sender: Any, resources: List[LibraryDoc]) -> None:
         if not self.initialized or self.invalid:
             return
 
@@ -664,7 +676,7 @@ class Namespace:
             self.invalidate()
 
     @_logger.call
-    def variables_changed(self, sender: Any, variables: List[LibraryDoc]) -> None:
+    def _on_variables_changed(self, sender: Any, variables: List[LibraryDoc]) -> None:
         if not self.initialized or self.invalid:
             return
 
@@ -684,19 +696,20 @@ class Namespace:
 
     def _invalidate(self) -> None:
         self._invalid = True
-        self.imports_manager.imports_changed.remove(self.imports_changed)
-        self.imports_manager.libraries_changed.remove(self.libraries_changed)
-        self.imports_manager.resources_changed.remove(self.resources_changed)
-        self.imports_manager.variables_changed.remove(self.variables_changed)
+        self.imports_manager.imports_changed.remove(self._on_imports_changed)
+        self.imports_manager.libraries_changed.remove(self._on_libraries_changed)
+        self.imports_manager.resources_changed.remove(self._on_resources_changed)
+        self.imports_manager.variables_changed.remove(self._on_variables_changed)
 
     @_logger.call
-    def invalidate(self) -> None:
+    def invalidate(self) -> bool:
         with self._initialize_lock:
             if self._invalid:
-                return
+                return False
 
             self._invalidate()
         self.has_invalidated(self)
+        return True
 
     @_logger.call
     def get_diagnostics(self) -> List[Diagnostic]:
@@ -803,7 +816,7 @@ class Namespace:
 
                     imports = self.get_imports()
 
-                    variables = self.get_resolvable_variables()
+                    variables = self.get_suite_variables()
 
                     self._import_default_libraries(variables)
                     self._import_imports(
@@ -868,8 +881,9 @@ class Namespace:
         return self.imports_manager.get_command_line_variables()
 
     def _reset_global_variables(self) -> None:
-        with self._global_variables_lock:
+        with self._global_variables_lock, self._suite_variables_lock:
             self._global_variables = None
+            self._suite_variables = None
 
     def get_global_variables(self) -> List[VariableDefinition]:
         with self._global_variables_lock:
@@ -894,13 +908,16 @@ class Namespace:
     ) -> Iterator[Tuple[VariableMatcher, VariableDefinition]]:
         yielded: Dict[VariableMatcher, VariableDefinition] = {}
 
-        test_or_keyword_nodes = list(
-            itertools.dropwhile(
-                lambda v: not isinstance(v, (TestCase, Keyword)),
-                nodes if nodes else [],
+        test_or_keyword = None
+
+        if nodes:
+            test_or_keyword_nodes = list(
+                itertools.dropwhile(
+                    lambda v: not isinstance(v, (TestCase, Keyword)),
+                    nodes if nodes else [],
+                )
             )
-        )
-        test_or_keyword = test_or_keyword_nodes[0] if test_or_keyword_nodes else None
+            test_or_keyword = test_or_keyword_nodes[0] if test_or_keyword_nodes else None
 
         for var in chain(
             *[
@@ -927,6 +944,31 @@ class Namespace:
                 yielded[var.matcher] = var
 
                 yield var.matcher, var
+
+    def get_suite_variables(
+        self,
+        nodes: Optional[List[ast.AST]] = None,
+        position: Optional[Position] = None,
+    ) -> Dict[str, Any]:
+        if nodes:
+            return {
+                v.name: v.value
+                for k, v in self.yield_variables(nodes, position, skip_commandline_variables=True)
+                if v.has_value
+            }
+        with self._suite_variables_lock:
+            vars = {}
+
+            def check_var(var: VariableDefinition) -> bool:
+                if var.matcher in vars:
+                    return False
+                vars[var.matcher] = var
+
+                return var.has_value
+
+            self._suite_variables = {v.name: v.value for v in filter(check_var, self.get_global_variables())}
+
+        return self._suite_variables
 
     def get_resolvable_variables(
         self,
@@ -1200,7 +1242,7 @@ class Namespace:
         try:
             for imp in imports:
                 if variables is None:
-                    variables = self.get_resolvable_variables()
+                    variables = self.get_suite_variables()
 
                 entry = self._import(
                     imp,
@@ -1222,7 +1264,7 @@ class Namespace:
                         if already_imported_resources is None and entry.library_doc.source != self.source:
                             self._resources[entry.import_name] = entry
                             if entry.variables:
-                                variables = self.get_resolvable_variables()
+                                variables = self.get_suite_variables()
 
                             try:
                                 variables = self._import_imports(
@@ -1296,7 +1338,7 @@ class Namespace:
                         ):
                             self._variables[entry.library_doc.source_or_origin] = entry
                             if entry.variables:
-                                variables = self.get_resolvable_variables()
+                                variables = self.get_suite_variables()
                         elif top_level and already_imported_variables and already_imported_variables.library_doc.source:
                             self.append_diagnostics(
                                 range=entry.import_range,
@@ -1416,7 +1458,7 @@ class Namespace:
         self._logger.debug(lambda: f"start import default libraries for document {self.document}")
         try:
             if variables is None:
-                variables = self.get_resolvable_variables()
+                variables = self.get_suite_variables()
 
             for library in DEFAULT_LIBRARIES:
                 e = _import_lib(library, variables)
@@ -1438,7 +1480,7 @@ class Namespace:
         variables: Optional[Dict[str, Any]] = None,
     ) -> LibraryEntry:
         if variables is None:
-            variables = self.get_resolvable_variables()
+            variables = self.get_suite_variables()
 
         library_doc = self.imports_manager.get_libdoc_for_library_import(
             name,
@@ -1480,7 +1522,7 @@ class Namespace:
         variables: Optional[Dict[str, Any]] = None,
     ) -> ResourceEntry:
         if variables is None:
-            variables = self.get_resolvable_variables()
+            variables = self.get_suite_variables()
 
         (namespace, library_doc) = self.imports_manager.get_namespace_and_libdoc_for_resource_import(
             name, base_dir, sentinel=self, variables=variables
@@ -1517,7 +1559,7 @@ class Namespace:
         variables: Optional[Dict[str, Any]] = None,
     ) -> VariablesEntry:
         if variables is None:
-            variables = self.get_resolvable_variables()
+            variables = self.get_suite_variables()
 
         library_doc = self.imports_manager.get_libdoc_for_variables_import(
             name,
@@ -1629,6 +1671,10 @@ class Namespace:
                 data,
             )
         )
+
+    def is_analyzed(self) -> bool:
+        with self._analyze_lock:
+            return self._analyzed
 
     @_logger.call(condition=lambda self: not self._analyzed)
     def analyze(self) -> None:

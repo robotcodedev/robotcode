@@ -215,13 +215,16 @@ class TextDocument:
 
     @contextmanager
     def _cache_invalidating(self) -> Iterator[None]:
-        self.cache_invalidate()
+        send_events = len(self._cache) > 0
+        if send_events:
+            self.cache_invalidate()
         try:
             with self._lock:
                 yield
         finally:
             self._invalidate_cache()
-            self.cache_invalidated(self)
+            if send_events:
+                self.cache_invalidated(self)
 
     def _invalidate_cache(self) -> None:
         self._cache.clear()

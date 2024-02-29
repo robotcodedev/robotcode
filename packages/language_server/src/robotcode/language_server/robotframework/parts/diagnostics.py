@@ -1,5 +1,4 @@
 import ast
-import threading
 from concurrent.futures import CancelledError
 from typing import TYPE_CHECKING, Any, List, Optional
 
@@ -24,6 +23,7 @@ from robotcode.robot.diagnostics.entities import (
     GlobalVariableDefinition,
     LibraryArgumentDefinition,
 )
+from robotcode.robot.diagnostics.library_doc import LibraryDoc
 from robotcode.robot.diagnostics.namespace import Namespace
 from robotcode.robot.utils.ast import (
     iter_nodes,
@@ -32,7 +32,7 @@ from robotcode.robot.utils.ast import (
 )
 from robotcode.robot.utils.stubs import HasError, HasErrors, HeaderAndBodyBlock
 
-from ...common.parts.diagnostics import DiagnosticsResult
+from ...common.parts.diagnostics import DiagnosticsCollectType, DiagnosticsResult
 
 if TYPE_CHECKING:
     from ..protocol import RobotLanguageServerProtocol
@@ -58,57 +58,81 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
         self.parent.diagnostics.collect.add(self.collect_unused_keyword_references)
         self.parent.diagnostics.collect.add(self.collect_unused_variable_references)
 
-        self._collect_unused_references_event = threading.Event()
-
-        self.parent.diagnostics.on_workspace_diagnostics_analyze.add(self._on_workspace_diagnostics_analyze)
-        self.parent.diagnostics.on_workspace_diagnostics_collect.add(self._on_workspace_diagnostics_collect)
+        self.parent.diagnostics.on_get_related_documents.add(self._on_get_related_documents)
 
     def _on_initialized(self, sender: Any) -> None:
         self.parent.diagnostics.analyze.add(self.analyze)
+        self.parent.documents_cache.namespace_invalidated.add(self._on_namespace_invalidated)
+        self.parent.documents_cache.namespace_initialized(self._on_namespace_initialized)
+        self.parent.documents_cache.libraries_changed.add(self._on_libraries_changed)
+        self.parent.documents_cache.variables_changed.add(self._on_variables_changed)
 
-        self.parent.documents_cache.namespace_invalidated.add(self.namespace_invalidated)
+    def _on_libraries_changed(self, sender: Any, libraries: List[LibraryDoc]) -> None:
+        for doc in self.parent.documents.documents:
+            namespace = self.parent.documents_cache.get_only_initialized_namespace(doc)
+            if namespace is not None:
+                lib_docs = (e.library_doc for e in namespace.get_libraries().values())
+                if any(lib_doc in lib_docs for lib_doc in libraries):
+                    self.parent.diagnostics.force_refresh_document(doc)
 
-    def _on_workspace_diagnostics_analyze(self, sender: Any) -> None:
-        self._collect_unused_references_event.clear()
-
-    def _on_workspace_diagnostics_collect(self, sender: Any) -> None:
-        self._collect_unused_references_event.set()
+    def _on_variables_changed(self, sender: Any, variables: List[LibraryDoc]) -> None:
+        for doc in self.parent.documents.documents:
+            namespace = self.parent.documents_cache.get_only_initialized_namespace(doc)
+            if namespace is not None:
+                lib_docs = (e.library_doc for e in namespace.get_imported_variables().values())
+                if any(lib_doc in lib_docs for lib_doc in variables):
+                    self.parent.diagnostics.force_refresh_document(doc)
 
     @language_id("robotframework")
     def analyze(self, sender: Any, document: TextDocument) -> None:
         self.parent.documents_cache.get_namespace(document).analyze()
 
     @language_id("robotframework")
-    def namespace_invalidated(self, sender: Any, namespace: Namespace) -> None:
-        self._collect_unused_references_event.clear()
-
-        self._namespace_invalidated(namespace)
-
-        self.parent.diagnostics.break_workspace_diagnostics_loop()
-
-    def _namespace_invalidated(self, namespace: Namespace) -> None:
+    def _on_namespace_initialized(self, sender: Any, namespace: Namespace) -> None:
         if namespace.document is not None:
-            refresh = namespace.document.opened_in_editor
-
-            self.parent.diagnostics.force_refresh_document(namespace.document, False)
-
-            if namespace.is_initialized():
-                resources = namespace.get_resources().values()
-                for r in resources:
-                    if r.library_doc.source:
-                        doc = self.parent.documents.get(Uri.from_path(r.library_doc.source).normalized())
-                        if doc is not None:
-                            refresh |= doc.opened_in_editor
-                            self.parent.diagnostics.force_refresh_document(doc, False)
-
-            if refresh:
-                self.parent.diagnostics.refresh()
+            self.parent.diagnostics.force_refresh_document(namespace.document)
 
     @language_id("robotframework")
-    def collect_namespace_diagnostics(self, sender: Any, document: TextDocument) -> DiagnosticsResult:
-        return document.get_cache(self._collect_namespace_diagnostics)
+    def _on_namespace_invalidated(self, sender: Any, namespace: Namespace) -> None:
+        if namespace.document is not None:
+            namespace.document.remove_cache_entry(self._collect_model_errors)
+            namespace.document.remove_cache_entry(self._collect_token_errors)
 
-    def _collect_namespace_diagnostics(self, document: TextDocument) -> DiagnosticsResult:
+    @language_id("robotframework")
+    def _on_get_related_documents(self, sender: Any, document: TextDocument) -> Optional[List[TextDocument]]:
+        namespace = self.parent.documents_cache.get_only_initialized_namespace(document)
+        if namespace is None:
+            return None
+
+        result = []
+
+        resources = namespace.get_resources().values()
+        for r in resources:
+            if r.library_doc.source:
+                doc = self.parent.documents.get(Uri.from_path(r.library_doc.source).normalized())
+                if doc is not None:
+                    result.append(doc)
+
+        lib_doc = namespace.get_library_doc()
+        for doc in self.parent.documents.documents:
+            if doc.language_id != "robotframework":
+                continue
+
+            doc_namespace = self.parent.documents_cache.get_only_initialized_namespace(doc)
+            if doc_namespace is None:
+                continue
+
+            if doc_namespace.is_analyzed():
+                for ref in doc_namespace.get_namespace_references():
+                    if ref.library_doc == lib_doc:
+                        result.append(doc)
+
+        return result
+
+    @language_id("robotframework")
+    def collect_namespace_diagnostics(
+        self, sender: Any, document: TextDocument, diagnostics_type: DiagnosticsCollectType
+    ) -> DiagnosticsResult:
         try:
             namespace = self.parent.documents_cache.get_namespace(document)
 
@@ -172,7 +196,9 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
 
     @language_id("robotframework")
     @_logger.call
-    def collect_token_errors(self, sender: Any, document: TextDocument) -> DiagnosticsResult:
+    def collect_token_errors(
+        self, sender: Any, document: TextDocument, diagnostics_type: DiagnosticsCollectType
+    ) -> DiagnosticsResult:
         return document.get_cache(self._collect_token_errors)
 
     def _collect_token_errors(self, document: TextDocument) -> DiagnosticsResult:
@@ -238,7 +264,9 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
 
     @language_id("robotframework")
     @_logger.call
-    def collect_model_errors(self, sender: Any, document: TextDocument) -> DiagnosticsResult:
+    def collect_model_errors(
+        self, sender: Any, document: TextDocument, diagnostics_type: DiagnosticsCollectType
+    ) -> DiagnosticsResult:
         return document.get_cache(self._collect_model_errors)
 
     def _collect_model_errors(self, document: TextDocument) -> DiagnosticsResult:
@@ -284,13 +312,15 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
 
     @language_id("robotframework")
     @_logger.call
-    def collect_unused_keyword_references(self, sender: Any, document: TextDocument) -> DiagnosticsResult:
+    def collect_unused_keyword_references(
+        self, sender: Any, document: TextDocument, diagnostics_type: DiagnosticsCollectType
+    ) -> DiagnosticsResult:
         config = self.parent.workspace.get_configuration(AnalysisConfig, document.uri)
 
         if not config.find_unused_references:
             return DiagnosticsResult(self.collect_unused_keyword_references, [])
 
-        if not self._collect_unused_references_event.is_set():
+        if diagnostics_type != DiagnosticsCollectType.SLOW:
             return DiagnosticsResult(self.collect_unused_keyword_references, None, True)
 
         return self._collect_unused_keyword_references(document)
@@ -341,13 +371,15 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
 
     @language_id("robotframework")
     @_logger.call
-    def collect_unused_variable_references(self, sender: Any, document: TextDocument) -> DiagnosticsResult:
+    def collect_unused_variable_references(
+        self, sender: Any, document: TextDocument, diagnostics_type: DiagnosticsCollectType
+    ) -> DiagnosticsResult:
         config = self.parent.workspace.get_configuration(AnalysisConfig, document.uri)
 
         if not config.find_unused_references:
             return DiagnosticsResult(self.collect_unused_variable_references, [])
 
-        if not self._collect_unused_references_event.is_set():
+        if diagnostics_type != DiagnosticsCollectType.SLOW:
             return DiagnosticsResult(self.collect_unused_variable_references, None, True)
 
         return self._collect_unused_variable_references(document)

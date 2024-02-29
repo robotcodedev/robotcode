@@ -14,7 +14,7 @@ from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.core.utils.version import Version, create_version_from_str
 from robotcode.core.workspace import WorkspaceFolder
 
-from ...common.parts.diagnostics import DiagnosticsResult
+from ...common.parts.diagnostics import DiagnosticsCollectType, DiagnosticsResult
 from ..configuration import RoboCopConfig
 from .protocol_part import RobotLanguageServerProtocolPart
 
@@ -50,7 +50,9 @@ class RobotRoboCopDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
 
     @language_id("robotframework")
     @_logger.call
-    def collect_diagnostics(self, sender: Any, document: TextDocument) -> DiagnosticsResult:
+    def collect_diagnostics(
+        self, sender: Any, document: TextDocument, diagnostics_type: DiagnosticsCollectType
+    ) -> DiagnosticsResult:
         workspace_folder = self.parent.workspace.get_workspace_folder(document.uri)
         if workspace_folder is not None:
             extension_config = self.get_config(document)

@@ -66,7 +66,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
 
         parent.references.collect.add(self.collect)
         parent.documents.did_change.add(self.document_did_change)
-
+        parent.documents.on_document_cache_invalidated(self.document_did_change)
         parent.diagnostics.on_workspace_diagnostics_break.add(self.on_workspace_diagnostics_break)
 
     @event

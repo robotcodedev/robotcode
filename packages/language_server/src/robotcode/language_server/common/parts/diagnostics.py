@@ -1,12 +1,14 @@
+import concurrent.futures
 import functools
 import itertools
 import time
 import uuid
 from concurrent.futures import CancelledError
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from enum import Enum
 from threading import Event, Timer
-from typing import TYPE_CHECKING, Any, Dict, Final, List, Optional, cast
+from typing import TYPE_CHECKING, Any, Dict, Final, Iterator, List, Optional, Union, cast
 
 from robotcode.core.concurrent import Lock, RLock, Task, check_current_task_canceled, run_as_task
 from robotcode.core.event import event
@@ -71,6 +73,7 @@ class WorkspaceDocumentsResult:
 
 @dataclass
 class DiagnosticsData:
+    lock: RLock
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
     entries: Dict[Any, Optional[List[Diagnostic]]] = field(default_factory=dict)
     version: Optional[int] = None
@@ -78,6 +81,11 @@ class DiagnosticsData:
     force: bool = False
     single: bool = False
     skipped_entries: bool = False
+
+
+class DiagnosticsCollectType(Enum):
+    NORMAL = 0
+    SLOW = 1
 
 
 class DiagnosticsProtocolPart(LanguageServerProtocolPart):
@@ -102,7 +110,6 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
         self.parent.documents.did_close.add(self.on_did_close)
 
         self.in_get_workspace_diagnostics = Event()
-        self.in_get_workspace_diagnostics
 
         self.client_supports_pull = False
 
@@ -143,7 +150,9 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
     def analyze(sender, document: TextDocument) -> Optional[DiagnosticsResult]: ...
 
     @event
-    def collect(sender, document: TextDocument) -> Optional[DiagnosticsResult]: ...
+    def collect(
+        sender, document: TextDocument, diagnostics_type: DiagnosticsCollectType
+    ) -> Optional[DiagnosticsResult]: ...
 
     @event
     def load_workspace_documents(
@@ -152,6 +161,9 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
 
     @event
     def on_workspace_loaded(sender: Any) -> None: ...
+
+    @event
+    def on_get_related_documents(sender: Any, document: TextDocument) -> Optional[List[TextDocument]]: ...
 
     @event
     def on_get_analysis_progress_mode(sender: Any, uri: Uri) -> Optional[AnalysisProgressMode]: ...
@@ -188,19 +200,84 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
                     self.on_workspace_loaded(self)
                     self.force_refresh_all()
 
+    def get_related_documents(
+        self, document: TextDocument, result: Optional[List[TextDocument]] = None
+    ) -> List[TextDocument]:
+        start = time.monotonic()
+        self._logger.debug(lambda: f"start get_related_documents for {document}")
+        try:
+            return self._get_related_documents(document)
+        finally:
+            self._logger.debug(lambda: f"end get_related_documents for {document} takes {time.monotonic() - start}s")
+
+    def _get_related_documents(
+        self, document: TextDocument, result: Optional[List[TextDocument]] = None
+    ) -> List[TextDocument]:
+        if result is None:
+            result = []
+
+        for docs in self.on_get_related_documents(self, document):
+            check_current_task_canceled()
+
+            if docs is not None:
+
+                if isinstance(docs, BaseException):
+                    if not isinstance(docs, CancelledError):
+                        self._logger.exception(docs, exc_info=result)
+                    continue
+
+                for doc in docs:
+                    if doc not in result and doc is not document:
+                        result.append(doc)
+                        self._get_related_documents(doc, result)
+
+        return result
+
+    def __on_document_cache_invalidated(self, document: TextDocument) -> None:
+        start = time.monotonic()
+        self._logger.debug(lambda: f"start on_document_cache_invalidated for {document}")
+        try:
+            needs_refresh = False
+            needs_break = False
+            for doc in (document, *self.get_related_documents(document)):
+                needs_refresh = needs_refresh or doc.opened_in_editor
+                needs_break = needs_break or doc.opened_in_editor
+                doc.set_data(DiagnosticsProtocolPart, None)
+                with self.get_diagnostics_data(doc) as data:
+                    if data.force:
+                        continue
+                    needs_break = True
+                    data.force = True
+
+            if needs_break:
+                self.break_workspace_diagnostics_loop()
+
+            if needs_refresh:
+                self.refresh()
+        except BaseException as e:
+            self._logger.exception(e)
+        finally:
+            self._logger.debug(
+                lambda: f"end on_document_cache_invalidated for {document} takes {time.monotonic() - start}s"
+            )
+
     def _on_document_cache_invalidated(self, sender: Any, document: TextDocument) -> None:
-        # TODO: find documents that needed to be refreshed
-        self.force_refresh_all()
+        run_as_task(self.__on_document_cache_invalidated, document)
 
     def force_refresh_all(self, refresh: bool = True) -> None:
         for doc in self.parent.documents.documents:
-            self.get_diagnostics_data(doc).force = True
+            with self.get_diagnostics_data(doc) as data:
+                data.force = True
 
         if refresh:
             self.refresh()
 
-    def force_refresh_document(self, document: TextDocument, refresh: bool = True) -> None:
-        self.get_diagnostics_data(document).force = True
+    def force_refresh_document(self, document: TextDocument, refresh: bool = True, single: bool = False) -> None:
+        with self.get_diagnostics_data(document) as data:
+            if data.force:
+                return
+            data.force = True
+            data.single = single
         if refresh and document.opened_in_editor:
             self.refresh()
 
@@ -213,11 +290,11 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
             return
 
         try:
-            data = self.get_diagnostics_data(document)
-            if data.future is not None and not data.future.done():
-                self._logger.debug(lambda: f"try to cancel diagnostics for {document}")
+            with self.get_diagnostics_data(document) as data:
+                if data.future is not None and not data.future.done():
+                    self._logger.debug(lambda: f"try to cancel diagnostics for {document}")
 
-                data.future.cancel()
+                    data.future.cancel()
         finally:
             self.publish_diagnostics(document, diagnostics=[])
 
@@ -247,6 +324,18 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
             if self._current_diagnostics_task is not None and not self._current_diagnostics_task.done():
                 self._current_diagnostics_task.cancel()
 
+    def _analyse_document(self, document: TextDocument) -> List[Union[DiagnosticsResult, None, BaseException]]:
+        return self.analyze(
+            self,
+            document,
+            callback_filter=language_id_filter(document),
+            return_exceptions=True,
+        )
+
+    def _doc_need_update(self, document: TextDocument) -> bool:
+        with self.get_diagnostics_data(document) as data:
+            return data.force or document.version != data.version or data.skipped_entries
+
     @_logger.call
     def run_workspace_diagnostics(self) -> None:
         self._logger.debug("start workspace diagnostics loop")
@@ -259,21 +348,10 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
 
             try:
                 self._break_diagnostics_loop_event.clear()
+                self.in_get_workspace_diagnostics.clear()
 
                 documents = sorted(
-                    [
-                        doc
-                        for doc in self.parent.documents.documents
-                        if (
-                            (
-                                (data := self.get_diagnostics_data(doc)).force
-                                or doc.version != data.version
-                                or data.future is None
-                                or data.skipped_entries
-                            )
-                            and not data.single
-                        )
-                    ],
+                    [doc for doc in self.parent.documents.documents if self._doc_need_update(doc)],
                     key=lambda d: not d.opened_in_editor,
                 )
 
@@ -319,21 +397,16 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
                             folder = self.parent.workspace.get_workspace_folder(document.uri)
                             name = path if folder is None else path.relative_to(folder.uri.to_path())
 
-                            progress.report(f"Analyze {name}", current=i + 1)
+                            progress.report(f"Analyze {i+1}/{len(documents)}: {name}", current=i + 1)
                         elif analysis_mode == AnalysisProgressMode.SIMPLE:
                             progress.begin()
                             progress.report(f"Analyze {i+1}/{len(documents)}", current=i + 1)
 
                         try:
                             with self._current_diagnostics_task_lock:
-                                self._current_diagnostics_task = run_as_task(
-                                    self.analyze,
-                                    self,
-                                    document,
-                                    callback_filter=language_id_filter(document),
-                                    return_exceptions=True,
-                                )
+                                self._current_diagnostics_task = run_as_task(self._analyse_document, document)
                             self._current_diagnostics_task.result(self._diagnostics_task_timeout)
+
                         except CancelledError:
                             self._logger.debug(lambda: f"Analyzing {document} cancelled")
                         except BaseException as e:
@@ -355,6 +428,8 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
                     self.on_workspace_diagnostics_break(self)
                     continue
 
+                self.in_get_workspace_diagnostics.set()
+
                 self.on_workspace_diagnostics_collect(self)
 
                 documents_to_collect = [
@@ -364,11 +439,14 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
                 ]
 
                 for document in set(documents) - set(documents_to_collect):
-                    self.get_diagnostics_data(document).force = False
-                    self.get_diagnostics_data(document).version = document.version
-                    self.get_diagnostics_data(document).skipped_entries = False
-                    self.get_diagnostics_data(document).single = False
-                    self.get_diagnostics_data(document).future = Task()
+                    check_current_task_canceled()
+
+                    if self._break_diagnostics_loop_event.is_set():
+                        self._logger.debug("break workspace diagnostics loop 4")
+                        self.on_workspace_diagnostics_break(self)
+                        break
+
+                    self.reset_document_diagnostics_data(document)
 
                 start = time.monotonic()
                 with self.parent.window.progress(
@@ -383,17 +461,13 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
                         check_current_task_canceled()
 
                         if self._break_diagnostics_loop_event.is_set():
-                            self._logger.debug("break workspace diagnostics loop 4")
+                            self._logger.debug("break workspace diagnostics loop 5")
                             self.on_workspace_diagnostics_break(self)
                             break
 
                         mode = self.get_diagnostics_mode(document.uri)
                         if mode == DiagnosticsMode.OFF:
-                            self.get_diagnostics_data(document).force = False
-                            self.get_diagnostics_data(document).version = document.version
-                            self.get_diagnostics_data(document).skipped_entries = False
-                            self.get_diagnostics_data(document).single = False
-                            self.get_diagnostics_data(document).future = Task()
+                            self.reset_document_diagnostics_data(document)
                             continue
 
                         done_something = True
@@ -406,7 +480,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
                             folder = self.parent.workspace.get_workspace_folder(document.uri)
                             name = path if folder is None else path.relative_to(folder.uri.to_path())
 
-                            progress.report(f"Collect {name}", current=i + 1)
+                            progress.report(f"Collect {i+1}/{len(documents_to_collect)}: {name}", current=i + 1)
                         elif analysis_mode == AnalysisProgressMode.SIMPLE:
                             progress.begin()
                             progress.report(f"Collect {i+1}/{len(documents_to_collect)}", current=i + 1)
@@ -416,10 +490,10 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
                                 self._current_diagnostics_task = self.create_document_diagnostics_task(
                                     document,
                                     False,
-                                    False,
                                     mode == DiagnosticsMode.WORKSPACE or document.opened_in_editor,
                                 )
-                            self._current_diagnostics_task.result(300)
+                            if self._current_diagnostics_task is not None:
+                                self._current_diagnostics_task.result(self._diagnostics_task_timeout)
                         except CancelledError:
                             self._logger.debug(lambda: f"Collecting diagnostics for {document} cancelled")
                         except BaseException as e:
@@ -447,52 +521,63 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
             finally:
                 self.on_workspace_diagnostics_end(self)
 
+    def reset_document_diagnostics_data(self, document: TextDocument) -> None:
+        with self.get_diagnostics_data(document) as data:
+            data.force = False
+            data.version = document.version
+            data.skipped_entries = False
+            data.single = False
+
     def _diagnostics_task_done(self, document: TextDocument, data: DiagnosticsData, task: Task[Any]) -> None:
         if task.done() and not task.cancelled():
-            data.single = False
+            with data.lock:
+                data.single = False
 
     def create_document_diagnostics_task(
         self,
         document: TextDocument,
-        single: bool,
         debounce: bool = True,
         send_diagnostics: bool = True,
     ) -> Task[Any]:
-        data = self.get_diagnostics_data(document)
 
-        if data.force or document.version != data.version or data.future is None or data.skipped_entries:
-            data.single = single
-            data.force = False
+        with self.get_diagnostics_data(document) as data:
 
-            future = data.future
+            if data.force or document.version != data.version or data.future is None or data.skipped_entries:
+                future = data.future
+                collect_slow = not data.single
+                if data.single:
+                    data.single = False
+                else:
+                    data.force = False
 
-            if future is not None and not future.done():
-                self._logger.debug(lambda: f"try to cancel diagnostics for {document}")
+                if future is not None and not future.done():
+                    self._logger.debug(lambda: f"try to cancel diagnostics for {document}")
 
-                future.cancel()
+                    future.cancel()
+                    try:
+                        concurrent.futures.wait([future], timeout=5)
+                    except BaseException as e:
+                        self._logger.exception(e)
 
-            data.version = document.version
-            data.future = run_as_task(
-                self._get_diagnostics_for_document,
-                document,
-                data,
-                debounce,
-                send_diagnostics,
-            )
+                data.version = document.version
+                data.future = run_as_task(
+                    self._get_diagnostics_for_document, document, data, debounce, send_diagnostics, collect_slow
+                )
 
-            data.future.add_done_callback(functools.partial(self._diagnostics_task_done, document, data))
-        else:
-            self._logger.debug(lambda: f"skip diagnostics for {document}")
+                data.future.add_done_callback(functools.partial(self._diagnostics_task_done, document, data))
+            else:
+                self._logger.debug(lambda: f"skip diagnostics for {document}")
 
-        return data.future
+            return data.future
 
     @_logger.call
     def _get_diagnostics_for_document(
         self,
         document: TextDocument,
         data: DiagnosticsData,
-        debounce: bool = True,
-        send_diagnostics: bool = True,
+        debounce: bool,
+        send_diagnostics: bool,
+        collect_slow: bool,
     ) -> None:
         self._logger.debug(lambda: f"Get diagnostics for {document}")
 
@@ -505,6 +590,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
             for result in self.collect(
                 self,
                 document,
+                DiagnosticsCollectType.SLOW if collect_slow else DiagnosticsCollectType.NORMAL,
                 callback_filter=language_id_filter(document),
                 return_exceptions=True,
             ):
@@ -558,11 +644,8 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
             ),
         )
 
-    def _update_document_diagnostics(self, document: TextDocument) -> None:
-        self.create_document_diagnostics_task(document, True).result(self._diagnostics_task_timeout)
-
     def update_document_diagnostics(self, sender: Any, document: TextDocument) -> None:
-        run_as_task(self._update_document_diagnostics, document)
+        self.force_refresh_document(document, refresh=True)
 
     @rpc_method(name="textDocument/diagnostic", param_type=DocumentDiagnosticParams, threaded=True)
     def _text_document_diagnostic(
@@ -592,21 +675,31 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
                     f"Document {text_document!r} not found.",
                 )
 
-            self.create_document_diagnostics_task(document, True).result(300)
+            self.force_refresh_document(document, refresh=False, single=True)
+            self.break_workspace_diagnostics_loop()
+
+            # task = self.create_document_diagnostics_task(document, True, collect_slow=False)
+            # if task is not None:
+            #     task.result(self._diagnostics_task_timeout)
 
             return RelatedFullDocumentDiagnosticReport([])
         except CancelledError:
             self._logger.debug("canceled _text_document_diagnostic")
             raise
 
-    def get_diagnostics_data(self, document: TextDocument) -> DiagnosticsData:
-        data: DiagnosticsData = document.get_data(DiagnosticsProtocolPart, None)
+    @contextmanager
+    def get_diagnostics_data(self, document: TextDocument) -> Iterator[DiagnosticsData]:
+        data: Optional[DiagnosticsData] = document.get_data(DiagnosticsProtocolPart, None)
 
         if data is None:
-            data = DiagnosticsData(str(uuid.uuid4()))  # type: ignore
+            data = DiagnosticsData(
+                RLock(default_timeout=self._diagnostics_task_timeout, name=f"diagnostics data for {document}"),
+                str(uuid.uuid4()),
+            )
             document.set_data(DiagnosticsProtocolPart, data)
 
-        return data
+        with data.lock:
+            yield data
 
     @rpc_method(name="workspace/diagnostic", param_type=WorkspaceDiagnosticParams, threaded=True)
     def _workspace_diagnostic(

@@ -22,7 +22,6 @@ from robot.parsing.lexer.tokens import Token
 from robotcode.core.documents_manager import DocumentsManager
 from robotcode.core.event import event
 from robotcode.core.filewatcher import FileWatcherManagerBase
-from robotcode.core.language import language_id_filter
 from robotcode.core.text_document import TextDocument
 from robotcode.core.uri import Uri
 from robotcode.core.utils.logging import LoggingDescriptor
@@ -32,6 +31,7 @@ from ..config.model import RobotBaseProfile
 from ..utils import get_robot_version
 from ..utils.stubs import Languages
 from .imports_manager import ImportsManager
+from .library_doc import LibraryDoc
 from .namespace import DocumentType, Namespace
 from .workspace_config import AnalysisRobotConfig, CacheConfig, RobotConfig
 
@@ -422,14 +422,20 @@ class DocumentsCacheHelper:
         return self.__get_namespace_for_document_type(document, DocumentType.GENERAL)
 
     @event
+    def namespace_initialized(sender, namespace: Namespace) -> None: ...
+
+    @event
     def namespace_invalidated(sender, namespace: Namespace) -> None: ...
 
     def __invalidate_namespace(self, sender: Namespace) -> None:
         document = sender.document
         if document is not None:
-            document.invalidate_cache()
+            document.remove_cache_entry(self.__get_general_namespace)
+            document.remove_cache_entry(self.__get_init_namespace)
+            document.remove_cache_entry(self.__get_resource_namespace)
+            document.remove_cache_entry(self.__get_namespace)
 
-            self.namespace_invalidated(self, sender, callback_filter=language_id_filter(document))
+            self.namespace_invalidated(self, sender)
 
     def __namespace_initialized(self, sender: Namespace) -> None:
         if sender.document is not None:
@@ -437,12 +443,18 @@ class DocumentsCacheHelper:
                 lambda: f"Save initialized Namespace: {sender.document.uri if sender.document else None}"
             )
             sender.document.set_data(self.INITIALIZED_NAMESPACE, sender)
+            self.namespace_initialized(self, sender)
 
     def get_initialized_namespace(self, document: TextDocument) -> Namespace:
         result: Optional[Namespace] = document.get_data(self.INITIALIZED_NAMESPACE)
         if result is None:
             self._logger.debug(lambda: f"There is no initialized Namespace: {document.uri if document else None}")
             result = self.get_namespace(document)
+        return result
+
+    def get_only_initialized_namespace(self, document: TextDocument) -> Optional[Namespace]:
+        result: Optional[Namespace] = document.get_data(self.INITIALIZED_NAMESPACE)
+
         return result
 
     def __get_namespace_for_document_type(
@@ -495,7 +507,7 @@ class DocumentsCacheHelper:
         ]
 
         analysis_config = self.workspace.get_configuration(AnalysisRobotConfig, root_uri)
-        return ImportsManager(
+        result = ImportsManager(
             self.documents_manager,
             self.file_watcher_manager,
             self,
@@ -509,6 +521,30 @@ class DocumentsCacheHelper:
             analysis_config.global_library_search_order,
             cache_base_path,
         )
+
+        result.libraries_changed.add(self._on_libraries_changed)
+        result.resources_changed.add(self._on_resources_changed)
+        result.variables_changed.add(self._on_variables_changed)
+
+        return result
+
+    @event
+    def libraries_changed(sender, libraries: List[LibraryDoc]) -> None: ...
+
+    @event
+    def resources_changed(sender, resources: List[LibraryDoc]) -> None: ...
+
+    @event
+    def variables_changed(sender, variables: List[LibraryDoc]) -> None: ...
+
+    def _on_libraries_changed(self, sender: ImportsManager, libraries: List[LibraryDoc]) -> None:
+        self.libraries_changed(self, libraries)
+
+    def _on_resources_changed(self, sender: ImportsManager, resources: List[LibraryDoc]) -> None:
+        self.resources_changed(self, resources)
+
+    def _on_variables_changed(self, sender: ImportsManager, variables: List[LibraryDoc]) -> None:
+        self.variables_changed(self, variables)
 
     def default_imports_manager(self) -> ImportsManager:
         with self._imports_managers_lock:

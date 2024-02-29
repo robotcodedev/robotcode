@@ -503,8 +503,8 @@ class ImportsManager:
         super().__init__()
 
         self.documents_manager = documents_manager
-        self.documents_manager.did_create_uri.add(self.possible_imports_modified)
-        self.documents_manager.did_change.add(self.possible_resource_document_modified)
+        self.documents_manager.did_create_uri.add(self._on_possible_imports_modified)
+        self.documents_manager.did_change.add(self._on_possible_resource_document_modified)
 
         self.file_watcher_manager: FileWatcherManagerBase = (
             file_watcher_manager if file_watcher_manager is not None else FileWatcherManagerDummy()
@@ -685,12 +685,15 @@ class ImportsManager:
     @event
     def imports_changed(sender, uri: DocumentUri) -> None: ...
 
-    def possible_imports_modified(self, sender: Any, uri: DocumentUri) -> None:
+    def _on_possible_imports_modified(self, sender: Any, uri: DocumentUri) -> None:
         # TODO: do we really need this?
         self.imports_changed(self, uri)
 
     @language_id("robotframework")
-    def possible_resource_document_modified(self, sender: Any, document: TextDocument) -> None:
+    def _on_possible_resource_document_modified(self, sender: Any, document: TextDocument) -> None:
+        run_as_task(self.__on_possible_resource_document_modified, sender, document)
+
+    def __on_possible_resource_document_modified(self, sender: Any, document: TextDocument) -> None:
         with self._resource_document_changed_timer_lock:
             if document in self._resource_document_changed_documents:
                 return
@@ -714,7 +717,7 @@ class ImportsManager:
             self._resource_document_changed_documents = set()
 
         for document in documents:
-            run_as_task(self.__resource_document_changed, document).result()
+            self.__resource_document_changed(document)
 
     def __resource_document_changed(self, document: TextDocument) -> None:
         resource_changed: List[LibraryDoc] = []
