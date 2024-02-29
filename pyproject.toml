@@ -49,7 +49,7 @@ classifiers = [
   "Framework :: Robot Framework :: Tool",
 ]
 requires-python = ">=3.8"
-dependencies = ["robotcode-core==0.76.0"]
+dependencies = ["robotcode-core==0.76.0", "robotcode-plugin==0.76.0"]
 dynamic = ["version"]
 
 
@@ -293,6 +293,7 @@ no_implicit_reexport = false
 exclude = ["**/.hatch", "**/node_modules", "**/__pycache__", "bundled/libs"]
 typeCheckingMode = "off"
 pythonVersion = "3.8"
+
 
 [tool.commitizen]
 name = "cz_conventional_commits"
