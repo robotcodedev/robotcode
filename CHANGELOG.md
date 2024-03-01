@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [0.76.2](https://github.com/d-biehl/robotcode/compare/v0.76.1..v0.76.2) - 2024-03-01
+
+### Bug Fixes
+
+- **cli:** Add missing plugin package ([66982bd](https://github.com/d-biehl/robotcode/commit/66982bd2dab0a15081e82ccd1bdcbfd466fcafd7))
+
+
 ## [0.76.1](https://github.com/d-biehl/robotcode/compare/v0.76.0..v0.76.1) - 2024-02-29
 
 ### Bug Fixes
