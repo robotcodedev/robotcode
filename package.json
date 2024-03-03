@@ -337,7 +337,13 @@
       {
         "language": "robotframework",
         "scopeName": "source.robotframework",
-        "path": "./syntaxes/robotframework.tmLanguage.json"
+        "path": "./syntaxes/robotframework.tmLanguage.json",
+        "tokenTypes": {
+          "string.unquoted.argument.robotframework": "other"
+        },
+        "embeddedLanguages": {
+          "meta.expression.robotframework": "python"
+        }
       }
     ],
     "keybindings": [
