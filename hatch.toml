@@ -50,9 +50,7 @@ extra-dependencies = [
 
 [envs.pypy]
 python = "pypy3.10"
-extra-dependencies = [
-  "robotframework==6.0",
-]
+extra-dependencies = ["robotframework==6.0"]
 
 [envs.rfdevel]
 python = "3.11"
@@ -166,7 +164,12 @@ deploy = ["python scripts/deploy_docs.py"]
 skip-install = true
 detached = true
 python = "38"
-dependencies = ["GitPython", "semantic-version", "commitizen", "git-cliff"]
+dependencies = [
+  "GitPython",
+  "semantic-version",
+  "commitizen",
+  "git-cliff==1.4.0"
+]
 
 [envs.build.scripts]
 update-changelog = ["python scripts/update_changelog.py"]
