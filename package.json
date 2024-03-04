@@ -269,6 +269,9 @@
           "variable": [
             "variable.other.readwrite.robotframework"
           ],
+          "variableExpression": [
+            "variable.expression.readwrite.robotframework"
+          ],
           "keywordCall": [
             "entity.name.function.keyword-call.robotframework"
           ],
@@ -339,10 +342,8 @@
         "scopeName": "source.robotframework",
         "path": "./syntaxes/robotframework.tmLanguage.json",
         "tokenTypes": {
-          "string.unquoted.argument.robotframework": "other"
-        },
-        "embeddedLanguages": {
-          "meta.expression.robotframework": "python"
+          "string.unquoted.argument.robotframework": "other",
+          "variable.expression.robotframework": "other"
         }
       }
     ],

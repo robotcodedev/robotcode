@@ -109,6 +109,7 @@ class RobotSemTokenTypes(Enum):
     FOR_SEPARATOR = "forSeparator"
     VARIABLE_BEGIN = "variableBegin"
     VARIABLE_END = "variableEnd"
+    VARIABLE_EXPRESSION = "variableExpression"
     ESCAPE = "escape"
     NAMESPACE = "namespace"
     ERROR = "error"
@@ -355,27 +356,30 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
                         length = token.end_col_offset - token.col_offset
 
                     last_index = token.value.rfind("}")
+
+                    is_expr = token.value[1:2] == "{" and token.value[last_index - 1 : last_index] == "}"
+
                     if last_index >= 0:
                         yield SemTokenInfo(
                             token.lineno,
                             col_offset,
-                            2,
+                            3 if is_expr else 2,
                             RobotSemTokenTypes.VARIABLE_BEGIN,
                             sem_mod,
                         )
 
-                        yield SemTokenInfo.from_token(
-                            token,
-                            sem_type,
-                            sem_mod,
-                            col_offset + 2,
-                            last_index - 2,
-                        )
+                        # yield SemTokenInfo.from_token(
+                        #     token,
+                        #     RobotSemTokenTypes.VARIABLE_EXPRESSION if is_expr else sem_type,
+                        #     sem_mod,
+                        #     col_offset + (3 if is_expr else 2),
+                        #     last_index - (4 if is_expr else 2),
+                        # )
 
                         yield SemTokenInfo(
                             token.lineno,
-                            col_offset + last_index,
-                            1,
+                            col_offset + ((last_index - 1) if is_expr else last_index),
+                            2 if is_expr else 1,
                             RobotSemTokenTypes.VARIABLE_END,
                             sem_mod,
                         )
