@@ -18,6 +18,11 @@ All notable changes to this project will be documented in this file. See [conven
 
 
 
+### Testing
+
+- Update regression some tests ([f01d37e](https://github.com/d-biehl/robotcode/commit/f01d37e42bd9ceab040ff0a3bb4e635902073a51))
+
+
 ## [0.76.2](https://github.com/d-biehl/robotcode/compare/v0.76.1..v0.76.2) - 2024-03-01
 
 ### Bug Fixes
