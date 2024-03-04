@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [0.77.0](https://github.com/d-biehl/robotcode/compare/v0.76.2..v0.77.0) - 2024-03-04
+
+### Bug Fixes
+
+- **diagnostics:** Resolving variables does not work for builtin vars at library import ([6b97730](https://github.com/d-biehl/robotcode/commit/6b97730f1791482a9ca9e5dee847cf6a240c98e2))
+
+
+### Features
+
+- **vscode:** Enable bracket coloring and matching in keyword arguments ([45243e5](https://github.com/d-biehl/robotcode/commit/45243e589ce44274aae58186071dbf271392d408))
+- **vscode:** Python syntax highlightning in `${{}}` expressions ([adf3627](https://github.com/d-biehl/robotcode/commit/adf36270ab7d39028ee1684e438cc42694af5e67))
+
+  this implements a part of #230
+
+
+
 ## [0.76.2](https://github.com/d-biehl/robotcode/compare/v0.76.1..v0.76.2) - 2024-03-01
 
 ### Bug Fixes
