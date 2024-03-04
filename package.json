@@ -110,7 +110,6 @@
         "editor.wordBasedSuggestions": "off",
         "editor.semanticHighlighting.enabled": true,
         "editor.inlayHints.enabled": "offUnlessPressed",
-        "editor.quickSuggestionsDelay": 100,
         "editor.quickSuggestions": {
           "strings": "on"
         }
@@ -1465,11 +1464,11 @@
   "devDependencies": {
     "@types/node": "^18.17.1",
     "@types/vscode": "^1.82.0",
-    "@typescript-eslint/eslint-plugin": "^7.0.2",
-    "@typescript-eslint/parser": "^7.0.2",
+    "@typescript-eslint/eslint-plugin": "^7.1.1",
+    "@typescript-eslint/parser": "^7.1.1",
     "@vscode/test-electron": "^2.3.9",
-    "@vscode/vsce": "^2.23.0",
-    "eslint": "^8.56.0",
+    "@vscode/vsce": "^2.24.0",
+    "eslint": "^8.57.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-import": "^2.29.1",
     "eslint-plugin-jsx-a11y": "^6.8.0",
