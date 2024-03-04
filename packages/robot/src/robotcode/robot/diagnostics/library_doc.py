@@ -1618,9 +1618,9 @@ def _find_library_internal(
 
     robot_variables = None
 
-    if contains_variable(name, "$@&%"):
-        robot_variables = resolve_robot_variables(working_dir, base_dir, command_line_variables, variables)
+    robot_variables = resolve_robot_variables(working_dir, base_dir, command_line_variables, variables)
 
+    if contains_variable(name, "$@&%"):
         try:
             name = robot_variables.replace_string(name, ignore_errors=False)
         except DataError as error:
@@ -2048,9 +2048,9 @@ def _find_variables_internal(
 
     _update_env(working_dir)
 
-    if contains_variable(name, "$@&%"):
-        robot_variables = resolve_robot_variables(working_dir, base_dir, command_line_variables, variables)
+    robot_variables = resolve_robot_variables(working_dir, base_dir, command_line_variables, variables)
 
+    if contains_variable(name, "$@&%"):
         try:
             name = robot_variables.replace_string(name, ignore_errors=False)
         except DataError as error:
@@ -2351,8 +2351,8 @@ def find_file(
 ) -> str:
     _update_env(working_dir)
 
+    robot_variables = resolve_robot_variables(working_dir, base_dir, command_line_variables, variables)
     if contains_variable(name, "$@&%"):
-        robot_variables = resolve_robot_variables(working_dir, base_dir, command_line_variables, variables)
         try:
             name = robot_variables.replace_string(name, ignore_errors=False)
         except DataError as error:
