@@ -13,7 +13,7 @@ result: !SemanticTokens
   - 0
   - 18
   - 41
-  - 50
+  - 51
   - 0
   - 1
   - 0
@@ -23,7 +23,7 @@ result: !SemanticTokens
   - 0
   - 18
   - 41
-  - 50
+  - 51
   - 0
   - 1
   - 0
@@ -33,7 +33,7 @@ result: !SemanticTokens
   - 0
   - 18
   - 28
-  - 50
+  - 51
   - 0
   - 2
   - 0
@@ -43,7 +43,7 @@ result: !SemanticTokens
   - 0
   - 10
   - 11
-  - 50
+  - 51
   - 0
   - 1
   - 0
@@ -53,7 +53,7 @@ result: !SemanticTokens
   - 0
   - 11
   - 8
-  - 50
+  - 51
   - 0
   - 2
   - 0
@@ -63,7 +63,7 @@ result: !SemanticTokens
   - 0
   - 13
   - 11
-  - 50
+  - 51
   - 0
   - 1
   - 0
@@ -73,7 +73,7 @@ result: !SemanticTokens
   - 0
   - 12
   - 14
-  - 50
+  - 51
   - 0
   - 2
   - 0
@@ -103,7 +103,7 @@ result: !SemanticTokens
   - 1
   - 4
   - 10
-  - 50
+  - 51
   - 0
   - 0
   - 10
@@ -118,7 +118,7 @@ result: !SemanticTokens
   - 1
   - 4
   - 10
-  - 50
+  - 51
   - 0
   - 0
   - 10
@@ -133,7 +133,7 @@ result: !SemanticTokens
   - 1
   - 4
   - 10
-  - 50
+  - 51
   - 0
   - 0
   - 10
