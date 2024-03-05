@@ -284,11 +284,13 @@
             "keyword.modifier.bdd-prefix.robotframework"
           ],
           "continuation": [
-            "punctuation.separator.continuation.robotframework"
+            "keyword.operator.continuation.robotframework"
           ],
-          "separator": [],
+          "separator": [
+            "keyword.operator.terminator.robotframework"
+          ],
           "terminator": [
-            "punctuation.terminator.robotframework"
+            "keyword.operator.terminator.robotframework"
           ],
           "variableBegin": [
             "punctuation.definition.variable.begin.robotframework"
@@ -343,7 +345,8 @@
         "tokenTypes": {
           "string.unquoted.argument.robotframework": "other",
           "variable.expression.robotframework": "other"
-        }
+        },
+        "unbalancedBracketScopes": ["comment.robotframework", "comment"]
       }
     ],
     "keybindings": [
