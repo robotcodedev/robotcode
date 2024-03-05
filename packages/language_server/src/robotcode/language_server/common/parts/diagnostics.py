@@ -109,7 +109,8 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
         self.parent.documents.on_document_cache_invalidated.add(self._on_document_cache_invalidated)
         self.parent.documents.did_close.add(self.on_did_close)
 
-        self.in_get_workspace_diagnostics = Event()
+        self.in_get_workspace_diagnostics_event = Event()
+        self.workspace_diagnostics_started_event = Event()
 
         self.client_supports_pull = False
 
@@ -345,10 +346,12 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
             check_current_task_canceled()
 
             self.on_workspace_diagnostics_start(self)
+            self.in_get_workspace_diagnostics_event.clear()
+            self.workspace_diagnostics_started_event.set()
+            done_something = False
 
             try:
                 self._break_diagnostics_loop_event.clear()
-                self.in_get_workspace_diagnostics.clear()
 
                 documents = sorted(
                     [doc for doc in self.parent.documents.documents if self._doc_need_update(doc)],
@@ -360,8 +363,6 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
                     continue
 
                 self._logger.debug(lambda: f"start collecting workspace diagnostics for {len(documents)} documents")
-
-                done_something = False
 
                 self.on_workspace_diagnostics_analyze(self)
 
@@ -427,8 +428,6 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
                     self._logger.debug("break workspace diagnostics loop 3")
                     self.on_workspace_diagnostics_break(self)
                     continue
-
-                self.in_get_workspace_diagnostics.set()
 
                 self.on_workspace_diagnostics_collect(self)
 
@@ -506,9 +505,6 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
                             with self._current_diagnostics_task_lock:
                                 self._current_diagnostics_task = None
 
-                if not done_something:
-                    check_current_task_canceled(1)
-
                 self._logger.debug(
                     lambda: f"collecting workspace diagnostics for {len(documents_to_collect)} "
                     f"documents takes {time.monotonic() - start}s"
@@ -519,7 +515,12 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
             except BaseException as e:
                 self._logger.exception(e)
             finally:
+                self.workspace_diagnostics_started_event.clear()
+                self.in_get_workspace_diagnostics_event.set()
                 self.on_workspace_diagnostics_end(self)
+
+                if not done_something:
+                    check_current_task_canceled(1)
 
     def reset_document_diagnostics_data(self, document: TextDocument) -> None:
         with self.get_diagnostics_data(document) as data:

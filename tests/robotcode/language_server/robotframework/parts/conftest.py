@@ -92,6 +92,9 @@ def protocol(
     # diagnostics_end.wait(120)
     # protocol.diagnostics.cancel_workspace_diagnostics_task(None)
 
+    protocol.diagnostics.workspace_diagnostics_started_event.wait(300)
+    protocol.diagnostics.in_get_workspace_diagnostics_event.wait(300)
+
     try:
         yield protocol
     finally:
