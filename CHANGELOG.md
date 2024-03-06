@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [0.78.0](https://github.com/d-biehl/robotcode/compare/v0.77.1..v0.78.0) - 2024-03-06
+
+### Bug Fixes
+
+- **vscode:** Some corrections in environment variable highlightning ([8936bfb](https://github.com/d-biehl/robotcode/commit/8936bfbabfef3b35811db32a757e577010c78e6f))
+
+
+### Features
+
+- **vscode:** Python syntax highlightning in IF and WHILE statements ([c56def3](https://github.com/d-biehl/robotcode/commit/c56def3577d1e3024f747695119e5ed6e508d200))
+
+  implements a part of #230
+
+
+
 ## [0.77.1](https://github.com/d-biehl/robotcode/compare/v0.77.0..v0.77.1) - 2024-03-06
 
 ### Bug Fixes
