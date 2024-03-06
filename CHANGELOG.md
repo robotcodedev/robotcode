@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [0.77.1](https://github.com/d-biehl/robotcode/compare/v0.77.0..v0.77.1) - 2024-03-06
+
+### Bug Fixes
+
+- **vscode:** Correct some things in bracket highlightning and coloring ([6c584dc](https://github.com/d-biehl/robotcode/commit/6c584dc5923398f43f6df1e09f1e6e07a12d4b44))
+
+
 ## [0.77.0](https://github.com/d-biehl/robotcode/compare/v0.76.2..v0.77.0) - 2024-03-05
 
 ### Bug Fixes
