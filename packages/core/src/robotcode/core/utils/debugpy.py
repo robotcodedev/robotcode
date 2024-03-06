@@ -17,10 +17,10 @@ def is_debugpy_installed() -> bool:
 
 def wait_for_debugpy_connected() -> bool:
     if is_debugpy_installed():
-        import debugpy
+        import debugpy  # noqa: T100
 
         _logger.info("wait for debugpy client")
-        debugpy.wait_for_client()
+        debugpy.wait_for_client()  # noqa: T100
 
         return True
     return False
@@ -28,7 +28,7 @@ def wait_for_debugpy_connected() -> bool:
 
 def enable_debugpy(port: int, addresses: Union[Sequence[str], str, None] = None) -> bool:
     if is_debugpy_installed():
-        import debugpy
+        import debugpy  # noqa: T100
 
         if addresses is None:
             addresses = ["127.0.0.1"]
@@ -37,7 +37,7 @@ def enable_debugpy(port: int, addresses: Union[Sequence[str], str, None] = None)
             addresses = [addresses]  # type: ignore
 
         for address in addresses:
-            debugpy.listen((address, port))
+            debugpy.listen((address, port))  # noqa: T100
 
         return True
     return False
@@ -45,17 +45,17 @@ def enable_debugpy(port: int, addresses: Union[Sequence[str], str, None] = None)
 
 def start_debugpy(end_point: Union[Tuple[str, int], int], wait_for_client: bool) -> Optional[int]:
     if is_debugpy_installed():
-        import debugpy
+        import debugpy  # noqa: T100
 
         if isinstance(end_point, int):
             end_point = ("127.0.0.1", end_point)
 
         real_port = find_free_port(end_point[1])
 
-        debugpy.listen((end_point[0], real_port))
+        debugpy.listen((end_point[0], real_port))  # noqa: T100
 
         if wait_for_client:
             _logger.info("wait for debugpy client")
-            debugpy.wait_for_client()
+            debugpy.wait_for_client()  # noqa: T100
         return real_port
     return None
