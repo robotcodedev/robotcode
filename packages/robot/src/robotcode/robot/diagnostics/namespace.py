@@ -99,6 +99,7 @@ from .library_doc import (
     KeywordError,
     KeywordMatcher,
     LibraryDoc,
+    resolve_robot_variables,
 )
 
 EXTRACT_COMMENT_PATTERN = re.compile(r".*(?:^ *|\t+| {2,})#(?P<comment>.*)$")
@@ -184,22 +185,19 @@ class VariablesVisitor(Visitor):
 class BlockVariableVisitor(Visitor):
     def __init__(
         self,
-        library_doc: LibraryDoc,
-        global_variables: List[VariableDefinition],
-        source: str,
+        namespace: "Namespace",
+        nodes: Optional[List[ast.AST]] = None,
         position: Optional[Position] = None,
         in_args: bool = True,
     ) -> None:
         super().__init__()
-        self.library_doc = library_doc
-        self.global_variables = global_variables
-        self.source = source
+        self.namespace = namespace
+        self.nodes = nodes
         self.position = position
         self.in_args = in_args
 
         self._results: Dict[str, VariableDefinition] = {}
         self.current_kw_doc: Optional[KeywordDoc] = None
-        self._var_statements_vars: List[VariableDefinition] = []
 
     def get(self, model: ast.AST) -> List[VariableDefinition]:
         self._results = {}
@@ -224,7 +222,7 @@ class BlockVariableVisitor(Visitor):
         name_token = node.get_token(Token.KEYWORD_NAME)
 
         if name_token is not None and name_token.value:
-            keyword = ModelHelper.get_keyword_definition_at_token(self.library_doc, name_token)
+            keyword = ModelHelper.get_keyword_definition_at_token(self.namespace.get_library_doc(), name_token)
             self.current_kw_doc = keyword
 
             for variable_token in filter(
@@ -246,7 +244,7 @@ class BlockVariableVisitor(Visitor):
                         col_offset=variable_token.col_offset,
                         end_line_no=variable_token.lineno,
                         end_col_offset=variable_token.end_col_offset,
-                        source=self.source,
+                        source=self.namespace.source,
                         keyword_doc=self.current_kw_doc,
                     )
 
@@ -290,7 +288,7 @@ class BlockVariableVisitor(Visitor):
                             col_offset=argument.col_offset,
                             end_line_no=argument.lineno,
                             end_col_offset=argument.end_col_offset,
-                            source=self.source,
+                            source=self.namespace.source,
                             keyword_doc=self.current_kw_doc,
                         )
                         self._results[argument.value] = arg_def
@@ -312,11 +310,47 @@ class BlockVariableVisitor(Visitor):
                         col_offset=variable.col_offset,
                         end_line_no=variable.lineno,
                         end_col_offset=variable.end_col_offset,
-                        source=self.source,
+                        source=self.namespace.source,
                     )
 
             except VariableError:
                 pass
+
+    def _get_var_name(self, original: str, position: Position, require_assign: bool = True) -> Optional[str]:
+        robot_variables = resolve_robot_variables(
+            str(self.namespace.imports_manager.root_folder),
+            str(Path(self.namespace.source).parent) if self.namespace.source else ".",
+            self.namespace.imports_manager.get_resolvable_command_line_variables(),
+            variables=self.namespace.get_resolvable_variables(),
+        )
+
+        try:
+            replaced = robot_variables.replace_string(original)
+        except VariableError:
+            replaced = original
+        try:
+            name = self._resolve_var_name(replaced, robot_variables)
+        except ValueError:
+            name = original
+        match = search_variable(name, identifiers="$@&")
+        match.resolve_base(robot_variables)
+        valid = match.is_assign() if require_assign else match.is_variable()
+        if not valid:
+            return None
+        return str(match)
+
+    def _resolve_var_name(self, name: str, variables: Any) -> str:
+        if name.startswith("\\"):
+            name = name[1:]
+        if len(name) < 2 or name[0] not in "$@&":
+            raise ValueError
+        if name[1] != "{":
+            name = f"{name[0]}{{{name[1:]}}}"
+        match = search_variable(name, identifiers="$@&", ignore_errors=True)
+        match.resolve_base(variables)
+        if not match.is_assign():
+            raise ValueError
+        return str(match)
 
     def visit_KeywordCall(self, node: Statement) -> None:  # noqa: N802
         # TODO  analyze "Set Local/Global/Suite Variable"
@@ -341,8 +375,61 @@ class BlockVariableVisitor(Visitor):
                             col_offset=variable_token.col_offset,
                             end_line_no=variable_token.lineno,
                             end_col_offset=variable_token.end_col_offset,
-                            source=self.source,
+                            source=self.namespace.source,
                         )
+
+            except VariableError:
+                pass
+
+        keyword_token = node.get_token(Token.KEYWORD)
+        if keyword_token is None or not keyword_token.value:
+            return
+
+        keyword = self.namespace.find_keyword(keyword_token.value, raise_keyword_error=False)
+        if keyword is None:
+            return
+
+        if keyword.libtype == "LIBRARY" and keyword.libname == "BuiltIn":
+            var_type = None
+            if keyword.name == "Set Suite Variable":
+                var_type = VariableDefinition
+            elif keyword.name == "Set Global Variable":
+                var_type = GlobalVariableDefinition
+            elif keyword.name == "Set Test Variable" or keyword.name == "Set Task Variable":
+                var_type = TestVariableDefinition
+            elif keyword.name == "Set Local Variable":
+                var_type = LocalVariableDefinition
+            else:
+                return
+            try:
+                variable = node.get_token(Token.ARGUMENT)
+                if variable is None:
+                    return
+
+                position = range_from_node(node).start
+                position.character = 0
+                var_name = self._get_var_name(variable.value, position)
+
+                if var_name is None or not is_variable(var_name):
+                    return
+
+                var = var_type(
+                    name=var_name,
+                    name_token=strip_variable_token(variable),
+                    line_no=variable.lineno,
+                    col_offset=variable.col_offset,
+                    end_line_no=variable.lineno,
+                    end_col_offset=variable.end_col_offset,
+                    source=self.namespace.source,
+                )
+
+                if var_name not in self._results or type(self._results[var_name]) != type(var):
+                    if isinstance(var, LocalVariableDefinition) or not any(
+                        l for l in self.namespace.get_global_variables() if l.matcher == var.matcher
+                    ):
+                        self._results[var_name] = var
+                    else:
+                        self._results.pop(var_name, None)
 
             except VariableError:
                 pass
@@ -368,7 +455,7 @@ class BlockVariableVisitor(Visitor):
                             col_offset=variable_token.col_offset,
                             end_line_no=variable_token.lineno,
                             end_col_offset=variable_token.end_col_offset,
-                            source=self.source,
+                            source=self.namespace.source,
                         )
 
             except VariableError:
@@ -386,7 +473,7 @@ class BlockVariableVisitor(Visitor):
                     col_offset=variable_token.col_offset,
                     end_line_no=variable_token.lineno,
                     end_col_offset=variable_token.end_col_offset,
-                    source=self.source,
+                    source=self.namespace.source,
                 )
 
     def visit_Var(self, node: Statement) -> None:  # noqa: N802
@@ -421,14 +508,12 @@ class BlockVariableVisitor(Visitor):
                 col_offset=variable.col_offset,
                 end_line_no=variable.lineno,
                 end_col_offset=variable.end_col_offset,
-                source=self.source,
+                source=self.namespace.source,
             )
-
-            self._var_statements_vars.append(var)
 
             if var_name not in self._results or type(self._results[var_name]) != type(var):
                 if isinstance(var, LocalVariableDefinition) or not any(
-                    l for l in self.global_variables if l.matcher == var.matcher
+                    l for l in self.namespace.get_global_variables() if l.matcher == var.matcher
                 ):
                     self._results[var_name] = var
                 else:
@@ -924,9 +1009,8 @@ class Namespace:
                 (
                     (
                         BlockVariableVisitor(
-                            self.get_library_doc(),
-                            self.get_global_variables(),
-                            self.source,
+                            self,
+                            nodes,
                             position,
                             isinstance(test_or_keyword_nodes[-1], Arguments) if nodes else False,
                         ).get(test_or_keyword)

@@ -348,7 +348,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
             if isinstance(node, (Documentation, Metadata)):
                 sem_mod = {SemanticTokenModifiers.DOCUMENTATION}
 
-            if token.type == Token.VARIABLE:
+            if token.type in [Token.VARIABLE, Token.ASSIGN]:
                 if is_variable(token.value, "$@&%"):
                     if col_offset is None:
                         col_offset = token.col_offset

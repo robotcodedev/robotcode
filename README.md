@@ -214,7 +214,7 @@ put this to the `settings.json`
             }
         },
         {
-            "scope": "variable.other.readwrite.robotframework",
+            "scope": "variable.name.readwrite.robotframework",
             "settings": {
                 //"fontStyle": "italic",
             }

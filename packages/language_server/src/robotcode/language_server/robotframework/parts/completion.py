@@ -254,7 +254,8 @@ def get_reserved_keywords() -> List[str]:
     global __reserved_keywords
 
     if __reserved_keywords is None:
-        __reserved_keywords = ["FOR", "END", "IF", "ELSE", "ELIF", "ELSE IF"]
+        __reserved_keywords = ["FOR", "END", "IF", "ELSE", "ELSE IF"]
+
         if get_robot_version() >= (5, 0):
             __reserved_keywords += [
                 "TRY",
@@ -267,6 +268,8 @@ def get_reserved_keywords() -> List[str]:
             ]
         if get_robot_version() >= (7, 0):
             __reserved_keywords += ["VAR"]
+        else:
+            __reserved_keywords += ["ELIF"]
 
         __reserved_keywords = sorted(__reserved_keywords)
     return __reserved_keywords

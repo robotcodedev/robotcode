@@ -8,11 +8,11 @@
 		"variable_setting": {
 			"name": "meta.variable.assign.robotframework",
 			"contentName": "string.unquoted.argument.robotframework",
-			"begin": "^(?:([$@&%]\\{)(.*?}*)(\\})( ?=)?)",
+			"begin": "^(?:([$@&]\\{)(.*?}*)(\\})( ?=)?)",
 			"beginCaptures": {
-				"1": { "name": "unctuation.definition.variable.begin.robotframework" },
-				"2": { "name": "variable.other.readwrite.robotframework" },
-				"3": { "name": "unctuation.definition.variable.end.robotframework" },
+				"1": { "name": "punctuation.definition.variable.begin.robotframework" },
+				"2": { "name": "variable.name.readwrite.robotframework" },
+				"3": { "name": "punctuation.definition.variable.end.robotframework" },
 				"4": { "name": "keyword.operator.robotframework" }
 			},
 			"end": "^(?!\\s*\\.\\.\\.)",
@@ -42,7 +42,7 @@
 		},
 		"simple_var": {
 			"name": "meta.variables.robotframework",
-			"contentName": "variable.other.readwrite.robotframework",
+			"contentName": "variable.name.readwrite.robotframework",
 			"begin": "[$@&]\\{",
 			"end": "(\\})|(?= {2}| ?\\t| ?$)",
 			"beginCaptures": { "0": { "name": "punctuation.definition.variable.begin.robotframework" } },
@@ -51,23 +51,24 @@
 		},
 		"env_var": {
 			"name": "meta.variables.robotframework",
-			"contentName": "variable.other.readwrite.robotframework",
-			"begin": "%\\{",
+			"begin": "(%\\{)",
 			"end": "(\\})|(?= {2}| ?\\t| ?$)",
 			"beginCaptures": { "0": { "name": "punctuation.definition.envvar.begin.robotframework" } },
 			"endCaptures": { "1": { "name": "punctuation.definition.envvar.end.robotframework" } },
 			"patterns": [ { "include": "#env_key_value_pair" } ]
 		},
 		"env_key_value_pair": {
-			"match": "([^=]*)((=)(.*))?",
-			"captures": {
-				"1": { "patterns": [ { "include": "#variables" } ] },
-				"3": { "name": "keyword.operator.robotframework" },
-				"4": {
-					"name": "string.unquoted.value.robotframework",
+			"begin": "([^=\\}]*)(=)?",
+			"end": "(?=\\}| {2}| ?\\t| ?$)",
+			"contentName": "constant.character.robotframework",
+			"beginCaptures": {
+				"1": {
+					"name": "variable.name.readwrite.robotframework",
 					"patterns": [ { "include": "#variables" } ]
-				}
-			}
+				},
+				"2": { "name": "keyword.operator.robotframework" }
+			},
+			"patterns": [ { "include": "#variables" } ]
 		},
 		"comment": {
 			"name": "comment.robotframework",
@@ -123,7 +124,7 @@
 			"begin": "(?<=\\s)(?=\\s*(?:(?=[$@&])))((?:\\s)*(?:[$&@]{(?:.*?)}(?:\\[.*?\\])?(?: ?=?\\s*))*)(.*?)(?: {2,}| ?\\t ?|$)",
 			"beginCaptures": {
 				"1": {
-					"name": "variable.other.readwrite.robotframework",
+					"name": "variable.name.readwrite.robotframework",
 					"patterns": [ { "include": "#variable_assignment_from_kw" } ]
 				},
 				"2": { "name": "entity.name.function.keyword-call.robotframework" }
@@ -146,7 +147,7 @@
 			]
 		},
 		"line_continuation": {
-			"match": "^(\\s*\\.\\.\\.)(?: {2,}| ?\\t+| ?$)(?!ELSE)",
+			"match": "^(\\s*\\.\\.\\.)(?: {2,}| ?\\t+| ?$)",
 			"name": "keyword.operator.robotframework"
 		},
 		"impossible": {
@@ -877,7 +878,7 @@
 			"match": "(\\$)([[:alpha:]_]\\w*)",
 			"captures": {
 				"1": { "name": "punctuation.definition.variable.begin.robotframework" },
-				"2": { "name": "variable.other.readwrite.robotframework" }
+				"2": { "name": "variable.name.readwrite.robotframework" }
 			}
 		},
 		"ellipsis": {

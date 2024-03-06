@@ -151,7 +151,7 @@
             }
           },
           {
-            "scope": "variable.other.readwrite.robotframework",
+            "scope": "variable.name.readwrite.robotframework",
             "settings": {}
           },
           {
@@ -266,7 +266,7 @@
             "string.unquoted.embeddedArgument.robotframework"
           ],
           "variable": [
-            "variable.other.readwrite.robotframework"
+            "variable.name.readwrite.robotframework"
           ],
           "variableExpression": [
             "variable.expression.readwrite.robotframework"
