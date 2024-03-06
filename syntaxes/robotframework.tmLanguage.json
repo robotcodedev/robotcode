@@ -111,6 +111,48 @@
 				{ "include": "#line_continuation" }
 			]
 		},
+		"control_flow_expression_statements": {
+			"name": "meta.keyword-call.content.robotframework",
+			"contentName": "string.unquoted.argument.robotframework",
+			"begin": "^(?!(?: {2,}| ?\\t ?)+(?:(?=[$\\[@&%]|\\.)))(?: {2,}| ?\\t ?)+(IF|ELSE IF|WHILE)(( {2,}| ?\\t)( *)(.*?))?(?= {2,}| ?\\t ?| ?$)",
+			"end": "^(?!\\s*\\.\\.\\.)",
+			"beginCaptures": {
+				"1": { "name": "keyword.control.flow.robotframework" },
+				"5": {
+					"name": "meta.python-expression.robotframework",
+					"patterns": [ { "include": "#expression" } ]
+				}
+			},
+			"patterns": [
+				{ "include": "#comment" },
+				{ "include": "#variables" },
+				{ "include": "#line_continuation" }
+			]
+		},
+		"control_flow_statements": {
+			"name": "meta.keyword-call.content.robotframework",
+			"contentName": "string.unquoted.argument.robotframework",
+			"begin": "^(?!(?: {2,}| ?\\t ?)+(?:(?=[$\\[@&%]|\\.)))(?: {2,}| ?\\t ?)+(FOR|END|ELSE|TRY|EXCEPT|FINALLY)(?= {2,}| ?\\t ?| ?$)",
+			"end": "^(?!\\s*\\.\\.\\.)",
+			"beginCaptures": { "1": { "name": "keyword.control.flow.robotframework" } },
+			"patterns": [
+				{ "include": "#comment" },
+				{ "include": "#variables" },
+				{ "include": "#line_continuation" }
+			]
+		},
+		"other_statements": {
+			"name": "meta.keyword-call.content.robotframework",
+			"contentName": "string.unquoted.argument.robotframework",
+			"begin": "^(?!(?: {2,}| ?\\t ?)+(?:(?=[$\\[@&%]|\\.)))(?: {2,}| ?\\t ?)+(VAR)(?= {2,}| ?\\t ?| ?$)",
+			"end": "^(?!\\s*\\.\\.\\.)",
+			"beginCaptures": { "1": { "name": "keyword.robotframework" } },
+			"patterns": [
+				{ "include": "#comment" },
+				{ "include": "#variables" },
+				{ "include": "#line_continuation" }
+			]
+		},
 		"returning_keyword_call": {
 			"name": "meta.returning-keyword-call.robotframework",
 			"contentName": "meta.returning.keyword.content.robotframework",
@@ -2278,6 +2320,9 @@
 		{ "include": "#variable_setting" },
 		{ "include": "#setting" },
 		{ "include": "#testcase_settings" },
+		{ "include": "#control_flow_expression_statements" },
+		{ "include": "#control_flow_statements" },
+		{ "include": "#other_statements" },
 		{ "include": "#keyword_call" },
 		{ "include": "#returning_keyword_call" }
 	],

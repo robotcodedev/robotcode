@@ -403,13 +403,14 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
                     col_offset = token.col_offset
 
                 for g in cls.ESCAPE_REGEX.finditer(token.value):
-                    yield SemTokenInfo.from_token(
-                        token,
-                        sem_type if g.group("x") is None else RobotSemTokenTypes.ESCAPE,
-                        sem_mod,
-                        col_offset + g.start(),
-                        g.end() - g.start(),
-                    )
+                    if g.group("x") is not None:
+                        yield SemTokenInfo.from_token(
+                            token,
+                            sem_type if g.group("x") is None else RobotSemTokenTypes.ESCAPE,
+                            sem_mod,
+                            col_offset + g.start(),
+                            g.end() - g.start(),
+                        )
             elif token.type in [Token.KEYWORD, ROBOT_KEYWORD_INNER] or (
                 token.type == Token.NAME and isinstance(node, (Fixture, Template, TestTemplate))
             ):
@@ -614,7 +615,8 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
                     1,
                 )
             else:
-                yield SemTokenInfo.from_token(token, sem_type, sem_mod, col_offset, length)
+                if token.type != Token.ARGUMENT:
+                    yield SemTokenInfo.from_token(token, sem_type, sem_mod, col_offset, length)
 
     def generate_sem_tokens(
         self,

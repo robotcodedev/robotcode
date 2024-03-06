@@ -60,6 +60,15 @@ result:
 - !Location
   range:
     end:
+      character: 19
+      line: 7
+    start:
+      character: 11
+      line: 7
+  uri: tests/duplicated_resources.robot
+- !Location
+  range:
+    end:
       character: 22
       line: 1
     start:
