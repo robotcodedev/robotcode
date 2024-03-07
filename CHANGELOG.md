@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
-## [0.78.0](https://github.com/d-biehl/robotcode/compare/v0.77.1..v0.78.0) - 2024-03-06
+## [0.78.0](https://github.com/d-biehl/robotcode/compare/v0.77.1..v0.78.0) - 2024-03-07
 
 ### Bug Fixes
 
@@ -15,6 +15,11 @@ All notable changes to this project will be documented in this file. See [conven
 
   implements a part of #230
 
+
+
+### Testing
+
+- Fix some regression tests ([6001e30](https://github.com/d-biehl/robotcode/commit/6001e30a1a2e5c3dfb20aeab54ebe6f3dc95f203))
 
 
 ## [0.77.1](https://github.com/d-biehl/robotcode/compare/v0.77.0..v0.77.1) - 2024-03-06
