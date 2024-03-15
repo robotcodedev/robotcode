@@ -16,6 +16,7 @@ from typing import (
     List,
     Literal,
     Optional,
+    Set,
     Tuple,
     Union,
     get_type_hints,
@@ -2264,6 +2265,9 @@ class RobotExtendBaseProfile(RobotBaseProfile):
 class RobotProfile(RobotExtendBaseProfile):
     """Robot Framework configuration profile."""
 
+    def __hash__(self) -> int:
+        return id(self)
+
     description: Optional[str] = field(description="Description of the profile.")
 
     detached: Optional[bool] = field(
@@ -2290,6 +2294,9 @@ class RobotProfile(RobotExtendBaseProfile):
             ```
             """
     )
+
+    def is_enabled(self) -> bool:
+        return self.enabled is None or bool(self.enabled)
 
     hidden: Union[bool, Condition, None] = field(
         description="""\
@@ -2349,13 +2356,13 @@ class RobotConfig(RobotExtendBaseProfile):
 
     tool: Any = field(description="Tool configurations.")
 
-    def select_profiles(
+    def _select_profiles(
         self,
         *names: str,
         verbose_callback: Optional[Callable[[Union[str, Callable[[], Any]]], None]] = None,
         error_callback: Optional[Callable[[Union[str, Callable[[], Any]]], None]] = None,
-    ) -> Dict[str, RobotProfile]:
-        result: Dict[str, RobotProfile] = {}
+    ) -> Dict[str, Tuple[RobotProfile, Optional[Set[Tuple[str, RobotProfile]]]]]:
+        result: Dict[str, Tuple[RobotProfile, Optional[Set[Tuple[str, RobotProfile]]]]] = {}
 
         profiles = self.profiles or {}
 
@@ -2372,14 +2379,20 @@ class RobotConfig(RobotExtendBaseProfile):
 
             names = (*(default_profile or ()),)
 
-        def select(name: str) -> None:
+        def select(name: str, parent_profiles: Optional[Set[Tuple[str, RobotProfile]]] = None) -> None:
             if not name:
                 return
 
             nonlocal result
 
             if verbose_callback:
-                verbose_callback(f"Selecting profiles matching '{name}'.")
+                if parent_profiles is not None:
+                    verbose_callback(
+                        f"Selecting profiles matching '{name}'"
+                        f" for parent profile '{next(f for f in parent_profiles)[0]}'."
+                    )
+                else:
+                    verbose_callback(f"Selecting profiles matching '{name}'.")
 
             profile_names = [p for p in profiles.keys() if fnmatch.fnmatchcase(p, name)]
 
@@ -2393,13 +2406,24 @@ class RobotConfig(RobotExtendBaseProfile):
 
             for v in profile_names:
                 p = profiles[v]
-                result.update({v: p})
+
                 if p.inherits:
                     if isinstance(p.inherits, list):
                         for i in p.inherits:
-                            select(str(i))
+                            select(str(i), {(v, p)})
                     else:
-                        select(str(p.inherits))
+                        select(str(p.inherits), {(v, p)})
+
+                if v in result:
+                    if parent_profiles is None:
+                        result[v] = (p, None)
+                    else:
+                        parents = result[v][1]
+                        if parents is not None:
+                            parents.update(parent_profiles)
+
+                else:
+                    result.update({v: (p, parent_profiles)})
 
         for name in names:
             select(name)
@@ -2438,7 +2462,7 @@ class RobotConfig(RobotExtendBaseProfile):
             }
         )
 
-        selected_profiles = self.select_profiles(
+        selected_profiles = self._select_profiles(
             *names, verbose_callback=verbose_callback, error_callback=error_callback
         )
         if verbose_callback:
@@ -2447,20 +2471,47 @@ class RobotConfig(RobotExtendBaseProfile):
             else:
                 verbose_callback("No profiles selected.")
 
-        for profile_name, profile in sorted(selected_profiles.items(), key=lambda x: x[1].precedence or 0):
+        for profile_name, (profile, parent_profiles) in sorted(
+            selected_profiles.items(), key=lambda x: x[1][0].precedence or 0
+        ):
             try:
-                if profile.enabled is not None and not bool(profile.enabled):
+                if not profile.is_enabled():
                     if verbose_callback:
                         verbose_callback(f'Skipping profile "{profile_name}" because it\'s disabled.')
                     continue
             except EvaluationError as e:
-                message = f'Error evaluating "enabled" condition for profile "{profile_name}": {e}'
+                message = f"Error evaluating 'enabled' condition for profile '{profile_name}': {e}"
 
                 if error_callback is None:
                     raise ValueError(message) from e
 
                 error_callback(message)
                 continue
+
+            if parent_profiles is not None:
+                disabled_profiles = []
+                skip = False
+                for parent_profile in parent_profiles:
+                    try:
+                        if not parent_profile[1].is_enabled():
+                            disabled_profiles.append(parent_profile[0])
+                    except EvaluationError as e:
+                        message = f"Error evaluating 'enabled' condition for profile '{parent_profile[0]}': {e}"
+
+                        if error_callback is None:
+                            raise ValueError(message) from e
+
+                        error_callback(message)
+                        skip = True
+                        break
+
+                if skip or len(disabled_profiles) == len(parent_profiles):
+                    if verbose_callback:
+                        verbose_callback(
+                            f"Skipping profile inherited '{profile_name}' because no parent is enabled."
+                            f" Disabled profiles: {', '.join(disabled_profiles)}."
+                        )
+                    continue
 
             if verbose_callback:
                 verbose_callback(f'Using profile "{profile_name}".')
@@ -2471,7 +2522,7 @@ class RobotConfig(RobotExtendBaseProfile):
                 for k, v in profile.env.items():
                     os.environ[k] = str(v)
                     if verbose_callback:
-                        verbose_callback(lambda: f"Set environment variable `{k}` to `{v}`")
+                        verbose_callback(lambda: f"Set environment variable '{k}' to '{v}'")
 
             if profile.detached:
                 result = RobotBaseProfile()
@@ -2520,4 +2571,4 @@ class RobotConfig(RobotExtendBaseProfile):
                 if new is not None:
                     setattr(result, f.name, new)
 
-        return result, selected_profiles, enabled_profiles
+        return result, {k: v[0] for k, v in selected_profiles.items()}, enabled_profiles
