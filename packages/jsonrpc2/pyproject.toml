@@ -25,7 +25,7 @@ classifiers = [
   "Framework :: Robot Framework",
   "Framework :: Robot Framework :: Tool",
 ]
-dependencies = ["robotcode-core==0.78.0"]
+dependencies = ["robotcode-core==0.78.1"]
 dynamic = ["version"]
 
 [project.urls]

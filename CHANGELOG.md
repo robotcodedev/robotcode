@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [0.78.1](https://github.com/d-biehl/robotcode/compare/v0.78.0..v0.78.1) - 2024-03-15
+
+### Bug Fixes
+
+- **analyze:** If a imported resource has import errors it is shown as releated information ([caf8541](https://github.com/d-biehl/robotcode/commit/caf8541c76e98bbd3ece931be31e00b388634d3a))
+- **langserver:** Hovering over `EMPTY` builtin variable respects the type and shows correct empty values ([c8b66c8](https://github.com/d-biehl/robotcode/commit/c8b66c8fcd05d18ee1d27b79f20bc8d2ff51dc44))
+- **profiles:** Profiles inherited by `[profile].inherit` are now merged before the parent profile, unless the `precedence` is set and are only enabled if the parent profile is enabled ([318d780](https://github.com/d-biehl/robotcode/commit/318d780d9e04b7cfae42a1616af76af56317b320))
+
+
 ## [0.78.0](https://github.com/d-biehl/robotcode/compare/v0.77.1..v0.78.0) - 2024-03-07
 
 ### Bug Fixes
