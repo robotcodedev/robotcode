@@ -27,6 +27,7 @@ from robotcode.core.lsp.types import (
 )
 from robotcode.core.text_document import TextDocument
 from robotcode.core.utils.logging import TRACE, LoggingDescriptor
+from robotcode.robot.diagnostics.entities import VariableDefinitionType
 from robotcode.robot.diagnostics.model_helper import ModelHelper
 from robotcode.robot.utils.ast import (
     get_nodes_at_position,
@@ -117,29 +118,43 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
                 if found_range is not None:
                     highlight_range = found_range
                     if variable.has_value or variable.resolvable:
-                        try:
-                            value = reprlib.repr(
-                                namespace.imports_manager.resolve_variable(
-                                    variable.name,
-                                    str(document.uri.to_path().parent),
-                                    namespace.get_resolvable_variables(nodes, position),
-                                )
-                            )
-                        except (
-                            asyncio.CancelledError,
-                            SystemExit,
-                            KeyboardInterrupt,
+                        if (
+                            variable.type == VariableDefinitionType.BUILTIN_VARIABLE
+                            and variable.matcher.normalized_name == "empty"
                         ):
-                            raise
-                        except BaseException:
-                            self._logger.exception("Error resolving variable: {e}", level=TRACE)
-                            value = ""
+                            line = document.get_lines()[found_range.start.line]
+                            prefix = line[found_range.start.character - 2 : found_range.start.character - 1]
+                            if prefix == "$":
+                                value = "''"
+                            elif prefix == "&":
+                                value = "{}"
+                            elif prefix == "@":
+                                value = "[]"
+                        else:
+                            try:
+                                value = reprlib.repr(
+                                    namespace.imports_manager.resolve_variable(
+                                        variable.name,
+                                        str(document.uri.to_path().parent),
+                                        namespace.get_resolvable_variables(nodes, position),
+                                    )
+                                )
+                            except (
+                                asyncio.CancelledError,
+                                SystemExit,
+                                KeyboardInterrupt,
+                            ):
+                                raise
+                            except BaseException:
+                                self._logger.exception("Error resolving variable: {e}", level=TRACE)
+                                value = ""
                     else:
                         value = ""
                     if text is None:
                         text = ""
                     if text:
                         text += "\n"
+
                     text += f"| ({variable.type.value}) | {variable.name} | {f' `{value}`' if value else ''} |"
 
             if text:

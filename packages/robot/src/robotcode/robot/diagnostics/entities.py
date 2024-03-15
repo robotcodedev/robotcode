@@ -155,6 +155,9 @@ class VariableMatcher:
         if isinstance(o, str):
             match = search_variable(o, "$@&%", ignore_errors=True)
             base = match.base
+            if base is None:
+                return False
+
             normalized = str(normalize(base))
             return self.normalized_name == normalized
 
