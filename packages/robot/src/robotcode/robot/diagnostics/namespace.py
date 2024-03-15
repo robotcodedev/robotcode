@@ -1123,6 +1123,7 @@ class Namespace:
         top_level: bool = False,
         source: Optional[str] = None,
         parent_import: Optional[Import] = None,
+        parent_source: Optional[str] = None,
     ) -> Optional[LibraryEntry]:
         result: Optional[LibraryEntry] = None
         try:
@@ -1304,6 +1305,26 @@ class Namespace:
                     source=DIAGNOSTICS_SOURCE_NAME,
                     code=type(e).__qualname__,
                 )
+            elif parent_import is not None:
+                self.append_diagnostics(
+                    range=parent_import.range,
+                    message="Import definition contains errors.",
+                    severity=DiagnosticSeverity.ERROR,
+                    source=DIAGNOSTICS_SOURCE_NAME,
+                    code=Error.IMPORT_CONTAINS_ERRORS,
+                    related_information=(
+                        (
+                            [
+                                DiagnosticRelatedInformation(
+                                    location=Location(str(Uri.from_path(parent_source)), value.range),
+                                    message=str(e),
+                                ),
+                            ]
+                        )
+                        if parent_source
+                        else None
+                    ),
+                )
         finally:
             self._reset_global_variables()
 
@@ -1318,6 +1339,7 @@ class Namespace:
         variables: Optional[Dict[str, Any]] = None,
         source: Optional[str] = None,
         parent_import: Optional[Import] = None,
+        parent_source: Optional[str] = None,
         depth: int = 0,
     ) -> Optional[Dict[str, Any]]:
 
@@ -1335,6 +1357,7 @@ class Namespace:
                     top_level=top_level,
                     source=source,
                     parent_import=parent_import,
+                    parent_source=parent_source if parent_source else source,
                 )
 
                 if entry is not None:
@@ -1358,6 +1381,7 @@ class Namespace:
                                     variables=variables,
                                     source=entry.library_doc.source,
                                     parent_import=imp if top_level else parent_import,
+                                    parent_source=parent_source if top_level else source,
                                     depth=depth + 1,
                                 )
                             except (SystemExit, KeyboardInterrupt):
