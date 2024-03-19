@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [0.78.2](https://github.com/d-biehl/robotcode/compare/v0.78.1..v0.78.2) - 2024-03-19
+
+### Bug Fixes
+
+- **tidy:** Make robotframework-tidy 4.11 running ([569dbe8](https://github.com/d-biehl/robotcode/commit/569dbe8e1ed264bed2f99c29fdb2d2c949acee30))
+
+
 ## [0.78.1](https://github.com/d-biehl/robotcode/compare/v0.78.0..v0.78.1) - 2024-03-15
 
 ### Bug Fixes
