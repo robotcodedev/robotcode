@@ -130,8 +130,13 @@ class RobotFormattingProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
                     robot_tidy.config.formatting.end_line,
                 )
                 disabler_finder.visit(model)
-                if disabler_finder.file_disabled:
-                    return None
+
+                if robotidy_version >= (4, 11):
+                    if disabler_finder.is_disabled_in_file():
+                        return None
+                else:
+                    if disabler_finder.file_disabled:
+                        return None
 
                 if robotidy_version >= (4, 0):
                     _, _, new, _ = robot_tidy.transform_until_stable(model, disabler_finder)
