@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [0.78.3](https://github.com/d-biehl/robotcode/compare/v0.78.2..v0.78.3) - 2024-03-20
+
+### Bug Fixes
+
+- **langserver:** Add missing `robotcode-robot` dependency ([2d1c99d](https://github.com/d-biehl/robotcode/commit/2d1c99d3cdeef9681f3bbeb4fc4f5df0f5d6de93))
+
+
 ## [0.78.2](https://github.com/d-biehl/robotcode/compare/v0.78.1..v0.78.2) - 2024-03-19
 
 ### Bug Fixes
