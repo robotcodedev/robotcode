@@ -49,7 +49,11 @@ classifiers = [
   "Framework :: Robot Framework :: Tool",
 ]
 requires-python = ">=3.8"
-dependencies = ["robotcode-core==0.78.3", "robotcode-plugin==0.78.3"]
+dependencies = [
+  "robotcode-core==0.78.3",
+  "robotcode-plugin==0.78.3",
+  "robotcode-robot==0.78.3",
+]
 dynamic = ["version"]
 
 
