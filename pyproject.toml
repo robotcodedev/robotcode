@@ -229,6 +229,8 @@ implicit_reexport = false
 implicit_optional = true
 disallow_untyped_decorators = false
 disallow_subclassing_any = false
+explicit_package_bases = true
+namespace_packages = true
 exclude = [
   '^\.mypy_cache/',
   '^\.venv/',
@@ -253,8 +255,6 @@ mypy_path = [
   "packages/runner/src",
   "packages/analyze/src",
 ]
-explicit_package_bases = true
-namespace_packages = true
 # allow_untyped_calls = true
 
 
