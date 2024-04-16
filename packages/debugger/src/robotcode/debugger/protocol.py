@@ -223,9 +223,9 @@ class DebugAdapterProtocol(JsonRPCProtocolBase):
         raise DebugAdapterRPCErrorException(
             f"Unknown Command '{message.command}'",
             error_message=Message(
-                format='Unknown command "{command}"',
-                variables={"command": str(message.command)},
-                show_user=True,
+                format='Unknown command "{command}": {request}',
+                variables={"command": str(message.command), "request": str(message)},
+                show_user=False,
             ),
         )
 
