@@ -315,6 +315,9 @@
           ],
           "var": [
             "storage.type.robotframework"
+          ],
+          "documentation": [
+            "markup.robotframework"
           ]
         }
       }

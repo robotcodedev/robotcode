@@ -1,5 +1,5 @@
 {
-	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+	"$schema": "https://raw.githubusercontent.com/RedCMD/TmLanguage-Syntax-Highlighter/main/vscode.tmLanguage.schema.json",
 	"repository": {
 		"header": {
 			"name": "keyword.other.header.robotframework",
@@ -71,12 +71,68 @@
 			"patterns": [ { "include": "#variables" } ]
 		},
 		"comment": {
-			"name": "comment.robotframework",
+			"name": "comment.block.robotframework",
 			"match": "(?:^ *|\\t+| {2,})(#.*)$",
 			"captures": { "1": { "name": "comment.line.robotframework" } }
 		},
 		"setting": {
-			"contentName": "variable.parameter.argument.robotframework",
+			"patterns": [
+				{ "include": "#documentation_setting" },
+				{ "include": "#other_setting" }
+			]
+		},
+		"escape": {
+			"patterns": [
+				{ "include": "#escape-sequence-unicode" },
+				{ "include": "#escape-sequence" }
+			]
+		},
+		"documentation_setting": {
+			"contentName": "markup.robotframework",
+			"begin": "(?i)^(documentation|dokumentation|Tài liệu hướng dẫn)(?= {2}| ?\\t| ?$)",
+			"beginCaptures": { "1": { "name": "keyword.control.settings.robotframework" } },
+			"end": "^(?!\\s*\\.\\.\\.)",
+			"patterns": [
+				{ "include": "#documentation_italic" },
+				{ "include": "#documentation_bold" },
+				{ "include": "#escape" },
+				{ "include": "#comment" },
+				{ "include": "#variables" },
+				{ "include": "#line_continuation" }
+			]
+		},
+		"documentation_bold": {
+			"contentName": "markup.bold.documentation.robotframework",
+			"begin": "\\*",
+			"end": "\\*|$",
+			"beginCaptures": { "0": { "name": "markup.robotframework" } },
+			"endCaptures": { "0": { "name": "markup.robotframework" } },
+			"patterns": [
+				{ "include": "#documentation_italic" },
+				{ "include": "#documentation_bold" },
+				{ "include": "#escape" },
+				{ "include": "#comment" },
+				{ "include": "#variables" },
+				{ "include": "#line_continuation" }
+			]
+		},
+		"documentation_italic": {
+			"contentName": "markup.italic.documentation.robotframework",
+			"begin": "_",
+			"end": "_|$",
+			"beginCaptures": { "0": { "name": "markup.robotframework" } },
+			"endCaptures": { "0": { "name": "markup.robotframework" } },
+			"patterns": [
+				{ "include": "#documentation_italic" },
+				{ "include": "#documentation_bold" },
+				{ "include": "#escape" },
+				{ "include": "#comment" },
+				{ "include": "#variables" },
+				{ "include": "#line_continuation" }
+			]
+		},
+		"other_setting": {
+			"contentName": "string.unquoted.argument.robotframework",
 			"begin": "(?i)^(\\S+( \\S+)*)(?= {2}| ?\\t| ?$)",
 			"beginCaptures": { "1": { "name": "keyword.control.settings.robotframework" } },
 			"end": "^(?!\\s*\\.\\.\\.)",
@@ -88,7 +144,27 @@
 			]
 		},
 		"testcase_settings": {
-			"contentName": "variable.parameter.argument.robotframework",
+			"patterns": [
+				{ "include": "#documentation_testcase_settings" },
+				{ "include": "#other_testcase_settings" }
+			]
+		},
+		"documentation_testcase_settings": {
+			"contentName": "markup.robotframework",
+			"begin": "(?i)(\\[(documentation|dokumentation|Tài liệu hướng dẫn)\\])(?= {2}| ?\\t| ?$)",
+			"beginCaptures": { "0": { "name": "keyword.control.settings.robotframework" } },
+			"end": "^(?!\\s*\\.\\.\\.)",
+			"patterns": [
+				{ "include": "#documentation_italic" },
+				{ "include": "#documentation_bold" },
+				{ "include": "#escape" },
+				{ "include": "#comment" },
+				{ "include": "#variables" },
+				{ "include": "#line_continuation" }
+			]
+		},
+		"other_testcase_settings": {
+			"contentName": "string.unquoted.argument.robotframework",
 			"begin": "(\\[.*?\\])(?= {2}| ?\\t| ?$)",
 			"beginCaptures": { "0": { "name": "keyword.control.settings.robotframework" } },
 			"end": "^(?!\\s*\\.\\.\\.)",

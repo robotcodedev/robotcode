@@ -23,11 +23,9 @@ from typing import (
 from robot.parsing.lexer.tokens import Token
 from robot.parsing.model.statements import (
     Arguments,
-    Documentation,
     Fixture,
     KeywordCall,
     LibraryImport,
-    Metadata,
     ResourceImport,
     Statement,
     Template,
@@ -116,6 +114,7 @@ class RobotSemTokenTypes(Enum):
     CONFIG = "config"
     NAMED_ARGUMENT = "namedArgument"
     VAR = "var"
+    DOCUMENTATION = "documentation"
 
 
 class RobotSemTokenModifiers(Enum):
@@ -345,7 +344,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
         if sem_info is not None:
             sem_type, sem_mod = sem_info
 
-            if isinstance(node, (Documentation, Metadata)):
+            if token.type in [Token.DOCUMENTATION, Token.METADATA]:
                 sem_mod = {SemanticTokenModifiers.DOCUMENTATION}
 
             if token.type in [Token.VARIABLE, Token.ASSIGN]:
@@ -367,14 +366,6 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
                             RobotSemTokenTypes.VARIABLE_BEGIN,
                             sem_mod,
                         )
-
-                        # yield SemTokenInfo.from_token(
-                        #     token,
-                        #     RobotSemTokenTypes.VARIABLE_EXPRESSION if is_expr else sem_type,
-                        #     sem_mod,
-                        #     col_offset + (3 if is_expr else 2),
-                        #     last_index - (4 if is_expr else 2),
-                        # )
 
                         yield SemTokenInfo(
                             token.lineno,
@@ -398,19 +389,6 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
                 else:
                     yield SemTokenInfo.from_token(token, sem_type, sem_mod)
 
-            elif token.type == Token.ARGUMENT and "\\" in token.value:
-                if col_offset is None:
-                    col_offset = token.col_offset
-
-                for g in cls.ESCAPE_REGEX.finditer(token.value):
-                    if g.group("x") is not None:
-                        yield SemTokenInfo.from_token(
-                            token,
-                            sem_type if g.group("x") is None else RobotSemTokenTypes.ESCAPE,
-                            sem_mod,
-                            col_offset + g.start(),
-                            g.end() - g.start(),
-                        )
             elif token.type in [Token.KEYWORD, ROBOT_KEYWORD_INNER] or (
                 token.type == Token.NAME and isinstance(node, (Fixture, Template, TestTemplate))
             ):
