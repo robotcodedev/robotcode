@@ -428,12 +428,6 @@
             "default": true,
             "markdownDescription": "Enable/disable inlay hints for namespaces.",
             "scope": "resource"
-          },
-          "robotcode.testExplorer.enabled": {
-            "type": "boolean",
-            "default": true,
-            "description": "Whether to show robot tests in the test explorer. You may want to disable this if you are using another tool to run robot tests.",
-            "scope": "resource"
           }
         }
       },
@@ -885,6 +879,18 @@
             "type": "boolean",
             "default": true,
             "description": "Starts the internal HTTP server only if needed."
+          }
+        }
+      },
+      {
+        "title": "Test Explorer",
+        "type": "object",
+        "properties": {
+          "robotcode.testExplorer.enabled": {
+            "type": "boolean",
+            "default": true,
+            "description": "Enable/disable whether Robot Framework tests and tasks are integrated into the VSCode Test/Test Explorer view.",
+            "scope": "resource"
           }
         }
       }

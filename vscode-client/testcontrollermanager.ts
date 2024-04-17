@@ -127,9 +127,6 @@ class WorkspaceFolderEntry {
   }
 }
 
-const testExplorerIsEnabled = (workspace: vscode.WorkspaceFolder) =>
-  vscode.workspace.getConfiguration("robotcode.testExplorer", workspace).get<boolean>("enabled");
-
 export class TestControllerManager {
   private _disposables: vscode.Disposable;
   public readonly testController: vscode.TestController;
@@ -197,15 +194,18 @@ export class TestControllerManager {
           (_) => undefined,
         );
       }),
-      vscode.workspace.onDidChangeConfiguration((event) => {
+      vscode.workspace.onDidChangeConfiguration(async (event) => {
+        let refresh = false;
+
         for (const ws of vscode.workspace.workspaceFolders ?? []) {
           if (event.affectsConfiguration("robotcode.testExplorer", ws)) {
-            if (testExplorerIsEnabled(ws)) {
-              this.refresh().catch((_) => undefined);
-            } else {
-              if (ws) this.removeWorkspaceFolderItems(ws);
-            }
+            refresh = true;
           }
+        }
+
+        if (refresh) {
+          await this.refreshWorkspace();
+          await this.updateRunProfiles();
         }
       }),
       vscode.workspace.onDidCloseTextDocument((document) => this.refreshDocument(document)),
@@ -308,6 +308,8 @@ export class TestControllerManager {
       const multiFolders = (vscode.workspace.workspaceFolders?.length ?? 0) > 1;
 
       for (const folder of vscode.workspace.workspaceFolders ?? []) {
+        if (!this.isTestExplorerEnabledForWorkspace(folder)) continue;
+
         const folderTag = this.getFolderTag(folder);
 
         const folderName = multiFolders ? ` [${folder.name}]` : "";
@@ -831,6 +833,12 @@ export class TestControllerManager {
     }
   }
 
+  // eslint-disable-next-line class-methods-use-this
+  private isTestExplorerEnabledForWorkspace(workspace: vscode.WorkspaceFolder): boolean {
+    const result = vscode.workspace.getConfiguration(CONFIG_SECTION, workspace).get<boolean>("testExplorer.enabled");
+    return result === undefined || result;
+  }
+
   private async refreshItem(item?: vscode.TestItem, token?: vscode.CancellationToken): Promise<void> {
     if (token?.isCancellationRequested) return;
 
@@ -898,7 +906,9 @@ export class TestControllerManager {
       const addedIds = new Set<string>();
 
       for (const folder of vscode.workspace.workspaceFolders ?? []) {
-        if (token?.isCancellationRequested || !testExplorerIsEnabled(folder)) return;
+        if (token?.isCancellationRequested) return;
+
+        if (!this.isTestExplorerEnabledForWorkspace(folder)) continue;
 
         if (this.robotTestItems.get(folder) === undefined || !this.robotTestItems.get(folder)?.valid) {
           const items = await this.getTestsFromWorkspaceFolder(folder, token);
