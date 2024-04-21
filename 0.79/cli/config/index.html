@@ -1,0 +1,4840 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Language support for Robot Framework for Visual Studio Code">
+      
+      
+        <meta name="author" content="Daniel Biehl">
+      
+      
+        <link rel="canonical" href="https://robotcode.io/latest/cli/config/">
+      
+      <link rel="icon" href="../../assets/images/logo.png">
+      <meta name="generator" content="mkdocs-1.6.0, mkdocs-material-8.5.10">
+    
+    
+      
+        <title>Config - RobotCode</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.975780f9.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.2505c338.min.css">
+        
+      
+      
+
+    
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce((e,_)=>(e<<5)-e+_.charCodeAt(0),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="black" data-md-color-accent="green">
+  
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&"object"==typeof palette.color)for(var key of Object.keys(palette.color))document.body.setAttribute("data-md-color-"+key,palette.color[key])</script>
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#profiledescription" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-component="outdated" hidden>
+        
+          <aside class="md-banner md-banner--warning">
+            <div class="md-banner__inner md-grid md-typeset">
+              
+You're not viewing the latest version.
+<a href="../../..">
+    <strong>Click here to go to latest.</strong>
+</a>
+
+            </div>
+            <script>var el=document.querySelector("[data-md-component=outdated]"),outdated=__md_get("__outdated",sessionStorage);!0===outdated&&el&&(el.hidden=!1)</script>
+          </aside>
+        
+      </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--lifted" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="RobotCode" class="md-header__button md-logo" aria-label="RobotCode" data-md-component="logo">
+      
+  <img src="../../assets/images/logo.png" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2Z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            RobotCode
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Config
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      <form class="md-header__option" data-md-component="palette">
+        
+          
+          
+          
+          <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="black" data-md-color-accent="green"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+          
+            <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_2" hidden>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12 20 8.69Z"/></svg>
+            </label>
+          
+        
+          
+          
+          
+          <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="black" data-md-color-accent="green"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_2">
+          
+            <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12c0-2.42-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12 20 8.69Z"/></svg>
+            </label>
+          
+        
+      </form>
+    
+    
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/d-biehl/robotcode" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    d-biehl/robotcode
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+    
+      
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-tabs__inner md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+
+
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        Home
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+
+
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../get_started/quickstart/" class="md-tabs__link">
+        Get Started
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+    
+  
+
+
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../about/" class="md-tabs__link md-tabs__link--active">
+        CLI
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+    
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="RobotCode" class="md-nav__button md-logo" aria-label="RobotCode" data-md-component="logo">
+      
+  <img src="../../assets/images/logo.png" alt="logo">
+
+    </a>
+    RobotCode
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/d-biehl/robotcode" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    d-biehl/robotcode
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+      
+
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" data-md-toggle="__nav_1" type="checkbox" id="__nav_1" checked>
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_1">
+          Home
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Home" data-md-level="1">
+        <label class="md-nav__title" for="__nav_1">
+          <span class="md-nav__icon md-icon"></span>
+          Home
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        About
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../features/" class="md-nav__link">
+        Features
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../installation/" class="md-nav__link">
+        Installation
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" data-md-toggle="__nav_2" type="checkbox" id="__nav_2" checked>
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_2">
+          Get Started
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Get Started" data-md-level="1">
+        <label class="md-nav__title" for="__nav_2">
+          <span class="md-nav__icon md-icon"></span>
+          Get Started
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../get_started/quickstart/" class="md-nav__link">
+        Quickstart
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../get_started/configuration/" class="md-nav__link">
+        Configuration
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../get_started/troubleshooting/" class="md-nav__link">
+        Troubleshooting
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+    
+  
+  
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_3" type="checkbox" id="__nav_3" checked>
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_3">
+          CLI
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="CLI" data-md-level="1">
+        <label class="md-nav__title" for="__nav_3">
+          <span class="md-nav__icon md-icon"></span>
+          CLI
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../about/" class="md-nav__link">
+        About
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/" class="md-nav__link">
+        Reference
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+    
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" data-md-toggle="toc" type="checkbox" id="__toc">
+      
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          Config
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        Config
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#profiledescription" class="md-nav__link">
+    [profile].description
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#profiledetached" class="md-nav__link">
+    [profile].detached
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#profileenabled" class="md-nav__link">
+    [profile].enabled
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#profileprecedence" class="md-nav__link">
+    [profile].precedence
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#args" class="md-nav__link">
+    args
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#console" class="md-nav__link">
+    console
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#console-colors" class="md-nav__link">
+    console-colors
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#console-markers" class="md-nav__link">
+    console-markers
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#console-width" class="md-nav__link">
+    console-width
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#debug-file" class="md-nav__link">
+    debug-file
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#default-profiles" class="md-nav__link">
+    default-profiles
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#doc" class="md-nav__link">
+    doc
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#dotted" class="md-nav__link">
+    dotted
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#dry-run" class="md-nav__link">
+    dry-run
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#env" class="md-nav__link">
+    env
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#excludes" class="md-nav__link">
+    excludes
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#exit-on-error" class="md-nav__link">
+    exit-on-error
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#exit-on-failure" class="md-nav__link">
+    exit-on-failure
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#expand-keywords" class="md-nav__link">
+    expand-keywords
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#extend-args" class="md-nav__link">
+    extend-args
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#extend-env" class="md-nav__link">
+    extend-env
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#extend-excludes" class="md-nav__link">
+    extend-excludes
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#extend-expand-keywords" class="md-nav__link">
+    extend-expand-keywords
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#extend-flatten-keywords" class="md-nav__link">
+    extend-flatten-keywords
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#extend-includes" class="md-nav__link">
+    extend-includes
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#extend-languages" class="md-nav__link">
+    extend-languages
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#extend-listeners" class="md-nav__link">
+    extend-listeners
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#extend-metadata" class="md-nav__link">
+    extend-metadata
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#extend-parse-include" class="md-nav__link">
+    extend-parse-include
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#extend-parsers" class="md-nav__link">
+    extend-parsers
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#extend-paths" class="md-nav__link">
+    extend-paths
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#extend-pre-rebot-modifiers" class="md-nav__link">
+    extend-pre-rebot-modifiers
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#extend-pre-run-modifiers" class="md-nav__link">
+    extend-pre-run-modifiers
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#extend-profiles" class="md-nav__link">
+    extend-profiles
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#extend-python-path" class="md-nav__link">
+    extend-python-path
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#extend-remove-keywords" class="md-nav__link">
+    extend-remove-keywords
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#extend-set-tag" class="md-nav__link">
+    extend-set-tag
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#extend-skip" class="md-nav__link">
+    extend-skip
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#extend-skip-on-failure" class="md-nav__link">
+    extend-skip-on-failure
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#extend-suites" class="md-nav__link">
+    extend-suites
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#extend-tag-doc" class="md-nav__link">
+    extend-tag-doc
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#extend-tag-stat-combine" class="md-nav__link">
+    extend-tag-stat-combine
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#extend-tag-stat-exclude" class="md-nav__link">
+    extend-tag-stat-exclude
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#extend-tag-stat-include" class="md-nav__link">
+    extend-tag-stat-include
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#extend-tag-stat-link" class="md-nav__link">
+    extend-tag-stat-link
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#extend-tasks" class="md-nav__link">
+    extend-tasks
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#extend-tests" class="md-nav__link">
+    extend-tests
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#extend-variable-files" class="md-nav__link">
+    extend-variable-files
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#extend-variables" class="md-nav__link">
+    extend-variables
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#extensions" class="md-nav__link">
+    extensions
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#flatten-keywords" class="md-nav__link">
+    flatten-keywords
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#includes" class="md-nav__link">
+    includes
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#languages" class="md-nav__link">
+    languages
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#libdoc" class="md-nav__link">
+    libdoc
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#libdocdoc-format" class="md-nav__link">
+    libdoc.doc-format
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#libdocextend-python-path" class="md-nav__link">
+    libdoc.extend-python-path
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#libdocformat" class="md-nav__link">
+    libdoc.format
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#libdocname" class="md-nav__link">
+    libdoc.name
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#libdocpython-path" class="md-nav__link">
+    libdoc.python-path
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#libdocquiet" class="md-nav__link">
+    libdoc.quiet
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#libdocspec-doc-format" class="md-nav__link">
+    libdoc.spec-doc-format
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#libdoctheme" class="md-nav__link">
+    libdoc.theme
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#listeners" class="md-nav__link">
+    listeners
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#log" class="md-nav__link">
+    log
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#log-level" class="md-nav__link">
+    log-level
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#log-title" class="md-nav__link">
+    log-title
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#max-assign-length" class="md-nav__link">
+    max-assign-length
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#max-error-lines" class="md-nav__link">
+    max-error-lines
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#metadata" class="md-nav__link">
+    metadata
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#name" class="md-nav__link">
+    name
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#no-status-rc" class="md-nav__link">
+    no-status-rc
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#output" class="md-nav__link">
+    output
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#output-dir" class="md-nav__link">
+    output-dir
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#parse-include" class="md-nav__link">
+    parse-include
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#parsers" class="md-nav__link">
+    parsers
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#paths" class="md-nav__link">
+    paths
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pre-rebot-modifiers" class="md-nav__link">
+    pre-rebot-modifiers
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pre-run-modifiers" class="md-nav__link">
+    pre-run-modifiers
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#profiles" class="md-nav__link">
+    profiles
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#python-path" class="md-nav__link">
+    python-path
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#quiet" class="md-nav__link">
+    quiet
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#randomize" class="md-nav__link">
+    randomize
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#re-run-failed" class="md-nav__link">
+    re-run-failed
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#re-run-failed-suites" class="md-nav__link">
+    re-run-failed-suites
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebot" class="md-nav__link">
+    rebot
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotconsole-colors" class="md-nav__link">
+    rebot.console-colors
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotdoc" class="md-nav__link">
+    rebot.doc
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotend-time" class="md-nav__link">
+    rebot.end-time
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotexcludes" class="md-nav__link">
+    rebot.excludes
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotexpand-keywords" class="md-nav__link">
+    rebot.expand-keywords
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotextend-excludes" class="md-nav__link">
+    rebot.extend-excludes
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotextend-expand-keywords" class="md-nav__link">
+    rebot.extend-expand-keywords
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotextend-flatten-keywords" class="md-nav__link">
+    rebot.extend-flatten-keywords
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotextend-includes" class="md-nav__link">
+    rebot.extend-includes
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotextend-metadata" class="md-nav__link">
+    rebot.extend-metadata
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotextend-parse-include" class="md-nav__link">
+    rebot.extend-parse-include
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotextend-pre-rebot-modifiers" class="md-nav__link">
+    rebot.extend-pre-rebot-modifiers
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotextend-python-path" class="md-nav__link">
+    rebot.extend-python-path
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotextend-remove-keywords" class="md-nav__link">
+    rebot.extend-remove-keywords
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotextend-set-tag" class="md-nav__link">
+    rebot.extend-set-tag
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotextend-suites" class="md-nav__link">
+    rebot.extend-suites
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotextend-tag-doc" class="md-nav__link">
+    rebot.extend-tag-doc
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotextend-tag-stat-combine" class="md-nav__link">
+    rebot.extend-tag-stat-combine
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotextend-tag-stat-exclude" class="md-nav__link">
+    rebot.extend-tag-stat-exclude
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotextend-tag-stat-include" class="md-nav__link">
+    rebot.extend-tag-stat-include
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotextend-tag-stat-link" class="md-nav__link">
+    rebot.extend-tag-stat-link
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotextend-tasks" class="md-nav__link">
+    rebot.extend-tasks
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotextend-tests" class="md-nav__link">
+    rebot.extend-tests
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotflatten-keywords" class="md-nav__link">
+    rebot.flatten-keywords
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotincludes" class="md-nav__link">
+    rebot.includes
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotlog" class="md-nav__link">
+    rebot.log
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotlog-level" class="md-nav__link">
+    rebot.log-level
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotlog-title" class="md-nav__link">
+    rebot.log-title
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotmerge" class="md-nav__link">
+    rebot.merge
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotmetadata" class="md-nav__link">
+    rebot.metadata
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotname" class="md-nav__link">
+    rebot.name
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotno-status-rc" class="md-nav__link">
+    rebot.no-status-rc
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotoutput" class="md-nav__link">
+    rebot.output
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotoutput-dir" class="md-nav__link">
+    rebot.output-dir
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotparse-include" class="md-nav__link">
+    rebot.parse-include
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotpre-rebot-modifiers" class="md-nav__link">
+    rebot.pre-rebot-modifiers
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotprocess-empty-suite" class="md-nav__link">
+    rebot.process-empty-suite
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotpython-path" class="md-nav__link">
+    rebot.python-path
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotremove-keywords" class="md-nav__link">
+    rebot.remove-keywords
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotreport" class="md-nav__link">
+    rebot.report
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotreport-background" class="md-nav__link">
+    rebot.report-background
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotreport-title" class="md-nav__link">
+    rebot.report-title
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotrpa" class="md-nav__link">
+    rebot.rpa
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotset-tag" class="md-nav__link">
+    rebot.set-tag
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotsplit-log" class="md-nav__link">
+    rebot.split-log
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotstart-time" class="md-nav__link">
+    rebot.start-time
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotsuite-stat-level" class="md-nav__link">
+    rebot.suite-stat-level
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotsuites" class="md-nav__link">
+    rebot.suites
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebottag-doc" class="md-nav__link">
+    rebot.tag-doc
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebottag-stat-combine" class="md-nav__link">
+    rebot.tag-stat-combine
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebottag-stat-exclude" class="md-nav__link">
+    rebot.tag-stat-exclude
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebottag-stat-include" class="md-nav__link">
+    rebot.tag-stat-include
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebottag-stat-link" class="md-nav__link">
+    rebot.tag-stat-link
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebottasks" class="md-nav__link">
+    rebot.tasks
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebottests" class="md-nav__link">
+    rebot.tests
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebottimestamp-outputs" class="md-nav__link">
+    rebot.timestamp-outputs
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotxunit" class="md-nav__link">
+    rebot.xunit
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#remove-keywords" class="md-nav__link">
+    remove-keywords
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#report" class="md-nav__link">
+    report
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#report-background" class="md-nav__link">
+    report-background
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#report-title" class="md-nav__link">
+    report-title
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rpa" class="md-nav__link">
+    rpa
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#run-empty-suite" class="md-nav__link">
+    run-empty-suite
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#set-tag" class="md-nav__link">
+    set-tag
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#skip" class="md-nav__link">
+    skip
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#skip-on-failure" class="md-nav__link">
+    skip-on-failure
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#skip-teardown-on-exit" class="md-nav__link">
+    skip-teardown-on-exit
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#split-log" class="md-nav__link">
+    split-log
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#suite-stat-level" class="md-nav__link">
+    suite-stat-level
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#suites" class="md-nav__link">
+    suites
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tag-doc" class="md-nav__link">
+    tag-doc
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tag-stat-combine" class="md-nav__link">
+    tag-stat-combine
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tag-stat-exclude" class="md-nav__link">
+    tag-stat-exclude
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tag-stat-include" class="md-nav__link">
+    tag-stat-include
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tag-stat-link" class="md-nav__link">
+    tag-stat-link
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tasks" class="md-nav__link">
+    tasks
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#testdoc" class="md-nav__link">
+    testdoc
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#testdocdoc" class="md-nav__link">
+    testdoc.doc
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#testdocexcludes" class="md-nav__link">
+    testdoc.excludes
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#testdocextend-excludes" class="md-nav__link">
+    testdoc.extend-excludes
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#testdocextend-includes" class="md-nav__link">
+    testdoc.extend-includes
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#testdocextend-metadata" class="md-nav__link">
+    testdoc.extend-metadata
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#testdocextend-set-tag" class="md-nav__link">
+    testdoc.extend-set-tag
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#testdocextend-suites" class="md-nav__link">
+    testdoc.extend-suites
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#testdocextend-tests" class="md-nav__link">
+    testdoc.extend-tests
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#testdocincludes" class="md-nav__link">
+    testdoc.includes
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#testdocmetadata" class="md-nav__link">
+    testdoc.metadata
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#testdocname" class="md-nav__link">
+    testdoc.name
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#testdocset-tag" class="md-nav__link">
+    testdoc.set-tag
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#testdocsuites" class="md-nav__link">
+    testdoc.suites
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#testdoctests" class="md-nav__link">
+    testdoc.tests
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#testdoctitle" class="md-nav__link">
+    testdoc.title
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tests" class="md-nav__link">
+    tests
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#timestamp-outputs" class="md-nav__link">
+    timestamp-outputs
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tool" class="md-nav__link">
+    tool
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#toolrobotcode-analyzeextend-ignore" class="md-nav__link">
+    tool.robotcode-analyze.extend-ignore
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#toolrobotcode-analyzeextend-select" class="md-nav__link">
+    tool.robotcode-analyze.extend-select
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#toolrobotcode-analyzeignore" class="md-nav__link">
+    tool.robotcode-analyze.ignore
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#toolrobotcode-analyzeselect" class="md-nav__link">
+    tool.robotcode-analyze.select
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#variable-files" class="md-nav__link">
+    variable-files
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#variables" class="md-nav__link">
+    variables
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#xunit" class="md-nav__link">
+    xunit
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#profiledescription" class="md-nav__link">
+    [profile].description
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#profiledetached" class="md-nav__link">
+    [profile].detached
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#profileenabled" class="md-nav__link">
+    [profile].enabled
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#profileprecedence" class="md-nav__link">
+    [profile].precedence
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#args" class="md-nav__link">
+    args
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#console" class="md-nav__link">
+    console
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#console-colors" class="md-nav__link">
+    console-colors
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#console-markers" class="md-nav__link">
+    console-markers
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#console-width" class="md-nav__link">
+    console-width
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#debug-file" class="md-nav__link">
+    debug-file
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#default-profiles" class="md-nav__link">
+    default-profiles
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#doc" class="md-nav__link">
+    doc
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#dotted" class="md-nav__link">
+    dotted
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#dry-run" class="md-nav__link">
+    dry-run
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#env" class="md-nav__link">
+    env
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#excludes" class="md-nav__link">
+    excludes
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#exit-on-error" class="md-nav__link">
+    exit-on-error
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#exit-on-failure" class="md-nav__link">
+    exit-on-failure
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#expand-keywords" class="md-nav__link">
+    expand-keywords
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#extend-args" class="md-nav__link">
+    extend-args
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#extend-env" class="md-nav__link">
+    extend-env
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#extend-excludes" class="md-nav__link">
+    extend-excludes
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#extend-expand-keywords" class="md-nav__link">
+    extend-expand-keywords
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#extend-flatten-keywords" class="md-nav__link">
+    extend-flatten-keywords
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#extend-includes" class="md-nav__link">
+    extend-includes
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#extend-languages" class="md-nav__link">
+    extend-languages
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#extend-listeners" class="md-nav__link">
+    extend-listeners
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#extend-metadata" class="md-nav__link">
+    extend-metadata
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#extend-parse-include" class="md-nav__link">
+    extend-parse-include
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#extend-parsers" class="md-nav__link">
+    extend-parsers
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#extend-paths" class="md-nav__link">
+    extend-paths
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#extend-pre-rebot-modifiers" class="md-nav__link">
+    extend-pre-rebot-modifiers
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#extend-pre-run-modifiers" class="md-nav__link">
+    extend-pre-run-modifiers
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#extend-profiles" class="md-nav__link">
+    extend-profiles
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#extend-python-path" class="md-nav__link">
+    extend-python-path
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#extend-remove-keywords" class="md-nav__link">
+    extend-remove-keywords
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#extend-set-tag" class="md-nav__link">
+    extend-set-tag
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#extend-skip" class="md-nav__link">
+    extend-skip
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#extend-skip-on-failure" class="md-nav__link">
+    extend-skip-on-failure
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#extend-suites" class="md-nav__link">
+    extend-suites
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#extend-tag-doc" class="md-nav__link">
+    extend-tag-doc
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#extend-tag-stat-combine" class="md-nav__link">
+    extend-tag-stat-combine
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#extend-tag-stat-exclude" class="md-nav__link">
+    extend-tag-stat-exclude
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#extend-tag-stat-include" class="md-nav__link">
+    extend-tag-stat-include
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#extend-tag-stat-link" class="md-nav__link">
+    extend-tag-stat-link
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#extend-tasks" class="md-nav__link">
+    extend-tasks
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#extend-tests" class="md-nav__link">
+    extend-tests
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#extend-variable-files" class="md-nav__link">
+    extend-variable-files
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#extend-variables" class="md-nav__link">
+    extend-variables
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#extensions" class="md-nav__link">
+    extensions
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#flatten-keywords" class="md-nav__link">
+    flatten-keywords
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#includes" class="md-nav__link">
+    includes
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#languages" class="md-nav__link">
+    languages
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#libdoc" class="md-nav__link">
+    libdoc
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#libdocdoc-format" class="md-nav__link">
+    libdoc.doc-format
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#libdocextend-python-path" class="md-nav__link">
+    libdoc.extend-python-path
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#libdocformat" class="md-nav__link">
+    libdoc.format
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#libdocname" class="md-nav__link">
+    libdoc.name
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#libdocpython-path" class="md-nav__link">
+    libdoc.python-path
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#libdocquiet" class="md-nav__link">
+    libdoc.quiet
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#libdocspec-doc-format" class="md-nav__link">
+    libdoc.spec-doc-format
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#libdoctheme" class="md-nav__link">
+    libdoc.theme
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#listeners" class="md-nav__link">
+    listeners
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#log" class="md-nav__link">
+    log
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#log-level" class="md-nav__link">
+    log-level
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#log-title" class="md-nav__link">
+    log-title
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#max-assign-length" class="md-nav__link">
+    max-assign-length
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#max-error-lines" class="md-nav__link">
+    max-error-lines
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#metadata" class="md-nav__link">
+    metadata
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#name" class="md-nav__link">
+    name
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#no-status-rc" class="md-nav__link">
+    no-status-rc
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#output" class="md-nav__link">
+    output
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#output-dir" class="md-nav__link">
+    output-dir
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#parse-include" class="md-nav__link">
+    parse-include
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#parsers" class="md-nav__link">
+    parsers
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#paths" class="md-nav__link">
+    paths
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pre-rebot-modifiers" class="md-nav__link">
+    pre-rebot-modifiers
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pre-run-modifiers" class="md-nav__link">
+    pre-run-modifiers
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#profiles" class="md-nav__link">
+    profiles
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#python-path" class="md-nav__link">
+    python-path
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#quiet" class="md-nav__link">
+    quiet
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#randomize" class="md-nav__link">
+    randomize
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#re-run-failed" class="md-nav__link">
+    re-run-failed
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#re-run-failed-suites" class="md-nav__link">
+    re-run-failed-suites
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebot" class="md-nav__link">
+    rebot
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotconsole-colors" class="md-nav__link">
+    rebot.console-colors
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotdoc" class="md-nav__link">
+    rebot.doc
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotend-time" class="md-nav__link">
+    rebot.end-time
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotexcludes" class="md-nav__link">
+    rebot.excludes
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotexpand-keywords" class="md-nav__link">
+    rebot.expand-keywords
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotextend-excludes" class="md-nav__link">
+    rebot.extend-excludes
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotextend-expand-keywords" class="md-nav__link">
+    rebot.extend-expand-keywords
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotextend-flatten-keywords" class="md-nav__link">
+    rebot.extend-flatten-keywords
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotextend-includes" class="md-nav__link">
+    rebot.extend-includes
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotextend-metadata" class="md-nav__link">
+    rebot.extend-metadata
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotextend-parse-include" class="md-nav__link">
+    rebot.extend-parse-include
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotextend-pre-rebot-modifiers" class="md-nav__link">
+    rebot.extend-pre-rebot-modifiers
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotextend-python-path" class="md-nav__link">
+    rebot.extend-python-path
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotextend-remove-keywords" class="md-nav__link">
+    rebot.extend-remove-keywords
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotextend-set-tag" class="md-nav__link">
+    rebot.extend-set-tag
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotextend-suites" class="md-nav__link">
+    rebot.extend-suites
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotextend-tag-doc" class="md-nav__link">
+    rebot.extend-tag-doc
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotextend-tag-stat-combine" class="md-nav__link">
+    rebot.extend-tag-stat-combine
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotextend-tag-stat-exclude" class="md-nav__link">
+    rebot.extend-tag-stat-exclude
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotextend-tag-stat-include" class="md-nav__link">
+    rebot.extend-tag-stat-include
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotextend-tag-stat-link" class="md-nav__link">
+    rebot.extend-tag-stat-link
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotextend-tasks" class="md-nav__link">
+    rebot.extend-tasks
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotextend-tests" class="md-nav__link">
+    rebot.extend-tests
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotflatten-keywords" class="md-nav__link">
+    rebot.flatten-keywords
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotincludes" class="md-nav__link">
+    rebot.includes
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotlog" class="md-nav__link">
+    rebot.log
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotlog-level" class="md-nav__link">
+    rebot.log-level
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotlog-title" class="md-nav__link">
+    rebot.log-title
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotmerge" class="md-nav__link">
+    rebot.merge
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotmetadata" class="md-nav__link">
+    rebot.metadata
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotname" class="md-nav__link">
+    rebot.name
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotno-status-rc" class="md-nav__link">
+    rebot.no-status-rc
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotoutput" class="md-nav__link">
+    rebot.output
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotoutput-dir" class="md-nav__link">
+    rebot.output-dir
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotparse-include" class="md-nav__link">
+    rebot.parse-include
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotpre-rebot-modifiers" class="md-nav__link">
+    rebot.pre-rebot-modifiers
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotprocess-empty-suite" class="md-nav__link">
+    rebot.process-empty-suite
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotpython-path" class="md-nav__link">
+    rebot.python-path
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotremove-keywords" class="md-nav__link">
+    rebot.remove-keywords
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotreport" class="md-nav__link">
+    rebot.report
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotreport-background" class="md-nav__link">
+    rebot.report-background
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotreport-title" class="md-nav__link">
+    rebot.report-title
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotrpa" class="md-nav__link">
+    rebot.rpa
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotset-tag" class="md-nav__link">
+    rebot.set-tag
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotsplit-log" class="md-nav__link">
+    rebot.split-log
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotstart-time" class="md-nav__link">
+    rebot.start-time
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotsuite-stat-level" class="md-nav__link">
+    rebot.suite-stat-level
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotsuites" class="md-nav__link">
+    rebot.suites
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebottag-doc" class="md-nav__link">
+    rebot.tag-doc
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebottag-stat-combine" class="md-nav__link">
+    rebot.tag-stat-combine
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebottag-stat-exclude" class="md-nav__link">
+    rebot.tag-stat-exclude
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebottag-stat-include" class="md-nav__link">
+    rebot.tag-stat-include
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebottag-stat-link" class="md-nav__link">
+    rebot.tag-stat-link
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebottasks" class="md-nav__link">
+    rebot.tasks
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebottests" class="md-nav__link">
+    rebot.tests
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebottimestamp-outputs" class="md-nav__link">
+    rebot.timestamp-outputs
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rebotxunit" class="md-nav__link">
+    rebot.xunit
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#remove-keywords" class="md-nav__link">
+    remove-keywords
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#report" class="md-nav__link">
+    report
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#report-background" class="md-nav__link">
+    report-background
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#report-title" class="md-nav__link">
+    report-title
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rpa" class="md-nav__link">
+    rpa
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#run-empty-suite" class="md-nav__link">
+    run-empty-suite
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#set-tag" class="md-nav__link">
+    set-tag
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#skip" class="md-nav__link">
+    skip
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#skip-on-failure" class="md-nav__link">
+    skip-on-failure
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#skip-teardown-on-exit" class="md-nav__link">
+    skip-teardown-on-exit
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#split-log" class="md-nav__link">
+    split-log
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#suite-stat-level" class="md-nav__link">
+    suite-stat-level
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#suites" class="md-nav__link">
+    suites
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tag-doc" class="md-nav__link">
+    tag-doc
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tag-stat-combine" class="md-nav__link">
+    tag-stat-combine
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tag-stat-exclude" class="md-nav__link">
+    tag-stat-exclude
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tag-stat-include" class="md-nav__link">
+    tag-stat-include
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tag-stat-link" class="md-nav__link">
+    tag-stat-link
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tasks" class="md-nav__link">
+    tasks
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#testdoc" class="md-nav__link">
+    testdoc
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#testdocdoc" class="md-nav__link">
+    testdoc.doc
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#testdocexcludes" class="md-nav__link">
+    testdoc.excludes
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#testdocextend-excludes" class="md-nav__link">
+    testdoc.extend-excludes
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#testdocextend-includes" class="md-nav__link">
+    testdoc.extend-includes
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#testdocextend-metadata" class="md-nav__link">
+    testdoc.extend-metadata
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#testdocextend-set-tag" class="md-nav__link">
+    testdoc.extend-set-tag
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#testdocextend-suites" class="md-nav__link">
+    testdoc.extend-suites
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#testdocextend-tests" class="md-nav__link">
+    testdoc.extend-tests
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#testdocincludes" class="md-nav__link">
+    testdoc.includes
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#testdocmetadata" class="md-nav__link">
+    testdoc.metadata
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#testdocname" class="md-nav__link">
+    testdoc.name
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#testdocset-tag" class="md-nav__link">
+    testdoc.set-tag
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#testdocsuites" class="md-nav__link">
+    testdoc.suites
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#testdoctests" class="md-nav__link">
+    testdoc.tests
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#testdoctitle" class="md-nav__link">
+    testdoc.title
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tests" class="md-nav__link">
+    tests
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#timestamp-outputs" class="md-nav__link">
+    timestamp-outputs
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tool" class="md-nav__link">
+    tool
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#toolrobotcode-analyzeextend-ignore" class="md-nav__link">
+    tool.robotcode-analyze.extend-ignore
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#toolrobotcode-analyzeextend-select" class="md-nav__link">
+    tool.robotcode-analyze.extend-select
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#toolrobotcode-analyzeignore" class="md-nav__link">
+    tool.robotcode-analyze.ignore
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#toolrobotcode-analyzeselect" class="md-nav__link">
+    tool.robotcode-analyze.select
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#variable-files" class="md-nav__link">
+    variable-files
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#variables" class="md-nav__link">
+    variables
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#xunit" class="md-nav__link">
+    xunit
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+  <a href="https://github.com/d-biehl/robotcode/blob/main/docs/cli/config.md" title="Edit this page" class="md-content__button md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75L3 17.25Z"/></svg>
+  </a>
+
+
+  <h1>Config</h1>
+
+<h2 id="profiledescription">[profile].description<a class="headerlink" href="#profiledescription" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[str]</p>
+<p>Description of the profile.</p>
+<h2 id="profiledetached">[profile].detached<a class="headerlink" href="#profiledetached" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[bool]</p>
+<p>The profile should be detached.
+Detached means it is not inherited from the main profile.</p>
+<h2 id="profileenabled">[profile].enabled<a class="headerlink" href="#profileenabled" title="Permanent link">&para;</a></h2>
+<p>Type: Union[bool, Condition, None]</p>
+<p>If enabled the profile is used. You can also use and <code>if</code> condition
+to calculate the enabled state.</p>
+<p>Examples:
+<div class="highlight"><pre><span></span><code><span class="c1"># alway disabled</span>
+<span class="n">enabled</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">false</span>
+</code></pre></div></p>
+<div class="highlight"><pre><span></span><code><span class="c1"># enabled if TEST_VAR is set</span>
+<span class="n">enabled</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">if</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s1">&#39;environ.get(&quot;CI&quot;) == &quot;true&quot;&#39;</span><span class="w"> </span><span class="p">}</span>
+</code></pre></div>
+<h2 id="profileprecedence">[profile].precedence<a class="headerlink" href="#profileprecedence" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[int]</p>
+<p>Precedence of the profile. Lower values are executed first. If not set the order is undefined.</p>
+<h2 id="args">args<a class="headerlink" href="#args" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[List[str]]</p>
+<p>Arguments to be passed to <em>robot</em>.</p>
+<p>Examples:
+<div class="highlight"><pre><span></span><code><span class="n">args</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;-t&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;abc&quot;</span><span class="p">]</span>
+</code></pre></div></p>
+<h2 id="console">console<a class="headerlink" href="#console" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[Literal['verbose', 'dotted', 'skipped', 'quiet', 'none']]</p>
+<p>How to report execution on the console.
+verbose:  report every suite and test (default)
+dotted:   only show <code>.</code> for passed test, <code>s</code> for
+skipped tests, and <code>F</code> for failed tests
+quiet:    no output except for errors and warnings
+none:     no output whatsoever</p>
+<p>corresponds to the <code>--console type</code> option of <em>robot</em></p>
+<h2 id="console-colors">console-colors<a class="headerlink" href="#console-colors" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[Literal['auto', 'on', 'ansi', 'off']]</p>
+<p>Use colors on console output or not.
+auto: use colors when output not redirected (default)
+on:   always use colors
+ansi: like <code>on</code> but use ANSI colors also on Windows
+off:  disable colors altogether</p>
+<p>corresponds to the <code>-C --consolecolors auto|on|ansi|off</code> option of <em>robot</em></p>
+<h2 id="console-markers">console-markers<a class="headerlink" href="#console-markers" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[Literal['auto', 'on', 'off']]</p>
+<p>Show markers on the console when top level
+keywords in a test case end. Values have same
+semantics as with --consolecolors.</p>
+<p>corresponds to the <code>-K --consolemarkers auto|on|off</code> option of <em>robot</em></p>
+<h2 id="console-width">console-width<a class="headerlink" href="#console-width" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[int]</p>
+<p>Width of the console output. Default is 78.</p>
+<p>corresponds to the <code>-W --consolewidth chars</code> option of <em>robot</em></p>
+<h2 id="debug-file">debug-file<a class="headerlink" href="#debug-file" title="Permanent link">&para;</a></h2>
+<p>Type: Union[str, StringExpression, None]</p>
+<p>Debug file written during execution. Not created
+unless this option is specified.</p>
+<p>corresponds to the <code>-b --debugfile file</code> option of <em>robot</em></p>
+<h2 id="default-profiles">default-profiles<a class="headerlink" href="#default-profiles" title="Permanent link">&para;</a></h2>
+<p>Type: Union[str, List[str], None]</p>
+<p>Selects the Default profile if no profile is given at command line.</p>
+<p>Examples:
+<div class="highlight"><pre><span></span><code><span class="n">default_profiles</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;default&quot;</span>
+</code></pre></div></p>
+<div class="highlight"><pre><span></span><code><span class="n">default_profiles</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;default&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;Firefox&quot;</span><span class="p">]</span>
+</code></pre></div>
+<h2 id="doc">doc<a class="headerlink" href="#doc" title="Permanent link">&para;</a></h2>
+<p>Type: Union[str, StringExpression, None]</p>
+<p>Set the documentation of the top level suite.
+Simple formatting is supported (e.g. <em>bold</em>). If the
+documentation contains spaces, it must be quoted.
+If the value is path to an existing file, actual
+documentation is read from that file.</p>
+<p>Examples:</p>
+<div class="highlight"><pre><span></span><code>--doc &quot;Very *good* example&quot;
+--doc doc_from_file.txt
+</code></pre></div>
+<p>corresponds to the <code>-D --doc documentation</code> option of <em>robot</em></p>
+<h2 id="dotted">dotted<a class="headerlink" href="#dotted" title="Permanent link">&para;</a></h2>
+<p>Type: Union[bool, Flag, None]</p>
+<p>Shortcut for <code>--console dotted</code>.</p>
+<p>corresponds to the <code>-. --dotted</code> option of <em>robot</em></p>
+<h2 id="dry-run">dry-run<a class="headerlink" href="#dry-run" title="Permanent link">&para;</a></h2>
+<p>Type: Union[bool, Flag, None]</p>
+<p>Verifies test data and runs tests so that library
+keywords are not executed.</p>
+<p>corresponds to the <code>--dryrun</code> option of <em>robot</em></p>
+<h2 id="env">env<a class="headerlink" href="#env" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[Dict[str, str]]</p>
+<p>Define environment variables to be set before running tests.</p>
+<p>Examples:
+<div class="highlight"><pre><span></span><code><span class="k">[env]</span>
+<span class="n">TEST_VAR</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;test&quot;</span>
+<span class="n">SECRET</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;password&quot;</span>
+</code></pre></div></p>
+<h2 id="excludes">excludes<a class="headerlink" href="#excludes" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[List[Union[str, StringExpression]]]</p>
+<p>Select test cases not to run by tag. These tests are
+not run even if included with --include. Tags are
+matched using same rules as with --include.</p>
+<p>corresponds to the <code>-e --exclude tag *</code> option of <em>robot</em></p>
+<h2 id="exit-on-error">exit-on-error<a class="headerlink" href="#exit-on-error" title="Permanent link">&para;</a></h2>
+<p>Type: Union[bool, Flag, None]</p>
+<p>Stops test execution if any error occurs when parsing
+test data, importing libraries, and so on.</p>
+<p>corresponds to the <code>--exitonerror</code> option of <em>robot</em></p>
+<h2 id="exit-on-failure">exit-on-failure<a class="headerlink" href="#exit-on-failure" title="Permanent link">&para;</a></h2>
+<p>Type: Union[bool, Flag, None]</p>
+<p>Stops test execution if any test fails.</p>
+<p>corresponds to the <code>-X --exitonfailure</code> option of <em>robot</em></p>
+<h2 id="expand-keywords">expand-keywords<a class="headerlink" href="#expand-keywords" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[List[Union[str, NamePattern, TagPattern]]]</p>
+<p>Matching keywords will be automatically expanded in
+the log file. Matching against keyword name or tags
+work using same rules as with --removekeywords.</p>
+<p>Examples:</p>
+<div class="highlight"><pre><span></span><code>--expandkeywords name:BuiltIn.Log
+--expandkeywords tag:expand
+</code></pre></div>
+<p>corresponds to the <code>--expandkeywords name:&lt;pattern&gt;|tag:&lt;pattern&gt; *</code> option of <em>robot</em></p>
+<h2 id="extend-args">extend-args<a class="headerlink" href="#extend-args" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[List[str]]</p>
+<p>Append extra arguments to be passed to <em>robot</em>.</p>
+<h2 id="extend-env">extend-env<a class="headerlink" href="#extend-env" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[Dict[str, str]]</p>
+<p>Append extra environment variables to be set before tests.</p>
+<h2 id="extend-excludes">extend-excludes<a class="headerlink" href="#extend-excludes" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[List[Union[str, StringExpression]]]</p>
+<p>Appends entries to the --exclude option.</p>
+<p>Select test cases not to run by tag. These tests are
+not run even if included with --include. Tags are
+matched using same rules as with --include.</p>
+<p>corresponds to the <code>-e --exclude tag *</code> option of <em>robot</em></p>
+<h2 id="extend-expand-keywords">extend-expand-keywords<a class="headerlink" href="#extend-expand-keywords" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[List[Union[str, NamePattern, TagPattern]]]</p>
+<p>Appends entries to the --expandkeywords option.</p>
+<p>Matching keywords will be automatically expanded in
+the log file. Matching against keyword name or tags
+work using same rules as with --removekeywords.</p>
+<p>Examples:</p>
+<div class="highlight"><pre><span></span><code>--expandkeywords name:BuiltIn.Log
+--expandkeywords tag:expand
+</code></pre></div>
+<p>corresponds to the <code>--expandkeywords name:&lt;pattern&gt;|tag:&lt;pattern&gt; *</code> option of <em>robot</em></p>
+<h2 id="extend-flatten-keywords">extend-flatten-keywords<a class="headerlink" href="#extend-flatten-keywords" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[List[Union[str, Literal['for', 'while', 'iteration'], NamePattern, TagPattern]]]</p>
+<p>Appends entries to the --flattenkeywords option.</p>
+<p>Flattens matching keywords in the generated log file.
+Matching keywords get all log messages from their
+child keywords and children are discarded otherwise.
+for:     flatten FOR loops fully
+while:   flatten WHILE loops fully
+iteration: flatten FOR/WHILE loop iterations
+foritem: deprecated alias for <code>iteration</code>
+name:<pattern>:  flatten matched keywords using same
+matching rules as with
+<code>--removekeywords name:&lt;pattern&gt;</code>
+tag:<pattern>:  flatten matched keywords using same
+matching rules as with
+<code>--removekeywords tag:&lt;pattern&gt;</code></p>
+<p>corresponds to the <code>--flattenkeywords for|while|iteration|name:&lt;pattern&gt;|tag:&lt;pattern&gt; *</code> option of <em>robot</em></p>
+<h2 id="extend-includes">extend-includes<a class="headerlink" href="#extend-includes" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[List[Union[str, StringExpression]]]</p>
+<p>Appends entries to the --include option.</p>
+<p>Select tests by tag. Similarly as name with --test,
+tag is case and space insensitive and it is possible
+to use patterns with <code>*</code>, <code>?</code> and <code>[]</code> as wildcards.
+Tags and patterns can also be combined together with
+<code>AND</code>, <code>OR</code>, and <code>NOT</code> operators.</p>
+<p>Examples:</p>
+<div class="highlight"><pre><span></span><code>--include foo --include bar*
+--include fooANDbar*
+</code></pre></div>
+<p>corresponds to the <code>-i --include tag *</code> option of <em>robot</em></p>
+<h2 id="extend-languages">extend-languages<a class="headerlink" href="#extend-languages" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[List[Union[str, StringExpression]]]</p>
+<p>Appends entries to the --language option.</p>
+<p>Activate localization. <code>lang</code> can be a name or a code
+of a built-in language, or a path or a module name of
+a custom language file.</p>
+<p>corresponds to the <code>--language lang *</code> option of <em>rebot</em></p>
+<h2 id="extend-listeners">extend-listeners<a class="headerlink" href="#extend-listeners" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[Dict[str, List[Union[str, StringExpression]]]]</p>
+<p>Appends entries to the --listener option.</p>
+<p>Class or module for monitoring test execution.
+Gets notifications e.g. when tests start and end.
+Arguments to the listener class can be given after
+the name using a colon or a semicolon as a separator.</p>
+<p>Examples:</p>
+<div class="highlight"><pre><span></span><code>--listener MyListener
+--listener path/to/Listener.py:arg1:arg2
+</code></pre></div>
+<p>corresponds to the <code>--listener listener *</code> option of <em>rebot</em></p>
+<h2 id="extend-metadata">extend-metadata<a class="headerlink" href="#extend-metadata" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[Dict[str, Union[str, StringExpression]]]</p>
+<p>Appends entries to the --metadata option.</p>
+<p>Set metadata of the top level suite. Value can
+contain formatting and be read from a file similarly
+as --doc. Example: --metadata Version:1.2</p>
+<p>corresponds to the <code>-M --metadata name:value *</code> option of <em>robot</em></p>
+<h2 id="extend-parse-include">extend-parse-include<a class="headerlink" href="#extend-parse-include" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[List[Union[str, StringExpression]]]</p>
+<p>Appends entries to the --parseinclude option.</p>
+<p>Parse only files matching <code>pattern</code>. It can be:
+- a file name or pattern like <code>example.robot</code> or
+<code>*.robot</code> to parse all files matching that name,
+- a file path like <code>path/to/example.robot</code>, or
+- a directory path like <code>path/to/example</code> to parse
+all files in that directory, recursively.</p>
+<p>corresponds to the <code>-I --parseinclude pattern *</code> option of <em>robot</em></p>
+<h2 id="extend-parsers">extend-parsers<a class="headerlink" href="#extend-parsers" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[Dict[str, List[Union[str, StringExpression]]]]</p>
+<p>Appends entries to the --parser option.</p>
+<p>Custom parser class or module. Parser classes accept
+arguments the same way as with --listener.</p>
+<p>corresponds to the <code>--parser parser *</code> option of <em>rebot</em></p>
+<h2 id="extend-paths">extend-paths<a class="headerlink" href="#extend-paths" title="Permanent link">&para;</a></h2>
+<p>Type: Union[str, List[str], None]</p>
+<p>Append extra entries to the paths argument.</p>
+<p>Examples:
+<div class="highlight"><pre><span></span><code><span class="n">paths</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;tests&quot;</span><span class="p">]</span>
+</code></pre></div></p>
+<h2 id="extend-pre-rebot-modifiers">extend-pre-rebot-modifiers<a class="headerlink" href="#extend-pre-rebot-modifiers" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[Dict[str, List[Union[str, StringExpression]]]]</p>
+<p>Appends entries to the --prerebotmodifier option.</p>
+<p>Class to programmatically modify the result
+model before creating reports and logs. Accepts
+arguments the same way as with --listener.</p>
+<p>corresponds to the <code>--prerebotmodifier modifier *</code> option of <em>robot</em></p>
+<h2 id="extend-pre-run-modifiers">extend-pre-run-modifiers<a class="headerlink" href="#extend-pre-run-modifiers" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[Dict[str, List[Union[str, StringExpression]]]]</p>
+<p>Appends entries to the --prerunmodifier option.</p>
+<p>Class to programmatically modify the suite
+structure before execution. Accepts arguments the
+same way as with --listener.</p>
+<p>corresponds to the <code>--prerunmodifier modifier *</code> option of <em>rebot</em></p>
+<h2 id="extend-profiles">extend-profiles<a class="headerlink" href="#extend-profiles" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[Dict[str, RobotProfile]]</p>
+<p>Extra execution profiles.</p>
+<h2 id="extend-python-path">extend-python-path<a class="headerlink" href="#extend-python-path" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[List[Union[str, StringExpression]]]</p>
+<p>Appends entries to the --pythonpath option.</p>
+<p>Additional locations (directories, ZIPs) where to
+search libraries and other extensions when they are
+imported. Multiple paths can be given by separating
+them with a colon (<code>:</code>) or by using this option
+several times. Given path can also be a glob pattern
+matching multiple paths.</p>
+<p>Examples:</p>
+<div class="highlight"><pre><span></span><code>--pythonpath libs/
+--pythonpath /opt/libs:libraries.zip
+</code></pre></div>
+<p>corresponds to the <code>-P --pythonpath path *</code> option of <em>robot</em></p>
+<h2 id="extend-remove-keywords">extend-remove-keywords<a class="headerlink" href="#extend-remove-keywords" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[List[Union[str, Literal['all', 'passed', 'for', 'wuks'], NamePattern, TagPattern]]]</p>
+<p>Appends entries to the --removekeywords option.</p>
+<p>Remove keyword data from the generated log file.
+Keywords containing warnings are not removed except
+in the <code>all</code> mode.
+all:     remove data from all keywords
+passed:  remove data only from keywords in passed
+test cases and suites
+for:     remove passed iterations from for loops
+while:   remove passed iterations from while loops
+wuks:    remove all but the last failing keyword
+inside <code>BuiltIn.Wait Until Keyword Succeeds</code>
+name:<pattern>:  remove data from keywords that match
+the given pattern. The pattern is matched
+against the full name of the keyword (e.g.
+'MyLib.Keyword', 'resource.Second Keyword'),
+is case, space, and underscore insensitive,
+and may contain <code>*</code>, <code>?</code> and <code>[]</code> wildcards.</p>
+<p>Examples:</p>
+<div class="highlight"><pre><span></span><code>--removekeywords name:Lib.HugeKw
+--removekeywords name:myresource.*
+</code></pre></div>
+<p>tag:<pattern>:  remove data from keywords that match
+the given pattern. Tags are case and space
+insensitive and patterns can contain <code>*</code>,
+<code>?</code> and <code>[]</code> wildcards. Tags and patterns
+can also be combined together with <code>AND</code>,
+<code>OR</code>, and <code>NOT</code> operators.</p>
+<p>Examples:</p>
+<div class="highlight"><pre><span></span><code>--removekeywords foo
+--removekeywords fooANDbar*
+</code></pre></div>
+<p>corresponds to the <code>--removekeywords all|passed|for|wuks|name:&lt;pattern&gt;|tag:&lt;pattern&gt; *</code> option of <em>robot</em></p>
+<h2 id="extend-set-tag">extend-set-tag<a class="headerlink" href="#extend-set-tag" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[List[Union[str, StringExpression]]]</p>
+<p>Appends entries to the --settag option.</p>
+<p>Sets given tag(s) to all executed tests.</p>
+<p>corresponds to the <code>-G --settag tag *</code> option of <em>robot</em></p>
+<h2 id="extend-skip">extend-skip<a class="headerlink" href="#extend-skip" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[List[Union[str, StringExpression]]]</p>
+<p>Appends entries to the --skip option.</p>
+<p>Tests having given tag will be skipped. Tag can be
+a pattern.</p>
+<p>corresponds to the <code>--skip tag *</code> option of <em>rebot</em></p>
+<h2 id="extend-skip-on-failure">extend-skip-on-failure<a class="headerlink" href="#extend-skip-on-failure" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[List[Union[str, StringExpression]]]</p>
+<p>Appends entries to the --skiponfailure option.</p>
+<p>Tests having given tag will be skipped if they fail.
+Tag can be a pattern</p>
+<p>corresponds to the <code>--skiponfailure tag *</code> option of <em>rebot</em></p>
+<h2 id="extend-suites">extend-suites<a class="headerlink" href="#extend-suites" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[List[Union[str, StringExpression]]]</p>
+<p>Appends entries to the --suite option.</p>
+<p>Select suites by name. When this option is used with
+--test, --include or --exclude, only tests in
+matching suites and also matching other filtering
+criteria are selected. Name can be a simple pattern
+similarly as with --test and it can contain parent
+name separated with a dot. For example, <code>-s X.Y</code>
+selects suite <code>Y</code> only if its parent is <code>X</code>.</p>
+<p>corresponds to the <code>-s --suite name *</code> option of <em>robot</em></p>
+<h2 id="extend-tag-doc">extend-tag-doc<a class="headerlink" href="#extend-tag-doc" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[Dict[str, Union[str, StringExpression]]]</p>
+<p>Appends entries to the --tagdoc option.</p>
+<p>Add documentation to tags matching the given
+pattern. Documentation is shown in <code>Test Details</code> and
+also as a tooltip in <code>Statistics by Tag</code>. Pattern can
+use <code>*</code>, <code>?</code> and <code>[]</code> as wildcards like --test.
+Documentation can contain formatting like --doc.</p>
+<p>Examples:</p>
+<div class="highlight"><pre><span></span><code>--tagdoc mytag:Example
+--tagdoc &quot;owner-*:Original author&quot;
+</code></pre></div>
+<p>corresponds to the <code>--tagdoc pattern:doc *</code> option of <em>robot</em></p>
+<h2 id="extend-tag-stat-combine">extend-tag-stat-combine<a class="headerlink" href="#extend-tag-stat-combine" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[List[Union[str, Dict[str, str]]]]</p>
+<p>Appends entries to the --tagstatcombine option.</p>
+<p>Create combined statistics based on tags.
+These statistics are added into <code>Statistics by Tag</code>.
+If the optional <code>name</code> is not given, name of the
+combined tag is got from the specified tags. Tags are
+matched using the same rules as with --include.</p>
+<p>Examples:</p>
+<div class="highlight"><pre><span></span><code>--tagstatcombine requirement-*
+--tagstatcombine tag1ANDtag2:My_name
+</code></pre></div>
+<p>corresponds to the <code>--tagstatcombine tags:name *</code> option of <em>robot</em></p>
+<h2 id="extend-tag-stat-exclude">extend-tag-stat-exclude<a class="headerlink" href="#extend-tag-stat-exclude" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[List[Union[str, StringExpression]]]</p>
+<p>Appends entries to the --tagstatexclude option.</p>
+<p>Exclude matching tags from <code>Statistics by Tag</code>.
+This option can be used with --tagstatinclude
+similarly as --exclude is used with --include.</p>
+<p>corresponds to the <code>--tagstatexclude tag *</code> option of <em>robot</em></p>
+<h2 id="extend-tag-stat-include">extend-tag-stat-include<a class="headerlink" href="#extend-tag-stat-include" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[List[Union[str, StringExpression]]]</p>
+<p>Appends entries to the --tagstatinclude option.</p>
+<p>Include only matching tags in <code>Statistics by Tag</code>
+in log and report. By default all tags are shown.
+Given tag can be a pattern like with --include.</p>
+<p>corresponds to the <code>--tagstatinclude tag *</code> option of <em>robot</em></p>
+<h2 id="extend-tag-stat-link">extend-tag-stat-link<a class="headerlink" href="#extend-tag-stat-link" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[Dict[str, Union[str, StringExpression]]]</p>
+<p>Appends entries to the --tagstatlink option.</p>
+<p>Add external links into <code>Statistics by
+Tag</code>. Pattern can use <code>*</code>, <code>?</code> and <code>[]</code> as wildcards
+like --test. Characters matching to <code>*</code> and <code>?</code>
+wildcards can be used in link and title with syntax
+%N, where N is index of the match (starting from 1).</p>
+<p>Examples:</p>
+<div class="highlight"><pre><span></span><code>--tagstatlink mytag:http://my.domain:Title
+--tagstatlink &quot;bug-*:http://url/id=%1:Issue Tracker&quot;
+</code></pre></div>
+<p>corresponds to the <code>--tagstatlink pattern:link:title *</code> option of <em>robot</em></p>
+<h2 id="extend-tasks">extend-tasks<a class="headerlink" href="#extend-tasks" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[List[Union[str, StringExpression]]]</p>
+<p>Appends entries to the --task option.</p>
+<p>Alias to --test. Especially applicable with --rpa.</p>
+<p>corresponds to the <code>--task name *</code> option of <em>robot</em></p>
+<h2 id="extend-tests">extend-tests<a class="headerlink" href="#extend-tests" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[List[Union[str, StringExpression]]]</p>
+<p>Appends entries to the --test option.</p>
+<p>Select tests by name or by long name containing also
+parent suite name like <code>Parent.Test</code>. Name is case
+and space insensitive and it can also be a simple
+pattern where <code>*</code> matches anything, <code>?</code> matches any
+single character, and <code>[chars]</code> matches one character
+in brackets.</p>
+<p>corresponds to the <code>-t --test name *</code> option of <em>robot</em></p>
+<h2 id="extend-variable-files">extend-variable-files<a class="headerlink" href="#extend-variable-files" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[List[Union[str, StringExpression]]]</p>
+<p>Appends entries to the --variablefile option.</p>
+<p>Python or YAML file file to read variables from.
+Possible arguments to the variable file can be given
+after the path using colon or semicolon as separator.</p>
+<p>Examples:</p>
+<div class="highlight"><pre><span></span><code>--variablefile path/vars.yaml
+--variablefile environment.py:testing
+</code></pre></div>
+<p>corresponds to the <code>-V --variablefile path *</code> option of <em>rebot</em></p>
+<h2 id="extend-variables">extend-variables<a class="headerlink" href="#extend-variables" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[Dict[str, Union[str, StringExpression]]]</p>
+<p>Appends entries to the --variable option.</p>
+<p>Set variables in the test data. Only scalar
+variables with string value are supported and name is
+given without <code>${}</code>. See --variablefile for a more
+powerful variable setting mechanism.</p>
+<p>Examples:</p>
+<div class="highlight"><pre><span></span><code>--variable name:Robot  =&gt;  ${name} = `Robot`
+-v &quot;hello:Hello world&quot; =&gt;  ${hello} = `Hello world`
+-v x: -v y:42          =&gt;  ${x} = ``, ${y} = `42`
+</code></pre></div>
+<p>corresponds to the <code>-v --variable name:value *</code> option of <em>rebot</em></p>
+<h2 id="extensions">extensions<a class="headerlink" href="#extensions" title="Permanent link">&para;</a></h2>
+<p>Type: Union[str, StringExpression, None]</p>
+<p>Parse only files with this extension when executing
+a directory. Has no effect when running individual
+files or when using resource files. If more than one
+extension is needed, separate them with a colon.</p>
+<p>Examples:</p>
+<div class="highlight"><pre><span></span><code>`--extension txt`, `--extension robot:txt`
+</code></pre></div>
+<p>Only <code>*.robot</code> files are parsed by default.</p>
+<p>corresponds to the <code>-F --extension value</code> option of <em>robot</em></p>
+<h2 id="flatten-keywords">flatten-keywords<a class="headerlink" href="#flatten-keywords" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[List[Union[str, Literal['for', 'while', 'iteration'], NamePattern, TagPattern]]]</p>
+<p>Flattens matching keywords in the generated log file.
+Matching keywords get all log messages from their
+child keywords and children are discarded otherwise.
+for:     flatten FOR loops fully
+while:   flatten WHILE loops fully
+iteration: flatten FOR/WHILE loop iterations
+foritem: deprecated alias for <code>iteration</code>
+name:<pattern>:  flatten matched keywords using same
+matching rules as with
+<code>--removekeywords name:&lt;pattern&gt;</code>
+tag:<pattern>:  flatten matched keywords using same
+matching rules as with
+<code>--removekeywords tag:&lt;pattern&gt;</code></p>
+<p>corresponds to the <code>--flattenkeywords for|while|iteration|name:&lt;pattern&gt;|tag:&lt;pattern&gt; *</code> option of <em>robot</em></p>
+<h2 id="includes">includes<a class="headerlink" href="#includes" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[List[Union[str, StringExpression]]]</p>
+<p>Select tests by tag. Similarly as name with --test,
+tag is case and space insensitive and it is possible
+to use patterns with <code>*</code>, <code>?</code> and <code>[]</code> as wildcards.
+Tags and patterns can also be combined together with
+<code>AND</code>, <code>OR</code>, and <code>NOT</code> operators.</p>
+<p>Examples:</p>
+<div class="highlight"><pre><span></span><code>--include foo --include bar*
+--include fooANDbar*
+</code></pre></div>
+<p>corresponds to the <code>-i --include tag *</code> option of <em>robot</em></p>
+<h2 id="languages">languages<a class="headerlink" href="#languages" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[List[Union[str, StringExpression]]]</p>
+<p>Activate localization. <code>lang</code> can be a name or a code
+of a built-in language, or a path or a module name of
+a custom language file.</p>
+<p>corresponds to the <code>--language lang *</code> option of <em>robot</em></p>
+<h2 id="libdoc">libdoc<a class="headerlink" href="#libdoc" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[LibDocProfile]</p>
+<p>Options to be passed to <em>libdoc</em>.</p>
+<h2 id="libdocdoc-format">libdoc.doc-format<a class="headerlink" href="#libdocdoc-format" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[Literal['ROBOT', 'HTML', 'TEXT', 'REST']]</p>
+<p>Specifies the source documentation format. Possible
+values are Robot Framework's documentation format,
+HTML, plain text, and reStructuredText. The default
+value can be specified in library source code and
+the initial default value is ROBOT.</p>
+<p>corresponds to the <code>-F --docformat ROBOT|HTML|TEXT|REST</code> option of <em>libdoc</em></p>
+<h2 id="libdocextend-python-path">libdoc.extend-python-path<a class="headerlink" href="#libdocextend-python-path" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[List[Union[str, StringExpression]]]</p>
+<p>Appends entries to the --pythonpath option.</p>
+<p>Additional locations where to search for libraries
+and resources.</p>
+<p>corresponds to the <code>-P --pythonpath path *</code> option of <em>libdoc</em></p>
+<h2 id="libdocformat">libdoc.format<a class="headerlink" href="#libdocformat" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[Literal['HTML', 'XML', 'JSON', 'LIBSPEC']]</p>
+<p>Specifies whether to generate an HTML output for
+humans or a machine readable spec file in XML or JSON
+format. The LIBSPEC format means XML spec with
+documentations converted to HTML. The default format
+is got from the output file extension.</p>
+<p>corresponds to the <code>-f --format HTML|XML|JSON|LIBSPEC</code> option of <em>libdoc</em></p>
+<h2 id="libdocname">libdoc.name<a class="headerlink" href="#libdocname" title="Permanent link">&para;</a></h2>
+<p>Type: Union[str, StringExpression, None]</p>
+<p>Sets the name of the documented library or resource.</p>
+<p>corresponds to the <code>-n --name name</code> option of <em>libdoc</em></p>
+<h2 id="libdocpython-path">libdoc.python-path<a class="headerlink" href="#libdocpython-path" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[List[Union[str, StringExpression]]]</p>
+<p>Additional locations where to search for libraries
+and resources.</p>
+<p>corresponds to the <code>-P --pythonpath path *</code> option of <em>libdoc</em></p>
+<h2 id="libdocquiet">libdoc.quiet<a class="headerlink" href="#libdocquiet" title="Permanent link">&para;</a></h2>
+<p>Type: Union[bool, Flag, None]</p>
+<p>Do not print the path of the generated output file
+to the console. New in RF 4.0.</p>
+<p>corresponds to the <code>--quiet</code> option of <em>libdoc</em></p>
+<h2 id="libdocspec-doc-format">libdoc.spec-doc-format<a class="headerlink" href="#libdocspec-doc-format" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[Literal['RAW', 'HTML']]</p>
+<p>Specifies the documentation format used with XML and
+JSON spec files. RAW means preserving the original
+documentation format and HTML means converting
+documentation to HTML. The default is RAW with XML
+spec files and HTML with JSON specs and when using
+the special LIBSPEC format. New in RF 4.0.</p>
+<p>corresponds to the <code>-s --specdocformat RAW|HTML</code> option of <em>libdoc</em></p>
+<h2 id="libdoctheme">libdoc.theme<a class="headerlink" href="#libdoctheme" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[Literal['DARK', 'LIGHT', 'NONE']]</p>
+<p>Use dark or light HTML theme. If this option is not
+used, or the value is NONE, the theme is selected
+based on the browser color scheme. New in RF 6.0.</p>
+<p>corresponds to the <code>--theme DARK|LIGHT|NONE</code> option of <em>libdoc</em></p>
+<h2 id="listeners">listeners<a class="headerlink" href="#listeners" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[Dict[str, List[Union[str, StringExpression]]]]</p>
+<p>Class or module for monitoring test execution.
+Gets notifications e.g. when tests start and end.
+Arguments to the listener class can be given after
+the name using a colon or a semicolon as a separator.</p>
+<p>Examples:</p>
+<div class="highlight"><pre><span></span><code>--listener MyListener
+--listener path/to/Listener.py:arg1:arg2
+</code></pre></div>
+<p>corresponds to the <code>--listener listener *</code> option of <em>robot</em></p>
+<h2 id="log">log<a class="headerlink" href="#log" title="Permanent link">&para;</a></h2>
+<p>Type: Union[str, StringExpression, None]</p>
+<p>HTML log file. Can be disabled by giving a special
+value <code>NONE</code>. Default: log.html</p>
+<p>Examples:</p>
+<div class="highlight"><pre><span></span><code>`--log mylog.html`, `-l NONE`
+</code></pre></div>
+<p>corresponds to the <code>-l --log file</code> option of <em>robot</em></p>
+<h2 id="log-level">log-level<a class="headerlink" href="#log-level" title="Permanent link">&para;</a></h2>
+<p>Type: Union[str, StringExpression, None]</p>
+<p>Threshold level for logging. Available levels: TRACE,
+DEBUG, INFO (default), WARN, NONE (no logging). Use
+syntax <code>LOGLEVEL:DEFAULT</code> to define the default
+visible log level in log files.</p>
+<p>Examples:</p>
+<div class="highlight"><pre><span></span><code>--loglevel DEBUG
+--loglevel DEBUG:INFO
+</code></pre></div>
+<p>corresponds to the <code>-L --loglevel level</code> option of <em>robot</em></p>
+<h2 id="log-title">log-title<a class="headerlink" href="#log-title" title="Permanent link">&para;</a></h2>
+<p>Type: Union[str, StringExpression, None]</p>
+<p>Title for the generated log file. The default title
+is <code>&lt;SuiteName&gt; Log</code>.</p>
+<p>corresponds to the <code>--logtitle title</code> option of <em>robot</em></p>
+<h2 id="max-assign-length">max-assign-length<a class="headerlink" href="#max-assign-length" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[int]</p>
+<p>Maximum number of characters to show in log
+when variables are assigned. Zero or negative values
+can be used to avoid showing assigned values at all.
+Default is 200.</p>
+<p>corresponds to the <code>--maxassignlength characters</code> option of <em>robot</em></p>
+<h2 id="max-error-lines">max-error-lines<a class="headerlink" href="#max-error-lines" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[int]</p>
+<p>Maximum number of error message lines to show in
+report when tests fail. Default is 40, minimum is 10
+and <code>NONE</code> can be used to show the full message.</p>
+<p>corresponds to the <code>--maxerrorlines lines</code> option of <em>robot</em></p>
+<h2 id="metadata">metadata<a class="headerlink" href="#metadata" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[Dict[str, Union[str, StringExpression]]]</p>
+<p>Set metadata of the top level suite. Value can
+contain formatting and be read from a file similarly
+as --doc. Example: --metadata Version:1.2</p>
+<p>corresponds to the <code>-M --metadata name:value *</code> option of <em>robot</em></p>
+<h2 id="name">name<a class="headerlink" href="#name" title="Permanent link">&para;</a></h2>
+<p>Type: Union[str, StringExpression, None]</p>
+<p>Set the name of the top level suite. By default the
+name is created based on the executed file or
+directory.</p>
+<p>corresponds to the <code>-N --name name</code> option of <em>robot</em></p>
+<h2 id="no-status-rc">no-status-rc<a class="headerlink" href="#no-status-rc" title="Permanent link">&para;</a></h2>
+<p>Type: Union[bool, Flag, None]</p>
+<p>Sets the return code to zero regardless of failures
+in test cases. Error codes are returned normally.</p>
+<p>corresponds to the <code>--nostatusrc</code> option of <em>robot</em></p>
+<h2 id="output">output<a class="headerlink" href="#output" title="Permanent link">&para;</a></h2>
+<p>Type: Union[str, StringExpression, None]</p>
+<p>XML output file. Given path, similarly as paths given
+to --log, --report, --xunit, and --debugfile, is
+relative to --outputdir unless given as an absolute
+path. Other output files are created based on XML
+output files after the test execution and XML outputs
+can also be further processed with Rebot tool. Can be
+disabled by giving a special value <code>NONE</code>.
+Default: output.xml</p>
+<p>corresponds to the <code>-o --output file</code> option of <em>robot</em></p>
+<h2 id="output-dir">output-dir<a class="headerlink" href="#output-dir" title="Permanent link">&para;</a></h2>
+<p>Type: Union[str, StringExpression, None]</p>
+<p>Where to create output files. The default is the
+directory where tests are run from and the given path
+is considered relative to that unless it is absolute.</p>
+<p>corresponds to the <code>-d --outputdir dir</code> option of <em>robot</em></p>
+<h2 id="parse-include">parse-include<a class="headerlink" href="#parse-include" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[List[Union[str, StringExpression]]]</p>
+<p>Parse only files matching <code>pattern</code>. It can be:
+- a file name or pattern like <code>example.robot</code> or
+<code>*.robot</code> to parse all files matching that name,
+- a file path like <code>path/to/example.robot</code>, or
+- a directory path like <code>path/to/example</code> to parse
+all files in that directory, recursively.</p>
+<p>corresponds to the <code>-I --parseinclude pattern *</code> option of <em>robot</em></p>
+<h2 id="parsers">parsers<a class="headerlink" href="#parsers" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[Dict[str, List[Union[str, StringExpression]]]]</p>
+<p>Custom parser class or module. Parser classes accept
+arguments the same way as with --listener.</p>
+<p>corresponds to the <code>--parser parser *</code> option of <em>robot</em></p>
+<h2 id="paths">paths<a class="headerlink" href="#paths" title="Permanent link">&para;</a></h2>
+<p>Type: Union[str, List[str], None]</p>
+<p>Specifies the paths where robot/robotcode should discover tests.
+If no paths are given at the command line this value is used.</p>
+<p>Examples:
+<div class="highlight"><pre><span></span><code><span class="n">paths</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;tests&quot;</span><span class="p">]</span>
+</code></pre></div></p>
+<p>Corresponds to the <code>paths</code> argument of <strong>robot</strong>.</p>
+<h2 id="pre-rebot-modifiers">pre-rebot-modifiers<a class="headerlink" href="#pre-rebot-modifiers" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[Dict[str, List[Union[str, StringExpression]]]]</p>
+<p>Class to programmatically modify the result
+model before creating reports and logs. Accepts
+arguments the same way as with --listener.</p>
+<p>corresponds to the <code>--prerebotmodifier modifier *</code> option of <em>robot</em></p>
+<h2 id="pre-run-modifiers">pre-run-modifiers<a class="headerlink" href="#pre-run-modifiers" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[Dict[str, List[Union[str, StringExpression]]]]</p>
+<p>Class to programmatically modify the suite
+structure before execution. Accepts arguments the
+same way as with --listener.</p>
+<p>corresponds to the <code>--prerunmodifier modifier *</code> option of <em>robot</em></p>
+<h2 id="profiles">profiles<a class="headerlink" href="#profiles" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[Dict[str, RobotProfile]]</p>
+<p>Execution profiles.</p>
+<h2 id="python-path">python-path<a class="headerlink" href="#python-path" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[List[Union[str, StringExpression]]]</p>
+<p>Additional locations (directories, ZIPs) where to
+search libraries and other extensions when they are
+imported. Multiple paths can be given by separating
+them with a colon (<code>:</code>) or by using this option
+several times. Given path can also be a glob pattern
+matching multiple paths.</p>
+<p>Examples:</p>
+<div class="highlight"><pre><span></span><code>--pythonpath libs/
+--pythonpath /opt/libs:libraries.zip
+</code></pre></div>
+<p>corresponds to the <code>-P --pythonpath path *</code> option of <em>robot</em></p>
+<h2 id="quiet">quiet<a class="headerlink" href="#quiet" title="Permanent link">&para;</a></h2>
+<p>Type: Union[bool, Flag, None]</p>
+<p>Shortcut for <code>--console quiet</code>.</p>
+<p>corresponds to the <code>--quiet</code> option of <em>robot</em></p>
+<h2 id="randomize">randomize<a class="headerlink" href="#randomize" title="Permanent link">&para;</a></h2>
+<p>Type: Union[str, Literal['all', 'suites', 'tests', 'none'], None]</p>
+<p>Randomizes the test execution order.
+all:    randomizes both suites and tests
+suites: randomizes suites
+tests:  randomizes tests
+none:   no randomization (default)
+Use syntax <code>VALUE:SEED</code> to give a custom random seed.
+The seed must be an integer.</p>
+<p>Examples:</p>
+<div class="highlight"><pre><span></span><code>--randomize all
+--randomize tests:1234
+</code></pre></div>
+<p>corresponds to the <code>--randomize all|suites|tests|none</code> option of <em>robot</em></p>
+<h2 id="re-run-failed">re-run-failed<a class="headerlink" href="#re-run-failed" title="Permanent link">&para;</a></h2>
+<p>Type: Union[str, StringExpression, None]</p>
+<p>Select failed tests from an earlier output file to be
+re-executed. Equivalent to selecting same tests
+individually using --test.</p>
+<p>corresponds to the <code>-R --rerunfailed output</code> option of <em>robot</em></p>
+<h2 id="re-run-failed-suites">re-run-failed-suites<a class="headerlink" href="#re-run-failed-suites" title="Permanent link">&para;</a></h2>
+<p>Type: Union[str, StringExpression, None]</p>
+<p>Select failed suites from an earlier output
+file to be re-executed.</p>
+<p>corresponds to the <code>-S --rerunfailedsuites output</code> option of <em>robot</em></p>
+<h2 id="rebot">rebot<a class="headerlink" href="#rebot" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[RebotProfile]</p>
+<p>Options to be passed to <em>rebot</em>.</p>
+<h2 id="rebotconsole-colors">rebot.console-colors<a class="headerlink" href="#rebotconsole-colors" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[Literal['auto', 'on', 'ansi', 'off']]</p>
+<p>Use colors on console output or not.
+auto: use colors when output not redirected (default)
+on:   always use colors
+ansi: like <code>on</code> but use ANSI colors also on Windows
+off:  disable colors altogether</p>
+<p>corresponds to the <code>-C --consolecolors auto|on|ansi|off</code> option of <em>robot</em></p>
+<h2 id="rebotdoc">rebot.doc<a class="headerlink" href="#rebotdoc" title="Permanent link">&para;</a></h2>
+<p>Type: Union[str, StringExpression, None]</p>
+<p>Set the documentation of the top level suite.
+Simple formatting is supported (e.g. <em>bold</em>). If the
+documentation contains spaces, it must be quoted.
+If the value is path to an existing file, actual
+documentation is read from that file.</p>
+<p>Examples:</p>
+<div class="highlight"><pre><span></span><code>--doc &quot;Very *good* example&quot;
+--doc doc_from_file.txt
+</code></pre></div>
+<p>corresponds to the <code>-D --doc documentation</code> option of <em>robot</em></p>
+<h2 id="rebotend-time">rebot.end-time<a class="headerlink" href="#rebotend-time" title="Permanent link">&para;</a></h2>
+<p>Type: Union[str, StringExpression, None]</p>
+<p>Same as --starttime but for end time. If both options
+are used, elapsed time of the suite is calculated
+based on them. For combined suites, it is otherwise
+calculated by adding elapsed times of the combined
+suites together.</p>
+<p>corresponds to the <code>--endtime timestamp</code> option of <em>rebot</em></p>
+<h2 id="rebotexcludes">rebot.excludes<a class="headerlink" href="#rebotexcludes" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[List[Union[str, StringExpression]]]</p>
+<p>Select test cases not to run by tag. These tests are
+not run even if included with --include. Tags are
+matched using same rules as with --include.</p>
+<p>corresponds to the <code>-e --exclude tag *</code> option of <em>robot</em></p>
+<h2 id="rebotexpand-keywords">rebot.expand-keywords<a class="headerlink" href="#rebotexpand-keywords" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[List[Union[str, NamePattern, TagPattern]]]</p>
+<p>Matching keywords will be automatically expanded in
+the log file. Matching against keyword name or tags
+work using same rules as with --removekeywords.</p>
+<p>Examples:</p>
+<div class="highlight"><pre><span></span><code>--expandkeywords name:BuiltIn.Log
+--expandkeywords tag:expand
+</code></pre></div>
+<p>corresponds to the <code>--expandkeywords name:&lt;pattern&gt;|tag:&lt;pattern&gt; *</code> option of <em>robot</em></p>
+<h2 id="rebotextend-excludes">rebot.extend-excludes<a class="headerlink" href="#rebotextend-excludes" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[List[Union[str, StringExpression]]]</p>
+<p>Appends entries to the --exclude option.</p>
+<p>Select test cases not to run by tag. These tests are
+not run even if included with --include. Tags are
+matched using same rules as with --include.</p>
+<p>corresponds to the <code>-e --exclude tag *</code> option of <em>robot</em></p>
+<h2 id="rebotextend-expand-keywords">rebot.extend-expand-keywords<a class="headerlink" href="#rebotextend-expand-keywords" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[List[Union[str, NamePattern, TagPattern]]]</p>
+<p>Appends entries to the --expandkeywords option.</p>
+<p>Matching keywords will be automatically expanded in
+the log file. Matching against keyword name or tags
+work using same rules as with --removekeywords.</p>
+<p>Examples:</p>
+<div class="highlight"><pre><span></span><code>--expandkeywords name:BuiltIn.Log
+--expandkeywords tag:expand
+</code></pre></div>
+<p>corresponds to the <code>--expandkeywords name:&lt;pattern&gt;|tag:&lt;pattern&gt; *</code> option of <em>robot</em></p>
+<h2 id="rebotextend-flatten-keywords">rebot.extend-flatten-keywords<a class="headerlink" href="#rebotextend-flatten-keywords" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[List[Union[str, Literal['for', 'while', 'iteration'], NamePattern, TagPattern]]]</p>
+<p>Appends entries to the --flattenkeywords option.</p>
+<p>Flattens matching keywords in the generated log file.
+Matching keywords get all log messages from their
+child keywords and children are discarded otherwise.
+for:     flatten FOR loops fully
+while:   flatten WHILE loops fully
+iteration: flatten FOR/WHILE loop iterations
+foritem: deprecated alias for <code>iteration</code>
+name:<pattern>:  flatten matched keywords using same
+matching rules as with
+<code>--removekeywords name:&lt;pattern&gt;</code>
+tag:<pattern>:  flatten matched keywords using same
+matching rules as with
+<code>--removekeywords tag:&lt;pattern&gt;</code></p>
+<p>corresponds to the <code>--flattenkeywords for|while|iteration|name:&lt;pattern&gt;|tag:&lt;pattern&gt; *</code> option of <em>robot</em></p>
+<h2 id="rebotextend-includes">rebot.extend-includes<a class="headerlink" href="#rebotextend-includes" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[List[Union[str, StringExpression]]]</p>
+<p>Appends entries to the --include option.</p>
+<p>Select tests by tag. Similarly as name with --test,
+tag is case and space insensitive and it is possible
+to use patterns with <code>*</code>, <code>?</code> and <code>[]</code> as wildcards.
+Tags and patterns can also be combined together with
+<code>AND</code>, <code>OR</code>, and <code>NOT</code> operators.</p>
+<p>Examples:</p>
+<div class="highlight"><pre><span></span><code>--include foo --include bar*
+--include fooANDbar*
+</code></pre></div>
+<p>corresponds to the <code>-i --include tag *</code> option of <em>robot</em></p>
+<h2 id="rebotextend-metadata">rebot.extend-metadata<a class="headerlink" href="#rebotextend-metadata" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[Dict[str, Union[str, StringExpression]]]</p>
+<p>Appends entries to the --metadata option.</p>
+<p>Set metadata of the top level suite. Value can
+contain formatting and be read from a file similarly
+as --doc. Example: --metadata Version:1.2</p>
+<p>corresponds to the <code>-M --metadata name:value *</code> option of <em>robot</em></p>
+<h2 id="rebotextend-parse-include">rebot.extend-parse-include<a class="headerlink" href="#rebotextend-parse-include" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[List[Union[str, StringExpression]]]</p>
+<p>Appends entries to the --parseinclude option.</p>
+<p>Parse only files matching <code>pattern</code>. It can be:
+- a file name or pattern like <code>example.robot</code> or
+<code>*.robot</code> to parse all files matching that name,
+- a file path like <code>path/to/example.robot</code>, or
+- a directory path like <code>path/to/example</code> to parse
+all files in that directory, recursively.</p>
+<p>corresponds to the <code>-I --parseinclude pattern *</code> option of <em>robot</em></p>
+<h2 id="rebotextend-pre-rebot-modifiers">rebot.extend-pre-rebot-modifiers<a class="headerlink" href="#rebotextend-pre-rebot-modifiers" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[Dict[str, List[Union[str, StringExpression]]]]</p>
+<p>Appends entries to the --prerebotmodifier option.</p>
+<p>Class to programmatically modify the result
+model before creating reports and logs. Accepts
+arguments the same way as with --listener.</p>
+<p>corresponds to the <code>--prerebotmodifier modifier *</code> option of <em>robot</em></p>
+<h2 id="rebotextend-python-path">rebot.extend-python-path<a class="headerlink" href="#rebotextend-python-path" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[List[Union[str, StringExpression]]]</p>
+<p>Appends entries to the --pythonpath option.</p>
+<p>Additional locations (directories, ZIPs) where to
+search libraries and other extensions when they are
+imported. Multiple paths can be given by separating
+them with a colon (<code>:</code>) or by using this option
+several times. Given path can also be a glob pattern
+matching multiple paths.</p>
+<p>Examples:</p>
+<div class="highlight"><pre><span></span><code>--pythonpath libs/
+--pythonpath /opt/libs:libraries.zip
+</code></pre></div>
+<p>corresponds to the <code>-P --pythonpath path *</code> option of <em>robot</em></p>
+<h2 id="rebotextend-remove-keywords">rebot.extend-remove-keywords<a class="headerlink" href="#rebotextend-remove-keywords" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[List[Union[str, Literal['all', 'passed', 'for', 'wuks'], NamePattern, TagPattern]]]</p>
+<p>Appends entries to the --removekeywords option.</p>
+<p>Remove keyword data from the generated log file.
+Keywords containing warnings are not removed except
+in the <code>all</code> mode.
+all:     remove data from all keywords
+passed:  remove data only from keywords in passed
+test cases and suites
+for:     remove passed iterations from for loops
+while:   remove passed iterations from while loops
+wuks:    remove all but the last failing keyword
+inside <code>BuiltIn.Wait Until Keyword Succeeds</code>
+name:<pattern>:  remove data from keywords that match
+the given pattern. The pattern is matched
+against the full name of the keyword (e.g.
+'MyLib.Keyword', 'resource.Second Keyword'),
+is case, space, and underscore insensitive,
+and may contain <code>*</code>, <code>?</code> and <code>[]</code> wildcards.</p>
+<p>Examples:</p>
+<div class="highlight"><pre><span></span><code>--removekeywords name:Lib.HugeKw
+--removekeywords name:myresource.*
+</code></pre></div>
+<p>tag:<pattern>:  remove data from keywords that match
+the given pattern. Tags are case and space
+insensitive and patterns can contain <code>*</code>,
+<code>?</code> and <code>[]</code> wildcards. Tags and patterns
+can also be combined together with <code>AND</code>,
+<code>OR</code>, and <code>NOT</code> operators.</p>
+<p>Examples:</p>
+<div class="highlight"><pre><span></span><code>--removekeywords foo
+--removekeywords fooANDbar*
+</code></pre></div>
+<p>corresponds to the <code>--removekeywords all|passed|for|wuks|name:&lt;pattern&gt;|tag:&lt;pattern&gt; *</code> option of <em>robot</em></p>
+<h2 id="rebotextend-set-tag">rebot.extend-set-tag<a class="headerlink" href="#rebotextend-set-tag" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[List[Union[str, StringExpression]]]</p>
+<p>Appends entries to the --settag option.</p>
+<p>Sets given tag(s) to all executed tests.</p>
+<p>corresponds to the <code>-G --settag tag *</code> option of <em>robot</em></p>
+<h2 id="rebotextend-suites">rebot.extend-suites<a class="headerlink" href="#rebotextend-suites" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[List[Union[str, StringExpression]]]</p>
+<p>Appends entries to the --suite option.</p>
+<p>Select suites by name. When this option is used with
+--test, --include or --exclude, only tests in
+matching suites and also matching other filtering
+criteria are selected. Name can be a simple pattern
+similarly as with --test and it can contain parent
+name separated with a dot. For example, <code>-s X.Y</code>
+selects suite <code>Y</code> only if its parent is <code>X</code>.</p>
+<p>corresponds to the <code>-s --suite name *</code> option of <em>robot</em></p>
+<h2 id="rebotextend-tag-doc">rebot.extend-tag-doc<a class="headerlink" href="#rebotextend-tag-doc" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[Dict[str, Union[str, StringExpression]]]</p>
+<p>Appends entries to the --tagdoc option.</p>
+<p>Add documentation to tags matching the given
+pattern. Documentation is shown in <code>Test Details</code> and
+also as a tooltip in <code>Statistics by Tag</code>. Pattern can
+use <code>*</code>, <code>?</code> and <code>[]</code> as wildcards like --test.
+Documentation can contain formatting like --doc.</p>
+<p>Examples:</p>
+<div class="highlight"><pre><span></span><code>--tagdoc mytag:Example
+--tagdoc &quot;owner-*:Original author&quot;
+</code></pre></div>
+<p>corresponds to the <code>--tagdoc pattern:doc *</code> option of <em>robot</em></p>
+<h2 id="rebotextend-tag-stat-combine">rebot.extend-tag-stat-combine<a class="headerlink" href="#rebotextend-tag-stat-combine" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[List[Union[str, Dict[str, str]]]]</p>
+<p>Appends entries to the --tagstatcombine option.</p>
+<p>Create combined statistics based on tags.
+These statistics are added into <code>Statistics by Tag</code>.
+If the optional <code>name</code> is not given, name of the
+combined tag is got from the specified tags. Tags are
+matched using the same rules as with --include.</p>
+<p>Examples:</p>
+<div class="highlight"><pre><span></span><code>--tagstatcombine requirement-*
+--tagstatcombine tag1ANDtag2:My_name
+</code></pre></div>
+<p>corresponds to the <code>--tagstatcombine tags:name *</code> option of <em>robot</em></p>
+<h2 id="rebotextend-tag-stat-exclude">rebot.extend-tag-stat-exclude<a class="headerlink" href="#rebotextend-tag-stat-exclude" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[List[Union[str, StringExpression]]]</p>
+<p>Appends entries to the --tagstatexclude option.</p>
+<p>Exclude matching tags from <code>Statistics by Tag</code>.
+This option can be used with --tagstatinclude
+similarly as --exclude is used with --include.</p>
+<p>corresponds to the <code>--tagstatexclude tag *</code> option of <em>robot</em></p>
+<h2 id="rebotextend-tag-stat-include">rebot.extend-tag-stat-include<a class="headerlink" href="#rebotextend-tag-stat-include" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[List[Union[str, StringExpression]]]</p>
+<p>Appends entries to the --tagstatinclude option.</p>
+<p>Include only matching tags in <code>Statistics by Tag</code>
+in log and report. By default all tags are shown.
+Given tag can be a pattern like with --include.</p>
+<p>corresponds to the <code>--tagstatinclude tag *</code> option of <em>robot</em></p>
+<h2 id="rebotextend-tag-stat-link">rebot.extend-tag-stat-link<a class="headerlink" href="#rebotextend-tag-stat-link" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[Dict[str, Union[str, StringExpression]]]</p>
+<p>Appends entries to the --tagstatlink option.</p>
+<p>Add external links into <code>Statistics by
+Tag</code>. Pattern can use <code>*</code>, <code>?</code> and <code>[]</code> as wildcards
+like --test. Characters matching to <code>*</code> and <code>?</code>
+wildcards can be used in link and title with syntax
+%N, where N is index of the match (starting from 1).</p>
+<p>Examples:</p>
+<div class="highlight"><pre><span></span><code>--tagstatlink mytag:http://my.domain:Title
+--tagstatlink &quot;bug-*:http://url/id=%1:Issue Tracker&quot;
+</code></pre></div>
+<p>corresponds to the <code>--tagstatlink pattern:link:title *</code> option of <em>robot</em></p>
+<h2 id="rebotextend-tasks">rebot.extend-tasks<a class="headerlink" href="#rebotextend-tasks" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[List[Union[str, StringExpression]]]</p>
+<p>Appends entries to the --task option.</p>
+<p>Alias to --test. Especially applicable with --rpa.</p>
+<p>corresponds to the <code>--task name *</code> option of <em>robot</em></p>
+<h2 id="rebotextend-tests">rebot.extend-tests<a class="headerlink" href="#rebotextend-tests" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[List[Union[str, StringExpression]]]</p>
+<p>Appends entries to the --test option.</p>
+<p>Select tests by name or by long name containing also
+parent suite name like <code>Parent.Test</code>. Name is case
+and space insensitive and it can also be a simple
+pattern where <code>*</code> matches anything, <code>?</code> matches any
+single character, and <code>[chars]</code> matches one character
+in brackets.</p>
+<p>corresponds to the <code>-t --test name *</code> option of <em>robot</em></p>
+<h2 id="rebotflatten-keywords">rebot.flatten-keywords<a class="headerlink" href="#rebotflatten-keywords" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[List[Union[str, Literal['for', 'while', 'iteration'], NamePattern, TagPattern]]]</p>
+<p>Flattens matching keywords in the generated log file.
+Matching keywords get all log messages from their
+child keywords and children are discarded otherwise.
+for:     flatten FOR loops fully
+while:   flatten WHILE loops fully
+iteration: flatten FOR/WHILE loop iterations
+foritem: deprecated alias for <code>iteration</code>
+name:<pattern>:  flatten matched keywords using same
+matching rules as with
+<code>--removekeywords name:&lt;pattern&gt;</code>
+tag:<pattern>:  flatten matched keywords using same
+matching rules as with
+<code>--removekeywords tag:&lt;pattern&gt;</code></p>
+<p>corresponds to the <code>--flattenkeywords for|while|iteration|name:&lt;pattern&gt;|tag:&lt;pattern&gt; *</code> option of <em>robot</em></p>
+<h2 id="rebotincludes">rebot.includes<a class="headerlink" href="#rebotincludes" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[List[Union[str, StringExpression]]]</p>
+<p>Select tests by tag. Similarly as name with --test,
+tag is case and space insensitive and it is possible
+to use patterns with <code>*</code>, <code>?</code> and <code>[]</code> as wildcards.
+Tags and patterns can also be combined together with
+<code>AND</code>, <code>OR</code>, and <code>NOT</code> operators.</p>
+<p>Examples:</p>
+<div class="highlight"><pre><span></span><code>--include foo --include bar*
+--include fooANDbar*
+</code></pre></div>
+<p>corresponds to the <code>-i --include tag *</code> option of <em>robot</em></p>
+<h2 id="rebotlog">rebot.log<a class="headerlink" href="#rebotlog" title="Permanent link">&para;</a></h2>
+<p>Type: Union[str, StringExpression, None]</p>
+<p>HTML log file. Can be disabled by giving a special
+value <code>NONE</code>. Default: log.html</p>
+<p>Examples:</p>
+<div class="highlight"><pre><span></span><code>`--log mylog.html`, `-l NONE`
+</code></pre></div>
+<p>corresponds to the <code>-l --log file</code> option of <em>robot</em></p>
+<h2 id="rebotlog-level">rebot.log-level<a class="headerlink" href="#rebotlog-level" title="Permanent link">&para;</a></h2>
+<p>Type: Union[str, StringExpression, None]</p>
+<p>Threshold for selecting messages. Available levels:
+TRACE (default), DEBUG, INFO, WARN, NONE (no msgs).
+Use syntax <code>LOGLEVEL:DEFAULT</code> to define the default
+visible log level in log files.</p>
+<p>Examples:</p>
+<div class="highlight"><pre><span></span><code>--loglevel DEBUG
+--loglevel DEBUG:INFO
+</code></pre></div>
+<p>corresponds to the <code>-L --loglevel level</code> option of <em>rebot</em></p>
+<h2 id="rebotlog-title">rebot.log-title<a class="headerlink" href="#rebotlog-title" title="Permanent link">&para;</a></h2>
+<p>Type: Union[str, StringExpression, None]</p>
+<p>Title for the generated log file. The default title
+is <code>&lt;SuiteName&gt; Log</code>.</p>
+<p>corresponds to the <code>--logtitle title</code> option of <em>robot</em></p>
+<h2 id="rebotmerge">rebot.merge<a class="headerlink" href="#rebotmerge" title="Permanent link">&para;</a></h2>
+<p>Type: Union[bool, Flag, None]</p>
+<p>When combining results, merge outputs together
+instead of putting them under a new top level suite.
+Example: rebot --merge orig.xml rerun.xml</p>
+<p>corresponds to the <code>-R --merge</code> option of <em>rebot</em></p>
+<h2 id="rebotmetadata">rebot.metadata<a class="headerlink" href="#rebotmetadata" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[Dict[str, Union[str, StringExpression]]]</p>
+<p>Set metadata of the top level suite. Value can
+contain formatting and be read from a file similarly
+as --doc. Example: --metadata Version:1.2</p>
+<p>corresponds to the <code>-M --metadata name:value *</code> option of <em>robot</em></p>
+<h2 id="rebotname">rebot.name<a class="headerlink" href="#rebotname" title="Permanent link">&para;</a></h2>
+<p>Type: Union[str, StringExpression, None]</p>
+<p>Set the name of the top level suite. By default the
+name is created based on the executed file or
+directory.</p>
+<p>corresponds to the <code>-N --name name</code> option of <em>robot</em></p>
+<h2 id="rebotno-status-rc">rebot.no-status-rc<a class="headerlink" href="#rebotno-status-rc" title="Permanent link">&para;</a></h2>
+<p>Type: Union[bool, Flag, None]</p>
+<p>Sets the return code to zero regardless of failures
+in test cases. Error codes are returned normally.</p>
+<p>corresponds to the <code>--nostatusrc</code> option of <em>robot</em></p>
+<h2 id="rebotoutput">rebot.output<a class="headerlink" href="#rebotoutput" title="Permanent link">&para;</a></h2>
+<p>Type: Union[str, StringExpression, None]</p>
+<p>XML output file. Not created unless this option is
+specified. Given path, similarly as paths given to
+--log, --report and --xunit, is relative to
+--outputdir unless given as an absolute path.</p>
+<p>corresponds to the <code>-o --output file</code> option of <em>rebot</em></p>
+<h2 id="rebotoutput-dir">rebot.output-dir<a class="headerlink" href="#rebotoutput-dir" title="Permanent link">&para;</a></h2>
+<p>Type: Union[str, StringExpression, None]</p>
+<p>Where to create output files. The default is the
+directory where tests are run from and the given path
+is considered relative to that unless it is absolute.</p>
+<p>corresponds to the <code>-d --outputdir dir</code> option of <em>robot</em></p>
+<h2 id="rebotparse-include">rebot.parse-include<a class="headerlink" href="#rebotparse-include" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[List[Union[str, StringExpression]]]</p>
+<p>Parse only files matching <code>pattern</code>. It can be:
+- a file name or pattern like <code>example.robot</code> or
+<code>*.robot</code> to parse all files matching that name,
+- a file path like <code>path/to/example.robot</code>, or
+- a directory path like <code>path/to/example</code> to parse
+all files in that directory, recursively.</p>
+<p>corresponds to the <code>-I --parseinclude pattern *</code> option of <em>robot</em></p>
+<h2 id="rebotpre-rebot-modifiers">rebot.pre-rebot-modifiers<a class="headerlink" href="#rebotpre-rebot-modifiers" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[Dict[str, List[Union[str, StringExpression]]]]</p>
+<p>Class to programmatically modify the result
+model before creating reports and logs. Accepts
+arguments the same way as with --listener.</p>
+<p>corresponds to the <code>--prerebotmodifier modifier *</code> option of <em>robot</em></p>
+<h2 id="rebotprocess-empty-suite">rebot.process-empty-suite<a class="headerlink" href="#rebotprocess-empty-suite" title="Permanent link">&para;</a></h2>
+<p>Type: Union[bool, Flag, None]</p>
+<p>Processes output also if the top level suite is
+empty. Useful e.g. with --include/--exclude when it
+is not an error that there are no matches.
+Use --skiponfailure when starting execution instead.</p>
+<p>corresponds to the <code>--processemptysuite</code> option of <em>rebot</em></p>
+<h2 id="rebotpython-path">rebot.python-path<a class="headerlink" href="#rebotpython-path" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[List[Union[str, StringExpression]]]</p>
+<p>Additional locations (directories, ZIPs) where to
+search libraries and other extensions when they are
+imported. Multiple paths can be given by separating
+them with a colon (<code>:</code>) or by using this option
+several times. Given path can also be a glob pattern
+matching multiple paths.</p>
+<p>Examples:</p>
+<div class="highlight"><pre><span></span><code>--pythonpath libs/
+--pythonpath /opt/libs:libraries.zip
+</code></pre></div>
+<p>corresponds to the <code>-P --pythonpath path *</code> option of <em>robot</em></p>
+<h2 id="rebotremove-keywords">rebot.remove-keywords<a class="headerlink" href="#rebotremove-keywords" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[List[Union[str, Literal['all', 'passed', 'for', 'wuks'], NamePattern, TagPattern]]]</p>
+<p>Remove keyword data from the generated log file.
+Keywords containing warnings are not removed except
+in the <code>all</code> mode.
+all:     remove data from all keywords
+passed:  remove data only from keywords in passed
+test cases and suites
+for:     remove passed iterations from for loops
+while:   remove passed iterations from while loops
+wuks:    remove all but the last failing keyword
+inside <code>BuiltIn.Wait Until Keyword Succeeds</code>
+name:<pattern>:  remove data from keywords that match
+the given pattern. The pattern is matched
+against the full name of the keyword (e.g.
+'MyLib.Keyword', 'resource.Second Keyword'),
+is case, space, and underscore insensitive,
+and may contain <code>*</code>, <code>?</code> and <code>[]</code> wildcards.</p>
+<p>Examples:</p>
+<div class="highlight"><pre><span></span><code>--removekeywords name:Lib.HugeKw
+--removekeywords name:myresource.*
+</code></pre></div>
+<p>tag:<pattern>:  remove data from keywords that match
+the given pattern. Tags are case and space
+insensitive and patterns can contain <code>*</code>,
+<code>?</code> and <code>[]</code> wildcards. Tags and patterns
+can also be combined together with <code>AND</code>,
+<code>OR</code>, and <code>NOT</code> operators.</p>
+<p>Examples:</p>
+<div class="highlight"><pre><span></span><code>--removekeywords foo
+--removekeywords fooANDbar*
+</code></pre></div>
+<p>corresponds to the <code>--removekeywords all|passed|for|wuks|name:&lt;pattern&gt;|tag:&lt;pattern&gt; *</code> option of <em>robot</em></p>
+<h2 id="rebotreport">rebot.report<a class="headerlink" href="#rebotreport" title="Permanent link">&para;</a></h2>
+<p>Type: Union[str, StringExpression, None]</p>
+<p>HTML report file. Can be disabled with <code>NONE</code>
+similarly as --log. Default: report.html</p>
+<p>corresponds to the <code>-r --report file</code> option of <em>robot</em></p>
+<h2 id="rebotreport-background">rebot.report-background<a class="headerlink" href="#rebotreport-background" title="Permanent link">&para;</a></h2>
+<p>Type: Union[str, StringExpression, None]</p>
+<p>Background colors to use in the report file.
+Given in format <code>passed:failed:skipped</code> where the
+<code>:skipped</code> part can be omitted. Both color names and
+codes work.</p>
+<p>Examples:</p>
+<div class="highlight"><pre><span></span><code>--reportbackground green:red:yellow
+--reportbackground #00E:#E00
+</code></pre></div>
+<p>corresponds to the <code>--reportbackground colors</code> option of <em>robot</em></p>
+<h2 id="rebotreport-title">rebot.report-title<a class="headerlink" href="#rebotreport-title" title="Permanent link">&para;</a></h2>
+<p>Type: Union[str, StringExpression, None]</p>
+<p>Title for the generated report file. The default
+title is <code>&lt;SuiteName&gt; Report</code>.</p>
+<p>corresponds to the <code>--reporttitle title</code> option of <em>robot</em></p>
+<h2 id="rebotrpa">rebot.rpa<a class="headerlink" href="#rebotrpa" title="Permanent link">&para;</a></h2>
+<p>Type: Union[bool, Flag, None]</p>
+<p>Turn on the generic automation mode. Mainly affects
+terminology so that "test" is replaced with "task"
+in logs and reports. By default the mode is got
+from test/task header in data files.</p>
+<p>corresponds to the <code>--rpa</code> option of <em>robot</em></p>
+<h2 id="rebotset-tag">rebot.set-tag<a class="headerlink" href="#rebotset-tag" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[List[Union[str, StringExpression]]]</p>
+<p>Sets given tag(s) to all executed tests.</p>
+<p>corresponds to the <code>-G --settag tag *</code> option of <em>robot</em></p>
+<h2 id="rebotsplit-log">rebot.split-log<a class="headerlink" href="#rebotsplit-log" title="Permanent link">&para;</a></h2>
+<p>Type: Union[bool, Flag, None]</p>
+<p>Split the log file into smaller pieces that open in
+browsers transparently.</p>
+<p>corresponds to the <code>--splitlog</code> option of <em>robot</em></p>
+<h2 id="rebotstart-time">rebot.start-time<a class="headerlink" href="#rebotstart-time" title="Permanent link">&para;</a></h2>
+<p>Type: Union[str, StringExpression, None]</p>
+<p>Set execution start time. Timestamp must be given in
+format <code>2007-10-01 15:12:42.268</code> where all separators
+are optional (e.g. <code>20071001151242268</code> is ok too) and
+parts from milliseconds to hours can be omitted if
+they are zero (e.g. <code>2007-10-01</code>). This can be used
+to override start time of a single suite or to set
+start time for a combined suite, which would
+otherwise be <code>N/A</code>.</p>
+<p>corresponds to the <code>--starttime timestamp</code> option of <em>rebot</em></p>
+<h2 id="rebotsuite-stat-level">rebot.suite-stat-level<a class="headerlink" href="#rebotsuite-stat-level" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[int]</p>
+<p>How many levels to show in <code>Statistics by Suite</code>
+in log and report. By default all suite levels are
+shown. Example:  --suitestatlevel 3</p>
+<p>corresponds to the <code>--suitestatlevel level</code> option of <em>robot</em></p>
+<h2 id="rebotsuites">rebot.suites<a class="headerlink" href="#rebotsuites" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[List[Union[str, StringExpression]]]</p>
+<p>Select suites by name. When this option is used with
+--test, --include or --exclude, only tests in
+matching suites and also matching other filtering
+criteria are selected. Name can be a simple pattern
+similarly as with --test and it can contain parent
+name separated with a dot. For example, <code>-s X.Y</code>
+selects suite <code>Y</code> only if its parent is <code>X</code>.</p>
+<p>corresponds to the <code>-s --suite name *</code> option of <em>robot</em></p>
+<h2 id="rebottag-doc">rebot.tag-doc<a class="headerlink" href="#rebottag-doc" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[Dict[str, Union[str, StringExpression]]]</p>
+<p>Add documentation to tags matching the given
+pattern. Documentation is shown in <code>Test Details</code> and
+also as a tooltip in <code>Statistics by Tag</code>. Pattern can
+use <code>*</code>, <code>?</code> and <code>[]</code> as wildcards like --test.
+Documentation can contain formatting like --doc.</p>
+<p>Examples:</p>
+<div class="highlight"><pre><span></span><code>--tagdoc mytag:Example
+--tagdoc &quot;owner-*:Original author&quot;
+</code></pre></div>
+<p>corresponds to the <code>--tagdoc pattern:doc *</code> option of <em>robot</em></p>
+<h2 id="rebottag-stat-combine">rebot.tag-stat-combine<a class="headerlink" href="#rebottag-stat-combine" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[List[Union[str, Dict[str, str]]]]</p>
+<p>Create combined statistics based on tags.
+These statistics are added into <code>Statistics by Tag</code>.
+If the optional <code>name</code> is not given, name of the
+combined tag is got from the specified tags. Tags are
+matched using the same rules as with --include.</p>
+<p>Examples:</p>
+<div class="highlight"><pre><span></span><code>--tagstatcombine requirement-*
+--tagstatcombine tag1ANDtag2:My_name
+</code></pre></div>
+<p>corresponds to the <code>--tagstatcombine tags:name *</code> option of <em>robot</em></p>
+<h2 id="rebottag-stat-exclude">rebot.tag-stat-exclude<a class="headerlink" href="#rebottag-stat-exclude" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[List[Union[str, StringExpression]]]</p>
+<p>Exclude matching tags from <code>Statistics by Tag</code>.
+This option can be used with --tagstatinclude
+similarly as --exclude is used with --include.</p>
+<p>corresponds to the <code>--tagstatexclude tag *</code> option of <em>robot</em></p>
+<h2 id="rebottag-stat-include">rebot.tag-stat-include<a class="headerlink" href="#rebottag-stat-include" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[List[Union[str, StringExpression]]]</p>
+<p>Include only matching tags in <code>Statistics by Tag</code>
+in log and report. By default all tags are shown.
+Given tag can be a pattern like with --include.</p>
+<p>corresponds to the <code>--tagstatinclude tag *</code> option of <em>robot</em></p>
+<h2 id="rebottag-stat-link">rebot.tag-stat-link<a class="headerlink" href="#rebottag-stat-link" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[Dict[str, Union[str, StringExpression]]]</p>
+<p>Add external links into <code>Statistics by
+Tag</code>. Pattern can use <code>*</code>, <code>?</code> and <code>[]</code> as wildcards
+like --test. Characters matching to <code>*</code> and <code>?</code>
+wildcards can be used in link and title with syntax
+%N, where N is index of the match (starting from 1).</p>
+<p>Examples:</p>
+<div class="highlight"><pre><span></span><code>--tagstatlink mytag:http://my.domain:Title
+--tagstatlink &quot;bug-*:http://url/id=%1:Issue Tracker&quot;
+</code></pre></div>
+<p>corresponds to the <code>--tagstatlink pattern:link:title *</code> option of <em>robot</em></p>
+<h2 id="rebottasks">rebot.tasks<a class="headerlink" href="#rebottasks" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[List[Union[str, StringExpression]]]</p>
+<p>Alias to --test. Especially applicable with --rpa.</p>
+<p>corresponds to the <code>--task name *</code> option of <em>robot</em></p>
+<h2 id="rebottests">rebot.tests<a class="headerlink" href="#rebottests" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[List[Union[str, StringExpression]]]</p>
+<p>Select tests by name or by long name containing also
+parent suite name like <code>Parent.Test</code>. Name is case
+and space insensitive and it can also be a simple
+pattern where <code>*</code> matches anything, <code>?</code> matches any
+single character, and <code>[chars]</code> matches one character
+in brackets.</p>
+<p>corresponds to the <code>-t --test name *</code> option of <em>robot</em></p>
+<h2 id="rebottimestamp-outputs">rebot.timestamp-outputs<a class="headerlink" href="#rebottimestamp-outputs" title="Permanent link">&para;</a></h2>
+<p>Type: Union[bool, Flag, None]</p>
+<p>When this option is used, timestamp in a format
+<code>YYYYMMDD-hhmmss</code> is added to all generated output
+files between their basename and extension. For
+example <code>-T -o output.xml -r report.html -l none</code>
+creates files like <code>output-20070503-154410.xml</code> and
+<code>report-20070503-154410.html</code>.</p>
+<p>corresponds to the <code>-T --timestampoutputs</code> option of <em>robot</em></p>
+<h2 id="rebotxunit">rebot.xunit<a class="headerlink" href="#rebotxunit" title="Permanent link">&para;</a></h2>
+<p>Type: Union[str, StringExpression, None]</p>
+<p>xUnit compatible result file. Not created unless this
+option is specified.</p>
+<p>corresponds to the <code>-x --xunit file</code> option of <em>robot</em></p>
+<h2 id="remove-keywords">remove-keywords<a class="headerlink" href="#remove-keywords" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[List[Union[str, Literal['all', 'passed', 'for', 'wuks'], NamePattern, TagPattern]]]</p>
+<p>Remove keyword data from the generated log file.
+Keywords containing warnings are not removed except
+in the <code>all</code> mode.
+all:     remove data from all keywords
+passed:  remove data only from keywords in passed
+test cases and suites
+for:     remove passed iterations from for loops
+while:   remove passed iterations from while loops
+wuks:    remove all but the last failing keyword
+inside <code>BuiltIn.Wait Until Keyword Succeeds</code>
+name:<pattern>:  remove data from keywords that match
+the given pattern. The pattern is matched
+against the full name of the keyword (e.g.
+'MyLib.Keyword', 'resource.Second Keyword'),
+is case, space, and underscore insensitive,
+and may contain <code>*</code>, <code>?</code> and <code>[]</code> wildcards.</p>
+<p>Examples:</p>
+<div class="highlight"><pre><span></span><code>--removekeywords name:Lib.HugeKw
+--removekeywords name:myresource.*
+</code></pre></div>
+<p>tag:<pattern>:  remove data from keywords that match
+the given pattern. Tags are case and space
+insensitive and patterns can contain <code>*</code>,
+<code>?</code> and <code>[]</code> wildcards. Tags and patterns
+can also be combined together with <code>AND</code>,
+<code>OR</code>, and <code>NOT</code> operators.</p>
+<p>Examples:</p>
+<div class="highlight"><pre><span></span><code>--removekeywords foo
+--removekeywords fooANDbar*
+</code></pre></div>
+<p>corresponds to the <code>--removekeywords all|passed|for|wuks|name:&lt;pattern&gt;|tag:&lt;pattern&gt; *</code> option of <em>robot</em></p>
+<h2 id="report">report<a class="headerlink" href="#report" title="Permanent link">&para;</a></h2>
+<p>Type: Union[str, StringExpression, None]</p>
+<p>HTML report file. Can be disabled with <code>NONE</code>
+similarly as --log. Default: report.html</p>
+<p>corresponds to the <code>-r --report file</code> option of <em>robot</em></p>
+<h2 id="report-background">report-background<a class="headerlink" href="#report-background" title="Permanent link">&para;</a></h2>
+<p>Type: Union[str, StringExpression, None]</p>
+<p>Background colors to use in the report file.
+Given in format <code>passed:failed:skipped</code> where the
+<code>:skipped</code> part can be omitted. Both color names and
+codes work.</p>
+<p>Examples:</p>
+<div class="highlight"><pre><span></span><code>--reportbackground green:red:yellow
+--reportbackground #00E:#E00
+</code></pre></div>
+<p>corresponds to the <code>--reportbackground colors</code> option of <em>robot</em></p>
+<h2 id="report-title">report-title<a class="headerlink" href="#report-title" title="Permanent link">&para;</a></h2>
+<p>Type: Union[str, StringExpression, None]</p>
+<p>Title for the generated report file. The default
+title is <code>&lt;SuiteName&gt; Report</code>.</p>
+<p>corresponds to the <code>--reporttitle title</code> option of <em>robot</em></p>
+<h2 id="rpa">rpa<a class="headerlink" href="#rpa" title="Permanent link">&para;</a></h2>
+<p>Type: Union[bool, Flag, None]</p>
+<p>Turn on the generic automation mode. Mainly affects
+terminology so that "test" is replaced with "task"
+in logs and reports. By default the mode is got
+from test/task header in data files.</p>
+<p>corresponds to the <code>--rpa</code> option of <em>robot</em></p>
+<h2 id="run-empty-suite">run-empty-suite<a class="headerlink" href="#run-empty-suite" title="Permanent link">&para;</a></h2>
+<p>Type: Union[bool, Flag, None]</p>
+<p>Executes suite even if it contains no tests. Useful
+e.g. with --include/--exclude when it is not an error
+that no test matches the condition.</p>
+<p>corresponds to the <code>--runemptysuite</code> option of <em>robot</em></p>
+<h2 id="set-tag">set-tag<a class="headerlink" href="#set-tag" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[List[Union[str, StringExpression]]]</p>
+<p>Sets given tag(s) to all executed tests.</p>
+<p>corresponds to the <code>-G --settag tag *</code> option of <em>robot</em></p>
+<h2 id="skip">skip<a class="headerlink" href="#skip" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[List[Union[str, StringExpression]]]</p>
+<p>Tests having given tag will be skipped. Tag can be
+a pattern.</p>
+<p>corresponds to the <code>--skip tag *</code> option of <em>robot</em></p>
+<h2 id="skip-on-failure">skip-on-failure<a class="headerlink" href="#skip-on-failure" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[List[Union[str, StringExpression]]]</p>
+<p>Tests having given tag will be skipped if they fail.
+Tag can be a pattern</p>
+<p>corresponds to the <code>--skiponfailure tag *</code> option of <em>robot</em></p>
+<h2 id="skip-teardown-on-exit">skip-teardown-on-exit<a class="headerlink" href="#skip-teardown-on-exit" title="Permanent link">&para;</a></h2>
+<p>Type: Union[bool, Flag, None]</p>
+<p>Causes teardowns to be skipped if test execution is
+stopped prematurely.</p>
+<p>corresponds to the <code>--skipteardownonexit</code> option of <em>robot</em></p>
+<h2 id="split-log">split-log<a class="headerlink" href="#split-log" title="Permanent link">&para;</a></h2>
+<p>Type: Union[bool, Flag, None]</p>
+<p>Split the log file into smaller pieces that open in
+browsers transparently.</p>
+<p>corresponds to the <code>--splitlog</code> option of <em>robot</em></p>
+<h2 id="suite-stat-level">suite-stat-level<a class="headerlink" href="#suite-stat-level" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[int]</p>
+<p>How many levels to show in <code>Statistics by Suite</code>
+in log and report. By default all suite levels are
+shown. Example:  --suitestatlevel 3</p>
+<p>corresponds to the <code>--suitestatlevel level</code> option of <em>robot</em></p>
+<h2 id="suites">suites<a class="headerlink" href="#suites" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[List[Union[str, StringExpression]]]</p>
+<p>Select suites by name. When this option is used with
+--test, --include or --exclude, only tests in
+matching suites and also matching other filtering
+criteria are selected. Name can be a simple pattern
+similarly as with --test and it can contain parent
+name separated with a dot. For example, <code>-s X.Y</code>
+selects suite <code>Y</code> only if its parent is <code>X</code>.</p>
+<p>corresponds to the <code>-s --suite name *</code> option of <em>robot</em></p>
+<h2 id="tag-doc">tag-doc<a class="headerlink" href="#tag-doc" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[Dict[str, Union[str, StringExpression]]]</p>
+<p>Add documentation to tags matching the given
+pattern. Documentation is shown in <code>Test Details</code> and
+also as a tooltip in <code>Statistics by Tag</code>. Pattern can
+use <code>*</code>, <code>?</code> and <code>[]</code> as wildcards like --test.
+Documentation can contain formatting like --doc.</p>
+<p>Examples:</p>
+<div class="highlight"><pre><span></span><code>--tagdoc mytag:Example
+--tagdoc &quot;owner-*:Original author&quot;
+</code></pre></div>
+<p>corresponds to the <code>--tagdoc pattern:doc *</code> option of <em>robot</em></p>
+<h2 id="tag-stat-combine">tag-stat-combine<a class="headerlink" href="#tag-stat-combine" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[List[Union[str, Dict[str, str]]]]</p>
+<p>Create combined statistics based on tags.
+These statistics are added into <code>Statistics by Tag</code>.
+If the optional <code>name</code> is not given, name of the
+combined tag is got from the specified tags. Tags are
+matched using the same rules as with --include.</p>
+<p>Examples:</p>
+<div class="highlight"><pre><span></span><code>--tagstatcombine requirement-*
+--tagstatcombine tag1ANDtag2:My_name
+</code></pre></div>
+<p>corresponds to the <code>--tagstatcombine tags:name *</code> option of <em>robot</em></p>
+<h2 id="tag-stat-exclude">tag-stat-exclude<a class="headerlink" href="#tag-stat-exclude" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[List[Union[str, StringExpression]]]</p>
+<p>Exclude matching tags from <code>Statistics by Tag</code>.
+This option can be used with --tagstatinclude
+similarly as --exclude is used with --include.</p>
+<p>corresponds to the <code>--tagstatexclude tag *</code> option of <em>robot</em></p>
+<h2 id="tag-stat-include">tag-stat-include<a class="headerlink" href="#tag-stat-include" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[List[Union[str, StringExpression]]]</p>
+<p>Include only matching tags in <code>Statistics by Tag</code>
+in log and report. By default all tags are shown.
+Given tag can be a pattern like with --include.</p>
+<p>corresponds to the <code>--tagstatinclude tag *</code> option of <em>robot</em></p>
+<h2 id="tag-stat-link">tag-stat-link<a class="headerlink" href="#tag-stat-link" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[Dict[str, Union[str, StringExpression]]]</p>
+<p>Add external links into <code>Statistics by
+Tag</code>. Pattern can use <code>*</code>, <code>?</code> and <code>[]</code> as wildcards
+like --test. Characters matching to <code>*</code> and <code>?</code>
+wildcards can be used in link and title with syntax
+%N, where N is index of the match (starting from 1).</p>
+<p>Examples:</p>
+<div class="highlight"><pre><span></span><code>--tagstatlink mytag:http://my.domain:Title
+--tagstatlink &quot;bug-*:http://url/id=%1:Issue Tracker&quot;
+</code></pre></div>
+<p>corresponds to the <code>--tagstatlink pattern:link:title *</code> option of <em>robot</em></p>
+<h2 id="tasks">tasks<a class="headerlink" href="#tasks" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[List[Union[str, StringExpression]]]</p>
+<p>Alias to --test. Especially applicable with --rpa.</p>
+<p>corresponds to the <code>--task name *</code> option of <em>robot</em></p>
+<h2 id="testdoc">testdoc<a class="headerlink" href="#testdoc" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[TestDocProfile]</p>
+<p>Options to be passed to <em>testdoc</em>.</p>
+<h2 id="testdocdoc">testdoc.doc<a class="headerlink" href="#testdocdoc" title="Permanent link">&para;</a></h2>
+<p>Type: Union[str, StringExpression, None]</p>
+<p>Override the documentation of the top level suite.</p>
+<p>corresponds to the <code>-D --doc document</code> option of <em>testdoc</em></p>
+<h2 id="testdocexcludes">testdoc.excludes<a class="headerlink" href="#testdocexcludes" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[List[Union[str, StringExpression]]]</p>
+<p>Exclude tests by tags.</p>
+<p>corresponds to the <code>-e --exclude tag *</code> option of <em>testdoc</em></p>
+<h2 id="testdocextend-excludes">testdoc.extend-excludes<a class="headerlink" href="#testdocextend-excludes" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[List[Union[str, StringExpression]]]</p>
+<p>Appends entries to the --exclude option.</p>
+<p>Exclude tests by tags.</p>
+<p>corresponds to the <code>-e --exclude tag *</code> option of <em>testdoc</em></p>
+<h2 id="testdocextend-includes">testdoc.extend-includes<a class="headerlink" href="#testdocextend-includes" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[List[Union[str, StringExpression]]]</p>
+<p>Appends entries to the --include option.</p>
+<p>Include tests by tags.</p>
+<p>corresponds to the <code>-i --include tag *</code> option of <em>testdoc</em></p>
+<h2 id="testdocextend-metadata">testdoc.extend-metadata<a class="headerlink" href="#testdocextend-metadata" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[Dict[str, Union[str, StringExpression]]]</p>
+<p>Appends entries to the --metadata option.</p>
+<p>Set/override metadata of the top level suite.</p>
+<p>corresponds to the <code>-M --metadata name:value *</code> option of <em>testdoc</em></p>
+<h2 id="testdocextend-set-tag">testdoc.extend-set-tag<a class="headerlink" href="#testdocextend-set-tag" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[List[Union[str, StringExpression]]]</p>
+<p>Appends entries to the --settag option.</p>
+<p>Set given tag(s) to all test cases.</p>
+<p>corresponds to the <code>-G --settag tag *</code> option of <em>testdoc</em></p>
+<h2 id="testdocextend-suites">testdoc.extend-suites<a class="headerlink" href="#testdocextend-suites" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[List[Union[str, StringExpression]]]</p>
+<p>Appends entries to the --suite option.</p>
+<p>Include suites by name.</p>
+<p>corresponds to the <code>-s --suite name *</code> option of <em>testdoc</em></p>
+<h2 id="testdocextend-tests">testdoc.extend-tests<a class="headerlink" href="#testdocextend-tests" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[List[Union[str, StringExpression]]]</p>
+<p>Appends entries to the --test option.</p>
+<p>Include tests by name.</p>
+<p>corresponds to the <code>-t --test name *</code> option of <em>testdoc</em></p>
+<h2 id="testdocincludes">testdoc.includes<a class="headerlink" href="#testdocincludes" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[List[Union[str, StringExpression]]]</p>
+<p>Include tests by tags.</p>
+<p>corresponds to the <code>-i --include tag *</code> option of <em>testdoc</em></p>
+<h2 id="testdocmetadata">testdoc.metadata<a class="headerlink" href="#testdocmetadata" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[Dict[str, Union[str, StringExpression]]]</p>
+<p>Set/override metadata of the top level suite.</p>
+<p>corresponds to the <code>-M --metadata name:value *</code> option of <em>testdoc</em></p>
+<h2 id="testdocname">testdoc.name<a class="headerlink" href="#testdocname" title="Permanent link">&para;</a></h2>
+<p>Type: Union[str, StringExpression, None]</p>
+<p>Override the name of the top level suite.</p>
+<p>corresponds to the <code>-N --name name</code> option of <em>testdoc</em></p>
+<h2 id="testdocset-tag">testdoc.set-tag<a class="headerlink" href="#testdocset-tag" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[List[Union[str, StringExpression]]]</p>
+<p>Set given tag(s) to all test cases.</p>
+<p>corresponds to the <code>-G --settag tag *</code> option of <em>testdoc</em></p>
+<h2 id="testdocsuites">testdoc.suites<a class="headerlink" href="#testdocsuites" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[List[Union[str, StringExpression]]]</p>
+<p>Include suites by name.</p>
+<p>corresponds to the <code>-s --suite name *</code> option of <em>testdoc</em></p>
+<h2 id="testdoctests">testdoc.tests<a class="headerlink" href="#testdoctests" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[List[Union[str, StringExpression]]]</p>
+<p>Include tests by name.</p>
+<p>corresponds to the <code>-t --test name *</code> option of <em>testdoc</em></p>
+<h2 id="testdoctitle">testdoc.title<a class="headerlink" href="#testdoctitle" title="Permanent link">&para;</a></h2>
+<p>Type: Union[str, StringExpression, None]</p>
+<p>Set the title of the generated documentation.
+Underscores in the title are converted to spaces.
+The default title is the name of the top level suite.</p>
+<p>corresponds to the <code>-T --title title</code> option of <em>testdoc</em></p>
+<h2 id="tests">tests<a class="headerlink" href="#tests" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[List[Union[str, StringExpression]]]</p>
+<p>Select tests by name or by long name containing also
+parent suite name like <code>Parent.Test</code>. Name is case
+and space insensitive and it can also be a simple
+pattern where <code>*</code> matches anything, <code>?</code> matches any
+single character, and <code>[chars]</code> matches one character
+in brackets.</p>
+<p>corresponds to the <code>-t --test name *</code> option of <em>robot</em></p>
+<h2 id="timestamp-outputs">timestamp-outputs<a class="headerlink" href="#timestamp-outputs" title="Permanent link">&para;</a></h2>
+<p>Type: Union[bool, Flag, None]</p>
+<p>When this option is used, timestamp in a format
+<code>YYYYMMDD-hhmmss</code> is added to all generated output
+files between their basename and extension. For
+example <code>-T -o output.xml -r report.html -l none</code>
+creates files like <code>output-20070503-154410.xml</code> and
+<code>report-20070503-154410.html</code>.</p>
+<p>corresponds to the <code>-T --timestampoutputs</code> option of <em>robot</em></p>
+<h2 id="tool">tool<a class="headerlink" href="#tool" title="Permanent link">&para;</a></h2>
+<p>Type: Any</p>
+<p>Tool configurations.</p>
+<h2 id="toolrobotcode-analyzeextend-ignore">tool.robotcode-analyze.extend-ignore<a class="headerlink" href="#toolrobotcode-analyzeextend-ignore" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[List[str]]</p>
+<p>Extends the rules which are ignored.</p>
+<h2 id="toolrobotcode-analyzeextend-select">tool.robotcode-analyze.extend-select<a class="headerlink" href="#toolrobotcode-analyzeextend-select" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[List[Union[str, robotcode.analyze.config.Dummy]]]</p>
+<p>Extends the rules which are run.</p>
+<h2 id="toolrobotcode-analyzeignore">tool.robotcode-analyze.ignore<a class="headerlink" href="#toolrobotcode-analyzeignore" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[List[str]]</p>
+<p>Defines which rules are ignored.</p>
+<h2 id="toolrobotcode-analyzeselect">tool.robotcode-analyze.select<a class="headerlink" href="#toolrobotcode-analyzeselect" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[List[Union[str, robotcode.analyze.config.Dummy]]]</p>
+<p>Selects which rules are run.</p>
+<h2 id="variable-files">variable-files<a class="headerlink" href="#variable-files" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[List[Union[str, StringExpression]]]</p>
+<p>Python or YAML file file to read variables from.
+Possible arguments to the variable file can be given
+after the path using colon or semicolon as separator.</p>
+<p>Examples:</p>
+<div class="highlight"><pre><span></span><code>--variablefile path/vars.yaml
+--variablefile environment.py:testing
+</code></pre></div>
+<p>corresponds to the <code>-V --variablefile path *</code> option of <em>robot</em></p>
+<h2 id="variables">variables<a class="headerlink" href="#variables" title="Permanent link">&para;</a></h2>
+<p>Type: Optional[Dict[str, Union[str, StringExpression]]]</p>
+<p>Set variables in the test data. Only scalar
+variables with string value are supported and name is
+given without <code>${}</code>. See --variablefile for a more
+powerful variable setting mechanism.</p>
+<p>Examples:</p>
+<div class="highlight"><pre><span></span><code>--variable name:Robot  =&gt;  ${name} = `Robot`
+-v &quot;hello:Hello world&quot; =&gt;  ${hello} = `Hello world`
+-v x: -v y:42          =&gt;  ${x} = ``, ${y} = `42`
+</code></pre></div>
+<p>corresponds to the <code>-v --variable name:value *</code> option of <em>robot</em></p>
+<h2 id="xunit">xunit<a class="headerlink" href="#xunit" title="Permanent link">&para;</a></h2>
+<p>Type: Union[str, StringExpression, None]</p>
+<p>xUnit compatible result file. Not created unless this
+option is specified.</p>
+<p>corresponds to the <code>-x --xunit file</code> option of <em>robot</em></p>
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+    <nav class="md-footer__inner md-grid" aria-label="Footer" >
+      
+        
+        <a href="../reference/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Reference" rel="prev">
+          <div class="md-footer__button md-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12Z"/></svg>
+          </div>
+          <div class="md-footer__title">
+            <div class="md-ellipsis">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              Reference
+            </div>
+          </div>
+        </a>
+      
+      
+    </nav>
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      <p>'Copyright &copy; Daniel Biehl 2022-present'</p> <p><a href="#__consent">Change cookie settings</a></p>
+
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+      <div class="md-consent" data-md-component="consent" id="__consent" hidden>
+        <div class="md-consent__overlay"></div>
+        <aside class="md-consent__inner">
+          <form class="md-consent__form md-grid md-typeset" name="consent">
+            
+
+
+  
+    
+  
+
+
+
+
+<h4>Cookie consent</h4>
+<p>We use cookies to recognize your repeated visits and preferences, as well as to measure the effectiveness of our documentation and whether users find what they're searching for. With your consent, you're helping us to make our documentation better.</p>
+<input class="md-toggle" type="checkbox" id="__settings" >
+<div class="md-consent__settings">
+  <ul class="task-list">
+    
+      
+      
+        
+        
+      
+      <li class="task-list-item">
+        <label class="task-list-control">
+          <input type="checkbox" name="github" checked>
+          <span class="task-list-indicator"></span>
+          GitHub
+        <label>
+      </li>
+    
+  </ul>
+</div>
+<div class="md-consent__controls">
+  
+    
+      <button class="md-button md-button--primary">Accept</button>
+    
+    
+    
+  
+    
+    
+      <button type="reset" class="md-button md-button--primary">Reject</button>
+    
+    
+  
+    
+    
+    
+      <label class="md-button" for="__settings">Manage settings</label>
+    
+  
+</div>
+          </form>
+        </aside>
+      </div>
+      <script>var consent=__md_get("__consent");if(consent)for(var input of document.forms.consent.elements)input.name&&(input.checked=consent[input.name]||!1);else"file:"!==location.protocol&&setTimeout(function(){document.querySelector("[data-md-component=consent]").hidden=!1},250);var action,form=document.forms.consent;for(action of["submit","reset"])form.addEventListener(action,function(e){if(e.preventDefault(),"reset"===e.type)for(var n of document.forms.consent.elements)n.name&&(n.checked=!1);__md_set("__consent",Object.fromEntries(Array.from(new FormData(form).keys()).map(function(e){return[e,!0]}))),location.hash="",location.reload()})</script>
+    
+    <script id="__config" type="application/json">{"base": "../..", "features": ["content.action.edit", "navigation.sections", "navigation.expand", "navigation.tabs", "navigation.tabs.sticky", "navigation.instant"], "search": "../../assets/javascripts/workers/search.16e2a7d4.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version.title": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.5a2dcb6a.min.js"></script>
+      
+    
+    
+  </body>
+</html>
