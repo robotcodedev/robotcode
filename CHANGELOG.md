@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [0.79.0](https://github.com/d-biehl/robotcode/compare/v0.78.4..v0.79.0) - 2024-04-21
+
+### Bug Fixes
+
+- **debugger:** Don't show a message on unsupported rpc commands ([504e091](https://github.com/d-biehl/robotcode/commit/504e091954b053288701d8b729a9ae2609ed73cc))
+- **langserver:** Normalize path handling should not fully resolve symlinks ([0c0198a](https://github.com/d-biehl/robotcode/commit/0c0198a99374cea5d6801b8590292bef06e87073))
+
+
+### Features
+
+- **langserver:** Highlight some formatting tags in documentation like bold and italics for englisch language ([4d2cdae](https://github.com/d-biehl/robotcode/commit/4d2cdae250d797d816366a723eeb56d4e93519a4))
+- **vscode:** Add option to disable the vscodes test explorer/execution integration ([9332099](https://github.com/d-biehl/robotcode/commit/93320995e4cb206e42339247d55c78f9fd327916))
+
+
+### Testing
+
+- **langserver:** Update regression tests ([4fab1d1](https://github.com/d-biehl/robotcode/commit/4fab1d1abad6d637ea054ee71d6e4dac836fd85e))
+
+
 ## [0.78.4](https://github.com/d-biehl/robotcode/compare/v0.78.3..v0.78.4) - 2024-03-20
 
 ### Bug Fixes
