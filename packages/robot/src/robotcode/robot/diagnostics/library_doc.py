@@ -66,6 +66,7 @@ from robot.variables.filesetter import PythonImporter, YamlImporter
 from robot.variables.finders import VariableFinder
 from robot.variables.search import contains_variable
 from robotcode.core.lsp.types import Position, Range
+from robotcode.core.utils.path import normalized_path
 from robotcode.robot.diagnostics.entities import (
     ArgumentDefinition,
     ImportedVariableDefinition,
@@ -1490,7 +1491,7 @@ def _get_default_variables() -> Any:
     if __default_variables is None:
         __default_variables = Variables()
         for k, v in {
-            "${TEMPDIR}": str(Path(tempfile.gettempdir()).resolve()),
+            "${TEMPDIR}": str(normalized_path(Path(tempfile.gettempdir()))),
             "${/}": os.sep,
             "${:}": os.pathsep,
             "${\\n}": os.linesep,
@@ -2476,7 +2477,7 @@ def complete_library_import(
             ]
 
         for p in paths:
-            path = p.resolve()
+            path = normalized_path(p)
 
             if path.exists() and path.is_dir():
                 result += [
@@ -2541,9 +2542,9 @@ def complete_resource_import(
     if name is None or name.startswith((".", "/", os.sep)):
         name_path = Path(name if name else base_dir)
         if name_path.is_absolute():
-            path = name_path.resolve()
+            path = normalized_path(name_path)
         else:
-            path = Path(base_dir, name if name else base_dir).resolve()
+            path = normalized_path(Path(base_dir, name if name else base_dir))
 
         if path.exists() and (path.is_dir()):
             result += [
@@ -2592,7 +2593,7 @@ def complete_variables_import(
             ]
 
         for p in paths:
-            path = p.resolve()
+            path = normalized_path(p)
 
             if path.exists() and path.is_dir():
                 result += [

@@ -6,6 +6,8 @@ from typing import Any, Dict, Iterator, List, Optional, Union, cast
 from robot import result, running
 from robot.model import Message
 
+from robotcode.core.utils.path import normalized_path
+
 from .dap_types import Event, Model
 from .debugger import Debugger
 
@@ -16,6 +18,14 @@ class RobotExecutionEventBody(Model):
     id: str
     attributes: Optional[Dict[str, Any]] = None
     failed_keywords: Optional[List[Dict[str, Any]]] = None
+
+
+def source_from_attributes(attributes: Dict[str, Any]) -> str:
+    s = attributes.get("source", "")
+    if s:
+        return str(normalized_path(Path(s)))
+
+    return s or ""
 
 
 class ListenerV2:
@@ -32,7 +42,7 @@ class ListenerV2:
                 event="robotStarted",
                 body=RobotExecutionEventBody(
                     type="suite",
-                    id=f"{attributes.get('source', '')};{attributes.get('longname', '')}",
+                    id=f"{source_from_attributes(attributes)};{attributes.get('longname', '')}",
                     attributes=dict(attributes),
                 ),
             ),
@@ -54,7 +64,7 @@ class ListenerV2:
                 body=RobotExecutionEventBody(
                     type="suite",
                     attributes=dict(attributes),
-                    id=f"{attributes.get('source', '')};{attributes.get('longname', '')}",
+                    id=f"{source_from_attributes(attributes)};{attributes.get('longname', '')}",
                     failed_keywords=self.failed_keywords,
                 ),
             ),
@@ -71,7 +81,7 @@ class ListenerV2:
                 event="robotStarted",
                 body=RobotExecutionEventBody(
                     type="test",
-                    id=f"{attributes.get('source', '')};{attributes.get('longname', '')};"
+                    id=f"{source_from_attributes(attributes)};{attributes.get('longname', '')};"
                     f"{attributes.get('lineno', 0)}",
                     attributes=dict(attributes),
                 ),
@@ -93,7 +103,7 @@ class ListenerV2:
                 event="robotEnded",
                 body=RobotExecutionEventBody(
                     type="test",
-                    id=f"{attributes.get('source', '')};{attributes.get('longname', '')};"
+                    id=f"{source_from_attributes(attributes)};{attributes.get('longname', '')};"
                     f"{attributes.get('lineno', 0)}",
                     attributes=dict(attributes),
                     failed_keywords=self.failed_keywords,
@@ -142,9 +152,9 @@ class ListenerV2:
             item_id = next(
                 (
                     (
-                        f"{Path(item.source).resolve() if item.source is not None else ''};{item.longname}"
+                        f"{normalized_path(Path(item.source)) if item.source is not None else ''};{item.longname}"
                         if item.type == "SUITE"
-                        else f"{Path(item.source).resolve() if item.source is not None else ''};"
+                        else f"{normalized_path(Path(item.source)) if item.source is not None else ''};"
                         f"{item.longname};{item.line}"
                     )
                     for item in Debugger.instance().full_stack_frames
@@ -189,9 +199,9 @@ class ListenerV2:
             item_id = next(
                 (
                     (
-                        f"{Path(item.source).resolve() if item.source is not None else ''};{item.longname}"
+                        f"{normalized_path(Path(item.source)) if item.source is not None else ''};{item.longname}"
                         if item.type == "SUITE"
-                        else f"{Path(item.source).resolve() if item.source is not None else ''};"
+                        else f"{normalized_path(Path(item.source)) if item.source is not None else ''};"
                         f"{item.longname};{item.line}"
                     )
                     for item in Debugger.instance().full_stack_frames
@@ -266,7 +276,7 @@ class ListenerV3:
             item: Union[running.TestSuite, running.TestCase],
         ) -> Iterator[str]:
             if isinstance(item, running.TestSuite):
-                yield f"{Path(item.source).resolve() if item.source is not None else ''};{item.longname}"
+                yield f"{normalized_path(item.source) if item.source is not None else ''};{item.longname}"
 
                 for s in item.suites:
                     yield from enqueue(s)
@@ -274,7 +284,7 @@ class ListenerV3:
                     yield from enqueue(s)
                 return
 
-            yield f"{Path(item.source).resolve() if item.source is not None else ''};{item.longname};{item.lineno}"
+            yield (f"{normalized_path(item.source) if item.source is not None else ''};{item.longname};{item.lineno}")
 
         if self._event_sended:
             return

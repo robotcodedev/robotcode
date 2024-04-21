@@ -37,7 +37,7 @@ from robotcode.core.utils.caching import SimpleLRUCache
 from robotcode.core.utils.dataclasses import as_json, from_json
 from robotcode.core.utils.glob_path import Pattern, iter_files
 from robotcode.core.utils.logging import LoggingDescriptor
-from robotcode.core.utils.path import path_is_relative_to
+from robotcode.core.utils.path import normalized_path, path_is_relative_to
 
 from ..__version__ import __version__
 from ..utils import get_robot_version, get_robot_version_str
@@ -183,7 +183,7 @@ class _LibrariesEntry(_ImportEntry):
                         self._lib_doc.module_spec is not None
                         and self._lib_doc.module_spec.submodule_search_locations is not None
                         and any(
-                            path_is_relative_to(path, Path(e).resolve())
+                            path_is_relative_to(path, normalized_path(Path(e)))
                             for e in self._lib_doc.module_spec.submodule_search_locations
                         )
                     )
@@ -197,7 +197,7 @@ class _LibrariesEntry(_ImportEntry):
                         self._lib_doc.module_spec is None
                         and not self._lib_doc.source
                         and self._lib_doc.python_path
-                        and any(path_is_relative_to(path, Path(e).resolve()) for e in self._lib_doc.python_path)
+                        and any(path_is_relative_to(path, normalized_path(Path(e))) for e in self._lib_doc.python_path)
                     )
                 ):
                     self._invalidate()
@@ -221,14 +221,14 @@ class _LibrariesEntry(_ImportEntry):
                 self.parent.file_watcher_manager.add_file_watchers(
                     self.parent.did_change_watched_files,
                     [
-                        str(Path(location).resolve().joinpath("**"))
+                        str(normalized_path(Path(location)).joinpath("**"))
                         for location in self._lib_doc.module_spec.submodule_search_locations
                     ],
                 )
             )
 
             if source_or_origin is not None and Path(source_or_origin).parent in [
-                Path(loc).resolve() for loc in self._lib_doc.module_spec.submodule_search_locations
+                normalized_path(Path(loc)) for loc in self._lib_doc.module_spec.submodule_search_locations
             ]:
                 return
 
@@ -307,7 +307,7 @@ class _ResourcesEntry(_ImportEntry):
                 path = uri.to_path()
                 if (
                     self._document is not None
-                    and (path.resolve() == self._document.uri.to_path().resolve())
+                    and (normalized_path(path) == normalized_path(self._document.uri.to_path()))
                     or self._document is None
                 ):
                     self._invalidate()
@@ -1457,7 +1457,7 @@ class ImportsManager:
         def _get_document() -> TextDocument:
             self._logger.debug(lambda: f"Load resource {name} from source {source}")
 
-            source_path = Path(source).resolve()
+            source_path = normalized_path(Path(source))
             extension = source_path.suffix
             if extension.lower() not in RESOURCE_EXTENSIONS:
                 raise ImportError(

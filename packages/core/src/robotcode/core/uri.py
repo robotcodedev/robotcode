@@ -7,6 +7,8 @@ from pathlib import Path
 from typing import Any, Iterator, Mapping, Optional, Union, overload
 from urllib import parse
 
+from .utils.path import normalized_path
+
 _IS_WIN = os.name == "nt"
 
 _RE_DRIVE_LETTER_PATH = re.compile(r"^\/[a-zA-Z]:")
@@ -158,6 +160,10 @@ class Uri(Mapping[str, str]):
     def query(self) -> str:
         return self._parts.query
 
+    @property
+    def fragment(self) -> str:
+        return self._parts.fragment
+
     @staticmethod
     def from_path(path: Union[str, Path, os.PathLike[str]]) -> Uri:
         result = Uri(Path(path).as_uri())
@@ -188,6 +194,26 @@ class Uri(Mapping[str, str]):
 
     def normalized(self) -> Uri:
         if self.scheme == "file":
-            return Uri.from_path(self.to_path().resolve())
+            return Uri.from_path(normalized_path(self.to_path()))
 
         return Uri(str(self))
+
+    def change(
+        self,
+        *,
+        scheme: Optional[str] = None,
+        netloc: Optional[str] = None,
+        path: Optional[str] = None,
+        params: Optional[str] = None,
+        query: Optional[str] = None,
+        fragment: Optional[str] = None,
+    ) -> Uri:
+
+        return Uri(
+            scheme=scheme if scheme is not None else self.scheme,
+            netloc=netloc if netloc is not None else self.netloc,
+            path=path if path is not None else self.path,
+            params=params if params is not None else self.params,
+            query=query if query is not None else self.query,
+            fragment=fragment if fragment is not None else self.fragment,
+        )

@@ -39,6 +39,7 @@ from robotcode.core.lsp.types import (
 from robotcode.core.uri import Uri
 from robotcode.core.utils.cli import show_hidden_arguments
 from robotcode.core.utils.dataclasses import from_json
+from robotcode.core.utils.path import normalized_path
 from robotcode.plugin import (
     Application,
     OutputFormat,
@@ -273,7 +274,7 @@ class Collector(SuiteVisitor):
         self._collected[-1][suite.name] = True
         self._collected.append(NormalizedDict(ignore="_"))
         try:
-            absolute_path = Path(suite.source).resolve() if suite.source else None
+            absolute_path = normalized_path(Path(suite.source)) if suite.source else None
             item = TestItem(
                 type="suite",
                 id=f"{absolute_path or ''};{suite.longname}",
@@ -328,7 +329,7 @@ class Collector(SuiteVisitor):
         if self._current.children is None:
             self._current.children = []
         try:
-            absolute_path = Path(test.source).resolve() if test.source is not None else None
+            absolute_path = normalized_path(Path(test.source)) if test.source is not None else None
             item = TestItem(
                 type="test",
                 id=f"{absolute_path or ''};{test.longname};{test.lineno}",
@@ -417,7 +418,7 @@ def build_diagnostics(messages: List[Message]) -> Dict[str, List[Diagnostic]]:
         line: Optional[int] = None,
         text: Optional[str] = None,
     ) -> None:
-        source_uri = str(Uri.from_path(Path(source_uri).resolve() if source_uri else Path.cwd()))
+        source_uri = str(Uri.from_path(normalized_path(Path(source_uri)) if source_uri else Path.cwd()))
 
         if source_uri not in result:
             result[source_uri] = []

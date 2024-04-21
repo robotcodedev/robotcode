@@ -209,9 +209,9 @@ async def run_debugger(
 
         args = [
             "--listener",
-            "robotcode.debugger.listeners.ListenerV2",
-            "--listener",
             "robotcode.debugger.listeners.ListenerV3",
+            "--listener",
+            "robotcode.debugger.listeners.ListenerV2",
             *args,
         ]
 
