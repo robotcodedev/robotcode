@@ -16,7 +16,7 @@ only-include = ["src", "CHANGELOG.md"]
 dependencies = [
   "pytest",
   "pytest-html",
-  "pytest_asyncio>=0.21,<0.23",
+  "pytest_asyncio>=0.23",
   # "pytest-regtest>=1.5.0",
   "pytest-cov",
   "mypy",
