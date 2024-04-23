@@ -62,3 +62,9 @@ scripts
 robotcode
 packages
 bundled/libs/bin
+
+cliff.toml
+pyproject.toml
+mkdocs.yml
+hatch.toml
+bundled_requirements.txt

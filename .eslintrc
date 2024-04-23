@@ -34,9 +34,6 @@
     "no-dupe-class-members": "off",
     "@typescript-eslint/no-dupe-class-members": "error",
     "no-empty-function": "off",
-    "@typescript-eslint/no-empty-function": [
-      "error"
-    ],
     "@typescript-eslint/no-empty-interface": "off",
     "@typescript-eslint/no-explicit-any": "error",
     "@typescript-eslint/no-non-null-assertion": "off",
@@ -49,12 +46,6 @@
       }
     ],
     "no-use-before-define": "off",
-    "@typescript-eslint/no-use-before-define": [
-      "error",
-      {
-        "functions": false
-      }
-    ],
     "no-useless-constructor": "off",
     "@typescript-eslint/no-useless-constructor": "error",
     "@typescript-eslint/no-var-requires": "off",
