@@ -48,11 +48,12 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Ensure latest pip is installed
-        run: python -m pip install --upgrade uv
+      # - name: Ensure latest pip is installed
+      #   run: python -m pip install --upgrade uv
 
       - name: Ensure latest hatch is installed
-        run: python -m uv pip install --upgrade hatch
+        # run: python -m uv pip install --upgrade hatch
+        run: pipx install hatch
 
       - name: Test Python Packages
         timeout-minutes: 30
