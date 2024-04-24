@@ -9,6 +9,8 @@ def main() -> None:
         dist_path.mkdir()
 
     uv_path = os.environ.get("HATCH_UV", None)
+    if uv_path:
+        uv_path = f'"{uv_path}"'
 
     installer_command = f"{uv_path+' ' if uv_path else ''}pip {'' if uv_path else '--disable-pip-version-check'}"
 
