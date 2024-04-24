@@ -29,7 +29,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: setup python environment
         id: setup-python
@@ -43,13 +43,11 @@ jobs:
       - name: Create dev environment
         run: |
           hatch env create
-          echo "CODEQL_PYTHON=$(hatch -q run which python)" >> $GITHUB_ENV
 
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v3
         with:
           languages: ${{ matrix.language }}
-          setup-python-dependencies: false
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v3
