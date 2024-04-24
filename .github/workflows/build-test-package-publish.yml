@@ -48,11 +48,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      # - name: Ensure latest pip is installed
-      #   run: python -m pip install --upgrade uv
-
       - name: Ensure latest hatch is installed
-        # run: python -m uv pip install --upgrade hatch
         run: pipx install hatch
 
       - name: Test Python Packages
@@ -111,11 +107,8 @@ jobs:
         with:
           python-version: "3.8"
 
-      - name: Ensure latest pip is installed
-        run: python -m pip install --upgrade pip
-
       - name: Ensure latest hatch is installed
-        run: python -m pip install --upgrade hatch
+        run: pipx install hatch
 
       - run: hatch run lint:style
         if: always()
@@ -142,11 +135,8 @@ jobs:
         with:
           python-version: "3.8"
 
-      - name: Ensure latest pip is installed
-        run: python -m pip install --upgrade pip
-
       - name: Ensure latest hatch is installed
-        run: python -m pip install --upgrade hatch
+        run: pipx install hatch
 
       - name: Setup Node.js environment
         uses: actions/setup-node@v4
@@ -204,14 +194,8 @@ jobs:
         with:
           python-version: "3.8"
 
-      - name: Ensure latest pip is installed
-        run: python -m pip install --upgrade pip
-
       - name: Ensure latest hatch is installed
-        run: python -m pip install --upgrade hatch
-
-      - name: Create Build Environment
-        run: hatch env create build
+        run: pipx install hatch
 
       - name: Setup Node.js environment
         uses: actions/setup-node@v4
