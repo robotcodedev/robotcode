@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 from subprocess import run
 
@@ -7,8 +8,12 @@ def main() -> None:
     if not dist_path.exists():
         dist_path.mkdir()
 
+    uv_path = os.environ.get("HATCH_UV", None)
+
+    installer_command = f"{uv_path+' ' if uv_path else ''}pip {'' if uv_path else '--disable-pip-version-check'}"
+
     run(
-        "pip --disable-pip-version-check install -U -r ./bundled_requirements.txt",
+        f"{installer_command} install -U -r ./bundled_requirements.txt",
         shell=True,
         check=False,
     ).check_returncode()
@@ -16,7 +21,7 @@ def main() -> None:
     packages = [f"-e {path}" for path in Path("./packages").iterdir() if (path / "pyproject.toml").exists()]
 
     run(
-        f"pip --disable-pip-version-check install --no-deps -U {' '.join(packages)}",
+        f"{installer_command} install --no-deps -U {' '.join(packages)}",
         shell=True,
         check=False,
     ).check_returncode()
