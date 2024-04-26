@@ -985,8 +985,8 @@ def test_really_complex_data() -> None:
         }
     },
     "initializationOptions": {
-        "storageUri": "file:///c%3A/Users/daniel/AppData/Roaming/Code%20-%20Insiders/User/workspaceStorage/1ab0e3033b053a024fb7cbf9068380d1/d-biehl.robotcode",
-        "globalStorageUri": "file:///c%3A/Users/daniel/AppData/Roaming/Code%20-%20Insiders/User/globalStorage/d-biehl.robotcode"
+        "storageUri": "file:///...",
+        "globalStorageUri": "file:///..."
     },
     "trace": "off",
     "workspaceFolders": [
@@ -1314,8 +1314,8 @@ def test_really_complex_data() -> None:
         root_path="c:\\tmp\\robottest\\dummy\\testprj",
         root_uri="file:///c%3A/tmp/robottest/dummy/testprj",
         initialization_options={
-            "storageUri": "file:///c%3A/Users/daniel/AppData/Roaming/Code%20-%20Insiders/User/workspaceStorage/1ab0e3033b053a024fb7cbf9068380d1/d-biehl.robotcode",
-            "globalStorageUri": "file:///c%3A/Users/daniel/AppData/Roaming/Code%20-%20Insiders/User/globalStorage/d-biehl.robotcode",
+            "storageUri": "file:///...",
+            "globalStorageUri": "file:///...",
         },
         trace=TraceValues.OFF,
         workspace_folders=[WorkspaceFolder(uri="file:///c%3A/tmp/robottest/dummy/testprj", name="testprj")],

@@ -2,7 +2,7 @@ site_name: RobotCode
 site_description: Language support for Robot Framework for Visual Studio Code
 site_author: Daniel Biehl
 site_url: https://robotcode.io
-repo_url: https://github.com/d-biehl/robotcode
+repo_url: https://github.com/robotcodedev/robotcode
 repo_name: d-biehl/robotcode
 edit_uri: blob/main/docs
 copyright: >

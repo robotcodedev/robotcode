@@ -7,17 +7,17 @@
   "version": "0.79.0",
   "author": {
     "name": "Daniel Biehl",
-    "url": "https://github.com/d-biehl/"
+    "url": "https://github.com/robotcodedev/"
   },
   "homepage": "https://robotcode.io",
   "repository": {
     "type": "git",
-    "url": "https://github.com/d-biehl/robotcode"
+    "url": "https://github.com/robotcodedev/robotcode"
   },
   "bugs": {
-    "url": "https://github.com/d-biehl/robotcode/issues"
+    "url": "https://github.com/robotcodedev/robotcode/issues"
   },
-  "qna": "https://github.com/d-biehl/robotcode/discussions/categories/q-a",
+  "qna": "https://github.com/robotcodedev/robotcode/discussions/categories/q-a",
   "engines": {
     "vscode": "^1.82.0"
   },
@@ -98,11 +98,11 @@
     "tomlValidation": [
       {
         "fileMatch": "robot.toml",
-        "url": "https://raw.githubusercontent.com/d-biehl/robotcode/main/etc/robot.toml.json"
+        "url": "https://raw.githubusercontent.com/robotcodedev/robotcode/main/etc/robot.toml.json"
       },
       {
         "fileMatch": ".robot.toml",
-        "url": "https://raw.githubusercontent.com/d-biehl/robotcode/main/etc/robot.toml.json"
+        "url": "https://raw.githubusercontent.com/robotcodedev/robotcode/main/etc/robot.toml.json"
       }
     ],
     "configurationDefaults": {

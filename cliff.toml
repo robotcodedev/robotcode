@@ -56,7 +56,7 @@ footer = """
 """
 # postprocessors
 postprocessors = [
-  { pattern = '\$REPO', replace = "https://github.com/d-biehl/robotcode" }, # replace repository URL
+  { pattern = '\$REPO', replace = "https://github.com/robotcodedev/robotcode" }, # replace repository URL
 ]
 [git]
 # parse the commits based on https://www.conventionalcommits.org

@@ -46,7 +46,7 @@ if __name__ == "__main__":
     base_schema = apischema.schema(
         extra={
             "x-taplo-info": {
-                "authors": ["d-biehl (https://github.com/d-biehl)"],
+                "authors": ["robotcodedev (https://github.com/robotcodedev)"],
                 "patterns": ["^(.*(/|\\\\)robot\\.toml|robot\\.toml)$"],
             }
         }
