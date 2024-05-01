@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [0.80.0](https://github.com/robotcodedev/robotcode/compare/v0.79.0..v0.80.0) - 2024-05-01
+
+### Features
+
+- We have a new icon ([fe78ec8](https://github.com/robotcodedev/robotcode/commit/fe78ec8ce6f7e269f22e9b9dd03b226d2eb96c54))
+
+
 ## [0.79.0](https://github.com/robotcodedev/robotcode/compare/v0.78.4..v0.79.0) - 2024-04-21
 
 ### Bug Fixes
