@@ -29,7 +29,7 @@ dependencies = ["click>=8.0.0", "pluggy>=1.0.0", "tomli_w>=1.0.0"]
 dynamic = ["version"]
 
 [project.urls]
-Donate = "https://github.com/sponsors/d-biehl"
+Donate = "https://opencollective.com/robotcode"
 Documentation = "https://github.com/robotcodedev/robotcode#readme"
 Changelog = "https://github.com/robotcodedev/robotcode/blob/main/CHANGELOG.md"
 Issues = "https://github.com/robotcodedev/robotcode/issues"

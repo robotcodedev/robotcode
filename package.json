@@ -71,8 +71,14 @@
     "color": "#111111"
   },
   "sponsor": {
-    "url": "https://github.com/sponsors/d-biehl"
+    "url": "https://opencollective.com/robotcode"
   },
+  "funding": [
+    {
+      "type": "opencollective",
+      "url": "https://opencollective.com/robotcode"
+    }
+  ],
   "main": "./out/extension.js",
   "contributes": {
     "icons": {
