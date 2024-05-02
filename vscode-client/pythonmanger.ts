@@ -141,16 +141,16 @@ export class PythonManager {
 
   public async getDebuggerPackagePath(): Promise<string | undefined> {
     // TODO: this is not enabled in debugpy extension yet
-    // const debugpy = vscode.extensions.getExtension("ms-python.debugpy");
-    // if (debugpy !== undefined) {
-    //   if (!debugpy.isActive) {
-    //     await debugpy.activate();
-    //   }
-    //   const path = (debugpy.exports as PythonExtension)?.debug.getDebuggerPackagePath();
-    //   if (path !== undefined) {
-    //     return path;
-    //   }
-    // }
+    const debugpy = vscode.extensions.getExtension("ms-python.debugpy");
+    if (debugpy !== undefined) {
+      if (!debugpy.isActive) {
+        await debugpy.activate();
+      }
+      const path = (debugpy.exports as PythonExtension)?.debug.getDebuggerPackagePath();
+      if (path !== undefined) {
+        return path;
+      }
+    }
     return (await this.getPythonExtension())?.debug.getDebuggerPackagePath();
   }
 

@@ -192,6 +192,10 @@ class RobotCodeDebugConfigurationProvider implements vscode.DebugConfigurationPr
             ...(envPythonPath ? envPythonPath.split(path.delimiter) : []),
           ].join(path.delimiter);
           debugConfiguration.env = env;
+        } else {
+          this.pythonManager.outputChannel.appendLine(
+            "WARNING: Failed to get debugpy path from extension. You need to manually install the debugpy package in your python environment.",
+          );
         }
       }
     } else if (debugConfiguration.request === "attach") {
