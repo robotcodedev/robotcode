@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import asyncio
 import inspect
 import json
@@ -142,7 +140,7 @@ class DebugAdapterProtocol(JsonRPCProtocolBase):
             )
 
     def _handle_messages(self, iterator: Iterator[ProtocolMessage]) -> None:
-        def done(f: asyncio.Future[Any]) -> None:
+        def done(f: "asyncio.Future[Any]") -> None:
             ex = f.exception()
             if ex is not None and not isinstance(ex, asyncio.CancelledError):
                 self._logger.exception(ex, exc_info=ex)
@@ -249,7 +247,7 @@ class DebugAdapterProtocol(JsonRPCProtocolBase):
 
             self._received_request[message.seq] = result
 
-        def done(t: asyncio.Task[Any]) -> None:
+        def done(t: "asyncio.Task[Any]") -> None:
             try:
                 self.send_response(message.seq, message.command, t.result())
             except asyncio.CancelledError:
@@ -257,7 +255,6 @@ class DebugAdapterProtocol(JsonRPCProtocolBase):
             except (SystemExit, KeyboardInterrupt):
                 raise
             except DebugAdapterRPCErrorException as ex:
-                self._logger.exception(ex)
                 self.send_error(
                     message=ex.message,
                     request_seq=message.seq,
@@ -321,7 +318,7 @@ class DebugAdapterProtocol(JsonRPCProtocolBase):
     @_logger.call
     def send_request_async(
         self, request: Request, return_type: Optional[Type[TResult]] = None
-    ) -> asyncio.Future[TResult]:
+    ) -> "asyncio.Future[TResult]":
         return asyncio.wrap_future(self.send_request(request, return_type))
 
     @_logger.call

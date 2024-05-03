@@ -1,8 +1,9 @@
 import asyncio
 import os
+import threading
 from typing import Any, Callable, Dict, List, Literal, Optional, Union
 
-from robotcode.core import async_tools
+from robotcode.core import concurrent
 from robotcode.core.types import ServerMode, TcpParams
 from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.jsonrpc2.protocol import rpc_method
@@ -59,21 +60,21 @@ class DebugAdapterServerProtocol(DebugAdapterProtocol):
     def __init__(self) -> None:
         super().__init__()
 
-        self._connected_event = async_tools.Event()
-        self._disconnected_event = async_tools.Event()
+        self._connected_event = threading.Event()
+        self._disconnected_event = threading.Event()
         self._connected = False
         self._sigint_signaled = False
 
         self._initialized = False
-        self._initialized_event = async_tools.Event()
+        self._initialized_event = threading.Event()
 
-        self._exited_lock = async_tools.Lock()
+        self._exited_lock = concurrent.RLock()
         self._exited = False
 
-        self._terminated_lock = async_tools.Lock()
+        self._terminated_lock = concurrent.RLock()
         self._terminated = False
 
-        self._received_configuration_done_event = async_tools.Event()
+        self._received_configuration_done_event = threading.Event()
         self._received_configuration_done = False
         self.received_configuration_done_callback: Optional[Callable[[], None]] = None
 
@@ -88,13 +89,13 @@ class DebugAdapterServerProtocol(DebugAdapterProtocol):
         return self._connected
 
     @property
-    async def exited(self) -> bool:
-        async with self._exited_lock:
+    def exited(self) -> bool:
+        with self._exited_lock:
             return self._exited
 
     @property
-    async def terminated(self) -> bool:
-        async with self._terminated_lock:
+    def terminated(self) -> bool:
+        with self._terminated_lock:
             return self._terminated
 
     @_logger.call
@@ -116,22 +117,24 @@ class DebugAdapterServerProtocol(DebugAdapterProtocol):
         self._disconnected_event.set()
 
     @_logger.call
-    async def wait_for_client(self, timeout: float = 5) -> bool:
-        await asyncio.wait_for(self._connected_event.wait(), timeout)
+    def wait_for_client(self, timeout: float = 5) -> bool:
+        if not self._connected_event.wait(timeout):
+            raise TimeoutError("Timeout waiting for client")
 
         return self._connected
 
     @_logger.call
-    async def wait_for_initialized(self, timeout: float = 30) -> bool:
-        await asyncio.wait_for(self._initialized_event.wait(), timeout)
+    def wait_for_initialized(self, timeout: float = 30) -> bool:
+        if not self._initialized_event.wait(timeout):
+            raise TimeoutError("Timeout waiting for client initialization")
 
         return self._initialized
 
     @_logger.call
-    async def wait_for_disconnected(self, timeout: float = 30) -> bool:
-        await asyncio.wait_for(self._disconnected_event.wait(), timeout)
+    def wait_for_disconnected(self, timeout: float = 5) -> bool:
+        self._disconnected_event.wait(timeout)
 
-        return self._connected
+        return not self._connected
 
     @rpc_method(name="initialize", param_type=InitializeRequestArguments)
     async def _initialize(self, arguments: InitializeRequestArguments, *args: Any, **kwargs: Any) -> Capabilities:
@@ -211,15 +214,15 @@ class DebugAdapterServerProtocol(DebugAdapterProtocol):
         self._initialized_event.set()
 
     @_logger.call
-    async def exit(self, exit_code: int) -> None:
-        async with self._exited_lock:
-            await self.send_event_async(ExitedEvent(body=ExitedEventBody(exit_code=exit_code)))
+    def exit(self, exit_code: int) -> None:
+        with self._exited_lock:
+            self.send_event(ExitedEvent(body=ExitedEventBody(exit_code=exit_code)))
             self._exited = True
 
     @_logger.call
-    async def terminate(self) -> None:
-        async with self._terminated_lock:
-            await self.send_event_async(TerminatedEvent())
+    def terminate(self) -> None:
+        with self._terminated_lock:
+            self.send_event(TerminatedEvent())
             self._terminated = True
 
     @rpc_method(name="terminate", param_type=TerminateArguments)
@@ -251,11 +254,7 @@ class DebugAdapterServerProtocol(DebugAdapterProtocol):
         *args: Any,
         **kwargs: Any,
     ) -> None:
-        if (
-            (not (await self.exited) or not (await self.terminated))
-            and arguments is not None
-            and arguments.terminate_debuggee
-        ):
+        if (not (self.exited) or not (self.terminated)) and arguments is not None and arguments.terminate_debuggee:
             os._exit(-1)
         else:
             await self.send_event_async(Event("disconnectRequested"))
@@ -290,8 +289,9 @@ class DebugAdapterServerProtocol(DebugAdapterProtocol):
             self.received_configuration_done_callback()
 
     @_logger.call
-    async def wait_for_configuration_done(self, timeout: float = 5) -> bool:
-        await asyncio.wait_for(self._received_configuration_done_event.wait(), timeout)
+    def wait_for_configuration_done(self, timeout: float = 5) -> bool:
+        if not self._received_configuration_done_event.wait(timeout):
+            raise TimeoutError("Timeout waiting for configuration done event")
 
         return self._received_configuration_done
 

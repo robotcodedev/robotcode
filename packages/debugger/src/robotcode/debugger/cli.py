@@ -1,4 +1,3 @@
-import asyncio
 from typing import Optional, Sequence, Tuple
 
 import click
@@ -22,7 +21,8 @@ DEBUGPY_DEFAULT_PORT = 5678
     add_help_option=True,
 )
 @click.option(
-    "--debug / --no-debug",
+    "--debug/--no-debug",
+    is_flag=True,
     default=True,
     help="Enable/disable debug mode",
     show_default=True,
@@ -34,7 +34,7 @@ DEBUGPY_DEFAULT_PORT = 5678
     show_default=True,
 )
 @click.option(
-    "--wait-for-client / --no-wait-for-client",
+    "--wait-for-client/--no-wait-for-client",
     is_flag=True,
     default=True,
     help="Waits until a debug client is connected.",
@@ -55,14 +55,14 @@ DEBUGPY_DEFAULT_PORT = 5678
     show_default=True,
 )
 @click.option(
-    "--debugpy / --no-debugpy",
+    "--debugpy/--no-debugpy",
     is_flag=True,
     default=False,
     help="Enable/disable python debugging.",
     show_default=True,
 )
 @click.option(
-    "--debugpy-wait-for-client",
+    "--debugpy-wait-for-client/--no-debugpy-wait-for-client",
     is_flag=True,
     default=True,
     help="Waits for a debugpy client to connect.",
@@ -170,28 +170,26 @@ def debug(
 
     try:
         app.exit(
-            asyncio.run(
-                run_debugger(
-                    ctx=ctx,
-                    app=app,
-                    args=list(robot_options_and_args),
-                    mode=mode,
-                    addresses=bind,
-                    port=port if port is not None else DEBUGGER_DEFAULT_PORT,
-                    pipe_name=pipe_name,
-                    debug=debug,
-                    stop_on_entry=stop_on_entry,
-                    wait_for_client=wait_for_client,
-                    wait_for_client_timeout=wait_for_client_timeout,
-                    configuration_done_timeout=configuration_done_timeout,
-                    debugpy=debugpy,
-                    debugpy_wait_for_client=debugpy_wait_for_client,
-                    debugpy_port=debugpy_port,
-                    output_messages=output_messages,
-                    output_log=output_log,
-                    output_timestamps=output_timestamps,
-                    group_output=group_output,
-                )
+            run_debugger(
+                ctx=ctx,
+                app=app,
+                args=list(robot_options_and_args),
+                mode=mode,
+                addresses=bind,
+                port=port if port is not None else DEBUGGER_DEFAULT_PORT,
+                pipe_name=pipe_name,
+                debug=debug,
+                stop_on_entry=stop_on_entry,
+                wait_for_client=wait_for_client,
+                wait_for_client_timeout=wait_for_client_timeout,
+                configuration_done_timeout=configuration_done_timeout,
+                debugpy=debugpy,
+                debugpy_wait_for_client=debugpy_wait_for_client,
+                debugpy_port=debugpy_port,
+                output_messages=output_messages,
+                output_log=output_log,
+                output_timestamps=output_timestamps,
+                group_output=group_output,
             )
         )
 

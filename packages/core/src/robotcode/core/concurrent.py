@@ -217,7 +217,9 @@ def _remove_future_from_running_tasks(future: Task[Any]) -> None:
 _P = ParamSpec("_P")
 
 
-def run_as_task(callable: Callable[_P, _TResult], *args: _P.args, **kwargs: _P.kwargs) -> Task[_TResult]:
+def _create_task_in_thread(
+    callable: Callable[_P, _TResult], *args: _P.args, **kwargs: _P.kwargs
+) -> Tuple[Task[_TResult], threading.Thread]:
     future: Task[_TResult] = Task()
     with _running_tasks_lock:
         thread = threading.Thread(
@@ -227,8 +229,26 @@ def run_as_task(callable: Callable[_P, _TResult], *args: _P.args, **kwargs: _P.k
         )
         _running_tasks[future] = thread
         future.add_done_callback(_remove_future_from_running_tasks)
+
     # TODO: don't set daemon=True because it can be deprecated in future pyhton versions
     thread.daemon = True
+    return future, thread
+
+
+def run_as_task(callable: Callable[_P, _TResult], *args: _P.args, **kwargs: _P.kwargs) -> Task[_TResult]:
+    future, thread = _create_task_in_thread(callable, *args, **kwargs)
+
+    thread.start()
+
+    return future
+
+
+def run_as_debugpy_hidden_task(callable: Callable[_P, _TResult], *args: _P.args, **kwargs: _P.kwargs) -> Task[_TResult]:
+    future, thread = _create_task_in_thread(callable, *args, **kwargs)
+
+    thread.pydev_do_not_trace = True  # type: ignore[attr-defined]
+    thread.is_pydev_daemon_thread = True  # type: ignore[attr-defined]
+
     thread.start()
 
     return future

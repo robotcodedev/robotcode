@@ -1448,10 +1448,10 @@ export class TestControllerManager {
       if (item !== undefined) {
         switch (event.attributes.status) {
           case "PASS":
-            if (!item?.canResolveChildren) run.passed(item, event.attributes.elapsedtime);
+            run.passed(item, event.attributes.elapsedtime);
             break;
           case "SKIP":
-            if (!item?.canResolveChildren) run.skipped(item);
+            run.skipped(item);
             break;
           default:
             {
@@ -1493,12 +1493,10 @@ export class TestControllerManager {
                 }
               }
 
-              if (!item?.canResolveChildren) {
-                if (event.attributes.status === "FAIL") {
-                  run.failed(item, messages, event.attributes.elapsedtime);
-                } else {
-                  run.errored(item, messages, event.attributes.elapsedtime);
-                }
+              if (event.attributes.status === "FAIL") {
+                run.failed(item, messages, event.attributes.elapsedtime);
+              } else {
+                run.errored(item, messages, event.attributes.elapsedtime);
               }
             }
             break;

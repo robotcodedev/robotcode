@@ -566,13 +566,7 @@ export class DebugManager {
     _event: string,
     options?: { port: number; addresses: undefined | string[] | null; processId?: number | null },
   ): Promise<boolean> {
-    if (
-      session.type === "robotcode" &&
-      !session.configuration.noDebug &&
-      session.configuration.attachPython &&
-      options &&
-      options.port
-    ) {
+    if (session.type === "robotcode" && !session.configuration.noDebug && options && options.port) {
       let pythonConfiguration = (session.configuration.pythonConfiguration as { [Key: string]: unknown }) ?? {};
 
       if (typeof pythonConfiguration === "string" || pythonConfiguration instanceof String) {

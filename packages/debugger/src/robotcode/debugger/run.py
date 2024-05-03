@@ -2,7 +2,8 @@ import asyncio
 import functools
 import os
 import threading
-import warnings
+import time
+from concurrent.futures import CancelledError
 from typing import (
     TYPE_CHECKING,
     Callable,
@@ -15,10 +16,7 @@ from typing import (
 
 import click
 
-from robotcode.core.async_tools import (
-    run_coroutine_from_thread_async,
-    run_coroutine_in_thread,
-)
+from robotcode.core.concurrent import run_as_debugpy_hidden_task
 from robotcode.core.types import ServerMode, TcpParams
 from robotcode.core.utils.debugpy import (
     enable_debugpy,
@@ -53,20 +51,22 @@ def set_server(value: "DebugAdapterServer") -> None:
 
 
 @_logger.call
-async def wait_for_server(timeout: float = 5) -> "DebugAdapterServer":
-    async def wait() -> None:
-        while get_server() is None:
-            await asyncio.sleep(0.005)
+def wait_for_server(timeout: float = 10) -> "DebugAdapterServer":
 
-    await asyncio.wait_for(wait(), timeout)
+    start_time = time.monotonic()
+    while get_server() is None and time.monotonic() - start_time < timeout:
+        time.sleep(0.005)
 
     result = get_server()
-    assert result is not None
+
+    if result is None:
+        raise RuntimeError("Timeout to get server instance.")
+
     return result
 
 
 @_logger.call
-async def _debug_adapter_server_(
+async def _debug_adapter_server_async(
     on_config_done_callback: Optional[Callable[["DebugAdapterServer"], None]],
     mode: ServerMode,
     addresses: Union[str, Sequence[str], None],
@@ -89,14 +89,26 @@ async def _debug_adapter_server_(
         await server.serve()
 
 
+def _debug_adapter_server_(
+    on_config_done_callback: Optional[Callable[["DebugAdapterServer"], None]],
+    mode: ServerMode,
+    addresses: Union[str, Sequence[str], None],
+    port: int,
+    pipe_name: Optional[str],
+) -> None:
+    asyncio.run(_debug_adapter_server_async(on_config_done_callback, mode, addresses, port, pipe_name))
+
+
 DEFAULT_TIMEOUT = 10.0
 
 
 config_done_callback: Optional[Callable[["DebugAdapterServer"], None]] = None
+debugpy_connected = threading.Event()
 
 
 @_logger.call
-async def start_debugpy_async(
+def start_debugpy(
+    app: Application,
     debugpy_port: Optional[int] = None,
     addresses: Union[Sequence[str], str, None] = None,
     wait_for_debugpy_client: bool = False,
@@ -122,17 +134,22 @@ async def start_debugpy_async(
             )
 
             if wait_for_debugpy_client:
-                wait_for_debugpy_connected()
+                app.verbose(f"Wait for debugpy incomming connections listening on {addresses}:{port}")
+                if not wait_for_debugpy_connected(wait_for_client_timeout):
+                    app.warning("No debugpy client connected")
+                else:
+                    app.verbose("Debugpy client connected")
+            debugpy_connected.set()
 
         config_done_callback = connect_debugpy
 
 
 @_logger.call
-async def run_debugger(
+def run_debugger(
     ctx: click.Context,
     app: Application,
     args: List[str],
-    mode: str,
+    mode: ServerMode,
     addresses: Union[str, Sequence[str], None],
     port: int,
     pipe_name: Optional[str] = None,
@@ -150,19 +167,21 @@ async def run_debugger(
     group_output: bool = False,
 ) -> int:
     if debug and debugpy and not is_debugpy_installed():
-        app.warning("Debugpy not installed.")
+        app.warning("Debugpy not installed")
 
     if debug and debugpy:
-        app.verbose("Try to start debugpy session.")
-        await start_debugpy_async(
+        app.verbose("Try to start debugpy session")
+        start_debugpy(
+            app,
             debugpy_port,
             addresses,
             debugpy_wait_for_client,
             wait_for_client_timeout,
         )
 
-    app.verbose("Start robotcode debugger thread.")
-    server_future = run_coroutine_in_thread(
+    app.verbose("Start robotcode debugger thread")
+
+    run_as_debugpy_hidden_task(
         _debug_adapter_server_,
         config_done_callback,
         mode,
@@ -171,41 +190,29 @@ async def run_debugger(
         pipe_name,
     )
 
-    server = await wait_for_server()
+    server = wait_for_server()
+
     exit_code = 255
 
     try:
         if wait_for_client:
-            app.verbose("Wait for incomming connections.")
+            app.verbose("Wait for incomming connections")
             try:
-                await run_coroutine_from_thread_async(
-                    server.protocol.wait_for_client,
-                    wait_for_client_timeout,
-                    loop=server.loop,
-                )
-            except asyncio.CancelledError:
-                pass
-            except asyncio.TimeoutError as e:
-                raise ConnectionError("No incomming connection from a debugger client.") from e
+                server.protocol.wait_for_client(wait_for_client_timeout)
+            except TimeoutError as e:
+                raise ConnectionError("No incomming connection from a debugger client") from e
 
-            await run_coroutine_from_thread_async(server.protocol.wait_for_initialized, loop=server.loop)
+            server.protocol.wait_for_initialized(wait_for_client_timeout)
 
         if wait_for_client:
             app.verbose("Wait for debug configuration.")
             try:
-                await run_coroutine_from_thread_async(
-                    server.protocol.wait_for_configuration_done,
-                    configuration_done_timeout,
-                    loop=server.loop,
-                )
-            except asyncio.CancelledError:
-                pass
-            except asyncio.TimeoutError as e:
-                raise ConnectionError("Timeout to get configuration from client.") from e
+                server.protocol.wait_for_configuration_done(configuration_done_timeout)
+            except TimeoutError as e:
+                raise ConnectionError("Timeout to get configuration from client") from e
 
         if debugpy and debugpy_wait_for_client:
-            app.verbose("Wait for debugpy incomming connections.")
-            wait_for_debugpy_connected()
+            debugpy_connected.wait(wait_for_client_timeout)
 
         args = [
             "--listener",
@@ -225,14 +232,14 @@ async def run_debugger(
         Debugger.instance().set_main_thread(threading.current_thread())
         Debugger.instance().server_loop = server.loop
 
-        app.verbose("Start the debugger instance.")
+        app.verbose("Start the debugger instance")
         Debugger.instance().start()
 
         exit_code = 0
         try:
             from robotcode.runner.cli.robot import robot
 
-            app.verbose("Start robot.")
+            app.verbose("Start robot")
             try:
                 robot_ctx = robot.make_context("robot", args, parent=ctx)
                 robot.invoke(robot_ctx)
@@ -240,8 +247,7 @@ async def run_debugger(
                 exit_code = cast(int, e.code)
         finally:
             if server.protocol.connected:
-                await run_coroutine_from_thread_async(
-                    server.protocol.send_event_async,
+                server.protocol.send_event(
                     Event(
                         event="robotExited",
                         body={
@@ -250,27 +256,19 @@ async def run_debugger(
                             "outputFile": Debugger.instance().robot_output_file,
                             "exitCode": exit_code,
                         },
-                    ),
-                    loop=server.loop,
+                    )
                 )
 
-                await run_coroutine_from_thread_async(server.protocol.exit, exit_code, loop=server.loop)
-    except asyncio.CancelledError:
+                server.protocol.exit(exit_code)
+    except CancelledError:
         pass
     finally:
         if server.protocol.connected:
-            await run_coroutine_from_thread_async(server.protocol.terminate, loop=server.loop)
+            server.protocol.terminate()
 
-            try:
-                await run_coroutine_from_thread_async(server.protocol.wait_for_disconnected, loop=server.loop)
-            except asyncio.TimeoutError:
-                warnings.warn("Timeout at disconnect client occurred.")
+            if not server.protocol.wait_for_disconnected():
+                app.warning("Timeout to get disconnected from client")
 
-        server_future.cancel()
-
-        try:
-            await server_future
-        except asyncio.CancelledError:
-            pass
+        server.loop.stop()
 
     return exit_code

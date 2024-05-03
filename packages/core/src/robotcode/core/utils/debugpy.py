@@ -1,4 +1,7 @@
+import threading
 from typing import Optional, Sequence, Tuple, Union
+
+from robotcode.core.concurrent import run_as_debugpy_hidden_task
 
 from .logging import LoggingDescriptor
 from .net import find_free_port
@@ -15,14 +18,25 @@ def is_debugpy_installed() -> bool:
     return True
 
 
-def wait_for_debugpy_connected() -> bool:
+def wait_for_debugpy_connected(timeout: float = 30) -> bool:
     if is_debugpy_installed():
         import debugpy  # noqa: T100
 
+        connected = threading.Event()
         _logger.info("wait for debugpy client")
-        debugpy.wait_for_client()  # noqa: T100
 
-        return True
+        def _wait_for_client() -> bool:
+            if not connected.wait(timeout=timeout):
+                debugpy.wait_for_client.cancel()
+                return False
+
+            return True
+
+        wait_task = run_as_debugpy_hidden_task(_wait_for_client)
+        debugpy.wait_for_client()  # noqa: T100
+        connected.set()
+        return wait_task.result()
+
     return False
 
 
