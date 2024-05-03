@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [0.81.0](https://github.com/robotcodedev/robotcode/compare/v0.80.0..v0.81.0) - 2024-05-03
+
+### Bug Fixes
+
+- **debugger:** Rework async code in debugger and some other little quitrks in debugger, like hiding the debugger thread when debuggin python code ([d7fe611](https://github.com/robotcodedev/robotcode/commit/d7fe611b1a88a8cac3ea31de4cf7de6a33339ea3))
+
+
+### Features
+
+- **vscode:** Get debugpy debuggerpackagepath from ms-python.debugpy extension ([9a00d0c](https://github.com/robotcodedev/robotcode/commit/9a00d0c4588bcfe55d5838070dc76410fa060c19))
+
+
 ## [0.80.0](https://github.com/robotcodedev/robotcode/compare/v0.79.0..v0.80.0) - 2024-05-01
 
 ### Features
