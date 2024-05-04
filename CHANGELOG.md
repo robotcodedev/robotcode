@@ -1182,6 +1182,7 @@ All notable changes to this project will be documented in this file. See [conven
 
 ### Features
 
+- Support for new `--parseinclude` option in robot config ([dfd88d8](https://github.com/robotcodedev/robotcode/commit/dfd88d87ed08d1065a26eb6f29c1eec6a03272f6))
 - Support for new RF 6.1 `--parse-include` option for discovering and executing tests ([607cf8d](https://github.com/robotcodedev/robotcode/commit/607cf8db2777b5d11db89e830131261d60581b0f))
 - Enable importing and completion of `.rest`, `.rsrc` and `.json` resource extensions (not parsing) ([3df22dd](https://github.com/robotcodedev/robotcode/commit/3df22ddcb703983b56d0756fef29d06cb2960009))
 - Support for importing `.json` files in RF 6.1 ([0f84c4e](https://github.com/robotcodedev/robotcode/commit/0f84c4ec1d9a897aa25ab37fff702f8feea50cf4))
@@ -1203,7 +1204,6 @@ All notable changes to this project will be documented in this file. See [conven
 
 ### Features
 
-- Support for new `--parseinclude` option in robot config ([dfd88d8](https://github.com/robotcodedev/robotcode/commit/dfd88d87ed08d1065a26eb6f29c1eec6a03272f6))
 - Support for new `--parseinclude` option in robot config ([6b84986](https://github.com/robotcodedev/robotcode/commit/6b84986e7109c36b5df81c0ff56f84665a855c6a))
 
 
