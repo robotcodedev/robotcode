@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [0.82.0](https://github.com/robotcodedev/robotcode/compare/v0.81.0..v0.82.0) - 2024-05-05
+
+### Features
+
+- **vscode:** Detection of invalid robot environment now shows a quickpick instead an error message ([95a7630](https://github.com/robotcodedev/robotcode/commit/95a7630e4c8820d8521935847a65eb71bf215097))
+
+  In the case RobotCode will initalize the LanguageServer and detect that environment is not valid, means wrong python version, no robotframework installed, instead an error message pops up a quickpick pops up, where you can do different things, like select a differnt interpreter, create a new venv, ignore this for the moment.
+  The advantage of this way is, that this also works with extensions like Pyhton Manger and so on
+
+
+
 ## [0.81.0](https://github.com/robotcodedev/robotcode/compare/v0.80.0..v0.81.0) - 2024-05-03
 
 ### Bug Fixes
