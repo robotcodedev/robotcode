@@ -1062,8 +1062,6 @@ export class TestControllerManager {
 
       if (isFileAndExists && vscode.workspace.textDocuments.find((d) => d.uri.toString() === uri?.toString())) return;
 
-      this.outputChannel.appendLine(`refresh uri ${uri ? uri.toString() : "unknown"} because: ${reason ?? "unknown"}`);
-
       if (exists) {
         const testItem = this.findTestItemByUri(uri.toString());
         if (testItem) {

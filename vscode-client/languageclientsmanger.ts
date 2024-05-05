@@ -118,6 +118,7 @@ export class LanguageClientsManager {
   public readonly outputChannels: Map<string, vscode.OutputChannel> = new Map();
 
   private _disposables: vscode.Disposable;
+  public _pythonCanceledPythonAndRobotEnv = new WeakMap<vscode.WorkspaceFolder, boolean>();
   public _pythonValidPythonAndRobotEnv = new WeakMap<vscode.WorkspaceFolder, boolean>();
   private _workspaceFolderDiscoverInfo = new WeakMap<vscode.WorkspaceFolder, DiscoverInfoResult>();
 
@@ -188,15 +189,17 @@ export class LanguageClientsManager {
 
       this.pythonManager.onActivePythonEnvironmentChanged(async (event) => {
         if (event.resource !== undefined) {
-          let needsRestart = false;
-          if (event.resource !== undefined) {
-            this._workspaceFolderDiscoverInfo.delete(event.resource);
-            needsRestart = this._pythonValidPythonAndRobotEnv.has(event.resource);
-            if (needsRestart) this._pythonValidPythonAndRobotEnv.delete(event.resource);
-          }
-          await this.refresh(event.resource.uri, needsRestart);
+          this.inShowErrorWithSelectPythonInterpreter = true;
+
+          this._workspaceFolderDiscoverInfo.delete(event.resource);
+          this._pythonValidPythonAndRobotEnv.delete(event.resource);
+          this._pythonCanceledPythonAndRobotEnv.delete(event.resource);
+          this.showErrorWithSelectPythonInterpreterCancelTokenSource?.cancel();
+          await this.refresh(event.resource.uri, true);
         } else {
           this._pythonValidPythonAndRobotEnv = new WeakMap<vscode.WorkspaceFolder, boolean>();
+          this._pythonCanceledPythonAndRobotEnv = new WeakMap<vscode.WorkspaceFolder, boolean>();
+
           await this.restart();
         }
       }),
@@ -278,19 +281,55 @@ export class LanguageClientsManager {
     return serverOptions;
   }
 
-  private async showErrorWithSelectPythonInterpreter(msg: string, folder: vscode.WorkspaceFolder) {
-    this.outputChannel.appendLine(msg);
+  private inShowErrorWithSelectPythonInterpreter = false;
+  private showErrorWithSelectPythonInterpreterCancelTokenSource: vscode.CancellationTokenSource | undefined;
 
-    const item = await vscode.window.showErrorMessage(
-      msg,
-      { title: "Select Python Interpreter", id: "select" },
-      { title: "Retry", id: "retry" },
+  private async showErrorWithSelectPythonInterpreter(title: string, _folder: vscode.WorkspaceFolder) {
+    this.inShowErrorWithSelectPythonInterpreter = false;
+    this.showErrorWithSelectPythonInterpreterCancelTokenSource = new vscode.CancellationTokenSource();
+
+    this.outputChannel.appendLine(`${title}`);
+
+    const item = await vscode.window.showQuickPick(
+      [
+        {
+          id: "select",
+          label: "Select Python Interpreter...",
+          detail:
+            "Choose a Python interpreter version 3.8 or newer that has `robotframework` version 4.1 or higher installed",
+        },
+        {
+          id: "create",
+          label: "Create Virtual Environment...",
+          detail: "Create a new virtual Python environment",
+        },
+        {
+          id: "retry",
+          label: "Retry",
+          detail:
+            "Install `robotframework` version 4.1 or higher manually in the current environment, then restart the language server",
+        },
+        { id: "ignore", label: "Ignore", detail: "Ignore this at the moment" },
+      ],
+      { title: title, placeHolder: "Choose an option...", ignoreFocusOut: true },
+      this.showErrorWithSelectPythonInterpreterCancelTokenSource.token,
     );
 
-    if (item && item.id === "select") {
-      await vscode.commands.executeCommand("python.setInterpreter");
-    } else if (item && item.id === "retry") {
-      await this.restart(folder.uri);
+    switch (item?.id) {
+      case "create":
+        await vscode.commands.executeCommand("python.createEnvironment");
+        break;
+      case "select":
+        await vscode.commands.executeCommand("python.setInterpreter");
+        break;
+      case "retry":
+        return;
+    }
+
+    if (!this.inShowErrorWithSelectPythonInterpreter) {
+      this._pythonCanceledPythonAndRobotEnv.set(_folder, true);
+
+      throw new Error(`Select Python Interpreter for folder ${_folder.name} canceled.`);
     }
   }
 
@@ -298,81 +337,97 @@ export class LanguageClientsManager {
     folder: vscode.WorkspaceFolder,
     showDialogs?: boolean,
   ): Promise<boolean> {
-    return await this._pythonValidPythonAndRobotEnvMutex.dispatch(async () => {
-      if (this._pythonValidPythonAndRobotEnv.has(folder)) {
-        const r = this._pythonValidPythonAndRobotEnv.get(folder) ?? false;
-        if (r || !showDialogs) {
-          return r;
-        }
-      }
-
-      const pythonCommand = await this.pythonManager.getPythonCommand(folder);
-      if (!pythonCommand) {
-        this._pythonValidPythonAndRobotEnv.set(folder, false);
-        if (showDialogs) {
-          await this.showErrorWithSelectPythonInterpreter(
-            `Can't find a valid python executable for workspace folder '${folder.name}'. ` +
-              "Check if python and the python extension is installed.",
-            folder,
-          );
-        }
-
+    return this._pythonValidPythonAndRobotEnvMutex.dispatch(async () => {
+      if (this._pythonCanceledPythonAndRobotEnv.has(folder)) {
         return false;
       }
 
-      if (!this.pythonManager.checkPythonVersion(pythonCommand)) {
-        this._pythonValidPythonAndRobotEnv.set(folder, false);
-        if (showDialogs) {
-          await this.showErrorWithSelectPythonInterpreter(
-            `Invalid python version for workspace folder '${folder.name}'. Only python version >= 3.8 supported. ` +
-              "Please update to a newer python version or select a valid python environment.",
-            folder,
-          );
-        }
-
-        return false;
+      let result = false;
+      while (!result) {
+        result = await this._isValidRobotEnvironmentInFolder(folder, showDialogs);
+        if (!showDialogs) break;
       }
 
-      const robotCheck = this.pythonManager.checkRobotVersion(pythonCommand);
-      if (robotCheck === undefined) {
-        this._pythonValidPythonAndRobotEnv.set(folder, false);
-
-        if (showDialogs) {
-          await this.showErrorWithSelectPythonInterpreter(
-            `Robot Framework package not found in workspace folder '${folder.name}'. ` +
-              "Please install Robot Framework >= version 4.1 to the current python environment or select a valid python environment.",
-            folder,
-          );
-        }
-
-        return false;
-      }
-
-      if (robotCheck === false) {
-        this._pythonValidPythonAndRobotEnv.set(folder, false);
-
-        if (showDialogs) {
-          await this.showErrorWithSelectPythonInterpreter(
-            `Robot Framework version in workspace folder '${folder.name}' not supported. Only Robot Framework version >= 4.1 supported. ` +
-              "Please install or update to Robot Framework >= version 4.1 to the current python environment or select a valid python environment.",
-            folder,
-          );
-        }
-
-        return false;
-      }
-
-      this._pythonValidPythonAndRobotEnv.set(folder, true);
-      return true;
+      return result;
     });
+  }
+
+  public async _isValidRobotEnvironmentInFolder(
+    folder: vscode.WorkspaceFolder,
+    showDialogs?: boolean,
+  ): Promise<boolean> {
+    if (this._pythonValidPythonAndRobotEnv.has(folder)) {
+      const r = this._pythonValidPythonAndRobotEnv.get(folder) ?? false;
+      if (r || !showDialogs) {
+        return r;
+      }
+    }
+
+    const pythonCommand = await this.pythonManager.getPythonCommand(folder);
+    if (!pythonCommand) {
+      this._pythonValidPythonAndRobotEnv.set(folder, false);
+      if (showDialogs) {
+        await this.showErrorWithSelectPythonInterpreter(
+          `Can't find a valid python executable for workspace folder '${folder.name}'`,
+          folder,
+        );
+      }
+
+      return false;
+    }
+
+    if (!this.pythonManager.checkPythonVersion(pythonCommand)) {
+      this._pythonValidPythonAndRobotEnv.set(folder, false);
+      if (showDialogs) {
+        await this.showErrorWithSelectPythonInterpreter(
+          `Invalid python version for workspace folder '${folder.name}'`,
+          folder,
+        );
+      }
+
+      return false;
+    }
+
+    const robotCheck = this.pythonManager.checkRobotVersion(pythonCommand);
+    if (robotCheck === undefined) {
+      this._pythonValidPythonAndRobotEnv.set(folder, false);
+
+      if (showDialogs) {
+        await this.showErrorWithSelectPythonInterpreter(
+          `Robot Framework package not found in workspace folder '${folder.name}'.`,
+          folder,
+        );
+      }
+
+      return false;
+    }
+
+    if (robotCheck === false) {
+      this._pythonValidPythonAndRobotEnv.set(folder, false);
+
+      if (showDialogs) {
+        await this.showErrorWithSelectPythonInterpreter(
+          `Robot Framework version in workspace folder '${folder.name}' not supported.`,
+          folder,
+        );
+      }
+
+      return false;
+    }
+
+    this._pythonValidPythonAndRobotEnv.set(folder, true);
+
+    return true;
   }
 
   private async getServerOptions(folder: vscode.WorkspaceFolder, mode: string): Promise<ServerOptions | undefined> {
     const config = vscode.workspace.getConfiguration(CONFIG_SECTION, folder);
 
-    const envOk = await this.isValidRobotEnvironmentInFolder(folder, true);
-    if (envOk === false) return undefined;
-
+    try {
+      if (!(await this.isValidRobotEnvironmentInFolder(folder, true))) return undefined;
+    } catch (e) {
+      return undefined;
+    }
     const pythonCommand = await this.pythonManager.getPythonCommand(folder);
     if (!pythonCommand) return undefined;
 
