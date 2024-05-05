@@ -87,6 +87,15 @@ matrix.rf.dependencies = [
   ] },
 ]
 
+[envs.hatch-test]
+dependencies = [
+  "pytest",
+  "pytest-html",
+  "pytest_asyncio>=0.23",
+  "pyyaml"
+]
+pre-install-commands = ["python ./scripts/install_packages.py"]
+
 [[envs.test.matrix]]
 rf = ["rf41", "rf50", "rf60", "rf61", "rf70"]
 
