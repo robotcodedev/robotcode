@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [0.82.1](https://github.com/robotcodedev/robotcode/compare/v0.82.0..v0.82.1) - 2024-05-09
+
+### Bug Fixes
+
+- **runner:** `--by-longname` and `--exclude-by-longname` now take into account whether a name for the run was set via `--name` command line argument or in the `name` setting robot.toml ([6f5c719](https://github.com/robotcodedev/robotcode/commit/6f5c719832885e524b72a69d47b2ccaf0608f6f9))
+
+
+### Refactor
+
+- **debugger:** Some code simplifications ([bc97744](https://github.com/robotcodedev/robotcode/commit/bc977445a5419cdc6ea5ad968298395a538a12bc))
+
+
 ## [0.82.0](https://github.com/robotcodedev/robotcode/compare/v0.81.0..v0.82.0) - 2024-05-05
 
 ### Features
