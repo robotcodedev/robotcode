@@ -8,6 +8,7 @@ from robot.errors import DataError, Information
 from robot.run import USAGE, RobotFramework
 from robot.version import get_full_version
 
+import robotcode.modifiers
 from robotcode.plugin import Application, pass_application
 from robotcode.plugin.click_helper.aliases import AliasedCommand
 from robotcode.plugin.click_helper.types import add_options
@@ -25,6 +26,8 @@ class RobotFrameworkEx(RobotFramework):
         paths: List[str],
         dry: bool,
         root_folder: Optional[Path],
+        by_longname: Tuple[str, ...] = (),
+        exclude_by_longname: Tuple[str, ...] = (),
     ) -> None:
         super().__init__()
         self.app = app
@@ -32,6 +35,8 @@ class RobotFrameworkEx(RobotFramework):
         self.dry = dry
         self.root_folder = root_folder
         self._orig_cwd = Path.cwd()
+        self.by_longname = by_longname
+        self.exclude_by_longname = exclude_by_longname
 
     def parse_arguments(self, cli_args: Any) -> Any:
         if self.root_folder is not None and Path.cwd() != self.root_folder:
@@ -60,6 +65,18 @@ class RobotFrameworkEx(RobotFramework):
                 f"Would execute robot with the following options and arguments:\n"
                 f'{line_end.join((*(f"{k} = {v!r}" for k, v in options.items()), *arguments))}'
             )
+
+        modifiers = []
+        root_name = options.get("name", None)
+
+        if self.by_longname:
+            modifiers.append(robotcode.modifiers.ByLongName(*self.by_longname, root_name=root_name))
+
+        if self.exclude_by_longname:
+            modifiers.append(robotcode.modifiers.ExcludedByLongName(*self.exclude_by_longname, root_name=root_name))
+
+        if modifiers:
+            options["prerunmodifier"] = options.get("prerunmodifier", []) + modifiers
 
         return options, arguments
 
@@ -90,10 +107,7 @@ ROBOT_OPTIONS: Set[click.Command] = {
 
 
 def handle_robot_options(
-    app: Application,
-    by_longname: Tuple[str, ...],
-    exclude_by_longname: Tuple[str, ...],
-    robot_options_and_args: Tuple[str, ...],
+    app: Application, robot_options_and_args: Tuple[str, ...]
 ) -> Tuple[Optional[Path], RobotBaseProfile, List[str]]:
     robot_arguments: Optional[List[Union[str, Path]]] = None
     old_sys_path = sys.path.copy()
@@ -117,20 +131,6 @@ def handle_robot_options(
         raise click.ClickException(str(e)) from e
 
     cmd_options = profile.build_command_line()
-
-    if by_longname:
-        sep = ";" if any(True for l in by_longname if ":" in l) else ":"
-        cmd_options += (
-            "--prerunmodifier",
-            f"robotcode.modifiers.ByLongName{sep}{sep.join(by_longname)}",
-        )
-
-    if exclude_by_longname:
-        sep = ";" if any(True for l in exclude_by_longname if ":" in l) else ":"
-        cmd_options += (
-            "--prerunmodifier",
-            f"robotcode.modifiers.ExcludedByLongName{sep}{sep.join(exclude_by_longname)}",
-        )
 
     app.verbose(
         lambda: "Executing robot with following options:\n    "
@@ -170,9 +170,7 @@ def robot(
     ```
     """
 
-    root_folder, profile, cmd_options = handle_robot_options(
-        app, by_longname, exclude_by_longname, robot_options_and_args
-    )
+    root_folder, profile, cmd_options = handle_robot_options(app, robot_options_and_args)
 
     app.exit(
         cast(
@@ -186,6 +184,8 @@ def robot(
                 ),
                 app.config.dry,
                 root_folder,
+                by_longname,
+                exclude_by_longname,
             ).execute_cli((*cmd_options, *robot_options_and_args), exit=False),
         )
     )

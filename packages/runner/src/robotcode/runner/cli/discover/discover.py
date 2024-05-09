@@ -462,9 +462,7 @@ def handle_options(
     exclude_by_longname: Tuple[str, ...],
     robot_options_and_args: Tuple[str, ...],
 ) -> Tuple[TestSuite, Collector, Optional[Dict[str, List[Diagnostic]]]]:
-    root_folder, profile, cmd_options = handle_robot_options(
-        app, by_longname, exclude_by_longname, robot_options_and_args
-    )
+    root_folder, profile, cmd_options = handle_robot_options(app, robot_options_and_args)
 
     diagnostics_logger = DiagnosticsLogger()
     try:
@@ -479,6 +477,8 @@ def handle_options(
             ),
             app.config.dry,
             root_folder,
+            by_longname,
+            exclude_by_longname,
         ).parse_arguments((*cmd_options, "--runemptysuite", *robot_options_and_args))
 
         settings = RobotSettings(options)
