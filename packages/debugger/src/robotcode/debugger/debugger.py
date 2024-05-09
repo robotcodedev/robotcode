@@ -1,6 +1,3 @@
-from __future__ import annotations
-
-import asyncio
 import itertools
 import os
 import pathlib
@@ -157,7 +154,7 @@ class InvalidThreadIdError(Exception):
 class StackFrameEntry:
     def __init__(
         self,
-        parent: Optional[StackFrameEntry],
+        parent: Optional["StackFrameEntry"],
         context: Any,
         name: str,
         type: str,
@@ -193,7 +190,7 @@ class StackFrameEntry:
     def __repr__(self) -> str:
         return f"StackFrameEntry({self.name!r}, {self.type!r}, {self.source!r}, {self.line!r}, {self.column!r})"
 
-    def get_first_or_self(self) -> StackFrameEntry:
+    def get_first_or_self(self) -> "StackFrameEntry":
         if self.stack_frames:
             return self.stack_frames[0]
         return self
@@ -260,14 +257,14 @@ else:
 
 
 class Debugger:
-    __instance: ClassVar[Optional[Debugger]] = None
+    __instance: ClassVar[Optional["Debugger"]] = None
     __lock: ClassVar = threading.RLock()
     __inside_instance: ClassVar = False
 
     _logger = LoggingDescriptor()
 
     @classmethod
-    def instance(cls) -> Debugger:
+    def instance(cls) -> "Debugger":
         if cls.__instance is not None:
             return cls.__instance
         with cls.__lock:
@@ -318,7 +315,6 @@ class Debugger:
         self.terminated = False
         self.attached = False
         self.path_mappings: List[PathMapping] = []
-        self.server_loop: Optional[asyncio.AbstractEventLoop] = None
 
         self._keyword_to_evaluate: Optional[Callable[..., Any]] = None
         self._evaluated_keyword_result: Any = None
@@ -917,14 +913,12 @@ class Debugger:
             status = attributes.get("status", "")
 
             if status == "FAIL":
-                if self.server_loop:
-                    self.process_end_state(
-                        status,
-                        {"failed_suite"},
-                        "Suite failed.",
-                        f"Suite failed{f': {v}' if (v := attributes.get('message')) else ''}",
-                    )
-
+                self.process_end_state(
+                    status,
+                    {"failed_suite"},
+                    "Suite failed.",
+                    f"Suite failed{f': {v}' if (v := attributes.get('message')) else ''}",
+                )
                 self.wait_for_running()
 
         source = attributes.get("source")

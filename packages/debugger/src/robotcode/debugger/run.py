@@ -230,7 +230,6 @@ def run_debugger(
         Debugger.instance().colored_output = app.colored
         Debugger.instance().debug = debug
         Debugger.instance().set_main_thread(threading.current_thread())
-        Debugger.instance().server_loop = server.loop
 
         app.verbose("Start the debugger instance")
         Debugger.instance().start()
@@ -267,7 +266,7 @@ def run_debugger(
             server.protocol.terminate()
 
             if not server.protocol.wait_for_disconnected():
-                app.warning("Timeout to get disconnected from client")
+                app.verbose("Timeout to get disconnected from client")
 
         server.loop.stop()
 

@@ -12,6 +12,7 @@ from typing import (
     List,
     Mapping,
     Optional,
+    Set,
     Tuple,
     Type,
     TypeVar,
@@ -81,6 +82,7 @@ class DebugAdapterProtocol(JsonRPCProtocolBase):
         self._received_request_lock = threading.RLock()
         self._received_request: OrderedDict[int, asyncio.Future[Any]] = OrderedDict()
         self._initialized = False
+        self._running_handle_message_tasks: Set[asyncio.Future[Any]] = set()
 
     @_logger.call
     def send_message(self, message: ProtocolMessage) -> None:
@@ -140,14 +142,10 @@ class DebugAdapterProtocol(JsonRPCProtocolBase):
             )
 
     def _handle_messages(self, iterator: Iterator[ProtocolMessage]) -> None:
-        def done(f: "asyncio.Future[Any]") -> None:
-            ex = f.exception()
-            if ex is not None and not isinstance(ex, asyncio.CancelledError):
-                self._logger.exception(ex, exc_info=ex)
-
         for m in iterator:
             task = asyncio.create_task(self.handle_message(m), name="handle_message")
-            task.add_done_callback(done)
+            self._running_handle_message_tasks.add(task)
+            task.add_done_callback(self._running_handle_message_tasks.discard)
 
     @_logger.call
     async def handle_message(self, message: ProtocolMessage) -> None:
