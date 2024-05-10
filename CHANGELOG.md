@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [0.82.2](https://github.com/robotcodedev/robotcode/compare/v0.82.1..v0.82.2) - 2024-05-10
+
+### Bug Fixes
+
+- **analyse:** Correct handling of keyword arguments in all other keyword settings, regardless of the order of the settings. ([62f9544](https://github.com/robotcodedev/robotcode/commit/62f95443b2f70d92afd16b15c65d9943f4e5f34e))
+
+
 ## [0.82.1](https://github.com/robotcodedev/robotcode/compare/v0.82.0..v0.82.1) - 2024-05-09
 
 ### Bug Fixes
