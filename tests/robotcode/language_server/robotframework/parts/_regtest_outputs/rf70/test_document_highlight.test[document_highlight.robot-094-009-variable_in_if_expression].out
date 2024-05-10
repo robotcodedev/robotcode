@@ -48,3 +48,21 @@ result:
     start:
       character: 9
       line: 106
+- !DocumentHighlight
+  kind: 1
+  range:
+    end:
+      character: 51
+      line: 164
+    start:
+      character: 50
+      line: 164
+- !DocumentHighlight
+  kind: 1
+  range:
+    end:
+      character: 51
+      line: 169
+    start:
+      character: 50
+      line: 169

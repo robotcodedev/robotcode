@@ -175,3 +175,30 @@ again a keyword with params
 #            ^ argument usage
     Log    ${b}
 #            ^ argument usage
+
+a keyword with variables in doc, timeout and tags
+    [Documentation]    a keyword with parameters ${a var} and ${a}
+#                                                  ^^^^^ a global var in doc
+#                                                               ^ an argument in doc
+    [Timeout]    ${a}
+#                  ^ an argument in timeout
+    [Tags]    ${a}   ${a var}    1234
+#               ^ an argument in tags
+#                      ^^^^^ an argument in tags
+    [Arguments]    ${a}    ${b}=${a}
+    Log    ${a}
+    Log    ${b}
+
+a keyword with variables in doc, timeout and tags with args first
+    ${a}  Set Variable  1
+    [Arguments]    ${a}    ${b}=${a}
+    [Documentation]    a keyword with parameters ${a var} and ${a}
+#                                                  ^^^^^ a global var in doc
+#                                                               ^ an argument in doc
+    [Timeout]    ${a}
+#                  ^ an argument in timeout
+    [Tags]    ${a}   ${a var}    1234
+#               ^ an argument in tags
+#                      ^^^^^ an argument in tags
+    Log    ${a}
+    Log    ${b}

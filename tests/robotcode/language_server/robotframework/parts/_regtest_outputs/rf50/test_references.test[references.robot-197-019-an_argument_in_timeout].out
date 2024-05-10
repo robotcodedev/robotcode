@@ -1,0 +1,50 @@
+data: !GeneratedTestData
+  character: 19
+  line: 197
+  name: an argument in timeout
+result:
+- !Location
+  range:
+    end:
+      character: 7
+      line: 192
+    start:
+      character: 6
+      line: 192
+  uri: tests/references.robot
+- !Location
+  range:
+    end:
+      character: 22
+      line: 193
+    start:
+      character: 21
+      line: 193
+  uri: tests/references.robot
+- !Location
+  range:
+    end:
+      character: 35
+      line: 193
+    start:
+      character: 34
+      line: 193
+  uri: tests/references.robot
+- !Location
+  range:
+    end:
+      character: 20
+      line: 197
+    start:
+      character: 19
+      line: 197
+  uri: tests/references.robot
+- !Location
+  range:
+    end:
+      character: 14
+      line: 202
+    start:
+      character: 13
+      line: 202
+  uri: tests/references.robot

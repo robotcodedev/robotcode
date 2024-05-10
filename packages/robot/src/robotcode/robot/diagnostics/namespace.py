@@ -26,13 +26,8 @@ from typing import (
 from robot.errors import VariableError
 from robot.libraries import STDLIBS
 from robot.parsing.lexer.tokens import Token
-from robot.parsing.model.blocks import (
-    Keyword,
-    SettingSection,
-    TestCase,
-    VariableSection,
-)
-from robot.parsing.model.statements import Arguments, Statement
+from robot.parsing.model.blocks import Keyword, SettingSection, TestCase, VariableSection
+from robot.parsing.model.statements import Arguments, Fixture, Statement, Timeout
 from robot.parsing.model.statements import LibraryImport as RobotLibraryImport
 from robot.parsing.model.statements import ResourceImport as RobotResourceImport
 from robot.parsing.model.statements import (
@@ -182,7 +177,7 @@ class VariablesVisitor(Visitor):
             )
 
 
-class BlockVariableVisitor(Visitor):
+class VariableVisitorBase(Visitor):
     def __init__(
         self,
         namespace: "Namespace",
@@ -198,55 +193,7 @@ class BlockVariableVisitor(Visitor):
 
         self._results: Dict[str, VariableDefinition] = {}
         self.current_kw_doc: Optional[KeywordDoc] = None
-
-    def get(self, model: ast.AST) -> List[VariableDefinition]:
-        self._results = {}
-
-        self.visit(model)
-
-        return list(self._results.values())
-
-    def visit(self, node: ast.AST) -> None:
-        if self.position is None or self.position >= range_from_node(node).start:
-            super().visit(node)
-
-    def visit_Keyword(self, node: ast.AST) -> None:  # noqa: N802
-        try:
-            self.generic_visit(node)
-        finally:
-            self.current_kw_doc = None
-
-    def visit_KeywordName(self, node: Statement) -> None:  # noqa: N802
-        from .model_helper import ModelHelper
-
-        name_token = node.get_token(Token.KEYWORD_NAME)
-
-        if name_token is not None and name_token.value:
-            keyword = ModelHelper.get_keyword_definition_at_token(self.namespace.get_library_doc(), name_token)
-            self.current_kw_doc = keyword
-
-            for variable_token in filter(
-                lambda e: e.type == Token.VARIABLE,
-                tokenize_variables(name_token, identifiers="$", ignore_errors=True),
-            ):
-                if variable_token.value:
-                    match = search_variable(variable_token.value, "$", ignore_errors=True)
-                    if match.base is None:
-                        continue
-                    name = match.base.split(":", 1)[0]
-                    full_name = f"{match.identifier}{{{name}}}"
-                    var_token = strip_variable_token(variable_token)
-                    var_token.value = name
-                    self._results[full_name] = ArgumentDefinition(
-                        name=full_name,
-                        name_token=var_token,
-                        line_no=variable_token.lineno,
-                        col_offset=variable_token.col_offset,
-                        end_line_no=variable_token.lineno,
-                        end_col_offset=variable_token.end_col_offset,
-                        source=self.namespace.source,
-                        keyword_doc=self.current_kw_doc,
-                    )
+        self.current_kw: Optional[Keyword] = None
 
     def get_variable_token(self, token: Token) -> Optional[Token]:
         return next(
@@ -260,6 +207,27 @@ class BlockVariableVisitor(Visitor):
             ),
             None,
         )
+
+
+class ArgumentVisitor(VariableVisitorBase):
+    def __init__(
+        self,
+        namespace: "Namespace",
+        nodes: Optional[List[ast.AST]],
+        position: Optional[Position],
+        in_args: bool,
+        current_kw_doc: Optional[KeywordDoc],
+    ) -> None:
+        super().__init__(namespace, nodes, position, in_args)
+
+        self.current_kw_doc: Optional[KeywordDoc] = current_kw_doc
+
+    def get(self, model: ast.AST) -> Dict[str, VariableDefinition]:
+        self._results = {}
+
+        self.visit(model)
+
+        return self._results
 
     def visit_Arguments(self, node: Statement) -> None:  # noqa: N802
         args: List[str] = []
@@ -295,6 +263,69 @@ class BlockVariableVisitor(Visitor):
 
             except VariableError:
                 pass
+
+
+class OnlyArgumentsVisitor(VariableVisitorBase):
+    def get(self, model: ast.AST) -> List[VariableDefinition]:
+        self._results = {}
+
+        self.visit(model)
+
+        return list(self._results.values())
+
+    def visit(self, node: ast.AST) -> None:
+        if self.position is None or self.position >= range_from_node(node).start:
+            super().visit(node)
+
+    def visit_Keyword(self, node: ast.AST) -> None:  # noqa: N802
+        self.current_kw = cast(Keyword, node)
+        try:
+            self.generic_visit(node)
+        finally:
+            self.current_kw = None
+            self.current_kw_doc = None
+
+    def visit_KeywordName(self, node: Statement) -> None:  # noqa: N802
+        from .model_helper import ModelHelper
+
+        name_token = node.get_token(Token.KEYWORD_NAME)
+
+        if name_token is not None and name_token.value:
+            keyword = ModelHelper.get_keyword_definition_at_token(self.namespace.get_library_doc(), name_token)
+            self.current_kw_doc = keyword
+
+            for variable_token in filter(
+                lambda e: e.type == Token.VARIABLE,
+                tokenize_variables(name_token, identifiers="$", ignore_errors=True),
+            ):
+                if variable_token.value:
+                    match = search_variable(variable_token.value, "$", ignore_errors=True)
+                    if match.base is None:
+                        continue
+                    name = match.base.split(":", 1)[0]
+                    full_name = f"{match.identifier}{{{name}}}"
+                    var_token = strip_variable_token(variable_token)
+                    var_token.value = name
+                    self._results[full_name] = ArgumentDefinition(
+                        name=full_name,
+                        name_token=var_token,
+                        line_no=variable_token.lineno,
+                        col_offset=variable_token.col_offset,
+                        end_line_no=variable_token.lineno,
+                        end_col_offset=variable_token.end_col_offset,
+                        source=self.namespace.source,
+                        keyword_doc=self.current_kw_doc,
+                    )
+
+            if self.current_kw is not None:
+                args = ArgumentVisitor(
+                    self.namespace, self.nodes, self.position, self.in_args, self.current_kw_doc
+                ).get(self.current_kw)
+                if args:
+                    self._results.update(args)
+
+
+class BlockVariableVisitor(OnlyArgumentsVisitor):
 
     def visit_ExceptHeader(self, node: Statement) -> None:  # noqa: N802
         variables = node.get_tokens(Token.VARIABLE)[:1]
@@ -990,10 +1021,12 @@ class Namespace:
         nodes: Optional[List[ast.AST]] = None,
         position: Optional[Position] = None,
         skip_commandline_variables: bool = False,
+        skip_local_variables: bool = False,
     ) -> Iterator[Tuple[VariableMatcher, VariableDefinition]]:
         yielded: Dict[VariableMatcher, VariableDefinition] = {}
 
         test_or_keyword = None
+        test_or_keyword_nodes = None
 
         if nodes:
             test_or_keyword_nodes = list(
@@ -1004,18 +1037,23 @@ class Namespace:
             )
             test_or_keyword = test_or_keyword_nodes[0] if test_or_keyword_nodes else None
 
+        in_args = isinstance(test_or_keyword_nodes[-1], Arguments) if test_or_keyword_nodes else False
+        only_args = (
+            isinstance(test_or_keyword_nodes[-1], (Arguments, Fixture, Timeout)) if test_or_keyword_nodes else False
+        )
+
         for var in chain(
             *[
                 (
                     (
-                        BlockVariableVisitor(
+                        (OnlyArgumentsVisitor if only_args else BlockVariableVisitor)(
                             self,
                             nodes,
                             position,
-                            isinstance(test_or_keyword_nodes[-1], Arguments) if nodes else False,
+                            in_args,
                         ).get(test_or_keyword)
                     )
-                    if test_or_keyword is not None
+                    if test_or_keyword is not None and not skip_local_variables
                     else []
                 )
             ],
@@ -1081,6 +1119,7 @@ class Namespace:
         nodes: Optional[List[ast.AST]] = None,
         position: Optional[Position] = None,
         skip_commandline_variables: bool = False,
+        skip_local_variables: bool = False,
         ignore_error: bool = False,
     ) -> Optional[VariableDefinition]:
         self.ensure_initialized()
@@ -1105,6 +1144,7 @@ class Namespace:
                 nodes,
                 position,
                 skip_commandline_variables=skip_commandline_variables,
+                skip_local_variables=skip_local_variables,
             ):
                 if matcher == m:
                     return v

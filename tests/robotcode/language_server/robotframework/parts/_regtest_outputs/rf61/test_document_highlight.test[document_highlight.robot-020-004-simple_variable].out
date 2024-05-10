@@ -75,3 +75,39 @@ result:
     start:
       character: 39
       line: 122
+- !DocumentHighlight
+  kind: 1
+  range:
+    end:
+      character: 56
+      line: 156
+    start:
+      character: 51
+      line: 156
+- !DocumentHighlight
+  kind: 1
+  range:
+    end:
+      character: 33
+      line: 161
+    start:
+      character: 28
+      line: 161
+- !DocumentHighlight
+  kind: 1
+  range:
+    end:
+      character: 56
+      line: 170
+    start:
+      character: 51
+      line: 170
+- !DocumentHighlight
+  kind: 1
+  range:
+    end:
+      character: 33
+      line: 175
+    start:
+      character: 28
+      line: 175

@@ -183,3 +183,39 @@ result:
     start:
       character: 4
       line: 151
+- !DocumentHighlight
+  kind: 1
+  range:
+    end:
+      character: 7
+      line: 165
+    start:
+      character: 4
+      line: 165
+- !DocumentHighlight
+  kind: 1
+  range:
+    end:
+      character: 7
+      line: 166
+    start:
+      character: 4
+      line: 166
+- !DocumentHighlight
+  kind: 1
+  range:
+    end:
+      character: 7
+      line: 178
+    start:
+      character: 4
+      line: 178
+- !DocumentHighlight
+  kind: 1
+  range:
+    end:
+      character: 7
+      line: 179
+    start:
+      character: 4
+      line: 179

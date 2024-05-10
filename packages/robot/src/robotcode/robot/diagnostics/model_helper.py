@@ -258,6 +258,7 @@ class ModelHelper:
         nodes: Optional[List[ast.AST]],
         position: Optional[Position] = None,
         skip_commandline_variables: bool = False,
+        skip_local_variables: bool = False,
         return_not_found: bool = False,
     ) -> Iterator[Tuple[Token, VariableDefinition]]:
         variable_started = False
@@ -270,6 +271,7 @@ class ModelHelper:
                             nodes,
                             position,
                             skip_commandline_variables=skip_commandline_variables,
+                            skip_local_variables=skip_local_variables,
                             ignore_error=True,
                         )
                         sub_token = Token(
@@ -376,6 +378,7 @@ class ModelHelper:
         nodes: Optional[List[ast.AST]],
         position: Optional[Position] = None,
         skip_commandline_variables: bool = False,
+        skip_local_variables: bool = False,
         return_not_found: bool = False,
     ) -> Iterator[Tuple[Token, VariableDefinition]]:
         def is_number(name: str) -> bool:
@@ -405,6 +408,7 @@ class ModelHelper:
                             nodes,
                             position,
                             skip_commandline_variables=skip_commandline_variables,
+                            skip_local_variables=skip_local_variables,
                             return_not_found=return_not_found,
                         ):
                             yield v
@@ -461,6 +465,7 @@ class ModelHelper:
                     nodes,
                     position,
                     skip_commandline_variables=skip_commandline_variables,
+                    skip_local_variables=skip_local_variables,
                     ignore_error=True,
                 )
                 if var is not None:
@@ -485,6 +490,7 @@ class ModelHelper:
                             nodes,
                             position,
                             skip_commandline_variables=skip_commandline_variables,
+                            skip_local_variables=skip_local_variables,
                             ignore_error=True,
                         )
                         sub_sub_token = Token(

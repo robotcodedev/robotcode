@@ -201,3 +201,29 @@ test kw
 #   ^^^^^^^  library alias
     res_lib_var.A Library Keyword
 #   ^^^^^^^^^^^  library alias from resource
+
+a keyword with variables in doc, timeout and tags
+    [Documentation]    a keyword with parameters ${a var} and ${an_arg}
+#                                                  ^^^^^ a global var in doc
+#                                                               ^^^^^^ an argument in doc
+    [Timeout]    ${an_arg}
+#                  ^ an argument in timeout
+    [Tags]    ${an_arg}   ${a var}    1234
+#               ^^^^^^ an argument in tags
+#                           ^^^^^ an argument in tags
+    [Arguments]    ${an_arg}    ${a_second_arg}=${a}
+    Log    ${an_arg}
+    Log    ${a_second_arg}
+
+a keyword with variables in doc, timeout and tags with args first
+    [Arguments]    ${an_arg}    ${a_second_arg}=${a}
+    [Documentation]    a keyword with parameters ${a var} and ${an_arg}
+#                                                  ^^^^^ a global var in doc
+#                                                               ^^^^^^ an argument in doc
+    [Timeout]    ${an_arg}
+#                  ^ an argument in timeout
+    [Tags]    ${an_arg}   ${a var}    1234
+#               ^^^^^^ an argument in tags
+#                           ^^^^^ an argument in tags
+    Log    ${an_arg}
+    Log    ${a_second_arg}

@@ -12,12 +12,14 @@ from robot.parsing.lexer.tokens import Token
 from robot.parsing.model.blocks import Keyword, TestCase
 from robot.parsing.model.statements import (
     Arguments,
+    DefaultTags,
     DocumentationOrMetadata,
     Fixture,
     KeywordCall,
     LibraryImport,
     ResourceImport,
     Statement,
+    Tags,
     Template,
     TemplateArguments,
     TestCaseName,
@@ -70,8 +72,34 @@ from .namespace import KeywordFinder, Namespace
 
 if get_robot_version() < (7, 0):
     from robot.variables.search import VariableIterator
+
+    VARIABLE_NOT_FOUND_HINT_TYPES: Tuple[Any, ...] = (
+        DocumentationOrMetadata,
+        TestCaseName,
+        Tags,
+        robot.parsing.model.statements.ForceTags,
+        DefaultTags,
+    )
+
+    IN_SETTING_TYPES: Tuple[Any, ...] = (
+        DocumentationOrMetadata,
+        Tags,
+        robot.parsing.model.statements.ForceTags,
+        DefaultTags,
+        Template,
+    )
 else:
     from robot.variables.search import VariableMatches
+
+    VARIABLE_NOT_FOUND_HINT_TYPES = (
+        DocumentationOrMetadata,
+        TestCaseName,
+        Tags,
+        robot.parsing.model.statements.TestTags,
+        DefaultTags,
+    )
+
+    IN_SETTING_TYPES = (DocumentationOrMetadata, Tags, robot.parsing.model.statements.TestTags, DefaultTags, Template)
 
 
 @dataclass
@@ -266,10 +294,10 @@ class NamespaceAnalyzer(Visitor, ModelHelper):
 
         self.node_stack.append(node)
         try:
+            in_setting = isinstance(node, IN_SETTING_TYPES)
+
             severity = (
-                DiagnosticSeverity.HINT
-                if isinstance(node, (DocumentationOrMetadata, TestCaseName))
-                else DiagnosticSeverity.ERROR
+                DiagnosticSeverity.HINT if isinstance(node, VARIABLE_NOT_FOUND_HINT_TYPES) else DiagnosticSeverity.ERROR
             )
 
             if isinstance(node, KeywordCall) and node.keyword:
@@ -295,6 +323,7 @@ class NamespaceAnalyzer(Visitor, ModelHelper):
                             self.node_stack,
                             range_from_token(token).start,
                             skip_commandline_variables=False,
+                            skip_local_variables=in_setting,
                             return_not_found=True,
                         ):
                             if isinstance(var, VariableNotFoundDefinition):
@@ -380,6 +409,7 @@ class NamespaceAnalyzer(Visitor, ModelHelper):
                     self.node_stack,
                     range_from_token(token).start,
                     skip_commandline_variables=False,
+                    skip_local_variables=in_setting,
                     return_not_found=True,
                 ):
                     if isinstance(var, VariableNotFoundDefinition):

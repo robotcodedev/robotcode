@@ -1,0 +1,113 @@
+data: !GeneratedTestData
+  character: 53
+  line: 156
+  name: a global var in doc
+result:
+- !DocumentHighlight
+  kind: 1
+  range:
+    end:
+      character: 7
+      line: 20
+    start:
+      character: 2
+      line: 20
+- !DocumentHighlight
+  kind: 1
+  range:
+    end:
+      character: 43
+      line: 30
+    start:
+      character: 38
+      line: 30
+- !DocumentHighlight
+  kind: 1
+  range:
+    end:
+      character: 54
+      line: 32
+    start:
+      character: 49
+      line: 32
+- !DocumentHighlight
+  kind: 1
+  range:
+    end:
+      character: 21
+      line: 34
+    start:
+      character: 16
+      line: 34
+- !DocumentHighlight
+  kind: 1
+  range:
+    end:
+      character: 32
+      line: 36
+    start:
+      character: 27
+      line: 36
+- !DocumentHighlight
+  kind: 1
+  range:
+    end:
+      character: 40
+      line: 38
+    start:
+      character: 35
+      line: 38
+- !DocumentHighlight
+  kind: 1
+  range:
+    end:
+      character: 35
+      line: 113
+    start:
+      character: 30
+      line: 113
+- !DocumentHighlight
+  kind: 1
+  range:
+    end:
+      character: 44
+      line: 122
+    start:
+      character: 39
+      line: 122
+- !DocumentHighlight
+  kind: 1
+  range:
+    end:
+      character: 56
+      line: 156
+    start:
+      character: 51
+      line: 156
+- !DocumentHighlight
+  kind: 1
+  range:
+    end:
+      character: 33
+      line: 161
+    start:
+      character: 28
+      line: 161
+- !DocumentHighlight
+  kind: 1
+  range:
+    end:
+      character: 56
+      line: 170
+    start:
+      character: 51
+      line: 170
+- !DocumentHighlight
+  kind: 1
+  range:
+    end:
+      character: 33
+      line: 175
+    start:
+      character: 28
+      line: 175

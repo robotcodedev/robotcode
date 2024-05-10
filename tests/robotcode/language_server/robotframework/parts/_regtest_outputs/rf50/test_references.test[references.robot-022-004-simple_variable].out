@@ -75,3 +75,39 @@ result:
       character: 39
       line: 159
   uri: tests/references.robot
+- !Location
+  range:
+    end:
+      character: 56
+      line: 179
+    start:
+      character: 51
+      line: 179
+  uri: tests/references.robot
+- !Location
+  range:
+    end:
+      character: 28
+      line: 184
+    start:
+      character: 23
+      line: 184
+  uri: tests/references.robot
+- !Location
+  range:
+    end:
+      character: 56
+      line: 194
+    start:
+      character: 51
+      line: 194
+  uri: tests/references.robot
+- !Location
+  range:
+    end:
+      character: 28
+      line: 199
+    start:
+      character: 23
+      line: 199
+  uri: tests/references.robot
