@@ -27,7 +27,7 @@ from robot.errors import VariableError
 from robot.libraries import STDLIBS
 from robot.parsing.lexer.tokens import Token
 from robot.parsing.model.blocks import Keyword, SettingSection, TestCase, VariableSection
-from robot.parsing.model.statements import Arguments, Fixture, Statement, Timeout
+from robot.parsing.model.statements import Arguments, Setup, Statement, Timeout
 from robot.parsing.model.statements import LibraryImport as RobotLibraryImport
 from robot.parsing.model.statements import ResourceImport as RobotResourceImport
 from robot.parsing.model.statements import (
@@ -1039,7 +1039,7 @@ class Namespace:
 
         in_args = isinstance(test_or_keyword_nodes[-1], Arguments) if test_or_keyword_nodes else False
         only_args = (
-            isinstance(test_or_keyword_nodes[-1], (Arguments, Fixture, Timeout)) if test_or_keyword_nodes else False
+            isinstance(test_or_keyword_nodes[-1], (Arguments, Setup, Timeout)) if test_or_keyword_nodes else False
         )
 
         for var in chain(

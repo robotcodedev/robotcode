@@ -202,3 +202,7 @@ a keyword with variables in doc, timeout and tags with args first
 #                      ^^^^^ an argument in tags
     Log    ${a}
     Log    ${b}
+
+    ${result}    Set Variable    1
+    [Teardown]    Log    ${result}
+#                          ^^^^^^ a local variable in teardown
