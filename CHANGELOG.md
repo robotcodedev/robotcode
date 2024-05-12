@@ -9,6 +9,11 @@ All notable changes to this project will be documented in this file. See [conven
 - **analyse:** Allow local variables in [Teardown] ([5bab97c](https://github.com/robotcodedev/robotcode/commit/5bab97c16f13a9041401c27e07782dbde9ce90a0))
 
 
+### Testing
+
+- Update some tests ([4981eb3](https://github.com/robotcodedev/robotcode/commit/4981eb30300f15ec1db48f9450a91c40546d42b6))
+
+
 ## [0.82.2](https://github.com/robotcodedev/robotcode/compare/v0.82.1..v0.82.2) - 2024-05-10
 
 ### Bug Fixes
