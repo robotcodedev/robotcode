@@ -2,4 +2,22 @@ data: !GeneratedTestData
   character: 27
   line: 206
   name: a local variable in teardown
-result: null
+result:
+- !Location
+  range:
+    end:
+      character: 12
+      line: 205
+    start:
+      character: 6
+      line: 205
+  uri: tests/references.robot
+- !Location
+  range:
+    end:
+      character: 33
+      line: 206
+    start:
+      character: 27
+      line: 206
+  uri: tests/references.robot
