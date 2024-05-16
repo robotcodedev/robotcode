@@ -19,7 +19,7 @@
   },
   "qna": "https://github.com/robotcodedev/robotcode/discussions/categories/q-a",
   "engines": {
-    "vscode": "^1.82.0"
+    "vscode": "^1.86.0"
   },
   "categories": [
     "Programming Languages",
@@ -1492,10 +1492,10 @@
   "devDependencies": {
     "@eslint/js": "^9.2.0",
     "@types/node": "^20.12.12",
-    "@types/vscode": "^1.89.0",
+    "@types/vscode": "^1.86.0",
     "@vscode/test-electron": "^2.3.10",
     "@vscode/vsce": "^2.26.1",
-    "esbuild": "^0.21.2",
+    "esbuild": "^0.21.3",
     "eslint": "^8.57.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-import": "^2.29.1",
