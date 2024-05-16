@@ -1,18 +1,26 @@
 {
   "compilerOptions": {
     "baseUrl": ".",
-    "module": "commonjs",
-    "moduleResolution": "Node",
-    "target": "ES2021",
+    "module": "CommonJS",
+    //"moduleResolution": "Node16",
+    "target": "ES2022",
     "outDir": "out",
-    "lib": ["es6", "dom", "ES2018", "ES2019", "ES2020", "ES2021"],
+    "lib": [
+      "es6",
+      "dom",
+      "ES2018",
+      "ES2019",
+      "ES2020",
+      "ES2021",
+      "ES2022",
+    ],
     "sourceMap": true,
     "rootDir": "vscode-client",
     "strict": true,
-    "experimentalDecorators": true,
-    "emitDecoratorMetadata": true,
-    //"esModuleInterop": true,
-    //"allowSyntheticDefaultImports": true,
+    // "experimentalDecorators": true,
+    // "emitDecoratorMetadata": true,
+    // "esModuleInterop": true,
+    // "allowSyntheticDefaultImports": true,
     "noImplicitAny": true,
     "noImplicitThis": true,
     "noUnusedLocals": true,
@@ -22,5 +30,10 @@
     "removeComments": true,
     "noImplicitReturns": true
   },
-  "exclude": ["node_modules", ".vscode-test", "out", "htmlcov"]
+  "exclude": [
+    "node_modules",
+    ".vscode-test",
+    "out",
+    "htmlcov"
+  ]
 }
