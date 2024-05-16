@@ -81,6 +81,7 @@
   ],
   "main": "./out/extension.js",
   "contributes": {
+    "markdown.markdownItPlugins": true,
     "icons": {
       "robotcode-robot": {
         "description": "RobotFramework Icon",
@@ -344,6 +345,9 @@
           ".resource"
         ],
         "configuration": "./language-configuration.json"
+      },
+      {
+        "id": "robotframework-injection"
       }
     ],
     "grammars": [
@@ -359,6 +363,17 @@
           "comment.robotframework",
           "comment"
         ]
+      },
+      {
+        "language": "robotframework-injection",
+        "scopeName": "markdown.robotframework.codeblock",
+        "path": "./syntaxes/codeblock_robotframework.tmLanguage.json",
+        "injectTo": [
+          "text.html.markdown"
+        ],
+        "embeddedLanguages": {
+          "meta.embedded.block.robotframework": "robotframework"
+        }
       }
     ],
     "keybindings": [
@@ -948,6 +963,12 @@
         "command": "robotcode.keywordsTreeView.showDocumentation",
         "enablement": "resourceLangId == robotframework && view == robotcode.keywordsTreeView",
         "icon": "$(book)"
+      },
+      {
+        "title": "Create New File",
+        "shortTitle": "Robot Framework File",
+        "category": "RobotCode",
+        "command": "robotcode.createNewFile"
       }
     ],
     "menus": {
@@ -996,6 +1017,13 @@
         {
           "command": "robotcode.keywordsTreeView.showDocumentation",
           "when": "view == robotcode.keywordsTreeView"
+        }
+      ],
+      "file/newFile": [
+        {
+          "command": "robotcode.createNewFile",
+          "group": "file",
+          "when": "!virtualWorkspace"
         }
       ]
     },

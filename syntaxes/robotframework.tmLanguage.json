@@ -2405,5 +2405,6 @@
 	"uuid": "a7fae509-bc8d-451e-b5fc-a47feb9d2a9e",
 	"fileTypes": [ "robotframework" ],
 	"name": "Robot Framework",
-	"scopeName": "source.robotframework"
+	"scopeName": "source.robotframework",
+	"displayName": "Robot Framework"
 }
