@@ -1164,7 +1164,7 @@ class Debugger:
     WINDOW_PATH_REGEX: ClassVar = re.compile(r"^(([a-z]:[\\/])|(\\\\)).*$", re.RegexFlag.IGNORECASE)
 
     @classmethod
-    def is_windows_path(cls, path: Union[os.PathLike[str], str]) -> bool:
+    def is_windows_path(cls, path: Union["os.PathLike[str]", str]) -> bool:
         return bool(cls.WINDOW_PATH_REGEX.fullmatch(str(path)))
 
     @staticmethod
@@ -1174,7 +1174,7 @@ class Debugger:
         except ValueError:
             return None
 
-    def map_path_to_client(self, path: Union[os.PathLike[str], str]) -> pathlib.PurePath:
+    def map_path_to_client(self, path: Union["os.PathLike[str]", str]) -> pathlib.PurePath:
         if not isinstance(path, PurePath):
             path = PurePath(path)
 
