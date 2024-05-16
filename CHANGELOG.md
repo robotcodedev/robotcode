@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [0.83.0](https://github.com/robotcodedev/robotcode/compare/v0.82.3..v0.83.0) - 2024-05-16
+
+### Bug Fixes
+
+- **debugger:** Fix type annotations for python 3.8 ([d2cc421](https://github.com/robotcodedev/robotcode/commit/d2cc42129725566c08bb0fe49f81fb41b2600695))
+
+
+### Features
+
+- **vscode:** Support for highlighning robot code in markdown code blocks ([b9de061](https://github.com/robotcodedev/robotcode/commit/b9de061f4511dec43c8a6f1b04437a1ccb1bc20d))
+
+  use the at defining the language in a codeblock you can use `robot` or `robotframework` as specifier
+
+
+
 ## [0.82.3](https://github.com/robotcodedev/robotcode/compare/v0.82.2..v0.82.3) - 2024-05-12
 
 ### Bug Fixes
