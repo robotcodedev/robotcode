@@ -1,3 +1,5 @@
+# robot.toml configuration settings
+
 ## [profile].description
 
 Type: `Optional[str]`

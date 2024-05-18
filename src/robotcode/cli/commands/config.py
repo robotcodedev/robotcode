@@ -307,7 +307,7 @@ def desc(app: Application, name: Optional[List[str]] = None) -> None:
     ]
 
     if app.config.output_format is None or app.config.output_format == OutputFormat.TEXT:
-        output = ""
+        output = "# robot.toml configuration settings\n\n"
         for field, value in config_fields:
             output += f"## {field}\n\n"
             type = (
