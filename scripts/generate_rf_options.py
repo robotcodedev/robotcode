@@ -45,6 +45,8 @@ name_corrections = {
 
 LF = "\n"
 
+RE_LIST_MATCHER = re.compile(r"^\s*([a-zA-Z0-9_]+)((:)(<[a-zA-Z0-9_]+>))?:\s+(.*$)")
+
 
 def generate(
     output: List[str],
@@ -92,7 +94,12 @@ def generate(
                         continue
             if current_line is None:
                 current_line = ""
-            current_line += "\n" + line.strip()
+            m = RE_LIST_MATCHER.match(line)
+            if not in_examples and m:
+                line = f"**{m.group(1)}{':\\\\'+m.group(4) if m.group(4) else ''}:** {m.group(5)}"
+                current_line += "\n\n" + line.strip()
+            else:
+                current_line += "\n" + line.strip()
 
     if cmd_options is None:
         cmd_options = {}

@@ -316,7 +316,7 @@ def desc(app: Application, name: Optional[List[str]] = None) -> None:
                 .replace("robotcode.robot.config.model.", "")
                 .replace("NoneType", "None")
             )
-            output += f"Type: {type}\n\n"
+            output += f"Type: `{type}`\n\n"
             output += value["description"] + "\n\n"
 
         app.echo_as_markdown(output)

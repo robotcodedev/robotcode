@@ -418,10 +418,14 @@ class CommonOptions(BaseOptions):
     console_colors: Optional[Literal["auto", "on", "ansi", "off"]] = field(
         description="""\
             Use colors on console output or not.
-            auto: use colors when output not redirected (default)
-            on:   always use colors
-            ansi: like `on` but use ANSI colors also on Windows
-            off:  disable colors altogether
+
+            **auto:** use colors when output not redirected (default)
+
+            **on:** always use colors
+
+            **ansi:** like `on` but use ANSI colors also on Windows
+
+            **off:** disable colors altogether
 
             corresponds to the `-C --consolecolors auto|on|ansi|off` option of _robot_
             """,
@@ -480,28 +484,25 @@ class CommonOptions(BaseOptions):
         robot_name="expandkeywords",
         robot_priority=500,
     )
-    flatten_keywords: Optional[
-        List[
-            Union[
-                str,
-                Literal["for", "while", "iteration"],
-                NamePattern,
-                TagPattern,
-            ]
-        ]
-    ] = field(
+    flatten_keywords: Optional[List[Union[str, Literal["for", "while", "iteration"], NamePattern, TagPattern]]] = field(
         description="""\
             Flattens matching keywords in the generated log file.
             Matching keywords get all log messages from their
             child keywords and children are discarded otherwise.
-            for:     flatten FOR loops fully
-            while:   flatten WHILE loops fully
-            iteration: flatten FOR/WHILE loop iterations
-            foritem: deprecated alias for `iteration`
-            name:<pattern>:  flatten matched keywords using same
+
+            **for:** flatten FOR loops fully
+
+            **while:** flatten WHILE loops fully
+
+            **iteration:** flatten FOR/WHILE loop iterations
+
+            **foritem:** deprecated alias for `iteration`
+
+            **name:\\<pattern>:** flatten matched keywords using same
             matching rules as with
             `--removekeywords name:<pattern>`
-            tag:<pattern>:  flatten matched keywords using same
+
+            **tag:\\<pattern>:** flatten matched keywords using same
             matching rules as with
             `--removekeywords tag:<pattern>`
 
@@ -665,28 +666,26 @@ class CommonOptions(BaseOptions):
         robot_priority=500,
         robot_short_name="P",
     )
-    remove_keywords: Optional[
-        List[
-            Union[
-                str,
-                Literal["all", "passed", "for", "wuks"],
-                NamePattern,
-                TagPattern,
-            ]
-        ]
-    ] = field(
-        description="""\
+    remove_keywords: Optional[List[Union[str, Literal["all", "passed", "for", "wuks"], NamePattern, TagPattern]]] = (
+        field(
+            description="""\
             Remove keyword data from the generated log file.
             Keywords containing warnings are not removed except
             in the `all` mode.
-            all:     remove data from all keywords
-            passed:  remove data only from keywords in passed
+
+            **all:** remove data from all keywords
+
+            **passed:** remove data only from keywords in passed
             test cases and suites
-            for:     remove passed iterations from for loops
-            while:   remove passed iterations from while loops
-            wuks:    remove all but the last failing keyword
+
+            **for:** remove passed iterations from for loops
+
+            **while:** remove passed iterations from while loops
+
+            **wuks:** remove all but the last failing keyword
             inside `BuiltIn.Wait Until Keyword Succeeds`
-            name:<pattern>:  remove data from keywords that match
+
+            **name:\\<pattern>:** remove data from keywords that match
             the given pattern. The pattern is matched
             against the full name of the keyword (e.g.
             'MyLib.Keyword', 'resource.Second Keyword'),
@@ -701,7 +700,8 @@ class CommonOptions(BaseOptions):
             ```
 
 
-            tag:<pattern>:  remove data from keywords that match
+
+            **tag:\\<pattern>:** remove data from keywords that match
             the given pattern. Tags are case and space
             insensitive and patterns can contain `*`,
             `?` and `[]` wildcards. Tags and patterns
@@ -717,8 +717,9 @@ class CommonOptions(BaseOptions):
 
             corresponds to the `--removekeywords all|passed|for|wuks|name:<pattern>|tag:<pattern> *` option of _robot_
             """,
-        robot_name="removekeywords",
-        robot_priority=500,
+            robot_name="removekeywords",
+            robot_priority=500,
+        )
     )
     report: Optional[Union[str, StringExpression]] = field(
         description="""\
@@ -990,14 +991,7 @@ class CommonExtendOptions(BaseOptions):
             """,
     )
     extend_flatten_keywords: Optional[
-        List[
-            Union[
-                str,
-                Literal["for", "while", "iteration"],
-                NamePattern,
-                TagPattern,
-            ]
-        ]
+        List[Union[str, Literal["for", "while", "iteration"], NamePattern, TagPattern]]
     ] = field(
         description="""\
             Appends entries to the --flattenkeywords option.
@@ -1005,14 +999,20 @@ class CommonExtendOptions(BaseOptions):
             Flattens matching keywords in the generated log file.
             Matching keywords get all log messages from their
             child keywords and children are discarded otherwise.
-            for:     flatten FOR loops fully
-            while:   flatten WHILE loops fully
-            iteration: flatten FOR/WHILE loop iterations
-            foritem: deprecated alias for `iteration`
-            name:<pattern>:  flatten matched keywords using same
+
+            **for:** flatten FOR loops fully
+
+            **while:** flatten WHILE loops fully
+
+            **iteration:** flatten FOR/WHILE loop iterations
+
+            **foritem:** deprecated alias for `iteration`
+
+            **name:\\<pattern>:** flatten matched keywords using same
             matching rules as with
             `--removekeywords name:<pattern>`
-            tag:<pattern>:  flatten matched keywords using same
+
+            **tag:\\<pattern>:** flatten matched keywords using same
             matching rules as with
             `--removekeywords tag:<pattern>`
 
@@ -1097,14 +1097,7 @@ class CommonExtendOptions(BaseOptions):
             """,
     )
     extend_remove_keywords: Optional[
-        List[
-            Union[
-                str,
-                Literal["all", "passed", "for", "wuks"],
-                NamePattern,
-                TagPattern,
-            ]
-        ]
+        List[Union[str, Literal["all", "passed", "for", "wuks"], NamePattern, TagPattern]]
     ] = field(
         description="""\
             Appends entries to the --removekeywords option.
@@ -1112,14 +1105,20 @@ class CommonExtendOptions(BaseOptions):
             Remove keyword data from the generated log file.
             Keywords containing warnings are not removed except
             in the `all` mode.
-            all:     remove data from all keywords
-            passed:  remove data only from keywords in passed
+
+            **all:** remove data from all keywords
+
+            **passed:** remove data only from keywords in passed
             test cases and suites
-            for:     remove passed iterations from for loops
-            while:   remove passed iterations from while loops
-            wuks:    remove all but the last failing keyword
+
+            **for:** remove passed iterations from for loops
+
+            **while:** remove passed iterations from while loops
+
+            **wuks:** remove all but the last failing keyword
             inside `BuiltIn.Wait Until Keyword Succeeds`
-            name:<pattern>:  remove data from keywords that match
+
+            **name:\\<pattern>:** remove data from keywords that match
             the given pattern. The pattern is matched
             against the full name of the keyword (e.g.
             'MyLib.Keyword', 'resource.Second Keyword'),
@@ -1134,7 +1133,8 @@ class CommonExtendOptions(BaseOptions):
             ```
 
 
-            tag:<pattern>:  remove data from keywords that match
+
+            **tag:\\<pattern>:** remove data from keywords that match
             the given pattern. Tags are case and space
             insensitive and patterns can contain `*`,
             `?` and `[]` wildcards. Tags and patterns
@@ -1289,11 +1289,15 @@ class RobotOptions(BaseOptions):
     console: Optional[Literal["verbose", "dotted", "skipped", "quiet", "none"]] = field(
         description="""\
             How to report execution on the console.
-            verbose:  report every suite and test (default)
-            dotted:   only show `.` for passed test, `s` for
+
+            **verbose:** report every suite and test (default)
+
+            **dotted:** only show `.` for passed test, `s` for
             skipped tests, and `F` for failed tests
-            quiet:    no output except for errors and warnings
-            none:     no output whatsoever
+
+            **quiet:** no output except for errors and warnings
+
+            **none:** no output whatsoever
 
             corresponds to the `--console type` option of _robot_
             """,
@@ -1481,7 +1485,8 @@ class RobotOptions(BaseOptions):
             output files after the test execution and XML outputs
             can also be further processed with Rebot tool. Can be
             disabled by giving a special value `NONE`.
-            Default: output.xml
+
+            **Default:** output.xml
 
             corresponds to the `-o --output file` option of _robot_
             """,
@@ -1523,10 +1528,14 @@ class RobotOptions(BaseOptions):
     randomize: Optional[Union[str, Literal["all", "suites", "tests", "none"]]] = field(
         description="""\
             Randomizes the test execution order.
-            all:    randomizes both suites and tests
-            suites: randomizes suites
-            tests:  randomizes tests
-            none:   no randomization (default)
+
+            **all:** randomizes both suites and tests
+
+            **suites:** randomizes suites
+
+            **tests:** randomizes tests
+
+            **none:** no randomization (default)
             Use syntax `VALUE:SEED` to give a custom random seed.
             The seed must be an integer.
 
@@ -1806,7 +1815,8 @@ class RebotOptions(BaseOptions):
         description="""\
             When combining results, merge outputs together
             instead of putting them under a new top level suite.
-            Example: rebot --merge orig.xml rerun.xml
+
+            **Example:** rebot --merge orig.xml rerun.xml
 
             corresponds to the `-R --merge` option of _rebot_
             """,

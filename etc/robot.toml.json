@@ -179,7 +179,7 @@
       "description": "Profile for _rebot_ command.",
       "properties": {
         "console-colors": {
-          "description": "Use colors on console output or not.\nauto: use colors when output not redirected (default)\non:   always use colors\nansi: like `on` but use ANSI colors also on Windows\noff:  disable colors altogether\n\ncorresponds to the `-C --consolecolors auto|on|ansi|off` option of _robot_\n",
+          "description": "Use colors on console output or not.\n\n**auto:** use colors when output not redirected (default)\n\n**on:** always use colors\n\n**ansi:** like `on` but use ANSI colors also on Windows\n\n**off:** disable colors altogether\n\ncorresponds to the `-C --consolecolors auto|on|ansi|off` option of _robot_\n",
           "enum": [
             "auto",
             "on",
@@ -307,7 +307,7 @@
           ]
         },
         "extend-flatten-keywords": {
-          "description": "Appends entries to the --flattenkeywords option.\n\nFlattens matching keywords in the generated log file.\nMatching keywords get all log messages from their\nchild keywords and children are discarded otherwise.\nfor:     flatten FOR loops fully\nwhile:   flatten WHILE loops fully\niteration: flatten FOR/WHILE loop iterations\nforitem: deprecated alias for `iteration`\nname:<pattern>:  flatten matched keywords using same\nmatching rules as with\n`--removekeywords name:<pattern>`\ntag:<pattern>:  flatten matched keywords using same\nmatching rules as with\n`--removekeywords tag:<pattern>`\n\ncorresponds to the `--flattenkeywords for|while|iteration|name:<pattern>|tag:<pattern> *` option of _robot_\n",
+          "description": "Appends entries to the --flattenkeywords option.\n\nFlattens matching keywords in the generated log file.\nMatching keywords get all log messages from their\nchild keywords and children are discarded otherwise.\n\n**for:** flatten FOR loops fully\n\n**while:** flatten WHILE loops fully\n\n**iteration:** flatten FOR/WHILE loop iterations\n\n**foritem:** deprecated alias for `iteration`\n\n**name:\\<pattern>:** flatten matched keywords using same\nmatching rules as with\n`--removekeywords name:<pattern>`\n\n**tag:\\<pattern>:** flatten matched keywords using same\nmatching rules as with\n`--removekeywords tag:<pattern>`\n\ncorresponds to the `--flattenkeywords for|while|iteration|name:<pattern>|tag:<pattern> *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
@@ -434,7 +434,7 @@
           ]
         },
         "extend-remove-keywords": {
-          "description": "Appends entries to the --removekeywords option.\n\nRemove keyword data from the generated log file.\nKeywords containing warnings are not removed except\nin the `all` mode.\nall:     remove data from all keywords\npassed:  remove data only from keywords in passed\ntest cases and suites\nfor:     remove passed iterations from for loops\nwhile:   remove passed iterations from while loops\nwuks:    remove all but the last failing keyword\ninside `BuiltIn.Wait Until Keyword Succeeds`\nname:<pattern>:  remove data from keywords that match\nthe given pattern. The pattern is matched\nagainst the full name of the keyword (e.g.\n'MyLib.Keyword', 'resource.Second Keyword'),\nis case, space, and underscore insensitive,\nand may contain `*`, `?` and `[]` wildcards.\n\nExamples:\n\n```\n--removekeywords name:Lib.HugeKw\n--removekeywords name:myresource.*\n```\n\n\ntag:<pattern>:  remove data from keywords that match\nthe given pattern. Tags are case and space\ninsensitive and patterns can contain `*`,\n`?` and `[]` wildcards. Tags and patterns\ncan also be combined together with `AND`,\n`OR`, and `NOT` operators.\n\nExamples:\n\n```\n--removekeywords foo\n--removekeywords fooANDbar*\n```\n\ncorresponds to the `--removekeywords all|passed|for|wuks|name:<pattern>|tag:<pattern> *` option of _robot_\n",
+          "description": "Appends entries to the --removekeywords option.\n\nRemove keyword data from the generated log file.\nKeywords containing warnings are not removed except\nin the `all` mode.\n\n**all:** remove data from all keywords\n\n**passed:** remove data only from keywords in passed\ntest cases and suites\n\n**for:** remove passed iterations from for loops\n\n**while:** remove passed iterations from while loops\n\n**wuks:** remove all but the last failing keyword\ninside `BuiltIn.Wait Until Keyword Succeeds`\n\n**name:\\<pattern>:** remove data from keywords that match\nthe given pattern. The pattern is matched\nagainst the full name of the keyword (e.g.\n'MyLib.Keyword', 'resource.Second Keyword'),\nis case, space, and underscore insensitive,\nand may contain `*`, `?` and `[]` wildcards.\n\nExamples:\n\n```\n--removekeywords name:Lib.HugeKw\n--removekeywords name:myresource.*\n```\n\n\n\n**tag:\\<pattern>:** remove data from keywords that match\nthe given pattern. Tags are case and space\ninsensitive and patterns can contain `*`,\n`?` and `[]` wildcards. Tags and patterns\ncan also be combined together with `AND`,\n`OR`, and `NOT` operators.\n\nExamples:\n\n```\n--removekeywords foo\n--removekeywords fooANDbar*\n```\n\ncorresponds to the `--removekeywords all|passed|for|wuks|name:<pattern>|tag:<pattern> *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
@@ -638,7 +638,7 @@
           ]
         },
         "flatten-keywords": {
-          "description": "Flattens matching keywords in the generated log file.\nMatching keywords get all log messages from their\nchild keywords and children are discarded otherwise.\nfor:     flatten FOR loops fully\nwhile:   flatten WHILE loops fully\niteration: flatten FOR/WHILE loop iterations\nforitem: deprecated alias for `iteration`\nname:<pattern>:  flatten matched keywords using same\nmatching rules as with\n`--removekeywords name:<pattern>`\ntag:<pattern>:  flatten matched keywords using same\nmatching rules as with\n`--removekeywords tag:<pattern>`\n\ncorresponds to the `--flattenkeywords for|while|iteration|name:<pattern>|tag:<pattern> *` option of _robot_\n",
+          "description": "Flattens matching keywords in the generated log file.\nMatching keywords get all log messages from their\nchild keywords and children are discarded otherwise.\n\n**for:** flatten FOR loops fully\n\n**while:** flatten WHILE loops fully\n\n**iteration:** flatten FOR/WHILE loop iterations\n\n**foritem:** deprecated alias for `iteration`\n\n**name:\\<pattern>:** flatten matched keywords using same\nmatching rules as with\n`--removekeywords name:<pattern>`\n\n**tag:\\<pattern>:** flatten matched keywords using same\nmatching rules as with\n`--removekeywords tag:<pattern>`\n\ncorresponds to the `--flattenkeywords for|while|iteration|name:<pattern>|tag:<pattern> *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
@@ -772,7 +772,7 @@
             }
           ],
           "default": null,
-          "description": "When combining results, merge outputs together\ninstead of putting them under a new top level suite.\nExample: rebot --merge orig.xml rerun.xml\n\ncorresponds to the `-R --merge` option of _rebot_\n",
+          "description": "When combining results, merge outputs together\ninstead of putting them under a new top level suite.\n\n**Example:** rebot --merge orig.xml rerun.xml\n\ncorresponds to the `-R --merge` option of _rebot_\n",
           "title": "Merge"
         },
         "metadata": {
@@ -945,7 +945,7 @@
           ]
         },
         "remove-keywords": {
-          "description": "Remove keyword data from the generated log file.\nKeywords containing warnings are not removed except\nin the `all` mode.\nall:     remove data from all keywords\npassed:  remove data only from keywords in passed\ntest cases and suites\nfor:     remove passed iterations from for loops\nwhile:   remove passed iterations from while loops\nwuks:    remove all but the last failing keyword\ninside `BuiltIn.Wait Until Keyword Succeeds`\nname:<pattern>:  remove data from keywords that match\nthe given pattern. The pattern is matched\nagainst the full name of the keyword (e.g.\n'MyLib.Keyword', 'resource.Second Keyword'),\nis case, space, and underscore insensitive,\nand may contain `*`, `?` and `[]` wildcards.\n\nExamples:\n\n```\n--removekeywords name:Lib.HugeKw\n--removekeywords name:myresource.*\n```\n\n\ntag:<pattern>:  remove data from keywords that match\nthe given pattern. Tags are case and space\ninsensitive and patterns can contain `*`,\n`?` and `[]` wildcards. Tags and patterns\ncan also be combined together with `AND`,\n`OR`, and `NOT` operators.\n\nExamples:\n\n```\n--removekeywords foo\n--removekeywords fooANDbar*\n```\n\ncorresponds to the `--removekeywords all|passed|for|wuks|name:<pattern>|tag:<pattern> *` option of _robot_\n",
+          "description": "Remove keyword data from the generated log file.\nKeywords containing warnings are not removed except\nin the `all` mode.\n\n**all:** remove data from all keywords\n\n**passed:** remove data only from keywords in passed\ntest cases and suites\n\n**for:** remove passed iterations from for loops\n\n**while:** remove passed iterations from while loops\n\n**wuks:** remove all but the last failing keyword\ninside `BuiltIn.Wait Until Keyword Succeeds`\n\n**name:\\<pattern>:** remove data from keywords that match\nthe given pattern. The pattern is matched\nagainst the full name of the keyword (e.g.\n'MyLib.Keyword', 'resource.Second Keyword'),\nis case, space, and underscore insensitive,\nand may contain `*`, `?` and `[]` wildcards.\n\nExamples:\n\n```\n--removekeywords name:Lib.HugeKw\n--removekeywords name:myresource.*\n```\n\n\n\n**tag:\\<pattern>:** remove data from keywords that match\nthe given pattern. Tags are case and space\ninsensitive and patterns can contain `*`,\n`?` and `[]` wildcards. Tags and patterns\ncan also be combined together with `AND`,\n`OR`, and `NOT` operators.\n\nExamples:\n\n```\n--removekeywords foo\n--removekeywords fooANDbar*\n```\n\ncorresponds to the `--removekeywords all|passed|for|wuks|name:<pattern>|tag:<pattern> *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
@@ -1321,7 +1321,7 @@
           ]
         },
         "console": {
-          "description": "How to report execution on the console.\nverbose:  report every suite and test (default)\ndotted:   only show `.` for passed test, `s` for\nskipped tests, and `F` for failed tests\nquiet:    no output except for errors and warnings\nnone:     no output whatsoever\n\ncorresponds to the `--console type` option of _robot_\n",
+          "description": "How to report execution on the console.\n\n**verbose:** report every suite and test (default)\n\n**dotted:** only show `.` for passed test, `s` for\nskipped tests, and `F` for failed tests\n\n**quiet:** no output except for errors and warnings\n\n**none:** no output whatsoever\n\ncorresponds to the `--console type` option of _robot_\n",
           "enum": [
             "verbose",
             "dotted",
@@ -1336,7 +1336,7 @@
           ]
         },
         "console-colors": {
-          "description": "Use colors on console output or not.\nauto: use colors when output not redirected (default)\non:   always use colors\nansi: like `on` but use ANSI colors also on Windows\noff:  disable colors altogether\n\ncorresponds to the `-C --consolecolors auto|on|ansi|off` option of _robot_\n",
+          "description": "Use colors on console output or not.\n\n**auto:** use colors when output not redirected (default)\n\n**on:** always use colors\n\n**ansi:** like `on` but use ANSI colors also on Windows\n\n**off:** disable colors altogether\n\ncorresponds to the `-C --consolecolors auto|on|ansi|off` option of _robot_\n",
           "enum": [
             "auto",
             "on",
@@ -1639,7 +1639,7 @@
           ]
         },
         "extend-flatten-keywords": {
-          "description": "Appends entries to the --flattenkeywords option.\n\nFlattens matching keywords in the generated log file.\nMatching keywords get all log messages from their\nchild keywords and children are discarded otherwise.\nfor:     flatten FOR loops fully\nwhile:   flatten WHILE loops fully\niteration: flatten FOR/WHILE loop iterations\nforitem: deprecated alias for `iteration`\nname:<pattern>:  flatten matched keywords using same\nmatching rules as with\n`--removekeywords name:<pattern>`\ntag:<pattern>:  flatten matched keywords using same\nmatching rules as with\n`--removekeywords tag:<pattern>`\n\ncorresponds to the `--flattenkeywords for|while|iteration|name:<pattern>|tag:<pattern> *` option of _robot_\n",
+          "description": "Appends entries to the --flattenkeywords option.\n\nFlattens matching keywords in the generated log file.\nMatching keywords get all log messages from their\nchild keywords and children are discarded otherwise.\n\n**for:** flatten FOR loops fully\n\n**while:** flatten WHILE loops fully\n\n**iteration:** flatten FOR/WHILE loop iterations\n\n**foritem:** deprecated alias for `iteration`\n\n**name:\\<pattern>:** flatten matched keywords using same\nmatching rules as with\n`--removekeywords name:<pattern>`\n\n**tag:\\<pattern>:** flatten matched keywords using same\nmatching rules as with\n`--removekeywords tag:<pattern>`\n\ncorresponds to the `--flattenkeywords for|while|iteration|name:<pattern>|tag:<pattern> *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
@@ -1881,7 +1881,7 @@
           ]
         },
         "extend-remove-keywords": {
-          "description": "Appends entries to the --removekeywords option.\n\nRemove keyword data from the generated log file.\nKeywords containing warnings are not removed except\nin the `all` mode.\nall:     remove data from all keywords\npassed:  remove data only from keywords in passed\ntest cases and suites\nfor:     remove passed iterations from for loops\nwhile:   remove passed iterations from while loops\nwuks:    remove all but the last failing keyword\ninside `BuiltIn.Wait Until Keyword Succeeds`\nname:<pattern>:  remove data from keywords that match\nthe given pattern. The pattern is matched\nagainst the full name of the keyword (e.g.\n'MyLib.Keyword', 'resource.Second Keyword'),\nis case, space, and underscore insensitive,\nand may contain `*`, `?` and `[]` wildcards.\n\nExamples:\n\n```\n--removekeywords name:Lib.HugeKw\n--removekeywords name:myresource.*\n```\n\n\ntag:<pattern>:  remove data from keywords that match\nthe given pattern. Tags are case and space\ninsensitive and patterns can contain `*`,\n`?` and `[]` wildcards. Tags and patterns\ncan also be combined together with `AND`,\n`OR`, and `NOT` operators.\n\nExamples:\n\n```\n--removekeywords foo\n--removekeywords fooANDbar*\n```\n\ncorresponds to the `--removekeywords all|passed|for|wuks|name:<pattern>|tag:<pattern> *` option of _robot_\n",
+          "description": "Appends entries to the --removekeywords option.\n\nRemove keyword data from the generated log file.\nKeywords containing warnings are not removed except\nin the `all` mode.\n\n**all:** remove data from all keywords\n\n**passed:** remove data only from keywords in passed\ntest cases and suites\n\n**for:** remove passed iterations from for loops\n\n**while:** remove passed iterations from while loops\n\n**wuks:** remove all but the last failing keyword\ninside `BuiltIn.Wait Until Keyword Succeeds`\n\n**name:\\<pattern>:** remove data from keywords that match\nthe given pattern. The pattern is matched\nagainst the full name of the keyword (e.g.\n'MyLib.Keyword', 'resource.Second Keyword'),\nis case, space, and underscore insensitive,\nand may contain `*`, `?` and `[]` wildcards.\n\nExamples:\n\n```\n--removekeywords name:Lib.HugeKw\n--removekeywords name:myresource.*\n```\n\n\n\n**tag:\\<pattern>:** remove data from keywords that match\nthe given pattern. Tags are case and space\ninsensitive and patterns can contain `*`,\n`?` and `[]` wildcards. Tags and patterns\ncan also be combined together with `AND`,\n`OR`, and `NOT` operators.\n\nExamples:\n\n```\n--removekeywords foo\n--removekeywords fooANDbar*\n```\n\ncorresponds to the `--removekeywords all|passed|for|wuks|name:<pattern>|tag:<pattern> *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
@@ -2177,7 +2177,7 @@
           "title": "Extensions"
         },
         "flatten-keywords": {
-          "description": "Flattens matching keywords in the generated log file.\nMatching keywords get all log messages from their\nchild keywords and children are discarded otherwise.\nfor:     flatten FOR loops fully\nwhile:   flatten WHILE loops fully\niteration: flatten FOR/WHILE loop iterations\nforitem: deprecated alias for `iteration`\nname:<pattern>:  flatten matched keywords using same\nmatching rules as with\n`--removekeywords name:<pattern>`\ntag:<pattern>:  flatten matched keywords using same\nmatching rules as with\n`--removekeywords tag:<pattern>`\n\ncorresponds to the `--flattenkeywords for|while|iteration|name:<pattern>|tag:<pattern> *` option of _robot_\n",
+          "description": "Flattens matching keywords in the generated log file.\nMatching keywords get all log messages from their\nchild keywords and children are discarded otherwise.\n\n**for:** flatten FOR loops fully\n\n**while:** flatten WHILE loops fully\n\n**iteration:** flatten FOR/WHILE loop iterations\n\n**foritem:** deprecated alias for `iteration`\n\n**name:\\<pattern>:** flatten matched keywords using same\nmatching rules as with\n`--removekeywords name:<pattern>`\n\n**tag:\\<pattern>:** flatten matched keywords using same\nmatching rules as with\n`--removekeywords tag:<pattern>`\n\ncorresponds to the `--flattenkeywords for|while|iteration|name:<pattern>|tag:<pattern> *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
@@ -2433,7 +2433,7 @@
             }
           ],
           "default": null,
-          "description": "XML output file. Given path, similarly as paths given\nto --log, --report, --xunit, and --debugfile, is\nrelative to --outputdir unless given as an absolute\npath. Other output files are created based on XML\noutput files after the test execution and XML outputs\ncan also be further processed with Rebot tool. Can be\ndisabled by giving a special value `NONE`.\nDefault: output.xml\n\ncorresponds to the `-o --output file` option of _robot_\n",
+          "description": "XML output file. Given path, similarly as paths given\nto --log, --report, --xunit, and --debugfile, is\nrelative to --outputdir unless given as an absolute\npath. Other output files are created based on XML\noutput files after the test execution and XML outputs\ncan also be further processed with Rebot tool. Can be\ndisabled by giving a special value `NONE`.\n\n**Default:** output.xml\n\ncorresponds to the `-o --output file` option of _robot_\n",
           "title": "Output"
         },
         "output-dir": {
@@ -2625,7 +2625,7 @@
               "type": "null"
             }
           ],
-          "description": "Randomizes the test execution order.\nall:    randomizes both suites and tests\nsuites: randomizes suites\ntests:  randomizes tests\nnone:   no randomization (default)\nUse syntax `VALUE:SEED` to give a custom random seed.\nThe seed must be an integer.\n\nExamples:\n\n```\n--randomize all\n--randomize tests:1234\n```\n\ncorresponds to the `--randomize all|suites|tests|none` option of _robot_\n",
+          "description": "Randomizes the test execution order.\n\n**all:** randomizes both suites and tests\n\n**suites:** randomizes suites\n\n**tests:** randomizes tests\n\n**none:** no randomization (default)\nUse syntax `VALUE:SEED` to give a custom random seed.\nThe seed must be an integer.\n\nExamples:\n\n```\n--randomize all\n--randomize tests:1234\n```\n\ncorresponds to the `--randomize all|suites|tests|none` option of _robot_\n",
           "title": "Randomize"
         },
         "re-run-failed": {
@@ -2673,7 +2673,7 @@
           "title": "Rebot"
         },
         "remove-keywords": {
-          "description": "Remove keyword data from the generated log file.\nKeywords containing warnings are not removed except\nin the `all` mode.\nall:     remove data from all keywords\npassed:  remove data only from keywords in passed\ntest cases and suites\nfor:     remove passed iterations from for loops\nwhile:   remove passed iterations from while loops\nwuks:    remove all but the last failing keyword\ninside `BuiltIn.Wait Until Keyword Succeeds`\nname:<pattern>:  remove data from keywords that match\nthe given pattern. The pattern is matched\nagainst the full name of the keyword (e.g.\n'MyLib.Keyword', 'resource.Second Keyword'),\nis case, space, and underscore insensitive,\nand may contain `*`, `?` and `[]` wildcards.\n\nExamples:\n\n```\n--removekeywords name:Lib.HugeKw\n--removekeywords name:myresource.*\n```\n\n\ntag:<pattern>:  remove data from keywords that match\nthe given pattern. Tags are case and space\ninsensitive and patterns can contain `*`,\n`?` and `[]` wildcards. Tags and patterns\ncan also be combined together with `AND`,\n`OR`, and `NOT` operators.\n\nExamples:\n\n```\n--removekeywords foo\n--removekeywords fooANDbar*\n```\n\ncorresponds to the `--removekeywords all|passed|for|wuks|name:<pattern>|tag:<pattern> *` option of _robot_\n",
+          "description": "Remove keyword data from the generated log file.\nKeywords containing warnings are not removed except\nin the `all` mode.\n\n**all:** remove data from all keywords\n\n**passed:** remove data only from keywords in passed\ntest cases and suites\n\n**for:** remove passed iterations from for loops\n\n**while:** remove passed iterations from while loops\n\n**wuks:** remove all but the last failing keyword\ninside `BuiltIn.Wait Until Keyword Succeeds`\n\n**name:\\<pattern>:** remove data from keywords that match\nthe given pattern. The pattern is matched\nagainst the full name of the keyword (e.g.\n'MyLib.Keyword', 'resource.Second Keyword'),\nis case, space, and underscore insensitive,\nand may contain `*`, `?` and `[]` wildcards.\n\nExamples:\n\n```\n--removekeywords name:Lib.HugeKw\n--removekeywords name:myresource.*\n```\n\n\n\n**tag:\\<pattern>:** remove data from keywords that match\nthe given pattern. Tags are case and space\ninsensitive and patterns can contain `*`,\n`?` and `[]` wildcards. Tags and patterns\ncan also be combined together with `AND`,\n`OR`, and `NOT` operators.\n\nExamples:\n\n```\n--removekeywords foo\n--removekeywords fooANDbar*\n```\n\ncorresponds to the `--removekeywords all|passed|for|wuks|name:<pattern>|tag:<pattern> *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
@@ -3169,7 +3169,7 @@
           ]
         },
         "console": {
-          "description": "How to report execution on the console.\nverbose:  report every suite and test (default)\ndotted:   only show `.` for passed test, `s` for\nskipped tests, and `F` for failed tests\nquiet:    no output except for errors and warnings\nnone:     no output whatsoever\n\ncorresponds to the `--console type` option of _robot_\n",
+          "description": "How to report execution on the console.\n\n**verbose:** report every suite and test (default)\n\n**dotted:** only show `.` for passed test, `s` for\nskipped tests, and `F` for failed tests\n\n**quiet:** no output except for errors and warnings\n\n**none:** no output whatsoever\n\ncorresponds to the `--console type` option of _robot_\n",
           "enum": [
             "verbose",
             "dotted",
@@ -3184,7 +3184,7 @@
           ]
         },
         "console-colors": {
-          "description": "Use colors on console output or not.\nauto: use colors when output not redirected (default)\non:   always use colors\nansi: like `on` but use ANSI colors also on Windows\noff:  disable colors altogether\n\ncorresponds to the `-C --consolecolors auto|on|ansi|off` option of _robot_\n",
+          "description": "Use colors on console output or not.\n\n**auto:** use colors when output not redirected (default)\n\n**on:** always use colors\n\n**ansi:** like `on` but use ANSI colors also on Windows\n\n**off:** disable colors altogether\n\ncorresponds to the `-C --consolecolors auto|on|ansi|off` option of _robot_\n",
           "enum": [
             "auto",
             "on",
@@ -3502,7 +3502,7 @@
           ]
         },
         "extend-flatten-keywords": {
-          "description": "Appends entries to the --flattenkeywords option.\n\nFlattens matching keywords in the generated log file.\nMatching keywords get all log messages from their\nchild keywords and children are discarded otherwise.\nfor:     flatten FOR loops fully\nwhile:   flatten WHILE loops fully\niteration: flatten FOR/WHILE loop iterations\nforitem: deprecated alias for `iteration`\nname:<pattern>:  flatten matched keywords using same\nmatching rules as with\n`--removekeywords name:<pattern>`\ntag:<pattern>:  flatten matched keywords using same\nmatching rules as with\n`--removekeywords tag:<pattern>`\n\ncorresponds to the `--flattenkeywords for|while|iteration|name:<pattern>|tag:<pattern> *` option of _robot_\n",
+          "description": "Appends entries to the --flattenkeywords option.\n\nFlattens matching keywords in the generated log file.\nMatching keywords get all log messages from their\nchild keywords and children are discarded otherwise.\n\n**for:** flatten FOR loops fully\n\n**while:** flatten WHILE loops fully\n\n**iteration:** flatten FOR/WHILE loop iterations\n\n**foritem:** deprecated alias for `iteration`\n\n**name:\\<pattern>:** flatten matched keywords using same\nmatching rules as with\n`--removekeywords name:<pattern>`\n\n**tag:\\<pattern>:** flatten matched keywords using same\nmatching rules as with\n`--removekeywords tag:<pattern>`\n\ncorresponds to the `--flattenkeywords for|while|iteration|name:<pattern>|tag:<pattern> *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
@@ -3733,7 +3733,7 @@
           ]
         },
         "extend-remove-keywords": {
-          "description": "Appends entries to the --removekeywords option.\n\nRemove keyword data from the generated log file.\nKeywords containing warnings are not removed except\nin the `all` mode.\nall:     remove data from all keywords\npassed:  remove data only from keywords in passed\ntest cases and suites\nfor:     remove passed iterations from for loops\nwhile:   remove passed iterations from while loops\nwuks:    remove all but the last failing keyword\ninside `BuiltIn.Wait Until Keyword Succeeds`\nname:<pattern>:  remove data from keywords that match\nthe given pattern. The pattern is matched\nagainst the full name of the keyword (e.g.\n'MyLib.Keyword', 'resource.Second Keyword'),\nis case, space, and underscore insensitive,\nand may contain `*`, `?` and `[]` wildcards.\n\nExamples:\n\n```\n--removekeywords name:Lib.HugeKw\n--removekeywords name:myresource.*\n```\n\n\ntag:<pattern>:  remove data from keywords that match\nthe given pattern. Tags are case and space\ninsensitive and patterns can contain `*`,\n`?` and `[]` wildcards. Tags and patterns\ncan also be combined together with `AND`,\n`OR`, and `NOT` operators.\n\nExamples:\n\n```\n--removekeywords foo\n--removekeywords fooANDbar*\n```\n\ncorresponds to the `--removekeywords all|passed|for|wuks|name:<pattern>|tag:<pattern> *` option of _robot_\n",
+          "description": "Appends entries to the --removekeywords option.\n\nRemove keyword data from the generated log file.\nKeywords containing warnings are not removed except\nin the `all` mode.\n\n**all:** remove data from all keywords\n\n**passed:** remove data only from keywords in passed\ntest cases and suites\n\n**for:** remove passed iterations from for loops\n\n**while:** remove passed iterations from while loops\n\n**wuks:** remove all but the last failing keyword\ninside `BuiltIn.Wait Until Keyword Succeeds`\n\n**name:\\<pattern>:** remove data from keywords that match\nthe given pattern. The pattern is matched\nagainst the full name of the keyword (e.g.\n'MyLib.Keyword', 'resource.Second Keyword'),\nis case, space, and underscore insensitive,\nand may contain `*`, `?` and `[]` wildcards.\n\nExamples:\n\n```\n--removekeywords name:Lib.HugeKw\n--removekeywords name:myresource.*\n```\n\n\n\n**tag:\\<pattern>:** remove data from keywords that match\nthe given pattern. Tags are case and space\ninsensitive and patterns can contain `*`,\n`?` and `[]` wildcards. Tags and patterns\ncan also be combined together with `AND`,\n`OR`, and `NOT` operators.\n\nExamples:\n\n```\n--removekeywords foo\n--removekeywords fooANDbar*\n```\n\ncorresponds to the `--removekeywords all|passed|for|wuks|name:<pattern>|tag:<pattern> *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
@@ -4029,7 +4029,7 @@
           "title": "Extensions"
         },
         "flatten-keywords": {
-          "description": "Flattens matching keywords in the generated log file.\nMatching keywords get all log messages from their\nchild keywords and children are discarded otherwise.\nfor:     flatten FOR loops fully\nwhile:   flatten WHILE loops fully\niteration: flatten FOR/WHILE loop iterations\nforitem: deprecated alias for `iteration`\nname:<pattern>:  flatten matched keywords using same\nmatching rules as with\n`--removekeywords name:<pattern>`\ntag:<pattern>:  flatten matched keywords using same\nmatching rules as with\n`--removekeywords tag:<pattern>`\n\ncorresponds to the `--flattenkeywords for|while|iteration|name:<pattern>|tag:<pattern> *` option of _robot_\n",
+          "description": "Flattens matching keywords in the generated log file.\nMatching keywords get all log messages from their\nchild keywords and children are discarded otherwise.\n\n**for:** flatten FOR loops fully\n\n**while:** flatten WHILE loops fully\n\n**iteration:** flatten FOR/WHILE loop iterations\n\n**foritem:** deprecated alias for `iteration`\n\n**name:\\<pattern>:** flatten matched keywords using same\nmatching rules as with\n`--removekeywords name:<pattern>`\n\n**tag:\\<pattern>:** flatten matched keywords using same\nmatching rules as with\n`--removekeywords tag:<pattern>`\n\ncorresponds to the `--flattenkeywords for|while|iteration|name:<pattern>|tag:<pattern> *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
@@ -4330,7 +4330,7 @@
             }
           ],
           "default": null,
-          "description": "XML output file. Given path, similarly as paths given\nto --log, --report, --xunit, and --debugfile, is\nrelative to --outputdir unless given as an absolute\npath. Other output files are created based on XML\noutput files after the test execution and XML outputs\ncan also be further processed with Rebot tool. Can be\ndisabled by giving a special value `NONE`.\nDefault: output.xml\n\ncorresponds to the `-o --output file` option of _robot_\n",
+          "description": "XML output file. Given path, similarly as paths given\nto --log, --report, --xunit, and --debugfile, is\nrelative to --outputdir unless given as an absolute\npath. Other output files are created based on XML\noutput files after the test execution and XML outputs\ncan also be further processed with Rebot tool. Can be\ndisabled by giving a special value `NONE`.\n\n**Default:** output.xml\n\ncorresponds to the `-o --output file` option of _robot_\n",
           "title": "Output"
         },
         "output-dir": {
@@ -4520,7 +4520,7 @@
               "type": "null"
             }
           ],
-          "description": "Randomizes the test execution order.\nall:    randomizes both suites and tests\nsuites: randomizes suites\ntests:  randomizes tests\nnone:   no randomization (default)\nUse syntax `VALUE:SEED` to give a custom random seed.\nThe seed must be an integer.\n\nExamples:\n\n```\n--randomize all\n--randomize tests:1234\n```\n\ncorresponds to the `--randomize all|suites|tests|none` option of _robot_\n",
+          "description": "Randomizes the test execution order.\n\n**all:** randomizes both suites and tests\n\n**suites:** randomizes suites\n\n**tests:** randomizes tests\n\n**none:** no randomization (default)\nUse syntax `VALUE:SEED` to give a custom random seed.\nThe seed must be an integer.\n\nExamples:\n\n```\n--randomize all\n--randomize tests:1234\n```\n\ncorresponds to the `--randomize all|suites|tests|none` option of _robot_\n",
           "title": "Randomize"
         },
         "re-run-failed": {
@@ -4568,7 +4568,7 @@
           "title": "Rebot"
         },
         "remove-keywords": {
-          "description": "Remove keyword data from the generated log file.\nKeywords containing warnings are not removed except\nin the `all` mode.\nall:     remove data from all keywords\npassed:  remove data only from keywords in passed\ntest cases and suites\nfor:     remove passed iterations from for loops\nwhile:   remove passed iterations from while loops\nwuks:    remove all but the last failing keyword\ninside `BuiltIn.Wait Until Keyword Succeeds`\nname:<pattern>:  remove data from keywords that match\nthe given pattern. The pattern is matched\nagainst the full name of the keyword (e.g.\n'MyLib.Keyword', 'resource.Second Keyword'),\nis case, space, and underscore insensitive,\nand may contain `*`, `?` and `[]` wildcards.\n\nExamples:\n\n```\n--removekeywords name:Lib.HugeKw\n--removekeywords name:myresource.*\n```\n\n\ntag:<pattern>:  remove data from keywords that match\nthe given pattern. Tags are case and space\ninsensitive and patterns can contain `*`,\n`?` and `[]` wildcards. Tags and patterns\ncan also be combined together with `AND`,\n`OR`, and `NOT` operators.\n\nExamples:\n\n```\n--removekeywords foo\n--removekeywords fooANDbar*\n```\n\ncorresponds to the `--removekeywords all|passed|for|wuks|name:<pattern>|tag:<pattern> *` option of _robot_\n",
+          "description": "Remove keyword data from the generated log file.\nKeywords containing warnings are not removed except\nin the `all` mode.\n\n**all:** remove data from all keywords\n\n**passed:** remove data only from keywords in passed\ntest cases and suites\n\n**for:** remove passed iterations from for loops\n\n**while:** remove passed iterations from while loops\n\n**wuks:** remove all but the last failing keyword\ninside `BuiltIn.Wait Until Keyword Succeeds`\n\n**name:\\<pattern>:** remove data from keywords that match\nthe given pattern. The pattern is matched\nagainst the full name of the keyword (e.g.\n'MyLib.Keyword', 'resource.Second Keyword'),\nis case, space, and underscore insensitive,\nand may contain `*`, `?` and `[]` wildcards.\n\nExamples:\n\n```\n--removekeywords name:Lib.HugeKw\n--removekeywords name:myresource.*\n```\n\n\n\n**tag:\\<pattern>:** remove data from keywords that match\nthe given pattern. Tags are case and space\ninsensitive and patterns can contain `*`,\n`?` and `[]` wildcards. Tags and patterns\ncan also be combined together with `AND`,\n`OR`, and `NOT` operators.\n\nExamples:\n\n```\n--removekeywords foo\n--removekeywords fooANDbar*\n```\n\ncorresponds to the `--removekeywords all|passed|for|wuks|name:<pattern>|tag:<pattern> *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
