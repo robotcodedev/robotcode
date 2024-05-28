@@ -46,10 +46,8 @@ playground
 coverage.xml
 .python-version
 
-# mkdocs
+# docs
 docs
-overrides
-site
 
 # others
 scripts

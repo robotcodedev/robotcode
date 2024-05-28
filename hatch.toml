@@ -13,7 +13,7 @@ only-include = ["src", "CHANGELOG.md"]
 
 
 [envs.default]
-installer="uv"
+installer = "uv"
 dependencies = [
   "pytest",
   "pytest-html",
@@ -88,12 +88,7 @@ matrix.rf.dependencies = [
 ]
 
 [envs.hatch-test]
-dependencies = [
-  "pytest",
-  "pytest-html",
-  "pytest_asyncio>=0.23",
-  "pyyaml"
-]
+dependencies = ["pytest", "pytest-html", "pytest_asyncio>=0.23", "pyyaml"]
 pre-install-commands = ["python ./scripts/install_packages.py"]
 
 [[envs.test.matrix]]
@@ -144,42 +139,12 @@ platform.windows.scripts = [
   "typing-py=mypy --no-incremental --cache-dir nul {args:.}",
 ]
 
-[envs.pages]
-python = "3.11"
-#detached = true
-extra-dependencies = [
-  "mkdocs>=1.4.2",
-  "mkdocs-material",
-  # Plugins
-  "mkdocs-minify-plugin",
-  "mkdocs-git-revision-date-localized-plugin",
-  "mkdocstrings-python",
-  "mkdocs-redirects",
-  "mkdocs-glightbox",
-
-  # Extensions
-  "mkdocs-click~=0.8.1",
-  "pymdown-extensions~=9.6.0",
-  # Necessary for syntax highlighting in code blocks
-  "pygments",
-  "mike",
-]
-
-[envs.pages.scripts]
-build = ["mkdocs build"]
-deploy = ["python scripts/deploy_docs.py"]
-
 
 [envs.build]
 skip-install = true
 detached = true
 python = "3.8"
-dependencies = [
-  "GitPython",
-  "semantic-version",
-  "commitizen",
-  "git-cliff"
-]
+dependencies = ["GitPython", "semantic-version", "commitizen", "git-cliff"]
 
 [envs.build.scripts]
 update-changelog = ["python scripts/update_changelog.py"]
