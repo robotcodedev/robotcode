@@ -15,7 +15,7 @@
 				"3": { "name": "punctuation.definition.variable.end.robotframework" },
 				"4": { "name": "keyword.operator.robotframework" }
 			},
-			"end": "^(?!\\s*\\.\\.\\.)",
+			"end": "^(?!(\\s*\\.\\.\\.)|(\\s+)|(\\s*#\\.*))",
 			"patterns": [
 				{ "include": "#escape" },
 				{ "include": "#comment" },
@@ -91,7 +91,7 @@
 			"contentName": "markup.robotframework",
 			"begin": "(?i)^(documentation|dokumentation|Tài liệu hướng dẫn)(?= {2}| ?\\t| ?$)",
 			"beginCaptures": { "1": { "name": "keyword.control.settings.robotframework" } },
-			"end": "^(?!\\s*\\.\\.\\.)",
+			"end": "^(?!(\\s*\\.\\.\\.)|(\\s+)|(\\s*#\\.*))",
 			"patterns": [
 				{ "include": "#documentation_italic" },
 				{ "include": "#documentation_bold" },
@@ -135,7 +135,7 @@
 			"contentName": "string.unquoted.argument.robotframework",
 			"begin": "(?i)^(\\S+( \\S+)*)(?= {2}| ?\\t| ?$)",
 			"beginCaptures": { "1": { "name": "keyword.control.settings.robotframework" } },
-			"end": "^(?!\\s*\\.\\.\\.)",
+			"end": "^(?!(\\s*\\.\\.\\.)|(\\s+)|(\\s*#\\.*))",
 			"patterns": [
 				{ "include": "#escape" },
 				{ "include": "#comment" },
@@ -153,7 +153,7 @@
 			"contentName": "markup.robotframework",
 			"begin": "(?i)(\\[(documentation|dokumentation|Tài liệu hướng dẫn)\\])(?= {2}| ?\\t| ?$)",
 			"beginCaptures": { "0": { "name": "keyword.control.settings.robotframework" } },
-			"end": "^(?!\\s*\\.\\.\\.)",
+			"end": "^(?!(\\s*\\.\\.\\.)|(\\s+)|(\\s*#\\.*))",
 			"patterns": [
 				{ "include": "#documentation_italic" },
 				{ "include": "#documentation_bold" },
@@ -167,7 +167,7 @@
 			"contentName": "string.unquoted.argument.robotframework",
 			"begin": "(\\[.*?\\])(?= {2}| ?\\t| ?$)",
 			"beginCaptures": { "0": { "name": "keyword.control.settings.robotframework" } },
-			"end": "^(?!\\s*\\.\\.\\.)",
+			"end": "^(?!(\\s*\\.\\.\\.)|(\\s+)|(\\s*#\\.*))",
 			"patterns": [
 				{ "include": "#escape" },
 				{ "include": "#comment" },
@@ -179,7 +179,7 @@
 			"name": "meta.keyword-call.content.robotframework",
 			"contentName": "string.unquoted.argument.robotframework",
 			"begin": "^(?!(?: {2,}| ?\\t ?)+(?:(?=[$\\[@&%]|\\.)))(?: {2,}| ?\\t ?)+(.*?)(?= {2,}| ?\\t ?| ?$)",
-			"end": "^(?!\\s*\\.\\.\\.)",
+			"end": "^(?!(\\s*\\.\\.\\.)|(\\s+)|(\\s*#\\.*))",
 			"beginCaptures": { "1": { "name": "entity.name.function.keyword-call.robotframework" } },
 			"patterns": [
 				{ "include": "#comment" },
@@ -191,7 +191,7 @@
 			"name": "meta.keyword-call.content.robotframework",
 			"contentName": "string.unquoted.argument.robotframework",
 			"begin": "^(?!(?: {2,}| ?\\t ?)+(?:(?=[$\\[@&%]|\\.)))(?: {2,}| ?\\t ?)+(IF|ELSE IF|WHILE)(( {2,}| ?\\t)( *)(.*?))?(?= {2,}| ?\\t ?| ?$)",
-			"end": "^(?!\\s*\\.\\.\\.)",
+			"end": "^(?!(\\s*\\.\\.\\.)|(\\s+)|(\\s*#\\.*))",
 			"beginCaptures": {
 				"1": { "name": "keyword.control.flow.robotframework" },
 				"5": {
@@ -209,7 +209,7 @@
 			"name": "meta.keyword-call.content.robotframework",
 			"contentName": "string.unquoted.argument.robotframework",
 			"begin": "^(?!(?: {2,}| ?\\t ?)+(?:(?=[$\\[@&%]|\\.)))(?: {2,}| ?\\t ?)+(FOR|END|ELSE|TRY|EXCEPT|FINALLY)(?= {2,}| ?\\t ?| ?$)",
-			"end": "^(?!\\s*\\.\\.\\.)",
+			"end": "^(?!(\\s*\\.\\.\\.)|(\\s+)|(\\s*#\\.*))",
 			"beginCaptures": { "1": { "name": "keyword.control.flow.robotframework" } },
 			"patterns": [
 				{ "include": "#comment" },
@@ -221,7 +221,7 @@
 			"name": "meta.keyword-call.content.robotframework",
 			"contentName": "string.unquoted.argument.robotframework",
 			"begin": "^(?!(?: {2,}| ?\\t ?)+(?:(?=[$\\[@&%]|\\.)))(?: {2,}| ?\\t ?)+(VAR)(?= {2,}| ?\\t ?| ?$)",
-			"end": "^(?!\\s*\\.\\.\\.)",
+			"end": "^(?!(\\s*\\.\\.\\.)|(\\s+)|(\\s*#\\.*))",
 			"beginCaptures": { "1": { "name": "keyword.robotframework" } },
 			"patterns": [
 				{ "include": "#comment" },
@@ -233,7 +233,7 @@
 			"name": "meta.returning-keyword-call.robotframework",
 			"contentName": "meta.returning.keyword.content.robotframework",
 			"begin": "^(?=(?: {2,}| ?\\t ?)+(?:(?=[$@&])))(?:\\s)",
-			"end": "^(?!\\s*\\.\\.\\.)",
+			"end": "^(?!(\\s*\\.\\.\\.)|(\\s+)|(\\s*#\\.*))",
 			"patterns": [ { "include": "#returning_keyword" } ]
 		},
 		"returning_keyword": {
@@ -247,7 +247,7 @@
 				},
 				"2": { "name": "entity.name.function.keyword-call.robotframework" }
 			},
-			"end": "^(?!\\s*\\.\\.\\.)",
+			"end": "^(?!(\\s*\\.\\.\\.)|(\\s+)|(\\s*#\\.*))",
 			"patterns": [
 				{ "include": "#variables" },
 				{ "include": "#line_continuation" },
@@ -266,7 +266,11 @@
 		},
 		"line_continuation": {
 			"match": "^(\\s*\\.\\.\\.)(?: {2,}| ?\\t+| ?$)",
-			"name": "keyword.operator.robotframework"
+            "captures": {
+                "1": {
+                    "name": "keyword.operator.continue.robotframework"
+                }
+            }
 		},
 		"impossible": {
 			"comment": "This is a special rule that should be used where no match is desired. It is not a good idea to match something like '1{0}' because in some cases that can result in infinite loops in token generation. So the rule instead matches and impossible expression to allow a match to fail and move to the next token.",
