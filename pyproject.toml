@@ -50,9 +50,9 @@ classifiers = [
 ]
 requires-python = ">=3.8"
 dependencies = [
-  "robotcode-core==0.83.0",
-  "robotcode-plugin==0.83.0",
-  "robotcode-robot==0.83.0",
+  "robotcode-core==0.83.1",
+  "robotcode-plugin==0.83.1",
+  "robotcode-robot==0.83.1",
 ]
 dynamic = ["version"]
 
@@ -70,20 +70,20 @@ robotcode = "robotcode.cli.__main__:main"
 
 
 [project.optional-dependencies]
-debugger = ["robotcode-debugger==0.83.0"]
-languageserver = ["robotcode-language-server==0.83.0"]
-runner = ["robotcode-runner==0.83.0"]
-analyze = ["robotcode-analyze==0.83.0"]
+debugger = ["robotcode-debugger==0.83.1"]
+languageserver = ["robotcode-language-server==0.83.1"]
+runner = ["robotcode-runner==0.83.1"]
+analyze = ["robotcode-analyze==0.83.1"]
 yaml = ["PyYAML>=5.4"]
 lint = ["robotframework-robocop>=2.0.0"]
 tidy = ["robotframework-tidy>=2.0.0"]
 rest = ["docutils"]
 colored = ["rich"]
 all = [
-  "robotcode-debugger==0.83.0",
-  "robotcode-language-server==0.83.0",
-  "robotcode-runner==0.83.0",
-  "robotcode-analyze==0.83.0",
+  "robotcode-debugger==0.83.1",
+  "robotcode-language-server==0.83.1",
+  "robotcode-runner==0.83.1",
+  "robotcode-analyze==0.83.1",
   "PyYAML>=5.4",
   "robotframework-robocop>=2.0.0",
   "robotframework-tidy>=2.0.0",
@@ -137,7 +137,7 @@ extend-exclude = '''
 
 [tool.pytest.ini_options]
 minversion = "6.0"
-addopts = "-ra -vv -rf --ignore=bundled --ignore=.hatch"
+addopts = "-ra -vv -rf --ignore=bundled --ignore=.hatch --reruns 5 --reruns-delay 1"
 filterwarnings = "ignore:.*Using or importing the ABCs from 'collections' instead of from 'collections.abc'.*:DeprecationWarning"
 testpaths = ["tests"]
 junit_suite_name = "robotcode"

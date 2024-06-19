@@ -2,6 +2,28 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [0.83.1](https://github.com/robotcodedev/robotcode/compare/v0.83.0..v0.83.1) - 2024-06-10
+
+### Bug Fixes
+
+- **config:** Correct some markdown syntax error in documentation for config model ([b5fed35](https://github.com/robotcodedev/robotcode/commit/b5fed353f75c679a49e9000a085ebdeca2b9d30d))
+- **vscode:** Correct highlightning of line continuations if it contains empty lines or comments lines ([c274c51](https://github.com/robotcodedev/robotcode/commit/c274c5113c55c75ba9496a3337279a11bb7dded0))
+
+
+### Documentation
+
+- Add a header to config docs ([17ae419](https://github.com/robotcodedev/robotcode/commit/17ae419c237c5e76d4cb2294c676896780dfade1))
+- Initial move to vitepress for documentation ([f37d8e7](https://github.com/robotcodedev/robotcode/commit/f37d8e7b3e89eedb04c92fa032b257a7efede43c))
+- Setup vitepress project correctly ([882d27c](https://github.com/robotcodedev/robotcode/commit/882d27c8c26af1d69c62c697b76e6c33874fb646))
+- Add a logo with text ([1ded4d0](https://github.com/robotcodedev/robotcode/commit/1ded4d0b10cfd137271e867ebfc0bd1c4d7fd12c))
+
+
+### Testing
+
+- Enable pytest-rerunfailures for unittests ([3b6e0ce](https://github.com/robotcodedev/robotcode/commit/3b6e0cedb30dffd7eb8ff538f09cf93b8a5c9be6))
+- Fix tests for Robot Framework version 7.0.1 ([420fee4](https://github.com/robotcodedev/robotcode/commit/420fee4236f7520102862efe0063896ba2761cda))
+
+
 ## [0.83.0](https://github.com/robotcodedev/robotcode/compare/v0.82.3..v0.83.0) - 2024-05-16
 
 ### Bug Fixes
