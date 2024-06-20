@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [0.83.3](https://github.com/robotcodedev/robotcode/compare/v0.83.2..v0.83.3) - 2024-06-20
+
+### Bug Fixes
+
+- **config:** Correct handling of string expression at building the command line in config model ([0a85e3d](https://github.com/robotcodedev/robotcode/commit/0a85e3df465805e6c6ec098d51ee6af43a72ae39))
+
+
 ## [0.83.2](https://github.com/robotcodedev/robotcode/compare/v0.83.1..v0.83.2) - 2024-06-20
 
 ### Bug Fixes
