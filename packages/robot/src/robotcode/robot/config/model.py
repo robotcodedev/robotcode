@@ -2294,7 +2294,7 @@ class RobotProfile(RobotExtendBaseProfile):
 
             Examples:
             ```toml
-            # alway disabled
+            # always disabled
             enabled = false
             ```
 

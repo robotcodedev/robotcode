@@ -22,7 +22,7 @@ to calculate the enabled state.
 
 Examples:
 ```toml
-# alway disabled
+# always disabled
 enabled = false
 ```
 
