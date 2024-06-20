@@ -349,3 +349,29 @@ def test_set_and_evaluates_environment_var_correctly_with_vars_overridden_in_pro
     assert evaluated.variables
     assert evaluated.variables["TEST_VAR"] == "test overridden"
     assert evaluated.variables["TEST_VAR_CALCULATED"] == "9"
+
+
+def test_str_expression_works_correctly_in_lists_in_build_command_line() -> None:
+    data = """\
+        [listeners]
+        dummy_listener = [
+            { expr = "'dummy' + '/output'" },
+        ]
+        listener_with_colon = ["dummy:output"]
+        """
+    config = load_robot_config_from_robot_toml_str(data)
+    evaluated = config.combine_profiles().evaluated_with_env()
+    cmd_line = evaluated.build_command_line()
+
+    assert cmd_line
+    assert cmd_line == ["--listener", "dummy_listener:dummy/output", "--listener", "listener_with_colon;dummy:output"]
+
+
+def test_type_that_wants_alist_should_throw_an_error() -> None:
+
+    data = """\
+            [listeners]
+            listener_with_colon = "dummy:output"
+            """
+    with pytest.raises(TypeError, match=".*Value must be of type.*"):
+        load_robot_config_from_robot_toml_str(data)

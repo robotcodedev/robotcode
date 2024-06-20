@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [0.83.3](https://github.com/robotcodedev/robotcode/compare/v0.83.2..v0.83.3) - 2024-06-20
+
+### Bug Fixes
+
+- **config:** Correct handling of string expression at building the command line in config model ([0a85e3d](https://github.com/robotcodedev/robotcode/commit/0a85e3df465805e6c6ec098d51ee6af43a72ae39))
+
+
+## [0.83.2](https://github.com/robotcodedev/robotcode/compare/v0.83.1..v0.83.2) - 2024-06-20
+
+### Bug Fixes
+
+- **vscode:** Optimize tmLanguage definition ([166cd25](https://github.com/robotcodedev/robotcode/commit/166cd2536d545c003fd8d7cdd5da31cfb74f94d4))
+- **vscode:** Some small corrections for in (semantic) highlightning ([43321f6](https://github.com/robotcodedev/robotcode/commit/43321f652930f91a4a2ab3f8ebd96056076dcdb5))
+
+
+### Documentation
+
+- Fix some typos ([8a1e91e](https://github.com/robotcodedev/robotcode/commit/8a1e91ed7cec0749e5b62ab99db27fede249ddda))
+
+
 ## [0.83.1](https://github.com/robotcodedev/robotcode/compare/v0.83.0..v0.83.1) - 2024-06-10
 
 ### Bug Fixes
