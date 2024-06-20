@@ -13,7 +13,7 @@ result: !SemanticTokens
   - 0
   - 20
   - 22
-  - 42
+  - 36
   - 0
   - 2
   - 0
@@ -93,7 +93,7 @@ result: !SemanticTokens
   - 0
   - 5
   - 16
-  - 42
+  - 36
   - 0
   - 1
   - 9
@@ -198,7 +198,7 @@ result: !SemanticTokens
   - 0
   - 5
   - 4
-  - 42
+  - 36
   - 0
   - 1
   - 4
@@ -228,7 +228,7 @@ result: !SemanticTokens
   - 0
   - 5
   - 12
-  - 42
+  - 36
   - 0
   - 4
   - 0
@@ -258,7 +258,7 @@ result: !SemanticTokens
   - 0
   - 5
   - 11
-  - 42
+  - 36
   - 0
   - 0
   - 11
@@ -268,7 +268,7 @@ result: !SemanticTokens
   - 0
   - 2
   - 5
-  - 42
+  - 36
   - 0
   - 0
   - 5
@@ -278,7 +278,7 @@ result: !SemanticTokens
   - 0
   - 5
   - 3
-  - 42
+  - 36
   - 0
   - 0
   - 3
@@ -308,7 +308,7 @@ result: !SemanticTokens
   - 0
   - 5
   - 11
-  - 42
+  - 36
   - 0
   - 0
   - 11
@@ -318,7 +318,7 @@ result: !SemanticTokens
   - 0
   - 2
   - 5
-  - 42
+  - 36
   - 0
   - 0
   - 5
@@ -328,7 +328,7 @@ result: !SemanticTokens
   - 0
   - 5
   - 3
-  - 42
+  - 36
   - 0
   - 0
   - 3
@@ -358,7 +358,7 @@ result: !SemanticTokens
   - 0
   - 5
   - 11
-  - 42
+  - 36
   - 0
   - 0
   - 11
@@ -368,7 +368,7 @@ result: !SemanticTokens
   - 0
   - 2
   - 5
-  - 42
+  - 36
   - 0
   - 0
   - 5
@@ -378,7 +378,7 @@ result: !SemanticTokens
   - 0
   - 2
   - 3
-  - 42
+  - 36
   - 0
   - 0
   - 3
@@ -408,7 +408,7 @@ result: !SemanticTokens
   - 0
   - 5
   - 41
-  - 42
+  - 36
   - 0
   - 4
   - 0
@@ -613,7 +613,7 @@ result: !SemanticTokens
   - 0
   - 5
   - 12
-  - 42
+  - 36
   - 1024
   - 0
   - 16

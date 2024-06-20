@@ -105,7 +105,7 @@
         "documentation_setting": {
             "contentName": "markup.robotframework",
             "begin": "(?i)^(documentation|dokumentation|Tài liệu hướng dẫn)(?= {2}| ?\\t| ?$)",
-            "beginCaptures": { "1": { "name": "keyword.control.global.settings.documentation.robotframework" } },
+            "beginCaptures": { "1": { "name": "keyword.control.settings.robotframework" } },
             "end": "^(?!(\\s*(\\.\\.\\.((( {2}| ?\\t)\\s*\\S.*)|(\\s*))?$))|(\\s*#.*$)|(\\s*$))",
             "patterns": [
                 { "include": "#comment" },
@@ -217,15 +217,14 @@
         "other_setting": {
             "contentName": "string.unquoted.argument.robotframework",
             "begin": "(?i)^(\\S+( \\S+)*)(?= {2}| ?\\t| ?$)",
-            "beginCaptures": { "1": { "name": "keyword.control.global.settings.robotframework" } },
+            "beginCaptures": { "1": { "name": "keyword.control.settings.robotframework" } },
             "end": "^(?!(\\s*(\\.\\.\\.((( {2}| ?\\t)\\s*\\S.*)|(\\s*))?$))|(\\s*#.*$)|(\\s*$))",
             "patterns": [
-                { "include": "#testcase_settings" },
-                { "include": "#control_flow_expression_statements" },
-                { "include": "#control_flow_statements" },
-                { "include": "#other_statements" },
-                { "include": "#keyword_call" },
-                { "include": "#returning_keyword_call" }
+                { "include": "#escape" },
+                { "include": "#comment" },
+                { "include": "#comment_line" },
+                { "include": "#variables" },
+                { "include": "#line_continuation" }
             ]
         },
         "unknown_setting": {
@@ -327,7 +326,7 @@
             "contentName": "string.unquoted.argument.robotframework",
             "begin": "^(?!(?: {2,}| ?\\t ?)+(?:(?=[$\\[@&%]|\\.)))(?: {2,}| ?\\t ?)+(VAR)(?= {2,}| ?\\t ?| ?$)",
             "end": "^(?!(\\s*(\\.\\.\\.((( {2}| ?\\t)\\s*\\S.*)|(\\s*))?$))|(\\s*#.*$)|(\\s*$))",
-            "beginCaptures": { "1": { "name": "keyword.robotframework" } },
+            "beginCaptures": { "1": { "name": "keyword.other.robotframework" } },
             "patterns": [
                 { "include": "#escape" },
                 { "include": "#comment" },

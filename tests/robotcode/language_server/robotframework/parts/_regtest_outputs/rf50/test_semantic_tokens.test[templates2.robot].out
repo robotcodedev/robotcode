@@ -13,7 +13,7 @@ result: !SemanticTokens
   - 0
   - 17
   - 42
-  - 42
+  - 36
   - 0
   - 2
   - 0
@@ -203,7 +203,7 @@ result: !SemanticTokens
   - 0
   - 5
   - 15
-  - 42
+  - 36
   - 0
   - 1
   - 4
@@ -308,7 +308,7 @@ result: !SemanticTokens
   - 0
   - 5
   - 15
-  - 42
+  - 36
   - 0
   - 1
   - 4
@@ -413,7 +413,7 @@ result: !SemanticTokens
   - 0
   - 5
   - 15
-  - 42
+  - 36
   - 0
   - 1
   - 4
