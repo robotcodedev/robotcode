@@ -1385,7 +1385,6 @@
             "presentation": {
               "hidden": true
             },
-            "attachPython": false,
             "pythonConfiguration": "RobotCode: Python"
           },
           {
