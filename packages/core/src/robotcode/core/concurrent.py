@@ -1,5 +1,6 @@
 import contextlib
 import inspect
+import os
 import threading
 from concurrent.futures import CancelledError, Future
 from types import TracebackType
@@ -246,8 +247,12 @@ def run_as_task(callable: Callable[_P, _TResult], *args: _P.args, **kwargs: _P.k
 def run_as_debugpy_hidden_task(callable: Callable[_P, _TResult], *args: _P.args, **kwargs: _P.kwargs) -> Task[_TResult]:
     future, thread = _create_task_in_thread(callable, *args, **kwargs)
 
-    thread.pydev_do_not_trace = True  # type: ignore[attr-defined]
-    thread.is_pydev_daemon_thread = True  # type: ignore[attr-defined]
+    hidden_tasks = os.environ.get("ROBOTCODE_DISABLE_HIDDEN_TASKS", "0")
+    hide = hidden_tasks == "0"
+
+    if hide:
+        thread.pydev_do_not_trace = True  # type: ignore[attr-defined]
+        thread.is_pydev_daemon_thread = True  # type: ignore[attr-defined]
 
     thread.start()
 
