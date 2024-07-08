@@ -25,7 +25,7 @@ def replace_in_file(filename: Path, pattern: "re.Pattern[str]", to: str) -> None
     filename.write_text(new)
 
 
-REPOSITORY_BASE = "https://raw.githubusercontent.com/d-biehl/robotcode"
+REPOSITORY_BASE = "https://raw.githubusercontent.com/robotcode/robotcode"
 
 
 def main() -> None:

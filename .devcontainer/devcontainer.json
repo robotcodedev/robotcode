@@ -81,9 +81,6 @@
         "evenBetterToml.schema.associations": {
           "^(.*(/|\\\\)\\.?robot\\.toml|\\.?robot\\.toml)$": "http://localhost:8000/etc/robot.toml.json"
         },
-        "yaml.schemas": {
-          "https://squidfunk.github.io/mkdocs-material/schema.json": "mkdocs.yml"
-        },
         "mypy-type-checker.importStrategy": "fromEnvironment",
         "debugpy.debugJustMyCode": false,
         "black-formatter.importStrategy": "fromEnvironment",
