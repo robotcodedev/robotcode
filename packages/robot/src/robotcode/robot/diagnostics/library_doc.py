@@ -86,10 +86,10 @@ from robotcode.robot.utils.match import normalize, normalize_namespace
 from robotcode.robot.utils.stubs import HasError, HasErrors
 
 if get_robot_version() < (7, 0):
-    from robot.running.handlers import _PythonHandler, _PythonInitHandler
-    from robot.running.model import ResourceFile
-    from robot.running.usererrorhandler import UserErrorHandler
-    from robot.running.userkeyword import UserLibrary
+    from robot.running.handlers import _PythonHandler, _PythonInitHandler  # pyright: ignore[reportMissingImports]
+    from robot.running.model import ResourceFile  # pyright: ignore[reportMissingImports]
+    from robot.running.usererrorhandler import UserErrorHandler  # pyright: ignore[reportMissingImports]
+    from robot.running.userkeyword import UserLibrary  # pyright: ignore[reportMissingImports]
 
     robot_notset = ArgInfo.NOTSET
 

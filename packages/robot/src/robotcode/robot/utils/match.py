@@ -1,9 +1,12 @@
 from functools import lru_cache
 
+_transform_table = str.maketrans("", "", "_ ")
+
 
 @lru_cache(maxsize=5000)
 def normalize(text: str) -> str:
-    return text.lower().replace("_", "").replace(" ", "")
+    # return text.lower().replace("_", "").replace(" ", "")
+    return text.casefold().translate(_transform_table)
 
 
 @lru_cache(maxsize=5000)

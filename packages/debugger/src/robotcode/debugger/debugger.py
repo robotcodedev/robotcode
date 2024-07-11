@@ -1442,20 +1442,24 @@ class Debugger:
                         )
                     elif entry.suite_id() == variables_reference:
                         globals = context.variables._global.as_dict()
+                        vars = entry.get_first_or_self().variables()
+                        vars_dict = vars.as_dict() if vars is not None else {}
                         result.update(
                             {
                                 k: self._create_variable(k, v)
                                 for k, v in context.variables._suite.as_dict().items()
-                                if k not in globals or globals[k] != v
+                                if (k not in globals or globals[k] != v) and (k in vars_dict)
                             }
                         )
                     elif entry.test_id() == variables_reference:
                         globals = context.variables._suite.as_dict()
+                        vars = entry.get_first_or_self().variables()
+                        vars_dict = vars.as_dict() if vars is not None else {}
                         result.update(
                             {
                                 k: self._create_variable(k, v)
                                 for k, v in context.variables._test.as_dict().items()
-                                if k not in globals or globals[k] != v
+                                if (k not in globals or globals[k] != v) and (k in vars_dict)
                             }
                         )
                     elif entry.local_id() == variables_reference:
