@@ -4,7 +4,7 @@
   "description": "Robot Framework IntelliSense, linting, test execution and debugging, code formatting, refactoring, and many more",
   "icon": "images/icon.png",
   "publisher": "d-biehl",
-  "version": "0.83.0",
+  "version": "0.83.3",
   "author": {
     "name": "Daniel Biehl",
     "url": "https://github.com/robotcodedev/"
@@ -1522,21 +1522,21 @@
     "vscode-languageclient": "^9.0.1"
   },
   "devDependencies": {
-    "@eslint/js": "^9.2.0",
-    "@types/node": "^20.12.12",
+    "@eslint/js": "^9.5.0",
+    "@types/node": "^20.14.5",
     "@types/vscode": "^1.86.0",
-    "@vscode/test-electron": "^2.3.10",
-    "@vscode/vsce": "^2.26.1",
-    "esbuild": "^0.21.3",
+    "@vscode/test-electron": "^2.4.0",
+    "@vscode/vsce": "^2.27.0",
+    "esbuild": "^0.21.5",
     "eslint": "^8.57.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-import": "^2.29.1",
     "eslint-plugin-prettier": "^5.1.3",
     "ovsx": "^0.9.1",
-    "prettier": "^3.2.5",
+    "prettier": "^3.3.2",
     "ts-loader": "^9.5.1",
     "typescript": "^5.4.5",
-    "typescript-eslint": "^7.9.0"
+    "typescript-eslint": "^7.13.1"
   },
   "workspaces": [
     "docs"

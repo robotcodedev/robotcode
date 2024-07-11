@@ -26,6 +26,7 @@ from robot.parsing.model.statements import (
     Fixture,
     KeywordCall,
     LibraryImport,
+    Metadata,
     ResourceImport,
     Statement,
     Template,
@@ -234,7 +235,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
                 None,
             ),
             frozenset({ROBOT_OPERATOR}): (SemanticTokenTypes.OPERATOR, None),
-            frozenset({Token.NAME}): (RobotSemTokenTypes.NAME, None),
+            frozenset({Token.NAME}): (RobotSemTokenTypes.ARGUMENT, None),
             frozenset({Token.CONTINUATION}): (
                 RobotSemTokenTypes.CONTINUATION,
                 None,
@@ -593,7 +594,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
                     1,
                 )
             else:
-                if token.type != Token.ARGUMENT:
+                if token.type != Token.ARGUMENT or token.type != Token.NAME and isinstance(node, Metadata):
                     yield SemTokenInfo.from_token(token, sem_type, sem_mod, col_offset, length)
 
     def generate_sem_tokens(

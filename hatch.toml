@@ -18,7 +18,7 @@ dependencies = [
   "pytest",
   "pytest-html",
   "pytest_asyncio>=0.23",
-  # "pytest-regtest>=1.5.0",
+  "pytest-rerunfailures",
   "pytest-cov",
   "mypy",
   "ruff",
