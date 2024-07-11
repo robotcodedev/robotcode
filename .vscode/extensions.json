@@ -10,6 +10,5 @@
 		"charliermarsh.ruff",
 		"ms-python.black-formatter",
 		"ms-python.mypy-type-checker",
-		"d-biehl.robotcode",
 	]
 }
