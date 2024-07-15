@@ -15,7 +15,7 @@ hero:
       link: /about
     - theme: brand
       text: Quick Start
-      link: /quick-start
+      link: /02_get_started/quickstart
     - theme: brand
       text: Raise an Issue or Enhancement
       link: "https://github.com/robotcodedev/robotcode/issues"
