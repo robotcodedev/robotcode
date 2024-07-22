@@ -75,8 +75,12 @@ async def _debug_adapter_server_async(
 ) -> None:
     from .server import DebugAdapterServer
 
-    current_thread = threading.current_thread
-    setattr(current_thread, "pydev_do_not_trace", True)
+    hidden_tasks = os.environ.get("ROBOTCODE_DISABLE_HIDDEN_TASKS", "0")
+    hide = hidden_tasks == "0"
+
+    if hide:
+        current_thread = threading.current_thread
+        setattr(current_thread, "pydev_do_not_trace", True)
 
     async with DebugAdapterServer(
         mode=mode,
@@ -240,6 +244,7 @@ def run_debugger(
 
             app.verbose("Start robot")
             try:
+                app.verbose(f"Create robot context with args: {args}")
                 robot_ctx = robot.make_context("robot", args, parent=ctx)
                 robot.invoke(robot_ctx)
             except SystemExit as e:

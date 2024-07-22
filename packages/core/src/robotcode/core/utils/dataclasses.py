@@ -314,7 +314,7 @@ def __from_dict_handle_basic_types(value: Any, t: Type[Any], strict: bool) -> Tu
 
 
 def __from_dict_handle_sequence(value: Any, t: Type[Any], strict: bool) -> Tuple[Any, bool]:
-    if isinstance(value, Sequence):
+    if isinstance(value, Sequence) and not isinstance(value, str):
         args = _get_args_cached(t)
         return (_get_origin_cached(t) or t)(from_dict(v, args, strict=strict) for v in value), True
     return None, False
@@ -471,7 +471,7 @@ def from_dict(
             try:
                 return match_(**params)
             except TypeError as ex:
-                raise TypeError(f"Can't initialize class {match_!r} with parameters {params!r}: {ex}") from ex
+                raise TypeError(f"Can't initialize {match_!r} with parameters {params!r}: {ex}") from ex
 
     raise TypeError(
         "Value must be of type `"

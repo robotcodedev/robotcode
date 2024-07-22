@@ -12,7 +12,9 @@ from typing import (
 )
 
 from robot.parsing.lexer.tokens import Token
+from robot.variables.search import search_variable
 from robotcode.core.lsp.types import Position, Range
+from robotcode.robot.utils.match import normalize
 
 from ..utils.ast import range_from_token
 
@@ -131,9 +133,6 @@ class InvalidVariableError(Exception):
 
 class VariableMatcher:
     def __init__(self, name: str) -> None:
-        from robot.variables.search import search_variable
-        from robotcode.robot.utils.match import normalize
-
         self.name = name
 
         match = search_variable(name, "$@&%", ignore_errors=True)
@@ -146,9 +145,6 @@ class VariableMatcher:
         self.normalized_name = str(normalize(self.base))
 
     def __eq__(self, o: object) -> bool:
-        from robot.utils.normalizing import normalize
-        from robot.variables.search import search_variable
-
         if isinstance(o, VariableMatcher):
             return o.normalized_name == self.normalized_name
 

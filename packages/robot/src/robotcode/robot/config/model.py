@@ -291,8 +291,9 @@ class BaseOptions(ValidateMixin):
                     for key, item in value.items():
                         append_name(field)
                         if isinstance(item, list):
-                            separator = ";" if any(True for s in item if ":" in s) else ":"
-                            result.append(f"{key}{separator if item else ''}{separator.join(item)}")
+                            str_item = [str(i) for i in item]
+                            separator = ";" if any(True for s in str_item if ":" in s) else ":"
+                            result.append(f"{key}{separator if item else ''}{separator.join(str_item)}")
                         else:
                             result.append(f"{key}:{item}")
                 else:
@@ -2294,7 +2295,7 @@ class RobotProfile(RobotExtendBaseProfile):
 
             Examples:
             ```toml
-            # alway disabled
+            # always disabled
             enabled = false
             ```
 

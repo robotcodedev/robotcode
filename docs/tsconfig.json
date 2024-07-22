@@ -1,0 +1,25 @@
+{
+  "compilerOptions": {
+    "module": "esnext",
+    "target": "esnext",
+    "lib": [
+      "DOM",
+      "ESNext",
+      "WebWorker"
+    ],
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "jsx": "preserve",
+    "noUnusedLocals": true,
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "forceConsistentCasingInFileNames": true,
+  },
+  "exclude": [
+    ".vitepress/dist",
+    ".vitepress/cache",
+    "dist",
+    "node_modules"
+  ]
+}
