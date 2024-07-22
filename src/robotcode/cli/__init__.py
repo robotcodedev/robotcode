@@ -1,4 +1,5 @@
 import logging
+import os
 from pathlib import Path
 from typing import List, Optional
 
@@ -254,12 +255,75 @@ def clean(ctx: click.Context) -> None:
     """
     click.echo("TODO")
 
+    if click.confirm("Are you sure you want to clean this project?"):
+        pass
+    else:
+        return
+
+    current_directory = os.getcwd()
+
+    try:
+        files = os.listdir(current_directory)
+        for file in files:
+            file_path = os.path.join(current_directory, file)
+            if os.path.isfile(file_path):
+                os.remove(file_path)
+    except OSError:
+        print("Error occurred while deleting files.")
+
+    try:
+        folders = os.listdir(current_directory)
+        for folder in folders:
+            folder_path = os.path.join(current_directory, folder)
+            if os.path.isdir(folder_path):
+                if os.path.basename(folder_path) != ".venv" and os.path.basename(folder_path) != ".vscode":
+                    try:
+                        files = os.listdir(folder_path)
+                        for file in files:
+                            file_path = os.path.join(folder_path, file)
+                            if os.path.isfile(file_path):
+                                os.remove(file_path)
+                    except OSError:
+                        print("Error occurred while deleting files.")
+                    os.rmdir(folder_path)
+    except OSError:
+        print("Error occurred while deleting folders.")
+
 
 @robotcode.command()
-@click.pass_context
-def new(ctx: click.Context) -> None:
+@click.argument("project_name", default="new_project")
+def new(project_name) -> None:
     """TODO: Create a new Robot Framework project.
 
     TODO: This is not implemented yet.
     """
     click.echo("TODO")
+
+    cur_path = project_name
+    if not os.path.exists(cur_path):
+        os.mkdir(cur_path)
+    else:
+        print("Directory {project_name} already exists.")
+        return
+
+    filename = "robot.toml"
+    with open(os.path.join(cur_path, filename), "w") as temp_file:
+        temp_file.write('output-dir = "output"\n'+'languages = ["english"]\n\n'
+                        +"[variables]\n"
+                        +'TEXT = "Hello world!"\n\n'
+                        +"[profiles.dev1]\n"
+                        +'output-dir = "dev1output"')
+
+    filename = "requirements.txt"
+    with open(os.path.join(cur_path, filename), "w") as temp_file:
+        temp_file.write("robotframework\n"+"robotframework-tidy\n"
+                        +"robotframework-browser\n"
+                        +"robotcode-runner")
+
+    cur_path = project_name + "/tests"
+    os.mkdir(cur_path)
+    filename = "example.robot"
+    with open(os.path.join(cur_path, filename), "w") as temp_file:
+        temp_file.write("*** Variables ***\n"+"$\{TEXT\}    HELLO WORLD!\n"
+                        +"*** Test Cases***\n"+"Say Hello\n"
+                        +"    Log    $\{TEXT\}")
