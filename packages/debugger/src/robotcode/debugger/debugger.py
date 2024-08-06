@@ -756,7 +756,7 @@ class Debugger:
                 OutputEvent(
                     body=OutputEventBody(
                         output=f"\u001b[38;5;14m{(type + ' ') if type else ''}\u001b[0m{name}\n",
-                        category=OutputCategory.CONSOLE,
+                        category="OutputCategory.CONSOLE",
                         group=OutputGroup.START,
                         source=Source(path=str(self.map_path_to_client(source))) if source else None,
                         line=line_no if source is not None else None,
@@ -778,7 +778,8 @@ class Debugger:
                         category=OutputCategory.CONSOLE,
                         group=OutputGroup.END,
                         source=Source(path=str(self.map_path_to_client(source))) if source else None,
-                        line=line_no,
+                        line=line_no if source is not None else None,
+                        column=0 if source is not None else None,
                     )
                 ),
             )

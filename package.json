@@ -1251,6 +1251,11 @@
               },
               "launcherArgs": {
                 "type": "array",
+                "description": "Command line arguments passed to launcher.",
+                "default": []
+              },
+              "launcherExtraArgs": {
+                "type": "array",
                 "description": "Extra command line arguments passed to launcher.",
                 "default": []
               },
