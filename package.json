@@ -1518,24 +1518,24 @@
   "dependencies": {
     "@vscode/python-extension": "^1.0.5",
     "ansi-colors": "^4.1.3",
+    "robotcode": "file:",
     "vscode-languageclient": "^9.0.1"
   },
   "devDependencies": {
-    "@eslint/js": "^9.5.0",
-    "@types/node": "^20.14.5",
+    "@eslint/js": "^9.8.0",
+    "@types/node": "^22.1.0",
     "@types/vscode": "^1.86.0",
-    "@vscode/test-electron": "^2.4.0",
-    "@vscode/vsce": "^2.27.0",
-    "esbuild": "^0.21.5",
-    "eslint": "^8.57.0",
+    "@vscode/test-electron": "^2.4.1",
+    "@vscode/vsce": "^2.31.1",
+    "esbuild": "^0.23.0",
+    "eslint": "^9.8.0",
     "eslint-config-prettier": "^9.1.0",
-    "eslint-plugin-import": "^2.29.1",
-    "eslint-plugin-prettier": "^5.1.3",
-    "ovsx": "^0.9.1",
-    "prettier": "^3.3.2",
+    "eslint-plugin-prettier": "^5.2.1",
+    "ovsx": "^0.9.2",
+    "prettier": "^3.3.3",
     "ts-loader": "^9.5.1",
-    "typescript": "^5.4.5",
-    "typescript-eslint": "^7.13.1"
+    "typescript": "^5.5.4",
+    "typescript-eslint": "^8.0.1"
   },
   "workspaces": [
     "docs"
