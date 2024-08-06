@@ -1,5 +1,6 @@
 import asyncio
 import os
+import signal
 import threading
 from typing import Any, Callable, Dict, List, Literal, Optional, Union
 
@@ -215,6 +216,7 @@ class DebugAdapterServerProtocol(DebugAdapterProtocol):
 
     @_logger.call
     def exit(self, exit_code: int) -> None:
+
         with self._exited_lock:
             self.send_event(ExitedEvent(body=ExitedEventBody(exit_code=exit_code)))
             self._exited = True
@@ -232,8 +234,6 @@ class DebugAdapterServerProtocol(DebugAdapterProtocol):
         *args: Any,
         **kwargs: Any,
     ) -> None:
-        import signal
-
         if not self._sigint_signaled:
             self._logger.info("Send SIGINT to process")
             signal.raise_signal(signal.SIGINT)

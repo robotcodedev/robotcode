@@ -180,6 +180,9 @@ class RobotCodeDebugConfigurationProvider implements vscode.DebugConfigurationPr
         debugConfiguration.attachPython = false;
       }
 
+      debugConfiguration.console =
+        (debugConfiguration?.console as string | undefined) ?? config.get<string>("debug.defaultConsole");
+
       if (debugConfiguration.attachPython && !config.get<boolean>("debug.useExternalDebugpy")) {
         const debugpyPath = await this.pythonManager.getDebuggerPackagePath();
 
@@ -233,7 +236,11 @@ class RobotCodeDebugAdapterDescriptorFactory implements vscode.DebugAdapterDescr
             throw new Error("Can't get a valid python command.");
           }
 
-          const robotcodeExtraArgs = config.get<string[]>("extraArgs", []);
+          let robotcodeExtraArgs = config.get<string[]>("extraArgs", []);
+
+          if (session.configuration.launcherExtraArgs) {
+            robotcodeExtraArgs = [...robotcodeExtraArgs, ...(session.configuration.launcherExtraArgs as string[])];
+          }
           const args: string[] = [
             "-u",
             this.pythonManager.robotCodeMain,
@@ -550,10 +557,6 @@ export class DebugManager {
           cwd: folder?.uri.fsPath,
           paths: paths?.length > 0 ? paths : ["."],
           args: "args" in testLaunchConfig ? [...(testLaunchConfig.args as string[]), ...args] : args,
-          console:
-            "console" in testLaunchConfig
-              ? testLaunchConfig.console
-              : config.get("debug.defaultConsole", "integratedTerminal"),
           runId: runId,
         },
       },

@@ -298,7 +298,7 @@ class LauncherDebugAdapterProtocol(DebugAdapterProtocol):
             run_env.update(env)
 
             await asyncio.get_event_loop().subprocess_exec(
-                lambda: OutputProtocol(self), *run_args, cwd=cwd, env=run_env
+                lambda: OutputProtocol(self), *robotcode_run_args, *run_args, cwd=cwd, env=run_env
             )
 
         else:
