@@ -1348,7 +1348,7 @@ export class TestControllerManager {
     if (run !== undefined) {
       for (const id of items) {
         const item = this.findTestItemById(id);
-        if (item !== undefined) {
+        if (item !== undefined && item.canResolveChildren===false) {
           run.enqueued(item);
         }
       }
@@ -1357,7 +1357,7 @@ export class TestControllerManager {
 
   private OnRobotStartedEvent(runId: string | undefined, event: RobotExecutionEvent) {
     switch (event.type) {
-      case "suite":
+      //case "suite":
       case "test":
         this.TestItemStarted(runId, event);
         break;
@@ -1382,7 +1382,7 @@ export class TestControllerManager {
 
   private OnRobotEndedEvent(runId: string | undefined, event: RobotExecutionEvent) {
     switch (event.type) {
-      case "suite":
+      //case "suite":
       case "test":
         this.TestItemEnded(runId, event);
         break;
