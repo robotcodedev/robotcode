@@ -1,0 +1,5 @@
+python-path = [
+    "tests/robotcode/language_server/robotframework/parts/data/lib",
+    "tests/robotcode/language_server/robotframework/parts/data/resources",
+]
+paths = "tests/robotcode/language_server/robotframework/parts/data"

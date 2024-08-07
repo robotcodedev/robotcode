@@ -293,3 +293,6 @@ report.html
 .ruff_cache/
 
 bundled/libs
+
+# robotframework
+results/
