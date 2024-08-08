@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/restrict-template-expressions */
 import * as net from "net";
 import * as vscode from "vscode";
 import {
@@ -151,7 +150,6 @@ export class LanguageClientsManager {
 
   private _fileExtensions?: string[];
 
-  // eslint-disable-next-line class-methods-use-this
   public get fileExtensions(): string[] {
     if (this._fileExtensions === undefined) {
       this._fileExtensions = ["robot", "resource"];
@@ -425,7 +423,7 @@ export class LanguageClientsManager {
 
     try {
       if (!(await this.isValidRobotEnvironmentInFolder(folder, true))) return undefined;
-    } catch (e) {
+    } catch {
       return undefined;
     }
     const pythonCommand = await this.pythonManager.getPythonCommand(folder);

@@ -1508,8 +1508,8 @@
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
     "pretest": "npm run compile && npm run lint",
-    "lint": "eslint --ext .ts,.tsx,.js .",
-    "lint-fix": "eslint --ext .ts,.tsx,.js --fix .",
+    "lint": "eslint .",
+    "lint-fix": "eslint --fix .",
     "test": "node ./out/test/runTest.js",
     "docs:install": "npm -C docs install",
     "docs:dev": "npm -w docs run dev",
@@ -1527,6 +1527,8 @@
     "vscode-languageclient": "^9.0.1"
   },
   "devDependencies": {
+    "@eslint/compat": "^1.1.1",
+    "@eslint/eslintrc": "^3.1.0",
     "@eslint/js": "^9.8.0",
     "@types/node": "^22.1.0",
     "@types/vscode": "^1.86.0",
@@ -1536,6 +1538,7 @@
     "eslint": "^9.8.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-prettier": "^5.2.1",
+    "globals": "^15.9.0",
     "ovsx": "^0.9.2",
     "prettier": "^3.3.3",
     "ts-loader": "^9.5.1",

@@ -1,6 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
 import { red, yellow, blue } from "ansi-colors";
 import * as vscode from "vscode";
 import { DebugManager } from "./debugmanager";
@@ -1348,7 +1345,7 @@ export class TestControllerManager {
     if (run !== undefined) {
       for (const id of items) {
         const item = this.findTestItemById(id);
-        if (item !== undefined && item.canResolveChildren===false) {
+        if (item !== undefined && item.canResolveChildren === false) {
           run.enqueued(item);
         }
       }

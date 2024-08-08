@@ -129,10 +129,10 @@ def range_from_node(
                         return Range(start=first_range.start, end=last_range.end)
 
     return Range(
-        start=Position(line=node.lineno - 1, character=node.col_offset),
+        start=Position(line=node.lineno - 1, character=node.col_offset),  # type: ignore
         end=Position(
-            line=node.end_lineno - 1 if node.end_lineno is not None else -1,
-            character=node.end_col_offset if node.end_col_offset is not None else -1,
+            line=node.end_lineno - 1 if node.end_lineno is not None else -1,  # type: ignore
+            character=node.end_col_offset if node.end_col_offset is not None else -1,  # type: ignore
         ),
     )
 

@@ -53,7 +53,6 @@ class RobotCodeDebugConfigurationProvider implements vscode.DebugConfigurationPr
     return this._resolveDebugConfiguration(folder, debugConfiguration, token);
   }
 
-  // eslint-disable-next-line class-methods-use-this
   async _resolveDebugConfiguration(
     folder: vscode.WorkspaceFolder | undefined,
     debugConfiguration: vscode.DebugConfiguration,
@@ -281,7 +280,7 @@ class RobotCodeDebugAdapterDescriptorFactory implements vscode.DebugAdapterDescr
           try {
             return new vscode.DebugAdapterServer(port, host);
           } catch (error) {
-            throw new Error("Failed to start debug launcher.");
+            throw new Error(`Failed to start debug launcher: ${error}`);
           }
         }
         case "pipe-server": {

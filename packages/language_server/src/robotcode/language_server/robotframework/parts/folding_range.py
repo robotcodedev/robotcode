@@ -54,18 +54,18 @@ class _Visitor(Visitor):
         if not self.line_folding_only:
             self.result.append(
                 FoldingRange(
-                    start_line=start_node.lineno - 1,
-                    end_line=end_node.end_lineno - 1 if end_node.end_lineno is not None else end_node.lineno - 1,
-                    start_character=start_node.col_offset if not self.line_folding_only else None,
-                    end_character=end_node.end_col_offset if not self.line_folding_only else None,
+                    start_line=start_node.lineno - 1,  # type: ignore
+                    end_line=end_node.end_lineno - 1 if end_node.end_lineno is not None else end_node.lineno - 1,  # type: ignore
+                    start_character=start_node.col_offset if not self.line_folding_only else None,  # type: ignore
+                    end_character=end_node.end_col_offset if not self.line_folding_only else None,  # type: ignore
                     kind=kind,
                 )
             )
         else:
             self.result.append(
                 FoldingRange(
-                    start_line=start_node.lineno - 1,
-                    end_line=end_node.end_lineno - 1 if end_node.end_lineno is not None else end_node.lineno - 1,
+                    start_line=start_node.lineno - 1,  # type: ignore
+                    end_line=end_node.end_lineno - 1 if end_node.end_lineno is not None else end_node.lineno - 1,  # type: ignore
                     kind=kind,
                 )
             )

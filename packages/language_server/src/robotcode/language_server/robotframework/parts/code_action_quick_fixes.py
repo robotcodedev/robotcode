@@ -579,7 +579,7 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
                     section = finder.variable_sections[-1]
 
                     _, last_stmt = FirstAndLastRealStatementFinder.find_from(section)
-                    end_lineno = last_stmt.end_lineno if last_stmt else section.end_lineno
+                    end_lineno = last_stmt.end_lineno if last_stmt else section.end_lineno  # type: ignore
                     if end_lineno is None:
                         return None
 
@@ -598,7 +598,7 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
                             _,
                             last_stmt,
                         ) = FirstAndLastRealStatementFinder.find_from(section)
-                        end_lineno = last_stmt.end_lineno if last_stmt else section.end_lineno
+                        end_lineno = last_stmt.end_lineno if last_stmt else section.end_lineno  # type: ignore
                         if end_lineno is None:
                             return None
 

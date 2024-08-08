@@ -174,7 +174,7 @@ class JsonRPCServer(Generic[TProtocol], abc.ABC):
     def start_stdio(self) -> None:
         self.mode = ServerMode.STDIO
 
-        transport = StdOutTransportAdapter(sys.__stdin__.buffer, sys.__stdout__.buffer)
+        transport = StdOutTransportAdapter(sys.__stdin__.buffer, sys.__stdout__.buffer)  # type: ignore
 
         protocol = self.create_protocol()
 
