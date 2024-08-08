@@ -151,12 +151,12 @@ If a variable is present in multiple of the inherited profiles, the value of tha
 
 You can select a profile to work with, by entering "RobotCode: Select Configuration Profiles" in the command palette (ctrl+shift+p).
 
-![Select Profile1](./../images/config%20images/toml-profiles-command-selection.PNG)
+![Select Profile1](images/toml-profiles-command-selection.png)
 
 Should you select more than one profile, a merged version of those profiles will be executed.
 Alternatively, you can select a profile to run or debug with, by clicking on the buttons, marked in the image below.
 
-![Select Profile2](./../images/config%20images/config_selec_buttons.PNG)
+![Select Profile2](images/config_select_buttons.png)
 
 Using this method however, does not allow you to select multiple profiles at once.
 
@@ -257,4 +257,4 @@ Here are some of the most common ways, to execute tests via the CLI.
 
     Executes all tests with a given tag. Tags can be assigned either globally in the settings or individually for each test case.
 
-    <IMG src="./../images/config%20images/tags_robot.PNG"/>
+    <IMG src="images/tags_robot.PNG"/>

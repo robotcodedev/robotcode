@@ -12,7 +12,7 @@ hero:
   actions:
     - theme: brand
       text: What is RobotCode?
-      link: /about
+      link: /01_about
     - theme: brand
       text: Get Started
       link: /02_get_started
@@ -24,11 +24,13 @@ features:
   - title: Autocomplete and IntelliSense
     details:
       Autocompletion for
-      - Libraries,
-      - Resources,
-      - Variables
-      - Keywords and Parameters
-      - Namespaces
+      Libraries,
+      Resources,
+      Variables,
+      Keywords and Parameters,
+      Namespaces,
+      and more...
+
 
       <img src="/autocomplete1.gif" />
   - title: Running and Debugging

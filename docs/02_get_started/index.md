@@ -5,21 +5,21 @@ Welcome to RobotCode! In this section, we will get your Visual Studio Code set u
 ## Requirements
 - Python 3.8 or above
 - Robotframework version 4.1 and above
-- VSCode version 1.82 and above
+- VSCode version 1.86 and above
 
 ## Installing RobotCode
 
 1. Open Visual Studio Code.
 2. Inside Visual Studio Code, create a new project folder or open an existing one where you want to set up your Robot Framework project.
-3. Go to the **Extensions** tab (Shortcut key `CTRL + SHIFT + X`).
-4. Search for **RobotCode** and install the extension ![RobotCode Icon](../robotcode-logo.svg "RobotCode Icon"){.inline-icon} [RobotCode - Robot Framework Support](https://marketplace.visualstudio.com/items?itemName=d-biehl.robotcode "RobotCode Extension"). This will also install the **Python** and **Python Debugger** extensions.
+3. Go to the **Extensions** tab (Shortcut key <kbd>CONTROL</kbd>+<kbd>SHIFT</kbd>+<kbd>X</kbd>).
+4. Search for **RobotCode** and install the extension ![RobotCode Icon](/robotcode-logo.svg "RobotCode Icon"){.inline-icon} [RobotCode - Robot Framework Support](https://marketplace.visualstudio.com/items?itemName=d-biehl.robotcode "RobotCode Extension"). This will also install the **Python** and **Python Debugger** extensions.
 5. **(Recommended)** Install the **Even Better TOML** extension for handling `.toml` files more effectively.  This will be helpful when setting up your project settings in the [Configuration](./configuration) section.
 
 After installation:
    - Right-click on the RobotCode extension in the Extensions tab.
    - Click **Add to Workspace Recommendations** to ensure that all team members working on this project are prompted to install the RobotCode extension, creating a consistent development environment for everyone.
 
-![RobotCode](../robotcode-add-to-workspace.gif){style="width: 30%;"}
+![RobotCode](images/robotcode-add-to-workspace.gif){style="width: 30%;"}
 
 ## Initialize an Empty Project
 
@@ -37,12 +37,14 @@ robotframework-tidy
 
 A virtual environment is a self-contained directory that contains a Python installation for a particular version of Python, plus a number of additional packages. This helps keep your project dependencies isolated from other projects. In this step we will let Visual Studio Code create a virtual environment using the selected Python version, install the dependencies listed in requirements.txt, and activate the virtual environment. This ensures that your project has all the necessary packages and an isolated environment for development.
 
-1. Click on **Create Environment** in Visual Studio Code. If this button isn't visible, you can alternatively open the Command Palette by pressing `CTRL + SHIFT + P`, then search for **Python: Create Environment**, and select it.
-2. Choose **Venv**, which stands for Virtual Environment.
+1. Click on **Create Environment** in Visual Studio Code. If this button isn't visible,
+   you can alternatively open the Command Palette by pressing
+   <kbd>CONTROL</kbd>+<kbd>SHIFT</kbd>+<kbd>P</kbd>, then search for **Python: Create Environment**, and select it.
+2. Choose **venv**, which stands for Virtual Environment.
 3. Select your preferred Python version.
 4. Check the box for requirements.txt and click OK.
 
-![Create python environment](../python-create-env.gif)
+![Create python environment](images/python-create-env.gif)
 
 ## Verifying the Installation
 1. Open the terminal in Visual Studio Code. Make sure you are in the root folder of your project.
@@ -65,6 +67,6 @@ First Test Case
 To run this test file, press the green play button next to the `First Test Case` keyword in the code.
 You should see the `Hello world` output displayed in the **Debug Console** of Visual Studio Code.
 
-![RobotCode](../robotcode-first-test-case.gif){style="width: 70%;"}
+![RobotCode](images/robotcode-first-test-case.gif){style="width: 70%;"}
 
 And that's it! If you have any questions or run into issues, check out the RobotCode documentation or join our community in slack for support. Happy coding!
