@@ -639,7 +639,7 @@ def validate_types(expected_types: Union[type, Tuple[type, ...], None], value: A
             continue
 
         if (
-            t is Any
+            t is Any  # type: ignore
             or t is Ellipsis  # type: ignore
             or isinstance(value, origin or t)
             or (
@@ -675,7 +675,7 @@ def validate_types(expected_types: Union[type, Tuple[type, ...], None], value: A
 
                 return []
 
-            if t is Any:
+            if t is Any:  # type: ignore
                 return []
 
             if isinstance(value, origin or t):
@@ -698,7 +698,7 @@ class ValidateMixin:
         if not dataclasses.is_dataclass(self):
             return
 
-        for f in dataclasses.fields(self):
+        for f in dataclasses.fields(self):  # type: ignore
             converter = f.metadata.get("convert")
             if converter is not None:
                 if inspect.ismethod(converter):
@@ -710,7 +710,7 @@ class ValidateMixin:
         if not dataclasses.is_dataclass(self):
             return
 
-        errors = {}
+        errors = {}  # type: ignore
 
         type_hints = _get_type_hints_cached(type(self))
 

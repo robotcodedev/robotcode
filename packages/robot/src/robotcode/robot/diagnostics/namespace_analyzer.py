@@ -117,14 +117,12 @@ class NamespaceAnalyzer(Visitor, ModelHelper):
         model: ast.AST,
         namespace: Namespace,
         finder: KeywordFinder,
-        ignored_lines: List[int],
     ) -> None:
         super().__init__()
 
         self.model = model
         self.namespace = namespace
         self.finder = finder
-        self._ignored_lines = ignored_lines
 
         self.current_testcase_or_keyword_name: Optional[str] = None
         self.test_template: Optional[TestTemplate] = None
@@ -261,8 +259,6 @@ class NamespaceAnalyzer(Visitor, ModelHelper):
                     )
                 )
             )
-            # r.start.character = 0
-            # r.end.character = 0
 
             var_def = self.namespace.find_variable(
                 name,
@@ -450,15 +446,6 @@ class NamespaceAnalyzer(Visitor, ModelHelper):
         finally:
             self.node_stack = self.node_stack[:-1]
 
-    def _should_ignore(self, range: Range) -> bool:
-        import builtins
-
-        for line_no in builtins.range(range.start.line, range.end.line + 1):
-            if line_no in self._ignored_lines:
-                return True
-
-        return False
-
     def append_diagnostics(
         self,
         range: Range,
@@ -471,8 +458,6 @@ class NamespaceAnalyzer(Visitor, ModelHelper):
         related_information: Optional[List[DiagnosticRelatedInformation]] = None,
         data: Optional[Any] = None,
     ) -> None:
-        if self._should_ignore(range):
-            return
 
         self._diagnostics.append(
             Diagnostic(
@@ -1167,7 +1152,7 @@ class NamespaceAnalyzer(Visitor, ModelHelper):
             for v in entries.values():
                 if v.import_source == self.namespace.source and v.import_range == range_from_token(name_token):
                     for k in self._namespace_references:
-                        if type(k) == type(v) and k.library_doc.source_or_origin == v.library_doc.source_or_origin:
+                        if type(k) is type(v) and k.library_doc.source_or_origin == v.library_doc.source_or_origin:
                             self._namespace_references[k].add(
                                 Location(self.namespace.document.document_uri, v.import_range)
                             )
@@ -1192,7 +1177,7 @@ class NamespaceAnalyzer(Visitor, ModelHelper):
             for v in entries.values():
                 if v.import_source == self.namespace.source and v.import_range == range_from_token(name_token):
                     for k in self._namespace_references:
-                        if type(k) == type(v) and k.library_doc.source_or_origin == v.library_doc.source_or_origin:
+                        if type(k) is type(v) and k.library_doc.source_or_origin == v.library_doc.source_or_origin:
                             self._namespace_references[k].add(
                                 Location(self.namespace.document.document_uri, v.import_range)
                             )
@@ -1217,7 +1202,7 @@ class NamespaceAnalyzer(Visitor, ModelHelper):
             for v in entries.values():
                 if v.import_source == self.namespace.source and v.import_range == range_from_token(name_token):
                     for k in self._namespace_references:
-                        if type(k) == type(v) and k.library_doc.source_or_origin == v.library_doc.source_or_origin:
+                        if type(k) is type(v) and k.library_doc.source_or_origin == v.library_doc.source_or_origin:
                             self._namespace_references[k].add(
                                 Location(self.namespace.document.document_uri, v.import_range)
                             )

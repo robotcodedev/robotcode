@@ -26,6 +26,7 @@ from robotcode.core.text_document import TextDocument
 from robotcode.core.uri import Uri
 from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.core.workspace import Workspace, WorkspaceFolder
+from robotcode.robot.diagnostics.diagnostics_modifier import DiagnosticsModifier
 
 from ..config.model import RobotBaseProfile
 from ..utils import get_robot_version
@@ -453,9 +454,7 @@ class DocumentsCacheHelper:
         return result
 
     def get_only_initialized_namespace(self, document: TextDocument) -> Optional[Namespace]:
-        result: Optional[Namespace] = document.get_data(self.INITIALIZED_NAMESPACE)
-
-        return result
+        return cast(Optional[Namespace], document.get_data(self.INITIALIZED_NAMESPACE))
 
     def __get_namespace_for_document_type(
         self, document: TextDocument, document_type: Optional[DocumentType]
@@ -579,3 +578,9 @@ class DocumentsCacheHelper:
     def calc_cache_path(self, folder_uri: Uri) -> Path:
         # TODO: cache path should be configurable, save cache in vscode workspace folder or in robotcode cache folder
         return folder_uri.to_path()
+
+    def get_diagnostic_modifier(self, document: TextDocument) -> DiagnosticsModifier:
+        return document.get_cache(self.__get_diagnostic_modifier)
+
+    def __get_diagnostic_modifier(self, document: TextDocument) -> DiagnosticsModifier:
+        return DiagnosticsModifier(self.get_model(document, False))

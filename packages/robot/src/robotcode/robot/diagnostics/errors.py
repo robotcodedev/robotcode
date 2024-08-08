@@ -31,3 +31,5 @@ class Error:
     DEPRECATED_FORCE_TAG = "DeprecatedForceTag"
     IMPORT_REQUIRES_VALUE = "ImportRequiresValue"
     KEYWORD_ERROR = "KeywordError"
+    MULTIPLE_KEYWORDS = "MultipleKeywords"
+    CONFLICTING_LIBRARY_KEYWORDS = "ConflictingLibraryKeywords"

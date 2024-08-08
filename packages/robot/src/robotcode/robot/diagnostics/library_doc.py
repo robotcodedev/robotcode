@@ -1960,7 +1960,7 @@ def get_library_doc(
                             return_type=(
                                 (
                                     str(kw[1].args.return_type)
-                                    if kw[1].args.return_type is not None and kw[1].args.return_type != type(None)
+                                    if kw[1].args.return_type is not None and kw[1].args.return_type is not type(None)
                                     else None
                                 )
                                 if get_robot_version() >= (7, 0)
@@ -2636,7 +2636,7 @@ def get_model_doc(
                     message=error,
                     type_name="ModelError",
                     source=source,
-                    line_no=node.lineno,
+                    line_no=node.lineno,  # type: ignore
                 )
             )
         if append_model_errors:
@@ -2648,7 +2648,7 @@ def get_model_doc(
                             message=e,
                             type_name="ModelError",
                             source=source,
-                            line_no=node.lineno,
+                            line_no=node.lineno,  # type: ignore
                         )
                     )
 

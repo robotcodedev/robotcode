@@ -89,7 +89,6 @@ export class PythonManager {
     return this._pythonExtension;
   }
 
-  // eslint-disable-next-line class-methods-use-this
   public async getPythonCommand(folder: vscode.WorkspaceFolder | undefined): Promise<string | undefined> {
     const config = vscode.workspace.getConfiguration(CONFIG_SECTION, folder);
     let result: string | undefined;

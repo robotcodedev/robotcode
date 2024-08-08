@@ -129,6 +129,9 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
 
         return result
 
+    def modify_diagnostics(self, document: TextDocument, diagnostics: List[Diagnostic]) -> List[Diagnostic]:
+        return self.parent.documents_cache.get_diagnostic_modifier(document).modify_diagnostics(diagnostics)
+
     @language_id("robotframework")
     def collect_namespace_diagnostics(
         self, sender: Any, document: TextDocument, diagnostics_type: DiagnosticsCollectType
@@ -136,7 +139,9 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
         try:
             namespace = self.parent.documents_cache.get_namespace(document)
 
-            return DiagnosticsResult(self.collect_namespace_diagnostics, namespace.get_diagnostics())
+            return DiagnosticsResult(
+                self.collect_namespace_diagnostics, self.modify_diagnostics(document, namespace.get_diagnostics())
+            )
         except (CancelledError, SystemExit, KeyboardInterrupt):
             raise
         except BaseException as e:
@@ -210,10 +215,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
             for token in self.parent.documents_cache.get_tokens(document):
                 check_current_task_canceled()
 
-                if token.type in [
-                    Token.ERROR,
-                    Token.FATAL_ERROR,
-                ] and not Namespace.should_ignore(document, range_from_token(token)):
+                if token.type in [Token.ERROR, Token.FATAL_ERROR]:
                     result.append(self._create_error_from_token(token))
 
                 try:
@@ -221,23 +223,19 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
                         if variable_token == token:
                             break
 
-                        if variable_token.type in [
-                            Token.ERROR,
-                            Token.FATAL_ERROR,
-                        ] and not Namespace.should_ignore(document, range_from_token(variable_token)):
+                        if variable_token.type in [Token.ERROR, Token.FATAL_ERROR]:
                             result.append(self._create_error_from_token(variable_token))
 
                 except VariableError as e:
-                    if not Namespace.should_ignore(document, range_from_token(token)):
-                        result.append(
-                            Diagnostic(
-                                range=range_from_token(token),
-                                message=str(e),
-                                severity=DiagnosticSeverity.ERROR,
-                                source=self.source_name,
-                                code=type(e).__qualname__,
-                            )
+                    result.append(
+                        Diagnostic(
+                            range=range_from_token(token),
+                            message=str(e),
+                            severity=DiagnosticSeverity.ERROR,
+                            source=self.source_name,
+                            code=type(e).__qualname__,
                         )
+                    )
         except (CancelledError, SystemExit, KeyboardInterrupt):
             raise
         except BaseException as e:
@@ -260,7 +258,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
                 ],
             )
 
-        return DiagnosticsResult(self.collect_token_errors, result)
+        return DiagnosticsResult(self.collect_token_errors, self.modify_diagnostics(document, result))
 
     @language_id("robotframework")
     @_logger.call
@@ -278,15 +276,14 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
                 check_current_task_canceled()
 
                 error = node.error if isinstance(node, HasError) else None
-                if error is not None and not Namespace.should_ignore(document, range_from_node(node)):
+                if error is not None:
                     result.append(self._create_error_from_node(node, error))
                 errors = node.errors if isinstance(node, HasErrors) else None
                 if errors is not None:
                     for e in errors:
-                        if not Namespace.should_ignore(document, range_from_node(node)):
-                            result.append(self._create_error_from_node(node, e))
+                        result.append(self._create_error_from_node(node, e))
 
-            return DiagnosticsResult(self.collect_model_errors, result)
+            return DiagnosticsResult(self.collect_model_errors, self.modify_diagnostics(document, result))
 
         except (CancelledError, SystemExit, KeyboardInterrupt):
             raise
@@ -334,7 +331,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
                 check_current_task_canceled()
 
                 references = self.parent.robot_references.find_keyword_references(document, kw, False, True)
-                if not references and not Namespace.should_ignore(document, kw.name_range):
+                if not references:
                     result.append(
                         Diagnostic(
                             range=kw.name_range,
@@ -346,7 +343,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
                         )
                     )
 
-            return DiagnosticsResult(self.collect_unused_keyword_references, result)
+            return DiagnosticsResult(self.collect_unused_keyword_references, self.modify_diagnostics(document, result))
         except (CancelledError, SystemExit, KeyboardInterrupt):
             raise
         except BaseException as e:
@@ -399,7 +396,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
                     continue
 
                 references = self.parent.robot_references.find_variable_references(document, var, False, True)
-                if not references and not Namespace.should_ignore(document, var.name_range):
+                if not references:
                     result.append(
                         Diagnostic(
                             range=var.name_range,
@@ -412,7 +409,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
                         )
                     )
 
-            return DiagnosticsResult(self.collect_unused_variable_references, result)
+            return DiagnosticsResult(self.collect_unused_variable_references, self.modify_diagnostics(document, result))
         except (CancelledError, SystemExit, KeyboardInterrupt):
             raise
         except BaseException as e:

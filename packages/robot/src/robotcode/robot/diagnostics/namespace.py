@@ -1,7 +1,6 @@
 import ast
 import enum
 import itertools
-import re
 import time
 import weakref
 from collections import OrderedDict, defaultdict
@@ -96,9 +95,6 @@ from .library_doc import (
     LibraryDoc,
     resolve_robot_variables,
 )
-
-EXTRACT_COMMENT_PATTERN = re.compile(r".*(?:^ *|\t+| {2,})#(?P<comment>.*)$")
-ROBOTCODE_PATTERN = re.compile(r"(?P<marker>\brobotcode\b)\s*:\s*(?P<rule>\b\w+\b)")
 
 
 class DiagnosticsError(Exception):
@@ -454,7 +450,7 @@ class BlockVariableVisitor(OnlyArgumentsVisitor):
                     source=self.namespace.source,
                 )
 
-                if var_name not in self._results or type(self._results[var_name]) != type(var):
+                if var_name not in self._results or type(self._results[var_name]) is not type(var):
                     if isinstance(var, LocalVariableDefinition) or not any(
                         l for l in self.namespace.get_global_variables() if l.matcher == var.matcher
                     ):
@@ -542,7 +538,7 @@ class BlockVariableVisitor(OnlyArgumentsVisitor):
                 source=self.namespace.source,
             )
 
-            if var_name not in self._results or type(self._results[var_name]) != type(var):
+            if var_name not in self._results or type(self._results[var_name]) is type(var):
                 if isinstance(var, LocalVariableDefinition) or not any(
                     l for l in self.namespace.get_global_variables() if l.matcher == var.matcher
                 ):
@@ -1803,8 +1799,6 @@ class Namespace:
         related_information: Optional[List[DiagnosticRelatedInformation]] = None,
         data: Optional[Any] = None,
     ) -> None:
-        if self._should_ignore(range):
-            return
 
         self._diagnostics.append(
             Diagnostic(
@@ -1840,12 +1834,7 @@ class Namespace:
                 start_time = time.monotonic()
 
                 try:
-                    result = NamespaceAnalyzer(
-                        self.model,
-                        self,
-                        self.create_finder(),
-                        self.get_ignored_lines(self.document) if self.document is not None else [],
-                    ).run()
+                    result = NamespaceAnalyzer(self.model, self, self.create_finder()).run()
 
                     self._diagnostics += result.diagnostics
                     self._keyword_references = result.keyword_references
@@ -1915,42 +1904,6 @@ class Namespace:
             raise_keyword_error=raise_keyword_error,
             handle_bdd_style=handle_bdd_style,
         )
-
-    @classmethod
-    def get_ignored_lines(cls, document: TextDocument) -> List[int]:
-        return document.get_cache(cls.__get_ignored_lines)
-
-    @staticmethod
-    def __get_ignored_lines(document: TextDocument) -> List[int]:
-        result = []
-        lines = document.get_lines()
-        for line_no, line in enumerate(lines):
-            comment = EXTRACT_COMMENT_PATTERN.match(line)
-            if comment and comment.group("comment"):
-                for match in ROBOTCODE_PATTERN.finditer(comment.group("comment")):
-                    if match.group("rule") == "ignore":
-                        result.append(line_no)
-
-        return result
-
-    @classmethod
-    def should_ignore(cls, document: Optional[TextDocument], range: Range) -> bool:
-        return cls.__should_ignore(
-            cls.get_ignored_lines(document) if document is not None else [],
-            range,
-        )
-
-    def _should_ignore(self, range: Range) -> bool:
-        if self._ignored_lines is None:
-            self._ignored_lines = self.get_ignored_lines(self.document) if self.document is not None else []
-
-        return self.__should_ignore(self._ignored_lines, range)
-
-    @staticmethod
-    def __should_ignore(lines: List[int], range: Range) -> bool:
-        import builtins
-
-        return any(line_no in lines for line_no in builtins.range(range.start.line, range.end.line + 1))
 
 
 class DiagnosticsEntry(NamedTuple):
@@ -2083,7 +2036,7 @@ class KeywordFinder:
                         DiagnosticsEntry(
                             self._create_multiple_keywords_found_message(name, found, implicit=False),
                             DiagnosticSeverity.ERROR,
-                            Error.KEYWORD_ERROR,
+                            Error.MULTIPLE_KEYWORDS,
                         )
                     )
                     raise CancelSearchError
@@ -2118,7 +2071,7 @@ class KeywordFinder:
                 DiagnosticsEntry(
                     self._create_multiple_keywords_found_message(name, found, implicit=False),
                     DiagnosticSeverity.ERROR,
-                    Error.KEYWORD_ERROR,
+                    Error.MULTIPLE_KEYWORDS,
                 )
             )
             raise CancelSearchError
@@ -2266,7 +2219,7 @@ class KeywordFinder:
             DiagnosticsEntry(
                 self._create_multiple_keywords_found_message(name, found),
                 DiagnosticSeverity.ERROR,
-                Error.KEYWORD_ERROR,
+                Error.MULTIPLE_KEYWORDS,
             )
         )
         raise CancelSearchError
@@ -2320,7 +2273,7 @@ class KeywordFinder:
             DiagnosticsEntry(
                 self._create_multiple_keywords_found_message(name, found),
                 DiagnosticSeverity.ERROR,
-                Error.KEYWORD_ERROR,
+                Error.MULTIPLE_KEYWORDS,
             )
         )
         raise CancelSearchError
@@ -2342,7 +2295,7 @@ class KeywordFinder:
             DiagnosticsEntry(
                 self._create_custom_and_standard_keyword_conflict_warning_message(custom, standard),
                 DiagnosticSeverity.WARNING,
-                Error.KEYWORD_ERROR,
+                Error.CONFLICTING_LIBRARY_KEYWORDS,
             )
         )
 

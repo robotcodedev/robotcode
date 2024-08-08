@@ -43,10 +43,10 @@ def analyze(app: Application, paths: Tuple[str]) -> Union[str, int, None]:
             robot_toml_tool_name="robotcode-analyze",
         ).evaluated()
 
+        app.print_data(analyzer_config)
+        app.print_data(robot_config)
+
     except (TypeError, ValueError) as e:
         raise click.ClickException(str(e)) from e
-
-    app.print_data(analyzer_config)
-    app.print_data(robot_config)
 
     return 0
