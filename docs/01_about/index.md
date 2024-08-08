@@ -1,9 +1,4 @@
----
-description: The About page of the RobotCode documentation.
-
----
 # About
-
 
 [![Visual Studio Marketplace](https://img.shields.io/visual-studio-marketplace/v/d-biehl.robotcode?style=flat&label=VS%20Marketplace&logo=visual-studio-code)](https://marketplace.visualstudio.com/items?itemName=d-biehl.robotcode)
 [![Installs](https://img.shields.io/visual-studio-marketplace/i/d-biehl.robotcode?style=flat)](https://marketplace.visualstudio.com/items?itemName=d-biehl.robotcode)
@@ -15,27 +10,21 @@ description: The About page of the RobotCode documentation.
 
 ----
 
-[[toc]]
-
-An [extension](https://marketplace.visualstudio.com/VSCode) which brings support for [RobotFramework](https://robotframework.org/)
-to [Visual Studio Code](https://code.visualstudio.com/), including [features](#features) like code completion, debugging, test explorer, refactoring and more!
+*RobotCode* is an [extension](https://marketplace.visualstudio.com/VSCode) that provides comprehensive support for [RobotFramework](https://robotframework.org/) in [Visual Studio Code](https://code.visualstudio.com/). It offers a wide range of features, including code completion, debugging, test explorer, refactoring, and more!
 
 ## Features
 
 With RobotCode you can edit your code with auto-completion, code navigation, syntax checking and many more.
 Here is a list of Features:
 
-- [Autocomplete and IntelliSense](#Autocomplete-and-IntelliSense)
-- [Code Navigation](#code-navigation)
-- [Diagnostics and Linting](#diagnostics-and-linting)
-- [Code Formatting](#code-formatting)
-- [Running and Debugging](#running-and-debugging)
-- [Multi-root Workspace folders](#multi-root-workspace-folders)
-- Find implementations and references of keywords, variables, libraries, resource and variable files
-  - Show codelenses for keyword definitions
-- Test Explorer
-- Refactorings
-  - renaming keywords, variables, tags
+- [About](#about)
+  - [Features](#features)
+    - [Autocomplete and IntelliSense](#autocomplete-and-intellisense)
+    - [Code Navigation](#code-navigation)
+    - [Diagnostics and Linting](#diagnostics-and-linting)
+    - [Code Formatting](#code-formatting)
+    - [Running and Debugging](#running-and-debugging)
+    - [Multi-root Workspace folders](#multi-root-workspace-folders)
 
 ### Autocomplete and IntelliSense
 

@@ -14,8 +14,8 @@ hero:
       text: What is RobotCode?
       link: /about
     - theme: brand
-      text: Quick Start
-      link: /02_get_started/quickstart
+      text: Get Started
+      link: /02_get_started
     - theme: brand
       text: Raise an Issue or Enhancement
       link: "https://github.com/robotcodedev/robotcode/issues"
