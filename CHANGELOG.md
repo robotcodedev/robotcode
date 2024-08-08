@@ -2,6 +2,131 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [0.84.0](https://github.com/robotcodedev/robotcode/compare/v0.83.3..v0.84.0) - 2024-08-08
+
+### Bug Fixes
+
+- **debugger:** Corrected handling of local variables in variables inspector ([12ecdd4](https://github.com/robotcodedev/robotcode/commit/12ecdd43376484a40b6cdeb2bca752bc09178fad))
+- **debugger:** Corrected start debuggin in internalConsole ([f3fbf20](https://github.com/robotcodedev/robotcode/commit/f3fbf20d01d75264d86c0af4575e98b0cfa7ec5b))
+- **robot:** Use casefold for normalizing and remove some local imports in VariableMatcher ([04e12a7](https://github.com/robotcodedev/robotcode/commit/04e12a7ee262177f5bede595baa14e283c3ef4e7))
+- **vscode:** Remove `attachPython` from default `launch.json` config ([8052f8d](https://github.com/robotcodedev/robotcode/commit/8052f8dfc4e83a8d7e26ef8049c3631881e0dd34))
+- **vscode:** Only test cases are reported as queued, started and completed ([f68b8e3](https://github.com/robotcodedev/robotcode/commit/f68b8e34161b4ec977fcae04d891399a53f951fc))
+
+  this corrects the number of successful/executed test cases in the upper area of the test explorer
+
+
+
+### Features
+
+- **debugger:** Added support for disabling the hiding of debugger threads/tasks. ([049c905](https://github.com/robotcodedev/robotcode/commit/049c90517d36035e3bc86d0271e219e744c5dc7c))
+
+  By setting the ROBOTCODE_DISABLE_HIDDEN_TASKS environment variable to a value not equal to 0, the Robot Code debugger will not be hidden from the Debugpy debugger, allowing you to debug the Robot Code debugger itself.
+
+- Diagnostics modifiers ([223ec13](https://github.com/robotcodedev/robotcode/commit/223ec134a9a947db50aebba0d10ad290ab3bffb5))
+
+
+  Implement functionality to configure diagnostic error messages during source code analysis. Lines in the code with the `# robotcode:` marker are now interpreted as modifiers. The full structure of a modifier is `# robotcode: <action>[code(,code)*]*`.
+
+  **Allowed actions:**
+
+  - `ignore`: Ignore specified diagnostic codes.
+  - `hint`: Treat specified diagnostic codes as hints.
+  - `warn`: Treat specified diagnostic codes as warnings.
+  - `error`: Treat specified diagnostic codes as errors.
+  - `reset`: Reset the diagnostic codes to their default state.
+
+  **This implementation allows for the following:**
+
+  - Custom actions to be performed on specified diagnostic codes.
+  - Enhanced control over which diagnostic messages are shown, ignored, or modified.
+  - Flexibility in managing diagnostic outputs for better code quality and debugging experience.
+
+  **Usage details:**
+
+  - A diagnostic modifier can be placed at the end of a line. It modifies only the errors occurring in that line.
+  - A modifier can be placed at the very beginning of a line. It applies from that line to the end of the file.
+  - If a modifier is within a block (e.g., Testcase, Keyword, IF, FOR) and is indented, it applies only to the current block.
+
+  **Example usage:**
+
+  - `# robotcode: ignore[variable-not-found, keyword-not-found]` - Ignores the errors for variable not found and keyword not found.
+  - `# robotcode: hint[MultipleKeywords]` - Treats the MultipleKeywords error as a hint.
+  - `# robotcode: warn[variable-not-found]` - Treats the variable-not-found error as a warning.
+  - `# robotcode: error[keyword-not-found]` - Treats the keyword-not-found error as an error.
+  - `# robotcode: reset[MultipleKeywords]` - Resets the MultipleKeywords error to its default state.
+  - `# robotcode: ignore` - Ignores all diagnostic messages .
+  - `# robotcode: reset` - Resets all diagnostic messages to their default.
+
+  **Example scenarios:**
+
+  *Modifier at the end of a line:*
+
+  ```robot
+  *** Keywords ***
+  Keyword Name
+      Log    ${arg1}    # robotcode: ignore[variable-not-found]
+  ```
+  This modifier will ignore the `variable-not-found` error for the `Log` keyword in this line only.
+
+  *Modifier at the beginning of a line:*
+
+  ```robot
+  # robotcode: ignore[keyword-not-found]
+  *** Test Cases ***
+  Example Test
+      Log    Hello
+      Some Undefined Keyword
+  ```
+  This modifier will ignore `keyword-not-found` errors from the point it is declared to the end of the file.
+
+  *Modifier within a block:*
+
+  ```robot
+  *** Keywords ***
+  Example Keyword
+      # robotcode: warn[variable-not-found]
+      Log    ${arg1}
+      Another Keyword
+  ```
+  This modifier will treat `variable-not-found` errors as warnings within the `Example Keyword` block.
+
+  *Modifier using reset:*
+
+  ```robot
+  # robotcode: error[variable-not-found]
+  *** Test Cases ***
+  Example Test
+      Log    ${undefined_variable}
+      # robotcode: reset[variable-not-found]
+      Log    ${undefined_variable}
+  ```
+  In this example, the `variable-not-found` error is treated as an error until it is reset in the `Another Test` block, where it will return to its default state.
+
+  *Modifier to ignore all diagnostic messages:*
+
+  ```robot
+  # robotcode: ignore
+  *** Test Cases ***
+  Example Test
+      Log    ${undefined_variable}
+      Some Undefined Keyword
+  ```
+  This modifier will ignore all diagnostic messages from the point it is declared to the end of the file.
+
+  *Modifier to reset all diagnostic messages:*
+
+  ```robot
+  # robotcode: ignore
+  *** Test Cases ***
+  Example Test
+      Log    ${undefined_variable}
+      # robotcode: reset
+      Another Test
+          Some Undefined Keyword
+  ```
+  In this example, all diagnostic messages are ignored until the `reset` modifier, which returns all messages to their default state from that point onward.
+
+
 ## [0.83.3](https://github.com/robotcodedev/robotcode/compare/v0.83.2..v0.83.3) - 2024-06-20
 
 ### Bug Fixes
