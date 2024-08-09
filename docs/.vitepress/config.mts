@@ -1,6 +1,8 @@
 import { defineConfig } from "vitepress";
 import { generateSidebar } from "vitepress-sidebar";
 import taskLists from "markdown-it-task-lists";
+import kbd from "markdown-it-kbd";
+import abbr from "markdown-it-abbr";
 import { tabsMarkdownPlugin } from "vitepress-plugin-tabs";
 import robotframework from "../../syntaxes/robotframework.tmLanguage.json";
 import { readFileSync } from "fs";
@@ -95,6 +97,8 @@ export default defineConfig({
   },
   markdown: {
     config(md: any) {
+      md.use(kbd);
+      md.use(abbr);
       md.use(taskLists);
       md.use(tabsMarkdownPlugin);
     },

@@ -167,3 +167,14 @@ img[src*="shields.io"] {
   vertical-align: middle;
   display: inline;
 }
+
+kbd {
+  display: inline-block;
+  padding: 0px 6px;
+  font-family: var(--vp-font-family-mono);
+  color: var(--color-fg-default);
+  vertical-align: middle;
+  background-color: var(--vp-input-switch-bg-color);
+  border: 1px solid var(--vp-input-border-color);
+  border-radius: 6px;
+}
