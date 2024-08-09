@@ -19,7 +19,7 @@ to [Visual Studio Code](https://code.visualstudio.com/), including [features](#f
 1. [Install a supported version of Python on your system](https://code.visualstudio.com/docs/python/python-tutorial#_prerequisites)
 (note: only Python 3.8 and above are supported)
 
-2. [Install a supported version of RobotFramwork on your system](https://github.com/robotframework/robotframework/blob/master/INSTALL.rst) (note: only RobotFramework 4.0 and above are supported)
+2. [Install a supported version of RobotFramwork on your system](https://github.com/robotframework/robotframework/blob/master/INSTALL.rst) (note: only RobotFramework 4.1 and above are supported)
 
 3. [Install the RobotCode extension for Visual Studio Code](https://code.visualstudio.com/docs/editor/extension-gallery).
 4. Open or create a robot file and start coding! 😉
@@ -37,17 +37,21 @@ to [Visual Studio Code](https://code.visualstudio.com/), including [features](#f
 With RobotCode you can edit your code with auto-completion, code navigation, syntax checking and many more.
 Here is a list of Features:
 
-- [Autocomplete and IntelliSense](#Autocomplete-and-IntelliSense)
-- [Code Navigation](#code-navigation)
-- [Diagnostics and Linting](#diagnostics-and-linting)
-- [Code Formatting](#code-formatting)
-- [Running and Debugging](#running-and-debugging)
-- [Multi-root Workspace folders](#multi-root-workspace-folders)
-- Find implementations and references of keywords, variables, libraries, resource and variable files
-  - Show codelenses for keyword definitions
-- Test Explorer
-- Refactorings
-  - renaming keywords, variables, tags
+- [RobotCode - Language support for Robot Framework for Visual Studio Code](#robotcode---language-support-for-robot-framework-for-visual-studio-code)
+  - [Quick start](#quick-start)
+  - [Requirements](#requirements)
+  - [Features](#features)
+    - [Autocomplete and IntelliSense](#autocomplete-and-intellisense)
+    - [Code Navigation](#code-navigation)
+    - [Diagnostics and Linting](#diagnostics-and-linting)
+    - [Code Formatting](#code-formatting)
+    - [Running and Debugging](#running-and-debugging)
+    - [Multi-root Workspace folders](#multi-root-workspace-folders)
+  - [Installed extensions](#installed-extensions)
+  - [Setting up your environment](#setting-up-your-environment)
+    - [With pipenv](#with-pipenv)
+  - [Customization](#customization)
+    - [Editor Style](#editor-style)
 
 ### Autocomplete and IntelliSense
 
