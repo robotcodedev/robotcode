@@ -149,15 +149,29 @@
         },
         "testcase_name": {
             "contentName": "string.unquoted.argument.robotframework",
-            "begin": "^( ?\\S+ ?\\S*)(?= {2}| ?\\t| ?$)",
+            "begin": "^( ?\\S+ ?(\\S* ?)*?)(?= {2}| ?\\t| ?$)",
             "beginCaptures": { "1": { "name": "entity.name.function.testcase.name.robotframework" } },
-            "end": "^(?!(\\s*(\\.\\.\\.((( {2}| ?\\t)\\s*\\S.*)|(\\s*))?$))|(\\s*#.*$)|(\\s*$))"
+            "end": "^(?!(\\s*(\\.\\.\\.((( {2}| ?\\t)\\s*\\S.*)|(\\s*))?$))|(\\s*#.*$)|(\\s*$))",
+            "patterns": [
+                { "include": "#escape" },
+                { "include": "#comment" },
+                { "include": "#comment_line" },
+                { "include": "#variables" },
+                { "include": "#line_continuation" }
+            ]
         },
         "keyword_name": {
             "contentName": "string.unquoted.argument.robotframework",
-            "begin": "^( ?\\S+ ?\\S*)(?= {2}| ?\\t| ?$)",
+            "begin": "^( ?\\S+ ?(\\S* ?)*?)(?= {2}| ?\\t| ?$)",
             "beginCaptures": { "1": { "name": "entity.name.function.keyword.name.robotframework" } },
-            "end": "^(?!(\\s*(\\.\\.\\.((( {2}| ?\\t)\\s*\\S.*)|(\\s*))?$))|(\\s*#.*$)|(\\s*$))"
+            "end": "^(?!(\\s*(\\.\\.\\.((( {2}| ?\\t)\\s*\\S.*)|(\\s*))?$))|(\\s*#.*$)|(\\s*$))",
+            "patterns": [
+                { "include": "#escape" },
+                { "include": "#comment" },
+                { "include": "#comment_line" },
+                { "include": "#variables" },
+                { "include": "#line_continuation" }
+            ]
         },
         "block_statements": {
             "patterns": [
