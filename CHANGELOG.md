@@ -2,18 +2,52 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [0.85.0](https://github.com/robotcodedev/robotcode/compare/v0.84.0..v0.85.0) - 2024-08-18
+
+### Bug Fixes
+
+- **langserver:** Corrected coloring of test case/keyword names if names contains line continuations `...` ([a848a93](https://github.com/robotcodedev/robotcode/commit/a848a935567a41804fa20879a5da6016b5a68f0d))
+
+
+### Documentation
+
+- Some reorganizations ([a49829b](https://github.com/robotcodedev/robotcode/commit/a49829b80b2e0f35eb4c70772bcff0af720fffeb))
+- Some more restrucuting ([5b2752f](https://github.com/robotcodedev/robotcode/commit/5b2752f66f2791da51e5d2cc7b063ec8b50fd247))
+- Correct RF versions in README ([da0af7b](https://github.com/robotcodedev/robotcode/commit/da0af7b82064304c7ed7c1290bb081eb4b38dde6))
+- "Get Started" improved ([c9954ad](https://github.com/robotcodedev/robotcode/commit/c9954ad394069f71eeac23c4b3453588227834ae))
+
+
+### Features
+
+- **langserver:** Send full completion info if language client does not support `completionItem/resolve` ([4cf0127](https://github.com/robotcodedev/robotcode/commit/4cf01274e70070b3c9eb9e630afe08be57035e37))
+
+
 ## [0.84.0](https://github.com/robotcodedev/robotcode/compare/v0.83.3..v0.84.0) - 2024-08-08
 
 ### Bug Fixes
 
 - **debugger:** Corrected handling of local variables in variables inspector ([12ecdd4](https://github.com/robotcodedev/robotcode/commit/12ecdd43376484a40b6cdeb2bca752bc09178fad))
+- **debugger:** Corrected start debuggin in internalConsole ([b5124c8](https://github.com/robotcodedev/robotcode/commit/b5124c87265aac26f30ec535ec72770bf258cfbd))
 - **debugger:** Corrected start debuggin in internalConsole ([f3fbf20](https://github.com/robotcodedev/robotcode/commit/f3fbf20d01d75264d86c0af4575e98b0cfa7ec5b))
 - **robot:** Use casefold for normalizing and remove some local imports in VariableMatcher ([04e12a7](https://github.com/robotcodedev/robotcode/commit/04e12a7ee262177f5bede595baa14e283c3ef4e7))
+- **vscode:** Remove `attachPython` from default `launch.json` config ([217653b](https://github.com/robotcodedev/robotcode/commit/217653b6a6c3e78dbbead659880c12c1d5fb4a54))
+- **vscode:** Only test cases are reported as queued, started and completed ([1d01f43](https://github.com/robotcodedev/robotcode/commit/1d01f43687a1b2f8428982cadcee7e72e1764738))
+
+  this corrects the number of successful/executed test cases in the upper area of the test explorer
+
 - **vscode:** Remove `attachPython` from default `launch.json` config ([8052f8d](https://github.com/robotcodedev/robotcode/commit/8052f8dfc4e83a8d7e26ef8049c3631881e0dd34))
 - **vscode:** Only test cases are reported as queued, started and completed ([f68b8e3](https://github.com/robotcodedev/robotcode/commit/f68b8e34161b4ec977fcae04d891399a53f951fc))
 
   this corrects the number of successful/executed test cases in the upper area of the test explorer
 
+
+
+### Documentation
+
+- **quickstart:** Add quickstart documentation page ([1fdb966](https://github.com/robotcodedev/robotcode/commit/1fdb966038595b79b7081ee94a735a8d76f3098e))
+- **quickstart:** Improve quickstart documentation ([a5dd60a](https://github.com/robotcodedev/robotcode/commit/a5dd60a0d1da7fd85cb781eaaaf530e5d8f30e8a))
+- Updated config page ([b230689](https://github.com/robotcodedev/robotcode/commit/b23068989da3aaff5ed8dce3b3c6653dceb88eb5))
+- Fix some formatting and spelling things ([99d18fe](https://github.com/robotcodedev/robotcode/commit/99d18fe2ffa3f754b125b7ae5f501ae90144c561))
 
 
 ### Features
@@ -22,6 +56,109 @@ All notable changes to this project will be documented in this file. See [conven
 
   By setting the ROBOTCODE_DISABLE_HIDDEN_TASKS environment variable to a value not equal to 0, the Robot Code debugger will not be hidden from the Debugpy debugger, allowing you to debug the Robot Code debugger itself.
 
+- Diagnostics modifiers ([d1e5f3f](https://github.com/robotcodedev/robotcode/commit/d1e5f3f5781ba50416fdd3e39c8416978dffc5c7))
+
+
+  Implement functionality to configure diagnostic error messages during source code analysis. Lines in the code with the `# robotcode:` marker are now interpreted as modifiers. The full structure of a modifier is `# robotcode: <action>[code(,code)*]*`.
+
+  **Allowed actions:**
+
+  - `ignore`: Ignore specified diagnostic codes.
+  - `hint`: Treat specified diagnostic codes as hints.
+  - `warn`: Treat specified diagnostic codes as warnings.
+  - `error`: Treat specified diagnostic codes as errors.
+  - `reset`: Reset the diagnostic codes to their default state.
+
+  **This implementation allows for the following:**
+
+  - Custom actions to be performed on specified diagnostic codes.
+  - Enhanced control over which diagnostic messages are shown, ignored, or modified.
+  - Flexibility in managing diagnostic outputs for better code quality and debugging experience.
+
+  **Usage details:**
+
+  - A diagnostic modifier can be placed at the end of a line. It modifies only the errors occurring in that line.
+  - A modifier can be placed at the very beginning of a line. It applies from that line to the end of the file.
+  - If a modifier is within a block (e.g., Testcase, Keyword, IF, FOR) and is indented, it applies only to the current block.
+
+  **Example usage:**
+
+  - `# robotcode: ignore[variable-not-found, keyword-not-found]` - Ignores the errors for variable not found and keyword not found.
+  - `# robotcode: hint[MultipleKeywords]` - Treats the MultipleKeywords error as a hint.
+  - `# robotcode: warn[variable-not-found]` - Treats the variable-not-found error as a warning.
+  - `# robotcode: error[keyword-not-found]` - Treats the keyword-not-found error as an error.
+  - `# robotcode: reset[MultipleKeywords]` - Resets the MultipleKeywords error to its default state.
+  - `# robotcode: ignore` - Ignores all diagnostic messages .
+  - `# robotcode: reset` - Resets all diagnostic messages to their default.
+
+  **Example scenarios:**
+
+  *Modifier at the end of a line:*
+
+  ```robot
+  *** Keywords ***
+  Keyword Name
+      Log    ${arg1}    # robotcode: ignore[variable-not-found]
+  ```
+  This modifier will ignore the `variable-not-found` error for the `Log` keyword in this line only.
+
+  *Modifier at the beginning of a line:*
+
+  ```robot
+  # robotcode: ignore[keyword-not-found]
+  *** Test Cases ***
+  Example Test
+      Log    Hello
+      Some Undefined Keyword
+  ```
+  This modifier will ignore `keyword-not-found` errors from the point it is declared to the end of the file.
+
+  *Modifier within a block:*
+
+  ```robot
+  *** Keywords ***
+  Example Keyword
+      # robotcode: warn[variable-not-found]
+      Log    ${arg1}
+      Another Keyword
+  ```
+  This modifier will treat `variable-not-found` errors as warnings within the `Example Keyword` block.
+
+  *Modifier using reset:*
+
+  ```robot
+  # robotcode: error[variable-not-found]
+  *** Test Cases ***
+  Example Test
+      Log    ${undefined_variable}
+      # robotcode: reset[variable-not-found]
+      Log    ${undefined_variable}
+  ```
+  In this example, the `variable-not-found` error is treated as an error until it is reset in the `Another Test` block, where it will return to its default state.
+
+  *Modifier to ignore all diagnostic messages:*
+
+  ```robot
+  # robotcode: ignore
+  *** Test Cases ***
+  Example Test
+      Log    ${undefined_variable}
+      Some Undefined Keyword
+  ```
+  This modifier will ignore all diagnostic messages from the point it is declared to the end of the file.
+
+  *Modifier to reset all diagnostic messages:*
+
+  ```robot
+  # robotcode: ignore
+  *** Test Cases ***
+  Example Test
+      Log    ${undefined_variable}
+      # robotcode: reset
+      Another Test
+          Some Undefined Keyword
+  ```
+  In this example, all diagnostic messages are ignored until the `reset` modifier, which returns all messages to their default state from that point onward.
 - Diagnostics modifiers ([223ec13](https://github.com/robotcodedev/robotcode/commit/223ec134a9a947db50aebba0d10ad290ab3bffb5))
 
 
