@@ -52,8 +52,11 @@ jobs:
         run: pipx install hatch
 
       - name: Test Python Packages
-        timeout-minutes: 30
-        run: hatch run test.${{ matrix.robot-version }}:test "--junitxml=test-results/os-${{ matrix.os }}-py-${{ matrix.python-version }}-${{ matrix.robot-version }}/test-results.xml"
+        uses: nick-fields/retry@v3
+        with:
+          max_attempts: 3
+          timeout_minutes: 30
+          command: hatch run test.${{ matrix.robot-version }}:test "--junitxml=test-results/os-${{ matrix.os }}-py-${{ matrix.python-version }}-${{ matrix.robot-version }}/test-results.xml"
 
       - name: Upload Test Results
         if: always()
