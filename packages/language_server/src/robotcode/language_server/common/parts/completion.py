@@ -1,3 +1,4 @@
+import dataclasses
 from concurrent.futures import CancelledError
 from itertools import chain
 from typing import TYPE_CHECKING, Any, Final, List, Optional, Union, cast
@@ -41,6 +42,7 @@ class CompletionProtocolPart(LanguageServerProtocolPart):
 
     def __init__(self, parent: "LanguageServerProtocol") -> None:
         super().__init__(parent)
+        self.resolve_support = False
 
     @event
     def collect(
@@ -74,6 +76,16 @@ class CompletionProtocolPart(LanguageServerProtocolPart):
                     ]
                 )
             )
+            if (
+                self.parent.client_capabilities is not None
+                and self.parent.client_capabilities.text_document is not None
+                and self.parent.client_capabilities.text_document.completion is not None
+                and self.parent.client_capabilities.text_document.completion.completion_item is not None
+                and self.parent.client_capabilities.text_document.completion.completion_item.resolve_support is not None
+                and self.parent.client_capabilities.text_document.completion.completion_item.resolve_support.properties
+            ):
+                self.resolve_support = True
+
             capabilities.completion_provider = CompletionOptions(
                 trigger_characters=trigger_chars if trigger_chars else None,
                 all_commit_characters=commit_chars if commit_chars else None,
@@ -141,13 +153,20 @@ class CompletionProtocolPart(LanguageServerProtocolPart):
             )
             if len(result.items) == 0:
                 return None
-            return result
+
+            if self.resolve_support:
+                return result
+
+            return dataclasses.replace(result, items=[self._completion_item_resolve(e) for e in result.items])
 
         result = list(chain(*[k for k in results if isinstance(k, list)]))
         if not result:
             return None
 
-        return result
+        if self.resolve_support:
+            return result
+
+        return [self._completion_item_resolve(e) for e in result]
 
     def update_completion_item_to_utf16(self, document: TextDocument, item: CompletionItem) -> None:
         if isinstance(item.text_edit, TextEdit):

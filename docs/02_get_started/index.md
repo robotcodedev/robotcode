@@ -45,13 +45,13 @@ However, it's important to note that there are alternative and better methods fo
 
 Create a `requirements.txt` file in the root folder of your project and add the following content:
 
-```requirements.txt [requirements.txt]
+```txt [requirements.txt]
 robotframework
 ```
 
 If you require additional dependencies, you can include them in the `requirements.txt` file. For instance, if you wish to utilize [robotframework-tidy](https://github.com/MarketSquare/robotframework-tidy) for formatting your robot files and the [Browser library](https://robotframework-browser.org/) for website testing, you can add the following line to the `requirements.txt` file:
 
-```requirements.txt [requirements.txt]
+```txt [requirements.txt]
 robotframework
 robotframework-tidy
 robotframework-browser
