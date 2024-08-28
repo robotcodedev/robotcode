@@ -1,7 +1,7 @@
-.idea
-.github
-.vscode
-.vscode-test
+**/.idea/
+**/.github/
+**/.vscode/
+**/.vscode-test/
 
 **/.gitignore
 
@@ -15,28 +15,28 @@ tsconfig.json
 vscode-client
 .eslintignore
 .prettier*
-
+eslint.config.mjs
 
 # python
-build
-.ruff_cache
-.hatch
-.venv
+**/build/
+**/.ruff_cache/
+**/.hatch/
+**/.venv/
 .flake8
 mypy.ini
 log.ini
 pyproject.toml
 *.lock
 
-tests
-dist
+**/tests/
+**/dist/
 
-**/__pycache__
-**/.mypy_cache
-**/.pytest_cache
-test-results
+**/__pycache__/
+**/.mypy_cache/
+**/.pytest_cache/
+**/test-results/
 
-playground
+**/playground/
 
 # svg files
 **/*.svg
@@ -47,22 +47,25 @@ coverage.xml
 .python-version
 
 # docs
-docs
+docs/
 
 # others
-scripts
+scripts/
 
-**/.robotcode_cache
+.robotcode_cache/
 
 .pre-commit-config.yaml
-.devcontainer
+.devcontainer/
 
-robotcode
-packages
-bundled/libs/bin
+**/robotcode/
+**/packages/
+**/bundled/libs/bin/
 
 cliff.toml
-pyproject.toml
+**/pyproject.toml
 mkdocs.yml
 hatch.toml
 bundled_requirements.txt
+
+robot.toml
+.robotignore
