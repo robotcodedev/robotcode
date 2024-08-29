@@ -546,10 +546,26 @@ def handle_options(
     add_help_option=True,
     epilog='Use "-- --help" to see `robot` help.',
 )
+@click.option(
+    "--tags / --no-tags",
+    "show_tags",
+    default=False,
+    show_default=True,
+    help="Show the tags that are present.",
+)
 @add_options(*ROBOT_OPTIONS)
+@click.option(
+    "--full-paths / --no-full-paths",
+    "full_paths",
+    default=False,
+    show_default=True,
+    help="Show full paths instead of releative.",
+)
 @pass_application
 def all(
     app: Application,
+    full_paths: bool,
+    show_tags: bool,
     by_longname: Tuple[str, ...],
     exclude_by_longname: Tuple[str, ...],
     robot_options_and_args: Tuple[str, ...],
@@ -578,24 +594,26 @@ def all(
             def print(item: TestItem, indent: int = 0) -> Iterable[str]:
                 type = click.style(
                     item.type.capitalize() if item.type == "suite" else tests_or_tasks.capitalize(),
-                    fg="green",
+                    fg="blue",
                 )
 
                 if item.type == "test":
-                    yield f"    {type}: {item.longname}{os.linesep}"
+                    yield "    "
+                    yield type
+                    yield click.style(f": {item.longname}", bold=True)
+                    yield click.style(
+                        f" ({item.source if full_paths else item.rel_source}"
+                        f":{item.range.start.line + 1 if item.range is not None else 1}){os.linesep}"
+                    )
+                    if show_tags and item.tags:
+                        yield click.style("        Tags:", bold=True, fg="green")
+                        yield f" {', '. join(normalize(str(tag), ignore='_') for tag in sorted(item.tags))}{os.linesep}"
                 else:
-                    yield f"{type}: {item.longname}{os.linesep}"
-
+                    yield type
+                    yield f": {item.longname}"
+                    yield click.style(f" ({item.source if full_paths else item.rel_source}){os.linesep}")
                 for child in item.children or []:
                     yield from print(child, indent + 2)
-
-                # type = click.style(
-                #     item.type.capitalize() if item.type == "suite" else tests_or_tasks.capitalize(), fg="green"
-                # )
-                # yield (f"{'  ' * indent}{type}: {item.name}{os.linesep}")
-                # if item.children:
-                #     for child in item.children:
-                #         yield from print(child, indent + 2)
 
                 if indent == 0:
                     yield os.linesep
@@ -654,24 +672,27 @@ def tests(
     ```
     """
 
-    _suite, collector, diagnostics = handle_options(app, by_longname, exclude_by_longname, robot_options_and_args)
+    suite, collector, diagnostics = handle_options(app, by_longname, exclude_by_longname, robot_options_and_args)
 
     if collector.all.children:
         if app.config.output_format is None or app.config.output_format == OutputFormat.TEXT:
 
+            tests_or_tasks = "Task" if suite.rpa else "Test"
+
             def print(items: List[TestItem]) -> Iterable[str]:
                 for item in items:
-                    yield click.style(
-                        f"{item.longname}",
-                        bold=True,
-                        fg="green" if show_tags else None,
+                    type = click.style(
+                        item.type.capitalize() if item.type == "suite" else tests_or_tasks.capitalize(),
+                        fg="blue",
                     )
+                    yield type
+                    yield click.style(f": {item.longname}", bold=True)
                     yield click.style(
                         f" ({item.source if full_paths else item.rel_source}"
                         f":{item.range.start.line + 1 if item.range is not None else 1}){os.linesep}"
                     )
                     if show_tags and item.tags:
-                        yield click.style("    Tags:", bold=True)
+                        yield click.style("    Tags:", bold=True, fg="green")
                         yield f" {', '. join(normalize(str(tag), ignore='_') for tag in sorted(item.tags))}{os.linesep}"
 
             if collector.tests:
@@ -687,9 +708,17 @@ def tests(
     epilog='Use "-- --help" to see `robot` help.',
 )
 @add_options(*ROBOT_OPTIONS)
+@click.option(
+    "--full-paths / --no-full-paths",
+    "full_paths",
+    default=False,
+    show_default=True,
+    help="Show full paths instead of releative.",
+)
 @pass_application
 def suites(
     app: Application,
+    full_paths: bool,
     by_longname: Tuple[str, ...],
     exclude_by_longname: Tuple[str, ...],
     robot_options_and_args: Tuple[str, ...],
@@ -716,7 +745,12 @@ def suites(
 
             def print(items: List[TestItem]) -> Iterable[str]:
                 for item in items:
-                    yield f"{item.longname}{os.linesep}"
+                    # yield f"{item.longname}{os.linesep}"
+                    yield click.style(
+                        f"{item.longname}",
+                        bold=True,
+                    )
+                    yield click.style(f" ({item.source if full_paths else item.rel_source}){os.linesep}")
 
             if collector.suites:
                 app.echo_via_pager(print(collector.suites))
