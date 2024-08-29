@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [0.86.1](https://github.com/robotcodedev/robotcode/compare/v0.86.0..v0.86.1) - 2024-08-29
+
+### Documentation
+
+- Update about and remove playground ([fd140d0](https://github.com/robotcodedev/robotcode/commit/fd140d046e686f542277699fd5bdd76a54137883))
+
+
 ## [0.86.0](https://github.com/robotcodedev/robotcode/compare/v0.85.0..v0.86.0) - 2024-08-29
 
 ### Bug Fixes
