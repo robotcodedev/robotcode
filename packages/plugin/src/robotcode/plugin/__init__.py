@@ -266,18 +266,21 @@ class Application:
         text_or_generator: Union[Iterable[str], Callable[[], Iterable[str]], str],
         color: Optional[bool] = None,
     ) -> None:
-        if not self.config.pager:
-            text = (
-                text_or_generator
-                if isinstance(text_or_generator, str)
-                else "".join(text_or_generator() if callable(text_or_generator) else text_or_generator)
-            )
-            click.echo(text, color=color if color is not None else self.colored)
-        else:
-            click.echo_via_pager(
-                text_or_generator,
-                color=color if color is not None else self.colored,
-            )
+        try:
+            if not self.config.pager:
+                text = (
+                    text_or_generator
+                    if isinstance(text_or_generator, str)
+                    else "".join(text_or_generator() if callable(text_or_generator) else text_or_generator)
+                )
+                click.echo(text, color=color if color is not None else self.colored)
+            else:
+                click.echo_via_pager(
+                    text_or_generator,
+                    color=color if color is not None else self.colored,
+                )
+        except OSError:
+            pass
 
     def keyboard_interrupt(self) -> None:
         self.verbose("Aborted!", file=sys.stderr)

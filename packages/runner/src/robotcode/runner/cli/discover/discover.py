@@ -29,6 +29,7 @@ from robot.running.builder.builders import SuiteStructureParser
 from robot.utils import NormalizedDict, normalize
 from robot.utils.filereader import FileReader
 
+from robotcode.core.ignore_spec import GIT_IGNORE_FILE, ROBOT_IGNORE_FILE, iter_files
 from robotcode.core.lsp.types import (
     Diagnostic,
     DiagnosticSeverity,
@@ -594,7 +595,7 @@ def all(
             def print(item: TestItem, indent: int = 0) -> Iterable[str]:
                 type = click.style(
                     item.type.capitalize() if item.type == "suite" else tests_or_tasks.capitalize(),
-                    fg="blue",
+                    fg="green",
                 )
 
                 if item.type == "test":
@@ -617,10 +618,13 @@ def all(
 
                 if indent == 0:
                     yield os.linesep
-                    yield f"Summary:{os.linesep}"
-                    yield f"  Suites: {collector.statistics.suites}{os.linesep}"
-                    yield f"  Suites with {tests_or_tasks}: {collector.statistics.suites_with_tests}{os.linesep}"
-                    yield f"  {tests_or_tasks}: {collector.statistics.tests}{os.linesep}"
+
+                    yield click.style("Suites: ", underline=True, bold=True, fg="blue")
+                    yield f"{collector.statistics.suites}{os.linesep}"
+                    yield click.style(f"Suites with {tests_or_tasks}: ", underline=True, bold=True, fg="blue")
+                    yield f"{collector.statistics.suites_with_tests}{os.linesep}"
+                    yield click.style(f"{tests_or_tasks}: ", underline=True, bold=True, fg="blue")
+                    yield f"{collector.statistics.tests}{os.linesep}"
 
             app.echo_via_pager(print(collector.all.children[0]))
 
@@ -912,3 +916,78 @@ def info(app: Application) -> None:
         # app.print_data(info, remove_defaults=True)
     else:
         app.print_data(info, remove_defaults=True)
+
+
+@discover.command(add_help_option=True)
+@click.option(
+    "--full-paths / --no-full-paths",
+    "full_paths",
+    default=False,
+    show_default=True,
+    help="Show full paths instead of releative.",
+)
+@click.argument(
+    "paths",
+    nargs=-1,
+    type=click.Path(exists=True, file_okay=True, dir_okay=True),
+)
+@pass_application
+def files(app: Application, full_paths: bool, paths: Iterable[Path]) -> None:
+    """\
+    Shows all files that are used to discover the tests.
+
+    Note: At the moment only `.robot` and `.resource` files are shown.
+    \b
+    Examples:
+    ```
+    robotcode discover files .
+    ```
+    """
+
+    root_folder, profile, cmd_options = handle_robot_options(app, ())
+
+    search_paths = set(
+        (
+            (
+                [*(app.config.default_paths if app.config.default_paths else ())]
+                if profile.paths is None
+                else profile.paths if isinstance(profile.paths, list) else [profile.paths]
+            )
+            if not paths
+            else [str(p) for p in paths]
+        )
+    )
+    if not search_paths:
+        raise click.UsageError("Expected at least 1 argument.")
+
+    def filter_extensions(p: Path) -> bool:
+        return p.suffix in [".robot", ".resource"]
+
+    result: List[str] = list(
+        map(
+            lambda p: os.path.abspath(p) if full_paths else (get_rel_source(str(p)) or str(p)),
+            filter(
+                filter_extensions,
+                iter_files(
+                    (Path(s) for s in search_paths),
+                    root=root_folder,
+                    ignore_files=[ROBOT_IGNORE_FILE, GIT_IGNORE_FILE],
+                    include_hidden=False,
+                    verbose_callback=app.verbose,
+                ),
+            ),
+        )
+    )
+    if app.config.output_format is None or app.config.output_format == OutputFormat.TEXT:
+
+        def print() -> Iterable[str]:
+            for p in result:
+                yield f"{p}{os.linesep}"
+
+            yield os.linesep
+            yield click.style("Total: ", underline=True, bold=True, fg="blue")
+            yield click.style(f"{len(result)} file(s){os.linesep}")
+
+        app.echo_via_pager(print())
+    else:
+        app.print_data(result, remove_defaults=True)

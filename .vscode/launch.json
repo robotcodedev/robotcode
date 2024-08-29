@@ -50,7 +50,9 @@
 				// "suites",
 				// // "discover", "tests", "--tags"
 				// "."
-				"language-server"
+				"discover",
+				"files",
+				".."
 			]
 		},
 		{

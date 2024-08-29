@@ -2,7 +2,9 @@ import os
 import re
 import sys
 from pathlib import Path, PurePath
-from typing import Dict, Iterable, Iterator, NamedTuple, Optional, Reversible, Tuple
+from typing import Callable, Dict, Iterable, Iterator, List, NamedTuple, Optional, Reversible, Tuple, Union
+
+from robotcode.core.utils.path import path_is_relative_to
 
 _SEPARATORS = ["/"]
 _SEPARATORS_GROUP = f"[{'|'.join(_SEPARATORS)}]"
@@ -280,32 +282,92 @@ def _is_hidden(entry: Path) -> bool:
 
 
 def iter_files(
-    root: Path,
+    paths: Union[Path, Iterable[Path]],
+    root: Optional[Path] = None,
     ignore_files: Iterable[str] = [GIT_IGNORE_FILE],
     include_hidden: bool = True,
     parent_spec: Optional[IgnoreSpec] = None,
+    verbose_callback: Optional[Callable[[str], None]] = None,
+) -> Iterator[Path]:
+    if isinstance(paths, Path):
+        paths = [paths]
+
+    for path in paths:
+        yield from _iter_files(
+            Path(os.path.abspath(path)),
+            root=Path(os.path.abspath(root)) if root is not None else root,
+            ignore_files=ignore_files,
+            include_hidden=include_hidden,
+            parent_spec=parent_spec,
+            verbose_callback=verbose_callback,
+        )
+
+
+def _iter_files(
+    path: Path,
+    root: Optional[Path] = None,
+    ignore_files: Iterable[str] = [GIT_IGNORE_FILE],
+    include_hidden: bool = True,
+    parent_spec: Optional[IgnoreSpec] = None,
+    verbose_callback: Optional[Callable[[str], None]] = None,
 ) -> Iterator[Path]:
 
-    if parent_spec is None:
-        parent_spec = IgnoreSpec.from_list(DEFAULT_SPEC_RULES, root)
+    if root is None:
+        root = path if path.is_dir() else path.parent
 
-    ignore_file = next((root / f for f in ignore_files if (root / f).is_file()), None)
+    if parent_spec is None:
+        parent_spec = IgnoreSpec.from_list(DEFAULT_SPEC_RULES, path)
+
+        if path_is_relative_to(path, root):
+            parents: List[Path] = []
+            p = path if path.is_dir() else path.parent
+            while True:
+                p = p.parent
+
+                if p < root:
+                    break
+
+                parents.insert(0, p)
+
+            for p in parents:
+                ignore_file = next((p / f for f in ignore_files if (p / f).is_file()), None)
+
+                if ignore_file is not None:
+                    if verbose_callback is not None:
+                        verbose_callback(f"using ignore file: '{ignore_file}'")
+                    parent_spec = parent_spec + IgnoreSpec.from_gitignore(ignore_file)
+                    ignore_files = [ignore_file.name]
+
+    ignore_file = next((path / f for f in ignore_files if (path / f).is_file()), None)
 
     if ignore_file is not None:
-        gitignore = parent_spec + IgnoreSpec.from_gitignore(root / ignore_file)
+        if verbose_callback is not None:
+            verbose_callback(f"using ignore file: '{ignore_file}'")
+        spec = parent_spec + IgnoreSpec.from_gitignore(ignore_file)
         ignore_files = [ignore_file.name]
     else:
-        gitignore = parent_spec
+        spec = parent_spec
 
-    for path in root.iterdir():
+    if not path.is_dir():
+        if spec is not None and spec.matches(path):
+            return
+        yield path
+        return
 
-        if not include_hidden and _is_hidden(path):
+    for p in path.iterdir():
+        if not include_hidden and _is_hidden(p):
             continue
 
-        if gitignore is not None and gitignore.matches(path):
+        if spec is not None and spec.matches(p):
             continue
 
-        if path.is_dir():
-            yield from iter_files(path, ignore_files, include_hidden, gitignore)
-        elif path.is_file():
-            yield path
+        if p.is_dir():
+            yield from _iter_files(
+                p,
+                ignore_files=ignore_files,
+                include_hidden=include_hidden,
+                parent_spec=spec,
+                verbose_callback=verbose_callback,
+            )
+        elif p.is_file():
+            yield p

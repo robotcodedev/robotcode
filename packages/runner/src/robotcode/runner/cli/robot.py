@@ -98,7 +98,6 @@ def _is_ignored(builder: SuiteStructureBuilder, path: Path) -> bool:
                 if not path_is_relative_to(dir, cache_data.base_path):
                     break
         else:
-            # TODO: we are in a different folder
             if curr_dir.parent in cache_data.data:
                 parent_data = cache_data.data[curr_dir.parent]
                 parent_spec_dir = curr_dir.parent
@@ -121,7 +120,10 @@ def _is_ignored(builder: SuiteStructureBuilder, path: Path) -> bool:
             if ignore_file is not None:
                 parent_data.ignore_files = [ignore_file.name]
 
-                parent_data.spec = parent_data.spec + IgnoreSpec.from_gitignore(parent_spec_dir / ignore_file)
+                if _app is not None:
+                    _app.verbose(f"using ignore file: '{ignore_file}'")
+
+                parent_data.spec = parent_data.spec + IgnoreSpec.from_gitignore(ignore_file)
             cache_data.data[parent_spec_dir] = parent_data
 
         if parent_data is not None and parent_data.spec is not None and parent_spec_dir != curr_dir:
@@ -130,7 +132,10 @@ def _is_ignored(builder: SuiteStructureBuilder, path: Path) -> bool:
             if ignore_file is not None:
                 curr_data = BuilderCacheData()
 
-                curr_data.spec = parent_data.spec + IgnoreSpec.from_gitignore(curr_dir / ignore_file)
+                if _app is not None:
+                    _app.verbose(f"using ignore file: '{ignore_file}'")
+
+                curr_data.spec = parent_data.spec + IgnoreSpec.from_gitignore(ignore_file)
                 curr_data.ignore_files = [ignore_file.name]
 
                 cache_data.data[curr_dir] = curr_data

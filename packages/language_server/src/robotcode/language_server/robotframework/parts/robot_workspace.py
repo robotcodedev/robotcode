@@ -73,7 +73,7 @@ class RobotWorkspaceProtocolPart(RobotLanguageServerProtocolPart):
                             lambda f: f.suffix in extensions,
                             iter_files(
                                 folder.uri.to_path(),
-                                [ROBOT_IGNORE_FILE, GIT_IGNORE_FILE],
+                                ignore_files=[ROBOT_IGNORE_FILE, GIT_IGNORE_FILE],
                                 include_hidden=False,
                                 parent_spec=IgnoreSpec.from_list(
                                     [*DEFAULT_SPEC_RULES, *(config.workspace.exclude_patterns or [])],
