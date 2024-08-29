@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import re
+import sys
 from dataclasses import astuple, dataclass, fields
 from pathlib import Path
 from typing import Any, Iterator, Mapping, Optional, Union, overload
@@ -9,7 +10,7 @@ from urllib import parse
 
 from .utils.path import normalized_path
 
-_IS_WIN = os.name == "nt"
+_IS_WIN = sys.platform == "win32"
 
 _RE_DRIVE_LETTER_PATH = re.compile(r"^\/[a-zA-Z]:")
 
