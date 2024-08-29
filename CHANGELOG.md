@@ -6,10 +6,19 @@ All notable changes to this project will be documented in this file. See [conven
 
 ### Bug Fixes
 
+- Change detection of win32 ([13a9265](https://github.com/robotcodedev/robotcode/commit/13a92652fa9a42d0eec989bd14cbe5cd3c115596))
 - Change detection of win32 ([0dfbd94](https://github.com/robotcodedev/robotcode/commit/0dfbd947baa4eb7dae984fda29e3f5d502a01ea7))
+- Correct vscodeignore file ([461bfb1](https://github.com/robotcodedev/robotcode/commit/461bfb1048308959e7ba8de1c9be92a8e9257c29))
+
+
+  I have over optimized the .vscodeignore file 🥶
 
 
 ### Features
+
+- **robotcode:** Introduce support for `.gitignore` and `.robotignore` during test suite discovery ([74fa480](https://github.com/robotcodedev/robotcode/commit/74fa480cdbe6d03f9d146ea322db4e4e22e242e8))
+
+  Implemented support for `.gitignore` and `.robotignore` files in the discovery process of Robot Framework test suites and test cases.
 
 - **robotcode:** Introduce support for `.gitignore` and `.robotignore` during test suite discovery ([022517f](https://github.com/robotcodedev/robotcode/commit/022517fef7a428a952cf6df7bdd4b7690c9875d5))
 
