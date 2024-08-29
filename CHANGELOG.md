@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [0.86.2](https://github.com/robotcodedev/robotcode/compare/v0.86.1..v0.86.2) - 2024-08-29
+
+### Bug Fixes
+
+- Correction of some type hints that prevent robot code from running with older Python versions ([37e20e3](https://github.com/robotcodedev/robotcode/commit/37e20e395c345c63b6e772e59cebdf6e3844550d))
+
+
 ## [0.86.1](https://github.com/robotcodedev/robotcode/compare/v0.86.0..v0.86.1) - 2024-08-29
 
 ### Documentation
