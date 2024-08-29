@@ -832,14 +832,13 @@
           "robotcode.workspace.excludePatterns": {
             "type": "array",
             "default": [
-              "**/.git/",
-              "**/.hatch/",
-              "**/.venv/",
-              "**/node_modules/",
-              "**/.pytest_cache/",
-              "**/__pycache__/",
-              "**/.mypy_cache/",
-              "**/.robotcode_cache/"
+              ".hatch/",
+              ".venv/",
+              "node_modules/",
+              ".pytest_cache/",
+              "__pycache__/",
+              ".mypy_cache/",
+              ".robotcode_cache/"
             ],
             "items": {
               "type": "string"

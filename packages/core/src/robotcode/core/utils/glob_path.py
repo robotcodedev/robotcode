@@ -1,7 +1,3 @@
-# mypy: warn_unused_ignores=false
-
-from __future__ import annotations
-
 import functools
 import os
 import re
@@ -114,8 +110,7 @@ def _is_hidden(entry: os.DirEntry[str]) -> bool:
         return True
 
     if os.name == "nt" and (
-        (not entry.is_symlink() and entry.stat().st_file_attributes & 2 != 0)  # type: ignore[attr-defined]
-        or entry.name.startswith("$")
+        (not entry.is_symlink() and entry.stat().st_file_attributes & 2 != 0) or entry.name.startswith("$")
     ):
         return True
 

@@ -80,6 +80,7 @@ class Application:
     def __init__(self) -> None:
         self.config = CommonConfig()
         self._show_diagnostics = True
+        self.root_folder: Path = Path.cwd()
 
     @property
     def show_diagnostics(self) -> bool:

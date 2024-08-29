@@ -1,22 +1,147 @@
 import os
 import sys
+import weakref
 from pathlib import Path
-from typing import Any, List, Optional, Set, Tuple, Union, cast
+from typing import Any, Dict, List, Optional, Set, Tuple, Union, cast
 
 import click
 from robot.errors import DataError, Information
 from robot.run import USAGE, RobotFramework
+from robot.running.builder.builders import SuiteStructureBuilder
 from robot.version import get_full_version
 
 import robotcode.modifiers
+from robotcode.core.ignore_spec import DEFAULT_SPEC_RULES, GIT_IGNORE_FILE, ROBOT_IGNORE_FILE, IgnoreSpec
+from robotcode.core.utils.path import path_is_relative_to
 from robotcode.plugin import Application, pass_application
 from robotcode.plugin.click_helper.aliases import AliasedCommand
 from robotcode.plugin.click_helper.types import add_options
 from robotcode.robot.config.loader import load_robot_config_from_path
 from robotcode.robot.config.model import RobotBaseProfile
 from robotcode.robot.config.utils import get_config_files
+from robotcode.robot.utils import get_robot_version
 
 from ..__version__ import __version__
+
+_app: Optional[Application] = None
+
+__patched = False
+
+
+def _patch() -> None:
+    global __patched
+    if __patched:
+        return
+    __patched = True
+
+    if get_robot_version() < (6, 1):
+        old_is_included = SuiteStructureBuilder._is_included
+
+        def _is_included_lt_61(self: SuiteStructureBuilder, path: str, base: str, ext: Any, incl_suites: Any) -> bool:
+            if not old_is_included(self, path, base, ext, incl_suites):
+                return False
+
+            return not _is_ignored(self, Path(path))
+
+        SuiteStructureBuilder._is_included = _is_included_lt_61
+    elif get_robot_version() >= (6, 1):
+        old_is_included = SuiteStructureBuilder._is_included
+
+        def _is_included(self: SuiteStructureBuilder, path: Path) -> bool:
+            if not old_is_included(self, path):
+                return False
+
+            return not _is_ignored(self, path)
+
+        SuiteStructureBuilder._is_included = _is_included
+
+
+class BuilderCacheData:
+    def __init__(self) -> None:
+        self.spec: Optional[IgnoreSpec] = None
+        self.ignore_files: List[str] = [ROBOT_IGNORE_FILE, GIT_IGNORE_FILE]
+
+
+class BuilderCache:
+    def __init__(self) -> None:
+        self.data: Dict[Path, BuilderCacheData] = {}
+        self.base_path: Path = _app.root_folder if _app is not None else Path.cwd()
+
+
+_BuilderCache: "weakref.WeakKeyDictionary[SuiteStructureBuilder, BuilderCache]" = weakref.WeakKeyDictionary()
+
+
+def _is_ignored(builder: SuiteStructureBuilder, path: Path) -> bool:
+    if builder not in _BuilderCache:
+        _BuilderCache[builder] = BuilderCache()
+
+    cache_data = _BuilderCache[builder]
+
+    curr_dir = path.parent
+
+    curr_dir = Path(os.path.abspath(curr_dir))
+
+    if curr_dir not in cache_data.data:
+
+        parent_data: Optional[BuilderCacheData] = None
+        parent_spec_dir: Optional[Path] = None
+
+        dir = curr_dir
+
+        if path_is_relative_to(curr_dir, cache_data.base_path):
+            while True:
+                if dir in cache_data.data:
+                    parent_data = cache_data.data[dir]
+                    parent_spec_dir = dir
+                    break
+                dir = dir.parent
+                if not path_is_relative_to(dir, cache_data.base_path):
+                    break
+        else:
+            # TODO: we are in a different folder
+            if curr_dir.parent in cache_data.data:
+                parent_data = cache_data.data[curr_dir.parent]
+                parent_spec_dir = curr_dir.parent
+            else:
+                parent_spec_dir = curr_dir
+                if parent_spec_dir in cache_data.data:
+                    parent_data = cache_data.data[parent_spec_dir]
+
+        if parent_spec_dir is None:
+            parent_spec_dir = cache_data.base_path
+
+        if parent_data is None:
+            parent_data = BuilderCacheData()
+            parent_data.spec = IgnoreSpec.from_list(DEFAULT_SPEC_RULES, parent_spec_dir)
+
+            ignore_file = next(
+                (parent_spec_dir / f for f in parent_data.ignore_files if (parent_spec_dir / f).is_file()), None
+            )
+
+            if ignore_file is not None:
+                parent_data.ignore_files = [ignore_file.name]
+
+                parent_data.spec = parent_data.spec + IgnoreSpec.from_gitignore(parent_spec_dir / ignore_file)
+            cache_data.data[parent_spec_dir] = parent_data
+
+        if parent_data is not None and parent_data.spec is not None and parent_spec_dir != curr_dir:
+            ignore_file = next((curr_dir / f for f in parent_data.ignore_files if (curr_dir / f).is_file()), None)
+
+            if ignore_file is not None:
+                curr_data = BuilderCacheData()
+
+                curr_data.spec = parent_data.spec + IgnoreSpec.from_gitignore(curr_dir / ignore_file)
+                curr_data.ignore_files = [ignore_file.name]
+
+                cache_data.data[curr_dir] = curr_data
+            else:
+                cache_data.data[curr_dir] = parent_data
+
+    spec = cache_data.data[curr_dir].spec
+    if spec is not None and spec.matches(path):
+        return True
+
+    return False
 
 
 class RobotFrameworkEx(RobotFramework):
@@ -109,6 +234,12 @@ ROBOT_OPTIONS: Set[click.Command] = {
 def handle_robot_options(
     app: Application, robot_options_and_args: Tuple[str, ...]
 ) -> Tuple[Optional[Path], RobotBaseProfile, List[str]]:
+
+    global _app
+    _app = app
+
+    _patch()
+
     robot_arguments: Optional[List[Union[str, Path]]] = None
     old_sys_path = sys.path.copy()
     try:
@@ -136,6 +267,9 @@ def handle_robot_options(
         lambda: "Executing robot with following options:\n    "
         + " ".join(f'"{o}"' for o in (cmd_options + list(robot_options_and_args)))
     )
+
+    if root_folder is not None:
+        app.root_folder = root_folder
 
     return root_folder, profile, cmd_options
 
