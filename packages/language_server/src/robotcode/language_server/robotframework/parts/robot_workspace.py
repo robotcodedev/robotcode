@@ -4,9 +4,9 @@ from logging import CRITICAL
 from threading import Event
 from typing import TYPE_CHECKING, Any, List, Optional
 
+from robotcode.core.ignore_spec import DEFAULT_SPEC_RULES, GIT_IGNORE_FILE, ROBOT_IGNORE_FILE, IgnoreSpec, iter_files
 from robotcode.core.language import language_id
 from robotcode.core.uri import Uri
-from robotcode.core.utils.glob_path import iter_files
 from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.jsonrpc2.protocol import rpc_method
 from robotcode.language_server.common.parts.diagnostics import (
@@ -66,13 +66,20 @@ class RobotWorkspaceProtocolPart(RobotLanguageServerProtocolPart):
             for folder in self.parent.workspace.workspace_folders:
                 config = self.parent.workspace.get_configuration(RobotCodeConfig, folder.uri)
 
+                extensions = [ROBOT_FILE_EXTENSION, RESOURCE_FILE_EXTENSION]
                 with self.parent.window.progress("Collect sources", cancellable=False):
                     files = list(
-                        iter_files(
-                            folder.uri.to_path(),
-                            f"**/*.{{{ROBOT_FILE_EXTENSION[1:]},{RESOURCE_FILE_EXTENSION[1:]}}}",
-                            ignore_patterns=config.workspace.exclude_patterns or [],
-                            absolute=True,
+                        filter(
+                            lambda f: f.suffix in extensions,
+                            iter_files(
+                                folder.uri.to_path(),
+                                [ROBOT_IGNORE_FILE, GIT_IGNORE_FILE],
+                                include_hidden=False,
+                                parent_spec=IgnoreSpec.from_list(
+                                    [*DEFAULT_SPEC_RULES, *(config.workspace.exclude_patterns or [])],
+                                    folder.uri.to_path(),
+                                ),
+                            ),
                         )
                     )
 

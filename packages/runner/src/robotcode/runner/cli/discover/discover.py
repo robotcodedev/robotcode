@@ -70,7 +70,7 @@ def _patch() -> None:
         return
     __patched = True
 
-    if get_robot_version() <= (6, 1):
+    if get_robot_version() < (6, 1):
         if get_robot_version() > (5, 0) and get_robot_version() < (6, 0) or get_robot_version() < (5, 0):
             from robot.running.builder.testsettings import (  # pyright: ignore[reportMissingImports]
                 TestDefaults,

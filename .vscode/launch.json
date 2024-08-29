@@ -47,7 +47,7 @@
 				// "analyze",
 
 				"discover",
-				"tests",
+				"suites",
 				// "discover", "tests", "--tags"
 				"."
 			]
