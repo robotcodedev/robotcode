@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [0.87.0](https://github.com/robotcodedev/robotcode/compare/v0.86.2..v0.87.0) - 2024-08-29
+
+### Bug Fixes
+
+- Correct installing colorama package ([da28477](https://github.com/robotcodedev/robotcode/commit/da28477ad126b40f796d8a9b85c64d0077133dd8))
+
+
+  this is somehow lost in the lates version of click..
+
+
+### Features
+
+- **cli:** New command `discover files` ([505f473](https://github.com/robotcodedev/robotcode/commit/505f4736c6d050304719866a3fdc210af5d8596a))
+
+  find all relevant robot framework files in a project.
+
+- **discover:** Add more colors and infos to discover commands ([9e2d6f7](https://github.com/robotcodedev/robotcode/commit/9e2d6f7e8ecc36c2b4916f62153392664dc43ba2))
+
+
 ## [0.86.2](https://github.com/robotcodedev/robotcode/compare/v0.86.1..v0.86.2) - 2024-08-29
 
 ### Bug Fixes
