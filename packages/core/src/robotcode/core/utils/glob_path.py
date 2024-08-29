@@ -61,7 +61,7 @@ def _glob_pattern_to_re(pattern: str) -> str:
 
 
 @functools.lru_cache(maxsize=256)
-def _compile_glob_pattern(pattern: str) -> re.Pattern[str]:
+def _compile_glob_pattern(pattern: str) -> "re.Pattern[str]":
     return re.compile(_glob_pattern_to_re(pattern))
 
 
@@ -82,7 +82,7 @@ class Pattern:
         else:
             self.re_pattern = None
 
-    def matches(self, path: Union[PurePath, str, os.PathLike[str]]) -> bool:
+    def matches(self, path: Union[PurePath, str, "os.PathLike[str]"]) -> bool:
         if isinstance(path, PurePath):
             path = path.as_posix()
         else:
@@ -99,14 +99,14 @@ class Pattern:
         return f"{type(self).__qualname__}(pattern={self.pattern!r}"
 
 
-def globmatches(pattern: str, path: Union[PurePath, str, os.PathLike[Any]]) -> bool:
+def globmatches(pattern: str, path: Union[PurePath, str, "os.PathLike[Any]"]) -> bool:
     return Pattern(pattern).matches(path)
 
 
 FILE_ATTRIBUTE_HIDDEN = 2
 
 
-def _is_hidden(entry: os.DirEntry[str]) -> bool:
+def _is_hidden(entry: "os.DirEntry[str]") -> bool:
     if entry.name.startswith("."):
         return True
 
@@ -119,7 +119,7 @@ def _is_hidden(entry: os.DirEntry[str]) -> bool:
 
 
 def iter_files(
-    path: Union[PurePath, str, os.PathLike[str]],
+    path: Union[PurePath, str, "os.PathLike[str]"],
     patterns: Union[Sequence[Union[Pattern, str]], Pattern, str, None] = None,
     ignore_patterns: Union[Sequence[Union[Pattern, str]], Pattern, str, None] = None,
     *,

@@ -46,10 +46,11 @@
 				//"config", "info", "list",
 				// "analyze",
 
-				"discover",
-				"suites",
-				// "discover", "tests", "--tags"
-				"."
+				// "discover",
+				// "suites",
+				// // "discover", "tests", "--tags"
+				// "."
+				"language-server"
 			]
 		},
 		{
