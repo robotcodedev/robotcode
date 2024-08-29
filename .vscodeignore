@@ -57,9 +57,9 @@ scripts/
 .pre-commit-config.yaml
 .devcontainer/
 
-**/robotcode/
-**/packages/
-**/bundled/libs/bin/
+robotcode/
+packages/
+bundled/libs/bin/
 
 cliff.toml
 **/pyproject.toml
