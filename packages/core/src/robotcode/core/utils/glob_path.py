@@ -1,6 +1,7 @@
 import functools
 import os
 import re
+import sys
 from pathlib import Path, PurePath
 from typing import Any, Iterable, Iterator, Optional, Sequence, Union, cast
 
@@ -109,7 +110,7 @@ def _is_hidden(entry: os.DirEntry[str]) -> bool:
     if entry.name.startswith("."):
         return True
 
-    if os.name == "nt" and (
+    if sys.platform == "win32" and (
         (not entry.is_symlink() and entry.stat().st_file_attributes & 2 != 0) or entry.name.startswith("$")
     ):
         return True

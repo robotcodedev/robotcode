@@ -1,5 +1,6 @@
 import os
 import re
+import sys
 from pathlib import Path, PurePath
 from typing import Dict, Iterable, Iterator, NamedTuple, Optional, Reversible, Tuple
 
@@ -269,7 +270,7 @@ def _is_hidden(entry: Path) -> bool:
     if entry.name.startswith("."):
         return True
 
-    if os.name == "nt" and (
+    if sys.platform == "win32" and (
         (not entry.is_symlink() and entry.stat().st_file_attributes & _FILE_ATTRIBUTE_HIDDEN != 0)
         or entry.name.startswith("$")
     ):

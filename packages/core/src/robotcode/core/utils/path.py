@@ -1,5 +1,6 @@
 import os
 import re
+import sys
 from pathlib import Path
 from typing import Any, Union
 
@@ -21,7 +22,7 @@ _RE_DRIVE_LETTER_PATH = re.compile(r"^[a-zA-Z]:")
 def normalized_path(path: Union[Path, str, "os.PathLike[Any]"]) -> Path:
     p = os.path.normpath(os.path.abspath(path))
 
-    if os.name == "nt" and _RE_DRIVE_LETTER_PATH.match(str(p)):
+    if sys.platform == "win32" and _RE_DRIVE_LETTER_PATH.match(str(p)):
         return Path(p[0].upper() + p[1:])
 
     return Path(p)
