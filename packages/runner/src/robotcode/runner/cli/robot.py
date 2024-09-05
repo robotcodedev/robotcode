@@ -284,7 +284,7 @@ def handle_robot_options(
     aliases=["run"],
     context_settings={"allow_extra_args": True, "ignore_unknown_options": True},
     add_help_option=True,
-    epilog='Use "-- --help" to see `robot` help.',
+    epilog="Use `-- --help` to see `robot` help.",
 )
 @add_options(*ROBOT_OPTIONS)
 @pass_application

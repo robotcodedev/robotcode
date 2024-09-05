@@ -36,7 +36,7 @@ class AliasedGroup(click.Group):
                 subcommand = f"{', '.join(cmd.aliases)}"
                 commands.append((subcommand, cmd))
 
-        if len(commands):
+        if commands:
             limit = formatter.width - 6 - max(len(cmd[0]) for cmd in commands)
 
             rows = []

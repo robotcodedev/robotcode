@@ -1,4 +1,4 @@
-# robot.toml configuration settings
+# `robot.toml` Configuration Settings
 
 ## [profile].description
 

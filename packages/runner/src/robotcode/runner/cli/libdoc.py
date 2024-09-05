@@ -44,7 +44,7 @@ class LibDocEx(LibDoc):
 @click.command(
     context_settings={"allow_extra_args": True, "ignore_unknown_options": True},
     add_help_option=True,
-    epilog='Use "-- --help" to see the `libdoc` help.',
+    epilog="Use `-- --help` to see the `libdoc` help.",
 )
 @click.version_option(
     version=__version__,

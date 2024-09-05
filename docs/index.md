@@ -31,19 +31,20 @@ features:
       Namespaces,
       and more...
 
-
       <img src="/autocomplete1.gif" />
+
   - title: Running and Debugging
     details: Running and debugging of RobotFramework testcases
       and tasks out of the box, directly from the definition of the test or suite.
 
       <img src="/running_tests.gif" />
 
-  - title: Feature C
-    details: Lorem ipsum dolor sit amet, consectetur adipiscing elit---
+  - title: Video Tutorial ...
+    details:
+      Watch the video tutorial I gave at RoboCon 2024.
+      <iframe src="https://www.youtube.com/embed/7Uad_250YuI?si=cbGrG6rM0MG7CWTB" title="YouTube video player" frameborder="0" allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+
 ---
-
-
 
 
 [![Visual Studio Marketplace](https://img.shields.io/visual-studio-marketplace/v/d-biehl.robotcode?style=flat&label=VS%20Marketplace&logo=visual-studio-code)](https://marketplace.visualstudio.com/items?itemName=d-biehl.robotcode)

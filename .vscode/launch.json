@@ -52,7 +52,8 @@
 				// "."
 				"discover",
 				"files",
-				".."
+				// ".."
+
 			]
 		},
 		{
@@ -67,6 +68,15 @@
 			"type": "debugpy",
 			"request": "launch",
 			"program": "${file}",
+			"console": "integratedTerminal",
+			"justMyCode": false,
+			"cwd": "${workspaceFolder}",
+		},
+		{
+			"name": "Python: Create Cmd Line Doc",
+			"type": "debugpy",
+			"request": "launch",
+			"program": "scripts/create_cmdline_doc.py",
 			"console": "integratedTerminal",
 			"justMyCode": false,
 			"cwd": "${workspaceFolder}",

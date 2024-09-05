@@ -545,7 +545,7 @@ def handle_options(
 @discover.command(
     context_settings={"allow_extra_args": True, "ignore_unknown_options": True},
     add_help_option=True,
-    epilog='Use "-- --help" to see `robot` help.',
+    epilog="Use `-- --help` to see `robot` help.",
 )
 @click.option(
     "--tags / --no-tags",
@@ -635,7 +635,7 @@ def all(
 @discover.command(
     context_settings={"allow_extra_args": True, "ignore_unknown_options": True},
     add_help_option=True,
-    epilog='Use "-- --help" to see `robot` help.',
+    epilog="Use `-- --help` to see `robot` help.",
 )
 @click.option(
     "--tags / --no-tags",
@@ -709,7 +709,7 @@ def tests(
 @discover.command(
     context_settings={"allow_extra_args": True, "ignore_unknown_options": True},
     add_help_option=True,
-    epilog='Use "-- --help" to see `robot` help.',
+    epilog="Use `-- --help` to see `robot` help.",
 )
 @add_options(*ROBOT_OPTIONS)
 @click.option(
@@ -771,7 +771,7 @@ class TagsResult:
 @discover.command(
     context_settings={"allow_extra_args": True, "ignore_unknown_options": True},
     add_help_option=True,
-    epilog='Use "-- --help" to see `robot` help.',
+    epilog="Use `-- --help` to see `robot` help.",
 )
 @click.option(
     "--normalized / --not-normalized",

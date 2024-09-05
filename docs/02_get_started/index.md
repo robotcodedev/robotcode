@@ -9,6 +9,13 @@ Let's explore how you can enhance your development experience with RobotCode - R
 - Robotframework version 4.1 and above
 - VSCode version 1.86 and above
 
+## Tutorial Video
+
+If you prefer to watch a video tutorial, check out the following video that covers installing, setting up and using RobotCode in Visual Studio Code. Also check out the following video I gave at RoboCon 2024:
+
+<iframe width="560" height="315" src="https://www.youtube.com/embed/7Uad_250YuI?si=QyC08AOvHp2IMg9S" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+
+
 ## Installing RobotCode
 
 To install RobotCode and set up your Robot Framework project in Visual Studio Code, follow these steps:

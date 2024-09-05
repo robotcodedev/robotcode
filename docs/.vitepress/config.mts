@@ -108,7 +108,7 @@ export default defineConfig({
     image: {
       lazyLoading: true,
     },
-    lineNumbers: true,
+    //lineNumbers: true,
     theme: { light: "material-theme-lighter", dark: "material-theme-darker" },
     headers: {
       level: [2, 3, 4],

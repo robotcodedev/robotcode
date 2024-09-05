@@ -44,7 +44,7 @@ class TestDocEx(TestDoc):
 @click.command(
     context_settings={"allow_extra_args": True, "ignore_unknown_options": True},
     add_help_option=True,
-    epilog='Use "-- --help" to see `testdoc` help.',
+    epilog="Use `-- --help` to see `testdoc` help.",
 )
 @click.version_option(
     version=__version__,
