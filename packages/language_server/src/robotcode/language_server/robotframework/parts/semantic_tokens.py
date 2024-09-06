@@ -543,12 +543,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
                         length,
                     )
             elif get_robot_version() >= (5, 0) and token.type == Token.OPTION:
-                if (
-                    isinstance(node, ExceptHeader)
-                    and token.value.startswith("type=")
-                    or isinstance(node, WhileHeader)
-                    and token.value.startswith("limit=")
-                ):
+                if (isinstance(node, ExceptHeader) or isinstance(node, WhileHeader)) and "=" in token.value:
                     if col_offset is None:
                         col_offset = token.col_offset
 
