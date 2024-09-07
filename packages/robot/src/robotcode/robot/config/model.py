@@ -434,6 +434,19 @@ class CommonOptions(BaseOptions):
         robot_priority=500,
         robot_short_name="C",
     )
+    console_links: Optional[Literal["auto", "off"]] = field(
+        description="""\
+            Control making paths to results files hyperlinks.
+
+            **auto:** use links when colors are enabled (default)
+
+            **off:** disable links unconditionally
+
+            corresponds to the `--consolelinks auto|off` option of _robot_
+            """,
+        robot_name="consolelinks",
+        robot_priority=500,
+    )
     doc: Optional[Union[str, StringExpression]] = field(
         description="""\
             Set the documentation of the top level suite.

@@ -1,4 +1,4 @@
-# `robot.toml` Configuration Settings
+# robot.toml configuration settings
 
 ## [profile].description
 
@@ -107,6 +107,18 @@ Use colors on console output or not.
 **off:** disable colors altogether
 
 corresponds to the `-C --consolecolors auto|on|ansi|off` option of _robot_
+
+## console-links
+
+Type: `Optional[Literal['auto', 'off']]`
+
+Control making paths to results files hyperlinks.
+
+**auto:** use links when colors are enabled (default)
+
+**off:** disable links unconditionally
+
+corresponds to the `--consolelinks auto|off` option of _robot_
 
 ## console-markers
 
@@ -1199,6 +1211,18 @@ Use colors on console output or not.
 **off:** disable colors altogether
 
 corresponds to the `-C --consolecolors auto|on|ansi|off` option of _robot_
+
+## rebot.console-links
+
+Type: `Optional[Literal['auto', 'off']]`
+
+Control making paths to results files hyperlinks.
+
+**auto:** use links when colors are enabled (default)
+
+**off:** disable links unconditionally
+
+corresponds to the `--consolelinks auto|off` option of _robot_
 
 ## rebot.doc
 

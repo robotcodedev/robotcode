@@ -192,6 +192,18 @@
             "null"
           ]
         },
+        "console-links": {
+          "description": "Control making paths to results files hyperlinks.\n\n**auto:** use links when colors are enabled (default)\n\n**off:** disable links unconditionally\n\ncorresponds to the `--consolelinks auto|off` option of _robot_\n",
+          "enum": [
+            "auto",
+            "off"
+          ],
+          "title": "Console links",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "doc": {
           "anyOf": [
             {
@@ -1344,6 +1356,18 @@
             "off"
           ],
           "title": "Console colors",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "console-links": {
+          "description": "Control making paths to results files hyperlinks.\n\n**auto:** use links when colors are enabled (default)\n\n**off:** disable links unconditionally\n\ncorresponds to the `--consolelinks auto|off` option of _robot_\n",
+          "enum": [
+            "auto",
+            "off"
+          ],
+          "title": "Console links",
           "type": [
             "string",
             "null"
@@ -3197,6 +3221,18 @@
             "null"
           ]
         },
+        "console-links": {
+          "description": "Control making paths to results files hyperlinks.\n\n**auto:** use links when colors are enabled (default)\n\n**off:** disable links unconditionally\n\ncorresponds to the `--consolelinks auto|off` option of _robot_\n",
+          "enum": [
+            "auto",
+            "off"
+          ],
+          "title": "Console links",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "console-markers": {
           "description": "Show markers on the console when top level\nkeywords in a test case end. Values have same\nsemantics as with --consolecolors.\n\ncorresponds to the `-K --consolemarkers auto|on|off` option of _robot_\n",
           "enum": [
@@ -3324,7 +3360,7 @@
             }
           ],
           "default": null,
-          "description": "If enabled the profile is used. You can also use and `if` condition\nto calculate the enabled state.\n\nExamples:\n```toml\n# alway disabled\nenabled = false\n```\n\n```toml\n# enabled if TEST_VAR is set\nenabled = { if = 'environ.get(\"CI\") == \"true\"' }\n```\n",
+          "description": "If enabled the profile is used. You can also use and `if` condition\nto calculate the enabled state.\n\nExamples:\n```toml\n# always disabled\nenabled = false\n```\n\n```toml\n# enabled if TEST_VAR is set\nenabled = { if = 'environ.get(\"CI\") == \"true\"' }\n```\n",
           "title": "Enabled"
         },
         "env": {
