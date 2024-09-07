@@ -1,0 +1,28 @@
+data: !GeneratedTestData
+  character: 4
+  line: 201
+  name: library alias from resource
+result:
+- !LocationLink
+  origin_selection_range:
+    end:
+      character: 15
+      line: 201
+    start:
+      character: 4
+      line: 201
+  target_range:
+    end:
+      character: 71
+      line: 1
+    start:
+      character: 60
+      line: 1
+  target_selection_range:
+    end:
+      character: 71
+      line: 1
+    start:
+      character: 60
+      line: 1
+  target_uri: firstresource.resource

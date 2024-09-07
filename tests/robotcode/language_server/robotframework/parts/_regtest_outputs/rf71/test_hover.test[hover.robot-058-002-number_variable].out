@@ -1,0 +1,15 @@
+data: !GeneratedTestData
+  character: 2
+  line: 58
+  name: number variable
+result: !Hover
+  contents:
+    kind: markdown
+    value: (suite variable) ${F}
+  range:
+    end:
+      character: 3
+      line: 58
+    start:
+      character: 2
+      line: 58

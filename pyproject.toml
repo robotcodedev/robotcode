@@ -146,6 +146,7 @@ junit_suite_name = "robotcode"
 # log_cli_level = 4
 # log_cli_format = "%(levelname)s %(name)s: %(message)s"
 asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "session"
 faulthandler_timeout = 30
 
 

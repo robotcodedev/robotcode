@@ -1,0 +1,15 @@
+data: !GeneratedTestData
+  character: 20
+  line: 13
+  name: variable in resource import
+result: !Hover
+  contents:
+    kind: markdown
+    value: (builtin variable) ${CURDIR}
+  range:
+    end:
+      character: 26
+      line: 13
+    start:
+      character: 20
+      line: 13

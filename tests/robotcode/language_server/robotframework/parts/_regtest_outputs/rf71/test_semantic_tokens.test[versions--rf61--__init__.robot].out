@@ -1,0 +1,18 @@
+result: !SemanticTokens
+  data:
+  - 0
+  - 0
+  - 16
+  - 27
+  - 0
+  - 1
+  - 0
+  - 6
+  - 17
+  - 0
+  - 0
+  - 10
+  - 17
+  - 17
+  - 0
+  result_id: null

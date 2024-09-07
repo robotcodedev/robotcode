@@ -1,0 +1,15 @@
+data: !GeneratedTestData
+  character: 5
+  line: 33
+  name: variable declarations
+result: !Hover
+  contents:
+    kind: markdown
+    value: (suite variable) &{A DICT}
+  range:
+    end:
+      character: 8
+      line: 33
+    start:
+      character: 2
+      line: 33

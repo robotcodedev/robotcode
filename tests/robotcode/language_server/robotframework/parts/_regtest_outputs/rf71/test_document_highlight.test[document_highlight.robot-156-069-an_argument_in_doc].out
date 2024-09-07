@@ -1,0 +1,5 @@
+data: !GeneratedTestData
+  character: 69
+  line: 156
+  name: an argument in doc
+result: null

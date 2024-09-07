@@ -1,0 +1,15 @@
+data: !GeneratedTestData
+  character: 18
+  line: 104
+  name: Namespace in Template
+result: !Hover
+  contents:
+    kind: markdown
+    value: '### Library *BuiltIn*'
+  range:
+    end:
+      character: 25
+      line: 104
+    start:
+      character: 18
+      line: 104

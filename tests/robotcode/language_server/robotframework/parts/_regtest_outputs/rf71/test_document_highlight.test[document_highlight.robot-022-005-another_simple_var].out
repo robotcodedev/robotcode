@@ -1,0 +1,32 @@
+data: !GeneratedTestData
+  character: 5
+  line: 22
+  name: another simple var
+result:
+- !DocumentHighlight
+  kind: 1
+  range:
+    end:
+      character: 45
+      line: 10
+    start:
+      character: 38
+      line: 10
+- !DocumentHighlight
+  kind: 1
+  range:
+    end:
+      character: 9
+      line: 22
+    start:
+      character: 2
+      line: 22
+- !DocumentHighlight
+  kind: 1
+  range:
+    end:
+      character: 44
+      line: 63
+    start:
+      character: 37
+      line: 63

@@ -1,0 +1,15 @@
+data: !GeneratedTestData
+  character: 10
+  line: 48
+  name: complex var expression
+result: !Hover
+  contents:
+    kind: markdown
+    value: (suite variable) ${A}
+  range:
+    end:
+      character: 11
+      line: 48
+    start:
+      character: 10
+      line: 48

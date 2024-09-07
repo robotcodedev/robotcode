@@ -1,0 +1,15 @@
+data: !GeneratedTestData
+  character: 4
+  line: 195
+  name: namespace in keyword with dot
+result: !Hover
+  contents:
+    kind: markdown
+    value: '### Resource *firstresource*'
+  range:
+    end:
+      character: 17
+      line: 195
+    start:
+      character: 4
+      line: 195

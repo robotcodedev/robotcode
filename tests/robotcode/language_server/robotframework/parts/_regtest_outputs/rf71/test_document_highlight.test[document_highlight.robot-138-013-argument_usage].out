@@ -1,0 +1,50 @@
+data: !GeneratedTestData
+  character: 13
+  line: 138
+  name: argument usage
+result:
+- !DocumentHighlight
+  kind: 1
+  range:
+    end:
+      character: 30
+      line: 132
+    start:
+      character: 29
+      line: 132
+- !DocumentHighlight
+  kind: 1
+  range:
+    end:
+      character: 48
+      line: 132
+    start:
+      character: 47
+      line: 132
+- !DocumentHighlight
+  kind: 1
+  range:
+    end:
+      character: 14
+      line: 138
+    start:
+      character: 13
+      line: 138
+- !DocumentHighlight
+  kind: 1
+  range:
+    end:
+      character: 52
+      line: 143
+    start:
+      character: 51
+      line: 143
+- !DocumentHighlight
+  kind: 1
+  range:
+    end:
+      character: 48
+      line: 146
+    start:
+      character: 47
+      line: 146
