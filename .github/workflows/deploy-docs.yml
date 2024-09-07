@@ -1,4 +1,4 @@
-name: Deploy VitePress site to Pages
+name: deploy docs site to Pages
 
 on:
   push:
