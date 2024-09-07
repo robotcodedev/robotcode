@@ -2,6 +2,29 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [0.88.0](https://github.com/robotcodedev/robotcode/compare/v0.87.0..v0.88.0) - 2024-09-07
+
+### Documentation
+
+- Introduce a script that generate the doc for cli tools ([ecb5ec9](https://github.com/robotcodedev/robotcode/commit/ecb5ec9db8740f9b794555b7a408a80670afe926))
+- Update some documentation about config and cli ([84553c3](https://github.com/robotcodedev/robotcode/commit/84553c358f6793855a4c7641659c0f7b75a1aba5))
+- Update readme ([1e601e3](https://github.com/robotcodedev/robotcode/commit/1e601e3c1542d8358e1d207c5083cbbdfd3c20f2))
+- Add a Tip&Tricks page ([dd27480](https://github.com/robotcodedev/robotcode/commit/dd274806324388a7798de2c5e7fd3dcf2794a230))
+
+
+### Features
+
+- **cli:** Disable console links for RF7.1 if running in VSCode terminal ([5e83537](https://github.com/robotcodedev/robotcode/commit/5e83537c999030780f9b254ca3c5ef7cbee99af3))
+- **config:** Add console_links to robot.toml ([3902937](https://github.com/robotcodedev/robotcode/commit/390293755d5f658e5e66a0be25ce1a1560f0483f))
+- **langserver:** Corrected and generalized semantic tokenizing if OPTION tokens in except and while statements ([d5a9339](https://github.com/robotcodedev/robotcode/commit/d5a9339e705e50ec3fb1af7e7559a5dd8b2012b5))
+
+
+### Testing
+
+- Corrected some regression tests ([f4a5d41](https://github.com/robotcodedev/robotcode/commit/f4a5d413995d08c021569c80f035ce5f819f0061))
+- Add tests for RF 7.1 ([cbe9fb2](https://github.com/robotcodedev/robotcode/commit/cbe9fb28cbf47fa0ac4eeb5150dfde77f5bccbdc))
+
+
 ## [0.87.0](https://github.com/robotcodedev/robotcode/compare/v0.86.2..v0.87.0) - 2024-08-29
 
 ### Bug Fixes
