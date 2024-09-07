@@ -311,6 +311,15 @@ def robot(
 
     root_folder, profile, cmd_options = handle_robot_options(app, robot_options_and_args)
 
+    console_links_args = []
+    if get_robot_version() >= (7, 1) and os.getenv("ROBOTCODE_DISABLE_ANSI_LINKS", "").lower() in [
+        "on",
+        "1",
+        "yes",
+        "true",
+    ]:
+        console_links_args = ["--consolelinks", "off"]
+
     app.exit(
         cast(
             int,
@@ -325,6 +334,6 @@ def robot(
                 root_folder,
                 by_longname,
                 exclude_by_longname,
-            ).execute_cli((*cmd_options, *robot_options_and_args), exit=False),
+            ).execute_cli((*cmd_options, *console_links_args, *robot_options_and_args), exit=False),
         )
     )

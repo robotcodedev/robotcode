@@ -11,6 +11,7 @@ from robotcode.plugin import Application, pass_application
 from robotcode.robot.config.loader import load_robot_config_from_path
 from robotcode.robot.config.model import RebotProfile
 from robotcode.robot.config.utils import get_config_files
+from robotcode.robot.utils import get_robot_version
 
 from ..__version__ import __version__
 
@@ -96,9 +97,20 @@ def rebot(app: Application, robot_options_and_args: Tuple[str, ...]) -> None:
         + " ".join(f'"{o}"' for o in (options + list(robot_options_and_args)))
     )
 
+    console_links_args = []
+    if get_robot_version() >= (7, 1) and os.getenv("ROBOTCODE_DISABLE_ANSI_LINKS", "").lower() in [
+        "on",
+        "1",
+        "yes",
+        "true",
+    ]:
+        console_links_args = ["--consolelinks", "off"]
+
     app.exit(
         cast(
             int,
-            RebotEx(app.config.dry, root_folder).execute_cli((*options, *robot_options_and_args), exit=False),
+            RebotEx(app.config.dry, root_folder).execute_cli(
+                (*options, *console_links_args, *robot_options_and_args), exit=False
+            ),
         )
     )

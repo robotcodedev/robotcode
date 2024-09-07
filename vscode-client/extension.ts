@@ -117,6 +117,12 @@ export async function activateAsync(context: vscode.ExtensionContext): Promise<v
     new KeywordsTreeViewProvider(context, languageClientManger, outputChannel),
   );
 
+  context.environmentVariableCollection.clear();
+  context.environmentVariableCollection.description = new vscode.MarkdownString(
+    "Disable ANSI links in `robot`'s terminal output.",
+  );
+  context.environmentVariableCollection.replace("ROBOTCODE_DISABLE_ANSI_LINKS", "1");
+
   await languageClientManger.refresh();
 
   context.subscriptions.push(
