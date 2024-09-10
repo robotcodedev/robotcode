@@ -13,6 +13,7 @@ import tempfile
 from hashlib import sha512
 from io import StringIO
 from pathlib import Path
+from typing import Type, cast
 
 import pytest
 from _pytest._code.code import ExceptionInfo, TerminalRepr
@@ -274,7 +275,7 @@ def pytest_runtest_makereport(item, call):
         if not isinstance(excinfo, ExceptionInfo):
             _outcome = "failed"
             longrepr = excinfo
-        elif excinfo.errisinstance(skip.Exception):  # type: ignore
+        elif excinfo.errisinstance(cast(Type[Exception], skip.Exception)):
             _outcome = "skipped"
             r = excinfo._getreprcrash()
             longrepr = (str(r.path), r.lineno, r.message) if r is not None else excinfo
