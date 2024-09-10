@@ -120,7 +120,7 @@ class LinkFormatter:
     def _format_url(self, text: str, format_as_image: bool = True) -> str:
         if "://" not in text:
             return text
-        return self._url.sub(functools.partial(self._replace_url, format_as_image), text)
+        return self._url.sub(lambda m: self._replace_url(format_as_image, m), text)
 
     def _replace_url(self, format_as_image: bool, match: re.Match[str]) -> str:
         pre = match.group(1)
