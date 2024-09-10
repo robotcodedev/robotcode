@@ -395,6 +395,9 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
                 ):
                     continue
 
+                if var.name_token is not None and var.name_token.value and var.name_token.value.startswith("_"):
+                    continue
+
                 references = self.parent.robot_references.find_variable_references(document, var, False, True)
                 if not references:
                     result.append(
