@@ -35,20 +35,35 @@ class RobotDocumentHighlightProtocolPart(RobotLanguageServerProtocolPart):
             for var, var_refs in all_variable_refs.items():
                 check_current_task_canceled()
 
-                for r in var_refs:
-                    if (var.source == namespace.source and position in var.name_range) or position in r.range:
+                if var_refs:
+                    for r in var_refs:
+                        if (var.source == namespace.source and position in var.name_range) or position in r.range:
+                            return [
+                                *(
+                                    [
+                                        DocumentHighlight(
+                                            var.name_range,
+                                            DocumentHighlightKind.WRITE,
+                                        )
+                                    ]
+                                    if var.source == namespace.source
+                                    else []
+                                ),
+                                *(DocumentHighlight(e.range, DocumentHighlightKind.READ) for e in var_refs),
+                            ]
+                else:
+                    if var.source == namespace.source and position in var.name_range:
                         return [
                             *(
                                 [
                                     DocumentHighlight(
                                         var.name_range,
-                                        DocumentHighlightKind.TEXT,
+                                        DocumentHighlightKind.WRITE,
                                     )
                                 ]
                                 if var.source == namespace.source
                                 else []
-                            ),
-                            *(DocumentHighlight(e.range, DocumentHighlightKind.TEXT) for e in var_refs),
+                            )
                         ]
 
         all_kw_refs = namespace.get_keyword_references()
@@ -56,15 +71,25 @@ class RobotDocumentHighlightProtocolPart(RobotLanguageServerProtocolPart):
             for kw, kw_refs in all_kw_refs.items():
                 check_current_task_canceled()
 
-                for r in kw_refs:
-                    if (kw.source == namespace.source and position in kw.range) or position in r.range:
+                if kw_refs:
+                    for r in kw_refs:
+                        if (kw.source == namespace.source and position in kw.range) or position in r.range:
+                            return [
+                                *(
+                                    [DocumentHighlight(kw.range, DocumentHighlightKind.TEXT)]
+                                    if kw.source == namespace.source
+                                    else []
+                                ),
+                                *(DocumentHighlight(e.range, DocumentHighlightKind.TEXT) for e in kw_refs),
+                            ]
+                else:
+                    if kw.source == namespace.source and position in kw.range:
                         return [
                             *(
                                 [DocumentHighlight(kw.range, DocumentHighlightKind.TEXT)]
                                 if kw.source == namespace.source
                                 else []
-                            ),
-                            *(DocumentHighlight(e.range, DocumentHighlightKind.TEXT) for e in kw_refs),
+                            )
                         ]
 
         all_namespace_refs = namespace.get_namespace_references()
@@ -98,4 +123,5 @@ class RobotDocumentHighlightProtocolPart(RobotLanguageServerProtocolPart):
                         ),
                         *(DocumentHighlight(e.range, DocumentHighlightKind.TEXT) for e in ns_refs),
                     ]
-        return None
+
+        return [DocumentHighlight(Range(position, position), DocumentHighlightKind.TEXT)]
