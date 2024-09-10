@@ -2,4 +2,13 @@ data: !GeneratedTestData
   character: 36
   line: 10
   name: Variable in library params
-result: null
+result:
+- !DocumentHighlight
+  kind: 1
+  range:
+    end:
+      character: 36
+      line: 10
+    start:
+      character: 36
+      line: 10

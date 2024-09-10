@@ -4,7 +4,7 @@ data: !GeneratedTestData
   name: multiple variables
 result:
 - !DocumentHighlight
-  kind: 1
+  kind: 3
   range:
     end:
       character: 7
@@ -13,7 +13,7 @@ result:
       character: 2
       line: 20
 - !DocumentHighlight
-  kind: 1
+  kind: 2
   range:
     end:
       character: 43
@@ -22,7 +22,7 @@ result:
       character: 38
       line: 30
 - !DocumentHighlight
-  kind: 1
+  kind: 2
   range:
     end:
       character: 54
@@ -31,7 +31,7 @@ result:
       character: 49
       line: 32
 - !DocumentHighlight
-  kind: 1
+  kind: 2
   range:
     end:
       character: 21
@@ -40,7 +40,7 @@ result:
       character: 16
       line: 34
 - !DocumentHighlight
-  kind: 1
+  kind: 2
   range:
     end:
       character: 32
@@ -49,7 +49,7 @@ result:
       character: 27
       line: 36
 - !DocumentHighlight
-  kind: 1
+  kind: 2
   range:
     end:
       character: 40
@@ -58,7 +58,7 @@ result:
       character: 35
       line: 38
 - !DocumentHighlight
-  kind: 1
+  kind: 2
   range:
     end:
       character: 35
@@ -67,7 +67,7 @@ result:
       character: 30
       line: 113
 - !DocumentHighlight
-  kind: 1
+  kind: 2
   range:
     end:
       character: 44
@@ -76,7 +76,7 @@ result:
       character: 39
       line: 122
 - !DocumentHighlight
-  kind: 1
+  kind: 2
   range:
     end:
       character: 56
@@ -85,7 +85,7 @@ result:
       character: 51
       line: 156
 - !DocumentHighlight
-  kind: 1
+  kind: 2
   range:
     end:
       character: 33
@@ -94,7 +94,7 @@ result:
       character: 28
       line: 161
 - !DocumentHighlight
-  kind: 1
+  kind: 2
   range:
     end:
       character: 56
@@ -103,7 +103,7 @@ result:
       character: 51
       line: 170
 - !DocumentHighlight
-  kind: 1
+  kind: 2
   range:
     end:
       character: 33

@@ -4,7 +4,7 @@ data: !GeneratedTestData
   name: variable in if expression
 result:
 - !DocumentHighlight
-  kind: 1
+  kind: 3
   range:
     end:
       character: 3
@@ -13,7 +13,7 @@ result:
       character: 2
       line: 24
 - !DocumentHighlight
-  kind: 1
+  kind: 2
   range:
     end:
       character: 11
@@ -22,7 +22,7 @@ result:
       character: 10
       line: 86
 - !DocumentHighlight
-  kind: 1
+  kind: 2
   range:
     end:
       character: 10
@@ -31,7 +31,7 @@ result:
       character: 9
       line: 94
 - !DocumentHighlight
-  kind: 1
+  kind: 2
   range:
     end:
       character: 11
@@ -40,7 +40,7 @@ result:
       character: 10
       line: 102
 - !DocumentHighlight
-  kind: 1
+  kind: 2
   range:
     end:
       character: 10
@@ -49,7 +49,7 @@ result:
       character: 9
       line: 106
 - !DocumentHighlight
-  kind: 1
+  kind: 2
   range:
     end:
       character: 51
@@ -58,7 +58,7 @@ result:
       character: 50
       line: 164
 - !DocumentHighlight
-  kind: 1
+  kind: 2
   range:
     end:
       character: 51
