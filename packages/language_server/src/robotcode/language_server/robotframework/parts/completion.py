@@ -2130,6 +2130,15 @@ class CompletionCollector(ModelHelper):
         if keyword_token is None or position <= range_from_token(keyword_token).end:
             return None
 
+        if (
+            position == range_from_token(token_at_position).start
+            and len(tokens_at_position) >= 3
+            and tokens_at_position[-2].type == Token.ARGUMENT
+            and not tokens_at_position[-2].value
+            and tokens_at_position[-3].type == Token.CONTINUATION
+        ):
+            return None
+
         keyword_doc_and_token = self.get_keyworddoc_and_token_from_position(
             keyword_token.value,
             keyword_token,
