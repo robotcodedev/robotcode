@@ -101,6 +101,23 @@ else:
     from robot.variables.search import VariableMatches
 
 
+if get_robot_version() < (5, 0):
+    ALLOWED_VARIABLE_TOKENS = [
+        Token.NAME,
+        Token.ARGUMENT,
+        Token.KEYWORD,
+        Token.ASSIGN,
+    ]
+else:
+    ALLOWED_VARIABLE_TOKENS = [
+        Token.NAME,
+        Token.ARGUMENT,
+        Token.KEYWORD,
+        Token.ASSIGN,
+        Token.OPTION,
+    ]
+
+
 DEFAULT_HEADER_STYLE = "*** {name}s ***"
 DEFAULT_HEADER_STYLE_51 = "*** {name} ***"
 
@@ -1141,12 +1158,7 @@ class CompletionCollector(ModelHelper):
                     break
                 token_at_position = tokens_at_position[token_at_position_index]
 
-            if token_at_position.type not in [
-                Token.NAME,
-                Token.ARGUMENT,
-                Token.KEYWORD,
-                Token.ASSIGN,
-            ]:
+            if token_at_position.type not in ALLOWED_VARIABLE_TOKENS:
                 return None
 
             close_brace_index_before = token_at_position.value.rfind(

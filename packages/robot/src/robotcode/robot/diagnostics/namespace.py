@@ -538,7 +538,7 @@ class BlockVariableVisitor(OnlyArgumentsVisitor):
                 source=self.namespace.source,
             )
 
-            if var_name not in self._results or type(self._results[var_name]) is type(var):
+            if var_name not in self._results or type(self._results[var_name]) is not type(var):
                 if isinstance(var, LocalVariableDefinition) or not any(
                     l for l in self.namespace.get_global_variables() if l.matcher == var.matcher
                 ):

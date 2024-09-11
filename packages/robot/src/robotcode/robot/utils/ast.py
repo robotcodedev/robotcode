@@ -225,6 +225,21 @@ def _tokenize_no_variables(token: Token) -> Iterator[Token]:
     yield token
 
 
+if get_robot_version() < (5, 0):
+    ALLOWED_TOKEN_TYPES = {
+        *Token.ALLOW_VARIABLES,
+        Token.KEYWORD,
+        Token.ASSIGN,
+    }
+else:
+    ALLOWED_TOKEN_TYPES = {
+        *Token.ALLOW_VARIABLES,
+        Token.KEYWORD,
+        Token.ASSIGN,
+        Token.OPTION,
+    }
+
+
 def tokenize_variables(
     token: Token,
     identifiers: str = "$@&%",
@@ -233,9 +248,7 @@ def tokenize_variables(
     extra_types: Optional[Set[str]] = None,
 ) -> Iterator[Token]:
     if token.type not in {
-        *Token.ALLOW_VARIABLES,
-        Token.KEYWORD,
-        Token.ASSIGN,
+        *ALLOWED_TOKEN_TYPES,
         *(extra_types if extra_types is not None else set()),
     }:
         return _tokenize_no_variables(token)
