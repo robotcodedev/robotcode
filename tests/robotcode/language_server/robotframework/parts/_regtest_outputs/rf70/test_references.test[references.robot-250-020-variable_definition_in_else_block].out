@@ -1,0 +1,32 @@
+data: !GeneratedTestData
+  character: 20
+  line: 250
+  name: variable definition in else block
+result:
+- !Location
+  range:
+    end:
+      character: 23
+      line: 247
+    start:
+      character: 17
+      line: 247
+  uri: tests/references.robot
+- !Location
+  range:
+    end:
+      character: 23
+      line: 250
+    start:
+      character: 17
+      line: 250
+  uri: tests/references.robot
+- !Location
+  range:
+    end:
+      character: 22
+      line: 253
+    start:
+      character: 16
+      line: 253
+  uri: tests/references.robot

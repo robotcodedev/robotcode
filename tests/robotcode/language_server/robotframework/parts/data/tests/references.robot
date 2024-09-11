@@ -206,3 +206,50 @@ a keyword with variables in doc, timeout and tags with args first
     ${result}    Set Variable    1
     [Teardown]    Log    ${result}
 #                          ^^^^^^ a local variable in teardown
+
+a keyword with a while loop
+    VAR    ${counter}    ${0}
+#            ^^^^^^^ counter variable
+    WHILE    True    limit=2s
+        Log To Console    ${counter}
+#                           ^^^^^^^ counter variable usage
+        VAR    ${counter}    ${counter+1}
+#                ^^^^^^^ counter variable assignment
+#                              ^^^^^^^ another counter variable usage
+    END
+
+a keyword with python expressions
+    [Documentation]    Escape pipe from input string:
+    ...    - if surunded by spaces
+    ...    - if it is the ending character
+    [Arguments]    ${val}
+#                   ^^^^ an argument
+    VAR    ${output}    ${{ re.sub(r' \|$', ' \|', $val) }}
+#                                                   ^^^ an argument usage
+#            ^^^^^^ local variable definition
+    VAR    ${output}    ${{ re.sub(r' \| ', ' \| ', $output) }}
+#            ^^^^^^ local variable assignment
+    RETURN    ${output}
+#               ^^^^^^ local variable usage
+
+a keyword with a while loop and variable in while options
+    [Documentation]    Showing argument not used but should not
+    [Arguments]    ${retries}
+#                    ^^^^^^^ an argument
+    WHILE    ${True}    limit=${retries}
+#                               ^^^^^^^ argument usage in while option
+        No Operation
+    END
+
+a keyword with VAR in condition
+    [Documentation]    Unused variable error and collapsing error
+    [Arguments]    ${arg}
+    IF    $arg == 1
+        VAR    ${my var}    foo
+#                ^^^^^^ variable definition in if block
+    ELSE
+        VAR    ${my var}    bar
+#                ^^^^^^ variable definition in else block
+    END
+    RETURN    ${my var}
+#               ^^^^^^ variable usage

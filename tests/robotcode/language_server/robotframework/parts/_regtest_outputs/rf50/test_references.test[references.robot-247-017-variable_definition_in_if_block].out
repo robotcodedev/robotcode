@@ -1,0 +1,5 @@
+data: !GeneratedTestData
+  character: 17
+  line: 247
+  name: variable definition in if block
+result: null

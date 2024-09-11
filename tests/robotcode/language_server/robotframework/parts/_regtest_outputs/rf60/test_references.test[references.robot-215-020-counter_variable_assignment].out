@@ -1,0 +1,5 @@
+data: !GeneratedTestData
+  character: 20
+  line: 215
+  name: counter variable assignment
+result: null
