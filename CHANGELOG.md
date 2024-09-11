@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [0.89.1](https://github.com/robotcodedev/robotcode/compare/v0.89.0..v0.89.1) - 2024-09-11
+
+### Bug Fixes
+
+- Corrected parsing of OPTION tokens and variable resolving ([5a8abf2](https://github.com/robotcodedev/robotcode/commit/5a8abf2ea5ae0be9833ecd0ff90658d6e3dbac59))
+- Corrected completion of arguments after `...` continuation line ([377aa9d](https://github.com/robotcodedev/robotcode/commit/377aa9d39a185961b2e6c16cb68c7169f490b15f))
+- Dont show completion right after `...` ([f24f6a8](https://github.com/robotcodedev/robotcode/commit/f24f6a8691451e34e65a3b6fba1f9d000278c066))
+
+
+### Testing
+
+- Add some more regression tests ([e2b3c4e](https://github.com/robotcodedev/robotcode/commit/e2b3c4e627df35b214d1d79b103400506d450911))
+
+
 ## [0.89.0](https://github.com/robotcodedev/robotcode/compare/v0.88.0..v0.89.0) - 2024-09-10
 
 ### Bug Fixes
