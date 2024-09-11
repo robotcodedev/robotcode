@@ -4092,6 +4092,11 @@ class Position(CamelSnakeMixin):
             return NotImplemented
         return (self.line, self.character) > (o.line, o.character)
 
+    def __ge__(self, o: object) -> bool:
+        if not isinstance(o, Position):
+            return NotImplemented
+        return (self.line, self.character) >= (o.line, o.character)
+
     def __iter__(self) -> Iterator[int]:
         return iter((self.line, self.character))
 

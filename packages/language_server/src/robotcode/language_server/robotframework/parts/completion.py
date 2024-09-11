@@ -2127,7 +2127,7 @@ class CompletionCollector(ModelHelper):
         keyword_doc_and_token: Optional[Tuple[Optional[KeywordDoc], Token]] = None
 
         keyword_token = kw_node.get_token(keyword_name_token_type)
-        if keyword_token is None or position.character < range_from_token(keyword_token).end.character:
+        if keyword_token is None or position <= range_from_token(keyword_token).end:
             return None
 
         keyword_doc_and_token = self.get_keyworddoc_and_token_from_position(
