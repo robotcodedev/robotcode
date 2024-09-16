@@ -86,8 +86,36 @@
       "robotcode-robot": {
         "description": "RobotFramework Icon",
         "default": {
-          "fontPath": "./icons/robot.woff",
+          "fontPath": "./icons/robotcode.woff2",
           "fontCharacter": "\\E900"
+        }
+      },
+      "robotcode-robocop": {
+        "description": "RoboCop Icon",
+        "default": {
+          "fontPath": "./icons/robotcode.woff2",
+          "fontCharacter": "\\E901"
+        }
+      },
+      "robotcode-python": {
+        "description": "Python Icon",
+        "default": {
+          "fontPath": "./icons/robotcode.woff2",
+          "fontCharacter": "\\E902"
+        }
+      },
+      "robotcode-tidy": {
+        "description": "Python Icon",
+        "default": {
+          "fontPath": "./icons/robotcode.woff2",
+          "fontCharacter": "\\E903"
+        }
+      },
+      "robotcode-robotcode": {
+        "description": "Python Icon",
+        "default": {
+          "fontPath": "./icons/robotcode.woff2",
+          "fontCharacter": "\\E904"
         }
       }
     },
@@ -920,20 +948,37 @@
         "title": "Run Current File",
         "category": "RobotCode",
         "command": "robotcode.runCurrentFile",
-        "enablement": "resourceLangId == robotframework && resourceExtname == .robot || explorerResourceIsFolder",
+        "enablement": "resourceLangId == robotframework && resourceExtname == .robot",
         "icon": "$(run)"
       },
       {
         "title": "Debug Current File",
         "category": "RobotCode",
         "command": "robotcode.debugCurrentFile",
-        "enablement": "resourceLangId == robotframework && resourceExtname == .robot || explorerResourceIsFolder",
+        "enablement": "resourceLangId == robotframework && resourceExtname == .robot",
         "icon": "$(debug-alt)"
       },
       {
         "title": "Restart Language Servers",
         "category": "RobotCode",
         "command": "robotcode.restartLanguageServers"
+      },
+      {
+        "title": "Disable RoboCop",
+        "category": "RobotCode",
+        "command": "robotcode.disableRoboCop",
+        "enablement": "resourceLangId == robotframework && config.robotcode.robocop.enabled"
+      },
+      {
+        "title": "Enable RoboCop",
+        "category": "RobotCode",
+        "command": "robotcode.enableRoboCop",
+        "enablement": "resourceLangId == robotframework && !config.robotcode.robocop.enabled"
+      },
+      {
+        "title": "Report Issue...",
+        "category": "RobotCode",
+        "command": "robotcode.reportIssue"
       },
       {
         "title": "Clear Cache and Restart Language Servers",
@@ -944,6 +989,11 @@
         "title": "Select Configuration Profiles",
         "category": "RobotCode",
         "command": "robotcode.selectConfigurationProfiles"
+      },
+      {
+        "title": "Show Tool Menu",
+        "category": "RobotCode",
+        "command": "robotcode.showToolMenu"
       },
       {
         "title": "Refresh",

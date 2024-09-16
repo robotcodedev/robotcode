@@ -277,9 +277,12 @@ export class TestControllerManager {
       vscode.commands.registerCommand("robotcode.debugCurrentFile", async (...args) => {
         await vscode.commands.executeCommand("testing.debugCurrentFile", ...args);
       }),
-      vscode.commands.registerCommand("robotcode.selectConfigurationProfiles", async () => {
-        await this.configureRunProfile();
-      }),
+      vscode.commands.registerCommand(
+        "robotcode.selectConfigurationProfiles",
+        async (folder?: vscode.WorkspaceFolder) => {
+          await this.selectConfigurationProfiles(folder);
+        },
+      ),
       vscode.workspace.onDidChangeConfiguration(async (event) => {
         for (const s of ["launch.configurations"]) {
           if (event.affectsConfiguration(s)) {
@@ -320,7 +323,7 @@ export class TestControllerManager {
         );
 
         runProfile.configureHandler = () => {
-          this.configureRunProfile().then(
+          this.selectConfigurationProfiles(folder).then(
             (_) => undefined,
             (_) => undefined,
           );
@@ -337,7 +340,7 @@ export class TestControllerManager {
         );
 
         debugProfile.configureHandler = () => {
-          this.configureRunProfile().then(
+          this.selectConfigurationProfiles(folder).then(
             (_) => undefined,
             (_) => undefined,
           );
@@ -430,44 +433,45 @@ export class TestControllerManager {
     ])) as RobotCodeProfilesResult;
   }
 
-  public async configureRunProfile(): Promise<void> {
-    if (vscode.workspace.workspaceFolders === undefined || vscode.workspace.workspaceFolders?.length === 0) return;
+  public async selectConfigurationProfiles(folder?: vscode.WorkspaceFolder): Promise<void> {
+    if (!folder) {
+      if (vscode.workspace.workspaceFolders === undefined || vscode.workspace.workspaceFolders?.length === 0) return;
 
-    const folders = await filterAsync(
-      vscode.workspace.workspaceFolders,
-      async (v) =>
-        (
-          await vscode.workspace.findFiles(
-            new vscode.RelativePattern(v, `**/*.{${this.languageClientsManager.fileExtensions.join(",")}}}`),
-            null,
-            1,
-          )
-        ).length > 0,
-    );
-
-    if (folders.length === 0) {
-      await vscode.window.showWarningMessage("No workspaces with Robot Framework files found.");
-      return;
-    }
-
-    const folder =
-      folders.length > 1
-        ? (
-            await vscode.window.showQuickPick(
-              folders.map((v) => {
-                return {
-                  label: v.name,
-                  description: v.uri.fsPath.toString(),
-                  value: v,
-                };
-              }),
-              { title: "Select Workspace Folder" },
+      const folders = await filterAsync(
+        vscode.workspace.workspaceFolders,
+        async (v) =>
+          (
+            await vscode.workspace.findFiles(
+              new vscode.RelativePattern(v, `**/*.{${this.languageClientsManager.fileExtensions.join(",")}}}`),
+              null,
+              1,
             )
-          )?.value
-        : folders[0];
+          ).length > 0,
+      );
 
-    if (!folder) return;
+      if (folders.length === 0) {
+        await vscode.window.showWarningMessage("No workspaces with Robot Framework files found.");
+        return;
+      }
 
+      folder =
+        folders.length > 1
+          ? (
+              await vscode.window.showQuickPick(
+                folders.map((v) => {
+                  return {
+                    label: v.name,
+                    description: v.uri.fsPath.toString(),
+                    value: v,
+                  };
+                }),
+                { title: "Select Workspace Folder" },
+              )
+            )?.value
+          : folders[0];
+
+      if (!folder) return;
+    }
     try {
       const config = vscode.workspace.getConfiguration(CONFIG_SECTION, folder);
       const result = await this.getRobotCodeProfiles(folder, config.get("profiles", undefined));

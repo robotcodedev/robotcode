@@ -43,6 +43,7 @@ from .parts.http_server import HttpServerProtocolPart
 from .parts.inlay_hint import RobotInlayHintProtocolPart
 from .parts.inline_value import RobotInlineValueProtocolPart
 from .parts.keywords_treeview import RobotKeywordsTreeViewPart
+from .parts.project_info import ProjectInfoPart
 from .parts.references import RobotReferencesProtocolPart
 from .parts.rename import RobotRenameProtocolPart
 from .parts.robocop_diagnostics import RobotRoboCopDiagnosticsProtocolPart
@@ -116,6 +117,7 @@ class RobotLanguageServerProtocol(LanguageServerProtocol):
 
     robot_debugging_utils = ProtocolPartDescriptor(RobotDebuggingUtilsProtocolPart)
     robot_keywords_treeview = ProtocolPartDescriptor(RobotKeywordsTreeViewPart)
+    robot_project_info = ProtocolPartDescriptor(ProjectInfoPart)
 
     http_server = ProtocolPartDescriptor(HttpServerProtocolPart)
 

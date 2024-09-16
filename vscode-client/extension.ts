@@ -4,6 +4,7 @@ import { LanguageClientsManager } from "./languageclientsmanger";
 import { PythonManager } from "./pythonmanger";
 import { TestControllerManager } from "./testcontrollermanager";
 import { KeywordsTreeViewProvider } from "./keywordsTreeViewProvider";
+import { LanguageToolsManager } from "./languageToolsManager";
 
 class TerminalLink extends vscode.TerminalLink {
   constructor(
@@ -48,6 +49,7 @@ export async function activateAsync(context: vscode.ExtensionContext): Promise<v
     languageClientManger,
     debugManager,
     testControllerManger,
+    new LanguageToolsManager(context, languageClientManger, pythonManager, testControllerManger, outputChannel),
     vscode.commands.registerCommand("robotcode.showDocumentation", async (url: string) => {
       if (url.indexOf("&theme=%24%7Btheme%7D") > 0) {
         url = url.replace("%24%7Btheme%7D", getDocTheme());
@@ -115,17 +117,7 @@ export async function activateAsync(context: vscode.ExtensionContext): Promise<v
     }),
 
     new KeywordsTreeViewProvider(context, languageClientManger, outputChannel),
-  );
 
-  context.environmentVariableCollection.clear();
-  context.environmentVariableCollection.description = new vscode.MarkdownString(
-    "Disable ANSI links in `robot`'s terminal output.",
-  );
-  context.environmentVariableCollection.replace("ROBOTCODE_DISABLE_ANSI_LINKS", "1");
-
-  await languageClientManger.refresh();
-
-  context.subscriptions.push(
     vscode.workspace.onDidChangeConfiguration(async (event) => {
       const affectedFolders = new Set<vscode.Uri>();
 
@@ -156,6 +148,15 @@ export async function activateAsync(context: vscode.ExtensionContext): Promise<v
       }
     }),
   );
+
+  context.environmentVariableCollection.clear();
+  context.environmentVariableCollection.description = new vscode.MarkdownString(
+    "Disable ANSI links in `robot`'s terminal output.",
+  );
+
+  context.environmentVariableCollection.replace("ROBOTCODE_DISABLE_ANSI_LINKS", "1");
+
+  languageClientManger.refresh();
 }
 
 function displayProgress<R>(promise: Promise<R>): Thenable<R> {

@@ -912,8 +912,6 @@ def info(app: Application) -> None:
     if app.config.output_format is None or app.config.output_format == OutputFormat.TEXT:
         for key, value in as_dict(info, remove_defaults=True).items():
             app.echo_via_pager(f"{key}: {value}")
-
-        # app.print_data(info, remove_defaults=True)
     else:
         app.print_data(info, remove_defaults=True)
 

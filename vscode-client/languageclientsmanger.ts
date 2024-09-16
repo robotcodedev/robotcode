@@ -82,6 +82,8 @@ export enum ClientState {
   Stopped,
   Starting,
   Running,
+  Ready,
+  Refreshed,
 }
 
 export interface ClientStateChangedEvent {
@@ -98,6 +100,12 @@ interface DiscoverInfoResult {
   system?: string;
   system_version?: string;
   [key: string]: string | undefined;
+}
+
+export interface ProjectInfo {
+  robotVersionString: string;
+  robocopVersionString?: string;
+  tidyVersionString: string;
 }
 
 interface RobotCodeContributions {
@@ -120,8 +128,6 @@ export class LanguageClientsManager {
   public _pythonCanceledPythonAndRobotEnv = new WeakMap<vscode.WorkspaceFolder, boolean>();
   public _pythonValidPythonAndRobotEnv = new WeakMap<vscode.WorkspaceFolder, boolean>();
   private _workspaceFolderDiscoverInfo = new WeakMap<vscode.WorkspaceFolder, DiscoverInfoResult>();
-
-  private readonly statusBarItem: vscode.StatusBarItem;
 
   private readonly _onClientStateChangedEmitter = new vscode.EventEmitter<ClientStateChangedEvent>();
 
@@ -177,22 +183,17 @@ export class LanguageClientsManager {
     fileWatcher1.onDidDelete((uri) => this.restart(vscode.workspace.getWorkspaceFolder(uri)?.uri));
     fileWatcher1.onDidChange((uri) => this.restart(vscode.workspace.getWorkspaceFolder(uri)?.uri));
 
-    this.statusBarItem = vscode.window.createStatusBarItem("robotCodeInfo", vscode.StatusBarAlignment.Right, 0);
-    this.statusBarItem.text = "RobotCode";
-
     this._disposables = vscode.Disposable.from(
       fileWatcher1,
-      this.statusBarItem,
-      vscode.window.onDidChangeActiveTextEditor(async (editor) => this.updateStatusbarItem(editor)),
 
       this.pythonManager.onActivePythonEnvironmentChanged(async (event) => {
         if (event.resource !== undefined) {
-          this.inShowErrorWithSelectPythonInterpreter = true;
+          this.inselectPythonEnvironment = true;
 
           this._workspaceFolderDiscoverInfo.delete(event.resource);
           this._pythonValidPythonAndRobotEnv.delete(event.resource);
           this._pythonCanceledPythonAndRobotEnv.delete(event.resource);
-          this.showErrorWithSelectPythonInterpreterCancelTokenSource?.cancel();
+          this.selectPythonEnvironmentCancelTokenSource?.cancel();
           await this.refresh(event.resource.uri, true);
         } else {
           this._pythonValidPythonAndRobotEnv = new WeakMap<vscode.WorkspaceFolder, boolean>();
@@ -204,23 +205,27 @@ export class LanguageClientsManager {
 
       vscode.workspace.onDidChangeWorkspaceFolders(async (_event) => this.refresh()),
       vscode.workspace.onDidOpenTextDocument(async (document) => this.getLanguageClientForDocument(document)),
-      vscode.commands.registerCommand("robotcode.restartLanguageServers", async () => await this.restart()),
-      vscode.commands.registerCommand("robotcode.clearCacheRestartLanguageServers", async () => {
-        await this.clearCaches();
-        await this.restart();
+      vscode.commands.registerCommand(
+        "robotcode.restartLanguageServers",
+        async (uri?: vscode.Uri) => await this.restart(uri),
+      ),
+      vscode.commands.registerCommand("robotcode.clearCacheRestartLanguageServers", async (uri?: vscode.Uri) => {
+        await this.clearCaches(uri);
+        await this.restart(uri);
       }),
     );
-    setTimeout(() => {
-      this.updateStatusbarItem(vscode.window.activeTextEditor).then(
-        (_) => undefined,
-        (_) => undefined,
-      );
-    }, 1000);
   }
 
-  public async clearCaches(): Promise<void> {
-    for (const client of this.clients.values()) {
-      await client.sendRequest("robot/cache/clear");
+  public async clearCaches(uri?: vscode.Uri): Promise<void> {
+    if (uri !== undefined) {
+      const client = await this.getLanguageClientForResource(uri);
+      if (client) {
+        await client.sendRequest("robot/cache/clear");
+      }
+    } else {
+      for (const client of this.clients.values()) {
+        await client.sendRequest("robot/cache/clear");
+      }
     }
   }
 
@@ -279,12 +284,22 @@ export class LanguageClientsManager {
     return serverOptions;
   }
 
-  private inShowErrorWithSelectPythonInterpreter = false;
-  private showErrorWithSelectPythonInterpreterCancelTokenSource: vscode.CancellationTokenSource | undefined;
+  private inselectPythonEnvironment = false;
+  private selectPythonEnvironmentCancelTokenSource: vscode.CancellationTokenSource | undefined;
 
-  private async showErrorWithSelectPythonInterpreter(title: string, _folder: vscode.WorkspaceFolder) {
-    this.inShowErrorWithSelectPythonInterpreter = false;
-    this.showErrorWithSelectPythonInterpreterCancelTokenSource = new vscode.CancellationTokenSource();
+  public async selectPythonEnvironment(
+    title: string,
+    folder?: vscode.WorkspaceFolder,
+    showRetry: boolean = true,
+  ): Promise<void> {
+    this.selectPythonEnvironmentCancelTokenSource?.cancel();
+
+    if (folder !== undefined) {
+      this._pythonCanceledPythonAndRobotEnv.set(folder, false);
+    }
+
+    this.inselectPythonEnvironment = false;
+    this.selectPythonEnvironmentCancelTokenSource = new vscode.CancellationTokenSource();
 
     this.outputChannel.appendLine(`${title}`);
 
@@ -301,16 +316,20 @@ export class LanguageClientsManager {
           label: "Create Virtual Environment...",
           detail: "Create a new virtual Python environment",
         },
-        {
-          id: "retry",
-          label: "Retry",
-          detail:
-            "Install `robotframework` version 4.1 or higher manually in the current environment, then restart the language server",
-        },
-        { id: "ignore", label: "Ignore", detail: "Ignore this at the moment" },
+        ...(showRetry
+          ? [
+              {
+                id: "retry",
+                label: "Retry",
+                detail:
+                  "Install `robotframework` version 4.1 or higher manually in the current environment, then restart the language server",
+              },
+              { id: "ignore", label: "Ignore", detail: "Ignore this at the moment" },
+            ]
+          : []),
       ],
       { title: title, placeHolder: "Choose an option...", ignoreFocusOut: true },
-      this.showErrorWithSelectPythonInterpreterCancelTokenSource.token,
+      this.selectPythonEnvironmentCancelTokenSource.token,
     );
 
     switch (item?.id) {
@@ -324,10 +343,10 @@ export class LanguageClientsManager {
         return;
     }
 
-    if (!this.inShowErrorWithSelectPythonInterpreter) {
-      this._pythonCanceledPythonAndRobotEnv.set(_folder, true);
+    if (folder !== undefined && !this.inselectPythonEnvironment) {
+      this._pythonCanceledPythonAndRobotEnv.set(folder, true);
 
-      throw new Error(`Select Python Interpreter for folder ${_folder.name} canceled.`);
+      throw new Error(`Select Python Interpreter for folder '${folder.name}' canceled.`);
     }
   }
 
@@ -365,7 +384,7 @@ export class LanguageClientsManager {
     if (!pythonCommand) {
       this._pythonValidPythonAndRobotEnv.set(folder, false);
       if (showDialogs) {
-        await this.showErrorWithSelectPythonInterpreter(
+        await this.selectPythonEnvironment(
           `Can't find a valid python executable for workspace folder '${folder.name}'`,
           folder,
         );
@@ -377,10 +396,7 @@ export class LanguageClientsManager {
     if (!this.pythonManager.checkPythonVersion(pythonCommand)) {
       this._pythonValidPythonAndRobotEnv.set(folder, false);
       if (showDialogs) {
-        await this.showErrorWithSelectPythonInterpreter(
-          `Invalid python version for workspace folder '${folder.name}'`,
-          folder,
-        );
+        await this.selectPythonEnvironment(`Invalid python version for workspace folder '${folder.name}'`, folder);
       }
 
       return false;
@@ -391,7 +407,7 @@ export class LanguageClientsManager {
       this._pythonValidPythonAndRobotEnv.set(folder, false);
 
       if (showDialogs) {
-        await this.showErrorWithSelectPythonInterpreter(
+        await this.selectPythonEnvironment(
           `Robot Framework package not found in workspace folder '${folder.name}'.`,
           folder,
         );
@@ -404,7 +420,7 @@ export class LanguageClientsManager {
       this._pythonValidPythonAndRobotEnv.set(folder, false);
 
       if (showDialogs) {
-        await this.showErrorWithSelectPythonInterpreter(
+        await this.selectPythonEnvironment(
           `Robot Framework version in workspace folder '${folder.name}' not supported.`,
           folder,
         );
@@ -477,15 +493,19 @@ export class LanguageClientsManager {
     return this.getLanguageClientForResource(document.uri);
   }
 
-  public async getLanguageClientForResource(
-    resource: string | vscode.Uri,
-    create = true,
-  ): Promise<LanguageClient | undefined> {
+  public hasClientForFolder(resource: string | vscode.Uri): boolean {
+    const uri = resource instanceof vscode.Uri ? resource : vscode.Uri.parse(resource);
+    const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
+    if (!workspaceFolder) return false;
+    return this.clients.has(workspaceFolder.uri.toString());
+  }
+
+  public async getLanguageClientForResource(resource: string | vscode.Uri): Promise<LanguageClient | undefined> {
     return this.clientsMutex.dispatch(async () => {
       const uri = resource instanceof vscode.Uri ? resource : vscode.Uri.parse(resource);
       let workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
 
-      if (!workspaceFolder || !create) {
+      if (!workspaceFolder) {
         if (vscode.workspace.workspaceFolders?.length === 1) {
           workspaceFolder = vscode.workspace.workspaceFolders[0];
         } else if (vscode.workspace.workspaceFolders?.length == 0) {
@@ -495,7 +515,7 @@ export class LanguageClientsManager {
         }
       }
 
-      if (!workspaceFolder || !create) return undefined;
+      if (!workspaceFolder) return undefined;
 
       let result = this.clients.get(workspaceFolder.uri.toString());
 
@@ -512,7 +532,7 @@ export class LanguageClientsManager {
         return undefined;
       }
 
-      const name = `RobotCode Language Server mode=${mode} for folder "${workspaceFolder.name}"`;
+      const name = `RobotCode Language Server mode=${mode} for folder '${workspaceFolder.name}'`;
 
       const outputChannel = this.outputChannels.get(name) ?? vscode.window.createOutputChannel(name);
       this.outputChannels.set(name, outputChannel);
@@ -666,6 +686,10 @@ export class LanguageClientsManager {
 
       if (started) {
         this.clients.set(workspaceFolder.uri.toString(), result);
+        this._onClientStateChangedEmitter.fire({
+          uri: uri,
+          state: ClientState.Ready,
+        });
         return result;
       }
 
@@ -736,12 +760,14 @@ export class LanguageClientsManager {
     for (const folder of folders) {
       try {
         await this.getLanguageClientForResource(folder.uri.toString()).catch((_) => undefined);
+        this._onClientStateChangedEmitter.fire({
+          uri: folder.uri,
+          state: ClientState.Refreshed,
+        });
       } catch {
         // do noting
       }
     }
-
-    await this.updateStatusbarItem(vscode.window.activeTextEditor);
   }
 
   public async openUriInDocumentationView(uri: vscode.Uri): Promise<void> {
@@ -824,44 +850,6 @@ export class LanguageClientsManager {
     );
   }
 
-  private async updateStatusbarItem(editor: vscode.TextEditor | undefined) {
-    if (editor && this.supportedLanguages.includes(editor.document.languageId)) {
-      try {
-        const folder = vscode.workspace.getWorkspaceFolder(editor.document.uri);
-        if (folder) {
-          if (!this._workspaceFolderDiscoverInfo.has(folder) && (await this.isValidRobotEnvironmentInFolder(folder))) {
-            this._workspaceFolderDiscoverInfo.set(
-              folder,
-              (await this.pythonManager.executeRobotCode(folder, ["discover", "info"])) as DiscoverInfoResult,
-            );
-          }
-          const info = this._workspaceFolderDiscoverInfo.get(folder);
-          if (info?.robot_version_string) {
-            this.statusBarItem.text = "$(robotcode-robot) " + info.robot_version_string;
-            this.statusBarItem.tooltip = new vscode.MarkdownString(
-              `
-- **Robot Framework**: ${info.robot_version_string}
-- **Python**: ${info.python_version_string}
-- **Python Executable**: ${info.executable}
-- **Platform**: ${info.platform}
-- **Machine**: ${info.machine}
-- **System**: ${info.system}
-- **System Version**: ${info.system_version}
-`,
-              true,
-            );
-
-            this.statusBarItem.show();
-            return;
-          }
-        }
-      } catch {
-        // do nothing
-      }
-    }
-    this.statusBarItem.hide();
-  }
-
   public async getDocumentImports(
     document: vscode.TextDocument,
     token?: vscode.CancellationToken | undefined,
@@ -895,6 +883,25 @@ export class LanguageClientsManager {
         {
           textDocument: { uri: document.uri.toString() },
         },
+        token ?? new vscode.CancellationTokenSource().token,
+      )) ?? []
+    );
+  }
+
+  public async getProjectInfo(
+    workspaceFolder: vscode.WorkspaceFolder,
+    token?: vscode.CancellationToken | undefined,
+  ): Promise<ProjectInfo | undefined> {
+    if (!this.hasClientForFolder(workspaceFolder.uri)) return undefined;
+
+    const client = await this.getLanguageClientForResource(workspaceFolder.uri);
+
+    if (client === undefined) return undefined;
+
+    return (
+      (await client.sendRequest<ProjectInfo>(
+        "robot/projectInfo",
+        {},
         token ?? new vscode.CancellationTokenSource().token,
       )) ?? []
     );

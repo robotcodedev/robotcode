@@ -4,10 +4,20 @@ import * as vscode from "vscode";
 import { CONFIG_SECTION } from "./config";
 import { PythonExtension, ActiveEnvironmentPathChangeEvent } from "@vscode/python-extension";
 
+const UNKNOWN = "unknown";
+const CUSTOM = "custom";
+
 export interface ActivePythonEnvironmentChangedEvent {
   readonly resource: vscode.WorkspaceFolder | undefined;
 }
 
+export class PythonInfo {
+  constructor(
+    public readonly name: string,
+    public readonly version: string,
+    public readonly path?: string,
+  ) {}
+}
 export class PythonManager {
   public get pythonLanguageServerMain(): string {
     return this._pythonLanguageServerMain;
@@ -60,7 +70,7 @@ export class PythonManager {
 
   private doActiveEnvironmentPathChanged(event: ActiveEnvironmentPathChangeEvent): void {
     this.outputChannel.appendLine(
-      `ActiveEnvironmentPathChanged: ${event.resource?.uri.toString() ?? "unknown"} ${event.id}`,
+      `ActiveEnvironmentPathChanged: ${event.resource?.uri.toString() ?? UNKNOWN} ${event.id}`,
     );
     this._onActivePythonEnvironmentChangedEmitter.fire({ resource: event.resource });
   }
@@ -235,5 +245,41 @@ export class PythonManager {
         }
       });
     });
+  }
+
+  async getPythonInfo(folder: vscode.WorkspaceFolder): Promise<PythonInfo | undefined> {
+    try {
+      const config = vscode.workspace.getConfiguration(CONFIG_SECTION, folder);
+      let name;
+      let path: string | undefined;
+      let version: string | undefined;
+
+      const configPython = config.get<string>("python");
+
+      if (configPython !== undefined && configPython !== "") {
+        path = configPython;
+      } else {
+        const pythonExtension = await this.getPythonExtension();
+
+        const environmentPath = pythonExtension?.environments.getActiveEnvironmentPath(folder);
+        if (environmentPath === undefined) {
+          return undefined;
+        }
+
+        const env = await pythonExtension?.environments.resolveEnvironment(environmentPath);
+        path = env?.executable.uri?.fsPath;
+        version =
+          env?.version !== undefined ? `${env.version.major}.${env.version.minor}.${env.version.micro}` : undefined;
+        if (env?.environment !== undefined) {
+          name = `('${env?.environment?.name ?? UNKNOWN}': ${env?.tools?.[0] ?? UNKNOWN})`;
+        } else {
+          name = env?.executable.bitness ?? UNKNOWN;
+        }
+      }
+
+      return new PythonInfo(name ?? CUSTOM, version ?? UNKNOWN, path);
+    } catch {
+      return undefined;
+    }
   }
 }
