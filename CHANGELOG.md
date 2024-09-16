@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [0.90.0](https://github.com/robotcodedev/robotcode/compare/v0.89.1..v0.90.0) - 2024-09-16
+
+### Features
+
+- Provide a language status icon and robot tools menu ([7ef83f3](https://github.com/robotcodedev/robotcode/commit/7ef83f3a5d70818ae8947d621ed765d0d3a65ce3))
+
+
+  Language Status Item:
+  ![image](https://github.com/user-attachments/assets/ff0d80d2-0cb5-4942-b828-ccab975cfc00)
+
+  RobotCode Tool Menu
+  ![image](https://github.com/user-attachments/assets/a9b15d1f-90c7-41f1-b29b-c9d6a59211e3)
+
+  A short Video:
+  https://github.com/user-attachments/assets/b6980485-d7ec-4f6c-88a0-7d1a4e65dc40
+
+
 ## [0.89.1](https://github.com/robotcodedev/robotcode/compare/v0.89.0..v0.89.1) - 2024-09-11
 
 ### Bug Fixes
