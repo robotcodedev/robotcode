@@ -13,6 +13,7 @@ import { LanguageStatusSeverity } from "vscode";
 import { TestControllerManager } from "./testcontrollermanager";
 
 const NOT_INSTALLED = "not installed";
+
 type QuickPickActionItem = {
   label?: string;
   getLabel?(folder?: vscode.WorkspaceFolder): string | undefined;
@@ -117,7 +118,7 @@ export class LanguageToolsManager {
       description: "Restarts the language server",
       async action(folder?: vscode.WorkspaceFolder): Promise<void> {
         if (folder !== undefined) {
-          await vscode.commands.executeCommand("robotcode.restartLanguageServers");
+          await vscode.commands.executeCommand("robotcode.restartLanguageServers", folder?.uri);
         }
       },
     },
@@ -126,7 +127,7 @@ export class LanguageToolsManager {
       description: "Clears the cache and restarts the language server",
       async action(folder?: vscode.WorkspaceFolder): Promise<void> {
         if (folder !== undefined) {
-          await vscode.commands.executeCommand("robotcode.clearCacheRestartLanguageServers");
+          await vscode.commands.executeCommand("robotcode.clearCacheRestartLanguageServers", folder?.uri);
         }
       },
     },
@@ -220,6 +221,38 @@ export class LanguageToolsManager {
       ),
 
       vscode.commands.registerCommand("robotcode.showToolMenu", async (folder?: vscode.WorkspaceFolder) => {
+        let f = folder;
+
+        if (f === undefined) {
+          if (vscode.window.activeTextEditor !== undefined) {
+            f = vscode.workspace.getWorkspaceFolder(vscode.window.activeTextEditor.document.uri);
+            if (f === undefined) {
+              vscode.window.showErrorMessage("Active document does not belong to a workspace folder.");
+              return;
+            }
+          } else {
+            if (vscode.workspace.workspaceFolders !== undefined && vscode.workspace.workspaceFolders.length === 1) {
+              f = vscode.workspace.workspaceFolders[0];
+            } else {
+              if (vscode.workspace.workspaceFolders !== undefined && vscode.workspace.workspaceFolders.length > 1) {
+                f = await vscode.window.showWorkspaceFolderPick({
+                  placeHolder: "Select a workspace folder",
+                });
+              }
+            }
+          }
+        }
+
+        if (f !== undefined && this.languageClientsManager.hasClientForResource(f.uri)) {
+          folder = f;
+        } else {
+          vscode.window.showErrorMessage("No RobotCode Language Server running for this workspace folder.");
+        }
+
+        if (folder === undefined) {
+          return;
+        }
+
         const result = await vscode.window.showQuickPick(
           this.toolMenu.map((v) => {
             return {

@@ -493,7 +493,7 @@ export class LanguageClientsManager {
     return this.getLanguageClientForResource(document.uri);
   }
 
-  public hasClientForFolder(resource: string | vscode.Uri): boolean {
+  public hasClientForResource(resource: string | vscode.Uri): boolean {
     const uri = resource instanceof vscode.Uri ? resource : vscode.Uri.parse(resource);
     const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
     if (!workspaceFolder) return false;
@@ -892,7 +892,7 @@ export class LanguageClientsManager {
     workspaceFolder: vscode.WorkspaceFolder,
     token?: vscode.CancellationToken | undefined,
   ): Promise<ProjectInfo | undefined> {
-    if (!this.hasClientForFolder(workspaceFolder.uri)) return undefined;
+    if (!this.hasClientForResource(workspaceFolder.uri)) return undefined;
 
     const client = await this.getLanguageClientForResource(workspaceFolder.uri);
 
