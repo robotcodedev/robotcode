@@ -33,3 +33,5 @@ class Error:
     KEYWORD_ERROR = "KeywordError"
     MULTIPLE_KEYWORDS = "MultipleKeywords"
     CONFLICTING_LIBRARY_KEYWORDS = "ConflictingLibraryKeywords"
+    INVALID_HEADER = "InvalidHeader"
+    DEPRECATED_HEADER = "DeprecatedHeader"

@@ -1117,6 +1117,27 @@ class NamespaceAnalyzer(Visitor, ModelHelper):
                         code=Error.DEPRECATED_HYPHEN_TAG,
                     )
 
+    def visit_SectionHeader(self, node: Statement) -> None:  # noqa: N802
+        if get_robot_version() >= (7, 0):
+            token = node.get_token(*Token.HEADER_TOKENS)
+            if not token.error:
+                return
+            if token.type == Token.INVALID_HEADER:
+                self.append_diagnostics(
+                    range=range_from_node_or_token(node, token),
+                    message=token.error,
+                    severity=DiagnosticSeverity.ERROR,
+                    code=Error.INVALID_HEADER,
+                )
+            else:
+                self.append_diagnostics(
+                    range=range_from_node_or_token(node, token),
+                    message=token.error,
+                    severity=DiagnosticSeverity.WARNING,
+                    tags=[DiagnosticTag.DEPRECATED],
+                    code=Error.DEPRECATED_HEADER,
+                )
+
     def visit_ReturnSetting(self, node: Statement) -> None:  # noqa: N802
         if get_robot_version() >= (7, 0):
             token = node.get_token(Token.RETURN_SETTING)
