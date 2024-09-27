@@ -124,8 +124,8 @@ export class KeywordsTreeViewProvider
 
         if (item instanceof KeywordItem) {
           if (item.document === undefined) return;
-
-          url = await this.languageClientsManager.getDocumentionUrl(item.document, item.parent?.id, item.id);
+          const item_id = item.id?.split("+")[1];
+          url = await this.languageClientsManager.getDocumentionUrl(item.document, item.parent?.id, item_id);
         } else if (item instanceof ImportItem) {
           if (item.document === undefined) return;
 
@@ -217,7 +217,7 @@ export class KeywordsTreeViewProvider
                         currentDoc,
                         result,
                         keyword.name,
-                        keyword.id,
+                        `${result.id}+${keyword.id}`,
                         keyword.signature,
                         toMarkdown(keyword.documentation),
                       ),
