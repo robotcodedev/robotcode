@@ -103,9 +103,9 @@ interface DiscoverInfoResult {
 }
 
 export interface ProjectInfo {
-  robotVersionString: string;
+  robotVersionString?: string;
   robocopVersionString?: string;
-  tidyVersionString: string;
+  tidyVersionString?: string;
 }
 
 interface RobotCodeContributions {

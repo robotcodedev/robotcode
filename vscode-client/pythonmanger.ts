@@ -14,6 +14,7 @@ export interface ActivePythonEnvironmentChangedEvent {
 export class PythonInfo {
   constructor(
     public readonly name: string,
+    public readonly type: string | undefined,
     public readonly version: string,
     public readonly path?: string,
   ) {}
@@ -250,7 +251,8 @@ export class PythonManager {
   async getPythonInfo(folder: vscode.WorkspaceFolder): Promise<PythonInfo | undefined> {
     try {
       const config = vscode.workspace.getConfiguration(CONFIG_SECTION, folder);
-      let name;
+      let name: string | undefined;
+      let type: string | undefined;
       let path: string | undefined;
       let version: string | undefined;
 
@@ -271,13 +273,14 @@ export class PythonManager {
         version =
           env?.version !== undefined ? `${env.version.major}.${env.version.minor}.${env.version.micro}` : undefined;
         if (env?.environment !== undefined) {
-          name = `('${env?.environment?.name ?? UNKNOWN}': ${env?.tools?.[0] ?? UNKNOWN})`;
+          type = env?.tools?.[0];
+          name = `('${env?.environment?.name ?? UNKNOWN}': ${type ?? UNKNOWN})`;
         } else {
           name = env?.executable.bitness ?? UNKNOWN;
         }
       }
 
-      return new PythonInfo(name ?? CUSTOM, version ?? UNKNOWN, path);
+      return new PythonInfo(name ?? CUSTOM, type, version ?? UNKNOWN, path);
     } catch {
       return undefined;
     }

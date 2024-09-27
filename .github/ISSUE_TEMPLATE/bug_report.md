@@ -10,7 +10,7 @@ assignees: ''
 **Describe the bug**
 A clear and concise description of what the bug is.
 
-**To Reproduce**
+**Steps To Reproduce**
 Steps to reproduce the behavior:
 1. Go to '...'
 2. Click on '....'
@@ -36,6 +36,9 @@ If applicable, add screenshots or videos to help explain your problem.
 **Logs**
 Copy the messages from VSCode "Output" view for RobotCode and RobotCode Language Server for the specific folder/workspace.
 
+**Additional context**
+Add any other context about the problem here.
+
 **Desktop (please complete the following information):**
 - VS Code Version [e.g. 1.60]
 - RobotCode Version [e.g. 0.3.2]
@@ -43,6 +46,3 @@ Copy the messages from VSCode "Output" view for RobotCode and RobotCode Language
 - Python Version [e.g. 3.9.7]
 - RobotFramework Version [e.g. 4.0.0]
 - Additional tools like robocop, robotidy
-  
-**Additional context**
-Add any other context about the problem here.

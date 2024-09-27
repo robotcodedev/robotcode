@@ -12,6 +12,9 @@ import { PythonManager } from "./pythonmanger";
 import { LanguageStatusSeverity } from "vscode";
 import { TestControllerManager } from "./testcontrollermanager";
 
+import * as path from "path";
+import * as fs from "fs-extra";
+
 const NOT_INSTALLED = "not installed";
 
 type QuickPickActionItem = {
@@ -168,6 +171,12 @@ export class LanguageToolsManager {
         }
       },
     },
+    {
+      label: "Report Issue",
+      action: async (folder?: vscode.WorkspaceFolder): Promise<void> => {
+        vscode.commands.executeCommand("robotcode.reportIssue", folder);
+      },
+    },
   ];
 
   constructor(
@@ -219,6 +228,87 @@ export class LanguageToolsManager {
           );
         },
       ),
+
+      vscode.commands.registerCommand("robotcode.reportIssue", async (folder?: vscode.WorkspaceFolder) => {
+        if (folder === undefined) {
+          if (vscode.window.activeTextEditor !== undefined) {
+            folder = vscode.workspace.getWorkspaceFolder(vscode.window.activeTextEditor.document.uri);
+          }
+        }
+        if (folder === undefined) {
+          if (vscode.workspace.workspaceFolders !== undefined && vscode.workspace.workspaceFolders.length === 1) {
+            folder = vscode.workspace.workspaceFolders[0];
+          } else {
+            if (vscode.workspace.workspaceFolders !== undefined && vscode.workspace.workspaceFolders.length > 1) {
+              folder = await vscode.window.showWorkspaceFolderPick({
+                placeHolder: "Select a workspace folder to report an issue for",
+              });
+            }
+          }
+        }
+        const folders = folder !== undefined ? [folder] : (vscode.workspace.workspaceFolders ?? []);
+
+        const bodyTemplatePath = path.join(
+          extensionContext.extensionPath,
+          "resources",
+          "report_issue_body_template.md",
+        );
+        const issueBody = (await fs.readFile(bodyTemplatePath, { encoding: "utf8" })).replaceAll("\r", "").trim();
+
+        const dataTemplatePath = path.join(
+          extensionContext.extensionPath,
+          "resources",
+          "report_issue_data_template.md",
+        );
+        let data = (await fs.readFile(dataTemplatePath, { encoding: "utf8" })).replaceAll("\r", "").trim();
+
+        const pythonVersions: string[] = [];
+        const robotFrameworkVersions: string[] = [];
+        const robocopVersions: string[] = [];
+        const tidyVersions: string[] = [];
+
+        for (const folder of folders) {
+          const pythonInfo = await pythonManager.getPythonInfo(folder);
+
+          if (pythonInfo !== undefined) {
+            const n = `${pythonInfo.version}${pythonInfo.type !== undefined ? " " + pythonInfo.type : ""}`;
+            if (!pythonVersions.includes(n)) pythonVersions.push(n);
+          }
+
+          const info = await this.languageClientsManager.getProjectInfo(folder);
+          if (info !== undefined) {
+            if (info.robotVersionString && !robotFrameworkVersions.includes(info.robotVersionString))
+              robotFrameworkVersions.push(info.robotVersionString);
+
+            if (info.robocopVersionString && !robocopVersions.includes(info.robocopVersionString))
+              robocopVersions.push(info.robocopVersionString);
+
+            if (info.tidyVersionString && !tidyVersions.includes(info.tidyVersionString))
+              tidyVersions.push(info.tidyVersionString);
+          }
+        }
+
+        data = data.replace("${{ PYTHON_VERSION }}", pythonVersions.join(", "));
+        data = data.replace("${{ ROBOTFRAMEWORK_VERSION }}", robotFrameworkVersions.join(", "));
+        data = data.replace(
+          "${{ ADDITIONAL_TOOLS }}",
+          robocopVersions.length > 0 || tidyVersions.length > 0
+            ? [
+                robocopVersions.map((v) => "robotframework-robocop==" + v).join(", "),
+                tidyVersions.map((v) => "robotframework-tidy==" + v).join(", "),
+              ].join(", ")
+            : "",
+        );
+
+        const args = {
+          extensionId: "d-biehl.robotcode",
+          // issueTitle: "Issue with RobotCode",
+          issueBody,
+          data,
+        };
+
+        await vscode.commands.executeCommand("workbench.action.openIssueReporter", args);
+      }),
 
       vscode.commands.registerCommand("robotcode.showToolMenu", async (folder?: vscode.WorkspaceFolder) => {
         let f = folder;
@@ -285,14 +375,15 @@ export class LanguageToolsManager {
           case ClientState.Starting:
             this.removeFolder(folder);
             this.robotVersion.busy = true;
-            await this.updateItems();
+
             break;
           default:
             this.removeFolder(folder);
             this.robotVersion.busy = false;
-            await this.updateItems();
+
             break;
         }
+        await this.updateItems();
       }),
       pythonManager.onActivePythonEnvironmentChanged(async (event) => {
         if (event.resource !== undefined) {
