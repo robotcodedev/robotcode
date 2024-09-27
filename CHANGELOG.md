@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [0.91.0](https://github.com/robotcodedev/robotcode/compare/v0.90.0..v0.91.0) - 2024-09-27
+
+### Bug Fixes
+
+- **vscode:** Tool menu stabilized ([de774fa](https://github.com/robotcodedev/robotcode/commit/de774fafa34269eb448b35fbf403ceb2cda04ed6))
+- **vscode:** Correct handling when opening library in keywords view if keyword is loaded twice with a different alias ([ac23751](https://github.com/robotcodedev/robotcode/commit/ac23751087fc9051ace8345ebe58cda88d4eb891))
+
+
+### Features
+
+- **analyze:** Show messages for InvalidHeader and DeprecatedHeader for RF7 ([518aa12](https://github.com/robotcodedev/robotcode/commit/518aa127d57bfeaf3a0bd1cbfc034394f56f63cb))
+- New command `RobotCode: Report Issue` ([94d1efa](https://github.com/robotcodedev/robotcode/commit/94d1efac4edeed7e6117a50448678254e8320c0c))
+
+
+  with this command you can report an issue directly from vscode to RobotCode's issue tracker
+
+
 ## [0.90.0](https://github.com/robotcodedev/robotcode/compare/v0.89.1..v0.90.0) - 2024-09-16
 
 ### Features
