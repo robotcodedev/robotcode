@@ -1,12 +1,27 @@
 import json
 import pathlib
 import typing
-from dataclasses import fields, is_dataclass
-from typing import Any, Callable, Optional
+from dataclasses import dataclass, fields, is_dataclass
+from typing import Any, Callable, Dict, Optional, Union
 
 import apischema
 
-from robotcode.robot.config.model import RobotConfig
+from robotcode.analyze.config import AnalyzerConfig
+from robotcode.robot.config.model import RobotConfig as OrigRobotConfig
+from robotcode.robot.config.model import field
+
+
+@dataclass
+class ToolConfig:
+    robotcode_analyze: Optional[AnalyzerConfig] = field(description="Analyzer configuration.")  # noqa: RUF009
+
+
+@dataclass
+class RobotConfig(OrigRobotConfig):
+    tool: Union[ToolConfig, Dict[str, Any], None] = field(description="Tool configurations.")  # noqa: RUF009
+
+
+RobotConfig.__doc__ = OrigRobotConfig.__doc__
 
 if __name__ == "__main__":
 

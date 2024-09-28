@@ -13,6 +13,8 @@ class CacheSaveLocation(Enum):
 
 @dataclass
 class AnalyzerConfig(BaseOptions):
+    """Analyzer configuration."""
+
     select: Optional[List[str]] = field(description="Selects which rules are run.")
     extend_select: Optional[List[str]] = field(description="Extends the rules which are run.")
     ignore: Optional[List[str]] = field(description="Defines which rules are ignored.")
