@@ -3,6 +3,7 @@ import re as re
 from ast import AST
 from collections import defaultdict
 from dataclasses import dataclass, field
+from enum import Enum
 from typing import Dict, List, Optional, Set, Union
 
 from robot.parsing.lexer.tokens import Token
@@ -12,15 +13,32 @@ from robotcode.core.lsp.types import Diagnostic, DiagnosticSeverity
 
 from ..utils.visitor import Visitor
 
-ACTIONS = ["ignore", "error", "warning", "information", "hint", "reset"]
+ACTIONS = ["ignore", "error", "warn", "warning", "info", "information", "hint", "reset"]
 
 ROBOTCODE_ACTION_AND_CODES_PATTERN = re.compile(rf"(?P<action>{'|'.join(ACTIONS)})(\[(?P<codes>[^\]]*?)\])?")
+
+
+class ModifierAction(Enum):
+    IGNORE = "ignore"
+    ERROR = "error"
+    WARNING = "warning"
+    INFORMATION = "information"
+    HINT = "hint"
+    RESET = "reset"
+
+    @classmethod
+    def from_str(cls, value: str) -> "ModifierAction":
+        if value == "warn":
+            value = "warning"
+        elif value == "info":
+            value = "information"
+        return cls(value)
 
 
 @dataclass
 class RulesAndCodes:
     codes: Dict[Union[str, int], Set[int]]
-    actions: Dict[int, Dict[Union[str, int], str]]
+    actions: Dict[int, Dict[Union[str, int], ModifierAction]]
 
 
 _translation_table = str.maketrans("", "", "_- ")
@@ -28,7 +46,7 @@ _translation_table = str.maketrans("", "", "_- ")
 ROBOTCODE_MARKER = "robotcode:"
 
 
-class DisablersVisitor(Visitor):
+class ModifiersVisitor(Visitor):
 
     def __init__(self) -> None:
         super().__init__()
@@ -65,8 +83,8 @@ class DisablersVisitor(Visitor):
         self._handle_statement_comments(node)
         self.generic_visit(node)
 
-    def _parse_robotcode_disabler(self, comment: str) -> Dict[str, List[str]]:
-        result: Dict[str, List[str]] = {}
+    def _parse_robotcode_disabler(self, comment: str) -> Dict[ModifierAction, List[str]]:
+        result: Dict[ModifierAction, List[str]] = {}
 
         comment = comment.strip()
         m = ROBOTCODE_ACTION_AND_CODES_PATTERN.match(comment)
@@ -74,7 +92,8 @@ class DisablersVisitor(Visitor):
             return result
 
         for m in ROBOTCODE_ACTION_AND_CODES_PATTERN.finditer(comment):
-            action = m.group("action")
+            action_str = m.group("action")
+            action = ModifierAction.from_str(action_str)
             messages = m.group("codes")
             result[action] = (
                 [m.strip().translate(_translation_table).lower() for m in messages.split(",")]
@@ -176,7 +195,7 @@ class DiagnosticsModifier:
 
     @functools.cached_property
     def rules_and_codes(self) -> RulesAndCodes:
-        visitor = DisablersVisitor()
+        visitor = ModifiersVisitor()
         visitor.visit(self.model)
         return visitor.rules_and_codes
 
@@ -200,20 +219,20 @@ class DiagnosticsModifier:
                 if actions is not None:
                     action = actions.get(code)
                     if action is not None:
-                        if action == "ignore":
+                        if action == ModifierAction.IGNORE:
                             return None
-                        if action == "reset":
+                        if action == ModifierAction.RESET:
                             pass
-                        elif action == "error":
+                        elif action == ModifierAction.ERROR:
                             modified = True
                             diagnostic.severity = DiagnosticSeverity.ERROR
-                        elif action == "warning":
+                        elif action == ModifierAction.WARNING:
                             modified = True
                             diagnostic.severity = DiagnosticSeverity.WARNING
-                        elif action == "information":
+                        elif action == ModifierAction.INFORMATION:
                             modified = True
                             diagnostic.severity = DiagnosticSeverity.INFORMATION
-                        elif action == "hint":
+                        elif action == ModifierAction.HINT:
                             modified = True
                             diagnostic.severity = DiagnosticSeverity.HINT
 

@@ -8,32 +8,36 @@ from robotcode.core.lsp.types import Diagnostic, DiagnosticSeverity, Position, R
 from robotcode.robot.diagnostics.diagnostics_modifier import (
     DiagnosticModifiersConfig,
     DiagnosticsModifier,
-    DisablersVisitor,
+    ModifierAction,
+    ModifiersVisitor,
 )
 
 
 @pytest.mark.parametrize(
     ("text", "expected_action_and_codes"),
     [
-        ("ignore", {"ignore": ["*"]}),
-        ("warn", {"warn": ["*"]}),
-        ("error", {"error": ["*"]}),
-        ("hint", {"hint": ["*"]}),
+        ("ignore", {ModifierAction.IGNORE: ["*"]}),
+        ("warn", {ModifierAction.WARNING: ["*"]}),
+        ("warning", {ModifierAction.WARNING: ["*"]}),
+        ("info", {ModifierAction.INFORMATION: ["*"]}),
+        ("information", {ModifierAction.INFORMATION: ["*"]}),
+        ("error", {ModifierAction.ERROR: ["*"]}),
+        ("hint", {ModifierAction.HINT: ["*"]}),
         ("garbage", {}),
-        ("ignore[message]", {"ignore": ["message"]}),
-        ("ignore[message1, message2]", {"ignore": ["message1", "message2"]}),
+        ("ignore[message]", {ModifierAction.IGNORE: ["message"]}),
+        ("ignore[message1, message2]", {ModifierAction.IGNORE: ["message1", "message2"]}),
         (
             "ignore[message1, message2] hint[message3, message4]",
-            {"ignore": ["message1", "message2"], "hint": ["message3", "message4"]},
+            {ModifierAction.IGNORE: ["message1", "message2"], ModifierAction.HINT: ["message3", "message4"]},
         ),
         (
             "  ignore[message1, message2] hint[message3, message4] garbage ",
-            {"ignore": ["message1", "message2"], "hint": ["message3", "message4"]},
+            {ModifierAction.IGNORE: ["message1", "message2"], ModifierAction.HINT: ["message3", "message4"]},
         ),
     ],
 )
-def test_disabler_parser_should_work(text: str, expected_action_and_codes: Dict[str, List[str]]) -> None:
-    visitor = DisablersVisitor()
+def test_disabler_parser_should_work(text: str, expected_action_and_codes: Dict[ModifierAction, List[str]]) -> None:
+    visitor = ModifiersVisitor()
     assert dict(visitor._parse_robotcode_disabler(text)) == expected_action_and_codes
 
 
@@ -49,7 +53,7 @@ first
 """
 
     model = get_model(io.StringIO(file))
-    visitor = DisablersVisitor()
+    visitor = ModifiersVisitor()
     visitor.visit(model)
     assert visitor.rules_and_codes.codes == {
         "*": {2, 3},
@@ -60,14 +64,14 @@ first
         "message4": {6},
     }
     assert visitor.rules_and_codes.actions == {
-        2: {"*": "ignore"},
-        3: {"*": "warn"},
-        5: {"unknownvariable": "ignore"},
+        2: {"*": ModifierAction.IGNORE},
+        3: {"*": ModifierAction.WARNING},
+        5: {"unknownvariable": ModifierAction.IGNORE},
         6: {
-            "message1": "ignore",
-            "message2": "ignore",
-            "message3": "hint",
-            "message4": "hint",
+            "message1": ModifierAction.IGNORE,
+            "message2": ModifierAction.IGNORE,
+            "message3": ModifierAction.HINT,
+            "message4": ModifierAction.HINT,
         },
     }
 
@@ -329,6 +333,56 @@ first
 """
     model = get_model(io.StringIO(file))
     modifier = DiagnosticsModifier(model, DiagnosticModifiersConfig(ignore=["unknown-variable"]))
+
+    diagnostics = [
+        Diagnostic(
+            range=Range(start=Position(line=5, character=4), end=Position(line=5, character=12)),
+            message="UnknownVariable",
+            code="UnknownVariable",
+            severity=DiagnosticSeverity.INFORMATION,
+        ),
+        Diagnostic(
+            range=Range(start=Position(line=6, character=4), end=Position(line=6, character=12)),
+            message="Message1",
+            code="message1",
+            severity=DiagnosticSeverity.ERROR,
+        ),
+        Diagnostic(
+            range=Range(start=Position(line=6, character=4), end=Position(line=6, character=12)),
+            message="Message3",
+            code="Message3",
+            severity=DiagnosticSeverity.ERROR,
+        ),
+    ]
+
+    result = modifier.modify_diagnostics(diagnostics)
+
+    assert result == [
+        Diagnostic(
+            range=Range(start=Position(line=6, character=4), end=Position(line=6, character=12)),
+            message="Message3",
+            code="Message3",
+            severity=DiagnosticSeverity.HINT,
+        )
+    ]
+
+
+def test_diagnostics_modifier_should_work_as_option_in_implicit_comment() -> None:
+    file = """\
+language: en
+robotcode: ignore[unknown-variable]
+*** Test Cases ***
+first
+    # robotcode: ignore[message_1, message_2]  hint[message 3, message 4]
+
+    unknown keyword
+    unknown keyword1
+    log  ${unknown}
+    log  hello
+
+"""
+    model = get_model(io.StringIO(file))
+    modifier = DiagnosticsModifier(model)
 
     diagnostics = [
         Diagnostic(
