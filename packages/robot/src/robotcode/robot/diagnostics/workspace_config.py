@@ -55,3 +55,13 @@ class CacheConfig(ConfigBase):
 @dataclass
 class AnalysisRobotConfig(ConfigBase):
     global_library_search_order: List[str] = field(default_factory=list)
+
+
+@config_section("robotcode.analysis.diagnosticModifiers")
+@dataclass
+class AnalysisDiagnosticModifiersConfig(ConfigBase):
+    ignore: List[str] = field(default_factory=list)
+    error: List[str] = field(default_factory=list)
+    warning: List[str] = field(default_factory=list)
+    information: List[str] = field(default_factory=list)
+    hint: List[str] = field(default_factory=list)

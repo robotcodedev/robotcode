@@ -5,7 +5,11 @@ import pytest
 from robot.api import get_model
 
 from robotcode.core.lsp.types import Diagnostic, DiagnosticSeverity, Position, Range
-from robotcode.robot.diagnostics.diagnostics_modifier import DiagnosticsModifier, DisablersVisitor
+from robotcode.robot.diagnostics.diagnostics_modifier import (
+    DiagnosticModifiersConfig,
+    DiagnosticsModifier,
+    DisablersVisitor,
+)
 
 
 @pytest.mark.parametrize(
@@ -276,6 +280,55 @@ first
 """
     model = get_model(io.StringIO(file))
     modifier = DiagnosticsModifier(model)
+
+    diagnostics = [
+        Diagnostic(
+            range=Range(start=Position(line=5, character=4), end=Position(line=5, character=12)),
+            message="UnknownVariable",
+            code="UnknownVariable",
+            severity=DiagnosticSeverity.INFORMATION,
+        ),
+        Diagnostic(
+            range=Range(start=Position(line=6, character=4), end=Position(line=6, character=12)),
+            message="Message1",
+            code="message1",
+            severity=DiagnosticSeverity.ERROR,
+        ),
+        Diagnostic(
+            range=Range(start=Position(line=6, character=4), end=Position(line=6, character=12)),
+            message="Message3",
+            code="Message3",
+            severity=DiagnosticSeverity.ERROR,
+        ),
+    ]
+
+    result = modifier.modify_diagnostics(diagnostics)
+
+    assert result == [
+        Diagnostic(
+            range=Range(start=Position(line=6, character=4), end=Position(line=6, character=12)),
+            message="Message3",
+            code="Message3",
+            severity=DiagnosticSeverity.HINT,
+        )
+    ]
+
+
+def test_diagnostics_modifier_should_be_configurable() -> None:
+    file = """\
+*** Test Cases ***
+first
+    ## robotcode: ignore[unknown-variable]
+    # robotcode: ignore[message_1, message_2]  hint[message 3, message 4]
+
+    unknown keyword
+    unknown keyword1
+    log  ${unknown}
+    log  hello
+
+"""
+    model = get_model(io.StringIO(file))
+    modifier = DiagnosticsModifier(model, DiagnosticModifiersConfig(ignore=["unknown-variable"]))
 
     diagnostics = [
         Diagnostic(

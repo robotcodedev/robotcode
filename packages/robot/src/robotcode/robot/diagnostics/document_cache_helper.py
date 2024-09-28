@@ -26,7 +26,7 @@ from robotcode.core.text_document import TextDocument
 from robotcode.core.uri import Uri
 from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.core.workspace import Workspace, WorkspaceFolder
-from robotcode.robot.diagnostics.diagnostics_modifier import DiagnosticsModifier
+from robotcode.robot.diagnostics.diagnostics_modifier import DiagnosticModifiersConfig, DiagnosticsModifier
 
 from ..config.model import RobotBaseProfile
 from ..utils import get_robot_version
@@ -34,7 +34,7 @@ from ..utils.stubs import Languages
 from .imports_manager import ImportsManager
 from .library_doc import LibraryDoc
 from .namespace import DocumentType, Namespace
-from .workspace_config import AnalysisRobotConfig, CacheConfig, RobotConfig
+from .workspace_config import AnalysisDiagnosticModifiersConfig, AnalysisRobotConfig, CacheConfig, RobotConfig
 
 
 class UnknownFileTypeError(Exception):
@@ -583,4 +583,14 @@ class DocumentsCacheHelper:
         return document.get_cache(self.__get_diagnostic_modifier)
 
     def __get_diagnostic_modifier(self, document: TextDocument) -> DiagnosticsModifier:
-        return DiagnosticsModifier(self.get_model(document, False))
+        analysis_config = self.workspace.get_configuration(AnalysisDiagnosticModifiersConfig, document.uri)
+        return DiagnosticsModifier(
+            self.get_model(document, False),
+            DiagnosticModifiersConfig(
+                ignore=analysis_config.ignore,
+                error=analysis_config.error,
+                warning=analysis_config.warning,
+                information=analysis_config.information,
+                hint=analysis_config.hint,
+            ),
+        )

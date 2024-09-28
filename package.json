@@ -748,6 +748,51 @@
             "markdownDescription": "Specifies a global [search order](https://robotframework.org/robotframework/latest/RobotFrameworkUserGuide.html#specifying-explicit-priority-between-libraries-and-resources) for libraries and resources. This is usefull when you have libraries containing keywords with the same name. **RobotCode** is unable to analyze the library search order in a file specified with [`Set Library Search Order`](https://robotframework.org/robotframework/latest/libraries/BuiltIn.html#Set%20Library%20Search%20Order), so you can define a global order here. Just make sure to call the `Set Library Search Order` keyword somewhere in your robot file or internally in your library.",
             "scope": "resource"
           },
+          "robotcode.analysis.diagnosticModifiers.ignore": {
+            "type": "array",
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "markdownDescription": "Specifies the error codes that should be ignored.\n\n**Example:** if you want to ignore all errors with the code `MultipleKeywords` you can add `MultipleKeywords` to the list. \n\n_Note:_ add a `*` to ignore all errors.",
+            "scope": "resource"
+          },
+          "robotcode.analysis.diagnosticModifiers.error": {
+            "type": "array",
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "markdownDescription": "Specifies the error codes that should be treated as error.\n\n**Example:** if you ignore all errors with a `*` in the `ignore` setting, put the code `MultipleKeywords` to enable only `MultipleKeywords` errors.",
+            "scope": "resource"
+          },
+          "robotcode.analysis.diagnosticModifiers.warning": {
+            "type": "array",
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "markdownDescription": "Specifies the error codes that should be a warning.\n\n**Example:** if you want that errors with the code `MultipleKeywords` should be a warning instead you can add `MultipleKeywords` to the list.",
+            "scope": "resource"
+          },
+          "robotcode.analysis.diagnosticModifiers.information": {
+            "type": "array",
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "markdownDescription": "Specify the error codes that should be displayed as information.\n\n**Example**: If you want errors with the code `MultipleKeywords` to be shown as information instead of errors, you can add `MultipleKeywords` to the list.",
+            "scope": "resource"
+          },
+          "robotcode.analysis.diagnosticModifiers.hint": {
+            "type": "array",
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "markdownDescription": "Specify the error codes that should be displayed as hint\n\n**Example**: If you want errors with the code `MultipleKeywords` to be shown as hint instead of errors, you can add `MultipleKeywords` to the list.",
+            "scope": "resource"
+          },
           "robotcode.analysis.findUnusedReferences": {
             "type": "boolean",
             "default": false,

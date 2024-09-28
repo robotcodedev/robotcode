@@ -3,7 +3,12 @@ from typing import List, Optional, Tuple
 
 from robotcode.core.workspace import ConfigBase, config_section
 from robotcode.language_server.common.parts.diagnostics import AnalysisProgressMode, DiagnosticsMode
-from robotcode.robot.diagnostics.workspace_config import AnalysisRobotConfig, CacheConfig, RobotConfig
+from robotcode.robot.diagnostics.workspace_config import (
+    AnalysisDiagnosticModifiersConfig,
+    AnalysisRobotConfig,
+    CacheConfig,
+    RobotConfig,
+)
 
 
 @config_section("robotcode.languageServer")
@@ -68,6 +73,7 @@ class AnalysisConfig(ConfigBase):
     find_unused_references: bool = False
     cache: CacheConfig = field(default_factory=CacheConfig)
     robot: AnalysisRobotConfig = field(default_factory=AnalysisRobotConfig)
+    modifiers: AnalysisDiagnosticModifiersConfig = field(default_factory=AnalysisDiagnosticModifiersConfig)
 
 
 @config_section("robotcode")

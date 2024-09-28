@@ -2,7 +2,7 @@ import functools
 import re as re
 from ast import AST
 from collections import defaultdict
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Set, Union
 
 from robot.parsing.lexer.tokens import Token
@@ -12,7 +12,7 @@ from robotcode.core.lsp.types import Diagnostic, DiagnosticSeverity
 
 from ..utils.visitor import Visitor
 
-ACTIONS = ["ignore", "error", "warn", "information", "hint", "reset"]
+ACTIONS = ["ignore", "error", "warning", "information", "hint", "reset"]
 
 ROBOTCODE_ACTION_AND_CODES_PATTERN = re.compile(rf"(?P<action>{'|'.join(ACTIONS)})(\[(?P<codes>[^\]]*?)\])?")
 
@@ -153,8 +153,25 @@ class DisablersVisitor(Visitor):
                             self.rules_and_codes.actions[i][code] = action
 
 
+@dataclass
+class DiagnosticModifiersConfig:
+    ignore: List[str] = field(default_factory=list)
+    error: List[str] = field(default_factory=list)
+    warning: List[str] = field(default_factory=list)
+    information: List[str] = field(default_factory=list)
+    hint: List[str] = field(default_factory=list)
+
+
 class DiagnosticsModifier:
-    def __init__(self, model: AST) -> None:
+    def __init__(self, model: AST, config: Optional[DiagnosticModifiersConfig] = None) -> None:
+        self.config = config or DiagnosticModifiersConfig()
+
+        self.config.ignore = [i.translate(_translation_table).lower() for i in self.config.ignore]
+        self.config.error = [i.translate(_translation_table).lower() for i in self.config.error]
+        self.config.warning = [i.translate(_translation_table).lower() for i in self.config.warning]
+        self.config.information = [i.translate(_translation_table).lower() for i in self.config.information]
+        self.config.hint = [i.translate(_translation_table).lower() for i in self.config.hint]
+
         self.model = model
 
     @functools.cached_property
@@ -165,7 +182,7 @@ class DiagnosticsModifier:
 
     def modify_diagnostic(self, diagnostic: Diagnostic) -> Optional[Diagnostic]:
         if diagnostic.code is not None:
-            code = (
+            code = orig_code = (
                 str(diagnostic.code).translate(_translation_table).lower()
                 if diagnostic.code is not None
                 else "unknowncode"
@@ -177,6 +194,7 @@ class DiagnosticsModifier:
                 code = "*"
                 lines = self.rules_and_codes.codes.get(code)
 
+            modified = False
             if lines is not None and diagnostic.range.start.line in lines:
                 actions = self.rules_and_codes.actions.get(diagnostic.range.start.line)
                 if actions is not None:
@@ -185,15 +203,41 @@ class DiagnosticsModifier:
                         if action == "ignore":
                             return None
                         if action == "reset":
-                            pass  # do nothing
+                            pass
                         elif action == "error":
+                            modified = True
                             diagnostic.severity = DiagnosticSeverity.ERROR
-                        elif action == "warn":
+                        elif action == "warning":
+                            modified = True
                             diagnostic.severity = DiagnosticSeverity.WARNING
                         elif action == "information":
+                            modified = True
                             diagnostic.severity = DiagnosticSeverity.INFORMATION
                         elif action == "hint":
+                            modified = True
                             diagnostic.severity = DiagnosticSeverity.HINT
+
+            if not modified:
+                if orig_code in self.config.ignore:
+                    return None
+                if orig_code in self.config.error:
+                    diagnostic.severity = DiagnosticSeverity.ERROR
+                elif orig_code in self.config.warning:
+                    diagnostic.severity = DiagnosticSeverity.WARNING
+                elif orig_code in self.config.information:
+                    diagnostic.severity = DiagnosticSeverity.INFORMATION
+                elif orig_code in self.config.hint:
+                    diagnostic.severity = DiagnosticSeverity.HINT
+                elif "*" in self.config.hint:
+                    diagnostic.severity = DiagnosticSeverity.HINT
+                elif "*" in self.config.information:
+                    diagnostic.severity = DiagnosticSeverity.INFORMATION
+                elif "*" in self.config.warning:
+                    diagnostic.severity = DiagnosticSeverity.WARNING
+                elif "*" in self.config.error:
+                    diagnostic.severity = DiagnosticSeverity.ERROR
+                elif "*" in self.config.ignore:
+                    return None
 
         return diagnostic
 
