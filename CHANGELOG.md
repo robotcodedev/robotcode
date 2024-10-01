@@ -2,6 +2,31 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [0.92.0](https://github.com/robotcodedev/robotcode/compare/v0.91.0..v0.92.0) - 2024-10-01
+
+### Features
+
+- **analyze:** Allow shortforms of `warning` and `information`, `warn` and `info` in diagnostic modifiers ([f226091](https://github.com/robotcodedev/robotcode/commit/f226091e59b0fff2858de7311d542b903c5bf2d3))
+- **config:** Added posibility to allow different tool configs to robot.toml.json schema ([ee256ce](https://github.com/robotcodedev/robotcode/commit/ee256ce38b39ae67ae107bb5fffa5dba8d8d7db4))
+- **robot.toml:** Introduce new settings for analysis in robot.toml ([fa37dba](https://github.com/robotcodedev/robotcode/commit/fa37dba7ccfebf9d221b6985a12e460e27209f64))
+- **vscode:** Introduce setting for modifing the diagnostics severity ([5cca59f](https://github.com/robotcodedev/robotcode/commit/5cca59fd364cb1c6a8a8c6f0e63a956bca88e366))
+
+  With these settings, you can override the default configuration for all diagnostic messages. By combining file, block, and line diagnostic modifiers, you can precisely control how specific errors are displayed.
+
+  - **`robotcode.analysis.diagnosticModifiers.ignore`**: Suppresses specific diagnostics from being displayed. You can specify one or more error codes, like `MultipleKeywords` or `[multiple-keywords, VariableNotFound]`. Use `*` to ignore all errors and then maybe add specific error codes to other modifiers, such as `information`, to selectively show them.
+  - **`robotcode.analysis.diagnosticModifiers.error`**: Treats selected diagnostics as errors.
+  - **`robotcode.analysis.diagnosticModifiers.warning`**: Displays chosen diagnostics as warnings.
+  - **`robotcode.analysis.diagnosticModifiers.information`**: Shows specified diagnostics as information
+  - **`robotcode.analysis.diagnosticModifiers.hint`**: Marks selected diagnostics as hints
+
+  These settings allow you to tailor the diagnostic outputs to meet the specific needs of your project.
+
+- Introduce `Select Python Environment` command and deprecate `robotcode.python` ([be0573d](https://github.com/robotcodedev/robotcode/commit/be0573ddcfaf1100de8058bc6383a013eaf4ee88))
+
+
+  See [here](https://github.com/microsoft/vscode-python/wiki/Setting-descriptions#pythondefaultinterpreterpath) for an explanation.
+
+
 ## [0.91.0](https://github.com/robotcodedev/robotcode/compare/v0.90.0..v0.91.0) - 2024-09-27
 
 ### Bug Fixes
