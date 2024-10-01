@@ -240,9 +240,8 @@ def robotcode(
 robotcode.add_command(config)
 robotcode.add_command(profiles)
 
-for p in PluginManager().cli_commands:
-    for c in p:
-        robotcode.add_command(c)
+for c in PluginManager.instance().cli_commands:
+    robotcode.add_command(c)
 
 
 @robotcode.command()

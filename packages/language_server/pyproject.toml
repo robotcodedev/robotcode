@@ -29,6 +29,7 @@ dependencies = [
   "robotframework>=4.1.0",
   "robotcode-jsonrpc2==0.91.0",
   "robotcode-robot==0.91.0",
+  "robotcode-analyze==0.91.0",
   "robotcode==0.91.0",
 ]
 dynamic = ["version"]

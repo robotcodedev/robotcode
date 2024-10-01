@@ -2,7 +2,7 @@ import dataclasses
 import os
 from fnmatch import fnmatchcase
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, Iterable, List, Optional, Type, Union, get_args, get_origin
 
 import click
 
@@ -20,11 +20,9 @@ from robotcode.robot.config.loader import (
     load_robot_config_from_path,
 )
 from robotcode.robot.config.model import (
-    LibDocProfile,
-    RebotProfile,
+    BaseOptions,
     RobotConfig,
     RobotProfile,
-    TestDocProfile,
 )
 from robotcode.robot.config.utils import get_config_files
 
@@ -70,7 +68,11 @@ def show(app: Application, single: bool, paths: List[Path]) -> None:
 
         if single:
             for file, _ in config_files:
-                config = load_robot_config_from_path(file)
+                config = load_robot_config_from_path(
+                    file,
+                    extra_tools={k: v for k, v in PluginManager.instance().tool_config_classes},
+                    verbose_callback=app.verbose,
+                )
                 click.secho(f"File: {file}")
                 app.print_data(
                     config,
@@ -80,7 +82,11 @@ def show(app: Application, single: bool, paths: List[Path]) -> None:
 
             return
 
-        config = load_robot_config_from_path(*config_files)
+        config = load_robot_config_from_path(
+            *config_files,
+            extra_tools={k: v for k, v in PluginManager.instance().tool_config_classes},
+            verbose_callback=app.verbose,
+        )
 
         app.print_data(
             config,
@@ -193,55 +199,51 @@ def info(app: Application) -> None:
     """Shows informations about possible configuration settings."""
 
 
-def get_config_fields() -> Dict[str, Dict[str, str]]:
-    result = {}
-    for field in dataclasses.fields(RobotConfig):
-        field_name_encoded = encode_case_for_field_name(RobotConfig, field)
-        result[field_name_encoded] = {
-            "type": str(field.type),
-            "description": field.metadata.get("description", "").strip(),
-        }
+def type_to_str(t: Union[Type[Any], str]) -> str:
+    if isinstance(t, str):
+        return f"'{t}'"
 
-    for field in dataclasses.fields(RobotProfile):
-        field_name_encoded = encode_case_for_field_name(RobotProfile, field)
-        if field_name_encoded in result:
+    origin = get_origin(t)
+    if origin is None:
+        return t.__name__
+
+    if origin is Union:
+        return " | ".join(type_to_str(a) for a in get_args(t))
+
+    return f"{origin.__name__}[{', '.join(type_to_str(a) for a in get_args(t))}]"
+
+
+def _get_config_fields_for_type(
+    prefix: str, cls: Type[Any], filter: Optional[Callable[[str], bool]] = None
+) -> Dict[str, Dict[str, str]]:
+    result = {}
+    for field in dataclasses.fields(cls):
+        field_name_encoded = encode_case_for_field_name(cls, field)
+        if filter and not filter(field_name_encoded):
             continue
 
-        result["[profile]." + field_name_encoded] = {
-            "type": str(field.type),
+        result[prefix + field_name_encoded] = {
+            "type": type_to_str(field.type),
             "description": field.metadata.get("description", "").strip(),
         }
+        args = get_args(field.type)
 
-    for field in dataclasses.fields(RebotProfile):
-        field_name_encoded = encode_case_for_field_name(RebotProfile, field)
-        result["rebot." + field_name_encoded] = {
-            "type": str(field.type),
-            "description": field.metadata.get("description", "").strip(),
-        }
+        p = f"{prefix}{'' if prefix[-1]=='.' else '.'}" if prefix else ""
+        for a in args:
+            origin = get_origin(a)
+            if origin is None and issubclass(a, BaseOptions):
+                result.update(_get_config_fields_for_type(f"{p}{field_name_encoded}.", a, filter))
+    return result
 
-    for field in dataclasses.fields(LibDocProfile):
-        field_name_encoded = encode_case_for_field_name(LibDocProfile, field)
-        result["libdoc." + field_name_encoded] = {
-            "type": str(field.type),
-            "description": field.metadata.get("description", "").strip(),
-        }
 
-    for field in dataclasses.fields(TestDocProfile):
-        field_name_encoded = encode_case_for_field_name(TestDocProfile, field)
-        result["testdoc." + field_name_encoded] = {
-            "type": str(field.type),
-            "description": field.metadata.get("description", "").strip(),
-        }
+def get_config_fields() -> Dict[str, Dict[str, str]]:
+    result = {}
+    result.update(_get_config_fields_for_type("", RobotConfig))
 
-    for entry in PluginManager().config_classes:
-        for s, cls in entry:
-            if dataclasses.is_dataclass(cls):
-                for field in dataclasses.fields(cls):
-                    field_name_encoded = encode_case_for_field_name(TestDocProfile, field)
-                    result[f"{s}." + field_name_encoded] = {
-                        "type": str(field.type),
-                        "description": field.metadata.get("description", "").strip(),
-                    }
+    result.update(_get_config_fields_for_type("[profile].", RobotProfile, lambda x: x not in result))
+    for entry in PluginManager.instance().tool_config_classes:
+        if dataclasses.is_dataclass(entry.config_class):
+            result.update(_get_config_fields_for_type(f"tool.{entry.tool_name}.", entry.config_class))
 
     return {k: v for k, v in sorted(result.items(), key=lambda item: item[0])}
 
@@ -275,7 +277,15 @@ def list(app: Application, name: Optional[List[str]] = None) -> None:
                 result.append(field)
 
     if app.config.output_format is None or app.config.output_format == OutputFormat.TEXT:
-        app.echo_via_pager(os.linesep.join(result))
+
+        def output() -> Iterable[str]:
+            for r in result:
+                yield r + os.linesep
+
+            yield os.linesep
+            yield f"Total: {len(result)}"
+
+        app.echo_via_pager(output())
     else:
         app.print_data({"names": result})
 

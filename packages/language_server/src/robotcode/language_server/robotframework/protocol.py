@@ -21,7 +21,7 @@ from robotcode.jsonrpc2.protocol import JsonRPCErrorException, JsonRPCErrors, Pr
 from robotcode.language_server.common.parts.document_symbols import symbol_information_label
 from robotcode.language_server.common.protocol import LanguageServerProtocol
 from robotcode.robot.config.model import RobotBaseProfile
-from robotcode.robot.diagnostics.workspace_config import RobotConfig
+from robotcode.robot.diagnostics.workspace_config import RobotConfig, WorkspaceAnalysisConfig
 from robotcode.robot.utils import get_robot_version
 
 from ..__version__ import __version__
@@ -152,9 +152,11 @@ class RobotLanguageServerProtocol(LanguageServerProtocol):
         self,
         server: "RobotLanguageServer",
         profile: Optional[RobotBaseProfile] = None,
+        analysis_config: Optional[WorkspaceAnalysisConfig] = None,
     ):
         super().__init__(server)
         self.robot_profile = profile if profile is not None else RobotBaseProfile()
+        self.analysis_config = analysis_config if analysis_config is not None else WorkspaceAnalysisConfig()
         self.robot_initialization_options = RobotInitializationOptions()
         self.on_initialize.add(self._on_initialize)
         self.on_initialized.add(self.server_initialized)

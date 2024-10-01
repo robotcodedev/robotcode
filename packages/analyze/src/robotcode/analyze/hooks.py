@@ -1,11 +1,12 @@
-from typing import Any, List, Tuple, Type
+from typing import List
 
 import click
 
 from robotcode.plugin import hookimpl
+from robotcode.plugin.specs import ToolConfig
 
 from .cli import analyze
-from .config import AnalyzerConfig
+from .config import AnalyzeConfig
 
 
 @hookimpl
@@ -14,5 +15,5 @@ def register_cli_commands() -> List[click.Command]:
 
 
 @hookimpl
-def register_config_classes() -> List[Tuple[str, Type[Any]]]:
-    return [("tool.robotcode-analyze", AnalyzerConfig)]
+def register_tool_config_classes() -> List[ToolConfig]:
+    return [ToolConfig("robotcode-analyze", AnalyzeConfig)]

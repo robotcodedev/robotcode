@@ -65,3 +65,10 @@ class AnalysisDiagnosticModifiersConfig(ConfigBase):
     warning: List[str] = field(default_factory=list)
     information: List[str] = field(default_factory=list)
     hint: List[str] = field(default_factory=list)
+
+
+@dataclass
+class WorkspaceAnalysisConfig:
+    cache: CacheConfig = field(default_factory=CacheConfig)
+    robot: AnalysisRobotConfig = field(default_factory=AnalysisRobotConfig)
+    modifiers: AnalysisDiagnosticModifiersConfig = field(default_factory=AnalysisDiagnosticModifiersConfig)

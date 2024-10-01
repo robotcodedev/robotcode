@@ -259,7 +259,7 @@ def handle_robot_options(
     )
     try:
         profile = (
-            load_robot_config_from_path(*config_files)
+            load_robot_config_from_path(*config_files, verbose_callback=app.verbose)
             .combine_profiles(*(app.config.profiles or []), verbose_callback=app.verbose, error_callback=app.error)
             .evaluated_with_env(verbose_callback=app.verbose, error_callback=app.error)
         )

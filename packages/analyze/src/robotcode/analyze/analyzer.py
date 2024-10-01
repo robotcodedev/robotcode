@@ -2,13 +2,13 @@ from pathlib import Path
 
 from robotcode.robot.config.model import RobotConfig
 
-from .config import AnalyzerConfig
+from .config import AnalyzeConfig
 
 
 class Analyzer:
     def __init__(
         self,
-        config: AnalyzerConfig,
+        config: AnalyzeConfig,
         robot_config: RobotConfig,
         root_folder: Path,
     ):

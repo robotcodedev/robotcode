@@ -6,14 +6,16 @@ from typing import Any, Callable, Dict, Optional, Union
 
 import apischema
 
-from robotcode.analyze.config import AnalyzerConfig
+from robotcode.analyze.config import AnalyzeConfig
 from robotcode.robot.config.model import RobotConfig as OrigRobotConfig
 from robotcode.robot.config.model import field
 
 
 @dataclass
 class ToolConfig:
-    robotcode_analyze: Optional[AnalyzerConfig] = field(description="Analyzer configuration.")  # noqa: RUF009
+    """Tool configurations."""
+
+    robotcode_analyze: Optional[AnalyzeConfig] = field(description=AnalyzeConfig.__doc__)  # noqa: RUF009
 
 
 @dataclass
@@ -60,10 +62,11 @@ if __name__ == "__main__":
 
     base_schema = apischema.schema(
         extra={
+            "title": "JSON schema for RobotCode's Robot Framework configuration",
             "x-taplo-info": {
                 "authors": ["robotcodedev (https://github.com/robotcodedev)"],
                 "patterns": ["^(.*(/|\\\\)robot\\.toml|robot\\.toml)$"],
-            }
+            },
         }
     )
     schema = apischema.json_schema.deserialization_schema(

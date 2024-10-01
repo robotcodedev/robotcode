@@ -34,7 +34,13 @@ from ..utils.stubs import Languages
 from .imports_manager import ImportsManager
 from .library_doc import LibraryDoc
 from .namespace import DocumentType, Namespace
-from .workspace_config import AnalysisDiagnosticModifiersConfig, AnalysisRobotConfig, CacheConfig, RobotConfig
+from .workspace_config import (
+    AnalysisDiagnosticModifiersConfig,
+    AnalysisRobotConfig,
+    CacheConfig,
+    RobotConfig,
+    WorkspaceAnalysisConfig,
+)
 
 
 class UnknownFileTypeError(Exception):
@@ -54,6 +60,7 @@ class DocumentsCacheHelper:
         documents_manager: DocumentsManager,
         file_watcher_manager: FileWatcherManagerBase,
         robot_profile: Optional[RobotBaseProfile],
+        analysis_config: Optional[WorkspaceAnalysisConfig],
     ) -> None:
         self.INITIALIZED_NAMESPACE = _CacheEntry()
 
@@ -62,6 +69,7 @@ class DocumentsCacheHelper:
         self.file_watcher_manager = file_watcher_manager
 
         self.robot_profile = robot_profile or RobotBaseProfile()
+        self.analysis_config = analysis_config or WorkspaceAnalysisConfig()
 
         self._imports_managers_lock = threading.RLock()
         self._imports_managers: weakref.WeakKeyDictionary[WorkspaceFolder, ImportsManager] = weakref.WeakKeyDictionary()
@@ -514,10 +522,10 @@ class DocumentsCacheHelper:
             variables,
             variable_files,
             environment,
-            cache_config.ignored_libraries,
-            cache_config.ignored_variables,
-            cache_config.ignore_arguments_for_library,
-            analysis_config.global_library_search_order,
+            self.analysis_config.cache.ignored_libraries + cache_config.ignored_libraries,
+            self.analysis_config.cache.ignored_variables + cache_config.ignored_variables,
+            self.analysis_config.cache.ignore_arguments_for_library + cache_config.ignore_arguments_for_library,
+            self.analysis_config.robot.global_library_search_order + analysis_config.global_library_search_order,
             cache_base_path,
         )
 
@@ -583,14 +591,14 @@ class DocumentsCacheHelper:
         return document.get_cache(self.__get_diagnostic_modifier)
 
     def __get_diagnostic_modifier(self, document: TextDocument) -> DiagnosticsModifier:
-        analysis_config = self.workspace.get_configuration(AnalysisDiagnosticModifiersConfig, document.uri)
+        modifiers_config = self.workspace.get_configuration(AnalysisDiagnosticModifiersConfig, document.uri)
         return DiagnosticsModifier(
             self.get_model(document, False),
             DiagnosticModifiersConfig(
-                ignore=analysis_config.ignore,
-                error=analysis_config.error,
-                warning=analysis_config.warning,
-                information=analysis_config.information,
-                hint=analysis_config.hint,
+                ignore=self.analysis_config.modifiers.ignore + modifiers_config.ignore,
+                error=self.analysis_config.modifiers.error + modifiers_config.error,
+                warning=self.analysis_config.modifiers.warning + modifiers_config.warning,
+                information=self.analysis_config.modifiers.information + modifiers_config.information,
+                hint=self.analysis_config.modifiers.hint + modifiers_config.hint,
             ),
         )

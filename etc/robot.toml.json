@@ -6,9 +6,117 @@
     }
   ],
   "definitions": {
-    "AnalyzerConfig": {
+    "AnalyzeConfig": {
       "additionalProperties": false,
-      "description": "Analyzer configuration.",
+      "description": "robotcode-analyze configuration.",
+      "properties": {
+        "cache": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/CacheConfig"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Defines the cache configuration.",
+          "title": "Cache"
+        },
+        "exclude-patterns": {
+          "default": null,
+          "description": "Specifies glob patterns for excluding files and folders from analysing by the language server.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Exclude patterns",
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "extend-cache": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/CacheConfig"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Extend the cache configuration.",
+          "title": "Extend cache"
+        },
+        "extend-exclude-patterns": {
+          "default": null,
+          "description": "Extend the exclude patterns.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Extend exclude patterns",
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "extend-global-library-search-order": {
+          "default": null,
+          "description": "Extend the global library search order setting.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Extend global library search order",
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "extend-modifiers": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/ModifiersConfig"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Extends the modifiers for the analysis.\n\nExamples:\n\n```toml\n[tool.robotcode-analyze.extend_modifiers]\nignore = [\"VariableNotFound\"]\nextend-hint = [\"KeywordNotFound\"]\nextend-information = [\"MultipleKeywords\"]\n```\n",
+          "title": "Extend modifiers"
+        },
+        "global-library-search-order": {
+          "default": null,
+          "description": "Specifies a global [search order](https://robotframework.org/robotframework/latest/RobotFrameworkUserGuide.html#specifying-explicit-priority-between-libraries-and-resources)\nfor libraries and resources.\nThis is usefull when you have libraries containing keywords with the same name. **RobotCode** is unable to\nanalyze the library search order in a file specified with\n[`Set Library Search Order`](https://robotframework.org/robotframework/latest/libraries/BuiltIn.html#Set%20Library%20Search%20Order),\nso you can define a global order here. Just make sure to call the `Set Library Search Order`\nkeyword somewhere in your robot file or internally in your library.\n",
+          "items": {
+            "type": "string"
+          },
+          "title": "Global library search order",
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "modifiers": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/ModifiersConfig"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Defines the modifiers for the analysis.\n\nExamples:\n\n```toml\n[tool.robotcode-analyze.modifiers]\nignore = [\"VariableNotFound\"]\nhint = [\"KeywordNotFound\"]\ninformation = [\"MultipleKeywords\"]\n```\n",
+          "title": "Modifiers"
+        }
+      },
+      "title": "AnalyzeConfig",
+      "type": "object"
+    },
+    "CacheConfig": {
+      "additionalProperties": false,
+      "description": "Cache configuration.",
       "properties": {
         "cache-dir": {
           "default": null,
@@ -19,91 +127,80 @@
             "null"
           ]
         },
-        "exclude-patterns": {
-          "default": [],
-          "items": {
-            "type": "string"
-          },
-          "title": "Exclude patterns",
-          "type": "array"
-        },
-        "extend-ignore": {
+        "extend-ignore-arguments-for-library": {
           "default": null,
-          "description": "Extends the rules which are ignored.",
+          "description": "Extend the ignore arguments for library settings.",
           "items": {
             "type": "string"
           },
-          "title": "Extend ignore",
+          "title": "Extend ignore arguments for library",
           "type": [
             "array",
             "null"
           ]
         },
-        "extend-select": {
+        "extend-ignored-libraries": {
           "default": null,
-          "description": "Extends the rules which are run.",
+          "description": "Extend the ignored libraries setting.",
           "items": {
             "type": "string"
           },
-          "title": "Extend select",
+          "title": "Extend ignored libraries",
           "type": [
             "array",
             "null"
           ]
         },
-        "global-library-search-order": {
-          "default": [],
-          "description": "TODO\n",
-          "items": {
-            "type": "string"
-          },
-          "title": "Global library search order",
-          "type": "array"
-        },
-        "ignore": {
+        "extend-ignored-variables": {
           "default": null,
-          "description": "Defines which rules are ignored.",
+          "description": "Extend the ignored variables setting.",
           "items": {
             "type": "string"
           },
-          "title": "Ignore",
+          "title": "Extend ignored variables",
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "ignore-arguments-for-library": {
+          "default": null,
+          "description": "Specifies a list of libraries for which arguments will be ignored during analysis.\nThis is usefull if you have library that gets variables from a python file as arguments that contains\ncomplex data like big dictionaries or complex objects that **RobotCode** can't handle.\nYou can specify a glob pattern that matches the library name or the source file.\n\nExamples:\n- `**/mylibfolder/mylib.py`\n- `MyLib`\n- `mylib.subpackage.subpackage`\n\nIf you change this setting, you may need to run the command\n`RobotCode: Clear Cache and Restart Language Servers`.\n\n_Ensure your library functions correctly without arguments e.g. by defining default\nvalues for all arguments._\n",
+          "items": {
+            "type": "string"
+          },
+          "title": "Ignore arguments for library",
           "type": [
             "array",
             "null"
           ]
         },
         "ignored-libraries": {
-          "default": [],
+          "default": null,
           "description": "Specifies the library names that should not be cached.\nThis is useful if you have a dynamic or hybrid library that has different keywords depending on\nthe arguments. You can specify a glob pattern that matches the library name or the source file.\n\nExamples:\n- `**/mylibfolder/mylib.py`\n- `MyLib`\n- `mylib.subpackage.subpackage`\n\nFor robot framework internal libraries, you have to specify the full module name like\n`robot.libraries.Remote`.\n",
           "items": {
             "type": "string"
           },
           "title": "Ignored libraries",
-          "type": "array"
+          "type": [
+            "array",
+            "null"
+          ]
         },
         "ignored-variables": {
-          "default": [],
+          "default": null,
           "description": "Specifies the variable files that should not be cached.\nThis is useful if you have a dynamic or hybrid variable files that has different variables\ndepending on the arguments. You can specify a glob pattern that matches the variable module\nname or the source file.\n\nExamples:\n- `**/variables/myvars.py`\n- `MyVariables`\n- `myvars.subpackage.subpackage`\n",
           "items": {
             "type": "string"
           },
           "title": "Ignored variables",
-          "type": "array"
-        },
-        "select": {
-          "default": null,
-          "description": "Selects which rules are run.",
-          "items": {
-            "type": "string"
-          },
-          "title": "Select",
           "type": [
             "array",
             "null"
           ]
         }
       },
-      "title": "AnalyzerConfig",
+      "title": "CacheConfig",
       "type": "object"
     },
     "Condition": {
@@ -256,6 +353,134 @@
         }
       },
       "title": "LibDocProfile",
+      "type": "object"
+    },
+    "ModifiersConfig": {
+      "additionalProperties": false,
+      "description": "Modifiers configuration.",
+      "properties": {
+        "error": {
+          "default": null,
+          "description": "\nSpecifies the error codes to treat as errors.\n\nExamples:\n\n```toml\n[tool.robotcode-analyze.modifiers]\nerror = [\"VariableNotFound\", \"multiple-keywords\"]\n```\n",
+          "items": {
+            "type": "string"
+          },
+          "title": "Error",
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "extend-error": {
+          "default": null,
+          "description": "\nExtend the error codes to treat as errors.\n\nExamples:\n\n```toml\n[tool.robotcode-analyze.modifiers]\nextend_error = [\"VariableNotFound\", \"multiple-keywords\"]\n```\n",
+          "items": {
+            "type": "string"
+          },
+          "title": "Extend error",
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "extend-hint": {
+          "default": null,
+          "description": "\nExtend the error codes to treat as hint.\n\nExamples:\n\n```toml\n[tool.robotcode-analyze.modifiers]\nextend_hint = [\"VariableNotFound\", \"multiple-keywords\"]\n```\n",
+          "items": {
+            "type": "string"
+          },
+          "title": "Extend hint",
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "extend-ignore": {
+          "default": null,
+          "description": "\nExtend the error codes to ignore.\n\nExamples:\n\n```toml\n[tool.robotcode-analyze.modifiers]\nextend_ignore = [\"VariableNotFound\", \"multiple-keywords\"]\n```\n",
+          "items": {
+            "type": "string"
+          },
+          "title": "Extend ignore",
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "extend-information": {
+          "default": null,
+          "description": "\nExtend the error codes to treat as information.\n\nExamples:\n\n```toml\n[tool.robotcode-analyze.modifiers]\nextend_information = [\"VariableNotFound\", \"multiple-keywords\"]\n```\n",
+          "items": {
+            "type": "string"
+          },
+          "title": "Extend information",
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "extend-warning": {
+          "default": null,
+          "description": "\nExtend the error codes to treat as warnings.\n\nExamples:\n\n```toml\n[tool.robotcode-analyze.modifiers]\nextend_warning = [\"VariableNotFound\", \"multiple-keywords\"]\n```\n",
+          "items": {
+            "type": "string"
+          },
+          "title": "Extend warning",
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "hint": {
+          "default": null,
+          "description": "\nSpecifies the error codes to treat as hint.\n\nExamples:\n\n```toml\n[tool.robotcode-analyze.modifiers]\nhint = [\"VariableNotFound\", \"multiple-keywords\"]\n```\n",
+          "items": {
+            "type": "string"
+          },
+          "title": "Hint",
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "ignore": {
+          "default": null,
+          "description": "Specifies the error codes to ignore.\n\nExamples:\n\n```toml\n[tool.robotcode-analyze.modifiers]\nignore = [\"VariableNotFound\", \"multiple-keywords\"]\n```\n",
+          "items": {
+            "type": "string"
+          },
+          "title": "Ignore",
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "information": {
+          "default": null,
+          "description": "\nSpecifies the error codes to treat as information.\n\nExamples:\n\n```toml\n[tool.robotcode-analyze.modifiers]\ninformation = [\"VariableNotFound\", \"multiple-keywords\"]\n```\n",
+          "items": {
+            "type": "string"
+          },
+          "title": "Information",
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "warning": {
+          "default": null,
+          "description": "\nSpecifies the error codes to treat as warning.\n\nExamples:\n\n```toml\n[tool.robotcode-analyze.modifiers]\nwarning = [\"VariableNotFound\", \"multiple-keywords\"]\n```\n",
+          "items": {
+            "type": "string"
+          },
+          "title": "Warning",
+          "type": [
+            "array",
+            "null"
+          ]
+        }
+      },
+      "title": "ModifiersConfig",
       "type": "object"
     },
     "NamePattern": {
@@ -5507,19 +5732,19 @@
     },
     "ToolConfig": {
       "additionalProperties": false,
-      "description": "ToolConfig(robotcode_analyze: Union[robotcode.analyze.config.AnalyzerConfig, NoneType] = None)",
+      "description": "Tool configurations.",
       "properties": {
         "robotcode-analyze": {
           "anyOf": [
             {
-              "$ref": "#/definitions/AnalyzerConfig"
+              "$ref": "#/definitions/AnalyzeConfig"
             },
             {
               "type": "null"
             }
           ],
           "default": null,
-          "description": "Analyzer configuration.",
+          "description": "robotcode-analyze configuration.",
           "title": "Robotcode analyze"
         }
       },
@@ -5527,6 +5752,7 @@
       "type": "object"
     }
   },
+  "title": "JSON schema for RobotCode's Robot Framework configuration",
   "x-taplo-info": {
     "authors": [
       "robotcodedev (https://github.com/robotcodedev)"

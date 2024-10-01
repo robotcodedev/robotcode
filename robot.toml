@@ -3,3 +3,10 @@ python-path = [
     "tests/robotcode/language_server/robotframework/parts/data/resources",
 ]
 paths = "tests/robotcode/language_server/robotframework/parts/data"
+
+[tool.robotcode-analyze]
+
+
+[tool.robotcode-analyze.extend-modifiers]
+warning = ["user"]
+extend-hint = ["a_second_hint"]

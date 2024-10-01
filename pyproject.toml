@@ -318,3 +318,8 @@ pre_bump_hooks = [
   "hatch run build:update-changelog",
   "git add .",
 ]
+
+
+[tool.robotcode-analyze.extend-modifiers]
+information = ["info_from_pyproject_toml"]
+extend-hint = ["a_hint_from_pyproject_toml"]

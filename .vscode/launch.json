@@ -31,6 +31,8 @@
 			},
 			"args": [
 				"--verbose",
+				"--format",
+				"toml",
 				// "robot"
 				// "debug-launch",
 				// "--pipe-server",
@@ -44,16 +46,16 @@
 				// "--no-color",
 				// "--no-pager",
 				//"config", "info", "list",
-				// "analyze",
-
+				// "analyze"
 				// "discover",
 				// "suites",
 				// // "discover", "tests", "--tags"
 				// "."
-				"discover",
-				"files",
+				// "discover",
+				// "files",
 				// ".."
-
+				"config",
+				"show",
 			]
 		},
 		{

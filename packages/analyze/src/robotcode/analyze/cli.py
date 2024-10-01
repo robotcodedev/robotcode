@@ -2,10 +2,9 @@ from typing import Tuple, Union
 
 import click
 
-from robotcode.analyze.config import AnalyzerConfig
+from robotcode.analyze.config import AnalyzeConfig
 from robotcode.plugin import Application, pass_application
 from robotcode.robot.config.loader import (
-    load_config_from_path,
     load_robot_config_from_path,
 )
 from robotcode.robot.config.utils import get_config_files
@@ -30,21 +29,20 @@ def analyze(app: Application, paths: Tuple[str]) -> Union[str, int, None]:
     config_files, root_folder, _ = get_config_files(paths, app.config.config_files, verbose_callback=app.verbose)
 
     try:
-        robot_config = (
-            load_robot_config_from_path(*config_files)
-            .combine_profiles(*(app.config.profiles or []), verbose_callback=app.verbose, error_callback=app.error)
-            .evaluated_with_env()
+        robot_config = load_robot_config_from_path(
+            *config_files, extra_tools={"robotcode-analyze": AnalyzeConfig}, verbose_callback=app.verbose
         )
 
-        analyzer_config = load_config_from_path(
-            AnalyzerConfig,
-            *config_files,
-            tool_name="robotcode-analyze",
-            robot_toml_tool_name="robotcode-analyze",
-        ).evaluated()
+        analyzer_config = robot_config.tool.get("robotcode-analyze", None) if robot_config.tool is not None else None
+        if analyzer_config is None:
+            analyzer_config = AnalyzeConfig()
+
+        robot_profile = robot_config.combine_profiles(
+            *(app.config.profiles or []), verbose_callback=app.verbose, error_callback=app.error
+        ).evaluated_with_env()
 
         app.print_data(analyzer_config)
-        app.print_data(robot_config)
+        app.print_data(robot_profile)
 
     except (TypeError, ValueError) as e:
         raise click.ClickException(str(e)) from e

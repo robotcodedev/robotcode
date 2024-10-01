@@ -245,6 +245,115 @@ class BaseOptions(ValidateMixin):
     def _decode_case(cls, s: str) -> str:
         return s.replace("-", "_")
 
+    @staticmethod
+    def _verified_value(name: str, value: Any, types: Union[type, Tuple[type, ...]], target: Any) -> Any:
+        errors = validate_types(types, value)
+        if errors:
+            raise TypeValidationError(
+                "Dataclass Type Validation Error",
+                target=target,
+                errors={name: errors},
+            )
+        return value
+
+    def evaluated(
+        self,
+        verbose_callback: Optional[Callable[[Union[str, Callable[[], Any]]], None]] = None,
+        error_callback: Optional[Callable[[Union[str, Callable[[], Any]]], None]] = None,
+    ) -> Self:
+        if verbose_callback is not None:
+            verbose_callback("Evaluating options")
+
+        result = dataclasses.replace(self)
+        for f in dataclasses.fields(result):
+            try:
+                if isinstance(getattr(result, f.name), Condition):
+                    setattr(result, f.name, getattr(result, f.name).evaluate())
+                elif isinstance(getattr(result, f.name), Expression):
+                    setattr(result, f.name, getattr(result, f.name).evaluate())
+                elif isinstance(getattr(result, f.name), list):
+                    setattr(
+                        result,
+                        f.name,
+                        [e.evaluate() if isinstance(e, Expression) else e for e in getattr(result, f.name)],
+                    )
+                elif isinstance(getattr(result, f.name), dict):
+                    setattr(
+                        result,
+                        f.name,
+                        {
+                            k: e.evaluate() if isinstance(e, Expression) else e
+                            for k, e in getattr(result, f.name).items()
+                        },
+                    )
+            except EvaluationError as e:
+                message = f"Evaluation of '{f.name}' failed: {type(e).__name__}: {e}"
+                if error_callback is None:
+                    raise ValueError(message) from e
+                error_callback(message)
+
+        return result
+
+    def add_options(self, config: "BaseOptions", combine_extends: bool = False) -> None:
+        type_hints = get_type_hints(type(self))
+        base_field_names = [f.name for f in dataclasses.fields(self)]
+
+        for f in dataclasses.fields(config):
+            if f.name.startswith(EXTEND_PREFIX):
+                if f.name not in base_field_names:
+                    continue
+
+                new = self._verified_value(
+                    f.name,
+                    getattr(config, f.name),
+                    type_hints[f.name[EXTEND_PREFIX_LEN:]],
+                    config,
+                )
+                if new is None:
+                    continue
+
+                old_field_name = f.name if combine_extends else f.name[EXTEND_PREFIX_LEN:]
+
+                old = getattr(self, old_field_name)
+                if old is None:
+                    setattr(self, old_field_name, new)
+                else:
+                    if isinstance(old, dict):
+                        if any(True for e in new.values() if isinstance(e, BaseOptions)):
+                            for key, value in new.items():
+                                if isinstance(value, BaseOptions) and key in old:
+                                    old[key].add_options(value, True)
+                                else:
+                                    old[key] = value
+                        else:
+                            setattr(self, old_field_name, {**old, **new})
+                    elif isinstance(old, list):
+                        setattr(self, old_field_name, [*old, *new])
+                    elif isinstance(old, tuple):
+                        setattr(self, old_field_name, (*old, *new))
+                    elif isinstance(old, BaseOptions):
+                        old.add_options(new)
+                    else:
+                        setattr(self, old_field_name, new)
+                continue
+
+            if f.name not in base_field_names:
+                continue
+
+            if combine_extends:
+                if EXTEND_PREFIX + f.name in base_field_names and getattr(config, f.name, None) is not None:
+                    setattr(self, EXTEND_PREFIX + f.name, None)
+
+            if getattr(config, f"{EXTEND_PREFIX}_{f.name}", None) is not None and not combine_extends:
+                continue
+
+            new = self._verified_value(f.name, getattr(config, f.name), type_hints[f.name], config)
+            if new is not None:
+                setattr(self, f.name, new)
+
+
+@dataclass
+class RobotBaseOptions(BaseOptions):
     """Base class for all options."""
 
     def build_command_line(self) -> List[str]:
@@ -304,116 +413,12 @@ class BaseOptions(ValidateMixin):
 
         return result
 
-    @staticmethod
-    def _verified_value(name: str, value: Any, types: Union[type, Tuple[type, ...]], target: Any) -> Any:
-        errors = validate_types(types, value)
-        if errors:
-            raise TypeValidationError(
-                "Dataclass Type Validation Error",
-                target=target,
-                errors={name: errors},
-            )
-        return value
-
-    def add_options(self, config: "BaseOptions", combine_extends: bool = False) -> None:
-        type_hints = get_type_hints(type(self))
-        base_field_names = [f.name for f in dataclasses.fields(self)]
-
-        for f in dataclasses.fields(config):
-            if f.name.startswith(EXTEND_PREFIX):
-                if f.name not in base_field_names:
-                    continue
-
-                new = self._verified_value(
-                    f.name,
-                    getattr(config, f.name),
-                    type_hints[f.name[EXTEND_PREFIX_LEN:]],
-                    config,
-                )
-                if new is None:
-                    continue
-
-                old_field_name = f.name if combine_extends else f.name[EXTEND_PREFIX_LEN:]
-
-                old = getattr(self, old_field_name)
-                if old is None:
-                    setattr(self, old_field_name, new)
-                else:
-                    if isinstance(old, dict):
-                        if any(True for e in new.values() if isinstance(e, BaseOptions)):
-                            for key, value in new.items():
-                                if isinstance(value, BaseOptions) and key in old:
-                                    old[key].add_options(value, True)
-                                else:
-                                    old[key] = value
-                        else:
-                            setattr(self, old_field_name, {**old, **new})
-                    elif isinstance(old, list):
-                        setattr(self, old_field_name, [*old, *new])
-                    elif isinstance(old, tuple):
-                        setattr(self, old_field_name, (*old, *new))
-                    else:
-                        setattr(self, old_field_name, new)
-                continue
-
-            if f.name not in base_field_names:
-                continue
-
-            if combine_extends:
-                if EXTEND_PREFIX + f.name in base_field_names and getattr(config, f.name, None) is not None:
-                    setattr(self, EXTEND_PREFIX + f.name, None)
-
-            if getattr(config, f"{EXTEND_PREFIX}_{f.name}", None) is not None and not combine_extends:
-                continue
-
-            new = self._verified_value(f.name, getattr(config, f.name), type_hints[f.name], config)
-            if new is not None:
-                setattr(self, f.name, new)
-
-    def evaluated(
-        self,
-        verbose_callback: Optional[Callable[[Union[str, Callable[[], Any]]], None]] = None,
-        error_callback: Optional[Callable[[Union[str, Callable[[], Any]]], None]] = None,
-    ) -> Self:
-        if verbose_callback is not None:
-            verbose_callback("Evaluating options")
-
-        result = dataclasses.replace(self)
-        for f in dataclasses.fields(result):
-            try:
-                if isinstance(getattr(result, f.name), Condition):
-                    setattr(result, f.name, getattr(result, f.name).evaluate())
-                elif isinstance(getattr(result, f.name), Expression):
-                    setattr(result, f.name, getattr(result, f.name).evaluate())
-                elif isinstance(getattr(result, f.name), list):
-                    setattr(
-                        result,
-                        f.name,
-                        [e.evaluate() if isinstance(e, Expression) else e for e in getattr(result, f.name)],
-                    )
-                elif isinstance(getattr(result, f.name), dict):
-                    setattr(
-                        result,
-                        f.name,
-                        {
-                            k: e.evaluate() if isinstance(e, Expression) else e
-                            for k, e in getattr(result, f.name).items()
-                        },
-                    )
-            except EvaluationError as e:
-                message = f"Evaluation of '{f.name}' failed: {type(e).__name__}: {e}"
-                if error_callback is None:
-                    raise ValueError(message) from e
-                error_callback(message)
-
-        return result
-
 
 # start generated code
 
 
 @dataclass
-class CommonOptions(BaseOptions):
+class CommonOptions(RobotBaseOptions):
     """Common options for all _robot_ commands."""
 
     console_colors: Optional[Literal["auto", "on", "ansi", "off"]] = field(
@@ -972,7 +977,7 @@ class CommonOptions(BaseOptions):
 
 
 @dataclass
-class CommonExtendOptions(BaseOptions):
+class CommonExtendOptions(RobotBaseOptions):
     """Extra common options for all _robot_ commands."""
 
     extend_excludes: Optional[List[Union[str, StringExpression]]] = field(
@@ -1297,7 +1302,7 @@ class CommonExtendOptions(BaseOptions):
 
 
 @dataclass
-class RobotOptions(BaseOptions):
+class RobotOptions(RobotBaseOptions):
     """Options for _robot_ command."""
 
     console: Optional[Literal["verbose", "dotted", "skipped", "quiet", "none"]] = field(
@@ -1674,7 +1679,7 @@ class RobotOptions(BaseOptions):
 
 
 @dataclass
-class RobotExtendOptions(BaseOptions):
+class RobotExtendOptions(RobotBaseOptions):
     """Extra options for _robot_ command."""
 
     extend_languages: Optional[List[Union[str, StringExpression]]] = field(
@@ -1789,7 +1794,7 @@ class RobotExtendOptions(BaseOptions):
 
 
 @dataclass
-class RebotOptions(BaseOptions):
+class RebotOptions(RobotBaseOptions):
     """Options for _rebot_ command."""
 
     end_time: Optional[Union[str, StringExpression]] = field(
@@ -1884,7 +1889,7 @@ class RebotOptions(BaseOptions):
 
 
 @dataclass
-class LibDocOptions(BaseOptions):
+class LibDocOptions(RobotBaseOptions):
     """Options for _libdoc_ command."""
 
     doc_format: Optional[Literal["ROBOT", "HTML", "TEXT", "REST"]] = field(
@@ -1976,7 +1981,7 @@ class LibDocOptions(BaseOptions):
 
 
 @dataclass
-class LibDocExtendOptions(BaseOptions):
+class LibDocExtendOptions(RobotBaseOptions):
     """Extra options for _libdoc_ command."""
 
     extend_python_path: Optional[List[Union[str, StringExpression]]] = field(
@@ -1992,7 +1997,7 @@ class LibDocExtendOptions(BaseOptions):
 
 
 @dataclass
-class TestDocOptions(BaseOptions):
+class TestDocOptions(RobotBaseOptions):
     """Options for _testdoc_ command."""
 
     doc: Optional[Union[str, StringExpression]] = field(
@@ -2090,7 +2095,7 @@ class TestDocOptions(BaseOptions):
 
 
 @dataclass
-class TestDocExtendOptions(BaseOptions):
+class TestDocExtendOptions(RobotBaseOptions):
     """Extra options for _testdoc_ command."""
 
     extend_excludes: Optional[List[Union[str, StringExpression]]] = field(
@@ -2378,7 +2383,7 @@ class RobotConfig(RobotExtendBaseProfile):
 
     extend_profiles: Optional[Dict[str, RobotProfile]] = field(description="Extra execution profiles.")
 
-    tool: Any = field(description="Tool configurations.")
+    tool: Optional[Dict[str, Any]] = field(description="Tool configurations.")
 
     def _select_profiles(
         self,

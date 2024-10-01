@@ -1,7 +1,8 @@
 import sys
+from dataclasses import fields, is_dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Any, Optional, Sequence, Tuple, Type, TypeVar, Union
+from typing import Any, Callable, Dict, Optional, Sequence, Tuple, Type, TypeVar, Union
 
 from robotcode.core.utils.dataclasses import from_dict
 
@@ -58,9 +59,9 @@ def load_robot_config_from_robot_toml_str(__s: str) -> RobotConfig:
 
 
 def load_config_from_robot_toml_str(
-    config_type: Type[_ConfigType], __s: str, tool_name: Optional[str] = None
+    config_type: Type[_ConfigType], data: Union[str, Dict[str, Any]], tool_name: Optional[str] = None
 ) -> _ConfigType:
-    dict_data = tomllib.loads(__s)
+    dict_data = tomllib.loads(data) if isinstance(data, str) else data
 
     if tool_name:
         try:
@@ -73,34 +74,39 @@ def load_config_from_robot_toml_str(
     return from_dict(dict_data, config_type)
 
 
-def load_config_from_pyproject_toml_str(config_type: Type[_ConfigType], tool_name: str, __s: str) -> _ConfigType:
-    dict_data = tomllib.loads(__s)
+def load_config_from_pyproject_toml_str(
+    config_type: Type[_ConfigType], tool_name: str, data: Union[str, Dict[str, Any]]
+) -> _ConfigType:
+    dict_data = tomllib.loads(data) if isinstance(data, str) else data
 
     return from_dict(dict_data.get("tool", {}).get(tool_name, {}), config_type)
 
 
 def _load_config_data_from_path(
     config_type: Type[_ConfigType],
-    tool_name: str,
+    pyproject_toml_tool_name: str,
     robot_toml_tool_name: Optional[str],
-    __path: Path,
+    path: Path,
+    data: Optional[Dict[str, Any]] = None,
 ) -> _ConfigType:
     try:
-        if __path.name == PYPROJECT_TOML:
-            return load_config_from_pyproject_toml_str(config_type, tool_name, __path.read_text("utf-8"))
+        if path.name == PYPROJECT_TOML:
+            return load_config_from_pyproject_toml_str(
+                config_type, pyproject_toml_tool_name, path.read_text("utf-8") if data is None else data
+            )
 
-        if __path.name == ROBOT_TOML or __path.name == LOCAL_ROBOT_TOML or __path.suffix == ".toml":
+        if path.name == ROBOT_TOML or path.name == LOCAL_ROBOT_TOML or path.suffix == ".toml":
             return load_config_from_robot_toml_str(
                 config_type,
-                __path.read_text("utf-8"),
+                path.read_text("utf-8") if data is None else data,
                 tool_name=robot_toml_tool_name,
             )
         raise TypeError("Unknown config file type.")
 
     except ValueError as e:
-        raise ConfigValueError(__path, f'Parsing "{__path}" failed: {e}') from e
+        raise ConfigValueError(path, f'Parsing "{path}" failed: {e}') from e
     except TypeError as e:
-        raise ConfigTypeError(__path, f'Parsing "{__path}" failed: {e}') from e
+        raise ConfigTypeError(path, f'Parsing "{path}" failed: {e}') from e
 
 
 def get_default_config() -> RobotConfig:
@@ -113,34 +119,74 @@ def get_default_config() -> RobotConfig:
 def load_config_from_path(
     config_type: Type[_ConfigType],
     *__paths: Union[Path, Tuple[Path, ConfigType]],
-    tool_name: str,
+    pyproject_toml_tool_name: str,
     robot_toml_tool_name: Optional[str] = None,
+    extra_tools: Optional[Dict[str, Type[Any]]] = None,
+    verbose_callback: Optional[Callable[[str], None]] = None,
 ) -> _ConfigType:
     result = config_type()
+    tools: Optional[Dict[str, Any]] = (
+        {} if extra_tools and is_dataclass(result) and any(f for f in fields(result) if f.name == "tool") else None
+    )
 
     for __path in __paths:
         if isinstance(__path, tuple):
             path, c_type = __path
             if path.name == "__no_user_config__.toml" and c_type == ConfigType.DEFAULT_CONFIG_TOML:
+                if verbose_callback:
+                    verbose_callback("Load default configuration.")
                 result.add_options(get_default_config())
                 continue
+
+        if verbose_callback:
+            verbose_callback(f"Load configuration from {__path if isinstance(__path, Path) else __path[0]}")
+
+        p = __path if isinstance(__path, Path) else __path[0]
+        data = tomllib.loads(p.read_text("utf-8"))
 
         result.add_options(
             _load_config_data_from_path(
                 config_type,
-                tool_name,
+                pyproject_toml_tool_name,
                 robot_toml_tool_name,
-                __path if isinstance(__path, Path) else __path[0],
+                p,
+                data,
             )
         )
+
+        if tools is not None and extra_tools:
+            for tool_name, tool_config in extra_tools.items():
+                if tool_name not in tools:
+                    tools[tool_name] = tool_config()
+
+                tool = tools[tool_name]
+                tool.add_options(
+                    _load_config_data_from_path(
+                        tool_config,
+                        tool_name,
+                        tool_name,
+                        p,
+                        data,
+                    )
+                )
+    if tools is not None:
+        setattr(result, "tool", tools)
 
     return result
 
 
 def load_robot_config_from_path(
     *__paths: Union[Path, Tuple[Path, ConfigType]],
+    extra_tools: Optional[Dict[str, Type[Any]]] = None,
+    verbose_callback: Optional[Callable[[str], None]] = None,
 ) -> RobotConfig:
-    return load_config_from_path(RobotConfig, *__paths, tool_name="robot")
+    return load_config_from_path(
+        RobotConfig,
+        *__paths,
+        pyproject_toml_tool_name="robot",
+        extra_tools=extra_tools,
+        verbose_callback=verbose_callback,
+    )
 
 
 def find_project_root(

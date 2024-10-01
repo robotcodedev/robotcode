@@ -4,6 +4,7 @@ from typing import Final, Optional, Sequence, Union
 
 import click
 
+from robotcode.analyze.config import AnalyzeConfig
 from robotcode.core.types import ServerMode, TcpParams
 from robotcode.plugin import Application, UnknownError, pass_application
 from robotcode.plugin.click_helper.options import (
@@ -14,6 +15,12 @@ from robotcode.plugin.click_helper.types import AddressesPort, add_options
 from robotcode.robot.config.loader import load_robot_config_from_path
 from robotcode.robot.config.model import RobotBaseProfile
 from robotcode.robot.config.utils import get_config_files
+from robotcode.robot.diagnostics.workspace_config import (
+    AnalysisDiagnosticModifiersConfig,
+    AnalysisRobotConfig,
+    CacheConfig,
+    WorkspaceAnalysisConfig,
+)
 
 from .__version__ import __version__
 
@@ -26,6 +33,7 @@ def run_server(
     port: int,
     pipe_name: Optional[str],
     profile: Optional[RobotBaseProfile] = None,
+    analysis_config: Optional[WorkspaceAnalysisConfig] = None,
 ) -> None:
     from .robotframework.server import RobotLanguageServer
 
@@ -34,6 +42,7 @@ def run_server(
         tcp_params=TcpParams(addresses or "127.0.0.1", port),
         pipe_name=pipe_name,
         profile=profile,
+        analysis_config=analysis_config,
     ) as server:
         server.run()
 
@@ -71,17 +80,49 @@ def language_server(
     """Run Robot Framework Language Server."""
 
     profile: Optional[RobotBaseProfile] = None
+    analysis_config: Optional[WorkspaceAnalysisConfig] = None
 
     config_files, root_folder, _ = get_config_files(paths, app.config.config_files, verbose_callback=app.verbose)
     if root_folder:
         os.chdir(root_folder)
 
     try:
-        profile = (
-            load_robot_config_from_path(*config_files)
-            .combine_profiles(*(app.config.profiles or []), verbose_callback=app.verbose, error_callback=app.error)
-            .evaluated_with_env(verbose_callback=app.verbose, error_callback=app.error)
+        robot_config = load_robot_config_from_path(
+            *config_files, extra_tools={"robotcode-analyze": AnalyzeConfig}, verbose_callback=app.verbose
         )
+        analyzer_config = robot_config.tool.get("robotcode-analyze", None) if robot_config.tool is not None else None
+
+        if analyzer_config is None:
+            analyzer_config = AnalyzeConfig()
+
+        analysis_config = WorkspaceAnalysisConfig(
+            cache=(
+                CacheConfig(
+                    # TODO savelocation
+                    ignored_libraries=analyzer_config.cache.ignored_libraries or [],
+                    ignored_variables=analyzer_config.cache.ignored_variables or [],
+                    ignore_arguments_for_library=analyzer_config.cache.ignore_arguments_for_library or [],
+                )
+                if analyzer_config.cache is not None
+                else CacheConfig()
+            ),
+            robot=AnalysisRobotConfig(global_library_search_order=analyzer_config.global_library_search_order or []),
+            modifiers=(
+                AnalysisDiagnosticModifiersConfig(
+                    ignore=analyzer_config.modifiers.ignore or [],
+                    error=analyzer_config.modifiers.error or [],
+                    warning=analyzer_config.modifiers.warning or [],
+                    information=analyzer_config.modifiers.information or [],
+                    hint=analyzer_config.modifiers.hint or [],
+                )
+                if analyzer_config.modifiers is not None
+                else AnalysisDiagnosticModifiersConfig()
+            ),
+        )
+
+        profile = robot_config.combine_profiles(
+            *(app.config.profiles or []), verbose_callback=app.verbose, error_callback=app.error
+        ).evaluated_with_env(verbose_callback=app.verbose, error_callback=app.error)
     except (TypeError, ValueError) as e:
         app.echo(str(e), err=True)
 
@@ -95,6 +136,7 @@ def language_server(
             port=port if port is not None else LANGUAGE_SERVER_DEFAULT_PORT,
             pipe_name=pipe_name,
             profile=profile,
+            analysis_config=analysis_config,
         )
     except SystemExit as e:
         app.verbose(f"Server exited with code {e.code}", err=e.code != 0)
