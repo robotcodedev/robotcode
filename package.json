@@ -440,8 +440,9 @@
           "robotcode.python": {
             "type": "string",
             "default": "",
-            "description": "Specifies the python executable to be used for RobotCode. If no path is specified, try to get it from \"python\" extension.",
-            "scope": "resource"
+            "markdownDescription": "Specifies the python executable to be used for RobotCode.\n\n**Note:** This is normally not necessary and should only be used if you want to use a completely different Python interpreter than the interpreter that can be selected via VSCode. Please use the `RobotCode: Select Python Environment` command to select the python interpreter.\n\nIf you want to define a default interpreter for your workspace use the `python.defaultInterpreterPath` setting. See [here](https://github.com/microsoft/vscode-python/wiki/Setting-descriptions#pythondefaultinterpreterpath) for an explanation.",
+            "scope": "resource",
+            "markdownDeprecationMessage": "This setting is deprecated in favor of using `python.defaultInterpreterPath`"
           }
         }
       },
@@ -1024,6 +1025,11 @@
         "title": "Report Issue...",
         "category": "RobotCode",
         "command": "robotcode.reportIssue"
+      },
+      {
+        "title": "Select Python Environment",
+        "category": "RobotCode",
+        "command": "robotcode.selectPythonEnvironment"
       },
       {
         "title": "Clear Cache and Restart Language Servers",

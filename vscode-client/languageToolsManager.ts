@@ -220,7 +220,7 @@ export class LanguageToolsManager {
       }),
       vscode.commands.registerCommand(
         "robotcode.selectPythonEnvironment",
-        async (folder?: vscode.WorkspaceFolder, showRetry?: boolean) => {
+        async (folder: vscode.WorkspaceFolder | undefined = undefined, showRetry: boolean = false) => {
           await this.languageClientsManager.selectPythonEnvironment(
             `Select Environment for workspace folder '${folder?.name}'`,
             folder,

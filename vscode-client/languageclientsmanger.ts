@@ -341,6 +341,8 @@ export class LanguageClientsManager {
         break;
       case "retry":
         return;
+      default:
+        if (!showRetry) return;
     }
 
     if (folder !== undefined && !this.inselectPythonEnvironment) {
