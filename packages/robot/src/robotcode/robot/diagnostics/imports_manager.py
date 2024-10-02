@@ -5,6 +5,7 @@ import os
 import shutil
 import sys
 import threading
+import time
 import weakref
 import zlib
 from abc import ABC, abstractmethod
@@ -1322,82 +1323,86 @@ class ImportsManager:
         )
 
         self._logger.debug(lambda: f"Load variables {source}{args!r}")
-        if meta is not None:
-            meta_file = Path(
-                self.variables_doc_cache_path,
-                meta.filepath_base + ".meta.json",
-            )
-            if meta_file.exists():
-                try:
-                    spec_path = None
-                    try:
-                        saved_meta = from_json(meta_file.read_text("utf-8"), LibraryMetaData)
-                        if saved_meta == meta:
-                            spec_path = Path(
-                                self.variables_doc_cache_path,
-                                meta.filepath_base + ".spec.json",
-                            )
-                            return from_json(spec_path.read_text("utf-8"), VariablesDoc)
-                    except (SystemExit, KeyboardInterrupt):
-                        raise
-                    except BaseException as e:
-                        raise RuntimeError(
-                            f"Failed to load library meta data for library {name} from {spec_path}"
-                        ) from e
-                except (SystemExit, KeyboardInterrupt):
-                    raise
-                except BaseException as e:
-                    self._logger.exception(e)
-
-        executor = ProcessPoolExecutor(max_workers=1, mp_context=mp.get_context("spawn"))
-        try:
-            result = executor.submit(
-                get_variables_doc,
-                name,
-                args,
-                working_dir,
-                base_dir,
-                self.get_resolvable_command_line_variables() if resolve_command_line_vars else None,
-                variables,
-            ).result(LOAD_LIBRARY_TIME_OUT)
-        except (SystemExit, KeyboardInterrupt):
-            raise
-        except BaseException as e:
-            self._logger.exception(e)
-            raise
-        finally:
-            executor.shutdown(True)
-
-        if result.stdout:
-            self._logger.warning(lambda: f"stdout captured at loading variables {name}{args!r}:\n{result.stdout}")
-
+        start_time = time.monotonic()
         try:
             if meta is not None:
                 meta_file = Path(
                     self.variables_doc_cache_path,
                     meta.filepath_base + ".meta.json",
                 )
-                spec_file = Path(
-                    self.variables_doc_cache_path,
-                    meta.filepath_base + ".spec.json",
-                )
-                spec_file.parent.mkdir(parents=True, exist_ok=True)
+                if meta_file.exists():
+                    try:
+                        spec_path = None
+                        try:
+                            saved_meta = from_json(meta_file.read_text("utf-8"), LibraryMetaData)
+                            if saved_meta == meta:
+                                spec_path = Path(
+                                    self.variables_doc_cache_path,
+                                    meta.filepath_base + ".spec.json",
+                                )
+                                return from_json(spec_path.read_text("utf-8"), VariablesDoc)
+                        except (SystemExit, KeyboardInterrupt):
+                            raise
+                        except BaseException as e:
+                            raise RuntimeError(
+                                f"Failed to load library meta data for library {name} from {spec_path}"
+                            ) from e
+                    except (SystemExit, KeyboardInterrupt):
+                        raise
+                    except BaseException as e:
+                        self._logger.exception(e)
 
-                try:
-                    spec_file.write_text(as_json(result), "utf-8")
-                except (SystemExit, KeyboardInterrupt):
-                    raise
-                except BaseException as e:
-                    raise RuntimeError(f"Cannot write spec file for variables '{name}' to '{spec_file}'") from e
-                meta_file.write_text(as_json(meta), "utf-8")
-            else:
-                self._logger.debug(lambda: f"Skip caching variables {name}{args!r}")
-        except (SystemExit, KeyboardInterrupt):
-            raise
-        except BaseException as e:
-            self._logger.exception(e)
+            executor = ProcessPoolExecutor(max_workers=1, mp_context=mp.get_context("spawn"))
+            try:
+                result = executor.submit(
+                    get_variables_doc,
+                    name,
+                    args,
+                    working_dir,
+                    base_dir,
+                    self.get_resolvable_command_line_variables() if resolve_command_line_vars else None,
+                    variables,
+                ).result(LOAD_LIBRARY_TIME_OUT)
+            except (SystemExit, KeyboardInterrupt):
+                raise
+            except BaseException as e:
+                self._logger.exception(e)
+                raise
+            finally:
+                executor.shutdown(True)
 
-        return result
+            if result.stdout:
+                self._logger.warning(lambda: f"stdout captured at loading variables {name}{args!r}:\n{result.stdout}")
+
+            try:
+                if meta is not None:
+                    meta_file = Path(
+                        self.variables_doc_cache_path,
+                        meta.filepath_base + ".meta.json",
+                    )
+                    spec_file = Path(
+                        self.variables_doc_cache_path,
+                        meta.filepath_base + ".spec.json",
+                    )
+                    spec_file.parent.mkdir(parents=True, exist_ok=True)
+
+                    try:
+                        spec_file.write_text(as_json(result), "utf-8")
+                    except (SystemExit, KeyboardInterrupt):
+                        raise
+                    except BaseException as e:
+                        raise RuntimeError(f"Cannot write spec file for variables '{name}' to '{spec_file}'") from e
+                    meta_file.write_text(as_json(meta), "utf-8")
+                else:
+                    self._logger.debug(lambda: f"Skip caching variables {name}{args!r}")
+            except (SystemExit, KeyboardInterrupt):
+                raise
+            except BaseException as e:
+                self._logger.exception(e)
+
+            return result
+        finally:
+            self._logger.debug(lambda: f"Load variables {source}{args!r} took {time.monotonic() - start_time} seconds")
 
     @_logger.call
     def get_libdoc_for_variables_import(

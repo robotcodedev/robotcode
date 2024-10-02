@@ -329,8 +329,7 @@ class RobotInlayHintProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
 
         except (SystemExit, KeyboardInterrupt):
             raise
-        except BaseException as e:
-            self._logger.exception(e)
+        except BaseException:
             return None
 
         arguments = library_node.get_tokens(RobotToken.ARGUMENT)
@@ -373,8 +372,7 @@ class RobotInlayHintProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
 
         except (SystemExit, KeyboardInterrupt):
             raise
-        except BaseException as e:
-            self._logger.exception(e)
+        except BaseException:
             return None
 
         arguments = library_node.get_tokens(RobotToken.ARGUMENT)

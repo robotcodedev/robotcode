@@ -1,6 +1,7 @@
 import time
 from concurrent.futures import CancelledError
 from logging import CRITICAL
+from pathlib import Path
 from threading import Event
 from typing import TYPE_CHECKING, Any, List, Optional
 
@@ -12,7 +13,6 @@ from robotcode.jsonrpc2.protocol import rpc_method
 from robotcode.language_server.common.parts.diagnostics import (
     AnalysisProgressMode,
     DiagnosticsMode,
-    WorkspaceDocumentsResult,
 )
 from robotcode.language_server.robotframework.configuration import AnalysisConfig
 from robotcode.robot.diagnostics.library_doc import (
@@ -58,10 +58,10 @@ class RobotWorkspaceProtocolPart(RobotLanguageServerProtocolPart):
         config = self.parent.workspace.get_configuration(AnalysisConfig, uri)
         return config.progress_mode
 
-    def load_workspace_documents(self, sender: Any) -> List[WorkspaceDocumentsResult]:
+    def load_workspace_documents(self, sender: Any) -> None:
         start = time.monotonic()
         try:
-            result: List[WorkspaceDocumentsResult] = []
+            result: List[Path] = []
 
             for folder in self.parent.workspace.workspace_folders:
                 config = self.parent.workspace.get_configuration(RobotCodeConfig, folder.uri)
@@ -79,9 +79,13 @@ class RobotWorkspaceProtocolPart(RobotLanguageServerProtocolPart):
                                     [*DEFAULT_SPEC_RULES, *(config.workspace.exclude_patterns or [])],
                                     folder.uri.to_path(),
                                 ),
+                                verbose_callback=self._logger.debug,
+                                verbose_trace=False,
                             ),
                         )
                     )
+
+                result.extend(files)
 
                 canceled = False
                 with self.parent.window.progress(
@@ -111,13 +115,11 @@ class RobotWorkspaceProtocolPart(RobotLanguageServerProtocolPart):
                         except BaseException as e:
                             ex = e
                             self._logger.exception(lambda: f"Can't load document {f}: {ex}", level=CRITICAL)
-
-            if canceled:
-                return []
-
-            return result
         finally:
-            self._logger.info(lambda: f"Workspace loaded {len(result)} documents in {time.monotonic() - start}s")
+            if canceled:
+                self._logger.info(lambda: "Workspace loading canceled")
+            else:
+                self._logger.info(lambda: f"Workspace loaded {len(result)} documents in {time.monotonic() - start}s")
 
     @rpc_method(name="robot/cache/clear", threaded=True)
     def robot_cache_clear(self) -> None:

@@ -288,6 +288,7 @@ def iter_files(
     include_hidden: bool = True,
     parent_spec: Optional[IgnoreSpec] = None,
     verbose_callback: Optional[Callable[[str], None]] = None,
+    verbose_trace: bool = False,
 ) -> Iterator[Path]:
     if isinstance(paths, Path):
         paths = [paths]
@@ -300,6 +301,7 @@ def iter_files(
             include_hidden=include_hidden,
             parent_spec=parent_spec,
             verbose_callback=verbose_callback,
+            verbose_trace=verbose_trace,
         )
 
 
@@ -310,7 +312,10 @@ def _iter_files(
     include_hidden: bool = True,
     parent_spec: Optional[IgnoreSpec] = None,
     verbose_callback: Optional[Callable[[str], None]] = None,
+    verbose_trace: bool = False,
 ) -> Iterator[Path]:
+    if verbose_callback is not None and verbose_trace:
+        verbose_callback(f"iter_files: {path}")
 
     if root is None:
         root = path if path.is_dir() else path.parent
@@ -368,6 +373,7 @@ def _iter_files(
                 include_hidden=include_hidden,
                 parent_spec=spec,
                 verbose_callback=verbose_callback,
+                verbose_trace=verbose_trace,
             )
         elif p.is_file():
             yield p

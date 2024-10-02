@@ -160,7 +160,7 @@ class VariableMatcher:
         return False
 
     def __hash__(self) -> int:
-        return hash(self.name)
+        return hash(self.normalized_name)
 
     def __str__(self) -> str:
         return self.name
@@ -252,7 +252,7 @@ class BuiltInVariableDefinition(VariableDefinition):
 
     @single_call
     def __hash__(self) -> int:
-        return hash((type(self), self.name, self.type))
+        return hash((type(self), self.name, self.type, None, None))
 
 
 @dataclass

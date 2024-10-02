@@ -694,7 +694,14 @@ class Namespace:
         self._own_variables: Optional[List[VariableDefinition]] = None
         self._own_variables_lock = RLock(default_timeout=120, name="Namespace.own_variables")
         self._global_variables: Optional[List[VariableDefinition]] = None
+        self._global_variables_dict: Optional[Dict[VariableMatcher, VariableDefinition]] = None
         self._global_variables_lock = RLock(default_timeout=120, name="Namespace.global_variables")
+        self._global_variables_dict_lock = RLock(default_timeout=120, name="Namespace.global_variables_dict")
+
+        self._global_resolvable_variables: Optional[Dict[str, Any]] = None
+        self._global_resolvable_variables_lock = RLock(
+            default_timeout=120, name="Namespace._global_resolvable_variables_lock"
+        )
 
         self._suite_variables: Optional[Dict[str, Any]] = None
         self._suite_variables_lock = RLock(default_timeout=120, name="Namespace.global_variables")
@@ -993,9 +1000,12 @@ class Namespace:
         return self.imports_manager.get_command_line_variables()
 
     def _reset_global_variables(self) -> None:
-        with self._global_variables_lock, self._suite_variables_lock:
-            self._global_variables = None
-            self._suite_variables = None
+        with self._global_variables_lock, self._global_variables_dict_lock, self._suite_variables_lock:
+            with self._global_resolvable_variables_lock:
+                self._global_variables = None
+                self._global_variables_dict = None
+                self._suite_variables = None
+                self._global_resolvable_variables = None
 
     def get_global_variables(self) -> List[VariableDefinition]:
         with self._global_variables_lock:
@@ -1012,12 +1022,20 @@ class Namespace:
 
             return self._global_variables
 
+    def get_global_variables_dict(self) -> Dict[VariableMatcher, VariableDefinition]:
+        with self._global_variables_dict_lock:
+            if self._global_variables_dict is None:
+                self._global_variables_dict = {m: v for m, v in self.yield_variables()}
+
+            return self._global_variables_dict
+
     def yield_variables(
         self,
         nodes: Optional[List[ast.AST]] = None,
         position: Optional[Position] = None,
         skip_commandline_variables: bool = False,
         skip_local_variables: bool = False,
+        skip_global_variables: bool = False,
     ) -> Iterator[Tuple[VariableMatcher, VariableDefinition]]:
         yielded: Dict[VariableMatcher, VariableDefinition] = {}
 
@@ -1053,7 +1071,7 @@ class Namespace:
                     else []
                 )
             ],
-            self.get_global_variables(),
+            self.get_global_variables() if not skip_global_variables else [],
         ):
             if var.matcher not in yielded:
                 if skip_commandline_variables and isinstance(var, CommandLineVariableDefinition):
@@ -1063,17 +1081,7 @@ class Namespace:
 
                 yield var.matcher, var
 
-    def get_suite_variables(
-        self,
-        nodes: Optional[List[ast.AST]] = None,
-        position: Optional[Position] = None,
-    ) -> Dict[str, Any]:
-        if nodes:
-            return {
-                v.name: v.value
-                for k, v in self.yield_variables(nodes, position, skip_commandline_variables=True)
-                if v.has_value
-            }
+    def get_suite_variables(self) -> Dict[str, Any]:
         with self._suite_variables_lock:
             vars = {}
 
@@ -1093,11 +1101,21 @@ class Namespace:
         nodes: Optional[List[ast.AST]] = None,
         position: Optional[Position] = None,
     ) -> Dict[str, Any]:
-        return {
-            v.name: v.value
-            for k, v in self.yield_variables(nodes, position, skip_commandline_variables=True)
-            if v.has_value
-        }
+        if nodes:
+            return {
+                v.name: v.value
+                for k, v in self.yield_variables(nodes, position, skip_commandline_variables=True)
+                if v.has_value
+            }
+
+        with self._global_resolvable_variables_lock:
+            if self._global_resolvable_variables is None:
+                self._global_resolvable_variables = {
+                    v.name: v.value
+                    for k, v in self.yield_variables(nodes, position, skip_commandline_variables=True)
+                    if v.has_value
+                }
+            return self._global_resolvable_variables
 
     def get_variable_matchers(
         self,
@@ -1141,9 +1159,15 @@ class Namespace:
                 position,
                 skip_commandline_variables=skip_commandline_variables,
                 skip_local_variables=skip_local_variables,
+                skip_global_variables=True,
             ):
                 if matcher == m:
                     return v
+
+            result = self.get_global_variables_dict().get(matcher, None)
+            if matcher is not None:
+                return result
+
         except InvalidVariableError:
             if not ignore_error:
                 raise
@@ -1576,28 +1600,29 @@ class Namespace:
 
         return variables
 
+    def _import_lib(self, library: str, variables: Optional[Dict[str, Any]] = None) -> Optional[LibraryEntry]:
+        try:
+            return self._get_library_entry(
+                library,
+                (),
+                None,
+                str(Path(self.source).parent),
+                is_default_library=True,
+                variables=variables,
+            )
+        except (SystemExit, KeyboardInterrupt):
+            raise
+        except BaseException as e:
+            self.append_diagnostics(
+                range=Range.zero(),
+                message=f"Can't import default library '{library}': {str(e) or type(e).__name__}",
+                severity=DiagnosticSeverity.ERROR,
+                source="Robot",
+                code=type(e).__qualname__,
+            )
+            return None
+
     def _import_default_libraries(self, variables: Optional[Dict[str, Any]] = None) -> None:
-        def _import_lib(library: str, variables: Optional[Dict[str, Any]] = None) -> Optional[LibraryEntry]:
-            try:
-                return self._get_library_entry(
-                    library,
-                    (),
-                    None,
-                    str(Path(self.source).parent),
-                    is_default_library=True,
-                    variables=variables,
-                )
-            except (SystemExit, KeyboardInterrupt):
-                raise
-            except BaseException as e:
-                self.append_diagnostics(
-                    range=Range.zero(),
-                    message=f"Can't import default library '{library}': {str(e) or type(e).__name__}",
-                    severity=DiagnosticSeverity.ERROR,
-                    source="Robot",
-                    code=type(e).__qualname__,
-                )
-                return None
 
         self._logger.debug(lambda: f"start import default libraries for document {self.document}")
         try:
@@ -1605,7 +1630,7 @@ class Namespace:
                 variables = self.get_suite_variables()
 
             for library in DEFAULT_LIBRARIES:
-                e = _import_lib(library, variables)
+                e = self._import_lib(library, variables)
                 if e is not None:
                     self._libraries[e.alias or e.name or e.import_name] = e
         finally:

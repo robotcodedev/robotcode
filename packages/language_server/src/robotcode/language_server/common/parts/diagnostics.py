@@ -66,12 +66,6 @@ class DiagnosticsResult:
 
 
 @dataclass
-class WorkspaceDocumentsResult:
-    name: Optional[str]
-    document: TextDocument
-
-
-@dataclass
 class DiagnosticsData:
     lock: RLock
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
@@ -158,7 +152,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
     @event
     def load_workspace_documents(
         sender,
-    ) -> Optional[List[WorkspaceDocumentsResult]]: ...
+    ) -> None: ...
 
     @event
     def on_workspace_loaded(sender: Any) -> None: ...
