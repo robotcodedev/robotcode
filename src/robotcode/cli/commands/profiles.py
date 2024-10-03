@@ -40,7 +40,9 @@ def profiles() -> None:
 def show(app: Application, no_evaluate: bool, paths: List[Path]) -> None:
     """Shows the given profile configuration."""
     try:
-        config_files, _, _ = get_config_files(paths, app.config.config_files, verbose_callback=app.verbose)
+        config_files, _, _ = get_config_files(
+            paths, app.config.config_files, root_folder=app.config.root, verbose_callback=app.verbose
+        )
 
         config = load_robot_config_from_path(*config_files, verbose_callback=app.verbose).combine_profiles(
             *(app.config.profiles or []), verbose_callback=app.verbose, error_callback=app.error
@@ -73,7 +75,9 @@ def list(app: Application, paths: List[Path], show_hidden: bool = False, sort_by
     """Lists the defined profiles in the current configuration."""
 
     try:
-        config_files, _, discovered_by = get_config_files(paths, app.config.config_files, verbose_callback=app.verbose)
+        config_files, _, discovered_by = get_config_files(
+            paths, app.config.config_files, root_folder=app.config.root, verbose_callback=app.verbose
+        )
 
         config = load_robot_config_from_path(*config_files, verbose_callback=app.verbose)
 

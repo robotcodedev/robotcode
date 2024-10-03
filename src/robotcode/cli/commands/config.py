@@ -64,7 +64,9 @@ def show(app: Application, single: bool, paths: List[Path]) -> None:
     ```
     """
     try:
-        config_files, _, _ = get_config_files(paths, app.config.config_files, verbose_callback=app.verbose)
+        config_files, _, _ = get_config_files(
+            paths, app.config.config_files, root_folder=app.config.root, verbose_callback=app.verbose
+        )
 
         if single:
             for file, _ in config_files:
@@ -123,7 +125,9 @@ def files(app: Application, paths: List[Path], user: bool = False) -> None:
     """
 
     try:
-        config_files, _, discovered_by = get_config_files(paths, app.config.config_files, verbose_callback=app.verbose)
+        config_files, _, discovered_by = get_config_files(
+            paths, app.config.config_files, root_folder=app.config.root, verbose_callback=app.verbose
+        )
 
         result: Dict[str, Any] = {"files": [{"path": str(file), "type": type} for file, type in config_files]}
 
@@ -168,7 +172,7 @@ def root(app: Application, paths: List[Path]) -> None:
     ```
     """
 
-    root_folder, discovered_by = find_project_root(*(paths or []))
+    root_folder, discovered_by = find_project_root(*(paths or []), root_folder=app.config.root)
 
     if root_folder is None and (app.config.output_format is None or app.config.output_format == OutputFormat.TEXT):
         raise click.ClickException("Cannot detect root folder. 😥")

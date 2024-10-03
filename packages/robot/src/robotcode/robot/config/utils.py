@@ -43,10 +43,11 @@ def get_user_config_file(
 def get_config_files(
     paths: Optional[Sequence[Union[str, Path]]] = None,
     config_files: Optional[Sequence[Path]] = None,
+    root_folder: Optional[Path] = None,
     *,
     verbose_callback: Optional[Callable[[str], None]] = None,
 ) -> Tuple[Sequence[Tuple[Path, ConfigType]], Optional[Path], DiscoverdBy]:
-    root_folder, discovered_by = find_project_root(*(paths or []))
+    root_folder, discovered_by = find_project_root(*(paths or []), root_folder=root_folder)
 
     if root_folder is None:
         root_folder = Path.cwd()

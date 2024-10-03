@@ -64,6 +64,7 @@ class OutputFormat(str, Enum):
 class CommonConfig:
     config_files: Optional[Sequence[Path]] = None
     profiles: Optional[Sequence[str]] = None
+    root: Optional[Path] = None
     dry: bool = False
     verbose: bool = False
     colored_output: ColoredOutput = ColoredOutput.AUTO

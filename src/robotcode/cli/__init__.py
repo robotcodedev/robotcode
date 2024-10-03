@@ -50,6 +50,15 @@ from .commands import config, profiles
         """,
 )
 @click.option(
+    "-r",
+    "--root",
+    "root",
+    type=click.Path(exists=True, path_type=Path, dir_okay=True, file_okay=False, resolve_path=True),
+    multiple=False,
+    show_envvar=True,
+    help="Specifies the root path to be used for the project. It will be automatically detected if not provided.",
+)
+@click.option(
     "-f",
     "--format",
     "format",
@@ -176,6 +185,7 @@ def robotcode(
     app: Application,
     config_files: Optional[List[Path]],
     profiles: Optional[List[str]],
+    root: Optional[Path],
     format: Optional[OutputFormat],
     dry: bool,
     verbose: bool,
@@ -207,6 +217,7 @@ def robotcode(
     app.config.profiles = profiles
     app.config.dry = dry
     app.config.verbose = verbose
+    app.config.root = root
 
     if color is None:
         app.config.colored_output = ColoredOutput.AUTO

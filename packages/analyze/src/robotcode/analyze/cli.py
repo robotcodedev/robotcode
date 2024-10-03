@@ -26,7 +26,9 @@ from .__version__ import __version__
 def analyze(app: Application, paths: Tuple[str]) -> Union[str, int, None]:
     """TODO: Analyzes a Robot Framework project."""
 
-    config_files, root_folder, _ = get_config_files(paths, app.config.config_files, verbose_callback=app.verbose)
+    config_files, root_folder, _ = get_config_files(
+        paths, app.config.config_files, root_folder=app.config.root, verbose_callback=app.verbose
+    )
 
     try:
         robot_config = load_robot_config_from_path(

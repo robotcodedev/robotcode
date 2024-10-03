@@ -82,7 +82,9 @@ def language_server(
     profile: Optional[RobotBaseProfile] = None
     analysis_config: Optional[WorkspaceAnalysisConfig] = None
 
-    config_files, root_folder, _ = get_config_files(paths, app.config.config_files, verbose_callback=app.verbose)
+    config_files, root_folder, _ = get_config_files(
+        paths, app.config.config_files, root_folder=app.config.root, verbose_callback=app.verbose
+    )
     if root_folder:
         os.chdir(root_folder)
 

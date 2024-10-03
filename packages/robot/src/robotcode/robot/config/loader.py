@@ -28,6 +28,7 @@ class DiscoverdBy(str, Enum):
     LOCAL_ROBOT_TOML = ".robot.toml (local file)"
     USER_DEFAULT_CONFIG_TOML = "robot.toml (user default config)"
     NOT_FOUND = "not found"
+    COMMAND_LINE = "command line"
 
 
 class ConfigType(str, Enum):
@@ -191,7 +192,12 @@ def load_robot_config_from_path(
 
 def find_project_root(
     *sources: Union[str, Path],
+    root_folder: Optional[Path] = None,
 ) -> Tuple[Optional[Path], DiscoverdBy]:
+
+    if root_folder:
+        return root_folder.absolute(), DiscoverdBy.COMMAND_LINE
+
     if not sources:
         sources = (str(Path.cwd().absolute()),)
 
