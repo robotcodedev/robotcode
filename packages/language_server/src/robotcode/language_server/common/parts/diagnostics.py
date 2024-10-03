@@ -356,72 +356,74 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
                     check_current_task_canceled(1)
                     continue
 
-                self._logger.debug(lambda: f"start collecting workspace diagnostics for {len(documents)} documents")
+                with self._logger.measure_time(
+                    lambda: f"analyzing workspace for {len(documents)} documents",
+                    context_name="workspace_diagnostics",
+                ):
 
-                self.on_workspace_diagnostics_analyze(self)
+                    self.on_workspace_diagnostics_analyze(self)
 
-                if self._break_diagnostics_loop_event.is_set():
-                    self._logger.debug("break workspace diagnostics loop 1")
-                    self.on_workspace_diagnostics_break(self)
-                    continue
+                    if self._break_diagnostics_loop_event.is_set():
+                        self._logger.debug("break workspace diagnostics loop 1", context_name="workspace_diagnostics")
+                        self.on_workspace_diagnostics_break(self)
+                        continue
 
-                start = time.monotonic()
-                with self.parent.window.progress(
-                    "Analyze Workspace",
-                    cancellable=False,
-                    current=0,
-                    max=len(documents),
-                    start=False,
-                ) as progress:
-                    for i, document in enumerate(documents):
-                        self._logger.debug(lambda: f"Analyze {document}")
-                        check_current_task_canceled()
+                    with self.parent.window.progress(
+                        "Analyze Workspace",
+                        cancellable=False,
+                        current=0,
+                        max=len(documents),
+                        start=False,
+                    ) as progress:
+                        for i, document in enumerate(documents):
+                            check_current_task_canceled()
 
-                        if self._break_diagnostics_loop_event.is_set():
-                            self._logger.debug("break workspace diagnostics loop 2")
-                            self.on_workspace_diagnostics_break(self)
-                            break
+                            if self._break_diagnostics_loop_event.is_set():
+                                self._logger.debug(
+                                    "break workspace diagnostics loop 2", context_name="workspace_diagnostics"
+                                )
+                                self.on_workspace_diagnostics_break(self)
+                                break
 
-                        done_something = True
+                            done_something = True
 
-                        analysis_mode = self.get_analysis_progress_mode(document.uri)
+                            analysis_mode = self.get_analysis_progress_mode(document.uri)
 
-                        if analysis_mode == AnalysisProgressMode.DETAILED:
-                            progress.begin()
-                            path = document.uri.to_path()
-                            folder = self.parent.workspace.get_workspace_folder(document.uri)
-                            name = path if folder is None else path.relative_to(folder.uri.to_path())
+                            if analysis_mode == AnalysisProgressMode.DETAILED:
+                                progress.begin()
+                                path = document.uri.to_path()
+                                folder = self.parent.workspace.get_workspace_folder(document.uri)
+                                name = path if folder is None else path.relative_to(folder.uri.to_path())
 
-                            progress.report(f"Analyze {i+1}/{len(documents)}: {name}", current=i + 1)
-                        elif analysis_mode == AnalysisProgressMode.SIMPLE:
-                            progress.begin()
-                            progress.report(f"Analyze {i+1}/{len(documents)}", current=i + 1)
+                                progress.report(f"Analyze {i+1}/{len(documents)}: {name}", current=i + 1)
+                            elif analysis_mode == AnalysisProgressMode.SIMPLE:
+                                progress.begin()
+                                progress.report(f"Analyze {i+1}/{len(documents)}", current=i + 1)
 
-                        try:
-                            with self._current_diagnostics_task_lock:
-                                self._current_diagnostics_task = run_as_task(self._analyse_document, document)
-                            self._current_diagnostics_task.result(self._diagnostics_task_timeout)
+                            try:
+                                with self._current_diagnostics_task_lock:
+                                    self._current_diagnostics_task = run_as_task(self._analyse_document, document)
+                                self._current_diagnostics_task.result(self._diagnostics_task_timeout)
 
-                        except CancelledError:
-                            self._logger.debug(lambda: f"Analyzing {document} cancelled")
-                        except BaseException as e:
-                            ex = e
-                            self._logger.exception(
-                                lambda: f"Error in analyzing ${document}: {ex}",
-                                exc_info=ex,
-                            )
-                        finally:
-                            with self._current_diagnostics_task_lock:
-                                self._current_diagnostics_task = None
+                            except CancelledError:
+                                self._logger.debug(
+                                    lambda: f"Analyzing {document.uri} cancelled", context_name="workspace_diagnostics"
+                                )
+                            except BaseException as e:
+                                ex = e
+                                self._logger.exception(
+                                    lambda: f"Error in analyzing ${document.uri}: {ex}",
+                                    exc_info=ex,
+                                    context_name="workspace_diagnostics",
+                                )
+                            finally:
+                                with self._current_diagnostics_task_lock:
+                                    self._current_diagnostics_task = None
 
-                self._logger.debug(
-                    lambda: f"Analyzing workspace for {len(documents)} " f"documents takes {time.monotonic() - start}s"
-                )
-
-                if self._break_diagnostics_loop_event.is_set():
-                    self._logger.debug("break workspace diagnostics loop 3")
-                    self.on_workspace_diagnostics_break(self)
-                    continue
+                    if self._break_diagnostics_loop_event.is_set():
+                        self._logger.debug("break workspace diagnostics loop 3", context_name="workspace_diagnostics")
+                        self.on_workspace_diagnostics_break(self)
+                        continue
 
                 self.on_workspace_diagnostics_collect(self)
 
@@ -431,78 +433,86 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
                     if doc.opened_in_editor or self.get_diagnostics_mode(document.uri) == DiagnosticsMode.WORKSPACE
                 ]
 
-                for document in set(documents) - set(documents_to_collect):
-                    check_current_task_canceled()
+                with self._logger.measure_time(
+                    lambda: f"collect workspace diagnostic for {len(documents_to_collect)} documents",
+                    context_name="collect_workspace_diagnostics",
+                ):
 
-                    if self._break_diagnostics_loop_event.is_set():
-                        self._logger.debug("break workspace diagnostics loop 4")
-                        self.on_workspace_diagnostics_break(self)
-                        break
-
-                    self.reset_document_diagnostics_data(document)
-
-                start = time.monotonic()
-                with self.parent.window.progress(
-                    "Collect Diagnostics",
-                    cancellable=False,
-                    current=0,
-                    max=len(documents_to_collect),
-                    start=False,
-                ) as progress:
-                    for i, document in enumerate(documents_to_collect):
-                        self._logger.debug(lambda: f"Collect diagnostics for {document}")
+                    for document in set(documents) - set(documents_to_collect):
                         check_current_task_canceled()
 
                         if self._break_diagnostics_loop_event.is_set():
-                            self._logger.debug("break workspace diagnostics loop 5")
+                            self._logger.debug("break workspace diagnostics loop 4")
                             self.on_workspace_diagnostics_break(self)
                             break
 
-                        mode = self.get_diagnostics_mode(document.uri)
-                        if mode == DiagnosticsMode.OFF:
-                            self.reset_document_diagnostics_data(document)
-                            continue
+                        self.reset_document_diagnostics_data(document)
 
-                        done_something = True
-
-                        analysis_mode = self.get_analysis_progress_mode(document.uri)
-
-                        if analysis_mode == AnalysisProgressMode.DETAILED:
-                            progress.begin()
-                            path = document.uri.to_path()
-                            folder = self.parent.workspace.get_workspace_folder(document.uri)
-                            name = path if folder is None else path.relative_to(folder.uri.to_path())
-
-                            progress.report(f"Collect {i+1}/{len(documents_to_collect)}: {name}", current=i + 1)
-                        elif analysis_mode == AnalysisProgressMode.SIMPLE:
-                            progress.begin()
-                            progress.report(f"Collect {i+1}/{len(documents_to_collect)}", current=i + 1)
-
-                        try:
-                            with self._current_diagnostics_task_lock:
-                                self._current_diagnostics_task = self.create_document_diagnostics_task(
-                                    document,
-                                    False,
-                                    mode == DiagnosticsMode.WORKSPACE or document.opened_in_editor,
-                                )
-                            if self._current_diagnostics_task is not None:
-                                self._current_diagnostics_task.result(self._diagnostics_task_timeout)
-                        except CancelledError:
-                            self._logger.debug(lambda: f"Collecting diagnostics for {document} cancelled")
-                        except BaseException as e:
-                            ex = e
-                            self._logger.exception(
-                                lambda: f"Error getting diagnostics for ${document}: {ex}",
-                                exc_info=ex,
+                    with self.parent.window.progress(
+                        "Collect Diagnostics",
+                        cancellable=False,
+                        current=0,
+                        max=len(documents_to_collect),
+                        start=False,
+                    ) as progress:
+                        for i, document in enumerate(documents_to_collect):
+                            self._logger.debug(
+                                lambda: f"collect diagnostics for {document.uri}",
+                                context_name="collect_workspace_diagnostics",
                             )
-                        finally:
-                            with self._current_diagnostics_task_lock:
-                                self._current_diagnostics_task = None
+                            check_current_task_canceled()
 
-                self._logger.debug(
-                    lambda: f"collecting workspace diagnostics for {len(documents_to_collect)} "
-                    f"documents takes {time.monotonic() - start}s"
-                )
+                            if self._break_diagnostics_loop_event.is_set():
+                                self._logger.debug(
+                                    "break workspace diagnostics loop 5", context_name="collect_workspace_diagnostics"
+                                )
+                                self.on_workspace_diagnostics_break(self)
+                                break
+
+                            mode = self.get_diagnostics_mode(document.uri)
+                            if mode == DiagnosticsMode.OFF:
+                                self.reset_document_diagnostics_data(document)
+                                continue
+
+                            done_something = True
+
+                            analysis_mode = self.get_analysis_progress_mode(document.uri)
+
+                            if analysis_mode == AnalysisProgressMode.DETAILED:
+                                progress.begin()
+                                path = document.uri.to_path()
+                                folder = self.parent.workspace.get_workspace_folder(document.uri)
+                                name = path if folder is None else path.relative_to(folder.uri.to_path())
+
+                                progress.report(f"Collect {i+1}/{len(documents_to_collect)}: {name}", current=i + 1)
+                            elif analysis_mode == AnalysisProgressMode.SIMPLE:
+                                progress.begin()
+                                progress.report(f"Collect {i+1}/{len(documents_to_collect)}", current=i + 1)
+
+                            try:
+                                with self._current_diagnostics_task_lock:
+                                    self._current_diagnostics_task = self.create_document_diagnostics_task(
+                                        document,
+                                        False,
+                                        mode == DiagnosticsMode.WORKSPACE or document.opened_in_editor,
+                                    )
+                                if self._current_diagnostics_task is not None:
+                                    self._current_diagnostics_task.result(self._diagnostics_task_timeout)
+                            except CancelledError:
+                                self._logger.debug(
+                                    lambda: f"Collecting diagnostics for {document.uri} cancelled",
+                                    context_name="collect_workspace_diagnostics",
+                                )
+                            except BaseException as e:
+                                ex = e
+                                self._logger.exception(
+                                    lambda: f"Error getting diagnostics for ${document.uri}: {ex}",
+                                    exc_info=ex,
+                                    context_name="collect_workspace_diagnostics",
+                                )
+                            finally:
+                                with self._current_diagnostics_task_lock:
+                                    self._current_diagnostics_task = None
 
             except (SystemExit, KeyboardInterrupt, CancelledError):
                 raise

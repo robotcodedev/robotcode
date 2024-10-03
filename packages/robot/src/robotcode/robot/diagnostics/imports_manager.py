@@ -5,7 +5,6 @@ import os
 import shutil
 import sys
 import threading
-import time
 import weakref
 import zlib
 from abc import ABC, abstractmethod
@@ -906,7 +905,8 @@ class ImportsManager:
                 ):
                     self._logger.debug(
                         lambda: f"Ignore library {result.name or '' if result is not None else ''}"
-                        f" {result.origin or '' if result is not None else ''} for caching."
+                        f" {result.origin or '' if result is not None else ''} for caching.",
+                        context_name="import",
                     )
                     return None, import_name, ignore_arguments
 
@@ -1144,9 +1144,7 @@ class ImportsManager:
         base_dir: str,
         variables: Optional[Dict[str, Any]] = None,
     ) -> LibraryDoc:
-        meta, source, ignore_arguments = self.get_library_meta(name, base_dir, variables)
-
-        self._logger.debug(lambda: f"Load Library {source}{args!r}")
+        meta, _source, ignore_arguments = self.get_library_meta(name, base_dir, variables)
 
         if meta is not None and not meta.has_errors:
             meta_file = Path(self.lib_doc_cache_path, meta.filepath_base + ".meta.json")
@@ -1220,7 +1218,7 @@ class ImportsManager:
 
                 meta_file.write_text(as_json(meta), "utf-8")
             else:
-                self._logger.debug(lambda: f"Skip caching library {name}{args!r}")
+                self._logger.debug(lambda: f"Skip caching library {name}{args!r}", context_name="import")
         except (SystemExit, KeyboardInterrupt):
             raise
         except BaseException as e:
@@ -1237,37 +1235,37 @@ class ImportsManager:
         sentinel: Any = None,
         variables: Optional[Dict[str, Any]] = None,
     ) -> LibraryDoc:
+        with self._logger.measure_time(lambda: f"loading library {name}{args!r}", context_name="import"):
+            source = self.find_library(name, base_dir, variables)
 
-        source = self.find_library(name, base_dir, variables)
+            resolved_args = resolve_args(
+                args,
+                str(self.root_folder),
+                base_dir,
+                self.get_resolvable_command_line_variables(),
+                variables,
+            )
+            entry_key = _LibrariesEntryKey(source, resolved_args)
 
-        resolved_args = resolve_args(
-            args,
-            str(self.root_folder),
-            base_dir,
-            self.get_resolvable_command_line_variables(),
-            variables,
-        )
-        entry_key = _LibrariesEntryKey(source, resolved_args)
+            with self._libaries_lock:
+                if entry_key not in self._libaries:
+                    self._libaries[entry_key] = _LibrariesEntry(
+                        self,
+                        name,
+                        args,
+                        str(self.root_folder),
+                        base_dir,
+                        self._get_library_libdoc_handler(variables),
+                        ignore_reference=sentinel is None,
+                    )
 
-        with self._libaries_lock:
-            if entry_key not in self._libaries:
-                self._libaries[entry_key] = _LibrariesEntry(
-                    self,
-                    name,
-                    args,
-                    str(self.root_folder),
-                    base_dir,
-                    self._get_library_libdoc_handler(variables),
-                    ignore_reference=sentinel is None,
-                )
+            entry = self._libaries[entry_key]
 
-        entry = self._libaries[entry_key]
+            if not entry.ignore_reference and sentinel is not None and sentinel not in entry.references:
+                weakref.finalize(sentinel, self.__remove_library_entry, entry_key, entry)
+                entry.references.add(sentinel)
 
-        if not entry.ignore_reference and sentinel is not None and sentinel not in entry.references:
-            weakref.finalize(sentinel, self.__remove_library_entry, entry_key, entry)
-            entry.references.add(sentinel)
-
-        return entry.get_libdoc()
+            return entry.get_libdoc()
 
     @_logger.call
     def get_libdoc_from_model(
@@ -1314,7 +1312,7 @@ class ImportsManager:
         resolve_variables: bool = True,
         resolve_command_line_vars: bool = True,
     ) -> VariablesDoc:
-        meta, source = self.get_variables_meta(
+        meta, _source = self.get_variables_meta(
             name,
             base_dir,
             variables,
@@ -1322,87 +1320,82 @@ class ImportsManager:
             resolve_command_line_vars=resolve_command_line_vars,
         )
 
-        self._logger.debug(lambda: f"Load variables {source}{args!r}")
-        start_time = time.monotonic()
+        if meta is not None:
+            meta_file = Path(
+                self.variables_doc_cache_path,
+                meta.filepath_base + ".meta.json",
+            )
+            if meta_file.exists():
+                try:
+                    spec_path = None
+                    try:
+                        saved_meta = from_json(meta_file.read_text("utf-8"), LibraryMetaData)
+                        if saved_meta == meta:
+                            spec_path = Path(
+                                self.variables_doc_cache_path,
+                                meta.filepath_base + ".spec.json",
+                            )
+                            return from_json(spec_path.read_text("utf-8"), VariablesDoc)
+                    except (SystemExit, KeyboardInterrupt):
+                        raise
+                    except BaseException as e:
+                        raise RuntimeError(
+                            f"Failed to load library meta data for library {name} from {spec_path}"
+                        ) from e
+                except (SystemExit, KeyboardInterrupt):
+                    raise
+                except BaseException as e:
+                    self._logger.exception(e)
+
+        executor = ProcessPoolExecutor(max_workers=1, mp_context=mp.get_context("spawn"))
+        try:
+            result = executor.submit(
+                get_variables_doc,
+                name,
+                args,
+                working_dir,
+                base_dir,
+                self.get_resolvable_command_line_variables() if resolve_command_line_vars else None,
+                variables,
+            ).result(LOAD_LIBRARY_TIME_OUT)
+        except (SystemExit, KeyboardInterrupt):
+            raise
+        except BaseException as e:
+            self._logger.exception(e)
+            raise
+        finally:
+            executor.shutdown(True)
+
+        if result.stdout:
+            self._logger.warning(lambda: f"stdout captured at loading variables {name}{args!r}:\n{result.stdout}")
+
         try:
             if meta is not None:
                 meta_file = Path(
                     self.variables_doc_cache_path,
                     meta.filepath_base + ".meta.json",
                 )
-                if meta_file.exists():
-                    try:
-                        spec_path = None
-                        try:
-                            saved_meta = from_json(meta_file.read_text("utf-8"), LibraryMetaData)
-                            if saved_meta == meta:
-                                spec_path = Path(
-                                    self.variables_doc_cache_path,
-                                    meta.filepath_base + ".spec.json",
-                                )
-                                return from_json(spec_path.read_text("utf-8"), VariablesDoc)
-                        except (SystemExit, KeyboardInterrupt):
-                            raise
-                        except BaseException as e:
-                            raise RuntimeError(
-                                f"Failed to load library meta data for library {name} from {spec_path}"
-                            ) from e
-                    except (SystemExit, KeyboardInterrupt):
-                        raise
-                    except BaseException as e:
-                        self._logger.exception(e)
+                spec_file = Path(
+                    self.variables_doc_cache_path,
+                    meta.filepath_base + ".spec.json",
+                )
+                spec_file.parent.mkdir(parents=True, exist_ok=True)
 
-            executor = ProcessPoolExecutor(max_workers=1, mp_context=mp.get_context("spawn"))
-            try:
-                result = executor.submit(
-                    get_variables_doc,
-                    name,
-                    args,
-                    working_dir,
-                    base_dir,
-                    self.get_resolvable_command_line_variables() if resolve_command_line_vars else None,
-                    variables,
-                ).result(LOAD_LIBRARY_TIME_OUT)
-            except (SystemExit, KeyboardInterrupt):
-                raise
-            except BaseException as e:
-                self._logger.exception(e)
-                raise
-            finally:
-                executor.shutdown(True)
+                try:
+                    spec_file.write_text(as_json(result), "utf-8")
+                except (SystemExit, KeyboardInterrupt):
+                    raise
+                except BaseException as e:
+                    raise RuntimeError(f"Cannot write spec file for variables '{name}' to '{spec_file}'") from e
+                meta_file.write_text(as_json(meta), "utf-8")
+            else:
+                self._logger.debug(lambda: f"Skip caching variables {name}{args!r}", context_name="import")
+        except (SystemExit, KeyboardInterrupt):
+            raise
+        except BaseException as e:
+            self._logger.exception(e)
 
-            if result.stdout:
-                self._logger.warning(lambda: f"stdout captured at loading variables {name}{args!r}:\n{result.stdout}")
-
-            try:
-                if meta is not None:
-                    meta_file = Path(
-                        self.variables_doc_cache_path,
-                        meta.filepath_base + ".meta.json",
-                    )
-                    spec_file = Path(
-                        self.variables_doc_cache_path,
-                        meta.filepath_base + ".spec.json",
-                    )
-                    spec_file.parent.mkdir(parents=True, exist_ok=True)
-
-                    try:
-                        spec_file.write_text(as_json(result), "utf-8")
-                    except (SystemExit, KeyboardInterrupt):
-                        raise
-                    except BaseException as e:
-                        raise RuntimeError(f"Cannot write spec file for variables '{name}' to '{spec_file}'") from e
-                    meta_file.write_text(as_json(meta), "utf-8")
-                else:
-                    self._logger.debug(lambda: f"Skip caching variables {name}{args!r}")
-            except (SystemExit, KeyboardInterrupt):
-                raise
-            except BaseException as e:
-                self._logger.exception(e)
-
-            return result
-        finally:
-            self._logger.debug(lambda: f"Load variables {source}{args!r} took {time.monotonic() - start_time} seconds")
+        return result
 
     @_logger.call
     def get_libdoc_for_variables_import(
@@ -1415,39 +1408,40 @@ class ImportsManager:
         resolve_variables: bool = True,
         resolve_command_line_vars: bool = True,
     ) -> VariablesDoc:
-        source = self.find_variables(name, base_dir, variables, resolve_variables, resolve_command_line_vars)
+        with self._logger.measure_time(lambda: f"getting libdoc for variables import {name}", context_name="import"):
+            source = self.find_variables(name, base_dir, variables, resolve_variables, resolve_command_line_vars)
 
-        if args:
-            resolved_args = resolve_args(
-                args,
-                str(self.root_folder),
-                base_dir,
-                self.get_resolvable_command_line_variables() if resolve_command_line_vars else None,
-                variables,
-            )
-        else:
-            resolved_args = ()
-
-        entry_key = _VariablesEntryKey(source, resolved_args)
-
-        with self._variables_lock:
-            if entry_key not in self._variables:
-                self._variables[entry_key] = _VariablesEntry(
-                    name,
-                    resolved_args,
+            if args:
+                resolved_args = resolve_args(
+                    args,
                     str(self.root_folder),
                     base_dir,
-                    self,
-                    self._get_variables_libdoc_handler(variables, resolve_variables, resolve_command_line_vars),
+                    self.get_resolvable_command_line_variables() if resolve_command_line_vars else None,
+                    variables,
                 )
+            else:
+                resolved_args = ()
 
-        entry = self._variables[entry_key]
+            entry_key = _VariablesEntryKey(source, resolved_args)
 
-        if sentinel is not None and sentinel not in entry.references:
-            entry.references.add(sentinel)
-            weakref.finalize(sentinel, self.__remove_variables_entry, entry_key, entry)
+            with self._variables_lock:
+                if entry_key not in self._variables:
+                    self._variables[entry_key] = _VariablesEntry(
+                        name,
+                        resolved_args,
+                        str(self.root_folder),
+                        base_dir,
+                        self,
+                        self._get_variables_libdoc_handler(variables, resolve_variables, resolve_command_line_vars),
+                    )
 
-        return entry.get_libdoc()
+            entry = self._variables[entry_key]
+
+            if sentinel is not None and sentinel not in entry.references:
+                entry.references.add(sentinel)
+                weakref.finalize(sentinel, self.__remove_variables_entry, entry_key, entry)
+
+            return entry.get_libdoc()
 
     @_logger.call
     def _get_entry_for_resource_import(
@@ -1460,7 +1454,7 @@ class ImportsManager:
         source = self.find_resource(name, base_dir, variables=variables)
 
         def _get_document() -> TextDocument:
-            self._logger.debug(lambda: f"Load resource {name} from source {source}")
+            self._logger.debug(lambda: f"Load resource {name} from source {source}", context_name="import")
 
             source_path = normalized_path(Path(source))
             extension = source_path.suffix
@@ -1493,9 +1487,10 @@ class ImportsManager:
         sentinel: Any = None,
         variables: Optional[Dict[str, Any]] = None,
     ) -> Tuple["Namespace", LibraryDoc]:
-        entry = self._get_entry_for_resource_import(name, base_dir, sentinel, variables)
+        with self._logger.measure_time(lambda: f"getting namespace and libdoc for {name}", context_name="import"):
+            entry = self._get_entry_for_resource_import(name, base_dir, sentinel, variables)
 
-        return entry.get_namespace(), entry.get_libdoc()
+            return entry.get_namespace(), entry.get_libdoc()
 
     def get_namespace_for_resource_import(
         self,

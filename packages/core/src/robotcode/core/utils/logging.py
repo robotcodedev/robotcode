@@ -7,11 +7,14 @@ import logging
 import os
 import reprlib
 import time
+from contextlib import contextmanager
 from enum import Enum
 from typing import (
     Any,
     Callable,
     ClassVar,
+    Dict,
+    Iterator,
     List,
     Optional,
     Type,
@@ -188,12 +191,19 @@ class LoggingDescriptor:
         condition: Optional[Callable[[], bool]] = None,
         *args: Any,
         stacklevel: int = 2,
+        context_name: Optional[str] = None,
         **kwargs: Any,
     ) -> None:
         if self.is_enabled_for(level) and condition is not None and condition() or condition is None:
+            depth = 0
+            if context_name is not None:
+                depth = self._measure_contexts.get(context_name, 0)
+
+            msg = ("  " * depth) + (msg() if callable(msg) else msg)
+
             self.logger.log(
                 level,
-                msg() if callable(msg) else msg,
+                msg,
                 *args,
                 stacklevel=stacklevel,
                 **kwargs,
@@ -215,6 +225,41 @@ class LoggingDescriptor:
             stacklevel=stacklevel,
             **kwargs,
         )
+
+    _log_measure_time = log
+    _measure_contexts: Dict[str, int] = {}
+
+    @contextmanager
+    def measure_time(
+        self,
+        msg: Union[str, Callable[[], str]],
+        *args: Any,
+        level: int = logging.DEBUG,
+        context_name: Optional[str] = None,
+        **kwargs: Any,
+    ) -> Iterator[None]:
+        if self.is_enabled_for(level):
+            depth = 0
+
+            if context_name is not None:
+                depth = self._measure_contexts.get(context_name, 0)
+
+                self._measure_contexts[context_name] = depth + 1
+
+            self._log_measure_time(level, f"{'  '*depth}Start {msg() if callable(msg) else msg}", *args, **kwargs)
+
+            start_time = time.monotonic()
+            try:
+                yield
+            finally:
+                duration = time.monotonic() - start_time
+
+                if context_name is not None:
+                    self._measure_contexts[context_name] = depth
+
+                self._log_measure_time(
+                    level, f"{'  '*depth}End {msg() if callable(msg) else msg} took {duration} seconds", *args, **kwargs
+                )
 
     def info(
         self,

@@ -1,4 +1,3 @@
-import time
 from concurrent.futures import CancelledError
 from logging import CRITICAL
 from pathlib import Path
@@ -59,67 +58,69 @@ class RobotWorkspaceProtocolPart(RobotLanguageServerProtocolPart):
         return config.progress_mode
 
     def load_workspace_documents(self, sender: Any) -> None:
-        start = time.monotonic()
-        try:
-            result: List[Path] = []
+        with self._logger.measure_time(lambda: "loading workspace documents", context_name="load_workspace_documents"):
+            try:
+                result: List[Path] = []
 
-            for folder in self.parent.workspace.workspace_folders:
-                config = self.parent.workspace.get_configuration(RobotCodeConfig, folder.uri)
+                for folder in self.parent.workspace.workspace_folders:
+                    config = self.parent.workspace.get_configuration(RobotCodeConfig, folder.uri)
 
-                extensions = [ROBOT_FILE_EXTENSION, RESOURCE_FILE_EXTENSION]
-                with self.parent.window.progress("Collect sources", cancellable=False):
-                    files = list(
-                        filter(
-                            lambda f: f.suffix in extensions,
-                            iter_files(
-                                folder.uri.to_path(),
-                                ignore_files=[ROBOT_IGNORE_FILE, GIT_IGNORE_FILE],
-                                include_hidden=False,
-                                parent_spec=IgnoreSpec.from_list(
-                                    [*DEFAULT_SPEC_RULES, *(config.workspace.exclude_patterns or [])],
+                    extensions = [ROBOT_FILE_EXTENSION, RESOURCE_FILE_EXTENSION]
+                    with self.parent.window.progress("Collect sources", cancellable=False):
+                        files = list(
+                            filter(
+                                lambda f: f.suffix in extensions,
+                                iter_files(
                                     folder.uri.to_path(),
-                                ),
-                                verbose_callback=self._logger.debug,
-                                verbose_trace=False,
-                            ),
-                        )
-                    )
-
-                result.extend(files)
-
-                canceled = False
-                with self.parent.window.progress(
-                    "Load workspace", current=0, max=len(files), start=False, cancellable=False
-                ) as progress:
-                    for i, f in enumerate(files):
-                        try:
-                            self.parent.documents.get_or_open_document(f)
-
-                            if config.analysis.progress_mode != AnalysisProgressMode.OFF:
-                                name = f.relative_to(folder.uri.to_path())
-
-                                progress.begin()
-                                progress.report(
-                                    (
-                                        f"Load {name!s}"
-                                        if config.analysis.progress_mode == AnalysisProgressMode.DETAILED
-                                        else None
+                                    ignore_files=[ROBOT_IGNORE_FILE, GIT_IGNORE_FILE],
+                                    include_hidden=False,
+                                    parent_spec=IgnoreSpec.from_list(
+                                        [*DEFAULT_SPEC_RULES, *(config.workspace.exclude_patterns or [])],
+                                        folder.uri.to_path(),
                                     ),
-                                    current=i,
+                                    verbose_callback=self._logger.debug,
+                                    verbose_trace=False,
+                                ),
+                            )
+                        )
+
+                    result.extend(files)
+
+                    canceled = False
+                    with self.parent.window.progress(
+                        "Load workspace", current=0, max=len(files), start=False, cancellable=False
+                    ) as progress:
+                        for i, f in enumerate(files):
+                            try:
+                                self.parent.documents.get_or_open_document(f)
+
+                                if config.analysis.progress_mode != AnalysisProgressMode.OFF:
+                                    name = f.relative_to(folder.uri.to_path())
+
+                                    progress.begin()
+                                    progress.report(
+                                        (
+                                            f"Load {name!s}"
+                                            if config.analysis.progress_mode == AnalysisProgressMode.DETAILED
+                                            else None
+                                        ),
+                                        current=i,
+                                    )
+                            except (SystemExit, KeyboardInterrupt):
+                                raise
+                            except CancelledError:
+                                canceled = True
+                                break
+                            except BaseException as e:
+                                ex = e
+                                self._logger.exception(
+                                    lambda: f"Can't load document {f}: {ex}",
+                                    level=CRITICAL,
+                                    context_name="load_workspace_documents",
                                 )
-                        except (SystemExit, KeyboardInterrupt):
-                            raise
-                        except CancelledError:
-                            canceled = True
-                            break
-                        except BaseException as e:
-                            ex = e
-                            self._logger.exception(lambda: f"Can't load document {f}: {ex}", level=CRITICAL)
-        finally:
-            if canceled:
-                self._logger.info(lambda: "Workspace loading canceled")
-            else:
-                self._logger.info(lambda: f"Workspace loaded {len(result)} documents in {time.monotonic() - start}s")
+            finally:
+                if canceled:
+                    self._logger.info(lambda: "Workspace loading canceled")
 
     @rpc_method(name="robot/cache/clear", threaded=True)
     def robot_cache_clear(self) -> None:

@@ -1,6 +1,6 @@
 import logging
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Literal, Optional
 
 import click
 
@@ -96,6 +96,22 @@ from .commands import config, profiles
     show_envvar=True,
 )
 @click.option(
+    "--log-format",
+    type=str,
+    help="Sets the log format. See python logging documentation for more information.",
+    default="%(name)s:%(levelname)s: %(message)s",
+    show_default=True,
+    show_envvar=True,
+)
+@click.option(
+    "--log-style",
+    type=click.Choice(["%", "{", "$"]),
+    help="Sets the log style. See python logging documentation for more information.",
+    default="%",
+    show_default=True,
+    show_envvar=True,
+)
+@click.option(
     "--log-filename",
     type=click.Path(
         file_okay=True,
@@ -167,6 +183,8 @@ def robotcode(
     pager: Optional[bool],
     log: bool,
     log_level: str,
+    log_format: str,
+    log_style: Literal["%", "{", "$"],
     log_filename: Optional[str],
     log_calls: bool,
     default_path: Optional[List[str]],
@@ -210,7 +228,8 @@ def robotcode(
 
         logging.basicConfig(
             level=log_level,
-            format="%(name)s:%(levelname)s: %(message)s",
+            format=log_format,
+            style=log_style,
             filename=log_filename,
         )
 

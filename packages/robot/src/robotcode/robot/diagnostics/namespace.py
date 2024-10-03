@@ -1400,12 +1400,12 @@ class Namespace:
         source: Optional[str] = None,
         parent_import: Optional[Import] = None,
         parent_source: Optional[str] = None,
-        depth: int = 0,
     ) -> Optional[Dict[str, Any]]:
 
-        current_time = time.monotonic()
-        self._logger.debug(lambda: f"{'  '*depth}start imports for {self.document if top_level else source}")
-        try:
+        with self._logger.measure_time(
+            lambda: f"loading imports for {self.source if top_level else source}",
+            context_name="import",
+        ):
             for imp in imports:
                 if variables is None:
                     variables = self.get_suite_variables()
@@ -1442,7 +1442,6 @@ class Namespace:
                                     source=entry.library_doc.source,
                                     parent_import=imp if top_level else parent_import,
                                     parent_source=parent_source if top_level else source,
-                                    depth=depth + 1,
                                 )
                             except (SystemExit, KeyboardInterrupt):
                                 raise
@@ -1592,12 +1591,6 @@ class Namespace:
                                 code=Error.LIBRARY_ALREADY_IMPORTED,
                             )
 
-        finally:
-            self._logger.debug(
-                lambda: f"{'  '*depth}end imports for "
-                f"{self.document if top_level else source} in {time.monotonic() - current_time}s"
-            )
-
         return variables
 
     def _import_lib(self, library: str, variables: Optional[Dict[str, Any]] = None) -> Optional[LibraryEntry]:
@@ -1624,8 +1617,7 @@ class Namespace:
 
     def _import_default_libraries(self, variables: Optional[Dict[str, Any]] = None) -> None:
 
-        self._logger.debug(lambda: f"start import default libraries for document {self.document}")
-        try:
+        with self._logger.measure_time(lambda: f"importing default libraries for {self.source}", context_name="import"):
             if variables is None:
                 variables = self.get_suite_variables()
 
@@ -1633,8 +1625,6 @@ class Namespace:
                 e = self._import_lib(library, variables)
                 if e is not None:
                     self._libraries[e.alias or e.name or e.import_name] = e
-        finally:
-            self._logger.debug(lambda: f"end import default libraries for document {self.document}")
 
     @_logger.call
     def _get_library_entry(
@@ -1845,8 +1835,6 @@ class Namespace:
 
     @_logger.call(condition=lambda self: not self._analyzed)
     def analyze(self) -> None:
-        import time
-
         from .namespace_analyzer import NamespaceAnalyzer
 
         with self._analyze_lock:
@@ -1855,53 +1843,43 @@ class Namespace:
 
                 self.ensure_initialized()
 
-                self._logger.debug(lambda: f"start analyze {self.document}")
-                start_time = time.monotonic()
+                with self._logger.measure_time(lambda: f"analyzing document {self.source}", context_name="analyze"):
+                    try:
+                        result = NamespaceAnalyzer(self.model, self, self.create_finder()).run()
 
-                try:
-                    result = NamespaceAnalyzer(self.model, self, self.create_finder()).run()
+                        self._diagnostics += result.diagnostics
+                        self._keyword_references = result.keyword_references
+                        self._variable_references = result.variable_references
+                        self._local_variable_assignments = result.local_variable_assignments
+                        self._namespace_references = result.namespace_references
 
-                    self._diagnostics += result.diagnostics
-                    self._keyword_references = result.keyword_references
-                    self._variable_references = result.variable_references
-                    self._local_variable_assignments = result.local_variable_assignments
-                    self._namespace_references = result.namespace_references
+                        lib_doc = self.get_library_doc()
 
-                    lib_doc = self.get_library_doc()
-
-                    if lib_doc.errors is not None:
-                        for err in lib_doc.errors:
-                            self.append_diagnostics(
-                                range=Range(
-                                    start=Position(
-                                        line=((err.line_no - 1) if err.line_no is not None else 0),
-                                        character=0,
+                        if lib_doc.errors is not None:
+                            for err in lib_doc.errors:
+                                self.append_diagnostics(
+                                    range=Range(
+                                        start=Position(
+                                            line=((err.line_no - 1) if err.line_no is not None else 0),
+                                            character=0,
+                                        ),
+                                        end=Position(
+                                            line=((err.line_no - 1) if err.line_no is not None else 0),
+                                            character=0,
+                                        ),
                                     ),
-                                    end=Position(
-                                        line=((err.line_no - 1) if err.line_no is not None else 0),
-                                        character=0,
-                                    ),
-                                ),
-                                message=err.message,
-                                severity=DiagnosticSeverity.ERROR,
-                                source=DIAGNOSTICS_SOURCE_NAME,
-                                code=err.type_name,
-                            )
-                # TODO: implement CancelationToken
-                except CancelledError:
-                    canceled = True
-                    self._logger.debug("analyzing canceled")
-                    raise
-                finally:
-                    self._analyzed = not canceled
-
-                    self._logger.debug(
-                        lambda: (
-                            f"end analyzed {self.document} succeed in {time.monotonic() - start_time}s"
-                            if self._analyzed
-                            else f"end analyzed {self.document} failed in {time.monotonic() - start_time}s"
-                        )
-                    )
+                                    message=err.message,
+                                    severity=DiagnosticSeverity.ERROR,
+                                    source=DIAGNOSTICS_SOURCE_NAME,
+                                    code=err.type_name,
+                                )
+                    # TODO: implement CancelationToken
+                    except CancelledError:
+                        canceled = True
+                        self._logger.debug("analyzing canceled")
+                        raise
+                    finally:
+                        self._analyzed = not canceled
 
                 self.has_analysed(self)
 
