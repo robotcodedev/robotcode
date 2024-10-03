@@ -260,6 +260,8 @@ class LoggingDescriptor:
                 self._log_measure_time(
                     level, f"{'  '*depth}End {msg() if callable(msg) else msg} took {duration} seconds", *args, **kwargs
                 )
+        else:
+            yield
 
     def info(
         self,
