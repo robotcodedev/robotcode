@@ -303,6 +303,7 @@ class InitializeRequestArguments(Model):
     supports_memory_references: Optional[bool] = None
     supports_progress_reporting: Optional[bool] = None
     supports_invalidated_event: Optional[bool] = None
+    supports_a_n_s_i_styling: Optional[bool] = None
 
 
 @dataclass
@@ -395,6 +396,7 @@ class Capabilities(Model):
     supports_stepping_granularity: Optional[bool] = None
     supports_instruction_breakpoints: Optional[bool] = None
     supports_exception_filter_options: Optional[bool] = None
+    supports_a_n_s_i_styling: Optional[bool] = None
 
 
 @dataclass

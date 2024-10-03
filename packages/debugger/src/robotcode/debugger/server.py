@@ -185,6 +185,7 @@ class DebugAdapterServerProtocol(DebugAdapterProtocol):
             supports_exception_options=True,
             supports_exception_filter_options=True,
             supports_completions_request=True,
+            supports_a_n_s_i_styling=True,
         )
 
     @rpc_method(name="attach", param_type=AttachRequestArguments)
