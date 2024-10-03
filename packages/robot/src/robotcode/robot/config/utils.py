@@ -44,10 +44,11 @@ def get_config_files(
     paths: Optional[Sequence[Union[str, Path]]] = None,
     config_files: Optional[Sequence[Path]] = None,
     root_folder: Optional[Path] = None,
+    no_vcs: bool = False,
     *,
     verbose_callback: Optional[Callable[[str], None]] = None,
 ) -> Tuple[Sequence[Tuple[Path, ConfigType]], Optional[Path], DiscoverdBy]:
-    root_folder, discovered_by = find_project_root(*(paths or []), root_folder=root_folder)
+    root_folder, discovered_by = find_project_root(*(paths or []), root_folder=root_folder, no_vcs=no_vcs)
 
     if root_folder is None:
         root_folder = Path.cwd()
@@ -55,7 +56,7 @@ def get_config_files(
             verbose_callback(f"Cannot detect root folder. Use current folder '{root_folder}' as root.")
 
     if verbose_callback:
-        verbose_callback(f"Found root at:\n    {root_folder} ({discovered_by.value})")
+        verbose_callback(f"Use root at:\n    {root_folder} ({discovered_by.value})")
 
     if config_files:
         if verbose_callback:

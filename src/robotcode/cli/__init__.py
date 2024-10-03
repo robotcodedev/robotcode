@@ -59,6 +59,12 @@ from .commands import config, profiles
     help="Specifies the root path to be used for the project. It will be automatically detected if not provided.",
 )
 @click.option(
+    "--no-vcs",
+    is_flag=True,
+    show_envvar=True,
+    help="Ignore version control system directories (e.g., .git, .hg) when detecting the project root.",
+)
+@click.option(
     "-f",
     "--format",
     "format",
@@ -186,6 +192,7 @@ def robotcode(
     config_files: Optional[List[Path]],
     profiles: Optional[List[str]],
     root: Optional[Path],
+    no_vcs: bool,
     format: Optional[OutputFormat],
     dry: bool,
     verbose: bool,
@@ -218,6 +225,7 @@ def robotcode(
     app.config.dry = dry
     app.config.verbose = verbose
     app.config.root = root
+    app.config.no_vcs = no_vcs
 
     if color is None:
         app.config.colored_output = ColoredOutput.AUTO

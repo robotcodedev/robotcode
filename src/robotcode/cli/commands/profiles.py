@@ -76,7 +76,11 @@ def list(app: Application, paths: List[Path], show_hidden: bool = False, sort_by
 
     try:
         config_files, _, discovered_by = get_config_files(
-            paths, app.config.config_files, root_folder=app.config.root, verbose_callback=app.verbose
+            paths,
+            app.config.config_files,
+            root_folder=app.config.root,
+            no_vcs=app.config.no_vcs,
+            verbose_callback=app.verbose,
         )
 
         config = load_robot_config_from_path(*config_files, verbose_callback=app.verbose)

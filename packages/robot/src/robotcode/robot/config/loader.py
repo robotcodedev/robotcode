@@ -193,6 +193,7 @@ def load_robot_config_from_path(
 def find_project_root(
     *sources: Union[str, Path],
     root_folder: Optional[Path] = None,
+    no_vcs: bool = False,
 ) -> Tuple[Optional[Path], DiscoverdBy]:
 
     if root_folder:
@@ -220,11 +221,12 @@ def find_project_root(
         if (directory / PYPROJECT_TOML).is_file():
             return directory, DiscoverdBy.PYPROJECT_TOML
 
-        if (directory / ".git").exists():
-            return directory, DiscoverdBy.GIT
+        if not no_vcs:
+            if (directory / ".git").exists():
+                return directory, DiscoverdBy.GIT
 
-        if (directory / ".hg").is_dir():
-            return directory, DiscoverdBy.HG
+            if (directory / ".hg").is_dir():
+                return directory, DiscoverdBy.HG
 
     return None, DiscoverdBy.NOT_FOUND
 

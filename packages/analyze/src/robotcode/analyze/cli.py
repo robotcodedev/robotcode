@@ -27,7 +27,11 @@ def analyze(app: Application, paths: Tuple[str]) -> Union[str, int, None]:
     """TODO: Analyzes a Robot Framework project."""
 
     config_files, root_folder, _ = get_config_files(
-        paths, app.config.config_files, root_folder=app.config.root, verbose_callback=app.verbose
+        paths,
+        app.config.config_files,
+        root_folder=app.config.root,
+        no_vcs=app.config.no_vcs,
+        verbose_callback=app.verbose,
     )
 
     try:

@@ -255,7 +255,11 @@ def handle_robot_options(
         sys.path = old_sys_path
 
     config_files, root_folder, _ = get_config_files(
-        robot_arguments, app.config.config_files, root_folder=app.config.root, verbose_callback=app.verbose
+        robot_arguments,
+        app.config.config_files,
+        root_folder=app.config.root,
+        no_vcs=app.config.no_vcs,
+        verbose_callback=app.verbose,
     )
     try:
         profile = (
