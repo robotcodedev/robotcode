@@ -1,7 +1,9 @@
 import dataclasses
+import logging
 import shutil
+import threading
 from pathlib import Path
-from typing import Iterator
+from typing import Any, Iterator
 
 import pytest
 
@@ -38,10 +40,12 @@ if robotcode_cache_path.exists():
     shutil.rmtree(robotcode_cache_path, ignore_errors=True)
 
 
-@pytest.fixture(scope="module", ids=generate_test_id)
+@pytest.fixture(scope="session", ids=generate_test_id)
 def protocol(
     request: pytest.FixtureRequest,
 ) -> Iterator[RobotLanguageServerProtocol]:
+    logging.warning("Starting language server")
+
     server = RobotLanguageServer()
 
     client_capas = ClientCapabilities(
@@ -82,14 +86,14 @@ def protocol(
 
     protocol._initialized(InitializedParams())
 
-    # diagnostics_end = threading.Event()
+    diagnostics_end = threading.Event()
 
-    # def on_diagnostics_end(sender: Any) -> None:
-    #     diagnostics_end.set()
+    def on_diagnostics_end(sender: Any) -> None:
+        diagnostics_end.set()
 
-    # protocol.diagnostics.on_workspace_diagnostics_end.add(on_diagnostics_end)
+    protocol.diagnostics.on_workspace_diagnostics_end.add(on_diagnostics_end)
 
-    # diagnostics_end.wait(120)
+    diagnostics_end.wait(120)
     # protocol.diagnostics.cancel_workspace_diagnostics_task(None)
 
     protocol.diagnostics.workspace_diagnostics_started_event.wait(300)

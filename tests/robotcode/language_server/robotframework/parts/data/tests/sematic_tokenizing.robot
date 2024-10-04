@@ -10,7 +10,18 @@ Limit as iteration count
         do something    This is run 0.5 seconds.
     END
 
+some templated
+    [Template]    template
+    1    2    3
+    3    ${{1+2+${1}}}    7
+
 *** Keywords ***
 do something
     [Arguments]    ${type}
     ok
+
+
+template
+    [Arguments]    ${a}    ${b}    ${c}
+    # TODO: implement keyword "template".
+    ok  ${a} ${b} ${c}

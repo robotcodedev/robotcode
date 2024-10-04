@@ -1,4 +1,5 @@
 import collections
+import functools
 import inspect
 import io
 import weakref
@@ -47,8 +48,16 @@ def position_from_utf16(lines: List[str], position: Position) -> Position:
     return Position(line=position.line, character=utf32_offset)
 
 
+@functools.lru_cache(maxsize=2048)
+def has_multibyte_char(line: str) -> bool:
+    return any(is_multibyte_char(c) for c in line)
+
+
 def position_to_utf16(lines: List[str], position: Position) -> Position:
     if position.line >= len(lines):
+        return position
+
+    if not has_multibyte_char(lines[position.line]):
         return position
 
     utf16_counter = 0

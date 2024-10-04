@@ -241,6 +241,9 @@
         "rules": {
           "*.documentation:robotframework": {
             "fontStyle": "italic"
+          },
+          "*.embedded:robotframework": {
+            "fontStyle": "italic"
           }
         }
       }
@@ -249,6 +252,10 @@
       {
         "id": "builtin",
         "description": "built in library, keyword or variable"
+      },
+      {
+        "id": "embedded",
+        "description": "embedded argument"
       }
     ],
     "semanticTokenScopes": [

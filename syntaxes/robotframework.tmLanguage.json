@@ -4,10 +4,10 @@
         "variable_setting": {
             "name": "meta.variable.assign.robotframework",
             "contentName": "string.unquoted.argument.robotframework",
-            "begin": "^(?:([$@&]\\{)(.*?}*)(\\})( ?=)?)",
+            "begin": "^([$@&]\\{)(.*?)(\\})(=?)(?= {2}| ?\\t| ?$)",
             "beginCaptures": {
                 "1": { "name": "punctuation.definition.variable.begin.robotframework" },
-                "2": { "name": "variable.name.readwrite.robotframework" },
+                "2": { "name": "variable.name.readwrite.robotframework", "patterns": [{"include": "#variables"}] },
                 "3": { "name": "punctuation.definition.variable.end.robotframework" },
                 "4": { "name": "keyword.operator.robotframework" }
             },
@@ -15,12 +15,14 @@
             "patterns": [
                 { "include": "#escape" },
                 { "include": "#comment" },
+                { "include": "#comment_line" },
                 { "include": "#line_continuation" },
                 { "include": "#variables" }
             ]
         },
         "variables_section": {
-            "begin": "^(\\*+\\s*(?i:variables?)( ?\\*+)?)(?= {2}| ?\\t| ?$)",
+            "name": "meta.section.variables.robotframework",
+            "begin": "^(\\*+\\s*(?i:variables?|proměnné|variabelen|varijable|muuttujat|variables|variablen|variáveis|กำหนดตัวแปร|zmienne|змінні|переменные|变量|變量|değişkenler|variabler|променливи|variabile|variabili|चर|các biến số|変数|변수)( ?\\*+)?)(?= {2}| ?\\t| ?$)",
             "beginCaptures": { "1": { "name": "keyword.other.header.variable.robotframework" } },
             "end": "^(?=\\*)",
             "patterns": [
@@ -44,6 +46,14 @@
                 { "include": "#expression" },
                 { "include": "#simple_var" }
             ]
+        },
+        "only_dollar_var": {
+            "name": "meta.variables.robotframework",
+            "contentName": "variable.name.readwrite.robotframework",
+            "begin": "[$]\\{",
+            "end": "(\\})|(?= {2}| ?\\t| ?$)",
+            "beginCaptures": { "0": { "name": "punctuation.definition.variable.begin.robotframework" } },
+            "endCaptures": { "1": { "name": "punctuation.definition.variable.end.robotframework" } }
         },
         "simple_var": {
             "name": "meta.variables.robotframework",
@@ -92,7 +102,8 @@
             ]
         },
         "settings_section": {
-            "begin": "^(\\*+\\s*(?i:settings?)( ?\\*+)?)(?= {2}| ?\\t| ?$)",
+            "name": "meta.section.settings.robotframework",
+            "begin": "^(\\*+\\s*(?i:settings?|nastavení|instellingen|postavke|asetukset|paramètres|einstellungen|configurações|definições|การตั้งค่า|ustawienia|налаштування|configuraciones|настройки|设置|設置|ayarlar|inställningar|setari|impostazioni|स्थापना|cài đặt|設定|설정?)( ?\\*+)?)(?= {2}| ?\\t| ?$)",
             "beginCaptures": { "1": { "name": "keyword.other.header.settings.robotframework" } },
             "end": "^(?=\\*)",
             "patterns": [
@@ -104,7 +115,7 @@
         },
         "documentation_setting": {
             "contentName": "markup.robotframework",
-            "begin": "(?i)^(documentation|dokumentation|Tài liệu hướng dẫn)(?= {2}| ?\\t| ?$)",
+            "begin": "(?i)^(documentation|dokumentace|documentatie|dokumentacija|dokumentaatio|dokumentation|documentação|เอกสาร|dokumentacja|документація|documentación|документация|说明|說明|dokümantasyon|documentazione|प्रलेखन|tài liệu hướng dẫn|ドキュメント|문서)(?= {2}| ?\\t| ?$)",
             "beginCaptures": { "1": { "name": "keyword.control.settings.robotframework" } },
             "end": "^(?!(\\s*(\\.\\.\\.((( {2}| ?\\t)\\s*\\S.*)|(\\s*))?$))|(\\s*#.*$)|(\\s*$))",
             "patterns": [
@@ -149,8 +160,8 @@
         },
         "testcase_name": {
             "contentName": "string.unquoted.argument.robotframework",
-            "begin": "^( ?\\S+ ?(\\S* ?)*?)(?= {2}| ?\\t| ?$)",
-            "beginCaptures": { "1": { "name": "entity.name.function.testcase.name.robotframework" } },
+            "begin": "^( ?\\S+( ?\\S*)*?)(?= {2}| ?\\t| ?$)",
+            "beginCaptures": { "1": { "name": "entity.name.function.testcase.name.robotframework", "patterns": [{"include": "#variables"}] } },
             "end": "^(?!(\\s*(\\.\\.\\.((( {2}| ?\\t)\\s*\\S.*)|(\\s*))?$))|(\\s*#.*$)|(\\s*$))",
             "patterns": [
                 { "include": "#escape" },
@@ -162,8 +173,8 @@
         },
         "keyword_name": {
             "contentName": "string.unquoted.argument.robotframework",
-            "begin": "^( ?\\S+ ?(\\S* ?)*?)(?= {2}| ?\\t| ?$)",
-            "beginCaptures": { "1": { "name": "entity.name.function.keyword.name.robotframework" } },
+            "begin": "^( ?\\S+( ?\\S*)*?)(?= {2}| ?\\t| ?$)",
+            "beginCaptures": { "1": { "name": "entity.name.function.keyword.name.robotframework", "patterns": [{"include": "#only_dollar_var"}] } },
             "end": "^(?!(\\s*(\\.\\.\\.((( {2}| ?\\t)\\s*\\S.*)|(\\s*))?$))|(\\s*#.*$)|(\\s*$))",
             "patterns": [
                 { "include": "#escape" },
@@ -184,7 +195,8 @@
             ]
         },
         "testcases_section": {
-            "begin": "^(\\*+\\s*(?i:test cases?)( ?\\*+)?)(?= {2}| ?\\t| ?$)",
+            "name": "meta.section.testcases.robotframework",
+            "begin": "^(\\*+\\s*(?i:test cases?|testovací případy|testgevallen|test cases|testit|unités de test|testfälle|casos de teste|การทดสอบ|przypadki testowe|тест-кейси|casos de prueba|заголовки тестов|用例|案例|test durumları|testfall|тестови случаи|cazuri de test|casi di test|नियत कार्य प्रवेशिका|các kịch bản kiểm thử|テスト ケース|테스트 사례)( ?\\*+)?)(?= {2}| ?\\t| ?$)",
             "beginCaptures": { "1": { "name": "keyword.other.header.testcase.robotframework" } },
             "end": "^(?=\\*)",
             "patterns": [
@@ -193,7 +205,8 @@
             ]
         },
         "tasks_section": {
-            "begin": "^(\\*+\\s*(?i:tasks?)( ?\\*+)?)(?= {2}| ?\\t| ?$)",
+            "name": "meta.section.tasks.robotframework",
+            "begin": "^(\\*+\\s*(?i:tasks?|úlohy|taken|taskovi|tehtävät|tâches|aufgaben|tarefas|งาน|zadania|завдань|tareas|задача|任务|任務|görevler|taskar|задачи|sarcini|attività|कार्य प्रवेशिका|các nghiệm vụ|タスク|작업)( ?\\*+)?)(?= {2}| ?\\t| ?$)",
             "beginCaptures": { "1": { "name": "keyword.other.header.task.robotframework" } },
             "end": "^(?=\\*)",
             "patterns": [
@@ -202,7 +215,8 @@
             ]
         },
         "keywords_section": {
-            "begin": "^(\\*+\\s*(?i:keywords?)( ?\\*+)?)(?= {2}| ?\\t| ?$)",
+            "name": "meta.section.keywords.robotframework",
+            "begin": "^(\\*+\\s*(?i:keywords?|klíčová slova|actiewoorden|keywords|avainsanat|mots-clés|schlüsselwörter|palavras-chave|คำสั่งเพิ่มเติม|słowa kluczowe|ключових слова|palabras clave|ключевые слова|关键字|關鍵字|anahtar kelimeler|nyckelord|ключови думи|cuvinte cheie|parole chiave|कुंजीशब्द|các từ khóa|キーワード|키워드)( ?\\*+)?)(?= {2}| ?\\t| ?$)",
             "beginCaptures": { "1": { "name": "keyword.other.header.keyword.robotframework" } },
             "end": "^(?=\\*)",
             "patterns": [
@@ -211,7 +225,8 @@
             ]
         },
         "comments_section": {
-            "begin": "^(\\*+\\s*(?i:comments?)( ?\\*+)?)(?= {2}| ?\\t| ?$)",
+            "name": "meta.section.comments.robotframework",
+            "begin": "^(\\*+\\s*(?i:comments?|komentáře|opmerkingen|komentari|kommentit|commentaires|kommentare|comentários|คำอธิบาย|komentarze|коментарів|comentarios|комментарии|备注|備註|yorumlar|kommentarer|коментари|comentarii|commenti|टिप्पणी|các chú thích|コメント|의견)( ?\\*+)?)(?= {2}| ?\\t| ?$)",
             "beginCaptures": { "1": { "name": "keyword.other.header.comment.robotframework" } },
             "end": "^(?=\\*)",
             "patterns": [
@@ -220,6 +235,7 @@
             ]
         },
         "section": {
+            "name": "meta.section.unknown.robotframework",
             "begin": "^(\\*+\\s*(.*)(\\s?\\*+)?)(?= {2}| ?\\t| ?$)",
             "beginCaptures": { "1": { "name": "keyword.other.header.robotframework" } },
             "end": "^(?=\\*)"
@@ -229,6 +245,7 @@
             "name": "comment.block.robotframework"
         },
         "other_setting": {
+            "name": "meta.setting.other.robotframework",
             "contentName": "string.unquoted.argument.robotframework",
             "begin": "(?i)^(\\S+( \\S+)*)(?= {2}| ?\\t| ?$)",
             "beginCaptures": { "1": { "name": "keyword.control.settings.robotframework" } },
@@ -262,7 +279,7 @@
         },
         "documentation_testcase_settings": {
             "contentName": "markup.robotframework",
-            "begin": "(?i)^( {2}|\\t)(\\s)*(\\[documentation\\])(?= {2}| ?\\t| ?$)",
+            "begin": "^( {2}|\\t)(\\s)*(?i:\\[(documentation|dokumentace|documentatie|dokumentacija|dokumentaatio|dokumentation|documentação|เอกสาร|dokumentacja|документація|documentación|документация|说明|說明|dokümantasyon|documentazione|प्रलेखन|tài liệu hướng dẫn|ドキュメント|문서)\\])(?= {2}| ?\\t| ?$)",
             "beginCaptures": { "3": { "name": "keyword.control.settings.documentation.robotframework" } },
             "end": "^(?!(\\s*(\\.\\.\\.((( {2}| ?\\t)\\s*\\S.*)|(\\s*))?$))|(\\s*#.*$)|(\\s*$))",
             "patterns": [
@@ -293,7 +310,7 @@
             "contentName": "string.unquoted.argument.robotframework",
             "begin": "^(?!(?: {2,}| ?\\t ?)+(?:(?=[$\\[@&%]|\\.)))(?: {2,}| ?\\t ?)+(.*?)(?= {2,}| ?\\t ?| ?$)",
             "end": "^(?!(\\s*(\\.\\.\\.((( {2}| ?\\t)\\s*\\S.*)|(\\s*))?$))|(\\s*#.*$)|(\\s*$))",
-            "beginCaptures": { "1": { "name": "entity.name.function.keyword-call.robotframework" } },
+            "beginCaptures": { "1": { "name": "entity.name.function.keyword-call.robotframework", "patterns": [{"include": "#variables"}]} },
             "patterns": [
                 { "include": "#escape" },
                 { "include": "#comment" },

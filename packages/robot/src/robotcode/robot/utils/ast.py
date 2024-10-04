@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import ast
 import itertools
-from typing import Any, Iterator, List, Optional, Sequence, Set, Tuple
+from typing import Any, Dict, Iterator, List, Optional, Sequence, Set, Tuple, Type, TypeVar, Union
+
+from typing_extensions import TypeGuard
 
 from robot.errors import VariableError
 from robot.parsing.lexer.tokens import Token
@@ -17,17 +19,42 @@ if get_robot_version() < (7, 0):
 else:
     from robot.variables.search import VariableMatches as VariableIterator
 
+_cached_isinstance_cache: Dict[Tuple[type, Tuple[type, ...]], bool] = {}
+
+_T = TypeVar("_T")
+
+
+def cached_isinstance(obj: Any, *expected_types: Type[_T]) -> TypeGuard[Union[_T]]:
+    try:
+        t = type(obj)
+        if (t, expected_types) in _cached_isinstance_cache:
+            return _cached_isinstance_cache[(t, expected_types)]
+
+        _cached_isinstance_cache[(t, expected_types)] = result = isinstance(obj, expected_types)
+
+        return result
+
+    except TypeError:
+        return False
+
+
+# def cached_isinstance(obj: Any, *expected_types: type) -> bool:
+#     try:
+#         return isinstance(obj, expected_types)
+#     except TypeError:
+#         return False
+
 
 def iter_nodes(node: ast.AST, descendants: bool = True) -> Iterator[ast.AST]:
     for _field, value in ast.iter_fields(node):
-        if isinstance(value, list):
+        if cached_isinstance(value, list):
             for item in value:
-                if isinstance(item, ast.AST):
+                if cached_isinstance(item, ast.AST):
                     yield item
                     if descendants:
                         yield from iter_nodes(item)
 
-        elif isinstance(value, ast.AST):
+        elif cached_isinstance(value, ast.AST):
             yield value
             if descendants:
                 yield from iter_nodes(value)
@@ -53,7 +80,7 @@ class FirstAndLastRealStatementFinder(Visitor):
         return finder.first_statement, finder.last_statement
 
     def visit_Statement(self, statement: ast.AST) -> None:  # noqa: N802
-        if not isinstance(statement, EmptyLine):
+        if not cached_isinstance(statement, EmptyLine):
             if self.first_statement is None:
                 self.first_statement = statement
 
@@ -63,7 +90,7 @@ class FirstAndLastRealStatementFinder(Visitor):
 def _get_non_data_range_from_node(
     node: ast.AST, only_start: bool = False, allow_comments: bool = False
 ) -> Optional[Range]:
-    if isinstance(node, Statement) and node.tokens:
+    if cached_isinstance(node, Statement) and node.tokens:
         start_token = next(
             (
                 v
@@ -115,7 +142,7 @@ def range_from_node(
     allow_comments: bool = False,
 ) -> Range:
     if skip_non_data:
-        if isinstance(node, Statement) and node.tokens:
+        if cached_isinstance(node, Statement) and node.tokens:
             result = _get_non_data_range_from_node(node, only_start, allow_comments)
             if result is not None:
                 return result

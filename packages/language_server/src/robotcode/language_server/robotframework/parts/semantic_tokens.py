@@ -23,6 +23,7 @@ from typing import (
 from robot.parsing.lexer.tokens import Token
 from robot.parsing.model.statements import (
     Arguments,
+    Documentation,
     Fixture,
     KeywordCall,
     LibraryImport,
@@ -62,6 +63,7 @@ from robotcode.robot.diagnostics.model_helper import ModelHelper
 from robotcode.robot.diagnostics.namespace import DEFAULT_BDD_PREFIXES, Namespace
 from robotcode.robot.utils import get_robot_version
 from robotcode.robot.utils.ast import (
+    cached_isinstance,
     iter_nodes,
     iter_over_keyword_names_and_owners,
     token_in_range,
@@ -120,6 +122,7 @@ class RobotSemTokenTypes(Enum):
 
 class RobotSemTokenModifiers(Enum):
     BUILTIN = "builtin"
+    EMBEDDED = "embedded"
 
 
 @dataclass
@@ -340,6 +343,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
         node: ast.AST,
         col_offset: Optional[int] = None,
         length: Optional[int] = None,
+        yield_arguments: bool = False,
     ) -> Iterator[SemTokenInfo]:
         sem_info = cls.mapping().get(token.type, None) if token.type is not None else None
         if sem_info is not None:
@@ -391,7 +395,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
                     yield SemTokenInfo.from_token(token, sem_type, sem_mod)
 
             elif token.type in [Token.KEYWORD, ROBOT_KEYWORD_INNER] or (
-                token.type == Token.NAME and isinstance(node, (Fixture, Template, TestTemplate))
+                token.type == Token.NAME and cached_isinstance(node, Fixture, Template, TestTemplate)
             ):
                 if (
                     namespace.find_keyword(
@@ -461,6 +465,9 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
 
                 kw_index = len(kw_namespace) + 1 if kw_namespace else 0
 
+                if token.type == Token.NAME and kw_doc is not None:
+                    sem_type = RobotSemTokenTypes.KEYWORD
+
                 if kw_namespace:
                     kw = token.value[kw_index:]
 
@@ -501,13 +508,25 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
                                 col_offset + kw_index + start,
                                 arg_start - start,
                             )
-                            yield SemTokenInfo.from_token(
-                                token,
-                                RobotSemTokenTypes.EMBEDDED_ARGUMENT,
-                                sem_mod,
-                                col_offset + kw_index + arg_start,
-                                arg_end - arg_start,
+
+                            embedded_token = Token(
+                                Token.ARGUMENT,
+                                token.value[arg_start:arg_end],
+                                token.lineno,
+                                token.col_offset + arg_start,
                             )
+
+                            for sub_token in ModelHelper.tokenize_variables(
+                                embedded_token,
+                                ignore_errors=True,
+                                identifiers="$@&%",
+                            ):
+                                for e in cls.generate_sem_sub_tokens(
+                                    namespace, builtin_library_doc, sub_token, node, yield_arguments=True
+                                ):
+                                    e.sem_modifiers = {RobotSemTokenModifiers.EMBEDDED}
+                                    yield e
+
                             start = arg_end + 1
 
                         if start < end:
@@ -521,7 +540,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
 
                 else:
                     yield SemTokenInfo.from_token(token, sem_type, sem_mod, col_offset + kw_index, len(kw))
-            elif token.type == Token.NAME and isinstance(node, (LibraryImport, ResourceImport, VariablesImport)):
+            elif token.type == Token.NAME and cached_isinstance(node, LibraryImport, ResourceImport, VariablesImport):
                 if "\\" in token.value:
                     if col_offset is None:
                         col_offset = token.col_offset
@@ -543,7 +562,9 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
                         length,
                     )
             elif get_robot_version() >= (5, 0) and token.type == Token.OPTION:
-                if (isinstance(node, ExceptHeader) or isinstance(node, WhileHeader)) and "=" in token.value:
+                if (
+                    cached_isinstance(node, ExceptHeader) or cached_isinstance(node, WhileHeader)
+                ) and "=" in token.value:
                     if col_offset is None:
                         col_offset = token.col_offset
 
@@ -589,7 +610,12 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
                     1,
                 )
             else:
-                if token.type != Token.ARGUMENT or token.type != Token.NAME and isinstance(node, Metadata):
+                if (
+                    yield_arguments
+                    or token.type != Token.ARGUMENT
+                    or token.type != Token.NAME
+                    and cached_isinstance(node, Metadata)
+                ):
                     yield SemTokenInfo.from_token(token, sem_type, sem_mod, col_offset, length)
 
     def generate_sem_tokens(
@@ -602,25 +628,25 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
         if (
             token.type in {Token.ARGUMENT, Token.TESTCASE_NAME, Token.KEYWORD_NAME}
             or token.type == Token.NAME
-            and isinstance(node, (VariablesImport, LibraryImport, ResourceImport))
+            and cached_isinstance(node, VariablesImport, LibraryImport, ResourceImport)
         ):
-            if (isinstance(node, Variable) and token.type == Token.ARGUMENT and node.name and node.name[0] == "&") or (
-                isinstance(node, Arguments)
-            ):
+            if (
+                cached_isinstance(node, Variable) and token.type == Token.ARGUMENT and node.name and node.name[0] == "&"
+            ) or (cached_isinstance(node, Arguments)):
                 name, value = split_from_equals(token.value)
                 if value is not None:
                     length = len(name)
 
                     yield SemTokenInfo.from_token(
                         Token(
-                            ROBOT_NAMED_ARGUMENT if isinstance(node, Variable) else SemanticTokenTypes.PARAMETER,
+                            ROBOT_NAMED_ARGUMENT if cached_isinstance(node, Variable) else SemanticTokenTypes.PARAMETER,
                             name,
                             token.lineno,
                             token.col_offset,
                         ),
                         (
                             RobotSemTokenTypes.NAMED_ARGUMENT
-                            if isinstance(node, Variable)
+                            if cached_isinstance(node, Variable)
                             else SemanticTokenTypes.PARAMETER
                         ),
                     )
@@ -640,7 +666,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
                         token.col_offset + length + 1,
                         token.error,
                     )
-                elif isinstance(node, Arguments) and name:
+                elif cached_isinstance(node, Arguments) and name:
                     yield SemTokenInfo.from_token(
                         Token(
                             ROBOT_NAMED_ARGUMENT,
@@ -663,11 +689,13 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
                 ignore_errors=True,
                 identifiers="$" if token.type == Token.KEYWORD_NAME else "$@&%",
             ):
-                for e in self.generate_sem_sub_tokens(namespace, builtin_library_doc, sub_token, node):
+                for e in self.generate_sem_sub_tokens(
+                    namespace, builtin_library_doc, sub_token, node, yield_arguments=True
+                ):
                     yield e
 
         else:
-            for e in self.generate_sem_sub_tokens(namespace, builtin_library_doc, token, node):
+            for e in self.generate_sem_sub_tokens(namespace, builtin_library_doc, token, node, yield_arguments=True):
                 yield e
 
     def generate_run_kw_tokens(
@@ -956,8 +984,8 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
             for node in iter_nodes(model):
                 check_current_task_canceled()
 
-                if isinstance(node, Statement):
-                    if isinstance(node, LibraryImport) and node.name:
+                if cached_isinstance(node, Statement):
+                    if cached_isinstance(node, LibraryImport) and node.name:
                         lib_doc = namespace.get_imported_library_libdoc(node.name, node.args, node.alias)
                         kw_doc = lib_doc.inits.keywords[0] if lib_doc and lib_doc.inits else None
                         if lib_doc is not None:
@@ -1009,7 +1037,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
 
                                 yield token, node
                             continue
-                    if isinstance(node, VariablesImport) and node.name:
+                    if cached_isinstance(node, VariablesImport) and node.name:
                         lib_doc = namespace.get_imported_variables_libdoc(node.name, node.args)
                         kw_doc = lib_doc.inits.keywords[0] if lib_doc and lib_doc.inits else None
                         if lib_doc is not None:
@@ -1061,12 +1089,12 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
 
                                 yield token, node
                             continue
-                    if isinstance(node, (KeywordCall, Fixture)):
+                    if cached_isinstance(node, KeywordCall, Fixture):
                         kw_token = cast(
                             Token,
                             (
                                 node.get_token(Token.KEYWORD)
-                                if isinstance(node, KeywordCall)
+                                if cached_isinstance(node, KeywordCall)
                                 else node.get_token(Token.NAME)
                             ),
                         )
@@ -1109,8 +1137,16 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
                                     yield kw_res
 
                                 continue
+                    if cached_isinstance(node, Documentation):
+                        for token in node.tokens:
+                            if token.type == Token.ARGUMENT:
+                                continue
+                            yield token, node
+                        continue
 
                     for token in node.tokens:
+                        if token.type == Token.COMMENT:
+                            continue
                         yield token, node
 
         lines = document.get_lines()
@@ -1136,6 +1172,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
                         ),
                     ),
                 )
+
                 token_col_offset = token_range.start.character
                 token_length = token_range.end.character - token_range.start.character
 

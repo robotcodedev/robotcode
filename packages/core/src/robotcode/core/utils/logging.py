@@ -258,7 +258,10 @@ class LoggingDescriptor:
                     self._measure_contexts[context_name] = depth
 
                 self._log_measure_time(
-                    level, f"{'  '*depth}End {msg() if callable(msg) else msg} took {duration} seconds", *args, **kwargs
+                    level,
+                    f"{'  '*depth}End {msg() if callable(msg) else msg} took {duration} seconds",
+                    *args,
+                    **kwargs,
                 )
         else:
             yield

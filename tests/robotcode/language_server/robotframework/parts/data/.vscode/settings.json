@@ -13,24 +13,16 @@
         }
     },
     "robotcode.languageServer.extraArgs": [
-        // "--debugpy",
+        "--debugpy",
         // "--debugpy-wait-for-client",
-        "--log",
-        "--log-level", "INFO",
+        // "--log",
+        // "--log-level", "INFO",
     ],
     "robotcode.robocop.enabled": false,
     "robotcode.robocop.exclude": ["E0303"],
-    // "robotcode.debug.groupOutput": false,
-    // "robotcode.robot.args": [
-    //     "-L", "TRACE"
-    // ],
-    // "robotcode.debug.outputLog": true,
-    // "robotcode.debug.outputMessages": true
-    //"python.analysis.diagnosticMode": "workspace"
-    //"robotcode.robot.paths": ["./tests", "./tests1"]
     "robotcode.analysis.referencesCodeLens": false,
     "robotcode.analysis.diagnosticMode": "openFilesOnly",
-    "robotcode.analysis.progressMode": "simple",
+    "robotcode.analysis.progressMode": "detailed",
     "robotcode.analysis.findUnusedReferences": true,
     "robotcode.analysis.cache.saveLocation": "workspaceFolder",
     "robotcode.analysis.cache.ignoredLibraries": [
@@ -49,5 +41,12 @@
     "robotcode.robot.variableFiles": [
         "${EXECDIR}/resources/testvars.yml"
     ],
-
+    "[robotframework]": {
+        "editor.wordBasedSuggestions": "off",
+        "editor.semanticHighlighting.enabled": true,
+        "editor.inlayHints.enabled": "offUnlessPressed",
+        "editor.quickSuggestions": {
+            "strings": "on"
+        }
+    },"
 }

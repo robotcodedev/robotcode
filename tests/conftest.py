@@ -73,14 +73,24 @@ def _std_replacements(request):
     yield r" 0x[0-9a-fA-F]+", " 0x?????????"
 
 
+@functools.lru_cache(maxsize=None)
+def re_compile(pattern: str) -> "re.Pattern[str]":
+    if IS_WIN:
+        # fix windows backwards slashes in regex
+        pattern = pattern.replace("\\", "\\\\")
+    return re.compile(pattern)
+
+
+def re_subn(pattern: str, repl: str, string: str):
+    return re_compile(pattern).subn(repl, string)
+
+
 def _std_conversion(recorded, request):
     fixed = []
+    replacements = _std_replacements(request)
     for line in recorded.split("\n"):
-        for regex, replacement in _std_replacements(request):
-            if IS_WIN:
-                # fix windows backwards slashes in regex
-                regex = regex.replace("\\", "\\\\")
-            line, __ = re.subn(regex, replacement, line)
+        for regex, replacement in replacements:
+            line, __ = re_subn(regex, replacement, line)
         fixed.append(line)
     return "\n".join(fixed)
 
