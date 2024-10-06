@@ -21,6 +21,7 @@ from typing import (
 )
 
 from robot.parsing.lexer.tokens import Token
+from robot.parsing.model.blocks import Section
 from robot.parsing.model.statements import (
     Arguments,
     Documentation,
@@ -73,6 +74,9 @@ from .protocol_part import RobotLanguageServerProtocolPart
 
 if get_robot_version() >= (5, 0):
     from robot.parsing.model.statements import ExceptHeader, WhileHeader
+
+if get_robot_version() >= (7, 0):
+    from robot.parsing.model.blocks import InvalidSection
 
 if TYPE_CHECKING:
     from ..protocol import RobotLanguageServerProtocol
@@ -981,7 +985,15 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
         last_col = 0
 
         def get_tokens() -> Iterator[Tuple[Token, ast.AST]]:
+            current_section: Optional[Section] = None
+            in_invalid_section = False
+
             for node in iter_nodes(model):
+                if cached_isinstance(node, Section):
+                    current_section = node
+                    if get_robot_version() >= (7, 0):
+                        in_invalid_section = cached_isinstance(current_section, InvalidSection)
+
                 check_current_task_canceled()
 
                 if cached_isinstance(node, Statement):
@@ -1145,7 +1157,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
                         continue
 
                     for token in node.tokens:
-                        if token.type == Token.COMMENT:
+                        if not in_invalid_section and token.type == Token.COMMENT:
                             continue
                         yield token, node
 
