@@ -1,7 +1,7 @@
 fail_fast: true
 default_language_version:
   python: python3.8
-default_stages: [commit, push]
+default_stages: [pre-commit, pre-push]
 repos:
   - repo: local
     hooks:
@@ -10,7 +10,7 @@ repos:
         entry: hatch run lint:install-packages
         pass_filenames: false
         language: system
-        stages: [commit]
+        stages: [pre-commit]
         types:
           - "python"
       - id: python_style
@@ -18,7 +18,7 @@ repos:
         entry: hatch run lint:style
         pass_filenames: false
         language: system
-        stages: [commit]
+        stages: [pre-commit]
         types:
           - "python"
       - id: python_typing
@@ -26,7 +26,7 @@ repos:
         entry: hatch run lint:typing
         pass_filenames: false
         language: system
-        stages: [commit]
+        stages: [pre-commit]
         types:
           - "python"
       - id: eslint
@@ -34,6 +34,6 @@ repos:
         entry: npm run lint
         pass_filenames: false
         language: system
-        stages: [commit]
+        stages: [pre-commit]
         types:
           - "javascript"
