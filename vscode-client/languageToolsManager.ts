@@ -66,6 +66,15 @@ export class LanguageToolsManager {
       },
     },
     {
+      label: "Start Terminal REPL",
+      description: "Starts an interactive Robot Framework REPL session in the terminal",
+      async action(folder?: vscode.WorkspaceFolder): Promise<void> {
+        if (folder !== undefined) {
+          await vscode.commands.executeCommand("robotcode.startTerminalRepl", folder);
+        }
+      },
+    },
+    {
       getLabel: (folder?: vscode.WorkspaceFolder): string => {
         const b = vscode.workspace
           .getConfiguration(CONFIG_SECTION, folder ?? vscode.window.activeTextEditor?.document)
@@ -203,7 +212,39 @@ export class LanguageToolsManager {
       this.pythonVersion,
       this.robocopVersion,
       this.tidyVersion,
+      vscode.commands.registerCommand(
+        "robotcode.startTerminalRepl",
+        async (folder: vscode.WorkspaceFolder | undefined): Promise<void> => {
+          if (folder === undefined) {
+            folder =
+              vscode.window.activeTextEditor !== undefined
+                ? vscode.workspace.getWorkspaceFolder(vscode.window.activeTextEditor?.document.uri)
+                : undefined;
 
+            if (!folder) {
+              if (vscode.workspace.workspaceFolders?.length === 1) {
+                folder = vscode.workspace.workspaceFolders[0];
+              } else if (vscode.workspace.workspaceFolders?.length == 0) {
+                folder = undefined;
+              } else {
+                folder = await vscode.window.showWorkspaceFolderPick();
+              }
+            }
+          }
+          if (folder === undefined) return;
+
+          const { pythonCommand, final_args } = await this.pythonManager.buildRobotCodeCommand(folder, ["repl"]);
+          vscode.window
+            .createTerminal({
+              name: `Robot REPL${vscode.workspace.workspaceFolders?.length === 1 ? "" : ` (${folder.name})`}`,
+              shellPath: pythonCommand,
+              shellArgs: final_args,
+              cwd: folder.uri,
+              iconPath: new vscode.ThemeIcon("robotcode-robot"),
+            })
+            .show();
+        },
+      ),
       vscode.commands.registerCommand("robotcode.disableRoboCop", async () => {
         if (vscode.window.activeTextEditor !== undefined) {
           await vscode.workspace
@@ -240,9 +281,7 @@ export class LanguageToolsManager {
             folder = vscode.workspace.workspaceFolders[0];
           } else {
             if (vscode.workspace.workspaceFolders !== undefined && vscode.workspace.workspaceFolders.length > 1) {
-              folder = await vscode.window.showWorkspaceFolderPick({
-                placeHolder: "Select a workspace folder to report an issue for",
-              });
+              folder = await vscode.window.showWorkspaceFolderPick();
             }
           }
         }
@@ -325,9 +364,7 @@ export class LanguageToolsManager {
               f = vscode.workspace.workspaceFolders[0];
             } else {
               if (vscode.workspace.workspaceFolders !== undefined && vscode.workspace.workspaceFolders.length > 1) {
-                f = await vscode.window.showWorkspaceFolderPick({
-                  placeHolder: "Select a workspace folder",
-                });
+                f = await vscode.window.showWorkspaceFolderPick();
               }
             }
           }

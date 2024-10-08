@@ -425,12 +425,18 @@ export class TestControllerManager {
     const config = vscode.workspace.getConfiguration(CONFIG_SECTION, folder);
     const paths = config.get<string[] | undefined>("robot.paths", undefined);
 
-    return (await this.languageClientsManager.pythonManager.executeRobotCode(folder, [
-      ...(profiles === undefined ? [] : profiles.flatMap((v) => ["--profile", v])),
-      ...(paths?.length ? paths.flatMap((v) => ["--default-path", v]) : ["--default-path", "."]),
-      "profiles",
-      "list",
-    ])) as RobotCodeProfilesResult;
+    return (await this.languageClientsManager.pythonManager.executeRobotCode(
+      folder,
+      [
+        ...(profiles === undefined ? [] : profiles.flatMap((v) => ["--profile", v])),
+        ...(paths?.length ? paths.flatMap((v) => ["--default-path", v]) : ["--default-path", "."]),
+        "profiles",
+        "list",
+      ],
+      "json",
+      true,
+      true,
+    )) as RobotCodeProfilesResult;
   }
 
   public async selectConfigurationProfiles(folder?: vscode.WorkspaceFolder): Promise<void> {
@@ -680,6 +686,9 @@ export class TestControllerManager {
         ...robotArgs,
         ...extraArgs,
       ],
+      "json",
+      true,
+      true,
       stdioData,
       token,
     )) as RobotCodeDiscoverResult;

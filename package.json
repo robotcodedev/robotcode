@@ -44,7 +44,8 @@
     "Behavior Driven Testing",
     "BDT",
     "Robotic Process Automation",
-    "RPA"
+    "RPA",
+    "notebookKernelRobotframeworkRepl"
   ],
   "featureFlags": {
     "usingNewInterpreterStorage": true
@@ -64,7 +65,8 @@
     "onDebug",
     "onDebugResolve:robotcode",
     "onDebugInitialConfigurations",
-    "onDebugDynamicConfigurations:robotcode"
+    "onDebugDynamicConfigurations:robotcode",
+    "onNotebook:robotframework-repl"
   ],
   "galleryBanner": {
     "theme": "dark",
@@ -81,6 +83,17 @@
   ],
   "main": "./out/extension.js",
   "contributes": {
+    "notebooks": [
+      {
+        "type": "robotframework-repl",
+        "displayName": "RobotFramework REPL",
+        "selector": [
+          {
+            "filenamePattern": "*.robotnb"
+          }
+        ]
+      }
+    ],
     "markdown.markdownItPlugins": true,
     "icons": {
       "robotcode-robot": {
@@ -382,6 +395,21 @@
         "configuration": "./language-configuration.json"
       },
       {
+        "id": "robotframework-repl",
+        "aliases": [
+          "Robot Framework REPL",
+          "robotframework repl"
+        ],
+        "icon": {
+          "light": "./icons/robot-light.png",
+          "dark": "./icons/robot-dark.png"
+        },
+        "extensions": [
+          ".robotrepl"
+        ],
+        "configuration": "./language-configuration.json"
+      },
+      {
         "id": "robotframework-injection"
       }
     ],
@@ -390,6 +418,19 @@
         "language": "robotframework",
         "scopeName": "source.robotframework",
         "path": "./syntaxes/robotframework.tmLanguage.json",
+        "tokenTypes": {
+          "string.unquoted.argument.robotframework": "other",
+          "variable.expression.robotframework": "other"
+        },
+        "unbalancedBracketScopes": [
+          "comment.robotframework",
+          "comment"
+        ]
+      },
+      {
+        "language": "robotframework-repl",
+        "scopeName": "source.robotframework-repl",
+        "path": "./syntaxes/robotframework-repl.tmLanguage.json",
         "tokenTypes": {
           "string.unquoted.argument.robotframework": "other",
           "variable.expression.robotframework": "other"
@@ -1017,6 +1058,11 @@
         "command": "robotcode.restartLanguageServers"
       },
       {
+        "title": "Start Terminal REPL",
+        "category": "RobotCode",
+        "command": "robotcode.startTerminalRepl"
+      },
+      {
         "title": "Disable RoboCop",
         "category": "RobotCode",
         "command": "robotcode.disableRoboCop",
@@ -1635,16 +1681,16 @@
     "vscode-languageclient": "^9.0.1"
   },
   "devDependencies": {
-    "@eslint/compat": "^1.1.1",
+    "@eslint/compat": "^1.2.0",
     "@eslint/eslintrc": "^3.1.0",
-    "@eslint/js": "^9.11.1",
+    "@eslint/js": "^9.12.0",
     "@types/fs-extra": "^11.0.4",
     "@types/node": "^22.7.2",
     "@types/vscode": "^1.86.0",
     "@vscode/test-electron": "^2.4.1",
     "@vscode/vsce": "^3.1.1",
     "esbuild": "^0.24.0",
-    "eslint": "^9.11.1",
+    "eslint": "^9.12.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-prettier": "^5.2.1",
     "globals": "^15.10.0",

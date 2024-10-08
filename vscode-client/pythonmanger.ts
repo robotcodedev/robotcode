@@ -167,27 +167,13 @@ export class PythonManager {
   public async executeRobotCode(
     folder: vscode.WorkspaceFolder,
     args: string[],
+    format?: string,
+    noColor?: boolean,
+    noPager?: boolean,
     stdioData?: string,
     token?: vscode.CancellationToken,
   ): Promise<unknown> {
-    const config = vscode.workspace.getConfiguration(CONFIG_SECTION, folder);
-    const robotCodeExtraArgs = config.get<string[]>("extraArgs", []);
-
-    const pythonCommand = await this.getPythonCommand(folder);
-    if (pythonCommand === undefined) throw new Error("Can't find python executable.");
-
-    const final_args = [
-      "-u",
-      "-X",
-      "utf8",
-      this.robotCodeMain,
-      ...robotCodeExtraArgs,
-      "--format",
-      "json",
-      "--no-color",
-      "--no-pager",
-      ...args,
-    ];
+    const { pythonCommand, final_args } = await this.buildRobotCodeCommand(folder, args, format, noColor, noPager);
 
     this.outputChannel.appendLine(`executeRobotCode: ${pythonCommand} ${final_args.join(" ")}`);
 
@@ -246,6 +232,33 @@ export class PythonManager {
         }
       });
     });
+  }
+
+  public async buildRobotCodeCommand(
+    folder: vscode.WorkspaceFolder,
+    args: string[],
+    format?: string,
+    noColor?: boolean,
+    noPager?: boolean,
+  ): Promise<{ pythonCommand: string; final_args: string[] }> {
+    const config = vscode.workspace.getConfiguration(CONFIG_SECTION, folder);
+    const robotCodeExtraArgs = config.get<string[]>("extraArgs", []);
+
+    const pythonCommand = await this.getPythonCommand(folder);
+    if (pythonCommand === undefined) throw new Error("Can't find python executable.");
+
+    const final_args = [
+      "-u",
+      "-X",
+      "utf8",
+      this.robotCodeMain,
+      ...robotCodeExtraArgs,
+      ...(format ? ["--format", format] : []),
+      ...(noColor ? ["--no-color"] : []),
+      ...(noPager ? ["--no-pager"] : []),
+      ...args,
+    ];
+    return { pythonCommand, final_args };
   }
 
   async getPythonInfo(folder: vscode.WorkspaceFolder): Promise<PythonInfo | undefined> {

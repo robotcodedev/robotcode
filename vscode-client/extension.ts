@@ -5,6 +5,7 @@ import { PythonManager } from "./pythonmanger";
 import { TestControllerManager } from "./testcontrollermanager";
 import { KeywordsTreeViewProvider } from "./keywordsTreeViewProvider";
 import { LanguageToolsManager } from "./languageToolsManager";
+import { NotebookManager } from "./notebook";
 
 class TerminalLink extends vscode.TerminalLink {
   constructor(
@@ -50,6 +51,7 @@ export async function activateAsync(context: vscode.ExtensionContext): Promise<v
     debugManager,
     testControllerManger,
     new LanguageToolsManager(context, languageClientManger, pythonManager, testControllerManger, outputChannel),
+    new NotebookManager(context, pythonManager, languageClientManger, outputChannel),
     vscode.commands.registerCommand("robotcode.showDocumentation", async (url: string) => {
       if (url.indexOf("&theme=%24%7Btheme%7D") > 0) {
         url = url.replace("%24%7Btheme%7D", getDocTheme());
@@ -63,6 +65,7 @@ export async function activateAsync(context: vscode.ExtensionContext): Promise<v
         {
           preserveFocus: true,
           viewColumn: vscode.ViewColumn.Beside,
+          preview: true,
         },
       );
     }),

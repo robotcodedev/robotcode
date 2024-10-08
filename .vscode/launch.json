@@ -30,9 +30,9 @@
 				"CMD_VAR_LONG": "long",
 			},
 			"args": [
-				"--verbose",
-				"--format",
-				"toml",
+				// "--verbose",
+				// "--format",
+				// "toml",
 				// "robot"
 				// "debug-launch",
 				// "--pipe-server",
@@ -54,8 +54,13 @@
 				// "discover",
 				// "files",
 				// ".."
-				"config",
-				"show",
+				// "config",
+				// "show",
+				"repl",
+				"-d", "output",
+				"-i",
+				"-v", "CMD_LINE_VAR:cmd_line_var",
+				// "E:\\source\\uvtestprj\\tests\\first.robotrepl"
 			]
 		},
 		{

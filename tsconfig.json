@@ -1,8 +1,13 @@
 {
   "compilerOptions": {
     "baseUrl": ".",
-    "module": "CommonJS",
-    "moduleResolution": "Node",
+    "paths": {
+      "*": [
+        "types/*"
+      ]
+    },
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
     "target": "ES2022",
     "outDir": "out",
     "lib": [
