@@ -2,6 +2,52 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [0.93.0](https://github.com/robotcodedev/robotcode/compare/v0.92.0..v0.93.0) - 2024-10-08
+
+### Bug Fixes
+
+- Logging of measure_time if log is disabled ([725c739](https://github.com/robotcodedev/robotcode/commit/725c739c0ed01b1249a611605c96e035467f03fa))
+- Enable supportsANSIStyling in DAP to reeanble colored output in debug console ([0d5616c](https://github.com/robotcodedev/robotcode/commit/0d5616c33215ed993052d4f50e7ad41a13b21058))
+- Corrected highlightning invalid sections for RF7 ([d139ff1](https://github.com/robotcodedev/robotcode/commit/d139ff1f9c309060cc12d1d7499cab1ada4a0b01))
+
+
+### Features
+
+- **cli:** New command line interface tool - Robot Framework REPL interpreter ([be386d2](https://github.com/robotcodedev/robotcode/commit/be386d244be0b9b85ca4fbe49597985652f066db))
+
+  The new CLI command `repl` introduces an interactive Robot Framework interpreter. You can install it by running `pip install robotcode[repl]` and start it via the command line using `robotcode repl`.
+
+  With this interactive interpreter, you can execute Robot Framework keywords without the need to run a full test suite. By default, all BuiltIn keywords are immediately accessible. To load a library, you can use the `import library` keyword, and for resources or variable files, you can use the corresponding built-in commands `import resource` and `import variables`. The outcome of any keyword execution, along with relevant log details, is displayed directly in the console.
+
+  You can exit the interpreter using the `exit` keyword or by pressing `CTRL`+`D` on Unix-like systems and `CTRL+Z` followed by `ENTER` on Windows.
+
+  At this stage, the implementation is fairly basic, but additional features for the REPL command are planned. This also serves as the first step toward an exciting new feature (spoiler alert!): Robot Framework Notebooks.
+
+- **debugger:** Increase timeouts for debugger to fit better to python debugger timeouts and introduce environment variables to override these timeouts ([63f3e4a](https://github.com/robotcodedev/robotcode/commit/63f3e4ac4d061eed95c95d615c501b2d4430e378))
+- **langserver:** Resolve variable in hover for documentation settings in testcases and keywords ([ffa9bdb](https://github.com/robotcodedev/robotcode/commit/ffa9bdb2cdca47b20f56b14deaece59fc49b9a13))
+- **vscode:** Introduce RobotCode: Start Terminal REPL command for launching the interactive Robot Framework interpreter directly from VSCode ([f4025fb](https://github.com/robotcodedev/robotcode/commit/f4025fb77c54ea49531c1ec67f1072c0a43c87f9))
+- Improved logging with time information ([27d21b5](https://github.com/robotcodedev/robotcode/commit/27d21b599d7d5005e2920a11b47583e32f9a049c))
+
+
+  - Operations that take a little longer now have an indication of how long they took
+  - 2 new command line switches `--log-format` and `--log-style`, see also the Python logging documentation
+- `--root` command line argument to specify a project root and disable autodetection of project root ([add4102](https://github.com/robotcodedev/robotcode/commit/add4102594ee73c3a93760eb4a5846358ddf2b1a))
+- Add `--no-vcs` command-line option to ignore VCS directories (e.g., .git) when detecting the project root ([d7e28f2](https://github.com/robotcodedev/robotcode/commit/d7e28f2c7c7ffd42ce3d989d1ae8f4e8207d7b81))
+
+
+  #closes 201
+
+
+### Performance
+
+- **langserver:** Speedup semantic highlightning a lot ([567ac72](https://github.com/robotcodedev/robotcode/commit/567ac72b393d6e42baadd575195744c5503da297))
+
+
+### Refactor
+
+- Some performance tweaks ([d3b39be](https://github.com/robotcodedev/robotcode/commit/d3b39be576dd80d757554708fff2cd0bc40354ff))
+
+
 ## [0.92.0](https://github.com/robotcodedev/robotcode/compare/v0.91.0..v0.92.0) - 2024-10-01
 
 ### Features
