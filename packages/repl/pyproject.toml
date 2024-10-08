@@ -3,8 +3,8 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "robotcode-runner"
-description = 'RobotCode runner for Robot Framework'
+name = "robotcode-repl"
+description = 'RobotCode REPL for Robot Framework'
 readme = { "file" = "README.md", "content-type" = "text/markdown" }
 requires-python = ">=3.8"
 license = {text = "Apache-2.0"}
@@ -27,15 +27,12 @@ classifiers = [
 ]
 dynamic = ["version"]
 dependencies = [
-  "robotframework>=4.1.0",
-  "robotcode-robot==0.92.0",
-  "robotcode-modifiers==0.92.0",
-  "robotcode-plugin==0.92.0",
-  "robotcode==0.92.0",
+  "robotcode-jsonrpc2==0.92.0",
+  "robotcode-runner==0.92.0"
 ]
 
 [project.entry-points.robotcode]
-runner = "robotcode.runner.hooks"
+repl = "robotcode.repl.hooks"
 
 [project.urls]
 Homepage = "https://robotcode.io"
@@ -46,7 +43,7 @@ Issues = "https://github.com/robotcodedev/robotcode/issues"
 Source = "https://github.com/robotcodedev/robotcode"
 
 [tool.hatch.version]
-path = "src/robotcode/runner/__version__.py"
+path = "src/robotcode/repl/__version__.py"
 
 [tool.hatch.build]
 dev-mode-dirs = ["src"]

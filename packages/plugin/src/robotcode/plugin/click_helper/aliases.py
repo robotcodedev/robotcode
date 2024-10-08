@@ -40,10 +40,9 @@ class AliasedGroup(click.Group):
             limit = formatter.width - 6 - max(len(cmd[0]) for cmd in commands)
 
             rows = []
-            for subcommand, cmd in commands:
+            for subcommand, cmd in sorted(commands):
                 help = cmd.get_short_help_str(limit)
-                rows.append((subcommand, help))
-                rows.append(("", f"(Alias for `{cmd.name}` command)"))
+                rows.append((subcommand, f"{help} (Alias for `{cmd.name}` command)"))
             if rows:
                 with formatter.section("Aliases"):
                     formatter.write_dl(rows)

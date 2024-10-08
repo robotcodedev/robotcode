@@ -2,7 +2,7 @@ import dataclasses
 import os
 from fnmatch import fnmatchcase
 from pathlib import Path
-from typing import Any, Callable, Dict, Iterable, List, Optional, Type, Union, get_args, get_origin
+from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Type, Union, get_args, get_origin
 
 import click
 
@@ -165,7 +165,7 @@ def files(app: Application, paths: List[Path], user: bool = False) -> None:
     required=False,
 )
 @pass_application
-def root(app: Application, paths: List[Path]) -> None:
+def root(app: Application, paths: Tuple[Path, ...]) -> None:
     """\
     Searches for the root folder of the project and prints them.
 

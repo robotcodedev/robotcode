@@ -282,6 +282,8 @@ playground/
 test-results
 results.html
 report.html
+log.html
+output.xml
 
 # pyenv
 .python-version

@@ -50,7 +50,7 @@ from robotcode.plugin import (
 from robotcode.plugin.click_helper.types import add_options
 from robotcode.robot.utils import get_robot_version
 
-from ..robot import ROBOT_OPTIONS, RobotFrameworkEx, handle_robot_options
+from ..robot import ROBOT_OPTIONS, ROBOT_VERSION_OPTIONS, RobotFrameworkEx, handle_robot_options
 
 
 class ErroneousTestSuite(running_model.TestSuite):
@@ -372,6 +372,7 @@ class Collector(SuiteVisitor):
     help="Read file contents from stdin. This is an internal option.",
     hidden=show_hidden_arguments(),
 )
+@add_options(*ROBOT_VERSION_OPTIONS)
 @pass_application
 def discover(app: Application, show_diagnostics: bool, read_from_stdin: bool) -> None:
     """\
@@ -942,7 +943,7 @@ def files(app: Application, full_paths: bool, paths: Iterable[Path]) -> None:
     ```
     """
 
-    root_folder, profile, cmd_options = handle_robot_options(app, ())
+    root_folder, profile, _cmd_options = handle_robot_options(app, ())
 
     search_paths = set(
         (

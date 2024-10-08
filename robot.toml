@@ -3,6 +3,10 @@ python-path = [
     "tests/robotcode/language_server/robotframework/parts/data/resources",
 ]
 paths = "tests/robotcode/language_server/robotframework/parts/data"
+#log-level = "TRACE:TRACE"
+
+[variables]
+a_robot_toml_variable = "a_robot_toml_value"
 
 [tool.robotcode-analyze]
 

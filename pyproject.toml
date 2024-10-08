@@ -78,12 +78,14 @@ yaml = ["PyYAML>=5.4"]
 lint = ["robotframework-robocop>=2.0.0"]
 tidy = ["robotframework-tidy>=2.0.0"]
 rest = ["docutils"]
+repl = ["robotcode-repl==0.92.0"]
 colored = ["rich"]
 all = [
   "robotcode-debugger==0.92.0",
   "robotcode-language-server==0.92.0",
   "robotcode-runner==0.92.0",
   "robotcode-analyze==0.92.0",
+  "robotcode-repl==0.92.0",
   "PyYAML>=5.4",
   "robotframework-robocop>=2.0.0",
   "robotframework-tidy>=2.0.0",

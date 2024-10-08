@@ -212,6 +212,19 @@ class RobotFrameworkEx(RobotFramework):
 
 
 # mypy: disable-error-code="arg-type"
+ROBOT_VERSION_OPTIONS = {
+    click.version_option(
+        version=__version__,
+        package_name="robotcode.runner",
+        prog_name="RobotCode Runner",
+        message=f"%(prog)s %(version)s\n{USAGE.splitlines()[0].split(' -- ')[0].strip()} {get_full_version()}",
+    ),
+}
+
+ROBOT_SIMPLE_OPTIONS: Set[click.Command] = {
+    *ROBOT_VERSION_OPTIONS,
+    click.argument("robot_options_and_args", nargs=-1, type=click.Path()),
+}
 
 ROBOT_OPTIONS: Set[click.Command] = {
     click.option(
@@ -226,13 +239,7 @@ ROBOT_OPTIONS: Set[click.Command] = {
         multiple=True,
         help="Excludes tests/tasks or suites by longname.",
     ),
-    click.version_option(
-        version=__version__,
-        package_name="robotcode.runner",
-        prog_name="RobotCode Runner",
-        message=f"%(prog)s %(version)s\n{USAGE.splitlines()[0].split(' -- ')[0].strip()} {get_full_version()}",
-    ),
-    click.argument("robot_options_and_args", nargs=-1, type=click.Path()),
+    *ROBOT_SIMPLE_OPTIONS,
 }
 
 
