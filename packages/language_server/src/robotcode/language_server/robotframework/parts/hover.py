@@ -184,11 +184,19 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
                 )
 
                 if found_range is not None:
-                    result.append((found_range, kw.to_markdown()))
+                    txt = kw.to_markdown()
+                    if kw.libtype == "RESOURCE":
+                        txt = namespace.imports_manager.replace_variables_scalar(
+                            txt,
+                            str(document.uri.to_path().parent),
+                            namespace.get_resolvable_variables(nodes, position),
+                        )
+                    result.append((found_range, txt))
             if result:
                 r = result[0][0]
                 if all(r == i[0] for i in result):
                     doc = "\n\n---\n\n".join(i[1] for i in result)
+
                     return Hover(
                         contents=MarkupContent(kind=MarkupKind.MARKDOWN, value=doc),
                         range=r,
@@ -233,6 +241,7 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
         document: TextDocument,
         position: Position,
     ) -> Optional[Hover]:
+        namespace = self.parent.documents_cache.get_namespace(document)
         test_case = cast(TestCase, node)
 
         if not position.is_in_range(range_from_node(test_case.header)):
@@ -259,6 +268,11 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
             txt += "\n*Tags*: "
             txt += f"{', '.join(tags.values)}\n"
 
+        txt = namespace.imports_manager.replace_variables_scalar(
+            txt,
+            str(document.uri.to_path().parent),
+            namespace.get_resolvable_variables(nodes, position),
+        )
         return Hover(
             contents=MarkupContent(kind=MarkupKind.MARKDOWN, value=MarkDownFormatter().format(txt)),
             range=range_from_token(name_token),

@@ -45,12 +45,8 @@ from robot.parsing.lexer.tokens import Token
 from robot.parsing.lexer.tokens import Token as RobotToken
 from robot.parsing.model.blocks import Keyword
 from robot.parsing.model.statements import Arguments, KeywordName
-from robot.running.arguments.argumentresolver import (
-    ArgumentResolver,
-    DictToKwargs,
-    NamedArgumentResolver,
-    VariableReplacer,
-)
+from robot.running.arguments.argumentresolver import ArgumentResolver, DictToKwargs, NamedArgumentResolver
+from robot.running.arguments.argumentresolver import VariableReplacer as ArgumentsVariableReplacer
 from robot.running.arguments.argumentspec import ArgInfo
 from robot.running.arguments.argumentspec import (
     ArgumentSpec as RobotArgumentSpec,
@@ -64,6 +60,7 @@ from robot.utils.robotpath import find_file as robot_find_file
 from robot.variables import Variables
 from robot.variables.filesetter import PythonImporter, YamlImporter
 from robot.variables.finders import VariableFinder
+from robot.variables.replacer import VariableReplacer
 from robot.variables.search import contains_variable
 from robotcode.core.lsp.types import Position, Range
 from robotcode.core.utils.path import normalized_path
@@ -578,9 +575,9 @@ class ArgumentSpec:
 
         positional, named = MyNamedArgumentResolver(self.__robot_arguments).resolve(arguments, variables)
         if get_robot_version() < (7, 0):
-            positional, named = VariableReplacer(resolve_variables_until).replace(positional, named, variables)
+            positional, named = ArgumentsVariableReplacer(resolve_variables_until).replace(positional, named, variables)
         else:
-            positional, named = VariableReplacer(self.__robot_arguments, resolve_variables_until).replace(
+            positional, named = ArgumentsVariableReplacer(self.__robot_arguments, resolve_variables_until).replace(
                 positional, named, variables
             )
         positional, named = DictToKwargs(self.__robot_arguments, dict_to_kwargs).handle(positional, named)
@@ -1583,6 +1580,26 @@ def resolve_variable(
         return VariableFinder(robot_variables.store).find(name.replace("\\", "\\\\"))
 
     return name.replace("\\", "\\\\")
+
+
+def replace_variables_scalar(
+    scalar: str,
+    working_dir: str = ".",
+    base_dir: str = ".",
+    command_line_variables: Optional[Dict[str, Optional[Any]]] = None,
+    variables: Optional[Dict[str, Optional[Any]]] = None,
+) -> Any:
+
+    _update_env(working_dir)
+
+    if contains_variable(scalar, "$@&%"):
+        robot_variables = resolve_robot_variables(working_dir, base_dir, command_line_variables, variables)
+        if get_robot_version() >= (6, 1):
+            return VariableReplacer(robot_variables).replace_scalar(scalar.replace("\\", "\\\\"))
+
+        return VariableReplacer(robot_variables.store).replace_scalar(scalar.replace("\\", "\\\\"))
+
+    return scalar.replace("\\", "\\\\")
 
 
 @contextmanager

@@ -64,6 +64,7 @@ from .library_doc import (
     get_variables_doc,
     is_library_by_path,
     is_variables_by_path,
+    replace_variables_scalar,
     resolve_args,
     resolve_variable,
 )
@@ -1567,6 +1568,20 @@ class ImportsManager:
     ) -> Any:
         return resolve_variable(
             name,
+            str(self.root_folder),
+            base_dir,
+            self.get_resolvable_command_line_variables(),
+            variables,
+        )
+
+    def replace_variables_scalar(
+        self,
+        scalar: str,
+        base_dir: str = ".",
+        variables: Optional[Dict[str, Any]] = None,
+    ) -> Any:
+        return replace_variables_scalar(
+            scalar,
             str(self.root_folder),
             base_dir,
             self.get_resolvable_command_line_variables(),
