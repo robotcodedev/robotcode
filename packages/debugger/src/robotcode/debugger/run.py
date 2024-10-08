@@ -103,7 +103,7 @@ def _debug_adapter_server_(
     asyncio.run(_debug_adapter_server_async(on_config_done_callback, mode, addresses, port, pipe_name))
 
 
-DEFAULT_TIMEOUT = 10.0
+DEFAULT_TIMEOUT = 15.0
 
 
 config_done_callback: Optional[Callable[["DebugAdapterServer"], None]] = None

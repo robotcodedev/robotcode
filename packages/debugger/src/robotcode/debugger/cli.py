@@ -39,20 +39,23 @@ DEBUGPY_DEFAULT_PORT = 5678
     default=True,
     help="Waits until a debug client is connected.",
     show_default=True,
+    show_envvar=True,
 )
 @click.option(
     "--wait-for-client-timeout",
     type=float,
-    default=10,
+    default=15,
     help="Timeout in seconds for waiting for a connection with a debug client.",
     show_default=True,
+    show_envvar=True,
 )
 @click.option(
     "--configuration-done-timeout",
     type=float,
-    default=10,
+    default=15,
     help="Timeout to wait for a configuration from client.",
     show_default=True,
+    show_envvar=True,
 )
 @click.option(
     "--debugpy/--no-debugpy",
@@ -60,6 +63,7 @@ DEBUGPY_DEFAULT_PORT = 5678
     default=False,
     help="Enable/disable python debugging.",
     show_default=True,
+    show_envvar=True,
 )
 @click.option(
     "--debugpy-wait-for-client/--no-debugpy-wait-for-client",
@@ -67,6 +71,7 @@ DEBUGPY_DEFAULT_PORT = 5678
     default=True,
     help="Waits for a debugpy client to connect.",
     show_default=False,
+    show_envvar=True,
 )
 @click.option(
     "--debugpy-port",

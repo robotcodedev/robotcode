@@ -118,7 +118,7 @@ class DebugAdapterServerProtocol(DebugAdapterProtocol):
         self._disconnected_event.set()
 
     @_logger.call
-    def wait_for_client(self, timeout: float = 5) -> bool:
+    def wait_for_client(self, timeout: float = 15) -> bool:
         if not self._connected_event.wait(timeout):
             raise TimeoutError("Timeout waiting for client")
 
@@ -132,7 +132,7 @@ class DebugAdapterServerProtocol(DebugAdapterProtocol):
         return self._initialized
 
     @_logger.call
-    def wait_for_disconnected(self, timeout: float = 5) -> bool:
+    def wait_for_disconnected(self, timeout: float = 15) -> bool:
         self._disconnected_event.wait(timeout)
 
         return not self._connected
