@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [0.93.1](https://github.com/robotcodedev/robotcode/compare/v0.93.0..v0.93.1) - 2024-10-09
+
+### Bug Fixes
+
+- **langserver:** Stabilized resolving of variables in test case and keyword documentation ([1bad58f](https://github.com/robotcodedev/robotcode/commit/1bad58fa16e10f0fe5b5f947b7fbea93b5497d8d))
+
+
 ## [0.93.0](https://github.com/robotcodedev/robotcode/compare/v0.92.0..v0.93.0) - 2024-10-08
 
 ### Bug Fixes
