@@ -711,6 +711,7 @@ class KeywordDoc(SourceEntity):
         add_signature: bool = True,
         header_level: int = 2,
         add_type: bool = True,
+        modify_doc_handler: Optional[Callable[[str], str]] = None,
     ) -> str:
         result = ""
 
@@ -723,12 +724,18 @@ class KeywordDoc(SourceEntity):
 
             result += f"##{'#' * header_level} Documentation:\n"
 
+            doc: Optional[str] = None
             if self.doc_format == ROBOT_DOC_FORMAT:
-                result += MarkDownFormatter().format(self.doc)
+                doc = MarkDownFormatter().format(self.doc)
             elif self.doc_format == REST_DOC_FORMAT:
-                result += convert_from_rest(self.doc)
+                doc = convert_from_rest(self.doc)
             else:
-                result += self.doc
+                doc = self.doc
+
+            if doc is not None:
+                if modify_doc_handler is not None:
+                    doc = modify_doc_handler(doc)
+                result += doc
 
         return result
 
@@ -1588,6 +1595,7 @@ def replace_variables_scalar(
     base_dir: str = ".",
     command_line_variables: Optional[Dict[str, Optional[Any]]] = None,
     variables: Optional[Dict[str, Optional[Any]]] = None,
+    ignore_errors: bool = False,
 ) -> Any:
 
     _update_env(working_dir)
@@ -1595,9 +1603,13 @@ def replace_variables_scalar(
     if contains_variable(scalar, "$@&%"):
         robot_variables = resolve_robot_variables(working_dir, base_dir, command_line_variables, variables)
         if get_robot_version() >= (6, 1):
-            return VariableReplacer(robot_variables).replace_scalar(scalar.replace("\\", "\\\\"))
+            return VariableReplacer(robot_variables).replace_scalar(
+                scalar.replace("\\", "\\\\"), ignore_errors=ignore_errors
+            )
 
-        return VariableReplacer(robot_variables.store).replace_scalar(scalar.replace("\\", "\\\\"))
+        return VariableReplacer(robot_variables.store).replace_scalar(
+            scalar.replace("\\", "\\\\"), ignore_errors=ignore_errors
+        )
 
     return scalar.replace("\\", "\\\\")
 

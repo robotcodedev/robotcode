@@ -1579,6 +1579,7 @@ class ImportsManager:
         scalar: str,
         base_dir: str = ".",
         variables: Optional[Dict[str, Any]] = None,
+        ignore_errors: bool = False,
     ) -> Any:
         return replace_variables_scalar(
             scalar,
@@ -1586,4 +1587,5 @@ class ImportsManager:
             base_dir,
             self.get_resolvable_command_line_variables(),
             variables,
+            ignore_errors=ignore_errors,
         )

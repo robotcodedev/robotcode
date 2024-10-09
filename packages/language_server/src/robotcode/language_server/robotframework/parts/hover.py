@@ -184,13 +184,19 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
                 )
 
                 if found_range is not None:
-                    txt = kw.to_markdown()
+
                     if kw.libtype == "RESOURCE":
-                        txt = namespace.imports_manager.replace_variables_scalar(
-                            txt,
-                            str(document.uri.to_path().parent),
-                            namespace.get_resolvable_variables(nodes, position),
+                        txt = kw.to_markdown(
+                            modify_doc_handler=lambda t: namespace.imports_manager.replace_variables_scalar(
+                                t,
+                                str(document.uri.to_path().parent),
+                                namespace.get_resolvable_variables(),
+                                ignore_errors=True,
+                            )
                         )
+                    else:
+                        txt = kw.to_markdown()
+
                     result.append((found_range, txt))
             if result:
                 r = result[0][0]
@@ -271,7 +277,8 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
         txt = namespace.imports_manager.replace_variables_scalar(
             txt,
             str(document.uri.to_path().parent),
-            namespace.get_resolvable_variables(nodes, position),
+            namespace.get_resolvable_variables(),
+            ignore_errors=True,
         )
         return Hover(
             contents=MarkupContent(kind=MarkupKind.MARKDOWN, value=MarkDownFormatter().format(txt)),
