@@ -66,7 +66,7 @@ Profiles can also inherit settings from each other to reduce duplication. The `m
 output-dir = "output/shared"
 
 [profiles.dev]
-merge = ["shared"]
+inherit = ["shared"]
 variables = { NAME = "Dev" }
 ```
 
