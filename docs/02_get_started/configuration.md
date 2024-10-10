@@ -59,14 +59,14 @@ variables = { NAME = "Production" }
 
 ### Inheriting Profiles
 
-Profiles can also inherit settings from each other to reduce duplication. The `merge` keyword allows you to combine settings from multiple profiles.
+Profiles can also inherit settings from each other to reduce duplication. The `inherits` keyword allows you to combine settings from multiple profiles.
 
 ```toml
 [profiles.shared]
 output-dir = "output/shared"
 
 [profiles.dev]
-inherit = ["shared"]
+inherits = ["shared"]
 variables = { NAME = "Dev" }
 ```
 
