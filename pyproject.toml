@@ -80,6 +80,7 @@ tidy = ["robotframework-tidy>=2.0.0"]
 rest = ["docutils"]
 repl = ["robotcode-repl==0.93.1"]
 colored = ["rich"]
+env = ["python-dotenv==1.0.0"]
 all = [
   "robotcode-debugger==0.93.1",
   "robotcode-language-server==0.93.1",
