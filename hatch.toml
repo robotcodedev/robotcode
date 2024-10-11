@@ -75,7 +75,7 @@ post-install-commands = ["pip install -U -e {root:uri}/../robotframework"]
 python = "3.8"
 
 [[envs.devel.matrix]]
-python = ["3.8", "3.9", "3.10", "3.11", "3.12"]
+python = ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13"]
 rf = ["rf41", "rf50", "rf60", "rf61", "rf70", "rf71"]
 
 [envs.devel.overrides]

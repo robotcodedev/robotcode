@@ -242,6 +242,8 @@ def add_type_signature_to_cache(t: Type[Any]) -> None:
 def _get_signature_cached(t: Type[Any]) -> inspect.Signature:
     r = __signature_cache.get(t, __NOT_SET)
     if r is __NOT_SET:
+        if t is bool:
+            raise ValueError
         r = __signature_cache[t] = inspect.signature(t)
     return cast(inspect.Signature, r)
 

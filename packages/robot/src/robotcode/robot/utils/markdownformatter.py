@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import functools
 import itertools
 import re
 from abc import ABC, abstractmethod
@@ -224,7 +223,7 @@ _                          # end of italic
             ("*", self._format_bold),
             ("_", self._format_italic),
             ("``", self._format_code),
-            ("", functools.partial(LinkFormatter().format_link)),
+            ("", LinkFormatter().format_link),
         ]
 
     def format(self, line: str) -> str:
@@ -249,9 +248,10 @@ _                          # end of italic
         return self._code.sub("\\1`\\3`", line)
 
 
-class PreformattedFormatter(Formatter):
-    _format_line = functools.partial(LineFormatter().format)
+_line_formatter = LineFormatter()
 
+
+class PreformattedFormatter(Formatter):
     def _handles(self, line: str) -> bool:
         return line.startswith("| ") or line == "|"
 
@@ -261,8 +261,6 @@ class PreformattedFormatter(Formatter):
 
 
 class ParagraphFormatter(Formatter):
-    _format_line = functools.partial(LineFormatter().format)
-
     def __init__(self, other_formatters: List[Formatter]) -> None:
         super().__init__()
         self._other_formatters = other_formatters
@@ -271,18 +269,17 @@ class ParagraphFormatter(Formatter):
         return not any(other.handles(line) for other in self._other_formatters)
 
     def format(self, lines: List[str]) -> str:
-        return self._format_line(" ".join(lines)) + "\n\n"
+        return _line_formatter.format(" ".join(lines)) + "\n\n"
 
 
 class ListFormatter(Formatter):
     _strip_lines = False
-    _format_item = functools.partial(LineFormatter().format)
 
     def _handles(self, line: str) -> bool:
         return bool(line.strip().startswith("- ") or line.startswith(" ") and self._lines)
 
     def format(self, lines: List[str]) -> str:
-        items = ["- %s" % self._format_item(line) for line in self._combine_lines(lines)]
+        items = ["- %s" % _line_formatter.format(line) for line in self._combine_lines(lines)]
         return "\n".join(items) + "\n\n"
 
     def _combine_lines(self, lines: List[str]) -> Iterator[str]:
@@ -311,7 +308,7 @@ class RulerFormatter(SingleLineFormatter):
 class TableFormatter(Formatter):
     _table_line = re.compile(r"^\| (.* |)\|$")
     _line_splitter = re.compile(r" \|(?= )")
-    _format_cell_content = functools.partial(LineFormatter().format)
+    _format_cell_content = _line_formatter.format
 
     def _handles(self, line: str) -> bool:
         return self._table_line.match(line) is not None
@@ -351,4 +348,4 @@ class TableFormatter(Formatter):
         if content.startswith("=") and content.endswith("="):
             content = content[1:-1]
 
-        return f" {self._format_cell_content(content).strip()} "
+        return f" {_line_formatter.format(content).strip()} "
