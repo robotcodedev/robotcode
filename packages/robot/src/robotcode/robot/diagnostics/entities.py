@@ -246,7 +246,7 @@ class GlobalVariableDefinition(VariableDefinition):
 
 
 @dataclass
-class BuiltInVariableDefinition(VariableDefinition):
+class BuiltInVariableDefinition(GlobalVariableDefinition):
     type: VariableDefinitionType = VariableDefinitionType.BUILTIN_VARIABLE
     resolvable: bool = True
 
@@ -266,7 +266,7 @@ class CommandLineVariableDefinition(GlobalVariableDefinition):
 
 
 @dataclass
-class ArgumentDefinition(VariableDefinition):
+class ArgumentDefinition(LocalVariableDefinition):
     type: VariableDefinitionType = VariableDefinitionType.ARGUMENT
     keyword_doc: Optional["KeywordDoc"] = field(default=None, compare=False, metadata={"nosave": True})
 

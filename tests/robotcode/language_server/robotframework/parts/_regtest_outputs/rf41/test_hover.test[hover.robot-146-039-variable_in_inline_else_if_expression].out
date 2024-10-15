@@ -2,4 +2,14 @@ data: !GeneratedTestData
   character: 39
   line: 146
   name: variable in inline else if expression
-result: null
+result: !Hover
+  contents:
+    kind: markdown
+    value: (suite variable) ${B}
+  range:
+    end:
+      character: 40
+      line: 146
+    start:
+      character: 39
+      line: 146

@@ -1,6 +1,7 @@
 import concurrent.futures
 import functools
 import itertools
+import logging
 import time
 import uuid
 from concurrent.futures import CancelledError
@@ -337,6 +338,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
         self.ensure_workspace_loaded()
 
         while True:
+
             check_current_task_canceled()
 
             self.on_workspace_diagnostics_start(self)
@@ -359,6 +361,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
                 with self._logger.measure_time(
                     lambda: f"analyzing workspace for {len(documents)} documents",
                     context_name="workspace_diagnostics",
+                    level=logging.CRITICAL,
                 ):
 
                     self.on_workspace_diagnostics_analyze(self)
@@ -375,13 +378,15 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
                         max=len(documents),
                         start=False,
                     ) as progress:
+                        breaked = False
                         for i, document in enumerate(documents):
                             check_current_task_canceled()
 
-                            if self._break_diagnostics_loop_event.is_set():
+                            if breaked or self._break_diagnostics_loop_event.is_set():
                                 self._logger.debug(
                                     "break workspace diagnostics loop 2", context_name="workspace_diagnostics"
                                 )
+                                breaked = True
                                 self.on_workspace_diagnostics_break(self)
                                 break
 
@@ -409,6 +414,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
                                 self._logger.debug(
                                     lambda: f"Analyzing {document.uri} cancelled", context_name="workspace_diagnostics"
                                 )
+                                breaked = True
                             except BaseException as e:
                                 ex = e
                                 self._logger.exception(
@@ -420,7 +426,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
                                 with self._current_diagnostics_task_lock:
                                     self._current_diagnostics_task = None
 
-                    if self._break_diagnostics_loop_event.is_set():
+                    if breaked or self._break_diagnostics_loop_event.is_set():
                         self._logger.debug("break workspace diagnostics loop 3", context_name="workspace_diagnostics")
                         self.on_workspace_diagnostics_break(self)
                         continue
@@ -436,13 +442,15 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
                 with self._logger.measure_time(
                     lambda: f"collect workspace diagnostic for {len(documents_to_collect)} documents",
                     context_name="collect_workspace_diagnostics",
+                    level=logging.CRITICAL,
                 ):
-
+                    breaked = False
                     for document in set(documents) - set(documents_to_collect):
                         check_current_task_canceled()
 
-                        if self._break_diagnostics_loop_event.is_set():
+                        if breaked or self._break_diagnostics_loop_event.is_set():
                             self._logger.debug("break workspace diagnostics loop 4")
+                            breaked = True
                             self.on_workspace_diagnostics_break(self)
                             break
 
@@ -456,10 +464,6 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
                         start=False,
                     ) as progress:
                         for i, document in enumerate(documents_to_collect):
-                            self._logger.debug(
-                                lambda: f"collect diagnostics for {document.uri}",
-                                context_name="collect_workspace_diagnostics",
-                            )
                             check_current_task_canceled()
 
                             if self._break_diagnostics_loop_event.is_set():
@@ -503,6 +507,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
                                     lambda: f"Collecting diagnostics for {document.uri} cancelled",
                                     context_name="collect_workspace_diagnostics",
                                 )
+                                breaked = True
                             except BaseException as e:
                                 ex = e
                                 self._logger.exception(
@@ -584,8 +589,6 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
         send_diagnostics: bool,
         collect_slow: bool,
     ) -> None:
-        self._logger.debug(lambda: f"Get diagnostics for {document}")
-
         if debounce:
             check_current_task_canceled(0.75)
 
@@ -661,8 +664,6 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
         *args: Any,
         **kwargs: Any,
     ) -> DocumentDiagnosticReport:
-        self._logger.debug("textDocument/diagnostic")
-
         self.parent.ensure_initialized()
 
         try:

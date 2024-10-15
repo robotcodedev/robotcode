@@ -2068,7 +2068,7 @@ class CompletionCollector(ModelHelper):
                 return None
 
             try:
-                libdoc = self.namespace.get_imported_variables_libdoc(import_node.name, import_node.args)
+                libdoc = self.namespace.get_variables_import_libdoc(import_node.name, import_node.args)
                 if libdoc is not None:
                     init = next((v for v in libdoc.inits.values()), None)
                     if init:

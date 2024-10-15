@@ -39,3 +39,12 @@ result:
     start:
       character: 42
       line: 102
+- !DocumentHighlight
+  kind: 2
+  range:
+    end:
+      character: 40
+      line: 106
+    start:
+      character: 39
+      line: 106

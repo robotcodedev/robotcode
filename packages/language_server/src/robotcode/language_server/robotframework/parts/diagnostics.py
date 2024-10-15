@@ -79,7 +79,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
         for doc in self.parent.documents.documents:
             namespace = self.parent.documents_cache.get_only_initialized_namespace(doc)
             if namespace is not None:
-                lib_docs = (e.library_doc for e in namespace.get_imported_variables().values())
+                lib_docs = (e.library_doc for e in namespace.get_variables_imports().values())
                 if any(lib_doc in lib_docs for lib_doc in variables):
                     self.parent.diagnostics.force_refresh_document(doc)
 

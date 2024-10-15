@@ -13,7 +13,7 @@
         }
     },
     "robotcode.languageServer.extraArgs": [
-        "--debugpy",
+        //"--debugpy",
         // "--debugpy-wait-for-client",
         // "--log",
         // "--log-level", "INFO",

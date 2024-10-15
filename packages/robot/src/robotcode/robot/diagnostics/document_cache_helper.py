@@ -410,7 +410,16 @@ class DocumentsCacheHelper:
         return document.get_cache(self.__get_namespace)
 
     def __get_namespace(self, document: TextDocument) -> Namespace:
-        return self.__get_namespace_for_document_type(document, None)
+        document_type = self.get_document_type(document)
+
+        if document_type == DocumentType.INIT:
+            return self.get_init_namespace(document)
+        if document_type == DocumentType.RESOURCE:
+            return self.get_resource_namespace(document)
+        if document_type == DocumentType.GENERAL:
+            return self.get_general_namespace(document)
+
+        return self.__get_namespace_for_document_type(document, document_type)
 
     def get_resource_namespace(self, document: TextDocument) -> Namespace:
         return document.get_cache(self.__get_resource_namespace)
@@ -448,9 +457,6 @@ class DocumentsCacheHelper:
 
     def __namespace_initialized(self, sender: Namespace) -> None:
         if sender.document is not None:
-            self._logger.debug(
-                lambda: f"Save initialized Namespace: {sender.document.uri if sender.document else None}"
-            )
             sender.document.set_data(self.INITIALIZED_NAMESPACE, sender)
             self.namespace_initialized(self, sender)
 

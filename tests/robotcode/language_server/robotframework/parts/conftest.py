@@ -3,7 +3,7 @@ import logging
 import shutil
 import threading
 from pathlib import Path
-from typing import Any, Iterator
+from typing import Any, AsyncIterable, Iterator
 
 import pytest
 
@@ -41,9 +41,9 @@ if robotcode_cache_path.exists():
 
 
 @pytest.fixture(scope="session", ids=generate_test_id)
-def protocol(
+async def protocol(
     request: pytest.FixtureRequest,
-) -> Iterator[RobotLanguageServerProtocol]:
+) -> AsyncIterable[RobotLanguageServerProtocol]:
     logging.warning("Starting language server")
 
     server = RobotLanguageServer()

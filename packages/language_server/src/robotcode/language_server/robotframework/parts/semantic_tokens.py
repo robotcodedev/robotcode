@@ -52,6 +52,7 @@ from robotcode.core.lsp.types import (
     SemanticTokenTypes,
 )
 from robotcode.core.text_document import TextDocument, range_to_utf16
+from robotcode.robot.diagnostics.keyword_finder import DEFAULT_BDD_PREFIXES
 from robotcode.robot.diagnostics.library_doc import (
     ALL_RUN_KEYWORDS_MATCHERS,
     BUILTIN_LIBRARY_NAME,
@@ -61,7 +62,7 @@ from robotcode.robot.diagnostics.library_doc import (
     LibraryDoc,
 )
 from robotcode.robot.diagnostics.model_helper import ModelHelper
-from robotcode.robot.diagnostics.namespace import DEFAULT_BDD_PREFIXES, Namespace
+from robotcode.robot.diagnostics.namespace import Namespace
 from robotcode.robot.utils import get_robot_version
 from robotcode.robot.utils.ast import (
     cached_isinstance,
@@ -1050,7 +1051,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
                                 yield token, node
                             continue
                     if cached_isinstance(node, VariablesImport) and node.name:
-                        lib_doc = namespace.get_imported_variables_libdoc(node.name, node.args)
+                        lib_doc = namespace.get_variables_import_libdoc(node.name, node.args)
                         kw_doc = lib_doc.inits.keywords[0] if lib_doc and lib_doc.inits else None
                         if lib_doc is not None:
                             for token in node.tokens:

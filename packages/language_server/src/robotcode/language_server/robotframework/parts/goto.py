@@ -65,16 +65,17 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart):
                 )
 
                 if found_range is not None and variable.source:
-                    result.append(
-                        LocationLink(
-                            origin_selection_range=found_range,
-                            target_uri=str(Uri.from_path(variable.source)),
-                            target_range=variable.range,
-                            target_selection_range=(
-                                range_from_token(variable.name_token) if variable.name_token else variable.range
-                            ),
+                    if variable.source:
+                        result.append(
+                            LocationLink(
+                                origin_selection_range=found_range,
+                                target_uri=str(Uri.from_path(variable.source)),
+                                target_range=variable.range,
+                                target_selection_range=(
+                                    range_from_token(variable.name_token) if variable.name_token else variable.range
+                                ),
+                            )
                         )
-                    )
 
             if result:
                 return result

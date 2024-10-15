@@ -360,7 +360,7 @@ class RobotInlayHintProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
         try:
             namespace = self.parent.documents_cache.get_namespace(document)
 
-            lib_doc = namespace.get_imported_variables_libdoc(library_node.name, library_node.args)
+            lib_doc = namespace.get_variables_import_libdoc(library_node.name, library_node.args)
 
             if lib_doc is None or lib_doc.errors:
                 lib_doc = namespace.imports_manager.get_libdoc_for_variables_import(

@@ -74,6 +74,7 @@ from robotcode.robot.diagnostics.entities import (
 )
 from robotcode.robot.utils import get_robot_version
 from robotcode.robot.utils.ast import (
+    cached_isinstance,
     get_variable_token,
     range_from_token,
     strip_variable_token,
@@ -247,7 +248,7 @@ class KeywordMatcher:
         return self._embedded_arguments
 
     def __eq__(self, o: object) -> bool:
-        if isinstance(o, KeywordMatcher):
+        if cached_isinstance(o, KeywordMatcher):
             if self._is_namespace != o._is_namespace:
                 return False
 
@@ -256,7 +257,7 @@ class KeywordMatcher:
 
             o = o.name
 
-        if not isinstance(o, str):
+        if not cached_isinstance(o, str):
             return False
 
         if self.embedded_arguments:
@@ -907,7 +908,8 @@ class KeywordStore:
         return self.__matchers
 
     def __getitem__(self, key: str) -> KeywordDoc:
-        items = [(k, v) for k, v in self._matchers.items() if k == key]
+        key_matcher = KeywordMatcher(key)
+        items = [(k, v) for k, v in self._matchers.items() if k == key_matcher]
 
         if not items:
             raise KeyError
@@ -933,8 +935,10 @@ class KeywordStore:
             multiple_keywords=[v for _, v in items],
         )
 
-    def __contains__(self, __x: object) -> bool:
-        return any(k == __x for k in self._matchers.keys())
+    def __contains__(self, _x: object) -> bool:
+        if not isinstance(_x, KeywordMatcher):
+            _x = KeywordMatcher(str(_x))
+        return any(k == _x for k in self._matchers.keys())
 
     def __len__(self) -> int:
         return len(self.keywords)
@@ -961,7 +965,11 @@ class KeywordStore:
             return default
 
     def get_all(self, key: str) -> List[KeywordDoc]:
-        return [v for k, v in self._matchers.items() if k == key]
+        return list(self.iter_all(key))
+
+    def iter_all(self, key: str) -> Iterable[KeywordDoc]:
+        key_matcher = KeywordMatcher(key)
+        yield from (v for k, v in self._matchers.items() if k == key_matcher)
 
 
 @dataclass
@@ -1540,7 +1548,6 @@ def resolve_robot_variables(
     command_line_variables: Optional[Dict[str, Optional[Any]]] = None,
     variables: Optional[Dict[str, Optional[Any]]] = None,
 ) -> Any:
-
     result: Variables = _get_default_variables().copy()
 
     for k, v in {
@@ -1554,14 +1561,16 @@ def resolve_robot_variables(
             result[k1] = v1
 
     if variables is not None:
-        vars = [_Variable(k, v) for k, v in variables.items() if v is not None and not isinstance(v, NativeValue)]
+        vars = [
+            _Variable(k, v) for k, v in variables.items() if v is not None and not cached_isinstance(v, NativeValue)
+        ]
         if get_robot_version() < (7, 0):
             result.set_from_variable_table(vars)
         else:
             result.set_from_variable_section(vars)
 
         for k2, v2 in variables.items():
-            if isinstance(v2, NativeValue):
+            if cached_isinstance(v2, NativeValue):
                 result[k2] = v2.value
 
         result.resolve_delayed()
@@ -1576,7 +1585,6 @@ def resolve_variable(
     command_line_variables: Optional[Dict[str, Optional[Any]]] = None,
     variables: Optional[Dict[str, Optional[Any]]] = None,
 ) -> Any:
-
     _update_env(working_dir)
 
     if contains_variable(name, "$@&%"):
@@ -2645,8 +2653,6 @@ def complete_variables_import(
 def get_model_doc(
     model: ast.AST,
     source: str,
-    model_type: str = "RESOURCE",
-    scope: str = "GLOBAL",
     append_model_errors: bool = True,
 ) -> LibraryDoc:
     errors: List[Error] = []
@@ -2777,8 +2783,8 @@ def get_model_doc(
     libdoc = LibraryDoc(
         name=lib.name or "",
         doc=lib.doc,
-        type=model_type,
-        scope=scope,
+        type="RESOURCE",
+        scope="GLOBAL",
         source=source,
         line_no=1,
         errors=errors,

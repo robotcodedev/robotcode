@@ -35,3 +35,6 @@ class Error:
     CONFLICTING_LIBRARY_KEYWORDS = "ConflictingLibraryKeywords"
     INVALID_HEADER = "InvalidHeader"
     DEPRECATED_HEADER = "DeprecatedHeader"
+    OVERRIDDEN_BY_COMMANDLINE = "OverriddenByCommandLine"
+    VARIABLE_ALREADY_DEFINED = "VariableAlreadyDefined"
+    VARIABLE_OVERRIDDEN = "VariableOverridden"

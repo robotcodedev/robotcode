@@ -2,6 +2,8 @@ import ast
 from concurrent.futures import CancelledError
 from typing import TYPE_CHECKING, Any, Callable, List, Optional, Type, cast
 
+from robot.parsing.lexer.tokens import Token as RobotToken
+from robot.parsing.model import statements
 from robot.parsing.model.statements import Statement
 
 from robotcode.core.concurrent import check_current_task_canceled
@@ -21,9 +23,9 @@ from robotcode.core.utils.caching import SimpleLRUCache
 from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.robot.diagnostics.entities import (
     LibraryEntry,
-    LocalVariableDefinition,
     ResourceEntry,
     VariableDefinition,
+    VariableDefinitionType,
 )
 from robotcode.robot.diagnostics.library_doc import (
     RESOURCE_FILE_EXTENSION,
@@ -227,7 +229,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
         if include_declaration and variable.source:
             result.append(Location(str(Uri.from_path(variable.source)), variable.name_range))
 
-        if isinstance(variable, (LocalVariableDefinition)):
+        if variable.type == VariableDefinitionType.LOCAL_VARIABLE:
             result.extend(self.find_variable_references_in_file(document, variable, False))
         else:
             result.extend(
@@ -256,7 +258,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
                 and variable.source != str(doc.uri.to_path())
                 and not any(e for e in (namespace.get_resources()).values() if e.library_doc.source == variable.source)
                 and not any(
-                    e for e in namespace.get_imported_variables().values() if e.library_doc.source == variable.source
+                    e for e in namespace.get_variables_imports().values() if e.library_doc.source == variable.source
                 )
                 and not any(e for e in namespace.get_command_line_variables() if e.source == variable.source)
             ):
@@ -543,7 +545,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
         namespace = self.parent.documents_cache.get_namespace(doc)
 
         result: List[Location] = []
-        for lib_entry in namespace.get_imported_variables().values():
+        for lib_entry in namespace.get_variables_imports().values():
             if lib_entry.import_source == str(doc.uri.to_path()) and lib_entry.library_doc.source == library_doc.source:
                 result.append(Location(str(doc.uri), lib_entry.import_range))
 
@@ -569,7 +571,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
             return None
 
         if position in range_from_token(name_token):
-            library_doc = namespace.get_imported_variables_libdoc(import_node.name, import_node.args)
+            library_doc = namespace.get_variables_import_libdoc(import_node.name, import_node.args)
 
             if library_doc is None:
                 return None
@@ -583,30 +585,27 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
 
         return None
 
-    def find_tag_references_in_file(self, doc: TextDocument, tag: str, is_normalized: bool = False) -> List[Location]:
-        from robot.parsing.lexer.tokens import Token as RobotToken
-        from robot.parsing.model import statements
-
-        tag_statments = (
-            (statements.Tags, statements.ForceTags, statements.DefaultTags)
-            if get_robot_version() < (6, 0)
+    TAG_STATEMENTS = (
+        (statements.Tags, statements.ForceTags, statements.DefaultTags)
+        if get_robot_version() < (6, 0)
+        else (
+            (
+                statements.Tags,
+                statements.ForceTags,
+                statements.DefaultTags,
+                statements.KeywordTags,
+            )
+            if get_robot_version() < (7, 0)
             else (
-                (
-                    statements.Tags,
-                    statements.ForceTags,
-                    statements.DefaultTags,
-                    statements.KeywordTags,
-                )
-                if get_robot_version() < (7, 0)
-                else (
-                    statements.Tags,
-                    statements.TestTags,
-                    statements.DefaultTags,
-                    statements.KeywordTags,
-                )
+                statements.Tags,
+                statements.TestTags,
+                statements.DefaultTags,
+                statements.KeywordTags,
             )
         )
+    )
 
+    def find_tag_references_in_file(self, doc: TextDocument, tag: str, is_normalized: bool = False) -> List[Location]:
         model = self.parent.documents_cache.get_model(doc)
 
         result: List[Location] = []
@@ -614,8 +613,8 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
             tag = normalize(tag)
 
         for node in iter_nodes(model):
-            if isinstance(node, tag_statments):
-                for token in node.get_tokens(RobotToken.ARGUMENT):
+            if isinstance(node, self.TAG_STATEMENTS):
+                for token in cast(Statement, node).get_tokens(RobotToken.ARGUMENT):
                     if token.value and normalize(token.value) == tag:
                         result.append(Location(str(doc.uri), range_from_token(token)))
 

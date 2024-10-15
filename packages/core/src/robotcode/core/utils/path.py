@@ -19,7 +19,7 @@ def path_is_relative_to(
 _RE_DRIVE_LETTER_PATH = re.compile(r"^[a-zA-Z]:")
 
 
-def normalized_path(path: Union[Path, str, "os.PathLike[Any]"]) -> Path:
+def normalized_path(path: "Union[str, os.PathLike[str]]") -> Path:
     p = os.path.normpath(os.path.abspath(path))
 
     if sys.platform == "win32" and _RE_DRIVE_LETTER_PATH.match(str(p)):
@@ -28,7 +28,7 @@ def normalized_path(path: Union[Path, str, "os.PathLike[Any]"]) -> Path:
     return Path(p)
 
 
-def normalized_path_full(path: Union[Path, str, "os.PathLike[Any]"]) -> Path:
+def normalized_path_full(path: Union[str, "os.PathLike[Any]"]) -> Path:
     p = normalized_path(path)
 
     orig_parents = list(reversed(p.parents))

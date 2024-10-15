@@ -1,6 +1,6 @@
 import logging
 from pathlib import Path
-from typing import List, Literal, Optional
+from typing import Any, List, Literal, Optional
 
 import click
 
@@ -18,6 +18,11 @@ from robotcode.plugin.manager import PluginManager
 
 from .__version__ import __version__
 from .commands import config, profiles
+
+
+class RobotCodeFormatter(logging.Formatter):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
 
 
 @click.group(
@@ -114,7 +119,7 @@ from .commands import config, profiles
     "--log-format",
     type=str,
     help="Sets the log format. See python logging documentation for more information.",
-    default="%(name)s:%(levelname)s: %(message)s",
+    default=logging.BASIC_FORMAT,
     show_default=True,
     show_envvar=True,
 )
@@ -251,6 +256,13 @@ def robotcode(
             style=log_style,
             filename=log_filename,
         )
+
+        try:
+            logging.root.handlers[0].formatter = RobotCodeFormatter(
+                fmt=log_format, style=log_style, defaults={"indent": ""}
+            )
+        except TypeError:
+            pass
 
     if debugpy:
         from robotcode.core.utils.debugpy import (

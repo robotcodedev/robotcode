@@ -578,6 +578,10 @@ class ImportsManager:
         self._resource_document_changed_timer_interval = 1
         self._resource_document_changed_documents: Set[TextDocument] = set()
 
+        self._resource_libdoc_cache: "weakref.WeakKeyDictionary[ast.AST, Dict[Tuple[str, bool], LibraryDoc]]" = (
+            weakref.WeakKeyDictionary()
+        )
+
     def __del__(self) -> None:
         try:
             if self._executor is not None:
@@ -854,7 +858,7 @@ class ImportsManager:
     ) -> None:
         try:
             if len(entry.references) == 0 or now:
-                self._logger.debug(lambda: f"Remove Va riables Entry {entry_key}")
+                self._logger.debug(lambda: f"Remove Variables Entry {entry_key}")
                 with self._variables_lock:
                     if len(entry.references) == 0:
                         e1 = self._variables.get(entry_key, None)
@@ -1273,17 +1277,29 @@ class ImportsManager:
         self,
         model: ast.AST,
         source: str,
-        model_type: str = "RESOURCE",
-        scope: str = "GLOBAL",
         append_model_errors: bool = True,
     ) -> LibraryDoc:
-        return get_model_doc(
+        key = (source, append_model_errors)
+
+        entry = None
+        if model in self._resource_libdoc_cache:
+            entry = self._resource_libdoc_cache.get(model, None)
+
+            if entry and key in entry:
+                return entry[key]
+
+        result = get_model_doc(
             model=model,
             source=source,
-            model_type=model_type,
-            scope=scope,
             append_model_errors=append_model_errors,
         )
+        if entry is None:
+            entry = {}
+            self._resource_libdoc_cache[model] = entry
+
+        entry[key] = result
+
+        return result
 
     def _get_variables_libdoc_handler(
         self,
@@ -1489,9 +1505,15 @@ class ImportsManager:
         variables: Optional[Dict[str, Any]] = None,
     ) -> Tuple["Namespace", LibraryDoc]:
         with self._logger.measure_time(lambda: f"getting namespace and libdoc for {name}", context_name="import"):
-            entry = self._get_entry_for_resource_import(name, base_dir, sentinel, variables)
+            with self._logger.measure_time(lambda: f"getting resource entry {name}", context_name="import"):
+                entry = self._get_entry_for_resource_import(name, base_dir, sentinel, variables)
 
-            return entry.get_namespace(), entry.get_libdoc()
+            with self._logger.measure_time(lambda: f"getting namespace {name}", context_name="import"):
+                namespace = entry.get_namespace()
+            with self._logger.measure_time(lambda: f"getting libdoc {name}", context_name="import"):
+                libdoc = entry.get_libdoc()
+
+            return namespace, libdoc
 
     def get_namespace_for_resource_import(
         self,

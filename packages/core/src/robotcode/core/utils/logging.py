@@ -16,6 +16,7 @@ from typing import (
     Dict,
     Iterator,
     List,
+    Mapping,
     Optional,
     Type,
     TypeVar,
@@ -192,6 +193,7 @@ class LoggingDescriptor:
         *args: Any,
         stacklevel: int = 2,
         context_name: Optional[str] = None,
+        extra: Optional[Mapping[str, object]] = None,
         **kwargs: Any,
     ) -> None:
         if self.is_enabled_for(level) and condition is not None and condition() or condition is None:
@@ -199,13 +201,17 @@ class LoggingDescriptor:
             if context_name is not None:
                 depth = self._measure_contexts.get(context_name, 0)
 
-            msg = ("  " * depth) + (msg() if callable(msg) else msg)
+            if depth > 0:
+                extra = {**extra} if extra is not None else {}
+                if "indent" not in extra:
+                    extra["indent"] = "  " * depth
 
             self.logger.log(
                 level,
-                msg,
+                msg() if callable(msg) else msg,
                 *args,
                 stacklevel=stacklevel,
+                extra=extra,
                 **kwargs,
             )
 
@@ -215,6 +221,8 @@ class LoggingDescriptor:
         condition: Optional[Callable[[], bool]] = None,
         *args: Any,
         stacklevel: int = 3,
+        context_name: Optional[str] = None,
+        extra: Optional[Mapping[str, object]] = None,
         **kwargs: Any,
     ) -> None:
         return self.log(
@@ -223,6 +231,8 @@ class LoggingDescriptor:
             condition,
             *args,
             stacklevel=stacklevel,
+            context_name=context_name,
+            extra=extra,
             **kwargs,
         )
 
@@ -236,6 +246,7 @@ class LoggingDescriptor:
         *args: Any,
         level: int = logging.DEBUG,
         context_name: Optional[str] = None,
+        extra: Optional[Mapping[str, object]] = None,
         **kwargs: Any,
     ) -> Iterator[None]:
         if self.is_enabled_for(level):
@@ -244,9 +255,19 @@ class LoggingDescriptor:
             if context_name is not None:
                 depth = self._measure_contexts.get(context_name, 0)
 
-                self._measure_contexts[context_name] = depth + 1
+                self._measure_contexts[context_name] = depth
 
-            self._log_measure_time(level, f"{'  '*depth}Start {msg() if callable(msg) else msg}", *args, **kwargs)
+            self._log_measure_time(
+                level,
+                lambda: f"Start {msg() if callable(msg) else msg}",
+                *args,
+                context_name=context_name,
+                extra=extra,
+                **kwargs,
+            )
+
+            if context_name is not None:
+                self._measure_contexts[context_name] = depth + 1
 
             start_time = time.monotonic()
             try:
@@ -259,8 +280,10 @@ class LoggingDescriptor:
 
                 self._log_measure_time(
                     level,
-                    f"{'  '*depth}End {msg() if callable(msg) else msg} took {duration} seconds",
+                    lambda: f"End {msg() if callable(msg) else msg} took {duration:.4f} seconds",
                     *args,
+                    context_name=context_name,
+                    extra=extra,
                     **kwargs,
                 )
         else:
@@ -272,9 +295,13 @@ class LoggingDescriptor:
         condition: Optional[Callable[[], bool]] = None,
         *args: Any,
         stacklevel: int = 3,
+        context_name: Optional[str] = None,
+        extra: Optional[Mapping[str, object]] = None,
         **kwargs: Any,
     ) -> None:
-        return self.log(logging.INFO, msg, condition, *args, stacklevel=stacklevel, **kwargs)
+        return self.log(
+            logging.INFO, msg, condition, *args, stacklevel=stacklevel, context_name=context_name, extra=extra, **kwargs
+        )
 
     def warning(
         self,
@@ -282,6 +309,8 @@ class LoggingDescriptor:
         condition: Optional[Callable[[], bool]] = None,
         *args: Any,
         stacklevel: int = 3,
+        context_name: Optional[str] = None,
+        extra: Optional[Mapping[str, object]] = None,
         **kwargs: Any,
     ) -> None:
         return self.log(
@@ -290,6 +319,8 @@ class LoggingDescriptor:
             condition,
             *args,
             stacklevel=stacklevel,
+            context_name=context_name,
+            extra=extra,
             **kwargs,
         )
 
@@ -299,6 +330,8 @@ class LoggingDescriptor:
         condition: Optional[Callable[[], bool]] = None,
         *args: Any,
         stacklevel: int = 3,
+        context_name: Optional[str] = None,
+        extra: Optional[Mapping[str, object]] = None,
         **kwargs: Any,
     ) -> None:
         return self.log(
@@ -307,6 +340,8 @@ class LoggingDescriptor:
             condition,
             *args,
             stacklevel=stacklevel,
+            context_name=context_name,
+            extra=extra,
             **kwargs,
         )
 
@@ -316,9 +351,13 @@ class LoggingDescriptor:
         condition: Optional[Callable[[], bool]] = None,
         *args: Any,
         stacklevel: int = 3,
+        context_name: Optional[str] = None,
+        extra: Optional[Mapping[str, object]] = None,
         **kwargs: Any,
     ) -> None:
-        return self.log(TRACE, msg, condition, *args, stacklevel=stacklevel, **kwargs)
+        return self.log(
+            TRACE, msg, condition, *args, stacklevel=stacklevel, context_name=context_name, extra=extra, **kwargs
+        )
 
     def exception(
         self,
@@ -327,6 +366,8 @@ class LoggingDescriptor:
         exc_info: Any = True,
         *args: Any,
         stacklevel: int = 3,
+        context_name: Optional[str] = None,
+        extra: Optional[Mapping[str, object]] = None,
         level: Optional[int] = None,
         **kwargs: Any,
     ) -> None:
@@ -342,6 +383,8 @@ class LoggingDescriptor:
                 *args,
                 exc_info=exc_info,
                 stacklevel=stacklevel,
+                context_name=context_name,
+                extra=extra,
                 **kwargs,
             )
 
@@ -352,6 +395,7 @@ class LoggingDescriptor:
             *args,
             exc_info=exc_info,
             stacklevel=stacklevel,
+            extra=extra,
             **kwargs,
         )
 
@@ -361,6 +405,8 @@ class LoggingDescriptor:
         condition: Optional[Callable[[], bool]] = None,
         *args: Any,
         stacklevel: int = 3,
+        context_name: Optional[str] = None,
+        extra: Optional[Mapping[str, object]] = None,
         **kwargs: Any,
     ) -> None:
         return self.log(
@@ -369,6 +415,8 @@ class LoggingDescriptor:
             condition,
             *args,
             stacklevel=stacklevel,
+            context_name=context_name,
+            extra=extra,
             **kwargs,
         )
 

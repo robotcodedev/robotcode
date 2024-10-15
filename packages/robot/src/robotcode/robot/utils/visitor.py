@@ -1,6 +1,5 @@
 import ast
 from abc import ABC
-from collections import defaultdict
 from typing import (
     Any,
     AsyncIterator,
@@ -9,7 +8,6 @@ from typing import (
     Iterator,
     Optional,
     Type,
-    Union,
 )
 
 from robot.parsing.model.statements import Statement
@@ -65,17 +63,12 @@ async def iter_nodes(node: ast.AST) -> AsyncIterator[ast.AST]:
                 yield n
 
 
-class _NotSet:
-    pass
-
-
 class VisitorFinder(ABC):
-    __NOT_SET = _NotSet()
-    __cls_finder_cache__: Dict[Type[Any], Union[Callable[..., Any], None, _NotSet]]
+    __cls_finder_cache__: Dict[Type[Any], Optional[Callable[..., Any]]]
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
         super().__init_subclass__(**kwargs)
-        cls.__cls_finder_cache__ = defaultdict(lambda: cls.__NOT_SET)
+        cls.__cls_finder_cache__ = {}
 
     @classmethod
     def __find_visitor(cls, node_cls: Type[Any]) -> Optional[Callable[..., Any]]:
@@ -93,10 +86,11 @@ class VisitorFinder(ABC):
 
     @classmethod
     def _find_visitor(cls, node_cls: Type[Any]) -> Optional[Callable[..., Any]]:
-        result = cls.__cls_finder_cache__[node_cls]
-        if result is cls.__NOT_SET:
-            result = cls.__cls_finder_cache__[node_cls] = cls.__find_visitor(node_cls)
-        return result  # type: ignore[return-value]
+        if node_cls in cls.__cls_finder_cache__:
+            return cls.__cls_finder_cache__[node_cls]
+
+        result = cls.__cls_finder_cache__[node_cls] = cls.__find_visitor(node_cls)
+        return result
 
 
 class Visitor(VisitorFinder):

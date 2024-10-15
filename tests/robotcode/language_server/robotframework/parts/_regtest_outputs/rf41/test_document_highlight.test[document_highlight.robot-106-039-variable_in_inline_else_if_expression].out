@@ -4,10 +4,46 @@ data: !GeneratedTestData
   name: variable in inline else if expression
 result:
 - !DocumentHighlight
-  kind: 1
+  kind: 3
   range:
     end:
-      character: 39
+      character: 3
+      line: 25
+    start:
+      character: 2
+      line: 25
+- !DocumentHighlight
+  kind: 2
+  range:
+    end:
+      character: 18
+      line: 89
+    start:
+      character: 17
+      line: 89
+- !DocumentHighlight
+  kind: 2
+  range:
+    end:
+      character: 17
+      line: 97
+    start:
+      character: 16
+      line: 97
+- !DocumentHighlight
+  kind: 2
+  range:
+    end:
+      character: 43
+      line: 102
+    start:
+      character: 42
+      line: 102
+- !DocumentHighlight
+  kind: 2
+  range:
+    end:
+      character: 40
       line: 106
     start:
       character: 39

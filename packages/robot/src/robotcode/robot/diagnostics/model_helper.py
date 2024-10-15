@@ -6,6 +6,7 @@ import token as python_token
 from io import StringIO
 from tokenize import TokenError, generate_tokens
 from typing import (
+    TYPE_CHECKING,
     Any,
     Iterator,
     List,
@@ -37,13 +38,16 @@ from .entities import (
     VariableDefinition,
     VariableNotFoundDefinition,
 )
+from .keyword_finder import DEFAULT_BDD_PREFIXES
 from .library_doc import (
     ArgumentInfo,
     KeywordArgumentKind,
     KeywordDoc,
     LibraryDoc,
 )
-from .namespace import DEFAULT_BDD_PREFIXES, Namespace
+
+if TYPE_CHECKING:
+    from .namespace import Namespace
 
 
 class ModelHelper:
@@ -52,7 +56,7 @@ class ModelHelper:
         cls,
         keyword_doc: Optional[KeywordDoc],
         argument_tokens: List[Token],
-        namespace: Namespace,
+        namespace: "Namespace",
         position: Position,
     ) -> Tuple[Optional[Tuple[Optional[KeywordDoc], Token]], List[Token]]:
         if keyword_doc is None or not keyword_doc.is_any_run_keyword():
@@ -200,7 +204,7 @@ class ModelHelper:
         keyword_name: Optional[str],
         keyword_token: Token,
         argument_tokens: List[Token],
-        namespace: Namespace,
+        namespace: "Namespace",
         position: Position,
         analyse_run_keywords: bool = True,
     ) -> Optional[Tuple[Optional[KeywordDoc], Token]]:
@@ -222,7 +226,7 @@ class ModelHelper:
 
     @classmethod
     def get_namespace_info_from_keyword_token(
-        cls, namespace: Namespace, keyword_token: Token
+        cls, namespace: "Namespace", keyword_token: Token
     ) -> Tuple[Optional[LibraryEntry], Optional[str]]:
         lib_entry: Optional[LibraryEntry] = None
         kw_namespace: Optional[str] = None
@@ -243,7 +247,7 @@ class ModelHelper:
 
         return lib_entry, kw_namespace
 
-    __match_extended = re.compile(
+    match_extended = re.compile(
         r"""
     (.+?)          # base name (group 1)
     ([^\s\w].+)    # extended part (group 2)
@@ -254,7 +258,7 @@ class ModelHelper:
     @staticmethod
     def iter_expression_variables_from_token(
         expression: Token,
-        namespace: Namespace,
+        namespace: "Namespace",
         nodes: Optional[List[ast.AST]],
         position: Optional[Position] = None,
         skip_commandline_variables: bool = False,
@@ -374,7 +378,7 @@ class ModelHelper:
     def iter_variables_from_token(
         cls,
         token: Token,
-        namespace: Namespace,
+        namespace: "Namespace",
         nodes: Optional[List[ast.AST]],
         position: Optional[Position] = None,
         skip_commandline_variables: bool = False,
@@ -413,7 +417,7 @@ class ModelHelper:
                         ):
                             yield v
                     elif base == "" and return_not_found:
-                        yield (
+                        yield (  # TODO: robotframework ignores this case, should we do the same or raise an error/hint?
                             sub_token,
                             VariableNotFoundDefinition(
                                 sub_token.lineno,
@@ -481,7 +485,7 @@ class ModelHelper:
                     and sub_token.value[1:2] == "{"
                     and sub_token.value[-1:] == "}"
                 ):
-                    match = cls.__match_extended.match(name[2:-1])
+                    match = cls.match_extended.match(name[2:-1])
                     if match is not None:
                         base_name, _ = match.groups()
                         name = f"{name[0]}{{{base_name.strip()}}}"
@@ -557,7 +561,7 @@ class ModelHelper:
     BDD_TOKEN = re.compile(r"^(Given|When|Then|And|But)$", flags=re.IGNORECASE)
 
     @classmethod
-    def split_bdd_prefix(cls, namespace: Namespace, token: Token) -> Tuple[Optional[Token], Optional[Token]]:
+    def split_bdd_prefix(cls, namespace: "Namespace", token: Token) -> Tuple[Optional[Token], Optional[Token]]:
         bdd_token = None
 
         parts = token.value.split()
@@ -590,7 +594,7 @@ class ModelHelper:
         return bdd_token, token
 
     @classmethod
-    def strip_bdd_prefix(cls, namespace: Namespace, token: Token) -> Token:
+    def strip_bdd_prefix(cls, namespace: "Namespace", token: Token) -> Token:
         if get_robot_version() < (6, 0):
             bdd_match = cls.BDD_TOKEN_REGEX.match(token.value)
             if bdd_match:
@@ -627,7 +631,7 @@ class ModelHelper:
         return token
 
     @classmethod
-    def is_bdd_token(cls, namespace: Namespace, token: Token) -> bool:
+    def is_bdd_token(cls, namespace: "Namespace", token: Token) -> bool:
         if get_robot_version() < (6, 0):
             bdd_match = cls.BDD_TOKEN.match(token.value)
             return bool(bdd_match)
@@ -651,7 +655,7 @@ class ModelHelper:
     @classmethod
     def get_keyword_definition_at_line(cls, library_doc: LibraryDoc, value: str, line: int) -> Optional[KeywordDoc]:
         return next(
-            (k for k in library_doc.keywords.get_all(value) if k.line_no == line),
+            (k for k in library_doc.keywords.iter_all(value) if k.line_no == line),
             None,
         )
 
