@@ -294,7 +294,7 @@ class NamespaceAnalyzer(Visitor):
     if get_robot_version() >= (7, 0):
 
         def visit_Var(self, node: Statement) -> None:  # noqa: N802
-            self._visit_statement(node)
+            self._analyze_statement_variables(node)
 
             variable = node.get_token(Token.VARIABLE)
             if variable is None:
@@ -348,13 +348,15 @@ class NamespaceAnalyzer(Visitor):
                 pass
 
     def visit_Statement(self, node: Statement) -> None:  # noqa: N802
-        self._visit_statement(node)
+        self._analyze_statement_variables(node)
 
-    def _visit_statement(self, node: Statement, severity: DiagnosticSeverity = DiagnosticSeverity.ERROR) -> None:
+    def _analyze_statement_variables(
+        self, node: Statement, severity: DiagnosticSeverity = DiagnosticSeverity.ERROR
+    ) -> None:
         for token in node.get_tokens(Token.ARGUMENT):
             self._analyze_token_variables(token, severity)
 
-    def _visit_expression_statement(
+    def _analyze_statement_expression_variables(
         self, node: Statement, severity: DiagnosticSeverity = DiagnosticSeverity.ERROR
     ) -> None:
 
@@ -367,7 +369,7 @@ class NamespaceAnalyzer(Visitor):
     ) -> None:
         self._in_setting = True
         try:
-            self._visit_statement(node, severity)
+            self._analyze_statement_variables(node, severity)
         finally:
             self._in_setting = False
 
@@ -921,7 +923,7 @@ class NamespaceAnalyzer(Visitor):
 
         if keyword_token is not None and keyword_token.value and keyword_token.value.upper() not in ("", "NONE"):
             self._analyze_token_variables(keyword_token)
-            self._visit_statement(node)
+            self._analyze_statement_variables(node)
 
             self._analyze_keyword_call(
                 node,
@@ -977,7 +979,7 @@ class NamespaceAnalyzer(Visitor):
             return
 
         self._analyze_token_variables(keyword_token)
-        self._visit_statement(node)
+        self._analyze_statement_variables(node)
 
         self._analyze_keyword_call(
             node,
@@ -1202,12 +1204,12 @@ class NamespaceAnalyzer(Visitor):
                 pass
 
     def visit_InlineIfHeader(self, node: Statement) -> None:  # noqa: N802
-        self._visit_expression_statement(node)
+        self._analyze_statement_expression_variables(node)
 
         self._analyze_assign_statement(node)
 
     def visit_ForHeader(self, node: Statement) -> None:  # noqa: N802
-        self._visit_statement(node)
+        self._analyze_statement_variables(node)
 
         variables = node.get_tokens(Token.VARIABLE)
         for variable in variables:
@@ -1243,7 +1245,8 @@ class NamespaceAnalyzer(Visitor):
                         )
 
     def visit_ExceptHeader(self, node: Statement) -> None:  # noqa: N802
-        self._visit_statement(node)
+        self._analyze_statement_variables(node)
+        self._analyze_option_token_variables(node)
 
         variable_token = node.get_token(Token.VARIABLE)
 
@@ -1299,7 +1302,7 @@ class NamespaceAnalyzer(Visitor):
         return "".join(temp), ()
 
     def visit_TemplateArguments(self, node: TemplateArguments) -> None:  # noqa: N802
-        self._visit_statement(node)
+        self._analyze_statement_variables(node)
 
         template = self._template or self._test_template
         if template is not None and template.value is not None and template.value.upper() not in ("", "NONE"):
@@ -1339,10 +1342,10 @@ class NamespaceAnalyzer(Visitor):
         self.generic_visit(node)
 
     def visit_DefaultTags(self, node: Statement) -> None:  # noqa: N802
-        self._visit_statement(node, DiagnosticSeverity.HINT)
+        self._analyze_statement_variables(node, DiagnosticSeverity.HINT)
 
     def visit_ForceTags(self, node: Statement) -> None:  # noqa: N802
-        self._visit_statement(node, DiagnosticSeverity.HINT)
+        self._analyze_statement_variables(node, DiagnosticSeverity.HINT)
 
         if get_robot_version() >= (6, 0):
             tag = node.get_token(Token.FORCE_TAGS)
@@ -1356,7 +1359,7 @@ class NamespaceAnalyzer(Visitor):
                 )
 
     def visit_TestTags(self, node: Statement) -> None:  # noqa: N802
-        self._visit_statement(node, DiagnosticSeverity.HINT)
+        self._analyze_statement_variables(node, DiagnosticSeverity.HINT)
 
         if get_robot_version() >= (6, 0):
             tag = node.get_token(Token.FORCE_TAGS)
@@ -1376,7 +1379,7 @@ class NamespaceAnalyzer(Visitor):
         self._visit_settings_statement(node, DiagnosticSeverity.HINT)
 
     def visit_Timeout(self, node: Statement) -> None:  # noqa: N802
-        self._visit_statement(node, DiagnosticSeverity.HINT)
+        self._analyze_statement_variables(node, DiagnosticSeverity.HINT)
 
     def visit_SingleValue(self, node: Statement) -> None:  # noqa: N802
         self._visit_settings_statement(node, DiagnosticSeverity.HINT)
@@ -1402,7 +1405,7 @@ class NamespaceAnalyzer(Visitor):
                     )
 
     def visit_SectionHeader(self, node: Statement) -> None:  # noqa: N802
-        self._visit_statement(node)
+        self._analyze_statement_variables(node)
 
         if get_robot_version() >= (7, 0):
             token = node.get_token(*Token.HEADER_TOKENS)
@@ -1425,7 +1428,7 @@ class NamespaceAnalyzer(Visitor):
                 )
 
     def visit_ReturnSetting(self, node: Statement) -> None:  # noqa: N802
-        self._visit_statement(node)
+        self._analyze_statement_variables(node)
 
         if get_robot_version() >= (7, 0):
             token = node.get_token(Token.RETURN_SETTING)
@@ -1456,7 +1459,7 @@ class NamespaceAnalyzer(Visitor):
             return
 
         self._analyze_token_variables(name_token)
-        self._visit_statement(node)
+        self._analyze_statement_variables(node)
 
         found = False
         entries = self._namespace.get_import_entries()
@@ -1485,7 +1488,7 @@ class NamespaceAnalyzer(Visitor):
             return
 
         self._analyze_token_variables(name_token)
-        self._visit_statement(node)
+        self._analyze_statement_variables(node)
 
         found = False
         entries = self._namespace.get_import_entries()
@@ -1513,7 +1516,7 @@ class NamespaceAnalyzer(Visitor):
             return
 
         self._analyze_token_variables(name_token)
-        self._visit_statement(node)
+        self._analyze_statement_variables(node)
 
         found = False
         entries = self._namespace.get_import_entries()
@@ -1533,8 +1536,11 @@ class NamespaceAnalyzer(Visitor):
                     break
 
     def visit_WhileHeader(self, node: Statement) -> None:  # noqa: N802
-        self._visit_expression_statement(node)
+        self._analyze_statement_expression_variables(node)
 
+        self._analyze_option_token_variables(node)
+
+    def _analyze_option_token_variables(self, node: Statement) -> None:
         for token in node.get_tokens(Token.OPTION):
             if token.value and "=" in token.value:
                 name, value = token.value.split("=", 1)
@@ -1543,10 +1549,10 @@ class NamespaceAnalyzer(Visitor):
                 self._analyze_token_variables(value_token)
 
     def visit_IfHeader(self, node: Statement) -> None:  # noqa: N802
-        self._visit_expression_statement(node)
+        self._analyze_statement_expression_variables(node)
 
     def visit_IfElseHeader(self, node: Statement) -> None:  # noqa: N802
-        self._visit_expression_statement(node)
+        self._analyze_statement_expression_variables(node)
 
     def _find_variable(self, name: str) -> Optional[VariableDefinition]:
         if name[:2] == "%{" and name[-1] == "}":

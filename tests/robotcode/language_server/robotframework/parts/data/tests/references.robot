@@ -253,3 +253,35 @@ a keyword with VAR in condition
     END
     RETURN    ${my var}
 #               ^^^^^^ variable usage
+
+a keyword with while and expression variable
+    [Documentation]    Showing argument not used but should not
+    [Arguments]    ${count}    ${retries}
+#                    ^^^^^^^ an argument
+    VAR  ${i}  ${0}
+    WHILE    $i < $count    limit=${retries}
+#             ^ local variable usage
+#                  ^^^^^ argument usage
+#                                   ^^^^^^^ argument usage in while option
+        No Operation
+    END
+
+try except with options
+    ${beginning}=    Set Variable    1
+    ${MATCH TYPE}     Set Variable  regexp
+
+    TRY
+        Some Keyword
+    EXCEPT    ValueError:    ${beginning}    type=start
+#                              ^^^^^^^^^ local variable usage
+        Error Handler
+    END
+
+    TRY
+        Some Keyword
+    EXCEPT    ValueError: .*    type=${MATCH TYPE}
+#                                      ^^^^^^^^^^ variable in option
+        Error Handler 1
+    EXCEPT    [Ee]rror \\d+ occurred    type=Regexp    # Backslash needs to be escaped.
+        Error Handler 2
+    END

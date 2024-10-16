@@ -1,0 +1,23 @@
+data: !GeneratedTestData
+  character: 31
+  line: 274
+  name: local variable usage
+result:
+- !Location
+  range:
+    end:
+      character: 15
+      line: 269
+    start:
+      character: 6
+      line: 269
+  uri: tests/references.robot
+- !Location
+  range:
+    end:
+      character: 40
+      line: 274
+    start:
+      character: 31
+      line: 274
+  uri: tests/references.robot
