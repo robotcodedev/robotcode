@@ -25,6 +25,7 @@ from typing import (
     final,
 )
 
+from robot.utils.text import split_args_from_name_or_path
 from robotcode.core.concurrent import RLock, run_as_task
 from robotcode.core.documents_manager import DocumentsManager
 from robotcode.core.event import event
@@ -603,8 +604,6 @@ class ImportsManager:
 
     @_logger.call
     def get_command_line_variables(self) -> List[VariableDefinition]:
-        from robot.utils.text import split_args_from_name_or_path
-
         with self._command_line_variables_lock:
             if self._command_line_variables is None:
                 command_line_vars: List[VariableDefinition] = []
