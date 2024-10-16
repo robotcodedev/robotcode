@@ -663,7 +663,11 @@ class ImportsManager:
                         raise
                     except BaseException as e:
                         # TODO add diagnostics
-                        self._logger.exception(e)
+                        ex = e
+                        self._logger.exception(
+                            lambda: f"Error getting command line variables: {ex}",
+                            exc_info=ex,
+                        )
 
                 self._command_line_variables = command_line_vars
 

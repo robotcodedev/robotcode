@@ -118,8 +118,7 @@ class DocumentsCacheHelper:
             except ValueError as e:
                 ex = e
                 self._logger.exception(
-                    lambda: f"Language configuration is not valid: {ex}"
-                    "\nPlease check your 'robotcode.robot.language' configuration.",
+                    lambda: f"Language configuration is not valid: {ex}",
                     exc_info=ex,
                     level=CRITICAL,
                 )
