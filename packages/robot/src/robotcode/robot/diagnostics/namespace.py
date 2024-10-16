@@ -755,6 +755,10 @@ class Namespace:
         return self._document() if self._document is not None else None
 
     @property
+    def document_uri(self) -> str:
+        return self.document.document_uri if self.document is not None else str(Uri.from_path(self.source))
+
+    @property
     def search_order(self) -> Tuple[str, ...]:
         if self._search_order is None:
             return tuple(self.imports_manager.global_library_search_order)

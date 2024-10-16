@@ -202,16 +202,14 @@ class NamespaceAnalyzer(Visitor):
             add_to_references = True
             first_overidden_reference: Optional[VariableDefinition] = None
             if existing_var is not None:
-                if self._namespace.document is not None:
-                    self._variable_references[existing_var].add(Location(self._namespace.document.document_uri, r))
-                    if existing_var not in self._overridden_variables:
-                        self._overridden_variables[existing_var] = var_def
-                    else:
-                        add_to_references = False
-                        first_overidden_reference = self._overridden_variables[existing_var]
-                        self._variable_references[first_overidden_reference].add(
-                            Location(self._namespace.document.document_uri, r)
-                        )
+
+                self._variable_references[existing_var].add(Location(self._namespace.document_uri, r))
+                if existing_var not in self._overridden_variables:
+                    self._overridden_variables[existing_var] = var_def
+                else:
+                    add_to_references = False
+                    first_overidden_reference = self._overridden_variables[existing_var]
+                    self._variable_references[first_overidden_reference].add(Location(self._namespace.document_uri, r))
 
                 if add_to_references and existing_var.type in [
                     VariableDefinitionType.GLOBAL_VARIABLE,
@@ -336,13 +334,11 @@ class NamespaceAnalyzer(Visitor):
                     self._variable_references[var] = set()
                 else:
                     existing_var = self._variables[var.matcher]
-                    if self._namespace.document is not None:
-                        location = Location(
-                            self._namespace.document.document_uri, range_from_token(strip_variable_token(variable))
-                        )
-                        self._variable_references[existing_var].add(location)
-                        if existing_var in self._overridden_variables:
-                            self._variable_references[self._overridden_variables[existing_var]].add(location)
+
+                    location = Location(self._namespace.document_uri, range_from_token(strip_variable_token(variable)))
+                    self._variable_references[existing_var].add(location)
+                    if existing_var in self._overridden_variables:
+                        self._variable_references[self._overridden_variables[existing_var]].add(location)
 
             except VariableError:
                 pass
@@ -377,43 +373,7 @@ class NamespaceAnalyzer(Visitor):
         self, token: Token, severity: DiagnosticSeverity = DiagnosticSeverity.ERROR
     ) -> None:
         for var_token, var in self._iter_expression_variables_from_token(token):
-            if var.type == VariableDefinitionType.VARIABLE_NOT_FOUND:
-                if var_token.type not in [
-                    Token.ASSIGN,
-                    Token.VARIABLE,
-                ]:
-                    self._append_diagnostics(
-                        range=range_from_token(var_token),
-                        message=f"Variable '{var.name}' not found.",
-                        severity=severity,
-                        source=DIAGNOSTICS_SOURCE_NAME,
-                        code=Error.VARIABLE_NOT_FOUND,
-                    )
-            else:
-                if self._namespace.document is not None:
-                    var_range = range_from_token(var_token)
-
-                    if var.name_range != var_range:
-                        self._variable_references[var].add(
-                            Location(
-                                self._namespace.document.document_uri,
-                                range_from_token(var_token),
-                            )
-                        )
-
-                        if var.type == VariableDefinitionType.COMMAND_LINE_VARIABLE:
-                            suite_var = self._namespace.find_variable(
-                                var.name,
-                                skip_commandline_variables=True,
-                                ignore_error=True,
-                            )
-                            if suite_var is not None and suite_var.type == VariableDefinitionType.VARIABLE:
-                                self._variable_references[suite_var].add(
-                                    Location(
-                                        self._namespace.document.document_uri,
-                                        range_from_token(var_token),
-                                    )
-                                )
+            self._handle_find_variable_result(token, var_token, var, severity)
 
     def visit(self, node: ast.AST) -> None:
         check_current_task_canceled()
@@ -426,76 +386,62 @@ class NamespaceAnalyzer(Visitor):
 
     def _analyze_token_variables(self, token: Token, severity: DiagnosticSeverity = DiagnosticSeverity.ERROR) -> None:
         for var_token, var in self._iter_variables_from_token(token):
-            if var.type == VariableDefinitionType.VARIABLE_NOT_FOUND:
-                if token.type not in [Token.ASSIGN, Token.VARIABLE]:
+            self._handle_find_variable_result(token, var_token, var, severity)
+
+    def _handle_find_variable_result(
+        self,
+        token: Token,
+        var_token: Token,
+        var: VariableDefinition,
+        severity: DiagnosticSeverity = DiagnosticSeverity.ERROR,
+    ) -> None:
+        if var.type == VariableDefinitionType.VARIABLE_NOT_FOUND:
+            self._append_diagnostics(
+                range=range_from_token(var_token),
+                message=f"Variable '{var.name}' not found.",
+                severity=severity,
+                source=DIAGNOSTICS_SOURCE_NAME,
+                code=Error.VARIABLE_NOT_FOUND,
+            )
+        else:
+            if (
+                var.type == VariableDefinitionType.ENVIRONMENT_VARIABLE
+                and cast(EnvironmentVariableDefinition, var).default_value is None
+            ):
+                env_name = var.name[2:-1]
+                if os.environ.get(env_name, None) is None:
                     self._append_diagnostics(
                         range=range_from_token(var_token),
-                        message=f"Variable '{var.name}' not found.",
+                        message=f"Environment variable '{var.name}' not found.",
                         severity=severity,
                         source=DIAGNOSTICS_SOURCE_NAME,
-                        code=Error.VARIABLE_NOT_FOUND,
+                        code=Error.ENVIROMMENT_VARIABLE_NOT_FOUND,
                     )
-            else:
-                if (
-                    var.type == VariableDefinitionType.ENVIRONMENT_VARIABLE
-                    and cast(EnvironmentVariableDefinition, var).default_value is None
-                ):
-                    env_name = var.name[2:-1]
-                    if os.environ.get(env_name, None) is None:
-                        self._append_diagnostics(
-                            range=range_from_token(var_token),
-                            message=f"Environment variable '{var.name}' not found.",
-                            severity=severity,
-                            source=DIAGNOSTICS_SOURCE_NAME,
-                            code=Error.ENVIROMMENT_VARIABLE_NOT_FOUND,
-                        )
 
-                if self._namespace.document is not None:
-                    if var.type == VariableDefinitionType.ENVIRONMENT_VARIABLE:
-                        (
-                            var_token.value,
-                            _,
-                            _,
-                        ) = var_token.value.partition("=")
+            if var.type == VariableDefinitionType.ENVIRONMENT_VARIABLE:
+                (
+                    var_token.value,
+                    _,
+                    _,
+                ) = var_token.value.partition("=")
 
-                    var_range = range_from_token(var_token)
+            var_range = range_from_token(var_token)
 
+            suite_var = None
+            if var.type in [
+                VariableDefinitionType.COMMAND_LINE_VARIABLE,
+                VariableDefinitionType.GLOBAL_VARIABLE,
+                VariableDefinitionType.TEST_VARIABLE,
+                VariableDefinitionType.VARIABLE,
+            ]:
+                suite_var = self._overridden_variables.get(var, None)
+
+                if suite_var is not None and suite_var.type != VariableDefinitionType.VARIABLE:
                     suite_var = None
-                    if var.type == VariableDefinitionType.COMMAND_LINE_VARIABLE:
-                        suite_var = self._overridden_variables.get(var, None)
 
-                        if suite_var is not None and suite_var.type != VariableDefinitionType.VARIABLE:
-                            suite_var = None
-
-                    if var.name_range != var_range:
-                        self._variable_references[var].add(
-                            Location(
-                                self._namespace.document.document_uri,
-                                var_range,
-                            )
-                        )
-                        if suite_var is not None:
-                            self._variable_references[suite_var].add(
-                                Location(
-                                    self._namespace.document.document_uri,
-                                    var_range,
-                                )
-                            )
-                        if token.type == Token.ASSIGN and var.type in [
-                            VariableDefinitionType.LOCAL_VARIABLE,
-                            VariableDefinitionType.ARGUMENT,
-                        ]:
-
-                            self._local_variable_assignments[var].add(var_range)
-
-                    elif var not in self._variable_references and token.type in [
-                        Token.ASSIGN,
-                        Token.ARGUMENT,
-                        Token.VARIABLE,
-                    ]:
-                        self._variable_references[var] = set()
-                        if suite_var is not None:
-                            self._variable_references[suite_var] = set()
+            self._variable_references[var].add(Location(self._namespace.document_uri, var_range))
+            if suite_var is not None:
+                self._variable_references[suite_var].add(Location(self._namespace.document_uri, var_range))
 
     def _append_diagnostics(
         self,
@@ -578,17 +524,14 @@ class NamespaceAnalyzer(Visitor):
                 kw_range = range_from_token(keyword_token)
 
             if kw_namespace and lib_entry is not None and lib_range is not None:
-                if self._namespace.document is not None:
-                    entries = [lib_entry]
-                    if self._finder.multiple_keywords_result is not None:
-                        entries = next(
-                            (v for k, v in (self._namespace.get_namespaces()).items() if k == kw_namespace),
-                            entries,
-                        )
-                    for entry in entries:
-                        self._namespace_references[entry].add(
-                            Location(self._namespace.document.document_uri, lib_range)
-                        )
+                entries = [lib_entry]
+                if self._finder.multiple_keywords_result is not None:
+                    entries = next(
+                        (v for k, v in (self._namespace.get_namespaces()).items() if k == kw_namespace),
+                        entries,
+                    )
+                for entry in entries:
+                    self._namespace_references[entry].add(Location(self._namespace.document_uri, lib_range))
 
             if not ignore_errors_if_contains_variables or is_not_variable_token(keyword_token):
                 for e in self._finder.diagnostics:
@@ -600,12 +543,12 @@ class NamespaceAnalyzer(Visitor):
                     )
 
             if result is None:
-                if self._namespace.document is not None and self._finder.multiple_keywords_result is not None:
+                if self._finder.multiple_keywords_result is not None:
                     for d in self._finder.multiple_keywords_result:
-                        self._keyword_references[d].add(Location(self._namespace.document.document_uri, kw_range))
+                        self._keyword_references[d].add(Location(self._namespace.document_uri, kw_range))
             else:
-                if self._namespace.document is not None:
-                    self._keyword_references[result].add(Location(self._namespace.document.document_uri, kw_range))
+
+                self._keyword_references[result].add(Location(self._namespace.document_uri, kw_range))
 
                 if result.errors:
                     self._append_diagnostics(
@@ -705,7 +648,7 @@ class NamespaceAnalyzer(Visitor):
                 code=type(e).__qualname__,
             )
 
-        if self._namespace.document is not None and result is not None:
+        if result is not None:
             if result.longname in [
                 "BuiltIn.Evaluate",
                 "BuiltIn.Should Be True",
@@ -721,39 +664,8 @@ class NamespaceAnalyzer(Visitor):
             ]:
                 tokens = argument_tokens
                 if tokens and (token := tokens[0]):
-                    for (
-                        var_token,
-                        var,
-                    ) in self._iter_expression_variables_from_token(token):
-                        if var.type == VariableDefinitionType.VARIABLE_NOT_FOUND:
-                            self._append_diagnostics(
-                                range=range_from_token(var_token),
-                                message=f"Variable '{var.name}' not found.",
-                                severity=DiagnosticSeverity.ERROR,
-                                code=Error.VARIABLE_NOT_FOUND,
-                            )
-                        else:
-                            if self._namespace.document is not None:
-                                self._variable_references[var].add(
-                                    Location(
-                                        self._namespace.document.document_uri,
-                                        range_from_token(var_token),
-                                    )
-                                )
+                    self._analyze_token_expression_variables(token)
 
-                                if var.type == VariableDefinitionType.COMMAND_LINE_VARIABLE:
-                                    suite_var = self._namespace.find_variable(
-                                        var.name,
-                                        skip_commandline_variables=True,
-                                        ignore_error=True,
-                                    )
-                                    if suite_var is not None and suite_var.type == VariableDefinitionType.VARIABLE:
-                                        self._variable_references[suite_var].add(
-                                            Location(
-                                                self._namespace.document.document_uri,
-                                                range_from_token(var_token),
-                                            )
-                                        )
             if result.argument_definitions:
                 for arg in argument_tokens:
                     name, value = split_from_equals(arg.value)
@@ -766,7 +678,7 @@ class NamespaceAnalyzer(Visitor):
                             name_token = Token(Token.ARGUMENT, name, arg.lineno, arg.col_offset)
                             self._variable_references[arg_def].add(
                                 Location(
-                                    self._namespace.document.document_uri,
+                                    self._namespace.document_uri,
                                     range_from_token(name_token),
                                 )
                             )
@@ -1152,13 +1064,12 @@ class NamespaceAnalyzer(Visitor):
                         if arg_def not in self._variable_references:
                             self._variable_references[arg_def] = set()
                     else:
-                        if self._namespace.document is not None:
-                            self._variable_references[args[matcher]].add(
-                                Location(
-                                    self._namespace.document.document_uri,
-                                    range_from_token(strip_variable_token(argument)),
-                                )
+                        self._variable_references[args[matcher]].add(
+                            Location(
+                                self._namespace.document_uri,
+                                range_from_token(strip_variable_token(argument)),
                             )
+                        )
 
             except VariableError:
                 pass
@@ -1191,14 +1102,14 @@ class NamespaceAnalyzer(Visitor):
                         )
                         self._variables[matcher] = var_def
                         self._variable_references[var_def] = set()
+                        self._local_variable_assignments[var_def].add(var_def.range)
                     else:
-                        if self._namespace.document is not None:
-                            self._variable_references[existing_var].add(
-                                Location(
-                                    self._namespace.document.document_uri,
-                                    range_from_token(strip_variable_token(variable_token)),
-                                )
+                        self._variable_references[existing_var].add(
+                            Location(
+                                self._namespace.document_uri,
+                                range_from_token(strip_variable_token(variable_token)),
                             )
+                        )
 
             except VariableError:
                 pass
@@ -1233,13 +1144,13 @@ class NamespaceAnalyzer(Visitor):
                     self._variables[var_def.matcher] = var_def
                     self._variable_references[var_def] = set()
                 else:
-                    if self._namespace.document is not None and existing_var.type in [
+                    if existing_var.type in [
                         VariableDefinitionType.ARGUMENT,
                         VariableDefinitionType.LOCAL_VARIABLE,
                     ]:
                         self._variable_references[existing_var].add(
                             Location(
-                                self._namespace.document.document_uri,
+                                self._namespace.document_uri,
                                 range_from_token(strip_variable_token(variable_token)),
                             )
                         )
