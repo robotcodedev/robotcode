@@ -36,9 +36,12 @@ def run_repl(
     variablefile: Tuple[str, ...],
     pythonpath: Tuple[str, ...],
     outputdir: Optional[str],
-    paths: Tuple[Path, ...],
+    files: Tuple[Path, ...],
 ) -> None:
     robot_options_and_args: Tuple[str, ...] = ()
+
+    if files:
+        files = tuple(f.absolute() for f in files)
 
     for var in variable:
         robot_options_and_args += ("--variable", var)
@@ -49,17 +52,13 @@ def run_repl(
     if outputdir:
         robot_options_and_args += ("--outputdir", outputdir)
 
-    root_folder, profile, cmd_options = handle_robot_options(app, robot_options_and_args)
+    root_folder, profile, cmd_options = handle_robot_options(app, (*robot_options_and_args, *(str(f) for f in files)))
 
     try:
 
-        options, arguments = RobotFrameworkEx(
+        options, _ = RobotFrameworkEx(
             app,
-            (
-                [*(app.config.default_paths if app.config.default_paths else ())]
-                if profile.paths is None
-                else profile.paths if isinstance(profile.paths, list) else [profile.paths]
-            ),
+            ["."],
             app.config.dry,
             root_folder,
         ).parse_arguments((*cmd_options, *robot_options_and_args))
@@ -71,7 +70,7 @@ def run_repl(
             report=None,
             quiet=True,
             listener=[
-                ReplListener(app, Interpreter(app, files=list(paths), inspect=inspect)),
+                ReplListener(app, Interpreter(app, files=list(files), inspect=inspect)),
             ],
         )
 
@@ -147,8 +146,8 @@ def run_repl(
     help="Activate inspection mode. This forces a prompt to appear after the REPL script is executed.",
 )
 @click.argument(
-    "paths",
-    type=click.Path(exists=True, path_type=Path),
+    "files",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
     nargs=-1,
     required=False,
 )
@@ -160,10 +159,10 @@ def repl(
     pythonpath: Tuple[str, ...],
     outputdir: Optional[str],
     inspect: bool,
-    paths: Tuple[Path, ...],
+    files: Tuple[Path, ...],
 ) -> None:
     """\
     Run Robot Framework interactively.
     """
 
-    run_repl(app, inspect, variable, variablefile, pythonpath, outputdir, paths)
+    run_repl(app, inspect, variable, variablefile, pythonpath, outputdir, files)
