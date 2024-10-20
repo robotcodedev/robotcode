@@ -9,7 +9,7 @@ import weakref
 import zlib
 from abc import ABC, abstractmethod
 from collections import OrderedDict
-from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import ProcessPoolExecutor, TimeoutError
 from dataclasses import dataclass
 from pathlib import Path
 from typing import (
@@ -83,9 +83,8 @@ RESOURCE_EXTENSIONS = (
 REST_EXTENSIONS = (".rst", ".rest")
 
 
-LOAD_LIBRARY_TIME_OUT = 30
-FIND_FILE_TIME_OUT = 10
-COMPLETE_LIBRARY_IMPORT_TIME_OUT = COMPLETE_RESOURCE_IMPORT_TIME_OUT = COMPLETE_VARIABLES_IMPORT_TIME_OUT = 10
+LOAD_LIBRARY_TIME_OUT = 10
+COMPLETE_LIBRARY_IMPORT_TIME_OUT = COMPLETE_RESOURCE_IMPORT_TIME_OUT = COMPLETE_VARIABLES_IMPORT_TIME_OUT = 5
 
 
 class _EntryKey:
@@ -1155,6 +1154,7 @@ class ImportsManager:
         meta, _source, ignore_arguments = self.get_library_meta(name, base_dir, variables)
 
         if meta is not None and not meta.has_errors:
+
             meta_file = Path(self.lib_doc_cache_path, meta.filepath_base + ".meta.json")
             if meta_file.exists():
                 try:
@@ -1164,13 +1164,18 @@ class ImportsManager:
                         if saved_meta.has_errors:
                             self._logger.debug(
                                 lambda: "Saved library spec for {name}{args!r} is not used "
-                                "due to errors in meta data"
+                                "due to errors in meta data",
+                                context_name="import",
                             )
 
                         if not saved_meta.has_errors and saved_meta == meta:
                             spec_path = Path(
                                 self.lib_doc_cache_path,
                                 meta.filepath_base + ".spec.json",
+                            )
+
+                            self._logger.debug(
+                                lambda: f"Use cached library meta data for {name}", context_name="import"
                             )
                             return from_json(spec_path.read_text("utf-8"), LibraryDoc)
 
@@ -1185,17 +1190,22 @@ class ImportsManager:
                 except BaseException as e:
                     self._logger.exception(e)
 
+        self._logger.debug(lambda: f"Load library in process {name}{args!r}", context_name="import")
         executor = ProcessPoolExecutor(max_workers=1, mp_context=mp.get_context("spawn"))
         try:
-            result = executor.submit(
-                get_library_doc,
-                name,
-                args if not ignore_arguments else (),
-                working_dir,
-                base_dir,
-                self.get_resolvable_command_line_variables(),
-                variables,
-            ).result(LOAD_LIBRARY_TIME_OUT)
+            try:
+                result = executor.submit(
+                    get_library_doc,
+                    name,
+                    args if not ignore_arguments else (),
+                    working_dir,
+                    base_dir,
+                    self.get_resolvable_command_line_variables(),
+                    variables,
+                ).result(LOAD_LIBRARY_TIME_OUT)
+
+            except TimeoutError as e:
+                raise RuntimeError(f"Timeout loading library {name}({args!r})") from e
 
         except (SystemExit, KeyboardInterrupt):
             raise
@@ -1369,15 +1379,20 @@ class ImportsManager:
 
         executor = ProcessPoolExecutor(max_workers=1, mp_context=mp.get_context("spawn"))
         try:
-            result = executor.submit(
-                get_variables_doc,
-                name,
-                args,
-                working_dir,
-                base_dir,
-                self.get_resolvable_command_line_variables() if resolve_command_line_vars else None,
-                variables,
-            ).result(LOAD_LIBRARY_TIME_OUT)
+            try:
+                result = executor.submit(
+                    get_variables_doc,
+                    name,
+                    args,
+                    working_dir,
+                    base_dir,
+                    self.get_resolvable_command_line_variables() if resolve_command_line_vars else None,
+                    variables,
+                ).result(LOAD_LIBRARY_TIME_OUT)
+
+            except TimeoutError as e:
+                raise RuntimeError(f"Timeout loading library {name}({args!r})") from e
+
         except (SystemExit, KeyboardInterrupt):
             raise
         except BaseException as e:
@@ -1553,7 +1568,7 @@ class ImportsManager:
             base_dir,
             self.get_resolvable_command_line_variables(),
             variables,
-        ).result(LOAD_LIBRARY_TIME_OUT)
+        ).result(COMPLETE_LIBRARY_IMPORT_TIME_OUT)
 
     def complete_resource_import(
         self,
@@ -1568,7 +1583,7 @@ class ImportsManager:
             base_dir,
             self.get_resolvable_command_line_variables(),
             variables,
-        ).result(LOAD_LIBRARY_TIME_OUT)
+        ).result(COMPLETE_RESOURCE_IMPORT_TIME_OUT)
 
     def complete_variables_import(
         self,
@@ -1583,7 +1598,7 @@ class ImportsManager:
             base_dir,
             self.get_resolvable_command_line_variables(),
             variables,
-        ).result(LOAD_LIBRARY_TIME_OUT)
+        ).result(COMPLETE_VARIABLES_IMPORT_TIME_OUT)
 
     def resolve_variable(
         self,
