@@ -2,6 +2,39 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [0.94.0](https://github.com/robotcodedev/robotcode/compare/v0.93.1..v0.94.0) - 2024-10-20
+
+### Bug Fixes
+
+- **analyzer:** Better exception message for invalid command variable files ([f8cb770](https://github.com/robotcodedev/robotcode/commit/f8cb770e68815719d6c70404325c8e7e75956fd6))
+- **analyzer:** Decrease load load library timeout and better error messages if time out occurs ([a3fb4a3](https://github.com/robotcodedev/robotcode/commit/a3fb4a3f6011b6d74cc5d9970b5faa1d7a090b1a))
+- **docs:** Corrected some things about the inheritance of profiles ([aa50cc7](https://github.com/robotcodedev/robotcode/commit/aa50cc74173671b629ebd2c8c7adbddc5f5ce77d))
+- **repl:** Corrected start of repl command if there is no  `robot.toml` with a `path`  setting ([42f96b4](https://github.com/robotcodedev/robotcode/commit/42f96b4fe42e75c52f58734c1767cd7d39307e06))
+- Correct analyzing of variables in WhileHeader options ([3a4ee79](https://github.com/robotcodedev/robotcode/commit/3a4ee79651c0d8ba650113e953abee52866f4338))
+
+
+### Features
+
+- Python 3.13 support ([3874a9c](https://github.com/robotcodedev/robotcode/commit/3874a9cee3116794f510f79c1aa28586ce7b7d06))
+
+
+### Performance
+
+- **analyze:** Improved performance of code analysis (more then 2x faster) ([2951759](https://github.com/robotcodedev/robotcode/commit/29517592ee6a09d6e36cb89dae81aa6b5669709e))
+- **analyze:** Optimize find unused refences (1.5x-2x faster) ([fda1f02](https://github.com/robotcodedev/robotcode/commit/fda1f029a1c9e18b9334ade8ea338e47a953cd30))
+- **analyzer:** Move model and token analyzing to the normal analysing stage ([7b3eb0c](https://github.com/robotcodedev/robotcode/commit/7b3eb0cafc5e3843827f3ef5e89b2c75bd986ab4))
+
+
+### Refactor
+
+- **analyze:** Remove unused/unneeded call to find variable in namespace ([b561607](https://github.com/robotcodedev/robotcode/commit/b5616072372bfe08bd6bcc9c08188ae867aa4a35))
+
+
+### Testing
+
+- Update tests for RF 7.1.1 ([702c5c9](https://github.com/robotcodedev/robotcode/commit/702c5c9a666f7ab2ae560f6e2c0c0393ece60dc3))
+
+
 ## [0.93.1](https://github.com/robotcodedev/robotcode/compare/v0.93.0..v0.93.1) - 2024-10-09
 
 ### Bug Fixes
