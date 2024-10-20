@@ -1,8 +1,5 @@
-import ast
 from concurrent.futures import CancelledError
 from typing import TYPE_CHECKING, Any, List, Optional
-
-from robot.parsing.lexer.tokens import Token
 
 from robotcode.core.concurrent import check_current_task_canceled
 from robotcode.core.language import language_id
@@ -25,12 +22,6 @@ from robotcode.robot.diagnostics.entities import (
 )
 from robotcode.robot.diagnostics.library_doc import LibraryDoc
 from robotcode.robot.diagnostics.namespace import Namespace
-from robotcode.robot.utils.ast import (
-    iter_nodes,
-    range_from_node,
-    range_from_token,
-)
-from robotcode.robot.utils.stubs import HasError, HasErrors, HeaderAndBodyBlock
 
 from ...common.parts.diagnostics import DiagnosticsCollectType, DiagnosticsResult
 
@@ -50,9 +41,6 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
 
         self.parent.on_initialized.add(self._on_initialized)
 
-        self.parent.diagnostics.collect.add(self.collect_token_errors)
-        self.parent.diagnostics.collect.add(self.collect_model_errors)
-
         self.parent.diagnostics.collect.add(self.collect_namespace_diagnostics)
 
         self.parent.diagnostics.collect.add(self.collect_unused_keyword_references)
@@ -62,7 +50,6 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
 
     def _on_initialized(self, sender: Any) -> None:
         self.parent.diagnostics.analyze.add(self.analyze)
-        self.parent.documents_cache.namespace_invalidated.add(self._on_namespace_invalidated)
         self.parent.documents_cache.namespace_initialized(self._on_namespace_initialized)
         self.parent.documents_cache.libraries_changed.add(self._on_libraries_changed)
         self.parent.documents_cache.variables_changed.add(self._on_variables_changed)
@@ -91,12 +78,6 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
     def _on_namespace_initialized(self, sender: Any, namespace: Namespace) -> None:
         if namespace.document is not None:
             self.parent.diagnostics.force_refresh_document(namespace.document)
-
-    @language_id("robotframework")
-    def _on_namespace_invalidated(self, sender: Any, namespace: Namespace) -> None:
-        if namespace.document is not None:
-            namespace.document.remove_cache_entry(self._collect_model_errors)
-            namespace.document.remove_cache_entry(self._collect_token_errors)
 
     @language_id("robotframework")
     def _on_get_related_documents(self, sender: Any, document: TextDocument) -> Optional[List[TextDocument]]:
@@ -158,148 +139,6 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
                             ),
                         ),
                         message=f"Fatal: can't get namespace diagnostics '{e}' ({type(e).__qualname__})",
-                        severity=DiagnosticSeverity.ERROR,
-                        source=self.source_name,
-                        code=type(e).__qualname__,
-                    )
-                ],
-            )
-
-    def _create_error_from_node(
-        self,
-        node: ast.AST,
-        msg: str,
-        source: Optional[str] = None,
-        only_start: bool = True,
-    ) -> Diagnostic:
-        from robot.parsing.model.statements import Statement
-
-        if isinstance(node, HeaderAndBodyBlock):
-            if node.header is not None:
-                node = node.header
-            elif node.body:
-                stmt = next((n for n in node.body if isinstance(n, Statement)), None)
-                if stmt is not None:
-                    node = stmt
-
-        return Diagnostic(
-            range=range_from_node(node, True, only_start),
-            message=msg,
-            severity=DiagnosticSeverity.ERROR,
-            source=source if source is not None else self.source_name,
-            code="ModelError",
-        )
-
-    def _create_error_from_token(self, token: Token, source: Optional[str] = None) -> Diagnostic:
-        return Diagnostic(
-            range=range_from_token(token),
-            message=token.error if token.error is not None else "(No Message).",
-            severity=DiagnosticSeverity.ERROR,
-            source=source if source is not None else self.source_name,
-            code="TokenError",
-        )
-
-    @language_id("robotframework")
-    @_logger.call
-    def collect_token_errors(
-        self, sender: Any, document: TextDocument, diagnostics_type: DiagnosticsCollectType
-    ) -> DiagnosticsResult:
-        return document.get_cache(self._collect_token_errors)
-
-    def _collect_token_errors(self, document: TextDocument) -> DiagnosticsResult:
-        from robot.errors import VariableError
-        from robot.parsing.lexer.tokens import Token
-
-        result: List[Diagnostic] = []
-        try:
-            for token in self.parent.documents_cache.get_tokens(document):
-                check_current_task_canceled()
-
-                if token.type in [Token.ERROR, Token.FATAL_ERROR]:
-                    result.append(self._create_error_from_token(token))
-
-                try:
-                    for variable_token in token.tokenize_variables():
-                        if variable_token == token:
-                            break
-
-                        if variable_token.type in [Token.ERROR, Token.FATAL_ERROR]:
-                            result.append(self._create_error_from_token(variable_token))
-
-                except VariableError as e:
-                    result.append(
-                        Diagnostic(
-                            range=range_from_token(token),
-                            message=str(e),
-                            severity=DiagnosticSeverity.ERROR,
-                            source=self.source_name,
-                            code=type(e).__qualname__,
-                        )
-                    )
-        except (CancelledError, SystemExit, KeyboardInterrupt):
-            raise
-        except BaseException as e:
-            return DiagnosticsResult(
-                self.collect_token_errors,
-                [
-                    Diagnostic(
-                        range=Range(
-                            start=Position(line=0, character=0),
-                            end=Position(
-                                line=len(document.get_lines()),
-                                character=len((document.get_lines())[-1] or ""),
-                            ),
-                        ),
-                        message=f"Fatal: can't get token diagnostics '{e}' ({type(e).__qualname__})",
-                        severity=DiagnosticSeverity.ERROR,
-                        source=self.source_name,
-                        code=type(e).__qualname__,
-                    )
-                ],
-            )
-
-        return DiagnosticsResult(self.collect_token_errors, self.modify_diagnostics(document, result))
-
-    @language_id("robotframework")
-    @_logger.call
-    def collect_model_errors(
-        self, sender: Any, document: TextDocument, diagnostics_type: DiagnosticsCollectType
-    ) -> DiagnosticsResult:
-        return document.get_cache(self._collect_model_errors)
-
-    def _collect_model_errors(self, document: TextDocument) -> DiagnosticsResult:
-        try:
-            model = self.parent.documents_cache.get_model(document, True)
-
-            result: List[Diagnostic] = []
-            for node in iter_nodes(model):
-                check_current_task_canceled()
-
-                error = node.error if isinstance(node, HasError) else None
-                if error is not None:
-                    result.append(self._create_error_from_node(node, error))
-                errors = node.errors if isinstance(node, HasErrors) else None
-                if errors is not None:
-                    for e in errors:
-                        result.append(self._create_error_from_node(node, e))
-
-            return DiagnosticsResult(self.collect_model_errors, self.modify_diagnostics(document, result))
-
-        except (CancelledError, SystemExit, KeyboardInterrupt):
-            raise
-        except BaseException as e:
-            return DiagnosticsResult(
-                self.collect_model_errors,
-                [
-                    Diagnostic(
-                        range=Range(
-                            start=Position(line=0, character=0),
-                            end=Position(
-                                line=len(document.get_lines()),
-                                character=len((document.get_lines())[-1] or ""),
-                            ),
-                        ),
-                        message=f"Fatal: can't get model diagnostics '{e}' ({type(e).__qualname__})",
                         severity=DiagnosticSeverity.ERROR,
                         source=self.source_name,
                         code=type(e).__qualname__,

@@ -1,6 +1,6 @@
 from typing import final
 
-DIAGNOSTICS_SOURCE_NAME = "robotcode.namespace"
+DIAGNOSTICS_SOURCE_NAME = "robotcode"
 
 
 @final
@@ -38,3 +38,5 @@ class Error:
     OVERRIDDEN_BY_COMMANDLINE = "OverriddenByCommandLine"
     VARIABLE_ALREADY_DEFINED = "VariableAlreadyDefined"
     VARIABLE_OVERRIDDEN = "VariableOverridden"
+    MODEL_ERROR = "ModelError"
+    TOKEN_ERROR = "TokenError"

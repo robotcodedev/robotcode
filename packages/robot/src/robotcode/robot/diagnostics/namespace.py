@@ -739,8 +739,6 @@ class Namespace:
 
         self._in_initialize = False
 
-        self._ignored_lines: Optional[List[int]] = None
-
     @event
     def has_invalidated(sender) -> None: ...
 

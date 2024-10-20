@@ -3,6 +3,7 @@ import itertools
 import os
 import token as python_token
 from collections import defaultdict
+from concurrent.futures import CancelledError
 from dataclasses import dataclass
 from io import StringIO
 from pathlib import Path
@@ -138,8 +139,17 @@ class NamespaceAnalyzer(Visitor):
                     self._visit_VariableSection(node)
 
         self._suite_variables = self._variables.copy()
-
-        self.visit(self._model)
+        try:
+            self.visit(self._model)
+        except (SystemExit, KeyboardInterrupt, CancelledError):
+            raise
+        except BaseException as e:
+            self._append_diagnostics(
+                range_from_node(self._model),
+                message=f"Fatal: can't analyze namespace '{e}')",
+                severity=DiagnosticSeverity.ERROR,
+                code=type(e).__qualname__,
+            )
 
         return AnalyzerResult(
             self._diagnostics,
@@ -375,8 +385,61 @@ class NamespaceAnalyzer(Visitor):
         for var_token, var in self._iter_expression_variables_from_token(token):
             self._handle_find_variable_result(token, var_token, var, severity)
 
+    def _append_error_from_node(
+        self,
+        node: ast.AST,
+        msg: str,
+        only_start: bool = True,
+    ) -> None:
+        from robot.parsing.model.statements import Statement
+
+        if hasattr(node, "header") and hasattr(node, "body"):
+            if node.header is not None:
+                node = node.header
+            elif node.body:
+                stmt = next((n for n in node.body if isinstance(n, Statement)), None)
+                if stmt is not None:
+                    node = stmt
+
+        self._append_diagnostics(
+            range=range_from_node(node, True, only_start),
+            message=msg,
+            severity=DiagnosticSeverity.ERROR,
+            code=Error.MODEL_ERROR,
+        )
+
     def visit(self, node: ast.AST) -> None:
         check_current_task_canceled()
+
+        already_added_errors = set()
+
+        if isinstance(node, Statement):
+            errors = node.get_tokens(Token.ERROR, Token.FATAL_ERROR)
+            if errors:
+                for error in errors:
+                    if error.error is not None and error.error not in already_added_errors:
+                        already_added_errors.add(error.error)
+
+                        self._append_diagnostics(
+                            range=range_from_token(error),
+                            message=error.error if error.error is not None else "(No Message).",
+                            severity=DiagnosticSeverity.ERROR,
+                            code=Error.TOKEN_ERROR,
+                        )
+
+        if hasattr(node, "error"):
+            error = node.error
+            if error is not None and error not in already_added_errors:
+                already_added_errors.add(error)
+                self._append_error_from_node(node, error or "(No Message).")
+
+        if hasattr(node, "errors"):
+            errors = node.errors
+            if errors:
+                for error in errors:
+                    if error is not None and error not in already_added_errors:
+                        already_added_errors.add(error)
+                        self._append_error_from_node(node, error or "(No Message).")
 
         self._node_stack.append(node)
         try:
@@ -400,7 +463,6 @@ class NamespaceAnalyzer(Visitor):
                 range=range_from_token(var_token),
                 message=f"Variable '{var.name}' not found.",
                 severity=severity,
-                source=DIAGNOSTICS_SOURCE_NAME,
                 code=Error.VARIABLE_NOT_FOUND,
             )
         else:
@@ -414,7 +476,6 @@ class NamespaceAnalyzer(Visitor):
                         range=range_from_token(var_token),
                         message=f"Environment variable '{var.name}' not found.",
                         severity=severity,
-                        source=DIAGNOSTICS_SOURCE_NAME,
                         code=Error.ENVIROMMENT_VARIABLE_NOT_FOUND,
                     )
 
@@ -1495,7 +1556,16 @@ class NamespaceAnalyzer(Visitor):
         self,
         to: Token,
     ) -> Iterator[Tuple[Token, Optional[VariableDefinition]]]:
-        for sub_token in ModelHelper.tokenize_variables(to, ignore_errors=True):
+
+        def exception_handler(e: BaseException, t: Token) -> None:
+            self._append_diagnostics(
+                range_from_token(t),
+                str(e),
+                severity=DiagnosticSeverity.ERROR,
+                code=Error.TOKEN_ERROR,
+            )
+
+        for sub_token in ModelHelper.tokenize_variables(to, ignore_errors=True, exception_handler=exception_handler):
             if sub_token.type == Token.VARIABLE:
                 base = sub_token.value[2:-1]
                 if base and not (base[0] == "{" and base[-1] == "}"):
@@ -1512,7 +1582,7 @@ class NamespaceAnalyzer(Visitor):
                     ):
                         yield v
                 elif base == "":
-                    yield (  # TODO: robotframework ignores this case, should we do the same or raise an error/hint?
+                    yield (
                         sub_token,
                         VariableNotFoundDefinition(
                             sub_token.lineno,
@@ -1521,7 +1591,7 @@ class NamespaceAnalyzer(Visitor):
                             sub_token.end_col_offset,
                             self._namespace.source,
                             sub_token.value,
-                            sub_token,
+                            strip_variable_token(sub_token),
                         ),
                     )
                     continue

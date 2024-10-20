@@ -114,7 +114,7 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
                         ),
                     )
                 )
-
+                value = None
                 if found_range is not None:
                     highlight_range = found_range
                     if variable.has_value or variable.resolvable:

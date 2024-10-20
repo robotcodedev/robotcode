@@ -53,7 +53,6 @@ from robotcode.core.lsp.types import WorkspaceFolder as TypesWorkspaceFolder
 from robotcode.core.uri import Uri
 from robotcode.core.utils.dataclasses import from_dict
 from robotcode.core.utils.logging import LoggingDescriptor
-from robotcode.core.utils.path import path_is_relative_to
 from robotcode.core.workspace import ConfigBase, TConfig, WorkspaceFolder
 from robotcode.core.workspace import Workspace as CoreWorkspace
 from robotcode.jsonrpc2.protocol import rpc_method
@@ -326,21 +325,6 @@ class Workspace(LanguageServerProtocolPart, CoreWorkspace, FileWatcherManagerBas
         result_future: Task[Optional[Any]] = Task()
         result_future.set_result([result])
         return result_future
-
-    def get_workspace_folder(self, uri: Union[Uri, str]) -> Optional[WorkspaceFolder]:
-        if isinstance(uri, str):
-            uri = Uri(uri)
-
-        result = sorted(
-            [f for f in self.workspace_folders if path_is_relative_to(uri.to_path(), f.uri.to_path())],
-            key=lambda v1: len(v1.uri),
-            reverse=True,
-        )
-
-        if len(result) > 0:
-            return result[0]
-
-        return None
 
     @rpc_method(name="workspace/didChangeWorkspaceFolders", param_type=DidChangeWorkspaceFoldersParams)
     def _workspace_did_change_workspace_folders(

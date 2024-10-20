@@ -8,6 +8,7 @@ from tokenize import TokenError, generate_tokens
 from typing import (
     TYPE_CHECKING,
     Any,
+    Callable,
     Iterator,
     List,
     Optional,
@@ -18,6 +19,7 @@ from typing import (
     Union,
 )
 
+from robot.errors import VariableError
 from robot.parsing.lexer.tokens import Token
 from robot.utils.escaping import split_from_equals, unescape
 from robot.variables.finders import NOT_FOUND, NumberFinder
@@ -358,21 +360,30 @@ class ModelHelper:
         ignore_errors: bool = False,
         *,
         extra_types: Optional[Set[str]] = None,
+        exception_handler: Optional[Callable[[Exception, Token], None]] = None,
     ) -> Iterator[Token]:
-        for t in tokenize_variables(token, identifiers, ignore_errors, extra_types=extra_types):
-            if t.type == Token.VARIABLE:
-                var, rest = cls.remove_index_from_variable_token(t)
-                if var is not None:
-                    yield var
-                if rest is not None:
-                    yield from cls.tokenize_variables(
-                        rest,
-                        identifiers,
-                        ignore_errors,
-                        extra_types=extra_types,
-                    )
-            else:
-                yield t
+        if exception_handler is not None:
+            ignore_errors = False
+        try:
+            for t in tokenize_variables(token, identifiers, ignore_errors, extra_types=extra_types):
+                if t.type == Token.VARIABLE:
+                    var, rest = cls.remove_index_from_variable_token(t)
+                    if var is not None:
+                        yield var
+                    if rest is not None:
+                        yield from cls.tokenize_variables(
+                            rest,
+                            identifiers,
+                            ignore_errors,
+                            extra_types=extra_types,
+                        )
+                else:
+                    yield t
+        except VariableError as e:
+            if exception_handler is not None:
+                exception_handler(e, token)
+            elif not ignore_errors:
+                raise
 
     @classmethod
     def iter_variables_from_token(
