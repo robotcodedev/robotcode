@@ -52,6 +52,7 @@ class KeywordFinder:
                 Optional[KeywordDoc],
                 List[DiagnosticsEntry],
                 Optional[List[KeywordDoc]],
+                Optional[str],
             ],
         ] = {}
 
@@ -80,6 +81,7 @@ class KeywordFinder:
             if cached is not None:
                 self.diagnostics = cached[1]
                 self.multiple_keywords_result = cached[2]
+                self.result_bdd_prefix = cached[3]
                 return cached[0]
 
             try:
@@ -106,6 +108,7 @@ class KeywordFinder:
                 result,
                 self.diagnostics,
                 self.multiple_keywords_result,
+                self.result_bdd_prefix,
             )
 
             return result

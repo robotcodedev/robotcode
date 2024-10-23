@@ -13,7 +13,8 @@
         }
     },
     "robotcode.languageServer.extraArgs": [
-        //"--debugpy",
+        "--verbose",
+        "--debugpy",
         // "--debugpy-wait-for-client",
         // "--log",
         // "--log-level", "INFO",
@@ -30,14 +31,6 @@
         "**/lib/alibrary.py",
         "LibraryWithErrors"
     ],
-    // "robotcode.extraArgs": [
-    //     "--debugpy",
-    //     "--debugpy-wait-for-client",
-    //     "--log",
-    //     "--log-level",
-    //     "DEBUG",
-    //     // "--log-calls"
-    // ],
     "robotcode.robot.variableFiles": [
         "${EXECDIR}/resources/testvars.yml"
     ],

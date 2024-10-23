@@ -6,6 +6,7 @@ import eslintPluginPrettierRecommended from "eslint-plugin-prettier/recommended"
 export default [
   {
     ignores: [
+      "**/.venv/",
       "**/node_modules/",
       "**/dist/",
       "**/out/",
