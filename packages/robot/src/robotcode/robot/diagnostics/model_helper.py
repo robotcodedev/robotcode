@@ -210,9 +210,13 @@ class ModelHelper:
         position: Position,
         analyse_run_keywords: bool = True,
     ) -> Optional[Tuple[Optional[KeywordDoc], Token]]:
-        keyword_doc = namespace.find_keyword(keyword_name, raise_keyword_error=False)
+        finder = namespace.get_finder()
+        keyword_doc = finder.find_keyword(keyword_name, raise_keyword_error=False)
         if keyword_doc is None:
             return None
+
+        if finder.result_bdd_prefix:
+            keyword_token = ModelHelper.strip_bdd_prefix(namespace, keyword_token)
 
         if position.is_in_range(range_from_token(keyword_token)):
             return keyword_doc, keyword_token

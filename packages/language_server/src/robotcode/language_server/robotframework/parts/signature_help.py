@@ -135,7 +135,7 @@ class RobotSignatureHelpProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
             keyword_token,
             [t for t in kw_node.get_tokens(RobotToken.ARGUMENT)],
             namespace,
-            range_from_token(keyword_token).start,
+            range_from_token(keyword_token).end,
             analyse_run_keywords=False,
         )
 

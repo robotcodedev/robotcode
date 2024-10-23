@@ -1,7 +1,6 @@
 import ast
 import enum
 import itertools
-import time
 import weakref
 from collections import OrderedDict, defaultdict
 from concurrent.futures import CancelledError
@@ -1804,28 +1803,18 @@ class Namespace:
     def get_keywords(self) -> List[KeywordDoc]:
         with self._keywords_lock:
             if self._keywords is None:
-                current_time = time.monotonic()
-                self._logger.debug("start collecting keywords")
-                try:
-                    i = 0
 
-                    self.ensure_initialized()
+                i = 0
 
-                    result: Dict[KeywordMatcher, KeywordDoc] = {}
+                self.ensure_initialized()
 
-                    for doc in self.iter_all_keywords():
-                        i += 1
-                        result[doc.matcher] = doc
+                result: Dict[KeywordMatcher, KeywordDoc] = {}
 
-                    self._keywords = list(result.values())
-                except BaseException:
-                    self._logger.debug("Canceled collecting keywords ")
-                    raise
-                else:
-                    self._logger.debug(
-                        lambda: f"end collecting {len(self._keywords) if self._keywords else 0}"
-                        f" keywords in {time.monotonic() - current_time}s analyze {i} keywords"
-                    )
+                for doc in self.iter_all_keywords():
+                    i += 1
+                    result[doc.matcher] = doc
+
+                self._keywords = list(result.values())
 
             return self._keywords
 

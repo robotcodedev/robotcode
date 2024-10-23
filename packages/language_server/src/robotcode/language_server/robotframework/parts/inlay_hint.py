@@ -107,13 +107,13 @@ class RobotInlayHintProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
             keyword_token,
             arguments,
             namespace,
-            range_from_token(keyword_token).start,
+            range_from_token(keyword_token).end,
         )
 
         if kw_result is None:
             return None
 
-        kw_doc, _ = kw_result
+        kw_doc, keyword_token = kw_result
 
         if kw_doc is None:
             return None

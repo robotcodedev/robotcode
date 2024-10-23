@@ -66,6 +66,7 @@ class KeywordFinder:
         self.multiple_keywords_result = None
         self.result_bdd_prefix = None
 
+    # TODO: make this threadsafe
     def find_keyword(
         self,
         name: Optional[str],
@@ -480,7 +481,7 @@ class KeywordFinder:
                 name[match.end() :], handle_bdd_style=False if get_robot_version() >= (7, 0) else True
             )
             if result:
-                self.result_bdd_prefix = str(match)
+                self.result_bdd_prefix = str(match.group(0))
 
             return result
         return None
