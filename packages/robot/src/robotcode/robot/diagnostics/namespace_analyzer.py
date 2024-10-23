@@ -552,12 +552,10 @@ class NamespaceAnalyzer(Visitor):
             if not allow_variables and not is_not_variable_token(keyword_token):
                 return None
 
-            result = self._finder.find_keyword(keyword, raise_keyword_error=False, handle_bdd_style=False)
+            result = self._finder.find_keyword(keyword, raise_keyword_error=False)
 
-            if result is None:
+            if result is not None and self._finder.result_bdd_prefix:
                 keyword_token = ModelHelper.strip_bdd_prefix(self._namespace, keyword_token)
-
-                result = self._finder.find_keyword(keyword, raise_keyword_error=False)
 
             kw_range = range_from_token(keyword_token)
 

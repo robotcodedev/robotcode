@@ -43,6 +43,8 @@ class KeywordFinder:
         self.self_library_doc = library_doc
 
         self.diagnostics: List[DiagnosticsEntry] = []
+        self.result_bdd_prefix: Optional[str] = None
+
         self.multiple_keywords_result: Optional[List[KeywordDoc]] = None
         self._cache: Dict[
             Tuple[Optional[str], bool],
@@ -61,6 +63,7 @@ class KeywordFinder:
     def reset_diagnostics(self) -> None:
         self.diagnostics = []
         self.multiple_keywords_result = None
+        self.result_bdd_prefix = None
 
     def find_keyword(
         self,
@@ -470,7 +473,11 @@ class KeywordFinder:
     def _get_bdd_style_keyword(self, name: str) -> Optional[KeywordDoc]:
         match = self.bdd_prefix_regexp.match(name)
         if match:
-            return self._find_keyword(
+            result = self._find_keyword(
                 name[match.end() :], handle_bdd_style=False if get_robot_version() >= (7, 0) else True
             )
+            if result:
+                self.result_bdd_prefix = str(match)
+
+            return result
         return None
