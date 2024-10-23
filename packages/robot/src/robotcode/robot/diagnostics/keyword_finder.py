@@ -1,3 +1,4 @@
+import re
 from itertools import chain
 from typing import TYPE_CHECKING, Dict, Iterable, Iterator, List, NamedTuple, Optional, Sequence, Tuple
 
@@ -51,10 +52,11 @@ class KeywordFinder:
                 Optional[List[KeywordDoc]],
             ],
         ] = {}
-        self.handle_bdd_style = True
+
         self._all_keywords: Optional[List[LibraryEntry]] = None
         self._resource_keywords: Optional[List[ResourceEntry]] = None
         self._library_keywords: Optional[List[LibraryEntry]] = None
+        self._bdd_prefix_regexp: Optional["re.Pattern[str]"] = None
 
     def reset_diagnostics(self) -> None:
         self.diagnostics = []
@@ -70,9 +72,7 @@ class KeywordFinder:
         try:
             self.reset_diagnostics()
 
-            self.handle_bdd_style = handle_bdd_style
-
-            cached = self._cache.get((name, self.handle_bdd_style), None)
+            cached = self._cache.get((name, handle_bdd_style), None)
 
             if cached is not None:
                 self.diagnostics = cached[1]
@@ -80,7 +80,7 @@ class KeywordFinder:
                 return cached[0]
 
             try:
-                result = self._find_keyword(name)
+                result = self._find_keyword(name, handle_bdd_style)
                 if result is None:
                     self.diagnostics.append(
                         DiagnosticsEntry(
@@ -99,7 +99,7 @@ class KeywordFinder:
                 result = None
                 self.diagnostics.append(DiagnosticsEntry(str(e), DiagnosticSeverity.ERROR, Error.KEYWORD_ERROR))
 
-            self._cache[(name, self.handle_bdd_style)] = (
+            self._cache[(name, handle_bdd_style)] = (
                 result,
                 self.diagnostics,
                 self.multiple_keywords_result,
@@ -109,7 +109,11 @@ class KeywordFinder:
         except CancelSearchError:
             return None
 
-    def _find_keyword(self, name: Optional[str]) -> Optional[KeywordDoc]:
+    def _find_keyword(
+        self,
+        name: Optional[str],
+        handle_bdd_style: bool = True,
+    ) -> Optional[KeywordDoc]:
         if not name:
             self.diagnostics.append(
                 DiagnosticsEntry(
@@ -129,14 +133,21 @@ class KeywordFinder:
             )
             raise CancelSearchError
 
-        result = self._get_keyword_from_self(name)
+        result: Optional[KeywordDoc] = None
+
+        if get_robot_version() >= (7, 0) and handle_bdd_style:
+            result = self._get_bdd_style_keyword(name)
+
+        if not result:
+            result = self._get_keyword_from_self(name)
+
         if not result and "." in name:
             result = self._get_explicit_keyword(name)
 
         if not result:
             result = self._get_implicit_keyword(name)
 
-        if not result and self.handle_bdd_style:
+        if get_robot_version() < (7, 0) and not result and handle_bdd_style:
             return self._get_bdd_style_keyword(name)
 
         return result
@@ -264,6 +275,9 @@ class KeywordFinder:
     def _select_best_matches(
         self, entries: List[Tuple[Optional[LibraryEntry], KeywordDoc]]
     ) -> List[Tuple[Optional[LibraryEntry], KeywordDoc]]:
+        if len(entries) < 2:
+            return entries
+
         normal = [hand for hand in entries if not hand[1].is_embedded]
         if normal:
             return normal
@@ -438,21 +452,25 @@ class KeywordFinder:
             f"or '{'' if standard[0] is None else standard[0].alias or standard[0].name}.{standard[1].name}'."
         )
 
-    def _get_bdd_style_keyword(self, name: str) -> Optional[KeywordDoc]:
-        if get_robot_version() < (6, 0):
-            lower = name.lower()
-            for prefix in ["given ", "when ", "then ", "and ", "but "]:
-                if lower.startswith(prefix):
-                    return self._find_keyword(name[len(prefix) :])
-            return None
+    @property
+    def bdd_prefix_regexp(self) -> "re.Pattern[str]":
+        if not self._bdd_prefix_regexp:
+            prefixes = (
+                "|".join(
+                    self.namespace.languages.bdd_prefixes
+                    if self.namespace.languages is not None
+                    else ["given", "when", "then", "and", "but"]
+                )
+                .replace(" ", r"\s")
+                .lower()
+            )
+            self._bdd_prefix_regexp = re.compile(rf"({prefixes})\s", re.IGNORECASE)
+        return self._bdd_prefix_regexp
 
-        parts = name.split()
-        if len(parts) < 2:
-            return None
-        for index in range(1, len(parts)):
-            prefix = " ".join(parts[:index]).title()
-            if prefix.title() in (
-                self.namespace.languages.bdd_prefixes if self.namespace.languages is not None else DEFAULT_BDD_PREFIXES
-            ):
-                return self._find_keyword(" ".join(parts[index:]))
+    def _get_bdd_style_keyword(self, name: str) -> Optional[KeywordDoc]:
+        match = self.bdd_prefix_regexp.match(name)
+        if match:
+            return self._find_keyword(
+                name[match.end() :], handle_bdd_style=False if get_robot_version() >= (7, 0) else True
+            )
         return None

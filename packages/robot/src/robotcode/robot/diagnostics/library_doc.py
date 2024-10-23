@@ -908,8 +908,7 @@ class KeywordStore:
         return self.__matchers
 
     def __getitem__(self, key: str) -> KeywordDoc:
-        key_matcher = KeywordMatcher(key)
-        items = [(k, v) for k, v in self._matchers.items() if k == key_matcher]
+        items = [(k, v) for k, v in self._matchers.items() if k == key]
 
         if not items:
             raise KeyError
@@ -968,8 +967,7 @@ class KeywordStore:
         return list(self.iter_all(key))
 
     def iter_all(self, key: str) -> Iterable[KeywordDoc]:
-        key_matcher = KeywordMatcher(key)
-        yield from (v for k, v in self._matchers.items() if k == key_matcher)
+        yield from (v for k, v in self._matchers.items() if k == key)
 
 
 @dataclass
