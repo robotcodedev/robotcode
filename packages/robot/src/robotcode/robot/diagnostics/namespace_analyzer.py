@@ -476,7 +476,7 @@ class NamespaceAnalyzer(Visitor):
                         range=range_from_token(var_token),
                         message=f"Environment variable '{var.name}' not found.",
                         severity=severity,
-                        code=Error.ENVIROMMENT_VARIABLE_NOT_FOUND,
+                        code=Error.ENVIRONMENT_VARIABLE_NOT_FOUND,
                     )
 
             if var.type == VariableDefinitionType.ENVIRONMENT_VARIABLE:
