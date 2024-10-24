@@ -21,7 +21,8 @@
 			"module": "robotcode.cli",
 			"justMyCode": false,
 			//"cwd": "${workspaceFolder}/tests/robotcode/language_server/robotframework/parts/data/tests",
-			"cwd": "${workspaceFolder}/..",
+			//"cwd": "${workspaceFolder}/..",
+			"cwd": "E:/source/uvtestprj",
 			//"cwd": "C:\\develop\\robot\\robotframework",
 			// "env": {
 			// 	"ROBOTCODE_COLOR": "1",
@@ -56,12 +57,13 @@
 				// ".."
 				// "config",
 				// "show",
-				"repl",
+				"discover",
+				"tests"
 				// "-d", "output",
 				// "-i",
 				// "-v", "CMD_LINE_VAR:cmd_line_var",
 				// "E:\\source\\uvtestprj\\tests\\first.robotrepl"
-				"./robotcode/language-configuration.json"
+
 			]
 		},
 		{

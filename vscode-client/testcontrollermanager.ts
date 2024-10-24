@@ -971,8 +971,14 @@ export class TestControllerManager {
     if (robotTestItem.range !== undefined) {
       testItem.range = toVsCodeRange(robotTestItem.range);
     }
+
     testItem.label = robotTestItem.name;
-    testItem.description = robotTestItem.description;
+    if (robotTestItem.type == "test" || robotTestItem.type == "task") {
+      testItem.description = robotTestItem.type + (robotTestItem.description ? ` - ${robotTestItem.description}` : "");
+    } else {
+      testItem.description = robotTestItem.description;
+    }
+
     if (robotTestItem.error !== undefined) {
       testItem.error = robotTestItem.error;
     }

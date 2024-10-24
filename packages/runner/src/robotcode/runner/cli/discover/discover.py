@@ -216,6 +216,7 @@ class TestItem:
     range: Optional[Range] = None
     tags: Optional[List[str]] = None
     error: Optional[str] = None
+    rpa: Optional[bool] = None
 
 
 @dataclass
@@ -228,7 +229,9 @@ class ResultItem:
 class Statistics:
     suites: int = 0
     suites_with_tests: int = 0
+    suites_with_tasks: int = 0
     tests: int = 0
+    tasks: int = 0
 
 
 def get_rel_source(source: Optional[str]) -> Optional[str]:
@@ -254,7 +257,7 @@ class Collector(SuiteVisitor):
         )
         self._current = self.all
         self.suites: List[TestItem] = []
-        self.tests: List[TestItem] = []
+        self.test_and_tasks: List[TestItem] = []
         self.tags: Dict[str, List[TestItem]] = defaultdict(list)
         self.normalized_tags: Dict[str, List[TestItem]] = defaultdict(list)
         self.statistics = Statistics()
@@ -294,6 +297,7 @@ class Collector(SuiteVisitor):
                 ),
                 children=[],
                 error=suite.error_message if isinstance(suite, ErroneousTestSuite) else None,
+                rpa=suite.rpa,
             )
         except ValueError as e:
             raise ValueError(f"Error while parsing suite {suite.source}: {e}") from e
@@ -313,7 +317,10 @@ class Collector(SuiteVisitor):
 
         self.statistics.suites += 1
         if suite.tests:
-            self.statistics.suites_with_tests += 1
+            if suite.rpa:
+                self.statistics.suites_with_tasks += 1
+            else:
+                self.statistics.suites_with_tests += 1
 
     def end_suite(self, _suite: TestSuite) -> None:
         self._collected.pop()
@@ -332,7 +339,7 @@ class Collector(SuiteVisitor):
         try:
             absolute_path = normalized_path(Path(test.source)) if test.source is not None else None
             item = TestItem(
-                type="test",
+                type="task" if self._current.rpa else "test",
                 id=f"{absolute_path or ''};{test.longname};{test.lineno}",
                 name=test.name,
                 longname=test.longname,
@@ -344,6 +351,7 @@ class Collector(SuiteVisitor):
                     end=Position(line=test.lineno - 1, character=0),
                 ),
                 tags=list(set(normalize(str(t), ignore="_") for t in test.tags)) if test.tags else None,
+                rpa=self._current.rpa,
             )
         except ValueError as e:
             raise ValueError(f"Error while parsing suite {test.source}: {e}") from e
@@ -352,10 +360,12 @@ class Collector(SuiteVisitor):
             self.tags[str(tag)].append(item)
             self.normalized_tags[normalize(str(tag), ignore="_")].append(item)
 
-        self.tests.append(item)
+        self.test_and_tasks.append(item)
         self._current.children.append(item)
-
-        self.statistics.tests += 1
+        if self._current.rpa:
+            self.statistics.tasks += 1
+        else:
+            self.statistics.tests += 1
 
 
 @click.group(invoke_without_command=False)
@@ -543,6 +553,28 @@ def handle_options(
     raise UnknownError("Unexpected error happened.")
 
 
+def print_statistics(app: Application, suite: TestSuite, collector: Collector) -> None:
+    def print() -> Iterable[str]:
+        yield click.style("Statistics:", underline=True, fg="blue")
+        yield os.linesep
+        yield click.style("  - Suites: ", underline=True, bold=True, fg="blue")
+        yield f"{collector.statistics.suites}{os.linesep}"
+        if collector.statistics.suites_with_tests:
+            yield click.style("  - Suites with tests: ", underline=True, bold=True, fg="blue")
+            yield f"{collector.statistics.suites_with_tests}{os.linesep}"
+        if collector.statistics.suites_with_tasks:
+            yield click.style("  - Suites with tasks: ", underline=True, bold=True, fg="blue")
+            yield f"{collector.statistics.suites_with_tasks}{os.linesep}"
+        if collector.statistics.tests:
+            yield click.style("  - Tests: ", underline=True, bold=True, fg="blue")
+            yield f"{collector.statistics.tests}{os.linesep}"
+        if collector.statistics.tasks:
+            yield click.style("  - Tasks: ", underline=True, bold=True, fg="blue")
+            yield f"{collector.statistics.tasks}{os.linesep}"
+
+    app.echo_via_pager(print())
+
+
 @discover.command(
     context_settings={"allow_extra_args": True, "ignore_unknown_options": True},
     add_help_option=True,
@@ -551,7 +583,7 @@ def handle_options(
 @click.option(
     "--tags / --no-tags",
     "show_tags",
-    default=False,
+    default=True,
     show_default=True,
     help="Show the tags that are present.",
 )
@@ -591,46 +623,68 @@ def all(
 
     if collector.all.children:
         if app.config.output_format is None or app.config.output_format == OutputFormat.TEXT:
-            tests_or_tasks = "Task" if suite.rpa else "Test"
 
             def print(item: TestItem, indent: int = 0) -> Iterable[str]:
-                type = click.style(
-                    item.type.capitalize() if item.type == "suite" else tests_or_tasks.capitalize(),
-                    fg="green",
-                )
-
-                if item.type == "test":
+                if item.type in ["test", "task"]:
                     yield "    "
-                    yield type
-                    yield click.style(f": {item.longname}", bold=True)
+                    yield click.style(f"{item.type.capitalize()}: ", fg="blue")
+                    yield click.style(item.longname, bold=True)
                     yield click.style(
                         f" ({item.source if full_paths else item.rel_source}"
                         f":{item.range.start.line + 1 if item.range is not None else 1}){os.linesep}"
                     )
                     if show_tags and item.tags:
-                        yield click.style("        Tags:", bold=True, fg="green")
+                        yield click.style("        Tags:", bold=True, fg="yellow")
                         yield f" {', '. join(normalize(str(tag), ignore='_') for tag in sorted(item.tags))}{os.linesep}"
                 else:
-                    yield type
-                    yield f": {item.longname}"
+                    yield click.style(f"{item.type.capitalize()}: ", fg="green")
+                    yield click.style(item.longname, bold=True)
                     yield click.style(f" ({item.source if full_paths else item.rel_source}){os.linesep}")
                 for child in item.children or []:
                     yield from print(child, indent + 2)
 
-                if indent == 0:
-                    yield os.linesep
-
-                    yield click.style("Suites: ", underline=True, bold=True, fg="blue")
-                    yield f"{collector.statistics.suites}{os.linesep}"
-                    yield click.style(f"Suites with {tests_or_tasks}: ", underline=True, bold=True, fg="blue")
-                    yield f"{collector.statistics.suites_with_tests}{os.linesep}"
-                    yield click.style(f"{tests_or_tasks}: ", underline=True, bold=True, fg="blue")
-                    yield f"{collector.statistics.tests}{os.linesep}"
-
             app.echo_via_pager(print(collector.all.children[0]))
+            print_statistics(app, suite, collector)
 
         else:
             app.print_data(ResultItem([collector.all], diagnostics), remove_defaults=True)
+
+
+def _test_or_tasks(
+    selected_type: str,
+    app: Application,
+    full_paths: bool,
+    show_tags: bool,
+    by_longname: Tuple[str, ...],
+    exclude_by_longname: Tuple[str, ...],
+    robot_options_and_args: Tuple[str, ...],
+) -> None:
+    suite, collector, diagnostics = handle_options(app, by_longname, exclude_by_longname, robot_options_and_args)
+
+    if collector.all.children:
+        if app.config.output_format is None or app.config.output_format == OutputFormat.TEXT:
+
+            def print(items: List[TestItem]) -> Iterable[str]:
+                for item in items:
+                    if item.type != selected_type:
+                        continue
+
+                    yield click.style(f"{item.type.capitalize()}: ", fg="blue")
+                    yield click.style(item.longname, bold=True)
+                    yield click.style(
+                        f" ({item.source if full_paths else item.rel_source}"
+                        f":{item.range.start.line + 1 if item.range is not None else 1}){os.linesep}"
+                    )
+                    if show_tags and item.tags:
+                        yield click.style("    Tags:", bold=True, fg="yellow")
+                        yield f" {', '. join(normalize(str(tag), ignore='_') for tag in sorted(item.tags))}{os.linesep}"
+
+            if collector.test_and_tasks:
+                app.echo_via_pager(print(collector.test_and_tasks))
+                print_statistics(app, suite, collector)
+
+        else:
+            app.print_data(ResultItem(collector.test_and_tasks, diagnostics), remove_defaults=True)
 
 
 @discover.command(
@@ -677,34 +731,53 @@ def tests(
     ```
     """
 
-    suite, collector, diagnostics = handle_options(app, by_longname, exclude_by_longname, robot_options_and_args)
+    _test_or_tasks("test", app, full_paths, show_tags, by_longname, exclude_by_longname, robot_options_and_args)
 
-    if collector.all.children:
-        if app.config.output_format is None or app.config.output_format == OutputFormat.TEXT:
 
-            tests_or_tasks = "Task" if suite.rpa else "Test"
+@discover.command(
+    context_settings={"allow_extra_args": True, "ignore_unknown_options": True},
+    add_help_option=True,
+    epilog="Use `-- --help` to see `robot` help.",
+)
+@click.option(
+    "--tags / --no-tags",
+    "show_tags",
+    default=False,
+    show_default=True,
+    help="Show the tags that are present.",
+)
+@click.option(
+    "--full-paths / --no-full-paths",
+    "full_paths",
+    default=False,
+    show_default=True,
+    help="Show full paths instead of releative.",
+)
+@add_options(*ROBOT_OPTIONS)
+@pass_application
+def tasks(
+    app: Application,
+    full_paths: bool,
+    show_tags: bool,
+    by_longname: Tuple[str, ...],
+    exclude_by_longname: Tuple[str, ...],
+    robot_options_and_args: Tuple[str, ...],
+) -> None:
+    """\
+    Discover tasks with the selected configuration, profiles, options and
+    arguments.
 
-            def print(items: List[TestItem]) -> Iterable[str]:
-                for item in items:
-                    type = click.style(
-                        item.type.capitalize() if item.type == "suite" else tests_or_tasks.capitalize(),
-                        fg="blue",
-                    )
-                    yield type
-                    yield click.style(f": {item.longname}", bold=True)
-                    yield click.style(
-                        f" ({item.source if full_paths else item.rel_source}"
-                        f":{item.range.start.line + 1 if item.range is not None else 1}){os.linesep}"
-                    )
-                    if show_tags and item.tags:
-                        yield click.style("    Tags:", bold=True, fg="green")
-                        yield f" {', '. join(normalize(str(tag), ignore='_') for tag in sorted(item.tags))}{os.linesep}"
+    You can use all known `robot` arguments to filter for example by tags or to use pre-run-modifier.
 
-            if collector.tests:
-                app.echo_via_pager(print(collector.tests))
-
-        else:
-            app.print_data(ResultItem(collector.tests, diagnostics), remove_defaults=True)
+    \b
+    Examples:
+    ```
+    robotcode discover tasks
+    robotcode --profile regression discover tasks
+    robotcode --profile regression discover tasks --include regression --exclude wipANDnotready
+    ```
+    """
+    _test_or_tasks("task", app, full_paths, show_tags, by_longname, exclude_by_longname, robot_options_and_args)
 
 
 @discover.command(
@@ -743,7 +816,7 @@ def suites(
     ```
     """
 
-    _suite, collector, diagnostics = handle_options(app, by_longname, exclude_by_longname, robot_options_and_args)
+    suite, collector, diagnostics = handle_options(app, by_longname, exclude_by_longname, robot_options_and_args)
 
     if collector.all.children:
         if app.config.output_format is None or app.config.output_format == OutputFormat.TEXT:
@@ -759,6 +832,8 @@ def suites(
 
             if collector.suites:
                 app.echo_via_pager(print(collector.suites))
+
+            print_statistics(app, suite, collector)
 
         else:
             app.print_data(ResultItem(collector.suites, diagnostics), remove_defaults=True)
@@ -789,6 +864,13 @@ class TagsResult:
     help="Show tests where the tag is present.",
 )
 @click.option(
+    "--tasks / --no-tasks",
+    "show_tasks",
+    default=False,
+    show_default=True,
+    help="Show tasks where the tag is present.",
+)
+@click.option(
     "--full-paths / --no-full-paths",
     "full_paths",
     default=False,
@@ -801,6 +883,7 @@ def tags(
     app: Application,
     normalized: bool,
     show_tests: bool,
+    show_tasks: bool,
     full_paths: bool,
     by_longname: Tuple[str, ...],
     exclude_by_longname: Tuple[str, ...],
@@ -822,7 +905,7 @@ def tags(
     ```
     """
 
-    _suite, collector, _diagnostics = handle_options(app, by_longname, exclude_by_longname, robot_options_and_args)
+    suite, collector, _diagnostics = handle_options(app, by_longname, exclude_by_longname, robot_options_and_args)
 
     if collector.all.children:
         if app.config.output_format is None or app.config.output_format == OutputFormat.TEXT:
@@ -832,17 +915,25 @@ def tags(
                     yield click.style(
                         f"{tag}{os.linesep}",
                         bold=show_tests,
-                        fg="green" if show_tests else None,
+                        fg="yellow" if show_tests else None,
                     )
-                    if show_tests:
+                    if show_tests or show_tasks:
                         for t in items:
-                            yield click.style(f"    {t.longname}", bold=True) + click.style(
+                            if show_tests != show_tasks:
+                                if show_tests and t.type != "test":
+                                    continue
+                                if show_tasks and t.type != "task":
+                                    continue
+                            yield click.style(f"    {t.type.capitalize()}: ", fg="blue")
+                            yield click.style(t.longname, bold=True) + click.style(
                                 f" ({t.source if full_paths else t.rel_source}"
                                 f":{t.range.start.line + 1 if t.range is not None else 1}){os.linesep}"
                             )
 
             if collector.normalized_tags:
                 app.echo_via_pager(print(collector.normalized_tags if normalized else collector.tags))
+
+            print_statistics(app, suite, collector)
 
         else:
             app.print_data(TagsResult(collector.normalized_tags), remove_defaults=True)
