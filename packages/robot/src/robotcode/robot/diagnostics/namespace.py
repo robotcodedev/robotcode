@@ -28,11 +28,6 @@ from robot.parsing.model.statements import ResourceImport as RobotResourceImport
 from robot.parsing.model.statements import (
     VariablesImport as RobotVariablesImport,
 )
-from robot.variables.search import (
-    is_scalar_assign,
-    is_variable,
-    search_variable,
-)
 from robotcode.core.concurrent import RLock
 from robotcode.core.event import event
 from robotcode.core.lsp.types import (
@@ -57,7 +52,12 @@ from ..utils.ast import (
     tokenize_variables,
 )
 from ..utils.stubs import Languages
-from ..utils.variables import BUILTIN_VARIABLES
+from ..utils.variables import (
+    BUILTIN_VARIABLES,
+    is_scalar_assign,
+    is_variable,
+    search_variable,
+)
 from ..utils.visitor import Visitor
 from .entities import (
     ArgumentDefinition,

@@ -12,11 +12,11 @@ from typing import (
 )
 
 from robot.parsing.lexer.tokens import Token
-from robot.variables.search import search_variable
 from robotcode.core.lsp.types import Position, Range
 from robotcode.robot.utils.match import normalize
 
 from ..utils.ast import range_from_token
+from ..utils.variables import search_variable
 
 if TYPE_CHECKING:
     from robotcode.robot.diagnostics.library_doc import KeywordDoc, LibraryDoc

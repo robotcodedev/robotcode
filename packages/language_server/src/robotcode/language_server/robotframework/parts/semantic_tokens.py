@@ -36,8 +36,7 @@ from robot.parsing.model.statements import (
     Variable,
     VariablesImport,
 )
-from robot.utils.escaping import split_from_equals, unescape
-from robot.variables.search import is_variable
+from robot.utils.escaping import unescape
 
 from robotcode.core.concurrent import check_current_task_canceled
 from robotcode.core.language import language_id
@@ -70,6 +69,7 @@ from robotcode.robot.utils.ast import (
     iter_over_keyword_names_and_owners,
     token_in_range,
 )
+from robotcode.robot.utils.variables import is_variable, split_from_equals
 
 from .protocol_part import RobotLanguageServerProtocolPart
 
@@ -1120,13 +1120,13 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
                         if kw_token is not None:
                             kw: Optional[str] = None
 
-                            for _, name in iter_over_keyword_names_and_owners(
+                            for _, n in iter_over_keyword_names_and_owners(
                                 ModelHelper.strip_bdd_prefix(namespace, kw_token).value
                             ):
-                                if name is not None:
-                                    matcher = KeywordMatcher(name)
+                                if n is not None:
+                                    matcher = KeywordMatcher(n)
                                     if matcher in ALL_RUN_KEYWORDS_MATCHERS:
-                                        kw = name
+                                        kw = n
                             if kw:
                                 kw_doc = namespace.find_keyword(kw_token.value)
                                 if kw_doc is not None and kw_doc.is_any_run_keyword():

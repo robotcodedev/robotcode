@@ -28,9 +28,8 @@ from robot.parsing.model.statements import (
     Variable,
     VariablesImport,
 )
-from robot.utils.escaping import split_from_equals, unescape
+from robot.utils.escaping import unescape
 from robot.variables.finders import NOT_FOUND, NumberFinder
-from robot.variables.search import contains_variable, is_scalar_assign, is_variable, search_variable
 from robotcode.core.concurrent import check_current_task_canceled
 from robotcode.core.lsp.types import (
     CodeDescription,
@@ -54,6 +53,7 @@ from ..utils.ast import (
     strip_variable_token,
     tokenize_variables,
 )
+from ..utils.variables import contains_variable, is_scalar_assign, is_variable, search_variable, split_from_equals
 from ..utils.visitor import Visitor
 from .entities import (
     ArgumentDefinition,

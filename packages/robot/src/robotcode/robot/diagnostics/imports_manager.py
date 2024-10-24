@@ -25,6 +25,7 @@ from typing import (
     final,
 )
 
+from robot.libraries import STDLIBS
 from robot.utils.text import split_args_from_name_or_path
 from robotcode.core.concurrent import RLock, run_as_task
 from robotcode.core.documents_manager import DocumentsManager
@@ -43,6 +44,7 @@ from robotcode.core.utils.path import normalized_path, path_is_relative_to
 from ..__version__ import __version__
 from ..utils import get_robot_version, get_robot_version_str
 from ..utils.robot_path import find_file_ex
+from ..utils.variables import contains_variable
 from .entities import (
     CommandLineVariableDefinition,
     VariableDefinition,
@@ -1023,8 +1025,6 @@ class ImportsManager:
         base_dir: str,
         variables: Optional[Dict[str, Any]] = None,
     ) -> str:
-        from robot.libraries import STDLIBS
-        from robot.variables.search import contains_variable
 
         if contains_variable(name, "$@&%"):
             return find_library(
@@ -1062,8 +1062,6 @@ class ImportsManager:
         file_type: str = "Resource",
         variables: Optional[Dict[str, Any]] = None,
     ) -> str:
-        from robot.variables.search import contains_variable
-
         if contains_variable(name, "$@&%"):
             return find_file(
                 name,
@@ -1102,8 +1100,6 @@ class ImportsManager:
         resolve_variables: bool = True,
         resolve_command_line_vars: bool = True,
     ) -> str:
-        from robot.variables.search import contains_variable
-
         if resolve_variables and contains_variable(name, "$@&%"):
             return find_variables(
                 name,

@@ -62,7 +62,6 @@ from robot.variables import Variables
 from robot.variables.filesetter import PythonImporter, YamlImporter
 from robot.variables.finders import VariableFinder
 from robot.variables.replacer import VariableReplacer
-from robot.variables.search import contains_variable
 from robotcode.core.lsp.types import Position, Range
 from robotcode.core.utils.path import normalized_path
 from robotcode.robot.diagnostics.entities import (
@@ -83,6 +82,8 @@ from robotcode.robot.utils.ast import (
 from robotcode.robot.utils.markdownformatter import MarkDownFormatter
 from robotcode.robot.utils.match import normalize, normalize_namespace
 from robotcode.robot.utils.stubs import HasError, HasErrors
+
+from ..utils.variables import contains_variable
 
 if get_robot_version() < (7, 0):
     from robot.running.handlers import _PythonHandler, _PythonInitHandler  # pyright: ignore[reportMissingImports]
@@ -1669,9 +1670,8 @@ def _find_library_internal(
 
     robot_variables = None
 
-    robot_variables = resolve_robot_variables(working_dir, base_dir, command_line_variables, variables)
-
     if contains_variable(name, "$@&%"):
+        robot_variables = resolve_robot_variables(working_dir, base_dir, command_line_variables, variables)
         try:
             name = robot_variables.replace_string(name, ignore_errors=False)
         except DataError as error:
@@ -1840,7 +1840,11 @@ def get_library_doc(
                 library_name,
                 args,
                 create_handlers=False,
-                variables=robot_variables,
+                variables=(
+                    robot_variables
+                    if robot_variables is not None
+                    else resolve_robot_variables(working_dir, base_dir, command_line_variables, variables)
+                ),
             )
             if get_robot_version() < (7, 0):
                 _ = lib.get_instance()
@@ -2099,9 +2103,8 @@ def _find_variables_internal(
 
     _update_env(working_dir)
 
-    robot_variables = resolve_robot_variables(working_dir, base_dir, command_line_variables, variables)
-
     if contains_variable(name, "$@&%"):
+        robot_variables = resolve_robot_variables(working_dir, base_dir, command_line_variables, variables)
         try:
             name = robot_variables.replace_string(name, ignore_errors=False)
         except DataError as error:
@@ -2122,12 +2125,18 @@ def resolve_args(
     command_line_variables: Optional[Dict[str, Optional[Any]]] = None,
     variables: Optional[Dict[str, Optional[Any]]] = None,
 ) -> Tuple[Any, ...]:
-    robot_variables = resolve_robot_variables(working_dir, base_dir, command_line_variables, variables)
+    # robot_variables = resolve_robot_variables(working_dir, base_dir, command_line_variables, variables)
+    robot_variables: Any = None
 
     result = []
     for arg in args:
         if isinstance(arg, str):
-            result.append(robot_variables.replace_string(arg, ignore_errors=True))
+            if contains_variable(arg, "$@&%"):
+                if robot_variables is None:
+                    robot_variables = resolve_robot_variables(working_dir, base_dir, command_line_variables, variables)
+                result.append(robot_variables.replace_string(arg, ignore_errors=True))
+            else:
+                result.append(arg)
         else:
             result.append(arg)
 
@@ -2402,8 +2411,8 @@ def find_file(
 ) -> str:
     _update_env(working_dir)
 
-    robot_variables = resolve_robot_variables(working_dir, base_dir, command_line_variables, variables)
     if contains_variable(name, "$@&%"):
+        robot_variables = resolve_robot_variables(working_dir, base_dir, command_line_variables, variables)
         try:
             name = robot_variables.replace_string(name, ignore_errors=False)
         except DataError as error:
@@ -2505,7 +2514,7 @@ def complete_library_import(
             if e not in DEFAULT_LIBRARIES
         ]
 
-    if name is not None:
+    if name is not None and contains_variable(name, "$@&%"):
         robot_variables = resolve_robot_variables(working_dir, base_dir, command_line_variables, variables)
 
         name = robot_variables.replace_string(name, ignore_errors=True)
@@ -2581,7 +2590,7 @@ def complete_resource_import(
 
     result: List[CompleteResult] = []
 
-    if name is not None:
+    if name is not None and contains_variable(name, "$@&%"):
         robot_variables = resolve_robot_variables(working_dir, base_dir, command_line_variables, variables)
 
         name = robot_variables.replace_string(name, ignore_errors=True)
@@ -2621,7 +2630,7 @@ def complete_variables_import(
 
     result: List[CompleteResult] = []
 
-    if name is not None:
+    if name is not None and contains_variable(name, "$@&%"):
         robot_variables = resolve_robot_variables(working_dir, base_dir, command_line_variables, variables)
 
         name = robot_variables.replace_string(name, ignore_errors=True)

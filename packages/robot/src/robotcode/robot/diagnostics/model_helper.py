@@ -21,9 +21,8 @@ from typing import (
 
 from robot.errors import VariableError
 from robot.parsing.lexer.tokens import Token
-from robot.utils.escaping import split_from_equals, unescape
+from robot.utils.escaping import unescape
 from robot.variables.finders import NOT_FOUND, NumberFinder
-from robot.variables.search import contains_variable, search_variable
 from robotcode.core.lsp.types import Position
 
 from ..utils import get_robot_version
@@ -35,6 +34,7 @@ from ..utils.ast import (
     whitespace_at_begin_of_token,
     whitespace_from_begin_of_token,
 )
+from ..utils.variables import contains_variable, search_variable, split_from_equals
 from .entities import (
     LibraryEntry,
     VariableDefinition,
