@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ast
+import functools
 import hashlib
 import importlib
 import importlib.util
@@ -197,14 +198,29 @@ def convert_from_rest(text: str) -> str:
     return text
 
 
+if get_robot_version() >= (6, 0):
+
+    @functools.lru_cache(maxsize=None)
+    def _get_embedded_arguments(name: str) -> Any:
+        try:
+            return EmbeddedArguments.from_name(name)
+        except (VariableError, DataError):
+            return ()
+
+else:
+
+    @functools.lru_cache(maxsize=None)
+    def _get_embedded_arguments(name: str) -> Any:
+        try:
+            return EmbeddedArguments(name)
+        except (VariableError, DataError):
+            return ()
+
+
 def is_embedded_keyword(name: str) -> bool:
     try:
-        if get_robot_version() >= (6, 0):
-            if EmbeddedArguments.from_name(name):
-                return True
-        else:
-            if EmbeddedArguments(name):
-                return True
+        if _get_embedded_arguments(name):
+            return True
     except (VariableError, DataError):
         return True
 
@@ -235,17 +251,21 @@ class KeywordMatcher:
     def embedded_arguments(self) -> Any:
         if self._embedded_arguments is None:
             if self._can_have_embedded:
-                try:
-                    if get_robot_version() >= (6, 0):
-                        self._embedded_arguments = EmbeddedArguments.from_name(self.name)
-                    else:
-                        self._embedded_arguments = EmbeddedArguments(self.name)
-                except (VariableError, DataError):
-                    self._embedded_arguments = ()
+                self._embedded_arguments = _get_embedded_arguments(self.name)
             else:
                 self._embedded_arguments = ()
 
         return self._embedded_arguments
+
+    if get_robot_version() >= (6, 0):
+
+        def __match_embedded(self, name: str) -> bool:
+            return self.embedded_arguments.match(name) is not None
+
+    else:
+
+        def __match_embedded(self, name: str) -> bool:
+            return self.embedded_arguments.name.match(name) is not None
 
     def __eq__(self, o: object) -> bool:
         if cached_isinstance(o, KeywordMatcher):
@@ -261,10 +281,7 @@ class KeywordMatcher:
             return False
 
         if self.embedded_arguments:
-            if get_robot_version() >= (6, 0):
-                return self.embedded_arguments.match(o) is not None
-
-            return self.embedded_arguments.name.match(o) is not None
+            return self.__match_embedded(o)
 
         return self.normalized_name == str(normalize_namespace(o) if self._is_namespace else normalize(o))
 
@@ -935,8 +952,6 @@ class KeywordStore:
         )
 
     def __contains__(self, _x: object) -> bool:
-        if not isinstance(_x, KeywordMatcher):
-            _x = KeywordMatcher(str(_x))
         return any(k == _x for k in self._matchers.keys())
 
     def __len__(self) -> int:

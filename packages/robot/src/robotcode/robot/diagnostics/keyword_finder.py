@@ -1,3 +1,4 @@
+import functools
 import re
 from itertools import chain
 from typing import TYPE_CHECKING, Dict, Iterable, Iterator, List, NamedTuple, Optional, Sequence, Tuple
@@ -59,7 +60,6 @@ class KeywordFinder:
         self._all_keywords: Optional[List[LibraryEntry]] = None
         self._resource_keywords: Optional[List[ResourceEntry]] = None
         self._library_keywords: Optional[List[LibraryEntry]] = None
-        self._bdd_prefix_regexp: Optional["re.Pattern[str]"] = None
 
     def reset_diagnostics(self) -> None:
         self.diagnostics = []
@@ -459,20 +459,18 @@ class KeywordFinder:
             f"or '{'' if standard[0] is None else standard[0].alias or standard[0].name}.{standard[1].name}'."
         )
 
-    @property
+    @functools.cached_property
     def bdd_prefix_regexp(self) -> "re.Pattern[str]":
-        if not self._bdd_prefix_regexp:
-            prefixes = (
-                "|".join(
-                    self.namespace.languages.bdd_prefixes
-                    if self.namespace.languages is not None
-                    else ["given", "when", "then", "and", "but"]
-                )
-                .replace(" ", r"\s")
-                .lower()
+        prefixes = (
+            "|".join(
+                self.namespace.languages.bdd_prefixes
+                if self.namespace.languages is not None
+                else ["given", "when", "then", "and", "but"]
             )
-            self._bdd_prefix_regexp = re.compile(rf"({prefixes})\s", re.IGNORECASE)
-        return self._bdd_prefix_regexp
+            .replace(" ", r"\s")
+            .lower()
+        )
+        return re.compile(rf"({prefixes})\s", re.IGNORECASE)
 
     def _get_bdd_style_keyword(self, name: str) -> Optional[KeywordDoc]:
         match = self.bdd_prefix_regexp.match(name)

@@ -893,6 +893,7 @@ class Namespace:
                 self._namespaces[KeywordMatcher(v.alias or v.name or v.import_name, is_namespace=True)].append(v)
             for v in (self.get_resources()).values():
                 self._namespaces[KeywordMatcher(v.alias or v.name or v.import_name, is_namespace=True)].append(v)
+
         return self._namespaces
 
     def get_resources(self) -> Dict[str, ResourceEntry]:
@@ -1793,11 +1794,10 @@ class Namespace:
 
         libdoc = self.get_library_doc()
 
-        for doc in itertools.chain(
+        yield from itertools.chain(
             self.get_imported_keywords(),
             libdoc.keywords if libdoc is not None else [],
-        ):
-            yield doc
+        )
 
     @_logger.call
     def get_keywords(self) -> List[KeywordDoc]:

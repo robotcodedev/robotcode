@@ -531,6 +531,20 @@ class NamespaceAnalyzer(Visitor):
             )
         )
 
+    KEYWORDS_WITH_EXPRESSIONS = [
+        "BuiltIn.Evaluate",
+        "BuiltIn.Should Be True",
+        "BuiltIn.Should Not Be True",
+        "BuiltIn.Skip If",
+        "BuiltIn.Continue For Loop If",
+        "BuiltIn.Exit For Loop If",
+        "BuiltIn.Return From Keyword If",
+        "BuiltIn.Run Keyword And Return If",
+        "BuiltIn.Pass Execution If",
+        "BuiltIn.Run Keyword If",
+        "BuiltIn.Run Keyword Unless",
+    ]
+
     def _analyze_keyword_call(
         self,
         node: ast.AST,
@@ -708,19 +722,7 @@ class NamespaceAnalyzer(Visitor):
             )
 
         if result is not None:
-            if result.longname in [
-                "BuiltIn.Evaluate",
-                "BuiltIn.Should Be True",
-                "BuiltIn.Should Not Be True",
-                "BuiltIn.Skip If",
-                "BuiltIn.Continue For Loop If",
-                "BuiltIn.Exit For Loop If",
-                "BuiltIn.Return From Keyword If",
-                "BuiltIn.Run Keyword And Return If",
-                "BuiltIn.Pass Execution If",
-                "BuiltIn.Run Keyword If",
-                "BuiltIn.Run Keyword Unless",
-            ]:
+            if result.longname in self.KEYWORDS_WITH_EXPRESSIONS:
                 tokens = argument_tokens
                 if tokens and (token := tokens[0]):
                     self._analyze_token_expression_variables(token)
