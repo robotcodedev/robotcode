@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from io import StringIO
 from pathlib import Path
 from tokenize import TokenError, generate_tokens
-from typing import TYPE_CHECKING, Any, Dict, Iterator, List, Optional, Set, Tuple, Union, cast
+from typing import TYPE_CHECKING, Any, Callable, Dict, Iterator, List, Optional, Set, Tuple, Union, cast
 
 from robot.errors import VariableError
 from robot.parsing.lexer.tokens import Token
@@ -43,6 +43,7 @@ from robotcode.core.lsp.types import (
     Range,
 )
 from robotcode.core.uri import Uri
+from robotcode.core.utils.logging import LoggingDescriptor
 
 from ..utils import get_robot_version
 from ..utils.ast import (
@@ -94,6 +95,9 @@ class AnalyzerResult:
 
 
 class NamespaceAnalyzer(Visitor):
+
+    _logger = LoggingDescriptor()
+
     def __init__(
         self,
         model: ast.AST,
@@ -126,8 +130,11 @@ class NamespaceAnalyzer(Visitor):
         self._overridden_variables: Dict[VariableDefinition, VariableDefinition] = {}
 
         self._in_setting = False
+        self._in_block_setting = False
 
         self._suite_variables = self._variables.copy()
+        self._block_variables: Optional[Dict[VariableMatcher, VariableDefinition]] = None
+        self._end_block_handlers: Optional[List[Callable[[], None]]] = None
 
     def run(self) -> AnalyzerResult:
         self._diagnostics = []
@@ -146,10 +153,11 @@ class NamespaceAnalyzer(Visitor):
         except BaseException as e:
             self._append_diagnostics(
                 range_from_node(self._model),
-                message=f"Fatal: can't analyze namespace '{e}')",
+                message=f"Fatal: can't analyze namespace '{e}'.",
                 severity=DiagnosticSeverity.ERROR,
                 code=type(e).__qualname__,
             )
+            self._logger.exception(e)
 
         return AnalyzerResult(
             self._diagnostics,
@@ -378,6 +386,15 @@ class NamespaceAnalyzer(Visitor):
             self._analyze_statement_variables(node, severity)
         finally:
             self._in_setting = False
+
+    def _visit_block_settings_statement(
+        self, node: Statement, severity: DiagnosticSeverity = DiagnosticSeverity.ERROR
+    ) -> None:
+        self._in_block_setting = True
+        try:
+            self._visit_settings_statement(node, severity)
+        finally:
+            self._in_block_setting = False
 
     def _analyze_token_expression_variables(
         self, token: Token, severity: DiagnosticSeverity = DiagnosticSeverity.ERROR
@@ -896,7 +913,29 @@ class NamespaceAnalyzer(Visitor):
 
         if keyword_token is not None and keyword_token.value and keyword_token.value.upper() not in ("", "NONE"):
             self._analyze_token_variables(keyword_token)
-            self._analyze_statement_variables(node)
+            self._visit_block_settings_statement(node)
+
+            self._analyze_keyword_call(
+                node,
+                keyword_token,
+                [e for e in node.get_tokens(Token.ARGUMENT)],
+                allow_variables=True,
+                ignore_errors_if_contains_variables=True,
+            )
+
+    def visit_Teardown(self, node: Fixture) -> None:  # noqa: N802
+        keyword_token = node.get_token(Token.NAME)
+
+        # TODO: calculate possible variables in NAME
+
+        if keyword_token is not None and keyword_token.value and keyword_token.value.upper() not in ("", "NONE"):
+
+            def _handler() -> None:
+                self._analyze_token_variables(keyword_token)
+                self._analyze_statement_variables(node)
+
+            if self._end_block_handlers is not None:
+                self._end_block_handlers.append(_handler)
 
             self._analyze_keyword_call(
                 node,
@@ -984,9 +1023,15 @@ class NamespaceAnalyzer(Visitor):
         self._current_testcase_or_keyword_name = node.name
         old_variables = self._variables
         self._variables = self._variables.copy()
+        self._end_block_handlers = []
         try:
             self.generic_visit(node)
+
+            for handler in self._end_block_handlers:
+                handler()
+
         finally:
+            self._end_block_handlers = None
             self._variables = old_variables
             self._current_testcase_or_keyword_name = None
             self._template = None
@@ -1029,13 +1074,21 @@ class NamespaceAnalyzer(Visitor):
         self._current_testcase_or_keyword_name = node.name
         old_variables = self._variables
         self._variables = self._variables.copy()
+        self._end_block_handlers = []
         try:
             arguments = next((v for v in node.body if isinstance(v, Arguments)), None)
             if arguments is not None:
                 self._visit_Arguments(arguments)
+            self._block_variables = self._variables.copy()
 
             self.generic_visit(node)
+
+            for handler in self._end_block_handlers:
+                handler()
+
         finally:
+            self._end_block_handlers = None
+            self._block_variables = None
             self._variables = old_variables
             self._current_testcase_or_keyword_name = None
             self._current_keyword_doc = None
@@ -1351,7 +1404,7 @@ class NamespaceAnalyzer(Visitor):
         self._visit_settings_statement(node, DiagnosticSeverity.HINT)
 
     def visit_Timeout(self, node: Statement) -> None:  # noqa: N802
-        self._analyze_statement_variables(node, DiagnosticSeverity.HINT)
+        self._visit_block_settings_statement(node)
 
     def visit_SingleValue(self, node: Statement) -> None:  # noqa: N802
         self._visit_settings_statement(node, DiagnosticSeverity.HINT)
@@ -1399,19 +1452,35 @@ class NamespaceAnalyzer(Visitor):
                     code=Error.DEPRECATED_HEADER,
                 )
 
-    def visit_ReturnSetting(self, node: Statement) -> None:  # noqa: N802
-        self._analyze_statement_variables(node)
+    if get_robot_version() >= (7, 0):
 
-        if get_robot_version() >= (7, 0):
-            token = node.get_token(Token.RETURN_SETTING)
-            if token is not None and token.error:
-                self._append_diagnostics(
-                    range=range_from_node_or_token(node, token),
-                    message=token.error,
-                    severity=DiagnosticSeverity.WARNING,
-                    tags=[DiagnosticTag.DEPRECATED],
-                    code=Error.DEPRECATED_RETURN_SETTING,
-                )
+        def visit_ReturnSetting(self, node: Statement) -> None:  # noqa: N802
+
+            def _handler() -> None:
+                self._analyze_statement_variables(node)
+
+            if self._end_block_handlers is not None:
+                self._end_block_handlers.append(_handler)
+
+            if get_robot_version() >= (7, 0):
+                token = node.get_token(Token.RETURN_SETTING)
+                if token is not None and token.error:
+                    self._append_diagnostics(
+                        range=range_from_node_or_token(node, token),
+                        message=token.error,
+                        severity=DiagnosticSeverity.WARNING,
+                        tags=[DiagnosticTag.DEPRECATED],
+                        code=Error.DEPRECATED_RETURN_SETTING,
+                    )
+
+    else:
+
+        def visit_Return(self, node: Statement) -> None:  # noqa: N802
+            def _handler() -> None:
+                self._analyze_statement_variables(node)
+
+            if self._end_block_handlers is not None:
+                self._end_block_handlers.append(_handler)
 
     def _check_import_name(self, value: Optional[str], node: ast.AST, type: str) -> None:
         if not value:
@@ -1540,7 +1609,11 @@ class NamespaceAnalyzer(Visitor):
                 default_value=default_value or None,
             )
 
-        vars = self._suite_variables if self._in_setting else self._variables
+        vars = (
+            self._block_variables
+            if self._block_variables and self._in_block_setting
+            else self._suite_variables if self._in_setting else self._variables
+        )
 
         matcher = VariableMatcher(name)
 
