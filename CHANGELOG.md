@@ -2,6 +2,45 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [0.95.0](https://github.com/robotcodedev/robotcode/compare/v0.94.0..v0.95.0) - 2024-10-25
+
+### Bug Fixes
+
+- **analyzer:** Fix some spellings ([b622c42](https://github.com/robotcodedev/robotcode/commit/b622c42d33bc0a41fab8ffa00cdc74cbb7fe98c8))
+- **analyzer:** Handle bdd prefixes correctly if keyword is cached ([41ff53f](https://github.com/robotcodedev/robotcode/commit/41ff53f9b3c8cc34f06f34ebeaa7c63691544cb2))
+- **analyzer:** Corrected analyzing of `[Return]`, `[Setup]`, `[Teardown]` statement ([4e17c8f](https://github.com/robotcodedev/robotcode/commit/4e17c8fc10814f62799548467efac25c07fbe429))
+- **analyzer:** Corrected exception in parsing ForHeaders with invalid variable ([0851d4f](https://github.com/robotcodedev/robotcode/commit/0851d4f6eb7bd90958996cc9c25506712885dca9))
+- **analyzer:** Fixed find variables as modules for RF > 5 ([ce787b2](https://github.com/robotcodedev/robotcode/commit/ce787b26d6fab981e432166972429aa2d0d84240))
+- **langserver:** Corrected inlay hints for bdd style keyword calls ([77ce8f1](https://github.com/robotcodedev/robotcode/commit/77ce8f1147a4355ea71986408971fca4f441bee5))
+- **langserver:** Only update direct references to a file, not imports if something changes ([ea24b06](https://github.com/robotcodedev/robotcode/commit/ea24b061c77de38e1f755a74979d2632970ff032))
+
+
+### Features
+
+- **analyzer:** Implemented better handling of imports of dynamic libraries ([f6b5b87](https://github.com/robotcodedev/robotcode/commit/f6b5b875daf7cd8d59d0cc46ea24a4d07b02c777))
+
+  - show also errors on in dynamic library API like in `get_keyword_documentation` and `get_keyword_arguments`
+
+- **discover:** Rework discover commands ([87e1dd9](https://github.com/robotcodedev/robotcode/commit/87e1dd96c525c9639b2727681bac22cc4c3ca8cc))
+
+  - show statistics on all commands
+  - better differention of tests and tasks
+  - new command `tasks` to show only the tasks
+  - command tests show only the tests
+  - new arguments for `tags` command `--tests` and `--tags`
+  - show the type of test or task in test explorer description
+
+
+
+### Performance
+
+- **analyzer:** Restructured code for handling bdd prefixes ([96fbe90](https://github.com/robotcodedev/robotcode/commit/96fbe9064fafe0a64f82b0d95b017726d18381fb))
+- **analyzer:** Optimized analysing keyword calls ([b1f0f28](https://github.com/robotcodedev/robotcode/commit/b1f0f28dfd0c7f38904ae9ecd0c247f5efec2ab1))
+- **analyzer:** Cache embedded arguments and some more little perf tweaks ([3603ff6](https://github.com/robotcodedev/robotcode/commit/3603ff6395d16473fdeb1fca8de910ea3aab8de2))
+- **analyzer:** Introduced some caching for parsing variables ([e39afe9](https://github.com/robotcodedev/robotcode/commit/e39afe92ef9dfd44d33537b4dec9bbec3738d116))
+- **analyzer:** Implemented DataCache, cache files are now saved in pickle format by default instead of json ([f3ecc22](https://github.com/robotcodedev/robotcode/commit/f3ecc221d0018f9264c958074a7458a6e119b1f6))
+
+
 ## [0.94.0](https://github.com/robotcodedev/robotcode/compare/v0.93.1..v0.94.0) - 2024-10-20
 
 ### Bug Fixes
