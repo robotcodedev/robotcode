@@ -59,6 +59,7 @@ from .entities import (
     ArgumentDefinition,
     EnvironmentVariableDefinition,
     GlobalVariableDefinition,
+    InvalidVariableError,
     LibraryEntry,
     LocalVariableDefinition,
     TestVariableDefinition,
@@ -1185,7 +1186,7 @@ class NamespaceAnalyzer(Visitor):
                             )
                         )
 
-            except VariableError:
+            except (VariableError, InvalidVariableError):
                 pass
 
     def _analyze_assign_statement(self, node: Statement) -> None:
@@ -1225,7 +1226,7 @@ class NamespaceAnalyzer(Visitor):
                             )
                         )
 
-            except VariableError:
+            except (VariableError, InvalidVariableError):
                 pass
 
     def visit_InlineIfHeader(self, node: Statement) -> None:  # noqa: N802
@@ -1239,7 +1240,7 @@ class NamespaceAnalyzer(Visitor):
         variables = node.get_tokens(Token.VARIABLE)
         for variable in variables:
             variable_token = self._get_variable_token(variable)
-            if variable_token is not None:
+            if variable_token is not None and is_variable(variable_token.value):
                 existing_var = self._find_variable(variable_token.value)
 
                 if existing_var is None or existing_var.type not in [
@@ -1301,7 +1302,7 @@ class NamespaceAnalyzer(Visitor):
                             source=self._namespace.source,
                         )
 
-            except VariableError:
+            except (VariableError, InvalidVariableError):
                 pass
 
     def _format_template(self, template: str, arguments: Tuple[str, ...]) -> Tuple[str, Tuple[str, ...]]:
@@ -1615,9 +1616,12 @@ class NamespaceAnalyzer(Visitor):
             else self._suite_variables if self._in_setting else self._variables
         )
 
-        matcher = VariableMatcher(name)
+        try:
+            matcher = VariableMatcher(name)
 
-        return vars.get(matcher, None)
+            return vars.get(matcher, None)
+        except (VariableError, InvalidVariableError):
+            return None
 
     def _is_number(self, name: str) -> bool:
         if name.startswith("$"):
