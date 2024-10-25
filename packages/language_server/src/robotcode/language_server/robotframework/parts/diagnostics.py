@@ -11,7 +11,6 @@ from robotcode.core.lsp.types import (
     Range,
 )
 from robotcode.core.text_document import TextDocument
-from robotcode.core.uri import Uri
 from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.language_server.robotframework.configuration import AnalysisConfig
 from robotcode.robot.diagnostics.entities import (
@@ -86,13 +85,6 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
             return None
 
         result = []
-
-        resources = namespace.get_resources().values()
-        for r in resources:
-            if r.library_doc.source:
-                doc = self.parent.documents.get(Uri.from_path(r.library_doc.source).normalized())
-                if doc is not None:
-                    result.append(doc)
 
         lib_doc = namespace.get_library_doc()
         for doc in self.parent.documents.documents:
