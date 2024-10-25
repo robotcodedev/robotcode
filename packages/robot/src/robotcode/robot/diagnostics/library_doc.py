@@ -1726,6 +1726,52 @@ def get_robot_library_html_doc_str(
         return output.getvalue()
 
 
+class _Logger(AbstractLogger):
+    def __init__(self) -> None:
+        super().__init__()
+        self.messages: List[Tuple[str, str, bool]] = []
+
+    def write(self, message: str, level: str, html: bool = False) -> None:
+        self.messages.append((message, level, html))
+
+
+def _import_test_library(name: str) -> Union[Any, Tuple[Any, str]]:
+    with OutputCapturer(library_import=True):
+        importer = Importer("test library", LOGGER)
+        return importer.import_class_or_module(name, return_source=True)
+
+
+def _get_test_library(
+    libcode: Any,
+    source: str,
+    name: str,
+    args: Optional[Tuple[Any, ...]] = None,
+    variables: Optional[Dict[str, Optional[Any]]] = None,
+    create_handlers: bool = True,
+    logger: Any = LOGGER,
+) -> Any:
+    if get_robot_version() < (7, 0):
+        libclass = robot.running.testlibraries._get_lib_class(libcode)
+        lib = libclass(libcode, name, args or [], source, logger, variables)
+        if create_handlers:
+            lib.create_handlers()
+    else:
+        lib = robot.running.testlibraries.TestLibrary.from_code(
+            libcode,
+            name,
+            source=Path(source),
+            args=args or [],
+            variables=variables,
+            create_keywords=create_handlers,
+            logger=logger,
+        )
+
+    return lib
+
+
+_T = TypeVar("_T")
+
+
 def get_library_doc(
     name: str,
     args: Optional[Tuple[Any, ...]] = None,
@@ -1734,45 +1780,6 @@ def get_library_doc(
     command_line_variables: Optional[Dict[str, Optional[Any]]] = None,
     variables: Optional[Dict[str, Optional[Any]]] = None,
 ) -> LibraryDoc:
-    class Logger(AbstractLogger):
-        def __init__(self) -> None:
-            super().__init__()
-            self.messages: List[Tuple[str, str, bool]] = []
-
-        def write(self, message: str, level: str, html: bool = False) -> None:
-            self.messages.append((message, level, html))
-
-    def import_test_library(name: str) -> Union[Any, Tuple[Any, str]]:
-        with OutputCapturer(library_import=True):
-            importer = Importer("test library", LOGGER)
-            return importer.import_class_or_module(name, return_source=True)
-
-    def get_test_library(
-        libcode: Any,
-        source: str,
-        name: str,
-        args: Optional[Tuple[Any, ...]] = None,
-        variables: Optional[Dict[str, Optional[Any]]] = None,
-        create_handlers: bool = True,
-        logger: Any = LOGGER,
-    ) -> Any:
-        if get_robot_version() < (7, 0):
-            libclass = robot.running.testlibraries._get_lib_class(libcode)
-            lib = libclass(libcode, name, args or [], source, logger, variables)
-            if create_handlers:
-                lib.create_handlers()
-        else:
-            lib = robot.running.testlibraries.TestLibrary.from_code(
-                libcode,
-                name,
-                source=Path(source),
-                args=args or [],
-                variables=variables,
-                create_keywords=create_handlers,
-                logger=logger,
-            )
-
-        return lib
 
     with _std_capture() as std_capturer:
         import_name, robot_variables = _find_library_internal(
@@ -1796,7 +1803,7 @@ def get_library_doc(
 
         source = None
         try:
-            libcode, source = import_test_library(import_name)
+            libcode, source = _import_test_library(import_name)
         except (SystemExit, KeyboardInterrupt):
             raise
         except BaseException as e:
@@ -1836,7 +1843,7 @@ def get_library_doc(
 
         lib = None
         try:
-            lib = get_test_library(
+            lib = _get_test_library(
                 libcode,
                 source,
                 library_name,
@@ -1866,7 +1873,7 @@ def get_library_doc(
 
             if args:
                 try:
-                    lib = get_test_library(libcode, source, library_name, (), create_handlers=False)
+                    lib = _get_test_library(libcode, source, library_name, (), create_handlers=False)
                     if get_robot_version() < (7, 0):
                         _ = lib.get_instance()
                     else:
@@ -1881,6 +1888,10 @@ def get_library_doc(
         libdoc = LibraryDoc(
             name=library_name,
             source=real_source,
+            line_no=lib.lineno if lib is not None else -1,
+            version=str(lib.version) if lib is not None else "",
+            scope=str(lib.scope) if lib is not None else ROBOT_DEFAULT_SCOPE,
+            doc_format=(str(lib.doc_format) or ROBOT_DOC_FORMAT) if lib is not None else ROBOT_DOC_FORMAT,
             module_spec=(
                 module_spec
                 if module_spec is not None
@@ -1889,16 +1900,33 @@ def get_library_doc(
                 else None
             ),
             python_path=sys.path,
-            line_no=lib.lineno if lib is not None else -1,
-            doc=str(lib.doc) if lib is not None else "",
-            version=str(lib.version) if lib is not None else "",
-            scope=str(lib.scope) if lib is not None else ROBOT_DEFAULT_SCOPE,
-            doc_format=(str(lib.doc_format) or ROBOT_DOC_FORMAT) if lib is not None else ROBOT_DOC_FORMAT,
             member_name=module_spec.member_name if module_spec is not None else None,
         )
 
         if lib is not None:
             try:
+
+                def _get(handler: Callable[[], _T]) -> Optional[_T]:
+                    try:
+                        return handler()
+                    except (SystemExit, KeyboardInterrupt):
+                        raise
+                    except BaseException as e:
+                        errors.append(
+                            error_from_exception(
+                                e,
+                                source or module_spec.origin if module_spec is not None else None,
+                                (
+                                    1
+                                    if source is not None or module_spec is not None and module_spec.origin is not None
+                                    else None
+                                ),
+                            )
+                        )
+                    return None
+
+                libdoc.doc = _get(lambda: str(lib.doc) if lib is not None else "") or ""
+
                 if get_robot_version() < (7, 0):
                     libdoc.has_listener = lib.has_listener
 
@@ -1928,10 +1956,10 @@ def get_library_doc(
                     keywords=[
                         KeywordDoc(
                             name=libdoc.name,
-                            arguments=[ArgumentInfo.from_robot(a) for a in kw[0].args],
-                            doc=kw[0].doc,
-                            tags=list(kw[0].tags),
-                            source=kw[0].source,
+                            arguments=_get(lambda: [ArgumentInfo.from_robot(a) for a in kw[0].args]) or [],
+                            doc=_get(lambda: kw[0].doc) or "",
+                            tags=_get(lambda: list(kw[0].tags)) or [],
+                            source=_get(lambda: kw[0].source) or "",
                             line_no=kw[0].lineno if kw[0].lineno is not None else -1,
                             col_offset=-1,
                             end_col_offset=-1,
@@ -1942,20 +1970,23 @@ def get_library_doc(
                             longname=f"{libdoc.name}.{kw[0].name}",
                             doc_format=str(lib.doc_format) or ROBOT_DOC_FORMAT,
                             is_initializer=True,
-                            arguments_spec=ArgumentSpec.from_robot_argument_spec(
-                                kw[1].arguments if get_robot_version() < (7, 0) else kw[1].args
+                            arguments_spec=_get(
+                                lambda: ArgumentSpec.from_robot_argument_spec(
+                                    kw[1].arguments if get_robot_version() < (7, 0) else kw[1].args
+                                )
                             ),
                         )
                         for kw in init_keywords
                     ]
                 )
 
-                logger = Logger()
-                lib.logger = logger
+                logger = _Logger()
 
                 if get_robot_version() < (7, 0):
+                    lib.logger = logger
                     lib.create_handlers()
                 else:
+                    lib._logger = logger
                     lib.create_keywords()
 
                 for m in logger.messages:
@@ -1988,10 +2019,10 @@ def get_library_doc(
                     keywords=[
                         KeywordDoc(
                             name=kw[0].name,
-                            arguments=[ArgumentInfo.from_robot(a) for a in kw[0].args],
-                            doc=kw[0].doc,
-                            tags=list(kw[0].tags),
-                            source=kw[0].source,
+                            arguments=_get(lambda: [ArgumentInfo.from_robot(a) for a in kw[0].args]) or [],
+                            doc=_get(lambda: kw[0].doc) or "",
+                            tags=_get(lambda: list(kw[0].tags)) or [],
+                            source=_get(lambda: kw[0].source) or "",
                             line_no=kw[0].lineno if kw[0].lineno is not None else -1,
                             col_offset=-1,
                             end_col_offset=-1,
@@ -2006,21 +2037,26 @@ def get_library_doc(
                             is_registered_run_keyword=RUN_KW_REGISTER.is_run_keyword(libdoc.name, kw[0].name),
                             args_to_process=get_args_to_process(libdoc.name, kw[0].name),
                             deprecated=kw[0].deprecated,
-                            arguments_spec=(
-                                ArgumentSpec.from_robot_argument_spec(
-                                    kw[1].arguments if get_robot_version() < (7, 0) else kw[1].args
-                                )
-                                if not kw[1].is_error_handler
-                                else None
-                            ),
-                            return_type=(
-                                (
-                                    str(kw[1].args.return_type)
-                                    if kw[1].args.return_type is not None and kw[1].args.return_type is not type(None)
+                            arguments_spec=_get(
+                                lambda: (
+                                    ArgumentSpec.from_robot_argument_spec(
+                                        kw[1].arguments if get_robot_version() < (7, 0) else kw[1].args
+                                    )
+                                    if not kw[1].is_error_handler
                                     else None
                                 )
-                                if get_robot_version() >= (7, 0)
-                                else None
+                            ),
+                            return_type=_get(
+                                lambda: (
+                                    (
+                                        str(kw[1].args.return_type)
+                                        if kw[1].args.return_type is not None
+                                        and kw[1].args.return_type is not type(None)
+                                        else None
+                                    )
+                                    if get_robot_version() >= (7, 0)
+                                    else None
+                                )
                             ),
                         )
                         for kw in keyword_docs

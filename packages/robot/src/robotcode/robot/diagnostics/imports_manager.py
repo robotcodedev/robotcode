@@ -577,6 +577,8 @@ class ImportsManager:
             weakref.WeakKeyDictionary()
         )
 
+        self._process_pool_executor: Optional[ProcessPoolExecutor] = None
+
     def __del__(self) -> None:
         try:
             if self._executor is not None:
@@ -894,12 +896,14 @@ class ImportsManager:
                     )
 
             if result is not None:
+                # TODO: use IgnoreSpec instead of this
                 ignore_arguments = any(
                     (p.matches(result.name) if result.name is not None else False)
                     or (p.matches(result.origin) if result.origin is not None else False)
                     for p in self.ignore_arguments_for_library_patters
                 )
 
+                # TODO: use IgnoreSpec instead of this
                 if any(
                     (p.matches(result.name) if result.name is not None else False)
                     or (p.matches(result.origin) if result.origin is not None else False)
@@ -1173,7 +1177,7 @@ class ImportsManager:
                         saved_meta = self.data_cache.read_cache_data(CacheSection.LIBRARY, meta_file, LibraryMetaData)
                         if saved_meta.has_errors:
                             self._logger.debug(
-                                lambda: "Saved library spec for {name}{args!r} is not used "
+                                lambda: f"Saved library spec for {name}{args!r} is not used "
                                 "due to errors in meta data",
                                 context_name="import",
                             )
@@ -1198,6 +1202,9 @@ class ImportsManager:
                     self._logger.exception(e)
 
         self._logger.debug(lambda: f"Load library in process {name}{args!r}", context_name="import")
+        # if self._process_pool_executor is None:
+        #     self._process_pool_executor = ProcessPoolExecutor(max_workers=1, mp_context=mp.get_context("spawn"))
+        # executor = self._process_pool_executor
         executor = ProcessPoolExecutor(max_workers=1, mp_context=mp.get_context("spawn"))
         try:
             try:
