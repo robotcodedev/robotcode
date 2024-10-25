@@ -1021,25 +1021,13 @@ class ImportsManager:
         base_dir: str,
         variables: Optional[Dict[str, Any]] = None,
     ) -> str:
-
-        if contains_variable(name, "$@&%"):
-            return find_library(
-                name,
-                str(self.root_folder),
-                base_dir,
-                self.get_resolvable_command_line_variables(),
-                variables,
-            )
-
-        if name in STDLIBS:
-            result = ROBOT_LIBRARY_PACKAGE + "." + name
-        else:
-            result = name
-
-        if is_library_by_path(result):
-            return find_file_ex(result, base_dir, "Library")
-
-        return result
+        return find_library(
+            name,
+            str(self.root_folder),
+            base_dir,
+            self.get_resolvable_command_line_variables(),
+            variables,
+        )
 
     def _find_library_simple(
         self,
@@ -1077,17 +1065,14 @@ class ImportsManager:
         file_type: str = "Resource",
         variables: Optional[Dict[str, Any]] = None,
     ) -> str:
-        if contains_variable(name, "$@&%"):
-            return find_file(
-                name,
-                str(self.root_folder),
-                base_dir,
-                self.get_resolvable_command_line_variables(),
-                variables,
-                file_type,
-            )
-
-        return find_file_ex(name, base_dir, file_type)
+        return find_file(
+            name,
+            str(self.root_folder),
+            base_dir,
+            self.get_resolvable_command_line_variables(),
+            variables,
+            file_type,
+        )
 
     def __find_resource_simple(
         self,
@@ -1111,7 +1096,6 @@ class ImportsManager:
                 name,
                 base_dir,
                 variables,
-                resolve_variables,
                 resolve_command_line_vars,
             )
         return self._variables_files_cache.get(self.__find_variables_simple, name, base_dir)
@@ -1122,25 +1106,15 @@ class ImportsManager:
         name: str,
         base_dir: str,
         variables: Optional[Dict[str, Any]] = None,
-        resolve_variables: bool = True,
         resolve_command_line_vars: bool = True,
     ) -> str:
-        if resolve_variables and contains_variable(name, "$@&%"):
-            return find_variables(
-                name,
-                str(self.root_folder),
-                base_dir,
-                self.get_resolvable_command_line_variables() if resolve_command_line_vars else None,
-                variables,
-            )
-
-        if get_robot_version() >= (5, 0):
-            if is_variables_by_path(name):
-                return find_file_ex(name, base_dir, "Variables")
-
-            return name
-
-        return find_file_ex(name, base_dir, "Variables")
+        return find_variables(
+            name,
+            str(self.root_folder),
+            base_dir,
+            self.get_resolvable_command_line_variables() if resolve_command_line_vars else None,
+            variables,
+        )
 
     @_logger.call
     def __find_variables_simple(
@@ -1148,6 +1122,12 @@ class ImportsManager:
         name: str,
         base_dir: str,
     ) -> str:
+
+        if get_robot_version() >= (5, 0):
+            if is_variables_by_path(name):
+                return find_file_ex(name, base_dir, "Variables")
+
+            return name
 
         return find_file_ex(name, base_dir, "Variables")
 
