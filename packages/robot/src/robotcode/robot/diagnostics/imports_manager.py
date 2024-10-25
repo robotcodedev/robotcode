@@ -36,8 +36,7 @@ from robotcode.core.lsp.types import DocumentUri, FileChangeType, FileEvent
 from robotcode.core.text_document import TextDocument
 from robotcode.core.uri import Uri
 from robotcode.core.utils.caching import SimpleLRUCache
-from robotcode.core.utils.dataclasses import as_json, from_json
-from robotcode.core.utils.glob_path import Pattern, iter_files
+from robotcode.core.utils.glob_path import Pattern
 from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.core.utils.path import normalized_path, path_is_relative_to
 
@@ -45,6 +44,8 @@ from ..__version__ import __version__
 from ..utils import get_robot_version, get_robot_version_str
 from ..utils.robot_path import find_file_ex
 from ..utils.variables import contains_variable
+from .data_cache import CacheSection
+from .data_cache import PickleDataCache as DefaultDataCache
 from .entities import (
     CommandLineVariableDefinition,
     VariableDefinition,
@@ -523,18 +524,10 @@ class ImportsManager:
         self._logger.trace(lambda: f"use {cache_base_path} as base for caching")
 
         self.cache_path = cache_base_path / ".robotcode_cache"
-
-        self.lib_doc_cache_path = (
+        self.data_cache = DefaultDataCache(
             self.cache_path
             / f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
             / get_robot_version_str()
-            / "libdoc"
-        )
-        self.variables_doc_cache_path = (
-            self.cache_path
-            / f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
-            / get_robot_version_str()
-            / "variables"
         )
 
         self.cmd_variables = variables
@@ -566,9 +559,9 @@ class ImportsManager:
         if environment:
             self._environment.update(environment)
 
-        self._library_files_cache = SimpleLRUCache(1024)
-        self._resource_files_cache = SimpleLRUCache(1024)
-        self._variables_files_cache = SimpleLRUCache(1024)
+        self._library_files_cache = SimpleLRUCache(2048)
+        self._resource_files_cache = SimpleLRUCache(2048)
+        self._variables_files_cache = SimpleLRUCache(2048)
 
         self._executor_lock = RLock(default_timeout=120, name="ImportsManager._executor_lock")
         self._executor: Optional[ProcessPoolExecutor] = None
@@ -920,16 +913,16 @@ class ImportsManager:
                     return None, import_name, ignore_arguments
 
                 if result.origin is not None:
-                    result.mtimes = {result.origin: Path(result.origin).stat().st_mtime_ns}
+                    result.mtimes = {result.origin: os.stat(result.origin, follow_symlinks=False).st_mtime_ns}
 
                 if result.submodule_search_locations:
                     if result.mtimes is None:
                         result.mtimes = {}
                     result.mtimes.update(
                         {
-                            str(f): f.stat().st_mtime_ns
+                            str(f): os.stat(f, follow_symlinks=False).st_mtime_ns
                             for f in itertools.chain(
-                                *(iter_files(loc, "**/*.py") for loc in result.submodule_search_locations)
+                                *(Path(loc).rglob("**/*.py") for loc in result.submodule_search_locations)
                             )
                         }
                     )
@@ -989,16 +982,16 @@ class ImportsManager:
                     return None, import_name
 
                 if result.origin is not None:
-                    result.mtimes = {result.origin: Path(result.origin).stat().st_mtime_ns}
+                    result.mtimes = {result.origin: os.stat(result.origin, follow_symlinks=False).st_mtime_ns}
 
                 if result.submodule_search_locations:
                     if result.mtimes is None:
                         result.mtimes = {}
                     result.mtimes.update(
                         {
-                            str(f): f.stat().st_mtime_ns
+                            str(f): os.stat(f, follow_symlinks=False).st_mtime_ns
                             for f in itertools.chain(
-                                *(iter_files(loc, "**/*.py") for loc in result.submodule_search_locations)
+                                *(Path(loc).rglob("**/*.py") for loc in result.submodule_search_locations)
                             )
                         }
                     )
@@ -1017,7 +1010,10 @@ class ImportsManager:
         base_dir: str,
         variables: Optional[Dict[str, Any]] = None,
     ) -> str:
-        return self._library_files_cache.get(self._find_library, name, base_dir, variables)
+        if contains_variable(name, "$@&%"):
+            return self._library_files_cache.get(self._find_library, name, base_dir, variables)
+
+        return self._library_files_cache.get(self._find_library_simple, name, base_dir)
 
     def _find_library(
         self,
@@ -1045,6 +1041,22 @@ class ImportsManager:
 
         return result
 
+    def _find_library_simple(
+        self,
+        name: str,
+        base_dir: str,
+    ) -> str:
+
+        if name in STDLIBS:
+            result = ROBOT_LIBRARY_PACKAGE + "." + name
+        else:
+            result = name
+
+        if is_library_by_path(result):
+            return find_file_ex(result, base_dir, "Library")
+
+        return result
+
     def find_resource(
         self,
         name: str,
@@ -1052,7 +1064,10 @@ class ImportsManager:
         file_type: str = "Resource",
         variables: Optional[Dict[str, Any]] = None,
     ) -> str:
-        return self._resource_files_cache.get(self.__find_resource, name, base_dir, file_type, variables)
+        if contains_variable(name, "$@&%"):
+            return self._resource_files_cache.get(self.__find_resource, name, base_dir, file_type, variables)
+
+        return self._resource_files_cache.get(self.__find_resource_simple, name, base_dir, file_type)
 
     @_logger.call
     def __find_resource(
@@ -1072,7 +1087,15 @@ class ImportsManager:
                 file_type,
             )
 
-        return str(find_file_ex(name, base_dir, file_type))
+        return find_file_ex(name, base_dir, file_type)
+
+    def __find_resource_simple(
+        self,
+        name: str,
+        base_dir: str,
+        file_type: str = "Resource",
+    ) -> str:
+        return find_file_ex(name, base_dir, file_type)
 
     def find_variables(
         self,
@@ -1082,14 +1105,16 @@ class ImportsManager:
         resolve_variables: bool = True,
         resolve_command_line_vars: bool = True,
     ) -> str:
-        return self._variables_files_cache.get(
-            self.__find_variables,
-            name,
-            base_dir,
-            variables,
-            resolve_variables,
-            resolve_command_line_vars,
-        )
+        if resolve_variables and contains_variable(name, "$@&%"):
+            return self._variables_files_cache.get(
+                self.__find_variables,
+                name,
+                base_dir,
+                variables,
+                resolve_variables,
+                resolve_command_line_vars,
+            )
+        return self._variables_files_cache.get(self.__find_variables_simple, name, base_dir)
 
     @_logger.call
     def __find_variables(
@@ -1111,11 +1136,20 @@ class ImportsManager:
 
         if get_robot_version() >= (5, 0):
             if is_variables_by_path(name):
-                return str(find_file_ex(name, base_dir, "Variables"))
+                return find_file_ex(name, base_dir, "Variables")
 
             return name
 
-        return str(find_file_ex(name, base_dir, "Variables"))
+        return find_file_ex(name, base_dir, "Variables")
+
+    @_logger.call
+    def __find_variables_simple(
+        self,
+        name: str,
+        base_dir: str,
+    ) -> str:
+
+        return find_file_ex(name, base_dir, "Variables")
 
     @property
     def executor(self) -> ProcessPoolExecutor:
@@ -1151,12 +1185,12 @@ class ImportsManager:
 
         if meta is not None and not meta.has_errors:
 
-            meta_file = Path(self.lib_doc_cache_path, meta.filepath_base + ".meta.json")
-            if meta_file.exists():
+            meta_file = meta.filepath_base + ".meta"
+            if self.data_cache.cache_data_exists(CacheSection.LIBRARY, meta_file):
                 try:
                     spec_path = None
                     try:
-                        saved_meta = from_json(meta_file.read_text("utf-8"), LibraryMetaData)
+                        saved_meta = self.data_cache.read_cache_data(CacheSection.LIBRARY, meta_file, LibraryMetaData)
                         if saved_meta.has_errors:
                             self._logger.debug(
                                 lambda: "Saved library spec for {name}{args!r} is not used "
@@ -1165,15 +1199,12 @@ class ImportsManager:
                             )
 
                         if not saved_meta.has_errors and saved_meta == meta:
-                            spec_path = Path(
-                                self.lib_doc_cache_path,
-                                meta.filepath_base + ".spec.json",
-                            )
+                            spec_path = meta.filepath_base + ".spec"
 
                             self._logger.debug(
                                 lambda: f"Use cached library meta data for {name}", context_name="import"
                             )
-                            return from_json(spec_path.read_text("utf-8"), LibraryDoc)
+                            return self.data_cache.read_cache_data(CacheSection.LIBRARY, spec_path, LibraryDoc)
 
                     except (SystemExit, KeyboardInterrupt):
                         raise
@@ -1218,19 +1249,17 @@ class ImportsManager:
             if meta is not None:
                 meta.has_errors = bool(result.errors)
 
-                meta_file = Path(self.lib_doc_cache_path, meta.filepath_base + ".meta.json")
-                spec_file = Path(self.lib_doc_cache_path, meta.filepath_base + ".spec.json")
-
-                spec_file.parent.mkdir(parents=True, exist_ok=True)
+                meta_file = meta.filepath_base + ".meta"
+                spec_file = meta.filepath_base + ".spec"
 
                 try:
-                    spec_file.write_text(as_json(result), "utf-8")
+                    self.data_cache.save_cache_data(CacheSection.LIBRARY, spec_file, result)
                 except (SystemExit, KeyboardInterrupt):
                     raise
                 except BaseException as e:
                     raise RuntimeError(f"Cannot write spec file for library '{name}' to '{spec_file}'") from e
 
-                meta_file.write_text(as_json(meta), "utf-8")
+                self.data_cache.save_cache_data(CacheSection.LIBRARY, meta_file, meta)
             else:
                 self._logger.debug(lambda: f"Skip caching library {name}{args!r}", context_name="import")
         except (SystemExit, KeyboardInterrupt):
@@ -1347,21 +1376,17 @@ class ImportsManager:
         )
 
         if meta is not None:
-            meta_file = Path(
-                self.variables_doc_cache_path,
-                meta.filepath_base + ".meta.json",
-            )
-            if meta_file.exists():
+            meta_file = meta.filepath_base + ".meta"
+
+            if self.data_cache.cache_data_exists(CacheSection.VARIABLES, meta_file):
                 try:
                     spec_path = None
                     try:
-                        saved_meta = from_json(meta_file.read_text("utf-8"), LibraryMetaData)
+                        saved_meta = self.data_cache.read_cache_data(CacheSection.VARIABLES, meta_file, LibraryMetaData)
                         if saved_meta == meta:
-                            spec_path = Path(
-                                self.variables_doc_cache_path,
-                                meta.filepath_base + ".spec.json",
-                            )
-                            return from_json(spec_path.read_text("utf-8"), VariablesDoc)
+                            spec_path = meta.filepath_base + ".spec"
+
+                            return self.data_cache.read_cache_data(CacheSection.VARIABLES, spec_path, VariablesDoc)
                     except (SystemExit, KeyboardInterrupt):
                         raise
                     except BaseException as e:
@@ -1402,23 +1427,16 @@ class ImportsManager:
 
         try:
             if meta is not None:
-                meta_file = Path(
-                    self.variables_doc_cache_path,
-                    meta.filepath_base + ".meta.json",
-                )
-                spec_file = Path(
-                    self.variables_doc_cache_path,
-                    meta.filepath_base + ".spec.json",
-                )
-                spec_file.parent.mkdir(parents=True, exist_ok=True)
+                meta_file = meta.filepath_base + ".meta"
+                spec_file = meta.filepath_base + ".spec"
 
                 try:
-                    spec_file.write_text(as_json(result), "utf-8")
+                    self.data_cache.save_cache_data(CacheSection.VARIABLES, spec_file, result)
                 except (SystemExit, KeyboardInterrupt):
                     raise
                 except BaseException as e:
                     raise RuntimeError(f"Cannot write spec file for variables '{name}' to '{spec_file}'") from e
-                meta_file.write_text(as_json(meta), "utf-8")
+                self.data_cache.save_cache_data(CacheSection.VARIABLES, meta_file, meta)
             else:
                 self._logger.debug(lambda: f"Skip caching variables {name}{args!r}", context_name="import")
         except (SystemExit, KeyboardInterrupt):

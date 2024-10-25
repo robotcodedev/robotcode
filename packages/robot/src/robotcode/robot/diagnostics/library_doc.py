@@ -1296,10 +1296,12 @@ class VariablesDoc(LibraryDoc):
         return result
 
 
+@functools.lru_cache(maxsize=256)
 def is_library_by_path(path: str) -> bool:
     return path.lower().endswith((".py", "/", os.sep))
 
 
+@functools.lru_cache(maxsize=256)
 def is_variables_by_path(path: str) -> bool:
     if get_robot_version() >= (6, 1):
         return path.lower().endswith((".py", ".yml", ".yaml", ".json", "/", os.sep))

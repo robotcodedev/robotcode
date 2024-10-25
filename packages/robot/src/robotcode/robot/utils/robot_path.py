@@ -1,21 +1,11 @@
-from __future__ import annotations
-
 import sys
 from os import PathLike
 from pathlib import Path
 from typing import Optional, Union
 
 
-def find_file(
-    path: Union[Path, PathLike[str], str],
-    basedir: Union[Path, PathLike[str], str] = ".",
-    file_type: Optional[str] = None,
-) -> str:
-    return find_file_ex(path, basedir, file_type)
-
-
 def find_file_ex(
-    path: Union[Path, PathLike[str], str],
+    path: Union[Path, "PathLike[str]", str],
     basedir: Union[Path, PathLike[str], str] = ".",
     file_type: Optional[str] = None,
 ) -> str:
@@ -25,6 +15,7 @@ def find_file_ex(
     ret = _find_absolute_path(path) if path.is_absolute() else _find_relative_path(path, basedir)
     if ret:
         return str(ret)
+
     default = file_type or "File"
 
     file_type = (
@@ -40,15 +31,23 @@ def find_file_ex(
     raise DataError("%s '%s' does not exist." % (file_type, path))
 
 
-def _find_absolute_path(path: Union[Path, PathLike[str], str]) -> Optional[str]:
+def find_file(
+    path: Union[Path, "PathLike[str]", str],
+    basedir: Union[Path, PathLike[str], str] = ".",
+    file_type: Optional[str] = None,
+) -> str:
+    return find_file_ex(path, basedir, file_type)
+
+
+def _find_absolute_path(path: Union[Path, "PathLike[str]", str]) -> Optional[str]:
     if _is_valid_file(path):
         return str(path)
     return None
 
 
 def _find_relative_path(
-    path: Union[Path, PathLike[str], str],
-    basedir: Union[Path, PathLike[str], str],
+    path: Union[Path, "PathLike[str]", str],
+    basedir: Union[Path, "PathLike[str]", str],
 ) -> Optional[str]:
     for base in [basedir, *sys.path]:
         if not base:
@@ -65,6 +64,6 @@ def _find_relative_path(
     return None
 
 
-def _is_valid_file(path: Union[Path, PathLike[str], str]) -> bool:
+def _is_valid_file(path: Union[Path, "PathLike[str]", str]) -> bool:
     path = Path(path)
     return path.is_file() or (path.is_dir() and Path(path, "__init__.py").is_fifo())
