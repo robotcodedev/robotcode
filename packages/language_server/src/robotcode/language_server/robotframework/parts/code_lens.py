@@ -70,11 +70,10 @@ class RobotCodeLensProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
 
         namespace = self.parent.documents_cache.get_namespace(document)
 
-        name = code_lens.data["name"]
         line = code_lens.data["line"]
 
         if self.parent.diagnostics.workspace_loaded_event.is_set():
-            kw_doc = self.get_keyword_definition_at_line(namespace.get_library_doc(), name, line)
+            kw_doc = self.get_keyword_definition_at_line(namespace.get_library_doc(), line)
 
             if kw_doc is not None and not kw_doc.is_error_handler:
                 if not self.parent.robot_references.has_cached_keyword_references(

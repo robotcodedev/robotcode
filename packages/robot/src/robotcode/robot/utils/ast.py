@@ -38,13 +38,6 @@ def cached_isinstance(obj: Any, *expected_types: Type[_T]) -> TypeGuard[Union[_T
         return False
 
 
-# def cached_isinstance(obj: Any, *expected_types: type) -> bool:
-#     try:
-#         return isinstance(obj, expected_types)
-#     except TypeError:
-#         return False
-
-
 def iter_nodes(node: ast.AST, descendants: bool = True) -> Iterator[ast.AST]:
     for _field, value in ast.iter_fields(node):
         if cached_isinstance(value, list):

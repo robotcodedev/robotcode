@@ -2,7 +2,6 @@ import ast
 from abc import ABC
 from typing import (
     Any,
-    AsyncIterator,
     Callable,
     Dict,
     Iterator,
@@ -35,32 +34,6 @@ def iter_field_values(node: ast.AST) -> Iterator[Any]:
             yield getattr(node, field)
         except AttributeError:
             pass
-
-
-def iter_child_nodes(node: ast.AST) -> Iterator[ast.AST]:
-    for _name, field in iter_fields(node):
-        if isinstance(field, ast.AST):
-            yield field
-        elif isinstance(field, list):
-            for item in field:
-                if isinstance(item, ast.AST):
-                    yield item
-
-
-async def iter_nodes(node: ast.AST) -> AsyncIterator[ast.AST]:
-    for _name, value in iter_fields(node):
-        if isinstance(value, list):
-            for item in value:
-                if isinstance(item, ast.AST):
-                    yield item
-                    async for n in iter_nodes(item):
-                        yield n
-
-        elif isinstance(value, ast.AST):
-            yield value
-
-            async for n in iter_nodes(value):
-                yield n
 
 
 class VisitorFinder(ABC):

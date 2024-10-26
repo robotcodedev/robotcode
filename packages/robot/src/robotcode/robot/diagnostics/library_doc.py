@@ -76,12 +76,12 @@ from robotcode.robot.utils import get_robot_version
 from robotcode.robot.utils.ast import (
     cached_isinstance,
     get_variable_token,
+    iter_nodes,
     range_from_token,
     strip_variable_token,
 )
 from robotcode.robot.utils.markdownformatter import MarkDownFormatter
 from robotcode.robot.utils.match import normalize, normalize_namespace
-from robotcode.robot.utils.stubs import HasError, HasErrors
 
 from ..utils.variables import contains_variable
 
@@ -239,7 +239,6 @@ class KeywordMatcher:
         self._can_have_embedded = can_have_embedded and not is_namespace
         self._is_namespace = is_namespace
         self._normalized_name: Optional[str] = None
-        self._embedded_arguments: Any = None
 
     @property
     def normalized_name(self) -> str:
@@ -248,15 +247,12 @@ class KeywordMatcher:
 
         return self._normalized_name
 
-    @property
+    @functools.cached_property
     def embedded_arguments(self) -> Any:
-        if self._embedded_arguments is None:
-            if self._can_have_embedded:
-                self._embedded_arguments = _get_embedded_arguments(self.name)
-            else:
-                self._embedded_arguments = ()
+        if self._can_have_embedded:
+            return _get_embedded_arguments(self.name) or ()
 
-        return self._embedded_arguments
+        return ()
 
     if get_robot_version() >= (6, 0):
 
@@ -269,7 +265,7 @@ class KeywordMatcher:
             return self.embedded_arguments.name.match(name) is not None
 
     def __eq__(self, o: object) -> bool:
-        if cached_isinstance(o, KeywordMatcher):
+        if type(o) is KeywordMatcher:
             if self._is_namespace != o._is_namespace:
                 return False
 
@@ -667,13 +663,11 @@ class KeywordDoc(SourceEntity):
     def __str__(self) -> str:
         return f"{self.name}({', '.join(str(arg) for arg in self.arguments)})"
 
-    @property
+    @functools.cached_property
     def matcher(self) -> KeywordMatcher:
-        if not hasattr(self, "__matcher"):
-            self.__matcher = KeywordMatcher(self.name)
-        return self.__matcher
+        return KeywordMatcher(self.name)
 
-    @property
+    @functools.cached_property
     def is_deprecated(self) -> bool:
         return self.deprecated or DEPRECATED_PATTERN.match(self.doc) is not None
 
@@ -685,13 +679,13 @@ class KeywordDoc(SourceEntity):
     def is_library_keyword(self) -> bool:
         return self.libtype == "LIBRARY"
 
-    @property
+    @functools.cached_property
     def deprecated_message(self) -> str:
         if (m := DEPRECATED_PATTERN.match(self.doc)) is not None:
             return m.group("message").strip()
         return ""
 
-    @property
+    @functools.cached_property
     def name_range(self) -> Range:
         if self.name_token is not None:
             return range_from_token(self.name_token)
@@ -709,7 +703,7 @@ class KeywordDoc(SourceEntity):
 
         return "robot:private" in self.normalized_tags()
 
-    @property
+    @functools.cached_property
     def range(self) -> Range:
         if self.name_token is not None:
             return range_from_token(self.name_token)
@@ -820,7 +814,7 @@ class KeywordDoc(SourceEntity):
 
         return result
 
-    @property
+    @functools.cached_property
     def signature(self) -> str:
         return (
             f'({self.type}) "{self.name}": ('
@@ -2716,15 +2710,16 @@ def get_model_doc(
     append_model_errors: bool = True,
 ) -> LibraryDoc:
     errors: List[Error] = []
-    keyword_name_nodes: List[KeywordName] = []
-    keywords_nodes: List[Keyword] = []
-    for node in ast.walk(model):
-        if isinstance(node, Keyword):
-            keywords_nodes.append(node)
-        if isinstance(node, KeywordName):
-            keyword_name_nodes.append(node)
+    keyword_name_nodes: Dict[int, KeywordName] = {}
+    keywords_nodes: Dict[int, Keyword] = {}
+    for node in iter_nodes(model):
+        if cached_isinstance(node, Keyword):
+            node.lineno
+            keywords_nodes[node.lineno] = node
+        if cached_isinstance(node, KeywordName):
+            keyword_name_nodes[node.lineno] = node
 
-        error = node.error if isinstance(node, HasError) else None
+        error = getattr(node, "error", None)
         if error is not None:
             errors.append(
                 Error(
@@ -2735,7 +2730,7 @@ def get_model_doc(
                 )
             )
         if append_model_errors:
-            node_errors = node.errors if isinstance(node, HasErrors) else None
+            node_errors = getattr(node, "errors", None)
             if node_errors is not None:
                 for e in node_errors:
                     errors.append(
@@ -2748,16 +2743,15 @@ def get_model_doc(
                     )
 
     def get_keyword_name_token_from_line(line: int) -> Optional[Token]:
-        for keyword_name in keyword_name_nodes:
-            if keyword_name.lineno == line:
-                return cast(Token, keyword_name.get_token(RobotToken.KEYWORD_NAME))
-
-        return None
+        keyword_name = keyword_name_nodes.get(line, None)
+        if keyword_name is None:
+            return None
+        return cast(Token, keyword_name.get_token(RobotToken.KEYWORD_NAME))
 
     def get_argument_definitions_from_line(
         line: int,
     ) -> List[ArgumentDefinition]:
-        keyword_node = next((k for k in keywords_nodes if k.lineno == line), None)
+        keyword_node = keywords_nodes.get(line, None)
         if keyword_node is None:
             return []
 

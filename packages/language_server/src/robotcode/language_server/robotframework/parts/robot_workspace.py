@@ -1,8 +1,7 @@
 from concurrent.futures import CancelledError
 from logging import CRITICAL
-from pathlib import Path
 from threading import Event
-from typing import TYPE_CHECKING, Any, List, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
 from robotcode.core.ignore_spec import DEFAULT_SPEC_RULES, GIT_IGNORE_FILE, ROBOT_IGNORE_FILE, IgnoreSpec, iter_files
 from robotcode.core.language import language_id
@@ -60,8 +59,6 @@ class RobotWorkspaceProtocolPart(RobotLanguageServerProtocolPart):
     def load_workspace_documents(self, sender: Any) -> None:
         with self._logger.measure_time(lambda: "loading workspace documents", context_name="load_workspace_documents"):
             try:
-                result: List[Path] = []
-
                 for folder in self.parent.workspace.workspace_folders:
                     config = self.parent.workspace.get_configuration(RobotCodeConfig, folder.uri)
 
@@ -84,9 +81,10 @@ class RobotWorkspaceProtocolPart(RobotLanguageServerProtocolPart):
                             )
                         )
 
-                    result.extend(files)
-
                     canceled = False
+                    self._logger.debug(
+                        lambda: f"Loading {len(files)} workspace documents", context_name="load_workspace_documents"
+                    )
                     with self.parent.window.progress(
                         "Load workspace", current=0, max=len(files), start=False, cancellable=False
                     ) as progress:

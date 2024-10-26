@@ -665,12 +665,12 @@ class ModelHelper:
 
     @classmethod
     def get_keyword_definition_at_token(cls, library_doc: LibraryDoc, token: Token) -> Optional[KeywordDoc]:
-        return cls.get_keyword_definition_at_line(library_doc, token.value, token.lineno)
+        return cls.get_keyword_definition_at_line(library_doc, token.lineno)
 
     @classmethod
-    def get_keyword_definition_at_line(cls, library_doc: LibraryDoc, value: str, line: int) -> Optional[KeywordDoc]:
+    def get_keyword_definition_at_line(cls, library_doc: LibraryDoc, line: int) -> Optional[KeywordDoc]:
         return next(
-            (k for k in library_doc.keywords.iter_all(value) if k.line_no == line),
+            (k for k in library_doc.keywords.keywords if k.line_no == line),
             None,
         )
 

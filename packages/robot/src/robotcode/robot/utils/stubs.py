@@ -1,22 +1,4 @@
-from __future__ import annotations
-
-from typing import Any, Dict, Iterator, List, Optional, Protocol, Set, runtime_checkable
-
-
-@runtime_checkable
-class HasError(Protocol):
-    error: Optional[str]
-
-
-@runtime_checkable
-class HasErrors(Protocol):
-    errors: Optional[List[str]]
-
-
-@runtime_checkable
-class HeaderAndBodyBlock(Protocol):
-    header: Any
-    body: List[Any]
+from typing import Any, Dict, Iterator, List, Protocol, Set, runtime_checkable
 
 
 @runtime_checkable
