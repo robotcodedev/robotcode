@@ -913,19 +913,13 @@ class KeywordStore:
     source_type: Optional[str] = None
     keywords: List[KeywordDoc] = field(default_factory=list)
 
-    @property
-    def _matchers(self) -> Dict[KeywordMatcher, KeywordDoc]:
-        if not hasattr(self, "__matchers"):
-            self.__matchers = {v.matcher: v for v in self.keywords}
-        return self.__matchers
-
     def __getitem__(self, key: str) -> KeywordDoc:
-        items = [(k, v) for k, v in self._matchers.items() if k == key]
+        items = [v for v in self.keywords if v.matcher == key]
 
         if not items:
             raise KeyError
         if len(items) == 1:
-            return items[0][1]
+            return items[0]
 
         if self.source and self.source_type:
             file_info = ""
@@ -940,14 +934,14 @@ class KeywordStore:
         else:
             file_info = "File"
         error = [f"{file_info} contains multiple keywords matching name '{key}':"]
-        names = sorted(k.name for k, v in items)
+        names = sorted(v.name for v in items)
         raise KeywordError(
             "\n    ".join(error + names),
-            multiple_keywords=[v for _, v in items],
+            multiple_keywords=[v for v in items],
         )
 
     def __contains__(self, _x: object) -> bool:
-        return any(k == _x for k in self._matchers.keys())
+        return any(v.matcher == _x for v in self.keywords)
 
     def __len__(self) -> int:
         return len(self.keywords)
@@ -977,7 +971,7 @@ class KeywordStore:
         return list(self.iter_all(key))
 
     def iter_all(self, key: str) -> Iterable[KeywordDoc]:
-        yield from (v for k, v in self._matchers.items() if k == key)
+        yield from (v for v in self.keywords if v.matcher == key)
 
 
 @dataclass
