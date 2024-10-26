@@ -145,10 +145,10 @@ class VariableMatcher:
         self.normalized_name = str(normalize(self.base))
 
     def __eq__(self, o: object) -> bool:
-        if isinstance(o, VariableMatcher):
+        if type(o) is VariableMatcher:
             return o.normalized_name == self.normalized_name
 
-        if isinstance(o, str):
+        if type(o) is str:
             match = search_variable(o, "$@&%", ignore_errors=True)
             base = match.base
             if base is None:

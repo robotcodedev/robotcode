@@ -240,6 +240,11 @@ class KeywordMatcher:
         self._is_namespace = is_namespace
         self._normalized_name: Optional[str] = None
 
+        self.embedded_arguments: Optional[EmbeddedArguments] = (
+            _get_embedded_arguments(self.name) or None if self._can_have_embedded else None
+        )
+        self._match_cache: Dict[str, bool] = {}
+
     @property
     def normalized_name(self) -> str:
         if self._normalized_name is None:
@@ -247,22 +252,15 @@ class KeywordMatcher:
 
         return self._normalized_name
 
-    @functools.cached_property
-    def embedded_arguments(self) -> Any:
-        if self._can_have_embedded:
-            return _get_embedded_arguments(self.name) or ()
-
-        return ()
-
     if get_robot_version() >= (6, 0):
 
         def __match_embedded(self, name: str) -> bool:
-            return self.embedded_arguments.match(name) is not None
+            return self.embedded_arguments is not None and self.embedded_arguments.match(name) is not None
 
     else:
 
         def __match_embedded(self, name: str) -> bool:
-            return self.embedded_arguments.name.match(name) is not None
+            return self.embedded_arguments is not None and self.embedded_arguments.name.match(name) is not None
 
     def __eq__(self, o: object) -> bool:
         if type(o) is KeywordMatcher:
@@ -274,7 +272,7 @@ class KeywordMatcher:
 
             o = o.name
 
-        if not cached_isinstance(o, str):
+        if type(o) is not str:
             return False
 
         if self.embedded_arguments:

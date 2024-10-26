@@ -58,8 +58,8 @@ class KeywordFinder:
         ] = {}
 
         self._all_keywords: Optional[List[LibraryEntry]] = None
-        self._resource_keywords: Optional[List[ResourceEntry]] = None
-        self._library_keywords: Optional[List[LibraryEntry]] = None
+        self._resource_imports: Optional[List[ResourceEntry]] = None
+        self._library_imports: Optional[List[LibraryEntry]] = None
 
     def reset_diagnostics(self) -> None:
         self.diagnostics = []
@@ -312,23 +312,23 @@ class KeywordFinder:
         other: Tuple[Optional[LibraryEntry], KeywordDoc],
     ) -> bool:
         return (
-            other[1].matcher.embedded_arguments.match(candidate[1].name) is not None
+            other[1].matcher.embedded_arguments is not None
+            and candidate[1].matcher.embedded_arguments is not None
+            and other[1].matcher.embedded_arguments.match(candidate[1].name) is not None
             and candidate[1].matcher.embedded_arguments.match(other[1].name) is None
         )
 
     def _get_keyword_from_resource_files(self, name: str) -> Optional[KeywordDoc]:
-        if self._resource_keywords is None:
-            self._resource_keywords = list(chain(self.namespace._resources.values()))
+        if self._resource_imports is None:
+            self._resource_imports = list(chain(self.namespace._resources.values()))
 
         if get_robot_version() >= (6, 0):
-            found: List[Tuple[Optional[LibraryEntry], KeywordDoc]] = []
-            for v in self._resource_keywords:
-                r = v.library_doc.keywords.get_all(name)
-                if r:
-                    found.extend([(v, k) for k in r])
+            found: List[Tuple[Optional[LibraryEntry], KeywordDoc]] = [
+                (v, k) for v in self._resource_imports for k in v.library_doc.keywords.iter_all(name)
+            ]
         else:
             found = []
-            for k in self._resource_keywords:
+            for k in self._resource_imports:
                 s = k.library_doc.keywords.get(name, None)
                 if s is not None:
                     found.append((k, s))
@@ -373,19 +373,18 @@ class KeywordFinder:
         return entries
 
     def _get_keyword_from_libraries(self, name: str) -> Optional[KeywordDoc]:
-        if self._library_keywords is None:
-            self._library_keywords = list(chain(self.namespace._libraries.values()))
+        if self._library_imports is None:
+            self._library_imports = list(chain(self.namespace._libraries.values()))
 
         if get_robot_version() >= (6, 0):
-            found: List[Tuple[Optional[LibraryEntry], KeywordDoc]] = []
-            for v in self._library_keywords:
-                r = v.library_doc.keywords.get_all(name)
-                if r:
-                    found.extend([(v, k) for k in r])
+            found: List[Tuple[Optional[LibraryEntry], KeywordDoc]] = [
+                (v, k) for v in self._library_imports for k in v.library_doc.keywords.iter_all(name)
+            ]
+
         else:
             found = []
 
-            for k in self._library_keywords:
+            for k in self._library_imports:
                 s = k.library_doc.keywords.get(name, None)
                 if s is not None:
                     found.append((k, s))
