@@ -6,7 +6,7 @@ from typing import Optional, Union
 
 def find_file_ex(
     path: Union[Path, "PathLike[str]", str],
-    basedir: Union[Path, PathLike[str], str] = ".",
+    basedir: Union[Path, "PathLike[str]", str] = ".",
     file_type: Optional[str] = None,
 ) -> str:
     from robot.errors import DataError
@@ -33,7 +33,7 @@ def find_file_ex(
 
 def find_file(
     path: Union[Path, "PathLike[str]", str],
-    basedir: Union[Path, PathLike[str], str] = ".",
+    basedir: Union[Path, "PathLike[str]", str] = ".",
     file_type: Optional[str] = None,
 ) -> str:
     return find_file_ex(path, basedir, file_type)
