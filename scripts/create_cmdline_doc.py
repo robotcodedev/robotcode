@@ -135,8 +135,6 @@ def main():
 
     output = regex.sub(f"\\1\n{command_docs}\n\\3", cli_doc.read_text("utf-8"))
 
-    print(output)
-
     cli_doc.write_text(output, "utf-8")
 
 
