@@ -54,6 +54,7 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     needs: build
+    if: success() && startsWith( github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     name: Deploy
     steps:
