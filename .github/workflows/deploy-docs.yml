@@ -2,8 +2,10 @@ name: deploy docs site to Pages
 
 on:
   push:
-    tags:
-        - "v*"
+    branches: main
+    paths:
+      - "docs/**"
+      - ".github/workflows/deploy-docs.yml"
     paths-ignore:
         - ".devcontainer/**"
         - ".github/**"
