@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [0.95.1](https://github.com/robotcodedev/robotcode/compare/v0.95.0..v0.95.1) - 2024-10-26
+
+### Bug Fixes
+
+- **robot:** Corrected some type hint for python 3.8 ([47510ac](https://github.com/robotcodedev/robotcode/commit/47510ac37b26dd3f6ffd1e0e454e6ae581076017))
+- **vscode:** Restart the language server if a change is detected in a `.gitignore` or `.robotignore` file ([7613bb2](https://github.com/robotcodedev/robotcode/commit/7613bb25bbe1623016997dbfbeba85789f480e8b))
+
+
+### Documentation
+
+- Update documentation for command line tools ([9e0d0dc](https://github.com/robotcodedev/robotcode/commit/9e0d0dc427c841c9a414a7baf00fc3cf9735c76a))
+
+
+### Performance
+
+- **analyzer:** Speed up the creation of libdocs from resource files ([2dfc91b](https://github.com/robotcodedev/robotcode/commit/2dfc91bb475781c6b0f557028046a69777eb155d))
+- **analyzer:** Speed up finding keywords and variables a little bit more ([aaa6439](https://github.com/robotcodedev/robotcode/commit/aaa6439870378bf9dccaca8e8c310da742e8b3dd))
+- **language_server:** Corrected handling of matching multiple keywords if keywords have embedded keywords ([c662685](https://github.com/robotcodedev/robotcode/commit/c6626857053d103264c848685e06a33390991d11))
+
+
 ## [0.95.0](https://github.com/robotcodedev/robotcode/compare/v0.94.0..v0.95.0) - 2024-10-25
 
 ### Bug Fixes
