@@ -10,6 +10,7 @@ on:
       - ".devcontainer/**"
       - ".github/**"
       - "!.github/workflows/**"
+      - "docs/**"
 
   pull_request:
     branches:
