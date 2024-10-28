@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [0.95.2](https://github.com/robotcodedev/robotcode/compare/v0.95.1..v0.95.2) - 2024-10-28
+
+### Performance
+
+- **analyzer:** Simplify generating of internal libdocs for resource files ([c232cea](https://github.com/robotcodedev/robotcode/commit/c232cea29672fc30eaf7a7e6ce08ee0ed8283968))
+
+
+### Refactor
+
+- **all:** Some cache adjustments and removal of unnecessary code ([9b0999c](https://github.com/robotcodedev/robotcode/commit/9b0999cc4425d84fb20c6c81b0e63b1939abebe7))
+
+
 ## [0.95.1](https://github.com/robotcodedev/robotcode/compare/v0.95.0..v0.95.1) - 2024-10-26
 
 ### Bug Fixes
