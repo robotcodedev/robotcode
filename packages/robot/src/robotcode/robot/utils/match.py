@@ -2,16 +2,17 @@ from functools import lru_cache
 
 _transform_table = str.maketrans("", "", "_ ")
 
+_transform_table_namespace = str.maketrans("", "", " ")
 
-@lru_cache(maxsize=None)
+
+@lru_cache(maxsize=8192)
 def normalize(text: str) -> str:
-    # return text.lower().replace("_", "").replace(" ", "")
-    return text.casefold().translate(_transform_table)
+    return text.translate(_transform_table).casefold()
 
 
-@lru_cache(maxsize=None)
+@lru_cache(maxsize=8192)
 def normalize_namespace(text: str) -> str:
-    return text.lower().replace(" ", "")
+    return text.translate(_transform_table_namespace).casefold()
 
 
 def eq(str1: str, str2: str) -> bool:

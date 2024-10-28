@@ -48,7 +48,7 @@ def position_from_utf16(lines: List[str], position: Position) -> Position:
     return Position(line=position.line, character=utf32_offset)
 
 
-@functools.lru_cache(maxsize=2048)
+@functools.lru_cache(maxsize=8192)
 def has_multibyte_char(line: str) -> bool:
     return any(is_multibyte_char(c) for c in line)
 

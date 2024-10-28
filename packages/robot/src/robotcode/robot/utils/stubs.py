@@ -1,12 +1,6 @@
-from typing import Any, Dict, Iterator, List, Protocol, Set, runtime_checkable
+from typing import Any, Dict, Iterator, List, Protocol, Set
 
 
-@runtime_checkable
-class BodyBlock(Protocol):
-    body: List[Any]
-
-
-@runtime_checkable
 class Languages(Protocol):
     languages: List[Any]
     headers: Dict[str, str]

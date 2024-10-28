@@ -80,23 +80,23 @@ class FirstAndLastRealStatementFinder(Visitor):
             self.last_statement = statement
 
 
+_NON_DATA_TOKENS = {
+    Token.SEPARATOR,
+    Token.CONTINUATION,
+    Token.EOL,
+    Token.EOS,
+}
+
+_NON_DATA_TOKENS_WITH_COMMENT = {*_NON_DATA_TOKENS, Token.COMMENT}
+
+
 def _get_non_data_range_from_node(
     node: ast.AST, only_start: bool = False, allow_comments: bool = False
 ) -> Optional[Range]:
+    non_data_tokens = _NON_DATA_TOKENS_WITH_COMMENT if allow_comments else _NON_DATA_TOKENS
     if cached_isinstance(node, Statement) and node.tokens:
         start_token = next(
-            (
-                v
-                for v in node.tokens
-                if v.type
-                not in [
-                    Token.SEPARATOR,
-                    *([] if allow_comments else [Token.COMMENT]),
-                    Token.CONTINUATION,
-                    Token.EOL,
-                    Token.EOS,
-                ]
-            ),
+            (v for v in node.tokens if v.type not in non_data_tokens),
             None,
         )
 
@@ -106,18 +106,7 @@ def _get_non_data_range_from_node(
             end_tokens = node.tokens
 
         end_token = next(
-            (
-                v
-                for v in reversed(end_tokens)
-                if v.type
-                not in [
-                    Token.SEPARATOR,
-                    *([] if allow_comments else [Token.COMMENT]),
-                    Token.CONTINUATION,
-                    Token.EOL,
-                    Token.EOS,
-                ]
-            ),
+            (v for v in reversed(end_tokens) if v.type not in non_data_tokens),
             None,
         )
         if start_token is not None and end_token is not None:
@@ -282,35 +271,35 @@ def tokenize_variables(
     return _tokenize_variables(token, variables)
 
 
-if get_robot_version() < (7, 0):
+def _tokenize_variables_before7(token: Token, variables: Any) -> Iterator[Token]:
+    lineno = token.lineno
+    col_offset = token.col_offset
+    remaining = ""
+    for before, variable, remaining in variables:
+        if before:
+            yield Token(token.type, before, lineno, col_offset)
+            col_offset += len(before)
+        yield Token(Token.VARIABLE, variable, lineno, col_offset)
+        col_offset += len(variable)
+    if remaining:
+        yield Token(token.type, remaining, lineno, col_offset)
 
-    def _tokenize_variables(token: Token, variables: Any) -> Iterator[Token]:
-        lineno = token.lineno
-        col_offset = token.col_offset
-        remaining = ""
-        for before, variable, remaining in variables:
-            if before:
-                yield Token(token.type, before, lineno, col_offset)
-                col_offset += len(before)
-            yield Token(Token.VARIABLE, variable, lineno, col_offset)
-            col_offset += len(variable)
-        if remaining:
-            yield Token(token.type, remaining, lineno, col_offset)
 
-else:
+def _tokenize_variables_v7(token: Token, variables: Any) -> Iterator[Token]:
+    lineno = token.lineno
+    col_offset = token.col_offset
+    after = ""
+    for match in variables:
+        if match.before:
+            yield Token(token.type, match.before, lineno, col_offset)
+        yield Token(Token.VARIABLE, match.match, lineno, col_offset + match.start)
+        col_offset += match.end
+        after = match.after
+    if after:
+        yield Token(token.type, after, lineno, col_offset)
 
-    def _tokenize_variables(token: Token, variables: Any) -> Iterator[Token]:
-        lineno = token.lineno
-        col_offset = token.col_offset
-        after = ""
-        for match in variables:
-            if match.before:
-                yield Token(token.type, match.before, lineno, col_offset)
-            yield Token(Token.VARIABLE, match.match, lineno, col_offset + match.start)
-            col_offset += match.end
-            after = match.after
-        if after:
-            yield Token(token.type, after, lineno, col_offset)
+
+_tokenize_variables = _tokenize_variables_before7 if get_robot_version() < (7, 0) else _tokenize_variables_v7
 
 
 def iter_over_keyword_names_and_owners(

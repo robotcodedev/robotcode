@@ -3,7 +3,7 @@ from __future__ import annotations
 import itertools
 import re
 from abc import ABC, abstractmethod
-from typing import Any, Callable, Iterator, List, Optional, Tuple
+from typing import Any, Callable, Final, Iterator, List, Optional, Tuple
 
 
 class Formatter(ABC):
@@ -87,7 +87,7 @@ class SingleLineFormatter(Formatter):
 
 
 class HeaderFormatter(SingleLineFormatter):
-    _regex = re.compile(r"^(={1,5})\s+(\S.*?)\s+\1$")
+    _regex: Final["re.Pattern[str]"] = re.compile(r"^(={1,5})\s+(\S.*?)\s+\1$")
 
     def match(self, line: str) -> Optional[re.Match[str]]:
         return self._regex.match(line)
@@ -103,8 +103,8 @@ class HeaderFormatter(SingleLineFormatter):
 
 class LinkFormatter:
     _image_exts = (".jpg", ".jpeg", ".png", ".gif", ".bmp", ".svg")
-    _link = re.compile(r"\[(.+?\|.*?)\]")
-    _url = re.compile(
+    _link: Final["re.Pattern[str]"] = re.compile(r"\[(.+?\|.*?)\]")
+    _url: Final["re.Pattern[str]"] = re.compile(
         r"""
 ((^|\ ) ["'(\[{]*)           # begin of line or space and opt. any char "'([{
 ([a-z][\w+-.]*://[^\s|]+?)   # url
@@ -177,7 +177,7 @@ class LinkFormatter:
 
 
 class LineFormatter:
-    _bold = re.compile(
+    _bold: Final["re.Pattern[str]"] = re.compile(
         r"""
 (                         # prefix (group 1)
   (^|\ )                  # begin of line or space
@@ -193,7 +193,7 @@ class LineFormatter:
 """,
         re.VERBOSE,
     )
-    _italic = re.compile(
+    _italic: Final["re.Pattern[str]"] = re.compile(
         r"""
 ( (^|\ ) ["'(]* )          # begin of line or space and opt. any char "'(
 _                          # start of italic
@@ -203,7 +203,7 @@ _                          # end of italic
 """,
         re.VERBOSE,
     )
-    _code = re.compile(
+    _code: Final["re.Pattern[str]"] = re.compile(
         r"""
 ( (^|\ ) ["'(]* )          # same as above with _ changed to ``
 ``
@@ -296,7 +296,7 @@ class ListFormatter(Formatter):
 
 
 class RulerFormatter(SingleLineFormatter):
-    regex = re.compile("^-{3,}$")
+    regex: Final["re.Pattern[str]"] = re.compile("^-{3,}$")
 
     def match(self, line: str) -> Optional[re.Match[str]]:
         return self.regex.match(line)
@@ -306,9 +306,9 @@ class RulerFormatter(SingleLineFormatter):
 
 
 class TableFormatter(Formatter):
-    _table_line = re.compile(r"^\| (.* |)\|$")
-    _line_splitter = re.compile(r" \|(?= )")
-    _format_cell_content = _line_formatter.format
+    _table_line: Final["re.Pattern[str]"] = re.compile(r"^\| (.* |)\|$")
+    _line_splitter: Final["re.Pattern[str]"] = re.compile(r" \|(?= )")
+    _format_cell_content: Final[Callable[[str], str]] = _line_formatter.format
 
     def _handles(self, line: str) -> bool:
         return self._table_line.match(line) is not None

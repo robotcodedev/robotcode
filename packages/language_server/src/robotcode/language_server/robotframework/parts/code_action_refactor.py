@@ -35,7 +35,6 @@ from robotcode.robot.utils.ast import (
     range_from_node,
     range_from_token,
 )
-from robotcode.robot.utils.stubs import BodyBlock
 
 from ...common.decorators import code_action_kinds
 from .code_action_helper_mixin import (
@@ -188,9 +187,9 @@ class RobotCodeActionRefactorProtocolPart(RobotLanguageServerProtocolPart, Model
 
         result = []
 
-        blocks: List[BodyBlock] = []
+        blocks: List[Block] = []
         for node in iter_nodes(model):
-            if isinstance(node, Block) and isinstance(node, BodyBlock):
+            if isinstance(node, Block) and hasattr(node, "body"):
                 blocks.append(node)
 
             r = range_from_node(node, skip_non_data=True, allow_comments=True)

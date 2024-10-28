@@ -3,6 +3,7 @@ from abc import ABC
 from typing import (
     Any,
     Callable,
+    ClassVar,
     Dict,
     Iterator,
     Optional,
@@ -37,7 +38,7 @@ def iter_field_values(node: ast.AST) -> Iterator[Any]:
 
 
 class VisitorFinder(ABC):
-    __cls_finder_cache__: Dict[Type[Any], Optional[Callable[..., Any]]]
+    __cls_finder_cache__: ClassVar[Dict[Type[Any], Optional[Callable[..., Any]]]]
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
         super().__init_subclass__(**kwargs)
