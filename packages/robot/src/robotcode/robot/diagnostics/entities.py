@@ -1,3 +1,4 @@
+import functools
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import (
@@ -142,7 +143,7 @@ class VariableMatcher:
 
         self.base = match.base
 
-        self.normalized_name = str(normalize(self.base))
+        self.normalized_name = normalize(self.base)
 
     def __eq__(self, o: object) -> bool:
         if type(o) is VariableMatcher:
@@ -154,7 +155,7 @@ class VariableMatcher:
             if base is None:
                 return False
 
-            normalized = str(normalize(base))
+            normalized = normalize(base)
             return self.normalized_name == normalized
 
         return False
@@ -194,10 +195,9 @@ class VariableDefinition(SourceEntity):
     value: Any = field(default=None, compare=False)
     value_is_native: bool = field(default=False, compare=False)
 
-    matcher: VariableMatcher = field(init=False, compare=False)
-
-    def __post_init__(self) -> None:
-        self.matcher = VariableMatcher(self.name)
+    @functools.cached_property
+    def matcher(self) -> VariableMatcher:
+        return VariableMatcher(self.name)
 
     @single_call
     def __hash__(self) -> int:

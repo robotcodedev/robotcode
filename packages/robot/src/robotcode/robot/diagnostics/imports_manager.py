@@ -573,11 +573,9 @@ class ImportsManager:
         self._resource_document_changed_timer_interval = 1
         self._resource_document_changed_documents: Set[TextDocument] = set()
 
-        self._resource_libdoc_cache: "weakref.WeakKeyDictionary[ast.AST, Dict[Tuple[str, bool], LibraryDoc]]" = (
+        self._resource_libdoc_cache: "weakref.WeakKeyDictionary[ast.AST, Dict[str, LibraryDoc]]" = (
             weakref.WeakKeyDictionary()
         )
-
-        self._process_pool_executor: Optional[ProcessPoolExecutor] = None
 
     def __del__(self) -> None:
         try:
@@ -1302,9 +1300,8 @@ class ImportsManager:
         self,
         model: ast.AST,
         source: str,
-        append_model_errors: bool = True,
     ) -> LibraryDoc:
-        key = (source, append_model_errors)
+        key = source
 
         entry = None
         if model in self._resource_libdoc_cache:
@@ -1313,11 +1310,7 @@ class ImportsManager:
             if entry and key in entry:
                 return entry[key]
 
-        result = get_model_doc(
-            model=model,
-            source=source,
-            append_model_errors=append_model_errors,
-        )
+        result = get_model_doc(model=model, source=source)
         if entry is None:
             entry = {}
             self._resource_libdoc_cache[model] = entry

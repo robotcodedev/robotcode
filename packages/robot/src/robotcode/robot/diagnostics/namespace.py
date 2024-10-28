@@ -910,11 +910,7 @@ class Namespace:
     def get_library_doc(self) -> LibraryDoc:
         with self._library_doc_lock:
             if self._library_doc is None:
-                self._library_doc = self.imports_manager.get_libdoc_from_model(
-                    self.model,
-                    self.source,
-                    append_model_errors=self.document_type is not None and self.document_type == DocumentType.RESOURCE,
-                )
+                self._library_doc = self.imports_manager.get_libdoc_from_model(self.model, self.source)
 
             return self._library_doc
 
@@ -1887,7 +1883,6 @@ class Namespace:
                                     source=DIAGNOSTICS_SOURCE_NAME,
                                     code=err.type_name,
                                 )
-                    # TODO: implement CancelationToken
                     except CancelledError:
                         canceled = True
                         self._logger.debug("analyzing canceled")
@@ -1904,7 +1899,7 @@ class Namespace:
 
     def create_finder(self) -> "KeywordFinder":
         self.ensure_initialized()
-        return KeywordFinder(self, self.get_library_doc())
+        return KeywordFinder(self)
 
     @_logger.call(condition=lambda self, name, **kwargs: self._finder is not None and name not in self._finder._cache)
     def find_keyword(

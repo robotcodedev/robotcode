@@ -1,4 +1,5 @@
 import ast
+import functools
 import itertools
 import os
 import token as python_token
@@ -70,7 +71,7 @@ from .entities import (
 )
 from .errors import DIAGNOSTICS_SOURCE_NAME, Error
 from .keyword_finder import KeywordFinder
-from .library_doc import KeywordDoc, is_embedded_keyword
+from .library_doc import KeywordDoc, LibraryDoc, is_embedded_keyword
 from .model_helper import ModelHelper
 
 if TYPE_CHECKING:
@@ -697,7 +698,7 @@ class NamespaceAnalyzer(Visitor):
                         code=Error.RESERVED_KEYWORD,
                     )
 
-                if get_robot_version() >= (6, 0) and result.is_resource_keyword and result.is_private():
+                if get_robot_version() >= (6, 0) and result.is_resource_keyword and result.is_private:
                     if self._namespace.source != result.source:
                         self._append_diagnostics(
                             range=kw_range,
@@ -1042,12 +1043,14 @@ class NamespaceAnalyzer(Visitor):
         if name_token is not None and name_token.value:
             self._analyze_token_variables(name_token, DiagnosticSeverity.HINT)
 
+    @functools.cached_property
+    def _namespace_lib_doc(self) -> LibraryDoc:
+        return self._namespace.get_library_doc()
+
     def visit_Keyword(self, node: Keyword) -> None:  # noqa: N802
         if node.name:
             name_token = node.header.get_token(Token.KEYWORD_NAME)
-            self._current_keyword_doc = ModelHelper.get_keyword_definition_at_token(
-                self._namespace.get_library_doc(), name_token
-            )
+            self._current_keyword_doc = ModelHelper.get_keyword_definition_at_token(self._namespace_lib_doc, name_token)
 
             if self._current_keyword_doc is not None and self._current_keyword_doc not in self._keyword_references:
                 self._keyword_references[self._current_keyword_doc] = set()

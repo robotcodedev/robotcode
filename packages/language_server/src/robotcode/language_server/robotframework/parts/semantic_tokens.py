@@ -491,7 +491,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
                     )
 
                 if builtin_library_doc is not None and kw in builtin_library_doc.keywords:
-                    if kw_doc is not None and kw_doc.libname == cls.BUILTIN_MATCHER and kw_doc.matcher == kw:
+                    if kw_doc is not None and kw_doc.libname == cls.BUILTIN_MATCHER and kw_doc.matcher.match_string(kw):
                         if not sem_mod:
                             sem_mod = set()
                         sem_mod.add(RobotSemTokenModifiers.BUILTIN)

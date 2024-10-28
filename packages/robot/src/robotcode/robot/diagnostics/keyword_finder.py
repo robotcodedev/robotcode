@@ -39,9 +39,8 @@ DEFAULT_BDD_PREFIXES = {"Given ", "When ", "Then ", "And ", "But "}
 
 
 class KeywordFinder:
-    def __init__(self, namespace: "Namespace", library_doc: LibraryDoc) -> None:
-        self.namespace = namespace
-        self.self_library_doc = library_doc
+    def __init__(self, namespace: "Namespace") -> None:
+        self._namespace = namespace
 
         self.diagnostics: List[DiagnosticsEntry] = []
         self.result_bdd_prefix: Optional[str] = None
@@ -57,9 +56,9 @@ class KeywordFinder:
             ],
         ] = {}
 
-        self._all_keywords: Optional[List[LibraryEntry]] = None
-        self._resource_imports: Optional[List[ResourceEntry]] = None
-        self._library_imports: Optional[List[LibraryEntry]] = None
+    @functools.cached_property
+    def _library_doc(self) -> LibraryDoc:
+        return self._namespace.get_library_doc()
 
     def reset_diagnostics(self) -> None:
         self.diagnostics = []
@@ -162,7 +161,7 @@ class KeywordFinder:
     def _get_keyword_from_self(self, name: str) -> Optional[KeywordDoc]:
         if get_robot_version() >= (6, 0):
             found: List[Tuple[Optional[LibraryEntry], KeywordDoc]] = [
-                (None, v) for v in self.self_library_doc.keywords.iter_all(name)
+                (None, v) for v in self._library_doc.keywords.iter_all(name)
             ]
             if len(found) > 1:
                 found = self._select_best_matches(found)
@@ -183,7 +182,7 @@ class KeywordFinder:
             return None
 
         try:
-            return self.self_library_doc.keywords.get(name, None)
+            return self._library_doc.keywords.get(name, None)
         except KeywordError as e:
             self.diagnostics.append(DiagnosticsEntry(str(e), DiagnosticSeverity.ERROR, Error.KEYWORD_ERROR))
             raise CancelSearchError from e
@@ -213,15 +212,16 @@ class KeywordFinder:
 
         return found[0][1] if found else None
 
-    def find_keywords(self, owner_name: str, name: str) -> List[Tuple[LibraryEntry, KeywordDoc]]:
-        if self._all_keywords is None:
-            self._all_keywords = list(
-                chain(
-                    self.namespace._libraries.values(),
-                    self.namespace._resources.values(),
-                )
+    @functools.cached_property
+    def _all_keywords(self) -> List[LibraryEntry]:
+        return list(
+            chain(
+                self._namespace._libraries.values(),
+                self._namespace._resources.values(),
             )
+        )
 
+    def find_keywords(self, owner_name: str, name: str) -> List[Tuple[LibraryEntry, KeywordDoc]]:
         if get_robot_version() >= (6, 0):
             result: List[Tuple[LibraryEntry, KeywordDoc]] = []
             for v in self._all_keywords:
@@ -271,11 +271,11 @@ class KeywordFinder:
     def _prioritize_same_file_or_public(
         self, entries: List[Tuple[Optional[LibraryEntry], KeywordDoc]]
     ) -> List[Tuple[Optional[LibraryEntry], KeywordDoc]]:
-        matches = [h for h in entries if h[1].source == self.namespace.source]
+        matches = [h for h in entries if h[1].source == self._namespace.source]
         if matches:
             return matches
 
-        matches = [handler for handler in entries if not handler[1].is_private()]
+        matches = [handler for handler in entries if not handler[1].is_private]
 
         return matches or entries
 
@@ -318,10 +318,11 @@ class KeywordFinder:
             and candidate[1].matcher.embedded_arguments.match(other[1].name) is None
         )
 
-    def _get_keyword_from_resource_files(self, name: str) -> Optional[KeywordDoc]:
-        if self._resource_imports is None:
-            self._resource_imports = list(chain(self.namespace._resources.values()))
+    @functools.cached_property
+    def _resource_imports(self) -> List[ResourceEntry]:
+        return list(chain(self._namespace._resources.values()))
 
+    def _get_keyword_from_resource_files(self, name: str) -> Optional[KeywordDoc]:
         if get_robot_version() >= (6, 0):
             found: List[Tuple[Optional[LibraryEntry], KeywordDoc]] = [
                 (v, k) for v in self._resource_imports for k in v.library_doc.keywords.iter_all(name)
@@ -365,17 +366,18 @@ class KeywordFinder:
     def _get_keyword_based_on_search_order(
         self, entries: List[Tuple[Optional[LibraryEntry], KeywordDoc]]
     ) -> List[Tuple[Optional[LibraryEntry], KeywordDoc]]:
-        for libname in self.namespace.search_order:
+        for libname in self._namespace.search_order:
             for e in entries:
                 if e[0] is not None and eq_namespace(libname, e[0].alias or e[0].name):
                     return [e]
 
         return entries
 
-    def _get_keyword_from_libraries(self, name: str) -> Optional[KeywordDoc]:
-        if self._library_imports is None:
-            self._library_imports = list(chain(self.namespace._libraries.values()))
+    @functools.cached_property
+    def _library_imports(self) -> List[LibraryEntry]:
+        return list(chain(self._namespace._libraries.values()))
 
+    def _get_keyword_from_libraries(self, name: str) -> Optional[KeywordDoc]:
         if get_robot_version() >= (6, 0):
             found: List[Tuple[Optional[LibraryEntry], KeywordDoc]] = [
                 (v, k) for v in self._library_imports for k in v.library_doc.keywords.iter_all(name)
@@ -462,8 +464,8 @@ class KeywordFinder:
     def bdd_prefix_regexp(self) -> "re.Pattern[str]":
         prefixes = (
             "|".join(
-                self.namespace.languages.bdd_prefixes
-                if self.namespace.languages is not None
+                self._namespace.languages.bdd_prefixes
+                if self._namespace.languages is not None
                 else ["given", "when", "then", "and", "but"]
             )
             .replace(" ", r"\s")

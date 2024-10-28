@@ -44,7 +44,7 @@ from robot.output.logger import LOGGER
 from robot.output.loggerhelper import AbstractLogger
 from robot.parsing.lexer.tokens import Token
 from robot.parsing.lexer.tokens import Token as RobotToken
-from robot.parsing.model.blocks import Keyword
+from robot.parsing.model.blocks import Keyword, KeywordSection, Section, SettingSection
 from robot.parsing.model.statements import Arguments, KeywordName
 from robot.running.arguments.argumentresolver import ArgumentResolver, DictToKwargs, NamedArgumentResolver
 from robot.running.arguments.argumentresolver import VariableReplacer as ArgumentsVariableReplacer
@@ -64,7 +64,18 @@ from robot.variables.finders import VariableFinder
 from robot.variables.replacer import VariableReplacer
 from robotcode.core.lsp.types import Position, Range
 from robotcode.core.utils.path import normalized_path
-from robotcode.robot.diagnostics.entities import (
+
+from ..utils import get_robot_version
+from ..utils.ast import (
+    cached_isinstance,
+    get_variable_token,
+    range_from_token,
+    strip_variable_token,
+)
+from ..utils.markdownformatter import MarkDownFormatter
+from ..utils.match import normalize, normalize_namespace
+from ..utils.variables import contains_variable
+from .entities import (
     ArgumentDefinition,
     ImportedVariableDefinition,
     LibraryArgumentDefinition,
@@ -72,18 +83,6 @@ from robotcode.robot.diagnostics.entities import (
     SourceEntity,
     single_call,
 )
-from robotcode.robot.utils import get_robot_version
-from robotcode.robot.utils.ast import (
-    cached_isinstance,
-    get_variable_token,
-    iter_nodes,
-    range_from_token,
-    strip_variable_token,
-)
-from robotcode.robot.utils.markdownformatter import MarkDownFormatter
-from robotcode.robot.utils.match import normalize, normalize_namespace
-
-from ..utils.variables import contains_variable
 
 if get_robot_version() < (7, 0):
     from robot.running.handlers import _PythonHandler, _PythonInitHandler  # pyright: ignore[reportMissingImports]
@@ -201,21 +200,35 @@ def convert_from_rest(text: str) -> str:
 
 if get_robot_version() >= (6, 0):
 
-    @functools.lru_cache(maxsize=None)
+    # monkey patch robot framework
+    _old_from_name = EmbeddedArguments.from_name
+
+    @functools.lru_cache(maxsize=8192)
+    def _new_from_name(name: str) -> EmbeddedArguments:
+        return _old_from_name(name)
+
+    EmbeddedArguments.from_name = _new_from_name
+
     def _get_embedded_arguments(name: str) -> Any:
         try:
             return EmbeddedArguments.from_name(name)
         except (VariableError, DataError):
             return ()
 
+    def _match_embedded(embedded_arguments: EmbeddedArguments, name: str) -> bool:
+        return embedded_arguments.match(name) is not None
+
 else:
 
-    @functools.lru_cache(maxsize=None)
+    @functools.lru_cache(maxsize=8192)
     def _get_embedded_arguments(name: str) -> Any:
         try:
             return EmbeddedArguments(name)
         except (VariableError, DataError):
             return ()
+
+    def _match_embedded(embedded_arguments: EmbeddedArguments, name: str) -> bool:
+        return embedded_arguments.name.match(name) is not None
 
 
 def is_embedded_keyword(name: str) -> bool:
@@ -243,31 +256,20 @@ class KeywordMatcher:
         self.embedded_arguments: Optional[EmbeddedArguments] = (
             _get_embedded_arguments(self.name) or None if self._can_have_embedded else None
         )
-        self._match_cache: Dict[str, bool] = {}
 
     @property
     def normalized_name(self) -> str:
         if self._normalized_name is None:
-            self._normalized_name = str(normalize_namespace(self.name) if self._is_namespace else normalize(self.name))
+            self._normalized_name = normalize_namespace(self.name) if self._is_namespace else normalize(self.name)
 
         return self._normalized_name
-
-    if get_robot_version() >= (6, 0):
-
-        def __match_embedded(self, name: str) -> bool:
-            return self.embedded_arguments is not None and self.embedded_arguments.match(name) is not None
-
-    else:
-
-        def __match_embedded(self, name: str) -> bool:
-            return self.embedded_arguments is not None and self.embedded_arguments.name.match(name) is not None
 
     def __eq__(self, o: object) -> bool:
         if type(o) is KeywordMatcher:
             if self._is_namespace != o._is_namespace:
                 return False
 
-            if not self.embedded_arguments:
+            if self.embedded_arguments is not None:
                 return self.normalized_name == o.normalized_name
 
             o = o.name
@@ -275,17 +277,25 @@ class KeywordMatcher:
         if type(o) is not str:
             return False
 
-        if self.embedded_arguments:
-            return self.__match_embedded(o)
+        return self.match_string(o)
 
-        return self.normalized_name == str(normalize_namespace(o) if self._is_namespace else normalize(o))
+    def match_string(self, o: str) -> bool:
+        if self.embedded_arguments is not None:
+            return _match_embedded(self.embedded_arguments, o)
+
+        return self.normalized_name == (normalize_namespace(o) if self._is_namespace else normalize(o))
 
     @single_call
     def __hash__(self) -> int:
         return hash(
-            (self.embedded_arguments.name, tuple(self.embedded_arguments.args))
-            if self.embedded_arguments
-            else (self.normalized_name, self._is_namespace)
+            (
+                self.normalized_name,
+                self._is_namespace,
+                self._can_have_embedded,
+                self.embedded_arguments,
+                self.embedded_arguments.name if self.embedded_arguments else None,
+                self.embedded_arguments.args if self.embedded_arguments else None,
+            )
         )
 
     def __str__(self) -> str:
@@ -612,7 +622,6 @@ class KeywordDoc(SourceEntity):
     libname: Optional[str] = None
     libtype: Optional[str] = None
     longname: Optional[str] = None
-    is_embedded: bool = False
     errors: Optional[List[Error]] = field(default=None, compare=False)
     doc_format: str = ROBOT_DOC_FORMAT
     is_error_handler: bool = False
@@ -662,6 +671,10 @@ class KeywordDoc(SourceEntity):
         return f"{self.name}({', '.join(str(arg) for arg in self.arguments)})"
 
     @functools.cached_property
+    def is_embedded(self) -> bool:
+        return self.matcher.embedded_arguments is not None
+
+    @functools.cached_property
     def matcher(self) -> KeywordMatcher:
         return KeywordMatcher(self.name)
 
@@ -690,16 +703,16 @@ class KeywordDoc(SourceEntity):
 
         return Range.invalid()
 
-    @single_call
+    @functools.cached_property
     def normalized_tags(self) -> List[str]:
         return [normalize(tag) for tag in self.tags]
 
-    @single_call
+    @functools.cached_property
     def is_private(self) -> bool:
         if get_robot_version() < (6, 0):
             return False
 
-        return "robot:private" in self.normalized_tags()
+        return "robot:private" in self.normalized_tags
 
     @functools.cached_property
     def range(self) -> Range:
@@ -885,7 +898,6 @@ class KeywordDoc(SourceEntity):
                 self.type,
                 self.libname,
                 self.libtype,
-                self.is_embedded,
                 self.is_initializer,
                 self.is_error_handler,
                 self.doc_format,
@@ -969,7 +981,7 @@ class KeywordStore:
         return list(self.iter_all(key))
 
     def iter_all(self, key: str) -> Iterable[KeywordDoc]:
-        yield from (v for v in self.keywords if v.matcher == key)
+        return (v for v in self.keywords if v.matcher.match_string(key))
 
 
 @dataclass
@@ -1282,12 +1294,12 @@ class VariablesDoc(LibraryDoc):
         return result
 
 
-@functools.lru_cache(maxsize=256)
+@functools.lru_cache(maxsize=8192)
 def is_library_by_path(path: str) -> bool:
     return path.lower().endswith((".py", "/", os.sep))
 
 
-@functools.lru_cache(maxsize=256)
+@functools.lru_cache(maxsize=8192)
 def is_variables_by_path(path: str) -> bool:
     if get_robot_version() >= (6, 1):
         return path.lower().endswith((".py", ".yml", ".yaml", ".json", "/", os.sep))
@@ -2016,7 +2028,6 @@ def get_library_doc(
                             libname=libdoc.name,
                             libtype=libdoc.type,
                             longname=f"{libdoc.name}.{kw[0].name}",
-                            is_embedded=is_embedded_keyword(kw[0].name),
                             doc_format=str(lib.doc_format) or ROBOT_DOC_FORMAT,
                             is_error_handler=kw[1].is_error_handler,
                             error_handler_message=kw[1].error_handler_message,
@@ -2696,133 +2707,146 @@ def complete_variables_import(
     return list(set(result))
 
 
+if get_robot_version() < (7, 0):
+
+    class _MyUserLibrary(UserLibrary):
+        current_kw: Any = None
+
+        def __init__(self, *args: Any, **kwargs: Any) -> None:
+            self.errors: List[Error] = []
+            super().__init__(*args, **kwargs)
+
+        def _log_creating_failed(self, handler: UserErrorHandler, error: BaseException) -> None:
+            err = Error(
+                message=f"Creating keyword '{handler.name}' failed: {error!s}",
+                type_name=type(error).__qualname__,
+                source=self.current_kw.source if self.current_kw is not None else None,
+                line_no=self.current_kw.lineno if self.current_kw is not None else None,
+            )
+            self.errors.append(err)
+
+        def _create_handler(self, kw: Any) -> Any:
+            self.current_kw = kw
+            try:
+                handler = super()._create_handler(kw)
+                handler.errors = None
+            except DataError as e:
+                err = Error(
+                    message=str(e),
+                    type_name=type(e).__qualname__,
+                    source=kw.source,
+                    line_no=kw.lineno,
+                )
+                self.errors.append(err)
+
+                handler = UserErrorHandler(e, kw.name, self.name)
+                handler.source = kw.source
+                handler.lineno = kw.lineno
+
+                handler.errors = [err]
+
+            return handler
+
+
+def _get_keyword_name_token_from_line(keyword_name_nodes: Dict[int, KeywordName], line: int) -> Optional[Token]:
+    keyword_name = keyword_name_nodes.get(line, None)
+    if keyword_name is None:
+        return None
+    return cast(Token, keyword_name.get_token(RobotToken.KEYWORD_NAME))
+
+
+def _get_argument_definitions_from_line(
+    keywords_nodes: Dict[int, Keyword],
+    source: Optional[str],
+    line: int,
+) -> List[ArgumentDefinition]:
+    keyword_node = keywords_nodes.get(line, None)
+    if keyword_node is None:
+        return []
+
+    arguments_node = next(
+        (n for n in ast.walk(keyword_node) if isinstance(n, Arguments)),
+        None,
+    )
+    if arguments_node is None:
+        return []
+
+    args: List[str] = []
+    arguments = arguments_node.get_tokens(RobotToken.ARGUMENT)
+    argument_definitions = []
+
+    for argument_token in (cast(RobotToken, e) for e in arguments):
+        try:
+            argument = get_variable_token(argument_token)
+
+            if argument is not None and argument.value != "@{}":
+                if argument.value not in args:
+                    args.append(argument.value)
+                    arg_def = ArgumentDefinition(
+                        name=argument.value,
+                        name_token=strip_variable_token(argument),
+                        line_no=argument.lineno,
+                        col_offset=argument.col_offset,
+                        end_line_no=argument.lineno,
+                        end_col_offset=argument.end_col_offset,
+                        source=source,
+                    )
+                    argument_definitions.append(arg_def)
+
+        except VariableError:
+            pass
+
+    return argument_definitions
+
+
+class _MyResourceBuilder(ResourceBuilder):
+    def __init__(self, resource: Any) -> None:
+        super().__init__(resource)
+        self.keyword_name_nodes: Dict[int, KeywordName] = {}
+        self.keywords_nodes: Dict[int, Keyword] = {}
+
+    def visit_Section(self, node: Section) -> None:  # noqa: N802
+        if isinstance(node, (SettingSection, KeywordSection)):
+            self.generic_visit(node)
+
+    def visit_Keyword(self, node: Keyword) -> None:  # noqa: N802
+        self.keywords_nodes[node.lineno] = node
+        super().visit_Keyword(node)
+        if node.header is not None:
+            self.keyword_name_nodes[node.lineno] = node.header
+
+
+def _get_kw_errors(kw: Any) -> Any:
+    r = kw.errors if hasattr(kw, "errors") else None
+    if get_robot_version() >= (7, 0) and kw.error:
+        if not r:
+            r = []
+        r.append(
+            Error(
+                message=str(kw.error),
+                type_name="KeywordError",
+                source=kw.source,
+                line_no=kw.lineno,
+            )
+        )
+    return r
+
+
 def get_model_doc(
     model: ast.AST,
     source: str,
-    append_model_errors: bool = True,
 ) -> LibraryDoc:
-    errors: List[Error] = []
-    keyword_name_nodes: Dict[int, KeywordName] = {}
-    keywords_nodes: Dict[int, Keyword] = {}
-    for node in iter_nodes(model):
-        if cached_isinstance(node, Keyword):
-            node.lineno
-            keywords_nodes[node.lineno] = node
-        if cached_isinstance(node, KeywordName):
-            keyword_name_nodes[node.lineno] = node
-
-        error = getattr(node, "error", None)
-        if error is not None:
-            errors.append(
-                Error(
-                    message=error,
-                    type_name="ModelError",
-                    source=source,
-                    line_no=node.lineno,  # type: ignore
-                )
-            )
-        if append_model_errors:
-            node_errors = getattr(node, "errors", None)
-            if node_errors is not None:
-                for e in node_errors:
-                    errors.append(
-                        Error(
-                            message=e,
-                            type_name="ModelError",
-                            source=source,
-                            line_no=node.lineno,  # type: ignore
-                        )
-                    )
-
-    def get_keyword_name_token_from_line(line: int) -> Optional[Token]:
-        keyword_name = keyword_name_nodes.get(line, None)
-        if keyword_name is None:
-            return None
-        return cast(Token, keyword_name.get_token(RobotToken.KEYWORD_NAME))
-
-    def get_argument_definitions_from_line(
-        line: int,
-    ) -> List[ArgumentDefinition]:
-        keyword_node = keywords_nodes.get(line, None)
-        if keyword_node is None:
-            return []
-
-        arguments_node = next(
-            (n for n in ast.walk(keyword_node) if isinstance(n, Arguments)),
-            None,
-        )
-        if arguments_node is None:
-            return []
-
-        args: List[str] = []
-        arguments = arguments_node.get_tokens(RobotToken.ARGUMENT)
-        argument_definitions = []
-
-        for argument_token in (cast(RobotToken, e) for e in arguments):
-            try:
-                argument = get_variable_token(argument_token)
-
-                if argument is not None and argument.value != "@{}":
-                    if argument.value not in args:
-                        args.append(argument.value)
-                        arg_def = ArgumentDefinition(
-                            name=argument.value,
-                            name_token=strip_variable_token(argument),
-                            line_no=argument.lineno,
-                            col_offset=argument.col_offset,
-                            end_line_no=argument.lineno,
-                            end_col_offset=argument.end_col_offset,
-                            source=source,
-                        )
-                        argument_definitions.append(arg_def)
-
-            except VariableError:
-                pass
-
-        return argument_definitions
-
     res = ResourceFile(source=source)
 
+    res_builder = _MyResourceBuilder(res)
     with LOGGER.cache_only:
-        ResourceBuilder(res).visit(model)
+        res_builder.visit(model)
+
+    keyword_name_nodes: Dict[int, KeywordName] = res_builder.keyword_name_nodes
+    keywords_nodes: Dict[int, Keyword] = res_builder.keywords_nodes
 
     if get_robot_version() < (7, 0):
-
-        class MyUserLibrary(UserLibrary):
-            current_kw: Any = None
-
-            def _log_creating_failed(self, handler: UserErrorHandler, error: BaseException) -> None:
-                err = Error(
-                    message=f"Creating keyword '{handler.name}' failed: {error!s}",
-                    type_name=type(error).__qualname__,
-                    source=self.current_kw.source if self.current_kw is not None else None,
-                    line_no=self.current_kw.lineno if self.current_kw is not None else None,
-                )
-                errors.append(err)
-
-            def _create_handler(self, kw: Any) -> Any:
-                self.current_kw = kw
-                try:
-                    handler = super()._create_handler(kw)
-                    handler.errors = None
-                except DataError as e:
-                    err = Error(
-                        message=str(e),
-                        type_name=type(e).__qualname__,
-                        source=kw.source,
-                        line_no=kw.lineno,
-                    )
-                    errors.append(err)
-
-                    handler = UserErrorHandler(e, kw.name, self.name)
-                    handler.source = kw.source
-                    handler.lineno = kw.lineno
-
-                    handler.errors = [err]
-
-                return handler
-
-        lib = MyUserLibrary(res)
+        lib = _MyUserLibrary(res)
     else:
         lib = res
 
@@ -2833,23 +2857,7 @@ def get_model_doc(
         scope="GLOBAL",
         source=source,
         line_no=1,
-        errors=errors,
     )
-
-    def get_kw_errors(kw: Any) -> Any:
-        r = kw.errors if hasattr(kw, "errors") else None
-        if get_robot_version() >= (7, 0) and kw.error:
-            if not r:
-                r = []
-            r.append(
-                Error(
-                    message=str(kw.error),
-                    type_name="KeywordError",
-                    source=kw.source,
-                    line_no=kw.lineno,
-                )
-            )
-        return r
 
     libdoc.keywords = KeywordStore(
         source=libdoc.name,
@@ -2861,7 +2869,7 @@ def get_model_doc(
                 doc=kw[0].doc,
                 tags=list(kw[0].tags),
                 source=str(kw[0].source),
-                name_token=get_keyword_name_token_from_line(kw[0].lineno),
+                name_token=_get_keyword_name_token_from_line(keyword_name_nodes, kw[0].lineno),
                 line_no=kw[0].lineno if kw[0].lineno is not None else -1,
                 col_offset=-1,
                 end_col_offset=-1,
@@ -2869,8 +2877,7 @@ def get_model_doc(
                 libname=libdoc.name,
                 libtype=libdoc.type,
                 longname=f"{libdoc.name}.{kw[0].name}",
-                is_embedded=is_embedded_keyword(kw[0].name),
-                errors=get_kw_errors(kw[1]),
+                errors=_get_kw_errors(kw[1]),
                 is_error_handler=isinstance(kw[1], UserErrorHandler),
                 error_handler_message=(
                     str(cast(UserErrorHandler, kw[1]).error) if isinstance(kw[1], UserErrorHandler) else None
@@ -2878,7 +2885,7 @@ def get_model_doc(
                 arguments_spec=ArgumentSpec.from_robot_argument_spec(
                     kw[1].arguments if get_robot_version() < (7, 0) else kw[1].args
                 ),
-                argument_definitions=get_argument_definitions_from_line(kw[0].lineno),
+                argument_definitions=_get_argument_definitions_from_line(keywords_nodes, source, kw[0].lineno),
             )
             for kw in [
                 (KeywordDocBuilder(resource=True).build_keyword(lw), lw)
