@@ -4,7 +4,7 @@
         "variable_setting": {
             "name": "meta.variable.assign.robotframework",
             "contentName": "string.unquoted.argument.robotframework",
-            "begin": "^([$@&]\\{)(.*?)(\\})(=?)(?= {2}| ?\\t| ?$)",
+            "begin": "^([$@&]\\{)(.*?)(\\})( ?=?)",
             "beginCaptures": {
                 "1": { "name": "punctuation.definition.variable.begin.robotframework" },
                 "2": { "name": "variable.name.readwrite.robotframework", "patterns": [{"include": "#variables"}] },
@@ -379,7 +379,6 @@
             "begin": "(?<=\\s)(?=\\s*(?:(?=[$@&])))((?:\\s)*(?:[$&@]{(?:.*?)}(?:\\[.*?\\])?(?: ?=?\\s*))*)(.*?)(?: {2,}| ?\\t ?|$)",
             "beginCaptures": {
                 "1": {
-                    "name": "variable.name.readwrite.robotframework",
                     "patterns": [ { "include": "#variable_assignment_from_kw" } ]
                 },
                 "2": { "name": "entity.name.function.keyword-call.robotframework" }
@@ -397,8 +396,7 @@
             "end": "(?:( ?=)|(?: {2,}| ?\\t+ ?| ?$)(?![#$@& \\n\\r]|\\.\\.\\.)|^(?=\\.\\.\\.)( {2,}| ?\\t+ ?| ?$)(?![#$@&]))",
             "endCaptures": { "1": { "name": "keyword.operator.robotframework" } },
             "patterns": [
-                { "include": "#line_continuation" },
-                { "include": "#comment" }
+                { "include": "#variables" }
             ]
         },
         "line_continuation": {
