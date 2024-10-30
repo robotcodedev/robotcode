@@ -317,7 +317,7 @@ class LauncherDebugAdapterProtocol(DebugAdapterProtocol):
             else:
                 sys.exit(255)
 
-            raise asyncio.TimeoutError("Can't connect to debugger.") from e
+            raise asyncio.TimeoutError("Unable to connect to RobotCode debugger.") from e
 
         if self._initialize_arguments is not None:
             await self.client.protocol.send_request_async(InitializeRequest(arguments=self._initialize_arguments))

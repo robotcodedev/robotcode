@@ -1213,7 +1213,7 @@ export class TestControllerManager {
 
     if (included.size === 0) return;
 
-    const run = this.testController.createTestRun(request, undefined);
+    const testRun = this.testController.createTestRun(request, undefined);
     let run_started = false;
 
     token.onCancellationRequested(async (_) => {
@@ -1235,13 +1235,13 @@ export class TestControllerManager {
         continue;
 
       const runId = TestControllerManager.runId.next().value;
-      this.testRuns.set(runId, run);
+      this.testRuns.set(runId, testRun);
 
-      let options = {};
+      const options: vscode.DebugSessionOptions = {
+        testRun: testRun,
+      };
       if (request.profile !== undefined && request.profile.kind !== vscode.TestRunProfileKind.Debug) {
-        options = {
-          noDebug: true,
-        };
+        options.noDebug = true;
       }
 
       let workspaceItem = this.findTestItemByUri(folder.uri.toString());
@@ -1340,7 +1340,7 @@ export class TestControllerManager {
     }
 
     if (!run_started) {
-      run.end();
+      testRun.end();
     }
   }
 
