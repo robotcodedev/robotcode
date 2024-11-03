@@ -1,3 +1,4 @@
+import functools
 import threading
 from typing import (
     Any,
@@ -11,9 +12,10 @@ from typing import (
     Union,
 )
 
-from robotcode.core.uri import Uri
-from robotcode.core.utils.dataclasses import CamelSnakeMixin, from_dict
-from robotcode.core.utils.path import path_is_relative_to
+from .documents_manager import DocumentsManager
+from .uri import Uri
+from .utils.dataclasses import CamelSnakeMixin, from_dict
+from .utils.path import path_is_relative_to
 
 
 class WorkspaceFolder:
@@ -98,3 +100,7 @@ class Workspace:
             return result[0]
 
         return None
+
+    @functools.cached_property
+    def documents(self) -> DocumentsManager:
+        return DocumentsManager()

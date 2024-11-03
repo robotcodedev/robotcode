@@ -1227,9 +1227,6 @@ class ImportsManager:
         finally:
             executor.shutdown(wait=True)
 
-        if result.stdout:
-            self._logger.warning(lambda: f"stdout captured at loading library {name}{args!r}:\n{result.stdout}")
-
         try:
             if meta is not None:
                 meta.has_errors = bool(result.errors)
@@ -1401,9 +1398,6 @@ class ImportsManager:
             raise
         finally:
             executor.shutdown(True)
-
-        if result.stdout:
-            self._logger.warning(lambda: f"stdout captured at loading variables {name}{args!r}:\n{result.stdout}")
 
         try:
             if meta is not None:

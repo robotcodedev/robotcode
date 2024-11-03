@@ -67,6 +67,12 @@ class AnalysisDiagnosticModifiersConfig(ConfigBase):
     hint: List[str] = field(default_factory=list)
 
 
+@config_section("robotcode.workspace")
+@dataclass
+class WorkspaceConfig(ConfigBase):
+    exclude_patterns: List[str] = field(default_factory=list)
+
+
 @dataclass
 class WorkspaceAnalysisConfig:
     cache: CacheConfig = field(default_factory=CacheConfig)

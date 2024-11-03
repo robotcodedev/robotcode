@@ -107,7 +107,7 @@ class LanguageServerProtocol(JsonRPCProtocol):
     version: Optional[str] = None
 
     file_extensions: ClassVar[Set[str]] = set()
-    languages: ClassVar[List[LanguageDefinition]] = []
+    language_definitions: ClassVar[List[LanguageDefinition]] = []
 
     def __init__(self, server: JsonRPCServer[Any]):
         super().__init__()

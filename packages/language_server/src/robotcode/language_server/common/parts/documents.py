@@ -56,7 +56,7 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart, DocumentsManager):
 
     def __init__(self, parent: "LanguageServerProtocol") -> None:
         super().__init__(parent)
-        DocumentsManager.__init__(self, parent.languages)
+        DocumentsManager.__init__(self, parent.language_definitions)
 
         self.parent.on_initialized.add(self._protocol_initialized)
 

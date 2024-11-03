@@ -250,6 +250,8 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
 
             if needs_refresh:
                 self.refresh()
+        except (SystemExit, KeyboardInterrupt):
+            raise
         except BaseException as e:
             self._logger.exception(e)
         finally:
@@ -410,6 +412,9 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
                                     self._current_diagnostics_task = run_as_task(self._analyse_document, document)
                                 self._current_diagnostics_task.result(self._diagnostics_task_timeout)
 
+                            except (SystemExit, KeyboardInterrupt):
+                                raise
+
                             except CancelledError:
                                 self._logger.debug(
                                     lambda: f"Analyzing {document.uri} cancelled", context_name="workspace_diagnostics"
@@ -502,6 +507,10 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
                                     )
                                 if self._current_diagnostics_task is not None:
                                     self._current_diagnostics_task.result(self._diagnostics_task_timeout)
+
+                            except (SystemExit, KeyboardInterrupt):
+                                raise
+
                             except CancelledError:
                                 self._logger.debug(
                                     lambda: f"Collecting diagnostics for {document.uri} cancelled",
@@ -566,6 +575,8 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
                     future.cancel()
                     try:
                         concurrent.futures.wait([future], timeout=5)
+                    except (SystemExit, KeyboardInterrupt):
+                        raise
                     except BaseException as e:
                         self._logger.exception(e)
 

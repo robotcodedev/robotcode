@@ -19,7 +19,7 @@ class _HelperCache:
         raise NotImplementedError
 
 
-class _IgnoreRule(NamedTuple):
+class IgnoreRule(NamedTuple):
     pattern: str
     regex: "re.Pattern[str]"
     negation: bool
@@ -75,7 +75,7 @@ class _IgnoreRule(NamedTuple):
 
 
 class IgnoreSpec(_HelperCache):
-    def __init__(self, rules: Reversible[_IgnoreRule]):
+    def __init__(self, rules: Reversible[IgnoreRule]):
         self.rules = rules
         self.negation = any(r.negation for r in rules)
 
@@ -141,7 +141,7 @@ class IgnoreSpec(_HelperCache):
     @classmethod
     def _rule_from_pattern(
         cls, pattern: str, base_path: PurePath, source: Optional[Tuple[str, int]] = None
-    ) -> Optional[_IgnoreRule]:
+    ) -> Optional[IgnoreRule]:
 
         orig_pattern = pattern
 
@@ -189,7 +189,7 @@ class IgnoreSpec(_HelperCache):
             i = i - 1
         regex = cls._fnmatch_pathname_to_regex(pattern, directory_only, negation, anchored=bool(anchored))
 
-        return _IgnoreRule(
+        return IgnoreRule(
             pattern=orig_pattern,
             regex=re.compile(regex),
             negation=negation,

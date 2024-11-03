@@ -38,8 +38,6 @@
             "presentation": {
                 "hidden": true
             },
-            "attachPython": false,
-            "pythonConfiguration": "RobotCode: Python"
         },
         {
             "name": "RobotCode: Default",
@@ -49,8 +47,6 @@
             "presentation": {
                 "hidden": true
             },
-            "attachPython": true,
-            "pythonConfiguration": "RobotCode: Python",
             // "robotCodeArgs": [
             //     "-v",
             //     "--log",
@@ -67,15 +63,6 @@
             //     "TRACE:TRACE",
             // ],
             "internalConsoleOptions": "neverOpen"
-        },
-        {
-            "name": "RobotCode: Python",
-            "type": "python",
-            "request": "attach",
-            "presentation": {
-                "hidden": true
-            },
-            "justMyCode": false
         }
     ]
 }

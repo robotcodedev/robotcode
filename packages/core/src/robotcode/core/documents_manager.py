@@ -28,7 +28,7 @@ class CantReadDocumentError(Exception):
 class DocumentsManager:
     _logger: Final = LoggingDescriptor()
 
-    def __init__(self, languages: List[LanguageDefinition]) -> None:
+    def __init__(self, languages: List[LanguageDefinition] = []) -> None:
         self.languages = languages
 
         self._documents: Dict[DocumentUri, TextDocument] = {}

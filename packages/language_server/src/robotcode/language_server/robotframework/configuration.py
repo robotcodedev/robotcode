@@ -8,6 +8,7 @@ from robotcode.robot.diagnostics.workspace_config import (
     AnalysisRobotConfig,
     CacheConfig,
     RobotConfig,
+    WorkspaceConfig,
 )
 
 
@@ -41,12 +42,6 @@ class RoboTidyConfig(ConfigBase):
     enabled: bool = True
     ignore_git_dir: bool = False
     config: Optional[str] = None
-
-
-@config_section("robotcode.workspace")
-@dataclass
-class WorkspaceConfig(ConfigBase):
-    exclude_patterns: List[str] = field(default_factory=list)
 
 
 @config_section("robotcode.documentationServer")

@@ -83,6 +83,8 @@ class EventResultIteratorBase(Generic[_TParams, _TResult]):
         ):
             try:
                 yield method(*__args, **__kwargs)
+            except (SystemExit, KeyboardInterrupt):
+                raise
             except BaseException as e:
                 if return_exceptions:
                     yield e

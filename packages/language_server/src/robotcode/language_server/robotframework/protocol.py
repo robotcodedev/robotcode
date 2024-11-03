@@ -92,7 +92,6 @@ class RobotInitializationOptions(CamelSnakeMixin):
 class RobotLanguageServerProtocol(LanguageServerProtocol):
     _logger: Final = LoggingDescriptor()
 
-    # documents_cache = ProtocolPartDescriptor(DocumentsCachePart)
     robot_workspace = ProtocolPartDescriptor(RobotWorkspaceProtocolPart)
     robot_diagnostics = ProtocolPartDescriptor(RobotDiagnosticsProtocolPart)
     robot_folding_ranges = ProtocolPartDescriptor(RobotFoldingRangeProtocolPart)
@@ -133,7 +132,7 @@ class RobotLanguageServerProtocol(LanguageServerProtocol):
         "yml",
     }
 
-    languages: ClassVar[List[LanguageDefinition]] = [
+    language_definitions: ClassVar[List[LanguageDefinition]] = [
         LanguageDefinition(
             id="robotframework",
             extensions=[".robot", ".resource"],

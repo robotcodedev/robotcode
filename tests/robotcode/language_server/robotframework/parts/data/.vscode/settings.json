@@ -41,5 +41,8 @@
         "editor.quickSuggestions": {
             "strings": "on"
         }
-    }
+    },
+    "robotcode.debug.attachPython": true,
+    "debugpy.debugJustMyCode": false
+
 }

@@ -20,10 +20,11 @@
 			"request": "launch",
 			"module": "robotcode.cli",
 			"justMyCode": false,
-			//"cwd": "${workspaceFolder}/tests/robotcode/language_server/robotframework/parts/data/tests",
+			"cwd": "${workspaceFolder}/tests/robotcode/language_server/robotframework/parts/data",
 			//"cwd": "${workspaceFolder}/..",
-			"cwd": "E:/source/uvtestprj",
-			//"cwd": "C:\\develop\\robot\\robotframework",
+			//"cwd": "${workspaceFolder}",
+			//"cwd": "E:/source/uvtestprj",
+			//"cwd": "e:\\develop\\robot\\robotframework",
 			// "env": {
 			// 	"ROBOTCODE_COLOR": "1",
 			// },
@@ -31,7 +32,7 @@
 				"CMD_VAR_LONG": "long",
 			},
 			"args": [
-				// "--verbose",
+				"--verbose",
 				// "--format",
 				// "toml",
 				// "robot"
@@ -57,13 +58,15 @@
 				// ".."
 				// "config",
 				// "show",
-				"discover",
-				"tests"
+				// "discover",
+				// "tests"
 				// "-d", "output",
 				// "-i",
 				// "-v", "CMD_LINE_VAR:cmd_line_var",
 				// "E:\\source\\uvtestprj\\tests\\first.robotrepl"
-
+				"analyze",
+				"code",
+				"tests"
 			]
 		},
 		{
