@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [0.96.0](https://github.com/robotcodedev/robotcode/compare/v0.95.2..v0.96.0) - 2024-11-04
+
+### Bug Fixes
+
+- **vscode:** Corrected tmlanguage to color variables in variables section ([0e32e41](https://github.com/robotcodedev/robotcode/commit/0e32e4123a0b5ae73055c1ebcf1a9e2d8bb5d8ab))
+- Corrected hash calculation for keyword matchers for keywords with embedded arguments for RF < 7 ([c58f622](https://github.com/robotcodedev/robotcode/commit/c58f622f1493d49d5b87e476b99965e3d2c935e6))
+
+
+### Features
+
+- **analyze:** Add command line support for static analysis of Robot Framework projects ([01a4c6d](https://github.com/robotcodedev/robotcode/commit/01a4c6dddc2c7ce7f2d4e63e31a5e3a01cec69f4))
+- **vscode:** Connect vscode testrun to the debug session to link the lifecycle to of the session to the ui actions of the test run ([0d3bd27](https://github.com/robotcodedev/robotcode/commit/0d3bd272df53905942723069acc2dc6511674d3c))
+
+
 ## [0.95.2](https://github.com/robotcodedev/robotcode/compare/v0.95.1..v0.95.2) - 2024-10-28
 
 ### Performance
