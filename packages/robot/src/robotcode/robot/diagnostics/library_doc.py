@@ -292,9 +292,12 @@ class KeywordMatcher:
                 self.normalized_name,
                 self._is_namespace,
                 self._can_have_embedded,
-                self.embedded_arguments,
                 self.embedded_arguments.name if self.embedded_arguments else None,
-                self.embedded_arguments.args if self.embedded_arguments else None,
+                (
+                    tuple(self.embedded_arguments.args)
+                    if self.embedded_arguments and self.embedded_arguments.args
+                    else None
+                ),
             )
         )
 
