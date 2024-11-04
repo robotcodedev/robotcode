@@ -115,9 +115,6 @@ export default defineConfig({
     },
     math: true,
     languages: [robotframework as any],
-    languageAlias: {
-      robot: "robotframework",
-    },
     toc: {
       level: [2, 3, 4],
     },
