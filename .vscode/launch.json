@@ -20,9 +20,9 @@
 			"request": "launch",
 			"module": "robotcode.cli",
 			"justMyCode": false,
-			"cwd": "${workspaceFolder}/tests/robotcode/language_server/robotframework/parts/data",
+			//"cwd": "${workspaceFolder}/tests/robotcode/language_server/robotframework/parts/data",
 			//"cwd": "${workspaceFolder}/..",
-			//"cwd": "${workspaceFolder}",
+			"cwd": "${workspaceFolder}",
 			//"cwd": "E:/source/uvtestprj",
 			//"cwd": "e:\\develop\\robot\\robotframework",
 			// "env": {

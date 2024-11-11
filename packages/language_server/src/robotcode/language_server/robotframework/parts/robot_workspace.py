@@ -63,6 +63,12 @@ class RobotWorkspaceProtocolPart(RobotLanguageServerProtocolPart):
                     config = self.parent.workspace.get_configuration(RobotCodeConfig, folder.uri)
 
                     extensions = [ROBOT_FILE_EXTENSION, RESOURCE_FILE_EXTENSION]
+
+                    exclude_patterns = [
+                        *self.parent.analysis_config.exclude_patterns,
+                        *(config.workspace.exclude_patterns or []),
+                    ]
+
                     with self.parent.window.progress("Collect sources", cancellable=False):
                         files = list(
                             filter(
@@ -72,7 +78,7 @@ class RobotWorkspaceProtocolPart(RobotLanguageServerProtocolPart):
                                     ignore_files=[ROBOT_IGNORE_FILE, GIT_IGNORE_FILE],
                                     include_hidden=False,
                                     parent_spec=IgnoreSpec.from_list(
-                                        [*DEFAULT_SPEC_RULES, *(config.workspace.exclude_patterns or [])],
+                                        [*DEFAULT_SPEC_RULES, *exclude_patterns],
                                         folder.uri.to_path(),
                                     ),
                                     verbose_callback=self._logger.debug,

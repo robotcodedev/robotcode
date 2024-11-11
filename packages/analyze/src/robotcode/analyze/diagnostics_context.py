@@ -37,7 +37,7 @@ class DiagnosticHandlers:
 class DiagnosticsContext(ABC):
     @property
     @abstractmethod
-    def analysis_config(self) -> Optional[WorkspaceAnalysisConfig]: ...
+    def analysis_config(self) -> WorkspaceAnalysisConfig: ...
 
     @property
     @abstractmethod

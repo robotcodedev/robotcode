@@ -75,6 +75,31 @@ class Statistic:
         Glob pattern to filter files to analyze. Can be specified multiple times.
         """,
 )
+@click.option(
+    "-v",
+    "--variable",
+    metavar="name:value",
+    type=str,
+    multiple=True,
+    help="Set variables in the test data. see `robot --variable` option.",
+)
+@click.option(
+    "-V",
+    "--variablefile",
+    metavar="path",
+    type=str,
+    multiple=True,
+    help="Python or YAML file file to read variables from. see `robot --variablefile` option.",
+)
+@click.option(
+    "-P",
+    "--pythonpath",
+    metavar="path",
+    type=str,
+    multiple=True,
+    help="Additional locations (directories, ZIPs, JARs) where to search test libraries"
+    " and other extensions when they are imported. see `robot --pythonpath` option.",
+)
 @click.argument(
     "paths", nargs=-1, type=click.Path(exists=True, dir_okay=True, file_okay=True, readable=True, path_type=Path)
 )
@@ -109,7 +134,10 @@ def code(app: Application, filter: Tuple[str], paths: Tuple[Path]) -> None:
 
         statistics = Statistic()
         for e in CodeAnalyzer(
-            app=app, config=analyzer_config, robot_profile=robot_profile, root_folder=root_folder
+            app=app,
+            analysis_config=analyzer_config.to_workspace_analysis_config(),
+            robot_profile=robot_profile,
+            root_folder=root_folder,
         ).run(paths=paths, filter=filter):
             statistics.files.add(e.document)
 

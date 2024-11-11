@@ -15,12 +15,7 @@ from robotcode.plugin.click_helper.types import AddressesPort, add_options
 from robotcode.robot.config.loader import load_robot_config_from_path
 from robotcode.robot.config.model import RobotBaseProfile
 from robotcode.robot.config.utils import get_config_files
-from robotcode.robot.diagnostics.workspace_config import (
-    AnalysisDiagnosticModifiersConfig,
-    AnalysisRobotConfig,
-    CacheConfig,
-    WorkspaceAnalysisConfig,
-)
+from robotcode.robot.diagnostics.workspace_config import WorkspaceAnalysisConfig
 
 from .__version__ import __version__
 
@@ -101,36 +96,13 @@ def language_server(
         if analyzer_config is None:
             analyzer_config = AnalyzeConfig()
 
-        analysis_config = WorkspaceAnalysisConfig(
-            cache=(
-                CacheConfig(
-                    # TODO savelocation
-                    ignored_libraries=analyzer_config.cache.ignored_libraries or [],
-                    ignored_variables=analyzer_config.cache.ignored_variables or [],
-                    ignore_arguments_for_library=analyzer_config.cache.ignore_arguments_for_library or [],
-                )
-                if analyzer_config.cache is not None
-                else CacheConfig()
-            ),
-            robot=AnalysisRobotConfig(global_library_search_order=analyzer_config.global_library_search_order or []),
-            modifiers=(
-                AnalysisDiagnosticModifiersConfig(
-                    ignore=analyzer_config.modifiers.ignore or [],
-                    error=analyzer_config.modifiers.error or [],
-                    warning=analyzer_config.modifiers.warning or [],
-                    information=analyzer_config.modifiers.information or [],
-                    hint=analyzer_config.modifiers.hint or [],
-                )
-                if analyzer_config.modifiers is not None
-                else AnalysisDiagnosticModifiersConfig()
-            ),
-        )
+        analysis_config = analyzer_config.to_workspace_analysis_config()
 
         profile = robot_config.combine_profiles(
             *(app.config.profiles or []), verbose_callback=app.verbose, error_callback=app.error
         ).evaluated_with_env(verbose_callback=app.verbose, error_callback=app.error)
     except (TypeError, ValueError) as e:
-        app.echo(str(e), err=True)
+        app.error(str(e), err=True)
 
     mode, port, bind, pipe_name = resolve_server_options(
         ctx, app, mode, port, bind, pipe_name, tcp, socket, stdio, pipe, None

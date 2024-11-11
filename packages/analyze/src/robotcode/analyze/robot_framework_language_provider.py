@@ -70,6 +70,10 @@ class RobotFrameworkLanguageProvider(LanguageProvider):
 
         extensions = self.LANGUAGE_DEFINITION.extensions
 
+        exclude_patterns = [
+            *self.diagnostics_context.analysis_config.exclude_patterns,
+            *(config.exclude_patterns or []),
+        ]
         return filter(
             lambda f: f.suffix.lower() in extensions,
             iter_files(
@@ -77,7 +81,7 @@ class RobotFrameworkLanguageProvider(LanguageProvider):
                 ignore_files=[ROBOT_IGNORE_FILE, GIT_IGNORE_FILE],
                 include_hidden=False,
                 parent_spec=IgnoreSpec.from_list(
-                    [*DEFAULT_SPEC_RULES, *(config.exclude_patterns or [])],
+                    [*DEFAULT_SPEC_RULES, *exclude_patterns],
                     folder.uri.to_path(),
                 ),
                 verbose_callback=self.verbose_callback,
@@ -90,4 +94,4 @@ class RobotFrameworkLanguageProvider(LanguageProvider):
 
         namespace.analyze()
 
-        return namespace.get_diagnostics()
+        return self._document_cache.get_diagnostic_modifier(document).modify_diagnostics(namespace.get_diagnostics())

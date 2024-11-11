@@ -3,6 +3,12 @@ from dataclasses import dataclass
 from typing import List, Optional
 
 from robotcode.robot.config.model import BaseOptions, field
+from robotcode.robot.diagnostics.workspace_config import (
+    AnalysisDiagnosticModifiersConfig,
+    AnalysisRobotConfig,
+    WorkspaceAnalysisConfig,
+)
+from robotcode.robot.diagnostics.workspace_config import CacheConfig as WorkspaceCacheConfig
 
 
 @dataclass
@@ -246,3 +252,30 @@ class AnalyzeConfig(BaseOptions):
     extend_global_library_search_order: Optional[List[str]] = field(
         description="Extend the global library search order setting."
     )
+
+    def to_workspace_analysis_config(self) -> WorkspaceAnalysisConfig:
+        return WorkspaceAnalysisConfig(
+            exclude_patterns=self.exclude_patterns or [],
+            cache=(
+                WorkspaceCacheConfig(
+                    # TODO savelocation
+                    ignored_libraries=self.cache.ignored_libraries or [],
+                    ignored_variables=self.cache.ignored_variables or [],
+                    ignore_arguments_for_library=self.cache.ignore_arguments_for_library or [],
+                )
+                if self.cache is not None
+                else WorkspaceCacheConfig()
+            ),
+            robot=AnalysisRobotConfig(global_library_search_order=self.global_library_search_order or []),
+            modifiers=(
+                AnalysisDiagnosticModifiersConfig(
+                    ignore=self.modifiers.ignore or [],
+                    error=self.modifiers.error or [],
+                    warning=self.modifiers.warning or [],
+                    information=self.modifiers.information or [],
+                    hint=self.modifiers.hint or [],
+                )
+                if self.modifiers is not None
+                else AnalysisDiagnosticModifiersConfig()
+            ),
+        )

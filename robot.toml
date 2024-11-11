@@ -11,6 +11,7 @@ a_robot_toml_variable = "a_robot_toml_value"
 [tool.robotcode-analyze]
 
 
-[tool.robotcode-analyze.extend-modifiers]
-warning = ["user"]
+[tool.robotcode-analyze.modifiers]
+warning = ["KeywordNotFound"]
+#warning = ["user"]
 extend-hint = ["a_second_hint"]

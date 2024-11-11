@@ -75,6 +75,7 @@ class WorkspaceConfig(ConfigBase):
 
 @dataclass
 class WorkspaceAnalysisConfig:
+    exclude_patterns: List[str] = field(default_factory=list)
     cache: CacheConfig = field(default_factory=CacheConfig)
     robot: AnalysisRobotConfig = field(default_factory=AnalysisRobotConfig)
     modifiers: AnalysisDiagnosticModifiersConfig = field(default_factory=AnalysisDiagnosticModifiersConfig)

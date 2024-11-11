@@ -12,7 +12,6 @@ from robotcode.plugin import Application
 from robotcode.robot.config.model import RobotBaseProfile
 from robotcode.robot.diagnostics.workspace_config import WorkspaceAnalysisConfig
 
-from .config import AnalyzeConfig
 from .diagnostics_context import DiagnosticHandlers, DiagnosticsContext
 from .robot_framework_language_provider import RobotFrameworkLanguageProvider
 
@@ -27,12 +26,13 @@ class CodeAnalyzer(DiagnosticsContext):
     def __init__(
         self,
         app: Application,
-        config: AnalyzeConfig,
+        analysis_config: WorkspaceAnalysisConfig,
         robot_profile: RobotBaseProfile,
         root_folder: Optional[Path],
     ):
         self.app = app
-        self._config = config
+        self._analysis_config = analysis_config or WorkspaceAnalysisConfig()
+
         self._robot_profile = robot_profile
         self._root_folder = root_folder if root_folder is not None else Path.cwd()
 
@@ -53,8 +53,8 @@ class CodeAnalyzer(DiagnosticsContext):
                 handler.verbose_callback = app.verbose
 
     @property
-    def analysis_config(self) -> Optional[WorkspaceAnalysisConfig]:
-        return None
+    def analysis_config(self) -> WorkspaceAnalysisConfig:
+        return self._analysis_config
 
     @property
     def profile(self) -> RobotBaseProfile:
