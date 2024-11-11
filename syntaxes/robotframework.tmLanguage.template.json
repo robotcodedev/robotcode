@@ -200,6 +200,7 @@
             "beginCaptures": { "1": { "name": "keyword.other.header.testcase.robotframework" } },
             "end": "^(?=\\*)",
             "patterns": [
+                { "include": "#comment_line" },
                 { "include": "#testcase_name" },
                 { "include": "#block_statements" }
             ]
@@ -210,6 +211,7 @@
             "beginCaptures": { "1": { "name": "keyword.other.header.task.robotframework" } },
             "end": "^(?=\\*)",
             "patterns": [
+                { "include": "#comment_line" },
                 { "include": "#testcase_name" },
                 { "include": "#block_statements" }
             ]
@@ -220,6 +222,7 @@
             "beginCaptures": { "1": { "name": "keyword.other.header.keyword.robotframework" } },
             "end": "^(?=\\*)",
             "patterns": [
+                { "include": "#comment_line" },
                 { "include": "#keyword_name" },
                 { "include": "#block_statements" }
             ]
