@@ -1,3 +1,4 @@
+import glob
 import os
 import sys
 from dataclasses import dataclass, field
@@ -214,7 +215,6 @@ class RobotLanguageServerProtocol(LanguageServerProtocol):
 
     def server_initialized(self, sender: Any) -> None:
         for folder in self.workspace.workspace_folders:
-            config: RobotConfig = self.workspace.get_configuration(RobotConfig, folder.uri)
 
             for p in self.robot_profile.python_path or []:
                 pa = Path(str(p))
@@ -222,9 +222,11 @@ class RobotLanguageServerProtocol(LanguageServerProtocol):
                     pa = Path(folder.uri.to_path(), pa)
 
                 absolute_path = str(pa.absolute())
-                if absolute_path not in sys.path:
-                    sys.path.insert(0, absolute_path)
+                for f in glob.glob(absolute_path):
+                    if Path(f).is_dir() and f not in sys.path:
+                        sys.path.insert(0, f)
 
+            config: RobotConfig = self.workspace.get_configuration(RobotConfig, folder.uri)
             if config is not None:
                 if config.env:
                     for k, v in config.env.items():
@@ -237,7 +239,8 @@ class RobotLanguageServerProtocol(LanguageServerProtocol):
                             pa = Path(folder.uri.to_path(), pa)
 
                         absolute_path = str(pa.absolute())
-                        if absolute_path not in sys.path:
-                            sys.path.insert(0, absolute_path)
+                        for f in glob.glob(absolute_path):
+                            if Path(f).is_dir() and f not in sys.path:
+                                sys.path.insert(0, f)
 
         self.on_robot_initialized(self)
