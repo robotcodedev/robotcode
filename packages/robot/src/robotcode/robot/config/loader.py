@@ -55,14 +55,36 @@ class ConfigTypeError(TypeError):
 _ConfigType = TypeVar("_ConfigType", bound=BaseOptions)
 
 
+class InvalidTomlError(ValueError):
+    pass
+
+
+class InvalidTomlFileError(ValueError):
+    pass
+
+
+def _load_toml(data: Union[str, Path]) -> Dict[str, Any]:
+    file = None
+    if isinstance(data, Path):
+        file = data
+        data = data.read_text("utf-8")
+
+    try:
+        return tomllib.loads(data)
+    except tomllib.TOMLDecodeError as e:
+        if file:
+            raise InvalidTomlFileError(f"Invalid TOML file'{file.absolute()}': {e}") from e
+        raise InvalidTomlError(f"Invalid TOML: {e}") from e
+
+
 def load_robot_config_from_robot_toml_str(__s: str) -> RobotConfig:
     return load_config_from_robot_toml_str(RobotConfig, __s)
 
 
 def load_config_from_robot_toml_str(
-    config_type: Type[_ConfigType], data: Union[str, Dict[str, Any]], tool_name: Optional[str] = None
+    config_type: Type[_ConfigType], data: Union[str, Dict[str, Any], Path], tool_name: Optional[str] = None
 ) -> _ConfigType:
-    dict_data = tomllib.loads(data) if isinstance(data, str) else data
+    dict_data = _load_toml(data) if isinstance(data, (str, Path)) else data
 
     if tool_name:
         try:
@@ -76,9 +98,9 @@ def load_config_from_robot_toml_str(
 
 
 def load_config_from_pyproject_toml_str(
-    config_type: Type[_ConfigType], tool_name: str, data: Union[str, Dict[str, Any]]
+    config_type: Type[_ConfigType], tool_name: str, data: Union[str, Dict[str, Any], Path]
 ) -> _ConfigType:
-    dict_data = tomllib.loads(data) if isinstance(data, str) else data
+    dict_data = _load_toml(data) if isinstance(data, (str, Path)) else data
 
     return from_dict(dict_data.get("tool", {}).get(tool_name, {}), config_type)
 
@@ -93,13 +115,13 @@ def _load_config_data_from_path(
     try:
         if path.name == PYPROJECT_TOML:
             return load_config_from_pyproject_toml_str(
-                config_type, pyproject_toml_tool_name, path.read_text("utf-8") if data is None else data
+                config_type, pyproject_toml_tool_name, path if data is None else data
             )
 
         if path.name == ROBOT_TOML or path.name == LOCAL_ROBOT_TOML or path.suffix == ".toml":
             return load_config_from_robot_toml_str(
                 config_type,
-                path.read_text("utf-8") if data is None else data,
+                path if data is None else data,
                 tool_name=robot_toml_tool_name,
             )
         raise TypeError("Unknown config file type.")
@@ -143,7 +165,7 @@ def load_config_from_path(
             verbose_callback(f"Load configuration from {__path if isinstance(__path, Path) else __path[0]}")
 
         p = __path if isinstance(__path, Path) else __path[0]
-        data = tomllib.loads(p.read_text("utf-8"))
+        data = _load_toml(p)
 
         result.add_options(
             _load_config_data_from_path(
