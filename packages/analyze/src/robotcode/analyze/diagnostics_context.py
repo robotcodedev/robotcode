@@ -5,20 +5,29 @@ from robotcode.core.event import event
 from robotcode.core.language import language_id_filter
 from robotcode.core.lsp.types import Diagnostic
 from robotcode.core.text_document import TextDocument
-from robotcode.core.workspace import Workspace
+from robotcode.core.workspace import Workspace, WorkspaceFolder
 from robotcode.robot.config.model import RobotBaseProfile
 from robotcode.robot.diagnostics.workspace_config import WorkspaceAnalysisConfig
 
 
 class DiagnosticHandlers:
     @event
-    def analyzers(sender, document: TextDocument) -> Optional[List[Diagnostic]]: ...
+    def document_analyzers(sender, document: TextDocument) -> Optional[List[Diagnostic]]: ...
+    @event
+    def folder_initializers(sender, folder: WorkspaceFolder) -> Optional[List[Diagnostic]]: ...
 
     @event
     def collectors(sender, document: TextDocument) -> Optional[List[Diagnostic]]: ...
 
+    def initialize_folder(self, folder: WorkspaceFolder) -> List[Union[List[Diagnostic], BaseException, None]]:
+        return self.folder_initializers(
+            self,
+            folder,
+            return_exceptions=True,
+        )
+
     def analyze_document(self, document: TextDocument) -> List[Union[List[Diagnostic], BaseException, None]]:
-        return self.analyzers(
+        return self.document_analyzers(
             self,
             document,
             callback_filter=language_id_filter(document),

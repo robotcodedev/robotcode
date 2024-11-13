@@ -117,7 +117,7 @@ def run_repl(
 @click.option(
     "-V",
     "--variablefile",
-    metavar="path",
+    metavar="PATH",
     type=str,
     multiple=True,
     help="Python or YAML file file to read variables from. see `robot --variablefile` option.",
@@ -125,10 +125,10 @@ def run_repl(
 @click.option(
     "-P",
     "--pythonpath",
-    metavar="path",
+    metavar="PATH",
     type=str,
     multiple=True,
-    help="Additional locations (directories, ZIPs, JARs) where to search test libraries"
+    help="Additional locations where to search test libraries"
     " and other extensions when they are imported. see `robot --pythonpath` option.",
 )
 @click.option(

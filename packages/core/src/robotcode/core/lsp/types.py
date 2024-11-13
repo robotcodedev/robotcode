@@ -3988,6 +3988,18 @@ class Range(CamelSnakeMixin):
     def __hash__(self) -> int:
         return hash((self.start, self.end))
 
+    @staticmethod
+    def from_int_range(
+        start_line: int, start_character: int = 0, end_line: Optional[int] = None, end_character: Optional[int] = None
+    ) -> Range:
+        return Range(
+            start=Position(line=start_line, character=start_character),
+            end=Position(
+                line=end_line if end_line is not None else start_line,
+                character=end_character if end_character is not None else start_character,
+            ),
+        )
+
 
 @dataclass
 class WorkspaceFoldersChangeEvent(CamelSnakeMixin):

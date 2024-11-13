@@ -25,6 +25,7 @@ from typing import (
     final,
 )
 
+from robot.errors import RobotError
 from robot.libraries import STDLIBS
 from robot.utils.text import split_args_from_name_or_path
 from robotcode.core.concurrent import RLock, run_as_task
@@ -32,7 +33,16 @@ from robotcode.core.documents_manager import DocumentsManager
 from robotcode.core.event import event
 from robotcode.core.filewatcher import FileWatcherEntry, FileWatcherManagerBase, FileWatcherManagerDummy
 from robotcode.core.language import language_id
-from robotcode.core.lsp.types import DocumentUri, FileChangeType, FileEvent
+from robotcode.core.lsp.types import (
+    Diagnostic,
+    DiagnosticRelatedInformation,
+    DiagnosticSeverity,
+    DocumentUri,
+    FileChangeType,
+    FileEvent,
+    Location,
+    Range,
+)
 from robotcode.core.text_document import TextDocument
 from robotcode.core.uri import Uri
 from robotcode.core.utils.caching import SimpleLRUCache
@@ -577,12 +587,20 @@ class ImportsManager:
             weakref.WeakKeyDictionary()
         )
 
+        self._diagnostics: List[Diagnostic] = []
+
     def __del__(self) -> None:
         try:
             if self._executor is not None:
                 self._executor.shutdown(wait=False)
         except RuntimeError:
             pass
+
+    @property
+    def diagnostics(self) -> List[Diagnostic]:
+        self.get_command_line_variables()
+
+        return self._diagnostics
 
     @property
     def environment(self) -> Mapping[str, str]:
@@ -647,18 +665,54 @@ class ImportsManager:
                             ]
 
                             if lib_doc.errors:
-                                # TODO add diagnostics
                                 for error in lib_doc.errors:
-                                    self._logger.error(
-                                        lambda: f"{error.type_name}: {error.message} in {error.source}:{error.line_no}"
+                                    self._diagnostics.append(
+                                        Diagnostic(
+                                            Range.zero(),
+                                            f"Processing variable file variable file '{name}({', '.join(args)})' failed"
+                                            + ("" if error.source is not None else f": {error.message}"),
+                                            DiagnosticSeverity.ERROR,
+                                            error.type_name,
+                                            related_information=(
+                                                [
+                                                    DiagnosticRelatedInformation(
+                                                        Location(
+                                                            str(Uri.from_path(os.path.abspath(error.source))),
+                                                            Range.from_int_range(
+                                                                (error.line_no - 1) if error.line_no is not None else -1
+                                                            ),
+                                                        ),
+                                                        error.message,
+                                                    )
+                                                ]
+                                                if error.source is not None
+                                                else None
+                                            ),
+                                        )
                                     )
+                    except RobotError as e:
+                        self._diagnostics.append(
+                            Diagnostic(
+                                Range.zero(),
+                                f"Error in command line variable file '{name}({', '.join(args)})': {e}",
+                                DiagnosticSeverity.ERROR,
+                                type(e).__name__,
+                            )
+                        )
                     except (SystemExit, KeyboardInterrupt):
                         raise
                     except BaseException as e:
-                        # TODO add diagnostics
+                        self._diagnostics.append(
+                            Diagnostic(
+                                Range.zero(),
+                                f"Error in command line variable file '{name}({', '.join(args)})': {e}",
+                                DiagnosticSeverity.ERROR,
+                                type(e).__name__,
+                            )
+                        )
                         ex = e
                         self._logger.exception(
-                            lambda: f"Error getting command line variables: {ex}",
+                            lambda: f"Error in command line variable file '{name}({', '.join(args)})'",
                             exc_info=ex,
                         )
 

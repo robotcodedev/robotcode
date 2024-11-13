@@ -16,6 +16,17 @@ def path_is_relative_to(
         return False
 
 
+def try_get_relative_path(
+    path: Union[str, "os.PathLike[str]"], other_path: Union[str, "os.PathLike[str]", None]
+) -> Path:
+    if other_path is None:
+        return Path(path)
+    try:
+        return Path(path).relative_to(other_path)
+    except ValueError:
+        return Path(path)
+
+
 _RE_DRIVE_LETTER_PATH = re.compile(r"^[a-zA-Z]:")
 
 

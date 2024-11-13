@@ -1,3 +1,4 @@
+import glob
 import sys
 from pathlib import Path
 from typing import Any, Iterable, List, Optional
@@ -46,7 +47,8 @@ class RobotFrameworkLanguageProvider(LanguageProvider):
         )
 
         self.diagnostics_context.workspace.documents.on_read_document_text.add(self.on_read_document_text)
-        self.diagnostics_context.diagnostics.analyzers.add(self.analyze_document)
+        self.diagnostics_context.diagnostics.folder_initializers.add(self.analyze_folder)
+        self.diagnostics_context.diagnostics.document_analyzers.add(self.analyze_document)
 
     def _update_python_path(self) -> None:
         if self.diagnostics_context.workspace.root_uri is not None:
@@ -56,8 +58,9 @@ class RobotFrameworkLanguageProvider(LanguageProvider):
                     pa = Path(self.diagnostics_context.workspace.root_uri.to_path(), pa)
 
                 absolute_path = str(pa.absolute())
-                if absolute_path not in sys.path:
-                    sys.path.insert(0, absolute_path)
+                for f in glob.glob(absolute_path):
+                    if Path(f).is_dir() and f not in sys.path:
+                        sys.path.insert(0, f)
 
     @language_id("robotframework")
     def on_read_document_text(self, sender: Any, uri: Uri) -> str:
@@ -95,3 +98,8 @@ class RobotFrameworkLanguageProvider(LanguageProvider):
         namespace.analyze()
 
         return self._document_cache.get_diagnostic_modifier(document).modify_diagnostics(namespace.get_diagnostics())
+
+    def analyze_folder(self, sender: Any, folder: WorkspaceFolder) -> Optional[List[Diagnostic]]:
+        imports_manager = self._document_cache.get_imports_manager_for_workspace_folder(folder)
+
+        return imports_manager.diagnostics

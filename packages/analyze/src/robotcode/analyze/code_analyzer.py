@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable, List, Optional
+from typing import Iterable, List, Optional, Union
 
 from robotcode.core.ignore_spec import IgnoreSpec
 from robotcode.core.lsp.types import Diagnostic
@@ -19,6 +19,12 @@ from .robot_framework_language_provider import RobotFrameworkLanguageProvider
 @dataclass
 class DocumentDiagnosticReport:
     document: TextDocument
+    items: List[Diagnostic]
+
+
+@dataclass
+class FolderDiagnosticReport:
+    folder: WorkspaceFolder
     items: List[Diagnostic]
 
 
@@ -72,8 +78,23 @@ class CodeAnalyzer(DiagnosticsContext):
     def diagnostics(self) -> DiagnosticHandlers:
         return self._dispatcher
 
-    def run(self, paths: Iterable[Path] = {}, filter: Iterable[str] = {}) -> Iterable[DocumentDiagnosticReport]:
+    def run(
+        self, paths: Iterable[Path] = {}, filter: Iterable[str] = {}
+    ) -> Iterable[Union[DocumentDiagnosticReport, FolderDiagnosticReport]]:
         for folder in self.workspace.workspace_folders:
+            self.app.verbose(f"Initialize folder {folder.uri.to_path()}")
+            initialize_result = self.diagnostics.initialize_folder(folder)
+            if initialize_result is not None:
+                diagnostics: List[Diagnostic] = []
+                for item in initialize_result:
+                    if item is None:
+                        continue
+                    elif isinstance(item, BaseException):
+                        self.app.error(f"Error analyzing {folder.uri.to_path()}: {item}")
+                    else:
+                        diagnostics.extend(item)
+                if diagnostics:
+                    yield FolderDiagnosticReport(folder, diagnostics)
 
             documents = self.collect_documents(folder, paths=paths, filter=filter)
 
@@ -81,16 +102,16 @@ class CodeAnalyzer(DiagnosticsContext):
             for document in documents:
                 analyze_result = self.diagnostics.analyze_document(document)
                 if analyze_result is not None:
-                    diagnostics: List[Diagnostic] = []
+                    diagnostics = []
                     for item in analyze_result:
                         if item is None:
                             continue
                         elif isinstance(item, BaseException):
-                            self.app.error(f"Error analyzing {document.uri}: {item}")
+                            self.app.error(f"Error analyzing {document.uri.to_path()}: {item}")
                         else:
                             diagnostics.extend(item)
-
-                    yield DocumentDiagnosticReport(document, diagnostics)
+                    if diagnostics:
+                        yield DocumentDiagnosticReport(document, diagnostics)
 
             self.app.verbose(f"Collect Diagnostics for {len(documents)} documents")
             for document in documents:
@@ -101,11 +122,11 @@ class CodeAnalyzer(DiagnosticsContext):
                         if item is None:
                             continue
                         elif isinstance(item, BaseException):
-                            self.app.error(f"Error analyzing {document.uri}: {item}")
+                            self.app.error(f"Error analyzing {document.uri.to_path()}: {item}")
                         else:
                             diagnostics.extend(item)
-
-                    yield DocumentDiagnosticReport(document, diagnostics)
+                    if diagnostics:
+                        yield DocumentDiagnosticReport(document, diagnostics)
 
     def collect_documents(
         self, folder: WorkspaceFolder, paths: Iterable[Path] = {}, filter: Iterable[str] = {}
