@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [0.97.0](https://github.com/robotcodedev/robotcode/compare/v0.96.0..v0.97.0) - 2024-11-13
+
+### Bug Fixes
+
+- **langserver:** Support glob pattern in `robot.toml`s `python-path` setting ([f6e380c](https://github.com/robotcodedev/robotcode/commit/f6e380c624f3126cb960c576ca4e083c8fe9a0fc))
+- **vscode:** Correct handling of comments in tmlanguage ([ce794bf](https://github.com/robotcodedev/robotcode/commit/ce794bfcb16481e14c3b003a8587060999f78d66))
+
+
+### Documentation
+
+- Expand documentation on `robotcode` packages, installation, and usage ([907fa8c](https://github.com/robotcodedev/robotcode/commit/907fa8c0b3c4d17b14fd1477f8acb4e7cd1aa401))
+
+
+### Features
+
+- **analyze:** `analyze code` command now also uses the settings in the `robot.toml` file. ([bd17a5d](https://github.com/robotcodedev/robotcode/commit/bd17a5d18372e0d1baa7b8e627e81c8d7639bab2))
+- **analyze:** Add CLI options for `pythonpath`, `variable`, and `variablefile` to `analyze code` command; collect errors for unimportable command line variable files ([b4e6be4](https://github.com/robotcodedev/robotcode/commit/b4e6be4ea740808b07647d2eaf28e85fb486a0e0))
+- **robot:** Display filename on TOML parsing error ([8c25db8](https://github.com/robotcodedev/robotcode/commit/8c25db81fb74ca9b0c647c434cb9ba9f344a54cd))
+
+
 ## [0.96.0](https://github.com/robotcodedev/robotcode/compare/v0.95.2..v0.96.0) - 2024-11-04
 
 ### Bug Fixes
