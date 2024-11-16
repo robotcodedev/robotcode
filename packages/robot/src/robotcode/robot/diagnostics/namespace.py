@@ -44,6 +44,7 @@ from robotcode.core.lsp.types import (
 from robotcode.core.text_document import TextDocument
 from robotcode.core.uri import Uri
 from robotcode.core.utils.logging import LoggingDescriptor
+from robotcode.core.utils.path import same_file
 
 from ..utils.ast import (
     range_from_node,
@@ -1242,8 +1243,37 @@ class Namespace:
 
                 source = self.imports_manager.find_resource(value.name, base_dir, variables=variables)
 
-                if source in self._resources_files:
+                allread_imported_resource = next(
+                    (
+                        v
+                        for k, v in self._resources.items()
+                        if v.library_doc.source is not None and same_file(v.library_doc.source, source)
+                    ),
+                    None,
+                )
+                if allread_imported_resource is not None:
                     self._logger.debug(lambda: f"Resource '{value.name}' already imported.", context_name="import")
+                    if top_level:
+                        self.append_diagnostics(
+                            range=value.range,
+                            message=f"Resource '{value.name}' already imported.",
+                            severity=DiagnosticSeverity.INFORMATION,
+                            source=DIAGNOSTICS_SOURCE_NAME,
+                            related_information=(
+                                [
+                                    DiagnosticRelatedInformation(
+                                        location=Location(
+                                            uri=str(Uri.from_path(allread_imported_resource.import_source)),
+                                            range=allread_imported_resource.import_range,
+                                        ),
+                                        message="",
+                                    )
+                                ]
+                                if allread_imported_resource.import_source
+                                else None
+                            ),
+                            code=Error.RESOURCE_ALREADY_IMPORTED,
+                        )
                     return None
 
                 if self.source == source:

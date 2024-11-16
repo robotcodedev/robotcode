@@ -39,7 +39,7 @@ def normalized_path(path: "Union[str, os.PathLike[str]]") -> Path:
     return Path(p)
 
 
-def normalized_path_full(path: Union[str, "os.PathLike[Any]"]) -> Path:
+def normalized_path_full(path: Union[str, "os.PathLike[str]"]) -> Path:
     p = normalized_path(path)
 
     orig_parents = list(reversed(p.parents))
@@ -59,3 +59,10 @@ def normalized_path_full(path: Union[str, "os.PathLike[Any]"]) -> Path:
             return Path(*parents, *[f.name for f in orig_parents[index:]])
 
     return Path(*parents)
+
+
+def same_file(path1: Union[str, "os.PathLike[str]", Path], path2: Union[str, "os.PathLike[str]", Path]) -> bool:
+    try:
+        return os.path.samefile(path1, path2)
+    except OSError:
+        return False
