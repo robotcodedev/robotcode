@@ -1483,7 +1483,7 @@ class Namespace:
                         allread_imported_resource = self._resources_files.get(entry.library_doc.source, None)
 
                         if allread_imported_resource is None and entry.library_doc.source != self.source:
-                            self._resources[entry.import_name] = entry
+                            self._resources[entry.library_doc.source] = entry
                             self._resources_files[entry.library_doc.source] = entry
                             if entry.variables:
                                 variables = self.get_suite_variables()
