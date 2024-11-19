@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [0.98.0](https://github.com/robotcodedev/robotcode/compare/v0.97.0..v0.98.0) - 2024-11-19
+
+### Bug Fixes
+
+- **analyze:** Corrected checking if a resource is already imported ([b5a76b3](https://github.com/robotcodedev/robotcode/commit/b5a76b37937f57c30209f7fb03f298bcd0588c70))
+- **analyze:** Corrected importing resources with identical relative names but different base paths ([5792ac7](https://github.com/robotcodedev/robotcode/commit/5792ac764a164279db2048c6667e135a73d65444))
+
+
+### Features
+
+- **analyzer:** Added command line options for diagnostics modifiers to `code` command ([0a29800](https://github.com/robotcodedev/robotcode/commit/0a29800b53ca53fb49999053be3cb58b8a1df629))
+- **repl:** Rework repl a little bit and add some new command line options ([610b1f3](https://github.com/robotcodedev/robotcode/commit/610b1f3482ed37b87e2df8058ea4ab1a05f96cd1))
+
+  see documentation
+
+
+
 ## [0.97.0](https://github.com/robotcodedev/robotcode/compare/v0.96.0..v0.97.0) - 2024-11-13
 
 ### Bug Fixes
