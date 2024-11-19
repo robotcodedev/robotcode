@@ -8,6 +8,7 @@ from robot.api import TestSuite, get_model
 from robot.conf import RobotSettings
 from robot.errors import DATA_ERROR, INFO_PRINTED, DataError, Information
 from robot.output import LOGGER
+from robot.reporting import ResultWriter
 
 from robotcode.plugin import (
     Application,
@@ -31,12 +32,18 @@ RobotCode REPL
 
 def run_repl(
     app: Application,
-    inspect: bool,
-    variable: Tuple[str, ...],
-    variablefile: Tuple[str, ...],
-    pythonpath: Tuple[str, ...],
-    outputdir: Optional[str],
-    files: Tuple[Path, ...],
+    inspect: bool = False,
+    variable: Tuple[str, ...] = (),
+    variablefile: Tuple[str, ...] = (),
+    pythonpath: Tuple[str, ...] = (),
+    outputdir: Optional[str] = None,
+    output: Optional[str] = None,
+    report: Optional[str] = None,
+    log: Optional[str] = None,
+    xunit: Optional[str] = None,
+    files: Tuple[Path, ...] = (),
+    show_keywords: bool = False,
+    interpreter: Optional[Interpreter] = None,
 ) -> None:
     robot_options_and_args: Tuple[str, ...] = ()
 
@@ -52,7 +59,7 @@ def run_repl(
     if outputdir:
         robot_options_and_args += ("--outputdir", outputdir)
 
-    root_folder, profile, cmd_options = handle_robot_options(app, (*robot_options_and_args, *(str(f) for f in files)))
+    root_folder, _profile, cmd_options = handle_robot_options(app, (*robot_options_and_args, *(str(f) for f in files)))
 
     try:
 
@@ -63,34 +70,41 @@ def run_repl(
             root_folder,
         ).parse_arguments((*cmd_options, *robot_options_and_args))
 
+        if interpreter is None:
+            interpreter = Interpreter(app, files=list(files), show_keywords=show_keywords, inspect=inspect)
+
         settings = RobotSettings(
             options,
-            output=None,
-            log=None,
-            report=None,
+            console="NONE",
+            output=output,
+            log=log,
+            report=report,
+            xunit=xunit,
             quiet=True,
             listener=[
-                ReplListener(app, Interpreter(app, files=list(files), inspect=inspect)),
+                ReplListener(app, interpreter),
             ],
         )
 
-        if app.show_diagnostics:
+        if app is not None and app.show_diagnostics:
             LOGGER.register_console_logger(**settings.console_output_config)
         else:
             LOGGER.unregister_console_logger()
-
-        LOGGER.unregister_console_logger()
 
         if get_robot_version() >= (5, 0):
             if settings.pythonpath:
                 sys.path = settings.pythonpath + sys.path
 
-        with io.StringIO(REPL_SUITE) as output:
-            model = get_model(output)
+        with io.StringIO(REPL_SUITE) as suite_io:
+            model = get_model(suite_io)
 
             suite = TestSuite.from_model(model)
             suite.configure(**settings.suite_config)
-            suite.run(settings)
+            result = suite.run(settings)
+
+            if settings.log or settings.report or settings.xunit:
+                writer = ResultWriter(settings.output if settings.log else result)
+                writer.write_results(settings.get_rebot_settings())
 
     except Information as err:
         app.echo(str(err))
@@ -132,11 +146,11 @@ def run_repl(
     " and other extensions when they are imported. see `robot --pythonpath` option.",
 )
 @click.option(
-    "-d",
-    "--outputdir",
-    metavar="dir",
-    type=str,
-    help="Where to create output files. see `robot --outputdir` option.",
+    "-k",
+    "--show-keywords",
+    is_flag=True,
+    default=False,
+    help="Executed keywords will be shown in the output.",
 )
 @click.option(
     "-i",
@@ -144,6 +158,41 @@ def run_repl(
     is_flag=True,
     default=False,
     help="Activate inspection mode. This forces a prompt to appear after the REPL script is executed.",
+)
+@click.option(
+    "-d",
+    "--outputdir",
+    metavar="DIR",
+    type=str,
+    help="Where to create output files. see `robot --outputdir` option.",
+)
+@click.option(
+    "-o",
+    "--output",
+    metavar="FILE",
+    type=str,
+    help="XML output file. see `robot --output` option.",
+)
+@click.option(
+    "-r",
+    "--report",
+    metavar="FILE",
+    type=str,
+    help="HTML output file. see `robot --report` option.",
+)
+@click.option(
+    "-l",
+    "--log",
+    metavar="FILE",
+    type=str,
+    help="HTML log file. see `robot --log` option.",
+)
+@click.option(
+    "-x",
+    "--xunit",
+    metavar="FILE",
+    type=str,
+    help="xUnit output file. see `robot --xunit` option.",
 )
 @click.argument(
     "files",
@@ -157,12 +206,30 @@ def repl(
     variable: Tuple[str, ...],
     variablefile: Tuple[str, ...],
     pythonpath: Tuple[str, ...],
-    outputdir: Optional[str],
+    show_keywords: bool,
     inspect: bool,
+    outputdir: Optional[str],
+    output: Optional[str],
+    report: Optional[str],
+    log: Optional[str],
+    xunit: Optional[str],
     files: Tuple[Path, ...],
 ) -> None:
     """\
     Run Robot Framework interactively.
     """
 
-    run_repl(app, inspect, variable, variablefile, pythonpath, outputdir, files)
+    run_repl(
+        app=app,
+        inspect=inspect,
+        variablefile=variable,
+        variable=variablefile,
+        pythonpath=pythonpath,
+        outputdir=outputdir,
+        output=output,
+        report=report,
+        log=log,
+        xunit=xunit,
+        files=files,
+        show_keywords=show_keywords,
+    )

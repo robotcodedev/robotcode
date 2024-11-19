@@ -1,5 +1,4 @@
 import sys
-from typing import List
 
 from ..__version__ import __version__
 
@@ -13,6 +12,3 @@ class Repl:
 
     def exit(self, exit_code: int = 0) -> None:
         sys.exit(exit_code)
-
-    def keywords(self) -> List[str]:
-        return ["repl", "exit"]

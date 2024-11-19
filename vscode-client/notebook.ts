@@ -29,7 +29,7 @@ export class REPLNotebookSerializer implements vscode.NotebookSerializer {
         new vscode.NotebookCellData(
           item.cell_type === "code" ? vscode.NotebookCellKind.Code : vscode.NotebookCellKind.Markup,
           item.source.join("\n"),
-          item.cell_type === "code" ? "python" : "markdown",
+          item.cell_type === "code" ? "robotframework-repl" : "markdown",
         ),
     );
 
