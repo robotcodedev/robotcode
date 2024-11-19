@@ -4,7 +4,6 @@ from typing import List, Optional, Set, Tuple
 
 import click
 
-from robotcode.analyze.config import AnalyzeConfig
 from robotcode.core.lsp.types import Diagnostic, DiagnosticSeverity
 from robotcode.core.text_document import TextDocument
 from robotcode.core.uri import Uri
@@ -18,6 +17,7 @@ from robotcode.robot.config.utils import get_config_files
 
 from .__version__ import __version__
 from .code_analyzer import CodeAnalyzer, DocumentDiagnosticReport, FolderDiagnosticReport
+from .config import AnalyzeConfig, ModifiersConfig
 
 
 @click.group(
@@ -105,6 +105,46 @@ class Statistic:
     help="Additional locations where to search test libraries"
     " and other extensions when they are imported. see `robot --pythonpath` option.",
 )
+@click.option(
+    "-mi",
+    "--modifiers-ignore",
+    metavar="CODE",
+    type=str,
+    multiple=True,
+    help="Specifies the diagnostics codes to ignore.",
+)
+@click.option(
+    "-me",
+    "--modifiers-error",
+    metavar="CODE",
+    type=str,
+    multiple=True,
+    help="Specifies the diagnostics codes to treat as errors.",
+)
+@click.option(
+    "-mw",
+    "--modifiers-warning",
+    metavar="CODE",
+    type=str,
+    multiple=True,
+    help="Specifies the diagnostics codes to treat as warning.",
+)
+@click.option(
+    "-mI",
+    "--modifiers-information",
+    metavar="CODE",
+    type=str,
+    multiple=True,
+    help="Specifies the diagnostics codes to treat as information.",
+)
+@click.option(
+    "-mh",
+    "--modifiers-hint",
+    metavar="CODE",
+    type=str,
+    multiple=True,
+    help="Specifies the diagnostics codes to treat as hint.",
+)
 @click.argument(
     "paths", nargs=-1, type=click.Path(exists=True, dir_okay=True, file_okay=True, readable=True, path_type=Path)
 )
@@ -115,12 +155,27 @@ def code(
     variable: Tuple[str, ...],
     variablefile: Tuple[str, ...],
     pythonpath: Tuple[str, ...],
+    modifiers_ignore: Tuple[str, ...],
+    modifiers_error: Tuple[str, ...],
+    modifiers_warning: Tuple[str, ...],
+    modifiers_information: Tuple[str, ...],
+    modifiers_hint: Tuple[str, ...],
     paths: Tuple[Path],
 ) -> None:
     """\
         Performs static code analysis to detect syntax errors, missing keywords or variables,
         missing arguments, and more on the given *PATHS*. *PATHS* can be files or directories.
         If no PATHS are given, the current directory is used.
+
+        \b
+        Examples:
+        ```
+        robotcode analyze code
+        robotcode analyze code --filter **/*.robot
+        robotcode analyze code tests/acceptance/first.robot
+        robotcode analyze code -mi DuplicateKeyword tests/acceptance/first.robot
+        robotcode --format json analyze code
+        ```
     """
 
     config_files, root_folder, _ = get_config_files(
@@ -161,6 +216,34 @@ def code(
                 robot_profile.variable_files = []
             for vf in variablefile:
                 robot_profile.variable_files.append(vf)
+
+        if analyzer_config.modifiers is None:
+            analyzer_config.modifiers = ModifiersConfig()
+
+        if modifiers_ignore:
+            if analyzer_config.modifiers.ignore is None:
+                analyzer_config.modifiers.ignore = []
+            analyzer_config.modifiers.ignore.extend(modifiers_ignore)
+
+        if modifiers_error:
+            if analyzer_config.modifiers.error is None:
+                analyzer_config.modifiers.error = []
+            analyzer_config.modifiers.error.extend(modifiers_error)
+
+        if modifiers_warning:
+            if analyzer_config.modifiers.warning is None:
+                analyzer_config.modifiers.warning = []
+            analyzer_config.modifiers.warning.extend(modifiers_warning)
+
+        if modifiers_information:
+            if analyzer_config.modifiers.information is None:
+                analyzer_config.modifiers.information = []
+            analyzer_config.modifiers.information.extend(modifiers_information)
+
+        if modifiers_hint:
+            if analyzer_config.modifiers.hint is None:
+                analyzer_config.modifiers.hint = []
+            analyzer_config.modifiers.hint.extend(modifiers_hint)
 
         statistics = Statistic()
         for e in CodeAnalyzer(
@@ -223,7 +306,7 @@ def _print_diagnostics(
                     + (f"{item.range.start.line + 1}:{item.range.start.character + 1}: " if print_range else " ")
                 )
                 if folder_path and folder_path != root_folder
-                else " "
+                else ""
             )
             + click.style(f"[{severity.name[0]}] {item.code}", fg=SEVERITY_COLORS[severity])
             + f": {indent(item.message, prefix='  ').strip()}",

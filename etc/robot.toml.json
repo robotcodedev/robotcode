@@ -361,7 +361,7 @@
       "properties": {
         "error": {
           "default": null,
-          "description": "\nSpecifies the error codes to treat as errors.\n\nExamples:\n\n```toml\n[tool.robotcode-analyze.modifiers]\nerror = [\"VariableNotFound\", \"multiple-keywords\"]\n```\n",
+          "description": "\nSpecifies the diagnostics codes to treat as errors.\n\nExamples:\n\n```toml\n[tool.robotcode-analyze.modifiers]\nerror = [\"VariableNotFound\", \"multiple-keywords\"]\n```\n",
           "items": {
             "type": "string"
           },
@@ -373,7 +373,7 @@
         },
         "extend-error": {
           "default": null,
-          "description": "\nExtend the error codes to treat as errors.\n\nExamples:\n\n```toml\n[tool.robotcode-analyze.modifiers]\nextend_error = [\"VariableNotFound\", \"multiple-keywords\"]\n```\n",
+          "description": "\nExtend the diagnostics codes to treat as errors.\n\nExamples:\n\n```toml\n[tool.robotcode-analyze.modifiers]\nextend_error = [\"VariableNotFound\", \"multiple-keywords\"]\n```\n",
           "items": {
             "type": "string"
           },
@@ -385,7 +385,7 @@
         },
         "extend-hint": {
           "default": null,
-          "description": "\nExtend the error codes to treat as hint.\n\nExamples:\n\n```toml\n[tool.robotcode-analyze.modifiers]\nextend_hint = [\"VariableNotFound\", \"multiple-keywords\"]\n```\n",
+          "description": "\nExtend the diagnostics codes to treat as hint.\n\nExamples:\n\n```toml\n[tool.robotcode-analyze.modifiers]\nextend_hint = [\"VariableNotFound\", \"multiple-keywords\"]\n```\n",
           "items": {
             "type": "string"
           },
@@ -397,7 +397,7 @@
         },
         "extend-ignore": {
           "default": null,
-          "description": "\nExtend the error codes to ignore.\n\nExamples:\n\n```toml\n[tool.robotcode-analyze.modifiers]\nextend_ignore = [\"VariableNotFound\", \"multiple-keywords\"]\n```\n",
+          "description": "\nExtend the diagnostics codes to ignore.\n\nExamples:\n\n```toml\n[tool.robotcode-analyze.modifiers]\nextend_ignore = [\"VariableNotFound\", \"multiple-keywords\"]\n```\n",
           "items": {
             "type": "string"
           },
@@ -409,7 +409,7 @@
         },
         "extend-information": {
           "default": null,
-          "description": "\nExtend the error codes to treat as information.\n\nExamples:\n\n```toml\n[tool.robotcode-analyze.modifiers]\nextend_information = [\"VariableNotFound\", \"multiple-keywords\"]\n```\n",
+          "description": "\nExtend the diagnostics codes to treat as information.\n\nExamples:\n\n```toml\n[tool.robotcode-analyze.modifiers]\nextend_information = [\"VariableNotFound\", \"multiple-keywords\"]\n```\n",
           "items": {
             "type": "string"
           },
@@ -421,7 +421,7 @@
         },
         "extend-warning": {
           "default": null,
-          "description": "\nExtend the error codes to treat as warnings.\n\nExamples:\n\n```toml\n[tool.robotcode-analyze.modifiers]\nextend_warning = [\"VariableNotFound\", \"multiple-keywords\"]\n```\n",
+          "description": "\nExtend the diagnostics codes to treat as warning.\n\nExamples:\n\n```toml\n[tool.robotcode-analyze.modifiers]\nextend_warning = [\"VariableNotFound\", \"multiple-keywords\"]\n```\n",
           "items": {
             "type": "string"
           },
@@ -433,7 +433,7 @@
         },
         "hint": {
           "default": null,
-          "description": "\nSpecifies the error codes to treat as hint.\n\nExamples:\n\n```toml\n[tool.robotcode-analyze.modifiers]\nhint = [\"VariableNotFound\", \"multiple-keywords\"]\n```\n",
+          "description": "\nSpecifies the diagnostics codes to treat as hint.\n\nExamples:\n\n```toml\n[tool.robotcode-analyze.modifiers]\nhint = [\"VariableNotFound\", \"multiple-keywords\"]\n```\n",
           "items": {
             "type": "string"
           },
@@ -445,7 +445,7 @@
         },
         "ignore": {
           "default": null,
-          "description": "Specifies the error codes to ignore.\n\nExamples:\n\n```toml\n[tool.robotcode-analyze.modifiers]\nignore = [\"VariableNotFound\", \"multiple-keywords\"]\n```\n",
+          "description": "Specifies the diagnostics codes to ignore.\n\nExamples:\n\n```toml\n[tool.robotcode-analyze.modifiers]\nignore = [\"VariableNotFound\", \"multiple-keywords\"]\n```\n",
           "items": {
             "type": "string"
           },
@@ -457,7 +457,7 @@
         },
         "information": {
           "default": null,
-          "description": "\nSpecifies the error codes to treat as information.\n\nExamples:\n\n```toml\n[tool.robotcode-analyze.modifiers]\ninformation = [\"VariableNotFound\", \"multiple-keywords\"]\n```\n",
+          "description": "\nSpecifies the diagnostics codes to treat as information.\n\nExamples:\n\n```toml\n[tool.robotcode-analyze.modifiers]\ninformation = [\"VariableNotFound\", \"multiple-keywords\"]\n```\n",
           "items": {
             "type": "string"
           },
@@ -469,7 +469,7 @@
         },
         "warning": {
           "default": null,
-          "description": "\nSpecifies the error codes to treat as warning.\n\nExamples:\n\n```toml\n[tool.robotcode-analyze.modifiers]\nwarning = [\"VariableNotFound\", \"multiple-keywords\"]\n```\n",
+          "description": "\nSpecifies the diagnostics codes to treat as warning.\n\nExamples:\n\n```toml\n[tool.robotcode-analyze.modifiers]\nwarning = [\"VariableNotFound\", \"multiple-keywords\"]\n```\n",
           "items": {
             "type": "string"
           },

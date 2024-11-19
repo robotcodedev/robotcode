@@ -2732,7 +2732,7 @@ extend-information = ["MultipleKeywords"]
 
 Type: `list[str] | None`
 
-Specifies the error codes to treat as errors.
+Specifies the diagnostics codes to treat as errors.
 
 Examples:
 
@@ -2745,7 +2745,7 @@ error = ["VariableNotFound", "multiple-keywords"]
 
 Type: `list[str] | None`
 
-Extend the error codes to treat as errors.
+Extend the diagnostics codes to treat as errors.
 
 Examples:
 
@@ -2758,7 +2758,7 @@ extend_error = ["VariableNotFound", "multiple-keywords"]
 
 Type: `list[str] | None`
 
-Extend the error codes to treat as hint.
+Extend the diagnostics codes to treat as hint.
 
 Examples:
 
@@ -2771,7 +2771,7 @@ extend_hint = ["VariableNotFound", "multiple-keywords"]
 
 Type: `list[str] | None`
 
-Extend the error codes to ignore.
+Extend the diagnostics codes to ignore.
 
 Examples:
 
@@ -2784,7 +2784,7 @@ extend_ignore = ["VariableNotFound", "multiple-keywords"]
 
 Type: `list[str] | None`
 
-Extend the error codes to treat as information.
+Extend the diagnostics codes to treat as information.
 
 Examples:
 
@@ -2797,7 +2797,7 @@ extend_information = ["VariableNotFound", "multiple-keywords"]
 
 Type: `list[str] | None`
 
-Extend the error codes to treat as warnings.
+Extend the diagnostics codes to treat as warning.
 
 Examples:
 
@@ -2810,7 +2810,7 @@ extend_warning = ["VariableNotFound", "multiple-keywords"]
 
 Type: `list[str] | None`
 
-Specifies the error codes to treat as hint.
+Specifies the diagnostics codes to treat as hint.
 
 Examples:
 
@@ -2823,7 +2823,7 @@ hint = ["VariableNotFound", "multiple-keywords"]
 
 Type: `list[str] | None`
 
-Specifies the error codes to ignore.
+Specifies the diagnostics codes to ignore.
 
 Examples:
 
@@ -2836,7 +2836,7 @@ ignore = ["VariableNotFound", "multiple-keywords"]
 
 Type: `list[str] | None`
 
-Specifies the error codes to treat as information.
+Specifies the diagnostics codes to treat as information.
 
 Examples:
 
@@ -2849,7 +2849,7 @@ information = ["VariableNotFound", "multiple-keywords"]
 
 Type: `list[str] | None`
 
-Specifies the error codes to treat as warning.
+Specifies the diagnostics codes to treat as warning.
 
 Examples:
 
@@ -2889,7 +2889,7 @@ information = ["MultipleKeywords"]
 
 Type: `list[str] | None`
 
-Specifies the error codes to treat as errors.
+Specifies the diagnostics codes to treat as errors.
 
 Examples:
 
@@ -2902,7 +2902,7 @@ error = ["VariableNotFound", "multiple-keywords"]
 
 Type: `list[str] | None`
 
-Extend the error codes to treat as errors.
+Extend the diagnostics codes to treat as errors.
 
 Examples:
 
@@ -2915,7 +2915,7 @@ extend_error = ["VariableNotFound", "multiple-keywords"]
 
 Type: `list[str] | None`
 
-Extend the error codes to treat as hint.
+Extend the diagnostics codes to treat as hint.
 
 Examples:
 
@@ -2928,7 +2928,7 @@ extend_hint = ["VariableNotFound", "multiple-keywords"]
 
 Type: `list[str] | None`
 
-Extend the error codes to ignore.
+Extend the diagnostics codes to ignore.
 
 Examples:
 
@@ -2941,7 +2941,7 @@ extend_ignore = ["VariableNotFound", "multiple-keywords"]
 
 Type: `list[str] | None`
 
-Extend the error codes to treat as information.
+Extend the diagnostics codes to treat as information.
 
 Examples:
 
@@ -2954,7 +2954,7 @@ extend_information = ["VariableNotFound", "multiple-keywords"]
 
 Type: `list[str] | None`
 
-Extend the error codes to treat as warnings.
+Extend the diagnostics codes to treat as warning.
 
 Examples:
 
@@ -2967,7 +2967,7 @@ extend_warning = ["VariableNotFound", "multiple-keywords"]
 
 Type: `list[str] | None`
 
-Specifies the error codes to treat as hint.
+Specifies the diagnostics codes to treat as hint.
 
 Examples:
 
@@ -2980,7 +2980,7 @@ hint = ["VariableNotFound", "multiple-keywords"]
 
 Type: `list[str] | None`
 
-Specifies the error codes to ignore.
+Specifies the diagnostics codes to ignore.
 
 Examples:
 
@@ -2993,7 +2993,7 @@ ignore = ["VariableNotFound", "multiple-keywords"]
 
 Type: `list[str] | None`
 
-Specifies the error codes to treat as information.
+Specifies the diagnostics codes to treat as information.
 
 Examples:
 
@@ -3006,7 +3006,7 @@ information = ["VariableNotFound", "multiple-keywords"]
 
 Type: `list[str] | None`
 
-Specifies the error codes to treat as warning.
+Specifies the diagnostics codes to treat as warning.
 
 Examples:
 

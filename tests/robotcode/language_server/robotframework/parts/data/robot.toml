@@ -69,3 +69,7 @@ enabled = { if = "environ.get('DISABLED_PROFILE') in ['true', '1']" }
 [profiles.test1.extend-variables]
 API_URL = "https://api.test1.company.com"
 APP_URL = "https://app.test1.company.com"
+
+
+[tool.robotcode-analyze.modifiers]
+warning = ["KeywordNotFound"]

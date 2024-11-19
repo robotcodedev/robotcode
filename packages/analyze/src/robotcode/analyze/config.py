@@ -17,7 +17,7 @@ class ModifiersConfig(BaseOptions):
 
     ignore: Optional[List[str]] = field(
         description="""\
-            Specifies the error codes to ignore.
+            Specifies the diagnostics codes to ignore.
 
             Examples:
 
@@ -29,7 +29,7 @@ class ModifiersConfig(BaseOptions):
     )
     extend_ignore: Optional[List[str]] = field(
         description="""
-            Extend the error codes to ignore.
+            Extend the diagnostics codes to ignore.
 
             Examples:
 
@@ -41,7 +41,7 @@ class ModifiersConfig(BaseOptions):
     )
     error: Optional[List[str]] = field(
         description="""
-            Specifies the error codes to treat as errors.
+            Specifies the diagnostics codes to treat as errors.
 
             Examples:
 
@@ -53,7 +53,7 @@ class ModifiersConfig(BaseOptions):
     )
     extend_error: Optional[List[str]] = field(
         description="""
-            Extend the error codes to treat as errors.
+            Extend the diagnostics codes to treat as errors.
 
             Examples:
 
@@ -65,7 +65,7 @@ class ModifiersConfig(BaseOptions):
     )
     warning: Optional[List[str]] = field(
         description="""
-            Specifies the error codes to treat as warning.
+            Specifies the diagnostics codes to treat as warning.
 
             Examples:
 
@@ -77,7 +77,7 @@ class ModifiersConfig(BaseOptions):
     )
     extend_warning: Optional[List[str]] = field(
         description="""
-            Extend the error codes to treat as warnings.
+            Extend the diagnostics codes to treat as warning.
 
             Examples:
 
@@ -89,7 +89,7 @@ class ModifiersConfig(BaseOptions):
     )
     information: Optional[List[str]] = field(
         description="""
-            Specifies the error codes to treat as information.
+            Specifies the diagnostics codes to treat as information.
 
             Examples:
 
@@ -101,7 +101,7 @@ class ModifiersConfig(BaseOptions):
     )
     extend_information: Optional[List[str]] = field(
         description="""
-            Extend the error codes to treat as information.
+            Extend the diagnostics codes to treat as information.
 
             Examples:
 
@@ -113,7 +113,7 @@ class ModifiersConfig(BaseOptions):
     )
     hint: Optional[List[str]] = field(
         description="""
-            Specifies the error codes to treat as hint.
+            Specifies the diagnostics codes to treat as hint.
 
             Examples:
 
@@ -125,7 +125,7 @@ class ModifiersConfig(BaseOptions):
     )
     extend_hint: Optional[List[str]] = field(
         description="""
-            Extend the error codes to treat as hint.
+            Extend the diagnostics codes to treat as hint.
 
             Examples:
 

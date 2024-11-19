@@ -122,7 +122,7 @@ class CodeAnalyzer(DiagnosticsContext):
                         if item is None:
                             continue
                         elif isinstance(item, BaseException):
-                            self.app.error(f"Error analyzing {document.uri.to_path()}: {item}")
+                            self.app.error(f"Error collecting diagnostics for {document.uri.to_path()}: {item}")
                         else:
                             diagnostics.extend(item)
                     if diagnostics:

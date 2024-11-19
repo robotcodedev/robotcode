@@ -1,14 +1,7 @@
-#default-profiles = "firefox"
-
-
-#extends-args = ["--profile", "default"]
-#[extra-profiles.abc]
 [extend-profiles.firefox]
 description = "The overridden firefox profile"
 extend-python-path = ["./python"]
-#extra-python-path = ["./python1"]
 output-dir = "output"
 
-[tool.robotcode-analyze]
-extend-select = ["None"]
-ignore = ["Nonono"]
+[tool.robotcode-analyze.extend-modifiers]
+extend-warning = ["VariableNotFound"]

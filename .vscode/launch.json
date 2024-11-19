@@ -64,10 +64,10 @@
 				// "-i",
 				// "-v", "CMD_LINE_VAR:cmd_line_var",
 				// "E:\\source\\uvtestprj\\tests\\first.robotrepl"
-				"analyze",
-				"code",
+				// "analyze",
+				// "code",
 				// "tests"
-				// "repl",
+				"repl",
 				// "-v",
 				// "asd:asd"
 
