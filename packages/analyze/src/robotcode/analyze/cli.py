@@ -1,3 +1,4 @@
+from enum import Flag
 from pathlib import Path
 from textwrap import indent
 from typing import List, Optional, Set, Tuple
@@ -45,6 +46,14 @@ SEVERITY_COLORS = {
 }
 
 
+class ReturnCode(Flag):
+    SUCCESS = 0
+    ERRORS = 1
+    WARNINGS = 2
+    INFOS = 4
+    HINTS = 8
+
+
 class Statistic:
     def __init__(self) -> None:
         self.folders: Set[WorkspaceFolder] = set()
@@ -59,6 +68,18 @@ class Statistic:
             f"Files: {len(self.files)}, Errors: {self.errors}, Warnings: {self.warnings}, "
             f"Infos: {self.infos}, Hints: {self.hints}"
         )
+
+    def calculate_return_code(self) -> ReturnCode:
+        return_code = ReturnCode.SUCCESS
+        if self.errors > 0:
+            return_code |= ReturnCode.ERRORS
+        if self.warnings > 0:
+            return_code |= ReturnCode.WARNINGS
+        if self.infos > 0:
+            return_code |= ReturnCode.INFOS
+        if self.hints > 0:
+            return_code |= ReturnCode.HINTS
+        return return_code
 
 
 @analyze.command(
@@ -151,7 +172,7 @@ class Statistic:
 @pass_application
 def code(
     app: Application,
-    filter: Tuple[str],
+    filter: Tuple[str, ...],
     variable: Tuple[str, ...],
     variablefile: Tuple[str, ...],
     pythonpath: Tuple[str, ...],
@@ -163,12 +184,23 @@ def code(
     paths: Tuple[Path],
 ) -> None:
     """\
-        Performs static code analysis to detect syntax errors, missing keywords or variables,
-        missing arguments, and more on the given *PATHS*. *PATHS* can be files or directories.
-        If no PATHS are given, the current directory is used.
+        Performs static code analysis to identify potential issues in the specified *PATHS*. The analysis detects syntax
+        errors, missing keywords or variables, missing arguments, and other problems.
+
+        - **PATHS**: Can be individual files or directories. If no *PATHS* are provided, the current directory is
+          analyzed by default.
+
+        The return code is a bitwise combination of the following values:
 
         \b
-        Examples:
+        - `0`: **SUCCESS** - No issues detected.
+        - `1`: **ERRORS** - Critical issues found.
+        - `2`: **WARNINGS** - Non-critical issues detected.
+        - `4`: **INFORMATIONS** - General information messages.
+        - `8`: **HINTS** - Suggestions or improvements.
+
+        \b
+        *Examples*:
         ```
         robotcode analyze code
         robotcode analyze code --filter **/*.robot
@@ -273,7 +305,7 @@ def code(
 
         app.echo(statistics_str)
 
-        app.exit(statistics.errors)
+        app.exit(statistics.calculate_return_code().value)
 
     except (TypeError, ValueError) as e:
         raise click.ClickException(str(e)) from e
