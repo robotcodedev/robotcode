@@ -2,6 +2,28 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [0.99.0](https://github.com/robotcodedev/robotcode/compare/v0.98.0..v0.99.0) - 2024-11-20
+
+### Bug Fixes
+
+- **analyzer:** Better recognition of circular imports ([a36dd41](https://github.com/robotcodedev/robotcode/commit/a36dd414c88f418e486979ae9fe988cafb97143c))
+
+
+### Features
+
+- **analyze:** `analyze code` now return a flag that indicates if errors/warnings/etc. occurs ([5125f7d](https://github.com/robotcodedev/robotcode/commit/5125f7dca21daf18f21708ab0676d8707fbb2827))
+
+  - `0`: **SUCCESS** - No issues detected.
+          - `1`: **ERRORS** - Critical issues found.
+          - `2`: **WARNINGS** - Non-critical issues detected.
+          - `4`: **INFORMATIONS** - General information messages.
+          - `8`: **HINTS** - Suggestions or improvements.
+
+  A return code 1 means error and 3 means there are errors and warning and so on.
+
+- **cli:** Add an astric (*) for options that can be used multiple times ([5bf5493](https://github.com/robotcodedev/robotcode/commit/5bf54936c2bfa12d92171d2fd9f9b55c86f9115f))
+
+
 ## [0.98.0](https://github.com/robotcodedev/robotcode/compare/v0.97.0..v0.98.0) - 2024-11-19
 
 ### Bug Fixes
