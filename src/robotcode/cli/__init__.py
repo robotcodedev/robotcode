@@ -19,6 +19,20 @@ from robotcode.plugin.manager import PluginManager
 from .__version__ import __version__
 from .commands import config, profiles
 
+old_make_metavar = click.Parameter.make_metavar
+
+
+def my_make_metavar(self: click.Parameter) -> str:
+    metavar = old_make_metavar(self)
+
+    if isinstance(self, click.Option) and self.multiple:
+        metavar += " *"
+
+    return metavar
+
+
+click.Parameter.make_metavar = my_make_metavar  # type: ignore[method-assign]
+
 
 class RobotCodeFormatter(logging.Formatter):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
@@ -38,8 +52,7 @@ class RobotCodeFormatter(logging.Formatter):
     multiple=True,
     show_envvar=True,
     help="""\
-        Config file to use. Can be specified multiple times.
-        If not specified, the default config file is used.
+        Config file to use. If not specified, the default config file is used.
         """,
 )
 @click.option(
@@ -50,8 +63,7 @@ class RobotCodeFormatter(logging.Formatter):
     multiple=True,
     show_envvar=True,
     help="""\
-        The Execution Profile to use. Can be specified multiple times.
-        If not specified, the default profile is used.
+        The Execution Profile to use. If not specified, the default profile is used.
         """,
 )
 @click.option(
@@ -59,7 +71,6 @@ class RobotCodeFormatter(logging.Formatter):
     "--root",
     "root",
     type=click.Path(exists=True, path_type=Path, dir_okay=True, file_okay=False, resolve_path=True),
-    multiple=False,
     show_envvar=True,
     help="Specifies the root path to be used for the project. It will be automatically detected if not provided.",
 )
@@ -157,8 +168,8 @@ class RobotCodeFormatter(logging.Formatter):
     type=click.Path(exists=False, resolve_path=False, path_type=str),
     multiple=True,
     hidden=show_hidden_arguments(),
-    help="Default path to use if no path is given or defined in a profile. Can be specified multiple times. "
-    "**This is an internal option for running in vscode",
+    help="Default path to use if no path is given or defined in a profile. "
+    "**This is an internal option for running in vscode**",
 )
 @click.option(
     "--launcher-script",

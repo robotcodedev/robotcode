@@ -14,7 +14,6 @@ from robotcode.plugin import (
     Application,
     pass_application,
 )
-from robotcode.plugin.click_helper.aliases import AliasedCommand
 from robotcode.robot.utils import get_robot_version
 from robotcode.runner.cli.robot import RobotFrameworkEx, handle_robot_options
 
@@ -115,8 +114,6 @@ def run_repl(
 
 
 @click.command(
-    cls=AliasedCommand,
-    aliases=["shell"],
     context_settings={"allow_extra_args": True, "ignore_unknown_options": True},
     add_help_option=True,
 )

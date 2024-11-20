@@ -66,8 +66,9 @@
 				// "E:\\source\\uvtestprj\\tests\\first.robotrepl"
 				// "analyze",
 				// "code",
+				"--help"
 				// "tests"
-				"repl",
+				//"repl",
 				// "-v",
 				// "asd:asd"
 
