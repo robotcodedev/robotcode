@@ -10,6 +10,7 @@ class Error:
     KEYWORD_NOT_FOUND = "KeywordNotFound"
     LIBRARY_CONTAINS_NO_KEYWORDS = "LibraryContainsNoKeywords"
     POSSIBLE_CIRCULAR_IMPORT = "PossibleCircularImport"
+    CIRCULAR_IMPORT = "CircularImport"
     RESOURCE_EMPTY = "ResourceEmpty"
     IMPORT_CONTAINS_ERRORS = "ImportContainsErrors"
     RECURSIVE_IMPORT = "RecursiveImport"

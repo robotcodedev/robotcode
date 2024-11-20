@@ -1276,11 +1276,12 @@ class Namespace:
                         )
                     return None
 
-                if self.source == source:
+                if same_file(self.source, source):
                     if parent_import:
                         self.append_diagnostics(
                             range=parent_import.range,
-                            message="Possible circular import.",
+                            message=f"Possible circular import detected, Resource file'{Path(self.source).name}' "
+                            "might reference itself directly or through other resource files",
                             severity=DiagnosticSeverity.INFORMATION,
                             source=DIAGNOSTICS_SOURCE_NAME,
                             related_information=(
@@ -1297,6 +1298,15 @@ class Namespace:
                                 else None
                             ),
                             code=Error.POSSIBLE_CIRCULAR_IMPORT,
+                        )
+                    else:
+                        self.append_diagnostics(
+                            range=value.range,
+                            message=f"Circular import detected, Resource file '{Path(source).name}' "
+                            "is importing itself",
+                            severity=DiagnosticSeverity.INFORMATION,
+                            source=DIAGNOSTICS_SOURCE_NAME,
+                            code=Error.CIRCULAR_IMPORT,
                         )
                 else:
                     result = self._get_resource_entry(
@@ -1545,7 +1555,14 @@ class Namespace:
                             (
                                 e
                                 for e in self._variables_imports.values()
-                                if e.library_doc.source == entry.library_doc.source
+                                if (
+                                    (
+                                        e.library_doc.source is not None
+                                        and entry.library_doc.source is not None
+                                        and same_file(e.library_doc.source, entry.library_doc.source)
+                                    )
+                                    or (e.library_doc.source is None and entry.library_doc.source is None)
+                                )
                                 and e.alias == entry.alias
                                 and e.args == entry.args
                             ),
@@ -1610,7 +1627,14 @@ class Namespace:
                             (
                                 e
                                 for e in self._libraries.values()
-                                if e.library_doc.source == entry.library_doc.source
+                                if (
+                                    (
+                                        e.library_doc.source is not None
+                                        and entry.library_doc.source is not None
+                                        and same_file(e.library_doc.source, entry.library_doc.source)
+                                    )
+                                    or (e.library_doc.source is None and entry.library_doc.source is None)
+                                )
                                 and e.library_doc.member_name == entry.library_doc.member_name
                                 and e.alias == entry.alias
                                 and e.args == entry.args
