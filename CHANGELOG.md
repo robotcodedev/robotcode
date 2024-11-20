@@ -14,10 +14,10 @@ All notable changes to this project will be documented in this file. See [conven
 - **analyze:** `analyze code` now return a flag that indicates if errors/warnings/etc. occurs ([5125f7d](https://github.com/robotcodedev/robotcode/commit/5125f7dca21daf18f21708ab0676d8707fbb2827))
 
   - `0`: **SUCCESS** - No issues detected.
-          - `1`: **ERRORS** - Critical issues found.
-          - `2`: **WARNINGS** - Non-critical issues detected.
-          - `4`: **INFORMATIONS** - General information messages.
-          - `8`: **HINTS** - Suggestions or improvements.
+  - `1`: **ERRORS** - Critical issues found.
+  - `2`: **WARNINGS** - Non-critical issues detected.
+  - `4`: **INFORMATIONS** - General information messages.
+  - `8`: **HINTS** - Suggestions or improvements.
 
   A return code 1 means error and 3 means there are errors and warning and so on.
 
