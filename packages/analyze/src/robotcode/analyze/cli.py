@@ -1,7 +1,7 @@
 from enum import Flag
 from pathlib import Path
 from textwrap import indent
-from typing import List, Optional, Set, Tuple
+from typing import List, Optional, Set, Tuple, Union
 
 import click
 
@@ -56,16 +56,49 @@ class ReturnCode(Flag):
 
 class Statistic:
     def __init__(self) -> None:
-        self.folders: Set[WorkspaceFolder] = set()
-        self.files: Set[TextDocument] = set()
-        self.errors = 0
-        self.warnings = 0
-        self.infos = 0
-        self.hints = 0
+        self._folders: Set[WorkspaceFolder] = set()
+        self._files: Set[TextDocument] = set()
+        self._diagnostics: List[Union[DocumentDiagnosticReport, FolderDiagnosticReport]] = []
+
+    @property
+    def errors(self) -> int:
+        return sum(
+            len([i for i in e.items if i.severity == DiagnosticSeverity.ERROR]) for e in self._diagnostics if e.items
+        )
+
+    @property
+    def warnings(self) -> int:
+        return sum(
+            len([i for i in e.items if i.severity == DiagnosticSeverity.WARNING]) for e in self._diagnostics if e.items
+        )
+
+    @property
+    def infos(self) -> int:
+        return sum(
+            len([i for i in e.items if i.severity == DiagnosticSeverity.INFORMATION])
+            for e in self._diagnostics
+            if e.items
+        )
+
+    @property
+    def hints(self) -> int:
+        return sum(
+            len([i for i in e.items if i.severity == DiagnosticSeverity.HINT]) for e in self._diagnostics if e.items
+        )
+
+    def add_diagnostics_report(
+        self, diagnostics_report: Union[DocumentDiagnosticReport, FolderDiagnosticReport]
+    ) -> None:
+        self._diagnostics.append(diagnostics_report)
+
+        if isinstance(diagnostics_report, FolderDiagnosticReport):
+            self._folders.add(diagnostics_report.folder)
+        elif isinstance(diagnostics_report, DocumentDiagnosticReport):
+            self._files.add(diagnostics_report.document)
 
     def __str__(self) -> str:
         return (
-            f"Files: {len(self.files)}, Errors: {self.errors}, Warnings: {self.warnings}, "
+            f"Files: {len(self._files)}, Errors: {self.errors}, Warnings: {self.warnings}, "
             f"Infos: {self.infos}, Hints: {self.hints}"
         )
 
@@ -192,7 +225,6 @@ def code(
 
         The return code is a bitwise combination of the following values:
 
-        \b
         - `0`: **SUCCESS** - No issues detected.
         - `1`: **ERRORS** - Critical issues found.
         - `2`: **WARNINGS** - Non-critical issues detected.
@@ -284,20 +316,17 @@ def code(
             robot_profile=robot_profile,
             root_folder=root_folder,
         ).run(paths=paths, filter=filter):
+            statistics.add_diagnostics_report(e)
+
             if isinstance(e, FolderDiagnosticReport):
-                statistics.folders.add(e.folder)
-
                 if e.items:
-                    _print_diagnostics(app, root_folder, statistics, e.items, e.folder.uri.to_path())
-
+                    _print_diagnostics(app, root_folder, e.items, e.folder.uri.to_path())
             elif isinstance(e, DocumentDiagnosticReport):
-                statistics.files.add(e.document)
-
                 doc_path = (
                     e.document.uri.to_path().relative_to(root_folder) if root_folder else e.document.uri.to_path()
                 )
                 if e.items:
-                    _print_diagnostics(app, root_folder, statistics, e.items, doc_path)
+                    _print_diagnostics(app, root_folder, e.items, doc_path)
 
         statistics_str = str(statistics)
         if statistics.errors > 0:
@@ -314,22 +343,12 @@ def code(
 def _print_diagnostics(
     app: Application,
     root_folder: Optional[Path],
-    statistics: Statistic,
     diagnostics: List[Diagnostic],
     folder_path: Optional[Path],
     print_range: bool = True,
 ) -> None:
     for item in diagnostics:
         severity = item.severity if item.severity is not None else DiagnosticSeverity.ERROR
-
-        if severity == DiagnosticSeverity.ERROR:
-            statistics.errors += 1
-        elif severity == DiagnosticSeverity.WARNING:
-            statistics.warnings += 1
-        elif severity == DiagnosticSeverity.INFORMATION:
-            statistics.infos += 1
-        elif severity == DiagnosticSeverity.HINT:
-            statistics.hints += 1
 
         app.echo(
             (

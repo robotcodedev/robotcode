@@ -93,8 +93,8 @@ class CodeAnalyzer(DiagnosticsContext):
                         self.app.error(f"Error analyzing {folder.uri.to_path()}: {item}")
                     else:
                         diagnostics.extend(item)
-                if diagnostics:
-                    yield FolderDiagnosticReport(folder, diagnostics)
+
+                yield FolderDiagnosticReport(folder, diagnostics)
 
             documents = self.collect_documents(folder, paths=paths, filter=filter)
 
@@ -110,8 +110,8 @@ class CodeAnalyzer(DiagnosticsContext):
                             self.app.error(f"Error analyzing {document.uri.to_path()}: {item}")
                         else:
                             diagnostics.extend(item)
-                    if diagnostics:
-                        yield DocumentDiagnosticReport(document, diagnostics)
+
+                    yield DocumentDiagnosticReport(document, diagnostics)
 
             self.app.verbose(f"Collect Diagnostics for {len(documents)} documents")
             for document in documents:
@@ -125,8 +125,8 @@ class CodeAnalyzer(DiagnosticsContext):
                             self.app.error(f"Error collecting diagnostics for {document.uri.to_path()}: {item}")
                         else:
                             diagnostics.extend(item)
-                    if diagnostics:
-                        yield DocumentDiagnosticReport(document, diagnostics)
+
+                    yield DocumentDiagnosticReport(document, diagnostics)
 
     def collect_documents(
         self, folder: WorkspaceFolder, paths: Iterable[Path] = {}, filter: Iterable[str] = {}
