@@ -6,7 +6,9 @@ DIAGNOSTICS_SOURCE_NAME = "robotcode"
 @final
 class Error:
     VARIABLE_NOT_FOUND = "VariableNotFound"
+    VARIABLE_NOT_REPLACED = "VariableNotReplaced"
     ENVIRONMENT_VARIABLE_NOT_FOUND = "EnvironmentVariableNotFound"
+    ENVIRONMENT_VARIABLE_NOT_REPLACED = "EnvironmentVariableNotReplaced"
     KEYWORD_NOT_FOUND = "KeywordNotFound"
     LIBRARY_CONTAINS_NO_KEYWORDS = "LibraryContainsNoKeywords"
     POSSIBLE_CIRCULAR_IMPORT = "PossibleCircularImport"

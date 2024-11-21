@@ -480,9 +480,13 @@ class NamespaceAnalyzer(Visitor):
         if var.type == VariableDefinitionType.VARIABLE_NOT_FOUND:
             self._append_diagnostics(
                 range=range_from_token(var_token),
-                message=f"Variable '{var.name}' not found.",
+                message=(
+                    f"Variable '{var.name}' not replaced."
+                    if severity == DiagnosticSeverity.HINT
+                    else f"Variable '{var.name}' not found."
+                ),
                 severity=severity,
-                code=Error.VARIABLE_NOT_FOUND,
+                code=Error.VARIABLE_NOT_REPLACED if severity == DiagnosticSeverity.HINT else Error.VARIABLE_NOT_FOUND,
             )
         else:
             if (
@@ -493,9 +497,17 @@ class NamespaceAnalyzer(Visitor):
                 if os.environ.get(env_name, None) is None:
                     self._append_diagnostics(
                         range=range_from_token(var_token),
-                        message=f"Environment variable '{var.name}' not found.",
+                        message=(
+                            f"Environment variable '{var.name}' not replaced."
+                            if severity == DiagnosticSeverity.HINT
+                            else f"Environment variable '{var.name}' not found."
+                        ),
                         severity=severity,
-                        code=Error.ENVIRONMENT_VARIABLE_NOT_FOUND,
+                        code=(
+                            Error.ENVIRONMENT_VARIABLE_NOT_REPLACED
+                            if severity == DiagnosticSeverity.HINT
+                            else Error.ENVIRONMENT_VARIABLE_NOT_FOUND
+                        ),
                     )
 
             if var.type == VariableDefinitionType.ENVIRONMENT_VARIABLE:

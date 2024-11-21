@@ -262,6 +262,8 @@ mypy_path = [
   "packages/robot/src",
   "packages/runner/src",
   "packages/analyze/src",
+  "packages/repl/src",
+  "packages/repl_server/src",
 ]
 # allow_untyped_calls = true
 
