@@ -584,10 +584,11 @@ class NamespaceAnalyzer(Visitor):
         analyze_run_keywords: bool = True,
         allow_variables: bool = False,
         ignore_errors_if_contains_variables: bool = False,
+        unescape_keyword: bool = True,
     ) -> Optional[KeywordDoc]:
         result: Optional[KeywordDoc] = None
 
-        keyword = unescape(keyword_token.value)
+        keyword = unescape(keyword_token.value) if unescape_keyword else keyword_token.value
 
         try:
             lib_entry = None
@@ -1008,9 +1009,7 @@ class NamespaceAnalyzer(Visitor):
         self._analyze_statement_variables(node)
 
         self._analyze_keyword_call(
-            node,
-            keyword_token,
-            [e for e in node.get_tokens(Token.ARGUMENT)],
+            node, keyword_token, [e for e in node.get_tokens(Token.ARGUMENT)], unescape_keyword=False
         )
 
         if not self._current_testcase_or_keyword_name:

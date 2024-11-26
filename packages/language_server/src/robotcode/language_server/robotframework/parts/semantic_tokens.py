@@ -404,7 +404,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
             ):
                 if (
                     namespace.find_keyword(
-                        token.value,
+                        unescape(token.value),  # TODO: this must be resovle possible variables
                         raise_keyword_error=False,
                         handle_bdd_style=False,
                     )
@@ -458,7 +458,9 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
 
                 kw_namespace: Optional[str] = None
                 kw: str = token.value
-                kw_doc = namespace.find_keyword(token.value, raise_keyword_error=False)
+                kw_doc = namespace.find_keyword(
+                    unescape(token.value), raise_keyword_error=False
+                )  # TODO: this must be resovle possible variables
 
                 (
                     lib_entry,
@@ -1121,14 +1123,14 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
                             kw: Optional[str] = None
 
                             for _, n in iter_over_keyword_names_and_owners(
-                                ModelHelper.strip_bdd_prefix(namespace, kw_token).value
+                                unescape(ModelHelper.strip_bdd_prefix(namespace, kw_token).value)
                             ):
                                 if n is not None:
                                     matcher = KeywordMatcher(n)
                                     if matcher in ALL_RUN_KEYWORDS_MATCHERS:
                                         kw = n
                             if kw:
-                                kw_doc = namespace.find_keyword(kw_token.value)
+                                kw_doc = namespace.find_keyword(unescape(kw_token.value))
                                 if kw_doc is not None and kw_doc.is_any_run_keyword():
                                     for kw_res in self.generate_run_kw_tokens(
                                         namespace,
