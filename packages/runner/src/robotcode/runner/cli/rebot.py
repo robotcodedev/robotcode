@@ -1,6 +1,5 @@
 import os
-from pathlib import Path
-from typing import Any, Optional, Tuple, cast
+from typing import Any, Tuple, cast
 
 import click
 from robot.errors import DataError, Information
@@ -17,10 +16,9 @@ from ..__version__ import __version__
 
 
 class RebotEx(Rebot):
-    def __init__(self, dry: bool, root_folder: Optional[Path]) -> None:
+    def __init__(self, dry: bool) -> None:
         super().__init__()
         self.dry = dry
-        self.root_folder = root_folder
 
     def parse_arguments(self, cli_args: Any) -> Any:
         options, arguments = super().parse_arguments(cli_args)
@@ -36,9 +34,6 @@ class RebotEx(Rebot):
         return options, arguments
 
     def main(self, datasources: Any, **options: Any) -> Any:
-        if self.root_folder is not None:
-            os.chdir(self.root_folder)
-
         return super().main(datasources, **options)
 
 
@@ -63,7 +58,8 @@ def rebot(app: Application, robot_options_and_args: Tuple[str, ...]) -> None:
 
     robot_arguments = None
     try:
-        _, robot_arguments = Rebot().parse_arguments(robot_options_and_args)
+        with app.save_syspath():
+            _, robot_arguments = Rebot().parse_arguments(robot_options_and_args)
     except (DataError, Information):
         pass
 
@@ -75,46 +71,47 @@ def rebot(app: Application, robot_options_and_args: Tuple[str, ...]) -> None:
         verbose_callback=app.verbose,
     )
 
-    try:
-        profile = (
-            load_robot_config_from_path(*config_files, verbose_callback=app.verbose)
-            .combine_profiles(*(app.config.profiles or []), verbose_callback=app.verbose, error_callback=app.error)
-            .evaluated_with_env(verbose_callback=app.verbose, error_callback=app.error)
+    with app.chdir(root_folder):
+        try:
+            profile = (
+                load_robot_config_from_path(*config_files, verbose_callback=app.verbose)
+                .combine_profiles(*(app.config.profiles or []), verbose_callback=app.verbose, error_callback=app.error)
+                .evaluated_with_env(verbose_callback=app.verbose, error_callback=app.error)
+            )
+
+        except (TypeError, ValueError) as e:
+            raise click.ClickException(str(e)) from e
+
+        rebot_options = profile.rebot
+        if rebot_options is None:
+            rebot_options = RebotProfile()
+
+        rebot_options.add_options(profile)
+
+        try:
+            options = rebot_options.build_command_line()
+        except (TypeError, ValueError) as e:
+            raise click.ClickException(str(e)) from e
+
+        app.verbose(
+            lambda: "Executing rebot with the following options:\n    "
+            + " ".join(f'"{o}"' for o in (options + list(robot_options_and_args)))
         )
 
-    except (TypeError, ValueError) as e:
-        raise click.ClickException(str(e)) from e
+        console_links_args = []
+        if get_robot_version() >= (7, 1) and os.getenv("ROBOTCODE_DISABLE_ANSI_LINKS", "").lower() in [
+            "on",
+            "1",
+            "yes",
+            "true",
+        ]:
+            console_links_args = ["--consolelinks", "off"]
 
-    rebot_options = profile.rebot
-    if rebot_options is None:
-        rebot_options = RebotProfile()
-
-    rebot_options.add_options(profile)
-
-    try:
-        options = rebot_options.build_command_line()
-    except (TypeError, ValueError) as e:
-        raise click.ClickException(str(e)) from e
-
-    app.verbose(
-        lambda: "Executing rebot with the following options:\n    "
-        + " ".join(f'"{o}"' for o in (options + list(robot_options_and_args)))
-    )
-
-    console_links_args = []
-    if get_robot_version() >= (7, 1) and os.getenv("ROBOTCODE_DISABLE_ANSI_LINKS", "").lower() in [
-        "on",
-        "1",
-        "yes",
-        "true",
-    ]:
-        console_links_args = ["--consolelinks", "off"]
-
-    app.exit(
-        cast(
-            int,
-            RebotEx(app.config.dry, root_folder).execute_cli(
-                (*options, *console_links_args, *robot_options_and_args), exit=False
-            ),
+        app.exit(
+            cast(
+                int,
+                RebotEx(app.config.dry).execute_cli(
+                    (*options, *console_links_args, *robot_options_and_args), exit=False
+                ),
+            )
         )
-    )

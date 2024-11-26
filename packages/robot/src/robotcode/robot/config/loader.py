@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict, Optional, Sequence, Tuple, Type, TypeVar, Union
 
 from robotcode.core.utils.dataclasses import from_dict
+from robotcode.core.utils.path import normalized_path
 
 if sys.version_info >= (3, 11):
     import tomllib
@@ -224,7 +225,7 @@ def find_project_root(
     if not sources:
         sources = (str(Path.cwd().absolute()),)
 
-    path_srcs = [Path(Path.cwd(), src).absolute() for src in sources]
+    path_srcs = [normalized_path(Path(Path.cwd(), src).absolute()) for src in sources]
 
     src_parents = [list(path.parents) + ([path] if path.is_dir() else []) for path in path_srcs]
 

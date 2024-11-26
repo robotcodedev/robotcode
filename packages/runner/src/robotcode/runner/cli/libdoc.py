@@ -1,6 +1,4 @@
-import os
-from pathlib import Path
-from typing import Any, Optional, Tuple, cast
+from typing import Any, Tuple, cast
 
 import click
 from robot.errors import DataError, Information
@@ -16,10 +14,9 @@ from ..__version__ import __version__
 
 
 class LibDocEx(LibDoc):
-    def __init__(self, dry: bool, root_folder: Optional[Path]) -> None:
+    def __init__(self, dry: bool) -> None:
         super().__init__()
         self.dry = dry
-        self.root_folder = root_folder
 
     def parse_arguments(self, cli_args: Any) -> Any:
         options, arguments = super().parse_arguments(cli_args)
@@ -35,9 +32,6 @@ class LibDocEx(LibDoc):
         return options, arguments
 
     def main(self, arguments: Any, **options: Any) -> Any:
-        if self.root_folder is not None:
-            os.chdir(self.root_folder)
-
         return super().main(arguments, **options)
 
 
@@ -62,7 +56,8 @@ def libdoc(app: Application, robot_options_and_args: Tuple[str, ...]) -> None:
 
     robot_arguments = None
     try:
-        _, robot_arguments = LibDoc().parse_arguments(robot_options_and_args)
+        with app.save_syspath():
+            _, robot_arguments = LibDoc().parse_arguments(robot_options_and_args)
     except (DataError, Information):
         pass
 
@@ -73,32 +68,34 @@ def libdoc(app: Application, robot_options_and_args: Tuple[str, ...]) -> None:
         no_vcs=app.config.no_vcs,
         verbose_callback=app.verbose,
     )
-    try:
-        profile = (
-            load_robot_config_from_path(*config_files, verbose_callback=app.verbose)
-            .combine_profiles(*(app.config.profiles or []), verbose_callback=app.verbose, error_callback=app.error)
-            .evaluated_with_env(verbose_callback=app.verbose, error_callback=app.error)
+
+    with app.chdir(root_folder):
+        try:
+            profile = (
+                load_robot_config_from_path(*config_files, verbose_callback=app.verbose)
+                .combine_profiles(*(app.config.profiles or []), verbose_callback=app.verbose, error_callback=app.error)
+                .evaluated_with_env(verbose_callback=app.verbose, error_callback=app.error)
+            )
+
+        except (TypeError, ValueError) as e:
+            raise click.ClickException(str(e)) from e
+
+        libdoc_options = profile.libdoc
+        if libdoc_options is None:
+            libdoc_options = LibDocProfile()
+
+        libdoc_options.add_options(profile)
+
+        options = libdoc_options.build_command_line()
+
+        app.verbose(
+            lambda: "Executing libdoc robot with the following options:\n    "
+            + " ".join(f'"{o}"' for o in (options + list(robot_options_and_args)))
         )
 
-    except (TypeError, ValueError) as e:
-        raise click.ClickException(str(e)) from e
-
-    libdoc_options = profile.libdoc
-    if libdoc_options is None:
-        libdoc_options = LibDocProfile()
-
-    libdoc_options.add_options(profile)
-
-    options = libdoc_options.build_command_line()
-
-    app.verbose(
-        lambda: "Executing libdoc robot with the following options:\n    "
-        + " ".join(f'"{o}"' for o in (options + list(robot_options_and_args)))
-    )
-
-    app.exit(
-        cast(
-            int,
-            LibDocEx(app.config.dry, root_folder).execute_cli((*options, *robot_options_and_args), exit=False),
+        app.exit(
+            cast(
+                int,
+                LibDocEx(app.config.dry).execute_cli((*options, *robot_options_and_args), exit=False),
+            )
         )
-    )

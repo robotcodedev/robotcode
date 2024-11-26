@@ -476,81 +476,84 @@ def handle_options(
 ) -> Tuple[TestSuite, Collector, Optional[Dict[str, List[Diagnostic]]]]:
     root_folder, profile, cmd_options = handle_robot_options(app, robot_options_and_args)
 
-    diagnostics_logger = DiagnosticsLogger()
-    try:
-        _patch()
+    with app.chdir(root_folder) as orig_folder:
 
-        options, arguments = RobotFrameworkEx(
-            app,
-            (
-                [*(app.config.default_paths if app.config.default_paths else ())]
-                if profile.paths is None
-                else profile.paths if isinstance(profile.paths, list) else [profile.paths]
-            ),
-            app.config.dry,
-            root_folder,
-            by_longname,
-            exclude_by_longname,
-        ).parse_arguments((*cmd_options, "--runemptysuite", *robot_options_and_args))
+        diagnostics_logger = DiagnosticsLogger()
+        try:
+            _patch()
 
-        settings = RobotSettings(options)
+            options, arguments = RobotFrameworkEx(
+                app,
+                (
+                    [*(app.config.default_paths if app.config.default_paths else ())]
+                    if profile.paths is None
+                    else profile.paths if isinstance(profile.paths, list) else [profile.paths]
+                ),
+                app.config.dry,
+                root_folder,
+                orig_folder,
+                by_longname,
+                exclude_by_longname,
+            ).parse_arguments((*cmd_options, "--runemptysuite", *robot_options_and_args))
 
-        if app.show_diagnostics:
-            LOGGER.register_console_logger(**settings.console_output_config)
-        else:
-            LOGGER.unregister_console_logger()
+            settings = RobotSettings(options)
 
-        LOGGER.register_logger(diagnostics_logger)
+            if app.show_diagnostics:
+                LOGGER.register_console_logger(**settings.console_output_config)
+            else:
+                LOGGER.unregister_console_logger()
 
-        if get_robot_version() >= (5, 0):
-            if settings.pythonpath:
-                sys.path = settings.pythonpath + sys.path
+            LOGGER.register_logger(diagnostics_logger)
 
-        if get_robot_version() > (6, 1):
-            builder = TestSuiteBuilder(
-                included_extensions=settings.extension,
-                included_files=settings.parse_include,
-                custom_parsers=settings.parsers,
-                rpa=settings.rpa,
-                lang=settings.languages,
-                allow_empty_suite=settings.run_empty_suite,
-            )
-        elif get_robot_version() >= (6, 0):
-            builder = TestSuiteBuilder(
-                settings["SuiteNames"],
-                included_extensions=settings.extension,
-                rpa=settings.rpa,
-                lang=settings.languages,
-                allow_empty_suite=settings.run_empty_suite,
-            )
-        else:
-            builder = TestSuiteBuilder(
-                settings["SuiteNames"],
-                included_extensions=settings.extension,
-                rpa=settings.rpa,
-                allow_empty_suite=settings.run_empty_suite,
-            )
+            if get_robot_version() >= (5, 0):
+                if settings.pythonpath:
+                    sys.path = settings.pythonpath + sys.path
 
-        suite = builder.build(*arguments)
-        settings.rpa = suite.rpa
-        if settings.pre_run_modifiers:
-            suite.visit(ModelModifier(settings.pre_run_modifiers, settings.run_empty_suite, LOGGER))
-        suite.configure(**settings.suite_config)
+            if get_robot_version() > (6, 1):
+                builder = TestSuiteBuilder(
+                    included_extensions=settings.extension,
+                    included_files=settings.parse_include,
+                    custom_parsers=settings.parsers,
+                    rpa=settings.rpa,
+                    lang=settings.languages,
+                    allow_empty_suite=settings.run_empty_suite,
+                )
+            elif get_robot_version() >= (6, 0):
+                builder = TestSuiteBuilder(
+                    settings["SuiteNames"],
+                    included_extensions=settings.extension,
+                    rpa=settings.rpa,
+                    lang=settings.languages,
+                    allow_empty_suite=settings.run_empty_suite,
+                )
+            else:
+                builder = TestSuiteBuilder(
+                    settings["SuiteNames"],
+                    included_extensions=settings.extension,
+                    rpa=settings.rpa,
+                    allow_empty_suite=settings.run_empty_suite,
+                )
 
-        collector = Collector()
+            suite = builder.build(*arguments)
+            settings.rpa = suite.rpa
+            if settings.pre_run_modifiers:
+                suite.visit(ModelModifier(settings.pre_run_modifiers, settings.run_empty_suite, LOGGER))
+            suite.configure(**settings.suite_config)
 
-        suite.visit(collector)
+            collector = Collector()
 
-        return suite, collector, build_diagnostics(diagnostics_logger.messages)
+            suite.visit(collector)
 
-    except Information as err:
-        app.echo(str(err))
-        app.exit(INFO_PRINTED)
-    except DataError as err:
-        app.error(str(err))
-        app.exit(DATA_ERROR)
+            return suite, collector, build_diagnostics(diagnostics_logger.messages)
 
-    raise UnknownError("Unexpected error happened.")
+        except Information as err:
+            app.echo(str(err))
+            app.exit(INFO_PRINTED)
+        except DataError as err:
+            app.error(str(err))
+            app.exit(DATA_ERROR)
+
+        raise UnknownError("Unexpected error happened.")
 
 
 def print_statistics(app: Application, suite: TestSuite, collector: Collector) -> None:

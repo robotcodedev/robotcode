@@ -1,5 +1,6 @@
 import dataclasses
 import sys
+from contextlib import contextmanager
 from dataclasses import dataclass
 from enum import Enum, unique
 from pathlib import Path
@@ -9,6 +10,8 @@ from typing import (
     AnyStr,
     Callable,
     Iterable,
+    Iterator,
+    Literal,
     Optional,
     Sequence,
     TypeVar,
@@ -20,6 +23,7 @@ import click
 import pluggy
 import tomli_w
 
+from robotcode.core.utils.contextlib import chdir
 from robotcode.core.utils.dataclasses import as_dict, as_json
 
 __all__ = [
@@ -291,6 +295,19 @@ class Application:
     def exit(self, code: int = 0) -> None:
         self.verbose(f"Exit with code {code}")
         sys.exit(code)
+
+    @contextmanager
+    def chdir(self, path: Union[str, Path, None]) -> Iterator[Optional[Path]]:
+        with chdir(path, self.verbose) as result:
+            yield result
+
+    @contextmanager
+    def save_syspath(self) -> Iterator[Literal[None]]:
+        self._syspath = sys.path[:]
+        try:
+            yield None
+        finally:
+            sys.path = self._syspath
 
 
 pass_application = click.make_pass_decorator(Application, ensure=True)

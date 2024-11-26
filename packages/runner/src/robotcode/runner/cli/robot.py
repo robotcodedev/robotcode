@@ -1,5 +1,4 @@
 import os
-import sys
 import weakref
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple, Union, cast
@@ -156,6 +155,7 @@ class RobotFrameworkEx(RobotFramework):
         paths: List[str],
         dry: bool,
         root_folder: Optional[Path],
+        orig_folder: Optional[Path],
         by_longname: Tuple[str, ...] = (),
         exclude_by_longname: Tuple[str, ...] = (),
     ) -> None:
@@ -164,15 +164,11 @@ class RobotFrameworkEx(RobotFramework):
         self.paths = paths
         self.dry = dry
         self.root_folder = root_folder
-        self._orig_cwd = Path.cwd()
+        self._orig_cwd = Path.cwd() if orig_folder is None else orig_folder
         self.by_longname = by_longname
         self.exclude_by_longname = exclude_by_longname
 
     def parse_arguments(self, cli_args: Any) -> Any:
-        if self.root_folder is not None and Path.cwd() != self.root_folder:
-            self.app.verbose(f"Changing working directory from {self._orig_cwd} to {self.root_folder}")
-            os.chdir(self.root_folder)
-
         try:
             options, arguments = super().parse_arguments(cli_args)
             if self.root_folder is not None:
@@ -253,13 +249,12 @@ def handle_robot_options(
     _patch()
 
     robot_arguments: Optional[List[Union[str, Path]]] = None
-    old_sys_path = sys.path.copy()
+
     try:
-        _, robot_arguments = RobotFramework().parse_arguments(robot_options_and_args)
+        with app.save_syspath():
+            _, robot_arguments = RobotFramework().parse_arguments(robot_options_and_args)
     except (DataError, Information):
         pass
-    finally:
-        sys.path = old_sys_path
 
     config_files, root_folder, _ = get_config_files(
         robot_arguments,
@@ -322,29 +317,31 @@ def robot(
 
     root_folder, profile, cmd_options = handle_robot_options(app, robot_options_and_args)
 
-    console_links_args = []
-    if get_robot_version() >= (7, 1) and os.getenv("ROBOTCODE_DISABLE_ANSI_LINKS", "").lower() in [
-        "on",
-        "1",
-        "yes",
-        "true",
-    ]:
-        console_links_args = ["--consolelinks", "off"]
+    with app.chdir(root_folder) as orig_folder:
+        console_links_args = []
+        if get_robot_version() >= (7, 1) and os.getenv("ROBOTCODE_DISABLE_ANSI_LINKS", "").lower() in [
+            "on",
+            "1",
+            "yes",
+            "true",
+        ]:
+            console_links_args = ["--consolelinks", "off"]
 
-    app.exit(
-        cast(
-            int,
-            RobotFrameworkEx(
-                app,
-                (
-                    [*(app.config.default_paths if app.config.default_paths else ())]
-                    if profile.paths is None
-                    else profile.paths if isinstance(profile.paths, list) else [profile.paths]
-                ),
-                app.config.dry,
-                root_folder,
-                by_longname,
-                exclude_by_longname,
-            ).execute_cli((*cmd_options, *console_links_args, *robot_options_and_args), exit=False),
+        app.exit(
+            cast(
+                int,
+                RobotFrameworkEx(
+                    app,
+                    (
+                        [*(app.config.default_paths if app.config.default_paths else ())]
+                        if profile.paths is None
+                        else profile.paths if isinstance(profile.paths, list) else [profile.paths]
+                    ),
+                    app.config.dry,
+                    root_folder,
+                    orig_folder,
+                    by_longname,
+                    exclude_by_longname,
+                ).execute_cli((*cmd_options, *console_links_args, *robot_options_and_args), exit=False),
+            )
         )
-    )
