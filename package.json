@@ -385,8 +385,8 @@
           "robotframework"
         ],
         "icon": {
-          "light": "./icons/robot-light.png",
-          "dark": "./icons/robot-dark.png"
+          "light": "./icons/light/robot.png",
+          "dark": "./icons/dark/robot.png"
         },
         "extensions": [
           ".robot",
@@ -401,16 +401,30 @@
           "robotframework repl"
         ],
         "icon": {
-          "light": "./icons/robot-light.png",
-          "dark": "./icons/robot-dark.png"
+          "light": "./icons/light/robot-repl.png",
+          "dark": "./icons/dark/robot-repl.png"
         },
         "extensions": [
-          ".robotrepl"
+          ".robotrepl",
+          ".robotsript"
         ],
         "configuration": "./language-configuration.json"
       },
       {
         "id": "robotframework-injection"
+      },
+      {
+        "id": "robotframework-notebook",
+        "aliases": [
+          "Robot Framework Notebook"
+        ],
+        "icon": {
+          "light": "./icons/light/robot-book.png",
+          "dark": "./icons/dark/robot-book.png"
+        },
+        "extensions": [
+          ".robotbook"
+        ]
       }
     ],
     "grammars": [
