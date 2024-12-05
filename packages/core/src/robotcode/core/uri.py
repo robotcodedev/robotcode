@@ -209,7 +209,6 @@ class Uri(Mapping[str, str]):
         query: Optional[str] = None,
         fragment: Optional[str] = None,
     ) -> Uri:
-
         return Uri(
             scheme=scheme if scheme is not None else self.scheme,
             netloc=netloc if netloc is not None else self.netloc,

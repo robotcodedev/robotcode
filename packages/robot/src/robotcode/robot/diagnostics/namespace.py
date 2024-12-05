@@ -169,7 +169,6 @@ class VariablesVisitor(Visitor):
 
 
 class VariableVisitorBase(Visitor):
-
     def __init__(
         self,
         namespace: "Namespace",
@@ -320,7 +319,6 @@ class OnlyArgumentsVisitor(VariableVisitorBase):
 
 
 class BlockVariableVisitor(OnlyArgumentsVisitor):
-
     def visit_ExceptHeader(self, node: Statement) -> None:  # noqa: N802
         variables = node.get_tokens(Token.VARIABLE)[:1]
         if variables and is_scalar_assign(variables[0].value):
@@ -1468,7 +1466,6 @@ class Namespace:
         parent_import: Optional[Import] = None,
         parent_source: Optional[str] = None,
     ) -> Optional[Dict[str, Any]]:
-
         with self._logger.measure_time(
             lambda: f"loading imports for {self.source if top_level else source}",
             context_name="import",
@@ -1693,7 +1690,6 @@ class Namespace:
             return None
 
     def _import_default_libraries(self, variables: Optional[Dict[str, Any]] = None) -> None:
-
         with self._logger.measure_time(lambda: f"importing default libraries for {self.source}", context_name="import"):
             if variables is None:
                 variables = self.get_suite_variables()
@@ -1853,7 +1849,6 @@ class Namespace:
     def get_keywords(self) -> List[KeywordDoc]:
         with self._keywords_lock:
             if self._keywords is None:
-
                 i = 0
 
                 self.ensure_initialized()
@@ -1880,7 +1875,6 @@ class Namespace:
         related_information: Optional[List[DiagnosticRelatedInformation]] = None,
         data: Optional[Any] = None,
     ) -> None:
-
         self._diagnostics.append(
             Diagnostic(
                 range,

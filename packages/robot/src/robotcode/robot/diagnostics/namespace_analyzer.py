@@ -97,7 +97,6 @@ class AnalyzerResult:
 
 
 class NamespaceAnalyzer(Visitor):
-
     _logger = LoggingDescriptor()
 
     def __init__(
@@ -222,7 +221,6 @@ class NamespaceAnalyzer(Visitor):
             add_to_references = True
             first_overidden_reference: Optional[VariableDefinition] = None
             if existing_var is not None:
-
                 self._variable_references[existing_var].add(Location(self._namespace.document_uri, r))
                 if existing_var not in self._overridden_variables:
                     self._overridden_variables[existing_var] = var_def
@@ -375,7 +373,6 @@ class NamespaceAnalyzer(Visitor):
     def _analyze_statement_expression_variables(
         self, node: Statement, severity: DiagnosticSeverity = DiagnosticSeverity.ERROR
     ) -> None:
-
         for token in node.get_tokens(Token.ARGUMENT):
             self._analyze_token_variables(token, severity)
             self._analyze_token_expression_variables(token, severity)
@@ -547,7 +544,6 @@ class NamespaceAnalyzer(Visitor):
         related_information: Optional[List[DiagnosticRelatedInformation]] = None,
         data: Optional[Any] = None,
     ) -> None:
-
         self._diagnostics.append(
             Diagnostic(
                 range,
@@ -652,7 +648,6 @@ class NamespaceAnalyzer(Visitor):
                     for d in self._finder.multiple_keywords_result:
                         self._keyword_references[d].add(Location(self._namespace.document_uri, kw_range))
             else:
-
                 self._keyword_references[result].add(Location(self._namespace.document_uri, kw_range))
 
                 if result.errors:
@@ -1112,7 +1107,6 @@ class NamespaceAnalyzer(Visitor):
         name_token = node.get_token(Token.KEYWORD_NAME)
 
         if name_token is not None and name_token.value:
-
             for variable_token in filter(
                 lambda e: e.type == Token.VARIABLE,
                 tokenize_variables(name_token, identifiers="$", ignore_errors=True),
@@ -1470,7 +1464,6 @@ class NamespaceAnalyzer(Visitor):
     if get_robot_version() >= (7, 0):
 
         def visit_ReturnSetting(self, node: Statement) -> None:  # noqa: N802
-
             def _handler() -> None:
                 self._analyze_statement_variables(node)
 
@@ -1535,7 +1528,6 @@ class NamespaceAnalyzer(Visitor):
                     break
 
     def visit_ResourceImport(self, node: ResourceImport) -> None:  # noqa: N802
-
         if get_robot_version() >= (6, 1):
             self._check_import_name(node.name, node, "Resource")
 
@@ -1647,7 +1639,6 @@ class NamespaceAnalyzer(Visitor):
         self,
         to: Token,
     ) -> Iterator[Tuple[Token, Optional[VariableDefinition]]]:
-
         def exception_handler(e: BaseException, t: Token) -> None:
             self._append_diagnostics(
                 range_from_token(t),
@@ -1698,7 +1689,6 @@ class NamespaceAnalyzer(Visitor):
                             yield sub_token_or_var, var_def
 
     def _iter_variables_from_token(self, token: Token) -> Iterator[Tuple[Token, VariableDefinition]]:
-
         if token.type == Token.VARIABLE and token.value.endswith("="):
             match = search_variable(token.value, ignore_errors=True)
             if not match.is_assign(allow_assign_mark=True):

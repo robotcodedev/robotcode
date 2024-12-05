@@ -184,7 +184,6 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
                 )
 
                 if found_range is not None:
-
                     if kw.libtype == "RESOURCE":
                         txt = kw.to_markdown(
                             modify_doc_handler=lambda t: namespace.imports_manager.replace_variables_scalar(

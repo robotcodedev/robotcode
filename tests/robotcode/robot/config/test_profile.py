@@ -368,7 +368,6 @@ def test_str_expression_works_correctly_in_lists_in_build_command_line() -> None
 
 
 def test_type_that_wants_alist_should_throw_an_error() -> None:
-
     data = """\
             [listeners]
             listener_with_colon = "dummy:output"

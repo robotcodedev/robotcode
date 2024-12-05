@@ -216,7 +216,6 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
             check_current_task_canceled()
 
             if docs is not None:
-
                 if isinstance(docs, BaseException):
                     if not isinstance(docs, CancelledError):
                         self._logger.exception(docs, exc_info=result)
@@ -340,7 +339,6 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
         self.ensure_workspace_loaded()
 
         while True:
-
             check_current_task_canceled()
 
             self.on_workspace_diagnostics_start(self)
@@ -365,7 +363,6 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
                     context_name="workspace_diagnostics",
                     level=logging.CRITICAL,
                 ):
-
                     self.on_workspace_diagnostics_analyze(self)
 
                     if self._break_diagnostics_loop_event.is_set():
@@ -558,9 +555,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
         debounce: bool = True,
         send_diagnostics: bool = True,
     ) -> Task[Any]:
-
         with self.get_diagnostics_data(document) as data:
-
             if data.force or document.version != data.version or data.future is None or data.skipped_entries:
                 future = data.future
                 collect_slow = not data.single

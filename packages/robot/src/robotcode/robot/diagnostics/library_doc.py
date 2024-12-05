@@ -199,7 +199,6 @@ def convert_from_rest(text: str) -> str:
 
 
 if get_robot_version() >= (6, 0):
-
     # monkey patch robot framework
     _old_from_name = EmbeddedArguments.from_name
 
@@ -1515,7 +1514,6 @@ __default_variables: Any = None
 
 
 def _get_default_variables() -> Any:
-
     global __default_variables
     if __default_variables is None:
         __default_variables = Variables()
@@ -1622,7 +1620,6 @@ def replace_variables_scalar(
     variables: Optional[Dict[str, Optional[Any]]] = None,
     ignore_errors: bool = False,
 ) -> Any:
-
     _update_env(working_dir)
 
     if contains_variable(scalar, "$@&%"):
@@ -1668,7 +1665,6 @@ def _find_library_internal(
     command_line_variables: Optional[Dict[str, Optional[Any]]] = None,
     variables: Optional[Dict[str, Optional[Any]]] = None,
 ) -> Tuple[str, Any]:
-
     _update_env(working_dir)
 
     robot_variables = None
@@ -1781,7 +1777,6 @@ def get_library_doc(
     command_line_variables: Optional[Dict[str, Optional[Any]]] = None,
     variables: Optional[Dict[str, Optional[Any]]] = None,
 ) -> LibraryDoc:
-
     with _std_capture() as std_capturer:
         import_name, robot_variables = _find_library_internal(
             name,
@@ -2147,7 +2142,6 @@ def _find_variables_internal(
     command_line_variables: Optional[Dict[str, Optional[Any]]] = None,
     variables: Optional[Dict[str, Optional[Any]]] = None,
 ) -> str:
-
     _update_env(working_dir)
 
     if contains_variable(name, "$@&%"):
@@ -2218,7 +2212,6 @@ def get_variables_doc(
     command_line_variables: Optional[Dict[str, Optional[Any]]] = None,
     variables: Optional[Dict[str, Optional[Any]]] = None,
 ) -> VariablesDoc:
-
     import_name: str = name
     stem = Path(name).stem
     module_spec: Optional[ModuleSpec] = None

@@ -477,7 +477,6 @@ def handle_options(
     root_folder, profile, cmd_options = handle_robot_options(app, robot_options_and_args)
 
     with app.chdir(root_folder) as orig_folder:
-
         diagnostics_logger = DiagnosticsLogger()
         try:
             _patch()

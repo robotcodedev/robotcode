@@ -68,7 +68,6 @@ class RobotFrameworkLanguageProvider(LanguageProvider):
             return str(reader.read())
 
     def collect_workspace_folder_files(self, folder: WorkspaceFolder) -> Iterable[Path]:
-
         config = self.diagnostics_context.workspace.get_configuration(WorkspaceConfig, folder.uri)
 
         extensions = self.LANGUAGE_DEFINITION.extensions

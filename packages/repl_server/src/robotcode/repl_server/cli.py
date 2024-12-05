@@ -38,7 +38,6 @@ def set_server(value: Optional["ReplServer"]) -> None:
 
 
 def wait_for_server(task: "Task[Any]", timeout: float = 10) -> "ReplServer":
-
     start_time = time.monotonic()
     while get_server() is None and time.monotonic() - start_time < timeout:
         time.sleep(0.005)

@@ -290,7 +290,6 @@ class Interpreter(BaseInterpreter):
             self._success = True
 
         if self._html_result is not None and isinstance(self._html_result, Element):
-
             kw = self.create_keyword_html_element(result)
 
             old_children = next(

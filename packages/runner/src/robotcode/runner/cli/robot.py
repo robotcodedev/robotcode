@@ -81,7 +81,6 @@ def _is_ignored(builder: SuiteStructureBuilder, path: Path) -> bool:
     curr_dir = Path(os.path.abspath(curr_dir))
 
     if curr_dir not in cache_data.data:
-
         parent_data: Optional[BuilderCacheData] = None
         parent_spec_dir: Optional[Path] = None
 
@@ -242,7 +241,6 @@ ROBOT_OPTIONS: Set[click.Command] = {
 def handle_robot_options(
     app: Application, robot_options_and_args: Tuple[str, ...]
 ) -> Tuple[Optional[Path], RobotBaseProfile, List[str]]:
-
     global _app
     _app = app
 

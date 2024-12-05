@@ -217,7 +217,6 @@ class DebugAdapterServerProtocol(DebugAdapterProtocol):
 
     @_logger.call
     def exit(self, exit_code: int) -> None:
-
         with self._exited_lock:
             self.send_event(ExitedEvent(body=ExitedEventBody(exit_code=exit_code)))
             self._exited = True

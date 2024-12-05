@@ -218,7 +218,6 @@ def find_project_root(
     root_folder: Optional[Path] = None,
     no_vcs: bool = False,
 ) -> Tuple[Optional[Path], DiscoverdBy]:
-
     if root_folder:
         return root_folder.absolute(), DiscoverdBy.COMMAND_LINE
 

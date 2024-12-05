@@ -215,7 +215,6 @@ class RobotLanguageServerProtocol(LanguageServerProtocol):
 
     def server_initialized(self, sender: Any) -> None:
         for folder in self.workspace.workspace_folders:
-
             for p in self.robot_profile.python_path or []:
                 pa = Path(str(p))
                 if not pa.is_absolute():

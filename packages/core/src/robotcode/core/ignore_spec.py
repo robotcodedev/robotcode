@@ -142,7 +142,6 @@ class IgnoreSpec(_HelperCache):
     def _rule_from_pattern(
         cls, pattern: str, base_path: PurePath, source: Optional[Tuple[str, int]] = None
     ) -> Optional[IgnoreRule]:
-
         orig_pattern = pattern
 
         if pattern.strip() == "" or pattern[0] == "#":

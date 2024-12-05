@@ -52,7 +52,6 @@ def set_server(value: "DebugAdapterServer") -> None:
 
 @_logger.call
 def wait_for_server(timeout: float = 10) -> "DebugAdapterServer":
-
     start_time = time.monotonic()
     while get_server() is None and time.monotonic() - start_time < timeout:
         time.sleep(0.005)

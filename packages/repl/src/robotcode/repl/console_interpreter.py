@@ -47,11 +47,9 @@ class ConsoleInterpreter(BaseInterpreter):
             for kw in test.body:
                 yield kw
         else:
-
             lines: List[str] = []
             last_one = False
             while True:
-
                 prompt = ""
                 if sys.stdin.isatty():
                     prompt = ">>> " if not lines else "... "

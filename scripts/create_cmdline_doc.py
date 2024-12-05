@@ -76,7 +76,6 @@ def generate(command: click.Command, depth: int = 2, parent_ctx: Optional[click.
         yield ""
 
     if isinstance(command, click.MultiCommand):
-
         yield "**Commands:**"
         yield ""
 
@@ -124,7 +123,6 @@ def generate(command: click.Command, depth: int = 2, parent_ctx: Optional[click.
 
 
 def main():
-
     cli_doc = Path("docs/03_reference/cli.md")
 
     regex = re.compile(

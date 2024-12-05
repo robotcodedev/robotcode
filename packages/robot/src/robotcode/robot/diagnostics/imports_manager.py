@@ -1089,7 +1089,6 @@ class ImportsManager:
         name: str,
         base_dir: str,
     ) -> str:
-
         if name in STDLIBS:
             result = ROBOT_LIBRARY_PACKAGE + "." + name
         else:
@@ -1177,7 +1176,6 @@ class ImportsManager:
         name: str,
         base_dir: str,
     ) -> str:
-
         if get_robot_version() >= (5, 0):
             if is_variables_by_path(name):
                 return find_file_ex(name, base_dir, "Variables")
@@ -1219,7 +1217,6 @@ class ImportsManager:
         meta, _source, ignore_arguments = self.get_library_meta(name, base_dir, variables)
 
         if meta is not None and not meta.has_errors:
-
             meta_file = meta.filepath_base + ".meta"
             if self.data_cache.cache_data_exists(CacheSection.LIBRARY, meta_file):
                 try:
