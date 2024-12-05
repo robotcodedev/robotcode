@@ -8,7 +8,8 @@
 
 ## Introduction
 
-Some classes for [RobotCode](https://robotcode.io) plugin management
+Provides a REPL for [RobotCode](https://robotcode.io).
+
 
 ## Installation
 

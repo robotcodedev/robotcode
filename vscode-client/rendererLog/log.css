@@ -1,0 +1,277 @@
+.suite,
+.test,
+#errors {
+    border-width: 1px;
+    border-style: solid;
+    padding: 0.3em 0.2em;
+    margin: 0.2em 0;
+}
+
+
+.test {
+    border-style: dashed;
+}
+
+#errors,
+.messages {
+    width: 100%;
+    border-spacing: 0;
+}
+
+.children {
+    margin-left: 0em;
+}
+
+.children.collapsible {
+    margin-left: 1.4em;
+}
+
+
+.children[data-collapsed=true] {
+    display: none;
+}
+
+.children[data-collapsed=false] {
+    display: block;
+}
+
+
+.suite,
+.test,
+.keyword {
+    border-left-width: 1px;
+    border-left-style: solid;
+    border-color: transparent;
+}
+
+.keyword:hover {
+    border-left-style: dashed;
+    border-color: inherit;
+}
+
+#s1,
+.suite>.children>.keyword {
+    margin-left: 0;
+}
+
+/* Suite, test and kw headers */
+.expander-header {
+    border-width: 0px;
+    border-radius: 5px;
+    position: relative;
+    margin-left: 2px;
+}
+
+.expander-root-header {
+    border-width: 0px;
+    border-radius: 5px;
+    position: relative;
+    margin-left: 2px;
+}
+
+.expander-header:hover {
+    background-color: var(--vscode-robotcode-expanderHeaderHoverBackground);
+    outline: 1px dashed var(--vscode-robotcode-expanderHeaderHoverOutline);
+    outline-offset: -1px;
+}
+
+.expander-header:focus {
+    color: var(--vscode-robotcode-expanderHeaderFocusForeground);
+    background-color: var(--vscode-robotcode-expanderHeaderFocusBackground);
+    outline: 1px solid var(--vscode-robotcode-expanderHeaderFocusOutline);
+    outline-offset: -1px;
+}
+
+.expander-header:focus:hover {
+    color: var(--vscode-robotcode-expanderHeaderFocusForeground);
+    background-color: var(--vscode-robotcode-expanderHeaderHoverBackground);
+    outline: 1px solid var(--vscode-robotcode-expanderHeaderFocusOutline);
+    outline-offset: -1px;
+}
+
+.expander-header-left {
+    cursor: pointer;
+    padding: 3px 80px 3px 20px;
+}
+
+.expander-root-header-left {
+    padding: 3px 80px 3px 20px;
+    height: 1em;
+}
+
+.expander-header-right {
+    position: absolute;
+    right: 0px;
+    top: 2px;
+    cursor: default;
+}
+
+.expander-header .label {
+    margin-right: 0.5em;
+}
+
+.name {
+    font-weight: bold;
+    white-space: pre-wrap;
+}
+
+.arg,
+.assign {
+    white-space: pre-wrap;
+}
+
+.elapsed {
+    float: right;
+    padding-left: 1em;
+}
+
+.expander-icon {
+    color: var(--vscode-robotcode-expanderIconForeground);
+    text-align: center;
+    vertical-align: middle;
+    font-family: monospace;
+    fill: var(--vscode-icon-foreground);
+    cursor: pointer;
+    display: inline-block;
+    width: 1em;
+    height: 1em;
+    padding: 1px;
+    border-radius: 5px;
+}
+
+.expander-icon:hover {
+    cursor: pointer;
+    background-color: var(--vscode-robotcode-expanderIconHoverBackground);
+    outline: 1px dashed var(--vscode-robotcode-expanderIconHoverOutline);
+    outline-offset: -1px;
+}
+
+.expander-icon.toggle[data-collapsed=false]::after {
+    content: '-';
+}
+
+.expander-icon.toggle[data-collapsed=true]::after {
+    content: '+';
+}
+
+.expander-icon.toggle {
+    margin: 0 auto;
+    position: absolute;
+    left: 0px;
+    top: 3px;
+}
+
+.expander-header .expand-all,
+.expander-header .collapse-all,
+.expander-header .link,
+.expander-root-header .expand-all,
+.expander-root-header .collapse-all,
+.expander-root-header .link {
+    visibility: hidden;
+}
+
+.collapse-all::after {
+    content: '▲';
+}
+
+.expand-all::after {
+    content: '▼';
+}
+
+.link::after {
+    content: '⇗';
+}
+
+.expander-header:hover .collapse-all,
+.expander-header:hover .expand-all,
+.expander-header:hover .link,
+.expander-root-header:hover .collapse-all,
+.expander-root-header:hover .expand-all,
+.expander-root-header:hover .link {
+    visibility: visible;
+}
+
+/* Messages and errors */
+.messages .time,
+.messages .message {
+    font-family: monospace;
+}
+
+#errors .message {
+    font-family: monospace;
+}
+
+.message-row {
+    height: 20px;
+}
+
+.time {
+    width: 5.5em;
+}
+
+.error-time {
+    width: 11em;
+    white-space: nowrap;
+}
+
+.level {
+    width: 5em;
+    text-align: center;
+}
+
+.select-message {
+    width: 24px;
+}
+
+.select-message>div {
+    float: right;
+    margin-right: 2px;
+    height: 16px;
+    width: 16px;
+    background-size: 12px 12px;
+    background-repeat: no-repeat;
+    background-position: center;
+}
+
+.message-row:hover .select-message div {
+    background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAQAAAD8fJRsAAAAAmJLR0QA/4ePzL8AAAAJcEhZcwAACxMAAAsTAQCanBgAAAAHdElNRQfeCR0MOzhWKZQOAAAASUlEQVQY032PsRHAIAwDX9BkicD+W8UMEqegAQJWKZ/+3sLZJhFGQEZzNaIa4ibh66En867VNaIeoP5WppNuIGoAlOm3g5VC1AdYeQv1BZPRSgAAAABJRU5ErkJggg==);
+    background-image: url(data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI4IiBoZWlnaHQ9IjgiIHZpZXdCb3g9IjAgMCA4IDgiPgogIDxwYXRoIGQ9Ik0wIDB2MWg4di0xaC04em0wIDJ2MWg2di0xaC02em0wIDJ2MWg4di0xaC04em0wIDJ2MWg2di0xaC02eiIgLz4KPC9zdmc+), none;
+    filter: var(--icon-filter);
+    border-width: 1px;
+    border-style: solid;
+    border-radius: 2px;
+}
+
+.select-message:hover div {
+    cursor: pointer;
+}
+
+/* Message tables - these MUST NOT be combined together because otherwise
+   dynamically altering them based on visible log level is not possible. */
+.trace-message {
+    display: table;
+}
+
+.debug-message {
+    display: table;
+}
+
+/* Metadata */
+.metadata {
+    width: 100%;
+    border-spacing: 0.2em;
+}
+
+.metadata th {
+    width: 12em;
+    vertical-align: top;
+    text-align: left;
+}
+
+.metadata td {
+    vertical-align: top;
+}
+
+.keyword-metadata {
+    font-size: 1em;
+}

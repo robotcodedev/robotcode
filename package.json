@@ -19,7 +19,7 @@
   },
   "qna": "https://github.com/robotcodedev/robotcode/discussions/categories/q-a",
   "engines": {
-    "vscode": "^1.86.0"
+    "vscode": "^1.90.0"
   },
   "categories": [
     "Programming Languages",
@@ -86,12 +86,213 @@
     "notebooks": [
       {
         "type": "robotframework-repl",
-        "displayName": "RobotFramework REPL",
+        "displayName": "Robot Framework Notebook",
         "selector": [
           {
-            "filenamePattern": "*.robotnb"
+            "filenamePattern": "*.robotbook"
           }
         ]
+      }
+    ],
+    "notebookRenderer": [
+      {
+        "id": "robotframework-repl-html",
+        "displayName": "Robot Framework Html Log",
+        "entrypoint": "./out/rendererHtml.js",
+        "mimeTypes": [
+          "x-application/robotframework-repl-html"
+        ]
+      },
+      {
+        "id": "robotframework-repl-log",
+        "displayName": "Robot Framework Log",
+        "entrypoint": "./out/rendererLog.js",
+        "mimeTypes": [
+          "x-application/robotframework-repl-log"
+        ],
+        "requiresMessaging": "optional"
+      }
+    ],
+    "colors": [
+      {
+        "id": "robotcode.logForeground",
+        "description": "Background color for log.",
+        "defaults": {
+          "dark": "editor.foreground",
+          "light": "editor.foreground",
+          "highContrast": "editor.foreground",
+          "highContrastLight": "editor.foreground"
+        }
+      },
+      {
+        "id": "robotcode.logBackground",
+        "description": "Background color for log.",
+        "defaults": {
+          "dark": "editor.background",
+          "light": "editor.background",
+          "highContrast": "editor.background",
+          "highContrastLight": "editor.background"
+        }
+      },
+      {
+        "id": "robotcode.logLabelForeground",
+        "description": "Foreground color for label.",
+        "defaults": {
+          "dark": "#000000",
+          "light": "#000000",
+          "highContrast": "#010203",
+          "highContrastLight": "#feedc3"
+        }
+      },
+      {
+        "id": "robotcode.logLabelBackground",
+        "description": "Background color for label",
+        "defaults": {
+          "dark": "#bbbbbb",
+          "light": "#bbbbbb",
+          "highContrast": "#feedc3",
+          "highContrastLight": "#010203"
+        }
+      },
+      {
+        "id": "robotcode.logLabelPassForeground",
+        "description": "Foreground color for pass label.",
+        "defaults": {
+          "dark": "#000000",
+          "light": "#000000",
+          "highContrast": "#010203",
+          "highContrastLight": "#feedc3"
+        }
+      },
+      {
+        "id": "robotcode.logLabelPassBackground",
+        "description": "Background color for pass label.",
+        "defaults": {
+          "dark": "#97bd61",
+          "light": "#97bd61",
+          "highContrast": "#feedc3",
+          "highContrastLight": "#010203"
+        }
+      },
+      {
+        "id": "robotcode.logLabelWarnForeground",
+        "description": "Forground color for warn label.",
+        "defaults": {
+          "dark": "#000000",
+          "light": "#000000",
+          "highContrast": "#010203",
+          "highContrastLight": "#feedc3"
+        }
+      },
+      {
+        "id": "robotcode.logLabelWarnBackground",
+        "description": "Background color for warn label.",
+        "defaults": {
+          "dark": "#fed84f",
+          "light": "#fed84f",
+          "highContrast": "#feedc3",
+          "highContrastLight": "#010203"
+        }
+      },
+      {
+        "id": "robotcode.logLabelErrorForeground",
+        "description": "Background color for error label.",
+        "defaults": {
+          "dark": "#ffffff",
+          "light": "#ffffff",
+          "highContrast": "#010203",
+          "highContrastLight": "#feedc3"
+        }
+      },
+      {
+        "id": "robotcode.logLabelErrorBackground",
+        "description": "Foreground color for error label.",
+        "defaults": {
+          "dark": "#ce3e01",
+          "light": "#ce3e01",
+          "highContrast": "#feedc3",
+          "highContrastLight": "#010203"
+        }
+      },
+      {
+        "id": "robotcode.expanderIconForeground",
+        "description": "Foreground color of expander icon.",
+        "defaults": {
+          "dark": "icon.foreground",
+          "light": "icon.foreground",
+          "highContrast": "icon.foreground",
+          "highContrastLight": "icon.foreground"
+        }
+      },
+      {
+        "id": "robotcode.expanderIconHoverBackground",
+        "description": "Hover Background color of expander icon.",
+        "defaults": {
+          "dark": "toolbar.hoverBackground",
+          "light": "toolbar.hoverBackground",
+          "highContrast": "toolbar.hoverBackground",
+          "highContrastLight": "toolbar.hoverBackground"
+        }
+      },
+      {
+        "id": "robotcode.expanderIconHoverOutline",
+        "description": "Hover Outline color of expander icon.",
+        "defaults": {
+          "dark": "toolbar.hoverOutline",
+          "light": "toolbar.hoverOutline",
+          "highContrast": "toolbar.hoverOutline",
+          "highContrastLight": "toolbar.hoverOutline"
+        }
+      },
+      {
+        "id": "robotcode.expanderHeaderHoverBackground",
+        "description": "Hover Background color of expander header.",
+        "defaults": {
+          "dark": "toolbar.hoverBackground",
+          "light": "toolbar.hoverBackground",
+          "highContrast": "toolbar.hoverBackground",
+          "highContrastLight": "toolbar.hoverBackground"
+        }
+      },
+      {
+        "id": "robotcode.expanderHeaderHoverOutline",
+        "description": "Hover Outline color of expander header.",
+        "defaults": {
+          "dark": "toolbar.hoverOutline",
+          "light": "toolbar.hoverOutline",
+          "highContrast": "toolbar.hoverOutline",
+          "highContrastLight": "toolbar.hoverOutline"
+        }
+      },
+      {
+        "id": "robotcode.expanderHeaderFocusForeground",
+        "description": "Hover Background color of expander icon.",
+        "defaults": {
+          "dark": "list.focusForeground",
+          "light": "list.focusForeground",
+          "highContrast": "list.focusForeground",
+          "highContrastLight": "list.focusForeground"
+        }
+      },
+      {
+        "id": "robotcode.expanderHeaderFocusBackground",
+        "description": "Hover Background color of expander icon.",
+        "defaults": {
+          "dark": "list.focusBackground",
+          "light": "list.focusBackground",
+          "highContrast": "list.focusBackground",
+          "highContrastLight": "list.focusBackground"
+        }
+      },
+      {
+        "id": "robotcode.expanderHeaderFocusOutline",
+        "description": "Hover Background color of expander icon.",
+        "defaults": {
+          "dark": "list.focusOutline",
+          "light": "list.focusOutline",
+          "highContrast": "list.focusOutline",
+          "highContrastLight": "list.focusOutline"
+        }
       }
     ],
     "markdown.markdownItPlugins": true,
@@ -1136,6 +1337,12 @@
         "shortTitle": "Robot Framework File",
         "category": "RobotCode",
         "command": "robotcode.createNewFile"
+      },
+      {
+        "title": "Create New File",
+        "shortTitle": "Robot Framework Notebook",
+        "category": "RobotCode",
+        "command": "robotcode.createNewNotebook"
       }
     ],
     "menus": {
@@ -1190,6 +1397,11 @@
         {
           "command": "robotcode.createNewFile",
           "group": "file",
+          "when": "!virtualWorkspace"
+        },
+        {
+          "command": "robotcode.createNewNotebook",
+          "group": "notebook",
           "when": "!virtualWorkspace"
         }
       ]
@@ -1667,14 +1879,9 @@
     ]
   },
   "scripts": {
-    "vscode:prepublish": "npm run esbuild-base -- --minify",
-    "esbuild-base": "esbuild ./vscode-client/extension.ts --bundle --outfile=out/extension.js --external:vscode --format=cjs --platform=node",
-    "esbuild": "npm run esbuild-base -- --sourcemap",
-    "esbuild-watch": "npm run esbuild-base -- --sourcemap --watch",
-    "test-compile": "tsc -p ./",
-    "compile": "tsc -p ./",
-    "watch": "tsc -watch -p ./",
-    "pretest": "npm run compile && npm run lint",
+    "compile": "node esbuild.mjs",
+    "vscode:prepublish": "npm run package",
+    "package": "node esbuild.mjs --production",
     "lint": "eslint .",
     "lint-fix": "eslint --fix .",
     "test": "node ./out/test/runTest.js",
@@ -1688,31 +1895,33 @@
     "ms-python.debugpy"
   ],
   "dependencies": {
-    "@vscode/python-extension": "^1.0.5",
     "ansi-colors": "^4.1.3",
     "fs-extra": "^11.2.0",
-    "robotcode": "file:",
     "vscode-languageclient": "^9.0.1"
   },
   "devDependencies": {
     "@eslint/compat": "^1.2.3",
     "@eslint/eslintrc": "^3.2.0",
     "@eslint/js": "^9.15.0",
+    "@jgoz/esbuild-plugin-typecheck": "^4.0.2",
     "@types/fs-extra": "^11.0.4",
     "@types/node": "^22.9.1",
-    "@types/vscode": "^1.86.0",
-    "@vscode/test-electron": "^2.4.1",
+    "@types/vscode": "^1.90.0",
+    "@types/vscode-notebook-renderer": "^1.72.3",
+    "@vscode/python-extension": "^1.0.5",
     "@vscode/vsce": "^3.2.1",
+    "@vscode/codicons": "^0.0.36",
     "esbuild": "^0.24.0",
     "eslint": "^9.15.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-prettier": "^5.2.1",
     "globals": "^15.12.0",
     "ovsx": "^0.10.1",
-    "prettier": "^3.3.3",
+    "preact": "^10.25.0",
+    "prettier": "^3.4.1",
     "ts-loader": "^9.5.1",
-    "typescript": "^5.6.3",
-    "typescript-eslint": "^8.15.0"
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.16.0"
   },
   "workspaces": [
     "docs"

@@ -251,8 +251,8 @@ def run_as_debugpy_hidden_task(callable: Callable[_P, _TResult], *args: _P.args,
     hide = hidden_tasks == "0"
 
     if hide:
-        thread.pydev_do_not_trace = True  # type: ignore[attr-defined]
-        thread.is_pydev_daemon_thread = True  # type: ignore[attr-defined]
+        setattr(thread, "pydev_do_not_trace", True)
+        setattr(thread, "is_pydev_daemon_thread", True)
 
     thread.start()
 

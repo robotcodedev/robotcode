@@ -1,0 +1,156 @@
+:target {
+    overflow: hidden;
+}
+
+/* Generic and misc styles */
+.result-body {
+    /* font-family: var(--vscode-font-family); */
+    font-family: Helvetica, sans-serif;
+    color: var(--vscode-robotcode-logForeground);
+    background-color: var(--vscode-robotcode-logBackground);
+}
+
+.root-container {
+    overflow-y: auto;
+    max-height: var(--notebook-cell-output-max-height);
+}
+
+table {
+    table-layout: fixed;
+    word-wrap: break-word;
+    empty-cells: show;
+}
+
+th,
+td {
+    vertical-align: top;
+}
+
+
+hr {
+    height: 1px;
+    border: 0;
+}
+
+a,
+a:link,
+a:visited {
+    text-decoration: none;
+}
+
+a>img {
+    border-width: 1px !important;
+    border-style: solid !important;
+}
+
+a:hover,
+a:active {
+    text-decoration: underline;
+}
+
+.parent-name {
+    font-size: x-small;
+}
+
+.message {
+    white-space: pre-wrap;
+}
+
+/* Headers */
+#header {
+    width: 65em;
+    height: 3em;
+    margin: 20px 0 6px 0;
+}
+
+h1 {
+    float: left;
+    margin: 0 0 0.5em 0;
+    width: 75%;
+}
+
+h2 {
+    clear: left;
+}
+
+#generated {
+    float: right;
+    text-align: right;
+    font-size: 0.9em;
+    white-space: nowrap;
+}
+
+/* Documentation headers */
+.doc>h2 {
+    font-size: 1.2em;
+}
+
+.doc>h3 {
+    font-size: 1.1em;
+}
+
+.doc>h4 {
+    font-size: 1.0em;
+}
+
+.label {
+    padding: 2px 5px;
+    font-size: 0.75em;
+    letter-spacing: 1px;
+    white-space: nowrap;
+    border-radius: 3px;
+    color: var(--vscode-robotcode-logLabelForeground);
+    background-color: var(--vscode-robotcode-logLabelBackground);
+}
+
+.label.debug,
+.label.trace,
+.label.error,
+.label.keyword {
+    letter-spacing: 0;
+}
+
+.label.pass,
+.label.fail,
+.label.error,
+.label.skip,
+.label.warn {
+    font-weight: bold;
+    color: var(--vscode-robotcode-logLabelWarnForeground);
+    background-color: var(--vscode-robotcode-logLabelWarnBackground);
+}
+
+.label.pass {
+    background-color: #97bd61;
+    color: var(--vscode-robotcode-logLabelPassForeground);
+    background-color: var(--vscode-robotcode-logLabelPassBackground);
+}
+
+.label.fail,
+.label.error {
+    color: var(--vscode-robotcode-logLabelErrorForeground);
+    background-color: var(--vscode-robotcode-logLabelErrorBackground);
+}
+
+.label.skip,
+.label.warn {
+    background-color: #fed84f;
+    color: var(--vscode-robotcode-logLabelWarnForeground);
+    background-color: var(--vscode-robotcode-logLabelWarnBackground);
+}
+
+/* Top right header */
+#top-right-header {
+    position: fixed;
+    top: 0;
+    right: 0;
+    z-index: 1000;
+    width: 12em;
+    text-align: center;
+}
+
+#log-level-selector {
+    padding: 0.3em 0;
+    font-size: 0.9em;
+    border-bottom-left-radius: 4px;
+}

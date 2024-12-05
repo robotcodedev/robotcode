@@ -75,13 +75,6 @@ async def _debug_adapter_server_async(
 ) -> None:
     from .server import DebugAdapterServer
 
-    hidden_tasks = os.environ.get("ROBOTCODE_DISABLE_HIDDEN_TASKS", "0")
-    hide = hidden_tasks == "0"
-
-    if hide:
-        current_thread = threading.current_thread
-        setattr(current_thread, "pydev_do_not_trace", True)
-
     async with DebugAdapterServer(
         mode=mode,
         tcp_params=TcpParams(addresses or "127.0.0.1", port),
@@ -93,7 +86,7 @@ async def _debug_adapter_server_async(
         await server.serve()
 
 
-def _debug_adapter_server_(
+def _debug_adapter_server(
     on_config_done_callback: Optional[Callable[["DebugAdapterServer"], None]],
     mode: ServerMode,
     addresses: Union[str, Sequence[str], None],
@@ -186,7 +179,7 @@ def run_debugger(
     app.verbose("Start robotcode debugger thread")
 
     run_as_debugpy_hidden_task(
-        _debug_adapter_server_,
+        _debug_adapter_server,
         config_done_callback,
         mode,
         addresses,

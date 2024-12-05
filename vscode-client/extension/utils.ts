@@ -224,3 +224,8 @@ export function truncateAndReplaceNewlines(str: string, maxLength: number = 50):
   }
   return processedString;
 }
+
+export function withTimeout<T>(promise: Thenable<T>, ms: number): Promise<T> {
+  const timeout = new Promise<never>((_, reject) => setTimeout(() => reject(new Error("Timeout exceeded")), ms));
+  return Promise.race([promise, timeout]);
+}

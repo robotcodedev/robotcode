@@ -85,7 +85,7 @@ class JsonRPCServer(Generic[TProtocol], abc.ABC):
         elif self.mode == ServerMode.TCP:
             self.loop.run_until_complete(self.start_tcp(self.tcp_params.host, self.tcp_params.port))
         elif self.mode == ServerMode.PIPE:
-            self.start_pipe(self.pipe_name)
+            self.loop.run_until_complete(self.start_pipe(self.pipe_name))
         elif self.mode == ServerMode.PIPE_SERVER:
             self.loop.run_until_complete(self.start_pipe_server(self.pipe_name))
         elif self.mode == ServerMode.SOCKET:
@@ -212,7 +212,7 @@ class JsonRPCServer(Generic[TProtocol], abc.ABC):
         self._run_func = self.loop.run_forever
 
     @_logger.call
-    def start_pipe(self, pipe_name: Optional[str]) -> None:
+    async def start_pipe(self, pipe_name: Optional[str]) -> None:
         from typing import TYPE_CHECKING
 
         if pipe_name is None:
@@ -227,15 +227,14 @@ class JsonRPCServer(Generic[TProtocol], abc.ABC):
                 if TYPE_CHECKING:
                     from asyncio.windows_events import ProactorEventLoop
 
-                self.loop.run_until_complete(
-                    cast("ProactorEventLoop", self.loop).create_pipe_connection(
-                        lambda: cast(
-                            "asyncio.StreamReaderProtocol",
-                            self.create_protocol(),
-                        ),
-                        pipe_name,
-                    )
+                await cast("ProactorEventLoop", self.loop).create_pipe_connection(
+                    lambda: cast(
+                        "asyncio.StreamReaderProtocol",
+                        self.create_protocol(),
+                    ),
+                    pipe_name,
                 )
+
             else:
                 self.loop.run_until_complete(self.loop.create_unix_connection(self.create_protocol, pipe_name))
         except NotImplementedError as e:

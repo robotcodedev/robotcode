@@ -39,7 +39,7 @@ pyproject.toml
 **/playground/
 
 # svg files
-**/*.svg
+#**/*.svg
 
 # coverage
 .coverage

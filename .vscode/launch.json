@@ -6,6 +6,31 @@
 	"version": "0.2.0",
 	"configurations": [
 		{
+			"name": "Attach to Node Process",
+			"port": 9229,
+			"request": "attach",
+			"skipFiles": [
+				"<node_internals>/**"
+			],
+			"type": "node",
+			"autoAttachChildProcesses": true
+		},
+
+
+		{
+			"name": "esbuild.mjs",
+			"program": "${workspaceFolder}/esbuild.mjs",
+			"request": "launch",
+			"skipFiles": [
+				"<node_internals>/**"
+			],
+			"type": "node",
+			"console": "integratedTerminal",
+			"runtimeArgs": [
+                "--experimental-modules"
+            ]
+		},
+		{
 			"name": "Python: Debug in terminal",
 			"type": "debugpy",
 			"request": "launch",
@@ -53,9 +78,10 @@
 				// "suites",
 				// // "discover", "tests", "--tags"
 				// "."
-				// "discover",
-				// "files",
-				// ".."
+				"discover",
+				"--no-diagnostics",
+				"all",
+				".."
 				// "config",
 				// "show",
 				// "discover",
@@ -66,9 +92,10 @@
 				// "E:\\source\\uvtestprj\\tests\\first.robotrepl"
 				// "analyze",
 				// "code",
-				"--help"
+				// "--help"
 				// "tests"
-				//"repl",
+				// "repl-server",
+				// "package.json"
 				// "-v",
 				// "asd:asd"
 
@@ -185,6 +212,8 @@
 			"args": [
 				"--extensionDevelopmentPath=${workspaceFolder}",
 			],
+			"debugWebviews": true,
+			"debugWebWorkerHost": true,
 			"outFiles": [
 				"${workspaceFolder}/out/**/*.js"
 			],

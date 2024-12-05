@@ -13,7 +13,7 @@ only-include = ["src", "CHANGELOG.md"]
 
 
 [envs.default]
-installer = "uv"
+#installer = "uv"
 dependencies = [
   "pytest",
   "pytest-html",

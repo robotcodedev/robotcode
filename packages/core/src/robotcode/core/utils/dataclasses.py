@@ -190,6 +190,7 @@ def as_json(obj: Any, indent: Optional[bool] = None, compact: Optional[bool] = N
         default=_default,
         indent=4 if indent else None,
         separators=(",", ":") if compact else None,
+        ensure_ascii=False,
     )
 
 
