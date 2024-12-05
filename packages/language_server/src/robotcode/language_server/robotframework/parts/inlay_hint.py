@@ -69,7 +69,7 @@ class RobotInlayHintProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
     @_logger.call
     def collect(self, sender: Any, document: TextDocument, range: Range) -> Optional[List[InlayHint]]:
         config = self.get_config(document)
-        if config is None or not config.parameter_names and not config.namespaces:
+        if config is None or (not config.parameter_names and not config.namespaces):
             return None
 
         model = self.parent.documents_cache.get_model(document, False)

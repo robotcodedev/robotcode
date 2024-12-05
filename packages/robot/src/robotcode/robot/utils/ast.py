@@ -205,7 +205,7 @@ def get_tokens_at_position(node: Statement, position: Position, include_end: boo
     return [
         t
         for t in node.tokens
-        if position.is_in_range(range := range_from_token(t), include_end) or include_end and range.end == position
+        if position.is_in_range(range := range_from_token(t), include_end) or (include_end and range.end == position)
     ]
 
 
@@ -214,7 +214,7 @@ def iter_nodes_at_position(node: ast.AST, position: Position, include_end: bool 
         yield node
 
     for n in iter_nodes(node):
-        if position.is_in_range(range := range_from_node(n), include_end) or include_end and range.end == position:
+        if position.is_in_range(range := range_from_node(n), include_end) or (include_end and range.end == position):
             yield n
 
 

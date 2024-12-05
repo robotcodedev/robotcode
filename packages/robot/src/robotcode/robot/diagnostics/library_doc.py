@@ -1824,7 +1824,11 @@ def get_library_doc(
                             if module_spec is not None and module_spec.origin
                             else import_name if is_library_by_path(import_name) else None
                         ),
-                        1 if source is not None or module_spec is not None and module_spec.origin is not None else None,
+                        (
+                            1
+                            if source is not None or (module_spec is not None and module_spec.origin is not None)
+                            else None
+                        ),
                     )
                 ],
                 python_path=sys.path,
@@ -1868,7 +1872,7 @@ def get_library_doc(
                 error_from_exception(
                     e,
                     source or module_spec.origin if module_spec is not None else None,
-                    1 if source is not None or module_spec is not None and module_spec.origin is not None else None,
+                    1 if source is not None or (module_spec is not None and module_spec.origin is not None) else None,
                 )
             )
 
@@ -1919,7 +1923,8 @@ def get_library_doc(
                                 source or module_spec.origin if module_spec is not None else None,
                                 (
                                     1
-                                    if source is not None or module_spec is not None and module_spec.origin is not None
+                                    if source is not None
+                                    or (module_spec is not None and module_spec.origin is not None)
                                     else None
                                 ),
                             )
@@ -2119,7 +2124,11 @@ def get_library_doc(
                     error_from_exception(
                         e,
                         source or module_spec.origin if module_spec is not None else None,
-                        1 if source is not None or module_spec is not None and module_spec.origin is not None else None,
+                        (
+                            1
+                            if source is not None or (module_spec is not None and module_spec.origin is not None)
+                            else None
+                        ),
                     )
                 )
 
@@ -2412,7 +2421,11 @@ def get_variables_doc(
                             if module_spec is not None and module_spec.origin
                             else import_name if is_variables_by_path(import_name) else None
                         ),
-                        1 if source is not None or module_spec is not None and module_spec.origin is not None else None,
+                        (
+                            1
+                            if source is not None or (module_spec is not None and module_spec.origin is not None)
+                            else None
+                        ),
                     )
                 ]
 
@@ -2432,7 +2445,7 @@ def get_variables_doc(
                         if module_spec is not None and module_spec.origin
                         else import_name if is_variables_by_path(import_name) else None
                     ),
-                    1 if source is not None or module_spec is not None and module_spec.origin is not None else None,
+                    1 if source is not None or (module_spec is not None and module_spec.origin is not None) else None,
                 )
             ],
             python_path=sys.path,
@@ -2480,7 +2493,7 @@ def is_file_like(name: Optional[str]) -> bool:
         return False
 
     base, filename = os.path.split(name)
-    return name.startswith(".") or bool(base) and filename != name
+    return name.startswith(".") or (bool(base) and filename != name)
 
 
 def iter_module_names(name: Optional[str] = None) -> Iterator[str]:
@@ -2522,10 +2535,8 @@ def iter_modules_from_python_path(
         if e.is_dir():
             for f in e.iterdir():
                 if not f.name.startswith(("_", ".")) and (
-                    f.is_file()
-                    and f.suffix in ALLOWED_LIBRARY_FILE_EXTENSIONS
-                    or f.is_dir()
-                    and f.suffix not in NOT_WANTED_DIR_EXTENSIONS
+                    (f.is_file() and f.suffix in ALLOWED_LIBRARY_FILE_EXTENSIONS)
+                    or (f.is_dir() and f.suffix not in NOT_WANTED_DIR_EXTENSIONS)
                 ):
                     if f.is_dir():
                         yield CompleteResult(f.name, CompleteResultKind.MODULE)
@@ -2586,8 +2597,7 @@ def complete_library_import(
                     if not f.name.startswith(("_", "."))
                     and (
                         (f.is_file() and f.suffix in ALLOWED_LIBRARY_FILE_EXTENSIONS)
-                        or f.is_dir()
-                        and f.suffix not in NOT_WANTED_DIR_EXTENSIONS
+                        or (f.is_dir() and f.suffix not in NOT_WANTED_DIR_EXTENSIONS)
                     )
                 ]
 
@@ -2606,10 +2616,8 @@ def iter_resources_from_python_path(
         if e.is_dir():
             for f in e.iterdir():
                 if not f.name.startswith(("_", ".")) and (
-                    f.is_file()
-                    and f.suffix in ALLOWED_RESOURCE_FILE_EXTENSIONS
-                    or f.is_dir()
-                    and f.suffix not in NOT_WANTED_DIR_EXTENSIONS
+                    (f.is_file() and f.suffix in ALLOWED_RESOURCE_FILE_EXTENSIONS)
+                    or (f.is_dir() and f.suffix not in NOT_WANTED_DIR_EXTENSIONS)
                 ):
                     yield CompleteResult(
                         f.name,
@@ -2633,7 +2641,7 @@ def complete_resource_import(
 
         name = robot_variables.replace_string(name, ignore_errors=True)
 
-    if name is None or not name.startswith(".") and not name.startswith("/") and not name.startswith(os.sep):
+    if name is None or (not name.startswith(".") and not name.startswith("/") and not name.startswith(os.sep)):
         result += list(iter_resources_from_python_path(name))
 
     if name is None or name.startswith((".", "/", os.sep)):
@@ -2702,8 +2710,7 @@ def complete_variables_import(
                     if not f.name.startswith(("_", "."))
                     and (
                         (f.is_file() and f.suffix in ALLOWED_VARIABLES_FILE_EXTENSIONS)
-                        or f.is_dir()
-                        and f.suffix not in NOT_WANTED_DIR_EXTENSIONS
+                        or (f.is_dir() and f.suffix not in NOT_WANTED_DIR_EXTENSIONS)
                     )
                 ]
 

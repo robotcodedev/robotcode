@@ -620,8 +620,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
                 if (
                     yield_arguments
                     or token.type != Token.ARGUMENT
-                    or token.type != Token.NAME
-                    and cached_isinstance(node, Metadata)
+                    or (token.type != Token.NAME and cached_isinstance(node, Metadata))
                 ):
                     yield SemTokenInfo.from_token(token, sem_type, sem_mod, col_offset, length)
 
@@ -632,10 +631,8 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
         namespace: Namespace,
         builtin_library_doc: Optional[LibraryDoc],
     ) -> Iterator[SemTokenInfo]:
-        if (
-            token.type in {Token.ARGUMENT, Token.TESTCASE_NAME, Token.KEYWORD_NAME}
-            or token.type == Token.NAME
-            and cached_isinstance(node, VariablesImport, LibraryImport, ResourceImport)
+        if token.type in {Token.ARGUMENT, Token.TESTCASE_NAME, Token.KEYWORD_NAME} or (
+            token.type == Token.NAME and cached_isinstance(node, VariablesImport, LibraryImport, ResourceImport)
         ):
             if (
                 cached_isinstance(node, Variable) and token.type == Token.ARGUMENT and node.name and node.name[0] == "&"

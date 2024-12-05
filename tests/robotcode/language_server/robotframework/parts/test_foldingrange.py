@@ -75,12 +75,13 @@ def test(
         result = [
             r
             for r in result
-            if "start" in data.name.lower()
-            and r.start_line == data.line
-            or "end" in data.name.lower()
-            and r.end_line
-            == data.line
-            - (0 if ("else" in data.name.lower() or "if" in data.name.lower() or "for" in data.name.lower()) else 1)
+            if ("start" in data.name.lower() and r.start_line == data.line)
+            or (
+                "end" in data.name.lower()
+                and r.end_line
+                == data.line
+                - (0 if ("else" in data.name.lower() or "if" in data.name.lower() or "for" in data.name.lower()) else 1)
+            )
         ]
     assert result
     regtest.write(yaml.dump({"data": data, "result": result}))

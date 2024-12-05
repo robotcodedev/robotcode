@@ -145,10 +145,8 @@ def threaded_task(__func: _F = None, *, enabled: bool = True) -> Callable[[_F], 
 
 
 def is_threaded_callable(callable: Callable[..., Any]) -> bool:
-    return (
-        getattr(callable, __THREADED_MARKER, False)
-        or inspect.ismethod(callable)
-        and getattr(callable, __THREADED_MARKER, False)
+    return getattr(callable, __THREADED_MARKER, False) or (
+        inspect.ismethod(callable) and getattr(callable, __THREADED_MARKER, False)
     )
 
 

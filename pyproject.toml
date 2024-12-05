@@ -175,7 +175,7 @@ target-version = "py38"
 extend-exclude = ["bundled/libs", ".hatch"]
 
 [tool.ruff.lint]
-ignore = ["E741", "N805", "N999", "RUF012", "RUF006", "ISC001", "RUF021", "RUF022"]
+ignore = ["E741", "N805", "N999", "RUF012", "RUF006", "ISC001"]
 select = [
   "E",
   "F",

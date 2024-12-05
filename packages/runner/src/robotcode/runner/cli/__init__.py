@@ -4,4 +4,4 @@ from .rebot import rebot
 from .robot import robot
 from .testdoc import testdoc
 
-__all__ = ["robot", "libdoc", "rebot", "testdoc", "discover"]
+__all__ = ["discover", "libdoc", "rebot", "robot", "testdoc"]

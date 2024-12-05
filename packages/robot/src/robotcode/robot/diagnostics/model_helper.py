@@ -749,9 +749,8 @@ class ModelHelper:
                     if argument_token_index < len(tokens) and tokens[argument_token_index].type == Token.ARGUMENT:
                         argument_token = tokens[argument_token_index]
 
-        if (
-            argument_index < 0
-            or argument_token is not None
+        if argument_index < 0 or (
+            argument_token is not None
             and argument_token.type == Token.ARGUMENT
             and argument_token.value.startswith(("@{", "&{"))
             and argument_token.value.endswith("}")

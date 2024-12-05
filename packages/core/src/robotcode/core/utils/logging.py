@@ -196,7 +196,7 @@ class LoggingDescriptor:
         extra: Optional[Mapping[str, object]] = None,
         **kwargs: Any,
     ) -> None:
-        if self.is_enabled_for(level) and condition is not None and condition() or condition is None:
+        if (self.is_enabled_for(level) and condition is not None and condition()) or condition is None:
             depth = 0
             if context_name is not None:
                 depth = self._measure_contexts.get(context_name, 0)

@@ -19,7 +19,7 @@ from typing import (
 
 from typing_extensions import ParamSpec
 
-__all__ = ["event_iterator", "event"]
+__all__ = ["event", "event_iterator"]
 
 _TResult = TypeVar("_TResult")
 _TParams = ParamSpec("_TParams")

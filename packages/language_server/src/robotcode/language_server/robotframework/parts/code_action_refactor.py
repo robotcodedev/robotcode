@@ -194,23 +194,18 @@ class RobotCodeActionRefactorProtocolPart(RobotLanguageServerProtocolPart, Model
 
             r = range_from_node(node, skip_non_data=True, allow_comments=True)
             if r.is_in_range(range):
-                if (
-                    isinstance(
-                        node,
-                        (
-                            Fixture,
-                            Documentation,
-                            MultiValue,
-                            SingleValue,
-                            TestCaseName,
-                            KeywordName,
-                            TemplateArguments,
-                        ),
-                    )
-                    or also_return
-                    and get_robot_version() >= (5, 0, 0)
-                    and isinstance(node, ReturnStatement)
-                ):
+                if isinstance(
+                    node,
+                    (
+                        Fixture,
+                        Documentation,
+                        MultiValue,
+                        SingleValue,
+                        TestCaseName,
+                        KeywordName,
+                        TemplateArguments,
+                    ),
+                ) or (also_return and get_robot_version() >= (5, 0, 0) and isinstance(node, ReturnStatement)):
                     return []
 
                 result.append(node)
@@ -246,8 +241,7 @@ class RobotCodeActionRefactorProtocolPart(RobotLanguageServerProtocolPart, Model
             n
             for n in result
             if isinstance(n, (IfHeader, ElseIfHeader, ElseHeader, ForHeader, End))
-            or get_robot_version() >= (5, 0)
-            and isinstance(n, (WhileHeader, TryHeader, ExceptHeader, FinallyHeader))
+            or (get_robot_version() >= (5, 0) and isinstance(n, (WhileHeader, TryHeader, ExceptHeader, FinallyHeader)))
         ):
             return []
 
@@ -255,10 +249,8 @@ class RobotCodeActionRefactorProtocolPart(RobotLanguageServerProtocolPart, Model
             n
             for n in result
             if isinstance(n, (Continue, Break))
-            or isinstance(n, Try)
-            and n.type in [RobotToken.EXCEPT, RobotToken.FINALLY, RobotToken.ELSE]
-            or also_return
-            and isinstance(n, ReturnStatement)
+            or (isinstance(n, Try) and n.type in [RobotToken.EXCEPT, RobotToken.FINALLY, RobotToken.ELSE])
+            or (also_return and isinstance(n, ReturnStatement))
         ):
             return []
 

@@ -164,7 +164,7 @@ def generate(
                 has_literal = [x for x in param_splitted if ":" not in x]
                 has_pattern = [x for x in param_splitted if ":" in x]
                 base_type = (
-                    ("Union[str, " if has_literal and has_pattern or len(has_pattern) > 1 else "")
+                    ("Union[str, " if (has_literal and has_pattern) or len(has_pattern) > 1 else "")
                     + (("Literal[" + ", ".join([f'"{x}"' for x in has_literal]) + "]") if has_literal else "")
                     + (
                         (
@@ -176,7 +176,7 @@ def generate(
                         if has_pattern
                         else ""
                     )
-                    + ("]" if has_literal and has_pattern or len(has_pattern) > 1 else "")
+                    + ("]" if (has_literal and has_pattern) or len(has_pattern) > 1 else "")
                 )
 
             elif len(param_splitted := param.split(":")) > 1:

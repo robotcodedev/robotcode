@@ -1318,11 +1318,8 @@ class Debugger:
         level = message["level"]
         current_frame = self.full_stack_frames[0] if self.full_stack_frames else None
 
-        if (
-            self.output_messages
-            or current_frame is not None
-            and current_frame.type != "KEYWORD"
-            and level in ["FAIL", "ERROR", "WARN"]
+        if self.output_messages or (
+            current_frame is not None and current_frame.type != "KEYWORD" and level in ["FAIL", "ERROR", "WARN"]
         ):
             self._send_log_event(message["timestamp"], level, message["message"], "messages")
 
@@ -1599,10 +1596,8 @@ class Debugger:
                 else evaluate_context.variables._global
             )
             if (
-                isinstance(context, EvaluateArgumentContext)
-                and context != EvaluateArgumentContext.REPL
-                or self.expression_mode
-            ):
+                isinstance(context, EvaluateArgumentContext) and context != EvaluateArgumentContext.REPL
+            ) or self.expression_mode:
                 if expression.startswith("! "):
                     splitted = self.SPLIT_LINE.split(expression[2:].strip())
 
@@ -1635,13 +1630,15 @@ class Debugger:
                         result = vars.replace_scalar(expression)
                     except VariableError:
                         if context is not None and (
-                            isinstance(context, EvaluateArgumentContext)
-                            and (
-                                context
-                                in [
-                                    EvaluateArgumentContext.HOVER,
-                                    EvaluateArgumentContext.WATCH,
-                                ]
+                            (
+                                isinstance(context, EvaluateArgumentContext)
+                                and (
+                                    context
+                                    in [
+                                        EvaluateArgumentContext.HOVER,
+                                        EvaluateArgumentContext.WATCH,
+                                    ]
+                                )
                             )
                             or context
                             in [

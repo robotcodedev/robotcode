@@ -102,7 +102,7 @@ def list(app: Application, paths: List[Path], show_hidden: bool = False, sort_by
                         "precedence": v.precedence,
                     }
                     for k, v in (config.profiles or {}).items()
-                    if show_hidden or not k.startswith("_") and not v.hidden
+                    if show_hidden or (not k.startswith("_") and not v.hidden)
                 ],
                 key=(
                     (lambda v: cast(Any, str(v.get("name", ""))))

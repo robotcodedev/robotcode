@@ -276,7 +276,7 @@ class ListFormatter(Formatter):
     _strip_lines = False
 
     def _handles(self, line: str) -> bool:
-        return bool(line.strip().startswith("- ") or line.startswith(" ") and self._lines)
+        return bool(line.strip().startswith("- ") or (line.startswith(" ") and self._lines))
 
     def format(self, lines: List[str]) -> str:
         items = ["- %s" % _line_formatter.format(line) for line in self._combine_lines(lines)]

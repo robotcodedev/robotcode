@@ -322,8 +322,7 @@ class _ResourcesEntry(_ImportEntry):
                 if (
                     self._document is not None
                     and (normalized_path(path) == normalized_path(self._document.uri.to_path()))
-                    or self._document is None
-                ):
+                ) or self._document is None:
                     self._invalidate()
 
                     return change.type

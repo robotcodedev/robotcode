@@ -6,7 +6,7 @@ from robotcode.jsonrpc2.server import JsonRPCServer
 
 from .protocol import LanguageServerProtocol
 
-__all__ = ["LanguageServerBase", "TCP_DEFAULT_PORT"]
+__all__ = ["TCP_DEFAULT_PORT", "LanguageServerBase"]
 
 TCP_DEFAULT_PORT = 6610
 

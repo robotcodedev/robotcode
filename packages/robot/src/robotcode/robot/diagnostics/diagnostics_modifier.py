@@ -209,7 +209,7 @@ class DiagnosticsModifier:
 
             lines = self.rules_and_codes.codes.get(code)
 
-            if lines is None or lines is not None and diagnostic.range.start.line not in lines:
+            if lines is None or (lines is not None and diagnostic.range.start.line not in lines):
                 code = "*"
                 lines = self.rules_and_codes.codes.get(code)
 

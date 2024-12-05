@@ -40,7 +40,7 @@ if TYPE_CHECKING:
     from robotcode.language_server.common.protocol import LanguageServerProtocol
 
 
-__all__ = ["TextDocumentProtocolPart", "LanguageServerDocumentError"]
+__all__ = ["LanguageServerDocumentError", "TextDocumentProtocolPart"]
 
 
 class LanguageServerDocumentError(JsonRPCException):

@@ -27,13 +27,13 @@ from robotcode.core.utils.contextlib import chdir
 from robotcode.core.utils.dataclasses import as_dict, as_json
 
 __all__ = [
-    "hookimpl",
-    "CommonConfig",
-    "pass_application",
     "Application",
-    "UnknownError",
-    "OutputFormat",
     "ColoredOutput",
+    "CommonConfig",
+    "OutputFormat",
+    "UnknownError",
+    "hookimpl",
+    "pass_application",
 ]
 
 F = TypeVar("F", bound=Callable[..., Any])

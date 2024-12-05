@@ -164,7 +164,7 @@ def _iter_files_recursive_re(
                 relative_path = (path / f.name).relative_to(_base_path)
 
                 if not ignore_patterns or not any(
-                    p.matches(relative_path) and (not p.only_dirs or p.only_dirs and f.is_dir())
+                    p.matches(relative_path) and (not p.only_dirs or (p.only_dirs and f.is_dir()))
                     for p in cast(Iterable[Pattern], ignore_patterns)
                 ):
                     if f.is_dir():
@@ -177,7 +177,7 @@ def _iter_files_recursive_re(
                             _base_path=_base_path,
                         )
                     if not patterns or any(
-                        p.matches(relative_path) and (not p.only_dirs or p.only_dirs and f.is_dir())
+                        p.matches(relative_path) and (not p.only_dirs or (p.only_dirs and f.is_dir()))
                         for p in cast(Iterable[Pattern], patterns)
                     ):
                         yield Path(f).absolute() if absolute else Path(f)

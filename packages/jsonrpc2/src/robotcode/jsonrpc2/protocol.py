@@ -40,24 +40,24 @@ from robotcode.core.utils.inspect import ensure_coroutine, iter_methods
 from robotcode.core.utils.logging import LoggingDescriptor
 
 __all__ = [
+    "GenericJsonRPCProtocolPart",
+    "InvalidProtocolVersionError",
+    "JsonRPCError",
+    "JsonRPCErrorException",
+    "JsonRPCErrorObject",
     "JsonRPCErrors",
+    "JsonRPCException",
     "JsonRPCMessage",
     "JsonRPCNotification",
+    "JsonRPCParseError",
+    "JsonRPCProtocol",
+    "JsonRPCProtocolPart",
     "JsonRPCRequest",
     "JsonRPCResponse",
-    "JsonRPCError",
-    "JsonRPCErrorObject",
-    "JsonRPCProtocol",
-    "JsonRPCException",
-    "JsonRPCParseError",
-    "InvalidProtocolVersionError",
-    "rpc_method",
-    "RpcRegistry",
-    "JsonRPCProtocolPart",
     "ProtocolPartDescriptor",
-    "GenericJsonRPCProtocolPart",
+    "RpcRegistry",
     "TProtocol",
-    "JsonRPCErrorException",
+    "rpc_method",
 ]
 
 _T = TypeVar("_T")
@@ -278,8 +278,7 @@ class RpcRegistry:
                     iter_methods(
                         obj,
                         lambda m2: isinstance(m2, RpcMethod)
-                        or inspect.ismethod(m2)
-                        and isinstance(m2.__func__, RpcMethod),
+                        or (inspect.ismethod(m2) and isinstance(m2.__func__, RpcMethod)),
                     ),
                 )
             }
