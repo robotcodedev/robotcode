@@ -2,6 +2,28 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [0.100.0](https://github.com/robotcodedev/robotcode/compare/v0.99.0..v0.100.0) - 2024-12-05
+
+### Bug Fixes
+
+- **analyze:** Corrected statistics about analyzed  files ([18b6cb8](https://github.com/robotcodedev/robotcode/commit/18b6cb878e893b32ce26b16c3de0c6e628367fde))
+- **analyzer:** Correct handling of variables in embedded args in keyword calls ([2c8ed56](https://github.com/robotcodedev/robotcode/commit/2c8ed5662be1e8621d7d9c742275ccaf1809d06c))
+- **config:** Corrected handling of relative items in python path and other variables if current folder is different then root folder of the project ([66a94bc](https://github.com/robotcodedev/robotcode/commit/66a94bc993a27d8fe5cec13813e524b1099509c6))
+- **vscode:** Corrected highlightning of bold/italic in documentation tags ([170287d](https://github.com/robotcodedev/robotcode/commit/170287db04ec811e39b7ec5e7bd853ae9d98ec7c))
+
+
+### Documentation
+
+- Update some docs ([639314b](https://github.com/robotcodedev/robotcode/commit/639314b9e526e7e3d5820631db0c7c777ac9d648))
+
+
+### Features
+
+- **analyzer:** Add error codes `VariableNotReplaced` and `EnvironmentVariableNotReplaced` for variables not found/replaced in documentation, tags, and metadata ([c5f766f](https://github.com/robotcodedev/robotcode/commit/c5f766f036e49153f318e91ddefb68c975668669))
+- **vscode:** Added some better file icons ([39fad12](https://github.com/robotcodedev/robotcode/commit/39fad12e6cc8d1246dc45c8e843fa1c3b046a491))
+- **vscode:** Preview of Robot Framework Notebook support for VSCode ([9185ccd](https://github.com/robotcodedev/robotcode/commit/9185ccd84dbb9f2f5cd2aba4212598abd93ef0f1))
+
+
 ## [0.99.0](https://github.com/robotcodedev/robotcode/compare/v0.98.0..v0.99.0) - 2024-11-20
 
 ### Bug Fixes
@@ -14,10 +36,10 @@ All notable changes to this project will be documented in this file. See [conven
 - **analyze:** `analyze code` now return a flag that indicates if errors/warnings/etc. occurs ([5125f7d](https://github.com/robotcodedev/robotcode/commit/5125f7dca21daf18f21708ab0676d8707fbb2827))
 
   - `0`: **SUCCESS** - No issues detected.
-  - `1`: **ERRORS** - Critical issues found.
-  - `2`: **WARNINGS** - Non-critical issues detected.
-  - `4`: **INFORMATIONS** - General information messages.
-  - `8`: **HINTS** - Suggestions or improvements.
+          - `1`: **ERRORS** - Critical issues found.
+          - `2`: **WARNINGS** - Non-critical issues detected.
+          - `4`: **INFORMATIONS** - General information messages.
+          - `8`: **HINTS** - Suggestions or improvements.
 
   A return code 1 means error and 3 means there are errors and warning and so on.
 
