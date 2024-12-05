@@ -1339,7 +1339,7 @@
         "command": "robotcode.createNewFile"
       },
       {
-        "title": "Create New File",
+        "title": "Create New Robot Framework Notebook",
         "shortTitle": "Robot Framework Notebook",
         "category": "RobotCode",
         "command": "robotcode.createNewNotebook"
