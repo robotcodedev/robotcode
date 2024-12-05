@@ -132,34 +132,42 @@
             ]
         },
         "documentation_bold": {
-            "contentName": "markup.bold.documentation.robotframework",
-            "begin": "(\\*)(\\**)",
-            "end": "(\\*)*(\\*)|$",
-            "beginCaptures": { "1": { "name": "markup.robotframework" } },
-            "endCaptures": { "2": { "name": "markup.robotframework" } },
-            "patterns": [
-                { "include": "#documentation_italic" },
-                { "include": "#escape" },
-                { "include": "#comment" },
-                { "include": "#comment_line" },
-                { "include": "#variables" },
-                { "include": "#line_continuation" }
-            ]
+            "match": "(?:(?<=\\s|^))(\\*)(?:(?=\\S))(.*?)(?:(?<=\\S))(\\*)(?:(?=\\s|_))",
+            "captures": {
+                "1": { "name": "punctuation.definition.italic.markdown" },
+                "2": {
+                    "name": "markup.bold.documentation.robotframework",
+                    "patterns": [
+                        { "include": "#documentation_italic" },
+                        { "include": "#documentation_bold" },
+                        { "include": "#escape" },
+                        { "include": "#comment" },
+                        { "include": "#comment_line" },
+                        { "include": "#variables" },
+                        { "include": "#line_continuation" }
+                    ]
+                },
+                "3": { "name": "punctuation.definition.italic.markdown" }
+            }
         },
         "documentation_italic": {
-            "contentName": "markup.italic.documentation.robotframework",
-            "begin": "(_)(_*)",
-            "end": "(_*)(_)|$",
-            "beginCaptures": { "1": { "name": "markup.robotframework" } },
-            "endCaptures": { "2": { "name": "markup.robotframework" } },
-            "patterns": [
-                { "include": "#documentation_bold" },
-                { "include": "#escape" },
-                { "include": "#comment" },
-                { "include": "#comment_line" },
-                { "include": "#variables" },
-                { "include": "#line_continuation" }
-            ]
+            "match": "(?:(?<=\\s|^))(_)(?:(?=\\S))(.*?)(?:(?<=\\S))(_)(?:(?=\\s|\\*))",
+            "captures": {
+                "1": { "name": "punctuation.definition.italic.markdown" },
+                "2": {
+                    "name": "markup.italic.documentation.robotframework",
+                    "patterns": [
+                        { "include": "#documentation_italic" },
+                        { "include": "#documentation_bold" },
+                        { "include": "#escape" },
+                        { "include": "#comment" },
+                        { "include": "#comment_line" },
+                        { "include": "#variables" },
+                        { "include": "#line_continuation" }
+                    ]
+                },
+                "3": { "name": "punctuation.definition.italic.markdown" }
+            }
         },
         "testcase_name": {
             "contentName": "string.unquoted.argument.robotframework",
@@ -389,11 +397,12 @@
             "contentName": "string.unquoted.argument.robotframework",
             "begin": "^(?:\\s*)([$@&]{(\\s?[^\\s|\\}](\\s?[^\\s|\\}]+?)*)*\\s?}(\\s?\\[(\\s?[^\\s|\\]](\\s?[^\\s|\\]]+?)*)*\\s?\\])*)( ?=?)(?: {2,}| ?\\t ?)(\\S(\\s?\\S)*)",
             "beginCaptures": {
-                "1": {
-                    "patterns": [ { "include": "#variables" } ]
-                },
+                "1": { "patterns": [ { "include": "#variables" } ] },
                 "7": { "name": "keyword.operator.robotframework" },
-                "8": { "name": "entity.name.function.keyword-call.robotframework", "patterns": [ { "include": "#variables" } ] }
+                "8": {
+                    "name": "entity.name.function.keyword-call.robotframework",
+                    "patterns": [ { "include": "#variables" } ]
+                }
             },
             "end": "^(?!(\\s*(\\.\\.\\.((( {2}| ?\\t)\\s*\\S.*)|(\\s*))?$))|(\\s*#.*$)|(\\s*$))",
             "patterns": [
