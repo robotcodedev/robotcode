@@ -190,7 +190,7 @@ def repl_server(
     files: Tuple[Path, ...],
 ) -> None:
     """\
-    Run Robot Framework interactively.
+    Start a REPL server, client can connect to the server and run the REPL scripts.
     """
 
     mode, port, bind, pipe_name = resolve_server_options(
