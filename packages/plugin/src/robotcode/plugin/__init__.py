@@ -1,4 +1,5 @@
 import dataclasses
+import os
 import sys
 from contextlib import contextmanager
 from dataclasses import dataclass
@@ -23,8 +24,8 @@ import click
 import pluggy
 import tomli_w
 
-from robotcode.core.utils.contextlib import chdir
 from robotcode.core.utils.dataclasses import as_dict, as_json
+from robotcode.core.utils.path import same_file
 
 __all__ = [
     "Application",
@@ -298,8 +299,24 @@ class Application:
 
     @contextmanager
     def chdir(self, path: Union[str, Path, None]) -> Iterator[Optional[Path]]:
-        with chdir(path, self.verbose) as result:
-            yield result
+        old_dir: Optional[Path] = Path.cwd()
+
+        if path is None or (old_dir and same_file(path, old_dir)):
+            self.verbose(f"no need to change directory to {path}")
+            old_dir = None
+        else:
+            if path:
+                self.verbose(f"Changing directory to {path}")
+
+                os.chdir(path)
+
+        try:
+            yield old_dir
+        finally:
+            if old_dir is not None:
+                self.verbose(f"Changing directory back to {old_dir}")
+
+                os.chdir(old_dir)
 
     @contextmanager
     def save_syspath(self) -> Iterator[Literal[None]]:
