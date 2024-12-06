@@ -69,3 +69,5 @@ bundled_requirements.txt
 
 robot.toml
 .robotignore
+
+esbuild.mjs
