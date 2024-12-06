@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [0.100.2](https://github.com/robotcodedev/robotcode/compare/v0.100.1..v0.100.2) - 2024-12-06
+
+### Bug Fixes
+
+- **plugin:** Corrected context based change current directory ([359589d](https://github.com/robotcodedev/robotcode/commit/359589d5c7a2f1b48bd0677db4e3fde6172aa6b8))
+
+
 ## [0.100.1](https://github.com/robotcodedev/robotcode/compare/v0.100.0..v0.100.1) - 2024-12-06
 
 ### Bug Fixes
