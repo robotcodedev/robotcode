@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [0.100.1](https://github.com/robotcodedev/robotcode/compare/v0.100.0..v0.100.1) - 2024-12-06
+
+### Bug Fixes
+
+- **jsonrpc2:** Corrected starting server in pipe mode ([e69f686](https://github.com/robotcodedev/robotcode/commit/e69f68664687be3d6af16c4f8a71972a34808c0a))
+- **vscode:** Update title for creating new Robot Framework Notebook ([86c48f8](https://github.com/robotcodedev/robotcode/commit/86c48f8490aabecace6d3cd24faf619d02c1a45e))
+
+
 ## [0.100.0](https://github.com/robotcodedev/robotcode/compare/v0.99.0..v0.100.0) - 2024-12-05
 
 ### Bug Fixes
