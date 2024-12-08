@@ -14,7 +14,7 @@
     },
     "robotcode.languageServer.extraArgs": [
         // "--verbose",
-        // "--debugpy",
+        "--debugpy",
         // "--debugpy-wait-for-client",
         // "--log",
         // "--log-level", "INFO",

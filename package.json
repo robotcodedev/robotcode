@@ -607,7 +607,7 @@
         },
         "extensions": [
           ".robotrepl",
-          ".robotsript"
+          ".robotscript"
         ],
         "configuration": "./language-configuration.json"
       },

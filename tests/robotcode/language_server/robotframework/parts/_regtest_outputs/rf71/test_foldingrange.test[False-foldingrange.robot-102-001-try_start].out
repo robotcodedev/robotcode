@@ -1,0 +1,12 @@
+data: !GeneratedTestData
+  character: 1
+  line: 102
+  name: try start
+result:
+- !FoldingRange
+  collapsed_text: null
+  end_character: 21
+  end_line: 104
+  kind: try
+  start_character: 0
+  start_line: 102

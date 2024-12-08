@@ -167,6 +167,7 @@
 			"args": [
 				"--full-trace",
 				"--tb=native",
+				"--regtest2-reset",
 				//"--regtest-reset",
 				//"tests/robotcode/language_server/robotframework/parts/test_foldingrange.py"
 				//"tests/robotcode/language_server/robotframework/parts/test_references.py"
@@ -175,7 +176,8 @@
 				//"tests/robotcode/utils/test_dataclasses.py::test_really_complex_data"
 				//"tests/robotcode/language_server/robotframework/parts/test_foldingrange.py"
 				//"tests/robotcode/language_server/robotframework/parts/test_document_symbols.py",
-				"./tests/robotcode/language_server/robotframework/parts/test_semantic_tokens.py "
+				// "./tests/robotcode/language_server/robotframework/parts/test_semantic_tokens.py "
+				"tests/robotcode/language_server/robotframework/parts/test_foldingrange.py::test[False-foldingrange.robot-123-001-try end]"
 			],
 			"console": "integratedTerminal",
 			"justMyCode": false,

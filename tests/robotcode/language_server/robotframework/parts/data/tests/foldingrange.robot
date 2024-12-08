@@ -77,3 +77,49 @@ IF statements
         Log    to much
     END
 #^ else end
+
+WHILE statements
+    ${a}    Set Variable    ${{0}}
+    WHILE    $a<10
+#^ while start
+        No Operation
+        ${a}    Set Variable    ${{$a+1}}
+    END
+#^ while end
+
+    No Operation
+
+
+TRY statements
+    TRY
+#^ try start
+        No Operation
+    EXCEPT
+#^ except start
+        No Operation
+    END
+#^ try end
+
+    TRY
+#^ try start
+        No Operation
+    FINALLY
+#^ finally start
+        No Operation
+    END
+#^ try end
+
+    TRY
+#^ try start
+        No Operation
+    EXCEPT    hello
+#^ except start
+        No Operation
+    EXCEPT
+#^ except start
+        No Operation
+    FINALLY
+#^ finally start
+        No Operation
+    END
+#^  try end

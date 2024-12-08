@@ -10,12 +10,16 @@ from robotcode.core.language import language_id
 from robotcode.core.lsp.types import FoldingRange
 from robotcode.core.text_document import TextDocument
 from robotcode.core.utils.logging import LoggingDescriptor
+from robotcode.robot.utils import get_robot_version
 from robotcode.robot.utils.visitor import Visitor
 
 from .protocol_part import RobotLanguageServerProtocolPart
 
 if TYPE_CHECKING:
     from ..protocol import RobotLanguageServerProtocol
+
+if get_robot_version() >= (5, 0):
+    from robot.parsing.model.blocks import Try, While
 
 
 class _Visitor(Visitor):
@@ -116,6 +120,19 @@ class _Visitor(Visitor):
 
         if node.type == "IF":
             self.current_if.remove(node)
+
+    if get_robot_version() >= (5, 0):
+
+        def visit_While(self, node: While) -> None:  # noqa: N802
+            self.__append(node, kind="while")
+            self.generic_visit(node)
+
+        def visit_Try(self, node: Try) -> None:  # noqa: N802
+            self.__append(node, kind="try", end_node=node.body[-1] if node.body else None)
+            self.generic_visit(node)
+
+
+#
 
 
 class RobotFoldingRangeProtocolPart(RobotLanguageServerProtocolPart):

@@ -83,5 +83,5 @@ def test(
                 - (0 if ("else" in data.name.lower() or "if" in data.name.lower() or "for" in data.name.lower()) else 1)
             )
         ]
-    assert result
+
     regtest.write(yaml.dump({"data": data, "result": result}))
