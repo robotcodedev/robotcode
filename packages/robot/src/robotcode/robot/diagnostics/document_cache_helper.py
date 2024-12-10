@@ -338,7 +338,7 @@ class DocumentsCacheHelper:
         if document_type == DocumentType.RESOURCE:
             return self.get_resource_model(document, data_only)
 
-        raise UnknownFileTypeError(f"Unknown file type '{document.uri}'.")
+        return self.get_general_model(document, data_only)
 
     def __get_model(
         self,

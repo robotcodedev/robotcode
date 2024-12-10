@@ -121,7 +121,7 @@ class Uri(Mapping[str, str]):
         netloc = parse.unquote(self.netloc)
         path = parse.unquote(self.path)
 
-        if self._parts.scheme != "file":
+        if self._parts.scheme not in ["file", "untitled"]:
             raise InvalidUriError(f"Invalid URI scheme '{self!s}'.")
 
         if netloc and self._parts.scheme == "file":

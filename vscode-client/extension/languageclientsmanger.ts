@@ -547,8 +547,14 @@ export class LanguageClientsManager {
         documentSelector:
           // TODO: use SUPPORTED_LANGUAGES here
           vscode.workspace.workspaceFolders?.length === 1
-            ? [{ scheme: "file", language: "robotframework" }]
-            : [{ scheme: "file", language: "robotframework", pattern: `${workspaceFolder.uri.fsPath}/**/*` }],
+            ? [
+                { scheme: "file", language: "robotframework" },
+                { scheme: "untitled", language: "robotframework" },
+              ]
+            : [
+                { scheme: "file", language: "robotframework", pattern: `${workspaceFolder.uri.fsPath}/**/*` },
+                { scheme: "untitled", language: "robotframework", pattern: `${workspaceFolder.uri.fsPath}/**/*` },
+              ],
         synchronize: {
           configurationSection: [CONFIG_SECTION],
         },

@@ -212,6 +212,7 @@ export class LanguageToolsManager {
       this.pythonVersion,
       this.robocopVersion,
       this.tidyVersion,
+      vscode.commands.registerCommand("robotcode.createNewFile", LanguageToolsManager.createNewFile),
       vscode.commands.registerCommand(
         "robotcode.startTerminalRepl",
         async (folder: vscode.WorkspaceFolder | undefined): Promise<void> => {
@@ -441,6 +442,84 @@ export class LanguageToolsManager {
         (_) => undefined,
       );
     }, 500);
+  }
+
+  static async createNewFile(destinationFolder?: vscode.Uri): Promise<vscode.TextDocument | undefined> {
+    let showSaveDialog = false;
+
+    if (destinationFolder === undefined) {
+      let folder: vscode.WorkspaceFolder | undefined = undefined;
+      if (vscode.workspace.workspaceFolders?.length == 1) {
+        folder = vscode.workspace.workspaceFolders[0];
+      } else {
+        folder = await vscode.window.showWorkspaceFolderPick({
+          placeHolder: "Select a workspace folder to create the file in",
+        });
+      }
+      if (folder === undefined) {
+        return undefined;
+      }
+
+      destinationFolder = folder.uri;
+      showSaveDialog = true;
+    }
+
+    const type = (
+      await vscode.window.showQuickPick(
+        [
+          { description: "Robot Framework suite file", label: ".robot", picked: true, type: "robot" },
+          { description: "Robot Framework resource file", label: ".resource", type: "resource" },
+          {
+            description: "Robot Framework suite init file",
+            label: "__init__.robot",
+            type: "init",
+          },
+        ],
+        { title: "Select a Robot Framework file type", placeHolder: "Select a file type" },
+      )
+    )?.type;
+
+    if (type === undefined) {
+      return undefined;
+    }
+
+    let uri: vscode.Uri | undefined = undefined;
+
+    if (type === "init") {
+      uri = vscode.Uri.joinPath(destinationFolder, `__init__.robot`);
+    } else {
+      uri = vscode.Uri.joinPath(destinationFolder, `newfile.${type}`);
+      let i = 1;
+      while (await fs.pathExists(uri.fsPath)) {
+        uri = vscode.Uri.joinPath(destinationFolder, `newfile-${i++}.${type}`);
+      }
+    }
+
+    if (showSaveDialog) {
+      uri = await vscode.window.showSaveDialog({
+        defaultUri: uri,
+        filters: { "Robot Framework": ["robot", "resource"] },
+        title: "Create new Robot Framework file",
+      });
+
+      if (uri === undefined) {
+        return;
+      }
+    }
+
+    await fs.ensureFile(uri.fsPath);
+
+    const doc = await vscode.workspace.openTextDocument(uri);
+
+    await vscode.window.showTextDocument(doc);
+
+    if (!showSaveDialog && type !== "init") {
+      await vscode.commands.executeCommand("workbench.files.action.focusFilesExplorer");
+      await vscode.commands.executeCommand("revealInExplorer", uri);
+      await vscode.commands.executeCommand("renameFile", uri);
+    }
+
+    return doc;
   }
 
   private removeFolder(folder: vscode.WorkspaceFolder) {

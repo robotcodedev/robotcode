@@ -61,7 +61,9 @@
     }
   },
   "activationEvents": [
-    "workspaceContains:**/*.{robot,resource}",
+    "workspaceContains:**/*.{robot,resource,robotrepl,robotscript}",
+    "workspaceContains:robot.toml",
+    "workspaceContains:.robot.toml",
     "onDebug",
     "onDebugResolve:robotcode",
     "onDebugInitialConfigurations",
@@ -1333,19 +1335,26 @@
         "icon": "$(book)"
       },
       {
-        "title": "Create New File",
+        "title": "New Robot Framework File",
         "shortTitle": "Robot Framework File",
         "category": "RobotCode",
         "command": "robotcode.createNewFile"
       },
       {
-        "title": "Create New Robot Framework Notebook",
+        "title": "New Robot Framework Notebook",
         "shortTitle": "Robot Framework Notebook",
         "category": "RobotCode",
         "command": "robotcode.createNewNotebook"
       }
     ],
     "menus": {
+      "explorer/context": [
+        {
+          "command": "robotcode.createNewFile",
+          "group": "1_robotcode@1",
+          "when": "!virtualWorkspace && explorerResourceIsFolder"
+        }
+      ],
       "editor/title/run": [
         {
           "command": "robotcode.runCurrentFile",
