@@ -132,7 +132,7 @@
             ]
         },
         "documentation_bold": {
-            "match": "(?:(?<=\\s|^))(\\*)(?:(?=\\S))(.*?)(?:(?<=\\S))(\\*)(?:(?=\\s|_))",
+            "match": "(?:(?<=\\s|^))(\\*)(?:(?=\\S))(.*?)(?:(?<=\\S))(\\*)(?:(?=\\s|_|\\.))",
             "captures": {
                 "1": { "name": "punctuation.definition.italic.markdown" },
                 "2": {
@@ -151,7 +151,7 @@
             }
         },
         "documentation_italic": {
-            "match": "(?:(?<=\\s|^))(_)(?:(?=\\S))(.*?)(?:(?<=\\S))(_)(?:(?=\\s|\\*))",
+            "match": "(?:(?<=\\s|^))(_)(?:(?=\\S))(.*?)(?:(?<=\\S))(_)(?:(?=\\s|\\*|\\.))",
             "captures": {
                 "1": { "name": "punctuation.definition.italic.markdown" },
                 "2": {
