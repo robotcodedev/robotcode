@@ -219,41 +219,14 @@
     text-align: center;
 }
 
-.select-message {
-    width: 24px;
-}
-
-.select-message>div {
-    float: right;
-    margin-right: 2px;
-    height: 16px;
-    width: 16px;
-    background-size: 12px 12px;
-    background-repeat: no-repeat;
-    background-position: center;
-}
-
-.message-row:hover .select-message div {
-    background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAQAAAD8fJRsAAAAAmJLR0QA/4ePzL8AAAAJcEhZcwAACxMAAAsTAQCanBgAAAAHdElNRQfeCR0MOzhWKZQOAAAASUlEQVQY032PsRHAIAwDX9BkicD+W8UMEqegAQJWKZ/+3sLZJhFGQEZzNaIa4ibh66En867VNaIeoP5WppNuIGoAlOm3g5VC1AdYeQv1BZPRSgAAAABJRU5ErkJggg==);
-    background-image: url(data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI4IiBoZWlnaHQ9IjgiIHZpZXdCb3g9IjAgMCA4IDgiPgogIDxwYXRoIGQ9Ik0wIDB2MWg4di0xaC04em0wIDJ2MWg2di0xaC02em0wIDJ2MWg4di0xaC04em0wIDJ2MWg2di0xaC02eiIgLz4KPC9zdmc+), none;
-    filter: var(--icon-filter);
-    border-width: 1px;
-    border-style: solid;
-    border-radius: 2px;
-}
-
-.select-message:hover div {
-    cursor: pointer;
-}
-
 /* Message tables - these MUST NOT be combined together because otherwise
    dynamically altering them based on visible log level is not possible. */
 .trace-message {
-    display: table;
+    display: none;
 }
 
 .debug-message {
-    display: table;
+    display: none;
 }
 
 /* Metadata */

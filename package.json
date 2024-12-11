@@ -98,14 +98,6 @@
     ],
     "notebookRenderer": [
       {
-        "id": "robotframework-repl-html",
-        "displayName": "Robot Framework Html Log",
-        "entrypoint": "./out/rendererHtml.js",
-        "mimeTypes": [
-          "x-application/robotframework-repl-html"
-        ]
-      },
-      {
         "id": "robotframework-repl-log",
         "displayName": "Robot Framework Log",
         "entrypoint": "./out/rendererLog.js",
@@ -676,7 +668,7 @@
         "args": {
           "text": "    "
         },
-        "when": "editorTextFocus && editorLangId == robotframework && config.robotcode.editor.4SpacesTab && !editorHasSelection && !inSnippetMode && !suggestWidgetVisible && !inlineSuggestionVisible"
+        "when": "editorTextFocus && (editorLangId == robotframework || editorLangId == robotframework-repl) && config.robotcode.editor.4SpacesTab && !editorHasSelection && !inSnippetMode && !suggestWidgetVisible && !inlineSuggestionVisible"
       }
     ],
     "configuration": [

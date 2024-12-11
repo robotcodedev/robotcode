@@ -13,7 +13,7 @@ interface RawNotebook {
 
 interface RawNotebookCellOutputItem {
   mime: string;
-  data: number[];
+  data: string;
 }
 
 interface RawNotebookCellOutput {
@@ -68,11 +68,26 @@ export class REPLNotebookSerializer implements vscode.NotebookSerializer {
       );
       result.outputs = item.outputs?.map((item) => {
         return new vscode.NotebookCellOutput(
-          item.items.map((item) => {
-            return {
-              mime: item.mime,
-              data: new Uint8Array(item.data),
-            };
+          item.items.flatMap((item) => {
+            if (item.mime === "x-application/robotframework-repl-log") {
+              const data = new Uint8Array(Buffer.from(item.data, "base64"));
+              return [
+                {
+                  mime: item.mime,
+                  data: data,
+                },
+                {
+                  mime: "text/x-json",
+                  data: data,
+                },
+              ];
+            }
+            return [
+              {
+                mime: item.mime,
+                data: new Uint8Array(Buffer.from(item.data, "base64")),
+              },
+            ];
           }),
           item.metadata,
         );
@@ -108,12 +123,14 @@ export class REPLNotebookSerializer implements vscode.NotebookSerializer {
         outputs: cell.outputs?.map((item) => {
           return {
             metadata: item.metadata ? { ...item.metadata } : undefined,
-            items: item.items.map((item) => {
-              return {
-                mime: item.mime,
-                data: Array.from(item.data),
-              };
-            }),
+            items: item.items
+              .filter((item) => item.mime !== "text/x-json")
+              .map((item) => {
+                return {
+                  mime: item.mime,
+                  data: Buffer.from(item.data).toString("base64"),
+                };
+              }),
           };
         }),
         executionSummary: cell.executionSummary
@@ -275,7 +292,7 @@ export class ReplServerClient {
       );
 
       return {
-        success: result?.success,
+        success: result?.success || false,
         output: new vscode.NotebookCellOutput(
           result?.items?.flatMap((item) => {
             return item.mime === "x-application/robotframework-repl-log"

@@ -35,7 +35,7 @@ interface KeywordResultData extends ResultData {
   status: string;
   start_time: string;
   end_time: string;
-  elapsed_time: number;
+  elapsed_time: string;
 
   items: ResultData[];
 }
@@ -467,9 +467,6 @@ class MessageResultRenderer extends Component<{ data: MessageResultData }> {
           ) : (
             <td class="message">{this.props.data.message}</td>
           )}
-          {/* <td class="select-message" title="Select message text">
-            <div></div>
-          </td> */}
         </tr>
       </table>
     );
@@ -508,9 +505,27 @@ class Keyword extends Component<KeywordProps> {
           {this.props.data.doc ? (
             <tr>
               <th>Documentation:</th>
-              <td class="doc">{this.props.data.doc}</td>
+              <td class="doc" dangerouslySetInnerHTML={{ __html: this.props.data.doc }}></td>
             </tr>
           ) : null}
+          {this.props.data.tags && this.props.data.tags.length > 0 ? (
+            <tr>
+              <th>Tags:</th>
+              <td class="tags">{this.props.data.tags.join(", ")}</td>
+            </tr>
+          ) : null}
+          {this.props.data.timeout ? (
+            <tr>
+              <th>Tags:</th>
+              <td class="tags">{this.props.data.timeout}</td>
+            </tr>
+          ) : null}
+          <tr>
+            <th>Start / End / Elapsed:</th>
+            <td>
+              {this.props.data.start_time} / ${this.props.data.elapsed_time} / ${this.props.data.elapsed_time}
+            </td>
+          </tr>
         </table>
         {this.props.data.items.map((child) => renderResultData(child))}
       </Fragment>

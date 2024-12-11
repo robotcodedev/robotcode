@@ -23,17 +23,6 @@ const projects = [
     external: ["vscode"],
   },
   {
-    entryPoints: ["./vscode-client/rendererHtml"],
-    format: "esm",
-    platform: "browser",
-    outfile: "out/rendererHtml.js",
-    external: ["vscode"],
-    loader: {
-      ".jstemp": "text",
-      ".csstemp": "text",
-    },
-  },
-  {
     entryPoints: ["./vscode-client/rendererLog"],
     format: "esm",
     platform: "browser",
