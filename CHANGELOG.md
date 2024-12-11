@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [0.101.0](https://github.com/robotcodedev/robotcode/compare/v0.100.2..v0.101.0) - 2024-12-11
+
+### Bug Fixes
+
+- **vscode:** Fixed highlightning of bold/italic in documentation ([d0e3b2e](https://github.com/robotcodedev/robotcode/commit/d0e3b2edcb7ef05ae99e9053a5acd47a2ce74901))
+
+
+### Features
+
+- **icons:** Change the color of the file icons back to the official colors ([d6b2ff4](https://github.com/robotcodedev/robotcode/commit/d6b2ff4f19f9eee33c56daad3f2a59b2d2e89d29))
+- **langserver:** Support for folding WHILE and TRY/EXCEPT/FINALLY statements ([b3c1ce2](https://github.com/robotcodedev/robotcode/commit/b3c1ce2ad8d2f696b33c240672edc3822524403f))
+- **notebook:** Optimize robot notebook file format, remove old html output ([7bc22fb](https://github.com/robotcodedev/robotcode/commit/7bc22fbc8793f375e5f6a532c07f910d90df092a))
+- **vscode:** Added "File > New File" menu support and context menu option for creating Robot files in the file explorer ([330fc4c](https://github.com/robotcodedev/robotcode/commit/330fc4cf596b9cf60c37aeee102f0fda92873f38))
+
+
 ## [0.100.2](https://github.com/robotcodedev/robotcode/compare/v0.100.1..v0.100.2) - 2024-12-06
 
 ### Bug Fixes
