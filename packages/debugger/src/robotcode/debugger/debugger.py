@@ -33,7 +33,6 @@ from robot.api.parsing import get_model
 from robot.errors import VariableError
 from robot.output import LOGGER
 from robot.running import EXECUTION_CONTEXTS, Keyword, TestCase, TestSuite
-from robot.utils import NormalizedDict
 from robot.variables import evaluate_expression
 
 from robotcode.core.event import event
@@ -1386,6 +1385,7 @@ class Debugger:
                 variables_reference=v_id,
                 named_variables=len(value) + 1,
                 indexed_variables=0,
+                presentation_hint=VariablePresentationHint(kind="data"),
             )
 
         if isinstance(value, Sequence) and not isinstance(value, str):
@@ -1398,6 +1398,7 @@ class Debugger:
                 variables_reference=v_id,
                 named_variables=1,
                 indexed_variables=len(value),
+                presentation_hint=VariablePresentationHint(kind="data"),
             )
 
         return Variable(name=name, value=repr(value), type=repr(type(value)))
@@ -1420,7 +1421,7 @@ class Debugger:
         count: Optional[int] = None,
         format: Optional[ValueFormat] = None,
     ) -> List[Variable]:
-        result: MutableMapping[str, Any] = NormalizedDict(ignore="_")
+        result: MutableMapping[str, Any] = {}
 
         if filter is None:
             entry = next(
@@ -1520,7 +1521,7 @@ class Debugger:
 
                 padding = len(str(len(value)))
 
-                for i, v in enumerate(value, start or 0):
+                for i, v in enumerate(value[start:], start or 0):
                     result[str(i)] = self._create_variable(str(i).zfill(padding), v)
                     c += 1
                     if count is not None and c >= count:
