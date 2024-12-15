@@ -95,6 +95,19 @@ class Undefined:
 UNDEFINED = Undefined()
 
 
+class DebugRepr(reprlib.Repr):
+    def __init__(self) -> None:
+        super().__init__()
+        self.maxtuple = 50
+        self.maxlist = 50
+        self.maxarray = 50
+        self.maxdict = 500
+        self.maxset = 50
+        self.maxfrozenset = 50
+        self.maxdeque = 50
+        self.maxstring = 500
+
+
 class EvaluateResult(NamedTuple):
     result: str
     type: Optional[str] = None
@@ -1374,13 +1387,15 @@ class Debugger:
         self._variables_object_cache.append(o)
         return id(o)
 
+    debug_repr = DebugRepr()
+
     def _create_variable(self, name: str, value: Any) -> Variable:
         if isinstance(value, Mapping):
             v_id = self._new_cache_id()
             self._variables_cache[v_id] = value
             return Variable(
                 name=name,
-                value=reprlib.repr(value),
+                value=self.debug_repr.repr(value),
                 type=repr(type(value)),
                 variables_reference=v_id,
                 named_variables=len(value) + 1,
@@ -1393,7 +1408,7 @@ class Debugger:
             self._variables_cache[v_id] = value
             return Variable(
                 name=name,
-                value=reprlib.repr(value),
+                value=self.debug_repr.repr(value),
                 type=repr(type(value)),
                 variables_reference=v_id,
                 named_variables=1,
@@ -1401,7 +1416,7 @@ class Debugger:
                 presentation_hint=VariablePresentationHint(kind="data"),
             )
 
-        return Variable(name=name, value=repr(value), type=repr(type(value)))
+        return Variable(name=name, value=self.debug_repr.repr(value), type=repr(type(value)))
 
     if get_robot_version() >= (7, 0):
 
