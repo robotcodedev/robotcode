@@ -1920,25 +1920,25 @@
   "devDependencies": {
     "@eslint/compat": "^1.2.4",
     "@eslint/eslintrc": "^3.2.0",
-    "@eslint/js": "^9.16.0",
+    "@eslint/js": "^9.17.0",
     "@jgoz/esbuild-plugin-typecheck": "^4.0.2",
     "@types/fs-extra": "^11.0.4",
-    "@types/node": "^22.10.1",
+    "@types/node": "^22.10.2",
     "@types/vscode": "^1.90.0",
     "@types/vscode-notebook-renderer": "^1.72.3",
     "@vscode/python-extension": "^1.0.5",
     "@vscode/vsce": "^3.2.1",
     "esbuild": "^0.24.0",
-    "eslint": "^9.16.0",
+    "eslint": "^9.17.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-prettier": "^5.2.1",
     "globals": "^15.13.0",
     "ovsx": "^0.10.1",
-    "preact": "^10.25.1",
+    "preact": "^10.25.2",
     "prettier": "^3.4.2",
     "ts-loader": "^9.5.1",
     "typescript": "^5.7.2",
-    "typescript-eslint": "^8.17.0"
+    "typescript-eslint": "^8.18.0"
   },
   "workspaces": [
     "docs"
