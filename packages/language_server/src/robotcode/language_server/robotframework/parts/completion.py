@@ -223,12 +223,12 @@ def get_snippets() -> Dict[str, List[str]]:
     if __snippets is None:
         __snippets = {
             "FOR": [
-                r"FOR  \${${1}}  ${2|IN,IN ENUMERATE,IN RANGE,IN ZIP|}  ${3:arg}",
-                "$0",
+                r"FOR    \${${1}}    ${2|IN,IN ENUMERATE,IN RANGE,IN ZIP|}    ${3:arg}",
+                "    $0",
                 "END",
                 "",
             ],
-            "IF": [r"IF  \${${1}}", "    $0", "END", ""],
+            "IF": [r"IF    \${${1}}", "    $0", "END", ""],
         }
 
         if get_robot_version() >= (5, 0):
@@ -237,7 +237,7 @@ def get_snippets() -> Dict[str, List[str]]:
                     "TRYEX": [
                         "TRY",
                         "    $0",
-                        r"EXCEPT  message",
+                        r"EXCEPT    message",
                         "    ",
                         "END",
                         "",
@@ -245,12 +245,12 @@ def get_snippets() -> Dict[str, List[str]]:
                     "TRYEXAS": [
                         "TRY",
                         "    $0",
-                        r"EXCEPT  message    AS    \${ex}",
+                        r"EXCEPT    message    AS    \${ex}",
                         "    ",
                         "END",
                         "",
                     ],
-                    "WHILE": [r"WHILE  ${1:expression}", "    $0", "END", ""],
+                    "WHILE": [r"WHILE    ${1:expression}", "    $0", "END", ""],
                 }
             )
         if get_robot_version() >= (7, 0):
