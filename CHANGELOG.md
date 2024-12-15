@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [0.102.0](https://github.com/robotcodedev/robotcode/compare/v0.101.0..v0.102.0) - 2024-12-15
+
+### Bug Fixes
+
+- **debugger:** Corrected order of sequences and values in variables view ([b0bf5c7](https://github.com/robotcodedev/robotcode/commit/b0bf5c76560714ceff3f484874efa5b74c3bb651))
+
+
+### Features
+
+- **debugger:** Increase the portion of the variable’s value displayed in the debug view ([0b0b80e](https://github.com/robotcodedev/robotcode/commit/0b0b80e3f506ac1a8d560464c08c7c2f3359f1a0))
+
+
 ## [0.101.0](https://github.com/robotcodedev/robotcode/compare/v0.100.2..v0.101.0) - 2024-12-11
 
 ### Bug Fixes
