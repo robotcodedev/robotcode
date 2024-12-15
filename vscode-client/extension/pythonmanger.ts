@@ -167,13 +167,21 @@ export class PythonManager {
   public async executeRobotCode(
     folder: vscode.WorkspaceFolder,
     args: string[],
+    profiles?: string[],
     format?: string,
     noColor?: boolean,
     noPager?: boolean,
     stdioData?: string,
     token?: vscode.CancellationToken,
   ): Promise<unknown> {
-    const { pythonCommand, final_args } = await this.buildRobotCodeCommand(folder, args, format, noColor, noPager);
+    const { pythonCommand, final_args } = await this.buildRobotCodeCommand(
+      folder,
+      args,
+      profiles,
+      format,
+      noColor,
+      noPager,
+    );
 
     this.outputChannel.appendLine(`executeRobotCode: ${pythonCommand} ${final_args.join(" ")}`);
 
@@ -237,6 +245,7 @@ export class PythonManager {
   public async buildRobotCodeCommand(
     folder: vscode.WorkspaceFolder,
     args: string[],
+    profiles?: string[],
     format?: string,
     noColor?: boolean,
     noPager?: boolean,
@@ -256,6 +265,7 @@ export class PythonManager {
       ...(format ? ["--format", format] : []),
       ...(noColor ? ["--no-color"] : []),
       ...(noPager ? ["--no-pager"] : []),
+      ...(profiles !== undefined ? profiles.flatMap((v) => ["--profile", v]) : []),
       ...args,
     ];
     return { pythonCommand, final_args };

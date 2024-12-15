@@ -108,11 +108,14 @@ class Interpreter(BaseInterpreter):
         self.files = files
         self.has_input = Event()
         self.executed = Event()
+        self.no_execution = Event()
+        self.no_execution.set()
         self._code: List[str] = []
         self._success: Optional[bool] = None
         self._result_data: Optional[ResultData] = None
         self._result_data_stack: List[ResultData] = []
         self.collect_messages: bool = False
+        self._interrupted = False
         self._has_shutdown = False
         self._cell_errors: List[str] = []
 
@@ -122,11 +125,17 @@ class Interpreter(BaseInterpreter):
         self.has_input.set()
 
     def execute(self, source: str) -> ExecutionResult:
+        self.no_execution.wait()
+
+        self.no_execution.clear()
+
         self._result_data_stack = []
 
         self._success = None
         try:
             self._cell_errors = []
+            self._interrupted = False
+
             self._result_data = RootResultData()
 
             self.executed.clear()
@@ -159,6 +168,8 @@ class Interpreter(BaseInterpreter):
             )
         except BaseException as e:
             return ExecutionResult(False, [ExecutionOutput("application/vnd.code.notebook.stderr", str(e))])
+        finally:
+            self.no_execution.set()
 
     def get_input(self) -> Iterator[Optional[Keyword]]:
         while self._code:

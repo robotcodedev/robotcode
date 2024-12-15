@@ -6,6 +6,7 @@ import { PythonManager } from "./pythonmanger";
 import * as cp from "child_process";
 import * as rpc from "vscode-jsonrpc/node";
 import { withTimeout } from "./utils";
+import { CONFIG_SECTION } from "./config";
 
 interface RawNotebook {
   cells: RawNotebookCell[];
@@ -161,7 +162,7 @@ export class ReplServerClient {
 
   connection: rpc.MessageConnection | undefined;
   childProcess: cp.ChildProcessWithoutNullStreams | undefined;
-  private _cancelationTokenSource: vscode.CancellationTokenSource | undefined;
+  private _cancelationTokenSources = new Map<vscode.CancellationTokenSource, vscode.NotebookCell>();
 
   dispose(): void {
     this.exitClient().finally(() => {});
@@ -198,10 +199,11 @@ export class ReplServerClient {
   }
 
   cancelCurrentExecution(): void {
-    if (this._cancelationTokenSource) {
-      this._cancelationTokenSource.cancel();
-      this._cancelationTokenSource.dispose();
+    for (const [token] of this._cancelationTokenSources) {
+      token.cancel();
+      token.dispose();
     }
+    this._cancelationTokenSources.clear();
   }
 
   async ensureInitialized(): Promise<void> {
@@ -223,10 +225,14 @@ export class ReplServerClient {
 
     const transport = await rpc.createClientPipeTransport(pipeName, "utf-8");
 
+    const config = vscode.workspace.getConfiguration(CONFIG_SECTION, folder);
+    const profiles = config.get<string[]>("profiles", []);
+
     const { pythonCommand, final_args } = await this.pythonManager.buildRobotCodeCommand(
       folder,
       //["-v", "--debugpy", "--debugpy-wait-for-client", "repl-server", "--pipe", pipeName],
       ["repl-server", "--pipe", pipeName, "--source", this.document.uri.fsPath],
+      profiles,
       undefined,
       true,
       true,
@@ -279,16 +285,16 @@ export class ReplServerClient {
     this.connection = connection;
   }
 
-  async executeCell(source: string): Promise<{ success?: boolean; output: vscode.NotebookCellOutput }> {
-    this._cancelationTokenSource = new vscode.CancellationTokenSource();
-
+  async executeCell(cell: vscode.NotebookCell): Promise<{ success?: boolean; output: vscode.NotebookCellOutput }> {
+    const _cancelationTokenSource = new vscode.CancellationTokenSource();
+    this._cancelationTokenSources.set(_cancelationTokenSource, cell);
     try {
       await this.ensureInitialized();
 
       const result = await this.connection?.sendRequest<ExecutionResult>(
         "executeCell",
-        { source },
-        this._cancelationTokenSource.token,
+        { source: cell.document.getText(), language_id: cell.document.languageId },
+        _cancelationTokenSource.token,
       );
 
       return {
@@ -306,9 +312,13 @@ export class ReplServerClient {
         ),
       };
     } finally {
-      this._cancelationTokenSource.dispose();
-      this._cancelationTokenSource = undefined;
+      this._cancelationTokenSources.delete(_cancelationTokenSource);
+      _cancelationTokenSource.dispose();
     }
+  }
+
+  async interrupt(): Promise<void> {
+    await this.connection?.sendRequest("interrupt");
   }
 }
 
@@ -320,7 +330,7 @@ export class REPLNotebookController {
   readonly description = "A Robot Framework REPL notebook controller";
   readonly supportsExecutionOrder = true;
   readonly controller: vscode.NotebookController;
-  readonly _clients = new Map<vscode.NotebookDocument, ReplServerClient>();
+  readonly clients = new Map<vscode.NotebookDocument, ReplServerClient>();
 
   _outputChannel: vscode.OutputChannel | undefined;
 
@@ -343,16 +353,21 @@ export class REPLNotebookController {
     this.controller.supportsExecutionOrder = true;
     this.controller.description = "Robot Framework REPL";
     this.controller.interruptHandler = async (notebook: vscode.NotebookDocument) => {
-      this._clients.get(notebook)?.dispose();
-      this._clients.delete(notebook);
+      this.clients.get(notebook)?.interrupt();
     };
     this._disposables = vscode.Disposable.from(
       this.controller,
       vscode.workspace.onDidCloseNotebookDocument((document) => {
-        this._clients.get(document)?.dispose();
-        this._clients.delete(document);
+        this.disposeDocument(document);
       }),
     );
+  }
+
+  disposeDocument(notebook: vscode.NotebookDocument): void {
+    const client = this.clients.get(notebook);
+    client?.interrupt();
+    client?.dispose();
+    this.clients.delete(notebook);
   }
 
   outputChannel(): vscode.OutputChannel {
@@ -363,18 +378,18 @@ export class REPLNotebookController {
   }
 
   dispose(): void {
-    for (const client of this._clients.values()) {
+    for (const client of this.clients.values()) {
       client.dispose();
     }
     this._disposables.dispose();
   }
 
   private getClient(document: vscode.NotebookDocument): ReplServerClient {
-    let client = this._clients.get(document);
+    let client = this.clients.get(document);
     if (!client) {
       client = new ReplServerClient(document, this.extensionContext, this.pythonManager, this.outputChannel());
       this.finalizeRegistry.register(document, client);
-      this._clients.set(document, client);
+      this.clients.set(document, client);
     }
     return client;
   }
@@ -398,8 +413,7 @@ export class REPLNotebookController {
 
     execution.start(Date.now());
     try {
-      const source = cell.document.getText();
-      const result = await client.executeCell(source);
+      const result = await client.executeCell(cell);
       if (result !== undefined) {
         success = result.success;
 
@@ -444,6 +458,20 @@ export class NotebookManager {
           ]),
         );
         await vscode.commands.executeCommand("vscode.openWith", newNotebook.uri, "robotframework-repl");
+      }),
+      vscode.commands.registerCommand("robotcode.notebookEditor.restartKernel", () => {
+        const notebook = vscode.window.activeNotebookEditor?.notebook;
+        if (notebook) {
+          vscode.window.withProgress(
+            {
+              location: vscode.ProgressLocation.Notification,
+              title: "Restarting kernel...",
+            },
+            async (_progress, _token) => {
+              this._notebookController.disposeDocument(notebook);
+            },
+          );
+        }
       }),
     );
   }

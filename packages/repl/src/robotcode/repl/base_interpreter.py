@@ -1,4 +1,5 @@
 import abc
+import signal
 from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Iterator, List, Optional, Tuple, Union, cast
@@ -9,7 +10,7 @@ from robot.output import LOGGER
 from robot.output import Message as OutputMessage
 from robot.running import Keyword, TestCase, TestSuite
 from robot.running.context import EXECUTION_CONTEXTS
-from robot.running.signalhandler import _StopSignalMonitor
+from robot.running.signalhandler import STOP_SIGNAL_MONITOR, _StopSignalMonitor
 
 from robotcode.core.utils.path import normalized_path
 from robotcode.robot.utils import get_robot_version
@@ -19,8 +20,21 @@ if TYPE_CHECKING:
     from robot import result, running
 
 
+class ExecutionInterrupted(ExecutionStatus):
+    pass
+
+
 def _register_signal_handler(self: Any, exsignum: Any) -> None:
     pass
+
+
+def _stop_signal_monitor_call(self: Any, signum: Any, frame: Any) -> None:
+    if self._running_keyword:
+        self._stop_execution_gracefully()
+
+
+def _stop_signal_monitor_stop_execution_gracefully(self: Any) -> None:
+    raise ExecutionInterrupted("Execution interrupted")
 
 
 _patched = False
@@ -30,7 +44,9 @@ def _patch() -> None:
     global _patched
     if not _patched:
         # Monkey patching the _register_signal_handler method to disable robot's signal handling
-        _StopSignalMonitor._register_signal_handler = _register_signal_handler
+        # _StopSignalMonitor._register_signal_handler = _register_signal_handler
+        _StopSignalMonitor.__call__ = _stop_signal_monitor_call
+        _StopSignalMonitor._stop_execution_gracefully = _stop_signal_monitor_stop_execution_gracefully
 
     _patched = True
 
@@ -167,7 +183,10 @@ class BaseInterpreter(abc.ABC):
         except ExecutionStatus:
             raise
         except BaseException as e:
-            self.log_message(str(e), "ERROR", timestamp=datetime.now())  # noqa: DTZ005
+            self.log_message(f"{type(e)}: {e}", "ERROR", timestamp=datetime.now())  # noqa: DTZ005
+
+    def interrupt(self) -> None:
+        signal.raise_signal(signal.SIGINT)
 
     def run(self) -> Any:
         self._logger.enabled = True
@@ -181,6 +200,8 @@ class BaseInterpreter(abc.ABC):
                     break
                 except (SystemExit, KeyboardInterrupt):
                     break
+                except ExecutionInterrupted as e:
+                    self.log_message(str(e), "ERROR", timestamp=datetime.now())  # noqa: DTZ005
                 except ExecutionStatus:
                     pass
                 except BaseException as e:
@@ -190,9 +211,10 @@ class BaseInterpreter(abc.ABC):
 
     def run_input(self) -> None:
         for kw in self.get_input():
-            if kw is None:
-                break
-            self.set_last_result(self.run_keyword(kw))
+            with STOP_SIGNAL_MONITOR:
+                if kw is None:
+                    break
+                self.set_last_result(self.run_keyword(kw))
 
     def set_last_result(self, result: Any) -> None:
         self.last_result = result

@@ -17,8 +17,12 @@ class ReplServerProtocol(JsonRPCProtocol):
         return "yeah initialized " + message
 
     @rpc_method(name="executeCell", threaded=True)
-    def execute_cell(self, source: str) -> Optional[ExecutionResult]:
+    def execute_cell(self, source: str, language_id: str) -> Optional[ExecutionResult]:
         return self.interpreter.execute(source)
+
+    @rpc_method(name="interrupt", threaded=True)
+    def interrupt(self) -> None:
+        self.interpreter.interrupt()
 
     @rpc_method(name="shutdown", threaded=True)
     def shutdown(self) -> None:

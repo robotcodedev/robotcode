@@ -427,12 +427,8 @@ export class TestControllerManager {
 
     return (await this.languageClientsManager.pythonManager.executeRobotCode(
       folder,
-      [
-        ...(profiles === undefined ? [] : profiles.flatMap((v) => ["--profile", v])),
-        ...(paths?.length ? paths.flatMap((v) => ["--default-path", v]) : ["--default-path", "."]),
-        "profiles",
-        "list",
-      ],
+      [...(paths?.length ? paths.flatMap((v) => ["--default-path", v]) : ["--default-path", "."]), "profiles", "list"],
+      profiles,
       "json",
       true,
       true,
@@ -677,7 +673,6 @@ export class TestControllerManager {
     const result = (await this.languageClientsManager.pythonManager.executeRobotCode(
       folder,
       [
-        ...(profiles === undefined ? [] : profiles.flatMap((v) => ["--profile", v])),
         ...(paths?.length ? paths.flatMap((v) => ["--default-path", v]) : ["--default-path", "."]),
         ...discoverArgs,
         ...mode_args,
@@ -686,6 +681,7 @@ export class TestControllerManager {
         ...robotArgs,
         ...extraArgs,
       ],
+      profiles,
       "json",
       true,
       true,

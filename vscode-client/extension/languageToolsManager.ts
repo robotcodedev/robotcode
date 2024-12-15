@@ -234,7 +234,14 @@ export class LanguageToolsManager {
           }
           if (folder === undefined) return;
 
-          const { pythonCommand, final_args } = await this.pythonManager.buildRobotCodeCommand(folder, ["repl"]);
+          const config = vscode.workspace.getConfiguration(CONFIG_SECTION, folder);
+          const profiles = config.get<string[]>("profiles", []);
+
+          const { pythonCommand, final_args } = await this.pythonManager.buildRobotCodeCommand(
+            folder,
+            ["repl"],
+            profiles,
+          );
           vscode.window
             .createTerminal({
               name: `Robot REPL${vscode.workspace.workspaceFolders?.length === 1 ? "" : ` (${folder.name})`}`,

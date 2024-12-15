@@ -1337,6 +1337,16 @@
         "shortTitle": "Robot Framework Notebook",
         "category": "RobotCode",
         "command": "robotcode.createNewNotebook"
+      },
+      {
+        "command": "robotcode.notebookEditor.restartKernel",
+        "title": "Restart Kernel",
+        "category": "RobotCode",
+        "shortTitle": "Restart",
+        "icon": {
+          "dark": "./resources/dark/restart-kernel.svg",
+          "light": "./resources/light/restart-kernel.svg"
+        }
       }
     ],
     "menus": {
@@ -1404,6 +1414,13 @@
           "command": "robotcode.createNewNotebook",
           "group": "notebook",
           "when": "!virtualWorkspace"
+        }
+      ],
+      "notebook/toolbar": [
+        {
+          "command": "robotcode.notebookEditor.restartKernel",
+          "group": "navigation/execute@1",
+          "when": "notebookKernel =~ /robotframework-repl/ && isWorkspaceTrusted"
         }
       ]
     },
