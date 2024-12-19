@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import threading
 from threading import Event
 from typing import Any, ClassVar, Final, List, Optional, Set, Union
@@ -15,6 +16,9 @@ from robotcode.core.lsp.types import (
     InitializeParamsClientInfoType,
     InitializeResult,
     InitializeResultServerInfoType,
+    LogMessageParams,
+    LogTraceParams,
+    MessageType,
     PositionEncodingKind,
     ProgressToken,
     Registration,
@@ -29,12 +33,13 @@ from robotcode.core.lsp.types import (
     UnregistrationParams,
     WorkspaceFolder,
 )
-from robotcode.core.utils.logging import LoggingDescriptor
+from robotcode.core.utils.logging import TRACE, LoggingDescriptor
 from robotcode.core.utils.process import pid_exists
 from robotcode.jsonrpc2.protocol import (
     JsonRPCErrorException,
     JsonRPCErrors,
     JsonRPCException,
+    JsonRPCMessage,
     JsonRPCProtocol,
     ProtocolPartDescriptor,
     rpc_method,
@@ -72,6 +77,34 @@ __all__ = ["LanguageServerException", "LanguageServerProtocol"]
 
 class LanguageServerException(JsonRPCException):
     pass
+
+
+class LanguageServerLogHandler(logging.Handler):
+    MAPPING = {
+        logging.INFO: MessageType.INFO,
+        logging.WARNING: MessageType.WARNING,
+        logging.ERROR: MessageType.ERROR,
+        TRACE: MessageType.LOG,
+    }
+
+    def __init__(self, protocol: "LanguageServerProtocol"):
+        super().__init__()
+        self.protocol = protocol
+        self.trace: TraceValues = TraceValues.OFF
+
+    def emit(self, record: logging.LogRecord) -> None:
+        if record.levelno == TRACE:
+            if self.trace != TraceValues.OFF:
+                self.protocol.log_trace(record.getMessage())
+
+        type = self.MAPPING.get(record.levelno, None)
+        if type is None:
+            type = MessageType.LOG
+
+        self.protocol.window_log_message(
+            type=type,
+            message=record.getMessage(),
+        )
 
 
 class LanguageServerProtocol(JsonRPCProtocol):
@@ -131,7 +164,12 @@ class LanguageServerProtocol(JsonRPCProtocol):
         )
 
         self._trace = TraceValues.OFF
+        self._trace_loghandler: Optional[LanguageServerLogHandler] = None
+
         self.is_initialized = Event()
+
+    def __del__(self) -> None:
+        self.trace = TraceValues.OFF
 
     @event
     def on_shutdown(sender) -> None:  # pragma: no cover, NOSONAR
@@ -148,6 +186,9 @@ class LanguageServerProtocol(JsonRPCProtocol):
     @trace.setter
     def trace(self, value: TraceValues) -> None:
         self._trace = value
+
+        if self._trace_loghandler:
+            self._trace_loghandler.trace = value
 
     @property
     def workspace(self) -> Workspace:
@@ -210,7 +251,14 @@ class LanguageServerProtocol(JsonRPCProtocol):
         if self.parent_process_id and pid_exists(self.parent_process_id):
             self.start_parent_process_watcher()
 
+        logger = logging.getLogger()
+
+        if self._trace_loghandler is None:
+            self._trace_loghandler = LanguageServerLogHandler(self)
+            logger.addHandler(self._trace_loghandler)
+
         self.trace = trace or TraceValues.OFF
+
         self.client_info = client_info
 
         self.client_capabilities = capabilities
@@ -292,6 +340,13 @@ class LanguageServerProtocol(JsonRPCProtocol):
 
         self.shutdown_received = True
 
+        logger = logging.getLogger()
+
+        if self._trace_loghandler in logger.handlers:
+            logging.getLogger().removeHandler(self._trace_loghandler)
+            del self._trace_loghandler
+            self._trace_loghandler = None
+
         try:
             self.cancel_all_received_request()
         except BaseException as e:
@@ -310,6 +365,16 @@ class LanguageServerProtocol(JsonRPCProtocol):
     @__logger.call
     def _set_trace(self, value: TraceValues, *args: Any, **kwargs: Any) -> None:
         self.trace = value
+
+    def window_log_message(self, type: MessageType, message: str) -> None:
+        self.send_notification("window/logMessage", LogMessageParams(type=type, message=message))
+
+    def log_trace(self, message: str, verbose: Optional[str] = None) -> None:
+        self.send_notification("$/logTrace", LogTraceParams(message=message, verbose=verbose))
+
+    def _do_trace_message(self, message: JsonRPCMessage, msg: bytes) -> None:
+        if getattr(message, "method", None) not in ["$/logTrace", "window/logMessage"]:
+            self._data_logger.trace(lambda: f"JSON send: {msg.decode()!r}")
 
     @rpc_method(name="$/cancelRequest", param_type=CancelParams)
     @__logger.call

@@ -550,10 +550,13 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
         if self.write_transport is not None:
             msg = header + body
 
-            self._data_logger.trace(lambda: f"JSON send: {msg.decode()!r}")
+            self._do_trace_message(message, msg)
 
             if self._loop:
                 self._loop.call_soon_threadsafe(self.write_transport.write, msg)
+
+    def _do_trace_message(self, message: JsonRPCMessage, msg: bytes) -> None:
+        self._data_logger.trace(lambda: f"JSON send: {msg.decode()!r}")
 
     @__logger.call
     def send_request(
