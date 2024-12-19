@@ -595,6 +595,30 @@ def test_literal_with_invalid_args_should_raise_typerror(expr: Any, type: Any) -
 
 
 @dataclass
+class SimpleData:
+    a: Optional[int] = None
+    b: Optional[str] = None
+
+
+@dataclass
+class ComplexData:
+    data: Optional[SimpleData] = None
+    more_data: Optional[str] = None
+
+
+@pytest.mark.parametrize(
+    ("expr", "type", "expected"),
+    [
+        ('{"a":1, "b":"2"}', Optional[SimpleData], SimpleData(1, "2")),
+        ("{}", Optional[SimpleData], SimpleData()),
+        ("{}", Optional[ComplexData], ComplexData()),
+    ],
+)
+def test_empty_dict_should_not_match_none_type(expr: Any, type: Any, expected: str) -> None:
+    assert from_json(expr, type, strict=True) == expected
+
+
+@dataclass
 class SimpleItemWithAlias:
     a: int = field(metadata={"alias": "a_test"})
 

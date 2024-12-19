@@ -419,6 +419,9 @@ def from_dict(
         match_type_hints: Optional[Dict[str, Any]] = None
 
         for t in types:
+            if t is type(None):
+                continue
+
             origin = _get_origin_cached(t)
 
             if origin is Literal:
@@ -455,7 +458,7 @@ def from_dict(
                 match_type_hints = type_hints
             elif match_same_keys is not None and len(match_same_keys) == len(same_keys):
                 raise TypeError(
-                    f"Value {value!r} matches to more then one types of "
+                    f"Value {value!r} of type {type(value)!r} matches to more then one types of "
                     f"{repr(types[0].__name__) if len(types) == 1 else ' | '.join(repr(e.__name__) for e in types)}."
                 )
 
