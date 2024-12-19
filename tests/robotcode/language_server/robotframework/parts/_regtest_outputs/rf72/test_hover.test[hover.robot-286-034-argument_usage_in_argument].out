@@ -1,0 +1,15 @@
+data: !GeneratedTestData
+  character: 34
+  line: 286
+  name: argument usage in argument
+result: !Hover
+  contents:
+    kind: markdown
+    value: (argument) ${a}
+  range:
+    end:
+      character: 35
+      line: 286
+    start:
+      character: 34
+      line: 286

@@ -1,0 +1,15 @@
+data: !GeneratedTestData
+  character: 36
+  line: 48
+  name: extra var
+result: !Hover
+  contents:
+    kind: markdown
+    value: (suite variable) ${C}
+  range:
+    end:
+      character: 37
+      line: 48
+    start:
+      character: 36
+      line: 48

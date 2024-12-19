@@ -1,0 +1,15 @@
+data: !GeneratedTestData
+  character: 21
+  line: 224
+  name: keyword of lib with error
+result: !Hover
+  contents:
+    kind: markdown
+    value: '### Keyword *A Library Keyword*'
+  range:
+    end:
+      character: 30
+      line: 224
+    start:
+      character: 13
+      line: 224

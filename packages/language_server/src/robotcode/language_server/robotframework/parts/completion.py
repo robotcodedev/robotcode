@@ -261,6 +261,18 @@ def get_snippets() -> Dict[str, List[str]]:
                     "VAR &{}": [r"VAR    &{${1}}    ${0}"],
                 }
             )
+
+        if get_robot_version() >= (7, 2):
+            __snippets.update(
+                {
+                    "GROUP": [
+                        "GROUP    ${1}",
+                        "    $0",
+                        "END",
+                        "",
+                    ]
+                }
+            )
     return __snippets
 
 
@@ -283,10 +295,12 @@ def get_reserved_keywords() -> List[str]:
                 "CONTINUE",
                 "RETURN",
             ]
+
         if get_robot_version() >= (7, 0):
             __reserved_keywords += ["VAR"]
-        else:
-            __reserved_keywords += ["ELIF"]
+
+        if get_robot_version() >= (7, 2):
+            __reserved_keywords += ["GROUP"]
 
         __reserved_keywords = sorted(__reserved_keywords)
     return __reserved_keywords

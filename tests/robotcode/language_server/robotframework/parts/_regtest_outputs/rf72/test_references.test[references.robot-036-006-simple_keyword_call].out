@@ -1,0 +1,2462 @@
+data: !GeneratedTestData
+  character: 6
+  line: 36
+  name: simple keyword call
+result:
+- !Location
+  range:
+    end:
+      character: 7
+      line: 2
+    start:
+      character: 4
+      line: 2
+  uri: discovery/__not_discovered.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 5
+    start:
+      character: 4
+      line: 5
+  uri: discovery/__not_discovered.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 2
+    start:
+      character: 4
+      line: 2
+  uri: discovery/_not_discovered.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 5
+    start:
+      character: 4
+      line: 5
+  uri: discovery/_not_discovered.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 3
+    start:
+      character: 4
+      line: 3
+  uri: extras/fibonaci.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 37
+    start:
+      character: 4
+      line: 37
+  uri: extras/fibonaci.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 3
+    start:
+      character: 4
+      line: 3
+  uri: folder_a/duplicated.resource
+- !Location
+  range:
+    end:
+      character: 7
+      line: 6
+    start:
+      character: 4
+      line: 6
+  uri: folder_a/duplicated.resource
+- !Location
+  range:
+    end:
+      character: 7
+      line: 3
+    start:
+      character: 4
+      line: 3
+  uri: folder_b/duplicated.resource
+- !Location
+  range:
+    end:
+      character: 7
+      line: 6
+    start:
+      character: 4
+      line: 6
+  uri: folder_b/duplicated.resource
+- !Location
+  range:
+    end:
+      character: 0
+      line: 3036
+    start:
+      character: 0
+      line: 3035
+  uri: libraries/BuiltIn.py
+- !Location
+  range:
+    end:
+      character: 7
+      line: 8
+    start:
+      character: 4
+      line: 8
+  uri: resources/firstresource.resource
+- !Location
+  range:
+    end:
+      character: 7
+      line: 11
+    start:
+      character: 4
+      line: 11
+  uri: resources/firstresource.resource
+- !Location
+  range:
+    end:
+      character: 7
+      line: 15
+    start:
+      character: 4
+      line: 15
+  uri: resources/firstresource.resource
+- !Location
+  range:
+    end:
+      character: 7
+      line: 17
+    start:
+      character: 4
+      line: 17
+  uri: resources/firstresource.resource
+- !Location
+  range:
+    end:
+      character: 7
+      line: 31
+    start:
+      character: 4
+      line: 31
+  uri: resources/firstresource.resource
+- !Location
+  range:
+    end:
+      character: 7
+      line: 7
+    start:
+      character: 4
+      line: 7
+  uri: rf61/embedded_keywords.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 11
+    start:
+      character: 4
+      line: 11
+  uri: rf61/embedded_keywords.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 5
+    start:
+      character: 4
+      line: 5
+  uri: rf61/jsonvariables.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 6
+    start:
+      character: 4
+      line: 6
+  uri: rf61/jsonvariables.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 40
+    start:
+      character: 4
+      line: 40
+  uri: rf70/vartest.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 41
+    start:
+      character: 4
+      line: 41
+  uri: rf70/vartest.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 54
+    start:
+      character: 4
+      line: 54
+  uri: rf70/vartest.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 55
+    start:
+      character: 4
+      line: 55
+  uri: rf70/vartest.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 2
+    start:
+      character: 4
+      line: 2
+  uri: tests/bddstyle.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 4
+    start:
+      character: 4
+      line: 4
+  uri: tests/bddstyle.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 6
+    start:
+      character: 4
+      line: 6
+  uri: tests/bddstyle.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 32
+    start:
+      character: 4
+      line: 32
+  uri: tests/code_action_show_documentation.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 37
+    start:
+      character: 4
+      line: 37
+  uri: tests/code_action_show_documentation.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 98
+    start:
+      character: 4
+      line: 98
+  uri: tests/code_action_show_documentation.robot
+- !Location
+  range:
+    end:
+      character: 8
+      line: 103
+    start:
+      character: 5
+      line: 103
+  uri: tests/code_action_show_documentation.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 106
+    start:
+      character: 4
+      line: 106
+  uri: tests/code_action_show_documentation.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 107
+    start:
+      character: 4
+      line: 107
+  uri: tests/code_action_show_documentation.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 110
+    start:
+      character: 4
+      line: 110
+  uri: tests/code_action_show_documentation.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 113
+    start:
+      character: 4
+      line: 113
+  uri: tests/code_action_show_documentation.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 116
+    start:
+      character: 4
+      line: 116
+  uri: tests/code_action_show_documentation.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 120
+    start:
+      character: 4
+      line: 120
+  uri: tests/code_action_show_documentation.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 121
+    start:
+      character: 4
+      line: 121
+  uri: tests/code_action_show_documentation.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 125
+    start:
+      character: 4
+      line: 125
+  uri: tests/code_action_show_documentation.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 126
+    start:
+      character: 4
+      line: 126
+  uri: tests/code_action_show_documentation.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 130
+    start:
+      character: 4
+      line: 130
+  uri: tests/code_action_show_documentation.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 131
+    start:
+      character: 4
+      line: 131
+  uri: tests/code_action_show_documentation.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 34
+    start:
+      character: 4
+      line: 34
+  uri: tests/document_highlight.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 41
+    start:
+      character: 4
+      line: 41
+  uri: tests/document_highlight.robot
+- !Location
+  range:
+    end:
+      character: 11
+      line: 88
+    start:
+      character: 8
+      line: 88
+  uri: tests/document_highlight.robot
+- !Location
+  range:
+    end:
+      character: 11
+      line: 91
+    start:
+      character: 8
+      line: 91
+  uri: tests/document_highlight.robot
+- !Location
+  range:
+    end:
+      character: 11
+      line: 96
+    start:
+      character: 8
+      line: 96
+  uri: tests/document_highlight.robot
+- !Location
+  range:
+    end:
+      character: 11
+      line: 99
+    start:
+      character: 8
+      line: 99
+  uri: tests/document_highlight.robot
+- !Location
+  range:
+    end:
+      character: 19
+      line: 102
+    start:
+      character: 16
+      line: 102
+  uri: tests/document_highlight.robot
+- !Location
+  range:
+    end:
+      character: 51
+      line: 102
+    start:
+      character: 48
+      line: 102
+  uri: tests/document_highlight.robot
+- !Location
+  range:
+    end:
+      character: 70
+      line: 102
+    start:
+      character: 67
+      line: 102
+  uri: tests/document_highlight.robot
+- !Location
+  range:
+    end:
+      character: 17
+      line: 106
+    start:
+      character: 14
+      line: 106
+  uri: tests/document_highlight.robot
+- !Location
+  range:
+    end:
+      character: 47
+      line: 106
+    start:
+      character: 44
+      line: 106
+  uri: tests/document_highlight.robot
+- !Location
+  range:
+    end:
+      character: 66
+      line: 106
+    start:
+      character: 63
+      line: 106
+  uri: tests/document_highlight.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 116
+    start:
+      character: 4
+      line: 116
+  uri: tests/document_highlight.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 118
+    start:
+      character: 4
+      line: 118
+  uri: tests/document_highlight.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 126
+    start:
+      character: 4
+      line: 126
+  uri: tests/document_highlight.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 128
+    start:
+      character: 4
+      line: 128
+  uri: tests/document_highlight.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 136
+    start:
+      character: 4
+      line: 136
+  uri: tests/document_highlight.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 138
+    start:
+      character: 4
+      line: 138
+  uri: tests/document_highlight.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 140
+    start:
+      character: 4
+      line: 140
+  uri: tests/document_highlight.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 151
+    start:
+      character: 4
+      line: 151
+  uri: tests/document_highlight.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 165
+    start:
+      character: 4
+      line: 165
+  uri: tests/document_highlight.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 166
+    start:
+      character: 4
+      line: 166
+  uri: tests/document_highlight.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 178
+    start:
+      character: 4
+      line: 178
+  uri: tests/document_highlight.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 179
+    start:
+      character: 4
+      line: 179
+  uri: tests/document_highlight.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 10
+    start:
+      character: 4
+      line: 10
+  uri: tests/foldingrange.robot
+- !Location
+  range:
+    end:
+      character: 15
+      line: 16
+    start:
+      character: 12
+      line: 16
+  uri: tests/foldingrange.robot
+- !Location
+  range:
+    end:
+      character: 15
+      line: 19
+    start:
+      character: 12
+      line: 19
+  uri: tests/foldingrange.robot
+- !Location
+  range:
+    end:
+      character: 15
+      line: 22
+    start:
+      character: 12
+      line: 22
+  uri: tests/foldingrange.robot
+- !Location
+  range:
+    end:
+      character: 11
+      line: 26
+    start:
+      character: 8
+      line: 26
+  uri: tests/foldingrange.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 34
+    start:
+      character: 4
+      line: 34
+  uri: tests/foldingrange.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 41
+    start:
+      character: 4
+      line: 41
+  uri: tests/foldingrange.robot
+- !Location
+  range:
+    end:
+      character: 11
+      line: 56
+    start:
+      character: 8
+      line: 56
+  uri: tests/foldingrange.robot
+- !Location
+  range:
+    end:
+      character: 11
+      line: 62
+    start:
+      character: 8
+      line: 62
+  uri: tests/foldingrange.robot
+- !Location
+  range:
+    end:
+      character: 11
+      line: 65
+    start:
+      character: 8
+      line: 65
+  uri: tests/foldingrange.robot
+- !Location
+  range:
+    end:
+      character: 15
+      line: 67
+    start:
+      character: 12
+      line: 67
+  uri: tests/foldingrange.robot
+- !Location
+  range:
+    end:
+      character: 15
+      line: 69
+    start:
+      character: 12
+      line: 69
+  uri: tests/foldingrange.robot
+- !Location
+  range:
+    end:
+      character: 11
+      line: 73
+    start:
+      character: 8
+      line: 73
+  uri: tests/foldingrange.robot
+- !Location
+  range:
+    end:
+      character: 11
+      line: 76
+    start:
+      character: 8
+      line: 76
+  uri: tests/foldingrange.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 43
+    start:
+      character: 4
+      line: 43
+  uri: tests/goto.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 47
+    start:
+      character: 4
+      line: 47
+  uri: tests/goto.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 49
+    start:
+      character: 4
+      line: 49
+  uri: tests/goto.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 52
+    start:
+      character: 4
+      line: 52
+  uri: tests/goto.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 54
+    start:
+      character: 4
+      line: 54
+  uri: tests/goto.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 57
+    start:
+      character: 4
+      line: 57
+  uri: tests/goto.robot
+- !Location
+  range:
+    end:
+      character: 15
+      line: 64
+    start:
+      character: 12
+      line: 64
+  uri: tests/goto.robot
+- !Location
+  range:
+    end:
+      character: 11
+      line: 71
+    start:
+      character: 8
+      line: 71
+  uri: tests/goto.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 75
+    start:
+      character: 4
+      line: 75
+  uri: tests/goto.robot
+- !Location
+  range:
+    end:
+      character: 18
+      line: 92
+    start:
+      character: 15
+      line: 92
+  uri: tests/goto.robot
+- !Location
+  range:
+    end:
+      character: 29
+      line: 94
+    start:
+      character: 26
+      line: 94
+  uri: tests/goto.robot
+- !Location
+  range:
+    end:
+      character: 29
+      line: 99
+    start:
+      character: 26
+      line: 99
+  uri: tests/goto.robot
+- !Location
+  range:
+    end:
+      character: 11
+      line: 115
+    start:
+      character: 8
+      line: 115
+  uri: tests/goto.robot
+- !Location
+  range:
+    end:
+      character: 11
+      line: 118
+    start:
+      character: 8
+      line: 118
+  uri: tests/goto.robot
+- !Location
+  range:
+    end:
+      character: 11
+      line: 123
+    start:
+      character: 8
+      line: 123
+  uri: tests/goto.robot
+- !Location
+  range:
+    end:
+      character: 11
+      line: 126
+    start:
+      character: 8
+      line: 126
+  uri: tests/goto.robot
+- !Location
+  range:
+    end:
+      character: 19
+      line: 129
+    start:
+      character: 16
+      line: 129
+  uri: tests/goto.robot
+- !Location
+  range:
+    end:
+      character: 51
+      line: 129
+    start:
+      character: 48
+      line: 129
+  uri: tests/goto.robot
+- !Location
+  range:
+    end:
+      character: 70
+      line: 129
+    start:
+      character: 67
+      line: 129
+  uri: tests/goto.robot
+- !Location
+  range:
+    end:
+      character: 17
+      line: 133
+    start:
+      character: 14
+      line: 133
+  uri: tests/goto.robot
+- !Location
+  range:
+    end:
+      character: 47
+      line: 133
+    start:
+      character: 44
+      line: 133
+  uri: tests/goto.robot
+- !Location
+  range:
+    end:
+      character: 66
+      line: 133
+    start:
+      character: 63
+      line: 133
+  uri: tests/goto.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 151
+    start:
+      character: 4
+      line: 151
+  uri: tests/goto.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 158
+    start:
+      character: 4
+      line: 158
+  uri: tests/goto.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 160
+    start:
+      character: 4
+      line: 160
+  uri: tests/goto.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 168
+    start:
+      character: 4
+      line: 168
+  uri: tests/goto.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 170
+    start:
+      character: 4
+      line: 170
+  uri: tests/goto.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 180
+    start:
+      character: 4
+      line: 180
+  uri: tests/goto.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 182
+    start:
+      character: 4
+      line: 182
+  uri: tests/goto.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 191
+    start:
+      character: 4
+      line: 191
+  uri: tests/goto.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 193
+    start:
+      character: 4
+      line: 193
+  uri: tests/goto.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 214
+    start:
+      character: 4
+      line: 214
+  uri: tests/goto.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 215
+    start:
+      character: 4
+      line: 215
+  uri: tests/goto.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 227
+    start:
+      character: 4
+      line: 227
+  uri: tests/goto.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 228
+    start:
+      character: 4
+      line: 228
+  uri: tests/goto.robot
+- !Location
+  range:
+    end:
+      character: 16
+      line: 64
+    start:
+      character: 13
+      line: 64
+  uri: tests/hover.robot
+- !Location
+  range:
+    end:
+      character: 27
+      line: 66
+    start:
+      character: 24
+      line: 66
+  uri: tests/hover.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 69
+    start:
+      character: 4
+      line: 69
+  uri: tests/hover.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 70
+    start:
+      character: 4
+      line: 70
+  uri: tests/hover.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 71
+    start:
+      character: 4
+      line: 71
+  uri: tests/hover.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 72
+    start:
+      character: 4
+      line: 72
+  uri: tests/hover.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 75
+    start:
+      character: 4
+      line: 75
+  uri: tests/hover.robot
+- !Location
+  range:
+    end:
+      character: 11
+      line: 83
+    start:
+      character: 8
+      line: 83
+  uri: tests/hover.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 86
+    start:
+      character: 4
+      line: 86
+  uri: tests/hover.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 89
+    start:
+      character: 4
+      line: 89
+  uri: tests/hover.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 92
+    start:
+      character: 4
+      line: 92
+  uri: tests/hover.robot
+- !Location
+  range:
+    end:
+      character: 29
+      line: 104
+    start:
+      character: 26
+      line: 104
+  uri: tests/hover.robot
+- !Location
+  range:
+    end:
+      character: 14
+      line: 121
+    start:
+      character: 11
+      line: 121
+  uri: tests/hover.robot
+- !Location
+  range:
+    end:
+      character: 11
+      line: 128
+    start:
+      character: 8
+      line: 128
+  uri: tests/hover.robot
+- !Location
+  range:
+    end:
+      character: 11
+      line: 131
+    start:
+      character: 8
+      line: 131
+  uri: tests/hover.robot
+- !Location
+  range:
+    end:
+      character: 11
+      line: 136
+    start:
+      character: 8
+      line: 136
+  uri: tests/hover.robot
+- !Location
+  range:
+    end:
+      character: 11
+      line: 139
+    start:
+      character: 8
+      line: 139
+  uri: tests/hover.robot
+- !Location
+  range:
+    end:
+      character: 19
+      line: 142
+    start:
+      character: 16
+      line: 142
+  uri: tests/hover.robot
+- !Location
+  range:
+    end:
+      character: 51
+      line: 142
+    start:
+      character: 48
+      line: 142
+  uri: tests/hover.robot
+- !Location
+  range:
+    end:
+      character: 70
+      line: 142
+    start:
+      character: 67
+      line: 142
+  uri: tests/hover.robot
+- !Location
+  range:
+    end:
+      character: 17
+      line: 146
+    start:
+      character: 14
+      line: 146
+  uri: tests/hover.robot
+- !Location
+  range:
+    end:
+      character: 47
+      line: 146
+    start:
+      character: 44
+      line: 146
+  uri: tests/hover.robot
+- !Location
+  range:
+    end:
+      character: 66
+      line: 146
+    start:
+      character: 63
+      line: 146
+  uri: tests/hover.robot
+- !Location
+  range:
+    end:
+      character: 24
+      line: 151
+    start:
+      character: 21
+      line: 151
+  uri: tests/hover.robot
+- !Location
+  range:
+    end:
+      character: 34
+      line: 154
+    start:
+      character: 31
+      line: 154
+  uri: tests/hover.robot
+- !Location
+  range:
+    end:
+      character: 13
+      line: 158
+    start:
+      character: 10
+      line: 158
+  uri: tests/hover.robot
+- !Location
+  range:
+    end:
+      character: 12
+      line: 161
+    start:
+      character: 9
+      line: 161
+  uri: tests/hover.robot
+- !Location
+  range:
+    end:
+      character: 11
+      line: 164
+    start:
+      character: 8
+      line: 164
+  uri: tests/hover.robot
+- !Location
+  range:
+    end:
+      character: 12
+      line: 167
+    start:
+      character: 9
+      line: 167
+  uri: tests/hover.robot
+- !Location
+  range:
+    end:
+      character: 11
+      line: 170
+    start:
+      character: 8
+      line: 170
+  uri: tests/hover.robot
+- !Location
+  range:
+    end:
+      character: 21
+      line: 173
+    start:
+      character: 18
+      line: 173
+  uri: tests/hover.robot
+- !Location
+  range:
+    end:
+      character: 40
+      line: 178
+    start:
+      character: 37
+      line: 178
+  uri: tests/hover.robot
+- !Location
+  range:
+    end:
+      character: 65
+      line: 178
+    start:
+      character: 62
+      line: 178
+  uri: tests/hover.robot
+- !Location
+  range:
+    end:
+      character: 82
+      line: 178
+    start:
+      character: 79
+      line: 178
+  uri: tests/hover.robot
+- !Location
+  range:
+    end:
+      character: 62
+      line: 183
+    start:
+      character: 59
+      line: 183
+  uri: tests/hover.robot
+- !Location
+  range:
+    end:
+      character: 27
+      line: 188
+    start:
+      character: 24
+      line: 188
+  uri: tests/hover.robot
+- !Location
+  range:
+    end:
+      character: 22
+      line: 242
+    start:
+      character: 19
+      line: 242
+  uri: tests/hover.robot
+- !Location
+  range:
+    end:
+      character: 23
+      line: 251
+    start:
+      character: 20
+      line: 251
+  uri: tests/hover.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 270
+    start:
+      character: 4
+      line: 270
+  uri: tests/hover.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 272
+    start:
+      character: 4
+      line: 272
+  uri: tests/hover.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 280
+    start:
+      character: 4
+      line: 280
+  uri: tests/hover.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 282
+    start:
+      character: 4
+      line: 282
+  uri: tests/hover.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 290
+    start:
+      character: 4
+      line: 290
+  uri: tests/hover.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 292
+    start:
+      character: 4
+      line: 292
+  uri: tests/hover.robot
+- !Location
+  range:
+    end:
+      character: 11
+      line: 299
+    start:
+      character: 8
+      line: 299
+  uri: tests/hover.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 7
+    start:
+      character: 4
+      line: 7
+  uri: tests/playground.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 9
+    start:
+      character: 4
+      line: 9
+  uri: tests/playground.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 10
+    start:
+      character: 4
+      line: 10
+  uri: tests/playground.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 12
+    start:
+      character: 4
+      line: 12
+  uri: tests/playground.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 13
+    start:
+      character: 4
+      line: 13
+  uri: tests/playground.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 14
+    start:
+      character: 4
+      line: 14
+  uri: tests/playground.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 16
+    start:
+      character: 4
+      line: 16
+  uri: tests/playground.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 23
+    start:
+      character: 4
+      line: 23
+  uri: tests/playground.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 24
+    start:
+      character: 4
+      line: 24
+  uri: tests/playground.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 36
+    start:
+      character: 4
+      line: 36
+  uri: tests/references.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 43
+    start:
+      character: 4
+      line: 43
+  uri: tests/references.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 115
+    start:
+      character: 4
+      line: 115
+  uri: tests/references.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 123
+    start:
+      character: 4
+      line: 123
+  uri: tests/references.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 128
+    start:
+      character: 4
+      line: 128
+  uri: tests/references.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 134
+    start:
+      character: 4
+      line: 134
+  uri: tests/references.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 135
+    start:
+      character: 4
+      line: 135
+  uri: tests/references.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 139
+    start:
+      character: 4
+      line: 139
+  uri: tests/references.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 143
+    start:
+      character: 4
+      line: 143
+  uri: tests/references.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 147
+    start:
+      character: 4
+      line: 147
+  uri: tests/references.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 153
+    start:
+      character: 4
+      line: 153
+  uri: tests/references.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 155
+    start:
+      character: 4
+      line: 155
+  uri: tests/references.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 163
+    start:
+      character: 4
+      line: 163
+  uri: tests/references.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 165
+    start:
+      character: 4
+      line: 165
+  uri: tests/references.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 173
+    start:
+      character: 4
+      line: 173
+  uri: tests/references.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 175
+    start:
+      character: 4
+      line: 175
+  uri: tests/references.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 188
+    start:
+      character: 4
+      line: 188
+  uri: tests/references.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 189
+    start:
+      character: 4
+      line: 189
+  uri: tests/references.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 202
+    start:
+      character: 4
+      line: 202
+  uri: tests/references.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 203
+    start:
+      character: 4
+      line: 203
+  uri: tests/references.robot
+- !Location
+  range:
+    end:
+      character: 21
+      line: 206
+    start:
+      character: 18
+      line: 206
+  uri: tests/references.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 12
+    start:
+      character: 4
+      line: 12
+  uri: tests/setup_teardown.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 16
+    start:
+      character: 4
+      line: 16
+  uri: tests/setup_teardown.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 21
+    start:
+      character: 4
+      line: 21
+  uri: tests/setup_teardown.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 31
+    start:
+      character: 4
+      line: 31
+  uri: tests/setup_teardown.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 34
+    start:
+      character: 4
+      line: 34
+  uri: tests/setup_teardown.robot
+- !Location
+  range:
+    end:
+      character: 11
+      line: 23
+    start:
+      character: 8
+      line: 23
+  uri: tests/symbols.robot
+- !Location
+  range:
+    end:
+      character: 11
+      line: 30
+    start:
+      character: 8
+      line: 30
+  uri: tests/symbols.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 28
+    start:
+      character: 4
+      line: 28
+  uri: tests/templates.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 62
+    start:
+      character: 4
+      line: 62
+  uri: tests/templates.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 63
+    start:
+      character: 4
+      line: 63
+  uri: tests/templates.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 64
+    start:
+      character: 4
+      line: 64
+  uri: tests/templates.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 65
+    start:
+      character: 4
+      line: 65
+  uri: tests/templates.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 69
+    start:
+      character: 4
+      line: 69
+  uri: tests/templates.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 70
+    start:
+      character: 4
+      line: 70
+  uri: tests/templates.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 71
+    start:
+      character: 4
+      line: 71
+  uri: tests/templates.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 72
+    start:
+      character: 4
+      line: 72
+  uri: tests/templates.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 75
+    start:
+      character: 4
+      line: 75
+  uri: tests/templates.robot
+- !Location
+  range:
+    end:
+      character: 37
+      line: 76
+    start:
+      character: 34
+      line: 76
+  uri: tests/templates.robot
+- !Location
+  range:
+    end:
+      character: 72
+      line: 76
+    start:
+      character: 69
+      line: 76
+  uri: tests/templates.robot
+- !Location
+  range:
+    end:
+      character: 11
+      line: 82
+    start:
+      character: 8
+      line: 82
+  uri: tests/templates.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 86
+    start:
+      character: 4
+      line: 86
+  uri: tests/templates.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 90
+    start:
+      character: 4
+      line: 90
+  uri: tests/templates.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 50
+    start:
+      character: 4
+      line: 50
+  uri: tests/templates2.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 54
+    start:
+      character: 4
+      line: 54
+  uri: tests/templates2.robot
+- !Location
+  range:
+    end:
+      character: 39
+      line: 1
+    start:
+      character: 36
+      line: 1
+  uri: tests/variables.robot
+- !Location
+  range:
+    end:
+      character: 72
+      line: 1
+    start:
+      character: 69
+      line: 1
+  uri: tests/variables.robot
+- !Location
+  range:
+    end:
+      character: 17
+      line: 2
+    start:
+      character: 14
+      line: 2
+  uri: tests/variables.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 18
+    start:
+      character: 4
+      line: 18
+  uri: tests/variables.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 19
+    start:
+      character: 4
+      line: 19
+  uri: tests/variables.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 20
+    start:
+      character: 4
+      line: 20
+  uri: tests/variables.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 21
+    start:
+      character: 4
+      line: 21
+  uri: tests/variables.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 22
+    start:
+      character: 4
+      line: 22
+  uri: tests/variables.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 23
+    start:
+      character: 4
+      line: 23
+  uri: tests/variables.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 24
+    start:
+      character: 4
+      line: 24
+  uri: tests/variables.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 25
+    start:
+      character: 4
+      line: 25
+  uri: tests/variables.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 26
+    start:
+      character: 4
+      line: 26
+  uri: tests/variables.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 27
+    start:
+      character: 4
+      line: 27
+  uri: tests/variables.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 28
+    start:
+      character: 4
+      line: 28
+  uri: tests/variables.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 29
+    start:
+      character: 4
+      line: 29
+  uri: tests/variables.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 30
+    start:
+      character: 4
+      line: 30
+  uri: tests/variables.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 31
+    start:
+      character: 4
+      line: 31
+  uri: tests/variables.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 33
+    start:
+      character: 4
+      line: 33
+  uri: tests/variables.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 34
+    start:
+      character: 4
+      line: 34
+  uri: tests/variables.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 35
+    start:
+      character: 4
+      line: 35
+  uri: tests/variables.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 36
+    start:
+      character: 4
+      line: 36
+  uri: tests/variables.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 37
+    start:
+      character: 4
+      line: 37
+  uri: tests/variables.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 38
+    start:
+      character: 4
+      line: 38
+  uri: tests/variables.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 39
+    start:
+      character: 4
+      line: 39
+  uri: tests/variables.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 40
+    start:
+      character: 4
+      line: 40
+  uri: tests/variables.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 41
+    start:
+      character: 4
+      line: 41
+  uri: tests/variables.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 42
+    start:
+      character: 4
+      line: 42
+  uri: tests/variables.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 43
+    start:
+      character: 4
+      line: 43
+  uri: tests/variables.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 44
+    start:
+      character: 4
+      line: 44
+  uri: tests/variables.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 45
+    start:
+      character: 4
+      line: 45
+  uri: tests/variables.robot
+- !Location
+  range:
+    end:
+      character: 21
+      line: 49
+    start:
+      character: 18
+      line: 49
+  uri: tests/variables.robot
+- !Location
+  range:
+    end:
+      character: 11
+      line: 53
+    start:
+      character: 8
+      line: 53
+  uri: tests/variables.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 60
+    start:
+      character: 4
+      line: 60
+  uri: tests/variables.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 61
+    start:
+      character: 4
+      line: 61
+  uri: tests/variables.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 62
+    start:
+      character: 4
+      line: 62
+  uri: tests/variables.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 63
+    start:
+      character: 4
+      line: 63
+  uri: tests/variables.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 66
+    start:
+      character: 4
+      line: 66
+  uri: tests/variables.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 67
+    start:
+      character: 4
+      line: 67
+  uri: tests/variables.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 69
+    start:
+      character: 4
+      line: 69
+  uri: tests/variables.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 72
+    start:
+      character: 4
+      line: 72
+  uri: tests/variables.robot
+- !Location
+  range:
+    end:
+      character: 11
+      line: 87
+    start:
+      character: 8
+      line: 87
+  uri: tests/variables.robot
+- !Location
+  range:
+    end:
+      character: 11
+      line: 89
+    start:
+      character: 8
+      line: 89
+  uri: tests/variables.robot
+- !Location
+  range:
+    end:
+      character: 23
+      line: 96
+    start:
+      character: 20
+      line: 96
+  uri: tests/variables.robot
+- !Location
+  range:
+    end:
+      character: 43
+      line: 109
+    start:
+      character: 40
+      line: 109
+  uri: tests/variables.robot
+- !Location
+  range:
+    end:
+      character: 34
+      line: 111
+    start:
+      character: 31
+      line: 111
+  uri: tests/variables.robot
+- !Location
+  range:
+    end:
+      character: 36
+      line: 112
+    start:
+      character: 33
+      line: 112
+  uri: tests/variables.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 128
+    start:
+      character: 4
+      line: 128
+  uri: tests/variables.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 130
+    start:
+      character: 4
+      line: 130
+  uri: tests/variables.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 131
+    start:
+      character: 4
+      line: 131
+  uri: tests/variables.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 155
+    start:
+      character: 4
+      line: 155
+  uri: tests/variables.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 163
+    start:
+      character: 4
+      line: 163
+  uri: tests/variables.robot
+- !Location
+  range:
+    end:
+      character: 37
+      line: 164
+    start:
+      character: 34
+      line: 164
+  uri: tests/variables.robot
+- !Location
+  range:
+    end:
+      character: 72
+      line: 164
+    start:
+      character: 69
+      line: 164
+  uri: tests/variables.robot
+- !Location
+  range:
+    end:
+      character: 11
+      line: 170
+    start:
+      character: 8
+      line: 170
+  uri: tests/variables.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 174
+    start:
+      character: 4
+      line: 174
+  uri: tests/variables.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 178
+    start:
+      character: 4
+      line: 178
+  uri: tests/variables.robot
+- !Location
+  range:
+    end:
+      character: 11
+      line: 9
+    start:
+      character: 8
+      line: 9
+  uri: tests1/first.robot
+- !Location
+  range:
+    end:
+      character: 11
+      line: 12
+    start:
+      character: 8
+      line: 12
+  uri: tests1/first.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 33
+    start:
+      character: 4
+      line: 33
+  uri: tests1/first.robot

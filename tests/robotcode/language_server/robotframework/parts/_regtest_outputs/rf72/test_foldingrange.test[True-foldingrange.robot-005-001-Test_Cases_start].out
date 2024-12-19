@@ -1,0 +1,12 @@
+data: !GeneratedTestData
+  character: 1
+  line: 5
+  name: Test Cases start
+result:
+- !FoldingRange
+  collapsed_text: null
+  end_character: null
+  end_line: 35
+  kind: section
+  start_character: null
+  start_line: 5

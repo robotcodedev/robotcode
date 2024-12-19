@@ -371,7 +371,7 @@
         "control_flow_statements": {
             "name": "meta.keyword-call.content.robotframework",
             "contentName": "string.unquoted.argument.robotframework",
-            "begin": "^(?!(?: {2,}| ?\\t ?)+(?:(?=[$\\[@&%]|\\.)))(?: {2,}| ?\\t ?)+(FOR|END|ELSE|TRY|EXCEPT|FINALLY)(?= {2,}| ?\\t ?| ?$)",
+            "begin": "^(?!(?: {2,}| ?\\t ?)+(?:(?=[$\\[@&%]|\\.)))(?: {2,}| ?\\t ?)+(FOR|GROUP|END|ELSE|TRY|EXCEPT|FINALLY)(?= {2,}| ?\\t ?| ?$)",
             "end": "^(?!(\\s*(\\.\\.\\.((( {2}| ?\\t)\\s*\\S.*)|(\\s*))?$))|(\\s*#.*$)|(\\s*$))",
             "beginCaptures": { "1": { "name": "keyword.control.flow.robotframework" } },
             "patterns": [

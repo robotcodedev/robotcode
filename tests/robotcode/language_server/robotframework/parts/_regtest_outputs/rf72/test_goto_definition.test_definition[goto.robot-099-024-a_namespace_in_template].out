@@ -1,0 +1,28 @@
+data: !GeneratedTestData
+  character: 24
+  line: 99
+  name: a namespace in template
+result:
+- !LocationLink
+  origin_selection_range:
+    end:
+      character: 25
+      line: 99
+    start:
+      character: 18
+      line: 99
+  target_range:
+    end:
+      character: 0
+      line: 3767
+    start:
+      character: 0
+      line: 3766
+  target_selection_range:
+    end:
+      character: 0
+      line: 3767
+    start:
+      character: 0
+      line: 3766
+  target_uri: BuiltIn.py

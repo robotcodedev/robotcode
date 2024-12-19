@@ -316,6 +316,12 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
                 }
             )
 
+        if get_robot_version() >= (7, 2):
+            definition.update(
+                {
+                    frozenset({Token.GROUP}): (RobotSemTokenTypes.CONTROL_FLOW, None),
+                }
+            )
         result: Dict[str, Tuple[Enum, Optional[Set[Enum]]]] = {}
         for k, v in definition.items():
             for e in k:

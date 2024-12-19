@@ -43,9 +43,9 @@ create-json-schema = "python ./scripts/create_robot_toml_json_schema.py"
 generate-rf-options = "python ./scripts/generate_rf_options.py"
 install-packages = "python ./scripts/install_packages.py"
 
-[envs.rflatest313]
+[envs.rfbeta]
 python = "3.13"
-extra-dependencies = ["robotframework==7.1"]
+extra-dependencies = ["robotframework==7.2b1"]
 
 [envs.rfmaster313]
 python = "3.13"
@@ -76,7 +76,7 @@ python = "3.8"
 
 [[envs.devel.matrix]]
 python = ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13"]
-rf = ["rf41", "rf50", "rf60", "rf61", "rf70", "rf71"]
+rf = ["rf41", "rf50", "rf60", "rf61", "rf70", "rf71", "rf72"]
 
 [envs.devel.overrides]
 matrix.rf.dependencies = [
@@ -98,6 +98,9 @@ matrix.rf.dependencies = [
   { value = "robotframework>=7.1, <7.2", if = [
     "rf71",
   ] },
+   { value = "robotframework>=7.2, <7.3", if = [
+    "rf72b1",
+  ] },
 ]
 
 [envs.hatch-test]
@@ -105,7 +108,7 @@ dependencies = ["pytest", "pytest-html", "pytest_asyncio>=0.23", "pyyaml"]
 pre-install-commands = ["python ./scripts/install_packages.py"]
 
 [[envs.test.matrix]]
-rf = ["rf41", "rf50", "rf60", "rf61", "rf70", "rf71"]
+rf = ["rf41", "rf50", "rf60", "rf61", "rf70", "rf71", "rf72"]
 
 [envs.test.overrides]
 matrix.rf.dependencies = [
@@ -126,6 +129,9 @@ matrix.rf.dependencies = [
   ] },
   { value = "robotframework>=7.1, <7.2", if = [
     "rf71",
+  ] },
+  { value = "robotframework>=7.2, <7.3", if = [
+    "rf72b1",
   ] },
 ]
 

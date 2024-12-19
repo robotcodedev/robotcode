@@ -1,0 +1,23 @@
+data: !GeneratedTestData
+  character: 5
+  line: 82
+  name: a keyword with emoji 2
+result:
+- !DocumentHighlight
+  kind: 1
+  range:
+    end:
+      character: 6
+      line: 80
+    start:
+      character: 4
+      line: 80
+- !DocumentHighlight
+  kind: 1
+  range:
+    end:
+      character: 6
+      line: 82
+    start:
+      character: 4
+      line: 82

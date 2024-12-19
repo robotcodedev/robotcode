@@ -1,0 +1,15 @@
+data: !GeneratedTestData
+  character: 20
+  line: 242
+  name: run keyword argument
+result: !Hover
+  contents:
+    kind: markdown
+    value: '### Keyword *Log*'
+  range:
+    end:
+      character: 22
+      line: 242
+    start:
+      character: 19
+      line: 242

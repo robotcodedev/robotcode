@@ -97,6 +97,10 @@ class _Visitor(Visitor):
         self.__append(node, kind="for_loop")
         self.generic_visit(node)
 
+    def visit_Group(self, node: ast.AST) -> None:  # noqa: N802
+        self.__append(node, kind="group")
+        self.generic_visit(node)
+
     def visit_For(self, node: ast.AST) -> None:  # noqa: N802
         self.__append(node, kind="for")
         self.generic_visit(node)
