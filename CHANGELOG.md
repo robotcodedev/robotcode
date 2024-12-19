@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [0.103.0](https://github.com/robotcodedev/robotcode/compare/v0.102.0..v0.103.0) - 2024-12-19
+
+### Bug Fixes
+
+- **core:** Handle json from_dict correctly for optinal types ([6820cc8](https://github.com/robotcodedev/robotcode/commit/6820cc8c83cd50111a1bcfc3f0241ff503153516))
+- **langserver:** Increase spaces in FOR snippet ([8adad45](https://github.com/robotcodedev/robotcode/commit/8adad455bb95fc4b5a6bd25fdf7e2e7b38c47492))
+
+
+### Features
+
+- **langserver:** Implemented `window/logMessage` to log output directly to the language server protocol client ([98c96f9](https://github.com/robotcodedev/robotcode/commit/98c96f9001a532a6139b0d5758e9886a32ad65a9))
+- **langserver:** Added support for GROUP block in RF 7.2 ([6495d59](https://github.com/robotcodedev/robotcode/commit/6495d59fc89152adec8282bf99cef6f476ee0367))
+- **notebook:** Implemented interupt execution and restart kernel ([2f2f629](https://github.com/robotcodedev/robotcode/commit/2f2f629fbccf37b4ed1f4f110953a7b04bf76dc1))
+
+
 ## [0.102.0](https://github.com/robotcodedev/robotcode/compare/v0.101.0..v0.102.0) - 2024-12-15
 
 ### Bug Fixes

@@ -27,10 +27,10 @@ classifiers = [
 ]
 dependencies = [
   "robotframework>=4.1.0",
-  "robotcode-jsonrpc2==0.102.0",
-  "robotcode-robot==0.102.0",
-  "robotcode-analyze==0.102.0",
-  "robotcode==0.102.0",
+  "robotcode-jsonrpc2==0.103.0",
+  "robotcode-robot==0.103.0",
+  "robotcode-analyze==0.103.0",
+  "robotcode==0.103.0",
 ]
 dynamic = ["version"]
 
