@@ -165,7 +165,11 @@ class RobotLanguageServerProtocol(LanguageServerProtocol):
     @_logger.call
     def _on_initialize(self, sender: Any, initialization_options: Optional[Any] = None) -> None:
         if initialization_options is not None:
-            self.robot_initialization_options = from_dict(initialization_options, RobotInitializationOptions)
+            try:
+                self.robot_initialization_options = from_dict(initialization_options, RobotInitializationOptions)
+            except Exception as e:
+                ex = e
+                self._logger.exception(lambda: f"Can't parse initialization options: {ex}", exc_info=e)
 
         if self.robot_initialization_options.env:
             for k, v in self.robot_initialization_options.env.items():
