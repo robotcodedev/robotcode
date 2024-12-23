@@ -537,6 +537,8 @@ export class LanguageClientsManager {
       }
 
       const name = `RobotCode Language Server for folder ${workspaceFolder.name}`;
+      const outputChannel = this.outputChannels.get(name) ?? vscode.window.createOutputChannel(name);
+      this.outputChannels.set(name, outputChannel);
 
       let closeHandlerAction = CloseAction.DoNotRestart;
 
@@ -590,6 +592,7 @@ export class LanguageClientsManager {
         // TODO: how we can start a language client on workspace level, not on folder level
         workspaceFolder,
         revealOutputChannelOn: RevealOutputChannelOn.Error, // TODO: should we make this configurable?
+        outputChannel,
         outputChannelName: name,
         markdown: {
           isTrusted: true,
