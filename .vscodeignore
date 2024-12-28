@@ -13,6 +13,7 @@ webpack.config.js
 .eslintrc.json
 tsconfig.json
 vscode-client
+intellij-client
 .eslintignore
 .prettier*
 eslint.config.mjs

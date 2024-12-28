@@ -1,0 +1,46 @@
+[versions]
+# libraries
+annotations = "24.1.0"
+kotlinxSerialization = "1.7.1"
+junit = "4.13.2"
+
+# plugins
+changelog = "2.2.1"
+intelliJPlatForm = "2.2.1"
+kotlin = "2.0.10"
+kover = "0.8.3"
+
+[libraries.annotations]
+group = "org.jetbrains"
+name = "annotations"
+version.ref = "annotations"
+
+[libraries.kotlinxSerialization]
+group = "org.jetbrains.kotlinx"
+name = "kotlinx-serialization-json"
+version.ref = "kotlinxSerialization"
+
+[libraries.junit]
+group = "junit"
+name = "junit"
+version.ref = "junit"
+
+[plugins.changelog]
+id = "org.jetbrains.changelog"
+version.ref = "changelog"
+
+[plugins.intelliJPlatForm]
+id = "org.jetbrains.intellij.platform"
+version.ref = "intelliJPlatForm"
+
+[plugins.kotlin]
+id = "org.jetbrains.kotlin.jvm"
+version.ref = "kotlin"
+
+[plugins.kover]
+id = "org.jetbrains.kotlinx.kover"
+version.ref = "kover"
+
+[plugins.kotlinSerialization]
+id = "org.jetbrains.kotlin.plugin.serialization"
+version.ref = "kotlin"

@@ -1,0 +1,88 @@
+<!-- Plugin Configuration File. Read more: https://plugins.jetbrains.com/docs/intellij/plugin-configuration-file.html -->
+<idea-plugin>
+	<id>dev.robotcode.robotcode4ij</id>
+	<name>RobotCode - Robot Framework Support</name>
+	<vendor email="admin@robotcode.dev" url="https://www.robotcode.io">robotcode.dev</vendor>
+
+	<depends>com.intellij.modules.platform</depends>
+	<depends>com.intellij.modules.python</depends>
+	<depends>com.redhat.devtools.lsp4ij</depends>
+	<depends>org.jetbrains.plugins.textmate</depends>
+
+
+	<resource-bundle>messages.RobotCode</resource-bundle>
+
+	<extensions defaultExtensionNs="com.intellij">
+		<textmate.bundleProvider implementation="dev.robotcode.robotcode4ij.RobotCodeTextMateBundleProvider"
+								 id="robotframework"/>
+
+		<fileType name="ROBOT_FRAMEWORK_SUITE" implementationClass="dev.robotcode.robotcode4ij.RobotSuiteFileType"
+				  language="robotframework" extensions="robot"/>
+
+		<fileType name="ROBOT_FRAMEWORK_RESOURCE" implementationClass="dev.robotcode.robotcode4ij.RobotResourceFileType"
+				  language="robotframework" extensions="resource"/>
+
+		<editorHighlighterProvider
+			filetype="ROBOT_FRAMEWORK_SUITE"
+			implementationClass="org.jetbrains.plugins.textmate.language.syntax.highlighting.TextMateEditorHighlighterProvider"
+		/>
+		<editorHighlighterProvider
+			filetype="ROBOT_FRAMEWORK_RESOURCE"
+			implementationClass="org.jetbrains.plugins.textmate.language.syntax.highlighting.TextMateEditorHighlighterProvider"
+		/>
+
+		<lang.syntaxHighlighterFactory
+			language="robotframework"
+			implementationClass="org.jetbrains.plugins.textmate.language.syntax.highlighting.TextMateSyntaxHighlighterFactory"/>
+
+		<lang.foldingBuilder language="robotframework"
+							 implementationClass="com.redhat.devtools.lsp4ij.features.foldingRange.LSPFoldingRangeBuilder"
+							 order="first"/>
+
+		<codeInsight.parameterInfo
+			language="robotframework"
+			implementationClass="com.redhat.devtools.lsp4ij.features.signatureHelp.LSPParameterInfoHandler"/>
+
+		<lang.psiStructureViewFactory
+			language="robotframework"
+			implementationClass="com.redhat.devtools.lsp4ij.features.documentSymbol.LSPDocumentSymbolStructureViewFactory"/>
+
+		<colorSettingsPage implementation="dev.robotcode.robotcode4ij.settings.RobotCodeColorSettingsPage"/>
+
+		<configurationType implementation="dev.robotcode.robotcode4ij.RobotCodeRunConfiguration"/>
+		<postStartupActivity implementation="dev.robotcode.robotcode4ij.RobotCodePostStartupActivity"/>
+
+		<projectConfigurable parentId="language"
+							 provider="dev.robotcode.robotcode4ij.settings.ProjectSettingsConfigurableProvider"
+							 id="dev.robotcode.robotcode4ij.projectsettings"
+							 displayName="Robot Framework"
+							 nonDefaultProject="true"/>
+
+
+
+	</extensions>
+	<extensions defaultExtensionNs="com.redhat.devtools.lsp4ij">
+		<server id="RobotCode"
+				name="RobotCode Language Server"
+				factoryClass="dev.robotcode.robotcode4ij.lsp.RobotCodeLanguageServerFactory"
+				supportsLightEdit="true"
+				order="first"
+		>
+			<description><![CDATA[
+                RobotCode - Robot Framework for IntelliJ platform.
+                ]]>
+			</description>
+		</server>
+		<languageMapping language="robotframework" serverId="RobotCode" languageId="robotframework"/>
+
+		<semanticTokensColorsProvider serverId="RobotCode" id="robotframework"
+									  class="dev.robotcode.robotcode4ij.RobotCodeSemanticTokensColorsProvider"/>
+
+
+	</extensions>
+
+	<applicationListeners>
+		<listener class="dev.robotcode.robotcode4ij.listeners.RobotCodeApplicationActivationListener"
+				  topic="com.intellij.openapi.application.ApplicationActivationListener"/>
+	</applicationListeners>
+</idea-plugin>

@@ -871,7 +871,7 @@
             "items": {
               "type": "string"
             },
-            "description": "Specifies the arguments to be passed to robot.",
+            "description": "Additional arguments to pass to the __robot__ command.",
             "scope": "resource"
           },
           "robotcode.robot.paths": {

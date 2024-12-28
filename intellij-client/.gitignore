@@ -1,0 +1,61 @@
+.scripts/*
+!.scripts/changelog.py
+!.scripts/edit_releases.py
+
+TODO.md
+.credentials/
+
+.sources/
+site/
+venv/
+
+### Generated ###
+.gradle/
+.kotlin/
+.intellijPlatform/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+### IntelliJ IDEA ###
+.idea/**
+!.idea/gradle.xml
+!.idea/icon.svg
+*.iws
+*.iml
+*.ipr
+out/
+!**/src/main/**/out/
+!**/src/test/**/out/
+
+### Eclipse ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+bin/
+!**/src/main/**/bin/
+!**/src/test/**/bin/
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+
+### VS Code ###
+.vscode/
+
+### Mac OS ###
+.DS_Store
+
+
+###
+
+src/main/bundled/libs
+
