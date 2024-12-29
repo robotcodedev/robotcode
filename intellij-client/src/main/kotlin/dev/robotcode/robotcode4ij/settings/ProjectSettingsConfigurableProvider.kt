@@ -46,7 +46,7 @@ class ProjectSettingsConfigurable(private val project: Project) : BoundSearchabl
             }
             group("Robot") {
                 row {
-                    expandableTextField().align(AlignX.FILL) .label("Arguments")
+                    expandableTextField().align(AlignX.FILL).label("Arguments")
                 }.rowComment("Additional arguments to pass to the <b>robot</b> command.")
                 row {
                     comboBox(listOf("default", "rpa", "norpa")).label("Mode")

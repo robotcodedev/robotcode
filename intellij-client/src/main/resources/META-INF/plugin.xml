@@ -8,7 +8,10 @@
 	<depends>com.intellij.modules.python</depends>
 	<depends>com.redhat.devtools.lsp4ij</depends>
 	<depends>org.jetbrains.plugins.textmate</depends>
-
+	<incompatible-with>robocorp.lsp.intellij</incompatible-with>
+	<incompatible-with>com.github.jnhyperion.hyperrobotframeworkplugin</incompatible-with>
+	<incompatible-with>com.millennialmedia.intellibot</incompatible-with>
+	<incompatible-with>com.github.nghiatm.robotframeworkplugin</incompatible-with>
 
 	<resource-bundle>messages.RobotCode</resource-bundle>
 
@@ -17,10 +20,15 @@
 								 id="robotframework"/>
 
 		<fileType name="ROBOT_FRAMEWORK_SUITE" implementationClass="dev.robotcode.robotcode4ij.RobotSuiteFileType"
+				  fieldName="INSTANCE"
 				  language="robotframework" extensions="robot"/>
 
 		<fileType name="ROBOT_FRAMEWORK_RESOURCE" implementationClass="dev.robotcode.robotcode4ij.RobotResourceFileType"
+				  fieldName="INSTANCE"
 				  language="robotframework" extensions="resource"/>
+
+		<lang.parserDefinition language="robotframework"
+							   implementationClass="dev.robotcode.robotcode4ij.RobotCodeParserDefinition"/>
 
 		<editorHighlighterProvider
 			filetype="ROBOT_FRAMEWORK_SUITE"
@@ -50,6 +58,7 @@
 		<colorSettingsPage implementation="dev.robotcode.robotcode4ij.settings.RobotCodeColorSettingsPage"/>
 
 		<configurationType implementation="dev.robotcode.robotcode4ij.RobotCodeRunConfiguration"/>
+
 		<postStartupActivity implementation="dev.robotcode.robotcode4ij.RobotCodePostStartupActivity"/>
 
 		<projectConfigurable parentId="language"
@@ -58,7 +67,12 @@
 							 displayName="Robot Framework"
 							 nonDefaultProject="true"/>
 
-
+		<codeStyleSettingsProvider implementation="dev.robotcode.robotcode4ij.RobotCodeCodeStyleSettingsProvider"/>
+		<langCodeStyleSettingsProvider
+			implementation="dev.robotcode.robotcode4ij.RobotCodeLangCodeStyleSettingsProvider"/>
+		<additionalTextAttributes scheme="Darcula" file="colorSchemes/RobotDarculaColorScheme.xml"/>
+		<additionalTextAttributes scheme="Dark" file="colorSchemes/RobotDarculaColorScheme.xml"/>
+		<additionalTextAttributes scheme="Light" file="colorSchemes/RobotLightColorScheme.xml"/>
 
 	</extensions>
 	<extensions defaultExtensionNs="com.redhat.devtools.lsp4ij">
@@ -76,9 +90,7 @@
 		<languageMapping language="robotframework" serverId="RobotCode" languageId="robotframework"/>
 
 		<semanticTokensColorsProvider serverId="RobotCode" id="robotframework"
-									  class="dev.robotcode.robotcode4ij.RobotCodeSemanticTokensColorsProvider"/>
-
-
+									  class="dev.robotcode.robotcode4ij.lsp.RobotCodeSemanticTokensColorsProvider"/>
 	</extensions>
 
 	<applicationListeners>

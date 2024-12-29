@@ -9,6 +9,6 @@ class BundledHelpers {
         val bundledPath: Path = basePath.resolve("bundled")
         val toolPath: Path = bundledPath.resolve("tool")
         val robotCodePath: Path = toolPath.resolve("robotcode")
-        val checkRobotVersion: Path= toolPath.resolve("utils").resolve("check_robot_version.py")
+        val checkRobotVersion: Path = toolPath.resolve("utils").resolve("check_robot_version.py")
     }
 }

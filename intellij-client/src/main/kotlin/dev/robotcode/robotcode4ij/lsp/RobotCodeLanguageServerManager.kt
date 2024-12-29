@@ -10,17 +10,12 @@ import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Key
 import com.intellij.openapi.util.removeUserData
-import com.intellij.util.io.isFile
 import com.jetbrains.python.sdk.pythonSdk
 import com.redhat.devtools.lsp4ij.LanguageServerManager
 import com.redhat.devtools.lsp4ij.ServerStatus
 import dev.robotcode.robotcode4ij.BundledHelpers
-import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import kotlin.io.path.Path
 import kotlin.io.path.exists
-import kotlin.io.path.isDirectory
 import kotlin.io.path.isRegularFile
 import kotlin.io.path.pathString
 
@@ -39,7 +34,7 @@ class RobotCodeLanguageServerManager(private val project: Project) {
         val result = ApplicationManager.getApplication().executeOnPooledThread<Boolean> {
             checkPythonAndRobot(pythonInterpreter)
         }.get()
-       
+        
         project.putUserData(ENABLED_KEY, result)
         
         return result

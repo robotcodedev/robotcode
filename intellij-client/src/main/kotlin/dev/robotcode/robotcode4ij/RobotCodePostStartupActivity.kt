@@ -24,6 +24,5 @@ class RobotCodePostStartupActivity : ProjectActivity {
         }.collect()
     }
     
-   
 }
 

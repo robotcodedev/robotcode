@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<list>
+	<option name="ROBOTFRAMEWORK_HEADER">
+		<value>
+			<option name="FONT_TYPE" value="1"/>
+			<option name="EFFECT_COLOR" value="CF8E6D"/>
+			<option name="EFFECT_TYPE" value="1"/>
+		</value>
+	</option>
+	<option name="ROBOTFRAMEWORK_KEYWORD_NAME">
+		<value>
+			<option name="FONT_TYPE" value="1"/>
+		</value>
+	</option>
+	<option name="ROBOTFRAMEWORK_TESTCASE_NAME">
+		<value>
+			<option name="FONT_TYPE" value="1"/>
+		</value>
+	</option>
+</list>

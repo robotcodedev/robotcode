@@ -1,8 +1,9 @@
-package dev.robotcode.robotcode4ij
+package dev.robotcode.robotcode4ij.lsp
 
 import com.intellij.openapi.editor.colors.TextAttributesKey
 import com.intellij.psi.PsiFile
 import com.redhat.devtools.lsp4ij.features.semanticTokens.SemanticTokensColorsProvider
+import dev.robotcode.robotcode4ij.RobotColors
 
 
 class RobotCodeSemanticTokensColorsProvider : SemanticTokensColorsProvider {
@@ -21,8 +22,21 @@ class RobotCodeSemanticTokensColorsProvider : SemanticTokensColorsProvider {
             "headerTask",
                 -> RobotColors.HEADER
             
+            "setting" -> RobotColors.SETTING
+            "settingImport" -> RobotColors.SETTING_IMPORT
+            "controlFlow" -> RobotColors.CONTROL_FLOW
+            
             "testcaseName" -> RobotColors.TESTCASE_NAME
             "keywordName" -> RobotColors.KEYWORD_NAME
+            "keywordCall" -> RobotColors.KEYWORD_CALL
+            "embeddedArgument" -> RobotColors.EMBEDDED_ARGUMENT
+            
+            "variable" -> RobotColors.VARIABLE
+            "variableExpression" -> RobotColors.VARIABLE_EXPRESSION
+            "variableBegin" -> RobotColors.VARIABLE_BEGIN
+            "variableEnd" -> RobotColors.VARIABLE_END
+            
+            "namespace" -> RobotColors.NAMESPACE
             else -> null
         }
         

@@ -1,9 +1,9 @@
 package dev.robotcode.robotcode4ij
 
 import com.intellij.openapi.fileTypes.LanguageFileType
-import org.jetbrains.plugins.textmate.TextMateBackedFileType
+import com.intellij.openapi.fileTypes.OSFileIdeAssociation
 
-class RobotSuiteFileType() : LanguageFileType(RobotFrameworkLanguage.INSTANCE) {
+object RobotSuiteFileType : LanguageFileType(RobotFrameworkLanguage), OSFileIdeAssociation {
     override fun getName() = "ROBOT_FRAMEWORK_SUITE";
     override fun getDisplayName() = "Robot Framework Suite";
     override fun getDescription() = "Robot Framework suite files";

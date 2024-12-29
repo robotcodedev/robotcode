@@ -16,7 +16,7 @@ import kotlin.io.path.pathString
 
 class RobotCodeLanguageServer(private val project: Project) : OSProcessStreamConnectionProvider(),
                                                               LanguageServerLogErrorHandler {
-                                                              
+    
     private var inputStream: InputStream? = null
     private var outputStream: OutputStream? = null
     private var serverSocket: ServerSocket? = null
@@ -72,6 +72,7 @@ class RobotCodeLanguageServer(private val project: Project) : OSProcessStreamCon
         serverSocket = null;
         
     }
+    
     override fun getInputStream(): InputStream {
         return inputStream!!
     }

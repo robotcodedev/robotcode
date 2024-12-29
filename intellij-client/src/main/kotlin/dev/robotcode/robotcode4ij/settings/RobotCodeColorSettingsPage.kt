@@ -14,11 +14,19 @@ import javax.swing.Icon
 class RobotCodeColorSettingsPage : ColorSettingsPage {
     
     private val descriptors: Array<AttributesDescriptor> = arrayOf(
-        AttributesDescriptor("Settings", RobotColors.HEADER),
+        AttributesDescriptor("Header", RobotColors.HEADER),
         AttributesDescriptor("Test case name", RobotColors.TESTCASE_NAME),
         AttributesDescriptor("Keyword name", RobotColors.KEYWORD_NAME),
+        AttributesDescriptor("Keyword call", RobotColors.KEYWORD_CALL),
+        AttributesDescriptor("Setting", RobotColors.SETTING),
+        AttributesDescriptor("Setting import", RobotColors.SETTING_IMPORT),
+        AttributesDescriptor("Control flow", RobotColors.CONTROL_FLOW),
+        AttributesDescriptor("Embedded argument", RobotColors.EMBEDDED_ARGUMENT),
+        AttributesDescriptor("Variable", RobotColors.VARIABLE),
+        AttributesDescriptor("Variable expression", RobotColors.VARIABLE_EXPRESSION),
+        AttributesDescriptor("Variable begin", RobotColors.VARIABLE_BEGIN),
+        AttributesDescriptor("Variable end", RobotColors.VARIABLE_END),
     )
-    
     
     override fun getAttributeDescriptors(): Array<AttributesDescriptor> {
         return descriptors
@@ -37,11 +45,22 @@ class RobotCodeColorSettingsPage : ColorSettingsPage {
     }
     
     override fun getHighlighter(): SyntaxHighlighter {
-        return SyntaxHighlighterFactory.getSyntaxHighlighter(RobotFrameworkLanguage.INSTANCE, null, null)
+        return SyntaxHighlighterFactory.getSyntaxHighlighter(RobotFrameworkLanguage, null, null)
     }
     
     override fun getDemoText(): String {
-        return "*** Test Cases *** "
+        return """
+            *** Settings ***
+            Library  SeleniumLibrary
+            
+            *** Variables ***
+            ${'$'}{URL}  http://example.com
+            
+            *** Test Cases ***
+            Example Test
+                Open Browser  ${'$'}{URL}
+                Close Browser
+        """.trimIndent()
     }
     
     override fun getAdditionalHighlightingTagToDescriptorMap(): MutableMap<String, TextAttributesKey>? {
