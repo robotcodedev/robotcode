@@ -149,6 +149,30 @@ jobs:
           cache: "npm"
           cache-dependency-path: package-lock.json
 
+      # Validate wrapper
+      - name: Gradle Wrapper Validation
+        uses: gradle/actions/wrapper-validation@v4
+
+      # Set up Java environment for the next steps
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: zulu
+          java-version: 21
+
+      # Setup Gradle
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-home-cache-cleanup: true
+
+      # Set environment variables
+      - name: Export Properties
+        id: properties
+        shell: bash
+        run: |
+          echo "pluginVerifierHomeDir=~/.pluginVerifier" >> $GITHUB_OUTPUT
+
       - name: install node modules
         run: npm install --also=dev
 
@@ -159,6 +183,9 @@ jobs:
       - name: update doc links
         if: ${{ startsWith( github.ref, 'refs/tags/v') }}
         run: hatch run build:update-doc-links
+
+      - name: Update Changelog
+        run: hatch run build:git-cliff -o CHANGELOG.md
 
       - name: package
         run: hatch run build:package
@@ -180,6 +207,23 @@ jobs:
         with:
           name: wheel-package
           path: dist/*.whl
+
+      - name: Prepare IntelliJ Plugin Artifact
+        id: artifact
+        shell: bash
+        run: |
+          cd ${{ github.workspace }}/intellij-client/build/distributions
+          FILENAME=`ls *.zip`
+          unzip "$FILENAME" -d content
+
+          echo "filename=${FILENAME:0:-4}" >> $GITHUB_OUTPUT
+
+      # Store already-built plugin as an artifact for downloading
+      - name: Upload IntelliJ plugin
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.artifact.outputs.filename }}
+          path: ./intellij-client/build/distributions/content/*/*
 
   publish:
     runs-on: ubuntu-latest

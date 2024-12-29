@@ -73,6 +73,13 @@ def main() -> None:
             rf"\g<1>{version or ''}\g<3>",
         )
 
+    for f in [Path("intellij-client/gradle.properties")]:
+        replace_in_file(
+            f,
+            re.compile(r"""(^pluginVersion\s*=\s*)([0-9]+\S*)""", re.MULTILINE),
+            rf"\g<1>{version or ''}",
+        )
+
 
 if __name__ == "__main__":
     main()
