@@ -17,10 +17,6 @@ class RobotCodeLanguageServerFactory : LanguageServerFactory, LanguageServerEnab
         return RobotCodeLanguageClient(project)
     }
     
-    override fun getServerInterface(): Class<out LanguageServer> {
-        return super.getServerInterface()
-    }
-    
     override fun isEnabled(project: Project): Boolean {
         if (project.getUserData(ENABLED_KEY) == true) {
             return true

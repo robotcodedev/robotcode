@@ -28,7 +28,7 @@ class RobotCodeLanguageServer(private val project: Project) : OSProcessStreamCon
     }
     
     private fun buildCommandLine(port: Int = 6610): GeneralCommandLine {
-        val pythonInterpreter = project.pythonSdk?.homePath;
+        val pythonInterpreter = project.pythonSdk?.homePath
         if (pythonInterpreter != null) {
             return GeneralCommandLine(
                 pythonInterpreter, "-u", "-X", "utf8",
@@ -69,7 +69,7 @@ class RobotCodeLanguageServer(private val project: Project) : OSProcessStreamCon
         clientSocket!!.close()
         clientSocket = null
         serverSocket!!.close()
-        serverSocket = null;
+        serverSocket = null
         
     }
     

@@ -9,7 +9,7 @@ class RobotCodeLanguageClient(project: Project?) : IndexAwareLanguageClient(proj
     
     override fun handleServerStatusChanged(serverStatus: ServerStatus?) {
         if (serverStatus == ServerStatus.started) {
-            triggerChangeConfiguration();
+            triggerChangeConfiguration()
         }
     }
     

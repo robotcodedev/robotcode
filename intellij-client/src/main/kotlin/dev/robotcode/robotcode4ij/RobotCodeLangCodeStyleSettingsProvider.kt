@@ -49,7 +49,7 @@ class RobotCodeLangCodeStyleSettingsProvider : LanguageCodeStyleSettingsProvider
         }
     }
     
-    override fun getCodeSample(settingsType: SettingsType): String? {
+    override fun getCodeSample(settingsType: SettingsType): String {
         return "*** Settings ***\n" +
             "Library  SeleniumLibrary\n" +
             "\n" +

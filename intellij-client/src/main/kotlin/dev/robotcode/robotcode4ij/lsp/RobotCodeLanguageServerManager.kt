@@ -66,7 +66,7 @@ class RobotCodeLanguageServerManager(private val project: Project) {
         )
         if (res.exitCode != 0 || res.stdout.trim() != "True") {
             thisLogger().warn("Invalid python version")
-            return false;
+            return false
         }
         
         val res1 = ExecUtil.execAndGetOutput(

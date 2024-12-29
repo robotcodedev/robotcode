@@ -27,9 +27,6 @@ class ProjectSettingsConfigurableProvider(private val project: Project) : Config
         return ProjectSettingsConfigurable(project)
     }
     
-    override fun canCreateConfigurable(): Boolean {
-        return super.canCreateConfigurable()
-    }
 }
 
 
@@ -96,14 +93,14 @@ class ProjectSettings : SimplePersistentStateComponent<ProjectSettings.ProjectSt
     }
     
     fun asJson(): JsonElement {
-        val builder = GsonBuilder().serializeNulls().setPrettyPrinting().create();
+        val builder = GsonBuilder().serializeNulls().setPrettyPrinting().create()
         
         val robotSettings = RobotCodeSettings()
         robotSettings.robotcode.inlayHints.parameterNames = state.inlayHintsParameterNames
         robotSettings.robotcode.inlayHints.namespaces = state.inlayHintsNamespaces
         
         val json = builder.toJsonTree(robotSettings)
-        return json;
+        return json
     }
     
     class ProjectState : BaseState() {

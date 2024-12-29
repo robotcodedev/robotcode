@@ -22,7 +22,7 @@ import com.intellij.psi.tree.TokenSet
 import org.jetbrains.plugins.textmate.TextMateService
 import org.jetbrains.plugins.textmate.language.syntax.lexer.TextMateHighlightingLexer
 
-val FILE = IStubFileElementType<PsiFileStub<RobotFile>>("RobotSuiteFile", RobotFrameworkLanguage);
+val FILE = IStubFileElementType<PsiFileStub<RobotFile>>("RobotSuiteFile", RobotFrameworkLanguage)
 
 class RobotCodeParserDefinition : ParserDefinition {
     
@@ -81,6 +81,4 @@ class RobotPsiParser : PsiParser {
     }
 }
 
-class RobotPsiElement(type: IElementType) : CompositePsiElement(type) {
-
-}
+class RobotPsiElement(type: IElementType) : CompositePsiElement(type)

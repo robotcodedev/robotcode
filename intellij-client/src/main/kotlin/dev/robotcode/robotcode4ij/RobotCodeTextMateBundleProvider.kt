@@ -12,6 +12,6 @@ private fun getBundles(): List<TextMateBundleProvider.PluginBundle> {
 class RobotCodeTextMateBundleProvider : TextMateBundleProvider {
     
     override fun getBundles(): List<TextMateBundleProvider.PluginBundle> {
-        return robotCodeBundle;
+        return robotCodeBundle
     }
 }

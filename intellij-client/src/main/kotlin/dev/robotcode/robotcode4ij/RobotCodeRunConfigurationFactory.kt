@@ -1,6 +1,6 @@
 package dev.robotcode.robotcode4ij
 
-import com.intellij.execution.configurations.ConfigurationFactory;
+import com.intellij.execution.configurations.ConfigurationFactory
 import com.intellij.execution.configurations.ConfigurationType
 import com.intellij.execution.configurations.RunConfiguration
 import com.intellij.openapi.project.Project
@@ -16,6 +16,6 @@ class RobotCodeRunConfigurationFactory(type: ConfigurationType) : ConfigurationF
     }
     
     override fun getIcon(): Icon? {
-        return RobotIcons.RobotCode;
+        return RobotIcons.RobotCode
     }
 }
