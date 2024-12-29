@@ -57,6 +57,10 @@ jobs:
         # see https://docs.github.com/en/code-security/code-scanning/creating-an-advanced-setup-for-code-scanning/customizing-your-advanced-setup-for-code-scanning.
         # If you are analyzing a compiled language, you can modify the 'build-mode' for that language to customize how
         # your codebase is analyzed, see https://docs.github.com/en/code-security/code-scanning/creating-an-advanced-setup-for-code-scanning/codeql-code-scanning-for-compiled-languages
+    
+    env:
+      ORG_GRADLE_OPTS: "-Xmx4096m"
+      
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
@@ -73,12 +77,7 @@ jobs:
 
         # For more details on CodeQL's query packs, refer to: https://docs.github.com/en/code-security/code-scanning/automatically-scanning-your-code-for-vulnerabilities-and-errors/configuring-code-scanning#using-queries-in-ql-packs
         # queries: security-extended,security-and-quality
-    - if: matrix.language == 'java-kotlin'
-      name: Build the code with Gradle
-      run: ./gradlew buildPlugin
-      env:
-        ORG_GRADLE_OPTS: "-Xmx4096m" # Hier setzen Sie die Umgebungsvariable
-        
+
     # If the analyze step fails for one of the languages you are analyzing with
     # "We were unable to automatically build your code", modify the matrix above
     # to set the build mode to "manual" for that language. Then modify this step
