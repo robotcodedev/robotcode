@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [0.104.0](https://github.com/robotcodedev/robotcode/compare/v0.103.0..v0.104.0) - 2024-12-30
+
+### Bug Fixes
+
+- **langserver:** Don't break initialization if `initializationOptions` are in wrong format ([7f27b66](https://github.com/robotcodedev/robotcode/commit/7f27b66a489a6cd3017ad0f633f94f319d051fa7))
+- **vscode:** Prevent the creation of multiple output channels for language servers ([56a0174](https://github.com/robotcodedev/robotcode/commit/56a01743c0962e185f08ae45fc28634df3996482))
+
+
+### Features
+
+- **intellij:** Added a first version of pycharm/intellij plugin ([e32117e](https://github.com/robotcodedev/robotcode/commit/e32117eaf8d835ab5efa78e9db2021e3dde23f24))
+- **intellij:** Implemented correct coloring of most elements and started implementing some settings dialogs for colors, codestyle and project settings ([dcb20f7](https://github.com/robotcodedev/robotcode/commit/dcb20f73d5cdbb2130634e1ca753044ba354230d))
+
+
 ## [0.103.0](https://github.com/robotcodedev/robotcode/compare/v0.102.0..v0.103.0) - 2024-12-19
 
 ### Bug Fixes
