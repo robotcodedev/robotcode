@@ -3,16 +3,13 @@ package dev.robotcode.robotcode4ij.lsp
 import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.project.Project
-import com.jetbrains.python.sdk.pythonSdk
 import com.redhat.devtools.lsp4ij.server.LanguageServerLogErrorHandler
 import com.redhat.devtools.lsp4ij.server.OSProcessStreamConnectionProvider
-import dev.robotcode.robotcode4ij.BundledHelpers
+import dev.robotcode.robotcode4ij.buildRobotCodeCommandLine
 import java.io.InputStream
 import java.io.OutputStream
 import java.net.ServerSocket
 import java.net.Socket
-import java.nio.charset.StandardCharsets
-import kotlin.io.path.pathString
 
 class RobotCodeLanguageServer(private val project: Project) : OSProcessStreamConnectionProvider(),
                                                               LanguageServerLogErrorHandler {
@@ -28,19 +25,7 @@ class RobotCodeLanguageServer(private val project: Project) : OSProcessStreamCon
     }
     
     private fun buildCommandLine(port: Int = 6610): GeneralCommandLine {
-        val pythonInterpreter = project.pythonSdk?.homePath
-        if (pythonInterpreter != null) {
-            return GeneralCommandLine(
-                pythonInterpreter, "-u", "-X", "utf8",
-                //"-m", "robotcode.cli",
-                BundledHelpers.robotCodePath.pathString,
-                //"--log", "--log-level", "DEBUG",
-                // "--debugpy",
-                // "--debugpy-wait-for-client",
-                "language-server", "--socket", "$port"
-            ).withWorkDirectory(project.basePath).withCharset(StandardCharsets.UTF_8)
-        }
-        throw IllegalArgumentException("PythonSDK is not defined for project ${project.name}")
+        return project.buildRobotCodeCommandLine(arrayOf("language-server", "--socket", "$port"))
     }
     
     override fun logError(error: String?) {
@@ -48,6 +33,7 @@ class RobotCodeLanguageServer(private val project: Project) : OSProcessStreamCon
             thisLogger().error(error)
     }
     
+    // TODO: Implement this method
     // override fun getInitializationOptions(rootUri: VirtualFile?): Any {
     //     return null
     // }
@@ -55,7 +41,7 @@ class RobotCodeLanguageServer(private val project: Project) : OSProcessStreamCon
     override fun start() {
         serverSocket = ServerSocket(0)
         commandLine = buildCommandLine(serverSocket!!.localPort)
-        thisLogger().info("Start robotcode with command $commandLine")
+        thisLogger().info("Start robotcode language server with command $commandLine")
         super.start()
         clientSocket = serverSocket!!.accept()
         inputStream = clientSocket!!.getInputStream()

@@ -5,8 +5,7 @@ import com.redhat.devtools.lsp4ij.LanguageServerEnablementSupport
 import com.redhat.devtools.lsp4ij.LanguageServerFactory
 import com.redhat.devtools.lsp4ij.client.LanguageClientImpl
 import com.redhat.devtools.lsp4ij.server.StreamConnectionProvider
-import dev.robotcode.robotcode4ij.lsp.RobotCodeLanguageServerManager.Companion.ENABLED_KEY
-import org.eclipse.lsp4j.services.LanguageServer
+import dev.robotcode.robotcode4ij.lsp.RobotCodeLanguageServerManager.Companion.LANGUAGE_SERVER_ENABLED_KEY
 
 class RobotCodeLanguageServerFactory : LanguageServerFactory, LanguageServerEnablementSupport {
     override fun createConnectionProvider(project: Project): StreamConnectionProvider {
@@ -18,7 +17,7 @@ class RobotCodeLanguageServerFactory : LanguageServerFactory, LanguageServerEnab
     }
     
     override fun isEnabled(project: Project): Boolean {
-        if (project.getUserData(ENABLED_KEY) == true) {
+        if (project.getUserData(LANGUAGE_SERVER_ENABLED_KEY) == true) {
             return true
         }
         
@@ -26,7 +25,7 @@ class RobotCodeLanguageServerFactory : LanguageServerFactory, LanguageServerEnab
     }
     
     override fun setEnabled(enabled: Boolean, project: Project) {
-        project.putUserData(ENABLED_KEY, enabled)
+        project.putUserData(LANGUAGE_SERVER_ENABLED_KEY, enabled)
     }
 }
 

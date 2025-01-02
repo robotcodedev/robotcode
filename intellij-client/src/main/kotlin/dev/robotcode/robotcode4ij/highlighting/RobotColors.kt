@@ -1,4 +1,4 @@
-package dev.robotcode.robotcode4ij
+package dev.robotcode.robotcode4ij.highlighting
 
 import com.intellij.openapi.editor.DefaultLanguageHighlighterColors
 import com.intellij.openapi.editor.colors.TextAttributesKey
@@ -24,9 +24,6 @@ object RobotColors {
     val CONTROL_FLOW: TextAttributesKey =
         createTextAttributesKey("ROBOTFRAMEWORK_CONTROL_FLOW", DefaultLanguageHighlighterColors.KEYWORD)
     
-    val EMBEDDED_ARGUMENT: TextAttributesKey =
-        createTextAttributesKey("ROBOTFRAMEWORK_EMBEDDED_ARGUMENT", DefaultLanguageHighlighterColors.STRING)
-    
     val VARIABLE: TextAttributesKey =
         createTextAttributesKey("ROBOTFRAMEWORK_VARIABLE", DefaultLanguageHighlighterColors.GLOBAL_VARIABLE)
     val VARIABLE_EXPRESSION: TextAttributesKey =
@@ -39,5 +36,24 @@ object RobotColors {
     val NAMESPACE: TextAttributesKey =
         createTextAttributesKey("ROBOTFRAMEWORK_NAMESPACE", DefaultLanguageHighlighterColors.CLASS_REFERENCE)
     
+    val ARGUMENT: TextAttributesKey =
+        createTextAttributesKey("ROBOTFRAMEWORK_ARGUMENT", DefaultLanguageHighlighterColors.STRING)
+    val EMBEDDED_ARGUMENT: TextAttributesKey =
+        createTextAttributesKey("ROBOTFRAMEWORK_EMBEDDED_ARGUMENT", DefaultLanguageHighlighterColors.STRING)
+    
+    val LINE_COMMENT: TextAttributesKey =
+        createTextAttributesKey("ROBOTFRAMEWORK_LINE_COMMENT", DefaultLanguageHighlighterColors.LINE_COMMENT)
+    
+    val BLOCK_COMMENT: TextAttributesKey =
+        createTextAttributesKey("ROBOTFRAMEWORK_BLOCK_COMMENT", DefaultLanguageHighlighterColors.BLOCK_COMMENT)
+    
+    val OPERATOR: TextAttributesKey =
+        createTextAttributesKey("ROBOTFRAMEWORK_OPERATOR", DefaultLanguageHighlighterColors.OPERATION_SIGN)
+    
+    val BDD_PREFIX: TextAttributesKey =
+        createTextAttributesKey("ROBOTFRAMEWORK_BDD_PREFIX", DefaultLanguageHighlighterColors.METADATA)
+    
+    val CONTINUATION: TextAttributesKey =
+        createTextAttributesKey("ROBOTFRAMEWORK_CONTINUATION", DefaultLanguageHighlighterColors.DOT)
 }
 

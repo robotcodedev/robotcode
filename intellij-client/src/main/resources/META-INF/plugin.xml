@@ -2,7 +2,8 @@
 <idea-plugin>
 	<id>dev.robotcode.robotcode4ij</id>
 	<name>RobotCode - Robot Framework Support</name>
-	<vendor email="admin@robotcode.dev" url="https://www.robotcode.io">robotcode.dev</vendor>
+	<vendor email="support@robotcode.dev" url="https://www.robotcode.io">robotcode.dev</vendor>
+	<category>Programming Languages</category>
 
 	<depends>com.intellij.modules.platform</depends>
 	<depends>com.intellij.modules.python</depends>
@@ -16,9 +17,6 @@
 	<resource-bundle>messages.RobotCode</resource-bundle>
 
 	<extensions defaultExtensionNs="com.intellij">
-		<textmate.bundleProvider implementation="dev.robotcode.robotcode4ij.RobotCodeTextMateBundleProvider"
-								 id="robotframework"/>
-
 		<fileType name="ROBOT_FRAMEWORK_SUITE" implementationClass="dev.robotcode.robotcode4ij.RobotSuiteFileType"
 				  fieldName="INSTANCE"
 				  language="robotframework" extensions="robot"/>
@@ -28,20 +26,17 @@
 				  language="robotframework" extensions="resource"/>
 
 		<lang.parserDefinition language="robotframework"
-							   implementationClass="dev.robotcode.robotcode4ij.RobotCodeParserDefinition"/>
-
-		<editorHighlighterProvider
-			filetype="ROBOT_FRAMEWORK_SUITE"
-			implementationClass="org.jetbrains.plugins.textmate.language.syntax.highlighting.TextMateEditorHighlighterProvider"
-		/>
-		<editorHighlighterProvider
-			filetype="ROBOT_FRAMEWORK_RESOURCE"
-			implementationClass="org.jetbrains.plugins.textmate.language.syntax.highlighting.TextMateEditorHighlighterProvider"
-		/>
+							   implementationClass="dev.robotcode.robotcode4ij.psi.RobotCodeParserDefinition"/>
 
 		<lang.syntaxHighlighterFactory
 			language="robotframework"
-			implementationClass="org.jetbrains.plugins.textmate.language.syntax.highlighting.TextMateSyntaxHighlighterFactory"/>
+			implementationClass="dev.robotcode.robotcode4ij.highlighting.RobotCodeSyntaxHighlighterFactory"/>
+
+		<lang.commenter language="robotframework"
+						implementationClass="dev.robotcode.robotcode4ij.editor.RobotCodeCommenter"/>
+
+		<commentTokenSetProvider language="robotframework"
+								 implementationClass="dev.robotcode.robotcode4ij.editor.RobotCodeCommentTokenSetProvider"/>
 
 		<lang.foldingBuilder language="robotframework"
 							 implementationClass="com.redhat.devtools.lsp4ij.features.foldingRange.LSPFoldingRangeBuilder"
@@ -57,8 +52,6 @@
 
 		<colorSettingsPage implementation="dev.robotcode.robotcode4ij.settings.RobotCodeColorSettingsPage"/>
 
-		<configurationType implementation="dev.robotcode.robotcode4ij.RobotCodeRunConfiguration"/>
-
 		<postStartupActivity implementation="dev.robotcode.robotcode4ij.RobotCodePostStartupActivity"/>
 
 		<projectConfigurable parentId="language"
@@ -67,14 +60,29 @@
 							 displayName="Robot Framework"
 							 nonDefaultProject="true"/>
 
-		<codeStyleSettingsProvider implementation="dev.robotcode.robotcode4ij.RobotCodeCodeStyleSettingsProvider"/>
+		<codeStyleSettingsProvider
+			implementation="dev.robotcode.robotcode4ij.settings.RobotCodeCodeStyleSettingsProvider"/>
 		<langCodeStyleSettingsProvider
-			implementation="dev.robotcode.robotcode4ij.RobotCodeLangCodeStyleSettingsProvider"/>
+			implementation="dev.robotcode.robotcode4ij.settings.RobotCodeLangCodeStyleSettingsProvider"/>
 		<additionalTextAttributes scheme="Darcula" file="colorSchemes/RobotDarculaColorScheme.xml"/>
 		<additionalTextAttributes scheme="Dark" file="colorSchemes/RobotDarculaColorScheme.xml"/>
 		<additionalTextAttributes scheme="Light" file="colorSchemes/RobotLightColorScheme.xml"/>
 
+		<runLineMarkerContributor language="robotframework" id="robotCodeRunLineMarkerContributor"
+								  implementationClass="dev.robotcode.robotcode4ij.execution.RobotCodeRunLineMarkerContributor"/>
+
+		<configurationType implementation="dev.robotcode.robotcode4ij.execution.RobotCodeConfigurationType"
+						   id="robotCodeConfigurationType"/>
+		<runConfigurationProducer
+			implementation="dev.robotcode.robotcode4ij.execution.RobotCodeRunConfigurationProducer"
+			id="robotCodeRunConfigurationProducer" order="first"/>
+		<programRunner implementation="dev.robotcode.robotcode4ij.execution.RobotCodeProgramRunner"
+					   id="robotCodeProgramRunner"/>
+
+		<internalFileTemplate name="Robot Suite File"/>
+		<internalFileTemplate name="Robot Resource File"/>
 	</extensions>
+
 	<extensions defaultExtensionNs="com.redhat.devtools.lsp4ij">
 		<server id="RobotCode"
 				name="RobotCode Language Server"
@@ -92,6 +100,12 @@
 		<semanticTokensColorsProvider serverId="RobotCode" id="robotframework"
 									  class="dev.robotcode.robotcode4ij.lsp.RobotCodeSemanticTokensColorsProvider"/>
 	</extensions>
+	<actions>
+		<action id="dev.robotcode.robotcode4ij.actions.RobotCreateFileAction"
+				class="dev.robotcode.robotcode4ij.actions.RobotCreateFileAction">
+			<add-to-group group-id="NewGroup" anchor="before" relative-to-action="NewFile"/>
+		</action>
+	</actions>
 
 	<applicationListeners>
 		<listener class="dev.robotcode.robotcode4ij.listeners.RobotCodeApplicationActivationListener"

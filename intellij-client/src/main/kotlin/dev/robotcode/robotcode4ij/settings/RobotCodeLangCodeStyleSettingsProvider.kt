@@ -1,4 +1,4 @@
-package dev.robotcode.robotcode4ij
+package dev.robotcode.robotcode4ij.settings
 
 import com.intellij.application.options.IndentOptionsEditor
 import com.intellij.application.options.SmartIndentOptionsEditor
@@ -7,10 +7,15 @@ import com.intellij.psi.codeStyle.CodeStyleSettings
 import com.intellij.psi.codeStyle.CodeStyleSettingsCustomizable
 import com.intellij.psi.codeStyle.CustomCodeStyleSettings
 import com.intellij.psi.codeStyle.LanguageCodeStyleSettingsProvider
+import dev.robotcode.robotcode4ij.RobotFrameworkLanguage
 
 class RobotCodeLangCodeStyleSettingsProvider : LanguageCodeStyleSettingsProvider() {
     override fun getLanguage(): Language {
         return RobotFrameworkLanguage
+    }
+    
+    override fun getFileExt(): String {
+        return "robot"
     }
     
     override fun getIndentOptionsEditor(): IndentOptionsEditor {
@@ -50,15 +55,35 @@ class RobotCodeLangCodeStyleSettingsProvider : LanguageCodeStyleSettingsProvider
     }
     
     override fun getCodeSample(settingsType: SettingsType): String {
-        return "*** Settings ***\n" +
-            "Library  SeleniumLibrary\n" +
-            "\n" +
-            "*** Variables ***\n" +
-            "${'$'}{BROWSER}  Chrome\n" +
-            "\n" +
-            "*** Test Cases ***\n" +
-            "Open Browser\n" +
-            "    Open Browser  https://www.google.com  \${BROWSER}\n" +
-            "    Close Browser\n"
+        return """
+        *** Settings ***
+        Library  SeleniumLibrary
+        
+        *** Variables ***
+        ${'$'}{URL}  http://example.com    # a comment
+        
+        *** Test Cases ***
+        Example Test
+            Open Application  ${'$'}{URL}
+            Log  %{APP_DATA:unknown}
+            Close Application
+            
+        BDD Example Test
+            Given application is ppen
+            When I enter something into the Search Field
+            Then Something Should Happen
+            
+        *** Keywords ***
+        Open Application
+            [Arguments]  ${'$'}{url}
+            Open Browser  ${'$'}{url}
+            
+        Close Application
+            Close Browser
+            
+        *** Comments ***
+        this is a comment block
+        with multiple lines
+        """.trimIndent()
     }
 }

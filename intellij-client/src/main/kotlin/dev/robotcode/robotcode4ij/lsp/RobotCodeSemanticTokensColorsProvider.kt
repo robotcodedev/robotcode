@@ -3,7 +3,7 @@ package dev.robotcode.robotcode4ij.lsp
 import com.intellij.openapi.editor.colors.TextAttributesKey
 import com.intellij.psi.PsiFile
 import com.redhat.devtools.lsp4ij.features.semanticTokens.SemanticTokensColorsProvider
-import dev.robotcode.robotcode4ij.RobotColors
+import dev.robotcode.robotcode4ij.highlighting.RobotColors
 
 
 class RobotCodeSemanticTokensColorsProvider : SemanticTokensColorsProvider {
@@ -29,6 +29,8 @@ class RobotCodeSemanticTokensColorsProvider : SemanticTokensColorsProvider {
             "testcaseName" -> RobotColors.TESTCASE_NAME
             "keywordName" -> RobotColors.KEYWORD_NAME
             "keywordCall" -> RobotColors.KEYWORD_CALL
+            
+            "argument" -> RobotColors.ARGUMENT
             "embeddedArgument" -> RobotColors.EMBEDDED_ARGUMENT
             
             "variable" -> RobotColors.VARIABLE
@@ -37,6 +39,8 @@ class RobotCodeSemanticTokensColorsProvider : SemanticTokensColorsProvider {
             "variableEnd" -> RobotColors.VARIABLE_END
             
             "namespace" -> RobotColors.NAMESPACE
+            "bddPrefix" -> RobotColors.BDD_PREFIX
+            "continuation" -> RobotColors.CONTINUATION
             else -> null
         }
         

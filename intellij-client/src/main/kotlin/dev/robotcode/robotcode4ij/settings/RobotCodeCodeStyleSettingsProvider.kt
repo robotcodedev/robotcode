@@ -1,4 +1,4 @@
-package dev.robotcode.robotcode4ij
+package dev.robotcode.robotcode4ij.settings
 
 import com.intellij.application.options.CodeStyleAbstractConfigurable
 import com.intellij.application.options.CodeStyleAbstractPanel
@@ -7,6 +7,7 @@ import com.intellij.psi.codeStyle.CodeStyleConfigurable
 import com.intellij.psi.codeStyle.CodeStyleSettings
 import com.intellij.psi.codeStyle.CodeStyleSettingsProvider
 import com.intellij.psi.codeStyle.CustomCodeStyleSettings
+import dev.robotcode.robotcode4ij.RobotFrameworkLanguage
 
 class RobotCodeCodeStyleSettingsProvider : CodeStyleSettingsProvider() {
     override fun getConfigurableDisplayName() = "Robot Framework"
@@ -21,12 +22,12 @@ class RobotCodeCodeStyleSettingsProvider : CodeStyleSettingsProvider() {
     ): CodeStyleConfigurable {
         return object : CodeStyleAbstractConfigurable(settings, modelSettings, this.configurableDisplayName) {
             override fun createPanel(settings: CodeStyleSettings): CodeStyleAbstractPanel {
-                return GdCodeStyleMainPanel(currentSettings, settings)
+                return CodeStyleMainPanel(currentSettings, settings)
             }
         }
     }
     
-    private class GdCodeStyleMainPanel(currentSettings: CodeStyleSettings, settings: CodeStyleSettings) :
+    private class CodeStyleMainPanel(currentSettings: CodeStyleSettings, settings: CodeStyleSettings) :
         TabbedLanguageCodeStylePanel(RobotFrameworkLanguage, currentSettings, settings)
     
 }

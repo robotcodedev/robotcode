@@ -27,8 +27,9 @@ interface RobotTestItem {
   type: string;
   id: string;
   uri?: string;
-  rel_source?: string;
-  needs_parse_include?: boolean;
+  relSource?: string;
+  source?: string;
+  needsParseInclude?: boolean;
   children: RobotTestItem[] | undefined;
   name: string;
   longname: string;
@@ -36,6 +37,7 @@ interface RobotTestItem {
   range?: Range;
   error?: string;
   tags?: string[];
+  rpa?: boolean;
 }
 
 interface RobotCodeDiscoverResult {
@@ -817,8 +819,8 @@ export class TestControllerManager {
         folder,
         ["discover", "--read-from-stdin", "tests"],
         [
-          ...(robotWorkspaceItem?.needs_parse_include && testItem.rel_source
-            ? ["--parse-include", testItem.rel_source]
+          ...(robotWorkspaceItem?.needsParseInclude && testItem.relSource
+            ? ["--parse-include", testItem.relSource]
             : []),
           "--suite",
           testItem?.longname,
@@ -1252,7 +1254,7 @@ export class TestControllerManager {
           folder,
           [],
           [],
-          workspaceRobotItem?.needs_parse_include ?? false,
+          workspaceRobotItem?.needsParseInclude ?? false,
           [],
           [],
           runId,
@@ -1295,7 +1297,7 @@ export class TestControllerManager {
 
               if (longname) {
                 suites.add(longname);
-                if (ritem?.rel_source) rel_sources.add(ritem?.rel_source);
+                if (ritem?.relSource) rel_sources.add(ritem?.relSource);
               }
             }
           } else {
@@ -1306,7 +1308,7 @@ export class TestControllerManager {
             }
             if (longname) {
               suites.add(longname);
-              if (ritem?.rel_source) rel_sources.add(ritem?.rel_source);
+              if (ritem?.relSource) rel_sources.add(ritem?.relSource);
             }
           }
         }
@@ -1321,7 +1323,7 @@ export class TestControllerManager {
           folder,
           Array.from(suites),
           Array.from(rel_sources),
-          workspaceRobotItem?.needs_parse_include ?? false,
+          workspaceRobotItem?.needsParseInclude ?? false,
           includedInWs,
           excludedInWs,
           runId,

@@ -39,7 +39,7 @@ from robotcode.core.lsp.types import (
 )
 from robotcode.core.uri import Uri
 from robotcode.core.utils.cli import show_hidden_arguments
-from robotcode.core.utils.dataclasses import from_json
+from robotcode.core.utils.dataclasses import CamelSnakeMixin, from_json
 from robotcode.core.utils.path import normalized_path
 from robotcode.plugin import (
     Application,
@@ -202,7 +202,7 @@ def _patch() -> None:
 
 
 @dataclass
-class TestItem:
+class TestItem(CamelSnakeMixin):
     type: str
     id: str
     name: str
@@ -220,13 +220,13 @@ class TestItem:
 
 
 @dataclass
-class ResultItem:
+class ResultItem(CamelSnakeMixin):
     items: List[TestItem]
     diagnostics: Optional[Dict[str, List[Diagnostic]]] = None
 
 
 @dataclass
-class Statistics:
+class Statistics(CamelSnakeMixin):
     suites: int = 0
     suites_with_tests: int = 0
     suites_with_tasks: int = 0
