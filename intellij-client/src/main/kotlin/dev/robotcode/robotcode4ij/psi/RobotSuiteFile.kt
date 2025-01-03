@@ -5,12 +5,22 @@ import com.intellij.openapi.fileTypes.FileType
 import com.intellij.psi.FileViewProvider
 import dev.robotcode.robotcode4ij.RobotFrameworkLanguage
 import dev.robotcode.robotcode4ij.RobotSuiteFileType
+import dev.robotcode.robotcode4ij.RobotResourceFileType
 
-class RobotFile(viewProvider: FileViewProvider) : PsiFileBase(
+class RobotSuiteFile(viewProvider: FileViewProvider) : PsiFileBase(
     viewProvider,
     RobotFrameworkLanguage
 ) {
     override fun getFileType(): FileType {
         return RobotSuiteFileType
+    }
+}
+
+class RobotResourceFile(viewProvider: FileViewProvider) : PsiFileBase(
+    viewProvider,
+    RobotFrameworkLanguage
+) {
+    override fun getFileType(): FileType {
+        return RobotResourceFileType
     }
 }

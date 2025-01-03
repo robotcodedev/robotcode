@@ -12,9 +12,21 @@ import com.intellij.openapi.fileTypes.SyntaxHighlighterFactory
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.tree.IElementType
+import dev.robotcode.robotcode4ij.psi.ARGUMENT
+import dev.robotcode.robotcode4ij.psi.COMMENT_BLOCK
+import dev.robotcode.robotcode4ij.psi.COMMENT_LINE
+import dev.robotcode.robotcode4ij.psi.CONTINUATION
+import dev.robotcode.robotcode4ij.psi.CONTROL_FLOW
 import dev.robotcode.robotcode4ij.psi.ENVIRONMENT_VARIABLE_BEGIN
 import dev.robotcode.robotcode4ij.psi.ENVIRONMENT_VARIABLE_END
+import dev.robotcode.robotcode4ij.psi.HEADER
+import dev.robotcode.robotcode4ij.psi.KEYWORD_CALL
+import dev.robotcode.robotcode4ij.psi.KEYWORD_NAME
+import dev.robotcode.robotcode4ij.psi.OPERATOR
 import dev.robotcode.robotcode4ij.psi.RobotTextMateElementType
+import dev.robotcode.robotcode4ij.psi.SETTING
+import dev.robotcode.robotcode4ij.psi.TESTCASE_NAME
+import dev.robotcode.robotcode4ij.psi.VARIABLE
 import dev.robotcode.robotcode4ij.psi.VARIABLE_BEGIN
 import dev.robotcode.robotcode4ij.psi.VARIABLE_END
 import org.jetbrains.plugins.textmate.language.syntax.highlighting.TextMateHighlighter
@@ -31,49 +43,27 @@ class RobotCodeHighlighterProvider : EditorHighlighterProvider {
 
 class RobotCodeHighlighter : TextMateHighlighter(RobotTextMateHighlightingLexer()) {
     companion object {
-        val elementMap = mapOf(
-            "comment.line.robotframework" to arrayOf(RobotColors.LINE_COMMENT),
-            "comment.line.rest.robotframework" to arrayOf(RobotColors.LINE_COMMENT),
-            "comment.block.robotframework" to arrayOf(RobotColors.BLOCK_COMMENT),
-            "keyword.other.header.robotframework" to arrayOf(RobotColors.HEADER),
-            "keyword.other.header.settings.robotframework" to arrayOf(RobotColors.HEADER),
-            "keyword.other.header.variable.robotframework" to arrayOf(RobotColors.HEADER),
-            "keyword.other.header.testcase.robotframework" to arrayOf(RobotColors.HEADER),
-            "keyword.other.header.task.robotframework" to arrayOf(RobotColors.HEADER),
-            "keyword.other.header.keyword.robotframework" to arrayOf(RobotColors.HEADER),
-            "keyword.other.header.comment.robotframework" to arrayOf(RobotColors.HEADER),
-            
-            "keyword.control.settings.robotframework" to arrayOf(RobotColors.SETTING),
-            "keyword.control.settings.documentation.robotframework" to arrayOf(RobotColors.SETTING),
-            
-            "entity.name.function.testcase.name.robotframework" to arrayOf(RobotColors.TESTCASE_NAME),
-            "entity.name.function.keyword.name.robotframework" to arrayOf(RobotColors.KEYWORD_NAME),
-            "entity.name.function.keyword-call.robotframework" to arrayOf(RobotColors.KEYWORD_CALL),
-            "keyword.control.flow.robotframework" to arrayOf(RobotColors.CONTROL_FLOW),
-            "keyword.other.robotframework" to arrayOf(RobotColors.SETTING),
-            "punctuation.definition.variable.begin.robotframework" to arrayOf(RobotColors.VARIABLE_BEGIN),
-            "punctuation.definition.variable.end.robotframework" to arrayOf(RobotColors.VARIABLE_END),
-            "variable.name.readwrite.robotframework" to arrayOf(RobotColors.VARIABLE),
-            "punctuation.definition.envvar.begin.robotframework" to arrayOf(RobotColors.VARIABLE_BEGIN),
-            "punctuation.definition.envvar.end.robotframework" to arrayOf(RobotColors.VARIABLE_END),
-            "keyword.operator.robotframework" to arrayOf(RobotColors.OPERATOR),
-            "constant.character.robotframework" to arrayOf(RobotColors.ARGUMENT),
-            "string.unquoted.argument.robotframework" to arrayOf(RobotColors.ARGUMENT),
-            "keyword.operator.continue.robotframework" to arrayOf(RobotColors.CONTINUATION),
-        )
         val elementTypeMap = mapOf(
+            COMMENT_LINE to arrayOf(RobotColors.LINE_COMMENT),
+            COMMENT_BLOCK to arrayOf(RobotColors.BLOCK_COMMENT),
             VARIABLE_BEGIN to arrayOf(RobotColors.VARIABLE_BEGIN),
             VARIABLE_END to arrayOf(RobotColors.VARIABLE_END),
             ENVIRONMENT_VARIABLE_BEGIN to arrayOf(RobotColors.VARIABLE_BEGIN),
             ENVIRONMENT_VARIABLE_END to arrayOf(RobotColors.VARIABLE_END),
+            TESTCASE_NAME to arrayOf(RobotColors.TESTCASE_NAME),
+            KEYWORD_NAME to arrayOf(RobotColors.KEYWORD_NAME),
+            HEADER to arrayOf(RobotColors.HEADER),
+            SETTING to arrayOf(RobotColors.SETTING),
+            KEYWORD_CALL to arrayOf(RobotColors.KEYWORD_CALL),
+            CONTROL_FLOW to arrayOf(RobotColors.CONTROL_FLOW),
+            VARIABLE to arrayOf(RobotColors.VARIABLE),
+            OPERATOR to arrayOf(RobotColors.OPERATOR),
+            ARGUMENT to arrayOf(RobotColors.ARGUMENT),
+            CONTINUATION to arrayOf(RobotColors.CONTINUATION),
         )
     }
     
     override fun getTokenHighlights(tokenType: IElementType?): Array<TextAttributesKey> {
-        if (tokenType is RobotTextMateElementType) {
-            val result = elementMap[tokenType.element.scope.scopeName]
-            if (result != null) return result
-        }
         if (tokenType in elementTypeMap) {
             val result = elementTypeMap[tokenType]
             if (result != null) return result

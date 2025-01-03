@@ -5,56 +5,43 @@ import com.intellij.psi.PsiFile
 import com.redhat.devtools.lsp4ij.features.semanticTokens.SemanticTokensColorsProvider
 import dev.robotcode.robotcode4ij.highlighting.RobotColors
 
+private val mapping by lazy {
+    mapOf(
+        "header" to RobotColors.HEADER,
+        "headerKeyword" to RobotColors.HEADER,
+        "headerComment" to RobotColors.HEADER,
+        "headerSettings" to RobotColors.HEADER,
+        "headerVariable" to RobotColors.HEADER,
+        "headerTestcase" to RobotColors.HEADER,
+        "headerTask" to RobotColors.HEADER,
+        
+        "setting" to RobotColors.SETTING,
+        "settingImport" to RobotColors.SETTING_IMPORT,
+        "controlFlow" to RobotColors.CONTROL_FLOW,
+        
+        "testcaseName" to RobotColors.TESTCASE_NAME,
+        "keywordName" to RobotColors.KEYWORD_NAME,
+        "keywordCall" to RobotColors.KEYWORD_CALL,
+        
+        "argument" to RobotColors.ARGUMENT,
+        "embeddedArgument" to RobotColors.EMBEDDED_ARGUMENT,
+        
+        "variable" to RobotColors.VARIABLE,
+        "variableExpression" to RobotColors.VARIABLE_EXPRESSION,
+        "variableBegin" to RobotColors.VARIABLE_BEGIN,
+        "variableEnd" to RobotColors.VARIABLE_END,
+        
+        "namespace" to RobotColors.NAMESPACE,
+        "bddPrefix" to RobotColors.BDD_PREFIX,
+        "continuation" to RobotColors.CONTINUATION
+    )
+}
 
 class RobotCodeSemanticTokensColorsProvider : SemanticTokensColorsProvider {
-    
-    
     override fun getTextAttributesKey(
         tokenType: String, tokenModifiers: MutableList<String>, file: PsiFile
-    ): TextAttributesKey? { // TODO implement RobotCodeSemanticTokensColorsProvider
-        return when (tokenType) {
-            "header",
-            "headerKeyword",
-            "headerComment",
-            "headerSettings",
-            "headerVariable",
-            "headerTestcase",
-            "headerTask",
-                -> RobotColors.HEADER
-            
-            "setting" -> RobotColors.SETTING
-            "settingImport" -> RobotColors.SETTING_IMPORT
-            "controlFlow" -> RobotColors.CONTROL_FLOW
-            
-            "testcaseName" -> RobotColors.TESTCASE_NAME
-            "keywordName" -> RobotColors.KEYWORD_NAME
-            "keywordCall" -> RobotColors.KEYWORD_CALL
-            
-            "argument" -> RobotColors.ARGUMENT
-            "embeddedArgument" -> RobotColors.EMBEDDED_ARGUMENT
-            
-            "variable" -> RobotColors.VARIABLE
-            "variableExpression" -> RobotColors.VARIABLE_EXPRESSION
-            "variableBegin" -> RobotColors.VARIABLE_BEGIN
-            "variableEnd" -> RobotColors.VARIABLE_END
-            
-            "namespace" -> RobotColors.NAMESPACE
-            "bddPrefix" -> RobotColors.BDD_PREFIX
-            "continuation" -> RobotColors.CONTINUATION
-            else -> null
-        }
-        
-        // return when (tokenType) {
-        //     "headerTestcase" -> {
-        //         val myAttrs = DefaultLanguageHighlighterColors.KEYWORD.defaultAttributes.clone();
-        //
-        //         myAttrs.effectType = EffectType.LINE_UNDERSCORE;
-        //         myAttrs.effectColor = myAttrs.foregroundColor;
-        //         myAttrs.fontType = Font.ITALIC;
-        //         return TextAttributesKey.createTextAttributesKey(
-        //             "tokenType", myAttrs
-        //         )
-        //     }
+    ): TextAttributesKey? {
+        return mapping[tokenType]
     }
 }
 

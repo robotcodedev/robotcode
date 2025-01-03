@@ -10,6 +10,8 @@ import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.tree.IFileElementType
 import com.intellij.psi.tree.TokenSet
+import dev.robotcode.robotcode4ij.RobotResourceFileType
+import dev.robotcode.robotcode4ij.RobotSuiteFileType
 import dev.robotcode.robotcode4ij.highlighting.RobotTextMateHighlightingLexer
 
 class RobotCodeParserDefinition : ParserDefinition {
@@ -27,8 +29,7 @@ class RobotCodeParserDefinition : ParserDefinition {
     }
     
     override fun getCommentTokens(): TokenSet {
-        // return COMMENT_TOKENS
-        return TokenSet.EMPTY
+        return COMMENT_TOKENS
     }
     
     override fun getStringLiteralElements(): TokenSet {
@@ -38,20 +39,19 @@ class RobotCodeParserDefinition : ParserDefinition {
     
     override fun createElement(node: ASTNode): PsiElement {
         return when (node.elementType) {
-            // COMMENT_LINE -> LineCommentPsiElement(node)
-            // COMMENT_BLOCK -> BlockCommentPsiElement(node)
-            // ARGUMENT -> ArgumentPsiElement(node)
-            TESTCASE_NAME -> TestCasePsiElement(node)
+            is IRobotFrameworkElementType -> SimpleASTWrapperPsiElement(node)
             is RobotTextMateElementType -> SimpleASTWrapperPsiElement(node)
-            VARIABLE_BEGIN, VARIABLE_END -> SimpleASTWrapperPsiElement(node)
-            ENVIRONMENT_VARIABLE_BEGIN, ENVIRONMENT_VARIABLE_END -> SimpleASTWrapperPsiElement(node)
             
             else -> throw IllegalArgumentException("Unknown element type: ${node.elementType}")
         }
     }
     
     override fun createFile(viewProvider: FileViewProvider): PsiFile {
-        return RobotFile(viewProvider)
+        return when (viewProvider.fileType) {
+            RobotSuiteFileType -> RobotSuiteFile(viewProvider)
+            RobotResourceFileType -> RobotResourceFile(viewProvider)
+            else -> throw IllegalArgumentException("Invalid file type: ${viewProvider.fileType}")
+        }
     }
 }
 

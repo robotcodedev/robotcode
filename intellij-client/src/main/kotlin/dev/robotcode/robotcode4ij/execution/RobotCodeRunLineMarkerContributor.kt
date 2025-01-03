@@ -5,7 +5,7 @@ import com.intellij.icons.AllIcons
 import com.intellij.psi.PsiElement
 import dev.robotcode.robotcode4ij.psi.FILE
 import dev.robotcode.robotcode4ij.psi.TESTCASE_NAME
-import org.toml.lang.psi.ext.elementType
+import com.intellij.psi.util.elementType
 
 class RobotCodeRunLineMarkerContributor : RunLineMarkerContributor() {
     override fun getInfo(element: PsiElement): Info? {

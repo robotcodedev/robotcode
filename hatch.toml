@@ -45,7 +45,7 @@ install-packages = "python ./scripts/install_packages.py"
 
 [envs.rfbeta]
 python = "3.13"
-extra-dependencies = ["robotframework==7.2b1"]
+extra-dependencies = ["robotframework==7.2rc1"]
 
 [envs.rfmaster313]
 python = "3.13"
@@ -99,7 +99,7 @@ matrix.rf.dependencies = [
     "rf71",
   ] },
    { value = "robotframework>=7.2, <7.3", if = [
-    "rf72b1",
+    "rf72rc1",
   ] },
 ]
 
@@ -131,7 +131,7 @@ matrix.rf.dependencies = [
     "rf71",
   ] },
   { value = "robotframework>=7.2, <7.3", if = [
-    "rf72b1",
+    "rf72rc1",
   ] },
 ]
 

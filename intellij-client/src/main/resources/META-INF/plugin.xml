@@ -37,9 +37,6 @@
 		<lang.commenter language="robotframework"
 						implementationClass="dev.robotcode.robotcode4ij.editor.RobotCodeCommenter"/>
 
-		<commentTokenSetProvider language="robotframework"
-								 implementationClass="dev.robotcode.robotcode4ij.editor.RobotCodeCommentTokenSetProvider"/>
-
 		<lang.foldingBuilder language="robotframework"
 							 implementationClass="com.redhat.devtools.lsp4ij.features.foldingRange.LSPFoldingRangeBuilder"
 							 order="first"/>
@@ -52,8 +49,6 @@
 			language="robotframework"
 			implementationClass="com.redhat.devtools.lsp4ij.features.documentSymbol.LSPDocumentSymbolStructureViewFactory"/>
 
-		<colorSettingsPage implementation="dev.robotcode.robotcode4ij.settings.RobotCodeColorSettingsPage"/>
-
 		<postStartupActivity implementation="dev.robotcode.robotcode4ij.RobotCodePostStartupActivity"/>
 
 		<projectConfigurable parentId="language"
@@ -62,10 +57,13 @@
 							 displayName="Robot Framework"
 							 nonDefaultProject="true"/>
 
+		<colorSettingsPage implementation="dev.robotcode.robotcode4ij.settings.RobotCodeColorSettingsPage"/>
+
 		<codeStyleSettingsProvider
 			implementation="dev.robotcode.robotcode4ij.settings.RobotCodeCodeStyleSettingsProvider"/>
 		<langCodeStyleSettingsProvider
 			implementation="dev.robotcode.robotcode4ij.settings.RobotCodeLangCodeStyleSettingsProvider"/>
+
 		<additionalTextAttributes scheme="Darcula" file="colorSchemes/RobotDarculaColorScheme.xml"/>
 		<additionalTextAttributes scheme="Dark" file="colorSchemes/RobotDarculaColorScheme.xml"/>
 		<additionalTextAttributes scheme="Light" file="colorSchemes/RobotLightColorScheme.xml"/>

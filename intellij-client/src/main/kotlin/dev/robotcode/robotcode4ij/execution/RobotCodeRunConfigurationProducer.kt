@@ -1,16 +1,16 @@
 package dev.robotcode.robotcode4ij.execution
 
 import com.intellij.execution.actions.ConfigurationContext
-import com.intellij.execution.actions.ConfigurationFromContext
 import com.intellij.execution.actions.LazyRunConfigurationProducer
 import com.intellij.execution.configurations.ConfigurationFactory
 import com.intellij.execution.configurations.runConfigurationType
 import com.intellij.openapi.util.Ref
 import com.intellij.psi.PsiElement
+import com.intellij.psi.util.elementType
 import dev.robotcode.robotcode4ij.psi.FILE
-import dev.robotcode.robotcode4ij.psi.RobotFile
+import dev.robotcode.robotcode4ij.psi.RobotSuiteFile
 import dev.robotcode.robotcode4ij.psi.TESTCASE_NAME
-import org.toml.lang.psi.ext.elementType
+
 
 class RobotCodeRunConfigurationProducer : LazyRunConfigurationProducer<RobotCodeRunConfiguration>() {
     override fun getConfigurationFactory(): ConfigurationFactory {
@@ -24,7 +24,7 @@ class RobotCodeRunConfigurationProducer : LazyRunConfigurationProducer<RobotCode
     ): Boolean {
         // TODO
         val psiElement = sourceElement.get()
-        val psiFile = psiElement.containingFile as? RobotFile ?: return false
+        val psiFile = psiElement.containingFile as? RobotSuiteFile ?: return false
         val virtualFile = psiFile.virtualFile ?: return false
         
         when (psiElement.elementType) {
@@ -50,7 +50,7 @@ class RobotCodeRunConfigurationProducer : LazyRunConfigurationProducer<RobotCode
         context: ConfigurationContext
     ): Boolean {
         val psiElement = context.psiLocation
-        val psiFile = psiElement?.containingFile as? RobotFile ?: return false
+        val psiFile = psiElement?.containingFile as? RobotSuiteFile ?: return false
         val virtualFile = psiFile.virtualFile ?: return false
         
         return when (psiElement.elementType) {
