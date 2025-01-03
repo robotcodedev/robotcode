@@ -1,5 +1,5 @@
 <!-- Plugin Configuration File. Read more: https://plugins.jetbrains.com/docs/intellij/plugin-configuration-file.html -->
-<idea-plugin>
+<idea-plugin require-restart="false">
 	<id>dev.robotcode.robotcode4ij</id>
 	<name>RobotCode - Robot Framework Support</name>
 	<vendor email="support@robotcode.dev" url="https://www.robotcode.io">robotcode.dev</vendor>
