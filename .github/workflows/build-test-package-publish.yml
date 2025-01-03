@@ -120,7 +120,7 @@ jobs:
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
-          distribution: zulu
+          distribution: jetbrains
           java-version: 21
 
       - name: Setup Gradle
@@ -143,7 +143,7 @@ jobs:
 
       - run: |
           cd intellij-client
-          ./gradlew verifyPlugin
+          gradlew verifyPlugin --console=plain
 
         if: always()
 
@@ -182,7 +182,7 @@ jobs:
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
-          distribution: zulu
+          distribution: jetbrains
           java-version: 21
 
       - name: Setup Gradle
