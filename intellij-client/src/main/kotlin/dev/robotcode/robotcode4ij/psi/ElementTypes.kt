@@ -13,10 +13,22 @@ val COMMENT_LINE = IElementType("COMMENT_LINE", RobotFrameworkLanguage)
 val COMMENT_BLOCK = IElementType("COMMENT_BLOCK", RobotFrameworkLanguage)
 val ARGUMENT = IElementType("ARGUMENT", RobotFrameworkLanguage)
 
+val VARIABLE_BEGIN = IElementType("VARIABLE_BEGIN", RobotFrameworkLanguage)
+val VARIABLE_END = IElementType("VARIABLE_END", RobotFrameworkLanguage)
+val ENVIRONMENT_VARIABLE_BEGIN = IElementType("VARIABLE_BEGIN", RobotFrameworkLanguage)
+val ENVIRONMENT_VARIABLE_END = IElementType("VARIABLE_END", RobotFrameworkLanguage)
+
 val COMMENT_TOKENS = TokenSet.create(COMMENT_LINE, COMMENT_BLOCK)
 val STRING_TOKENS = TokenSet.create(ARGUMENT)
 
-class RobotTextMateElementType(val element: TextMateElementType) : IElementType(
-    "ROBOT_TEXTMATE_ELEMENT_TYPE",
-    RobotFrameworkLanguage
-)
+
+class RobotTextMateElementType(
+    val element: TextMateElementType, debugName: String = "ROBOT_TEXTMATE_ELEMENT_TYPE",
+    register: Boolean = false
+) :
+    IElementType(
+        debugName,
+        RobotFrameworkLanguage,
+        register
+    )
+

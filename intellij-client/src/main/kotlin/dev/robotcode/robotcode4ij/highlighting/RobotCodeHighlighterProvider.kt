@@ -12,7 +12,11 @@ import com.intellij.openapi.fileTypes.SyntaxHighlighterFactory
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.tree.IElementType
+import dev.robotcode.robotcode4ij.psi.ENVIRONMENT_VARIABLE_BEGIN
+import dev.robotcode.robotcode4ij.psi.ENVIRONMENT_VARIABLE_END
 import dev.robotcode.robotcode4ij.psi.RobotTextMateElementType
+import dev.robotcode.robotcode4ij.psi.VARIABLE_BEGIN
+import dev.robotcode.robotcode4ij.psi.VARIABLE_END
 import org.jetbrains.plugins.textmate.language.syntax.highlighting.TextMateHighlighter
 import org.jetbrains.plugins.textmate.language.syntax.lexer.TextMateLexerDataStorage
 
@@ -57,11 +61,23 @@ class RobotCodeHighlighter : TextMateHighlighter(RobotTextMateHighlightingLexer(
             "string.unquoted.argument.robotframework" to arrayOf(RobotColors.ARGUMENT),
             "keyword.operator.continue.robotframework" to arrayOf(RobotColors.CONTINUATION),
         )
+        val elementTypeMap = mapOf(
+            VARIABLE_BEGIN to arrayOf(RobotColors.VARIABLE_BEGIN),
+            VARIABLE_END to arrayOf(RobotColors.VARIABLE_END),
+            ENVIRONMENT_VARIABLE_BEGIN to arrayOf(RobotColors.VARIABLE_BEGIN),
+            ENVIRONMENT_VARIABLE_END to arrayOf(RobotColors.VARIABLE_END),
+        )
     }
     
     override fun getTokenHighlights(tokenType: IElementType?): Array<TextAttributesKey> {
-        val result = elementMap[(tokenType as? RobotTextMateElementType)?.element?.scope?.scopeName]
-        if (result != null) return result
+        if (tokenType is RobotTextMateElementType) {
+            val result = elementMap[tokenType.element.scope.scopeName]
+            if (result != null) return result
+        }
+        if (tokenType in elementTypeMap) {
+            val result = elementTypeMap[tokenType]
+            if (result != null) return result
+        }
         return super.getTokenHighlights(tokenType)
     }
 }

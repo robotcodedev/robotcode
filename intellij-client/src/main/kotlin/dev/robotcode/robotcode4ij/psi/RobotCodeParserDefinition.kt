@@ -43,6 +43,9 @@ class RobotCodeParserDefinition : ParserDefinition {
             // ARGUMENT -> ArgumentPsiElement(node)
             TESTCASE_NAME -> TestCasePsiElement(node)
             is RobotTextMateElementType -> SimpleASTWrapperPsiElement(node)
+            VARIABLE_BEGIN, VARIABLE_END -> SimpleASTWrapperPsiElement(node)
+            ENVIRONMENT_VARIABLE_BEGIN, ENVIRONMENT_VARIABLE_END -> SimpleASTWrapperPsiElement(node)
+            
             else -> throw IllegalArgumentException("Unknown element type: ${node.elementType}")
         }
     }

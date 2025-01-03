@@ -32,6 +32,8 @@
 			language="robotframework"
 			implementationClass="dev.robotcode.robotcode4ij.highlighting.RobotCodeSyntaxHighlighterFactory"/>
 
+		<lang.braceMatcher language="robotframework"
+						   implementationClass="dev.robotcode.robotcode4ij.editor.RobotCodeBraceMatcher"/>
 		<lang.commenter language="robotframework"
 						implementationClass="dev.robotcode.robotcode4ij.editor.RobotCodeCommenter"/>
 
