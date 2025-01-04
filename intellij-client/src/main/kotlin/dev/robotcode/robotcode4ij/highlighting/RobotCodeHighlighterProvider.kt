@@ -23,7 +23,6 @@ import dev.robotcode.robotcode4ij.psi.HEADER
 import dev.robotcode.robotcode4ij.psi.KEYWORD_CALL
 import dev.robotcode.robotcode4ij.psi.KEYWORD_NAME
 import dev.robotcode.robotcode4ij.psi.OPERATOR
-import dev.robotcode.robotcode4ij.psi.RobotTextMateElementType
 import dev.robotcode.robotcode4ij.psi.SETTING
 import dev.robotcode.robotcode4ij.psi.TESTCASE_NAME
 import dev.robotcode.robotcode4ij.psi.VARIABLE

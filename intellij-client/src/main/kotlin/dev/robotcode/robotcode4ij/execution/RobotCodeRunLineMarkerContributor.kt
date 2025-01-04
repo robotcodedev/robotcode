@@ -3,9 +3,9 @@ package dev.robotcode.robotcode4ij.execution
 import com.intellij.execution.lineMarker.RunLineMarkerContributor
 import com.intellij.icons.AllIcons
 import com.intellij.psi.PsiElement
+import com.intellij.psi.util.elementType
 import dev.robotcode.robotcode4ij.psi.FILE
 import dev.robotcode.robotcode4ij.psi.TESTCASE_NAME
-import com.intellij.psi.util.elementType
 
 class RobotCodeRunLineMarkerContributor : RunLineMarkerContributor() {
     override fun getInfo(element: PsiElement): Info? {

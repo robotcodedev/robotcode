@@ -15,15 +15,15 @@ private val PAIRS = arrayOf(
 )
 
 class RobotCodeBraceMatcher : PairedBraceMatcher {
-
+    
     override fun getPairs(): Array<BracePair> {
         return PAIRS
     }
-
+    
     override fun isPairedBracesAllowedBeforeType(lbraceType: IElementType, contextType: IElementType?): Boolean {
         return true
     }
-
+    
     override fun getCodeConstructStart(file: PsiFile?, openingBraceOffset: Int): Int {
         return openingBraceOffset
     }

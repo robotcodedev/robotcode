@@ -4,8 +4,8 @@ import com.intellij.extapi.psi.PsiFileBase
 import com.intellij.openapi.fileTypes.FileType
 import com.intellij.psi.FileViewProvider
 import dev.robotcode.robotcode4ij.RobotFrameworkLanguage
-import dev.robotcode.robotcode4ij.RobotSuiteFileType
 import dev.robotcode.robotcode4ij.RobotResourceFileType
+import dev.robotcode.robotcode4ij.RobotSuiteFileType
 
 class RobotSuiteFile(viewProvider: FileViewProvider) : PsiFileBase(
     viewProvider,

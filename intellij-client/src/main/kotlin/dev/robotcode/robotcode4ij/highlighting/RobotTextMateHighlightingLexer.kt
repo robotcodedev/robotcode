@@ -27,42 +27,44 @@ class RobotTextMateHighlightingLexer : TextMateHighlightingLexer(
     TextMateBundleHolder.descriptor, Registry.get("textmate.line.highlighting.limit").asInteger()
 ) {
     companion object {
-        val mapping = mapOf(
-            "comment.line.robotframework" to COMMENT_LINE,
-            "comment.line.rest.robotframework" to COMMENT_LINE,
-            "comment.block.robotframework" to COMMENT_BLOCK,
-            "punctuation.definition.variable.begin.robotframework" to VARIABLE_BEGIN,
-            "punctuation.definition.variable.end.robotframework" to VARIABLE_END,
-            "punctuation.definition.envvar.begin.robotframework" to ENVIRONMENT_VARIABLE_BEGIN,
-            "punctuation.definition.envvar.end.robotframework" to ENVIRONMENT_VARIABLE_END,
-            
-            "entity.name.function.testcase.name.robotframework" to TESTCASE_NAME,
-            "entity.name.function.keyword.name.robotframework" to KEYWORD_NAME,
-            
-            "keyword.other.header.robotframework" to HEADER,
-            "keyword.other.header.settings.robotframework" to HEADER,
-            "keyword.other.header.variable.robotframework" to HEADER,
-            "keyword.other.header.testcase.robotframework" to HEADER,
-            "keyword.other.header.task.robotframework" to HEADER,
-            "keyword.other.header.keyword.robotframework" to HEADER,
-            "keyword.other.header.comment.robotframework" to HEADER,
-            
-            "keyword.control.settings.robotframework" to SETTING,
-            "keyword.control.settings.documentation.robotframework" to SETTING,
-            
-            "entity.name.function.keyword-call.robotframework" to KEYWORD_CALL,
-            "keyword.control.flow.robotframework" to CONTROL_FLOW,
-            
-            "keyword.other.robotframework" to SETTING,
-            
-            "variable.name.readwrite.robotframework" to VARIABLE,
-            "keyword.operator.robotframework" to OPERATOR,
-            
-            "constant.character.robotframework" to ARGUMENT,
-            "string.unquoted.argument.robotframework" to ARGUMENT,
-            
-            "keyword.operator.continue.robotframework" to CONTINUATION,
+        val mapping by lazy {
+            mapOf(
+                "comment.line.robotframework" to COMMENT_LINE,
+                "comment.line.rest.robotframework" to COMMENT_LINE,
+                "comment.block.robotframework" to COMMENT_BLOCK,
+                "punctuation.definition.variable.begin.robotframework" to VARIABLE_BEGIN,
+                "punctuation.definition.variable.end.robotframework" to VARIABLE_END,
+                "punctuation.definition.envvar.begin.robotframework" to ENVIRONMENT_VARIABLE_BEGIN,
+                "punctuation.definition.envvar.end.robotframework" to ENVIRONMENT_VARIABLE_END,
+                
+                "entity.name.function.testcase.name.robotframework" to TESTCASE_NAME,
+                "entity.name.function.keyword.name.robotframework" to KEYWORD_NAME,
+                
+                "keyword.other.header.robotframework" to HEADER,
+                "keyword.other.header.settings.robotframework" to HEADER,
+                "keyword.other.header.variable.robotframework" to HEADER,
+                "keyword.other.header.testcase.robotframework" to HEADER,
+                "keyword.other.header.task.robotframework" to HEADER,
+                "keyword.other.header.keyword.robotframework" to HEADER,
+                "keyword.other.header.comment.robotframework" to HEADER,
+                
+                "keyword.control.settings.robotframework" to SETTING,
+                "keyword.control.settings.documentation.robotframework" to SETTING,
+                
+                "entity.name.function.keyword-call.robotframework" to KEYWORD_CALL,
+                "keyword.control.flow.robotframework" to CONTROL_FLOW,
+                
+                "keyword.other.robotframework" to SETTING,
+                
+                "variable.name.readwrite.robotframework" to VARIABLE,
+                "keyword.operator.robotframework" to OPERATOR,
+                
+                "constant.character.robotframework" to ARGUMENT,
+                "string.unquoted.argument.robotframework" to ARGUMENT,
+                
+                "keyword.operator.continue.robotframework" to CONTINUATION,
             )
+        }
     }
     
     override fun getTokenType(): IElementType? {
