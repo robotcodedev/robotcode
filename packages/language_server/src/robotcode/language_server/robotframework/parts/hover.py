@@ -44,6 +44,16 @@ if TYPE_CHECKING:
 _HoverMethod = Callable[[ast.AST, List[ast.AST], TextDocument, Position], Optional[Hover]]
 
 
+class MyRepr(reprlib.Repr):
+    def __init__(self) -> None:
+        super().__init__()
+        self.maxstring = 50
+        self.indent = 4
+
+
+_my_repr = MyRepr()
+
+
 class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
     _logger = LoggingDescriptor()
 
@@ -115,6 +125,7 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
                     )
                 )
                 value = None
+                real_value = None
                 if found_range is not None:
                     highlight_range = found_range
                     if variable.has_value or variable.resolvable:
@@ -132,13 +143,14 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
                                 value = "[]"
                         else:
                             try:
-                                value = reprlib.repr(
-                                    namespace.imports_manager.resolve_variable(
-                                        variable.name,
-                                        str(document.uri.to_path().parent),
-                                        namespace.get_resolvable_variables(nodes, position),
-                                    )
+                                real_value = namespace.imports_manager.resolve_variable(
+                                    variable.name,
+                                    str(document.uri.to_path().parent),
+                                    namespace.get_resolvable_variables(nodes, position),
                                 )
+
+                                value = _my_repr.repr(real_value)
+
                             except (
                                 asyncio.CancelledError,
                                 SystemExit,
@@ -150,15 +162,18 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
                                 value = ""
                     else:
                         value = ""
-                    if text is None:
-                        text = ""
-                    if text:
-                        text += "\n"
 
-                    text += f"| ({variable.type.value}) | {variable.name} | {f' `{value}`' if value else ''} |"
+                    text = f"### {variable.type.value.title()} `{variable.name}`\n\n"
 
+                    if value:
+
+                        text += "```python\n"
+                        text += f"value: {type(real_value).__name__} = {value}\n"
+                        text += "```\n"
+
+                    text += "\n"
             if text:
-                text = "| | | |\n|:--|:--|:--|\n" + text
+
                 return Hover(
                     contents=MarkupContent(kind=MarkupKind.MARKDOWN, value=text),
                     range=highlight_range,
