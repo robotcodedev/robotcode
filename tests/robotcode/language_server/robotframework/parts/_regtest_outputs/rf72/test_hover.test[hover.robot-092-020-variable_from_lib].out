@@ -5,7 +5,7 @@ data: !GeneratedTestData
 result: !Hover
   contents:
     kind: markdown
-    value: (suite variable [imported]) ${A_VAR_FROM_LIB}
+    value: '### Suite Variable [Imported] `${A_VAR_FROM_LIB}`'
   range:
     end:
       character: 27

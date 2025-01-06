@@ -5,7 +5,7 @@ data: !GeneratedTestData
 result: !Hover
   contents:
     kind: markdown
-    value: (builtin variable) ${CURDIR}
+    value: '### Builtin Variable `${CURDIR}`'
   range:
     end:
       character: 19

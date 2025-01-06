@@ -5,7 +5,7 @@ data: !GeneratedTestData
 result: !Hover
   contents:
     kind: markdown
-    value: (suite variable) ${A VAR}
+    value: '### Suite Variable `${A VAR}`'
   range:
     end:
       character: 7

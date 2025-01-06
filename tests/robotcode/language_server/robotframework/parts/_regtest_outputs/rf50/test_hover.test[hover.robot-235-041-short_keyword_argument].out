@@ -5,7 +5,7 @@ data: !GeneratedTestData
 result: !Hover
   contents:
     kind: markdown
-    value: (argument) ${a}
+    value: '### Argument `${a}`'
   range:
     end:
       character: 42

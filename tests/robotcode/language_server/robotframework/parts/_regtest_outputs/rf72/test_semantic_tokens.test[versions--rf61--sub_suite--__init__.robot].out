@@ -10,9 +10,4 @@ result: !SemanticTokens
   - 4
   - 25
   - 0
-  - 0
-  - 8
-  - 43
-  - 36
-  - 0
   result_id: null
