@@ -6,35 +6,35 @@ import com.intellij.openapi.options.colors.AttributesDescriptor
 import com.intellij.openapi.options.colors.ColorDescriptor
 import com.intellij.openapi.options.colors.ColorSettingsPage
 import dev.robotcode.robotcode4ij.RobotIcons
-import dev.robotcode.robotcode4ij.highlighting.RobotCodeHighlighter
-import dev.robotcode.robotcode4ij.highlighting.RobotColors
+import dev.robotcode.robotcode4ij.highlighting.RobotCodeSyntaxHighlighter
+import dev.robotcode.robotcode4ij.highlighting.Colors
 import javax.swing.Icon
 
 class RobotCodeColorSettingsPage : ColorSettingsPage {
     
     private val descriptors: Array<AttributesDescriptor> = arrayOf(
-        AttributesDescriptor("Header", RobotColors.HEADER),
-        AttributesDescriptor("Test case name", RobotColors.TESTCASE_NAME),
-        AttributesDescriptor("Keyword name", RobotColors.KEYWORD_NAME),
-        AttributesDescriptor("Keyword call", RobotColors.KEYWORD_CALL),
-        AttributesDescriptor("Setting", RobotColors.SETTING),
-        AttributesDescriptor("Setting import", RobotColors.SETTING_IMPORT),
-        AttributesDescriptor("Control flow", RobotColors.CONTROL_FLOW),
-        AttributesDescriptor("Argument", RobotColors.ARGUMENT),
-        AttributesDescriptor("Embedded argument", RobotColors.EMBEDDED_ARGUMENT),
-        AttributesDescriptor("Variable", RobotColors.VARIABLE),
-        AttributesDescriptor("Variable expression", RobotColors.VARIABLE_EXPRESSION),
-        AttributesDescriptor("Variable begin", RobotColors.VARIABLE_BEGIN),
-        AttributesDescriptor("Variable end", RobotColors.VARIABLE_END),
+        AttributesDescriptor("Header", Colors.HEADER),
+        AttributesDescriptor("Test case name", Colors.TESTCASE_NAME),
+        AttributesDescriptor("Keyword name", Colors.KEYWORD_NAME),
+        AttributesDescriptor("Keyword call", Colors.KEYWORD_CALL),
+        AttributesDescriptor("Setting", Colors.SETTING),
+        AttributesDescriptor("Setting import", Colors.SETTING_IMPORT),
+        AttributesDescriptor("Control flow", Colors.CONTROL_FLOW),
+        AttributesDescriptor("Argument", Colors.ARGUMENT),
+        AttributesDescriptor("Embedded argument", Colors.EMBEDDED_ARGUMENT),
+        AttributesDescriptor("Variable", Colors.VARIABLE),
+        AttributesDescriptor("Variable expression", Colors.VARIABLE_EXPRESSION),
+        AttributesDescriptor("Variable begin", Colors.VARIABLE_BEGIN),
+        AttributesDescriptor("Variable end", Colors.VARIABLE_END),
         
-        AttributesDescriptor("Line comment", RobotColors.LINE_COMMENT),
-        AttributesDescriptor("Block comment", RobotColors.BLOCK_COMMENT),
+        AttributesDescriptor("Line comment", Colors.LINE_COMMENT),
+        AttributesDescriptor("Block comment", Colors.BLOCK_COMMENT),
         
-        AttributesDescriptor("Operator", RobotColors.OPERATOR),
-        AttributesDescriptor("Namespace", RobotColors.NAMESPACE),
-        AttributesDescriptor("BDD prefix", RobotColors.BDD_PREFIX),
+        AttributesDescriptor("Operator", Colors.OPERATOR),
+        AttributesDescriptor("Namespace", Colors.NAMESPACE),
+        AttributesDescriptor("BDD prefix", Colors.BDD_PREFIX),
         
-        AttributesDescriptor("Continuation", RobotColors.CONTINUATION),
+        AttributesDescriptor("Continuation", Colors.CONTINUATION),
     )
     
     override fun getAttributeDescriptors(): Array<AttributesDescriptor> {
@@ -54,7 +54,7 @@ class RobotCodeColorSettingsPage : ColorSettingsPage {
     }
     
     override fun getHighlighter(): SyntaxHighlighter {
-        return RobotCodeHighlighter()
+        return RobotCodeSyntaxHighlighter()
     }
     
     override fun getDemoText(): String {

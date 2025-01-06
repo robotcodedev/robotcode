@@ -4,6 +4,8 @@ import com.intellij.extapi.psi.ASTWrapperPsiElement
 import com.intellij.lang.ASTNode
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiElementVisitor
+import com.intellij.psi.impl.source.tree.CompositePsiElement
+import com.intellij.psi.tree.IElementType
 
 open class SimpleASTWrapperPsiElement(tcNode: ASTNode) : ASTWrapperPsiElement(tcNode) {
     override fun getChildren(): Array<PsiElement> {
@@ -21,4 +23,3 @@ open class SimpleASTWrapperPsiElement(tcNode: ASTNode) : ASTWrapperPsiElement(tc
     override fun acceptChildren(visitor: PsiElementVisitor) {
     }
 }
-

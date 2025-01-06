@@ -1,7 +1,9 @@
 import org.jetbrains.changelog.Changelog
 import org.jetbrains.changelog.markdownToHTML
 import org.jetbrains.intellij.platform.gradle.Constants.Constraints
+import org.jetbrains.intellij.platform.gradle.IntelliJPlatformType
 import org.jetbrains.intellij.platform.gradle.TestFrameworkType
+import org.jetbrains.intellij.platform.gradle.tasks.PrepareSandboxTask
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
@@ -29,7 +31,7 @@ kotlin {
 // Configure project's dependencies
 repositories {
     mavenCentral()
-
+    
     // IntelliJ Platform Gradle Plugin Repositories Extension - read more: https://plugins.jetbrains.com/docs/intellij/tools-intellij-platform-gradle-plugin-repositories-extension.html
     intellijPlatform {
         defaultRepositories()
@@ -41,7 +43,7 @@ dependencies {
     compileOnly(libs.kotlinxSerialization)
     testImplementation(kotlin("test"))
     testImplementation(libs.junit)
-
+    
     // IntelliJ Platform Gradle Plugin Dependencies Extension - read more: https://plugins.jetbrains.com/docs/intellij/tools-intellij-platform-gradle-plugin-dependencies-extension.html
     intellijPlatform {
         create(
@@ -49,31 +51,11 @@ dependencies {
             providers.gradleProperty("platformVersion"),
             useInstaller = false
         )
-
+        
         // Plugin Dependencies. Uses `platformBundledPlugins` property from the gradle.properties file for bundled IntelliJ Platform plugins.
         bundledPlugins(providers.gradleProperty("platformBundledPlugins").map { it.split(',') })
-
-        // Plugin Dependencies. Uses `platformPlugins` property from the gradle.properties file for plugin from JetBrains Marketplace.
-        // plugins(providers.gradleProperty("platformPlugins").map { it.split(',') })
-
-        val platformPlugins =  ArrayList<String>()
-        // val localLsp4ij = file("../lsp4ij.old/build/idea-sandbox/plugins/LSP4IJ").absoluteFile
-        // if (localLsp4ij.isDirectory) {
-        //     // In case Gradle fails to build because it can't find some missing jar, try deleting
-        //     // ~/.gradle/caches/modules-2/files-2.1/com.jetbrains.intellij.idea/unzipped.com.jetbrains.plugins/com.redhat.devtools.lsp4ij*
-        //     localPlugin(localLsp4ij.toString())
-        // } else {
-        //     // When running on CI or when there's no local lsp4ij
-        //     val latestLsp4ijNightlyVersion = fetchLatestLsp4ijNightlyVersion()
-        //     platformPlugins.add("com.redhat.devtools.lsp4ij:$latestLsp4ijNightlyVersion@nightly")
-        // }
-
-        platformPlugins.add("com.redhat.devtools.lsp4ij:0.9.0")
-        //Uses `platformPlugins` property from the gradle.properties file.
-        platformPlugins.addAll(providers.gradleProperty("platformPlugins").map { it.split(',').map(String::trim).filter(String::isNotEmpty) }.get())
-
-        plugins(platformPlugins)
-
+        plugins(providers.gradleProperty("platformPlugins").map { it.split(',') })
+        
         pluginVerifier()
         zipSigner()
         testFramework(TestFrameworkType.Platform)
@@ -85,12 +67,12 @@ intellijPlatform {
     pluginConfiguration {
         name = providers.gradleProperty("pluginName")
         version = providers.gradleProperty("pluginVersion")
-
+        
         // Extract the <!-- Plugin description --> section from README.md and provide for the plugin's manifest
         description = providers.fileContents(layout.projectDirectory.file("README.md")).asText.map {
             val start = "<!-- Plugin description -->"
             val end = "<!-- Plugin description end -->"
-
+            
             with(it.lines()) {
                 if (!containsAll(listOf(start, end))) {
                     throw GradleException("Plugin description section not found in README.md:\n$start ... $end")
@@ -98,7 +80,7 @@ intellijPlatform {
                 subList(indexOf(start) + 1, indexOf(end)).joinToString("\n").let(::markdownToHTML)
             }
         }
-
+        
         val changelog = project.changelog // local variable for configuration cache compatibility
         // Get the latest available change notes from the changelog file
         changeNotes = providers.gradleProperty("pluginVersion").map { pluginVersion ->
@@ -111,19 +93,19 @@ intellijPlatform {
                 )
             }
         }
-
+        
         ideaVersion {
             sinceBuild = providers.gradleProperty("pluginSinceBuild")
             untilBuild = providers.gradleProperty("pluginUntilBuild")
         }
     }
-
+    
     signing {
         certificateChain = providers.environmentVariable("CERTIFICATE_CHAIN")
         privateKey = providers.environmentVariable("PRIVATE_KEY")
         password = providers.environmentVariable("PRIVATE_KEY_PASSWORD")
     }
-
+    
     publishing {
         token = providers.environmentVariable("PUBLISH_TOKEN")
         // The pluginVersion is based on the SemVer (https://semver.org) and supports pre-release labels, like 2.1.7-alpha.3
@@ -132,7 +114,7 @@ intellijPlatform {
         channels = providers.gradleProperty("pluginVersion")
             .map { listOf(it.substringAfter('-', "").substringBefore('.').ifEmpty { "default" }) }
     }
-
+    
     pluginVerification {
         ides {
             recommended()
@@ -158,6 +140,15 @@ kover {
     }
 }
 
+val prepareSandboxConfig: PrepareSandboxTask.() -> Unit = {
+    from("..") {
+        include("package.json", "language-configuration.json", "syntaxes/**/*", "bundled/**/*")
+        exclude("**/bin")
+        exclude("**/__pycache__")
+        into("robotcode4ij/data")
+    }
+}
+
 tasks {
     runIde {
         // From https://app.slack.com/client/T5P9YATH9/C5U8BM1MK
@@ -166,24 +157,19 @@ tasks {
         // systemProperty("terminal.new.ui", "false")
         // systemProperty("ide.tree.painter.compact.default", "true")
     }
-
+    
     wrapper {
         gradleVersion = providers.gradleProperty("gradleVersion").get()
     }
-
+    
     publishPlugin {
         dependsOn(patchChangelog)
     }
-    prepareSandbox {
-        from("..") {
-            include("package.json", "language-configuration.json", "syntaxes/**/*", "bundled/**/*" )
-            
-            exclude("**/bin")
-            exclude("**/__pycache__")
-            into("robotcode4ij/data")
-        }
-    }
+    
+    prepareSandbox(prepareSandboxConfig)
 }
+
+
 
 // Configure UI tests plugin
 // Read more: https://github.com/JetBrains/intellij-ui-test-robot
@@ -198,10 +184,24 @@ val runIdeForUiTests by intellijPlatformTesting.runIde.registering {
             )
         }
     }
-
+    
+    prepareSandboxTask(prepareSandboxConfig)
+    
     plugins {
         robotServerPlugin(Constraints.LATEST_VERSION)
     }
+}
+
+val runIdePyCharmProf by intellijPlatformTesting.runIde.registering {
+    type = IntelliJPlatformType.PyCharmProfessional
+    
+    prepareSandboxTask(prepareSandboxConfig)
+}
+
+val runIdeIntellijIdeaC by intellijPlatformTesting.runIde.registering {
+    type = IntelliJPlatformType.IntellijIdeaCommunity
+    
+    prepareSandboxTask(prepareSandboxConfig)
 }
 
 fun fetchLatestLsp4ijNightlyVersion(): String {
@@ -220,10 +220,10 @@ fun fetchLatestLsp4ijNightlyVersion(): String {
             onlineVersion = matcher.group(1)
             println("Latest approved nightly build: $onlineVersion")
         }
-    } catch (e:Exception) {
+    } catch (e: Exception) {
         println("Failed to fetch LSP4IJ nightly build version: ${e.message}")
     }
-
+    
     val minVersion = "0.0.1-20231213-012910"
     return if (minVersion < onlineVersion) onlineVersion else minVersion
 }

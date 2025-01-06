@@ -29,7 +29,7 @@ import org.jetbrains.plugins.textmate.language.syntax.lexer.TextMateScope
 import java.util.*
 import kotlin.math.min
 
-class RobotCodeTextMateHighlightingLexer : LexerBase() {
+class RobotCodeLexer : LexerBase() {
     companion object {
         val mapping by lazy {
             mapOf(

@@ -5,6 +5,7 @@ import com.intellij.execution.process.CapturingProcessRunner
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
+import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.project.Project
 import dev.robotcode.robotcode4ij.buildRobotCodeCommandLine
 import kotlinx.serialization.Serializable
@@ -110,17 +111,21 @@ import kotlinx.serialization.json.JsonElement
         // TODO: Add support for configurable paths
         val defaultPaths = arrayOf("--default-path", ".")
         
-        val cmdLine = project.buildRobotCodeCommandLine(
-            arrayOf(*defaultPaths, "discover", "all"), format = "json"
-        )
-        
-        testItems = ApplicationManager.getApplication().executeOnPooledThread<RobotCodeDiscoverResult> {
-            val result = CapturingProcessRunner(CapturingProcessHandler(cmdLine)).runProcess()
-            if (result.exitCode != 0) {
-                throw RuntimeException("Failed to discover test items: ${result.stderr}")
-            }
-            Json.decodeFromString<RobotCodeDiscoverResult>(result.stdout)
-        }.get().items ?: arrayOf()
+        try {
+            val cmdLine = project.buildRobotCodeCommandLine(
+                arrayOf(*defaultPaths, "discover", "all"), format = "json"
+            )
+            
+            testItems = ApplicationManager.getApplication().executeOnPooledThread<RobotCodeDiscoverResult> {
+                val result = CapturingProcessRunner(CapturingProcessHandler(cmdLine)).runProcess()
+                if (result.exitCode != 0) {
+                    throw RuntimeException("Failed to discover test items: ${result.stderr}")
+                }
+                Json.decodeFromString<RobotCodeDiscoverResult>(result.stdout)
+            }.get().items ?: arrayOf()
+        } catch (e: Exception) {
+            thisLogger().warn("Failed to discover test items", e)
+        }
     }
 }
 

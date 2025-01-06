@@ -1,6 +1,7 @@
 package dev.robotcode.robotcode4ij.execution
 
 import com.intellij.execution.Executor
+import com.intellij.execution.compound.CompoundRunConfigurationSettingsEditor
 import com.intellij.execution.configurations.ConfigurationFactory
 import com.intellij.execution.configurations.LocatableConfigurationBase
 import com.intellij.execution.configurations.RunConfiguration
@@ -17,7 +18,8 @@ class RobotCodeRunConfiguration(project: Project, factory: ConfigurationFactory)
     }
     
     override fun getConfigurationEditor(): SettingsEditor<out RunConfiguration> {
-        TODO("Not yet implemented")
+        // TODO: Implement configuration editor
+        return RobotCodeRunConfigurationEditor()
     }
     
     var suite: String = ""

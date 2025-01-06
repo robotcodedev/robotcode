@@ -20,7 +20,11 @@ class RobotPsiParser : PsiParser, LightPsiParser {
                 builder.advanceLexer()
                 token.done(it)
             } ?: run {
-                builder.advanceLexer()
+                (builder.tokenType as? RobotTextMateElementType)?.let {
+                    val token = builder.mark()
+                    builder.advanceLexer()
+                    token.done(it)
+                } ?: builder.advanceLexer()
             }
             
         }

@@ -30,31 +30,31 @@ import org.jetbrains.plugins.textmate.language.syntax.lexer.TextMateScope
 import java.util.function.Function
 
 
-class RobotCodeHighlighter : SyntaxHighlighterBase() {
+class RobotCodeSyntaxHighlighter : SyntaxHighlighterBase() {
     companion object {
         val elementTypeMap = mapOf(
-            COMMENT_LINE to arrayOf(RobotColors.LINE_COMMENT),
-            COMMENT_BLOCK to arrayOf(RobotColors.BLOCK_COMMENT),
-            VARIABLE_BEGIN to arrayOf(RobotColors.VARIABLE_BEGIN),
-            VARIABLE_END to arrayOf(RobotColors.VARIABLE_END),
-            ENVIRONMENT_VARIABLE_BEGIN to arrayOf(RobotColors.VARIABLE_BEGIN),
-            ENVIRONMENT_VARIABLE_END to arrayOf(RobotColors.VARIABLE_END),
-            TESTCASE_NAME to arrayOf(RobotColors.TESTCASE_NAME),
-            KEYWORD_NAME to arrayOf(RobotColors.KEYWORD_NAME),
-            HEADER to arrayOf(RobotColors.HEADER),
-            SETTING to arrayOf(RobotColors.SETTING),
-            KEYWORD_CALL to arrayOf(RobotColors.KEYWORD_CALL),
-            CONTROL_FLOW to arrayOf(RobotColors.CONTROL_FLOW),
-            VARIABLE to arrayOf(RobotColors.VARIABLE),
-            OPERATOR to arrayOf(RobotColors.OPERATOR),
-            ARGUMENT to arrayOf(RobotColors.ARGUMENT),
-            CONTINUATION to arrayOf(RobotColors.CONTINUATION),
+            COMMENT_LINE to arrayOf(Colors.LINE_COMMENT),
+            COMMENT_BLOCK to arrayOf(Colors.BLOCK_COMMENT),
+            VARIABLE_BEGIN to arrayOf(Colors.VARIABLE_BEGIN),
+            VARIABLE_END to arrayOf(Colors.VARIABLE_END),
+            ENVIRONMENT_VARIABLE_BEGIN to arrayOf(Colors.VARIABLE_BEGIN),
+            ENVIRONMENT_VARIABLE_END to arrayOf(Colors.VARIABLE_END),
+            TESTCASE_NAME to arrayOf(Colors.TESTCASE_NAME),
+            KEYWORD_NAME to arrayOf(Colors.KEYWORD_NAME),
+            HEADER to arrayOf(Colors.HEADER),
+            SETTING to arrayOf(Colors.SETTING),
+            KEYWORD_CALL to arrayOf(Colors.KEYWORD_CALL),
+            CONTROL_FLOW to arrayOf(Colors.CONTROL_FLOW),
+            VARIABLE to arrayOf(Colors.VARIABLE),
+            OPERATOR to arrayOf(Colors.OPERATOR),
+            ARGUMENT to arrayOf(Colors.ARGUMENT),
+            CONTINUATION to arrayOf(Colors.CONTINUATION),
         )
         
         val PLAIN_SYNTAX_HIGHLIGHTER: PlainSyntaxHighlighter = PlainSyntaxHighlighter()
     }
     
-    private val myLexer = RobotTextMateHighlightingLexer()
+    private val myLexer = RobotCodeLexer()
     
     override fun getHighlightingLexer(): Lexer {
         return myLexer

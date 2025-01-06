@@ -4,7 +4,7 @@ import com.intellij.openapi.editor.DefaultLanguageHighlighterColors
 import com.intellij.openapi.editor.colors.TextAttributesKey
 import com.intellij.openapi.editor.colors.TextAttributesKey.createTextAttributesKey
 
-object RobotColors {
+object Colors {
     
     val HEADER: TextAttributesKey =
         createTextAttributesKey("ROBOTFRAMEWORK_HEADER", DefaultLanguageHighlighterColors.KEYWORD)

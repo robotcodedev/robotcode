@@ -7,6 +7,6 @@ import com.intellij.openapi.vfs.VirtualFile
 
 class RobotCodeSyntaxHighlighterFactory : SyntaxHighlighterFactory() {
     override fun getSyntaxHighlighter(project: Project?, virtualFile: VirtualFile?): SyntaxHighlighter {
-        return RobotCodeHighlighter()
+        return RobotCodeSyntaxHighlighter()
     }
 }
