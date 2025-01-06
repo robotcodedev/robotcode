@@ -1,47 +1,78 @@
 # robotcode4ij
 
-![Build](https://github.com/robotcodedev/robotcode4ij/workflows/Build/badge.svg)
-[![Version](https://img.shields.io/jetbrains/plugin/v/MARKETPLACE_ID.svg)](https://plugins.jetbrains.com/plugin/MARKETPLACE_ID)
-[![Downloads](https://img.shields.io/jetbrains/plugin/d/MARKETPLACE_ID.svg)](https://plugins.jetbrains.com/plugin/MARKETPLACE_ID)
+[![JETBRAINS Marketplace](https://img.shields.io/jetbrains/plugin/v/26216.svg)](https://plugins.jetbrains.com/plugin/26216)
+[![Downloads](https://img.shields.io/jetbrains/plugin/d/26216.svg)](https://plugins.jetbrains.com/plugin/26216)
 
-## Template ToDo list
-- [x] Create a new [IntelliJ Platform Plugin Template][template] project.
-- [ ] Get familiar with the [template documentation][template].
-- [ ] Adjust the [pluginGroup](./gradle.properties) and [pluginName](./gradle.properties), as well as the [id](./src/main/resources/META-INF/plugin.xml) and [sources package](./src/main/kotlin).
-- [ ] Adjust the plugin description in `README` (see [Tips][docs:plugin-description])
-- [ ] Review the [Legal Agreements](https://plugins.jetbrains.com/docs/marketplace/legal-agreements.html?from=IJPluginTemplate).
-- [ ] [Publish a plugin manually](https://plugins.jetbrains.com/docs/intellij/publishing-plugin.html?from=IJPluginTemplate) for the first time.
-- [ ] Set the `MARKETPLACE_ID` in the above README badges. You can obtain it once the plugin is published to JetBrains Marketplace.
-- [ ] Set the [Plugin Signing](https://plugins.jetbrains.com/docs/intellij/plugin-signing.html?from=IJPluginTemplate) related [secrets](https://github.com/JetBrains/intellij-platform-plugin-template#environment-variables).
-- [ ] Set the [Deployment Token](https://plugins.jetbrains.com/docs/marketplace/plugin-upload.html?from=IJPluginTemplate).
-- [ ] Click the <kbd>Watch</kbd> button on the top of the [IntelliJ Platform Plugin Template][template] to be notified about releases containing new features and fixes.
 
 <!-- Plugin description -->
-Robot Framework IntelliSense, linting, test execution and debugging, code formatting, refactoring, and many more.
+
+⚠️ **Important Notice** ⚠️
+This plugin is currently under active development and is not yet ready for production use. Please note that it may contain bugs or lack certain features.
+
+We invite you to join the Robot Framework and RobotCode community by reporting issues, suggesting features, and helping us improve the plugin.
+
+Your feedback is greatly appreciated! 🙂
+
+
+**RobotCode** is a PyCharm/IntelliJ Plugin that enhances your workflow with [Robot Framework](https://robotframework.org/).
+It provides a rich set of features to help you write, run, and debug your Robot Framework tests directly within your IDE.
+
+## Why RobotCode?
+
+**Built on Robot Framework Core**
+RobotCode is based on the Robot Framework Core and uses its parser, ensuring complete compatibility and consistency. This means you get the same syntax validation, error messages, and behavior as if you were running Robot Framework directly.
+
+**Powered by the Language Server Protocol**
+RobotCode is built on the Language Server Protocol (LSP), a modern standard for implementing language support across multiple editors and IDEs. This ensures a seamless and responsive user experience, while making it easier to maintain compatibility with evolving IDE features.
+
+**Powerful Command Line Tools**
+RobotCode extends the Robot Framework CLI with enhanced tools for test execution, analysis, and debugging. It supports [`robot.toml`](https://robotcode.io/03_reference/) configurations, integrates a Debug Adapter Protocol (DAP) compatible debugger, and provides an interactive REPL environment for experimenting with Robot Framework commands. Modular and flexible, these tools streamline your workflow for both development and production.
+
+## Key Features
+
+- **Smart Code Editing**: Auto-completion, syntax highlighting, and seamless navigation.
+- **Refactoring**: Easily rename variables, keywords, and arguments across your project.
+- **Integrated Debugging**: Debug Robot Framework tests directly within the IDE.
+- **Test Management**: Discover, run, and monitor Robot Framework tests without leaving your IDE.
+- **Rich Test Reports**: View detailed test results and logs directly in the IDE.
+- **Code Analysis**: Leverage tools like [Robocop](https://robocop.readthedocs.io/) for linting and static code analysis.
+- **Formatting Made Easy**: Use [Robotidy](https://robotidy.readthedocs.io/) for consistent code formatting.
+- **Support for `robot.toml`**: Manage your Robot Framework projects with ease.
+- **More Features Coming Soon!**
+
+
+## Requirements
+
+- Python 3.8 or newer
+- Robot Framework 4.1 or newer
+- PyCharm 2024.3.1 or newer
+
+## Getting Started
+
+1. Install the [RobotCode Plugin](https://plugins.jetbrains.com/plugin/26216) from the JETBRAINS Marketplace.
+2. Configure your Robot Framework Python environment
+3. Start writing and running your Robot Framework tests!
+
+(Comming soon...)
+For a more detailed guide, check out the [Let's get started](https://robotcode.io/02_get_started/) Guide on the [RobotCode](https://robotcode.io) website.
+
 <!-- Plugin description end -->
 
 ## Installation
 
 - Using the IDE built-in plugin system:
-  
-  <kbd>Settings/Preferences</kbd> > <kbd>Plugins</kbd> > <kbd>Marketplace</kbd> > <kbd>Search for "robotcode4ij"</kbd> >
+
+  <kbd>Settings/Preferences</kbd> > <kbd>Plugins</kbd> > <kbd>Marketplace</kbd> > <kbd>Search for "RobotCode"</kbd> >
   <kbd>Install</kbd>
-  
+
 - Using JetBrains Marketplace:
 
-  Go to [JetBrains Marketplace](https://plugins.jetbrains.com/plugin/MARKETPLACE_ID) and install it by clicking the <kbd>Install to ...</kbd> button in case your IDE is running.
+  Go to [JetBrains Marketplace](https://plugins.jetbrains.com/plugin/26216) and install it by clicking the <kbd>Install to ...</kbd> button in case your IDE is running.
 
-  You can also download the [latest release](https://plugins.jetbrains.com/plugin/MARKETPLACE_ID/versions) from JetBrains Marketplace and install it manually using
+  You can also download the [latest release](https://plugins.jetbrains.com/plugin/26216/versions) from JetBrains Marketplace and install it manually using
   <kbd>Settings/Preferences</kbd> > <kbd>Plugins</kbd> > <kbd>⚙️</kbd> > <kbd>Install plugin from disk...</kbd>
 
 - Manually:
 
-  Download the [latest release](https://github.com/robotcodedev/robotcode4ij/releases/latest) and install it manually using
+  Download the [latest release](https://github.com/robotcodedev/robotcode/releases/latest) and install it manually using
   <kbd>Settings/Preferences</kbd> > <kbd>Plugins</kbd> > <kbd>⚙️</kbd> > <kbd>Install plugin from disk...</kbd>
-
-
----
-Plugin based on the [IntelliJ Platform Plugin Template][template].
-
-[template]: https://github.com/JetBrains/intellij-platform-plugin-template
-[docs:plugin-description]: https://plugins.jetbrains.com/docs/intellij/plugin-user-experience.html#plugin-description-and-presentation
