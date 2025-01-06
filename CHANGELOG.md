@@ -2,6 +2,29 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [0.105.0](https://github.com/robotcodedev/robotcode/compare/v0.104.0..v0.105.0) - 2025-01-06
+
+### Documentation
+
+- Update readme's ([f4f576f](https://github.com/robotcodedev/robotcode/commit/f4f576f3222ac3cf08904a336615edf45c57f922))
+
+
+### Features
+
+- **intellij:** Added initial Robot Framework file templates and better syntax highlighting support based on a customized TextMate lexer/parser ([ef67d2c](https://github.com/robotcodedev/robotcode/commit/ef67d2c661c6ae8c8c734561b54f63d82f9b4e3c))
+- **intellij:** Implemented brace matcher for variables ([9ee1f22](https://github.com/robotcodedev/robotcode/commit/9ee1f22c2f077a1c92ac9f5f6dc37542fb24e79c))
+- **intellij:** Finalize syntax coloring and sematic highlightning ([faa905d](https://github.com/robotcodedev/robotcode/commit/faa905d048d4af076695b619d91ee97371cfd0fd))
+- **intellij:** Finalize syntax coloring and sematic highlightning part 2 ([97081a5](https://github.com/robotcodedev/robotcode/commit/97081a5f13a7f58d6825853330c8806506ad6fde))
+- **intellij:** Implemented support for highlightning embedded arguments, escape sequences, python expressions and so on ([c5d6cf3](https://github.com/robotcodedev/robotcode/commit/c5d6cf3722c22929799b154204711c697928da7e))
+- **langserver:** Correct highlightning to better highlight python expresseions, escape sequences, environment variable default value and embedded argument regexes ([5dba571](https://github.com/robotcodedev/robotcode/commit/5dba5713f746cb9fb1b36433be982493bb3905d2))
+- **language_server:** Enhanced hover representation of variables ([039682d](https://github.com/robotcodedev/robotcode/commit/039682dbdd19a6e1dc972f642dbfd5f1787b4dcd))
+
+
+### Testing
+
+- Update regression tests ([c5f4573](https://github.com/robotcodedev/robotcode/commit/c5f4573c1b9ea9a2db720c5044bf7a2cdc8e2bda))
+
+
 ## [0.104.0](https://github.com/robotcodedev/robotcode/compare/v0.103.0..v0.104.0) - 2024-12-30
 
 ### Bug Fixes
