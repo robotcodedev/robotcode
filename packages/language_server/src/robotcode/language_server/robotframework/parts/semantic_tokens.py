@@ -32,6 +32,7 @@ from robot.parsing.model.statements import (
     ResourceImport,
     Statement,
     Template,
+    TemplateArguments,
     TestTemplate,
     Variable,
     VariablesImport,
@@ -163,8 +164,6 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
         parent.semantic_tokens.token_modifiers += list(RobotSemTokenModifiers)
 
         parent.semantic_tokens.collect_full.add(self.collect_full)
-        # parent.semantic_tokens.collect_range.add(self.collect_range)
-        # parent.semantic_tokens.collect_full_delta.add(self.collect_full_delta)
 
         self.parent.on_initialized.add(self._on_initialized)
 
@@ -345,9 +344,8 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
 
     BUILTIN_MATCHER: ClassVar = KeywordMatcher("BuiltIn", is_namespace=True)
 
-    @classmethod
     def generate_sem_sub_tokens(
-        cls,
+        self,
         namespace: Namespace,
         builtin_library_doc: Optional[LibraryDoc],
         token: Token,
@@ -356,7 +354,8 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
         length: Optional[int] = None,
         yield_arguments: bool = False,
     ) -> Iterator[SemTokenInfo]:
-        sem_info = cls.mapping().get(token.type, None) if token.type is not None else None
+
+        sem_info = self.mapping().get(token.type, None) if token.type is not None else None
         if sem_info is not None:
             sem_type, sem_mod = sem_info
 
@@ -419,7 +418,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
                     bdd_len = 0
 
                     if get_robot_version() < (6, 0):
-                        bdd_match = cls.BDD_TOKEN_REGEX.match(token.value)
+                        bdd_match = self.BDD_TOKEN_REGEX.match(token.value)
                         if bdd_match:
                             bdd_len = len(bdd_match.group(1))
                     else:
@@ -489,7 +488,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
                         col_offset,
                         len(kw_namespace),
                         RobotSemTokenTypes.NAMESPACE,
-                        {RobotSemTokenModifiers.BUILTIN} if kw_namespace == cls.BUILTIN_MATCHER else None,
+                        {RobotSemTokenModifiers.BUILTIN} if kw_namespace == self.BUILTIN_MATCHER else None,
                     )
                     yield SemTokenInfo(
                         token.lineno,
@@ -499,7 +498,11 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
                     )
 
                 if builtin_library_doc is not None and kw in builtin_library_doc.keywords:
-                    if kw_doc is not None and kw_doc.libname == cls.BUILTIN_MATCHER and kw_doc.matcher.match_string(kw):
+                    if (
+                        kw_doc is not None
+                        and kw_doc.libname == self.BUILTIN_MATCHER
+                        and kw_doc.matcher.match_string(kw)
+                    ):
                         if not sem_mod:
                             sem_mod = set()
                         sem_mod.add(RobotSemTokenModifiers.BUILTIN)
@@ -534,9 +537,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
                                 ignore_errors=True,
                                 identifiers="$@&%",
                             ):
-                                for e in cls.generate_sem_sub_tokens(
-                                    namespace, builtin_library_doc, sub_token, node, yield_arguments=True
-                                ):
+                                for e in self.generate_sem_sub_tokens(namespace, builtin_library_doc, sub_token, node):
                                     e.sem_modifiers = {RobotSemTokenModifiers.EMBEDDED}
                                     yield e
 
@@ -558,7 +559,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
                     if col_offset is None:
                         col_offset = token.col_offset
 
-                    for g in cls.ESCAPE_REGEX.finditer(token.value):
+                    for g in self.ESCAPE_REGEX.finditer(token.value):
                         yield SemTokenInfo.from_token(
                             token,
                             RobotSemTokenTypes.NAMESPACE if g.group("x") is None else RobotSemTokenTypes.ESCAPE,
@@ -626,6 +627,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
                 if (
                     yield_arguments
                     or token.type != Token.ARGUMENT
+                    or (token.type == Token.ARGUMENT and cached_isinstance(node, TemplateArguments))
                     or (token.type != Token.NAME and cached_isinstance(node, Metadata))
                 ):
                     yield SemTokenInfo.from_token(token, sem_type, sem_mod, col_offset, length)
@@ -699,13 +701,11 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
                 ignore_errors=True,
                 identifiers="$" if token.type == Token.KEYWORD_NAME else "$@&%",
             ):
-                for e in self.generate_sem_sub_tokens(
-                    namespace, builtin_library_doc, sub_token, node, yield_arguments=True
-                ):
+                for e in self.generate_sem_sub_tokens(namespace, builtin_library_doc, sub_token, node):
                     yield e
 
         else:
-            for e in self.generate_sem_sub_tokens(namespace, builtin_library_doc, token, node, yield_arguments=True):
+            for e in self.generate_sem_sub_tokens(namespace, builtin_library_doc, token, node):
                 yield e
 
     def generate_run_kw_tokens(
