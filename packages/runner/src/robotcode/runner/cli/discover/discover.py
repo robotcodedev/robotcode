@@ -207,6 +207,7 @@ class TestItem(CamelSnakeMixin):
     id: str
     name: str
     longname: str
+    lineno: Optional[int] = None
     uri: Optional[DocumentUri] = None
     rel_source: Optional[str] = None
     source: Optional[str] = None
@@ -345,6 +346,7 @@ class Collector(SuiteVisitor):
                 id=f"{absolute_path or ''};{test.longname};{test.lineno}",
                 name=test.name,
                 longname=test.longname,
+                lineno=test.lineno,
                 uri=str(Uri.from_path(absolute_path)) if absolute_path else None,
                 source=str(test.source),
                 rel_source=get_rel_source(test.source),
