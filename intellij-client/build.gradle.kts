@@ -4,13 +4,6 @@ import org.jetbrains.intellij.platform.gradle.Constants.Constraints
 import org.jetbrains.intellij.platform.gradle.IntelliJPlatformType
 import org.jetbrains.intellij.platform.gradle.TestFrameworkType
 import org.jetbrains.intellij.platform.gradle.tasks.PrepareSandboxTask
-import java.net.URI
-import java.net.http.HttpClient
-import java.net.http.HttpRequest
-import java.net.http.HttpResponse
-import java.time.Duration
-import java.time.temporal.ChronoUnit
-import java.util.regex.Pattern
 
 plugins {
     alias(libs.plugins.kotlin)
@@ -53,7 +46,7 @@ dependencies {
         create(
             providers.gradleProperty("platformType"),
             providers.gradleProperty("platformVersion"),
-            useInstaller = false
+            useInstaller = false,
         )
         
         // Plugin Dependencies. Uses `platformBundledPlugins` property from the gradle.properties file for bundled IntelliJ Platform plugins.
@@ -85,14 +78,13 @@ intellijPlatform {
             }
         }
         
-        val changelog = project.changelog // local variable for configuration cache compatibility
-        // Get the latest available change notes from the changelog file
+        val changelog = project.changelog
+        
+        // local variable for configuration cache compatibility // Get the latest available change notes from the changelog file
         changeNotes = providers.gradleProperty("pluginVersion").map { pluginVersion ->
             with(changelog) {
                 renderItem(
-                    (getOrNull(pluginVersion) ?: getUnreleased())
-                        .withHeader(false)
-                        .withEmptySections(false),
+                    (getOrNull(pluginVersion) ?: getUnreleased()).withHeader(false).withEmptySections(false),
                     Changelog.OutputType.HTML,
                 )
             }
@@ -112,6 +104,7 @@ intellijPlatform {
     
     publishing {
         token = providers.environmentVariable("PUBLISH_TOKEN")
+        
         // The pluginVersion is based on the SemVer (https://semver.org) and supports pre-release labels, like 2.1.7-alpha.3
         // Specify pre-release label to publish the plugin in a custom Release Channel automatically. Read more:
         // https://plugins.jetbrains.com/docs/intellij/deployment.html#specifying-a-release-channel
@@ -156,6 +149,7 @@ val prepareSandboxConfig: PrepareSandboxTask.() -> Unit = {
 
 tasks {
     runIde {
+        
         // From https://app.slack.com/client/T5P9YATH9/C5U8BM1MK
         // systemProperty("ide.experimental.ui", "true")
         // systemProperty("projectView.hide.dot.idea", "false")
@@ -173,7 +167,6 @@ tasks {
     
     prepareSandbox(prepareSandboxConfig)
 }
-
 
 
 // Configure UI tests plugin
@@ -207,28 +200,4 @@ val runIdeIntellijIdeaC by intellijPlatformTesting.runIde.registering {
     type = IntelliJPlatformType.IntellijIdeaCommunity
     
     prepareSandboxTask(prepareSandboxConfig)
-}
-
-fun fetchLatestLsp4ijNightlyVersion(): String {
-    val client = HttpClient.newBuilder().build();
-    var onlineVersion = ""
-    try {
-        val request: HttpRequest = HttpRequest.newBuilder()
-            .uri(URI("https://plugins.jetbrains.com/api/plugins/23257/updates?channel=nightly&size=1"))
-            .GET()
-            .timeout(Duration.of(10, ChronoUnit.SECONDS))
-            .build()
-        val response = client.send(request, HttpResponse.BodyHandlers.ofString());
-        val pattern = Pattern.compile("\"version\":\"([^\"]+)\"")
-        val matcher = pattern.matcher(response.body())
-        if (matcher.find()) {
-            onlineVersion = matcher.group(1)
-            println("Latest approved nightly build: $onlineVersion")
-        }
-    } catch (e: Exception) {
-        println("Failed to fetch LSP4IJ nightly build version: ${e.message}")
-    }
-    
-    val minVersion = "0.0.1-20231213-012910"
-    return if (minVersion < onlineVersion) onlineVersion else minVersion
 }
