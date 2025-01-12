@@ -18,7 +18,7 @@ import kotlinx.coroutines.withTimeout
 import org.eclipse.lsp4j.debug.OutputEventArgumentsCategory
 
 class RobotOutputToGeneralTestEventsConverter(
-    testFrameworkName: String, consoleProperties: RobotRunnerConsoleProperties,
+    testFrameworkName: String, val consoleProperties: RobotRunnerConsoleProperties,
 ) : OutputToGeneralTestEventsConverter(testFrameworkName, consoleProperties) {
     
     private var _firstCall = false
@@ -54,7 +54,6 @@ class RobotOutputToGeneralTestEventsConverter(
                 else -> ServiceMessageBuilder.testFailed(args.name).apply {
                     addAttribute("message", args.attributes.message ?: "Error")
                 }
-                
             }
             
             else -> null
@@ -90,10 +89,6 @@ class RobotOutputToGeneralTestEventsConverter(
     
     private var configurationDone = CompletableDeferred<Unit>()
     
-    private fun processConnected() {
-        configurationDone.complete(Unit)
-    }
-    
     init {
         consoleProperties.state?.afterInitialize?.adviseEternal {
             runBlocking {
@@ -108,23 +103,26 @@ class RobotOutputToGeneralTestEventsConverter(
         }
         consoleProperties.state?.debugClient?.onRobotStarted?.adviseEternal(this::robotStarted)
         consoleProperties.state?.debugClient?.onRobotEnded?.adviseEternal(this::robotEnded)
-        consoleProperties.state?.debugClient?.onRobotLog?.adviseEternal { args -> // TODO: Implement this
-            // val msg = ServiceMessageBuilder.testStdOut("blah")
-            //
-            // msg.addAttribute("nodeId", args.itemId ?: "0").addAttribute(
-            //     "out", "[${args.level}] ${args.message}\n"
-            // )
-            // this.processServiceMessageFromRobot(msg)
-        }
+        
+        // TODO: Implement this
+        // consoleProperties.state?.debugClient?.onRobotLog?.adviseEternal { args ->
+        //     val msg = ServiceMessageBuilder.testStdOut("blah")
+        //
+        //     msg.addAttribute("nodeId", args.itemId ?: "0").addAttribute(
+        //         "out", "[${args.level}] ${args.message}\n"
+        //     )
+        //     this.processServiceMessageFromRobot(msg)
+        // }
+        
         consoleProperties.state?.debugClient?.onOutput?.adviseEternal { args ->
             val msg =
                 if (args.category == OutputEventArgumentsCategory.STDERR) ServiceMessageBuilder.testStdErr(args.category)
                 else ServiceMessageBuilder.testStdOut(args.category)
             
             msg.addAttribute("nodeId", testItemIdStack.lastOrNull() ?: "0")
-            msg.addAttribute("out", "${args.output}")
+            msg.addAttribute("out", "\u001b[38;5;243m${args.output}\u001b[0m")
             
-            this.processServiceMessageFromRobot(msg)
+            processServiceMessageFromRobot(msg)
         }
         
     }
@@ -133,6 +131,7 @@ class RobotOutputToGeneralTestEventsConverter(
         ServiceMessage.parse(msg.toString())?.let {
             this.processServiceMessage(it, visitor)
         }
+        
     }
     
     override fun processServiceMessages(text: String, outputType: Key<*>, visitor: ServiceMessageVisitor): Boolean {
@@ -140,10 +139,10 @@ class RobotOutputToGeneralTestEventsConverter(
             _firstCall = true
             this.visitor = visitor
             
-            processConnected()
+            configurationDone.complete(Unit)
         }
         
-        // TODO: make this configurable
+        // TODO: make this configurable or find a way to output this to another console
         return true
     }
 }

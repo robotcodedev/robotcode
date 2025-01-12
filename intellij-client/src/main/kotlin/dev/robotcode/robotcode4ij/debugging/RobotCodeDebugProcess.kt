@@ -56,16 +56,16 @@ class RobotCodeDebugProcess(
         debugClient.onStopped.adviseSuspend(Lifetime.Eternal, Dispatchers.IO) { args ->
             handleOnStopped(args)
         }
-        debugClient.onOutput.adviseSuspend(Lifetime.Eternal, Dispatchers.IO) { args ->
-            
-            session.reportMessage(
-                args.output, when (args.category) {
-                    OutputEventArgumentsCategory.STDOUT, OutputEventArgumentsCategory.CONSOLE -> MessageType.INFO
-                    OutputEventArgumentsCategory.STDERR -> MessageType.ERROR
-                    else -> MessageType.WARNING
-                }
-            )
-        }
+        // debugClient.onOutput.adviseSuspend(Lifetime.Eternal, Dispatchers.IO) { args ->
+        //
+        //     session.reportMessage(
+        //         args.output, when (args.category) {
+        //             OutputEventArgumentsCategory.STDOUT, OutputEventArgumentsCategory.CONSOLE -> MessageType.INFO
+        //             OutputEventArgumentsCategory.STDERR -> MessageType.ERROR
+        //             else -> MessageType.WARNING
+        //         }
+        //     )
+        // }
         
         // debugClient.onTerminated.adviseSuspend(Lifetime.Eternal, Dispatchers.IO) {
         //     session.stop()
@@ -105,6 +105,7 @@ class RobotCodeDebugProcess(
             
             "exception" -> {
                 // TODO session.exceptionCaught()
+                session.positionReached(createRobotCodeSuspendContext(args.threadId))
             }
             
             else -> {

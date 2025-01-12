@@ -1,12 +1,14 @@
 package dev.robotcode.robotcode4ij.execution
 
 import com.intellij.execution.actions.ConfigurationContext
+import com.intellij.execution.actions.ConfigurationFromContext
 import com.intellij.execution.actions.LazyRunConfigurationProducer
 import com.intellij.execution.configurations.ConfigurationFactory
 import com.intellij.execution.configurations.runConfigurationType
 import com.intellij.openapi.util.Ref
 import com.intellij.psi.PsiElement
 import dev.robotcode.robotcode4ij.testing.testManger
+import java.util.*
 
 
 class RobotCodeRunConfigurationProducer : LazyRunConfigurationProducer<RobotCodeRunConfiguration>() {
@@ -21,7 +23,13 @@ class RobotCodeRunConfigurationProducer : LazyRunConfigurationProducer<RobotCode
     ): Boolean {
         val testItem = configuration.project.testManger.findTestItem(sourceElement.get()) ?: return false
         
-        configuration.name = testItem.name
+        
+        configuration.name = "${
+            testItem.type.replaceFirstChar {
+                if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it
+                    .toString()
+            }
+        } ${testItem.name}"
         configuration.includedTestItems = listOf(testItem)
         
         return true
@@ -37,4 +45,9 @@ class RobotCodeRunConfigurationProducer : LazyRunConfigurationProducer<RobotCode
         
         return configuration.includedTestItems == listOf(testItem)
     }
+    
+    override fun isPreferredConfiguration(self: ConfigurationFromContext?, other: ConfigurationFromContext?): Boolean {
+        return false
+    }
+    
 }

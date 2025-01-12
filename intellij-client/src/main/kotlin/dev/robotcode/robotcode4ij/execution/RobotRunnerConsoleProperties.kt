@@ -13,9 +13,11 @@ class RobotRunnerConsoleProperties(
     
     var state: RobotCodeRunProfileState? = null
     
-    init { // isUsePredefinedMessageFilter = false
+    init {
+        
+        isUsePredefinedMessageFilter = false
         setIfUndefined(HIDE_PASSED_TESTS, false)
-        setIfUndefined(HIDE_IGNORED_TEST, true)
+        setIfUndefined(HIDE_IGNORED_TEST, false)
         setIfUndefined(SCROLL_TO_SOURCE, true)
         setIfUndefined(SELECT_FIRST_DEFECT, true)
         setIfUndefined(SHOW_STATISTICS, true)

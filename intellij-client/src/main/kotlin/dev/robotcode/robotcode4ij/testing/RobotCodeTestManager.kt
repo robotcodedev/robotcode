@@ -8,6 +8,7 @@ import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.psi.PsiDirectory
 import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiElement
 import com.intellij.psi.util.elementType
@@ -30,6 +31,7 @@ import java.net.URI
     val id: String,
     val name: String,
     val longname: String,
+    val lineno: Int? = null,
     val description: String? = null,
     val uri: String? = null,
     val relSource: String? = null,
@@ -177,14 +179,17 @@ import java.net.URI
     
     
     fun findTestItem(element: PsiElement): RobotCodeTestItem? {
+        val directory = element as? PsiDirectory
+        if (directory != null) {
+            return findTestItem(directory.virtualFile.uri)
+        }
         val containingFile = element.containingFile ?: return null
         if (containingFile !is RobotSuiteFile) {
             return null
         }
         
         if (element is RobotSuiteFile) {
-            val result = findTestItem(containingFile.virtualFile.uri)
-            return result
+            return findTestItem(containingFile.virtualFile.uri)
         }
         
         if (element.elementType !is IRobotFrameworkElementType) {
