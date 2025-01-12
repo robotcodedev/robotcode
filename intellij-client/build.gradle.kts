@@ -41,6 +41,10 @@ repositories {
 // Dependencies are managed with Gradle version catalog - read more: https://docs.gradle.org/current/userguide/platforms.html#sub:version-catalog
 dependencies {
     compileOnly(libs.kotlinxSerialization)
+    
+    // implementation(libs.lsp4j)
+    implementation(libs.lsp4jdebug)
+    
     testImplementation(kotlin("test"))
     testImplementation(libs.junit)
     
@@ -119,6 +123,7 @@ intellijPlatform {
         ides {
             recommended()
         }
+        
     }
 }
 

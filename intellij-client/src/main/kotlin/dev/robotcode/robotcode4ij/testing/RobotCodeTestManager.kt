@@ -7,10 +7,19 @@ import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.psi.PsiDocumentManager
+import com.intellij.psi.PsiElement
+import com.intellij.psi.util.elementType
+import com.intellij.psi.util.startOffset
+import com.intellij.util.io.URLUtil
 import dev.robotcode.robotcode4ij.buildRobotCodeCommandLine
+import dev.robotcode.robotcode4ij.psi.IRobotFrameworkElementType
+import dev.robotcode.robotcode4ij.psi.RobotSuiteFile
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
+import java.net.URI
 
 @Serializable data class Position(val line: UInt, val character: UInt)
 
@@ -107,8 +116,7 @@ import kotlinx.serialization.json.JsonElement
     var testItems: Array<RobotCodeTestItem> = arrayOf()
         private set
     
-    fun refresh() {
-        // TODO: Add support for configurable paths
+    fun refresh() { // TODO: Add support for configurable paths
         val defaultPaths = arrayOf("--default-path", ".")
         
         try {
@@ -127,7 +135,77 @@ import kotlinx.serialization.json.JsonElement
             thisLogger().warn("Failed to discover test items", e)
         }
     }
+    
+    fun findTestItem(
+        uri: String,
+        line: UInt? = null,
+    ): RobotCodeTestItem? {
+        return findTestItem(testItems, uri, line)
+    }
+    
+    fun findTestItem(
+        root: RobotCodeTestItem,
+        uri: String,
+        line: UInt? = null,
+    ): RobotCodeTestItem? {
+        
+        if (line == null) {
+            if (root.uri == uri) {
+                return root
+            }
+        } else {
+            if (root.uri == uri && root.range != null && root.range.start.line == line) {
+                return root
+            }
+        }
+        
+        return findTestItem(root.children ?: arrayOf(), uri, line)
+    }
+    
+    fun findTestItem(
+        testItems: Array<RobotCodeTestItem>, uri: String, line: UInt? = null
+    ): RobotCodeTestItem? {
+        testItems.forEach { item ->
+            val found = findTestItem(item, uri, line)
+            if (found != null) {
+                return found
+            }
+        }
+        
+        return null
+    }
+    
+    
+    fun findTestItem(element: PsiElement): RobotCodeTestItem? {
+        val containingFile = element.containingFile ?: return null
+        if (containingFile !is RobotSuiteFile) {
+            return null
+        }
+        
+        if (element is RobotSuiteFile) {
+            val result = findTestItem(containingFile.virtualFile.uri)
+            return result
+        }
+        
+        if (element.elementType !is IRobotFrameworkElementType) {
+            return null
+        }
+        
+        val psiDocumentManager = PsiDocumentManager.getInstance(project) ?: return null
+        val document = psiDocumentManager.getDocument(containingFile) ?: return null
+        val lineNumber = document.getLineNumber(element.startOffset)
+        val columnNumber = element.startOffset - document.getLineStartOffset(lineNumber)
+        if (columnNumber != 0) return null
+        
+        val result = findTestItem(containingFile.virtualFile.uri, lineNumber.toUInt())
+        return result
+    }
 }
+
+val VirtualFile.uri: String
+    get() {
+        return URI.create(fileSystem.protocol + URLUtil.SCHEME_SEPARATOR + "/" + path.replace(":", "%3A")).toString()
+    }
 
 val Project.testManger: RobotCodeTestManager
     get() {

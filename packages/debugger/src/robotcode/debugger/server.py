@@ -132,7 +132,7 @@ class DebugAdapterServerProtocol(DebugAdapterProtocol):
         return self._initialized
 
     @_logger.call
-    def wait_for_disconnected(self, timeout: float = 15) -> bool:
+    def wait_for_disconnected(self, timeout: float = 1) -> bool:
         self._disconnected_event.wait(timeout)
 
         return not self._connected

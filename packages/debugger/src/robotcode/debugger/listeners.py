@@ -16,6 +16,8 @@ from .debugger import Debugger
 class RobotExecutionEventBody(Model):
     type: str
     id: str
+    name: str
+    parent_id: Optional[str] = None
     attributes: Optional[Dict[str, Any]] = None
     failed_keywords: Optional[List[Dict[str, Any]]] = None
 
@@ -34,15 +36,19 @@ class ListenerV2:
     def __init__(self) -> None:
         self.failed_keywords: Optional[List[Dict[str, Any]]] = None
         self.last_fail_message: Optional[str] = None
+        self.suite_id_stack: List[str] = []
 
     def start_suite(self, name: str, attributes: Dict[str, Any]) -> None:
+        id = f"{source_from_attributes(attributes)};{attributes.get('longname', '')}"
         Debugger.instance().send_event(
             self,
             Event(
                 event="robotStarted",
                 body=RobotExecutionEventBody(
                     type="suite",
-                    id=f"{source_from_attributes(attributes)};{attributes.get('longname', '')}",
+                    name=name,
+                    id=id,
+                    parent_id=self.suite_id_stack[-1] if self.suite_id_stack else None,
                     attributes=dict(attributes),
                 ),
             ),
@@ -51,8 +57,10 @@ class ListenerV2:
         Debugger.instance().start_output_group(name, attributes, "SUITE")
 
         Debugger.instance().start_suite(name, attributes)
+        self.suite_id_stack.append(id)
 
     def end_suite(self, name: str, attributes: Dict[str, Any]) -> None:
+        id = f"{source_from_attributes(attributes)};{attributes.get('longname', '')}"
         Debugger.instance().end_suite(name, attributes)
 
         Debugger.instance().end_output_group(name, attributes, "SUITE")
@@ -63,13 +71,15 @@ class ListenerV2:
                 event="robotEnded",
                 body=RobotExecutionEventBody(
                     type="suite",
+                    name=name,
                     attributes=dict(attributes),
-                    id=f"{source_from_attributes(attributes)};{attributes.get('longname', '')}",
+                    id=id,
+                    parent_id=self.suite_id_stack[-1] if self.suite_id_stack else None,
                     failed_keywords=self.failed_keywords,
                 ),
             ),
         )
-
+        self.suite_id_stack.pop()
         self.failed_keywords = None
 
     def start_test(self, name: str, attributes: Dict[str, Any]) -> None:
@@ -81,8 +91,10 @@ class ListenerV2:
                 event="robotStarted",
                 body=RobotExecutionEventBody(
                     type="test",
+                    name=name,
                     id=f"{source_from_attributes(attributes)};{attributes.get('longname', '')};"
                     f"{attributes.get('lineno', 0)}",
+                    parent_id=self.suite_id_stack[-1] if self.suite_id_stack else None,
                     attributes=dict(attributes),
                 ),
             ),
@@ -103,8 +115,10 @@ class ListenerV2:
                 event="robotEnded",
                 body=RobotExecutionEventBody(
                     type="test",
+                    name=name,
                     id=f"{source_from_attributes(attributes)};{attributes.get('longname', '')};"
                     f"{attributes.get('lineno', 0)}",
+                    parent_id=self.suite_id_stack[-1] if self.suite_id_stack else None,
                     attributes=dict(attributes),
                     failed_keywords=self.failed_keywords,
                 ),
@@ -308,6 +322,7 @@ class ListenerV3:
                         event="robotSetFailed",
                         body=RobotExecutionEventBody(
                             type="test",
+                            name=result_item.name,
                             attributes={
                                 "longname": result_item.longname,
                                 "status": str(result_item.status),
@@ -325,6 +340,7 @@ class ListenerV3:
                         ),
                     ),
                 )
+
             if isinstance(result_item, result.TestSuite):
                 for r in result_item.suites:
                     p = next((i for i in data_item.suites if i.id == r.id), None) if data_item else None

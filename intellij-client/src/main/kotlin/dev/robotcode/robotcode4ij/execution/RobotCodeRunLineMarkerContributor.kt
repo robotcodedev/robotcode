@@ -3,14 +3,19 @@ package dev.robotcode.robotcode4ij.execution
 import com.intellij.execution.lineMarker.RunLineMarkerContributor
 import com.intellij.icons.AllIcons
 import com.intellij.psi.PsiElement
-import com.intellij.psi.util.elementType
-import dev.robotcode.robotcode4ij.psi.FILE
-import dev.robotcode.robotcode4ij.psi.TESTCASE_NAME
+import dev.robotcode.robotcode4ij.testing.testManger
 
 class RobotCodeRunLineMarkerContributor : RunLineMarkerContributor() {
     override fun getInfo(element: PsiElement): Info? {
-        if (element.elementType != TESTCASE_NAME && element.elementType != FILE) return null
-        
-        return withExecutorActions(AllIcons.RunConfigurations.TestState.Run)
+        var testElement = element.project.testManger.findTestItem(element) ?: return null
+        var icon = AllIcons.RunConfigurations.TestState.Run
+        if (testElement.type == "suite") {
+            icon = AllIcons.RunConfigurations.TestState.Run_run
+        }
+        return withExecutorActions(icon)
+    }
+    
+    override fun getSlowInfo(element: PsiElement): Info? {
+        return super.getSlowInfo(element)
     }
 }

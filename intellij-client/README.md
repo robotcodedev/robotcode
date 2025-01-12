@@ -6,6 +6,10 @@
 
 <!-- Plugin description -->
 
+**RobotCode** is a PyCharm/IntelliJ Plugin that enhances your workflow with [Robot Framework](https://robotframework.org/).
+It provides a rich set of features to help you write, run, and debug your Robot Framework tests directly within your IDE.
+
+
 ⚠️ **Important Notice** ⚠️
 This plugin is currently under active development and is not yet ready for production use. Please note that it may contain bugs or lack certain features.
 
@@ -13,9 +17,6 @@ We invite you to join the Robot Framework and RobotCode community by reporting i
 
 Your feedback is greatly appreciated! 🙂
 
-
-**RobotCode** is a PyCharm/IntelliJ Plugin that enhances your workflow with [Robot Framework](https://robotframework.org/).
-It provides a rich set of features to help you write, run, and debug your Robot Framework tests directly within your IDE.
 
 ## Why RobotCode?
 
@@ -27,6 +28,7 @@ RobotCode is built on the Language Server Protocol (LSP), a modern standard for 
 
 **Powerful Command Line Tools**
 RobotCode extends the Robot Framework CLI with enhanced tools for test execution, analysis, and debugging. It supports [`robot.toml`](https://robotcode.io/03_reference/) configurations, integrates a Debug Adapter Protocol (DAP) compatible debugger, and provides an interactive REPL environment for experimenting with Robot Framework commands. Modular and flexible, these tools streamline your workflow for both development and production.
+
 
 ## Key Features
 
@@ -47,6 +49,7 @@ RobotCode extends the Robot Framework CLI with enhanced tools for test execution
 - Robot Framework 4.1 or newer
 - PyCharm 2024.3.1 or newer
 
+
 ## Getting Started
 
 1. Install the [RobotCode Plugin](https://plugins.jetbrains.com/plugin/26216) from the JETBRAINS Marketplace.
@@ -57,6 +60,7 @@ RobotCode extends the Robot Framework CLI with enhanced tools for test execution
 For a more detailed guide, check out the [Let's get started](https://robotcode.io/02_get_started/) Guide on the [RobotCode](https://robotcode.io) website.
 
 <!-- Plugin description end -->
+
 
 ## Installation
 

@@ -11,24 +11,18 @@ import dev.robotcode.robotcode4ij.RobotResourceFileType
 import dev.robotcode.robotcode4ij.RobotSuiteFileType
 
 class RobotCreateFileAction : CreateFileFromTemplateAction(
-    "Robot Framework File", "Robot Framework file",
-    RobotIcons
-        .Suite
-),
-                              DumbAware {
+    "Robot Framework File", "Robot Framework file", RobotIcons.Suite
+), DumbAware {
     override fun buildDialog(project: Project, directory: PsiDirectory, builder: CreateFileFromTemplateDialog.Builder) {
         builder.setTitle("New Robot Framework File")
-        FileTemplateManager.getInstance(project)
-            .allTemplates
-            .forEach {
-                if (it.extension == RobotSuiteFileType.defaultExtension) {
-                    builder.addKind(it.name, RobotIcons.Suite, it.name)
-                } else if (it.extension == RobotResourceFileType.defaultExtension) {
-                    builder.addKind(it.name, RobotIcons.Resource, it.name)
-                }
+        FileTemplateManager.getInstance(project).allTemplates.forEach {
+            if (it.extension == RobotSuiteFileType.defaultExtension) {
+                builder.addKind(it.name, RobotIcons.Suite, it.name)
+            } else if (it.extension == RobotResourceFileType.defaultExtension) {
+                builder.addKind(it.name, RobotIcons.Resource, it.name)
             }
-        builder
-            .addKind("Suite file", RobotIcons.Suite, "Robot Suite File")
+        }
+        builder.addKind("Suite file", RobotIcons.Suite, "Robot Suite File")
             .addKind("Resource file", RobotIcons.Resource, "Robot Resource File")
         
     }
@@ -36,5 +30,4 @@ class RobotCreateFileAction : CreateFileFromTemplateAction(
     override fun getActionName(directory: PsiDirectory?, newName: String, templateName: String?): String {
         return "Create Robot Framework File"
     }
-    
 }

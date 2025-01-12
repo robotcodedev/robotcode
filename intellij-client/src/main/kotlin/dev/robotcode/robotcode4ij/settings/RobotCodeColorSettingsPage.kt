@@ -6,8 +6,8 @@ import com.intellij.openapi.options.colors.AttributesDescriptor
 import com.intellij.openapi.options.colors.ColorDescriptor
 import com.intellij.openapi.options.colors.ColorSettingsPage
 import dev.robotcode.robotcode4ij.RobotIcons
-import dev.robotcode.robotcode4ij.highlighting.RobotCodeSyntaxHighlighter
 import dev.robotcode.robotcode4ij.highlighting.Colors
+import dev.robotcode.robotcode4ij.highlighting.RobotCodeSyntaxHighlighter
 import javax.swing.Icon
 
 class RobotCodeColorSettingsPage : ColorSettingsPage {

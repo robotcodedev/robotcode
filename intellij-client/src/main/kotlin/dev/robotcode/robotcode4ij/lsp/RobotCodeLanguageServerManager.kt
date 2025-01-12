@@ -38,7 +38,7 @@ class RobotCodeLanguageServerManager(private val project: Project) {
         if (tryConfigureProject()) {
             
             val options = LanguageServerManager.StartOptions()
-            options.setForceStart(true)
+            options.isForceStart = true
             
             LanguageServerManager.getInstance(project).start(LANGUAGE_SERVER_ID, options)
             LanguageServerManager.getInstance(project).getLanguageServer(LANGUAGE_SERVER_ID).thenApply { server ->

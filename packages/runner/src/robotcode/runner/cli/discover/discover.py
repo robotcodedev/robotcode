@@ -234,7 +234,7 @@ class Statistics(CamelSnakeMixin):
     tasks: int = 0
 
 
-def get_rel_source(source: Optional[str]) -> Optional[str]:
+def get_rel_source(source: Union[str, Path, None]) -> Optional[str]:
     if source is None:
         return None
     try:
@@ -253,6 +253,8 @@ class Collector(SuiteVisitor):
             name=absolute_path.name,
             longname=absolute_path.name,
             uri=str(Uri.from_path(absolute_path)),
+            source=str(absolute_path),
+            rel_source=get_rel_source(absolute_path),
             needs_parse_include=get_robot_version() >= (6, 1),
         )
         self._current = self.all

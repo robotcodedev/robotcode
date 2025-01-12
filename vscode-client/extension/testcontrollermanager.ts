@@ -59,7 +59,6 @@ interface RobotCodeProfilesResult {
 interface RobotExecutionAttributes {
   id: string | undefined;
   longname: string | undefined;
-  originalname: string | undefined;
   template: string | undefined;
   status: string | undefined;
   message: string | undefined;

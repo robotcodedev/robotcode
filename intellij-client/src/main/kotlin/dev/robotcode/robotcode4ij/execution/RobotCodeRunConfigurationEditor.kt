@@ -1,11 +1,11 @@
 package dev.robotcode.robotcode4ij.execution
 
 import com.intellij.execution.configuration.EnvironmentVariablesComponent
-import com.intellij.util.ui.ComponentWithEmptyText
-import com.intellij.ui.RawCommandLineEditor
 import com.intellij.openapi.options.SettingsEditor
+import com.intellij.ui.RawCommandLineEditor
 import com.intellij.ui.dsl.builder.AlignX
 import com.intellij.ui.dsl.builder.panel
+import com.intellij.util.ui.ComponentWithEmptyText
 import javax.swing.JComponent
 
 class RobotCodeRunConfigurationEditor : SettingsEditor<RobotCodeRunConfiguration>() {

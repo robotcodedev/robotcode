@@ -9,7 +9,11 @@ import org.jetbrains.plugins.textmate.language.syntax.lexer.TextMateScope
 
 val FILE = IStubFileElementType<PsiFileStub<RobotSuiteFile>>("RobotFrameworkFile", RobotFrameworkLanguage)
 
-class IRobotFrameworkElementType(debugName: String) : IElementType(debugName, RobotFrameworkLanguage)
+open class IRobotFrameworkElementType(debugName: String, register: Boolean = true) : IElementType(
+    debugName,
+    RobotFrameworkLanguage,
+    register
+)
 
 val HEADER = IRobotFrameworkElementType("HEADER")
 val SETTING = IRobotFrameworkElementType("SETTING")
@@ -41,12 +45,12 @@ val COMMENT_TOKENS = TokenSet.create(COMMENT_LINE, COMMENT_BLOCK)
 val STRING_TOKENS = TokenSet.create(ARGUMENT)
 
 
-class RobotTextMateElementType private constructor (
+class RobotTextMateElementType private constructor(
     val scope: TextMateScope,
     debugName: String = "ROBOT_TEXTMATE_ELEMENT_TYPE(${scope.scopeName})",
     register: Boolean = false
-) : IElementType(
-    debugName, RobotFrameworkLanguage, register
+) : IRobotFrameworkElementType(
+    debugName, register
 ) {
     override fun toString(): String {
         return "RobotTextMateElementType($scope)"

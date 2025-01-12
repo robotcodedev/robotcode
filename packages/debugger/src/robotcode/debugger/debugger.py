@@ -8,6 +8,7 @@ import time
 import weakref
 from collections import deque
 from enum import Enum
+from functools import cached_property
 from pathlib import Path, PurePath
 from typing import (
     Any,
@@ -67,6 +68,7 @@ from .dap_types import (
     Variable,
     VariablePresentationHint,
 )
+from .id_manager import IdManager
 
 if get_robot_version() >= (7, 0):
     from robot.running import UserKeyword as UserKeywordHandler
@@ -163,6 +165,10 @@ class InvalidThreadIdError(Exception):
         super().__init__(f"Invalid thread id {thread_id}")
 
 
+class MarkerObject:
+    pass
+
+
 class StackFrameEntry:
     def __init__(
         self,
@@ -193,10 +199,10 @@ class StackFrameEntry:
         self.libname = libname
         self.kwname = kwname
         self.longname = longname
-        self._suite_marker = object()
-        self._test_marker = object()
-        self._local_marker = object()
-        self._global_marker = object()
+        self._suite_marker = MarkerObject()
+        self._test_marker = MarkerObject()
+        self._local_marker = MarkerObject()
+        self._global_marker = MarkerObject()
         self.stack_frames: Deque[StackFrameEntry] = deque()
 
     def __repr__(self) -> str:
@@ -207,21 +213,27 @@ class StackFrameEntry:
             return self.stack_frames[0]
         return self
 
-    @property
+    _id_manager = IdManager()
+
+    @cached_property
     def id(self) -> int:
-        return id(self)
+        return self._id_manager.get_id(self)
 
+    @cached_property
     def test_id(self) -> int:
-        return id(self._test_marker)
+        return self._id_manager.get_id(self._test_marker)
 
+    @cached_property
     def suite_id(self) -> int:
-        return id(self._suite_marker)
+        return self._id_manager.get_id(self._suite_marker)
 
+    @cached_property
     def local_id(self) -> int:
-        return id(self._local_marker)
+        return self._id_manager.get_id(self._local_marker)
 
+    @cached_property
     def global_id(self) -> int:
-        return id(self._global_marker)
+        return self._id_manager.get_id(self._global_marker)
 
 
 class HitCountEntry(NamedTuple):
@@ -266,6 +278,9 @@ else:
 
         def end_keyword(self, data: running.Keyword, result: result.Keyword) -> None:
             self.steps.pop()
+
+
+breakpoint_id_manager = IdManager()
 
 
 class Debugger:
@@ -521,6 +536,7 @@ class Debugger:
         lines: Optional[List[int]] = None,
         source_modified: Optional[bool] = None,
     ) -> List[Breakpoint]:
+
         if self.is_windows_path(source.path or ""):
             path: pathlib.PurePath = pathlib.PureWindowsPath(source.path or "")
         else:
@@ -535,7 +551,7 @@ class Debugger:
             )
             return [
                 Breakpoint(
-                    id=id(v),
+                    id=breakpoint_id_manager.get_id(v),
                     source=Source(path=str(path)),
                     verified=True,
                     line=v.line,
@@ -559,6 +575,7 @@ class Debugger:
                 self,
                 StoppedEvent(
                     body=StoppedEventBody(
+                        description="Paused",
                         reason=StoppedReason.PAUSE,
                         thread_id=threading.current_thread().ident,
                     )
@@ -574,6 +591,7 @@ class Debugger:
                     self,
                     StoppedEvent(
                         body=StoppedEventBody(
+                            description="Next step",
                             reason=StoppedReason.STEP,
                             thread_id=threading.current_thread().ident,
                         )
@@ -588,6 +606,7 @@ class Debugger:
                 self,
                 StoppedEvent(
                     body=StoppedEventBody(
+                        description="Step in",
                         reason=StoppedReason.STEP,
                         thread_id=threading.current_thread().ident,
                     )
@@ -602,6 +621,7 @@ class Debugger:
                 self,
                 StoppedEvent(
                     body=StoppedEventBody(
+                        description="Step out",
                         reason=StoppedReason.STEP,
                         thread_id=threading.current_thread().ident,
                     )
@@ -613,6 +633,7 @@ class Debugger:
             if source_path in self.breakpoints:
                 breakpoints = [v for v in self.breakpoints[source_path].breakpoints if v.line == line_no]
                 if len(breakpoints) > 0:
+
                     for point in breakpoints:
                         if point.condition is not None:
                             hit = False
@@ -673,9 +694,10 @@ class Debugger:
                             self,
                             StoppedEvent(
                                 body=StoppedEventBody(
+                                    description="Breakpoint hit",
                                     reason=StoppedReason.BREAKPOINT,
                                     thread_id=threading.current_thread().ident,
-                                    hit_breakpoint_ids=[id(v) for v in breakpoints],
+                                    hit_breakpoint_ids=[breakpoint_id_manager.get_id(v) for v in breakpoints],
                                 )
                             ),
                         )
@@ -1346,7 +1368,7 @@ class Debugger:
                         name="Local",
                         expensive=False,
                         presentation_hint="local",
-                        variables_reference=entry.local_id(),
+                        variables_reference=entry.local_id,
                     )
                 )
                 if context.variables._test is not None and entry.type == "KEYWORD":
@@ -1355,7 +1377,7 @@ class Debugger:
                             name="Test",
                             expensive=False,
                             presentation_hint="test",
-                            variables_reference=entry.test_id(),
+                            variables_reference=entry.test_id,
                         )
                     )
                 if context.variables._suite is not None and entry.type in [
@@ -1367,7 +1389,7 @@ class Debugger:
                             name="Suite",
                             expensive=False,
                             presentation_hint="suite",
-                            variables_reference=entry.suite_id(),
+                            variables_reference=entry.suite_id,
                         )
                     )
                 if context.variables._global is not None:
@@ -1376,16 +1398,18 @@ class Debugger:
                             name="Global",
                             expensive=False,
                             presentation_hint="global",
-                            variables_reference=entry.global_id(),
+                            variables_reference=entry.global_id,
                         )
                     )
 
         return result
 
+    _cache_id_manager = IdManager()
+
     def _new_cache_id(self) -> int:
-        o = object()
+        o = MarkerObject()
         self._variables_object_cache.append(o)
-        return id(o)
+        return StackFrameEntry._id_manager.get_id(o)
 
     debug_repr = DebugRepr()
 
@@ -1443,18 +1467,18 @@ class Debugger:
                 (
                     v
                     for v in self.stack_frames
-                    if variables_reference in [v.global_id(), v.suite_id(), v.test_id(), v.local_id()]
+                    if variables_reference in [v.global_id, v.suite_id, v.test_id, v.local_id]
                 ),
                 None,
             )
             if entry is not None:
                 context = entry.context()
                 if context is not None:
-                    if entry.global_id() == variables_reference:
+                    if entry.global_id == variables_reference:
                         result.update(
                             {k: self._create_variable(k, v) for k, v in context.variables._global.as_dict().items()}
                         )
-                    elif entry.suite_id() == variables_reference:
+                    elif entry.suite_id == variables_reference:
                         globals = context.variables._global.as_dict()
                         vars = entry.get_first_or_self().variables()
                         vars_dict = vars.as_dict() if vars is not None else {}
@@ -1465,7 +1489,7 @@ class Debugger:
                                 if (k not in globals or globals[k] != v) and (k in vars_dict)
                             }
                         )
-                    elif entry.test_id() == variables_reference:
+                    elif entry.test_id == variables_reference:
                         globals = context.variables._suite.as_dict()
                         vars = entry.get_first_or_self().variables()
                         vars_dict = vars.as_dict() if vars is not None else {}
@@ -1476,7 +1500,7 @@ class Debugger:
                                 if (k not in globals or globals[k] != v) and (k in vars_dict)
                             }
                         )
-                    elif entry.local_id() == variables_reference:
+                    elif entry.local_id == variables_reference:
                         vars = entry.get_first_or_self().variables()
                         if vars is not None:
                             p = entry.parent() if entry.parent else None
@@ -1821,7 +1845,7 @@ class Debugger:
             (
                 v
                 for v in self.full_stack_frames
-                if variables_reference in [v.global_id(), v.local_id(), v.suite_id(), v.test_id()]
+                if variables_reference in [v.global_id, v.local_id, v.suite_id, v.test_id]
             ),
             None,
         )

@@ -1,20 +1,23 @@
 package dev.robotcode.robotcode4ij.execution
 
 import com.intellij.execution.Executor
-import com.intellij.execution.compound.CompoundRunConfigurationSettingsEditor
 import com.intellij.execution.configurations.ConfigurationFactory
 import com.intellij.execution.configurations.LocatableConfigurationBase
 import com.intellij.execution.configurations.RunConfiguration
 import com.intellij.execution.configurations.RunProfileState
 import com.intellij.execution.runners.ExecutionEnvironment
+import com.intellij.execution.testframework.sm.runner.SMRunnerConsolePropertiesProvider
+import com.intellij.execution.testframework.sm.runner.SMTRunnerConsoleProperties
 import com.intellij.openapi.options.SettingsEditor
 import com.intellij.openapi.project.Project
+import dev.robotcode.robotcode4ij.testing.RobotCodeTestItem
 
 class RobotCodeRunConfiguration(project: Project, factory: ConfigurationFactory) :
     LocatableConfigurationBase<ConfigurationFactory>
-        (project, factory, "Robot Framework") {
+        (project, factory, "Robot Framework"), SMRunnerConsolePropertiesProvider {
+    
     override fun getState(executor: Executor, environment: ExecutionEnvironment): RunProfileState {
-        return RobotCodeRunProfileState(environment)
+        return RobotCodeRunProfileState(this, environment)
     }
     
     override fun getConfigurationEditor(): SettingsEditor<out RunConfiguration> {
@@ -22,6 +25,11 @@ class RobotCodeRunConfiguration(project: Project, factory: ConfigurationFactory)
         return RobotCodeRunConfigurationEditor()
     }
     
-    var suite: String = ""
-    var test: String = ""
+    var includedTestItems: List<RobotCodeTestItem> = emptyList()
+    
+    var paths: List<String> = emptyList()
+    
+    override fun createTestConsoleProperties(executor: Executor): SMTRunnerConsoleProperties {
+        return RobotRunnerConsoleProperties(this, "Robot Framework", executor)
+    }
 }

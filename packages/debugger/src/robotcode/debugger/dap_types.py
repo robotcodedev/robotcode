@@ -523,6 +523,9 @@ class SourceBreakpoint(Model):
     hit_condition: Optional[str] = None
     log_message: Optional[str] = None
 
+    def __hash__(self) -> int:
+        return hash((self.line, self.column, self.condition, self.hit_condition, self.log_message))
+
 
 @dataclass
 class SetBreakpointsArguments(Model):

@@ -1,14 +1,25 @@
 [versions]
 # libraries
-annotations = "24.1.0"
-kotlinxSerialization = "1.7.1"
-junit = "4.13.2"
+annotations = "26.0.1"
+kotlinxSerialization = "1.8.0"
+junit = "5.11.4"
+lsp4j = "0.21.1"
 
 # plugins
 changelog = "2.2.1"
 intelliJPlatForm = "2.2.1"
-kotlin = "2.0.10"
-kover = "0.8.3"
+kotlin = "2.1.0"
+kover = "0.9.1"
+
+[libraries.lsp4j]
+group = "org.eclipse.lsp4j"
+name = "org.eclipse.lsp4j"
+version.ref = "lsp4j"
+
+[libraries.lsp4jdebug]
+group = "org.eclipse.lsp4j"
+name = "org.eclipse.lsp4j.debug"
+version.ref = "lsp4j"
 
 [libraries.annotations]
 group = "org.jetbrains"
@@ -44,3 +55,5 @@ version.ref = "kover"
 [plugins.kotlinSerialization]
 id = "org.jetbrains.kotlin.plugin.serialization"
 version.ref = "kotlin"
+
+
