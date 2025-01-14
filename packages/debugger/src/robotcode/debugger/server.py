@@ -23,7 +23,6 @@ from .dap_types import (
     EvaluateArguments,
     EvaluateResponseBody,
     Event,
-    ExceptionBreakpointsFilter,
     ExitedEvent,
     ExitedEventBody,
     InitializedEvent,
@@ -50,6 +49,7 @@ from .dap_types import (
     VariablesResponseBody,
 )
 from .debugger import Debugger, PathMapping
+from .default_capabilities import DFEAULT_CAPABILITIES
 from .protocol import DebugAdapterProtocol
 
 TCP_DEFAULT_PORT = 6612
@@ -144,49 +144,7 @@ class DebugAdapterServerProtocol(DebugAdapterProtocol):
         if self.loop is not None:
             self.loop.call_soon(self.initialized)
 
-        return Capabilities(
-            supports_configuration_done_request=True,
-            supports_conditional_breakpoints=True,
-            supports_hit_conditional_breakpoints=True,
-            support_terminate_debuggee=True,
-            # support_suspend_debuggee=True,
-            supports_evaluate_for_hovers=True,
-            supports_terminate_request=True,
-            supports_log_points=True,
-            supports_set_expression=True,
-            supports_set_variable=True,
-            supports_value_formatting_options=True,
-            exception_breakpoint_filters=[
-                ExceptionBreakpointsFilter(
-                    filter="failed_keyword",
-                    label="Failed Keywords",
-                    description="Breaks on failed keywords",
-                    default=False,
-                ),
-                ExceptionBreakpointsFilter(
-                    filter="uncaught_failed_keyword",
-                    label="Uncaught Failed Keywords",
-                    description="Breaks on uncaught failed keywords",
-                    default=True,
-                ),
-                ExceptionBreakpointsFilter(
-                    filter="failed_test",
-                    label="Failed Test",
-                    description="Breaks on failed tests",
-                    default=False,
-                ),
-                ExceptionBreakpointsFilter(
-                    filter="failed_suite",
-                    label="Failed Suite",
-                    description="Breaks on failed suite",
-                    default=False,
-                ),
-            ],
-            supports_exception_options=True,
-            supports_exception_filter_options=True,
-            supports_completions_request=True,
-            supports_a_n_s_i_styling=True,
-        )
+        return DFEAULT_CAPABILITIES
 
     @rpc_method(name="attach", param_type=AttachRequestArguments)
     async def _attach(

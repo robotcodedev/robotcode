@@ -26,6 +26,7 @@ from typing import (
     Sequence,
     Set,
     Tuple,
+    TypedDict,
     Union,
     cast,
 )
@@ -283,6 +284,12 @@ else:
 breakpoint_id_manager = IdManager()
 
 
+class ExceptionInformation(TypedDict):
+    text: Optional[str]
+    description: str
+    status: str
+
+
 class Debugger:
     __instance: ClassVar[Optional["Debugger"]] = None
     __lock: ClassVar = threading.RLock()
@@ -356,6 +363,7 @@ class Debugger:
         self._evaluate_cache: List[Any] = []
         self._variables_cache: Dict[int, Any] = {}
         self._variables_object_cache: List[Any] = []
+        self._current_exception: Optional[ExceptionInformation] = None
 
     @property
     def state(self) -> State:
@@ -726,6 +734,8 @@ class Debugger:
             self.requested_state = RequestedState.Nothing
             self.state = State.Paused
 
+            self._current_exception = {"text": text, "description": description, "status": status}
+
             self.send_event(
                 self,
                 StoppedEvent(
@@ -779,6 +789,7 @@ class Debugger:
                     continue
 
                 break
+            self._current_exception = None
 
     def start_output_group(self, name: str, attributes: Dict[str, Any], type: Optional[str] = None) -> None:
         if self.group_output:
@@ -993,7 +1004,7 @@ class Debugger:
             if status == "FAIL":
                 self.process_end_state(
                     status,
-                    {"failed_test"},
+                    {""},
                     "Test failed.",
                     f"Test failed{f': {v}' if (v := attributes.get('message')) else ''}",
                 )
@@ -1158,7 +1169,7 @@ class Debugger:
                             {"uncaught_failed_keyword"}
                             if self.is_not_caughted_by_keyword()
                             and self.is_not_caugthed_by_except(self.last_fail_message)
-                            else {}
+                            else []
                         ),
                     },
                     "Keyword failed.",
@@ -1413,7 +1424,9 @@ class Debugger:
 
     debug_repr = DebugRepr()
 
-    def _create_variable(self, name: str, value: Any) -> Variable:
+    def _create_variable(
+        self, name: str, value: Any, presentation_hint: Optional[VariablePresentationHint] = None
+    ) -> Variable:
         if isinstance(value, Mapping):
             v_id = self._new_cache_id()
             self._variables_cache[v_id] = value
@@ -1424,7 +1437,9 @@ class Debugger:
                 variables_reference=v_id,
                 named_variables=len(value) + 1,
                 indexed_variables=0,
-                presentation_hint=VariablePresentationHint(kind="data"),
+                presentation_hint=(
+                    presentation_hint if presentation_hint is not None else VariablePresentationHint(kind="data")
+                ),
             )
 
         if isinstance(value, Sequence) and not isinstance(value, str):
@@ -1502,6 +1517,14 @@ class Debugger:
                         )
                     elif entry.local_id == variables_reference:
                         vars = entry.get_first_or_self().variables()
+
+                        if self._current_exception is not None:
+                            result["${EXCEPTION}"] = self._create_variable(
+                                "${EXCEPTION}",
+                                self._current_exception,
+                                VariablePresentationHint(kind="virtual"),
+                            )
+
                         if vars is not None:
                             p = entry.parent() if entry.parent else None
 
@@ -1880,7 +1903,7 @@ class Debugger:
                 if option.filter_id in [
                     "failed_keyword",
                     "uncaught_failed_keyword",
-                    "failed_test",
+                    "",
                     "failed_suite",
                 ]:
                     entry = ExceptionBreakpointsEntry(
