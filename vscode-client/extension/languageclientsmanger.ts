@@ -577,9 +577,11 @@ export class LanguageClientsManager {
           return false;
         },
         errorHandler: {
-          error(_error: Error, _message: Message | undefined, _count: number | undefined): ErrorHandlerResult {
+          error(error: Error, message: Message | undefined, _count: number | undefined): ErrorHandlerResult {
+            outputChannel.appendLine(`language server error: ${error} (${message})`);
             return {
               action: ErrorAction.Continue,
+              handled: true,
             };
           },
 
