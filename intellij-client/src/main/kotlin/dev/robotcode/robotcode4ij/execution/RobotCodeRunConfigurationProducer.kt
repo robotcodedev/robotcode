@@ -23,14 +23,16 @@ class RobotCodeRunConfigurationProducer : LazyRunConfigurationProducer<RobotCode
     ): Boolean {
         val testItem = configuration.project.testManger.findTestItem(sourceElement.get()) ?: return false
         
-        
         configuration.name = "${
             testItem.type.replaceFirstChar {
                 if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it
                     .toString()
             }
         } ${testItem.name}"
-        configuration.includedTestItems = listOf(testItem)
+        
+        if (testItem.type != "workspace") {
+            configuration.includedTestItems = listOf(testItem)
+        }
         
         return true
     }
@@ -43,6 +45,9 @@ class RobotCodeRunConfigurationProducer : LazyRunConfigurationProducer<RobotCode
         val psiElement = context.psiLocation ?: return false
         val testItem = configuration.project.testManger.findTestItem(psiElement) ?: return false
         
+        if (testItem.type == "workspace") {
+            return configuration.includedTestItems.isEmpty()
+        }
         return configuration.includedTestItems == listOf(testItem)
     }
     

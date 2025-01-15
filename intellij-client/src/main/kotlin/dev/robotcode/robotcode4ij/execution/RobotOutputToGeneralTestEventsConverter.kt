@@ -7,23 +7,32 @@ import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.util.Key
 import com.intellij.util.Urls.newLocalFileUrl
 import com.intellij.util.Urls.newUrl
+import com.jetbrains.rd.util.lifetime.Lifetime
 import com.jetbrains.rd.util.reactive.adviseEternal
+import com.jetbrains.rd.util.threading.coroutines.adviseSuspend
 import dev.robotcode.robotcode4ij.debugging.RobotExecutionEventArguments
 import jetbrains.buildServer.messages.serviceMessages.ServiceMessage
 import jetbrains.buildServer.messages.serviceMessages.ServiceMessageVisitor
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.DelicateCoroutinesApi
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.newSingleThreadContext
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import org.eclipse.lsp4j.debug.OutputEventArgumentsCategory
 
-class RobotOutputToGeneralTestEventsConverter(
+
+@OptIn(ExperimentalCoroutinesApi::class) class RobotOutputToGeneralTestEventsConverter(
     testFrameworkName: String, val consoleProperties: RobotRunnerConsoleProperties,
 ) : OutputToGeneralTestEventsConverter(testFrameworkName, consoleProperties) {
     
     private var _firstCall = false
     private lateinit var visitor: ServiceMessageVisitor
     private val testItemIdStack = mutableListOf<String>()
+    
+    @OptIn(ExperimentalCoroutinesApi::class, DelicateCoroutinesApi::class)
+    private val myContext = newSingleThreadContext("RobotOutputToGeneralTestEventsConverter")
     
     private fun robotStarted(args: RobotExecutionEventArguments) {
         testItemIdStack.add(args.id)
@@ -101,8 +110,13 @@ class RobotOutputToGeneralTestEventsConverter(
                 }
             }
         }
-        consoleProperties.state?.debugClient?.onRobotStarted?.adviseEternal(this::robotStarted)
-        consoleProperties.state?.debugClient?.onRobotEnded?.adviseEternal(this::robotEnded)
+        
+        consoleProperties.state?.debugClient?.onRobotStarted?.adviseSuspend(
+            Lifetime.Eternal,
+            myContext,
+            this::robotStarted
+        )
+        consoleProperties.state?.debugClient?.onRobotEnded?.adviseSuspend(Lifetime.Eternal, myContext, this::robotEnded)
         
         // TODO: Implement this
         // consoleProperties.state?.debugClient?.onRobotLog?.adviseEternal { args ->
@@ -114,7 +128,7 @@ class RobotOutputToGeneralTestEventsConverter(
         //     this.processServiceMessageFromRobot(msg)
         // }
         
-        consoleProperties.state?.debugClient?.onOutput?.adviseEternal { args ->
+        consoleProperties.state?.debugClient?.onOutput?.adviseSuspend(Lifetime.Eternal, myContext) { args ->
             val msg =
                 if (args.category == OutputEventArgumentsCategory.STDERR) ServiceMessageBuilder.testStdErr(args.category)
                 else ServiceMessageBuilder.testStdOut(args.category)
@@ -124,14 +138,12 @@ class RobotOutputToGeneralTestEventsConverter(
             
             processServiceMessageFromRobot(msg)
         }
-        
     }
     
     private fun processServiceMessageFromRobot(msg: ServiceMessageBuilder) {
         ServiceMessage.parse(msg.toString())?.let {
             this.processServiceMessage(it, visitor)
         }
-        
     }
     
     override fun processServiceMessages(text: String, outputType: Key<*>, visitor: ServiceMessageVisitor): Boolean {
@@ -141,6 +153,7 @@ class RobotOutputToGeneralTestEventsConverter(
             
             configurationDone.complete(Unit)
         }
+        runBlocking(myContext) { fireOnUncapturedOutput(text, outputType) }
         
         // TODO: make this configurable or find a way to output this to another console
         return true

@@ -3,17 +3,21 @@ package dev.robotcode.robotcode4ij.debugging
 import com.intellij.execution.ExecutionResult
 import com.intellij.execution.process.ProcessHandler
 import com.intellij.execution.ui.ExecutionConsole
-import com.intellij.openapi.ui.MessageType
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.xdebugger.XDebugProcess
 import com.intellij.xdebugger.XDebugSession
 import com.intellij.xdebugger.XSourcePosition
+import com.intellij.xdebugger.breakpoints.XBreakpoint
 import com.intellij.xdebugger.breakpoints.XBreakpointHandler
 import com.intellij.xdebugger.breakpoints.XLineBreakpoint
 import com.intellij.xdebugger.evaluation.XDebuggerEditorsProvider
 import com.intellij.xdebugger.frame.XSuspendContext
 import com.jetbrains.rd.util.lifetime.Lifetime
 import com.jetbrains.rd.util.threading.coroutines.adviseSuspend
+import dev.robotcode.robotcode4ij.debugging.breakpoints.RobotCodeExceptionBreakpointHandler
+import dev.robotcode.robotcode4ij.debugging.breakpoints.RobotCodeExceptionBreakpointProperties
+import dev.robotcode.robotcode4ij.debugging.breakpoints.RobotCodeLineBreakpointHandler
+import dev.robotcode.robotcode4ij.debugging.breakpoints.RobotCodeLineBreakpointProperties
 import dev.robotcode.robotcode4ij.execution.RobotCodeRunProfileState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.future.await
@@ -22,7 +26,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.eclipse.lsp4j.debug.ContinueArguments
 import org.eclipse.lsp4j.debug.NextArguments
-import org.eclipse.lsp4j.debug.OutputEventArgumentsCategory
+import org.eclipse.lsp4j.debug.PauseArguments
 import org.eclipse.lsp4j.debug.SetBreakpointsArguments
 import org.eclipse.lsp4j.debug.Source
 import org.eclipse.lsp4j.debug.SourceBreakpoint
@@ -50,26 +54,11 @@ class RobotCodeDebugProcess(
         }
     
     init {
+        session.setPauseActionSupported(true)
         state.afterInitialize.adviseSuspend(Lifetime.Eternal, Dispatchers.IO) {
             runBlocking { sendBreakpointRequest() }
         }
-        debugClient.onStopped.adviseSuspend(Lifetime.Eternal, Dispatchers.IO) { args ->
-            handleOnStopped(args)
-        }
-        // debugClient.onOutput.adviseSuspend(Lifetime.Eternal, Dispatchers.IO) { args ->
-        //
-        //     session.reportMessage(
-        //         args.output, when (args.category) {
-        //             OutputEventArgumentsCategory.STDOUT, OutputEventArgumentsCategory.CONSOLE -> MessageType.INFO
-        //             OutputEventArgumentsCategory.STDERR -> MessageType.ERROR
-        //             else -> MessageType.WARNING
-        //         }
-        //     )
-        // }
-        
-        // debugClient.onTerminated.adviseSuspend(Lifetime.Eternal, Dispatchers.IO) {
-        //     session.stop()
-        // }
+        debugClient.onStopped.adviseSuspend(Lifetime.Eternal, Dispatchers.IO, this::handleOnStopped)
     }
     
     private suspend fun createRobotCodeSuspendContext(threadId: Int): RobotCodeSuspendContext {
@@ -89,8 +78,7 @@ class RobotCodeDebugProcess(
                 if (bp is LineBreakpointInfo) {
                     if (!session.breakpointReached(
                             bp.breakpoint, null, createRobotCodeSuspendContext(
-                                args
-                                    .threadId
+                                args.threadId
                             )
                         )
                     ) {
@@ -103,9 +91,17 @@ class RobotCodeDebugProcess(
                 }
             }
             
-            "exception" -> {
-                // TODO session.exceptionCaught()
-                session.positionReached(createRobotCodeSuspendContext(args.threadId))
+            "exception" -> { // TODO session.exceptionCaught()
+                if (!session.breakpointReached(
+                        exceptionBreakpoints.first().breakpoint,
+                        null,
+                        createRobotCodeSuspendContext(args.threadId)
+                    )
+                ) {
+                    debugServer.continue_(ContinueArguments().apply {
+                        threadId = args.threadId
+                    }).await()
+                }
             }
             
             else -> {
@@ -116,18 +112,26 @@ class RobotCodeDebugProcess(
     }
     
     private open class BreakPointInfo(val line: Int, var file: VirtualFile, var id: Int? = null)
-    private class LineBreakpointInfo(val breakpoint: XLineBreakpoint<RobotCodeBreakpointProperties>, id: Int? = null) :
-        BreakPointInfo(breakpoint.line, breakpoint.sourcePosition!!.file, id)
+    private class LineBreakpointInfo(
+        val breakpoint: XLineBreakpoint<RobotCodeLineBreakpointProperties>, id: Int? = null
+    ) : BreakPointInfo(breakpoint.line, breakpoint.sourcePosition!!.file, id)
+    
+    private class ExceptionBreakpointInfo(
+        val breakpoint: XBreakpoint<RobotCodeExceptionBreakpointProperties>, id: Int? = null
+    )
     
     private class OneTimeBreakpointInfo(val position: XSourcePosition, id: Int? = null) :
         BreakPointInfo(position.line, position.file, id)
+    
+    private val exceptionBreakpoints = mutableListOf<ExceptionBreakpointInfo>()
     
     private val breakpoints = mutableListOf<BreakPointInfo>()
     private val breakpointMap = mutableMapOf<VirtualFile, MutableMap<Int, BreakPointInfo>>()
     private val breakpointsMapMutex = Mutex()
     
     private val editorsProvider = RobotCodeXDebuggerEditorsProvider()
-    private val breakpointHandler = RobotCodeBreakpointHandler(this)
+    private val breakpointHandler = RobotCodeLineBreakpointHandler(this)
+    private val exceptionBreakpointHandler = RobotCodeExceptionBreakpointHandler(this)
     
     override fun getEditorsProvider(): XDebuggerEditorsProvider {
         return editorsProvider
@@ -146,10 +150,26 @@ class RobotCodeDebugProcess(
     }
     
     override fun getBreakpointHandlers(): Array<out XBreakpointHandler<*>?> {
-        return arrayOf(breakpointHandler)
+        return arrayOf(breakpointHandler, exceptionBreakpointHandler)
     }
     
-    fun registerBreakpoint(breakpoint: XLineBreakpoint<RobotCodeBreakpointProperties>) {
+    fun registerExceptionBreakpoint(breakpoint: XBreakpoint<RobotCodeExceptionBreakpointProperties>) {
+        runBlocking {
+            breakpointsMapMutex.withLock {
+                exceptionBreakpoints.add(ExceptionBreakpointInfo(breakpoint))
+            }
+        }
+    }
+    
+    fun unregisterExceptionBreakpoint(breakpoint: XBreakpoint<RobotCodeExceptionBreakpointProperties>) {
+        runBlocking {
+            breakpointsMapMutex.withLock {
+                exceptionBreakpoints.removeIf { it.breakpoint == breakpoint }
+            }
+        }
+    }
+    
+    fun registerBreakpoint(breakpoint: XLineBreakpoint<RobotCodeLineBreakpointProperties>) {
         runBlocking {
             breakpointsMapMutex.withLock {
                 breakpoint.sourcePosition?.let {
@@ -165,7 +185,7 @@ class RobotCodeDebugProcess(
         }
     }
     
-    fun unregisterBreakpoint(breakpoint: XLineBreakpoint<RobotCodeBreakpointProperties>) {
+    fun unregisterBreakpoint(breakpoint: XLineBreakpoint<RobotCodeLineBreakpointProperties>) {
         runBlocking {
             breakpointsMapMutex.withLock {
                 breakpoint.sourcePosition?.let {
@@ -312,6 +332,12 @@ class RobotCodeDebugProcess(
             sendBreakpointRequest(position.file)
             
             resume(context)
+        }
+    }
+    
+    override fun startPausing() {
+        runBlocking {
+            debugServer.pause(PauseArguments().apply { threadId = 0 }).await()
         }
     }
 }

@@ -41,6 +41,7 @@ class RobotCodeDebugProgramRunner : AsyncProgramRunner<RunnerSettings>() {
                 return RobotCodeDebugProcess(session, result, state)
             }
         })
+        
         return session.runContentDescriptor
     }
 }

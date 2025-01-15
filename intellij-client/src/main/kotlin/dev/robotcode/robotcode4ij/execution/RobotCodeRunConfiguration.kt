@@ -11,6 +11,7 @@ import com.intellij.execution.testframework.sm.runner.SMTRunnerConsoleProperties
 import com.intellij.openapi.options.SettingsEditor
 import com.intellij.openapi.project.Project
 import dev.robotcode.robotcode4ij.testing.RobotCodeTestItem
+import org.jdom.Element
 
 class RobotCodeRunConfiguration(project: Project, factory: ConfigurationFactory) :
     LocatableConfigurationBase<ConfigurationFactory>
@@ -31,5 +32,17 @@ class RobotCodeRunConfiguration(project: Project, factory: ConfigurationFactory)
     
     override fun createTestConsoleProperties(executor: Executor): SMTRunnerConsoleProperties {
         return RobotRunnerConsoleProperties(this, "Robot Framework", executor)
+    }
+    
+    override fun writeExternal(element: Element) {
+        super.writeExternal(element)
+        // TODO: Implement serialization
+        // XmlSerializer.serializeInto(this, element)
+    }
+    
+    override fun readExternal(element: Element) {
+        super.readExternal(element)
+        // TODO: Implement deserialization
+        // XmlSerializer.deserializeInto(this, element)
     }
 }

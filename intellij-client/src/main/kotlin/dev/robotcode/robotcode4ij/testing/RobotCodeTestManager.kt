@@ -1,5 +1,6 @@
 package dev.robotcode.robotcode4ij.testing
 
+import com.intellij.codeInsight.daemon.DaemonCodeAnalyzer
 import com.intellij.execution.process.CapturingProcessHandler
 import com.intellij.execution.process.CapturingProcessRunner
 import com.intellij.openapi.application.ApplicationManager
@@ -118,7 +119,9 @@ import java.net.URI
     var testItems: Array<RobotCodeTestItem> = arrayOf()
         private set
     
-    fun refresh() { // TODO: Add support for configurable paths
+    fun refresh() {
+        
+        // TODO: Add support for configurable paths
         val defaultPaths = arrayOf("--default-path", ".")
         
         try {
@@ -136,6 +139,8 @@ import java.net.URI
         } catch (e: Exception) {
             thisLogger().warn("Failed to discover test items", e)
         }
+        
+        DaemonCodeAnalyzer.getInstance(project).restart()
     }
     
     fun findTestItem(
@@ -183,6 +188,7 @@ import java.net.URI
         if (directory != null) {
             return findTestItem(directory.virtualFile.uri)
         }
+        
         val containingFile = element.containingFile ?: return null
         if (containingFile !is RobotSuiteFile) {
             return null
@@ -199,6 +205,8 @@ import java.net.URI
         val psiDocumentManager = PsiDocumentManager.getInstance(project) ?: return null
         val document = psiDocumentManager.getDocument(containingFile) ?: return null
         val lineNumber = document.getLineNumber(element.startOffset)
+        if (lineNumber <= 0) return null // this is a suite file and this is already caught above
+        
         val columnNumber = element.startOffset - document.getLineStartOffset(lineNumber)
         if (columnNumber != 0) return null
         

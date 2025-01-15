@@ -13,9 +13,10 @@ import com.intellij.execution.process.ProcessListener
 import com.intellij.execution.process.ProcessTerminatedListener
 import com.intellij.execution.runners.ExecutionEnvironment
 import com.intellij.execution.runners.ProgramRunner
-import com.intellij.execution.testframework.sm.SMTestRunnerConnectionUtil.createAndAttachConsole
+import com.intellij.execution.testframework.sm.SMTestRunnerConnectionUtil
 import com.intellij.execution.testframework.sm.runner.SMRunnerConsolePropertiesProvider
-import com.intellij.execution.ui.ConsoleView
+import com.intellij.execution.testframework.sm.runner.SMTRunnerConsoleProperties
+import com.intellij.execution.testframework.ui.BaseTestsOutputConsoleView
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.util.Key
 import com.intellij.openapi.util.Ref
@@ -49,6 +50,7 @@ class RobotCodeRunProfileState(private val config: RobotCodeRunConfiguration, en
     companion object {
         const val DEBUGGER_DEFAULT_PORT = 6612
         val DEBUG_PORT: Key<Int> = Key.create("ROBOTCODE_DEBUG_PORT")
+        const val TESTFRAMEWORK_NAME = "RobotCode"
     }
     
     val debugClient = RobotCodeDebugProtocolClient()
@@ -101,44 +103,53 @@ class RobotCodeRunProfileState(private val config: RobotCodeRunConfiguration, en
                 *connection.toTypedArray(),
                 *(if (!debug) arrayOf("--no-debug") else arrayOf()),
                 *(included.toTypedArray())
-            ),
-            noColor = false
-            // extraArgs = arrayOf("-v", "--log", "--log-level", "TRACE")
+            ), noColor = false // extraArgs = arrayOf("-v", "--log", "--log-level", "TRACE")
         
         )
         
-        val handler = KillableColoredProcessHandler(commandLine)
-        // handler.setHasPty(true)
+        val handler = KillableColoredProcessHandler(commandLine) // handler.setHasPty(true)
         handler.putUserData(DEBUG_PORT, port)
         ProcessTerminatedListener.attach(handler)
         handler.addProcessListener(this)
+        
+        // RunContentManager.getInstance(project).showRunContent(environment.executor, handler)
+        
         return handler
     }
     
     override fun execute(executor: Executor, runner: ProgramRunner<*>): ExecutionResult {
         val processHandler = startProcess()
-        val console: ConsoleView = createAndAttachConsoleInEDT(processHandler, executor)
-        return DefaultExecutionResult(console, processHandler, *createActions(console, processHandler))
+        val (console, properties) = createAndAttachConsoleInEDT(processHandler, executor)
+        
+        val result = DefaultExecutionResult(console, processHandler, *createActions(console, processHandler))
+        result.setRestartActions(properties.createRerunFailedTestsAction(console))
+        
+        return result
     }
     
-    private fun createAndAttachConsoleInEDT(processHandler: ProcessHandler, executor: Executor): ConsoleView {
+    
+    private fun createAndAttachConsoleInEDT(
+        processHandler: ProcessHandler, executor: Executor
+    ): Pair<BaseTestsOutputConsoleView, SMTRunnerConsoleProperties> {
         val consoleRef = Ref.create<Any>()
+        val propertiesRef = Ref.create<Any>()
         ApplicationManager.getApplication().invokeAndWait {
             try {
-                val properties = config as? SMRunnerConsolePropertiesProvider
-                if (properties == null) {
-                    consoleRef.set(super.createConsole(executor))
-                } else {
-                    val consoleProperties = properties.createTestConsoleProperties(executor)
-                    if (consoleProperties is RobotRunnerConsoleProperties) {
-                        consoleProperties.state = this
-                    }
-                    consoleRef.set(
-                        createAndAttachConsole(
-                            "RobotCode", processHandler, consoleProperties
-                        )
-                    )
+                val propertiesProvider = config as SMRunnerConsolePropertiesProvider
+                
+                val consoleProperties = propertiesProvider.createTestConsoleProperties(executor)
+                if (consoleProperties is RobotRunnerConsoleProperties) {
+                    consoleProperties.state = this
                 }
+                
+                var splitterPropertyName = SMTestRunnerConnectionUtil.getSplitterPropertyName(TESTFRAMEWORK_NAME)
+                var consoleView = RobotCodeRunnerConsoleView(consoleProperties, splitterPropertyName)
+                SMTestRunnerConnectionUtil.initConsoleView(consoleView, TESTFRAMEWORK_NAME)
+                consoleView.attachToProcess(processHandler)
+                consoleRef.set(consoleView)
+                // consoleRef.set(createAndAttachConsole("RobotCode", processHandler, consoleProperties))
+                propertiesRef.set(consoleProperties)
+                
             } catch (e: ExecutionException) {
                 consoleRef.set(e)
             } catch (e: RuntimeException) {
@@ -150,7 +161,7 @@ class RobotCodeRunProfileState(private val config: RobotCodeRunConfiguration, en
             throw consoleRef.get() as ExecutionException
         } else if (consoleRef.get() is RuntimeException) throw consoleRef.get() as RuntimeException
         
-        return consoleRef.get() as ConsoleView
+        return Pair(consoleRef.get() as BaseTestsOutputConsoleView, propertiesRef.get() as SMTRunnerConsoleProperties)
     }
     
     private suspend fun tryConnectToServerWithTimeout(

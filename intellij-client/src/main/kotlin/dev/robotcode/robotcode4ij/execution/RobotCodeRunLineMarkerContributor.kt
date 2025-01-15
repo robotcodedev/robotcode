@@ -1,7 +1,6 @@
 package dev.robotcode.robotcode4ij.execution
 
 import com.intellij.execution.lineMarker.RunLineMarkerContributor
-import com.intellij.icons.AllIcons
 import com.intellij.psi.PsiElement
 import com.intellij.util.Urls.newLocalFileUrl
 import com.intellij.util.Urls.newUrl

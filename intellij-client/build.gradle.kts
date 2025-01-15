@@ -4,6 +4,9 @@ import org.jetbrains.intellij.platform.gradle.Constants.Constraints
 import org.jetbrains.intellij.platform.gradle.IntelliJPlatformType
 import org.jetbrains.intellij.platform.gradle.TestFrameworkType
 import org.jetbrains.intellij.platform.gradle.tasks.PrepareSandboxTask
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.dsl.KotlinVersion
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     alias(libs.plugins.kotlin)
@@ -169,9 +172,17 @@ tasks {
 }
 
 
+tasks.withType<KotlinCompile> {
+    compilerOptions {
+        jvmTarget.set(JvmTarget.JVM_21)
+        languageVersion.set(KotlinVersion.KOTLIN_2_1)
+        apiVersion.set(KotlinVersion.KOTLIN_2_1)
+    }
+}
+
 // Configure UI tests plugin
 // Read more: https://github.com/JetBrains/intellij-ui-test-robot
-val runIdeForUiTests by intellijPlatformTesting.runIde.registering {
+@Suppress("unused") val runIdeForUiTests by intellijPlatformTesting.runIde.registering {
     task {
         jvmArgumentProviders += CommandLineArgumentProvider {
             listOf(
@@ -190,13 +201,13 @@ val runIdeForUiTests by intellijPlatformTesting.runIde.registering {
     }
 }
 
-val runIdePyCharmProf by intellijPlatformTesting.runIde.registering {
+@Suppress("unused") val runIdePyCharmProf by intellijPlatformTesting.runIde.registering {
     type = IntelliJPlatformType.PyCharmProfessional
     
     prepareSandboxTask(prepareSandboxConfig)
 }
 
-val runIdeIntellijIdeaC by intellijPlatformTesting.runIde.registering {
+@Suppress("unused") val runIdeIntellijIdeaC by intellijPlatformTesting.runIde.registering {
     type = IntelliJPlatformType.IntellijIdeaCommunity
     
     prepareSandboxTask(prepareSandboxConfig)

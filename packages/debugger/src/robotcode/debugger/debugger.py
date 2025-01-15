@@ -455,7 +455,8 @@ class Debugger:
             self.condition.notify_all()
 
     def pause_thread(self, thread_id: int) -> None:
-        if self.main_thread is None or thread_id != self.main_thread.ident:
+        # thread_id 0 means all threads
+        if self.main_thread is None or (thread_id != 0 and thread_id != self.main_thread.ident):
             raise InvalidThreadIdError(thread_id)
 
         with self.condition:

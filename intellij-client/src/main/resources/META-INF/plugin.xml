@@ -77,7 +77,10 @@
 			implementation="dev.robotcode.robotcode4ij.execution.RobotCodeRunConfigurationProducer"/>
 		<programRunner implementation="dev.robotcode.robotcode4ij.execution.RobotCodeProgramRunner"/>
 		<programRunner implementation="dev.robotcode.robotcode4ij.debugging.RobotCodeDebugProgramRunner"/>
-		<xdebugger.breakpointType implementation="dev.robotcode.robotcode4ij.debugging.RobotCodeBreakpointType"/>
+		<xdebugger.breakpointType
+			implementation="dev.robotcode.robotcode4ij.debugging.breakpoints.RobotCodeLineBreakpointType"/>
+		<xdebugger.breakpointType
+			implementation="dev.robotcode.robotcode4ij.debugging.breakpoints.RobotCodeExceptionBreakpointType"/>
 		<!-- TODO - Add exception breakpoints -->
 
 		<internalFileTemplate name="Robot Suite File"/>

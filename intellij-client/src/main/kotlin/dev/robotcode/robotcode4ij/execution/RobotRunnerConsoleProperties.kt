@@ -2,10 +2,12 @@ package dev.robotcode.robotcode4ij.execution
 
 import com.intellij.execution.Executor
 import com.intellij.execution.testframework.TestConsoleProperties
+import com.intellij.execution.testframework.actions.AbstractRerunFailedTestsAction
 import com.intellij.execution.testframework.sm.SMCustomMessagesParsing
 import com.intellij.execution.testframework.sm.runner.OutputToGeneralTestEventsConverter
 import com.intellij.execution.testframework.sm.runner.SMTRunnerConsoleProperties
 import com.intellij.execution.testframework.sm.runner.SMTestLocator
+import com.intellij.execution.ui.ConsoleView
 
 class RobotRunnerConsoleProperties(
     config: RobotCodeRunConfiguration, testFrameworkName: String, executor: Executor
@@ -23,7 +25,7 @@ class RobotRunnerConsoleProperties(
         setIfUndefined(SHOW_STATISTICS, true)
         
         isIdBasedTestTree = true
-        isPrintTestingStartedTime = true
+        // isPrintTestingStartedTime = true
     }
     
     override fun getTestLocator(): SMTestLocator {
@@ -41,6 +43,14 @@ class RobotRunnerConsoleProperties(
     
     override fun isEditable(): Boolean {
         return true
+    }
+    
+    class MyRerunFailedTestsAction(consoleView: ConsoleView, consoleProperties: SMTRunnerConsoleProperties) :
+    // TODO
+        AbstractRerunFailedTestsAction(consoleView)
+    
+    override fun createRerunFailedTestsAction(consoleView: ConsoleView): AbstractRerunFailedTestsAction? {
+        return MyRerunFailedTestsAction(consoleView, this)
     }
 }
 
