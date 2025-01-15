@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [0.106.0](https://github.com/robotcodedev/robotcode/compare/v0.105.0..v0.106.0) - 2025-01-15
+
+### Bug Fixes
+
+- **vscode:** Suppress UI error notifications for language client errors; log them in the output channel instead ([420a8a7](https://github.com/robotcodedev/robotcode/commit/420a8a7c234c70414a9027a9597dbc80309327f1))
+
+
+### Features
+
+- **debugger:** Display a virtual variable in the local scope with details about the current exception when an exception breakpoint is triggered ([4690071](https://github.com/robotcodedev/robotcode/commit/46900713196cb9d52afab2b5692cf9594e374c79))
+- **intellij:** Implemented robot framework debugger ([121b26e](https://github.com/robotcodedev/robotcode/commit/121b26eee9ef580816bdaed09bec17c304fe8c38))
+- **intellij:** Implemented show test status on gutter icon ([678e5e8](https://github.com/robotcodedev/robotcode/commit/678e5e8d8d2e81dd00a4cbddc0a42ca9fa4de269))
+- **intellij:** Execute tests from project tree view on files and folders ([b155bd1](https://github.com/robotcodedev/robotcode/commit/b155bd1d6e4fd5a963625585cf1b0c101600cb00))
+- **intellij:** Support for pause and exception break points in debugger ([446a246](https://github.com/robotcodedev/robotcode/commit/446a2460b240b3b0636c9fbb4ebeb60fbf9320ca))
+- Ready for RF 7.2 ([45a0131](https://github.com/robotcodedev/robotcode/commit/45a01312af5abfff33fa15023dce5364ecf5ee7c))
+
+
 ## [0.105.0](https://github.com/robotcodedev/robotcode/compare/v0.104.0..v0.105.0) - 2025-01-06
 
 ### Documentation
