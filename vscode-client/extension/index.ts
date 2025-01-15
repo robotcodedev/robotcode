@@ -147,7 +147,9 @@ export async function activateAsync(context: vscode.ExtensionContext): Promise<v
       }
 
       for (const uri of affectedFolders) {
-        await languageClientManger.restart(uri);
+        setTimeout(async () => {
+          await languageClientManger.restart(uri);
+        }, 1000);
       }
     }),
   );
