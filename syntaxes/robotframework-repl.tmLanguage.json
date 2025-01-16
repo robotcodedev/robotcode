@@ -114,6 +114,10 @@
         },
         "escape": {
             "patterns": [
+                {
+                    "name": "constant.character.escape.python",
+                    "match": "\\\\[\\$@&%]"
+                },
                 { "include": "#escape-sequence-unicode" },
                 { "include": "#escape-sequence" }
             ]

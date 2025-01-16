@@ -537,7 +537,9 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
                                 ignore_errors=True,
                                 identifiers="$@&%",
                             ):
-                                for e in self.generate_sem_sub_tokens(namespace, builtin_library_doc, sub_token, node):
+                                for e in self.generate_sem_sub_tokens(
+                                    namespace, builtin_library_doc, sub_token, node, yield_arguments=True
+                                ):
                                     e.sem_modifiers = {RobotSemTokenModifiers.EMBEDDED}
                                     yield e
 

@@ -114,6 +114,10 @@
         },
         "escape": {
             "patterns": [
+                {
+                    "name": "constant.character.escape.python",
+                    "match": "\\\\[\\$@&%]"
+                },
                 { "include": "#escape-sequence-unicode" },
                 { "include": "#escape-sequence" }
             ]
@@ -186,11 +190,7 @@
         "testcase_name_def": {
             "contentName": "string.unquoted.argument.robotframework",
             "begin": "^( ?\\S+( ?\\S*)*?)(?= {2}| ?\\t| ?$)",
-            "beginCaptures": {
-                "1": {
-                    "patterns": [ { "include": "#testcase_name" } ]
-                }
-            },
+            "beginCaptures": { "1": { "patterns": [ { "include": "#testcase_name" } ] } },
             "end": "^(?!(\\s*(\\.\\.\\.((( {2}| ?\\t)\\s*\\S.*)|(\\s*))?$))|(\\s*#.*$)|(\\s*$))",
             "patterns": [
                 { "include": "#escape" },
@@ -204,18 +204,12 @@
             "contentName": "entity.name.function.testcase.name.robotframework",
             "begin": "",
             "while": ".",
-            "patterns": [
-                { "include": "#variables" }
-            ]
+            "patterns": [ { "include": "#escape" }, { "include": "#variables" } ]
         },
         "keyword_name_def": {
             "contentName": "string.unquoted.argument.robotframework",
             "begin": "^( ?\\S+( ?\\S*)*?)(?= {2}| ?\\t| ?$)",
-            "beginCaptures": {
-                "1": {
-                    "patterns": [ { "include": "#keyword_name" } ]
-                }
-            },
+            "beginCaptures": { "1": { "patterns": [ { "include": "#keyword_name" } ] } },
             "end": "^(?!(\\s*(\\.\\.\\.((( {2}| ?\\t)\\s*\\S.*)|(\\s*))?$))|(\\s*#.*$)|(\\s*$))",
             "patterns": [
                 { "include": "#escape" },
@@ -230,6 +224,7 @@
             "begin": "",
             "while": ".",
             "patterns": [
+                { "include": "#escape" },
                 { "include": "#embedded_argument" }
             ]
         },
@@ -365,7 +360,7 @@
             "beginCaptures": {
                 "1": {
                     "name": "entity.name.function.keyword-call.robotframework",
-                    "patterns": [ { "include": "#variables" } ]
+                    "patterns": [{ "include": "#escape" }, { "include": "#variables" } ]
                 }
             },
             "patterns": [
@@ -383,9 +378,7 @@
             "end": "^(?!(\\s*(\\.\\.\\.((( {2}| ?\\t)\\s*\\S.*)|(\\s*))?$))|(\\s*#.*$)|(\\s*$))",
             "beginCaptures": {
                 "1": { "name": "keyword.control.flow.robotframework" },
-                "5": {
-                    "patterns": [ { "include": "#expression" } ]
-                }
+                "5": { "patterns": [ { "include": "#expression" } ] }
             },
             "patterns": [
                 { "include": "#escape" },

@@ -18,3 +18,9 @@ kw    [Arguments]    ${input}    ${multiplier}    ${result}
 Testcase 1    kw    1        2        2
 Testcase 2    kw    2        2        4
 Testcase 3    kw    4        4        16
+Testcase 4
+    Given value of var <1234> is present
+    When value of var input is multiplied by "+"
+    then value of var result should be [asdfasdfsd]
+    And value of var result should be [\${1}]
+    And value of var result should be [@{1}]
