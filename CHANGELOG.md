@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [0.106.1](https://github.com/robotcodedev/robotcode/compare/v0.106.0..v0.106.1) - 2025-01-16
+
+### Bug Fixes
+
+- **langserver:** Correct highlightning of embedded keywords arguments ([6db88f2](https://github.com/robotcodedev/robotcode/commit/6db88f2b2cc8ae812701757a62537344051a38a5))
+- **vscode:** Suppress UI error notifications if configuration has changed ([2f1265a](https://github.com/robotcodedev/robotcode/commit/2f1265a41af079f0ce11ce161703a35ed0d6d37c))
+
+
 ## [0.106.0](https://github.com/robotcodedev/robotcode/compare/v0.105.0..v0.106.0) - 2025-01-15
 
 ### Bug Fixes
