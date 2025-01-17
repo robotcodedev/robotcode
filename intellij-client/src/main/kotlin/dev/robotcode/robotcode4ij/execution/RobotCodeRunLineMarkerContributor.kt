@@ -9,6 +9,9 @@ import dev.robotcode.robotcode4ij.testing.testManger
 class RobotCodeRunLineMarkerContributor : RunLineMarkerContributor() {
     override fun getInfo(element: PsiElement): Info? {
         var testElement = element.project.testManger.findTestItem(element) ?: return null
+        if (testElement.type != "test" && testElement.children.isNullOrEmpty()) {
+            return null
+        }
         
         val uri = newUrl(
             "robotcode", "/", newLocalFileUrl(testElement.source!!).toString()

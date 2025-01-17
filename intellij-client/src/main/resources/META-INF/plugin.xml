@@ -113,15 +113,6 @@
 				class="dev.robotcode.robotcode4ij.actions.RobotCreateFileAction">
 			<add-to-group group-id="NewGroup" anchor="before" relative-to-action="NewFile"/>
 		</action>
-
-		<!--		<action id="dev.robotcode.robotcode4ij.actions.RobotRunAction"-->
-		<!--				class="dev.robotcode.robotcode4ij.actions.RobotRunAction"-->
-		<!--				icon="AllIcons.Actions.Execute"-->
-		<!--				description="Run all Robot Tests within the Directory and all sub Directories">-->
-		<!--			<add-to-group group-id="RunContextGroupInner"-->
-		<!--						  anchor="before"-->
-		<!--						  relative-to-action="RunContextGroupMore"/>-->
-		<!--		</action>-->
 	</actions>
 
 	<applicationListeners>

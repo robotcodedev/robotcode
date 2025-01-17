@@ -55,9 +55,8 @@ class RobotCodeDebugProcess(
     
     init {
         session.setPauseActionSupported(true)
-        state.afterInitialize.adviseSuspend(Lifetime.Eternal, Dispatchers.IO) {
-            runBlocking { sendBreakpointRequest() }
-        }
+        
+        state.afterInitialize.adviseSuspend(Lifetime.Eternal, Dispatchers.IO) { sendBreakpointRequest() }
         debugClient.onStopped.adviseSuspend(Lifetime.Eternal, Dispatchers.IO, this::handleOnStopped)
     }
     

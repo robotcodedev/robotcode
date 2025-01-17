@@ -78,10 +78,7 @@ class RobotCodeLexer : LexerBase() {
     
     
     private val myLexer =
-        TextMateLexer(
-            TextMateBundleHolder.descriptor, Registry.get("textmate.line.highlighting.limit").asInteger(),
-            true
-        )
+        TextMateLexer(TextMateBundleHolder.descriptor, Registry.get("textmate.line.highlighting.limit").asInteger())
     private var currentLineTokens = LinkedList<TextMateLexer.Token?>()
     private lateinit var buffer: CharSequence
     private var endOffset = 0

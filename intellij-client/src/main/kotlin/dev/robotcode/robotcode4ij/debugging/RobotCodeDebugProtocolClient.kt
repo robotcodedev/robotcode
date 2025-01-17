@@ -2,6 +2,7 @@ package dev.robotcode.robotcode4ij.debugging
 
 import com.intellij.openapi.diagnostic.thisLogger
 import com.jetbrains.rd.util.reactive.Signal
+import org.eclipse.lsp4j.debug.ExitedEventArguments
 import org.eclipse.lsp4j.debug.OutputEventArguments
 import org.eclipse.lsp4j.debug.StoppedEventArguments
 import org.eclipse.lsp4j.debug.TerminatedEventArguments
@@ -143,6 +144,7 @@ data class RobotLogMessageEventArguments(
 @Suppress("unused") class RobotCodeDebugProtocolClient : IDebugProtocolClient {
     var onStopped = Signal<StoppedEventArguments>()
     val onTerminated = Signal<TerminatedEventArguments?>()
+    val onExited = Signal<ExitedEventArguments?>()
     
     val onRobotEnqueued = Signal<RobotEnqueuedArguments>()
     val onRobotStarted = Signal<RobotExecutionEventArguments>()
@@ -152,6 +154,11 @@ data class RobotLogMessageEventArguments(
     val onRobotLog = Signal<RobotLogMessageEventArguments>()
     val onRobotMessage = Signal<RobotLogMessageEventArguments>()
     val onOutput = Signal<OutputEventArguments>()
+    
+    override fun exited(args: ExitedEventArguments?) {
+        super.exited(args)
+        onExited.fire(args)
+    }
     
     override fun terminated(args: TerminatedEventArguments?) {
         super.terminated(args)

@@ -28,10 +28,11 @@ object Colors {
         createTextAttributesKey("ROBOTFRAMEWORK_VARIABLE", DefaultLanguageHighlighterColors.GLOBAL_VARIABLE)
     val VARIABLE_EXPRESSION: TextAttributesKey =
         createTextAttributesKey("ROBOTFRAMEWORK_VARIABLE_EXPRESSION", DefaultLanguageHighlighterColors.GLOBAL_VARIABLE)
+    
     val VARIABLE_BEGIN: TextAttributesKey =
         createTextAttributesKey("ROBOTFRAMEWORK_VARIABLE_BEGIN", DefaultLanguageHighlighterColors.BRACES)
     val VARIABLE_END: TextAttributesKey =
-        createTextAttributesKey("ROBOTFRAMEWORK_VARIABLE_BEGIN", DefaultLanguageHighlighterColors.BRACES)
+        createTextAttributesKey("ROBOTFRAMEWORK_VARIABLE_END", DefaultLanguageHighlighterColors.BRACES)
     
     val NAMESPACE: TextAttributesKey =
         createTextAttributesKey("ROBOTFRAMEWORK_NAMESPACE", DefaultLanguageHighlighterColors.CLASS_REFERENCE)
