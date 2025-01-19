@@ -52,6 +52,7 @@ from .parts.robot_workspace import RobotWorkspaceProtocolPart
 from .parts.selection_range import RobotSelectionRangeProtocolPart
 from .parts.semantic_tokens import RobotSemanticTokenProtocolPart
 from .parts.signature_help import RobotSignatureHelpProtocolPart
+from .parts.workspace_symbols import RobotWorkspaceSymbolsProtocolPart
 
 if TYPE_CHECKING:
     from .server import RobotLanguageServer
@@ -118,6 +119,7 @@ class RobotLanguageServerProtocol(LanguageServerProtocol):
     robot_debugging_utils = ProtocolPartDescriptor(RobotDebuggingUtilsProtocolPart)
     robot_keywords_treeview = ProtocolPartDescriptor(RobotKeywordsTreeViewPart)
     robot_project_info = ProtocolPartDescriptor(ProjectInfoPart)
+    robot_workspace_symbols = ProtocolPartDescriptor(RobotWorkspaceSymbolsProtocolPart)
 
     http_server = ProtocolPartDescriptor(HttpServerProtocolPart)
 

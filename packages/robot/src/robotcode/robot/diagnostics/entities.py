@@ -394,3 +394,39 @@ class VariablesEntry(LibraryEntry):
                 self.import_source,
             )
         )
+
+
+@dataclass
+class TestCaseDefinition(SourceEntity):
+    name: str
+
+    @single_call
+    def __hash__(self) -> int:
+        return hash(
+            (
+                self.line_no,
+                self.col_offset,
+                self.end_line_no,
+                self.end_col_offset,
+                self.source,
+                self.name,
+            )
+        )
+
+
+@dataclass
+class TagDefinition(SourceEntity):
+    name: str
+
+    @single_call
+    def __hash__(self) -> int:
+        return hash(
+            (
+                self.line_no,
+                self.col_offset,
+                self.end_line_no,
+                self.end_col_offset,
+                self.source,
+                self.name,
+            )
+        )

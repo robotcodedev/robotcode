@@ -72,6 +72,8 @@ from .entities import (
     LocalVariableDefinition,
     ResourceEntry,
     ResourceImport,
+    TagDefinition,
+    TestCaseDefinition,
     TestVariableDefinition,
     VariableDefinition,
     VariableMatcher,
@@ -720,6 +722,9 @@ class Namespace:
         self._local_variable_assignments: Dict[VariableDefinition, Set[Range]] = {}
         self._namespace_references: Dict[LibraryEntry, Set[Location]] = {}
 
+        self._test_case_definitions: List[TestCaseDefinition] = []
+        self._tag_definitions: List[TagDefinition] = []
+
         self._imported_keywords: Optional[List[KeywordDoc]] = None
         self._imported_keywords_lock = RLock(default_timeout=120, name="Namespace.imported_keywords")
         self._keywords: Optional[List[KeywordDoc]] = None
@@ -847,18 +852,21 @@ class Namespace:
 
         return self._keyword_references
 
-    def get_variable_references(
-        self,
-    ) -> Dict[VariableDefinition, Set[Location]]:
+    def get_variable_references(self) -> Dict[VariableDefinition, Set[Location]]:
         self.ensure_initialized()
 
         self.analyze()
 
         return self._variable_references
 
-    def get_local_variable_assignments(
-        self,
-    ) -> Dict[VariableDefinition, Set[Range]]:
+    def get_testcase_definitions(self) -> List[TestCaseDefinition]:
+        self.ensure_initialized()
+
+        self.analyze()
+
+        return self._test_case_definitions
+
+    def get_local_variable_assignments(self) -> Dict[VariableDefinition, Set[Range]]:
         self.ensure_initialized()
 
         self.analyze()
@@ -1910,6 +1918,8 @@ class Namespace:
                         self._variable_references = result.variable_references
                         self._local_variable_assignments = result.local_variable_assignments
                         self._namespace_references = result.namespace_references
+                        self._test_case_definitions = result.test_case_definitions
+                        self._tag_definitions = result.tag_definitions
 
                         lib_doc = self.get_library_doc()
 
