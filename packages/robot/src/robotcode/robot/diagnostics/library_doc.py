@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import ast
 import functools
-import hashlib
 import importlib
 import importlib.util
 import io
@@ -634,7 +633,6 @@ class KeywordDoc(SourceEntity):
     deprecated: bool = field(default=False, compare=False)
     return_type: Optional[str] = field(default=None, compare=False)
 
-    parent_digest: Optional[str] = field(default=None, init=False, metadata={"nosave": True})
     parent: Optional[LibraryDoc] = field(default=None, init=False, metadata={"nosave": True})
 
     def _get_argument_definitions(self) -> Optional[List[ArgumentDefinition]]:
@@ -656,16 +654,7 @@ class KeywordDoc(SourceEntity):
             else []
         )
 
-    digest: Optional[str] = field(init=False)
-
     def __post_init__(self) -> None:
-        s = (
-            f"{self.name}|{self.source}|{self.line_no}|"
-            f"{self.end_line_no}|{self.col_offset}|{self.end_col_offset}|"
-            f"{self.type}|{self.libname}|{self.libtype}"
-        )
-        self.digest = hashlib.sha224(s.encode("utf-8")).hexdigest()
-
         if self.argument_definitions is None:
             self.argument_definitions = self._get_argument_definitions()
 
@@ -1030,8 +1019,6 @@ class LibraryDoc:
     has_listener: Optional[bool] = None
     library_type: Optional[LibraryType] = None
 
-    digest: Optional[str] = field(init=False)
-
     @property
     def inits(self) -> KeywordStore:
         return self._inits
@@ -1056,16 +1043,8 @@ class LibraryDoc:
 
         for k in keywords:
             k.parent = self
-            k.parent_digest = self.digest
 
     def __post_init__(self) -> None:
-        s = (
-            f"{self.name}|{self.source}|{self.line_no}|"
-            f"{self.end_line_no}|{self.version}|"
-            f"{self.type}|{self.scope}|{self.doc_format}"
-        )
-        self.digest = hashlib.sha224(s.encode("utf-8")).hexdigest()
-
         self._update_keywords(self._inits)
         self._update_keywords(self._keywords)
 

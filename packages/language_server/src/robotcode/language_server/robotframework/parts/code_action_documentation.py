@@ -113,26 +113,18 @@ class RobotCodeActionDocumentationProtocolPart(RobotLanguageServerProtocolPart, 
 
                         if kw_doc.libtype == "LIBRARY":
                             entry = next(
-                                (
-                                    v
-                                    for v in (namespace.get_libraries()).values()
-                                    if v.library_doc.digest == kw_doc.parent_digest
-                                ),
+                                (v for v in (namespace.get_libraries()).values() if v.library_doc == kw_doc.parent),
                                 None,
                             )
 
                         elif kw_doc.libtype == "RESOURCE":
                             entry = next(
-                                (
-                                    v
-                                    for v in (namespace.get_resources()).values()
-                                    if v.library_doc.digest == kw_doc.parent_digest
-                                ),
+                                (v for v in (namespace.get_resources()).values() if v.library_doc == kw_doc.parent),
                                 None,
                             )
 
                             self_libdoc = namespace.get_library_doc()
-                            if entry is None and self_libdoc.digest == kw_doc.parent_digest:
+                            if entry is None and self_libdoc == kw_doc.parent:
                                 entry = LibraryEntry(
                                     self_libdoc.name,
                                     str(document.uri.to_path().name),
