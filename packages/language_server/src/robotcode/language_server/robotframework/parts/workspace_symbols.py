@@ -31,7 +31,6 @@ class RobotWorkspaceSymbolsProtocolPart(RobotLanguageServerProtocolPart):
     @_logger.call
     def collect(self, sender: Any, query: str) -> Optional[Union[List[WorkspaceSymbol], List[SymbolInformation], None]]:
         result: List[WorkspaceSymbol] = []
-
         for document in self.parent.documents.documents:
             if document.language_id == "robotframework":
                 namespace = self.parent.documents_cache.get_only_initialized_namespace(document)
