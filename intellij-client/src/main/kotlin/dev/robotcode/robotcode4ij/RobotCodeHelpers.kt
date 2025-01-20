@@ -6,6 +6,7 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.PathManager
 import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.project.modules
 import com.intellij.openapi.util.Key
 import com.jetbrains.python.sdk.pythonSdk
 import java.nio.file.Path
@@ -26,6 +27,13 @@ class RobotCodeHelpers {
     }
 }
 
+val Project.robotPythonSdk: com.intellij.openapi.projectRoots.Sdk?
+    get() {
+        return this.pythonSdk ?: this.projectFile?.let {
+            this.modules.firstNotNullOfOrNull { it.pythonSdk }
+        }
+    }
+
 fun Project.checkPythonAndRobotVersion(reset: Boolean = false): Boolean {
     if (!reset && this.getUserData(RobotCodeHelpers.PYTHON_AND_ROBOT_OK_KEY) == true) {
         return true
@@ -33,7 +41,7 @@ fun Project.checkPythonAndRobotVersion(reset: Boolean = false): Boolean {
     
     val result = ApplicationManager.getApplication().executeOnPooledThread<Boolean> {
         
-        val pythonInterpreter = this.pythonSdk?.homePath
+        val pythonInterpreter = this.robotPythonSdk?.homePath
         
         if (pythonInterpreter == null) {
             thisLogger().info("No Python Interpreter defined for project '${this.name}'")
@@ -93,7 +101,7 @@ fun Project.buildRobotCodeCommandLine(
         throw IllegalArgumentException("PythonSDK is not defined or robot version is not valid for project ${this.name}")
     }
     
-    val pythonInterpreter = this.pythonSdk?.homePath
+    val pythonInterpreter = this.robotPythonSdk?.homePath
     val commandLine = GeneralCommandLine(
         pythonInterpreter,
         "-u",

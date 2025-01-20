@@ -115,10 +115,13 @@ import java.util.*
         }
     }
     
-    
     private val refreshScope = CoroutineScope(Dispatchers.Default)
     
     fun refreshDebounced(file: VirtualFile) {
+        if (!project.isOpen || project.isDisposed) {
+            return
+        }
+        
         val job = refreshJobs[file]
         
         if (job != null) {
@@ -137,6 +140,10 @@ import java.util.*
     }
     
     fun refreshDebounced() {
+        if (!project.isOpen || project.isDisposed) {
+            return
+        }
+        
         refreshJobs.values.forEach { it.cancel() }
         refreshJob?.cancel()
         
@@ -148,6 +155,10 @@ import java.util.*
     }
     
     fun refresh(uri: String) {
+        if (!project.isOpen || project.isDisposed) {
+            return
+        }
+        
         thisLogger().info("Refreshing test items for $uri")
         try {
             val testItem = findTestItem(uri) ?: return
