@@ -1,10 +1,10 @@
 import dataclasses
-from typing import cast
+from typing import List, Union, cast
 
 import pytest
 import yaml
 
-from robotcode.core.lsp.types import Location
+from robotcode.core.lsp.types import Location, SymbolInformation, WorkspaceSymbol
 from robotcode.core.uri import Uri
 from robotcode.language_server.robotframework.protocol import (
     RobotLanguageServerProtocol,
@@ -38,7 +38,9 @@ def test(
                             dataclasses.replace(v.location, uri=Uri(v.location.uri).to_path().name),
                         ),
                     )
-                    for v in result
+                    for v in cast(
+                        "Union[List[WorkspaceSymbol], List[SymbolInformation]]", sorted(result, key=lambda v: v.name)
+                    )
                 ],
             }
         )
