@@ -1,95 +1,5 @@
 result:
 - !WorkspaceSymbol
-  container_name: firstresource
-  data: null
-  kind: 13
-  location:
-    range:
-      end:
-        character: 47
-        line: 4
-      start:
-        character: 0
-        line: 4
-    uri: firstresource.resource
-  name: ${A_VAR_FROM_RESOURE}
-  tags: null
-- !WorkspaceSymbol
-  container_name: firstresource
-  data: null
-  kind: 13
-  location:
-    range:
-      end:
-        character: 61
-        line: 23
-      start:
-        character: 46
-        line: 23
-    uri: firstresource.resource
-  name: ${a_short_name}
-  tags: null
-- !WorkspaceSymbol
-  container_name: firstresource
-  data: null
-  kind: 12
-  location:
-    range:
-      end:
-        character: 19
-        line: 22
-      start:
-        character: 0
-        line: 22
-    uri: firstresource.resource
-  name: a keyword with args
-  tags: null
-- !WorkspaceSymbol
-  container_name: firstresource
-  data: null
-  kind: 12
-  location:
-    range:
-      end:
-        character: 26
-        line: 7
-      start:
-        character: 0
-        line: 7
-    uri: firstresource.resource
-  name: do something in a resource
-  tags: null
-- !WorkspaceSymbol
-  container_name: duplicated
-  data: null
-  kind: 12
-  location:
-    range:
-      end:
-        character: 20
-        line: 5
-      start:
-        character: 0
-        line: 5
-    uri: duplicated.resource
-  name: A Resource Keyword A
-  tags: null
-- !WorkspaceSymbol
-  container_name: duplicated
-  data: null
-  kind: 12
-  location:
-    range:
-      end:
-        character: 20
-        line: 5
-      start:
-        character: 0
-        line: 5
-    uri: duplicated.resource
-  name: a resource keyword B
-  tags: null
-- !WorkspaceSymbol
   container_name: bddstyle
   data: null
   kind: 5
@@ -418,6 +328,111 @@ result:
         line: 121
     uri: document_highlight.robot
   name: another keyword with params
+  tags: null
+- !WorkspaceSymbol
+  container_name: duplicated
+  data: null
+  kind: 12
+  location:
+    range:
+      end:
+        character: 20
+        line: 5
+      start:
+        character: 0
+        line: 5
+    uri: duplicated.resource
+  name: A Resource Keyword A
+  tags: null
+- !WorkspaceSymbol
+  container_name: duplicated
+  data: null
+  kind: 12
+  location:
+    range:
+      end:
+        character: 20
+        line: 5
+      start:
+        character: 0
+        line: 5
+    uri: duplicated.resource
+  name: a resource keyword B
+  tags: null
+- !WorkspaceSymbol
+  container_name: embedded_keywords
+  data: null
+  kind: 12
+  location:
+    range:
+      end:
+        character: 43
+        line: 9
+      start:
+        character: 0
+        line: 9
+    uri: embedded_keywords.robot
+  name: do ${something} with ${thing} and this data
+  tags: null
+- !WorkspaceSymbol
+  container_name: firstresource
+  data: null
+  kind: 13
+  location:
+    range:
+      end:
+        character: 47
+        line: 4
+      start:
+        character: 0
+        line: 4
+    uri: firstresource.resource
+  name: ${A_VAR_FROM_RESOURE}
+  tags: null
+- !WorkspaceSymbol
+  container_name: firstresource
+  data: null
+  kind: 13
+  location:
+    range:
+      end:
+        character: 61
+        line: 23
+      start:
+        character: 46
+        line: 23
+    uri: firstresource.resource
+  name: ${a_short_name}
+  tags: null
+- !WorkspaceSymbol
+  container_name: firstresource
+  data: null
+  kind: 12
+  location:
+    range:
+      end:
+        character: 19
+        line: 22
+      start:
+        character: 0
+        line: 22
+    uri: firstresource.resource
+  name: a keyword with args
+  tags: null
+- !WorkspaceSymbol
+  container_name: firstresource
+  data: null
+  kind: 12
+  location:
+    range:
+      end:
+        character: 26
+        line: 7
+      start:
+        character: 0
+        line: 7
+    uri: firstresource.resource
+  name: do something in a resource
   tags: null
 - !WorkspaceSymbol
   container_name: foldingrange
@@ -885,21 +900,6 @@ result:
   name: Limit as iteration count
   tags: null
 - !WorkspaceSymbol
-  container_name: symbols
-  data: null
-  kind: 12
-  location:
-    range:
-      end:
-        character: 10
-        line: 39
-      start:
-        character: 0
-        line: 39
-    uri: symbols.robot
-  name: a keywords
-  tags: null
-- !WorkspaceSymbol
   container_name: some_tasks
   data: null
   kind: 5
@@ -928,6 +928,51 @@ result:
         line: 4
     uri: some_tasks.robot
   name: another simple task
+  tags: null
+- !WorkspaceSymbol
+  container_name: sometasks
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 10
+        line: 1
+      start:
+        character: 0
+        line: 1
+    uri: sometasks.robot
+  name: first task
+  tags: null
+- !WorkspaceSymbol
+  container_name: sometasks
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 11
+        line: 4
+      start:
+        character: 0
+        line: 4
+    uri: sometasks.robot
+  name: second task
+  tags: null
+- !WorkspaceSymbol
+  container_name: symbols
+  data: null
+  kind: 12
+  location:
+    range:
+      end:
+        character: 10
+        line: 39
+      start:
+        character: 0
+        line: 39
+    uri: symbols.robot
+  name: a keywords
   tags: null
 - !WorkspaceSymbol
   container_name: templates
@@ -1153,51 +1198,6 @@ result:
         line: 157
     uri: variables.robot
   name: named arguments
-  tags: null
-- !WorkspaceSymbol
-  container_name: embedded_keywords
-  data: null
-  kind: 12
-  location:
-    range:
-      end:
-        character: 43
-        line: 9
-      start:
-        character: 0
-        line: 9
-    uri: embedded_keywords.robot
-  name: do ${something} with ${thing} and this data
-  tags: null
-- !WorkspaceSymbol
-  container_name: sometasks
-  data: null
-  kind: 5
-  location:
-    range:
-      end:
-        character: 10
-        line: 1
-      start:
-        character: 0
-        line: 1
-    uri: sometasks.robot
-  name: first task
-  tags: null
-- !WorkspaceSymbol
-  container_name: sometasks
-  data: null
-  kind: 5
-  location:
-    range:
-      end:
-        character: 11
-        line: 4
-      start:
-        character: 0
-        line: 4
-    uri: sometasks.robot
-  name: second task
   tags: null
 - !WorkspaceSymbol
   container_name: vartest

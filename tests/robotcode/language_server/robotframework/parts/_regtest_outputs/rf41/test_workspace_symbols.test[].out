@@ -1,259 +1,63 @@
 result:
 - !WorkspaceSymbol
-  container_name: firstresource
+  container_name: __not_discovered
   data: null
-  kind: 13
+  kind: 5
   location:
     range:
       end:
-        character: 47
+        character: 10
+        line: 1
+      start:
+        character: 0
+        line: 1
+    uri: __not_discovered.robot
+  name: first test
+  tags: null
+- !WorkspaceSymbol
+  container_name: __not_discovered
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 6
         line: 4
       start:
         character: 0
         line: 4
-    uri: firstresource.resource
-  name: ${A_VAR_FROM_RESOURE}
+    uri: __not_discovered.robot
+  name: second
   tags: null
 - !WorkspaceSymbol
-  container_name: firstresource
+  container_name: _not_discovered
   data: null
-  kind: 13
+  kind: 5
   location:
     range:
       end:
-        character: 41
-        line: 23
-      start:
-        character: 27
-        line: 23
-    uri: firstresource.resource
-  name: ${a long name}
-  tags: null
-- !WorkspaceSymbol
-  container_name: firstresource
-  data: null
-  kind: 13
-  location:
-    range:
-      end:
-        character: 61
-        line: 23
-      start:
-        character: 46
-        line: 23
-    uri: firstresource.resource
-  name: ${a_short_name}
-  tags: null
-- !WorkspaceSymbol
-  container_name: firstresource
-  data: null
-  kind: 13
-  location:
-    range:
-      end:
-        character: 23
-        line: 23
-      start:
-        character: 19
-        line: 23
-    uri: firstresource.resource
-  name: ${a}
-  tags: null
-- !WorkspaceSymbol
-  container_name: firstresource
-  data: null
-  kind: 13
-  location:
-    range:
-      end:
-        character: 23
-        line: 30
-      start:
-        character: 19
-        line: 30
-    uri: firstresource.resource
-  name: "${\U0001F413}"
-  tags: null
-- !WorkspaceSymbol
-  container_name: firstresource
-  data: null
-  kind: 13
-  location:
-    range:
-      end:
-        character: 34
-        line: 30
-      start:
-        character: 27
-        line: 30
-    uri: firstresource.resource
-  name: "${\U0001F60E\U0001F60B\U0001F619\U0001F619}"
-  tags: null
-- !WorkspaceSymbol
-  container_name: firstresource
-  data: null
-  kind: 13
-  location:
-    range:
-      end:
-        character: 51
-        line: 30
-      start:
-        character: 39
-        line: 30
-    uri: firstresource.resource
-  name: "${\U0001F9DF\u200D\u2642\uFE0F\U0001F6C3\U0001FAC5\U0001F3FF\U0001F478\U0001F3FF\
-    }"
-  tags: null
-- !WorkspaceSymbol
-  container_name: firstresource
-  data: null
-  kind: 12
-  location:
-    range:
-      end:
-        character: 19
-        line: 22
-      start:
-        character: 0
-        line: 22
-    uri: firstresource.resource
-  name: a keyword with args
-  tags: null
-- !WorkspaceSymbol
-  container_name: firstresource
-  data: null
-  kind: 12
-  location:
-    range:
-      end:
-        character: 26
-        line: 7
-      start:
-        character: 0
-        line: 7
-    uri: firstresource.resource
-  name: do something in a resource
-  tags: null
-- !WorkspaceSymbol
-  container_name: firstresource
-  data: null
-  kind: 12
-  location:
-    range:
-      end:
-        character: 12
-        line: 10
-      start:
-        character: 0
-        line: 10
-    uri: firstresource.resource
-  name: do.sell fish
-  tags: null
-- !WorkspaceSymbol
-  container_name: firstresource
-  data: null
-  kind: 12
-  location:
-    range:
-      end:
-        character: 20
-        line: 14
-      start:
-        character: 0
-        line: 14
-    uri: firstresource.resource
-  name: some failing keyword
-  tags: null
-- !WorkspaceSymbol
-  container_name: firstresource
-  data: null
-  kind: 12
-  location:
-    range:
-      end:
-        character: 2
-        line: 26
-      start:
-        character: 0
-        line: 26
-    uri: firstresource.resource
-  name: "\U0001F916\U0001F916"
-  tags: null
-- !WorkspaceSymbol
-  container_name: duplicated
-  data: null
-  kind: 12
-  location:
-    range:
-      end:
-        character: 20
-        line: 5
-      start:
-        character: 0
-        line: 5
-    uri: duplicated.resource
-  name: A Resource Keyword A
-  tags: null
-- !WorkspaceSymbol
-  container_name: duplicated
-  data: null
-  kind: 12
-  location:
-    range:
-      end:
-        character: 15
-        line: 8
-      start:
-        character: 0
-        line: 8
-    uri: duplicated.resource
-  name: a dummy keyword
-  tags: null
-- !WorkspaceSymbol
-  container_name: duplicated
-  data: null
-  kind: 12
-  location:
-    range:
-      end:
-        character: 18
+        character: 10
         line: 1
       start:
         character: 0
         line: 1
-    uri: duplicated.resource
-  name: duplicated keyword
+    uri: _not_discovered.robot
+  name: first test
   tags: null
 - !WorkspaceSymbol
-  container_name: duplicated
+  container_name: _not_discovered
   data: null
-  kind: 12
+  kind: 5
   location:
     range:
       end:
-        character: 20
-        line: 5
+        character: 6
+        line: 4
       start:
         character: 0
-        line: 5
-    uri: duplicated.resource
-  name: a resource keyword B
-  tags: null
-- !WorkspaceSymbol
-  container_name: duplicated
-  data: null
-  kind: 12
-  location:
-    range:
-      end:
-        character: 18
-        line: 1
-      start:
-        character: 0
-        line: 1
-    uri: duplicated.resource
-  name: duplicated keyword
+        line: 4
+    uri: _not_discovered.robot
+  name: second
   tags: null
 - !WorkspaceSymbol
   container_name: bddstyle
@@ -1006,66 +810,6 @@ result:
   name: third
   tags: null
 - !WorkspaceSymbol
-  container_name: __not_discovered
-  data: null
-  kind: 5
-  location:
-    range:
-      end:
-        character: 10
-        line: 1
-      start:
-        character: 0
-        line: 1
-    uri: __not_discovered.robot
-  name: first test
-  tags: null
-- !WorkspaceSymbol
-  container_name: __not_discovered
-  data: null
-  kind: 5
-  location:
-    range:
-      end:
-        character: 6
-        line: 4
-      start:
-        character: 0
-        line: 4
-    uri: __not_discovered.robot
-  name: second
-  tags: null
-- !WorkspaceSymbol
-  container_name: _not_discovered
-  data: null
-  kind: 5
-  location:
-    range:
-      end:
-        character: 10
-        line: 1
-      start:
-        character: 0
-        line: 1
-    uri: _not_discovered.robot
-  name: first test
-  tags: null
-- !WorkspaceSymbol
-  container_name: _not_discovered
-  data: null
-  kind: 5
-  location:
-    range:
-      end:
-        character: 6
-        line: 4
-      start:
-        character: 0
-        line: 4
-    uri: _not_discovered.robot
-  name: second
-  tags: null
-- !WorkspaceSymbol
   container_name: discovered__
   data: null
   kind: 5
@@ -1093,126 +837,6 @@ result:
         character: 0
         line: 5
     uri: discovered__.robot
-  name: first test
-  tags: null
-- !WorkspaceSymbol
-  container_name: part1__suite
-  data: null
-  kind: 5
-  location:
-    range:
-      end:
-        character: 10
-        line: 1
-      start:
-        character: 0
-        line: 1
-    uri: part1__suite.robot
-  name: first test
-  tags: null
-- !WorkspaceSymbol
-  container_name: part2__suite
-  data: null
-  kind: 5
-  location:
-    range:
-      end:
-        character: 10
-        line: 1
-      start:
-        character: 0
-        line: 1
-    uri: part2__suite.robot
-  name: first test
-  tags: null
-- !WorkspaceSymbol
-  container_name: part2__suite
-  data: null
-  kind: 5
-  location:
-    range:
-      end:
-        character: 11
-        line: 4
-      start:
-        character: 0
-        line: 4
-    uri: part2__suite.robot
-  name: second test
-  tags: null
-- !WorkspaceSymbol
-  container_name: simple  suite
-  data: null
-  kind: 5
-  location:
-    range:
-      end:
-        character: 10
-        line: 1
-      start:
-        character: 0
-        line: 1
-    uri: simple  suite.robot
-  name: first test
-  tags: null
-- !WorkspaceSymbol
-  container_name: simple suite
-  data: null
-  kind: 5
-  location:
-    range:
-      end:
-        character: 10
-        line: 1
-      start:
-        character: 0
-        line: 1
-    uri: simple suite.robot
-  name: first test
-  tags: null
-- !WorkspaceSymbol
-  container_name: simple suite_
-  data: null
-  kind: 5
-  location:
-    range:
-      end:
-        character: 10
-        line: 1
-      start:
-        character: 0
-        line: 1
-    uri: simple suite_.robot
-  name: first test
-  tags: null
-- !WorkspaceSymbol
-  container_name: simple
-  data: null
-  kind: 5
-  location:
-    range:
-      end:
-        character: 10
-        line: 1
-      start:
-        character: 0
-        line: 1
-    uri: simple.robot
-  name: first test
-  tags: null
-- !WorkspaceSymbol
-  container_name: simple_
-  data: null
-  kind: 5
-  location:
-    range:
-      end:
-        character: 10
-        line: 1
-      start:
-        character: 0
-        line: 1
-    uri: simple_.robot
   name: first test
   tags: null
 - !WorkspaceSymbol
@@ -1666,6 +1290,81 @@ result:
   name: third
   tags: null
 - !WorkspaceSymbol
+  container_name: duplicated
+  data: null
+  kind: 12
+  location:
+    range:
+      end:
+        character: 20
+        line: 5
+      start:
+        character: 0
+        line: 5
+    uri: duplicated.resource
+  name: A Resource Keyword A
+  tags: null
+- !WorkspaceSymbol
+  container_name: duplicated
+  data: null
+  kind: 12
+  location:
+    range:
+      end:
+        character: 15
+        line: 8
+      start:
+        character: 0
+        line: 8
+    uri: duplicated.resource
+  name: a dummy keyword
+  tags: null
+- !WorkspaceSymbol
+  container_name: duplicated
+  data: null
+  kind: 12
+  location:
+    range:
+      end:
+        character: 18
+        line: 1
+      start:
+        character: 0
+        line: 1
+    uri: duplicated.resource
+  name: duplicated keyword
+  tags: null
+- !WorkspaceSymbol
+  container_name: duplicated
+  data: null
+  kind: 12
+  location:
+    range:
+      end:
+        character: 20
+        line: 5
+      start:
+        character: 0
+        line: 5
+    uri: duplicated.resource
+  name: a resource keyword B
+  tags: null
+- !WorkspaceSymbol
+  container_name: duplicated
+  data: null
+  kind: 12
+  location:
+    range:
+      end:
+        character: 18
+        line: 1
+      start:
+        character: 0
+        line: 1
+    uri: duplicated.resource
+  name: duplicated keyword
+  tags: null
+- !WorkspaceSymbol
   container_name: duplicated_resources
   data: null
   kind: 5
@@ -1679,6 +1378,126 @@ result:
         line: 13
     uri: duplicated_resources.robot
   name: first
+  tags: null
+- !WorkspaceSymbol
+  container_name: embedded_keywords
+  data: null
+  kind: 13
+  location:
+    range:
+      end:
+        character: 26
+        line: 10
+      start:
+        character: 19
+        line: 10
+    uri: embedded_keywords.robot
+  name: ${data}
+  tags: null
+- !WorkspaceSymbol
+  container_name: embedded_keywords
+  data: null
+  kind: 13
+  location:
+    range:
+      end:
+        character: 15
+        line: 6
+      start:
+        character: 3
+        line: 6
+    uri: embedded_keywords.robot
+  name: ${something}
+  tags: null
+- !WorkspaceSymbol
+  container_name: embedded_keywords
+  data: null
+  kind: 13
+  location:
+    range:
+      end:
+        character: 15
+        line: 9
+      start:
+        character: 3
+        line: 9
+    uri: embedded_keywords.robot
+  name: ${something}
+  tags: null
+- !WorkspaceSymbol
+  container_name: embedded_keywords
+  data: null
+  kind: 13
+  location:
+    range:
+      end:
+        character: 29
+        line: 6
+      start:
+        character: 21
+        line: 6
+    uri: embedded_keywords.robot
+  name: ${thing}
+  tags: null
+- !WorkspaceSymbol
+  container_name: embedded_keywords
+  data: null
+  kind: 13
+  location:
+    range:
+      end:
+        character: 29
+        line: 9
+      start:
+        character: 21
+        line: 9
+    uri: embedded_keywords.robot
+  name: ${thing}
+  tags: null
+- !WorkspaceSymbol
+  container_name: embedded_keywords
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 6
+        line: 1
+      start:
+        character: 0
+        line: 1
+    uri: embedded_keywords.robot
+  name: Test 1
+  tags: null
+- !WorkspaceSymbol
+  container_name: embedded_keywords
+  data: null
+  kind: 12
+  location:
+    range:
+      end:
+        character: 29
+        line: 6
+      start:
+        character: 0
+        line: 6
+    uri: embedded_keywords.robot
+  name: do ${something} with ${thing}
+  tags: null
+- !WorkspaceSymbol
+  container_name: embedded_keywords
+  data: null
+  kind: 12
+  location:
+    range:
+      end:
+        character: 43
+        line: 9
+      start:
+        character: 0
+        line: 9
+    uri: embedded_keywords.robot
+  name: do ${something} with ${thing} and this data
   tags: null
 - !WorkspaceSymbol
   container_name: external_libray
@@ -1859,6 +1678,397 @@ result:
         line: 21
     uri: fibonaci.robot
   name: fibonaci
+  tags: null
+- !WorkspaceSymbol
+  container_name: first
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 5
+        line: 5
+      start:
+        character: 0
+        line: 5
+    uri: first.robot
+  name: first
+  tags: null
+- !WorkspaceSymbol
+  container_name: first
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 6
+        line: 9
+      start:
+        character: 0
+        line: 9
+    uri: first.robot
+  name: second
+  tags: null
+- !WorkspaceSymbol
+  container_name: first
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 5
+        line: 1
+      start:
+        character: 0
+        line: 1
+    uri: first.robot
+  name: first
+  tags: null
+- !WorkspaceSymbol
+  container_name: first
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 6
+        line: 5
+      start:
+        character: 0
+        line: 5
+    uri: first.robot
+  name: second
+  tags: null
+- !WorkspaceSymbol
+  container_name: first
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 5
+        line: 10
+      start:
+        character: 0
+        line: 10
+    uri: first.robot
+  name: third
+  tags: null
+- !WorkspaceSymbol
+  container_name: first
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 5
+        line: 3
+      start:
+        character: 0
+        line: 3
+    uri: first.robot
+  name: first
+  tags: null
+- !WorkspaceSymbol
+  container_name: first
+  data: null
+  kind: 13
+  location:
+    range:
+      end:
+        character: 23
+        line: 32
+      start:
+        character: 19
+        line: 32
+    uri: first.robot
+  name: ${b}
+  tags: null
+- !WorkspaceSymbol
+  container_name: first
+  data: null
+  kind: 13
+  location:
+    range:
+      end:
+        character: 10
+        line: 31
+      start:
+        character: 4
+        line: 31
+    uri: first.robot
+  name: ${def}
+  tags: null
+- !WorkspaceSymbol
+  container_name: first
+  data: null
+  kind: 12
+  location:
+    range:
+      end:
+        character: 14
+        line: 31
+      start:
+        character: 0
+        line: 31
+    uri: first.robot
+  name: abc ${def} hih
+  tags: null
+- !WorkspaceSymbol
+  container_name: first
+  data: null
+  kind: 12
+  location:
+    range:
+      end:
+        character: 21
+        line: 27
+      start:
+        character: 0
+        line: 27
+    uri: first.robot
+  name: some failing keyword1
+  tags: null
+- !WorkspaceSymbol
+  container_name: first
+  data: null
+  kind: 12
+  location:
+    range:
+      end:
+        character: 12
+        line: 24
+      start:
+        character: 0
+        line: 24
+    uri: first.robot
+  name: some keyword
+  tags: null
+- !WorkspaceSymbol
+  container_name: first
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 4
+        line: 5
+      start:
+        character: 0
+        line: 5
+    uri: first.robot
+  name: wip1
+  tags: null
+- !WorkspaceSymbol
+  container_name: first
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 3
+        line: 15
+      start:
+        character: 0
+        line: 15
+    uri: first.robot
+  name: wop
+  tags: null
+- !WorkspaceSymbol
+  container_name: first
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 3
+        line: 19
+      start:
+        character: 0
+        line: 19
+    uri: first.robot
+  name: wup
+  tags: null
+- !WorkspaceSymbol
+  container_name: firstresource
+  data: null
+  kind: 13
+  location:
+    range:
+      end:
+        character: 47
+        line: 4
+      start:
+        character: 0
+        line: 4
+    uri: firstresource.resource
+  name: ${A_VAR_FROM_RESOURE}
+  tags: null
+- !WorkspaceSymbol
+  container_name: firstresource
+  data: null
+  kind: 13
+  location:
+    range:
+      end:
+        character: 41
+        line: 23
+      start:
+        character: 27
+        line: 23
+    uri: firstresource.resource
+  name: ${a long name}
+  tags: null
+- !WorkspaceSymbol
+  container_name: firstresource
+  data: null
+  kind: 13
+  location:
+    range:
+      end:
+        character: 61
+        line: 23
+      start:
+        character: 46
+        line: 23
+    uri: firstresource.resource
+  name: ${a_short_name}
+  tags: null
+- !WorkspaceSymbol
+  container_name: firstresource
+  data: null
+  kind: 13
+  location:
+    range:
+      end:
+        character: 23
+        line: 23
+      start:
+        character: 19
+        line: 23
+    uri: firstresource.resource
+  name: ${a}
+  tags: null
+- !WorkspaceSymbol
+  container_name: firstresource
+  data: null
+  kind: 13
+  location:
+    range:
+      end:
+        character: 23
+        line: 30
+      start:
+        character: 19
+        line: 30
+    uri: firstresource.resource
+  name: "${\U0001F413}"
+  tags: null
+- !WorkspaceSymbol
+  container_name: firstresource
+  data: null
+  kind: 13
+  location:
+    range:
+      end:
+        character: 34
+        line: 30
+      start:
+        character: 27
+        line: 30
+    uri: firstresource.resource
+  name: "${\U0001F60E\U0001F60B\U0001F619\U0001F619}"
+  tags: null
+- !WorkspaceSymbol
+  container_name: firstresource
+  data: null
+  kind: 13
+  location:
+    range:
+      end:
+        character: 51
+        line: 30
+      start:
+        character: 39
+        line: 30
+    uri: firstresource.resource
+  name: "${\U0001F9DF\u200D\u2642\uFE0F\U0001F6C3\U0001FAC5\U0001F3FF\U0001F478\U0001F3FF\
+    }"
+  tags: null
+- !WorkspaceSymbol
+  container_name: firstresource
+  data: null
+  kind: 12
+  location:
+    range:
+      end:
+        character: 19
+        line: 22
+      start:
+        character: 0
+        line: 22
+    uri: firstresource.resource
+  name: a keyword with args
+  tags: null
+- !WorkspaceSymbol
+  container_name: firstresource
+  data: null
+  kind: 12
+  location:
+    range:
+      end:
+        character: 26
+        line: 7
+      start:
+        character: 0
+        line: 7
+    uri: firstresource.resource
+  name: do something in a resource
+  tags: null
+- !WorkspaceSymbol
+  container_name: firstresource
+  data: null
+  kind: 12
+  location:
+    range:
+      end:
+        character: 12
+        line: 10
+      start:
+        character: 0
+        line: 10
+    uri: firstresource.resource
+  name: do.sell fish
+  tags: null
+- !WorkspaceSymbol
+  container_name: firstresource
+  data: null
+  kind: 12
+  location:
+    range:
+      end:
+        character: 20
+        line: 14
+      start:
+        character: 0
+        line: 14
+    uri: firstresource.resource
+  name: some failing keyword
+  tags: null
+- !WorkspaceSymbol
+  container_name: firstresource
+  data: null
+  kind: 12
+  location:
+    range:
+      end:
+        character: 2
+        line: 26
+      start:
+        character: 0
+        line: 26
+    uri: firstresource.resource
+  name: "\U0001F916\U0001F916"
   tags: null
 - !WorkspaceSymbol
   container_name: foldingrange
@@ -2596,6 +2806,21 @@ result:
   name: third
   tags: null
 - !WorkspaceSymbol
+  container_name: grouptest
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 5
+        line: 1
+      start:
+        character: 0
+        line: 1
+    uri: grouptest.robot
+  name: first
+  tags: null
+- !WorkspaceSymbol
   container_name: hover
   data: null
   kind: 13
@@ -3149,6 +3374,66 @@ result:
         line: 234
     uri: hover.robot
   name: twelfth
+  tags: null
+- !WorkspaceSymbol
+  container_name: jsonvariables
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 5
+        line: 4
+      start:
+        character: 0
+        line: 4
+    uri: jsonvariables.robot
+  name: first
+  tags: null
+- !WorkspaceSymbol
+  container_name: part1__suite
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 10
+        line: 1
+      start:
+        character: 0
+        line: 1
+    uri: part1__suite.robot
+  name: first test
+  tags: null
+- !WorkspaceSymbol
+  container_name: part2__suite
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 10
+        line: 1
+      start:
+        character: 0
+        line: 1
+    uri: part2__suite.robot
+  name: first test
+  tags: null
+- !WorkspaceSymbol
+  container_name: part2__suite
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 11
+        line: 4
+      start:
+        character: 0
+        line: 4
+    uri: part2__suite.robot
+  name: second test
   tags: null
 - !WorkspaceSymbol
   container_name: playground
@@ -4156,6 +4441,36 @@ result:
   name: first
   tags: null
 - !WorkspaceSymbol
+  container_name: second
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 5
+        line: 5
+      start:
+        character: 0
+        line: 5
+    uri: second.robot
+  name: first
+  tags: null
+- !WorkspaceSymbol
+  container_name: second
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 6
+        line: 9
+      start:
+        character: 0
+        line: 9
+    uri: second.robot
+  name: second
+  tags: null
+- !WorkspaceSymbol
   container_name: sematic_tokenizing
   data: null
   kind: 13
@@ -4516,6 +4831,156 @@ result:
   name: first
   tags: null
 - !WorkspaceSymbol
+  container_name: simple
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 10
+        line: 1
+      start:
+        character: 0
+        line: 1
+    uri: simple.robot
+  name: first test
+  tags: null
+- !WorkspaceSymbol
+  container_name: simple  suite
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 10
+        line: 1
+      start:
+        character: 0
+        line: 1
+    uri: simple  suite.robot
+  name: first test
+  tags: null
+- !WorkspaceSymbol
+  container_name: simple suite
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 10
+        line: 1
+      start:
+        character: 0
+        line: 1
+    uri: simple suite.robot
+  name: first test
+  tags: null
+- !WorkspaceSymbol
+  container_name: simple suite_
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 10
+        line: 1
+      start:
+        character: 0
+        line: 1
+    uri: simple suite_.robot
+  name: first test
+  tags: null
+- !WorkspaceSymbol
+  container_name: simple_
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 10
+        line: 1
+      start:
+        character: 0
+        line: 1
+    uri: simple_.robot
+  name: first test
+  tags: null
+- !WorkspaceSymbol
+  container_name: some_tasks
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 13
+        line: 1
+      start:
+        character: 0
+        line: 1
+    uri: some_tasks.robot
+  name: a simple task
+  tags: null
+- !WorkspaceSymbol
+  container_name: some_tasks
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 19
+        line: 4
+      start:
+        character: 0
+        line: 4
+    uri: some_tasks.robot
+  name: another simple task
+  tags: null
+- !WorkspaceSymbol
+  container_name: sometasks
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 10
+        line: 1
+      start:
+        character: 0
+        line: 1
+    uri: sometasks.robot
+  name: first task
+  tags: null
+- !WorkspaceSymbol
+  container_name: sometasks
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 11
+        line: 4
+      start:
+        character: 0
+        line: 4
+    uri: sometasks.robot
+  name: second task
+  tags: null
+- !WorkspaceSymbol
+  container_name: suite_with_name
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 5
+        line: 4
+      start:
+        character: 0
+        line: 4
+    uri: suite_with_name.robot
+  name: first
+  tags: null
+- !WorkspaceSymbol
   container_name: symbols
   data: null
   kind: 13
@@ -4650,141 +5115,6 @@ result:
         line: 11
     uri: symbols.robot
   name: first
-  tags: null
-- !WorkspaceSymbol
-  container_name: first
-  data: null
-  kind: 5
-  location:
-    range:
-      end:
-        character: 5
-        line: 5
-      start:
-        character: 0
-        line: 5
-    uri: first.robot
-  name: first
-  tags: null
-- !WorkspaceSymbol
-  container_name: first
-  data: null
-  kind: 5
-  location:
-    range:
-      end:
-        character: 6
-        line: 9
-      start:
-        character: 0
-        line: 9
-    uri: first.robot
-  name: second
-  tags: null
-- !WorkspaceSymbol
-  container_name: second
-  data: null
-  kind: 5
-  location:
-    range:
-      end:
-        character: 5
-        line: 5
-      start:
-        character: 0
-        line: 5
-    uri: second.robot
-  name: first
-  tags: null
-- !WorkspaceSymbol
-  container_name: second
-  data: null
-  kind: 5
-  location:
-    range:
-      end:
-        character: 6
-        line: 9
-      start:
-        character: 0
-        line: 9
-    uri: second.robot
-  name: second
-  tags: null
-- !WorkspaceSymbol
-  container_name: first
-  data: null
-  kind: 5
-  location:
-    range:
-      end:
-        character: 5
-        line: 1
-      start:
-        character: 0
-        line: 1
-    uri: first.robot
-  name: first
-  tags: null
-- !WorkspaceSymbol
-  container_name: first
-  data: null
-  kind: 5
-  location:
-    range:
-      end:
-        character: 6
-        line: 5
-      start:
-        character: 0
-        line: 5
-    uri: first.robot
-  name: second
-  tags: null
-- !WorkspaceSymbol
-  container_name: first
-  data: null
-  kind: 5
-  location:
-    range:
-      end:
-        character: 5
-        line: 10
-      start:
-        character: 0
-        line: 10
-    uri: first.robot
-  name: third
-  tags: null
-- !WorkspaceSymbol
-  container_name: some_tasks
-  data: null
-  kind: 5
-  location:
-    range:
-      end:
-        character: 13
-        line: 1
-      start:
-        character: 0
-        line: 1
-    uri: some_tasks.robot
-  name: a simple task
-  tags: null
-- !WorkspaceSymbol
-  container_name: some_tasks
-  data: null
-  kind: 5
-  location:
-    range:
-      end:
-        character: 19
-        line: 4
-      start:
-        character: 0
-        line: 4
-    uri: some_tasks.robot
-  name: another simple task
   tags: null
 - !WorkspaceSymbol
   container_name: templates
@@ -6422,201 +6752,6 @@ result:
   name: third
   tags: null
 - !WorkspaceSymbol
-  container_name: embedded_keywords
-  data: null
-  kind: 13
-  location:
-    range:
-      end:
-        character: 26
-        line: 10
-      start:
-        character: 19
-        line: 10
-    uri: embedded_keywords.robot
-  name: ${data}
-  tags: null
-- !WorkspaceSymbol
-  container_name: embedded_keywords
-  data: null
-  kind: 13
-  location:
-    range:
-      end:
-        character: 15
-        line: 6
-      start:
-        character: 3
-        line: 6
-    uri: embedded_keywords.robot
-  name: ${something}
-  tags: null
-- !WorkspaceSymbol
-  container_name: embedded_keywords
-  data: null
-  kind: 13
-  location:
-    range:
-      end:
-        character: 15
-        line: 9
-      start:
-        character: 3
-        line: 9
-    uri: embedded_keywords.robot
-  name: ${something}
-  tags: null
-- !WorkspaceSymbol
-  container_name: embedded_keywords
-  data: null
-  kind: 13
-  location:
-    range:
-      end:
-        character: 29
-        line: 6
-      start:
-        character: 21
-        line: 6
-    uri: embedded_keywords.robot
-  name: ${thing}
-  tags: null
-- !WorkspaceSymbol
-  container_name: embedded_keywords
-  data: null
-  kind: 13
-  location:
-    range:
-      end:
-        character: 29
-        line: 9
-      start:
-        character: 21
-        line: 9
-    uri: embedded_keywords.robot
-  name: ${thing}
-  tags: null
-- !WorkspaceSymbol
-  container_name: embedded_keywords
-  data: null
-  kind: 5
-  location:
-    range:
-      end:
-        character: 6
-        line: 1
-      start:
-        character: 0
-        line: 1
-    uri: embedded_keywords.robot
-  name: Test 1
-  tags: null
-- !WorkspaceSymbol
-  container_name: embedded_keywords
-  data: null
-  kind: 12
-  location:
-    range:
-      end:
-        character: 29
-        line: 6
-      start:
-        character: 0
-        line: 6
-    uri: embedded_keywords.robot
-  name: do ${something} with ${thing}
-  tags: null
-- !WorkspaceSymbol
-  container_name: embedded_keywords
-  data: null
-  kind: 12
-  location:
-    range:
-      end:
-        character: 43
-        line: 9
-      start:
-        character: 0
-        line: 9
-    uri: embedded_keywords.robot
-  name: do ${something} with ${thing} and this data
-  tags: null
-- !WorkspaceSymbol
-  container_name: jsonvariables
-  data: null
-  kind: 5
-  location:
-    range:
-      end:
-        character: 5
-        line: 4
-      start:
-        character: 0
-        line: 4
-    uri: jsonvariables.robot
-  name: first
-  tags: null
-- !WorkspaceSymbol
-  container_name: sometasks
-  data: null
-  kind: 5
-  location:
-    range:
-      end:
-        character: 10
-        line: 1
-      start:
-        character: 0
-        line: 1
-    uri: sometasks.robot
-  name: first task
-  tags: null
-- !WorkspaceSymbol
-  container_name: sometasks
-  data: null
-  kind: 5
-  location:
-    range:
-      end:
-        character: 11
-        line: 4
-      start:
-        character: 0
-        line: 4
-    uri: sometasks.robot
-  name: second task
-  tags: null
-- !WorkspaceSymbol
-  container_name: first
-  data: null
-  kind: 5
-  location:
-    range:
-      end:
-        character: 5
-        line: 3
-      start:
-        character: 0
-        line: 3
-    uri: first.robot
-  name: first
-  tags: null
-- !WorkspaceSymbol
-  container_name: suite_with_name
-  data: null
-  kind: 5
-  location:
-    range:
-      end:
-        character: 5
-        line: 4
-      start:
-        character: 0
-        line: 4
-    uri: suite_with_name.robot
-  name: first
-  tags: null
-- !WorkspaceSymbol
   container_name: vartest
   data: null
   kind: 13
@@ -6780,21 +6915,6 @@ result:
         line: 7
     uri: vartest.robot
   name: var with scope
-  tags: null
-- !WorkspaceSymbol
-  container_name: grouptest
-  data: null
-  kind: 5
-  location:
-    range:
-      end:
-        character: 5
-        line: 1
-      start:
-        character: 0
-        line: 1
-    uri: grouptest.robot
-  name: first
   tags: null
 - !WorkspaceSymbol
   container_name: very_big_file
@@ -13455,124 +13575,4 @@ result:
         line: 4655
     uri: very_big_file.robot
   name: the test confirms the Android ${name} is non-human
-  tags: null
-- !WorkspaceSymbol
-  container_name: first
-  data: null
-  kind: 13
-  location:
-    range:
-      end:
-        character: 23
-        line: 32
-      start:
-        character: 19
-        line: 32
-    uri: first.robot
-  name: ${b}
-  tags: null
-- !WorkspaceSymbol
-  container_name: first
-  data: null
-  kind: 13
-  location:
-    range:
-      end:
-        character: 10
-        line: 31
-      start:
-        character: 4
-        line: 31
-    uri: first.robot
-  name: ${def}
-  tags: null
-- !WorkspaceSymbol
-  container_name: first
-  data: null
-  kind: 12
-  location:
-    range:
-      end:
-        character: 14
-        line: 31
-      start:
-        character: 0
-        line: 31
-    uri: first.robot
-  name: abc ${def} hih
-  tags: null
-- !WorkspaceSymbol
-  container_name: first
-  data: null
-  kind: 12
-  location:
-    range:
-      end:
-        character: 21
-        line: 27
-      start:
-        character: 0
-        line: 27
-    uri: first.robot
-  name: some failing keyword1
-  tags: null
-- !WorkspaceSymbol
-  container_name: first
-  data: null
-  kind: 12
-  location:
-    range:
-      end:
-        character: 12
-        line: 24
-      start:
-        character: 0
-        line: 24
-    uri: first.robot
-  name: some keyword
-  tags: null
-- !WorkspaceSymbol
-  container_name: first
-  data: null
-  kind: 5
-  location:
-    range:
-      end:
-        character: 4
-        line: 5
-      start:
-        character: 0
-        line: 5
-    uri: first.robot
-  name: wip1
-  tags: null
-- !WorkspaceSymbol
-  container_name: first
-  data: null
-  kind: 5
-  location:
-    range:
-      end:
-        character: 3
-        line: 15
-      start:
-        character: 0
-        line: 15
-    uri: first.robot
-  name: wop
-  tags: null
-- !WorkspaceSymbol
-  container_name: first
-  data: null
-  kind: 5
-  location:
-    range:
-      end:
-        character: 3
-        line: 19
-      start:
-        character: 0
-        line: 19
-    uri: first.robot
-  name: wup
   tags: null

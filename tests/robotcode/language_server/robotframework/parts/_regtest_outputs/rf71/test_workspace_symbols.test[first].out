@@ -1,35 +1,5 @@
 result:
 - !WorkspaceSymbol
-  container_name: bddstyle
-  data: null
-  kind: 12
-  location:
-    range:
-      end:
-        character: 34
-        line: 1
-      start:
-        character: 0
-        line: 1
-    uri: bddstyle.robot
-  name: value of var <${input}> is present
-  tags: null
-- !WorkspaceSymbol
-  container_name: code_action_show_documentation
-  data: null
-  kind: 5
-  location:
-    range:
-      end:
-        character: 5
-        line: 27
-      start:
-        character: 0
-        line: 27
-    uri: code_action_show_documentation.robot
-  name: first
-  tags: null
-- !WorkspaceSymbol
   container_name: __not_discovered
   data: null
   kind: 5
@@ -60,6 +30,36 @@ result:
   name: first test
   tags: null
 - !WorkspaceSymbol
+  container_name: bddstyle
+  data: null
+  kind: 12
+  location:
+    range:
+      end:
+        character: 34
+        line: 1
+      start:
+        character: 0
+        line: 1
+    uri: bddstyle.robot
+  name: value of var <${input}> is present
+  tags: null
+- !WorkspaceSymbol
+  container_name: code_action_show_documentation
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 5
+        line: 27
+      start:
+        character: 0
+        line: 27
+    uri: code_action_show_documentation.robot
+  name: first
+  tags: null
+- !WorkspaceSymbol
   container_name: discovered__
   data: null
   kind: 5
@@ -87,111 +87,6 @@ result:
         character: 0
         line: 5
     uri: discovered__.robot
-  name: first test
-  tags: null
-- !WorkspaceSymbol
-  container_name: part1__suite
-  data: null
-  kind: 5
-  location:
-    range:
-      end:
-        character: 10
-        line: 1
-      start:
-        character: 0
-        line: 1
-    uri: part1__suite.robot
-  name: first test
-  tags: null
-- !WorkspaceSymbol
-  container_name: part2__suite
-  data: null
-  kind: 5
-  location:
-    range:
-      end:
-        character: 10
-        line: 1
-      start:
-        character: 0
-        line: 1
-    uri: part2__suite.robot
-  name: first test
-  tags: null
-- !WorkspaceSymbol
-  container_name: simple  suite
-  data: null
-  kind: 5
-  location:
-    range:
-      end:
-        character: 10
-        line: 1
-      start:
-        character: 0
-        line: 1
-    uri: simple  suite.robot
-  name: first test
-  tags: null
-- !WorkspaceSymbol
-  container_name: simple suite
-  data: null
-  kind: 5
-  location:
-    range:
-      end:
-        character: 10
-        line: 1
-      start:
-        character: 0
-        line: 1
-    uri: simple suite.robot
-  name: first test
-  tags: null
-- !WorkspaceSymbol
-  container_name: simple suite_
-  data: null
-  kind: 5
-  location:
-    range:
-      end:
-        character: 10
-        line: 1
-      start:
-        character: 0
-        line: 1
-    uri: simple suite_.robot
-  name: first test
-  tags: null
-- !WorkspaceSymbol
-  container_name: simple
-  data: null
-  kind: 5
-  location:
-    range:
-      end:
-        character: 10
-        line: 1
-      start:
-        character: 0
-        line: 1
-    uri: simple.robot
-  name: first test
-  tags: null
-- !WorkspaceSymbol
-  container_name: simple_
-  data: null
-  kind: 5
-  location:
-    range:
-      end:
-        character: 10
-        line: 1
-      start:
-        character: 0
-        line: 1
-    uri: simple_.robot
   name: first test
   tags: null
 - !WorkspaceSymbol
@@ -255,6 +150,51 @@ result:
   name: first
   tags: null
 - !WorkspaceSymbol
+  container_name: first
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 5
+        line: 5
+      start:
+        character: 0
+        line: 5
+    uri: first.robot
+  name: first
+  tags: null
+- !WorkspaceSymbol
+  container_name: first
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 5
+        line: 1
+      start:
+        character: 0
+        line: 1
+    uri: first.robot
+  name: first
+  tags: null
+- !WorkspaceSymbol
+  container_name: first
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 5
+        line: 3
+      start:
+        character: 0
+        line: 3
+    uri: first.robot
+  name: first
+  tags: null
+- !WorkspaceSymbol
   container_name: foldingrange
   data: null
   kind: 5
@@ -300,6 +240,21 @@ result:
   name: first
   tags: null
 - !WorkspaceSymbol
+  container_name: grouptest
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 5
+        line: 1
+      start:
+        character: 0
+        line: 1
+    uri: grouptest.robot
+  name: first
+  tags: null
+- !WorkspaceSymbol
   container_name: hover
   data: null
   kind: 5
@@ -313,6 +268,51 @@ result:
         line: 62
     uri: hover.robot
   name: first
+  tags: null
+- !WorkspaceSymbol
+  container_name: jsonvariables
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 5
+        line: 4
+      start:
+        character: 0
+        line: 4
+    uri: jsonvariables.robot
+  name: first
+  tags: null
+- !WorkspaceSymbol
+  container_name: part1__suite
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 10
+        line: 1
+      start:
+        character: 0
+        line: 1
+    uri: part1__suite.robot
+  name: first test
+  tags: null
+- !WorkspaceSymbol
+  container_name: part2__suite
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 10
+        line: 1
+      start:
+        character: 0
+        line: 1
+    uri: part2__suite.robot
+  name: first test
   tags: null
 - !WorkspaceSymbol
   container_name: playground
@@ -405,6 +405,21 @@ result:
   name: first
   tags: null
 - !WorkspaceSymbol
+  container_name: second
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 5
+        line: 5
+      start:
+        character: 0
+        line: 5
+    uri: second.robot
+  name: first
+  tags: null
+- !WorkspaceSymbol
   container_name: setup_teardown
   data: null
   kind: 5
@@ -432,6 +447,111 @@ result:
         character: 0
         line: 11
     uri: signature_help.robot
+  name: first
+  tags: null
+- !WorkspaceSymbol
+  container_name: simple
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 10
+        line: 1
+      start:
+        character: 0
+        line: 1
+    uri: simple.robot
+  name: first test
+  tags: null
+- !WorkspaceSymbol
+  container_name: simple  suite
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 10
+        line: 1
+      start:
+        character: 0
+        line: 1
+    uri: simple  suite.robot
+  name: first test
+  tags: null
+- !WorkspaceSymbol
+  container_name: simple suite
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 10
+        line: 1
+      start:
+        character: 0
+        line: 1
+    uri: simple suite.robot
+  name: first test
+  tags: null
+- !WorkspaceSymbol
+  container_name: simple suite_
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 10
+        line: 1
+      start:
+        character: 0
+        line: 1
+    uri: simple suite_.robot
+  name: first test
+  tags: null
+- !WorkspaceSymbol
+  container_name: simple_
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 10
+        line: 1
+      start:
+        character: 0
+        line: 1
+    uri: simple_.robot
+  name: first test
+  tags: null
+- !WorkspaceSymbol
+  container_name: sometasks
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 10
+        line: 1
+      start:
+        character: 0
+        line: 1
+    uri: sometasks.robot
+  name: first task
+  tags: null
+- !WorkspaceSymbol
+  container_name: suite_with_name
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 5
+        line: 4
+      start:
+        character: 0
+        line: 4
+    uri: suite_with_name.robot
   name: first
   tags: null
 - !WorkspaceSymbol
@@ -465,51 +585,6 @@ result:
   name: first
   tags: null
 - !WorkspaceSymbol
-  container_name: first
-  data: null
-  kind: 5
-  location:
-    range:
-      end:
-        character: 5
-        line: 5
-      start:
-        character: 0
-        line: 5
-    uri: first.robot
-  name: first
-  tags: null
-- !WorkspaceSymbol
-  container_name: second
-  data: null
-  kind: 5
-  location:
-    range:
-      end:
-        character: 5
-        line: 5
-      start:
-        character: 0
-        line: 5
-    uri: second.robot
-  name: first
-  tags: null
-- !WorkspaceSymbol
-  container_name: first
-  data: null
-  kind: 5
-  location:
-    range:
-      end:
-        character: 5
-        line: 1
-      start:
-        character: 0
-        line: 1
-    uri: first.robot
-  name: first
-  tags: null
-- !WorkspaceSymbol
   container_name: templates
   data: null
   kind: 5
@@ -540,66 +615,6 @@ result:
   name: first
   tags: null
 - !WorkspaceSymbol
-  container_name: jsonvariables
-  data: null
-  kind: 5
-  location:
-    range:
-      end:
-        character: 5
-        line: 4
-      start:
-        character: 0
-        line: 4
-    uri: jsonvariables.robot
-  name: first
-  tags: null
-- !WorkspaceSymbol
-  container_name: sometasks
-  data: null
-  kind: 5
-  location:
-    range:
-      end:
-        character: 10
-        line: 1
-      start:
-        character: 0
-        line: 1
-    uri: sometasks.robot
-  name: first task
-  tags: null
-- !WorkspaceSymbol
-  container_name: first
-  data: null
-  kind: 5
-  location:
-    range:
-      end:
-        character: 5
-        line: 3
-      start:
-        character: 0
-        line: 3
-    uri: first.robot
-  name: first
-  tags: null
-- !WorkspaceSymbol
-  container_name: suite_with_name
-  data: null
-  kind: 5
-  location:
-    range:
-      end:
-        character: 5
-        line: 4
-      start:
-        character: 0
-        line: 4
-    uri: suite_with_name.robot
-  name: first
-  tags: null
-- !WorkspaceSymbol
   container_name: vartest
   data: null
   kind: 12
@@ -613,21 +628,6 @@ result:
         line: 43
     uri: vartest.robot
   name: a keyword with variables in doc, timeout and tags with args first
-  tags: null
-- !WorkspaceSymbol
-  container_name: grouptest
-  data: null
-  kind: 5
-  location:
-    range:
-      end:
-        character: 5
-        line: 1
-      start:
-        character: 0
-        line: 1
-    uri: grouptest.robot
-  name: first
   tags: null
 - !WorkspaceSymbol
   container_name: very_big_file

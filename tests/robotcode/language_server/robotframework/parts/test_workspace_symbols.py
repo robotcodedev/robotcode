@@ -40,7 +40,7 @@ def test(
                     )
                     for v in cast(
                         "Union[List[WorkspaceSymbol], List[SymbolInformation]]",
-                        sorted(result, key=lambda v: (str(v.location.uri), v.name)),
+                        sorted(result, key=lambda v: (str(v.container_name), str(v.location.uri), v.name)),
                     )
                 ],
             }
