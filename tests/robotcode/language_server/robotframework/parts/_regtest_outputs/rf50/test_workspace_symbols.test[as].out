@@ -15,6 +15,936 @@ result:
   name: ${A_VAR_FROM_RESOURE}
   tags: null
 - !WorkspaceSymbol
+  container_name: firstresource
+  data: null
+  kind: 13
+  location:
+    range:
+      end:
+        character: 61
+        line: 23
+      start:
+        character: 46
+        line: 23
+    uri: firstresource.resource
+  name: ${a_short_name}
+  tags: null
+- !WorkspaceSymbol
+  container_name: firstresource
+  data: null
+  kind: 12
+  location:
+    range:
+      end:
+        character: 19
+        line: 22
+      start:
+        character: 0
+        line: 22
+    uri: firstresource.resource
+  name: a keyword with args
+  tags: null
+- !WorkspaceSymbol
+  container_name: firstresource
+  data: null
+  kind: 12
+  location:
+    range:
+      end:
+        character: 26
+        line: 7
+      start:
+        character: 0
+        line: 7
+    uri: firstresource.resource
+  name: do something in a resource
+  tags: null
+- !WorkspaceSymbol
+  container_name: duplicated
+  data: null
+  kind: 12
+  location:
+    range:
+      end:
+        character: 20
+        line: 5
+      start:
+        character: 0
+        line: 5
+    uri: duplicated.resource
+  name: A Resource Keyword A
+  tags: null
+- !WorkspaceSymbol
+  container_name: duplicated
+  data: null
+  kind: 12
+  location:
+    range:
+      end:
+        character: 20
+        line: 5
+      start:
+        character: 0
+        line: 5
+    uri: duplicated.resource
+  name: a resource keyword B
+  tags: null
+- !WorkspaceSymbol
+  container_name: bddstyle
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 10
+        line: 17
+      start:
+        character: 0
+        line: 17
+    uri: bddstyle.robot
+  name: Testcase 1
+  tags: null
+- !WorkspaceSymbol
+  container_name: bddstyle
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 10
+        line: 18
+      start:
+        character: 0
+        line: 18
+    uri: bddstyle.robot
+  name: Testcase 2
+  tags: null
+- !WorkspaceSymbol
+  container_name: bddstyle
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 10
+        line: 19
+      start:
+        character: 0
+        line: 19
+    uri: bddstyle.robot
+  name: Testcase 3
+  tags: null
+- !WorkspaceSymbol
+  container_name: bddstyle
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 10
+        line: 20
+      start:
+        character: 0
+        line: 20
+    uri: bddstyle.robot
+  name: Testcase 4
+  tags: null
+- !WorkspaceSymbol
+  container_name: bddstyle
+  data: null
+  kind: 12
+  location:
+    range:
+      end:
+        character: 34
+        line: 1
+      start:
+        character: 0
+        line: 1
+    uri: bddstyle.robot
+  name: value of var <${input}> is present
+  tags: null
+- !WorkspaceSymbol
+  container_name: bddstyle
+  data: null
+  kind: 12
+  location:
+    range:
+      end:
+        character: 51
+        line: 3
+      start:
+        character: 0
+        line: 3
+    uri: bddstyle.robot
+  name: value of var input is multiplied by "${multiplier}"
+  tags: null
+- !WorkspaceSymbol
+  container_name: bddstyle
+  data: null
+  kind: 12
+  location:
+    range:
+      end:
+        character: 41
+        line: 5
+      start:
+        character: 0
+        line: 5
+    uri: bddstyle.robot
+  name: value of var result should be [${result}]
+  tags: null
+- !WorkspaceSymbol
+  container_name: code_action_show_documentation
+  data: null
+  kind: 13
+  location:
+    range:
+      end:
+        character: 20
+        line: 24
+      start:
+        character: 0
+        line: 24
+    uri: code_action_show_documentation.robot
+  name: ${bananas}
+  tags: null
+- !WorkspaceSymbol
+  container_name: code_action_show_documentation
+  data: null
+  kind: 13
+  location:
+    range:
+      end:
+        character: 17
+        line: 115
+      start:
+        character: 7
+        line: 115
+    uri: code_action_show_documentation.robot
+  name: ${bananas}
+  tags: null
+- !WorkspaceSymbol
+  container_name: code_action_show_documentation
+  data: null
+  kind: 12
+  location:
+    range:
+      end:
+        character: 21
+        line: 118
+      start:
+        character: 0
+        line: 118
+    uri: code_action_show_documentation.robot
+  name: a keyword with params
+  tags: null
+- !WorkspaceSymbol
+  container_name: code_action_show_documentation
+  data: null
+  kind: 12
+  location:
+    range:
+      end:
+        character: 38
+        line: 101
+      start:
+        character: 0
+        line: 101
+    uri: code_action_show_documentation.robot
+  name: add ${number:[0-9]+} coins to ${thing}
+  tags: null
+- !WorkspaceSymbol
+  container_name: code_action_show_documentation
+  data: null
+  kind: 12
+  location:
+    range:
+      end:
+        character: 27
+        line: 128
+      start:
+        character: 0
+        line: 128
+    uri: code_action_show_documentation.robot
+  name: again a keyword with params
+  tags: null
+- !WorkspaceSymbol
+  container_name: code_action_show_documentation
+  data: null
+  kind: 12
+  location:
+    range:
+      end:
+        character: 27
+        line: 123
+      start:
+        character: 0
+        line: 123
+    uri: code_action_show_documentation.robot
+  name: another keyword with params
+  tags: null
+- !WorkspaceSymbol
+  container_name: code_action_show_documentation
+  data: null
+  kind: 12
+  location:
+    range:
+      end:
+        character: 31
+        line: 115
+      start:
+        character: 0
+        line: 115
+    uri: code_action_show_documentation.robot
+  name: do add ${bananas} and to my bag
+  tags: null
+- !WorkspaceSymbol
+  container_name: document_highlight
+  data: null
+  kind: 13
+  location:
+    range:
+      end:
+        character: 47
+        line: 164
+      start:
+        character: 32
+        line: 164
+    uri: document_highlight.robot
+  name: ${a_second_arg}
+  tags: null
+- !WorkspaceSymbol
+  container_name: document_highlight
+  data: null
+  kind: 13
+  location:
+    range:
+      end:
+        character: 47
+        line: 169
+      start:
+        character: 32
+        line: 169
+    uri: document_highlight.robot
+  name: ${a_second_arg}
+  tags: null
+- !WorkspaceSymbol
+  container_name: document_highlight
+  data: null
+  kind: 12
+  location:
+    range:
+      end:
+        character: 21
+        line: 112
+      start:
+        character: 0
+        line: 112
+    uri: document_highlight.robot
+  name: a keyword with params
+  tags: null
+- !WorkspaceSymbol
+  container_name: document_highlight
+  data: null
+  kind: 12
+  location:
+    range:
+      end:
+        character: 49
+        line: 155
+      start:
+        character: 0
+        line: 155
+    uri: document_highlight.robot
+  name: a keyword with variables in doc, timeout and tags
+  tags: null
+- !WorkspaceSymbol
+  container_name: document_highlight
+  data: null
+  kind: 12
+  location:
+    range:
+      end:
+        character: 65
+        line: 168
+      start:
+        character: 0
+        line: 168
+    uri: document_highlight.robot
+  name: a keyword with variables in doc, timeout and tags with args first
+  tags: null
+- !WorkspaceSymbol
+  container_name: document_highlight
+  data: null
+  kind: 12
+  location:
+    range:
+      end:
+        character: 38
+        line: 149
+      start:
+        character: 0
+        line: 149
+    uri: document_highlight.robot
+  name: add ${number:[0-9]+} coins to ${thing}
+  tags: null
+- !WorkspaceSymbol
+  container_name: document_highlight
+  data: null
+  kind: 12
+  location:
+    range:
+      end:
+        character: 27
+        line: 131
+      start:
+        character: 0
+        line: 131
+    uri: document_highlight.robot
+  name: again a keyword with params
+  tags: null
+- !WorkspaceSymbol
+  container_name: document_highlight
+  data: null
+  kind: 12
+  location:
+    range:
+      end:
+        character: 27
+        line: 121
+      start:
+        character: 0
+        line: 121
+    uri: document_highlight.robot
+  name: another keyword with params
+  tags: null
+- !WorkspaceSymbol
+  container_name: foldingrange
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 13
+        line: 52
+      start:
+        character: 0
+        line: 52
+    uri: foldingrange.robot
+  name: IF statements
+  tags: null
+- !WorkspaceSymbol
+  container_name: foldingrange
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 14
+        line: 92
+      start:
+        character: 0
+        line: 92
+    uri: foldingrange.robot
+  name: TRY statements
+  tags: null
+- !WorkspaceSymbol
+  container_name: foldingrange
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 16
+        line: 80
+      start:
+        character: 0
+        line: 80
+    uri: foldingrange.robot
+  name: WHILE statements
+  tags: null
+- !WorkspaceSymbol
+  container_name: goto
+  data: null
+  kind: 13
+  location:
+    range:
+      end:
+        character: 47
+        line: 213
+      start:
+        character: 32
+        line: 213
+    uri: goto.robot
+  name: ${a_second_arg}
+  tags: null
+- !WorkspaceSymbol
+  container_name: goto
+  data: null
+  kind: 13
+  location:
+    range:
+      end:
+        character: 47
+        line: 218
+      start:
+        character: 32
+        line: 218
+    uri: goto.robot
+  name: ${a_second_arg}
+  tags: null
+- !WorkspaceSymbol
+  container_name: goto
+  data: null
+  kind: 12
+  location:
+    range:
+      end:
+        character: 21
+        line: 154
+      start:
+        character: 0
+        line: 154
+    uri: goto.robot
+  name: a keyword with params
+  tags: null
+- !WorkspaceSymbol
+  container_name: goto
+  data: null
+  kind: 12
+  location:
+    range:
+      end:
+        character: 49
+        line: 204
+      start:
+        character: 0
+        line: 204
+    uri: goto.robot
+  name: a keyword with variables in doc, timeout and tags
+  tags: null
+- !WorkspaceSymbol
+  container_name: goto
+  data: null
+  kind: 12
+  location:
+    range:
+      end:
+        character: 65
+        line: 217
+      start:
+        character: 0
+        line: 217
+    uri: goto.robot
+  name: a keyword with variables in doc, timeout and tags with args first
+  tags: null
+- !WorkspaceSymbol
+  container_name: goto
+  data: null
+  kind: 12
+  location:
+    range:
+      end:
+        character: 16
+        line: 149
+      start:
+        character: 0
+        line: 149
+    uri: goto.robot
+  name: a simple keyword
+  tags: null
+- !WorkspaceSymbol
+  container_name: goto
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 16
+        line: 98
+      start:
+        character: 0
+        line: 98
+    uri: goto.robot
+  name: a templated Test
+  tags: null
+- !WorkspaceSymbol
+  container_name: goto
+  data: null
+  kind: 12
+  location:
+    range:
+      end:
+        character: 27
+        line: 186
+      start:
+        character: 0
+        line: 186
+    uri: goto.robot
+  name: again a keyword with params
+  tags: null
+- !WorkspaceSymbol
+  container_name: goto
+  data: null
+  kind: 12
+  location:
+    range:
+      end:
+        character: 27
+        line: 163
+      start:
+        character: 0
+        line: 163
+    uri: goto.robot
+  name: another keyword with params
+  tags: null
+- !WorkspaceSymbol
+  container_name: goto
+  data: null
+  kind: 12
+  location:
+    range:
+      end:
+        character: 32
+        line: 173
+      start:
+        character: 0
+        line: 173
+    uri: goto.robot
+  name: just another keyword with params
+  tags: null
+- !WorkspaceSymbol
+  container_name: hover
+  data: null
+  kind: 12
+  location:
+    range:
+      end:
+        character: 21
+        line: 266
+      start:
+        character: 0
+        line: 266
+    uri: hover.robot
+  name: a keyword with params
+  tags: null
+- !WorkspaceSymbol
+  container_name: hover
+  data: null
+  kind: 12
+  location:
+    range:
+      end:
+        character: 16
+        line: 258
+      start:
+        character: 0
+        line: 258
+    uri: hover.robot
+  name: a simple keyword
+  tags: null
+- !WorkspaceSymbol
+  container_name: hover
+  data: null
+  kind: 12
+  location:
+    range:
+      end:
+        character: 27
+        line: 285
+      start:
+        character: 0
+        line: 285
+    uri: hover.robot
+  name: again a keyword with params
+  tags: null
+- !WorkspaceSymbol
+  container_name: hover
+  data: null
+  kind: 12
+  location:
+    range:
+      end:
+        character: 27
+        line: 275
+      start:
+        character: 0
+        line: 275
+    uri: hover.robot
+  name: another keyword with params
+  tags: null
+- !WorkspaceSymbol
+  container_name: references
+  data: null
+  kind: 13
+  location:
+    range:
+      end:
+        character: 20
+        line: 26
+      start:
+        character: 0
+        line: 26
+    uri: references.robot
+  name: ${bananas}
+  tags: null
+- !WorkspaceSymbol
+  container_name: references
+  data: null
+  kind: 13
+  location:
+    range:
+      end:
+        character: 17
+        line: 145
+      start:
+        character: 7
+        line: 145
+    uri: references.robot
+  name: ${bananas}
+  tags: null
+- !WorkspaceSymbol
+  container_name: references
+  data: null
+  kind: 12
+  location:
+    range:
+      end:
+        character: 57
+        line: 234
+      start:
+        character: 0
+        line: 234
+    uri: references.robot
+  name: a keyword with a while loop and variable in while options
+  tags: null
+- !WorkspaceSymbol
+  container_name: references
+  data: null
+  kind: 12
+  location:
+    range:
+      end:
+        character: 21
+        line: 149
+      start:
+        character: 0
+        line: 149
+    uri: references.robot
+  name: a keyword with params
+  tags: null
+- !WorkspaceSymbol
+  container_name: references
+  data: null
+  kind: 12
+  location:
+    range:
+      end:
+        character: 33
+        line: 220
+      start:
+        character: 0
+        line: 220
+    uri: references.robot
+  name: a keyword with python expressions
+  tags: null
+- !WorkspaceSymbol
+  container_name: references
+  data: null
+  kind: 12
+  location:
+    range:
+      end:
+        character: 49
+        line: 178
+      start:
+        character: 0
+        line: 178
+    uri: references.robot
+  name: a keyword with variables in doc, timeout and tags
+  tags: null
+- !WorkspaceSymbol
+  container_name: references
+  data: null
+  kind: 12
+  location:
+    range:
+      end:
+        character: 65
+        line: 191
+      start:
+        character: 0
+        line: 191
+    uri: references.robot
+  name: a keyword with variables in doc, timeout and tags with args first
+  tags: null
+- !WorkspaceSymbol
+  container_name: references
+  data: null
+  kind: 12
+  location:
+    range:
+      end:
+        character: 44
+        line: 256
+      start:
+        character: 0
+        line: 256
+    uri: references.robot
+  name: a keyword with while and expression variable
+  tags: null
+- !WorkspaceSymbol
+  container_name: references
+  data: null
+  kind: 12
+  location:
+    range:
+      end:
+        character: 38
+        line: 125
+      start:
+        character: 0
+        line: 125
+    uri: references.robot
+  name: add ${number:[0-9]+} coins to ${thing}
+  tags: null
+- !WorkspaceSymbol
+  container_name: references
+  data: null
+  kind: 12
+  location:
+    range:
+      end:
+        character: 27
+        line: 168
+      start:
+        character: 0
+        line: 168
+    uri: references.robot
+  name: again a keyword with params
+  tags: null
+- !WorkspaceSymbol
+  container_name: references
+  data: null
+  kind: 12
+  location:
+    range:
+      end:
+        character: 27
+        line: 158
+      start:
+        character: 0
+        line: 158
+    uri: references.robot
+  name: another keyword with params
+  tags: null
+- !WorkspaceSymbol
+  container_name: references
+  data: null
+  kind: 12
+  location:
+    range:
+      end:
+        character: 31
+        line: 145
+      start:
+        character: 0
+        line: 145
+    uri: references.robot
+  name: do add ${bananas} and to my bag
+  tags: null
+- !WorkspaceSymbol
+  container_name: sematic_tokenizing
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 40
+        line: 1
+      start:
+        character: 0
+        line: 1
+    uri: sematic_tokenizing.robot
+  name: Continue when iteration limit is reached
+  tags: null
+- !WorkspaceSymbol
+  container_name: sematic_tokenizing
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 24
+        line: 7
+      start:
+        character: 0
+        line: 7
+    uri: sematic_tokenizing.robot
+  name: Limit as iteration count
+  tags: null
+- !WorkspaceSymbol
+  container_name: symbols
+  data: null
+  kind: 12
+  location:
+    range:
+      end:
+        character: 10
+        line: 39
+      start:
+        character: 0
+        line: 39
+    uri: symbols.robot
+  name: a keywords
+  tags: null
+- !WorkspaceSymbol
+  container_name: some_tasks
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 13
+        line: 1
+      start:
+        character: 0
+        line: 1
+    uri: some_tasks.robot
+  name: a simple task
+  tags: null
+- !WorkspaceSymbol
+  container_name: some_tasks
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 19
+        line: 4
+      start:
+        character: 0
+        line: 4
+    uri: some_tasks.robot
+  name: another simple task
+  tags: null
+- !WorkspaceSymbol
+  container_name: templates
+  data: null
+  kind: 12
+  location:
+    range:
+      end:
+        character: 47
+        line: 85
+      start:
+        character: 0
+        line: 85
+    uri: templates.robot
+  name: check that ${a} plus ${b:[a-c]+} is ${expected}
+  tags: null
+- !WorkspaceSymbol
   container_name: templates2
   data: null
   kind: 13
@@ -45,216 +975,6 @@ result:
   name: ${VALID USER}
   tags: null
 - !WorkspaceSymbol
-  container_name: document_highlight
-  data: null
-  kind: 13
-  location:
-    range:
-      end:
-        character: 47
-        line: 164
-      start:
-        character: 32
-        line: 164
-    uri: document_highlight.robot
-  name: ${a_second_arg}
-  tags: null
-- !WorkspaceSymbol
-  container_name: document_highlight
-  data: null
-  kind: 13
-  location:
-    range:
-      end:
-        character: 47
-        line: 169
-      start:
-        character: 32
-        line: 169
-    uri: document_highlight.robot
-  name: ${a_second_arg}
-  tags: null
-- !WorkspaceSymbol
-  container_name: goto
-  data: null
-  kind: 13
-  location:
-    range:
-      end:
-        character: 47
-        line: 213
-      start:
-        character: 32
-        line: 213
-    uri: goto.robot
-  name: ${a_second_arg}
-  tags: null
-- !WorkspaceSymbol
-  container_name: goto
-  data: null
-  kind: 13
-  location:
-    range:
-      end:
-        character: 47
-        line: 218
-      start:
-        character: 32
-        line: 218
-    uri: goto.robot
-  name: ${a_second_arg}
-  tags: null
-- !WorkspaceSymbol
-  container_name: vartest
-  data: null
-  kind: 13
-  location:
-    range:
-      end:
-        character: 47
-        line: 39
-      start:
-        character: 32
-        line: 39
-    uri: vartest.robot
-  name: ${a_second_arg}
-  tags: null
-- !WorkspaceSymbol
-  container_name: vartest
-  data: null
-  kind: 13
-  location:
-    range:
-      end:
-        character: 47
-        line: 45
-      start:
-        character: 32
-        line: 45
-    uri: vartest.robot
-  name: ${a_second_arg}
-  tags: null
-- !WorkspaceSymbol
-  container_name: firstresource
-  data: null
-  kind: 13
-  location:
-    range:
-      end:
-        character: 61
-        line: 23
-      start:
-        character: 46
-        line: 23
-    uri: firstresource.resource
-  name: ${a_short_name}
-  tags: null
-- !WorkspaceSymbol
-  container_name: variables
-  data: null
-  kind: 13
-  location:
-    range:
-      end:
-        character: 10
-        line: 64
-      start:
-        character: 4
-        line: 64
-    uri: variables.robot
-  name: ${asd}
-  tags: null
-- !WorkspaceSymbol
-  container_name: code_action_show_documentation
-  data: null
-  kind: 13
-  location:
-    range:
-      end:
-        character: 20
-        line: 24
-      start:
-        character: 0
-        line: 24
-    uri: code_action_show_documentation.robot
-  name: ${bananas}
-  tags: null
-- !WorkspaceSymbol
-  container_name: code_action_show_documentation
-  data: null
-  kind: 13
-  location:
-    range:
-      end:
-        character: 17
-        line: 115
-      start:
-        character: 7
-        line: 115
-    uri: code_action_show_documentation.robot
-  name: ${bananas}
-  tags: null
-- !WorkspaceSymbol
-  container_name: references
-  data: null
-  kind: 13
-  location:
-    range:
-      end:
-        character: 20
-        line: 26
-      start:
-        character: 0
-        line: 26
-    uri: references.robot
-  name: ${bananas}
-  tags: null
-- !WorkspaceSymbol
-  container_name: references
-  data: null
-  kind: 13
-  location:
-    range:
-      end:
-        character: 17
-        line: 145
-      start:
-        character: 7
-        line: 145
-    uri: references.robot
-  name: ${bananas}
-  tags: null
-- !WorkspaceSymbol
-  container_name: very_big_file
-  data: null
-  kind: 13
-  location:
-    range:
-      end:
-        character: 71
-        line: 8
-      start:
-        character: 0
-        line: 8
-    uri: very_big_file.robot
-  name: ${cryptic_answer}
-  tags: null
-- !WorkspaceSymbol
-  container_name: very_big_file
-  data: null
-  kind: 13
-  location:
-    range:
-      end:
-        character: 69
-        line: 4639
-      start:
-        character: 52
-        line: 4639
-    uri: very_big_file.robot
-  name: ${cryptic_answer}
-  tags: null
-- !WorkspaceSymbol
   container_name: templates2
   data: null
   kind: 13
@@ -268,36 +988,6 @@ result:
         line: 49
     uri: templates2.robot
   name: ${password}
-  tags: null
-- !WorkspaceSymbol
-  container_name: duplicated
-  data: null
-  kind: 12
-  location:
-    range:
-      end:
-        character: 20
-        line: 5
-      start:
-        character: 0
-        line: 5
-    uri: duplicated.resource
-  name: A Resource Keyword A
-  tags: null
-- !WorkspaceSymbol
-  container_name: sematic_tokenizing
-  data: null
-  kind: 5
-  location:
-    range:
-      end:
-        character: 40
-        line: 1
-      start:
-        character: 0
-        line: 1
-    uri: sematic_tokenizing.robot
-  name: Continue when iteration limit is reached
   tags: null
 - !WorkspaceSymbol
   container_name: templates2
@@ -328,21 +1018,6 @@ result:
         line: 14
     uri: templates2.robot
   name: Empty User Name and Password
-  tags: null
-- !WorkspaceSymbol
-  container_name: foldingrange
-  data: null
-  kind: 5
-  location:
-    range:
-      end:
-        character: 13
-        line: 52
-      start:
-        character: 0
-        line: 52
-    uri: foldingrange.robot
-  name: IF statements
   tags: null
 - !WorkspaceSymbol
   container_name: templates2
@@ -390,21 +1065,6 @@ result:
   name: Invalid User Name and Password
   tags: null
 - !WorkspaceSymbol
-  container_name: sematic_tokenizing
-  data: null
-  kind: 5
-  location:
-    range:
-      end:
-        character: 24
-        line: 7
-      start:
-        character: 0
-        line: 7
-    uri: sematic_tokenizing.robot
-  name: Limit as iteration count
-  tags: null
-- !WorkspaceSymbol
   container_name: templates2
   data: null
   kind: 12
@@ -420,34 +1080,244 @@ result:
   name: Login with invalid credentials should fail
   tags: null
 - !WorkspaceSymbol
-  container_name: foldingrange
+  container_name: variables
+  data: null
+  kind: 13
+  location:
+    range:
+      end:
+        character: 10
+        line: 64
+      start:
+        character: 4
+        line: 64
+    uri: variables.robot
+  name: ${asd}
+  tags: null
+- !WorkspaceSymbol
+  container_name: variables
+  data: null
+  kind: 12
+  location:
+    range:
+      end:
+        character: 31
+        line: 180
+      start:
+        character: 0
+        line: 180
+    uri: variables.robot
+  name: a keyword with kwonly separator
+  tags: null
+- !WorkspaceSymbol
+  container_name: variables
+  data: null
+  kind: 12
+  location:
+    range:
+      end:
+        character: 49
+        line: 173
+      start:
+        character: 0
+        line: 173
+    uri: variables.robot
+  name: check that ${a:[0-9\ ]*} plus ${b} is ${expected}
+  tags: null
+- !WorkspaceSymbol
+  container_name: variables
   data: null
   kind: 5
   location:
     range:
       end:
-        character: 14
-        line: 92
+        character: 15
+        line: 154
       start:
         character: 0
-        line: 92
-    uri: foldingrange.robot
-  name: TRY statements
+        line: 154
+    uri: variables.robot
+  name: environmentvars
   tags: null
 - !WorkspaceSymbol
-  container_name: bddstyle
+  container_name: variables
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 15
+        line: 157
+      start:
+        character: 0
+        line: 157
+    uri: variables.robot
+  name: named arguments
+  tags: null
+- !WorkspaceSymbol
+  container_name: embedded_keywords
+  data: null
+  kind: 12
+  location:
+    range:
+      end:
+        character: 43
+        line: 9
+      start:
+        character: 0
+        line: 9
+    uri: embedded_keywords.robot
+  name: do ${something} with ${thing} and this data
+  tags: null
+- !WorkspaceSymbol
+  container_name: sometasks
   data: null
   kind: 5
   location:
     range:
       end:
         character: 10
-        line: 17
+        line: 1
       start:
         character: 0
-        line: 17
-    uri: bddstyle.robot
-  name: Testcase 1
+        line: 1
+    uri: sometasks.robot
+  name: first task
+  tags: null
+- !WorkspaceSymbol
+  container_name: sometasks
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 11
+        line: 4
+      start:
+        character: 0
+        line: 4
+    uri: sometasks.robot
+  name: second task
+  tags: null
+- !WorkspaceSymbol
+  container_name: vartest
+  data: null
+  kind: 13
+  location:
+    range:
+      end:
+        character: 47
+        line: 39
+      start:
+        character: 32
+        line: 39
+    uri: vartest.robot
+  name: ${a_second_arg}
+  tags: null
+- !WorkspaceSymbol
+  container_name: vartest
+  data: null
+  kind: 13
+  location:
+    range:
+      end:
+        character: 47
+        line: 45
+      start:
+        character: 32
+        line: 45
+    uri: vartest.robot
+  name: ${a_second_arg}
+  tags: null
+- !WorkspaceSymbol
+  container_name: vartest
+  data: null
+  kind: 12
+  location:
+    range:
+      end:
+        character: 49
+        line: 29
+      start:
+        character: 0
+        line: 29
+    uri: vartest.robot
+  name: a keyword with variables in doc, timeout and tags
+  tags: null
+- !WorkspaceSymbol
+  container_name: vartest
+  data: null
+  kind: 12
+  location:
+    range:
+      end:
+        character: 65
+        line: 43
+      start:
+        character: 0
+        line: 43
+    uri: vartest.robot
+  name: a keyword with variables in doc, timeout and tags with args first
+  tags: null
+- !WorkspaceSymbol
+  container_name: vartest
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 22
+        line: 14
+      start:
+        character: 0
+        line: 14
+    uri: vartest.robot
+  name: var with invalid scope
+  tags: null
+- !WorkspaceSymbol
+  container_name: vartest
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 14
+        line: 7
+      start:
+        character: 0
+        line: 7
+    uri: vartest.robot
+  name: var with scope
+  tags: null
+- !WorkspaceSymbol
+  container_name: very_big_file
+  data: null
+  kind: 13
+  location:
+    range:
+      end:
+        character: 71
+        line: 8
+      start:
+        character: 0
+        line: 8
+    uri: very_big_file.robot
+  name: ${cryptic_answer}
+  tags: null
+- !WorkspaceSymbol
+  container_name: very_big_file
+  data: null
+  kind: 13
+  location:
+    range:
+      end:
+        character: 69
+        line: 4639
+      start:
+        character: 52
+        line: 4639
+    uri: very_big_file.robot
+  name: ${cryptic_answer}
   tags: null
 - !WorkspaceSymbol
   container_name: very_big_file
@@ -5955,21 +6825,6 @@ result:
   name: Testcase 19
   tags: null
 - !WorkspaceSymbol
-  container_name: bddstyle
-  data: null
-  kind: 5
-  location:
-    range:
-      end:
-        character: 10
-        line: 18
-      start:
-        character: 0
-        line: 18
-    uri: bddstyle.robot
-  name: Testcase 2
-  tags: null
-- !WorkspaceSymbol
   container_name: very_big_file
   data: null
   kind: 5
@@ -6135,21 +6990,6 @@ result:
   name: Testcase 29
   tags: null
 - !WorkspaceSymbol
-  container_name: bddstyle
-  data: null
-  kind: 5
-  location:
-    range:
-      end:
-        character: 10
-        line: 19
-      start:
-        character: 0
-        line: 19
-    uri: bddstyle.robot
-  name: Testcase 3
-  tags: null
-- !WorkspaceSymbol
   container_name: very_big_file
   data: null
   kind: 5
@@ -6313,21 +7153,6 @@ result:
         line: 430
     uri: very_big_file.robot
   name: Testcase 39
-  tags: null
-- !WorkspaceSymbol
-  container_name: bddstyle
-  data: null
-  kind: 5
-  location:
-    range:
-      end:
-        character: 10
-        line: 20
-      start:
-        character: 0
-        line: 20
-    uri: bddstyle.robot
-  name: Testcase 4
   tags: null
 - !WorkspaceSymbol
   container_name: very_big_file
@@ -6780,756 +7605,6 @@ result:
   name: Testcase 9
   tags: null
 - !WorkspaceSymbol
-  container_name: foldingrange
-  data: null
-  kind: 5
-  location:
-    range:
-      end:
-        character: 16
-        line: 80
-      start:
-        character: 0
-        line: 80
-    uri: foldingrange.robot
-  name: WHILE statements
-  tags: null
-- !WorkspaceSymbol
-  container_name: references
-  data: null
-  kind: 12
-  location:
-    range:
-      end:
-        character: 57
-        line: 234
-      start:
-        character: 0
-        line: 234
-    uri: references.robot
-  name: a keyword with a while loop and variable in while options
-  tags: null
-- !WorkspaceSymbol
-  container_name: firstresource
-  data: null
-  kind: 12
-  location:
-    range:
-      end:
-        character: 19
-        line: 22
-      start:
-        character: 0
-        line: 22
-    uri: firstresource.resource
-  name: a keyword with args
-  tags: null
-- !WorkspaceSymbol
-  container_name: variables
-  data: null
-  kind: 12
-  location:
-    range:
-      end:
-        character: 31
-        line: 180
-      start:
-        character: 0
-        line: 180
-    uri: variables.robot
-  name: a keyword with kwonly separator
-  tags: null
-- !WorkspaceSymbol
-  container_name: code_action_show_documentation
-  data: null
-  kind: 12
-  location:
-    range:
-      end:
-        character: 21
-        line: 118
-      start:
-        character: 0
-        line: 118
-    uri: code_action_show_documentation.robot
-  name: a keyword with params
-  tags: null
-- !WorkspaceSymbol
-  container_name: document_highlight
-  data: null
-  kind: 12
-  location:
-    range:
-      end:
-        character: 21
-        line: 112
-      start:
-        character: 0
-        line: 112
-    uri: document_highlight.robot
-  name: a keyword with params
-  tags: null
-- !WorkspaceSymbol
-  container_name: goto
-  data: null
-  kind: 12
-  location:
-    range:
-      end:
-        character: 21
-        line: 154
-      start:
-        character: 0
-        line: 154
-    uri: goto.robot
-  name: a keyword with params
-  tags: null
-- !WorkspaceSymbol
-  container_name: hover
-  data: null
-  kind: 12
-  location:
-    range:
-      end:
-        character: 21
-        line: 266
-      start:
-        character: 0
-        line: 266
-    uri: hover.robot
-  name: a keyword with params
-  tags: null
-- !WorkspaceSymbol
-  container_name: references
-  data: null
-  kind: 12
-  location:
-    range:
-      end:
-        character: 21
-        line: 149
-      start:
-        character: 0
-        line: 149
-    uri: references.robot
-  name: a keyword with params
-  tags: null
-- !WorkspaceSymbol
-  container_name: references
-  data: null
-  kind: 12
-  location:
-    range:
-      end:
-        character: 33
-        line: 220
-      start:
-        character: 0
-        line: 220
-    uri: references.robot
-  name: a keyword with python expressions
-  tags: null
-- !WorkspaceSymbol
-  container_name: document_highlight
-  data: null
-  kind: 12
-  location:
-    range:
-      end:
-        character: 49
-        line: 155
-      start:
-        character: 0
-        line: 155
-    uri: document_highlight.robot
-  name: a keyword with variables in doc, timeout and tags
-  tags: null
-- !WorkspaceSymbol
-  container_name: goto
-  data: null
-  kind: 12
-  location:
-    range:
-      end:
-        character: 49
-        line: 204
-      start:
-        character: 0
-        line: 204
-    uri: goto.robot
-  name: a keyword with variables in doc, timeout and tags
-  tags: null
-- !WorkspaceSymbol
-  container_name: references
-  data: null
-  kind: 12
-  location:
-    range:
-      end:
-        character: 49
-        line: 178
-      start:
-        character: 0
-        line: 178
-    uri: references.robot
-  name: a keyword with variables in doc, timeout and tags
-  tags: null
-- !WorkspaceSymbol
-  container_name: vartest
-  data: null
-  kind: 12
-  location:
-    range:
-      end:
-        character: 49
-        line: 29
-      start:
-        character: 0
-        line: 29
-    uri: vartest.robot
-  name: a keyword with variables in doc, timeout and tags
-  tags: null
-- !WorkspaceSymbol
-  container_name: document_highlight
-  data: null
-  kind: 12
-  location:
-    range:
-      end:
-        character: 65
-        line: 168
-      start:
-        character: 0
-        line: 168
-    uri: document_highlight.robot
-  name: a keyword with variables in doc, timeout and tags with args first
-  tags: null
-- !WorkspaceSymbol
-  container_name: goto
-  data: null
-  kind: 12
-  location:
-    range:
-      end:
-        character: 65
-        line: 217
-      start:
-        character: 0
-        line: 217
-    uri: goto.robot
-  name: a keyword with variables in doc, timeout and tags with args first
-  tags: null
-- !WorkspaceSymbol
-  container_name: references
-  data: null
-  kind: 12
-  location:
-    range:
-      end:
-        character: 65
-        line: 191
-      start:
-        character: 0
-        line: 191
-    uri: references.robot
-  name: a keyword with variables in doc, timeout and tags with args first
-  tags: null
-- !WorkspaceSymbol
-  container_name: vartest
-  data: null
-  kind: 12
-  location:
-    range:
-      end:
-        character: 65
-        line: 43
-      start:
-        character: 0
-        line: 43
-    uri: vartest.robot
-  name: a keyword with variables in doc, timeout and tags with args first
-  tags: null
-- !WorkspaceSymbol
-  container_name: references
-  data: null
-  kind: 12
-  location:
-    range:
-      end:
-        character: 44
-        line: 256
-      start:
-        character: 0
-        line: 256
-    uri: references.robot
-  name: a keyword with while and expression variable
-  tags: null
-- !WorkspaceSymbol
-  container_name: symbols
-  data: null
-  kind: 12
-  location:
-    range:
-      end:
-        character: 10
-        line: 39
-      start:
-        character: 0
-        line: 39
-    uri: symbols.robot
-  name: a keywords
-  tags: null
-- !WorkspaceSymbol
-  container_name: duplicated
-  data: null
-  kind: 12
-  location:
-    range:
-      end:
-        character: 20
-        line: 5
-      start:
-        character: 0
-        line: 5
-    uri: duplicated.resource
-  name: a resource keyword B
-  tags: null
-- !WorkspaceSymbol
-  container_name: goto
-  data: null
-  kind: 12
-  location:
-    range:
-      end:
-        character: 16
-        line: 149
-      start:
-        character: 0
-        line: 149
-    uri: goto.robot
-  name: a simple keyword
-  tags: null
-- !WorkspaceSymbol
-  container_name: hover
-  data: null
-  kind: 12
-  location:
-    range:
-      end:
-        character: 16
-        line: 258
-      start:
-        character: 0
-        line: 258
-    uri: hover.robot
-  name: a simple keyword
-  tags: null
-- !WorkspaceSymbol
-  container_name: some_tasks
-  data: null
-  kind: 5
-  location:
-    range:
-      end:
-        character: 13
-        line: 1
-      start:
-        character: 0
-        line: 1
-    uri: some_tasks.robot
-  name: a simple task
-  tags: null
-- !WorkspaceSymbol
-  container_name: goto
-  data: null
-  kind: 5
-  location:
-    range:
-      end:
-        character: 16
-        line: 98
-      start:
-        character: 0
-        line: 98
-    uri: goto.robot
-  name: a templated Test
-  tags: null
-- !WorkspaceSymbol
-  container_name: code_action_show_documentation
-  data: null
-  kind: 12
-  location:
-    range:
-      end:
-        character: 38
-        line: 101
-      start:
-        character: 0
-        line: 101
-    uri: code_action_show_documentation.robot
-  name: add ${number:[0-9]+} coins to ${thing}
-  tags: null
-- !WorkspaceSymbol
-  container_name: document_highlight
-  data: null
-  kind: 12
-  location:
-    range:
-      end:
-        character: 38
-        line: 149
-      start:
-        character: 0
-        line: 149
-    uri: document_highlight.robot
-  name: add ${number:[0-9]+} coins to ${thing}
-  tags: null
-- !WorkspaceSymbol
-  container_name: references
-  data: null
-  kind: 12
-  location:
-    range:
-      end:
-        character: 38
-        line: 125
-      start:
-        character: 0
-        line: 125
-    uri: references.robot
-  name: add ${number:[0-9]+} coins to ${thing}
-  tags: null
-- !WorkspaceSymbol
-  container_name: code_action_show_documentation
-  data: null
-  kind: 12
-  location:
-    range:
-      end:
-        character: 27
-        line: 128
-      start:
-        character: 0
-        line: 128
-    uri: code_action_show_documentation.robot
-  name: again a keyword with params
-  tags: null
-- !WorkspaceSymbol
-  container_name: document_highlight
-  data: null
-  kind: 12
-  location:
-    range:
-      end:
-        character: 27
-        line: 131
-      start:
-        character: 0
-        line: 131
-    uri: document_highlight.robot
-  name: again a keyword with params
-  tags: null
-- !WorkspaceSymbol
-  container_name: goto
-  data: null
-  kind: 12
-  location:
-    range:
-      end:
-        character: 27
-        line: 186
-      start:
-        character: 0
-        line: 186
-    uri: goto.robot
-  name: again a keyword with params
-  tags: null
-- !WorkspaceSymbol
-  container_name: hover
-  data: null
-  kind: 12
-  location:
-    range:
-      end:
-        character: 27
-        line: 285
-      start:
-        character: 0
-        line: 285
-    uri: hover.robot
-  name: again a keyword with params
-  tags: null
-- !WorkspaceSymbol
-  container_name: references
-  data: null
-  kind: 12
-  location:
-    range:
-      end:
-        character: 27
-        line: 168
-      start:
-        character: 0
-        line: 168
-    uri: references.robot
-  name: again a keyword with params
-  tags: null
-- !WorkspaceSymbol
-  container_name: code_action_show_documentation
-  data: null
-  kind: 12
-  location:
-    range:
-      end:
-        character: 27
-        line: 123
-      start:
-        character: 0
-        line: 123
-    uri: code_action_show_documentation.robot
-  name: another keyword with params
-  tags: null
-- !WorkspaceSymbol
-  container_name: document_highlight
-  data: null
-  kind: 12
-  location:
-    range:
-      end:
-        character: 27
-        line: 121
-      start:
-        character: 0
-        line: 121
-    uri: document_highlight.robot
-  name: another keyword with params
-  tags: null
-- !WorkspaceSymbol
-  container_name: goto
-  data: null
-  kind: 12
-  location:
-    range:
-      end:
-        character: 27
-        line: 163
-      start:
-        character: 0
-        line: 163
-    uri: goto.robot
-  name: another keyword with params
-  tags: null
-- !WorkspaceSymbol
-  container_name: hover
-  data: null
-  kind: 12
-  location:
-    range:
-      end:
-        character: 27
-        line: 275
-      start:
-        character: 0
-        line: 275
-    uri: hover.robot
-  name: another keyword with params
-  tags: null
-- !WorkspaceSymbol
-  container_name: references
-  data: null
-  kind: 12
-  location:
-    range:
-      end:
-        character: 27
-        line: 158
-      start:
-        character: 0
-        line: 158
-    uri: references.robot
-  name: another keyword with params
-  tags: null
-- !WorkspaceSymbol
-  container_name: some_tasks
-  data: null
-  kind: 5
-  location:
-    range:
-      end:
-        character: 19
-        line: 4
-      start:
-        character: 0
-        line: 4
-    uri: some_tasks.robot
-  name: another simple task
-  tags: null
-- !WorkspaceSymbol
-  container_name: variables
-  data: null
-  kind: 12
-  location:
-    range:
-      end:
-        character: 49
-        line: 173
-      start:
-        character: 0
-        line: 173
-    uri: variables.robot
-  name: check that ${a:[0-9\ ]*} plus ${b} is ${expected}
-  tags: null
-- !WorkspaceSymbol
-  container_name: templates
-  data: null
-  kind: 12
-  location:
-    range:
-      end:
-        character: 47
-        line: 85
-      start:
-        character: 0
-        line: 85
-    uri: templates.robot
-  name: check that ${a} plus ${b:[a-c]+} is ${expected}
-  tags: null
-- !WorkspaceSymbol
-  container_name: embedded_keywords
-  data: null
-  kind: 12
-  location:
-    range:
-      end:
-        character: 43
-        line: 9
-      start:
-        character: 0
-        line: 9
-    uri: embedded_keywords.robot
-  name: do ${something} with ${thing} and this data
-  tags: null
-- !WorkspaceSymbol
-  container_name: code_action_show_documentation
-  data: null
-  kind: 12
-  location:
-    range:
-      end:
-        character: 31
-        line: 115
-      start:
-        character: 0
-        line: 115
-    uri: code_action_show_documentation.robot
-  name: do add ${bananas} and to my bag
-  tags: null
-- !WorkspaceSymbol
-  container_name: references
-  data: null
-  kind: 12
-  location:
-    range:
-      end:
-        character: 31
-        line: 145
-      start:
-        character: 0
-        line: 145
-    uri: references.robot
-  name: do add ${bananas} and to my bag
-  tags: null
-- !WorkspaceSymbol
-  container_name: firstresource
-  data: null
-  kind: 12
-  location:
-    range:
-      end:
-        character: 26
-        line: 7
-      start:
-        character: 0
-        line: 7
-    uri: firstresource.resource
-  name: do something in a resource
-  tags: null
-- !WorkspaceSymbol
-  container_name: variables
-  data: null
-  kind: 5
-  location:
-    range:
-      end:
-        character: 15
-        line: 154
-      start:
-        character: 0
-        line: 154
-    uri: variables.robot
-  name: environmentvars
-  tags: null
-- !WorkspaceSymbol
-  container_name: sometasks
-  data: null
-  kind: 5
-  location:
-    range:
-      end:
-        character: 10
-        line: 1
-      start:
-        character: 0
-        line: 1
-    uri: sometasks.robot
-  name: first task
-  tags: null
-- !WorkspaceSymbol
-  container_name: goto
-  data: null
-  kind: 12
-  location:
-    range:
-      end:
-        character: 32
-        line: 173
-      start:
-        character: 0
-        line: 173
-    uri: goto.robot
-  name: just another keyword with params
-  tags: null
-- !WorkspaceSymbol
-  container_name: variables
-  data: null
-  kind: 5
-  location:
-    range:
-      end:
-        character: 15
-        line: 157
-      start:
-        character: 0
-        line: 157
-    uri: variables.robot
-  name: named arguments
-  tags: null
-- !WorkspaceSymbol
-  container_name: sometasks
-  data: null
-  kind: 5
-  location:
-    range:
-      end:
-        character: 11
-        line: 4
-      start:
-        character: 0
-        line: 4
-    uri: sometasks.robot
-  name: second task
-  tags: null
-- !WorkspaceSymbol
   container_name: very_big_file
   data: null
   kind: 12
@@ -7663,79 +7738,4 @@ result:
         line: 4655
     uri: very_big_file.robot
   name: the test confirms the Android ${name} is non-human
-  tags: null
-- !WorkspaceSymbol
-  container_name: bddstyle
-  data: null
-  kind: 12
-  location:
-    range:
-      end:
-        character: 34
-        line: 1
-      start:
-        character: 0
-        line: 1
-    uri: bddstyle.robot
-  name: value of var <${input}> is present
-  tags: null
-- !WorkspaceSymbol
-  container_name: bddstyle
-  data: null
-  kind: 12
-  location:
-    range:
-      end:
-        character: 51
-        line: 3
-      start:
-        character: 0
-        line: 3
-    uri: bddstyle.robot
-  name: value of var input is multiplied by "${multiplier}"
-  tags: null
-- !WorkspaceSymbol
-  container_name: bddstyle
-  data: null
-  kind: 12
-  location:
-    range:
-      end:
-        character: 41
-        line: 5
-      start:
-        character: 0
-        line: 5
-    uri: bddstyle.robot
-  name: value of var result should be [${result}]
-  tags: null
-- !WorkspaceSymbol
-  container_name: vartest
-  data: null
-  kind: 5
-  location:
-    range:
-      end:
-        character: 22
-        line: 14
-      start:
-        character: 0
-        line: 14
-    uri: vartest.robot
-  name: var with invalid scope
-  tags: null
-- !WorkspaceSymbol
-  container_name: vartest
-  data: null
-  kind: 5
-  location:
-    range:
-      end:
-        character: 14
-        line: 7
-      start:
-        character: 0
-        line: 7
-    uri: vartest.robot
-  name: var with scope
   tags: null

@@ -1,93 +1,18 @@
 result:
 - !WorkspaceSymbol
-  container_name: symbols
-  data: null
-  kind: 13
-  location:
-    range:
-      end:
-        character: 27
-        line: 41
-      start:
-        character: 19
-        line: 41
-    uri: symbols.robot
-  name: ${first}
-  tags: null
-- !WorkspaceSymbol
-  container_name: foldingrange
-  data: null
-  kind: 5
-  location:
-    range:
-      end:
-        character: 5
-        line: 8
-      start:
-        character: 0
-        line: 8
-    uri: foldingrange.robot
-  name: First
-  tags: null
-- !WorkspaceSymbol
-  container_name: document_highlight
+  container_name: bddstyle
   data: null
   kind: 12
   location:
     range:
       end:
-        character: 65
-        line: 168
+        character: 34
+        line: 1
       start:
         character: 0
-        line: 168
-    uri: document_highlight.robot
-  name: a keyword with variables in doc, timeout and tags with args first
-  tags: null
-- !WorkspaceSymbol
-  container_name: goto
-  data: null
-  kind: 12
-  location:
-    range:
-      end:
-        character: 65
-        line: 217
-      start:
-        character: 0
-        line: 217
-    uri: goto.robot
-  name: a keyword with variables in doc, timeout and tags with args first
-  tags: null
-- !WorkspaceSymbol
-  container_name: references
-  data: null
-  kind: 12
-  location:
-    range:
-      end:
-        character: 65
-        line: 191
-      start:
-        character: 0
-        line: 191
-    uri: references.robot
-  name: a keyword with variables in doc, timeout and tags with args first
-  tags: null
-- !WorkspaceSymbol
-  container_name: vartest
-  data: null
-  kind: 12
-  location:
-    range:
-      end:
-        character: 65
-        line: 43
-      start:
-        character: 0
-        line: 43
-    uri: vartest.robot
-  name: a keyword with variables in doc, timeout and tags with args first
+        line: 1
+    uri: bddstyle.robot
+  name: value of var <${input}> is present
   tags: null
 - !WorkspaceSymbol
   container_name: code_action_show_documentation
@@ -105,337 +30,7 @@ result:
   name: first
   tags: null
 - !WorkspaceSymbol
-  container_name: document_highlight
-  data: null
-  kind: 5
-  location:
-    range:
-      end:
-        character: 5
-        line: 29
-      start:
-        character: 0
-        line: 29
-    uri: document_highlight.robot
-  name: first
-  tags: null
-- !WorkspaceSymbol
-  container_name: duplicated_resources
-  data: null
-  kind: 5
-  location:
-    range:
-      end:
-        character: 5
-        line: 13
-      start:
-        character: 0
-        line: 13
-    uri: duplicated_resources.robot
-  name: first
-  tags: null
-- !WorkspaceSymbol
-  container_name: external_libray
-  data: null
-  kind: 5
-  location:
-    range:
-      end:
-        character: 5
-        line: 5
-      start:
-        character: 0
-        line: 5
-    uri: external_libray.robot
-  name: first
-  tags: null
-- !WorkspaceSymbol
-  container_name: goto
-  data: null
-  kind: 5
-  location:
-    range:
-      end:
-        character: 5
-        line: 40
-      start:
-        character: 0
-        line: 40
-    uri: goto.robot
-  name: first
-  tags: null
-- !WorkspaceSymbol
-  container_name: hover
-  data: null
-  kind: 5
-  location:
-    range:
-      end:
-        character: 5
-        line: 62
-      start:
-        character: 0
-        line: 62
-    uri: hover.robot
-  name: first
-  tags: null
-- !WorkspaceSymbol
-  container_name: playground
-  data: null
-  kind: 5
-  location:
-    range:
-      end:
-        character: 5
-        line: 6
-      start:
-        character: 0
-        line: 6
-    uri: playground.robot
-  name: first
-  tags: null
-- !WorkspaceSymbol
-  container_name: references
-  data: null
-  kind: 5
-  location:
-    range:
-      end:
-        character: 5
-        line: 31
-      start:
-        character: 0
-        line: 31
-    uri: references.robot
-  name: first
-  tags: null
-- !WorkspaceSymbol
-  container_name: remotetest
-  data: null
-  kind: 5
-  location:
-    range:
-      end:
-        character: 5
-        line: 5
-      start:
-        character: 0
-        line: 5
-    uri: remotetest.robot
-  name: first
-  tags: null
-- !WorkspaceSymbol
-  container_name: reserved
-  data: null
-  kind: 5
-  location:
-    range:
-      end:
-        character: 5
-        line: 1
-      start:
-        character: 0
-        line: 1
-    uri: reserved.robot
-  name: first
-  tags: null
-- !WorkspaceSymbol
-  container_name: setup_teardown
-  data: null
-  kind: 5
-  location:
-    range:
-      end:
-        character: 5
-        line: 10
-      start:
-        character: 0
-        line: 10
-    uri: setup_teardown.robot
-  name: first
-  tags: null
-- !WorkspaceSymbol
-  container_name: signature_help
-  data: null
-  kind: 5
-  location:
-    range:
-      end:
-        character: 5
-        line: 11
-      start:
-        character: 0
-        line: 11
-    uri: signature_help.robot
-  name: first
-  tags: null
-- !WorkspaceSymbol
-  container_name: symbols
-  data: null
-  kind: 5
-  location:
-    range:
-      end:
-        character: 5
-        line: 11
-      start:
-        character: 0
-        line: 11
-    uri: symbols.robot
-  name: first
-  tags: null
-- !WorkspaceSymbol
-  container_name: first
-  data: null
-  kind: 5
-  location:
-    range:
-      end:
-        character: 5
-        line: 5
-      start:
-        character: 0
-        line: 5
-    uri: first.robot
-  name: first
-  tags: null
-- !WorkspaceSymbol
-  container_name: second
-  data: null
-  kind: 5
-  location:
-    range:
-      end:
-        character: 5
-        line: 5
-      start:
-        character: 0
-        line: 5
-    uri: second.robot
-  name: first
-  tags: null
-- !WorkspaceSymbol
-  container_name: first
-  data: null
-  kind: 5
-  location:
-    range:
-      end:
-        character: 5
-        line: 1
-      start:
-        character: 0
-        line: 1
-    uri: first.robot
-  name: first
-  tags: null
-- !WorkspaceSymbol
-  container_name: templates
-  data: null
-  kind: 5
-  location:
-    range:
-      end:
-        character: 5
-        line: 10
-      start:
-        character: 0
-        line: 10
-    uri: templates.robot
-  name: first
-  tags: null
-- !WorkspaceSymbol
-  container_name: variables
-  data: null
-  kind: 5
-  location:
-    range:
-      end:
-        character: 5
-        line: 17
-      start:
-        character: 0
-        line: 17
-    uri: variables.robot
-  name: first
-  tags: null
-- !WorkspaceSymbol
-  container_name: jsonvariables
-  data: null
-  kind: 5
-  location:
-    range:
-      end:
-        character: 5
-        line: 4
-      start:
-        character: 0
-        line: 4
-    uri: jsonvariables.robot
-  name: first
-  tags: null
-- !WorkspaceSymbol
-  container_name: first
-  data: null
-  kind: 5
-  location:
-    range:
-      end:
-        character: 5
-        line: 3
-      start:
-        character: 0
-        line: 3
-    uri: first.robot
-  name: first
-  tags: null
-- !WorkspaceSymbol
-  container_name: suite_with_name
-  data: null
-  kind: 5
-  location:
-    range:
-      end:
-        character: 5
-        line: 4
-      start:
-        character: 0
-        line: 4
-    uri: suite_with_name.robot
-  name: first
-  tags: null
-- !WorkspaceSymbol
-  container_name: grouptest
-  data: null
-  kind: 5
-  location:
-    range:
-      end:
-        character: 5
-        line: 1
-      start:
-        character: 0
-        line: 1
-    uri: grouptest.robot
-  name: first
-  tags: null
-- !WorkspaceSymbol
-  container_name: playground
-  data: null
-  kind: 12
-  location:
-    range:
-      end:
-        character: 8
-        line: 21
-      start:
-        character: 0
-        line: 21
-    uri: playground.robot
-  name: first kw
-  tags: null
-- !WorkspaceSymbol
-  container_name: sometasks
+  container_name: __not_discovered
   data: null
   kind: 5
   location:
@@ -446,8 +41,23 @@ result:
       start:
         character: 0
         line: 1
-    uri: sometasks.robot
-  name: first task
+    uri: __not_discovered.robot
+  name: first test
+  tags: null
+- !WorkspaceSymbol
+  container_name: _not_discovered
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 10
+        line: 1
+      start:
+        character: 0
+        line: 1
+    uri: _not_discovered.robot
+  name: first test
   tags: null
 - !WorkspaceSymbol
   container_name: discovered__
@@ -585,22 +195,367 @@ result:
   name: first test
   tags: null
 - !WorkspaceSymbol
-  container_name: _not_discovered
+  container_name: document_highlight
   data: null
-  kind: 5
+  kind: 12
   location:
     range:
       end:
-        character: 10
-        line: 1
+        character: 65
+        line: 168
       start:
         character: 0
-        line: 1
-    uri: _not_discovered.robot
-  name: first test
+        line: 168
+    uri: document_highlight.robot
+  name: a keyword with variables in doc, timeout and tags with args first
   tags: null
 - !WorkspaceSymbol
-  container_name: __not_discovered
+  container_name: document_highlight
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 5
+        line: 29
+      start:
+        character: 0
+        line: 29
+    uri: document_highlight.robot
+  name: first
+  tags: null
+- !WorkspaceSymbol
+  container_name: duplicated_resources
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 5
+        line: 13
+      start:
+        character: 0
+        line: 13
+    uri: duplicated_resources.robot
+  name: first
+  tags: null
+- !WorkspaceSymbol
+  container_name: external_libray
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 5
+        line: 5
+      start:
+        character: 0
+        line: 5
+    uri: external_libray.robot
+  name: first
+  tags: null
+- !WorkspaceSymbol
+  container_name: foldingrange
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 5
+        line: 8
+      start:
+        character: 0
+        line: 8
+    uri: foldingrange.robot
+  name: First
+  tags: null
+- !WorkspaceSymbol
+  container_name: goto
+  data: null
+  kind: 12
+  location:
+    range:
+      end:
+        character: 65
+        line: 217
+      start:
+        character: 0
+        line: 217
+    uri: goto.robot
+  name: a keyword with variables in doc, timeout and tags with args first
+  tags: null
+- !WorkspaceSymbol
+  container_name: goto
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 5
+        line: 40
+      start:
+        character: 0
+        line: 40
+    uri: goto.robot
+  name: first
+  tags: null
+- !WorkspaceSymbol
+  container_name: hover
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 5
+        line: 62
+      start:
+        character: 0
+        line: 62
+    uri: hover.robot
+  name: first
+  tags: null
+- !WorkspaceSymbol
+  container_name: playground
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 5
+        line: 6
+      start:
+        character: 0
+        line: 6
+    uri: playground.robot
+  name: first
+  tags: null
+- !WorkspaceSymbol
+  container_name: playground
+  data: null
+  kind: 12
+  location:
+    range:
+      end:
+        character: 8
+        line: 21
+      start:
+        character: 0
+        line: 21
+    uri: playground.robot
+  name: first kw
+  tags: null
+- !WorkspaceSymbol
+  container_name: references
+  data: null
+  kind: 12
+  location:
+    range:
+      end:
+        character: 65
+        line: 191
+      start:
+        character: 0
+        line: 191
+    uri: references.robot
+  name: a keyword with variables in doc, timeout and tags with args first
+  tags: null
+- !WorkspaceSymbol
+  container_name: references
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 5
+        line: 31
+      start:
+        character: 0
+        line: 31
+    uri: references.robot
+  name: first
+  tags: null
+- !WorkspaceSymbol
+  container_name: remotetest
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 5
+        line: 5
+      start:
+        character: 0
+        line: 5
+    uri: remotetest.robot
+  name: first
+  tags: null
+- !WorkspaceSymbol
+  container_name: reserved
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 5
+        line: 1
+      start:
+        character: 0
+        line: 1
+    uri: reserved.robot
+  name: first
+  tags: null
+- !WorkspaceSymbol
+  container_name: setup_teardown
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 5
+        line: 10
+      start:
+        character: 0
+        line: 10
+    uri: setup_teardown.robot
+  name: first
+  tags: null
+- !WorkspaceSymbol
+  container_name: signature_help
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 5
+        line: 11
+      start:
+        character: 0
+        line: 11
+    uri: signature_help.robot
+  name: first
+  tags: null
+- !WorkspaceSymbol
+  container_name: symbols
+  data: null
+  kind: 13
+  location:
+    range:
+      end:
+        character: 27
+        line: 41
+      start:
+        character: 19
+        line: 41
+    uri: symbols.robot
+  name: ${first}
+  tags: null
+- !WorkspaceSymbol
+  container_name: symbols
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 5
+        line: 11
+      start:
+        character: 0
+        line: 11
+    uri: symbols.robot
+  name: first
+  tags: null
+- !WorkspaceSymbol
+  container_name: first
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 5
+        line: 5
+      start:
+        character: 0
+        line: 5
+    uri: first.robot
+  name: first
+  tags: null
+- !WorkspaceSymbol
+  container_name: second
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 5
+        line: 5
+      start:
+        character: 0
+        line: 5
+    uri: second.robot
+  name: first
+  tags: null
+- !WorkspaceSymbol
+  container_name: first
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 5
+        line: 1
+      start:
+        character: 0
+        line: 1
+    uri: first.robot
+  name: first
+  tags: null
+- !WorkspaceSymbol
+  container_name: templates
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 5
+        line: 10
+      start:
+        character: 0
+        line: 10
+    uri: templates.robot
+  name: first
+  tags: null
+- !WorkspaceSymbol
+  container_name: variables
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 5
+        line: 17
+      start:
+        character: 0
+        line: 17
+    uri: variables.robot
+  name: first
+  tags: null
+- !WorkspaceSymbol
+  container_name: jsonvariables
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 5
+        line: 4
+      start:
+        character: 0
+        line: 4
+    uri: jsonvariables.robot
+  name: first
+  tags: null
+- !WorkspaceSymbol
+  container_name: sometasks
   data: null
   kind: 5
   location:
@@ -611,8 +566,68 @@ result:
       start:
         character: 0
         line: 1
-    uri: __not_discovered.robot
-  name: first test
+    uri: sometasks.robot
+  name: first task
+  tags: null
+- !WorkspaceSymbol
+  container_name: first
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 5
+        line: 3
+      start:
+        character: 0
+        line: 3
+    uri: first.robot
+  name: first
+  tags: null
+- !WorkspaceSymbol
+  container_name: suite_with_name
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 5
+        line: 4
+      start:
+        character: 0
+        line: 4
+    uri: suite_with_name.robot
+  name: first
+  tags: null
+- !WorkspaceSymbol
+  container_name: vartest
+  data: null
+  kind: 12
+  location:
+    range:
+      end:
+        character: 65
+        line: 43
+      start:
+        character: 0
+        line: 43
+    uri: vartest.robot
+  name: a keyword with variables in doc, timeout and tags with args first
+  tags: null
+- !WorkspaceSymbol
+  container_name: grouptest
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 5
+        line: 1
+      start:
+        character: 0
+        line: 1
+    uri: grouptest.robot
+  name: first
   tags: null
 - !WorkspaceSymbol
   container_name: very_big_file
@@ -643,19 +658,4 @@ result:
         line: 4655
     uri: very_big_file.robot
   name: the test confirms the Android ${name} is non-human
-  tags: null
-- !WorkspaceSymbol
-  container_name: bddstyle
-  data: null
-  kind: 12
-  location:
-    range:
-      end:
-        character: 34
-        line: 1
-      start:
-        character: 0
-        line: 1
-    uri: bddstyle.robot
-  name: value of var <${input}> is present
   tags: null
