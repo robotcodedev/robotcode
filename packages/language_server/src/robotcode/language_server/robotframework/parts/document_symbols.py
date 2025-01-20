@@ -94,7 +94,7 @@ class _Visitor(Visitor):
             r = range_from_node(node)
             symbol = DocumentSymbol(
                 name=node.name,
-                kind=SymbolKind.METHOD,
+                kind=SymbolKind.CLASS,
                 range=r,
                 selection_range=r,
                 children=[],

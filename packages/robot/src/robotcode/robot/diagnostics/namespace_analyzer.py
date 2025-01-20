@@ -63,6 +63,8 @@ from .entities import (
     InvalidVariableError,
     LibraryEntry,
     LocalVariableDefinition,
+    TagDefinition,
+    TestCaseDefinition,
     TestVariableDefinition,
     VariableDefinition,
     VariableDefinitionType,
@@ -92,6 +94,8 @@ class AnalyzerResult:
     variable_references: Dict[VariableDefinition, Set[Location]]
     local_variable_assignments: Dict[VariableDefinition, Set[Range]]
     namespace_references: Dict[LibraryEntry, Set[Location]]
+    test_case_definitions: List[TestCaseDefinition]
+    tag_definitions: List[TagDefinition]
 
     # TODO Tag references
 
@@ -121,6 +125,8 @@ class NamespaceAnalyzer(Visitor):
         self._variable_references: Dict[VariableDefinition, Set[Location]] = defaultdict(set)
         self._local_variable_assignments: Dict[VariableDefinition, Set[Range]] = defaultdict(set)
         self._namespace_references: Dict[LibraryEntry, Set[Location]] = defaultdict(set)
+        self._test_case_definitions: List[TestCaseDefinition] = []
+        self._tag_definitions: List[TagDefinition] = []
 
         self._variables: Dict[VariableMatcher, VariableDefinition] = {
             **{v.matcher: v for v in self._namespace.get_builtin_variables()},
@@ -166,6 +172,8 @@ class NamespaceAnalyzer(Visitor):
             self._variable_references,
             self._local_variable_assignments,
             self._namespace_references,
+            self._test_case_definitions,
+            self._tag_definitions,
         )
 
     def _visit_VariableSection(self, node: VariableSection) -> None:  # noqa: N802
@@ -1048,6 +1056,16 @@ class NamespaceAnalyzer(Visitor):
         name_token = node.get_token(Token.TESTCASE_NAME)
         if name_token is not None and name_token.value:
             self._analyze_token_variables(name_token, DiagnosticSeverity.HINT)
+            self._test_case_definitions.append(
+                TestCaseDefinition(
+                    line_no=name_token.lineno,
+                    col_offset=name_token.col_offset,
+                    end_line_no=name_token.lineno,
+                    end_col_offset=name_token.end_col_offset,
+                    source=self._namespace.source,
+                    name=name_token.value,
+                )
+            )
 
     @functools.cached_property
     def _namespace_lib_doc(self) -> LibraryDoc:

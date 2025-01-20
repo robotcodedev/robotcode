@@ -6,7 +6,7 @@ result: !DocumentSymbol
   children: []
   deprecated: null
   detail: null
-  kind: 6
+  kind: 5
   name: first
   range:
     end:

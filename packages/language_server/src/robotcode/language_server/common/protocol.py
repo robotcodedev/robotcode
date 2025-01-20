@@ -71,6 +71,7 @@ from .parts.semantic_tokens import SemanticTokensProtocolPart
 from .parts.signature_help import SignatureHelpProtocolPart
 from .parts.window import WindowProtocolPart
 from .parts.workspace import Workspace
+from .parts.workspace_symbols import WorkspaceSymbolsProtocolPart
 
 __all__ = ["LanguageServerException", "LanguageServerProtocol"]
 
@@ -133,6 +134,7 @@ class LanguageServerProtocol(JsonRPCProtocol):
     inline_value: Final = ProtocolPartDescriptor(InlineValueProtocolPart)
     inlay_hint: Final = ProtocolPartDescriptor(InlayHintProtocolPart)
     code_action: Final = ProtocolPartDescriptor(CodeActionProtocolPart)
+    workspace_symbols: Final = ProtocolPartDescriptor(WorkspaceSymbolsProtocolPart)
 
     name: Optional[str] = None
     short_name: Optional[str] = None
