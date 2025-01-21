@@ -1,11 +1,11 @@
 package dev.robotcode.robotcode4ij.highlighting
 
 import com.intellij.lexer.Lexer
+import com.intellij.openapi.editor.DefaultLanguageHighlighterColors
+import com.intellij.openapi.editor.HighlighterColors
 import com.intellij.openapi.editor.colors.TextAttributesKey
-import com.intellij.openapi.fileTypes.PlainSyntaxHighlighter
 import com.intellij.openapi.fileTypes.SyntaxHighlighterBase
 import com.intellij.psi.tree.IElementType
-import com.intellij.util.containers.ContainerUtil
 import dev.robotcode.robotcode4ij.psi.ARGUMENT
 import dev.robotcode.robotcode4ij.psi.COMMENT_BLOCK
 import dev.robotcode.robotcode4ij.psi.COMMENT_LINE
@@ -23,11 +23,6 @@ import dev.robotcode.robotcode4ij.psi.TESTCASE_NAME
 import dev.robotcode.robotcode4ij.psi.VARIABLE
 import dev.robotcode.robotcode4ij.psi.VARIABLE_BEGIN
 import dev.robotcode.robotcode4ij.psi.VARIABLE_END
-import org.jetbrains.plugins.textmate.TextMateService
-import org.jetbrains.plugins.textmate.language.TextMateScopeComparator
-import org.jetbrains.plugins.textmate.language.syntax.highlighting.TextMateTheme
-import org.jetbrains.plugins.textmate.language.syntax.lexer.TextMateScope
-import java.util.function.Function
 
 
 class RobotCodeSyntaxHighlighter : SyntaxHighlighterBase() {
@@ -51,8 +46,52 @@ class RobotCodeSyntaxHighlighter : SyntaxHighlighterBase() {
             CONTINUATION to arrayOf(Colors.CONTINUATION),
         )
         
-        val PLAIN_SYNTAX_HIGHLIGHTER: PlainSyntaxHighlighter = PlainSyntaxHighlighter()
+        val textMateElementMap = mapOf(
+            "comment" to arrayOf(DefaultLanguageHighlighterColors.LINE_COMMENT),
+            "constant" to arrayOf(DefaultLanguageHighlighterColors.CONSTANT),
+            "constant.character.escape" to arrayOf(DefaultLanguageHighlighterColors.VALID_STRING_ESCAPE),
+            "constant.language" to arrayOf(DefaultLanguageHighlighterColors.KEYWORD),
+            "constant.numeric" to arrayOf(DefaultLanguageHighlighterColors.NUMBER),
+            "declaration.section" to arrayOf(DefaultLanguageHighlighterColors.CLASS_NAME),
+            "entity.name.section" to arrayOf(DefaultLanguageHighlighterColors.CLASS_NAME),
+            "declaration.tag" to arrayOf(DefaultLanguageHighlighterColors.CLASS_NAME),
+            "entity.name.function" to arrayOf(DefaultLanguageHighlighterColors.FUNCTION_DECLARATION),
+            "entity.name.tag" to arrayOf(DefaultLanguageHighlighterColors.CLASS_NAME),
+            "entity.name.type" to arrayOf(DefaultLanguageHighlighterColors.CLASS_NAME),
+            "entity.other.attribute-name" to arrayOf(DefaultLanguageHighlighterColors.INSTANCE_FIELD),
+            "entity.other.inherited-class" to arrayOf(DefaultLanguageHighlighterColors.CLASS_REFERENCE),
+            "invalid" to arrayOf(DefaultLanguageHighlighterColors.INVALID_STRING_ESCAPE),
+            "invalid.deprecated.trailing-whitespace" to arrayOf(DefaultLanguageHighlighterColors.INVALID_STRING_ESCAPE),
+            "keyword" to arrayOf(DefaultLanguageHighlighterColors.KEYWORD),
+            "keyword.control.import" to arrayOf(DefaultLanguageHighlighterColors.KEYWORD),
+            "keyword.operator" to arrayOf(DefaultLanguageHighlighterColors.OPERATION_SIGN),
+            "markup.heading" to arrayOf(DefaultLanguageHighlighterColors.MARKUP_TAG),
+            "markup.list" to arrayOf(DefaultLanguageHighlighterColors.MARKUP_TAG),
+            "markup.quote" to arrayOf(DefaultLanguageHighlighterColors.MARKUP_TAG),
+            "meta.embedded" to arrayOf(HighlighterColors.TEXT),
+            "meta.preprocessor" to arrayOf(DefaultLanguageHighlighterColors.METADATA),
+            "meta.section" to arrayOf(DefaultLanguageHighlighterColors.CLASS_NAME),
+            "entity.name.section" to arrayOf(DefaultLanguageHighlighterColors.CLASS_NAME),
+            "meta.tag" to arrayOf(DefaultLanguageHighlighterColors.METADATA),
+            "storage" to arrayOf(DefaultLanguageHighlighterColors.KEYWORD),
+            "storage.type.method" to arrayOf(DefaultLanguageHighlighterColors.KEYWORD),
+            "string" to arrayOf(DefaultLanguageHighlighterColors.STRING),
+            "string.source" to arrayOf(DefaultLanguageHighlighterColors.STRING),
+            "string.unquoted" to arrayOf(DefaultLanguageHighlighterColors.STRING),
+            "support.class" to arrayOf(DefaultLanguageHighlighterColors.CLASS_REFERENCE),
+            "support.constant" to arrayOf(DefaultLanguageHighlighterColors.CONSTANT),
+            "support.function" to arrayOf(DefaultLanguageHighlighterColors.FUNCTION_CALL),
+            "support.type" to arrayOf(DefaultLanguageHighlighterColors.CLASS_REFERENCE),
+            "support.variable" to arrayOf(DefaultLanguageHighlighterColors.GLOBAL_VARIABLE),
+            "text" to arrayOf(DefaultLanguageHighlighterColors.STRING),
+            "variable" to arrayOf(DefaultLanguageHighlighterColors.GLOBAL_VARIABLE),
+            "variable.language" to arrayOf(DefaultLanguageHighlighterColors.GLOBAL_VARIABLE),
+            "variable.other" to arrayOf(DefaultLanguageHighlighterColors.GLOBAL_VARIABLE),
+            "variable.parameter" to arrayOf(DefaultLanguageHighlighterColors.PARAMETER),
+            "punctuation.definition.string" to arrayOf(DefaultLanguageHighlighterColors.STRING),
+        )
     }
+    
     
     private val myLexer = RobotCodeLexer()
     
@@ -60,50 +99,32 @@ class RobotCodeSyntaxHighlighter : SyntaxHighlighterBase() {
         return myLexer
     }
     
+    fun createSubstringSequence(input: String): Sequence<String> = sequence {
+        var current = input
+        while (current.isNotEmpty()) {
+            yield(current)
+            current = current.substringBeforeLast('.', "")
+        }
+    }
+    
     override fun getTokenHighlights(tokenType: IElementType?): Array<TextAttributesKey> {
         val result = elementTypeMap[tokenType]
         if (result != null) return result
         
-        if (tokenType !is RobotTextMateElementType) return PLAIN_SYNTAX_HIGHLIGHTER.getTokenHighlights(tokenType)
+        if (tokenType !is RobotTextMateElementType) return arrayOf(HighlighterColors.TEXT)
         
-        val service = TextMateService.getInstance()
-        val customHighlightingColors = service.customHighlightingColors
+        val result1 = mutableListOf<TextAttributesKey>()
         
-        val highlightingRules = ContainerUtil.union(customHighlightingColors.keys, TextMateTheme.INSTANCE.rules)
-        
-        val textMateScope = trimEmbeddedScope(tokenType)
-        val selectors: List<CharSequence> = ContainerUtil.reverse(
-            TextMateScopeComparator(textMateScope, Function.identity())
-                .sortAndFilter(highlightingRules)
-        )
-        val result1 = ContainerUtil.map2Array(
-            selectors,
-            TextAttributesKey::class.java
-        ) { rule: CharSequence ->
-            val customTextAttributes = customHighlightingColors[rule]
-            customTextAttributes?.getTextAttributesKey(TextMateTheme.INSTANCE)
-                ?: TextMateTheme.INSTANCE.getTextAttributesKey(rule)
-        }
-        
-        return result1
-    }
-    
-    private fun trimEmbeddedScope(tokenType: RobotTextMateElementType): TextMateScope {
-        var current: TextMateScope? = tokenType.scope
-        val trail: MutableList<CharSequence?> = ArrayList()
-        while (current != null) {
-            val scopeName = current.scopeName
-            if (scopeName != null && scopeName.contains(".embedded.")) {
-                var result = TextMateScope.EMPTY
-                for (i in trail.indices.reversed()) {
-                    result = result.add(trail[i])
-                }
-                return result
+        for (scope1 in (tokenType.scope.scopeName?.toString() ?: "").split(".")) {
+            for (scope2 in createSubstringSequence(scope1)) {
+                val result2 = textMateElementMap[scope2]
+                if (result2 != null) result1.addAll(result2)
             }
-            trail.add(scopeName)
-            current = current.parent
         }
-        return tokenType.scope
+        
+        if (result1.isNotEmpty()) return result1.toTypedArray()
+        
+        return arrayOf(HighlighterColors.TEXT)
     }
 }
 
