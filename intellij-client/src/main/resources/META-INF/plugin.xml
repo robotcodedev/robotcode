@@ -113,10 +113,22 @@
 									  class="dev.robotcode.robotcode4ij.lsp.RobotCodeSemanticTokensColorsProvider"/>
 	</extensions>
 	<actions>
-		<action id="dev.robotcode.robotcode4ij.actions.RobotCreateFileAction"
-				class="dev.robotcode.robotcode4ij.actions.RobotCreateFileAction">
+		<action id="dev.robotcode.robotcode4ij.actions.RobotCodeCreateFileAction"
+				class="dev.robotcode.robotcode4ij.actions.RobotCodeCreateFileAction">
 			<add-to-group group-id="NewGroup" anchor="before" relative-to-action="NewFile"/>
 		</action>
+		<group id="dev.robotcode.robotcode4ij.actions" text="RobotCode"
+			   icon="dev.robotcode.robotcode4ij.RobotIcons.RobotCode" description="Tools for RobotCode" popup="true">
+			<add-to-group group-id="ToolsMenu" anchor="last"/>
+
+			<action class="dev.robotcode.robotcode4ij.actions.RobotCodeRestartLanguageServerAction"
+					id="dev.robotcode.robotcode4ij.actions.RobotCodeRestartLanguageServerAction"
+					text="Restart RobotCode Language Server"/>
+			<action class="dev.robotcode.robotcode4ij.actions.RobotCodeClearCacheAndRestartLanguageServerAction"
+					id="dev.robotcode.robotcode4ij.actions.RobotCodeClearCacheAndRestartLanguageServerAction"
+					text="Clear Cache and Restart RobotCode Language Server"/>
+		</group>
+
 	</actions>
 
 	<applicationListeners>

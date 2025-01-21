@@ -9,6 +9,8 @@ import com.intellij.openapi.util.removeUserData
 import com.redhat.devtools.lsp4ij.LanguageServerManager
 import com.redhat.devtools.lsp4ij.ServerStatus
 import dev.robotcode.robotcode4ij.checkPythonAndRobotVersion
+import kotlinx.coroutines.future.await
+import kotlinx.coroutines.runBlocking
 
 @Service(Service.Level.PROJECT)
 class RobotCodeLanguageServerManager(private val project: Project) {
@@ -58,6 +60,15 @@ class RobotCodeLanguageServerManager(private val project: Project) {
     fun restart() {
         stop()
         start()
+    }
+    
+    fun clearCacheAndRestart() {
+        runBlocking {
+            val server = LanguageServerManager.getInstance(project).getLanguageServer(LANGUAGE_SERVER_ID).await()
+            (server?.server as RobotCodeServerApi).clearCache()?.await()
+            
+            restart()
+        }
     }
     
     val status: ServerStatus?

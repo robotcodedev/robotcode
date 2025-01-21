@@ -256,6 +256,7 @@ import java.util.*
             }.get()?.items ?: arrayOf()
         } catch (e: Exception) {
             thisLogger().warn("Failed to discover test items", e)
+            testItems = arrayOf()
         }
         
         DaemonCodeAnalyzer.getInstance(project).restart()

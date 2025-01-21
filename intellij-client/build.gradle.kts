@@ -38,8 +38,11 @@ repositories {
 dependencies {
     compileOnly(libs.kotlinxSerialization)
     
-    // implementation(libs.lsp4j)
-    implementation(libs.lsp4jdebug)
+    //implementation(libs.lsp4j)
+    implementation(libs.lsp4jdebug) {
+        exclude(group = "org.eclipse.lsp4j", module = "org.eclipse.lsp4j.jsonrpc")
+        exclude(group = "com.google.code.gson", module = "gson")
+    }
     
     testImplementation(kotlin("test"))
     testImplementation(libs.junit)

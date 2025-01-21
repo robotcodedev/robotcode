@@ -8,6 +8,7 @@ import com.redhat.devtools.lsp4ij.client.features.LSPClientFeatures
 import com.redhat.devtools.lsp4ij.server.StreamConnectionProvider
 import dev.robotcode.robotcode4ij.lsp.RobotCodeLanguageServerManager.Companion.LANGUAGE_SERVER_ENABLED_KEY
 import dev.robotcode.robotcode4ij.lsp.features.RobotDiagnosticsFeature
+import org.eclipse.lsp4j.services.LanguageServer
 
 @Suppress("UnstableApiUsage") class RobotCodeLanguageServerFactory : LanguageServerFactory,
                                                                      LanguageServerEnablementSupport {
@@ -21,6 +22,10 @@ import dev.robotcode.robotcode4ij.lsp.features.RobotDiagnosticsFeature
     
     override fun createLanguageClient(project: Project): LanguageClientImpl {
         return RobotCodeLanguageClient(project)
+    }
+    
+    override fun getServerInterface(): Class<out LanguageServer?> {
+        return RobotCodeServerApi::class.java
     }
     
     override fun isEnabled(project: Project): Boolean {

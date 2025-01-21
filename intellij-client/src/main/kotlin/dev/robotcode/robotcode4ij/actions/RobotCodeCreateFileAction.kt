@@ -10,7 +10,7 @@ import dev.robotcode.robotcode4ij.RobotIcons
 import dev.robotcode.robotcode4ij.RobotResourceFileType
 import dev.robotcode.robotcode4ij.RobotSuiteFileType
 
-class RobotCreateFileAction : CreateFileFromTemplateAction(
+class RobotCodeCreateFileAction : CreateFileFromTemplateAction(
     "Robot Framework File", "Robot Framework file", RobotIcons.Suite
 ), DumbAware {
     override fun buildDialog(project: Project, directory: PsiDirectory, builder: CreateFileFromTemplateDialog.Builder) {
