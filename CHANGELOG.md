@@ -2,6 +2,38 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [0.107.0](https://github.com/robotcodedev/robotcode/compare/v0.106.1..v0.107.0) - 2025-01-21
+
+### Bug Fixes
+
+- **intellij:** Stabilized getting the correct python sdk for a project ([f8622ef](https://github.com/robotcodedev/robotcode/commit/f8622ef6eacfb6dc484044b465f281cba02ee0c3))
+
+
+### Features
+
+- **intellij:** Dynamic update of test run buttons on file and configuration changes ([da9687c](https://github.com/robotcodedev/robotcode/commit/da9687c0cd75270d6f7f397f776f230b3469a684))
+- **intellij:** Implemented support for 4 spaces tab ([de83635](https://github.com/robotcodedev/robotcode/commit/de836356cd991cf09d315aaacad2ed1e94c433b9))
+
+  - this is enabled by default for robot files
+
+- **intellij:** Support for highlight for python expressions ([a2c2760](https://github.com/robotcodedev/robotcode/commit/a2c276043f26303b4856dc13aed88cd2eea5432f))
+- **langserver:** Support for workspace symbols ([a90ce60](https://github.com/robotcodedev/robotcode/commit/a90ce60250b9dc82c8a78bc910878171617c6a45))
+- **langserver:** Support for workspace symbols ([66cb701](https://github.com/robotcodedev/robotcode/commit/66cb701620322bd248db053dcb3d0f598c76a93b))
+
+
+### Refactor
+
+- **robot:** Remove unused digest fields from KeywordDoc and LibraryDoc ([e550fb0](https://github.com/robotcodedev/robotcode/commit/e550fb0be816fed4a1d66d17ae3f02b059095713))
+
+
+### Testing
+
+- **langserver:** Correct some regression tests ([98fe4d0](https://github.com/robotcodedev/robotcode/commit/98fe4d0581170f71f6ed02a43f8bb4fb19699437))
+- **langserver:** Corrected some regression tests ([1fa8e7a](https://github.com/robotcodedev/robotcode/commit/1fa8e7a6e43ea370db5821a9ba8549b88eafad6d))
+- **langserver:** Corrected some more regression tests ([2c8e451](https://github.com/robotcodedev/robotcode/commit/2c8e451de333ae30c7d0c0716ef4ace23e2d8f6b))
+- **langserver:** Corrected some more regression tests ([68bd93c](https://github.com/robotcodedev/robotcode/commit/68bd93cccd763290ff34021a18811f46340c94b9))
+
+
 ## [0.106.1](https://github.com/robotcodedev/robotcode/compare/v0.106.0..v0.106.1) - 2025-01-16
 
 ### Bug Fixes
