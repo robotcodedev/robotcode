@@ -1,4 +1,4 @@
-package dev.robotcode.robotcode4ij.settings
+package dev.robotcode.robotcode4ij.configuration
 
 import com.intellij.openapi.editor.colors.TextAttributesKey
 import com.intellij.openapi.fileTypes.SyntaxHighlighter
@@ -22,6 +22,7 @@ class RobotCodeColorSettingsPage : ColorSettingsPage {
         AttributesDescriptor("Control flow", Colors.CONTROL_FLOW),
         AttributesDescriptor("Argument", Colors.ARGUMENT),
         AttributesDescriptor("Embedded argument", Colors.EMBEDDED_ARGUMENT),
+        AttributesDescriptor("Named argument", Colors.NAMED_ARGUMENT),
         AttributesDescriptor("Variable", Colors.VARIABLE),
         AttributesDescriptor("Variable expression", Colors.VARIABLE_EXPRESSION),
         AttributesDescriptor("Variable begin", Colors.VARIABLE_BEGIN),

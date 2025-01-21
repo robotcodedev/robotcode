@@ -25,7 +25,7 @@ private val mapping by lazy {
         
         "argument" to Colors.ARGUMENT,
         "embeddedArgument" to Colors.EMBEDDED_ARGUMENT,
-        
+        "namedArgument" to Colors.NAMED_ARGUMENT,
         "variable" to Colors.VARIABLE,
         "variableExpression" to Colors.VARIABLE_EXPRESSION,
         "variableBegin" to Colors.VARIABLE_BEGIN,

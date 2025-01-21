@@ -1,4 +1,4 @@
-package dev.robotcode.robotcode4ij.settings
+package dev.robotcode.robotcode4ij.configuration
 
 import com.intellij.application.options.CodeStyleAbstractConfigurable
 import com.intellij.application.options.CodeStyleAbstractPanel
@@ -28,6 +28,9 @@ class RobotCodeCodeStyleSettingsProvider : CodeStyleSettingsProvider() {
     }
     
     private class CodeStyleMainPanel(currentSettings: CodeStyleSettings, settings: CodeStyleSettings) :
-        TabbedLanguageCodeStylePanel(RobotFrameworkLanguage, currentSettings, settings)
-    
+        TabbedLanguageCodeStylePanel(RobotFrameworkLanguage, currentSettings, settings) {
+        override fun initTabs(settings: CodeStyleSettings?) {
+            addIndentOptionsTab(settings)
+        }
+    }
 }

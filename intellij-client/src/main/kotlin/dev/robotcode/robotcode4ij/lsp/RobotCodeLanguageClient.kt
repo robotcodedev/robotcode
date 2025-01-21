@@ -3,7 +3,7 @@ package dev.robotcode.robotcode4ij.lsp
 import com.intellij.openapi.project.Project
 import com.redhat.devtools.lsp4ij.ServerStatus
 import com.redhat.devtools.lsp4ij.client.IndexAwareLanguageClient
-import dev.robotcode.robotcode4ij.settings.ProjectSettings
+import dev.robotcode.robotcode4ij.configuration.RobotCodeProjectConfiguration
 
 class RobotCodeLanguageClient(project: Project?) : IndexAwareLanguageClient(project) {
     
@@ -14,6 +14,6 @@ class RobotCodeLanguageClient(project: Project?) : IndexAwareLanguageClient(proj
     }
     
     override fun createSettings(): Any {
-        return ProjectSettings.getInstance(project).asJson()
+        return RobotCodeProjectConfiguration.getInstance(project).asJson()
     }
 }

@@ -53,17 +53,17 @@
 		<postStartupActivity implementation="dev.robotcode.robotcode4ij.RobotCodePostStartupActivity"/>
 
 		<projectConfigurable parentId="language"
-							 provider="dev.robotcode.robotcode4ij.settings.ProjectSettingsConfigurableProvider"
+							 provider="dev.robotcode.robotcode4ij.configuration.RobotCodeProjectSettingsConfigurableProvider"
 							 id="dev.robotcode.robotcode4ij.projectsettings"
 							 displayName="Robot Framework"
 							 nonDefaultProject="true"/>
 
-		<colorSettingsPage implementation="dev.robotcode.robotcode4ij.settings.RobotCodeColorSettingsPage"/>
+		<colorSettingsPage implementation="dev.robotcode.robotcode4ij.configuration.RobotCodeColorSettingsPage"/>
 
 		<codeStyleSettingsProvider
-			implementation="dev.robotcode.robotcode4ij.settings.RobotCodeCodeStyleSettingsProvider"/>
+			implementation="dev.robotcode.robotcode4ij.configuration.RobotCodeCodeStyleSettingsProvider"/>
 		<langCodeStyleSettingsProvider
-			implementation="dev.robotcode.robotcode4ij.settings.RobotCodeLangCodeStyleSettingsProvider"/>
+			implementation="dev.robotcode.robotcode4ij.configuration.RobotCodeLanguageCodeStyleSettingsProvider"/>
 
 		<additionalTextAttributes scheme="Darcula" file="colorSchemes/RobotDarculaColorScheme.xml"/>
 		<additionalTextAttributes scheme="Dark" file="colorSchemes/RobotDarculaColorScheme.xml"/>
@@ -89,6 +89,10 @@
 		<!--		<testStatusListener implementation="dev.robotcode.robotcode4ij.testing.RobotCodeTestStatusListener"/>-->
 		<!--		<testActionProvider implementation="dev.robotcode.robotcode4ij.testing.RobotCodeTestActionProvider"/>-->
 
+		<statusBarWidgetFactory implementation="dev.robotcode.robotcode4ij.editor.RobotCodeStatusBarWidgetFactory"
+								id="dev.robotcode.robotcode4ij.editor.RobotCodeStatusBarWidget"/>
+		<editorActionHandler action="EditorTab"
+							 implementationClass="dev.robotcode.robotcode4ij.editor.RobotCodeEditorTabActionHandler"/>
 	</extensions>
 
 	<extensions defaultExtensionNs="com.redhat.devtools.lsp4ij">

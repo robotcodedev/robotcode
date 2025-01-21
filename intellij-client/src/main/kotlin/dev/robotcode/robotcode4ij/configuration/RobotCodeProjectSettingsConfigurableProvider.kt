@@ -1,4 +1,4 @@
-package dev.robotcode.robotcode4ij.settings
+package dev.robotcode.robotcode4ij.configuration
 
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonElement
@@ -8,7 +8,7 @@ import com.intellij.openapi.components.SimplePersistentStateComponent
 import com.intellij.openapi.components.State
 import com.intellij.openapi.components.Storage
 import com.intellij.openapi.components.service
-import com.intellij.openapi.options.BoundSearchableConfigurable
+import com.intellij.openapi.options.BoundConfigurable
 import com.intellij.openapi.options.Configurable
 import com.intellij.openapi.options.ConfigurableProvider
 import com.intellij.openapi.project.Project
@@ -17,24 +17,21 @@ import com.intellij.ui.dsl.builder.AlignX
 import com.intellij.ui.dsl.builder.bindSelected
 import com.intellij.ui.dsl.builder.bindText
 import com.intellij.ui.dsl.builder.panel
+import dev.robotcode.robotcode4ij.configuration.SimplePersistentStateComponentHelper.delegate
+import dev.robotcode.robotcode4ij.configuration.SimplePersistentStateComponentHelper.stringDelegate
 import dev.robotcode.robotcode4ij.lsp.langServerManager
-import dev.robotcode.robotcode4ij.settings.SimplePersistentStateComponentHelper.delegate
-import dev.robotcode.robotcode4ij.settings.SimplePersistentStateComponentHelper.stringDelegate
 
 
-class ProjectSettingsConfigurableProvider(private val project: Project) : ConfigurableProvider() {
+class RobotCodeProjectSettingsConfigurableProvider(private val project: Project) : ConfigurableProvider() {
     override fun createConfigurable(): Configurable {
-        return ProjectSettingsConfigurable(project)
+        return RobotCodeProjectSettingsConfigurable(project)
     }
-    
 }
 
 
-class ProjectSettingsConfigurable(private val project: Project) : BoundSearchableConfigurable(
-    "Robot Framework", "robotcode.robotframework.settings"
-) {
+class RobotCodeProjectSettingsConfigurable(private val project: Project) : BoundConfigurable("RobotCode") {
     
-    private val settings = ProjectSettings.getInstance(project)
+    private val settings = RobotCodeProjectConfiguration.getInstance(project)
     
     override fun createPanel(): DialogPanel {
         return panel {
@@ -49,8 +46,7 @@ class ProjectSettingsConfigurable(private val project: Project) : BoundSearchabl
                     comboBox(listOf("default", "rpa", "norpa")).label("Mode")
                 }.rowComment("Specifies robot execution mode. Corresponds to the `--rpa` or `--norpa` option of __robot__.")
             }
-            group("Editing") {
-                // TODO: not supported in IntelliJ
+            group("Editing") { // TODO: not supported in IntelliJ
                 // group("Editor") {
                 //     row {
                 //         checkBox("4 Spaces Tab").bindSelected(settings::editor4SpacesTab)
@@ -87,9 +83,10 @@ class ProjectSettingsConfigurable(private val project: Project) : BoundSearchabl
 }
 
 @Service(Service.Level.PROJECT) @State(name = "ProjectSettings", storages = [Storage("robotcodeSettings.xml")])
-class ProjectSettings : SimplePersistentStateComponent<ProjectSettings.ProjectState>(ProjectState()) {
+class RobotCodeProjectConfiguration :
+    SimplePersistentStateComponent<RobotCodeProjectConfiguration.ProjectState>(ProjectState()) {
     companion object {
-        fun getInstance(project: Project): ProjectSettings = project.service()
+        fun getInstance(project: Project): RobotCodeProjectConfiguration = project.service()
     }
     
     fun asJson(): JsonElement {
@@ -123,13 +120,11 @@ data class InlayHints(
 )
 
 data class Completion(
-    var filterDefaultLanguage: Boolean = false,
-    var headerStyle: String? = null
+    var filterDefaultLanguage: Boolean = false, var headerStyle: String? = null
 )
 
 data class All(
-    var completion: Completion = Completion(),
-    var inlayHints: InlayHints = InlayHints()
+    var completion: Completion = Completion(), var inlayHints: InlayHints = InlayHints()
 )
 
 data class RobotCodeSettings(

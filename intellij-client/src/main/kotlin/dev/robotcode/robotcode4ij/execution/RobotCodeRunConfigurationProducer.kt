@@ -7,9 +7,14 @@ import com.intellij.execution.configurations.ConfigurationFactory
 import com.intellij.execution.configurations.runConfigurationType
 import com.intellij.openapi.util.Ref
 import com.intellij.psi.PsiElement
+import com.redhat.devtools.lsp4ij.features.documentSymbol.DocumentSymbolData
 import dev.robotcode.robotcode4ij.testing.testManger
 import java.util.*
 
+fun DocumentSymbolData.toPsiElement(): PsiElement? {
+    val file = this.containingFile
+    return file.findElementAt(textOffset)
+}
 
 class RobotCodeRunConfigurationProducer : LazyRunConfigurationProducer<RobotCodeRunConfiguration>() {
     override fun getConfigurationFactory(): ConfigurationFactory {
@@ -21,7 +26,11 @@ class RobotCodeRunConfigurationProducer : LazyRunConfigurationProducer<RobotCode
         context: ConfigurationContext,
         sourceElement: Ref<PsiElement>
     ): Boolean {
-        val testItem = configuration.project.testManger.findTestItem(sourceElement.get()) ?: return false
+        var psiElement = sourceElement.get()
+        if (psiElement is DocumentSymbolData) {
+            psiElement = psiElement.toPsiElement() ?: return false
+        }
+        val testItem = configuration.project.testManger.findTestItem(psiElement) ?: return false
         
         configuration.name = "${
             testItem.type.replaceFirstChar {
@@ -41,8 +50,10 @@ class RobotCodeRunConfigurationProducer : LazyRunConfigurationProducer<RobotCode
         configuration: RobotCodeRunConfiguration,
         context: ConfigurationContext
     ): Boolean {
-        
-        val psiElement = context.psiLocation ?: return false
+        var psiElement = context.psiLocation ?: return false
+        if (psiElement is DocumentSymbolData) {
+            psiElement = psiElement.toPsiElement() ?: return false
+        }
         val testItem = configuration.project.testManger.findTestItem(psiElement) ?: return false
         
         if (testItem.type == "workspace") {

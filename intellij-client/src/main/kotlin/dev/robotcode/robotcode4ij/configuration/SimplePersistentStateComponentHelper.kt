@@ -1,4 +1,4 @@
-package dev.robotcode.robotcode4ij.settings
+package dev.robotcode.robotcode4ij.configuration
 
 import com.intellij.openapi.components.BaseState
 import com.intellij.openapi.components.SimplePersistentStateComponent
