@@ -12,6 +12,7 @@ All notable changes to this project will be documented in this file. See [conven
 ### Documentation
 
 - Redesign the README and some docs and added `powered by IntelliJ` to README and docs ([db5ec53](https://github.com/robotcodedev/robotcode/commit/db5ec5378dbeee82c24a62bf4a22c32e8bc89e36))
+- Change svgs in README to pngs ([434307c](https://github.com/robotcodedev/robotcode/commit/434307c2e042bed06a159983e5052e0961d05f86))
 
 
 ### Features
