@@ -136,9 +136,6 @@ class _Visitor(Visitor):
             self.generic_visit(node)
 
 
-#
-
-
 class RobotFoldingRangeProtocolPart(RobotLanguageServerProtocolPart):
     _logger = LoggingDescriptor()
 
