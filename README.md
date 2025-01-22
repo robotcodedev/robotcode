@@ -132,4 +132,4 @@ This project is licensed under the [Apache 2.0 License](https://spdx.org/license
 ---
 
 ## Powered by
-[![JetBrains logo.](docs/images/jetbrains.svg)](https://jb.gg/OpenSourceSupport)
+[![JetBrains logo.](docs/images/jetbrains.png)](https://jb.gg/OpenSourceSupport)
