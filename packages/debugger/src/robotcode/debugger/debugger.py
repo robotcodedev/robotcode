@@ -573,6 +573,9 @@ class Debugger:
         return []
 
     def process_start_state(self, source: str, line_no: int, type: str, status: str) -> None:
+        if self.state == State.CallKeyword:
+            return
+
         if self.state == State.Stopped:
             return
 
@@ -718,6 +721,8 @@ class Debugger:
         description: str,
         text: Optional[str],
     ) -> None:
+        if self.state == State.CallKeyword:
+            return
         if self.state == State.Stopped:
             return
 
@@ -911,6 +916,9 @@ class Debugger:
                 self.stack_frames[0].stack_frames.popleft()
 
     def start_suite(self, name: str, attributes: Dict[str, Any]) -> None:
+        if self.state == State.CallKeyword:
+            return
+
         if not self.run_started:
             self.run_started = True
             self.debug_logger = DebugLogger()
@@ -956,6 +964,9 @@ class Debugger:
                 self.wait_for_running()
 
     def end_suite(self, name: str, attributes: Dict[str, Any]) -> None:
+        if self.state == State.CallKeyword:
+            return
+
         if self.debug:
             status = attributes.get("status", "")
 
@@ -975,6 +986,9 @@ class Debugger:
         self.remove_stackframe_entry(name, type, source, line_no)
 
     def start_test(self, name: str, attributes: Dict[str, Any]) -> None:
+        if self.state == State.CallKeyword:
+            return
+
         source = attributes.get("source")
         line_no_dummy = attributes.get("lineno", 1)
         if isinstance(line_no_dummy, str):
@@ -999,6 +1013,9 @@ class Debugger:
             self.wait_for_running()
 
     def end_test(self, name: str, attributes: Dict[str, Any]) -> None:
+        if self.state == State.CallKeyword:
+            return
+
         if self.debug:
             status = attributes.get("status", "")
 
@@ -1030,6 +1047,9 @@ class Debugger:
             return EXECUTION_CONTEXTS.current.namespace.get_runner(name)._handler
 
     def start_keyword(self, name: str, attributes: Dict[str, Any]) -> None:
+        if self.state == State.CallKeyword:
+            return
+
         status = attributes.get("status", "")
         source = attributes.get("source")
         line_no_dummy = attributes.get("lineno", 1)
@@ -1157,6 +1177,9 @@ class Debugger:
         return True
 
     def end_keyword(self, name: str, attributes: Dict[str, Any]) -> None:
+        if self.state == State.CallKeyword:
+            return
+
         type = attributes.get("type")
         if self.debug:
             status = attributes.get("status", "")
@@ -1618,6 +1641,18 @@ class Debugger:
         def _run_keyword(self, kw: Keyword, context: Any) -> Any:
             return kw.run(context)
 
+    if get_robot_version() >= (7, 2):
+
+        @staticmethod
+        def check_message_is_logged(listener: Any, msg: Any) -> bool:
+            return cast(bool, listener._is_logged(msg))
+
+    else:
+
+        @staticmethod
+        def check_message_is_logged(listener: Any, msg: Any) -> bool:
+            return cast(bool, listener._is_logged(msg.level))
+
     def evaluate(
         self,
         expression: str,
@@ -1745,18 +1780,19 @@ class Debugger:
                                         result = e
                                         break
                                     finally:
-                                        messages = LOGGER._log_message_cache or []
-                                        for msg in messages or ():
-                                            # hack to get and evaluate log level
-                                            listener: Any = next(iter(LOGGER), None)
-                                            if listener is None or listener._is_logged(msg.level):
-                                                self.log_message(
-                                                    {
-                                                        "level": msg.level,
-                                                        "message": msg.message,
-                                                        "timestamp": msg.timestamp,
-                                                    }
-                                                )
+                                        if get_robot_version() <= (7, 2):
+                                            messages = LOGGER._log_message_cache or []
+                                            for msg in messages or ():
+                                                # hack to get and evaluate log level
+                                                listener: Any = next(iter(LOGGER), None)
+                                                if listener is None or self.check_message_is_logged(listener, msg):
+                                                    self.log_message(
+                                                        {
+                                                            "level": msg.level,
+                                                            "message": msg.message,
+                                                            "timestamp": msg.timestamp,
+                                                        }
+                                                    )
                         return result
 
                     result = self.run_in_robot_thread(run_kw)
