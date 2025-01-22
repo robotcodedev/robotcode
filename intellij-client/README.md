@@ -1,4 +1,4 @@
-# robotcode4ij
+# RobotCode - The Ultimate Robot Framework Toolset
 
 [![JETBRAINS Marketplace](https://img.shields.io/jetbrains/plugin/v/26216.svg)](https://plugins.jetbrains.com/plugin/26216)
 [![Downloads](https://img.shields.io/jetbrains/plugin/d/26216.svg)](https://plugins.jetbrains.com/plugin/26216)
@@ -6,8 +6,7 @@
 
 <!-- Plugin description -->
 
-**RobotCode** is a PyCharm/IntelliJ Plugin that enhances your workflow
-with [Robot Framework](https://robotframework.org/).
+**RobotCode** is a PyCharm/IntelliJ Plugin that enhances your development experience with [Robot Framework](https://robotframework.org/).
 It provides a rich set of features to help you write, run, and debug your Robot Framework tests directly within your
 IDE.
 
@@ -20,23 +19,26 @@ us improve the plugin.
 
 Your feedback is greatly appreciated! 🙂
 
-## Why RobotCode?
+## What is RobotCode?
 
-**Built on Robot Framework Core**
-RobotCode is based on the Robot Framework Core and uses its parser, ensuring complete compatibility and consistency.
-This means you get the same syntax validation, error messages, and behavior as if you were running Robot Framework
-directly.
+RobotCode is a comprehensive toolkit for Robot Framework development, offering advanced features to enhance your productivity and streamline your workflow. Whether you're using Visual Studio Code, IntelliJ, or other LSP-compatible editors, RobotCode ensures a consistent and seamless experience.
 
-**Powered by the Language Server Protocol**
-RobotCode is built on the Language Server Protocol (LSP), a modern standard for implementing language support across
-multiple editors and IDEs. This ensures a seamless and responsive user experience, while making it easier to maintain
-compatibility with evolving IDE features.
+### Key Advantages:
 
-**Powerful Command Line Tools**
-RobotCode extends the Robot Framework CLI with enhanced tools for test execution, analysis, and debugging. It supports [
-`robot.toml`](https://robotcode.io/03_reference/) configurations, integrates a Debug Adapter Protocol (DAP) compatible
-debugger, and provides an interactive REPL environment for experimenting with Robot Framework commands. Modular and
-flexible, these tools streamline your workflow for both development and production.
+- **Built on Robot Framework Core**
+  RobotCode uses Robot Framework's native parser for syntax validation, error messages, and behavior, ensuring full compatibility and reliability in your projects.
+
+- **Powered by the Language Server Protocol (LSP)**
+  By leveraging the LSP, RobotCode provides real-time code navigation, intelligent auto-completion, and refactoring capabilities across various editors and IDEs.
+
+- **Multi-Platform IDE Extensions**
+  RobotCode offers robust extensions for Visual Studio Code and IntelliJ Platform, delivering the same high-quality features regardless of your preferred development environment. Thanks to LSP, it also works with editors like Neovim and Sublime Text.
+
+- **Enhanced CLI Tools**
+  Extend Robot Framework's command-line capabilities with tools for test execution, debugging, and code analysis. Features include `robot.toml` support, a Debug Adapter Protocol (DAP) debugger, and an interactive REPL for quick experimentation.
+
+With RobotCode, you can focus on building and testing your automation workflows while enjoying an integrated and efficient development experience.
+
 
 ## Key Features
 
@@ -55,7 +57,7 @@ flexible, these tools streamline your workflow for both development and producti
 
 - Python 3.8 or newer
 - Robot Framework 4.1 or newer
-- PyCharm 2024.3.1 or newer
+- PyCharm 2024.3.2 or newer
 
 ## Getting Started
 
@@ -89,3 +91,10 @@ the [RobotCode](https://robotcode.io) website.
 
   Download the [latest release](https://github.com/robotcodedev/robotcode/releases/latest) and install it manually using
   <kbd>Settings/Preferences</kbd> > <kbd>Plugins</kbd> > <kbd>⚙️</kbd> > <kbd>Install plugin from disk...</kbd>
+
+## License
+
+This project is licensed under the [Apache 2.0 License](https://spdx.org/licenses/Apache-2.0.html).
+
+## Powered by
+[![JetBrains logo.](../docs/images/jetbrains.svg)](https://jb.gg/OpenSourceSupport)

@@ -1,11 +1,9 @@
 ---
-# https://vitepress.dev/reference/default-theme-home-page
 layout: home
 
 hero:
   name: RobotCode
-  text: Robot Framework for Visual Studio Code and more
-  tagline: Boost Your Test Automation with RobotCode
+  tagline: The Ultimate Robot Framework Toolset
   image:
     src: /robotcode-logo.svg
     alt: RobotCode Logo
@@ -42,7 +40,8 @@ features:
   - title: Video Tutorial ...
     details:
       Watch the video tutorial I gave at RoboCon 2024.
-      <iframe src="https://www.youtube.com/embed/7Uad_250YuI?si=cbGrG6rM0MG7CWTB" title="YouTube video player" frameborder="0" allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+
+      <iframe src="https://www.youtube.com/embed/7Uad_250YuI?si=cbGrG6rM0MG7CWTB" title="YouTube video player" frameborder="0" allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen />
 
 ---
 
@@ -60,3 +59,7 @@ features:
 [![PyPI - Version](https://img.shields.io/pypi/v/robotcode.svg?style=flat)](https://pypi.org/project/robotcode)
 [![Python Version](https://img.shields.io/pypi/pyversions/robotcode.svg?style=flat)](https://pypi.org/project/robotcode)
 [![Downloads](https://img.shields.io/pypi/dm/robotcode.svg?style=flat&label=downloads)](https://pypi.org/project/robotcode)
+
+
+## Powered by
+[![JetBrains logo.](images/jetbrains.svg)](https://jb.gg/OpenSourceSupport)
