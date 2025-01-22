@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [0.108.0](https://github.com/robotcodedev/robotcode/compare/v0.107.0..v0.108.0) - 2025-01-22
+
+### Bug Fixes
+
+- **debugger:** Corrected evaluating/executing keywords for RF 7.2 ([df92ad4](https://github.com/robotcodedev/robotcode/commit/df92ad4e6910de9556e6c20148489ab42ed06a93))
+
+
+### Documentation
+
+- Redesign the README and some docs and added `powered by IntelliJ` to README and docs ([db5ec53](https://github.com/robotcodedev/robotcode/commit/db5ec5378dbeee82c24a62bf4a22c32e8bc89e36))
+
+
+### Features
+
+- **intellij:** Add clear cache and restart actions for language server ([2f04e9a](https://github.com/robotcodedev/robotcode/commit/2f04e9aa3116c5bdb7ac3826c6433b04c8c5077b))
+
+
 ## [0.107.0](https://github.com/robotcodedev/robotcode/compare/v0.106.1..v0.107.0) - 2025-01-21
 
 ### Bug Fixes
