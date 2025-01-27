@@ -38,7 +38,6 @@ cov = "pytest --cov-report=term-missing --cov-config=pyproject.toml --cov=robotc
 no-cov = "cov --no-cov {args}"
 test = "pytest {args}"
 test-reset = "pytest --regtest2-reset {args}"
-install-bundled-editable = "python ./scripts/install_bundled_editable.py"
 create-json-schema = "python ./scripts/create_robot_toml_json_schema.py"
 generate-rf-options = "python ./scripts/generate_rf_options.py"
 install-packages = "python ./scripts/install_packages.py"
@@ -177,3 +176,4 @@ publish = ["python scripts/publish.py"]
 extract-release-notes = ["python scripts/extract_release_notes.py"]
 is-prerelease = ["python scripts/is_prerelease.py"]
 bump = ["cz bump"]
+install-bundled-editable = "python ./scripts/install_bundled_editable.py"
