@@ -5,6 +5,6 @@ import org.eclipse.lsp4j.services.LanguageServer
 import java.util.concurrent.CompletableFuture
 
 
-interface RobotCodeServerApi: LanguageServer {
+interface RobotCodeServerApi : LanguageServer {
     @JsonRequest("robot/cache/clear") fun clearCache(): CompletableFuture<Void>?
 }

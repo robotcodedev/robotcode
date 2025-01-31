@@ -1,7 +1,23 @@
 package dev.robotcode.robotcode4ij.testing
 
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 import kotlinx.serialization.json.JsonElement
+import java.net.URI
+
+private object UriCache {
+    const val MAX_SIZE = 512
+    
+    private val cache = object : LinkedHashMap<String, URI>(MAX_SIZE, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, URI>?): Boolean {
+            return size >= MAX_SIZE
+        }
+    }
+    
+    fun get(uri: String): URI {
+        return cache.getOrPut(uri) { URI.create(uri) }
+    }
+}
 
 @Serializable
 data class Position(val line: UInt, val character: UInt)
@@ -67,6 +83,18 @@ data class Position(val line: UInt, val character: UInt)
         result = 31 * result + (error?.hashCode() ?: 0)
         result = 31 * result + (tags?.contentHashCode() ?: 0)
         return result
+    }
+    
+    @Transient
+    val realUri: URI? = if (uri != null) UriCache.get(uri) else null
+    
+    fun isSameUri(uri: String?): Boolean {
+        if (realUri == null || uri == null)
+            return false
+        
+        val otherUri = UriCache.get(uri)
+        
+        return otherUri.scheme == realUri.scheme && otherUri.path == realUri.path
     }
 }
 

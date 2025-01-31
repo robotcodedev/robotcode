@@ -25,7 +25,6 @@ import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiElement
 import com.intellij.psi.util.elementType
 import com.intellij.psi.util.startOffset
-import com.intellij.util.io.URLUtil
 import dev.robotcode.robotcode4ij.RobotSuiteFileType
 import dev.robotcode.robotcode4ij.buildRobotCodeCommandLine
 import dev.robotcode.robotcode4ij.psi.IRobotFrameworkElementType
@@ -38,9 +37,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import java.net.URI
+import java.nio.file.Paths
 import java.util.*
-
 
 @Service(Service.Level.PROJECT) class RobotCodeTestManager(private val project: Project) : Disposable, DocumentListener,
                                                                                            AsyncFileListener,
@@ -229,7 +227,7 @@ import java.util.*
                     arrayOf(*defaultPaths, "discover", "--read-from-stdin", "all"), format = "json"
                 ).withCharset(Charsets.UTF_8).withWorkDirectory(project.basePath)
                 
-                var openFiles = mutableMapOf<String, String>()
+                val openFiles = mutableMapOf<String, String>()
                 
                 ApplicationManager.getApplication().runReadAction {
                     FileEditorManagerEx.getInstanceEx(project).openFiles.forEach { file ->
@@ -239,7 +237,7 @@ import java.util.*
                     }
                 }
                 
-                var openFilesAsString = Json.encodeToString(openFiles)
+                val openFilesAsString = Json.encodeToString(openFiles)
                 
                 val result = CapturingProcessHandler(cmdLine).apply {
                     process.outputStream.bufferedWriter().apply {
@@ -276,11 +274,11 @@ import java.util.*
     ): RobotCodeTestItem? {
         
         if (line == null) {
-            if (root.uri == uri) {
+            if (root.isSameUri(uri)) {
                 return root
             }
         } else {
-            if (root.uri == uri && root.range != null && root.range.start.line == line) {
+            if (root.isSameUri(uri) && root.range != null && root.range.start.line == line) {
                 return root
             }
         }
@@ -334,9 +332,23 @@ import java.util.*
     }
 }
 
+private fun getRfcCompliantUri(virtualFile: VirtualFile): String {
+    val filePath = virtualFile.path
+    
+    val normalizedPath = if (isWindows()) {
+        filePath.replace("\\", "/")
+    } else {
+        filePath
+    }
+    
+    return Paths.get(normalizedPath).toUri().toString()
+}
+
+private fun isWindows(): Boolean = System.getProperty("os.name").lowercase().contains("win")
+
 val VirtualFile.uri: String
     get() {
-        return URI.create(fileSystem.protocol + URLUtil.SCHEME_SEPARATOR + "/" + path.replace(":", "%3A")).toString()
+        return getRfcCompliantUri(this)
     }
 
 val Project.testManger: RobotCodeTestManager
