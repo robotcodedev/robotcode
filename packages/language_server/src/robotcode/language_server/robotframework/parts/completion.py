@@ -127,7 +127,7 @@ class RobotCompletionProtocolPart(RobotLanguageServerProtocolPart):
 
     def __init__(self, parent: "RobotLanguageServerProtocol") -> None:
         super().__init__(parent)
-
+        self.doc_cache: Dict[str, str] = {}
         parent.completion.collect.add(self.collect)
         parent.completion.resolve.add(self.resolve)
 
@@ -171,9 +171,9 @@ class RobotCompletionProtocolPart(RobotLanguageServerProtocolPart):
         model = self.parent.documents_cache.get_model(document, False)
 
         config = self.get_config(document)
-
+        self.doc_cache = {}
         return CompletionCollector(
-            self.parent,
+            self,
             document,
             model,
             namespace,
@@ -195,7 +195,7 @@ class RobotCompletionProtocolPart(RobotLanguageServerProtocolPart):
                         config = self.get_config(document)
 
                         return CompletionCollector(
-                            self.parent,
+                            self,
                             document,
                             model,
                             namespace,
@@ -331,7 +331,7 @@ class CompletionCollector(ModelHelper):
 
     def __init__(
         self,
-        parent: "RobotLanguageServerProtocol",
+        parent: "RobotCompletionProtocolPart",
         document: TextDocument,
         model: ast.AST,
         namespace: Namespace,
@@ -407,7 +407,7 @@ class CompletionCollector(ModelHelper):
         if data is not None:
             document_uri = data.get("document_uri", None)
             if document_uri is not None:
-                document = self.parent.documents.get(document_uri)
+                document = self.parent.parent.documents.get(document_uri)
                 if document is not None and (comp_type := data.get("type", None)) is not None:
                     if comp_type in [
                         CompleteResultKind.MODULE.name,
@@ -532,11 +532,15 @@ class CompletionCollector(ModelHelper):
                                 raise
                             except BaseException:
                                 pass
+                    elif comp_type == CompleteResultKind.DOC_CACHE.name:
+                        if (name := data.get("name", None)) is not None:
+                            if (doc := self.parent.doc_cache.get(name, None)) is not None:
+                                completion_item.documentation = MarkupContent(kind=MarkupKind.MARKDOWN, value=doc)
 
         return completion_item
 
     def create_headers_completion_items(self, range: Optional[Range]) -> List[CompletionItem]:
-        doc_type = self.parent.documents_cache.get_document_type(self.document)
+        doc_type = self.parent.parent.documents_cache.get_document_type(self.document)
 
         if self.namespace.languages is None:
             if doc_type in [DocumentType.RESOURCE, DocumentType.INIT]:
@@ -624,7 +628,7 @@ class CompletionCollector(ModelHelper):
         ]
 
     def create_settings_completion_items(self, range: Optional[Range]) -> List[CompletionItem]:
-        doc_type = self.parent.documents_cache.get_document_type(self.document)
+        doc_type = self.parent.parent.documents_cache.get_document_type(self.document)
 
         settings_class: Type[Settings] = SuiteFileSettings
         if doc_type == DocumentType.RESOURCE:
@@ -2283,20 +2287,23 @@ class CompletionCollector(ModelHelper):
 
                     for i, b_snippet in enumerate(bool_snippets):
                         if b_snippet[0]:
+                            cache_name = f"BOOL{id(type_info)}_{i}"
+                            self.parent.doc_cache[cache_name] = type_info.to_markdown()
                             result.append(
                                 CompletionItem(
                                     label=b_snippet[0],
                                     kind=CompletionItemKind.CONSTANT,
                                     detail=f"{type_info.name}({b_snippet[1]})",
-                                    documentation=MarkupContent(
-                                        MarkupKind.MARKDOWN,
-                                        type_info.to_markdown(),
-                                    ),
                                     sort_text=f"01_000_{int(not b_snippet[1])}_{b_snippet[0]}",
                                     insert_text_format=InsertTextFormat.PLAIN_TEXT,
                                     text_edit=TextEdit(
                                         range=completion_range,
                                         new_text=b_snippet[0],
+                                    ),
+                                    data=CompletionItemData(
+                                        document_uri=str(self.document.uri),
+                                        type=CompleteResultKind.DOC_CACHE.name,
+                                        name=cache_name,
                                     ),
                                 )
                             )
@@ -2325,18 +2332,29 @@ class CompletionCollector(ModelHelper):
                     )
                 if type_info.members:
                     for member_index, member in enumerate(type_info.members):
+                        cache_name = f"TYPE_MEMBER{id(type_info)}_{member_index}"
+                        self.parent.doc_cache[cache_name] = (
+                            f"```python\n{member.name} = {member.value}\n```"
+                            "\n\n---"
+                            f"\n{type_info.to_markdown(only_doc=True)}"
+                        )
                         result.append(
                             CompletionItem(
                                 label=member.name,
                                 kind=CompletionItemKind.ENUM_MEMBER,
-                                detail=type_info.name,
+                                detail=f"{type_info.name}({type_info.type})",
                                 documentation=MarkupContent(
                                     MarkupKind.MARKDOWN,
-                                    f"```python\n{member.name} = {member.value}\n```\n\n{type_info.to_markdown()}",
+                                    f"```python\n{member.name} = {member.value}\n```",
                                 ),
-                                sort_text=f"09_{i:03}_{member_index:03}_{member.name}",
+                                sort_text=f"09_{i:9}_{member_index:09}_{member.name}",
                                 insert_text_format=InsertTextFormat.PLAIN_TEXT,
                                 text_edit=TextEdit(range=completion_range, new_text=member.name),
+                                data=CompletionItemData(
+                                    document_uri=str(self.document.uri),
+                                    type=CompleteResultKind.DOC_CACHE.name,
+                                    name=cache_name,
+                                ),
                             )
                         )
                 if type_info.items:
@@ -2357,19 +2375,22 @@ class CompletionCollector(ModelHelper):
                         + "}",
                     ]
                     for i, snippet in enumerate(snippets):
+                        cache_name = f"TYPE_ITEMS{id(type_info)}_{i}"
+                        self.parent.doc_cache[cache_name] = type_info.to_markdown()
                         if snippet:
                             result.append(
                                 CompletionItem(
                                     label=snippet,
                                     kind=CompletionItemKind.STRUCT,
-                                    detail=type_info.name,
-                                    documentation=MarkupContent(
-                                        MarkupKind.MARKDOWN,
-                                        type_info.to_markdown(),
-                                    ),
-                                    sort_text=f"08_{i:03}_{snippet}",
+                                    detail=f"{type_info.name}({type_info.type})",
+                                    sort_text=f"08_{i:09}_{snippet}",
                                     insert_text_format=InsertTextFormat.SNIPPET,
                                     text_edit=TextEdit(range=completion_range, new_text=snippet),
+                                    data=CompletionItemData(
+                                        document_uri=str(self.document.uri),
+                                        type=CompleteResultKind.DOC_CACHE.name,
+                                        name=cache_name,
+                                    ),
                                 )
                             )
 

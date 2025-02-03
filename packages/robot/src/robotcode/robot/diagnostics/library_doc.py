@@ -2091,6 +2091,7 @@ def get_library_doc(
                             td.usages,
                             [EnumMember(m.name, m.value) for m in td.members] if td.members else None,
                             [TypedDictItem(i.key, i.type, i.required) for i in td.items] if td.items else None,
+                            # TODO nested types like Literals
                             libname=libdoc.name,
                             libtype=libdoc.type,
                             doc_format=libdoc.doc_format,
@@ -2463,6 +2464,7 @@ class CompleteResultKind(Enum):
     VARIABLES_MODULE = "Variables Module"
     FOLDER = "Directory"
     KEYWORD = "Keyword"
+    DOC_CACHE = "DOC_CACHE"
 
 
 class CompleteResult(NamedTuple):
