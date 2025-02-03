@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [0.108.1](https://github.com/robotcodedev/robotcode/compare/v0.108.0..v0.108.1) - 2025-02-03
+
+### Bug Fixes
+
+- **intellij:** Make comparing testitem uri's platform independend ([f597624](https://github.com/robotcodedev/robotcode/commit/f597624c6063410ba7f5afcc09a77c770636fd57))
+- **langserver:** Cache to_markdown methods ([39e509e](https://github.com/robotcodedev/robotcode/commit/39e509eb03ba01ae2b1fbce021640c2b76f8f1e6))
+- **langserver:** Only send complete documentation when resolving completion items for typed dicts and enums ([498af3c](https://github.com/robotcodedev/robotcode/commit/498af3c9845c181c0541bd21ae7b19bf6f137db4))
+
+
 ## [0.108.0](https://github.com/robotcodedev/robotcode/compare/v0.107.0..v0.108.0) - 2025-01-22
 
 ### Bug Fixes

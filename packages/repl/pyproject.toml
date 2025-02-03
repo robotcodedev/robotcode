@@ -27,7 +27,7 @@ classifiers = [
 ]
 dynamic = ["version"]
 dependencies = [
-  "robotcode-runner==0.108.0"
+  "robotcode-runner==0.108.1"
 ]
 
 [project.entry-points.robotcode]
