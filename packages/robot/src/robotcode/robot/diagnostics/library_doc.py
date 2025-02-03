@@ -80,6 +80,7 @@ from .entities import (
     LibraryArgumentDefinition,
     NativeValue,
     SourceEntity,
+    cached_method,
     single_call,
 )
 
@@ -362,7 +363,8 @@ class TypeDoc:
             )
         )
 
-    def to_markdown(self, header_level: int = 2) -> str:
+    @cached_method
+    def to_markdown(self, header_level: int = 2, only_doc: bool = False) -> str:
         result = ""
 
         result += f"##{'#' * header_level} {self.name} ({self.type})\n\n"
@@ -378,19 +380,22 @@ class TypeDoc:
             else:
                 result += self.doc
 
-        if self.members:
-            result += f"\n\n###{'#' * header_level} Allowed Values:\n\n"
-            result += "- " + "\n- ".join(f"`{m.name}`" for m in self.members)
+        if not only_doc:
+            if self.members:
+                result += f"\n\n###{'#' * header_level} Allowed Values:\n\n"
+                result += "- " + "\n- ".join(f"`{m.name}`" for m in self.members)
 
-        if self.items:
-            result += f"\n\n###{'#' * header_level} Dictionary Structure:\n\n"
-            result += "```\n{"
-            result += "\n ".join(f"'{m.key}': <{m.type}> {'# optional' if not m.required else ''}" for m in self.items)
-            result += "\n}\n```"
+            if self.items:
+                result += f"\n\n###{'#' * header_level} Dictionary Structure:\n\n"
+                result += "```\n{"
+                result += "\n ".join(
+                    f"'{m.key}': <{m.type}> {'# optional' if not m.required else ''}" for m in self.items
+                )
+                result += "\n}\n```"
 
-        if self.accepts:
-            result += f"\n\n###{'#' * header_level} Converted Types:\n\n"
-            result += "- " + "\n- ".join(self.accepts)
+            if self.accepts:
+                result += f"\n\n###{'#' * header_level} Converted Types:\n\n"
+                result += "- " + "\n- ".join(self.accepts)
 
         return result
 
@@ -475,6 +480,7 @@ class ArgumentInfo:
     def __str__(self) -> str:
         return self.signature()
 
+    @cached_method
     def signature(self, add_types: bool = True) -> str:
         prefix = ""
         if self.kind == KeywordArgumentKind.POSITIONAL_ONLY_MARKER:
@@ -721,6 +727,7 @@ class KeywordDoc(SourceEntity):
             ),
         )
 
+    @cached_method
     def to_markdown(
         self,
         add_signature: bool = True,
@@ -796,7 +803,7 @@ class KeywordDoc(SourceEntity):
 
                 result += (
                     f"\n| `{prefix}{a.name!s}`"
-                    f'| {": " if a.types else " "}'
+                    f"| {': ' if a.types else ' '}"
                     f"{escaped_pipe.join(f'`{escape_pipe(s)}`' for s in a.types) if a.types else ''} "
                     f"| {'=' if a.default_value is not None else ''} "
                     f"| {f'`{a.default_value!s}`' if a.default_value else ''} |"
@@ -832,6 +839,7 @@ class KeywordDoc(SourceEntity):
             + ")"
         )
 
+    @cached_method
     def parameter_signature(self, full_signatures: Optional[Sequence[int]] = None) -> str:
         return (
             "("
@@ -1094,6 +1102,7 @@ class LibraryDoc:
             ),
         )
 
+    @cached_method
     def to_markdown(
         self,
         add_signature: bool = True,
@@ -1250,6 +1259,7 @@ class VariablesDoc(LibraryDoc):
 
     variables: List[ImportedVariableDefinition] = field(default_factory=list)
 
+    @cached_method
     def to_markdown(
         self,
         add_signature: bool = True,

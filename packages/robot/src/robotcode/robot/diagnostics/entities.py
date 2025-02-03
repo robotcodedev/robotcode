@@ -5,12 +5,15 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
+    Generic,
     List,
     Optional,
     Tuple,
     TypeVar,
     cast,
 )
+
+from typing_extensions import Concatenate, ParamSpec
 
 from robot.parsing.lexer.tokens import Token
 from robotcode.core.lsp.types import Position, Range
@@ -39,6 +42,39 @@ def single_call(func: _F) -> _F:
         return result
 
     return cast(_F, wrapper)
+
+
+P = ParamSpec("P")
+R = TypeVar("R")
+
+
+class cached_method(Generic[P, R]):  # noqa: N801
+    def __init__(
+        self, func: Optional[Callable[Concatenate[Any, P], R]] = None, *, maxsize: Optional[int] = None
+    ) -> None:
+        self.func: Optional[Callable[Concatenate[Any, P], R]] = func
+        self._maxsize = maxsize
+        self.cache_name: Optional[str] = None
+        if func is not None:
+            functools.update_wrapper(self, func)
+
+    def __set_name__(self, owner: type, name: str) -> None:
+        self.cache_name = f"__cached_{owner.__name__}_{name}"
+
+    def __call__(self, func: Callable[Concatenate[Any, P], R]) -> "cached_method[P, R]":
+        self.func = func
+        functools.update_wrapper(self, func)
+        return self
+
+    def __get__(self, instance: Any, owner: Optional[type] = None) -> Callable[P, R]:
+        cached = instance.__dict__.get(self.cache_name, _NOT_SET)
+        if cached is _NOT_SET:
+            assert self.func is not None
+
+            bound_method = self.func.__get__(instance, owner)
+            cached = functools.lru_cache(maxsize=self._maxsize)(bound_method)
+            instance.__dict__[self.cache_name] = cached
+        return cast(Callable[P, R], cached)
 
 
 @dataclass
