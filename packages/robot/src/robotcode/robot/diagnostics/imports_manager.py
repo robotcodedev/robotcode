@@ -610,7 +610,8 @@ class ImportsManager:
 
     def clear_cache(self) -> None:
         if self.cache_path.exists():
-            shutil.rmtree(self.cache_path)
+            shutil.rmtree(self.cache_path, ignore_errors=True)
+
             self._logger.debug(lambda: f"Cleared cache {self.cache_path}")
 
     @_logger.call

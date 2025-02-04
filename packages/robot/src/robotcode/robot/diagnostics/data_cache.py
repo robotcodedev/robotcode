@@ -27,9 +27,19 @@ class DataCache(ABC):
     def save_cache_data(self, section: CacheSection, entry_name: str, data: Any) -> None: ...
 
 
-class JsonDataCache(DataCache):
+class FileCacheDataBase(DataCache, ABC):
     def __init__(self, cache_dir: Path) -> None:
         self.cache_dir = cache_dir
+
+        if not Path.exists(self.cache_dir):
+            Path.mkdir(self.cache_dir, parents=True)
+            Path(self.cache_dir / ".gitignore").write_text(
+                "# Created by robotcode\n*\n",
+                "utf-8",
+            )
+
+
+class JsonDataCache(FileCacheDataBase):
 
     def build_cache_data_filename(self, section: CacheSection, entry_name: str) -> Path:
         return self.cache_dir / section.value / (entry_name + ".json")
@@ -51,10 +61,7 @@ class JsonDataCache(DataCache):
         cached_file.write_text(as_json(data), "utf-8")
 
 
-class PickleDataCache(DataCache):
-    def __init__(self, cache_dir: Path) -> None:
-        self.cache_dir = cache_dir
-
+class PickleDataCache(FileCacheDataBase):
     def build_cache_data_filename(self, section: CacheSection, entry_name: str) -> Path:
         return self.cache_dir / section.value / (entry_name + ".pkl")
 
