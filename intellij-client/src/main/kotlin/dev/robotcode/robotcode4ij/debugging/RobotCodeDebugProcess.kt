@@ -90,7 +90,7 @@ class RobotCodeDebugProcess(
                 }
             }
             
-            "exception" -> { // TODO session.exceptionCaught()
+            "exception" -> {
                 if (!session.breakpointReached(
                         exceptionBreakpoints.first().breakpoint,
                         null,

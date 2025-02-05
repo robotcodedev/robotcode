@@ -162,8 +162,11 @@ class StackTraceResult(NamedTuple):
 
 
 class InvalidThreadIdError(Exception):
-    def __init__(self, thread_id: Any) -> None:
-        super().__init__(f"Invalid thread id {thread_id}")
+    def __init__(self, current_thread_id: Any, expected_thread_id: Any = None) -> None:
+        super().__init__(
+            f"Invalid thread id {current_thread_id}"
+            + (f", expected {expected_thread_id}" if expected_thread_id is not None else "")
+        )
 
 
 class MarkerObject:
@@ -429,12 +432,12 @@ class Debugger:
         with self.condition:
             self.state = State.Stopped
 
-            if self.main_thread is not None and self.main_thread.ident:
+            if self.main_thread_is_alive:
                 self.send_event(
                     self,
                     ContinuedEvent(
                         body=ContinuedEventBody(
-                            thread_id=self.main_thread.ident,
+                            thread_id=self.main_thread_id,
                             all_threads_continued=True,
                         )
                     ),
@@ -442,22 +445,24 @@ class Debugger:
 
             self.condition.notify_all()
 
+    def check_thread_id(self, thread_id: int) -> None:
+        if not self.main_thread_is_alive and thread_id != self.main_thread_id:
+            raise InvalidThreadIdError(thread_id, self.main_thread_id)
+
     def continue_all(self) -> None:
-        if self.main_thread is not None and self.main_thread.ident is not None:
-            self.continue_thread(self.main_thread.ident)
+        if self.main_thread_is_alive:
+            self.continue_thread(self.main_thread_id)
 
     def continue_thread(self, thread_id: int) -> None:
-        if self.main_thread is None or thread_id != self.main_thread.ident:
-            raise InvalidThreadIdError(thread_id)
+        self.check_thread_id(thread_id)
 
         with self.condition:
             self.requested_state = RequestedState.Running
             self.condition.notify_all()
 
     def pause_thread(self, thread_id: int) -> None:
-        # thread_id 0 means all threads
-        if self.main_thread is None or (thread_id != 0 and thread_id != self.main_thread.ident):
-            raise InvalidThreadIdError(thread_id)
+        if thread_id != 0:
+            self.check_thread_id(thread_id)
 
         with self.condition:
             self.requested_state = RequestedState.Pause
@@ -465,8 +470,7 @@ class Debugger:
             self.condition.notify_all()
 
     def next(self, thread_id: int, granularity: Optional[SteppingGranularity] = None) -> None:
-        if self.main_thread is None or thread_id != self.main_thread.ident:
-            raise InvalidThreadIdError(thread_id)
+        self.check_thread_id(thread_id)
 
         with self.condition:
             if self.full_stack_frames and self.full_stack_frames[0].type in [
@@ -500,8 +504,7 @@ class Debugger:
         target_id: Optional[int] = None,
         granularity: Optional[SteppingGranularity] = None,
     ) -> None:
-        if self.main_thread is None or thread_id != self.main_thread.ident:
-            raise InvalidThreadIdError(thread_id)
+        self.check_thread_id(thread_id)
 
         with self.condition:
             self.requested_state = RequestedState.StepIn
@@ -509,8 +512,7 @@ class Debugger:
             self.condition.notify_all()
 
     def step_out(self, thread_id: int, granularity: Optional[SteppingGranularity] = None) -> None:
-        if self.main_thread is None or thread_id != self.main_thread.ident:
-            raise InvalidThreadIdError(thread_id)
+        self.check_thread_id(thread_id)
 
         with self.condition:
             self.requested_state = RequestedState.StepOut
@@ -589,7 +591,7 @@ class Debugger:
                     body=StoppedEventBody(
                         description="Paused",
                         reason=StoppedReason.PAUSE,
-                        thread_id=threading.current_thread().ident,
+                        thread_id=self.main_thread_id,
                     )
                 ),
             )
@@ -605,7 +607,7 @@ class Debugger:
                         body=StoppedEventBody(
                             description="Next step",
                             reason=StoppedReason.STEP,
-                            thread_id=threading.current_thread().ident,
+                            thread_id=self.main_thread_id,
                         )
                     ),
                 )
@@ -620,7 +622,7 @@ class Debugger:
                     body=StoppedEventBody(
                         description="Step in",
                         reason=StoppedReason.STEP,
-                        thread_id=threading.current_thread().ident,
+                        thread_id=self.main_thread_id,
                     )
                 ),
             )
@@ -635,7 +637,7 @@ class Debugger:
                     body=StoppedEventBody(
                         description="Step out",
                         reason=StoppedReason.STEP,
-                        thread_id=threading.current_thread().ident,
+                        thread_id=self.main_thread_id,
                     )
                 ),
             )
@@ -708,7 +710,7 @@ class Debugger:
                                 body=StoppedEventBody(
                                     description="Breakpoint hit",
                                     reason=StoppedReason.BREAKPOINT,
-                                    thread_id=threading.current_thread().ident,
+                                    thread_id=self.main_thread_id,
                                     hit_breakpoint_ids=[breakpoint_id_manager.get_id(v) for v in breakpoints],
                                 )
                             ),
@@ -747,7 +749,7 @@ class Debugger:
                 StoppedEvent(
                     body=StoppedEventBody(
                         reason=reason,
-                        thread_id=threading.current_thread().ident,
+                        thread_id=self.main_thread_id,
                         description=description,
                         text=text,
                     )
@@ -782,12 +784,12 @@ class Debugger:
                 if self.requested_state == RequestedState.Running:
                     self.requested_state = RequestedState.Nothing
                     self.state = State.Running
-                    if self.main_thread is not None and self.main_thread.ident is not None:
+                    if self.main_thread_is_alive:
                         self.send_event(
                             self,
                             ContinuedEvent(
                                 body=ContinuedEventBody(
-                                    thread_id=self.main_thread.ident,
+                                    thread_id=self.main_thread_id,
                                     all_threads_continued=True,
                                 )
                             ),
@@ -947,7 +949,7 @@ class Debugger:
                     StoppedEvent(
                         body=StoppedEventBody(
                             reason=StoppedReason.ENTRY,
-                            thread_id=threading.current_thread().ident,
+                            thread_id=self.main_thread_id,
                         )
                     ),
                 )
@@ -1221,15 +1223,25 @@ class Debugger:
     def set_main_thread(self, thread: threading.Thread) -> None:
         self.main_thread = thread
 
-    def get_threads(self) -> List[Thread]:
-        main_thread = self.main_thread or threading.main_thread()
+    @property
+    def main_thread_id(self) -> int:
+        return 1 if self.main_thread_is_alive else 0
 
-        return [
-            Thread(
-                id=main_thread.ident if main_thread.ident else 0,
-                name=main_thread.name or "",
-            )
-        ]
+    @property
+    def main_thread_is_alive(self) -> bool:
+        return self.main_thread is not None and self.main_thread.is_alive()
+
+    def get_threads(self) -> List[Thread]:
+        return (
+            [
+                Thread(
+                    id=self.main_thread_id,
+                    name="RobotMain",
+                )
+            ]
+            if self.main_thread_is_alive
+            else []
+        )
 
     WINDOW_PATH_REGEX: ClassVar = re.compile(r"^(([a-z]:[\\/])|(\\\\)).*$", re.RegexFlag.IGNORECASE)
 
@@ -1281,8 +1293,7 @@ class Debugger:
         levels: Optional[int] = None,
         format: Optional[StackFrameFormat] = None,
     ) -> StackTraceResult:
-        if self.main_thread is None or thread_id != self.main_thread.ident:
-            raise InvalidThreadIdError(thread_id)
+        self.check_thread_id(thread_id)
 
         start_frame = start_frame or 0
         levels = start_frame + (levels or len(self.stack_frames))
