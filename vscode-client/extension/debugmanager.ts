@@ -3,7 +3,7 @@ import * as vscode from "vscode";
 import { PythonManager } from "./pythonmanger";
 import { CONFIG_SECTION } from "./config";
 import { LanguageClientsManager, SUPPORTED_LANGUAGES, toVsCodeRange } from "./languageclientsmanger";
-import { WeakValueSet, waitForFile, sleep } from "./utils";
+import { WeakValueSet, waitForFile, sleep, escapeRobotGlobPatterns } from "./utils";
 import * as cp from "child_process";
 import { tmpdir } from "os";
 import { join } from "path";
@@ -496,7 +496,7 @@ export class DebugManager {
     if (needs_parse_include) {
       for (const s of rel_sources) {
         args.push("--parse-include");
-        args.push(s);
+        args.push(escapeRobotGlobPatterns(s));
       }
     }
 
@@ -507,7 +507,7 @@ export class DebugManager {
 
     for (const s of suites) {
       args.push("--suite");
-      args.push(s);
+      args.push(escapeRobotGlobPatterns(s));
     }
 
     if (included.length > 0) {

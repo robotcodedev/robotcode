@@ -4,7 +4,7 @@ import { DebugManager } from "./debugmanager";
 import * as fs from "fs";
 
 import { ClientState, LanguageClientsManager, toVsCodeRange } from "./languageclientsmanger";
-import { filterAsync, Mutex, sleep, truncateAndReplaceNewlines, WeakValueMap } from "./utils";
+import { escapeRobotGlobPatterns, filterAsync, Mutex, sleep, truncateAndReplaceNewlines, WeakValueMap } from "./utils";
 import { CONFIG_SECTION } from "./config";
 import { Range, Diagnostic, DiagnosticSeverity } from "vscode-languageclient/node";
 
@@ -819,10 +819,10 @@ export class TestControllerManager {
         ["discover", "--read-from-stdin", "tests"],
         [
           ...(robotWorkspaceItem?.needsParseInclude && testItem.relSource
-            ? ["--parse-include", testItem.relSource]
+            ? ["--parse-include", escapeRobotGlobPatterns(testItem.relSource)]
             : []),
           "--suite",
-          testItem?.longname,
+          escapeRobotGlobPatterns(testItem.longname),
         ],
         JSON.stringify(o),
         false,

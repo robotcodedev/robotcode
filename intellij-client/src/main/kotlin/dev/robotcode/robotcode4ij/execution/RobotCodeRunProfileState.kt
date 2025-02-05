@@ -103,7 +103,7 @@ class RobotCodeRunProfileState(private val config: RobotCodeRunConfiguration, en
                 *connection.toTypedArray(),
                 *(if (!debug) arrayOf("--no-debug") else arrayOf()),
                 *(included.toTypedArray())
-            ), noColor = false // extraArgs = arrayOf("-v", "--log", "--log-level", "TRACE")
+            ), noColor = false ,extraArgs = arrayOf("-v", "--log", "--log-level", "TRACE")
         
         )
         

@@ -29,6 +29,7 @@ import dev.robotcode.robotcode4ij.RobotSuiteFileType
 import dev.robotcode.robotcode4ij.buildRobotCodeCommandLine
 import dev.robotcode.robotcode4ij.psi.IRobotFrameworkElementType
 import dev.robotcode.robotcode4ij.psi.RobotSuiteFile
+import dev.robotcode.robotcode4ij.utils.escapeRobotGlob
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -173,11 +174,11 @@ import java.util.*
                         "--read-from-stdin",
                         "tests",
                         *(if (testItem.needsParseInclude == true && testItem.relSource != null) arrayOf(
-                            "--needs-parse-include", testItem.relSource
+                            "--needs-parse-include", escapeRobotGlob(testItem.relSource)
                         )
                         else arrayOf<String>()),
                         "--suite",
-                        testItem.longname
+                        escapeRobotGlob(testItem.longname)
                     ), format = "json"
                 ).withCharset(Charsets.UTF_8).withWorkDirectory(project.basePath)
                 
