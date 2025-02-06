@@ -1918,18 +1918,18 @@
     "vscode-languageclient": "^9.0.1"
   },
   "devDependencies": {
-    "@eslint/compat": "^1.2.5",
+    "@eslint/compat": "^1.2.6",
     "@eslint/eslintrc": "^3.2.0",
-    "@eslint/js": "^9.18.0",
+    "@eslint/js": "^9.19.0",
     "@jgoz/esbuild-plugin-typecheck": "^4.0.2",
     "@types/fs-extra": "^11.0.4",
-    "@types/node": "^22.10.7",
+    "@types/node": "^22.13.1",
     "@types/vscode": "^1.90.0",
     "@types/vscode-notebook-renderer": "^1.72.3",
     "@vscode/python-extension": "^1.0.5",
-    "@vscode/vsce": "^3.2.1",
+    "@vscode/vsce": "^3.2.2",
     "esbuild": "^0.24.2",
-    "eslint": "^9.18.0",
+    "eslint": "^9.19.0",
     "eslint-config-prettier": "^10.0.1",
     "eslint-plugin-prettier": "^5.2.3",
     "globals": "^15.14.0",
@@ -1938,7 +1938,7 @@
     "prettier": "^3.4.2",
     "ts-loader": "^9.5.2",
     "typescript": "^5.7.3",
-    "typescript-eslint": "^8.21.0"
+    "typescript-eslint": "^8.23.0"
   },
   "workspaces": [
     "docs"
