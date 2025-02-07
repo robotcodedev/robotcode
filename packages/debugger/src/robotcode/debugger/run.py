@@ -118,16 +118,17 @@ def start_debugpy(
         global config_done_callback
 
         def connect_debugpy(server: "DebugAdapterServer") -> None:
-            server.protocol.send_event(
-                Event(
-                    event="debugpyStarted",
-                    body={
-                        "port": port,
-                        "addresses": addresses,
-                        "processId": os.getpid(),
-                    },
+            if not os.environ.get("DEBUGPY_ADAPTER_ENDPOINTS", None):
+                server.protocol.send_event(
+                    Event(
+                        event="debugpyStarted",
+                        body={
+                            "port": port,
+                            "addresses": addresses,
+                            "processId": os.getpid(),
+                        },
+                    )
                 )
-            )
 
             if wait_for_debugpy_client:
                 app.verbose(f"Wait for debugpy incomming connections listening on {addresses}:{port}")
