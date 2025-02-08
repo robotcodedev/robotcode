@@ -1,0 +1,2 @@
+#! /bin/bash
+python3 $ROBOTCODE_BUNDLED_ROBOTCODE_MAIN $@

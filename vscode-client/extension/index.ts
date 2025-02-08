@@ -6,6 +6,7 @@ import { TestControllerManager } from "./testcontrollermanager";
 import { KeywordsTreeViewProvider } from "./keywordsTreeViewProvider";
 import { LanguageToolsManager } from "./languageToolsManager";
 import { NotebookManager } from "./notebook";
+import path from "path";
 
 class TerminalLink extends vscode.TerminalLink {
   constructor(
@@ -154,12 +155,20 @@ export async function activateAsync(context: vscode.ExtensionContext): Promise<v
     }),
   );
 
-  context.environmentVariableCollection.clear();
-  context.environmentVariableCollection.description = new vscode.MarkdownString(
-    "Disable ANSI links in `robot`'s terminal output.",
-  );
+  const collection = context.environmentVariableCollection;
+  collection.description = new vscode.MarkdownString("RobotCode specific variables.");
 
-  context.environmentVariableCollection.replace("ROBOTCODE_DISABLE_ANSI_LINKS", "1");
+  collection.clear();
+
+  const pathSeparator = process.platform === "win32" ? ";" : ":";
+  const scriptsDir = context.asAbsolutePath(path.join("bundled", "scripts"));
+
+  collection.append("PATH", `${pathSeparator}${scriptsDir}`, {
+    applyAtShellIntegration: true,
+  });
+
+  collection.replace("ROBOTCODE_DISABLE_ANSI_LINKS", "1");
+  collection.replace("ROBOTCODE_BUNDLED_ROBOTCODE_MAIN", pythonManager.robotCodeMain);
 
   languageClientManger.refresh();
 }

@@ -128,35 +128,39 @@ def list(app: Application, paths: List[Path], show_hidden: bool = False, sort_by
                     lines = v[k].splitlines()
                     v[k] = " ".join(lines[:1]) + (" ..." if len(lines) > 1 else "")
 
-            header = ""
-            max_name = max(
-                0,
-                len("Name"),
-                *(len(profile["name"]) for profile in result["profiles"]),
-            )
-            max_description = max(
-                0,
-                len("Description"),
-                *(len(profile["description"]) for profile in result["profiles"]),
-            )
-            header += (
-                f'| Active | Selected | Enabled | Precedence | Name{(max_name - len("Name")) * " "} '
-                f'| Description{(max_description - len("Description")) * " "} |\n'
-            )
-            header += f"|:------:|:------:|:--------:|:-------:|:{max_name * '-'}-|:{max_description * '-'}-|\n"
-            for selected_profiles, enabled, name, description, precedence in (
-                (v["selected"], v["enabled"], v["name"], v["description"], v["precedence"]) for v in result["profiles"]
-            ):
-                header += (
-                    f'|   {"*" if selected_profiles and enabled else " "}    '
-                    f'|    {"*" if selected_profiles else " "}     '
-                    f'|    {"*" if enabled else " "}    '
-                    f'|    {precedence if precedence else " "}    '
-                    f'| {name}{(max_name - len(name)) * " "} '
-                    f'| {description if description else ""}{(max_description - len(description)) * " "} |\n'
+            output = ""
+            if result["profiles"]:
+                max_name = max(
+                    0,
+                    len("Name"),
+                    *(len(profile["name"]) for profile in result["profiles"]),
                 )
+                max_description = max(
+                    0,
+                    len("Description"),
+                    *(len(profile["description"]) for profile in result["profiles"]),
+                )
+                output += (
+                    f'| Active | Selected | Enabled | Precedence | Name{(max_name - len("Name")) * " "} '
+                    f'| Description{(max_description - len("Description")) * " "} |\n'
+                )
+                output += f"|:------:|:------:|:--------:|:-------:|:{max_name * '-'}-|:{max_description * '-'}-|\n"
+                for selected_profiles, enabled, name, description, precedence in (
+                    (v["selected"], v["enabled"], v["name"], v["description"], v["precedence"])
+                    for v in result["profiles"]
+                ):
+                    output += (
+                        f'|   {"*" if selected_profiles and enabled else " "}    '
+                        f'|    {"*" if selected_profiles else " "}     '
+                        f'|    {"*" if enabled else " "}    '
+                        f'|    {precedence if precedence else " "}    '
+                        f'| {name}{(max_name - len(name)) * " "} '
+                        f'| {description if description else ""}{(max_description - len(description)) * " "} |\n'
+                    )
+            else:
+                output += "No profiles defined.\n"
 
-            app.echo_as_markdown(header)
+            app.echo_as_markdown(output)
         else:
             app.print_data(result)
 
