@@ -15,7 +15,7 @@ import kotlinx.coroutines.flow.onEach
 class RobotCodePostStartupActivity : ProjectActivity {
     override suspend fun execute(project: Project) {
         project.langServerManager.start()
-        project.testManger.refresh()
+        project.testManger.refreshDebounced()
         
         VirtualFileManager.getInstance().addAsyncFileListener(RobotCodeVirtualFileListener(project), project.testManger)
         
@@ -24,7 +24,7 @@ class RobotCodePostStartupActivity : ProjectActivity {
             if (moduleChanges.filterIsInstance<EntityChange.Replaced<ModuleEntity>>().isNotEmpty()) {
                 project.checkPythonAndRobotVersion(true)
                 project.langServerManager.restart()
-                project.testManger.refresh()
+                project.testManger.refreshDebounced()
             }
         }.collect()
     }

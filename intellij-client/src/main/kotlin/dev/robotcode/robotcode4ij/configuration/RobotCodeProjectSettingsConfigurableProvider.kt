@@ -47,11 +47,6 @@ class RobotCodeProjectSettingsConfigurable(private val project: Project) : Bound
                 }.rowComment("Specifies robot execution mode. Corresponds to the `--rpa` or `--norpa` option of __robot__.")
             }
             group("Editing") { // TODO: not supported in IntelliJ
-                // group("Editor") {
-                //     row {
-                //         checkBox("4 Spaces Tab").bindSelected(settings::editor4SpacesTab)
-                //     }.rowComment("If actived insert 4 spaces if TAB is pressed.")
-                // }
                 group("Completion") {
                     row {
                         checkBox("Filter Default Language").bindSelected(settings::completionFilterDefaultLanguage)
@@ -101,14 +96,12 @@ class RobotCodeProjectConfiguration :
     }
     
     class ProjectState : BaseState() {
-        // TODO var editor4SpacesTab by property(defaultValue = true)
         var completionFilterDefaultLanguage by property(defaultValue = false)
         var completionHeaderStyle by string()
         var inlayHintsParameterNames by property(defaultValue = false)
         var inlayHintsNamespaces by property(defaultValue = false)
     }
     
-    // TODO var editor4SpacesTab by delegate(ProjectState::editor4SpacesTab)
     var completionFilterDefaultLanguage by delegate(ProjectState::completionFilterDefaultLanguage)
     var completionHeaderStyle by stringDelegate(ProjectState::completionHeaderStyle)
     var inlayHintsParameterNames by delegate(ProjectState::inlayHintsParameterNames)

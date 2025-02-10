@@ -32,6 +32,7 @@ import dev.robotcode.robotcode4ij.psi.RobotSuiteFile
 import dev.robotcode.robotcode4ij.utils.escapeRobotGlob
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -114,7 +115,8 @@ import java.util.*
         }
     }
     
-    private val refreshScope = CoroutineScope(Dispatchers.Default)
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private val refreshScope = CoroutineScope(Dispatchers.IO.limitedParallelism(1))
     
     fun refreshDebounced(file: VirtualFile) {
         if (!project.isOpen || project.isDisposed) {
@@ -129,7 +131,7 @@ import java.util.*
         }
         if (refreshJob != null) {
             thisLogger().info("Cancelling previous refresh job")
-            runBlocking { refreshJob?.join() }
+            //runBlocking { refreshJob?.join() }
         }
         refreshJobs[file] = refreshScope.launch {
             delay(DEBOUNCE_DELAY)
