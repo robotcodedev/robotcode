@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [0.109.1](https://github.com/robotcodedev/robotcode/compare/v0.109.0..v0.109.1) - 2025-02-10
+
+### Bug Fixes
+
+- **vscode:** Correct appending profile options to robotcode commands ([8746faa](https://github.com/robotcodedev/robotcode/commit/8746faae84ab2bc2a0e0a972fcd7f84e844f1bba))
+
+
 ## [0.109.0](https://github.com/robotcodedev/robotcode/compare/v0.108.1..v0.109.0) - 2025-02-10
 
 ### Bug Fixes
