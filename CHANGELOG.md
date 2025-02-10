@@ -2,6 +2,28 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [0.109.0](https://github.com/robotcodedev/robotcode/compare/v0.108.1..v0.109.0) - 2025-02-10
+
+### Bug Fixes
+
+- **debugger:** Use 32-bit thread IDs for improved compatibility with some LSP clients ([5055763](https://github.com/robotcodedev/robotcode/commit/50557638c258b7496cbb4097b358ed1fe0075523))
+- **debugger:** If there is already a debugpy adapter endpoint defined we don't need explicitly attach the python debugger ([7f3010a](https://github.com/robotcodedev/robotcode/commit/7f3010a92b8737f0f9608bedbeb166a95c96b46b))
+- **intellij:** Stabilize test discovery at project startup ([7aeb379](https://github.com/robotcodedev/robotcode/commit/7aeb37974da360630d20416475ba407d39163cc5))
+- **vscode,intellij:** Escape glob patterns in --suite and --parse-include arguments for discover and executing tests ([4007481](https://github.com/robotcodedev/robotcode/commit/40074816b4a87cb1fb1c4f937d215457fb2e905f))
+
+
+### Features
+
+- **robotcode:** Automatically create `.gitignore` in `.robotcode_cache` ([79d14e4](https://github.com/robotcodedev/robotcode/commit/79d14e4e0173527eabbd4cd119f36feacc7c18d5))
+
+  You no longer need to manually add `.robotcode_cache` to your `.gitignore` file, as it is now automatically ignored.
+  If you already have an existing `.robotcode_cache` folder, simply run the command `RobotCode: Clear Cache and Restart Language Servers`.
+  For IntelliJ-based platforms, you can find this command in the **RobotCode** menu under the **Tools** main menu.
+
+- **vscode:** Add shell integration to run RobotCode in a VSCode terminal without requiring Python package installation ([febf5d8](https://github.com/robotcodedev/robotcode/commit/febf5d898c744df29f388173a06f1197e333efab))
+- **vscode:** Use shell integration instead of full python command line to start repl if shell integration is enabled ([50426a2](https://github.com/robotcodedev/robotcode/commit/50426a26c700702d1eeeb85ca8e642f33a2b413c))
+
+
 ## [0.108.1](https://github.com/robotcodedev/robotcode/compare/v0.108.0..v0.108.1) - 2025-02-03
 
 ### Bug Fixes
