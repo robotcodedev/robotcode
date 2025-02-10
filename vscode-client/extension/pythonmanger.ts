@@ -265,7 +265,7 @@ export class PythonManager {
       ...(format ? ["--format", format] : []),
       ...(noColor ? ["--no-color"] : []),
       ...(noPager ? ["--no-pager"] : []),
-      ...(profiles !== undefined ? profiles.flatMap((v) => ["--p", v]) : []),
+      ...(profiles !== undefined ? profiles.flatMap((v) => ["-p", v]) : []),
       ...args,
     ];
     return { pythonCommand, final_args };

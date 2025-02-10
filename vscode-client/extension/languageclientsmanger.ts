@@ -462,7 +462,7 @@ export class LanguageClientsManager {
       return getAvailablePort(["127.0.0.1"]);
     };
 
-    const profiles = config.get<string[]>("profiles", []).flatMap((v) => ["--profile", v]);
+    const profiles = config.get<string[]>("profiles", []).flatMap((v) => ["-p", v]);
 
     return {
       run: {
