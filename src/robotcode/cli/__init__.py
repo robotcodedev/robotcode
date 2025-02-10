@@ -303,23 +303,3 @@ robotcode.add_command(profiles)
 
 for c in PluginManager.instance().cli_commands:
     robotcode.add_command(c)
-
-
-@robotcode.command()
-@click.pass_context
-def clean(ctx: click.Context) -> None:
-    """TODO: Cleans a Robot Framework project.
-
-    TODO: This is not implemented yet.
-    """
-    click.echo("TODO")
-
-
-@robotcode.command()
-@click.pass_context
-def new(ctx: click.Context) -> None:
-    """TODO: Create a new Robot Framework project.
-
-    TODO: This is not implemented yet.
-    """
-    click.echo("TODO")
