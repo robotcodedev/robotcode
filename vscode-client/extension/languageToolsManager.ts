@@ -39,6 +39,37 @@ type QuickPickActionItem = {
   action?(folder?: vscode.WorkspaceFolder): Promise<void>;
 };
 
+async function waitForShellIntegration(
+  folder: vscode.WorkspaceFolder,
+  terminal: vscode.Terminal,
+  timeout: number = 3000,
+): Promise<boolean> {
+  const config = vscode.workspace.getConfiguration("terminal.integrated.shellIntegration", folder);
+  const enabled = config.get("enabled", false);
+  if (!enabled) {
+    return false;
+  }
+
+  return new Promise<boolean>((resolve) => {
+    if (terminal.shellIntegration) {
+      resolve(true);
+      return;
+    }
+
+    const listener = vscode.window.onDidChangeTerminalShellIntegration((event) => {
+      if (event.terminal === terminal) {
+        listener.dispose();
+        resolve(true);
+      }
+    });
+
+    setTimeout(() => {
+      listener.dispose();
+      resolve(false);
+    }, timeout);
+  });
+}
+
 export class LanguageToolsManager {
   private _workspaceFolderLanguageStatuses = new WeakMap<vscode.WorkspaceFolder, ProjectInfo>();
   private _disposables: vscode.Disposable;
@@ -237,20 +268,27 @@ export class LanguageToolsManager {
           const config = vscode.workspace.getConfiguration(CONFIG_SECTION, folder);
           const profiles = config.get<string[]>("profiles", []);
 
-          const { pythonCommand, final_args } = await this.pythonManager.buildRobotCodeCommand(
-            folder,
-            ["repl"],
-            profiles,
-          );
-          vscode.window
-            .createTerminal({
-              name: `Robot REPL${vscode.workspace.workspaceFolders?.length === 1 ? "" : ` (${folder.name})`}`,
-              shellPath: pythonCommand,
-              shellArgs: final_args,
-              cwd: folder.uri,
-              iconPath: new vscode.ThemeIcon("robotcode-robot"),
-            })
-            .show();
+          const terminal = vscode.window.createTerminal({
+            name: `Robot REPL${vscode.workspace.workspaceFolders?.length === 1 ? "" : ` (${folder.name})`}`,
+            cwd: folder.uri,
+            iconPath: new vscode.ThemeIcon("robotcode-robot"),
+            isTransient: false,
+          });
+          terminal.show();
+          const shellIntegrationActive = await waitForShellIntegration(folder, terminal);
+          if (shellIntegrationActive) {
+            terminal.shellIntegration?.executeCommand("robotcode", [
+              ...(profiles !== undefined ? profiles.flatMap((v) => ["-p", v]) : []),
+              "repl",
+            ]);
+          } else {
+            const { pythonCommand, final_args } = await this.pythonManager.buildRobotCodeCommand(
+              folder,
+              ["repl"],
+              profiles,
+            );
+            terminal.sendText(`${pythonCommand} ${final_args.join(" ")}`, true);
+          }
         },
       ),
       vscode.commands.registerCommand("robotcode.disableRoboCop", async () => {
