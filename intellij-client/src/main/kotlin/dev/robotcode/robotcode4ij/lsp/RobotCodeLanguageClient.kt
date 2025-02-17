@@ -7,7 +7,7 @@ import dev.robotcode.robotcode4ij.configuration.RobotCodeProjectConfiguration
 
 class RobotCodeLanguageClient(project: Project?) : IndexAwareLanguageClient(project) {
     
-    override fun handleServerStatusChanged(serverStatus: ServerStatus?) {
+    override fun handleServerStatusChanged(serverStatus: ServerStatus) {
         if (serverStatus == ServerStatus.started) {
             triggerChangeConfiguration()
         }
