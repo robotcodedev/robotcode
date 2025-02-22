@@ -344,7 +344,7 @@ private fun getRfcCompliantUri(virtualFile: VirtualFile): String {
         filePath
     }
     
-    return Paths.get(normalizedPath).toUri().toString()
+    return Paths.get(normalizedPath).toUri().toString().removeSuffix("/")
 }
 
 private fun isWindows(): Boolean = System.getProperty("os.name").lowercase().contains("win")
