@@ -93,6 +93,7 @@
 								id="dev.robotcode.robotcode4ij.editor.RobotCodeStatusBarWidget"/>
 		<editorActionHandler action="EditorTab"
 							 implementationClass="dev.robotcode.robotcode4ij.editor.RobotCodeEditorTabActionHandler"/>
+
 	</extensions>
 
 	<extensions defaultExtensionNs="com.redhat.devtools.lsp4ij">
@@ -112,6 +113,7 @@
 		<semanticTokensColorsProvider serverId="RobotCode" id="robotframework"
 									  class="dev.robotcode.robotcode4ij.lsp.RobotCodeSemanticTokensColorsProvider"/>
 	</extensions>
+
 	<actions>
 		<action id="dev.robotcode.robotcode4ij.actions.RobotCodeCreateFileAction"
 				class="dev.robotcode.robotcode4ij.actions.RobotCodeCreateFileAction">
