@@ -563,19 +563,19 @@ def print_statistics(app: Application, suite: TestSuite, collector: Collector) -
     def print() -> Iterable[str]:
         yield click.style("Statistics:", underline=True, fg="blue")
         yield os.linesep
-        yield click.style("  - Suites: ", underline=True, bold=True, fg="blue")
+        yield click.style("  - Suites: ", bold=True, fg="blue")
         yield f"{collector.statistics.suites}{os.linesep}"
         if collector.statistics.suites_with_tests:
-            yield click.style("  - Suites with tests: ", underline=True, bold=True, fg="blue")
+            yield click.style("  - Suites with tests: ", bold=True, fg="blue")
             yield f"{collector.statistics.suites_with_tests}{os.linesep}"
         if collector.statistics.suites_with_tasks:
-            yield click.style("  - Suites with tasks: ", underline=True, bold=True, fg="blue")
+            yield click.style("  - Suites with tasks: ", bold=True, fg="blue")
             yield f"{collector.statistics.suites_with_tasks}{os.linesep}"
         if collector.statistics.tests:
-            yield click.style("  - Tests: ", underline=True, bold=True, fg="blue")
+            yield click.style("  - Tests: ", bold=True, fg="blue")
             yield f"{collector.statistics.tests}{os.linesep}"
         if collector.statistics.tasks:
-            yield click.style("  - Tasks: ", underline=True, bold=True, fg="blue")
+            yield click.style("  - Tasks: ", bold=True, fg="blue")
             yield f"{collector.statistics.tasks}{os.linesep}"
 
     app.echo_via_pager(print())
