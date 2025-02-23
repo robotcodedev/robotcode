@@ -175,5 +175,5 @@ package = ["python scripts/package.py"]
 publish = ["python scripts/publish.py"]
 extract-release-notes = ["python scripts/extract_release_notes.py"]
 is-prerelease = ["python scripts/is_prerelease.py"]
-bump = ["cz bump"]
+bump = ["cz bump {args}"]
 install-bundled-editable = "python ./scripts/install_bundled_editable.py"
