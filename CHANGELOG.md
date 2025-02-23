@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [0.109.2](https://github.com/robotcodedev/robotcode/compare/v0.109.1..v0.109.2) - 2025-02-23
+
+### Bug Fixes
+
+- **intellij:** Remove trailing slash from URIs ([62fde84](https://github.com/robotcodedev/robotcode/commit/62fde847aff911f0e6e7b521c1e564f8a0fa2455))
+
+
+### Refactor
+
+- **robotcode:** Remove `clean` and `new` command because we implement it later ([6da369a](https://github.com/robotcodedev/robotcode/commit/6da369ae69c1f3f6b1f97c9952d3035dc713076f))
+
+  create enhancement request #393
+
+- **runner:** Remove underlining from statistics output ([6fdd81d](https://github.com/robotcodedev/robotcode/commit/6fdd81d03d0d9ba826f331f32c739662d947609f))
+
+
 ## [0.109.1](https://github.com/robotcodedev/robotcode/compare/v0.109.0..v0.109.1) - 2025-02-10
 
 ### Bug Fixes
