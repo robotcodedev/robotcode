@@ -76,6 +76,7 @@ commit_parsers = [
   { message = "^Feature", group = "Features" },
   { message = "^fix", group = "Bug Fixes" },
   { message = "^doc", group = "Documentation" },
+  { message = "^docs", group = "Documentation" },
   { message = "^perf", group = "Performance" },
   { message = "^refactor", group = "Refactor" },
   { message = "^style", group = "Styling", skip = true },

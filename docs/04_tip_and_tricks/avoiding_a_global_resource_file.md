@@ -78,7 +78,7 @@ If modifying your project structure is not possible, consider mitigating potenti
   ]
   ```
 
-  Or you can also use a [`robot.toml`](http://localhost:5173/03_reference/config) file and add the following contents:
+  Or you can also use a [`robot.toml`](/03_reference/config) file and add the following contents:
 
   ```toml
   [tool.robotcode-analyze.modifiers]
