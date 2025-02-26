@@ -69,34 +69,47 @@ The recommended solution is to **modularize your resources**:
 
 This modular approach not only eliminates issues like circular dependencies and performance bottlenecks but also enhances maintainability and clarity. It ensures that suite settings clearly document which components are required for each test suite.
 
-### When Restructuring Isn’t Possible
+## When Restructuring Isn’t Possible
 
-If restructuring your project is not an option, you can mitigate potential issues by managing the warnings provided by your development environment. For instance, you can suppress warnings related to circular dependencies and redundant imports either on a per-file basis or globally.
+If restructuring your project isn’t an option, you can mitigate potential issues by managing warnings from your development environment. For example, you can suppress warnings related to circular dependencies and redundant imports on a per-file basis or globally.
 
-For global suppression in VS Code, add the following to your `settings.json`:
+- **Suppress Warnings in Specific Files:**
+  Use directives to disable warnings for circular dependencies and already-imported resources on a per-file basis.
 
-```json
-"robotcode.analysis.diagnosticModifiers.ignore": [
-    "PossibleCircularImport",
-    "CircularImport",
-    "ResourceAlreadyImported",
-    "VariablesAlreadyImported",
-    "LibraryAlreadyImported"
-]
-```
+  ```robot
+  # robotcode: ignore[*ResourceAlreadyImported*, PossibleCircularImport]
+  *** Settings ***
+  Variables  variables
 
-Alternatively, you can use a [`robot.toml`](/03_reference/config) file with these contents:
+  Resource  already_imported.resource  # robotcode: ignore[ResourceAlreadyImported]
+  Resource  circular_import.resource  # robotcode: ignore[PossibleCircularImport]
+  ```
 
-```toml
-[tool.robotcode-analyze.modifiers]
-ignore = [
-    "PossibleCircularImport",
-    "CircularImport",
-    "ResourceAlreadyImported",
-    "VariablesAlreadyImported",
-    "LibraryAlreadyImported"
-]
-```
+- **Suppress Warnings Globally:**
+  For global suppression in VS Code, add the following to your `settings.json`:
+
+  ```json
+  "robotcode.analysis.diagnosticModifiers.ignore": [
+      "PossibleCircularImport",
+      "CircularImport",
+      "ResourceAlreadyImported",
+      "VariablesAlreadyImported",
+      "LibraryAlreadyImported"
+  ]
+  ```
+
+  Alternatively, to remain IDE-independent, use a [`robot.toml`](/03_reference/config) file with these contents:
+
+  ```toml
+  [tool.robotcode-analyze.modifiers]
+  ignore = [
+      "PossibleCircularImport",
+      "CircularImport",
+      "ResourceAlreadyImported",
+      "VariablesAlreadyImported",
+      "LibraryAlreadyImported"
+  ]
+  ```
 
 ## Conclusion
 
