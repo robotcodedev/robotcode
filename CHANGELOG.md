@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [0.109.3](https://github.com/robotcodedev/robotcode/compare/v0.109.2..v0.109.3) - 2025-02-26
+
+### Documentation
+
+- Added an article about avoiding a global resource file ([18327b6](https://github.com/robotcodedev/robotcode/commit/18327b6b320201bf8e5de4a8b4939a085ed47ae0))
+- Correct links ([22af24d](https://github.com/robotcodedev/robotcode/commit/22af24d116ce0165bff67e1a7a51ba6527cbdefa))
+- Update the articel about avoiding global resource files ([57f9209](https://github.com/robotcodedev/robotcode/commit/57f9209452ea03cc0f4dc2378ca3696086497ef4))
+- Update the articel about avoiding global resource files ([bd396fb](https://github.com/robotcodedev/robotcode/commit/bd396fb550897dc0933b31544ecac847358b9739))
+- Add examples of good project structure and a small migration guide to avoiding global resources document ([dfd495c](https://github.com/robotcodedev/robotcode/commit/dfd495caa595da7aa1fc33c5b3255bd4e222d35d))
+- Update article about avoiding global resource files ([87bd175](https://github.com/robotcodedev/robotcode/commit/87bd1759532b748462745057c7cc1109571a4dd3))
+- Rewrite index of tips&tricks ([579e728](https://github.com/robotcodedev/robotcode/commit/579e728af6a0601c186b0a896ad884c7d2ff0a7f))
+
+
 ## [0.109.2](https://github.com/robotcodedev/robotcode/compare/v0.109.1..v0.109.2) - 2025-02-23
 
 ### Bug Fixes
