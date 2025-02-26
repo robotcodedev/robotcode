@@ -1,96 +1,103 @@
 # Avoiding a Global Resource File
 
-When organizing your suite, tests, resources and libraries in a Robot Framework project, it may seem attractive to consolidate all libraries and resources into one global file - for example, a `Keywords.resource` file - and then include only this single file in every suite or resource. At first glance, this strategy appears to streamline the setup by reducing the number of explicit imports. However, while it may simplify the initial configuration, this approach often leads to a host of challenges later on.
+In many Robot Framework projects, there is a temptation to simplify setup by consolidating all resources and libraries into one global file—often named something like `Keywords.resource`—which is then usually the only resource imported into suites and other resource files. At first glance, this strategy appears to streamline the project structure by reducing the number of explicit imports and centralizing common functionality. However, while this approach may save time during initial configuration, it masks underlying design issues and introduces several long-term challenges. These challenges range from complex circular dependencies and naming collisions to performance slowdowns and decreased maintainability, which ultimately hinder the scalability and robustness of the test suite.
 
-## Why is it not a good idea?
+## Why This Approach is Problematic
 
-- **Circular Dependencies**: Importing one global file into multiple keyword resource files can lead to circular dependencies. RobotCode will issue warnings in these cases, indicating that a file is already imported or that a circular reference has been detected. Beyond these warnings, circular dependencies are a red flag for poor design. They complicate dependency management, hinder refactoring efforts, and obscure the overall structure of the project. Additionally, circular references indicate that components are too tightly coupled, which makes the system less modular and more prone to cascading errors when changes are made.
+- **Circular Dependencies:**
+  Using one global file in multiple keyword resource files can create circular dependencies. While Robot Framework does not display warnings during execution, RobotCode flags these issues with warnings about already imported files or circular references. These warnings highlight poor design practices that complicate dependency management, hinder refactoring, and reduce modularity. Tightly coupled components can lead to cascading errors when changes are made.
 
-- **Risk of Overwriting Keywords or Variables**: Centralizing all resources increases the likelihood of naming collisions. With many keywords and variables defined in one file, accidental overwrites become more probable, making debugging more challenging and causing unpredictable test outcomes.
+- **Ambiguities in Keyword Resolution and Variable Precedence:**
+  In Robot Framework, keywords are not silently overwritten. Instead, if multiple keywords with the same name are present, test execution fails due to ambiguous matches. This forces test writers to explicitly decide which resource's keyword to use, thereby increasing the effort during test case creation. Additionally, variables behave differently: the first variable declaration takes precedence, and all subsequent declarations in other variable sections from different resource files are ignored. Consequently, when using a global resource file, you must carefully manage the order in which resources are imported to ensure the intended variable values are used—further adding to the overall complexity.
 
-- **Performance Issues**: Robot Framework, and consequently RobotCode, iterates through the entire list of known keywords for every keyword call, checking each one to see if it matches the call. This process becomes particularly time-consuming when using keywords with embedded arguments, where regular expressions are involved rather than simple string comparisons. A large global resource file filled with rarely-used elements can therefore significantly slow down keyword resolution, especially in larger projects.
+- **Performance Issues:**
+  For every keyword call, Robot Framework iterates through the entire list of known keywords—and code analysis tools like RobotCode must do the same. The performance impact significantly depends on whether the system checks 50, 500, or even 5000 keywords; indeed, 500 to 5000 keywords is a realistic number in an average project. This process is especially time-consuming with embedded arguments that require regular expressions rather than simple string comparisons. A large global file filled with rarely used elements can significantly slow down keyword resolution, particularly in larger projects.
 
-- **Decreased Maintainability**: When hundreds or even thousands of resources reside in a single file, it becomes increasingly difficult for test writers to locate the relevant keywords or variables. This not only hinders productivity but also adds unnecessary complexity to both test creation and maintenance.
+- **Decreased Maintainability:**
+  While the number of resource files may be relatively small—perhaps 50 to 100—the combined global resource file can easily contain 500 or more keywords. This consolidation makes it difficult for test writers to quickly locate the relevant keyword or variable among hundreds of entries. The dense aggregation reduces clarity and increases the maintenance burden, as even a small change might affect multiple areas of the project. Refactoring becomes more challenging when the entire functionality is bundled into a single file, since updates or corrections must be made with care to avoid unintended side effects across the project.
 
-- **Creation of Unnecessary References**: Relying on a centralized file creates redundant links across your project, making it harder to track resource usage. These unnecessary references increase the risk of errors during updates or refactoring.
+- **Creation of Unnecessary References:**
+  Relying on a centralized file forces all suites and resource files to reference the same global file, even if they only need a subset of its contents. This means that every suite is indirectly coupled to every keyword and variable in that file, regardless of whether they are used. Such an arrangement makes it difficult to determine which keywords are actually needed for a given suite. When updates or refactoring are required, developers may unintentionally modify or remove elements that other parts of the project still depend on. This extra layer of indirection complicates resource tracking, increases the likelihood of errors during maintenance, and can create confusion in larger teams where multiple developers modify the global file simultaneously.
 
-## Documentation Through Suite Settings
+## Documenting with Suite Settings
 
-Library and resource declarations in the suite settings serve as both configuration and vital documentation. Test suites and test cases are not merely executable source code; they are also a critical part of your project's overall documentation. By explicitly declaring which libraries and resources are required—for instance, for handling login processes, customer management, and database validations—you provide clear insight into the functional areas under test. This explicit mapping not only improves maintainability but also communicates intent.
+Declaring libraries and resources in the suite settings is not only a configuration step—it also serves as essential documentation. Test suites and test cases are more than just executable code; they document which functional areas of the application are under test. By explicitly declaring the required libraries and resources (e.g., for login processes, customer management, or database validations), you provide clear insight into the suite’s focus.
 
-When someone reads the suite settings, they understand not only how the tests run but also which aspects of the application are considered critical. For example:
+For example:
 
 ```robot
 *** Settings ***
-Library   LoginLibrary
+Library   LoginProcess
 Resource  CustomerManagement.resource
 Resource  DatabaseValidation.resource
 ```
 
-This declaration tells the reader that the test suite is focused on specific areas of the application. It offers an immediate understanding of the suite's scope, serving as a form of living documentation. As such, tests become more than just code—they become an integral part of your project's documentation, helping new team members, stakeholders, and automated systems quickly grasp what parts of the application are being validated.
+This explicit declaration improves maintainability and helps new team members, stakeholders, and automated systems quickly understand the application areas being validated.
 
 ## Limitations in Import and Package Management
 
-It is also worth noting that Robot Framework, in its current form, lacks a robust import or package management system. The framework does not complain if resources or libraries are imported multiple times, which might seem convenient at first. However, this behavior can lead to issues—for instance, when the same library is imported with different parameters, Robot Framework may simply overwrite the previous instance, resulting in unpredictable behavior. The concepts of public versus private imports and a proper package management system for Robot Framework are regular topics in roadmap discussions. One can only hope that future versions will address these limitations to better support modular and reliable test architectures.
+Robot Framework’s import mechanism is quite basic—it lacks namespaces or similar constructs found in other programming languages. Instead, it relies solely on a name alias for libraries or the resource file name. Although Robot Framework does not flag multiple imports as errors, this simplicity can lead to issues. For instance, importing the same library with different parameters may result in the earlier instance being overwritten, causing unpredictable behavior. This limitation is often discussed in roadmap conversations, with hopes that future versions of Robot Framework will include more robust support for modular imports and package management.
 
 ## Clean Code Considerations
 
-Adhering to clean code principles is essential for building maintainable, readable, and scalable projects. A modular approach offers several advantages:
+Adhering to clean code principles is crucial for building maintainable, readable, and scalable projects. A modular approach offers several benefits:
 
-- **Separation of Concerns**: Dividing resources into logically grouped files ensures that each file has a clear, focused purpose. This separation makes the codebase easier to understand and maintain.
-- **Enhanced Readability**: A smaller, purpose-driven file structure improves readability. Developers can quickly locate and modify only the necessary parts without wading through irrelevant code.
-- **Simplified Dependency Management**: Reducing the number of references between files decreases coupling. This clear separation limits the impact of changes, making your project more resilient to modifications over time.
-- **Ease of Refactoring**: With resources organized into well-defined modules, refactoring becomes more straightforward. Developers can update or replace specific parts of the project without unintended side effects on unrelated components.
+- **Separation of Concerns:**
+  Grouping resources into logically separated files ensures each file has a clear, focused purpose, making the codebase easier to understand and maintain.
 
-## What is the Better Approach?
+- **Enhanced Readability:**
+  Smaller, purpose-driven files improve readability, enabling developers to quickly locate and modify only the necessary parts of the code.
+
+- **Simplified Dependency Management:**
+  Reducing inter-file references decreases coupling. This separation limits the impact of changes and makes your project more resilient.
+
+- **Ease of Refactoring:**
+  When resources are organized into well-defined modules, refactoring becomes more straightforward. Developers can update or replace specific components without unintended side effects on unrelated parts.
+
+## The Better Approach: Modularization
 
 The recommended solution is to **modularize your resources**:
 
-- **Keep the Global File Minimal**: Limit the global resource file to only the libraries and resources that are truly needed across all test cases and keyword files.
-- **Import Only What’s Needed**: Instead of centralizing everything in a single file, selectively import only the necessary resources into each test case or keyword file.
-- **Organize Resources into Logical Groups**: Structure your project by separating resources into distinct files based on their function. For example:
-  - Business-specific (functional) keywords
-  - Technical keywords (e.g., those dealing with databases, APIs, or UI interactions)
+- **Keep the Global File Minimal:**
+  Restrict the global resource file to only those libraries and resources that are truly needed across all test cases and keyword files.
 
-This modular approach not only helps eliminate issues like circular dependencies and performance bottlenecks but also enhances maintainability and clarity. It ensures that suite settings serve as clear documentation for the parts of the application under test.
+- **Import Only What’s Needed:**
+  Instead of centralizing everything, selectively import only the necessary resources into each test case or keyword file.
 
-### What if Restructuring is Not an Option?
+- **Organize Resources by Function:**
+  Structure your project by grouping resources into files based on their function. For example, separate business-specific keywords from technical ones (such as those for database or API interactions).
 
-If modifying your project structure is not possible, consider mitigating potential issues by managing the warnings provided by your development environment. You can suppress warnings related to circular dependencies and redundant imports either on a per-file basis or globally. For global suppression, your development environment (e.g., VS Code) can be configured to ignore specific warning names encountered during the analysis of import statements. These warning names include:
+This modular approach not only eliminates issues like circular dependencies and performance bottlenecks but also enhances maintainability and clarity. It ensures that suite settings clearly document which components are required for each test suite.
 
-- `PossibleCircularImport`: Indicates a potential circular dependency that may not be immediately evident.
-- `CircularImport`: Signals that a circular dependency has been definitively detected.
-- `ResourceAlreadyImported`: Warns that a resource file is being imported more than once.
-- `VariablesAlreadyImported`: Alerts that a variables file has been imported multiple times.
-- `LibraryAlreadyImported`: Notifies that a library has already been imported, which can be problematic if imported with different parameters.
+### When Restructuring Isn’t Possible
 
-- **Suppress Warnings Globally**: Alternatively, configure your development environment (e.g., VS Code) to disable these warnings project-wide by adjusting the settings.
+If restructuring your project is not an option, you can mitigate potential issues by managing the warnings provided by your development environment. For instance, you can suppress warnings related to circular dependencies and redundant imports either on a per-file basis or globally.
 
-  In VS Code you can add the following to your `settings.json`:
+For global suppression in VS Code, add the following to your `settings.json`:
 
-  ```json
-  "robotcode.analysis.diagnosticModifiers.ignore": [
-      "PossibleCircularImport",
-      "CircularImport",
-      "ResourceAlreadyImported",
-      "VariablesAlreadyImported",
-      "LibraryAlreadyImported"
-  ]
-  ```
+```json
+"robotcode.analysis.diagnosticModifiers.ignore": [
+    "PossibleCircularImport",
+    "CircularImport",
+    "ResourceAlreadyImported",
+    "VariablesAlreadyImported",
+    "LibraryAlreadyImported"
+]
+```
 
-  Or you can also use a [`robot.toml`](/03_reference/config) file and add the following contents:
+Alternatively, you can use a [`robot.toml`](/03_reference/config) file with these contents:
 
-  ```toml
-  [tool.robotcode-analyze.modifiers]
-  ignore = [
-      "PossibleCircularImport",
-      "CircularImport",
-      "ResourceAlreadyImported",
-      "VariablesAlreadyImported",
-      "LibraryAlreadyImported"
-  ]
-  ```
+```toml
+[tool.robotcode-analyze.modifiers]
+ignore = [
+    "PossibleCircularImport",
+    "CircularImport",
+    "ResourceAlreadyImported",
+    "VariablesAlreadyImported",
+    "LibraryAlreadyImported"
+]
+```
 
 ## Conclusion
 
-While using a single global resource file like **Keywords.resource** may appear to simplify your test setup by reducing the number of imports, it ultimately creates more problems than it solves. Issues such as circular dependencies—flagged by RobotCode warnings and indicative of poor design choices—naming collisions, performance degradation, and decreased maintainability quickly outweigh the initial convenience. Moreover, a modular approach not only adheres to clean code principles but also ensures that your suite settings clearly document the specific components required for each suite. This clarity is vital for understanding which parts of the application—such as login processes, customer management, or database checks—are being tested. A modular resource structure is the optimal solution for avoiding these pitfalls. However, if a centralized file is unavoidable, you can manage the risks by selectively suppressing warnings.
+In summary, while a single global resource file might simplify the initial setup by reducing the number of imports, it ultimately creates more problems than it solves. Issues such as circular dependencies, naming collisions, performance degradation, and decreased maintainability quickly outweigh the initial convenience. A modular resource structure adheres to clean code principles and ensures that suite settings serve as clear, documented indicators of which parts of the application are under test. If a centralized file is unavoidable, selectively suppressing warnings can help manage the associated risks.
