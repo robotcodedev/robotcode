@@ -1,6 +1,10 @@
 # Avoiding a Global Resource File
 
-In many Robot Framework projects, there is a temptation to simplify setup by consolidating all resources and libraries into one global file—often named something like `Keywords.resource`—which is then usually the only resource imported into suites and other resource files. At first glance, this strategy appears to streamline the project structure by reducing the number of explicit imports and centralizing common functionality. However, while this approach may save time during initial configuration, it masks underlying design issues and introduces several long-term challenges. These challenges range from complex circular dependencies and naming collisions to performance slowdowns and decreased maintainability, which ultimately hinder the scalability and robustness of the test suite.
+## Introduction
+
+In many Robot Framework projects, there is a temptation to simplify setup by consolidating all resources and libraries into one global file—often named something like `Keywords.resource`—which is then usually the only resource imported into suites and other resource files.
+
+**Executive Summary**: While global resource files might seem convenient initially, they lead to circular dependencies, keyword ambiguities, performance issues, and maintenance challenges. This guide explains the problems of this approach and offers a modular alternative that improves code organization, maintainability, and performance.
 
 ## Why This Approach is Problematic
 
@@ -19,9 +23,38 @@ In many Robot Framework projects, there is a temptation to simplify setup by con
 - **Creation of Unnecessary References:**
   Relying on a centralized file forces all suites and resource files to reference the same global file, even if they only need a subset of its contents. This means that every suite is indirectly coupled to every keyword and variable in that file, regardless of whether they are used. Such an arrangement makes it difficult to determine which keywords are actually needed for a given suite. When updates or refactoring are required, developers may unintentionally modify or remove elements that other parts of the project still depend on. This extra layer of indirection complicates resource tracking, increases the likelihood of errors during maintenance, and can create confusion in larger teams where multiple developers modify the global file simultaneously.
 
+### Example of Problematic Global Resource File
+
+Consider this example of a typical global resource file that causes issues:
+
+```robot
+*** Settings ***
+# Global.resource - tries to do everything
+Library    SeleniumLibrary
+Library    RequestsLibrary
+Library    DatabaseLibrary
+Library    OperatingSystem
+Resource   LoginKeywords.resource
+Resource   CustomerKeywords.resource
+Resource   OrderKeywords.resource
+Resource   ApiKeywords.resource
+Resource   ReportingKeywords.resource
+# ...and 20+ more imports
+
+*** Variables ***
+${GLOBAL_URL}    https://example.com
+${DB_CONNECTION}    connection_string
+# ...hundreds of variables for different modules
+
+*** Keywords ***
+# 500+ keywords covering every aspect of the system
+```
+
+When this file gets imported into multiple other resources and suite files, it creates a tangled web of dependencies.
+
 ## Documenting with Suite Settings
 
-Declaring libraries and resources in the suite settings is not only a configuration step—it also serves as essential documentation. Test suites and test cases are more than just executable code; they document which functional areas of the application are under test. By explicitly declaring the required libraries and resources (e.g., for login processes, customer management, or database validations), you provide clear insight into the suite’s focus.
+Suite settings do more than just configure your test environment—they serve as essential documentation for your project. When you explicitly declare libraries, resources and also variables in your settings section, you're creating a clear record of which technical or functional areas of the application are being used in this file. This transparency helps team members, stakeholders, and testers quickly understand the suite's purpose.
 
 For example:
 
@@ -32,7 +65,7 @@ Resource  CustomerManagement.resource
 Resource  DatabaseValidation.resource
 ```
 
-This explicit declaration improves maintainability and helps new team members, stakeholders, and automated systems quickly understand the application areas being validated.
+This declaration immediately communicates that this suite deals with login processes, customer management, and database validation—improving maintainability and knowledge transfer within your team.
 
 ## Limitations in Import and Package Management
 
@@ -95,9 +128,8 @@ project/
 └── tests/
     ├── api/
     │   └── customer_api_tests.robot  # Imports only api/customers.resource
-    ├── api/
-    └── business/
-        └── contracts.robot         # Imports only ui/login_page.resource
+    ├── business/
+    │   └── contracts.robot         # Imports only ui/login_page.resource
     └── ui_tests/
         └── login_tests.robot         # Imports only ui/login_page.resource
 ```
@@ -149,32 +181,97 @@ If you have an existing project with a large global resource file, consider this
    - Remove those keywords from the global file
    - Eventually phase out the global file completely
 
-For keywords that are genuinely used everywhere, consider keeping a minimal `common.resource` file, but ensure it only contains truly global utilities.
+Here's a concrete example of refactoring from a global approach to a modular one:
 
+**Before (Global.resource):**
+```robot
+*** Settings ***
+Library    SeleniumLibrary
+Library    RequestsLibrary
 
-## When Restructuring Isn’t Possible
+*** Keywords ***
+Login To Application
+    [Arguments]    ${username}    ${password}
+    Open Browser    ${URL}    ${BROWSER}
+    Input Text    id=username    ${username}
+    Input Password    id=password    ${password}
+    Click Button    id=login-button
 
-If restructuring your project isn’t an option, you can mitigate potential issues by managing warnings from your development environment. For example, you can suppress warnings related to circular dependencies and redundant imports on a per-file basis or globally.
+Get Customer Details
+    [Arguments]    ${customer_id}
+    ${response}=    GET    ${API_URL}/customers/${customer_id}
+    [Return]    ${response.json()}
+```
+
+**After:**
+
+**/resources/ui/login.resource:**
+```robot
+*** Settings ***
+Library    SeleniumLibrary
+
+*** Keywords ***
+Login To Application
+    [Arguments]    ${username}    ${password}
+    Open Browser    ${URL}    ${BROWSER}
+    Input Text    id=username    ${username}
+    Input Password    id=password    ${password}
+    Click Button    id=login-button
+```
+
+**/resources/api/customers.resource:**
+```robot
+*** Settings ***
+Library    RequestsLibrary
+
+*** Keywords ***
+Get Customer Details
+    [Arguments]    ${customer_id}
+    ${response}=    GET    ${API_URL}/customers/${customer_id}
+    [Return]    ${response.json()}
+```
+
+**/tests/login_test.robot:**
+```robot
+*** Settings ***
+Resource    resources/ui/login.resource
+# Only importing what is needed
+
+*** Test Cases ***
+Valid Login
+    Login To Application    valid_user    valid_password
+```
+
+## When Restructuring Isn't Possible
+
+If restructuring your project isn't an option, you can mitigate potential issues by managing warnings from your development environment. For example, you can suppress warnings related to circular dependencies and redundant imports on a per-file basis or globally.
+
+It's important to understand that suppressing warnings doesn't fix the underlying issues—it merely acknowledges them. When you choose to ignore specific diagnostics, you're making a conscious decision that these particular issues are acceptable in your codebase. This explicit acknowledgment is different from simply ignoring random warnings in your IDE. By documenting suppressions in your code or configuration files, you're communicating to your team that you understand the potential problem but have determined that it's an acceptable compromise given your project's constraints.
+
+This approach is particularly useful during transitional periods or when working with legacy codebases where perfect architectural solutions aren't immediately feasible. However, these suppressions should ideally be revisited periodically to determine if the underlying issues can eventually be resolved through refactoring.
 
 ### Suppress Warnings in Specific Files
 
 Use directives to disable warnings for circular dependencies and already-imported resources on a per-file basis.
 
 ```robot
-# robotcode: ignore[*ResourceAlreadyImported*, PossibleCircularImport]
+# example for disabling of specific messages for the whole file
+# robotcode: ignore[ResourceAlreadyImported, PossibleCircularImport]
 *** Settings ***
 Variables  variables
 
+# example for disabling of specific messages for a statement
 Resource  already_imported.resource  # robotcode: ignore[ResourceAlreadyImported]
 Resource  circular_import.resource  # robotcode: ignore[PossibleCircularImport]
 ```
 
 ### Suppress Warnings Globally
 
-For global suppression in VS Code, add the following to your `settings.json`:
+The preferred approach to suppress warnings globally is using a `robot.toml` configuration file. This method is IDE-independent and can be checked into version control to share with your team. Create a [`robot.toml`](/03_reference/config) file in your project root with these contents:
 
-```json
-"robotcode.analysis.diagnosticModifiers.ignore": [
+```toml
+[tool.robotcode-analyze.modifiers]
+ignore = [
     "PossibleCircularImport",
     "CircularImport",
     "ResourceAlreadyImported",
@@ -183,11 +280,10 @@ For global suppression in VS Code, add the following to your `settings.json`:
 ]
 ```
 
-Alternatively, to remain IDE-independent, use a [`robot.toml`](/03_reference/config) file with these contents:
+Alternatively, if you're working exclusively in VS Code, you can add the following to your `settings.json`, though this approach is not recommended for team environments as it only affects your local setup:
 
-```toml
-[tool.robotcode-analyze.modifiers]
-ignore = [
+```json
+"robotcode.analysis.diagnosticModifiers.ignore": [
     "PossibleCircularImport",
     "CircularImport",
     "ResourceAlreadyImported",
