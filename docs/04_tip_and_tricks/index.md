@@ -1,129 +1,25 @@
 # Tips and Tricks
 
-Here are some tips and tricks that you might find useful when working with RobotCode.
+Welcome to the RobotCode Tips and Tricks section! This part of the documentation is designed to help you optimize your workflow, solve common problems, and discover useful techniques that may not be immediately obvious.
 
-## Customization
+## Introduction
 
-### Editor Style
+Whether you're a beginner or an experienced robot programmer, this collection of tips and tricks aims to enhance your productivity and help you get the most out of RobotCode. The suggestions here come from real-world experience and community contributions.
 
-You can change some stylings for RobotFramework files in VSCode editor, independently of the current theme. (see [Customizing a Color Theme](https://code.visualstudio.com/docs/getstarted/themes#_customizing-a-color-theme))
+## Contents
 
-See the difference:
+- [Avoiding a Global Resource File](./avoiding_a_global_resource_file.md)
 
-| Before                                                            | After                                                       |
-| ----------------------------------------------------------------- | ----------------------------------------------------------- |
-| ![Without customization](./images/without_customization.gif) | ![With customization](./images/with_customization.gif) |
+  While global resource files might seem convenient initially, they lead to circular dependencies, keyword ambiguities, performance issues, and maintenance challenges. This guide explains the problems of this approach and offers a modular alternative that improves code organization, maintainability, and performance.
 
+- [Customizing Visual Studio Code for using RobotCode](./vscode_customizations.md)
 
-As a template you can put the following code to your user settings of VSCode.
+  This guide helps you customize VSCode to improve your experience when working with RobotCode.
 
-Open the user `settings.json` like this:
+## Contributing
 
-<kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>P</kbd> or <kbd>F1</kbd> or <kbd>CMD</kbd> + <kbd>Shift</kbd> + <kbd>P</kbd>
+Have a useful tip or trick? Consider contributing to this section! Your experience might help other members of the RobotCode community.
 
-and then type:
+---
 
-`Preferences: Open Settings (JSON)`
-
-put this to the `settings.json`
-
-```jsonc
-"editor.tokenColorCustomizations": {
-    "textMateRules": [
-        {
-            "scope": "variable.function.keyword-call.inner.robotframework",
-            "settings": {
-                "fontStyle": "italic"
-            }
-        },
-        {
-            "scope": "variable.function.keyword-call.robotframework",
-            "settings": {
-                //"fontStyle": "bold"
-            }
-        },
-        {
-            "scope": "string.unquoted.embeddedArgument.robotframework",
-            "settings": {
-                "fontStyle": "italic"
-            }
-        },
-        {
-            "scope": "entity.name.function.testcase.name.robotframework",
-            "settings": {
-                "fontStyle": "bold underline"
-            }
-        },
-        {
-            "scope": "entity.name.function.keyword.name.robotframework",
-            "settings": {
-                "fontStyle": "bold italic"
-            }
-        },
-        {
-            "scope": "variable.name.readwrite.robotframework",
-            "settings": {
-                //"fontStyle": "italic",
-            }
-        },
-        {
-            "scope": "keyword.control.import.robotframework",
-            "settings": {
-                "fontStyle": "italic"
-            }
-        },
-        {
-            "scope": "keyword.other.header.setting.robotframework",
-            "settings": {
-                "fontStyle": "bold underline"
-            }
-        },
-        {
-            "scope": "keyword.other.header.variable.robotframework",
-            "settings": {
-                "fontStyle": "bold underline"
-            }
-        },
-        {
-            "scope": "keyword.other.header.testcase.robotframework",
-            "settings": {
-                "fontStyle": "bold underline"
-            }
-        },
-        {
-            "scope": "keyword.other.header.keyword.robotframework",
-            "settings": {
-                "fontStyle": "bold underline"
-            }
-        },
-        {
-            "scope": "keyword.other.header.setting.robotframework",
-            "settings": {
-                "fontStyle": "bold underline"
-            }
-        },
-        {
-            "scope": "keyword.other.header.comment.robotframework",
-            "settings": {
-                "fontStyle": "bold italic underline"
-            }
-        },
-        {
-            "scope": "string.unquoted.escape.robotframework",
-            "settings": {
-                //"foreground": "#FF0000",
-            }
-        }
-    ]
-},
-
-"editor.semanticTokenColorCustomizations": {
-    "rules": {
-        "*.documentation:robotframework": {
-            "fontStyle": "italic",
-            //"foreground": "#aaaaaa"
-        }
-    }
-}
-
-```
+*Note: This documentation is continuously evolving. Check back regularly for new tips and tricks.*
