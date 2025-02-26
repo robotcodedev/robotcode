@@ -69,47 +69,132 @@ The recommended solution is to **modularize your resources**:
 
 This modular approach not only eliminates issues like circular dependencies and performance bottlenecks but also enhances maintainability and clarity. It ensures that suite settings clearly document which components are required for each test suite.
 
+### Example
+
+A well-organized Robot Framework project might have a structure like this:
+
+```
+project/
+├── lib/
+│   └───UserData.py
+├── resources/
+│   ├── api/
+│   │   ├── authentication.resource    # API auth keywords
+│   │   ├── customers.resource         # Customer API endpoints
+│   │   └── orders.resource           # Order API endpoints
+│   ├── functional/
+│   │   ├── users.resource       # Login page interactions
+│   │   ├── customers.resource    # Customer page interactions
+│   ├── ui/
+│   │   ├── login.resource       # Login page interactions
+│   │   ├── customers.resource    # Customer page interactions
+│   │   └── common_elements.resource  # Shared UI elements
+│   └── common/
+│       ├── test_data.resource        # Test data generation
+│       └── utilities.resource        # General helper keywords
+└── tests/
+    ├── api/
+    │   └── customer_api_tests.robot  # Imports only api/customers.resource
+    ├── api/
+    └── business/
+        └── contracts.robot         # Imports only ui/login_page.resource
+    └── ui_tests/
+        └── login_tests.robot         # Imports only ui/login_page.resource
+```
+
+In this structure, each test file imports only the specific resources it needs, avoiding a global import file. If you put the `resources` folder to your python path (this is the default for RobotCode)
+
+Your settings section in a resource file for functional keywords, can be look like this:
+
+```robot
+*** Settings ***
+# In login_tests.robot
+Resource          ui/login.resource
+Resource          ui/customers.resource
+Resource          common/test_data.resource
+
+```
+
+and if you have a suite for functional tests, like this:
+
+```robot
+*** Settings ***
+# In contracts.robot
+Resource          functional/users.resource
+Resource          functional/customers.resource
+Resource          common/test_data.resource
+
+```
+
+### Migration Guide: From Global to Modular Structure
+
+If you have an existing project with a large global resource file, consider this incremental approach:
+
+1. **Analyze usage patterns**:
+   - Identify which keywords/variables are actually used in each test suite
+   - Look for natural functional groupings (UI, API, data generation, etc.)
+
+2. **Create specialized resource files**:
+   - Start with one functional area (e.g., login functionality)
+   - Extract relevant keywords into a new `login.resource` file
+   - Maintain the original global file temporarily
+
+3. **Gradual transition**:
+   - Update one test suite at a time to use the specific resource
+   - Keep the global import during transition for backward compatibility
+   - Run tests after each change to verify functionality
+
+4. **Progressive cleanup**:
+   - Once all suites using specific functionality import the correct resource file
+   - Remove those keywords from the global file
+   - Eventually phase out the global file completely
+
+For keywords that are genuinely used everywhere, consider keeping a minimal `common.resource` file, but ensure it only contains truly global utilities.
+
+
 ## When Restructuring Isn’t Possible
 
 If restructuring your project isn’t an option, you can mitigate potential issues by managing warnings from your development environment. For example, you can suppress warnings related to circular dependencies and redundant imports on a per-file basis or globally.
 
-- **Suppress Warnings in Specific Files:**
-  Use directives to disable warnings for circular dependencies and already-imported resources on a per-file basis.
+### Suppress Warnings in Specific Files
 
-  ```robot
-  # robotcode: ignore[*ResourceAlreadyImported*, PossibleCircularImport]
-  *** Settings ***
-  Variables  variables
+Use directives to disable warnings for circular dependencies and already-imported resources on a per-file basis.
 
-  Resource  already_imported.resource  # robotcode: ignore[ResourceAlreadyImported]
-  Resource  circular_import.resource  # robotcode: ignore[PossibleCircularImport]
-  ```
+```robot
+# robotcode: ignore[*ResourceAlreadyImported*, PossibleCircularImport]
+*** Settings ***
+Variables  variables
 
-- **Suppress Warnings Globally:**
-  For global suppression in VS Code, add the following to your `settings.json`:
+Resource  already_imported.resource  # robotcode: ignore[ResourceAlreadyImported]
+Resource  circular_import.resource  # robotcode: ignore[PossibleCircularImport]
+```
 
-  ```json
-  "robotcode.analysis.diagnosticModifiers.ignore": [
-      "PossibleCircularImport",
-      "CircularImport",
-      "ResourceAlreadyImported",
-      "VariablesAlreadyImported",
-      "LibraryAlreadyImported"
-  ]
-  ```
+### Suppress Warnings Globally
 
-  Alternatively, to remain IDE-independent, use a [`robot.toml`](/03_reference/config) file with these contents:
+For global suppression in VS Code, add the following to your `settings.json`:
 
-  ```toml
-  [tool.robotcode-analyze.modifiers]
-  ignore = [
-      "PossibleCircularImport",
-      "CircularImport",
-      "ResourceAlreadyImported",
-      "VariablesAlreadyImported",
-      "LibraryAlreadyImported"
-  ]
-  ```
+```json
+"robotcode.analysis.diagnosticModifiers.ignore": [
+    "PossibleCircularImport",
+    "CircularImport",
+    "ResourceAlreadyImported",
+    "VariablesAlreadyImported",
+    "LibraryAlreadyImported"
+]
+```
+
+Alternatively, to remain IDE-independent, use a [`robot.toml`](/03_reference/config) file with these contents:
+
+```toml
+[tool.robotcode-analyze.modifiers]
+ignore = [
+    "PossibleCircularImport",
+    "CircularImport",
+    "ResourceAlreadyImported",
+    "VariablesAlreadyImported",
+    "LibraryAlreadyImported"
+]
+```
 
 ## Conclusion
 
