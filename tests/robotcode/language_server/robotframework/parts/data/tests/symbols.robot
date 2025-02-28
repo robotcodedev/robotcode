@@ -48,3 +48,14 @@ another keyword
 #^^^^^^^^^^^^^^ another keyword
     [Documentation]    *DEPRECATED!!* - this keyword is deprecated
     No Operation
+
+*** Test Cases ***
+    # test case with no name
+#^^^ unreachable test
+    Unreachable
+
+*** Keywords ***
+    # keyword with no name
+#^^^ unreachable keyword
+
+    Unreachable

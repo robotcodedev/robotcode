@@ -87,7 +87,7 @@ class _Visitor(Visitor):
         self.generic_visit_current_symbol(node, symbol)
 
     def visit_TestCase(self, node: TestCase) -> None:  # noqa: N802
-        if node.name is None:
+        if not node.name:
             return
 
         if self.current_symbol is not None and self.current_symbol.children is not None:
@@ -104,7 +104,7 @@ class _Visitor(Visitor):
             self.generic_visit_current_symbol(node, symbol)
 
     def visit_Keyword(self, node: Keyword) -> None:  # noqa: N802
-        if node.name is None:
+        if not node.name:
             return
 
         if self.current_symbol is not None and self.current_symbol.children is not None:
