@@ -51,9 +51,9 @@ classifiers = [
 ]
 requires-python = ">=3.8"
 dependencies = [
-  "robotcode-core==0.109.3",
-  "robotcode-plugin==0.109.3",
-  "robotcode-robot==0.109.3",
+  "robotcode-core==0.109.4",
+  "robotcode-plugin==0.109.4",
+  "robotcode-robot==0.109.4",
 ]
 dynamic = ["version"]
 
@@ -71,24 +71,24 @@ robotcode = "robotcode.cli.__main__:main"
 
 
 [project.optional-dependencies]
-debugger = ["robotcode-debugger==0.109.3"]
-languageserver = ["robotcode-language-server==0.109.3"]
-runner = ["robotcode-runner==0.109.3"]
-analyze = ["robotcode-analyze==0.109.3"]
+debugger = ["robotcode-debugger==0.109.4"]
+languageserver = ["robotcode-language-server==0.109.4"]
+runner = ["robotcode-runner==0.109.4"]
+analyze = ["robotcode-analyze==0.109.4"]
 yaml = ["PyYAML>=5.4"]
 lint = ["robotframework-robocop>=2.0.0"]
 tidy = ["robotframework-tidy>=2.0.0"]
 rest = ["docutils"]
-repl = ["robotcode-repl==0.109.3"]
-replserver = ["robotcode-repl-server==0.109.3"]
+repl = ["robotcode-repl==0.109.4"]
+replserver = ["robotcode-repl-server==0.109.4"]
 colored = ["rich"]
 all = [
-  "robotcode-debugger==0.109.3",
-  "robotcode-language-server==0.109.3",
-  "robotcode-runner==0.109.3",
-  "robotcode-analyze==0.109.3",
-  "robotcode-repl==0.109.3",
-  "robotcode-repl-server==0.109.3",
+  "robotcode-debugger==0.109.4",
+  "robotcode-language-server==0.109.4",
+  "robotcode-runner==0.109.4",
+  "robotcode-analyze==0.109.4",
+  "robotcode-repl==0.109.4",
+  "robotcode-repl-server==0.109.4",
   "PyYAML>=5.4",
   "robotframework-robocop>=2.0.0",
   "robotframework-tidy>=2.0.0",
