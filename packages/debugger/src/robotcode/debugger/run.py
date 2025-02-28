@@ -114,21 +114,23 @@ def start_debugpy(
     if port != debugpy_port:
         _logger.warning(lambda: f"start debugpy session on port {port}")
 
+    # this is set by vscode for non config debugpy sessions, we don't need it, so remove it
+    del os.environ["DEBUGPY_ADAPTER_ENDPOINTS"]
+
     if enable_debugpy(port, addresses):
         global config_done_callback
 
         def connect_debugpy(server: "DebugAdapterServer") -> None:
-            if not os.environ.get("DEBUGPY_ADAPTER_ENDPOINTS", None):
-                server.protocol.send_event(
-                    Event(
-                        event="debugpyStarted",
-                        body={
-                            "port": port,
-                            "addresses": addresses,
-                            "processId": os.getpid(),
-                        },
-                    )
+            server.protocol.send_event(
+                Event(
+                    event="debugpyStarted",
+                    body={
+                        "port": port,
+                        "addresses": addresses,
+                        "processId": os.getpid(),
+                    },
                 )
+            )
 
             if wait_for_debugpy_client:
                 app.verbose(f"Wait for debugpy incomming connections listening on {addresses}:{port}")
