@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [0.109.5](https://github.com/robotcodedev/robotcode/compare/v0.109.4..v0.109.5) - 2025-02-28
+
+### Bug Fixes
+
+- **langserver:** Corrected document_symbols when matching keyword or test case declaration when no name is given ([1525db2](https://github.com/robotcodedev/robotcode/commit/1525db2985dfe7ecd488c2e838fd39f0355fbd5a))
+
+
+### Testing
+
+- **langserver:** Update tests for RF 7.2 ([ce77f62](https://github.com/robotcodedev/robotcode/commit/ce77f6292b09912307021464ca1e72132d81f26d))
+
+
 ## [0.109.4](https://github.com/robotcodedev/robotcode/compare/v0.109.3..v0.109.4) - 2025-02-28
 
 ### Bug Fixes
