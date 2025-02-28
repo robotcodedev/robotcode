@@ -8,11 +8,12 @@
         "preview": "vitepress preview"
     },
     "devDependencies": {
+        "esbuild": "^0.25.0",
         "markdown-it-abbr": "^2.0.0",
         "markdown-it-kbd": "^2.2.2",
         "markdown-it-mathjax3": "^4.3.2",
         "markdown-it-task-lists": "^2.1.1",
-        "typescript": "^5.8.2",
+        "typescript": "^5.7.3",
         "typescript-eslint": "^8.25.0",
         "vitepress": "^1.6.3",
         "vitepress-plugin-tabs": "^0.6.0",

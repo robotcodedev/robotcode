@@ -1937,7 +1937,7 @@
     "preact": "^10.26.4",
     "prettier": "^3.5.2",
     "ts-loader": "^9.5.2",
-    "typescript": "^5.8.2",
+    "typescript": "^5.7.3",
     "typescript-eslint": "^8.25.0"
   },
   "workspaces": [
