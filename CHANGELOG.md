@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [0.109.6](https://github.com/robotcodedev/robotcode/compare/v0.109.5..v0.109.6) - 2025-02-28
+
+### Bug Fixes
+
+- **vscode:** Downgrade to typescript 5.7.3 because eslint dont support newer ones ([f1ea63e](https://github.com/robotcodedev/robotcode/commit/f1ea63eb08039c45d663e957953dd43b512ccc27))
+
+
 ## [0.109.5](https://github.com/robotcodedev/robotcode/compare/v0.109.4..v0.109.5) - 2025-02-28
 
 ### Bug Fixes
