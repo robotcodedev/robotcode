@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [1.0.0](https://github.com/robotcodedev/robotcode/compare/v0.109.6..v1.0.0) - 2025-03-05
+
+### Bug Fixes
+
+- **tmlang:** Recognize 2 or spaces between arguments to better work in intellj platform ([6198707](https://github.com/robotcodedev/robotcode/commit/6198707c7f22a9744dcad7a4e0d9bc6f64f46e4c))
+
+
+### Documentation
+
+- Update get started/configuration ([f8060e5](https://github.com/robotcodedev/robotcode/commit/f8060e53ba95007fea2a62c137dfc4c271086cab))
+
+
+### Features
+
+- **intellij:** Support for more semantic highlight tokens ([e48943b](https://github.com/robotcodedev/robotcode/commit/e48943b5fff6b296a4ddb510be5eb1cf144c2a4e))
+
+
 ## [0.109.6](https://github.com/robotcodedev/robotcode/compare/v0.109.5..v0.109.6) - 2025-02-28
 
 ### Bug Fixes
