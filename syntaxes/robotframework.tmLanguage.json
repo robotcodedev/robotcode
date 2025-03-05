@@ -1,6 +1,10 @@
 {
     "$schema": "https://raw.githubusercontent.com/RedCMD/TmLanguage-Syntax-Highlighter/main/vscode.tmLanguage.schema.json",
     "repository": {
+        "arg_separator": {
+            "name": "meta.arg.separator.robotframework",
+            "match": "( {2}| ?\\t)+"
+        },
         "variable_setting": {
             "name": "meta.variable.assign.robotframework",
             "contentName": "string.unquoted.argument.robotframework",
@@ -20,7 +24,8 @@
                 { "include": "#comment" },
                 { "include": "#comment_line" },
                 { "include": "#line_continuation" },
-                { "include": "#variables" }
+                { "include": "#variables" },
+                { "include": "#arg_separator"}
             ]
         },
         "variables_section": {
@@ -146,7 +151,8 @@
                 { "include": "#documentation_bold" },
                 { "include": "#escape" },
                 { "include": "#variables" },
-                { "include": "#line_continuation" }
+                { "include": "#line_continuation" },
+                { "include": "#arg_separator"}
             ]
         },
         "documentation_bold": {
@@ -162,7 +168,8 @@
                         { "include": "#comment" },
                         { "include": "#comment_line" },
                         { "include": "#variables" },
-                        { "include": "#line_continuation" }
+                        { "include": "#line_continuation" },
+                        { "include": "#arg_separator"}
                     ]
                 },
                 "3": { "name": "punctuation.definition.italic.markdown" }
@@ -181,7 +188,8 @@
                         { "include": "#comment" },
                         { "include": "#comment_line" },
                         { "include": "#variables" },
-                        { "include": "#line_continuation" }
+                        { "include": "#line_continuation" },
+                        { "include": "#arg_separator"}
                     ]
                 },
                 "3": { "name": "punctuation.definition.italic.markdown" }
@@ -197,7 +205,8 @@
                 { "include": "#comment" },
                 { "include": "#comment_line" },
                 { "include": "#variables" },
-                { "include": "#line_continuation" }
+                { "include": "#line_continuation" },
+                { "include": "#arg_separator"}
             ]
         },
         "testcase_name": {
@@ -216,7 +225,9 @@
                 { "include": "#comment" },
                 { "include": "#comment_line" },
                 { "include": "#variables" },
-                { "include": "#line_continuation" }
+                { "include": "#line_continuation" },
+                { "include": "#arg_separator"}
+
             ]
         },
         "keyword_name": {
@@ -302,7 +313,8 @@
                 { "include": "#comment" },
                 { "include": "#comment_line" },
                 { "include": "#variables" },
-                { "include": "#line_continuation" }
+                { "include": "#line_continuation" },
+                { "include": "#arg_separator"}
             ]
         },
         "unknown_setting": {
@@ -315,7 +327,8 @@
                 { "include": "#comment" },
                 { "include": "#comment_line" },
                 { "include": "#variables" },
-                { "include": "#line_continuation" }
+                { "include": "#line_continuation" },
+                { "include": "#arg_separator"}
             ]
         },
         "testcase_settings": {
@@ -336,7 +349,8 @@
                 { "include": "#comment" },
                 { "include": "#comment_line" },
                 { "include": "#variables" },
-                { "include": "#line_continuation" }
+                { "include": "#line_continuation" },
+                { "include": "#arg_separator"}
             ]
         },
         "other_testcase_settings": {
@@ -349,7 +363,8 @@
                 { "include": "#comment" },
                 { "include": "#comment_line" },
                 { "include": "#variables" },
-                { "include": "#line_continuation" }
+                { "include": "#line_continuation" },
+                { "include": "#arg_separator"}
             ]
         },
         "keyword_call": {
@@ -360,7 +375,7 @@
             "beginCaptures": {
                 "1": {
                     "name": "entity.name.function.keyword-call.robotframework",
-                    "patterns": [ { "include": "#escape" }, { "include": "#variables" } ]
+                    "patterns": [{ "include": "#escape" }, { "include": "#variables" } ]
                 }
             },
             "patterns": [
@@ -368,7 +383,8 @@
                 { "include": "#comment" },
                 { "include": "#comment_line" },
                 { "include": "#variables" },
-                { "include": "#line_continuation" }
+                { "include": "#line_continuation" },
+                { "include": "#arg_separator"}
             ]
         },
         "control_flow_expression_statements": {
@@ -385,7 +401,8 @@
                 { "include": "#comment" },
                 { "include": "#comment_line" },
                 { "include": "#variables" },
-                { "include": "#line_continuation" }
+                { "include": "#line_continuation" },
+                { "include": "#arg_separator"}
             ]
         },
         "control_flow_statements": {
@@ -398,7 +415,8 @@
                 { "include": "#comment" },
                 { "include": "#comment_line" },
                 { "include": "#variables" },
-                { "include": "#line_continuation" }
+                { "include": "#line_continuation" },
+                { "include": "#arg_separator"}
             ]
         },
         "other_statements": {
@@ -412,7 +430,8 @@
                 { "include": "#comment" },
                 { "include": "#comment_line" },
                 { "include": "#variables" },
-                { "include": "#line_continuation" }
+                { "include": "#line_continuation" },
+                { "include": "#arg_separator"}
             ]
         },
         "returning_keyword_call": {
@@ -434,6 +453,7 @@
             "patterns": [
                 { "include": "#variables" },
                 { "include": "#line_continuation" },
+                { "include": "#arg_separator"},
                 { "include": "#comment" }
             ]
         },
@@ -445,7 +465,7 @@
             "patterns": [ { "include": "#variables" } ]
         },
         "line_continuation": {
-            "match": "^(\\s*\\.\\.\\.)(?! ?\\S)",
+            "match": "^\\s*(\\.\\.\\.)(?! ?\\S)",
             "captures": { "1": { "name": "keyword.operator.continue.robotframework" } }
         },
         "impossible": {

@@ -41,6 +41,7 @@ test-reset = "pytest --regtest2-reset {args}"
 create-json-schema = "python ./scripts/create_robot_toml_json_schema.py"
 generate-rf-options = "python ./scripts/generate_rf_options.py"
 install-packages = "python ./scripts/install_packages.py"
+generate-tmlanguage = "python ./scripts/generate_tmlanguage.py"
 
 [envs.rfbeta]
 python = "3.13"
