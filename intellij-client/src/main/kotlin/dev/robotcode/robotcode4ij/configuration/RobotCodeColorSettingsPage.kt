@@ -17,6 +17,8 @@ class RobotCodeColorSettingsPage : ColorSettingsPage {
         AttributesDescriptor("Test case name", Colors.TESTCASE_NAME),
         AttributesDescriptor("Keyword name", Colors.KEYWORD_NAME),
         AttributesDescriptor("Keyword call", Colors.KEYWORD_CALL),
+        AttributesDescriptor("Keyword call inner", Colors.KEYWORD_CALL_INNER),
+        AttributesDescriptor("Name call", Colors.NAME_CALL),
         AttributesDescriptor("Setting", Colors.SETTING),
         AttributesDescriptor("Setting import", Colors.SETTING_IMPORT),
         AttributesDescriptor("Control flow", Colors.CONTROL_FLOW),

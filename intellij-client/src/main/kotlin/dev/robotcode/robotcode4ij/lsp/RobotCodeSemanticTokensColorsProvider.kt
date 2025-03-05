@@ -1,7 +1,9 @@
 package dev.robotcode.robotcode4ij.lsp
 
+import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.editor.colors.TextAttributesKey
 import com.intellij.psi.PsiFile
+import com.redhat.devtools.lsp4ij.features.semanticTokens.DefaultSemanticTokensColorsProvider
 import com.redhat.devtools.lsp4ij.features.semanticTokens.SemanticTokensColorsProvider
 import dev.robotcode.robotcode4ij.highlighting.Colors
 
@@ -22,7 +24,8 @@ private val mapping by lazy {
         "testcaseName" to Colors.TESTCASE_NAME,
         "keywordName" to Colors.KEYWORD_NAME,
         "keywordCall" to Colors.KEYWORD_CALL,
-        
+        "keywordCallInner" to Colors.KEYWORD_CALL_INNER,
+        "nameCall" to Colors.NAME_CALL,
         "argument" to Colors.ARGUMENT,
         "embeddedArgument" to Colors.EMBEDDED_ARGUMENT,
         "namedArgument" to Colors.NAMED_ARGUMENT,
@@ -37,11 +40,16 @@ private val mapping by lazy {
     )
 }
 
-class RobotCodeSemanticTokensColorsProvider : SemanticTokensColorsProvider {
+class RobotCodeSemanticTokensColorsProvider : DefaultSemanticTokensColorsProvider() {
     override fun getTextAttributesKey(
         tokenType: String, tokenModifiers: MutableList<String>, file: PsiFile
     ): TextAttributesKey? {
-        return mapping[tokenType]
+        val result = mapping[tokenType] ?: super.getTextAttributesKey(tokenType, tokenModifiers, file)
+        
+        return result ?: run {
+            thisLogger().warn("Unknown token type: $tokenType")
+            null
+        }
     }
 }
 
