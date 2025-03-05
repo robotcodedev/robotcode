@@ -4,7 +4,6 @@ import org.jetbrains.intellij.platform.gradle.Constants.Constraints
 import org.jetbrains.intellij.platform.gradle.IntelliJPlatformType
 import org.jetbrains.intellij.platform.gradle.TestFrameworkType
 import org.jetbrains.intellij.platform.gradle.tasks.PrepareSandboxTask
-import org.jetbrains.intellij.platform.gradle.tasks.aware.IntelliJPlatformVersionAware
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.dsl.KotlinVersion
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
@@ -208,7 +207,7 @@ tasks.withType<KotlinCompile> {
 @Suppress("unused") val runIdePyCharmCommunityEAP by intellijPlatformTesting.runIde.registering {
     type = IntelliJPlatformType.PyCharmCommunity
     version = "LATEST-EAP-SNAPSHOT"
-    
+
     prepareSandboxTask(prepareSandboxConfig)
 }
 
