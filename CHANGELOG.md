@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [1.0.1](https://github.com/robotcodedev/robotcode/compare/v1.0.0..v1.0.1) - 2025-03-06
+
+### Bug Fixes
+
+- **language_server:** Improve range calculation for document symbols and add handling for negative ranges ([1db6978](https://github.com/robotcodedev/robotcode/commit/1db69786b3a926abd03a669b84058c41105ce1fb))
+
+
+### Documentation
+
+- Fixes some typos ([d149ae8](https://github.com/robotcodedev/robotcode/commit/d149ae830cea98a2556b11575bb30a52b006dcf1))
+- Add a separate document about support and contribution ([4da4a51](https://github.com/robotcodedev/robotcode/commit/4da4a51189f7869644932ac4afdb7ce7ec3e430f))
+
+
 ## [1.0.0](https://github.com/robotcodedev/robotcode/compare/v0.109.6..v1.0.0) - 2025-03-05
 
 ### Bug Fixes
