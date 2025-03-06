@@ -62,4 +62,4 @@ features:
 
 
 ## Powered by
-[![JetBrains logo.](images/jetbrains.svg)](https://jb.gg/OpenSourceSupport)
+[![JetBrains Logo](images/jetbrains.svg)](https://jb.gg/OpenSourceSupport)
