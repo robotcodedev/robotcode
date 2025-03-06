@@ -267,6 +267,9 @@ class _Visitor(Visitor):
                 name = name[:-1].rstrip()
 
         if self.current_symbol is not None and self.current_symbol.children is not None:
-            r = range_from_node(node)
+            if node.tokens[:1]:
+                r = range_from_token(node.tokens[0])
+            else:
+                r = range_from_node(node)
             symbol = DocumentSymbol(name=name, kind=SymbolKind.VARIABLE, range=r, selection_range=r)
             self.current_symbol.children.append(symbol)

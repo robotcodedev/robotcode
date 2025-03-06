@@ -123,6 +123,18 @@ def range_from_node(
     only_start: bool = False,
     allow_comments: bool = False,
 ) -> Range:
+    r = _range_from_node(node, skip_non_data, only_start, allow_comments)
+    if r.end.line < 0 or r.end.character < 0:
+        return Range(r.start, r.start)
+    return r
+
+
+def _range_from_node(
+    node: ast.AST,
+    skip_non_data: bool = False,
+    only_start: bool = False,
+    allow_comments: bool = False,
+) -> Range:
     if skip_non_data:
         if cached_isinstance(node, Statement) and node.tokens:
             result = _get_non_data_range_from_node(node, only_start, allow_comments)

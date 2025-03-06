@@ -1,0 +1,25 @@
+data: !GeneratedTestData
+  character: 7
+  line: 6
+  name: variable in variables section
+result: !DocumentSymbol
+  children: []
+  deprecated: null
+  detail: null
+  kind: 13
+  name: ${A_VAR}
+  range:
+    end:
+      character: 8
+      line: 6
+    start:
+      character: 0
+      line: 6
+  selection_range:
+    end:
+      character: 8
+      line: 6
+    start:
+      character: 0
+      line: 6
+  tags: null

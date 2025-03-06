@@ -5,7 +5,7 @@ Library    Collections
 *** Variables ***
 #^^^^^^^^^^^^^^^ variables section
 ${A_VAR}    1
-
+#^^^^^^^  variable in variables section
 
 *** Test Cases ***
 #^^^^^^^^^^^^^^^^^ test cases
