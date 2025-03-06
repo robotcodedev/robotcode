@@ -49,7 +49,7 @@ export default defineConfig({
     nav: [
       { text: "Home", link: "/" },
       { text: "Documentation", link: "/01_about" },
-      { text: "Contribute", link: "https://github.com/robotcodedev" },
+      { text: "Support & Contribute", link: "/05_contributing" },
       { text: "Q&A", link: "https://github.com/robotcodedev/robotcode/discussions/categories/q-a" },
       {
         text: pkg.version,
