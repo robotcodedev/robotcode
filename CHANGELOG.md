@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [1.0.2](https://github.com/robotcodedev/robotcode/compare/v1.0.1..v1.0.2) - 2025-03-07
+
+### Bug Fixes
+
+- **debugger:** Remove unnecessary environment variables for debugpy sessions ([08cba92](https://github.com/robotcodedev/robotcode/commit/08cba92302bf79be1a71c370aaf573f23be90b33))
+
+
 ## [1.0.1](https://github.com/robotcodedev/robotcode/compare/v1.0.0..v1.0.1) - 2025-03-06
 
 ### Bug Fixes
