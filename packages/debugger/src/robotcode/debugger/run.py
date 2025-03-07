@@ -115,7 +115,10 @@ def start_debugpy(
         _logger.warning(lambda: f"start debugpy session on port {port}")
 
     # this is set by vscode for non config debugpy sessions, we don't need it, so remove it
-    del os.environ["DEBUGPY_ADAPTER_ENDPOINTS"]
+    if "DEBUGPY_ADAPTER_ENDPOINTS" in os.environ:
+        del os.environ["DEBUGPY_ADAPTER_ENDPOINTS"]
+    if "VSCODE_DEBUGPY_ADAPTER_ENDPOINTS" in os.environ:
+        del os.environ["VSCODE_DEBUGPY_ADAPTER_ENDPOINTS"]
 
     if enable_debugpy(port, addresses):
         global config_done_callback
