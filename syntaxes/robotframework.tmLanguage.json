@@ -412,6 +412,7 @@
             "end": "^(?!(\\s*(\\.\\.\\.((( {2}| ?\\t)\\s*\\S.*)|(\\s*))?$))|(\\s*#.*$)|(\\s*$))",
             "beginCaptures": { "1": { "name": "keyword.control.flow.robotframework" } },
             "patterns": [
+                { "include": "#escape" },
                 { "include": "#comment" },
                 { "include": "#comment_line" },
                 { "include": "#variables" },
@@ -451,10 +452,12 @@
             },
             "end": "^(?!(\\s*(\\.\\.\\.((( {2}| ?\\t)\\s*\\S.*)|(\\s*))?$))|(\\s*#.*$)|(\\s*$))",
             "patterns": [
+                { "include": "#escape" },
+                { "include": "#comment" },
+                { "include": "#comment_line" },
                 { "include": "#variables" },
                 { "include": "#line_continuation" },
-                { "include": "#arg_separator"},
-                { "include": "#comment" }
+                { "include": "#arg_separator"}
             ]
         },
         "variable_assignment_from_kw": {
