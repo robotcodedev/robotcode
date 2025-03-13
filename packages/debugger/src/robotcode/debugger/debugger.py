@@ -1637,8 +1637,8 @@ class Debugger:
 
         return list(result.values())
 
-    IS_VARIABLE_RE: ClassVar = re.compile(r"^[$@&%]\{.*\}(\[[^\]]*\])?$")
-    IS_VARIABLE_ASSIGNMENT_RE: ClassVar = re.compile(r"^[$@&%]\{.*\}=?$")
+    IS_VARIABLE_RE: ClassVar = re.compile(r"^[$@&]\{.*\}(\[[^\]]*\])?$")
+    IS_VARIABLE_ASSIGNMENT_RE: ClassVar = re.compile(r"^[$@&]\{.*\}=?$")
     SPLIT_LINE: ClassVar = re.compile(r"(?= {2,}| ?\t)\s*")
     CURRDIR: ClassVar = re.compile(r"(?i)\$\{CURDIR\}")
 
@@ -1762,8 +1762,10 @@ class Debugger:
                 else:
                     result = internal_evaluate_expression(vars.replace_string(expression), vars)
             else:
-                if self.IS_VARIABLE_RE.match(expression.strip()):
-                    result = vars[expression.strip()]
+                parts = self.SPLIT_LINE.split(expression.strip())
+                if parts and len(parts) == 1 and self.IS_VARIABLE_RE.match(parts[0].strip()):
+                    # result = vars[parts[0].strip()]
+                    result = vars.replace_scalar(parts[0].strip())
                 else:
 
                     def get_test_body_from_string(command: str) -> TestCase:
