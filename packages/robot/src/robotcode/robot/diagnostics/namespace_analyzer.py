@@ -332,6 +332,10 @@ class NamespaceAnalyzer(Visitor):
                 if not is_variable(var_name):
                     return
 
+                stripped_variable = strip_variable_token(
+                    Token(variable.type, var_name, variable.lineno, variable.col_offset, variable.error)
+                )
+
                 scope = cast(Var, node).scope
                 if scope:
                     scope = scope.upper()
@@ -347,11 +351,11 @@ class NamespaceAnalyzer(Visitor):
 
                 var = var_type(
                     name=var_name,
-                    name_token=strip_variable_token(variable),
-                    line_no=variable.lineno,
-                    col_offset=variable.col_offset,
-                    end_line_no=variable.lineno,
-                    end_col_offset=variable.end_col_offset,
+                    name_token=strip_variable_token(stripped_variable),
+                    line_no=stripped_variable.lineno,
+                    col_offset=stripped_variable.col_offset,
+                    end_line_no=stripped_variable.lineno,
+                    end_col_offset=stripped_variable.end_col_offset,
                     source=self._namespace.source,
                 )
 
@@ -361,7 +365,9 @@ class NamespaceAnalyzer(Visitor):
                 else:
                     existing_var = self._variables[var.matcher]
 
-                    location = Location(self._namespace.document_uri, range_from_token(strip_variable_token(variable)))
+                    location = Location(
+                        self._namespace.document_uri, range_from_token(strip_variable_token(stripped_variable))
+                    )
                     self._variable_references[existing_var].add(location)
                     if existing_var in self._overridden_variables:
                         self._variable_references[self._overridden_variables[existing_var]].add(location)
