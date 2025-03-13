@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [1.0.3](https://github.com/robotcodedev/robotcode/compare/v1.0.2..v1.0.3) - 2025-03-13
+
+### Bug Fixes
+
+- **analyzer:** Corrected handling of VAR statement for variable with equal sign ([227d173](https://github.com/robotcodedev/robotcode/commit/227d1738b05cbd07cc5ee88cd234fc477b082e18))
+- **debugger:** Ensure proper evaluation of variable expressions ([6b90851](https://github.com/robotcodedev/robotcode/commit/6b90851271beeb0cfa1a3f6feb6ce2a82a3b0361))
+- **vscode:** Correct handling of comments in keyword calls with return ([c3c32bf](https://github.com/robotcodedev/robotcode/commit/c3c32bf36d3a75aabf22e01de9a35130931bbee9))
+
+
+### Refactor
+
+- **debugger:** Some code simplifications ([b14877c](https://github.com/robotcodedev/robotcode/commit/b14877c41091ba777fdf8a4410ff4fc9630c383d))
+
+
 ## [1.0.2](https://github.com/robotcodedev/robotcode/compare/v1.0.1..v1.0.2) - 2025-03-07
 
 ### Bug Fixes
