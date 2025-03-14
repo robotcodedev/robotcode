@@ -10,15 +10,15 @@ result: !DocumentSymbol
   name: Keywords
   range:
     end:
-      character: 16
-      line: 60
+      character: 1
+      line: 61
     start:
       character: 0
       line: 56
   selection_range:
     end:
-      character: 16
-      line: 60
+      character: 1
+      line: 61
     start:
       character: 0
       line: 56

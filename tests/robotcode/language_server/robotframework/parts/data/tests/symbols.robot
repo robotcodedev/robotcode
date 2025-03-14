@@ -59,3 +59,12 @@ another keyword
 #^^^ unreachable keyword
 
     Unreachable
+
+*** Test Cases ***
+vars with equal sign
+    VAR  ${var 1}=    1
+#          ^^^^^  variable with space and equal sign
+    VAR  ${var 2} =    1
+#          ^^^^^ variable with space and equal sign
+    ${var 1}=  Evaluate    1+2
+#     ^^^^^ variable with space and equal sign

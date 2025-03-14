@@ -5118,6 +5118,21 @@ result:
 - !WorkspaceSymbol
   container_name: symbols
   data: null
+  kind: 13
+  location:
+    range:
+      end:
+        character: 12
+        line: 68
+      start:
+        character: 4
+        line: 68
+    uri: symbols.robot
+  name: ${var 1}
+  tags: null
+- !WorkspaceSymbol
+  container_name: symbols
+  data: null
   kind: 12
   location:
     range:
@@ -5160,6 +5175,21 @@ result:
         line: 11
     uri: symbols.robot
   name: first
+  tags: null
+- !WorkspaceSymbol
+  container_name: symbols
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 20
+        line: 63
+      start:
+        character: 0
+        line: 63
+    uri: symbols.robot
+  name: vars with equal sign
   tags: null
 - !WorkspaceSymbol
   container_name: templates

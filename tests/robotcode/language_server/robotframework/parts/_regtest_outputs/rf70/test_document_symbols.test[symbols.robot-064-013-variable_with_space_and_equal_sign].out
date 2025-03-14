@@ -1,0 +1,25 @@
+data: !GeneratedTestData
+  character: 13
+  line: 64
+  name: variable with space and equal sign
+result: !DocumentSymbol
+  children: []
+  deprecated: null
+  detail: null
+  kind: 13
+  name: ${var 1}=
+  range:
+    end:
+      character: 18
+      line: 64
+    start:
+      character: 9
+      line: 64
+  selection_range:
+    end:
+      character: 18
+      line: 64
+    start:
+      character: 9
+      line: 64
+  tags: null

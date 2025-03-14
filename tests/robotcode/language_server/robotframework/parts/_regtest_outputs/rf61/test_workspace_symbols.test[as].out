@@ -975,6 +975,21 @@ result:
   name: a keywords
   tags: null
 - !WorkspaceSymbol
+  container_name: symbols
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 20
+        line: 63
+      start:
+        character: 0
+        line: 63
+    uri: symbols.robot
+  name: vars with equal sign
+  tags: null
+- !WorkspaceSymbol
   container_name: templates
   data: null
   kind: 12

@@ -3802,10 +3802,10 @@ result:
   location:
     range:
       end:
-        character: 21
+        character: 20
         line: 210
       start:
-        character: 11
+        character: 13
         line: 210
     uri: references.robot
   name: ${counter}
@@ -3832,10 +3832,10 @@ result:
   location:
     range:
       end:
-        character: 13
+        character: 12
         line: 260
       start:
-        character: 9
+        character: 11
         line: 260
     uri: references.robot
   name: ${i}
@@ -3847,10 +3847,10 @@ result:
   location:
     range:
       end:
-        character: 24
+        character: 23
         line: 247
       start:
-        character: 15
+        character: 17
         line: 247
     uri: references.robot
   name: ${my var}
@@ -3877,10 +3877,10 @@ result:
   location:
     range:
       end:
-        character: 20
+        character: 19
         line: 226
       start:
-        character: 11
+        character: 13
         line: 226
     uri: references.robot
   name: ${output}
@@ -5152,10 +5152,10 @@ result:
   location:
     range:
       end:
-        character: 21
+        character: 20
         line: 19
       start:
-        character: 9
+        character: 11
         line: 19
     uri: symbols.robot
   name: ${local_var}
@@ -5189,6 +5189,36 @@ result:
         line: 41
     uri: symbols.robot
   name: ${second}
+  tags: null
+- !WorkspaceSymbol
+  container_name: symbols
+  data: null
+  kind: 13
+  location:
+    range:
+      end:
+        character: 16
+        line: 64
+      start:
+        character: 11
+        line: 64
+    uri: symbols.robot
+  name: ${var 1}
+  tags: null
+- !WorkspaceSymbol
+  container_name: symbols
+  data: null
+  kind: 13
+  location:
+    range:
+      end:
+        character: 16
+        line: 66
+      start:
+        character: 11
+        line: 66
+    uri: symbols.robot
+  name: ${var 2}
   tags: null
 - !WorkspaceSymbol
   container_name: symbols
@@ -5235,6 +5265,21 @@ result:
         line: 11
     uri: symbols.robot
   name: first
+  tags: null
+- !WorkspaceSymbol
+  container_name: symbols
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 20
+        line: 63
+      start:
+        character: 0
+        line: 63
+    uri: symbols.robot
+  name: vars with equal sign
   tags: null
 - !WorkspaceSymbol
   container_name: templates
@@ -6878,10 +6923,10 @@ result:
   location:
     range:
       end:
-        character: 20
+        character: 19
         line: 4
       start:
-        character: 11
+        character: 13
         line: 4
     uri: vartest.robot
   name: ${RESULT}
@@ -6893,10 +6938,10 @@ result:
   location:
     range:
       end:
-        character: 20
+        character: 19
         line: 10
       start:
-        character: 11
+        character: 13
         line: 10
     uri: vartest.robot
   name: ${RESULT}
@@ -6908,10 +6953,10 @@ result:
   location:
     range:
       end:
-        character: 20
+        character: 19
         line: 17
       start:
-        character: 11
+        character: 13
         line: 17
     uri: vartest.robot
   name: ${RESULT}
@@ -6983,10 +7028,10 @@ result:
   location:
     range:
       end:
-        character: 15
+        character: 14
         line: 2
       start:
-        character: 11
+        character: 13
         line: 2
     uri: vartest.robot
   name: ${a}
@@ -6998,10 +7043,10 @@ result:
   location:
     range:
       end:
-        character: 15
+        character: 14
         line: 8
       start:
-        character: 11
+        character: 13
         line: 8
     uri: vartest.robot
   name: ${a}
@@ -7013,10 +7058,10 @@ result:
   location:
     range:
       end:
-        character: 15
+        character: 14
         line: 15
       start:
-        character: 11
+        character: 13
         line: 15
     uri: vartest.robot
   name: ${a}
@@ -7028,10 +7073,10 @@ result:
   location:
     range:
       end:
-        character: 15
+        character: 14
         line: 3
       start:
-        character: 11
+        character: 13
         line: 3
     uri: vartest.robot
   name: ${b}
@@ -7043,10 +7088,10 @@ result:
   location:
     range:
       end:
-        character: 15
+        character: 14
         line: 9
       start:
-        character: 11
+        character: 13
         line: 9
     uri: vartest.robot
   name: ${b}
@@ -7058,10 +7103,10 @@ result:
   location:
     range:
       end:
-        character: 15
+        character: 14
         line: 16
       start:
-        character: 11
+        character: 13
         line: 16
     uri: vartest.robot
   name: ${b}
@@ -7073,10 +7118,10 @@ result:
   location:
     range:
       end:
-        character: 15
+        character: 14
         line: 21
       start:
-        character: 11
+        character: 13
         line: 21
     uri: vartest.robot
   name: '&{a}'
@@ -7088,10 +7133,10 @@ result:
   location:
     range:
       end:
-        character: 15
+        character: 14
         line: 25
       start:
-        character: 11
+        character: 13
         line: 25
     uri: vartest.robot
   name: '@{a}'
