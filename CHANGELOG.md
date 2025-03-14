@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
-## [1.0.3](https://github.com/robotcodedev/robotcode/compare/v1.0.2..v1.0.3) - 2025-03-13
+## [1.0.3](https://github.com/robotcodedev/robotcode/compare/v1.0.2..v1.0.3) - 2025-03-14
 
 ### Bug Fixes
 
@@ -14,6 +14,11 @@ All notable changes to this project will be documented in this file. See [conven
 ### Refactor
 
 - **debugger:** Some code simplifications ([b14877c](https://github.com/robotcodedev/robotcode/commit/b14877c41091ba777fdf8a4410ff4fc9630c383d))
+
+
+### Testing
+
+- **langserver:** Update and add some tests ([b47fc81](https://github.com/robotcodedev/robotcode/commit/b47fc81c85310273e716c4ae9804ec876c5080e3))
 
 
 ## [1.0.2](https://github.com/robotcodedev/robotcode/compare/v1.0.1..v1.0.2) - 2025-03-07
