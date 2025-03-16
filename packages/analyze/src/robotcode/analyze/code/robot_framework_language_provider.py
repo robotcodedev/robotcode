@@ -47,7 +47,7 @@ class RobotFrameworkLanguageProvider(LanguageProvider):
         )
 
         self.diagnostics_context.workspace.documents.on_read_document_text.add(self.on_read_document_text)
-        self.diagnostics_context.diagnostics.folder_initializers.add(self.analyze_folder)
+        self.diagnostics_context.diagnostics.folder_analyzers.add(self.analyze_folder)
         self.diagnostics_context.diagnostics.document_analyzers.add(self.analyze_document)
 
     def _update_python_path(self) -> None:

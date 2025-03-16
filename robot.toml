@@ -3,3 +3,6 @@ python-path = [
     "tests/robotcode/language_server/robotframework/parts/data/resources",
 ]
 paths = "tests/robotcode/language_server/robotframework/parts/data"
+
+[tool.robotcode-analyze.code]
+exit-code-mask = ["info", "hint"]

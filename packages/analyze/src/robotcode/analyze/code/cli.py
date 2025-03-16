@@ -17,7 +17,7 @@ from robotcode.robot.config.loader import (
 from robotcode.robot.config.utils import get_config_files
 
 from ..__version__ import __version__
-from ..config import AnalyzeConfig, ModifiersConfig
+from ..config import AnalyzeConfig, ExitCodeMask, ModifiersConfig
 from .code_analyzer import CodeAnalyzer, DocumentDiagnosticReport, FolderDiagnosticReport
 
 SEVERITY_COLORS = {
@@ -37,7 +37,8 @@ class ReturnCode(Flag):
 
 
 class Statistic:
-    def __init__(self) -> None:
+    def __init__(self, exit_code_mask: ExitCodeMask) -> None:
+        self.exit_code_mask = exit_code_mask
         self._folders: Set[WorkspaceFolder] = set()
         self._files: Set[TextDocument] = set()
         self._diagnostics: List[Union[DocumentDiagnosticReport, FolderDiagnosticReport]] = []
@@ -86,15 +87,31 @@ class Statistic:
 
     def calculate_return_code(self) -> ReturnCode:
         return_code = ReturnCode.SUCCESS
-        if self.errors > 0:
+        if self.errors > 0 and not self.exit_code_mask & ExitCodeMask.ERROR:
             return_code |= ReturnCode.ERRORS
-        if self.warnings > 0:
+        if self.warnings > 0 and not self.exit_code_mask & ExitCodeMask.WARN:
             return_code |= ReturnCode.WARNINGS
-        if self.infos > 0:
+        if self.infos > 0 and not self.exit_code_mask & ExitCodeMask.INFO:
             return_code |= ReturnCode.INFOS
-        if self.hints > 0:
+        if self.hints > 0 and not self.exit_code_mask & ExitCodeMask.HINT:
             return_code |= ReturnCode.HINTS
         return return_code
+
+
+def _parse_exit_code_mask(ctx: click.Context, param: click.Option, value: Tuple[str, ...]) -> ExitCodeMask:
+    try:
+        return ExitCodeMask.parse(value)
+    except KeyError as e:
+        raise click.BadParameter(str(e)) from e
+
+
+def _split_comma(ctx: click.Context, param: click.Option, value: Optional[List[str]]) -> List[str]:
+    if value is None:
+        return []
+    result: List[str] = []
+    for item in value:
+        result.extend([x.strip() for x in item.split(",") if x.strip()])
+    return result
 
 
 @click.command(
@@ -181,6 +198,24 @@ class Statistic:
     multiple=True,
     help="Specifies the diagnostics codes to treat as hint.",
 )
+@click.option(
+    "--exit-code-mask",
+    "-xm",
+    multiple=True,
+    callback=_parse_exit_code_mask,
+    metavar="[" + "|".join(member.name.lower() for member in ExitCodeMask if member.name is not None) + "|all]",
+    help="Specifies which diagnostic severities should not affect the exit code. "
+    "For example, with 'warn' in the mask, warnings won't cause a non-zero exit code.",
+)
+@click.option(
+    "--extend-exit-code-mask",
+    "-xe",
+    multiple=True,
+    callback=_parse_exit_code_mask,
+    metavar="[" + "|".join(member.name.lower() for member in ExitCodeMask if member.name is not None) + "|all]",
+    help="Extend the exit code mask with the specified values. This appends to the default mask, defined in the config"
+    " file.",
+)
 @click.argument(
     "paths", nargs=-1, type=click.Path(exists=True, dir_okay=True, file_okay=True, readable=True, path_type=Path)
 )
@@ -196,6 +231,8 @@ def code(
     modifiers_warning: Tuple[str, ...],
     modifiers_information: Tuple[str, ...],
     modifiers_hint: Tuple[str, ...],
+    exit_code_mask: ExitCodeMask,
+    extend_exit_code_mask: ExitCodeMask,
     paths: Tuple[Path],
 ) -> None:
     """\
@@ -291,7 +328,14 @@ def code(
                 analyzer_config.modifiers.hint = []
             analyzer_config.modifiers.hint.extend(modifiers_hint)
 
-        statistics = Statistic()
+        default_mask = (
+            exit_code_mask
+            if exit_code_mask != ExitCodeMask.NONE
+            else ExitCodeMask.parse(analyzer_config.code.exit_code_mask if analyzer_config.code is not None else None)
+        )
+        mask = default_mask | extend_exit_code_mask
+
+        statistics = Statistic(mask)
         for e in CodeAnalyzer(
             app=app,
             analysis_config=analyzer_config.to_workspace_analysis_config(),

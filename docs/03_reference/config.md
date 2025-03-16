@@ -2615,6 +2615,38 @@ Examples:
 - `MyVariables`
 - `myvars.subpackage.subpackage`
 
+## tool.robotcode-analyze.code
+
+Type: `CodeConfig | None`
+
+Defines the code analysis configuration.
+
+Examples:
+
+```toml
+[tool.robotcode-analyze.code]
+exit_code_mask = "error|warn"
+```
+
+## tool.robotcode-analyze.code.exit-code-mask
+
+Type: `list[Literal['error', 'warn', 'warning', 'info', 'information', 'hint']] | None`
+
+Specifies the exit code mask for the code analysis.
+This is useful if you want to ignore certain types of diagnostics in the result code.
+
+Examples:
+```toml
+[tool.robotcode-analyze.code]
+exit_code_mask = ["error", "warn"]
+```
+
+## tool.robotcode-analyze.code.extend-exit-code-mask
+
+Type: `list[Literal['error', 'warn', 'warning', 'info', 'information', 'hint']] | None`
+
+Extend the exit code mask setting.
+
 ## tool.robotcode-analyze.exclude-patterns
 
 Type: `list[str] | None`
@@ -2700,6 +2732,31 @@ Examples:
 - `**/variables/myvars.py`
 - `MyVariables`
 - `myvars.subpackage.subpackage`
+
+## tool.robotcode-analyze.extend-code
+
+Type: `CodeConfig | None`
+
+Extend the code analysis configuration.
+
+## tool.robotcode-analyze.extend-code.exit-code-mask
+
+Type: `list[Literal['error', 'warn', 'warning', 'info', 'information', 'hint']] | None`
+
+Specifies the exit code mask for the code analysis.
+This is useful if you want to ignore certain types of diagnostics in the result code.
+
+Examples:
+```toml
+[tool.robotcode-analyze.code]
+exit_code_mask = ["error", "warn"]
+```
+
+## tool.robotcode-analyze.extend-code.extend-exit-code-mask
+
+Type: `list[Literal['error', 'warn', 'warning', 'info', 'information', 'hint']] | None`
+
+Extend the exit code mask setting.
 
 ## tool.robotcode-analyze.extend-exclude-patterns
 

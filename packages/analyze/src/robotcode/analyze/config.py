@@ -1,6 +1,7 @@
 # ruff: noqa: RUF009
 from dataclasses import dataclass
-from typing import List, Optional
+from enum import IntFlag
+from typing import Iterable, List, Literal, Optional, Union
 
 from robotcode.robot.config.model import BaseOptions, field
 from robotcode.robot.diagnostics.workspace_config import (
@@ -197,9 +198,73 @@ class CacheConfig(BaseOptions):
     )
 
 
+class ExitCodeMask(IntFlag):
+    NONE = 0
+    ERROR = 1
+    WARN = 2
+    WARNING = WARN
+    INFO = 4
+    INFORMATION = INFO
+    HINT = 8
+    ALL = ERROR | WARN | INFO | HINT
+
+    @staticmethod
+    def parse(value: Union[Iterable[str], str, None]) -> "ExitCodeMask":
+        if value is None:
+            return ExitCodeMask.NONE
+
+        flags = ExitCodeMask(0)
+        for entry in value:
+            for part_orig in entry.split(","):
+                part = part_orig.strip().upper()
+                if part:
+                    try:
+                        flags |= ExitCodeMask[part]
+                    except KeyError as e:
+                        raise KeyError(f"Invalid exit code mask value: {part_orig}") from e
+        return flags
+
+
+ExitCodeMaskLiteral = Literal["error", "warn", "warning", "info", "information", "hint"]
+ExitCodeMaskList = List[ExitCodeMaskLiteral]
+
+
+@dataclass
+class CodeConfig(BaseOptions):
+    """robotcode-analyze code configuration."""
+
+    exit_code_mask: Optional[ExitCodeMaskList] = field(
+        description="""\
+            Specifies the exit code mask for the code analysis.
+            This is useful if you want to ignore certain types of diagnostics in the result code.
+
+            Examples:
+            ```toml
+            [tool.robotcode-analyze.code]
+            exit_code_mask = ["error", "warn"]
+            ```
+            """,
+    )
+    extend_exit_code_mask: Optional[ExitCodeMaskList] = field(description="Extend the exit code mask setting.")
+
+
 @dataclass
 class AnalyzeConfig(BaseOptions):
     """robotcode-analyze configuration."""
+
+    code: Optional[CodeConfig] = field(
+        description="""\
+            Defines the code analysis configuration.
+
+            Examples:
+
+            ```toml
+            [tool.robotcode-analyze.code]
+            exit_code_mask = "error|warn"
+            ```
+        """
+    )
+    extend_code: Optional[CodeConfig] = field(description="Extend the code analysis configuration.")
 
     modifiers: Optional[ModifiersConfig] = field(
         description="""\

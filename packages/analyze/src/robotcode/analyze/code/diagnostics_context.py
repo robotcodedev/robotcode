@@ -14,13 +14,13 @@ class DiagnosticHandlers:
     @event
     def document_analyzers(sender, document: TextDocument) -> Optional[List[Diagnostic]]: ...
     @event
-    def folder_initializers(sender, folder: WorkspaceFolder) -> Optional[List[Diagnostic]]: ...
+    def folder_analyzers(sender, folder: WorkspaceFolder) -> Optional[List[Diagnostic]]: ...
 
     @event
     def collectors(sender, document: TextDocument) -> Optional[List[Diagnostic]]: ...
 
-    def initialize_folder(self, folder: WorkspaceFolder) -> List[Union[List[Diagnostic], BaseException, None]]:
-        return self.folder_initializers(
+    def analyze_folder(self, folder: WorkspaceFolder) -> List[Union[List[Diagnostic], BaseException, None]]:
+        return self.folder_analyzers(
             self,
             folder,
             return_exceptions=True,

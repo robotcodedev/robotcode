@@ -23,6 +23,19 @@
           "description": "Defines the cache configuration.",
           "title": "Cache"
         },
+        "code": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/CodeConfig"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Defines the code analysis configuration.\n\nExamples:\n\n```toml\n[tool.robotcode-analyze.code]\nexit_code_mask = \"error|warn\"\n```\n",
+          "title": "Code"
+        },
         "exclude-patterns": {
           "default": null,
           "description": "Specifies glob patterns for excluding files and folders from analysing by the language server.",
@@ -47,6 +60,19 @@
           "default": null,
           "description": "Extend the cache configuration.",
           "title": "Extend cache"
+        },
+        "extend-code": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/CodeConfig"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Extend the code analysis configuration.",
+          "title": "Extend code"
         },
         "extend-exclude-patterns": {
           "default": null,
@@ -201,6 +227,54 @@
         }
       },
       "title": "CacheConfig",
+      "type": "object"
+    },
+    "CodeConfig": {
+      "additionalProperties": false,
+      "description": "robotcode-analyze code configuration.",
+      "properties": {
+        "exit-code-mask": {
+          "default": null,
+          "description": "Specifies the exit code mask for the code analysis.\nThis is useful if you want to ignore certain types of diagnostics in the result code.\n\nExamples:\n```toml\n[tool.robotcode-analyze.code]\nexit_code_mask = [\"error\", \"warn\"]\n```\n",
+          "items": {
+            "enum": [
+              "error",
+              "warn",
+              "warning",
+              "info",
+              "information",
+              "hint"
+            ],
+            "type": "string"
+          },
+          "title": "Exit code mask",
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "extend-exit-code-mask": {
+          "default": null,
+          "description": "Extend the exit code mask setting.",
+          "items": {
+            "enum": [
+              "error",
+              "warn",
+              "warning",
+              "info",
+              "information",
+              "hint"
+            ],
+            "type": "string"
+          },
+          "title": "Extend exit code mask",
+          "type": [
+            "array",
+            "null"
+          ]
+        }
+      },
+      "title": "CodeConfig",
       "type": "object"
     },
     "Condition": {

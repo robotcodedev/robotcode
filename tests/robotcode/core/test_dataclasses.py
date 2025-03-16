@@ -221,6 +221,9 @@ def test_encode_with_optional_field_and_none_as_default_value() -> None:
             List[Union[EnumData, str]],
             [EnumData.FIRST, EnumData.SECOND, "ninety"],
         ),
+        ('"warn"', Literal["warn"], "warn"),
+        ('["warn"]', List[Literal["warn", "error"]], ["warn"]),
+        ('["warn", "error"]', List[Literal["warn", "error"]], ["warn", "error"]),
     ],
 )
 def test_decode_simple(expr: Any, type: Any, expected: str) -> None:

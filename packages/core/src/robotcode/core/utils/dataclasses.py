@@ -480,7 +480,7 @@ def from_dict(
                 raise TypeError(f"Can't initialize {match_!r} with parameters {params!r}: {ex}") from ex
 
     raise TypeError(
-        "Value must be of type `"
+        f"Value '{value}' must be of type `"
         + (
             repr(types[0])
             if len(types) == 1

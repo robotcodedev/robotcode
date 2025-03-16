@@ -78,10 +78,10 @@
 				// "suites",
 				// // "discover", "tests", "--tags"
 				// "."
-				"discover",
-				"--no-diagnostics",
-				"all",
-				".."
+				// "discover",
+				// "--no-diagnostics",
+				// "all",
+				// ".."
 				// "config",
 				// "show",
 				// "discover",
@@ -90,8 +90,8 @@
 				// "-i",
 				// "-v", "CMD_LINE_VAR:cmd_line_var",
 				// "E:\\source\\uvtestprj\\tests\\first.robotrepl"
-				// "analyze",
-				// "code",
+				"analyze",
+				"code",
 				// "--help"
 				// "tests"
 				// "repl-server",

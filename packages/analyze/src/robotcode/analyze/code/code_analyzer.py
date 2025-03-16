@@ -83,7 +83,7 @@ class CodeAnalyzer(DiagnosticsContext):
     ) -> Iterable[Union[DocumentDiagnosticReport, FolderDiagnosticReport]]:
         for folder in self.workspace.workspace_folders:
             self.app.verbose(f"Initialize folder {folder.uri.to_path()}")
-            initialize_result = self.diagnostics.initialize_folder(folder)
+            initialize_result = self.diagnostics.analyze_folder(folder)
             if initialize_result is not None:
                 diagnostics: List[Diagnostic] = []
                 for item in initialize_result:
