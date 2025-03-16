@@ -5,7 +5,7 @@ from typing import Any, Iterable, List, Optional
 
 from robot.utils import FileReader
 
-from robotcode.analyze.diagnostics_context import DiagnosticsContext
+from robotcode.analyze.code.diagnostics_context import DiagnosticsContext
 from robotcode.core.filewatcher import FileWatcherManagerDummy
 from robotcode.core.ignore_spec import DEFAULT_SPEC_RULES, GIT_IGNORE_FILE, ROBOT_IGNORE_FILE, IgnoreSpec, iter_files
 from robotcode.core.language import LanguageDefinition, language_id
@@ -51,16 +51,21 @@ class RobotFrameworkLanguageProvider(LanguageProvider):
         self.diagnostics_context.diagnostics.document_analyzers.add(self.analyze_document)
 
     def _update_python_path(self) -> None:
-        if self.diagnostics_context.workspace.root_uri is not None:
-            for p in self.diagnostics_context.profile.python_path or []:
-                pa = Path(str(p))
-                if not pa.is_absolute():
-                    pa = Path(self.diagnostics_context.workspace.root_uri.to_path(), pa)
+        root_path = (
+            self.diagnostics_context.workspace.root_uri.to_path()
+            if self.diagnostics_context.workspace.root_uri is not None
+            else None
+        )
 
-                absolute_path = str(pa.absolute())
-                for f in glob.glob(absolute_path):
-                    if Path(f).is_dir() and f not in sys.path:
-                        sys.path.insert(0, f)
+        for p in self.diagnostics_context.profile.python_path or []:
+            pa = Path(str(p))
+            if root_path is not None and not pa.is_absolute():
+                pa = Path(root_path, pa)
+
+            absolute_path = str(pa.absolute())
+            for f in glob.glob(absolute_path):
+                if Path(f).is_dir() and f not in sys.path:
+                    sys.path.insert(0, f)
 
     @language_id("robotframework")
     def on_read_document_text(self, sender: Any, uri: Uri) -> str:

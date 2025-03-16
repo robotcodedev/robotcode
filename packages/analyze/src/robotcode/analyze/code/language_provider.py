@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Callable, Iterable, List, Optional
 
-from robotcode.analyze.diagnostics_context import DiagnosticsContext
+from robotcode.analyze.code.diagnostics_context import DiagnosticsContext
 from robotcode.core.language import LanguageDefinition
 from robotcode.core.workspace import WorkspaceFolder
 
