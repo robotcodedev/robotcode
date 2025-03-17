@@ -225,7 +225,7 @@ class ExitCodeMask(IntFlag):
         return flags
 
 
-ExitCodeMaskLiteral = Literal["error", "warn", "warning", "info", "information", "hint"]
+ExitCodeMaskLiteral = Literal["error", "warn", "warning", "info", "information", "hint", "all"]
 ExitCodeMaskList = List[ExitCodeMaskLiteral]
 
 

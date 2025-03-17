@@ -243,7 +243,8 @@
               "warning",
               "info",
               "information",
-              "hint"
+              "hint",
+              "all"
             ],
             "type": "string"
           },
@@ -263,7 +264,8 @@
               "warning",
               "info",
               "information",
-              "hint"
+              "hint",
+              "all"
             ],
             "type": "string"
           },
