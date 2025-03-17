@@ -372,5 +372,5 @@ def test_type_that_wants_alist_should_throw_an_error() -> None:
             [listeners]
             listener_with_colon = "dummy:output"
             """
-    with pytest.raises(TypeError, match=".*Value must be of type.*"):
+    with pytest.raises(TypeError, match=".*Value '.*' must be of type.*"):
         load_robot_config_from_robot_toml_str(data)
