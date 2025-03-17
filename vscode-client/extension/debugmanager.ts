@@ -612,10 +612,11 @@ export class DebugManager {
     logFile?: string,
     reportFile?: string,
   ): Promise<void> {
-    if (session.configuration?.openOutputAfterRun === "report" && reportFile) {
-      await this.languageClientsManager.openUriInDocumentationView(vscode.Uri.file(reportFile));
-    } else if (session.configuration?.openOutputAfterRun === "log" && logFile) {
-      await this.languageClientsManager.openUriInDocumentationView(vscode.Uri.file(logFile));
+    const openMode = session.configuration?.openOutputAfterRun as string;
+    const fileToOpen = openMode === "report" ? reportFile : openMode === "log" ? logFile : undefined;
+
+    if (fileToOpen) {
+      await this.languageClientsManager.openOutputFile(vscode.Uri.file(fileToOpen));
     }
   }
 }

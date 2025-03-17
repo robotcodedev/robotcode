@@ -794,6 +794,25 @@ export class LanguageClientsManager {
     }
   }
 
+  public async openOutputFile(file: vscode.Uri): Promise<void> {
+    const workspace = vscode.workspace.getWorkspaceFolder(file);
+    const result = vscode.workspace.getConfiguration(CONFIG_SECTION, workspace).get<string>("run.openOutputTarget");
+
+    switch (result) {
+      case "simpleBrowser":
+        await this.openUriInDocumentationView(file);
+        break;
+      case "externalHttp":
+        await vscode.env.openExternal(
+          await vscode.env.asExternalUri((await this.convertToDocumentationUri(file)) ?? file),
+        );
+        break;
+      case "externalFile":
+        await vscode.env.openExternal(file);
+        break;
+    }
+  }
+
   public async convertToDocumentationUri(
     uri: vscode.Uri,
     token?: vscode.CancellationToken | undefined,

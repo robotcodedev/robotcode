@@ -116,7 +116,7 @@ export async function activateAsync(context: vscode.ExtensionContext): Promise<v
         return [];
       },
       async handleTerminalLink(link: TerminalLink) {
-        await languageClientManger.openUriInDocumentationView(vscode.Uri.file(link.path));
+        await languageClientManger.openOutputFile(vscode.Uri.file(link.path));
       },
     }),
 

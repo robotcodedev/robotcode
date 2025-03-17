@@ -757,6 +757,22 @@
             "default": "none",
             "description": "Defines if the report or log file should be opened after a run.",
             "scope": "resource"
+          },
+          "robotcode.run.openOutputTarget": {
+            "type": "string",
+            "enum": [
+              "simpleBrowser",
+              "externalHttp",
+              "externalFile"
+            ],
+            "enumDescriptions": [
+              "Display the output file in a simple VSCode browser window.",
+              "Display the output file in your default web browser via HTTP.",
+              "Display the output file in your default browser via the file system."
+            ],
+            "default": "simpleBrowser",
+            "description": "Specifies how Robot Framework output files should be displayed when opened.",
+            "scope": "resource"
           }
         }
       },
