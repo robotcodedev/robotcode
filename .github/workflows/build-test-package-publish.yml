@@ -49,8 +49,8 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Ensure latest hatch is installed
-        run: pipx install hatch
+      - name: Install Hatch
+        uses: pypa/hatch@install
 
       - name: Test Python Packages
         uses: nick-fields/retry@v3
@@ -111,8 +111,8 @@ jobs:
         with:
           python-version: "3.8"
 
-      - name: Ensure latest hatch is installed
-        run: pipx install hatch
+      - name: Install Hatch
+        uses: pypa/hatch@install
 
       - name: Gradle Wrapper Validation
         uses: gradle/actions/wrapper-validation@v4
@@ -166,8 +166,8 @@ jobs:
         with:
           python-version: "3.8"
 
-      - name: Ensure latest hatch is installed
-        run: pipx install hatch
+      - name: Install Hatch
+        uses: pypa/hatch@install
 
       - name: Setup Node.js environment
         uses: actions/setup-node@v4
@@ -255,8 +255,8 @@ jobs:
         with:
           python-version: "3.8"
 
-      - name: Ensure latest hatch is installed
-        run: pipx install hatch
+      - name: Install Hatch
+        uses: pypa/hatch@install
 
       - name: Setup Node.js environment
         uses: actions/setup-node@v4
