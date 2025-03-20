@@ -5,6 +5,10 @@ default_stages:
   - commit-msg
   - pre-commit
   - pre-push
+default_install_hook_types:
+  - pre-commit
+  - commit-msg
+  - pre-push
 
 repos:
   - repo: https://github.com/compilerla/conventional-pre-commit
