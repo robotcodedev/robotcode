@@ -1,8 +1,18 @@
 fail_fast: true
 default_language_version:
-  python: python3.8
-default_stages: [pre-commit, pre-push]
+  python: python3.9
+default_stages:
+  - commit-msg
+  - pre-commit
+  - pre-push
+
 repos:
+  - repo: https://github.com/compilerla/conventional-pre-commit
+    rev: v4.0.0
+    hooks:
+      - id: conventional-pre-commit
+        stages: [commit-msg]
+        args: []
   - repo: local
     hooks:
       - id: lint_package_update
