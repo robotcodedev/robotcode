@@ -10,6 +10,7 @@ import pkg from "../../package.json";
 //import python_svg from "../images/python.svg?raw";
 const python_svg = readFileSync("images/python.svg", "utf-8");
 const vscode_svg = readFileSync("images/vscode.svg", "utf-8");
+const pycharm_svg = readFileSync("images/pycharm.svg", "utf-8");
 const opencollective_svg = readFileSync("images/opencollective.svg", "utf-8");
 
 // https://vitepress.dev/reference/site-config
@@ -92,6 +93,7 @@ export default defineConfig({
       { icon: "github", link: "https://github.com/robotcodedev/robotcode" },
       { icon: { svg: python_svg }, link: "https://pypi.org/project/robotcode/" },
       { icon: { svg: vscode_svg }, link: "https://marketplace.visualstudio.com/items?itemName=d-biehl.robotcode" },
+      { icon: { svg: pycharm_svg }, link: "https://plugins.jetbrains.com/plugin/26216" },
       { icon: { svg: opencollective_svg }, link: "https://opencollective.com/robotcode" },
     ],
   },
