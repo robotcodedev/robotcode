@@ -26,7 +26,7 @@ class LibDocEx(LibDoc):
             raise Information(
                 "Dry run, not executing any commands. "
                 f"Would execute libdoc with the following options and arguments:\n"
-                f'{line_end.join((*(f"{k} = {v!r}" for k, v in options.items()), *arguments))}'
+                f"{line_end.join((*(f'{k} = {v!r}' for k, v in options.items()), *arguments))}"
             )
 
         return options, arguments

@@ -44,7 +44,7 @@ class DebugAdapterErrorResponseError(JsonRPCException):
     def __init__(self, error: ErrorResponse) -> None:
         super().__init__(
             f'{error.message} (seq={error.request_seq} command="{error.command}")'
-            f'{f": {error.body.error}" if error.body is not None and error.body.error else ""}'
+            f"{f': {error.body.error}' if error.body is not None and error.body.error else ''}"
         )
         self.error = error
 
@@ -60,7 +60,7 @@ class DebugAdapterRPCErrorException(JsonRPCException):
     ) -> None:
         super().__init__(
             f'{(message + " ") if message else ""}(seq={request_seq} command="{command}")'
-            f'{f": {error_message}" if error_message else ""}'
+            f"{f': {error_message}' if error_message else ''}"
         )
         self.message = message
         self.request_seq = request_seq

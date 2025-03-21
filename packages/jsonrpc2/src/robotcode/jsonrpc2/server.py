@@ -94,7 +94,9 @@ class JsonRPCServer(Generic[TProtocol], abc.ABC):
                 (
                     self.tcp_params.host
                     if isinstance(self.tcp_params.host, str)
-                    else self.tcp_params.host[0] if self.tcp_params.host else None
+                    else self.tcp_params.host[0]
+                    if self.tcp_params.host
+                    else None
                 ),
             )
         else:

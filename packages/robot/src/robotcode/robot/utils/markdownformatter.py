@@ -333,14 +333,14 @@ class TableFormatter(Formatter):
 
         for row in header_rows or [[]]:
             row += [""] * (max_columns - len(row))
-            table.append(f'|{"|".join(self._format_cell(cell) for cell in row)}|')
+            table.append(f"|{'|'.join(self._format_cell(cell) for cell in row)}|")
 
         row_ = [" :--- "] * max_columns
-        table.append(f'|{"|".join(row_)}|')
+        table.append(f"|{'|'.join(row_)}|")
 
         for row in body_rows:
             row += [""] * (max_columns - len(row))
-            table.append(f'|{"|".join(self._format_cell(cell) for cell in row)}|')
+            table.append(f"|{'|'.join(self._format_cell(cell) for cell in row)}|")
 
         return "\n".join(table) + "\n\n"
 

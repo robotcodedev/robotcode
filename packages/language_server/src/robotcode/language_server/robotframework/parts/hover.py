@@ -166,14 +166,12 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
                     text = f"### {variable.type.value.title()} `{variable.name}`\n\n"
 
                     if value:
-
                         text += "```python\n"
                         text += f"value: {type(real_value).__name__} = {value}\n"
                         text += "```\n"
 
                     text += "\n"
             if text:
-
                 return Hover(
                     contents=MarkupContent(kind=MarkupKind.MARKDOWN, value=text),
                     range=highlight_range,

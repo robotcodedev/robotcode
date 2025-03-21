@@ -53,7 +53,7 @@ class LockBase:
         aquired = self._lock.acquire(blocking, timeout=timeout)
         if not aquired and blocking and timeout > 0:
             raise RuntimeError(
-                f"Could not acquire {self.__class__.__qualname__} {self.name+' ' if self.name else ' '}in {timeout}s."
+                f"Could not acquire {self.__class__.__qualname__} {self.name + ' ' if self.name else ' '}in {timeout}s."
             )
         return aquired
 

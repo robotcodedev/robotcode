@@ -245,7 +245,9 @@ class LauncherDebugAdapterProtocol(DebugAdapterProtocol):
                         kind=(
                             RunInTerminalKind.INTEGRATED
                             if console == "integratedTerminal"
-                            else RunInTerminalKind.EXTERNAL if console == "externalTerminal" else None
+                            else RunInTerminalKind.EXTERNAL
+                            if console == "externalTerminal"
+                            else None
                         ),
                         title=name,
                     )

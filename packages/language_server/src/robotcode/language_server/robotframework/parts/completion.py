@@ -1733,7 +1733,9 @@ class CompletionCollector(ModelHelper):
                         else (
                             CompletionItemKind.FILE
                             if e.kind == CompleteResultKind.FILE
-                            else CompletionItemKind.FOLDER if e.kind == CompleteResultKind.FOLDER else None
+                            else CompletionItemKind.FOLDER
+                            if e.kind == CompleteResultKind.FOLDER
+                            else None
                         )
                     ),
                     detail=e.kind.value,
@@ -1928,7 +1930,9 @@ class CompletionCollector(ModelHelper):
                     else (
                         CompletionItemKind.FILE
                         if e.kind == CompleteResultKind.FILE
-                        else CompletionItemKind.FOLDER if e.kind == CompleteResultKind.FOLDER else None
+                        else CompletionItemKind.FOLDER
+                        if e.kind == CompleteResultKind.FOLDER
+                        else None
                     )
                 ),
                 detail=e.kind.value,
@@ -2050,7 +2054,9 @@ class CompletionCollector(ModelHelper):
                         else (
                             CompletionItemKind.FILE
                             if e.kind == CompleteResultKind.FILE
-                            else CompletionItemKind.FOLDER if e.kind == CompleteResultKind.FOLDER else None
+                            else CompletionItemKind.FOLDER
+                            if e.kind == CompleteResultKind.FOLDER
+                            else None
                         )
                     ),
                     detail=e.kind.value,

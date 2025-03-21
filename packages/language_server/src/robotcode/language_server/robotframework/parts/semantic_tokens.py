@@ -354,7 +354,6 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
         length: Optional[int] = None,
         yield_arguments: bool = False,
     ) -> Iterator[SemTokenInfo]:
-
         sem_info = self.mapping().get(token.type, None) if token.type is not None else None
         if sem_info is not None:
             sem_type, sem_mod = sem_info

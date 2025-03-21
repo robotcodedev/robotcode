@@ -490,7 +490,9 @@ def handle_options(
                 (
                     [*(app.config.default_paths if app.config.default_paths else ())]
                     if profile.paths is None
-                    else profile.paths if isinstance(profile.paths, list) else [profile.paths]
+                    else profile.paths
+                    if isinstance(profile.paths, list)
+                    else [profile.paths]
                 ),
                 app.config.dry,
                 root_folder,
@@ -641,7 +643,7 @@ def all(
                     )
                     if show_tags and item.tags:
                         yield click.style("        Tags:", bold=True, fg="yellow")
-                        yield f" {', '. join(normalize(str(tag), ignore='_') for tag in sorted(item.tags))}{os.linesep}"
+                        yield f" {', '.join(normalize(str(tag), ignore='_') for tag in sorted(item.tags))}{os.linesep}"
                 else:
                     yield click.style(f"{item.type.capitalize()}: ", fg="green")
                     yield click.style(item.longname, bold=True)
@@ -683,7 +685,7 @@ def _test_or_tasks(
                     )
                     if show_tags and item.tags:
                         yield click.style("    Tags:", bold=True, fg="yellow")
-                        yield f" {', '. join(normalize(str(tag), ignore='_') for tag in sorted(item.tags))}{os.linesep}"
+                        yield f" {', '.join(normalize(str(tag), ignore='_') for tag in sorted(item.tags))}{os.linesep}"
 
             if collector.test_and_tasks:
                 app.echo_via_pager(print(collector.test_and_tasks))
@@ -1047,7 +1049,9 @@ def files(app: Application, full_paths: bool, paths: Iterable[Path]) -> None:
             (
                 [*(app.config.default_paths if app.config.default_paths else ())]
                 if profile.paths is None
-                else profile.paths if isinstance(profile.paths, list) else [profile.paths]
+                else profile.paths
+                if isinstance(profile.paths, list)
+                else [profile.paths]
             )
             if not paths
             else [str(p) for p in paths]

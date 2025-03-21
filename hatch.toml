@@ -22,7 +22,6 @@ dependencies = [
   "pytest-cov",
   "mypy",
   "ruff",
-  "black",
   "debugpy",
   "GitPython",
   "semantic-version",
@@ -98,7 +97,7 @@ matrix.rf.dependencies = [
   { value = "robotframework>=7.1, <7.2", if = [
     "rf71",
   ] },
-   { value = "robotframework>=7.2, <7.3", if = [
+  { value = "robotframework>=7.2, <7.3", if = [
     "rf72",
   ] },
 ]
@@ -150,10 +149,8 @@ features = ["all"]
 
 
 [envs.lint.scripts]
-typing-py = "mypy --no-incremental --cache-dir /dev/null {args:.}"
-typing = ["typing-py", "npm run compile"]
-style = ["ruff check .", "black --check --diff .", "npx eslint ."]
-fmt = ["black .", "ruff check --fix .", "style", "npx eslint --fix ."]
+typing = "mypy --no-incremental --cache-dir /dev/null {args:.}"
+style = ["ruff check .", "ruff format --diff ."]
 all = ["style", "typing"]
 
 [envs.lint.overrides]
@@ -178,3 +175,14 @@ extract-release-notes = ["python scripts/extract_release_notes.py"]
 is-prerelease = ["python scripts/is_prerelease.py"]
 bump = ["cz bump {args}"]
 install-bundled-editable = "python ./scripts/install_bundled_editable.py"
+
+
+[envs.hatch-static-analysis]
+installer="uv"
+dependencies = ["ruff"]
+
+[envs.hatch-static-analysis.scripts]
+format-check = ["ruff format --check --diff {args:.}"]
+format-fix = ["ruff format {args:.}"]
+lint-check = ["ruff check {args:.}"]
+lint-fix = "ruff check --fix {args:.}"

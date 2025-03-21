@@ -1797,7 +1797,9 @@ def get_library_doc(
                 source=(
                     source or module_spec.origin
                     if module_spec is not None and module_spec.origin
-                    else import_name if is_library_by_path(import_name) else None
+                    else import_name
+                    if is_library_by_path(import_name)
+                    else None
                 ),
                 module_spec=module_spec,
                 errors=[
@@ -1806,7 +1808,9 @@ def get_library_doc(
                         (
                             source or module_spec.origin
                             if module_spec is not None and module_spec.origin
-                            else import_name if is_library_by_path(import_name) else None
+                            else import_name
+                            if is_library_by_path(import_name)
+                            else None
                         ),
                         (
                             1
@@ -2402,7 +2406,9 @@ def get_variables_doc(
                         (
                             source or module_spec.origin
                             if module_spec is not None and module_spec.origin
-                            else import_name if is_variables_by_path(import_name) else None
+                            else import_name
+                            if is_variables_by_path(import_name)
+                            else None
                         ),
                         (
                             1
@@ -2426,7 +2432,9 @@ def get_variables_doc(
                     (
                         source or module_spec.origin
                         if module_spec is not None and module_spec.origin
-                        else import_name if is_variables_by_path(import_name) else None
+                        else import_name
+                        if is_variables_by_path(import_name)
+                        else None
                     ),
                     1 if source is not None or (module_spec is not None and module_spec.origin is not None) else None,
                 )

@@ -26,7 +26,7 @@ class TestDocEx(TestDoc):
             raise Information(
                 "Dry run, not executing any commands. "
                 f"Would execute testdoc with the followingoptions and arguments:\n"
-                f'{line_end.join((*(f"{k} = {v!r}" for k, v in options.items()), *arguments))}'
+                f"{line_end.join((*(f'{k} = {v!r}' for k, v in options.items()), *arguments))}"
             )
 
         return options, arguments

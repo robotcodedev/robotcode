@@ -15,7 +15,6 @@ class GitDescribeVersion(NamedTuple):
 
 def determine_version_bump(repo_path="."):
     try:
-
         repo = Repo(repo_path)
         if repo.bare:
             raise ValueError("Not a valid Git repository.")

@@ -188,7 +188,7 @@ class RobotFrameworkEx(RobotFramework):
             raise Information(
                 "Dry run, not executing any commands. "
                 f"Would execute robot with the following options and arguments:\n"
-                f'{line_end.join((*(f"{k} = {v!r}" for k, v in options.items()), *arguments))}'
+                f"{line_end.join((*(f'{k} = {v!r}' for k, v in options.items()), *arguments))}"
             )
 
         modifiers = []
@@ -333,7 +333,9 @@ def robot(
                     (
                         [*(app.config.default_paths if app.config.default_paths else ())]
                         if profile.paths is None
-                        else profile.paths if isinstance(profile.paths, list) else [profile.paths]
+                        else profile.paths
+                        if isinstance(profile.paths, list)
+                        else [profile.paths]
                     ),
                     app.config.dry,
                     root_folder,

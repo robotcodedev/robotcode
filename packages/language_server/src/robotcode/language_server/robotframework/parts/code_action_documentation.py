@@ -90,7 +90,9 @@ class RobotCodeActionDocumentationProtocolPart(RobotLanguageServerProtocolPart, 
                 (
                     node.value
                     if isinstance(node, (TestTemplate, Template))
-                    else node.keyword if isinstance(node, KeywordCall) else node.name
+                    else node.keyword
+                    if isinstance(node, KeywordCall)
+                    else node.name
                 ),
                 cast(
                     Token,

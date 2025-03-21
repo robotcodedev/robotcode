@@ -399,10 +399,10 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
                                 folder = self.parent.workspace.get_workspace_folder(document.uri)
                                 name = path if folder is None else path.relative_to(folder.uri.to_path())
 
-                                progress.report(f"Analyze {i+1}/{len(documents)}: {name}", current=i + 1)
+                                progress.report(f"Analyze {i + 1}/{len(documents)}: {name}", current=i + 1)
                             elif analysis_mode == AnalysisProgressMode.SIMPLE:
                                 progress.begin()
-                                progress.report(f"Analyze {i+1}/{len(documents)}", current=i + 1)
+                                progress.report(f"Analyze {i + 1}/{len(documents)}", current=i + 1)
 
                             try:
                                 with self._current_diagnostics_task_lock:
@@ -490,10 +490,10 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
                                 folder = self.parent.workspace.get_workspace_folder(document.uri)
                                 name = path if folder is None else path.relative_to(folder.uri.to_path())
 
-                                progress.report(f"Collect {i+1}/{len(documents_to_collect)}: {name}", current=i + 1)
+                                progress.report(f"Collect {i + 1}/{len(documents_to_collect)}: {name}", current=i + 1)
                             elif analysis_mode == AnalysisProgressMode.SIMPLE:
                                 progress.begin()
-                                progress.report(f"Collect {i+1}/{len(documents_to_collect)}", current=i + 1)
+                                progress.report(f"Collect {i + 1}/{len(documents_to_collect)}", current=i + 1)
 
                             try:
                                 with self._current_diagnostics_task_lock:

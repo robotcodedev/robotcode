@@ -488,7 +488,9 @@ def from_dict(
                 (
                     (getattr(e, "__name__", None) or str(e) if e is not type(None) else "None")
                     if _get_origin_cached(e) is not Literal
-                    else repr(e).replace("typing.", "") if e is not None else "None"
+                    else repr(e).replace("typing.", "")
+                    if e is not None
+                    else "None"
                 )
                 for e in types
             )

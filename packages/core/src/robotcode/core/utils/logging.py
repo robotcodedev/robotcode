@@ -149,7 +149,9 @@ class LoggingDescriptor:
                     else (
                         ("" if self.__owner is None else self.__owner.__module__ + "." + self.__owner.__qualname__)
                         if self.__owner is not None
-                        else get_unwrapped_func(self.__func).__module__ if self.__func is not None else "<unknown>"
+                        else get_unwrapped_func(self.__func).__module__
+                        if self.__func is not None
+                        else "<unknown>"
                     )
                     + self.__postfix
                 )

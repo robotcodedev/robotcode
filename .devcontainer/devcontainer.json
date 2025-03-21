@@ -41,7 +41,6 @@
         "tamasfe.even-better-toml",
         "gruntfuggly.todo-tree",
         "charliermarsh.ruff",
-        "ms-python.black-formatter",
         "ms-python.mypy-type-checker",
         "ms-python.debugpy"
       ],
@@ -82,12 +81,7 @@
           "^(.*(/|\\\\)\\.?robot\\.toml|\\.?robot\\.toml)$": "http://localhost:8000/etc/robot.toml.json"
         },
         "mypy-type-checker.importStrategy": "fromEnvironment",
-        "debugpy.debugJustMyCode": false,
-        "black-formatter.importStrategy": "fromEnvironment",
-        "black-formatter.args": [
-          "--config",
-          "${workspaceFolder}./pyproject.toml"
-        ]
+        "debugpy.debugJustMyCode": false
       }
     }
   }

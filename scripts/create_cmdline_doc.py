@@ -26,7 +26,7 @@ if __name__ == "__main__" and not __package__:
 def generate(command: click.Command, depth: int = 2, parent_ctx: Optional[click.Context] = None) -> Iterator[str]:
     ctx = click.Context(command, info_name=command.name, parent=parent_ctx, auto_envvar_prefix="ROBOTCODE")
 
-    yield f"#{'#'*depth} {ctx.command.name}"
+    yield f"#{'#' * depth} {ctx.command.name}"
     yield ""
 
     formatter = ctx.make_formatter()

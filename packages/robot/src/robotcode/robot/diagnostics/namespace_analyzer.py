@@ -676,7 +676,9 @@ class NamespaceAnalyzer(Visitor):
                                         Uri.from_path(
                                             err.source
                                             if err.source is not None
-                                            else result.source if result.source is not None else "/<unknown>"
+                                            else result.source
+                                            if result.source is not None
+                                            else "/<unknown>"
                                         )
                                     ),
                                     range=Range(
@@ -1643,7 +1645,9 @@ class NamespaceAnalyzer(Visitor):
         vars = (
             self._block_variables
             if self._block_variables and self._in_block_setting
-            else self._suite_variables if self._in_setting else self._variables
+            else self._suite_variables
+            if self._in_setting
+            else self._variables
         )
 
         try:

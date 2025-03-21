@@ -226,7 +226,9 @@ class _LibrariesEntry(_ImportEntry):
         source_or_origin = (
             self._lib_doc.source
             if self._lib_doc.source is not None
-            else self._lib_doc.module_spec.origin if self._lib_doc.module_spec is not None else None
+            else self._lib_doc.module_spec.origin
+            if self._lib_doc.module_spec is not None
+            else None
         )
 
         # we are a module, so add the module path into file watchers
@@ -1226,8 +1228,7 @@ class ImportsManager:
                         saved_meta = self.data_cache.read_cache_data(CacheSection.LIBRARY, meta_file, LibraryMetaData)
                         if saved_meta.has_errors:
                             self._logger.debug(
-                                lambda: f"Saved library spec for {name}{args!r} is not used "
-                                "due to errors in meta data",
+                                lambda: f"Saved library spec for {name}{args!r} is not used due to errors in meta data",
                                 context_name="import",
                             )
 

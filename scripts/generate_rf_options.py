@@ -96,7 +96,7 @@ def generate(
                 current_line = ""
             m = RE_LIST_MATCHER.match(line)
             if not in_examples and m:
-                line = f"**{m.group(1)}{':\\\\'+m.group(4) if m.group(4) else ''}:** {m.group(5)}"
+                line = f"**{m.group(1)}{':\\\\' + m.group(4) if m.group(4) else ''}:** {m.group(5)}"
                 current_line += "\n\n" + line.strip()
             else:
                 current_line += "\n" + line.strip()
@@ -207,7 +207,7 @@ def generate(
                 )
                 output.append(
                     f"    {name}"
-                    f': {get_type(name, internal_options[long_name]["default"], v, is_flag, extend)} = field(\n'
+                    f": {get_type(name, internal_options[long_name]['default'], v, is_flag, extend)} = field(\n"
                     f'        description="""\\\n{create_desc(v, extend)}\n            """,'
                 )
                 if not extend:

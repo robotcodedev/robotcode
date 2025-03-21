@@ -40,7 +40,6 @@ class FileCacheDataBase(DataCache, ABC):
 
 
 class JsonDataCache(FileCacheDataBase):
-
     def build_cache_data_filename(self, section: CacheSection, entry_name: str) -> Path:
         return self.cache_dir / section.value / (entry_name + ".json")
 

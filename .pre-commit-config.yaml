@@ -49,5 +49,4 @@ repos:
         pass_filenames: false
         language: system
         stages: [pre-commit]
-        types:
-          - "javascript"
+        types_or: [javascript, jsx, ts, tsx]

@@ -149,7 +149,7 @@ def files(app: Application, paths: List[Path], user: bool = False) -> None:
 
         if app.config.output_format is None or app.config.output_format == OutputFormat.TEXT:
             for entry in result["files"]:
-                app.echo(f'{entry["path"]} ({entry["type"].value})')
+                app.echo(f"{entry['path']} ({entry['type'].value})")
         else:
             app.print_data(result)
 
@@ -242,7 +242,7 @@ def _get_config_fields_for_type(
         }
         args = get_args(field.type)
 
-        p = f"{prefix}{'' if prefix[-1]=='.' else '.'}" if prefix else ""
+        p = f"{prefix}{'' if prefix[-1] == '.' else '.'}" if prefix else ""
         for a in args:
             origin = get_origin(a)
             if origin is None and issubclass(a, BaseOptions):

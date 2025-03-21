@@ -582,12 +582,16 @@ class ImportVisitor(Visitor):
                     end_line_no=(
                         last_data_token.lineno
                         if last_data_token is not None
-                        else node.end_lineno if node.end_lineno is not None else -1
+                        else node.end_lineno
+                        if node.end_lineno is not None
+                        else -1
                     ),
                     end_col_offset=(
                         last_data_token.end_col_offset
                         if last_data_token is not None
-                        else node.end_col_offset if node.end_col_offset is not None else -1
+                        else node.end_col_offset
+                        if node.end_col_offset is not None
+                        else -1
                     ),
                     source=self.source,
                 )
@@ -607,12 +611,16 @@ class ImportVisitor(Visitor):
                     end_line_no=(
                         last_data_token.lineno
                         if last_data_token is not None
-                        else node.end_lineno if node.end_lineno is not None else -1
+                        else node.end_lineno
+                        if node.end_lineno is not None
+                        else -1
                     ),
                     end_col_offset=(
                         last_data_token.end_col_offset
                         if last_data_token is not None
-                        else node.end_col_offset if node.end_col_offset is not None else -1
+                        else node.end_col_offset
+                        if node.end_col_offset is not None
+                        else -1
                     ),
                     source=self.source,
                 )
@@ -633,12 +641,16 @@ class ImportVisitor(Visitor):
                     end_line_no=(
                         last_data_token.lineno
                         if last_data_token is not None
-                        else node.end_lineno if node.end_lineno is not None else -1
+                        else node.end_lineno
+                        if node.end_lineno is not None
+                        else -1
                     ),
                     end_col_offset=(
                         last_data_token.end_col_offset
                         if last_data_token is not None
-                        else node.end_col_offset if node.end_col_offset is not None else -1
+                        else node.end_col_offset
+                        if node.end_col_offset is not None
+                        else -1
                     ),
                     source=self.source,
                 )

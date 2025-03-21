@@ -83,7 +83,9 @@ class SemanticTokensProtocolPart(LanguageServerProtocolPart):
                 full=(
                     SemanticTokensOptionsFullType1(delta=True if len(self.collect_full_delta) else None)
                     if len(self.collect_full) and len(self.collect_full_delta)
-                    else True if len(self.collect_full) else None
+                    else True
+                    if len(self.collect_full)
+                    else None
                 ),
                 range=True if len(self.collect_range) else None,
             )

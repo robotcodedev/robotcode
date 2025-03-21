@@ -110,7 +110,7 @@ class ConsoleInterpreter(BaseInterpreter):
         if is_true(html):
             message = f"*HTML*{message}"
 
-        self.app.echo(f"{'  '*self.indent}[ {level} ] {message}", file=sys.__stdout__ if std_err else sys.__stderr__)
+        self.app.echo(f"{'  ' * self.indent}[ {level} ] {message}", file=sys.__stdout__ if std_err else sys.__stderr__)
 
     def message(
         self, message: str, level: str, html: Union[str, bool] = False, timestamp: Union[datetime, str, None] = None
@@ -126,7 +126,8 @@ class ConsoleInterpreter(BaseInterpreter):
             return
 
         self.app.echo(
-            f"{'  '*self.indent}KEYWORD {result.libname}.{result.kwname}  {'  '.join(result.args)}", file=sys.__stdout__
+            f"{'  ' * self.indent}KEYWORD {result.libname}.{result.kwname}  {'  '.join(result.args)}",
+            file=sys.__stdout__,
         )
         self.indent += 1
 

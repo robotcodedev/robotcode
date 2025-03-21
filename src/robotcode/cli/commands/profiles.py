@@ -141,8 +141,8 @@ def list(app: Application, paths: List[Path], show_hidden: bool = False, sort_by
                     *(len(profile["description"]) for profile in result["profiles"]),
                 )
                 output += (
-                    f'| Active | Selected | Enabled | Precedence | Name{(max_name - len("Name")) * " "} '
-                    f'| Description{(max_description - len("Description")) * " "} |\n'
+                    f"| Active | Selected | Enabled | Precedence | Name{(max_name - len('Name')) * ' '} "
+                    f"| Description{(max_description - len('Description')) * ' '} |\n"
                 )
                 output += f"|:------:|:------:|:--------:|:-------:|:{max_name * '-'}-|:{max_description * '-'}-|\n"
                 for selected_profiles, enabled, name, description, precedence in (
@@ -150,12 +150,12 @@ def list(app: Application, paths: List[Path], show_hidden: bool = False, sort_by
                     for v in result["profiles"]
                 ):
                     output += (
-                        f'|   {"*" if selected_profiles and enabled else " "}    '
-                        f'|    {"*" if selected_profiles else " "}     '
-                        f'|    {"*" if enabled else " "}    '
-                        f'|    {precedence if precedence else " "}    '
-                        f'| {name}{(max_name - len(name)) * " "} '
-                        f'| {description if description else ""}{(max_description - len(description)) * " "} |\n'
+                        f"|   {'*' if selected_profiles and enabled else ' '}    "
+                        f"|    {'*' if selected_profiles else ' '}     "
+                        f"|    {'*' if enabled else ' '}    "
+                        f"|    {precedence if precedence else ' '}    "
+                        f"| {name}{(max_name - len(name)) * ' '} "
+                        f"| {description if description else ''}{(max_description - len(description)) * ' '} |\n"
                     )
             else:
                 output += "No profiles defined.\n"

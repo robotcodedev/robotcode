@@ -128,18 +128,6 @@ upload_to_release = false
 upload_to_repository = false
 build_command = "pip install hatch && hatch build"
 
-[tool.black]
-line-length = 120
-target-version = ['py38']
-extend-exclude = '''
-(
-  /(
-    | bundled/libs
-  )/
-)
-'''
-
-
 [tool.pytest.ini_options]
 minversion = "6.0"
 addopts = "-ra -vv -rf --ignore=bundled --ignore=.hatch"

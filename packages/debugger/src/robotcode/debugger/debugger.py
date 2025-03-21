@@ -547,7 +547,6 @@ class Debugger:
         lines: Optional[List[int]] = None,
         source_modified: Optional[bool] = None,
     ) -> List[Breakpoint]:
-
         if self.is_windows_path(source.path or ""):
             path: pathlib.PurePath = pathlib.PureWindowsPath(source.path or "")
         else:
@@ -647,7 +646,6 @@ class Debugger:
             if source_path in self.breakpoints:
                 breakpoints = [v for v in self.breakpoints[source_path].breakpoints if v.line == line_no]
                 if len(breakpoints) > 0:
-
                     for point in breakpoints:
                         if point.condition is not None:
                             hit = False
