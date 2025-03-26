@@ -48,23 +48,23 @@ import java.util.*
     companion object {
         private const val DEBOUNCE_DELAY = 1000L
     }
-    
+
     private val refreshJobs = WeakHashMap<VirtualFile, Job>()
     private var refreshJob: Job? = null
-    
+
     var testItems: Array<RobotCodeTestItem> = arrayOf()
         private set
-    
+
     init {
         EditorFactory.getInstance().eventMulticaster.addDocumentListener(this, this)
         VirtualFileManager.getInstance().addAsyncFileListener(this, this)
         project.messageBus.connect().subscribe(FileEditorManagerListener.FILE_EDITOR_MANAGER, this)
     }
-    
+
     override fun dispose() {
         EditorFactory.getInstance().eventMulticaster.removeDocumentListener(this)
     }
-    
+
     override fun documentChanged(event: DocumentEvent) {
         super.documentChanged(event)
         FileDocumentManager.getInstance().getFile(event.document)?.let { file ->
@@ -78,11 +78,11 @@ import java.util.*
                         }
                     }
                 }
-                
+
             }
         }
     }
-    
+
     override fun prepareChange(events: List<VFileEvent>): AsyncFileListener.ChangeApplier? {
         return object : AsyncFileListener.ChangeApplier {
             override fun afterVfsChange() {
@@ -95,36 +95,36 @@ import java.util.*
                             } else {
                                 refreshDebounced()
                             }
-                            
+
                         }
                     }
                 }
             }
         }
     }
-    
+
     override fun fileOpened(source: FileEditorManager, file: VirtualFile) {
         if (file.fileType == RobotSuiteFileType) {
             refreshDebounced(file)
         }
     }
-    
+
     override fun fileClosed(source: FileEditorManager, file: VirtualFile) {
         if (file.fileType == RobotSuiteFileType) {
             refreshDebounced(file)
         }
     }
-    
+
     @OptIn(ExperimentalCoroutinesApi::class)
     private val refreshScope = CoroutineScope(Dispatchers.IO.limitedParallelism(1))
-    
+
     fun refreshDebounced(file: VirtualFile) {
         if (!project.isOpen || project.isDisposed) {
             return
         }
-        
+
         val job = refreshJobs[file]
-        
+
         if (job != null) {
             thisLogger().info("Cancelling previous refresh job")
             job.cancel()
@@ -139,36 +139,36 @@ import java.util.*
             refreshJobs.remove(file)
         }
     }
-    
+
     fun refreshDebounced() {
         if (!project.isOpen || project.isDisposed) {
             return
         }
-        
+
         refreshJobs.values.forEach { it.cancel() }
         refreshJob?.cancel()
-        
+
         refreshJob = refreshScope.launch {
             delay(DEBOUNCE_DELAY)
             refresh()
             refreshJob = null
         }
     }
-    
+
     fun refresh(uri: String) {
         if (!project.isOpen || project.isDisposed) {
             return
         }
-        
+
         thisLogger().info("Refreshing test items for $uri")
         try {
             val testItem = findTestItem(uri) ?: return
-            
+
             testItem.children = ApplicationManager.getApplication().executeOnPooledThread<RobotCodeDiscoverResult> {
-                
+
                 // TODO: Add support for configurable paths
-                val defaultPaths = arrayOf("--default-path", ".")
-                
+                val defaultPaths = arrayOf("-dp", ".")
+
                 val cmdLine = project.buildRobotCodeCommandLine(
                     arrayOf(
                         *defaultPaths,
@@ -183,9 +183,9 @@ import java.util.*
                         escapeRobotGlob(testItem.longname)
                     ), format = "json"
                 ).withCharset(Charsets.UTF_8).withWorkDirectory(project.basePath)
-                
+
                 var openFiles = mutableMapOf<String, String>()
-                
+
                 ApplicationManager.getApplication().runReadAction {
                     FileEditorManagerEx.getInstanceEx(project).openFiles.forEach { file ->
                         if (file.uri == uri) {
@@ -195,9 +195,9 @@ import java.util.*
                         }
                     }
                 }
-                
+
                 var openFilesAsString = Json.encodeToString(openFiles)
-                
+
                 val result = CapturingProcessHandler(cmdLine).apply {
                     process.outputStream.bufferedWriter().apply {
                         write(openFilesAsString)
@@ -205,7 +205,7 @@ import java.util.*
                         close()
                     }
                 }.runProcess()
-                
+
                 if (result.exitCode != 0) {
                     throw RuntimeException("Failed to discover test items for $uri: ${result.stderr}")
                 }
@@ -214,24 +214,24 @@ import java.util.*
         } catch (e: Exception) {
             thisLogger().warn("Failed to discover test items", e)
         }
-        
+
         DaemonCodeAnalyzer.getInstance(project).restart()
     }
-    
+
     fun refresh() {
         thisLogger().info("Refreshing test items")
         try {
             testItems = ApplicationManager.getApplication().executeOnPooledThread<RobotCodeDiscoverResult> {
-                
+
                 // TODO: Add support for configurable paths
-                val defaultPaths = arrayOf("--default-path", ".")
-                
+                val defaultPaths = arrayOf("-dp", ".")
+
                 val cmdLine = project.buildRobotCodeCommandLine(
                     arrayOf(*defaultPaths, "discover", "--read-from-stdin", "all"), format = "json"
                 ).withCharset(Charsets.UTF_8).withWorkDirectory(project.basePath)
-                
+
                 val openFiles = mutableMapOf<String, String>()
-                
+
                 ApplicationManager.getApplication().runReadAction {
                     FileEditorManagerEx.getInstanceEx(project).openFiles.forEach { file ->
                         FileDocumentManager.getInstance().getDocument(file)?.let { document ->
@@ -239,9 +239,9 @@ import java.util.*
                         }
                     }
                 }
-                
+
                 val openFilesAsString = Json.encodeToString(openFiles)
-                
+
                 val result = CapturingProcessHandler(cmdLine).apply {
                     process.outputStream.bufferedWriter().apply {
                         write(openFilesAsString)
@@ -249,7 +249,7 @@ import java.util.*
                         close()
                     }
                 }.runProcess()
-                
+
                 if (result.exitCode != 0) {
                     throw RuntimeException("Failed to discover test items: ${result.stderr}")
                 }
@@ -259,23 +259,23 @@ import java.util.*
             thisLogger().warn("Failed to discover test items", e)
             testItems = arrayOf()
         }
-        
+
         DaemonCodeAnalyzer.getInstance(project).restart()
     }
-    
+
     fun findTestItem(
         uri: String,
         line: UInt? = null,
     ): RobotCodeTestItem? {
         return findTestItem(testItems, uri, line)
     }
-    
+
     fun findTestItem(
         root: RobotCodeTestItem,
         uri: String,
         line: UInt? = null,
     ): RobotCodeTestItem? {
-        
+
         if (line == null) {
             if (root.isSameUri(uri)) {
                 return root
@@ -285,10 +285,10 @@ import java.util.*
                 return root
             }
         }
-        
+
         return findTestItem(root.children ?: arrayOf(), uri, line)
     }
-    
+
     fun findTestItem(
         testItems: Array<RobotCodeTestItem>, uri: String, line: UInt? = null
     ): RobotCodeTestItem? {
@@ -298,38 +298,38 @@ import java.util.*
                 return found
             }
         }
-        
+
         return null
     }
-    
-    
+
+
     fun findTestItem(element: PsiElement): RobotCodeTestItem? {
         val directory = element as? PsiDirectory
         if (directory != null) {
             return findTestItem(directory.virtualFile.uri)
         }
-        
+
         val containingFile = element.containingFile ?: return null
         if (containingFile !is RobotSuiteFile) {
             return null
         }
-        
+
         if (element is RobotSuiteFile) {
             return findTestItem(containingFile.virtualFile.uri)
         }
-        
+
         if (element.elementType !is IRobotFrameworkElementType) {
             return null
         }
-        
+
         val psiDocumentManager = PsiDocumentManager.getInstance(project) ?: return null
         val document = psiDocumentManager.getDocument(containingFile) ?: return null
         val lineNumber = document.getLineNumber(element.startOffset)
         if (lineNumber <= 0) return null // this is a suite file and this is already caught above
-        
+
         val columnNumber = element.startOffset - document.getLineStartOffset(lineNumber)
         if (columnNumber != 0) return null
-        
+
         val result = findTestItem(containingFile.virtualFile.uri, lineNumber.toUInt())
         return result
     }
@@ -337,13 +337,13 @@ import java.util.*
 
 private fun getRfcCompliantUri(virtualFile: VirtualFile): String {
     val filePath = virtualFile.path
-    
+
     val normalizedPath = if (isWindows()) {
         filePath.replace("\\", "/")
     } else {
         filePath
     }
-    
+
     return Paths.get(normalizedPath).toUri().toString().removeSuffix("/")
 }
 

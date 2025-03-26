@@ -428,7 +428,7 @@ export class TestControllerManager {
 
     return (await this.languageClientsManager.pythonManager.executeRobotCode(
       folder,
-      [...(paths?.length ? paths.flatMap((v) => ["--default-path", v]) : ["--default-path", "."]), "profiles", "list"],
+      [...(paths?.length ? paths.flatMap((v) => ["-dp", v]) : ["-dp", "."]), "profiles", "list"],
       profiles,
       "json",
       true,
@@ -674,7 +674,7 @@ export class TestControllerManager {
     const result = (await this.languageClientsManager.pythonManager.executeRobotCode(
       folder,
       [
-        ...(paths?.length ? paths.flatMap((v) => ["--default-path", v]) : ["--default-path", "."]),
+        ...(paths?.length ? paths.flatMap((v) => ["-dp", v]) : ["-dp", "."]),
         ...discoverArgs,
         ...mode_args,
         ...pythonPath.flatMap((v) => ["-P", v]),
@@ -819,7 +819,7 @@ export class TestControllerManager {
         ["discover", "--read-from-stdin", "tests"],
         [
           ...(robotWorkspaceItem?.needsParseInclude && testItem.relSource
-            ? ["--parse-include", escapeRobotGlobPatterns(testItem.relSource)]
+            ? ["-I", escapeRobotGlobPatterns(testItem.relSource)]
             : []),
           "--suite",
           escapeRobotGlobPatterns(testItem.longname),

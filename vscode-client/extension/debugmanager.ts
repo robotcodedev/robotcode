@@ -495,31 +495,31 @@ export class DebugManager {
 
     if (needs_parse_include) {
       for (const s of rel_sources) {
-        args.push("--parse-include");
+        args.push("-I");
         args.push(escapeRobotGlobPatterns(s));
       }
     }
 
     if (topLevelSuiteName) {
-      args.push("--name");
+      args.push("-N");
       args.push(topLevelSuiteName);
     }
 
     for (const s of suites) {
-      args.push("--suite");
+      args.push("-s");
       args.push(escapeRobotGlobPatterns(s));
     }
 
     if (included.length > 0) {
       for (const s of included) {
-        args.push("--by-longname");
+        args.push("-bl");
         args.push(s);
       }
     }
 
     if (excluded.length > 0) {
       for (const s of excluded) {
-        args.push("--exclude-by-longname");
+        args.push("-ebl");
         args.push(s);
       }
     }
