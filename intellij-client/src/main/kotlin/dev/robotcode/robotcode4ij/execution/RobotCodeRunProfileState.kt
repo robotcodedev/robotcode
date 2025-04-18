@@ -26,6 +26,7 @@ import com.jetbrains.rd.util.reactive.adviseEternal
 import dev.robotcode.robotcode4ij.buildRobotCodeCommandLine
 import dev.robotcode.robotcode4ij.debugging.RobotCodeDebugProgramRunner
 import dev.robotcode.robotcode4ij.debugging.RobotCodeDebugProtocolClient
+import dev.robotcode.robotcode4ij.testing.testManger
 import dev.robotcode.robotcode4ij.utils.NetUtils.findFreePort
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.TimeoutCancellationException
@@ -41,6 +42,7 @@ import org.eclipse.lsp4j.debug.services.IDebugProtocolServer
 import org.eclipse.lsp4j.jsonrpc.Launcher
 import java.net.Socket
 import java.net.SocketTimeoutException
+import kotlin.io.path.Path
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
@@ -80,7 +82,9 @@ class RobotCodeRunProfileState(private val config: RobotCodeRunConfiguration, en
         
         // Determine default paths
         val testSuitePath = profile.testSuitePath
-        val defaultPaths = arrayOf("--default-path", if (!testSuitePath.isNullOrEmpty()) testSuitePath else ".")
+        
+        // TODO: Add support for configurable paths
+        val defaultPaths = arrayOf("--default-path", ".")
         
         // Prepare variables as command line arguments
         val variables = profile.variables?.split(",")?.mapNotNull {
@@ -94,11 +98,19 @@ class RobotCodeRunProfileState(private val config: RobotCodeRunConfiguration, en
         val debug = environment.runner is RobotCodeDebugProgramRunner
         
         val included = mutableListOf<String>()
-        if (!profile.includedTestItems.isNullOrEmpty()) {
-            val includedTestItems = profile.includedTestItems!!.split(",").map { it.trim() }.filter { it.isNotEmpty() }
-            for (testitem in includedTestItems) {
+        
+        if (testSuitePath != null){
+            val testitem = profile.project.testManger.findTestItem(Path(testSuitePath).toUri().toString())
+            if (testitem != null) {
                 included.add("--by-longname")
-                included.add(testitem)
+                included.add(testitem.longname)
+            }
+        }
+        if (!profile.includedTestItems.isNullOrEmpty()) {
+            val testItemLongNames = profile.includedTestItems!!.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+            for (testItemLongName in testItemLongNames){
+                included.add("--by-longname")
+                included.add(testItemLongName)
             }
         }
         

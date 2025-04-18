@@ -83,7 +83,7 @@ class RobotCodeRunConfigurationEditor(private val project: Project) : SettingsEd
             row("Test Suite Path:") {
                 cell(testSuitePathField).align(AlignX.FILL)
             }
-            row("Included TestItems:") {
+            row("Included Test Items:") {
                 cell(includedTestItemsField).align(AlignX.FILL)
             }
             row("Environment Variables:") {
