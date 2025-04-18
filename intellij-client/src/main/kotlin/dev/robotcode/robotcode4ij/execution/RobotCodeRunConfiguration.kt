@@ -29,7 +29,7 @@ class RobotCodeRunConfiguration(project: Project, factory: ConfigurationFactory)
     // Additional arguments
     var additionalArguments: String? = null
     
-    var includedTestItems: List<RobotCodeTestItem> = emptyList()
+    var includedTestItems: String? = null
     
     override fun getState(executor: Executor, environment: ExecutionEnvironment): RunProfileState {
         return RobotCodeRunProfileState(this, environment)
@@ -47,6 +47,7 @@ class RobotCodeRunConfiguration(project: Project, factory: ConfigurationFactory)
         super.writeExternal(element)
         // Save data to XML
         environmentVariables.writeExternal(element)
+        element.setAttribute("testitems", includedTestItems ?: "")
         element.setAttribute("variables", variables ?: "")
         element.setAttribute("testSuitePath", testSuitePath ?: "")
         element.setAttribute("additionalArguments", additionalArguments ?: "")
@@ -59,5 +60,6 @@ class RobotCodeRunConfiguration(project: Project, factory: ConfigurationFactory)
         variables = element.getAttributeValue("variables")
         testSuitePath = element.getAttributeValue("testSuitePath")
         additionalArguments = element.getAttributeValue("additionalArguments")
+        includedTestItems = element.getAttributeValue("testitems")
     }
 }

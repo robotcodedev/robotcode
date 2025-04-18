@@ -10,6 +10,7 @@ import com.intellij.ui.dsl.builder.AlignX
 import com.intellij.ui.dsl.builder.panel
 import com.intellij.util.ui.ComponentWithEmptyText
 import javax.swing.JComponent
+import javax.swing.JTextField
 
 class RobotCodeRunConfigurationEditor(private val project: Project) : SettingsEditor<RobotCodeRunConfiguration>() {
     
@@ -21,6 +22,10 @@ class RobotCodeRunConfigurationEditor(private val project: Project) : SettingsEd
                 (textField as ComponentWithEmptyText).emptyText.text = "Define variables, e.g. VAR1=value1, VAR2=value2"
             }
         }
+    
+    private val includedTestItemsField = JTextField().apply {
+        toolTipText = "Enter testitems separated by commas, e.g., MyProject.tests.testsuite1.testcase1,MyProject.tests.testsuite1.testcase2"
+    }
     
     private val testSuitePathField = TextFieldWithBrowseButton().apply {
         addBrowseFolderListener(
@@ -51,6 +56,9 @@ class RobotCodeRunConfigurationEditor(private val project: Project) : SettingsEd
         
         // Reset the additional arguments field
         argumentsField.text = s.additionalArguments ?: ""
+        
+        // Reset the included test cases field
+        includedTestItemsField.text = s.includedTestItems
     }
     
     override fun applyEditorTo(s: RobotCodeRunConfiguration) {
@@ -65,12 +73,18 @@ class RobotCodeRunConfigurationEditor(private val project: Project) : SettingsEd
         
         // Apply the additional arguments field
         s.additionalArguments = argumentsField.text.ifBlank { null }
+        
+        // Apply the included test items field
+        s.includedTestItems = includedTestItemsField.text
     }
     
     override fun createEditor(): JComponent {
         return panel {
             row("Test Suite Path:") {
                 cell(testSuitePathField).align(AlignX.FILL)
+            }
+            row("Included TestItems:") {
+                cell(includedTestItemsField).align(AlignX.FILL)
             }
             row("Environment Variables:") {
                 cell(environmentVariablesField.component).align(AlignX.FILL)

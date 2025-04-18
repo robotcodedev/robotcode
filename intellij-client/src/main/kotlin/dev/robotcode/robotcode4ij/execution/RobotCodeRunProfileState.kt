@@ -94,9 +94,12 @@ class RobotCodeRunProfileState(private val config: RobotCodeRunConfiguration, en
         val debug = environment.runner is RobotCodeDebugProgramRunner
         
         val included = mutableListOf<String>()
-        for (test in profile.includedTestItems) {
-            included.add("--by-longname")
-            included.add(test.longname)
+        if (!profile.includedTestItems.isNullOrEmpty()) {
+            val includedTestItems = profile.includedTestItems!!.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+            for (testitem in includedTestItems) {
+                included.add("--by-longname")
+                included.add(testitem)
+            }
         }
         
         val connection = mutableListOf<String>()
