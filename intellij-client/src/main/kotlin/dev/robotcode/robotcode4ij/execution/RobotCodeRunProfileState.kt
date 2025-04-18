@@ -6,6 +6,7 @@ import com.intellij.execution.ExecutionException
 import com.intellij.execution.ExecutionResult
 import com.intellij.execution.Executor
 import com.intellij.execution.configurations.CommandLineState
+import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.execution.process.KillableColoredProcessHandler
 import com.intellij.execution.process.ProcessEvent
 import com.intellij.execution.process.ProcessHandler
@@ -74,11 +75,21 @@ class RobotCodeRunProfileState(private val config: RobotCodeRunConfiguration, en
     
     override fun startProcess(): ProcessHandler {
         val project = environment.project
-        val profile =
-            environment.runProfile as? RobotCodeRunConfiguration ?: throw CantRunException("Invalid run configuration")
+        val profile = environment.runProfile as? RobotCodeRunConfiguration
+            ?: throw CantRunException("Invalid run configuration")
         
-        // TODO: Add support for configurable paths
-        val defaultPaths = arrayOf("--default-path", ".")
+        // Determine default paths
+        val testSuitePath = profile.testSuitePath
+        val defaultPaths = arrayOf("--default-path", if (!testSuitePath.isNullOrEmpty()) testSuitePath else ".")
+        
+        // Prepare variables as command line arguments
+        val variables = profile.variables?.split(",")?.mapNotNull {
+            val keyValue = it.split("=")
+            if (keyValue.size == 2) "-v ${keyValue[0]}:${keyValue[1]}" else null
+        }?.toTypedArray() ?: emptyArray()
+        
+        // Collect additional arguments
+        val additionalArguments = profile.additionalArguments?.split(" ")?.toTypedArray() ?: emptyArray()
         
         val debug = environment.runner is RobotCodeDebugProgramRunner
         
@@ -89,30 +100,45 @@ class RobotCodeRunProfileState(private val config: RobotCodeRunConfiguration, en
         }
         
         val connection = mutableListOf<String>()
-        
         val port = findFreePort(DEBUGGER_DEFAULT_PORT)
         if (port != DEBUGGER_DEFAULT_PORT) {
             included.add("--tcp")
             included.add(port.toString())
         }
         
+        // Combine all parts into the final command line
         val commandLine = project.buildRobotCodeCommandLine(
             arrayOf(
                 *defaultPaths,
                 "debug",
                 *connection.toTypedArray(),
                 *(if (!debug) arrayOf("--no-debug") else arrayOf()),
-                *(included.toTypedArray())
-            ), noColor = false // ,extraArgs = arrayOf("-v", "--log", "--log-level", "TRACE")
-        
+                *included.toTypedArray(),
+                *variables,
+                *additionalArguments
+            ),
+            noColor = false
         )
         
-        val handler = KillableColoredProcessHandler(commandLine) // handler.setHasPty(true)
+        // Apply environment variables
+        val environmentVariables = profile.environmentVariables.envs
+        for ((key, value) in environmentVariables) {
+            commandLine.environment[key] = value
+        }
+        
+        // Apply "passParentEnvironment" if set to false
+        commandLine.withParentEnvironmentType(
+            if (profile.environmentVariables.isPassParentEnvs) {
+                GeneralCommandLine.ParentEnvironmentType.CONSOLE
+            } else {
+                GeneralCommandLine.ParentEnvironmentType.NONE
+            }
+        )
+        
+        val handler = KillableColoredProcessHandler(commandLine)
         handler.putUserData(DEBUG_PORT, port)
         ProcessTerminatedListener.attach(handler)
         handler.addProcessListener(this)
-        
-        // RunContentManager.getInstance(project).showRunContent(environment.executor, handler)
         
         return handler
     }
@@ -142,8 +168,8 @@ class RobotCodeRunProfileState(private val config: RobotCodeRunConfiguration, en
                     consoleProperties.state = this
                 }
                 
-                var splitterPropertyName = SMTestRunnerConnectionUtil.getSplitterPropertyName(TESTFRAMEWORK_NAME)
-                var consoleView = RobotCodeRunnerConsoleView(consoleProperties, splitterPropertyName)
+                val splitterPropertyName = SMTestRunnerConnectionUtil.getSplitterPropertyName(TESTFRAMEWORK_NAME)
+                val consoleView = RobotCodeRunnerConsoleView(consoleProperties, splitterPropertyName)
                 SMTestRunnerConnectionUtil.initConsoleView(consoleView, TESTFRAMEWORK_NAME)
                 consoleView.attachToProcess(processHandler)
                 consoleRef.set(consoleView)
@@ -192,7 +218,7 @@ class RobotCodeRunProfileState(private val config: RobotCodeRunConfiguration, en
     @OptIn(ExperimentalUuidApi::class) override fun startNotified(event: ProcessEvent) {
         runBlocking(Dispatchers.IO) {
             
-            var port = event.processHandler.getUserData(DEBUG_PORT) ?: throw CantRunException("No debug port found.")
+            val port = event.processHandler.getUserData(DEBUG_PORT) ?: throw CantRunException("No debug port found.")
             
             socket = tryConnectToServerWithTimeout("127.0.0.1", port, 10000, retryIntervalMillis = 100)
                 ?: throw CantRunException("Unable to establish connection to debug server.")
@@ -232,7 +258,7 @@ class RobotCodeRunProfileState(private val config: RobotCodeRunConfiguration, en
             }
             
             afterConfigurationDone.fire(Unit)
-            debugServer.attach(emptyMap<String, Object>())
+            debugServer.attach(emptyMap<String, Any>())
         }
     }
     

@@ -1,9 +1,9 @@
 package dev.robotcode.robotcode4ij.execution
 
 import com.intellij.execution.Executor
+import com.intellij.execution.configuration.EnvironmentVariablesData
 import com.intellij.execution.configurations.ConfigurationFactory
 import com.intellij.execution.configurations.LocatableConfigurationBase
-import com.intellij.execution.configurations.RunConfiguration
 import com.intellij.execution.configurations.RunProfileState
 import com.intellij.execution.runners.ExecutionEnvironment
 import com.intellij.execution.testframework.sm.runner.SMRunnerConsolePropertiesProvider
@@ -17,32 +17,47 @@ class RobotCodeRunConfiguration(project: Project, factory: ConfigurationFactory)
     LocatableConfigurationBase<ConfigurationFactory>
         (project, factory, "Robot Framework"), SMRunnerConsolePropertiesProvider {
     
-    override fun getState(executor: Executor, environment: ExecutionEnvironment): RunProfileState {
-        return RobotCodeRunProfileState(this, environment)
-    }
+    // Environment variables
+    var environmentVariables: EnvironmentVariablesData = EnvironmentVariablesData.DEFAULT
     
-    override fun getConfigurationEditor(): SettingsEditor<out RunConfiguration> {
-        // TODO: Implement configuration editor
-        return RobotCodeRunConfigurationEditor()
-    }
+    // Variables
+    var variables: String? = null
+    
+    // Test suite path
+    var testSuitePath: String? = null
+    
+    // Additional arguments
+    var additionalArguments: String? = null
     
     var includedTestItems: List<RobotCodeTestItem> = emptyList()
     
-    var paths: List<String> = emptyList()
+    override fun getState(executor: Executor, environment: ExecutionEnvironment): RunProfileState {
+        return RobotCodeRunProfileState(this, environment)
+    }
     
     override fun createTestConsoleProperties(executor: Executor): SMTRunnerConsoleProperties {
         return RobotRunnerConsoleProperties(this, "Robot Framework", executor)
     }
     
+    override fun getConfigurationEditor(): SettingsEditor<out RobotCodeRunConfiguration> {
+        return RobotCodeRunConfigurationEditor(project)
+    }
+    
     override fun writeExternal(element: Element) {
         super.writeExternal(element)
-        // TODO: Implement serialization
-        // XmlSerializer.serializeInto(this, element)
+        // Save data to XML
+        environmentVariables.writeExternal(element)
+        element.setAttribute("variables", variables ?: "")
+        element.setAttribute("testSuitePath", testSuitePath ?: "")
+        element.setAttribute("additionalArguments", additionalArguments ?: "")
     }
     
     override fun readExternal(element: Element) {
         super.readExternal(element)
-        // TODO: Implement deserialization
-        // XmlSerializer.deserializeInto(this, element)
+        // Read data from XML
+        environmentVariables = EnvironmentVariablesData.readExternal(element)
+        variables = element.getAttributeValue("variables")
+        testSuitePath = element.getAttributeValue("testSuitePath")
+        additionalArguments = element.getAttributeValue("additionalArguments")
     }
 }
