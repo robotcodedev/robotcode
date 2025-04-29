@@ -176,17 +176,6 @@ class RegTestFixture:
         self.buffer = StringIO()
 
     @property
-    def old_output_file_name(self) -> Path:
-        name, __, test_function = self.nodeid.partition("::")
-        file_name = Path(name)
-
-        test_function = test_function.replace("/", "--")
-        if len(test_function) > 100:
-            test_function = sha512(test_function.encode("utf-8")).hexdigest()[:10]
-
-        return Path(f"{file_name.stem}.{test_function}.out")
-
-    @property
     def output_file_name(self) -> Path:
         name, __, test_function = self.nodeid.partition("::")
         file_name = Path(name)
@@ -203,10 +192,6 @@ class RegTestFixture:
         return Path(f"{file_name.stem}.{test_function}.out")
 
     @property
-    def old_result_file(self) -> Path:
-        return Path(self.test_folder, "_regtest_outputs", self.old_output_file_name)
-
-    @property
     def result_file(self) -> Path:
         return Path(self.test_folder, "_regtest_outputs", self.output_file_name)
 
@@ -220,9 +205,6 @@ class RegTestFixture:
     def tobe(self):
         if os.path.exists(self.result_file):
             with open(self.result_file) as f:
-                return f.read()
-        if os.path.exists(self.old_result_file):
-            with open(self.old_result_file) as f:
                 return f.read()
 
         return ""
@@ -239,10 +221,6 @@ class RegTestFixture:
         folder = os.path.dirname(self.result_file)
         if not os.path.exists(folder):
             os.makedirs(folder)
-        if os.path.exists(self.old_result_file):
-            with open(self.old_result_file, "w") as fh:
-                fh.write(self.current)
-            return
 
         with open(self.result_file, "w") as fh:
             fh.write(self.current)

@@ -77,7 +77,7 @@ def generate_test_id_with_path(base_path: Path, params: Any) -> Any:
         return repr(params)
     if isinstance(params, Path):
         if base_path:
-            return str(params.relative_to(base_path))
+            return str(params.relative_to(base_path).as_posix())
         return params.name
 
     return params
