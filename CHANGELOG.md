@@ -87,6 +87,8 @@ All notable changes to this project will be documented in this file. See [conven
 ### Testing
 
 - Fix some unittest ([98e4d5c](https://github.com/robotcodedev/robotcode/commit/98e4d5c2e69e1d2a3a1518456f85ff04b15be920))
+- Disable some flaky tests ([f9a1a82](https://github.com/robotcodedev/robotcode/commit/f9a1a823c6cb9d885231c81830d6e438cf60b680))
+- Disable some flaky tests and correct regression test output file to be platform independent ([4387984](https://github.com/robotcodedev/robotcode/commit/43879844c9fdc845ae2b9fa373f076eb13a9feb9))
 
 
 ## [1.0.3](https://github.com/robotcodedev/robotcode/compare/v1.0.2..v1.0.3) - 2025-03-14
