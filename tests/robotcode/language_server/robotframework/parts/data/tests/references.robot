@@ -10,10 +10,10 @@ Variables       ${CURDIR}/../lib/myvariables.py
 Resource        ${CURDIR}/../resources/firstresource.resource
 #                 ^^^^^^  Variable in resource import path
 Library         alibrary    a_param=from hello    WITH NAME    lib_hello
-#               ^^^^^^^^ a custom library
+##               ^^^^^^^^ a custom library
 Library         alibrary    a_param=${LIB_ARG}    WITH NAME    lib_var
 #                                     ^^^^^^^  Variable in library params
-#               ^^^^^^^^ a same custom library
+##               ^^^^^^^^ a same custom library
 Suite Setup    BuiltIn.Log To Console    hi from suite setup
 #                      ^^^^^^^^^^^^^^  suite fixture keyword call with namespace
 Test Setup    Log To Console    hi from test setup
