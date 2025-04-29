@@ -1380,6 +1380,51 @@ result:
   name: first
   tags: null
 - !WorkspaceSymbol
+  container_name: embedded_args
+  data: null
+  kind: 13
+  location:
+    range:
+      end:
+        character: 10
+        line: 1
+      start:
+        character: 3
+        line: 1
+    uri: embedded_args.resource
+  name: ${task}
+  tags: null
+- !WorkspaceSymbol
+  container_name: embedded_args
+  data: null
+  kind: 13
+  location:
+    range:
+      end:
+        character: 24
+        line: 1
+      start:
+        character: 16
+        line: 1
+    uri: embedded_args.resource
+  name: ${thing}
+  tags: null
+- !WorkspaceSymbol
+  container_name: embedded_args
+  data: null
+  kind: 12
+  location:
+    range:
+      end:
+        character: 24
+        line: 1
+      start:
+        character: 0
+        line: 1
+    uri: embedded_args.resource
+  name: do ${task} with ${thing}
+  tags: null
+- !WorkspaceSymbol
   container_name: embedded_keywords
   data: null
   kind: 13
@@ -4508,10 +4553,10 @@ result:
     range:
       end:
         character: 23
-        line: 24
+        line: 31
       start:
         character: 19
-        line: 24
+        line: 31
     uri: sematic_tokenizing.robot
   name: ${a}
   tags: null
@@ -4523,10 +4568,10 @@ result:
     range:
       end:
         character: 31
-        line: 24
+        line: 31
       start:
         character: 27
-        line: 24
+        line: 31
     uri: sematic_tokenizing.robot
   name: ${b}
   tags: null
@@ -4538,10 +4583,10 @@ result:
     range:
       end:
         character: 39
-        line: 24
+        line: 31
       start:
         character: 35
-        line: 24
+        line: 31
     uri: sematic_tokenizing.robot
   name: ${c}
   tags: null
@@ -4553,10 +4598,10 @@ result:
     range:
       end:
         character: 26
-        line: 19
+        line: 26
       start:
         character: 19
-        line: 19
+        line: 26
     uri: sematic_tokenizing.robot
   name: ${type}
   tags: null
@@ -4568,10 +4613,10 @@ result:
     range:
       end:
         character: 40
-        line: 1
+        line: 4
       start:
         character: 0
-        line: 1
+        line: 4
     uri: sematic_tokenizing.robot
   name: Continue when iteration limit is reached
   tags: null
@@ -4583,10 +4628,10 @@ result:
     range:
       end:
         character: 24
-        line: 7
+        line: 10
       start:
         character: 0
-        line: 7
+        line: 10
     uri: sematic_tokenizing.robot
   name: Limit as iteration count
   tags: null
@@ -4598,10 +4643,10 @@ result:
     range:
       end:
         character: 12
-        line: 18
+        line: 25
       start:
         character: 0
-        line: 18
+        line: 25
     uri: sematic_tokenizing.robot
   name: do something
   tags: null
@@ -4612,11 +4657,26 @@ result:
   location:
     range:
       end:
-        character: 14
-        line: 12
+        character: 27
+        line: 20
       start:
         character: 0
-        line: 12
+        line: 20
+    uri: sematic_tokenizing.robot
+  name: some embedded args keywords
+  tags: null
+- !WorkspaceSymbol
+  container_name: sematic_tokenizing
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 14
+        line: 15
+      start:
+        character: 0
+        line: 15
     uri: sematic_tokenizing.robot
   name: some templated
   tags: null
@@ -4628,10 +4688,10 @@ result:
     range:
       end:
         character: 8
-        line: 23
+        line: 30
       start:
         character: 0
-        line: 23
+        line: 30
     uri: sematic_tokenizing.robot
   name: template
   tags: null

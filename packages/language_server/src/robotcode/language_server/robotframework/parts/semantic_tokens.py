@@ -528,7 +528,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
                                 Token.ARGUMENT,
                                 token.value[arg_start:arg_end],
                                 token.lineno,
-                                token.col_offset + arg_start,
+                                token.col_offset + kw_index + arg_start,
                             )
 
                             for sub_token in ModelHelper.tokenize_variables(
