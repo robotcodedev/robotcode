@@ -9,15 +9,6 @@ rf_version = f"rf{get_robot_version()[0]}{get_robot_version()[1]}"
 
 class RegTestFixtureEx(RegTestFixture):
     @property
-    def old_result_file(self) -> Path:
-        return Path(
-            self.test_folder,
-            "_regtest_outputs",
-            rf_version,
-            self.old_output_file_name,
-        )
-
-    @property
     def result_file(self) -> Path:
         return Path(
             self.test_folder,

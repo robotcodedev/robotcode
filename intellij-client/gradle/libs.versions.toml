@@ -1,13 +1,13 @@
 [versions]
 # libraries
-annotations = "26.0.1"
-kotlinxSerialization = "1.7.3"
+annotations = "26.0.2"
+kotlinxSerialization = "1.8.1"
 junit = "4.13.2"
 lsp4j = "0.21.1"
 
 # plugins
 changelog = "2.2.1"
-intelliJPlatForm = "2.2.1"
+intelliJPlatForm = "2.5.0"
 kotlin = "2.1.0"
 kover = "0.9.1"
 
@@ -55,5 +55,3 @@ version.ref = "kover"
 [plugins.kotlinSerialization]
 id = "org.jetbrains.kotlin.plugin.serialization"
 version.ref = "kotlin"
-
-

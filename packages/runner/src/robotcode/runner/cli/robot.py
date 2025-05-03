@@ -224,12 +224,14 @@ ROBOT_SIMPLE_OPTIONS: Set[click.Command] = {
 ROBOT_OPTIONS: Set[click.Command] = {
     click.option(
         "--by-longname",
+        "-bl",
         type=str,
         multiple=True,
         help="Select tests/tasks or suites by longname.",
     ),
     click.option(
         "--exclude-by-longname",
+        "-ebl",
         type=str,
         multiple=True,
         help="Excludes tests/tasks or suites by longname.",

@@ -143,8 +143,8 @@ class LauncherDebugAdapterProtocol(DebugAdapterProtocol):
         robotcode_run_args = [
             python or sys.executable,
             *debugger_script,
-            *itertools.chain.from_iterable(["--profile", p] for p in profiles or []),
-            *itertools.chain.from_iterable(["--default-path", p] for p in paths or []),
+            *itertools.chain.from_iterable(["-p", p] for p in profiles or []),
+            *itertools.chain.from_iterable(["-dp", p] for p in paths or []),
             *(robotCodeArgs or []),
             "debug",
         ]

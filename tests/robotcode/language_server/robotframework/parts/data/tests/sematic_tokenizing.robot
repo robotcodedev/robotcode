@@ -1,3 +1,6 @@
+*** Settings ***
+Resource    embedded_args.resource
+
 *** Test Cases ***
 Continue when iteration limit is reached
     WHILE    True    limit=5    on_limit=pass
@@ -14,6 +17,10 @@ some templated
     [Template]    template
     1    2    3
     3    ${{1+2+${1}}}    7
+
+some embedded args keywords
+    do task with thing
+    embedded_args.do task with thing   
 
 *** Keywords ***
 do something

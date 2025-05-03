@@ -84,7 +84,7 @@ class RobotCodeRunProfileState(private val config: RobotCodeRunConfiguration, en
         val testSuitePath = profile.testSuitePath
         
         // TODO: Add support for configurable paths
-        val defaultPaths = arrayOf("--default-path", ".")
+        val defaultPaths = arrayOf("-dp", ".")
         
         // Prepare variables as command line arguments
         val variables = profile.variables?.split(",")?.mapNotNull {
@@ -98,18 +98,18 @@ class RobotCodeRunProfileState(private val config: RobotCodeRunConfiguration, en
         val debug = environment.runner is RobotCodeDebugProgramRunner
         
         val included = mutableListOf<String>()
-        
+
         if (testSuitePath != null){
             val testitem = profile.project.testManger.findTestItem(Path(testSuitePath).toUri().toString())
             if (testitem != null) {
-                included.add("--by-longname")
+                included.add("-bl")
                 included.add(testitem.longname)
             }
         }
         if (!profile.includedTestItems.isNullOrEmpty()) {
             val testItemLongNames = profile.includedTestItems!!.split(",").map { it.trim() }.filter { it.isNotEmpty() }
             for (testItemLongName in testItemLongNames){
-                included.add("--by-longname")
+                included.add("-bl")
                 included.add(testItemLongName)
             }
         }

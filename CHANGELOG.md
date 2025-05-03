@@ -2,6 +2,95 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [1.1.0](https://github.com/robotcodedev/robotcode/compare/v1.0.3..v1.1.0) - 2025-04-29
+
+### Bug Fixes
+
+- **analyze:** Allow `all` also in `robot.toml` configuration for `exit-code-mask` ([a496714](https://github.com/robotcodedev/robotcode/commit/a496714b88d397b46f4b4192c82336711fccac5a))
+- **langserver:** Corrected highlightning of embedded arguments if there is a namespace given before the keyword ([0ce5446](https://github.com/robotcodedev/robotcode/commit/0ce5446154b34655bd5db4c6cba91a9a82266440))
+
+
+### Documentation
+
+- Draft article about variables ([161006e](https://github.com/robotcodedev/robotcode/commit/161006e6a730f52501bdff7dcd1cba9e85300fcd))
+- Added pycharm link on the robotcode.io homepage ([7686a21](https://github.com/robotcodedev/robotcode/commit/7686a21c76681d2a7321a67c1c872b6c77687000))
+
+
+### Features
+
+- **analyze:** Exit code mask configuration for code analysis ([4b677ad](https://github.com/robotcodedev/robotcode/commit/4b677add254f88519d950e54ac5ef1f4e499d0e6))
+
+  Configure which message types should **not** influence the exit code of `robotcode analyze code`, allowing granular control over CI/CD pipeline behavior or pre-commit hooks.
+
+  **Configuration File (`robot.toml`)**
+
+  ```toml
+  [tool.robotcode-analyze.code]
+  exit-code-mask = ["error", "warn"]
+  ```
+
+  **Command Line Options**
+
+  ```
+  robotcode analyze code --exit-code-mask error,warn    # or -xm
+  robotcode analyze code --extend-exit-code-mask info   # or -xe
+  ```
+
+  - `-xm` (or `--exit-code-mask`) overwrites the configuration in `robot.toml`
+  - `-xe` (or `--extend-exit-code-mask`) extends the configuration in `robot.toml`
+  - Both options can be specified multiple times or with comma-separated values:
+
+      ```
+      robotcode analyze code -xm error -xm warn  # multiple options
+      robotcode analyze code -xm error,warn      # comma-separated
+      ```
+
+  **Behavior**
+
+  - Message types in the mask are ignored when determining exit code
+  - Available types: `error`, `warn`/`warning`, `info`/`information`, `hint`
+  - Special value `all` ignores all message types (always exit code 0)
+  - Without configuration, all message types affect the exit code
+
+  **Example**
+
+  ```toml
+  # In robot.toml - Ignore warnings but let errors affect exit code
+  [tool.robotcode-analyze.code]
+  exit-code-mask = ["warn"]
+  ```
+
+  ```bash
+  # Using short options
+  robotcode analyze code -xm error,hint  # Overwrites robot.toml config
+  robotcode analyze code -xe info -xe hint  # Extends robot.toml config with multiple types
+  robotcode analyze code -xm all          # Always exit with code 0
+  ```
+
+- **vscode:** Add configuration for output file display options ([738d7a6](https://github.com/robotcodedev/robotcode/commit/738d7a6129f8e459c0af1961ebedfe320d2a4b9d))
+
+  Add "robotcode.run.openOutputTarget" setting to control how Robot Framework output files are displayed:
+  - simpleBrowser: in VSCode's built-in browser
+  - externalHttp: in default browser via HTTP protocol
+  - externalFile: in default browser via file system
+
+  The externalFile options may not run in remote development environments.
+
+- **vscode:** Use short CLI argument versions when calling robotcode ([0987f55](https://github.com/robotcodedev/robotcode/commit/0987f551803f23e2c8342638d2b3bb1e23cc99da))
+
+
+### Refactor
+
+- **analyze:** Move code analysing to it's own module ([0123a50](https://github.com/robotcodedev/robotcode/commit/0123a507a3b23265676aa8d0c68af322e01f513c))
+
+
+### Testing
+
+- Fix some unittest ([98e4d5c](https://github.com/robotcodedev/robotcode/commit/98e4d5c2e69e1d2a3a1518456f85ff04b15be920))
+- Disable some flaky tests ([f9a1a82](https://github.com/robotcodedev/robotcode/commit/f9a1a823c6cb9d885231c81830d6e438cf60b680))
+- Disable some flaky tests and correct regression test output file to be platform independent ([4387984](https://github.com/robotcodedev/robotcode/commit/43879844c9fdc845ae2b9fa373f076eb13a9feb9))
+
+
 ## [1.0.3](https://github.com/robotcodedev/robotcode/compare/v1.0.2..v1.0.3) - 2025-03-14
 
 ### Bug Fixes

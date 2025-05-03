@@ -2630,7 +2630,7 @@ exit_code_mask = "error|warn"
 
 ## tool.robotcode-analyze.code.exit-code-mask
 
-Type: `list[Literal['error', 'warn', 'warning', 'info', 'information', 'hint']] | None`
+Type: `list[Literal['error', 'warn', 'warning', 'info', 'information', 'hint', 'all']] | None`
 
 Specifies the exit code mask for the code analysis.
 This is useful if you want to ignore certain types of diagnostics in the result code.
@@ -2643,7 +2643,7 @@ exit_code_mask = ["error", "warn"]
 
 ## tool.robotcode-analyze.code.extend-exit-code-mask
 
-Type: `list[Literal['error', 'warn', 'warning', 'info', 'information', 'hint']] | None`
+Type: `list[Literal['error', 'warn', 'warning', 'info', 'information', 'hint', 'all']] | None`
 
 Extend the exit code mask setting.
 
@@ -2741,7 +2741,7 @@ Extend the code analysis configuration.
 
 ## tool.robotcode-analyze.extend-code.exit-code-mask
 
-Type: `list[Literal['error', 'warn', 'warning', 'info', 'information', 'hint']] | None`
+Type: `list[Literal['error', 'warn', 'warning', 'info', 'information', 'hint', 'all']] | None`
 
 Specifies the exit code mask for the code analysis.
 This is useful if you want to ignore certain types of diagnostics in the result code.
@@ -2754,7 +2754,7 @@ exit_code_mask = ["error", "warn"]
 
 ## tool.robotcode-analyze.extend-code.extend-exit-code-mask
 
-Type: `list[Literal['error', 'warn', 'warning', 'info', 'information', 'hint']] | None`
+Type: `list[Literal['error', 'warn', 'warning', 'info', 'information', 'hint', 'all']] | None`
 
 Extend the exit code mask setting.
 

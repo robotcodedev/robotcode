@@ -360,6 +360,36 @@ result:
   name: a resource keyword B
   tags: null
 - !WorkspaceSymbol
+  container_name: embedded_args
+  data: null
+  kind: 13
+  location:
+    range:
+      end:
+        character: 10
+        line: 1
+      start:
+        character: 3
+        line: 1
+    uri: embedded_args.resource
+  name: ${task}
+  tags: null
+- !WorkspaceSymbol
+  container_name: embedded_args
+  data: null
+  kind: 12
+  location:
+    range:
+      end:
+        character: 24
+        line: 1
+      start:
+        character: 0
+        line: 1
+    uri: embedded_args.resource
+  name: do ${task} with ${thing}
+  tags: null
+- !WorkspaceSymbol
   container_name: embedded_keywords
   data: null
   kind: 12
@@ -877,10 +907,10 @@ result:
     range:
       end:
         character: 40
-        line: 1
+        line: 4
       start:
         character: 0
-        line: 1
+        line: 4
     uri: sematic_tokenizing.robot
   name: Continue when iteration limit is reached
   tags: null
@@ -892,12 +922,27 @@ result:
     range:
       end:
         character: 24
-        line: 7
+        line: 10
       start:
         character: 0
-        line: 7
+        line: 10
     uri: sematic_tokenizing.robot
   name: Limit as iteration count
+  tags: null
+- !WorkspaceSymbol
+  container_name: sematic_tokenizing
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 27
+        line: 20
+      start:
+        character: 0
+        line: 20
+    uri: sematic_tokenizing.robot
+  name: some embedded args keywords
   tags: null
 - !WorkspaceSymbol
   container_name: some_tasks
