@@ -2,15 +2,17 @@ package dev.robotcode.robotcode4ij.execution
 
 import com.intellij.execution.configuration.EnvironmentVariablesComponent
 import com.intellij.openapi.fileChooser.FileChooserDescriptorFactory
-import com.intellij.openapi.ui.TextFieldWithBrowseButton
 import com.intellij.openapi.options.SettingsEditor
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.ui.TextFieldWithBrowseButton
+import com.intellij.ui.CheckBoxList
 import com.intellij.ui.RawCommandLineEditor
 import com.intellij.ui.dsl.builder.AlignX
 import com.intellij.ui.dsl.builder.panel
 import com.intellij.util.ui.ComponentWithEmptyText
+import dev.robotcode.robotcode4ij.testing.testManger
 import javax.swing.JComponent
-import javax.swing.JTextField
+import javax.swing.JScrollPane
 
 class RobotCodeRunConfigurationEditor(private val project: Project) : SettingsEditor<RobotCodeRunConfiguration>() {
     
@@ -23,8 +25,8 @@ class RobotCodeRunConfigurationEditor(private val project: Project) : SettingsEd
             }
         }
     
-    private val includedTestItemsField = JTextField().apply {
-        toolTipText = "Enter testitems separated by commas, e.g., MyProject.tests.testsuite1.testcase1,MyProject.tests.testsuite1.testcase2"
+    private val includedTestItemsField = CheckBoxList<String>().apply {
+        toolTipText = "Select test items to include in the configuration."
     }
     
     private val testSuitePathField = TextFieldWithBrowseButton().apply {
@@ -57,8 +59,13 @@ class RobotCodeRunConfigurationEditor(private val project: Project) : SettingsEd
         // Reset the additional arguments field
         argumentsField.text = s.additionalArguments ?: ""
         
-        // Reset the included test cases field
-        includedTestItemsField.text = s.includedTestItems
+        //  Reset the additional includedTestItems field
+        val selectedItems = s.includedTestItems?.split(",")?.map { it.trim() } ?: emptyList()
+        val testItems = project.testManger.flattenTestItemLongNames()
+        includedTestItemsField.clear()
+        testItems.forEach { item ->
+            includedTestItemsField.addItem(item, item, selectedItems.contains(item))
+        }
     }
     
     override fun applyEditorTo(s: RobotCodeRunConfiguration) {
@@ -75,16 +82,21 @@ class RobotCodeRunConfigurationEditor(private val project: Project) : SettingsEd
         s.additionalArguments = argumentsField.text.ifBlank { null }
         
         // Apply the included test items field
-        s.includedTestItems = includedTestItemsField.text
+        s.includedTestItems = includedTestItemsField.checkedItems.joinToString(",")
     }
     
     override fun createEditor(): JComponent {
+        val testItems = project.testManger.flattenTestItemLongNames()
+        includedTestItemsField.clear()
+        testItems.forEach { item ->
+            includedTestItemsField.addItem(item, item, false) // Initially unselected
+        }
         return panel {
             row("Test Suite Path:") {
                 cell(testSuitePathField).align(AlignX.FILL)
             }
             row("Included Test Items:") {
-                cell(includedTestItemsField).align(AlignX.FILL)
+                cell(JScrollPane(includedTestItemsField)).align(AlignX.FILL)
             }
             row("Environment Variables:") {
                 cell(environmentVariablesField.component).align(AlignX.FILL)

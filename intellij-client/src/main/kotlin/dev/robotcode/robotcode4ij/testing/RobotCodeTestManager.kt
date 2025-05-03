@@ -36,7 +36,6 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.nio.file.Paths
@@ -332,6 +331,16 @@ import java.util.*
         
         val result = findTestItem(containingFile.virtualFile.uri, lineNumber.toUInt())
         return result
+    }
+    
+    fun flattenTestItemLongNames(): List<String> {
+        return flattenLongNames(testItems)
+    }
+    
+    private fun flattenLongNames(items: Array<RobotCodeTestItem>?): List<String>{
+        return items?.flatMap { item ->
+            listOf(item.longname) + flattenLongNames(item.children)
+        } ?: emptyList()
     }
 }
 
