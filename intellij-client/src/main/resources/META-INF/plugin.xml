@@ -9,6 +9,7 @@
 	<depends>com.intellij.modules.python</depends>
 	<depends>com.redhat.devtools.lsp4ij</depends>
 	<depends>org.jetbrains.plugins.textmate</depends>
+
 	<incompatible-with>robocorp.lsp.intellij</incompatible-with>
 	<incompatible-with>com.github.jnhyperion.hyperrobotframeworkplugin</incompatible-with>
 	<incompatible-with>com.millennialmedia.intellibot</incompatible-with>
@@ -49,6 +50,27 @@
 		<lang.psiStructureViewFactory
 			language="robotframework"
 			implementationClass="com.redhat.devtools.lsp4ij.features.documentSymbol.LSPDocumentSymbolStructureViewFactory"/>
+
+		<callHierarchyProvider
+			language="robotframework"
+			implementationClass="com.redhat.devtools.lsp4ij.features.callHierarchy.LSPCallHierarchyProvider"/>
+
+		<codeBlockProvider
+			language="robotframework"
+			implementationClass="com.redhat.devtools.lsp4ij.features.codeBlockProvider.LSPCodeBlockProvider"
+			order="first"/>
+
+		<highlightVisitor
+			id="robotframework"
+			implementation="dev.robotcode.robotcode4ij.lsp.RobotSemanticTokensHighlightVisitor"
+			order="first"/>
+
+		<typeHierarchyProvider language="robotframework"
+							   implementationClass="com.redhat.devtools.lsp4ij.features.typeHierarchy.LSPTypeHierarchyProvider"/>
+
+		<lang.fileViewProviderFactory
+			language="robotframework"
+			implementationClass="dev.robotcode.robotcode4ij.lsp.RobotCodeTokensFileViewProviderFactory"/>
 
 		<postStartupActivity implementation="dev.robotcode.robotcode4ij.RobotCodePostStartupActivity"/>
 

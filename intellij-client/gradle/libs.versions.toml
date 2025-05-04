@@ -1,14 +1,14 @@
 [versions]
 # libraries
 annotations = "26.0.2"
-kotlinxSerialization = "1.8.1"
+kotlinxSerialization = "1.7.3"
 junit = "4.13.2"
 lsp4j = "0.21.1"
 
 # plugins
 changelog = "2.2.1"
 intelliJPlatForm = "2.5.0"
-kotlin = "2.1.0"
+kotlin = "2.1.10"
 kover = "0.9.1"
 
 [libraries.lsp4j]

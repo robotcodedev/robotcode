@@ -28,6 +28,7 @@ private val mapping by lazy {
         "nameCall" to Colors.NAME_CALL,
         "argument" to Colors.ARGUMENT,
         "embeddedArgument" to Colors.EMBEDDED_ARGUMENT,
+        "argument,embedded" to Colors.EMBEDDED_ARGUMENT,
         "namedArgument" to Colors.NAMED_ARGUMENT,
         "variable" to Colors.VARIABLE,
         "variableExpression" to Colors.VARIABLE_EXPRESSION,
@@ -44,10 +45,14 @@ class RobotCodeSemanticTokensColorsProvider : DefaultSemanticTokensColorsProvide
     override fun getTextAttributesKey(
         tokenType: String, tokenModifiers: MutableList<String>, file: PsiFile
     ): TextAttributesKey? {
-        val result = mapping[tokenType] ?: super.getTextAttributesKey(tokenType, tokenModifiers, file)
+        var tokenTypeAndModifiers = tokenType
+        if (tokenModifiers.isNotEmpty()) {
+            tokenTypeAndModifiers += ",${tokenModifiers.joinToString(",")}"
+        }
+        val result = mapping[tokenTypeAndModifiers] ?: mapping[tokenType] ?: super.getTextAttributesKey(tokenType, tokenModifiers, file)
         
         return result ?: run {
-            thisLogger().warn("Unknown token type: $tokenType")
+            thisLogger().warn("Unknown token type: $tokenType and modifiers: $tokenModifiers")
             null
         }
     }
