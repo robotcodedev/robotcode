@@ -2,6 +2,27 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [1.2.0](https://github.com/robotcodedev/robotcode/compare/v1.1.0..v1.2.0) - 2025-05-07
+
+### Bug Fixes
+
+- **intellij:** Corrected handling of short by-longname argument ([b5fa232](https://github.com/robotcodedev/robotcode/commit/b5fa232f4c0fd3032b863363c141d8ffeff6c8c7))
+- **intellij:** Reenable semantic highlightning, because something has changed in the new LSP4IJ API ([5cdf3c3](https://github.com/robotcodedev/robotcode/commit/5cdf3c3ab87857db294e63bcdc0798f1cfd5eacd))
+- Update IntelliJ platform version and plugin dependencies ([e94c96b](https://github.com/robotcodedev/robotcode/commit/e94c96b99646e602820663f1210d0df962251bf1))
+
+
+  because of some new features regarding syntax highlightning and text mate the minimal supported version is PyCharm 2025.1
+
+
+### Features
+
+- **intellij:** Refactored textmate highlightning to use the new intellij textmate infrastructure ([74644f0](https://github.com/robotcodedev/robotcode/commit/74644f055e6c1dea38e37446ef430387c667b80c))
+- **langserver:** Refactor and optimize Robot Framework textmate syntax highlighting rules ([5b7c4b1](https://github.com/robotcodedev/robotcode/commit/5b7c4b13469072e3c39c8c112118149ac4b5b1cd))
+
+  this also fixes the loading of robotframework core test files in PyCharm
+
+
+
 ## [1.1.0](https://github.com/robotcodedev/robotcode/compare/v1.0.3..v1.1.0) - 2025-04-29
 
 ### Bug Fixes
