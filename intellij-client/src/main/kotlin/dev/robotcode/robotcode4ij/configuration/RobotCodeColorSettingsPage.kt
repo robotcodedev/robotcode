@@ -11,7 +11,7 @@ import dev.robotcode.robotcode4ij.highlighting.RobotCodeSyntaxHighlighter
 import javax.swing.Icon
 
 class RobotCodeColorSettingsPage : ColorSettingsPage {
-
+    
     private val descriptors: Array<AttributesDescriptor> = arrayOf(
         AttributesDescriptor("Header", Colors.HEADER),
         AttributesDescriptor("Test case name", Colors.TESTCASE_NAME),
@@ -30,37 +30,37 @@ class RobotCodeColorSettingsPage : ColorSettingsPage {
         AttributesDescriptor("Variable expression", Colors.VARIABLE_EXPRESSION),
         AttributesDescriptor("Variable begin", Colors.VARIABLE_BEGIN),
         AttributesDescriptor("Variable end", Colors.VARIABLE_END),
-
+        
         AttributesDescriptor("Line comment", Colors.LINE_COMMENT),
         AttributesDescriptor("Block comment", Colors.BLOCK_COMMENT),
-
+        
         AttributesDescriptor("Operator", Colors.OPERATOR),
         AttributesDescriptor("Namespace", Colors.NAMESPACE),
         AttributesDescriptor("BDD prefix", Colors.BDD_PREFIX),
-
+        
         AttributesDescriptor("Continuation", Colors.CONTINUATION),
     )
-
+    
     override fun getAttributeDescriptors(): Array<AttributesDescriptor> {
         return descriptors
     }
-
+    
     override fun getColorDescriptors(): Array<ColorDescriptor> {
         return ColorDescriptor.EMPTY_ARRAY
     }
-
+    
     override fun getDisplayName(): String {
         return "Robot Framework"
     }
-
+    
     override fun getIcon(): Icon? {
         return RobotIcons.RobotCode
     }
-
+    
     override fun getHighlighter(): SyntaxHighlighter {
         return RobotCodeSyntaxHighlighter()
     }
-
+    
     override fun getDemoText(): String {
         return """
         *** Settings ***
@@ -124,7 +124,7 @@ class RobotCodeColorSettingsPage : ColorSettingsPage {
         with multiple lines
         """.trimIndent()
     }
-
+    
     override fun getAdditionalHighlightingTagToDescriptorMap(): MutableMap<String, TextAttributesKey>? {
         return null
     }

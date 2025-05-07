@@ -15,13 +15,13 @@ private val mapping by lazy {
         "headerVariable" to Colors.HEADER,
         "headerTestcase" to Colors.HEADER,
         "headerTask" to Colors.HEADER,
-
+        
         "setting" to Colors.SETTING,
         "settingImport" to Colors.SETTING_IMPORT,
         "controlFlow" to Colors.CONTROL_FLOW,
         "forSeparator" to Colors.CONTROL_FLOW,
         "var" to Colors.VAR,
-
+        
         "testcaseName" to Colors.TESTCASE_NAME,
         "keywordName" to Colors.KEYWORD_NAME,
         "keywordCall" to Colors.KEYWORD_CALL,
@@ -35,7 +35,7 @@ private val mapping by lazy {
         "variableExpression" to Colors.VARIABLE_EXPRESSION,
         "variableBegin" to Colors.VARIABLE_BEGIN,
         "variableEnd" to Colors.VARIABLE_END,
-
+        
         "namespace" to Colors.NAMESPACE,
         "bddPrefix" to Colors.BDD_PREFIX,
         "continuation" to Colors.CONTINUATION
@@ -50,8 +50,12 @@ class RobotCodeSemanticTokensColorsProvider : DefaultSemanticTokensColorsProvide
         if (tokenModifiers.isNotEmpty()) {
             tokenTypeAndModifiers += ",${tokenModifiers.joinToString(",")}"
         }
-        val result = mapping[tokenTypeAndModifiers] ?: mapping[tokenType] ?: super.getTextAttributesKey(tokenType, tokenModifiers, file)
-
+        val result = mapping[tokenTypeAndModifiers] ?: mapping[tokenType] ?: super.getTextAttributesKey(
+            tokenType,
+            tokenModifiers,
+            file
+        )
+        
         return result ?: run {
             thisLogger().warn("Unknown token type: $tokenType and modifiers: $tokenModifiers")
             null

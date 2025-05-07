@@ -8,7 +8,7 @@ object NetUtils {
         try {
             ServerSocket(startPort).use { return startPort }
         } catch (_: Exception) {
-        
+
         }
         
         return if (endPort == null) {
