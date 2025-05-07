@@ -41,7 +41,7 @@
             ]
         },
         "expression_var": {
-            "name": "meta.variables.expression.robotframework",
+            "name": "meta.variable.expression.robotframework",
             "begin": "[$@&]\\{\\{",
             "end": "\\}\\}",
             "beginCaptures": { "0": { "name": "punctuation.definition.expression.begin.robotframework" } },
@@ -73,7 +73,7 @@
             "patterns": [ { "include": "#variables" } ]
         },
         "simple_var": {
-            "name": "meta.variables.robotframework",
+            "name": "meta.variable.simple.robotframework",
             "contentName": "variable.name.readwrite.robotframework",
             "begin": "[$@&]\\{",
             "end": "(\\})|(?= {2}| ?\\t| ?$)",
@@ -82,7 +82,7 @@
             "patterns": [ { "include": "#expression_var" } ]
         },
         "env_var": {
-            "name": "meta.variables.robotframework",
+            "name": "meta.variable.env.robotframework",
             "begin": "(%\\{)",
             "end": "(\\})|(?= {2}| ?\\t| ?$)",
             "beginCaptures": { "0": { "name": "punctuation.definition.envvar.begin.robotframework" } },
