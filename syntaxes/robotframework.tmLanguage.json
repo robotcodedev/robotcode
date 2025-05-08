@@ -70,8 +70,8 @@
             "beginCaptures": { "1": { "name": "keyword.other.header.variable.robotframework" } },
             "end": "^(?=\\*)",
             "patterns": [
-                { "include": "#variable_setting" },
-                { "include": "#comment_line" }
+                { "include": "#comment_line" },
+                { "include": "#variable_setting" }
             ]
         },
         "variables": {
