@@ -6,7 +6,6 @@ from robot.errors import VariableError
 from robot.parsing.lexer.tokens import Token
 from robot.parsing.model.blocks import Keyword, Section, TestCase
 from robot.parsing.model.statements import Statement
-from robot.variables import search_variable
 
 from robotcode.core.language import language_id
 from robotcode.core.lsp.types import (
@@ -21,6 +20,7 @@ from robotcode.robot.utils.ast import (
     range_from_token,
     tokenize_variables,
 )
+from robotcode.robot.utils.variables import search_variable
 from robotcode.robot.utils.visitor import Visitor
 
 from .protocol_part import RobotLanguageServerProtocolPart
