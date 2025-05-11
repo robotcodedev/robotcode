@@ -28,6 +28,9 @@ object Colors {
     val CONTROL_FLOW: TextAttributesKey =
         createTextAttributesKey("ROBOTFRAMEWORK_CONTROL_FLOW", DefaultLanguageHighlighterColors.KEYWORD)
     
+    val VAR: TextAttributesKey =
+        createTextAttributesKey("ROBOTFRAMEWORK_VAR", DefaultLanguageHighlighterColors.KEYWORD)
+    
     val VARIABLE: TextAttributesKey =
         createTextAttributesKey("ROBOTFRAMEWORK_VARIABLE", DefaultLanguageHighlighterColors.GLOBAL_VARIABLE)
     val VARIABLE_EXPRESSION: TextAttributesKey =
@@ -63,4 +66,3 @@ object Colors {
     val CONTINUATION: TextAttributesKey =
         createTextAttributesKey("ROBOTFRAMEWORK_CONTINUATION", DefaultLanguageHighlighterColors.DOT)
 }
-

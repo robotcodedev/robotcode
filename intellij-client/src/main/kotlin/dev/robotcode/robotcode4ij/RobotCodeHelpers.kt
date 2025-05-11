@@ -22,7 +22,7 @@ class RobotCodeHelpers {
         val toolPath: Path = bundledPath.resolve("tool")
         val robotCodePath: Path = toolPath.resolve("robotcode")
         val checkRobotVersion: Path = toolPath.resolve("utils").resolve("check_robot_version.py")
-
+        
         val PYTHON_AND_ROBOT_OK_KEY = Key.create<Boolean?>("ROBOTCODE_PYTHON_AND_ROBOT_OK")
     }
 }
@@ -38,28 +38,28 @@ fun Project.checkPythonAndRobotVersion(reset: Boolean = false): Boolean {
     if (!reset && this.getUserData(RobotCodeHelpers.PYTHON_AND_ROBOT_OK_KEY) == true) {
         return true
     }
-
+    
     val result = ApplicationManager.getApplication().executeOnPooledThread<Boolean> {
-
+        
         val pythonInterpreter = this.robotPythonSdk?.homePath
-
+        
         if (pythonInterpreter == null) {
             thisLogger().info("No Python Interpreter defined for project '${this.name}'")
             return@executeOnPooledThread false
         }
-
+        
         if (!Path(pythonInterpreter).exists()) {
             thisLogger().warn("Python Interpreter $pythonInterpreter not exists")
             return@executeOnPooledThread false
         }
-
+        
         if (!Path(pythonInterpreter).isRegularFile()) {
             thisLogger().warn("Python Interpreter $pythonInterpreter is not a regular file")
             return@executeOnPooledThread false
         }
-
+        
         thisLogger().info("Use Python Interpreter $pythonInterpreter for project '${this.name}'")
-
+        
         val res = ExecUtil.execAndGetOutput(
             GeneralCommandLine(
                 pythonInterpreter, "-u", "-c", "import sys; print(sys.version_info[:2]>=(3,8))"
@@ -69,7 +69,7 @@ fun Project.checkPythonAndRobotVersion(reset: Boolean = false): Boolean {
             thisLogger().warn("Invalid python version")
             return@executeOnPooledThread false
         }
-
+        
         val res1 = ExecUtil.execAndGetOutput(
             GeneralCommandLine(pythonInterpreter, "-u", RobotCodeHelpers.checkRobotVersion.pathString),
             timeoutInMilliseconds = 5000
@@ -78,13 +78,13 @@ fun Project.checkPythonAndRobotVersion(reset: Boolean = false): Boolean {
             thisLogger().warn("Invalid Robot Framework version")
             return@executeOnPooledThread false
         }
-
+        
         return@executeOnPooledThread true
-
+        
     }.get()
-
+    
     this.putUserData(RobotCodeHelpers.PYTHON_AND_ROBOT_OK_KEY, result)
-
+    
     return result
 }
 
@@ -100,7 +100,7 @@ fun Project.buildRobotCodeCommandLine(
     if (!this.checkPythonAndRobotVersion()) {
         throw IllegalArgumentException("PythonSDK is not defined or robot version is not valid for project ${this.name}")
     }
-
+    
     val pythonInterpreter = this.robotPythonSdk?.homePath
     val commandLine = GeneralCommandLine(
         pythonInterpreter,
@@ -115,6 +115,6 @@ fun Project.buildRobotCodeCommandLine(
         *extraArgs,
         *args
     ).withWorkDirectory(this.basePath).withCharset(Charsets.UTF_8)
-
+    
     return commandLine
 }

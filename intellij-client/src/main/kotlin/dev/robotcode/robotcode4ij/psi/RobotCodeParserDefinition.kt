@@ -34,14 +34,13 @@ class RobotCodeParserDefinition : ParserDefinition {
     }
     
     override fun getStringLiteralElements(): TokenSet {
-        // return STRING_TOKENS
-        return TokenSet.EMPTY
+        return STRING_TOKENS
     }
     
     override fun createElement(node: ASTNode): PsiElement {
         return when (node.elementType) {
-            is IRobotFrameworkElementType -> SimpleASTWrapperPsiElement(node)
             is RobotTextMateElementType -> ASTWrapperPsiElement(node)
+            is IRobotFrameworkElementType -> SimpleASTWrapperPsiElement(node)
             
             else -> throw IllegalArgumentException("Unknown element type: ${node.elementType}")
         }

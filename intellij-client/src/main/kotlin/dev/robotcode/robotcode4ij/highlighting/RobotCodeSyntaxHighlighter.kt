@@ -92,7 +92,6 @@ class RobotCodeSyntaxHighlighter : SyntaxHighlighterBase() {
         )
     }
     
-    
     private val myLexer = RobotCodeLexer()
     
     override fun getHighlightingLexer(): Lexer {

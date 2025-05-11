@@ -1,32 +1,54 @@
 {
     "$schema": "https://raw.githubusercontent.com/RedCMD/TmLanguage-Syntax-Highlighter/main/vscode.tmLanguage.schema.json",
     "repository": {
-        "arg_separator": {
-            "name": "meta.arg.separator.robotframework",
-            "match": "( {2}| ?\\t)+"
+        "argument": {
+            "match": "\\S+(?: \\S+)*",
+            "name": "string.unquoted.argument.robotframework",
+            "captures": {
+                "0": {
+                    "patterns": [
+                        { "include": "#escape" },
+                        { "include": "#variables" }
+                    ]
+                }
+            }
         },
-        "variable_setting": {
-            "name": "meta.variable.assign.robotframework",
-            "contentName": "string.unquoted.argument.robotframework",
-            "begin": "^([$@&]\\{)(.*?)(\\})( ?=?)",
-            "beginCaptures": {
-                "1": { "name": "punctuation.definition.variable.begin.robotframework" },
-                "2": {
-                    "name": "variable.name.readwrite.robotframework",
-                    "patterns": [ { "include": "#variables" } ]
-                },
-                "3": { "name": "punctuation.definition.variable.end.robotframework" },
-                "4": { "name": "keyword.operator.robotframework" }
-            },
+        "arguments": {
+            "name": "meta.arguments.robotframework",
+            "begin": "(?!(?: {2,}| ?\\t ?)+)",
             "end": "^(?!(\\s*(\\.\\.\\.((( {2}| ?\\t)\\s*\\S.*)|(\\s*))?$))|(\\s*#.*$)|(\\s*$))",
             "patterns": [
                 { "include": "#escape" },
                 { "include": "#comment" },
                 { "include": "#comment_line" },
-                { "include": "#line_continuation" },
                 { "include": "#variables" },
-                { "include": "#arg_separator"}
+                { "include": "#line_continuation" },
+                { "include": "#argument" }
             ]
+        },
+        "variable_setting": {
+            "name": "meta.variables.setting.robotframework",
+            "begin": "^(.*?)(?= {2}| ?\\t| ?$)",
+            "beginCaptures": {
+                "1": {
+                    "name": "meta.variables.setting.variable.robotframework",
+                    "patterns": [ { "include": "#variable_assignment" } ]
+                }
+            },
+            "end": "^(?!(\\s*(\\.\\.\\.((( {2}| ?\\t)\\s*\\S.*)|(\\s*))?$))|(\\s*#.*$)|(\\s*$))",
+            "patterns": [ { "include": "#arguments" } ]
+        },
+        "variable_assignment": {
+            "name": "meta.variable.assign.robotframework",
+            "contentName": "variable.name.readwrite.robotframework",
+            "begin": "[$@&]\\{",
+            "end": "(\\}( ?=)?)(?=( {2}| ?\\t| ?$))",
+            "beginCaptures": { "0": { "name": "punctuation.definition.variable.begin.robotframework" } },
+            "endCaptures": {
+                "1": { "name": "punctuation.definition.variable.end.robotframework" },
+                "2": { "name": "keyword.operator.robotframework" }
+            },
+            "patterns": [ { "include": "#variables" } ]
         },
         "variables_section": {
             "name": "meta.section.variables.robotframework",
@@ -46,15 +68,12 @@
             ]
         },
         "expression_var": {
-            "name": "meta.variables.expression.robotframework",
+            "name": "meta.variable.expression.robotframework",
             "begin": "[$@&]\\{\\{",
             "end": "\\}\\}",
             "beginCaptures": { "0": { "name": "punctuation.definition.expression.begin.robotframework" } },
             "endCaptures": { "0": { "name": "punctuation.definition.expression.end.robotframework" } },
-            "patterns": [
-                { "include": "#expression" },
-                { "include": "#simple_var" }
-            ]
+            "patterns": [ { "include": "#variables" } ]
         },
         "embedded_argument": {
             "name": "meta.embedded_argument.robotframework",
@@ -78,16 +97,27 @@
             "patterns": [ { "include": "#variables" } ]
         },
         "simple_var": {
-            "name": "meta.variables.robotframework",
+            "name": "meta.variable.simple.robotframework",
             "contentName": "variable.name.readwrite.robotframework",
             "begin": "[$@&]\\{",
             "end": "(\\})|(?= {2}| ?\\t| ?$)",
             "beginCaptures": { "0": { "name": "punctuation.definition.variable.begin.robotframework" } },
             "endCaptures": { "1": { "name": "punctuation.definition.variable.end.robotframework" } },
-            "patterns": [ { "include": "#expression_var" } ]
+            "patterns": [
+                { "include": "#simple_curly_braces" },
+                { "include": "#variables" }
+            ]
+        },
+        "simple_curly_braces": {
+            "name": "meta.variable.simple.robotframework",
+            "contentName": "variable.name.readwrite.robotframework",
+            "begin": "\\{",
+            "end": "\\}|(?= {2}| ?\\t| ?$)",
+            "beginCaptures": { "0": { "name": "punctuation.definition.curly.begin.robotframework" } },
+            "endCaptures": { "1": { "name": "punctuation.definition.curly.end.robotframework" } }
         },
         "env_var": {
-            "name": "meta.variables.robotframework",
+            "name": "meta.variable.env.robotframework",
             "begin": "(%\\{)",
             "end": "(\\})|(?= {2}| ?\\t| ?$)",
             "beginCaptures": { "0": { "name": "punctuation.definition.envvar.begin.robotframework" } },
@@ -129,8 +159,11 @@
         },
         "settings_section": {
             "name": "meta.section.settings.robotframework",
-            "begin": "^(\\*+\\s*(?i:${settings_header}?)( ?\\*+)?)(?= {2}| ?\\t| ?$)",
-            "beginCaptures": { "1": { "name": "keyword.other.header.settings.robotframework" } },
+            "begin": "^(\\*+\\s*(?i:${settings_header})( ?\\*+)?)(.*$)",
+            "beginCaptures": {
+                "1": { "name": "keyword.other.header.settings.robotframework" },
+                "3": { "name": "comment.header.robotframework" }
+            },
             "end": "^(?=\\*)",
             "patterns": [
                 { "include": "#comment_line" },
@@ -139,40 +172,55 @@
                 { "include": "#unknown_setting" }
             ]
         },
-        "documentation_setting": {
-            "contentName": "markup.robotframework",
-            "begin": "(?i)^(${documentation_setting})(?= {2}| ?\\t| ?$)",
-            "beginCaptures": { "1": { "name": "keyword.control.settings.robotframework" } },
+        "documentation_argument": {
+            "match": "\\S+(?: \\S+)*?",
+            "name": "markup.robotframework",
+            "captures": {
+                "0": {
+                    "patterns": [
+                        { "include": "#escape" },
+                        { "include": "#documentation_italic" },
+                        { "include": "#documentation_bold" },
+                        { "include": "#variables" }
+                    ]
+                }
+            }
+        },
+        "documentation_arguments": {
+            "begin": "(?!(?: {2,}| ?\\t ?)+)",
             "end": "^(?!(\\s*(\\.\\.\\.((( {2}| ?\\t)\\s*\\S.*)|(\\s*))?$))|(\\s*#.*$)|(\\s*$))",
             "patterns": [
                 { "include": "#comment" },
                 { "include": "#comment_line" },
+                { "include": "#escape" },
                 { "include": "#documentation_italic" },
                 { "include": "#documentation_bold" },
-                { "include": "#escape" },
                 { "include": "#variables" },
                 { "include": "#line_continuation" },
-                { "include": "#arg_separator"}
+                { "include": "#documentation_argument" }
             ]
+        },
+        "documentation_setting": {
+            "name": "meta.setting.documentation.robotframework",
+            "begin": "(?i)^(${documentation_setting})(?= {2}| ?\\t| ?$)",
+            "beginCaptures": { "1": { "name": "keyword.control.settings.robotframework" } },
+            "end": "^(?!(\\s*(\\.\\.\\.((( {2}| ?\\t)\\s*\\S.*)|(\\s*))?$))|(\\s*#.*$)|(\\s*$))",
+            "patterns": [ { "include": "#documentation_arguments" } ]
         },
         "documentation_bold": {
             "match": "(?:(?<=\\s|^))(\\*)(?:(?=\\S))(.*?)(?:(?<=\\S))(\\*)(?:(?=\\s|_|\\.))",
             "captures": {
-                "1": { "name": "punctuation.definition.italic.markdown" },
+                "1": { "name": "punctuation.definition.bold.markdown" },
                 "2": {
                     "name": "markup.bold.documentation.robotframework",
                     "patterns": [
                         { "include": "#documentation_italic" },
                         { "include": "#documentation_bold" },
                         { "include": "#escape" },
-                        { "include": "#comment" },
-                        { "include": "#comment_line" },
-                        { "include": "#variables" },
-                        { "include": "#line_continuation" },
-                        { "include": "#arg_separator"}
+                        { "include": "#variables" }
                     ]
                 },
-                "3": { "name": "punctuation.definition.italic.markdown" }
+                "3": { "name": "punctuation.definition.bold.markdown" }
             }
         },
         "documentation_italic": {
@@ -182,53 +230,35 @@
                 "2": {
                     "name": "markup.italic.documentation.robotframework",
                     "patterns": [
-                        { "include": "#documentation_italic" },
                         { "include": "#documentation_bold" },
+                        { "include": "#documentation_italic" },
                         { "include": "#escape" },
-                        { "include": "#comment" },
-                        { "include": "#comment_line" },
-                        { "include": "#variables" },
-                        { "include": "#line_continuation" },
-                        { "include": "#arg_separator"}
+                        { "include": "#variables" }
                     ]
                 },
                 "3": { "name": "punctuation.definition.italic.markdown" }
             }
         },
         "testcase_name_def": {
-            "contentName": "string.unquoted.argument.robotframework",
             "begin": "^( ?\\S+( ?\\S*)*?)(?= {2}| ?\\t| ?$)",
             "beginCaptures": { "1": { "patterns": [ { "include": "#testcase_name" } ] } },
             "end": "^(?!(\\s*(\\.\\.\\.((( {2}| ?\\t)\\s*\\S.*)|(\\s*))?$))|(\\s*#.*$)|(\\s*$))",
-            "patterns": [
-                { "include": "#escape" },
-                { "include": "#comment" },
-                { "include": "#comment_line" },
-                { "include": "#variables" },
-                { "include": "#line_continuation" },
-                { "include": "#arg_separator"}
-            ]
+            "patterns": [ { "include": "#arguments" } ]
         },
         "testcase_name": {
             "contentName": "entity.name.function.testcase.name.robotframework",
             "begin": "",
             "while": ".",
-            "patterns": [ { "include": "#escape" }, { "include": "#variables" } ]
+            "patterns": [
+                { "include": "#escape" },
+                { "include": "#variables" }
+            ]
         },
         "keyword_name_def": {
-            "contentName": "string.unquoted.argument.robotframework",
             "begin": "^( ?\\S+( ?\\S*)*?)(?= {2}| ?\\t| ?$)",
             "beginCaptures": { "1": { "patterns": [ { "include": "#keyword_name" } ] } },
             "end": "^(?!(\\s*(\\.\\.\\.((( {2}| ?\\t)\\s*\\S.*)|(\\s*))?$))|(\\s*#.*$)|(\\s*$))",
-            "patterns": [
-                { "include": "#escape" },
-                { "include": "#comment" },
-                { "include": "#comment_line" },
-                { "include": "#variables" },
-                { "include": "#line_continuation" },
-                { "include": "#arg_separator"}
-
-            ]
+            "patterns": [ { "include": "#arguments" } ]
         },
         "keyword_name": {
             "contentName": "entity.name.function.keyword.name.robotframework",
@@ -244,15 +274,18 @@
                 { "include": "#testcase_settings" },
                 { "include": "#control_flow_expression_statements" },
                 { "include": "#control_flow_statements" },
-                { "include": "#other_statements" },
-                { "include": "#keyword_call" },
-                { "include": "#returning_keyword_call" }
+                { "include": "#var_statement" },
+                { "include": "#returning_keyword_call" },
+                { "include": "#keyword_call" }
             ]
         },
         "testcases_section": {
             "name": "meta.section.testcases.robotframework",
-            "begin": "^(\\*+\\s*(?i:${test_cases_header})( ?\\*+)?)(?= {2}| ?\\t| ?$)",
-            "beginCaptures": { "1": { "name": "keyword.other.header.testcase.robotframework" } },
+            "begin": "^(\\*+\\s*(?i:${test_cases_header})( ?\\*+)?)(.*$)",
+            "beginCaptures": {
+                "1": { "name": "keyword.other.header.testcase.robotframework" },
+                "3": { "name": "comment.header.robotframework" }
+            },
             "end": "^(?=\\*)",
             "patterns": [
                 { "include": "#comment_line" },
@@ -262,8 +295,11 @@
         },
         "tasks_section": {
             "name": "meta.section.tasks.robotframework",
-            "begin": "^(\\*+\\s*(?i:${tasks_header})( ?\\*+)?)(?= {2}| ?\\t| ?$)",
-            "beginCaptures": { "1": { "name": "keyword.other.header.task.robotframework" } },
+            "begin": "^(\\*+\\s*(?i:${tasks_header})( ?\\*+)?)(.*$)",
+            "beginCaptures": {
+                "1": { "name": "keyword.other.header.task.robotframework" },
+                "3": { "name": "comment.header.robotframework" }
+            },
             "end": "^(?=\\*)",
             "patterns": [
                 { "include": "#comment_line" },
@@ -274,7 +310,10 @@
         "keywords_section": {
             "name": "meta.section.keywords.robotframework",
             "begin": "^(\\*+\\s*(?i:${keywords_header})( ?\\*+)?)(?= {2}| ?\\t| ?$)",
-            "beginCaptures": { "1": { "name": "keyword.other.header.keyword.robotframework" } },
+            "beginCaptures": {
+                "1": { "name": "keyword.other.header.keyword.robotframework" },
+                "3": { "name": "comment.header.robotframework" }
+            },
             "end": "^(?=\\*)",
             "patterns": [
                 { "include": "#comment_line" },
@@ -284,8 +323,11 @@
         },
         "comments_section": {
             "name": "meta.section.comments.robotframework",
-            "begin": "^(\\*+\\s*(?i:${comments_header})( ?\\*+)?)(?= {2}| ?\\t| ?$)",
-            "beginCaptures": { "1": { "name": "keyword.other.header.comment.robotframework" } },
+            "begin": "^(\\*+\\s*(?i:${comments_header})( ?\\*+)?)(.*$)",
+            "beginCaptures": {
+                "1": { "name": "keyword.other.header.comment.robotframework" },
+                "3": { "name": "comment.header.robotframework" }
+            },
             "end": "^(?=\\*)",
             "patterns": [
                 { "include": "#comment_line" },
@@ -304,32 +346,17 @@
         },
         "other_setting": {
             "name": "meta.setting.other.robotframework",
-            "contentName": "string.unquoted.argument.robotframework",
             "begin": "(?i)^(\\S+( \\S+)*)(?= {2}| ?\\t| ?$)",
             "beginCaptures": { "1": { "name": "keyword.control.settings.robotframework" } },
             "end": "^(?!(\\s*(\\.\\.\\.((( {2}| ?\\t)\\s*\\S.*)|(\\s*))?$))|(\\s*#.*$)|(\\s*$))",
-            "patterns": [
-                { "include": "#escape" },
-                { "include": "#comment" },
-                { "include": "#comment_line" },
-                { "include": "#variables" },
-                { "include": "#line_continuation" },
-                { "include": "#arg_separator"}
-            ]
+            "patterns": [ { "include": "#arguments" } ]
         },
         "unknown_setting": {
-            "contentName": "comment.unknown.setting.arguments.robotframework",
+            "name": "meta.setting.unknown.robotframework",
             "begin": "(?i)^(\\s+)(\\S+( \\S+)*)(?= {2}| ?\\t| ?$)",
             "beginCaptures": { "2": { "name": "comment.unknown.setting.robotframework" } },
             "end": "^(?!(\\s*(\\.\\.\\.((( {2}| ?\\t)\\s*\\S.*)|(\\s*))?$))|(\\s*#.*$)|(\\s*$))",
-            "patterns": [
-                { "include": "#escape" },
-                { "include": "#comment" },
-                { "include": "#comment_line" },
-                { "include": "#variables" },
-                { "include": "#line_continuation" },
-                { "include": "#arg_separator"}
-            ]
+            "patterns": [ { "include": "#arguments" } ]
         },
         "testcase_settings": {
             "patterns": [
@@ -338,150 +365,86 @@
             ]
         },
         "documentation_testcase_settings": {
-            "contentName": "markup.robotframework",
+            "name": "meta.testcase_setting.documentation.robotframework",
             "begin": "^( {2}|\\t)(\\s)*(?i:\\[(${documentation_setting})\\])(?= {2}| ?\\t| ?$)",
             "beginCaptures": { "3": { "name": "keyword.control.settings.documentation.robotframework" } },
             "end": "^(?!(\\s*(\\.\\.\\.((( {2}| ?\\t)\\s*\\S.*)|(\\s*))?$))|(\\s*#.*$)|(\\s*$))",
-            "patterns": [
-                { "include": "#documentation_italic" },
-                { "include": "#documentation_bold" },
-                { "include": "#escape" },
-                { "include": "#comment" },
-                { "include": "#comment_line" },
-                { "include": "#variables" },
-                { "include": "#line_continuation" },
-                { "include": "#arg_separator"}
-            ]
+            "patterns": [ { "include": "#documentation_arguments" } ]
         },
         "other_testcase_settings": {
-            "contentName": "string.unquoted.argument.robotframework",
-            "begin": "^( {2}|\\t)(\\s)*(\\[.*?\\])(?= {2}| ?\\t| ?$)",
+            "begin": "^( {2}|\\t)(\\s*)(\\[.*?\\])(?= {2}| ?\\t| ?$)",
             "beginCaptures": { "0": { "name": "keyword.control.settings.robotframework" } },
             "end": "^(?!(\\s*(\\.\\.\\.((( {2}| ?\\t)\\s*\\S.*)|(\\s*))?$))|(\\s*#.*$)|(\\s*$))",
-            "patterns": [
-                { "include": "#escape" },
-                { "include": "#comment" },
-                { "include": "#comment_line" },
-                { "include": "#variables" },
-                { "include": "#line_continuation" },
-                { "include": "#arg_separator"}
-            ]
+            "patterns": [ { "include": "#arguments" } ]
         },
         "keyword_call": {
             "name": "meta.keyword-call.content.robotframework",
-            "contentName": "string.unquoted.argument.robotframework",
-            "begin": "^(?!(?: {2,}| ?\\t ?)+(?:(?=[$\\[@&%]|\\.)))(?: {2,}| ?\\t ?)+(.*?)(?= {2,}| ?\\t ?| ?$)",
+            "begin": "^(( {2}|\\t)(\\s*))(.*?)(?= {2}| ?\\t| ?$)",
             "end": "^(?!(\\s*(\\.\\.\\.((( {2}| ?\\t)\\s*\\S.*)|(\\s*))?$))|(\\s*#.*$)|(\\s*$))",
             "beginCaptures": {
-                "1": {
+                "4": {
                     "name": "entity.name.function.keyword-call.robotframework",
-                    "patterns": [{ "include": "#escape" }, { "include": "#variables" } ]
+                    "patterns": [
+                        { "include": "#escape" },
+                        { "include": "#variables" }
+                    ]
                 }
             },
-            "patterns": [
-                { "include": "#escape" },
-                { "include": "#comment" },
-                { "include": "#comment_line" },
-                { "include": "#variables" },
-                { "include": "#line_continuation" },
-                { "include": "#arg_separator"}
-            ]
-        },
-        "control_flow_expression_statements": {
-            "name": "meta.keyword-call.content.robotframework",
-            "contentName": "string.unquoted.argument.robotframework",
-            "begin": "^(?!(?: {2,}| ?\\t ?)+(?:(?=[$\\[@&%]|\\.)))(?: {2,}| ?\\t ?)+(IF|ELSE IF|WHILE)(( {2,}| ?\\t)( *)(.*?))?(?= {2,}| ?\\t ?| ?$)",
-            "end": "^(?!(\\s*(\\.\\.\\.((( {2}| ?\\t)\\s*\\S.*)|(\\s*))?$))|(\\s*#.*$)|(\\s*$))",
-            "beginCaptures": {
-                "1": { "name": "keyword.control.flow.robotframework" },
-                "5": { "patterns": [ { "include": "#expression" } ] }
-            },
-            "patterns": [
-                { "include": "#escape" },
-                { "include": "#comment" },
-                { "include": "#comment_line" },
-                { "include": "#variables" },
-                { "include": "#line_continuation" },
-                { "include": "#arg_separator"}
-            ]
-        },
-        "control_flow_statements": {
-            "name": "meta.keyword-call.content.robotframework",
-            "contentName": "string.unquoted.argument.robotframework",
-            "begin": "^(?!(?: {2,}| ?\\t ?)+(?:(?=[$\\[@&%]|\\.)))(?: {2,}| ?\\t ?)+(FOR|GROUP|END|ELSE|TRY|EXCEPT|FINALLY)(?= {2,}| ?\\t ?| ?$)",
-            "end": "^(?!(\\s*(\\.\\.\\.((( {2}| ?\\t)\\s*\\S.*)|(\\s*))?$))|(\\s*#.*$)|(\\s*$))",
-            "beginCaptures": { "1": { "name": "keyword.control.flow.robotframework" } },
-            "patterns": [
-                { "include": "#escape" },
-                { "include": "#comment" },
-                { "include": "#comment_line" },
-                { "include": "#variables" },
-                { "include": "#line_continuation" },
-                { "include": "#arg_separator"}
-            ]
-        },
-        "other_statements": {
-            "name": "meta.keyword-call.content.robotframework",
-            "contentName": "string.unquoted.argument.robotframework",
-            "begin": "^(?!(?: {2,}| ?\\t ?)+(?:(?=[$\\[@&%]|\\.)))(?: {2,}| ?\\t ?)+(VAR)(?= {2,}| ?\\t ?| ?$)",
-            "end": "^(?!(\\s*(\\.\\.\\.((( {2}| ?\\t)\\s*\\S.*)|(\\s*))?$))|(\\s*#.*$)|(\\s*$))",
-            "beginCaptures": { "1": { "name": "keyword.other.robotframework" } },
-            "patterns": [
-                { "include": "#escape" },
-                { "include": "#comment" },
-                { "include": "#comment_line" },
-                { "include": "#variables" },
-                { "include": "#line_continuation" },
-                { "include": "#arg_separator"}
-            ]
+            "patterns": [ { "include": "#arguments" } ]
         },
         "returning_keyword_call": {
-            "name": "meta.returning-keyword-call.robotframework",
-            "contentName": "meta.returning.keyword.content.robotframework",
-            "begin": "^(?=(?: {2,}| ?\\t ?)+(?:(?=[$@&])))(?:\\s)",
+            "name": "meta.returning-keyword-call.content.robotframework",
+            "begin": "^(( {2}|\\t)(\\s*))([$&@]\\{(\\S+(?: \\S+)*)\\}(( ?=)?( {2}|\\t)(\\s*)))(.*?)(?= {2}| ?\\t| ?$)",
             "end": "^(?!(\\s*(\\.\\.\\.((( {2}| ?\\t)\\s*\\S.*)|(\\s*))?$))|(\\s*#.*$)|(\\s*$))",
-            "patterns": [ { "include": "#returning_keyword" } ]
-        },
-        "returning_keyword": {
-            "name": "meta.returning-keyword.robotframework",
-            "contentName": "string.unquoted.argument.robotframework",
-            "begin": "(?<=\\s)(?=\\s*(?:(?=[$@&])))((?:\\s)*(?:[$&@]{(?:.*?)}(?:\\[.*?\\])?(?: ?=?\\s*))*)(.*?)(?: {2,}| ?\\t ?|$)",
             "beginCaptures": {
-                "1": { "patterns": [ { "include": "#variable_assignment_from_kw" } ] },
-                "2": { "name": "entity.name.function.keyword-call.robotframework" }
+                "4": {
+                    "name": "meta.returning-keyword-call.assign.robotframework",
+                    "patterns": [ { "include": "#variable_assignment" } ]
+                },
+                "10": {
+                    "name": "entity.name.function.keyword-call.robotframework",
+                    "patterns": [
+                        { "include": "#escape" },
+                        { "include": "#variables" }
+                    ]
+                }
             },
-            "end": "^(?!(\\s*(\\.\\.\\.((( {2}| ?\\t)\\s*\\S.*)|(\\s*))?$))|(\\s*#.*$)|(\\s*$))",
-            "patterns": [
-                { "include": "#escape" },
-                { "include": "#comment" },
-                { "include": "#comment_line" },
-                { "include": "#variables" },
-                { "include": "#line_continuation" },
-                { "include": "#arg_separator"}
-            ]
+            "patterns": [ { "include": "#arguments" } ]
         },
-        "variable_assignment_from_kw": {
-            "contentName": "meta.variable.assignment.keyword.content.robotframework",
-            "begin": "(?<=^\\s)(?:\\s*)(?=[$@&])",
-            "end": "(?:( ?=)|(?: {2,}| ?\\t+ ?| ?$)(?![#$@& \\n\\r]|\\.\\.\\.)|^(?=\\.\\.\\.)( {2,}| ?\\t+ ?| ?$)(?![#$@&]))",
-            "endCaptures": { "1": { "name": "keyword.operator.robotframework" } },
-            "patterns": [ { "include": "#variables" } ]
+        "control_flow_expression_statements": {
+            "name": "meta.control-flow-expressions.robotframework",
+            "begin": "^( {2}|\\t)(\\s*)(IF|ELSE IF|WHILE)(( {2,}| ?\\t)( *)(.*?))?(?= {2}| ?\\t| ?$)",
+            "end": "^(?!(\\s*(\\.\\.\\.((( {2}| ?\\t)\\s*\\S.*)|(\\s*))?$))|(\\s*#.*$)|(\\s*$))",
+            "beginCaptures": {
+                "3": { "name": "keyword.control.flow.robotframework" },
+                "4": { "patterns": [ { "include": "#expression" } ] }
+            },
+            "patterns": [ { "include": "#arguments" } ]
+        },
+        "control_flow_statements": {
+            "name": "meta.control-flow-statements.robotframework",
+            "begin": "^( {2}|\\t)(\\s*)(FOR|GROUP|END|ELSE|TRY|EXCEPT|FINALLY|BREAK|CONTINUE)(?= {2}| ?\\t| ?$)",
+            "end": "^(?!(\\s*(\\.\\.\\.((( {2}| ?\\t)\\s*\\S.*)|(\\s*))?$))|(\\s*#.*$)|(\\s*$))",
+            "beginCaptures": { "3": { "name": "keyword.control.flow.robotframework" } },
+            "patterns": [ { "include": "#arguments" } ]
+        },
+        "var_statement": {
+            "name": "meta.var-statement.robotframework",
+            "begin": "^( {2}|\\t)(\\s*)(VAR)(( {2}|\\t)+(\\S.+?))?(?= {2}| ?\\t| ?$)",
+            "end": "^(?!(\\s*(\\.\\.\\.((( {2}| ?\\t)\\s*\\S.*)|(\\s*))?$))|(\\s*#.*$)|(\\s*$))",
+            "beginCaptures": {
+                "3": { "name": "keyword.other.robotframework" },
+                "4": { "patterns": [ { "include": "#variable_assignment" } ] }
+            },
+            "patterns": [ { "include": "#arguments" } ]
         },
         "line_continuation": {
-            "match": "^(\\s*\\.\\.\\.)(?! ?\\S)",
-            "captures": { "1": { "name": "keyword.operator.continue.robotframework" } }
+            "match": "^(\\s*)(\\.\\.\\.)(?= {2}| ?\\t| ?$)",
+            "captures": { "2": { "name": "keyword.operator.continue.robotframework" } }
         },
         "impossible": {
             "comment": "This is a special rule that should be used where no match is desired. It is not a good idea to match something like '1{0}' because in some cases that can result in infinite loops in token generation. So the rule instead matches and impossible expression to allow a match to fail and move to the next token.",
             "match": "$.^"
-        },
-        "semicolon": {
-            "patterns": [
-                {
-                    "name": "invalid.deprecated.semicolon.python",
-                    "match": "\\;$"
-                }
-            ]
         },
         "comments": {
             "patterns": [
@@ -515,79 +478,6 @@
                 },
                 { "include": "#comments-base" }
             ]
-        },
-        "docstring": {
-            "patterns": [
-                {
-                    "name": "string.quoted.docstring.multi.python",
-                    "begin": "(\\'\\'\\'|\\\"\\\"\\\")",
-                    "end": "(\\1)",
-                    "beginCaptures": { "1": { "name": "punctuation.definition.string.begin.python" } },
-                    "endCaptures": { "1": { "name": "punctuation.definition.string.end.python" } },
-                    "patterns": [
-                        { "include": "#docstring-prompt" },
-                        { "include": "#codetags" },
-                        { "include": "#docstring-guts-unicode" }
-                    ]
-                },
-                {
-                    "name": "string.quoted.docstring.raw.multi.python",
-                    "begin": "([rR])(\\'\\'\\'|\\\"\\\"\\\")",
-                    "end": "(\\2)",
-                    "beginCaptures": {
-                        "1": { "name": "storage.type.string.python" },
-                        "2": { "name": "punctuation.definition.string.begin.python" }
-                    },
-                    "endCaptures": { "1": { "name": "punctuation.definition.string.end.python" } },
-                    "patterns": [
-                        { "include": "#string-consume-escape" },
-                        { "include": "#docstring-prompt" },
-                        { "include": "#codetags" }
-                    ]
-                },
-                {
-                    "name": "string.quoted.docstring.single.python",
-                    "begin": "(\\'|\\\")",
-                    "end": "(\\1)|(\\n)",
-                    "beginCaptures": { "1": { "name": "punctuation.definition.string.begin.python" } },
-                    "endCaptures": {
-                        "1": { "name": "punctuation.definition.string.end.python" },
-                        "2": { "name": "invalid.illegal.newline.python" }
-                    },
-                    "patterns": [
-                        { "include": "#codetags" },
-                        { "include": "#docstring-guts-unicode" }
-                    ]
-                },
-                {
-                    "name": "string.quoted.docstring.raw.single.python",
-                    "begin": "([rR])(\\'|\\\")",
-                    "end": "(\\2)|(\\n)",
-                    "beginCaptures": {
-                        "1": { "name": "storage.type.string.python" },
-                        "2": { "name": "punctuation.definition.string.begin.python" }
-                    },
-                    "endCaptures": {
-                        "1": { "name": "punctuation.definition.string.end.python" },
-                        "2": { "name": "invalid.illegal.newline.python" }
-                    },
-                    "patterns": [
-                        { "include": "#string-consume-escape" },
-                        { "include": "#codetags" }
-                    ]
-                }
-            ]
-        },
-        "docstring-guts-unicode": {
-            "patterns": [
-                { "include": "#escape-sequence-unicode" },
-                { "include": "#escape-sequence" },
-                { "include": "#string-line-continuation" }
-            ]
-        },
-        "docstring-prompt": {
-            "match": "(?x)\n  (?:\n    (?:^|\\G) \\s* (?# '\\G' is necessary for ST)\n    ((?:>>>|\\.\\.\\.) \\s) (?=\\s*\\S)\n  )\n",
-            "captures": { "1": { "name": "keyword.control.flow.python" } }
         },
         "expression-bare": {
             "comment": "valid Python expressions w/o comments and line continuation",

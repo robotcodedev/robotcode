@@ -1,9 +1,12 @@
 package dev.robotcode.robotcode4ij.highlighting
 
 import com.intellij.lexer.LexerBase
+import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.util.registry.Registry
 import com.intellij.psi.TokenType
 import com.intellij.psi.tree.IElementType
+import com.intellij.textmate.joni.JoniRegexFactory
 import dev.robotcode.robotcode4ij.TextMateBundleHolder
 import dev.robotcode.robotcode4ij.psi.ARGUMENT
 import dev.robotcode.robotcode4ij.psi.COMMENT_BLOCK
@@ -24,8 +27,16 @@ import dev.robotcode.robotcode4ij.psi.TESTCASE_NAME
 import dev.robotcode.robotcode4ij.psi.VARIABLE
 import dev.robotcode.robotcode4ij.psi.VARIABLE_BEGIN
 import dev.robotcode.robotcode4ij.psi.VARIABLE_END
-import org.jetbrains.plugins.textmate.language.syntax.lexer.TextMateLexer
+import org.jetbrains.plugins.textmate.language.syntax.lexer.TextMateCachingSyntaxMatcher
+import org.jetbrains.plugins.textmate.language.syntax.lexer.TextMateLexerCore
 import org.jetbrains.plugins.textmate.language.syntax.lexer.TextMateScope
+import org.jetbrains.plugins.textmate.language.syntax.lexer.TextMateSyntaxMatcherImpl
+import org.jetbrains.plugins.textmate.language.syntax.lexer.TextmateToken
+import org.jetbrains.plugins.textmate.language.syntax.selector.TextMateSelectorCachingWeigher
+import org.jetbrains.plugins.textmate.language.syntax.selector.TextMateSelectorWeigherImpl
+import org.jetbrains.plugins.textmate.regex.CachingRegexFactory
+import org.jetbrains.plugins.textmate.regex.RegexFactory
+import org.jetbrains.plugins.textmate.regex.RememberingLastMatchRegexFactory
 import java.util.*
 import kotlin.math.min
 
@@ -76,10 +87,19 @@ class RobotCodeLexer : LexerBase() {
         }
     }
     
+    val regexFactory: RegexFactory = CachingRegexFactory(RememberingLastMatchRegexFactory(JoniRegexFactory()))
+    val weigher: TextMateSelectorCachingWeigher = TextMateSelectorCachingWeigher(TextMateSelectorWeigherImpl())
+    val syntaxMatcher: TextMateCachingSyntaxMatcher =
+        TextMateCachingSyntaxMatcher(TextMateSyntaxMatcherImpl(regexFactory, weigher))
+    val lexer = TextMateLexerCore(
+        TextMateBundleHolder.descriptor,
+        syntaxMatcher,
+        Registry.get("textmate.line.highlighting.limit").asInteger(),
+        false
+    )
     
-    private val myLexer =
-        TextMateLexer(TextMateBundleHolder.descriptor, Registry.get("textmate.line.highlighting.limit").asInteger())
-    private var currentLineTokens = LinkedList<TextMateLexer.Token?>()
+    
+    private var currentLineTokens = LinkedList<TextmateToken?>()
     private lateinit var buffer: CharSequence
     private var endOffset = 0
     private var currentOffset = 0
@@ -95,7 +115,7 @@ class RobotCodeLexer : LexerBase() {
         this.endOffset = endOffset
         this.currentLineTokens.clear()
         this.restartable = initialState == 0
-        myLexer.init(buffer, startOffset)
+        lexer.init(buffer, startOffset)
         this.advance()
     }
     
@@ -117,20 +137,23 @@ class RobotCodeLexer : LexerBase() {
     
     override fun advance() {
         if (this.currentOffset >= this.endOffset) {
-            this.updateState(null as TextMateLexer.Token?, this.endOffset)
+            this.updateState(null, this.endOffset)
         } else {
             if (currentLineTokens.isEmpty()) {
-                myLexer.advanceLine(this.currentLineTokens)
+                val app = ApplicationManager.getApplication()
+                val checkCancelledCallback: Runnable? =
+                    if (app != null && !app.isUnitTestMode) Runnable { ProgressManager.checkCanceled() } else null
+                currentLineTokens.addAll(lexer.advanceLine(checkCancelledCallback))
             }
             
             this.updateState(
                 currentLineTokens.poll(),
-                myLexer.currentOffset
+                lexer.getCurrentOffset()
             )
         }
     }
     
-    private fun updateState(token: TextMateLexer.Token?, fallbackOffset: Int) {
+    private fun updateState(token: TextmateToken?, fallbackOffset: Int) {
         if (token != null) {
             this.tokenType =
                 (if (token.scope === TextMateScope.WHITESPACE) TokenType.WHITE_SPACE else mapping[token.scope.scopeName]
@@ -157,5 +180,3 @@ class RobotCodeLexer : LexerBase() {
         return endOffset
     }
 }
-
-
