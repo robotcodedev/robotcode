@@ -137,6 +137,7 @@ jobs:
       - name: Run Plugin Verification tasks
         run: |
           cd intellij-client
+          ./gradlew clean buildPlugin
           ./gradlew verifyPlugin -Dplugin.verifier.home.dir=~/.pluginVerifier
           REPORTS=$(cat ${{ github.workspace }}/build/reports/pluginVerifier/*/report.md | sed 's/^#/##/')
           echo "$REPORTS" >> $GITHUB_STEP_SUMMARY
