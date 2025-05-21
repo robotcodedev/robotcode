@@ -135,16 +135,21 @@ jobs:
         continue-on-error: true
         run: |
           cd intellij-client
-          gradlew verifyPlugin -Dplugin.verifier.home.dir=~/.pluginVerifier
-          REPORTS=$(cat ${{ github.workspace }}/intellij-client/build/reports/pluginVerifier/*/report.md | sed 's/^#/##/')
-          echo "$REPORTS" >> $GITHUB_STEP_SUMMARY
+
+          finish() {
+            REPORTS=$(cat build/reports/pluginVerifier/*/report.md | sed 's/^#/##/')
+            echo "$REPORTS" >> $GITHUB_STEP_SUMMARY
+          }
+          trap finish EXIT
+
+          gradle verifyPlugin -Dplugin.verifier.home.dir=~/.pluginVerifier
 
       - name: Collect Plugin Verifier Result
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
           name: pluginVerifier-result
-          path: ${{ github.workspace }}/intellij-client/build/reports/pluginVerifier
+          path: ./intellij-client/build/reports/pluginVerifier
 
   package:
     needs: [test]
