@@ -30,16 +30,24 @@ class ProjectInfoPart(RobotLanguageServerProtocolPart):
 
     @rpc_method(name="robot/projectInfo", threaded=True)
     @_logger.call
-    def _get_document_imports(
+    def _robot_project_info(
         self,
         *args: Any,
         **kwargs: Any,
     ) -> ProjectInfo:
         robocop_version_string = None
         if robocop_installed():
-            from robocop.version import __version__
+            try:
+                from robocop.version import __version__
 
-            robocop_version_string = __version__
+                robocop_version_string = __version__
+            except ImportError:
+                try:
+                    from robocop import __version__
+
+                    robocop_version_string = __version__
+                except ImportError:
+                    pass
 
         tidy_version_string = None
         if robotidy_installed():
