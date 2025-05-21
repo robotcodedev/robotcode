@@ -43,3 +43,4 @@ class Error:
     VARIABLE_OVERRIDDEN = "VariableOverridden"
     MODEL_ERROR = "ModelError"
     TOKEN_ERROR = "TokenError"
+    ASSIGN_MARK_ALLOWED_ONLY_ON_LAST_VAR = "AssignmentMarkAllowedOnlyOnLastVariable"

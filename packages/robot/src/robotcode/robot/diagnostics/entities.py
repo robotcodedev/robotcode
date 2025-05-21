@@ -17,10 +17,9 @@ from typing_extensions import Concatenate, ParamSpec
 
 from robot.parsing.lexer.tokens import Token
 from robotcode.core.lsp.types import Position, Range
-from robotcode.robot.utils.match import normalize
 
 from ..utils.ast import range_from_token
-from ..utils.variables import search_variable
+from ..utils.variables import VariableMatcher
 
 if TYPE_CHECKING:
     from robotcode.robot.diagnostics.library_doc import KeywordDoc, LibraryDoc
@@ -162,48 +161,6 @@ class VariablesImport(Import):
     @single_call
     def __hash__(self) -> int:
         return hash((type(self), self.name, self.args))
-
-
-class InvalidVariableError(Exception):
-    pass
-
-
-class VariableMatcher:
-    def __init__(self, name: str) -> None:
-        self.name = name
-
-        match = search_variable(name, "$@&%", ignore_errors=True)
-
-        if match.base is None:
-            raise InvalidVariableError(f"Invalid variable '{name}'")
-
-        self.base = match.base
-
-        self.normalized_name = normalize(self.base)
-
-    def __eq__(self, o: object) -> bool:
-        if type(o) is VariableMatcher:
-            return o.normalized_name == self.normalized_name
-
-        if type(o) is str:
-            match = search_variable(o, "$@&%", ignore_errors=True)
-            base = match.base
-            if base is None:
-                return False
-
-            normalized = normalize(base)
-            return self.normalized_name == normalized
-
-        return False
-
-    def __hash__(self) -> int:
-        return hash(self.normalized_name)
-
-    def __str__(self) -> str:
-        return self.name
-
-    def __repr__(self) -> str:
-        return f"{type(self).__name__}(name={self.name!r})"
 
 
 class VariableDefinitionType(Enum):

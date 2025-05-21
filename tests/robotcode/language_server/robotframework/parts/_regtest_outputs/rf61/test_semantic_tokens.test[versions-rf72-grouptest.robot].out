@@ -23,7 +23,7 @@ result: !SemanticTokens
   - 1
   - 4
   - 3
-  - 52
+  - 54
   - 0
   - 2
   - 4
@@ -48,11 +48,11 @@ result: !SemanticTokens
   - 2
   - 8
   - 3
-  - 52
+  - 54
   - 0
   - 2
   - 4
   - 3
-  - 52
+  - 54
   - 0
   result_id: null

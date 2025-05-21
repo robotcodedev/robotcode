@@ -548,6 +548,12 @@
           "variableEnd": [
             "punctuation.definition.variable.end.robotframework"
           ],
+          "expressionBegin": [
+            "punctuation.definition.expression.begin.robotframework"
+          ],
+          "expressionEnd": [
+            "punctuation.definition.expression.end.robotframework"
+          ],
           "escape": [
             "constant.character.escape.robotframework"
           ],

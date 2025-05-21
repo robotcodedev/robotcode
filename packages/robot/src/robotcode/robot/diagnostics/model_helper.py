@@ -253,7 +253,7 @@ class ModelHelper:
 
         return lib_entry, kw_namespace
 
-    match_extended = re.compile(
+    MATCH_EXTENDED = re.compile(
         r"""
     (.+?)          # base name (group 1)
     ([^\s\w].+)    # extended part (group 2)
@@ -500,9 +500,9 @@ class ModelHelper:
                     and sub_token.value[1:2] == "{"
                     and sub_token.value[-1:] == "}"
                 ):
-                    match = cls.match_extended.match(name[2:-1])
-                    if match is not None:
-                        base_name, _ = match.groups()
+                    extended_match = cls.MATCH_EXTENDED.match(name[2:-1])
+                    if extended_match is not None:
+                        base_name, _ = extended_match.groups()
                         name = f"{name[0]}{{{base_name.strip()}}}"
                         var = namespace.find_variable(
                             name,

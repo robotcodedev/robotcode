@@ -55,6 +55,8 @@ from ..utils.ast import (
 from ..utils.stubs import Languages
 from ..utils.variables import (
     BUILTIN_VARIABLES,
+    InvalidVariableError,
+    VariableMatcher,
     is_scalar_assign,
     is_variable,
     search_variable,
@@ -66,7 +68,6 @@ from .entities import (
     EnvironmentVariableDefinition,
     GlobalVariableDefinition,
     Import,
-    InvalidVariableError,
     LibraryEntry,
     LibraryImport,
     LocalVariableDefinition,
@@ -76,7 +77,6 @@ from .entities import (
     TestCaseDefinition,
     TestVariableDefinition,
     VariableDefinition,
-    VariableMatcher,
     VariablesEntry,
     VariablesImport,
 )

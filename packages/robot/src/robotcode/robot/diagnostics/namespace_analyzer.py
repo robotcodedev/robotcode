@@ -54,13 +54,20 @@ from ..utils.ast import (
     strip_variable_token,
     tokenize_variables,
 )
-from ..utils.variables import contains_variable, is_scalar_assign, is_variable, search_variable, split_from_equals
+from ..utils.variables import (
+    InvalidVariableError,
+    VariableMatcher,
+    contains_variable,
+    is_scalar_assign,
+    is_variable,
+    search_variable,
+    split_from_equals,
+)
 from ..utils.visitor import Visitor
 from .entities import (
     ArgumentDefinition,
     EnvironmentVariableDefinition,
     GlobalVariableDefinition,
-    InvalidVariableError,
     LibraryEntry,
     LocalVariableDefinition,
     TagDefinition,
@@ -68,7 +75,6 @@ from .entities import (
     TestVariableDefinition,
     VariableDefinition,
     VariableDefinitionType,
-    VariableMatcher,
     VariableNotFoundDefinition,
 )
 from .errors import DIAGNOSTICS_SOURCE_NAME, Error
@@ -186,19 +192,18 @@ class NamespaceAnalyzer(Visitor):
         if name_token is None:
             return
 
-        name = name_token.value
-
-        if name is not None:
-            match = search_variable(name, ignore_errors=True)
-            if not match.is_assign(allow_assign_mark=True):
+        if name_token.value is not None:
+            matcher = search_variable(
+                name_token.value[:-1].rstrip() if name_token.value.endswith("=") else name_token.value,
+                ignore_errors=True,
+            )
+            if not matcher.is_assign(allow_assign_mark=True) or matcher.name is None:
                 return
 
-            if name.endswith("="):
-                name = name[:-1].rstrip()
+            name = matcher.name
 
-            stripped_name_token = strip_variable_token(
-                Token(name_token.type, name, name_token.lineno, name_token.col_offset, name_token.error)
-            )
+            stripped_name_token = strip_variable_token(name_token, matcher=matcher)
+
             r = range_from_token(stripped_name_token)
 
             existing_var = self._find_variable(name)
@@ -413,7 +418,7 @@ class NamespaceAnalyzer(Visitor):
         self, token: Token, severity: DiagnosticSeverity = DiagnosticSeverity.ERROR
     ) -> None:
         for var_token, var in self._iter_expression_variables_from_token(token):
-            self._handle_find_variable_result(token, var_token, var, severity)
+            self._handle_find_variable_result(var_token, var, severity)
 
     def _append_error_from_node(
         self,
@@ -479,11 +484,10 @@ class NamespaceAnalyzer(Visitor):
 
     def _analyze_token_variables(self, token: Token, severity: DiagnosticSeverity = DiagnosticSeverity.ERROR) -> None:
         for var_token, var in self._iter_variables_from_token(token):
-            self._handle_find_variable_result(token, var_token, var, severity)
+            self._handle_find_variable_result(var_token, var, severity)
 
     def _handle_find_variable_result(
         self,
-        token: Token,
         var_token: Token,
         var: VariableDefinition,
         severity: DiagnosticSeverity = DiagnosticSeverity.ERROR,
@@ -663,6 +667,9 @@ class NamespaceAnalyzer(Visitor):
                         self._keyword_references[d].add(Location(self._namespace.document_uri, kw_range))
             else:
                 self._keyword_references[result].add(Location(self._namespace.document_uri, kw_range))
+
+                if result.is_embedded:
+                    self._analyze_token_variables(keyword_token)
 
                 if result.errors:
                     self._append_diagnostics(
@@ -1016,7 +1023,6 @@ class NamespaceAnalyzer(Visitor):
             )
             return
 
-        self._analyze_token_variables(keyword_token)
         self._analyze_statement_variables(node)
 
         self._analyze_keyword_call(
@@ -1224,25 +1230,61 @@ class NamespaceAnalyzer(Visitor):
                 pass
 
     def _analyze_assign_statement(self, node: Statement) -> None:
+        token_with_assign_mark: Optional[Token] = None
         for assign_token in node.get_tokens(Token.ASSIGN):
             variable_token = self._get_variable_token(assign_token)
+
+            if token_with_assign_mark is not None:
+                r = range_from_token(token_with_assign_mark)
+                r.start.character = r.end.character - 1
+                self._append_diagnostics(
+                    range=r,
+                    message="Assign mark '=' can be used only with the last variable.",
+                    severity=DiagnosticSeverity.ERROR,
+                    code=Error.ASSIGN_MARK_ALLOWED_ONLY_ON_LAST_VAR,
+                )
+
+            if assign_token.value.endswith("="):
+                token_with_assign_mark = assign_token
 
             try:
                 if variable_token is not None:
                     matcher = VariableMatcher(variable_token.value)
-                    existing_var = next(
-                        (
-                            v
-                            for k, v in self._variables.items()
-                            if k == matcher
-                            and v.type in [VariableDefinitionType.ARGUMENT, VariableDefinitionType.LOCAL_VARIABLE]
-                        ),
-                        None,
-                    )
+                    stripped_variable_token = strip_variable_token(variable_token, matcher=matcher)
+                    if matcher.name is None:
+                        return
+
+                    if matcher.items:
+                        existing_var = self._find_variable(matcher.name)
+                        if existing_var is None:
+                            self._handle_find_variable_result(
+                                stripped_variable_token,
+                                VariableNotFoundDefinition(
+                                    stripped_variable_token.lineno,
+                                    stripped_variable_token.col_offset,
+                                    stripped_variable_token.lineno,
+                                    stripped_variable_token.end_col_offset,
+                                    self._namespace.source,
+                                    matcher.name,
+                                    stripped_variable_token,
+                                ),
+                            )
+                            return
+                    else:
+                        existing_var = next(
+                            (
+                                v
+                                for k, v in self._variables.items()
+                                if k == matcher
+                                and v.type in [VariableDefinitionType.ARGUMENT, VariableDefinitionType.LOCAL_VARIABLE]
+                            ),
+                            None,
+                        )
+
                     if existing_var is None:
                         var_def = LocalVariableDefinition(
-                            name=variable_token.value,
-                            name_token=strip_variable_token(variable_token),
+                            name=matcher.name,
+                            name_token=stripped_variable_token,
                             line_no=variable_token.lineno,
                             col_offset=variable_token.col_offset,
                             end_line_no=variable_token.lineno,
@@ -1256,7 +1298,7 @@ class NamespaceAnalyzer(Visitor):
                         self._variable_references[existing_var].add(
                             Location(
                                 self._namespace.document_uri,
-                                range_from_token(strip_variable_token(variable_token)),
+                                range_from_token(stripped_variable_token),
                             )
                         )
 
@@ -1747,9 +1789,9 @@ class NamespaceAnalyzer(Visitor):
                     and var_token.value[1:2] == "{"
                     and var_token.value[-1:] == "}"
                 ):
-                    match = ModelHelper.match_extended.match(name[2:-1])
-                    if match is not None:
-                        base_name, _ = match.groups()
+                    extended_match = ModelHelper.MATCH_EXTENDED.match(name[2:-1])
+                    if extended_match is not None:
+                        base_name, _ = extended_match.groups()
                         name = f"{name[0]}{{{base_name.strip()}}}"
                         var = self._find_variable(name)
                         sub_sub_token = Token(
