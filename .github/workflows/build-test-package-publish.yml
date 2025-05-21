@@ -125,8 +125,6 @@ jobs:
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
-        with:
-          cache-cleanup: always
 
       - run: hatch run lint:style
         if: always()
@@ -139,7 +137,7 @@ jobs:
           cd intellij-client
           ./gradlew clean buildPlugin
           ./gradlew verifyPlugin -Dplugin.verifier.home.dir=~/.pluginVerifier
-          REPORTS=$(cat ${{ github.workspace }}/build/reports/pluginVerifier/*/report.md | sed 's/^#/##/')
+          REPORTS=$(cat ${{ github.workspace }}/intellij-client/build/reports/pluginVerifier/*/report.md | sed 's/^#/##/')
           echo "$REPORTS" >> $GITHUB_STEP_SUMMARY
 
       - name: Collect Plugin Verifier Result
@@ -147,7 +145,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: pluginVerifier-result
-          path: ${{ github.workspace }}/build/reports/pluginVerifier
+          path: ${{ github.workspace }}/intellij-client/build/reports/pluginVerifier
 
   package:
     needs: [test]
