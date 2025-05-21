@@ -39,8 +39,7 @@ class RobotCodeParserDefinition : ParserDefinition {
     
     override fun createElement(node: ASTNode): PsiElement {
         return when (node.elementType) {
-            is RobotTextMateElementType -> ASTWrapperPsiElement(node)
-            is IRobotFrameworkElementType -> SimpleASTWrapperPsiElement(node)
+            is IRobotFrameworkElementType -> ASTWrapperPsiElement(node)
             
             else -> throw IllegalArgumentException("Unknown element type: ${node.elementType}")
         }

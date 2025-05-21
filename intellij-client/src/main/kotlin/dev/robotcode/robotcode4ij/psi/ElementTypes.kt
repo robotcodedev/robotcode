@@ -25,13 +25,16 @@ val COMMENT_LINE = IRobotFrameworkElementType("COMMENT_LINE")
 val COMMENT_BLOCK = IRobotFrameworkElementType("COMMENT_BLOCK")
 
 val ARGUMENT = IRobotFrameworkElementType("ARGUMENT")
+val ESCAPE = IRobotFrameworkElementType("ESCAPE")
 
 val VARIABLE_BEGIN = IRobotFrameworkElementType("VARIABLE_BEGIN")
 val VARIABLE_END = IRobotFrameworkElementType("VARIABLE_END")
-val EXPRESSION_VARIABLE_BEGIN = IRobotFrameworkElementType("EXPRESSION_VARIABLE_BEGIN")
-val EXPRESSION_VARIABLE_END = IRobotFrameworkElementType("EXPRESSION_VARIABLE_END")
+val EXPRESSION_BEGIN = IRobotFrameworkElementType("EXPRESSION_VARIABLE_BEGIN")
+val EXPRESSION_END = IRobotFrameworkElementType("EXPRESSION_VARIABLE_END")
 val ENVIRONMENT_VARIABLE_BEGIN = IRobotFrameworkElementType("VARIABLE_BEGIN")
 val ENVIRONMENT_VARIABLE_END = IRobotFrameworkElementType("VARIABLE_END")
+val VARIABLE_INDEX_BEGIN = IRobotFrameworkElementType("VARIABLE_INDEX_BEGIN")
+val VARIABLE_INDEX_END = IRobotFrameworkElementType("VARIABLE_INDEX_END")
 
 val KEYWORD_CALL = IRobotFrameworkElementType("KEYWORD_CALL")
 val CONTROL_FLOW = IRobotFrameworkElementType("CONTROL_FLOW")
@@ -39,7 +42,7 @@ val VARIABLE = IRobotFrameworkElementType("VARIABLE")
 
 val OPERATOR = IRobotFrameworkElementType("OPERATOR")
 val CONTINUATION = IRobotFrameworkElementType("CONTINUATION")
-
+val VAR = IRobotFrameworkElementType("VAR")
 
 val COMMENT_TOKENS = TokenSet.create(COMMENT_LINE, COMMENT_BLOCK)
 val STRING_TOKENS = TokenSet.create(ARGUMENT)

@@ -30,6 +30,10 @@ class RobotCodeColorSettingsPage : ColorSettingsPage {
         AttributesDescriptor("Variable expression", Colors.VARIABLE_EXPRESSION),
         AttributesDescriptor("Variable begin", Colors.VARIABLE_BEGIN),
         AttributesDescriptor("Variable end", Colors.VARIABLE_END),
+        AttributesDescriptor("Variable index begin", Colors.VARIABLE_INDEX_BEGIN),
+        AttributesDescriptor("Variable index end", Colors.VARIABLE_INDEX_END),
+        AttributesDescriptor("Expression begin", Colors.EXPRESSION_BEGIN),
+        AttributesDescriptor("Expression end", Colors.EXPRESSION_END),
         
         AttributesDescriptor("Line comment", Colors.LINE_COMMENT),
         AttributesDescriptor("Block comment", Colors.BLOCK_COMMENT),
@@ -39,6 +43,8 @@ class RobotCodeColorSettingsPage : ColorSettingsPage {
         AttributesDescriptor("BDD prefix", Colors.BDD_PREFIX),
         
         AttributesDescriptor("Continuation", Colors.CONTINUATION),
+        
+        AttributesDescriptor("Escape", Colors.ESCAPE),
     )
     
     override fun getAttributeDescriptors(): Array<AttributesDescriptor> {
@@ -92,9 +98,19 @@ class RobotCodeColorSettingsPage : ColorSettingsPage {
             ...    ${'$'}{arg2}
             [Tags]  example
             [Setup]  Open Application  with arguments
-
+            
             Log    ${'$'}{arg1} ${'$'}{arg2}
             Log To Console  Hello World
+            Log    ${'$'}{{1+2*"asd"}}
+            Log   \n \x12 \u1234 \U12345678 \N{name}
+            Log    ${'$'}{arg1}[abc]
+            ${'$'}{arg1}[abc]   Evaluate  1+2
+        
+        A Test With Vars
+            VAR  ${'$'}{var1}  value1
+            VAR  @{var2}  value2   value3
+            VAR  &{var2}  v2=value2   v3=value3
+            Do Something  with=A Value
 
         *** Keywords ***
         Open Application

@@ -13,6 +13,9 @@ import dev.robotcode.robotcode4ij.psi.CONTINUATION
 import dev.robotcode.robotcode4ij.psi.CONTROL_FLOW
 import dev.robotcode.robotcode4ij.psi.ENVIRONMENT_VARIABLE_BEGIN
 import dev.robotcode.robotcode4ij.psi.ENVIRONMENT_VARIABLE_END
+import dev.robotcode.robotcode4ij.psi.ESCAPE
+import dev.robotcode.robotcode4ij.psi.EXPRESSION_BEGIN
+import dev.robotcode.robotcode4ij.psi.EXPRESSION_END
 import dev.robotcode.robotcode4ij.psi.HEADER
 import dev.robotcode.robotcode4ij.psi.KEYWORD_CALL
 import dev.robotcode.robotcode4ij.psi.KEYWORD_NAME
@@ -20,9 +23,12 @@ import dev.robotcode.robotcode4ij.psi.OPERATOR
 import dev.robotcode.robotcode4ij.psi.RobotTextMateElementType
 import dev.robotcode.robotcode4ij.psi.SETTING
 import dev.robotcode.robotcode4ij.psi.TESTCASE_NAME
+import dev.robotcode.robotcode4ij.psi.VAR
 import dev.robotcode.robotcode4ij.psi.VARIABLE
 import dev.robotcode.robotcode4ij.psi.VARIABLE_BEGIN
 import dev.robotcode.robotcode4ij.psi.VARIABLE_END
+import dev.robotcode.robotcode4ij.psi.VARIABLE_INDEX_BEGIN
+import dev.robotcode.robotcode4ij.psi.VARIABLE_INDEX_END
 
 
 class RobotCodeSyntaxHighlighter : SyntaxHighlighterBase() {
@@ -34,16 +40,22 @@ class RobotCodeSyntaxHighlighter : SyntaxHighlighterBase() {
             VARIABLE_END to arrayOf(Colors.VARIABLE_END),
             ENVIRONMENT_VARIABLE_BEGIN to arrayOf(Colors.VARIABLE_BEGIN),
             ENVIRONMENT_VARIABLE_END to arrayOf(Colors.VARIABLE_END),
+            EXPRESSION_BEGIN to arrayOf(Colors.EXPRESSION_BEGIN),
+            EXPRESSION_END to arrayOf(Colors.EXPRESSION_END),
+            VARIABLE_INDEX_BEGIN to arrayOf(Colors.VARIABLE_INDEX_BEGIN),
+            VARIABLE_INDEX_END to arrayOf(Colors.VARIABLE_INDEX_END),
             TESTCASE_NAME to arrayOf(Colors.TESTCASE_NAME),
             KEYWORD_NAME to arrayOf(Colors.KEYWORD_NAME),
             HEADER to arrayOf(Colors.HEADER),
             SETTING to arrayOf(Colors.SETTING),
+            VAR to arrayOf(Colors.VAR),
             KEYWORD_CALL to arrayOf(Colors.KEYWORD_CALL),
             CONTROL_FLOW to arrayOf(Colors.CONTROL_FLOW),
             VARIABLE to arrayOf(Colors.VARIABLE),
             OPERATOR to arrayOf(Colors.OPERATOR),
             ARGUMENT to arrayOf(Colors.ARGUMENT),
             CONTINUATION to arrayOf(Colors.CONTINUATION),
+            ESCAPE to arrayOf(Colors.ESCAPE),
         )
         
         val textMateElementMap = mapOf(

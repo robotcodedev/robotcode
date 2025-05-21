@@ -60,11 +60,6 @@
 			implementationClass="com.redhat.devtools.lsp4ij.features.codeBlockProvider.LSPCodeBlockProvider"
 			order="first"/>
 
-		<highlightVisitor
-			id="robotframework"
-			implementation="dev.robotcode.robotcode4ij.lsp.RobotSemanticTokensHighlightVisitor"
-			order="first"/>
-
 		<typeHierarchyProvider language="robotframework"
 							   implementationClass="com.redhat.devtools.lsp4ij.features.typeHierarchy.LSPTypeHierarchyProvider"/>
 
