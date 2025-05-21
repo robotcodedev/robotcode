@@ -15,7 +15,4 @@ class RobotCodeConfigurationType : ConfigurationTypeBase(
         addFactory(configurationFactory)
     }
     
-    override fun isDumbAware(): Boolean {
-        return super.isDumbAware()
-    }
 }

@@ -44,25 +44,4 @@ class RobotCodeDebuggerEvaluator(val debugServer: IDebugProtocolServer, val fram
         }
     }
     
-    override fun getEvaluationMode(text: String, startOffset: Int, endOffset: Int, psiFile: PsiFile?): EvaluationMode? {
-        return super.getEvaluationMode(text, startOffset, endOffset, psiFile)
-    }
-    
-    override fun getExpressionInfoAtOffset(
-        project: Project,
-        document: Document,
-        offset: Int,
-        sideEffectsAllowed: Boolean
-    ): ExpressionInfo? {
-        return super.getExpressionInfoAtOffset(project, document, offset, sideEffectsAllowed)
-    }
-    
-    override fun getExpressionRangeAtOffset(
-        project: Project?,
-        document: Document?,
-        offset: Int,
-        sideEffectsAllowed: Boolean
-    ): TextRange? {
-        return super.getExpressionRangeAtOffset(project, document, offset, sideEffectsAllowed)
-    }
 }

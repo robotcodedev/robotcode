@@ -144,10 +144,6 @@ class RobotCodeDebugProcess(
         return executionResult.processHandler
     }
     
-    override fun sessionInitialized() {
-        super.sessionInitialized()
-    }
-    
     override fun getBreakpointHandlers(): Array<out XBreakpointHandler<*>?> {
         return arrayOf(breakpointHandler, exceptionBreakpointHandler)
     }

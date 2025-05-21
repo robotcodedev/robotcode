@@ -21,12 +21,12 @@ class RobotSMTestLocator : SMTestLocator {
             val line = uri.parameters?.drop(1)?.split("&")?.firstOrNull { it.startsWith("line=") }?.substring(5)
                 ?.toIntOrNull()
             
-            LocalFileSystem.getInstance().findFileByPath(uri.path)?.let {
-                PsiManager.getInstance(project).findFile(it)?.let {
-                    val document = PsiDocumentManager.getInstance(project).getDocument(it)
-                    document?.let { doc ->
+            LocalFileSystem.getInstance().findFileByPath(uri.path)?.let { virtualFile ->
+                PsiManager.getInstance(project).findFile(virtualFile)?.let { psiFile ->
+                    
+                    PsiDocumentManager.getInstance(project).getDocument(psiFile)?.let { doc ->
                         val offset = doc.getLineStartOffset(line ?: 0)
-                        it.findElementAt(offset)
+                        psiFile.findElementAt(offset)
                     }
                 }
             }?.let {

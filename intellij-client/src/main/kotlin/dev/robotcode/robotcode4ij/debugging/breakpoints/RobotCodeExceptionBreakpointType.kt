@@ -36,13 +36,6 @@ class RobotCodeExceptionBreakpointType :
         return RobotCodeExceptionBreakpointProperties()
     }
     
-    override fun addBreakpoint(
-        project: Project?,
-        parentComponent: JComponent?
-    ): XBreakpoint<RobotCodeExceptionBreakpointProperties>? {
-        return super.addBreakpoint(project, parentComponent)
-    }
-    
     override fun getBreakpointsDialogHelpTopic(): @NonNls String? {
         return "reference.dialogs.breakpoints"
     }
