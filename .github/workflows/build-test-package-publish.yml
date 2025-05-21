@@ -128,24 +128,25 @@ jobs:
         with:
           cache-cleanup: always
 
-      # Set environment variables
-      - name: Export Properties
-        id: properties
-        shell: bash
-        run: |
-          echo "pluginVerifierHomeDir=~/.pluginVerifier" >> $GITHUB_OUTPUT
-
       - run: hatch run lint:style
         if: always()
 
       - run: hatch run lint:typing
         if: always()
 
-      - run: |
+      - name: Run Plugin Verification tasks
+        run: |
           cd intellij-client
-          gradle verifyPlugin --console=plain
+          ./gradlew verifyPlugin -Dplugin.verifier.home.dir=~/.pluginVerifier
+          REPORTS=$(cat ${{ github.workspace }}/build/reports/pluginVerifier/*/report.md | sed 's/^#/##/')
+          echo "$REPORTS" >> $GITHUB_STEP_SUMMARY
 
-        if: always()
+      - name: Collect Plugin Verifier Result
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: pluginVerifier-result
+          path: ${{ github.workspace }}/build/reports/pluginVerifier
 
   package:
     needs: [test]
