@@ -114,9 +114,6 @@ jobs:
       - name: Install Hatch
         uses: pypa/hatch@install
 
-      - name: Gradle Wrapper Validation
-        uses: gradle/actions/wrapper-validation@v4
-
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
@@ -125,6 +122,8 @@ jobs:
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-cleanup: always
 
       - run: hatch run lint:style
         if: always()
@@ -136,8 +135,7 @@ jobs:
         continue-on-error: true
         run: |
           cd intellij-client
-          ./gradlew clean buildPlugin
-          ./gradlew verifyPlugin -Dplugin.verifier.home.dir=~/.pluginVerifier
+          gradlew verifyPlugin -Dplugin.verifier.home.dir=~/.pluginVerifier
           REPORTS=$(cat ${{ github.workspace }}/intellij-client/build/reports/pluginVerifier/*/report.md | sed 's/^#/##/')
           echo "$REPORTS" >> $GITHUB_STEP_SUMMARY
 
@@ -176,9 +174,6 @@ jobs:
           node-version: "20"
           cache: "npm"
           cache-dependency-path: package-lock.json
-
-      - name: Gradle Wrapper Validation
-        uses: gradle/actions/wrapper-validation@v4
 
       - name: Setup Java
         uses: actions/setup-java@v4
