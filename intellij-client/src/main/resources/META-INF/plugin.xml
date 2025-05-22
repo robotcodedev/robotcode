@@ -110,7 +110,7 @@
 								id="dev.robotcode.robotcode4ij.editor.RobotCodeStatusBarWidget"/>
 		<editorActionHandler action="EditorTab"
 							 implementationClass="dev.robotcode.robotcode4ij.editor.RobotCodeEditorTabActionHandler"/>
-
+		<editorNotificationProvider implementation="dev.robotcode.robotcode4ij.editor.EditorNotificationProvider"/>
 	</extensions>
 
 	<extensions defaultExtensionNs="com.redhat.devtools.lsp4ij">

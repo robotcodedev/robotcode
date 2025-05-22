@@ -1,12 +1,6 @@
 package dev.robotcode.robotcode4ij.debugging
 
-import com.intellij.openapi.editor.Document
-import com.intellij.openapi.project.Project
-import com.intellij.openapi.util.TextRange
-import com.intellij.psi.PsiFile
 import com.intellij.xdebugger.XSourcePosition
-import com.intellij.xdebugger.evaluation.EvaluationMode
-import com.intellij.xdebugger.evaluation.ExpressionInfo
 import com.intellij.xdebugger.evaluation.XDebuggerEvaluator
 import kotlinx.coroutines.future.await
 import kotlinx.coroutines.runBlocking

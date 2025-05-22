@@ -1,13 +1,11 @@
 package dev.robotcode.robotcode4ij.debugging.breakpoints
 
 import com.intellij.icons.AllIcons
-import com.intellij.openapi.project.Project
 import com.intellij.xdebugger.breakpoints.XBreakpoint
 import com.intellij.xdebugger.breakpoints.XBreakpointType
 import org.jetbrains.annotations.Nls
 import org.jetbrains.annotations.NonNls
 import javax.swing.Icon
-import javax.swing.JComponent
 
 class RobotCodeExceptionBreakpointType :
     XBreakpointType<XBreakpoint<RobotCodeExceptionBreakpointProperties>, RobotCodeExceptionBreakpointProperties>(

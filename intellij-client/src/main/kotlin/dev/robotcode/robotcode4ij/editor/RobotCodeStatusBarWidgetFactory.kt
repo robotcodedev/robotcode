@@ -6,6 +6,7 @@ import com.intellij.openapi.util.NlsContexts
 import com.intellij.openapi.wm.StatusBarWidget
 import com.intellij.openapi.wm.StatusBarWidget.IconPresentation
 import com.intellij.openapi.wm.StatusBarWidgetFactory
+import dev.robotcode.robotcode4ij.CheckPythonAndRobotVersionResult
 import dev.robotcode.robotcode4ij.RobotIcons
 import dev.robotcode.robotcode4ij.checkPythonAndRobotVersion
 import org.jetbrains.annotations.NonNls
@@ -38,6 +39,6 @@ class RobotCodeStatusBarWidgetFactory : StatusBarWidgetFactory {
     }
     
     override fun isAvailable(project: Project): Boolean {
-        return project.checkPythonAndRobotVersion()
+        return project.checkPythonAndRobotVersion() == CheckPythonAndRobotVersionResult.OK
     }
 }
