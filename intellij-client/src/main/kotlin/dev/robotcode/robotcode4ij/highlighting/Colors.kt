@@ -41,6 +41,16 @@ object Colors {
     val VARIABLE_END: TextAttributesKey =
         createTextAttributesKey("ROBOTFRAMEWORK_VARIABLE_END", DefaultLanguageHighlighterColors.BRACES)
     
+    val VARIABLE_INDEX_BEGIN: TextAttributesKey =
+        createTextAttributesKey("ROBOTFRAMEWORK_VARIABLE_INDEX_BEGIN", DefaultLanguageHighlighterColors.BRACKETS)
+    val VARIABLE_INDEX_END: TextAttributesKey =
+        createTextAttributesKey("ROBOTFRAMEWORK_VARIABLE_INDEX_END", DefaultLanguageHighlighterColors.BRACKETS)
+    
+    val EXPRESSION_BEGIN: TextAttributesKey =
+        createTextAttributesKey("ROBOTFRAMEWORK_EXPRESSION_BEGIN", DefaultLanguageHighlighterColors.BRACES)
+    val EXPRESSION_END: TextAttributesKey =
+        createTextAttributesKey("ROBOTFRAMEWORK_EXPRESSION_END", DefaultLanguageHighlighterColors.BRACES)
+    
     val NAMESPACE: TextAttributesKey =
         createTextAttributesKey("ROBOTFRAMEWORK_NAMESPACE", DefaultLanguageHighlighterColors.CLASS_REFERENCE)
     
@@ -65,4 +75,10 @@ object Colors {
     
     val CONTINUATION: TextAttributesKey =
         createTextAttributesKey("ROBOTFRAMEWORK_CONTINUATION", DefaultLanguageHighlighterColors.DOT)
+    
+    val ESCAPE: TextAttributesKey =
+        createTextAttributesKey("ROBOTFRAMEWORK_ESCAPE", DefaultLanguageHighlighterColors.VALID_STRING_ESCAPE)
+    
+    val ERROR: TextAttributesKey =
+        createTextAttributesKey("ROBOTFRAMEWORK_ERROR", DefaultLanguageHighlighterColors.INVALID_STRING_ESCAPE)
 }

@@ -8,7 +8,7 @@ import dev.robotcode.robotcode4ij.testing.testManger
 
 class RobotCodeRunLineMarkerContributor : RunLineMarkerContributor() {
     override fun getInfo(element: PsiElement): Info? {
-        var testElement = element.project.testManger.findTestItem(element) ?: return null
+        val testElement = element.project.testManger.findTestItem(element) ?: return null
         if (testElement.type != "test" && testElement.children.isNullOrEmpty()) {
             return null
         }
@@ -17,11 +17,8 @@ class RobotCodeRunLineMarkerContributor : RunLineMarkerContributor() {
             "robotcode", "/", newLocalFileUrl(testElement.source!!).toString()
         ).addParameters(mapOf("line" to ((testElement.lineno ?: 1) - 1).toString()))
         
-        var icon = getTestStateIcon(uri.toString(), element.project, testElement.type != "test")
+        val icon = getTestStateIcon(uri.toString(), element.project, testElement.type != "test")
         return withExecutorActions(icon)
     }
     
-    override fun getSlowInfo(element: PsiElement): Info? {
-        return super.getSlowInfo(element)
-    }
 }

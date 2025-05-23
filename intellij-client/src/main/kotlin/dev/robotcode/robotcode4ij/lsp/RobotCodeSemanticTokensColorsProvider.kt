@@ -35,10 +35,12 @@ private val mapping by lazy {
         "variableExpression" to Colors.VARIABLE_EXPRESSION,
         "variableBegin" to Colors.VARIABLE_BEGIN,
         "variableEnd" to Colors.VARIABLE_END,
-        
+        "expressionBegin" to Colors.EXPRESSION_BEGIN,
+        "expressionEnd" to Colors.EXPRESSION_END,
         "namespace" to Colors.NAMESPACE,
         "bddPrefix" to Colors.BDD_PREFIX,
-        "continuation" to Colors.CONTINUATION
+        "continuation" to Colors.CONTINUATION,
+        "error" to Colors.ERROR,
     )
 }
 

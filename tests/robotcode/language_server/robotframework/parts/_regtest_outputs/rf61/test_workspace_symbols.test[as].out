@@ -720,6 +720,21 @@ result:
   name: another keyword with params
   tags: null
 - !WorkspaceSymbol
+  container_name: indexed_variables
+  data: null
+  kind: 13
+  location:
+    range:
+      end:
+        character: 24
+        line: 1
+      start:
+        character: 0
+        line: 1
+    uri: indexed_variables.robot
+  name: '@{A_LIST}'
+  tags: null
+- !WorkspaceSymbol
   container_name: references
   data: null
   kind: 13

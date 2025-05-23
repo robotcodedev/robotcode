@@ -25,6 +25,7 @@ import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiElement
 import com.intellij.psi.util.elementType
 import com.intellij.psi.util.startOffset
+import dev.robotcode.robotcode4ij.InvalidPythonOrRobotVersionException
 import dev.robotcode.robotcode4ij.RobotSuiteFileType
 import dev.robotcode.robotcode4ij.buildRobotCodeCommandLine
 import dev.robotcode.robotcode4ij.psi.IRobotFrameworkElementType
@@ -225,9 +226,14 @@ import java.util.*
                 // TODO: Add support for configurable paths
                 val defaultPaths = arrayOf("-dp", ".")
                 
-                val cmdLine = project.buildRobotCodeCommandLine(
-                    arrayOf(*defaultPaths, "discover", "--read-from-stdin", "all"), format = "json"
-                ).withCharset(Charsets.UTF_8).withWorkDirectory(project.basePath)
+                val cmdLine = try {
+                    project.buildRobotCodeCommandLine(
+                        arrayOf(*defaultPaths, "discover", "--read-from-stdin", "all"), format = "json"
+                    ).withCharset(Charsets.UTF_8).withWorkDirectory(project.basePath)
+                } catch (e: InvalidPythonOrRobotVersionException) {
+                    thisLogger().warn("Failed to build command line", e)
+                    return@executeOnPooledThread null
+                }
                 
                 val openFiles = mutableMapOf<String, String>()
                 

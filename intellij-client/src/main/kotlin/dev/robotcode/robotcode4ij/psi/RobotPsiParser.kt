@@ -15,18 +15,7 @@ class RobotPsiParser : PsiParser, LightPsiParser {
     override fun parseLight(root: IElementType, builder: PsiBuilder) {
         val mark = builder.mark()
         while (!builder.eof()) {
-            (builder.tokenType as? IRobotFrameworkElementType)?.let {
-                val token = builder.mark()
-                builder.advanceLexer()
-                token.done(it)
-            } ?: run {
-                (builder.tokenType as? RobotTextMateElementType)?.let {
-                    val token = builder.mark()
-                    builder.advanceLexer()
-                    token.done(it)
-                } ?: builder.advanceLexer()
-            }
-            
+            builder.advanceLexer()
         }
         mark.done(root)
     }

@@ -3,11 +3,13 @@ package dev.robotcode.robotcode4ij.lsp
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
+import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Key
 import com.intellij.openapi.util.removeUserData
 import com.redhat.devtools.lsp4ij.LanguageServerManager
 import com.redhat.devtools.lsp4ij.ServerStatus
+import dev.robotcode.robotcode4ij.CheckPythonAndRobotVersionResult
 import dev.robotcode.robotcode4ij.checkPythonAndRobotVersion
 import kotlinx.coroutines.future.await
 import kotlinx.coroutines.runBlocking
@@ -22,7 +24,7 @@ class RobotCodeLanguageServerManager(private val project: Project) {
     fun tryConfigureProject(): Boolean {
         project.removeUserData(LANGUAGE_SERVER_ENABLED_KEY)
         
-        val result = project.checkPythonAndRobotVersion()
+        val result = project.checkPythonAndRobotVersion() == CheckPythonAndRobotVersionResult.OK
         
         project.putUserData(LANGUAGE_SERVER_ENABLED_KEY, result)
         
@@ -58,16 +60,15 @@ class RobotCodeLanguageServerManager(private val project: Project) {
     }
     
     fun restart() {
+        thisLogger().info("Restarting language server")
         stop()
         start()
     }
     
-    fun clearCacheAndRestart() {
+    fun clearCache() {
         runBlocking {
             val server = LanguageServerManager.getInstance(project).getLanguageServer(LANGUAGE_SERVER_ID).await()
             (server?.server as RobotCodeServerApi).clearCache()?.await()
-            
-            restart()
         }
     }
     

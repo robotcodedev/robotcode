@@ -11,6 +11,7 @@ from robot.parsing.lexer.tokens import Token
 from robot.parsing.model.statements import EmptyLine, Statement
 from robotcode.core.lsp.types import Position, Range
 
+from ..utils.variables import VariableMatcher, search_variable
 from . import get_robot_version
 from .visitor import Visitor
 
@@ -325,23 +326,22 @@ def iter_over_keyword_names_and_owners(
             yield ".".join(tokens[:i]), ".".join(tokens[i:])
 
 
-def strip_variable_token(token: Token) -> Token:
-    if (
-        token.type == Token.VARIABLE
-        and token.value[:1] in "$@&%"
-        and token.value[1:2] == "{"
-        and token.value[-1:] == "}"
-    ):
-        value = token.value[2:-1]
+def strip_variable_token(token: Token, identifiers: str = "$@&%*", matcher: Optional[VariableMatcher] = None) -> Token:
+    if token.type == Token.VARIABLE:
+        if matcher is None:
+            matcher = search_variable(token.value, identifiers, ignore_errors=True)
 
-        stripped_value = value.lstrip()
-        stripped_offset = len(value) - len(stripped_value)
-        return Token(
-            token.type,
-            stripped_value.rstrip(),
-            token.lineno,
-            token.col_offset + 2 + stripped_offset,
-        )
+        if matcher.is_variable():
+            value = matcher.base
+
+            stripped_value = value.lstrip()
+            stripped_offset = len(value) - len(stripped_value)
+            return Token(
+                token.type,
+                matcher.base.strip(),
+                token.lineno,
+                token.col_offset + 2 + stripped_offset,
+            )
 
     return token
 

@@ -4,11 +4,21 @@ import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.execution.util.ExecUtil
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.PathManager
+import com.intellij.openapi.components.Service
+import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.modules
 import com.intellij.openapi.util.Key
 import com.jetbrains.python.sdk.pythonSdk
+import dev.robotcode.robotcode4ij.lsp.langServerManager
+import dev.robotcode.robotcode4ij.testing.testManger
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.nio.file.Path
 import kotlin.io.path.Path
 import kotlin.io.path.exists
@@ -23,7 +33,7 @@ class RobotCodeHelpers {
         val robotCodePath: Path = toolPath.resolve("robotcode")
         val checkRobotVersion: Path = toolPath.resolve("utils").resolve("check_robot_version.py")
         
-        val PYTHON_AND_ROBOT_OK_KEY = Key.create<Boolean?>("ROBOTCODE_PYTHON_AND_ROBOT_OK")
+        val PYTHON_AND_ROBOT_OK_KEY = Key.create<CheckPythonAndRobotVersionResult?>("ROBOTCODE_PYTHON_AND_ROBOT_OK")
     }
 }
 
@@ -34,28 +44,43 @@ val Project.robotPythonSdk: com.intellij.openapi.projectRoots.Sdk?
         }
     }
 
-fun Project.checkPythonAndRobotVersion(reset: Boolean = false): Boolean {
-    if (!reset && this.getUserData(RobotCodeHelpers.PYTHON_AND_ROBOT_OK_KEY) == true) {
-        return true
+enum class CheckPythonAndRobotVersionResult(val errorMessage: String? = null) {
+    OK(null),
+    NO_PYTHON("No Python interpreter is configured for the project."),
+    INVALID_PYTHON("The configured Python interpreter is invalid."),
+    INVALID_PYTHON_VERSION("The Python version configured for the project is too old. Minimum required version is 3.9."),
+    INVALID_ROBOT("The Robot Framework version is invalid or not installed. Version 5.0 or higher is required.")
+}
+
+fun Project.resetPythonAndRobotVersionCache() {
+    this.putUserData(RobotCodeHelpers.PYTHON_AND_ROBOT_OK_KEY, null)
+}
+
+fun Project.checkPythonAndRobotVersion(reset: Boolean = false): CheckPythonAndRobotVersionResult {
+    if (!reset) {
+        val cachedResult = this.getUserData(RobotCodeHelpers.PYTHON_AND_ROBOT_OK_KEY)
+        if (cachedResult != null) {
+            return cachedResult
+        }
     }
     
-    val result = ApplicationManager.getApplication().executeOnPooledThread<Boolean> {
+    val result = ApplicationManager.getApplication().executeOnPooledThread<CheckPythonAndRobotVersionResult> {
         
         val pythonInterpreter = this.robotPythonSdk?.homePath
         
         if (pythonInterpreter == null) {
             thisLogger().info("No Python Interpreter defined for project '${this.name}'")
-            return@executeOnPooledThread false
+            return@executeOnPooledThread CheckPythonAndRobotVersionResult.NO_PYTHON
         }
         
         if (!Path(pythonInterpreter).exists()) {
             thisLogger().warn("Python Interpreter $pythonInterpreter not exists")
-            return@executeOnPooledThread false
+            return@executeOnPooledThread CheckPythonAndRobotVersionResult.INVALID_PYTHON
         }
         
         if (!Path(pythonInterpreter).isRegularFile()) {
             thisLogger().warn("Python Interpreter $pythonInterpreter is not a regular file")
-            return@executeOnPooledThread false
+            return@executeOnPooledThread CheckPythonAndRobotVersionResult.INVALID_PYTHON
         }
         
         thisLogger().info("Use Python Interpreter $pythonInterpreter for project '${this.name}'")
@@ -67,7 +92,7 @@ fun Project.checkPythonAndRobotVersion(reset: Boolean = false): Boolean {
         )
         if (res.exitCode != 0 || res.stdout.trim() != "True") {
             thisLogger().warn("Invalid python version")
-            return@executeOnPooledThread false
+            return@executeOnPooledThread CheckPythonAndRobotVersionResult.INVALID_PYTHON_VERSION
         }
         
         val res1 = ExecUtil.execAndGetOutput(
@@ -76,10 +101,10 @@ fun Project.checkPythonAndRobotVersion(reset: Boolean = false): Boolean {
         )
         if (res1.exitCode != 0 || res1.stdout.trim() != "True") {
             thisLogger().warn("Invalid Robot Framework version")
-            return@executeOnPooledThread false
+            return@executeOnPooledThread CheckPythonAndRobotVersionResult.INVALID_ROBOT
         }
         
-        return@executeOnPooledThread true
+        return@executeOnPooledThread CheckPythonAndRobotVersionResult.OK
         
     }.get()
     
@@ -88,6 +113,7 @@ fun Project.checkPythonAndRobotVersion(reset: Boolean = false): Boolean {
     return result
 }
 
+class InvalidPythonOrRobotVersionException(message: String) : Exception(message)
 
 fun Project.buildRobotCodeCommandLine(
     args: Array<String> = arrayOf(),
@@ -97,8 +123,8 @@ fun Project.buildRobotCodeCommandLine(
     noColor: Boolean = true,
     noPager: Boolean = true
 ): GeneralCommandLine {
-    if (!this.checkPythonAndRobotVersion()) {
-        throw IllegalArgumentException("PythonSDK is not defined or robot version is not valid for project ${this.name}")
+    if (this.checkPythonAndRobotVersion() != CheckPythonAndRobotVersionResult.OK) {
+        throw InvalidPythonOrRobotVersionException("PythonSDK is not defined or robot version is not valid for project ${this.name}")
     }
     
     val pythonInterpreter = this.robotPythonSdk?.homePath
@@ -117,4 +143,51 @@ fun Project.buildRobotCodeCommandLine(
     ).withWorkDirectory(this.basePath).withCharset(Charsets.UTF_8)
     
     return commandLine
+}
+
+@Service(Service.Level.PROJECT)
+private class RobotCodeRestartManager(private val project: Project) {
+    companion object {
+        private const val DEBOUNCE_DELAY = 500L
+    }
+    
+    private var refreshJob: Job? = null
+    
+    fun restart(reset: Boolean = false) {
+        project.checkPythonAndRobotVersion(reset)
+        project.langServerManager.restart()
+        project.testManger.refreshDebounced()
+    }
+    
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private val restartScope = CoroutineScope(Dispatchers.IO.limitedParallelism(1))
+    
+    fun restartDebounced(reset: Boolean = false) {
+        if (!project.isOpen || project.isDisposed) {
+            return
+        }
+        
+        refreshJob?.cancel()
+        
+        refreshJob = restartScope.launch {
+            delay(DEBOUNCE_DELAY)
+            restart(reset)
+            refreshJob = null
+        }
+    }
+    
+    fun cancelRestart() {
+        refreshJob?.cancel()
+        refreshJob = null
+    }
+}
+
+fun Project.restartAll(reset: Boolean = false, debounced: Boolean = true) {
+    val service = this.service<RobotCodeRestartManager>()
+    if (debounced) {
+        service.restartDebounced(reset)
+    } else {
+        service.cancelRestart()
+        service.restart(reset)
+    }
 }

@@ -29,7 +29,4 @@ class RobotCodeTokensFileViewProvider(
     eventSystemEnabled: Boolean,
     language: Language
 ) : LSPSemanticTokensSingleRootFileViewProvider(manager, file, eventSystemEnabled, language),
-    LSPSemanticTokensFileViewProvider {
-    
-    
-}
+    LSPSemanticTokensFileViewProvider

@@ -13,11 +13,11 @@
         }
     },
     "robotcode.languageServer.extraArgs": [
-        // "--verbose",
-        // "--debugpy",
+        "--verbose",
+        "--debugpy",
         //"--debugpy-wait-for-client",
-        // "--log",
-        // "--log-level", "INFO",
+        "--log",
+        "--log-level", "DEBUG",
     ],
     "robotcode.robocop.enabled": false,
     "robotcode.robocop.exclude": ["E0303"],

@@ -15,8 +15,9 @@ import dev.robotcode.robotcode4ij.psi.CONTINUATION
 import dev.robotcode.robotcode4ij.psi.CONTROL_FLOW
 import dev.robotcode.robotcode4ij.psi.ENVIRONMENT_VARIABLE_BEGIN
 import dev.robotcode.robotcode4ij.psi.ENVIRONMENT_VARIABLE_END
-import dev.robotcode.robotcode4ij.psi.EXPRESSION_VARIABLE_BEGIN
-import dev.robotcode.robotcode4ij.psi.EXPRESSION_VARIABLE_END
+import dev.robotcode.robotcode4ij.psi.ESCAPE
+import dev.robotcode.robotcode4ij.psi.EXPRESSION_BEGIN
+import dev.robotcode.robotcode4ij.psi.EXPRESSION_END
 import dev.robotcode.robotcode4ij.psi.HEADER
 import dev.robotcode.robotcode4ij.psi.KEYWORD_CALL
 import dev.robotcode.robotcode4ij.psi.KEYWORD_NAME
@@ -24,9 +25,12 @@ import dev.robotcode.robotcode4ij.psi.OPERATOR
 import dev.robotcode.robotcode4ij.psi.RobotTextMateElementType
 import dev.robotcode.robotcode4ij.psi.SETTING
 import dev.robotcode.robotcode4ij.psi.TESTCASE_NAME
+import dev.robotcode.robotcode4ij.psi.VAR
 import dev.robotcode.robotcode4ij.psi.VARIABLE
 import dev.robotcode.robotcode4ij.psi.VARIABLE_BEGIN
 import dev.robotcode.robotcode4ij.psi.VARIABLE_END
+import dev.robotcode.robotcode4ij.psi.VARIABLE_INDEX_BEGIN
+import dev.robotcode.robotcode4ij.psi.VARIABLE_INDEX_END
 import org.jetbrains.plugins.textmate.language.syntax.lexer.TextMateCachingSyntaxMatcher
 import org.jetbrains.plugins.textmate.language.syntax.lexer.TextMateLexerCore
 import org.jetbrains.plugins.textmate.language.syntax.lexer.TextMateScope
@@ -52,8 +56,10 @@ class RobotCodeLexer : LexerBase() {
                 "punctuation.definition.variable.end.robotframework" to VARIABLE_END,
                 "punctuation.definition.envvar.begin.robotframework" to ENVIRONMENT_VARIABLE_BEGIN,
                 "punctuation.definition.envvar.end.robotframework" to ENVIRONMENT_VARIABLE_END,
-                "punctuation.definition.expression.begin.robotframework" to EXPRESSION_VARIABLE_BEGIN,
-                "punctuation.definition.expression.end.robotframework" to EXPRESSION_VARIABLE_END,
+                "punctuation.definition.expression.begin.robotframework" to EXPRESSION_BEGIN,
+                "punctuation.definition.expression.end.robotframework" to EXPRESSION_END,
+                "punctuation.definition.variable.index.begin.robotframework" to VARIABLE_INDEX_BEGIN,
+                "punctuation.definition.variable.index.end.robotframework" to VARIABLE_INDEX_END,
                 
                 "entity.name.function.testcase.name.robotframework" to TESTCASE_NAME,
                 "entity.name.function.keyword.name.robotframework" to KEYWORD_NAME,
@@ -73,16 +79,16 @@ class RobotCodeLexer : LexerBase() {
                 "keyword.control.flow.robotframework" to CONTROL_FLOW,
                 
                 "keyword.other.robotframework" to SETTING,
+                "keyword.other.var.robotframework" to VAR,
                 
                 "variable.name.readwrite.robotframework" to VARIABLE,
                 "keyword.operator.robotframework" to OPERATOR,
                 
                 "constant.character.robotframework" to ARGUMENT,
+                "constant.character.escape.python" to ESCAPE,
                 "string.unquoted.argument.robotframework" to ARGUMENT,
                 
                 "keyword.operator.continue.robotframework" to CONTINUATION,
-                
-                "punctuation.definition.variable.python.begin.robotframework" to VARIABLE_BEGIN,
             )
         }
     }
@@ -95,7 +101,7 @@ class RobotCodeLexer : LexerBase() {
         TextMateBundleHolder.descriptor,
         syntaxMatcher,
         Registry.get("textmate.line.highlighting.limit").asInteger(),
-        false
+        true,
     )
     
     
@@ -138,19 +144,21 @@ class RobotCodeLexer : LexerBase() {
     override fun advance() {
         if (this.currentOffset >= this.endOffset) {
             this.updateState(null, this.endOffset)
-        } else {
-            if (currentLineTokens.isEmpty()) {
-                val app = ApplicationManager.getApplication()
-                val checkCancelledCallback: Runnable? =
-                    if (app != null && !app.isUnitTestMode) Runnable { ProgressManager.checkCanceled() } else null
-                currentLineTokens.addAll(lexer.advanceLine(checkCancelledCallback))
-            }
-            
-            this.updateState(
-                currentLineTokens.poll(),
-                lexer.getCurrentOffset()
-            )
+            return
         }
+        
+        if (currentLineTokens.isEmpty()) {
+            val app = ApplicationManager.getApplication()
+            val checkCancelledCallback: Runnable? =
+                if (app != null && !app.isUnitTestMode) Runnable { ProgressManager.checkCanceled() } else null
+            currentLineTokens.addAll(lexer.advanceLine(checkCancelledCallback))
+        }
+        
+        this.updateState(
+            currentLineTokens.poll(),
+            lexer.getCurrentOffset()
+        )
+        
     }
     
     private fun updateState(token: TextmateToken?, fallbackOffset: Int) {

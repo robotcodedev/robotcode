@@ -23,4 +23,45 @@
 			<option name="FONT_TYPE" value="2"/>
 		</value>
 	</option>
+	<option name="ROBOTFRAMEWORK_VARIABLE_BEGIN">
+		<value>
+			<option name="FOREGROUND" value="5C7DDE"/>
+		</value>
+	</option>
+	<option name="ROBOTFRAMEWORK_VARIABLE_END">
+		<value>
+			<option name="FOREGROUND" value="5C7DDE"/>
+		</value>
+	</option>
+	<option name="ROBOTFRAMEWORK_EXPRESSION_BEGIN">
+		<value>
+			<option name="FOREGROUND" value="AA5CDE"/>
+		</value>
+	</option>
+	<option name="ROBOTFRAMEWORK_EXPRESSION_END">
+		<value>
+			<option name="FOREGROUND" value="AA5CDE"/>
+		</value>
+	</option>
+	<option name="ROBOTFRAMEWORK_VARIABLE_INDEX_BEGIN">
+		<value>
+			<option name="FOREGROUND" value="9D4343"/>
+		</value>
+	</option>
+	<option name="ROBOTFRAMEWORK_VARIABLE_INDEX_END">
+		<value>
+			<option name="FOREGROUND" value="9D4343"/>
+		</value>
+	</option>
+	<option name="ROBOTFRAMEWORK_NAMESPACE">
+		<value>
+			<option name="FOREGROUND" value="245597"/>
+		</value>
+	</option>
+	<option name="ROBOTFRAMEWORK_SETTING_IMPORT">
+		<value>
+			<option name="FOREGROUND" value="cf8e6d"/>
+			<option name="FONT_TYPE" value="2"/>
+		</value>
+	</option>
 </list>

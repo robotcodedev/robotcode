@@ -22,8 +22,8 @@ from .commands import config, profiles
 old_make_metavar = click.Parameter.make_metavar
 
 
-def my_make_metavar(self: click.Parameter) -> str:
-    metavar = old_make_metavar(self)
+def my_make_metavar(self: click.Parameter, *args: Any, **kwargs: Any) -> str:
+    metavar = old_make_metavar(self, *args, **kwargs)
 
     if isinstance(self, click.Option) and self.multiple:
         metavar += " *"

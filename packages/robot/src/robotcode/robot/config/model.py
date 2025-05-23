@@ -2371,11 +2371,11 @@ class RobotConfig(RobotExtendBaseProfile):
 
             Examples:
             ```toml
-            default_profiles = "default"
+            default-profiles = "default"
             ```
 
             ```toml
-            default_profiles = ["default", "Firefox"]
+            default-profiles = ["default", "Firefox"]
             ```
             """
     )

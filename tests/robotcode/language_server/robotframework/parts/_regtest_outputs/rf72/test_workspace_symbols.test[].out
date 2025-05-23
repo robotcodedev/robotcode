@@ -3451,6 +3451,51 @@ result:
   name: twelfth
   tags: null
 - !WorkspaceSymbol
+  container_name: indexed_variables
+  data: null
+  kind: 13
+  location:
+    range:
+      end:
+        character: 13
+        line: 2
+      start:
+        character: 0
+        line: 2
+    uri: indexed_variables.robot
+  name: ${index}
+  tags: null
+- !WorkspaceSymbol
+  container_name: indexed_variables
+  data: null
+  kind: 13
+  location:
+    range:
+      end:
+        character: 24
+        line: 1
+      start:
+        character: 0
+        line: 1
+    uri: indexed_variables.robot
+  name: '@{A_LIST}'
+  tags: null
+- !WorkspaceSymbol
+  container_name: indexed_variables
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 5
+        line: 6
+      start:
+        character: 0
+        line: 6
+    uri: indexed_variables.robot
+  name: first
+  tags: null
+- !WorkspaceSymbol
   container_name: jsonvariables
   data: null
   kind: 5
