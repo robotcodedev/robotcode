@@ -2,6 +2,31 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [Unreleased]
+
+### Bug Fixes
+
+- **cli:** Corrected monkey patching for click>=8.2.0 ([425e64d](https://github.com/robotcodedev/robotcode/commit/425e64ddf8c6a9a54ec6fe3d801253c2e3a2156a))
+- **textmate:** Enhance variable assignment handling ([7333eb9](https://github.com/robotcodedev/robotcode/commit/7333eb9b2f46e2af25583af2d5346b4b92dd1137))
+- **textmate:** Corrected highlightning of comments in variable section ([5204afb](https://github.com/robotcodedev/robotcode/commit/5204afbfdd7f745c3e00ebc8d59fa3ad992ec0a8))
+- Corrected detection of robocop ([f06bcbc](https://github.com/robotcodedev/robotcode/commit/f06bcbc1c2514326567399f8e5179da6ff5f9ed7))
+
+
+### Features
+
+- **intellij:** Reimplement and simplified parsing and syntax highlightning ([2dcdf7c](https://github.com/robotcodedev/robotcode/commit/2dcdf7ce846e8483fb427cdc7945a084fe4c3232))
+- **langserver:** Better support for indexed assignments ([6fad9b1](https://github.com/robotcodedev/robotcode/commit/6fad9b161b85b2412b6a9d5169e69b4ce37c43c3))
+- Show editor hint for Python/Robot Framework issues instead of throwing error ([4c2a43b](https://github.com/robotcodedev/robotcode/commit/4c2a43b8fd2ece7f905fc10695f2d5b9487dc52a))
+
+
+  When opening a Robot Framework file, issues related to the Python environment or Robot Framework version are now shown as an editor hint at the top of the file tab, instead of raising an exception.
+
+
+### Refactor
+
+- **intellij:** Some code cleanup ([479a9c3](https://github.com/robotcodedev/robotcode/commit/479a9c3e6b1bc117e5c1222953b755a198cbc8c2))
+
+
 ## [1.2.0](https://github.com/robotcodedev/robotcode/compare/v1.1.0..v1.2.0) - 2025-05-07
 
 ### Bug Fixes
