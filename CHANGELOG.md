@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
-## [Unreleased]
+## [1.3.0-dev1](https://github.com/robotcodedev/robotcode/compare/v1.2.0..v1.3.0-dev1) - 2025-05-28
 
 ### Bug Fixes
 
