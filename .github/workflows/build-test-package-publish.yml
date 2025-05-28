@@ -237,7 +237,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: intellij-package
-          path: ./intellij-client/build/distributions/*.zip
+          path: intellij-client/build/distributions/*.zip
 
   publish:
     runs-on: ubuntu-latest
