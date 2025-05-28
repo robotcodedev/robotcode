@@ -264,6 +264,17 @@ jobs:
       - name: Install Hatch
         uses: pypa/hatch@install
 
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: jetbrains
+          java-version: 21
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-cleanup: always
+
       - name: Setup Node.js environment
         uses: actions/setup-node@v4
         with:
@@ -317,3 +328,4 @@ jobs:
           OVSX_PAT: ${{ secrets.OVSX_PAT }}
           PYPI_USERNAME: ${{ secrets.PYPI_USERNAME }}
           PYPI_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
+          PUBLISH_TOKEN: ${{ secrets.JETBRAINS_MARKETPLACE_TOKEN }}
