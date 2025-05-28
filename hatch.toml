@@ -162,7 +162,7 @@ platform.windows.scripts = [
 [envs.build]
 skip-install = true
 detached = true
-python = "3.8"
+python = "3.9"
 dependencies = ["GitPython", "semantic-version", "commitizen", "git-cliff"]
 
 [envs.build.scripts]
