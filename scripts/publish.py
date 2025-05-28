@@ -37,16 +37,17 @@ def main() -> None:
     if not dist_path.exists():
         raise FileNotFoundError(f"dist folder '{dist_path}' not exists")
 
-    current_version = get_version()
+    version = get_version()
 
-    vsix_path = Path(dist_path, f"robotcode-{current_version}.vsix")
+    vsix_path = Path(dist_path, f"robotcode-{version}.vsix")
 
-    run(
-        "npx vsce publish",
-        f"npx vsce publish -i {vsix_path}",
-        shell=True,
-        timeout=600,
-    )
+    if not version.prerelease:
+        run(
+            "npx vsce publish",
+            f"npx vsce publish -i {vsix_path}",
+            shell=True,
+            timeout=600,
+        )
     run(
         "npx ovsx publish",
         f"npx ovsx publish {vsix_path}",
