@@ -300,7 +300,7 @@ jobs:
 
       - name: create github release
         uses: softprops/action-gh-release@v2
-        if: github.ref_type == 'tag' && startsWith( github.ref, 'refs/tags')
+        if: github.ref_type == 'tag' && startsWith( github.ref, 'refs/tags/v')
         with:
           files: "dist/*"
           name: "v${{ steps.get_release_informations.outputs.release_version }}"
