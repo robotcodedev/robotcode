@@ -223,17 +223,17 @@ jobs:
           path: dist/robotcode*.vsix
 
       - name: Upload python package
-        id: upload-python-package
+        id: upload-python-packages
         uses: actions/upload-artifact@v4
         with:
-          name: python-package
+          name: python-packages
           path: dist/*.tar.gz
 
       - name: Upload python wheel package
-        id: upload-wheel-package
+        id: upload-wheel-packages
         uses: actions/upload-artifact@v4
         with:
-          name: wheel-package
+          name: wheel-packages
           path: dist/*.whl
 
       - name: Upload intellij plugin
@@ -275,19 +275,19 @@ jobs:
 
       - uses: actions/download-artifact@v4
         with:
-          artifact-ids: upload-vscode-package
+          name: vscode-package
           path: dist
       - uses: actions/download-artifact@v4
         with:
-          artifact-ids: upload-python-package
+          name: python-packages
           path: dist
       - uses: actions/download-artifact@v4
         with:
-          artifact-ids: upload-wheel-package
+          name: wheel-packages
           path: dist
       - uses: actions/download-artifact@v4
         with:
-          artifact-ids: upload-intellij-package
+          name: intellij-package
           path: dist
 
       - name: get release informations
