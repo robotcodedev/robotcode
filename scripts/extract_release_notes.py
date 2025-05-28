@@ -23,6 +23,8 @@ def main() -> None:
     version = get_version()
 
     changelog = Path("CHANGELOG.md").read_text()
+    if version.prerelease:
+        version = "Unreleased"
 
     regex = re.compile(
         rf"^\#\#\s*\[({version})\][^\n]*?\n(?P<text>.*?)^\#\#\s+",
