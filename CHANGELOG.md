@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
-## [1.3.0-dev1](https://github.com/robotcodedev/robotcode/compare/v1.2.0..v1.3.0-dev1) - 2025-05-28
+## [Unreleased]
 
 ### Bug Fixes
 
@@ -2819,7 +2819,7 @@ All notable changes to this project will be documented in this file. See [conven
 - Github workflow ([a235b86](https://github.com/robotcodedev/robotcode/commit/a235b864139c911cf593b58843c4d2726f770cf5))
 
 
-## [0.26.0](https://github.com/robotcodedev/robotcode/compare/v0.25.2-beta.1..v0.26.0) - 2023-02-25
+## [0.26.0](https://github.com/robotcodedev/robotcode/compare/v0.25.1..v0.26.0) - 2023-02-25
 
 ### Bug Fixes
 
@@ -2848,42 +2848,7 @@ All notable changes to this project will be documented in this file. See [conven
 - Ignore errors if remove cache dir ([c670989](https://github.com/robotcodedev/robotcode/commit/c67098916b5b7d9f0050127102936c3a9ffcc18b))
 
 
-## [0.25.2-beta.1](https://github.com/robotcodedev/robotcode/compare/v0.25.1..v0.25.2-beta.1) - 2023-02-07
-
-### Documentation
-
-- Add some badges to readme and reorder the chapters ([22120f1](https://github.com/robotcodedev/robotcode/commit/22120f16e973f61b02f04a47c29fbe6d1b5e2283))
-- Add python badges to README ([c0ec329](https://github.com/robotcodedev/robotcode/commit/c0ec3290b80714ff73528082a3fd2825f1c01f59))
-
-
-### Refactor
-
-- **robotlangserver:** Optimize test discovering ([4949ba6](https://github.com/robotcodedev/robotcode/commit/4949ba6b3e6dce7f00624586fcb5db2f0a630ad1))
-- **robotlangserver:** Workspace rpc methods are now running threaded ([8f8f2b9](https://github.com/robotcodedev/robotcode/commit/8f8f2b946e6fa97b6b934e8a6db30128a5351e7c))
-- Fix some ruff errors and warnings, disable isort in precommit ([c144250](https://github.com/robotcodedev/robotcode/commit/c1442503d3d899c7108bfbceef17943e823e92ba))
-- Replace *Generator with *Iterator ([cd96b1d](https://github.com/robotcodedev/robotcode/commit/cd96b1dd35fe5b57fd5442c107d3ee43aa87b370))
-- Change logger calls with an f-string to use lambdas ([cc555e1](https://github.com/robotcodedev/robotcode/commit/cc555e1953a88a8857d69f259c07ed9b8e66434e))
-- Use `list` over useless lambda in default_factories ([930fa46](https://github.com/robotcodedev/robotcode/commit/930fa466c46d6822b670459b1d1574d92bc56878))
-- Fix some pytest ruff warning ([b2bff02](https://github.com/robotcodedev/robotcode/commit/b2bff02083cc16682de237390d9880a4010db051))
-- Fix some flake8-return warnings ([bea720d](https://github.com/robotcodedev/robotcode/commit/bea720dbd17eaaf937168835684b9010dbe57921))
-- Simplify some code ([9403f72](https://github.com/robotcodedev/robotcode/commit/9403f723526e9a1ffa7067023427f95a59ab736e))
-- Fix some PIE810 errors ([59848e2](https://github.com/robotcodedev/robotcode/commit/59848e22178a7691732be22932e3562b44fdab02))
-- Fix some mypy errors ([9356b32](https://github.com/robotcodedev/robotcode/commit/9356b32420a7049ba50ac76dab8bb288fcf6051a))
-
-
-### Testing
-
-- Add a copy of remote example library ([d0b2ca5](https://github.com/robotcodedev/robotcode/commit/d0b2ca5a4ed7a6b8bd7eef09764f7a072f1df47d))
-- Enable pytest logging ([bf07425](https://github.com/robotcodedev/robotcode/commit/bf07425dd15ebfe0bdcd0e20f1a584705a0d2a8e))
-- Remove Remote library references ([2ba0edd](https://github.com/robotcodedev/robotcode/commit/2ba0eddc6da08fb11d4ec38713c81fd0ad0b8287))
-- Run discovery tests in thread ([5fe0f97](https://github.com/robotcodedev/robotcode/commit/5fe0f97673f5d249de33734315c5ef0563cffe5a))
-- Run coroutines in ThreadPoolExecutor ([e4325f1](https://github.com/robotcodedev/robotcode/commit/e4325f1fcffb32c06f1bcf5c95cf1ebcab81943a))
-- Disable logging ([b6e59b5](https://github.com/robotcodedev/robotcode/commit/b6e59b5473c086433ca065814bd88d2e0a3fb89c))
-- Let collect data in languages server test run in his own thread ([327b122](https://github.com/robotcodedev/robotcode/commit/327b122aef03e223dd12aed5bc0bbb6324ee4a10))
-- Make regtests for rf tests version dependend ([fe69626](https://github.com/robotcodedev/robotcode/commit/fe6962629edf5b90eeb4e9f4ba6a7b025498feca))
-
-
-## [0.25.1](https://github.com/robotcodedev/robotcode/compare/v0.25.0..v0.25.1) - 2023-01-24
+## [0.25.1] - 2023-01-24
 
 ### Bug Fixes
 
