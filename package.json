@@ -1162,19 +1162,22 @@
             "type": "boolean",
             "default": true,
             "markdownDescription": "Enables 'robotidy' code formatting, if installed. See [robotidy](https://github.com/MarketSquare/robotframework-tidy)",
-            "scope": "resource"
+            "scope": "resource",
+            "markdownDeprecationMessage": "Using of `robotframework-tidy` is deprecated, because it is no longer maintained. Please use `robotframework-robocop>=6.0` instead."
           },
           "robotcode.robotidy.ignoreGitDir": {
             "type": "boolean",
             "default": true,
             "markdownDescription": "Ignore .git directories when searching for the default configuration file. Corresponds to the `--ignore-git-dir` of _robotidy_ See [robotidy](https://github.com/MarketSquare/robotframework-tidy)",
-            "scope": "resource"
+            "scope": "resource",
+            "markdownDeprecationMessage": "Using of `robotframework-tidy` is deprecated, because it is no longer maintained. Please use `robotframework-robocop>=6.0` instead."
           },
           "robotcode.robotidy.config": {
             "type": "string",
             "default": "",
             "markdownDescription": "Read configuration from FILE path. Corresponds to the `--config` of _robotidy_ See [robotidy](https://github.com/MarketSquare/robotframework-tidy)",
-            "scope": "resource"
+            "scope": "resource",
+            "markdownDeprecationMessage": "Using of `robotframework-tidy` is deprecated, because it is no longer maintained. Please use `robotframework-robocop>=6.0` instead."
           }
         }
       },
