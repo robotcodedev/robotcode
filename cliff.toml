@@ -96,9 +96,9 @@ filter_commits = true
 tag_pattern = "v[0-9]+\\.[0-9]+\\.[0-9]+-*"
 
 # regex for skipping tags
-skip_tags = "v[0-9]+\\.[0-9]+\\.[0-9]+-(alpha|beta|dev)\\.[0-9]+"
+skip_tags = ""
 # regex for ignoring tags
-ignore_tags = ""
+ignore_tags = "v[0-9]+\\.[0-9]+\\.[0-9]+-(alpha|beta|dev)\\.[0-9]+"
 # sort the tags topologically
 topo_order = true
 # sort the commits inside sections by oldest/newest order
