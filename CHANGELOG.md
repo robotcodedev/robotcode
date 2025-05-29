@@ -7,8 +7,8 @@ All notable changes to this project will be documented in this file. See [conven
 ### Bug Fixes
 
 - **cli:** Corrected monkey patching for click>=8.2.0 ([425e64d](https://github.com/robotcodedev/robotcode/commit/425e64ddf8c6a9a54ec6fe3d801253c2e3a2156a))
-- **textmate:** Enhance variable assignment handling ([7333eb9](https://github.com/robotcodedev/robotcode/commit/7333eb9b2f46e2af25583af2d5346b4b92dd1137))
 - **textmate:** Corrected highlightning of comments in variable section ([5204afb](https://github.com/robotcodedev/robotcode/commit/5204afbfdd7f745c3e00ebc8d59fa3ad992ec0a8))
+- **textmate:** Enhance variable assignment handling ([7333eb9](https://github.com/robotcodedev/robotcode/commit/7333eb9b2f46e2af25583af2d5346b4b92dd1137))
 - Corrected detection of robocop ([f06bcbc](https://github.com/robotcodedev/robotcode/commit/f06bcbc1c2514326567399f8e5179da6ff5f9ed7))
 
 
@@ -31,8 +31,8 @@ All notable changes to this project will be documented in this file. See [conven
 
 ### Bug Fixes
 
-- **intellij:** Corrected handling of short by-longname argument ([b5fa232](https://github.com/robotcodedev/robotcode/commit/b5fa232f4c0fd3032b863363c141d8ffeff6c8c7))
 - **intellij:** Reenable semantic highlightning, because something has changed in the new LSP4IJ API ([5cdf3c3](https://github.com/robotcodedev/robotcode/commit/5cdf3c3ab87857db294e63bcdc0798f1cfd5eacd))
+- **intellij:** Corrected handling of short by-longname argument ([b5fa232](https://github.com/robotcodedev/robotcode/commit/b5fa232f4c0fd3032b863363c141d8ffeff6c8c7))
 - Update IntelliJ platform version and plugin dependencies ([e94c96b](https://github.com/robotcodedev/robotcode/commit/e94c96b99646e602820663f1210d0df962251bf1))
 
 
@@ -58,8 +58,8 @@ All notable changes to this project will be documented in this file. See [conven
 
 ### Documentation
 
-- Draft article about variables ([161006e](https://github.com/robotcodedev/robotcode/commit/161006e6a730f52501bdff7dcd1cba9e85300fcd))
 - Added pycharm link on the robotcode.io homepage ([7686a21](https://github.com/robotcodedev/robotcode/commit/7686a21c76681d2a7321a67c1c872b6c77687000))
+- Draft article about variables ([161006e](https://github.com/robotcodedev/robotcode/commit/161006e6a730f52501bdff7dcd1cba9e85300fcd))
 
 
 ### Features
@@ -113,6 +113,7 @@ All notable changes to this project will be documented in this file. See [conven
   robotcode analyze code -xm all          # Always exit with code 0
   ```
 
+- **vscode:** Use short CLI argument versions when calling robotcode ([0987f55](https://github.com/robotcodedev/robotcode/commit/0987f551803f23e2c8342638d2b3bb1e23cc99da))
 - **vscode:** Add configuration for output file display options ([738d7a6](https://github.com/robotcodedev/robotcode/commit/738d7a6129f8e459c0af1961ebedfe320d2a4b9d))
 
   Add "robotcode.run.openOutputTarget" setting to control how Robot Framework output files are displayed:
@@ -122,7 +123,6 @@ All notable changes to this project will be documented in this file. See [conven
 
   The externalFile options may not run in remote development environments.
 
-- **vscode:** Use short CLI argument versions when calling robotcode ([0987f55](https://github.com/robotcodedev/robotcode/commit/0987f551803f23e2c8342638d2b3bb1e23cc99da))
 
 
 ### Refactor
@@ -132,9 +132,9 @@ All notable changes to this project will be documented in this file. See [conven
 
 ### Testing
 
-- Fix some unittest ([98e4d5c](https://github.com/robotcodedev/robotcode/commit/98e4d5c2e69e1d2a3a1518456f85ff04b15be920))
-- Disable some flaky tests ([f9a1a82](https://github.com/robotcodedev/robotcode/commit/f9a1a823c6cb9d885231c81830d6e438cf60b680))
 - Disable some flaky tests and correct regression test output file to be platform independent ([4387984](https://github.com/robotcodedev/robotcode/commit/43879844c9fdc845ae2b9fa373f076eb13a9feb9))
+- Disable some flaky tests ([f9a1a82](https://github.com/robotcodedev/robotcode/commit/f9a1a823c6cb9d885231c81830d6e438cf60b680))
+- Fix some unittest ([98e4d5c](https://github.com/robotcodedev/robotcode/commit/98e4d5c2e69e1d2a3a1518456f85ff04b15be920))
 
 
 ## [1.0.3](https://github.com/robotcodedev/robotcode/compare/v1.0.2..v1.0.3) - 2025-03-14
@@ -172,8 +172,8 @@ All notable changes to this project will be documented in this file. See [conven
 
 ### Documentation
 
-- Fixes some typos ([d149ae8](https://github.com/robotcodedev/robotcode/commit/d149ae830cea98a2556b11575bb30a52b006dcf1))
 - Add a separate document about support and contribution ([4da4a51](https://github.com/robotcodedev/robotcode/commit/4da4a51189f7869644932ac4afdb7ce7ec3e430f))
+- Fixes some typos ([d149ae8](https://github.com/robotcodedev/robotcode/commit/d149ae830cea98a2556b11575bb30a52b006dcf1))
 
 
 ## [1.0.0](https://github.com/robotcodedev/robotcode/compare/v0.109.6..v1.0.0) - 2025-03-05
@@ -223,13 +223,13 @@ All notable changes to this project will be documented in this file. See [conven
 
 ### Documentation
 
-- Added an article about avoiding a global resource file ([18327b6](https://github.com/robotcodedev/robotcode/commit/18327b6b320201bf8e5de4a8b4939a085ed47ae0))
-- Correct links ([22af24d](https://github.com/robotcodedev/robotcode/commit/22af24d116ce0165bff67e1a7a51ba6527cbdefa))
-- Update the articel about avoiding global resource files ([57f9209](https://github.com/robotcodedev/robotcode/commit/57f9209452ea03cc0f4dc2378ca3696086497ef4))
-- Update the articel about avoiding global resource files ([bd396fb](https://github.com/robotcodedev/robotcode/commit/bd396fb550897dc0933b31544ecac847358b9739))
-- Add examples of good project structure and a small migration guide to avoiding global resources document ([dfd495c](https://github.com/robotcodedev/robotcode/commit/dfd495caa595da7aa1fc33c5b3255bd4e222d35d))
-- Update article about avoiding global resource files ([87bd175](https://github.com/robotcodedev/robotcode/commit/87bd1759532b748462745057c7cc1109571a4dd3))
 - Rewrite index of tips&tricks ([579e728](https://github.com/robotcodedev/robotcode/commit/579e728af6a0601c186b0a896ad884c7d2ff0a7f))
+- Update article about avoiding global resource files ([87bd175](https://github.com/robotcodedev/robotcode/commit/87bd1759532b748462745057c7cc1109571a4dd3))
+- Add examples of good project structure and a small migration guide to avoiding global resources document ([dfd495c](https://github.com/robotcodedev/robotcode/commit/dfd495caa595da7aa1fc33c5b3255bd4e222d35d))
+- Update the articel about avoiding global resource files ([bd396fb](https://github.com/robotcodedev/robotcode/commit/bd396fb550897dc0933b31544ecac847358b9739))
+- Update the articel about avoiding global resource files ([57f9209](https://github.com/robotcodedev/robotcode/commit/57f9209452ea03cc0f4dc2378ca3696086497ef4))
+- Correct links ([22af24d](https://github.com/robotcodedev/robotcode/commit/22af24d116ce0165bff67e1a7a51ba6527cbdefa))
+- Added an article about avoiding a global resource file ([18327b6](https://github.com/robotcodedev/robotcode/commit/18327b6b320201bf8e5de4a8b4939a085ed47ae0))
 
 
 ## [0.109.2](https://github.com/robotcodedev/robotcode/compare/v0.109.1..v0.109.2) - 2025-02-23
@@ -259,8 +259,8 @@ All notable changes to this project will be documented in this file. See [conven
 
 ### Bug Fixes
 
-- **debugger:** Use 32-bit thread IDs for improved compatibility with some LSP clients ([5055763](https://github.com/robotcodedev/robotcode/commit/50557638c258b7496cbb4097b358ed1fe0075523))
 - **debugger:** If there is already a debugpy adapter endpoint defined we don't need explicitly attach the python debugger ([7f3010a](https://github.com/robotcodedev/robotcode/commit/7f3010a92b8737f0f9608bedbeb166a95c96b46b))
+- **debugger:** Use 32-bit thread IDs for improved compatibility with some LSP clients ([5055763](https://github.com/robotcodedev/robotcode/commit/50557638c258b7496cbb4097b358ed1fe0075523))
 - **intellij:** Stabilize test discovery at project startup ([7aeb379](https://github.com/robotcodedev/robotcode/commit/7aeb37974da360630d20416475ba407d39163cc5))
 - **vscode,intellij:** Escape glob patterns in --suite and --parse-include arguments for discover and executing tests ([4007481](https://github.com/robotcodedev/robotcode/commit/40074816b4a87cb1fb1c4f937d215457fb2e905f))
 
@@ -273,8 +273,8 @@ All notable changes to this project will be documented in this file. See [conven
   If you already have an existing `.robotcode_cache` folder, simply run the command `RobotCode: Clear Cache and Restart Language Servers`.
   For IntelliJ-based platforms, you can find this command in the **RobotCode** menu under the **Tools** main menu.
 
-- **vscode:** Add shell integration to run RobotCode in a VSCode terminal without requiring Python package installation ([febf5d8](https://github.com/robotcodedev/robotcode/commit/febf5d898c744df29f388173a06f1197e333efab))
 - **vscode:** Use shell integration instead of full python command line to start repl if shell integration is enabled ([50426a2](https://github.com/robotcodedev/robotcode/commit/50426a26c700702d1eeeb85ca8e642f33a2b413c))
+- **vscode:** Add shell integration to run RobotCode in a VSCode terminal without requiring Python package installation ([febf5d8](https://github.com/robotcodedev/robotcode/commit/febf5d898c744df29f388173a06f1197e333efab))
 
 
 ## [0.108.1](https://github.com/robotcodedev/robotcode/compare/v0.108.0..v0.108.1) - 2025-02-03
@@ -282,8 +282,8 @@ All notable changes to this project will be documented in this file. See [conven
 ### Bug Fixes
 
 - **intellij:** Make comparing testitem uri's platform independend ([f597624](https://github.com/robotcodedev/robotcode/commit/f597624c6063410ba7f5afcc09a77c770636fd57))
-- **langserver:** Cache to_markdown methods ([39e509e](https://github.com/robotcodedev/robotcode/commit/39e509eb03ba01ae2b1fbce021640c2b76f8f1e6))
 - **langserver:** Only send complete documentation when resolving completion items for typed dicts and enums ([498af3c](https://github.com/robotcodedev/robotcode/commit/498af3c9845c181c0541bd21ae7b19bf6f137db4))
+- **langserver:** Cache to_markdown methods ([39e509e](https://github.com/robotcodedev/robotcode/commit/39e509eb03ba01ae2b1fbce021640c2b76f8f1e6))
 
 
 ## [0.108.0](https://github.com/robotcodedev/robotcode/compare/v0.107.0..v0.108.0) - 2025-01-22
@@ -295,8 +295,8 @@ All notable changes to this project will be documented in this file. See [conven
 
 ### Documentation
 
-- Redesign the README and some docs and added `powered by IntelliJ` to README and docs ([db5ec53](https://github.com/robotcodedev/robotcode/commit/db5ec5378dbeee82c24a62bf4a22c32e8bc89e36))
 - Change svgs in README to pngs ([434307c](https://github.com/robotcodedev/robotcode/commit/434307c2e042bed06a159983e5052e0961d05f86))
+- Redesign the README and some docs and added `powered by IntelliJ` to README and docs ([db5ec53](https://github.com/robotcodedev/robotcode/commit/db5ec5378dbeee82c24a62bf4a22c32e8bc89e36))
 
 
 ### Features
@@ -313,14 +313,14 @@ All notable changes to this project will be documented in this file. See [conven
 
 ### Features
 
-- **intellij:** Dynamic update of test run buttons on file and configuration changes ([da9687c](https://github.com/robotcodedev/robotcode/commit/da9687c0cd75270d6f7f397f776f230b3469a684))
+- **intellij:** Support for highlight for python expressions ([a2c2760](https://github.com/robotcodedev/robotcode/commit/a2c276043f26303b4856dc13aed88cd2eea5432f))
 - **intellij:** Implemented support for 4 spaces tab ([de83635](https://github.com/robotcodedev/robotcode/commit/de836356cd991cf09d315aaacad2ed1e94c433b9))
 
   - this is enabled by default for robot files
 
-- **intellij:** Support for highlight for python expressions ([a2c2760](https://github.com/robotcodedev/robotcode/commit/a2c276043f26303b4856dc13aed88cd2eea5432f))
-- **langserver:** Support for workspace symbols ([a90ce60](https://github.com/robotcodedev/robotcode/commit/a90ce60250b9dc82c8a78bc910878171617c6a45))
+- **intellij:** Dynamic update of test run buttons on file and configuration changes ([da9687c](https://github.com/robotcodedev/robotcode/commit/da9687c0cd75270d6f7f397f776f230b3469a684))
 - **langserver:** Support for workspace symbols ([66cb701](https://github.com/robotcodedev/robotcode/commit/66cb701620322bd248db053dcb3d0f598c76a93b))
+- **langserver:** Support for workspace symbols ([a90ce60](https://github.com/robotcodedev/robotcode/commit/a90ce60250b9dc82c8a78bc910878171617c6a45))
 
 
 ### Refactor
@@ -330,10 +330,10 @@ All notable changes to this project will be documented in this file. See [conven
 
 ### Testing
 
-- **langserver:** Correct some regression tests ([98fe4d0](https://github.com/robotcodedev/robotcode/commit/98fe4d0581170f71f6ed02a43f8bb4fb19699437))
-- **langserver:** Corrected some regression tests ([1fa8e7a](https://github.com/robotcodedev/robotcode/commit/1fa8e7a6e43ea370db5821a9ba8549b88eafad6d))
-- **langserver:** Corrected some more regression tests ([2c8e451](https://github.com/robotcodedev/robotcode/commit/2c8e451de333ae30c7d0c0716ef4ace23e2d8f6b))
 - **langserver:** Corrected some more regression tests ([68bd93c](https://github.com/robotcodedev/robotcode/commit/68bd93cccd763290ff34021a18811f46340c94b9))
+- **langserver:** Corrected some more regression tests ([2c8e451](https://github.com/robotcodedev/robotcode/commit/2c8e451de333ae30c7d0c0716ef4ace23e2d8f6b))
+- **langserver:** Corrected some regression tests ([1fa8e7a](https://github.com/robotcodedev/robotcode/commit/1fa8e7a6e43ea370db5821a9ba8549b88eafad6d))
+- **langserver:** Correct some regression tests ([98fe4d0](https://github.com/robotcodedev/robotcode/commit/98fe4d0581170f71f6ed02a43f8bb4fb19699437))
 
 
 ## [0.106.1](https://github.com/robotcodedev/robotcode/compare/v0.106.0..v0.106.1) - 2025-01-16
@@ -354,10 +354,10 @@ All notable changes to this project will be documented in this file. See [conven
 ### Features
 
 - **debugger:** Display a virtual variable in the local scope with details about the current exception when an exception breakpoint is triggered ([4690071](https://github.com/robotcodedev/robotcode/commit/46900713196cb9d52afab2b5692cf9594e374c79))
-- **intellij:** Implemented robot framework debugger ([121b26e](https://github.com/robotcodedev/robotcode/commit/121b26eee9ef580816bdaed09bec17c304fe8c38))
-- **intellij:** Implemented show test status on gutter icon ([678e5e8](https://github.com/robotcodedev/robotcode/commit/678e5e8d8d2e81dd00a4cbddc0a42ca9fa4de269))
-- **intellij:** Execute tests from project tree view on files and folders ([b155bd1](https://github.com/robotcodedev/robotcode/commit/b155bd1d6e4fd5a963625585cf1b0c101600cb00))
 - **intellij:** Support for pause and exception break points in debugger ([446a246](https://github.com/robotcodedev/robotcode/commit/446a2460b240b3b0636c9fbb4ebeb60fbf9320ca))
+- **intellij:** Execute tests from project tree view on files and folders ([b155bd1](https://github.com/robotcodedev/robotcode/commit/b155bd1d6e4fd5a963625585cf1b0c101600cb00))
+- **intellij:** Implemented show test status on gutter icon ([678e5e8](https://github.com/robotcodedev/robotcode/commit/678e5e8d8d2e81dd00a4cbddc0a42ca9fa4de269))
+- **intellij:** Implemented robot framework debugger ([121b26e](https://github.com/robotcodedev/robotcode/commit/121b26eee9ef580816bdaed09bec17c304fe8c38))
 - Ready for RF 7.2 ([45a0131](https://github.com/robotcodedev/robotcode/commit/45a01312af5abfff33fa15023dce5364ecf5ee7c))
 
 
@@ -370,11 +370,11 @@ All notable changes to this project will be documented in this file. See [conven
 
 ### Features
 
-- **intellij:** Added initial Robot Framework file templates and better syntax highlighting support based on a customized TextMate lexer/parser ([ef67d2c](https://github.com/robotcodedev/robotcode/commit/ef67d2c661c6ae8c8c734561b54f63d82f9b4e3c))
-- **intellij:** Implemented brace matcher for variables ([9ee1f22](https://github.com/robotcodedev/robotcode/commit/9ee1f22c2f077a1c92ac9f5f6dc37542fb24e79c))
-- **intellij:** Finalize syntax coloring and sematic highlightning ([faa905d](https://github.com/robotcodedev/robotcode/commit/faa905d048d4af076695b619d91ee97371cfd0fd))
-- **intellij:** Finalize syntax coloring and sematic highlightning part 2 ([97081a5](https://github.com/robotcodedev/robotcode/commit/97081a5f13a7f58d6825853330c8806506ad6fde))
 - **intellij:** Implemented support for highlightning embedded arguments, escape sequences, python expressions and so on ([c5d6cf3](https://github.com/robotcodedev/robotcode/commit/c5d6cf3722c22929799b154204711c697928da7e))
+- **intellij:** Finalize syntax coloring and sematic highlightning part 2 ([97081a5](https://github.com/robotcodedev/robotcode/commit/97081a5f13a7f58d6825853330c8806506ad6fde))
+- **intellij:** Finalize syntax coloring and sematic highlightning ([faa905d](https://github.com/robotcodedev/robotcode/commit/faa905d048d4af076695b619d91ee97371cfd0fd))
+- **intellij:** Implemented brace matcher for variables ([9ee1f22](https://github.com/robotcodedev/robotcode/commit/9ee1f22c2f077a1c92ac9f5f6dc37542fb24e79c))
+- **intellij:** Added initial Robot Framework file templates and better syntax highlighting support based on a customized TextMate lexer/parser ([ef67d2c](https://github.com/robotcodedev/robotcode/commit/ef67d2c661c6ae8c8c734561b54f63d82f9b4e3c))
 - **langserver:** Correct highlightning to better highlight python expresseions, escape sequences, environment variable default value and embedded argument regexes ([5dba571](https://github.com/robotcodedev/robotcode/commit/5dba5713f746cb9fb1b36433be982493bb3905d2))
 - **language_server:** Enhanced hover representation of variables ([039682d](https://github.com/robotcodedev/robotcode/commit/039682dbdd19a6e1dc972f642dbfd5f1787b4dcd))
 
@@ -394,8 +394,8 @@ All notable changes to this project will be documented in this file. See [conven
 
 ### Features
 
-- **intellij:** Added a first version of pycharm/intellij plugin ([e32117e](https://github.com/robotcodedev/robotcode/commit/e32117eaf8d835ab5efa78e9db2021e3dde23f24))
 - **intellij:** Implemented correct coloring of most elements and started implementing some settings dialogs for colors, codestyle and project settings ([dcb20f7](https://github.com/robotcodedev/robotcode/commit/dcb20f73d5cdbb2130634e1ca753044ba354230d))
+- **intellij:** Added a first version of pycharm/intellij plugin ([e32117e](https://github.com/robotcodedev/robotcode/commit/e32117eaf8d835ab5efa78e9db2021e3dde23f24))
 
 
 ## [0.103.0](https://github.com/robotcodedev/robotcode/compare/v0.102.0..v0.103.0) - 2024-12-19
@@ -408,8 +408,8 @@ All notable changes to this project will be documented in this file. See [conven
 
 ### Features
 
-- **langserver:** Implemented `window/logMessage` to log output directly to the language server protocol client ([98c96f9](https://github.com/robotcodedev/robotcode/commit/98c96f9001a532a6139b0d5758e9886a32ad65a9))
 - **langserver:** Added support for GROUP block in RF 7.2 ([6495d59](https://github.com/robotcodedev/robotcode/commit/6495d59fc89152adec8282bf99cef6f476ee0367))
+- **langserver:** Implemented `window/logMessage` to log output directly to the language server protocol client ([98c96f9](https://github.com/robotcodedev/robotcode/commit/98c96f9001a532a6139b0d5758e9886a32ad65a9))
 - **notebook:** Implemented interupt execution and restart kernel ([2f2f629](https://github.com/robotcodedev/robotcode/commit/2f2f629fbccf37b4ed1f4f110953a7b04bf76dc1))
 
 
@@ -473,8 +473,8 @@ All notable changes to this project will be documented in this file. See [conven
 ### Features
 
 - **analyzer:** Add error codes `VariableNotReplaced` and `EnvironmentVariableNotReplaced` for variables not found/replaced in documentation, tags, and metadata ([c5f766f](https://github.com/robotcodedev/robotcode/commit/c5f766f036e49153f318e91ddefb68c975668669))
-- **vscode:** Added some better file icons ([39fad12](https://github.com/robotcodedev/robotcode/commit/39fad12e6cc8d1246dc45c8e843fa1c3b046a491))
 - **vscode:** Preview of Robot Framework Notebook support for VSCode ([9185ccd](https://github.com/robotcodedev/robotcode/commit/9185ccd84dbb9f2f5cd2aba4212598abd93ef0f1))
+- **vscode:** Added some better file icons ([39fad12](https://github.com/robotcodedev/robotcode/commit/39fad12e6cc8d1246dc45c8e843fa1c3b046a491))
 
 
 ## [0.99.0](https://github.com/robotcodedev/robotcode/compare/v0.98.0..v0.99.0) - 2024-11-20
@@ -503,8 +503,8 @@ All notable changes to this project will be documented in this file. See [conven
 
 ### Bug Fixes
 
-- **analyze:** Corrected checking if a resource is already imported ([b5a76b3](https://github.com/robotcodedev/robotcode/commit/b5a76b37937f57c30209f7fb03f298bcd0588c70))
 - **analyze:** Corrected importing resources with identical relative names but different base paths ([5792ac7](https://github.com/robotcodedev/robotcode/commit/5792ac764a164279db2048c6667e135a73d65444))
+- **analyze:** Corrected checking if a resource is already imported ([b5a76b3](https://github.com/robotcodedev/robotcode/commit/b5a76b37937f57c30209f7fb03f298bcd0588c70))
 
 
 ### Features
@@ -531,8 +531,8 @@ All notable changes to this project will be documented in this file. See [conven
 
 ### Features
 
-- **analyze:** `analyze code` command now also uses the settings in the `robot.toml` file. ([bd17a5d](https://github.com/robotcodedev/robotcode/commit/bd17a5d18372e0d1baa7b8e627e81c8d7639bab2))
 - **analyze:** Add CLI options for `pythonpath`, `variable`, and `variablefile` to `analyze code` command; collect errors for unimportable command line variable files ([b4e6be4](https://github.com/robotcodedev/robotcode/commit/b4e6be4ea740808b07647d2eaf28e85fb486a0e0))
+- **analyze:** `analyze code` command now also uses the settings in the `robot.toml` file. ([bd17a5d](https://github.com/robotcodedev/robotcode/commit/bd17a5d18372e0d1baa7b8e627e81c8d7639bab2))
 - **robot:** Display filename on TOML parsing error ([8c25db8](https://github.com/robotcodedev/robotcode/commit/8c25db81fb74ca9b0c647c434cb9ba9f344a54cd))
 
 
@@ -577,8 +577,8 @@ All notable changes to this project will be documented in this file. See [conven
 
 ### Performance
 
-- **analyzer:** Speed up the creation of libdocs from resource files ([2dfc91b](https://github.com/robotcodedev/robotcode/commit/2dfc91bb475781c6b0f557028046a69777eb155d))
 - **analyzer:** Speed up finding keywords and variables a little bit more ([aaa6439](https://github.com/robotcodedev/robotcode/commit/aaa6439870378bf9dccaca8e8c310da742e8b3dd))
+- **analyzer:** Speed up the creation of libdocs from resource files ([2dfc91b](https://github.com/robotcodedev/robotcode/commit/2dfc91bb475781c6b0f557028046a69777eb155d))
 - **language_server:** Corrected handling of matching multiple keywords if keywords have embedded keywords ([c662685](https://github.com/robotcodedev/robotcode/commit/c6626857053d103264c848685e06a33390991d11))
 
 
@@ -586,13 +586,13 @@ All notable changes to this project will be documented in this file. See [conven
 
 ### Bug Fixes
 
-- **analyzer:** Fix some spellings ([b622c42](https://github.com/robotcodedev/robotcode/commit/b622c42d33bc0a41fab8ffa00cdc74cbb7fe98c8))
-- **analyzer:** Handle bdd prefixes correctly if keyword is cached ([41ff53f](https://github.com/robotcodedev/robotcode/commit/41ff53f9b3c8cc34f06f34ebeaa7c63691544cb2))
-- **analyzer:** Corrected analyzing of `[Return]`, `[Setup]`, `[Teardown]` statement ([4e17c8f](https://github.com/robotcodedev/robotcode/commit/4e17c8fc10814f62799548467efac25c07fbe429))
-- **analyzer:** Corrected exception in parsing ForHeaders with invalid variable ([0851d4f](https://github.com/robotcodedev/robotcode/commit/0851d4f6eb7bd90958996cc9c25506712885dca9))
 - **analyzer:** Fixed find variables as modules for RF > 5 ([ce787b2](https://github.com/robotcodedev/robotcode/commit/ce787b26d6fab981e432166972429aa2d0d84240))
-- **langserver:** Corrected inlay hints for bdd style keyword calls ([77ce8f1](https://github.com/robotcodedev/robotcode/commit/77ce8f1147a4355ea71986408971fca4f441bee5))
+- **analyzer:** Corrected exception in parsing ForHeaders with invalid variable ([0851d4f](https://github.com/robotcodedev/robotcode/commit/0851d4f6eb7bd90958996cc9c25506712885dca9))
+- **analyzer:** Corrected analyzing of `[Return]`, `[Setup]`, `[Teardown]` statement ([4e17c8f](https://github.com/robotcodedev/robotcode/commit/4e17c8fc10814f62799548467efac25c07fbe429))
+- **analyzer:** Handle bdd prefixes correctly if keyword is cached ([41ff53f](https://github.com/robotcodedev/robotcode/commit/41ff53f9b3c8cc34f06f34ebeaa7c63691544cb2))
+- **analyzer:** Fix some spellings ([b622c42](https://github.com/robotcodedev/robotcode/commit/b622c42d33bc0a41fab8ffa00cdc74cbb7fe98c8))
 - **langserver:** Only update direct references to a file, not imports if something changes ([ea24b06](https://github.com/robotcodedev/robotcode/commit/ea24b061c77de38e1f755a74979d2632970ff032))
+- **langserver:** Corrected inlay hints for bdd style keyword calls ([77ce8f1](https://github.com/robotcodedev/robotcode/commit/77ce8f1147a4355ea71986408971fca4f441bee5))
 
 
 ### Features
@@ -614,19 +614,19 @@ All notable changes to this project will be documented in this file. See [conven
 
 ### Performance
 
-- **analyzer:** Restructured code for handling bdd prefixes ([96fbe90](https://github.com/robotcodedev/robotcode/commit/96fbe9064fafe0a64f82b0d95b017726d18381fb))
-- **analyzer:** Optimized analysing keyword calls ([b1f0f28](https://github.com/robotcodedev/robotcode/commit/b1f0f28dfd0c7f38904ae9ecd0c247f5efec2ab1))
-- **analyzer:** Cache embedded arguments and some more little perf tweaks ([3603ff6](https://github.com/robotcodedev/robotcode/commit/3603ff6395d16473fdeb1fca8de910ea3aab8de2))
-- **analyzer:** Introduced some caching for parsing variables ([e39afe9](https://github.com/robotcodedev/robotcode/commit/e39afe92ef9dfd44d33537b4dec9bbec3738d116))
 - **analyzer:** Implemented DataCache, cache files are now saved in pickle format by default instead of json ([f3ecc22](https://github.com/robotcodedev/robotcode/commit/f3ecc221d0018f9264c958074a7458a6e119b1f6))
+- **analyzer:** Introduced some caching for parsing variables ([e39afe9](https://github.com/robotcodedev/robotcode/commit/e39afe92ef9dfd44d33537b4dec9bbec3738d116))
+- **analyzer:** Cache embedded arguments and some more little perf tweaks ([3603ff6](https://github.com/robotcodedev/robotcode/commit/3603ff6395d16473fdeb1fca8de910ea3aab8de2))
+- **analyzer:** Optimized analysing keyword calls ([b1f0f28](https://github.com/robotcodedev/robotcode/commit/b1f0f28dfd0c7f38904ae9ecd0c247f5efec2ab1))
+- **analyzer:** Restructured code for handling bdd prefixes ([96fbe90](https://github.com/robotcodedev/robotcode/commit/96fbe9064fafe0a64f82b0d95b017726d18381fb))
 
 
 ## [0.94.0](https://github.com/robotcodedev/robotcode/compare/v0.93.1..v0.94.0) - 2024-10-20
 
 ### Bug Fixes
 
-- **analyzer:** Better exception message for invalid command variable files ([f8cb770](https://github.com/robotcodedev/robotcode/commit/f8cb770e68815719d6c70404325c8e7e75956fd6))
 - **analyzer:** Decrease load load library timeout and better error messages if time out occurs ([a3fb4a3](https://github.com/robotcodedev/robotcode/commit/a3fb4a3f6011b6d74cc5d9970b5faa1d7a090b1a))
+- **analyzer:** Better exception message for invalid command variable files ([f8cb770](https://github.com/robotcodedev/robotcode/commit/f8cb770e68815719d6c70404325c8e7e75956fd6))
 - **docs:** Corrected some things about the inheritance of profiles ([aa50cc7](https://github.com/robotcodedev/robotcode/commit/aa50cc74173671b629ebd2c8c7adbddc5f5ce77d))
 - **repl:** Corrected start of repl command if there is no  `robot.toml` with a `path`  setting ([42f96b4](https://github.com/robotcodedev/robotcode/commit/42f96b4fe42e75c52f58734c1767cd7d39307e06))
 - Correct analyzing of variables in WhileHeader options ([3a4ee79](https://github.com/robotcodedev/robotcode/commit/3a4ee79651c0d8ba650113e953abee52866f4338))
@@ -639,8 +639,8 @@ All notable changes to this project will be documented in this file. See [conven
 
 ### Performance
 
-- **analyze:** Improved performance of code analysis (more then 2x faster) ([2951759](https://github.com/robotcodedev/robotcode/commit/29517592ee6a09d6e36cb89dae81aa6b5669709e))
 - **analyze:** Optimize find unused refences (1.5x-2x faster) ([fda1f02](https://github.com/robotcodedev/robotcode/commit/fda1f029a1c9e18b9334ade8ea338e47a953cd30))
+- **analyze:** Improved performance of code analysis (more then 2x faster) ([2951759](https://github.com/robotcodedev/robotcode/commit/29517592ee6a09d6e36cb89dae81aa6b5669709e))
 - **analyzer:** Move model and token analyzing to the normal analysing stage ([7b3eb0c](https://github.com/robotcodedev/robotcode/commit/7b3eb0cafc5e3843827f3ef5e89b2c75bd986ab4))
 
 
@@ -665,9 +665,9 @@ All notable changes to this project will be documented in this file. See [conven
 
 ### Bug Fixes
 
-- Logging of measure_time if log is disabled ([725c739](https://github.com/robotcodedev/robotcode/commit/725c739c0ed01b1249a611605c96e035467f03fa))
-- Enable supportsANSIStyling in DAP to reeanble colored output in debug console ([0d5616c](https://github.com/robotcodedev/robotcode/commit/0d5616c33215ed993052d4f50e7ad41a13b21058))
 - Corrected highlightning invalid sections for RF7 ([d139ff1](https://github.com/robotcodedev/robotcode/commit/d139ff1f9c309060cc12d1d7499cab1ada4a0b01))
+- Enable supportsANSIStyling in DAP to reeanble colored output in debug console ([0d5616c](https://github.com/robotcodedev/robotcode/commit/0d5616c33215ed993052d4f50e7ad41a13b21058))
+- Logging of measure_time if log is disabled ([725c739](https://github.com/robotcodedev/robotcode/commit/725c739c0ed01b1249a611605c96e035467f03fa))
 
 
 ### Features
@@ -685,16 +685,16 @@ All notable changes to this project will be documented in this file. See [conven
 - **debugger:** Increase timeouts for debugger to fit better to python debugger timeouts and introduce environment variables to override these timeouts ([63f3e4a](https://github.com/robotcodedev/robotcode/commit/63f3e4ac4d061eed95c95d615c501b2d4430e378))
 - **langserver:** Resolve variable in hover for documentation settings in testcases and keywords ([ffa9bdb](https://github.com/robotcodedev/robotcode/commit/ffa9bdb2cdca47b20f56b14deaece59fc49b9a13))
 - **vscode:** Introduce RobotCode: Start Terminal REPL command for launching the interactive Robot Framework interpreter directly from VSCode ([f4025fb](https://github.com/robotcodedev/robotcode/commit/f4025fb77c54ea49531c1ec67f1072c0a43c87f9))
+- Add `--no-vcs` command-line option to ignore VCS directories (e.g., .git) when detecting the project root ([d7e28f2](https://github.com/robotcodedev/robotcode/commit/d7e28f2c7c7ffd42ce3d989d1ae8f4e8207d7b81))
+
+
+  #closes 201
+- `--root` command line argument to specify a project root and disable autodetection of project root ([add4102](https://github.com/robotcodedev/robotcode/commit/add4102594ee73c3a93760eb4a5846358ddf2b1a))
 - Improved logging with time information ([27d21b5](https://github.com/robotcodedev/robotcode/commit/27d21b599d7d5005e2920a11b47583e32f9a049c))
 
 
   - Operations that take a little longer now have an indication of how long they took
   - 2 new command line switches `--log-format` and `--log-style`, see also the Python logging documentation
-- `--root` command line argument to specify a project root and disable autodetection of project root ([add4102](https://github.com/robotcodedev/robotcode/commit/add4102594ee73c3a93760eb4a5846358ddf2b1a))
-- Add `--no-vcs` command-line option to ignore VCS directories (e.g., .git) when detecting the project root ([d7e28f2](https://github.com/robotcodedev/robotcode/commit/d7e28f2c7c7ffd42ce3d989d1ae8f4e8207d7b81))
-
-
-  #closes 201
 
 
 ### Performance
@@ -736,8 +736,8 @@ All notable changes to this project will be documented in this file. See [conven
 
 ### Bug Fixes
 
-- **vscode:** Tool menu stabilized ([de774fa](https://github.com/robotcodedev/robotcode/commit/de774fafa34269eb448b35fbf403ceb2cda04ed6))
 - **vscode:** Correct handling when opening library in keywords view if keyword is loaded twice with a different alias ([ac23751](https://github.com/robotcodedev/robotcode/commit/ac23751087fc9051ace8345ebe58cda88d4eb891))
+- **vscode:** Tool menu stabilized ([de774fa](https://github.com/robotcodedev/robotcode/commit/de774fafa34269eb448b35fbf403ceb2cda04ed6))
 
 
 ### Features
@@ -770,9 +770,9 @@ All notable changes to this project will be documented in this file. See [conven
 
 ### Bug Fixes
 
-- Corrected parsing of OPTION tokens and variable resolving ([5a8abf2](https://github.com/robotcodedev/robotcode/commit/5a8abf2ea5ae0be9833ecd0ff90658d6e3dbac59))
-- Corrected completion of arguments after `...` continuation line ([377aa9d](https://github.com/robotcodedev/robotcode/commit/377aa9d39a185961b2e6c16cb68c7169f490b15f))
 - Dont show completion right after `...` ([f24f6a8](https://github.com/robotcodedev/robotcode/commit/f24f6a8691451e34e65a3b6fba1f9d000278c066))
+- Corrected completion of arguments after `...` continuation line ([377aa9d](https://github.com/robotcodedev/robotcode/commit/377aa9d39a185961b2e6c16cb68c7169f490b15f))
+- Corrected parsing of OPTION tokens and variable resolving ([5a8abf2](https://github.com/robotcodedev/robotcode/commit/5a8abf2ea5ae0be9833ecd0ff90658d6e3dbac59))
 
 
 ### Testing
@@ -789,27 +789,27 @@ All notable changes to this project will be documented in this file. See [conven
 
 ### Features
 
-- Enable Robot Framework 7.1 support ([6921c9a](https://github.com/robotcodedev/robotcode/commit/6921c9ac4457a3a8ad5b830584533c1c2ec69a99))
 - Variables start with a `_` are no longer beeing reported as unused ([afea114](https://github.com/robotcodedev/robotcode/commit/afea11413ceb96d21397416c37f538102fd259cb))
+- Enable Robot Framework 7.1 support ([6921c9a](https://github.com/robotcodedev/robotcode/commit/6921c9ac4457a3a8ad5b830584533c1c2ec69a99))
 
 
 ### Refactor
 
+- Fix some unused ignores for mypy ([575bbff](https://github.com/robotcodedev/robotcode/commit/575bbff0692fdcffcbc80aa4031450cff8148bd4))
 - Use lambda instead of functools.partial ([1518f71](https://github.com/robotcodedev/robotcode/commit/1518f71acb48dd9e7ccd822da58d3203eebb7774))
 
 
   functools.partial with method is deprecated in Python 3.13
-- Fix some unused ignores for mypy ([575bbff](https://github.com/robotcodedev/robotcode/commit/575bbff0692fdcffcbc80aa4031450cff8148bd4))
 
 
 ## [0.88.0](https://github.com/robotcodedev/robotcode/compare/v0.87.0..v0.88.0) - 2024-09-07
 
 ### Documentation
 
-- Introduce a script that generate the doc for cli tools ([ecb5ec9](https://github.com/robotcodedev/robotcode/commit/ecb5ec9db8740f9b794555b7a408a80670afe926))
-- Update some documentation about config and cli ([84553c3](https://github.com/robotcodedev/robotcode/commit/84553c358f6793855a4c7641659c0f7b75a1aba5))
-- Update readme ([1e601e3](https://github.com/robotcodedev/robotcode/commit/1e601e3c1542d8358e1d207c5083cbbdfd3c20f2))
 - Add a Tip&Tricks page ([dd27480](https://github.com/robotcodedev/robotcode/commit/dd274806324388a7798de2c5e7fd3dcf2794a230))
+- Update readme ([1e601e3](https://github.com/robotcodedev/robotcode/commit/1e601e3c1542d8358e1d207c5083cbbdfd3c20f2))
+- Update some documentation about config and cli ([84553c3](https://github.com/robotcodedev/robotcode/commit/84553c358f6793855a4c7641659c0f7b75a1aba5))
+- Introduce a script that generate the doc for cli tools ([ecb5ec9](https://github.com/robotcodedev/robotcode/commit/ecb5ec9db8740f9b794555b7a408a80670afe926))
 
 
 ### Features
@@ -821,8 +821,8 @@ All notable changes to this project will be documented in this file. See [conven
 
 ### Testing
 
-- Corrected some regression tests ([f4a5d41](https://github.com/robotcodedev/robotcode/commit/f4a5d413995d08c021569c80f035ce5f819f0061))
 - Add tests for RF 7.1 ([cbe9fb2](https://github.com/robotcodedev/robotcode/commit/cbe9fb28cbf47fa0ac4eeb5150dfde77f5bccbdc))
+- Corrected some regression tests ([f4a5d41](https://github.com/robotcodedev/robotcode/commit/f4a5d413995d08c021569c80f035ce5f819f0061))
 
 
 ## [0.87.0](https://github.com/robotcodedev/robotcode/compare/v0.86.2..v0.87.0) - 2024-08-29
@@ -862,21 +862,21 @@ All notable changes to this project will be documented in this file. See [conven
 
 ### Bug Fixes
 
-- Change detection of win32 ([13a9265](https://github.com/robotcodedev/robotcode/commit/13a92652fa9a42d0eec989bd14cbe5cd3c115596))
-- Change detection of win32 ([0dfbd94](https://github.com/robotcodedev/robotcode/commit/0dfbd947baa4eb7dae984fda29e3f5d502a01ea7))
 - Correct vscodeignore file ([461bfb1](https://github.com/robotcodedev/robotcode/commit/461bfb1048308959e7ba8de1c9be92a8e9257c29))
 
 
   I have over optimized the .vscodeignore file 🥶
+- Change detection of win32 ([0dfbd94](https://github.com/robotcodedev/robotcode/commit/0dfbd947baa4eb7dae984fda29e3f5d502a01ea7))
+- Change detection of win32 ([13a9265](https://github.com/robotcodedev/robotcode/commit/13a92652fa9a42d0eec989bd14cbe5cd3c115596))
 
 
 ### Features
 
-- **robotcode:** Introduce support for `.gitignore` and `.robotignore` during test suite discovery ([74fa480](https://github.com/robotcodedev/robotcode/commit/74fa480cdbe6d03f9d146ea322db4e4e22e242e8))
+- **robotcode:** Introduce support for `.gitignore` and `.robotignore` during test suite discovery ([022517f](https://github.com/robotcodedev/robotcode/commit/022517fef7a428a952cf6df7bdd4b7690c9875d5))
 
   Implemented support for `.gitignore` and `.robotignore` files in the discovery process of Robot Framework test suites and test cases.
 
-- **robotcode:** Introduce support for `.gitignore` and `.robotignore` during test suite discovery ([022517f](https://github.com/robotcodedev/robotcode/commit/022517fef7a428a952cf6df7bdd4b7690c9875d5))
+- **robotcode:** Introduce support for `.gitignore` and `.robotignore` during test suite discovery ([74fa480](https://github.com/robotcodedev/robotcode/commit/74fa480cdbe6d03f9d146ea322db4e4e22e242e8))
 
   Implemented support for `.gitignore` and `.robotignore` files in the discovery process of Robot Framework test suites and test cases.
 
@@ -891,10 +891,10 @@ All notable changes to this project will be documented in this file. See [conven
 
 ### Documentation
 
-- Some reorganizations ([a49829b](https://github.com/robotcodedev/robotcode/commit/a49829b80b2e0f35eb4c70772bcff0af720fffeb))
-- Some more restrucuting ([5b2752f](https://github.com/robotcodedev/robotcode/commit/5b2752f66f2791da51e5d2cc7b063ec8b50fd247))
-- Correct RF versions in README ([da0af7b](https://github.com/robotcodedev/robotcode/commit/da0af7b82064304c7ed7c1290bb081eb4b38dde6))
 - "Get Started" improved ([c9954ad](https://github.com/robotcodedev/robotcode/commit/c9954ad394069f71eeac23c4b3453588227834ae))
+- Correct RF versions in README ([da0af7b](https://github.com/robotcodedev/robotcode/commit/da0af7b82064304c7ed7c1290bb081eb4b38dde6))
+- Some more restrucuting ([5b2752f](https://github.com/robotcodedev/robotcode/commit/5b2752f66f2791da51e5d2cc7b063ec8b50fd247))
+- Some reorganizations ([a49829b](https://github.com/robotcodedev/robotcode/commit/a49829b80b2e0f35eb4c70772bcff0af720fffeb))
 
 
 ### Features
@@ -906,28 +906,28 @@ All notable changes to this project will be documented in this file. See [conven
 
 ### Bug Fixes
 
-- **debugger:** Corrected handling of local variables in variables inspector ([12ecdd4](https://github.com/robotcodedev/robotcode/commit/12ecdd43376484a40b6cdeb2bca752bc09178fad))
-- **debugger:** Corrected start debuggin in internalConsole ([b5124c8](https://github.com/robotcodedev/robotcode/commit/b5124c87265aac26f30ec535ec72770bf258cfbd))
 - **debugger:** Corrected start debuggin in internalConsole ([f3fbf20](https://github.com/robotcodedev/robotcode/commit/f3fbf20d01d75264d86c0af4575e98b0cfa7ec5b))
+- **debugger:** Corrected start debuggin in internalConsole ([b5124c8](https://github.com/robotcodedev/robotcode/commit/b5124c87265aac26f30ec535ec72770bf258cfbd))
+- **debugger:** Corrected handling of local variables in variables inspector ([12ecdd4](https://github.com/robotcodedev/robotcode/commit/12ecdd43376484a40b6cdeb2bca752bc09178fad))
 - **robot:** Use casefold for normalizing and remove some local imports in VariableMatcher ([04e12a7](https://github.com/robotcodedev/robotcode/commit/04e12a7ee262177f5bede595baa14e283c3ef4e7))
-- **vscode:** Remove `attachPython` from default `launch.json` config ([217653b](https://github.com/robotcodedev/robotcode/commit/217653b6a6c3e78dbbead659880c12c1d5fb4a54))
-- **vscode:** Only test cases are reported as queued, started and completed ([1d01f43](https://github.com/robotcodedev/robotcode/commit/1d01f43687a1b2f8428982cadcee7e72e1764738))
-
-  this corrects the number of successful/executed test cases in the upper area of the test explorer
-
-- **vscode:** Remove `attachPython` from default `launch.json` config ([8052f8d](https://github.com/robotcodedev/robotcode/commit/8052f8dfc4e83a8d7e26ef8049c3631881e0dd34))
 - **vscode:** Only test cases are reported as queued, started and completed ([f68b8e3](https://github.com/robotcodedev/robotcode/commit/f68b8e34161b4ec977fcae04d891399a53f951fc))
 
   this corrects the number of successful/executed test cases in the upper area of the test explorer
 
+- **vscode:** Remove `attachPython` from default `launch.json` config ([8052f8d](https://github.com/robotcodedev/robotcode/commit/8052f8dfc4e83a8d7e26ef8049c3631881e0dd34))
+- **vscode:** Only test cases are reported as queued, started and completed ([1d01f43](https://github.com/robotcodedev/robotcode/commit/1d01f43687a1b2f8428982cadcee7e72e1764738))
+
+  this corrects the number of successful/executed test cases in the upper area of the test explorer
+
+- **vscode:** Remove `attachPython` from default `launch.json` config ([217653b](https://github.com/robotcodedev/robotcode/commit/217653b6a6c3e78dbbead659880c12c1d5fb4a54))
 
 
 ### Documentation
 
-- **quickstart:** Add quickstart documentation page ([1fdb966](https://github.com/robotcodedev/robotcode/commit/1fdb966038595b79b7081ee94a735a8d76f3098e))
 - **quickstart:** Improve quickstart documentation ([a5dd60a](https://github.com/robotcodedev/robotcode/commit/a5dd60a0d1da7fd85cb781eaaaf530e5d8f30e8a))
-- Updated config page ([b230689](https://github.com/robotcodedev/robotcode/commit/b23068989da3aaff5ed8dce3b3c6653dceb88eb5))
+- **quickstart:** Add quickstart documentation page ([1fdb966](https://github.com/robotcodedev/robotcode/commit/1fdb966038595b79b7081ee94a735a8d76f3098e))
 - Fix some formatting and spelling things ([99d18fe](https://github.com/robotcodedev/robotcode/commit/99d18fe2ffa3f754b125b7ae5f501ae90144c561))
+- Updated config page ([b230689](https://github.com/robotcodedev/robotcode/commit/b23068989da3aaff5ed8dce3b3c6653dceb88eb5))
 
 
 ### Features
@@ -936,7 +936,7 @@ All notable changes to this project will be documented in this file. See [conven
 
   By setting the ROBOTCODE_DISABLE_HIDDEN_TASKS environment variable to a value not equal to 0, the Robot Code debugger will not be hidden from the Debugpy debugger, allowing you to debug the Robot Code debugger itself.
 
-- Diagnostics modifiers ([d1e5f3f](https://github.com/robotcodedev/robotcode/commit/d1e5f3f5781ba50416fdd3e39c8416978dffc5c7))
+- Diagnostics modifiers ([223ec13](https://github.com/robotcodedev/robotcode/commit/223ec134a9a947db50aebba0d10ad290ab3bffb5))
 
 
   Implement functionality to configure diagnostic error messages during source code analysis. Lines in the code with the `# robotcode:` marker are now interpreted as modifiers. The full structure of a modifier is `# robotcode: <action>[code(,code)*]*`.
@@ -1039,7 +1039,7 @@ All notable changes to this project will be documented in this file. See [conven
           Some Undefined Keyword
   ```
   In this example, all diagnostic messages are ignored until the `reset` modifier, which returns all messages to their default state from that point onward.
-- Diagnostics modifiers ([223ec13](https://github.com/robotcodedev/robotcode/commit/223ec134a9a947db50aebba0d10ad290ab3bffb5))
+- Diagnostics modifiers ([d1e5f3f](https://github.com/robotcodedev/robotcode/commit/d1e5f3f5781ba50416fdd3e39c8416978dffc5c7))
 
 
   Implement functionality to configure diagnostic error messages during source code analysis. Lines in the code with the `# robotcode:` marker are now interpreted as modifiers. The full structure of a modifier is `# robotcode: <action>[code(,code)*]*`.
@@ -1155,8 +1155,8 @@ All notable changes to this project will be documented in this file. See [conven
 
 ### Bug Fixes
 
-- **vscode:** Optimize tmLanguage definition ([166cd25](https://github.com/robotcodedev/robotcode/commit/166cd2536d545c003fd8d7cdd5da31cfb74f94d4))
 - **vscode:** Some small corrections for in (semantic) highlightning ([43321f6](https://github.com/robotcodedev/robotcode/commit/43321f652930f91a4a2ab3f8ebd96056076dcdb5))
+- **vscode:** Optimize tmLanguage definition ([166cd25](https://github.com/robotcodedev/robotcode/commit/166cd2536d545c003fd8d7cdd5da31cfb74f94d4))
 
 
 ### Documentation
@@ -1174,16 +1174,16 @@ All notable changes to this project will be documented in this file. See [conven
 
 ### Documentation
 
-- Add a header to config docs ([17ae419](https://github.com/robotcodedev/robotcode/commit/17ae419c237c5e76d4cb2294c676896780dfade1))
-- Initial move to vitepress for documentation ([f37d8e7](https://github.com/robotcodedev/robotcode/commit/f37d8e7b3e89eedb04c92fa032b257a7efede43c))
-- Setup vitepress project correctly ([882d27c](https://github.com/robotcodedev/robotcode/commit/882d27c8c26af1d69c62c697b76e6c33874fb646))
 - Add a logo with text ([1ded4d0](https://github.com/robotcodedev/robotcode/commit/1ded4d0b10cfd137271e867ebfc0bd1c4d7fd12c))
+- Setup vitepress project correctly ([882d27c](https://github.com/robotcodedev/robotcode/commit/882d27c8c26af1d69c62c697b76e6c33874fb646))
+- Initial move to vitepress for documentation ([f37d8e7](https://github.com/robotcodedev/robotcode/commit/f37d8e7b3e89eedb04c92fa032b257a7efede43c))
+- Add a header to config docs ([17ae419](https://github.com/robotcodedev/robotcode/commit/17ae419c237c5e76d4cb2294c676896780dfade1))
 
 
 ### Testing
 
-- Enable pytest-rerunfailures for unittests ([3b6e0ce](https://github.com/robotcodedev/robotcode/commit/3b6e0cedb30dffd7eb8ff538f09cf93b8a5c9be6))
 - Fix tests for Robot Framework version 7.0.1 ([420fee4](https://github.com/robotcodedev/robotcode/commit/420fee4236f7520102862efe0063896ba2761cda))
+- Enable pytest-rerunfailures for unittests ([3b6e0ce](https://github.com/robotcodedev/robotcode/commit/3b6e0cedb30dffd7eb8ff538f09cf93b8a5c9be6))
 
 
 ## [0.83.0](https://github.com/robotcodedev/robotcode/compare/v0.82.3..v0.83.0) - 2024-05-16
@@ -1347,17 +1347,17 @@ All notable changes to this project will be documented in this file. See [conven
 
 ### Features
 
-- **vscode:** Enable bracket coloring and matching in keyword arguments ([45243e5](https://github.com/robotcodedev/robotcode/commit/45243e589ce44274aae58186071dbf271392d408))
 - **vscode:** Python syntax highlightning in `${{}}` expressions ([adf3627](https://github.com/robotcodedev/robotcode/commit/adf36270ab7d39028ee1684e438cc42694af5e67))
 
   this implements a part of #230
 
+- **vscode:** Enable bracket coloring and matching in keyword arguments ([45243e5](https://github.com/robotcodedev/robotcode/commit/45243e589ce44274aae58186071dbf271392d408))
 
 
 ### Testing
 
-- Update regression some tests ([f01d37e](https://github.com/robotcodedev/robotcode/commit/f01d37e42bd9ceab040ff0a3bb4e635902073a51))
 - Fix some regression tests ([cb420ad](https://github.com/robotcodedev/robotcode/commit/cb420adb5f7384ebaf9e5f562b4356c5600721f0))
+- Update regression some tests ([f01d37e](https://github.com/robotcodedev/robotcode/commit/f01d37e42bd9ceab040ff0a3bb4e635902073a51))
 
 
 ## [0.76.2](https://github.com/robotcodedev/robotcode/compare/v0.76.1..v0.76.2) - 2024-03-01
@@ -1371,10 +1371,10 @@ All notable changes to this project will be documented in this file. See [conven
 
 ### Bug Fixes
 
-- **core:** Avoid iterator changes during Event.notify when adding or removing new event handlers ([ccc5faf](https://github.com/robotcodedev/robotcode/commit/ccc5fafe40b1e9cbec828f3e976189ba35b0100d))
 - **core:** Send cache_invalidate events before and after locking to avoid deadlocks ([5f06377](https://github.com/robotcodedev/robotcode/commit/5f06377bfdd436dd0d1867ab6817cec7521454dc))
-- **langserver:** Sometimes an exception in evaluating variables in expressions occurs ([bd9bcfd](https://github.com/robotcodedev/robotcode/commit/bd9bcfde91e61261e4580552e1a3d2c92200d3c5))
+- **core:** Avoid iterator changes during Event.notify when adding or removing new event handlers ([ccc5faf](https://github.com/robotcodedev/robotcode/commit/ccc5fafe40b1e9cbec828f3e976189ba35b0100d))
 - **langserver:** Change keywords treeview rpc methods to non async ([f85621a](https://github.com/robotcodedev/robotcode/commit/f85621ac7f9ccdf22b54e8528a788eea2fd6fbf5))
+- **langserver:** Sometimes an exception in evaluating variables in expressions occurs ([bd9bcfd](https://github.com/robotcodedev/robotcode/commit/bd9bcfde91e61261e4580552e1a3d2c92200d3c5))
 
 
 ### Performance
@@ -1386,8 +1386,8 @@ All notable changes to this project will be documented in this file. See [conven
 
 ### Bug Fixes
 
-- **langserver:** Add duplicated imports to references ([e603628](https://github.com/robotcodedev/robotcode/commit/e603628f599c361e13b2f09acf236c30d3822496))
 - **langserver:** Correct variable handling from resource imports ([619eee4](https://github.com/robotcodedev/robotcode/commit/619eee4c879fcc586b8b8be396cb141c0488cdf4))
+- **langserver:** Add duplicated imports to references ([e603628](https://github.com/robotcodedev/robotcode/commit/e603628f599c361e13b2f09acf236c30d3822496))
 - **vscode:** Correct resolving resource documentation in keywords treeview ([2935bb8](https://github.com/robotcodedev/robotcode/commit/2935bb8b139f88d48217d902fd69bd0233e17dcb))
 
 
@@ -1417,11 +1417,11 @@ All notable changes to this project will be documented in this file. See [conven
 
 ### Bug Fixes
 
+- **debugger:** Fix some small glitches when robot is terminated but the Vscode is not fast enough to notice it ;-) ([5fdb0d7](https://github.com/robotcodedev/robotcode/commit/5fdb0d7f7ab92a131172d38e252810e82e39bad6))
 - **debugger:** Correct wrong lineno informations from robot in listener start_(test/suite/keyword) lineno is `None` ([b4f9c5c](https://github.com/robotcodedev/robotcode/commit/b4f9c5c67f41d7be1170c9da022cd5421a0d20ef))
 
   If RobotFramework executes a test case, keyword or so, where the line number is not set internally, i.e. `None`, it generates an empty string for the line number in the listener instead of also passing `None`. This rarely happens, but it does occur.
 
-- **debugger:** Fix some small glitches when robot is terminated but the Vscode is not fast enough to notice it ;-) ([5fdb0d7](https://github.com/robotcodedev/robotcode/commit/5fdb0d7f7ab92a131172d38e252810e82e39bad6))
 
 
 ### Features
@@ -1436,8 +1436,8 @@ All notable changes to this project will be documented in this file. See [conven
 
 ### Bug Fixes
 
-- **debugger:** Filling zeros are now added to the name of an element so that elements are sorted correctly in the variable view at debugging time ([456ab2c](https://github.com/robotcodedev/robotcode/commit/456ab2c0a30a490e3324d0376cd7fe651a1c2c4a))
 - **debugger:** Add `BuiltIn.Run Keyword And Return Status` to the list of keywords that caught exceptions on inner keywords ([add8297](https://github.com/robotcodedev/robotcode/commit/add8297e851f1226dd980fa543bb4c9f124ad441))
+- **debugger:** Filling zeros are now added to the name of an element so that elements are sorted correctly in the variable view at debugging time ([456ab2c](https://github.com/robotcodedev/robotcode/commit/456ab2c0a30a490e3324d0376cd7fe651a1c2c4a))
 - **langserver:** Correct importing variables with the same filename ([e1ac0cb](https://github.com/robotcodedev/robotcode/commit/e1ac0cb5ed439fce3e8c9c2dad19ded4c1726eb4))
 
   closes [BUG] Variables from variable files are often displayed as not found #214
@@ -1487,8 +1487,8 @@ All notable changes to this project will be documented in this file. See [conven
 ### Bug Fixes
 
 - **discover:** Don't show an error if no tests or suite are found ([f57b065](https://github.com/robotcodedev/robotcode/commit/f57b065dd6ecda58176f2af5cb945daed7d1a3ea))
-- **vscode:** Trim and shorten long names and descriptions in `Select Configuration Profiles` command ([8abcb67](https://github.com/robotcodedev/robotcode/commit/8abcb67cc697e0fcf3986b551727338887daeeff))
 - **vscode:** Stabilized recreation of test explorer items if folders are deleted ([370ff84](https://github.com/robotcodedev/robotcode/commit/370ff847e644ff99d7563a5fbc04b81864dcb5f6))
+- **vscode:** Trim and shorten long names and descriptions in `Select Configuration Profiles` command ([8abcb67](https://github.com/robotcodedev/robotcode/commit/8abcb67cc697e0fcf3986b551727338887daeeff))
 
 
 ### Features
@@ -1505,12 +1505,12 @@ All notable changes to this project will be documented in this file. See [conven
 
 ### Features
 
+- **profiles:** A profile can now be hidden and inherit from other profiles ([9cd2ffb](https://github.com/robotcodedev/robotcode/commit/9cd2ffb16ecf139c5c8f2c3cdda2a82cc529b7b5))
+- **profiles:** Profiles prefixed with an underscore (`_`) are now automatically hidden in `profiles list` command ([97bf390](https://github.com/robotcodedev/robotcode/commit/97bf3901652892cca71f5a92d98adb151cdfb772))
 - **profiles:** Enhanced handling of environment variables in profile settings ([37fdbb3](https://github.com/robotcodedev/robotcode/commit/37fdbb3108360e20eb44235d0a3130df32d69ff5))
 
   This update allows the setting, overriding, and utilization of system environment variables in expressions and conditions within the robot.toml configuration files. This enhancement increases the flexibility and adaptability of profile configurations.
 
-- **profiles:** Profiles prefixed with an underscore (`_`) are now automatically hidden in `profiles list` command ([97bf390](https://github.com/robotcodedev/robotcode/commit/97bf3901652892cca71f5a92d98adb151cdfb772))
-- **profiles:** A profile can now be hidden and inherit from other profiles ([9cd2ffb](https://github.com/robotcodedev/robotcode/commit/9cd2ffb16ecf139c5c8f2c3cdda2a82cc529b7b5))
 - **vscode:** Show profiles from robot.toml in test explorer as test profile ([fcb32a7](https://github.com/robotcodedev/robotcode/commit/fcb32a7a0e7ea40e87e0b459db2cdfd582837b0e))
 
 
@@ -1589,14 +1589,14 @@ All notable changes to this project will be documented in this file. See [conven
 
 ### Documentation
 
-- Change description of package ([f6a4f79](https://github.com/robotcodedev/robotcode/commit/f6a4f79df13b72b36cb5958f467ac3c2d75eae66))
 - Create CONTRIBUTING.md and review CODE_OF_CONDUCT.md ([a107b95](https://github.com/robotcodedev/robotcode/commit/a107b95b3fc40b76abfe74972b5f0e254cbfabe4))
+- Change description of package ([f6a4f79](https://github.com/robotcodedev/robotcode/commit/f6a4f79df13b72b36cb5958f467ac3c2d75eae66))
 
 
 ### Refactor
 
-- **langserver:** Remove unused maxProjectFileCount setting ([4f4ad31](https://github.com/robotcodedev/robotcode/commit/4f4ad318d67fe784db13fece70fbd79e3ccedb00))
 - **langserver:** Move TextDocument from langserver to core package, some other simple refactorings ([d60977b](https://github.com/robotcodedev/robotcode/commit/d60977bb9ccab4b09a6e69b2ba71dd7a2ae5d2f1))
+- **langserver:** Remove unused maxProjectFileCount setting ([4f4ad31](https://github.com/robotcodedev/robotcode/commit/4f4ad318d67fe784db13fece70fbd79e3ccedb00))
 - Move diagnostics helper code to robotcode.robot package ([c94edb3](https://github.com/robotcodedev/robotcode/commit/c94edb306132daddccd6fd9e64343914aafa868a))
 
 
@@ -1604,8 +1604,8 @@ All notable changes to this project will be documented in this file. See [conven
 
 ### Bug Fixes
 
-- **langserver:** Completion in templated test cases should not show keywords and such things ([621c70a](https://github.com/robotcodedev/robotcode/commit/621c70ab36cee35a468b7741e82778eb02355a4a))
 - **langserver:** Generate libdoc spec generation for RFW 7 ([e259c86](https://github.com/robotcodedev/robotcode/commit/e259c869fecbd09379863e214bec778dd902724c))
+- **langserver:** Completion in templated test cases should not show keywords and such things ([621c70a](https://github.com/robotcodedev/robotcode/commit/621c70ab36cee35a468b7741e82778eb02355a4a))
 - **vscode:** Open a result file or view documention does not work in CodeSpaces ([0020ddf](https://github.com/robotcodedev/robotcode/commit/0020ddf00c82a3ee325cb4d9a588dcdccaf32c19))
 
 
@@ -1613,61 +1613,61 @@ All notable changes to this project will be documented in this file. See [conven
 
 ### Bug Fixes
 
-- **langserver:** Correct highlight ranges for hover ([d0e4091](https://github.com/robotcodedev/robotcode/commit/d0e40919ace8ae3d08a3256695212f2723950ffd))
-- **langserver:** Goto and implementation sometimes return to many wrong results on import statements ([3798c5e](https://github.com/robotcodedev/robotcode/commit/3798c5ef06ef8b02994b6dbc2ba71ea37fe1b542))
-- **langserver:** Preventing extensive calls to 'workspace/configuration' through caching ([77db502](https://github.com/robotcodedev/robotcode/commit/77db5024fb7a5fa56fb895e5a3d9a371910c7bf5))
+- **langserver:** Stabilize workspace diagnostics ([185b551](https://github.com/robotcodedev/robotcode/commit/185b551a88e3b823290da9916d1052dec04dda96))
+- **langserver:** Speedup diagnostics, unused references and codelenses updates ([e13641e](https://github.com/robotcodedev/robotcode/commit/e13641e80cd296fd1463152d70e90e234223d9da))
 - **langserver:** Langserver that sometimes hangs, 'loop is not running'  or 'lock take to long' messages ([37d8119](https://github.com/robotcodedev/robotcode/commit/37d8119408bd31bb8e0e7381b2509a3cd47cdcbc))
 
   Rewrote and refactor diagnostics and refreshing part to use normal threads and not async. This should also bring a better performance for bigger projects, but maybe this needs some more optimizations.
 
-- **langserver:** Speedup diagnostics, unused references and codelenses updates ([e13641e](https://github.com/robotcodedev/robotcode/commit/e13641e80cd296fd1463152d70e90e234223d9da))
-- **langserver:** Stabilize workspace diagnostics ([185b551](https://github.com/robotcodedev/robotcode/commit/185b551a88e3b823290da9916d1052dec04dda96))
+- **langserver:** Preventing extensive calls to 'workspace/configuration' through caching ([77db502](https://github.com/robotcodedev/robotcode/commit/77db5024fb7a5fa56fb895e5a3d9a371910c7bf5))
+- **langserver:** Goto and implementation sometimes return to many wrong results on import statements ([3798c5e](https://github.com/robotcodedev/robotcode/commit/3798c5ef06ef8b02994b6dbc2ba71ea37fe1b542))
+- **langserver:** Correct highlight ranges for hover ([d0e4091](https://github.com/robotcodedev/robotcode/commit/d0e40919ace8ae3d08a3256695212f2723950ffd))
 
 
 ### Refactor
 
-- **langserver:** Remove async from robotcode langserver analytics ([1ff1e44](https://github.com/robotcodedev/robotcode/commit/1ff1e44d91f64671e108b35f8fe9f7005a72be5d))
-- **langserver:** Remove AsyncVisitor code ([c9aaa60](https://github.com/robotcodedev/robotcode/commit/c9aaa6088a86c67b8dec5cb9794efe6c339cc6a5))
-- **langserver:** Implement cancelable threads and remove async code from definition, implementations, hover, folding ([2fae8e3](https://github.com/robotcodedev/robotcode/commit/2fae8e35a54ef0173a7f13cd7016a724587d9958))
-- **langserver:** Remove HasExtendCapabilities protocol and implement the method directly, extend threaded decorator ([b76eb0f](https://github.com/robotcodedev/robotcode/commit/b76eb0f4fcdd649232bfddcf7060423c385af92d))
-- **langserver:** Remove async code from document_highlight and document_symbols, add regression tests for document_symbols ([755daf7](https://github.com/robotcodedev/robotcode/commit/755daf72d1e9ff2a98dbf73e91de28e0a4ade3ac))
-- **langserver:** Move local import to global imports in document_symbols ([135b0d4](https://github.com/robotcodedev/robotcode/commit/135b0d4dc1979471a389b3efbf75278325e10139))
-- **langserver:** Remove async code from code actions ([87cb416](https://github.com/robotcodedev/robotcode/commit/87cb416ae2daf390ef49ca0e8016c691faa3ecfe))
-- **langserver:** Remove async code from completions ([5009202](https://github.com/robotcodedev/robotcode/commit/5009202eeef47bb67ebac0d21d58244c24f3ae35))
-- **langserver:** Some parameter renaming ([a2bddf9](https://github.com/robotcodedev/robotcode/commit/a2bddf94eb69bd2e3238d13484ff3c46df0cc1e2))
-- **langserver:** Move core.utils.threading to core.concurrent and rename some function ([faee359](https://github.com/robotcodedev/robotcode/commit/faee359d0c7e45b7c1d0b44b1b6c1d247fb1d6fe))
-- **langserver:** Remove async code from code lens ([204624c](https://github.com/robotcodedev/robotcode/commit/204624cc3fa1662babc929b5067497e820d660d1))
-- **langserver:** Remove async code from commands ([58f185b](https://github.com/robotcodedev/robotcode/commit/58f185bd0636a3c1f640372771a66e8b2a33cc06))
-- **langserver:** Remove async code from formatting and some import corrections ([2f25c78](https://github.com/robotcodedev/robotcode/commit/2f25c7805fe1e81589aedf7ee3f420db36ed88c4))
-- **langserver:** Remove async code from inlay hints ([7535bfa](https://github.com/robotcodedev/robotcode/commit/7535bfa68c493e566ee39ef51370e04eda809b5f))
-- **langserver:** Remove async code from inline value ([4e1b23c](https://github.com/robotcodedev/robotcode/commit/4e1b23cf3fe43d7a602f0c8983879d4e25444ed0))
-- **langserver:** Remove async code from diagnostics, selection range, workspace, signature help ([0c38843](https://github.com/robotcodedev/robotcode/commit/0c38843b28cfa5175d65b3eafec3c455afcc3d2f))
-- **langserver:** Remove async code from rename ([15e409d](https://github.com/robotcodedev/robotcode/commit/15e409dcb67e2fbe0fc6a3479ad1a0f090b3830d))
-- **langserver:** Remove async code from semantic tokens ([3adddd1](https://github.com/robotcodedev/robotcode/commit/3adddd12f75664dc98988402c2597965be7a4bf3))
-- **langserver:** Correct refresh handling and remove some unneeded code ([3f3944f](https://github.com/robotcodedev/robotcode/commit/3f3944f630ac6117cdb8a16d7078f9e8ab47e6cc))
-- **langserver:** Remove threaded decorator from rpc methods and introduce a threaded property for the rpc_method decorator ([b478ae3](https://github.com/robotcodedev/robotcode/commit/b478ae3da563fd9af7409c234b55efabb412f8a7))
 - **langserver:** Rename core.concurrent.FutureEx to Task ([d75eb9a](https://github.com/robotcodedev/robotcode/commit/d75eb9aa7005514c01b3ced5924191ed7cd780ab))
+- **langserver:** Remove threaded decorator from rpc methods and introduce a threaded property for the rpc_method decorator ([b478ae3](https://github.com/robotcodedev/robotcode/commit/b478ae3da563fd9af7409c234b55efabb412f8a7))
+- **langserver:** Correct refresh handling and remove some unneeded code ([3f3944f](https://github.com/robotcodedev/robotcode/commit/3f3944f630ac6117cdb8a16d7078f9e8ab47e6cc))
+- **langserver:** Remove async code from semantic tokens ([3adddd1](https://github.com/robotcodedev/robotcode/commit/3adddd12f75664dc98988402c2597965be7a4bf3))
+- **langserver:** Remove async code from rename ([15e409d](https://github.com/robotcodedev/robotcode/commit/15e409dcb67e2fbe0fc6a3479ad1a0f090b3830d))
+- **langserver:** Remove async code from diagnostics, selection range, workspace, signature help ([0c38843](https://github.com/robotcodedev/robotcode/commit/0c38843b28cfa5175d65b3eafec3c455afcc3d2f))
+- **langserver:** Remove async code from inline value ([4e1b23c](https://github.com/robotcodedev/robotcode/commit/4e1b23cf3fe43d7a602f0c8983879d4e25444ed0))
+- **langserver:** Remove async code from inlay hints ([7535bfa](https://github.com/robotcodedev/robotcode/commit/7535bfa68c493e566ee39ef51370e04eda809b5f))
+- **langserver:** Remove async code from formatting and some import corrections ([2f25c78](https://github.com/robotcodedev/robotcode/commit/2f25c7805fe1e81589aedf7ee3f420db36ed88c4))
+- **langserver:** Remove async code from commands ([58f185b](https://github.com/robotcodedev/robotcode/commit/58f185bd0636a3c1f640372771a66e8b2a33cc06))
+- **langserver:** Remove async code from code lens ([204624c](https://github.com/robotcodedev/robotcode/commit/204624cc3fa1662babc929b5067497e820d660d1))
+- **langserver:** Move core.utils.threading to core.concurrent and rename some function ([faee359](https://github.com/robotcodedev/robotcode/commit/faee359d0c7e45b7c1d0b44b1b6c1d247fb1d6fe))
+- **langserver:** Some parameter renaming ([a2bddf9](https://github.com/robotcodedev/robotcode/commit/a2bddf94eb69bd2e3238d13484ff3c46df0cc1e2))
+- **langserver:** Remove async code from completions ([5009202](https://github.com/robotcodedev/robotcode/commit/5009202eeef47bb67ebac0d21d58244c24f3ae35))
+- **langserver:** Remove async code from code actions ([87cb416](https://github.com/robotcodedev/robotcode/commit/87cb416ae2daf390ef49ca0e8016c691faa3ecfe))
+- **langserver:** Move local import to global imports in document_symbols ([135b0d4](https://github.com/robotcodedev/robotcode/commit/135b0d4dc1979471a389b3efbf75278325e10139))
+- **langserver:** Remove async code from document_highlight and document_symbols, add regression tests for document_symbols ([755daf7](https://github.com/robotcodedev/robotcode/commit/755daf72d1e9ff2a98dbf73e91de28e0a4ade3ac))
+- **langserver:** Remove HasExtendCapabilities protocol and implement the method directly, extend threaded decorator ([b76eb0f](https://github.com/robotcodedev/robotcode/commit/b76eb0f4fcdd649232bfddcf7060423c385af92d))
+- **langserver:** Implement cancelable threads and remove async code from definition, implementations, hover, folding ([2fae8e3](https://github.com/robotcodedev/robotcode/commit/2fae8e35a54ef0173a7f13cd7016a724587d9958))
+- **langserver:** Remove AsyncVisitor code ([c9aaa60](https://github.com/robotcodedev/robotcode/commit/c9aaa6088a86c67b8dec5cb9794efe6c339cc6a5))
+- **langserver:** Remove async from robotcode langserver analytics ([1ff1e44](https://github.com/robotcodedev/robotcode/commit/1ff1e44d91f64671e108b35f8fe9f7005a72be5d))
 - **robotcode:** Move threaded decorator to the new core.utils.threading module ([96b897b](https://github.com/robotcodedev/robotcode/commit/96b897b63bdc13aaa0e383a12e74399e0f8caa86))
-- Remove some unneeded code ([65e1775](https://github.com/robotcodedev/robotcode/commit/65e1775fd380b7e6b67a88c327f8961929e9cafb))
-- Move most of langserver...ast_utils to robotcode.robot.utils.ast ([bc96805](https://github.com/robotcodedev/robotcode/commit/bc96805dc8fb813ac4b2fe4e65da79897bf275c4))
-- Move language_server.robotframework.utils to robotcode.robot package ([6fe4dc0](https://github.com/robotcodedev/robotcode/commit/6fe4dc03408a2fb9c6c21c8db8954f6cb04c825f))
 - Move some diagnostics code from langserver package to robot package ([4b3e65c](https://github.com/robotcodedev/robotcode/commit/4b3e65cad56b7029860a35a4e16f496930a4b504))
+- Move language_server.robotframework.utils to robotcode.robot package ([6fe4dc0](https://github.com/robotcodedev/robotcode/commit/6fe4dc03408a2fb9c6c21c8db8954f6cb04c825f))
+- Move most of langserver...ast_utils to robotcode.robot.utils.ast ([bc96805](https://github.com/robotcodedev/robotcode/commit/bc96805dc8fb813ac4b2fe4e65da79897bf275c4))
+- Remove some unneeded code ([65e1775](https://github.com/robotcodedev/robotcode/commit/65e1775fd380b7e6b67a88c327f8961929e9cafb))
 
 
 ### Testing
 
-- Add RFW 7.0 to devel and test matrix ([cd35020](https://github.com/robotcodedev/robotcode/commit/cd3502086b1505b53a89047d27ca097d3dfce07b))
-- Try to stablize regression tests ([19419b3](https://github.com/robotcodedev/robotcode/commit/19419b3c10f0a7e079d6b6b7466516f4ec756f88))
-- Enable RFW 7.0 tests in github workflow ([6a39f66](https://github.com/robotcodedev/robotcode/commit/6a39f66f6113ef8e1437a3bf2ae10d3de6fe0203))
 - Another try to stabilize regression tests ([91d4d48](https://github.com/robotcodedev/robotcode/commit/91d4d482fdcecc65270f98f715760576ea9f7544))
+- Enable RFW 7.0 tests in github workflow ([6a39f66](https://github.com/robotcodedev/robotcode/commit/6a39f66f6113ef8e1437a3bf2ae10d3de6fe0203))
+- Try to stablize regression tests ([19419b3](https://github.com/robotcodedev/robotcode/commit/19419b3c10f0a7e079d6b6b7466516f4ec756f88))
+- Add RFW 7.0 to devel and test matrix ([cd35020](https://github.com/robotcodedev/robotcode/commit/cd3502086b1505b53a89047d27ca097d3dfce07b))
 
 
 ## [0.68.1](https://github.com/robotcodedev/robotcode/compare/v0.68.0..v0.68.1) - 2023-12-21
 
 ### Bug Fixes
 
-- **robotcode:** Add missing robotcode-plugin dependency ([570232d](https://github.com/robotcodedev/robotcode/commit/570232d6c7fa5c9bb2492515c4006d830481e151))
 - **robotcode:** Catch OSError's if we can't create the default robot.toml config file ([6dd5f9e](https://github.com/robotcodedev/robotcode/commit/6dd5f9ef69f4d9914e34feccb8566fbfca79b260))
+- **robotcode:** Add missing robotcode-plugin dependency ([570232d](https://github.com/robotcodedev/robotcode/commit/570232d6c7fa5c9bb2492515c4006d830481e151))
 
 
 ## [0.68.0](https://github.com/robotcodedev/robotcode/compare/v0.67.0..v0.68.0) - 2023-12-20
@@ -1692,8 +1692,8 @@ All notable changes to this project will be documented in this file. See [conven
 
 ### Bug Fixes
 
-- **langserver:** Correted folding of IF blocks with multiple ELSE/ELSE IF's ([536db5e](https://github.com/robotcodedev/robotcode/commit/536db5e7038ada87f37a6dce8fbf6d4c0d9fb0a0))
 - **langserver:** Unbound local variable in imports manager ([6d7b3d2](https://github.com/robotcodedev/robotcode/commit/6d7b3d2e53b9e8766891332318b5085a797f40ca))
+- **langserver:** Correted folding of IF blocks with multiple ELSE/ELSE IF's ([536db5e](https://github.com/robotcodedev/robotcode/commit/536db5e7038ada87f37a6dce8fbf6d4c0d9fb0a0))
 - **vscode:** Don't show diagnostics when discover tests from a single file ([25024ac](https://github.com/robotcodedev/robotcode/commit/25024ac4151571448b3ca465f90823d1761c336e))
 
 
@@ -1711,9 +1711,9 @@ All notable changes to this project will be documented in this file. See [conven
 
 ### Testing
 
-- **langserver:** Fix some regression tests ([0016ef6](https://github.com/robotcodedev/robotcode/commit/0016ef6318b6587fb8e9f193d80e8a5da370538c))
-- **langserver:** Fix some regression tests ([fec9542](https://github.com/robotcodedev/robotcode/commit/fec954287c534d2e98f8a798d7058426231a86ed))
 - **langserver:** Fix some more regression tests ([a399bd6](https://github.com/robotcodedev/robotcode/commit/a399bd6e1bd9fae2f15a198ec1c75b49b814947b))
+- **langserver:** Fix some regression tests ([fec9542](https://github.com/robotcodedev/robotcode/commit/fec954287c534d2e98f8a798d7058426231a86ed))
+- **langserver:** Fix some regression tests ([0016ef6](https://github.com/robotcodedev/robotcode/commit/0016ef6318b6587fb8e9f193d80e8a5da370538c))
 
 
 ## [0.66.1](https://github.com/robotcodedev/robotcode/compare/v0.66.0..v0.66.1) - 2023-11-24
@@ -1746,15 +1746,15 @@ All notable changes to this project will be documented in this file. See [conven
 
 ### Features
 
-- **langserver:** Support for new VAR statement in RF7 ([2678884](https://github.com/robotcodedev/robotcode/commit/2678884fedce733a3c6a52589c4b5f55fb2beda4))
 - **langserver:** Added new return type information of keyword from libdoc to documentation hover ([b91f2ff](https://github.com/robotcodedev/robotcode/commit/b91f2ff5b5a369ac65f36f0222954e29c56ca2f7))
+- **langserver:** Support for new VAR statement in RF7 ([2678884](https://github.com/robotcodedev/robotcode/commit/2678884fedce733a3c6a52589c4b5f55fb2beda4))
 
 
 ### Refactor
 
 - **jsonrpc:** Use concurrent.Futures instead of asyncio.Futures for request ([50384dc](https://github.com/robotcodedev/robotcode/commit/50384dcc94b676c4c8b3a6a7f1e4881104d99999))
-- Some code cleanup and simplifications ([f799fb4](https://github.com/robotcodedev/robotcode/commit/f799fb44090ded0fb0d12b0d4dbef8dbfdc28706))
 - Move markdown formatter to robotcode.robot.utils ([5a22bef](https://github.com/robotcodedev/robotcode/commit/5a22bef05d015576742506423b13cd773a4d9c70))
+- Some code cleanup and simplifications ([f799fb4](https://github.com/robotcodedev/robotcode/commit/f799fb44090ded0fb0d12b0d4dbef8dbfdc28706))
 
 
 ## [0.64.1](https://github.com/robotcodedev/robotcode/compare/v0.64.0..v0.64.1) - 2023-11-20
@@ -1769,23 +1769,23 @@ All notable changes to this project will be documented in this file. See [conven
 ### Bug Fixes
 
 - **cli:** Add missing dependency ([9c6ed1f](https://github.com/robotcodedev/robotcode/commit/9c6ed1faed00a577dea34e1c1c5fd9146f687a2a))
-- **langserver:** Signature help and markdown documentation for arguments without type for RF7 ([d67b2a0](https://github.com/robotcodedev/robotcode/commit/d67b2a025416a1e2ea90c20ec0db888794f874a8))
-- **langserver:** Support for clients that do not implement pull diagnostics, e.g. neovim ([ced5372](https://github.com/robotcodedev/robotcode/commit/ced5372267a0cf632f556391b2fcc215dc46016d))
 - **langserver:** Correct detection of valid nodes in quickfixes for TRY/EXCEPT statements in RF5 ([1bcef86](https://github.com/robotcodedev/robotcode/commit/1bcef867260c607c1fb8719a36d4408b84e138e6))
-- Correct completion of argument types for RF7 ([dbca774](https://github.com/robotcodedev/robotcode/commit/dbca774e4b38aac389d7ac2b1a12fe6cd730157f))
+- **langserver:** Support for clients that do not implement pull diagnostics, e.g. neovim ([ced5372](https://github.com/robotcodedev/robotcode/commit/ced5372267a0cf632f556391b2fcc215dc46016d))
+- **langserver:** Signature help and markdown documentation for arguments without type for RF7 ([d67b2a0](https://github.com/robotcodedev/robotcode/commit/d67b2a025416a1e2ea90c20ec0db888794f874a8))
 - Some small glitches in semantic highlightning ([39b658f](https://github.com/robotcodedev/robotcode/commit/39b658fd6acb9378d253e56e32bfea8046482b8b))
+- Correct completion of argument types for RF7 ([dbca774](https://github.com/robotcodedev/robotcode/commit/dbca774e4b38aac389d7ac2b1a12fe6cd730157f))
 
 
 ### Documentation
 
-- Correct some command line descriptions ([c0e2536](https://github.com/robotcodedev/robotcode/commit/c0e2536cb07b087e9929597146fde29b2f4f1a87))
 - Correct some docs for CLI interface ([7bc7099](https://github.com/robotcodedev/robotcode/commit/7bc70992d2cdff14c1a6b20b387633a7df40d591))
+- Correct some command line descriptions ([c0e2536](https://github.com/robotcodedev/robotcode/commit/c0e2536cb07b087e9929597146fde29b2f4f1a87))
 
 
 ### Features
 
-- **langserver:** Colorize new VAR token for RF7 ([3cd27b2](https://github.com/robotcodedev/robotcode/commit/3cd27b2307f4d5d8aba140bdc0127b7048ca8c68))
 - **langserver:** Add completions and new snippets for the new VAR statement for RF7 ([5631a1b](https://github.com/robotcodedev/robotcode/commit/5631a1bf11f7f3bc368732c06708dda10b80933d))
+- **langserver:** Colorize new VAR token for RF7 ([3cd27b2](https://github.com/robotcodedev/robotcode/commit/3cd27b2307f4d5d8aba140bdc0127b7048ca8c68))
 - **vscode:** Support for creating test profiles in vscodes test explorer ([8c0e889](https://github.com/robotcodedev/robotcode/commit/8c0e8893e1dfde90e8f624d7aa256b796dc0c7e3))
 
   In `launch.json` you can create a new entry with purpose `test-profile` this entry is show in the "run tests" and "debug tests" drop down and can be selected by right click on a test end then "Execute Using Profile..." entry. This profile is then used instead of the default test launch config with the purpose `test`
@@ -1811,8 +1811,8 @@ All notable changes to this project will be documented in this file. See [conven
 ### Refactor
 
 - **cli:** Move --(no)-diagnostic switch to the discover command ([9ed33c9](https://github.com/robotcodedev/robotcode/commit/9ed33c9944c0064de26e533ee328cf2207f3f30e))
-- Remove inner imports from analyzer ([470bcff](https://github.com/robotcodedev/robotcode/commit/470bcff25f1121460e146171a48104d9a8e35e7b))
 - Some code simplifications ([fbec326](https://github.com/robotcodedev/robotcode/commit/fbec3263054453ba37f8311e0d0f580b695f2565))
+- Remove inner imports from analyzer ([470bcff](https://github.com/robotcodedev/robotcode/commit/470bcff25f1121460e146171a48104d9a8e35e7b))
 
 
 ## [0.63.0](https://github.com/robotcodedev/robotcode/compare/v0.62.3..v0.63.0) - 2023-11-12
@@ -1845,8 +1845,8 @@ All notable changes to this project will be documented in this file. See [conven
 
 ### Bug Fixes
 
-- **langserver:** Correction of escaped characters and variables highlighting in import names ([22ef5f3](https://github.com/robotcodedev/robotcode/commit/22ef5f3e1be3509e2343a3e83f81c07d4ec97a91))
 - **langserver:** Correct handling of imports containing backslashes, in RobotFramework you have to escape them ([097c28b](https://github.com/robotcodedev/robotcode/commit/097c28bb2ac2e9621bce01a3746cb16edec1a107))
+- **langserver:** Correction of escaped characters and variables highlighting in import names ([22ef5f3](https://github.com/robotcodedev/robotcode/commit/22ef5f3e1be3509e2343a3e83f81c07d4ec97a91))
 
 
 ## [0.62.2](https://github.com/robotcodedev/robotcode/compare/v0.62.1..v0.62.2) - 2023-10-28
@@ -1927,8 +1927,8 @@ All notable changes to this project will be documented in this file. See [conven
 
 ### Performance
 
-- **core:** Improve perfomance of converting dataclasses to json ([dfb576e](https://github.com/robotcodedev/robotcode/commit/dfb576e2578d8306516400132d6b6d8df4a71e18))
 - **core:** Increase performance of dataclasses.from_dict ([a41cfb3](https://github.com/robotcodedev/robotcode/commit/a41cfb3835cc76a1616ad8de71dcdc374b240222))
+- **core:** Improve perfomance of converting dataclasses to json ([dfb576e](https://github.com/robotcodedev/robotcode/commit/dfb576e2578d8306516400132d6b6d8df4a71e18))
 
 
 ## [0.61.2](https://github.com/robotcodedev/robotcode/compare/v0.61.1..v0.61.2) - 2023-10-07
@@ -1960,8 +1960,8 @@ All notable changes to this project will be documented in this file. See [conven
 ### Features
 
 - **discovery:** Add more options for discovering tags and tests ([508b517](https://github.com/robotcodedev/robotcode/commit/508b5178c7503525bda7708e191f76b1cddacc7c))
-- **robotcode:** Rename `extra-` prefix to `extend-` in robot.toml files ([d4747e2](https://github.com/robotcodedev/robotcode/commit/d4747e256122cfde7556ef28de6e310867ccf3f6))
 - **robotcode:** Better formatting and include active, selected, enabled state of a profile in `profile list` command ([850c751](https://github.com/robotcodedev/robotcode/commit/850c751a34a96bcc8965b8d08c82dbae5e1e558a))
+- **robotcode:** Rename `extra-` prefix to `extend-` in robot.toml files ([d4747e2](https://github.com/robotcodedev/robotcode/commit/d4747e256122cfde7556ef28de6e310867ccf3f6))
 
 
 ### Performance
@@ -1973,8 +1973,8 @@ All notable changes to this project will be documented in this file. See [conven
 
 ### Features
 
-- **robotcode:** Introduce plugin spec for configuration classes ([582e360](https://github.com/robotcodedev/robotcode/commit/582e3608f452a4168124a11b23a872c45f8096be))
 - **robotcode:** Add `Path` to allowed GLOBALS in config expressions ([66aea74](https://github.com/robotcodedev/robotcode/commit/66aea748df4b2861951c8dc2d2a8a22b78c1fefc))
+- **robotcode:** Introduce plugin spec for configuration classes ([582e360](https://github.com/robotcodedev/robotcode/commit/582e3608f452a4168124a11b23a872c45f8096be))
 
 
 ## [0.59.0](https://github.com/robotcodedev/robotcode/compare/v0.58.0..v0.59.0) - 2023-09-28
@@ -2006,32 +2006,32 @@ All notable changes to this project will be documented in this file. See [conven
 
 ### Bug Fixes
 
-- **langserver:** Some correction at line and file endings for signature help ([782bfe6](https://github.com/robotcodedev/robotcode/commit/782bfe69b7f0828e4d6f952fe6bbe665de10a1c4))
 - **langserver:** Only show valid headers in resource and init.robot file at completion ([674040a](https://github.com/robotcodedev/robotcode/commit/674040a4ec0de9d8cf6031796798d7b1a03acfee))
+- **langserver:** Some correction at line and file endings for signature help ([782bfe6](https://github.com/robotcodedev/robotcode/commit/782bfe69b7f0828e4d6f952fe6bbe665de10a1c4))
 
 
 ## [0.57.2](https://github.com/robotcodedev/robotcode/compare/v0.57.1..v0.57.2) - 2023-09-20
 
 ### Bug Fixes
 
-- **langserver:** Don't show argument completion if the cursor is in a keyword assignment ([3c5a797](https://github.com/robotcodedev/robotcode/commit/3c5a797c37d4c6a3c06f4d87cdb0d01fe2c98146))
 - **langserver:** Don't show surround code action if we have selected template arguments ([59a0114](https://github.com/robotcodedev/robotcode/commit/59a01140f8800d5be0caba48e0654dee8de83325))
+- **langserver:** Don't show argument completion if the cursor is in a keyword assignment ([3c5a797](https://github.com/robotcodedev/robotcode/commit/3c5a797c37d4c6a3c06f4d87cdb0d01fe2c98146))
 
 
 ## [0.57.1](https://github.com/robotcodedev/robotcode/compare/v0.57.0..v0.57.1) - 2023-09-19
 
 ### Bug Fixes
 
-- **langserver:** Correct some completion quirks at line or file ends ([080ab83](https://github.com/robotcodedev/robotcode/commit/080ab83a02ba34cfbae55785813b0ffdf40ceb77))
 - **langserver:** Correct some in refactor surrounding quirks at file ends ([082132c](https://github.com/robotcodedev/robotcode/commit/082132cc69df4ab0a96fe834426107cc003dfad8))
+- **langserver:** Correct some completion quirks at line or file ends ([080ab83](https://github.com/robotcodedev/robotcode/commit/080ab83a02ba34cfbae55785813b0ffdf40ceb77))
 
 
 ## [0.57.0](https://github.com/robotcodedev/robotcode/compare/v0.56.0..v0.57.0) - 2023-09-17
 
 ### Features
 
-- **langserver:** Quick fixes for code actions are generated for all diagnostics specified in the request, and quick fixes are generated with the name of the variable or keyword in the label. ([c2b8f5a](https://github.com/robotcodedev/robotcode/commit/c2b8f5aa3ac11905b3f8bfe45e89691219f85df9))
 - **langserver:** Improved quickfix `create keyword` can now add keywords to resource files if valid namespace is given ([9499d43](https://github.com/robotcodedev/robotcode/commit/9499d431fd1fb842237948956a42e6f803128a60))
+- **langserver:** Quick fixes for code actions are generated for all diagnostics specified in the request, and quick fixes are generated with the name of the variable or keyword in the label. ([c2b8f5a](https://github.com/robotcodedev/robotcode/commit/c2b8f5aa3ac11905b3f8bfe45e89691219f85df9))
 - New code action refactor rewrite: surroundings for TRY/EXCEPT/FINALLY ([fdba5b9](https://github.com/robotcodedev/robotcode/commit/fdba5b93cd3b9484eceb73b9eeacbef2769876d2))
 
 
@@ -2049,9 +2049,9 @@ All notable changes to this project will be documented in this file. See [conven
 
 ### Features
 
-- **langserver:** New code action quick fixes - assign kw result to variable, create local variable, disable robot code diagnostics for line ([bba00aa](https://github.com/robotcodedev/robotcode/commit/bba00aa3edc9e51a24104221d019798aba211d5d))
-- **langserver:** New code action quick fix - create suite variable ([4c03a80](https://github.com/robotcodedev/robotcode/commit/4c03a80f118fdb5547777f62a99546a874d2cfdb))
 - **langserver:** New code action quick fix - Add argument ([a21c05b](https://github.com/robotcodedev/robotcode/commit/a21c05be3f767def97d38c9960df8efdade1749c))
+- **langserver:** New code action quick fix - create suite variable ([4c03a80](https://github.com/robotcodedev/robotcode/commit/4c03a80f118fdb5547777f62a99546a874d2cfdb))
+- **langserver:** New code action quick fixes - assign kw result to variable, create local variable, disable robot code diagnostics for line ([bba00aa](https://github.com/robotcodedev/robotcode/commit/bba00aa3edc9e51a24104221d019798aba211d5d))
 
 
 ### Refactor
@@ -2078,9 +2078,9 @@ All notable changes to this project will be documented in this file. See [conven
 
 ### Bug Fixes
 
-- Update of RobotCode icon in status bar when Python environment is changed ([161806c](https://github.com/robotcodedev/robotcode/commit/161806c32df5f76d6ca86a441e060024f0eeba17))
-- Don't complete arguments for run keywords ([38698ed](https://github.com/robotcodedev/robotcode/commit/38698ed05a5f809f287c9e003d3837e605bab2be))
 - Correct handling of @ variable and & dictionary arguments in signature help and completion ([4415387](https://github.com/robotcodedev/robotcode/commit/44153873fff9981eda05a07ba2922a625328e756))
+- Don't complete arguments for run keywords ([38698ed](https://github.com/robotcodedev/robotcode/commit/38698ed05a5f809f287c9e003d3837e605bab2be))
+- Update of RobotCode icon in status bar when Python environment is changed ([161806c](https://github.com/robotcodedev/robotcode/commit/161806c32df5f76d6ca86a441e060024f0eeba17))
 
 
 ### Features
@@ -2098,9 +2098,9 @@ All notable changes to this project will be documented in this file. See [conven
 
 ### Bug Fixes
 
-- **langserver:** Correct some styles for semantic highlightning ([89eeeb4](https://github.com/robotcodedev/robotcode/commit/89eeeb4506d8e1730cf8c44dc69f423ad95d0d24))
-- **langserver:** Change scope name of argument tokens to allow better automatic opening of completions ([4f144c4](https://github.com/robotcodedev/robotcode/commit/4f144c4114d6ed1921143451d47ecfe738a77f1b))
 - **langserver:** Dont show values in completions if the token before is an named argument token ([26c6eda](https://github.com/robotcodedev/robotcode/commit/26c6edab9488f9b345cb328c792153a1a2cfb887))
+- **langserver:** Change scope name of argument tokens to allow better automatic opening of completions ([4f144c4](https://github.com/robotcodedev/robotcode/commit/4f144c4114d6ed1921143451d47ecfe738a77f1b))
+- **langserver:** Correct some styles for semantic highlightning ([89eeeb4](https://github.com/robotcodedev/robotcode/commit/89eeeb4506d8e1730cf8c44dc69f423ad95d0d24))
 
 
 ## [0.54.2](https://github.com/robotcodedev/robotcode/compare/v0.54.1..v0.54.2) - 2023-09-02
@@ -2123,17 +2123,17 @@ All notable changes to this project will be documented in this file. See [conven
 
 ### Bug Fixes
 
-- **langserver:** Disable directory browsing in documentation server ([18ad3ff](https://github.com/robotcodedev/robotcode/commit/18ad3ff50f7a223bdeed6f58d1cd54386a12664b))
 - **langserver:** Correct end positon of completion range in arguments ([063d105](https://github.com/robotcodedev/robotcode/commit/063d105d6fa2feb94253a9b46a448c2977a168a2))
+- **langserver:** Disable directory browsing in documentation server ([18ad3ff](https://github.com/robotcodedev/robotcode/commit/18ad3ff50f7a223bdeed6f58d1cd54386a12664b))
 
 
 ### Features
 
+- **langserver:** Better signature help and completion of keyword arguments and library import arguments, including completions for type converters like Enums, bools, TypedDict, ... ([dee570b](https://github.com/robotcodedev/robotcode/commit/dee570b98352c4d6aafe1ce5496806fd02fc9254))
 - **langserver:** Better argument signatures for completion and signature help ([ed7b186](https://github.com/robotcodedev/robotcode/commit/ed7b18623b7f49180f98672bd7fb2a0781e15b9e))
 
   don't break between prefix and name of signature
 
-- **langserver:** Better signature help and completion of keyword arguments and library import arguments, including completions for type converters like Enums, bools, TypedDict, ... ([dee570b](https://github.com/robotcodedev/robotcode/commit/dee570b98352c4d6aafe1ce5496806fd02fc9254))
 
 
 ## [0.53.0](https://github.com/robotcodedev/robotcode/compare/v0.52.0..v0.53.0) - 2023-08-27
@@ -2157,11 +2157,11 @@ All notable changes to this project will be documented in this file. See [conven
 ### Features
 
 - **debugger:** Add some more informations in verbose mode ([ff87819](https://github.com/robotcodedev/robotcode/commit/ff87819c10f1ceb656ce28d678e9c74f4d0b5810))
+- **langserver:** Inlay hint and signature help now shows the correct parameters and active parameter index, make both work for library and variable imports and show type informations if type hints are defined ([99bc996](https://github.com/robotcodedev/robotcode/commit/99bc996a970e91ec54bdec5a2f371baafd965706))
 - **langserver:** Goto, highlight, rename, hover, find references for named arguments ([054d210](https://github.com/robotcodedev/robotcode/commit/054d2101536a205d87b2d7409609cfe5ac1ba6ff))
 
   rename and goto only works for resource keywords
 
-- **langserver:** Inlay hint and signature help now shows the correct parameters and active parameter index, make both work for library and variable imports and show type informations if type hints are defined ([99bc996](https://github.com/robotcodedev/robotcode/commit/99bc996a970e91ec54bdec5a2f371baafd965706))
 - **robotcode:** Internal cli args are now hidden ([934e299](https://github.com/robotcodedev/robotcode/commit/934e299ecbfce3d7ef5a3ca403201499836a32fd))
 
   If you want to show these args set the environment variable `ROBOTCODE_SHOW_HIDDEN_ARGS` to `true` or `1`.
@@ -2191,8 +2191,8 @@ All notable changes to this project will be documented in this file. See [conven
 ### Features
 
 - **discovery:** Option to show/hide parsing errors/warnings at suite/test discovery ([633b6b5](https://github.com/robotcodedev/robotcode/commit/633b6b54f3026a93821faedd0d48a860ebac6f63))
-- **langserver:** Highlight namespace references ([b9cd85a](https://github.com/robotcodedev/robotcode/commit/b9cd85a9e6af908ab3c541eb37b89e1d3c08fc82))
 - **langserver:** Rework "Analysing", "Hover", "Document Highlight", "Goto" and other things to make them faster, simpler, and easier to extend ([47c1feb](https://github.com/robotcodedev/robotcode/commit/47c1febac2536f653ff662154dcea40c48f860c2))
+- **langserver:** Highlight namespace references ([b9cd85a](https://github.com/robotcodedev/robotcode/commit/b9cd85a9e6af908ab3c541eb37b89e1d3c08fc82))
 
 
 ### Refactor
@@ -2237,18 +2237,18 @@ All notable changes to this project will be documented in this file. See [conven
 
 ### Documentation
 
-- Better help texts for profiles and config commands ([3195451](https://github.com/robotcodedev/robotcode/commit/3195451c449dbf4e15c854c04e8bc9b5f5e45767))
 - Correct doc strings in model ([e0f8e6b](https://github.com/robotcodedev/robotcode/commit/e0f8e6b166d5d255cbf8498272869d8c2f2b30c4))
+- Better help texts for profiles and config commands ([3195451](https://github.com/robotcodedev/robotcode/commit/3195451c449dbf4e15c854c04e8bc9b5f5e45767))
 
 
 ### Features
 
+- "create keyword" quick fix detects bdd prefixes in the keyword being created and creates keywords without the prefix ([e9b6431](https://github.com/robotcodedev/robotcode/commit/e9b64313a35db2931dc02a5c6f0f95f4a1f9be98))
+- Reporting suites and tests with the same name when tests are discovered ([e5d895b](https://github.com/robotcodedev/robotcode/commit/e5d895bff914326fcc99d5c86ea98624a86136b4))
 - User default `robot.toml` config file ([55f559d](https://github.com/robotcodedev/robotcode/commit/55f559d36c16fb0e9f371c31d1a2a45d427eb636))
 
 
   Instead of defining default settings like output-dir or python-path in VSCode a default config file is created in user directory. The default settings in VSCode are removed, but you can define them here again, but the prefered way is to use the `robot.toml` file in user directory.
-- Reporting suites and tests with the same name when tests are discovered ([e5d895b](https://github.com/robotcodedev/robotcode/commit/e5d895bff914326fcc99d5c86ea98624a86136b4))
-- "create keyword" quick fix detects bdd prefixes in the keyword being created and creates keywords without the prefix ([e9b6431](https://github.com/robotcodedev/robotcode/commit/e9b64313a35db2931dc02a5c6f0f95f4a1f9be98))
 
 
 ## [0.48.0](https://github.com/robotcodedev/robotcode/compare/v0.47.5..v0.48.0) - 2023-07-30
@@ -2256,14 +2256,14 @@ All notable changes to this project will be documented in this file. See [conven
 ### Bug Fixes
 
 - **robotcode:** Add missing profile settings to config documentation ([48cb64c](https://github.com/robotcodedev/robotcode/commit/48cb64cd6e04d97dd473598b3b91a0698772de48))
+- Better output for discover info command ([ac6b4a6](https://github.com/robotcodedev/robotcode/commit/ac6b4a67be5e891d14e7cc05b42fe73f210478e8))
+- Discover tests for RF 6.1.1 ([b27cbcf](https://github.com/robotcodedev/robotcode/commit/b27cbcfe7ed373b05caf5b5d3b4df93345b6c34d))
+- In a test run, errors that occur are first selected in the test case and not in the keyword definition ([a6f0488](https://github.com/robotcodedev/robotcode/commit/a6f0488fd155d3aa01da4568d5154e22b5c57ab5))
+- Correct completion of settings with ctrl+space in some situation ([47c1165](https://github.com/robotcodedev/robotcode/commit/47c1165468b5ea9e6705c4f95d1f763afae0fda2))
 - Correct update of test run results when suite teardown fails or is skipped during suite teardown ([80b742e](https://github.com/robotcodedev/robotcode/commit/80b742eb1cde1777393475727f15738f58b497a9))
 
 
   Unfortunately, if a test has already failed but it is subsequently skipped in the teardown, the error status of VSCode is not set because the skipped status has a lower priority than the failed status. This is a VSCode problem and I can't change it at the moment.
-- Correct completion of settings with ctrl+space in some situation ([47c1165](https://github.com/robotcodedev/robotcode/commit/47c1165468b5ea9e6705c4f95d1f763afae0fda2))
-- In a test run, errors that occur are first selected in the test case and not in the keyword definition ([a6f0488](https://github.com/robotcodedev/robotcode/commit/a6f0488fd155d3aa01da4568d5154e22b5c57ab5))
-- Discover tests for RF 6.1.1 ([b27cbcf](https://github.com/robotcodedev/robotcode/commit/b27cbcfe7ed373b05caf5b5d3b4df93345b6c34d))
-- Better output for discover info command ([ac6b4a6](https://github.com/robotcodedev/robotcode/commit/ac6b4a67be5e891d14e7cc05b42fe73f210478e8))
 
 
 ### Features
@@ -2290,8 +2290,8 @@ All notable changes to this project will be documented in this file. See [conven
 
 ### Bug Fixes
 
-- Reset changlog ([e39b6ce](https://github.com/robotcodedev/robotcode/commit/e39b6ce25183f4353830db8abc8b04ee19ffbbeb))
 - Move to commitizen to create new releases, this is only a dummy release.. ([07b6e4c](https://github.com/robotcodedev/robotcode/commit/07b6e4c96b63b821368c47094c55192b03f33279))
+- Reset changlog ([e39b6ce](https://github.com/robotcodedev/robotcode/commit/e39b6ce25183f4353830db8abc8b04ee19ffbbeb))
 
 
 ## [0.47.2](https://github.com/robotcodedev/robotcode/compare/v0.47.1..v0.47.2) - 2023-07-17
@@ -2313,32 +2313,32 @@ All notable changes to this project will be documented in this file. See [conven
 
 ### Bug Fixes
 
-- **debugger:** (re)disable attachPython by default ([26ee516](https://github.com/robotcodedev/robotcode/commit/26ee516b9dda5912fff18d2b9e4f3126b08fcc0a))
 - **debugger:** Hide uncaught exceptions now also works correctly for RF >=5 and < 6.1 ([f784613](https://github.com/robotcodedev/robotcode/commit/f7846138d2f668625d1afc2ec46f246338cc084e))
-- Update diagnostic for Robocop 4.0 release after disablers module was rewritten ([6636bfd](https://github.com/robotcodedev/robotcode/commit/6636bfd352927c5721f9c34edfc99b2635b99937))
-- Stabilize debugger with new vscode version > 1.79 ([d5ad4ba](https://github.com/robotcodedev/robotcode/commit/d5ad4bad6ffe8f210cb6b0f10ca33ccdb269a457))
+- **debugger:** (re)disable attachPython by default ([26ee516](https://github.com/robotcodedev/robotcode/commit/26ee516b9dda5912fff18d2b9e4f3126b08fcc0a))
 - Correct message output in test results view ([b18856f](https://github.com/robotcodedev/robotcode/commit/b18856f1232650e91de3abf1ee8071c750fb689c))
+- Stabilize debugger with new vscode version > 1.79 ([d5ad4ba](https://github.com/robotcodedev/robotcode/commit/d5ad4bad6ffe8f210cb6b0f10ca33ccdb269a457))
+- Update diagnostic for Robocop 4.0 release after disablers module was rewritten ([6636bfd](https://github.com/robotcodedev/robotcode/commit/6636bfd352927c5721f9c34edfc99b2635b99937))
 
 
 ### Features
 
-- **debugger:** Debugger does not stop on errors caught in TRY/EXCEPT blocks ([043842c](https://github.com/robotcodedev/robotcode/commit/043842c0709867fdc18d9b4417c7db00cead04fb))
-
-  To stop on these errors you have to switch on the exception breakpoint "Failed Keywords".
-
+- **debugger:** Expanding dict and list variables in the variable view of the debugger, this also works in hints over variables, in the watch view and also by evaluating expressions/keywords in the command line of the debugger ([2969379](https://github.com/robotcodedev/robotcode/commit/296937934db8997891df61c600953fc166a2dec2))
+- **debugger:** Simple keyword completion in debugger ([6b1ffb6](https://github.com/robotcodedev/robotcode/commit/6b1ffb6ae5738cd9fcf674729baecbb3964d0729))
 - **debugger:** Switching between "keyword" and "expression" mode by typing `# exprmode` into debug console (default: keyword mode) ([1cc6680](https://github.com/robotcodedev/robotcode/commit/1cc668006b4d04911cae419d3dd53916c7dd68fe))
 
   In the expression mode you can enter python expression and ask for variables and so on.
   In keyword mode you can enter robot framework statements, i.e. simple keyword call, IF/FOR/TRY statements, this also allows multi line input
 
-- **debugger:** Simple keyword completion in debugger ([6b1ffb6](https://github.com/robotcodedev/robotcode/commit/6b1ffb6ae5738cd9fcf674729baecbb3964d0729))
-- **debugger:** Expanding dict and list variables in the variable view of the debugger, this also works in hints over variables, in the watch view and also by evaluating expressions/keywords in the command line of the debugger ([2969379](https://github.com/robotcodedev/robotcode/commit/296937934db8997891df61c600953fc166a2dec2))
-- Show more informations in hint over a variables import ([735a209](https://github.com/robotcodedev/robotcode/commit/735a209801ab3014ec417a583279929a9d88c1b2))
+- **debugger:** Debugger does not stop on errors caught in TRY/EXCEPT blocks ([043842c](https://github.com/robotcodedev/robotcode/commit/043842c0709867fdc18d9b4417c7db00cead04fb))
+
+  To stop on these errors you have to switch on the exception breakpoint "Failed Keywords".
+
+- Show deprecation information if using `Force Tags` and `Default Tags` ([f23e5d0](https://github.com/robotcodedev/robotcode/commit/f23e5d0ec2420561589ca24240e449defe7fd373))
 - Complete reserved tags in Tags settings ([483b9ac](https://github.com/robotcodedev/robotcode/commit/483b9ac539daca8129945aec31735fd51bf00c6b))
 
 
   Closes [ENHANCEMENT] Support Reserved Tags #103
-- Show deprecation information if using `Force Tags` and `Default Tags` ([f23e5d0](https://github.com/robotcodedev/robotcode/commit/f23e5d0ec2420561589ca24240e449defe7fd373))
+- Show more informations in hint over a variables import ([735a209](https://github.com/robotcodedev/robotcode/commit/735a209801ab3014ec417a583279929a9d88c1b2))
 
 
 ## [0.46.0](https://github.com/robotcodedev/robotcode/compare/v0.45.0..v0.46.0) - 2023-07-05
@@ -2362,8 +2362,8 @@ All notable changes to this project will be documented in this file. See [conven
 
 ### Bug Fixes
 
-- Change code property for diagnostics for analyse imports to ImportRequiresValue ([222e89c](https://github.com/robotcodedev/robotcode/commit/222e89cdc0391323d89c54ccbc4a54d13eb99b28))
 - Document_symbols throws exception if section name is empty ([ffce34d](https://github.com/robotcodedev/robotcode/commit/ffce34d7edd3f31f94da76edc090853f98cadb29))
+- Change code property for diagnostics for analyse imports to ImportRequiresValue ([222e89c](https://github.com/robotcodedev/robotcode/commit/222e89cdc0391323d89c54ccbc4a54d13eb99b28))
 
 
 ### Features
@@ -2382,9 +2382,9 @@ All notable changes to this project will be documented in this file. See [conven
 
 ### Bug Fixes
 
-- Extension not terminating sometimes on vscode exit ([753c89c](https://github.com/robotcodedev/robotcode/commit/753c89c91373bb5a27881bee23c1fc1e37b41356))
-- Detect languageId of not given at "textDocument/didOpen" ([54e329e](https://github.com/robotcodedev/robotcode/commit/54e329e48d456c61063b697b91d4796a8ca34b3e))
 - Correct handling error in server->client JSON RPC requests ([6e16659](https://github.com/robotcodedev/robotcode/commit/6e166590f7b0096741c085d13ea7437f4674c4a8))
+- Detect languageId of not given at "textDocument/didOpen" ([54e329e](https://github.com/robotcodedev/robotcode/commit/54e329e48d456c61063b697b91d4796a8ca34b3e))
+- Extension not terminating sometimes on vscode exit ([753c89c](https://github.com/robotcodedev/robotcode/commit/753c89c91373bb5a27881bee23c1fc1e37b41356))
 
 
 ### Features
@@ -2401,8 +2401,8 @@ All notable changes to this project will be documented in this file. See [conven
 
 ### Bug Fixes
 
-- Only update test explorer items if file is a valid robot suite ([9461acf](https://github.com/robotcodedev/robotcode/commit/9461acf5e1b1263dd5f61c1b864de83729fd87ec))
 - Update testitems does not work correctly if a __init__.robot is changed ([a426e84](https://github.com/robotcodedev/robotcode/commit/a426e840c35a17aba95f0c927b34d338d4a31889))
+- Only update test explorer items if file is a valid robot suite ([9461acf](https://github.com/robotcodedev/robotcode/commit/9461acf5e1b1263dd5f61c1b864de83729fd87ec))
 
 
 ## [0.43.1](https://github.com/robotcodedev/robotcode/compare/v0.43.0..v0.43.1) - 2023-06-15
@@ -2416,31 +2416,31 @@ All notable changes to this project will be documented in this file. See [conven
 
 ### Bug Fixes
 
-- Checks for robot version 6.1 ([e16f09c](https://github.com/robotcodedev/robotcode/commit/e16f09caa359995c052606a46c9843fba0591731))
-- Hover over a tasks shows "task" in hint and not "test case" ([457f3ae](https://github.com/robotcodedev/robotcode/commit/457f3ae1409d58c5c6c5844c714559ce161fa5dd))
 - Correct highlightning `*** Tasks ***` and `*** Settings ***` ([c4cfdb9](https://github.com/robotcodedev/robotcode/commit/c4cfdb97b1e0b60561573dd94ddac5631093a7c6))
+- Hover over a tasks shows "task" in hint and not "test case" ([457f3ae](https://github.com/robotcodedev/robotcode/commit/457f3ae1409d58c5c6c5844c714559ce161fa5dd))
+- Checks for robot version 6.1 ([e16f09c](https://github.com/robotcodedev/robotcode/commit/e16f09caa359995c052606a46c9843fba0591731))
 
 
 ### Features
 
-- Support for new `--parseinclude` option in robot config ([dfd88d8](https://github.com/robotcodedev/robotcode/commit/dfd88d87ed08d1065a26eb6f29c1eec6a03272f6))
-- Support for new RF 6.1 `--parse-include` option for discovering and executing tests ([607cf8d](https://github.com/robotcodedev/robotcode/commit/607cf8db2777b5d11db89e830131261d60581b0f))
-- Enable importing and completion of `.rest`, `.rsrc` and `.json` resource extensions (not parsing) ([3df22dd](https://github.com/robotcodedev/robotcode/commit/3df22ddcb703983b56d0756fef29d06cb2960009))
 - Support for importing `.json` files in RF 6.1 ([0f84c4e](https://github.com/robotcodedev/robotcode/commit/0f84c4ec1d9a897aa25ab37fff702f8feea50cf4))
+- Enable importing and completion of `.rest`, `.rsrc` and `.json` resource extensions (not parsing) ([3df22dd](https://github.com/robotcodedev/robotcode/commit/3df22ddcb703983b56d0756fef29d06cb2960009))
+- Support for new RF 6.1 `--parse-include` option for discovering and executing tests ([607cf8d](https://github.com/robotcodedev/robotcode/commit/607cf8db2777b5d11db89e830131261d60581b0f))
+- Support for new `--parseinclude` option in robot config ([dfd88d8](https://github.com/robotcodedev/robotcode/commit/dfd88d87ed08d1065a26eb6f29c1eec6a03272f6))
 
 
 ### Testing
 
-- Update tests für RF 6.1rc1 ([3d8a702](https://github.com/robotcodedev/robotcode/commit/3d8a702b3a4e838c5e7e23de4b37b4945dd9f377))
 - Update regression tests ([b37bf58](https://github.com/robotcodedev/robotcode/commit/b37bf587e19d4c4bf1846a341572abdf3c1bcf63))
+- Update tests für RF 6.1rc1 ([3d8a702](https://github.com/robotcodedev/robotcode/commit/3d8a702b3a4e838c5e7e23de4b37b4945dd9f377))
 
 
 ## [0.42.0](https://github.com/robotcodedev/robotcode/compare/v0.41.0..v0.42.0) - 2023-06-05
 
 ### Bug Fixes
 
-- Resolving variable values in hover for RF 6.1 ([0acdd21](https://github.com/robotcodedev/robotcode/commit/0acdd21f24266700d87b046deead43aa33aae90b))
 - Compatibility with Python 3.12 ([3ec4d23](https://github.com/robotcodedev/robotcode/commit/3ec4d23cd4e4f2b04d5a1b792131b90ef523b8e8))
+- Resolving variable values in hover for RF 6.1 ([0acdd21](https://github.com/robotcodedev/robotcode/commit/0acdd21f24266700d87b046deead43aa33aae90b))
 
 
 ### Features
@@ -2467,11 +2467,11 @@ All notable changes to this project will be documented in this file. See [conven
 
 ### Features
 
-- Optimize/speedup searching of files, setting `robotcode.workspace.excludePatterns` now supports gitignore like patterns ([d48b629](https://github.com/robotcodedev/robotcode/commit/d48b629a2ad77c9ee1bb67fc2ff00461b593ace3))
 - New `robotcode.robotidy.ignoreGitDir` and `robotcode.robotidy.config` setting to set the config file for _robotidy_ and to ignore git files if searching for config files for _robotidy_ ([a9e9c02](https://github.com/robotcodedev/robotcode/commit/a9e9c023ed62b1fc6ab7d231c9a1c47cfb42330b))
 
 
   see also: https://robotidy.readthedocs.io/
+- Optimize/speedup searching of files, setting `robotcode.workspace.excludePatterns` now supports gitignore like patterns ([d48b629](https://github.com/robotcodedev/robotcode/commit/d48b629a2ad77c9ee1bb67fc2ff00461b593ace3))
 
 
 ### Refactor
@@ -2500,16 +2500,16 @@ All notable changes to this project will be documented in this file. See [conven
 
 ### Features
 
-- Language server now is a robotcode cli plugin and can use config files and execution profiles ([12308bb](https://github.com/robotcodedev/robotcode/commit/12308bbed1585b62885a8d699d8969a1310b7db3))
 - New command `RobotCode: Select Execution Profiles` ([78f5548](https://github.com/robotcodedev/robotcode/commit/78f554899a0c50c82deeac07fc921128beef778c))
+- Language server now is a robotcode cli plugin and can use config files and execution profiles ([12308bb](https://github.com/robotcodedev/robotcode/commit/12308bbed1585b62885a8d699d8969a1310b7db3))
 
 
 ## [0.38.0](https://github.com/robotcodedev/robotcode/compare/v0.37.1..v0.38.0) - 2023-05-15
 
 ### Bug Fixes
 
-- Use dispose instead of stop to exit language server instances ([5aba99b](https://github.com/robotcodedev/robotcode/commit/5aba99b1ad551132e8f86c138cca28694dfec545))
 - Bring output console into view if robotcode discovery fails ([8bcc147](https://github.com/robotcodedev/robotcode/commit/8bcc1477b1315a7bd385d159346dd6ca95c0e57f))
+- Use dispose instead of stop to exit language server instances ([5aba99b](https://github.com/robotcodedev/robotcode/commit/5aba99b1ad551132e8f86c138cca28694dfec545))
 
 
 ### Features
@@ -2539,8 +2539,8 @@ All notable changes to this project will be documented in this file. See [conven
 
 ### Features
 
-- Test discovery now runs in a separate process with the `robotcode discover` command, this supports also prerunmodifiers and RF 6.1 custom parsers ([ee5f0fb](https://github.com/robotcodedev/robotcode/commit/ee5f0fb8dd70232cc50b78e73b180adb906c57d2))
 - Reintroduce of updating the tests when typing ([94053fc](https://github.com/robotcodedev/robotcode/commit/94053fca5ad40300c8e57bebbecc2523b7d26d94))
+- Test discovery now runs in a separate process with the `robotcode discover` command, this supports also prerunmodifiers and RF 6.1 custom parsers ([ee5f0fb](https://github.com/robotcodedev/robotcode/commit/ee5f0fb8dd70232cc50b78e73b180adb906c57d2))
 
 
 ### Refactor
@@ -2552,11 +2552,11 @@ All notable changes to this project will be documented in this file. See [conven
 
 ### Features
 
-- Select run profiles in test explorer ([a7f8408](https://github.com/robotcodedev/robotcode/commit/a7f840801656b96fc5dca68b69a112c17f7a08bc))
 - Simple `discover all` command ([a1d8b84](https://github.com/robotcodedev/robotcode/commit/a1d8b84349193be58432ec883e1c5dbf0887f64e))
 
 
   shows which tests are executed without running them.
+- Select run profiles in test explorer ([a7f8408](https://github.com/robotcodedev/robotcode/commit/a7f840801656b96fc5dca68b69a112c17f7a08bc))
 
 
 ## [0.35.0](https://github.com/robotcodedev/robotcode/compare/v0.34.1..v0.35.0) - 2023-04-25
@@ -2598,8 +2598,8 @@ All notable changes to this project will be documented in this file. See [conven
 
 ### Refactor
 
-- Create robotcode bundled interface ([1126605](https://github.com/robotcodedev/robotcode/commit/1126605c52fb17993c875358e8e1ddca2a8ea224))
 - Fix some ruff errors ([38aa2d2](https://github.com/robotcodedev/robotcode/commit/38aa2d230ae785719eae86785ed0fd4b66036ee8))
+- Create robotcode bundled interface ([1126605](https://github.com/robotcodedev/robotcode/commit/1126605c52fb17993c875358e8e1ddca2a8ea224))
 
 
 ## [0.33.0](https://github.com/robotcodedev/robotcode/compare/v0.32.3..v0.33.0) - 2023-04-09
@@ -2654,8 +2654,8 @@ All notable changes to this project will be documented in this file. See [conven
 
 ### Features
 
-- Add command for robots _testdoc_ ([dd6d758](https://github.com/robotcodedev/robotcode/commit/dd6d7583f5075b35823b83b8a7aa828507904013))
 - Allow expression for str options, better handling of tag:<pattern>, name:<pattern> options ([d037ddb](https://github.com/robotcodedev/robotcode/commit/d037ddbd9d44ccbb501af3854cf8a7d7df607ddd))
+- Add command for robots _testdoc_ ([dd6d758](https://github.com/robotcodedev/robotcode/commit/dd6d7583f5075b35823b83b8a7aa828507904013))
 
 
 ### Refactor
@@ -2673,20 +2673,20 @@ All notable changes to this project will be documented in this file. See [conven
 ### Features
 
 - **robotcode:** Add commands to get informations about configurations and profiles ([edc4ee5](https://github.com/robotcodedev/robotcode/commit/edc4ee5e5b41f397918b9476ec7e6e09f0bfe53c))
-- New commands robot, rebot, libdoc for robotcode.runner ([25027fa](https://github.com/robotcodedev/robotcode/commit/25027faf3e3b7bb14596d90dd0ec1f43af922522))
 - Profiles can now be enabled or disabled, also with a condition. Profiles can now also be selected with a wildcard pattern. ([4282f02](https://github.com/robotcodedev/robotcode/commit/4282f02bab4b483d74d486e983ec9a1f606fd3d7))
+- New commands robot, rebot, libdoc for robotcode.runner ([25027fa](https://github.com/robotcodedev/robotcode/commit/25027faf3e3b7bb14596d90dd0ec1f43af922522))
 
 
 ### Refactor
 
-- Add more configuration options, update schema, new command config ([5816669](https://github.com/robotcodedev/robotcode/commit/5816669096fc90cfd58f947e361b2e36d725902e))
 - Move the config command to robotcode package ([90c6c25](https://github.com/robotcodedev/robotcode/commit/90c6c2545dc6f2077d6aa2f2670a3570d134a673))
+- Add more configuration options, update schema, new command config ([5816669](https://github.com/robotcodedev/robotcode/commit/5816669096fc90cfd58f947e361b2e36d725902e))
 
 
 ### Testing
 
-- Correct mypy error in tests ([37dca4d](https://github.com/robotcodedev/robotcode/commit/37dca4d57871d882b40bbc31cb6c7fa0055eafe3))
 - Add bundled to be ignored in pytest discovery ([c008005](https://github.com/robotcodedev/robotcode/commit/c0080059b9c9133e531b337492b71cbd07437962))
+- Correct mypy error in tests ([37dca4d](https://github.com/robotcodedev/robotcode/commit/37dca4d57871d882b40bbc31cb6c7fa0055eafe3))
 
 
 ## [0.30.0](https://github.com/robotcodedev/robotcode/compare/v0.29.0..v0.30.0) - 2023-03-22
@@ -2719,8 +2719,8 @@ All notable changes to this project will be documented in this file. See [conven
 
 ### Bug Fixes
 
-- Correct discovering for RobotFramework 6.1a1 ([99aa82d](https://github.com/robotcodedev/robotcode/commit/99aa82de7d8b67d6acae1d2131351ff9354c4a4f))
 - Correct analysing keywords with embedded arguments for RF >= 6.1 ([ef0b51f](https://github.com/robotcodedev/robotcode/commit/ef0b51f0bae83194a20a45d7cb07a4a6ac2b4f1c))
+- Correct discovering for RobotFramework 6.1a1 ([99aa82d](https://github.com/robotcodedev/robotcode/commit/99aa82de7d8b67d6acae1d2131351ff9354c4a4f))
 
 
 ### Documentation
@@ -2751,8 +2751,8 @@ All notable changes to this project will be documented in this file. See [conven
 
 ### Bug Fixes
 
-- Return codes for command line tools now uses sys.exit with return codes ([b6ad7dd](https://github.com/robotcodedev/robotcode/commit/b6ad7dd75276e65ffab9c8acb2c24e0750a93791))
 - #125 Robot Code crashes with a variables file containing a Dict[str, Callable] ([7e0b55c](https://github.com/robotcodedev/robotcode/commit/7e0b55c65609ba37c928a636d0b764ddbb2ae57d))
+- Return codes for command line tools now uses sys.exit with return codes ([b6ad7dd](https://github.com/robotcodedev/robotcode/commit/b6ad7dd75276e65ffab9c8acb2c24e0750a93791))
 
 
 ### Documentation
@@ -2769,8 +2769,8 @@ All notable changes to this project will be documented in this file. See [conven
 
 ### Bug Fixes
 
-- The debugger no longer requires a dependency on the language server ([c5199ee](https://github.com/robotcodedev/robotcode/commit/c5199ee7111d17f44334464d6a6d24965adb2eea))
 - Unknown workspace edit change received at renaming ([48aef63](https://github.com/robotcodedev/robotcode/commit/48aef63b9085cb90fdbdc42d18ae5843c7774d69))
+- The debugger no longer requires a dependency on the language server ([c5199ee](https://github.com/robotcodedev/robotcode/commit/c5199ee7111d17f44334464d6a6d24965adb2eea))
 
 
 ### Refactor
@@ -2826,6 +2826,12 @@ All notable changes to this project will be documented in this file. See [conven
 - Correct error message if variable import not found ([a4b8fbb](https://github.com/robotcodedev/robotcode/commit/a4b8fbb6d830dfb92c59b17b7ac14fafe88558ed))
 
 
+### Documentation
+
+- Add python badges to README ([c0ec329](https://github.com/robotcodedev/robotcode/commit/c0ec3290b80714ff73528082a3fd2825f1c01f59))
+- Add some badges to readme and reorder the chapters ([22120f1](https://github.com/robotcodedev/robotcode/commit/22120f16e973f61b02f04a47c29fbe6d1b5e2283))
+
+
 ### Features
 
 - Switch to [hatch](https://hatch.pypa.io) build tool and bigger internal refactorings ([bc1c99b](https://github.com/robotcodedev/robotcode/commit/bc1c99bd8d70ec0b6a70257575d9dd4c44793f96))
@@ -2833,22 +2839,41 @@ All notable changes to this project will be documented in this file. See [conven
 
 ### Refactor
 
+- **robotlangserver:** Workspace rpc methods are now running threaded ([8f8f2b9](https://github.com/robotcodedev/robotcode/commit/8f8f2b946e6fa97b6b934e8a6db30128a5351e7c))
+- **robotlangserver:** Optimize test discovering ([4949ba6](https://github.com/robotcodedev/robotcode/commit/4949ba6b3e6dce7f00624586fcb5db2f0a630ad1))
 - Generate lsp types from json model ([8b7af4f](https://github.com/robotcodedev/robotcode/commit/8b7af4f1081ea4fe9eca6516c762d9dfb2b7ed9e))
+- Fix some mypy errors ([9356b32](https://github.com/robotcodedev/robotcode/commit/9356b32420a7049ba50ac76dab8bb288fcf6051a))
+- Fix some PIE810 errors ([59848e2](https://github.com/robotcodedev/robotcode/commit/59848e22178a7691732be22932e3562b44fdab02))
+- Simplify some code ([9403f72](https://github.com/robotcodedev/robotcode/commit/9403f723526e9a1ffa7067023427f95a59ab736e))
+- Fix some flake8-return warnings ([bea720d](https://github.com/robotcodedev/robotcode/commit/bea720dbd17eaaf937168835684b9010dbe57921))
+- Fix some pytest ruff warning ([b2bff02](https://github.com/robotcodedev/robotcode/commit/b2bff02083cc16682de237390d9880a4010db051))
+- Use `list` over useless lambda in default_factories ([930fa46](https://github.com/robotcodedev/robotcode/commit/930fa466c46d6822b670459b1d1574d92bc56878))
+- Change logger calls with an f-string to use lambdas ([cc555e1](https://github.com/robotcodedev/robotcode/commit/cc555e1953a88a8857d69f259c07ed9b8e66434e))
+- Replace *Generator with *Iterator ([cd96b1d](https://github.com/robotcodedev/robotcode/commit/cd96b1dd35fe5b57fd5442c107d3ee43aa87b370))
+- Fix some ruff errors and warnings, disable isort in precommit ([c144250](https://github.com/robotcodedev/robotcode/commit/c1442503d3d899c7108bfbceef17943e823e92ba))
 
 
 ### Testing
 
-- Introduce timeout/wait_for for langserver tests ([b9f4d5e](https://github.com/robotcodedev/robotcode/commit/b9f4d5e219d2f6c5a335d12c131ee0c8ced9d475))
-- Decrease timeout for language server tests ([9790823](https://github.com/robotcodedev/robotcode/commit/979082354e4fdaadd01d2eefe5071edafaf3d4ee))
-- Increate test timeouts and enable pytest logging ([1d6a980](https://github.com/robotcodedev/robotcode/commit/1d6a980f7f629abd0b7951566621868b4b55ad29))
-- Disable run_workspace_diagnostics in unit tests ([2348b0e](https://github.com/robotcodedev/robotcode/commit/2348b0e641cbcfe8ef06ef31766e6a3954070e52))
-- Increase timeout for langserver tests ([1224dae](https://github.com/robotcodedev/robotcode/commit/1224dae0a020d6d48a8a3a8e4d538bfc51c1726e))
-- Use Lock instead of RLock for AsyncLRUCache ([c36683e](https://github.com/robotcodedev/robotcode/commit/c36683e3d113f1c31fc9e47196797746b4cd7fc8))
-- Remove cache dir before running tests ([5a9323b](https://github.com/robotcodedev/robotcode/commit/5a9323b6c3f402c8abcd3129ccb92553fee40716))
 - Ignore errors if remove cache dir ([c670989](https://github.com/robotcodedev/robotcode/commit/c67098916b5b7d9f0050127102936c3a9ffcc18b))
+- Remove cache dir before running tests ([5a9323b](https://github.com/robotcodedev/robotcode/commit/5a9323b6c3f402c8abcd3129ccb92553fee40716))
+- Use Lock instead of RLock for AsyncLRUCache ([c36683e](https://github.com/robotcodedev/robotcode/commit/c36683e3d113f1c31fc9e47196797746b4cd7fc8))
+- Increase timeout for langserver tests ([1224dae](https://github.com/robotcodedev/robotcode/commit/1224dae0a020d6d48a8a3a8e4d538bfc51c1726e))
+- Disable run_workspace_diagnostics in unit tests ([2348b0e](https://github.com/robotcodedev/robotcode/commit/2348b0e641cbcfe8ef06ef31766e6a3954070e52))
+- Increate test timeouts and enable pytest logging ([1d6a980](https://github.com/robotcodedev/robotcode/commit/1d6a980f7f629abd0b7951566621868b4b55ad29))
+- Decrease timeout for language server tests ([9790823](https://github.com/robotcodedev/robotcode/commit/979082354e4fdaadd01d2eefe5071edafaf3d4ee))
+- Introduce timeout/wait_for for langserver tests ([b9f4d5e](https://github.com/robotcodedev/robotcode/commit/b9f4d5e219d2f6c5a335d12c131ee0c8ced9d475))
+- Make regtests for rf tests version dependend ([fe69626](https://github.com/robotcodedev/robotcode/commit/fe6962629edf5b90eeb4e9f4ba6a7b025498feca))
+- Let collect data in languages server test run in his own thread ([327b122](https://github.com/robotcodedev/robotcode/commit/327b122aef03e223dd12aed5bc0bbb6324ee4a10))
+- Disable logging ([b6e59b5](https://github.com/robotcodedev/robotcode/commit/b6e59b5473c086433ca065814bd88d2e0a3fb89c))
+- Run coroutines in ThreadPoolExecutor ([e4325f1](https://github.com/robotcodedev/robotcode/commit/e4325f1fcffb32c06f1bcf5c95cf1ebcab81943a))
+- Run discovery tests in thread ([5fe0f97](https://github.com/robotcodedev/robotcode/commit/5fe0f97673f5d249de33734315c5ef0563cffe5a))
+- Remove Remote library references ([2ba0edd](https://github.com/robotcodedev/robotcode/commit/2ba0eddc6da08fb11d4ec38713c81fd0ad0b8287))
+- Enable pytest logging ([bf07425](https://github.com/robotcodedev/robotcode/commit/bf07425dd15ebfe0bdcd0e20f1a584705a0d2a8e))
+- Add a copy of remote example library ([d0b2ca5](https://github.com/robotcodedev/robotcode/commit/d0b2ca5a4ed7a6b8bd7eef09764f7a072f1df47d))
 
 
-## [0.25.1] - 2023-01-24
+## [0.25.1](https://github.com/robotcodedev/robotcode/compare/v0.25.0..v0.25.1) - 2023-01-24
 
 ### Bug Fixes
 
@@ -2908,8 +2933,8 @@ All notable changes to this project will be documented in this file. See [conven
 
 ### Refactor
 
-- Introduce asyncio.RLock ([ab918db](https://github.com/robotcodedev/robotcode/commit/ab918db596d0502a4666816589b1674d99cbef18))
 - Prepare create keywords quickfix ([b34c8bf](https://github.com/robotcodedev/robotcode/commit/b34c8bfa80be6ebe08e25e239983b18a53c81bea))
+- Introduce asyncio.RLock ([ab918db](https://github.com/robotcodedev/robotcode/commit/ab918db596d0502a4666816589b1674d99cbef18))
 
 
 ## [0.23.0](https://github.com/robotcodedev/robotcode/compare/v0.22.1..v0.23.0) - 2023-01-13
@@ -2928,8 +2953,8 @@ All notable changes to this project will be documented in this file. See [conven
 
 ### Bug Fixes
 
-- **robotlangserver:** Generating documentation view with parameters that contains .py at the at does not work ([8210bd9](https://github.com/robotcodedev/robotcode/commit/8210bd9c8bed94e61b475a2c25dc032c7bdb3d68))
 - **robotlangserver:** Resolving imports with arguments in diffent files and folders but with same string representation ie. ${curdir}/blah.py now works correctly ([8c0517d](https://github.com/robotcodedev/robotcode/commit/8c0517d2c30ad395b121fde841869c994741151d))
+- **robotlangserver:** Generating documentation view with parameters that contains .py at the at does not work ([8210bd9](https://github.com/robotcodedev/robotcode/commit/8210bd9c8bed94e61b475a2c25dc032c7bdb3d68))
 
 
 ## [0.22.0](https://github.com/robotcodedev/robotcode/compare/v0.21.4..v0.22.0) - 2023-01-12
@@ -2985,13 +3010,13 @@ All notable changes to this project will be documented in this file. See [conven
 
 ### Bug Fixes
 
+- **robotlangserver:** Speedup analyser ([228ae4e](https://github.com/robotcodedev/robotcode/commit/228ae4e9a50b6cb0ad5ecb824f6b45bcb1476258))
 - **robotlangserver:** Loading documents hardened ([eab71f8](https://github.com/robotcodedev/robotcode/commit/eab71f87b3e16eeb34e62a811235e5126b2734cf))
 
   Invalid document don't break loading, initializing and analysing documents and discovering tests
 
-- **robotlangserver:** Speedup analyser ([228ae4e](https://github.com/robotcodedev/robotcode/commit/228ae4e9a50b6cb0ad5ecb824f6b45bcb1476258))
-- Generating keyword specs for keywords with empty lineno ([60d76aa](https://github.com/robotcodedev/robotcode/commit/60d76aa25c9437d1c3029322d3c576738c0406cb))
 - Try to handle unknow documents as .robot files to support resources as .txt or .tsv files ([4fed028](https://github.com/robotcodedev/robotcode/commit/4fed028a42b3705568639469de24615d23152de3))
+- Generating keyword specs for keywords with empty lineno ([60d76aa](https://github.com/robotcodedev/robotcode/commit/60d76aa25c9437d1c3029322d3c576738c0406cb))
 
 
 ### Features
@@ -3020,12 +3045,12 @@ All notable changes to this project will be documented in this file. See [conven
 
   see --include and --exclude arguments from robot
 
-- **robotlangserver:** Show keyword tags in keyword documentation ([c82b60b](https://github.com/robotcodedev/robotcode/commit/c82b60b281c70eb6aa3cb4227a494d1b1f026f12))
+- **robotlangserver:** Implement embedded keyword precedence for RF 6.0, this also speedups keyword analysing ([f975be8](https://github.com/robotcodedev/robotcode/commit/f975be8d53ac2ef6a0cbcc8d69dbf815e04312e8))
 - **robotlangserver:** Support for robot:private keywords for RF>6.0.0 ([e24603f](https://github.com/robotcodedev/robotcode/commit/e24603f07319e2730fb59d62e1f8f4bc8c245368))
 
   Show warnings if you use a private keyword and prioritize not private keywords over private keywords
 
-- **robotlangserver:** Implement embedded keyword precedence for RF 6.0, this also speedups keyword analysing ([f975be8](https://github.com/robotcodedev/robotcode/commit/f975be8d53ac2ef6a0cbcc8d69dbf815e04312e8))
+- **robotlangserver:** Show keyword tags in keyword documentation ([c82b60b](https://github.com/robotcodedev/robotcode/commit/c82b60b281c70eb6aa3cb4227a494d1b1f026f12))
 
 
 ### Refactor
@@ -3077,26 +3102,26 @@ All notable changes to this project will be documented in this file. See [conven
 
 ### Bug Fixes
 
-- **vscode:** Some tweaks for better highlightning ([40b7512](https://github.com/robotcodedev/robotcode/commit/40b751223ea77b0c978f9252b3e946c02f9437d6))
 - **vscode:** Highlightning comments in text mate mode ([1c1cb9a](https://github.com/robotcodedev/robotcode/commit/1c1cb9a22a02c89dd604418d883b570a68d199b1))
+- **vscode:** Some tweaks for better highlightning ([40b7512](https://github.com/robotcodedev/robotcode/commit/40b751223ea77b0c978f9252b3e946c02f9437d6))
 
 
 ### Performance
 
-- **robotlangserver:** Refactor some unnecessary async/await methods ([0f8c134](https://github.com/robotcodedev/robotcode/commit/0f8c1349f9bcdeb817f28247afc11c076c9747d0))
 - **robotlangserver:** Speedup keyword completion ([6bcaa22](https://github.com/robotcodedev/robotcode/commit/6bcaa22ab492bad7882f5585ae852be87384f497))
 
   Recalcution of useable keywords is only called if imports changed, this should speedup showing the completion window for keywords
 
+- **robotlangserver:** Refactor some unnecessary async/await methods ([0f8c134](https://github.com/robotcodedev/robotcode/commit/0f8c1349f9bcdeb817f28247afc11c076c9747d0))
 
 
 ### Testing
 
+- **all:** Fix tests for python 3.11 ([07d5101](https://github.com/robotcodedev/robotcode/commit/07d510163edc9034cfd063324eadb84418d212c7))
 - **all:** Switching to pytest-regtest ([c2d8384](https://github.com/robotcodedev/robotcode/commit/c2d838474591f07d217da1b7a9ef0303b66e794f))
 
   Switching to pytest-regtest brings massive speed to regression test
 
-- **all:** Fix tests for python 3.11 ([07d5101](https://github.com/robotcodedev/robotcode/commit/07d510163edc9034cfd063324eadb84418d212c7))
 
 
 ## [0.17.2](https://github.com/robotcodedev/robotcode/compare/v0.17.1..v0.17.2) - 2022-12-09
@@ -3126,14 +3151,14 @@ All notable changes to this project will be documented in this file. See [conven
 
 ### Features
 
-- **robotlangserver:** Highlight embedded arguments ([d8b23e4](https://github.com/robotcodedev/robotcode/commit/d8b23e45951e660baea327b3534026da9ee27286))
-- **robotlangserver:** Optimization of the analysis of keywords with embedded arguments ([0995a2e](https://github.com/robotcodedev/robotcode/commit/0995a2ee73561162b823d43c5e8077a8daa28053))
 - **robotlangserver:** Highlight dictionary keys and values with different colors ([9596540](https://github.com/robotcodedev/robotcode/commit/9596540bfdf2e027c1a1963a2c8b3ae81d42485a))
+- **robotlangserver:** Optimization of the analysis of keywords with embedded arguments ([0995a2e](https://github.com/robotcodedev/robotcode/commit/0995a2ee73561162b823d43c5e8077a8daa28053))
+- **robotlangserver:** Highlight embedded arguments ([d8b23e4](https://github.com/robotcodedev/robotcode/commit/d8b23e45951e660baea327b3534026da9ee27286))
+- **vscode:** Provide better coloring in the debug console. ([c5de757](https://github.com/robotcodedev/robotcode/commit/c5de757ad132fb06a07be80d39c512568a18aa08))
 - **vscode:** Add new command `Restart Language Server` ([2b4c9c6](https://github.com/robotcodedev/robotcode/commit/2b4c9c6b90520234e4277364563c37e979c2f409))
 
   If the extension hangs, you can try to restart only the language server of robot code instead of restart or reload vscode
 
-- **vscode:** Provide better coloring in the debug console. ([c5de757](https://github.com/robotcodedev/robotcode/commit/c5de757ad132fb06a07be80d39c512568a18aa08))
 
 
 ## [0.15.0](https://github.com/robotcodedev/robotcode/compare/v0.14.5..v0.15.0) - 2022-12-07
