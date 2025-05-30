@@ -1,6 +1,5 @@
 import io
 import os
-import re
 from concurrent.futures import CancelledError
 from typing import TYPE_CHECKING, Any, List, Optional, cast
 
@@ -14,26 +13,17 @@ from robotcode.core.lsp.types import (
 )
 from robotcode.core.text_document import TextDocument
 from robotcode.core.utils.logging import LoggingDescriptor
-from robotcode.core.utils.version import create_version_from_str
-from robotcode.robot.diagnostics.model_helper import ModelHelper
 from robotcode.robot.utils import get_robot_version
 
-from ..configuration import RoboTidyConfig
+from ..configuration import RoboCopConfig, RoboTidyConfig
 from .protocol_part import RobotLanguageServerProtocolPart
+from .robocop_tidy_mixin import RoboCopTidyMixin
 
 if TYPE_CHECKING:
     from ..protocol import RobotLanguageServerProtocol
 
 
-def robotidy_installed() -> bool:
-    try:
-        __import__("robotidy")
-    except ImportError:
-        return False
-    return True
-
-
-class RobotFormattingProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
+class RobotFormattingProtocolPart(RobotLanguageServerProtocolPart, RoboCopTidyMixin):
     _logger = LoggingDescriptor()
 
     def __init__(self, parent: "RobotLanguageServerProtocol") -> None:
@@ -41,7 +31,7 @@ class RobotFormattingProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
 
         parent.formatting.format.add(self.format)
 
-        if robotidy_installed():
+        if self.robotidy_installed or (self.robocop_installed and self.robocop_version >= (6, 0)):
             parent.formatting.format_range.add(self.format_range)
 
         self.space_count = 4
@@ -49,13 +39,21 @@ class RobotFormattingProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
         self.line_separator = os.linesep
         self.short_test_name_length = 18
         self.setting_and_variable_name_length = 14
+        self.robocop_installed_message_shown = False
 
-    def get_config(self, document: TextDocument) -> RoboTidyConfig:
+    def get_tidy_config(self, document: TextDocument) -> RoboTidyConfig:
         folder = self.parent.workspace.get_workspace_folder(document.uri)
         if folder is None:
             return RoboTidyConfig()
 
         return self.parent.workspace.get_configuration(RoboTidyConfig, folder.uri)
+
+    def get_robocop_config(self, document: TextDocument) -> RoboCopConfig:
+        folder = self.parent.workspace.get_workspace_folder(document.uri)
+        if folder is None:
+            return RoboCopConfig()
+
+        return self.parent.workspace.get_configuration(RoboCopConfig, folder.uri)
 
     @language_id("robotframework")
     @_logger.call
@@ -66,22 +64,31 @@ class RobotFormattingProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
         options: FormattingOptions,
         **further_options: Any,
     ) -> Optional[List[TextEdit]]:
-        config = self.get_config(document)
+        if (get_robot_version() >= (5, 0)) and self.robocop_installed and self.robocop_version >= (6, 0):
+            if not self.robocop_installed_message_shown and self.robotidy_installed:
+                self.parent.window.show_message(
+                    "`robotframework-robocop >= 6.0` is installed and will be used for formatting.\n"
+                    "`robotframework-tidy` is also detected in the workspace. "
+                    "It is not needed as `robocop` handles formatting tasks.\n",
+                    MessageType.INFO,
+                )
+                self.robocop_installed_message_shown = True
 
-        if (config.enabled or get_robot_version() >= (5, 0)) and robotidy_installed():
-            return self.format_robot_tidy(document, options, config=config, **further_options)
+            return self.format_robocop(document, options, **further_options)
+
+        tidy_config = self.get_tidy_config(document)
+        if (tidy_config.enabled or get_robot_version() >= (5, 0)) and self.robotidy_installed:
+            return self.format_robot_tidy(document, options, config=tidy_config, **further_options)
 
         if get_robot_version() < (5, 0):
             return self.format_internal(document, options, **further_options)
 
         self.parent.window.show_message(
-            "RobotFramework formatter is not available, please install 'robotframework-tidy'.",
+            "RobotFramework formatter is not available, please install 'robotframework-robocop'.",
             MessageType.ERROR,
         )
 
         return None
-
-    RE_LINEBREAKS = re.compile(r"\r\n|\r|\n")
 
     def format_robot_tidy(
         self,
@@ -91,28 +98,24 @@ class RobotFormattingProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
         config: Optional[RoboTidyConfig] = None,
         **further_options: Any,
     ) -> Optional[List[TextEdit]]:
-        from robotidy.version import __version__
-
         try:
             if config is None:
-                config = self.get_config(document)
-
-            robotidy_version = create_version_from_str(__version__)
+                config = self.get_tidy_config(document)
 
             model = self.parent.documents_cache.get_model(document, False)
 
-            if robotidy_version >= (3, 0):
+            if self.robotidy_version >= (3, 0):
                 from robotidy.api import get_robotidy
                 from robotidy.disablers import RegisterDisablers
 
-                if robotidy_version >= (4, 2):
+                if self.robotidy_version >= (4, 2):
                     robot_tidy = get_robotidy(
                         document.uri.to_path(),
                         None,
                         ignore_git_dir=config.ignore_git_dir,
                         config=config.config,
                     )
-                elif robotidy_version >= (4, 1):
+                elif self.robotidy_version >= (4, 1):
                     robot_tidy = get_robotidy(
                         document.uri.to_path(),
                         None,
@@ -131,14 +134,14 @@ class RobotFormattingProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
                 )
                 disabler_finder.visit(model)
 
-                if robotidy_version >= (4, 11):
+                if self.robotidy_version >= (4, 11):
                     if disabler_finder.is_disabled_in_file():
                         return None
                 else:
                     if disabler_finder.file_disabled:
                         return None
 
-                if robotidy_version >= (4, 0):
+                if self.robotidy_version >= (4, 0):
                     _, _, new, _ = robot_tidy.transform_until_stable(model, disabler_finder)
                 else:
                     _, _, new = robot_tidy.transform(model, disabler_finder.disablers)
@@ -152,7 +155,7 @@ class RobotFormattingProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
                     robot_tidy.formatting_config.start_line = range.start.line + 1
                     robot_tidy.formatting_config.end_line = range.end.line + 1
 
-                if robotidy_version >= (2, 2):
+                if self.robotidy_version >= (2, 2):
                     from robotidy.disablers import RegisterDisablers
 
                     disabler_finder = RegisterDisablers(
@@ -185,6 +188,50 @@ class RobotFormattingProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
             self._logger.exception(e)
             self.parent.window.show_message(f"Executing `robotidy` failed: {e}", MessageType.ERROR)
         return None
+
+    def format_robocop(
+        self,
+        document: TextDocument,
+        options: FormattingOptions,
+        range: Optional[Range] = None,
+        **further_options: Any,
+    ) -> Optional[List[TextEdit]]:
+        from robocop.config import ConfigManager
+        from robocop.formatter.runner import RobocopFormatter
+
+        robocop_config = self.get_robocop_config(document)
+
+        config_manager = ConfigManager(
+            [document.uri.to_path()],
+            config=robocop_config.config_file,
+            ignore_git_dir=robocop_config.ignore_git_dir,
+            ignore_file_config=robocop_config.ignore_file_config,
+        )
+
+        config = config_manager.get_config_for_source_file(document.uri.to_path())
+
+        if range is not None:
+            config.formatter.start_line = range.start.line + 1
+            config.formatter.end_line = range.end.line + 1
+
+        runner = RobocopFormatter(config_manager)
+        runner.config = config
+
+        model = self.parent.documents_cache.get_model(document, False)
+        _, _, new, _ = runner.format_until_stable(model)
+
+        if new.text == document.text():
+            return None
+
+        return [
+            TextEdit(
+                range=Range(
+                    start=Position(line=0, character=0),
+                    end=Position(line=len(document.get_lines()), character=0),
+                ),
+                new_text=new.text,
+            )
+        ]
 
     def format_internal(
         self,
@@ -233,8 +280,8 @@ class RobotFormattingProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
         options: FormattingOptions,
         **further_options: Any,
     ) -> Optional[List[TextEdit]]:
-        config = self.get_config(document)
-        if config.enabled and robotidy_installed():
+        config = self.get_tidy_config(document)
+        if (config.enabled and self.robotidy_installed) or (self.robocop_installed and self.robocop_version >= (6, 0)):
             return self.format_robot_tidy(document, options, range=range, config=config, **further_options)
 
         return None

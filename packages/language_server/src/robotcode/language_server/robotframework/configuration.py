@@ -33,6 +33,9 @@ class RoboCopConfig(ConfigBase):
     enabled: bool = True
     include: List[str] = field(default_factory=list)
     exclude: List[str] = field(default_factory=list)
+    ignore_git_dir: bool = False
+    ignore_file_config: bool = False
+    config_file: Optional[str] = None
     configurations: List[str] = field(default_factory=list)
 
 

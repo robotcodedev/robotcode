@@ -7,9 +7,8 @@ from robotcode.core.utils.dataclasses import CamelSnakeMixin
 from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.jsonrpc2.protocol import rpc_method
 
-from .formatting import robotidy_installed
 from .protocol_part import RobotLanguageServerProtocolPart
-from .robocop_diagnostics import robocop_installed
+from .robocop_tidy_mixin import RoboCopTidyMixin
 
 if TYPE_CHECKING:
     from ..protocol import RobotLanguageServerProtocol
@@ -22,7 +21,7 @@ class ProjectInfo(CamelSnakeMixin):
     tidy_version_string: Optional[str] = None
 
 
-class ProjectInfoPart(RobotLanguageServerProtocolPart):
+class ProjectInfoPart(RobotLanguageServerProtocolPart, RoboCopTidyMixin):
     _logger = LoggingDescriptor()
 
     def __init__(self, parent: "RobotLanguageServerProtocol") -> None:
@@ -36,24 +35,12 @@ class ProjectInfoPart(RobotLanguageServerProtocolPart):
         **kwargs: Any,
     ) -> ProjectInfo:
         robocop_version_string = None
-        if robocop_installed():
-            try:
-                from robocop.version import __version__
-
-                robocop_version_string = __version__
-            except ImportError:
-                try:
-                    from robocop import __version__
-
-                    robocop_version_string = __version__
-                except ImportError:
-                    pass
+        if self.robocop_installed:
+            robocop_version_string = self.robocop_version_str
 
         tidy_version_string = None
-        if robotidy_installed():
-            from robotidy.version import __version__
-
-            tidy_version_string = __version__
+        if self.robotidy_installed:
+            tidy_version_string = self.robotidy_version_str
 
         return ProjectInfo(
             robot_version_string=get_version(),

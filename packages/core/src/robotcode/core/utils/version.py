@@ -1,3 +1,4 @@
+import functools
 import re
 from typing import NamedTuple, Optional
 
@@ -16,6 +17,7 @@ class Version(NamedTuple):
     dev: Optional[int] = None
 
 
+@functools.lru_cache(maxsize=128)
 def create_version_from_str(version_str: str) -> Version:
     def s_to_i(s: Optional[str]) -> Optional[int]:
         return int(s) if s is not None else None

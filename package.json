@@ -1116,13 +1116,13 @@
         }
       },
       {
-        "title": "Linting - Robocop",
+        "title": "Linting and Formatting - Robocop",
         "type": "object",
         "properties": {
           "robotcode.robocop.enabled": {
             "type": "boolean",
             "default": true,
-            "markdownDescription": "Enables 'robocop' code analysis, if installed. See [robocop](https://github.com/MarketSquare/robotframework-robocop)",
+            "markdownDescription": "Enables 'robocop' code analysis, if installed. See [robocop](https://robocop.readthedocs.io/)",
             "scope": "resource"
           },
           "robotcode.robocop.include": {
@@ -1132,7 +1132,8 @@
               "type": "string"
             },
             "description": "Include specified 'robocop' rules. You can define rule by its name or id. Glob patterns are supported",
-            "scope": "resource"
+            "scope": "resource",
+            "markdownDeprecationMessage": "This is a setting for an old `robotframework-robocop` version `<6.0` and will be removed in the future"
           },
           "robotcode.robocop.exclude": {
             "type": "array",
@@ -1140,7 +1141,26 @@
             "items": {
               "type": "string"
             },
-            "description": "Exlude specified 'robocop' rules. You can define rule by its name or id. Glob patterns are supported",
+            "description": "Exclude specified 'robocop' rules. You can define rule by its name or id. Glob patterns are supported",
+            "scope": "resource",
+            "markdownDeprecationMessage": "This is a setting for an old `robotframework-robocop` version `<6.0` and will be removed in the future."
+          },
+          "robotcode.robocop.ignoreGitDir": {
+            "type": "boolean",
+            "default": false,
+            "markdownDescription": "Do not stop searching for config file when .git directory is found. Corresponds to the `--ignore-git-dir` of _robocop_ See [robocop](https://robocop.readthedocs.io/)",
+            "scope": "resource"
+          },
+          "robotcode.robocop.configFile": {
+            "type": "string",
+            "default": null,
+            "markdownDescription": "Read configuration from FILE path. Corresponds to the `--config` option of _robocop_ See [robocop](https://robocop.readthedocs.io/)",
+            "scope": "resource"
+          },
+          "robotcode.robocop.ignoreFileConfig": {
+            "type": "boolean",
+            "default": false,
+            "markdownDescription": "Do not load configuration files. Corresponds to the `--ignore-file-config` option of _robocop_ See [robocop](https://robocop.readthedocs.io/)",
             "scope": "resource"
           },
           "robotcode.robocop.configurations": {
@@ -1149,8 +1169,9 @@
             "items": {
               "type": "string"
             },
-            "description": "Configure 'robocop' checker with parameter value.",
-            "scope": "resource"
+            "description": "Configure checker or report with parameter value. Corresponds to the `--configure` option of _robocop_ See [robocop](https://robocop.readthedocs.io/)",
+            "scope": "resource",
+            "markdownDeprecationMessage": "This is a setting for an old `robotframework-robocop` version `<6.0` and will be removed in the future."
           }
         }
       },
