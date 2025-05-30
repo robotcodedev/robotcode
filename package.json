@@ -1940,6 +1940,66 @@
           }
         ]
       }
+    ],
+    "chatParticipants":[
+
+    ],
+    "languageModelTools": [
+      {
+        "name": "robot-get_library_doc",
+        "displayName": "Get Library Documentation",
+        "toolReferenceName": "robotGetLibraryDoc",
+        "modelDescription": "Gets the library documentation for the given library name. This includes keywords, documentation, and other information about the library.",
+        "userDescription": "Gets documentation for the given library.",
+        "canBeReferencedInPrompt": true,
+        "tags": [
+          "robot",
+          "robotframework",
+          "robotframework-library",
+          "robotframework-keyword",
+          "robotcode"
+        ],
+        "icon": "$(robotcode-robot)",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "libraryName"
+          ],
+          "properties": {
+            "libraryName": {
+              "type": "string",
+              "description": "The name of the library."
+            },
+            "resourcePath": {
+              "type": "string",
+              "description": "The path to the robot framework file or workspace to get the library information for."
+            }
+          }
+        }
+      },
+      {
+        "name": "robot-get_environment_details",
+        "displayName": "Get Robot Framework Environment Informations",
+        "toolReferenceName": "robotGetEnvironmentInfo",
+        "modelDescription": "This tool will retrieve the details of the Robot Framework Environment for the specified file or workspace. This includes informations about the python interpreter, like the version and the executable path, and the versions of robot framework, RobotCode, robocop and robotidy if installed.",
+        "userDescription": "Gets informations about the Robot Framework Environment.",
+        "canBeReferencedInPrompt": true,
+        "tags": [
+          "robot",
+          "robotframework",
+          "robotcode"
+        ],
+        "icon": "$(robotcode-robot)",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "resourcePath": {
+              "type": "string",
+              "description": "The path to the robot framework file or workspace to get the details for."
+            }
+          }
+        }
+      }
     ]
   },
   "scripts": {
@@ -1961,7 +2021,8 @@
   "dependencies": {
     "ansi-colors": "^4.1.3",
     "fs-extra": "^11.3.0",
-    "vscode-languageclient": "^9.0.1"
+    "vscode-languageclient": "^9.0.1",
+    "@vscode/prompt-tsx": "^0.4.0-alpha.4"
   },
   "devDependencies": {
     "@eslint/compat": "^1.2.9",

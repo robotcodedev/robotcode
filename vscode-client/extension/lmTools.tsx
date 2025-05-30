@@ -1,0 +1,143 @@
+/* eslint-disable class-methods-use-this */
+import * as vscode from "vscode";
+import { LanguageClientsManager } from "./languageclientsmanger";
+
+function resolveWorkspaceFolder(filepath?: string): vscode.WorkspaceFolder | undefined {
+  if (!filepath) {
+    return vscode.workspace.workspaceFolders ? vscode.workspace.workspaceFolders[0] : undefined;
+  }
+
+  try {
+    return vscode.workspace.getWorkspaceFolder(vscode.Uri.parse(filepath));
+  } catch {
+    return vscode.workspace.getWorkspaceFolder(vscode.Uri.file(filepath));
+  }
+}
+
+interface GetLibDocToolParamters {
+  libraryName: string;
+  resourcePath?: string;
+}
+
+export class GetLibDocTool implements vscode.LanguageModelTool<GetLibDocToolParamters> {
+  constructor(
+    public readonly extensionContext: vscode.ExtensionContext,
+    public readonly languageClientsManager: LanguageClientsManager,
+    public readonly outputChannel: vscode.OutputChannel,
+  ) {}
+
+  async invoke(
+    options: vscode.LanguageModelToolInvocationOptions<GetLibDocToolParamters>,
+    token: vscode.CancellationToken,
+  ): Promise<vscode.LanguageModelToolResult> {
+    const workspaceFolder = resolveWorkspaceFolder(options.input.resourcePath);
+
+    if (!workspaceFolder) {
+      return new vscode.LanguageModelToolResult([
+        new vscode.LanguageModelTextPart("No workspace folder found. Please open a Robot Framework project."),
+      ]);
+    }
+
+    const libdoc = await this.languageClientsManager.getLibraryDocumentation(
+      workspaceFolder,
+      options.input.libraryName,
+      token,
+    );
+    if (!libdoc) {
+      return new vscode.LanguageModelToolResult([
+        new vscode.LanguageModelTextPart(
+          "Failed to retrieve library documentation. Ensure the Robot Framework extension is properly configured and the library is installed.",
+        ),
+      ]);
+    }
+
+    const keywords = libdoc.keywords
+      ? libdoc.keywords.map(
+          (kw) => new vscode.LanguageModelTextPart(`${kw.documentation || "No documentation available."}`),
+        )
+      : [new vscode.LanguageModelTextPart("No keywords available.")];
+
+    return new vscode.LanguageModelToolResult([
+      new vscode.LanguageModelTextPart(libdoc.documentation ?? "No documentation available."),
+      ...keywords,
+    ]);
+  }
+
+  async prepareInvocation?(
+    options: vscode.LanguageModelToolInvocationPrepareOptions<GetLibDocToolParamters>,
+    _token: vscode.CancellationToken,
+  ): Promise<vscode.PreparedToolInvocation> {
+    const workspaceFolder = resolveWorkspaceFolder(options.input.resourcePath);
+    if (!workspaceFolder) {
+      return {
+        invocationMessage: "No workspace folder found. Please open a Robot Framework project.",
+      };
+    }
+
+    return {
+      invocationMessage: "Retrieving Robot Framework Library details",
+    };
+  }
+}
+
+interface GetEnvironmentDetailsParamters {
+  resourcePath?: string;
+}
+
+export class GetEnvironmentDetails implements vscode.LanguageModelTool<GetEnvironmentDetailsParamters> {
+  constructor(
+    public readonly extensionContext: vscode.ExtensionContext,
+    public readonly languageClientsManager: LanguageClientsManager,
+    public readonly outputChannel: vscode.OutputChannel,
+  ) {}
+
+  async invoke(
+    options: vscode.LanguageModelToolInvocationOptions<GetLibDocToolParamters>,
+    token: vscode.CancellationToken,
+  ): Promise<vscode.LanguageModelToolResult> {
+    const workspaceFolder = resolveWorkspaceFolder(options.input.resourcePath);
+
+    if (!workspaceFolder) {
+      return new vscode.LanguageModelToolResult([
+        new vscode.LanguageModelTextPart("No workspace folder found. Please open a Robot Framework project."),
+      ]);
+    }
+
+    const projectInfo = await this.languageClientsManager.getProjectInfo(workspaceFolder, token);
+    if (!projectInfo) {
+      return new vscode.LanguageModelToolResult([
+        new vscode.LanguageModelTextPart(
+          "Failed to retrieve project information. Ensure the Robot Framework extension is properly configured.",
+        ),
+      ]);
+    }
+
+    const message = [
+      "# Environment Details",
+      `**Workspace Folder:** ${workspaceFolder.name}`,
+      `**Python Interpreter Version:** ${projectInfo.pythonVersionString || "Not set"}`,
+      `**Python Executable:** ${projectInfo.pythonExecutable || "Not set"}`,
+      `**Robot Framework Version:** ${projectInfo.robotVersionString || "Not installed"}`,
+      `**RobotCode Version:** ${projectInfo.robotCodeVersionString || "Not set"}`,
+      `**Robocop Version:** ${projectInfo.robocopVersionString || "Not installed"}`,
+      `**Robotidy Version:** ${projectInfo.tidyVersionString || "Not installed"}`,
+    ];
+    return new vscode.LanguageModelToolResult([new vscode.LanguageModelTextPart(message.join("\n"))]);
+  }
+
+  async prepareInvocation?(
+    options: vscode.LanguageModelToolInvocationPrepareOptions<GetLibDocToolParamters>,
+    _token: vscode.CancellationToken,
+  ): Promise<vscode.PreparedToolInvocation> {
+    const workspaceFolder = resolveWorkspaceFolder(options.input.resourcePath);
+    if (!workspaceFolder) {
+      return {
+        invocationMessage: "No workspace folder found. Please open a Robot Framework project.",
+      };
+    }
+
+    return {
+      invocationMessage: "Retrieving Robot Framework environment details",
+    };
+  }
+}

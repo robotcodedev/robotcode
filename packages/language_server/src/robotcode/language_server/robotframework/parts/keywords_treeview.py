@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, List, Optional
 
 from robotcode.core.lsp.types import TextDocumentIdentifier
+from robotcode.core.uri import Uri
 from robotcode.core.utils.dataclasses import CamelSnakeMixin
 from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.jsonrpc2.protocol import rpc_method
@@ -19,11 +20,25 @@ class GetDocumentImportsParams(CamelSnakeMixin):
 
 
 @dataclass(repr=False)
+class GetLibraryDocumentationParams(CamelSnakeMixin):
+    workspace_folder_uri: str
+    library_name: str
+
+
+@dataclass(repr=False)
 class Keyword(CamelSnakeMixin):
     name: str
     id: Optional[str]
     signature: Optional[str] = None
     documentation: Optional[str] = None
+
+
+@dataclass(repr=False)
+class LibraryDocumentation(CamelSnakeMixin):
+    name: str
+    documentation: Optional[str] = None
+    keywords: Optional[List[Keyword]] = None
+    initializers: Optional[List[Keyword]] = None
 
 
 @dataclass(repr=False)
@@ -165,3 +180,43 @@ class RobotKeywordsTreeViewPart(RobotLanguageServerProtocolPart, ModelHelper):
             )
 
         return None
+
+    @rpc_method(
+        name="robot/keywordsview/getLibraryDocumentation", param_type=GetLibraryDocumentationParams, threaded=True
+    )
+    @_logger.call
+    def _get_library_documentation(
+        self,
+        workspace_folder_uri: str,
+        library_name: str,
+        *args: Any,
+        **kwargs: Any,
+    ) -> Optional[LibraryDocumentation]:
+        imports_manager = self.parent.documents_cache.get_imports_manager_for_uri(Uri(workspace_folder_uri))
+
+        libdoc = imports_manager.get_libdoc_for_library_import(library_name, (), ".")
+        if libdoc.errors:
+            raise ValueError(f"Errors while loading library documentation: {libdoc.errors}")
+
+        return LibraryDocumentation(
+            name=libdoc.name,
+            documentation=libdoc.to_markdown(),
+            keywords=[
+                Keyword(
+                    l.name,
+                    str(hash(l)),
+                    l.parameter_signature(),
+                    l.to_markdown(),
+                )
+                for l in libdoc.keywords.values()
+            ],
+            initializers=[
+                Keyword(
+                    s.name,
+                    str(hash(s)),
+                    s.parameter_signature(),
+                    s.to_markdown(),
+                )
+                for s in libdoc.inits.values()
+            ],
+        )

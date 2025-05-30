@@ -14,7 +14,10 @@
       "ES2022",
     ],
     "outDir": "../../out/extension",
-    "rootDir": "."
+    "rootDir": ".",
+    "jsx": "react",
+		"jsxFactory": "vscpp",
+		"jsxFragmentFactory": "vscppf"
   },
   "exclude": [
     "../../node_modules",

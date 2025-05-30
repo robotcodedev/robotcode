@@ -7,6 +7,7 @@ import { KeywordsTreeViewProvider } from "./keywordsTreeViewProvider";
 import { LanguageToolsManager } from "./languageToolsManager";
 import { NotebookManager } from "./notebook";
 import path from "path";
+import { GetEnvironmentDetails, GetLibDocTool } from "./lmTools";
 
 class TerminalLink extends vscode.TerminalLink {
   constructor(
@@ -153,6 +154,11 @@ export async function activateAsync(context: vscode.ExtensionContext): Promise<v
         }, 1000);
       }
     }),
+    vscode.lm.registerTool("robot-get_library_doc", new GetLibDocTool(context, languageClientManger, outputChannel)),
+    vscode.lm.registerTool(
+      "robot-get_environment_details",
+      new GetEnvironmentDetails(context, languageClientManger, outputChannel),
+    ),
   );
 
   const collection = context.environmentVariableCollection;
