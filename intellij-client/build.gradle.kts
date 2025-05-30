@@ -121,7 +121,14 @@ intellijPlatform {
         failureLevel = listOf(INVALID_PLUGIN, COMPATIBILITY_PROBLEMS, MISSING_DEPENDENCIES)
         verificationReportsFormats = listOf(MARKDOWN, PLAIN)
         ides {
-            recommended()
+            select {
+                types = listOf(
+                    IntelliJPlatformType.PyCharmCommunity,
+                    IntelliJPlatformType.PyCharmProfessional,
+                    IntelliJPlatformType.IntellijIdeaCommunity,
+                    IntelliJPlatformType.IntellijIdeaUltimate,
+                )
+            }
         }
         
     }
