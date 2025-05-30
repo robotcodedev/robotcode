@@ -39,7 +39,7 @@ class RobotFormattingProtocolPart(RobotLanguageServerProtocolPart, RoboCopTidyMi
         self.line_separator = os.linesep
         self.short_test_name_length = 18
         self.setting_and_variable_name_length = 14
-        self.robocop_installed_message_shown = False
+        self.is_robocop_notification_shown = False
 
     def get_tidy_config(self, document: TextDocument) -> RoboTidyConfig:
         folder = self.parent.workspace.get_workspace_folder(document.uri)
@@ -65,14 +65,15 @@ class RobotFormattingProtocolPart(RobotLanguageServerProtocolPart, RoboCopTidyMi
         **further_options: Any,
     ) -> Optional[List[TextEdit]]:
         if (get_robot_version() >= (5, 0)) and self.robocop_installed and self.robocop_version >= (6, 0):
-            if not self.robocop_installed_message_shown and self.robotidy_installed:
+            if not self.is_robocop_notification_shown and self.robotidy_installed:
                 self.parent.window.show_message(
-                    "`robotframework-robocop >= 6.0` is installed and will be used for formatting.\n"
-                    "`robotframework-tidy` is also detected in the workspace. "
-                    "It is not needed as `robocop` handles formatting tasks.\n",
+                    "`robotframework-robocop >= 6.0` is installed and will be used for formatting.\n\n"
+                    "`robotframework-tidy` is also detected in the workspace, but its use is redundant.\n"
+                    "Robocop fully supports all formatting tasks and provides a more comprehensive solution.\n\n"
+                    "Note: The use of `robotframework-tidy` is deprecated and should be avoided in favor of Robocop.",
                     MessageType.INFO,
                 )
-                self.robocop_installed_message_shown = True
+                self.is_robocop_notification_shown = True
 
             return self.format_robocop(document, options, **further_options)
 
