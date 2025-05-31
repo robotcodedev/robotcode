@@ -4,7 +4,7 @@
   "description": "Robot Framework IntelliSense, linting, test execution and debugging, code formatting, refactoring, and many more",
   "icon": "images/icon.png",
   "publisher": "d-biehl",
-  "version": "1.2.0",
+  "version": "1.3.0-dev.3",
   "author": {
     "name": "Daniel Biehl",
     "url": "https://github.com/robotcodedev/"
@@ -19,7 +19,7 @@
   },
   "qna": "https://github.com/robotcodedev/robotcode/discussions/categories/q-a",
   "engines": {
-    "vscode": "^1.96.0"
+    "vscode": "^1.99.0"
   },
   "categories": [
     "Programming Languages",
@@ -1116,13 +1116,13 @@
         }
       },
       {
-        "title": "Linting - Robocop",
+        "title": "Linting and Formatting - Robocop",
         "type": "object",
         "properties": {
           "robotcode.robocop.enabled": {
             "type": "boolean",
             "default": true,
-            "markdownDescription": "Enables 'robocop' code analysis, if installed. See [robocop](https://github.com/MarketSquare/robotframework-robocop)",
+            "markdownDescription": "Enables 'robocop' code analysis, if installed. See [robocop](https://robocop.readthedocs.io/)",
             "scope": "resource"
           },
           "robotcode.robocop.include": {
@@ -1132,7 +1132,8 @@
               "type": "string"
             },
             "description": "Include specified 'robocop' rules. You can define rule by its name or id. Glob patterns are supported",
-            "scope": "resource"
+            "scope": "resource",
+            "markdownDeprecationMessage": "This is a setting for an old `robotframework-robocop` version `<6.0` and will be removed in the future"
           },
           "robotcode.robocop.exclude": {
             "type": "array",
@@ -1140,7 +1141,26 @@
             "items": {
               "type": "string"
             },
-            "description": "Exlude specified 'robocop' rules. You can define rule by its name or id. Glob patterns are supported",
+            "description": "Exclude specified 'robocop' rules. You can define rule by its name or id. Glob patterns are supported",
+            "scope": "resource",
+            "markdownDeprecationMessage": "This is a setting for an old `robotframework-robocop` version `<6.0` and will be removed in the future."
+          },
+          "robotcode.robocop.ignoreGitDir": {
+            "type": "boolean",
+            "default": false,
+            "markdownDescription": "Do not stop searching for config file when .git directory is found. Corresponds to the `--ignore-git-dir` of _robocop_ See [robocop](https://robocop.readthedocs.io/)",
+            "scope": "resource"
+          },
+          "robotcode.robocop.configFile": {
+            "type": "string",
+            "default": null,
+            "markdownDescription": "Read configuration from FILE path. Corresponds to the `--config` option of _robocop_ See [robocop](https://robocop.readthedocs.io/)",
+            "scope": "resource"
+          },
+          "robotcode.robocop.ignoreFileConfig": {
+            "type": "boolean",
+            "default": false,
+            "markdownDescription": "Do not load configuration files. Corresponds to the `--ignore-file-config` option of _robocop_ See [robocop](https://robocop.readthedocs.io/)",
             "scope": "resource"
           },
           "robotcode.robocop.configurations": {
@@ -1149,8 +1169,9 @@
             "items": {
               "type": "string"
             },
-            "description": "Configure 'robocop' checker with parameter value.",
-            "scope": "resource"
+            "description": "Configure checker or report with parameter value. Corresponds to the `--configure` option of _robocop_ See [robocop](https://robocop.readthedocs.io/)",
+            "scope": "resource",
+            "markdownDeprecationMessage": "This is a setting for an old `robotframework-robocop` version `<6.0` and will be removed in the future."
           }
         }
       },
@@ -1162,19 +1183,22 @@
             "type": "boolean",
             "default": true,
             "markdownDescription": "Enables 'robotidy' code formatting, if installed. See [robotidy](https://github.com/MarketSquare/robotframework-tidy)",
-            "scope": "resource"
+            "scope": "resource",
+            "markdownDeprecationMessage": "Using of `robotframework-tidy` is deprecated, because it is no longer maintained. Please use `robotframework-robocop>=6.0` instead."
           },
           "robotcode.robotidy.ignoreGitDir": {
             "type": "boolean",
             "default": true,
             "markdownDescription": "Ignore .git directories when searching for the default configuration file. Corresponds to the `--ignore-git-dir` of _robotidy_ See [robotidy](https://github.com/MarketSquare/robotframework-tidy)",
-            "scope": "resource"
+            "scope": "resource",
+            "markdownDeprecationMessage": "Using of `robotframework-tidy` is deprecated, because it is no longer maintained. Please use `robotframework-robocop>=6.0` instead."
           },
           "robotcode.robotidy.config": {
             "type": "string",
             "default": "",
             "markdownDescription": "Read configuration from FILE path. Corresponds to the `--config` of _robotidy_ See [robotidy](https://github.com/MarketSquare/robotframework-tidy)",
-            "scope": "resource"
+            "scope": "resource",
+            "markdownDeprecationMessage": "Using of `robotframework-tidy` is deprecated, because it is no longer maintained. Please use `robotframework-robocop>=6.0` instead."
           }
         }
       },
@@ -1916,6 +1940,66 @@
           }
         ]
       }
+    ],
+    "chatParticipants":[
+
+    ],
+    "languageModelTools": [
+      {
+        "name": "robot-get_library_doc",
+        "displayName": "Get Library Documentation",
+        "toolReferenceName": "robotGetLibraryDoc",
+        "modelDescription": "Gets the library documentation for the given library name. This includes keywords, documentation, and other information about the library.",
+        "userDescription": "Gets documentation for the given library.",
+        "canBeReferencedInPrompt": true,
+        "tags": [
+          "robot",
+          "robotframework",
+          "robotframework-library",
+          "robotframework-keyword",
+          "robotcode"
+        ],
+        "icon": "$(robotcode-robot)",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "libraryName"
+          ],
+          "properties": {
+            "libraryName": {
+              "type": "string",
+              "description": "The name of the library."
+            },
+            "resourcePath": {
+              "type": "string",
+              "description": "The path to the robot framework file or workspace to get the library information for."
+            }
+          }
+        }
+      },
+      {
+        "name": "robot-get_environment_details",
+        "displayName": "Get Robot Framework Environment Informations",
+        "toolReferenceName": "robotGetEnvironmentInfo",
+        "modelDescription": "This tool will retrieve the details of the Robot Framework Environment for the specified file or workspace. This includes informations about the python interpreter, like the version and the executable path, and the versions of robot framework, RobotCode, robocop and robotidy if installed.",
+        "userDescription": "Gets informations about the Robot Framework Environment.",
+        "canBeReferencedInPrompt": true,
+        "tags": [
+          "robot",
+          "robotframework",
+          "robotcode"
+        ],
+        "icon": "$(robotcode-robot)",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "resourcePath": {
+              "type": "string",
+              "description": "The path to the robot framework file or workspace to get the details for."
+            }
+          }
+        }
+      }
     ]
   },
   "scripts": {
@@ -1937,7 +2021,8 @@
   "dependencies": {
     "ansi-colors": "^4.1.3",
     "fs-extra": "^11.3.0",
-    "vscode-languageclient": "^9.0.1"
+    "vscode-languageclient": "^9.0.1",
+    "@vscode/prompt-tsx": "^0.4.0-alpha.4"
   },
   "devDependencies": {
     "@eslint/compat": "^1.2.9",
@@ -1945,22 +2030,22 @@
     "@eslint/js": "^9.27.0",
     "@jgoz/esbuild-plugin-typecheck": "^4.0.3",
     "@types/fs-extra": "^11.0.4",
-    "@types/node": "^22.15.19",
-    "@types/vscode": "^1.96.0",
+    "@types/node": "^22.15.27",
+    "@types/vscode": "^1.99.0",
     "@types/vscode-notebook-renderer": "^1.72.3",
     "@vscode/python-extension": "^1.0.5",
-    "@vscode/vsce": "^3.4.1",
-    "esbuild": "^0.25.4",
+    "@vscode/vsce": "^3.4.2",
+    "esbuild": "^0.25.5",
     "eslint": "^9.27.0",
     "eslint-config-prettier": "^10.1.5",
-    "eslint-plugin-prettier": "^5.4.0",
-    "globals": "^16.1.0",
+    "eslint-plugin-prettier": "^5.4.1",
+    "globals": "^16.2.0",
     "ovsx": "^0.10.2",
-    "preact": "^10.26.6",
+    "preact": "^10.26.8",
     "prettier": "^3.5.3",
     "ts-loader": "^9.5.2",
     "typescript": "^5.8.3",
-    "typescript-eslint": "^8.32.1"
+    "typescript-eslint": "^8.33.0"
   },
   "workspaces": [
     "docs"

@@ -51,9 +51,9 @@ classifiers = [
 ]
 requires-python = ">=3.8"
 dependencies = [
-  "robotcode-core==1.2.0",
-  "robotcode-plugin==1.2.0",
-  "robotcode-robot==1.2.0",
+  "robotcode-core==1.3.0-dev.3",
+  "robotcode-plugin==1.3.0-dev.3",
+  "robotcode-robot==1.3.0-dev.3",
 ]
 dynamic = ["version"]
 
@@ -71,24 +71,24 @@ robotcode = "robotcode.cli.__main__:main"
 
 
 [project.optional-dependencies]
-debugger = ["robotcode-debugger==1.2.0"]
-languageserver = ["robotcode-language-server==1.2.0"]
-runner = ["robotcode-runner==1.2.0"]
-analyze = ["robotcode-analyze==1.2.0"]
+debugger = ["robotcode-debugger==1.3.0-dev.3"]
+languageserver = ["robotcode-language-server==1.3.0-dev.3"]
+runner = ["robotcode-runner==1.3.0-dev.3"]
+analyze = ["robotcode-analyze==1.3.0-dev.3"]
 yaml = ["PyYAML>=5.4"]
 lint = ["robotframework-robocop>=2.0.0"]
 tidy = ["robotframework-tidy>=2.0.0"]
 rest = ["docutils"]
-repl = ["robotcode-repl==1.2.0"]
-replserver = ["robotcode-repl-server==1.2.0"]
+repl = ["robotcode-repl==1.3.0-dev.3"]
+replserver = ["robotcode-repl-server==1.3.0-dev.3"]
 colored = ["rich"]
 all = [
-  "robotcode-debugger==1.2.0",
-  "robotcode-language-server==1.2.0",
-  "robotcode-runner==1.2.0",
-  "robotcode-analyze==1.2.0",
-  "robotcode-repl==1.2.0",
-  "robotcode-repl-server==1.2.0",
+  "robotcode-debugger==1.3.0-dev.3",
+  "robotcode-language-server==1.3.0-dev.3",
+  "robotcode-runner==1.3.0-dev.3",
+  "robotcode-analyze==1.3.0-dev.3",
+  "robotcode-repl==1.3.0-dev.3",
+  "robotcode-repl-server==1.3.0-dev.3",
   "PyYAML>=5.4",
   "robotframework-robocop>=2.0.0",
   "robotframework-tidy>=2.0.0",
@@ -300,7 +300,7 @@ pythonVersion = "3.8"
 name = "cz_conventional_commits"
 bump_message = "chore(release): bump version $current_version → $new_version"
 tag_format = "v$version"
-version_scheme = "semver"
+version_scheme = "semver2"
 version_provider = "scm"
 update_changelog_on_bump = false
 # major_version_zero = true

@@ -20,7 +20,7 @@ from scripts.tools import get_version
 
 def main() -> None:
     version = get_version()
-    preview = 1 if version.prerelease else 0
+    preview = "true" if version.prerelease else "false"
 
     print(preview)
 

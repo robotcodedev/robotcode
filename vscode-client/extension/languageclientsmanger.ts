@@ -43,6 +43,13 @@ export interface Keyword {
   documentation?: string;
 }
 
+export interface LibraryDocumentation {
+  name: string;
+  documentation?: string;
+  keywords?: Keyword[];
+  initializers?: DocumentImport[];
+}
+
 export interface DocumentImport {
   name: string;
   alias?: string;
@@ -106,6 +113,9 @@ export interface ProjectInfo {
   robotVersionString?: string;
   robocopVersionString?: string;
   tidyVersionString?: string;
+  pythonVersionString?: string;
+  pythonExecutable?: string;
+  robotCodeVersionString?: string;
 }
 
 interface RobotCodeContributions {
@@ -179,7 +189,7 @@ export class LanguageClientsManager {
     public readonly outputChannel: vscode.OutputChannel,
   ) {
     const fileWatcher1 = vscode.workspace.createFileSystemWatcher(
-      `**/{pyproject.toml,robot.toml,.robot.toml,.gitignore,.robotignore}`,
+      `**/{pyproject.toml,robot.toml,.robot.toml,robocop.toml,.gitignore,.robotignore}`,
     );
     fileWatcher1.onDidCreate((uri) => this.restart(vscode.workspace.getWorkspaceFolder(uri)?.uri));
     fileWatcher1.onDidDelete((uri) => this.restart(vscode.workspace.getWorkspaceFolder(uri)?.uri));
@@ -897,6 +907,27 @@ export class LanguageClientsManager {
         },
         token ?? new vscode.CancellationTokenSource().token,
       )) ?? []
+    );
+  }
+
+  public async getLibraryDocumentation(
+    workspace_folder: vscode.WorkspaceFolder,
+    libraryName: string,
+    token?: vscode.CancellationToken | undefined,
+  ): Promise<LibraryDocumentation | undefined> {
+    const client = await this.getLanguageClientForResource(workspace_folder.uri);
+
+    if (!client) return undefined;
+
+    return (
+      (await client.sendRequest<LibraryDocumentation>(
+        "robot/keywordsview/getLibraryDocumentation",
+        {
+          workspaceFolderUri: workspace_folder.uri.toString(),
+          libraryName: libraryName,
+        },
+        token ?? new vscode.CancellationTokenSource().token,
+      )) ?? undefined
     );
   }
 

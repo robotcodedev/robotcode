@@ -17,20 +17,13 @@ from robotcode.core.workspace import WorkspaceFolder
 from ...common.parts.diagnostics import DiagnosticsCollectType, DiagnosticsResult
 from ..configuration import RoboCopConfig
 from .protocol_part import RobotLanguageServerProtocolPart
+from .robocop_tidy_mixin import RoboCopTidyMixin
 
 if TYPE_CHECKING:
     from ..protocol import RobotLanguageServerProtocol
 
 
-def robocop_installed() -> bool:
-    try:
-        __import__("robocop")
-    except ImportError:
-        return False
-    return True
-
-
-class RobotRoboCopDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
+class RobotRoboCopDiagnosticsProtocolPart(RobotLanguageServerProtocolPart, RoboCopTidyMixin):
     _logger = LoggingDescriptor()
 
     def __init__(self, parent: "RobotLanguageServerProtocol") -> None:
@@ -38,7 +31,7 @@ class RobotRoboCopDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
 
         self.source_name = "robocop"
 
-        if robocop_installed():
+        if self.robocop_installed and self.robocop_version < (6, 0):
             parent.diagnostics.collect.add(self.collect_diagnostics)
 
     def get_config(self, document: TextDocument) -> Optional[RoboCopConfig]:

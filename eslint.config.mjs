@@ -19,6 +19,7 @@ export default [
       "**/docs/",
       "**/packages/",
       "**/js",
+      "**/build/",
     ],
   },
   { files: ["**/*.{ts,tsx}"] },

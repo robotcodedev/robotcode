@@ -32,13 +32,20 @@ def run(title: str, *args: Any, **kwargs: Any) -> None:
 
 def main() -> None:
     current_version = get_version()
-
-    run(
-        "create changelog",
-        f"git-cliff --bump -t v{current_version} -o CHANGELOG.md",
-        shell=True,
-        timeout=600,
-    )
+    if current_version.prerelease:
+        run(
+            "create changelog",
+            "git-cliff -o CHANGELOG.md",
+            shell=True,
+            timeout=600,
+        )
+    else:
+        run(
+            "create changelog",
+            f"git-cliff --bump -t v{current_version} -o CHANGELOG.md",
+            shell=True,
+            timeout=600,
+        )
 
 
 if __name__ == "__main__":

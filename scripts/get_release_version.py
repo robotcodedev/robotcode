@@ -1,5 +1,4 @@
 import contextlib
-import re
 import sys
 from pathlib import Path
 
@@ -20,19 +19,7 @@ from scripts.tools import get_version
 
 
 def main() -> None:
-    version = get_version()
-
-    changelog = Path("CHANGELOG.md").read_text()
-    if version.prerelease:
-        version = "Unreleased"
-
-    regex = re.compile(
-        rf"^\#\#\s*\[({version})\][^\n]*?\n(?P<text>.*?)^\#\#\s+",
-        re.MULTILINE | re.DOTALL,
-    )
-
-    for match in regex.finditer(changelog):
-        print(match.group("text").strip())
+    print(get_version())
 
 
 if __name__ == "__main__":
