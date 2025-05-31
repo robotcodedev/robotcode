@@ -1,0 +1,15 @@
+data: !GeneratedTestData
+  character: 26
+  line: 92
+  name: variable from lib
+result: !Hover
+  contents:
+    kind: markdown
+    value: '### Suite Variable [Imported] `${A_VAR_FROM_LIB}`'
+  range:
+    end:
+      character: 27
+      line: 92
+    start:
+      character: 13
+      line: 92

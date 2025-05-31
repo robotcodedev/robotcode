@@ -199,7 +199,7 @@ def convert_from_rest(text: str) -> str:
 
 
 if get_robot_version() >= (6, 0):
-    # monkey patch robot framework
+    # monkey patch robot framework for performance reasons
     _old_from_name = EmbeddedArguments.from_name
 
     @functools.lru_cache(maxsize=8192)
@@ -214,8 +214,14 @@ if get_robot_version() >= (6, 0):
         except (VariableError, DataError):
             return ()
 
-    def _match_embedded(embedded_arguments: EmbeddedArguments, name: str) -> bool:
-        return embedded_arguments.match(name) is not None
+    if get_robot_version() >= (7, 3):
+
+        def _match_embedded(embedded_arguments: EmbeddedArguments, name: str) -> bool:
+            return bool(embedded_arguments.matches(name))
+    else:
+
+        def _match_embedded(embedded_arguments: EmbeddedArguments, name: str) -> bool:
+            return embedded_arguments.match(name) is not None
 
 else:
 

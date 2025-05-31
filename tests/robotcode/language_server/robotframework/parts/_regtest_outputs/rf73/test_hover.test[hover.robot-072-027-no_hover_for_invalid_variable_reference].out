@@ -1,0 +1,5 @@
+data: !GeneratedTestData
+  character: 27
+  line: 72
+  name: no hover for invalid variable reference
+result: null

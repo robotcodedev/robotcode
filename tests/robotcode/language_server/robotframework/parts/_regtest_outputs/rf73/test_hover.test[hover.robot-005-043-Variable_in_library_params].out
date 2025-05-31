@@ -1,0 +1,15 @@
+data: !GeneratedTestData
+  character: 43
+  line: 5
+  name: Variable in library params
+result: !Hover
+  contents:
+    kind: markdown
+    value: '### Suite Variable `${LIB_ARG}`'
+  range:
+    end:
+      character: 47
+      line: 5
+    start:
+      character: 40
+      line: 5

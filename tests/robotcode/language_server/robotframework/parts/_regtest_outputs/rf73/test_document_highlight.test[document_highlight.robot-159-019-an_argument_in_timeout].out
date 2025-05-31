@@ -1,0 +1,32 @@
+data: !GeneratedTestData
+  character: 19
+  line: 159
+  name: an argument in timeout
+result:
+- !DocumentHighlight
+  kind: 2
+  range:
+    end:
+      character: 25
+      line: 159
+    start:
+      character: 19
+      line: 159
+- !DocumentHighlight
+  kind: 3
+  range:
+    end:
+      character: 27
+      line: 164
+    start:
+      character: 21
+      line: 164
+- !DocumentHighlight
+  kind: 2
+  range:
+    end:
+      character: 19
+      line: 165
+    start:
+      character: 13
+      line: 165

@@ -1,0 +1,28 @@
+data: !GeneratedTestData
+  character: 57
+  line: 14
+  name: var in library parameters
+result:
+- !LocationLink
+  origin_selection_range:
+    end:
+      character: 64
+      line: 14
+    start:
+      character: 57
+      line: 14
+  target_range:
+    end:
+      character: 22
+      line: 23
+    start:
+      character: 0
+      line: 23
+  target_selection_range:
+    end:
+      character: 9
+      line: 23
+    start:
+      character: 2
+      line: 23
+  target_uri: goto.robot

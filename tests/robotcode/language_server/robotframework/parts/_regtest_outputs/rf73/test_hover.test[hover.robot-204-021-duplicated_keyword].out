@@ -1,0 +1,15 @@
+data: !GeneratedTestData
+  character: 21
+  line: 204
+  name: duplicated keyword
+result: !Hover
+  contents:
+    kind: markdown
+    value: '### Keyword *duplicated keyword*'
+  range:
+    end:
+      character: 22
+      line: 204
+    start:
+      character: 4
+      line: 204

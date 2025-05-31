@@ -1,0 +1,15 @@
+data: !GeneratedTestData
+  character: 17
+  line: 129
+  name: variable in else if
+result: !Hover
+  contents:
+    kind: markdown
+    value: '### Suite Variable `${B}`'
+  range:
+    end:
+      character: 18
+      line: 129
+    start:
+      character: 17
+      line: 129

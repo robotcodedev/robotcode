@@ -1,0 +1,59 @@
+data: !GeneratedTestData
+  character: 37
+  line: 3
+  name: a custom library with path
+result:
+- !Location
+  range:
+    end:
+      character: 27
+      line: 3
+    start:
+      character: 16
+      line: 3
+  uri: tests/code_action_show_documentation.robot
+- !Location
+  range:
+    end:
+      character: 47
+      line: 5
+    start:
+      character: 16
+      line: 5
+  uri: tests/code_action_show_documentation.robot
+- !Location
+  range:
+    end:
+      character: 47
+      line: 2
+    start:
+      character: 16
+      line: 2
+  uri: tests/document_highlight.robot
+- !Location
+  range:
+    end:
+      character: 49
+      line: 4
+    start:
+      character: 18
+      line: 4
+  uri: tests/goto.robot
+- !Location
+  range:
+    end:
+      character: 49
+      line: 7
+    start:
+      character: 18
+      line: 7
+  uri: tests/hover.robot
+- !Location
+  range:
+    end:
+      character: 47
+      line: 3
+    start:
+      character: 16
+      line: 3
+  uri: tests/references.robot

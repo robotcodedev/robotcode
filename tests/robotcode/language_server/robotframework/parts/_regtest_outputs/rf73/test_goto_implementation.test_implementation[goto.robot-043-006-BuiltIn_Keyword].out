@@ -1,0 +1,28 @@
+data: !GeneratedTestData
+  character: 6
+  line: 43
+  name: BuiltIn Keyword
+result:
+- !LocationLink
+  origin_selection_range:
+    end:
+      character: 7
+      line: 43
+    start:
+      character: 4
+      line: 43
+  target_range:
+    end:
+      character: 0
+      line: 3298
+    start:
+      character: 0
+      line: 3297
+  target_selection_range:
+    end:
+      character: 0
+      line: 3298
+    start:
+      character: 0
+      line: 3297
+  target_uri: BuiltIn.py

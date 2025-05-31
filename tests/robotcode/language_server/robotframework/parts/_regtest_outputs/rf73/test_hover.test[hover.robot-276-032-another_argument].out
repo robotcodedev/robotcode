@@ -1,0 +1,15 @@
+data: !GeneratedTestData
+  character: 32
+  line: 276
+  name: another argument
+result: !Hover
+  contents:
+    kind: markdown
+    value: '### Argument `${A VAR}`'
+  range:
+    end:
+      character: 35
+      line: 276
+    start:
+      character: 30
+      line: 276
