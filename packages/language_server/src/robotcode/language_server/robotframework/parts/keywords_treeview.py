@@ -17,12 +17,26 @@ if TYPE_CHECKING:
 @dataclass(repr=False)
 class GetDocumentImportsParams(CamelSnakeMixin):
     text_document: TextDocumentIdentifier
+    no_documentation: Optional[bool] = None
+
+
+@dataclass(repr=False)
+class GetDocumentKeywordsParams(CamelSnakeMixin):
+    text_document: TextDocumentIdentifier
+    no_documentation: Optional[bool] = None
 
 
 @dataclass(repr=False)
 class GetLibraryDocumentationParams(CamelSnakeMixin):
     workspace_folder_uri: str
     library_name: str
+
+
+@dataclass(repr=False)
+class GetKeywordDocumentationParams(CamelSnakeMixin):
+    workspace_folder_uri: str
+    library_name: str
+    keyword_name: str
 
 
 @dataclass(repr=False)
@@ -69,6 +83,7 @@ class RobotKeywordsTreeViewPart(RobotLanguageServerProtocolPart, ModelHelper):
     def _get_document_imports(
         self,
         text_document: TextDocumentIdentifier,
+        no_documentation: Optional[bool] = None,
         *args: Any,
         **kwargs: Any,
     ) -> Optional[List[DocumentImport]]:
@@ -87,16 +102,18 @@ class RobotKeywordsTreeViewPart(RobotLanguageServerProtocolPart, ModelHelper):
                     alias=v.alias,
                     id=str(hash(v)),
                     type="library",
-                    documentation=v.library_doc.to_markdown(add_signature=False),
+                    documentation=v.library_doc.to_markdown(add_signature=False) if not no_documentation else None,
                     keywords=[
                         Keyword(
                             l.name,
                             str(hash(l)),
                             l.parameter_signature(),
-                            l.to_markdown(add_signature=False),
+                            l.to_markdown(add_signature=False) if not no_documentation else None,
                         )
                         for l in v.library_doc.keywords.values()
-                    ],
+                    ]
+                    if not no_documentation
+                    else None,
                 )
             )
         for _k, v in namespace.get_resources().items():
@@ -106,21 +123,29 @@ class RobotKeywordsTreeViewPart(RobotLanguageServerProtocolPart, ModelHelper):
                     alias=None,
                     id=str(hash(v)),
                     type="resource",
-                    documentation=v.library_doc.to_markdown(add_signature=False),
+                    documentation=v.library_doc.to_markdown(add_signature=False) if not no_documentation else None,
                     keywords=[
-                        Keyword(l.name, str(hash(l)), l.parameter_signature(), l.to_markdown(add_signature=False))
+                        Keyword(
+                            l.name,
+                            str(hash(l)),
+                            l.parameter_signature(),
+                            l.to_markdown(add_signature=False) if not no_documentation else None,
+                        )
                         for l in v.library_doc.keywords.values()
-                    ],
+                    ]
+                    if not no_documentation
+                    else None,
                 )
             )
 
         return result
 
-    @rpc_method(name="robot/keywordsview/getDocumentKeywords", param_type=GetDocumentImportsParams, threaded=True)
+    @rpc_method(name="robot/keywordsview/getDocumentKeywords", param_type=GetDocumentKeywordsParams, threaded=True)
     @_logger.call
     def _get_document_keywords(
         self,
         text_document: TextDocumentIdentifier,
+        no_documentation: Optional[bool] = None,
         *args: Any,
         **kwargs: Any,
     ) -> Optional[List[Keyword]]:
@@ -131,7 +156,12 @@ class RobotKeywordsTreeViewPart(RobotLanguageServerProtocolPart, ModelHelper):
         namespace = self.parent.documents_cache.get_namespace(document)
 
         return [
-            Keyword(l.name, str(hash(l)), l.parameter_signature(), l.to_markdown(add_signature=False))
+            Keyword(
+                l.name,
+                str(hash(l)),
+                l.parameter_signature(),
+                l.to_markdown(add_signature=False) if not no_documentation else None,
+            )
             for l in namespace.get_library_doc().keywords.values()
         ]
 
@@ -219,4 +249,33 @@ class RobotKeywordsTreeViewPart(RobotLanguageServerProtocolPart, ModelHelper):
                 )
                 for s in libdoc.inits.values()
             ],
+        )
+
+    @rpc_method(
+        name="robot/keywordsview/getKeywordDocumentation", param_type=GetKeywordDocumentationParams, threaded=True
+    )
+    @_logger.call
+    def _get_keyword_documentation(
+        self,
+        workspace_folder_uri: str,
+        library_name: str,
+        keyword_name: str,
+        *args: Any,
+        **kwargs: Any,
+    ) -> Optional[Keyword]:
+        imports_manager = self.parent.documents_cache.get_imports_manager_for_uri(Uri(workspace_folder_uri))
+
+        libdoc = imports_manager.get_libdoc_for_library_import(library_name, (), ".")
+        if libdoc.errors:
+            raise ValueError(f"Errors while loading library documentation: {libdoc.errors}")
+
+        kw = libdoc.keywords.get(keyword_name, None)
+        if kw is None:
+            raise ValueError(f"Keyword '{keyword_name}' not found in library '{library_name}'.")
+
+        return Keyword(
+            name=kw.name,
+            id=str(hash(kw)),
+            signature=kw.parameter_signature(),
+            documentation=kw.to_markdown(),
         )

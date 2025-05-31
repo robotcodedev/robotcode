@@ -1941,16 +1941,14 @@
         ]
       }
     ],
-    "chatParticipants":[
-
-    ],
+    "chatParticipants": [],
     "languageModelTools": [
       {
-        "name": "robot-get_library_doc",
+        "name": "robot-get_library_documentation",
         "displayName": "Get Library Documentation",
-        "toolReferenceName": "robotGetLibraryDoc",
-        "modelDescription": "Gets the library documentation for the given library name. This includes keywords, documentation, and other information about the library.",
-        "userDescription": "Gets documentation for the given library.",
+        "toolReferenceName": "robotGetLibraryDocumentation",
+        "modelDescription": "Retrieves comprehensive documentation for Robot Framework libraries. Returns the library's description, initialization parameters with their types and default values, complete list of available keywords with their signatures (including arguments, types, and return values). Use this tool when you need to understand what keywords are available in a library, how to initialize it, or get detailed parameter information. Do not use for getting documentation of specific keywords (use robot-get_keyword_documentation instead) or for analyzing test files. Limitations: Only works with libraries that are properly installed and importable in the current Python environment, may not work with dynamic libraries that change behavior based on runtime conditions, and requires the specified library to be accessible from the workspace's Robot Framework configuration.",
+        "userDescription": "Gets Documentation and keyword list for a Robot Framework library.",
         "canBeReferencedInPrompt": true,
         "tags": [
           "robot",
@@ -1978,10 +1976,74 @@
         }
       },
       {
+        "name": "robot-get_keyword_documentation",
+        "displayName": "Get Keyword Documentation",
+        "toolReferenceName": "robotGetKeywordDoc",
+        "modelDescription": "Retrieves detailed documentation for a specific Robot Framework keyword. Returns the keyword's complete signature with parameter names, types, default values, and detailed descriptions, along with return value information and usage examples. Use this tool when you need specific information about how to use a particular keyword, its parameters, or expected behavior. Do not use for getting a list of all keywords in a library (use robot-get_library_documentation instead) or for analyzing test file content. Limitations: Requires both the keyword name and library name to be specified accurately, only works with keywords from libraries that are properly installed and importable in the current Python environment, may not work with dynamic keywords that change behavior based on runtime conditions, and requires the specified library to be accessible from the workspace's Robot Framework configuration.",
+        "userDescription": "Gets detailed documentation for a specific Robot Framework keyword.",
+        "canBeReferencedInPrompt": true,
+        "tags": [
+          "robot",
+          "robotframework",
+          "robotframework-keyword",
+          "robotcode"
+        ],
+        "icon": "$(robotcode-robot)",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "keywordName",
+            "libraryName"
+          ],
+          "properties": {
+            "keywordName": {
+              "type": "string",
+              "description": "The name of the keyword."
+            },
+            "libraryName": {
+              "type": "string",
+              "description": "The name of the library containing the keyword."
+            },
+            "resourcePath": {
+              "type": "string",
+              "description": "The path to the robot framework file or workspace."
+            }
+          }
+        }
+      },
+      {
+        "name": "robot-get_document_imports",
+        "displayName": "Get Document Imports",
+        "toolReferenceName": "robotGetDocumentImports",
+        "modelDescription": "Retrieves a list of all imported libraries and resource files for a specific Robot Framework document. Returns the names and paths of all libraries imported in the specified Robot Framework file. Use this tool when you need to analyze the dependencies of a Robot Framework document or understand its library and resource usage. Limitations: Only works with Robot Framework files, may not detect dynamic imports or libraries loaded at runtime, and requires the specified file to be accessible from the workspace's Robot Framework configuration.",
+        "userDescription": "Gets a list of all imported libraries and resources for a specific Robot Framework document.",
+        "canBeReferencedInPrompt": true,
+        "tags": [
+          "robot",
+          "robotframework",
+          "robotframework-library",
+          "robotframework-resource",
+          "robotcode"
+        ],
+        "icon": "$(robotcode-robot)",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "resourcePath"
+          ],
+          "properties": {
+            "resourcePath": {
+              "type": "string",
+              "description": "The path to a robot framework file."
+            }
+          }
+        }
+      },
+      {
         "name": "robot-get_environment_details",
         "displayName": "Get Robot Framework Environment Informations",
         "toolReferenceName": "robotGetEnvironmentInfo",
-        "modelDescription": "This tool will retrieve the details of the Robot Framework Environment for the specified file or workspace. This includes informations about the python interpreter, like the version and the executable path, and the versions of robot framework, RobotCode, robocop and robotidy if installed.",
+        "modelDescription": "Retrieves detailed environment information for Robot Framework workspaces or files. Returns comprehensive details about the Python interpreter (version, executable path), installed Robot Framework version, RobotCode extension version, and optional tool versions (robocop, robotidy) if available. Use this tool when you need to diagnose environment issues, verify installations, check version compatibility, or troubleshoot Robot Framework setup problems. Limitations: Only provides information about the currently configured Python environment for the workspace, may not detect tools installed in different Python environments, requires proper workspace configuration to access environment details, and information accuracy depends on the current RobotCode language server connection.",
         "userDescription": "Gets informations about the Robot Framework Environment.",
         "canBeReferencedInPrompt": true,
         "tags": [
