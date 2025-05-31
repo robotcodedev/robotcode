@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file. See [conven
 ### Bug Fixes
 
 - **cli:** Corrected monkey patching for click>=8.2.0 ([425e64d](https://github.com/robotcodedev/robotcode/commit/425e64ddf8c6a9a54ec6fe3d801253c2e3a2156a))
+- **formatting:** Improve message clarity for robocop formatting ([f71d15d](https://github.com/robotcodedev/robotcode/commit/f71d15df40f8bfd1f9f325d35e1ba73bcf16c9aa))
 - **textmate:** Corrected highlightning of comments in variable section ([5204afb](https://github.com/robotcodedev/robotcode/commit/5204afbfdd7f745c3e00ebc8d59fa3ad992ec0a8))
 - **textmate:** Enhance variable assignment handling ([7333eb9](https://github.com/robotcodedev/robotcode/commit/7333eb9b2f46e2af25583af2d5346b4b92dd1137))
 - Corrected detection of robocop ([f06bcbc](https://github.com/robotcodedev/robotcode/commit/f06bcbc1c2514326567399f8e5179da6ff5f9ed7))
@@ -17,7 +18,10 @@ All notable changes to this project will be documented in this file. See [conven
 - **intellij:** Reimplement and simplified parsing and syntax highlightning ([2dcdf7c](https://github.com/robotcodedev/robotcode/commit/2dcdf7ce846e8483fb427cdc7945a084fe4c3232))
 - **langserver:** Implemented robocop 6.0 formatting and deprecate old robotidy ([310bc54](https://github.com/robotcodedev/robotcode/commit/310bc544be8306fb85a329698763b562cd9d85aa))
 - **langserver:** Better support for indexed assignments ([6fad9b1](https://github.com/robotcodedev/robotcode/commit/6fad9b161b85b2412b6a9d5169e69b4ce37c43c3))
+- **vscode:** Add language model tool to get the library and resource imports from a robot file ([e5631f0](https://github.com/robotcodedev/robotcode/commit/e5631f042e42810b35d8694649cb76819b7b5866))
+- **vscode:** Add language model tools for retrieving library documentation and environment details ([a311e99](https://github.com/robotcodedev/robotcode/commit/a311e996cf95b2afaacc4b4402a4e2749b8d46bc))
 - **vscode:** Add deprecation messages for robotframework-tidy in configuration ([37c5371](https://github.com/robotcodedev/robotcode/commit/37c5371919d10a7ea1f46c91f1f7707b63fa96ce))
+- Basic support for Robot Framework 7.3 ([e6ffef7](https://github.com/robotcodedev/robotcode/commit/e6ffef7ded23ccab2bf3359891e5698f65a99ec4))
 - Show editor hint for Python/Robot Framework issues instead of throwing error ([4c2a43b](https://github.com/robotcodedev/robotcode/commit/4c2a43b8fd2ece7f905fc10695f2d5b9487dc52a))
 
 
