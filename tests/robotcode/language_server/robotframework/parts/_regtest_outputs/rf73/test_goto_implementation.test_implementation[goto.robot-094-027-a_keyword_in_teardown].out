@@ -1,0 +1,28 @@
+data: !GeneratedTestData
+  character: 27
+  line: 94
+  name: a keyword in teardown
+result:
+- !LocationLink
+  origin_selection_range:
+    end:
+      character: 29
+      line: 94
+    start:
+      character: 26
+      line: 94
+  target_range:
+    end:
+      character: 0
+      line: 3298
+    start:
+      character: 0
+      line: 3297
+  target_selection_range:
+    end:
+      character: 0
+      line: 3298
+    start:
+      character: 0
+      line: 3297
+  target_uri: BuiltIn.py

@@ -1,0 +1,15 @@
+data: !GeneratedTestData
+  character: 22
+  line: 43
+  name: inner inner var
+result: !Hover
+  contents:
+    kind: markdown
+    value: '### Suite Variable `${D}`'
+  range:
+    end:
+      character: 23
+      line: 43
+    start:
+      character: 22
+      line: 43

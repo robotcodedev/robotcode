@@ -471,7 +471,9 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
                         sem_mod.add(RobotSemTokenModifiers.BUILTIN)
 
                 if kw_doc is not None and kw_doc.is_embedded and kw_doc.matcher.embedded_arguments:
-                    if get_robot_version() >= (6, 0):
+                    if get_robot_version() >= (7, 3):
+                        m = kw_doc.matcher.embedded_arguments.name.fullmatch(kw)
+                    elif get_robot_version() >= (6, 0):
                         m = kw_doc.matcher.embedded_arguments.match(kw)
                     else:
                         m = kw_doc.matcher.embedded_arguments.name.match(kw)

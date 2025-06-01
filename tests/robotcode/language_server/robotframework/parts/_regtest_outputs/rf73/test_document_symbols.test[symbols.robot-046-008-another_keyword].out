@@ -1,0 +1,25 @@
+data: !GeneratedTestData
+  character: 8
+  line: 46
+  name: another keyword
+result: !DocumentSymbol
+  children: []
+  deprecated: null
+  detail: null
+  kind: 12
+  name: another keyword
+  range:
+    end:
+      character: 1
+      line: 50
+    start:
+      character: 0
+      line: 46
+  selection_range:
+    end:
+      character: 1
+      line: 50
+    start:
+      character: 0
+      line: 46
+  tags: null

@@ -1,0 +1,28 @@
+data: !GeneratedTestData
+  character: 10
+  line: 64
+  name: Robot BuilIn Namespace
+result:
+- !LocationLink
+  origin_selection_range:
+    end:
+      character: 11
+      line: 64
+    start:
+      character: 4
+      line: 64
+  target_range:
+    end:
+      character: 0
+      line: 4078
+    start:
+      character: 0
+      line: 4077
+  target_selection_range:
+    end:
+      character: 0
+      line: 4078
+    start:
+      character: 0
+      line: 4077
+  target_uri: BuiltIn.py

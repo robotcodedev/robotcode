@@ -1,0 +1,25 @@
+data: !GeneratedTestData
+  character: 21
+  line: 41
+  name: first argument
+result: !DocumentSymbol
+  children: []
+  deprecated: null
+  detail: null
+  kind: 13
+  name: ${first}
+  range:
+    end:
+      character: 27
+      line: 41
+    start:
+      character: 19
+      line: 41
+  selection_range:
+    end:
+      character: 27
+      line: 41
+    start:
+      character: 19
+      line: 41
+  tags: null

@@ -1,0 +1,19 @@
+data: !GeneratedTestData
+  character: 1
+  line: 43
+  name: Keyword end
+result:
+- !FoldingRange
+  collapsed_text: null
+  end_character: 1
+  end_line: 42
+  kind: section
+  start_character: 0
+  start_line: 36
+- !FoldingRange
+  collapsed_text: null
+  end_character: 1
+  end_line: 42
+  kind: keyword
+  start_character: 0
+  start_line: 39

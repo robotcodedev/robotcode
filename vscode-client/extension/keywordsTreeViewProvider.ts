@@ -196,7 +196,7 @@ export class KeywordsTreeViewProvider
           const currentDoc = document; // needed for the closure
 
           this._currentDocumentData.imports = (
-            await this.languageClientsManager.getDocumentImports(document, this._cancelationSource.token)
+            await this.languageClientsManager.getDocumentImports(document, false, this._cancelationSource.token)
           )
             .map((lib_or_res) => {
               if (this._cancelationSource?.token.isCancellationRequested) {

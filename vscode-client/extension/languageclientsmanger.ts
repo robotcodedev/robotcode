@@ -47,7 +47,7 @@ export interface LibraryDocumentation {
   name: string;
   documentation?: string;
   keywords?: Keyword[];
-  initializers?: DocumentImport[];
+  initializers?: Keyword[];
 }
 
 export interface DocumentImport {
@@ -892,10 +892,18 @@ export class LanguageClientsManager {
   }
 
   public async getDocumentImports(
-    document: vscode.TextDocument,
+    document_or_uri: vscode.TextDocument | vscode.Uri | string,
+    noDocumentation?: boolean | undefined,
     token?: vscode.CancellationToken | undefined,
   ): Promise<DocumentImport[]> {
-    const client = await this.getLanguageClientForResource(document.uri);
+    const uri =
+      document_or_uri instanceof vscode.Uri
+        ? document_or_uri
+        : typeof document_or_uri === "string"
+          ? vscode.Uri.parse(document_or_uri)
+          : document_or_uri.uri;
+
+    const client = await this.getLanguageClientForResource(uri);
 
     if (!client) return [];
 
@@ -903,7 +911,8 @@ export class LanguageClientsManager {
       (await client.sendRequest<DocumentImport[]>(
         "robot/keywordsview/getDocumentImports",
         {
-          textDocument: { uri: document.uri.toString() },
+          textDocument: { uri: uri.toString() },
+          noDocumentation: noDocumentation,
         },
         token ?? new vscode.CancellationTokenSource().token,
       )) ?? []
@@ -925,6 +934,29 @@ export class LanguageClientsManager {
         {
           workspaceFolderUri: workspace_folder.uri.toString(),
           libraryName: libraryName,
+        },
+        token ?? new vscode.CancellationTokenSource().token,
+      )) ?? undefined
+    );
+  }
+
+  public async getKeywordDocumentation(
+    workspace_folder: vscode.WorkspaceFolder,
+    libraryName: string,
+    keywordName: string,
+    token?: vscode.CancellationToken | undefined,
+  ): Promise<Keyword | undefined> {
+    const client = await this.getLanguageClientForResource(workspace_folder.uri);
+
+    if (!client) return undefined;
+
+    return (
+      (await client.sendRequest<Keyword>(
+        "robot/keywordsview/getKeywordDocumentation",
+        {
+          workspaceFolderUri: workspace_folder.uri.toString(),
+          libraryName: libraryName,
+          keywordName: keywordName,
         },
         token ?? new vscode.CancellationTokenSource().token,
       )) ?? undefined

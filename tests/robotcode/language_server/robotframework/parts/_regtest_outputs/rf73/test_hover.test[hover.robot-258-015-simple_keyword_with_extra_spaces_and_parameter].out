@@ -1,0 +1,15 @@
+data: !GeneratedTestData
+  character: 15
+  line: 258
+  name: simple keyword with extra spaces and parameter
+result: !Hover
+  contents:
+    kind: markdown
+    value: '### Keyword *a simple keyword*'
+  range:
+    end:
+      character: 16
+      line: 258
+    start:
+      character: 0
+      line: 258

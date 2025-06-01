@@ -1,0 +1,32 @@
+data: !GeneratedTestData
+  character: 18
+  line: 2
+  name: Variable in library import path
+result:
+- !DocumentHighlight
+  kind: 2
+  range:
+    end:
+      character: 24
+      line: 2
+    start:
+      character: 18
+      line: 2
+- !DocumentHighlight
+  kind: 2
+  range:
+    end:
+      character: 24
+      line: 4
+    start:
+      character: 18
+      line: 4
+- !DocumentHighlight
+  kind: 2
+  range:
+    end:
+      character: 24
+      line: 6
+    start:
+      character: 18
+      line: 6

@@ -1,0 +1,14 @@
+data: !GeneratedTestData
+  character: 14
+  line: 116
+  name: argument usage
+result:
+- !DocumentHighlight
+  kind: 1
+  range:
+    end:
+      character: 14
+      line: 116
+    start:
+      character: 14
+      line: 116

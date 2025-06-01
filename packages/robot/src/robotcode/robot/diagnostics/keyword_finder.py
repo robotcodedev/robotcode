@@ -306,17 +306,32 @@ class KeywordFinder:
                 return True
         return False
 
-    def _is_better_match(
-        self,
-        candidate: Tuple[Optional[LibraryEntry], KeywordDoc],
-        other: Tuple[Optional[LibraryEntry], KeywordDoc],
-    ) -> bool:
-        return (
-            other[1].matcher.embedded_arguments is not None
-            and candidate[1].matcher.embedded_arguments is not None
-            and other[1].matcher.embedded_arguments.match(candidate[1].name) is not None
-            and candidate[1].matcher.embedded_arguments.match(other[1].name) is None
-        )
+    if get_robot_version() >= (7, 3):
+
+        def _is_better_match(
+            self,
+            candidate: Tuple[Optional[LibraryEntry], KeywordDoc],
+            other: Tuple[Optional[LibraryEntry], KeywordDoc],
+        ) -> bool:
+            return (
+                other[1].matcher.embedded_arguments is not None
+                and candidate[1].matcher.embedded_arguments is not None
+                and other[1].matcher.embedded_arguments.matches(candidate[1].name)
+                and not candidate[1].matcher.embedded_arguments.matches(other[1].name)
+            )
+    else:
+
+        def _is_better_match(
+            self,
+            candidate: Tuple[Optional[LibraryEntry], KeywordDoc],
+            other: Tuple[Optional[LibraryEntry], KeywordDoc],
+        ) -> bool:
+            return (
+                other[1].matcher.embedded_arguments is not None
+                and candidate[1].matcher.embedded_arguments is not None
+                and other[1].matcher.embedded_arguments.match(candidate[1].name) is not None
+                and candidate[1].matcher.embedded_arguments.match(other[1].name) is None
+            )
 
     @functools.cached_property
     def _resource_imports(self) -> List[ResourceEntry]:

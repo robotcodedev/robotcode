@@ -1,0 +1,18 @@
+data: !GeneratedTestData
+  character: 30
+  line: 24
+  name: int params
+result: !SignatureHelp
+  active_parameter: 0
+  active_signature: 0
+  signatures:
+  - active_parameter: 0
+    documentation: null
+    label: '(i: int, b: bool, l: TestEnum = A)'
+    parameters:
+    - documentation: null
+      label: 'i: int'
+    - documentation: null
+      label: 'b: bool'
+    - documentation: null
+      label: 'l: TestEnum = A'

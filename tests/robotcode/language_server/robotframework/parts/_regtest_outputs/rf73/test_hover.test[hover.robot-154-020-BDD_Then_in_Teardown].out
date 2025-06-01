@@ -1,0 +1,5 @@
+data: !GeneratedTestData
+  character: 20
+  line: 154
+  name: BDD Then in Teardown
+result: null

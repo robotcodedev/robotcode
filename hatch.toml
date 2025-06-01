@@ -46,21 +46,11 @@ generate-tmlanguage = "python ./scripts/generate_tmlanguage.py"
 python = "3.13"
 extra-dependencies = ["robotframework==7.2rc1"]
 
-[envs.rfmaster313]
-python = "3.13"
-extra-dependencies = [
-  "robotframework @ git+https://github.com/robotframework/robotframework.git",
-]
-
 [envs.rfmaster]
 python = "3.12"
 extra-dependencies = [
   "robotframework @ git+https://github.com/robotframework/robotframework.git",
 ]
-
-[envs.pypy]
-python = "pypy3.10"
-extra-dependencies = ["robotframework==6.0"]
 
 [envs.rfdevel]
 python = "3.11"
@@ -75,30 +65,33 @@ python = "3.8"
 
 [[envs.devel.matrix]]
 python = ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13"]
-rf = ["rf41", "rf50", "rf60", "rf61", "rf70", "rf71", "rf72"]
+rf = ["rf41", "rf50", "rf60", "rf61", "rf70", "rf71", "rf72", "rf73"]
 
 [envs.devel.overrides]
 matrix.rf.dependencies = [
-  { value = "robotframework>=4.1.0, <5.0", if = [
+  { value = "robotframework~=4.1.0", if = [
     "rf41",
   ] },
-  { value = "robotframework>=5.0.0, <6.0", if = [
+  { value = "robotframework~=5.0.0", if = [
     "rf50",
   ] },
-  { value = "robotframework>6.0.0, <6.1", if = [
+  { value = "robotframework~=6.0.0", if = [
     "rf60",
   ] },
-  { value = "robotframework>=6.1, <7.0", if = [
+  { value = "robotframework~=6.1.0", if = [
     "rf61",
   ] },
-  { value = "robotframework>=7.0, <7.1", if = [
+  { value = "robotframework~=7.0.0", if = [
     "rf70",
   ] },
-  { value = "robotframework>=7.1, <7.2", if = [
+  { value = "robotframework~=7.1.0", if = [
     "rf71",
   ] },
-  { value = "robotframework>=7.2, <7.3", if = [
+  { value = "robotframework~=7.2.0", if = [
     "rf72",
+  ] },
+  { value = "robotframework~=7.3.0", if = [
+    "rf73",
   ] },
 ]
 
@@ -107,30 +100,33 @@ dependencies = ["pytest", "pytest-html", "pytest_asyncio>=0.23", "pyyaml"]
 pre-install-commands = ["python ./scripts/install_packages.py"]
 
 [[envs.test.matrix]]
-rf = ["rf41", "rf50", "rf60", "rf61", "rf70", "rf71", "rf72"]
+rf = ["rf41", "rf50", "rf60", "rf61", "rf70", "rf71", "rf72", "rf73"]
 
 [envs.test.overrides]
 matrix.rf.dependencies = [
-  { value = "robotframework>=4.1.0, <5.0", if = [
+  { value = "robotframework~=4.1.0", if = [
     "rf41",
   ] },
-  { value = "robotframework>=5.0.0, <6.0", if = [
+  { value = "robotframework~=5.0.0", if = [
     "rf50",
   ] },
-  { value = "robotframework>6.0.0, <6.1", if = [
+  { value = "robotframework~=6.0.0", if = [
     "rf60",
   ] },
-  { value = "robotframework>=6.1, <7.0", if = [
+  { value = "robotframework~=6.1.0", if = [
     "rf61",
   ] },
-  { value = "robotframework>=7.0, <7.1", if = [
+  { value = "robotframework~=7.0.0", if = [
     "rf70",
   ] },
-  { value = "robotframework>=7.1, <7.2", if = [
+  { value = "robotframework~=7.1.0", if = [
     "rf71",
   ] },
-  { value = "robotframework>=7.2, <7.3", if = [
+  { value = "robotframework~=7.2.0", if = [
     "rf72",
+  ] },
+  { value = "robotframework~=7.3.0", if = [
+    "rf73",
   ] },
 ]
 
@@ -179,7 +175,7 @@ install-bundled-editable = "python ./scripts/install_bundled_editable.py"
 
 
 [envs.hatch-static-analysis]
-installer="uv"
+installer = "uv"
 dependencies = ["ruff"]
 
 [envs.hatch-static-analysis.scripts]
