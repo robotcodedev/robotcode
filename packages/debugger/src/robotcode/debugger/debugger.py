@@ -1781,29 +1781,40 @@ class Debugger:
                         result = None
 
                         if len(test.body):
-                            for kw in test.body:
-                                with LOGGER.delayed_logging:
-                                    try:
-                                        result = self._run_keyword(kw, evaluate_context)
-                                    except (SystemExit, KeyboardInterrupt):
-                                        raise
-                                    except BaseException as e:
-                                        result = e
-                                        break
-                                    finally:
-                                        if get_robot_version() <= (7, 2):
-                                            messages = LOGGER._log_message_cache or []
-                                            for msg in messages or ():
-                                                # hack to get and evaluate log level
-                                                listener: Any = next(iter(LOGGER), None)
-                                                if listener is None or self.check_message_is_logged(listener, msg):
-                                                    self.log_message(
-                                                        {
-                                                            "level": msg.level,
-                                                            "message": msg.message,
-                                                            "timestamp": msg.timestamp,
-                                                        }
-                                                    )
+                            if get_robot_version() >= (7, 3):
+                                for kw in test.body:
+                                    with evaluate_context.output.delayed_logging:
+                                        try:
+                                            result = self._run_keyword(kw, evaluate_context)
+                                        except (SystemExit, KeyboardInterrupt):
+                                            raise
+                                        except BaseException as e:
+                                            result = e
+                                            break
+                            else:
+                                for kw in test.body:
+                                    with LOGGER.delayed_logging:
+                                        try:
+                                            result = self._run_keyword(kw, evaluate_context)
+                                        except (SystemExit, KeyboardInterrupt):
+                                            raise
+                                        except BaseException as e:
+                                            result = e
+                                            break
+                                        finally:
+                                            if get_robot_version() <= (7, 2):
+                                                messages = LOGGER._log_message_cache or []
+                                                for msg in messages or ():
+                                                    # hack to get and evaluate log level
+                                                    listener: Any = next(iter(LOGGER), None)
+                                                    if listener is None or self.check_message_is_logged(listener, msg):
+                                                        self.log_message(
+                                                            {
+                                                                "level": msg.level,
+                                                                "message": msg.message,
+                                                                "timestamp": msg.timestamp,
+                                                            }
+                                                        )
                         return result
 
                     result = self.run_in_robot_thread(run_kw)
