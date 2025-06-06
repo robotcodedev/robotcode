@@ -78,4 +78,5 @@ a simple keyword with union argument
 #    Whatever
 
 a ${keyword: int:keyword} with embedded args
+    [Documentation]    this is a simple embedded keyword
     log    ${keyword}

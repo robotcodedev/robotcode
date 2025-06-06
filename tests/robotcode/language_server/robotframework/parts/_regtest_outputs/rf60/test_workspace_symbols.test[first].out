@@ -300,6 +300,21 @@ result:
   name: first
   tags: null
 - !WorkspaceSymbol
+  container_name: old_for
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 5
+        line: 1
+      start:
+        character: 0
+        line: 1
+    uri: old_for.robot
+  name: first
+  tags: null
+- !WorkspaceSymbol
   container_name: part1__suite
   data: null
   kind: 5

@@ -3511,6 +3511,66 @@ result:
   name: first
   tags: null
 - !WorkspaceSymbol
+  container_name: old_for
+  data: null
+  kind: 13
+  location:
+    range:
+      end:
+        character: 14
+        line: 10
+      start:
+        character: 13
+        line: 10
+    uri: old_for.robot
+  name: ${i}
+  tags: null
+- !WorkspaceSymbol
+  container_name: old_for
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 5
+        line: 1
+      start:
+        character: 0
+        line: 1
+    uri: old_for.robot
+  name: first
+  tags: null
+- !WorkspaceSymbol
+  container_name: old_for
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 6
+        line: 6
+      start:
+        character: 0
+        line: 6
+    uri: old_for.robot
+  name: second
+  tags: null
+- !WorkspaceSymbol
+  container_name: old_for
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 5
+        line: 9
+      start:
+        character: 0
+        line: 9
+    uri: old_for.robot
+  name: third
+  tags: null
+- !WorkspaceSymbol
   container_name: part1__suite
   data: null
   kind: 5
