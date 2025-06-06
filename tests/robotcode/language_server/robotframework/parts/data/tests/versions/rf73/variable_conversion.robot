@@ -2,6 +2,8 @@
 ${a: int}                       1
 ${s: str}                       hallo welt
 ${k: Literal["Yes", "No"]}      No
+@{numbers: int}                 1    2    4    11aa
+${time: datetime}               now
 
 
 *** Test Cases ***
@@ -9,6 +11,9 @@ suite variables
     Log    ${a}
     Log    ${s}
     Log    ${k}
+    Log    ${time}
+    Log    ${numbers}
+    Log    ${TYPE_VAR}
     a simple keyword with args    2    a string    [1,2,3]
     a simple keyword with default arguments
     a simple keyword with union argument    1
@@ -40,6 +45,9 @@ if assignment
     ${a: int}    IF    $a    Evaluate    "asd"    ELSE    Evaluate    3+4
     Log    ${a}
 
+calling kws with embedded args
+    a keyword with embedded args
+
 
 *** Keywords ***
 a simple keyword with args
@@ -68,3 +76,6 @@ a simple keyword with union argument
 # Varargs
 #    [Arguments]    @{v: int}    @{w}
 #    Whatever
+
+a ${keyword: int:keyword} with embedded args
+    log    ${keyword}

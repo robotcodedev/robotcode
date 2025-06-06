@@ -19,7 +19,7 @@ from robot.parsing.lexer.tokens import Token
 from robotcode.core.lsp.types import Position, Range
 
 from ..utils.ast import range_from_token
-from ..utils.variables import VariableMatcher
+from ..utils.variables import VariableMatcher, search_variable
 
 if TYPE_CHECKING:
     from robotcode.robot.diagnostics.library_doc import KeywordDoc, LibraryDoc
@@ -191,7 +191,13 @@ class VariableDefinition(SourceEntity):
 
     @functools.cached_property
     def matcher(self) -> VariableMatcher:
-        return VariableMatcher(self.name)
+        return search_variable(self.name)
+
+    @functools.cached_property
+    def full_name(self) -> str:
+        m = self.matcher
+        value_type = f": {self.value_type}" if self.value_type else ""
+        return f"{m.identifier}{{{m.base.strip()}{value_type}}}"
 
     @single_call
     def __hash__(self) -> int:

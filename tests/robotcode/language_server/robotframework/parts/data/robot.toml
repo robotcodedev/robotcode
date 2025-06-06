@@ -27,6 +27,7 @@ ROBOTCODE_DISABLE_HIDDEN_TASKS = "1"
 CMD_VAR = { expr = "1+2*5" }
 CMD_VAR_LONG = "a test"
 ANOTHER_VAR = { expr = "environ.get('CMD_VAR_LONG', 'default')" }
+TYPE_VAR = " str:string"
 
 [profiles.devel]
 description = """The devel profile

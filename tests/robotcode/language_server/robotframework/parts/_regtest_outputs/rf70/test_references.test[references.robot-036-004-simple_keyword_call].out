@@ -223,24 +223,6 @@ result:
   range:
     end:
       character: 7
-      line: 8
-    start:
-      character: 4
-      line: 8
-  uri: rf73/variable_conversion.robot
-- !Location
-  range:
-    end:
-      character: 7
-      line: 9
-    start:
-      character: 4
-      line: 9
-  uri: rf73/variable_conversion.robot
-- !Location
-  range:
-    end:
-      character: 7
       line: 10
     start:
       character: 4
@@ -250,19 +232,46 @@ result:
   range:
     end:
       character: 7
-      line: 20
+      line: 11
     start:
       character: 4
-      line: 20
+      line: 11
   uri: rf73/variable_conversion.robot
 - !Location
   range:
     end:
       character: 7
-      line: 21
+      line: 12
     start:
       character: 4
-      line: 21
+      line: 12
+  uri: rf73/variable_conversion.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 13
+    start:
+      character: 4
+      line: 13
+  uri: rf73/variable_conversion.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 14
+    start:
+      character: 4
+      line: 14
+  uri: rf73/variable_conversion.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 15
+    start:
+      character: 4
+      line: 15
   uri: rf73/variable_conversion.robot
 - !Location
   range:
@@ -276,74 +285,47 @@ result:
 - !Location
   range:
     end:
+      character: 7
+      line: 26
+    start:
+      character: 4
+      line: 26
+  uri: rf73/variable_conversion.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 30
+    start:
+      character: 4
+      line: 30
+  uri: rf73/variable_conversion.robot
+- !Location
+  range:
+    end:
       character: 11
-      line: 31
+      line: 36
     start:
       character: 8
-      line: 31
+      line: 36
   uri: rf73/variable_conversion.robot
 - !Location
   range:
     end:
       character: 11
-      line: 35
+      line: 40
     start:
       character: 8
-      line: 35
-  uri: rf73/variable_conversion.robot
-- !Location
-  range:
-    end:
-      character: 7
-      line: 40
-    start:
-      character: 4
       line: 40
   uri: rf73/variable_conversion.robot
 - !Location
   range:
     end:
       character: 7
-      line: 47
+      line: 45
     start:
       character: 4
-      line: 47
-  uri: rf73/variable_conversion.robot
-- !Location
-  range:
-    end:
-      character: 7
-      line: 48
-    start:
-      character: 4
-      line: 48
-  uri: rf73/variable_conversion.robot
-- !Location
-  range:
-    end:
-      character: 7
-      line: 49
-    start:
-      character: 4
-      line: 49
-  uri: rf73/variable_conversion.robot
-- !Location
-  range:
-    end:
-      character: 7
-      line: 50
-    start:
-      character: 4
-      line: 50
-  uri: rf73/variable_conversion.robot
-- !Location
-  range:
-    end:
-      character: 7
-      line: 54
-    start:
-      character: 4
-      line: 54
+      line: 45
   uri: rf73/variable_conversion.robot
 - !Location
   range:
@@ -358,10 +340,64 @@ result:
   range:
     end:
       character: 7
-      line: 59
+      line: 56
     start:
       character: 4
-      line: 59
+      line: 56
+  uri: rf73/variable_conversion.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 57
+    start:
+      character: 4
+      line: 57
+  uri: rf73/variable_conversion.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 58
+    start:
+      character: 4
+      line: 58
+  uri: rf73/variable_conversion.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 62
+    start:
+      character: 4
+      line: 62
+  uri: rf73/variable_conversion.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 63
+    start:
+      character: 4
+      line: 63
+  uri: rf73/variable_conversion.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 67
+    start:
+      character: 4
+      line: 67
+  uri: rf73/variable_conversion.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 80
+    start:
+      character: 4
+      line: 80
   uri: rf73/variable_conversion.robot
 - !Location
   range:
