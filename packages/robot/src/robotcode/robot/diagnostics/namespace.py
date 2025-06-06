@@ -46,7 +46,9 @@ from robotcode.core.uri import Uri
 from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.core.utils.path import same_file
 
+from ..utils import get_robot_version
 from ..utils.ast import (
+    get_first_variable_token,
     range_from_node,
     range_from_token,
     strip_variable_token,
@@ -58,7 +60,6 @@ from ..utils.variables import (
     InvalidVariableError,
     VariableMatcher,
     is_scalar_assign,
-    is_variable,
     search_variable,
 )
 from ..utils.visitor import Visitor
@@ -93,6 +94,9 @@ from .library_doc import (
 )
 from .namespace_analyzer import NamespaceAnalyzer
 
+if get_robot_version() >= (7, 0):
+    from robot.parsing.model.statements import Var
+
 
 class DiagnosticsError(Exception):
     pass
@@ -126,15 +130,10 @@ class VariablesVisitor(Visitor):
         if name_token is None:
             return
 
-        name = name_token.value
-
-        if name is not None:
-            match = search_variable(name, ignore_errors=True)
-            if not match.is_assign(allow_assign_mark=True):
+        if name_token.value is not None:
+            matcher = search_variable(name_token.value, ignore_errors=True, parse_type=True)
+            if not matcher.is_assign(allow_assign_mark=True) or matcher.name is None:
                 return
-
-            if name.endswith("="):
-                name = name[:-1].rstrip()
 
             values = node.get_values(Token.ARGUMENT)
             has_value = bool(values)
@@ -146,26 +145,21 @@ class VariablesVisitor(Visitor):
                 for s in values
             )
 
+            stripped_name_token = strip_variable_token(name_token, matcher=matcher, parse_type=True)
+
             self._results.append(
                 VariableDefinition(
-                    name=name,
-                    name_token=strip_variable_token(
-                        Token(
-                            name_token.type,
-                            name,
-                            name_token.lineno,
-                            name_token.col_offset,
-                            name_token.error,
-                        )
-                    ),
-                    line_no=node.lineno,
-                    col_offset=node.col_offset,
-                    end_line_no=node.lineno,
-                    end_col_offset=node.end_col_offset,
+                    name=matcher.name,
+                    name_token=stripped_name_token,
+                    line_no=stripped_name_token.lineno,
+                    col_offset=stripped_name_token.col_offset,
+                    end_line_no=stripped_name_token.lineno,
+                    end_col_offset=stripped_name_token.end_col_offset,
                     source=self.source,
                     has_value=has_value,
                     resolvable=True,
                     value=value,
+                    value_type=matcher.type,
                 )
             )
 
@@ -185,23 +179,10 @@ class VariableVisitorBase(Visitor):
         self.position = position
         self.in_args = in_args
 
-        self._results: Dict[str, VariableDefinition] = {}
+        self._results: Dict[VariableMatcher, VariableDefinition] = {}
         self.current_kw_doc: Optional[KeywordDoc] = None
         self.current_kw: Optional[Keyword] = None
         self._resolved_variables: Any = resolved_variables
-
-    def get_variable_token(self, token: Token) -> Optional[Token]:
-        return next(
-            (
-                v
-                for v in itertools.dropwhile(
-                    lambda t: t.type in Token.NON_DATA_TOKENS,
-                    tokenize_variables(token, ignore_errors=True, extra_types={Token.VARIABLE}),
-                )
-                if v.type == Token.VARIABLE
-            ),
-            None,
-        )
 
 
 class ArgumentVisitor(VariableVisitorBase):
@@ -217,7 +198,7 @@ class ArgumentVisitor(VariableVisitorBase):
 
         self.current_kw_doc: Optional[KeywordDoc] = current_kw_doc
 
-    def get(self, model: ast.AST) -> Dict[str, VariableDefinition]:
+    def get(self, model: ast.AST) -> Dict[VariableMatcher, VariableDefinition]:
         self._results = {}
 
         self.visit(model)
@@ -225,13 +206,11 @@ class ArgumentVisitor(VariableVisitorBase):
         return self._results
 
     def visit_Arguments(self, node: Statement) -> None:  # noqa: N802
-        args: List[str] = []
+        args: Dict[VariableMatcher, VariableDefinition] = {}
 
-        arguments = node.get_tokens(Token.ARGUMENT)
-
-        for argument_token in arguments:
+        for argument_token in node.get_tokens(Token.ARGUMENT):
             try:
-                argument = self.get_variable_token(argument_token)
+                argument = get_first_variable_token(argument_token)
 
                 if argument is not None and argument.value != "@{}":
                     if (
@@ -242,19 +221,27 @@ class ArgumentVisitor(VariableVisitorBase):
                     ):
                         break
 
-                    if argument.value not in args:
-                        args.append(argument.value)
+                    matcher = VariableMatcher(argument.value, parse_type=True, ignore_errors=True)
+                    if not matcher.is_variable() or matcher.name is None:
+                        continue
+
+                    stripped_argument_token = strip_variable_token(argument, parse_type=True, matcher=matcher)
+
+                    if matcher not in args:
                         arg_def = ArgumentDefinition(
-                            name=argument.value,
-                            name_token=strip_variable_token(argument),
-                            line_no=argument.lineno,
-                            col_offset=argument.col_offset,
-                            end_line_no=argument.lineno,
-                            end_col_offset=argument.end_col_offset,
+                            name=matcher.name,
+                            name_token=stripped_argument_token,
+                            line_no=stripped_argument_token.lineno,
+                            col_offset=stripped_argument_token.col_offset,
+                            end_line_no=stripped_argument_token.lineno,
+                            end_col_offset=stripped_argument_token.end_col_offset,
                             source=self.namespace.source,
                             keyword_doc=self.current_kw_doc,
+                            value_type=matcher.type,
                         )
-                        self._results[argument.value] = arg_def
+
+                        args[matcher] = arg_def
+                        self._results[matcher] = arg_def
 
             except VariableError:
                 pass
@@ -301,7 +288,7 @@ class OnlyArgumentsVisitor(VariableVisitorBase):
                     full_name = f"{match.identifier}{{{name}}}"
                     var_token = strip_variable_token(variable_token)
                     var_token.value = name
-                    self._results[full_name] = ArgumentDefinition(
+                    self._results[match] = ArgumentDefinition(
                         name=full_name,
                         name_token=var_token,
                         line_no=variable_token.lineno,
@@ -325,7 +312,7 @@ class BlockVariableVisitor(OnlyArgumentsVisitor):
         variables = node.get_tokens(Token.VARIABLE)[:1]
         if variables and is_scalar_assign(variables[0].value):
             try:
-                variable = self.get_variable_token(variables[0])
+                variable = get_first_variable_token(variables[0])
 
                 if variable is not None:
                     self._results[variable.value] = LocalVariableDefinition(
@@ -384,171 +371,213 @@ class BlockVariableVisitor(OnlyArgumentsVisitor):
         # TODO  analyze "Set Local/Global/Suite Variable"
 
         for assign_token in node.get_tokens(Token.ASSIGN):
-            variable_token = self.get_variable_token(assign_token)
-
+            if (
+                self.position is not None
+                and self.position in range_from_node(node)
+                and self.position > range_from_token(assign_token).end
+            ):
+                continue
             try:
-                if variable_token is not None:
-                    if (
-                        self.position is not None
-                        and self.position in range_from_node(node)
-                        and self.position > range_from_token(variable_token).end
-                    ):
-                        continue
-
-                    if variable_token.value not in self._results:
-                        self._results[variable_token.value] = LocalVariableDefinition(
-                            name=variable_token.value,
-                            name_token=strip_variable_token(variable_token),
-                            line_no=variable_token.lineno,
-                            col_offset=variable_token.col_offset,
-                            end_line_no=variable_token.lineno,
-                            end_col_offset=variable_token.end_col_offset,
-                            source=self.namespace.source,
-                        )
-
-            except VariableError:
-                pass
-
-        keyword_token = node.get_token(Token.KEYWORD)
-        if keyword_token is None or not keyword_token.value:
-            return
-
-        keyword = self.namespace.find_keyword(keyword_token.value, raise_keyword_error=False)
-        if keyword is None:
-            return
-
-        if keyword.libtype == "LIBRARY" and keyword.libname == "BuiltIn":
-            var_type = None
-            if keyword.name == "Set Suite Variable":
-                var_type = VariableDefinition
-            elif keyword.name == "Set Global Variable":
-                var_type = GlobalVariableDefinition
-            elif keyword.name == "Set Test Variable" or keyword.name == "Set Task Variable":
-                var_type = TestVariableDefinition
-            elif keyword.name == "Set Local Variable":
-                var_type = LocalVariableDefinition
-            else:
-                return
-            try:
-                variable = node.get_token(Token.ARGUMENT)
-                if variable is None:
-                    return
-
-                position = range_from_node(node).start
-                position.character = 0
-                var_name = self._get_var_name(variable.value, position)
-
-                if var_name is None or not is_variable(var_name):
-                    return
-
-                var = var_type(
-                    name=var_name,
-                    name_token=strip_variable_token(variable),
-                    line_no=variable.lineno,
-                    col_offset=variable.col_offset,
-                    end_line_no=variable.lineno,
-                    end_col_offset=variable.end_col_offset,
-                    source=self.namespace.source,
+                matcher = search_variable(
+                    assign_token.value[:-1].rstrip() if assign_token.value.endswith("=") else assign_token.value,
+                    parse_type=True,
+                    ignore_errors=True,
                 )
 
-                if var_name not in self._results or type(self._results[var_name]) is not type(var):
-                    if isinstance(var, LocalVariableDefinition) or not any(
-                        l for l in self.namespace.get_global_variables() if l.matcher == var.matcher
-                    ):
-                        self._results[var_name] = var
-                    else:
-                        self._results.pop(var_name, None)
+                if not matcher.is_assign(allow_assign_mark=True) or matcher.name is None:
+                    continue
+
+                if matcher not in self._results:
+                    stripped_name_token = strip_variable_token(assign_token, matcher=matcher, parse_type=True)
+
+                    self._results[matcher] = LocalVariableDefinition(
+                        name=matcher.name,
+                        name_token=stripped_name_token,
+                        line_no=stripped_name_token.lineno,
+                        col_offset=stripped_name_token.col_offset,
+                        end_line_no=stripped_name_token.lineno,
+                        end_col_offset=stripped_name_token.end_col_offset,
+                        source=self.namespace.source,
+                        value_type=matcher.type,
+                    )
 
             except VariableError:
                 pass
+
+        # TODO: analyse Set Suite/Test/Global Variable keywords
+        # keyword_token = node.get_token(Token.KEYWORD)
+        # if keyword_token is None or not keyword_token.value:
+        #     return
+
+        # keyword = self.namespace.find_keyword(keyword_token.value, raise_keyword_error=False)
+        # if keyword is None:
+        #     return
+
+        # if keyword.libtype == "LIBRARY" and keyword.libname == "BuiltIn":
+        #     var_type = None
+        #     if keyword.name == "Set Suite Variable":
+        #         var_type = VariableDefinition
+        #     elif keyword.name == "Set Global Variable":
+        #         var_type = GlobalVariableDefinition
+        #     elif keyword.name == "Set Test Variable" or keyword.name == "Set Task Variable":
+        #         var_type = TestVariableDefinition
+        #     elif keyword.name == "Set Local Variable":
+        #         var_type = LocalVariableDefinition
+        #     else:
+        #         return
+        #     try:
+        #         variable = node.get_token(Token.ARGUMENT)
+        #         if variable is None:
+        #             return
+
+        #         position = range_from_node(node).start
+        #         position.character = 0
+        #         var_name = self._get_var_name(variable.value, position)
+
+        #         if var_name is None or not is_variable(var_name):
+        #             return
+
+        #         var = var_type(
+        #             name=var_name,
+        #             name_token=strip_variable_token(variable),
+        #             line_no=variable.lineno,
+        #             col_offset=variable.col_offset,
+        #             end_line_no=variable.lineno,
+        #             end_col_offset=variable.end_col_offset,
+        #             source=self.namespace.source,
+        #         )
+
+        #         if var_name not in self._results or type(self._results[var_name]) is not type(var):
+        #             if isinstance(var, LocalVariableDefinition) or not any(
+        #                 l for l in self.namespace.get_global_variables() if l.matcher == var.matcher
+        #             ):
+        #                 self._results[var_name] = var
+        #             else:
+        #                 self._results.pop(var_name, None)
+
+        #     except VariableError:
+        #         pass
 
     def visit_InlineIfHeader(self, node: Statement) -> None:  # noqa: N802
         for assign_token in node.get_tokens(Token.ASSIGN):
-            variable_token = self.get_variable_token(assign_token)
-
+            if (
+                self.position is not None
+                and self.position in range_from_node(node)
+                and self.position > range_from_token(assign_token).end
+            ):
+                continue
             try:
-                if variable_token is not None:
-                    if (
-                        self.position is not None
-                        and self.position in range_from_node(node)
-                        and self.position > range_from_token(variable_token).end
-                    ):
-                        continue
+                matcher = search_variable(
+                    assign_token.value[:-1].rstrip() if assign_token.value.endswith("=") else assign_token.value,
+                    parse_type=True,
+                    ignore_errors=True,
+                )
 
-                    if variable_token.value not in self._results:
-                        self._results[variable_token.value] = LocalVariableDefinition(
-                            name=variable_token.value,
-                            name_token=strip_variable_token(variable_token),
-                            line_no=variable_token.lineno,
-                            col_offset=variable_token.col_offset,
-                            end_line_no=variable_token.lineno,
-                            end_col_offset=variable_token.end_col_offset,
-                            source=self.namespace.source,
-                        )
+                if not matcher.is_assign(allow_assign_mark=True) or matcher.name is None:
+                    continue
+
+                if matcher not in self._results:
+                    stripped_name_token = strip_variable_token(assign_token, matcher=matcher, parse_type=True)
+
+                    self._results[matcher] = LocalVariableDefinition(
+                        name=matcher.name,
+                        name_token=stripped_name_token,
+                        line_no=stripped_name_token.lineno,
+                        col_offset=stripped_name_token.col_offset,
+                        end_line_no=stripped_name_token.lineno,
+                        end_col_offset=stripped_name_token.end_col_offset,
+                        source=self.namespace.source,
+                        value_type=matcher.type,
+                    )
 
             except VariableError:
                 pass
 
     def visit_ForHeader(self, node: Statement) -> None:  # noqa: N802
-        variables = node.get_tokens(Token.VARIABLE)
-        for variable in variables:
-            variable_token = self.get_variable_token(variable)
-            if variable_token is not None and variable_token.value and variable_token.value not in self._results:
-                self._results[variable_token.value] = LocalVariableDefinition(
-                    name=variable_token.value,
-                    name_token=strip_variable_token(variable_token),
-                    line_no=variable_token.lineno,
-                    col_offset=variable_token.col_offset,
-                    end_line_no=variable_token.lineno,
-                    end_col_offset=variable_token.end_col_offset,
-                    source=self.namespace.source,
+        for assign_token in node.get_tokens(Token.VARIABLE):
+            if (
+                self.position is not None
+                and self.position in range_from_node(node)
+                and self.position > range_from_token(assign_token).end
+            ):
+                continue
+            try:
+                matcher = search_variable(
+                    assign_token.value[:-1].rstrip() if assign_token.value.endswith("=") else assign_token.value,
+                    parse_type=True,
+                    ignore_errors=True,
                 )
 
-    def visit_Var(self, node: Statement) -> None:  # noqa: N802
-        from robot.parsing.model.statements import Var
+                if not matcher.is_assign(allow_assign_mark=True) or matcher.name is None:
+                    continue
 
-        variable = node.get_token(Token.VARIABLE)
-        if variable is None:
-            return
-        try:
-            var_name = variable.value
-            if var_name.endswith("="):
-                var_name = var_name[:-1].rstrip()
+                if matcher not in self._results:
+                    stripped_name_token = strip_variable_token(assign_token, matcher=matcher, parse_type=True)
 
-            if not is_variable(var_name):
+                    self._results[matcher] = LocalVariableDefinition(
+                        name=matcher.name,
+                        name_token=stripped_name_token,
+                        line_no=stripped_name_token.lineno,
+                        col_offset=stripped_name_token.col_offset,
+                        end_line_no=stripped_name_token.lineno,
+                        end_col_offset=stripped_name_token.end_col_offset,
+                        source=self.namespace.source,
+                        value_type=matcher.type,
+                    )
+
+            except VariableError:
+                pass
+
+    if get_robot_version() >= (7, 0):
+
+        def visit_Var(self, node: Var) -> None:  # noqa: N802
+            name_token = node.get_token(Token.VARIABLE)
+            if name_token is None:
                 return
 
-            scope = cast(Var, node).scope
+            try:
+                matcher = search_variable(
+                    name_token.value[:-1].rstrip() if name_token.value.endswith("=") else name_token.value,
+                    parse_type=True,
+                    ignore_errors=True,
+                )
+                if not matcher.is_assign(allow_assign_mark=True) or matcher.name is None:
+                    return
 
-            if scope in ("SUITE",):
-                var_type = VariableDefinition
-            elif scope in ("TEST", "TASK"):
-                var_type = TestVariableDefinition
-            elif scope in ("GLOBAL",):
-                var_type = GlobalVariableDefinition
-            else:
-                var_type = LocalVariableDefinition
+                stripped_name_token = strip_variable_token(name_token, matcher=matcher, parse_type=True)
 
-            var = var_type(
-                name=var_name,
-                name_token=strip_variable_token(variable),
-                line_no=variable.lineno,
-                col_offset=variable.col_offset,
-                end_line_no=variable.lineno,
-                end_col_offset=variable.end_col_offset,
-                source=self.namespace.source,
-            )
+                scope = node.scope
 
-            if var_name not in self._results or type(self._results[var_name]) is not type(var):
-                if isinstance(var, LocalVariableDefinition) or not any(
-                    l for l in self.namespace.get_global_variables() if l.matcher == var.matcher
-                ):
-                    self._results[var_name] = var
+                if scope in ("SUITE",):
+                    var_type = VariableDefinition
+                elif scope in ("TEST", "TASK"):
+                    var_type = TestVariableDefinition
+                elif scope in ("GLOBAL",):
+                    var_type = GlobalVariableDefinition
                 else:
-                    self._results.pop(var_name, None)
+                    var_type = LocalVariableDefinition
 
-        except VariableError:
-            pass
+                var = var_type(
+                    name=matcher.name,
+                    name_token=stripped_name_token,
+                    line_no=stripped_name_token.lineno,
+                    col_offset=stripped_name_token.col_offset,
+                    end_line_no=stripped_name_token.lineno,
+                    end_col_offset=stripped_name_token.end_col_offset,
+                    source=self.namespace.source,
+                    value_type=matcher.type,
+                )
+
+                if matcher not in self._results or type(self._results[matcher]) is not type(var):
+                    if isinstance(var, LocalVariableDefinition) or not any(
+                        l for l in self.namespace.get_global_variables() if l.matcher == var.matcher
+                    ):
+                        self._results[matcher] = var
+                    else:
+                        self._results.pop(matcher, None)
+
+            except VariableError:
+                pass
 
 
 class ImportVisitor(Visitor):
@@ -1153,7 +1182,9 @@ class Namespace:
     ) -> Dict[VariableMatcher, VariableDefinition]:
         self.ensure_initialized()
 
-        return {m: v for m, v in self.yield_variables(nodes, position)}
+        # return {m: v for m, v in self.yield_variables(nodes, position)}
+        l = list(self.yield_variables(nodes, position))
+        return dict(reversed(l))
 
     @_logger.call
     def find_variable(

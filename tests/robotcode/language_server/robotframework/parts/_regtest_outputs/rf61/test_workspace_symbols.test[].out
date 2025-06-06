@@ -81,10 +81,10 @@ result:
   location:
     range:
       end:
-        character: 29
+        character: 28
         line: 9
       start:
-        character: 21
+        character: 23
         line: 9
     uri: bddstyle.robot
   name: ${input}
@@ -111,10 +111,10 @@ result:
   location:
     range:
       end:
-        character: 46
+        character: 45
         line: 9
       start:
-        character: 33
+        character: 35
         line: 9
     uri: bddstyle.robot
   name: ${multiplier}
@@ -141,10 +141,10 @@ result:
   location:
     range:
       end:
-        character: 59
+        character: 58
         line: 9
       start:
-        character: 50
+        character: 52
         line: 9
     uri: bddstyle.robot
   name: ${result}
@@ -276,10 +276,10 @@ result:
   location:
     range:
       end:
-        character: 27
+        character: 26
         line: 119
       start:
-        character: 19
+        character: 21
         line: 119
     uri: code_action_show_documentation.robot
   name: ${A VAR}
@@ -291,10 +291,10 @@ result:
   location:
     range:
       end:
-        character: 36
+        character: 35
         line: 124
       start:
-        character: 28
+        character: 30
         line: 124
     uri: code_action_show_documentation.robot
   name: ${A VAR}
@@ -306,10 +306,10 @@ result:
   location:
     range:
       end:
-        character: 22
+        character: 9
         line: 23
       start:
-        character: 0
+        character: 2
         line: 23
     uri: code_action_show_documentation.robot
   name: ${LIB_ARG}
@@ -321,10 +321,10 @@ result:
   location:
     range:
       end:
-        character: 17
+        character: 7
         line: 22
       start:
-        character: 0
+        character: 2
         line: 22
     uri: code_action_show_documentation.robot
   name: ${a var}
@@ -336,10 +336,10 @@ result:
   location:
     range:
       end:
-        character: 23
+        character: 22
         line: 129
       start:
-        character: 19
+        character: 21
         line: 129
     uri: code_action_show_documentation.robot
   name: ${a}
@@ -351,10 +351,10 @@ result:
   location:
     range:
       end:
-        character: 20
+        character: 9
         line: 24
       start:
-        character: 0
+        character: 2
         line: 24
     uri: code_action_show_documentation.robot
   name: ${bananas}
@@ -381,10 +381,10 @@ result:
   location:
     range:
       end:
-        character: 31
+        character: 30
         line: 129
       start:
-        character: 27
+        character: 29
         line: 129
     uri: code_action_show_documentation.robot
   name: ${b}
@@ -411,10 +411,10 @@ result:
   location:
     range:
       end:
-        character: 13
+        character: 12
         line: 52
       start:
-        character: 4
+        character: 6
         line: 52
     uri: code_action_show_documentation.robot
   name: ${result}
@@ -486,10 +486,10 @@ result:
   location:
     range:
       end:
-        character: 24
+        character: 23
         line: 124
       start:
-        character: 19
+        character: 21
         line: 124
     uri: code_action_show_documentation.robot
   name: ${tt}
@@ -516,10 +516,10 @@ result:
   location:
     range:
       end:
-        character: 26
+        character: 25
         line: 97
       start:
-        character: 19
+        character: 21
         line: 97
     uri: code_action_show_documentation.robot
   name: ${type}
@@ -846,10 +846,10 @@ result:
   location:
     range:
       end:
-        character: 27
+        character: 26
         line: 113
       start:
-        character: 19
+        character: 21
         line: 113
     uri: document_highlight.robot
   name: ${A VAR}
@@ -861,10 +861,10 @@ result:
   location:
     range:
       end:
-        character: 36
+        character: 35
         line: 122
       start:
-        character: 28
+        character: 30
         line: 122
     uri: document_highlight.robot
   name: ${A VAR}
@@ -876,10 +876,10 @@ result:
   location:
     range:
       end:
-        character: 10
+        character: 3
         line: 24
       start:
-        character: 0
+        character: 2
         line: 24
     uri: document_highlight.robot
   name: ${A}
@@ -891,10 +891,10 @@ result:
   location:
     range:
       end:
-        character: 10
+        character: 3
         line: 25
       start:
-        character: 0
+        character: 2
         line: 25
     uri: document_highlight.robot
   name: ${B}
@@ -906,10 +906,10 @@ result:
   location:
     range:
       end:
-        character: 22
+        character: 9
         line: 22
       start:
-        character: 0
+        character: 2
         line: 22
     uri: document_highlight.robot
   name: ${LIB_ARG}
@@ -921,10 +921,10 @@ result:
   location:
     range:
       end:
-        character: 17
+        character: 7
         line: 20
       start:
-        character: 0
+        character: 2
         line: 20
     uri: document_highlight.robot
   name: ${a var}
@@ -936,10 +936,10 @@ result:
   location:
     range:
       end:
-        character: 47
+        character: 46
         line: 164
       start:
-        character: 32
+        character: 34
         line: 164
     uri: document_highlight.robot
   name: ${a_second_arg}
@@ -951,10 +951,10 @@ result:
   location:
     range:
       end:
-        character: 47
+        character: 46
         line: 169
       start:
-        character: 32
+        character: 34
         line: 169
     uri: document_highlight.robot
   name: ${a_second_arg}
@@ -966,10 +966,10 @@ result:
   location:
     range:
       end:
-        character: 28
+        character: 27
         line: 164
       start:
-        character: 19
+        character: 21
         line: 164
     uri: document_highlight.robot
   name: ${an_arg}
@@ -981,10 +981,10 @@ result:
   location:
     range:
       end:
-        character: 28
+        character: 27
         line: 169
       start:
-        character: 19
+        character: 21
         line: 169
     uri: document_highlight.robot
   name: ${an_arg}
@@ -996,10 +996,10 @@ result:
   location:
     range:
       end:
-        character: 23
+        character: 22
         line: 132
       start:
-        character: 19
+        character: 21
         line: 132
     uri: document_highlight.robot
   name: ${a}
@@ -1011,10 +1011,10 @@ result:
   location:
     range:
       end:
-        character: 31
+        character: 30
         line: 132
       start:
-        character: 27
+        character: 29
         line: 132
     uri: document_highlight.robot
   name: ${b}
@@ -1026,10 +1026,10 @@ result:
   location:
     range:
       end:
-        character: 44
+        character: 43
         line: 132
       start:
-        character: 40
+        character: 42
         line: 132
     uri: document_highlight.robot
   name: ${c}
@@ -1056,10 +1056,10 @@ result:
   location:
     range:
       end:
-        character: 13
+        character: 12
         line: 57
       start:
-        character: 4
+        character: 6
         line: 57
     uri: document_highlight.robot
   name: ${result}
@@ -1086,10 +1086,10 @@ result:
   location:
     range:
       end:
-        character: 24
+        character: 23
         line: 122
       start:
-        character: 19
+        character: 21
         line: 122
     uri: document_highlight.robot
   name: ${tt}
@@ -1431,10 +1431,10 @@ result:
   location:
     range:
       end:
-        character: 26
+        character: 25
         line: 10
       start:
-        character: 19
+        character: 21
         line: 10
     uri: embedded_keywords.robot
   name: ${data}
@@ -1566,10 +1566,10 @@ result:
   location:
     range:
       end:
-        character: 8
+        character: 7
         line: 2
       start:
-        character: 4
+        character: 6
         line: 2
     uri: fibonaci.robot
   name: ${a}
@@ -1581,10 +1581,10 @@ result:
   location:
     range:
       end:
-        character: 8
+        character: 7
         line: 36
       start:
-        character: 4
+        character: 6
         line: 36
     uri: fibonaci.robot
   name: ${a}
@@ -1596,10 +1596,10 @@ result:
   location:
     range:
       end:
-        character: 13
+        character: 12
         line: 27
       start:
-        character: 8
+        character: 10
         line: 27
     uri: fibonaci.robot
   name: ${n1}
@@ -1611,10 +1611,10 @@ result:
   location:
     range:
       end:
-        character: 13
+        character: 12
         line: 28
       start:
-        character: 8
+        character: 10
         line: 28
     uri: fibonaci.robot
   name: ${n2}
@@ -1626,10 +1626,10 @@ result:
   location:
     range:
       end:
-        character: 23
+        character: 22
         line: 22
       start:
-        character: 19
+        character: 21
         line: 22
     uri: fibonaci.robot
   name: ${n}
@@ -1641,10 +1641,10 @@ result:
   location:
     range:
       end:
-        character: 23
+        character: 22
         line: 35
       start:
-        character: 19
+        character: 21
         line: 35
     uri: fibonaci.robot
   name: ${n}
@@ -1656,10 +1656,10 @@ result:
   location:
     range:
       end:
-        character: 12
+        character: 11
         line: 25
       start:
-        character: 8
+        character: 10
         line: 25
     uri: fibonaci.robot
   name: ${r}
@@ -1821,10 +1821,10 @@ result:
   location:
     range:
       end:
-        character: 23
+        character: 22
         line: 32
       start:
-        character: 19
+        character: 21
         line: 32
     uri: first.robot
   name: ${b}
@@ -1956,10 +1956,10 @@ result:
   location:
     range:
       end:
-        character: 47
+        character: 20
         line: 4
       start:
-        character: 0
+        character: 2
         line: 4
     uri: firstresource.resource
   name: ${A_VAR_FROM_RESOURE}
@@ -1971,10 +1971,10 @@ result:
   location:
     range:
       end:
-        character: 41
+        character: 40
         line: 23
       start:
-        character: 27
+        character: 29
         line: 23
     uri: firstresource.resource
   name: ${a long name}
@@ -1986,10 +1986,10 @@ result:
   location:
     range:
       end:
-        character: 61
+        character: 60
         line: 23
       start:
-        character: 46
+        character: 48
         line: 23
     uri: firstresource.resource
   name: ${a_short_name}
@@ -2001,10 +2001,10 @@ result:
   location:
     range:
       end:
-        character: 23
+        character: 22
         line: 23
       start:
-        character: 19
+        character: 21
         line: 23
     uri: firstresource.resource
   name: ${a}
@@ -2016,10 +2016,10 @@ result:
   location:
     range:
       end:
-        character: 23
+        character: 22
         line: 30
       start:
-        character: 19
+        character: 21
         line: 30
     uri: firstresource.resource
   name: "${\U0001F413}"
@@ -2031,10 +2031,10 @@ result:
   location:
     range:
       end:
-        character: 34
+        character: 33
         line: 30
       start:
-        character: 27
+        character: 29
         line: 30
     uri: firstresource.resource
   name: "${\U0001F60E\U0001F60B\U0001F619\U0001F619}"
@@ -2046,10 +2046,10 @@ result:
   location:
     range:
       end:
-        character: 51
+        character: 50
         line: 30
       start:
-        character: 39
+        character: 41
         line: 30
     uri: firstresource.resource
   name: "${\U0001F9DF\u200D\u2642\uFE0F\U0001F6C3\U0001FAC5\U0001F3FF\U0001F478\U0001F3FF\
@@ -2137,10 +2137,10 @@ result:
   location:
     range:
       end:
-        character: 8
+        character: 7
         line: 53
       start:
-        character: 4
+        character: 6
         line: 53
     uri: foldingrange.robot
   name: ${a}
@@ -2152,10 +2152,10 @@ result:
   location:
     range:
       end:
-        character: 8
+        character: 7
         line: 81
       start:
-        character: 4
+        character: 6
         line: 81
     uri: foldingrange.robot
   name: ${a}
@@ -2167,10 +2167,10 @@ result:
   location:
     range:
       end:
-        character: 15
+        character: 14
         line: 12
       start:
-        character: 11
+        character: 13
         line: 12
     uri: foldingrange.robot
   name: ${i}
@@ -2272,10 +2272,10 @@ result:
   location:
     range:
       end:
-        character: 37
+        character: 36
         line: 174
       start:
-        character: 28
+        character: 30
         line: 174
     uri: goto.robot
   name: ${A VAR1}
@@ -2287,10 +2287,10 @@ result:
   location:
     range:
       end:
-        character: 27
+        character: 7
         line: 21
       start:
-        character: 0
+        character: 2
         line: 21
     uri: goto.robot
   name: ${A VAR}
@@ -2302,10 +2302,10 @@ result:
   location:
     range:
       end:
-        character: 27
+        character: 26
         line: 155
       start:
-        character: 19
+        character: 21
         line: 155
     uri: goto.robot
   name: ${A VAR}
@@ -2317,10 +2317,10 @@ result:
   location:
     range:
       end:
-        character: 36
+        character: 35
         line: 164
       start:
-        character: 28
+        character: 30
         line: 164
     uri: goto.robot
   name: ${A VAR}
@@ -2332,10 +2332,10 @@ result:
   location:
     range:
       end:
-        character: 10
+        character: 3
         line: 36
       start:
-        character: 0
+        character: 2
         line: 36
     uri: goto.robot
   name: ${A}
@@ -2347,10 +2347,10 @@ result:
   location:
     range:
       end:
-        character: 10
+        character: 3
         line: 37
       start:
-        character: 0
+        character: 2
         line: 37
     uri: goto.robot
   name: ${B}
@@ -2362,10 +2362,10 @@ result:
   location:
     range:
       end:
-        character: 11
+        character: 5
         line: 25
       start:
-        character: 0
+        character: 2
         line: 25
     uri: goto.robot
   name: ${DOT}
@@ -2377,10 +2377,10 @@ result:
   location:
     range:
       end:
-        character: 22
+        character: 9
         line: 23
       start:
-        character: 0
+        character: 2
         line: 23
     uri: goto.robot
   name: ${LIB_ARG}
@@ -2392,10 +2392,10 @@ result:
   location:
     range:
       end:
-        character: 22
+        character: 8
         line: 20
       start:
-        character: 0
+        character: 2
         line: 20
     uri: goto.robot
   name: ${MY_DIR}
@@ -2407,10 +2407,10 @@ result:
   location:
     range:
       end:
-        character: 47
+        character: 46
         line: 213
       start:
-        character: 32
+        character: 34
         line: 213
     uri: goto.robot
   name: ${a_second_arg}
@@ -2422,10 +2422,10 @@ result:
   location:
     range:
       end:
-        character: 47
+        character: 46
         line: 218
       start:
-        character: 32
+        character: 34
         line: 218
     uri: goto.robot
   name: ${a_second_arg}
@@ -2437,10 +2437,10 @@ result:
   location:
     range:
       end:
-        character: 50
+        character: 14
         line: 32
       start:
-        character: 0
+        character: 2
         line: 32
     uri: goto.robot
   name: ${all together}
@@ -2452,70 +2452,70 @@ result:
   location:
     range:
       end:
-        character: 28
-        line: 213
-      start:
-        character: 19
-        line: 213
-    uri: goto.robot
-  name: ${an_arg}
-  tags: null
-- !WorkspaceSymbol
-  container_name: goto
-  data: null
-  kind: 13
-  location:
-    range:
-      end:
-        character: 28
-        line: 218
-      start:
-        character: 19
-        line: 218
-    uri: goto.robot
-  name: ${an_arg}
-  tags: null
-- !WorkspaceSymbol
-  container_name: goto
-  data: null
-  kind: 13
-  location:
-    range:
-      end:
-        character: 8
-        line: 136
-      start:
-        character: 4
-        line: 136
-    uri: goto.robot
-  name: ${a}
-  tags: null
-- !WorkspaceSymbol
-  container_name: goto
-  data: null
-  kind: 13
-  location:
-    range:
-      end:
-        character: 23
-        line: 187
-      start:
-        character: 19
-        line: 187
-    uri: goto.robot
-  name: ${a}
-  tags: null
-- !WorkspaceSymbol
-  container_name: goto
-  data: null
-  kind: 13
-  location:
-    range:
-      end:
-        character: 31
-        line: 187
-      start:
         character: 27
+        line: 213
+      start:
+        character: 21
+        line: 213
+    uri: goto.robot
+  name: ${an_arg}
+  tags: null
+- !WorkspaceSymbol
+  container_name: goto
+  data: null
+  kind: 13
+  location:
+    range:
+      end:
+        character: 27
+        line: 218
+      start:
+        character: 21
+        line: 218
+    uri: goto.robot
+  name: ${an_arg}
+  tags: null
+- !WorkspaceSymbol
+  container_name: goto
+  data: null
+  kind: 13
+  location:
+    range:
+      end:
+        character: 7
+        line: 136
+      start:
+        character: 6
+        line: 136
+    uri: goto.robot
+  name: ${a}
+  tags: null
+- !WorkspaceSymbol
+  container_name: goto
+  data: null
+  kind: 13
+  location:
+    range:
+      end:
+        character: 22
+        line: 187
+      start:
+        character: 21
+        line: 187
+    uri: goto.robot
+  name: ${a}
+  tags: null
+- !WorkspaceSymbol
+  container_name: goto
+  data: null
+  kind: 13
+  location:
+    range:
+      end:
+        character: 30
+        line: 187
+      start:
+        character: 29
         line: 187
     uri: goto.robot
   name: ${b}
@@ -2527,10 +2527,10 @@ result:
   location:
     range:
       end:
-        character: 17
+        character: 16
         line: 68
       start:
-        character: 11
+        character: 13
         line: 68
     uri: goto.robot
   name: ${key}
@@ -2542,40 +2542,40 @@ result:
   location:
     range:
       end:
-        character: 24
+        character: 23
         line: 164
-      start:
-        character: 19
-        line: 164
-    uri: goto.robot
-  name: ${tt}
-  tags: null
-- !WorkspaceSymbol
-  container_name: goto
-  data: null
-  kind: 13
-  location:
-    range:
-      end:
-        character: 24
-        line: 174
-      start:
-        character: 19
-        line: 174
-    uri: goto.robot
-  name: ${tt}
-  tags: null
-- !WorkspaceSymbol
-  container_name: goto
-  data: null
-  kind: 13
-  location:
-    range:
-      end:
-        character: 29
-        line: 68
       start:
         character: 21
+        line: 164
+    uri: goto.robot
+  name: ${tt}
+  tags: null
+- !WorkspaceSymbol
+  container_name: goto
+  data: null
+  kind: 13
+  location:
+    range:
+      end:
+        character: 23
+        line: 174
+      start:
+        character: 21
+        line: 174
+    uri: goto.robot
+  name: ${tt}
+  tags: null
+- !WorkspaceSymbol
+  container_name: goto
+  data: null
+  kind: 13
+  location:
+    range:
+      end:
+        character: 28
+        line: 68
+      start:
+        character: 23
         line: 68
     uri: goto.robot
   name: ${value}
@@ -2587,10 +2587,10 @@ result:
   location:
     range:
       end:
-        character: 35
+        character: 8
         line: 22
       start:
-        character: 0
+        character: 2
         line: 22
     uri: goto.robot
   name: '&{A DICT}'
@@ -2602,10 +2602,10 @@ result:
   location:
     range:
       end:
-        character: 34
+        character: 10
         line: 29
       start:
-        character: 0
+        character: 2
         line: 29
     uri: goto.robot
   name: '&{dict_var}'
@@ -2617,10 +2617,10 @@ result:
   location:
     range:
       end:
-        character: 26
+        character: 10
         line: 27
       start:
-        character: 0
+        character: 2
         line: 27
     uri: goto.robot
   name: '@{list_var}'
@@ -2887,10 +2887,10 @@ result:
   location:
     range:
       end:
-        character: 28
+        character: 7
         line: 30
       start:
-        character: 0
+        character: 2
         line: 30
     uri: hover.robot
   name: ${A VAR}
@@ -2902,10 +2902,10 @@ result:
   location:
     range:
       end:
-        character: 27
+        character: 26
         line: 267
       start:
-        character: 19
+        character: 21
         line: 267
     uri: hover.robot
   name: ${A VAR}
@@ -2917,10 +2917,10 @@ result:
   location:
     range:
       end:
-        character: 36
+        character: 35
         line: 276
       start:
-        character: 28
+        character: 30
         line: 276
     uri: hover.robot
   name: ${A VAR}
@@ -2932,10 +2932,10 @@ result:
   location:
     range:
       end:
-        character: 10
+        character: 3
         line: 41
       start:
-        character: 0
+        character: 2
         line: 41
     uri: hover.robot
   name: ${A}
@@ -2947,10 +2947,10 @@ result:
   location:
     range:
       end:
-        character: 9
+        character: 3
         line: 42
       start:
-        character: 0
+        character: 2
         line: 42
     uri: hover.robot
   name: ${B}
@@ -2962,10 +2962,10 @@ result:
   location:
     range:
       end:
-        character: 28
+        character: 3
         line: 43
       start:
-        character: 0
+        character: 2
         line: 43
     uri: hover.robot
   name: ${C}
@@ -2977,10 +2977,10 @@ result:
   location:
     range:
       end:
-        character: 9
+        character: 3
         line: 56
       start:
-        character: 0
+        character: 2
         line: 56
     uri: hover.robot
   name: ${D}
@@ -2992,10 +2992,10 @@ result:
   location:
     range:
       end:
-        character: 41
+        character: 3
         line: 57
       start:
-        character: 0
+        character: 2
         line: 57
     uri: hover.robot
   name: ${E}
@@ -3007,10 +3007,10 @@ result:
   location:
     range:
       end:
-        character: 14
+        character: 3
         line: 58
       start:
-        character: 0
+        character: 2
         line: 58
     uri: hover.robot
   name: ${F}
@@ -3022,10 +3022,25 @@ result:
   location:
     range:
       end:
-        character: 38
+        character: 17
+        line: 38
+      start:
+        character: 2
+        line: 38
+    uri: hover.robot
+  name: ${INVALID VAR ${}}
+  tags: null
+- !WorkspaceSymbol
+  container_name: hover
+  data: null
+  kind: 13
+  location:
+    range:
+      end:
+        character: 3
         line: 48
       start:
-        character: 0
+        character: 2
         line: 48
     uri: hover.robot
   name: ${K}
@@ -3037,10 +3052,10 @@ result:
   location:
     range:
       end:
-        character: 22
+        character: 9
         line: 36
       start:
-        character: 0
+        character: 2
         line: 36
     uri: hover.robot
   name: ${LIB_ARG}
@@ -3052,10 +3067,10 @@ result:
   location:
     range:
       end:
-        character: 23
+        character: 22
         line: 286
       start:
-        character: 19
+        character: 21
         line: 286
     uri: hover.robot
   name: ${a}
@@ -3067,10 +3082,10 @@ result:
   location:
     range:
       end:
-        character: 31
+        character: 30
         line: 286
       start:
-        character: 27
+        character: 29
         line: 286
     uri: hover.robot
   name: ${b}
@@ -3097,10 +3112,10 @@ result:
   location:
     range:
       end:
-        character: 17
+        character: 16
         line: 81
       start:
-        character: 11
+        character: 13
         line: 81
     uri: hover.robot
   name: ${key}
@@ -3112,10 +3127,10 @@ result:
   location:
     range:
       end:
-        character: 13
+        character: 12
         line: 111
       start:
-        character: 4
+        character: 6
         line: 111
     uri: hover.robot
   name: ${result}
@@ -3127,10 +3142,10 @@ result:
   location:
     range:
       end:
-        character: 24
+        character: 23
         line: 276
       start:
-        character: 19
+        character: 21
         line: 276
     uri: hover.robot
   name: ${tt}
@@ -3142,10 +3157,10 @@ result:
   location:
     range:
       end:
-        character: 29
+        character: 28
         line: 81
       start:
-        character: 21
+        character: 23
         line: 81
     uri: hover.robot
   name: ${value}
@@ -3157,10 +3172,10 @@ result:
   location:
     range:
       end:
-        character: 35
+        character: 8
         line: 33
       start:
-        character: 0
+        character: 2
         line: 33
     uri: hover.robot
   name: '&{A DICT}'
@@ -3457,10 +3472,25 @@ result:
   location:
     range:
       end:
-        character: 13
+        character: 17
+        line: 3
+      start:
+        character: 2
+        line: 3
+    uri: indexed_variables.robot
+  name: ${A_LIST ${index}}
+  tags: null
+- !WorkspaceSymbol
+  container_name: indexed_variables
+  data: null
+  kind: 13
+  location:
+    range:
+      end:
+        character: 7
         line: 2
       start:
-        character: 0
+        character: 2
         line: 2
     uri: indexed_variables.robot
   name: ${index}
@@ -3472,10 +3502,10 @@ result:
   location:
     range:
       end:
-        character: 24
+        character: 8
         line: 1
       start:
-        character: 0
+        character: 2
         line: 1
     uri: indexed_variables.robot
   name: '@{A_LIST}'
@@ -3562,10 +3592,10 @@ result:
   location:
     range:
       end:
-        character: 21
+        character: 3
         line: 1
       start:
-        character: 0
+        character: 2
         line: 1
     uri: playground.robot
   name: ${2}
@@ -3577,10 +3607,10 @@ result:
   location:
     range:
       end:
-        character: 12
+        character: 3
         line: 2
       start:
-        character: 0
+        character: 2
         line: 2
     uri: playground.robot
   name: ${a}
@@ -3592,10 +3622,10 @@ result:
   location:
     range:
       end:
-        character: 23
+        character: 22
         line: 22
       start:
-        character: 19
+        character: 21
         line: 22
     uri: playground.robot
   name: ${a}
@@ -3607,10 +3637,10 @@ result:
   location:
     range:
       end:
-        character: 31
+        character: 30
         line: 22
       start:
-        character: 27
+        character: 29
         line: 22
     uri: playground.robot
   name: ${b}
@@ -3622,10 +3652,10 @@ result:
   location:
     range:
       end:
-        character: 8
+        character: 7
         line: 15
       start:
-        character: 4
+        character: 6
         line: 15
     uri: playground.robot
   name: ${v}
@@ -3667,10 +3697,10 @@ result:
   location:
     range:
       end:
-        character: 27
+        character: 26
         line: 150
       start:
-        character: 19
+        character: 21
         line: 150
     uri: references.robot
   name: ${A VAR}
@@ -3682,10 +3712,10 @@ result:
   location:
     range:
       end:
-        character: 36
+        character: 35
         line: 159
       start:
-        character: 28
+        character: 30
         line: 159
     uri: references.robot
   name: ${A VAR}
@@ -3697,10 +3727,10 @@ result:
   location:
     range:
       end:
-        character: 22
+        character: 9
         line: 24
       start:
-        character: 0
+        character: 2
         line: 24
     uri: references.robot
   name: ${LIB_ARG}
@@ -3712,10 +3742,10 @@ result:
   location:
     range:
       end:
-        character: 17
+        character: 16
         line: 270
       start:
-        character: 4
+        character: 6
         line: 270
     uri: references.robot
   name: ${MATCH TYPE}
@@ -3727,10 +3757,10 @@ result:
   location:
     range:
       end:
-        character: 17
+        character: 7
         line: 22
       start:
-        character: 0
+        character: 2
         line: 22
     uri: references.robot
   name: ${a var}
@@ -3742,10 +3772,10 @@ result:
   location:
     range:
       end:
-        character: 25
+        character: 24
         line: 245
       start:
-        character: 19
+        character: 21
         line: 245
     uri: references.robot
   name: ${arg}
@@ -3757,10 +3787,10 @@ result:
   location:
     range:
       end:
-        character: 23
+        character: 22
         line: 169
       start:
-        character: 19
+        character: 21
         line: 169
     uri: references.robot
   name: ${a}
@@ -3772,10 +3802,10 @@ result:
   location:
     range:
       end:
-        character: 23
+        character: 22
         line: 187
       start:
-        character: 19
+        character: 21
         line: 187
     uri: references.robot
   name: ${a}
@@ -3787,10 +3817,10 @@ result:
   location:
     range:
       end:
-        character: 23
+        character: 22
         line: 193
       start:
-        character: 19
+        character: 21
         line: 193
     uri: references.robot
   name: ${a}
@@ -3802,10 +3832,10 @@ result:
   location:
     range:
       end:
-        character: 20
+        character: 9
         line: 26
       start:
-        character: 0
+        character: 2
         line: 26
     uri: references.robot
   name: ${bananas}
@@ -3832,10 +3862,10 @@ result:
   location:
     range:
       end:
-        character: 16
+        character: 15
         line: 269
       start:
-        character: 4
+        character: 6
         line: 269
     uri: references.robot
   name: ${beginning}
@@ -3847,10 +3877,10 @@ result:
   location:
     range:
       end:
-        character: 31
+        character: 30
         line: 169
       start:
-        character: 27
+        character: 29
         line: 169
     uri: references.robot
   name: ${b}
@@ -3862,10 +3892,10 @@ result:
   location:
     range:
       end:
-        character: 31
+        character: 30
         line: 187
       start:
-        character: 27
+        character: 29
         line: 187
     uri: references.robot
   name: ${b}
@@ -3877,10 +3907,10 @@ result:
   location:
     range:
       end:
-        character: 31
+        character: 30
         line: 193
       start:
-        character: 27
+        character: 29
         line: 193
     uri: references.robot
   name: ${b}
@@ -3892,10 +3922,10 @@ result:
   location:
     range:
       end:
-        character: 27
+        character: 26
         line: 258
       start:
-        character: 19
+        character: 21
         line: 258
     uri: references.robot
   name: ${count}
@@ -3922,10 +3952,10 @@ result:
   location:
     range:
       end:
-        character: 13
+        character: 12
         line: 59
       start:
-        character: 4
+        character: 6
         line: 59
     uri: references.robot
   name: ${result}
@@ -3937,10 +3967,10 @@ result:
   location:
     range:
       end:
-        character: 13
+        character: 12
         line: 205
       start:
-        character: 4
+        character: 6
         line: 205
     uri: references.robot
   name: ${result}
@@ -3952,10 +3982,10 @@ result:
   location:
     range:
       end:
-        character: 29
+        character: 28
         line: 236
       start:
-        character: 19
+        character: 21
         line: 236
     uri: references.robot
   name: ${retries}
@@ -3967,10 +3997,10 @@ result:
   location:
     range:
       end:
-        character: 41
+        character: 40
         line: 258
       start:
-        character: 31
+        character: 33
         line: 258
     uri: references.robot
   name: ${retries}
@@ -4042,10 +4072,10 @@ result:
   location:
     range:
       end:
-        character: 24
+        character: 23
         line: 159
       start:
-        character: 19
+        character: 21
         line: 159
     uri: references.robot
   name: ${tt}
@@ -4072,10 +4102,10 @@ result:
   location:
     range:
       end:
-        character: 26
+        character: 25
         line: 122
       start:
-        character: 19
+        character: 21
         line: 122
     uri: references.robot
   name: ${type}
@@ -4087,10 +4117,10 @@ result:
   location:
     range:
       end:
-        character: 25
+        character: 24
         line: 224
       start:
-        character: 19
+        character: 21
         line: 224
     uri: references.robot
   name: ${val}
@@ -4147,10 +4177,10 @@ result:
   location:
     range:
       end:
-        character: 11
+        character: 4
         line: 27
       start:
-        character: 0
+        character: 2
         line: 27
     uri: references.robot
   name: "${\U0001F9E8\U0001F9E8}"
@@ -4597,10 +4627,10 @@ result:
   location:
     range:
       end:
-        character: 23
+        character: 22
         line: 31
       start:
-        character: 19
+        character: 21
         line: 31
     uri: sematic_tokenizing.robot
   name: ${a}
@@ -4612,10 +4642,10 @@ result:
   location:
     range:
       end:
-        character: 31
+        character: 30
         line: 31
       start:
-        character: 27
+        character: 29
         line: 31
     uri: sematic_tokenizing.robot
   name: ${b}
@@ -4627,10 +4657,10 @@ result:
   location:
     range:
       end:
-        character: 39
+        character: 38
         line: 31
       start:
-        character: 35
+        character: 37
         line: 31
     uri: sematic_tokenizing.robot
   name: ${c}
@@ -4642,10 +4672,10 @@ result:
   location:
     range:
       end:
-        character: 26
+        character: 25
         line: 26
       start:
-        character: 19
+        character: 21
         line: 26
     uri: sematic_tokenizing.robot
   name: ${type}
@@ -4762,10 +4792,10 @@ result:
   location:
     range:
       end:
-        character: 26
+        character: 25
         line: 30
       start:
-        character: 19
+        character: 21
         line: 30
     uri: setup_teardown.robot
   name: ${type}
@@ -4867,10 +4897,10 @@ result:
   location:
     range:
       end:
-        character: 8
+        character: 7
         line: 19
       start:
-        character: 4
+        character: 6
         line: 19
     uri: signature_help.robot
   name: ${a}
@@ -4882,10 +4912,10 @@ result:
   location:
     range:
       end:
-        character: 16
+        character: 15
         line: 19
       start:
-        character: 12
+        character: 14
         line: 19
     uri: signature_help.robot
   name: ${b}
@@ -4897,10 +4927,10 @@ result:
   location:
     range:
       end:
-        character: 57
+        character: 56
         line: 32
       start:
-        character: 50
+        character: 52
         line: 32
     uri: signature_help.robot
   name: ${html}
@@ -4912,10 +4942,10 @@ result:
   location:
     range:
       end:
-        character: 41
+        character: 40
         line: 32
       start:
-        character: 33
+        character: 35
         line: 32
     uri: signature_help.robot
   name: ${level}
@@ -4927,10 +4957,10 @@ result:
   location:
     range:
       end:
-        character: 29
+        character: 28
         line: 32
       start:
-        character: 19
+        character: 21
         line: 32
     uri: signature_help.robot
   name: ${message}
@@ -5122,10 +5152,10 @@ result:
   location:
     range:
       end:
-        character: 13
+        character: 7
         line: 6
       start:
-        character: 0
+        character: 2
         line: 6
     uri: symbols.robot
   name: ${A_VAR}
@@ -5152,10 +5182,10 @@ result:
   location:
     range:
       end:
-        character: 27
+        character: 26
         line: 41
       start:
-        character: 19
+        character: 21
         line: 41
     uri: symbols.robot
   name: ${first}
@@ -5167,10 +5197,10 @@ result:
   location:
     range:
       end:
-        character: 33
+        character: 32
         line: 16
       start:
-        character: 20
+        character: 22
         line: 16
     uri: symbols.robot
   name: ${kw_result1}
@@ -5182,10 +5212,10 @@ result:
   location:
     range:
       end:
-        character: 16
+        character: 15
         line: 13
       start:
-        character: 4
+        character: 6
         line: 13
     uri: symbols.robot
   name: ${kw_result}
@@ -5197,10 +5227,10 @@ result:
   location:
     range:
       end:
-        character: 20
+        character: 19
         line: 21
       start:
-        character: 9
+        character: 11
         line: 21
     uri: symbols.robot
   name: ${loop_var}
@@ -5212,10 +5242,10 @@ result:
   location:
     range:
       end:
-        character: 40
+        character: 39
         line: 41
       start:
-        character: 31
+        character: 33
         line: 41
     uri: symbols.robot
   name: ${second}
@@ -5227,10 +5257,10 @@ result:
   location:
     range:
       end:
-        character: 12
+        character: 11
         line: 68
       start:
-        character: 4
+        character: 6
         line: 68
     uri: symbols.robot
   name: ${var 1}
@@ -5303,10 +5333,10 @@ result:
   location:
     range:
       end:
-        character: 13
+        character: 7
         line: 6
       start:
-        character: 0
+        character: 2
         line: 6
     uri: templates.robot
   name: ${A VAR}
@@ -5318,10 +5348,10 @@ result:
   location:
     range:
       end:
-        character: 25
+        character: 24
         line: 79
       start:
-        character: 19
+        character: 21
         line: 79
     uri: templates.robot
   name: ${aaa}
@@ -5333,10 +5363,10 @@ result:
   location:
     range:
       end:
-        character: 23
+        character: 22
         line: 61
       start:
-        character: 19
+        character: 21
         line: 61
     uri: templates.robot
   name: ${a}
@@ -5348,10 +5378,10 @@ result:
   location:
     range:
       end:
-        character: 23
+        character: 22
         line: 68
       start:
-        character: 19
+        character: 21
         line: 68
     uri: templates.robot
   name: ${a}
@@ -5378,10 +5408,10 @@ result:
   location:
     range:
       end:
-        character: 23
+        character: 22
         line: 89
       start:
-        character: 19
+        character: 21
         line: 89
     uri: templates.robot
   name: ${a}
@@ -5393,10 +5423,10 @@ result:
   location:
     range:
       end:
-        character: 31
+        character: 30
         line: 61
       start:
-        character: 27
+        character: 29
         line: 61
     uri: templates.robot
   name: ${b}
@@ -5408,10 +5438,10 @@ result:
   location:
     range:
       end:
-        character: 31
+        character: 30
         line: 68
       start:
-        character: 27
+        character: 29
         line: 68
     uri: templates.robot
   name: ${b}
@@ -5438,10 +5468,10 @@ result:
   location:
     range:
       end:
-        character: 31
+        character: 30
         line: 89
       start:
-        character: 27
+        character: 29
         line: 89
     uri: templates.robot
   name: ${b}
@@ -5453,10 +5483,10 @@ result:
   location:
     range:
       end:
-        character: 39
+        character: 38
         line: 61
       start:
-        character: 35
+        character: 37
         line: 61
     uri: templates.robot
   name: ${c}
@@ -5468,10 +5498,10 @@ result:
   location:
     range:
       end:
-        character: 39
+        character: 38
         line: 68
       start:
-        character: 35
+        character: 37
         line: 68
     uri: templates.robot
   name: ${c}
@@ -5498,10 +5528,10 @@ result:
   location:
     range:
       end:
-        character: 46
+        character: 45
         line: 89
       start:
-        character: 35
+        character: 37
         line: 89
     uri: templates.robot
   name: ${expected}
@@ -5513,10 +5543,10 @@ result:
   location:
     range:
       end:
-        character: 15
+        character: 14
         line: 81
       start:
-        character: 11
+        character: 13
         line: 81
     uri: templates.robot
   name: ${i}
@@ -5528,10 +5558,10 @@ result:
   location:
     range:
       end:
-        character: 26
+        character: 10
         line: 7
       start:
-        character: 0
+        character: 2
         line: 7
     uri: templates.robot
   name: '@{LIST VAR}'
@@ -5768,10 +5798,10 @@ result:
   location:
     range:
       end:
-        character: 23
+        character: 16
         line: 5
       start:
-        character: 0
+        character: 2
         line: 5
     uri: templates2.robot
   name: ${VALID PASSWORD}
@@ -5783,10 +5813,10 @@ result:
   location:
     range:
       end:
-        character: 22
+        character: 12
         line: 4
       start:
-        character: 0
+        character: 2
         line: 4
     uri: templates2.robot
   name: ${VALID USER}
@@ -5798,10 +5828,10 @@ result:
   location:
     range:
       end:
-        character: 23
+        character: 22
         line: 53
       start:
-        character: 19
+        character: 21
         line: 53
     uri: templates2.robot
   name: ${a}
@@ -5813,10 +5843,10 @@ result:
   location:
     range:
       end:
-        character: 31
+        character: 30
         line: 53
       start:
-        character: 27
+        character: 29
         line: 53
     uri: templates2.robot
   name: ${b}
@@ -5828,10 +5858,10 @@ result:
   location:
     range:
       end:
-        character: 19
+        character: 18
         line: 22
       start:
-        character: 11
+        character: 13
         line: 22
     uri: templates2.robot
   name: ${index}
@@ -5843,10 +5873,10 @@ result:
   location:
     range:
       end:
-        character: 18
+        character: 17
         line: 19
       start:
-        character: 11
+        character: 13
         line: 19
     uri: templates2.robot
   name: ${item}
@@ -5858,10 +5888,10 @@ result:
   location:
     range:
       end:
-        character: 18
+        character: 17
         line: 28
       start:
-        character: 11
+        character: 13
         line: 28
     uri: templates2.robot
   name: ${item}
@@ -5873,10 +5903,10 @@ result:
   location:
     range:
       end:
-        character: 18
+        character: 17
         line: 38
       start:
-        character: 11
+        character: 13
         line: 38
     uri: templates2.robot
   name: ${item}
@@ -5888,10 +5918,10 @@ result:
   location:
     range:
       end:
-        character: 45
+        character: 44
         line: 49
       start:
-        character: 34
+        character: 36
         line: 49
     uri: templates2.robot
   name: ${password}
@@ -5903,10 +5933,10 @@ result:
   location:
     range:
       end:
-        character: 30
+        character: 29
         line: 49
       start:
-        character: 19
+        character: 21
         line: 49
     uri: templates2.robot
   name: ${username}
@@ -5918,10 +5948,10 @@ result:
   location:
     range:
       end:
-        character: 38
+        character: 7
         line: 6
       start:
-        character: 0
+        character: 2
         line: 6
     uri: templates2.robot
   name: '@{ITEMS}'
@@ -6092,16 +6122,346 @@ result:
   name: Template with FOR loop
   tags: null
 - !WorkspaceSymbol
+  container_name: variable_conversion
+  data: null
+  kind: 13
+  location:
+    range:
+      end:
+        character: 40
+        line: 58
+      start:
+        character: 21
+        line: 58
+    uri: variable_conversion.robot
+  name: '${a: int | str | None}'
+  tags: null
+- !WorkspaceSymbol
+  container_name: variable_conversion
+  data: null
+  kind: 13
+  location:
+    range:
+      end:
+        character: 8
+        line: 1
+      start:
+        character: 2
+        line: 1
+    uri: variable_conversion.robot
+  name: '${a: int}'
+  tags: null
+- !WorkspaceSymbol
+  container_name: variable_conversion
+  data: null
+  kind: 13
+  location:
+    range:
+      end:
+        character: 12
+        line: 39
+      start:
+        character: 6
+        line: 39
+    uri: variable_conversion.robot
+  name: '${a: int}'
+  tags: null
+- !WorkspaceSymbol
+  container_name: variable_conversion
+  data: null
+  kind: 13
+  location:
+    range:
+      end:
+        character: 27
+        line: 45
+      start:
+        character: 21
+        line: 45
+    uri: variable_conversion.robot
+  name: '${a: int}'
+  tags: null
+- !WorkspaceSymbol
+  container_name: variable_conversion
+  data: null
+  kind: 13
+  location:
+    range:
+      end:
+        character: 22
+        line: 53
+      start:
+        character: 21
+        line: 53
+    uri: variable_conversion.robot
+  name: ${a}
+  tags: null
+- !WorkspaceSymbol
+  container_name: variable_conversion
+  data: null
+  kind: 13
+  location:
+    range:
+      end:
+        character: 37
+        line: 53
+      start:
+        character: 31
+        line: 53
+    uri: variable_conversion.robot
+  name: '${b: int}'
+  tags: null
+- !WorkspaceSymbol
+  container_name: variable_conversion
+  data: null
+  kind: 13
+  location:
+    range:
+      end:
+        character: 40
+        line: 45
+      start:
+        character: 34
+        line: 45
+    uri: variable_conversion.robot
+  name: '${c: str}'
+  tags: null
+- !WorkspaceSymbol
+  container_name: variable_conversion
+  data: null
+  kind: 13
+  location:
+    range:
+      end:
+        character: 59
+        line: 45
+      start:
+        character: 47
+        line: 45
+    uri: variable_conversion.robot
+  name: '${d: list[str]}'
+  tags: null
+- !WorkspaceSymbol
+  container_name: variable_conversion
+  data: null
+  kind: 13
+  location:
+    range:
+      end:
+        character: 12
+        line: 24
+      start:
+        character: 6
+        line: 24
+    uri: variable_conversion.robot
+  name: '${i: int}'
+  tags: null
+- !WorkspaceSymbol
+  container_name: variable_conversion
+  data: null
+  kind: 13
+  location:
+    range:
+      end:
+        character: 19
+        line: 34
+      start:
+        character: 13
+        line: 34
+    uri: variable_conversion.robot
+  name: '${i: int}'
+  tags: null
+- !WorkspaceSymbol
+  container_name: variable_conversion
+  data: null
+  kind: 13
+  location:
+    range:
+      end:
+        character: 25
+        line: 3
+      start:
+        character: 2
+        line: 3
+    uri: variable_conversion.robot
+  name: '${k: Literal["Yes", "No"]}'
+  tags: null
+- !WorkspaceSymbol
+  container_name: variable_conversion
+  data: null
+  kind: 13
+  location:
+    range:
+      end:
+        character: 19
+        line: 30
+      start:
+        character: 13
+        line: 30
+    uri: variable_conversion.robot
+  name: '${l: int}'
+  tags: null
+- !WorkspaceSymbol
+  container_name: variable_conversion
+  data: null
+  kind: 13
+  location:
+    range:
+      end:
+        character: 8
+        line: 2
+      start:
+        character: 2
+        line: 2
+    uri: variable_conversion.robot
+  name: '${s: str}'
+  tags: null
+- !WorkspaceSymbol
+  container_name: variable_conversion
+  data: null
+  kind: 13
+  location:
+    range:
+      end:
+        character: 32
+        line: 34
+      start:
+        character: 26
+        line: 34
+    uri: variable_conversion.robot
+  name: '${s: str}'
+  tags: null
+- !WorkspaceSymbol
+  container_name: variable_conversion
+  data: null
+  kind: 12
+  location:
+    range:
+      end:
+        character: 26
+        line: 44
+      start:
+        character: 0
+        line: 44
+    uri: variable_conversion.robot
+  name: a simple keyword with args
+  tags: null
+- !WorkspaceSymbol
+  container_name: variable_conversion
+  data: null
+  kind: 12
+  location:
+    range:
+      end:
+        character: 39
+        line: 52
+      start:
+        character: 0
+        line: 52
+    uri: variable_conversion.robot
+  name: a simple keyword with default arguments
+  tags: null
+- !WorkspaceSymbol
+  container_name: variable_conversion
+  data: null
+  kind: 12
+  location:
+    range:
+      end:
+        character: 36
+        line: 57
+      start:
+        character: 0
+        line: 57
+    uri: variable_conversion.robot
+  name: a simple keyword with union argument
+  tags: null
+- !WorkspaceSymbol
+  container_name: variable_conversion
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 9
+        line: 27
+      start:
+        character: 0
+        line: 27
+    uri: variable_conversion.robot
+  name: for loops
+  tags: null
+- !WorkspaceSymbol
+  container_name: variable_conversion
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 13
+        line: 38
+      start:
+        character: 0
+        line: 38
+    uri: variable_conversion.robot
+  name: if assignment
+  tags: null
+- !WorkspaceSymbol
+  container_name: variable_conversion
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 19
+        line: 23
+      start:
+        character: 0
+        line: 23
+    uri: variable_conversion.robot
+  name: keyword assignments
+  tags: null
+- !WorkspaceSymbol
+  container_name: variable_conversion
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 15
+        line: 17
+      start:
+        character: 0
+        line: 17
+    uri: variable_conversion.robot
+  name: local variables
+  tags: null
+- !WorkspaceSymbol
+  container_name: variable_conversion
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 15
+        line: 7
+      start:
+        character: 0
+        line: 7
+    uri: variable_conversion.robot
+  name: suite variables
+  tags: null
+- !WorkspaceSymbol
   container_name: variables
   data: null
   kind: 13
   location:
     range:
       end:
-        character: 16
+        character: 4
         line: 12
       start:
-        character: 0
+        character: 2
         line: 12
     uri: variables.robot
   name: ${DD}
@@ -6113,10 +6473,10 @@ result:
   location:
     range:
       end:
-        character: 24
+        character: 11
         line: 124
       start:
-        character: 0
+        character: 2
         line: 124
     uri: variables.robot
   name: ${INFO_DATA}
@@ -6128,10 +6488,10 @@ result:
   location:
     range:
       end:
-        character: 12
+        character: 4
         line: 11
       start:
-        character: 0
+        character: 2
         line: 11
     uri: variables.robot
   name: ${UU}
@@ -6143,10 +6503,10 @@ result:
   location:
     range:
       end:
-        character: 24
+        character: 7
         line: 123
       start:
-        character: 0
+        character: 2
         line: 123
     uri: variables.robot
   name: ${VALUE}
@@ -6158,10 +6518,10 @@ result:
   location:
     range:
       end:
-        character: 12
+        character: 4
         line: 10
       start:
-        character: 0
+        character: 2
         line: 10
     uri: variables.robot
   name: ${ZZ}
@@ -6188,10 +6548,25 @@ result:
   location:
     range:
       end:
-        character: 10
+        character: 24
+        line: 167
+      start:
+        character: 21
+        line: 167
+    uri: variables.robot
+  name: ${aaa}
+  tags: null
+- !WorkspaceSymbol
+  container_name: variables
+  data: null
+  kind: 13
+  location:
+    range:
+      end:
+        character: 9
         line: 64
       start:
-        character: 4
+        character: 6
         line: 64
     uri: variables.robot
   name: ${asd}
@@ -6203,10 +6578,10 @@ result:
   location:
     range:
       end:
-        character: 8
+        character: 7
         line: 75
       start:
-        character: 4
+        character: 6
         line: 75
     uri: variables.robot
   name: ${a}
@@ -6218,10 +6593,10 @@ result:
   location:
     range:
       end:
-        character: 8
+        character: 7
         line: 83
       start:
-        character: 4
+        character: 6
         line: 83
     uri: variables.robot
   name: ${a}
@@ -6233,10 +6608,10 @@ result:
   location:
     range:
       end:
-        character: 8
+        character: 7
         line: 99
       start:
-        character: 4
+        character: 6
         line: 99
     uri: variables.robot
   name: ${a}
@@ -6263,10 +6638,10 @@ result:
   location:
     range:
       end:
-        character: 21
+        character: 20
         line: 177
       start:
-        character: 17
+        character: 19
         line: 177
     uri: variables.robot
   name: ${a}
@@ -6278,10 +6653,10 @@ result:
   location:
     range:
       end:
-        character: 8
+        character: 7
         line: 76
       start:
-        character: 4
+        character: 6
         line: 76
     uri: variables.robot
   name: ${b}
@@ -6293,10 +6668,10 @@ result:
   location:
     range:
       end:
-        character: 8
+        character: 7
         line: 84
       start:
-        character: 4
+        character: 6
         line: 84
     uri: variables.robot
   name: ${b}
@@ -6308,10 +6683,10 @@ result:
   location:
     range:
       end:
-        character: 8
+        character: 7
         line: 100
       start:
-        character: 4
+        character: 6
         line: 100
     uri: variables.robot
   name: ${b}
@@ -6338,10 +6713,10 @@ result:
   location:
     range:
       end:
-        character: 27
+        character: 26
         line: 177
       start:
-        character: 23
+        character: 25
         line: 177
     uri: variables.robot
   name: ${b}
@@ -6353,10 +6728,10 @@ result:
   location:
     range:
       end:
-        character: 8
+        character: 7
         line: 77
       start:
-        character: 4
+        character: 6
         line: 77
     uri: variables.robot
   name: ${c}
@@ -6368,10 +6743,10 @@ result:
   location:
     range:
       end:
-        character: 8
+        character: 7
         line: 102
       start:
-        character: 4
+        character: 6
         line: 102
     uri: variables.robot
   name: ${c}
@@ -6383,10 +6758,10 @@ result:
   location:
     range:
       end:
-        character: 8
+        character: 7
         line: 78
       start:
-        character: 4
+        character: 6
         line: 78
     uri: variables.robot
   name: ${d}
@@ -6413,10 +6788,10 @@ result:
   location:
     range:
       end:
-        character: 40
+        character: 39
         line: 177
       start:
-        character: 29
+        character: 31
         line: 177
     uri: variables.robot
   name: ${expected}
@@ -6428,10 +6803,10 @@ result:
   location:
     range:
       end:
-        character: 8
+        character: 7
         line: 79
       start:
-        character: 4
+        character: 6
         line: 79
     uri: variables.robot
   name: ${e}
@@ -6443,10 +6818,10 @@ result:
   location:
     range:
       end:
-        character: 43
+        character: 11
         line: 9
       start:
-        character: 0
+        character: 2
         line: 9
     uri: variables.robot
   name: ${full_name}
@@ -6458,10 +6833,10 @@ result:
   location:
     range:
       end:
-        character: 8
+        character: 7
         line: 80
       start:
-        character: 4
+        character: 6
         line: 80
     uri: variables.robot
   name: ${f}
@@ -6473,10 +6848,10 @@ result:
   location:
     range:
       end:
-        character: 19
+        character: 18
         line: 68
       start:
-        character: 4
+        character: 6
         line: 68
     uri: variables.robot
   name: ${hello there1}
@@ -6488,10 +6863,10 @@ result:
   location:
     range:
       end:
-        character: 13
+        character: 12
         line: 52
       start:
-        character: 9
+        character: 11
         line: 52
     uri: variables.robot
   name: ${i}
@@ -6503,13 +6878,28 @@ result:
   location:
     range:
       end:
-        character: 13
+        character: 12
         line: 169
       start:
-        character: 9
+        character: 11
         line: 169
     uri: variables.robot
   name: ${i}
+  tags: null
+- !WorkspaceSymbol
+  container_name: variables
+  data: null
+  kind: 13
+  location:
+    range:
+      end:
+        character: 83
+        line: 181
+      start:
+        character: 75
+        line: 181
+    uri: variables.robot
+  name: ${keywords}
   tags: null
 - !WorkspaceSymbol
   container_name: variables
@@ -6533,10 +6923,10 @@ result:
   location:
     range:
       end:
-        character: 99
+        character: 98
         line: 181
       start:
-        character: 88
+        character: 90
         line: 181
     uri: variables.robot
   name: ${listener}
@@ -6548,10 +6938,10 @@ result:
   location:
     range:
       end:
-        character: 26
+        character: 25
         line: 181
       start:
-        character: 19
+        character: 21
         line: 181
     uri: variables.robot
   name: ${name}
@@ -6563,13 +6953,28 @@ result:
   location:
     range:
       end:
-        character: 57
+        character: 15
         line: 8
       start:
-        character: 0
+        character: 2
         line: 8
     uri: variables.robot
   name: ${pre_full_name}
+  tags: null
+- !WorkspaceSymbol
+  container_name: variables
+  data: null
+  kind: 13
+  location:
+    range:
+      end:
+        character: 68
+        line: 181
+      start:
+        character: 63
+        line: 181
+    uri: variables.robot
+  name: ${scope}
   tags: null
 - !WorkspaceSymbol
   container_name: variables
@@ -6593,10 +6998,10 @@ result:
   location:
     range:
       end:
-        character: 47
+        character: 46
         line: 181
       start:
-        character: 37
+        character: 39
         line: 181
     uri: variables.robot
   name: ${version}
@@ -6608,10 +7013,10 @@ result:
   location:
     range:
       end:
-        character: 11
+        character: 4
         line: 14
       start:
-        character: 0
+        character: 2
         line: 14
     uri: variables.robot
   name: "${\U0001F9E8\U0001F9E8}"
@@ -6623,10 +7028,10 @@ result:
   location:
     range:
       end:
-        character: 13
+        character: 12
         line: 71
       start:
-        character: 4
+        character: 6
         line: 71
     uri: variables.robot
   name: '&{a dict}'
@@ -6938,10 +7343,10 @@ result:
   location:
     range:
       end:
-        character: 47
+        character: 46
         line: 39
       start:
-        character: 32
+        character: 34
         line: 39
     uri: vartest.robot
   name: ${a_second_arg}
@@ -6953,10 +7358,10 @@ result:
   location:
     range:
       end:
-        character: 47
+        character: 46
         line: 45
       start:
-        character: 32
+        character: 34
         line: 45
     uri: vartest.robot
   name: ${a_second_arg}
@@ -6968,10 +7373,10 @@ result:
   location:
     range:
       end:
-        character: 28
+        character: 27
         line: 39
       start:
-        character: 19
+        character: 21
         line: 39
     uri: vartest.robot
   name: ${an_arg}
@@ -6983,10 +7388,10 @@ result:
   location:
     range:
       end:
-        character: 28
+        character: 27
         line: 45
       start:
-        character: 19
+        character: 21
         line: 45
     uri: vartest.robot
   name: ${an_arg}
@@ -7118,10 +7523,10 @@ result:
   location:
     range:
       end:
-        character: 35
+        character: 11
         line: 5
       start:
-        character: 0
+        character: 2
         line: 5
     uri: very_big_file.robot
   name: ${city_name}
@@ -7148,10 +7553,10 @@ result:
   location:
     range:
       end:
-        character: 71
+        character: 16
         line: 8
       start:
-        character: 0
+        character: 2
         line: 8
     uri: very_big_file.robot
   name: ${cryptic_answer}
@@ -7178,10 +7583,10 @@ result:
   location:
     range:
       end:
-        character: 34
+        character: 10
         line: 6
       start:
-        character: 0
+        character: 2
         line: 6
     uri: very_big_file.robot
   name: ${location}
@@ -7298,10 +7703,10 @@ result:
   location:
     range:
       end:
-        character: 62
+        character: 10
         line: 7
       start:
-        character: 0
+        character: 2
         line: 7
     uri: very_big_file.robot
   name: ${question}

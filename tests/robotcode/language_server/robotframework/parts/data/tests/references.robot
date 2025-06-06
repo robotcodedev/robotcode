@@ -105,7 +105,7 @@ sixth
 #   ^^^^ a keyword with emoji
     firstresource.🤖🤖  🐓=${🧨🧨}    🧟‍♂️🛃🫅🏿👸🏿=${🧨🧨}+${🧨🧨}  #  test
 #   ^^^^^^^^^^^^^^^^^^  a keyword with namespace and emoji
-#                           ^^^^^^  a variable with emoji
+#                           ^^^  a variable with emoji
 
 
 seventh

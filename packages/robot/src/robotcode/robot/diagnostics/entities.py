@@ -187,6 +187,7 @@ class VariableDefinition(SourceEntity):
 
     value: Any = field(default=None, compare=False)
     value_is_native: bool = field(default=False, compare=False)
+    value_type: Optional[str] = field(default=None, compare=False)
 
     @functools.cached_property
     def matcher(self) -> VariableMatcher:

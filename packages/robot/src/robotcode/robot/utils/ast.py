@@ -326,10 +326,12 @@ def iter_over_keyword_names_and_owners(
             yield ".".join(tokens[:i]), ".".join(tokens[i:])
 
 
-def strip_variable_token(token: Token, identifiers: str = "$@&%*", matcher: Optional[VariableMatcher] = None) -> Token:
-    if token.type == Token.VARIABLE:
+def strip_variable_token(
+    token: Token, identifiers: str = "$@&%*", parse_type: bool = False, matcher: Optional[VariableMatcher] = None
+) -> Token:
+    if token.type in [Token.VARIABLE, Token.ASSIGN]:
         if matcher is None:
-            matcher = search_variable(token.value, identifiers, ignore_errors=True)
+            matcher = search_variable(token.value, identifiers, parse_type=parse_type, ignore_errors=True)
 
         if matcher.is_variable():
             value = matcher.base
@@ -346,13 +348,13 @@ def strip_variable_token(token: Token, identifiers: str = "$@&%*", matcher: Opti
     return token
 
 
-def get_variable_token(token: Token) -> Optional[Token]:
+def get_first_variable_token(token: Token, extra_types: Optional[Set[str]] = None) -> Optional[Token]:
     return next(
         (
             v
             for v in itertools.dropwhile(
                 lambda t: t.type in Token.NON_DATA_TOKENS,
-                tokenize_variables(token, ignore_errors=True),
+                tokenize_variables(token, ignore_errors=True, extra_types=extra_types),
             )
             if v.type == Token.VARIABLE
         ),

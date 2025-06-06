@@ -576,10 +576,10 @@ result:
   location:
     range:
       end:
-        character: 27
+        character: 26
         line: 41
       start:
-        character: 19
+        character: 21
         line: 41
     uri: symbols.robot
   name: ${first}

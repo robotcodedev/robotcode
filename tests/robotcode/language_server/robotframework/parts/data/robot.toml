@@ -21,6 +21,7 @@ DuplicateTests = []
 
 [env]
 ENV_VAR = "1"
+ROBOTCODE_DISABLE_HIDDEN_TASKS = "1"
 
 [variables]
 CMD_VAR = { expr = "1+2*5" }
