@@ -23,8 +23,16 @@ function diagnosticsSeverityToVsCode(severity?: DiagnosticSeverity): vscode.Diag
   }
 }
 
+enum RobotItemType {
+  WORKSPACE = "workspace",
+  SUITE = "suite",
+  TEST = "test",
+  TASK = "task",
+  ERROR = "error",
+}
+
 interface RobotTestItem {
-  type: string;
+  type: RobotItemType;
   id: string;
   uri?: string;
   relSource?: string;
@@ -159,25 +167,27 @@ export class TestControllerManager {
       (_) => undefined,
     );
 
-    const fileWatcher = vscode.workspace.createFileSystemWatcher(`**/[!._]*`);
+    const fileWatcher = vscode.workspace.createFileSystemWatcher(
+      `**/*.{${this.languageClientsManager.fileExtensions.join(",")}}`,
+    );
 
-    fileWatcher.onDidCreate((uri) => {
-      this.refreshUri(uri, "create");
+    fileWatcher.onDidCreate(async (uri) => {
+      await this.refreshUri(uri, "create");
     });
-    fileWatcher.onDidDelete((uri) => {
-      this.refreshUri(uri, "delete");
+    fileWatcher.onDidDelete(async (uri) => {
+      await this.refreshUri(uri, "delete");
     });
-    fileWatcher.onDidChange((uri) => {
-      this.refreshUri(uri, "change");
+    fileWatcher.onDidChange(async (uri) => {
+      await this.refreshUri(uri, "change");
     });
 
     this._disposables = vscode.Disposable.from(
       this.diagnosticCollection,
       fileWatcher,
-      this.languageClientsManager.onClientStateChanged((event) => {
+      this.languageClientsManager.onClientStateChanged(async (event) => {
         switch (event.state) {
           case ClientState.Running: {
-            this.refresh().catch((_) => undefined);
+            await this.refresh();
             break;
           }
           case ClientState.Stopped: {
@@ -187,10 +197,7 @@ export class TestControllerManager {
             break;
           }
         }
-        this.updateRunProfiles().then(
-          (_) => undefined,
-          (_) => undefined,
-        );
+        await this.updateRunProfiles();
       }),
       vscode.workspace.onDidChangeConfiguration(async (event) => {
         let refresh = false;
@@ -234,7 +241,7 @@ export class TestControllerManager {
           this.debugSessions.delete(session);
 
           if (session.configuration.runId !== undefined) {
-            this.TestRunExited(session.configuration.runId);
+            this.testRunExited(session.configuration.runId);
           }
         }
       }),
@@ -242,31 +249,31 @@ export class TestControllerManager {
         if (event.session.configuration.type === "robotcode") {
           switch (event.event) {
             case "robotExited": {
-              this.TestRunExited(event.session.configuration.runId);
+              this.testRunExited(event.session.configuration.runId);
               break;
             }
             case "robotStarted": {
-              this.OnRobotStartedEvent(event.session.configuration.runId, event.body as RobotExecutionEvent);
+              this.onRobotStartedEvent(event.session.configuration.runId, event.body as RobotExecutionEvent);
               break;
             }
             case "robotEnded": {
-              this.OnRobotEndedEvent(event.session.configuration.runId, event.body as RobotExecutionEvent);
+              this.onRobotEndedEvent(event.session.configuration.runId, event.body as RobotExecutionEvent);
               break;
             }
             case "robotSetFailed": {
-              this.OnRobotSetFailed(event.session.configuration.runId, event.body as RobotExecutionEvent);
+              this.onRobotSetFailed(event.session.configuration.runId, event.body as RobotExecutionEvent);
               break;
             }
             case "robotEnqueued": {
-              this.TestItemEnqueued(event.session.configuration.runId, event.body?.items);
+              this.testItemEnqueued(event.session.configuration.runId, event.body?.items);
               break;
             }
             case "robotLog": {
-              this.OnRobotLogMessageEvent(event.session.configuration.runId, event.body as RobotLogMessageEvent, false);
+              this.onRobotLogMessageEvent(event.session.configuration.runId, event.body as RobotLogMessageEvent, false);
               break;
             }
             case "robotMessage": {
-              this.OnRobotLogMessageEvent(event.session.configuration.runId, event.body as RobotLogMessageEvent, true);
+              this.onRobotLogMessageEvent(event.session.configuration.runId, event.body as RobotLogMessageEvent, true);
               break;
             }
           }
@@ -540,6 +547,14 @@ export class TestControllerManager {
   }
 
   dispose(): void {
+    this.didChangedTimer.forEach((entry) => entry.cancel());
+    this.didChangedTimer.clear();
+
+    if (this.refreshWorkspaceChangeTimer) {
+      this.refreshWorkspaceChangeTimer.cancel();
+      this.refreshWorkspaceChangeTimer = undefined;
+    }
+
     this._disposables.dispose();
     this.testController.dispose();
   }
@@ -728,7 +743,6 @@ export class TestControllerManager {
     folder: vscode.WorkspaceFolder,
     token?: vscode.CancellationToken,
   ): Promise<RobotTestItem[] | undefined> {
-    // TODO do not use hardcoded file extensions
     const robotFiles = await vscode.workspace.findFiles(
       new vscode.RelativePattern(folder, `**/*.{${this.languageClientsManager.fileExtensions.join(",")}}`),
       undefined,
@@ -776,7 +790,7 @@ export class TestControllerManager {
       return [
         {
           name: folder.name,
-          type: "workspace",
+          type: RobotItemType.WORKSPACE,
           id: folder.uri.fsPath,
           uri: folder.uri.toString(),
           longname: folder.name,
@@ -856,7 +870,7 @@ export class TestControllerManager {
 
         let tests = robotItem?.children;
 
-        if (robotItem?.type === "suite" && item.uri !== undefined) {
+        if (robotItem?.type === RobotItemType.SUITE && item.uri !== undefined) {
           if (robotItem.children === undefined) robotItem.children = [];
 
           const openDoc = vscode.workspace.textDocuments.find((d) => d.uri.toString() === item.uri?.toString());
@@ -963,15 +977,20 @@ export class TestControllerManager {
       }
     }
 
-    testItem.canResolveChildren = robotTestItem.type === "suite" || robotTestItem.type === "workspace";
+    testItem.canResolveChildren =
+      robotTestItem.type === RobotItemType.SUITE || robotTestItem.type === RobotItemType.WORKSPACE;
 
     if (robotTestItem.range !== undefined) {
       testItem.range = toVsCodeRange(robotTestItem.range);
     }
 
     testItem.label = robotTestItem.name;
-    if (robotTestItem.type == "test" || robotTestItem.type == "task") {
-      testItem.description = robotTestItem.type + (robotTestItem.description ? ` - ${robotTestItem.description}` : "");
+    if (
+      robotTestItem.type == RobotItemType.TEST ||
+      robotTestItem.type == RobotItemType.TASK ||
+      robotTestItem.type == RobotItemType.SUITE
+    ) {
+      testItem.description = `${robotTestItem.type} ${robotTestItem.description ? ` - ${robotTestItem.description}` : ""}`;
     } else {
       testItem.description = robotTestItem.description;
     }
@@ -1060,7 +1079,7 @@ export class TestControllerManager {
     });
   }
 
-  private refreshUri(uri?: vscode.Uri, reason?: string) {
+  private async refreshUri(uri?: vscode.Uri, reason?: string) {
     if (uri) {
       if (uri?.scheme !== "file") return;
 
@@ -1078,10 +1097,7 @@ export class TestControllerManager {
       if (exists) {
         const testItem = this.findTestItemByUri(uri.toString());
         if (testItem) {
-          this.refreshItem(testItem).then(
-            (_) => undefined,
-            (_) => undefined,
-          );
+          await this.refresh(testItem);
           return;
         }
       }
@@ -1153,7 +1169,7 @@ export class TestControllerManager {
           folders.set(ws, []);
         }
         const ritem = this.findRobotItem(i);
-        if (ritem?.type == "workspace") {
+        if (ritem?.type == RobotItemType.WORKSPACE) {
           i.children.forEach((c) => {
             folders.get(ws)?.push(c);
           });
@@ -1186,7 +1202,7 @@ export class TestControllerManager {
     if (request.include) {
       request.include.forEach((v) => {
         const robotTest = this.findRobotItem(v);
-        if (robotTest?.type === "workspace") {
+        if (robotTest?.type === RobotItemType.WORKSPACE) {
           v.children.forEach((v) => includedItems.push(v));
         } else {
           includedItems.push(v);
@@ -1195,9 +1211,9 @@ export class TestControllerManager {
     } else {
       this.testController.items.forEach((test) => {
         const robotTest = this.findRobotItem(test);
-        if (robotTest?.type === "error") {
+        if (robotTest?.type === RobotItemType.ERROR) {
           return;
-        } else if (robotTest?.type === "workspace") {
+        } else if (robotTest?.type === RobotItemType.WORKSPACE) {
           test.children.forEach((v) => includedItems.push(v));
         } else {
           includedItems.push(test);
@@ -1244,7 +1260,7 @@ export class TestControllerManager {
       let workspaceItem = this.findTestItemByUri(folder.uri.toString());
       const workspaceRobotItem = workspaceItem ? this.findRobotItem(workspaceItem) : undefined;
 
-      if (workspaceRobotItem?.type == "workspace" && workspaceRobotItem.children?.length) {
+      if (workspaceRobotItem?.type == RobotItemType.WORKSPACE && workspaceRobotItem.children?.length) {
         workspaceItem = workspaceItem?.children.get(workspaceRobotItem.children[0].id);
       }
 
@@ -1267,7 +1283,7 @@ export class TestControllerManager {
         const includedInWs = testItems
           .map((i) => {
             const ritem = this.findRobotItem(i);
-            if (ritem?.type == "workspace" && ritem.children?.length) {
+            if (ritem?.type == RobotItemType.WORKSPACE && ritem.children?.length) {
               return ritem.children[0].longname;
             }
             return ritem?.longname;
@@ -1278,7 +1294,7 @@ export class TestControllerManager {
             .get(folder)
             ?.map((i) => {
               const ritem = this.findRobotItem(i);
-              if (ritem?.type == "workspace" && ritem.children?.length) {
+              if (ritem?.type == RobotItemType.WORKSPACE && ritem.children?.length) {
                 return ritem.children[0].longname;
               }
               return ritem?.longname;
@@ -1302,7 +1318,7 @@ export class TestControllerManager {
           } else {
             const ritem = this.findRobotItem(testItem);
             let longname = ritem?.longname;
-            if (ritem?.type == "workspace" && ritem.children?.length) {
+            if (ritem?.type == RobotItemType.WORKSPACE && ritem.children?.length) {
               longname = ritem.children[0].longname;
             }
             if (longname) {
@@ -1314,7 +1330,7 @@ export class TestControllerManager {
 
         let suiteName: string | undefined = undefined;
 
-        if (workspaceRobotItem?.type == "workspace" && workspaceRobotItem.children?.length) {
+        if (workspaceRobotItem?.type == RobotItemType.WORKSPACE && workspaceRobotItem.children?.length) {
           suiteName = workspaceRobotItem.children[0].longname;
         }
 
@@ -1341,7 +1357,7 @@ export class TestControllerManager {
     }
   }
 
-  private TestRunExited(runId: string | undefined) {
+  private testRunExited(runId: string | undefined) {
     if (runId === undefined) return;
 
     const run = this.testRuns.get(runId);
@@ -1353,7 +1369,7 @@ export class TestControllerManager {
     }
   }
 
-  private TestItemEnqueued(runId: string | undefined, items: string[] | undefined) {
+  private testItemEnqueued(runId: string | undefined, items: string[] | undefined) {
     if (runId === undefined || items === undefined) return;
 
     const run = this.testRuns.get(runId);
@@ -1368,11 +1384,11 @@ export class TestControllerManager {
     }
   }
 
-  private OnRobotStartedEvent(runId: string | undefined, event: RobotExecutionEvent) {
+  private onRobotStartedEvent(runId: string | undefined, event: RobotExecutionEvent) {
     switch (event.type) {
       //case "suite":
       case "test":
-        this.TestItemStarted(runId, event);
+        this.testItemStarted(runId, event);
         break;
       default:
         // do nothing
@@ -1380,7 +1396,7 @@ export class TestControllerManager {
     }
   }
 
-  private TestItemStarted(runId: string | undefined, event: RobotExecutionEvent) {
+  private testItemStarted(runId: string | undefined, event: RobotExecutionEvent) {
     if (runId === undefined || event.attributes?.longname === undefined) return;
 
     const run = this.testRuns.get(runId);
@@ -1393,11 +1409,11 @@ export class TestControllerManager {
     }
   }
 
-  private OnRobotEndedEvent(runId: string | undefined, event: RobotExecutionEvent) {
+  private onRobotEndedEvent(runId: string | undefined, event: RobotExecutionEvent) {
     switch (event.type) {
       //case "suite":
       case "test":
-        this.TestItemEnded(runId, event);
+        this.testItemEnded(runId, event);
         break;
       default:
         // do nothing
@@ -1405,11 +1421,11 @@ export class TestControllerManager {
     }
   }
 
-  private OnRobotSetFailed(runId: string | undefined, event: RobotExecutionEvent) {
+  private onRobotSetFailed(runId: string | undefined, event: RobotExecutionEvent) {
     switch (event.type) {
       case "suite":
       case "test":
-        this.TestItemSetFailed(runId, event);
+        this.testItemSetFailed(runId, event);
         break;
       default:
         // do nothing
@@ -1417,7 +1433,7 @@ export class TestControllerManager {
     }
   }
 
-  private TestItemSetFailed(runId: string | undefined, event: RobotExecutionEvent) {
+  private testItemSetFailed(runId: string | undefined, event: RobotExecutionEvent) {
     if (runId === undefined || event.attributes?.longname === undefined) return;
 
     const run = this.testRuns.get(runId);
@@ -1448,7 +1464,7 @@ export class TestControllerManager {
     }
   }
 
-  private TestItemEnded(runId: string | undefined, event: RobotExecutionEvent) {
+  private testItemEnded(runId: string | undefined, event: RobotExecutionEvent) {
     if (runId === undefined || event.attributes?.longname === undefined) return;
 
     const run = this.testRuns.get(runId);
@@ -1516,7 +1532,7 @@ export class TestControllerManager {
     }
   }
 
-  private OnRobotLogMessageEvent(runId: string | undefined, event: RobotLogMessageEvent, isMessage: boolean): void {
+  private onRobotLogMessageEvent(runId: string | undefined, event: RobotLogMessageEvent, isMessage: boolean): void {
     if (runId === undefined) return;
 
     const run = this.testRuns.get(runId);
