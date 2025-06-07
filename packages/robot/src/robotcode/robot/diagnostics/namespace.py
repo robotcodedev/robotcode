@@ -1148,7 +1148,7 @@ class Namespace:
     ) -> Dict[str, Any]:
         if nodes:
             return {
-                v.name: v.value
+                v.full_name: v.value
                 for k, v in self.yield_variables(nodes, position, skip_commandline_variables=True)
                 if v.has_value
             }
@@ -1156,7 +1156,7 @@ class Namespace:
         with self._global_resolvable_variables_lock:
             if self._global_resolvable_variables is None:
                 self._global_resolvable_variables = {
-                    v.name: v.value
+                    v.full_name: v.value
                     for k, v in self.yield_variables(nodes, position, skip_commandline_variables=True)
                     if v.has_value
                 }
