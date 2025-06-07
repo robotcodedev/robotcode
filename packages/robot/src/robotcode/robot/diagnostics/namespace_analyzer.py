@@ -1,6 +1,7 @@
 import ast
 import functools
 import os
+import re
 import token as python_token
 from collections import defaultdict
 from concurrent.futures import CancelledError
@@ -64,6 +65,7 @@ from ..utils.variables import (
 from ..utils.visitor import Visitor
 from .entities import (
     ArgumentDefinition,
+    EmbeddedArgumentDefinition,
     EnvironmentVariableDefinition,
     GlobalVariableDefinition,
     LibraryEntry,
@@ -1135,6 +1137,8 @@ class NamespaceAnalyzer(Visitor):
             self._current_testcase_or_keyword_name = None
             self._current_keyword_doc = None
 
+    EMBEDDED_ARGUMENTS_MATCHER = re.compile("([^:]+): ([^:]+)(:(.*))?")
+
     def visit_KeywordName(self, node: KeywordName) -> None:  # noqa: N802
         name_token = node.get_token(Token.KEYWORD_NAME)
 
@@ -1144,14 +1148,28 @@ class NamespaceAnalyzer(Visitor):
                 tokenize_variables(name_token, identifiers="$", ignore_errors=True),
             ):
                 if variable_token.value:
-                    match = search_variable(variable_token.value, "$", ignore_errors=True)
-                    if match.base is None:
+                    matcher = search_variable(variable_token.value, "$", ignore_errors=True)
+                    if matcher.base is None:
                         continue
-                    name = match.base.split(":", 1)[0]
-                    full_name = f"{match.identifier}{{{name}}}"
+                    if ":" not in matcher.base:
+                        name = matcher.base
+                        pattern = None
+                        type = None
+                    elif get_robot_version() >= (7, 3):
+                        re_match = self.EMBEDDED_ARGUMENTS_MATCHER.fullmatch(matcher.base)
+                        if re_match:
+                            name, type, _, pattern = re_match.groups()
+                        else:
+                            name, pattern = matcher.base.split(":", 1)
+                            type = None
+                    else:
+                        name, pattern = matcher.base.split(":", 1)
+                        type = None
+
+                    full_name = f"{matcher.identifier}{{{name}}}"
                     var_token = strip_variable_token(variable_token)
                     var_token.value = name
-                    arg_def = ArgumentDefinition(
+                    arg_def = EmbeddedArgumentDefinition(
                         name=full_name,
                         name_token=var_token,
                         line_no=variable_token.lineno,
@@ -1160,6 +1178,8 @@ class NamespaceAnalyzer(Visitor):
                         end_col_offset=variable_token.end_col_offset,
                         source=self._namespace.source,
                         keyword_doc=self._current_keyword_doc,
+                        value_type=type,
+                        pattern=pattern,
                     )
 
                     self._variables[arg_def.matcher] = arg_def

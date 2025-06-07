@@ -276,6 +276,15 @@ class ArgumentDefinition(LocalVariableDefinition):
 
 
 @dataclass
+class EmbeddedArgumentDefinition(ArgumentDefinition):
+    pattern: Optional[str] = field(default=None, compare=False)
+
+    @single_call
+    def __hash__(self) -> int:
+        return hash((type(self), self.name, self.type, self.range, self.source))
+
+
+@dataclass
 class LibraryArgumentDefinition(ArgumentDefinition):
     @single_call
     def __hash__(self) -> int:

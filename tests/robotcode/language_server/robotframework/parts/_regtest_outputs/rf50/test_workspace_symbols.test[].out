@@ -6158,11 +6158,41 @@ result:
   location:
     range:
       end:
+        character: 19
+        line: 6
+      start:
+        character: 2
+        line: 6
+    uri: variable_conversion.robot
+  name: '${DATES: list[date]}'
+  tags: null
+- !WorkspaceSymbol
+  container_name: variable_conversion
+  data: null
+  kind: 13
+  location:
+    range:
+      end:
+        character: 28
+        line: 7
+      start:
+        character: 2
+        line: 7
+    uri: variable_conversion.robot
+  name: '${PRIORITIES: dict[int, str]}'
+  tags: null
+- !WorkspaceSymbol
+  container_name: variable_conversion
+  data: null
+  kind: 13
+  location:
+    range:
+      end:
         character: 40
-        line: 66
+        line: 68
       start:
         character: 21
-        line: 66
+        line: 68
     uri: variable_conversion.robot
   name: '${a: int | str | None}'
   tags: null
@@ -6189,10 +6219,10 @@ result:
     range:
       end:
         character: 12
-        line: 44
+        line: 45
       start:
         character: 6
-        line: 44
+        line: 45
     uri: variable_conversion.robot
   name: '${a: int}'
   tags: null
@@ -6204,10 +6234,10 @@ result:
     range:
       end:
         character: 27
-        line: 53
+        line: 55
       start:
         character: 21
-        line: 53
+        line: 55
     uri: variable_conversion.robot
   name: '${a: int}'
   tags: null
@@ -6219,10 +6249,10 @@ result:
     range:
       end:
         character: 22
-        line: 61
+        line: 63
       start:
         character: 21
-        line: 61
+        line: 63
     uri: variable_conversion.robot
   name: ${a}
   tags: null
@@ -6234,10 +6264,10 @@ result:
     range:
       end:
         character: 37
-        line: 61
+        line: 63
       start:
         character: 31
-        line: 61
+        line: 63
     uri: variable_conversion.robot
   name: '${b: int}'
   tags: null
@@ -6249,10 +6279,10 @@ result:
     range:
       end:
         character: 40
-        line: 53
+        line: 55
       start:
         character: 34
-        line: 53
+        line: 55
     uri: variable_conversion.robot
   name: '${c: str}'
   tags: null
@@ -6264,10 +6294,10 @@ result:
     range:
       end:
         character: 59
-        line: 53
+        line: 55
       start:
         character: 47
-        line: 53
+        line: 55
     uri: variable_conversion.robot
   name: '${d: list[str]}'
   tags: null
@@ -6279,10 +6309,10 @@ result:
     range:
       end:
         character: 12
-        line: 29
+        line: 30
       start:
         character: 6
-        line: 29
+        line: 30
     uri: variable_conversion.robot
   name: '${i: int}'
   tags: null
@@ -6294,10 +6324,10 @@ result:
     range:
       end:
         character: 19
-        line: 39
+        line: 40
       start:
         character: 13
-        line: 39
+        line: 40
     uri: variable_conversion.robot
   name: '${i: int}'
   tags: null
@@ -6323,11 +6353,11 @@ result:
   location:
     range:
       end:
-        character: 25
-        line: 79
+        character: 34
+        line: 81
       start:
         character: 2
-        line: 79
+        line: 81
     uri: variable_conversion.robot
   name: ${keyword}
   tags: null
@@ -6339,10 +6369,10 @@ result:
     range:
       end:
         character: 19
-        line: 35
+        line: 36
       start:
         character: 13
-        line: 35
+        line: 36
     uri: variable_conversion.robot
   name: '${l: int}'
   tags: null
@@ -6369,10 +6399,10 @@ result:
     range:
       end:
         character: 32
-        line: 39
+        line: 40
       start:
         character: 26
-        line: 39
+        line: 40
     uri: variable_conversion.robot
   name: '${s: str}'
   tags: null
@@ -6413,13 +6443,13 @@ result:
   location:
     range:
       end:
-        character: 44
-        line: 79
+        character: 53
+        line: 81
       start:
         character: 0
-        line: 79
+        line: 81
     uri: variable_conversion.robot
-  name: 'a ${keyword: int:keyword} with embedded args'
+  name: 'a ${keyword: int:keyword|testcase} with embedded args'
   tags: null
 - !WorkspaceSymbol
   container_name: variable_conversion
@@ -6429,10 +6459,10 @@ result:
     range:
       end:
         character: 26
-        line: 52
+        line: 54
       start:
         character: 0
-        line: 52
+        line: 54
     uri: variable_conversion.robot
   name: a simple keyword with args
   tags: null
@@ -6444,10 +6474,10 @@ result:
     range:
       end:
         character: 39
-        line: 60
+        line: 62
       start:
         character: 0
-        line: 60
+        line: 62
     uri: variable_conversion.robot
   name: a simple keyword with default arguments
   tags: null
@@ -6459,10 +6489,10 @@ result:
     range:
       end:
         character: 36
-        line: 65
+        line: 67
       start:
         character: 0
-        line: 65
+        line: 67
     uri: variable_conversion.robot
   name: a simple keyword with union argument
   tags: null
@@ -6474,10 +6504,10 @@ result:
     range:
       end:
         character: 30
-        line: 47
+        line: 48
       start:
         character: 0
-        line: 47
+        line: 48
     uri: variable_conversion.robot
   name: calling kws with embedded args
   tags: null
@@ -6489,10 +6519,10 @@ result:
     range:
       end:
         character: 9
-        line: 32
+        line: 33
       start:
         character: 0
-        line: 32
+        line: 33
     uri: variable_conversion.robot
   name: for loops
   tags: null
@@ -6504,10 +6534,10 @@ result:
     range:
       end:
         character: 13
-        line: 43
+        line: 44
       start:
         character: 0
-        line: 43
+        line: 44
     uri: variable_conversion.robot
   name: if assignment
   tags: null
@@ -6519,10 +6549,10 @@ result:
     range:
       end:
         character: 19
-        line: 28
+        line: 29
       start:
         character: 0
-        line: 28
+        line: 29
     uri: variable_conversion.robot
   name: keyword assignments
   tags: null
@@ -6534,10 +6564,10 @@ result:
     range:
       end:
         character: 15
-        line: 22
+        line: 23
       start:
         character: 0
-        line: 22
+        line: 23
     uri: variable_conversion.robot
   name: local variables
   tags: null
@@ -6549,10 +6579,10 @@ result:
     range:
       end:
         character: 15
-        line: 9
+        line: 10
       start:
         character: 0
-        line: 9
+        line: 10
     uri: variable_conversion.robot
   name: suite variables
   tags: null

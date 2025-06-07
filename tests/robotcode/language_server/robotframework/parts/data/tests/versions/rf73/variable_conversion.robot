@@ -4,7 +4,8 @@ ${s: str}                       hallo welt
 ${k: Literal["Yes", "No"]}      No
 @{numbers: int}                 1    2    4    11aa
 ${time: datetime}               now
-
+${DATES: list[date]}             {'rc1': '2025-05-08', 'final': '2025-05-30'}
+${PRIORITIES: dict[int, str]}    {3278: 'Critical', 4173: 'High', 5334: 'High'}
 
 *** Test Cases ***
 suite variables
@@ -47,6 +48,7 @@ if assignment
 
 calling kws with embedded args
     a keyword with embedded args
+    a testcase with embedded args
 
 
 *** Keywords ***
@@ -77,6 +79,6 @@ a simple keyword with union argument
 #    [Arguments]    @{v: int}    @{w}
 #    Whatever
 
-a ${keyword: int:keyword} with embedded args
+a ${keyword: int:keyword|testcase} with embedded args
     [Documentation]    this is a simple embedded keyword
-    log    ${keyword}
+    Log    ${keyword}
