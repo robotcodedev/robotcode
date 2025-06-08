@@ -194,7 +194,7 @@ class VariableDefinition(SourceEntity):
         return search_variable(self.name)
 
     @functools.cached_property
-    def full_name(self) -> str:
+    def convertable_name(self) -> str:
         m = self.matcher
         value_type = f": {self.value_type}" if self.value_type else ""
         return f"{m.identifier}{{{m.base.strip()}{value_type}}}"

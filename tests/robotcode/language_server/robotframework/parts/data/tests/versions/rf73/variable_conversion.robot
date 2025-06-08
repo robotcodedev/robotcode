@@ -1,11 +1,13 @@
 *** Variables ***
-${a: int}                       1
-${s: str}                       hallo welt
-${k: Literal["Yes", "No"]}      No
-@{numbers: int}                 1    2    4    11aa
-${time: datetime}               now
-${DATES: list[date]}             {'rc1': '2025-05-08', 'final': '2025-05-30'}
-${PRIORITIES: dict[int, str]}    {3278: 'Critical', 4173: 'High', 5334: 'High'}
+${a: int}                           1
+${s: str}                           hallo welt
+${k: Literal["Yes", "No"]}          No
+@{numbers: int}                     1    2    4    11
+@{wrong_numbers: int}               1    2    4    11aa
+${time: datetime}                   now
+${DATES: list[date]}                {'rc1': '2025-05-08', 'final': '2025-05-30'}
+${PRIORITIES: dict[int, str]}       {3278: 'Critical', 4173: 'High', 5334: 'High'}
+
 
 *** Test Cases ***
 suite variables
@@ -14,7 +16,7 @@ suite variables
     Log    ${k}
     Log    ${time}
     Log    ${numbers}
-    Log    ${TYPE_VAR}
+    Log    ${TYPE_VAR}: ${{type($TYPE_VAR)}}
     a simple keyword with args    2    a string    [1,2,3]
     a simple keyword with default arguments
     a simple keyword with union argument    1
