@@ -1768,11 +1768,13 @@
                   "string"
                 ],
                 "enum": [
+                  "none",
                   "default",
                   "test",
                   "test-profile"
                 ],
                 "markdownEnumDescriptions": [
+                  "No purpose defined.",
                   "Configuration is uses as default for all other configurations.",
                   "Default configuration for running or debugging tests.",
                   "Defines a test profile that you can select in the test explorer or via the play button during a test. This configuration is used instead of the configuration with the purpose `test`."
@@ -1781,11 +1783,13 @@
                 "description": "Defines what purpose this configuration has.",
                 "items": {
                   "enum": [
+                    "none",
                     "default",
                     "test",
                     "test-profile"
                   ],
                   "markdownEnumDescriptions": [
+                    "No purpose defined.",
                     "Configuration is uses as default for all other configurations.",
                     "Default configuration for running or debugging tests.",
                     "Defines a test profile that you can select in the test explorer or via the play button during a test. This configuration is used instead of the configuration with the purpose `test`."

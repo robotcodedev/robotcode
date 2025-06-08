@@ -189,18 +189,20 @@ class DebugAdapterServerProtocol(DebugAdapterProtocol):
     async def _terminate(
         self,
         arguments: Optional[TerminateArguments] = None,
+        restart: Optional[bool] = None,
         *args: Any,
         **kwargs: Any,
     ) -> None:
-        if not self._sigint_signaled:
+        Debugger.instance().terminate()
+
+        if not restart and not self._sigint_signaled:
             self._logger.info("Send SIGINT to process")
             signal.raise_signal(signal.SIGINT)
             self._sigint_signaled = True
-            # Debugger.instance().continue_all()
+
+            Debugger.instance().continue_all_if_paused()
         else:
             await self.send_event_async(Event("terminateRequested"))
-
-            Debugger.instance().terminate()
 
             self._logger.info("Send SIGTERM to process")
             signal.raise_signal(signal.SIGTERM)

@@ -622,6 +622,26 @@ class TerminateResponse(Response):
     pass
 
 
+class RestartArguments(Model):
+    arguments: Union[LaunchRequestArguments | AttachRequestArguments]
+
+
+@dataclass
+class _RestartRequest:
+    arguments: Optional[RestartArguments] = None
+
+
+@dataclass
+class RestartRequest(Request, _RestartRequest):
+    arguments: Optional[RestartArguments] = None
+    command: str = "restart"
+
+
+@dataclass
+class RestartResponse(Response):
+    pass
+
+
 @dataclass
 class StackFrameFormat(Model):
     parameters: Optional[bool] = None
