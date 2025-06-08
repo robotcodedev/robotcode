@@ -1274,7 +1274,7 @@
           },
           "robotcode.documentationServer.startOnDemand": {
             "type": "boolean",
-            "default": true,
+            "default": false,
             "description": "Starts the internal HTTP server only if needed."
           }
         }
