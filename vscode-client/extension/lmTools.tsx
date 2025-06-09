@@ -78,7 +78,7 @@ export class GetLibraryInfoTool implements vscode.LanguageModelTool<GetLibraryIn
     }
 
     return {
-      invocationMessage: "Retrieving Robot Framework Library details",
+      invocationMessage: `Retrieving Robot Framework Library details for library: '${options.input.libraryName}'`,
     };
   }
 }
@@ -130,7 +130,7 @@ export class GetKeywordInfoTool implements vscode.LanguageModelTool<GetKeywordIn
   }
 
   async prepareInvocation?(
-    options: vscode.LanguageModelToolInvocationPrepareOptions<GetLibraryInfoToolParamters>,
+    options: vscode.LanguageModelToolInvocationPrepareOptions<GetKeywordInfoToolParamters>,
     _token: vscode.CancellationToken,
   ): Promise<vscode.PreparedToolInvocation> {
     const workspaceFolder = resolveWorkspaceFolder(options.input.resourcePath);
@@ -141,7 +141,7 @@ export class GetKeywordInfoTool implements vscode.LanguageModelTool<GetKeywordIn
     }
 
     return {
-      invocationMessage: "Retrieving Robot Framework Keyword details",
+      invocationMessage: `Retrieving Robot Framework Keyword details for keyword: '${options.input.keywordName}' from library: '${options.input.libraryName}'`,
     };
   }
 }
@@ -183,7 +183,7 @@ export class GetDocumentImportsTool implements vscode.LanguageModelTool<GetDocum
     }
 
     return {
-      invocationMessage: "Retrieving Robot Framework Document Imports",
+      invocationMessage: `Retrieving Robot Framework Document Imports for '${options.input.resourcePath}'`,
     };
   }
 }

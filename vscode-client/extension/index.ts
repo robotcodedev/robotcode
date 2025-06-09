@@ -163,7 +163,7 @@ export async function activateAsync(context: vscode.ExtensionContext): Promise<v
       new GetKeywordInfoTool(context, languageClientManger, outputChannel),
     ),
     vscode.lm.registerTool(
-      "robot-get_document_imports",
+      "robot-get_file_imports",
       new GetDocumentImportsTool(context, languageClientManger, outputChannel),
     ),
     vscode.lm.registerTool(

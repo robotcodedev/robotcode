@@ -260,12 +260,12 @@ def run_debugger(
                     )
                 )
 
-                server.protocol.exit(exit_code)
     except CancelledError:
         pass
     finally:
         if server.protocol.connected:
             server.protocol.terminate()
+            server.protocol.exit(exit_code)
 
             if not server.protocol.wait_for_disconnected():
                 app.verbose("Timeout to get disconnected from client")

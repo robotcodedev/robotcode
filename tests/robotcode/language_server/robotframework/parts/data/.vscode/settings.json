@@ -17,7 +17,7 @@
         "--debugpy",
         //"--debugpy-wait-for-client",
         "--log",
-        "--log-level", "DEBUG",
+        //"--log-level", "DEBUG",
     ],
     "robotcode.robocop.enabled": false,
     "robotcode.robocop.exclude": ["E0303"],

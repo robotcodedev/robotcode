@@ -449,6 +449,10 @@ class Debugger:
         if not self.main_thread_is_alive and thread_id != self.main_thread_id:
             raise InvalidThreadIdError(thread_id, self.main_thread_id)
 
+    def continue_all_if_paused(self) -> None:
+        if self.state == State.Paused:
+            self.continue_all()
+
     def continue_all(self) -> None:
         if self.main_thread_is_alive:
             self.continue_thread(self.main_thread_id)

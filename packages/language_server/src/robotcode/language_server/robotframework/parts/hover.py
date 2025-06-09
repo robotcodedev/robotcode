@@ -163,7 +163,7 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
                     else:
                         value = ""
 
-                    text = f"### {variable.type.value.title()} `{variable.name}`\n\n"
+                    text = f"### {variable.type.value.title()} `{variable.convertable_name}`\n\n"
 
                     if value:
                         text += "```python\n"

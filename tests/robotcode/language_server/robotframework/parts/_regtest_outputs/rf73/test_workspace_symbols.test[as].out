@@ -111,10 +111,10 @@ result:
   location:
     range:
       end:
-        character: 20
+        character: 9
         line: 24
       start:
-        character: 0
+        character: 2
         line: 24
     uri: code_action_show_documentation.robot
   name: ${bananas}
@@ -216,10 +216,10 @@ result:
   location:
     range:
       end:
-        character: 47
+        character: 46
         line: 164
       start:
-        character: 32
+        character: 34
         line: 164
     uri: document_highlight.robot
   name: ${a_second_arg}
@@ -231,10 +231,10 @@ result:
   location:
     range:
       end:
-        character: 47
+        character: 46
         line: 169
       start:
-        character: 32
+        character: 34
         line: 169
     uri: document_highlight.robot
   name: ${a_second_arg}
@@ -411,10 +411,10 @@ result:
   location:
     range:
       end:
-        character: 47
+        character: 20
         line: 4
       start:
-        character: 0
+        character: 2
         line: 4
     uri: firstresource.resource
   name: ${A_VAR_FROM_RESOURE}
@@ -426,10 +426,10 @@ result:
   location:
     range:
       end:
-        character: 61
+        character: 60
         line: 23
       start:
-        character: 46
+        character: 48
         line: 23
     uri: firstresource.resource
   name: ${a_short_name}
@@ -516,10 +516,10 @@ result:
   location:
     range:
       end:
-        character: 47
+        character: 46
         line: 213
       start:
-        character: 32
+        character: 34
         line: 213
     uri: goto.robot
   name: ${a_second_arg}
@@ -531,10 +531,10 @@ result:
   location:
     range:
       end:
-        character: 47
+        character: 46
         line: 218
       start:
-        character: 32
+        character: 34
         line: 218
     uri: goto.robot
   name: ${a_second_arg}
@@ -726,10 +726,25 @@ result:
   location:
     range:
       end:
-        character: 24
+        character: 17
+        line: 3
+      start:
+        character: 2
+        line: 3
+    uri: indexed_variables.robot
+  name: ${A_LIST ${index}}
+  tags: null
+- !WorkspaceSymbol
+  container_name: indexed_variables
+  data: null
+  kind: 13
+  location:
+    range:
+      end:
+        character: 8
         line: 1
       start:
-        character: 0
+        character: 2
         line: 1
     uri: indexed_variables.robot
   name: '@{A_LIST}'
@@ -741,10 +756,10 @@ result:
   location:
     range:
       end:
-        character: 20
+        character: 9
         line: 26
       start:
-        character: 0
+        character: 2
         line: 26
     uri: references.robot
   name: ${bananas}
@@ -1071,10 +1086,10 @@ result:
   location:
     range:
       end:
-        character: 23
+        character: 16
         line: 5
       start:
-        character: 0
+        character: 2
         line: 5
     uri: templates2.robot
   name: ${VALID PASSWORD}
@@ -1086,10 +1101,10 @@ result:
   location:
     range:
       end:
-        character: 22
+        character: 12
         line: 4
       start:
-        character: 0
+        character: 2
         line: 4
     uri: templates2.robot
   name: ${VALID USER}
@@ -1101,10 +1116,10 @@ result:
   location:
     range:
       end:
-        character: 45
+        character: 44
         line: 49
       start:
-        character: 34
+        character: 36
         line: 49
     uri: templates2.robot
   name: ${password}
@@ -1200,16 +1215,166 @@ result:
   name: Login with invalid credentials should fail
   tags: null
 - !WorkspaceSymbol
+  container_name: variable_conversion
+  data: null
+  kind: 13
+  location:
+    range:
+      end:
+        character: 7
+        line: 7
+      start:
+        character: 2
+        line: 7
+    uri: variable_conversion.robot
+  name: ${DATES}
+  tags: null
+- !WorkspaceSymbol
+  container_name: variable_conversion
+  data: null
+  kind: 12
+  location:
+    range:
+      end:
+        character: 53
+        line: 83
+      start:
+        character: 0
+        line: 83
+    uri: variable_conversion.robot
+  name: 'a ${keyword: int:keyword|testcase} with embedded args'
+  tags: null
+- !WorkspaceSymbol
+  container_name: variable_conversion
+  data: null
+  kind: 12
+  location:
+    range:
+      end:
+        character: 26
+        line: 56
+      start:
+        character: 0
+        line: 56
+    uri: variable_conversion.robot
+  name: a simple keyword with args
+  tags: null
+- !WorkspaceSymbol
+  container_name: variable_conversion
+  data: null
+  kind: 12
+  location:
+    range:
+      end:
+        character: 39
+        line: 64
+      start:
+        character: 0
+        line: 64
+    uri: variable_conversion.robot
+  name: a simple keyword with default arguments
+  tags: null
+- !WorkspaceSymbol
+  container_name: variable_conversion
+  data: null
+  kind: 12
+  location:
+    range:
+      end:
+        character: 36
+        line: 69
+      start:
+        character: 0
+        line: 69
+    uri: variable_conversion.robot
+  name: a simple keyword with union argument
+  tags: null
+- !WorkspaceSymbol
+  container_name: variable_conversion
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 30
+        line: 50
+      start:
+        character: 0
+        line: 50
+    uri: variable_conversion.robot
+  name: calling kws with embedded args
+  tags: null
+- !WorkspaceSymbol
+  container_name: variable_conversion
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 13
+        line: 46
+      start:
+        character: 0
+        line: 46
+    uri: variable_conversion.robot
+  name: if assignment
+  tags: null
+- !WorkspaceSymbol
+  container_name: variable_conversion
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 19
+        line: 31
+      start:
+        character: 0
+        line: 31
+    uri: variable_conversion.robot
+  name: keyword assignments
+  tags: null
+- !WorkspaceSymbol
+  container_name: variable_conversion
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 15
+        line: 25
+      start:
+        character: 0
+        line: 25
+    uri: variable_conversion.robot
+  name: local variables
+  tags: null
+- !WorkspaceSymbol
+  container_name: variable_conversion
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 15
+        line: 12
+      start:
+        character: 0
+        line: 12
+    uri: variable_conversion.robot
+  name: suite variables
+  tags: null
+- !WorkspaceSymbol
   container_name: variables
   data: null
   kind: 13
   location:
     range:
       end:
-        character: 10
+        character: 9
         line: 64
       start:
-        character: 4
+        character: 6
         line: 64
     uri: variables.robot
   name: ${asd}
@@ -1281,10 +1446,10 @@ result:
   location:
     range:
       end:
-        character: 47
+        character: 46
         line: 39
       start:
-        character: 32
+        character: 34
         line: 39
     uri: vartest.robot
   name: ${a_second_arg}
@@ -1296,10 +1461,10 @@ result:
   location:
     range:
       end:
-        character: 47
+        character: 46
         line: 45
       start:
-        character: 32
+        character: 34
         line: 45
     uri: vartest.robot
   name: ${a_second_arg}
@@ -1371,10 +1536,10 @@ result:
   location:
     range:
       end:
-        character: 71
+        character: 16
         line: 8
       start:
-        character: 0
+        character: 2
         line: 8
     uri: very_big_file.robot
   name: ${cryptic_answer}

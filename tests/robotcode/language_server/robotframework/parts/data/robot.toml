@@ -21,11 +21,13 @@ DuplicateTests = []
 
 [env]
 ENV_VAR = "1"
+ROBOTCODE_DISABLE_HIDDEN_TASKS = "1"
 
 [variables]
 CMD_VAR = { expr = "1+2*5" }
 CMD_VAR_LONG = "a test"
 ANOTHER_VAR = { expr = "environ.get('CMD_VAR_LONG', 'default')" }
+TYPE_VAR = " int:1234"
 
 [profiles.devel]
 description = """The devel profile

@@ -87,9 +87,25 @@ class KeywordFinder:
             try:
                 result = self._find_keyword(name, handle_bdd_style)
                 if result is None:
+                    error_message = "No keyword with found."
+
+                    if name and name.strip(": ").upper() == "FOR":
+                        error_message = (
+                            f"Support for the old FOR loop syntax has been removed. "
+                            f"Replace '{name}' with 'FOR', end the loop with 'END', and "
+                            f"remove escaping backslashes."
+                        )
+                    elif name and name == "\\":
+                        error_message = (
+                            "No keyword with name '\\' found. If it is used inside a for "
+                            "loop, remove escaping backslashes and end the loop with 'END'."
+                        )
+                    else:
+                        error_message = f"No keyword with name '{name}' found."
+
                     self.diagnostics.append(
                         DiagnosticsEntry(
-                            f"No keyword with name '{name}' found.",
+                            error_message,
                             DiagnosticSeverity.ERROR,
                             Error.KEYWORD_NOT_FOUND,
                         )

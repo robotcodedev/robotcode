@@ -38,16 +38,13 @@
             "presentation": {
                 "hidden": true
             },
-        },
-        {
-            "name": "RobotCode: Default",
-            "type": "robotcode",
-            "request": "launch",
-            "purpose": "test",
-            "presentation": {
-                "hidden": true
-            },
             // "robotCodeArgs": [
+            //     "-v",
+            //     "--log",
+            //     "--log-level=TRACE",
+            //     "--log-calls"
+            // ],
+            // "launcherExtraArgs": [
             //     "-v",
             //     "--log",
             //     "--log-level=TRACE",

@@ -4,7 +4,7 @@
   "description": "Robot Framework IntelliSense, linting, test execution and debugging, code formatting, refactoring, and many more",
   "icon": "images/icon.png",
   "publisher": "d-biehl",
-  "version": "1.3.0-dev.4",
+  "version": "1.3.0-dev.5",
   "author": {
     "name": "Daniel Biehl",
     "url": "https://github.com/robotcodedev/"
@@ -1274,7 +1274,7 @@
           },
           "robotcode.documentationServer.startOnDemand": {
             "type": "boolean",
-            "default": true,
+            "default": false,
             "description": "Starts the internal HTTP server only if needed."
           }
         }
@@ -1768,11 +1768,13 @@
                   "string"
                 ],
                 "enum": [
+                  "none",
                   "default",
                   "test",
                   "test-profile"
                 ],
                 "markdownEnumDescriptions": [
+                  "No purpose defined.",
                   "Configuration is uses as default for all other configurations.",
                   "Default configuration for running or debugging tests.",
                   "Defines a test profile that you can select in the test explorer or via the play button during a test. This configuration is used instead of the configuration with the purpose `test`."
@@ -1781,11 +1783,13 @@
                 "description": "Defines what purpose this configuration has.",
                 "items": {
                   "enum": [
+                    "none",
                     "default",
                     "test",
                     "test-profile"
                   ],
                   "markdownEnumDescriptions": [
+                    "No purpose defined.",
                     "Configuration is uses as default for all other configurations.",
                     "Default configuration for running or debugging tests.",
                     "Defines a test profile that you can select in the test explorer or via the play button during a test. This configuration is used instead of the configuration with the purpose `test`."
@@ -2012,11 +2016,11 @@
         }
       },
       {
-        "name": "robot-get_document_imports",
-        "displayName": "Get Document Imports",
+        "name": "robot-get_file_imports",
+        "displayName": "List imported libraries, resources and variable files for a Robot Framework Document",
         "toolReferenceName": "robotGetDocumentImports",
-        "modelDescription": "Retrieves a list of all imported libraries and resource files for a specific Robot Framework document. Returns the names and paths of all libraries imported in the specified Robot Framework file. Use this tool when you need to analyze the dependencies of a Robot Framework document or understand its library and resource usage. Limitations: Only works with Robot Framework files, may not detect dynamic imports or libraries loaded at runtime, and requires the specified file to be accessible from the workspace's Robot Framework configuration.",
-        "userDescription": "Gets a list of all imported libraries and resources for a specific Robot Framework document.",
+        "modelDescription": "Retrieves a list of all imported libraries, resources and variable files for a specific Robot Framework document. Returns the names and paths of all libraries imported in the specified Robot Framework file. Use this tool when you need to analyze the dependencies of a Robot Framework document or understand its library and resource usage. Limitations: Only works with Robot Framework files, may not detect dynamic imports or libraries loaded at runtime, and requires the specified file to be accessible from the workspace's Robot Framework configuration.",
+        "userDescription": "Gets a list of all imported libraries, resources and variable files for a specific Robot Framework document.",
         "canBeReferencedInPrompt": true,
         "tags": [
           "robot",
@@ -2044,7 +2048,7 @@
         "displayName": "Get Robot Framework Environment Informations",
         "toolReferenceName": "robotGetEnvironmentInfo",
         "modelDescription": "Retrieves detailed environment information for Robot Framework workspaces or files. Returns comprehensive details about the Python interpreter (version, executable path), installed Robot Framework version, RobotCode extension version, and optional tool versions (robocop, robotidy) if available. Use this tool when you need to diagnose environment issues, verify installations, check version compatibility, or troubleshoot Robot Framework setup problems. Limitations: Only provides information about the currently configured Python environment for the workspace, may not detect tools installed in different Python environments, requires proper workspace configuration to access environment details, and information accuracy depends on the current RobotCode language server connection.",
-        "userDescription": "Gets informations about the Robot Framework Environment.",
+        "userDescription": "Gets informations about the Robot Framework Environment .",
         "canBeReferencedInPrompt": true,
         "tags": [
           "robot",

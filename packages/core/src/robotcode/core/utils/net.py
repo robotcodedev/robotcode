@@ -13,12 +13,13 @@ def find_free_port(start: Optional[int] = None, end: Optional[int] = None) -> in
 
     try:
         with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
+            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+
             with contextlib.suppress(Exception):
                 s.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 0)
 
             s.bind(("127.0.0.1", port))
 
-            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             return cast(int, s.getsockname()[1])
     except (SystemExit, KeyboardInterrupt):
         raise

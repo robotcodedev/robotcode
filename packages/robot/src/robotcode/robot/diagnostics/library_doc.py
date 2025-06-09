@@ -67,7 +67,7 @@ from robotcode.core.utils.path import normalized_path
 from ..utils import get_robot_version
 from ..utils.ast import (
     cached_isinstance,
-    get_variable_token,
+    get_first_variable_token,
     range_from_token,
     strip_variable_token,
 )
@@ -2785,7 +2785,7 @@ def _get_argument_definitions_from_line(
 
     for argument_token in (cast(RobotToken, e) for e in arguments):
         try:
-            argument = get_variable_token(argument_token)
+            argument = get_first_variable_token(argument_token)
 
             if argument is not None and argument.value != "@{}":
                 if argument.value not in args:

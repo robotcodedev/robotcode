@@ -223,6 +223,186 @@ result:
   range:
     end:
       character: 7
+      line: 13
+    start:
+      character: 4
+      line: 13
+  uri: rf73/variable_conversion.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 14
+    start:
+      character: 4
+      line: 14
+  uri: rf73/variable_conversion.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 15
+    start:
+      character: 4
+      line: 15
+  uri: rf73/variable_conversion.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 16
+    start:
+      character: 4
+      line: 16
+  uri: rf73/variable_conversion.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 17
+    start:
+      character: 4
+      line: 17
+  uri: rf73/variable_conversion.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 18
+    start:
+      character: 4
+      line: 18
+  uri: rf73/variable_conversion.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 28
+    start:
+      character: 4
+      line: 28
+  uri: rf73/variable_conversion.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 29
+    start:
+      character: 4
+      line: 29
+  uri: rf73/variable_conversion.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 33
+    start:
+      character: 4
+      line: 33
+  uri: rf73/variable_conversion.robot
+- !Location
+  range:
+    end:
+      character: 11
+      line: 39
+    start:
+      character: 8
+      line: 39
+  uri: rf73/variable_conversion.robot
+- !Location
+  range:
+    end:
+      character: 11
+      line: 43
+    start:
+      character: 8
+      line: 43
+  uri: rf73/variable_conversion.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 48
+    start:
+      character: 4
+      line: 48
+  uri: rf73/variable_conversion.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 59
+    start:
+      character: 4
+      line: 59
+  uri: rf73/variable_conversion.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 60
+    start:
+      character: 4
+      line: 60
+  uri: rf73/variable_conversion.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 61
+    start:
+      character: 4
+      line: 61
+  uri: rf73/variable_conversion.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 62
+    start:
+      character: 4
+      line: 62
+  uri: rf73/variable_conversion.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 66
+    start:
+      character: 4
+      line: 66
+  uri: rf73/variable_conversion.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 67
+    start:
+      character: 4
+      line: 67
+  uri: rf73/variable_conversion.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 71
+    start:
+      character: 4
+      line: 71
+  uri: rf73/variable_conversion.robot
+- !Location
+  range:
+    end:
+      character: 7
+      line: 85
+    start:
+      character: 4
+      line: 85
+  uri: rf73/variable_conversion.robot
+- !Location
+  range:
+    end:
+      character: 7
       line: 2
     start:
       character: 4

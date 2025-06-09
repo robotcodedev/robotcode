@@ -13,10 +13,10 @@ result:
       line: 25
   target_range:
     end:
-      character: 11
+      character: 5
       line: 25
     start:
-      character: 0
+      character: 2
       line: 25
   target_selection_range:
     end:

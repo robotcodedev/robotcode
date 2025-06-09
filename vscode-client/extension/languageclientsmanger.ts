@@ -27,6 +27,11 @@ import { getAvailablePort } from "./net_utils";
 const LANGUAGE_SERVER_DEFAULT_TCP_PORT = 6610;
 const LANGUAGE_SERVER_DEFAULT_HOST = "127.0.0.1";
 
+// Language Server Configuration Constants
+const CLIENT_DISPOSE_TIMEOUT = 5000;
+const CLIENT_SLEEP_DURATION = 500;
+const LANGUAGE_CLIENT_PREFIX = "$robotCode:";
+
 export function toVsCodeRange(range: Range): vscode.Range {
   return new vscode.Range(
     new vscode.Position(range.start.line, range.start.character),
@@ -146,39 +151,52 @@ export class LanguageClientsManager {
   }
 
   private _supportedLanguages?: string[];
+  private _fileExtensions?: string[];
+
+  /**
+   * Invalidate cached extension data when extensions change
+   */
+  private invalidateExtensionCaches(): void {
+    this._supportedLanguages = undefined;
+    this._fileExtensions = undefined;
+  }
+
+  /**
+   * Helper method to collect extension contributions from all VS Code extensions
+   */
+  private static collectExtensionContributions(
+    propertyPath: "languageIds" | "fileExtensions",
+    defaultValues: string[],
+  ): string[] {
+    const result: string[] = [...defaultValues];
+
+    vscode.extensions.all.forEach((extension) => {
+      if (extension.packageJSON) {
+        const ext = (extension.packageJSON as RobotCodeContributions)?.contributes?.robotCode?.[propertyPath];
+        if (ext !== undefined) {
+          result.push(...ext);
+        }
+      }
+    });
+
+    return result;
+  }
 
   public get supportedLanguages(): string[] {
     if (this._supportedLanguages === undefined) {
-      this._supportedLanguages = ["robotframework"];
-
-      vscode.extensions.all.forEach((extension) => {
-        if (this._supportedLanguages !== undefined && extension.packageJSON !== undefined) {
-          const ext = (extension.packageJSON as RobotCodeContributions)?.contributes?.robotCode?.languageIds;
-
-          if (ext !== undefined) {
-            this._supportedLanguages.push(...ext);
-          }
-        }
-      });
+      this._supportedLanguages = LanguageClientsManager.collectExtensionContributions("languageIds", [
+        "robotframework",
+      ]);
     }
     return this._supportedLanguages;
   }
 
-  private _fileExtensions?: string[];
-
   public get fileExtensions(): string[] {
     if (this._fileExtensions === undefined) {
-      this._fileExtensions = ["robot", "resource"];
-
-      vscode.extensions.all.forEach((extension) => {
-        if (this._fileExtensions !== undefined && extension.packageJSON !== undefined) {
-          const ext = (extension.packageJSON as RobotCodeContributions)?.contributes?.robotCode?.fileExtensions;
-
-          if (ext !== undefined) {
-            this._fileExtensions.push(...ext);
-          }
-        }
-      });
+      this._fileExtensions = LanguageClientsManager.collectExtensionContributions("fileExtensions", [
+        "robot",
+        "resource",
+      ]);
     }
     return this._fileExtensions;
   }
@@ -195,8 +213,15 @@ export class LanguageClientsManager {
     fileWatcher1.onDidDelete((uri) => this.restart(vscode.workspace.getWorkspaceFolder(uri)?.uri));
     fileWatcher1.onDidChange((uri) => this.restart(vscode.workspace.getWorkspaceFolder(uri)?.uri));
 
+    // Listen for extension changes to invalidate caches
+    const extensionChangeListener = vscode.extensions.onDidChange(() => {
+      this.logger.debug("Extensions changed, invalidating caches");
+      this.invalidateExtensionCaches();
+    });
+
     this._disposables = vscode.Disposable.from(
       fileWatcher1,
+      extensionChangeListener,
 
       this.pythonManager.onActivePythonEnvironmentChanged(async (event) => {
         if (event.resource !== undefined) {
@@ -228,16 +253,37 @@ export class LanguageClientsManager {
     );
   }
 
+  private readonly logger = {
+    info: (message: string) => this.outputChannel.appendLine(`[INFO] ${message}`),
+    warn: (message: string) => this.outputChannel.appendLine(`[WARN] ${message}`),
+    error: (message: string) => this.outputChannel.appendLine(`[ERROR] ${message}`),
+    debug: (message: string) => this.outputChannel.appendLine(`[DEBUG] ${message}`),
+  };
+
   public async clearCaches(uri?: vscode.Uri): Promise<void> {
+    this.logger.info("Clearing language server caches...");
+
     if (uri !== undefined) {
       const client = await this.getLanguageClientForResource(uri);
       if (client) {
-        await client.sendRequest("robot/cache/clear");
+        try {
+          await client.sendRequest("robot/cache/clear");
+          this.logger.info(`Cache cleared for ${uri.toString()}`);
+        } catch (error) {
+          this.logger.error(`Failed to clear cache for ${uri.toString()}: ${error}`);
+        }
       }
     } else {
-      for (const client of this.clients.values()) {
-        await client.sendRequest("robot/cache/clear");
-      }
+      const clearPromises = Array.from(this.clients.values()).map(async (client) => {
+        try {
+          await client.sendRequest("robot/cache/clear");
+        } catch (error) {
+          this.logger.error(`Failed to clear cache for client: ${error}`);
+        }
+      });
+
+      await Promise.allSettled(clearPromises);
+      this.logger.info("Cache clearing completed for all clients");
     }
   }
 
@@ -248,9 +294,9 @@ export class LanguageClientsManager {
     this.clients.clear();
 
     for (const client of clients) {
-      promises.push(client.dispose(5000));
+      promises.push(client.dispose(CLIENT_DISPOSE_TIMEOUT));
     }
-    await sleep(500);
+    await sleep(CLIENT_SLEEP_DURATION);
 
     return Promise.all(promises).then(
       (r) => {
@@ -266,7 +312,7 @@ export class LanguageClientsManager {
   dispose(): void {
     this.stopAllClients().then(
       (_) => undefined,
-      (_) => undefined,
+      (error) => this.logger.error(`Error during dispose: ${error}`),
     );
     this._disposables.dispose();
   }
@@ -554,16 +600,15 @@ export class LanguageClientsManager {
 
       const clientOptions: LanguageClientOptions = {
         documentSelector:
-          // TODO: use SUPPORTED_LANGUAGES here
           vscode.workspace.workspaceFolders?.length === 1
-            ? [
-                { scheme: "file", language: "robotframework" },
-                { scheme: "untitled", language: "robotframework" },
-              ]
-            : [
-                { scheme: "file", language: "robotframework", pattern: `${workspaceFolder.uri.fsPath}/**/*` },
-                { scheme: "untitled", language: "robotframework", pattern: `${workspaceFolder.uri.fsPath}/**/*` },
-              ],
+            ? this.supportedLanguages.flatMap((lang) => [
+                { scheme: "file", language: lang },
+                { scheme: "untitled", language: lang },
+              ])
+            : this.supportedLanguages.flatMap((lang) => [
+                { scheme: "file", language: lang, pattern: `${workspaceFolder.uri.fsPath}/**/*` },
+                { scheme: "untitled", language: lang, pattern: `${workspaceFolder.uri.fsPath}/**/*` },
+              ]),
         synchronize: {
           configurationSection: [CONFIG_SECTION],
         },
@@ -656,7 +701,12 @@ export class LanguageClientsManager {
       };
 
       this.outputChannel.appendLine(`create Language client: ${name}`);
-      result = new LanguageClient(`$robotCode:${workspaceFolder.uri.toString()}`, name, serverOptions, clientOptions);
+      result = new LanguageClient(
+        `${LANGUAGE_CLIENT_PREFIX}${workspaceFolder.uri.toString()}`,
+        name,
+        serverOptions,
+        clientOptions,
+      );
 
       this.outputChannel.appendLine(`trying to start Language client: ${name}`);
 
@@ -736,12 +786,12 @@ export class LanguageClientsManager {
         this.clients.delete(workspaceFolder.uri.toString());
 
         if (client) {
-          await client.dispose(5000);
-          await sleep(500);
+          await client.dispose(CLIENT_DISPOSE_TIMEOUT);
+          await sleep(CLIENT_SLEEP_DURATION);
         }
       } else {
         if (await this.stopAllClients()) {
-          await sleep(500);
+          await sleep(CLIENT_SLEEP_DURATION);
         }
       }
     });

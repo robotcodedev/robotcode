@@ -19,7 +19,7 @@ from robot.parsing.lexer.tokens import Token
 from robotcode.core.lsp.types import Position, Range
 
 from ..utils.ast import range_from_token
-from ..utils.variables import VariableMatcher
+from ..utils.variables import VariableMatcher, search_variable
 
 if TYPE_CHECKING:
     from robotcode.robot.diagnostics.library_doc import KeywordDoc, LibraryDoc
@@ -187,10 +187,17 @@ class VariableDefinition(SourceEntity):
 
     value: Any = field(default=None, compare=False)
     value_is_native: bool = field(default=False, compare=False)
+    value_type: Optional[str] = field(default=None, compare=False)
 
     @functools.cached_property
     def matcher(self) -> VariableMatcher:
-        return VariableMatcher(self.name)
+        return search_variable(self.name)
+
+    @functools.cached_property
+    def convertable_name(self) -> str:
+        m = self.matcher
+        value_type = f": {self.value_type}" if self.value_type else ""
+        return f"{m.identifier}{{{m.base.strip()}{value_type}}}"
 
     @single_call
     def __hash__(self) -> int:
@@ -262,6 +269,15 @@ class CommandLineVariableDefinition(GlobalVariableDefinition):
 class ArgumentDefinition(LocalVariableDefinition):
     type: VariableDefinitionType = VariableDefinitionType.ARGUMENT
     keyword_doc: Optional["KeywordDoc"] = field(default=None, compare=False, metadata={"nosave": True})
+
+    @single_call
+    def __hash__(self) -> int:
+        return hash((type(self), self.name, self.type, self.range, self.source))
+
+
+@dataclass
+class EmbeddedArgumentDefinition(ArgumentDefinition):
+    pattern: Optional[str] = field(default=None, compare=False)
 
     @single_call
     def __hash__(self) -> int:

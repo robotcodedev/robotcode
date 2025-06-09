@@ -52,7 +52,7 @@ class RoboTidyConfig(ConfigBase):
 class DocumentationServerConfig(ConfigBase):
     start_port: int = 3100
     end_port: int = 3199
-    start_on_demand: bool = True
+    start_on_demand: bool = False
 
 
 @config_section("robotcode.inlayHints")
