@@ -7,17 +7,38 @@ All notable changes to this project will be documented in this file. See [conven
 ### Bug Fixes
 
 - **cli:** Corrected monkey patching for click>=8.2.0 ([425e64d](https://github.com/robotcodedev/robotcode/commit/425e64ddf8c6a9a54ec6fe3d801253c2e3a2156a))
+- **debugger:** Improve termination handling ([a890264](https://github.com/robotcodedev/robotcode/commit/a890264547341c190eaef5e0240f0cc81deb3c70))
 - **formatting:** Improve message clarity for robocop formatting ([f71d15d](https://github.com/robotcodedev/robotcode/commit/f71d15df40f8bfd1f9f325d35e1ba73bcf16c9aa))
+- **langserver:** Disable on-demand startup for the documentation server to ensure it launches on initialization ([81d63fa](https://github.com/robotcodedev/robotcode/commit/81d63faa5f0cfbcf95e293c53daeb80840117438))
+- **net:** Move SO_REUSEADDR socket option setting to the correct location to speeding up port discovery and preventing bind failures. ([b54cc93](https://github.com/robotcodedev/robotcode/commit/b54cc9300abb4c7060bfa94cb2e1bfa272936eda))
 - **textmate:** Corrected highlightning of comments in variable section ([5204afb](https://github.com/robotcodedev/robotcode/commit/5204afbfdd7f745c3e00ebc8d59fa3ad992ec0a8))
 - **textmate:** Enhance variable assignment handling ([7333eb9](https://github.com/robotcodedev/robotcode/commit/7333eb9b2f46e2af25583af2d5346b4b92dd1137))
 - Corrected detection of robocop ([f06bcbc](https://github.com/robotcodedev/robotcode/commit/f06bcbc1c2514326567399f8e5179da6ff5f9ed7))
 
 
+### Documentation
+
+- **contributing:** Enhance development setup and workflow instructions ([b23331b](https://github.com/robotcodedev/robotcode/commit/b23331b8622ddd97c2030de96212323f5e7d4171))
+
+  Updated the contributing guide to include detailed development environment setup options, IDE configuration, and a comprehensive development workflow. Improved clarity and added troubleshooting tips for common issues.
+
+
+
 ### Features
 
+- **analyzer:** Support for converting resolvable variables with types ([17123a0](https://github.com/robotcodedev/robotcode/commit/17123a046015e57fc64aa73f1227309b78bed4a2))
+- **analyzer:** Support for types in embedded arguments ([35526a0](https://github.com/robotcodedev/robotcode/commit/35526a05fbfdccc2a250f86a8fe3d51bf510607c))
+- **analyzer:** Improve 'keyword not found' messages for old `FOR:` syntax ([94cdc54](https://github.com/robotcodedev/robotcode/commit/94cdc54dd017e6e3892ead8a4cd9d8068b6b88ca))
+- **debugger:** Update delayed logging handling for Robot Framework 7.3 compatibility ([0b51afc](https://github.com/robotcodedev/robotcode/commit/0b51afce6acace2de358120dae365f190719cd05))
 - **intellij:** Reimplement and simplified parsing and syntax highlightning ([2dcdf7c](https://github.com/robotcodedev/robotcode/commit/2dcdf7ce846e8483fb427cdc7945a084fe4c3232))
+- **langserver:** Show variable type in hover for RF 7.3 ([10d981f](https://github.com/robotcodedev/robotcode/commit/10d981f657ba34db1449984fe4a28623632c5b64))
 - **langserver:** Implemented robocop 6.0 formatting and deprecate old robotidy ([310bc54](https://github.com/robotcodedev/robotcode/commit/310bc544be8306fb85a329698763b562cd9d85aa))
 - **langserver:** Better support for indexed assignments ([6fad9b1](https://github.com/robotcodedev/robotcode/commit/6fad9b161b85b2412b6a9d5169e69b4ce37c43c3))
+- **robot:** Unify variable handling and prepare for RF 7.3 type parsing ([73cda66](https://github.com/robotcodedev/robotcode/commit/73cda6698959fd3cbdce0901b87a40701cbe4966))
+
+  - Added support for parse_type parameter in Robot Framework 7.3+
+  - Unified variable processing across different RF versions
+
 - **vscode:** Add language model tool to get the library and resource imports from a robot file ([e5631f0](https://github.com/robotcodedev/robotcode/commit/e5631f042e42810b35d8694649cb76819b7b5866))
 - **vscode:** Add language model tools for retrieving library documentation and environment details ([a311e99](https://github.com/robotcodedev/robotcode/commit/a311e996cf95b2afaacc4b4402a4e2749b8d46bc))
 - **vscode:** Add deprecation messages for robotframework-tidy in configuration ([37c5371](https://github.com/robotcodedev/robotcode/commit/37c5371919d10a7ea1f46c91f1f7707b63fa96ce))
@@ -30,7 +51,9 @@ All notable changes to this project will be documented in this file. See [conven
 
 ### Refactor
 
+- **analyzer:** Some renamings ([5f1f5c3](https://github.com/robotcodedev/robotcode/commit/5f1f5c37f62ae6cb32bf7a1db5c6ddbb592d8337))
 - **intellij:** Some code cleanup ([479a9c3](https://github.com/robotcodedev/robotcode/commit/479a9c3e6b1bc117e5c1222953b755a198cbc8c2))
+- **vscode:** Some refactorings and code cleanup ([d8eac38](https://github.com/robotcodedev/robotcode/commit/d8eac3808e23320fcb7efa92e85c574988d1a7ef))
 
 
 ## [1.2.0](https://github.com/robotcodedev/robotcode/compare/v1.1.0..v1.2.0) - 2025-05-07
