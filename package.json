@@ -1133,7 +1133,7 @@
             },
             "description": "Include specified 'robocop' rules. You can define rule by its name or id. Glob patterns are supported",
             "scope": "resource",
-            "markdownDeprecationMessage": "This is a setting for an old `robotframework-robocop` version `<6.0` and will be removed in the future"
+            "markdownDeprecationMessage": "This is a setting for an old `robotframework-robocop` version `<6.0` and will be removed in the future and will be removed in the future and is ignored if you have `robotframework-robocop>=6.0` installed."
           },
           "robotcode.robocop.exclude": {
             "type": "array",
@@ -1143,7 +1143,7 @@
             },
             "description": "Exclude specified 'robocop' rules. You can define rule by its name or id. Glob patterns are supported",
             "scope": "resource",
-            "markdownDeprecationMessage": "This is a setting for an old `robotframework-robocop` version `<6.0` and will be removed in the future."
+            "markdownDeprecationMessage": "This is a setting for an old `robotframework-robocop` version `<6.0` and will be removed in the future and is ignored if you have `robotframework-robocop>=6.0` installed."
           },
           "robotcode.robocop.ignoreGitDir": {
             "type": "boolean",
@@ -1171,7 +1171,7 @@
             },
             "description": "Configure checker or report with parameter value. Corresponds to the `--configure` option of _robocop_ See [robocop](https://robocop.readthedocs.io/)",
             "scope": "resource",
-            "markdownDeprecationMessage": "This is a setting for an old `robotframework-robocop` version `<6.0` and will be removed in the future."
+            "markdownDeprecationMessage": "This is a setting for an old `robotframework-robocop` version `<6.0` and will be removed in the future and will be removed in the future and is ignored if you have `robotframework-robocop>=6.0` installed."
           }
         }
       },
@@ -2096,7 +2096,7 @@
     "@eslint/js": "^9.28.0",
     "@jgoz/esbuild-plugin-typecheck": "^4.0.3",
     "@types/fs-extra": "^11.0.4",
-    "@types/node": "^22.15.27",
+    "@types/node": "^20.19.0",
     "@types/vscode": "^1.99.0",
     "@types/vscode-notebook-renderer": "^1.72.3",
     "@vscode/python-extension": "^1.0.5",
