@@ -26,7 +26,7 @@ class EnumChoice(click.Choice, Generic[T]):
     def __init__(
         self,
         choices: Type[T],
-        case_sensitive: bool = True,
+        case_sensitive: bool = False,
         excluded: Optional[Set[T]] = None,
     ) -> None:
         super().__init__(
