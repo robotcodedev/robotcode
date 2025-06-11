@@ -12,14 +12,14 @@
             "justMyCode": false
         }
     },
-    "robotcode.languageServer.extraArgs": [
-        "--verbose",
-        "--debugpy",
-        //"--debugpy-wait-for-client",
-        "--log",
-        //"--log-level", "DEBUG",
-    ],
-    "robotcode.robocop.enabled": false,
+    // "robotcode.languageServer.extraArgs": [
+    //     "--verbose",
+    //     "--debugpy",
+    //     //"--debugpy-wait-for-client",
+    //     "--log",
+    //     "--log-level", "DEBUG",
+    // ],
+    "robotcode.robocop.enabled": true,
     "robotcode.robocop.exclude": ["E0303"],
     "robotcode.analysis.referencesCodeLens": false,
     "robotcode.analysis.diagnosticMode": "openFilesOnly",
