@@ -1,5 +1,6 @@
 import io
 from typing import TYPE_CHECKING, Any, List, Optional
+from weakref import WeakKeyDictionary
 
 from robotcode.core.language import language_id
 from robotcode.core.lsp.types import (
@@ -20,6 +21,8 @@ from .protocol_part import RobotLanguageServerProtocolPart
 from .robocop_tidy_mixin import RoboCopTidyMixin
 
 if TYPE_CHECKING:
+    from robocop.linter.runner import RobocopLinter
+
     from ..protocol import RobotLanguageServerProtocol
 
 
@@ -30,8 +33,9 @@ class RobotRoboCopDiagnosticsProtocolPart(RobotLanguageServerProtocolPart, RoboC
         super().__init__(parent)
 
         self.source_name = "robocop"
+        self._robocop_linters: WeakKeyDictionary[WorkspaceFolder, "RobocopLinter"] = WeakKeyDictionary()
 
-        if self.robocop_installed and self.robocop_version < (6, 0):
+        if self.robocop_installed:
             parent.diagnostics.collect.add(self.collect_diagnostics)
 
     def get_config(self, document: TextDocument) -> Optional[RoboCopConfig]:
@@ -45,21 +49,92 @@ class RobotRoboCopDiagnosticsProtocolPart(RobotLanguageServerProtocolPart, RoboC
     @_logger.call
     def collect_diagnostics(
         self, sender: Any, document: TextDocument, diagnostics_type: DiagnosticsCollectType
-    ) -> DiagnosticsResult:
-        workspace_folder = self.parent.workspace.get_workspace_folder(document.uri)
-        if workspace_folder is not None:
-            extension_config = self.get_config(document)
+    ) -> Optional[DiagnosticsResult]:
+        if self.robocop_installed:
+            workspace_folder = self.parent.workspace.get_workspace_folder(document.uri)
+            if workspace_folder is not None:
+                config = self.get_config(document)
 
-            if extension_config is not None and extension_config.enabled:
-                return DiagnosticsResult(
-                    self.collect_diagnostics,
-                    self.collect(document, workspace_folder, extension_config),
-                )
+                if config is not None and config.enabled:
+                    if self.robocop_version >= (6, 0):
+                        # In Robocop 6.0, the diagnostics are collected in a different way
+                        return DiagnosticsResult(
+                            self.collect_diagnostics,
+                            self.collect(document, workspace_folder, config),
+                        )
 
-        return DiagnosticsResult(self.collect_diagnostics, [])
+                    return DiagnosticsResult(
+                        self.collect_diagnostics,
+                        self.collect_old(document, workspace_folder, config),
+                    )
+
+        return None
 
     @_logger.call
     def collect(
+        self,
+        document: TextDocument,
+        workspace_folder: WorkspaceFolder,
+        extension_config: RoboCopConfig,
+    ) -> List[Diagnostic]:
+        from robocop.config import ConfigManager
+        from robocop.linter.rules import RuleSeverity
+        from robocop.linter.runner import RobocopLinter
+
+        linter = self._robocop_linters.get(workspace_folder, None)
+
+        if linter is None:
+            config_manager = ConfigManager(
+                [],
+                root=workspace_folder.uri.to_path(),
+                config=extension_config.config_file,
+                ignore_git_dir=extension_config.ignore_git_dir,
+                ignore_file_config=extension_config.ignore_file_config,
+            )
+            linter = RobocopLinter(config_manager)
+            self._robocop_linters[workspace_folder] = linter
+
+        source = document.uri.to_path()
+
+        config = linter.config_manager.get_config_for_source_file(source)
+        model = self.parent.documents_cache.get_model(document, False)
+        diagnostics = linter.run_check(model, source, config)
+
+        return [
+            Diagnostic(
+                range=Range(
+                    start=Position(
+                        line=diagnostic.range.start.line - 1,
+                        character=diagnostic.range.start.character - 1,
+                    ),
+                    end=Position(
+                        line=max(0, diagnostic.range.end.line - 1),
+                        character=max(0, diagnostic.range.end.character - 1),
+                    ),
+                ),
+                message=diagnostic.message,
+                severity=(
+                    DiagnosticSeverity.INFORMATION
+                    if diagnostic.severity == RuleSeverity.INFO
+                    else (
+                        DiagnosticSeverity.WARNING
+                        if diagnostic.severity == RuleSeverity.WARNING
+                        else (
+                            DiagnosticSeverity.ERROR
+                            if diagnostic.severity == RuleSeverity.ERROR
+                            else DiagnosticSeverity.HINT
+                        )
+                    )
+                ),
+                source=self.source_name,
+                code=f"{diagnostic.rule.rule_id}-{diagnostic.rule.name}",
+                code_description=self.get_code_description(self.robocop_version, diagnostic),
+            )
+            for diagnostic in diagnostics
+        ]
+
+    @_logger.call
+    def collect_old(
         self,
         document: TextDocument,
         workspace_folder: WorkspaceFolder,
@@ -174,7 +249,9 @@ class RobotRoboCopDiagnosticsProtocolPart(RobotLanguageServerProtocolPart, RoboC
         if version < (3, 0):
             return None
 
-        base = f"https://robocop.readthedocs.io/en/{version.major}.{version.minor}.{version.patch}"
+        version_letter = "v" if version.major >= 6 else ""
+
+        base = f"https://robocop.readthedocs.io/en/{version_letter}{version.major}.{version.minor}.{version.patch}"
 
         if version < (4, 0):
             return CodeDescription(href=f"{base}/rules.html#{issue.name}".lower())
@@ -187,4 +264,7 @@ class RobotRoboCopDiagnosticsProtocolPart(RobotLanguageServerProtocolPart, RoboC
                 href=f"{base}/rules_list.html#{issue.name}-{issue.severity.value}{issue.rule_id}".lower()
             )
 
-        return CodeDescription(href=f"{base}/rules_list.html#{issue.name}".lower())
+        if version < (6, 0):
+            return CodeDescription(href=f"{base}/rules_list.html#{issue.name}".lower())
+
+        return CodeDescription(href=f"{base}/rules/rules_list.html#{issue.rule.rule_id}-{issue.rule.name}".lower())
