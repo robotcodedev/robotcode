@@ -1541,7 +1541,7 @@ class ImportsManager:
 
             return self.documents_manager.get_or_open_document(source_path)
 
-        entry_key = _ResourcesEntryKey(source)
+        entry_key = _ResourcesEntryKey(os.path.normpath(os.path.abspath(source)))
 
         with self._resources_lock:
             if entry_key not in self._resources:
