@@ -64,7 +64,7 @@ class RobotFormattingProtocolPart(RobotLanguageServerProtocolPart, RoboCopTidyMi
         options: FormattingOptions,
         **further_options: Any,
     ) -> Optional[List[TextEdit]]:
-        if (get_robot_version() >= (5, 0)) and self.robocop_installed and self.robocop_version >= (6, 0):
+        if self.robocop_installed and self.robocop_version >= (6, 0):
             if not self.is_robocop_notification_shown and self.robotidy_installed:
                 self.parent.window.show_message(
                     "`robotframework-robocop >= 6.0` is installed and will be used for formatting.\n\n"
@@ -201,9 +201,11 @@ class RobotFormattingProtocolPart(RobotLanguageServerProtocolPart, RoboCopTidyMi
         from robocop.formatter.runner import RobocopFormatter
 
         robocop_config = self.get_robocop_config(document)
+        workspace_folder = self.parent.workspace.get_workspace_folder(document.uri)
 
         config_manager = ConfigManager(
             [document.uri.to_path()],
+            root=workspace_folder.uri.to_path() if workspace_folder else None,
             config=robocop_config.config_file,
             ignore_git_dir=robocop_config.ignore_git_dir,
             ignore_file_config=robocop_config.ignore_file_config,
