@@ -1,0 +1,5 @@
+[tool.robocop.lint]
+ignore = [
+    "unused-variable",
+    "unused-argument"
+]
