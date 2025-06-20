@@ -18,7 +18,6 @@ from robotcode.core.workspace import WorkspaceFolder
 from ...common.parts.diagnostics import DiagnosticsCollectType, DiagnosticsResult
 from ..configuration import RoboCopConfig
 from .protocol_part import RobotLanguageServerProtocolPart
-from .robocop_tidy_mixin import RoboCopTidyMixin
 
 if TYPE_CHECKING:
     from robocop.linter.runner import RobocopLinter
@@ -26,7 +25,7 @@ if TYPE_CHECKING:
     from ..protocol import RobotLanguageServerProtocol
 
 
-class RobotRoboCopDiagnosticsProtocolPart(RobotLanguageServerProtocolPart, RoboCopTidyMixin):
+class RobotRoboCopDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
     _logger = LoggingDescriptor()
 
     def __init__(self, parent: "RobotLanguageServerProtocol") -> None:
@@ -35,7 +34,7 @@ class RobotRoboCopDiagnosticsProtocolPart(RobotLanguageServerProtocolPart, RoboC
         self.source_name = "robocop"
         self._robocop_linters: WeakKeyDictionary[WorkspaceFolder, "RobocopLinter"] = WeakKeyDictionary()
 
-        if self.robocop_installed:
+        if self.parent.robocop_helper.robocop_installed:
             parent.diagnostics.collect.add(self.collect_diagnostics)
 
     def get_config(self, document: TextDocument) -> Optional[RoboCopConfig]:
@@ -50,18 +49,15 @@ class RobotRoboCopDiagnosticsProtocolPart(RobotLanguageServerProtocolPart, RoboC
     def collect_diagnostics(
         self, sender: Any, document: TextDocument, diagnostics_type: DiagnosticsCollectType
     ) -> Optional[DiagnosticsResult]:
-        if self.robocop_installed:
+        if self.parent.robocop_helper.robocop_installed:
             workspace_folder = self.parent.workspace.get_workspace_folder(document.uri)
             if workspace_folder is not None:
                 config = self.get_config(document)
 
                 if config is not None and config.enabled:
-                    if self.robocop_version >= (6, 0):
+                    if self.parent.robocop_helper.robocop_version >= (6, 0):
                         # In Robocop 6.0, the diagnostics are collected in a different way
-                        return DiagnosticsResult(
-                            self.collect_diagnostics,
-                            self.collect(document, workspace_folder, config),
-                        )
+                        return DiagnosticsResult(self.collect_diagnostics, self.collect(document, workspace_folder))
 
                     return DiagnosticsResult(
                         self.collect_diagnostics,
@@ -71,26 +67,17 @@ class RobotRoboCopDiagnosticsProtocolPart(RobotLanguageServerProtocolPart, RoboC
         return None
 
     @_logger.call
-    def collect(
-        self,
-        document: TextDocument,
-        workspace_folder: WorkspaceFolder,
-        extension_config: RoboCopConfig,
-    ) -> List[Diagnostic]:
-        from robocop.config import ConfigManager
+    def collect(self, document: TextDocument, workspace_folder: WorkspaceFolder) -> List[Diagnostic]:
         from robocop.linter.rules import RuleSeverity
         from robocop.linter.runner import RobocopLinter
 
         linter = self._robocop_linters.get(workspace_folder, None)
 
         if linter is None:
-            config_manager = ConfigManager(
-                [],
-                root=workspace_folder.uri.to_path(),
-                config=extension_config.config_file,
-                ignore_git_dir=extension_config.ignore_git_dir,
-                ignore_file_config=extension_config.ignore_file_config,
-            )
+            config_manager = self.parent.robocop_helper.get_config_manager(workspace_folder)
+
+            config = config_manager.get_config_for_source_file(document.uri.to_path())
+
             linter = RobocopLinter(config_manager)
             self._robocop_linters[workspace_folder] = linter
 
@@ -128,7 +115,7 @@ class RobotRoboCopDiagnosticsProtocolPart(RobotLanguageServerProtocolPart, RoboC
                 ),
                 source=self.source_name,
                 code=f"{diagnostic.rule.rule_id}-{diagnostic.rule.name}",
-                code_description=self.get_code_description(self.robocop_version, diagnostic),
+                code_description=self.get_code_description(self.parent.robocop_helper.robocop_version, diagnostic),
             )
             for diagnostic in diagnostics
         ]
