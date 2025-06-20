@@ -61,7 +61,7 @@ python = "3.8"
 post-install-commands = ["pip install -U -e {root:uri}/../robotframework"]
 
 [envs.devel]
-python = "3.8"
+python = "3.10"
 
 [[envs.devel.matrix]]
 python = ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13"]
@@ -131,7 +131,7 @@ matrix.rf.dependencies = [
 ]
 
 [envs.lint]
-python = "3.8"
+python = "3.10"
 #skip-install = true
 #extra-dependencies = ["tomli>=2.0.0"]
 extra-dependencies = [
