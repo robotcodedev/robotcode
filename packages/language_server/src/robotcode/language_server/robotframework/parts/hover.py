@@ -73,7 +73,7 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
         for base in cls.__bases__:
             method = self._find_method(base)
             if method:
-                return cast(_HoverMethod, method)
+                return method
 
         return None
 

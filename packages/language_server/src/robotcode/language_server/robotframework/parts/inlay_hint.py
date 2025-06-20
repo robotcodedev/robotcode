@@ -61,7 +61,7 @@ class RobotInlayHintProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
         for base in cls.__bases__:
             method = self._find_method(base)
             if method:
-                return cast(_HandlerMethod, method)
+                return method
 
         return None
 

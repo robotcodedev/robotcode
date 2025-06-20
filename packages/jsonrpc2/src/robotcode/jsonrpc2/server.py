@@ -6,6 +6,7 @@ import threading
 from concurrent.futures import ThreadPoolExecutor
 from types import TracebackType
 from typing import (
+    Any,
     BinaryIO,
     Callable,
     Coroutine,
@@ -44,7 +45,7 @@ class StdOutTransportAdapter(asyncio.Transport):
         self.rfile.close()
         self.wfile.close()
 
-    def write(self, data: bytes) -> None:
+    def write(self, data: "bytes | bytearray | memoryview[Any]") -> None:
         self.wfile.write(data)
         self.wfile.flush()
 

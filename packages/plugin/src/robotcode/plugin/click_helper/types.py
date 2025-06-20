@@ -20,7 +20,7 @@ import click
 T = TypeVar("T", bound=Enum)
 
 
-class EnumChoice(click.Choice, Generic[T]):
+class EnumChoice(click.Choice, Generic[T]):  # type: ignore[type-arg]
     """A click.Choice that accepts Enum values."""
 
     def __init__(
@@ -30,7 +30,7 @@ class EnumChoice(click.Choice, Generic[T]):
         excluded: Optional[Set[T]] = None,
     ) -> None:
         super().__init__(
-            choices if excluded is None else (set(choices).difference(excluded)),  # type: ignore
+            choices if excluded is None else (set(choices).difference(excluded)),
             case_sensitive,
         )
 

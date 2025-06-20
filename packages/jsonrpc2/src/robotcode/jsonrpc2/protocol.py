@@ -196,7 +196,7 @@ def rpc_method(
         if isinstance(func, classmethod):
             f = func.__func__  # type: ignore
         elif isinstance(func, staticmethod):
-            f = func.__func__  # type: ignore
+            f = func.__func__
         else:
             f = func
 

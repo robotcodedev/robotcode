@@ -159,7 +159,7 @@ fail_under = 40
 
 [tool.ruff]
 line-length = 120
-target-version = "py38"
+target-version = "py310"
 extend-exclude = ["bundled/libs", ".hatch"]
 
 [tool.ruff.lint]
@@ -216,7 +216,7 @@ mark-parentheses = false
 
 
 [tool.mypy]
-python_version = "3.8"
+python_version = "3.10"
 strict = true
 warn_redundant_casts = true
 warn_unused_ignores = true

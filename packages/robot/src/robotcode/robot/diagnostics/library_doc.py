@@ -1328,7 +1328,7 @@ def get_module_spec(module_name: str) -> Optional[ModuleSpec]:
                 member_name = m + "." + member_name if m and member_name is not None else m
 
     if result is not None:
-        return ModuleSpec(  # type: ignore
+        return ModuleSpec(
             name=result.name,
             origin=result.origin,
             submodule_search_locations=(

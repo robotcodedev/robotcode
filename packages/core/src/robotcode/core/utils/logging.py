@@ -136,7 +136,7 @@ class LoggingDescriptor:
 
             if self.__func is not None:
                 if isinstance(self.__func, staticmethod):
-                    returned_logger = self.__func.__func__()  # type: ignore
+                    returned_logger = self.__func.__func__()
                 else:
                     returned_logger = self.__func()
 
