@@ -1,7 +1,6 @@
 import concurrent.futures
 import functools
 import itertools
-import logging
 import time
 import uuid
 from concurrent.futures import CancelledError
@@ -361,7 +360,6 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
                 with self._logger.measure_time(
                     lambda: f"analyzing workspace for {len(documents)} documents",
                     context_name="workspace_diagnostics",
-                    level=logging.CRITICAL,
                 ):
                     self.on_workspace_diagnostics_analyze(self)
 
@@ -444,7 +442,6 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
                 with self._logger.measure_time(
                     lambda: f"collect workspace diagnostic for {len(documents_to_collect)} documents",
                     context_name="collect_workspace_diagnostics",
-                    level=logging.CRITICAL,
                 ):
                     breaked = False
                     for document in set(documents) - set(documents_to_collect):
