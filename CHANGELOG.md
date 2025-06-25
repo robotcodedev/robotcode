@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
-## [Unreleased]
+## [1.3.0](https://github.com/robotcodedev/robotcode/compare/v1.2.0..v1.3.0) - 2025-06-16
 
 ### Bug Fixes
 
@@ -10,8 +10,10 @@ All notable changes to this project will be documented in this file. See [conven
 - **cli:** Corrected monkey patching for click>=8.2.0 ([425e64d](https://github.com/robotcodedev/robotcode/commit/425e64ddf8c6a9a54ec6fe3d801253c2e3a2156a))
 - **debugger:** Improve termination handling ([a890264](https://github.com/robotcodedev/robotcode/commit/a890264547341c190eaef5e0240f0cc81deb3c70))
 - **formatting:** Improve message clarity for robocop formatting ([f71d15d](https://github.com/robotcodedev/robotcode/commit/f71d15df40f8bfd1f9f325d35e1ba73bcf16c9aa))
+- **imports:** Corrected caching of already loaded resources ([4606c4f](https://github.com/robotcodedev/robotcode/commit/4606c4ff12906b54edfeb1e29927f61b2130332c))
 - **langserver:** Implemented support for robocop >= 6 checks ([8dc2f3c](https://github.com/robotcodedev/robotcode/commit/8dc2f3ce94bf6c6a771b6ffcc6a969ae617397e6))
 - **langserver:** Disable on-demand startup for the documentation server to ensure it launches on initialization ([81d63fa](https://github.com/robotcodedev/robotcode/commit/81d63faa5f0cfbcf95e293c53daeb80840117438))
+- **listener:** Add 'robocop.toml' to monitored project files to allow detection of changes in robocop configuration ([987ea42](https://github.com/robotcodedev/robotcode/commit/987ea421f22b133851a462b921b7c3e1e5802a4a))
 - **net:** Move SO_REUSEADDR socket option setting to the correct location to speeding up port discovery and preventing bind failures. ([b54cc93](https://github.com/robotcodedev/robotcode/commit/b54cc9300abb4c7060bfa94cb2e1bfa272936eda))
 - **textmate:** Corrected highlightning of comments in variable section ([5204afb](https://github.com/robotcodedev/robotcode/commit/5204afbfdd7f745c3e00ebc8d59fa3ad992ec0a8))
 - **textmate:** Enhance variable assignment handling ([7333eb9](https://github.com/robotcodedev/robotcode/commit/7333eb9b2f46e2af25583af2d5346b4b92dd1137))
@@ -57,6 +59,11 @@ All notable changes to this project will be documented in this file. See [conven
 - **analyzer:** Some renamings ([5f1f5c3](https://github.com/robotcodedev/robotcode/commit/5f1f5c37f62ae6cb32bf7a1db5c6ddbb592d8337))
 - **intellij:** Some code cleanup ([479a9c3](https://github.com/robotcodedev/robotcode/commit/479a9c3e6b1bc117e5c1222953b755a198cbc8c2))
 - **vscode:** Some refactorings and code cleanup ([d8eac38](https://github.com/robotcodedev/robotcode/commit/d8eac3808e23320fcb7efa92e85c574988d1a7ef))
+
+
+### Testing
+
+- Update regression tests for RF 7.3.1 ([93bef41](https://github.com/robotcodedev/robotcode/commit/93bef414711e069fe097251892e3cc63fccf6392))
 
 
 ## [1.2.0](https://github.com/robotcodedev/robotcode/compare/v1.1.0..v1.2.0) - 2025-05-07

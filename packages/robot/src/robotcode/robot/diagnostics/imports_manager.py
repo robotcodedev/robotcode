@@ -1527,11 +1527,11 @@ class ImportsManager:
         variables: Optional[Dict[str, Any]] = None,
     ) -> _ResourcesEntry:
         source = self.find_resource(name, base_dir, variables=variables)
+        source_path = normalized_path(Path(source))
 
         def _get_document() -> TextDocument:
-            self._logger.debug(lambda: f"Load resource {name} from source {source}", context_name="import")
+            self._logger.debug(lambda: f"Load resource {name} from source {source_path}", context_name="import")
 
-            source_path = normalized_path(Path(source))
             extension = source_path.suffix
             if extension.lower() not in RESOURCE_EXTENSIONS:
                 raise ImportError(
@@ -1541,7 +1541,7 @@ class ImportsManager:
 
             return self.documents_manager.get_or_open_document(source_path)
 
-        entry_key = _ResourcesEntryKey(source)
+        entry_key = _ResourcesEntryKey(str(source_path))
 
         with self._resources_lock:
             if entry_key not in self._resources:

@@ -68,7 +68,7 @@ class RobotSignatureHelpProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
         for base in cls.__bases__:
             method = self._find_method(base)
             if method:
-                return cast(_SignatureHelpMethod, method)
+                return method
         return None
 
     @language_id("robotframework")

@@ -48,6 +48,7 @@ from .parts.project_info import ProjectInfoPart
 from .parts.references import RobotReferencesProtocolPart
 from .parts.rename import RobotRenameProtocolPart
 from .parts.robocop_diagnostics import RobotRoboCopDiagnosticsProtocolPart
+from .parts.robocop_helper import RoboCopHelper
 from .parts.robot_workspace import RobotWorkspaceProtocolPart
 from .parts.selection_range import RobotSelectionRangeProtocolPart
 from .parts.semantic_tokens import RobotSemanticTokenProtocolPart
@@ -102,6 +103,7 @@ class RobotLanguageServerProtocol(LanguageServerProtocol):
     robot_completion = ProtocolPartDescriptor(RobotCompletionProtocolPart)
     robot_signature_help = ProtocolPartDescriptor(RobotSignatureHelpProtocolPart)
     robot_document_symbols = ProtocolPartDescriptor(RobotDocumentSymbolsProtocolPart)
+    robocop_helper = ProtocolPartDescriptor(RoboCopHelper)
     robot_robocop_diagnostics = ProtocolPartDescriptor(RobotRoboCopDiagnosticsProtocolPart)
     robot_formatting = ProtocolPartDescriptor(RobotFormattingProtocolPart)
     robot_semantic_tokens = ProtocolPartDescriptor(RobotSemanticTokenProtocolPart)

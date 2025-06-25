@@ -30,7 +30,7 @@ class EnumChoice(click.Choice, Generic[T]):
         excluded: Optional[Set[T]] = None,
     ) -> None:
         super().__init__(
-            choices if excluded is None else (set(choices).difference(excluded)),  # type: ignore
+            choices if excluded is None else (set(choices).difference(excluded)),  # type: ignore[arg-type]
             case_sensitive,
         )
 

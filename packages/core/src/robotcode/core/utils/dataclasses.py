@@ -647,7 +647,7 @@ def validate_types(expected_types: Union[type, Tuple[type, ...], None], value: A
             continue
 
         if (
-            t is Any  # type: ignore
+            t is Any
             or t is Ellipsis  # type: ignore
             or isinstance(value, origin or t)
             or (
@@ -683,7 +683,7 @@ def validate_types(expected_types: Union[type, Tuple[type, ...], None], value: A
 
                 return []
 
-            if t is Any:  # type: ignore
+            if t is Any:
                 return []
 
             if isinstance(value, origin or t):

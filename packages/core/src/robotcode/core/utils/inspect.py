@@ -15,7 +15,7 @@ def iter_methods(
                 m = v
             else:
                 m = getattr(obj, name)
-                if not inspect.ismethod(m):  # type: ignore
+                if not inspect.ismethod(m):
                     continue
 
             if predicate is None or predicate(m):

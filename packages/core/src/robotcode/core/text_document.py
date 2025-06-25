@@ -226,7 +226,7 @@ class TextDocument:
     def _cache_invalidating(self) -> Iterator[None]:
         send_events = len(self._cache) > 0
         if send_events:
-            self.cache_invalidate()
+            self.cache_invalidate(self)
         try:
             with self._lock:
                 yield

@@ -801,7 +801,6 @@ class PauseResponse(Response):
     pass
 
 
-@dataclass
 class SteppingGranularity(Enum):
     STATEMENT = "statement"
     LINE = "line"

@@ -76,7 +76,7 @@ class Workspace:
         section: Type[TConfig],
         scope_uri: Union[str, Uri, None] = None,
     ) -> TConfig:
-        result = self.settings
+        result: Any = self.settings
         for sub_key in str(section).split("."):
             if sub_key in result:
                 result = result.get(sub_key, None)

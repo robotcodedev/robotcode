@@ -14,15 +14,15 @@ result:
   target_range:
     end:
       character: 0
-      line: 4078
+      line: 4092
     start:
       character: 0
-      line: 4077
+      line: 4091
   target_selection_range:
     end:
       character: 0
-      line: 4078
+      line: 4092
     start:
       character: 0
-      line: 4077
+      line: 4091
   target_uri: BuiltIn.py
