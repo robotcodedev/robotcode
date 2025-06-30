@@ -2,6 +2,36 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [1.4.0](https://github.com/robotcodedev/robotcode/compare/v1.3.0..v1.4.0) - 2025-06-30
+
+### Bug Fixes
+
+- **langserver:** Remove timing messages from diagnostics in log ([c908485](https://github.com/robotcodedev/robotcode/commit/c90848514f713805fa330ccfc4344cc8775d0118))
+
+  - if you want to see it again, then you have to enable the log output for the language server
+
+
+
+### Documentation
+
+- Update Python and Robot Framework version requirements and deprecation notice ([6396b7e](https://github.com/robotcodedev/robotcode/commit/6396b7ef76fd8d41c3d79afc0bab871342eb8622))
+
+
+### Features
+
+- **langserver:** Improve and unify Robocop 6 configuration loading ([b3c5dd3](https://github.com/robotcodedev/robotcode/commit/b3c5dd3c50308116fc1e1de7adc156a6086cd8fd))
+
+  - Enhance configuration loading process
+  - Add notifications for faulty configurations
+
+
+
+### Refactor
+
+- Simpify some logging code ([5ea1ca1](https://github.com/robotcodedev/robotcode/commit/5ea1ca1c77269df8ebcc70e9a86e77a89d9249a6))
+- Switch lint environment to python 3.10 and corrected all linting errors and warnings ([19a2632](https://github.com/robotcodedev/robotcode/commit/19a26325454ba1b5e53b8548a16c0a3fbe8d5422))
+
+
 ## [1.3.0](https://github.com/robotcodedev/robotcode/compare/v1.2.0..v1.3.0) - 2025-06-16
 
 ### Bug Fixes
