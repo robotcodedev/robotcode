@@ -19,6 +19,8 @@
         "--log",
         "--log-level", "DEBUG",
         // "--log-format", "%(indent)s%(levelname)s:%(name)s:%(filename)s:%(lineno)d: %(message)s"
+
+        // "--log-config", "logging.json"
     ],
     // "robotcode.robocop.configFile": "pyproject.toml",
     "robotcode.robocop.enabled": true,

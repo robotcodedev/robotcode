@@ -196,7 +196,7 @@ class DebugAdapterServerProtocol(DebugAdapterProtocol):
         Debugger.instance().terminate()
 
         if not restart and not self._sigint_signaled:
-            self._logger.info("Send SIGINT to process")
+            self._logger.debug("Send SIGINT to process")
             signal.raise_signal(signal.SIGINT)
             self._sigint_signaled = True
 
@@ -204,7 +204,7 @@ class DebugAdapterServerProtocol(DebugAdapterProtocol):
         else:
             await self.send_event_async(Event("terminateRequested"))
 
-            self._logger.info("Send SIGTERM to process")
+            self._logger.debug("Send SIGTERM to process")
             signal.raise_signal(signal.SIGTERM)
 
     @rpc_method(name="disconnect", param_type=DisconnectArguments)

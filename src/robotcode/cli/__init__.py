@@ -1,4 +1,6 @@
+import json
 import logging
+import logging.config
 from pathlib import Path
 from typing import Any, List, Literal, Optional
 
@@ -35,8 +37,11 @@ click.Parameter.make_metavar = my_make_metavar  # type: ignore[method-assign]
 
 
 class RobotCodeFormatter(logging.Formatter):
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
-        super().__init__(*args, **kwargs)
+    def __init__(self, *args: Any, defaults: Any = None, **kwargs: Any) -> None:
+        defaults = defaults or {}
+        if defaults.get("indent") is None:
+            defaults["indent"] = ""
+        super().__init__(*args, defaults=defaults, **kwargs)
 
 
 @click.group(
@@ -163,6 +168,21 @@ class RobotCodeFormatter(logging.Formatter):
     show_envvar=True,
 )
 @click.option(
+    "--log-config",
+    type=click.Path(
+        file_okay=True,
+        dir_okay=False,
+        readable=True,
+        exists=True,
+        path_type=str,
+    ),
+    help="Path to a logging configuration file. This must be a valid Python logging configuration file in JSON format."
+    " If this option is set, the other logging options are ignored.",
+    default=None,
+    show_default=True,
+    show_envvar=True,
+)
+@click.option(
     "--default-path",
     "-dp",
     type=click.Path(exists=False, resolve_path=False, path_type=str),
@@ -220,6 +240,7 @@ def robotcode(
     log_style: Literal["%", "{", "$"],
     log_filename: Optional[str],
     log_calls: bool,
+    log_config: Optional[Path],
     default_path: Optional[List[str]],
     launcher_script: Optional[str] = None,
     debugpy: bool = False,
@@ -257,7 +278,21 @@ def robotcode(
     app.config.log_level = log_level
     app.config.log_calls = log_calls
 
-    if log:
+    if log_config:
+        if log_calls:
+            LoggingDescriptor.set_call_tracing(True)
+
+        app.verbose(f"Loading logging configuration from '{log_config}'")
+        try:
+            with open(log_config, "r", encoding="utf-8") as f:
+                config = json.load(f)
+
+            logging.config.dictConfig(config)
+
+        except Exception as e:
+            app.error(f"Failed to load logging configuration from '{log_config}': {e}")
+
+    elif log:
         if log_calls:
             LoggingDescriptor.set_call_tracing(True)
 
@@ -269,9 +304,7 @@ def robotcode(
         )
 
         try:
-            logging.root.handlers[0].formatter = RobotCodeFormatter(
-                fmt=log_format, style=log_style, defaults={"indent": ""}
-            )
+            logging.root.handlers[0].formatter = RobotCodeFormatter(fmt=log_format, style=log_style)
         except TypeError:
             pass
 

@@ -203,10 +203,9 @@ class LoggingDescriptor:
             if context_name is not None:
                 depth = self._measure_contexts.get(context_name, 0)
 
-            if depth > 0:
-                extra = {**extra} if extra is not None else {}
-                if "indent" not in extra:
-                    extra["indent"] = "  " * depth
+            extra = {**extra} if extra is not None else {}
+            if "indent" not in extra:
+                extra["indent"] = ("  " * depth) if depth > 0 else ""
 
             self.logger.log(
                 level,
