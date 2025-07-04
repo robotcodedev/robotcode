@@ -500,7 +500,7 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
             raise
         except BaseException as e:
             self.__logger.exception(e)
-            self.send_error(JsonRPCErrors.PARSE_ERROR, f"{type(e).__name__}: {e}")
+            self.send_error(JsonRPCErrors.PARSE_ERROR, f"{e}")
 
     def _handle_messages(self, iterator: Iterator[JsonRPCMessage]) -> None:
         for m in iterator:
@@ -786,6 +786,9 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
                     ex = t.exception()
                     if ex is not None:
                         self.__logger.exception(ex, exc_info=ex)
+                        if isinstance(ex, JsonRPCErrorException):
+                            raise ex
+
                         raise JsonRPCErrorException(
                             JsonRPCErrors.INTERNAL_ERROR,
                             f"{type(ex).__name__}: {ex}",
@@ -804,7 +807,7 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
         except JsonRPCErrorException as e:
             self.send_error(
                 e.code,
-                e.message or f"{type(e).__name__}: {e}",
+                e.message or f"{e}",
                 id=message.id,
                 data=e.data,
             )
@@ -812,7 +815,7 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
             self.__logger.exception(e)
             self.send_error(
                 JsonRPCErrors.INTERNAL_ERROR,
-                f"{type(e).__name__}: {e}",
+                f"{e}",
                 id=message.id,
             )
 
