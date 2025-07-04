@@ -15,6 +15,7 @@ from typing import (
 from robot.parsing.lexer.tokens import Token
 from robot.parsing.model.statements import Statement
 
+from robotcode.core.concurrent import check_current_task_canceled
 from robotcode.core.language import language_id
 from robotcode.core.lsp.types import (
     AnnotatedTextEdit,
@@ -25,6 +26,7 @@ from robotcode.core.lsp.types import (
     Position,
     PrepareRenameResult,
     PrepareRenameResultType1,
+    Range,
     RenameFile,
     TextDocumentEdit,
     WorkspaceEdit,
@@ -142,7 +144,7 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
     ) -> Optional[PrepareRenameResult]:
         result = self._find_default(nodes, document, position)
         if result is not None:
-            var, token = result
+            var, found_range = result
 
             if var.type == VariableDefinitionType.BUILTIN_VARIABLE:
                 self.parent.window.show_message("You cannot rename a builtin variable, only references are renamed.")
@@ -158,13 +160,12 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
                     "Only references are renamed and you have to rename the variable definition yourself."
                 )
             elif var.type == VariableDefinitionType.ENVIRONMENT_VARIABLE:
-                token.value, _, _ = token.value.partition("=")
                 self.parent.window.show_message(
                     "You are about to rename an environment variable. "
                     "Only references are renamed and you have to rename the variable definition yourself."
                 )
 
-            return PrepareRenameResultType1(range_from_token(token), token.value)
+            return PrepareRenameResultType1(found_range, document.get_text(found_range))
 
         return None
 
@@ -176,7 +177,11 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
         new_name: str,
     ) -> Optional[WorkspaceEdit]:
         result = self._find_default(nodes, document, position)
-
+        if "  " in new_name or "\t" in new_name:
+            raise CantRenameError(
+                "Variable names cannot contain more then one spaces or tabs. "
+                "Please use only one space or underscores instead.",
+            )
         if result is not None:
             var, _ = result
 
@@ -209,49 +214,29 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
 
     def _find_default(
         self, nodes: List[ast.AST], document: TextDocument, position: Position
-    ) -> Optional[Tuple[VariableDefinition, Token]]:
-        from robot.parsing.lexer.tokens import Token as RobotToken
-
+    ) -> Optional[Tuple[VariableDefinition, Range]]:
         namespace = self.parent.documents_cache.get_namespace(document)
 
-        if not nodes:
-            return None
+        all_variable_refs = namespace.get_variable_references()
+        if all_variable_refs:
+            for variable, var_refs in all_variable_refs.items():
+                check_current_task_canceled()
 
-        node = nodes[-1]
+                found_range = (
+                    variable.name_range
+                    if variable.source == namespace.source and position.is_in_range(variable.name_range, False)
+                    else cast(
+                        Optional[Range],
+                        next(
+                            (r.range for r in var_refs if position.is_in_range(r.range)),
+                            None,
+                        ),
+                    )
+                )
 
-        if not isinstance(node, Statement):
-            return None
-
-        tokens = get_tokens_at_position(node, position)
-
-        token_and_var: Optional[Tuple[VariableDefinition, Token]] = None
-
-        for token in tokens:
-            token_and_var = next(
-                (
-                    (var, var_token)
-                    for var_token, var in self.iter_variables_from_token(token, namespace, nodes, position)
-                    if position in range_from_token(var_token)
-                ),
-                None,
-            )
-
-        if (
-            token_and_var is None
-            and isinstance(node, self.get_expression_statement_types())
-            and (token := node.get_token(RobotToken.ARGUMENT)) is not None
-            and position in range_from_token(token)
-        ):
-            token_and_var = next(
-                (
-                    (var, var_token)
-                    for var_token, var in self.iter_expression_variables_from_token(token, namespace, nodes, position)
-                    if position in range_from_token(var_token)
-                ),
-                None,
-            )
-
-        return token_and_var
+                if found_range is not None:
+                    return variable, found_range
+        return None
 
     def _prepare_rename_keyword(self, result: Optional[Tuple[KeywordDoc, Token]]) -> Optional[PrepareRenameResult]:
         if result is not None:

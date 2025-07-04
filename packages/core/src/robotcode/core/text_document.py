@@ -216,6 +216,70 @@ class TextDocument:
 
             return self._lines
 
+    def get_text(self, r: Range) -> str:
+        lines = self.get_lines()
+
+        start_pos = r.start
+        end_pos = r.end
+
+        # Validate range
+        if start_pos.line < 0 or start_pos.character < 0:
+            raise InvalidRangeError(f"Invalid start position: {start_pos}")
+        if end_pos.line < 0 or end_pos.character < 0:
+            raise InvalidRangeError(f"Invalid end position: {end_pos}")
+        if start_pos > end_pos:
+            raise InvalidRangeError(f"Start position is greater than end position: {r}")
+
+        # Handle case where range is beyond document
+        if start_pos.line >= len(lines):
+            return ""
+
+        # Single line case
+        if start_pos.line == end_pos.line:
+            if start_pos.line < len(lines):
+                line = lines[start_pos.line]
+                # Handle newline character at end of line
+                if line.endswith(("\n", "\r\n")):
+                    line_content = line.rstrip("\r\n")
+                    if end_pos.character > len(line_content):
+                        # Include the newline character(s)
+                        return line[start_pos.character :]
+
+                    return line_content[start_pos.character : end_pos.character]
+
+                return line[start_pos.character : end_pos.character]
+            return ""
+
+        # Multi-line case
+        result_lines = []
+
+        # First line
+        if start_pos.line < len(lines):
+            first_line = lines[start_pos.line]
+            if first_line.endswith(("\n", "\r\n")):
+                result_lines.append(first_line[start_pos.character :])
+            else:
+                result_lines.append(first_line[start_pos.character :] + "\n")
+
+        # Middle lines
+        for line_idx in range(start_pos.line + 1, min(end_pos.line, len(lines))):
+            result_lines.append(lines[line_idx])
+
+        # Last line
+        if end_pos.line < len(lines):
+            last_line = lines[end_pos.line]
+            if last_line.endswith(("\n", "\r\n")):
+                line_content = last_line.rstrip("\r\n")
+                if end_pos.character > len(line_content):
+                    # Include the newline character(s)
+                    result_lines.append(last_line)
+                else:
+                    result_lines.append(line_content[: end_pos.character])
+            else:
+                result_lines.append(last_line[: end_pos.character])
+
+        return "".join(result_lines)
+
     @event
     def cache_invalidate(sender) -> None: ...
 

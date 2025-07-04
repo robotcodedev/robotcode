@@ -46,12 +46,7 @@ class RenameProtocolPart(LanguageServerProtocolPart):
             )
 
     @event
-    def collect(
-        sender,
-        document: TextDocument,
-        position: Position,
-        new_name: str,
-    ) -> Optional[WorkspaceEdit]: ...
+    def collect(sender, document: TextDocument, position: Position, new_name: str) -> Optional[WorkspaceEdit]: ...
 
     @event
     def collect_prepare(sender, document: TextDocument, position: Position) -> Optional[PrepareRenameResult]: ...
@@ -81,6 +76,9 @@ class RenameProtocolPart(LanguageServerProtocolPart):
             check_current_task_canceled()
 
             if isinstance(result, BaseException):
+                if isinstance(result, CantRenameError):
+                    raise JsonRPCErrorException(ErrorCodes.INVALID_PARAMS, str(result))
+
                 if not isinstance(result, CancelledError):
                     self._logger.exception(result, exc_info=result)
             else:

@@ -357,7 +357,7 @@ class NamespaceAnalyzer(Visitor):
 
                 var = var_type(
                     name=matcher.name,
-                    name_token=strip_variable_token(stripped_name_token),
+                    name_token=stripped_name_token,
                     line_no=stripped_name_token.lineno,
                     col_offset=stripped_name_token.col_offset,
                     end_line_no=stripped_name_token.lineno,
@@ -372,9 +372,7 @@ class NamespaceAnalyzer(Visitor):
                 else:
                     existing_var = self._variables[var.matcher]
 
-                    location = Location(
-                        self._namespace.document_uri, range_from_token(strip_variable_token(stripped_name_token))
-                    )
+                    location = Location(self._namespace.document_uri, range_from_token(stripped_name_token))
                     self._variable_references[existing_var].add(location)
                     if existing_var in self._overridden_variables:
                         self._variable_references[self._overridden_variables[existing_var]].add(location)
