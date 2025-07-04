@@ -47,10 +47,6 @@ class LanguageServerDocumentError(JsonRPCException):
     pass
 
 
-class CantReadDocumentError(Exception):
-    pass
-
-
 class TextDocumentProtocolPart(LanguageServerProtocolPart, DocumentsManager):
     __logger: Final = LoggingDescriptor()
 
