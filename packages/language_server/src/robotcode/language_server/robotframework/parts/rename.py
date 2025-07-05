@@ -6,7 +6,6 @@ from typing import (
     List,
     Optional,
     Tuple,
-    Type,
     TypeVar,
     Union,
     cast,
@@ -36,9 +35,6 @@ from robotcode.robot.diagnostics.entities import (
 )
 from robotcode.robot.diagnostics.library_doc import KeywordDoc
 from robotcode.robot.diagnostics.model_helper import ModelHelper
-from robotcode.robot.utils.ast import (
-    get_nodes_at_position,
-)
 
 from ...common.parts.rename import CantRenameError
 from .protocol_part import RobotLanguageServerProtocolPart
@@ -62,90 +58,36 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
         parent.rename.collect.add(self.collect)
         parent.rename.collect_prepare.add(self.collect_prepare)
 
-    def _find_method(self, cls: Type[Any], prefix: str) -> Optional[_T]:
-        if cls is ast.AST:
-            return None
-        method_name = prefix + "_" + cls.__name__
-        if hasattr(self, method_name):
-            method = getattr(self, method_name)
-            if callable(method):
-                return cast(_T, method)
-        for base in cls.__bases__:
-            method = self._find_method(base, prefix)
-            if method:
-                return cast(_T, method)
-        return None
-
     @language_id("robotframework")
     @_logger.call
     def collect(
-        self,
-        sender: Any,
-        document: TextDocument,
-        position: Position,
-        new_name: str,
+        self, sender: Any, document: TextDocument, position: Position, new_name: str
     ) -> Optional[WorkspaceEdit]:
-        result_nodes = get_nodes_at_position(
-            self.parent.documents_cache.get_model(document),
-            position,
-            include_end=True,
-        )
-
-        if not result_nodes:
-            return None
-
-        result_node = result_nodes[-1]
-
-        result = self._rename_variable(result_nodes, document, position, new_name)
+        result = self._rename_variable(document, position, new_name)
         if result:
             return result
 
-        result = self._rename_keyword(result_nodes, document, position, new_name)
+        result = self._rename_keyword(document, position, new_name)
         if result:
             return result
-
-        method: Optional[_RenameMethod] = self._find_method(type(result_node), "rename")
-        if method is not None:
-            result = method(result_node, document, position, new_name)
-            if result is not None:
-                return result
 
         return None
 
     @language_id("robotframework")
     @_logger.call
     def collect_prepare(self, sender: Any, document: TextDocument, position: Position) -> Optional[PrepareRenameResult]:
-        result_nodes = get_nodes_at_position(
-            self.parent.documents_cache.get_model(document),
-            position,
-            include_end=True,
-        )
-
-        if not result_nodes:
-            return None
-
-        result_node = result_nodes[-1]
-
-        result = self._prepare_rename_variable(result_nodes, document, position)
+        result = self._prepare_rename_variable(document, position)
         if result:
             return result
 
-        result = self._prepare_rename_keyword(result_nodes, document, position)
+        result = self._prepare_rename_keyword(document, position)
         if result:
             return result
-
-        method: Optional[_PrepareRenameMethod] = self._find_method(type(result_node), "prepare_rename")
-        if method is not None:
-            result = method(result_node, document, position)
-            if result is not None:
-                return result
 
         return None
 
-    def _prepare_rename_variable(
-        self, nodes: List[ast.AST], document: TextDocument, position: Position
-    ) -> Optional[PrepareRenameResult]:
-        result = self._find_variable_definition_on_pos(nodes, document, position)
+    def _prepare_rename_variable(self, document: TextDocument, position: Position) -> Optional[PrepareRenameResult]:
+        result = self._find_variable_definition_on_pos(document, position)
         if result is not None:
             var, found_range = result
 
@@ -172,20 +114,14 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
 
         return None
 
-    def _rename_variable(
-        self,
-        nodes: List[ast.AST],
-        document: TextDocument,
-        position: Position,
-        new_name: str,
-    ) -> Optional[WorkspaceEdit]:
+    def _rename_variable(self, document: TextDocument, position: Position, new_name: str) -> Optional[WorkspaceEdit]:
         if "  " in new_name or "\t" in new_name:
             raise CantRenameError(
                 "Variable names cannot contain more then one spaces or tabs. "
                 "Please use only one space or underscores instead.",
             )
 
-        result = self._find_variable_definition_on_pos(nodes, document, position)
+        result = self._find_variable_definition_on_pos(document, position)
 
         if result is not None:
             var, _ = result
@@ -218,7 +154,7 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
         return None
 
     def _find_variable_definition_on_pos(
-        self, nodes: List[ast.AST], document: TextDocument, position: Position
+        self, document: TextDocument, position: Position
     ) -> Optional[Tuple[VariableDefinition, Range]]:
         namespace = self.parent.documents_cache.get_namespace(document)
 
@@ -243,10 +179,8 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
                     return variable, found_range
         return None
 
-    def _prepare_rename_keyword(
-        self, nodes: List[ast.AST], document: TextDocument, position: Position
-    ) -> Optional[PrepareRenameResult]:
-        result = self._find_keyword_definition_on_pos(nodes, document, position)
+    def _prepare_rename_keyword(self, document: TextDocument, position: Position) -> Optional[PrepareRenameResult]:
+        result = self._find_keyword_definition_on_pos(document, position)
         if result is not None:
             kw_doc, found_range = result
 
@@ -263,20 +197,14 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
 
         return None
 
-    def _rename_keyword(
-        self,
-        nodes: List[ast.AST],
-        document: TextDocument,
-        position: Position,
-        new_name: str,
-    ) -> Optional[WorkspaceEdit]:
+    def _rename_keyword(self, document: TextDocument, position: Position, new_name: str) -> Optional[WorkspaceEdit]:
         if "  " in new_name or "\t" in new_name:
             raise CantRenameError(
                 "Keyword names cannot contain more then one spaces or tabs. "
                 "Please use only one space or underscores instead.",
             )
 
-        result = self._find_keyword_definition_on_pos(nodes, document, position)
+        result = self._find_keyword_definition_on_pos(document, position)
         if result is not None:
             kw_doc, _ = result
 
@@ -303,7 +231,7 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
         return None
 
     def _find_keyword_definition_on_pos(
-        self, nodes: List[ast.AST], document: TextDocument, position: Position
+        self, document: TextDocument, position: Position
     ) -> Optional[Tuple[KeywordDoc, Range]]:
         namespace = self.parent.documents_cache.get_namespace(document)
 
