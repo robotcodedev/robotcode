@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [1.5.0](https://github.com/robotcodedev/robotcode/compare/v1.4.0..v1.5.0) - 2025-07-07
+
+### Features
+
+- **cli:** Add new command line switch `--log-config` to specify a python json log configuration ([31a11f2](https://github.com/robotcodedev/robotcode/commit/31a11f27b96fba6c879218c9b13cdea5f8bb89c3))
+- **jsonrpcl:** Simplify error message formatting in JsonRPCProtocol for better readability in clients ([75614b0](https://github.com/robotcodedev/robotcode/commit/75614b05820f57c98c416949abced03970e0b429))
+
+
+### Refactor
+
+- **langserver:** Remove some unused code ([fa429a5](https://github.com/robotcodedev/robotcode/commit/fa429a502e1901cfc0d4126c4047994a5fd5ee39))
+- **langserver:** Simplify keyword renaming ([3836362](https://github.com/robotcodedev/robotcode/commit/3836362073599bcc32d9cb38425645d34d681f91))
+- **langserver:** Simplify variable renaming ([779fd70](https://github.com/robotcodedev/robotcode/commit/779fd703339ce81124f03f08b73e2639d0729212))
+
+
+### Testing
+
+- Update regression tests for RF 7.3.2 ([fd1b89a](https://github.com/robotcodedev/robotcode/commit/fd1b89ac17b1f378bc66c6d944afc92252f13ecf))
+
+
 ## [1.4.0](https://github.com/robotcodedev/robotcode/compare/v1.3.0..v1.4.0) - 2025-06-30
 
 ### Bug Fixes
