@@ -77,7 +77,6 @@ runner = ["robotcode-runner==1.5.0"]
 analyze = ["robotcode-analyze==1.5.0"]
 yaml = ["PyYAML>=5.4"]
 lint = ["robotframework-robocop>=2.0.0"]
-tidy = ["robotframework-tidy>=2.0.0"]
 rest = ["docutils"]
 repl = ["robotcode-repl==1.5.0"]
 replserver = ["robotcode-repl-server==1.5.0"]
@@ -91,7 +90,6 @@ all = [
   "robotcode-repl-server==1.5.0",
   "PyYAML>=5.4",
   "robotframework-robocop>=2.0.0",
-  "robotframework-tidy>=2.0.0",
   "docutils",
   "rich",
 ]
