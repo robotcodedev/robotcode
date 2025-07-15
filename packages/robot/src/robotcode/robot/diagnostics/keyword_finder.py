@@ -65,7 +65,6 @@ class KeywordFinder:
         self.multiple_keywords_result = None
         self.result_bdd_prefix = None
 
-    # TODO: make this threadsafe
     def find_keyword(
         self,
         name: Optional[str],

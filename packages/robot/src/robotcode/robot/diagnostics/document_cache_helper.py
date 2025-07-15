@@ -589,7 +589,6 @@ class DocumentsCacheHelper:
             return self._imports_managers[folder]
 
     def calc_cache_path(self, folder_uri: Uri) -> Path:
-        # TODO: cache path should be configurable, save cache in vscode workspace folder or in robotcode cache folder
         return folder_uri.to_path()
 
     def get_diagnostic_modifier(self, document: TextDocument) -> DiagnosticsModifier:
