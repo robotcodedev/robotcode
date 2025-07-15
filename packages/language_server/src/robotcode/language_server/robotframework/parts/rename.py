@@ -8,7 +8,6 @@ from typing import (
     Tuple,
     TypeVar,
     Union,
-    cast,
 )
 
 from robotcode.core.concurrent import check_current_task_canceled
@@ -166,12 +165,9 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
                 found_range = (
                     variable.name_range
                     if variable.source == namespace.source and position.is_in_range(variable.name_range, False)
-                    else cast(
-                        Optional[Range],
-                        next(
-                            (r.range for r in var_refs if position.is_in_range(r.range)),
-                            None,
-                        ),
+                    else next(
+                        (r.range for r in var_refs if position.is_in_range(r.range)),
+                        None,
                     )
                 )
 
@@ -243,12 +239,9 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
                 found_range = (
                     keyword.name_range
                     if keyword.source == namespace.source and position.is_in_range(keyword.name_range, False)
-                    else cast(
-                        Optional[Range],
-                        next(
-                            (r.range for r in kw_refs if position.is_in_range(r.range)),
-                            None,
-                        ),
+                    else next(
+                        (r.range for r in kw_refs if position.is_in_range(r.range)),
+                        None,
                     )
                 )
 

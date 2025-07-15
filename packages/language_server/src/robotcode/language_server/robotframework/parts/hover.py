@@ -116,12 +116,9 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
                 found_range = (
                     variable.name_range
                     if variable.source == namespace.source and position.is_in_range(variable.name_range, False)
-                    else cast(
-                        Optional[Range],
-                        next(
-                            (r.range for r in var_refs if position.is_in_range(r.range)),
-                            None,
-                        ),
+                    else next(
+                        (r.range for r in var_refs if position.is_in_range(r.range)),
+                        None,
                     )
                 )
                 value = None
@@ -187,12 +184,9 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
                 found_range = (
                     kw.name_range
                     if kw.source == namespace.source and position.is_in_range(kw.name_range, False)
-                    else cast(
-                        Optional[Range],
-                        next(
-                            (r.range for r in kw_refs if position.is_in_range(r.range, False)),
-                            None,
-                        ),
+                    else next(
+                        (r.range for r in kw_refs if position.is_in_range(r.range, False)),
+                        None,
                     )
                 )
 
@@ -231,12 +225,9 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
                     else (
                         ns.alias_range
                         if ns.import_source == namespace.source and position.is_in_range(ns.alias_range, False)
-                        else cast(
-                            Optional[Range],
-                            next(
-                                (r.range for r in ns_refs if position.is_in_range(r.range, False)),
-                                None,
-                            ),
+                        else next(
+                            (r.range for r in ns_refs if position.is_in_range(r.range, False)),
+                            None,
                         )
                     )
                 )
