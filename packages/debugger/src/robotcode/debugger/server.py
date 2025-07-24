@@ -50,6 +50,7 @@ from .dap_types import (
 )
 from .debugger import Debugger, PathMapping
 from .default_capabilities import DFEAULT_CAPABILITIES
+from .mixins import SyncedEventBody
 from .protocol import DebugAdapterProtocol
 
 TCP_DEFAULT_PORT = 6612
@@ -78,12 +79,22 @@ class DebugAdapterServerProtocol(DebugAdapterProtocol):
         self._received_configuration_done_event = threading.Event()
         self._received_configuration_done = False
         self.received_configuration_done_callback: Optional[Callable[[], None]] = None
+        self.sync_event: threading.Event = threading.Event()
 
         Debugger.instance().send_event.add(self.on_debugger_send_event)
 
-    def on_debugger_send_event(self, sender: Any, event: Event) -> None:
+    def on_debugger_send_event(self, sender: Any, event: Event, synced: bool = False) -> None:
         if self._loop is not None:
-            asyncio.run_coroutine_threadsafe(self.send_event_async(event), loop=self._loop)
+            synced = True if isinstance(event.body, SyncedEventBody) and event.body.synced else False
+
+            if synced:
+                self.sync_event.clear()
+
+            # asyncio.run_coroutine_threadsafe(self.send_event_async(event), loop=self._loop).result(15)
+            self._loop.call_soon_threadsafe(self.send_event, event)
+
+            if synced:
+                self.sync_event.wait(15)
 
     @property
     def connected(self) -> bool:
@@ -382,6 +393,14 @@ class DebugAdapterServerProtocol(DebugAdapterProtocol):
     ) -> CompletionsResponseBody:
         result = Debugger.instance().completions(text, column, line, frame_id)
         return CompletionsResponseBody(targets=result)
+
+    @rpc_method(name="robot/sync", threaded=True)
+    def _robot_sync(
+        self,
+        *args: Any,
+        **kwargs: Any,
+    ) -> None:
+        self.sync_event.set()
 
 
 class DebugAdapterServer(JsonRPCServer[DebugAdapterServerProtocol]):

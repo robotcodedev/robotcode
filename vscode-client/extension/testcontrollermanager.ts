@@ -85,6 +85,8 @@ interface RobotExecutionEvent {
   id: string;
   attributes: RobotExecutionAttributes | undefined;
   failedKeywords: RobotExecutionAttributes[] | undefined;
+  source: string | undefined;
+  lineno: number | undefined;
 }
 
 type RobotLogLevel = "FAIL" | "ERROR" | "WARN" | "INFO" | "DEBUG" | "TRACE";
@@ -133,6 +135,13 @@ class WorkspaceFolderEntry {
   }
 }
 
+class TestRunInfo {
+  public constructor(
+    public readonly run: vscode.TestRun,
+    public readonly startedEvents: Map<string, RobotExecutionEvent> = new Map(),
+  ) {}
+}
+
 export class TestControllerManager {
   private _disposables: vscode.Disposable;
   public readonly testController: vscode.TestController;
@@ -141,10 +150,13 @@ export class TestControllerManager {
   public runProfiles: vscode.TestRunProfile[] = [];
 
   private readonly refreshMutex = new Mutex();
+  private readonly updateEditorsMutex = new Mutex();
   private readonly debugSessions = new Set<vscode.DebugSession>();
   private readonly didChangedTimer = new Map<string, DidChangeEntry>();
   private refreshWorkspaceChangeTimer: DidChangeEntry | undefined;
   private diagnosticCollection = vscode.languages.createDiagnosticCollection("robotCode discovery");
+  private activeStepDecorationType: vscode.TextEditorDecorationType;
+  showEditorRunDecorations = false;
 
   constructor(
     public readonly extensionContext: vscode.ExtensionContext,
@@ -181,9 +193,20 @@ export class TestControllerManager {
       await this.refreshUri(uri, "change");
     });
 
+    this.activeStepDecorationType = vscode.window.createTextEditorDecorationType({
+      isWholeLine: true,
+      backgroundColor: { id: "editor.rangeHighlightBackground" },
+      borderColor: { id: "editor.rangeHighlightBorder" },
+      after: {
+        color: { id: "editorCodeLens.foreground" },
+        contentText: " \u231B",
+      },
+    });
+
     this._disposables = vscode.Disposable.from(
       this.diagnosticCollection,
       fileWatcher,
+      this.activeStepDecorationType,
       this.languageClientsManager.onClientStateChanged(async (event) => {
         switch (event.state) {
           case ClientState.Running: {
@@ -231,7 +254,7 @@ export class TestControllerManager {
 
       vscode.debug.onDidStartDebugSession((session) => {
         if (session.configuration.type === "robotcode" && session.configuration.runId !== undefined) {
-          if (this.testRuns.has(session.configuration.runId)) {
+          if (this.testRunInfos.has(session.configuration.runId)) {
             this.debugSessions.add(session);
           }
         }
@@ -245,7 +268,7 @@ export class TestControllerManager {
           }
         }
       }),
-      vscode.debug.onDidReceiveDebugSessionCustomEvent((event) => {
+      vscode.debug.onDidReceiveDebugSessionCustomEvent(async (event) => {
         if (event.session.configuration.type === "robotcode") {
           switch (event.event) {
             case "robotExited": {
@@ -253,11 +276,11 @@ export class TestControllerManager {
               break;
             }
             case "robotStarted": {
-              this.onRobotStartedEvent(event.session.configuration.runId, event.body as RobotExecutionEvent);
+              await this.onRobotStartedEvent(event.session.configuration.runId, event.body as RobotExecutionEvent);
               break;
             }
             case "robotEnded": {
-              this.onRobotEndedEvent(event.session.configuration.runId, event.body as RobotExecutionEvent);
+              await this.onRobotEndedEvent(event.session.configuration.runId, event.body as RobotExecutionEvent);
               break;
             }
             case "robotSetFailed": {
@@ -276,6 +299,9 @@ export class TestControllerManager {
               this.onRobotLogMessageEvent(event.session.configuration.runId, event.body as RobotLogMessageEvent, true);
               break;
             }
+          }
+          if (event.body?.synced) {
+            await event.session.customRequest("robot/sync");
           }
         }
       }),
@@ -1158,7 +1184,7 @@ export class TestControllerManager {
     return undefined;
   }
 
-  private readonly testRuns = new Map<string, vscode.TestRun>();
+  private readonly testRunInfos = new Map<string, TestRunInfo>();
 
   private mapTestItemsToWorkspaceFolder(items: vscode.TestItem[]): Map<vscode.WorkspaceFolder, vscode.TestItem[]> {
     const folders = new Map<vscode.WorkspaceFolder, vscode.TestItem[]>();
@@ -1230,7 +1256,7 @@ export class TestControllerManager {
     let run_started = false;
 
     token.onCancellationRequested(async (_) => {
-      for (const e of this.testRuns.keys()) {
+      for (const e of this.testRunInfos.keys()) {
         for (const session of this.debugSessions) {
           if (session.configuration.runId === e) {
             await vscode.debug.stopDebugging(session);
@@ -1248,7 +1274,7 @@ export class TestControllerManager {
         continue;
 
       const runId = TestControllerManager.runId.next().value;
-      this.testRuns.set(runId, testRun);
+      this.testRunInfos.set(runId, new TestRunInfo(testRun));
 
       const options: vscode.DebugSessionOptions = {
         testRun: testRun,
@@ -1360,10 +1386,10 @@ export class TestControllerManager {
   private testRunExited(runId: string | undefined) {
     if (runId === undefined) return;
 
-    const run = this.testRuns.get(runId);
-    this.testRuns.delete(runId);
+    const run = this.testRunInfos.get(runId)?.run;
+    this.testRunInfos.delete(runId);
     if (run !== undefined) {
-      if (Array.from(this.testRuns.values()).indexOf(run) === -1) {
+      if (Array.from(this.testRunInfos.values()).findIndex((info) => info.run === run) === -1) {
         run.end();
       }
     }
@@ -1372,7 +1398,7 @@ export class TestControllerManager {
   private testItemEnqueued(runId: string | undefined, items: string[] | undefined) {
     if (runId === undefined || items === undefined) return;
 
-    const run = this.testRuns.get(runId);
+    const run = this.testRunInfos.get(runId)?.run;
 
     if (run !== undefined) {
       for (const id of items) {
@@ -1384,11 +1410,84 @@ export class TestControllerManager {
     }
   }
 
-  private onRobotStartedEvent(runId: string | undefined, event: RobotExecutionEvent) {
+  private async updateEditorDecorations(event: RobotExecutionEvent | undefined = undefined) {
+    if (!this.showEditorRunDecorations) return;
+
+    await this.updateEditorsMutex.dispatch(() => {
+      // Early exit if no test runs
+      if (this.testRunInfos.size === 0) return;
+
+      // Filter editors based on event
+      const editors =
+        event !== undefined
+          ? vscode.window.visibleTextEditors.filter((editor) => editor.document.uri.fsPath === event.source)
+          : vscode.window.visibleTextEditors;
+
+      if (editors.length === 0) return;
+
+      // Build a map of source paths to line numbers for efficient lookup
+      const sourceToLines = new Map<string, Set<number>>();
+
+      for (const info of this.testRunInfos.values()) {
+        for (const startedEvent of info.startedEvents.values()) {
+          if (startedEvent.source && startedEvent.lineno && startedEvent.lineno > 0) {
+            if (!sourceToLines.has(startedEvent.source)) {
+              sourceToLines.set(startedEvent.source, new Set());
+            }
+            sourceToLines.get(startedEvent.source)!.add(startedEvent.lineno);
+          }
+        }
+      }
+
+      // Apply decorations to editors
+      for (const editor of editors) {
+        const editorPath = editor.document.uri.fsPath;
+        const lineNumbers = sourceToLines.get(editorPath);
+
+        const decorations: vscode.DecorationOptions[] = [];
+        if (lineNumbers) {
+          for (const lineno of lineNumbers) {
+            decorations.push({
+              range: new vscode.Range(new vscode.Position(lineno - 1, 0), new vscode.Position(lineno - 1, 0)),
+            });
+          }
+        }
+
+        editor.setDecorations(this.activeStepDecorationType, decorations);
+      }
+    });
+  }
+
+  private async onRobotStartedEvent(runId: string | undefined, event: RobotExecutionEvent) {
+    if (runId) {
+      if (event.source !== undefined && event.lineno !== undefined && event.lineno > 0) {
+        // try {
+        //   const editor = await vscode.window.showTextDocument(vscode.Uri.file(event.source));
+
+        //   editor.revealRange(
+        //     new vscode.Range(new vscode.Position(event.lineno - 1, 0), new vscode.Position(event.lineno - 1, 0)),
+        //     vscode.TextEditorRevealType.Default,
+        //   );
+        // } catch {
+        //   // ignore
+        // }
+        await this.updateEditorsMutex.dispatch(() => {
+          const infos = this.testRunInfos.get(runId);
+          if (infos !== undefined) {
+            infos.startedEvents.set(event.id, event);
+          }
+        });
+        await this.updateEditorDecorations(event);
+      }
+    }
+
     switch (event.type) {
-      //case "suite":
+      case "suite":
+        break;
       case "test":
         this.testItemStarted(runId, event);
+        break;
+      case "keyword":
         break;
       default:
         // do nothing
@@ -1399,7 +1498,7 @@ export class TestControllerManager {
   private testItemStarted(runId: string | undefined, event: RobotExecutionEvent) {
     if (runId === undefined || event.attributes?.longname === undefined) return;
 
-    const run = this.testRuns.get(runId);
+    const run = this.testRunInfos.get(runId)?.run;
 
     if (run !== undefined) {
       const item = this.findTestItemById(event.id);
@@ -1409,11 +1508,24 @@ export class TestControllerManager {
     }
   }
 
-  private onRobotEndedEvent(runId: string | undefined, event: RobotExecutionEvent) {
+  private async onRobotEndedEvent(runId: string | undefined, event: RobotExecutionEvent) {
+    if (runId) {
+      await this.updateEditorsMutex.dispatch(() => {
+        const infos = this.testRunInfos.get(runId);
+        if (infos !== undefined) {
+          infos.startedEvents.delete(event.id);
+        }
+      });
+
+      this.updateEditorDecorations(event);
+    }
     switch (event.type) {
-      //case "suite":
+      case "suite":
+        break;
       case "test":
         this.testItemEnded(runId, event);
+        break;
+      case "keyword":
         break;
       default:
         // do nothing
@@ -1436,7 +1548,7 @@ export class TestControllerManager {
   private testItemSetFailed(runId: string | undefined, event: RobotExecutionEvent) {
     if (runId === undefined || event.attributes?.longname === undefined) return;
 
-    const run = this.testRuns.get(runId);
+    const run = this.testRunInfos.get(runId)?.run;
 
     if (run !== undefined) {
       const item = this.findTestItemById(event.id);
@@ -1467,7 +1579,7 @@ export class TestControllerManager {
   private testItemEnded(runId: string | undefined, event: RobotExecutionEvent) {
     if (runId === undefined || event.attributes?.longname === undefined) return;
 
-    const run = this.testRuns.get(runId);
+    const run = this.testRunInfos.get(runId)?.run;
 
     if (run !== undefined) {
       const item = this.findTestItemById(event.id);
@@ -1535,7 +1647,7 @@ export class TestControllerManager {
   private onRobotLogMessageEvent(runId: string | undefined, event: RobotLogMessageEvent, isMessage: boolean): void {
     if (runId === undefined) return;
 
-    const run = this.testRuns.get(runId);
+    const run = this.testRunInfos.get(runId)?.run;
 
     let location: vscode.Location | undefined = undefined;
 

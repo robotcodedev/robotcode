@@ -10,16 +10,42 @@ from robotcode.core.utils.path import normalized_path
 
 from .dap_types import Event, Model
 from .debugger import Debugger
+from .mixins import SyncedEventBody
 
 
 @dataclass
-class RobotExecutionEventBody(Model):
+class RobotExecutionEventBody(Model, SyncedEventBody):
     type: str
     id: str
     name: str
     parent_id: Optional[str] = None
     attributes: Optional[Dict[str, Any]] = None
     failed_keywords: Optional[List[Dict[str, Any]]] = None
+    source: Optional[str] = None
+    lineno: Optional[int] = None
+    synced: bool = True
+
+
+@dataclass
+class RobotEnqueuedEventBody(Model, SyncedEventBody):
+    items: List[str]
+    synced: bool = True
+
+
+@dataclass
+class RobotLogMessageEventBody(Model, SyncedEventBody):
+    item_id: Optional[str]
+
+    message: Optional[str]
+    level: Optional[str]
+    timestamp: Optional[str]
+    html: Optional[str]
+
+    source: Optional[str] = None
+    lineno: Optional[int] = None
+    column: Optional[int] = None
+
+    synced: bool = True
 
 
 def source_from_attributes(attributes: Dict[str, Any]) -> str:
@@ -40,6 +66,7 @@ class ListenerV2:
 
     def start_suite(self, name: str, attributes: Dict[str, Any]) -> None:
         id = f"{source_from_attributes(attributes)};{attributes.get('longname', '')}"
+
         Debugger.instance().send_event(
             self,
             Event(
@@ -50,6 +77,8 @@ class ListenerV2:
                     id=id,
                     parent_id=self.suite_id_stack[-1] if self.suite_id_stack else None,
                     attributes=dict(attributes),
+                    source=source_from_attributes(attributes) or None,
+                    lineno=attributes.get("lineno", None),
                 ),
             ),
         )
@@ -76,6 +105,8 @@ class ListenerV2:
                     id=id,
                     parent_id=self.suite_id_stack[-1] if self.suite_id_stack else None,
                     failed_keywords=self.failed_keywords,
+                    source=source_from_attributes(attributes) or None,
+                    lineno=attributes.get("lineno", None),
                 ),
             ),
         )
@@ -96,6 +127,8 @@ class ListenerV2:
                     f"{attributes.get('lineno', 0)}",
                     parent_id=self.suite_id_stack[-1] if self.suite_id_stack else None,
                     attributes=dict(attributes),
+                    source=source_from_attributes(attributes) or None,
+                    lineno=attributes.get("lineno", None),
                 ),
             ),
         )
@@ -121,6 +154,8 @@ class ListenerV2:
                     parent_id=self.suite_id_stack[-1] if self.suite_id_stack else None,
                     attributes=dict(attributes),
                     failed_keywords=self.failed_keywords,
+                    source=source_from_attributes(attributes) or None,
+                    lineno=attributes.get("lineno", None),
                 ),
             ),
         )
@@ -135,10 +170,44 @@ class ListenerV2:
                 attributes.get("type"),
             )
 
+        # if Debugger.instance().state != State.CallKeyword:
+        #     Debugger.instance().send_event(
+        #         self,
+        #         Event(
+        #             event="robotStarted",
+        #             body=RobotExecutionEventBody(
+        #                 type="keyword",
+        #                 name=name,
+        #                 id=f"{source_from_attributes(attributes)};{name};{attributes.get('lineno', 0)}",
+        #                 parent_id=self.suite_id_stack[-1] if self.suite_id_stack else None,
+        #                 attributes=dict(attributes),
+        #                 source=source_from_attributes(attributes) or None,
+        #                 lineno=attributes.get("lineno", None),
+        #             ),
+        #         ),
+        #     )
+
         Debugger.instance().start_keyword(name, attributes)
 
     def end_keyword(self, name: str, attributes: Dict[str, Any]) -> None:
         Debugger.instance().end_keyword(name, attributes)
+
+        # if Debugger.instance().state != State.CallKeyword:
+        #     Debugger.instance().send_event(
+        #         self,
+        #         Event(
+        #             event="robotEnded",
+        #             body=RobotExecutionEventBody(
+        #                 type="keyword",
+        #                 name=name,
+        #                 id=f"{source_from_attributes(attributes)};{name};{attributes.get('lineno', 0)}",
+        #                 parent_id=self.suite_id_stack[-1] if self.suite_id_stack else None,
+        #                 attributes=dict(attributes),
+        #                 source=source_from_attributes(attributes) or None,
+        #                 lineno=attributes.get("lineno", None),
+        #             ),
+        #         ),
+        #     )
 
         if attributes["type"] in ["KEYWORD", "SETUP", "TEARDOWN"]:
             Debugger.instance().end_output_group(name, attributes, attributes.get("type"))
@@ -189,14 +258,16 @@ class ListenerV2:
                 self,
                 Event(
                     event="robotLog",
-                    body={
-                        "itemId": item_id,
-                        "source": source,
-                        "lineno": line,
-                        "column": column,
-                        **dict(message),
-                        **({"message": msg} if msg else {}),
-                    },
+                    body=RobotLogMessageEventBody(
+                        item_id=item_id,
+                        message=msg if msg else message.get("message", None),
+                        level=message.get("level", None),
+                        timestamp=message.get("timestamp", None),
+                        html=message.get("html", None),
+                        source=source,
+                        lineno=line,
+                        column=column,
+                    ),
                 ),
             )
 
@@ -236,14 +307,16 @@ class ListenerV2:
                 self,
                 Event(
                     event="robotMessage",
-                    body={
-                        "itemId": item_id,
-                        "source": source,
-                        "lineno": line,
-                        "column": column,
-                        **dict(message),
-                        **({"message": msg} if msg else {}),
-                    },
+                    body=RobotLogMessageEventBody(
+                        item_id=item_id,
+                        message=msg if msg else message.get("message", None),
+                        level=message.get("level", None),
+                        timestamp=message.get("timestamp", None),
+                        html=message.get("html", None),
+                        source=source,
+                        lineno=line,
+                        column=column,
+                    ),
                 ),
             )
 
@@ -305,7 +378,7 @@ class ListenerV3:
 
         items = list(reversed(list(enqueue(cast(running.model.TestSuite, data)))))
 
-        Debugger.instance().send_event(self, Event(event="robotEnqueued", body={"items": items}))
+        Debugger.instance().send_event(self, Event(event="robotEnqueued", body=RobotEnqueuedEventBody(items)))
 
         self._event_sended = True
 
@@ -337,6 +410,8 @@ class ListenerV3:
                                 if isinstance(result_item, result.TestCase)
                                 else ""
                             ),
+                            source=str(normalized_path(Path(result_item.source))) if result_item.source else None,
+                            lineno=data_item.lineno if data_item else None,
                         ),
                     ),
                 )
