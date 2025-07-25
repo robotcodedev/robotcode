@@ -4,12 +4,6 @@
 	"version": "2.0.0",
 	"tasks": [
 		{
-			"label": "robotcode: lint fix",
-			"type": "shell",
-			"command": "hatch run lint:fix",
-			"problemMatcher": []
-		},
-		{
 			"label": "robotcode: lint all",
 			"type": "shell",
 			"command": "hatch run lint:all",
