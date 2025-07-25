@@ -23,6 +23,7 @@ import com.intellij.openapi.util.Ref
 import com.jetbrains.rd.util.reactive.Signal
 import com.jetbrains.rd.util.reactive.adviseEternal
 import dev.robotcode.robotcode4ij.buildRobotCodeCommandLine
+import dev.robotcode.robotcode4ij.debugging.IRobotCodeDebugProtocolServer
 import dev.robotcode.robotcode4ij.debugging.RobotCodeDebugProgramRunner
 import dev.robotcode.robotcode4ij.debugging.RobotCodeDebugProtocolClient
 import dev.robotcode.robotcode4ij.utils.NetUtils.findFreePort
@@ -35,9 +36,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import org.eclipse.lsp4j.debug.ConfigurationDoneArguments
 import org.eclipse.lsp4j.debug.InitializeRequestArguments
-import org.eclipse.lsp4j.debug.launch.DSPLauncher
-import org.eclipse.lsp4j.debug.services.IDebugProtocolServer
-import org.eclipse.lsp4j.jsonrpc.Launcher
+import org.eclipse.lsp4j.jsonrpc.debug.DebugLauncher
 import java.net.Socket
 import java.net.SocketTimeoutException
 import kotlin.uuid.ExperimentalUuidApi
@@ -54,7 +53,7 @@ class RobotCodeRunProfileState(private val config: RobotCodeRunConfiguration, en
     }
     
     val debugClient = RobotCodeDebugProtocolClient()
-    lateinit var debugServer: IDebugProtocolServer
+    lateinit var debugServer: IRobotCodeDebugProtocolServer
     var isInitialized = false
         private set
     var isConfigurationDone = false
@@ -62,7 +61,6 @@ class RobotCodeRunProfileState(private val config: RobotCodeRunConfiguration, en
     
     val afterInitialize = Signal<Unit>()
     val afterConfigurationDone = Signal<Unit>()
-    
     
     init {
         debugClient.onTerminated.adviseEternal {
@@ -142,8 +140,8 @@ class RobotCodeRunProfileState(private val config: RobotCodeRunConfiguration, en
                     consoleProperties.state = this
                 }
                 
-                var splitterPropertyName = SMTestRunnerConnectionUtil.getSplitterPropertyName(TESTFRAMEWORK_NAME)
-                var consoleView = RobotCodeRunnerConsoleView(consoleProperties, splitterPropertyName)
+                val splitterPropertyName = SMTestRunnerConnectionUtil.getSplitterPropertyName(TESTFRAMEWORK_NAME)
+                val consoleView = RobotCodeRunnerConsoleView(consoleProperties, splitterPropertyName)
                 SMTestRunnerConnectionUtil.initConsoleView(consoleView, TESTFRAMEWORK_NAME)
                 consoleView.attachToProcess(processHandler)
                 consoleRef.set(consoleView)
@@ -192,17 +190,22 @@ class RobotCodeRunProfileState(private val config: RobotCodeRunConfiguration, en
     @OptIn(ExperimentalUuidApi::class) override fun startNotified(event: ProcessEvent) {
         runBlocking(Dispatchers.IO) {
             
-            var port = event.processHandler.getUserData(DEBUG_PORT) ?: throw CantRunException("No debug port found.")
+            val port = event.processHandler.getUserData(DEBUG_PORT) ?: throw CantRunException("No debug port found.")
             
             socket = tryConnectToServerWithTimeout("127.0.0.1", port, 10000, retryIntervalMillis = 100)
                 ?: throw CantRunException("Unable to establish connection to debug server.")
             
-            val launcher: Launcher<IDebugProtocolServer> =
-                DSPLauncher.createClientLauncher(debugClient, socket.getInputStream(), socket.getOutputStream())
+            val launcher = DebugLauncher.createLauncher(
+                debugClient,
+                IRobotCodeDebugProtocolServer::class.java,
+                socket.getInputStream(),
+                socket.getOutputStream()
+            );
             
             launcher.startListening()
             
             debugServer = launcher.remoteProxy
+            debugClient.server = debugServer
             
             val arguments = InitializeRequestArguments().apply {
                 clientID = Uuid.random().toString()
