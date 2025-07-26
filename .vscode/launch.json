@@ -6,29 +6,50 @@
 	"version": "0.2.0",
 	"configurations": [
 		{
-			"name": "Attach to Node Process",
-			"port": 9229,
+			"name": "Python: Attach Prompt",
+			"type": "debugpy",
 			"request": "attach",
-			"skipFiles": [
-				"<node_internals>/**"
-			],
-			"type": "node",
-			"autoAttachChildProcesses": true
+			"connect": {
+				"host": "localhost",
+				"port": "${input:portNumber}"
+			}
 		},
-
-
 		{
-			"name": "esbuild.mjs",
-			"program": "${workspaceFolder}/esbuild.mjs",
+			"name": "Python: Attach to 5678",
+			"type": "debugpy",
+			"request": "attach",
+			"connect": {
+				"host": "localhost",
+				"port": 5678
+			},
+			"justMyCode": false,
+			"subProcess": true,
+			"showReturnValue": true,
+		},
+		{
+			"name": "Python: Attach using Process Id",
+			"type": "debugpy",
+			"request": "attach",
+			"processId": "${command:pickProcess}",
+			"justMyCode": false
+		},
+		{
+			"name": "Python: Create Cmd Line Doc",
+			"type": "debugpy",
 			"request": "launch",
-			"skipFiles": [
-				"<node_internals>/**"
-			],
-			"type": "node",
+			"program": "scripts/create_cmdline_doc.py",
 			"console": "integratedTerminal",
-			"runtimeArgs": [
-                "--experimental-modules"
-            ]
+			"justMyCode": false,
+			"cwd": "${workspaceFolder}",
+		},
+		{
+			"name": "Python: Current File",
+			"type": "debugpy",
+			"request": "launch",
+			"program": "${file}",
+			"console": "integratedTerminal",
+			"justMyCode": false,
+			"cwd": "${workspaceFolder}",
 		},
 		{
 			"name": "Python: Debug in terminal",
@@ -38,6 +59,81 @@
 				"debug-in-terminal"
 			],
 			"justMyCode": false
+		},
+		{
+			"name": "Python: Debug Tests",
+			"type": "debugpy",
+			"request": "launch",
+			"program": "${file}",
+			"purpose": [
+				"debug-test"
+			],
+			"console": "integratedTerminal",
+			"justMyCode": false
+		},
+		{
+			"name": "Python: Pytest All Test",
+			"type": "debugpy",
+			"request": "launch",
+			"module": "pytest",
+			"args": [
+				"."
+			],
+			"console": "integratedTerminal",
+			"justMyCode": false,
+			"cwd": "${workspaceFolder}",
+		},
+		{
+			"name": "Python: Pytest Current File",
+			"type": "debugpy",
+			"request": "launch",
+			"module": "pytest",
+			"args": [
+				"${file}"
+			],
+			"console": "integratedTerminal",
+			"justMyCode": false,
+			"cwd": "${workspaceFolder}",
+		},
+		{
+			"name": "Python: Pytest Some Test",
+			"type": "debugpy",
+			"request": "launch",
+			"module": "pytest",
+			"args": [
+				"--full-trace",
+				"--tb=native",
+				"--regtest2-reset",
+				//"--regtest-reset",
+				//"tests/robotcode/language_server/robotframework/parts/test_foldingrange.py"
+				//"tests/robotcode/language_server/robotframework/parts/test_references.py"
+				//"./tests/robotcode/language_server/robotframework/parts/test_discovering.py::test_workspace_discovery"
+				//"tests/robotcode/language_server/robotframework/parts/test_document_highlight.py"
+				//"tests/robotcode/utils/test_dataclasses.py::test_really_complex_data"
+				//"tests/robotcode/language_server/robotframework/parts/test_foldingrange.py"
+				//"tests/robotcode/language_server/robotframework/parts/test_document_symbols.py",
+				// "./tests/robotcode/language_server/robotframework/parts/test_semantic_tokens.py "
+				"tests/robotcode/language_server/robotframework/parts/test_foldingrange.py::test[False-foldingrange.robot-123-001-try end]"
+			],
+			"console": "integratedTerminal",
+			"justMyCode": false,
+			"cwd": "${workspaceFolder}",
+		},
+		{
+			"name": "Python: Remote-Attach",
+			"type": "debugpy",
+			"request": "attach",
+			"connect": {
+				"host": "localhost",
+				"port": 5678
+			},
+			"pathMappings": [
+				{
+					"localRoot": "${workspaceFolder}",
+					"remoteRoot": "."
+				}
+			],
+			"justMyCode": true
 		},
 		{
 			"name": "Python: RobotCode",
@@ -98,102 +194,17 @@
 				// "package.json"
 				// "-v",
 				// "asd:asd"
-
 			]
 		},
 		{
-			"name": "Python: Attach using Process Id",
-			"type": "debugpy",
-			"request": "attach",
-			"processId": "${command:pickProcess}",
-			"justMyCode": false
-		},
-		{
-			"name": "Python: Current File",
+			"name": "Python: RobotCode Debugger",
 			"type": "debugpy",
 			"request": "launch",
-			"program": "${file}",
-			"console": "integratedTerminal",
-			"justMyCode": false,
-			"cwd": "${workspaceFolder}",
-		},
-		{
-			"name": "Python: Create Cmd Line Doc",
-			"type": "debugpy",
-			"request": "launch",
-			"program": "scripts/create_cmdline_doc.py",
-			"console": "integratedTerminal",
-			"justMyCode": false,
-			"cwd": "${workspaceFolder}",
-		},
-		{
-			"name": "Python: Attach to 5678",
-			"type": "debugpy",
-			"request": "attach",
-			"connect": {
-				"host": "localhost",
-				"port": 5678
-			},
-			"justMyCode": false,
-			"subProcess": true,
-			"showReturnValue": true,
-		},
-		{
-			"name": "Python: Attach Prompt",
-			"type": "debugpy",
-			"request": "attach",
-			"connect": {
-				"host": "localhost",
-				"port": "${input:portNumber}"
-			}
-		},
-		{
-			"name": "Python: Pytest All Test",
-			"type": "debugpy",
-			"request": "launch",
-			"module": "pytest",
+			"module": "robotcode.ci",
 			"args": [
-				"."
+				"debugger",
+				"--no-wait-for-client"
 			],
-			"console": "integratedTerminal",
-			"justMyCode": false,
-			"cwd": "${workspaceFolder}",
-		},
-		{
-			"name": "Python: Pytest Some Test",
-			"type": "debugpy",
-			"request": "launch",
-			"module": "pytest",
-			"args": [
-				"--full-trace",
-				"--tb=native",
-				"--regtest2-reset",
-				//"--regtest-reset",
-				//"tests/robotcode/language_server/robotframework/parts/test_foldingrange.py"
-				//"tests/robotcode/language_server/robotframework/parts/test_references.py"
-				//"./tests/robotcode/language_server/robotframework/parts/test_discovering.py::test_workspace_discovery"
-				//"tests/robotcode/language_server/robotframework/parts/test_document_highlight.py"
-				//"tests/robotcode/utils/test_dataclasses.py::test_really_complex_data"
-				//"tests/robotcode/language_server/robotframework/parts/test_foldingrange.py"
-				//"tests/robotcode/language_server/robotframework/parts/test_document_symbols.py",
-				// "./tests/robotcode/language_server/robotframework/parts/test_semantic_tokens.py "
-				"tests/robotcode/language_server/robotframework/parts/test_foldingrange.py::test[False-foldingrange.robot-123-001-try end]"
-			],
-			"console": "integratedTerminal",
-			"justMyCode": false,
-			"cwd": "${workspaceFolder}",
-		},
-		{
-			"name": "Python: Pytest Current File",
-			"type": "debugpy",
-			"request": "launch",
-			"module": "pytest",
-			"args": [
-				"${file}"
-			],
-			"console": "integratedTerminal",
-			"justMyCode": false,
-			"cwd": "${workspaceFolder}",
 		},
 		{
 			"name": "Python: robotcode language_server",
@@ -206,6 +217,20 @@
 				"--stdio",
 				"${workspaceFolder}/tests/robotcode/language_server/robotframework/parts/data/tests"
 			]
+		},
+		{
+			"name": "Extension Tests",
+			"type": "extensionHost",
+			"request": "launch",
+			"runtimeExecutable": "${execPath}",
+			"args": [
+				"--extensionDevelopmentPath=${workspaceFolder}",
+				"--extensionTestsPath=${workspaceFolder}/out/test/suite/index"
+			],
+			"outFiles": [
+				"${workspaceFolder}/out/test/**/*.js"
+			],
+			"preLaunchTask": "npm: compile"
 		},
 		{
 			"name": "Run Extension",
@@ -235,45 +260,27 @@
 			"preLaunchTask": "npm: compile"
 		},
 		{
-			"name": "Extension Tests",
-			"type": "extensionHost",
-			"request": "launch",
-			"runtimeExecutable": "${execPath}",
-			"args": [
-				"--extensionDevelopmentPath=${workspaceFolder}",
-				"--extensionTestsPath=${workspaceFolder}/out/test/suite/index"
-			],
-			"outFiles": [
-				"${workspaceFolder}/out/test/**/*.js"
-			],
-			"preLaunchTask": "npm: compile"
-		},
-		{
-			"name": "Python: Debug Tests",
-			"type": "debugpy",
-			"request": "launch",
-			"program": "${file}",
-			"purpose": [
-				"debug-test"
-			],
-			"console": "integratedTerminal",
-			"justMyCode": false
-		},
-		{
-			"name": "Python: Remote-Attach",
-			"type": "debugpy",
+			"name": "Attach to Node Process",
+			"port": 9229,
 			"request": "attach",
-			"connect": {
-				"host": "localhost",
-				"port": 5678
-			},
-			"pathMappings": [
-				{
-					"localRoot": "${workspaceFolder}",
-					"remoteRoot": "."
-				}
+			"skipFiles": [
+				"<node_internals>/**"
 			],
-			"justMyCode": true
+			"type": "node",
+			"autoAttachChildProcesses": true
+		},
+		{
+			"name": "esbuild.mjs",
+			"program": "${workspaceFolder}/esbuild.mjs",
+			"request": "launch",
+			"skipFiles": [
+				"<node_internals>/**"
+			],
+			"type": "node",
+			"console": "integratedTerminal",
+			"runtimeArgs": [
+				"--experimental-modules"
+			]
 		}
 	],
 	"inputs": [
