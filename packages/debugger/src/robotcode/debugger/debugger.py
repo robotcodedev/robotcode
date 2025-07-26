@@ -293,6 +293,31 @@ class ExceptionInformation(TypedDict):
     status: str
 
 
+class _DebuggerInstanceDescriptor:
+    """Descriptor that forwards all attribute access to the singleton instance."""
+
+    def __init__(self) -> None:
+        self._owner_class: Optional[type] = None
+
+    def __set_name__(self, owner: type, name: str) -> None:
+        """Called when the descriptor is assigned to a class."""
+        self._owner_class = owner
+
+    def __get__(self, obj: Any, owner: Optional[type]) -> "Debugger":
+        if self._owner_class is None:
+            self._owner_class = owner
+        if self._owner_class is not None and hasattr(self._owner_class, "_get_instance"):
+            return cast("Debugger", self._owner_class._get_instance())
+        # This should never happen in practice, but needed for type checking
+        raise RuntimeError("Debugger class not properly initialized")
+
+    def __set__(self, obj: Any, value: Any) -> None:
+        raise AttributeError("Cannot replace the debugger instance")
+
+    def __delete__(self, obj: Any) -> None:
+        raise AttributeError("Cannot delete the debugger instance")
+
+
 class Debugger:
     __instance: ClassVar[Optional["Debugger"]] = None
     __lock: ClassVar = threading.RLock()
@@ -300,8 +325,12 @@ class Debugger:
 
     _logger = LoggingDescriptor()
 
+    # Descriptor that allows Debugger.instance.field = value syntax
+    instance = _DebuggerInstanceDescriptor()
+
     @classmethod
-    def instance(cls) -> "Debugger":
+    def _get_instance(cls) -> "Debugger":
+        """Internal method to get the singleton instance."""
         if cls.__instance is not None:
             return cls.__instance
         with cls.__lock:
@@ -313,6 +342,11 @@ class Debugger:
                 finally:
                     cls.__inside_instance = False
         return cls.__instance
+
+    @classmethod
+    def get_instance(cls) -> "Debugger":
+        """Backward compatibility method for old instance() calls."""
+        return cls._get_instance()
 
     def __new__(cls, *args: Any, **kwargs: Any) -> Any:
         if cls.__instance is None:

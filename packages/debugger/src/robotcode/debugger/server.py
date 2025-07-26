@@ -81,12 +81,12 @@ class DebugAdapterServerProtocol(DebugAdapterProtocol):
         self.received_configuration_done_callback: Optional[Callable[[], None]] = None
         self.sync_event: threading.Event = threading.Event()
 
-        Debugger.instance().send_event.add(self.on_debugger_send_event)
+        Debugger.instance.send_event.add(self.on_debugger_send_event)
 
     def on_debugger_send_event(self, sender: Any, event: Event, synced: bool = False) -> None:
         if self._loop is not None:
             synced = (
-                Debugger.instance().state != State.CallKeyword
+                Debugger.instance.state != State.CallKeyword
                 if isinstance(event.body, SyncedEventBody) and event.body.synced
                 else False
             )
@@ -174,14 +174,14 @@ class DebugAdapterServerProtocol(DebugAdapterProtocol):
         **kwargs: Any,
     ) -> None:
         if pathMappings:
-            Debugger.instance().path_mappings = [
+            Debugger.instance.path_mappings = [
                 PathMapping(
                     local_root=v.get("localRoot", None),
                     remote_root=v.get("remoteRoot", None),
                 )
                 for v in pathMappings
             ]
-        Debugger.instance().attached = True
+        Debugger.instance.attached = True
 
     @_logger.call
     def initialized(self) -> None:
@@ -208,14 +208,14 @@ class DebugAdapterServerProtocol(DebugAdapterProtocol):
         *args: Any,
         **kwargs: Any,
     ) -> None:
-        Debugger.instance().terminate()
+        Debugger.instance.terminate()
 
         if not restart and not self._sigint_signaled:
             self._logger.debug("Send SIGINT to process")
             signal.raise_signal(signal.SIGINT)
             self._sigint_signaled = True
 
-            Debugger.instance().continue_all_if_paused()
+            Debugger.instance.continue_all_if_paused()
         else:
             await self.send_event_async(Event("terminateRequested"))
 
@@ -233,15 +233,15 @@ class DebugAdapterServerProtocol(DebugAdapterProtocol):
             os._exit(-1)
         else:
             await self.send_event_async(Event("disconnectRequested"))
-            Debugger.instance().attached = False
-            Debugger.instance().continue_all()
+            Debugger.instance.attached = False
+            Debugger.instance.continue_all()
 
     @rpc_method(name="setBreakpoints", param_type=SetBreakpointsArguments)
     async def _set_breakpoints(
         self, arguments: SetBreakpointsArguments, *args: Any, **kwargs: Any
     ) -> SetBreakpointsResponseBody:
         return SetBreakpointsResponseBody(
-            breakpoints=Debugger.instance().set_breakpoints(
+            breakpoints=Debugger.instance.set_breakpoints(
                 arguments.source,
                 arguments.breakpoints,
                 arguments.lines,
@@ -272,32 +272,32 @@ class DebugAdapterServerProtocol(DebugAdapterProtocol):
 
     @rpc_method(name="continue", param_type=ContinueArguments)
     async def _continue(self, arguments: ContinueArguments, *args: Any, **kwargs: Any) -> ContinueResponseBody:
-        Debugger.instance().continue_thread(arguments.thread_id)
+        Debugger.instance.continue_thread(arguments.thread_id)
         return ContinueResponseBody(all_threads_continued=True)
 
     @rpc_method(name="pause", param_type=PauseArguments)
     async def _pause(self, arguments: PauseArguments, *args: Any, **kwargs: Any) -> None:
-        Debugger.instance().pause_thread(arguments.thread_id)
+        Debugger.instance.pause_thread(arguments.thread_id)
 
     @rpc_method(name="next", param_type=NextArguments)
     async def _next(self, arguments: NextArguments, *args: Any, **kwargs: Any) -> None:
-        Debugger.instance().next(arguments.thread_id, arguments.granularity)
+        Debugger.instance.next(arguments.thread_id, arguments.granularity)
 
     @rpc_method(name="stepIn", param_type=StepInArguments)
     async def _step_in(self, arguments: StepInArguments, *args: Any, **kwargs: Any) -> None:
-        Debugger.instance().step_in(arguments.thread_id, arguments.target_id, arguments.granularity)
+        Debugger.instance.step_in(arguments.thread_id, arguments.target_id, arguments.granularity)
 
     @rpc_method(name="stepOut", param_type=StepOutArguments)
     async def _step_out(self, arguments: StepOutArguments, *args: Any, **kwargs: Any) -> None:
-        Debugger.instance().step_out(arguments.thread_id, arguments.granularity)
+        Debugger.instance.step_out(arguments.thread_id, arguments.granularity)
 
     @rpc_method(name="threads")
     async def _threads(self, *args: Any, **kwargs: Any) -> ThreadsResponseBody:
-        return ThreadsResponseBody(threads=Debugger.instance().get_threads())
+        return ThreadsResponseBody(threads=Debugger.instance.get_threads())
 
     @rpc_method(name="stackTrace", param_type=StackTraceArguments)
     async def _stack_trace(self, arguments: StackTraceArguments, *args: Any, **kwargs: Any) -> StackTraceResponseBody:
-        result = Debugger.instance().get_stack_trace(
+        result = Debugger.instance.get_stack_trace(
             arguments.thread_id,
             arguments.start_frame,
             arguments.levels,
@@ -307,7 +307,7 @@ class DebugAdapterServerProtocol(DebugAdapterProtocol):
 
     @rpc_method(name="scopes", param_type=ScopesArguments)
     async def _scopes(self, arguments: ScopesArguments, *args: Any, **kwargs: Any) -> ScopesResponseBody:
-        return ScopesResponseBody(scopes=Debugger.instance().get_scopes(arguments.frame_id))
+        return ScopesResponseBody(scopes=Debugger.instance.get_scopes(arguments.frame_id))
 
     @rpc_method(name="variables", param_type=VariablesArguments)
     async def _variables(
@@ -322,7 +322,7 @@ class DebugAdapterServerProtocol(DebugAdapterProtocol):
         **kwargs: Any,
     ) -> VariablesResponseBody:
         return VariablesResponseBody(
-            variables=Debugger.instance().get_variables(variables_reference, filter, start, count, format)
+            variables=Debugger.instance.get_variables(variables_reference, filter, start, count, format)
         )
 
     @rpc_method(name="evaluate", param_type=EvaluateArguments)
@@ -336,7 +336,7 @@ class DebugAdapterServerProtocol(DebugAdapterProtocol):
         *args: Any,
         **kwargs: Any,
     ) -> EvaluateResponseBody:
-        result = Debugger.instance().evaluate(expression, frame_id, context, format)
+        result = Debugger.instance.evaluate(expression, frame_id, context, format)
         return EvaluateResponseBody(
             result=result.result,
             type=result.type,
@@ -358,7 +358,7 @@ class DebugAdapterServerProtocol(DebugAdapterProtocol):
         *args: Any,
         **kwargs: Any,
     ) -> SetVariableResponseBody:
-        result = Debugger.instance().set_variable(variables_reference, name, value, format)
+        result = Debugger.instance.set_variable(variables_reference, name, value, format)
         return SetVariableResponseBody(
             value=result.value,
             type=result.type,
@@ -377,7 +377,7 @@ class DebugAdapterServerProtocol(DebugAdapterProtocol):
         *args: Any,
         **kwargs: Any,
     ) -> Optional[SetExceptionBreakpointsResponseBody]:
-        result = Debugger.instance().set_exception_breakpoints(
+        result = Debugger.instance.set_exception_breakpoints(
             arguments.filters,
             arguments.filter_options,
             arguments.exception_options,
@@ -395,7 +395,7 @@ class DebugAdapterServerProtocol(DebugAdapterProtocol):
         *args: Any,
         **kwargs: Any,
     ) -> CompletionsResponseBody:
-        result = Debugger.instance().completions(text, column, line, frame_id)
+        result = Debugger.instance.completions(text, column, line, frame_id)
         return CompletionsResponseBody(targets=result)
 
     @rpc_method(name="robot/sync", threaded=True)
