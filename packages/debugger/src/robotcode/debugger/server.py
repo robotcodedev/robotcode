@@ -48,7 +48,7 @@ from .dap_types import (
     VariablesArguments,
     VariablesResponseBody,
 )
-from .debugger import Debugger, PathMapping
+from .debugger import Debugger, PathMapping, State
 from .default_capabilities import DFEAULT_CAPABILITIES
 from .mixins import SyncedEventBody
 from .protocol import DebugAdapterProtocol
@@ -85,7 +85,11 @@ class DebugAdapterServerProtocol(DebugAdapterProtocol):
 
     def on_debugger_send_event(self, sender: Any, event: Event, synced: bool = False) -> None:
         if self._loop is not None:
-            synced = True if isinstance(event.body, SyncedEventBody) and event.body.synced else False
+            synced = (
+                Debugger.instance().state != State.CallKeyword
+                if isinstance(event.body, SyncedEventBody) and event.body.synced
+                else False
+            )
 
             if synced:
                 self.sync_event.clear()
