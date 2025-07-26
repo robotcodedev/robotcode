@@ -21,6 +21,15 @@
 
 RobotCode is a comprehensive Robot Framework toolkit that provides IDE extensions (VS Code, IntelliJ), CLI tools, and Language Server Protocol implementation. It uses Robot Framework's native parser for full compatibility while extending it with modern development tools like DAP debugging, test discovery, and multi-workspace support.
 
+## Agent Communication Guidelines
+
+- **Ask When Unclear:** If requirements or context are ambiguous, ask clarifying questions
+- **Sequential Questions:** Ask questions one at a time, allowing the user to answer each individually
+- **Multiple Choice Format:** When possible, provide specific options rather than open-ended questions
+- **Always Include "Other":** End multiple choice questions with "Other - please specify" option
+- **Progressive Refinement:** Start with broad questions, then get more specific based on answers
+- **Acknowledge Answers:** Confirm understanding before proceeding to implementation
+
 ## Tech Stack
 
 ### Core Technologies
@@ -43,6 +52,46 @@ RobotCode is a comprehensive Robot Framework toolkit that provides IDE extension
 - **Python Versions:** 3.8, 3.9, 3.10, 3.11, 3.12, 3.13
 - **Robot Framework:** 5.0, 6.0, 6.1, 7.0, 7.1, 7.2, 7.3
 - **Test Framework:** pytest with regtest2 for snapshot testing
+
+## General Coding Guidelines
+
+### Clean Code Principles
+- **Readability First:** Code is read more often than written - prioritize clarity over cleverness
+- **Meaningful Names:** Use descriptive names for variables, functions, and classes that express intent
+- **Single Responsibility:** Each function/class should have one reason to change
+- **Small Functions:** Keep functions focused and under 20 lines when possible
+- **No Magic Numbers:** Use named constants or enums instead of hardcoded values
+- **Avoid Deep Nesting:** Use early returns and guard clauses to reduce cyclomatic complexity
+
+### Code Organization
+- **Consistent Structure:** Follow established patterns within each package
+- **Separation of Concerns:** Keep business logic separate from infrastructure code
+- **Interface Segregation:** Create focused interfaces rather than monolithic ones
+- **Dependency Inversion:** Depend on abstractions, not concrete implementations
+
+### Error Handling
+- **Explicit Error Handling:** Use proper exception/error types and hierarchies
+- **Fail Fast:** Validate inputs early and provide clear error messages
+- **Resource Management:** Use appropriate resource cleanup patterns (try-with-resources, RAII, etc.)
+- **Logging:** Provide meaningful log messages at appropriate levels
+
+### Documentation Standards
+- **Function Documentation:** All public functions/methods must have comprehensive documentation
+- **Type Annotations:** Use static type checking where available (TypeScript, Python type hints, etc.)
+- **README Files:** Each package/module should have clear usage documentation
+- **Inline Comments:** Explain *why*, not *what* - the code should be self-documenting
+
+### Testing Requirements
+- **Test Coverage:** Maintain high test coverage with meaningful test cases
+- **Test Naming:** Use descriptive test names that explain the scenario
+- **Test Structure:** Organize tests clearly with setup, execution, and verification phases
+- **Test Independence:** Each test should be able to run in isolation
+
+### Performance Considerations
+- **Async Patterns:** Use proper asynchronous programming patterns where applicable
+- **Resource Efficiency:** Minimize memory allocations and resource usage in hot paths
+- **Lazy Loading:** Load resources only when needed
+- **Caching Strategy:** Implement appropriate caching for expensive operations
 
 ## Architecture Patterns
 
