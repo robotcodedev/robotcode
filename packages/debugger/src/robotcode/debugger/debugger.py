@@ -6,7 +6,7 @@ import reprlib
 import threading
 import time
 import weakref
-from collections import deque
+from collections import OrderedDict, deque
 from enum import Enum
 from functools import cached_property
 from pathlib import Path, PurePath
@@ -103,8 +103,8 @@ UNDEFINED = Undefined()
 STATE_CHANGE_DELAY = 0.01  # Delay to avoid busy loops during state changes
 EVALUATE_TIMEOUT = 120  # Timeout for keyword evaluation in seconds
 KEYWORD_EVALUATION_TIMEOUT = 60  # Timeout for keyword evaluation wait in seconds
-MAX_EVALUATE_CACHE_SIZE = 50  # Maximum number of items in evaluate cache
 MAX_VARIABLE_ITEMS_DISPLAY = 500  # Maximum items to display in variable view
+MAX_REGEX_CACHE_SIZE = 25  # Maximum number of compiled regex patterns to cache
 
 
 # Type definitions for better type safety
@@ -370,7 +370,6 @@ class Debugger:
         if cls.__instance is not None:
             return cls.__instance
         with cls.__lock:
-            # re-check, perhaps it was created in the mean time...
             if cls.__instance is None:
                 cls.__inside_instance = True
                 try:
@@ -433,7 +432,6 @@ class Debugger:
 
         self.debug_logger: Optional[DebugLogger] = None
         self.run_started = False
-        self._evaluate_cache: List[Any] = []
         self._variables_cache: Dict[int, Any] = {}
         self._variables_object_cache: List[Any] = []
         self._current_exception: Optional[ExceptionInformation] = None
@@ -450,9 +448,7 @@ class Debugger:
             State.Paused,
             State.CallKeyword,
         ]:
-            self._variables_cache.clear()
-            self._variables_object_cache.clear()
-            self._evaluate_cache.clear()
+            self._clear_all_caches()
 
         time.sleep(STATE_CHANGE_DELAY)
 
@@ -492,6 +488,12 @@ class Debugger:
 
     def terminate(self) -> None:
         self.terminated = True
+
+    def _clear_all_caches(self) -> None:
+        """Optimized method to clear all caches in one operation."""
+        self._variables_cache.clear()
+        self._variables_object_cache.clear()
+        self.__compiled_regex_cache.clear()
 
     def start(self) -> None:
         with self.condition:
@@ -1184,19 +1186,45 @@ class Debugger:
         return r is None
 
     __matchers: Optional[Dict[str, Callable[[str, str], bool]]] = None
+    __compiled_regex_cache: "OrderedDict[str, re.Pattern[str]]" = OrderedDict()
+    __robot_matcher: Optional[Any] = None
 
     def _get_matcher(self, pattern_type: str) -> Optional[Callable[[str, str], bool]]:
-        from robot.utils import Matcher
-
         if self.__matchers is None:
             self.__matchers: Dict[str, Callable[[str, str], bool]] = {
-                "GLOB": lambda m, p: bool(Matcher(p, spaceless=False, caseless=False).match(m)),
+                "GLOB": self._glob_matcher,
                 "LITERAL": lambda m, p: m == p,
-                "REGEXP": lambda m, p: re.match(rf"{p}\Z", m) is not None,
+                "REGEXP": self._regexp_matcher,
                 "START": lambda m, p: m.startswith(p),
             }
 
         return self.__matchers.get(pattern_type.upper(), None)
+
+    def _glob_matcher(self, message: str, pattern: str) -> bool:
+        """Optimized glob matcher with cached Robot Matcher."""
+        if self.__robot_matcher is None:
+            from robot.utils import Matcher
+
+            self.__robot_matcher = Matcher
+
+        return bool(self.__robot_matcher(pattern, spaceless=False, caseless=False).match(message))
+
+    def _regexp_matcher(self, message: str, pattern: str) -> bool:
+        """Optimized regex matcher with LRU caching (max 25 entries)."""
+        if pattern in self.__compiled_regex_cache:
+            self.__compiled_regex_cache.move_to_end(pattern)
+            compiled_pattern = self.__compiled_regex_cache[pattern]
+        else:
+            if len(self.__compiled_regex_cache) >= MAX_REGEX_CACHE_SIZE:
+                self.__compiled_regex_cache.popitem(last=False)
+
+            try:
+                compiled_pattern = re.compile(rf"{pattern}\Z")
+                self.__compiled_regex_cache[pattern] = compiled_pattern
+            except re.error:
+                return False
+
+        return compiled_pattern.match(message) is not None
 
     def _should_run_except(self, branch: Any, error: str) -> bool:
         if not branch.patterns:
@@ -1905,10 +1933,6 @@ class Debugger:
         return self._create_evaluate_result(result)
 
     def _create_evaluate_result(self, value: Any) -> EvaluateResult:
-        self._evaluate_cache.insert(0, value)
-        if len(self._evaluate_cache) > MAX_EVALUATE_CACHE_SIZE:
-            self._evaluate_cache.pop()
-
         if isinstance(value, Mapping):
             v_id = self._new_cache_id()
             self._variables_cache[v_id] = value
@@ -1962,10 +1986,6 @@ class Debugger:
             return result
 
     def _create_set_variable_result(self, value: Any) -> SetVariableResult:
-        self._evaluate_cache.insert(0, value)
-        if len(self._evaluate_cache) > MAX_EVALUATE_CACHE_SIZE:
-            self._evaluate_cache.pop()
-
         if isinstance(value, Mapping):
             v_id = self._new_cache_id()
             self._variables_cache[v_id] = value
