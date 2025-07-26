@@ -23,12 +23,45 @@ RobotCode is a comprehensive Robot Framework toolkit that provides IDE extension
 
 ## Agent Communication Guidelines
 
-- **Ask When Unclear:** If requirements or context are ambiguous, ask clarifying questions
-- **Sequential Questions:** Ask questions one at a time, allowing the user to answer each individually
-- **Multiple Choice Format:** When possible, provide specific options rather than open-ended questions
-- **Always Include "Other":** End multiple choice questions with "Other - please specify" option
-- **Progressive Refinement:** Start with broad questions, then get more specific based on answers
-- **Acknowledge Answers:** Confirm understanding before proceeding to implementation
+### When to Ask vs. Implement Directly
+
+- **ALWAYS ASK when multiple valid approaches exist:** Present specific options and wait for user choice
+- **ALWAYS ASK when requirements are incomplete:** Don't make assumptions about missing details
+- **IMPLEMENT DIRECTLY only when:** Requirements are clear and there's one obvious correct approach
+- **STOP and ASK if unsure:** Better to ask than to implement the wrong solution
+
+### Question Format Rules
+
+- **Wait for Response:** NEVER implement after asking - always wait for the user's explicit choice
+- **Specific Options:** Provide concrete alternatives, not vague descriptions
+- **Number Options:** Use "1), 2), 3)" format for easy selection
+- **Always Include "Other":** End with "4) Other approach - please describe what you have in mind"
+- **One Question at a Time:** Ask one focused question, get answer, then proceed or ask next question
+
+### Implementation Flow
+
+1. **Analyze Request:** Is this clear and unambiguous?
+2. **If Unclear:** Ask specific question with numbered options and STOP
+3. **Wait for Answer:** Do not proceed until user responds
+4. **Confirm Understanding:** "I understand you want option X. I'll implement..."
+5. **Then Implement:** Only after explicit user choice
+
+### Example Interaction Pattern
+
+```
+User: "Add error handling to the function"
+
+Agent: "I see several approaches for error handling. Which would you prefer?
+
+1) Try-catch blocks with specific exception types
+2) Return Result<T, Error> pattern with error types
+3) Simple boolean return with logging
+4) Other approach - please describe what you have in mind
+
+Please let me know which option you'd like me to implement."
+
+[WAIT FOR USER RESPONSE - DO NOT IMPLEMENT YET]
+```
 
 ## Tech Stack
 
