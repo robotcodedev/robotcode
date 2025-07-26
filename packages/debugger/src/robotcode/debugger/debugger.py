@@ -98,6 +98,14 @@ class Undefined:
 UNDEFINED = Undefined()
 
 
+# Debugger configuration constants
+STATE_CHANGE_DELAY = 0.01  # Delay to avoid busy loops during state changes
+EVALUATE_TIMEOUT = 120  # Timeout for keyword evaluation in seconds
+KEYWORD_EVALUATION_TIMEOUT = 60  # Timeout for keyword evaluation wait in seconds
+MAX_EVALUATE_CACHE_SIZE = 50  # Maximum number of items in evaluate cache
+MAX_VARIABLE_ITEMS_DISPLAY = 500  # Maximum items to display in variable view
+
+
 class DebugRepr(reprlib.Repr):
     def __init__(self) -> None:
         super().__init__()
@@ -418,7 +426,7 @@ class Debugger:
             self._variables_object_cache.clear()
             self._evaluate_cache.clear()
 
-        time.sleep(0.01)
+        time.sleep(STATE_CHANGE_DELAY)
 
         self._state = value
 
@@ -813,7 +821,7 @@ class Debugger:
                         self._evaluated_keyword_result = e
                     finally:
                         self._evaluate_keyword_event.set()
-                        self._after_evaluate_keyword_event.wait(120)
+                        self._after_evaluate_keyword_event.wait(EVALUATE_TIMEOUT)
 
                     continue
 
@@ -1636,10 +1644,10 @@ class Debugger:
 
                     for i, (k, v) in enumerate(value.items(), start or 0):
                         result[repr(i)] = self._create_variable(repr(k), v)
-                        if i >= 500:
+                        if i >= MAX_VARIABLE_ITEMS_DISPLAY:
                             result["Unable to handle"] = self._create_variable(
                                 "Unable to handle",
-                                "Maximum number of items (500) reached.",
+                                f"Maximum number of items ({MAX_VARIABLE_ITEMS_DISPLAY}) reached.",
                             )
                             break
 
@@ -1870,7 +1878,7 @@ class Debugger:
 
     def _create_evaluate_result(self, value: Any) -> EvaluateResult:
         self._evaluate_cache.insert(0, value)
-        if len(self._evaluate_cache) > 50:
+        if len(self._evaluate_cache) > MAX_EVALUATE_CACHE_SIZE:
             self._evaluate_cache.pop()
 
         if isinstance(value, Mapping):
@@ -1910,7 +1918,7 @@ class Debugger:
             self.condition.notify_all()
 
         try:
-            self._evaluate_keyword_event.wait(60)
+            self._evaluate_keyword_event.wait(KEYWORD_EVALUATION_TIMEOUT)
         finally:
             result = self._evaluated_keyword_result
 
@@ -1927,7 +1935,7 @@ class Debugger:
 
     def _create_set_variable_result(self, value: Any) -> SetVariableResult:
         self._evaluate_cache.insert(0, value)
-        if len(self._evaluate_cache) > 50:
+        if len(self._evaluate_cache) > MAX_EVALUATE_CACHE_SIZE:
             self._evaluate_cache.pop()
 
         if isinstance(value, Mapping):
