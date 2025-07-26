@@ -28,23 +28,11 @@ applyTo: **/*.py
 - **MUST** use proper __init__.py files for package imports
 
 ### Code Style Standards
-- **Formatting:** Follow Black code style with line length 88
-- **Imports:** isort with profile=black
-- **Type Hints:** Required for all public APIs
+- **Formatting:** we use ruff for formatting
+- **Type Hints:** Required for all APIs
 - **Docstrings:** Google style for modules, classes, and functions
+- **linting:** use ruff for static analysis and mypy for type checking
 
-### Environment Setup
-```bash
-hatch run install-packages    # Install all packages in development mode
-```
-
-### Testing Commands
-```bash
-hatch run test.rf70:test      # Test with Robot Framework 7.0
-hatch run test.rf70.py311:test # Specific Python + RF combination
-hatch run cov                 # Run with coverage reporting
-pytest --regtest2-reset      # Update test snapshots
-```
 
 ### Code Quality
 ```bash
@@ -52,39 +40,10 @@ hatch run lint:all            # All linting checks (black, isort, flake8)
 hatch run lint:fix            # Auto-fix style issues
 ```
 
-## CLI Error Handling Pattern
-
-**REQUIRED** pattern for all CLI tools:
-```python
-try:
-  result = execute_command()
-except Exception as e:
-  app.error(f"Failed to execute: {e}")
-```
-
-## Package-Specific Guidelines
-
-### Core Package (`packages/core/`)
-- **Base utilities and shared functionality**
-- **MUST** be importable by all other packages
-- **NO** dependencies on other RobotCode packages
-
-### Language Server (`packages/language_server/`)
-- **LSP implementation for IDE integration**
-- **ALWAYS** use asyncio patterns
-- **REQUIRED** proper error isolation per workspace
-
-### Debugger (`packages/debugger/`)
-- **Debug Adapter Protocol implementation**
-- **MUST** handle multi-workspace scenarios
-- **REQUIRED** proper session management
-
-### Runner (`packages/runner/`)
-- **Enhanced Robot Framework execution tools**
-- **ALWAYS** use Robot Framework native parser
-- **REQUIRED** configuration via robot.toml
-
 ### Testing Requirements
+
+### Python Interpreter
+- **ask your tools** wich python interpreter to use for the project/workspace
 
 ### Matrix Testing
 - **COMPREHENSIVE** testing across Python 3.8-3.13
@@ -93,18 +52,15 @@ except Exception as e:
 - **SNAPSHOT** testing with pytest regtest2
 
 ### Test Execution
+
+**IMPORTANT**use the correct Python environment selected in your IDE
+
+- **USE** `pytest .` to run unit tests,
 - **USE** `pytest --regtest2-reset` to update snapshots
 - **RUN** specific environments: `hatch run test.rf70.py311:test`
 - **COVERAGE** reporting with `hatch run cov`
 
-## Configuration System
-
-### robot.toml Configuration
-- **IMPLEMENT** robot.toml parsing throughout CLI and language server
-- **SUPPORT** profile management and inheritance
-- **VALIDATE** configuration options
-
-### Multi-Platform Consistency
+## Multi-Platform Consistency
 - **ENSURE** consistent behavior across VS Code and IntelliJ
 - **MAINTAIN** unified configuration approach
 - **DOCUMENT** platform-specific differences

@@ -142,6 +142,7 @@ features = ["all"]
 typing = "mypy --no-incremental --cache-dir /dev/null {args:.}"
 style = ["ruff check .", "ruff format --diff ."]
 all = ["style", "typing"]
+fix = ["ruff check --fix .", "ruff format ."]
 
 [envs.lint.overrides]
 platform.windows.scripts = [
