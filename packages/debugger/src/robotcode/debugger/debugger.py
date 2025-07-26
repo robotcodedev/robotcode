@@ -23,6 +23,7 @@ from typing import (
     MutableMapping,
     NamedTuple,
     Optional,
+    Protocol,
     Sequence,
     Set,
     Tuple,
@@ -104,6 +105,40 @@ EVALUATE_TIMEOUT = 120  # Timeout for keyword evaluation in seconds
 KEYWORD_EVALUATION_TIMEOUT = 60  # Timeout for keyword evaluation wait in seconds
 MAX_EVALUATE_CACHE_SIZE = 50  # Maximum number of items in evaluate cache
 MAX_VARIABLE_ITEMS_DISPLAY = 500  # Maximum items to display in variable view
+
+
+# Type definitions for better type safety
+EvaluationResult = Union[Any, Exception]
+KeywordCallable = Callable[[], EvaluationResult]
+AttributeDict = Dict[str, Any]
+
+
+class ExceptionInformation(TypedDict, total=False):
+    text: Optional[str]
+    description: str
+    status: str
+
+
+class LogMessage(TypedDict, total=False):
+    level: str
+    message: str
+    timestamp: str
+    html: Optional[str]
+
+
+class RobotContextProtocol(Protocol):
+    """Protocol for Robot Framework execution context."""
+
+    variables: Any
+    namespace: Any
+
+
+class KeywordHandlerProtocol(Protocol):
+    """Protocol for Robot Framework keyword handlers."""
+
+    name: str
+    args: Any  # Robot version dependent type
+    arguments: Any  # Robot version dependent type
 
 
 class DebugRepr(reprlib.Repr):
@@ -259,12 +294,14 @@ class PathMapping(NamedTuple):
     remote_root: Optional[str]
 
 
+class DebugLoggerBase:
+    def __init__(self) -> None:
+        self.steps: List[Any] = []
+
+
 if get_robot_version() < (7, 0):
 
-    class DebugLogger:
-        def __init__(self) -> None:
-            self.steps: List[Any] = []
-
+    class DebugLogger(DebugLoggerBase):
         def start_keyword(self, kw: Any) -> None:
             self.steps.append(kw)
 
@@ -275,10 +312,7 @@ else:
     from robot import result, running
     from robot.output.loggerapi import LoggerApi
 
-    class DebugLogger(LoggerApi):  # type: ignore[no-redef]
-        def __init__(self) -> None:
-            self.steps: List[Any] = []
-
+    class DebugLogger(DebugLoggerBase, LoggerApi):  # type: ignore[no-redef]
         def start_try(self, data: "running.Try", result: "result.Try") -> None:
             self.steps.append(data)
 
@@ -293,12 +327,6 @@ else:
 
 
 breakpoint_id_manager = IdManager()
-
-
-class ExceptionInformation(TypedDict):
-    text: Optional[str]
-    description: str
-    status: str
 
 
 class _DebuggerInstanceDescriptor:
@@ -395,8 +423,8 @@ class Debugger:
         self.attached = False
         self.path_mappings: List[PathMapping] = []
 
-        self._keyword_to_evaluate: Optional[Callable[..., Any]] = None
-        self._evaluated_keyword_result: Any = None
+        self._keyword_to_evaluate: Optional[KeywordCallable] = None
+        self._evaluated_keyword_result: Optional[EvaluationResult] = None
         self._evaluate_keyword_event = threading.Event()
         self._evaluate_keyword_event.set()
         self._after_evaluate_keyword_event = threading.Event()
@@ -843,7 +871,7 @@ class Debugger:
                 break
             self._current_exception = None
 
-    def start_output_group(self, name: str, attributes: Dict[str, Any], type: Optional[str] = None) -> None:
+    def start_output_group(self, name: str, attributes: AttributeDict, type: Optional[str] = None) -> None:
         if self.group_output:
             source = attributes.get("source")
             line_no = attributes.get("lineno")
@@ -862,7 +890,7 @@ class Debugger:
                 ),
             )
 
-    def end_output_group(self, name: str, attributes: Dict[str, Any], type: Optional[str] = None) -> None:
+    def end_output_group(self, name: str, attributes: AttributeDict, type: Optional[str] = None) -> None:
         if self.group_output:
             source = attributes.get("source")
             line_no = attributes.get("lineno")
@@ -889,7 +917,7 @@ class Debugger:
         line: Optional[int],
         column: Optional[int] = None,
         *,
-        handler: Any = None,
+        handler: Optional[KeywordHandlerProtocol] = None,
         libname: Optional[str] = None,
         kwname: Optional[str] = None,
         longname: Optional[str] = None,
@@ -943,7 +971,7 @@ class Debugger:
         line: Optional[int],
         column: Optional[int] = None,
         *,
-        handler: Any = None,
+        handler: Optional[KeywordHandlerProtocol] = None,
     ) -> None:
         self.full_stack_frames.popleft()
 
@@ -961,7 +989,7 @@ class Debugger:
             if self.stack_frames:
                 self.stack_frames[0].stack_frames.popleft()
 
-    def start_suite(self, name: str, attributes: Dict[str, Any]) -> None:
+    def start_suite(self, name: str, attributes: AttributeDict) -> None:
         if self.state == State.CallKeyword:
             return
 
@@ -1009,7 +1037,7 @@ class Debugger:
 
                 self.wait_for_running()
 
-    def end_suite(self, name: str, attributes: Dict[str, Any]) -> None:
+    def end_suite(self, name: str, attributes: AttributeDict) -> None:
         if self.state == State.CallKeyword:
             return
 
@@ -1031,7 +1059,7 @@ class Debugger:
 
         self.remove_stackframe_entry(name, type, source, line_no)
 
-    def start_test(self, name: str, attributes: Dict[str, Any]) -> None:
+    def start_test(self, name: str, attributes: AttributeDict) -> None:
         if self.state == State.CallKeyword:
             return
 
@@ -1058,7 +1086,7 @@ class Debugger:
 
             self.wait_for_running()
 
-    def end_test(self, name: str, attributes: Dict[str, Any]) -> None:
+    def end_test(self, name: str, attributes: AttributeDict) -> None:
         if self.state == State.CallKeyword:
             return
 
@@ -1092,7 +1120,7 @@ class Debugger:
         def get_current_keyword_handler(self, name: str) -> UserKeywordHandler:
             return EXECUTION_CONTEXTS.current.namespace.get_runner(name)._handler
 
-    def start_keyword(self, name: str, attributes: Dict[str, Any]) -> None:
+    def start_keyword(self, name: str, attributes: AttributeDict) -> None:
         if self.state == State.CallKeyword:
             return
 
@@ -1107,7 +1135,7 @@ class Debugger:
         libname = attributes.get("libname")
         kwname = attributes.get("kwname")
 
-        handler: Any = None
+        handler: Optional[KeywordHandlerProtocol] = None
         if type in ["KEYWORD", "SETUP", "TEARDOWN"]:
             try:
                 handler = self.get_current_keyword_handler(name)
@@ -1222,7 +1250,7 @@ class Debugger:
                                 return False
         return True
 
-    def end_keyword(self, name: str, attributes: Dict[str, Any]) -> None:
+    def end_keyword(self, name: str, attributes: AttributeDict) -> None:
         if self.state == State.CallKeyword:
             return
 
@@ -1253,7 +1281,7 @@ class Debugger:
         type = attributes.get("type", "KEYWORD")
         kwname = attributes.get("kwname")
 
-        handler: Any = None
+        handler: Optional[KeywordHandlerProtocol] = None
         if type in ["KEYWORD", "SETUP", "TEARDOWN"]:
             try:
                 handler = self.get_current_keyword_handler(name)
@@ -1378,7 +1406,7 @@ class Debugger:
         "DEBUG": "\u001b[38;5;8m",
     }
 
-    def log_message(self, message: Dict[str, Any]) -> None:
+    def log_message(self, message: LogMessage) -> None:
         level = message["level"]
         msg = message["message"]
 
@@ -1438,7 +1466,7 @@ class Debugger:
             + f"{msg}\n"
         )
 
-    def message(self, message: Dict[str, Any]) -> None:
+    def message(self, message: LogMessage) -> None:
         level = message["level"]
         current_frame = self.full_stack_frames[0] if self.full_stack_frames else None
 
@@ -1905,7 +1933,7 @@ class Debugger:
 
         return EvaluateResult(result=repr(value), type=repr(type(value)))
 
-    def run_in_robot_thread(self, kw: Callable[[], Any]) -> Any:
+    def run_in_robot_thread(self, kw: KeywordCallable) -> EvaluationResult:
         with self.condition:
             self._keyword_to_evaluate = kw
             self._evaluated_keyword_result = None

@@ -9,7 +9,7 @@ from robot.model import Message
 from robotcode.core.utils.path import normalized_path
 
 from .dap_types import Event, Model
-from .debugger import Debugger
+from .debugger import Debugger, LogMessage
 from .mixins import SyncedEventBody
 
 
@@ -220,7 +220,7 @@ class ListenerV2:
 
     RE_FILE_LINE_MATCHER = re.compile(r".+\sin\sfile\s'(?P<file>.*)'\son\sline\s(?P<line>\d+):(?P<message>.*)")
 
-    def log_message(self, message: Dict[str, Any]) -> None:
+    def log_message(self, message: LogMessage) -> None:
         if message["level"] in ["FAIL", "ERROR", "WARN"]:
             current_frame = Debugger.instance.full_stack_frames[0] if Debugger.instance.full_stack_frames else None
 
@@ -273,7 +273,7 @@ class ListenerV2:
 
         Debugger.instance.log_message(message)
 
-    def message(self, message: Dict[str, Any]) -> None:
+    def message(self, message: LogMessage) -> None:
         if message["level"] in ["FAIL", "ERROR", "WARN"]:
             current_frame = Debugger.instance.full_stack_frames[0] if Debugger.instance.full_stack_frames else None
 
