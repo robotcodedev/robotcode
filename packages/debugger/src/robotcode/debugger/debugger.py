@@ -72,6 +72,10 @@ from .dap_types import (
 )
 from .id_manager import IdManager
 
+if get_robot_version() >= (5, 0):
+    from robot.running.model import Try
+    from robot.utils import Matcher as RobotMatcher
+
 if get_robot_version() >= (7, 0):
     from robot.running import UserKeyword as UserKeywordHandler
 else:
@@ -1202,12 +1206,8 @@ class Debugger:
 
     def _glob_matcher(self, message: str, pattern: str) -> bool:
         """Optimized glob matcher with cached Robot Matcher."""
-        if self.__robot_matcher is None:
-            from robot.utils import Matcher
 
-            self.__robot_matcher = Matcher
-
-        return bool(self.__robot_matcher(pattern, spaceless=False, caseless=False).match(message))
+        return bool(RobotMatcher(pattern, spaceless=False, caseless=False).match(message))
 
     def _regexp_matcher(self, message: str, pattern: str) -> bool:
         """Optimized regex matcher with LRU caching (max 25 entries)."""
@@ -1259,14 +1259,21 @@ class Debugger:
         def _get_step_data(self, step: Any) -> Any:
             return step.data
 
-    def is_not_caugthed_by_except(self, message: Optional[str]) -> bool:
-        if not message:
-            return True
+    if get_robot_version() < (5, 0):
 
-        if self.debug_logger:
-            if get_robot_version() >= (5, 0):
-                from robot.running.model import Try
+        def is_not_caugthed_by_except(self, message: Optional[str]) -> bool:
+            if not message:
+                return True
+            return False
+    else:
 
+        def is_not_caugthed_by_except(self, message: Optional[str]) -> bool:
+            if not message:
+                return True
+
+            # TODO resolve variables in exception message
+
+            if self.debug_logger:
                 if self.debug_logger.steps:
                     for branch in [
                         self._get_step_data(f)
@@ -1276,7 +1283,7 @@ class Debugger:
                         for except_branch in branch.except_branches:
                             if self._should_run_except(except_branch, message):
                                 return False
-        return True
+            return True
 
     def end_keyword(self, name: str, attributes: AttributeDict) -> None:
         if self.state == State.CallKeyword:
@@ -1610,131 +1617,143 @@ class Debugger:
         count: Optional[int] = None,
         format: Optional[ValueFormat] = None,
     ) -> List[Variable]:
-        result: MutableMapping[str, Any] = {}
-
         if filter is None:
-            entry = next(
-                (
-                    v
-                    for v in self.stack_frames
-                    if variables_reference in [v.global_id, v.suite_id, v.test_id, v.local_id]
-                ),
-                None,
+            return self._get_variables_no_filter(variables_reference)
+        if filter == "indexed":
+            return self._get_variables_indexed(variables_reference, start, count)
+        if filter == "named":
+            return self._get_variables_named(variables_reference, start, count)
+
+        raise ValueError(f"Unknown filter: {filter}")
+
+    def _get_variables_no_filter(self, variables_reference: int) -> List[Variable]:
+        result: MutableMapping[str, Any] = {}
+        entry = next(
+            (v for v in self.stack_frames if variables_reference in [v.global_id, v.suite_id, v.test_id, v.local_id]),
+            None,
+        )
+        if entry is not None:
+            context = entry.context()
+            if context is not None:
+                if entry.global_id == variables_reference:
+                    result.update(
+                        {k: self._create_variable(k, v) for k, v in context.variables._global.as_dict().items()}
+                    )
+                elif entry.suite_id == variables_reference:
+                    result.update(self._get_suite_variables(context, entry))
+                elif entry.test_id == variables_reference:
+                    result.update(self._get_test_variables(context, entry))
+                elif entry.local_id == variables_reference:
+                    result.update(self._get_local_variables(context, entry))
+        else:
+            value = self._variables_cache.get(variables_reference, None)
+            result.update(self._get_cached_variables(value))
+        return list(result.values())
+
+    def _get_suite_variables(self, context: Any, entry: Any) -> MutableMapping[str, Variable]:
+        result: MutableMapping[str, Variable] = {}
+        globals = context.variables._global.as_dict()
+        vars = entry.get_first_or_self().variables()
+        vars_dict = vars.as_dict() if vars is not None else {}
+        for k, v in context.variables._suite.as_dict().items():
+            if (k not in globals or globals[k] != v) and (k in vars_dict):
+                result[k] = self._create_variable(k, v)
+        return result
+
+    def _get_test_variables(self, context: Any, entry: Any) -> MutableMapping[str, Variable]:
+        result: MutableMapping[str, Variable] = {}
+        globals = context.variables._suite.as_dict()
+        vars = entry.get_first_or_self().variables()
+        vars_dict = vars.as_dict() if vars is not None else {}
+        for k, v in context.variables._test.as_dict().items():
+            if (k not in globals or globals[k] != v) and (k in vars_dict):
+                result[k] = self._create_variable(k, v)
+        return result
+
+    def _get_local_variables(self, context: Any, entry: Any) -> MutableMapping[str, Variable]:
+        result: MutableMapping[str, Variable] = {}
+        vars = entry.get_first_or_self().variables()
+        if self._current_exception is not None:
+            result["${EXCEPTION}"] = self._create_variable(
+                "${EXCEPTION}",
+                self._current_exception,
+                VariablePresentationHint(kind="virtual"),
             )
-            if entry is not None:
-                context = entry.context()
-                if context is not None:
-                    if entry.global_id == variables_reference:
-                        result.update(
-                            {k: self._create_variable(k, v) for k, v in context.variables._global.as_dict().items()}
-                        )
-                    elif entry.suite_id == variables_reference:
-                        globals = context.variables._global.as_dict()
-                        vars = entry.get_first_or_self().variables()
-                        vars_dict = vars.as_dict() if vars is not None else {}
-                        result.update(
-                            {
-                                k: self._create_variable(k, v)
-                                for k, v in context.variables._suite.as_dict().items()
-                                if (k not in globals or globals[k] != v) and (k in vars_dict)
-                            }
-                        )
-                    elif entry.test_id == variables_reference:
-                        globals = context.variables._suite.as_dict()
-                        vars = entry.get_first_or_self().variables()
-                        vars_dict = vars.as_dict() if vars is not None else {}
-                        result.update(
-                            {
-                                k: self._create_variable(k, v)
-                                for k, v in context.variables._test.as_dict().items()
-                                if (k not in globals or globals[k] != v) and (k in vars_dict)
-                            }
-                        )
-                    elif entry.local_id == variables_reference:
-                        vars = entry.get_first_or_self().variables()
+        if vars is not None:
+            p = entry.parent() if entry.parent else None
+            globals = (
+                (p.get_first_or_self().variables() if p is not None else None)
+                or context.variables._test
+                or context.variables._suite
+                or context.variables._global
+            ).as_dict()
+            suite_vars = (context.variables._suite or context.variables._global).as_dict()
+            for k, v in vars.as_dict().items():
+                if (k not in globals or globals[k] != v) and (
+                    entry.handler is None or k not in suite_vars or suite_vars[k] != v
+                ):
+                    result[k] = self._create_variable(k, v)
+            if entry.handler is not None and self.get_handler_args(entry.handler):
+                for argument in self.get_handler_args(entry.handler).argument_names:
+                    name = f"${{{argument}}}"
+                    try:
+                        value = vars[name]
+                    except (SystemExit, KeyboardInterrupt):
+                        raise
+                    except BaseException as e:
+                        value = str(e)
+                    result[name] = self._create_variable(name, value)
+        return result
 
-                        if self._current_exception is not None:
-                            result["${EXCEPTION}"] = self._create_variable(
-                                "${EXCEPTION}",
-                                self._current_exception,
-                                VariablePresentationHint(kind="virtual"),
-                            )
+    def _get_cached_variables(self, value: Any) -> MutableMapping[str, Variable]:
+        result: MutableMapping[str, Variable] = {}
+        if value is not None and isinstance(value, Mapping):
+            result["len()"] = self._create_variable("len()", len(value))
+            for i, (k, v) in enumerate(value.items()):
+                result[repr(i)] = self._create_variable(repr(k), v)
+                if i >= MAX_VARIABLE_ITEMS_DISPLAY:
+                    result["Unable to handle"] = self._create_variable(
+                        "Unable to handle",
+                        f"Maximum number of items ({MAX_VARIABLE_ITEMS_DISPLAY}) reached.",
+                    )
+                    break
+        elif value is not None and isinstance(value, Sequence) and not isinstance(value, str):
+            result["len()"] = self._create_variable("len()", len(value))
+        return result
 
-                        if vars is not None:
-                            p = entry.parent() if entry.parent else None
+    def _get_variables_indexed(
+        self,
+        variables_reference: int,
+        start: Optional[int],
+        count: Optional[int],
+    ) -> List[Variable]:
+        result: MutableMapping[str, Any] = {}
+        value = self._variables_cache.get(variables_reference, None)
+        if value is not None:
+            c = 0
+            padding = len(str(len(value)))
+            for i, v in enumerate(value[start:], start or 0):
+                result[str(i)] = self._create_variable(str(i).zfill(padding), v)
+                c += 1
+                if count is not None and c >= count:
+                    break
+        return list(result.values())
 
-                            globals = (
-                                (p.get_first_or_self().variables() if p is not None else None)
-                                or context.variables._test
-                                or context.variables._suite
-                                or context.variables._global
-                            ).as_dict()
-
-                            suite_vars = (context.variables._suite or context.variables._global).as_dict()
-
-                            result.update(
-                                {
-                                    k: self._create_variable(k, v)
-                                    for k, v in vars.as_dict().items()
-                                    if (k not in globals or globals[k] != v)
-                                    and (entry.handler is None or k not in suite_vars or suite_vars[k] != v)
-                                }
-                            )
-
-                            if entry.handler is not None and self.get_handler_args(entry.handler):
-                                for argument in self.get_handler_args(entry.handler).argument_names:
-                                    name = f"${{{argument}}}"
-                                    try:
-                                        value = vars[name]
-                                    except (SystemExit, KeyboardInterrupt):
-                                        raise
-                                    except BaseException as e:
-                                        value = str(e)
-
-                                    result[name] = self._create_variable(name, value)
-            else:
-                value = self._variables_cache.get(variables_reference, None)
-
-                if value is not None and isinstance(value, Mapping):
-                    result.update({"len()": self._create_variable("len()", len(value))})
-
-                    for i, (k, v) in enumerate(value.items(), start or 0):
-                        result[repr(i)] = self._create_variable(repr(k), v)
-                        if i >= MAX_VARIABLE_ITEMS_DISPLAY:
-                            result["Unable to handle"] = self._create_variable(
-                                "Unable to handle",
-                                f"Maximum number of items ({MAX_VARIABLE_ITEMS_DISPLAY}) reached.",
-                            )
-                            break
-
-                elif value is not None and isinstance(value, Sequence) and not isinstance(value, str):
-                    result.update({"len()": self._create_variable("len()", len(value))})
-
-        elif filter == "indexed":
-            value = self._variables_cache.get(variables_reference, None)
-
-            if value is not None:
-                c = 0
-
-                padding = len(str(len(value)))
-
-                for i, v in enumerate(value[start:], start or 0):
-                    result[str(i)] = self._create_variable(str(i).zfill(padding), v)
-                    c += 1
-                    if count is not None and c >= count:
-                        break
-
-        elif filter == "named":
-            value = self._variables_cache.get(variables_reference, None)
-
-            if value is not None and isinstance(value, Mapping):
-                for i, (k, v) in enumerate(value.items(), start or 0):
-                    result[repr(i)] = self._create_variable(repr(k), v)
-                    if count is not None and i >= count:
-                        break
-            elif value is not None and isinstance(value, Sequence) and not isinstance(value, str):
-                result.update({"len()": self._create_variable("len()", len(value))})
-
+    def _get_variables_named(
+        self,
+        variables_reference: int,
+        start: Optional[int],
+        count: Optional[int],
+    ) -> List[Variable]:
+        result: MutableMapping[str, Any] = {}
+        value = self._variables_cache.get(variables_reference, None)
+        if value is not None and isinstance(value, Mapping):
+            for i, (k, v) in enumerate(value.items(), start or 0):
+                result[repr(i)] = self._create_variable(repr(k), v)
+                if count is not None and i >= count:
+                    break
+        elif value is not None and isinstance(value, Sequence) and not isinstance(value, str):
+            result["len()"] = self._create_variable("len()", len(value))
         return list(result.values())
 
     IS_VARIABLE_RE: ClassVar = re.compile(r"^[$@&]\{.*\}(\[[^\]]*\])?$")
