@@ -1771,158 +1771,34 @@ class Debugger:
         context: Union[EvaluateArgumentContext, str, None] = None,
         format: Optional[ValueFormat] = None,
     ) -> EvaluateResult:
+        """Evaluate an expression in the context of a stack frame."""
         if not expression:
             return EvaluateResult(result="")
 
-        if (
-            (context == EvaluateArgumentContext.REPL)
-            and expression.startswith("#")
-            and expression[1:].strip() == "exprmode"
-        ):
+        # Handle expression mode toggle
+        if self._is_expression_mode_toggle(expression, context):
             self.expression_mode = not self.expression_mode
             return EvaluateResult(result="# Expression mode is now " + ("on" if self.expression_mode else "off"))
 
-        stack_frame = next((v for v in self.full_stack_frames if v.id == frame_id), None)
-
-        evaluate_context = stack_frame.context() if stack_frame else None
-
+        # Get evaluation context
+        stack_frame, evaluate_context = self._get_evaluation_context(frame_id)
         if evaluate_context is None:
-            evaluate_context = EXECUTION_CONTEXTS.current
-
-        if stack_frame is None and evaluate_context is None:
             return EvaluateResult(result="Unable to evaluate expression. No context available.", type="FatalError")
 
-        result: Any = None
+        # Process CURDIR substitution
+        processed_expression = self._process_curdir_substitution(expression, stack_frame)
+        if isinstance(processed_expression, EvaluateResult):
+            return processed_expression
+
+        # Get variables context
+        vars = self._get_variables_context(stack_frame, evaluate_context)
+
+        # Evaluate expression
         try:
-            if stack_frame is not None and stack_frame.source is not None:
-                curdir = str(Path(stack_frame.source).parent)
-                expression = self.CURRDIR.sub(curdir.replace("\\", "\\\\"), expression)
-                if expression == curdir:
-                    return EvaluateResult(repr(expression), repr(type(expression)))
-
-            vars = (
-                (stack_frame.get_first_or_self().variables() or evaluate_context.variables.current)
-                if stack_frame is not None
-                else evaluate_context.variables._global
-            )
-            if (
-                isinstance(context, EvaluateArgumentContext) and context != EvaluateArgumentContext.REPL
-            ) or self.expression_mode:
-                if expression.startswith("! "):
-                    splitted = self.SPLIT_LINE.split(expression[2:].strip())
-
-                    if splitted:
-                        variables: List[str] = []
-                        while len(splitted) > 1 and self.IS_VARIABLE_ASSIGNMENT_RE.match(splitted[0].strip()):
-                            var = splitted[0]
-                            splitted = splitted[1:]
-                            if var.endswith("="):
-                                var = var[:-1]
-                            variables.append(var)
-
-                        if splitted:
-
-                            def run_kw() -> Any:
-                                kw = Keyword(
-                                    name=splitted[0],
-                                    args=tuple(splitted[1:]),
-                                    assign=tuple(variables),
-                                )
-                                return self._run_keyword(kw, evaluate_context)
-
-                            result = self.run_in_robot_thread(run_kw)
-
-                            if isinstance(result, BaseException):
-                                raise result
-
-                elif self.IS_VARIABLE_RE.match(expression.strip()):
-                    try:
-                        result = vars.replace_scalar(expression)
-                    except VariableError:
-                        if context is not None and (
-                            (
-                                isinstance(context, EvaluateArgumentContext)
-                                and (
-                                    context
-                                    in [
-                                        EvaluateArgumentContext.HOVER,
-                                        EvaluateArgumentContext.WATCH,
-                                    ]
-                                )
-                            )
-                            or context
-                            in [
-                                EvaluateArgumentContext.HOVER.value,
-                                EvaluateArgumentContext.WATCH.value,
-                            ]
-                        ):
-                            result = UNDEFINED
-                        else:
-                            raise
-                else:
-                    result = internal_evaluate_expression(vars.replace_string(expression), vars)
+            if self._is_expression_mode(context):
+                result = self._evaluate_expression_mode(processed_expression, vars, evaluate_context, context)
             else:
-                parts = self.SPLIT_LINE.split(expression.strip())
-                if parts and len(parts) == 1 and self.IS_VARIABLE_RE.match(parts[0].strip()):
-                    # result = vars[parts[0].strip()]
-                    result = vars.replace_scalar(parts[0].strip())
-                else:
-
-                    def get_test_body_from_string(command: str) -> TestCase:
-                        suite_str = (
-                            "*** Test Cases ***\nDummyTestCase423141592653589793\n  "
-                            + ("\n  ".join(command.split("\n")) if "\n" in command else command)
-                        ) + "\n"
-
-                        model = get_model(suite_str)
-                        suite: TestSuite = TestSuite.from_model(model)
-                        return cast(TestCase, suite.tests[0])
-
-                    def run_kw() -> Any:
-                        test = get_test_body_from_string(expression)
-                        result = None
-
-                        if len(test.body):
-                            if get_robot_version() >= (7, 3):
-                                for kw in test.body:
-                                    with evaluate_context.output.delayed_logging:
-                                        try:
-                                            result = self._run_keyword(kw, evaluate_context)
-                                        except (SystemExit, KeyboardInterrupt):
-                                            raise
-                                        except BaseException as e:
-                                            result = e
-                                            break
-                            else:
-                                for kw in test.body:
-                                    with LOGGER.delayed_logging:
-                                        try:
-                                            result = self._run_keyword(kw, evaluate_context)
-                                        except (SystemExit, KeyboardInterrupt):
-                                            raise
-                                        except BaseException as e:
-                                            result = e
-                                            break
-                                        finally:
-                                            if get_robot_version() <= (7, 2):
-                                                messages = LOGGER._log_message_cache or []
-                                                for msg in messages or ():
-                                                    # hack to get and evaluate log level
-                                                    listener: Any = next(iter(LOGGER), None)
-                                                    if listener is None or self.check_message_is_logged(listener, msg):
-                                                        self.log_message(
-                                                            {
-                                                                "level": msg.level,
-                                                                "message": msg.message,
-                                                                "timestamp": msg.timestamp,
-                                                            }
-                                                        )
-                        return result
-
-                    result = self.run_in_robot_thread(run_kw)
-
-                    if isinstance(result, BaseException):
-                        raise result
+                result = self._evaluate_repl_mode(processed_expression, vars, evaluate_context)
 
         except (SystemExit, KeyboardInterrupt):
             raise
@@ -1931,6 +1807,197 @@ class Debugger:
             raise
 
         return self._create_evaluate_result(result)
+
+    def _is_expression_mode_toggle(self, expression: str, context: Union[EvaluateArgumentContext, str, None]) -> bool:
+        """Check if expression is a command to toggle expression mode."""
+        return (
+            (context == EvaluateArgumentContext.REPL)
+            and expression.startswith("#")
+            and expression[1:].strip() == "exprmode"
+        )
+
+    def _get_evaluation_context(self, frame_id: Optional[int]) -> tuple[Optional[StackFrameEntry], Any]:
+        """Get the stack frame and evaluation context for the given frame ID."""
+        stack_frame = next((v for v in self.full_stack_frames if v.id == frame_id), None)
+        evaluate_context = stack_frame.context() if stack_frame else None
+
+        if evaluate_context is None:
+            evaluate_context = EXECUTION_CONTEXTS.current
+
+        return stack_frame, evaluate_context
+
+    def _process_curdir_substitution(
+        self, expression: str, stack_frame: Optional[StackFrameEntry]
+    ) -> Union[str, EvaluateResult]:
+        """Process ${CURDIR} substitution in expression."""
+        if stack_frame is not None and stack_frame.source is not None:
+            curdir = str(Path(stack_frame.source).parent)
+            expression = self.CURRDIR.sub(curdir.replace("\\", "\\\\"), expression)
+            if expression == curdir:
+                return EvaluateResult(repr(expression), repr(type(expression)))
+        return expression
+
+    def _get_variables_context(self, stack_frame: Optional[StackFrameEntry], evaluate_context: Any) -> Any:
+        """Get the variables context for evaluation."""
+        return (
+            (stack_frame.get_first_or_self().variables() or evaluate_context.variables.current)
+            if stack_frame is not None
+            else evaluate_context.variables._global
+        )
+
+    def _is_expression_mode(self, context: Union[EvaluateArgumentContext, str, None]) -> bool:
+        """Check if we should use expression mode for evaluation."""
+        return (
+            isinstance(context, EvaluateArgumentContext) and context != EvaluateArgumentContext.REPL
+        ) or self.expression_mode
+
+    def _evaluate_expression_mode(
+        self, expression: str, vars: Any, evaluate_context: Any, context: Union[EvaluateArgumentContext, str, None]
+    ) -> Any:
+        """Evaluate expression in expression mode."""
+        if expression.startswith("! "):
+            return self._evaluate_keyword_expression(expression, evaluate_context)
+        if self.IS_VARIABLE_RE.match(expression.strip()):
+            return self._evaluate_variable_expression(expression, vars, context)
+        return internal_evaluate_expression(vars.replace_string(expression), vars)
+
+    def _evaluate_keyword_expression(self, expression: str, evaluate_context: Any) -> Any:
+        """Evaluate a keyword expression (starting with '! ')."""
+        splitted = self.SPLIT_LINE.split(expression[2:].strip())
+
+        if not splitted:
+            return None
+
+        # Extract variable assignments
+        variables: List[str] = []
+        while len(splitted) > 1 and self.IS_VARIABLE_ASSIGNMENT_RE.match(splitted[0].strip()):
+            var = splitted[0]
+            splitted = splitted[1:]
+            if var.endswith("="):
+                var = var[:-1]
+            variables.append(var)
+
+        if not splitted:
+            return None
+
+        def run_kw() -> Any:
+            kw = Keyword(
+                name=splitted[0],
+                args=tuple(splitted[1:]),
+                assign=tuple(variables),
+            )
+            return self._run_keyword(kw, evaluate_context)
+
+        result = self.run_in_robot_thread(run_kw)
+
+        if isinstance(result, BaseException):
+            raise result
+
+        return result
+
+    def _evaluate_variable_expression(
+        self, expression: str, vars: Any, context: Union[EvaluateArgumentContext, str, None]
+    ) -> Any:
+        """Evaluate a variable expression."""
+        try:
+            return vars.replace_scalar(expression)
+        except VariableError:
+            if self._should_return_undefined_for_variable_error(context):
+                return UNDEFINED
+            raise
+
+    def _should_return_undefined_for_variable_error(self, context: Union[EvaluateArgumentContext, str, None]) -> bool:
+        """Check if we should return UNDEFINED for variable errors in certain contexts."""
+        return context is not None and (
+            (
+                isinstance(context, EvaluateArgumentContext)
+                and context in [EvaluateArgumentContext.HOVER, EvaluateArgumentContext.WATCH]
+            )
+            or context in [EvaluateArgumentContext.HOVER.value, EvaluateArgumentContext.WATCH.value]
+        )
+
+    def _evaluate_repl_mode(self, expression: str, vars: Any, evaluate_context: Any) -> Any:
+        """Evaluate expression in REPL mode."""
+        parts = self.SPLIT_LINE.split(expression.strip())
+        if parts and len(parts) == 1 and self.IS_VARIABLE_RE.match(parts[0].strip()):
+            return vars.replace_scalar(parts[0].strip())
+        return self._evaluate_test_body_expression(expression, evaluate_context)
+
+    def _evaluate_test_body_expression(self, expression: str, evaluate_context: Any) -> Any:
+        """Evaluate a test body expression (Robot Framework commands)."""
+
+        def get_test_body_from_string(command: str) -> TestCase:
+            suite_str = (
+                "*** Test Cases ***\nDummyTestCase423141592653589793\n  "
+                + ("\n  ".join(command.split("\n")) if "\n" in command else command)
+            ) + "\n"
+
+            model = get_model(suite_str)
+            suite: TestSuite = TestSuite.from_model(model)
+            return cast(TestCase, suite.tests[0])
+
+        def run_kw() -> Any:
+            test = get_test_body_from_string(expression)
+            result = None
+
+            if len(test.body):
+                if get_robot_version() >= (7, 3):
+                    result = self._execute_keywords_with_delayed_logging_v73(test.body, evaluate_context)
+                else:
+                    result = self._execute_keywords_with_delayed_logging_legacy(test.body, evaluate_context)
+            return result
+
+        result = self.run_in_robot_thread(run_kw)
+
+        if isinstance(result, BaseException):
+            raise result
+
+        return result
+
+    def _execute_keywords_with_delayed_logging_v73(self, keywords: Any, evaluate_context: Any) -> Any:
+        """Execute keywords with delayed logging for Robot Framework >= 7.3."""
+        result = None
+        for kw in keywords:
+            with evaluate_context.output.delayed_logging:
+                try:
+                    result = self._run_keyword(kw, evaluate_context)
+                except (SystemExit, KeyboardInterrupt):
+                    raise
+                except BaseException as e:
+                    result = e
+                    break
+        return result
+
+    def _execute_keywords_with_delayed_logging_legacy(self, keywords: Any, evaluate_context: Any) -> Any:
+        """Execute keywords with delayed logging for Robot Framework < 7.3."""
+        result = None
+        for kw in keywords:
+            with LOGGER.delayed_logging:
+                try:
+                    result = self._run_keyword(kw, evaluate_context)
+                except (SystemExit, KeyboardInterrupt):
+                    raise
+                except BaseException as e:
+                    result = e
+                    break
+                finally:
+                    if get_robot_version() <= (7, 2):
+                        self._process_delayed_log_messages()
+        return result
+
+    def _process_delayed_log_messages(self) -> None:
+        """Process delayed log messages for older Robot Framework versions."""
+        messages = LOGGER._log_message_cache or []
+        for msg in messages or ():
+            listener: Any = next(iter(LOGGER), None)
+            if listener is None or self.check_message_is_logged(listener, msg):
+                self.log_message(
+                    {
+                        "level": msg.level,
+                        "message": msg.message,
+                        "timestamp": msg.timestamp,
+                    }
+                )
 
     def _create_evaluate_result(self, value: Any) -> EvaluateResult:
         if isinstance(value, Mapping):
