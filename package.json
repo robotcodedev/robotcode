@@ -448,10 +448,13 @@
       "editor.semanticTokenColorCustomizations": {
         "rules": {
           "*.documentation:robotframework": {
-            "fontStyle": "italic"
+            "italic": true
           },
           "*.embedded:robotframework": {
-            "fontStyle": "italic"
+            "italic": true
+          },
+          "*.builtin:robotframework": {
+            "italic": true
           }
         }
       }
@@ -511,9 +514,6 @@
           ],
           "argument": [
             "string.unquoted.argument.robotframework"
-          ],
-          "embeddedArgument": [
-            "string.unquoted.embeddedArgument.robotframework"
           ],
           "variable": [
             "variable.name.readwrite.robotframework"

@@ -111,7 +111,6 @@ ROBOT_OPERATOR = "OPERATOR"
 
 
 class RobotSemTokenTypes(Enum):
-    SECTION = "section"
     SETTING_IMPORT = "settingImport"
     SETTING = "setting"
     HEADER = "header"
@@ -125,7 +124,6 @@ class RobotSemTokenTypes(Enum):
     KEYWORD_NAME = "keywordName"
     CONTROL_FLOW = "controlFlow"
     ARGUMENT = "argument"
-    EMBEDDED_ARGUMENT = "embeddedArgument"
     VARIABLE = "variable"
     KEYWORD = "keywordCall"
     KEYWORD_INNER = "keywordCallInner"
@@ -1156,9 +1154,9 @@ class SemanticTokenGenerator:
             if token.type in [Token.DOCUMENTATION, Token.METADATA]:
                 sem_mod = {SemanticTokenModifiers.DOCUMENTATION}
 
-            if token.type in [Token.VARIABLE, Token.ASSIGN]:
-                # TODO: maybe we can distinguish between local and global variables, by default all variables are global
-                pass
+            # TODO: maybe we can distinguish between local and global variables, by default all variables are global
+            # if token.type in [Token.VARIABLE, Token.ASSIGN]:
+            #     pass
 
             elif token.type in [Token.KEYWORD, ROBOT_KEYWORD_INNER] or (
                 token.type == Token.NAME and cached_isinstance(node, Fixture, Template, TestTemplate)
