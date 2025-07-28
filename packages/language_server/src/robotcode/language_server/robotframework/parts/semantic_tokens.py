@@ -484,38 +484,6 @@ class ArgumentProcessor:
         except StopIteration:
             return None
 
-    def consume_until_separator(self, separator_values: List[str]) -> List[Token]:
-        """Consume tokens until separator is found.
-
-        Args:
-            separator_values: List of separator values to stop at
-
-        Returns:
-            List of consumed tokens (excluding separator)
-        """
-        consumed = []
-        while self.has_next():
-            next_token = self.peek()
-            if next_token and next_token.value in separator_values:
-                break
-            consumed_token = self.consume()
-            if consumed_token:
-                consumed.append(consumed_token)
-        return consumed
-
-    def consume_all_remaining(self) -> List[Token]:
-        """Consume all remaining tokens efficiently.
-
-        Returns:
-            List of all remaining tokens
-        """
-        consumed = []
-        while self.has_next():
-            consumed_token = self.consume()
-            if consumed_token:
-                consumed.append(consumed_token)
-        return consumed
-
     def iter_until_separator(self, separator_values: List[str]) -> Iterator[Token]:
         """Iterate tokens until separator is found without creating a list.
 
@@ -543,50 +511,6 @@ class ArgumentProcessor:
             token = self.consume()
             if token:
                 yield token
-
-    def count_until_separator(self, separator_values: List[str]) -> int:
-        """Count tokens until separator without consuming them.
-
-        Args:
-            separator_values: List of separator values to stop at
-
-        Returns:
-            Number of tokens until separator (excluding separator)
-        """
-        count = 0
-        saved_index = self.index
-        while self.has_next():
-            next_token = self.peek()
-            if next_token and next_token.value in separator_values:
-                break
-            self.consume()
-            count += 1
-        self.index = saved_index
-        return count
-
-    def process_until_separator_direct(
-        self, separator_values: List[str], processor_func: Any, *args: Any, **kwargs: Any
-    ) -> Any:
-        """Process tokens until separator directly without creating intermediate lists.
-
-        Args:
-            separator_values: List of separator values to stop at
-            processor_func: Function to call for each token
-            *args, **kwargs: Additional arguments for processor_func
-
-        Returns:
-            Result from processor_func
-        """
-        start_index = self.index
-        count = self.count_until_separator(separator_values)
-
-        if count == 0:
-            return processor_func([], *args, **kwargs)
-
-        tokens_slice = self.arguments[start_index : start_index + count]
-        self.index = start_index + count
-
-        return processor_func(tokens_slice, *args, **kwargs)
 
 
 class NamedArgumentProcessor:
