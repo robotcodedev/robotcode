@@ -152,20 +152,25 @@ class RobotSemTokenModifiers(Enum):
     EMBEDDED = "embedded"
 
 
+# Type aliases for better type hints - extend base types to be compatible with LSP framework
+AnyTokenType = Union[RobotSemTokenTypes, SemanticTokenTypes, Enum]
+AnyTokenModifier = Union[RobotSemTokenModifiers, SemanticTokenModifiers, Enum]
+
+
 @dataclass
 class SemTokenInfo:
     lineno: int
     col_offset: int
     length: int
-    sem_token_type: Enum
-    sem_modifiers: Optional[Set[Enum]] = None
+    sem_token_type: AnyTokenType
+    sem_modifiers: Optional[Set[AnyTokenModifier]] = None
 
     @classmethod
     def from_token(
         cls,
         token: Token,
-        sem_token_type: Enum,
-        sem_modifiers: Optional[Set[Enum]] = None,
+        sem_token_type: AnyTokenType,
+        sem_modifiers: Optional[Set[AnyTokenModifier]] = None,
         col_offset: Optional[int] = None,
         length: Optional[int] = None,
     ) -> "SemTokenInfo":
@@ -187,7 +192,7 @@ class SemanticTokenMapper:
     - Managing builtin keyword matching
     """
 
-    _mapping: ClassVar[Optional[Dict[str, Tuple[Enum, Optional[Set[Enum]]]]]] = None
+    _mapping: ClassVar[Optional[Dict[str, Tuple[AnyTokenType, Optional[Set[AnyTokenModifier]]]]]] = None
 
     ESCAPE_REGEX: ClassVar[Pattern[str]] = re.compile(
         r"(?P<t>[^\\]+)|(?P<x>\\(?:[\\nrt]|x[0-9A-Fa-f]{2}|u[0-9a-fA-F]{4}|U[0-9a-fA-F]{8}))|(?P<e>\\(?:[^\\nrt\\xuU]|[\\xuU][^0-9a-fA-F]))",
@@ -197,13 +202,13 @@ class SemanticTokenMapper:
     BUILTIN_MATCHER: ClassVar[KeywordMatcher] = KeywordMatcher("BuiltIn", is_namespace=True)
 
     @classmethod
-    def generate_mapping(cls) -> Dict[str, Tuple[Enum, Optional[Set[Enum]]]]:
+    def generate_mapping(cls) -> Dict[str, Tuple[AnyTokenType, Optional[Set[AnyTokenModifier]]]]:
         """Generate semantic token mappings for different Robot Framework versions.
 
         Returns:
             Dict mapping token types to semantic token information
         """
-        definition: Dict[FrozenSet[str], Tuple[Enum, Optional[Set[Enum]]]] = {
+        definition: Dict[FrozenSet[str], Tuple[AnyTokenType, Optional[Set[AnyTokenModifier]]]] = {
             frozenset(Token.HEADER_TOKENS): (RobotSemTokenTypes.HEADER, None),
             frozenset({Token.SETTING_HEADER}): (
                 RobotSemTokenTypes.HEADER_SETTINGS,
@@ -348,7 +353,7 @@ class SemanticTokenMapper:
                 }
             )
 
-        result: Dict[str, Tuple[Enum, Optional[Set[Enum]]]] = {}
+        result: Dict[str, Tuple[AnyTokenType, Optional[Set[AnyTokenModifier]]]] = {}
         for k, v in definition.items():
             for e in k:
                 result[e] = v
@@ -356,7 +361,7 @@ class SemanticTokenMapper:
         return result
 
     @classmethod
-    def mapping(cls) -> Dict[str, Tuple[Enum, Optional[Set[Enum]]]]:
+    def mapping(cls) -> Dict[str, Tuple[AnyTokenType, Optional[Set[AnyTokenModifier]]]]:
         """Get cached token type mappings.
 
         Returns:
@@ -366,7 +371,9 @@ class SemanticTokenMapper:
             cls._mapping = cls.generate_mapping()
         return cls._mapping
 
-    def get_semantic_info(self, token_type: Optional[str]) -> Optional[Tuple[Enum, Optional[Set[Enum]]]]:
+    def get_semantic_info(
+        self, token_type: Optional[str]
+    ) -> Optional[Tuple[AnyTokenType, Optional[Set[AnyTokenModifier]]]]:
         """Get semantic token information for a given token type.
 
         Args:
@@ -631,68 +638,6 @@ class NamedArgumentProcessor:
             yield from self.generate_named_argument_tokens(token, arg_info, node, token_type_override)
         else:
             yield token, node
-
-    def process_semantic_token_for_named_argument(self, token: Token, node: ast.AST) -> Iterator[SemTokenInfo]:
-        """Process a token for named argument in semantic token context.
-
-        Args:
-            token: The token to process
-            node: The AST node
-
-        Yields:
-            SemTokenInfo: Semantic token information
-        """
-        name, value = split_from_equals(token.value)
-        if value is not None:
-            length = len(name)
-
-            is_variable_node = hasattr(node, "name") and hasattr(node, "value")
-
-            yield SemTokenInfo.from_token(
-                Token(
-                    ROBOT_NAMED_ARGUMENT if is_variable_node else SemanticTokenTypes.PARAMETER,
-                    name,
-                    token.lineno,
-                    token.col_offset,
-                ),
-                (RobotSemTokenTypes.NAMED_ARGUMENT if is_variable_node else SemanticTokenTypes.PARAMETER),
-            )
-            yield SemTokenInfo.from_token(
-                Token(
-                    ROBOT_OPERATOR,
-                    "=",
-                    token.lineno,
-                    token.col_offset + length,
-                ),
-                SemanticTokenTypes.OPERATOR,
-            )
-            modified_token = Token(
-                token.type,
-                value,
-                token.lineno,
-                token.col_offset + length + 1,
-                token.error,
-            )
-            yield SemTokenInfo.from_token(modified_token, RobotSemTokenTypes.ARGUMENT)
-
-        elif hasattr(node, "assign") and name:
-            yield SemTokenInfo.from_token(
-                Token(
-                    ROBOT_NAMED_ARGUMENT,
-                    name,
-                    token.lineno,
-                    token.col_offset,
-                ),
-                RobotSemTokenTypes.NAMED_ARGUMENT,
-            )
-            modified_token = Token(
-                token.type,
-                "",
-                token.lineno,
-                token.col_offset + len(name),
-                token.error,
-            )
-            yield SemTokenInfo.from_token(modified_token, RobotSemTokenTypes.ARGUMENT)
 
 
 class KeywordTokenAnalyzer:
