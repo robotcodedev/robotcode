@@ -26,15 +26,21 @@ RobotCode is a comprehensive Robot Framework toolkit that provides IDE extension
 ### Core Rules
 
 - **REVIEW/ANALYZE/CHECK/EXAMINE:** READ-ONLY operations. Provide analysis and feedback, NEVER make changes
-- **IMPLEMENT/ADD/CREATE/FIX/CHANGE:** Implementation required. Ask for clarification if multiple approaches exist
+- **IMPLEMENT/ADD/CREATE/FIX/CHANGE:** Implementation required. ALWAYS ask for confirmation and wait for explicit user choice before proceeding
 - **IMPROVE/OPTIMIZE/REFACTOR:** Always ask for specific approach before implementing
+- **MANDATORY WAIT:** When presenting implementation options, ALWAYS wait for explicit user choice before proceeding
 
 ### Communication Flow
 
 1. **Recognize Intent:** Review request vs. Implementation request?
 2. **For Reviews:** Analyze and suggest, but don't change anything
-3. **For Implementation:** Ask numbered options if unclear, wait for response, then implement
-4. **Question Format:** Use "A), B), C), D), ..." format, always end with "Other approach"
+3. **For Implementation:**
+   - ALWAYS ask for confirmation before implementing
+   - If multiple approaches exist, present numbered options A), B), C), D), ...)
+   - ALWAYS end with "Other approach"
+   - WAIT for user response before proceeding
+   - NEVER start implementation until user explicitly chooses an option
+4. **Critical Rule:** When presenting options, STOP and wait for user input. Do not continue with any implementation.
 
 ## Tech Stack
 
