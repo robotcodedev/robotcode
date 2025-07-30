@@ -13,8 +13,6 @@ def find_free_port(start: Optional[int] = None, end: Optional[int] = None) -> in
 
     try:
         with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
-            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-
             with contextlib.suppress(Exception):
                 s.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 0)
 
