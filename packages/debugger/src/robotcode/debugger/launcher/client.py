@@ -96,8 +96,10 @@ class DAPClient:
                     self._protocol.on_connection_lost.add(self.on_connection_lost)
                 except (asyncio.CancelledError, KeyboardInterrupt, SystemExit):
                     raise
-                except ConnectionError:
+                except (ConnectionError, OSError):
                     pass
+                except BaseException as e:
+                    raise DAPClientError(f"Failed to connect to {self.tcp_params.host}:{self.tcp_params.port}") from e
 
         if self._protocol is not None:
             raise DAPClientError("Client already connected.")

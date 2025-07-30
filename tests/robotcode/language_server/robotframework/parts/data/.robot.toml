@@ -1,7 +1,7 @@
 [extend-profiles.firefox]
 description = "The overridden firefox profile"
 extend-python-path = ["./python"]
-output-dir = "output"
+#output-dir = "output"
 
 [tool.robotcode-analyze.extend-modifiers]
 extend-warning = ["VariableNotFound"]
