@@ -2,6 +2,46 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [1.6.0](https://github.com/robotcodedev/robotcode/compare/v1.5.0..v1.6.0) - 2025-07-30
+
+### Bug Fixes
+
+- **core:** Remove unnecessary socket option for address reuse in find_free_port ([1ee754a](https://github.com/robotcodedev/robotcode/commit/1ee754abc7b27a8d2d70e15f39dad8ec0febc4da))
+- **debugger:** Enhance error handling in DAPClient and simplify port allocation for new testrun sessions ([43f242d](https://github.com/robotcodedev/robotcode/commit/43f242d61dc0e249e1912ac0d7be8df63478d802))
+
+  - every new test run gets it's own tcp port
+
+- **debugger:** Only sync when not in CallKeyword state ([709798a](https://github.com/robotcodedev/robotcode/commit/709798ac5cfbdf84ede7282d396bcae03a7e33f7))
+
+
+### Documentation
+
+- Remove robotframework-tidy from docs ([c259a0f](https://github.com/robotcodedev/robotcode/commit/c259a0f42819e25603ff333afdf6fc9c00b6b279))
+
+
+### Features
+
+- **debug:** Better synchronization between test view and execution in intellij-client, part 2 ([4ce87a2](https://github.com/robotcodedev/robotcode/commit/4ce87a2a86c72c944fab5de1288d08ecc33928e7))
+- **debugger:** Better synchronization between test view and execution in vscode, part 1 ([63c895f](https://github.com/robotcodedev/robotcode/commit/63c895f8d78ba0db64c32c4100ab09bf42941232))
+- **robotcode:** Remove robotframework-tidy from optional-dependencies ([205cfd1](https://github.com/robotcodedev/robotcode/commit/205cfd1a93aae3bfc4e062d1d16b0dd3ad2e4f98))
+
+
+### Refactor
+
+- **debugger:** Split get_variables method and splitup version specific behavior for exception handling ([c828202](https://github.com/robotcodedev/robotcode/commit/c828202021d8b0eb0e4862fec0e96713977cfe62))
+- **debugger:** Break down complex evaluate() method ([4c6b9af](https://github.com/robotcodedev/robotcode/commit/4c6b9afc988a0b4838e16bd9f57b4d57db278721))
+- **debugger:** Optimize cache management and improve regex matching performance ([2edfeea](https://github.com/robotcodedev/robotcode/commit/2edfeea3d884b486b19d3c6ab4b6e76e03572b57))
+- **debugger:** Enhance type safety by introducing protocols and type definitions for log messages and attributes ([a65b9b9](https://github.com/robotcodedev/robotcode/commit/a65b9b95cf66d3b513da2c50d1409a56887c9963))
+- **debugger:** Replace magic numbers with named constants for better readability ([65b0912](https://github.com/robotcodedev/robotcode/commit/65b091218e2ed5552e6d2a84ab61600ecbdc75a3))
+- **debugger:** Replace instance method calls with property access for consistency ([8ea82e4](https://github.com/robotcodedev/robotcode/commit/8ea82e45f4d343431aa42dfd525ed5ccb09d4df7))
+- **instructions:** Clarify implementation guidelines and communication flow ([b37be1c](https://github.com/robotcodedev/robotcode/commit/b37be1c683467ba4f3557127cb6337d5baad19c3))
+- **langserver:** Improve performance and memory consumption for semantic tokens ([e8297ff](https://github.com/robotcodedev/robotcode/commit/e8297ffc2f093cbab7eeff0bbecc7fba3dd5f330))
+- **langserver:** Remove unused semantic token types and update regression tests ([6b262b5](https://github.com/robotcodedev/robotcode/commit/6b262b54d3aa53e55f4661b289f7959baf1f260a))
+- **langserver:** Remove unused methods to simplify code ([96ba516](https://github.com/robotcodedev/robotcode/commit/96ba5162238fe04ca9b2473dcc512b94efc8cf7f))
+- **langserver:** Optimize memory consumption and perfomance in semantic token highlighter ([7e5e8e3](https://github.com/robotcodedev/robotcode/commit/7e5e8e3b9ebc0a3a1ce0a0dccee4cdf160d7bdb5))
+- **langserver:** Remove some unneeded casts ([c82a604](https://github.com/robotcodedev/robotcode/commit/c82a6040ea9b6d786e0af9cf5078780e2aaf7437))
+
+
 ## [1.5.0](https://github.com/robotcodedev/robotcode/compare/v1.4.0..v1.5.0) - 2025-07-07
 
 ### Features
