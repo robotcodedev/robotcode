@@ -26,7 +26,7 @@ from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.jsonrpc2.protocol import (
     JsonRPCException,
     JsonRPCProtocolBase,
-    SendedRequestEntry,
+    SentRequestEntry,
 )
 
 from .dap_types import (
@@ -78,7 +78,7 @@ class DebugAdapterProtocol(JsonRPCProtocolBase):
     def __init__(self) -> None:
         super().__init__()
         self._sended_request_lock = threading.RLock()
-        self._sended_request: OrderedDict[int, SendedRequestEntry] = OrderedDict()
+        self._sended_request: OrderedDict[int, SentRequestEntry] = OrderedDict()
         self._received_request_lock = threading.RLock()
         self._received_request: OrderedDict[int, asyncio.Future[Any]] = OrderedDict()
         self._initialized = False
@@ -307,7 +307,7 @@ class DebugAdapterProtocol(JsonRPCProtocolBase):
         result: Task[TResult] = Task()
 
         with self._sended_request_lock:
-            self._sended_request[request.seq] = SendedRequestEntry(result, return_type)
+            self._sended_request[request.seq] = SentRequestEntry(result, return_type)
 
         self.send_message(request)
 
