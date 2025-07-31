@@ -289,7 +289,7 @@ no_implicit_reexport = false
 #include_runtime_files = false
 
 [tool.pyright]
-exclude = ["**/.hatch", "**/node_modules", "**/__pycache__", "bundled/libs"]
+exclude = ["**/.hatch", "**/node_modules", "**/__pycache__", "bundled/libs", "intellij-client/build"]
 typeCheckingMode = "off"
 pythonVersion = "3.8"
 
