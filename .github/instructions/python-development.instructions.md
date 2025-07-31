@@ -30,7 +30,7 @@ applyTo: **/*.py
 ### Code Style Standards
 - **Formatting:** we use ruff for formatting
 - **Type Hints:** Required for all APIs
-- **Docstrings:** Google style for modules, classes, and functions
+- **Docstrings:** Google style for modules, classes, and functions, but follows clean code principles
 - **linting:** use ruff for static analysis and mypy for type checking
 
 
