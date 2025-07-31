@@ -1,5 +1,6 @@
 import { defineConfig } from "vitepress";
 import { generateSidebar } from "vitepress-sidebar";
+import llmstxtPlugin from "vitepress-plugin-llmstxt";
 import taskLists from "markdown-it-task-lists";
 import kbd from "markdown-it-kbd";
 import abbr from "markdown-it-abbr";
@@ -35,6 +36,9 @@ export default defineConfig({
     ["meta", { property: "og:image", content: "https://robotcode.io/robotcode-logo.jpg" }],
     ["meta", { property: "og:url", content: "https://robotcode.io/" }],
   ],
+  vite: {
+    plugins: [llmstxtPlugin()],
+  },
   themeConfig: {
     // https://vitepress.dev/reference/default-theme-config
     logo: { src: "/robotcode-logo.svg", alt: "RobotCode Logo" },

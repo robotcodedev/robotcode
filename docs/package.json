@@ -17,7 +17,8 @@
         "typescript-eslint": "^8.38.0",
         "vitepress": "^1.6.3",
         "vitepress-plugin-tabs": "^0.7.1",
-        "vitepress-sidebar": "^1.32.1"
+        "vitepress-sidebar": "^1.32.1",
+        "vitepress-plugin-llmstxt": "^0.3.2"
     },
     "dependencies": {
         "docs": "file:"
