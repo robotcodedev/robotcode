@@ -234,6 +234,27 @@ class NamespaceAnalyzer(Visitor):
             )
 
             add_to_references = True
+
+            if existing_var is not None and existing_var.type == VariableDefinitionType.IMPORTED_VARIABLE:
+                self._append_diagnostics(
+                    r,
+                    "Overrides imported variable.",
+                    DiagnosticSeverity.WARNING,
+                    Error.OVERRIDES_IMPORTED_VARIABLE,
+                    related_information=[
+                        DiagnosticRelatedInformation(
+                            location=Location(
+                                uri=str(Uri.from_path(existing_var.source)),
+                                range=existing_var.range,
+                            ),
+                            message="Already defined here.",
+                        )
+                    ]
+                    if existing_var.source
+                    else None,
+                )
+                existing_var = None
+
             first_overidden_reference: Optional[VariableDefinition] = None
             if existing_var is not None:
                 self._variable_references[existing_var].add(Location(self._namespace.document_uri, r))

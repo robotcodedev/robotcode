@@ -39,6 +39,7 @@ class Error:
     INVALID_HEADER = "InvalidHeader"
     DEPRECATED_HEADER = "DeprecatedHeader"
     OVERRIDDEN_BY_COMMANDLINE = "OverriddenByCommandLine"
+    OVERRIDES_IMPORTED_VARIABLE = "OverridesImportedVariable"
     VARIABLE_ALREADY_DEFINED = "VariableAlreadyDefined"
     VARIABLE_OVERRIDDEN = "VariableOverridden"
     MODEL_ERROR = "ModelError"

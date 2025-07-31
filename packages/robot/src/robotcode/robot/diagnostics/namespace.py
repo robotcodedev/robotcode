@@ -1116,8 +1116,8 @@ class Namespace:
                     else []
                 ),
                 [] if skip_global_variables or skip_commandline_variables else self.get_command_line_variables(),
-                [] if skip_global_variables else self.get_own_variables(),
                 [] if skip_global_variables else self.get_imported_variables(),
+                [] if skip_global_variables else self.get_own_variables(),
                 [] if skip_global_variables else self.get_builtin_variables(),
             )
         )
