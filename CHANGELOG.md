@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [1.7.0](https://github.com/robotcodedev/robotcode/compare/v1.6.0..v1.7.0) - 2025-07-31
+
+### Bug Fixes
+
+- **diagnostics:** Correct overriding of imported variables in suite variables ([afed6db](https://github.com/robotcodedev/robotcode/commit/afed6db7cf9d5293b62a01eaaeba621517894ebd))
+
+
+### Features
+
+- **docs:** Add generated llms.txt and llms-full.txt to website ([1f23559](https://github.com/robotcodedev/robotcode/commit/1f23559ff9f26cb2dd9977c001b883493f1f32b4))
+
+
+### Refactor
+
+- **jsonrpc:** Fix some spellings and split up some methods ([3c71ce6](https://github.com/robotcodedev/robotcode/commit/3c71ce64f8a797a4f0db925c2379800a3e48a987))
+
+
 ## [1.6.0](https://github.com/robotcodedev/robotcode/compare/v1.5.0..v1.6.0) - 2025-07-30
 
 ### Bug Fixes
