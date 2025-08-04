@@ -7,7 +7,7 @@ lsp4j = "0.21.1"
 
 # plugins
 changelog = "2.2.1"
-intelliJPlatForm = "2.6.0"
+intelliJPlatForm = "2.7.0"
 kotlin = "2.1.10"
 kover = "0.9.1"
 
