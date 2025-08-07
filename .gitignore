@@ -332,3 +332,6 @@ bundled/libs
 
 # robotframework
 results/
+
+# kilocode
+.kilocode/
