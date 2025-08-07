@@ -53,6 +53,29 @@ With RobotCode, you can focus on building and testing your automation workflows 
 - **And More!**: Check out the [official documentation](https://robotcode.io) for more details.
 
 
+## Support RobotCode
+
+RobotCode is developed and maintained by volunteers. Your support helps us continue improving and adding new features.
+
+**Become a Sponsor:**
+- [GitHub Sponsors](https://github.com/sponsors/robotcodedev) - Monthly or one-time sponsorship
+- [Open Collective](https://opencollective.com/robotcode) - One-time or recurring donations
+
+**Corporate Sponsorship:**
+- Direct & transparent: Open Collective (https://opencollective.com/robotcode) – invoices, public ledger
+- Ecosystem support: Robot Framework Foundation membership (https://robotframework.org/foundation/) – indirectly benefits RobotCode
+
+**Other Ways to Support:**
+- Star the repository
+- Leave a review on the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=d-biehl.robotcode) and [JetBrains Marketplace](https://plugins.jetbrains.com/plugin/26216)
+- Ask questions & help others ([Slack #robotcode](https://slack.robotframework.org/) / [Forum](https://forum.robotframework.org) / [Discussions](https://github.com/robotcodedev/robotcode/discussions))
+- Report bugs in the [issue tracker](https://github.com/robotcodedev/robotcode/issues)
+- Suggest enhancements or features (issues or [Discussions](https://github.com/robotcodedev/robotcode/discussions))
+- Share usage patterns & integration ideas ([Discussions](https://github.com/robotcodedev/robotcode/discussions))
+- Improve tests (edge cases, large suites, multi-root, versions)
+- Contribute code ([good first issue](https://github.com/robotcodedev/robotcode/labels/good%20first%20issue) / [help wanted](https://github.com/robotcodedev/robotcode/labels/help%20wanted))
+
+
 ## Requirements
 
 ### Python and Robot Framework Versions
@@ -163,4 +186,8 @@ This project is licensed under the [Apache 2.0 License](https://spdx.org/license
 ---
 
 ## Powered by
-[![JetBrains logo.](docs/images/jetbrains.png)](https://jb.gg/OpenSourceSupport)
+
+[Robot Framework Foundation](https://robotframework.org/foundation)
+
+
+[Jetbrains](https://jb.gg/OpenSourceSupport)
