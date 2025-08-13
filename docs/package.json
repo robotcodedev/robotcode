@@ -8,19 +8,19 @@
         "preview": "vitepress preview"
     },
     "devDependencies": {
-        "esbuild": "^0.25.8",
+        "esbuild": "^0.25.9",
         "markdown-it-abbr": "^2.0.0",
         "markdown-it-kbd": "^3.0.0",
         "markdown-it-mathjax3": "^4.3.2",
         "markdown-it-task-lists": "^2.1.1",
-        "typescript": "^5.8.3",
-        "typescript-eslint": "^8.38.0",
-        "vitepress": "^1.6.3",
+        "typescript": "^5.9.2",
+        "typescript-eslint": "^8.39.1",
+        "vitepress": "^1.6.4",
         "vitepress-plugin-tabs": "^0.7.1",
         "vitepress-sidebar": "^1.33.0",
         "vitepress-plugin-llmstxt": "^0.4.2"
     },
     "dependencies": {
-        "docs": "file:"
+        
     }
 }
