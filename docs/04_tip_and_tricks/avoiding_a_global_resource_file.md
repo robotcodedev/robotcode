@@ -17,6 +17,8 @@ In many Robot Framework projects, there is a temptation to simplify setup by con
 - **Performance Issues:**
   For every keyword call, Robot Framework iterates through the entire list of known keywords—and code analysis tools like RobotCode must do the same. The performance impact significantly depends on whether the system checks 50, 500, or even 5000 keywords; indeed, 500 to 5000 keywords is a realistic number in an average project. This process is especially time-consuming with embedded arguments that require regular expressions rather than simple string comparisons. A large global file filled with rarely used elements can significantly slow down keyword resolution, particularly in larger projects.
 
+  *Heuristic:* If a global resource file contains more than ~200 keywords or imports more than ~20 resource files, consider modularizing to improve performance and maintainability.
+
 - **Decreased Maintainability:**
   While the number of resource files may be relatively small—perhaps 50 to 100—the combined global resource file can easily contain 500 or more keywords. This consolidation makes it difficult for test writers to quickly locate the relevant keyword or variable among hundreds of entries. The dense aggregation reduces clarity and increases the maintenance burden, as even a small change might affect multiple areas of the project. Refactoring becomes more challenging when the entire functionality is bundled into a single file, since updates or corrections must be made with care to avoid unintended side effects across the project.
 
@@ -49,6 +51,8 @@ ${DB_CONNECTION}    connection_string
 *** Keywords ***
 # 500+ keywords covering every aspect of the system
 ```
+
+Note: importing the same library or resource with different parameters in different places can lead to earlier instances being reused or overwritten, causing surprising behavior. Avoid parameterized duplicates and prefer small, purpose-specific imports.
 
 When this file gets imported into multiple other resources and suite files, it creates a tangled web of dependencies.
 
@@ -109,54 +113,60 @@ A well-organized Robot Framework project might have a structure like this:
 ```
 project/
 ├── lib/
-│   └───UserData.py
+│   └── UserData.py
 ├── resources/
 │   ├── api/
 │   │   ├── authentication.resource    # API auth keywords
 │   │   ├── customers.resource         # Customer API endpoints
-│   │   └── orders.resource           # Order API endpoints
+│   │   └── orders.resource            # Order API endpoints
 │   ├── functional/
-│   │   ├── users.resource       # Login page interactions
-│   │   ├── customers.resource    # Customer page interactions
+│   │   ├── users.resource             # User domain keywords
+│   │   ├── customers.resource         # Customer domain keywords
 │   ├── ui/
-│   │   ├── login.resource       # Login page interactions
-│   │   ├── customers.resource    # Customer page interactions
-│   │   └── common_elements.resource  # Shared UI elements
+│   │   ├── login.resource             # Login page interactions
+│   │   ├── customers.resource         # Customer page interactions
+│   │   └── common_elements.resource   # Shared UI elements
 │   └── common/
-│       ├── test_data.resource        # Test data generation
-│       └── utilities.resource        # General helper keywords
+│       ├── test_data.resource         # Test data generation
+│       └── utilities.resource         # General helper keywords
 └── tests/
     ├── api/
-    │   └── customer_api_tests.robot  # Imports only api/customers.resource
+    │   └── customer_api_tests.robot   # Imports only api/customers.resource
     ├── business/
-    │   └── contracts.robot         # Imports only ui/login_page.resource
+    │   └── contracts.robot            # Imports only ui/login.resource
     └── ui_tests/
-        └── login_tests.robot         # Imports only ui/login_page.resource
+        └── login_tests.robot          # Imports only ui/login.resource
 ```
 
-In this structure, each test file imports only the specific resources it needs, avoiding a global import file. If you put the `resources` folder to your python path (this is the default for RobotCode)
+In this structure, each test file imports only the specific resources it needs, avoiding a global import file. Note: Robot Framework resolves Resource imports relative to the importing file (or via absolute paths). PYTHONPATH applies to Python libraries, not resource files. RobotCode can configure analysis and discovery paths via robot.toml.
 
-Your settings section in a resource file for functional keywords, can be look like this:
+Your suite settings can look like this:
 
-```robot
+::: code-group
+
+```robot [login.robot]
 *** Settings ***
-# In login_tests.robot
 Resource          ui/login.resource
 Resource          ui/customers.resource
 Resource          common/test_data.resource
 
 ```
 
-and if you have a suite for functional tests, like this:
+:::
 
-```robot
+and if you have a suite for functional tests, it can look like this:
+
+::: code-group
+
+```robot [contracts.robot]
 *** Settings ***
-# In contracts.robot
 Resource          functional/users.resource
 Resource          functional/customers.resource
 Resource          common/test_data.resource
 
 ```
+
+:::
 
 ### Migration Guide: From Global to Modular Structure
 
@@ -165,6 +175,7 @@ If you have an existing project with a large global resource file, consider this
 1. **Analyze usage patterns**:
    - Identify which keywords/variables are actually used in each test suite
    - Look for natural functional groupings (UI, API, data generation, etc.)
+   - Measure counts (keywords, variables, and resource imports) per file to prioritize refactoring; use a threshold (for example ~200 keywords) as a guide.
 
 2. **Create specialized resource files**:
    - Start with one functional area (e.g., login functionality)
@@ -184,63 +195,86 @@ If you have an existing project with a large global resource file, consider this
 Here's a concrete example of refactoring from a global approach to a modular one:
 
 **Before (Global.resource):**
-```robot
+
+::: code-group
+
+```robot [/tests/login_test.robot]
 *** Settings ***
-Library    SeleniumLibrary
-Library    RequestsLibrary
-
-*** Keywords ***
-Login To Application
-    [Arguments]    ${username}    ${password}
-    Open Browser    ${URL}    ${BROWSER}
-    Input Text    id=username    ${username}
-    Input Password    id=password    ${password}
-    Click Button    id=login-button
-
-Get Customer Details
-    [Arguments]    ${customer_id}
-    ${response}=    GET    ${API_URL}/customers/${customer_id}
-    [Return]    ${response.json()}
-```
-
-**After:**
-
-**/resources/ui/login.resource:**
-```robot
-*** Settings ***
-Library    SeleniumLibrary
-
-*** Keywords ***
-Login To Application
-    [Arguments]    ${username}    ${password}
-    Open Browser    ${URL}    ${BROWSER}
-    Input Text    id=username    ${username}
-    Input Password    id=password    ${password}
-    Click Button    id=login-button
-```
-
-**/resources/api/customers.resource:**
-```robot
-*** Settings ***
-Library    RequestsLibrary
-
-*** Keywords ***
-Get Customer Details
-    [Arguments]    ${customer_id}
-    ${response}=    GET    ${API_URL}/customers/${customer_id}
-    [Return]    ${response.json()}
-```
-
-**/tests/login_test.robot:**
-```robot
-*** Settings ***
-Resource    resources/ui/login.resource
-# Only importing what is needed
+# Anti-pattern: single global import
+Resource    resources/Global.resource
 
 *** Test Cases ***
 Valid Login
     Login To Application    valid_user    valid_password
+    Get Customer Details    123
 ```
+
+```robot [/resources/Global.resource]
+*** Settings ***
+Library    SeleniumLibrary
+Library    RequestsLibrary
+Library    Collections
+Resource   common/test_data.resource
+Resource   common/utility.resource
+
+*** Keywords ***
+Login To Application
+    [Arguments]    ${username}    ${password}
+    Open Browser    ${URL}    ${BROWSER}
+    Input Text    id=username    ${username}
+    Input Password    id=password    ${password}
+    Click Button    id=login-button
+
+Get Customer Details
+    [Arguments]    ${customer_id}
+    ${response}=    GET    ${API_URL}/customers/${customer_id}
+    RETURN    ${response.json()}
+```
+
+:::
+
+**After:**
+
+::: code-group
+
+```robot [/tests/login_test.robot]
+*** Settings ***
+# Only importing what is needed
+Resource    ui/login.resource
+Resource    api/customers.resource
+
+*** Test Cases ***
+Valid Login
+    Login To Application    valid_user    valid_password
+    Get Customer Details    123
+```
+
+```robot [/resources/ui/login.resource]
+*** Settings ***
+Library    SeleniumLibrary
+Resource   common/utility.resource
+
+*** Keywords ***
+Login To Application
+    [Arguments]    ${username}    ${password}
+    Open Browser    ${URL}    ${BROWSER}
+    Input Text    id=username    ${username}
+    Input Password    id=password    ${password}
+    Click Button    id=login-button
+```
+
+```robot [/resources/api/customers.resource]
+*** Settings ***
+Library    RequestsLibrary
+
+*** Keywords ***
+Get Customer Details
+    [Arguments]    ${customer_id}
+    ${response}=    GET    ${API_URL}/customers/${customer_id}
+    [Return]    ${response.json()}
+```
+
+:::
 
 ## When Restructuring Isn't Possible
 
