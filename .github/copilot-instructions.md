@@ -102,6 +102,26 @@ RobotCode is a comprehensive Robot Framework toolkit that provides IDE extension
 
   This rule ensures consistency across the codebase, improves discoverability for international contributors, and enables reliable tooling (linters, analyzers, and internationalized docs). Use English even when writing examples or user-facing strings in tests; if localised strings are required, keep the canonical code-level names and primary docs in English and add separate localized resources.
 
+### Commit Message Standard
+- **Conventional Commits (REQUIRED):** This project uses the Conventional Commits specification for commit messages. Commit messages must follow the format:
+  - <type>(<scope>): <short description>
+  - Optionally include a longer body and/or footer for references (breaking changes, issue numbers).
+
+  Common types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`.
+
+  Example:
+  - feat(cli): add `--dry-run` flag to publish command
+
+  Following this convention enables automated changelog generation, semantic versioning tools, and clearer git history.
+
+  Brief rules (self-contained):
+  - A commit message MUST start with a type, optionally a scope, then a short description. Example: `feat(cli): add --dry-run flag`.
+  - Types indicate the kind of change (e.g., `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`).
+  - The scope is optional and should be a noun describing the area affected (e.g., `cli`, `docs`).
+  - An optional body may follow after a blank line to explain motivation and other details.
+  - Breaking changes MUST be indicated in the footer with `BREAKING CHANGE: <description>`.
+  - Multiple line footer entries can reference issues or metadata (e.g., `Closes #123`).
+
 ### Testing Requirements
 - **Test Coverage:** Maintain high test coverage with meaningful test cases
 - **Test Naming:** Use descriptive test names that explain the scenario
