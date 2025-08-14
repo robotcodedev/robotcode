@@ -93,6 +93,15 @@ RobotCode is a comprehensive Robot Framework toolkit that provides IDE extension
 - **README Files:** Each package/module should have clear usage documentation
 - **Inline Comments:** Explain *why*, not *what* - the code should be self-documenting
 
+### Project Language Requirement
+- **English for code and docs (REQUIRED):** Regardless of the natural language a user speaks when interacting with contributors or tools, all project-facing text must use English. This includes:
+  - Documentation and README content
+  - Inline comments and docstrings
+  - Public and internal variable, function, class, and module names (identifiers)
+  - Commit messages and code review comments where project conventions apply
+
+  This rule ensures consistency across the codebase, improves discoverability for international contributors, and enables reliable tooling (linters, analyzers, and internationalized docs). Use English even when writing examples or user-facing strings in tests; if localised strings are required, keep the canonical code-level names and primary docs in English and add separate localized resources.
+
 ### Testing Requirements
 - **Test Coverage:** Maintain high test coverage with meaningful test cases
 - **Test Naming:** Use descriptive test names that explain the scenario
