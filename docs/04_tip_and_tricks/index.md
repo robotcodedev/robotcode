@@ -12,7 +12,7 @@ Whether you're a beginner or an experienced robot programmer, this collection of
 
   While global resource files might seem convenient initially, they lead to circular dependencies, keyword ambiguities, performance issues, and maintenance challenges. This guide explains the problems of this approach and offers a modular alternative that improves code organization, maintainability, and performance.
 
-- [Why is my variable shown as "not found"](./02_variable_not_found.md)
+- [Why is my variable shown as "not found"](./02_why_variable_not_found.md)
 
   This guide explains the common reasons for `VariableNotFound` errors in RobotCode and offers practical solutions.
 
