@@ -53,12 +53,12 @@
   --vp-c-brand-1: #0b7285; /* strong teal for text and accents */
   --vp-c-brand-2: #138496; /* hover */
   --vp-c-brand-3: #0a6b73; /* button bg */
-  --vp-c-brand-soft: rgba(10,107,115,0.08);
+  --vp-c-brand-soft: rgba(10, 107, 115, 0.08);
 
   --vp-c-tip-1: #0b7285;
   --vp-c-tip-2: #138496;
   --vp-c-tip-3: #0a6b73;
-  --vp-c-tip-soft: rgba(10,107,115,0.06);
+  --vp-c-tip-soft: rgba(10, 107, 115, 0.06);
 
   --vp-c-warning-1: var(--vp-c-yellow-1);
   --vp-c-warning-2: var(--vp-c-yellow-2);
@@ -86,11 +86,11 @@
   --vp-button-brand-active-text: var(--vp-c-white);
   --vp-button-brand-active-bg: var(--vp-c-brand-1);
 
-/* Slightly larger buttons to match Robot Framework site feel */
-.vp-theme-default .vp-button {
-  padding: 0.6rem 1rem;
-  border-radius: 8px;
-}
+  /* Slightly larger buttons to match Robot Framework site feel */
+  .vp-theme-default .vp-button {
+    padding: 0.6rem 1rem;
+    border-radius: 8px;
+  }
 }
 
 /**
@@ -101,10 +101,29 @@
   --vp-home-hero-name-color: #ffffff;
   --vp-home-hero-name-background: linear-gradient(90deg, #0b7285 0%, #138496 100%);
 
-/* Hero adjustments */
-.VPHero {
-  background: linear-gradient(180deg, rgba(11,114,133,0.06) 0%, transparent 60%);
+  /* Hero adjustments */
+  .VPHero {
+    background: linear-gradient(180deg, rgba(11, 114, 133, 0.06) 0%, transparent 60%);
+  }
 }
+
+@media (min-width: 640px) {
+  .VPHero .hero-img,
+  .VPHero img[src*="robotcode-vintage.png"] {
+    max-width: 256px;
+    max-height: 256px;
+  }
+}
+
+@media (min-width: 960px) {
+  /* Make the hero image larger and more prominent.
+   Targets the image used in the home front-matter (e.g. /robotcode-vintage.png).
+   Adjusts max-width and adds responsive scaling for larger viewports. */
+  .VPHero .hero-img,
+  .VPHero img[src*="robotcode-vintage.png"] {
+    max-width: 500px; /* increase from default to make image larger */
+    max-height: 500px; /* increase from default to make image larger */
+  }
 }
 
 /**
@@ -114,12 +133,12 @@
 :root {
   --vp-custom-block-tip-border: transparent;
   --vp-custom-block-tip-text: var(--vp-c-text-1);
-  --vp-custom-block-tip-bg: rgba(10,107,115,0.06);
-  --vp-custom-block-tip-code-bg: rgba(10,107,115,0.04);
+  --vp-custom-block-tip-bg: rgba(10, 107, 115, 0.06);
+  --vp-custom-block-tip-code-bg: rgba(10, 107, 115, 0.04);
 
-/* Warning / danger softer palettes */
-  --vp-c-warning-soft: rgba(255,193,7,0.06);
-  --vp-c-danger-soft: rgba(220,53,69,0.06);
+  /* Warning / danger softer palettes */
+  --vp-c-warning-soft: rgba(255, 193, 7, 0.06);
+  --vp-c-danger-soft: rgba(220, 53, 69, 0.06);
 }
 
 /**
