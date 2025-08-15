@@ -39,6 +39,13 @@ export default defineConfig({
   vite: {
     plugins: [llmstxtPlugin()],
   },
+  vue: {
+    template: {
+      compilerOptions: {
+        isCustomElement: (tag) => tag === "lite-youtube",
+      },
+    },
+  },
   themeConfig: {
     // https://vitepress.dev/reference/default-theme-config
     logo: { src: "/robotcode-logo.svg", alt: "RobotCode Logo" },
@@ -71,7 +78,12 @@ export default defineConfig({
       },
     ],
     search: {
-      provider: "local",
+      provider: "algolia",
+      options: {
+        appId: "7D5ZR1RO6N",
+        apiKey: "699cc9be1fe74f0953afdd17beb6e9c9",
+        indexName: "robotcode",
+      },
     },
     editLink: {
       pattern: "https://github.com/robotcodedev/robotcode/edit/main/docs/:path",
