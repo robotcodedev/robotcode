@@ -2,6 +2,34 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [1.8.0](https://github.com/robotcodedev/robotcode/compare/v1.7.0..v1.8.0) - 2025-08-15
+
+### Bug Fixes
+
+- **vscode:** Improve handling of active environment path changes in PythonManager ([79e410e](https://github.com/robotcodedev/robotcode/commit/79e410ee275c1ce701ca438cef99d4c11be312a3))
+
+
+### Documentation
+
+- **contributing:** Remove emojis and improve formatting for clarity ([b5bf94d](https://github.com/robotcodedev/robotcode/commit/b5bf94deb145c869aca55ac11c250156293413ff))
+- **copilot-instructions:** Update formatting and punctuation for clarity and consistency ([d39a5fc](https://github.com/robotcodedev/robotcode/commit/d39a5fc3adfffda4d8093e49ff5687cd7cfb1669))
+- **css:** Update brand colors and button styles for Robot Framework theme ([3b84bb4](https://github.com/robotcodedev/robotcode/commit/3b84bb48ad07e637cb49238c7c87fb7e4f9126d9))
+- **tips:** Correct link to "Why is my variable shown as 'not found'" article ([0f45265](https://github.com/robotcodedev/robotcode/commit/0f45265752c1f409f6bbca4a64d3a9c23fc9be39))
+- **tips:** Reorganize tip and tricks files with numbered prefixes and finish why_variable_not_found article ([4a9156c](https://github.com/robotcodedev/robotcode/commit/4a9156cc6bdb9cd4a4ccd2400435e70b1d24c0ef))
+- Redesign landing page a bit ([b9dcf16](https://github.com/robotcodedev/robotcode/commit/b9dcf1641d485f9ce51a1d535393c7c926be4995))
+- Add commit message standard to guidelines ([2db7f61](https://github.com/robotcodedev/robotcode/commit/2db7f61e12c280663fe9fc5d4f1adf6b286e0ff6))
+- Add CLAUDE.md for project guidance and development instructions ([53bcc04](https://github.com/robotcodedev/robotcode/commit/53bcc04bfb636b53a21b8e9e9a57753d1fbe8e81))
+- Add project language requirement to ensure consistency in code and documentation ([a6baec4](https://github.com/robotcodedev/robotcode/commit/a6baec46e0a9405296b869dac7368f1cada6211a))
+- Enhance guidance on modular resource file structure and performance considerations ([7800f67](https://github.com/robotcodedev/robotcode/commit/7800f673333a8bad7d405201f8be0bb0a4925b93))
+- Update requirements for Python, Robot Framework, and VSCode versions ([e91918d](https://github.com/robotcodedev/robotcode/commit/e91918d049e2a7660168d7e6c80d4e802c72a930))
+- Add support section to README.md with sponsorship details ([675cc9c](https://github.com/robotcodedev/robotcode/commit/675cc9c927670adec584e23da9aa5e10b1120197))
+
+
+### Features
+
+- **docs:** Integrate lite-youtube-embed and update search provider to Algolia ([aa02835](https://github.com/robotcodedev/robotcode/commit/aa02835d007b2041b4e8572fb1340608520524d5))
+
+
 ## [1.7.0](https://github.com/robotcodedev/robotcode/compare/v1.6.0..v1.7.0) - 2025-07-31
 
 ### Bug Fixes
