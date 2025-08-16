@@ -39,7 +39,7 @@ And if you like the project, but just don't have time to contribute, that's fine
 ## Code of Conduct
 
 This project and everyone participating in it is governed by the
-[robotcode Code of Conduct](https://github.com/robotcodedev/robotcode/blob/master/CODE_OF_CONDUCT.md).
+[robotcode Code of Conduct](https://github.com/robotcodedev/robotcode/blob/main/CODE_OF_CONDUCT.md).
 By participating, you are expected to uphold this code. Please report unacceptable behavior
 to <support@robotcode.io>.
 
@@ -186,8 +186,8 @@ For local development with containers:
 If you prefer to set up locally:
 
 1. **Prerequisites:**
-   - Python 3.8+ (system Python is fine)
-   - Node.js 16+
+   - Python 3.10+ (system Python is fine)
+   - Node.js 22+
    - Git
 
 2. **Setup:**
@@ -248,6 +248,8 @@ You can also check available environments with: `hatch env show`
 5. **Fix linting issues:** `hatch run lint:style` for formatting
 6. **Commit your changes** with a descriptive commit message
 7. **Push and create a pull request**
+
+Note on Python versions: while the project tests across Python 3.8–3.13 to ensure broad compatibility, active development and production usage target Python 3.10+.
 
 #### Pull Request Guidelines
 
@@ -561,7 +563,3 @@ If you're interested in joining the project team:
 - **Alignment** with project goals and values
 
 We value diversity and welcome contributors from all backgrounds. The robotcode project benefits from different perspectives and experiences.
-
-<!-- omit in toc -->
-## Attribution
-This guide is based on the **contributing-gen**. [Make your own](https://github.com/bttger/contributing-gen)!
