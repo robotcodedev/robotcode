@@ -8,7 +8,16 @@
 
 ## Introduction
 
-The Language Server for [RobotCode](https://robotcode.io).
+Language Server Protocol (LSP) implementation for [RobotCode](https://robotcode.io), enabling enhanced IDE features such as code completion, linting, and navigation.
+
+This package is part of the [RobotCode](https://robotcode.io) project. The complete source code is available at [github.com/robotcodedev/robotcode](https://github.com/robotcodedev/robotcode).
+
+## Features
+
+- Code completion for Robot Framework keywords
+- Real-time linting and error checking
+- Support for multi-workspace environments
+- Integration with various IDEs through LSP
 
 ## Installation
 
@@ -16,6 +25,20 @@ The Language Server for [RobotCode](https://robotcode.io).
 pip install robotcode-language-server
 ```
 
+## Documentation
+
+For comprehensive documentation, please visit [robotcode.io](https://robotcode.io).
+
+## Security
+
+For security concerns, please refer to our [Security Policy](https://github.com/robotcodedev/robotcode/security/policy).
+
 ## License
 
 `robotcode-language-server` is distributed under the terms of the [Apache-2.0](https://spdx.org/licenses/Apache-2.0.html) license.
+
+## Support
+
+- 📖 [Documentation](https://robotcode.io)
+- 💬 [Discussions](https://github.com/robotcodedev/robotcode/discussions)
+- 🐛 [Issues](https://github.com/robotcodedev/robotcode/issues)

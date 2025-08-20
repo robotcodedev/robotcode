@@ -8,7 +8,9 @@
 
 ## Introduction
 
-The [RobotCode](https://robotcode.io) Debugger for Robot Framework.
+Debug Adapter Protocol (DAP) implementation for Robot Framework debugging in [RobotCode](https://robotcode.io).
+
+This package is part of the [RobotCode](https://robotcode.io) project. The complete source code is available at [github.com/robotcodedev/robotcode](https://github.com/robotcodedev/robotcode).
 
 ## Installation
 
@@ -16,6 +18,20 @@ The [RobotCode](https://robotcode.io) Debugger for Robot Framework.
 pip install robotcode-debugger
 ```
 
+## Documentation
+
+For comprehensive documentation, please visit [robotcode.io](https://robotcode.io).
+
+## Security
+
+For security concerns, please refer to our [Security Policy](https://github.com/robotcodedev/robotcode/security/policy).
+
 ## License
 
 `robotcode-debugger` is distributed under the terms of the [Apache-2.0](https://spdx.org/licenses/Apache-2.0.html) license.
+
+## Support
+
+- 📖 [Documentation](https://robotcode.io)
+- 💬 [Discussions](https://github.com/robotcodedev/robotcode/discussions)
+- 🐛 [Issues](https://github.com/robotcodedev/robotcode/issues)

@@ -8,7 +8,9 @@
 
 ## Introduction
 
-Support classes for [RobotCode](https://robotcode.io) for handling Robot Framework projects.
+Robot Framework project handling and integration utilities for [RobotCode](https://robotcode.io).
+
+This package is part of the [RobotCode](https://robotcode.io) project. The complete source code is available at [github.com/robotcodedev/robotcode](https://github.com/robotcodedev/robotcode).
 
 ## Installation
 
@@ -16,6 +18,20 @@ Support classes for [RobotCode](https://robotcode.io) for handling Robot Framewo
 pip install robotcode-robot
 ```
 
+## Documentation
+
+For comprehensive documentation, please visit [robotcode.io](https://robotcode.io).
+
+## Security
+
+For security concerns, please refer to our [Security Policy](https://github.com/robotcodedev/robotcode/security/policy).
+
 ## License
 
 `robotcode-robot` is distributed under the terms of the [Apache-2.0](https://spdx.org/licenses/Apache-2.0.html) license.
+
+## Support
+
+- 📖 [Documentation](https://robotcode.io)
+- 💬 [Discussions](https://github.com/robotcodedev/robotcode/discussions)
+- 🐛 [Issues](https://github.com/robotcodedev/robotcode/issues)
