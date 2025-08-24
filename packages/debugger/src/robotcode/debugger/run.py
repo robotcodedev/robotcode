@@ -223,17 +223,17 @@ def run_debugger(
             *args,
         ]
 
-        Debugger.instance().stop_on_entry = stop_on_entry
-        Debugger.instance().output_messages = output_messages
-        Debugger.instance().output_log = output_log
-        Debugger.instance().group_output = group_output
-        Debugger.instance().output_timestamps = output_timestamps
-        Debugger.instance().colored_output = app.colored
-        Debugger.instance().debug = debug
-        Debugger.instance().set_main_thread(threading.current_thread())
+        Debugger.instance.stop_on_entry = stop_on_entry
+        Debugger.instance.output_messages = output_messages
+        Debugger.instance.output_log = output_log
+        Debugger.instance.group_output = group_output
+        Debugger.instance.output_timestamps = output_timestamps
+        Debugger.instance.colored_output = app.colored
+        Debugger.instance.debug = debug
+        Debugger.instance.set_main_thread(threading.current_thread())
 
         app.verbose("Start the debugger instance")
-        Debugger.instance().start()
+        Debugger.instance.start()
 
         exit_code = 0
         try:
@@ -252,9 +252,9 @@ def run_debugger(
                     Event(
                         event="robotExited",
                         body={
-                            "reportFile": Debugger.instance().robot_report_file,
-                            "logFile": Debugger.instance().robot_log_file,
-                            "outputFile": Debugger.instance().robot_output_file,
+                            "reportFile": Debugger.instance.robot_report_file,
+                            "logFile": Debugger.instance.robot_log_file,
+                            "outputFile": Debugger.instance.robot_output_file,
                             "exitCode": exit_code,
                         },
                     )

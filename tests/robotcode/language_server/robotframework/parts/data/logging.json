@@ -1,0 +1,35 @@
+{
+    "version": 1,
+    "disable_existing_loggers": true,
+    "formatters": {
+        "standard": {
+            "class": "robotcode.cli.RobotCodeFormatter",
+            "format": "%(indent)s %(asctime)s %(name)s %(levelname)s: %(message)s"
+        }
+    },
+    "handlers": {
+        "console": {
+            "level": "DEBUG",
+            "class": "logging.StreamHandler",
+            "formatter": "standard"
+        },
+        "file_handler": {
+            "level": "DEBUG",
+            "class": "logging.handlers.RotatingFileHandler",
+            "formatter": "standard",
+            "filename": "info.log",
+            "mode": "w",
+            "maxBytes": 26214400,
+            "backupCount": 10,
+            "encoding": "utf8"
+        }
+    },
+
+    "root": {
+        "level": "DEBUG",
+        "handlers": [
+            "console",
+            "file_handler"
+        ]
+    }
+}

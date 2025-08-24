@@ -9,17 +9,43 @@ from robot.model import Message
 from robotcode.core.utils.path import normalized_path
 
 from .dap_types import Event, Model
-from .debugger import Debugger
+from .debugger import Debugger, LogMessage
+from .mixins import SyncedEventBody
 
 
 @dataclass
-class RobotExecutionEventBody(Model):
+class RobotExecutionEventBody(Model, SyncedEventBody):
     type: str
     id: str
     name: str
     parent_id: Optional[str] = None
     attributes: Optional[Dict[str, Any]] = None
     failed_keywords: Optional[List[Dict[str, Any]]] = None
+    source: Optional[str] = None
+    lineno: Optional[int] = None
+    synced: bool = True
+
+
+@dataclass
+class RobotEnqueuedEventBody(Model, SyncedEventBody):
+    items: List[str]
+    synced: bool = True
+
+
+@dataclass
+class RobotLogMessageEventBody(Model, SyncedEventBody):
+    item_id: Optional[str]
+
+    message: Optional[str]
+    level: Optional[str]
+    timestamp: Optional[str]
+    html: Optional[str]
+
+    source: Optional[str] = None
+    lineno: Optional[int] = None
+    column: Optional[int] = None
+
+    synced: bool = True
 
 
 def source_from_attributes(attributes: Dict[str, Any]) -> str:
@@ -40,7 +66,8 @@ class ListenerV2:
 
     def start_suite(self, name: str, attributes: Dict[str, Any]) -> None:
         id = f"{source_from_attributes(attributes)};{attributes.get('longname', '')}"
-        Debugger.instance().send_event(
+
+        Debugger.instance.send_event(
             self,
             Event(
                 event="robotStarted",
@@ -50,22 +77,24 @@ class ListenerV2:
                     id=id,
                     parent_id=self.suite_id_stack[-1] if self.suite_id_stack else None,
                     attributes=dict(attributes),
+                    source=source_from_attributes(attributes) or None,
+                    lineno=attributes.get("lineno", None),
                 ),
             ),
         )
 
-        Debugger.instance().start_output_group(name, attributes, "SUITE")
+        Debugger.instance.start_output_group(name, attributes, "SUITE")
 
-        Debugger.instance().start_suite(name, attributes)
+        Debugger.instance.start_suite(name, attributes)
         self.suite_id_stack.append(id)
 
     def end_suite(self, name: str, attributes: Dict[str, Any]) -> None:
         id = f"{source_from_attributes(attributes)};{attributes.get('longname', '')}"
-        Debugger.instance().end_suite(name, attributes)
+        Debugger.instance.end_suite(name, attributes)
 
-        Debugger.instance().end_output_group(name, attributes, "SUITE")
+        Debugger.instance.end_output_group(name, attributes, "SUITE")
 
-        Debugger.instance().send_event(
+        Debugger.instance.send_event(
             self,
             Event(
                 event="robotEnded",
@@ -76,6 +105,8 @@ class ListenerV2:
                     id=id,
                     parent_id=self.suite_id_stack[-1] if self.suite_id_stack else None,
                     failed_keywords=self.failed_keywords,
+                    source=source_from_attributes(attributes) or None,
+                    lineno=attributes.get("lineno", None),
                 ),
             ),
         )
@@ -85,7 +116,7 @@ class ListenerV2:
     def start_test(self, name: str, attributes: Dict[str, Any]) -> None:
         self.failed_keywords = None
 
-        Debugger.instance().send_event(
+        Debugger.instance.send_event(
             self,
             Event(
                 event="robotStarted",
@@ -96,20 +127,22 @@ class ListenerV2:
                     f"{attributes.get('lineno', 0)}",
                     parent_id=self.suite_id_stack[-1] if self.suite_id_stack else None,
                     attributes=dict(attributes),
+                    source=source_from_attributes(attributes) or None,
+                    lineno=attributes.get("lineno", None),
                 ),
             ),
         )
 
-        Debugger.instance().start_output_group(name, attributes, "TEST")
+        Debugger.instance.start_output_group(name, attributes, "TEST")
 
-        Debugger.instance().start_test(name, attributes)
+        Debugger.instance.start_test(name, attributes)
 
     def end_test(self, name: str, attributes: Dict[str, Any]) -> None:
-        Debugger.instance().end_test(name, attributes)
+        Debugger.instance.end_test(name, attributes)
 
-        Debugger.instance().end_output_group(name, attributes, "TEST")
+        Debugger.instance.end_output_group(name, attributes, "TEST")
 
-        Debugger.instance().send_event(
+        Debugger.instance.send_event(
             self,
             Event(
                 event="robotEnded",
@@ -121,6 +154,8 @@ class ListenerV2:
                     parent_id=self.suite_id_stack[-1] if self.suite_id_stack else None,
                     attributes=dict(attributes),
                     failed_keywords=self.failed_keywords,
+                    source=source_from_attributes(attributes) or None,
+                    lineno=attributes.get("lineno", None),
                 ),
             ),
         )
@@ -129,19 +164,53 @@ class ListenerV2:
 
     def start_keyword(self, name: str, attributes: Dict[str, Any]) -> None:
         if attributes["type"] in ["KEYWORD", "SETUP", "TEARDOWN"]:
-            Debugger.instance().start_output_group(
+            Debugger.instance.start_output_group(
                 f"{name}({', '.join(repr(v) for v in attributes.get('args', []))})",
                 attributes,
                 attributes.get("type"),
             )
 
-        Debugger.instance().start_keyword(name, attributes)
+        # if Debugger.instance.state != State.CallKeyword:
+        #     Debugger.instance.send_event(
+        #         self,
+        #         Event(
+        #             event="robotStarted",
+        #             body=RobotExecutionEventBody(
+        #                 type="keyword",
+        #                 name=name,
+        #                 id=f"{source_from_attributes(attributes)};{name};{attributes.get('lineno', 0)}",
+        #                 parent_id=self.suite_id_stack[-1] if self.suite_id_stack else None,
+        #                 attributes=dict(attributes),
+        #                 source=source_from_attributes(attributes) or None,
+        #                 lineno=attributes.get("lineno", None),
+        #             ),
+        #         ),
+        #     )
+
+        Debugger.instance.start_keyword(name, attributes)
 
     def end_keyword(self, name: str, attributes: Dict[str, Any]) -> None:
-        Debugger.instance().end_keyword(name, attributes)
+        Debugger.instance.end_keyword(name, attributes)
+
+        # if Debugger.instance.state != State.CallKeyword:
+        #     Debugger.instance.send_event(
+        #         self,
+        #         Event(
+        #             event="robotEnded",
+        #             body=RobotExecutionEventBody(
+        #                 type="keyword",
+        #                 name=name,
+        #                 id=f"{source_from_attributes(attributes)};{name};{attributes.get('lineno', 0)}",
+        #                 parent_id=self.suite_id_stack[-1] if self.suite_id_stack else None,
+        #                 attributes=dict(attributes),
+        #                 source=source_from_attributes(attributes) or None,
+        #                 lineno=attributes.get("lineno", None),
+        #             ),
+        #         ),
+        #     )
 
         if attributes["type"] in ["KEYWORD", "SETUP", "TEARDOWN"]:
-            Debugger.instance().end_output_group(name, attributes, attributes.get("type"))
+            Debugger.instance.end_output_group(name, attributes, attributes.get("type"))
 
             if attributes["status"] == "FAIL" and attributes.get("source"):
                 if self.failed_keywords is None:
@@ -151,13 +220,13 @@ class ListenerV2:
 
     RE_FILE_LINE_MATCHER = re.compile(r".+\sin\sfile\s'(?P<file>.*)'\son\sline\s(?P<line>\d+):(?P<message>.*)")
 
-    def log_message(self, message: Dict[str, Any]) -> None:
+    def log_message(self, message: LogMessage) -> None:
         if message["level"] in ["FAIL", "ERROR", "WARN"]:
-            current_frame = Debugger.instance().full_stack_frames[0] if Debugger.instance().full_stack_frames else None
+            current_frame = Debugger.instance.full_stack_frames[0] if Debugger.instance.full_stack_frames else None
 
             if message["level"] == "FAIL":
                 self.last_fail_message = message["message"]
-                Debugger.instance().last_fail_message = self.last_fail_message
+                Debugger.instance.last_fail_message = self.last_fail_message
 
             source = current_frame.source if current_frame else None
             line = current_frame.line if current_frame else None
@@ -171,7 +240,7 @@ class ListenerV2:
                         else f"{normalized_path(Path(item.source)) if item.source is not None else ''};"
                         f"{item.longname};{item.line}"
                     )
-                    for item in Debugger.instance().full_stack_frames
+                    for item in Debugger.instance.full_stack_frames
                     if item.type in ["SUITE", "TEST"]
                 ),
                 None,
@@ -185,26 +254,28 @@ class ListenerV2:
                 msg = match.group("message")
                 column = 0
 
-            Debugger.instance().send_event(
+            Debugger.instance.send_event(
                 self,
                 Event(
                     event="robotLog",
-                    body={
-                        "itemId": item_id,
-                        "source": source,
-                        "lineno": line,
-                        "column": column,
-                        **dict(message),
-                        **({"message": msg} if msg else {}),
-                    },
+                    body=RobotLogMessageEventBody(
+                        item_id=item_id,
+                        message=msg if msg else message.get("message", None),
+                        level=message.get("level", None),
+                        timestamp=message.get("timestamp", None),
+                        html=message.get("html", None),
+                        source=source,
+                        lineno=line,
+                        column=column,
+                    ),
                 ),
             )
 
-        Debugger.instance().log_message(message)
+        Debugger.instance.log_message(message)
 
-    def message(self, message: Dict[str, Any]) -> None:
+    def message(self, message: LogMessage) -> None:
         if message["level"] in ["FAIL", "ERROR", "WARN"]:
-            current_frame = Debugger.instance().full_stack_frames[0] if Debugger.instance().full_stack_frames else None
+            current_frame = Debugger.instance.full_stack_frames[0] if Debugger.instance.full_stack_frames else None
 
             source = current_frame.source if current_frame else None
             line = current_frame.line if current_frame else None
@@ -218,7 +289,7 @@ class ListenerV2:
                         else f"{normalized_path(Path(item.source)) if item.source is not None else ''};"
                         f"{item.longname};{item.line}"
                     )
-                    for item in Debugger.instance().full_stack_frames
+                    for item in Debugger.instance.full_stack_frames
                     if item.type in ["SUITE", "TEST"]
                 ),
                 None,
@@ -232,22 +303,24 @@ class ListenerV2:
                 msg = match.group("message")
                 column = 0
 
-            Debugger.instance().send_event(
+            Debugger.instance.send_event(
                 self,
                 Event(
                     event="robotMessage",
-                    body={
-                        "itemId": item_id,
-                        "source": source,
-                        "lineno": line,
-                        "column": column,
-                        **dict(message),
-                        **({"message": msg} if msg else {}),
-                    },
+                    body=RobotLogMessageEventBody(
+                        item_id=item_id,
+                        message=msg if msg else message.get("message", None),
+                        level=message.get("level", None),
+                        timestamp=message.get("timestamp", None),
+                        html=message.get("html", None),
+                        source=source,
+                        lineno=line,
+                        column=column,
+                    ),
                 ),
             )
 
-        Debugger.instance().message(message)
+        Debugger.instance.message(message)
 
     def library_import(self, name: str, attributes: Dict[str, Any]) -> None:
         pass
@@ -259,13 +332,13 @@ class ListenerV2:
         pass
 
     def output_file(self, path: str) -> None:
-        Debugger.instance().robot_output_file = path
+        Debugger.instance.robot_output_file = path
 
     def log_file(self, path: str) -> None:
-        Debugger.instance().robot_log_file = path
+        Debugger.instance.robot_log_file = path
 
     def report_file(self, path: str) -> None:
-        Debugger.instance().robot_report_file = path
+        Debugger.instance.robot_report_file = path
 
     def xunit_file(self, path: str) -> None:
         pass
@@ -305,7 +378,7 @@ class ListenerV3:
 
         items = list(reversed(list(enqueue(cast(running.model.TestSuite, data)))))
 
-        Debugger.instance().send_event(self, Event(event="robotEnqueued", body={"items": items}))
+        Debugger.instance.send_event(self, Event(event="robotEnqueued", body=RobotEnqueuedEventBody(items)))
 
         self._event_sended = True
 
@@ -316,7 +389,7 @@ class ListenerV3:
             message: str,
         ) -> None:
             if isinstance(result_item, result.TestCase):
-                Debugger.instance().send_event(
+                Debugger.instance.send_event(
                     self,
                     Event(
                         event="robotSetFailed",
@@ -337,6 +410,8 @@ class ListenerV3:
                                 if isinstance(result_item, result.TestCase)
                                 else ""
                             ),
+                            source=str(normalized_path(Path(result_item.source))) if result_item.source else None,
+                            lineno=data_item.lineno if data_item else None,
                         ),
                     ),
                 )

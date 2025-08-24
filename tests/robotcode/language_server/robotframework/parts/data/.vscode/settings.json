@@ -12,15 +12,21 @@
             "justMyCode": false
         }
     },
-    // "robotcode.languageServer.extraArgs": [
-    //     "--verbose",
-    //     "--debugpy",
-    //     //"--debugpy-wait-for-client",
-    //     "--log",
-    //     "--log-level", "DEBUG",
-    // ],
+    "robotcode.languageServer.extraArgs": [
+        "--verbose",
+        "--debugpy",
+        //"--debugpy-wait-for-client",
+        "--log",
+        "--log-level", "DEBUG",
+        // "--log-format", "%(indent)s%(levelname)s:%(name)s:%(filename)s:%(lineno)d: %(message)s"
+
+        // "--log-config", "logging.json"
+    ],
+    // "robotcode.robocop.configFile": "pyproject.toml",
     "robotcode.robocop.enabled": true,
-    "robotcode.robocop.exclude": ["E0303"],
+    "robotcode.robocop.exclude": [
+        "E0303"
+    ],
     "robotcode.analysis.referencesCodeLens": false,
     "robotcode.analysis.diagnosticMode": "openFilesOnly",
     "robotcode.analysis.progressMode": "detailed",
@@ -43,6 +49,6 @@
         }
     },
     "robotcode.debug.attachPython": true,
-    "debugpy.debugJustMyCode": false
+    "debugpy.debugJustMyCode": false,
 
 }

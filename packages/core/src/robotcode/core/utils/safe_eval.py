@@ -47,7 +47,7 @@ class Transformer(ast.NodeTransformer):
     def __init__(self, allowed_names: Optional[Sequence[str]]) -> None:
         self.allowed_names = (*self.STD_ALLOWED_NAMES, *(allowed_names or []))
 
-    def visit_Name(self, node: ast.Name) -> ast.AST:  # noqa: N802
+    def visit_Name(self, node: ast.Name) -> ast.AST:
         if node.id not in self.allowed_names:
             raise NameError(f"Name access to '{node.id}' is not allowed")
 

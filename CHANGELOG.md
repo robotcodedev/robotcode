@@ -2,6 +2,141 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [1.8.0](https://github.com/robotcodedev/robotcode/compare/v1.7.0..v1.8.0) - 2025-08-15
+
+### Bug Fixes
+
+- **vscode:** Improve handling of active environment path changes in PythonManager ([79e410e](https://github.com/robotcodedev/robotcode/commit/79e410ee275c1ce701ca438cef99d4c11be312a3))
+
+
+### Documentation
+
+- **contributing:** Remove emojis and improve formatting for clarity ([b5bf94d](https://github.com/robotcodedev/robotcode/commit/b5bf94deb145c869aca55ac11c250156293413ff))
+- **copilot-instructions:** Update formatting and punctuation for clarity and consistency ([d39a5fc](https://github.com/robotcodedev/robotcode/commit/d39a5fc3adfffda4d8093e49ff5687cd7cfb1669))
+- **css:** Update brand colors and button styles for Robot Framework theme ([3b84bb4](https://github.com/robotcodedev/robotcode/commit/3b84bb48ad07e637cb49238c7c87fb7e4f9126d9))
+- **tips:** Correct link to "Why is my variable shown as 'not found'" article ([0f45265](https://github.com/robotcodedev/robotcode/commit/0f45265752c1f409f6bbca4a64d3a9c23fc9be39))
+- **tips:** Reorganize tip and tricks files with numbered prefixes and finish why_variable_not_found article ([4a9156c](https://github.com/robotcodedev/robotcode/commit/4a9156cc6bdb9cd4a4ccd2400435e70b1d24c0ef))
+- Redesign landing page a bit ([b9dcf16](https://github.com/robotcodedev/robotcode/commit/b9dcf1641d485f9ce51a1d535393c7c926be4995))
+- Add commit message standard to guidelines ([2db7f61](https://github.com/robotcodedev/robotcode/commit/2db7f61e12c280663fe9fc5d4f1adf6b286e0ff6))
+- Add CLAUDE.md for project guidance and development instructions ([53bcc04](https://github.com/robotcodedev/robotcode/commit/53bcc04bfb636b53a21b8e9e9a57753d1fbe8e81))
+- Add project language requirement to ensure consistency in code and documentation ([a6baec4](https://github.com/robotcodedev/robotcode/commit/a6baec46e0a9405296b869dac7368f1cada6211a))
+- Enhance guidance on modular resource file structure and performance considerations ([7800f67](https://github.com/robotcodedev/robotcode/commit/7800f673333a8bad7d405201f8be0bb0a4925b93))
+- Update requirements for Python, Robot Framework, and VSCode versions ([e91918d](https://github.com/robotcodedev/robotcode/commit/e91918d049e2a7660168d7e6c80d4e802c72a930))
+- Add support section to README.md with sponsorship details ([675cc9c](https://github.com/robotcodedev/robotcode/commit/675cc9c927670adec584e23da9aa5e10b1120197))
+
+
+### Features
+
+- **docs:** Integrate lite-youtube-embed and update search provider to Algolia ([aa02835](https://github.com/robotcodedev/robotcode/commit/aa02835d007b2041b4e8572fb1340608520524d5))
+
+
+## [1.7.0](https://github.com/robotcodedev/robotcode/compare/v1.6.0..v1.7.0) - 2025-07-31
+
+### Bug Fixes
+
+- **diagnostics:** Correct overriding of imported variables in suite variables ([afed6db](https://github.com/robotcodedev/robotcode/commit/afed6db7cf9d5293b62a01eaaeba621517894ebd))
+
+
+### Features
+
+- **docs:** Add generated llms.txt and llms-full.txt to website ([1f23559](https://github.com/robotcodedev/robotcode/commit/1f23559ff9f26cb2dd9977c001b883493f1f32b4))
+
+
+### Refactor
+
+- **jsonrpc:** Fix some spellings and split up some methods ([3c71ce6](https://github.com/robotcodedev/robotcode/commit/3c71ce64f8a797a4f0db925c2379800a3e48a987))
+
+
+## [1.6.0](https://github.com/robotcodedev/robotcode/compare/v1.5.0..v1.6.0) - 2025-07-30
+
+### Bug Fixes
+
+- **core:** Remove unnecessary socket option for address reuse in find_free_port ([1ee754a](https://github.com/robotcodedev/robotcode/commit/1ee754abc7b27a8d2d70e15f39dad8ec0febc4da))
+- **debugger:** Enhance error handling in DAPClient and simplify port allocation for new testrun sessions ([43f242d](https://github.com/robotcodedev/robotcode/commit/43f242d61dc0e249e1912ac0d7be8df63478d802))
+
+  - every new test run gets it's own tcp port
+
+- **debugger:** Only sync when not in CallKeyword state ([709798a](https://github.com/robotcodedev/robotcode/commit/709798ac5cfbdf84ede7282d396bcae03a7e33f7))
+
+
+### Documentation
+
+- Remove robotframework-tidy from docs ([c259a0f](https://github.com/robotcodedev/robotcode/commit/c259a0f42819e25603ff333afdf6fc9c00b6b279))
+
+
+### Features
+
+- **debug:** Better synchronization between test view and execution in intellij-client, part 2 ([4ce87a2](https://github.com/robotcodedev/robotcode/commit/4ce87a2a86c72c944fab5de1288d08ecc33928e7))
+- **debugger:** Better synchronization between test view and execution in vscode, part 1 ([63c895f](https://github.com/robotcodedev/robotcode/commit/63c895f8d78ba0db64c32c4100ab09bf42941232))
+- **robotcode:** Remove robotframework-tidy from optional-dependencies ([205cfd1](https://github.com/robotcodedev/robotcode/commit/205cfd1a93aae3bfc4e062d1d16b0dd3ad2e4f98))
+
+
+### Refactor
+
+- **debugger:** Split get_variables method and splitup version specific behavior for exception handling ([c828202](https://github.com/robotcodedev/robotcode/commit/c828202021d8b0eb0e4862fec0e96713977cfe62))
+- **debugger:** Break down complex evaluate() method ([4c6b9af](https://github.com/robotcodedev/robotcode/commit/4c6b9afc988a0b4838e16bd9f57b4d57db278721))
+- **debugger:** Optimize cache management and improve regex matching performance ([2edfeea](https://github.com/robotcodedev/robotcode/commit/2edfeea3d884b486b19d3c6ab4b6e76e03572b57))
+- **debugger:** Enhance type safety by introducing protocols and type definitions for log messages and attributes ([a65b9b9](https://github.com/robotcodedev/robotcode/commit/a65b9b95cf66d3b513da2c50d1409a56887c9963))
+- **debugger:** Replace magic numbers with named constants for better readability ([65b0912](https://github.com/robotcodedev/robotcode/commit/65b091218e2ed5552e6d2a84ab61600ecbdc75a3))
+- **debugger:** Replace instance method calls with property access for consistency ([8ea82e4](https://github.com/robotcodedev/robotcode/commit/8ea82e45f4d343431aa42dfd525ed5ccb09d4df7))
+- **instructions:** Clarify implementation guidelines and communication flow ([b37be1c](https://github.com/robotcodedev/robotcode/commit/b37be1c683467ba4f3557127cb6337d5baad19c3))
+- **langserver:** Improve performance and memory consumption for semantic tokens ([e8297ff](https://github.com/robotcodedev/robotcode/commit/e8297ffc2f093cbab7eeff0bbecc7fba3dd5f330))
+- **langserver:** Remove unused semantic token types and update regression tests ([6b262b5](https://github.com/robotcodedev/robotcode/commit/6b262b54d3aa53e55f4661b289f7959baf1f260a))
+- **langserver:** Remove unused methods to simplify code ([96ba516](https://github.com/robotcodedev/robotcode/commit/96ba5162238fe04ca9b2473dcc512b94efc8cf7f))
+- **langserver:** Optimize memory consumption and perfomance in semantic token highlighter ([7e5e8e3](https://github.com/robotcodedev/robotcode/commit/7e5e8e3b9ebc0a3a1ce0a0dccee4cdf160d7bdb5))
+- **langserver:** Remove some unneeded casts ([c82a604](https://github.com/robotcodedev/robotcode/commit/c82a6040ea9b6d786e0af9cf5078780e2aaf7437))
+
+
+## [1.5.0](https://github.com/robotcodedev/robotcode/compare/v1.4.0..v1.5.0) - 2025-07-07
+
+### Features
+
+- **cli:** Add new command line switch `--log-config` to specify a python json log configuration ([31a11f2](https://github.com/robotcodedev/robotcode/commit/31a11f27b96fba6c879218c9b13cdea5f8bb89c3))
+- **jsonrpcl:** Simplify error message formatting in JsonRPCProtocol for better readability in clients ([75614b0](https://github.com/robotcodedev/robotcode/commit/75614b05820f57c98c416949abced03970e0b429))
+
+
+### Refactor
+
+- **langserver:** Remove some unused code ([fa429a5](https://github.com/robotcodedev/robotcode/commit/fa429a502e1901cfc0d4126c4047994a5fd5ee39))
+- **langserver:** Simplify keyword renaming ([3836362](https://github.com/robotcodedev/robotcode/commit/3836362073599bcc32d9cb38425645d34d681f91))
+- **langserver:** Simplify variable renaming ([779fd70](https://github.com/robotcodedev/robotcode/commit/779fd703339ce81124f03f08b73e2639d0729212))
+
+
+### Testing
+
+- Update regression tests for RF 7.3.2 ([fd1b89a](https://github.com/robotcodedev/robotcode/commit/fd1b89ac17b1f378bc66c6d944afc92252f13ecf))
+
+
+## [1.4.0](https://github.com/robotcodedev/robotcode/compare/v1.3.0..v1.4.0) - 2025-06-30
+
+### Bug Fixes
+
+- **langserver:** Remove timing messages from diagnostics in log ([c908485](https://github.com/robotcodedev/robotcode/commit/c90848514f713805fa330ccfc4344cc8775d0118))
+
+  - if you want to see it again, then you have to enable the log output for the language server
+
+
+
+### Documentation
+
+- Update Python and Robot Framework version requirements and deprecation notice ([6396b7e](https://github.com/robotcodedev/robotcode/commit/6396b7ef76fd8d41c3d79afc0bab871342eb8622))
+
+
+### Features
+
+- **langserver:** Improve and unify Robocop 6 configuration loading ([b3c5dd3](https://github.com/robotcodedev/robotcode/commit/b3c5dd3c50308116fc1e1de7adc156a6086cd8fd))
+
+  - Enhance configuration loading process
+  - Add notifications for faulty configurations
+
+
+
+### Refactor
+
+- Simpify some logging code ([5ea1ca1](https://github.com/robotcodedev/robotcode/commit/5ea1ca1c77269df8ebcc70e9a86e77a89d9249a6))
+- Switch lint environment to python 3.10 and corrected all linting errors and warnings ([19a2632](https://github.com/robotcodedev/robotcode/commit/19a26325454ba1b5e53b8548a16c0a3fbe8d5422))
+
+
 ## [1.3.0](https://github.com/robotcodedev/robotcode/compare/v1.2.0..v1.3.0) - 2025-06-16
 
 ### Bug Fixes

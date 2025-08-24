@@ -348,7 +348,7 @@ class RpcRegistry:
         return result.param_type
 
 
-class SendedRequestEntry:
+class SentRequestEntry:
     def __init__(self, future: Task[Any], result_type: Optional[Type[Any]]) -> None:
         self.future = future
         self.result_type = result_type
@@ -420,6 +420,8 @@ class JsonRPCProtocolBase(asyncio.Protocol, ABC):
         re.DOTALL,
     )
 
+    DEFAULT_MESSAGE_LENGTH: Final = 1
+
     def data_received(self, data: bytes) -> None:
         while len(data):
             # Append the incoming chunk to the message buffer
@@ -429,7 +431,7 @@ class JsonRPCProtocolBase(asyncio.Protocol, ABC):
             found = self.MESSAGE_PATTERN.match(self._message_buf)
 
             body = found.group("body") if found else b""
-            length = int(found.group("length")) if found else 1
+            length = int(found.group("length")) if found else self.DEFAULT_MESSAGE_LENGTH
 
             charset = (
                 found.group("charset").decode("ascii") if found and found.group("charset") is not None else self.CHARSET
@@ -453,9 +455,9 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
 
     def __init__(self) -> None:
         super().__init__()
-        self._sended_request_lock = threading.RLock()
-        self._sended_request: OrderedDict[Union[str, int], SendedRequestEntry] = OrderedDict()
-        self._sended_request_count = 0
+        self._sent_request_lock = threading.RLock()
+        self._sent_request: OrderedDict[Union[str, int], SentRequestEntry] = OrderedDict()
+        self._sent_request_count = 0
         self._received_request: OrderedDict[Union[str, int, None], ReceivedRequestEntry] = OrderedDict()
         self._received_request_lock = threading.RLock()
         self._signature_cache: Dict[Callable[..., Any], inspect.Signature] = {}
@@ -500,7 +502,7 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
             raise
         except BaseException as e:
             self.__logger.exception(e)
-            self.send_error(JsonRPCErrors.PARSE_ERROR, f"{type(e).__name__}: {e}")
+            self.send_error(JsonRPCErrors.PARSE_ERROR, f"{e}")
 
     def _handle_messages(self, iterator: Iterator[JsonRPCMessage]) -> None:
         for m in iterator:
@@ -567,11 +569,11 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
     ) -> Task[_TResult]:
         result: Task[_TResult] = Task()
 
-        with self._sended_request_lock:
-            self._sended_request_count += 1
-            id = self._sended_request_count
+        with self._sent_request_lock:
+            self._sent_request_count += 1
+            id = self._sent_request_count
 
-            self._sended_request[id] = SendedRequestEntry(result, return_type)
+            self._sent_request[id] = SentRequestEntry(result, return_type)
 
         request = JsonRPCRequest(id=id, method=method, params=params)
         self.send_message(request)
@@ -598,8 +600,8 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
             self.send_error(JsonRPCErrors.INTERNAL_ERROR, error)
             return
 
-        with self._sended_request_lock:
-            entry = self._sended_request.pop(message.id, None)
+        with self._sent_request_lock:
+            entry = self._sent_request.pop(message.id, None)
 
         if entry is None:
             error = f"Invalid response. Could not find id '{message.id}' in request list."
@@ -628,8 +630,8 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
             self.__logger.warning(error)
             raise JsonRPCErrorException(message.error.code, message.error.message, message.error.data)
 
-        with self._sended_request_lock:
-            entry = self._sended_request.pop(message.id, None)
+        with self._sent_request_lock:
+            entry = self._sent_request.pop(message.id, None)
 
         if entry is None:
             error = f"Invalid response. Could not find id '{message.id}' in request list."
@@ -660,70 +662,157 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
         params_type: Optional[Type[Any]],
         params: Any,
     ) -> Tuple[List[Any], Dict[str, Any]]:
+        """Convert JSON-RPC parameters to function arguments.
+
+        Args:
+            callable: The target function to call
+            params_type: Expected parameter type for conversion
+            params: Raw parameters from JSON-RPC message
+
+        Returns:
+            Tuple of (positional_args, keyword_args) for function call
+        """
         if params is None:
             return [], {}
+
         if params_type is None:
-            if isinstance(params, Mapping):
-                return [], dict(**params)
+            return self._handle_untyped_params(params)
 
-            return [params], {}
+        return self._handle_typed_params(callable, params_type, params)
 
-        # try to convert the dict to correct type
+    def _handle_untyped_params(self, params: Any) -> Tuple[List[Any], Dict[str, Any]]:
+        """Handle parameters when no specific type is expected."""
+        if isinstance(params, Mapping):
+            return [], dict(**params)
+        return [params], {}
+
+    def _handle_typed_params(
+        self,
+        callable: Callable[..., Any],
+        params_type: Type[Any],
+        params: Any,
+    ) -> Tuple[List[Any], Dict[str, Any]]:
+        """Handle parameters with type conversion and signature matching."""
+        # Convert the parameters to the expected type
         converted_params = from_dict(params, params_type)
 
-        # get the signature of the callable
-        if callable in self._signature_cache:
-            signature = self._signature_cache[callable]
-        else:
-            signature = inspect.signature(callable)
-            self._signature_cache[callable] = signature
+        # Get cached signature or create new one
+        signature = self._get_cached_signature(callable)
 
+        # Extract field names from converted parameters
+        field_names = self._extract_field_names(converted_params)
+
+        # Process signature parameters
+        return self._process_signature_parameters(signature, converted_params, params, field_names)
+
+    def _get_cached_signature(self, callable: Callable[..., Any]) -> inspect.Signature:
+        """Get or cache the signature of a callable."""
+        if callable in self._signature_cache:
+            return self._signature_cache[callable]
+
+        signature = inspect.signature(callable)
+        self._signature_cache[callable] = signature
+        return signature
+
+    def _extract_field_names(self, converted_params: Any) -> List[str]:
+        """Extract field names from converted parameters."""
+        if is_dataclass(converted_params):
+            return [f.name for f in fields(converted_params)]
+        return list(converted_params.__dict__.keys())
+
+    def _process_signature_parameters(
+        self,
+        signature: inspect.Signature,
+        converted_params: Any,
+        params: Any,
+        field_names: List[str],
+    ) -> Tuple[List[Any], Dict[str, Any]]:
+        """Process function signature parameters and map them to arguments."""
         has_var_kw = any(p.kind == inspect.Parameter.VAR_KEYWORD for p in signature.parameters.values())
 
-        kw_args = {}
-        args = []
+        kw_args: Dict[str, Any] = {}
+        args: List[Any] = []
         params_added = False
-
-        field_names = (
-            [f.name for f in fields(converted_params)]
-            if is_dataclass(converted_params)
-            else list(converted_params.__dict__.keys())
-        )
 
         rest = set(field_names)
         if isinstance(params, dict):
             rest = set.union(rest, params.keys())
 
-        for v in signature.parameters.values():
-            if v.name in field_names:
-                if v.kind == inspect.Parameter.POSITIONAL_ONLY:
-                    args.append(getattr(converted_params, v.name))
-                else:
-                    kw_args[v.name] = getattr(converted_params, v.name)
+        # Map signature parameters to arguments
+        for param in signature.parameters.values():
+            if param.name in field_names:
+                self._add_field_parameter(param, converted_params, args, kw_args)
+                rest.remove(param.name)
+            elif param.name == "params":
+                self._add_params_parameter(param, converted_params, args, kw_args)
+                params_added = True
+            elif isinstance(params, dict) and param.name in params:
+                self._add_dict_parameter(param, params, args, kw_args)
 
-                rest.remove(v.name)
-            elif v.name == "params":
-                if v.kind == inspect.Parameter.POSITIONAL_ONLY:
-                    args.append(converted_params)
-                    params_added = True
-                else:
-                    kw_args[v.name] = converted_params
-                    params_added = True
-            elif isinstance(params, dict) and v.name in params:
-                if v.kind == inspect.Parameter.POSITIONAL_ONLY:
-                    args.append(params[v.name])
-                else:
-                    kw_args[v.name] = params[v.name]
+        # Handle remaining parameters if function accepts **kwargs
         if has_var_kw:
-            for r in rest:
-                if hasattr(converted_params, r):
-                    kw_args[r] = getattr(converted_params, r)
-                elif isinstance(params, dict) and r in params:
-                    kw_args[r] = params[r]
+            self._handle_var_keywords(rest, converted_params, params, kw_args, params_added)
 
-            if not params_added:
-                kw_args["params"] = converted_params
         return args, kw_args
+
+    def _add_field_parameter(
+        self,
+        param: inspect.Parameter,
+        converted_params: Any,
+        args: List[Any],
+        kw_args: Dict[str, Any],
+    ) -> None:
+        """Add a parameter from converted_params fields."""
+        value = getattr(converted_params, param.name)
+        if param.kind == inspect.Parameter.POSITIONAL_ONLY:
+            args.append(value)
+        else:
+            kw_args[param.name] = value
+
+    def _add_params_parameter(
+        self,
+        param: inspect.Parameter,
+        converted_params: Any,
+        args: List[Any],
+        kw_args: Dict[str, Any],
+    ) -> None:
+        """Add the entire converted_params as 'params' parameter."""
+        if param.kind == inspect.Parameter.POSITIONAL_ONLY:
+            args.append(converted_params)
+        else:
+            kw_args[param.name] = converted_params
+
+    def _add_dict_parameter(
+        self,
+        param: inspect.Parameter,
+        params: Dict[str, Any],
+        args: List[Any],
+        kw_args: Dict[str, Any],
+    ) -> None:
+        """Add a parameter from the original params dict."""
+        value = params[param.name]
+        if param.kind == inspect.Parameter.POSITIONAL_ONLY:
+            args.append(value)
+        else:
+            kw_args[param.name] = value
+
+    def _handle_var_keywords(
+        self,
+        rest: Set[str],
+        converted_params: Any,
+        params: Any,
+        kw_args: Dict[str, Any],
+        params_added: bool,
+    ) -> None:
+        """Handle remaining parameters for functions with **kwargs."""
+        for name in rest:
+            if hasattr(converted_params, name):
+                kw_args[name] = getattr(converted_params, name)
+            elif isinstance(params, dict) and name in params:
+                kw_args[name] = params[name]
+
+        if not params_added:
+            kw_args["params"] = converted_params
 
     async def handle_request(self, message: JsonRPCRequest) -> None:
         try:
@@ -786,6 +875,9 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
                     ex = t.exception()
                     if ex is not None:
                         self.__logger.exception(ex, exc_info=ex)
+                        if isinstance(ex, JsonRPCErrorException):
+                            raise ex
+
                         raise JsonRPCErrorException(
                             JsonRPCErrors.INTERNAL_ERROR,
                             f"{type(ex).__name__}: {ex}",
@@ -804,7 +896,7 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
         except JsonRPCErrorException as e:
             self.send_error(
                 e.code,
-                e.message or f"{type(e).__name__}: {e}",
+                e.message or f"{e}",
                 id=message.id,
                 data=e.data,
             )
@@ -812,7 +904,7 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
             self.__logger.exception(e)
             self.send_error(
                 JsonRPCErrors.INTERNAL_ERROR,
-                f"{type(e).__name__}: {e}",
+                f"{e}",
                 id=message.id,
             )
 
@@ -856,7 +948,14 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
             pass
         except (SystemExit, KeyboardInterrupt):
             raise
+        except JsonRPCErrorException:
+            # Specific RPC errors should be re-raised
+            raise
+        except (ValueError, TypeError) as e:
+            # Parameter validation errors
+            self.__logger.warning(lambda: f"Parameter validation failed for {message.method}: {e}", exc_info=e)
         except BaseException as e:
+            # Unexpected errors
             self.__logger.exception(e)
 
 

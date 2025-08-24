@@ -89,7 +89,7 @@ class LibDocRequestHandler(SimpleHTTPRequestHandler):
         )
         return None
 
-    def do_GET(self) -> None:  # noqa: N802
+    def do_GET(self) -> None:
         query = parse_qs(urlparse(self.path).query)
         name = n[0] if (n := query.get("name", [])) else None
         args = n[0] if (n := query.get("args", [])) else None

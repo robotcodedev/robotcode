@@ -39,8 +39,8 @@ class SemanticTokensProtocolPart(LanguageServerProtocolPart):
     def __init__(self, parent: "LanguageServerProtocol") -> None:
         super().__init__(parent)
 
-        self.token_types: List[Enum] = list(SemanticTokenTypes)
-        self.token_modifiers: List[Enum] = list(SemanticTokenModifiers)
+        self.token_types: List[Union[SemanticTokenTypes, Enum]] = list(SemanticTokenTypes)
+        self.token_modifiers: List[Union[SemanticTokenModifiers, Enum]] = list(SemanticTokenModifiers)
 
         self.refresh_timer_lock = threading.RLock()
         self.refresh_timer: Optional[threading.Timer] = None

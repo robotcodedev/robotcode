@@ -198,15 +198,14 @@ class LoggingDescriptor:
         extra: Optional[Mapping[str, object]] = None,
         **kwargs: Any,
     ) -> None:
-        if (self.is_enabled_for(level) and condition is not None and condition()) or condition is None:
+        if self.is_enabled_for(level) and (condition is None or condition()):
             depth = 0
             if context_name is not None:
                 depth = self._measure_contexts.get(context_name, 0)
 
-            if depth > 0:
-                extra = {**extra} if extra is not None else {}
-                if "indent" not in extra:
-                    extra["indent"] = "  " * depth
+            extra = {**extra} if extra is not None else {}
+            if "indent" not in extra:
+                extra["indent"] = ("  " * depth) if depth > 0 else ""
 
             self.logger.log(
                 level,
@@ -238,7 +237,6 @@ class LoggingDescriptor:
             **kwargs,
         )
 
-    _log_measure_time = log
     _measure_contexts: Dict[str, int] = {}
 
     @contextmanager
@@ -259,11 +257,12 @@ class LoggingDescriptor:
 
                 self._measure_contexts[context_name] = depth
 
-            self._log_measure_time(
+            self.log(
                 level,
                 lambda: f"Start {msg() if callable(msg) else msg}",
                 *args,
                 context_name=context_name,
+                stacklevel=3,
                 extra=extra,
                 **kwargs,
             )
@@ -280,11 +279,12 @@ class LoggingDescriptor:
                 if context_name is not None:
                     self._measure_contexts[context_name] = depth
 
-                self._log_measure_time(
+                self.log(
                     level,
                     lambda: f"End {msg() if callable(msg) else msg} took {duration:.4f} seconds",
                     *args,
                     context_name=context_name,
+                    stacklevel=3,
                     extra=extra,
                     **kwargs,
                 )

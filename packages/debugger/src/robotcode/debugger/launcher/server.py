@@ -136,7 +136,7 @@ class LauncherDebugAdapterProtocol(DebugAdapterProtocol):
 
         connect_timeout = launcherTimeout or 10
 
-        port = find_free_port(DEBUGGER_DEFAULT_PORT)
+        port = find_free_port()
 
         debugger_script = ["-m", "robotcode.cli"] if self.debugger_script is None else [str(Path(self.debugger_script))]
 
@@ -254,6 +254,7 @@ class LauncherDebugAdapterProtocol(DebugAdapterProtocol):
                 ),
                 return_type=RunInTerminalResponseBody,
             )
+            # time.sleep(1)  # Give some time for the terminal to start
         elif console is None or console == "internalConsole":
             run_env: Dict[str, Optional[str]] = dict(os.environ)
             run_env.update(env)

@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Any, List, Optional, cast
+from typing import TYPE_CHECKING, Any, List, Optional
 
 from robotcode.core.concurrent import check_current_task_canceled
 from robotcode.core.language import language_id
@@ -100,12 +100,9 @@ class RobotDocumentHighlightProtocolPart(RobotLanguageServerProtocolPart):
                     ns.import_range
                     if ns.import_source == namespace.source
                     and (position.is_in_range(ns.alias_range, False) or position.is_in_range(ns.import_range, False))
-                    else cast(
-                        Optional[Range],
-                        next(
-                            (r.range for r in ns_refs if position.is_in_range(r.range, False)),
-                            None,
-                        ),
+                    else next(
+                        (r.range for r in ns_refs if position.is_in_range(r.range, False)),
+                        None,
                     )
                 )
 

@@ -26,10 +26,6 @@ if TYPE_CHECKING:
 from .protocol_part import RobotLanguageServerProtocolPart
 
 
-class CantReadDocumentError(Exception):
-    pass
-
-
 class RobotWorkspaceProtocolPart(RobotLanguageServerProtocolPart):
     _logger = LoggingDescriptor()
 

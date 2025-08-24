@@ -70,10 +70,16 @@ export class PythonManager {
   }
 
   private doActiveEnvironmentPathChanged(event: ActiveEnvironmentPathChangeEvent): void {
-    this.outputChannel.appendLine(
-      `ActiveEnvironmentPathChanged: ${event.resource?.uri.toString() ?? UNKNOWN} ${event.id}`,
-    );
-    this._onActivePythonEnvironmentChangedEmitter.fire({ resource: event.resource });
+    const wsFolder =
+      event.resource === undefined
+        ? undefined
+        : event.resource instanceof vscode.Uri
+          ? vscode.workspace.getWorkspaceFolder(event.resource)
+          : event.resource;
+
+    this.outputChannel.appendLine(`ActiveEnvironmentPathChanged: ${wsFolder?.uri ?? UNKNOWN} ${event.id}`);
+
+    this._onActivePythonEnvironmentChangedEmitter.fire({ resource: wsFolder });
   }
 
   async getPythonExtension(): Promise<PythonExtension | undefined> {

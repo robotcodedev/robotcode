@@ -179,7 +179,8 @@ class VariableDefinitionType(Enum):
 @dataclass
 class VariableDefinition(SourceEntity):
     name: str
-    name_token: Optional[Token]
+    name_token: Optional[Token]  # TODO: this is not needed anymore, but kept for compatibility
+
     type: VariableDefinitionType = VariableDefinitionType.VARIABLE
 
     has_value: bool = field(default=False, compare=False)

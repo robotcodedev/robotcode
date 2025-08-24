@@ -98,15 +98,6 @@ class LanguageServerLogHandler(logging.Handler):
             if self.trace != TraceValues.OFF:
                 self.protocol.log_trace(record.getMessage())
 
-        type = self.MAPPING.get(record.levelno, None)
-        if type is None:
-            type = MessageType.LOG
-
-        self.protocol.window_log_message(
-            type=type,
-            message=record.getMessage(),
-        )
-
 
 class LanguageServerProtocol(JsonRPCProtocol):
     __logger = LoggingDescriptor()

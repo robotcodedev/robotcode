@@ -234,6 +234,27 @@ class NamespaceAnalyzer(Visitor):
             )
 
             add_to_references = True
+
+            if existing_var is not None and existing_var.type == VariableDefinitionType.IMPORTED_VARIABLE:
+                self._append_diagnostics(
+                    r,
+                    "Overrides imported variable.",
+                    DiagnosticSeverity.WARNING,
+                    Error.OVERRIDES_IMPORTED_VARIABLE,
+                    related_information=[
+                        DiagnosticRelatedInformation(
+                            location=Location(
+                                uri=str(Uri.from_path(existing_var.source)),
+                                range=existing_var.range,
+                            ),
+                            message="Already defined here.",
+                        )
+                    ]
+                    if existing_var.source
+                    else None,
+                )
+                existing_var = None
+
             first_overidden_reference: Optional[VariableDefinition] = None
             if existing_var is not None:
                 self._variable_references[existing_var].add(Location(self._namespace.document_uri, r))
@@ -357,7 +378,7 @@ class NamespaceAnalyzer(Visitor):
 
                 var = var_type(
                     name=matcher.name,
-                    name_token=strip_variable_token(stripped_name_token),
+                    name_token=stripped_name_token,
                     line_no=stripped_name_token.lineno,
                     col_offset=stripped_name_token.col_offset,
                     end_line_no=stripped_name_token.lineno,
@@ -372,9 +393,7 @@ class NamespaceAnalyzer(Visitor):
                 else:
                     existing_var = self._variables[var.matcher]
 
-                    location = Location(
-                        self._namespace.document_uri, range_from_token(strip_variable_token(stripped_name_token))
-                    )
+                    location = Location(self._namespace.document_uri, range_from_token(stripped_name_token))
                     self._variable_references[existing_var].add(location)
                     if existing_var in self._overridden_variables:
                         self._variable_references[self._overridden_variables[existing_var]].add(location)

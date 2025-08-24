@@ -2,6 +2,7 @@ package dev.robotcode.robotcode4ij.debugging
 
 import com.intellij.openapi.diagnostic.thisLogger
 import com.jetbrains.rd.util.reactive.Signal
+import kotlinx.coroutines.future.await
 import org.eclipse.lsp4j.debug.ExitedEventArguments
 import org.eclipse.lsp4j.debug.OutputEventArguments
 import org.eclipse.lsp4j.debug.StoppedEventArguments
@@ -142,6 +143,8 @@ data class RobotLogMessageEventArguments(
 )
 
 @Suppress("unused") class RobotCodeDebugProtocolClient : IDebugProtocolClient {
+    var server: IRobotCodeDebugProtocolServer? = null
+    
     var onStopped = Signal<StoppedEventArguments>()
     val onTerminated = Signal<TerminatedEventArguments?>()
     val onExited = Signal<ExitedEventArguments?>()
@@ -170,39 +173,46 @@ data class RobotLogMessageEventArguments(
         onStopped.fire(args)
     }
     
-    @JsonNotification("robotEnqueued") fun robotEnqueued(args: RobotEnqueuedArguments) {
+    @JsonNotification("robotEnqueued")  fun robotEnqueued(args: RobotEnqueuedArguments) {
         thisLogger().trace("robotEnqueued")
         onRobotEnqueued.fire(args)
+        server?.robotSync()
     }
     
     @JsonNotification("robotStarted") fun robotStarted(args: RobotExecutionEventArguments) {
         thisLogger().trace("robotStarted $args")
         onRobotStarted.fire(args)
+        server?.robotSync()
     }
     
     @JsonNotification("robotEnded") fun robotEnded(args: RobotExecutionEventArguments) {
         thisLogger().trace("robotEnded $args")
         onRobotEnded.fire(args)
+        server?.robotSync()
     }
     
     @JsonNotification("robotSetFailed") fun robotSetFailed(args: RobotExecutionEventArguments) {
         thisLogger().trace("robotSetFailed $args")
         onRobotSetFailed.fire(args)
+        server?.robotSync()
     }
     
     @JsonNotification("robotExited") fun robotExited(args: RobotExitedEventArguments) {
         thisLogger().trace("robotExited")
         onRobotExited.fire(args)
+        server?.robotSync()
     }
     
     @JsonNotification("robotLog") fun robotLog(args: RobotLogMessageEventArguments) {
         thisLogger().trace("robotLog")
         onRobotLog.fire(args)
+        server?.robotSync()
     }
     
     @JsonNotification("robotMessage") fun robotMessage(args: RobotLogMessageEventArguments) {
         thisLogger().trace("robotMessage")
         onRobotMessage.fire(args)
+        server?.robotSync()
     }
     
     override fun output(args: OutputEventArguments) {

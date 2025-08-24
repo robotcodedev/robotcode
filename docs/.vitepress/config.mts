@@ -1,5 +1,6 @@
 import { defineConfig } from "vitepress";
 import { generateSidebar } from "vitepress-sidebar";
+import llmstxtPlugin from "vitepress-plugin-llmstxt";
 import taskLists from "markdown-it-task-lists";
 import kbd from "markdown-it-kbd";
 import abbr from "markdown-it-abbr";
@@ -35,6 +36,16 @@ export default defineConfig({
     ["meta", { property: "og:image", content: "https://robotcode.io/robotcode-logo.jpg" }],
     ["meta", { property: "og:url", content: "https://robotcode.io/" }],
   ],
+  vite: {
+    plugins: [llmstxtPlugin()],
+  },
+  vue: {
+    template: {
+      compilerOptions: {
+        isCustomElement: (tag) => tag === "lite-youtube",
+      },
+    },
+  },
   themeConfig: {
     // https://vitepress.dev/reference/default-theme-config
     logo: { src: "/robotcode-logo.svg", alt: "RobotCode Logo" },
@@ -67,7 +78,12 @@ export default defineConfig({
       },
     ],
     search: {
-      provider: "local",
+      provider: "algolia",
+      options: {
+        appId: "7D5ZR1RO6N",
+        apiKey: "699cc9be1fe74f0953afdd17beb6e9c9",
+        indexName: "robotcode",
+      },
     },
     editLink: {
       pattern: "https://github.com/robotcodedev/robotcode/edit/main/docs/:path",

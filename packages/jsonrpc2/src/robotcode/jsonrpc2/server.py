@@ -198,7 +198,6 @@ class JsonRPCServer(Generic[TProtocol], abc.ABC):
                             stop_event.wait(0.01)
 
                 with ThreadPoolExecutor(max_workers=1, thread_name_prefix="aio_readline") as stdio_executor:
-                    self._stdio_threadpool = stdio_executor
                     await asyncio.wrap_future(stdio_executor.submit(run))
 
             self.loop.run_until_complete(aio_readline(transport.rfile, protocol))

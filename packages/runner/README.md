@@ -8,7 +8,9 @@
 
 ## Introduction
 
-Some classes for [RobotCode](https://robotcode.io) plugin management
+Test execution and runner utilities for Robot Framework in [RobotCode](https://robotcode.io).
+
+This package is part of the [RobotCode](https://robotcode.io) project. The complete source code is available at [github.com/robotcodedev/robotcode](https://github.com/robotcodedev/robotcode).
 
 ## Installation
 
@@ -16,6 +18,20 @@ Some classes for [RobotCode](https://robotcode.io) plugin management
 pip install robotcode-runner
 ```
 
+## Documentation
+
+For comprehensive documentation, please visit [robotcode.io](https://robotcode.io).
+
+## Security
+
+For security concerns, please refer to our [Security Policy](https://github.com/robotcodedev/robotcode/security/policy).
+
 ## License
 
 `robotcode-runner` is distributed under the terms of the [Apache-2.0](https://spdx.org/licenses/Apache-2.0.html) license.
+
+## Support
+
+- 📖 [Documentation](https://robotcode.io)
+- 💬 [Discussions](https://github.com/robotcodedev/robotcode/discussions)
+- 🐛 [Issues](https://github.com/robotcodedev/robotcode/issues)

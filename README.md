@@ -1,10 +1,10 @@
 # RobotCode - The Ultimate Robot Framework Toolset
 
-[![License](https://img.shields.io/github/license/robotcodedev/robotcode?style=flat&logo=apache)](https://github.com/robotcodedev/robotcode/blob/master/LICENSE)
+[![License](https://img.shields.io/github/license/robotcodedev/robotcode?style=flat&logo=apache)](https://github.com/robotcodedev/robotcode/blob/main/LICENSE)
 [![Build Status](https://img.shields.io/github/actions/workflow/status/robotcodedev/robotcode/build-test-package-publish.yml?branch=main&style=flat&logo=github)](https://github.com/robotcodedev/robotcode/actions?query=workflow:build_test_package_publish)
 [![VS Code Marketplace](https://img.shields.io/visual-studio-marketplace/v/d-biehl.robotcode?style=flat&label=VS%20Marketplace&logo=visual-studio-code)](https://marketplace.visualstudio.com/items?itemName=d-biehl.robotcode)
 [![Installs](https://img.shields.io/visual-studio-marketplace/i/d-biehl.robotcode?style=flat)](https://marketplace.visualstudio.com/items?itemName=d-biehl.robotcode)
-[![JETBRAINS Marketplace](https://img.shields.io/jetbrains/plugin/v/26216.svg)](https://plugins.jetbrains.com/plugin/26216)
+[![JetBrains Marketplace](https://img.shields.io/jetbrains/plugin/v/26216.svg)](https://plugins.jetbrains.com/plugin/26216)
 [![Downloads](https://img.shields.io/jetbrains/plugin/d/26216.svg)](https://plugins.jetbrains.com/plugin/26216)
 [![PyPI - Version](https://img.shields.io/pypi/v/robotcode.svg?style=flat)](https://pypi.org/project/robotcode)
 [![Python Version](https://img.shields.io/pypi/pyversions/robotcode.svg?style=flat)](https://pypi.org/project/robotcode)
@@ -52,7 +52,6 @@ With RobotCode, you can focus on building and testing your automation workflows 
 - **RobotCode Repl and Notebooks**: Play with Robot Framework in a Jupyter Notebook-like environment.
 - **And More!**: Check out the [official documentation](https://robotcode.io) for more details.
 
-
 ## Requirements
 
 ### Python and Robot Framework Versions
@@ -61,7 +60,7 @@ With RobotCode, you can focus on building and testing your automation workflows 
 
 ### IDE Support
 
-- Visual Studio Code 1.99 or newer
+- Visual Studio Code 1.99.0 or newer
 - PyCharm 2025.1 or newer or IntelliJ IDEA 2025.1 or newer
 
 ### Deprecated Python and Robot Framework Versions
@@ -112,7 +111,7 @@ To get the most out of RobotCode, we recommend using:
    Visit the [Getting Started Guide](https://robotcode.io/02_get_started/) for detailed setup instructions and advanced features.
 
 **Extensions:**
-RobotCode automatically installs the [Python](https://marketplace.visualstudio.com/items?itemName=ms-python.python) and the [Python Debugger](https://marketplace.visualstudio.com/items?itemName=ms-python.debugpy) extension. Additional extensions may be required depending on your project needs.
+RobotCode declares dependencies on the [Python](https://marketplace.visualstudio.com/items?itemName=ms-python.python) and [Python Debugger](https://marketplace.visualstudio.com/items?itemName=ms-python.debugpy) extensions so VS Code installs them when required. Additional extensions may be needed depending on your project.
 
 
 ### IntelliJ IDEA or PyCharm
@@ -141,7 +140,7 @@ RobotCode automatically installs the [Python](https://marketplace.visualstudio.c
    Visit the [Getting Started Guide](https://robotcode.io/02_get_started/) for detailed setup instructions and advanced features.
 
 **Plugins:**
-RobotCode automatically installs the [LSP4IJ](https://plugins.jetbrains.com/plugin/23257). Additional plugins may be required depending on your project needs.
+RobotCode declares a dependency on [LSP4IJ](https://plugins.jetbrains.com/plugin/23257) so your IDE installs it automatically. Additional plugins may be required depending on your project needs.
 
 
 ## Documentation
@@ -156,6 +155,29 @@ Here are some additional resources to help you troubleshoot or learn more:
 - **[Support](https://robotcode.io/support/):** Learn how to get help and report issues.
 
 
+## Support RobotCode
+
+RobotCode is driven by the passion of its lead developer and the support of a growing community. To continue adding new features, improving stability, and expanding the ecosystem, your involvement is essential. Whether you contribute code, offer feedback, or provide financial support, you help shape the future of RobotCode.
+
+**Become a Sponsor:**
+- [GitHub Sponsors](https://github.com/sponsors/robotcodedev) - Monthly or one-time sponsorship
+- [Open Collective](https://opencollective.com/robotcode) - One-time or recurring donations
+
+**Corporate Sponsorship:**
+- Direct & transparent: Open Collective (https://opencollective.com/robotcode) – invoices, public ledger
+- Ecosystem support: Robot Framework Foundation membership (https://robotframework.org/foundation/) – indirectly benefits RobotCode
+
+**Other Ways to Support:**
+- Star the repository
+- Leave a review on the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=d-biehl.robotcode) and [JetBrains Marketplace](https://plugins.jetbrains.com/plugin/26216)
+- Ask questions & help others ([Slack #robotcode](https://slack.robotframework.org/) / [Forum](https://forum.robotframework.org) / [Discussions](https://github.com/robotcodedev/robotcode/discussions))
+- Report bugs in the [issue tracker](https://github.com/robotcodedev/robotcode/issues)
+- Suggest enhancements or features (issues or [Discussions](https://github.com/robotcodedev/robotcode/discussions))
+- Share usage patterns & integration ideas ([Discussions](https://github.com/robotcodedev/robotcode/discussions))
+- Improve tests (edge cases, large suites, multi-root, versions)
+- Contribute code ([good first issue](https://github.com/robotcodedev/robotcode/labels/good%20first%20issue) / [help wanted](https://github.com/robotcodedev/robotcode/labels/help%20wanted))
+
+
 ## License
 
 This project is licensed under the [Apache 2.0 License](https://spdx.org/licenses/Apache-2.0.html).
@@ -163,4 +185,8 @@ This project is licensed under the [Apache 2.0 License](https://spdx.org/license
 ---
 
 ## Powered by
-[![JetBrains logo.](docs/images/jetbrains.png)](https://jb.gg/OpenSourceSupport)
+
+[Robot Framework Foundation](https://robotframework.org/foundation)
+
+
+[JetBrains](https://jb.gg/OpenSourceSupport)

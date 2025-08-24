@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, List, Optional, Union, cast
+from typing import TYPE_CHECKING, Any, List, Union
 
 from robotcode.core.concurrent import check_current_task_canceled
 from robotcode.core.language import language_id
-from robotcode.core.lsp.types import Location, LocationLink, Position, Range
+from robotcode.core.lsp.types import Location, LocationLink, Position
 from robotcode.core.text_document import TextDocument
 from robotcode.core.uri import Uri
 from robotcode.core.utils.logging import LoggingDescriptor
@@ -55,12 +55,9 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart):
                 found_range = (
                     variable.name_range
                     if variable.source == namespace.source and position.is_in_range(variable.name_range, False)
-                    else cast(
-                        Optional[Range],
-                        next(
-                            (r.range for r in var_refs if position.is_in_range(r.range)),
-                            None,
-                        ),
+                    else next(
+                        (r.range for r in var_refs if position.is_in_range(r.range)),
+                        None,
                     )
                 )
 
@@ -90,12 +87,9 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart):
                 found_range = (
                     kw.name_range
                     if kw.source == namespace.source and position.is_in_range(kw.name_range, False)
-                    else cast(
-                        Optional[Range],
-                        next(
-                            (r.range for r in kw_refs if position.is_in_range(r.range, False)),
-                            None,
-                        ),
+                    else next(
+                        (r.range for r in kw_refs if position.is_in_range(r.range, False)),
+                        None,
                     )
                 )
 

@@ -5,9 +5,9 @@ Let's explore how you can enhance your development experience with RobotCode - R
 
 ## Requirements
 
-- Python 3.8 or above
-- Robotframework version 4.1 and above
-- VSCode version 1.86 and above
+- Python 3.10 or above
+- Robotframework version 5.0 and above
+- VSCode version 1.99 and above
 
 ## Tutorial Video
 
@@ -56,11 +56,11 @@ Create a `requirements.txt` file in the root folder of your project and add the 
 robotframework
 ```
 
-If you require additional dependencies, you can include them in the `requirements.txt` file. For instance, if you wish to utilize [robotframework-tidy](https://github.com/MarketSquare/robotframework-tidy) for formatting your robot files and the [Browser library](https://robotframework-browser.org/) for website testing, you can add the following line to the `requirements.txt` file:
+If you require additional dependencies, you can include them in the `requirements.txt` file. For instance, if you wish to utilize [robotframework-robocop](https://github.com/MarketSquare/robotframework-robocop) for formatting and linting your robot files and the [Browser library](https://robotframework-browser.org/) for website testing, you can add the following line to the `requirements.txt` file:
 
 ```txt [requirements.txt]
 robotframework
-robotframework-tidy
+robotframework-robocop
 robotframework-browser
 ```
 

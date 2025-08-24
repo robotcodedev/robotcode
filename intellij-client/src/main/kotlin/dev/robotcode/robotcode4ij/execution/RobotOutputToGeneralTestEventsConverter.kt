@@ -9,7 +9,6 @@ import com.intellij.util.Urls.newLocalFileUrl
 import com.intellij.util.Urls.newUrl
 import com.jetbrains.rd.util.lifetime.Lifetime
 import com.jetbrains.rd.util.reactive.adviseEternal
-import com.jetbrains.rd.util.threading.coroutines.adviseSuspend
 import dev.robotcode.robotcode4ij.debugging.RobotExecutionEventArguments
 import jetbrains.buildServer.messages.serviceMessages.ServiceMessage
 import jetbrains.buildServer.messages.serviceMessages.ServiceMessageVisitor
@@ -111,24 +110,11 @@ import org.eclipse.lsp4j.debug.OutputEventArgumentsCategory
             }
         }
         
-        consoleProperties.state?.debugClient?.onRobotStarted?.adviseSuspend(
-            Lifetime.Eternal,
-            myContext,
-            this::robotStarted
+        consoleProperties.state?.debugClient?.onRobotStarted?.advise(            Lifetime.Eternal,            this::robotStarted
         )
-        consoleProperties.state?.debugClient?.onRobotEnded?.adviseSuspend(Lifetime.Eternal, myContext, this::robotEnded)
+        consoleProperties.state?.debugClient?.onRobotEnded?.advise(Lifetime.Eternal, this::robotEnded)
         
-        // TODO: Implement this
-        // consoleProperties.state?.debugClient?.onRobotLog?.adviseEternal { args ->
-        //     val msg = ServiceMessageBuilder.testStdOut("blah")
-        //
-        //     msg.addAttribute("nodeId", args.itemId ?: "0").addAttribute(
-        //         "out", "[${args.level}] ${args.message}\n"
-        //     )
-        //     this.processServiceMessageFromRobot(msg)
-        // }
-        
-        consoleProperties.state?.debugClient?.onOutput?.adviseSuspend(Lifetime.Eternal, myContext) { args ->
+        consoleProperties.state?.debugClient?.onOutput?.advise(Lifetime.Eternal) { args ->
             val msg =
                 if (args.category == OutputEventArgumentsCategory.STDERR) ServiceMessageBuilder.testStdErr(args.category)
                 else ServiceMessageBuilder.testStdOut(args.category)

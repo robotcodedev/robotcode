@@ -60,7 +60,7 @@ RobotCode extends the Robot Framework CLI with enhanced tools for test execution
 - **Robust Debugging Capabilities:** RobotCode integrates a Debug Adapter Protocol (DAP) compatible debugger, enabling you to debug your Robot Framework tests with ease. Set breakpoints, step through code, inspect variables, and more, all from within your favorite editor.
 - Every IDE that supports the DAP can be used with RobotCode to debug Robot Framework tests.
 
-### Robot Framwork Repl and Notebooks
+### Robot Framework Repl and Notebooks
 
 - **Interactive REPL Environment:** Experiment with Robot Framework commands in an interactive Read-Eval-Print Loop (REPL) environment, perfect for testing out new ideas or troubleshooting issues on the fly.
 - **Jupyter Notebook-Like Experience:** Enjoy the flexibility of a Jupyter Notebook-like environment for working with Robot Framework code, allowing you to explore, test, and iterate quickly and efficiently.

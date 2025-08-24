@@ -6,7 +6,7 @@ import reprlib
 import threading
 import time
 import weakref
-from collections import deque
+from collections import OrderedDict, deque
 from enum import Enum
 from functools import cached_property
 from pathlib import Path, PurePath
@@ -23,6 +23,7 @@ from typing import (
     MutableMapping,
     NamedTuple,
     Optional,
+    Protocol,
     Sequence,
     Set,
     Tuple,
@@ -71,6 +72,10 @@ from .dap_types import (
 )
 from .id_manager import IdManager
 
+if get_robot_version() >= (5, 0):
+    from robot.running.model import Try
+    from robot.utils import Matcher as RobotMatcher
+
 if get_robot_version() >= (7, 0):
     from robot.running import UserKeyword as UserKeywordHandler
 else:
@@ -96,6 +101,48 @@ class Undefined:
 
 
 UNDEFINED = Undefined()
+
+
+# Debugger configuration constants
+STATE_CHANGE_DELAY = 0.01  # Delay to avoid busy loops during state changes
+EVALUATE_TIMEOUT = 120  # Timeout for keyword evaluation in seconds
+KEYWORD_EVALUATION_TIMEOUT = 60  # Timeout for keyword evaluation wait in seconds
+MAX_VARIABLE_ITEMS_DISPLAY = 500  # Maximum items to display in variable view
+MAX_REGEX_CACHE_SIZE = 25  # Maximum number of compiled regex patterns to cache
+
+
+# Type definitions for better type safety
+EvaluationResult = Union[Any, Exception]
+KeywordCallable = Callable[[], EvaluationResult]
+AttributeDict = Dict[str, Any]
+
+
+class ExceptionInformation(TypedDict, total=False):
+    text: Optional[str]
+    description: str
+    status: str
+
+
+class LogMessage(TypedDict, total=False):
+    level: str
+    message: str
+    timestamp: str
+    html: Optional[str]
+
+
+class RobotContextProtocol(Protocol):
+    """Protocol for Robot Framework execution context."""
+
+    variables: Any
+    namespace: Any
+
+
+class KeywordHandlerProtocol(Protocol):
+    """Protocol for Robot Framework keyword handlers."""
+
+    name: str
+    args: Any  # Robot version dependent type
+    arguments: Any  # Robot version dependent type
 
 
 class DebugRepr(reprlib.Repr):
@@ -251,12 +298,14 @@ class PathMapping(NamedTuple):
     remote_root: Optional[str]
 
 
+class DebugLoggerBase:
+    def __init__(self) -> None:
+        self.steps: List[Any] = []
+
+
 if get_robot_version() < (7, 0):
 
-    class DebugLogger:
-        def __init__(self) -> None:
-            self.steps: List[Any] = []
-
+    class DebugLogger(DebugLoggerBase):
         def start_keyword(self, kw: Any) -> None:
             self.steps.append(kw)
 
@@ -267,10 +316,7 @@ else:
     from robot import result, running
     from robot.output.loggerapi import LoggerApi
 
-    class DebugLogger(LoggerApi):  # type: ignore[no-redef]
-        def __init__(self) -> None:
-            self.steps: List[Any] = []
-
+    class DebugLogger(DebugLoggerBase, LoggerApi):  # type: ignore[no-redef]
         def start_try(self, data: "running.Try", result: "result.Try") -> None:
             self.steps.append(data)
 
@@ -287,10 +333,29 @@ else:
 breakpoint_id_manager = IdManager()
 
 
-class ExceptionInformation(TypedDict):
-    text: Optional[str]
-    description: str
-    status: str
+class _DebuggerInstanceDescriptor:
+    """Descriptor that forwards all attribute access to the singleton instance."""
+
+    def __init__(self) -> None:
+        self._owner_class: Optional[type] = None
+
+    def __set_name__(self, owner: type, name: str) -> None:
+        """Called when the descriptor is assigned to a class."""
+        self._owner_class = owner
+
+    def __get__(self, obj: Any, owner: Optional[type]) -> "Debugger":
+        if self._owner_class is None:
+            self._owner_class = owner
+        if self._owner_class is not None and hasattr(self._owner_class, "_get_instance"):
+            return cast("Debugger", self._owner_class._get_instance())
+        # This should never happen in practice, but needed for type checking
+        raise RuntimeError("Debugger class not properly initialized")
+
+    def __set__(self, obj: Any, value: Any) -> None:
+        raise AttributeError("Cannot replace the debugger instance")
+
+    def __delete__(self, obj: Any) -> None:
+        raise AttributeError("Cannot delete the debugger instance")
 
 
 class Debugger:
@@ -300,12 +365,15 @@ class Debugger:
 
     _logger = LoggingDescriptor()
 
+    # Descriptor that allows Debugger.instance.field = value syntax
+    instance = _DebuggerInstanceDescriptor()
+
     @classmethod
-    def instance(cls) -> "Debugger":
+    def _get_instance(cls) -> "Debugger":
+        """Internal method to get the singleton instance."""
         if cls.__instance is not None:
             return cls.__instance
         with cls.__lock:
-            # re-check, perhaps it was created in the mean time...
             if cls.__instance is None:
                 cls.__inside_instance = True
                 try:
@@ -313,6 +381,11 @@ class Debugger:
                 finally:
                     cls.__inside_instance = False
         return cls.__instance
+
+    @classmethod
+    def get_instance(cls) -> "Debugger":
+        """Backward compatibility method for old instance() calls."""
+        return cls._get_instance()
 
     def __new__(cls, *args: Any, **kwargs: Any) -> Any:
         if cls.__instance is None:
@@ -353,8 +426,8 @@ class Debugger:
         self.attached = False
         self.path_mappings: List[PathMapping] = []
 
-        self._keyword_to_evaluate: Optional[Callable[..., Any]] = None
-        self._evaluated_keyword_result: Any = None
+        self._keyword_to_evaluate: Optional[KeywordCallable] = None
+        self._evaluated_keyword_result: Optional[EvaluationResult] = None
         self._evaluate_keyword_event = threading.Event()
         self._evaluate_keyword_event.set()
         self._after_evaluate_keyword_event = threading.Event()
@@ -363,7 +436,6 @@ class Debugger:
 
         self.debug_logger: Optional[DebugLogger] = None
         self.run_started = False
-        self._evaluate_cache: List[Any] = []
         self._variables_cache: Dict[int, Any] = {}
         self._variables_object_cache: List[Any] = []
         self._current_exception: Optional[ExceptionInformation] = None
@@ -380,11 +452,9 @@ class Debugger:
             State.Paused,
             State.CallKeyword,
         ]:
-            self._variables_cache.clear()
-            self._variables_object_cache.clear()
-            self._evaluate_cache.clear()
+            self._clear_all_caches()
 
-        time.sleep(0.01)
+        time.sleep(STATE_CHANGE_DELAY)
 
         self._state = value
 
@@ -422,6 +492,12 @@ class Debugger:
 
     def terminate(self) -> None:
         self.terminated = True
+
+    def _clear_all_caches(self) -> None:
+        """Optimized method to clear all caches in one operation."""
+        self._variables_cache.clear()
+        self._variables_object_cache.clear()
+        self.__compiled_regex_cache.clear()
 
     def start(self) -> None:
         with self.condition:
@@ -779,7 +855,7 @@ class Debugger:
                         self._evaluated_keyword_result = e
                     finally:
                         self._evaluate_keyword_event.set()
-                        self._after_evaluate_keyword_event.wait(120)
+                        self._after_evaluate_keyword_event.wait(EVALUATE_TIMEOUT)
 
                     continue
 
@@ -801,7 +877,7 @@ class Debugger:
                 break
             self._current_exception = None
 
-    def start_output_group(self, name: str, attributes: Dict[str, Any], type: Optional[str] = None) -> None:
+    def start_output_group(self, name: str, attributes: AttributeDict, type: Optional[str] = None) -> None:
         if self.group_output:
             source = attributes.get("source")
             line_no = attributes.get("lineno")
@@ -820,7 +896,7 @@ class Debugger:
                 ),
             )
 
-    def end_output_group(self, name: str, attributes: Dict[str, Any], type: Optional[str] = None) -> None:
+    def end_output_group(self, name: str, attributes: AttributeDict, type: Optional[str] = None) -> None:
         if self.group_output:
             source = attributes.get("source")
             line_no = attributes.get("lineno")
@@ -847,7 +923,7 @@ class Debugger:
         line: Optional[int],
         column: Optional[int] = None,
         *,
-        handler: Any = None,
+        handler: Optional[KeywordHandlerProtocol] = None,
         libname: Optional[str] = None,
         kwname: Optional[str] = None,
         longname: Optional[str] = None,
@@ -901,7 +977,7 @@ class Debugger:
         line: Optional[int],
         column: Optional[int] = None,
         *,
-        handler: Any = None,
+        handler: Optional[KeywordHandlerProtocol] = None,
     ) -> None:
         self.full_stack_frames.popleft()
 
@@ -919,7 +995,7 @@ class Debugger:
             if self.stack_frames:
                 self.stack_frames[0].stack_frames.popleft()
 
-    def start_suite(self, name: str, attributes: Dict[str, Any]) -> None:
+    def start_suite(self, name: str, attributes: AttributeDict) -> None:
         if self.state == State.CallKeyword:
             return
 
@@ -967,7 +1043,7 @@ class Debugger:
 
                 self.wait_for_running()
 
-    def end_suite(self, name: str, attributes: Dict[str, Any]) -> None:
+    def end_suite(self, name: str, attributes: AttributeDict) -> None:
         if self.state == State.CallKeyword:
             return
 
@@ -989,7 +1065,7 @@ class Debugger:
 
         self.remove_stackframe_entry(name, type, source, line_no)
 
-    def start_test(self, name: str, attributes: Dict[str, Any]) -> None:
+    def start_test(self, name: str, attributes: AttributeDict) -> None:
         if self.state == State.CallKeyword:
             return
 
@@ -1016,7 +1092,7 @@ class Debugger:
 
             self.wait_for_running()
 
-    def end_test(self, name: str, attributes: Dict[str, Any]) -> None:
+    def end_test(self, name: str, attributes: AttributeDict) -> None:
         if self.state == State.CallKeyword:
             return
 
@@ -1050,7 +1126,7 @@ class Debugger:
         def get_current_keyword_handler(self, name: str) -> UserKeywordHandler:
             return EXECUTION_CONTEXTS.current.namespace.get_runner(name)._handler
 
-    def start_keyword(self, name: str, attributes: Dict[str, Any]) -> None:
+    def start_keyword(self, name: str, attributes: AttributeDict) -> None:
         if self.state == State.CallKeyword:
             return
 
@@ -1065,7 +1141,7 @@ class Debugger:
         libname = attributes.get("libname")
         kwname = attributes.get("kwname")
 
-        handler: Any = None
+        handler: Optional[KeywordHandlerProtocol] = None
         if type in ["KEYWORD", "SETUP", "TEARDOWN"]:
             try:
                 handler = self.get_current_keyword_handler(name)
@@ -1114,19 +1190,41 @@ class Debugger:
         return r is None
 
     __matchers: Optional[Dict[str, Callable[[str, str], bool]]] = None
+    __compiled_regex_cache: "OrderedDict[str, re.Pattern[str]]" = OrderedDict()
+    __robot_matcher: Optional[Any] = None
 
     def _get_matcher(self, pattern_type: str) -> Optional[Callable[[str, str], bool]]:
-        from robot.utils import Matcher
-
         if self.__matchers is None:
             self.__matchers: Dict[str, Callable[[str, str], bool]] = {
-                "GLOB": lambda m, p: bool(Matcher(p, spaceless=False, caseless=False).match(m)),
+                "GLOB": self._glob_matcher,
                 "LITERAL": lambda m, p: m == p,
-                "REGEXP": lambda m, p: re.match(rf"{p}\Z", m) is not None,
+                "REGEXP": self._regexp_matcher,
                 "START": lambda m, p: m.startswith(p),
             }
 
         return self.__matchers.get(pattern_type.upper(), None)
+
+    def _glob_matcher(self, message: str, pattern: str) -> bool:
+        """Optimized glob matcher with cached Robot Matcher."""
+
+        return bool(RobotMatcher(pattern, spaceless=False, caseless=False).match(message))
+
+    def _regexp_matcher(self, message: str, pattern: str) -> bool:
+        """Optimized regex matcher with LRU caching (max 25 entries)."""
+        if pattern in self.__compiled_regex_cache:
+            self.__compiled_regex_cache.move_to_end(pattern)
+            compiled_pattern = self.__compiled_regex_cache[pattern]
+        else:
+            if len(self.__compiled_regex_cache) >= MAX_REGEX_CACHE_SIZE:
+                self.__compiled_regex_cache.popitem(last=False)
+
+            try:
+                compiled_pattern = re.compile(rf"{pattern}\Z")
+                self.__compiled_regex_cache[pattern] = compiled_pattern
+            except re.error:
+                return False
+
+        return compiled_pattern.match(message) is not None
 
     def _should_run_except(self, branch: Any, error: str) -> bool:
         if not branch.patterns:
@@ -1161,14 +1259,21 @@ class Debugger:
         def _get_step_data(self, step: Any) -> Any:
             return step.data
 
-    def is_not_caugthed_by_except(self, message: Optional[str]) -> bool:
-        if not message:
-            return True
+    if get_robot_version() < (5, 0):
 
-        if self.debug_logger:
-            if get_robot_version() >= (5, 0):
-                from robot.running.model import Try
+        def is_not_caugthed_by_except(self, message: Optional[str]) -> bool:
+            if not message:
+                return True
+            return False
+    else:
 
+        def is_not_caugthed_by_except(self, message: Optional[str]) -> bool:
+            if not message:
+                return True
+
+            # TODO resolve variables in exception message
+
+            if self.debug_logger:
                 if self.debug_logger.steps:
                     for branch in [
                         self._get_step_data(f)
@@ -1178,9 +1283,9 @@ class Debugger:
                         for except_branch in branch.except_branches:
                             if self._should_run_except(except_branch, message):
                                 return False
-        return True
+            return True
 
-    def end_keyword(self, name: str, attributes: Dict[str, Any]) -> None:
+    def end_keyword(self, name: str, attributes: AttributeDict) -> None:
         if self.state == State.CallKeyword:
             return
 
@@ -1211,7 +1316,7 @@ class Debugger:
         type = attributes.get("type", "KEYWORD")
         kwname = attributes.get("kwname")
 
-        handler: Any = None
+        handler: Optional[KeywordHandlerProtocol] = None
         if type in ["KEYWORD", "SETUP", "TEARDOWN"]:
             try:
                 handler = self.get_current_keyword_handler(name)
@@ -1336,7 +1441,7 @@ class Debugger:
         "DEBUG": "\u001b[38;5;8m",
     }
 
-    def log_message(self, message: Dict[str, Any]) -> None:
+    def log_message(self, message: LogMessage) -> None:
         level = message["level"]
         msg = message["message"]
 
@@ -1396,7 +1501,7 @@ class Debugger:
             + f"{msg}\n"
         )
 
-    def message(self, message: Dict[str, Any]) -> None:
+    def message(self, message: LogMessage) -> None:
         level = message["level"]
         current_frame = self.full_stack_frames[0] if self.full_stack_frames else None
 
@@ -1512,131 +1617,143 @@ class Debugger:
         count: Optional[int] = None,
         format: Optional[ValueFormat] = None,
     ) -> List[Variable]:
-        result: MutableMapping[str, Any] = {}
-
         if filter is None:
-            entry = next(
-                (
-                    v
-                    for v in self.stack_frames
-                    if variables_reference in [v.global_id, v.suite_id, v.test_id, v.local_id]
-                ),
-                None,
+            return self._get_variables_no_filter(variables_reference)
+        if filter == "indexed":
+            return self._get_variables_indexed(variables_reference, start, count)
+        if filter == "named":
+            return self._get_variables_named(variables_reference, start, count)
+
+        raise ValueError(f"Unknown filter: {filter}")
+
+    def _get_variables_no_filter(self, variables_reference: int) -> List[Variable]:
+        result: MutableMapping[str, Any] = {}
+        entry = next(
+            (v for v in self.stack_frames if variables_reference in [v.global_id, v.suite_id, v.test_id, v.local_id]),
+            None,
+        )
+        if entry is not None:
+            context = entry.context()
+            if context is not None:
+                if entry.global_id == variables_reference:
+                    result.update(
+                        {k: self._create_variable(k, v) for k, v in context.variables._global.as_dict().items()}
+                    )
+                elif entry.suite_id == variables_reference:
+                    result.update(self._get_suite_variables(context, entry))
+                elif entry.test_id == variables_reference:
+                    result.update(self._get_test_variables(context, entry))
+                elif entry.local_id == variables_reference:
+                    result.update(self._get_local_variables(context, entry))
+        else:
+            value = self._variables_cache.get(variables_reference, None)
+            result.update(self._get_cached_variables(value))
+        return list(result.values())
+
+    def _get_suite_variables(self, context: Any, entry: Any) -> MutableMapping[str, Variable]:
+        result: MutableMapping[str, Variable] = {}
+        globals = context.variables._global.as_dict()
+        vars = entry.get_first_or_self().variables()
+        vars_dict = vars.as_dict() if vars is not None else {}
+        for k, v in context.variables._suite.as_dict().items():
+            if (k not in globals or globals[k] != v) and (k in vars_dict):
+                result[k] = self._create_variable(k, v)
+        return result
+
+    def _get_test_variables(self, context: Any, entry: Any) -> MutableMapping[str, Variable]:
+        result: MutableMapping[str, Variable] = {}
+        globals = context.variables._suite.as_dict()
+        vars = entry.get_first_or_self().variables()
+        vars_dict = vars.as_dict() if vars is not None else {}
+        for k, v in context.variables._test.as_dict().items():
+            if (k not in globals or globals[k] != v) and (k in vars_dict):
+                result[k] = self._create_variable(k, v)
+        return result
+
+    def _get_local_variables(self, context: Any, entry: Any) -> MutableMapping[str, Variable]:
+        result: MutableMapping[str, Variable] = {}
+        vars = entry.get_first_or_self().variables()
+        if self._current_exception is not None:
+            result["${EXCEPTION}"] = self._create_variable(
+                "${EXCEPTION}",
+                self._current_exception,
+                VariablePresentationHint(kind="virtual"),
             )
-            if entry is not None:
-                context = entry.context()
-                if context is not None:
-                    if entry.global_id == variables_reference:
-                        result.update(
-                            {k: self._create_variable(k, v) for k, v in context.variables._global.as_dict().items()}
-                        )
-                    elif entry.suite_id == variables_reference:
-                        globals = context.variables._global.as_dict()
-                        vars = entry.get_first_or_self().variables()
-                        vars_dict = vars.as_dict() if vars is not None else {}
-                        result.update(
-                            {
-                                k: self._create_variable(k, v)
-                                for k, v in context.variables._suite.as_dict().items()
-                                if (k not in globals or globals[k] != v) and (k in vars_dict)
-                            }
-                        )
-                    elif entry.test_id == variables_reference:
-                        globals = context.variables._suite.as_dict()
-                        vars = entry.get_first_or_self().variables()
-                        vars_dict = vars.as_dict() if vars is not None else {}
-                        result.update(
-                            {
-                                k: self._create_variable(k, v)
-                                for k, v in context.variables._test.as_dict().items()
-                                if (k not in globals or globals[k] != v) and (k in vars_dict)
-                            }
-                        )
-                    elif entry.local_id == variables_reference:
-                        vars = entry.get_first_or_self().variables()
+        if vars is not None:
+            p = entry.parent() if entry.parent else None
+            globals = (
+                (p.get_first_or_self().variables() if p is not None else None)
+                or context.variables._test
+                or context.variables._suite
+                or context.variables._global
+            ).as_dict()
+            suite_vars = (context.variables._suite or context.variables._global).as_dict()
+            for k, v in vars.as_dict().items():
+                if (k not in globals or globals[k] != v) and (
+                    entry.handler is None or k not in suite_vars or suite_vars[k] != v
+                ):
+                    result[k] = self._create_variable(k, v)
+            if entry.handler is not None and self.get_handler_args(entry.handler):
+                for argument in self.get_handler_args(entry.handler).argument_names:
+                    name = f"${{{argument}}}"
+                    try:
+                        value = vars[name]
+                    except (SystemExit, KeyboardInterrupt):
+                        raise
+                    except BaseException as e:
+                        value = str(e)
+                    result[name] = self._create_variable(name, value)
+        return result
 
-                        if self._current_exception is not None:
-                            result["${EXCEPTION}"] = self._create_variable(
-                                "${EXCEPTION}",
-                                self._current_exception,
-                                VariablePresentationHint(kind="virtual"),
-                            )
+    def _get_cached_variables(self, value: Any) -> MutableMapping[str, Variable]:
+        result: MutableMapping[str, Variable] = {}
+        if value is not None and isinstance(value, Mapping):
+            result["len()"] = self._create_variable("len()", len(value))
+            for i, (k, v) in enumerate(value.items()):
+                result[repr(i)] = self._create_variable(repr(k), v)
+                if i >= MAX_VARIABLE_ITEMS_DISPLAY:
+                    result["Unable to handle"] = self._create_variable(
+                        "Unable to handle",
+                        f"Maximum number of items ({MAX_VARIABLE_ITEMS_DISPLAY}) reached.",
+                    )
+                    break
+        elif value is not None and isinstance(value, Sequence) and not isinstance(value, str):
+            result["len()"] = self._create_variable("len()", len(value))
+        return result
 
-                        if vars is not None:
-                            p = entry.parent() if entry.parent else None
+    def _get_variables_indexed(
+        self,
+        variables_reference: int,
+        start: Optional[int],
+        count: Optional[int],
+    ) -> List[Variable]:
+        result: MutableMapping[str, Any] = {}
+        value = self._variables_cache.get(variables_reference, None)
+        if value is not None:
+            c = 0
+            padding = len(str(len(value)))
+            for i, v in enumerate(value[start:], start or 0):
+                result[str(i)] = self._create_variable(str(i).zfill(padding), v)
+                c += 1
+                if count is not None and c >= count:
+                    break
+        return list(result.values())
 
-                            globals = (
-                                (p.get_first_or_self().variables() if p is not None else None)
-                                or context.variables._test
-                                or context.variables._suite
-                                or context.variables._global
-                            ).as_dict()
-
-                            suite_vars = (context.variables._suite or context.variables._global).as_dict()
-
-                            result.update(
-                                {
-                                    k: self._create_variable(k, v)
-                                    for k, v in vars.as_dict().items()
-                                    if (k not in globals or globals[k] != v)
-                                    and (entry.handler is None or k not in suite_vars or suite_vars[k] != v)
-                                }
-                            )
-
-                            if entry.handler is not None and self.get_handler_args(entry.handler):
-                                for argument in self.get_handler_args(entry.handler).argument_names:
-                                    name = f"${{{argument}}}"
-                                    try:
-                                        value = vars[name]
-                                    except (SystemExit, KeyboardInterrupt):
-                                        raise
-                                    except BaseException as e:
-                                        value = str(e)
-
-                                    result[name] = self._create_variable(name, value)
-            else:
-                value = self._variables_cache.get(variables_reference, None)
-
-                if value is not None and isinstance(value, Mapping):
-                    result.update({"len()": self._create_variable("len()", len(value))})
-
-                    for i, (k, v) in enumerate(value.items(), start or 0):
-                        result[repr(i)] = self._create_variable(repr(k), v)
-                        if i >= 500:
-                            result["Unable to handle"] = self._create_variable(
-                                "Unable to handle",
-                                "Maximum number of items (500) reached.",
-                            )
-                            break
-
-                elif value is not None and isinstance(value, Sequence) and not isinstance(value, str):
-                    result.update({"len()": self._create_variable("len()", len(value))})
-
-        elif filter == "indexed":
-            value = self._variables_cache.get(variables_reference, None)
-
-            if value is not None:
-                c = 0
-
-                padding = len(str(len(value)))
-
-                for i, v in enumerate(value[start:], start or 0):
-                    result[str(i)] = self._create_variable(str(i).zfill(padding), v)
-                    c += 1
-                    if count is not None and c >= count:
-                        break
-
-        elif filter == "named":
-            value = self._variables_cache.get(variables_reference, None)
-
-            if value is not None and isinstance(value, Mapping):
-                for i, (k, v) in enumerate(value.items(), start or 0):
-                    result[repr(i)] = self._create_variable(repr(k), v)
-                    if count is not None and i >= count:
-                        break
-            elif value is not None and isinstance(value, Sequence) and not isinstance(value, str):
-                result.update({"len()": self._create_variable("len()", len(value))})
-
+    def _get_variables_named(
+        self,
+        variables_reference: int,
+        start: Optional[int],
+        count: Optional[int],
+    ) -> List[Variable]:
+        result: MutableMapping[str, Any] = {}
+        value = self._variables_cache.get(variables_reference, None)
+        if value is not None and isinstance(value, Mapping):
+            for i, (k, v) in enumerate(value.items(), start or 0):
+                result[repr(i)] = self._create_variable(repr(k), v)
+                if count is not None and i >= count:
+                    break
+        elif value is not None and isinstance(value, Sequence) and not isinstance(value, str):
+            result["len()"] = self._create_variable("len()", len(value))
         return list(result.values())
 
     IS_VARIABLE_RE: ClassVar = re.compile(r"^[$@&]\{.*\}(\[[^\]]*\])?$")
@@ -1673,158 +1790,34 @@ class Debugger:
         context: Union[EvaluateArgumentContext, str, None] = None,
         format: Optional[ValueFormat] = None,
     ) -> EvaluateResult:
+        """Evaluate an expression in the context of a stack frame."""
         if not expression:
             return EvaluateResult(result="")
 
-        if (
-            (context == EvaluateArgumentContext.REPL)
-            and expression.startswith("#")
-            and expression[1:].strip() == "exprmode"
-        ):
+        # Handle expression mode toggle
+        if self._is_expression_mode_toggle(expression, context):
             self.expression_mode = not self.expression_mode
             return EvaluateResult(result="# Expression mode is now " + ("on" if self.expression_mode else "off"))
 
-        stack_frame = next((v for v in self.full_stack_frames if v.id == frame_id), None)
-
-        evaluate_context = stack_frame.context() if stack_frame else None
-
+        # Get evaluation context
+        stack_frame, evaluate_context = self._get_evaluation_context(frame_id)
         if evaluate_context is None:
-            evaluate_context = EXECUTION_CONTEXTS.current
-
-        if stack_frame is None and evaluate_context is None:
             return EvaluateResult(result="Unable to evaluate expression. No context available.", type="FatalError")
 
-        result: Any = None
+        # Process CURDIR substitution
+        processed_expression = self._process_curdir_substitution(expression, stack_frame)
+        if isinstance(processed_expression, EvaluateResult):
+            return processed_expression
+
+        # Get variables context
+        vars = self._get_variables_context(stack_frame, evaluate_context)
+
+        # Evaluate expression
         try:
-            if stack_frame is not None and stack_frame.source is not None:
-                curdir = str(Path(stack_frame.source).parent)
-                expression = self.CURRDIR.sub(curdir.replace("\\", "\\\\"), expression)
-                if expression == curdir:
-                    return EvaluateResult(repr(expression), repr(type(expression)))
-
-            vars = (
-                (stack_frame.get_first_or_self().variables() or evaluate_context.variables.current)
-                if stack_frame is not None
-                else evaluate_context.variables._global
-            )
-            if (
-                isinstance(context, EvaluateArgumentContext) and context != EvaluateArgumentContext.REPL
-            ) or self.expression_mode:
-                if expression.startswith("! "):
-                    splitted = self.SPLIT_LINE.split(expression[2:].strip())
-
-                    if splitted:
-                        variables: List[str] = []
-                        while len(splitted) > 1 and self.IS_VARIABLE_ASSIGNMENT_RE.match(splitted[0].strip()):
-                            var = splitted[0]
-                            splitted = splitted[1:]
-                            if var.endswith("="):
-                                var = var[:-1]
-                            variables.append(var)
-
-                        if splitted:
-
-                            def run_kw() -> Any:
-                                kw = Keyword(
-                                    name=splitted[0],
-                                    args=tuple(splitted[1:]),
-                                    assign=tuple(variables),
-                                )
-                                return self._run_keyword(kw, evaluate_context)
-
-                            result = self.run_in_robot_thread(run_kw)
-
-                            if isinstance(result, BaseException):
-                                raise result
-
-                elif self.IS_VARIABLE_RE.match(expression.strip()):
-                    try:
-                        result = vars.replace_scalar(expression)
-                    except VariableError:
-                        if context is not None and (
-                            (
-                                isinstance(context, EvaluateArgumentContext)
-                                and (
-                                    context
-                                    in [
-                                        EvaluateArgumentContext.HOVER,
-                                        EvaluateArgumentContext.WATCH,
-                                    ]
-                                )
-                            )
-                            or context
-                            in [
-                                EvaluateArgumentContext.HOVER.value,
-                                EvaluateArgumentContext.WATCH.value,
-                            ]
-                        ):
-                            result = UNDEFINED
-                        else:
-                            raise
-                else:
-                    result = internal_evaluate_expression(vars.replace_string(expression), vars)
+            if self._is_expression_mode(context):
+                result = self._evaluate_expression_mode(processed_expression, vars, evaluate_context, context)
             else:
-                parts = self.SPLIT_LINE.split(expression.strip())
-                if parts and len(parts) == 1 and self.IS_VARIABLE_RE.match(parts[0].strip()):
-                    # result = vars[parts[0].strip()]
-                    result = vars.replace_scalar(parts[0].strip())
-                else:
-
-                    def get_test_body_from_string(command: str) -> TestCase:
-                        suite_str = (
-                            "*** Test Cases ***\nDummyTestCase423141592653589793\n  "
-                            + ("\n  ".join(command.split("\n")) if "\n" in command else command)
-                        ) + "\n"
-
-                        model = get_model(suite_str)
-                        suite: TestSuite = TestSuite.from_model(model)
-                        return cast(TestCase, suite.tests[0])
-
-                    def run_kw() -> Any:
-                        test = get_test_body_from_string(expression)
-                        result = None
-
-                        if len(test.body):
-                            if get_robot_version() >= (7, 3):
-                                for kw in test.body:
-                                    with evaluate_context.output.delayed_logging:
-                                        try:
-                                            result = self._run_keyword(kw, evaluate_context)
-                                        except (SystemExit, KeyboardInterrupt):
-                                            raise
-                                        except BaseException as e:
-                                            result = e
-                                            break
-                            else:
-                                for kw in test.body:
-                                    with LOGGER.delayed_logging:
-                                        try:
-                                            result = self._run_keyword(kw, evaluate_context)
-                                        except (SystemExit, KeyboardInterrupt):
-                                            raise
-                                        except BaseException as e:
-                                            result = e
-                                            break
-                                        finally:
-                                            if get_robot_version() <= (7, 2):
-                                                messages = LOGGER._log_message_cache or []
-                                                for msg in messages or ():
-                                                    # hack to get and evaluate log level
-                                                    listener: Any = next(iter(LOGGER), None)
-                                                    if listener is None or self.check_message_is_logged(listener, msg):
-                                                        self.log_message(
-                                                            {
-                                                                "level": msg.level,
-                                                                "message": msg.message,
-                                                                "timestamp": msg.timestamp,
-                                                            }
-                                                        )
-                        return result
-
-                    result = self.run_in_robot_thread(run_kw)
-
-                    if isinstance(result, BaseException):
-                        raise result
+                result = self._evaluate_repl_mode(processed_expression, vars, evaluate_context)
 
         except (SystemExit, KeyboardInterrupt):
             raise
@@ -1834,11 +1827,198 @@ class Debugger:
 
         return self._create_evaluate_result(result)
 
-    def _create_evaluate_result(self, value: Any) -> EvaluateResult:
-        self._evaluate_cache.insert(0, value)
-        if len(self._evaluate_cache) > 50:
-            self._evaluate_cache.pop()
+    def _is_expression_mode_toggle(self, expression: str, context: Union[EvaluateArgumentContext, str, None]) -> bool:
+        """Check if expression is a command to toggle expression mode."""
+        return (
+            (context == EvaluateArgumentContext.REPL)
+            and expression.startswith("#")
+            and expression[1:].strip() == "exprmode"
+        )
 
+    def _get_evaluation_context(self, frame_id: Optional[int]) -> tuple[Optional[StackFrameEntry], Any]:
+        """Get the stack frame and evaluation context for the given frame ID."""
+        stack_frame = next((v for v in self.full_stack_frames if v.id == frame_id), None)
+        evaluate_context = stack_frame.context() if stack_frame else None
+
+        if evaluate_context is None:
+            evaluate_context = EXECUTION_CONTEXTS.current
+
+        return stack_frame, evaluate_context
+
+    def _process_curdir_substitution(
+        self, expression: str, stack_frame: Optional[StackFrameEntry]
+    ) -> Union[str, EvaluateResult]:
+        """Process ${CURDIR} substitution in expression."""
+        if stack_frame is not None and stack_frame.source is not None:
+            curdir = str(Path(stack_frame.source).parent)
+            expression = self.CURRDIR.sub(curdir.replace("\\", "\\\\"), expression)
+            if expression == curdir:
+                return EvaluateResult(repr(expression), repr(type(expression)))
+        return expression
+
+    def _get_variables_context(self, stack_frame: Optional[StackFrameEntry], evaluate_context: Any) -> Any:
+        """Get the variables context for evaluation."""
+        return (
+            (stack_frame.get_first_or_self().variables() or evaluate_context.variables.current)
+            if stack_frame is not None
+            else evaluate_context.variables._global
+        )
+
+    def _is_expression_mode(self, context: Union[EvaluateArgumentContext, str, None]) -> bool:
+        """Check if we should use expression mode for evaluation."""
+        return (
+            isinstance(context, EvaluateArgumentContext) and context != EvaluateArgumentContext.REPL
+        ) or self.expression_mode
+
+    def _evaluate_expression_mode(
+        self, expression: str, vars: Any, evaluate_context: Any, context: Union[EvaluateArgumentContext, str, None]
+    ) -> Any:
+        """Evaluate expression in expression mode."""
+        if expression.startswith("! "):
+            return self._evaluate_keyword_expression(expression, evaluate_context)
+        if self.IS_VARIABLE_RE.match(expression.strip()):
+            return self._evaluate_variable_expression(expression, vars, context)
+        return internal_evaluate_expression(vars.replace_string(expression), vars)
+
+    def _evaluate_keyword_expression(self, expression: str, evaluate_context: Any) -> Any:
+        """Evaluate a keyword expression (starting with '! ')."""
+        splitted = self.SPLIT_LINE.split(expression[2:].strip())
+
+        if not splitted:
+            return None
+
+        # Extract variable assignments
+        variables: List[str] = []
+        while len(splitted) > 1 and self.IS_VARIABLE_ASSIGNMENT_RE.match(splitted[0].strip()):
+            var = splitted[0]
+            splitted = splitted[1:]
+            if var.endswith("="):
+                var = var[:-1]
+            variables.append(var)
+
+        if not splitted:
+            return None
+
+        def run_kw() -> Any:
+            kw = Keyword(
+                name=splitted[0],
+                args=tuple(splitted[1:]),
+                assign=tuple(variables),
+            )
+            return self._run_keyword(kw, evaluate_context)
+
+        result = self.run_in_robot_thread(run_kw)
+
+        if isinstance(result, BaseException):
+            raise result
+
+        return result
+
+    def _evaluate_variable_expression(
+        self, expression: str, vars: Any, context: Union[EvaluateArgumentContext, str, None]
+    ) -> Any:
+        """Evaluate a variable expression."""
+        try:
+            return vars.replace_scalar(expression)
+        except VariableError:
+            if self._should_return_undefined_for_variable_error(context):
+                return UNDEFINED
+            raise
+
+    def _should_return_undefined_for_variable_error(self, context: Union[EvaluateArgumentContext, str, None]) -> bool:
+        """Check if we should return UNDEFINED for variable errors in certain contexts."""
+        return context is not None and (
+            (
+                isinstance(context, EvaluateArgumentContext)
+                and context in [EvaluateArgumentContext.HOVER, EvaluateArgumentContext.WATCH]
+            )
+            or context in [EvaluateArgumentContext.HOVER.value, EvaluateArgumentContext.WATCH.value]
+        )
+
+    def _evaluate_repl_mode(self, expression: str, vars: Any, evaluate_context: Any) -> Any:
+        """Evaluate expression in REPL mode."""
+        parts = self.SPLIT_LINE.split(expression.strip())
+        if parts and len(parts) == 1 and self.IS_VARIABLE_RE.match(parts[0].strip()):
+            return vars.replace_scalar(parts[0].strip())
+        return self._evaluate_test_body_expression(expression, evaluate_context)
+
+    def _evaluate_test_body_expression(self, expression: str, evaluate_context: Any) -> Any:
+        """Evaluate a test body expression (Robot Framework commands)."""
+
+        def get_test_body_from_string(command: str) -> TestCase:
+            suite_str = (
+                "*** Test Cases ***\nDummyTestCase423141592653589793\n  "
+                + ("\n  ".join(command.split("\n")) if "\n" in command else command)
+            ) + "\n"
+
+            model = get_model(suite_str)
+            suite: TestSuite = TestSuite.from_model(model)
+            return cast(TestCase, suite.tests[0])
+
+        def run_kw() -> Any:
+            test = get_test_body_from_string(expression)
+            result = None
+
+            if len(test.body):
+                if get_robot_version() >= (7, 3):
+                    result = self._execute_keywords_with_delayed_logging_v73(test.body, evaluate_context)
+                else:
+                    result = self._execute_keywords_with_delayed_logging_legacy(test.body, evaluate_context)
+            return result
+
+        result = self.run_in_robot_thread(run_kw)
+
+        if isinstance(result, BaseException):
+            raise result
+
+        return result
+
+    def _execute_keywords_with_delayed_logging_v73(self, keywords: Any, evaluate_context: Any) -> Any:
+        """Execute keywords with delayed logging for Robot Framework >= 7.3."""
+        result = None
+        for kw in keywords:
+            with evaluate_context.output.delayed_logging:
+                try:
+                    result = self._run_keyword(kw, evaluate_context)
+                except (SystemExit, KeyboardInterrupt):
+                    raise
+                except BaseException as e:
+                    result = e
+                    break
+        return result
+
+    def _execute_keywords_with_delayed_logging_legacy(self, keywords: Any, evaluate_context: Any) -> Any:
+        """Execute keywords with delayed logging for Robot Framework < 7.3."""
+        result = None
+        for kw in keywords:
+            with LOGGER.delayed_logging:
+                try:
+                    result = self._run_keyword(kw, evaluate_context)
+                except (SystemExit, KeyboardInterrupt):
+                    raise
+                except BaseException as e:
+                    result = e
+                    break
+                finally:
+                    if get_robot_version() <= (7, 2):
+                        self._process_delayed_log_messages()
+        return result
+
+    def _process_delayed_log_messages(self) -> None:
+        """Process delayed log messages for older Robot Framework versions."""
+        messages = LOGGER._log_message_cache or []
+        for msg in messages or ():
+            listener: Any = next(iter(LOGGER), None)
+            if listener is None or self.check_message_is_logged(listener, msg):
+                self.log_message(
+                    {
+                        "level": msg.level,
+                        "message": msg.message,
+                        "timestamp": msg.timestamp,
+                    }
+                )
+
+    def _create_evaluate_result(self, value: Any) -> EvaluateResult:
         if isinstance(value, Mapping):
             v_id = self._new_cache_id()
             self._variables_cache[v_id] = value
@@ -1863,7 +2043,7 @@ class Debugger:
 
         return EvaluateResult(result=repr(value), type=repr(type(value)))
 
-    def run_in_robot_thread(self, kw: Callable[[], Any]) -> Any:
+    def run_in_robot_thread(self, kw: KeywordCallable) -> EvaluationResult:
         with self.condition:
             self._keyword_to_evaluate = kw
             self._evaluated_keyword_result = None
@@ -1876,7 +2056,7 @@ class Debugger:
             self.condition.notify_all()
 
         try:
-            self._evaluate_keyword_event.wait(60)
+            self._evaluate_keyword_event.wait(KEYWORD_EVALUATION_TIMEOUT)
         finally:
             result = self._evaluated_keyword_result
 
@@ -1892,10 +2072,6 @@ class Debugger:
             return result
 
     def _create_set_variable_result(self, value: Any) -> SetVariableResult:
-        self._evaluate_cache.insert(0, value)
-        if len(self._evaluate_cache) > 50:
-            self._evaluate_cache.pop()
-
         if isinstance(value, Mapping):
             v_id = self._new_cache_id()
             self._variables_cache[v_id] = value

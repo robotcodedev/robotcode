@@ -366,7 +366,7 @@ class RobotBaseOptions(BaseOptions):
         )
 
         def append_name(field: "dataclasses.Field[Any]", add_flag: Optional[str] = None) -> None:
-            if "robot_short_name" in field.metadata:
+            if "robot_short_name" in field.metadata and not add_flag:
                 result.append(f"-{field.metadata['robot_short_name']}")
             elif "robot_name" in field.metadata:
                 result.append(f"--{'no' if add_flag else ''}{field.metadata['robot_name']}")

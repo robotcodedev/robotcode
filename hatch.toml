@@ -65,13 +65,10 @@ python = "3.10"
 
 [[envs.devel.matrix]]
 python = ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13"]
-rf = ["rf41", "rf50", "rf60", "rf61", "rf70", "rf71", "rf72", "rf73"]
+rf = ["rf50", "rf60", "rf61", "rf70", "rf71", "rf72", "rf73"]
 
 [envs.devel.overrides]
 matrix.rf.dependencies = [
-  { value = "robotframework~=4.1.0", if = [
-    "rf41",
-  ] },
   { value = "robotframework~=5.0.0", if = [
     "rf50",
   ] },
@@ -100,13 +97,10 @@ dependencies = ["pytest", "pytest-html", "pytest_asyncio>=0.23", "pyyaml"]
 pre-install-commands = ["python ./scripts/install_packages.py"]
 
 [[envs.test.matrix]]
-rf = ["rf41", "rf50", "rf60", "rf61", "rf70", "rf71", "rf72", "rf73"]
+rf = ["rf50", "rf60", "rf61", "rf70", "rf71", "rf72", "rf73"]
 
 [envs.test.overrides]
 matrix.rf.dependencies = [
-  { value = "robotframework~=4.1.0", if = [
-    "rf41",
-  ] },
   { value = "robotframework~=5.0.0", if = [
     "rf50",
   ] },
@@ -148,6 +142,7 @@ features = ["all"]
 typing = "mypy --no-incremental --cache-dir /dev/null {args:.}"
 style = ["ruff check .", "ruff format --diff ."]
 all = ["style", "typing"]
+fix = ["ruff check --fix .", "ruff format ."]
 
 [envs.lint.overrides]
 platform.windows.scripts = [

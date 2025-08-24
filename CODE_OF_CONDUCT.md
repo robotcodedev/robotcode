@@ -1,4 +1,4 @@
-# Code of Conduct - robotcode
+# Code of Conduct - RobotCode
 
 ## Our Pledge
 
