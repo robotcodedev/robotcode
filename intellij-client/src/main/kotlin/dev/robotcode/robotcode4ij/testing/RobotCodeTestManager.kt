@@ -338,6 +338,16 @@ import java.util.*
         val result = findTestItem(containingFile.virtualFile.uri, lineNumber.toUInt())
         return result
     }
+    
+    fun flattenTestItemLongNames(): List<String> {
+        return flattenLongNames(testItems)
+    }
+    
+    private fun flattenLongNames(items: Array<RobotCodeTestItem>?): List<String>{
+        return items?.flatMap { item ->
+            listOf(item.longname) + flattenLongNames(item.children)
+        } ?: emptyList()
+    }
 }
 
 private fun getRfcCompliantUri(virtualFile: VirtualFile): String {
