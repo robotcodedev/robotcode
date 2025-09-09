@@ -96,8 +96,8 @@ RESOURCE_EXTENSIONS = (
 REST_EXTENSIONS = (".rst", ".rest")
 
 
-LOAD_LIBRARY_TIME_OUT = 10
-COMPLETE_LIBRARY_IMPORT_TIME_OUT = COMPLETE_RESOURCE_IMPORT_TIME_OUT = COMPLETE_VARIABLES_IMPORT_TIME_OUT = 5
+LOAD_LIBRARY_TIMEOUT: int = int(os.environ.get("ROBOTCODE_LOAD_LIBRARY_TIMEOUT", 10))
+COMPLETE_LIBRARY_IMPORT_TIMEOUT = COMPLETE_RESOURCE_IMPORT_TIMEOUT = COMPLETE_VARIABLES_IMPORT_TIMEOUT = 5
 
 
 class _EntryKey:
@@ -1266,7 +1266,7 @@ class ImportsManager:
                     base_dir,
                     self.get_resolvable_command_line_variables(),
                     variables,
-                ).result(LOAD_LIBRARY_TIME_OUT)
+                ).result(LOAD_LIBRARY_TIMEOUT)
 
             except TimeoutError as e:
                 raise RuntimeError(f"Timeout loading library {name}({args!r})") from e
@@ -1438,7 +1438,7 @@ class ImportsManager:
                     base_dir,
                     self.get_resolvable_command_line_variables() if resolve_command_line_vars else None,
                     variables,
-                ).result(LOAD_LIBRARY_TIME_OUT)
+                ).result(LOAD_LIBRARY_TIMEOUT)
 
             except TimeoutError as e:
                 raise RuntimeError(f"Timeout loading library {name}({args!r})") from e
@@ -1608,7 +1608,7 @@ class ImportsManager:
             base_dir,
             self.get_resolvable_command_line_variables(),
             variables,
-        ).result(COMPLETE_LIBRARY_IMPORT_TIME_OUT)
+        ).result(COMPLETE_LIBRARY_IMPORT_TIMEOUT)
 
     def complete_resource_import(
         self,
@@ -1623,7 +1623,7 @@ class ImportsManager:
             base_dir,
             self.get_resolvable_command_line_variables(),
             variables,
-        ).result(COMPLETE_RESOURCE_IMPORT_TIME_OUT)
+        ).result(COMPLETE_RESOURCE_IMPORT_TIMEOUT)
 
     def complete_variables_import(
         self,
@@ -1638,7 +1638,7 @@ class ImportsManager:
             base_dir,
             self.get_resolvable_command_line_variables(),
             variables,
-        ).result(COMPLETE_VARIABLES_IMPORT_TIME_OUT)
+        ).result(COMPLETE_VARIABLES_IMPORT_TIMEOUT)
 
     def resolve_variable(
         self,
