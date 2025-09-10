@@ -1269,7 +1269,9 @@ class ImportsManager:
                 ).result(LOAD_LIBRARY_TIMEOUT)
 
             except TimeoutError as e:
-                raise RuntimeError(f"Timeout loading library {name}({args!r})") from e
+                raise RuntimeError(
+                    f"Exceeded timeout of {LOAD_LIBRARY_TIMEOUT} seconds loading library {name}({args!r}). Check implementation of the library, why instantiation would take so long. If you think, you require more time to load a library, set environment variable ROBOTCODE_LOAD_LIBRARY_TIMEOUT to amount of seconds."
+                ) from e
 
         except (SystemExit, KeyboardInterrupt):
             raise
@@ -1441,7 +1443,9 @@ class ImportsManager:
                 ).result(LOAD_LIBRARY_TIMEOUT)
 
             except TimeoutError as e:
-                raise RuntimeError(f"Timeout loading library {name}({args!r})") from e
+                raise RuntimeError(
+                    f"Exceeded timeout of {LOAD_LIBRARY_TIMEOUT} seconds loading library {name}({args!r}). Check implementation of the library, why instantiation would take so long. If you think, you require more time to load a library, set environment variable ROBOTCODE_LOAD_LIBRARY_TIMEOUT to amount of seconds."
+                ) from e
 
         except (SystemExit, KeyboardInterrupt):
             raise
