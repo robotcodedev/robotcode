@@ -1270,10 +1270,11 @@ class ImportsManager:
 
             except TimeoutError as e:
                 raise RuntimeError(
-                    f"""Exceeded timeout of {LOAD_LIBRARY_TIMEOUT} seconds loading library {name}({args!r}).
-                    Check implementation of the library, why instantiation would take so long. If you think,
-                    you require more time to load a library, set environment variable
-                    ROBOTCODE_LOAD_LIBRARY_TIMEOUT to amount of seconds."""
+                    f"Loading library {name!r} with args {args!r} (working_dir={working_dir!r}, base_dir={base_dir!r}) "
+                    f"timed out after {LOAD_LIBRARY_TIMEOUT} seconds. "
+                    "The library may be slow or blocked during import. "
+                    "If required, increase the timeout by setting the ROBOTCODE_LOAD_LIBRARY_TIMEOUT "
+                    "environment variable."
                 ) from e
 
         except (SystemExit, KeyboardInterrupt):
@@ -1447,10 +1448,12 @@ class ImportsManager:
 
             except TimeoutError as e:
                 raise RuntimeError(
-                    f"""Exceeded timeout of {LOAD_LIBRARY_TIMEOUT} seconds loading library {name}({args!r}).
-                    Check implementation of the library, why instantiation would take so long. If you think,
-                    you require more time to load a library, set environment variable
-                    ROBOTCODE_LOAD_LIBRARY_TIMEOUT to amount of seconds."""
+                    f"Loading variables {name!r} with args {args!r} (working_dir={working_dir!r}, "
+                    f"base_dir={base_dir!r}) "
+                    f"timed out after {LOAD_LIBRARY_TIMEOUT} seconds. "
+                    "The variables may be slow or blocked during import. "
+                    "If required, increase the timeout by setting the ROBOTCODE_LOAD_LIBRARY_TIMEOUT "
+                    "environment variable."
                 ) from e
 
         except (SystemExit, KeyboardInterrupt):
