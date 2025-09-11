@@ -113,7 +113,7 @@ def test_if_profile_is_not_defined_an_error_is_raised() -> None:
 
     with pytest.raises(
         ValueError,
-        match="Can't find any configuration profiles matching the pattern 'nonexistent'.",
+        match=r"Can't find any configuration profiles matching the pattern 'nonexistent'.",
     ):
         config.combine_profiles("nonexistent")
 
@@ -242,7 +242,7 @@ def test_profiles_enabled_cant_be_an_invalid_condition() -> None:
         """
     config = load_robot_config_from_robot_toml_str(data)
     os.environ["CI"] = "true"
-    with pytest.raises(ValueError, match=".*invalid syntax.*"):
+    with pytest.raises(ValueError, match=r".*invalid syntax.*"):
         config.combine_profiles("*")
 
 
@@ -372,5 +372,5 @@ def test_type_that_wants_alist_should_throw_an_error() -> None:
             [listeners]
             listener_with_colon = "dummy:output"
             """
-    with pytest.raises(TypeError, match=".*Value '.*' must be of type.*"):
+    with pytest.raises(TypeError, match=r".*Value '.*' must be of type.*"):
         load_robot_config_from_robot_toml_str(data)
