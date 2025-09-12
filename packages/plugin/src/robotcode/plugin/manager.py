@@ -14,7 +14,7 @@ class PluginManager:
     def instance(cls) -> "Self":
         if cls._instance is None:
             cls._instance = cls()
-        return cast("Self", cls._instance)
+        return cls._instance
 
     def __init__(self) -> None:
         self._plugin_manager = pluggy.PluginManager("robotcode")

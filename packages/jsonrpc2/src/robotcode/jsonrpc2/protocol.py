@@ -834,7 +834,7 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
                 if e.threaded:
                     if e.is_coroutine:
                         task = run_coroutine_in_thread(
-                            ensure_coroutine(cast(Callable[..., Any], e.method)),
+                            e.method,
                             *params[0],
                             **params[1],
                         )
@@ -935,9 +935,7 @@ class JsonRPCProtocol(JsonRPCProtocolBase):
             else:
                 if e.threaded:
                     if e.is_coroutine:
-                        task = run_coroutine_in_thread(
-                            ensure_coroutine(cast(Callable[..., Any], e.method)), *params[0], **params[1]
-                        )
+                        task = run_coroutine_in_thread(ensure_coroutine(e.method), *params[0], **params[1])
                     else:
                         task = asyncio.wrap_future(run_as_task(e.method, *params[0], **params[1]))
                 else:
