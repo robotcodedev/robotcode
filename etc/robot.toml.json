@@ -123,6 +123,15 @@
             "null"
           ]
         },
+        "load-library-timeout": {
+          "default": null,
+          "description": "Specifies the timeout in seconds for loading (importing) libraries and variable files during\nanalysis. Increase this if your libraries perform heavy initialization (network calls, large\ndependency graphs, model loading, etc.).\n\nMust be > 0 when set. If you omit this key, RobotCode will instead look for the environment\nvariable `ROBOTCODE_LOAD_LIBRARY_TIMEOUT`; otherwise it will use the internal default `10`.\n\nExamples:\n\n```toml\n[tool.robotcode-analyze]\n# Fast fail if libraries normally import in < 2s\nload_library_timeout = 5\n```\n\n```toml\n[tool.robotcode-analyze]\n# Allow heavy bootstrap (e.g. Selenium + large resource trees)\nload_library_timeout = 30\n```\n\n```toml\n[tool.robotcode-analyze]\n# Omit to use default\n# load_library_timeout = 15\n```\n",
+          "title": "Load library timeout",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
         "modifiers": {
           "anyOf": [
             {
@@ -1828,7 +1837,7 @@
             }
           ],
           "default": null,
-          "description": "Selects the Default profile if no profile is given at command line.\n\nExamples:\n```toml\ndefault_profiles = \"default\"\n```\n\n```toml\ndefault_profiles = [\"default\", \"Firefox\"]\n```\n",
+          "description": "Selects the Default profile if no profile is given at command line.\n\nExamples:\n```toml\ndefault-profiles = \"default\"\n```\n\n```toml\ndefault-profiles = [\"default\", \"Firefox\"]\n```\n",
           "title": "Default profiles"
         },
         "doc": {
