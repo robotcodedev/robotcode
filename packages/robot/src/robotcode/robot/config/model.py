@@ -697,9 +697,9 @@ class CommonOptions(RobotBaseOptions):
             **passed:** remove data only from keywords in passed
             test cases and suites
 
-            **for:** remove passed iterations from for loops
+            **for:** remove passed iterations from FOR loops
 
-            **while:** remove passed iterations from while loops
+            **while:** remove passed iterations from WHILE loops
 
             **wuks:** remove all but the last failing keyword
             inside `BuiltIn.Wait Until Keyword Succeeds`
@@ -847,7 +847,6 @@ class CommonOptions(RobotBaseOptions):
             pattern. Documentation is shown in `Test Details` and
             also as a tooltip in `Statistics by Tag`. Pattern can
             use `*`, `?` and `[]` as wildcards like --test.
-            Documentation can contain formatting like --doc.
 
             Examples:
 
@@ -1130,9 +1129,9 @@ class CommonExtendOptions(RobotBaseOptions):
             **passed:** remove data only from keywords in passed
             test cases and suites
 
-            **for:** remove passed iterations from for loops
+            **for:** remove passed iterations from FOR loops
 
-            **while:** remove passed iterations from while loops
+            **while:** remove passed iterations from WHILE loops
 
             **wuks:** remove all but the last failing keyword
             inside `BuiltIn.Wait Until Keyword Succeeds`
@@ -1202,7 +1201,6 @@ class CommonExtendOptions(RobotBaseOptions):
             pattern. Documentation is shown in `Test Details` and
             also as a tooltip in `Statistics by Tag`. Pattern can
             use `*`, `?` and `[]` as wildcards like --test.
-            Documentation can contain formatting like --doc.
 
             Examples:
 
@@ -1862,7 +1860,6 @@ class RebotOptions(RobotBaseOptions):
             Processes output also if the top level suite is
             empty. Useful e.g. with --include/--exclude when it
             is not an error that there are no matches.
-            Use --skiponfailure when starting execution instead.
 
             corresponds to the `--processemptysuite` option of _rebot_
             """,
@@ -1944,7 +1941,7 @@ class LibDocOptions(RobotBaseOptions):
     quiet: Union[bool, Flag, None] = field(
         description="""\
             Do not print the path of the generated output file
-            to the console. New in RF 4.0.
+            to the console.
 
             corresponds to the `--quiet` option of _libdoc_
             """,
@@ -1959,7 +1956,7 @@ class LibDocOptions(RobotBaseOptions):
             documentation format and HTML means converting
             documentation to HTML. The default is RAW with XML
             spec files and HTML with JSON specs and when using
-            the special LIBSPEC format. New in RF 4.0.
+            the special LIBSPEC format.
 
             corresponds to the `-s --specdocformat RAW|HTML` option of _libdoc_
             """,
