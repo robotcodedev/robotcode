@@ -55,6 +55,9 @@ class CacheConfig(ConfigBase):
 @dataclass
 class AnalysisRobotConfig(ConfigBase):
     global_library_search_order: List[str] = field(default_factory=list)
+    # Timeout in seconds for loading libraries and variable files during analysis. If None, fallback to env var
+    # ROBOTCODE_LOAD_LIBRARY_TIMEOUT or default (10).
+    load_library_timeout: Optional[int] = None
 
 
 @config_section("robotcode.analysis.diagnosticModifiers")

@@ -96,7 +96,8 @@ RESOURCE_EXTENSIONS = (
 REST_EXTENSIONS = (".rst", ".rest")
 
 
-LOAD_LIBRARY_TIMEOUT: int = int(os.environ.get("ROBOTCODE_LOAD_LIBRARY_TIMEOUT", 10))
+DEFAULT_LOAD_LIBRARY_TIMEOUT: int = 10
+ENV_LOAD_LIBRARY_TIMEOUT_VAR = "ROBOTCODE_LOAD_LIBRARY_TIMEOUT"
 COMPLETE_LIBRARY_IMPORT_TIMEOUT = COMPLETE_RESOURCE_IMPORT_TIMEOUT = COMPLETE_VARIABLES_IMPORT_TIMEOUT = 5
 
 
@@ -514,6 +515,7 @@ class ImportsManager:
         ignore_arguments_for_library: List[str],
         global_library_search_order: List[str],
         cache_base_path: Optional[Path],
+        load_library_timeout: Optional[int] = None,
     ) -> None:
         super().__init__()
 
@@ -589,6 +591,45 @@ class ImportsManager:
         )
 
         self._diagnostics: List[Diagnostic] = []
+
+        # precedence: explicit config (arg) > environment variable > default
+        if load_library_timeout is None:
+            env_value = os.environ.get(ENV_LOAD_LIBRARY_TIMEOUT_VAR)
+            if env_value is not None:
+                try:
+                    load_library_timeout = int(env_value)
+                except ValueError:
+                    self._logger.warning(
+                        lambda: (
+                            "Invalid value for "
+                            f"{ENV_LOAD_LIBRARY_TIMEOUT_VAR}={env_value!r}, using default "
+                            f"{DEFAULT_LOAD_LIBRARY_TIMEOUT}"
+                        ),
+                        context_name="imports",
+                    )
+                    load_library_timeout = DEFAULT_LOAD_LIBRARY_TIMEOUT
+            else:
+                load_library_timeout = DEFAULT_LOAD_LIBRARY_TIMEOUT
+
+        # enforce sane lower bound
+        if load_library_timeout <= 0:
+            self._logger.warning(
+                lambda: (
+                    "Configured load_library_timeout "
+                    f"{load_library_timeout} is not > 0, fallback to {DEFAULT_LOAD_LIBRARY_TIMEOUT}"
+                ),
+                context_name="imports",
+            )
+            load_library_timeout = DEFAULT_LOAD_LIBRARY_TIMEOUT
+
+        self.load_library_timeout = load_library_timeout
+
+        self._logger.critical(lambda: f"Using LoadLibrary timeout of {self.load_library_timeout} seconds")
+
+        self._logger.trace(
+            lambda: f"Using load_library_timeout={self.load_library_timeout} (config/env/default)",
+            context_name="imports",
+        )
 
     def __del__(self) -> None:
         try:
@@ -1266,12 +1307,12 @@ class ImportsManager:
                     base_dir,
                     self.get_resolvable_command_line_variables(),
                     variables,
-                ).result(LOAD_LIBRARY_TIMEOUT)
+                ).result(self.load_library_timeout)
 
             except TimeoutError as e:
                 raise RuntimeError(
                     f"Loading library {name!r} with args {args!r} (working_dir={working_dir!r}, base_dir={base_dir!r}) "
-                    f"timed out after {LOAD_LIBRARY_TIMEOUT} seconds. "
+                    f"timed out after {self.load_library_timeout} seconds. "
                     "The library may be slow or blocked during import. "
                     "If required, increase the timeout by setting the ROBOTCODE_LOAD_LIBRARY_TIMEOUT "
                     "environment variable."
@@ -1444,13 +1485,13 @@ class ImportsManager:
                     base_dir,
                     self.get_resolvable_command_line_variables() if resolve_command_line_vars else None,
                     variables,
-                ).result(LOAD_LIBRARY_TIMEOUT)
+                ).result(self.load_library_timeout)
 
             except TimeoutError as e:
                 raise RuntimeError(
                     f"Loading variables {name!r} with args {args!r} (working_dir={working_dir!r}, "
                     f"base_dir={base_dir!r}) "
-                    f"timed out after {LOAD_LIBRARY_TIMEOUT} seconds. "
+                    f"timed out after {self.load_library_timeout} seconds. "
                     "The variables may be slow or blocked during import. "
                     "If required, increase the timeout by setting the ROBOTCODE_LOAD_LIBRARY_TIMEOUT "
                     "environment variable."

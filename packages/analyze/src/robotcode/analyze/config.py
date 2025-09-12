@@ -318,6 +318,37 @@ class AnalyzeConfig(BaseOptions):
         description="Extend the global library search order setting."
     )
 
+    load_library_timeout: Optional[int] = field(
+        description="""\
+            Specifies the timeout in seconds for loading (importing) libraries and variable files during
+            analysis. Increase this if your libraries perform heavy initialization (network calls, large
+            dependency graphs, model loading, etc.).
+
+            Must be > 0 when set. If you omit this key, RobotCode will instead look for the environment
+            variable `ROBOTCODE_LOAD_LIBRARY_TIMEOUT`; otherwise it will use the internal default `10`.
+
+            Examples:
+
+            ```toml
+            [tool.robotcode-analyze]
+            # Fast fail if libraries normally import in < 2s
+            load_library_timeout = 5
+            ```
+
+            ```toml
+            [tool.robotcode-analyze]
+            # Allow heavy bootstrap (e.g. Selenium + large resource trees)
+            load_library_timeout = 30
+            ```
+
+            ```toml
+            [tool.robotcode-analyze]
+            # Omit to use default
+            # load_library_timeout = 15
+            ```
+        """,
+    )
+
     def to_workspace_analysis_config(self) -> WorkspaceAnalysisConfig:
         return WorkspaceAnalysisConfig(
             exclude_patterns=self.exclude_patterns or [],
@@ -331,7 +362,10 @@ class AnalyzeConfig(BaseOptions):
                 if self.cache is not None
                 else WorkspaceCacheConfig()
             ),
-            robot=AnalysisRobotConfig(global_library_search_order=self.global_library_search_order or []),
+            robot=AnalysisRobotConfig(
+                global_library_search_order=self.global_library_search_order or [],
+                load_library_timeout=self.load_library_timeout,
+            ),
             modifiers=(
                 AnalysisDiagnosticModifiersConfig(
                     ignore=self.modifiers.ignore or [],

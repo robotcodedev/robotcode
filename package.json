@@ -1028,6 +1028,14 @@
             "markdownDescription": "Specifies a global [search order](https://robotframework.org/robotframework/latest/RobotFrameworkUserGuide.html#specifying-explicit-priority-between-libraries-and-resources) for libraries and resources. This is usefull when you have libraries containing keywords with the same name. **RobotCode** is unable to analyze the library search order in a file specified with [`Set Library Search Order`](https://robotframework.org/robotframework/latest/libraries/BuiltIn.html#Set%20Library%20Search%20Order), so you can define a global order here. Just make sure to call the `Set Library Search Order` keyword somewhere in your robot file or internally in your library.",
             "scope": "resource"
           },
+          "robotcode.analysis.robot.loadLibraryTimeout": {
+            "type": ["number", "null"],
+            "default": null,
+            "minimum": 1,
+            "maximum": 3600,
+            "markdownDescription": "Specifies the timeout in seconds for loading libraries and variable files during analysis. Use this when libraries initialize slowly (network calls, heavy imports, large models).\n\n**Must be > 0 when set.**\n\n**Warning:** Defining a value here overrides both the configuration file value and the environment variable.\n\nIf you change this setting, you may need to run the command `RobotCode: Clear Cache and Restart Language Servers`.",
+            "scope": "resource"
+          },
           "robotcode.analysis.diagnosticModifiers.ignore": {
             "type": "array",
             "default": [],
@@ -2051,6 +2059,7 @@
         "userDescription": "Gets informations about the Robot Framework Environment .",
         "canBeReferencedInPrompt": true,
         "tags": [
+
           "robot",
           "robotframework",
           "robotcode"

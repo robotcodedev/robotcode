@@ -114,6 +114,15 @@ def _split_comma(ctx: click.Context, param: click.Option, value: Optional[List[s
     return result
 
 
+def _validate_load_library_timeout(ctx: click.Context, param: click.Option, value: Optional[int]) -> Optional[int]:
+    """Validate --load-library-timeout (>0) or pass through None."""
+    if value is None:
+        return None
+    if value <= 0:
+        raise click.BadParameter("must be > 0")
+    return value
+
+
 @click.command(
     add_help_option=True,
 )
@@ -216,6 +225,18 @@ def _split_comma(ctx: click.Context, param: click.Option, value: Optional[List[s
     help="Extend the exit code mask with the specified values. This appends to the default mask, defined in the config"
     " file.",
 )
+@click.option(
+    "--load-library-timeout",
+    type=int,
+    callback=_validate_load_library_timeout,
+    metavar="SECONDS",
+    show_envvar=True,
+    envvar="ROBOTCODE_LOAD_LIBRARY_TIMEOUT",
+    help=(
+        "Timeout (in seconds) for loading libraries and variable files during analysis. "
+        "Must be > 0. Overrides config file and environment variable when set."
+    ),
+)
 @click.argument(
     "paths", nargs=-1, type=click.Path(exists=True, dir_okay=True, file_okay=True, readable=True, path_type=Path)
 )
@@ -234,6 +255,7 @@ def code(
     exit_code_mask: ExitCodeMask,
     extend_exit_code_mask: ExitCodeMask,
     paths: Tuple[Path],
+    load_library_timeout: Optional[int],
 ) -> None:
     """\
         Performs static code analysis to identify potential issues in the specified *PATHS*. The analysis detects syntax
@@ -334,6 +356,12 @@ def code(
             else ExitCodeMask.parse(analyzer_config.code.exit_code_mask if analyzer_config.code is not None else None)
         )
         mask = default_mask | extend_exit_code_mask
+
+        if load_library_timeout is not None:
+            analyzer_config.load_library_timeout = load_library_timeout
+
+        app.verbose(f"Using analyzer_config: {analyzer_config}")
+        app.verbose(f"Using exit code mask: {mask}")
 
         statistics = Statistic(mask)
         for e in CodeAnalyzer(

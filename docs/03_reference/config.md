@@ -3118,3 +3118,48 @@ option is specified.
 corresponds to the `-x --xunit file` option of _robot_
 
 
+## tool.robotcode-analyze.global-library-search-order
+
+Type: `list[str] | None`
+
+Specifies a global search order for libraries and resources used during static analysis.
+This helps disambiguate keywords with identical names coming from multiple sources.
+RobotCode cannot infer dynamic changes done at runtime via `Set Library Search Order`, so
+define a deterministic order here if needed.
+
+Examples:
+
+```toml
+[tool.robotcode-analyze]
+global_library_search_order = ["MyLib", "BuiltIn", "Collections"]
+```
+
+## tool.robotcode-analyze.load-library-timeout
+
+Type: `int | None`
+
+Specifies the timeout in seconds for loading (importing) libraries and variable files during analysis. Increase this if your libraries perform heavy initialization (network calls, large dependency graphs, model loading, etc.).
+
+Must be > 0 when set. If you omit this key, RobotCode will instead look for the environment variable `ROBOTCODE_LOAD_LIBRARY_TIMEOUT`; otherwise it will use the internal default `10`.
+
+Examples:
+
+```toml
+[tool.robotcode-analyze]
+# Fast fail if libraries normally import in < 2s
+load_library_timeout = 5
+```
+
+```toml
+[tool.robotcode-analyze]
+# Allow heavy bootstrap (e.g. Selenium + large resource trees)
+load_library_timeout = 30
+```
+
+```toml
+[tool.robotcode-analyze]
+# Omit to use default
+# load_library_timeout = 15
+```
+
+

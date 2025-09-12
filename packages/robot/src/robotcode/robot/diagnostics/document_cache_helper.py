@@ -532,6 +532,11 @@ class DocumentsCacheHelper:
             self.analysis_config.cache.ignore_arguments_for_library + cache_config.ignore_arguments_for_library,
             self.analysis_config.robot.global_library_search_order + analysis_config.global_library_search_order,
             cache_base_path,
+            load_library_timeout=(
+                analysis_config.load_library_timeout
+                if analysis_config.load_library_timeout is not None
+                else self.analysis_config.robot.load_library_timeout
+            ),
         )
 
         result.libraries_changed.add(self._on_libraries_changed)
