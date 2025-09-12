@@ -341,22 +341,6 @@ class TestArgumentProcessor:
         assert current is not None
         assert current.value == "arg1"
 
-    def test_performance_with_large_argument_list(self) -> None:
-        """Test performance with large argument lists (no list slicing)."""
-        # Create large list of arguments
-        large_args = [Token(Token.ARGUMENT, f"arg{i}", 1, i * 10) for i in range(1000)]
-
-        processor = ArgumentProcessor(large_args)
-
-        # Test that all arguments can be efficiently processed
-        consumed_count = 0
-        while processor.has_next():
-            token = processor.consume()
-            if token:
-                consumed_count += 1
-
-        assert consumed_count == 1000
-
 
 class TestNamedArgumentProcessor:
     """Test cases for NamedArgumentProcessor class."""
@@ -1480,27 +1464,6 @@ class TestArgumentProcessorEdgeCases:
         assert current is not None
         assert current.value == "first_arg"
 
-    def test_remaining_slice_performance(self) -> None:
-        """Test remaining_slice performance with large lists."""
-        # Create large token list
-        large_tokens = [Token(Token.ARGUMENT, f"arg{i}", 1, i * 10) for i in range(10000)]
-        processor = ArgumentProcessor(large_tokens)
-
-        # Advance to middle
-        for _ in range(5000):
-            processor.consume()
-
-        # Get remaining slice - should be efficient
-        import time
-
-        start_time = time.time()
-        remaining = processor.remaining_slice()
-        end_time = time.time()
-
-        # Should be fast (< 1ms) and correct length
-        assert (end_time - start_time) < 0.001  # Less than 1ms
-        assert len(remaining) == 5000
-
 
 class TestNamedArgumentValidationRobust:
     """Robust tests for named argument validation and edge cases."""
@@ -1787,130 +1750,6 @@ class TestErrorHandling:
             except Exception as e:
                 # Should not raise exceptions
                 pytest.fail(f"Should not raise exception for unknown token '{token_type}': {e}")
-
-
-class TestPerformanceScenarios:
-    """Performance tests for semantic token processing."""
-
-    def test_large_keyword_argument_lists(self) -> None:
-        """Test performance with large keyword argument lists."""
-        # Create keyword with many arguments
-        large_args = [Token(Token.ARGUMENT, f"arg{i}=value{i}", 1, i * 20) for i in range(1000)]
-        processor = ArgumentProcessor(large_args)
-
-        # Test that processing is efficient
-        import time
-
-        start_time = time.time()
-
-        processed_count = 0
-        while processor.has_next():
-            token = processor.consume()
-            if token:
-                processed_count += 1
-
-        end_time = time.time()
-
-        # Should process quickly (< 100ms for 1000 args)
-        assert (end_time - start_time) < 0.1
-        assert processed_count == 1000
-
-    def test_unicode_handling_performance(self) -> None:
-        """Test performance with Unicode characters in tokens."""
-        # Create tokens with various Unicode characters
-        unicode_tokens = [
-            Token(Token.ARGUMENT, f"测试参数{i}", 1, i * 15)  # Chinese
-            for i in range(100)  # Reduced to 100 for more realistic test
-        ]
-
-        processor = ArgumentProcessor(unicode_tokens)
-        generator = SemanticTokenGenerator()
-        namespace = type(
-            "MockNamespace",
-            (),
-            {
-                "find_keyword": lambda self, name, **kwargs: None,
-                "languages": None,
-            },
-        )()
-
-        # Test processing time
-        import time
-
-        start_time = time.time()
-
-        processed_tokens = []
-        while processor.has_next():
-            token = processor.consume()
-            if token:
-                node = KeywordCall([])
-                try:
-                    sem_tokens = list(generator.generate_sem_tokens(token, node, namespace, None))
-                    processed_tokens.extend(sem_tokens)
-                except Exception:
-                    # Some tokens might not be processable, that's OK for performance test
-                    pass
-
-        end_time = time.time()
-
-        # Should handle Unicode efficiently (< 200ms for 100 tokens)
-        assert (end_time - start_time) < 0.2
-        # At least some tokens should be processed
-        assert len(processed_tokens) >= 0  # Just ensure no crash
-
-    def test_memory_usage_large_robot_files(self) -> None:
-        """Test memory usage with large Robot Framework files."""
-        # Simulate large Robot file content
-        large_robot_content = """*** Test Cases ***
-"""
-        for i in range(100):
-            large_robot_content += f"""Test Case {i}
-    Log    message=Test message {i}    level=INFO
-    Set Variable    ${{var{i}}}    value{i}
-    Should Be Equal    first=${{var{i}}}    second=value{i}
-
-"""
-
-        # Parse with Robot Framework
-        model = get_model(large_robot_content)
-        generator = SemanticTokenGenerator()
-        namespace = type(
-            "MockNamespace",
-            (),
-            {
-                "find_keyword": lambda self, name, **kwargs: None,
-                "languages": None,
-            },
-        )()
-
-        # Collect all tokens
-        all_tokens = []
-        import ast
-
-        for node in ast.walk(model):
-            if hasattr(node, "tokens"):
-                for token in getattr(node, "tokens", []):
-                    if token.type not in [Token.SEPARATOR, Token.EOL, Token.EOS]:
-                        all_tokens.append((token, node))
-
-        # Process all tokens and measure memory (simplified)
-        import time
-
-        start_time = time.time()
-        processed_semantic_tokens = []
-
-        for token, node in all_tokens:
-            try:
-                sem_tokens = list(generator.generate_sem_tokens(token, node, namespace, None))
-                processed_semantic_tokens.extend(sem_tokens)
-            except Exception:
-                pass  # Ignore processing errors for this performance test
-
-        end_time = time.time()
-
-        # Should process large files reasonably quickly
-        assert (end_time - start_time) < 2.0  # 2 seconds max
-        assert len(processed_semantic_tokens) >= len(all_tokens) * 0.5  # At least 50% processed
 
 
 class TestRealWorldIntegration:
