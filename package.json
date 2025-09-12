@@ -4,7 +4,7 @@
   "description": "Robot Framework IntelliSense, linting, test execution and debugging, code formatting, refactoring, and many more",
   "icon": "images/icon.png",
   "publisher": "d-biehl",
-  "version": "1.8.0",
+  "version": "1.9.0",
   "author": {
     "name": "Daniel Biehl",
     "url": "https://github.com/robotcodedev/"
@@ -1029,7 +1029,10 @@
             "scope": "resource"
           },
           "robotcode.analysis.robot.loadLibraryTimeout": {
-            "type": ["number", "null"],
+            "type": [
+              "number",
+              "null"
+            ],
             "default": null,
             "minimum": 1,
             "maximum": 3600,
@@ -2059,7 +2062,6 @@
         "userDescription": "Gets informations about the Robot Framework Environment .",
         "canBeReferencedInPrompt": true,
         "tags": [
-
           "robot",
           "robotframework",
           "robotcode"

@@ -2,6 +2,47 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [1.9.0](https://github.com/robotcodedev/robotcode/compare/v1.8.0..v1.9.0) - 2025-09-12
+
+### Bug Fixes
+
+- **robot:** Update class inheritance from BaseOptions to RobotBaseOptions for consistency ([1f18c52](https://github.com/robotcodedev/robotcode/commit/1f18c52600e9e467c835f9ebc0586b093e201def))
+- **robot:** Improve timeout error messages for library and variable loading ([d698900](https://github.com/robotcodedev/robotcode/commit/d698900bad4e0df6df26c925905777b245414164))
+- **robot:** Use --no* for disabled RF flags (e.g. --noexitonfailure) instead of short enable flags ([a6ffcf5](https://github.com/robotcodedev/robotcode/commit/a6ffcf56fdaa76efcb2f7ec7b6cfbad6d6ea2ddb))
+- **tests:** Use raw string notation for regex in exception matchers ([d6ba124](https://github.com/robotcodedev/robotcode/commit/d6ba12461f9f29e680c094b1f9279206300fb322))
+
+
+### Documentation
+
+- **config:** Add load-library-timeout option for library and variable loading to json schema ([d93a397](https://github.com/robotcodedev/robotcode/commit/d93a397fcb2018b46cca2b41c186e559709d09bd))
+- Enhance README.md's and remove redundant license files across packages ([f21f4ea](https://github.com/robotcodedev/robotcode/commit/f21f4eafc43cf6bbea60e87f15025a6c4dcfed7c))
+- Add comprehensive security policy and reporting guidelines ([a49027a](https://github.com/robotcodedev/robotcode/commit/a49027a2ba6c6eaa4d96a4cbb78f91cc8ded4d91))
+- Update links and improve wording in documentation ([409c393](https://github.com/robotcodedev/robotcode/commit/409c393b716904a66b76885400f3953083eb8a7d))
+- Reorganize support section in README.md for clarity ([22e56b7](https://github.com/robotcodedev/robotcode/commit/22e56b7a4e4e8ec47d62649ef83445b32aeb3742))
+
+
+### Features
+
+- **analyze,robot:** Add configurable load_library_timeout with CLI flag and robot.toml support ([461212d](https://github.com/robotcodedev/robotcode/commit/461212d8c5ce8f24ce795b33ed0b6106bbba9497))
+
+  Add configurable library/variable load timeout. Sources (precedence):
+
+  analyze code: --load-library-timeout / --no-load-library-timeout
+  VS Code setting: robotcode.analysis.robot.loadLibraryTimeout
+  robot.toml / pyproject: [tool.robotcode-analyze] load-library-timeout
+  Env: ROBOTCODE_LOAD_LIBRARY_TIMEOUT
+  Default: 10
+  Replaces previous hard-coded timeout, adds validation (>0), clearer docs, and examples.
+
+- **robot:** Define more detailed error message for library load timeout ([d5848ab](https://github.com/robotcodedev/robotcode/commit/d5848ab6d9b1285a6dc2465869b2bc274693603e))
+- **robot:** Environment variable for load library timeout ([20c98c3](https://github.com/robotcodedev/robotcode/commit/20c98c3db7beaa9e67b8214f41976a70048305e6))
+
+
+### Refactor
+
+- **tests:** Remove performance tests for argument processing ([d019a60](https://github.com/robotcodedev/robotcode/commit/d019a60fccb23e3d4a7d1269aae3379b97ce803b))
+
+
 ## [1.8.0](https://github.com/robotcodedev/robotcode/compare/v1.7.0..v1.8.0) - 2025-08-15
 
 ### Bug Fixes
