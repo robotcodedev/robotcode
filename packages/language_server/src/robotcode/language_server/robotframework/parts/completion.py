@@ -1739,7 +1739,7 @@ class CompletionCollector(ModelHelper):
                         )
                     ),
                     detail=e.kind.value,
-                    sort_text=f"030_{e}",
+                    sort_text=f"030_{e.label}",
                     insert_text_format=InsertTextFormat.PLAIN_TEXT,
                     text_edit=TextEdit(range=r, new_text=e.label) if r is not None else None,
                     data=CompletionItemData(
@@ -1936,7 +1936,7 @@ class CompletionCollector(ModelHelper):
                     )
                 ),
                 detail=e.kind.value,
-                sort_text=f"030_{e}",
+                sort_text=f"030_{e.label}",
                 insert_text_format=InsertTextFormat.PLAIN_TEXT,
                 text_edit=TextEdit(range=r, new_text=e.label) if r is not None else None,
                 data=CompletionItemData(
@@ -2060,7 +2060,7 @@ class CompletionCollector(ModelHelper):
                         )
                     ),
                     detail=e.kind.value,
-                    sort_text=f"030_{e}",
+                    sort_text=f"030_{e.label}",
                     insert_text_format=InsertTextFormat.PLAIN_TEXT,
                     text_edit=TextEdit(range=r, new_text=e.label) if r is not None else None,
                     data=CompletionItemData(
