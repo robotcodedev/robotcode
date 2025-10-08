@@ -72,7 +72,12 @@ class JsonRPCServer(Generic[TProtocol], abc.ABC):
         self._in_closing = False
         self._closed = False
 
-        self.loop = asyncio.get_event_loop()
+        try:
+            self.loop = asyncio.get_event_loop()
+        except RuntimeError:
+            self.loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(self.loop)
+
         if self.loop is not None:
             self.loop.slow_callback_duration = 10
 

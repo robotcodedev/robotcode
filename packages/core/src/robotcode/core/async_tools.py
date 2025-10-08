@@ -79,8 +79,11 @@ def run_coroutine_in_thread(
 
         ct = asyncio.current_task()
 
-        loop = asyncio.get_event_loop()
-        loop.slow_callback_duration = 10
+        try:
+            loop = asyncio.get_event_loop()
+            loop.slow_callback_duration = 10
+        except RuntimeError:
+            pass
 
         callback_added_event.wait(600)
 
