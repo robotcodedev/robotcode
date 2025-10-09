@@ -6,17 +6,18 @@ build-backend = "hatchling.build"
 name = "robotcode-core"
 description = 'Some core classes for RobotCode'
 readme = { "file" = "README.md", "content-type" = "text/markdown" }
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 license = {text = "Apache-2.0"}
 keywords = []
 authors = [{ name = "Daniel Biehl", email = "dbiehl@live.de" }]
 classifiers = [
   "Development Status :: 5 - Production/Stable",
   "Programming Language :: Python",
-  "Programming Language :: Python :: 3.8",
-  "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
   "Programming Language :: Python :: Implementation :: CPython",
   "Programming Language :: Python :: Implementation :: PyPy",
   "Operating System :: OS Independent",
@@ -54,7 +55,7 @@ detached = true
 python = "38"
 
 [tool.mypy]
-python_version = "3.8"
+python_version = "3.10"
 strict = true
 warn_redundant_casts = true
 warn_unused_ignores = true

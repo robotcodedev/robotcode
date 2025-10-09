@@ -46,7 +46,7 @@ hatch run lint:fix            # Auto-fix style issues
 - **ask your tools** wich python interpreter to use for the project/workspace
 
 ### Matrix Testing
-- **COMPREHENSIVE** testing across Python 3.8-3.13
+- **COMPREHENSIVE** testing across Python 3.10-3.14
 - **MATRIX** testing with Robot Framework 5.0-7.3
 - **INTEGRATION** tests in tests/robotcode/ with real scenarios
 - **SNAPSHOT** testing with pytest regtest2

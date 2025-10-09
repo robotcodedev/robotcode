@@ -41,7 +41,7 @@ RobotCode is a comprehensive Robot Framework toolkit that provides IDE extension
 ## Tech Stack
 
 ### Core Technologies
-- **Language Server:** Python 3.8-3.13 with asyncio
+- **Language Server:** Python 3.10-3.14 with asyncio
 - **Protocol:** Language Server Protocol (LSP) + Debug Adapter Protocol (DAP)
 - **Parser:** Robot Framework native parser for full compatibility
 - **Build System:** Hatch for package management and testing
@@ -57,7 +57,7 @@ RobotCode is a comprehensive Robot Framework toolkit that provides IDE extension
 - **Build:** Gradle with kotlin-gradle-plugin
 
 ### Testing Matrix
-- **Python Versions:** 3.8, 3.9, 3.10, 3.11, 3.12, 3.13
+- **Python Versions:** 3.10, 3.11, 3.12, 3.13, 3.14
 - **Robot Framework:** 5.0, 6.0, 6.1, 7.0, 7.1, 7.2, 7.3
 - **Test Framework:** pytest with regtest2 for snapshot testing
 

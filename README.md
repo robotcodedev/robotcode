@@ -63,30 +63,20 @@ With RobotCode, you can focus on building and testing your automation workflows 
 - Visual Studio Code 1.99.0 or newer
 - PyCharm 2025.1 or newer or IntelliJ IDEA 2025.1 or newer
 
-### Deprecated Python and Robot Framework Versions
-
-**⚠️ DEPRECATION WARNING:**
-Support for Python 3.8, 3.9, and Robot Framework 4.1 is deprecated and will be removed in a future release. To ensure compatibility and benefit from ongoing improvements, please upgrade to Python 3.10 or later and Robot Framework 5.0 or later.
+### Python and Robot Framework Version Requirements
 
 **Python Version Requirements:**
-Although Robot Framework still supports Python 3.8 and 3.9, RobotCode requires Python 3.10 or newer due to its use of more modern libraries and features. Many key tools in the ecosystem—such as robocop and the Browser library—have already dropped support for Python 3.8, which is no longer maintained. Python 3.9 will reach end-of-life on October 5, 2025.
-
-**Robot Framework Version Requirements:**
-Robot Framework 4.1 is outdated. Given the regular release cadence of Robot Framework—typically two major versions per year—maintaining support for older versions introduces significant overhead. That effort is better spent on supporting current and upcoming features.
-
-**Compatibility and Limitations:**
-RobotCode currently remains compatible with Python 3.8+ and Robot Framework 4.1+, but with important limitations:
-	•	New features may not be available for older versions.
-	•	Development and testing efforts are focused on newer versions.
-
-**Why Python 3.10:**
-After Python 3.9 reaches end-of-life, RobotCode will start using Python 3.10+ features that are not backward-compatible. Python 3.10 introduces several important improvements, including:
+RobotCode requires Python 3.10 or newer. Python 3.8 and 3.9 are no longer supported as they have reached or are approaching end-of-life status. Python 3.10 provides several important improvements that enable cleaner, more efficient code:
 	•	Structural pattern matching
 	•	More informative error messages
 	•	Simplified type hints using the | operator
 	•	Performance enhancements
 
-These capabilities enable cleaner, more efficient code and improved developer experience.
+**Robot Framework Version Requirements:**
+RobotCode supports Robot Framework 5.0 or later. Older versions like Robot Framework 4.1 are no longer supported due to their outdated nature and the regular release cadence of Robot Framework.
+
+**Why These Requirements:**
+Many key tools in the Robot Framework ecosystem—such as robocop and the Browser library—have already moved to similar requirements. This alignment ensures compatibility and allows RobotCode to leverage modern Python features for improved performance and developer experience.
 
 **Recommendation:**
 To get the most out of RobotCode, we recommend using:
