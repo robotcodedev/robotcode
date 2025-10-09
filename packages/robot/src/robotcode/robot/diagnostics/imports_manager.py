@@ -624,7 +624,7 @@ class ImportsManager:
 
         self.load_library_timeout = load_library_timeout
 
-        self._logger.critical(lambda: f"Using LoadLibrary timeout of {self.load_library_timeout} seconds")
+        self._logger.trace(lambda: f"Using LoadLibrary timeout of {self.load_library_timeout} seconds")
 
         self._logger.trace(
             lambda: f"Using load_library_timeout={self.load_library_timeout} (config/env/default)",
