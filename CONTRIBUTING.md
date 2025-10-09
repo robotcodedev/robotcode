@@ -249,7 +249,7 @@ You can also check available environments with: `hatch env show`
 6. **Commit your changes** with a descriptive commit message
 7. **Push and create a pull request**
 
-Note on Python versions: while the project tests across Python 3.8–3.13 to ensure broad compatibility, active development and production usage target Python 3.10+.
+Note on Python versions: the project tests across Python 3.10–3.14; active development and production usage target Python 3.10+.
 
 #### Pull Request Guidelines
 
@@ -296,8 +296,7 @@ hatch run test.rf50:test      # Robot Framework 5.0.x
 hatch run test.rf41:test      # Robot Framework 4.1.x
 
 # Run tests in specific development environments (single combination)
-hatch run devel:test          # ⚠️ Runs ALL matrix combinations (Python 3.8-3.13 × RF 4.1-7.3)
-hatch run devel.py39-rf73:test  # Python 3.9 with Robot Framework 7.3.x (single combination)
+hatch run devel:test          # ⚠️ Runs ALL matrix combinations (Python 3.10-3.14 × RF 4.1-7.3)
 hatch run devel.py311-rf70:test # Python 3.11 with Robot Framework 7.0.x (single combination)
 hatch run devel.py312-rf73:test # Python 3.12 with Robot Framework 7.3.x (single combination)
 hatch run devel.py313-rf73:test # Python 3.13 with Robot Framework 7.3.x (single combination)
@@ -315,7 +314,7 @@ hatch run rfdevel:test        # Local Robot Framework development version
 - For CI/full testing, use the matrix commands
 
 **Available Environment Matrix:**
-- **Python versions**: 3.8, 3.9, 3.10, 3.11, 3.12, 3.13
+- **Python versions**: 3.10, 3.11, 3.12, 3.13, 3.14
 - **Robot Framework versions**: 4.1.x, 5.0.x, 6.0.x, 6.1.x, 7.0.x, 7.1.x, 7.2.x, 7.3.x
 
 #### Building the Project

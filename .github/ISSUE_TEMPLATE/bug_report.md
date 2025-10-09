@@ -43,6 +43,6 @@ Add any other context about the problem here.
 - VS Code Version [e.g. 1.60]
 - RobotCode Version [e.g. 0.3.2]
 - OS: [e.g. Windows, Linux]
-- Python Version [e.g. 3.9.7]
+- Python Version [e.g. 3.12.6]
 - RobotFramework Version [e.g. 4.0.0]
 - Additional tools like robocop
