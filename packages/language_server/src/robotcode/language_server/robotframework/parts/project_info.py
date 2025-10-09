@@ -19,7 +19,6 @@ if TYPE_CHECKING:
 class ProjectInfo(CamelSnakeMixin):
     robot_version_string: str
     robocop_version_string: Optional[str]
-    tidy_version_string: Optional[str] = None
     python_version_string: Optional[str] = None
     python_executable: Optional[str] = None
     robot_code_version_string: Optional[str] = None
@@ -42,14 +41,9 @@ class ProjectInfoPart(RobotLanguageServerProtocolPart):
         if self.parent.robocop_helper.robocop_installed:
             robocop_version_string = self.parent.robocop_helper.robocop_version_str
 
-        tidy_version_string = None
-        if self.parent.robocop_helper.robotidy_installed:
-            tidy_version_string = self.parent.robocop_helper.robotidy_version_str
-
         return ProjectInfo(
             robot_version_string=get_version(),
             robocop_version_string=robocop_version_string,
-            tidy_version_string=tidy_version_string,
             python_version_string=sys.version,
             python_executable=sys.executable,
             robot_code_version_string=robotcode_version,

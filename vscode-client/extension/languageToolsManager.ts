@@ -77,7 +77,6 @@ export class LanguageToolsManager {
   readonly robotCode: vscode.LanguageStatusItem;
   readonly robotVersion: vscode.LanguageStatusItem;
   readonly robocopVersion: vscode.LanguageStatusItem;
-  readonly tidyVersion: vscode.LanguageStatusItem;
   readonly pythonVersion: vscode.LanguageStatusItem;
   readonly profiles: vscode.LanguageStatusItem;
 
@@ -234,15 +233,13 @@ export class LanguageToolsManager {
     this.robotVersion = vscode.languages.createLanguageStatusItem("robotcode2", selector);
     this.pythonVersion = vscode.languages.createLanguageStatusItem("robotcode3", selector);
     this.robocopVersion = vscode.languages.createLanguageStatusItem("robotcode4", selector);
-    this.tidyVersion = vscode.languages.createLanguageStatusItem("robotcode5", selector);
-    this.profiles = vscode.languages.createLanguageStatusItem("robotcode6", selector);
+    this.profiles = vscode.languages.createLanguageStatusItem("robotcode5", selector);
 
     this._disposables = vscode.Disposable.from(
       this.robotCode,
       this.robotVersion,
       this.pythonVersion,
       this.robocopVersion,
-      this.tidyVersion,
       vscode.commands.registerCommand("robotcode.createNewFile", LanguageToolsManager.createNewFile),
       vscode.commands.registerCommand(
         "robotcode.startTerminalRepl",
@@ -350,7 +347,6 @@ export class LanguageToolsManager {
         const pythonVersions: string[] = [];
         const robotFrameworkVersions: string[] = [];
         const robocopVersions: string[] = [];
-        const tidyVersions: string[] = [];
 
         for (const folder of folders) {
           const pythonInfo = await pythonManager.getPythonInfo(folder);
@@ -367,9 +363,6 @@ export class LanguageToolsManager {
 
             if (info.robocopVersionString && !robocopVersions.includes(info.robocopVersionString))
               robocopVersions.push(info.robocopVersionString);
-
-            if (info.tidyVersionString && !tidyVersions.includes(info.tidyVersionString))
-              tidyVersions.push(info.tidyVersionString);
           }
         }
 
@@ -377,11 +370,8 @@ export class LanguageToolsManager {
         data = data.replace("${{ ROBOTFRAMEWORK_VERSION }}", robotFrameworkVersions.join(", "));
         data = data.replace(
           "${{ ADDITIONAL_TOOLS }}",
-          robocopVersions.length > 0 || tidyVersions.length > 0
-            ? [
-                robocopVersions.map((v) => "robotframework-robocop==" + v).join(", "),
-                tidyVersions.map((v) => "robotframework-tidy==" + v).join(", "),
-              ].join(", ")
+          robocopVersions.length > 0
+            ? [robocopVersions.map((v) => "robotframework-robocop==" + v).join(", ")].join(", ")
             : "",
         );
 
@@ -635,9 +625,6 @@ export class LanguageToolsManager {
       title: robocopEnabled ? "Disable" : "Enable",
       command: robocopEnabled ? "robotcode.disableRoboCop" : "robotcode.enableRoboCop",
     };
-
-    this.tidyVersion.text = `$(robotcode-tidy) ${projectInfo?.tidyVersionString ?? NOT_INSTALLED}`;
-    this.tidyVersion.detail = "Tidy Version";
 
     const pythonInfo = folder !== undefined ? await this.pythonManager.getPythonInfo(folder) : undefined;
 

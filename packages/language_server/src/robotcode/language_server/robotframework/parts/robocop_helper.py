@@ -30,26 +30,6 @@ class RoboCopHelper(RobotLanguageServerProtocolPart):
         self._config_managers: Dict[WorkspaceFolder, "ConfigManager"] = {}
 
     @functools.cached_property
-    def robotidy_installed(self) -> bool:
-        try:
-            __import__("robotidy")
-        except ImportError:
-            return False
-        return True
-
-    @functools.cached_property
-    def robotidy_version(self) -> Version:
-        from robotidy.version import __version__
-
-        return create_version_from_str(__version__)
-
-    @functools.cached_property
-    def robotidy_version_str(self) -> str:
-        from robotidy.version import __version__
-
-        return str(__version__)
-
-    @functools.cached_property
     def robocop_installed(self) -> bool:
         try:
             __import__("robocop")

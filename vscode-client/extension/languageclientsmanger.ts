@@ -117,7 +117,6 @@ interface DiscoverInfoResult {
 export interface ProjectInfo {
   robotVersionString?: string;
   robocopVersionString?: string;
-  tidyVersionString?: string;
   pythonVersionString?: string;
   pythonExecutable?: string;
   robotCodeVersionString?: string;

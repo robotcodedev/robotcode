@@ -46,7 +46,7 @@ With RobotCode, you can focus on building and testing your automation workflows 
 - **Debugging**: Debug your Robot Framework tests with ease.
 - **Command Line Tools**: A wide array of tools to assist in setting up and managing Robot Framework environments.
 - **Code Analysis with Robocop**: Install [Robocop](https://robocop.readthedocs.io/) for additional code analysis.
-- **Code Formatting**: Format your code using Robot Framework’s built-in tools like `robot.tidy` or [Robotidy](https://robotidy.readthedocs.io/).
+- **Code Formatting**: Use [Robocop's formatter](https://robocop.readthedocs.io/) for consistent code formatting.
 - **Multi-root Workspace Support**: Manage multiple Robot Framework projects with different Python environments simultaneously.
 - **Customizable Settings**: Configure the extension to fit your needs.
 - **RobotCode Repl and Notebooks**: Play with Robot Framework in a Jupyter Notebook-like environment.

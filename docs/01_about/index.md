@@ -40,7 +40,7 @@ RobotCode extends the Robot Framework CLI with enhanced tools for test execution
 
 ### Code Formatting and Tidying
 
-- **Automatic Code Formatting:** Keep your code clean and consistent with RobotCode’s formatting tools. You can choose to use the built-in `robot.tidy` tool (now deprecated) or the more powerful [Robotidy](https://robotidy.readthedocs.io/). With just a few clicks, your code is neatly organized and ready for review.
+- **Automatic Code Formatting:** Keep your code clean and consistent with RobotCode’s formatting tools. Use [Robocop's formatter](https://robocop.readthedocs.io/) for modern, consistent formatting directly in RobotCode.
 - **Customizable Formatting Options:** Tailor the formatting rules to suit your project’s needs, ensuring that your codebase remains consistent and easy to read.
 
 ### Running and Debugging

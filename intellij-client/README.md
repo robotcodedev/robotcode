@@ -49,7 +49,7 @@ With RobotCode, you can focus on building and testing your automation workflows 
 - **Rich Test Reports**: View detailed test results and logs directly in the IDE.
 - **Code Analysis**: Leverage tools like [Robocop](https://robocop.readthedocs.io/) for linting and static code
   analysis.
-- **Formatting Made Easy**: Use [Robotidy](https://robotidy.readthedocs.io/) for consistent code formatting.
+- **Formatting Made Easy**: Use Robocop's built-in formatter for consistent code formatting.
 - **Support for `robot.toml`**: Manage your Robot Framework projects with ease.
 - **More Features Coming Soon!**
 

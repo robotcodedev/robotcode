@@ -58,7 +58,7 @@ To install all packages, including optional dependencies, use:
 pip install robotcode[all]
 ```
 
-This includes additional tools, such as [`robocop`](https://robocop.readthedocs.io) for linting and [`robotidy`](https://robotidy.readthedocs.io) for code formatting, which further enhance the development experience with Robot Framework.
+This includes additional tools, such as [`robocop`](https://robocop.readthedocs.io) for linting and formatting, which further enhance the development experience with Robot Framework.
 
 
 ## Commands
@@ -298,7 +298,7 @@ robotcode analyze code [OPTIONS] [PATHS]...
 
 - `-f, --filter PATTERN *`
 
-   Glob pattern to filter files to analyze. Can be specified multiple times.         
+   Glob pattern to filter files to analyze. Can be specified multiple times.
 
 
 - `-v, --variable name:value *`

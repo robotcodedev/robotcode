@@ -39,14 +39,6 @@ class RoboCopConfig(ConfigBase):
     configurations: List[str] = field(default_factory=list)
 
 
-@config_section("robotcode.robotidy")
-@dataclass
-class RoboTidyConfig(ConfigBase):
-    enabled: bool = True
-    ignore_git_dir: bool = False
-    config: Optional[str] = None
-
-
 @config_section("robotcode.documentationServer")
 @dataclass
 class DocumentationServerConfig(ConfigBase):

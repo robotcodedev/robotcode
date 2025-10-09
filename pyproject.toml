@@ -261,7 +261,6 @@ module = [
   "robot.*",
   "robotremoteserver.*",
   "debugpy.*",
-  "robotidy.*",
   "robocop.*",
   "pluggy",
 ]

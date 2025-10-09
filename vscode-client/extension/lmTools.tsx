@@ -228,7 +228,6 @@ export class GetEnvironmentDetails implements vscode.LanguageModelTool<GetEnviro
       `**Robot Framework Version:** ${projectInfo.robotVersionString || "Not installed"}`,
       `**RobotCode Version:** ${projectInfo.robotCodeVersionString || "Not set"}`,
       `**Robocop Version:** ${projectInfo.robocopVersionString || "Not installed"}`,
-      `**Robotidy Version:** ${projectInfo.tidyVersionString || "Not installed"}`,
     ];
     return new vscode.LanguageModelToolResult([new vscode.LanguageModelTextPart(message.join("\n"))]);
   }

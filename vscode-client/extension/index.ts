@@ -133,7 +133,6 @@ export async function activateAsync(context: vscode.ExtensionContext): Promise<v
         "robotcode.languageServer",
         "robotcode.robot",
         "robotcode.robocop",
-        "robotcode.robotidy",
         "robotcode.analysis",
         "robotcode.workspace",
         "robotcode.documentationServer",
