@@ -8,17 +8,17 @@
         "preview": "vitepress preview"
     },
     "devDependencies": {
-        "esbuild": "^0.25.9",
+        "esbuild": "^0.25.10",
         "lite-youtube-embed": "^0.3.3",
         "markdown-it-abbr": "^2.0.0",
         "markdown-it-kbd": "^3.0.0",
-        "markdown-it-mathjax3": "^4.3.2",
+        "markdown-it-mathjax3": "^5.2.0",
         "markdown-it-task-lists": "^2.1.1",
-        "typescript": "^5.9.2",
-        "typescript-eslint": "^8.43.0",
+        "typescript": "^5.9.3",
+        "typescript-eslint": "^8.46.0",
         "vitepress": "^1.6.4",
         "vitepress-plugin-llmstxt": "^0.4.2",
-        "vitepress-plugin-tabs": "^0.7.1",
+        "vitepress-plugin-tabs": "^0.7.3",
         "vitepress-sidebar": "^1.33.0"
     }
 }
