@@ -12,7 +12,6 @@
         "lite-youtube-embed": "^0.3.3",
         "markdown-it-abbr": "^2.0.0",
         "markdown-it-kbd": "^3.0.0",
-        "markdown-it-mathjax3": "^5.2.0",
         "markdown-it-task-lists": "^2.1.1",
         "typescript": "^5.9.3",
         "typescript-eslint": "^8.46.0",

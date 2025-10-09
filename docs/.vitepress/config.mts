@@ -131,7 +131,7 @@ export default defineConfig({
     headers: {
       level: [2, 3, 4],
     },
-    math: true,
+    math: false,
     languages: [robotframework as any],
     toc: {
       level: [2, 3, 4],
