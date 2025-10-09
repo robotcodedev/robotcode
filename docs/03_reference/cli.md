@@ -49,7 +49,7 @@ pip install robotcode[runner]
 pip install robotcode[analyze]
 pip install robotcode[debugger]
 pip install robotcode[repl]
-pip install robotcode[language-server]
+pip install robotcode[languageserver]
 ```
 
 To install all packages, including optional dependencies, use:
