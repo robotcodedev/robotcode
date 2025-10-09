@@ -2,7 +2,8 @@ name: deploy docs site to Pages
 
 on:
   push:
-    branches: main
+    branches:
+      - main
     tags:
       - "v*"
     paths-ignore:
