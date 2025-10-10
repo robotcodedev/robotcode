@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [2.0.1](https://github.com/robotcodedev/robotcode/compare/v2.0.0..v2.0.1) - 2025-10-10
+
+### Bug Fixes
+
+- Corrected packaging of python wheels/vscode packages ([242f822](https://github.com/robotcodedev/robotcode/commit/242f822c5ffa2b6c0611620f0701a0286d405d87))
+
+
 ## [2.0.0](https://github.com/robotcodedev/robotcode/compare/v1.9.0..v2.0.0) - 2025-10-10
 
 ### Bug Fixes
