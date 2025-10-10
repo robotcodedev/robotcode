@@ -55,11 +55,11 @@ dev-mode-dirs = ["src"]
 
 [tool.hatch.build.targets.wheel]
 only-include = ["src/robotcode"]
-sources = ["src"]
+
 
 [tool.hatch.build.targets.sdist]
 only-include = ["src"]
 
 [tool.hatch.envs.build]
 detached = true
-python = "38"
+python = "310"
