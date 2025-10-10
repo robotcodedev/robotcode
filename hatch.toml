@@ -6,6 +6,7 @@ dev-mode-dirs = ["src"]
 
 [build.targets.wheel]
 only-include = ["src/robotcode"]
+sources = ["src"]
 
 [build.targets.sdist]
 only-include = ["src", "CHANGELOG.md"]

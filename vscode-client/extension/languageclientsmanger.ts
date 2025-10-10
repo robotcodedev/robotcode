@@ -366,7 +366,7 @@ export class LanguageClientsManager {
           id: "select",
           label: "Select Python Interpreter...",
           detail:
-            "Choose a Python interpreter version 3.8 or newer that has `robotframework` version 4.1 or higher installed",
+            "Choose a Python interpreter version 3.10 or newer that has `robotframework` version 4.1 or higher installed",
         },
         {
           id: "create",

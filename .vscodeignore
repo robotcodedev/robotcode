@@ -72,3 +72,8 @@ robot.toml
 .robotignore
 
 esbuild.mjs
+
+# ai agents
+CLAUDE.md
+AGENT.md
+AGENTS.md
