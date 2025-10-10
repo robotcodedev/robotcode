@@ -83,6 +83,10 @@ class _Visitor(Visitor):
         self.__append(node, kind="comment")
         self.generic_visit(node)
 
+    def visit_Documentation(self, node: ast.AST) -> None:  # noqa: N802
+        self.__append(node, kind="documentation")
+        self.generic_visit(node)
+
     def visit_TestCase(self, node: TestCase) -> None:  # noqa: N802
         if node.name:
             self.__append(node, kind="testcase")
