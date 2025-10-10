@@ -930,7 +930,8 @@ class Debugger:
     ) -> StackFrameEntry:
         path = pathlib.Path(source) if source is not None else None
         is_file = path is not None and path.is_file()
-        if path is not None and not is_file and type in ["SETUP", "TEARDOWN"]:
+
+        if path is not None and not is_file:
             init_path = pathlib.Path(path, "__init__.robot")
             if init_path.exists() and init_path.is_file():
                 is_file = True
