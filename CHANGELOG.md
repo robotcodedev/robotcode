@@ -2,6 +2,36 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [2.0.0](https://github.com/robotcodedev/robotcode/compare/v1.9.0..v2.0.0) - 2025-10-10
+
+### Bug Fixes
+
+- **debugger:** Handle breakpoints in `__init__.robot` files correctly ([34da5e7](https://github.com/robotcodedev/robotcode/commit/34da5e7db1955f7dde5a3a1c60f46cdc9fc6ea82))
+- **langserver:** Support for Python 3.14 ([d7fe624](https://github.com/robotcodedev/robotcode/commit/d7fe624a79a09ecfbc4fa0ff61acb86a0d54b873))
+- **langserver:** Update sort_text to use e.label for better clarity in import completion items ([39e1272](https://github.com/robotcodedev/robotcode/commit/39e12726f73004ef9083dd767ef8d1dbd6c9bd06))
+- **robot:** Change logger level from critical to trace for LoadLibrary timeout ([52fc3b0](https://github.com/robotcodedev/robotcode/commit/52fc3b0c642447bd9cb424d16693307bab1c285f))
+- **robot:** Change logger level from critical to trace for load_library_timeout ([c0e6898](https://github.com/robotcodedev/robotcode/commit/c0e68986287c79ae411a95286d1e31d41c8a0b36))
+- Remove Python 3.8 support and update classifiers for Python 3.14 ([e642d5b](https://github.com/robotcodedev/robotcode/commit/e642d5bf4ea9cf9169ea9aadcc4945251a3063db))
+
+
+### Documentation
+
+- Update Python version references to 3.12.6 and adjust testing matrix to 3.10-3.14 ([0d41933](https://github.com/robotcodedev/robotcode/commit/0d41933d15b516c7884557cbba157230ac96a70b))
+- Disable math rendering in VitePress config and remove related dependencies ([5390600](https://github.com/robotcodedev/robotcode/commit/5390600fd211cbe8761a51f0864439c837605d50))
+
+
+### Features
+
+- **langserver:** Add support for folding documentation settings ([2b627d7](https://github.com/robotcodedev/robotcode/commit/2b627d7e107a6290da8c6ac7f77e246b53553071))
+- **langserver:** Remove Robotidy support ([c49bf40](https://github.com/robotcodedev/robotcode/commit/c49bf405900ca9226463f87719f6cc678d8ff8ae))
+  - **BREAKING**: remove Robotidy support
+
+  Use robotframework-robocop>=6.0 for formatting.
+
+- Drop Python 3.8 and 3.9 support, require Python 3.10+ ([7c825de](https://github.com/robotcodedev/robotcode/commit/7c825de2fa1a956e375dc01f542c66b8975d687c))
+  - **BREAKING**: Python 3.8 and 3.9 are no longer supported. Minimum required version is now Python 3.10.
+
+
 ## [1.9.0](https://github.com/robotcodedev/robotcode/compare/v1.8.0..v1.9.0) - 2025-09-12
 
 ### Bug Fixes

@@ -4,7 +4,7 @@
   "description": "Robot Framework IntelliSense, linting, test execution and debugging, code formatting, refactoring, and many more",
   "icon": "images/icon.png",
   "publisher": "d-biehl",
-  "version": "1.9.0",
+  "version": "2.0.0",
   "author": {
     "name": "Daniel Biehl",
     "url": "https://github.com/robotcodedev/"
@@ -1186,7 +1186,6 @@
           }
         }
       },
-
       {
         "title": "Workspace",
         "type": "object",
@@ -2032,7 +2031,7 @@
         "name": "robot-get_environment_details",
         "displayName": "Get Robot Framework Environment Informations",
         "toolReferenceName": "robotGetEnvironmentInfo",
-  "modelDescription": "Retrieves detailed environment information for Robot Framework workspaces or files. Returns comprehensive details about the Python interpreter (version, executable path), installed Robot Framework version, RobotCode extension version, and optional tool versions (e.g., robocop) if available. Use this tool when you need to diagnose environment issues, verify installations, check version compatibility, or troubleshoot Robot Framework setup problems. Limitations: Only provides information about the currently configured Python environment for the workspace, may not detect tools installed in different Python environments, requires proper workspace configuration to access environment details, and information accuracy depends on the current RobotCode language server connection.",
+        "modelDescription": "Retrieves detailed environment information for Robot Framework workspaces or files. Returns comprehensive details about the Python interpreter (version, executable path), installed Robot Framework version, RobotCode extension version, and optional tool versions (e.g., robocop) if available. Use this tool when you need to diagnose environment issues, verify installations, check version compatibility, or troubleshoot Robot Framework setup problems. Limitations: Only provides information about the currently configured Python environment for the workspace, may not detect tools installed in different Python environments, requires proper workspace configuration to access environment details, and information accuracy depends on the current RobotCode language server connection.",
         "userDescription": "Gets informations about the Robot Framework Environment .",
         "canBeReferencedInPrompt": true,
         "tags": [
