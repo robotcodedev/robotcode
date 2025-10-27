@@ -146,5 +146,6 @@ What you will learn:
 
 
 ## Powered by
-[RBTFRMWRK/Foundation](https://robotframework.org/foundation)
+[![imbus AG](images/imbus-web-logo.svg)](https://www.imbus.de)
+[![Robot Framework Foundation](images/RFFoundation.svg)](https://robotframework.org/foundation)
 [![JetBrains Logo](images/jetbrains.svg)](https://jb.gg/OpenSourceSupport)
