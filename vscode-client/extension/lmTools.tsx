@@ -7,11 +7,12 @@ function resolveWorkspaceFolder(filepath?: string): vscode.WorkspaceFolder | und
     return vscode.workspace.workspaceFolders ? vscode.workspace.workspaceFolders[0] : undefined;
   }
 
-  try {
-    return vscode.workspace.getWorkspaceFolder(vscode.Uri.parse(filepath));
-  } catch {
-    return vscode.workspace.getWorkspaceFolder(vscode.Uri.file(filepath));
+  const workspaceFolder = vscode.workspace.getWorkspaceFolder(vscode.Uri.file(filepath));
+  if (workspaceFolder) {
+    return workspaceFolder;
   }
+
+  return vscode.workspace.getWorkspaceFolder(vscode.Uri.parse(filepath));
 }
 
 interface GetLibraryInfoToolParamters {
