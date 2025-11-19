@@ -6,6 +6,13 @@
 	"version": "0.2.0",
 	"configurations": [
 		{
+			"name": "LibDoc Dummy",
+			"type": "debugpy",
+			"request": "launch",
+			"module": "robot.libdoc",
+			"args": ["playground/dummy.py", "playground/dummy.json"]
+		},
+		{
 			"name": "Python: Attach Prompt",
 			"type": "debugpy",
 			"request": "attach",

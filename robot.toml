@@ -2,8 +2,12 @@ python-path = [
     "tests/robotcode/language_server/robotframework/parts/data/lib",
     "tests/robotcode/language_server/robotframework/parts/data/resources",
 ]
-paths = "tests/robotcode/language_server/robotframework/parts/data"
+paths = [
+    # "tests/robotcode/language_server/robotframework/parts/data",
+    "playground",
+]
 rpa = false
+run-empty-suite = true
 
 [tool.robotcode-analyze.code]
 exit-code-mask = ["info", "hint"]

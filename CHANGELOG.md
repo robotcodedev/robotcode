@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [2.0.2](https://github.com/robotcodedev/robotcode/compare/v2.0.1..v2.0.2) - 2025-11-19
+
+### Bug Fixes
+
+- **vscode:** Improve workspace folder resolution logic for chat tools ([de73d7d](https://github.com/robotcodedev/robotcode/commit/de73d7d2fc347d6cfc37f9319e20ee81efe006ef))
+
+
+### Documentation
+
+- Add Robot Framework Foundation and imbus as sponsors ([804758c](https://github.com/robotcodedev/robotcode/commit/804758c7ed75c1f7145a1370f0e2e33393c582e9))
+
+
 ## [2.0.1](https://github.com/robotcodedev/robotcode/compare/v2.0.0..v2.0.1) - 2025-10-10
 
 ### Bug Fixes
