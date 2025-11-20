@@ -680,6 +680,8 @@
     "configuration": [
       {
         "title": "General",
+        "order": 97,
+        "id": "robotcode.general",
         "type": "object",
         "properties": {
           "robotcode.extraArgs": {
@@ -712,6 +714,8 @@
       {
         "title": "Editing",
         "type": "object",
+        "order": 98,
+        "id": "robotcode.editing",
         "properties": {
           "robotcode.editor.4SpacesTab": {
             "type": "boolean",
@@ -747,6 +751,8 @@
       {
         "title": "Run",
         "type": "object",
+        "order": 99,
+        "id": "robotcode.run",
         "properties": {
           "robotcode.run.openOutputAfterRun": {
             "type": "string",
@@ -785,6 +791,8 @@
       {
         "title": "Debug",
         "type": "object",
+        "order": 100,
+        "id": "robotcode.debug",
         "properties": {
           "robotcode.debugLauncher.mode": {
             "type": "string",
@@ -886,6 +894,8 @@
       {
         "title": "Robot",
         "type": "object",
+        "order": 101,
+        "id": "robotcode.robot",
         "properties": {
           "robotcode.robot.args": {
             "type": "array",
@@ -977,6 +987,8 @@
       {
         "title": "Analysis",
         "type": "object",
+        "order": 102,
+        "id": "robotcode.analysis",
         "properties": {
           "robotcode.analysis.cache.saveLocation": {
             "type": "string",
@@ -1129,6 +1141,8 @@
       {
         "title": "Linting and Formatting - Robocop",
         "type": "object",
+        "order": 103,
+        "id": "robotcode.robocop",
         "properties": {
           "robotcode.robocop.enabled": {
             "type": "boolean",
@@ -1189,6 +1203,8 @@
       {
         "title": "Workspace",
         "type": "object",
+        "order": 104,
+        "id": "robotcode.workspace",
         "properties": {
           "robotcode.workspace.excludePatterns": {
             "type": "array",
@@ -1212,6 +1228,8 @@
       {
         "title": "Language Server",
         "type": "object",
+        "order": 105,
+        "id": "robotcode.languageServer",
         "properties": {
           "robotcode.languageServer.mode": {
             "type": "string",
@@ -1245,6 +1263,8 @@
       {
         "title": "Documentation",
         "type": "object",
+        "order": 106,
+        "id": "robotcode.documentation",
         "properties": {
           "robotcode.documentationServer.startPort": {
             "type": "integer",
@@ -1266,6 +1286,8 @@
       {
         "title": "Test Explorer",
         "type": "object",
+        "order": 107,
+        "id": "robotcode.testExplorer",
         "properties": {
           "robotcode.testExplorer.enabled": {
             "type": "boolean",
@@ -2072,7 +2094,6 @@
     "@vscode/prompt-tsx": "^0.4.0-alpha.5",
     "ansi-colors": "^4.1.3",
     "fs-extra": "^11.3.2",
-    "vitepress-sidebar": "^1.26.0",
     "vscode-languageclient": "^9.0.1"
   },
   "devDependencies": {
