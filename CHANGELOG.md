@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [2.0.3](https://github.com/robotcodedev/robotcode/compare/v2.0.2..v2.0.3) - 2025-11-20
+
+### Bug Fixes
+
+- **vscode:** Correct configurations in settings view ([8bd0329](https://github.com/robotcodedev/robotcode/commit/8bd0329f768bb2440f4409869b442edc807da0a7))
+
+
 ## [2.0.2](https://github.com/robotcodedev/robotcode/compare/v2.0.1..v2.0.2) - 2025-11-19
 
 ### Bug Fixes
