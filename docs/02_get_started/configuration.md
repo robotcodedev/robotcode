@@ -159,7 +159,7 @@ robotcode -p dev robot tests/
 robotcode -p base -p windows robot tests/
 
 # Override variables on command line
-robotcode -p dev -v BROWSER:firefox robot tests/
+robotcode -p dev robot -v BROWSER:firefox tests/
 
 # Run tests by tag
 robotcode robot -i smoke -i regression tests/
