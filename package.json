@@ -4,7 +4,7 @@
   "description": "Robot Framework IntelliSense, linting, test execution and debugging, code formatting, refactoring, and many more",
   "icon": "images/icon.png",
   "publisher": "d-biehl",
-  "version": "2.0.3",
+  "version": "2.0.4",
   "author": {
     "name": "Daniel Biehl",
     "url": "https://github.com/robotcodedev/"

@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [2.0.4](https://github.com/robotcodedev/robotcode/compare/v2.0.3..v2.0.4) - 2025-11-25
+
+### Documentation
+
+- Add diagnostics modifiers section to reference documentation ([52b1deb](https://github.com/robotcodedev/robotcode/commit/52b1debd4dc337221e195d86a56677b4c300f27c))
+- Correct command syntax for running tests with overridden variables ([bfc6801](https://github.com/robotcodedev/robotcode/commit/bfc6801da41c8068b248c918955d581b55a628d2))
+
+
 ## [2.0.3](https://github.com/robotcodedev/robotcode/compare/v2.0.2..v2.0.3) - 2025-11-20
 
 ### Bug Fixes
