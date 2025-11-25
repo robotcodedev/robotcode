@@ -4,3 +4,6 @@ output
 
 # robotcode
 .robotcode_cache/
+
+# uv
+uv.lock
