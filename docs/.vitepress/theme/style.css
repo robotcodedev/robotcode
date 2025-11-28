@@ -109,7 +109,7 @@
 
 @media (min-width: 640px) {
   .VPHero .hero-img,
-  .VPHero img[src*="robotcode-vintage.png"] {
+  .VPHero .image-src {
     max-width: 256px;
     max-height: 256px;
   }
@@ -120,9 +120,9 @@
    Targets the image used in the home front-matter (e.g. /robotcode-vintage.png).
    Adjusts max-width and adds responsive scaling for larger viewports. */
   .VPHero .hero-img,
-  .VPHero img[src*="robotcode-vintage.png"] {
-    max-width: 500px; /* increase from default to make image larger */
-    max-height: 500px; /* increase from default to make image larger */
+  .VPHero .image-src {
+    max-width: 512px; /* increase from default to make image larger */
+    max-height: 512px; /* increase from default to make image larger */
   }
 }
 
