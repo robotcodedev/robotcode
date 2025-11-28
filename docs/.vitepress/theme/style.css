@@ -98,13 +98,13 @@
  * -------------------------------------------------------------------------- */
 
 :root {
-  --vp-home-hero-name-color: #ffffff;
-  --vp-home-hero-name-background: linear-gradient(90deg, #0b7285 0%, #138496 100%);
+  /* --vp-home-hero-name-color: #ffffff;
+  --vp-home-hero-name-background: linear-gradient(90deg, #0b7285 0%, #138496 100%); */
 
   /* Hero adjustments */
-  .VPHero {
+  /* .VPHero {
     background: linear-gradient(180deg, rgba(11, 114, 133, 0.06) 0%, transparent 60%);
-  }
+  } */
 }
 
 @media (min-width: 640px) {
