@@ -2429,7 +2429,7 @@ def get_variables_doc(
                 # TODO: add type information of the value including dict key names and member names
                 libdoc.variables = []
                 for name, value in importer.import_variables(import_name, args):
-                    var_info = variable_info.get(name, (1, 0, len(name)))
+                    var_info = variable_info.get(name, (1, 0, 0))
                     libdoc.variables.append(
                         ImportedVariableDefinition(
                             line_no=var_info[0],
