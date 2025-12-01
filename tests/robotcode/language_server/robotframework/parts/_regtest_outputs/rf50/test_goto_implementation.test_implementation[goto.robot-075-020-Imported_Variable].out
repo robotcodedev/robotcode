@@ -13,14 +13,14 @@ result:
       line: 75
   target_range:
     end:
-      character: 17
+      character: 0
       line: 0
     start:
       character: 0
       line: 0
   target_selection_range:
     end:
-      character: 17
+      character: 0
       line: 0
     start:
       character: 0
