@@ -2,6 +2,36 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [2.1.0](https://github.com/robotcodedev/robotcode/compare/v2.0.4..v2.1.0) - 2025-12-01
+
+### Documentation
+
+- Correct some stylings ([5edb90c](https://github.com/robotcodedev/robotcode/commit/5edb90c90700bb0fea5773f102171e14da8f6abd))
+- Make the hero image a bit more christmassy ([4fd8412](https://github.com/robotcodedev/robotcode/commit/4fd841257ed6f9297799a7b9ab1ce829c6837266))
+
+
+### Features
+
+- **vscode:** Add option to control extension activation per scope ([7af4583](https://github.com/robotcodedev/robotcode/commit/7af4583367c1746bb089eedb085fcb6d5f9fe966))
+
+  Add new `robotcode.disableExtension` configuration setting that allows
+  users to disable or enable the RobotCode extension at any scope level.
+
+  With resource scope, users can:
+  - Disable the extension globally (user settings) and enable it for
+    specific workspaces or folders
+  - Disable the extension for a workspace and enable it for specific
+    folders within
+  - Disable the extension only for specific folders in multi-root
+    workspaces
+
+  This is useful in:
+  - Large workspaces where RobotCode is not needed everywhere
+  - Multi-root workspaces with mixed project types
+  - Environments where users want opt-in rather than opt-out behavior
+
+
+
 ## [2.0.4](https://github.com/robotcodedev/robotcode/compare/v2.0.3..v2.0.4) - 2025-11-25
 
 ### Documentation
