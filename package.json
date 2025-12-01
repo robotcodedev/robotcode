@@ -684,6 +684,12 @@
         "id": "robotcode.general",
         "type": "object",
         "properties": {
+          "robotcode.disableExtension": {
+            "type": "boolean",
+            "default": false,
+            "markdownDescription": "Disables the RobotCode extension for the workspace or folder.\n\nThis is useful in large workspaces or multi root workspaces where you do not want to use RobotCode everywhere.",
+            "scope": "resource"
+          },
           "robotcode.extraArgs": {
             "type": "array",
             "default": [],

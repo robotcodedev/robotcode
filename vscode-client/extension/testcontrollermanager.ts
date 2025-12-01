@@ -882,7 +882,12 @@ export class TestControllerManager {
 
   // eslint-disable-next-line class-methods-use-this
   private isTestExplorerEnabledForWorkspace(workspace: vscode.WorkspaceFolder): boolean {
+    if (vscode.workspace.getConfiguration(CONFIG_SECTION, workspace).get<boolean>("disableExtension")) {
+      return false;
+    }
+
     const result = vscode.workspace.getConfiguration(CONFIG_SECTION, workspace).get<boolean>("testExplorer.enabled");
+
     return result === undefined || result;
   }
 
