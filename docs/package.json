@@ -14,7 +14,7 @@
         "markdown-it-kbd": "^3.0.2",
         "markdown-it-task-lists": "^2.1.1",
         "typescript": "^5.9.3",
-        "typescript-eslint": "^8.47.0",
+        "typescript-eslint": "^8.48.1",
         "vitepress": "^1.6.4",
         "vitepress-plugin-llmstxt": "^0.5.0",
         "vitepress-plugin-tabs": "^0.7.3",

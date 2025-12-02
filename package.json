@@ -19,7 +19,7 @@
   },
   "qna": "https://github.com/robotcodedev/robotcode/discussions/categories/q-a",
   "engines": {
-    "vscode": "^1.101.0"
+    "vscode": "^1.103.0"
   },
   "categories": [
     "Programming Languages",
@@ -2104,26 +2104,26 @@
   },
   "devDependencies": {
     "@eslint/compat": "^2.0.0",
-    "@eslint/eslintrc": "^3.3.1",
+    "@eslint/eslintrc": "^3.3.3",
     "@eslint/js": "^9.39.1",
     "@jgoz/esbuild-plugin-typecheck": "^4.0.4",
     "@types/fs-extra": "^11.0.4",
-    "@types/node": "^20.19.0",
-    "@types/vscode": "^1.101.0",
+    "@types/node": "^22.17.0",
+    "@types/vscode": "^1.103.0",
     "@types/vscode-notebook-renderer": "^1.72.4",
     "@vscode/python-extension": "^1.0.6",
-    "@vscode/vsce": "^3.7.0",
+    "@vscode/vsce": "^3.7.1",
     "esbuild": "^0.27.0",
     "eslint": "^9.39.1",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.4",
     "globals": "^16.5.0",
-    "ovsx": "^0.10.6",
-    "preact": "^10.27.2",
-    "prettier": "^3.6.2",
+    "ovsx": "^0.10.7",
+    "preact": "^10.28.0",
+    "prettier": "^3.7.3",
     "ts-loader": "^9.5.4",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.47.0"
+    "typescript-eslint": "^8.48.1"
   },
   "workspaces": [
     "docs"
