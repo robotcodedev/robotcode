@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
-## [2.1.0](https://github.com/robotcodedev/robotcode/compare/v2.0.4..v2.1.0) - 2025-12-01
+## [2.1.0](https://github.com/robotcodedev/robotcode/compare/v2.0.4..v2.1.0) - 2025-12-02
 
 ### Documentation
 
@@ -29,6 +29,15 @@ All notable changes to this project will be documented in this file. See [conven
   - Large workspaces where RobotCode is not needed everywhere
   - Multi-root workspaces with mixed project types
   - Environments where users want opt-in rather than opt-out behavior
+
+
+
+### Performance
+
+- **vscode:** Cache getRobotCodeProfiles results ([8aa6db5](https://github.com/robotcodedev/robotcode/commit/8aa6db5f39252106d138d49a40f8050dbe00da81))
+
+  Add caching for robot.toml profiles to avoid spawning a new process
+  on every call. Cache is invalidated on language client state changes.
 
 
 
