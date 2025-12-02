@@ -1,7 +1,6 @@
 [build-system]
-requires = ["hatchling>=1.24.2"]
+requires = ["hatchling>=1.28.0"]
 build-backend = "hatchling.build"
-
 
 [project]
 name = "robotcode"
@@ -49,25 +48,8 @@ classifiers = [
   "Framework :: Robot Framework :: Tool",
 ]
 requires-python = ">=3.10"
-dependencies = [
-  "robotcode-core==2.1.0",
-  "robotcode-plugin==2.1.0",
-  "robotcode-robot==2.1.0",
-]
+dependencies = ["robotcode-core", "robotcode-plugin", "robotcode-robot"]
 dynamic = ["version"]
-
-
-[project.urls]
-Homepage = "https://robotcode.io"
-Donate = "https://opencollective.com/robotcode"
-Documentation = "https://github.com/robotcodedev/robotcode#readme"
-Changelog = "https://github.com/robotcodedev/robotcode/blob/main/CHANGELOG.md"
-Issues = "https://github.com/robotcodedev/robotcode/issues"
-Source = "https://github.com/robotcodedev/robotcode"
-
-[project.scripts]
-robotcode = "robotcode.cli.__main__:main"
-
 
 [project.optional-dependencies]
 debugger = ["robotcode-debugger==2.1.0"]
@@ -81,17 +63,52 @@ repl = ["robotcode-repl==2.1.0"]
 replserver = ["robotcode-repl-server==2.1.0"]
 colored = ["rich"]
 all = [
-  "robotcode-debugger==2.1.0",
-  "robotcode-language-server==2.1.0",
-  "robotcode-runner==2.1.0",
-  "robotcode-analyze==2.1.0",
-  "robotcode-repl==2.1.0",
-  "robotcode-repl-server==2.1.0",
+  "robotcode-debugger",
+  "robotcode-language-server",
+  "robotcode-runner",
+  "robotcode-analyze",
+  "robotcode-repl",
+  "robotcode-repl-server",
   "PyYAML>=5.4",
-  "robotframework-robocop>=2.0.0",
+  "robotframework-robocop>=6.0.0",
   "docutils",
   "rich",
 ]
+
+[dependency-groups]
+debugger = ["robotcode-debugger"]
+languageserver = ["robotcode-language-server"]
+runner = ["robotcode-runner"]
+analyze = ["robotcode-analyze"]
+replserver = ["robotcode-repl-server"]
+repl = ["robotcode-repl"]
+yaml = ["PyYAML>=5.4"]
+lint = ["robotframework-robocop>=6.0.0"]
+rest = ["docutils"]
+colored = ["rich"]
+all = [
+  { "include-group" = "debugger" },
+  { "include-group" = "languageserver" },
+  { "include-group" = "runner" },
+  { "include-group" = "analyze" },
+  { "include-group" = "repl" },
+  { "include-group" = "replserver" },
+  { "include-group" = "yaml" },
+  { "include-group" = "lint" },
+  { "include-group" = "rest" },
+  { "include-group" = "colored" },
+]
+
+[project.urls]
+Homepage = "https://robotcode.io"
+Donate = "https://opencollective.com/robotcode"
+Documentation = "https://github.com/robotcodedev/robotcode#readme"
+Changelog = "https://github.com/robotcodedev/robotcode/blob/main/CHANGELOG.md"
+Issues = "https://github.com/robotcodedev/robotcode/issues"
+Source = "https://github.com/robotcodedev/robotcode"
+
+[project.scripts]
+robotcode = "robotcode.cli.__main__:main"
 
 
 [tool.semantic_release]
@@ -257,13 +274,7 @@ mypy_path = [
 
 
 [[tool.mypy.overrides]]
-module = [
-  "robot.*",
-  "robotremoteserver.*",
-  "debugpy.*",
-  "robocop.*",
-  "pluggy",
-]
+module = ["robot.*", "robotremoteserver.*", "debugpy.*", "robocop.*", "pluggy"]
 ignore_missing_imports = true
 no_implicit_reexport = false
 
@@ -287,7 +298,13 @@ no_implicit_reexport = false
 #include_runtime_files = false
 
 [tool.pyright]
-exclude = ["**/.hatch", "**/node_modules", "**/__pycache__", "bundled/libs", "intellij-client/build"]
+exclude = [
+  "**/.hatch",
+  "**/node_modules",
+  "**/__pycache__",
+  "bundled/libs",
+  "intellij-client/build",
+]
 typeCheckingMode = "off"
 pythonVersion = "3.10"
 
