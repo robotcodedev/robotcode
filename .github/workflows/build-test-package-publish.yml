@@ -46,8 +46,6 @@ jobs:
 
       - name: Install Hatch
         uses: pypa/hatch@install
-        with:
-          version: 1.15.1
 
       - name: Test Python Packages
         uses: nick-fields/retry@v3
@@ -111,8 +109,6 @@ jobs:
 
       - name: Install Hatch
         uses: pypa/hatch@install
-        with:
-          version: 1.15.1
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -172,8 +168,7 @@ jobs:
 
       - name: Install Hatch
         uses: pypa/hatch@install
-        with:
-          version: 1.15.1
+
       - name: Setup Node.js environment
         uses: actions/setup-node@v4
         with:
@@ -263,8 +258,6 @@ jobs:
 
       - name: Install Hatch
         uses: pypa/hatch@install
-        with:
-          version: 1.15.1
 
       - name: Setup Java
         uses: actions/setup-java@v4

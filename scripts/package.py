@@ -28,13 +28,13 @@ def main() -> None:
     packages = [f"{path}" for path in Path("./packages").iterdir() if (path / "pyproject.toml").exists()]
     for package in packages:
         run(
-            f"hatch -e build build {dist_path}",
+            f"hatch -e hatch-build build {dist_path}",
             shell=True,
             cwd=package,
             check=False,
         ).check_returncode()
 
-    run(f"hatch -e build build {dist_path}", shell=True, check=False).check_returncode()
+    run(f"hatch -e hatch-build build {dist_path}", shell=True, check=False).check_returncode()
 
     shutil.rmtree("./bundled/libs", ignore_errors=True)
 
