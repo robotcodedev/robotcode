@@ -381,9 +381,10 @@ export class LanguageClientsManager {
                 detail:
                   "Install `robotframework` version 4.1 or higher manually in the current environment, then restart the language server",
               },
-              { id: "ignore", label: "Ignore", detail: "Ignore this at the moment" },
             ]
           : []),
+        { id: "ignore", label: "Ignore", detail: "Ignore this at the moment" },
+        { id: "disable", label: "Disable", detail: "Disable the RobotCode extension for this workspace or folder" },
       ],
       { title: title, placeHolder: "Choose an option...", ignoreFocusOut: true },
       this.selectPythonEnvironmentCancelTokenSource.token,
@@ -398,6 +399,12 @@ export class LanguageClientsManager {
         break;
       case "retry":
         return;
+      case "disable":
+        if (folder !== undefined) {
+          const config = vscode.workspace.getConfiguration(CONFIG_SECTION, folder);
+          await config.update("disableExtension", true, vscode.ConfigurationTarget.WorkspaceFolder);
+        }
+        break;
       default:
         if (!showRetry) return;
     }
@@ -575,6 +582,10 @@ export class LanguageClientsManager {
       }
 
       if (!workspaceFolder) return undefined;
+
+      if (vscode.workspace.getConfiguration(CONFIG_SECTION, workspaceFolder).get<boolean>("disableExtension")) {
+        return undefined;
+      }
 
       let result = this.clients.get(workspaceFolder.uri.toString());
 
