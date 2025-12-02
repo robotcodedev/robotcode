@@ -157,6 +157,7 @@ export class TestControllerManager {
   private diagnosticCollection = vscode.languages.createDiagnosticCollection("robotCode discovery");
   private activeStepDecorationType: vscode.TextEditorDecorationType;
   showEditorRunDecorations = false;
+  private readonly profilesCache = new WeakMap<vscode.WorkspaceFolder, RobotCodeProfilesResult>();
 
   constructor(
     public readonly extensionContext: vscode.ExtensionContext,
@@ -208,13 +209,16 @@ export class TestControllerManager {
       fileWatcher,
       this.activeStepDecorationType,
       this.languageClientsManager.onClientStateChanged(async (event) => {
+        const folder = vscode.workspace.getWorkspaceFolder(event.uri);
+        if (folder) {
+          this.invalidateProfilesCache(folder);
+        }
         switch (event.state) {
           case ClientState.Running: {
             await this.refresh();
             break;
           }
           case ClientState.Stopped: {
-            const folder = vscode.workspace.getWorkspaceFolder(event.uri);
             if (folder) this.removeWorkspaceFolderItems(folder);
 
             break;
@@ -446,6 +450,16 @@ export class TestControllerManager {
     });
   }
 
+  public invalidateProfilesCache(folder?: vscode.WorkspaceFolder): void {
+    if (folder) {
+      this.profilesCache.delete(folder);
+    } else {
+      for (const ws of vscode.workspace.workspaceFolders ?? []) {
+        this.profilesCache.delete(ws);
+      }
+    }
+  }
+
   public async getRobotCodeProfiles(
     folder: vscode.WorkspaceFolder,
     profiles?: string[],
@@ -456,10 +470,16 @@ export class TestControllerManager {
         messages: [],
       } as RobotCodeProfilesResult;
     }
+
+    // Use cache only when no specific profiles are requested
+    if (profiles === undefined && this.profilesCache.has(folder)) {
+      return this.profilesCache.get(folder)!;
+    }
+
     const config = vscode.workspace.getConfiguration(CONFIG_SECTION, folder);
     const paths = config.get<string[] | undefined>("robot.paths", undefined);
 
-    return (await this.languageClientsManager.pythonManager.executeRobotCode(
+    const result = (await this.languageClientsManager.pythonManager.executeRobotCode(
       folder,
       [...(paths?.length ? paths.flatMap((v) => ["-dp", v]) : ["-dp", "."]), "profiles", "list"],
       profiles,
@@ -467,6 +487,13 @@ export class TestControllerManager {
       true,
       true,
     )) as RobotCodeProfilesResult;
+
+    // Cache the result only when no specific profiles were requested
+    if (profiles === undefined) {
+      this.profilesCache.set(folder, result);
+    }
+
+    return result;
   }
 
   public async selectConfigurationProfiles(folder?: vscode.WorkspaceFolder): Promise<void> {
