@@ -233,25 +233,27 @@ class RobotRoboCopDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
         return result
 
     def get_code_description(self, version: Version, issue: Any) -> Optional[CodeDescription]:
+        if hasattr(issue, "docs_url"):  # since robocop 6.13
+            return CodeDescription(issue.docs_url)
         if version < (3, 0):
             return None
 
         version_letter = "v" if version.major >= 6 else ""
+        base = f"https://robocop.dev/{version_letter}{version.major}.{version.minor}.{version.patch}"
 
-        base = f"https://robocop.readthedocs.io/en/{version_letter}{version.major}.{version.minor}.{version.patch}"
-
-        if version < (4, 0):
-            return CodeDescription(href=f"{base}/rules.html#{issue.name}".lower())
-
-        if version < (4, 1):
-            return CodeDescription(href=f"{base}/rules.html#{issue.name}-{issue.severity.value}{issue.rule_id}".lower())
-
-        if version < (4, 1, 1):
+        if version >= (6, 0):
+            # https://robocop.dev/v6.0.0/rules/rules_list.html#doc01-missing-doc-keyword
+            return CodeDescription(href=f"{base}/rules/rules_list.html#{issue.rule.rule_id}-{issue.rule.name}".lower())
+        if version >= (4, 1, 1):
+            # https://robocop.dev/4.1.1/rules_list.html#missing-doc-keyword
+            return CodeDescription(href=f"{base}/rules_list.html#{issue.name}".lower())
+        if version >= (4, 1):
+            # https://robocop.dev/4.1.0/rules_list.html#missing-doc-keyword-w0201
             return CodeDescription(
                 href=f"{base}/rules_list.html#{issue.name}-{issue.severity.value}{issue.rule_id}".lower()
             )
-
-        if version < (6, 0):
-            return CodeDescription(href=f"{base}/rules_list.html#{issue.name}".lower())
-
-        return CodeDescription(href=f"{base}/rules/rules_list.html#{issue.rule.rule_id}-{issue.rule.name}".lower())
+        if version >= (4, 0):
+            # https://robocop.dev/4.0.0/rules.html#missing-doc-keyword-w0201
+            return CodeDescription(href=f"{base}/rules.html#{issue.name}-{issue.severity.value}{issue.rule_id}".lower())
+        # https://robocop.dev/3.1.0/rules.html#missing-doc-keyword
+        return CodeDescription(href=f"{base}/rules.html#{issue.name}".lower())
