@@ -757,14 +757,14 @@ class Namespace:
         self._suite_variables: Optional[Dict[str, Any]] = None
         self._suite_variables_lock = RLock(default_timeout=120, name="Namespace.global_variables")
 
-        self._diagnostics: List[Diagnostic] = []
-        self._keyword_references: Dict[KeywordDoc, Set[Location]] = {}
-        self._variable_references: Dict[VariableDefinition, Set[Location]] = {}
-        self._local_variable_assignments: Dict[VariableDefinition, Set[Range]] = {}
-        self._namespace_references: Dict[LibraryEntry, Set[Location]] = {}
+        self._diagnostics: Optional[List[Diagnostic]] = None
+        self._keyword_references: Optional[Dict[KeywordDoc, Set[Location]]] = None
+        self._variable_references: Optional[Dict[VariableDefinition, Set[Location]]] = None
+        self._local_variable_assignments: Optional[Dict[VariableDefinition, Set[Range]]] = None
+        self._namespace_references: Optional[Dict[LibraryEntry, Set[Location]]] = None
 
-        self._test_case_definitions: List[TestCaseDefinition] = []
-        self._tag_definitions: List[TagDefinition] = []
+        self._test_case_definitions: Optional[List[TestCaseDefinition]] = None
+        self._tag_definitions: Optional[List[TagDefinition]] = None
 
         self._imported_keywords: Optional[List[KeywordDoc]] = None
         self._imported_keywords_lock = RLock(default_timeout=120, name="Namespace.imported_keywords")
@@ -879,47 +879,53 @@ class Namespace:
 
     @_logger.call
     def get_diagnostics(self) -> List[Diagnostic]:
-        self.ensure_initialized()
+        if self._diagnostics is None:
+            self.ensure_initialized()
 
-        self.analyze()
+            self.analyze()
 
-        return self._diagnostics
+        return self._diagnostics if self._diagnostics is not None else []
 
     @_logger.call
     def get_keyword_references(self) -> Dict[KeywordDoc, Set[Location]]:
-        self.ensure_initialized()
+        if self._keyword_references is None:
+            self.ensure_initialized()
 
-        self.analyze()
+            self.analyze()
 
-        return self._keyword_references
+        return self._keyword_references if self._keyword_references is not None else {}
 
     def get_variable_references(self) -> Dict[VariableDefinition, Set[Location]]:
-        self.ensure_initialized()
+        if self._variable_references is None:
+            self.ensure_initialized()
 
-        self.analyze()
+            self.analyze()
 
-        return self._variable_references
+        return self._variable_references if self._variable_references is not None else {}
 
     def get_testcase_definitions(self) -> List[TestCaseDefinition]:
-        self.ensure_initialized()
+        if self._test_case_definitions is None:
+            self.ensure_initialized()
 
-        self.analyze()
+            self.analyze()
 
-        return self._test_case_definitions
+        return self._test_case_definitions if self._test_case_definitions is not None else []
 
     def get_local_variable_assignments(self) -> Dict[VariableDefinition, Set[Range]]:
-        self.ensure_initialized()
+        if self._local_variable_assignments is None:
+            self.ensure_initialized()
 
-        self.analyze()
+            self.analyze()
 
-        return self._local_variable_assignments
+        return self._local_variable_assignments if self._local_variable_assignments is not None else {}
 
     def get_namespace_references(self) -> Dict[LibraryEntry, Set[Location]]:
-        self.ensure_initialized()
+        if self._namespace_references is None:
+            self.ensure_initialized()
 
-        self.analyze()
+            self.analyze()
 
-        return self._namespace_references
+        return self._namespace_references if self._namespace_references is not None else {}
 
     def get_import_entries(self) -> Dict[Import, LibraryEntry]:
         self.ensure_initialized()
@@ -1182,7 +1188,6 @@ class Namespace:
     ) -> Dict[VariableMatcher, VariableDefinition]:
         self.ensure_initialized()
 
-        # return {m: v for m, v in self.yield_variables(nodes, position)}
         l = list(self.yield_variables(nodes, position))
         return dict(reversed(l))
 
@@ -1926,6 +1931,9 @@ class Namespace:
         related_information: Optional[List[DiagnosticRelatedInformation]] = None,
         data: Optional[Any] = None,
     ) -> None:
+        if self._diagnostics is None:
+            self._diagnostics = []
+
         self._diagnostics.append(
             Diagnostic(
                 range,
@@ -1955,7 +1963,8 @@ class Namespace:
                 with self._logger.measure_time(lambda: f"analyzing document {self.source}", context_name="analyze"):
                     try:
                         result = NamespaceAnalyzer(self.model, self, self.create_finder()).run()
-
+                        if self._diagnostics is None:
+                            self._diagnostics = []
                         self._diagnostics += result.diagnostics
                         self._keyword_references = result.keyword_references
                         self._variable_references = result.variable_references

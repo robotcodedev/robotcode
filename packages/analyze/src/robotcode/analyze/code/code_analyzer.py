@@ -98,35 +98,35 @@ class CodeAnalyzer(DiagnosticsContext):
 
             documents = self.collect_documents(folder, paths=paths, filter=filter)
 
-            self.app.verbose(f"Analyzing {len(documents)} documents")
-            for document in documents:
-                analyze_result = self.diagnostics.analyze_document(document)
-                if analyze_result is not None:
-                    diagnostics = []
-                    for item in analyze_result:
-                        if item is None:
-                            continue
-                        elif isinstance(item, BaseException):
-                            self.app.error(f"Error analyzing {document.uri.to_path()}: {item}")
-                        else:
-                            diagnostics.extend(item)
+            with self.app.progressbar(documents, label="Analyzing Documents") as progressbar:
+                for document in progressbar:
+                    analyze_result = self.diagnostics.analyze_document(document)
+                    if analyze_result is not None:
+                        diagnostics = []
+                        for item in analyze_result:
+                            if item is None:
+                                continue
+                            elif isinstance(item, BaseException):
+                                self.app.error(f"Error analyzing {document.uri.to_path()}: {item}")
+                            else:
+                                diagnostics.extend(item)
 
-                    yield DocumentDiagnosticReport(document, diagnostics)
+                        yield DocumentDiagnosticReport(document, diagnostics)
 
-            self.app.verbose(f"Collect Diagnostics for {len(documents)} documents")
-            for document in documents:
-                analyze_result = self.diagnostics.collect_diagnostics(document)
-                if analyze_result is not None:
-                    diagnostics = []
-                    for item in analyze_result:
-                        if item is None:
-                            continue
-                        elif isinstance(item, BaseException):
-                            self.app.error(f"Error collecting diagnostics for {document.uri.to_path()}: {item}")
-                        else:
-                            diagnostics.extend(item)
+            with self.app.progressbar(documents, label="Collecting Diagnostics") as progressbar:
+                for document in progressbar:
+                    analyze_result = self.diagnostics.collect_diagnostics(document)
+                    if analyze_result is not None:
+                        diagnostics = []
+                        for item in analyze_result:
+                            if item is None:
+                                continue
+                            elif isinstance(item, BaseException):
+                                self.app.error(f"Error collecting diagnostics for {document.uri.to_path()}: {item}")
+                            else:
+                                diagnostics.extend(item)
 
-                    yield DocumentDiagnosticReport(document, diagnostics)
+                        yield DocumentDiagnosticReport(document, diagnostics)
 
     def collect_documents(
         self, folder: WorkspaceFolder, paths: Iterable[Path] = {}, filter: Iterable[str] = {}
@@ -139,8 +139,10 @@ class CodeAnalyzer(DiagnosticsContext):
         documents: List[TextDocument] = []
 
         self.app.verbose(f"Collecting files in workspace folder '{folder.uri.to_path()}'")
+        file_counter = 0
         for handler in self.language_handlers:
             for file in handler.collect_workspace_folder_files(folder):
+                file_counter += 1
                 try:
                     document = self.workspace.documents.get_or_open_document(file)
                     document_path = normalized_path(document.uri.to_path()).as_posix()
@@ -157,5 +159,8 @@ class CodeAnalyzer(DiagnosticsContext):
                 except Exception as e:
                     self.app.error(f"Error reading {file}: {e}")
                     continue
+
+        self.app.verbose(f"{file_counter} files in workspace folder '{folder.uri.to_path()}'")
+        self.app.verbose(f"Collected {len(documents)} files for analyzing in workspace folder '{folder.uri.to_path()}'")
 
         return documents

@@ -31,13 +31,14 @@ _NOT_SET = object()
 
 
 def single_call(func: _F) -> _F:
-    name = f"__single_result_{func.__name__}__"
+    result = _NOT_SET
 
     def wrapper(self: Any, *args: Any, **kwargs: Any) -> Any:
-        result = self.__dict__.get(name, _NOT_SET)
+        nonlocal result
+
         if result is _NOT_SET:
             result = func(self, *args, **kwargs)
-            self.__dict__[name] = result
+
         return result
 
     return cast(_F, wrapper)
@@ -168,6 +169,7 @@ class VariableDefinitionType(Enum):
     LOCAL_VARIABLE = "local variable"
     TEST_VARIABLE = "test variable"
     ARGUMENT = "argument"
+    LIBRARY_ARGUMENT = "library argument"
     GLOBAL_VARIABLE = "global variable"
     COMMAND_LINE_VARIABLE = "global variable [command line]"
     BUILTIN_VARIABLE = "builtin variable"
@@ -202,7 +204,7 @@ class VariableDefinition(SourceEntity):
 
     @single_call
     def __hash__(self) -> int:
-        return hash((type(self), self.name, self.type, self.range, self.source))
+        return hash((self.type, self.name, self.source, self.range))
 
     @property
     def name_range(self) -> Range:
@@ -225,7 +227,7 @@ class TestVariableDefinition(VariableDefinition):
 
     @single_call
     def __hash__(self) -> int:
-        return hash((type(self), self.name, self.type, self.range, self.source))
+        return hash((self.type, self.name, self.source, self.range))
 
 
 @dataclass
@@ -234,7 +236,7 @@ class LocalVariableDefinition(VariableDefinition):
 
     @single_call
     def __hash__(self) -> int:
-        return hash((type(self), self.name, self.type, self.range, self.source))
+        return hash((self.type, self.name, self.source, self.range))
 
 
 @dataclass
@@ -243,7 +245,7 @@ class GlobalVariableDefinition(VariableDefinition):
 
     @single_call
     def __hash__(self) -> int:
-        return hash((type(self), self.name, self.type, self.range, self.source))
+        return hash((self.type, self.name, self.source, self.range))
 
 
 @dataclass
@@ -253,7 +255,7 @@ class BuiltInVariableDefinition(GlobalVariableDefinition):
 
     @single_call
     def __hash__(self) -> int:
-        return hash((type(self), self.name, self.type, None, None))
+        return hash((self.type, self.name, self.source, self.range))
 
 
 @dataclass
@@ -263,7 +265,7 @@ class CommandLineVariableDefinition(GlobalVariableDefinition):
 
     @single_call
     def __hash__(self) -> int:
-        return hash((type(self), self.name, self.type, self.range, self.source))
+        return hash((self.type, self.name, self.source, self.range))
 
 
 @dataclass
@@ -273,7 +275,7 @@ class ArgumentDefinition(LocalVariableDefinition):
 
     @single_call
     def __hash__(self) -> int:
-        return hash((type(self), self.name, self.type, self.range, self.source))
+        return hash((self.type, self.name, self.source, self.range))
 
 
 @dataclass
@@ -282,14 +284,16 @@ class EmbeddedArgumentDefinition(ArgumentDefinition):
 
     @single_call
     def __hash__(self) -> int:
-        return hash((type(self), self.name, self.type, self.range, self.source))
+        return hash((self.type, self.name, self.source, self.range))
 
 
 @dataclass
 class LibraryArgumentDefinition(ArgumentDefinition):
+    type: VariableDefinitionType = VariableDefinitionType.LIBRARY_ARGUMENT
+
     @single_call
     def __hash__(self) -> int:
-        return hash((type(self), self.name, self.type, self.range, self.source))
+        return hash((self.type, self.name, self.source, self.range))
 
 
 @dataclass(frozen=True, eq=False, repr=False)
@@ -310,7 +314,7 @@ class ImportedVariableDefinition(VariableDefinition):
 
     @single_call
     def __hash__(self) -> int:
-        return hash((type(self), self.name, self.type, self.source))
+        return hash((self.type, self.name, self.source, self.range))
 
 
 @dataclass
@@ -322,7 +326,7 @@ class EnvironmentVariableDefinition(VariableDefinition):
 
     @single_call
     def __hash__(self) -> int:
-        return hash((type(self), self.name, self.type))
+        return hash((self.type, self.name, self.source, self.range))
 
 
 @dataclass
@@ -332,7 +336,7 @@ class VariableNotFoundDefinition(VariableDefinition):
 
     @single_call
     def __hash__(self) -> int:
-        return hash((type(self), self.name, self.type))
+        return hash((self.type, self.name, self.source, self.range))
 
 
 @dataclass

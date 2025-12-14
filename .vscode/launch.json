@@ -41,6 +41,13 @@
 			"justMyCode": false
 		},
 		{
+			"name": "Python: Attach using Process",
+			"type": "debugpy",
+			"request": "attach",
+			"processId": 41720,
+			"justMyCode": false
+		},
+		{
 			"name": "Python: Create Cmd Line Doc",
 			"type": "debugpy",
 			"request": "launch",

@@ -17,13 +17,13 @@ class DiagnosticHandlers:
     def folder_analyzers(sender, folder: WorkspaceFolder) -> Optional[List[Diagnostic]]: ...
 
     @event
-    def collectors(sender, document: TextDocument) -> Optional[List[Diagnostic]]: ...
+    def document_collectors(sender, document: TextDocument) -> Optional[List[Diagnostic]]: ...
 
     def analyze_folder(self, folder: WorkspaceFolder) -> List[Union[List[Diagnostic], BaseException, None]]:
         return self.folder_analyzers(
             self,
             folder,
-            return_exceptions=True,
+            return_exceptions=False,
         )
 
     def analyze_document(self, document: TextDocument) -> List[Union[List[Diagnostic], BaseException, None]]:
@@ -31,15 +31,15 @@ class DiagnosticHandlers:
             self,
             document,
             callback_filter=language_id_filter(document),
-            return_exceptions=True,
+            return_exceptions=False,
         )
 
     def collect_diagnostics(self, document: TextDocument) -> List[Union[List[Diagnostic], BaseException, None]]:
-        return self.collectors(
+        return self.document_collectors(
             self,
             document,
             callback_filter=language_id_filter(document),
-            return_exceptions=True,
+            return_exceptions=False,
         )
 
 

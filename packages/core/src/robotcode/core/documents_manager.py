@@ -35,8 +35,8 @@ class DocumentsManager:
         self._lock = RLock(name="DocumentsManager.lock", default_timeout=120)
 
     @property
-    def documents(self) -> List[TextDocument]:
-        return list(self._documents.values())
+    def documents(self) -> Iterator[TextDocument]:
+        return iter(self._documents.values())
 
     __NORMALIZE_LINE_ENDINGS: Final = re.compile(r"(\r?\n)")
 

@@ -5,6 +5,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from enum import Enum, unique
 from pathlib import Path
+from types import TracebackType
 from typing import (
     IO,
     Any,
@@ -14,6 +15,7 @@ from typing import (
     Iterator,
     Literal,
     Optional,
+    Protocol,
     Sequence,
     TypeVar,
     Union,
@@ -39,6 +41,7 @@ __all__ = [
 
 F = TypeVar("F", bound=Callable[..., Any])
 hookimpl = cast(Callable[[F], F], pluggy.HookimplMarker("robotcode"))
+T = TypeVar("T")
 
 
 class UnknownError(click.ClickException):
@@ -83,6 +86,21 @@ class CommonConfig:
     log_calls: bool = False
 
 
+class ProgressBar(Protocol[T]):
+    def __enter__(self) -> "ProgressBar[T]": ...
+
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        tb: TracebackType | None,
+    ) -> None: ...
+
+    def __iter__(self) -> Iterator[T]: ...
+
+    def __next__(self) -> T: ...
+
+
 class Application:
     def __init__(self) -> None:
         self.config = CommonConfig()
@@ -120,6 +138,28 @@ class Application:
                 color=self.colored,
                 fg="bright_black",
             )
+
+    def progressbar(
+        self,
+        iterable: Iterable[T],
+        length: int | None = None,
+        label: str | None = None,
+        hidden: bool = False,
+        show_eta: bool = True,
+        show_percent: bool | None = None,
+        show_pos: bool = True,
+    ) -> ProgressBar[T]:
+        return click.progressbar(
+            iterable,
+            length=length,
+            label=label,
+            hidden=not self.config.verbose or hidden,
+            show_eta=show_eta,
+            show_percent=show_percent,
+            show_pos=show_pos,
+            file=sys.stderr,
+            color=self.colored,
+        )
 
     def warning(
         self,

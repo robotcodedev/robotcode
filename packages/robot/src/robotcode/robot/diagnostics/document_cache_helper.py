@@ -173,8 +173,8 @@ class DocumentsCacheHelper:
 
     def get_tokens(self, document: TextDocument, data_only: bool = False) -> List[Token]:
         if data_only:
-            return document.get_cache(self.__get_tokens_data_only)
-        return document.get_cache(self.__get_tokens)
+            return self.__get_tokens_data_only(document)
+        return self.__get_tokens(document)
 
     def __get_tokens_data_only(self, document: TextDocument) -> List[Token]:
         document_type = self.get_document_type(document)
@@ -199,6 +199,12 @@ class DocumentsCacheHelper:
         raise UnknownFileTypeError(str(document.uri))
 
     def get_general_tokens(self, document: TextDocument, data_only: bool = False) -> List[Token]:
+        if document.version is None:
+            if data_only:
+                return self.__get_general_tokens_data_only(document)
+
+            return self.__get_general_tokens(document)
+
         if data_only:
             return document.get_cache(self.__get_general_tokens_data_only)
         return document.get_cache(self.__get_general_tokens)
@@ -282,6 +288,12 @@ class DocumentsCacheHelper:
         return get(document.text())
 
     def get_resource_tokens(self, document: TextDocument, data_only: bool = False) -> List[Token]:
+        if document.version is None:
+            if data_only:
+                return self.__get_resource_tokens_data_only(document)
+
+            return self.__get_resource_tokens(document)
+
         if data_only:
             return document.get_cache(self.__get_resource_tokens_data_only)
 
@@ -306,6 +318,12 @@ class DocumentsCacheHelper:
         return self.__get_tokens_internal(document, get)
 
     def get_init_tokens(self, document: TextDocument, data_only: bool = False) -> List[Token]:
+        if document.version is None:
+            if data_only:
+                return self.__get_init_tokens_data_only(document)
+
+            return self.__get_init_tokens(document)
+
         if data_only:
             return document.get_cache(self.__get_init_tokens_data_only)
         return document.get_cache(self.__get_init_tokens)
@@ -363,11 +381,15 @@ class DocumentsCacheHelper:
         return cast(ast.AST, model)
 
     def get_general_model(self, document: TextDocument, data_only: bool = True) -> ast.AST:
+        if document.version is None:
+            if data_only:
+                return self.__get_general_model_data_only(document, self.get_general_tokens(document, True))
+
+            return self.__get_general_model(document, self.get_general_tokens(document))
+
         if data_only:
-            return document.get_cache(
-                self.__get_general_model_data_only,
-                self.get_general_tokens(document, True),
-            )
+            return document.get_cache(self.__get_general_model_data_only, self.get_general_tokens(document, True))
+
         return document.get_cache(self.__get_general_model, self.get_general_tokens(document))
 
     def __get_general_model_data_only(self, document: TextDocument, tokens: Iterable[Any]) -> ast.AST:
@@ -377,6 +399,12 @@ class DocumentsCacheHelper:
         return self.__get_model(document, tokens, DocumentType.GENERAL)
 
     def get_resource_model(self, document: TextDocument, data_only: bool = True) -> ast.AST:
+        if document.version is None:
+            if data_only:
+                return self.__get_resource_model_data_only(document, self.get_resource_tokens(document, True))
+
+            return self.__get_resource_model(document, self.get_resource_tokens(document))
+
         if data_only:
             return document.get_cache(
                 self.__get_resource_model_data_only,
@@ -392,11 +420,15 @@ class DocumentsCacheHelper:
         return self.__get_model(document, tokens, DocumentType.RESOURCE)
 
     def get_init_model(self, document: TextDocument, data_only: bool = True) -> ast.AST:
+        if document.version is None:
+            if data_only:
+                return self.__get_init_model_data_only(document, self.get_init_tokens(document, True))
+
+            return self.__get_init_model(document, self.get_init_tokens(document))
+
         if data_only:
-            return document.get_cache(
-                self.__get_init_model_data_only,
-                self.get_init_tokens(document, True),
-            )
+            return document.get_cache(self.__get_init_model_data_only, self.get_init_tokens(document, True))
+
         return document.get_cache(self.__get_init_model, self.get_init_tokens(document))
 
     def __get_init_model_data_only(self, document: TextDocument, tokens: Iterable[Any]) -> ast.AST:
@@ -406,19 +438,14 @@ class DocumentsCacheHelper:
         return self.__get_model(document, tokens, DocumentType.INIT)
 
     def get_namespace(self, document: TextDocument) -> Namespace:
-        return document.get_cache(self.__get_namespace)
-
-    def __get_namespace(self, document: TextDocument) -> Namespace:
         document_type = self.get_document_type(document)
 
         if document_type == DocumentType.INIT:
             return self.get_init_namespace(document)
         if document_type == DocumentType.RESOURCE:
             return self.get_resource_namespace(document)
-        if document_type == DocumentType.GENERAL:
-            return self.get_general_namespace(document)
 
-        return self.__get_namespace_for_document_type(document, document_type)
+        return self.get_general_namespace(document)
 
     def get_resource_namespace(self, document: TextDocument) -> Namespace:
         return document.get_cache(self.__get_resource_namespace)
@@ -450,7 +477,6 @@ class DocumentsCacheHelper:
             document.remove_cache_entry(self.__get_general_namespace)
             document.remove_cache_entry(self.__get_init_namespace)
             document.remove_cache_entry(self.__get_resource_namespace)
-            document.remove_cache_entry(self.__get_namespace)
 
             self.namespace_invalidated(self, sender)
 

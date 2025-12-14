@@ -1,3 +1,5 @@
+import functools
+import time
 from enum import Flag
 from pathlib import Path
 from textwrap import indent
@@ -36,43 +38,73 @@ class ReturnCode(Flag):
     HINTS = 8
 
 
-class Statistic:
+class ResultCollector:
     def __init__(self, exit_code_mask: ExitCodeMask) -> None:
         self.exit_code_mask = exit_code_mask
         self._folders: Set[WorkspaceFolder] = set()
         self._files: Set[TextDocument] = set()
-        self._diagnostics: List[Union[DocumentDiagnosticReport, FolderDiagnosticReport]] = []
+        self.diagnostics: List[Union[DocumentDiagnosticReport, FolderDiagnosticReport]] = []
+        self._start_time = time.time()
+        self._end_time = self._start_time
+
+    @staticmethod
+    def _format_duration(seconds: float) -> str:
+        total_seconds = max(0.0, seconds)
+
+        hours, remainder = divmod(total_seconds, 3600.0)
+        minutes, seconds_remainder = divmod(remainder, 60.0)
+
+        hours_int = int(hours)
+        minutes_int = int(minutes)
+
+        if hours_int > 0:
+            return f"{hours_int}h {minutes_int}m {seconds_remainder:.2f}s"
+        if minutes_int > 0:
+            return f"{minutes_int}m {seconds_remainder:.2f}s"
+        return f"{seconds_remainder:.2f}s"
+
+    def start(self) -> float:
+        self._start_time = time.time()
+        return self._start_time
+
+    def stop(self) -> float:
+        self._end_time = time.time()
+        return self._end_time
 
     @property
+    def elapsed(self) -> float:
+        return self._end_time - self._start_time
+
+    @functools.cached_property
     def errors(self) -> int:
         return sum(
-            len([i for i in e.items if i.severity == DiagnosticSeverity.ERROR]) for e in self._diagnostics if e.items
+            len([i for i in e.items if i.severity == DiagnosticSeverity.ERROR]) for e in self.diagnostics if e.items
         )
 
-    @property
+    @functools.cached_property
     def warnings(self) -> int:
         return sum(
-            len([i for i in e.items if i.severity == DiagnosticSeverity.WARNING]) for e in self._diagnostics if e.items
+            len([i for i in e.items if i.severity == DiagnosticSeverity.WARNING]) for e in self.diagnostics if e.items
         )
 
-    @property
+    @functools.cached_property
     def infos(self) -> int:
         return sum(
             len([i for i in e.items if i.severity == DiagnosticSeverity.INFORMATION])
-            for e in self._diagnostics
+            for e in self.diagnostics
             if e.items
         )
 
-    @property
+    @functools.cached_property
     def hints(self) -> int:
         return sum(
-            len([i for i in e.items if i.severity == DiagnosticSeverity.HINT]) for e in self._diagnostics if e.items
+            len([i for i in e.items if i.severity == DiagnosticSeverity.HINT]) for e in self.diagnostics if e.items
         )
 
     def add_diagnostics_report(
         self, diagnostics_report: Union[DocumentDiagnosticReport, FolderDiagnosticReport]
     ) -> None:
-        self._diagnostics.append(diagnostics_report)
+        self.diagnostics.append(diagnostics_report)
 
         if isinstance(diagnostics_report, FolderDiagnosticReport):
             self._folders.add(diagnostics_report.folder)
@@ -83,6 +115,7 @@ class Statistic:
         return (
             f"Files: {len(self._files)}, Errors: {self.errors}, Warnings: {self.warnings}, "
             f"Infos: {self.infos}, Hints: {self.hints}"
+            f" (in {self._format_duration(self.elapsed)})"
         )
 
     def calculate_return_code(self) -> ReturnCode:
@@ -363,32 +396,37 @@ def code(
         app.verbose(f"Using analyzer_config: {analyzer_config}")
         app.verbose(f"Using exit code mask: {mask}")
 
-        statistics = Statistic(mask)
-        for e in CodeAnalyzer(
-            app=app,
-            analysis_config=analyzer_config.to_workspace_analysis_config(),
-            robot_profile=robot_profile,
-            root_folder=root_folder,
-        ).run(paths=paths, filter=filter):
-            statistics.add_diagnostics_report(e)
+        result_collector = ResultCollector(mask)
+        result_collector.start()
+        try:
+            for e in CodeAnalyzer(
+                app=app,
+                analysis_config=analyzer_config.to_workspace_analysis_config(),
+                robot_profile=robot_profile,
+                root_folder=root_folder,
+            ).run(paths=paths, filter=filter):
+                result_collector.add_diagnostics_report(e)
 
-            if isinstance(e, FolderDiagnosticReport):
-                if e.items:
-                    _print_diagnostics(app, root_folder, e.items, e.folder.uri.to_path())
-            elif isinstance(e, DocumentDiagnosticReport):
-                doc_path = (
-                    e.document.uri.to_path().relative_to(root_folder) if root_folder else e.document.uri.to_path()
-                )
-                if e.items:
-                    _print_diagnostics(app, root_folder, e.items, doc_path)
+            for e in result_collector.diagnostics:
+                if isinstance(e, FolderDiagnosticReport):
+                    if e.items:
+                        _print_diagnostics(app, root_folder, e.items, e.folder.uri.to_path())
+                elif isinstance(e, DocumentDiagnosticReport):
+                    doc_path = (
+                        e.document.uri.to_path().relative_to(root_folder) if root_folder else e.document.uri.to_path()
+                    )
+                    if e.items:
+                        _print_diagnostics(app, root_folder, e.items, doc_path)
+        finally:
+            result_collector.stop()
 
-        statistics_str = str(statistics)
-        if statistics.errors > 0:
+        statistics_str = str(result_collector)
+        if result_collector.errors > 0:
             statistics_str = click.style(statistics_str, fg="red")
 
         app.echo(statistics_str)
 
-        app.exit(statistics.calculate_return_code().value)
+        app.exit(result_collector.calculate_return_code().value)
 
     except (TypeError, ValueError) as e:
         raise click.ClickException(str(e)) from e
