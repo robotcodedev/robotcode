@@ -58,10 +58,18 @@ async def protocol(
     initialization_options = {"python_path": ["./lib", "./resources"]}
 
     protocol = RobotLanguageServerProtocol(server)
+
+    to_replace = {}
+    if hasattr(request, "param"):
+        for f in dataclasses.fields(request.param):
+            v = getattr(request.param, f.name)
+            if v is not None:
+                to_replace[f.name] = v
+
     protocol._initialize(
         dataclasses.replace(
             client_capas,
-            **({k: v for k, v in vars(request.param).items() if v is not None} if hasattr(request, "param") else {}),
+            **to_replace,
         ),
         root_path=str(root_path),
         root_uri=root_path.as_uri(),

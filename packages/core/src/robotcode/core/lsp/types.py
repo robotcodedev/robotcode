@@ -655,7 +655,7 @@ LSPObject = object
 # Since: 3.17.0
 
 
-@dataclass
+@dataclass(slots=True)
 class TextDocumentPositionParams(CamelSnakeMixin):
     """A parameter literal used in requests to pass a text document and a position inside that
     document."""
@@ -667,20 +667,20 @@ class TextDocumentPositionParams(CamelSnakeMixin):
     """The position inside the text document."""
 
 
-@dataclass
+@dataclass(slots=True)
 class WorkDoneProgressParams(CamelSnakeMixin):
     work_done_token: Optional[ProgressToken] = None
     """An optional token that a server can use to report work done progress."""
 
 
-@dataclass
+@dataclass(slots=True)
 class PartialResultParams(CamelSnakeMixin):
     partial_result_token: Optional[ProgressToken] = None
     """An optional token that a server can use to report partial results (e.g. streaming) to
     the client."""
 
 
-@dataclass
+@dataclass(slots=True)
 class ImplementationParams(CamelSnakeMixin):
     text_document: TextDocumentIdentifier
     """The text document."""
@@ -696,7 +696,7 @@ class ImplementationParams(CamelSnakeMixin):
     the client."""
 
 
-@dataclass
+@dataclass(slots=True)
 class Location(CamelSnakeMixin):
     """Represents a location inside a resource, such as a line
     inside a text file."""
@@ -709,7 +709,7 @@ class Location(CamelSnakeMixin):
         return hash((self.uri, self.range))
 
 
-@dataclass
+@dataclass(slots=True)
 class TextDocumentRegistrationOptions(CamelSnakeMixin):
     """General text document registration options."""
 
@@ -718,17 +718,17 @@ class TextDocumentRegistrationOptions(CamelSnakeMixin):
     the document selector provided on the client side will be used."""
 
 
-@dataclass
+@dataclass(slots=True)
 class WorkDoneProgressOptions(CamelSnakeMixin):
     work_done_progress: Optional[bool] = None
 
 
-@dataclass
+@dataclass(slots=True)
 class ImplementationOptions(CamelSnakeMixin):
     work_done_progress: Optional[bool] = None
 
 
-@dataclass
+@dataclass(slots=True)
 class StaticRegistrationOptions(CamelSnakeMixin):
     """Static registration options to be returned in the initialize
     request."""
@@ -738,7 +738,7 @@ class StaticRegistrationOptions(CamelSnakeMixin):
     the request again. See also Registration#id."""
 
 
-@dataclass
+@dataclass(slots=True)
 class ImplementationRegistrationOptions(CamelSnakeMixin):
     document_selector: Optional[DocumentSelector] = None
     """A document selector to identify the scope of the registration. If set to null
@@ -751,7 +751,7 @@ class ImplementationRegistrationOptions(CamelSnakeMixin):
     the request again. See also Registration#id."""
 
 
-@dataclass
+@dataclass(slots=True)
 class TypeDefinitionParams(CamelSnakeMixin):
     text_document: TextDocumentIdentifier
     """The text document."""
@@ -767,12 +767,12 @@ class TypeDefinitionParams(CamelSnakeMixin):
     the client."""
 
 
-@dataclass
+@dataclass(slots=True)
 class TypeDefinitionOptions(CamelSnakeMixin):
     work_done_progress: Optional[bool] = None
 
 
-@dataclass
+@dataclass(slots=True)
 class TypeDefinitionRegistrationOptions(CamelSnakeMixin):
     document_selector: Optional[DocumentSelector] = None
     """A document selector to identify the scope of the registration. If set to null
@@ -785,7 +785,7 @@ class TypeDefinitionRegistrationOptions(CamelSnakeMixin):
     the request again. See also Registration#id."""
 
 
-@dataclass
+@dataclass(slots=True)
 class WorkspaceFolder(CamelSnakeMixin):
     """A workspace folder inside a client."""
 
@@ -797,7 +797,7 @@ class WorkspaceFolder(CamelSnakeMixin):
     workspace folder in the user interface."""
 
 
-@dataclass
+@dataclass(slots=True)
 class DidChangeWorkspaceFoldersParams(CamelSnakeMixin):
     """The parameters of a `workspace/didChangeWorkspaceFolders` notification."""
 
@@ -805,14 +805,14 @@ class DidChangeWorkspaceFoldersParams(CamelSnakeMixin):
     """The actual workspace folder change event."""
 
 
-@dataclass
+@dataclass(slots=True)
 class ConfigurationParams(CamelSnakeMixin):
     """The parameters of a configuration request."""
 
     items: List[ConfigurationItem]
 
 
-@dataclass
+@dataclass(slots=True)
 class DocumentColorParams(CamelSnakeMixin):
     """Parameters for a {@link DocumentColorRequest}."""
 
@@ -827,7 +827,7 @@ class DocumentColorParams(CamelSnakeMixin):
     the client."""
 
 
-@dataclass
+@dataclass(slots=True)
 class ColorInformation(CamelSnakeMixin):
     """Represents a color range from a document."""
 
@@ -838,12 +838,12 @@ class ColorInformation(CamelSnakeMixin):
     """The actual color value for this color range."""
 
 
-@dataclass
+@dataclass(slots=True)
 class DocumentColorOptions(CamelSnakeMixin):
     work_done_progress: Optional[bool] = None
 
 
-@dataclass
+@dataclass(slots=True)
 class DocumentColorRegistrationOptions(CamelSnakeMixin):
     document_selector: Optional[DocumentSelector] = None
     """A document selector to identify the scope of the registration. If set to null
@@ -856,7 +856,7 @@ class DocumentColorRegistrationOptions(CamelSnakeMixin):
     the request again. See also Registration#id."""
 
 
-@dataclass
+@dataclass(slots=True)
 class ColorPresentationParams(CamelSnakeMixin):
     """Parameters for a {@link ColorPresentationRequest}."""
 
@@ -877,7 +877,7 @@ class ColorPresentationParams(CamelSnakeMixin):
     the client."""
 
 
-@dataclass
+@dataclass(slots=True)
 class ColorPresentation(CamelSnakeMixin):
     label: str
     """The label of this color presentation. It will be shown on the color
@@ -894,7 +894,7 @@ class ColorPresentation(CamelSnakeMixin):
     selecting this color presentation. Edits must not overlap with the main {@link ColorPresentation.textEdit edit} nor with themselves."""
 
 
-@dataclass
+@dataclass(slots=True)
 class FoldingRangeParams(CamelSnakeMixin):
     """Parameters for a {@link FoldingRangeRequest}."""
 
@@ -909,7 +909,7 @@ class FoldingRangeParams(CamelSnakeMixin):
     the client."""
 
 
-@dataclass
+@dataclass(slots=True)
 class FoldingRange(CamelSnakeMixin):
     """Represents a folding range. To be valid, start and end line must be bigger than zero and smaller
     than the number of lines in the document. Clients are free to ignore invalid ranges.
@@ -943,12 +943,12 @@ class FoldingRange(CamelSnakeMixin):
     # Since: 3.17.0
 
 
-@dataclass
+@dataclass(slots=True)
 class FoldingRangeOptions(CamelSnakeMixin):
     work_done_progress: Optional[bool] = None
 
 
-@dataclass
+@dataclass(slots=True)
 class FoldingRangeRegistrationOptions(CamelSnakeMixin):
     document_selector: Optional[DocumentSelector] = None
     """A document selector to identify the scope of the registration. If set to null
@@ -961,7 +961,7 @@ class FoldingRangeRegistrationOptions(CamelSnakeMixin):
     the request again. See also Registration#id."""
 
 
-@dataclass
+@dataclass(slots=True)
 class DeclarationParams(CamelSnakeMixin):
     text_document: TextDocumentIdentifier
     """The text document."""
@@ -977,12 +977,12 @@ class DeclarationParams(CamelSnakeMixin):
     the client."""
 
 
-@dataclass
+@dataclass(slots=True)
 class DeclarationOptions(CamelSnakeMixin):
     work_done_progress: Optional[bool] = None
 
 
-@dataclass
+@dataclass(slots=True)
 class DeclarationRegistrationOptions(CamelSnakeMixin):
     work_done_progress: Optional[bool] = None
 
@@ -995,7 +995,7 @@ class DeclarationRegistrationOptions(CamelSnakeMixin):
     the request again. See also Registration#id."""
 
 
-@dataclass
+@dataclass(slots=True)
 class SelectionRangeParams(CamelSnakeMixin):
     """A parameter literal used in selection range requests."""
 
@@ -1013,7 +1013,7 @@ class SelectionRangeParams(CamelSnakeMixin):
     the client."""
 
 
-@dataclass
+@dataclass(slots=True)
 class SelectionRange(CamelSnakeMixin):
     """A selection range represents a part of a selection hierarchy. A selection range
     may have a parent selection range that contains it."""
@@ -1025,12 +1025,12 @@ class SelectionRange(CamelSnakeMixin):
     """The parent selection range containing this range. Therefore `parent.range` must contain `this.range`."""
 
 
-@dataclass
+@dataclass(slots=True)
 class SelectionRangeOptions(CamelSnakeMixin):
     work_done_progress: Optional[bool] = None
 
 
-@dataclass
+@dataclass(slots=True)
 class SelectionRangeRegistrationOptions(CamelSnakeMixin):
     work_done_progress: Optional[bool] = None
 
@@ -1043,19 +1043,19 @@ class SelectionRangeRegistrationOptions(CamelSnakeMixin):
     the request again. See also Registration#id."""
 
 
-@dataclass
+@dataclass(slots=True)
 class WorkDoneProgressCreateParams(CamelSnakeMixin):
     token: ProgressToken
     """The token to be used to report progress."""
 
 
-@dataclass
+@dataclass(slots=True)
 class WorkDoneProgressCancelParams(CamelSnakeMixin):
     token: ProgressToken
     """The token to be used to report progress."""
 
 
-@dataclass
+@dataclass(slots=True)
 class CallHierarchyPrepareParams(CamelSnakeMixin):
     """The parameter of a `textDocument/prepareCallHierarchy` request.
 
@@ -1073,7 +1073,7 @@ class CallHierarchyPrepareParams(CamelSnakeMixin):
     """An optional token that a server can use to report work done progress."""
 
 
-@dataclass
+@dataclass(slots=True)
 class CallHierarchyItem(CamelSnakeMixin):
     """Represents programming constructs like functions or constructors in the context
     of call hierarchy.
@@ -1109,7 +1109,7 @@ class CallHierarchyItem(CamelSnakeMixin):
     incoming calls or outgoing calls requests."""
 
 
-@dataclass
+@dataclass(slots=True)
 class CallHierarchyOptions(CamelSnakeMixin):
     """Call hierarchy options used during static registration.
 
@@ -1120,7 +1120,7 @@ class CallHierarchyOptions(CamelSnakeMixin):
     work_done_progress: Optional[bool] = None
 
 
-@dataclass
+@dataclass(slots=True)
 class CallHierarchyRegistrationOptions(CamelSnakeMixin):
     """Call hierarchy options used during static or dynamic registration.
 
@@ -1139,7 +1139,7 @@ class CallHierarchyRegistrationOptions(CamelSnakeMixin):
     the request again. See also Registration#id."""
 
 
-@dataclass
+@dataclass(slots=True)
 class CallHierarchyIncomingCallsParams(CamelSnakeMixin):
     """The parameter of a `callHierarchy/incomingCalls` request.
 
@@ -1157,7 +1157,7 @@ class CallHierarchyIncomingCallsParams(CamelSnakeMixin):
     the client."""
 
 
-@dataclass
+@dataclass(slots=True)
 class CallHierarchyIncomingCall(CamelSnakeMixin):
     """Represents an incoming call, e.g. a caller of a method or constructor.
 
@@ -1173,7 +1173,7 @@ class CallHierarchyIncomingCall(CamelSnakeMixin):
     denoted by {@link CallHierarchyIncomingCall.from `this.from`}."""
 
 
-@dataclass
+@dataclass(slots=True)
 class CallHierarchyOutgoingCallsParams(CamelSnakeMixin):
     """The parameter of a `callHierarchy/outgoingCalls` request.
 
@@ -1191,7 +1191,7 @@ class CallHierarchyOutgoingCallsParams(CamelSnakeMixin):
     the client."""
 
 
-@dataclass
+@dataclass(slots=True)
 class CallHierarchyOutgoingCall(CamelSnakeMixin):
     """Represents an outgoing call, e.g. calling a getter from a method or a method from a constructor etc.
 
@@ -1208,7 +1208,7 @@ class CallHierarchyOutgoingCall(CamelSnakeMixin):
     and not {@link CallHierarchyOutgoingCall.to `this.to`}."""
 
 
-@dataclass
+@dataclass(slots=True)
 class SemanticTokensParams(CamelSnakeMixin):
     """@since 3.16.0"""
 
@@ -1225,7 +1225,7 @@ class SemanticTokensParams(CamelSnakeMixin):
     the client."""
 
 
-@dataclass
+@dataclass(slots=True)
 class SemanticTokens(CamelSnakeMixin):
     """@since 3.16.0"""
 
@@ -1241,7 +1241,7 @@ class SemanticTokens(CamelSnakeMixin):
     send a delta."""
 
 
-@dataclass
+@dataclass(slots=True)
 class SemanticTokensPartialResult(CamelSnakeMixin):
     """@since 3.16.0"""
 
@@ -1250,13 +1250,13 @@ class SemanticTokensPartialResult(CamelSnakeMixin):
     data: List[int]
 
 
-@dataclass
+@dataclass(slots=True)
 class SemanticTokensOptionsFullType1(CamelSnakeMixin):
     delta: Optional[bool] = None
     """The server supports deltas for full documents."""
 
 
-@dataclass
+@dataclass(slots=True)
 class SemanticTokensOptions(CamelSnakeMixin):
     """@since 3.16.0"""
 
@@ -1275,13 +1275,13 @@ class SemanticTokensOptions(CamelSnakeMixin):
     work_done_progress: Optional[bool] = None
 
 
-@dataclass
+@dataclass(slots=True)
 class SemanticTokensRegistrationOptionsFullType1(CamelSnakeMixin):
     delta: Optional[bool] = None
     """The server supports deltas for full documents."""
 
 
-@dataclass
+@dataclass(slots=True)
 class SemanticTokensRegistrationOptions(CamelSnakeMixin):
     """@since 3.16.0"""
 
@@ -1308,7 +1308,7 @@ class SemanticTokensRegistrationOptions(CamelSnakeMixin):
     the request again. See also Registration#id."""
 
 
-@dataclass
+@dataclass(slots=True)
 class SemanticTokensDeltaParams(CamelSnakeMixin):
     """@since 3.16.0"""
 
@@ -1329,7 +1329,7 @@ class SemanticTokensDeltaParams(CamelSnakeMixin):
     the client."""
 
 
-@dataclass
+@dataclass(slots=True)
 class SemanticTokensDelta(CamelSnakeMixin):
     """@since 3.16.0"""
 
@@ -1341,7 +1341,7 @@ class SemanticTokensDelta(CamelSnakeMixin):
     result_id: Optional[str] = None
 
 
-@dataclass
+@dataclass(slots=True)
 class SemanticTokensDeltaPartialResult(CamelSnakeMixin):
     """@since 3.16.0"""
 
@@ -1350,7 +1350,7 @@ class SemanticTokensDeltaPartialResult(CamelSnakeMixin):
     edits: List[SemanticTokensEdit]
 
 
-@dataclass
+@dataclass(slots=True)
 class SemanticTokensRangeParams(CamelSnakeMixin):
     """@since 3.16.0"""
 
@@ -1370,7 +1370,7 @@ class SemanticTokensRangeParams(CamelSnakeMixin):
     the client."""
 
 
-@dataclass
+@dataclass(slots=True)
 class ShowDocumentParams(CamelSnakeMixin):
     """Params to show a document.
 
@@ -1399,7 +1399,7 @@ class ShowDocumentParams(CamelSnakeMixin):
     file."""
 
 
-@dataclass
+@dataclass(slots=True)
 class ShowDocumentResult(CamelSnakeMixin):
     """The result of a showDocument request.
 
@@ -1411,7 +1411,7 @@ class ShowDocumentResult(CamelSnakeMixin):
     """A boolean indicating if the show was successful."""
 
 
-@dataclass
+@dataclass(slots=True)
 class LinkedEditingRangeParams(CamelSnakeMixin):
     text_document: TextDocumentIdentifier
     """The text document."""
@@ -1423,7 +1423,7 @@ class LinkedEditingRangeParams(CamelSnakeMixin):
     """An optional token that a server can use to report work done progress."""
 
 
-@dataclass
+@dataclass(slots=True)
 class LinkedEditingRanges(CamelSnakeMixin):
     """The result of a linked editing range request.
 
@@ -1441,12 +1441,12 @@ class LinkedEditingRanges(CamelSnakeMixin):
     pattern will be used."""
 
 
-@dataclass
+@dataclass(slots=True)
 class LinkedEditingRangeOptions(CamelSnakeMixin):
     work_done_progress: Optional[bool] = None
 
 
-@dataclass
+@dataclass(slots=True)
 class LinkedEditingRangeRegistrationOptions(CamelSnakeMixin):
     document_selector: Optional[DocumentSelector] = None
     """A document selector to identify the scope of the registration. If set to null
@@ -1459,7 +1459,7 @@ class LinkedEditingRangeRegistrationOptions(CamelSnakeMixin):
     the request again. See also Registration#id."""
 
 
-@dataclass
+@dataclass(slots=True)
 class CreateFilesParams(CamelSnakeMixin):
     """The parameters sent in notifications/requests for user-initiated creation of
     files.
@@ -1472,7 +1472,7 @@ class CreateFilesParams(CamelSnakeMixin):
     """An array of all files/folders created in this operation."""
 
 
-@dataclass
+@dataclass(slots=True)
 class WorkspaceEdit(CamelSnakeMixin):
     """A workspace edit represents changes to many resources managed in the workspace. The edit
     should either provide `changes` or `documentChanges`. If documentChanges are present
@@ -1512,7 +1512,7 @@ class WorkspaceEdit(CamelSnakeMixin):
     # Since: 3.16.0
 
 
-@dataclass
+@dataclass(slots=True)
 class FileOperationRegistrationOptions(CamelSnakeMixin):
     """The options to register for file operations.
 
@@ -1524,7 +1524,7 @@ class FileOperationRegistrationOptions(CamelSnakeMixin):
     """The actual filters."""
 
 
-@dataclass
+@dataclass(slots=True)
 class RenameFilesParams(CamelSnakeMixin):
     """The parameters sent in notifications/requests for user-initiated renames of
     files.
@@ -1538,7 +1538,7 @@ class RenameFilesParams(CamelSnakeMixin):
     the folder will be included, and not its children."""
 
 
-@dataclass
+@dataclass(slots=True)
 class DeleteFilesParams(CamelSnakeMixin):
     """The parameters sent in notifications/requests for user-initiated deletes of
     files.
@@ -1551,7 +1551,7 @@ class DeleteFilesParams(CamelSnakeMixin):
     """An array of all files/folders deleted in this operation."""
 
 
-@dataclass
+@dataclass(slots=True)
 class MonikerParams(CamelSnakeMixin):
     text_document: TextDocumentIdentifier
     """The text document."""
@@ -1567,7 +1567,7 @@ class MonikerParams(CamelSnakeMixin):
     the client."""
 
 
-@dataclass
+@dataclass(slots=True)
 class Moniker(CamelSnakeMixin):
     """Moniker definition to match LSIF 0.5 moniker definition.
 
@@ -1589,12 +1589,12 @@ class Moniker(CamelSnakeMixin):
     """The moniker kind if known."""
 
 
-@dataclass
+@dataclass(slots=True)
 class MonikerOptions(CamelSnakeMixin):
     work_done_progress: Optional[bool] = None
 
 
-@dataclass
+@dataclass(slots=True)
 class MonikerRegistrationOptions(CamelSnakeMixin):
     document_selector: Optional[DocumentSelector] = None
     """A document selector to identify the scope of the registration. If set to null
@@ -1603,7 +1603,7 @@ class MonikerRegistrationOptions(CamelSnakeMixin):
     work_done_progress: Optional[bool] = None
 
 
-@dataclass
+@dataclass(slots=True)
 class TypeHierarchyPrepareParams(CamelSnakeMixin):
     """The parameter of a `textDocument/prepareTypeHierarchy` request.
 
@@ -1621,7 +1621,7 @@ class TypeHierarchyPrepareParams(CamelSnakeMixin):
     """An optional token that a server can use to report work done progress."""
 
 
-@dataclass
+@dataclass(slots=True)
 class TypeHierarchyItem(CamelSnakeMixin):
     """@since 3.17.0"""
 
@@ -1658,7 +1658,7 @@ class TypeHierarchyItem(CamelSnakeMixin):
     resolving supertypes and subtypes."""
 
 
-@dataclass
+@dataclass(slots=True)
 class TypeHierarchyOptions(CamelSnakeMixin):
     """Type hierarchy options used during static registration.
 
@@ -1669,7 +1669,7 @@ class TypeHierarchyOptions(CamelSnakeMixin):
     work_done_progress: Optional[bool] = None
 
 
-@dataclass
+@dataclass(slots=True)
 class TypeHierarchyRegistrationOptions(CamelSnakeMixin):
     """Type hierarchy options used during static or dynamic registration.
 
@@ -1688,7 +1688,7 @@ class TypeHierarchyRegistrationOptions(CamelSnakeMixin):
     the request again. See also Registration#id."""
 
 
-@dataclass
+@dataclass(slots=True)
 class TypeHierarchySupertypesParams(CamelSnakeMixin):
     """The parameter of a `typeHierarchy/supertypes` request.
 
@@ -1706,7 +1706,7 @@ class TypeHierarchySupertypesParams(CamelSnakeMixin):
     the client."""
 
 
-@dataclass
+@dataclass(slots=True)
 class TypeHierarchySubtypesParams(CamelSnakeMixin):
     """The parameter of a `typeHierarchy/subtypes` request.
 
@@ -1724,7 +1724,7 @@ class TypeHierarchySubtypesParams(CamelSnakeMixin):
     the client."""
 
 
-@dataclass
+@dataclass(slots=True)
 class InlineValueParams(CamelSnakeMixin):
     """A parameter literal used in inline value requests.
 
@@ -1746,7 +1746,7 @@ class InlineValueParams(CamelSnakeMixin):
     """An optional token that a server can use to report work done progress."""
 
 
-@dataclass
+@dataclass(slots=True)
 class InlineValueOptions(CamelSnakeMixin):
     """Inline value options used during static registration.
 
@@ -1757,7 +1757,7 @@ class InlineValueOptions(CamelSnakeMixin):
     work_done_progress: Optional[bool] = None
 
 
-@dataclass
+@dataclass(slots=True)
 class InlineValueRegistrationOptions(CamelSnakeMixin):
     """Inline value options used during static or dynamic registration.
 
@@ -1776,7 +1776,7 @@ class InlineValueRegistrationOptions(CamelSnakeMixin):
     the request again. See also Registration#id."""
 
 
-@dataclass
+@dataclass(slots=True)
 class InlayHintParams(CamelSnakeMixin):
     """A parameter literal used in inlay hint requests.
 
@@ -1794,7 +1794,7 @@ class InlayHintParams(CamelSnakeMixin):
     """An optional token that a server can use to report work done progress."""
 
 
-@dataclass
+@dataclass(slots=True)
 class InlayHint(CamelSnakeMixin):
     """Inlay hint information.
 
@@ -1844,7 +1844,7 @@ class InlayHint(CamelSnakeMixin):
     a `textDocument/inlayHint` and a `inlayHint/resolve` request."""
 
 
-@dataclass
+@dataclass(slots=True)
 class InlayHintOptions(CamelSnakeMixin):
     """Inlay hint options used during static registration.
 
@@ -1859,7 +1859,7 @@ class InlayHintOptions(CamelSnakeMixin):
     work_done_progress: Optional[bool] = None
 
 
-@dataclass
+@dataclass(slots=True)
 class InlayHintRegistrationOptions(CamelSnakeMixin):
     """Inlay hint options used during static or dynamic registration.
 
@@ -1882,7 +1882,7 @@ class InlayHintRegistrationOptions(CamelSnakeMixin):
     the request again. See also Registration#id."""
 
 
-@dataclass
+@dataclass(slots=True)
 class DocumentDiagnosticParams(CamelSnakeMixin):
     """Parameters of the document diagnostic request.
 
@@ -1907,7 +1907,7 @@ class DocumentDiagnosticParams(CamelSnakeMixin):
     the client."""
 
 
-@dataclass
+@dataclass(slots=True)
 class DocumentDiagnosticReportPartialResult(CamelSnakeMixin):
     """A partial result for a document diagnostic report.
 
@@ -1921,7 +1921,7 @@ class DocumentDiagnosticReportPartialResult(CamelSnakeMixin):
     ]
 
 
-@dataclass
+@dataclass(slots=True)
 class DiagnosticServerCancellationData(CamelSnakeMixin):
     """Cancellation data returned from a diagnostic request.
 
@@ -1932,7 +1932,7 @@ class DiagnosticServerCancellationData(CamelSnakeMixin):
     retrigger_request: bool
 
 
-@dataclass
+@dataclass(slots=True)
 class DiagnosticOptions(CamelSnakeMixin):
     """Diagnostic options.
 
@@ -1956,7 +1956,7 @@ class DiagnosticOptions(CamelSnakeMixin):
     work_done_progress: Optional[bool] = None
 
 
-@dataclass
+@dataclass(slots=True)
 class DiagnosticRegistrationOptions(CamelSnakeMixin):
     """Diagnostic registration options.
 
@@ -1988,7 +1988,7 @@ class DiagnosticRegistrationOptions(CamelSnakeMixin):
     the request again. See also Registration#id."""
 
 
-@dataclass
+@dataclass(slots=True)
 class WorkspaceDiagnosticParams(CamelSnakeMixin):
     """Parameters of the workspace diagnostic request.
 
@@ -2011,7 +2011,7 @@ class WorkspaceDiagnosticParams(CamelSnakeMixin):
     the client."""
 
 
-@dataclass
+@dataclass(slots=True)
 class WorkspaceDiagnosticReport(CamelSnakeMixin):
     """A workspace diagnostic report.
 
@@ -2022,7 +2022,7 @@ class WorkspaceDiagnosticReport(CamelSnakeMixin):
     items: List[WorkspaceDocumentDiagnosticReport]
 
 
-@dataclass
+@dataclass(slots=True)
 class WorkspaceDiagnosticReportPartialResult(CamelSnakeMixin):
     """A partial result for a workspace diagnostic report.
 
@@ -2033,7 +2033,7 @@ class WorkspaceDiagnosticReportPartialResult(CamelSnakeMixin):
     items: List[WorkspaceDocumentDiagnosticReport]
 
 
-@dataclass
+@dataclass(slots=True)
 class DidOpenNotebookDocumentParams(CamelSnakeMixin):
     """The params sent in an open notebook document notification.
 
@@ -2049,7 +2049,7 @@ class DidOpenNotebookDocumentParams(CamelSnakeMixin):
     of a notebook cell."""
 
 
-@dataclass
+@dataclass(slots=True)
 class DidChangeNotebookDocumentParams(CamelSnakeMixin):
     """The params sent in a change notebook document notification.
 
@@ -2079,7 +2079,7 @@ class DidChangeNotebookDocumentParams(CamelSnakeMixin):
       you receive them."""
 
 
-@dataclass
+@dataclass(slots=True)
 class DidSaveNotebookDocumentParams(CamelSnakeMixin):
     """The params sent in a save notebook document notification.
 
@@ -2091,7 +2091,7 @@ class DidSaveNotebookDocumentParams(CamelSnakeMixin):
     """The notebook document that got saved."""
 
 
-@dataclass
+@dataclass(slots=True)
 class DidCloseNotebookDocumentParams(CamelSnakeMixin):
     """The params sent in a close notebook document notification.
 
@@ -2107,17 +2107,17 @@ class DidCloseNotebookDocumentParams(CamelSnakeMixin):
     of a notebook cell that got closed."""
 
 
-@dataclass
+@dataclass(slots=True)
 class RegistrationParams(CamelSnakeMixin):
     registrations: List[Registration]
 
 
-@dataclass
+@dataclass(slots=True)
 class UnregistrationParams(CamelSnakeMixin):
     unregisterations: List[Unregistration]
 
 
-@dataclass
+@dataclass(slots=True)
 class InitializeParamsClientInfoType(CamelSnakeMixin):
     name: str
     """The name of the client as defined by the client."""
@@ -2126,7 +2126,7 @@ class InitializeParamsClientInfoType(CamelSnakeMixin):
     """The client's version as defined by the client."""
 
 
-@dataclass
+@dataclass(slots=True)
 class WorkspaceFoldersInitializeParams(CamelSnakeMixin):
     workspace_folders: Optional[List[WorkspaceFolder]] = None
     """The workspace folders configured in the client when the server starts.
@@ -2139,7 +2139,7 @@ class WorkspaceFoldersInitializeParams(CamelSnakeMixin):
     # Since: 3.6.0
 
 
-@dataclass
+@dataclass(slots=True)
 class InitializeParams(CamelSnakeMixin):
     capabilities: ClientCapabilities
     """The capabilities provided by the client (editor or tool)"""
@@ -2201,7 +2201,7 @@ class InitializeParams(CamelSnakeMixin):
     # Since: 3.6.0
 
 
-@dataclass
+@dataclass(slots=True)
 class InitializeResultServerInfoType(CamelSnakeMixin):
     name: str
     """The name of the server as defined by the server."""
@@ -2210,7 +2210,7 @@ class InitializeResultServerInfoType(CamelSnakeMixin):
     """The server's version as defined by the server."""
 
 
-@dataclass
+@dataclass(slots=True)
 class InitializeResult(CamelSnakeMixin):
     """The result returned from an initialize request."""
 
@@ -2224,7 +2224,7 @@ class InitializeResult(CamelSnakeMixin):
     # Since: 3.15.0
 
 
-@dataclass
+@dataclass(slots=True)
 class InitializeError(CamelSnakeMixin):
     """The data type of the ResponseError if the
     initialize request fails."""
@@ -2236,12 +2236,12 @@ class InitializeError(CamelSnakeMixin):
     (3) if user selected retry the initialize method is sent again."""
 
 
-@dataclass
+@dataclass(slots=True)
 class InitializedParams(CamelSnakeMixin):
     pass
 
 
-@dataclass
+@dataclass(slots=True)
 class DidChangeConfigurationParams(CamelSnakeMixin):
     """The parameters of a change configuration notification."""
 
@@ -2249,12 +2249,12 @@ class DidChangeConfigurationParams(CamelSnakeMixin):
     """The actual changed settings"""
 
 
-@dataclass
+@dataclass(slots=True)
 class DidChangeConfigurationRegistrationOptions(CamelSnakeMixin):
     section: Optional[Union[str, List[str]]] = None
 
 
-@dataclass
+@dataclass(slots=True)
 class ShowMessageParams(CamelSnakeMixin):
     """The parameters of a notification message."""
 
@@ -2265,7 +2265,7 @@ class ShowMessageParams(CamelSnakeMixin):
     """The actual message."""
 
 
-@dataclass
+@dataclass(slots=True)
 class ShowMessageRequestParams(CamelSnakeMixin):
     type: MessageType
     """The message type. See {@link MessageType}"""
@@ -2277,13 +2277,13 @@ class ShowMessageRequestParams(CamelSnakeMixin):
     """The message action items to present."""
 
 
-@dataclass
+@dataclass(slots=True)
 class MessageActionItem(CamelSnakeMixin):
     title: str
     """A short title like 'Retry', 'Open Log' etc."""
 
 
-@dataclass
+@dataclass(slots=True)
 class LogMessageParams(CamelSnakeMixin):
     """The log message parameters."""
 
@@ -2294,7 +2294,7 @@ class LogMessageParams(CamelSnakeMixin):
     """The actual message."""
 
 
-@dataclass
+@dataclass(slots=True)
 class DidOpenTextDocumentParams(CamelSnakeMixin):
     """The parameters sent in an open text document notification"""
 
@@ -2302,7 +2302,7 @@ class DidOpenTextDocumentParams(CamelSnakeMixin):
     """The document that was opened."""
 
 
-@dataclass
+@dataclass(slots=True)
 class DidChangeTextDocumentParams(CamelSnakeMixin):
     """The change text document notification's parameters."""
 
@@ -2325,7 +2325,7 @@ class DidChangeTextDocumentParams(CamelSnakeMixin):
       you receive them."""
 
 
-@dataclass
+@dataclass(slots=True)
 class TextDocumentChangeRegistrationOptions(CamelSnakeMixin):
     """Describe options to be used when registered for text document change events."""
 
@@ -2337,7 +2337,7 @@ class TextDocumentChangeRegistrationOptions(CamelSnakeMixin):
     the document selector provided on the client side will be used."""
 
 
-@dataclass
+@dataclass(slots=True)
 class DidCloseTextDocumentParams(CamelSnakeMixin):
     """The parameters sent in a close text document notification"""
 
@@ -2345,7 +2345,7 @@ class DidCloseTextDocumentParams(CamelSnakeMixin):
     """The document that was closed."""
 
 
-@dataclass
+@dataclass(slots=True)
 class DidSaveTextDocumentParams(CamelSnakeMixin):
     """The parameters sent in a save text document notification"""
 
@@ -2357,7 +2357,7 @@ class DidSaveTextDocumentParams(CamelSnakeMixin):
     when the save notification was requested."""
 
 
-@dataclass
+@dataclass(slots=True)
 class SaveOptions(CamelSnakeMixin):
     """Save options."""
 
@@ -2365,7 +2365,7 @@ class SaveOptions(CamelSnakeMixin):
     """The client is supposed to include the content on save."""
 
 
-@dataclass
+@dataclass(slots=True)
 class TextDocumentSaveRegistrationOptions(CamelSnakeMixin):
     """Save registration options."""
 
@@ -2377,7 +2377,7 @@ class TextDocumentSaveRegistrationOptions(CamelSnakeMixin):
     """The client is supposed to include the content on save."""
 
 
-@dataclass
+@dataclass(slots=True)
 class WillSaveTextDocumentParams(CamelSnakeMixin):
     """The parameters sent in a will save text document notification."""
 
@@ -2388,7 +2388,7 @@ class WillSaveTextDocumentParams(CamelSnakeMixin):
     """The 'TextDocumentSaveReason'."""
 
 
-@dataclass
+@dataclass(slots=True)
 class TextEdit(CamelSnakeMixin):
     """A text edit applicable to a text document."""
 
@@ -2401,7 +2401,7 @@ class TextEdit(CamelSnakeMixin):
     empty string."""
 
 
-@dataclass
+@dataclass(slots=True)
 class DidChangeWatchedFilesParams(CamelSnakeMixin):
     """The watched files change notification's parameters."""
 
@@ -2409,7 +2409,7 @@ class DidChangeWatchedFilesParams(CamelSnakeMixin):
     """The actual file events."""
 
 
-@dataclass
+@dataclass(slots=True)
 class DidChangeWatchedFilesRegistrationOptions(CamelSnakeMixin):
     """Describe options to be used when registered for text document change events."""
 
@@ -2417,7 +2417,7 @@ class DidChangeWatchedFilesRegistrationOptions(CamelSnakeMixin):
     """The watchers to register."""
 
 
-@dataclass
+@dataclass(slots=True)
 class PublishDiagnosticsParams(CamelSnakeMixin):
     """The publish diagnostic notification's parameters."""
 
@@ -2434,7 +2434,7 @@ class PublishDiagnosticsParams(CamelSnakeMixin):
     # Since: 3.15.0
 
 
-@dataclass
+@dataclass(slots=True)
 class CompletionParams(CamelSnakeMixin):
     """Completion parameters"""
 
@@ -2456,7 +2456,7 @@ class CompletionParams(CamelSnakeMixin):
     the client."""
 
 
-@dataclass
+@dataclass(slots=True)
 class CompletionItem(CamelSnakeMixin):
     """A completion item represents a text snippet that is
     proposed to complete text that is being typed."""
@@ -2603,14 +2603,14 @@ class CompletionItem(CamelSnakeMixin):
     {@link CompletionRequest} and a {@link CompletionResolveRequest}."""
 
 
-@dataclass
+@dataclass(slots=True)
 class CompletionListItemDefaultsTypeEditRangeType1(CamelSnakeMixin):
     insert: Range
 
     replace: Range
 
 
-@dataclass
+@dataclass(slots=True)
 class CompletionListItemDefaultsType(CamelSnakeMixin):
     commit_characters: Optional[List[str]] = None
     """A default commit character set.
@@ -2643,7 +2643,7 @@ class CompletionListItemDefaultsType(CamelSnakeMixin):
     # Since: 3.17.0
 
 
-@dataclass
+@dataclass(slots=True)
 class CompletionList(CamelSnakeMixin):
     """Represents a collection of {@link CompletionItem completion items} to be presented
     in the editor."""
@@ -2674,7 +2674,7 @@ class CompletionList(CamelSnakeMixin):
     # Since: 3.17.0
 
 
-@dataclass
+@dataclass(slots=True)
 class CompletionOptionsCompletionItemType(CamelSnakeMixin):
     label_details_support: Optional[bool] = None
     """The server has support for completion item label
@@ -2685,7 +2685,7 @@ class CompletionOptionsCompletionItemType(CamelSnakeMixin):
     # Since: 3.17.0
 
 
-@dataclass
+@dataclass(slots=True)
 class CompletionOptions(CamelSnakeMixin):
     """Completion options."""
 
@@ -2724,7 +2724,7 @@ class CompletionOptions(CamelSnakeMixin):
     work_done_progress: Optional[bool] = None
 
 
-@dataclass
+@dataclass(slots=True)
 class CompletionRegistrationOptionsCompletionItemType(CamelSnakeMixin):
     label_details_support: Optional[bool] = None
     """The server has support for completion item label
@@ -2735,7 +2735,7 @@ class CompletionRegistrationOptionsCompletionItemType(CamelSnakeMixin):
     # Since: 3.17.0
 
 
-@dataclass
+@dataclass(slots=True)
 class CompletionRegistrationOptions(CamelSnakeMixin):
     """Registration options for a {@link CompletionRequest}."""
 
@@ -2778,7 +2778,7 @@ class CompletionRegistrationOptions(CamelSnakeMixin):
     work_done_progress: Optional[bool] = None
 
 
-@dataclass
+@dataclass(slots=True)
 class HoverParams(CamelSnakeMixin):
     """Parameters for a {@link HoverRequest}."""
 
@@ -2792,7 +2792,7 @@ class HoverParams(CamelSnakeMixin):
     """An optional token that a server can use to report work done progress."""
 
 
-@dataclass
+@dataclass(slots=True)
 class Hover(CamelSnakeMixin):
     """The result of a hover request."""
 
@@ -2804,14 +2804,14 @@ class Hover(CamelSnakeMixin):
     visualize the hover, e.g. by changing the background color."""
 
 
-@dataclass
+@dataclass(slots=True)
 class HoverOptions(CamelSnakeMixin):
     """Hover options."""
 
     work_done_progress: Optional[bool] = None
 
 
-@dataclass
+@dataclass(slots=True)
 class HoverRegistrationOptions(CamelSnakeMixin):
     """Registration options for a {@link HoverRequest}."""
 
@@ -2822,7 +2822,7 @@ class HoverRegistrationOptions(CamelSnakeMixin):
     work_done_progress: Optional[bool] = None
 
 
-@dataclass
+@dataclass(slots=True)
 class SignatureHelpParams(CamelSnakeMixin):
     """Parameters for a {@link SignatureHelpRequest}."""
 
@@ -2843,7 +2843,7 @@ class SignatureHelpParams(CamelSnakeMixin):
     """An optional token that a server can use to report work done progress."""
 
 
-@dataclass
+@dataclass(slots=True)
 class SignatureHelp(CamelSnakeMixin):
     """Signature help represents the signature of something
     callable. There can be multiple signature but only one
@@ -2873,7 +2873,7 @@ class SignatureHelp(CamelSnakeMixin):
     active signature does have any."""
 
 
-@dataclass
+@dataclass(slots=True)
 class SignatureHelpOptions(CamelSnakeMixin):
     """Server Capabilities for a {@link SignatureHelpRequest}."""
 
@@ -2892,7 +2892,7 @@ class SignatureHelpOptions(CamelSnakeMixin):
     work_done_progress: Optional[bool] = None
 
 
-@dataclass
+@dataclass(slots=True)
 class SignatureHelpRegistrationOptions(CamelSnakeMixin):
     """Registration options for a {@link SignatureHelpRequest}."""
 
@@ -2915,7 +2915,7 @@ class SignatureHelpRegistrationOptions(CamelSnakeMixin):
     work_done_progress: Optional[bool] = None
 
 
-@dataclass
+@dataclass(slots=True)
 class DefinitionParams(CamelSnakeMixin):
     """Parameters for a {@link DefinitionRequest}."""
 
@@ -2933,14 +2933,14 @@ class DefinitionParams(CamelSnakeMixin):
     the client."""
 
 
-@dataclass
+@dataclass(slots=True)
 class DefinitionOptions(CamelSnakeMixin):
     """Server Capabilities for a {@link DefinitionRequest}."""
 
     work_done_progress: Optional[bool] = None
 
 
-@dataclass
+@dataclass(slots=True)
 class DefinitionRegistrationOptions(CamelSnakeMixin):
     """Registration options for a {@link DefinitionRequest}."""
 
@@ -2951,7 +2951,7 @@ class DefinitionRegistrationOptions(CamelSnakeMixin):
     work_done_progress: Optional[bool] = None
 
 
-@dataclass
+@dataclass(slots=True)
 class ReferenceParams(CamelSnakeMixin):
     """Parameters for a {@link ReferencesRequest}."""
 
@@ -2971,14 +2971,14 @@ class ReferenceParams(CamelSnakeMixin):
     the client."""
 
 
-@dataclass
+@dataclass(slots=True)
 class ReferenceOptions(CamelSnakeMixin):
     """Reference options."""
 
     work_done_progress: Optional[bool] = None
 
 
-@dataclass
+@dataclass(slots=True)
 class ReferenceRegistrationOptions(CamelSnakeMixin):
     """Registration options for a {@link ReferencesRequest}."""
 
@@ -2989,7 +2989,7 @@ class ReferenceRegistrationOptions(CamelSnakeMixin):
     work_done_progress: Optional[bool] = None
 
 
-@dataclass
+@dataclass(slots=True)
 class DocumentHighlightParams(CamelSnakeMixin):
     """Parameters for a {@link DocumentHighlightRequest}."""
 
@@ -3007,7 +3007,7 @@ class DocumentHighlightParams(CamelSnakeMixin):
     the client."""
 
 
-@dataclass
+@dataclass(slots=True)
 class DocumentHighlight(CamelSnakeMixin):
     """A document highlight is a range inside a text document which deserves
     special attention. Usually a document highlight is visualized by changing
@@ -3020,14 +3020,14 @@ class DocumentHighlight(CamelSnakeMixin):
     """The highlight kind, default is {@link DocumentHighlightKind.Text text}."""
 
 
-@dataclass
+@dataclass(slots=True)
 class DocumentHighlightOptions(CamelSnakeMixin):
     """Provider options for a {@link DocumentHighlightRequest}."""
 
     work_done_progress: Optional[bool] = None
 
 
-@dataclass
+@dataclass(slots=True)
 class DocumentHighlightRegistrationOptions(CamelSnakeMixin):
     """Registration options for a {@link DocumentHighlightRequest}."""
 
@@ -3038,7 +3038,7 @@ class DocumentHighlightRegistrationOptions(CamelSnakeMixin):
     work_done_progress: Optional[bool] = None
 
 
-@dataclass
+@dataclass(slots=True)
 class DocumentSymbolParams(CamelSnakeMixin):
     """Parameters for a {@link DocumentSymbolRequest}."""
 
@@ -3053,7 +3053,7 @@ class DocumentSymbolParams(CamelSnakeMixin):
     the client."""
 
 
-@dataclass
+@dataclass(slots=True)
 class BaseSymbolInformation(CamelSnakeMixin):
     """A base for all symbol information."""
 
@@ -3076,7 +3076,7 @@ class BaseSymbolInformation(CamelSnakeMixin):
     symbols."""
 
 
-@dataclass
+@dataclass(slots=True)
 class SymbolInformation(CamelSnakeMixin):
     """Represents information about programming constructs like variables, classes,
     interfaces etc."""
@@ -3116,7 +3116,7 @@ class SymbolInformation(CamelSnakeMixin):
     symbols."""
 
 
-@dataclass
+@dataclass(slots=True)
 class DocumentSymbol(CamelSnakeMixin):
     """Represents programming constructs like variables, classes, interfaces etc.
     that appear in a document. Document symbols can be hierarchical and they
@@ -3157,7 +3157,7 @@ class DocumentSymbol(CamelSnakeMixin):
     """Children of this symbol, e.g. properties of a class."""
 
 
-@dataclass
+@dataclass(slots=True)
 class DocumentSymbolOptions(CamelSnakeMixin):
     """Provider options for a {@link DocumentSymbolRequest}."""
 
@@ -3171,7 +3171,7 @@ class DocumentSymbolOptions(CamelSnakeMixin):
     work_done_progress: Optional[bool] = None
 
 
-@dataclass
+@dataclass(slots=True)
 class DocumentSymbolRegistrationOptions(CamelSnakeMixin):
     """Registration options for a {@link DocumentSymbolRequest}."""
 
@@ -3189,7 +3189,7 @@ class DocumentSymbolRegistrationOptions(CamelSnakeMixin):
     work_done_progress: Optional[bool] = None
 
 
-@dataclass
+@dataclass(slots=True)
 class CodeActionParams(CamelSnakeMixin):
     """The parameters of a {@link CodeActionRequest}."""
 
@@ -3210,7 +3210,7 @@ class CodeActionParams(CamelSnakeMixin):
     the client."""
 
 
-@dataclass
+@dataclass(slots=True)
 class Command(CamelSnakeMixin):
     """Represents a reference to a command. Provides a title which
     will be used to represent a command in the UI and, optionally,
@@ -3228,7 +3228,7 @@ class Command(CamelSnakeMixin):
     invoked with."""
 
 
-@dataclass
+@dataclass(slots=True)
 class CodeActionDisabledType(CamelSnakeMixin):
     reason: str
     """Human readable description of why the code action is currently disabled.
@@ -3236,7 +3236,7 @@ class CodeActionDisabledType(CamelSnakeMixin):
     This is displayed in the code actions UI."""
 
 
-@dataclass
+@dataclass(slots=True)
 class CodeAction(CamelSnakeMixin):
     """A code action represents a change that can be performed in code, e.g. to fix a problem or
     to refactor code.
@@ -3299,7 +3299,7 @@ class CodeAction(CamelSnakeMixin):
     # Since: 3.16.0
 
 
-@dataclass
+@dataclass(slots=True)
 class CodeActionOptions(CamelSnakeMixin):
     """Provider options for a {@link CodeActionRequest}."""
 
@@ -3319,7 +3319,7 @@ class CodeActionOptions(CamelSnakeMixin):
     work_done_progress: Optional[bool] = None
 
 
-@dataclass
+@dataclass(slots=True)
 class CodeActionRegistrationOptions(CamelSnakeMixin):
     """Registration options for a {@link CodeActionRequest}."""
 
@@ -3343,7 +3343,7 @@ class CodeActionRegistrationOptions(CamelSnakeMixin):
     work_done_progress: Optional[bool] = None
 
 
-@dataclass
+@dataclass(slots=True)
 class WorkspaceSymbolParams(CamelSnakeMixin):
     """The parameters of a {@link WorkspaceSymbolRequest}."""
 
@@ -3359,12 +3359,12 @@ class WorkspaceSymbolParams(CamelSnakeMixin):
     the client."""
 
 
-@dataclass
+@dataclass(slots=True)
 class WorkspaceSymbolLocationType1(CamelSnakeMixin):
     uri: DocumentUri
 
 
-@dataclass
+@dataclass(slots=True)
 class WorkspaceSymbol(CamelSnakeMixin):
     """A special workspace symbol that supports locations without a range.
 
@@ -3404,7 +3404,7 @@ class WorkspaceSymbol(CamelSnakeMixin):
     symbols."""
 
 
-@dataclass
+@dataclass(slots=True)
 class WorkspaceSymbolOptions(CamelSnakeMixin):
     """Server capabilities for a {@link WorkspaceSymbolRequest}."""
 
@@ -3418,7 +3418,7 @@ class WorkspaceSymbolOptions(CamelSnakeMixin):
     work_done_progress: Optional[bool] = None
 
 
-@dataclass
+@dataclass(slots=True)
 class WorkspaceSymbolRegistrationOptions(CamelSnakeMixin):
     """Registration options for a {@link WorkspaceSymbolRequest}."""
 
@@ -3432,7 +3432,7 @@ class WorkspaceSymbolRegistrationOptions(CamelSnakeMixin):
     work_done_progress: Optional[bool] = None
 
 
-@dataclass
+@dataclass(slots=True)
 class CodeLensParams(CamelSnakeMixin):
     """The parameters of a {@link CodeLensRequest}."""
 
@@ -3447,7 +3447,7 @@ class CodeLensParams(CamelSnakeMixin):
     the client."""
 
 
-@dataclass
+@dataclass(slots=True)
 class CodeLens(CamelSnakeMixin):
     """A code lens represents a {@link Command command} that should be shown along with
     source text, like the number of references, a way to run tests, etc.
@@ -3468,7 +3468,7 @@ class CodeLens(CamelSnakeMixin):
     (#CodeLensResolveRequest)"""
 
 
-@dataclass
+@dataclass(slots=True)
 class CodeLensOptions(CamelSnakeMixin):
     """Code Lens provider options of a {@link CodeLensRequest}."""
 
@@ -3478,7 +3478,7 @@ class CodeLensOptions(CamelSnakeMixin):
     work_done_progress: Optional[bool] = None
 
 
-@dataclass
+@dataclass(slots=True)
 class CodeLensRegistrationOptions(CamelSnakeMixin):
     """Registration options for a {@link CodeLensRequest}."""
 
@@ -3492,7 +3492,7 @@ class CodeLensRegistrationOptions(CamelSnakeMixin):
     work_done_progress: Optional[bool] = None
 
 
-@dataclass
+@dataclass(slots=True)
 class DocumentLinkParams(CamelSnakeMixin):
     """The parameters of a {@link DocumentLinkRequest}."""
 
@@ -3507,7 +3507,7 @@ class DocumentLinkParams(CamelSnakeMixin):
     the client."""
 
 
-@dataclass
+@dataclass(slots=True)
 class DocumentLink(CamelSnakeMixin):
     """A document link is a range in a text document that links to an internal or external resource, like another
     text document or a web site."""
@@ -3533,7 +3533,7 @@ class DocumentLink(CamelSnakeMixin):
     DocumentLinkRequest and a DocumentLinkResolveRequest."""
 
 
-@dataclass
+@dataclass(slots=True)
 class DocumentLinkOptions(CamelSnakeMixin):
     """Provider options for a {@link DocumentLinkRequest}."""
 
@@ -3543,7 +3543,7 @@ class DocumentLinkOptions(CamelSnakeMixin):
     work_done_progress: Optional[bool] = None
 
 
-@dataclass
+@dataclass(slots=True)
 class DocumentLinkRegistrationOptions(CamelSnakeMixin):
     """Registration options for a {@link DocumentLinkRequest}."""
 
@@ -3557,7 +3557,7 @@ class DocumentLinkRegistrationOptions(CamelSnakeMixin):
     work_done_progress: Optional[bool] = None
 
 
-@dataclass
+@dataclass(slots=True)
 class DocumentFormattingParams(CamelSnakeMixin):
     """The parameters of a {@link DocumentFormattingRequest}."""
 
@@ -3571,14 +3571,14 @@ class DocumentFormattingParams(CamelSnakeMixin):
     """An optional token that a server can use to report work done progress."""
 
 
-@dataclass
+@dataclass(slots=True)
 class DocumentFormattingOptions(CamelSnakeMixin):
     """Provider options for a {@link DocumentFormattingRequest}."""
 
     work_done_progress: Optional[bool] = None
 
 
-@dataclass
+@dataclass(slots=True)
 class DocumentFormattingRegistrationOptions(CamelSnakeMixin):
     """Registration options for a {@link DocumentFormattingRequest}."""
 
@@ -3589,7 +3589,7 @@ class DocumentFormattingRegistrationOptions(CamelSnakeMixin):
     work_done_progress: Optional[bool] = None
 
 
-@dataclass
+@dataclass(slots=True)
 class DocumentRangeFormattingParams(CamelSnakeMixin):
     """The parameters of a {@link DocumentRangeFormattingRequest}."""
 
@@ -3606,14 +3606,14 @@ class DocumentRangeFormattingParams(CamelSnakeMixin):
     """An optional token that a server can use to report work done progress."""
 
 
-@dataclass
+@dataclass(slots=True)
 class DocumentRangeFormattingOptions(CamelSnakeMixin):
     """Provider options for a {@link DocumentRangeFormattingRequest}."""
 
     work_done_progress: Optional[bool] = None
 
 
-@dataclass
+@dataclass(slots=True)
 class DocumentRangeFormattingRegistrationOptions(CamelSnakeMixin):
     """Registration options for a {@link DocumentRangeFormattingRequest}."""
 
@@ -3624,7 +3624,7 @@ class DocumentRangeFormattingRegistrationOptions(CamelSnakeMixin):
     work_done_progress: Optional[bool] = None
 
 
-@dataclass
+@dataclass(slots=True)
 class DocumentOnTypeFormattingParams(CamelSnakeMixin):
     """The parameters of a {@link DocumentOnTypeFormattingRequest}."""
 
@@ -3646,7 +3646,7 @@ class DocumentOnTypeFormattingParams(CamelSnakeMixin):
     """The formatting options."""
 
 
-@dataclass
+@dataclass(slots=True)
 class DocumentOnTypeFormattingOptions(CamelSnakeMixin):
     """Provider options for a {@link DocumentOnTypeFormattingRequest}."""
 
@@ -3657,7 +3657,7 @@ class DocumentOnTypeFormattingOptions(CamelSnakeMixin):
     """More trigger characters."""
 
 
-@dataclass
+@dataclass(slots=True)
 class DocumentOnTypeFormattingRegistrationOptions(CamelSnakeMixin):
     """Registration options for a {@link DocumentOnTypeFormattingRequest}."""
 
@@ -3672,7 +3672,7 @@ class DocumentOnTypeFormattingRegistrationOptions(CamelSnakeMixin):
     """More trigger characters."""
 
 
-@dataclass
+@dataclass(slots=True)
 class RenameParams(CamelSnakeMixin):
     """The parameters of a {@link RenameRequest}."""
 
@@ -3691,7 +3691,7 @@ class RenameParams(CamelSnakeMixin):
     """An optional token that a server can use to report work done progress."""
 
 
-@dataclass
+@dataclass(slots=True)
 class RenameOptions(CamelSnakeMixin):
     """Provider options for a {@link RenameRequest}."""
 
@@ -3704,7 +3704,7 @@ class RenameOptions(CamelSnakeMixin):
     work_done_progress: Optional[bool] = None
 
 
-@dataclass
+@dataclass(slots=True)
 class RenameRegistrationOptions(CamelSnakeMixin):
     """Registration options for a {@link RenameRequest}."""
 
@@ -3721,7 +3721,7 @@ class RenameRegistrationOptions(CamelSnakeMixin):
     work_done_progress: Optional[bool] = None
 
 
-@dataclass
+@dataclass(slots=True)
 class PrepareRenameParams(CamelSnakeMixin):
     text_document: TextDocumentIdentifier
     """The text document."""
@@ -3733,7 +3733,7 @@ class PrepareRenameParams(CamelSnakeMixin):
     """An optional token that a server can use to report work done progress."""
 
 
-@dataclass
+@dataclass(slots=True)
 class ExecuteCommandParams(CamelSnakeMixin):
     """The parameters of a {@link ExecuteCommandRequest}."""
 
@@ -3747,7 +3747,7 @@ class ExecuteCommandParams(CamelSnakeMixin):
     """An optional token that a server can use to report work done progress."""
 
 
-@dataclass
+@dataclass(slots=True)
 class ExecuteCommandOptions(CamelSnakeMixin):
     """The server capabilities of a {@link ExecuteCommandRequest}."""
 
@@ -3757,7 +3757,7 @@ class ExecuteCommandOptions(CamelSnakeMixin):
     work_done_progress: Optional[bool] = None
 
 
-@dataclass
+@dataclass(slots=True)
 class ExecuteCommandRegistrationOptions(CamelSnakeMixin):
     """Registration options for a {@link ExecuteCommandRequest}."""
 
@@ -3767,7 +3767,7 @@ class ExecuteCommandRegistrationOptions(CamelSnakeMixin):
     work_done_progress: Optional[bool] = None
 
 
-@dataclass
+@dataclass(slots=True)
 class ApplyWorkspaceEditParams(CamelSnakeMixin):
     """The parameters passed via a apply workspace edit request."""
 
@@ -3780,7 +3780,7 @@ class ApplyWorkspaceEditParams(CamelSnakeMixin):
     stack to undo the workspace edit."""
 
 
-@dataclass
+@dataclass(slots=True)
 class ApplyWorkspaceEditResult(CamelSnakeMixin):
     """The result returned from the apply workspace edit request.
 
@@ -3802,7 +3802,7 @@ class ApplyWorkspaceEditResult(CamelSnakeMixin):
     if the client signals a `failureHandlingStrategy` in its client capabilities."""
 
 
-@dataclass
+@dataclass(slots=True)
 class WorkDoneProgressBegin(CamelSnakeMixin):
     title: str
     """Mandatory title of the progress operation. Used to briefly inform about
@@ -3833,7 +3833,7 @@ class WorkDoneProgressBegin(CamelSnakeMixin):
     that are not following this rule. The value range is [0, 100]."""
 
 
-@dataclass
+@dataclass(slots=True)
 class WorkDoneProgressReport(CamelSnakeMixin):
     kind: Literal["report"] = "report"
 
@@ -3859,7 +3859,7 @@ class WorkDoneProgressReport(CamelSnakeMixin):
     that are not following this rule. The value range is [0, 100]"""
 
 
-@dataclass
+@dataclass(slots=True)
 class WorkDoneProgressEnd(CamelSnakeMixin):
     kind: Literal["end"] = "end"
 
@@ -3868,25 +3868,25 @@ class WorkDoneProgressEnd(CamelSnakeMixin):
     of the operation."""
 
 
-@dataclass
+@dataclass(slots=True)
 class SetTraceParams(CamelSnakeMixin):
     value: TraceValues
 
 
-@dataclass
+@dataclass(slots=True)
 class LogTraceParams(CamelSnakeMixin):
     message: str
 
     verbose: Optional[str] = None
 
 
-@dataclass
+@dataclass(slots=True)
 class CancelParams(CamelSnakeMixin):
     id: Union[int, str]
     """The request id to cancel."""
 
 
-@dataclass
+@dataclass(slots=True)
 class ProgressParams(CamelSnakeMixin):
     token: ProgressToken
     """The progress token provided by the client or server."""
@@ -3895,7 +3895,7 @@ class ProgressParams(CamelSnakeMixin):
     """The progress data."""
 
 
-@dataclass
+@dataclass(slots=True)
 class LocationLink(CamelSnakeMixin):
     """Represents the connection of two locations. Provides additional metadata over normal {@link Location locations},
     including an origin range."""
@@ -3919,7 +3919,7 @@ class LocationLink(CamelSnakeMixin):
     the definition position."""
 
 
-@dataclass
+@dataclass(slots=True)
 class Range(CamelSnakeMixin):
     """A range in a text document expressed as (zero-based) start and end positions.
 
@@ -4001,7 +4001,7 @@ class Range(CamelSnakeMixin):
         )
 
 
-@dataclass
+@dataclass(slots=True)
 class WorkspaceFoldersChangeEvent(CamelSnakeMixin):
     """The workspace folder change event."""
 
@@ -4012,7 +4012,7 @@ class WorkspaceFoldersChangeEvent(CamelSnakeMixin):
     """The array of the removed workspace folders"""
 
 
-@dataclass
+@dataclass(slots=True)
 class ConfigurationItem(CamelSnakeMixin):
     scope_uri: Optional[str] = None
     """The scope to get the configuration section for."""
@@ -4021,7 +4021,7 @@ class ConfigurationItem(CamelSnakeMixin):
     """The configuration section asked for."""
 
 
-@dataclass
+@dataclass(slots=True)
 class TextDocumentIdentifier(CamelSnakeMixin):
     """A literal to identify a text document in the client."""
 
@@ -4029,7 +4029,7 @@ class TextDocumentIdentifier(CamelSnakeMixin):
     """The text document's uri."""
 
 
-@dataclass
+@dataclass(slots=True)
 class Color(CamelSnakeMixin):
     """Represents a color in RGBA space."""
 
@@ -4046,7 +4046,7 @@ class Color(CamelSnakeMixin):
     """The alpha component of this color in the range [0-1]."""
 
 
-@dataclass
+@dataclass(slots=True)
 @functools.total_ordering
 class Position(CamelSnakeMixin):
     """Position in a text document expressed as zero-based line and character
@@ -4121,7 +4121,7 @@ class Position(CamelSnakeMixin):
         return hash((self.line, self.character))
 
 
-@dataclass
+@dataclass(slots=True)
 class SemanticTokensEdit(CamelSnakeMixin):
     """@since 3.16.0"""
 
@@ -4137,7 +4137,7 @@ class SemanticTokensEdit(CamelSnakeMixin):
     """The elements to insert."""
 
 
-@dataclass
+@dataclass(slots=True)
 class FileCreate(CamelSnakeMixin):
     """Represents information on a file/folder create.
 
@@ -4149,7 +4149,7 @@ class FileCreate(CamelSnakeMixin):
     """A file:// URI for the location of the file/folder being created."""
 
 
-@dataclass
+@dataclass(slots=True)
 class TextDocumentEdit(CamelSnakeMixin):
     """Describes textual changes on a text document. A TextDocumentEdit describes all changes
     on a document version Si and after they are applied move the document to version Si+1.
@@ -4167,7 +4167,7 @@ class TextDocumentEdit(CamelSnakeMixin):
     # Since: 3.16.0 - support for AnnotatedTextEdit. This is guarded using aclient capability.
 
 
-@dataclass
+@dataclass(slots=True)
 class ResourceOperation(CamelSnakeMixin):
     """A generic resource operation."""
 
@@ -4181,7 +4181,7 @@ class ResourceOperation(CamelSnakeMixin):
     # Since: 3.16.0
 
 
-@dataclass
+@dataclass(slots=True)
 class CreateFile(CamelSnakeMixin):
     """Create file operation."""
 
@@ -4201,7 +4201,7 @@ class CreateFile(CamelSnakeMixin):
     # Since: 3.16.0
 
 
-@dataclass
+@dataclass(slots=True)
 class RenameFile(CamelSnakeMixin):
     """Rename file operation"""
 
@@ -4224,7 +4224,7 @@ class RenameFile(CamelSnakeMixin):
     # Since: 3.16.0
 
 
-@dataclass
+@dataclass(slots=True)
 class DeleteFile(CamelSnakeMixin):
     """Delete file operation"""
 
@@ -4244,7 +4244,7 @@ class DeleteFile(CamelSnakeMixin):
     # Since: 3.16.0
 
 
-@dataclass
+@dataclass(slots=True)
 class ChangeAnnotation(CamelSnakeMixin):
     """Additional information that describes document changes.
 
@@ -4265,7 +4265,7 @@ class ChangeAnnotation(CamelSnakeMixin):
     the user interface."""
 
 
-@dataclass
+@dataclass(slots=True)
 class FileOperationFilter(CamelSnakeMixin):
     """A filter to describe in which file operation requests or notifications
     the server is interested in receiving.
@@ -4281,7 +4281,7 @@ class FileOperationFilter(CamelSnakeMixin):
     """A Uri scheme like `file` or `untitled`."""
 
 
-@dataclass
+@dataclass(slots=True)
 class FileRename(CamelSnakeMixin):
     """Represents information on a file/folder rename.
 
@@ -4296,7 +4296,7 @@ class FileRename(CamelSnakeMixin):
     """A file:// URI for the new location of the file/folder being renamed."""
 
 
-@dataclass
+@dataclass(slots=True)
 class FileDelete(CamelSnakeMixin):
     """Represents information on a file/folder delete.
 
@@ -4308,7 +4308,7 @@ class FileDelete(CamelSnakeMixin):
     """A file:// URI for the location of the file/folder being deleted."""
 
 
-@dataclass
+@dataclass(slots=True)
 class InlineValueContext(CamelSnakeMixin):
     """@since 3.17.0"""
 
@@ -4322,7 +4322,7 @@ class InlineValueContext(CamelSnakeMixin):
     Typically the end position of the range denotes the line where the inline values are shown."""
 
 
-@dataclass
+@dataclass(slots=True)
 class InlineValueText(CamelSnakeMixin):
     """Provide inline value as text.
 
@@ -4337,7 +4337,7 @@ class InlineValueText(CamelSnakeMixin):
     """The text of the inline value."""
 
 
-@dataclass
+@dataclass(slots=True)
 class InlineValueVariableLookup(CamelSnakeMixin):
     """Provide inline value through a variable lookup.
     If only a range is specified, the variable name will be extracted from the underlying document.
@@ -4358,7 +4358,7 @@ class InlineValueVariableLookup(CamelSnakeMixin):
     """If specified the name of the variable to look up."""
 
 
-@dataclass
+@dataclass(slots=True)
 class InlineValueEvaluatableExpression(CamelSnakeMixin):
     """Provide an inline value through an expression evaluation.
     If only a range is specified, the expression will be extracted from the underlying document.
@@ -4376,7 +4376,7 @@ class InlineValueEvaluatableExpression(CamelSnakeMixin):
     """If specified the expression overrides the extracted expression."""
 
 
-@dataclass
+@dataclass(slots=True)
 class InlayHintLabelPart(CamelSnakeMixin):
     """An inlay hint label part allows for interactive and composite labels
     of inlay hints.
@@ -4413,7 +4413,7 @@ class InlayHintLabelPart(CamelSnakeMixin):
     might resolve this property late using the resolve request."""
 
 
-@dataclass
+@dataclass(slots=True)
 class MarkupContent(CamelSnakeMixin):
     """A `MarkupContent` literal represents a string value which content is interpreted base on its
     kind flag. Currently the protocol supports `plaintext` and `markdown` as markup kinds.
@@ -4445,7 +4445,7 @@ class MarkupContent(CamelSnakeMixin):
     """The content itself"""
 
 
-@dataclass
+@dataclass(slots=True)
 class FullDocumentDiagnosticReport(CamelSnakeMixin):
     """A diagnostic report with a full set of problems.
 
@@ -4465,7 +4465,7 @@ class FullDocumentDiagnosticReport(CamelSnakeMixin):
     same document."""
 
 
-@dataclass
+@dataclass(slots=True)
 class RelatedFullDocumentDiagnosticReport(CamelSnakeMixin):
     """A full diagnostic report with a set of related documents.
 
@@ -4500,7 +4500,7 @@ class RelatedFullDocumentDiagnosticReport(CamelSnakeMixin):
     same document."""
 
 
-@dataclass
+@dataclass(slots=True)
 class UnchangedDocumentDiagnosticReport(CamelSnakeMixin):
     """A diagnostic report indicating that the last returned
     report is still accurate.
@@ -4520,7 +4520,7 @@ class UnchangedDocumentDiagnosticReport(CamelSnakeMixin):
     provided."""
 
 
-@dataclass
+@dataclass(slots=True)
 class RelatedUnchangedDocumentDiagnosticReport(CamelSnakeMixin):
     """An unchanged diagnostic report with a set of related documents.
 
@@ -4554,7 +4554,7 @@ class RelatedUnchangedDocumentDiagnosticReport(CamelSnakeMixin):
     provided."""
 
 
-@dataclass
+@dataclass(slots=True)
 class PreviousResultId(CamelSnakeMixin):
     """A previous result id in a workspace pull request.
 
@@ -4570,7 +4570,7 @@ class PreviousResultId(CamelSnakeMixin):
     """The value of the previous result id."""
 
 
-@dataclass
+@dataclass(slots=True)
 class NotebookDocument(CamelSnakeMixin):
     """A notebook document.
 
@@ -4598,7 +4598,7 @@ class NotebookDocument(CamelSnakeMixin):
     Note: should always be an object literal (e.g. LSPObject)"""
 
 
-@dataclass
+@dataclass(slots=True)
 class TextDocumentItem(CamelSnakeMixin):
     """An item to transfer a text document from the client to the
     server."""
@@ -4617,7 +4617,7 @@ class TextDocumentItem(CamelSnakeMixin):
     """The content of the opened text document."""
 
 
-@dataclass
+@dataclass(slots=True)
 class VersionedNotebookDocumentIdentifier(CamelSnakeMixin):
     """A versioned notebook document identifier.
 
@@ -4632,7 +4632,7 @@ class VersionedNotebookDocumentIdentifier(CamelSnakeMixin):
     """The notebook document's uri."""
 
 
-@dataclass
+@dataclass(slots=True)
 class NotebookDocumentChangeEventCellsTypeStructureType(CamelSnakeMixin):
     array: NotebookCellArrayChange
     """The change to the cell array."""
@@ -4644,14 +4644,14 @@ class NotebookDocumentChangeEventCellsTypeStructureType(CamelSnakeMixin):
     """Additional closed cell text documents."""
 
 
-@dataclass
+@dataclass(slots=True)
 class NotebookDocumentChangeEventCellsTypeTextContentType(CamelSnakeMixin):
     document: VersionedTextDocumentIdentifier
 
     changes: List[TextDocumentContentChangeEvent]
 
 
-@dataclass
+@dataclass(slots=True)
 class NotebookDocumentChangeEventCellsType(CamelSnakeMixin):
     structure: Optional[NotebookDocumentChangeEventCellsTypeStructureType] = None
     """Changes to the cell structure to add or
@@ -4665,7 +4665,7 @@ class NotebookDocumentChangeEventCellsType(CamelSnakeMixin):
     """Changes to the text content of notebook cells."""
 
 
-@dataclass
+@dataclass(slots=True)
 class NotebookDocumentChangeEvent(CamelSnakeMixin):
     """A change event for a notebook document.
 
@@ -4682,7 +4682,7 @@ class NotebookDocumentChangeEvent(CamelSnakeMixin):
     """Changes to cells"""
 
 
-@dataclass
+@dataclass(slots=True)
 class NotebookDocumentIdentifier(CamelSnakeMixin):
     """A literal to identify a notebook document in the client.
 
@@ -4694,7 +4694,7 @@ class NotebookDocumentIdentifier(CamelSnakeMixin):
     """The notebook document's uri."""
 
 
-@dataclass
+@dataclass(slots=True)
 class Registration(CamelSnakeMixin):
     """General parameters to to register for an notification or to register a provider."""
 
@@ -4709,7 +4709,7 @@ class Registration(CamelSnakeMixin):
     """Options necessary for the registration."""
 
 
-@dataclass
+@dataclass(slots=True)
 class Unregistration(CamelSnakeMixin):
     """General parameters to unregister a request or notification."""
 
@@ -4721,7 +4721,7 @@ class Unregistration(CamelSnakeMixin):
     """The method to unregister for."""
 
 
-@dataclass
+@dataclass(slots=True)
 class ServerCapabilitiesWorkspaceType(CamelSnakeMixin):
     workspace_folders: Optional[WorkspaceFoldersServerCapabilities] = None
     """The server supports workspace folder.
@@ -4736,7 +4736,7 @@ class ServerCapabilitiesWorkspaceType(CamelSnakeMixin):
     # Since: 3.16.0
 
 
-@dataclass
+@dataclass(slots=True)
 class ServerCapabilities(CamelSnakeMixin):
     """Defines the capabilities provided by a language
     server."""
@@ -4895,7 +4895,7 @@ class ServerCapabilities(CamelSnakeMixin):
     """Experimental server capabilities."""
 
 
-@dataclass
+@dataclass(slots=True)
 class VersionedTextDocumentIdentifier(CamelSnakeMixin):
     """A text document identifier to denote a specific version of a text document."""
 
@@ -4906,7 +4906,7 @@ class VersionedTextDocumentIdentifier(CamelSnakeMixin):
     """The text document's uri."""
 
 
-@dataclass
+@dataclass(slots=True)
 class FileEvent(CamelSnakeMixin):
     """An event describing a file change."""
 
@@ -4917,7 +4917,7 @@ class FileEvent(CamelSnakeMixin):
     """The change type."""
 
 
-@dataclass
+@dataclass(slots=True)
 class FileSystemWatcher(CamelSnakeMixin):
     glob_pattern: GlobPattern
     """The glob pattern to watch. See {@link GlobPattern glob pattern} for more detail.
@@ -4931,7 +4931,7 @@ class FileSystemWatcher(CamelSnakeMixin):
     which is 7."""
 
 
-@dataclass
+@dataclass(slots=True)
 class Diagnostic(CamelSnakeMixin):
     """Represents a diagnostic, such as a compiler error or warning. Diagnostic objects
     are only valid in the scope of a resource."""
@@ -4979,7 +4979,7 @@ class Diagnostic(CamelSnakeMixin):
     # Since: 3.16.0
 
 
-@dataclass
+@dataclass(slots=True)
 class CompletionContext(CamelSnakeMixin):
     """Contains additional information about the context in which a completion request is triggered."""
 
@@ -4991,7 +4991,7 @@ class CompletionContext(CamelSnakeMixin):
     Is undefined if `triggerKind !== CompletionTriggerKind.TriggerCharacter`"""
 
 
-@dataclass
+@dataclass(slots=True)
 class CompletionItemLabelDetails(CamelSnakeMixin):
     """Additional details for a completion item label.
 
@@ -5008,7 +5008,7 @@ class CompletionItemLabelDetails(CamelSnakeMixin):
     for fully qualified names and file paths."""
 
 
-@dataclass
+@dataclass(slots=True)
 class InsertReplaceEdit(CamelSnakeMixin):
     """A special text edit to provide an insert and a replace operation.
 
@@ -5026,7 +5026,7 @@ class InsertReplaceEdit(CamelSnakeMixin):
     """The range if the replace is requested."""
 
 
-@dataclass
+@dataclass(slots=True)
 class SignatureHelpContext(CamelSnakeMixin):
     """Additional information about the context in which a signature help request was triggered.
 
@@ -5055,7 +5055,7 @@ class SignatureHelpContext(CamelSnakeMixin):
     the user navigating through available signatures."""
 
 
-@dataclass
+@dataclass(slots=True)
 class SignatureInformation(CamelSnakeMixin):
     """Represents the signature of something callable. A signature
     can have a label, like a function-name, a doc-comment, and
@@ -5081,7 +5081,7 @@ class SignatureInformation(CamelSnakeMixin):
     # Since: 3.16.0
 
 
-@dataclass
+@dataclass(slots=True)
 class ReferenceContext(CamelSnakeMixin):
     """Value-object that contains additional information when
     requesting references."""
@@ -5090,7 +5090,7 @@ class ReferenceContext(CamelSnakeMixin):
     """Include the declaration of the current symbol."""
 
 
-@dataclass
+@dataclass(slots=True)
 class CodeActionContext(CamelSnakeMixin):
     """Contains additional diagnostic information about the context in which
     a {@link CodeActionProvider.provideCodeActions code action} is run."""
@@ -5115,7 +5115,7 @@ class CodeActionContext(CamelSnakeMixin):
     # Since: 3.17.0
 
 
-@dataclass
+@dataclass(slots=True)
 class FormattingOptions(CamelSnakeMixin):
     """Value-object describing what options formatting should use."""
 
@@ -5144,7 +5144,7 @@ class FormattingOptions(CamelSnakeMixin):
     # Since: 3.15.0
 
 
-@dataclass
+@dataclass(slots=True)
 class SemanticTokensLegend(CamelSnakeMixin):
     """@since 3.16.0"""
 
@@ -5157,7 +5157,7 @@ class SemanticTokensLegend(CamelSnakeMixin):
     """The token modifiers a server uses."""
 
 
-@dataclass
+@dataclass(slots=True)
 class OptionalVersionedTextDocumentIdentifier(CamelSnakeMixin):
     """A text document identifier to optionally denote a specific version of a text document."""
 
@@ -5172,7 +5172,7 @@ class OptionalVersionedTextDocumentIdentifier(CamelSnakeMixin):
     truth (as specified with document content ownership)."""
 
 
-@dataclass
+@dataclass(slots=True)
 class AnnotatedTextEdit(CamelSnakeMixin):
     """A special text edit with an additional change annotation.
 
@@ -5191,7 +5191,7 @@ class AnnotatedTextEdit(CamelSnakeMixin):
     empty string."""
 
 
-@dataclass
+@dataclass(slots=True)
 class CreateFileOptions(CamelSnakeMixin):
     """Options to create a file."""
 
@@ -5202,7 +5202,7 @@ class CreateFileOptions(CamelSnakeMixin):
     """Ignore if exists."""
 
 
-@dataclass
+@dataclass(slots=True)
 class RenameFileOptions(CamelSnakeMixin):
     """Rename file options"""
 
@@ -5213,7 +5213,7 @@ class RenameFileOptions(CamelSnakeMixin):
     """Ignores if target exists."""
 
 
-@dataclass
+@dataclass(slots=True)
 class DeleteFileOptions(CamelSnakeMixin):
     """Delete file options"""
 
@@ -5224,7 +5224,7 @@ class DeleteFileOptions(CamelSnakeMixin):
     """Ignore the operation if the file doesn't exist."""
 
 
-@dataclass
+@dataclass(slots=True)
 class FileOperationPattern(CamelSnakeMixin):
     """A pattern to describe in which file operation requests or notifications
     the server is interested in receiving.
@@ -5251,7 +5251,7 @@ class FileOperationPattern(CamelSnakeMixin):
     """Additional options used during matching."""
 
 
-@dataclass
+@dataclass(slots=True)
 class WorkspaceFullDocumentDiagnosticReport(CamelSnakeMixin):
     """A full document diagnostic report for a workspace diagnostic result.
 
@@ -5278,7 +5278,7 @@ class WorkspaceFullDocumentDiagnosticReport(CamelSnakeMixin):
     same document."""
 
 
-@dataclass
+@dataclass(slots=True)
 class WorkspaceUnchangedDocumentDiagnosticReport(CamelSnakeMixin):
     """An unchanged document diagnostic report for a workspace diagnostic result.
 
@@ -5304,7 +5304,7 @@ class WorkspaceUnchangedDocumentDiagnosticReport(CamelSnakeMixin):
     provided."""
 
 
-@dataclass
+@dataclass(slots=True)
 class NotebookCell(CamelSnakeMixin):
     """A notebook cell.
 
@@ -5333,7 +5333,7 @@ class NotebookCell(CamelSnakeMixin):
     if supported by the client."""
 
 
-@dataclass
+@dataclass(slots=True)
 class NotebookCellArrayChange(CamelSnakeMixin):
     """A change describing how to move a `NotebookCell`
     array from state S to S'.
@@ -5352,7 +5352,7 @@ class NotebookCellArrayChange(CamelSnakeMixin):
     """The new cells, if any"""
 
 
-@dataclass
+@dataclass(slots=True)
 class ClientCapabilities(CamelSnakeMixin):
     """Defines the capabilities provided by the client."""
 
@@ -5381,7 +5381,7 @@ class ClientCapabilities(CamelSnakeMixin):
     """Experimental client capabilities."""
 
 
-@dataclass
+@dataclass(slots=True)
 class TextDocumentSyncOptions(CamelSnakeMixin):
     open_close: Optional[bool] = None
     """Open and close notifications are sent to the server. If omitted open close notification should not
@@ -5404,12 +5404,12 @@ class TextDocumentSyncOptions(CamelSnakeMixin):
     sent."""
 
 
-@dataclass
+@dataclass(slots=True)
 class NotebookDocumentSyncOptionsNotebookSelectorType1CellsType(CamelSnakeMixin):
     language: str
 
 
-@dataclass
+@dataclass(slots=True)
 class NotebookDocumentSyncOptionsNotebookSelectorType1(CamelSnakeMixin):
     notebook: Union[str, NotebookDocumentFilter]
     """The notebook to be synced If a string
@@ -5420,12 +5420,12 @@ class NotebookDocumentSyncOptionsNotebookSelectorType1(CamelSnakeMixin):
     """The cells of the matching notebook to be synced."""
 
 
-@dataclass
+@dataclass(slots=True)
 class NotebookDocumentSyncOptionsNotebookSelectorType2CellsType(CamelSnakeMixin):
     language: str
 
 
-@dataclass
+@dataclass(slots=True)
 class NotebookDocumentSyncOptionsNotebookSelectorType2(CamelSnakeMixin):
     cells: List[NotebookDocumentSyncOptionsNotebookSelectorType2CellsType]
     """The cells of the matching notebook to be synced."""
@@ -5436,7 +5436,7 @@ class NotebookDocumentSyncOptionsNotebookSelectorType2(CamelSnakeMixin):
     notebook type. '*' matches every notebook."""
 
 
-@dataclass
+@dataclass(slots=True)
 class NotebookDocumentSyncOptions(CamelSnakeMixin):
     """Options specific to a notebook plus its cells
     to be synced to the server.
@@ -5467,12 +5467,12 @@ class NotebookDocumentSyncOptions(CamelSnakeMixin):
     the server. Will only be honored if mode === `notebook`."""
 
 
-@dataclass
+@dataclass(slots=True)
 class NotebookDocumentSyncRegistrationOptionsNotebookSelectorType1CellsType(CamelSnakeMixin):
     language: str
 
 
-@dataclass
+@dataclass(slots=True)
 class NotebookDocumentSyncRegistrationOptionsNotebookSelectorType1(CamelSnakeMixin):
     notebook: Union[str, NotebookDocumentFilter]
     """The notebook to be synced If a string
@@ -5483,12 +5483,12 @@ class NotebookDocumentSyncRegistrationOptionsNotebookSelectorType1(CamelSnakeMix
     """The cells of the matching notebook to be synced."""
 
 
-@dataclass
+@dataclass(slots=True)
 class NotebookDocumentSyncRegistrationOptionsNotebookSelectorType2CellsType(CamelSnakeMixin):
     language: str
 
 
-@dataclass
+@dataclass(slots=True)
 class NotebookDocumentSyncRegistrationOptionsNotebookSelectorType2(CamelSnakeMixin):
     cells: List[NotebookDocumentSyncRegistrationOptionsNotebookSelectorType2CellsType]
     """The cells of the matching notebook to be synced."""
@@ -5499,7 +5499,7 @@ class NotebookDocumentSyncRegistrationOptionsNotebookSelectorType2(CamelSnakeMix
     notebook type. '*' matches every notebook."""
 
 
-@dataclass
+@dataclass(slots=True)
 class NotebookDocumentSyncRegistrationOptions(CamelSnakeMixin):
     """Registration options specific to a notebook.
 
@@ -5524,7 +5524,7 @@ class NotebookDocumentSyncRegistrationOptions(CamelSnakeMixin):
     the request again. See also Registration#id."""
 
 
-@dataclass
+@dataclass(slots=True)
 class WorkspaceFoldersServerCapabilities(CamelSnakeMixin):
     supported: Optional[bool] = None
     """The server has support for workspace folders"""
@@ -5539,7 +5539,7 @@ class WorkspaceFoldersServerCapabilities(CamelSnakeMixin):
     using the `client/unregisterCapability` request."""
 
 
-@dataclass
+@dataclass(slots=True)
 class FileOperationOptions(CamelSnakeMixin):
     """Options for notifications/requests for user operations on files.
 
@@ -5566,7 +5566,7 @@ class FileOperationOptions(CamelSnakeMixin):
     """The server is interested in receiving willDeleteFiles file requests."""
 
 
-@dataclass
+@dataclass(slots=True)
 class CodeDescription(CamelSnakeMixin):
     """Structure to capture a description for an error code.
 
@@ -5578,7 +5578,7 @@ class CodeDescription(CamelSnakeMixin):
     """An URI to open with more information about the diagnostic error."""
 
 
-@dataclass
+@dataclass(slots=True)
 class DiagnosticRelatedInformation(CamelSnakeMixin):
     """Represents a related message and source code location for a diagnostic. This should be
     used to point to code locations that cause or related to a diagnostics, e.g when duplicating
@@ -5591,7 +5591,7 @@ class DiagnosticRelatedInformation(CamelSnakeMixin):
     """The message of this related diagnostic information."""
 
 
-@dataclass
+@dataclass(slots=True)
 class ParameterInformation(CamelSnakeMixin):
     """Represents a parameter of a callable-signature. A parameter can
     have a label and a doc-comment."""
@@ -5611,7 +5611,7 @@ class ParameterInformation(CamelSnakeMixin):
     in the UI but can be omitted."""
 
 
-@dataclass
+@dataclass(slots=True)
 class NotebookCellTextDocumentFilter(CamelSnakeMixin):
     """A notebook cell text document filter denotes a cell text
     document by different properties.
@@ -5633,7 +5633,7 @@ class NotebookCellTextDocumentFilter(CamelSnakeMixin):
     notebook cell document. '*' matches every language."""
 
 
-@dataclass
+@dataclass(slots=True)
 class FileOperationPatternOptions(CamelSnakeMixin):
     """Matching options for the file operation pattern.
 
@@ -5645,7 +5645,7 @@ class FileOperationPatternOptions(CamelSnakeMixin):
     """The pattern should be matched ignoring casing."""
 
 
-@dataclass
+@dataclass(slots=True)
 class ExecutionSummary(CamelSnakeMixin):
     execution_order: int
     """A strict monotonically increasing value
@@ -5657,7 +5657,7 @@ class ExecutionSummary(CamelSnakeMixin):
     not if known by the client."""
 
 
-@dataclass
+@dataclass(slots=True)
 class WorkspaceClientCapabilities(CamelSnakeMixin):
     """Workspace specific client capabilities."""
 
@@ -5734,7 +5734,7 @@ class WorkspaceClientCapabilities(CamelSnakeMixin):
     # Since: 3.17.0.
 
 
-@dataclass
+@dataclass(slots=True)
 class TextDocumentClientCapabilities(CamelSnakeMixin):
     """Text document specific client capabilities."""
 
@@ -5872,7 +5872,7 @@ class TextDocumentClientCapabilities(CamelSnakeMixin):
     # Since: 3.17.0
 
 
-@dataclass
+@dataclass(slots=True)
 class NotebookDocumentClientCapabilities(CamelSnakeMixin):
     """Capabilities specific to the notebook document support.
 
@@ -5887,7 +5887,7 @@ class NotebookDocumentClientCapabilities(CamelSnakeMixin):
     # Since: 3.17.0
 
 
-@dataclass
+@dataclass(slots=True)
 class WindowClientCapabilities(CamelSnakeMixin):
     work_done_progress: Optional[bool] = None
     """It indicates whether the client supports server initiated
@@ -5914,7 +5914,7 @@ class WindowClientCapabilities(CamelSnakeMixin):
     # Since: 3.16.0
 
 
-@dataclass
+@dataclass(slots=True)
 class GeneralClientCapabilitiesStaleRequestSupportType(CamelSnakeMixin):
     cancel: bool
     """The client will actively cancel the request."""
@@ -5925,7 +5925,7 @@ class GeneralClientCapabilitiesStaleRequestSupportType(CamelSnakeMixin):
     response with error code `ContentModified`"""
 
 
-@dataclass
+@dataclass(slots=True)
 class GeneralClientCapabilities(CamelSnakeMixin):
     """General client capabilities.
 
@@ -5976,7 +5976,7 @@ class GeneralClientCapabilities(CamelSnakeMixin):
     # Since: 3.17.0
 
 
-@dataclass
+@dataclass(slots=True)
 class RelativePattern(CamelSnakeMixin):
     """A relative pattern is a helper to construct glob patterns that are matched
     relatively to a base URI. The common value for a `baseUri` is a workspace
@@ -5994,7 +5994,7 @@ class RelativePattern(CamelSnakeMixin):
     """The actual glob pattern;"""
 
 
-@dataclass
+@dataclass(slots=True)
 class WorkspaceEditClientCapabilitiesChangeAnnotationSupportType(CamelSnakeMixin):
     groups_on_label: Optional[bool] = None
     """Whether the client groups edits with equal labels into tree nodes,
@@ -6002,7 +6002,7 @@ class WorkspaceEditClientCapabilitiesChangeAnnotationSupportType(CamelSnakeMixin
     be a tree node."""
 
 
-@dataclass
+@dataclass(slots=True)
 class WorkspaceEditClientCapabilities(CamelSnakeMixin):
     document_changes: Optional[bool] = None
     """The client supports versioned document changes in `WorkspaceEdit`s"""
@@ -6039,13 +6039,13 @@ class WorkspaceEditClientCapabilities(CamelSnakeMixin):
     # Since: 3.16.0
 
 
-@dataclass
+@dataclass(slots=True)
 class DidChangeConfigurationClientCapabilities(CamelSnakeMixin):
     dynamic_registration: Optional[bool] = None
     """Did change configuration notification supports dynamic registration."""
 
 
-@dataclass
+@dataclass(slots=True)
 class DidChangeWatchedFilesClientCapabilities(CamelSnakeMixin):
     dynamic_registration: Optional[bool] = None
     """Did change watched files notification supports dynamic registration. Please note
@@ -6060,7 +6060,7 @@ class DidChangeWatchedFilesClientCapabilities(CamelSnakeMixin):
     # Since: 3.17.0
 
 
-@dataclass
+@dataclass(slots=True)
 class WorkspaceSymbolClientCapabilitiesSymbolKindType(CamelSnakeMixin):
     value_set: Optional[List[SymbolKind]] = None
     """The symbol kind values the client supports. When this
@@ -6073,20 +6073,20 @@ class WorkspaceSymbolClientCapabilitiesSymbolKindType(CamelSnakeMixin):
     the initial version of the protocol."""
 
 
-@dataclass
+@dataclass(slots=True)
 class WorkspaceSymbolClientCapabilitiesTagSupportType(CamelSnakeMixin):
     value_set: List[SymbolTag]
     """The tags supported by the client."""
 
 
-@dataclass
+@dataclass(slots=True)
 class WorkspaceSymbolClientCapabilitiesResolveSupportType(CamelSnakeMixin):
     properties: List[str]
     """The properties that a client can resolve lazily. Usually
     `location.range`"""
 
 
-@dataclass
+@dataclass(slots=True)
 class WorkspaceSymbolClientCapabilities(CamelSnakeMixin):
     """Client capabilities for a {@link WorkspaceSymbolRequest}."""
 
@@ -6112,7 +6112,7 @@ class WorkspaceSymbolClientCapabilities(CamelSnakeMixin):
     # Since: 3.17.0
 
 
-@dataclass
+@dataclass(slots=True)
 class ExecuteCommandClientCapabilities(CamelSnakeMixin):
     """The client capabilities of a {@link ExecuteCommandRequest}."""
 
@@ -6120,7 +6120,7 @@ class ExecuteCommandClientCapabilities(CamelSnakeMixin):
     """Execute command supports dynamic registration."""
 
 
-@dataclass
+@dataclass(slots=True)
 class SemanticTokensWorkspaceClientCapabilities(CamelSnakeMixin):
     """@since 3.16.0"""
 
@@ -6136,7 +6136,7 @@ class SemanticTokensWorkspaceClientCapabilities(CamelSnakeMixin):
     wide change that requires such a calculation."""
 
 
-@dataclass
+@dataclass(slots=True)
 class CodeLensWorkspaceClientCapabilities(CamelSnakeMixin):
     """@since 3.16.0"""
 
@@ -6152,7 +6152,7 @@ class CodeLensWorkspaceClientCapabilities(CamelSnakeMixin):
     change that requires such a calculation."""
 
 
-@dataclass
+@dataclass(slots=True)
 class FileOperationClientCapabilities(CamelSnakeMixin):
     """Capabilities relating to events from file operations by the user in the client.
 
@@ -6185,7 +6185,7 @@ class FileOperationClientCapabilities(CamelSnakeMixin):
     """The client has support for sending willDeleteFiles requests."""
 
 
-@dataclass
+@dataclass(slots=True)
 class InlineValueWorkspaceClientCapabilities(CamelSnakeMixin):
     """Client workspace capabilities specific to inline values.
 
@@ -6203,7 +6203,7 @@ class InlineValueWorkspaceClientCapabilities(CamelSnakeMixin):
     change that requires such a calculation."""
 
 
-@dataclass
+@dataclass(slots=True)
 class InlayHintWorkspaceClientCapabilities(CamelSnakeMixin):
     """Client workspace capabilities specific to inlay hints.
 
@@ -6221,7 +6221,7 @@ class InlayHintWorkspaceClientCapabilities(CamelSnakeMixin):
     change that requires such a calculation."""
 
 
-@dataclass
+@dataclass(slots=True)
 class DiagnosticWorkspaceClientCapabilities(CamelSnakeMixin):
     """Workspace client capabilities specific to diagnostic pull requests.
 
@@ -6239,7 +6239,7 @@ class DiagnosticWorkspaceClientCapabilities(CamelSnakeMixin):
     change that requires such a calculation."""
 
 
-@dataclass
+@dataclass(slots=True)
 class TextDocumentSyncClientCapabilities(CamelSnakeMixin):
     dynamic_registration: Optional[bool] = None
     """Whether text document synchronization supports dynamic registration."""
@@ -6256,24 +6256,24 @@ class TextDocumentSyncClientCapabilities(CamelSnakeMixin):
     """The client supports did save notifications."""
 
 
-@dataclass
+@dataclass(slots=True)
 class CompletionClientCapabilitiesCompletionItemTypeTagSupportType(CamelSnakeMixin):
     value_set: List[CompletionItemTag]
     """The tags supported by the client."""
 
 
-@dataclass
+@dataclass(slots=True)
 class CompletionClientCapabilitiesCompletionItemTypeResolveSupportType(CamelSnakeMixin):
     properties: List[str]
     """The properties that a client can resolve lazily."""
 
 
-@dataclass
+@dataclass(slots=True)
 class CompletionClientCapabilitiesCompletionItemTypeInsertTextModeSupportType(CamelSnakeMixin):
     value_set: List[InsertTextMode]
 
 
-@dataclass
+@dataclass(slots=True)
 class CompletionClientCapabilitiesCompletionItemType(CamelSnakeMixin):
     snippet_support: Optional[bool] = None
     """Client supports snippets as insert text.
@@ -6336,7 +6336,7 @@ class CompletionClientCapabilitiesCompletionItemType(CamelSnakeMixin):
     # Since: 3.17.0
 
 
-@dataclass
+@dataclass(slots=True)
 class CompletionClientCapabilitiesCompletionItemKindType(CamelSnakeMixin):
     value_set: Optional[List[CompletionItemKind]] = None
     """The completion item kind values the client supports. When this
@@ -6349,7 +6349,7 @@ class CompletionClientCapabilitiesCompletionItemKindType(CamelSnakeMixin):
     the initial version of the protocol."""
 
 
-@dataclass
+@dataclass(slots=True)
 class CompletionClientCapabilitiesCompletionListType(CamelSnakeMixin):
     item_defaults: Optional[List[str]] = None
     """The client supports the following itemDefaults on
@@ -6363,7 +6363,7 @@ class CompletionClientCapabilitiesCompletionListType(CamelSnakeMixin):
     # Since: 3.17.0
 
 
-@dataclass
+@dataclass(slots=True)
 class CompletionClientCapabilities(CamelSnakeMixin):
     """Completion client capabilities"""
 
@@ -6396,7 +6396,7 @@ class CompletionClientCapabilities(CamelSnakeMixin):
     # Since: 3.17.0
 
 
-@dataclass
+@dataclass(slots=True)
 class HoverClientCapabilities(CamelSnakeMixin):
     dynamic_registration: Optional[bool] = None
     """Whether hover supports dynamic registration."""
@@ -6406,7 +6406,7 @@ class HoverClientCapabilities(CamelSnakeMixin):
     property. The order describes the preferred format of the client."""
 
 
-@dataclass
+@dataclass(slots=True)
 class SignatureHelpClientCapabilitiesSignatureInformationTypeParameterInformationType(CamelSnakeMixin):
     label_offset_support: Optional[bool] = None
     """The client supports processing label offsets instead of a
@@ -6416,7 +6416,7 @@ class SignatureHelpClientCapabilitiesSignatureInformationTypeParameterInformatio
     # Since: 3.14.0
 
 
-@dataclass
+@dataclass(slots=True)
 class SignatureHelpClientCapabilitiesSignatureInformationType(CamelSnakeMixin):
     documentation_format: Optional[List[MarkupKind]] = None
     """Client supports the following content formats for the documentation
@@ -6435,7 +6435,7 @@ class SignatureHelpClientCapabilitiesSignatureInformationType(CamelSnakeMixin):
     # Since: 3.16.0
 
 
-@dataclass
+@dataclass(slots=True)
 class SignatureHelpClientCapabilities(CamelSnakeMixin):
     """Client Capabilities for a {@link SignatureHelpRequest}."""
 
@@ -6456,7 +6456,7 @@ class SignatureHelpClientCapabilities(CamelSnakeMixin):
     # Since: 3.15.0
 
 
-@dataclass
+@dataclass(slots=True)
 class DeclarationClientCapabilities(CamelSnakeMixin):
     """@since 3.14.0"""
 
@@ -6471,7 +6471,7 @@ class DeclarationClientCapabilities(CamelSnakeMixin):
     """The client supports additional metadata in the form of declaration links."""
 
 
-@dataclass
+@dataclass(slots=True)
 class DefinitionClientCapabilities(CamelSnakeMixin):
     """Client Capabilities for a {@link DefinitionRequest}."""
 
@@ -6485,7 +6485,7 @@ class DefinitionClientCapabilities(CamelSnakeMixin):
     # Since: 3.14.0
 
 
-@dataclass
+@dataclass(slots=True)
 class TypeDefinitionClientCapabilities(CamelSnakeMixin):
     """Since 3.6.0"""
 
@@ -6500,7 +6500,7 @@ class TypeDefinitionClientCapabilities(CamelSnakeMixin):
     Since 3.14.0"""
 
 
-@dataclass
+@dataclass(slots=True)
 class ImplementationClientCapabilities(CamelSnakeMixin):
     """@since 3.6.0"""
 
@@ -6518,7 +6518,7 @@ class ImplementationClientCapabilities(CamelSnakeMixin):
     # Since: 3.14.0
 
 
-@dataclass
+@dataclass(slots=True)
 class ReferenceClientCapabilities(CamelSnakeMixin):
     """Client Capabilities for a {@link ReferencesRequest}."""
 
@@ -6526,7 +6526,7 @@ class ReferenceClientCapabilities(CamelSnakeMixin):
     """Whether references supports dynamic registration."""
 
 
-@dataclass
+@dataclass(slots=True)
 class DocumentHighlightClientCapabilities(CamelSnakeMixin):
     """Client Capabilities for a {@link DocumentHighlightRequest}."""
 
@@ -6534,7 +6534,7 @@ class DocumentHighlightClientCapabilities(CamelSnakeMixin):
     """Whether document highlight supports dynamic registration."""
 
 
-@dataclass
+@dataclass(slots=True)
 class DocumentSymbolClientCapabilitiesSymbolKindType(CamelSnakeMixin):
     value_set: Optional[List[SymbolKind]] = None
     """The symbol kind values the client supports. When this
@@ -6547,13 +6547,13 @@ class DocumentSymbolClientCapabilitiesSymbolKindType(CamelSnakeMixin):
     the initial version of the protocol."""
 
 
-@dataclass
+@dataclass(slots=True)
 class DocumentSymbolClientCapabilitiesTagSupportType(CamelSnakeMixin):
     value_set: List[SymbolTag]
     """The tags supported by the client."""
 
 
-@dataclass
+@dataclass(slots=True)
 class DocumentSymbolClientCapabilities(CamelSnakeMixin):
     """Client Capabilities for a {@link DocumentSymbolRequest}."""
 
@@ -6583,7 +6583,7 @@ class DocumentSymbolClientCapabilities(CamelSnakeMixin):
     # Since: 3.16.0
 
 
-@dataclass
+@dataclass(slots=True)
 class CodeActionClientCapabilitiesCodeActionLiteralSupportTypeCodeActionKindType(CamelSnakeMixin):
     value_set: List[Union[CodeActionKind, str]]
     """The code action kind values the client supports. When this
@@ -6592,20 +6592,20 @@ class CodeActionClientCapabilitiesCodeActionLiteralSupportTypeCodeActionKindType
     to a default value when unknown."""
 
 
-@dataclass
+@dataclass(slots=True)
 class CodeActionClientCapabilitiesCodeActionLiteralSupportType(CamelSnakeMixin):
     code_action_kind: CodeActionClientCapabilitiesCodeActionLiteralSupportTypeCodeActionKindType
     """The code action kind is support with the following value
     set."""
 
 
-@dataclass
+@dataclass(slots=True)
 class CodeActionClientCapabilitiesResolveSupportType(CamelSnakeMixin):
     properties: List[str]
     """The properties that a client can resolve lazily."""
 
 
-@dataclass
+@dataclass(slots=True)
 class CodeActionClientCapabilities(CamelSnakeMixin):
     """The Client Capabilities of a {@link CodeActionRequest}."""
 
@@ -6658,7 +6658,7 @@ class CodeActionClientCapabilities(CamelSnakeMixin):
     # Since: 3.16.0
 
 
-@dataclass
+@dataclass(slots=True)
 class CodeLensClientCapabilities(CamelSnakeMixin):
     """The client capabilities  of a {@link CodeLensRequest}."""
 
@@ -6666,7 +6666,7 @@ class CodeLensClientCapabilities(CamelSnakeMixin):
     """Whether code lens supports dynamic registration."""
 
 
-@dataclass
+@dataclass(slots=True)
 class DocumentLinkClientCapabilities(CamelSnakeMixin):
     """The client capabilities of a {@link DocumentLinkRequest}."""
 
@@ -6680,7 +6680,7 @@ class DocumentLinkClientCapabilities(CamelSnakeMixin):
     # Since: 3.15.0
 
 
-@dataclass
+@dataclass(slots=True)
 class DocumentColorClientCapabilities(CamelSnakeMixin):
     dynamic_registration: Optional[bool] = None
     """Whether implementation supports dynamic registration. If this is set to `true`
@@ -6688,7 +6688,7 @@ class DocumentColorClientCapabilities(CamelSnakeMixin):
     for the corresponding server capability as well."""
 
 
-@dataclass
+@dataclass(slots=True)
 class DocumentFormattingClientCapabilities(CamelSnakeMixin):
     """Client capabilities of a {@link DocumentFormattingRequest}."""
 
@@ -6696,7 +6696,7 @@ class DocumentFormattingClientCapabilities(CamelSnakeMixin):
     """Whether formatting supports dynamic registration."""
 
 
-@dataclass
+@dataclass(slots=True)
 class DocumentRangeFormattingClientCapabilities(CamelSnakeMixin):
     """Client capabilities of a {@link DocumentRangeFormattingRequest}."""
 
@@ -6704,7 +6704,7 @@ class DocumentRangeFormattingClientCapabilities(CamelSnakeMixin):
     """Whether range formatting supports dynamic registration."""
 
 
-@dataclass
+@dataclass(slots=True)
 class DocumentOnTypeFormattingClientCapabilities(CamelSnakeMixin):
     """Client capabilities of a {@link DocumentOnTypeFormattingRequest}."""
 
@@ -6712,7 +6712,7 @@ class DocumentOnTypeFormattingClientCapabilities(CamelSnakeMixin):
     """Whether on type formatting supports dynamic registration."""
 
 
-@dataclass
+@dataclass(slots=True)
 class RenameClientCapabilities(CamelSnakeMixin):
     dynamic_registration: Optional[bool] = None
     """Whether rename supports dynamic registration."""
@@ -6744,7 +6744,7 @@ class RenameClientCapabilities(CamelSnakeMixin):
     # Since: 3.16.0
 
 
-@dataclass
+@dataclass(slots=True)
 class FoldingRangeClientCapabilitiesFoldingRangeKindType(CamelSnakeMixin):
     value_set: Optional[List[Union[FoldingRangeKind, str]]] = None
     """The folding range kind values the client supports. When this
@@ -6753,7 +6753,7 @@ class FoldingRangeClientCapabilitiesFoldingRangeKindType(CamelSnakeMixin):
     to a default value when unknown."""
 
 
-@dataclass
+@dataclass(slots=True)
 class FoldingRangeClientCapabilitiesFoldingRangeType(CamelSnakeMixin):
     collapsed_text: Optional[bool] = None
     """If set, the client signals that it supports setting collapsedText on
@@ -6763,7 +6763,7 @@ class FoldingRangeClientCapabilitiesFoldingRangeType(CamelSnakeMixin):
     # Since: 3.17.0
 
 
-@dataclass
+@dataclass(slots=True)
 class FoldingRangeClientCapabilities(CamelSnakeMixin):
     dynamic_registration: Optional[bool] = None
     """Whether implementation supports dynamic registration for folding range
@@ -6794,7 +6794,7 @@ class FoldingRangeClientCapabilities(CamelSnakeMixin):
     # Since: 3.17.0
 
 
-@dataclass
+@dataclass(slots=True)
 class SelectionRangeClientCapabilities(CamelSnakeMixin):
     dynamic_registration: Optional[bool] = None
     """Whether implementation supports dynamic registration for selection range providers. If this is set to `true`
@@ -6802,13 +6802,13 @@ class SelectionRangeClientCapabilities(CamelSnakeMixin):
     capability as well."""
 
 
-@dataclass
+@dataclass(slots=True)
 class PublishDiagnosticsClientCapabilitiesTagSupportType(CamelSnakeMixin):
     value_set: List[DiagnosticTag]
     """The tags supported by the client."""
 
 
-@dataclass
+@dataclass(slots=True)
 class PublishDiagnosticsClientCapabilities(CamelSnakeMixin):
     """The publish diagnostic client capabilities."""
 
@@ -6844,7 +6844,7 @@ class PublishDiagnosticsClientCapabilities(CamelSnakeMixin):
     # Since: 3.16.0
 
 
-@dataclass
+@dataclass(slots=True)
 class CallHierarchyClientCapabilities(CamelSnakeMixin):
     """@since 3.16.0"""
 
@@ -6856,14 +6856,14 @@ class CallHierarchyClientCapabilities(CamelSnakeMixin):
     return value for the corresponding server capability as well."""
 
 
-@dataclass
+@dataclass(slots=True)
 class SemanticTokensClientCapabilitiesRequestsTypeFullType1(CamelSnakeMixin):
     delta: Optional[bool] = None
     """The client will send the `textDocument/semanticTokens/full/delta` request if
     the server provides a corresponding handler."""
 
 
-@dataclass
+@dataclass(slots=True)
 class SemanticTokensClientCapabilitiesRequestsType(CamelSnakeMixin):
     range: Optional[Union[bool, Any]] = None
     """The client will send the `textDocument/semanticTokens/range` request if
@@ -6874,7 +6874,7 @@ class SemanticTokensClientCapabilitiesRequestsType(CamelSnakeMixin):
     the server provides a corresponding handler."""
 
 
-@dataclass
+@dataclass(slots=True)
 class SemanticTokensClientCapabilities(CamelSnakeMixin):
     """@since 3.16.0"""
 
@@ -6933,7 +6933,7 @@ class SemanticTokensClientCapabilities(CamelSnakeMixin):
     # Since: 3.17.0
 
 
-@dataclass
+@dataclass(slots=True)
 class LinkedEditingRangeClientCapabilities(CamelSnakeMixin):
     """Client capabilities for the linked editing range request.
 
@@ -6947,7 +6947,7 @@ class LinkedEditingRangeClientCapabilities(CamelSnakeMixin):
     return value for the corresponding server capability as well."""
 
 
-@dataclass
+@dataclass(slots=True)
 class MonikerClientCapabilities(CamelSnakeMixin):
     """Client capabilities specific to the moniker request.
 
@@ -6961,7 +6961,7 @@ class MonikerClientCapabilities(CamelSnakeMixin):
     for the corresponding server capability as well."""
 
 
-@dataclass
+@dataclass(slots=True)
 class TypeHierarchyClientCapabilities(CamelSnakeMixin):
     """@since 3.17.0"""
 
@@ -6973,7 +6973,7 @@ class TypeHierarchyClientCapabilities(CamelSnakeMixin):
     return value for the corresponding server capability as well."""
 
 
-@dataclass
+@dataclass(slots=True)
 class InlineValueClientCapabilities(CamelSnakeMixin):
     """Client capabilities specific to inline values.
 
@@ -6985,13 +6985,13 @@ class InlineValueClientCapabilities(CamelSnakeMixin):
     """Whether implementation supports dynamic registration for inline value providers."""
 
 
-@dataclass
+@dataclass(slots=True)
 class InlayHintClientCapabilitiesResolveSupportType(CamelSnakeMixin):
     properties: List[str]
     """The properties that a client can resolve lazily."""
 
 
-@dataclass
+@dataclass(slots=True)
 class InlayHintClientCapabilities(CamelSnakeMixin):
     """Inlay hint client capabilities.
 
@@ -7007,7 +7007,7 @@ class InlayHintClientCapabilities(CamelSnakeMixin):
     hint."""
 
 
-@dataclass
+@dataclass(slots=True)
 class DiagnosticClientCapabilities(CamelSnakeMixin):
     """Client capabilities specific to diagnostic pull requests.
 
@@ -7024,7 +7024,7 @@ class DiagnosticClientCapabilities(CamelSnakeMixin):
     """Whether the clients supports related documents for document diagnostic pulls."""
 
 
-@dataclass
+@dataclass(slots=True)
 class NotebookDocumentSyncClientCapabilities(CamelSnakeMixin):
     """Notebook specific client capabilities.
 
@@ -7042,7 +7042,7 @@ class NotebookDocumentSyncClientCapabilities(CamelSnakeMixin):
     """The client supports sending execution summary data per cell."""
 
 
-@dataclass
+@dataclass(slots=True)
 class ShowMessageRequestClientCapabilitiesMessageActionItemType(CamelSnakeMixin):
     additional_properties_support: Optional[bool] = None
     """Whether the client supports additional attributes which
@@ -7050,7 +7050,7 @@ class ShowMessageRequestClientCapabilitiesMessageActionItemType(CamelSnakeMixin)
     request's response."""
 
 
-@dataclass
+@dataclass(slots=True)
 class ShowMessageRequestClientCapabilities(CamelSnakeMixin):
     """Show message request client capabilities"""
 
@@ -7058,7 +7058,7 @@ class ShowMessageRequestClientCapabilities(CamelSnakeMixin):
     """Capabilities specific to the `MessageActionItem` type."""
 
 
-@dataclass
+@dataclass(slots=True)
 class ShowDocumentClientCapabilities(CamelSnakeMixin):
     """Client capabilities for the showDocument request.
 
@@ -7071,7 +7071,7 @@ class ShowDocumentClientCapabilities(CamelSnakeMixin):
     request."""
 
 
-@dataclass
+@dataclass(slots=True)
 class RegularExpressionsClientCapabilities(CamelSnakeMixin):
     """Client capabilities specific to regular expressions.
 
@@ -7086,7 +7086,7 @@ class RegularExpressionsClientCapabilities(CamelSnakeMixin):
     """The engine's version."""
 
 
-@dataclass
+@dataclass(slots=True)
 class MarkdownClientCapabilities(CamelSnakeMixin):
     """Client capabilities specific to the used markdown parser.
 
@@ -7108,7 +7108,7 @@ class MarkdownClientCapabilities(CamelSnakeMixin):
     # Since: 3.17.0
 
 
-@dataclass
+@dataclass(slots=True)
 class TextDocumentColorPresentationOptions(CamelSnakeMixin):
     work_done_progress: Optional[bool] = None
 
@@ -7188,14 +7188,14 @@ pull request.
 # Since: 3.17.0
 
 
-@dataclass
+@dataclass(slots=True)
 class PrepareRenameResultType1(CamelSnakeMixin):
     range: Range
 
     placeholder: str
 
 
-@dataclass
+@dataclass(slots=True)
 class PrepareRenameResultType2(CamelSnakeMixin):
     default_behavior: bool
 
@@ -7220,7 +7220,7 @@ WorkspaceDocumentDiagnosticReport = Union[
 # Since: 3.17.0
 
 
-@dataclass
+@dataclass(slots=True)
 class TextDocumentContentChangeEventType1(CamelSnakeMixin):
     range: Range
     """The range of the document that changed."""
@@ -7234,7 +7234,7 @@ class TextDocumentContentChangeEventType1(CamelSnakeMixin):
     @deprecated use range instead."""
 
 
-@dataclass
+@dataclass(slots=True)
 class TextDocumentContentChangeEventType2(CamelSnakeMixin):
     text: str
     """The new text of the whole document."""
@@ -7245,7 +7245,7 @@ TextDocumentContentChangeEvent = Union[TextDocumentContentChangeEventType1, Text
 it is considered to be the full content of the document."""
 
 
-@dataclass
+@dataclass(slots=True)
 class MarkedStringType1(CamelSnakeMixin):
     language: str
 
@@ -7267,7 +7267,7 @@ Note that markdown strings will be sanitized - that means html will be escaped.
 @deprecated use MarkupContent instead."""
 
 
-@dataclass
+@dataclass(slots=True)
 class TextDocumentFilterType1(CamelSnakeMixin):
     language: str
     """A language id, like `typescript`."""
@@ -7279,7 +7279,7 @@ class TextDocumentFilterType1(CamelSnakeMixin):
     """A glob pattern, like `*.{ts,js}`."""
 
 
-@dataclass
+@dataclass(slots=True)
 class TextDocumentFilterType2(CamelSnakeMixin):
     scheme: str
     """A Uri {@link Uri.scheme scheme}, like `file` or `untitled`."""
@@ -7291,7 +7291,7 @@ class TextDocumentFilterType2(CamelSnakeMixin):
     """A glob pattern, like `*.{ts,js}`."""
 
 
-@dataclass
+@dataclass(slots=True)
 class TextDocumentFilterType3(CamelSnakeMixin):
     pattern: str
     """A glob pattern, like `*.{ts,js}`."""
@@ -7323,7 +7323,7 @@ Glob patterns can have the following syntax:
 # Since: 3.17.0
 
 
-@dataclass
+@dataclass(slots=True)
 class NotebookDocumentFilterType1(CamelSnakeMixin):
     notebook_type: str
     """The type of the enclosing notebook."""
@@ -7335,7 +7335,7 @@ class NotebookDocumentFilterType1(CamelSnakeMixin):
     """A glob pattern."""
 
 
-@dataclass
+@dataclass(slots=True)
 class NotebookDocumentFilterType2(CamelSnakeMixin):
     scheme: str
     """A Uri {@link Uri.scheme scheme}, like `file` or `untitled`."""
@@ -7347,7 +7347,7 @@ class NotebookDocumentFilterType2(CamelSnakeMixin):
     """A glob pattern."""
 
 
-@dataclass
+@dataclass(slots=True)
 class NotebookDocumentFilterType3(CamelSnakeMixin):
     pattern: str
     """A glob pattern."""
