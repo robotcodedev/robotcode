@@ -26,7 +26,7 @@ class _Visitor(Visitor):
     def __init__(self, parent: RobotFoldingRangeProtocolPart) -> None:
         super().__init__()
         self.parent = parent
-        self.line_folding_only = True
+        self.line_folding_only = False
         if (
             self.parent.parent.client_capabilities
             and self.parent.parent.client_capabilities.text_document
