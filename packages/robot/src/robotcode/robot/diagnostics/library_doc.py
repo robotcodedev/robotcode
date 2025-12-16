@@ -2192,6 +2192,42 @@ def find_variables(
     )
 
 
+def _extract_variable_line_numbers_from_python_source(source_path: str) -> Dict[str, Tuple[int, int, int]]:
+    variable_info: Dict[str, Tuple[int, int, int]] = {}
+
+    try:
+        with open(source_path, "r", encoding="utf-8") as f:
+            source_code = f.read()
+
+        tree = ast.parse(source_code, filename=source_path)
+
+        # Find all module-level assignments
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Assign):
+                # Only consider module-level assignments (col_offset == 0)
+                if node.col_offset == 0 and node.lineno:
+                    for target in node.targets:
+                        if isinstance(target, ast.Name):
+                            # Simple assignment: VAR = value
+                            variable_info[target.id] = (node.lineno, target.col_offset, len(target.id))
+                        elif isinstance(target, ast.Tuple):
+                            # Tuple unpacking: a, b = values
+                            for elt in target.elts:
+                                if isinstance(elt, ast.Name):
+                                    variable_info[elt.id] = (node.lineno, elt.col_offset, len(elt.id))
+            elif isinstance(node, ast.AnnAssign):
+                # Annotated assignment: VAR: int = value
+                if node.col_offset == 0 and node.lineno:
+                    if isinstance(node.target, ast.Name):
+                        variable_info[node.target.id] = (node.lineno, node.target.col_offset, len(node.target.id))
+    except (OSError, SyntaxError):
+        # If we can't read or parse the file, return empty dict
+        # Variables will fall back to default line_no=1, col_offset=0
+        pass
+
+    return variable_info
+
+
 def get_variables_doc(
     name: str,
     args: Optional[Tuple[Any, ...]] = None,
@@ -2373,24 +2409,33 @@ def get_variables_doc(
                                 ]
                             )
             try:
+                # Extract line numbers and column offsets from Python source for better go-to-definition
+                variable_info: Dict[str, Tuple[int, int, int]] = {}
+                if python_import and source:
+                    variable_info = _extract_variable_line_numbers_from_python_source(source)
+
                 # TODO: add type information of the value including dict key names and member names
-                libdoc.variables = [
-                    ImportedVariableDefinition(
-                        line_no=1,
-                        col_offset=0,
-                        end_line_no=1,
-                        end_col_offset=0,
-                        source=source or (module_spec.origin if module_spec is not None else None) or "",
-                        name=name if get_robot_version() < (7, 0) else f"${{{name}}}",
-                        name_token=None,
-                        value=(
-                            NativeValue(value) if value is None or isinstance(value, (int, float, bool, str)) else None
-                        ),
-                        has_value=value is None or isinstance(value, (int, float, bool, str)),
-                        value_is_native=value is None or isinstance(value, (int, float, bool, str)),
+                libdoc.variables = []
+                for name, value in importer.import_variables(import_name, args):
+                    var_info = variable_info.get(name, (1, 0, 0))
+                    libdoc.variables.append(
+                        ImportedVariableDefinition(
+                            line_no=var_info[0],
+                            col_offset=var_info[1],
+                            end_line_no=var_info[0],
+                            end_col_offset=var_info[1] + var_info[2],
+                            source=source or (module_spec.origin if module_spec is not None else None) or "",
+                            name=(name if get_robot_version() < (7, 0) else f"${{{name}}}"),
+                            name_token=None,
+                            value=(
+                                NativeValue(value)
+                                if value is None or isinstance(value, (int, float, bool, str))
+                                else None
+                            ),
+                            has_value=value is None or isinstance(value, (int, float, bool, str)),
+                            value_is_native=value is None or isinstance(value, (int, float, bool, str)),
+                        )
                     )
-                    for name, value in importer.import_variables(import_name, args)
-                ]
             except (SystemExit, KeyboardInterrupt):
                 raise
             except BaseException as e:
