@@ -47,7 +47,7 @@ __not_valid = object()
 __to_snake_case_cache: Dict[str, str] = {}
 
 
-@functools.lru_cache(maxsize=None)
+@functools.lru_cache(maxsize=1024)
 def to_snake_case(s: str) -> str:
     result = __to_snake_case_cache.get(s, __not_valid)
     if result is __not_valid:
@@ -66,7 +66,7 @@ _RE_CAMEL_CASE_2 = re.compile(r"[\-_\.\s]([a-z])")
 __to_snake_camel_cache: Dict[str, str] = {}
 
 
-@functools.lru_cache(maxsize=None)
+@functools.lru_cache(maxsize=1024)
 def to_camel_case(s: str) -> str:
     result = __to_snake_camel_cache.get(s, __not_valid)
     if result is __not_valid:

@@ -1,19 +1,12 @@
-import functools
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import (
     TYPE_CHECKING,
     Any,
-    Callable,
-    Generic,
     List,
     Optional,
     Tuple,
-    TypeVar,
-    cast,
 )
-
-from typing_extensions import Concatenate, ParamSpec
 
 from robot.parsing.lexer.tokens import Token
 from robotcode.core.lsp.types import Position, Range
@@ -24,60 +17,8 @@ from ..utils.variables import VariableMatcher, search_variable
 if TYPE_CHECKING:
     from robotcode.robot.diagnostics.library_doc import KeywordDoc, LibraryDoc
 
-_F = TypeVar("_F", bound=Callable[..., Any])
 
-
-_NOT_SET = object()
-
-
-def single_call(func: _F) -> _F:
-    result = _NOT_SET
-
-    def wrapper(self: Any, *args: Any, **kwargs: Any) -> Any:
-        nonlocal result
-
-        if result is _NOT_SET:
-            result = func(self, *args, **kwargs)
-
-        return result
-
-    return cast(_F, wrapper)
-
-
-P = ParamSpec("P")
-R = TypeVar("R")
-
-
-class cached_method(Generic[P, R]):  # noqa: N801
-    def __init__(
-        self, func: Optional[Callable[Concatenate[Any, P], R]] = None, *, maxsize: Optional[int] = None
-    ) -> None:
-        self.func: Optional[Callable[Concatenate[Any, P], R]] = func
-        self._maxsize = maxsize
-        self.cache_name: Optional[str] = None
-        if func is not None:
-            functools.update_wrapper(self, func)
-
-    def __set_name__(self, owner: type, name: str) -> None:
-        self.cache_name = f"__cached_{owner.__name__}_{name}"
-
-    def __call__(self, func: Callable[Concatenate[Any, P], R]) -> "cached_method[P, R]":
-        self.func = func
-        functools.update_wrapper(self, func)
-        return self
-
-    def __get__(self, instance: Any, owner: Optional[type] = None) -> Callable[P, R]:
-        cached = instance.__dict__.get(self.cache_name, _NOT_SET)
-        if cached is _NOT_SET:
-            assert self.func is not None
-
-            bound_method = self.func.__get__(instance, owner)
-            cached = functools.lru_cache(maxsize=self._maxsize)(bound_method)
-            instance.__dict__[self.cache_name] = cached
-        return cast(Callable[P, R], cached)
-
-
-@dataclass
+@dataclass(slots=True)
 class SourceEntity:
     line_no: int
     col_offset: int
@@ -92,7 +33,6 @@ class SourceEntity:
             end=Position(line=self.end_line_no - 1, character=self.end_col_offset),
         )
 
-    @single_call
     def __hash__(self) -> int:
         return hash(
             (
@@ -105,7 +45,7 @@ class SourceEntity:
         )
 
 
-@dataclass
+@dataclass(slots=True)
 class Import(SourceEntity):
     name: Optional[str]
     name_token: Optional[Token]
@@ -124,7 +64,7 @@ class Import(SourceEntity):
         )
 
 
-@dataclass
+@dataclass(slots=True)
 class LibraryImport(Import):
     args: Tuple[str, ...] = ()
     alias: Optional[str] = None
@@ -143,23 +83,20 @@ class LibraryImport(Import):
             ),
         )
 
-    @single_call
     def __hash__(self) -> int:
         return hash((type(self), self.name, self.args, self.alias))
 
 
-@dataclass
+@dataclass(slots=True)
 class ResourceImport(Import):
-    @single_call
     def __hash__(self) -> int:
         return hash((type(self), self.name))
 
 
-@dataclass
+@dataclass(slots=True)
 class VariablesImport(Import):
     args: Tuple[str, ...] = ()
 
-    @single_call
     def __hash__(self) -> int:
         return hash((type(self), self.name, self.args))
 
@@ -178,7 +115,7 @@ class VariableDefinitionType(Enum):
     VARIABLE_NOT_FOUND = "variable not found"
 
 
-@dataclass
+@dataclass(slots=True)
 class VariableDefinition(SourceEntity):
     name: str
     name_token: Optional[Token]  # TODO: this is not needed anymore, but kept for compatibility
@@ -192,17 +129,16 @@ class VariableDefinition(SourceEntity):
     value_is_native: bool = field(default=False, compare=False)
     value_type: Optional[str] = field(default=None, compare=False)
 
-    @functools.cached_property
+    @property
     def matcher(self) -> VariableMatcher:
         return search_variable(self.name)
 
-    @functools.cached_property
+    @property
     def convertable_name(self) -> str:
         m = self.matcher
         value_type = f": {self.value_type}" if self.value_type else ""
         return f"{m.identifier}{{{m.base.strip()}{value_type}}}"
 
-    @single_call
     def __hash__(self) -> int:
         return hash((self.type, self.name, self.source, self.range))
 
@@ -221,82 +157,74 @@ class VariableDefinition(SourceEntity):
         )
 
 
-@dataclass
+@dataclass(slots=True)
 class TestVariableDefinition(VariableDefinition):
     type: VariableDefinitionType = VariableDefinitionType.TEST_VARIABLE
 
-    @single_call
     def __hash__(self) -> int:
         return hash((self.type, self.name, self.source, self.range))
 
 
-@dataclass
+@dataclass(slots=True)
 class LocalVariableDefinition(VariableDefinition):
     type: VariableDefinitionType = VariableDefinitionType.LOCAL_VARIABLE
 
-    @single_call
     def __hash__(self) -> int:
         return hash((self.type, self.name, self.source, self.range))
 
 
-@dataclass
+@dataclass(slots=True)
 class GlobalVariableDefinition(VariableDefinition):
     type: VariableDefinitionType = VariableDefinitionType.GLOBAL_VARIABLE
 
-    @single_call
     def __hash__(self) -> int:
         return hash((self.type, self.name, self.source, self.range))
 
 
-@dataclass
+@dataclass(slots=True)
 class BuiltInVariableDefinition(GlobalVariableDefinition):
     type: VariableDefinitionType = VariableDefinitionType.BUILTIN_VARIABLE
     resolvable: bool = True
 
-    @single_call
     def __hash__(self) -> int:
         return hash((self.type, self.name, self.source, self.range))
 
 
-@dataclass
+@dataclass(slots=True)
 class CommandLineVariableDefinition(GlobalVariableDefinition):
     type: VariableDefinitionType = VariableDefinitionType.COMMAND_LINE_VARIABLE
     resolvable: bool = True
 
-    @single_call
     def __hash__(self) -> int:
         return hash((self.type, self.name, self.source, self.range))
 
 
-@dataclass
+@dataclass(slots=True)
 class ArgumentDefinition(LocalVariableDefinition):
     type: VariableDefinitionType = VariableDefinitionType.ARGUMENT
     keyword_doc: Optional["KeywordDoc"] = field(default=None, compare=False, metadata={"nosave": True})
 
-    @single_call
     def __hash__(self) -> int:
         return hash((self.type, self.name, self.source, self.range))
 
 
-@dataclass
+@dataclass(slots=True)
 class EmbeddedArgumentDefinition(ArgumentDefinition):
     pattern: Optional[str] = field(default=None, compare=False)
 
-    @single_call
     def __hash__(self) -> int:
         return hash((self.type, self.name, self.source, self.range))
 
 
-@dataclass
+@dataclass(slots=True)
 class LibraryArgumentDefinition(ArgumentDefinition):
     type: VariableDefinitionType = VariableDefinitionType.LIBRARY_ARGUMENT
 
-    @single_call
     def __hash__(self) -> int:
         return hash((self.type, self.name, self.source, self.range))
 
 
-@dataclass(frozen=True, eq=False, repr=False)
+@dataclass(slots=True, frozen=True, eq=False, repr=False)
 class NativeValue:
     value: Any
 
@@ -307,39 +235,36 @@ class NativeValue:
         return str(self.value)
 
 
-@dataclass
+@dataclass(slots=True)
 class ImportedVariableDefinition(VariableDefinition):
     type: VariableDefinitionType = VariableDefinitionType.IMPORTED_VARIABLE
     value: Optional[NativeValue] = field(default=None, compare=False)
 
-    @single_call
     def __hash__(self) -> int:
         return hash((self.type, self.name, self.source, self.range))
 
 
-@dataclass
+@dataclass(slots=True)
 class EnvironmentVariableDefinition(VariableDefinition):
     type: VariableDefinitionType = VariableDefinitionType.ENVIRONMENT_VARIABLE
     resolvable: bool = True
 
     default_value: Any = field(default=None, compare=False)
 
-    @single_call
     def __hash__(self) -> int:
         return hash((self.type, self.name, self.source, self.range))
 
 
-@dataclass
+@dataclass(slots=True)
 class VariableNotFoundDefinition(VariableDefinition):
     type: VariableDefinitionType = VariableDefinitionType.VARIABLE_NOT_FOUND
     resolvable: bool = False
 
-    @single_call
     def __hash__(self) -> int:
         return hash((self.type, self.name, self.source, self.range))
 
 
-@dataclass
+@dataclass(slots=True)
 class LibraryEntry:
     name: str
     import_name: str
@@ -358,7 +283,6 @@ class LibraryEntry:
             result += f"  WITH NAME  {self.alias}"
         return result
 
-    @single_call
     def __hash__(self) -> int:
         return hash(
             (
@@ -374,12 +298,11 @@ class LibraryEntry:
         )
 
 
-@dataclass
+@dataclass(slots=True)
 class ResourceEntry(LibraryEntry):
     imports: List[Import] = field(default_factory=list, compare=False)
     variables: List[VariableDefinition] = field(default_factory=list, compare=False)
 
-    @single_call
     def __hash__(self) -> int:
         return hash(
             (
@@ -392,11 +315,10 @@ class ResourceEntry(LibraryEntry):
         )
 
 
-@dataclass
+@dataclass(slots=True)
 class VariablesEntry(LibraryEntry):
     variables: List[ImportedVariableDefinition] = field(default_factory=list, compare=False)
 
-    @single_call
     def __hash__(self) -> int:
         return hash(
             (
@@ -410,11 +332,10 @@ class VariablesEntry(LibraryEntry):
         )
 
 
-@dataclass
+@dataclass(slots=True)
 class TestCaseDefinition(SourceEntity):
     name: str
 
-    @single_call
     def __hash__(self) -> int:
         return hash(
             (
@@ -428,11 +349,10 @@ class TestCaseDefinition(SourceEntity):
         )
 
 
-@dataclass
+@dataclass(slots=True)
 class TagDefinition(SourceEntity):
     name: str
 
-    @single_call
     def __hash__(self) -> int:
         return hash(
             (

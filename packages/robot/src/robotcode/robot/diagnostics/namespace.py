@@ -1961,17 +1961,20 @@ class Namespace:
                 self.ensure_initialized()
 
                 with self._logger.measure_time(lambda: f"analyzing document {self.source}", context_name="analyze"):
+                    analyzer = NamespaceAnalyzer(self.model, self, self.create_finder())
+
                     try:
-                        result = NamespaceAnalyzer(self.model, self, self.create_finder()).run()
+                        analyzer_result = analyzer.run()
+
                         if self._diagnostics is None:
                             self._diagnostics = []
-                        self._diagnostics += result.diagnostics
-                        self._keyword_references = result.keyword_references
-                        self._variable_references = result.variable_references
-                        self._local_variable_assignments = result.local_variable_assignments
-                        self._namespace_references = result.namespace_references
-                        self._test_case_definitions = result.test_case_definitions
-                        self._tag_definitions = result.tag_definitions
+                        self._diagnostics += analyzer_result.diagnostics
+                        self._keyword_references = analyzer_result.keyword_references
+                        self._variable_references = analyzer_result.variable_references
+                        self._local_variable_assignments = analyzer_result.local_variable_assignments
+                        self._namespace_references = analyzer_result.namespace_references
+                        self._test_case_definitions = analyzer_result.test_case_definitions
+                        self._tag_definitions = analyzer_result.tag_definitions
 
                         lib_doc = self.get_library_doc()
 
@@ -1998,6 +2001,7 @@ class Namespace:
                         self._logger.debug("analyzing canceled")
                         raise
                     finally:
+                        del analyzer
                         self._analyzed = not canceled
 
                 self.has_analysed(self)

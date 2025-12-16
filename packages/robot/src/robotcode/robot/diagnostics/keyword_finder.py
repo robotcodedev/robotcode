@@ -1,5 +1,6 @@
 import functools
 import re
+import weakref
 from itertools import chain
 from typing import TYPE_CHECKING, Dict, Iterable, Iterator, List, NamedTuple, Optional, Sequence, Tuple
 
@@ -40,7 +41,7 @@ DEFAULT_BDD_PREFIXES = {"Given ", "When ", "Then ", "And ", "But "}
 
 class KeywordFinder:
     def __init__(self, namespace: "Namespace") -> None:
-        self._namespace = namespace
+        self._namespace: "Namespace" = weakref.proxy(namespace)
 
         self.diagnostics: List[DiagnosticsEntry] = []
         self.result_bdd_prefix: Optional[str] = None

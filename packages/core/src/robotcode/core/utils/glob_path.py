@@ -60,7 +60,7 @@ def _glob_pattern_to_re(pattern: str) -> str:
     return result
 
 
-@functools.lru_cache(maxsize=8192)
+@functools.lru_cache(maxsize=1024)
 def _compile_glob_pattern(pattern: str) -> "re.Pattern[str]":
     return re.compile(_glob_pattern_to_re(pattern))
 

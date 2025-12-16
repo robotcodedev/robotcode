@@ -73,7 +73,7 @@ def _std_replacements(request):
     yield r" 0x[0-9a-fA-F]+", " 0x?????????"
 
 
-@functools.lru_cache(maxsize=None)
+@functools.lru_cache(maxsize=1024)
 def re_compile(pattern: str) -> "re.Pattern[str]":
     if IS_WIN:
         # fix windows backwards slashes in regex

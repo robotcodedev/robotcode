@@ -93,7 +93,7 @@ else:
     from robot.variables.search import VariableMatches
 
 
-@dataclass
+@dataclass(slots=True, frozen=True)
 class AnalyzerResult:
     diagnostics: List[Diagnostic]
     keyword_references: Dict[KeywordDoc, Set[Location]]

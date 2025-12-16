@@ -5,12 +5,12 @@ _transform_table = str.maketrans("", "", "_ ")
 _transform_table_namespace = str.maketrans("", "", " ")
 
 
-@lru_cache(maxsize=8192)
+@lru_cache(maxsize=1024)
 def normalize(text: str) -> str:
     return text.translate(_transform_table).casefold()
 
 
-@lru_cache(maxsize=8192)
+@lru_cache(maxsize=1024)
 def normalize_namespace(text: str) -> str:
     return text.translate(_transform_table_namespace).casefold()
 

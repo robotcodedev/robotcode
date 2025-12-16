@@ -80,8 +80,6 @@ from .entities import (
     LibraryArgumentDefinition,
     NativeValue,
     SourceEntity,
-    cached_method,
-    single_call,
 )
 
 if get_robot_version() < (7, 0):
@@ -202,7 +200,7 @@ if get_robot_version() >= (6, 0):
     # monkey patch robot framework for performance reasons
     _old_from_name = EmbeddedArguments.from_name
 
-    @functools.lru_cache(maxsize=8192)
+    @functools.lru_cache(maxsize=1024)
     def _new_from_name(name: str) -> EmbeddedArguments:
         return _old_from_name(name)
 
@@ -225,7 +223,7 @@ if get_robot_version() >= (6, 0):
 
 else:
 
-    @functools.lru_cache(maxsize=8192)
+    @functools.lru_cache(maxsize=1024)
     def _get_embedded_arguments(name: str) -> Any:
         try:
             return EmbeddedArguments(name)
@@ -290,7 +288,6 @@ class KeywordMatcher:
 
         return self.normalized_name == (normalize_namespace(o) if self._is_namespace else normalize(o))
 
-    @single_call
     def __hash__(self) -> int:
         return hash(
             (
@@ -329,20 +326,20 @@ class TypeDocType(Enum):
     STANDARD = "Standard"
 
 
-@dataclass
+@dataclass(slots=True)
 class TypedDictItem:
     key: str
     type: str
     required: Optional[bool] = None
 
 
-@dataclass
+@dataclass(slots=True)
 class EnumMember:
     name: str
     value: str
 
 
-@dataclass
+@dataclass(slots=True)
 class TypeDoc:
     type: str
     name: str
@@ -356,7 +353,6 @@ class TypeDoc:
 
     doc_format: str = ROBOT_DOC_FORMAT
 
-    @single_call
     def __hash__(self) -> int:
         return hash(
             (
@@ -369,7 +365,6 @@ class TypeDoc:
             )
         )
 
-    @cached_method
     def to_markdown(self, header_level: int = 2, only_doc: bool = False) -> str:
         result = ""
 
@@ -406,13 +401,13 @@ class TypeDoc:
         return result
 
 
-@dataclass
+@dataclass(slots=True)
 class SourceAndLineInfo:
     source: str
     line_no: int
 
 
-@dataclass
+@dataclass(slots=True)
 class Error:
     message: str
     type_name: str
@@ -453,7 +448,7 @@ def robot_arg_repr(arg: Any) -> Optional[str]:
     return str(robot_arg.default_repr)
 
 
-@dataclass
+@dataclass(slots=True)
 class ArgumentInfo:
     name: str
     str_repr: str
@@ -486,7 +481,6 @@ class ArgumentInfo:
     def __str__(self) -> str:
         return self.signature()
 
-    @cached_method
     def signature(self, add_types: bool = True) -> str:
         prefix = ""
         if self.kind == KeywordArgumentKind.POSITIONAL_ONLY_MARKER:
@@ -519,7 +513,7 @@ class ArgumentInfo:
 DEPRECATED_PATTERN = re.compile(r"^\*DEPRECATED(?P<message>.*)\*(?P<doc>.*)")
 
 
-@dataclass
+@dataclass(slots=True)
 class ArgumentSpec:
     name: Optional[str]
     type: str
@@ -560,7 +554,7 @@ class ArgumentSpec:
     ) -> Tuple[List[Any], List[Tuple[str, Any]]]:
         if not hasattr(self, "__robot_arguments"):
             if get_robot_version() < (7, 0):
-                self.__robot_arguments = RobotArgumentSpec(
+                __robot_arguments = RobotArgumentSpec(
                     self.name,
                     self.type,
                     self.positional_only,
@@ -572,7 +566,7 @@ class ArgumentSpec:
                     None,
                 )
             else:
-                self.__robot_arguments = RobotArgumentSpec(
+                __robot_arguments = RobotArgumentSpec(
                     self.name,
                     self.type,
                     self.positional_only,
@@ -584,18 +578,18 @@ class ArgumentSpec:
                     self.embedded,
                     None,
                 )
-        self.__robot_arguments.name = self.name
+        __robot_arguments.name = self.name
         if validate:
             if get_robot_version() < (7, 0):
                 resolver = ArgumentResolver(
-                    self.__robot_arguments,
+                    __robot_arguments,
                     resolve_named=resolve_named,
                     resolve_variables_until=resolve_variables_until,
                     dict_to_kwargs=dict_to_kwargs,
                 )
             else:
                 resolver = ArgumentResolver(
-                    self.__robot_arguments,
+                    __robot_arguments,
                     resolve_named=resolve_named,
                     resolve_args_until=resolve_variables_until,
                     dict_to_kwargs=dict_to_kwargs,
@@ -609,18 +603,18 @@ class ArgumentSpec:
             def _raise_positional_after_named(self) -> None:
                 pass
 
-        positional, named = MyNamedArgumentResolver(self.__robot_arguments).resolve(arguments, variables)
+        positional, named = MyNamedArgumentResolver(__robot_arguments).resolve(arguments, variables)
         if get_robot_version() < (7, 0):
             positional, named = ArgumentsVariableReplacer(resolve_variables_until).replace(positional, named, variables)
         else:
-            positional, named = ArgumentsVariableReplacer(self.__robot_arguments, resolve_variables_until).replace(
+            positional, named = ArgumentsVariableReplacer(__robot_arguments, resolve_variables_until).replace(
                 positional, named, variables
             )
-        positional, named = DictToKwargs(self.__robot_arguments, dict_to_kwargs).handle(positional, named)
+        positional, named = DictToKwargs(__robot_arguments, dict_to_kwargs).handle(positional, named)
         return positional, named
 
 
-@dataclass
+@dataclass(slots=True)
 class KeywordDoc(SourceEntity):
     name: str = ""
     name_token: Optional[Token] = field(default=None, compare=False)
@@ -673,15 +667,15 @@ class KeywordDoc(SourceEntity):
     def __str__(self) -> str:
         return f"{self.name}({', '.join(str(arg) for arg in self.arguments)})"
 
-    @functools.cached_property
+    @property
     def is_embedded(self) -> bool:
         return self.matcher.embedded_arguments is not None
 
-    @functools.cached_property
+    @property
     def matcher(self) -> KeywordMatcher:
         return KeywordMatcher(self.name)
 
-    @functools.cached_property
+    @property
     def is_deprecated(self) -> bool:
         return self.deprecated or DEPRECATED_PATTERN.match(self.doc) is not None
 
@@ -693,31 +687,31 @@ class KeywordDoc(SourceEntity):
     def is_library_keyword(self) -> bool:
         return self.libtype == "LIBRARY"
 
-    @functools.cached_property
+    @property
     def deprecated_message(self) -> str:
         if (m := DEPRECATED_PATTERN.match(self.doc)) is not None:
             return m.group("message").strip()
         return ""
 
-    @functools.cached_property
+    @property
     def name_range(self) -> Range:
         if self.name_token is not None:
             return range_from_token(self.name_token)
 
         return Range.invalid()
 
-    @functools.cached_property
+    @property
     def normalized_tags(self) -> List[str]:
         return [normalize(tag) for tag in self.tags]
 
-    @functools.cached_property
+    @property
     def is_private(self) -> bool:
         if get_robot_version() < (6, 0):
             return False
 
         return "robot:private" in self.normalized_tags
 
-    @functools.cached_property
+    @property
     def range(self) -> Range:
         if self.name_token is not None:
             return range_from_token(self.name_token)
@@ -733,7 +727,6 @@ class KeywordDoc(SourceEntity):
             ),
         )
 
-    @cached_method
     def to_markdown(
         self,
         add_signature: bool = True,
@@ -829,7 +822,7 @@ class KeywordDoc(SourceEntity):
 
         return result
 
-    @functools.cached_property
+    @property
     def signature(self) -> str:
         return (
             f'({self.type}) "{self.name}": ('
@@ -845,7 +838,6 @@ class KeywordDoc(SourceEntity):
             + ")"
         )
 
-    @cached_method
     def parameter_signature(self, full_signatures: Optional[Sequence[int]] = None) -> str:
         return (
             "("
@@ -889,7 +881,6 @@ class KeywordDoc(SourceEntity):
     def is_run_keywords(self) -> bool:
         return self.libname == BUILTIN_LIBRARY_NAME and self.name == RUN_KEYWORDS_NAME
 
-    @single_call
     def __hash__(self) -> int:
         return hash(
             (
@@ -922,7 +913,7 @@ class KeywordError(Exception):
         self.multiple_keywords = multiple_keywords
 
 
-@dataclass
+@dataclass(slots=True)
 class KeywordStore:
     source: Optional[str] = None
     source_type: Optional[str] = None
@@ -989,7 +980,7 @@ class KeywordStore:
         return (v for v in self.keywords if v.matcher.match_string(key))
 
 
-@dataclass
+@dataclass(slots=True)
 class ModuleSpec:
     name: str
     origin: Optional[str]
@@ -1010,7 +1001,7 @@ RE_INLINE_LINK = re.compile(r"([\`])((?:\1|.)+?)\1", re.VERBOSE)
 RE_HEADERS = re.compile(r"^(#{2,9})\s+(\S.*)$", re.MULTILINE)
 
 
-@dataclass
+@dataclass(slots=True)
 class LibraryDoc:
     name: str = ""
     doc: str = field(default="", compare=False)
@@ -1062,7 +1053,6 @@ class LibraryDoc:
         self._update_keywords(self._inits)
         self._update_keywords(self._keywords)
 
-    @single_call
     def __hash__(self) -> int:
         return hash(
             (
@@ -1108,7 +1098,6 @@ class LibraryDoc:
             ),
         )
 
-    @cached_method
     def to_markdown(
         self,
         add_signature: bool = True,
@@ -1258,14 +1247,13 @@ def var_repr(value: Any) -> str:
     return "${{ " + repr(value) + " }}"
 
 
-@dataclass
+@dataclass(slots=True)
 class VariablesDoc(LibraryDoc):
     type: str = "VARIABLES"
     scope: str = "GLOBAL"
 
     variables: List[ImportedVariableDefinition] = field(default_factory=list)
 
-    @cached_method
     def to_markdown(
         self,
         add_signature: bool = True,
@@ -1291,12 +1279,12 @@ class VariablesDoc(LibraryDoc):
         return result
 
 
-@functools.lru_cache(maxsize=8192)
+@functools.lru_cache(maxsize=1024)
 def is_library_by_path(path: str) -> bool:
     return path.lower().endswith((".py", "/", os.sep))
 
 
-@functools.lru_cache(maxsize=8192)
+@functools.lru_cache(maxsize=1024)
 def is_variables_by_path(path: str) -> bool:
     if get_robot_version() >= (6, 1):
         return path.lower().endswith((".py", ".yml", ".yaml", ".json", "/", os.sep))
@@ -1492,7 +1480,7 @@ def error_from_exception(
     )
 
 
-@dataclass
+@dataclass(slots=True)
 class _Variable:
     name: str
     value: Iterable[str]
