@@ -6,10 +6,10 @@ junit = "4.13.2"
 lsp4j = "0.21.1"
 
 # plugins
-changelog = "2.2.1"
-intelliJPlatForm = "2.7.2"
-kotlin = "2.1.10"
-kover = "0.9.1"
+changelog = "2.5.0"
+intelliJPlatForm = "2.10.5"
+kotlin = "2.3.0"
+kover = "0.9.4"
 
 [libraries.lsp4j]
 group = "org.eclipse.lsp4j"
