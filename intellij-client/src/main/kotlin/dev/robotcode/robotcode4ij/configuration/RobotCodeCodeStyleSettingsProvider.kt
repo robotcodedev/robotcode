@@ -3,6 +3,7 @@ package dev.robotcode.robotcode4ij.configuration
 import com.intellij.application.options.CodeStyleAbstractConfigurable
 import com.intellij.application.options.CodeStyleAbstractPanel
 import com.intellij.application.options.TabbedLanguageCodeStylePanel
+import com.intellij.lang.Language
 import com.intellij.psi.codeStyle.CodeStyleConfigurable
 import com.intellij.psi.codeStyle.CodeStyleSettings
 import com.intellij.psi.codeStyle.CodeStyleSettingsProvider
@@ -32,5 +33,9 @@ class RobotCodeCodeStyleSettingsProvider : CodeStyleSettingsProvider() {
         override fun initTabs(settings: CodeStyleSettings?) {
             addIndentOptionsTab(settings)
         }
+    }
+    
+    override fun getLanguage(): Language {
+        return RobotFrameworkLanguage
     }
 }
