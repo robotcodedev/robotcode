@@ -6,7 +6,7 @@ hero:
   text: Robot Framework IDE & CLI, the friendly way.
   tagline: Language server, debugger, analyzer, REPL, and shareable profiles for IDE & CI
   image:
-    src: /robotcode-vintage-christmas.png
+    src: /robotcode-vintage.png
     alt: RobotCode Logo
   actions:
     - theme: brand
