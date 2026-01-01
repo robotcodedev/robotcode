@@ -8,7 +8,7 @@ lsp4j = "0.21.1"
 # plugins
 changelog = "2.5.0"
 intelliJPlatForm = "2.10.5"
-kotlin = "2.3.0"
+kotlin = "2.2.21"
 kover = "0.9.4"
 
 [libraries.lsp4j]
