@@ -138,7 +138,7 @@ jobs:
           }
           trap finish EXIT
 
-          gradle verifyPlugin -Dplugin.verifier.home.dir=~/.pluginVerifier
+          gradle --no-daemon verifyPlugin -Dplugin.verifier.home.dir=~/.pluginVerifier
 
       - name: Collect Plugin Verifier Result
         if: ${{ always() }}
