@@ -1,0 +1,15 @@
+data: !GeneratedTestData
+  character: 23
+  line: 10
+  name: variable in variables import
+result: !Hover
+  contents:
+    kind: markdown
+    value: '### Builtin Variable `${CURDIR}`'
+  range:
+    end:
+      character: 26
+      line: 10
+    start:
+      character: 20
+      line: 10

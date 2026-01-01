@@ -1,0 +1,15 @@
+data: !GeneratedTestData
+  character: 61
+  line: 22
+  name: lib with errors alias
+result: !Hover
+  contents:
+    kind: markdown
+    value: '### Library *LibraryWithErrors*'
+  range:
+    end:
+      character: 65
+      line: 22
+    start:
+      character: 57
+      line: 22

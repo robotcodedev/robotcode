@@ -1,0 +1,68 @@
+data: !GeneratedTestData
+  character: 33
+  line: 6
+  name: a variable import
+result:
+- !Location
+  range:
+    end:
+      character: 47
+      line: 7
+    start:
+      character: 16
+      line: 7
+  uri: tests/code_action_show_documentation.robot
+- !Location
+  range:
+    end:
+      character: 47
+      line: 4
+    start:
+      character: 16
+      line: 4
+  uri: tests/document_highlight.robot
+- !Location
+  range:
+    end:
+      character: 24
+      line: 9
+    start:
+      character: 13
+      line: 9
+  uri: tests/duplicated_resources.robot
+- !Location
+  range:
+    end:
+      character: 49
+      line: 7
+    start:
+      character: 18
+      line: 7
+  uri: tests/goto.robot
+- !Location
+  range:
+    end:
+      character: 49
+      line: 10
+    start:
+      character: 18
+      line: 10
+  uri: tests/hover.robot
+- !Location
+  range:
+    end:
+      character: 47
+      line: 6
+    start:
+      character: 16
+      line: 6
+  uri: tests/references.robot
+- !Location
+  range:
+    end:
+      character: 27
+      line: 3
+    start:
+      character: 13
+      line: 3
+  uri: tests/variables.robot

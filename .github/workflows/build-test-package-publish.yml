@@ -33,7 +33,7 @@ jobs:
       matrix:
         os: [macos-latest, ubuntu-latest, windows-latest]
         python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
-        robot-version: ["rf50", "rf60", "rf61", "rf70", "rf71", "rf72", "rf73"]
+        robot-version: ["rf50", "rf60", "rf61", "rf70", "rf71", "rf72", "rf73", "rf74"]
 
     steps:
       - uses: actions/checkout@v4

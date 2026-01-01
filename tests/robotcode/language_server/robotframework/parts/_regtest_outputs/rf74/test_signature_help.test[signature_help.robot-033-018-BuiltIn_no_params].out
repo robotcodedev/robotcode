@@ -1,0 +1,12 @@
+data: !GeneratedTestData
+  character: 18
+  line: 33
+  name: BuiltIn no params
+result: !SignatureHelp
+  active_parameter: -1
+  active_signature: 0
+  signatures:
+  - active_parameter: -1
+    documentation: null
+    label: ()
+    parameters: []

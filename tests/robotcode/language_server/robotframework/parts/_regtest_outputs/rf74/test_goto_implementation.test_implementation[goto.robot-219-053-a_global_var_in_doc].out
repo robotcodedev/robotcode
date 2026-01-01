@@ -1,0 +1,28 @@
+data: !GeneratedTestData
+  character: 53
+  line: 219
+  name: a global var in doc
+result:
+- !LocationLink
+  origin_selection_range:
+    end:
+      character: 56
+      line: 219
+    start:
+      character: 51
+      line: 219
+  target_range:
+    end:
+      character: 7
+      line: 21
+    start:
+      character: 2
+      line: 21
+  target_selection_range:
+    end:
+      character: 7
+      line: 21
+    start:
+      character: 2
+      line: 21
+  target_uri: goto.robot

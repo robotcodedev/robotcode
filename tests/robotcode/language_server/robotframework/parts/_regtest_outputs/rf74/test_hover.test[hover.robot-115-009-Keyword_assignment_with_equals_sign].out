@@ -1,0 +1,15 @@
+data: !GeneratedTestData
+  character: 9
+  line: 115
+  name: Keyword assignment with equals sign
+result: !Hover
+  contents:
+    kind: markdown
+    value: '### Local Variable `${result}`'
+  range:
+    end:
+      character: 12
+      line: 115
+    start:
+      character: 6
+      line: 115

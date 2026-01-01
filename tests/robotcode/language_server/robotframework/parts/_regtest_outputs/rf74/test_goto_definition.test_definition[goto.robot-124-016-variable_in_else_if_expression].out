@@ -1,0 +1,28 @@
+data: !GeneratedTestData
+  character: 16
+  line: 124
+  name: variable in else if expression
+result:
+- !LocationLink
+  origin_selection_range:
+    end:
+      character: 17
+      line: 124
+    start:
+      character: 16
+      line: 124
+  target_range:
+    end:
+      character: 3
+      line: 37
+    start:
+      character: 2
+      line: 37
+  target_selection_range:
+    end:
+      character: 3
+      line: 37
+    start:
+      character: 2
+      line: 37
+  target_uri: goto.robot

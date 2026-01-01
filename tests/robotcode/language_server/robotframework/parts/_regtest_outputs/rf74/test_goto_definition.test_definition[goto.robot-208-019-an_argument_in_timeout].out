@@ -1,0 +1,28 @@
+data: !GeneratedTestData
+  character: 19
+  line: 208
+  name: an argument in timeout
+result:
+- !LocationLink
+  origin_selection_range:
+    end:
+      character: 25
+      line: 208
+    start:
+      character: 19
+      line: 208
+  target_range:
+    end:
+      character: 27
+      line: 213
+    start:
+      character: 21
+      line: 213
+  target_selection_range:
+    end:
+      character: 27
+      line: 213
+    start:
+      character: 21
+      line: 213
+  target_uri: goto.robot

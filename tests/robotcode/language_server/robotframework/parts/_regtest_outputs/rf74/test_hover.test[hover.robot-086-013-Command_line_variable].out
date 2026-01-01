@@ -1,0 +1,15 @@
+data: !GeneratedTestData
+  character: 13
+  line: 86
+  name: Command line variable
+result: !Hover
+  contents:
+    kind: markdown
+    value: '### Global Variable [Command Line] `${CMD_VAR}`'
+  range:
+    end:
+      character: 20
+      line: 86
+    start:
+      character: 13
+      line: 86

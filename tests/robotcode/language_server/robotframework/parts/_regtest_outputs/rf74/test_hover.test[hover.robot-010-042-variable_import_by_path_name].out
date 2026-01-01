@@ -1,0 +1,15 @@
+data: !GeneratedTestData
+  character: 42
+  line: 10
+  name: variable import by path name
+result: !Hover
+  contents:
+    kind: markdown
+    value: '### Variables *myvariables*'
+  range:
+    end:
+      character: 49
+      line: 10
+    start:
+      character: 18
+      line: 10
