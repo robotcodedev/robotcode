@@ -1,4 +1,3 @@
-# pyright: reportMissingTypeArgument=true, reportMissingParameterType=true
 import dataclasses
 import enum
 import functools
@@ -6,6 +5,7 @@ import inspect
 import itertools
 import json
 import re
+import types
 from typing import (
     Any,
     Callable,
@@ -42,41 +42,27 @@ _RE_SNAKE_CASE_1 = re.compile(r"[\-\.\s]")
 _RE_SNAKE_CASE_2 = re.compile(r"[A-Z]")
 
 
-__not_valid = object()
-
-__to_snake_case_cache: Dict[str, str] = {}
+__NOT_SET = object()
 
 
 @functools.lru_cache(maxsize=1024)
 def to_snake_case(s: str) -> str:
-    result = __to_snake_case_cache.get(s, __not_valid)
-    if result is __not_valid:
-        s = _RE_SNAKE_CASE_1.sub("_", s)
-        if not s:
-            result = s
-        else:
-            result = s[0].lower() + _RE_SNAKE_CASE_2.sub(lambda matched: "_" + matched.group(0).lower(), s[1:])
-        __to_snake_case_cache[s] = result
-    return cast(str, result)
+    s = _RE_SNAKE_CASE_1.sub("_", s)
+    if not s:
+        return s
+    return s[0].lower() + _RE_SNAKE_CASE_2.sub(lambda matched: "_" + matched.group(0).lower(), s[1:])
 
 
 _RE_CAMEL_CASE_1 = re.compile(r"^[\-_\.]")
 _RE_CAMEL_CASE_2 = re.compile(r"[\-_\.\s]([a-z])")
 
-__to_snake_camel_cache: Dict[str, str] = {}
-
 
 @functools.lru_cache(maxsize=1024)
 def to_camel_case(s: str) -> str:
-    result = __to_snake_camel_cache.get(s, __not_valid)
-    if result is __not_valid:
-        s = _RE_CAMEL_CASE_1.sub("", s)
-        if not s:
-            result = s
-        else:
-            result = str(s[0]).lower() + _RE_CAMEL_CASE_2.sub(lambda matched: str(matched.group(1)).upper(), s[1:])
-        __to_snake_camel_cache[s] = result
-    return cast(str, result)
+    s = _RE_CAMEL_CASE_1.sub("", s)
+    if not s:
+        return s
+    return str(s[0]).lower() + _RE_CAMEL_CASE_2.sub(lambda matched: str(matched.group(1)).upper(), s[1:])
 
 
 class CamelSnakeMixin:
@@ -102,49 +88,37 @@ class DefaultConfig:
         return s
 
 
-__field_name_cache: Dict[Tuple[Type[Any], dataclasses.Field], str] = {}  # type: ignore
-__NOT_SET = object()
+@functools.lru_cache(maxsize=1024)
+def _encode_case_for_field_name_cached(t: Type[Any], field: dataclasses.Field[Any]) -> str:
+    alias = field.metadata.get("alias", None)
+    if alias:
+        return str(alias)
+
+    if hasattr(t, "_encode_case"):
+        return str(t._encode_case(field.name))
+
+    return field.name
 
 
 def encode_case_for_field_name(obj: Any, field: dataclasses.Field) -> str:  # type: ignore
     t = obj if isinstance(obj, type) else type(obj)
-    name = __field_name_cache.get((t, field), __NOT_SET)
-    if name is __NOT_SET:
-        alias = field.metadata.get("alias", None)
-        if alias:
-            name = str(alias)
-        elif hasattr(obj, "_encode_case"):
-            name = str(obj._encode_case(field.name))
-        else:
-            name = field.name
-        __field_name_cache[(t, field)] = name
-
-    return cast(str, name)
+    return _encode_case_for_field_name_cached(t, field)
 
 
-__decode_case_cache: Dict[Tuple[Type[Any], str], str] = {}
-
-
+@functools.lru_cache(maxsize=1024)
 def _decode_case_for_member_name(type: Type[Any], name: str) -> str:
-    r = __decode_case_cache.get((type, name), __NOT_SET)
-    if r is __NOT_SET:
-        if dataclasses.is_dataclass(type):
-            field = next(
-                (f for f in get_dataclass_fields(type) if f.metadata.get("alias", None) == name),
-                None,
-            )
-            if field:
-                r = field.name
+    if dataclasses.is_dataclass(type):
+        field = next(
+            (f for f in get_dataclass_fields(type) if f.metadata.get("alias", None) == name),
+            None,
+        )
+        if field:
+            return field.name
 
-        if r is __NOT_SET:
-            if hasattr(type, "_decode_case"):
-                r = str(type._decode_case(name))
-            else:
-                r = name
+    if hasattr(type, "_decode_case"):
+        return str(type._decode_case(name))
 
-        __decode_case_cache[(type, name)] = cast(str, r)
-
-    return cast(str, r)
+    return name
 
 
 NONETYPE = type(None)
@@ -313,6 +287,11 @@ def __from_dict_handle_enum(value: Any, t: Type[Any], strict: bool) -> Tuple[Any
 def __from_dict_handle_basic_types(value: Any, t: Type[Any], strict: bool) -> Tuple[Any, bool]:
     if isinstance(value, t):
         return value, True
+
+    if not strict:
+        if t is float and isinstance(value, int):
+            return float(value), True
+
     return None, False
 
 
@@ -330,6 +309,10 @@ def __from_dict_handle_mapping(value: Any, t: Type[Any], strict: bool) -> Tuple[
     return None, False
 
 
+def is_union(tp: Optional[Type[Any]]) -> bool:
+    return tp is Union or tp is types.UnionType  # type: ignore[comparison-overlap]
+
+
 __from_dict_handlers: List[
     Tuple[
         Callable[[Type[Any]], bool],
@@ -340,7 +323,7 @@ __from_dict_handlers: List[
         lambda t: t in {int, bool, float, str, NONETYPE},
         __from_dict_handle_basic_types,
     ),
-    (lambda t: _get_origin_cached(t) is Union, __from_dict_handle_union),
+    (lambda t: is_union(_get_origin_cached(t)), __from_dict_handle_union),
     (lambda t: _get_origin_cached(t) is Literal, __from_dict_handle_literal),
     (__is_enum, __from_dict_handle_enum),
     (
@@ -427,7 +410,7 @@ def from_dict(
             if origin is Literal:
                 continue
 
-            cased_value: Dict[str, Any] = {_decode_case_for_member_name(t, k): v for k, v in value.items()}
+            cased_value: Dict[str, Any] = {_decode_case_for_member_name(t, k): v for k, v in value.items()}  # type: ignore[arg-type]
 
             type_hints = _get_type_hints_cached(origin or t)
             try:
@@ -618,7 +601,7 @@ class TypeValidationError(Exception):
         return f"{s} (errors = {self.errors!r})"
 
 
-def validate_types(expected_types: Union[type, Tuple[type, ...], None], value: Any) -> List[str]:
+def validate_types(expected_types: Union[Type[Any], Tuple[Type[Any], ...], None], value: Any) -> List[str]:
     if expected_types is None:
         return []
 
