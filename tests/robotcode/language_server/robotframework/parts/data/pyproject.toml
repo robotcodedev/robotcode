@@ -1,1 +1,22 @@
-[tool.robocop]
+[project]
+name = "data"
+version = "0.1.0"
+description = "Test Project for Robotcode Language Server - Data Part"
+readme = "README.md"
+authors = [
+    { name = "Daniel Biehl", email = "dbiehl@live.de" }
+]
+requires-python = ">=3.10"
+dependencies = [
+    "robotframework>=5.0.0",
+]
+
+[build-system]
+requires = ["uv_build>=0.9.16,<0.10.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "debugpy>=1.8.18",
+    "robotframework-robocop>=6.0.0",
+]
