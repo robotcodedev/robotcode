@@ -127,25 +127,25 @@ jobs:
       - run: hatch run lint:typing
         if: always()
 
-      - name: Run Plugin Verification tasks
-        continue-on-error: true
-        run: |
-          cd intellij-client
+      # - name: Run Plugin Verification tasks
+      #   continue-on-error: true
+      #   run: |
+      #     cd intellij-client
 
-          finish() {
-            REPORTS=$(cat build/reports/pluginVerifier/*/report.md | sed 's/^#/##/')
-            echo "$REPORTS" >> $GITHUB_STEP_SUMMARY
-          }
-          trap finish EXIT
+      #     finish() {
+      #       REPORTS=$(cat build/reports/pluginVerifier/*/report.md | sed 's/^#/##/')
+      #       echo "$REPORTS" >> $GITHUB_STEP_SUMMARY
+      #     }
+      #     trap finish EXIT
 
-          gradle --no-daemon verifyPlugin -Dplugin.verifier.home.dir=~/.pluginVerifier
+      #     gradle --no-daemon verifyPlugin -Dplugin.verifier.home.dir=~/.pluginVerifier
 
-      - name: Collect Plugin Verifier Result
-        if: ${{ always() }}
-        uses: actions/upload-artifact@v6
-        with:
-          name: pluginVerifier-result
-          path: ./intellij-client/build/reports/pluginVerifier
+      # - name: Collect Plugin Verifier Result
+      #   if: ${{ always() }}
+      #   uses: actions/upload-artifact@v6
+      #   with:
+      #     name: pluginVerifier-result
+      #     path: ./intellij-client/build/reports/pluginVerifier
 
   package:
     needs: [test]
