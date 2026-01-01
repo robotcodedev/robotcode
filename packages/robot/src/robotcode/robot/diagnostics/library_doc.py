@@ -1260,7 +1260,7 @@ class VariablesDoc(LibraryDoc):
         only_doc: bool = True,
         header_level: int = 2,
     ) -> str:
-        result = super().to_markdown(add_signature, only_doc, header_level)
+        result = super(VariablesDoc, self).to_markdown(add_signature, only_doc, header_level)
 
         if self.variables:
             result += "\n---\n\n"
