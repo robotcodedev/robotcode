@@ -2,6 +2,50 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [2.2.0](https://github.com/robotcodedev/robotcode/compare/v2.1.0..v2.2.0) - 2026-01-02
+
+### Bug Fixes
+
+- **intellij:** Add missing language method in RobotCodeCodeStyleSettingsProvider ([90673bf](https://github.com/robotcodedev/robotcode/commit/90673bf16393ff317079059c870c97340229f0e7))
+- **langserver:** Default to folding ranges to character-based ([6cbefe2](https://github.com/robotcodedev/robotcode/commit/6cbefe2901890930a89ce7e53bcd1a26b51ba4e1))
+
+  Use character-based folding ranges by default when client capabilities are unknown.
+
+- **robocop:** Update robocop documentation urls ([c15bdfa](https://github.com/robotcodedev/robotcode/commit/c15bdfa27713ed68959a8ccbf5a2d61469a8fa06))
+- **robot:** Use explicit class reference for super() in VariablesDoc to allow slots ([8af05a9](https://github.com/robotcodedev/robotcode/commit/8af05a9756bd957c7cba03c0ca9ac91a691ab598))
+
+
+### Documentation
+
+- Add some funny random hero images ([f62e1bd](https://github.com/robotcodedev/robotcode/commit/f62e1bd8cfe621414c1a45f318f687407731a401))
+- Back to normal hero image ([57633b5](https://github.com/robotcodedev/robotcode/commit/57633b5a1271c5383a548234108ece0aa86be88d))
+
+
+### Features
+
+- Add support for Robot Framework 7.4 ([3e140c9](https://github.com/robotcodedev/robotcode/commit/3e140c9a18fbe563f0f4c7a7fdee306fdcf97225))
+- Enhance diagnostics and analysis features with progress indicators in verbose mode and performance improvements ([1ac9247](https://github.com/robotcodedev/robotcode/commit/1ac9247fa820605e66d6dc61f24732edab662f12))
+
+
+### Performance
+
+- **lsp:** Use dataclass slots for protocol types ([82012e8](https://github.com/robotcodedev/robotcode/commit/82012e8c478b75e1781b3eb3ac9f9c3a4ce0c29a))
+
+  use @dataclass(slots=True) for LSP model classes to reduce per-instance memory overhead and speed up attribute access in LSP hot paths
+
+
+
+### Refactor
+
+- **core:** Simplify casing caches and add support for PEP 604 unions ([428226a](https://github.com/robotcodedev/robotcode/commit/428226a8d393e7f650e5b7caa43feb090587490c))
+- Reduce lru_cache maxsize for performance optimization across multiple modules ([f715d32](https://github.com/robotcodedev/robotcode/commit/f715d3239ba19b6eaa9f8a346ab61bf524aa5dc8))
+
+
+### Testing
+
+- Real pyproject file for test project ([c3e17b2](https://github.com/robotcodedev/robotcode/commit/c3e17b2203e1a23d7b7373d4b618f7039063a5cc))
+
+
 ## [2.1.0](https://github.com/robotcodedev/robotcode/compare/v2.0.4..v2.1.0) - 2025-12-02
 
 ### Documentation
