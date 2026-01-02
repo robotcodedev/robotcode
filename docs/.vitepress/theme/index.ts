@@ -4,6 +4,7 @@ import type { Theme } from "vitepress";
 import { inBrowser } from "vitepress";
 import DefaultTheme from "vitepress/theme";
 import { enhanceAppWithTabs } from "vitepress-plugin-tabs/client";
+import RandomHeroImage from "./components/RandomHeroImage.vue";
 import "./style.css";
 import "lite-youtube-embed/src/lite-yt-embed.css";
 
@@ -14,11 +15,11 @@ if (inBrowser) {
 
 export default {
   extends: DefaultTheme,
-  Layout: () => {
-    return h(DefaultTheme.Layout, null, {
-      // https://vitepress.dev/guide/extending-default-theme#layout-slots
-    });
-  },
+  Layout: () =>
+    h(DefaultTheme.Layout, null, {
+      // Render a randomized hero image each time the page loads in the browser.
+      "home-hero-image": () => h(RandomHeroImage),
+    }),
   enhanceApp({ app, router, siteData }) {
     // ...
     enhanceAppWithTabs(app);
