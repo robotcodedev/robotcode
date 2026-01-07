@@ -2119,7 +2119,7 @@
     "eslint-plugin-prettier": "^5.5.4",
     "globals": "^16.5.0",
     "ovsx": "^0.10.7",
-    "preact": "^10.28.1",
+    "preact": "^10.28.2",
     "prettier": "^3.7.4",
     "ts-loader": "^9.5.4",
     "typescript": "^5.9.3",
