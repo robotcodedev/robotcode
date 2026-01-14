@@ -1,9 +1,13 @@
 import ast
 import enum
+import hashlib
 import itertools
+import sys
 import weakref
+import zlib
 from collections import OrderedDict, defaultdict
 from concurrent.futures import CancelledError
+from dataclasses import dataclass
 from pathlib import Path
 from typing import (
     Any,
@@ -21,13 +25,16 @@ from typing import (
 
 from robot.errors import VariableError
 from robot.parsing.lexer.tokens import Token
-from robot.parsing.model.blocks import Keyword, SettingSection, TestCase, VariableSection
+from robot.parsing.model.blocks import (
+    Keyword,
+    SettingSection,
+    TestCase,
+    VariableSection,
+)
 from robot.parsing.model.statements import Arguments, Setup, Statement, Timeout
 from robot.parsing.model.statements import LibraryImport as RobotLibraryImport
 from robot.parsing.model.statements import ResourceImport as RobotResourceImport
-from robot.parsing.model.statements import (
-    VariablesImport as RobotVariablesImport,
-)
+from robot.parsing.model.statements import VariablesImport as RobotVariablesImport
 from robotcode.core.concurrent import RLock
 from robotcode.core.event import event
 from robotcode.core.lsp.types import (
@@ -46,7 +53,7 @@ from robotcode.core.uri import Uri
 from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.core.utils.path import same_file
 
-from ..utils import get_robot_version
+from ..utils import get_robot_version, get_robot_version_str
 from ..utils.ast import (
     get_first_variable_token,
     range_from_node,
@@ -69,6 +76,7 @@ from .entities import (
     EnvironmentVariableDefinition,
     GlobalVariableDefinition,
     Import,
+    ImportedVariableDefinition,
     LibraryEntry,
     LibraryImport,
     LocalVariableDefinition,
@@ -96,6 +104,90 @@ from .namespace_analyzer import NamespaceAnalyzer
 
 if get_robot_version() >= (7, 0):
     from robot.parsing.model.statements import Var
+
+
+# Namespace cache version - bump major for incompatible format changes
+# 1.0: Single-file cache format with atomic writes (meta + spec in one file)
+NAMESPACE_META_VERSION = "1.0"
+
+
+@dataclass(frozen=True)
+class NamespaceMetaData:
+    """Metadata for validating namespace cache (immutable)."""
+
+    meta_version: str
+    source: str
+    mtime: int  # Source file modification time in nanoseconds
+    file_size: int  # Source file size in bytes
+    content_hash: str  # Tiered hash of file content (size + first 64KB + last 64KB)
+    library_sources_mtimes: tuple[tuple[str, int], ...]  # ((library_source, mtime), ...)
+    resource_sources_mtimes: tuple[tuple[str, int], ...]  # ((resource_source, mtime), ...)
+    variables_sources_mtimes: tuple[tuple[str, int], ...]  # ((variables_source, mtime), ...)
+    robot_version: str
+    python_executable: str  # sys.executable - detects venv changes
+    sys_path_hash: str  # Hash of sys.path in original order - detects PYTHONPATH/install changes
+
+    @property
+    def filepath_base(self) -> str:
+        p = Path(self.source)
+        return f"{zlib.adler32(str(p.parent).encode('utf-8')):08x}_{p.stem}"
+
+
+@dataclass(frozen=True)
+class _CachedEntryBase:
+    """Common fields for all cached import entries (immutable)."""
+
+    name: str
+    import_name: str
+    library_doc_source: str | None  # Source path to look up LibraryDoc
+    args: tuple[Any, ...]
+    alias: str | None
+    import_range: Range
+    import_source: str | None
+    alias_range: Range
+
+
+@dataclass(frozen=True)
+class CachedLibraryEntry(_CachedEntryBase):
+    """Serializable representation of LibraryEntry for caching (immutable)."""
+
+
+@dataclass(frozen=True)
+class CachedResourceEntry(_CachedEntryBase):
+    """Serializable representation of ResourceEntry for caching (immutable)."""
+
+    imports: tuple[Import, ...] = ()
+    variables: tuple[VariableDefinition, ...] = ()
+
+
+@dataclass(frozen=True)
+class CachedVariablesEntry(_CachedEntryBase):
+    """Serializable representation of VariablesEntry for caching (immutable)."""
+
+    variables: tuple["ImportedVariableDefinition", ...] = ()
+
+
+@dataclass(frozen=True)
+class NamespaceCacheData:
+    """Serializable namespace state for disk caching (immutable)."""
+
+    # Initialization data
+    libraries: tuple[tuple[str, CachedLibraryEntry], ...]
+    resources: tuple[tuple[str, CachedResourceEntry], ...]
+    resources_files: tuple[tuple[str, str], ...]  # ((source, key), ...)
+    variables_imports: tuple[tuple[str, CachedVariablesEntry], ...]
+    own_variables: tuple[VariableDefinition, ...]
+    imports: tuple[Import, ...]
+    library_doc: LibraryDoc | None
+
+    # Analysis data (cached to skip re-analysis on warm start)
+    analyzed: bool = False  # True if analysis was completed when cache was saved
+    diagnostics: tuple[Diagnostic, ...] = ()
+    test_case_definitions: tuple[TestCaseDefinition, ...] = ()
+    tag_definitions: tuple[TagDefinition, ...] = ()
+    # Namespace references: ((import_index, (locations...)), ...)
+    # Maps import index (in imports tuple) to set of locations where the import is referenced
+    namespace_references: tuple[tuple[int, tuple[Location, ...]], ...] = ()
 
 
 class DiagnosticsError(Exception):
@@ -967,6 +1059,472 @@ class Namespace:
                 self._library_doc = self.imports_manager.get_libdoc_from_model(self.model, self.source)
 
             return self._library_doc
+
+    @staticmethod
+    def _compute_content_hash(path: Path) -> tuple[int, str]:
+        """Compute robust content hash using tiered strategy.
+
+        Returns (file_size, hash_string).
+        Hash covers: file_size + first_64KB + last_64KB
+
+        This catches:
+        - Appended content (size change)
+        - Inserted content (size change)
+        - Modified content in first 64KB
+        - Modified content in last 64KB
+        """
+        stat = path.stat()
+        file_size = stat.st_size
+
+        with open(path, "rb") as f:
+            first_chunk = f.read(65536)
+
+            # For files > 64KB, also hash last 64KB
+            if file_size > 65536:
+                f.seek(max(0, file_size - 65536))
+                last_chunk = f.read(65536)
+            else:
+                last_chunk = b""
+
+        # Combine size + both chunks into single hash
+        hasher = hashlib.sha256()
+        hasher.update(f"{file_size}:".encode())
+        hasher.update(first_chunk)
+        hasher.update(last_chunk)
+
+        return file_size, hasher.hexdigest()
+
+    def get_cache_metadata(self) -> NamespaceMetaData | None:
+        """Generate metadata for cache validation."""
+        if not self._initialized:
+            return None
+
+        source_path = Path(self.source)
+        if not source_path.exists():
+            return None
+
+        try:
+            # Compute content hash for robust validation
+            file_size, content_hash = self._compute_content_hash(source_path)
+        except OSError:
+            self._logger.debug(lambda: f"Failed to compute content hash for {self.source}")
+            return None
+
+        library_mtimes: list[tuple[str, int]] = []
+        for entry in self._libraries.values():
+            if entry.library_doc.source:
+                lib_path = Path(entry.library_doc.source)
+                if lib_path.exists():
+                    library_mtimes.append((entry.library_doc.source, lib_path.stat().st_mtime_ns))
+
+        resource_mtimes: list[tuple[str, int]] = []
+        for entry in self._resources.values():
+            if entry.library_doc.source:
+                res_path = Path(entry.library_doc.source)
+                if res_path.exists():
+                    resource_mtimes.append((entry.library_doc.source, res_path.stat().st_mtime_ns))
+
+        variables_mtimes: list[tuple[str, int]] = []
+        for entry in self._variables_imports.values():
+            if entry.library_doc.source:
+                var_path = Path(entry.library_doc.source)
+                if var_path.exists():
+                    variables_mtimes.append((entry.library_doc.source, var_path.stat().st_mtime_ns))
+
+        # Compute environment identity - hash sys.path in original order
+        # Order matters for import resolution (first match wins)
+        sys_path_hash = hashlib.sha256("\n".join(sys.path).encode("utf-8")).hexdigest()[:16]
+
+        return NamespaceMetaData(
+            meta_version=NAMESPACE_META_VERSION,
+            source=self.source,
+            mtime=source_path.stat().st_mtime_ns,
+            file_size=file_size,
+            content_hash=content_hash,
+            library_sources_mtimes=tuple(library_mtimes),
+            resource_sources_mtimes=tuple(resource_mtimes),
+            variables_sources_mtimes=tuple(variables_mtimes),
+            robot_version=get_robot_version_str(),
+            python_executable=sys.executable,
+            sys_path_hash=sys_path_hash,
+        )
+
+    def _serialize_namespace_references(self) -> tuple[tuple[int, tuple[Location, ...]], ...]:
+        """Serialize _namespace_references for caching.
+
+        Maps LibraryEntry keys to import indices (position in _imports list).
+        """
+        if self._namespace_references is None or self._imports is None:
+            return ()
+
+        # Build reverse mapping: LibraryEntry -> import index
+        entry_to_index: dict[LibraryEntry, int] = {}
+        for i, imp in enumerate(self._imports):
+            if imp in self._import_entries:
+                entry_to_index[self._import_entries[imp]] = i
+
+        # Serialize namespace references using import indices
+        result: list[tuple[int, tuple[Location, ...]]] = []
+        for entry, locations in self._namespace_references.items():
+            if entry in entry_to_index:
+                result.append((entry_to_index[entry], tuple(locations)))
+
+        return tuple(result)
+
+    def to_cache_data(self) -> NamespaceCacheData:
+        """Extract serializable state for disk caching."""
+        # Convert LibraryEntry -> CachedLibraryEntry
+        cached_libraries: list[tuple[str, CachedLibraryEntry]] = []
+        for key, entry in self._libraries.items():
+            cached_libraries.append((
+                key,
+                CachedLibraryEntry(
+                    name=entry.name,
+                    import_name=entry.import_name,
+                    library_doc_source=entry.library_doc.source,
+                    args=entry.args,
+                    alias=entry.alias,
+                    import_range=entry.import_range,
+                    import_source=entry.import_source,
+                    alias_range=entry.alias_range,
+                ),
+            ))
+
+        # Convert ResourceEntry -> CachedResourceEntry
+        cached_resources: list[tuple[str, CachedResourceEntry]] = []
+        for key, entry in self._resources.items():
+            cached_resources.append((
+                key,
+                CachedResourceEntry(
+                    name=entry.name,
+                    import_name=entry.import_name,
+                    library_doc_source=entry.library_doc.source,
+                    args=entry.args,
+                    alias=entry.alias,
+                    import_range=entry.import_range,
+                    import_source=entry.import_source,
+                    alias_range=entry.alias_range,
+                    imports=tuple(entry.imports),
+                    variables=tuple(entry.variables),
+                ),
+            ))
+
+        # Build resources_files mapping (source -> key)
+        resources_files: list[tuple[str, str]] = []
+        for source, entry in self._resources_files.items():
+            # Find the key in _resources that corresponds to this entry
+            for key, res_entry in self._resources.items():
+                if res_entry is entry:
+                    resources_files.append((source, key))
+                    break
+
+        # Convert VariablesEntry -> CachedVariablesEntry
+        cached_variables: list[tuple[str, CachedVariablesEntry]] = []
+        for key, entry in self._variables_imports.items():
+            cached_variables.append((
+                key,
+                CachedVariablesEntry(
+                    name=entry.name,
+                    import_name=entry.import_name,
+                    library_doc_source=entry.library_doc.source,
+                    args=entry.args,
+                    alias=entry.alias,
+                    import_range=entry.import_range,
+                    import_source=entry.import_source,
+                    alias_range=entry.alias_range,
+                    variables=tuple(entry.variables),
+                ),
+            ))
+
+        return NamespaceCacheData(
+            libraries=tuple(cached_libraries),
+            resources=tuple(cached_resources),
+            resources_files=tuple(resources_files),
+            variables_imports=tuple(cached_variables),
+            own_variables=tuple(self._own_variables) if self._own_variables is not None else (),
+            imports=tuple(self._imports) if self._imports is not None else (),
+            library_doc=self._library_doc,
+            # Include analysis results if analysis was completed
+            analyzed=self._analyzed,
+            diagnostics=tuple(self._diagnostics) if self._diagnostics is not None else (),
+            test_case_definitions=(
+                tuple(self._test_case_definitions) if self._test_case_definitions is not None else ()
+            ),
+            tag_definitions=tuple(self._tag_definitions) if self._tag_definitions is not None else (),
+            namespace_references=self._serialize_namespace_references(),
+        )
+
+    @classmethod
+    def _restore_libraries_from_cache(
+        cls,
+        ns: "Namespace",
+        cached_libraries: tuple[tuple[str, CachedLibraryEntry], ...],
+        imports_manager: "ImportsManager",
+    ) -> bool:
+        """Restore library entries from cache. Returns False if cache is stale."""
+        for key, cached_entry in cached_libraries:
+            library_doc = imports_manager.get_libdoc_for_source(
+                cached_entry.library_doc_source, cached_entry.name
+            )
+            if library_doc is None:
+                return False
+            ns._libraries[key] = LibraryEntry(
+                name=cached_entry.name,
+                import_name=cached_entry.import_name,
+                library_doc=library_doc,
+                args=cached_entry.args,
+                alias=cached_entry.alias,
+                import_range=cached_entry.import_range,
+                import_source=cached_entry.import_source,
+                alias_range=cached_entry.alias_range,
+            )
+        return True
+
+    @classmethod
+    def _restore_resources_from_cache(
+        cls,
+        ns: "Namespace",
+        cached_resources: tuple[tuple[str, CachedResourceEntry], ...],
+        imports_manager: "ImportsManager",
+    ) -> bool:
+        """Restore resource entries from cache. Returns False if cache is stale."""
+        for key, cached_entry in cached_resources:
+            library_doc = imports_manager.get_resource_libdoc_for_source(cached_entry.library_doc_source)
+            if library_doc is None:
+                return False
+            ns._resources[key] = ResourceEntry(
+                name=cached_entry.name,
+                import_name=cached_entry.import_name,
+                library_doc=library_doc,
+                args=cached_entry.args,
+                alias=cached_entry.alias,
+                import_range=cached_entry.import_range,
+                import_source=cached_entry.import_source,
+                alias_range=cached_entry.alias_range,
+                imports=list(cached_entry.imports),
+                variables=list(cached_entry.variables),
+            )
+        return True
+
+    @classmethod
+    def _restore_variables_from_cache(
+        cls,
+        ns: "Namespace",
+        cached_variables: tuple[tuple[str, CachedVariablesEntry], ...],
+        imports_manager: "ImportsManager",
+    ) -> bool:
+        """Restore variables entries from cache. Returns False if cache is stale."""
+        for key, cached_entry in cached_variables:
+            library_doc = imports_manager.get_variables_libdoc_for_source(cached_entry.library_doc_source)
+            if library_doc is None:
+                return False
+            ns._variables_imports[key] = VariablesEntry(
+                name=cached_entry.name,
+                import_name=cached_entry.import_name,
+                library_doc=library_doc,
+                args=cached_entry.args,
+                alias=cached_entry.alias,
+                import_range=cached_entry.import_range,
+                import_source=cached_entry.import_source,
+                alias_range=cached_entry.alias_range,
+                variables=list(cached_entry.variables),
+            )
+        return True
+
+    @classmethod
+    def _match_library_import(
+        cls,
+        imp: LibraryImport,
+        entry: LibraryEntry,
+    ) -> bool:
+        """Match a library import to an entry using resolution-based matching.
+
+        Priority order:
+        1. Exact alias match (if import has alias)
+        2. Exact import_name match
+        3. Exact library name match
+        4. Source path match (for path-based imports)
+
+        Does NOT use substring matching to avoid false positives like
+        "MyLib" matching "MyLibExtended".
+        """
+        # 1. Best: alias match (most specific)
+        if imp.alias and entry.name == imp.alias:
+            return True
+
+        # 2. Exact import_name match
+        if imp.name and entry.import_name == imp.name:
+            return True
+
+        # 3. Exact library name match (case-insensitive for standard libs)
+        if imp.name and entry.name:
+            if entry.name == imp.name:
+                return True
+            # Case-insensitive match for library names
+            if entry.name.lower() == imp.name.lower():
+                return True
+
+        # 4. Source path match for path-based imports
+        if imp.name and entry.library_doc.source:
+            # Check if import name ends with the library filename
+            lib_filename = Path(entry.library_doc.source).stem
+            imp_path = Path(imp.name)
+            if imp_path.stem == lib_filename:
+                return True
+            # Also check the full library doc name
+            if entry.library_doc.name and entry.library_doc.name == imp.name:
+                return True
+
+        return False
+
+    @classmethod
+    def _rebuild_import_entries(cls, ns: "Namespace") -> None:
+        """Rebuild _import_entries mapping from restored imports and library/resource/variables entries.
+
+        This is needed after restoring from cache so the analyzer can find namespace references.
+        The _import_entries dict maps Import objects to their corresponding LibraryEntry.
+
+        Note: When the same library/resource is imported multiple times, each import gets its
+        own entry in _import_entries (with the same library_doc but different import_range/source).
+        """
+        if ns._imports is None:
+            return
+
+        for imp in ns._imports:
+            if isinstance(imp, LibraryImport):
+                # Find a library entry using resolution-based matching
+                for entry in ns._libraries.values():
+                    if cls._match_library_import(imp, entry):
+                        # Create a new entry for this import with the correct range/source
+                        ns._import_entries[imp] = LibraryEntry(
+                            name=entry.name,
+                            import_name=imp.name or "",
+                            library_doc=entry.library_doc,
+                            args=imp.args,
+                            alias=imp.alias,
+                            import_range=imp.range,
+                            import_source=imp.source,
+                            alias_range=imp.alias_range,
+                        )
+                        break
+            elif isinstance(imp, ResourceImport):
+                for entry in ns._resources.values():
+                    if entry.import_name == imp.name or entry.name == imp.name:
+                        ns._import_entries[imp] = ResourceEntry(
+                            name=entry.name,
+                            import_name=imp.name or "",
+                            library_doc=entry.library_doc,
+                            args=(),
+                            alias=None,
+                            import_range=imp.range,
+                            import_source=imp.source,
+                            imports=entry.imports,
+                            variables=entry.variables,
+                        )
+                        break
+            elif isinstance(imp, VariablesImport):
+                for entry in ns._variables_imports.values():
+                    if entry.import_name == imp.name or entry.name == imp.name:
+                        ns._import_entries[imp] = VariablesEntry(
+                            name=entry.name,
+                            import_name=imp.name or "",
+                            library_doc=entry.library_doc,
+                            args=imp.args,
+                            alias=None,
+                            import_range=imp.range,
+                            import_source=imp.source,
+                            variables=entry.variables,
+                        )
+                        break
+
+    @classmethod
+    def _restore_namespace_references(
+        cls,
+        ns: "Namespace",
+        cached_refs: tuple[tuple[int, tuple[Location, ...]], ...],
+    ) -> None:
+        """Restore _namespace_references from cached import indices.
+
+        Maps import indices back to LibraryEntry objects using _import_entries.
+        """
+        if not cached_refs or ns._imports is None:
+            ns._namespace_references = {}
+            return
+
+        # Build mapping: import index -> LibraryEntry
+        index_to_entry: dict[int, LibraryEntry] = {}
+        for i, imp in enumerate(ns._imports):
+            if imp in ns._import_entries:
+                index_to_entry[i] = ns._import_entries[imp]
+
+        # Restore namespace references
+        ns._namespace_references = {}
+        for import_idx, locations in cached_refs:
+            if import_idx in index_to_entry:
+                entry = index_to_entry[import_idx]
+                ns._namespace_references[entry] = set(locations)
+
+    @classmethod
+    def from_cache_data(
+        cls,
+        cache_data: NamespaceCacheData,
+        imports_manager: "ImportsManager",
+        model: ast.AST,
+        source: str,
+        document: TextDocument | None = None,
+        document_type: "DocumentType | None" = None,
+        languages: Languages | None = None,
+        workspace_languages: Languages | None = None,
+    ) -> "Namespace | None":
+        """Create a pre-initialized namespace from cached data."""
+        # Create namespace instance without initializing
+        ns = cls(
+            imports_manager=imports_manager,
+            model=model,
+            source=source,
+            document=document,
+            document_type=document_type,
+            languages=languages,
+            workspace_languages=workspace_languages,
+        )
+
+        # Restore libraries
+        if not cls._restore_libraries_from_cache(ns, cache_data.libraries, imports_manager):
+            return None
+
+        # Restore resources
+        if not cls._restore_resources_from_cache(ns, cache_data.resources, imports_manager):
+            return None
+
+        # Restore resources_files mapping
+        for src, key in cache_data.resources_files:
+            if key in ns._resources:
+                ns._resources_files[src] = ns._resources[key]
+
+        # Restore variables
+        if not cls._restore_variables_from_cache(ns, cache_data.variables_imports, imports_manager):
+            return None
+
+        # Restore other state
+        ns._own_variables = list(cache_data.own_variables)
+        ns._imports = list(cache_data.imports)
+        ns._library_doc = cache_data.library_doc
+
+        # Rebuild _import_entries mapping from restored imports and entries
+        # This is needed for the analyzer to find namespace references
+        cls._rebuild_import_entries(ns)
+
+        # Mark as initialized
+        ns._initialized = True
+
+        # Restore cached diagnostics if available (analysis will still run to populate references)
+        # Note: We don't set _analyzed=True because features like goto definition need
+        # _variable_references and _keyword_references which aren't cached yet.
+        # The analysis phase will run but initialization is cached, providing partial speedup.
+        if cache_data.analyzed and cache_data.diagnostics:
+            ns._diagnostics = list(cache_data.diagnostics)
+
+        return ns
 
     class DataEntry(NamedTuple):
         libraries: Dict[str, LibraryEntry] = OrderedDict()

@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import ast
+import hashlib
 import io
+import sys
 import threading
 import weakref
 from logging import CRITICAL
@@ -11,10 +13,6 @@ from typing import (
     Callable,
     Iterable,
     Iterator,
-    List,
-    Optional,
-    Tuple,
-    Union,
     cast,
 )
 
@@ -31,9 +29,10 @@ from robotcode.robot.diagnostics.diagnostics_modifier import DiagnosticModifiers
 from ..config.model import RobotBaseProfile
 from ..utils import get_robot_version
 from ..utils.stubs import Languages
+from .data_cache import CacheSection
 from .imports_manager import ImportsManager
 from .library_doc import LibraryDoc
-from .namespace import DocumentType, Namespace
+from .namespace import DocumentType, Namespace, NamespaceCacheData, NamespaceMetaData
 from .workspace_config import (
     AnalysisDiagnosticModifiersConfig,
     AnalysisRobotConfig,
@@ -41,6 +40,9 @@ from .workspace_config import (
     RobotConfig,
     WorkspaceAnalysisConfig,
 )
+
+# Interval for cleaning up stale entries in dependency maps
+_DEPENDENCY_CLEANUP_INTERVAL = 100
 
 
 class UnknownFileTypeError(Exception):
@@ -59,8 +61,8 @@ class DocumentsCacheHelper:
         workspace: Workspace,
         documents_manager: DocumentsManager,
         file_watcher_manager: FileWatcherManagerBase,
-        robot_profile: Optional[RobotBaseProfile],
-        analysis_config: Optional[WorkspaceAnalysisConfig],
+        robot_profile: RobotBaseProfile | None,
+        analysis_config: WorkspaceAnalysisConfig | None,
     ) -> None:
         self.INITIALIZED_NAMESPACE = _CacheEntry()
 
@@ -71,14 +73,36 @@ class DocumentsCacheHelper:
         self.robot_profile = robot_profile or RobotBaseProfile()
         self.analysis_config = analysis_config or WorkspaceAnalysisConfig()
 
+        # Lock ordering (to prevent deadlocks when acquiring multiple locks):
+        # 1. _imports_managers_lock
+        # 2. _importers_lock
+        # 3. _library_users_lock
+        # 4. _variables_users_lock
+        # Always acquire in this order if multiple locks are needed in the same operation.
+
         self._imports_managers_lock = threading.RLock()
         self._imports_managers: weakref.WeakKeyDictionary[WorkspaceFolder, ImportsManager] = weakref.WeakKeyDictionary()
-        self._default_imports_manager: Optional[ImportsManager] = None
-        self._workspace_languages: weakref.WeakKeyDictionary[WorkspaceFolder, Optional[Languages]] = (
+        self._default_imports_manager: ImportsManager | None = None
+        self._workspace_languages: weakref.WeakKeyDictionary[WorkspaceFolder, Languages | None] = (
             weakref.WeakKeyDictionary()
         )
 
-    def get_languages_for_document(self, document_or_uri: Union[TextDocument, Uri, str]) -> Optional[Languages]:
+        # Reverse dependency map: source path -> set of documents that import it
+        self._importers_lock = threading.RLock()
+        self._importers: dict[str, weakref.WeakSet[TextDocument]] = {}
+
+        # Reverse dependency maps for libraries and variables (by source path for stable lookup)
+        # Using source path instead of id() because Python can reuse object IDs after GC
+        self._library_users_lock = threading.RLock()
+        self._library_users: dict[str, weakref.WeakSet[TextDocument]] = {}
+
+        self._variables_users_lock = threading.RLock()
+        self._variables_users: dict[str, weakref.WeakSet[TextDocument]] = {}
+
+        # Counter for periodic cleanup of stale dependency map entries
+        self._track_count = 0
+
+    def get_languages_for_document(self, document_or_uri: TextDocument | Uri | str) -> Languages | None:
         if get_robot_version() < (6, 0):
             return None
 
@@ -86,7 +110,7 @@ class DocumentsCacheHelper:
             Languages as RobotLanguages,
         )
 
-        uri: Union[Uri, str]
+        uri: Uri | str
 
         if isinstance(document_or_uri, TextDocument):
             uri = document_or_uri.uri
@@ -129,7 +153,7 @@ class DocumentsCacheHelper:
 
     def build_languages_from_model(
         self, document: TextDocument, model: ast.AST
-    ) -> Tuple[Optional[Languages], Optional[Languages]]:
+    ) -> tuple[Languages | None, Languages | None]:
         if get_robot_version() < (6, 0):
             return (None, None)
 
@@ -171,12 +195,12 @@ class DocumentsCacheHelper:
 
         return DocumentType.UNKNOWN
 
-    def get_tokens(self, document: TextDocument, data_only: bool = False) -> List[Token]:
+    def get_tokens(self, document: TextDocument, data_only: bool = False) -> list[Token]:
         if data_only:
             return self.__get_tokens_data_only(document)
         return self.__get_tokens(document)
 
-    def __get_tokens_data_only(self, document: TextDocument) -> List[Token]:
+    def __get_tokens_data_only(self, document: TextDocument) -> list[Token]:
         document_type = self.get_document_type(document)
         if document_type == DocumentType.INIT:
             return self.get_init_tokens(document, True)
@@ -187,7 +211,7 @@ class DocumentsCacheHelper:
 
         raise UnknownFileTypeError(str(document.uri))
 
-    def __get_tokens(self, document: TextDocument) -> List[Token]:
+    def __get_tokens(self, document: TextDocument) -> list[Token]:
         document_type = self.get_document_type(document)
         if document_type == DocumentType.INIT:
             return self.get_init_tokens(document)
@@ -198,7 +222,7 @@ class DocumentsCacheHelper:
 
         raise UnknownFileTypeError(str(document.uri))
 
-    def get_general_tokens(self, document: TextDocument, data_only: bool = False) -> List[Token]:
+    def get_general_tokens(self, document: TextDocument, data_only: bool = False) -> list[Token]:
         if document.version is None:
             if data_only:
                 return self.__get_general_tokens_data_only(document)
@@ -266,28 +290,28 @@ class DocumentsCacheHelper:
 
         return robot.api.get_init_tokens(source, data_only=data_only, tokenize_variables=tokenize_variables)
 
-    def __get_general_tokens_data_only(self, document: TextDocument) -> List[Token]:
+    def __get_general_tokens_data_only(self, document: TextDocument) -> list[Token]:
         lang = self.get_languages_for_document(document)
 
-        def get(text: str) -> List[Token]:
+        def get(text: str) -> list[Token]:
             with io.StringIO(text) as content:
                 return [e for e in self.__internal_get_tokens(content, True, lang=lang)]
 
         return self.__get_tokens_internal(document, get)
 
-    def __get_general_tokens(self, document: TextDocument) -> List[Token]:
+    def __get_general_tokens(self, document: TextDocument) -> list[Token]:
         lang = self.get_languages_for_document(document)
 
-        def get(text: str) -> List[Token]:
+        def get(text: str) -> list[Token]:
             with io.StringIO(text) as content:
                 return [e for e in self.__internal_get_tokens(content, lang=lang)]
 
         return self.__get_tokens_internal(document, get)
 
-    def __get_tokens_internal(self, document: TextDocument, get: Callable[[str], List[Token]]) -> List[Token]:
+    def __get_tokens_internal(self, document: TextDocument, get: Callable[[str], list[Token]]) -> list[Token]:
         return get(document.text())
 
-    def get_resource_tokens(self, document: TextDocument, data_only: bool = False) -> List[Token]:
+    def get_resource_tokens(self, document: TextDocument, data_only: bool = False) -> list[Token]:
         if document.version is None:
             if data_only:
                 return self.__get_resource_tokens_data_only(document)
@@ -299,25 +323,25 @@ class DocumentsCacheHelper:
 
         return document.get_cache(self.__get_resource_tokens)
 
-    def __get_resource_tokens_data_only(self, document: TextDocument) -> List[Token]:
+    def __get_resource_tokens_data_only(self, document: TextDocument) -> list[Token]:
         lang = self.get_languages_for_document(document)
 
-        def get(text: str) -> List[Token]:
+        def get(text: str) -> list[Token]:
             with io.StringIO(text) as content:
                 return [e for e in self.__internal_get_resource_tokens(content, True, lang=lang)]
 
         return self.__get_tokens_internal(document, get)
 
-    def __get_resource_tokens(self, document: TextDocument) -> List[Token]:
+    def __get_resource_tokens(self, document: TextDocument) -> list[Token]:
         lang = self.get_languages_for_document(document)
 
-        def get(text: str) -> List[Token]:
+        def get(text: str) -> list[Token]:
             with io.StringIO(text) as content:
                 return [e for e in self.__internal_get_resource_tokens(content, lang=lang)]
 
         return self.__get_tokens_internal(document, get)
 
-    def get_init_tokens(self, document: TextDocument, data_only: bool = False) -> List[Token]:
+    def get_init_tokens(self, document: TextDocument, data_only: bool = False) -> list[Token]:
         if document.version is None:
             if data_only:
                 return self.__get_init_tokens_data_only(document)
@@ -328,19 +352,19 @@ class DocumentsCacheHelper:
             return document.get_cache(self.__get_init_tokens_data_only)
         return document.get_cache(self.__get_init_tokens)
 
-    def __get_init_tokens_data_only(self, document: TextDocument) -> List[Token]:
+    def __get_init_tokens_data_only(self, document: TextDocument) -> list[Token]:
         lang = self.get_languages_for_document(document)
 
-        def get(text: str) -> List[Token]:
+        def get(text: str) -> list[Token]:
             with io.StringIO(text) as content:
                 return [e for e in self.__internal_get_init_tokens(content, True, lang=lang)]
 
         return self.__get_tokens_internal(document, get)
 
-    def __get_init_tokens(self, document: TextDocument) -> List[Token]:
+    def __get_init_tokens(self, document: TextDocument) -> list[Token]:
         lang = self.get_languages_for_document(document)
 
-        def get(text: str) -> List[Token]:
+        def get(text: str) -> list[Token]:
             with io.StringIO(text) as content:
                 return [e for e in self.__internal_get_init_tokens(content, lang=lang)]
 
@@ -483,20 +507,277 @@ class DocumentsCacheHelper:
     def __namespace_initialized(self, sender: Namespace) -> None:
         if sender.document is not None:
             sender.document.set_data(self.INITIALIZED_NAMESPACE, sender)
+
+            # Track reverse dependencies: record that this document imports its resources
+            self._track_imports(sender.document, sender)
+
+            # Save to disk cache for faster restart (initial save without analysis data)
+            imports_manager = self.get_imports_manager(sender.document)
+            self._save_namespace_to_cache(sender, imports_manager)
+
             self.namespace_initialized(self, sender)
 
+    def __namespace_analysed(self, sender: Namespace) -> None:
+        """Re-save namespace to cache after analysis to include diagnostics and analysis results."""
+        if sender.document is not None:
+            imports_manager = self.get_imports_manager(sender.document)
+            self._save_namespace_to_cache(sender, imports_manager)
+
+    def _track_imports(self, document: TextDocument, namespace: Namespace) -> None:
+        """Update the reverse dependency map for a namespace's imports."""
+        with self._importers_lock:
+            # Track resource imports
+            for source in namespace.get_resources().keys():
+                if source not in self._importers:
+                    self._importers[source] = weakref.WeakSet()
+                self._importers[source].add(document)
+
+        # Track library users (by source path for stable lookup)
+        with self._library_users_lock:
+            for entry in namespace.get_libraries().values():
+                lib_key = entry.library_doc.source or entry.library_doc.name
+                if lib_key and lib_key not in self._library_users:
+                    self._library_users[lib_key] = weakref.WeakSet()
+                if lib_key:
+                    self._library_users[lib_key].add(document)
+
+        # Track variables users (by source path for stable lookup)
+        with self._variables_users_lock:
+            for entry in namespace.get_variables_imports().values():
+                var_key = entry.library_doc.source or entry.library_doc.name
+                if var_key and var_key not in self._variables_users:
+                    self._variables_users[var_key] = weakref.WeakSet()
+                if var_key:
+                    self._variables_users[var_key].add(document)
+
+        # Periodically cleanup stale entries
+        self._track_count += 1
+        if self._track_count >= _DEPENDENCY_CLEANUP_INTERVAL:
+            self._track_count = 0
+            self._cleanup_stale_dependency_maps()
+
+    def get_importers(self, source: str) -> list[TextDocument]:
+        """Get all documents that import a given source file (O(1) lookup)."""
+        with self._importers_lock:
+            if source in self._importers:
+                return list(self._importers[source])
+            return []
+
+    def clear_importers(self, source: str) -> None:
+        """Clear the importers set for a source (called when source is modified)."""
+        with self._importers_lock:
+            if source in self._importers:
+                del self._importers[source]
+
+    def get_library_users(self, library_doc: LibraryDoc) -> list[TextDocument]:
+        """Get all documents that use a given library (O(1) lookup by source path)."""
+        with self._library_users_lock:
+            lib_key = library_doc.source or library_doc.name
+            if lib_key and lib_key in self._library_users:
+                return list(self._library_users[lib_key])
+            return []
+
+    def get_variables_users(self, variables_doc: LibraryDoc) -> list[TextDocument]:
+        """Get all documents that use a given variables file (O(1) lookup by source path)."""
+        with self._variables_users_lock:
+            var_key = variables_doc.source or variables_doc.name
+            if var_key and var_key in self._variables_users:
+                return list(self._variables_users[var_key])
+            return []
+
+    def _cleanup_stale_dependency_maps(self) -> None:
+        """Remove entries with empty WeakSets from dependency maps.
+
+        Called periodically to prevent memory accumulation from stale entries
+        where the object IDs have been reused after garbage collection.
+        """
+        with self._importers_lock:
+            stale_importer_keys = [k for k, v in self._importers.items() if len(v) == 0]
+            for key in stale_importer_keys:
+                del self._importers[key]
+
+        with self._library_users_lock:
+            stale_lib_keys = [k for k, v in self._library_users.items() if len(v) == 0]
+            for lib_key in stale_lib_keys:
+                del self._library_users[lib_key]
+
+        with self._variables_users_lock:
+            stale_var_keys = [k for k, v in self._variables_users.items() if len(v) == 0]
+            for var_key in stale_var_keys:
+                del self._variables_users[var_key]
+
     def get_initialized_namespace(self, document: TextDocument) -> Namespace:
-        result: Optional[Namespace] = document.get_data(self.INITIALIZED_NAMESPACE)
+        result: Namespace | None = document.get_data(self.INITIALIZED_NAMESPACE)
         if result is None:
             self._logger.debug(lambda: f"There is no initialized Namespace: {document.uri if document else None}")
             result = self.get_namespace(document)
         return result
 
-    def get_only_initialized_namespace(self, document: TextDocument) -> Optional[Namespace]:
-        return cast(Optional[Namespace], document.get_data(self.INITIALIZED_NAMESPACE))
+    def get_only_initialized_namespace(self, document: TextDocument) -> Namespace | None:
+        return cast(Namespace | None, document.get_data(self.INITIALIZED_NAMESPACE))
+
+    def _try_load_namespace_from_cache(
+        self,
+        document: TextDocument,
+        model: ast.AST,
+        imports_manager: ImportsManager,
+        document_type: DocumentType | None,
+        languages: Languages | None,
+        workspace_languages: Languages | None,
+    ) -> Namespace | None:
+        """Attempt to load namespace from disk cache."""
+        source = str(document.uri.to_path())
+        source_path = Path(source)
+
+        if not source_path.exists():
+            return None
+
+        try:
+            source_stat = source_path.stat()
+            current_mtime = source_stat.st_mtime_ns
+            current_size = source_stat.st_size
+        except OSError:
+            return None
+
+        # Build cache filename using SHA256 for collision resistance
+        normalized = str(source_path.resolve())
+        cache_key = hashlib.sha256(normalized.encode("utf-8")).hexdigest()[:16]
+        cache_file = cache_key + ".cache"
+
+        # Check if cache file exists
+        if not imports_manager.data_cache.cache_data_exists(CacheSection.NAMESPACE, cache_file):
+            return None
+
+        # Load cache data (single file contains (meta, spec) tuple)
+        try:
+            saved_meta, cache_data = imports_manager.data_cache.read_cache_data(
+                CacheSection.NAMESPACE, cache_file, tuple
+            )
+        except Exception:
+            self._logger.debug(lambda: f"Failed to read namespace cache for {source}", context_name="import")
+            return None
+
+        # Type check the loaded data
+        if not isinstance(saved_meta, NamespaceMetaData) or not isinstance(cache_data, NamespaceCacheData):
+            self._logger.debug(lambda: f"Namespace cache type mismatch for {source}", context_name="import")
+            return None
+
+        # Validate source file mtime
+        if saved_meta.mtime != current_mtime:
+            self._logger.debug(lambda: f"Namespace cache mtime mismatch for {source}", context_name="import")
+            return None
+
+        # Fast path: if mtime AND size both match, skip expensive content hash computation
+        if saved_meta.file_size != current_size:
+            # Size changed - need content hash to validate
+            try:
+                _, current_hash = Namespace._compute_content_hash(source_path)
+            except OSError:
+                return None
+
+            if saved_meta.content_hash != current_hash:
+                self._logger.debug(
+                    lambda: f"Namespace cache content hash mismatch for {source}", context_name="import"
+                )
+                return None
+
+        # Validate environment identity (detects venv changes, PYTHONPATH changes, etc.)
+        if saved_meta.python_executable != sys.executable:
+            self._logger.debug(
+                lambda: f"Namespace cache Python executable mismatch for {source}", context_name="import"
+            )
+            return None
+
+        current_sys_path_hash = hashlib.sha256("\n".join(sys.path).encode("utf-8")).hexdigest()[:16]
+        if saved_meta.sys_path_hash != current_sys_path_hash:
+            self._logger.debug(lambda: f"Namespace cache sys.path hash mismatch for {source}", context_name="import")
+            return None
+
+        # Validate all library source mtimes
+        for lib_source, lib_mtime in saved_meta.library_sources_mtimes:
+            lib_path = Path(lib_source)
+            try:
+                if not lib_path.exists() or lib_path.stat().st_mtime_ns != lib_mtime:
+                    self._logger.debug(
+                        lambda: f"Namespace cache library mtime mismatch for {lib_source}", context_name="import"
+                    )
+                    return None
+            except OSError:
+                return None
+
+        # Validate all resource source mtimes
+        for res_source, res_mtime in saved_meta.resource_sources_mtimes:
+            res_path = Path(res_source)
+            try:
+                if not res_path.exists() or res_path.stat().st_mtime_ns != res_mtime:
+                    self._logger.debug(
+                        lambda: f"Namespace cache resource mtime mismatch for {res_source}", context_name="import"
+                    )
+                    return None
+            except OSError:
+                return None
+
+        # Validate all variables source mtimes
+        for var_source, var_mtime in saved_meta.variables_sources_mtimes:
+            var_path = Path(var_source)
+            try:
+                if not var_path.exists() or var_path.stat().st_mtime_ns != var_mtime:
+                    self._logger.debug(
+                        lambda: f"Namespace cache variables mtime mismatch for {var_source}", context_name="import"
+                    )
+                    return None
+            except OSError:
+                return None
+
+        # Create namespace from cache data
+        result = Namespace.from_cache_data(
+            cache_data=cache_data,
+            imports_manager=imports_manager,
+            model=model,
+            source=source,
+            document=document,
+            document_type=document_type,
+            languages=languages,
+            workspace_languages=workspace_languages,
+        )
+
+        if result is not None:
+            self._logger.debug(lambda: f"Loaded namespace from cache for {source}", context_name="import")
+
+        return result
+
+    def _save_namespace_to_cache(self, namespace: Namespace, imports_manager: ImportsManager) -> None:
+        """Save initialized namespace to disk cache.
+
+        Uses single-file format with atomic writes for consistency.
+        The cache file contains a (meta, spec) tuple.
+        """
+        if not namespace._initialized:
+            return
+
+        meta = namespace.get_cache_metadata()
+        if meta is None:
+            return
+
+        cache_data = namespace.to_cache_data()
+
+        # Build cache filename using SHA256 for collision resistance
+        source_path = Path(namespace.source)
+        normalized = str(source_path.resolve())
+        cache_key = hashlib.sha256(normalized.encode("utf-8")).hexdigest()[:16]
+        cache_file = cache_key + ".cache"
+
+        # Save as single tuple (meta, spec) - atomic and consistent
+        try:
+            imports_manager.data_cache.save_cache_data(
+                CacheSection.NAMESPACE, cache_file, (meta, cache_data)
+            )
+            self._logger.debug(lambda: f"Saved namespace to cache for {namespace.source}", context_name="import")
+        except OSError:
+            self._logger.debug(lambda: f"Failed to save namespace cache for {namespace.source}", context_name="import")
 
     def __get_namespace_for_document_type(
-        self, document: TextDocument, document_type: Optional[DocumentType]
+        self, document: TextDocument, document_type: DocumentType | None
     ) -> Namespace:
         if document_type is not None and document_type == DocumentType.INIT:
             model = self.get_init_model(document)
@@ -511,6 +792,20 @@ class DocumentsCacheHelper:
 
         languages, workspace_languages = self.build_languages_from_model(document, model)
 
+        # Try loading from disk cache first
+        cached = self._try_load_namespace_from_cache(
+            document, model, imports_manager, document_type, languages, workspace_languages
+        )
+        if cached is not None:
+            cached.has_invalidated.add(self.__invalidate_namespace)
+            cached.has_initialized.add(self.__namespace_initialized)
+            cached.has_analysed.add(self.__namespace_analysed)
+            # Mark as initialized in document data and track imports
+            document.set_data(self.INITIALIZED_NAMESPACE, cached)
+            self._track_imports(document, cached)
+            return cached
+
+        # Cache miss - create new namespace
         result = Namespace(
             imports_manager,
             model,
@@ -522,6 +817,7 @@ class DocumentsCacheHelper:
         )
         result.has_invalidated.add(self.__invalidate_namespace)
         result.has_initialized.add(self.__namespace_initialized)
+        result.has_analysed.add(self.__namespace_analysed)
 
         return result
 
@@ -572,21 +868,21 @@ class DocumentsCacheHelper:
         return result
 
     @event
-    def libraries_changed(sender, libraries: List[LibraryDoc]) -> None: ...
+    def libraries_changed(sender, libraries: list[LibraryDoc]) -> None: ...
 
     @event
-    def resources_changed(sender, resources: List[LibraryDoc]) -> None: ...
+    def resources_changed(sender, resources: list[LibraryDoc]) -> None: ...
 
     @event
-    def variables_changed(sender, variables: List[LibraryDoc]) -> None: ...
+    def variables_changed(sender, variables: list[LibraryDoc]) -> None: ...
 
-    def _on_libraries_changed(self, sender: ImportsManager, libraries: List[LibraryDoc]) -> None:
+    def _on_libraries_changed(self, sender: ImportsManager, libraries: list[LibraryDoc]) -> None:
         self.libraries_changed(self, libraries)
 
-    def _on_resources_changed(self, sender: ImportsManager, resources: List[LibraryDoc]) -> None:
+    def _on_resources_changed(self, sender: ImportsManager, resources: list[LibraryDoc]) -> None:
         self.resources_changed(self, resources)
 
-    def _on_variables_changed(self, sender: ImportsManager, variables: List[LibraryDoc]) -> None:
+    def _on_variables_changed(self, sender: ImportsManager, variables: list[LibraryDoc]) -> None:
         self.variables_changed(self, variables)
 
     def default_imports_manager(self) -> ImportsManager:
@@ -606,7 +902,7 @@ class DocumentsCacheHelper:
     def get_imports_manager_for_uri(self, uri: Uri) -> ImportsManager:
         return self.get_imports_manager_for_workspace_folder(self.workspace.get_workspace_folder(uri))
 
-    def get_imports_manager_for_workspace_folder(self, folder: Optional[WorkspaceFolder]) -> ImportsManager:
+    def get_imports_manager_for_workspace_folder(self, folder: WorkspaceFolder | None) -> ImportsManager:
         if folder is None:
             if len(self.workspace.workspace_folders) == 1:
                 folder = self.workspace.workspace_folders[0]

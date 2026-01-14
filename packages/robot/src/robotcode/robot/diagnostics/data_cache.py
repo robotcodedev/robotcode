@@ -1,4 +1,6 @@
+import os
 import pickle
+import tempfile
 from abc import ABC, abstractmethod
 from enum import Enum
 from pathlib import Path
@@ -12,6 +14,8 @@ _T = TypeVar("_T")
 class CacheSection(Enum):
     LIBRARY = "libdoc"
     VARIABLES = "variables"
+    RESOURCE = "resource"
+    NAMESPACE = "namespace"
 
 
 class DataCache(ABC):
@@ -85,5 +89,23 @@ class PickleDataCache(FileCacheDataBase):
         cached_file = self.build_cache_data_filename(section, entry_name)
 
         cached_file.parent.mkdir(parents=True, exist_ok=True)
-        with cached_file.open("wb") as f:
-            pickle.dump(data, f)
+
+        # Atomic write: write to temp file, then rename
+        # This ensures readers never see partial/corrupt data
+        temp_fd, temp_path = tempfile.mkstemp(
+            dir=cached_file.parent,
+            prefix=cached_file.stem + "_",
+            suffix=".tmp",
+        )
+        try:
+            with os.fdopen(temp_fd, "wb") as f:
+                pickle.dump(data, f)
+            # Atomic rename (POSIX guarantees atomicity; Windows may fail if target exists)
+            Path(temp_path).replace(cached_file)
+        except Exception:
+            # Clean up temp file on failure (temp file may be left behind on SystemExit/KeyboardInterrupt)
+            try:
+                os.unlink(temp_path)
+            except OSError:
+                pass
+            raise
