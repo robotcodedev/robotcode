@@ -30,8 +30,9 @@ from ..config.model import RobotBaseProfile
 from ..utils import get_robot_version
 from ..utils.stubs import Languages
 from .data_cache import CacheSection
+from .entities import VariableDefinition
 from .imports_manager import ImportsManager
-from .library_doc import LibraryDoc
+from .library_doc import KeywordDoc, LibraryDoc
 from .namespace import DocumentType, Namespace, NamespaceCacheData, NamespaceMetaData
 from .workspace_config import (
     AnalysisDiagnosticModifiersConfig,
@@ -98,6 +99,18 @@ class DocumentsCacheHelper:
 
         self._variables_users_lock = threading.RLock()
         self._variables_users: dict[str, weakref.WeakSet[TextDocument]] = {}
+
+        # Reference tracking for O(1) lookup of keyword/variable usages
+        # Uses (source, name) tuples as keys for stability across cache invalidation
+        self._ref_tracking_lock = threading.RLock()
+        self._keyword_ref_users: dict[tuple[str, str], weakref.WeakSet[TextDocument]] = {}
+        self._variable_ref_users: dict[tuple[str, str], weakref.WeakSet[TextDocument]] = {}
+        self._doc_keyword_refs: weakref.WeakKeyDictionary[
+            TextDocument, set[tuple[str, str]]
+        ] = weakref.WeakKeyDictionary()
+        self._doc_variable_refs: weakref.WeakKeyDictionary[
+            TextDocument, set[tuple[str, str]]
+        ] = weakref.WeakKeyDictionary()
 
         # Counter for periodic cleanup of stale dependency map entries
         self._track_count = 0
@@ -520,6 +533,8 @@ class DocumentsCacheHelper:
     def __namespace_analysed(self, sender: Namespace) -> None:
         """Re-save namespace to cache after analysis to include diagnostics and analysis results."""
         if sender.document is not None:
+            self._track_references(sender.document, sender)
+
             imports_manager = self.get_imports_manager(sender.document)
             self._save_namespace_to_cache(sender, imports_manager)
 
@@ -585,6 +600,22 @@ class DocumentsCacheHelper:
                 return list(self._variables_users[var_key])
             return []
 
+    def get_keyword_ref_users(self, kw_doc: KeywordDoc) -> list[TextDocument]:
+        """Get documents that reference a keyword."""
+        with self._ref_tracking_lock:
+            key = (kw_doc.source or "", kw_doc.name)
+            if key in self._keyword_ref_users:
+                return list(self._keyword_ref_users[key])
+            return []
+
+    def get_variable_ref_users(self, var_def: VariableDefinition) -> list[TextDocument]:
+        """Get documents that reference a variable."""
+        with self._ref_tracking_lock:
+            key = (var_def.source or "", var_def.name)
+            if key in self._variable_ref_users:
+                return list(self._variable_ref_users[key])
+            return []
+
     def _cleanup_stale_dependency_maps(self) -> None:
         """Remove entries with empty WeakSets from dependency maps.
 
@@ -605,6 +636,59 @@ class DocumentsCacheHelper:
             stale_var_keys = [k for k, v in self._variables_users.items() if len(v) == 0]
             for var_key in stale_var_keys:
                 del self._variables_users[var_key]
+
+        with self._ref_tracking_lock:
+            stale_kw_ref_keys = [k for k, v in self._keyword_ref_users.items() if len(v) == 0]
+            for kw_ref_key in stale_kw_ref_keys:
+                del self._keyword_ref_users[kw_ref_key]
+
+            stale_var_ref_keys = [k for k, v in self._variable_ref_users.items() if len(v) == 0]
+            for var_ref_key in stale_var_ref_keys:
+                del self._variable_ref_users[var_ref_key]
+
+    def _track_references(self, document: TextDocument, namespace: Namespace) -> None:
+        """Track keyword/variable references.
+
+        Uses diff-based updates: compares current references against previous
+        to handle documents that stop referencing items after edits.
+        """
+        with self._ref_tracking_lock:
+            self._update_keyword_refs(document, namespace)
+            self._update_variable_refs(document, namespace)
+
+    def _update_keyword_refs(self, document: TextDocument, namespace: Namespace) -> None:
+        """Update reverse index for keyword references."""
+        keyword_refs = namespace.get_keyword_references()
+        new_keys = {(kw.source or "", kw.name) for kw in keyword_refs}
+        old_keys = self._doc_keyword_refs.get(document, set())
+
+        for key in old_keys - new_keys:
+            if key in self._keyword_ref_users:
+                self._keyword_ref_users[key].discard(document)
+
+        for key in new_keys - old_keys:
+            if key not in self._keyword_ref_users:
+                self._keyword_ref_users[key] = weakref.WeakSet()
+            self._keyword_ref_users[key].add(document)
+
+        self._doc_keyword_refs[document] = new_keys
+
+    def _update_variable_refs(self, document: TextDocument, namespace: Namespace) -> None:
+        """Update reverse index for variable references."""
+        variable_refs = namespace.get_variable_references()
+        new_keys = {(var.source or "", var.name) for var in variable_refs}
+        old_keys = self._doc_variable_refs.get(document, set())
+
+        for key in old_keys - new_keys:
+            if key in self._variable_ref_users:
+                self._variable_ref_users[key].discard(document)
+
+        for key in new_keys - old_keys:
+            if key not in self._variable_ref_users:
+                self._variable_ref_users[key] = weakref.WeakSet()
+            self._variable_ref_users[key].add(document)
+
+        self._doc_variable_refs[document] = new_keys
 
     def get_initialized_namespace(self, document: TextDocument) -> Namespace:
         result: Namespace | None = document.get_data(self.INITIALIZED_NAMESPACE)

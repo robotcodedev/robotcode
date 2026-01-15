@@ -18,8 +18,9 @@ from robotcode.robot.diagnostics.entities import (
     EnvironmentVariableDefinition,
     GlobalVariableDefinition,
     LibraryArgumentDefinition,
+    VariableDefinition,
 )
-from robotcode.robot.diagnostics.library_doc import LibraryDoc
+from robotcode.robot.diagnostics.library_doc import KeywordDoc, LibraryDoc
 from robotcode.robot.diagnostics.namespace import Namespace
 
 from ...common.parts.diagnostics import DiagnosticsCollectType, DiagnosticsResult
@@ -138,6 +139,40 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
                 ],
             )
 
+    def _is_keyword_used_anywhere(
+        self,
+        document: TextDocument,
+        kw: KeywordDoc,
+        namespace: Namespace,
+    ) -> bool:
+        """Check if keyword is used anywhere, using index with safe fallback."""
+        if self.parent.documents_cache.get_keyword_ref_users(kw):
+            return True
+
+        if namespace.get_keyword_references().get(kw):
+            return True
+
+        # Safe fallback: workspace scan if index might be incomplete
+        refs = self.parent.robot_references.find_keyword_references(document, kw, False, True)
+        return bool(refs)
+
+    def _is_variable_used_anywhere(
+        self,
+        document: TextDocument,
+        var: VariableDefinition,
+        namespace: Namespace,
+    ) -> bool:
+        """Check if variable is used anywhere, using index with safe fallback."""
+        if self.parent.documents_cache.get_variable_ref_users(var):
+            return True
+
+        if namespace.get_variable_references().get(var):
+            return True
+
+        # Safe fallback: workspace scan if index might be incomplete
+        refs = self.parent.robot_references.find_variable_references(document, var, False, True)
+        return bool(refs)
+
     @language_id("robotframework")
     @_logger.call
     def collect_unused_keyword_references(
@@ -166,10 +201,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
             for kw in (namespace.get_library_doc()).keywords.values():
                 check_current_task_canceled()
 
-                references = self.parent.robot_references.find_keyword_references(
-                    document, kw, False, True
-                )
-                if not references:
+                if not self._is_keyword_used_anywhere(document, kw, namespace):
                     result.append(
                         Diagnostic(
                             range=kw.name_range,
@@ -255,10 +287,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
                 ):
                     continue
 
-                references = self.parent.robot_references.find_variable_references(
-                    document, var, False, True
-                )
-                if not references:
+                if not self._is_variable_used_anywhere(document, var, namespace):
                     result.append(
                         Diagnostic(
                             range=var.name_range,
