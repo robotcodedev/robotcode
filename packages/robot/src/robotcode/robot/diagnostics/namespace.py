@@ -108,6 +108,7 @@ if get_robot_version() >= (7, 0):
 
 # Namespace cache version - bump major for incompatible format changes
 # 1.0: Single-file cache format with atomic writes (meta + spec in one file)
+#      Extended to include full analysis caching (keyword_references, variable_references, local_variable_assignments)
 NAMESPACE_META_VERSION = "1.0"
 
 
@@ -168,6 +169,37 @@ class CachedVariablesEntry(_CachedEntryBase):
 
 
 @dataclass(frozen=True)
+class KeywordRefKey:
+    """Stable key for identifying keywords across cache sessions (immutable).
+
+    Uses minimal fields needed for unique identification:
+    - source + line_no uniquely identifies a location in code
+    - name ensures we match the right keyword at that location
+    """
+
+    source: str  # File path (empty string for builtins)
+    name: str  # Keyword name
+    line_no: int  # Line number (0 for builtins)
+
+
+@dataclass(frozen=True)
+class VariableRefKey:
+    """Stable key for identifying variables across cache sessions (immutable).
+
+    Uses minimal fields needed for unique identification:
+    - source + line_no + col_offset uniquely identifies a location
+    - name ensures we match the right variable at that location
+    - var_type distinguishes between different variable definition types
+    """
+
+    source: str  # File path
+    name: str  # Variable name (e.g., "${MY_VAR}")
+    var_type: str  # VariableDefinitionType.value
+    line_no: int
+    col_offset: int
+
+
+@dataclass(frozen=True)
 class NamespaceCacheData:
     """Serializable namespace state for disk caching (immutable)."""
 
@@ -188,6 +220,13 @@ class NamespaceCacheData:
     # Namespace references: ((import_index, (locations...)), ...)
     # Maps import index (in imports tuple) to set of locations where the import is referenced
     namespace_references: tuple[tuple[int, tuple[Location, ...]], ...] = ()
+
+    # Full analysis caching - keyword and variable references
+    # When these are populated and fully_analyzed is True, analysis phase can be skipped entirely
+    keyword_references: tuple[tuple[KeywordRefKey, tuple[Location, ...]], ...] = ()
+    variable_references: tuple[tuple[VariableRefKey, tuple[Location, ...]], ...] = ()
+    local_variable_assignments: tuple[tuple[VariableRefKey, tuple[Range, ...]], ...] = ()
+    fully_analyzed: bool = False  # True if full analysis data is cached
 
 
 class DiagnosticsError(Exception):
@@ -1171,6 +1210,67 @@ class Namespace:
 
         return tuple(result)
 
+    def _serialize_keyword_references(self) -> tuple[tuple[KeywordRefKey, tuple[Location, ...]], ...]:
+        """Serialize _keyword_references for caching using stable keys.
+
+        Uses (source, name, line_no) as a stable key that survives cache sessions.
+        """
+        if self._keyword_references is None:
+            return ()
+
+        result: list[tuple[KeywordRefKey, tuple[Location, ...]]] = []
+        for kw_doc, locations in self._keyword_references.items():
+            key = KeywordRefKey(
+                source=kw_doc.source or "",
+                name=kw_doc.name,
+                line_no=kw_doc.line_no,
+            )
+            result.append((key, tuple(locations)))
+
+        return tuple(result)
+
+    def _serialize_variable_references(self) -> tuple[tuple[VariableRefKey, tuple[Location, ...]], ...]:
+        """Serialize _variable_references for caching using stable keys.
+
+        Uses (source, name, var_type, line_no, col_offset) as a stable key.
+        """
+        if self._variable_references is None:
+            return ()
+
+        result: list[tuple[VariableRefKey, tuple[Location, ...]]] = []
+        for var_def, locations in self._variable_references.items():
+            key = VariableRefKey(
+                source=var_def.source or "",
+                name=var_def.name,
+                var_type=var_def.type.value,
+                line_no=var_def.line_no,
+                col_offset=var_def.col_offset,
+            )
+            result.append((key, tuple(locations)))
+
+        return tuple(result)
+
+    def _serialize_local_variable_assignments(self) -> tuple[tuple[VariableRefKey, tuple[Range, ...]], ...]:
+        """Serialize _local_variable_assignments for caching using stable keys.
+
+        Uses the same key format as variable references.
+        """
+        if self._local_variable_assignments is None:
+            return ()
+
+        result: list[tuple[VariableRefKey, tuple[Range, ...]]] = []
+        for var_def, ranges in self._local_variable_assignments.items():
+            key = VariableRefKey(
+                source=var_def.source or "",
+                name=var_def.name,
+                var_type=var_def.type.value,
+                line_no=var_def.line_no,
+                col_offset=var_def.col_offset,
+            )
+            result.append((key, tuple(ranges)))
+
+        return tuple(result)
+
     def to_cache_data(self) -> NamespaceCacheData:
         """Extract serializable state for disk caching."""
         # Convert LibraryEntry -> CachedLibraryEntry
@@ -1252,6 +1352,11 @@ class Namespace:
             ),
             tag_definitions=tuple(self._tag_definitions) if self._tag_definitions is not None else (),
             namespace_references=self._serialize_namespace_references(),
+            # Full analysis caching
+            keyword_references=self._serialize_keyword_references() if self._analyzed else (),
+            variable_references=self._serialize_variable_references() if self._analyzed else (),
+            local_variable_assignments=self._serialize_local_variable_assignments() if self._analyzed else (),
+            fully_analyzed=self._analyzed,
         )
 
     @classmethod
@@ -1465,6 +1570,163 @@ class Namespace:
                 ns._namespace_references[entry] = set(locations)
 
     @classmethod
+    def _restore_keyword_references(
+        cls,
+        ns: "Namespace",
+        cached_refs: tuple[tuple[KeywordRefKey, tuple[Location, ...]], ...],
+    ) -> dict[KeywordDoc, set[Location]] | None:
+        """Restore _keyword_references from cached stable keys.
+
+        Returns None if >10% of references are missing (cache likely stale),
+        otherwise returns the restored dictionary.
+        """
+        if not cached_refs:
+            return {}
+
+        # Build O(1) lookup: KeywordRefKey -> KeywordDoc
+        lookup: dict[KeywordRefKey, KeywordDoc] = {}
+
+        # Include keywords from all imported libraries
+        for entry in ns._libraries.values():
+            for kw in entry.library_doc.keywords:
+                key = KeywordRefKey(kw.source or "", kw.name, kw.line_no)
+                lookup[key] = kw
+
+        # Include keywords from all imported resources
+        for entry in ns._resources.values():
+            for kw in entry.library_doc.keywords:
+                key = KeywordRefKey(kw.source or "", kw.name, kw.line_no)
+                lookup[key] = kw
+
+        # Include own keywords if this file has a library_doc
+        if ns._library_doc is not None:
+            for kw in ns._library_doc.keywords:
+                key = KeywordRefKey(kw.source or "", kw.name, kw.line_no)
+                lookup[key] = kw
+
+        # Restore references with validation
+        result: dict[KeywordDoc, set[Location]] = {}
+        missing = 0
+
+        for key, locations in cached_refs:
+            if key in lookup:
+                result[lookup[key]] = set(locations)
+            else:
+                missing += 1
+
+        # If >10% missing, cache is likely stale - signal to recompute
+        if missing > len(cached_refs) * 0.1:
+            return None
+
+        return result
+
+    @classmethod
+    def _restore_variable_references(
+        cls,
+        ns: "Namespace",
+        cached_refs: tuple[tuple[VariableRefKey, tuple[Location, ...]], ...],
+    ) -> dict[VariableDefinition, set[Location]] | None:
+        """Restore _variable_references from cached stable keys.
+
+        Returns None if >10% of references are missing (cache likely stale),
+        otherwise returns the restored dictionary.
+        """
+        if not cached_refs:
+            return {}
+
+        # Build O(1) lookup: VariableRefKey -> VariableDefinition
+        lookup: dict[VariableRefKey, VariableDefinition] = {}
+
+        # Include own variables
+        if ns._own_variables is not None:
+            for var in ns._own_variables:
+                key = VariableRefKey(
+                    var.source or "", var.name, var.type.value, var.line_no, var.col_offset
+                )
+                lookup[key] = var
+
+        # Include variables from imported resources
+        for res_entry in ns._resources.values():
+            for var in res_entry.variables:
+                key = VariableRefKey(
+                    var.source or "", var.name, var.type.value, var.line_no, var.col_offset
+                )
+                lookup[key] = var
+
+        # Include variables from variables imports
+        for var_entry in ns._variables_imports.values():
+            for var in var_entry.variables:
+                key = VariableRefKey(
+                    var.source or "", var.name, var.type.value, var.line_no, var.col_offset
+                )
+                lookup[key] = var
+
+        # Restore references with validation
+        result: dict[VariableDefinition, set[Location]] = {}
+        missing = 0
+
+        for key, locations in cached_refs:
+            if key in lookup:
+                result[lookup[key]] = set(locations)
+            else:
+                missing += 1
+
+        # If >10% missing, cache is likely stale - signal to recompute
+        if missing > len(cached_refs) * 0.1:
+            return None
+
+        return result
+
+    @classmethod
+    def _restore_local_variable_assignments(
+        cls,
+        ns: "Namespace",
+        cached_refs: tuple[tuple[VariableRefKey, tuple[Range, ...]], ...],
+    ) -> dict[VariableDefinition, set[Range]] | None:
+        """Restore _local_variable_assignments from cached stable keys.
+
+        Returns None if >10% of assignments are missing (cache likely stale),
+        otherwise returns the restored dictionary.
+        """
+        if not cached_refs:
+            return {}
+
+        # Build O(1) lookup: VariableRefKey -> VariableDefinition
+        # Local variables are typically in own_variables
+        lookup: dict[VariableRefKey, VariableDefinition] = {}
+
+        if ns._own_variables is not None:
+            for var in ns._own_variables:
+                key = VariableRefKey(
+                    var.source or "", var.name, var.type.value, var.line_no, var.col_offset
+                )
+                lookup[key] = var
+
+        # Also check resources for local variables defined there
+        for res_entry in ns._resources.values():
+            for var in res_entry.variables:
+                key = VariableRefKey(
+                    var.source or "", var.name, var.type.value, var.line_no, var.col_offset
+                )
+                lookup[key] = var
+
+        # Restore assignments with validation
+        result: dict[VariableDefinition, set[Range]] = {}
+        missing = 0
+
+        for key, ranges in cached_refs:
+            if key in lookup:
+                result[lookup[key]] = set(ranges)
+            else:
+                missing += 1
+
+        # If >10% missing, cache is likely stale - signal to recompute
+        if missing > len(cached_refs) * 0.1:
+            return None
+
+        return result
+
+    @classmethod
     def from_cache_data(
         cls,
         cache_data: NamespaceCacheData,
@@ -1517,12 +1779,34 @@ class Namespace:
         # Mark as initialized
         ns._initialized = True
 
-        # Restore cached diagnostics if available (analysis will still run to populate references)
-        # Note: We don't set _analyzed=True because features like goto definition need
-        # _variable_references and _keyword_references which aren't cached yet.
-        # The analysis phase will run but initialization is cached, providing partial speedup.
+        # Restore cached diagnostics if available
         if cache_data.analyzed and cache_data.diagnostics:
             ns._diagnostics = list(cache_data.diagnostics)
+
+        # Restore cached test case and tag definitions
+        if cache_data.test_case_definitions:
+            ns._test_case_definitions = list(cache_data.test_case_definitions)
+        if cache_data.tag_definitions:
+            ns._tag_definitions = list(cache_data.tag_definitions)
+
+        # Restore namespace references
+        if cache_data.namespace_references:
+            cls._restore_namespace_references(ns, cache_data.namespace_references)
+
+        # Attempt full analysis restoration if available
+        # This allows skipping the analysis phase entirely on warm start
+        if cache_data.fully_analyzed:
+            keyword_refs = cls._restore_keyword_references(ns, cache_data.keyword_references)
+            variable_refs = cls._restore_variable_references(ns, cache_data.variable_references)
+            local_var_assigns = cls._restore_local_variable_assignments(ns, cache_data.local_variable_assignments)
+
+            # Only set _analyzed=True if ALL references were restored successfully
+            # If any returned None (>10% missing), fall back to recomputing
+            if keyword_refs is not None and variable_refs is not None and local_var_assigns is not None:
+                ns._keyword_references = keyword_refs
+                ns._variable_references = variable_refs
+                ns._local_variable_assignments = local_var_assigns
+                ns._analyzed = True
 
         return ns
 

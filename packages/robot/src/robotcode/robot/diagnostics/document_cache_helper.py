@@ -887,6 +887,10 @@ class DocumentsCacheHelper:
             # Mark as initialized in document data and track imports
             document.set_data(self.INITIALIZED_NAMESPACE, cached)
             self._track_imports(document, cached)
+            # If fully analyzed from cache, also track references
+            # (since has_analysed event won't fire for already-analyzed namespaces)
+            if cached._analyzed:
+                self._track_references(document, cached)
             return cached
 
         # Cache miss - create new namespace
