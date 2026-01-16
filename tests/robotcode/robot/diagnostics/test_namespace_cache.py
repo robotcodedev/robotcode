@@ -64,9 +64,10 @@ class TestNamespaceMetaData:
 
     def test_filepath_base_property(self) -> None:
         """filepath_base computes correct cache filename base."""
+        source = "/home/user/project/tests/test_example.robot"
         meta = NamespaceMetaData(
             meta_version=NAMESPACE_META_VERSION,
-            source="/home/user/project/tests/test_example.robot",
+            source=source,
             mtime=1234567890,
             file_size=100,
             content_hash="abc",
@@ -79,7 +80,8 @@ class TestNamespaceMetaData:
         )
 
         # Should be "adler32hash_stem" format
-        expected_hash = f"{zlib.adler32(b'/home/user/project/tests'):08x}"
+        parent_path = str(Path(source).parent)
+        expected_hash = f"{zlib.adler32(parent_path.encode('utf-8')):08x}"
         assert meta.filepath_base == f"{expected_hash}_test_example"
 
     def test_filepath_base_with_different_paths(self) -> None:

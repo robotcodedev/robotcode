@@ -1246,10 +1246,7 @@ class ImportsManager:
             if self._executor is None:
                 # Cap at 4 workers to balance parallelism with memory usage
                 max_workers = min(mp.cpu_count() or 1, 4)
-                self._executor = ProcessPoolExecutor(
-                    max_workers=max_workers,
-                    mp_context=mp.get_context("spawn")
-                )
+                self._executor = ProcessPoolExecutor(max_workers=max_workers, mp_context=mp.get_context("spawn"))
 
         return self._executor
 
@@ -1440,9 +1437,7 @@ class ImportsManager:
                     saved_meta = self.data_cache.read_cache_data(CacheSection.RESOURCE, meta_file, ResourceMetaData)
                     if saved_meta == meta:
                         spec_path = meta.filepath_base + ".spec"
-                        self._logger.debug(
-                            lambda: f"Use cached resource data for {source}", context_name="import"
-                        )
+                        self._logger.debug(lambda: f"Use cached resource data for {source}", context_name="import")
                         result = self.data_cache.read_cache_data(CacheSection.RESOURCE, spec_path, LibraryDoc)
                         # Store in in-memory cache too
                         if entry is None:
@@ -1476,9 +1471,7 @@ class ImportsManager:
 
         return result
 
-    def get_libdoc_for_source(
-        self, source: Optional[str], name: Optional[str] = None
-    ) -> Optional[LibraryDoc]:
+    def get_libdoc_for_source(self, source: Optional[str], name: Optional[str] = None) -> Optional[LibraryDoc]:
         """Look up a library LibraryDoc by its source path from disk cache.
 
         Used when restoring namespace from cache - looks up cached library data.

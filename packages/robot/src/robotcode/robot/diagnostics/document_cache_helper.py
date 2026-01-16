@@ -105,12 +105,12 @@ class DocumentsCacheHelper:
         self._ref_tracking_lock = threading.RLock()
         self._keyword_ref_users: dict[tuple[str, str], weakref.WeakSet[TextDocument]] = {}
         self._variable_ref_users: dict[tuple[str, str], weakref.WeakSet[TextDocument]] = {}
-        self._doc_keyword_refs: weakref.WeakKeyDictionary[
-            TextDocument, set[tuple[str, str]]
-        ] = weakref.WeakKeyDictionary()
-        self._doc_variable_refs: weakref.WeakKeyDictionary[
-            TextDocument, set[tuple[str, str]]
-        ] = weakref.WeakKeyDictionary()
+        self._doc_keyword_refs: weakref.WeakKeyDictionary[TextDocument, set[tuple[str, str]]] = (
+            weakref.WeakKeyDictionary()
+        )
+        self._doc_variable_refs: weakref.WeakKeyDictionary[TextDocument, set[tuple[str, str]]] = (
+            weakref.WeakKeyDictionary()
+        )
 
         # Counter for periodic cleanup of stale dependency map entries
         self._track_count = 0
@@ -760,9 +760,7 @@ class DocumentsCacheHelper:
                 return None
 
             if saved_meta.content_hash != current_hash:
-                self._logger.debug(
-                    lambda: f"Namespace cache content hash mismatch for {source}", context_name="import"
-                )
+                self._logger.debug(lambda: f"Namespace cache content hash mismatch for {source}", context_name="import")
                 return None
 
         # Validate environment identity (detects venv changes, PYTHONPATH changes, etc.)
@@ -853,9 +851,7 @@ class DocumentsCacheHelper:
 
         # Save as single tuple (meta, spec) - atomic and consistent
         try:
-            imports_manager.data_cache.save_cache_data(
-                CacheSection.NAMESPACE, cache_file, (meta, cache_data)
-            )
+            imports_manager.data_cache.save_cache_data(CacheSection.NAMESPACE, cache_file, (meta, cache_data))
             self._logger.debug(lambda: f"Saved namespace to cache for {namespace.source}", context_name="import")
         except OSError:
             self._logger.debug(lambda: f"Failed to save namespace cache for {namespace.source}", context_name="import")

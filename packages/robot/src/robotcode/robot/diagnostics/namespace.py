@@ -1276,38 +1276,42 @@ class Namespace:
         # Convert LibraryEntry -> CachedLibraryEntry
         cached_libraries: list[tuple[str, CachedLibraryEntry]] = []
         for key, entry in self._libraries.items():
-            cached_libraries.append((
-                key,
-                CachedLibraryEntry(
-                    name=entry.name,
-                    import_name=entry.import_name,
-                    library_doc_source=entry.library_doc.source,
-                    args=entry.args,
-                    alias=entry.alias,
-                    import_range=entry.import_range,
-                    import_source=entry.import_source,
-                    alias_range=entry.alias_range,
-                ),
-            ))
+            cached_libraries.append(
+                (
+                    key,
+                    CachedLibraryEntry(
+                        name=entry.name,
+                        import_name=entry.import_name,
+                        library_doc_source=entry.library_doc.source,
+                        args=entry.args,
+                        alias=entry.alias,
+                        import_range=entry.import_range,
+                        import_source=entry.import_source,
+                        alias_range=entry.alias_range,
+                    ),
+                )
+            )
 
         # Convert ResourceEntry -> CachedResourceEntry
         cached_resources: list[tuple[str, CachedResourceEntry]] = []
         for key, entry in self._resources.items():
-            cached_resources.append((
-                key,
-                CachedResourceEntry(
-                    name=entry.name,
-                    import_name=entry.import_name,
-                    library_doc_source=entry.library_doc.source,
-                    args=entry.args,
-                    alias=entry.alias,
-                    import_range=entry.import_range,
-                    import_source=entry.import_source,
-                    alias_range=entry.alias_range,
-                    imports=tuple(entry.imports),
-                    variables=tuple(entry.variables),
-                ),
-            ))
+            cached_resources.append(
+                (
+                    key,
+                    CachedResourceEntry(
+                        name=entry.name,
+                        import_name=entry.import_name,
+                        library_doc_source=entry.library_doc.source,
+                        args=entry.args,
+                        alias=entry.alias,
+                        import_range=entry.import_range,
+                        import_source=entry.import_source,
+                        alias_range=entry.alias_range,
+                        imports=tuple(entry.imports),
+                        variables=tuple(entry.variables),
+                    ),
+                )
+            )
 
         # Build resources_files mapping (source -> key)
         resources_files: list[tuple[str, str]] = []
@@ -1321,20 +1325,22 @@ class Namespace:
         # Convert VariablesEntry -> CachedVariablesEntry
         cached_variables: list[tuple[str, CachedVariablesEntry]] = []
         for key, entry in self._variables_imports.items():
-            cached_variables.append((
-                key,
-                CachedVariablesEntry(
-                    name=entry.name,
-                    import_name=entry.import_name,
-                    library_doc_source=entry.library_doc.source,
-                    args=entry.args,
-                    alias=entry.alias,
-                    import_range=entry.import_range,
-                    import_source=entry.import_source,
-                    alias_range=entry.alias_range,
-                    variables=tuple(entry.variables),
-                ),
-            ))
+            cached_variables.append(
+                (
+                    key,
+                    CachedVariablesEntry(
+                        name=entry.name,
+                        import_name=entry.import_name,
+                        library_doc_source=entry.library_doc.source,
+                        args=entry.args,
+                        alias=entry.alias,
+                        import_range=entry.import_range,
+                        import_source=entry.import_source,
+                        alias_range=entry.alias_range,
+                        variables=tuple(entry.variables),
+                    ),
+                )
+            )
 
         return NamespaceCacheData(
             libraries=tuple(cached_libraries),
@@ -1368,9 +1374,7 @@ class Namespace:
     ) -> bool:
         """Restore library entries from cache. Returns False if cache is stale."""
         for key, cached_entry in cached_libraries:
-            library_doc = imports_manager.get_libdoc_for_source(
-                cached_entry.library_doc_source, cached_entry.name
-            )
+            library_doc = imports_manager.get_libdoc_for_source(cached_entry.library_doc_source, cached_entry.name)
             if library_doc is None:
                 return False
             ns._libraries[key] = LibraryEntry(
@@ -1640,25 +1644,19 @@ class Namespace:
         # Include own variables
         if ns._own_variables is not None:
             for var in ns._own_variables:
-                key = VariableRefKey(
-                    var.source or "", var.name, var.type.value, var.line_no, var.col_offset
-                )
+                key = VariableRefKey(var.source or "", var.name, var.type.value, var.line_no, var.col_offset)
                 lookup[key] = var
 
         # Include variables from imported resources
         for res_entry in ns._resources.values():
             for var in res_entry.variables:
-                key = VariableRefKey(
-                    var.source or "", var.name, var.type.value, var.line_no, var.col_offset
-                )
+                key = VariableRefKey(var.source or "", var.name, var.type.value, var.line_no, var.col_offset)
                 lookup[key] = var
 
         # Include variables from variables imports
         for var_entry in ns._variables_imports.values():
             for var in var_entry.variables:
-                key = VariableRefKey(
-                    var.source or "", var.name, var.type.value, var.line_no, var.col_offset
-                )
+                key = VariableRefKey(var.source or "", var.name, var.type.value, var.line_no, var.col_offset)
                 lookup[key] = var
 
         # Restore references with validation
@@ -1697,17 +1695,13 @@ class Namespace:
 
         if ns._own_variables is not None:
             for var in ns._own_variables:
-                key = VariableRefKey(
-                    var.source or "", var.name, var.type.value, var.line_no, var.col_offset
-                )
+                key = VariableRefKey(var.source or "", var.name, var.type.value, var.line_no, var.col_offset)
                 lookup[key] = var
 
         # Also check resources for local variables defined there
         for res_entry in ns._resources.values():
             for var in res_entry.variables:
-                key = VariableRefKey(
-                    var.source or "", var.name, var.type.value, var.line_no, var.col_offset
-                )
+                key = VariableRefKey(var.source or "", var.name, var.type.value, var.line_no, var.col_offset)
                 lookup[key] = var
 
         # Restore assignments with validation

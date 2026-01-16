@@ -28,14 +28,16 @@ class TestResourceMetaData:
 
     def test_filepath_base_property(self) -> None:
         """filepath_base computes correct cache filename base."""
+        source = "/home/user/project/resources/common.resource"
         meta = ResourceMetaData(
             meta_version=RESOURCE_META_VERSION,
-            source="/home/user/project/resources/common.resource",
+            source=source,
             mtime=0,
         )
 
         # Should be "adler32hash_stem" format
-        expected_hash = f"{zlib.adler32(b'/home/user/project/resources'):08x}"
+        parent_path = str(Path(source).parent)
+        expected_hash = f"{zlib.adler32(parent_path.encode('utf-8')):08x}"
         assert meta.filepath_base == f"{expected_hash}_common"
 
     def test_filepath_base_different_paths(self) -> None:
