@@ -22,8 +22,16 @@ class TestNamespaceCaching:
         protocol: RobotLanguageServerProtocol,
     ) -> None:
         """Cache directory is created after workspace analysis."""
-        # The protocol fixture already runs workspace diagnostics
-        # which should create the cache directory
+        # Trigger analysis by accessing a document and its namespace
+        test_file = DATA_ROOT / "tests" / "hover.robot"
+        if not test_file.exists():
+            pytest.skip("Test file not found")
+
+        doc = protocol.documents.get_or_open_document(test_file, "robotframework")
+        ns = protocol.documents_cache.get_namespace(doc)
+        assert ns is not None, "Should have namespace"
+
+        # After analysis, cache directory should be created
         assert CACHE_DIR.exists(), "Cache directory should be created"
 
     def test_namespace_cache_files_created(
@@ -31,6 +39,15 @@ class TestNamespaceCaching:
         protocol: RobotLanguageServerProtocol,
     ) -> None:
         """Namespace cache files are created for analyzed robot files."""
+        # Trigger analysis first
+        test_file = DATA_ROOT / "tests" / "hover.robot"
+        if not test_file.exists():
+            pytest.skip("Test file not found")
+
+        doc = protocol.documents.get_or_open_document(test_file, "robotframework")
+        ns = protocol.documents_cache.get_namespace(doc)
+        assert ns is not None, "Should have namespace"
+
         # Look for namespace cache files
         ns_cache_dirs = list(CACHE_DIR.glob("*/*/namespace"))
 
@@ -128,17 +145,16 @@ class TestNamespaceCaching:
         if not ns_cache_dirs:
             pytest.skip("No namespace cache directory found")
 
-        # Collect all cache file names
-        cache_files: list[Path] = []
+        # Check uniqueness within each RF version's namespace directory
+        # (different RF versions may have the same file names, which is expected)
         for ns_dir in ns_cache_dirs:
-            cache_files.extend(ns_dir.glob("*.cache.pkl"))
+            cache_files = list(ns_dir.glob("*.cache.pkl"))
+            if len(cache_files) < 2:
+                continue
 
-        if len(cache_files) < 2:
-            pytest.skip("Need at least 2 cache files to test uniqueness")
-
-        # All cache file names should be unique
-        names = [f.name for f in cache_files]
-        assert len(names) == len(set(names)), "Cache file names should be unique"
+            # Within a single namespace directory, all cache file names should be unique
+            names = [f.name for f in cache_files]
+            assert len(names) == len(set(names)), f"Cache file names should be unique within {ns_dir}"
 
 
 class TestCacheInvalidation:
@@ -185,6 +201,15 @@ class TestLibraryDocCaching:
         protocol: RobotLanguageServerProtocol,
     ) -> None:
         """Library documentation cache directory is created."""
+        # Trigger analysis first by accessing a document that imports libraries
+        test_file = DATA_ROOT / "tests" / "hover.robot"
+        if not test_file.exists():
+            pytest.skip("Test file not found")
+
+        doc = protocol.documents.get_or_open_document(test_file, "robotframework")
+        ns = protocol.documents_cache.get_namespace(doc)
+        assert ns is not None, "Should have namespace"
+
         libdoc_dirs = list(CACHE_DIR.glob("*/*/libdoc"))
 
         # After analyzing files that import libraries, should have libdoc cache

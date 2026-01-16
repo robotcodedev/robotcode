@@ -824,7 +824,11 @@ class DocumentsCacheHelper:
         )
 
         if result is not None:
-            self._logger.debug(lambda: f"Loaded namespace from cache for {source}", context_name="import")
+            self._logger.debug(
+                lambda: f"Loaded namespace from cache for {source} "
+                f"(fully_analyzed={cache_data.fully_analyzed}, _analyzed={result._analyzed})",
+                context_name="import",
+            )
 
         return result
 
@@ -852,7 +856,10 @@ class DocumentsCacheHelper:
         # Save as single tuple (meta, spec) - atomic and consistent
         try:
             imports_manager.data_cache.save_cache_data(CacheSection.NAMESPACE, cache_file, (meta, cache_data))
-            self._logger.debug(lambda: f"Saved namespace to cache for {namespace.source}", context_name="import")
+            self._logger.debug(
+                lambda: f"Saved namespace to cache for {namespace.source} (fully_analyzed={cache_data.fully_analyzed})",
+                context_name="import",
+            )
         except OSError:
             self._logger.debug(lambda: f"Failed to save namespace cache for {namespace.source}", context_name="import")
 
