@@ -224,7 +224,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
         include_declaration: bool = True,
         stop_at_first: bool = False,
     ) -> List[Location]:
-        result = []
+        result: List[Location] = []
 
         if include_declaration and variable.source:
             result.append(Location(str(Uri.from_path(variable.source)), variable.name_range))
@@ -232,15 +232,22 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
         if variable.type == VariableDefinitionType.LOCAL_VARIABLE:
             result.extend(self.find_variable_references_in_file(document, variable, False))
         else:
-            result.extend(
-                self._find_references_in_workspace(
-                    document,
-                    stop_at_first,
-                    self.find_variable_references_in_file,
-                    variable,
-                    False,
+            # Use reverse index for lookup instead of workspace scan
+            docs_to_search = self.parent.documents_cache.get_variable_ref_users(variable)
+            if docs_to_search:
+                for doc in docs_to_search:
+                    check_current_task_canceled()
+                    result.extend(self.find_variable_references_in_file(doc, variable, False))
+                    if result and stop_at_first:
+                        break
+            else:
+                # Fallback to workspace scan if index is empty
+                result.extend(
+                    self._find_references_in_workspace(
+                        document, stop_at_first, self.find_variable_references_in_file, variable, False
+                    )
                 )
-            )
+
         return result
 
     @_logger.call
@@ -317,20 +324,26 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
         include_declaration: bool = True,
         stop_at_first: bool = False,
     ) -> List[Location]:
-        result = []
+        result: List[Location] = []
 
         if include_declaration and kw_doc.source:
             result.append(Location(str(Uri.from_path(kw_doc.source)), kw_doc.range))
 
-        result.extend(
-            self._find_references_in_workspace(
-                document,
-                stop_at_first,
-                self.find_keyword_references_in_file,
-                kw_doc,
-                False,
+        # Use reverse index for lookup instead of workspace scan
+        docs_to_search = self.parent.documents_cache.get_keyword_ref_users(kw_doc)
+        if docs_to_search:
+            for doc in docs_to_search:
+                check_current_task_canceled()
+                result.extend(self.find_keyword_references_in_file(doc, kw_doc, False))
+                if result and stop_at_first:
+                    break
+        else:
+            # Fallback to workspace scan if index is empty
+            result.extend(
+                self._find_references_in_workspace(
+                    document, stop_at_first, self.find_keyword_references_in_file, kw_doc, False
+                )
             )
-        )
 
         return result
 

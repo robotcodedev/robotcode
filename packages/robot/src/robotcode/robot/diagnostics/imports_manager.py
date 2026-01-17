@@ -498,6 +498,24 @@ class LibraryMetaData:
         raise ValueError("Cannot determine filepath base.")
 
 
+@dataclass
+class ResourceMetaData:
+    """Metadata for caching resource LibraryDoc to disk."""
+
+    meta_version: str
+    source: str
+    mtime: int
+
+    @property
+    def filepath_base(self) -> str:
+        p = Path(self.source)
+        return f"{zlib.adler32(str(p.parent).encode('utf-8')):08x}_{p.stem}"
+
+
+# Current version for resource cache invalidation
+RESOURCE_META_VERSION = "1"
+
+
 class ImportsManager:
     _logger = LoggingDescriptor()
 
@@ -589,6 +607,10 @@ class ImportsManager:
         self._resource_libdoc_cache: "weakref.WeakKeyDictionary[ast.AST, Dict[str, LibraryDoc]]" = (
             weakref.WeakKeyDictionary()
         )
+        self._libdoc_by_source: dict[str, LibraryDoc] = {}
+        self._libdoc_by_name: dict[str, LibraryDoc] = {}  # For standard libraries cached by name
+        self._resource_libdoc_by_source: dict[str, LibraryDoc] = {}
+        self._variables_libdoc_by_source: dict[str, LibraryDoc] = {}
 
         self._diagnostics: List[Diagnostic] = []
 
@@ -834,9 +856,7 @@ class ImportsManager:
                         lib_doc = r_entry.get_libdoc()
                         r_entry.invalidate()
 
-                except (SystemExit, KeyboardInterrupt):
-                    raise
-                except BaseException:
+                except Exception:
                     result = True
 
                 if result and lib_doc is not None:
@@ -871,7 +891,7 @@ class ImportsManager:
                     result = r_entry.check_file_changed(changes)
                     if result is not None:
                         resource_changed.append((r_key, result, lib_doc))
-        except BaseException as e:
+        except Exception as e:
             self._logger.exception(e)
             raise
 
@@ -911,6 +931,7 @@ class ImportsManager:
         entry: _LibrariesEntry,
         now: bool = False,
     ) -> None:
+        removed_lib_doc: Optional[LibraryDoc] = None
         try:
             if len(entry.references) == 0 or now:
                 self._logger.debug(lambda: f"Remove Library Entry {entry_key}")
@@ -918,11 +939,17 @@ class ImportsManager:
                     if len(entry.references) == 0:
                         e1 = self._libaries.get(entry_key, None)
                         if e1 == entry:
+                            removed_lib_doc = entry.get_libdoc()
                             self._libaries.pop(entry_key, None)
                             entry.invalidate()
                 self._logger.debug(lambda: f"Library Entry {entry_key} removed")
         finally:
             self._library_files_cache.clear()
+            if removed_lib_doc is not None:
+                if removed_lib_doc.source:
+                    self._libdoc_by_source.pop(removed_lib_doc.source, None)
+                if removed_lib_doc.name:
+                    self._libdoc_by_name.pop(removed_lib_doc.name, None)
 
     def __remove_resource_entry(
         self,
@@ -930,6 +957,7 @@ class ImportsManager:
         entry: _ResourcesEntry,
         now: bool = False,
     ) -> None:
+        removed_lib_doc: Optional[LibraryDoc] = None
         try:
             if len(entry.references) == 0 or now:
                 self._logger.debug(lambda: f"Remove Resource Entry {entry_key}")
@@ -937,12 +965,14 @@ class ImportsManager:
                     if len(entry.references) == 0 or now:
                         e1 = self._resources.get(entry_key, None)
                         if e1 == entry:
+                            removed_lib_doc = entry.get_libdoc()
                             self._resources.pop(entry_key, None)
-
                             entry.invalidate()
                 self._logger.debug(lambda: f"Resource Entry {entry_key} removed")
         finally:
             self._resource_files_cache.clear()
+            if removed_lib_doc is not None and removed_lib_doc.source:
+                self._resource_libdoc_by_source.pop(removed_lib_doc.source, None)
 
     def __remove_variables_entry(
         self,
@@ -950,6 +980,7 @@ class ImportsManager:
         entry: _VariablesEntry,
         now: bool = False,
     ) -> None:
+        removed_lib_doc: Optional[VariablesDoc] = None
         try:
             if len(entry.references) == 0 or now:
                 self._logger.debug(lambda: f"Remove Variables Entry {entry_key}")
@@ -957,11 +988,14 @@ class ImportsManager:
                     if len(entry.references) == 0:
                         e1 = self._variables.get(entry_key, None)
                         if e1 == entry:
+                            removed_lib_doc = entry.get_libdoc()
                             self._variables.pop(entry_key, None)
                             entry.invalidate()
                 self._logger.debug(lambda: f"Variables Entry {entry_key} removed")
         finally:
             self._variables_files_cache.clear()
+            if removed_lib_doc is not None and removed_lib_doc.source:
+                self._variables_libdoc_by_source.pop(removed_lib_doc.source, None)
 
     def get_library_meta(
         self,
@@ -1027,9 +1061,7 @@ class ImportsManager:
                     )
 
             return result, import_name, ignore_arguments
-        except (SystemExit, KeyboardInterrupt):
-            raise
-        except BaseException:
+        except Exception:
             pass
 
         return None, import_name, ignore_arguments
@@ -1096,9 +1128,7 @@ class ImportsManager:
                     )
 
             return result, import_name
-        except (SystemExit, KeyboardInterrupt):
-            raise
-        except BaseException:
+        except Exception:
             pass
 
         return None, name
@@ -1232,7 +1262,9 @@ class ImportsManager:
     def executor(self) -> ProcessPoolExecutor:
         with self._executor_lock:
             if self._executor is None:
-                self._executor = ProcessPoolExecutor(mp_context=mp.get_context("spawn"))
+                # Cap at 4 workers to balance parallelism with memory usage
+                max_workers = min(mp.cpu_count() or 1, 4)
+                self._executor = ProcessPoolExecutor(max_workers=max_workers, mp_context=mp.get_context("spawn"))
 
         return self._executor
 
@@ -1293,38 +1325,30 @@ class ImportsManager:
                     self._logger.exception(e)
 
         self._logger.debug(lambda: f"Load library in process {name}{args!r}", context_name="import")
-        # if self._process_pool_executor is None:
-        #     self._process_pool_executor = ProcessPoolExecutor(max_workers=1, mp_context=mp.get_context("spawn"))
-        # executor = self._process_pool_executor
-        executor = ProcessPoolExecutor(max_workers=1, mp_context=mp.get_context("spawn"))
         try:
-            try:
-                result = executor.submit(
-                    get_library_doc,
-                    name,
-                    args if not ignore_arguments else (),
-                    working_dir,
-                    base_dir,
-                    self.get_resolvable_command_line_variables(),
-                    variables,
-                ).result(self.load_library_timeout)
+            result = self.executor.submit(
+                get_library_doc,
+                name,
+                args if not ignore_arguments else (),
+                working_dir,
+                base_dir,
+                self.get_resolvable_command_line_variables(),
+                variables,
+            ).result(self.load_library_timeout)
 
-            except TimeoutError as e:
-                raise RuntimeError(
-                    f"Loading library {name!r} with args {args!r} (working_dir={working_dir!r}, base_dir={base_dir!r}) "
-                    f"timed out after {self.load_library_timeout} seconds. "
-                    "The library may be slow or blocked during import. "
-                    "If required, increase the timeout by setting the ROBOTCODE_LOAD_LIBRARY_TIMEOUT "
-                    "environment variable."
-                ) from e
-
+        except TimeoutError as e:
+            raise RuntimeError(
+                f"Loading library {name!r} with args {args!r} (working_dir={working_dir!r}, base_dir={base_dir!r}) "
+                f"timed out after {self.load_library_timeout} seconds. "
+                "The library may be slow or blocked during import. "
+                "If required, increase the timeout by setting the ROBOTCODE_LOAD_LIBRARY_TIMEOUT "
+                "environment variable."
+            ) from e
         except (SystemExit, KeyboardInterrupt):
             raise
         except BaseException as e:
             self._logger.exception(e)
             raise
-        finally:
-            executor.shutdown(wait=True)
 
         try:
             if meta is not None:
@@ -1391,6 +1415,21 @@ class ImportsManager:
 
             return entry.get_libdoc()
 
+    def _get_resource_meta(self, source: str) -> Optional[ResourceMetaData]:
+        """Get metadata for a resource file for cache validation."""
+        source_path = Path(source)
+        if not source_path.exists():
+            return None
+        try:
+            mtime = source_path.stat().st_mtime_ns
+        except OSError:
+            return None
+        return ResourceMetaData(
+            meta_version=RESOURCE_META_VERSION,
+            source=source,
+            mtime=mtime,
+        )
+
     @_logger.call
     def get_libdoc_from_model(
         self,
@@ -1399,6 +1438,7 @@ class ImportsManager:
     ) -> LibraryDoc:
         key = source
 
+        # Check in-memory cache first
         entry = None
         if model in self._resource_libdoc_cache:
             entry = self._resource_libdoc_cache.get(model, None)
@@ -1406,14 +1446,208 @@ class ImportsManager:
             if entry and key in entry:
                 return entry[key]
 
+        # Check disk cache
+        meta = self._get_resource_meta(source)
+        if meta is not None:
+            meta_file = meta.filepath_base + ".meta"
+            if self.data_cache.cache_data_exists(CacheSection.RESOURCE, meta_file):
+                try:
+                    saved_meta = self.data_cache.read_cache_data(CacheSection.RESOURCE, meta_file, ResourceMetaData)
+                    if saved_meta == meta:
+                        spec_path = meta.filepath_base + ".spec"
+                        self._logger.debug(lambda: f"Use cached resource data for {source}", context_name="import")
+                        result = self.data_cache.read_cache_data(CacheSection.RESOURCE, spec_path, LibraryDoc)
+                        # Store in in-memory cache too
+                        if entry is None:
+                            entry = {}
+                            self._resource_libdoc_cache[model] = entry
+                        entry[key] = result
+                        return result
+                except Exception:
+                    self._logger.debug(
+                        lambda: f"Failed to load cached resource data for {source}", context_name="import"
+                    )
+
+        # Cache miss - compute the LibraryDoc
         result = get_model_doc(model=model, source=source)
+
+        # Store in in-memory cache
         if entry is None:
             entry = {}
             self._resource_libdoc_cache[model] = entry
-
         entry[key] = result
 
+        # Save to disk cache
+        if meta is not None:
+            try:
+                meta_file = meta.filepath_base + ".meta"
+                spec_file = meta.filepath_base + ".spec"
+                self.data_cache.save_cache_data(CacheSection.RESOURCE, spec_file, result)
+                self.data_cache.save_cache_data(CacheSection.RESOURCE, meta_file, meta)
+            except OSError:
+                self._logger.debug(lambda: f"Failed to save resource cache for {source}", context_name="import")
+
         return result
+
+    def _cache_libdoc(
+        self,
+        lib_doc: LibraryDoc,
+        name: Optional[str] = None,
+        source: Optional[str] = None,
+    ) -> LibraryDoc:
+        """Cache a LibraryDoc for future lookups and return it."""
+        effective_source = source or lib_doc.source
+        if effective_source:
+            self._libdoc_by_source[effective_source] = lib_doc
+        if name:
+            self._libdoc_by_name[name] = lib_doc
+        elif lib_doc.name:
+            self._libdoc_by_name[lib_doc.name] = lib_doc
+        return lib_doc
+
+    def get_libdoc_for_source(self, source: Optional[str], name: Optional[str] = None) -> Optional[LibraryDoc]:
+        """Look up a library LibraryDoc by its source path or name.
+
+        Used when restoring namespace from cache - looks up cached library data.
+        Returns None if not found (cache miss or no source).
+
+        Uses in-memory index first, then falls back to loaded libraries
+        and disk cache if needed.
+
+        Args:
+            source: The source path of the library
+            name: Optional library name, used to look up standard libraries that
+                  are cached by name instead of source path
+        """
+        if source is None and name is None:
+            return None
+
+        if source is not None and source in self._libdoc_by_source:
+            return self._libdoc_by_source[source]
+
+        if name is not None and name in self._libdoc_by_name:
+            return self._libdoc_by_name[name]
+
+        # Check loaded libraries (and populate index for future lookups)
+        with self._libaries_lock:
+            for entry in self._libaries.values():
+                lib_doc = entry.get_libdoc()
+                # Populate index while iterating
+                if lib_doc.source and lib_doc.source not in self._libdoc_by_source:
+                    self._libdoc_by_source[lib_doc.source] = lib_doc
+                if lib_doc.name and lib_doc.name not in self._libdoc_by_name:
+                    self._libdoc_by_name[lib_doc.name] = lib_doc
+
+                if source is not None and lib_doc.source == source:
+                    return lib_doc
+                if name is not None and lib_doc.name == name:
+                    return lib_doc
+
+        # Try disk cache using library name (for standard libraries)
+        # Standard libraries are cached with full module paths like "robot/libraries/BuiltIn.spec"
+        try:
+            if name is not None:
+                # First try the name directly (for libraries with dots like "mypackage.MyLibrary")
+                spec_file = name.replace(".", "/") + ".spec"
+                if self.data_cache.cache_data_exists(CacheSection.LIBRARY, spec_file):
+                    lib_doc = self.data_cache.read_cache_data(CacheSection.LIBRARY, spec_file, LibraryDoc)
+                    return self._cache_libdoc(lib_doc, name=name)
+
+                # Try standard Robot Framework library path
+                spec_file = "robot/libraries/" + name + ".spec"
+                if self.data_cache.cache_data_exists(CacheSection.LIBRARY, spec_file):
+                    lib_doc = self.data_cache.read_cache_data(CacheSection.LIBRARY, spec_file, LibraryDoc)
+                    return self._cache_libdoc(lib_doc, name=name)
+
+            # Try disk cache using source path to build cache key (for by_path libraries)
+            if source is not None:
+                source_path = Path(source)
+                if source_path.exists():
+                    cache_key = f"{zlib.adler32(str(source_path.parent).encode('utf-8')):08x}_{source_path.stem}"
+
+                    spec_file = cache_key + ".spec"
+                    if self.data_cache.cache_data_exists(CacheSection.LIBRARY, spec_file):
+                        lib_doc = self.data_cache.read_cache_data(CacheSection.LIBRARY, spec_file, LibraryDoc)
+                        return self._cache_libdoc(lib_doc, source=source)
+        except Exception as e:
+            self._logger.debug(
+                lambda e=e: f"get_libdoc_for_source failed for source={source}, name={name}: {e}",  # type: ignore[misc]
+                context_name="import",
+            )
+
+        return None
+
+    def get_resource_libdoc_for_source(self, source: Optional[str]) -> Optional[LibraryDoc]:
+        """Look up a resource LibraryDoc by its source path.
+
+        Used when restoring namespace from cache - looks up cached resource data.
+        Returns None if not found (cache miss or no source).
+
+        Uses in-memory cache first, then falls back to disk cache.
+        """
+        if source is None:
+            return None
+
+        if source in self._resource_libdoc_by_source:
+            return self._resource_libdoc_by_source[source]
+
+        source_path = Path(source)
+        if not source_path.exists():
+            return None
+
+        # Build cache filename using ResourceMetaData.filepath_base logic
+        cache_key = f"{zlib.adler32(str(source_path.parent).encode('utf-8')):08x}_{source_path.stem}"
+        spec_file = cache_key + ".spec"
+
+        if self.data_cache.cache_data_exists(CacheSection.RESOURCE, spec_file):
+            try:
+                lib_doc = self.data_cache.read_cache_data(CacheSection.RESOURCE, spec_file, LibraryDoc)
+                # Cache for future lookups
+                self._resource_libdoc_by_source[source] = lib_doc
+                return lib_doc
+            except (OSError, TypeError, EOFError, AttributeError, ImportError) as e:
+                self._logger.debug(
+                    lambda e=e: f"get_resource_libdoc_for_source failed for {source}: {e}",  # type: ignore[misc]
+                    context_name="import",
+                )
+
+        return None
+
+    def get_variables_libdoc_for_source(self, source: Optional[str]) -> Optional[LibraryDoc]:
+        """Look up a variables LibraryDoc by its source path.
+
+        Used when restoring namespace from cache - looks up cached variables data.
+        Returns None if not found (cache miss or no source).
+
+        Uses in-memory cache first, then falls back to disk cache.
+        """
+        if source is None:
+            return None
+
+        if source in self._variables_libdoc_by_source:
+            return self._variables_libdoc_by_source[source]
+
+        source_path = Path(source)
+        if not source_path.exists():
+            return None
+
+        # Build cache filename similar to variables cache logic
+        cache_key = f"{zlib.adler32(str(source_path.parent).encode('utf-8')):08x}_{source_path.stem}"
+        spec_file = cache_key + ".spec"
+
+        if self.data_cache.cache_data_exists(CacheSection.VARIABLES, spec_file):
+            try:
+                lib_doc = self.data_cache.read_cache_data(CacheSection.VARIABLES, spec_file, LibraryDoc)
+                # Cache for future lookups
+                self._variables_libdoc_by_source[source] = lib_doc
+                return lib_doc
+            except (OSError, TypeError, EOFError, AttributeError, ImportError) as e:
+                self._logger.debug(
+                    lambda e=e: f"get_variables_libdoc_for_source failed for {source}: {e}",  # type: ignore[misc]
+                    context_name="import",
+                )
+
+        return None
 
     def _get_variables_libdoc_handler(
         self,
@@ -1474,36 +1708,31 @@ class ImportsManager:
                 except BaseException as e:
                     self._logger.exception(e)
 
-        executor = ProcessPoolExecutor(max_workers=1, mp_context=mp.get_context("spawn"))
         try:
-            try:
-                result = executor.submit(
-                    get_variables_doc,
-                    name,
-                    args,
-                    working_dir,
-                    base_dir,
-                    self.get_resolvable_command_line_variables() if resolve_command_line_vars else None,
-                    variables,
-                ).result(self.load_library_timeout)
+            result = self.executor.submit(
+                get_variables_doc,
+                name,
+                args,
+                working_dir,
+                base_dir,
+                self.get_resolvable_command_line_variables() if resolve_command_line_vars else None,
+                variables,
+            ).result(self.load_library_timeout)
 
-            except TimeoutError as e:
-                raise RuntimeError(
-                    f"Loading variables {name!r} with args {args!r} (working_dir={working_dir!r}, "
-                    f"base_dir={base_dir!r}) "
-                    f"timed out after {self.load_library_timeout} seconds. "
-                    "The variables may be slow or blocked during import. "
-                    "If required, increase the timeout by setting the ROBOTCODE_LOAD_LIBRARY_TIMEOUT "
-                    "environment variable."
-                ) from e
-
+        except TimeoutError as e:
+            raise RuntimeError(
+                f"Loading variables {name!r} with args {args!r} (working_dir={working_dir!r}, "
+                f"base_dir={base_dir!r}) "
+                f"timed out after {self.load_library_timeout} seconds. "
+                "The variables may be slow or blocked during import. "
+                "If required, increase the timeout by setting the ROBOTCODE_LOAD_LIBRARY_TIMEOUT "
+                "environment variable."
+            ) from e
         except (SystemExit, KeyboardInterrupt):
             raise
         except BaseException as e:
             self._logger.exception(e)
             raise
-        finally:
-            executor.shutdown(True)
 
         try:
             if meta is not None:

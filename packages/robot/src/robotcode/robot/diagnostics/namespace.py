@@ -1,9 +1,13 @@
 import ast
 import enum
+import hashlib
 import itertools
+import sys
 import weakref
+import zlib
 from collections import OrderedDict, defaultdict
 from concurrent.futures import CancelledError
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import (
     Any,
@@ -21,13 +25,16 @@ from typing import (
 
 from robot.errors import VariableError
 from robot.parsing.lexer.tokens import Token
-from robot.parsing.model.blocks import Keyword, SettingSection, TestCase, VariableSection
+from robot.parsing.model.blocks import (
+    Keyword,
+    SettingSection,
+    TestCase,
+    VariableSection,
+)
 from robot.parsing.model.statements import Arguments, Setup, Statement, Timeout
 from robot.parsing.model.statements import LibraryImport as RobotLibraryImport
 from robot.parsing.model.statements import ResourceImport as RobotResourceImport
-from robot.parsing.model.statements import (
-    VariablesImport as RobotVariablesImport,
-)
+from robot.parsing.model.statements import VariablesImport as RobotVariablesImport
 from robotcode.core.concurrent import RLock
 from robotcode.core.event import event
 from robotcode.core.lsp.types import (
@@ -46,7 +53,7 @@ from robotcode.core.uri import Uri
 from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.core.utils.path import same_file
 
-from ..utils import get_robot_version
+from ..utils import get_robot_version, get_robot_version_str
 from ..utils.ast import (
     get_first_variable_token,
     range_from_node,
@@ -66,9 +73,11 @@ from ..utils.visitor import Visitor
 from .entities import (
     ArgumentDefinition,
     BuiltInVariableDefinition,
+    EmbeddedArgumentDefinition,
     EnvironmentVariableDefinition,
     GlobalVariableDefinition,
     Import,
+    ImportedVariableDefinition,
     LibraryEntry,
     LibraryImport,
     LocalVariableDefinition,
@@ -78,6 +87,7 @@ from .entities import (
     TestCaseDefinition,
     TestVariableDefinition,
     VariableDefinition,
+    VariableDefinitionType,
     VariablesEntry,
     VariablesImport,
 )
@@ -89,6 +99,7 @@ from .library_doc import (
     DEFAULT_LIBRARIES,
     KeywordDoc,
     KeywordMatcher,
+    KeywordStore,
     LibraryDoc,
     resolve_robot_variables,
 )
@@ -96,6 +107,142 @@ from .namespace_analyzer import NamespaceAnalyzer
 
 if get_robot_version() >= (7, 0):
     from robot.parsing.model.statements import Var
+
+
+# Namespace cache version - bump major for incompatible format changes
+# 1.0: Single-file cache format with atomic writes (meta + spec in one file)
+#      Extended to include full analysis caching (keyword_references, variable_references, local_variable_assignments)
+NAMESPACE_META_VERSION = "1.0"
+
+# Variable syntax constants for parsing ${var}, @{var}, &{var}, %{var}
+_VAR_PREFIX_LEN = 2  # Length of "${", "@{", "&{", or "%{"
+_VAR_SUFFIX_LEN = 1  # Length of "}"
+_VAR_WRAPPER_LEN = _VAR_PREFIX_LEN + _VAR_SUFFIX_LEN  # Total wrapper length (3)
+
+
+@dataclass(frozen=True)
+class NamespaceMetaData:
+    """Metadata for validating namespace cache (immutable)."""
+
+    meta_version: str
+    source: str
+    mtime: int  # Source file modification time in nanoseconds
+    file_size: int  # Source file size in bytes
+    content_hash: str  # Tiered hash of file content (size + first 64KB + last 64KB)
+    library_sources_mtimes: tuple[
+        tuple[str, int], ...
+    ]  # ((library_source, mtime), ...)
+    resource_sources_mtimes: tuple[
+        tuple[str, int], ...
+    ]  # ((resource_source, mtime), ...)
+    variables_sources_mtimes: tuple[
+        tuple[str, int], ...
+    ]  # ((variables_source, mtime), ...)
+    robot_version: str
+    python_executable: str  # sys.executable - detects venv changes
+    sys_path_hash: str  # Hash of sys.path in original order - detects PYTHONPATH/install changes
+
+    @property
+    def filepath_base(self) -> str:
+        p = Path(self.source)
+        return f"{zlib.adler32(str(p.parent).encode('utf-8')):08x}_{p.stem}"
+
+
+@dataclass(frozen=True)
+class _CachedEntryBase:
+    """Common fields for all cached import entries (immutable)."""
+
+    name: str
+    import_name: str
+    library_doc_source: str | None  # Source path to look up LibraryDoc
+    args: tuple[Any, ...]
+    alias: str | None
+    import_range: Range
+    import_source: str | None
+    alias_range: Range
+
+
+@dataclass(frozen=True)
+class CachedLibraryEntry(_CachedEntryBase):
+    """Serializable representation of LibraryEntry for caching (immutable)."""
+
+
+@dataclass(frozen=True)
+class CachedResourceEntry(_CachedEntryBase):
+    """Serializable representation of ResourceEntry for caching (immutable)."""
+
+    imports: tuple[Import, ...] = ()
+    variables: tuple[VariableDefinition, ...] = ()
+
+
+@dataclass(frozen=True)
+class CachedVariablesEntry(_CachedEntryBase):
+    """Serializable representation of VariablesEntry for caching (immutable)."""
+
+    variables: tuple["ImportedVariableDefinition", ...] = ()
+
+
+@dataclass(frozen=True)
+class KeywordRefKey:
+    """Stable key for identifying keywords across cache sessions (immutable).
+
+    Uses minimal fields needed for unique identification:
+    - source + line_no uniquely identifies a location in code
+    - name ensures we match the right keyword at that location
+    """
+
+    source: str  # File path (empty string for builtins)
+    name: str  # Keyword name
+    line_no: int  # Line number (0 for builtins)
+
+
+@dataclass(frozen=True)
+class VariableRefKey:
+    """Stable key for identifying variables across cache sessions (immutable).
+
+    Uses minimal fields needed for unique identification:
+    - source + line_no + col_offset uniquely identifies a location
+    - name ensures we match the right variable at that location
+    - var_type distinguishes between different variable definition types
+    """
+
+    source: str  # File path
+    name: str  # Variable name (e.g., "${MY_VAR}")
+    var_type: str  # VariableDefinitionType.value
+    line_no: int
+    col_offset: int
+
+
+@dataclass(frozen=True)
+class NamespaceCacheData:
+    """Serializable namespace state for disk caching (immutable)."""
+
+    # Initialization data
+    libraries: tuple[tuple[str, CachedLibraryEntry], ...]
+    resources: tuple[tuple[str, CachedResourceEntry], ...]
+    resources_files: tuple[tuple[str, str], ...]  # ((source, key), ...)
+    variables_imports: tuple[tuple[str, CachedVariablesEntry], ...]
+    own_variables: tuple[VariableDefinition, ...]
+    imports: tuple[Import, ...]
+    library_doc: LibraryDoc | None
+
+    # Analysis data (cached to skip re-analysis on warm start)
+    analyzed: bool = False  # True if analysis was completed when cache was saved
+    diagnostics: tuple[Diagnostic, ...] = ()
+    test_case_definitions: tuple[TestCaseDefinition, ...] = ()
+    tag_definitions: tuple[TagDefinition, ...] = ()
+    # Namespace references: ((import_index, (locations...)), ...)
+    # Maps import index (in imports tuple) to set of locations where the import is referenced
+    namespace_references: tuple[tuple[int, tuple[Location, ...]], ...] = ()
+
+    # Full analysis caching - keyword and variable references
+    # When these are populated and fully_analyzed is True, analysis phase can be skipped entirely
+    keyword_references: tuple[tuple[KeywordRefKey, tuple[Location, ...]], ...] = ()
+    variable_references: tuple[tuple[VariableRefKey, tuple[Location, ...]], ...] = ()
+    local_variable_assignments: tuple[
+        tuple[VariableRefKey, tuple[Range, ...]], ...
+    ] = ()
+    fully_analyzed: bool = False  # True if full analysis data is cached
 
 
 class DiagnosticsError(Exception):
@@ -131,7 +278,9 @@ class VariablesVisitor(Visitor):
             return
 
         if name_token.value is not None:
-            matcher = search_variable(name_token.value, ignore_errors=True, parse_type=True)
+            matcher = search_variable(
+                name_token.value, ignore_errors=True, parse_type=True
+            )
             if not matcher.is_assign(allow_assign_mark=True) or matcher.name is None:
                 return
 
@@ -145,7 +294,9 @@ class VariablesVisitor(Visitor):
                 for s in values
             )
 
-            stripped_name_token = strip_variable_token(name_token, matcher=matcher, parse_type=True)
+            stripped_name_token = strip_variable_token(
+                name_token, matcher=matcher, parse_type=True
+            )
 
             self._results.append(
                 VariableDefinition(
@@ -221,11 +372,15 @@ class ArgumentVisitor(VariableVisitorBase):
                     ):
                         break
 
-                    matcher = VariableMatcher(argument.value, parse_type=True, ignore_errors=True)
+                    matcher = VariableMatcher(
+                        argument.value, parse_type=True, ignore_errors=True
+                    )
                     if not matcher.is_variable() or matcher.name is None:
                         continue
 
-                    stripped_argument_token = strip_variable_token(argument, parse_type=True, matcher=matcher)
+                    stripped_argument_token = strip_variable_token(
+                        argument, parse_type=True, matcher=matcher
+                    )
 
                     if matcher not in args:
                         arg_def = ArgumentDefinition(
@@ -273,7 +428,9 @@ class OnlyArgumentsVisitor(VariableVisitorBase):
         name_token = node.get_token(Token.KEYWORD_NAME)
 
         if name_token is not None and name_token.value:
-            keyword = ModelHelper.get_keyword_definition_at_token(self.namespace.get_library_doc(), name_token)
+            keyword = ModelHelper.get_keyword_definition_at_token(
+                self.namespace.get_library_doc(), name_token
+            )
             self.current_kw_doc = keyword
 
             for variable_token in filter(
@@ -281,7 +438,9 @@ class OnlyArgumentsVisitor(VariableVisitorBase):
                 tokenize_variables(name_token, identifiers="$", ignore_errors=True),
             ):
                 if variable_token.value:
-                    match = search_variable(variable_token.value, "$", ignore_errors=True)
+                    match = search_variable(
+                        variable_token.value, "$", ignore_errors=True
+                    )
                     if match.base is None:
                         continue
                     name = match.base.split(":", 1)[0]
@@ -301,7 +460,11 @@ class OnlyArgumentsVisitor(VariableVisitorBase):
 
             if self.current_kw is not None:
                 args = ArgumentVisitor(
-                    self.namespace, self.nodes, self.position, self.in_args, self.current_kw_doc
+                    self.namespace,
+                    self.nodes,
+                    self.position,
+                    self.in_args,
+                    self.current_kw_doc,
                 ).get(self.current_kw)
                 if args:
                     self._results.update(args)
@@ -328,11 +491,15 @@ class BlockVariableVisitor(OnlyArgumentsVisitor):
             except VariableError:
                 pass
 
-    def _get_var_name(self, original: str, position: Position, require_assign: bool = True) -> Optional[str]:
+    def _get_var_name(
+        self, original: str, position: Position, require_assign: bool = True
+    ) -> Optional[str]:
         if self._resolved_variables is None:
             self._resolved_variables = resolve_robot_variables(
                 str(self.namespace.imports_manager.root_folder),
-                str(Path(self.namespace.source).parent) if self.namespace.source else ".",
+                str(Path(self.namespace.source).parent)
+                if self.namespace.source
+                else ".",
                 self.namespace.imports_manager.get_resolvable_command_line_variables(),
                 variables=self.namespace.get_resolvable_variables(),
             )
@@ -379,16 +546,23 @@ class BlockVariableVisitor(OnlyArgumentsVisitor):
                 continue
             try:
                 matcher = search_variable(
-                    assign_token.value[:-1].rstrip() if assign_token.value.endswith("=") else assign_token.value,
+                    assign_token.value[:-1].rstrip()
+                    if assign_token.value.endswith("=")
+                    else assign_token.value,
                     parse_type=True,
                     ignore_errors=True,
                 )
 
-                if not matcher.is_assign(allow_assign_mark=True) or matcher.name is None:
+                if (
+                    not matcher.is_assign(allow_assign_mark=True)
+                    or matcher.name is None
+                ):
                     continue
 
                 if matcher not in self._results:
-                    stripped_name_token = strip_variable_token(assign_token, matcher=matcher, parse_type=True)
+                    stripped_name_token = strip_variable_token(
+                        assign_token, matcher=matcher, parse_type=True
+                    )
 
                     self._results[matcher] = LocalVariableDefinition(
                         name=matcher.name,
@@ -468,16 +642,23 @@ class BlockVariableVisitor(OnlyArgumentsVisitor):
                 continue
             try:
                 matcher = search_variable(
-                    assign_token.value[:-1].rstrip() if assign_token.value.endswith("=") else assign_token.value,
+                    assign_token.value[:-1].rstrip()
+                    if assign_token.value.endswith("=")
+                    else assign_token.value,
                     parse_type=True,
                     ignore_errors=True,
                 )
 
-                if not matcher.is_assign(allow_assign_mark=True) or matcher.name is None:
+                if (
+                    not matcher.is_assign(allow_assign_mark=True)
+                    or matcher.name is None
+                ):
                     continue
 
                 if matcher not in self._results:
-                    stripped_name_token = strip_variable_token(assign_token, matcher=matcher, parse_type=True)
+                    stripped_name_token = strip_variable_token(
+                        assign_token, matcher=matcher, parse_type=True
+                    )
 
                     self._results[matcher] = LocalVariableDefinition(
                         name=matcher.name,
@@ -503,16 +684,23 @@ class BlockVariableVisitor(OnlyArgumentsVisitor):
                 continue
             try:
                 matcher = search_variable(
-                    assign_token.value[:-1].rstrip() if assign_token.value.endswith("=") else assign_token.value,
+                    assign_token.value[:-1].rstrip()
+                    if assign_token.value.endswith("=")
+                    else assign_token.value,
                     parse_type=True,
                     ignore_errors=True,
                 )
 
-                if not matcher.is_assign(allow_assign_mark=True) or matcher.name is None:
+                if (
+                    not matcher.is_assign(allow_assign_mark=True)
+                    or matcher.name is None
+                ):
                     continue
 
                 if matcher not in self._results:
-                    stripped_name_token = strip_variable_token(assign_token, matcher=matcher, parse_type=True)
+                    stripped_name_token = strip_variable_token(
+                        assign_token, matcher=matcher, parse_type=True
+                    )
 
                     self._results[matcher] = LocalVariableDefinition(
                         name=matcher.name,
@@ -537,14 +725,21 @@ class BlockVariableVisitor(OnlyArgumentsVisitor):
 
             try:
                 matcher = search_variable(
-                    name_token.value[:-1].rstrip() if name_token.value.endswith("=") else name_token.value,
+                    name_token.value[:-1].rstrip()
+                    if name_token.value.endswith("=")
+                    else name_token.value,
                     parse_type=True,
                     ignore_errors=True,
                 )
-                if not matcher.is_assign(allow_assign_mark=True) or matcher.name is None:
+                if (
+                    not matcher.is_assign(allow_assign_mark=True)
+                    or matcher.name is None
+                ):
                     return
 
-                stripped_name_token = strip_variable_token(name_token, matcher=matcher, parse_type=True)
+                stripped_name_token = strip_variable_token(
+                    name_token, matcher=matcher, parse_type=True
+                )
 
                 scope = node.scope
 
@@ -568,9 +763,13 @@ class BlockVariableVisitor(OnlyArgumentsVisitor):
                     value_type=matcher.type,
                 )
 
-                if matcher not in self._results or type(self._results[matcher]) is not type(var):
+                if matcher not in self._results or type(
+                    self._results[matcher]
+                ) is not type(var):
                     if isinstance(var, LocalVariableDefinition) or not any(
-                        l for l in self.namespace.get_global_variables() if l.matcher == var.matcher
+                        l
+                        for l in self.namespace.get_global_variables()
+                        if l.matcher == var.matcher
                     ):
                         self._results[matcher] = var
                     else:
@@ -597,7 +796,9 @@ class ImportVisitor(Visitor):
         separator = node.get_token(Token.WITH_NAME)
         alias_token = node.get_tokens(Token.NAME)[-1] if separator else None
 
-        last_data_token = next(v for v in reversed(node.tokens) if v.type not in Token.NON_DATA_TOKENS)
+        last_data_token = next(
+            v for v in reversed(node.tokens) if v.type not in Token.NON_DATA_TOKENS
+        )
         if node.name:
             self._results.append(
                 LibraryImport(
@@ -629,7 +830,9 @@ class ImportVisitor(Visitor):
     def visit_ResourceImport(self, node: RobotResourceImport) -> None:  # noqa: N802
         name = node.get_token(Token.NAME)
 
-        last_data_token = next(v for v in reversed(node.tokens) if v.type not in Token.NON_DATA_TOKENS)
+        last_data_token = next(
+            v for v in reversed(node.tokens) if v.type not in Token.NON_DATA_TOKENS
+        )
         if node.name:
             self._results.append(
                 ResourceImport(
@@ -658,7 +861,9 @@ class ImportVisitor(Visitor):
     def visit_VariablesImport(self, node: RobotVariablesImport) -> None:  # noqa: N802
         name = node.get_token(Token.NAME)
 
-        last_data_token = next(v for v in reversed(node.tokens) if v.type not in Token.NON_DATA_TOKENS)
+        last_data_token = next(
+            v for v in reversed(node.tokens) if v.type not in Token.NON_DATA_TOKENS
+        )
         if node.name:
             self._results.append(
                 VariablesImport(
@@ -731,18 +936,30 @@ class Namespace:
         self._analyzed = False
         self._analyze_lock = RLock(default_timeout=120, name="Namespace.analyze")
         self._library_doc: Optional[LibraryDoc] = None
-        self._library_doc_lock = RLock(default_timeout=120, name="Namespace.library_doc")
+        self._library_doc_lock = RLock(
+            default_timeout=120, name="Namespace.library_doc"
+        )
         self._imports: Optional[List[Import]] = None
         self._import_entries: Dict[Import, LibraryEntry] = OrderedDict()
         self._own_variables: Optional[List[VariableDefinition]] = None
-        self._own_variables_lock = RLock(default_timeout=120, name="Namespace.own_variables")
+        self._own_variables_lock = RLock(
+            default_timeout=120, name="Namespace.own_variables"
+        )
         self._global_variables: Optional[List[VariableDefinition]] = None
-        self._global_variables_lock = RLock(default_timeout=120, name="Namespace.global_variables")
-        self._global_variables_dict: Optional[Dict[VariableMatcher, VariableDefinition]] = None
-        self._global_variables_dict_lock = RLock(default_timeout=120, name="Namespace.global_variables_dict")
+        self._global_variables_lock = RLock(
+            default_timeout=120, name="Namespace.global_variables"
+        )
+        self._global_variables_dict: Optional[
+            Dict[VariableMatcher, VariableDefinition]
+        ] = None
+        self._global_variables_dict_lock = RLock(
+            default_timeout=120, name="Namespace.global_variables_dict"
+        )
 
         self._imported_variables: Optional[List[VariableDefinition]] = None
-        self._imported_variables_lock = RLock(default_timeout=120, name="Namespace._imported_variables_lock")
+        self._imported_variables_lock = RLock(
+            default_timeout=120, name="Namespace._imported_variables_lock"
+        )
 
         self._global_resolvable_variables: Optional[Dict[str, Any]] = None
         self._global_resolvable_variables_lock = RLock(
@@ -755,19 +972,27 @@ class Namespace:
         )
 
         self._suite_variables: Optional[Dict[str, Any]] = None
-        self._suite_variables_lock = RLock(default_timeout=120, name="Namespace.global_variables")
+        self._suite_variables_lock = RLock(
+            default_timeout=120, name="Namespace.global_variables"
+        )
 
         self._diagnostics: Optional[List[Diagnostic]] = None
         self._keyword_references: Optional[Dict[KeywordDoc, Set[Location]]] = None
-        self._variable_references: Optional[Dict[VariableDefinition, Set[Location]]] = None
-        self._local_variable_assignments: Optional[Dict[VariableDefinition, Set[Range]]] = None
+        self._variable_references: Optional[
+            Dict[VariableDefinition, Set[Location]]
+        ] = None
+        self._local_variable_assignments: Optional[
+            Dict[VariableDefinition, Set[Range]]
+        ] = None
         self._namespace_references: Optional[Dict[LibraryEntry, Set[Location]]] = None
 
         self._test_case_definitions: Optional[List[TestCaseDefinition]] = None
         self._tag_definitions: Optional[List[TagDefinition]] = None
 
         self._imported_keywords: Optional[List[KeywordDoc]] = None
-        self._imported_keywords_lock = RLock(default_timeout=120, name="Namespace.imported_keywords")
+        self._imported_keywords_lock = RLock(
+            default_timeout=120, name="Namespace.imported_keywords"
+        )
         self._keywords: Optional[List[KeywordDoc]] = None
         self._keywords_lock = RLock(default_timeout=120, name="Namespace.keywords")
 
@@ -784,13 +1009,45 @@ class Namespace:
         self._in_initialize = False
 
     @event
-    def has_invalidated(sender) -> None: ...
+    def has_invalidated(sender) -> None:
+        ...
 
     @event
-    def has_initialized(sender) -> None: ...
+    def has_initialized(sender) -> None:
+        ...
 
     @event
-    def has_analysed(sender) -> None: ...
+    def has_analysed(sender) -> None:
+        ...
+
+    @staticmethod
+    def _make_variable_ref_key(var: VariableDefinition) -> "VariableRefKey":
+        """Create a VariableRefKey from a VariableDefinition.
+
+        This helper eliminates code duplication when creating cache keys
+        for variable references.
+
+        Note: For RF 7.3+ compatibility, variable names are normalized to strip
+        type annotations. This ensures that "${arg: int}" and "${arg}" produce
+        the same key, matching how _visit_Arguments normalizes names.
+        """
+        # Normalize name to strip type annotations for RF 7.3+ compatibility
+        normalized_name = var.name
+        if var.name and var.name.startswith(("${", "@{", "&{", "%{")):
+            try:
+                matcher = VariableMatcher(var.name, parse_type=True, ignore_errors=True)
+                if matcher.name:
+                    normalized_name = matcher.name
+            except Exception:
+                pass  # Keep original name if parsing fails
+
+        return VariableRefKey(
+            var.source or "",
+            normalized_name,
+            var.type.value,
+            var.line_no,
+            var.col_offset,
+        )
 
     @property
     def document(self) -> Optional[TextDocument]:
@@ -798,7 +1055,11 @@ class Namespace:
 
     @property
     def document_uri(self) -> str:
-        return self.document.document_uri if self.document is not None else str(Uri.from_path(self.source))
+        return (
+            self.document.document_uri
+            if self.document is not None
+            else str(Uri.from_path(self.source))
+        )
 
     @property
     def search_order(self) -> Tuple[str, ...]:
@@ -834,7 +1095,9 @@ class Namespace:
         invalidate = False
 
         for p in resources:
-            if any(e for e in self._resources.values() if e.library_doc.source == p.source):
+            if any(
+                e for e in self._resources.values() if e.library_doc.source == p.source
+            ):
                 invalidate = True
                 break
 
@@ -849,7 +1112,11 @@ class Namespace:
         invalidate = False
 
         for p in variables:
-            if any(e for e in self._variables_imports.values() if e.library_doc.source == p.source):
+            if any(
+                e
+                for e in self._variables_imports.values()
+                if e.library_doc.source == p.source
+            ):
                 invalidate = True
                 break
 
@@ -901,7 +1168,9 @@ class Namespace:
 
             self.analyze()
 
-        return self._variable_references if self._variable_references is not None else {}
+        return (
+            self._variable_references if self._variable_references is not None else {}
+        )
 
     def get_testcase_definitions(self) -> List[TestCaseDefinition]:
         if self._test_case_definitions is None:
@@ -909,7 +1178,11 @@ class Namespace:
 
             self.analyze()
 
-        return self._test_case_definitions if self._test_case_definitions is not None else []
+        return (
+            self._test_case_definitions
+            if self._test_case_definitions is not None
+            else []
+        )
 
     def get_local_variable_assignments(self) -> Dict[VariableDefinition, Set[Range]]:
         if self._local_variable_assignments is None:
@@ -917,7 +1190,11 @@ class Namespace:
 
             self.analyze()
 
-        return self._local_variable_assignments if self._local_variable_assignments is not None else {}
+        return (
+            self._local_variable_assignments
+            if self._local_variable_assignments is not None
+            else {}
+        )
 
     def get_namespace_references(self) -> Dict[LibraryEntry, Set[Location]]:
         if self._namespace_references is None:
@@ -925,7 +1202,9 @@ class Namespace:
 
             self.analyze()
 
-        return self._namespace_references if self._namespace_references is not None else {}
+        return (
+            self._namespace_references if self._namespace_references is not None else {}
+        )
 
     def get_import_entries(self) -> Dict[Import, LibraryEntry]:
         self.ensure_initialized()
@@ -944,9 +1223,17 @@ class Namespace:
             self._namespaces = defaultdict(list)
 
             for v in (self.get_libraries()).values():
-                self._namespaces[KeywordMatcher(v.alias or v.name or v.import_name, is_namespace=True)].append(v)
+                self._namespaces[
+                    KeywordMatcher(
+                        v.alias or v.name or v.import_name, is_namespace=True
+                    )
+                ].append(v)
             for v in (self.get_resources()).values():
-                self._namespaces[KeywordMatcher(v.alias or v.name or v.import_name, is_namespace=True)].append(v)
+                self._namespaces[
+                    KeywordMatcher(
+                        v.alias or v.name or v.import_name, is_namespace=True
+                    )
+                ].append(v)
 
         return self._namespaces
 
@@ -964,9 +1251,1012 @@ class Namespace:
     def get_library_doc(self) -> LibraryDoc:
         with self._library_doc_lock:
             if self._library_doc is None:
-                self._library_doc = self.imports_manager.get_libdoc_from_model(self.model, self.source)
+                self._library_doc = self.imports_manager.get_libdoc_from_model(
+                    self.model, self.source
+                )
 
             return self._library_doc
+
+    @staticmethod
+    def _compute_content_hash(path: Path) -> tuple[int, str]:
+        """Compute robust content hash using tiered strategy.
+
+        Returns (file_size, hash_string).
+        Hash covers: file_size + first_64KB + last_64KB
+
+        This catches:
+        - Appended content (size change)
+        - Inserted content (size change)
+        - Modified content in first 64KB
+        - Modified content in last 64KB
+        """
+        stat = path.stat()
+        file_size = stat.st_size
+
+        with open(path, "rb") as f:
+            first_chunk = f.read(65536)
+
+            # For files > 64KB, also hash last 64KB
+            if file_size > 65536:
+                f.seek(max(0, file_size - 65536))
+                last_chunk = f.read(65536)
+            else:
+                last_chunk = b""
+
+        # Combine size + both chunks into single hash
+        hasher = hashlib.sha256()
+        hasher.update(f"{file_size}:".encode())
+        hasher.update(first_chunk)
+        hasher.update(last_chunk)
+
+        return file_size, hasher.hexdigest()
+
+    def get_cache_metadata(self) -> NamespaceMetaData | None:
+        """Generate metadata for cache validation."""
+        if not self._initialized:
+            return None
+
+        source_path = Path(self.source)
+        if not source_path.exists():
+            return None
+
+        try:
+            # Compute content hash for robust validation
+            file_size, content_hash = self._compute_content_hash(source_path)
+        except OSError:
+            self._logger.debug(
+                lambda: f"Failed to compute content hash for {self.source}"
+            )
+            return None
+
+        library_mtimes: list[tuple[str, int]] = []
+        for entry in self._libraries.values():
+            if entry.library_doc.source:
+                lib_path = Path(entry.library_doc.source)
+                if lib_path.exists():
+                    library_mtimes.append(
+                        (entry.library_doc.source, lib_path.stat().st_mtime_ns)
+                    )
+
+        resource_mtimes: list[tuple[str, int]] = []
+        for entry in self._resources.values():
+            if entry.library_doc.source:
+                res_path = Path(entry.library_doc.source)
+                if res_path.exists():
+                    resource_mtimes.append(
+                        (entry.library_doc.source, res_path.stat().st_mtime_ns)
+                    )
+
+        variables_mtimes: list[tuple[str, int]] = []
+        for entry in self._variables_imports.values():
+            if entry.library_doc.source:
+                var_path = Path(entry.library_doc.source)
+                if var_path.exists():
+                    variables_mtimes.append(
+                        (entry.library_doc.source, var_path.stat().st_mtime_ns)
+                    )
+
+        # Compute environment identity - hash sys.path in original order
+        # Order matters for import resolution (first match wins)
+        sys_path_hash = hashlib.sha256("\n".join(sys.path).encode("utf-8")).hexdigest()[
+            :16
+        ]
+
+        return NamespaceMetaData(
+            meta_version=NAMESPACE_META_VERSION,
+            source=self.source,
+            mtime=source_path.stat().st_mtime_ns,
+            file_size=file_size,
+            content_hash=content_hash,
+            library_sources_mtimes=tuple(library_mtimes),
+            resource_sources_mtimes=tuple(resource_mtimes),
+            variables_sources_mtimes=tuple(variables_mtimes),
+            robot_version=get_robot_version_str(),
+            python_executable=sys.executable,
+            sys_path_hash=sys_path_hash,
+        )
+
+    def _serialize_namespace_references(
+        self,
+    ) -> tuple[tuple[int, tuple[Location, ...]], ...]:
+        """Serialize _namespace_references for caching.
+
+        Maps LibraryEntry keys to import indices (position in _imports list).
+        """
+        if self._namespace_references is None or self._imports is None:
+            return ()
+
+        # Build reverse mapping: LibraryEntry -> import index
+        entry_to_index: dict[LibraryEntry, int] = {}
+        for i, imp in enumerate(self._imports):
+            if imp in self._import_entries:
+                entry_to_index[self._import_entries[imp]] = i
+
+        # Serialize namespace references using import indices
+        result: list[tuple[int, tuple[Location, ...]]] = []
+        for entry, locations in self._namespace_references.items():
+            if entry in entry_to_index:
+                result.append((entry_to_index[entry], tuple(locations)))
+
+        return tuple(result)
+
+    def _serialize_keyword_references(
+        self,
+    ) -> tuple[tuple[KeywordRefKey, tuple[Location, ...]], ...]:
+        """Serialize _keyword_references for caching using stable keys.
+
+        Uses (source, name, line_no) as a stable key that survives cache sessions.
+        """
+        if self._keyword_references is None:
+            return ()
+
+        result: list[tuple[KeywordRefKey, tuple[Location, ...]]] = []
+        for kw_doc, locations in self._keyword_references.items():
+            key = KeywordRefKey(
+                source=kw_doc.source or "",
+                name=kw_doc.name,
+                line_no=kw_doc.line_no,
+            )
+            result.append((key, tuple(locations)))
+
+        return tuple(result)
+
+    def _serialize_variable_references(
+        self,
+    ) -> tuple[tuple[VariableRefKey, tuple[Location, ...]], ...]:
+        """Serialize _variable_references for caching using stable keys.
+
+        Uses (source, name, var_type, line_no, col_offset) as a stable key.
+        """
+        if self._variable_references is None:
+            return ()
+
+        result: list[tuple[VariableRefKey, tuple[Location, ...]]] = []
+        for var_def, locations in self._variable_references.items():
+            result.append((self._make_variable_ref_key(var_def), tuple(locations)))
+
+        return tuple(result)
+
+    def _serialize_local_variable_assignments(
+        self,
+    ) -> tuple[tuple[VariableRefKey, tuple[Range, ...]], ...]:
+        """Serialize _local_variable_assignments for caching using stable keys.
+
+        Uses the same key format as variable references.
+        """
+        if self._local_variable_assignments is None:
+            return ()
+
+        result: list[tuple[VariableRefKey, tuple[Range, ...]]] = []
+        for var_def, ranges in self._local_variable_assignments.items():
+            result.append((self._make_variable_ref_key(var_def), tuple(ranges)))
+
+        return tuple(result)
+
+    def to_cache_data(self) -> NamespaceCacheData:
+        """Extract serializable state for disk caching."""
+        # Convert LibraryEntry -> CachedLibraryEntry
+        cached_libraries: list[tuple[str, CachedLibraryEntry]] = []
+        for key, entry in self._libraries.items():
+            cached_libraries.append(
+                (
+                    key,
+                    CachedLibraryEntry(
+                        name=entry.name,
+                        import_name=entry.import_name,
+                        library_doc_source=entry.library_doc.source,
+                        args=entry.args,
+                        alias=entry.alias,
+                        import_range=entry.import_range,
+                        import_source=entry.import_source,
+                        alias_range=entry.alias_range,
+                    ),
+                )
+            )
+
+        # Convert ResourceEntry -> CachedResourceEntry
+        cached_resources: list[tuple[str, CachedResourceEntry]] = []
+        for key, entry in self._resources.items():
+            cached_resources.append(
+                (
+                    key,
+                    CachedResourceEntry(
+                        name=entry.name,
+                        import_name=entry.import_name,
+                        library_doc_source=entry.library_doc.source,
+                        args=entry.args,
+                        alias=entry.alias,
+                        import_range=entry.import_range,
+                        import_source=entry.import_source,
+                        alias_range=entry.alias_range,
+                        imports=tuple(entry.imports),
+                        variables=tuple(entry.variables),
+                    ),
+                )
+            )
+
+        # Build resources_files mapping (source -> key)
+        resources_files: list[tuple[str, str]] = []
+        for source, entry in self._resources_files.items():
+            # Find the key in _resources that corresponds to this entry
+            for key, res_entry in self._resources.items():
+                if res_entry is entry:
+                    resources_files.append((source, key))
+                    break
+
+        # Convert VariablesEntry -> CachedVariablesEntry
+        cached_variables: list[tuple[str, CachedVariablesEntry]] = []
+        for key, entry in self._variables_imports.items():
+            cached_variables.append(
+                (
+                    key,
+                    CachedVariablesEntry(
+                        name=entry.name,
+                        import_name=entry.import_name,
+                        library_doc_source=entry.library_doc.source,
+                        args=entry.args,
+                        alias=entry.alias,
+                        import_range=entry.import_range,
+                        import_source=entry.import_source,
+                        alias_range=entry.alias_range,
+                        variables=tuple(entry.variables),
+                    ),
+                )
+            )
+
+        return NamespaceCacheData(
+            libraries=tuple(cached_libraries),
+            resources=tuple(cached_resources),
+            resources_files=tuple(resources_files),
+            variables_imports=tuple(cached_variables),
+            own_variables=tuple(self._own_variables)
+            if self._own_variables is not None
+            else (),
+            imports=tuple(self._imports) if self._imports is not None else (),
+            library_doc=self._library_doc,
+            # Include analysis results if analysis was completed
+            analyzed=self._analyzed,
+            diagnostics=tuple(self._diagnostics)
+            if self._diagnostics is not None
+            else (),
+            test_case_definitions=(
+                tuple(self._test_case_definitions)
+                if self._test_case_definitions is not None
+                else ()
+            ),
+            tag_definitions=tuple(self._tag_definitions)
+            if self._tag_definitions is not None
+            else (),
+            namespace_references=self._serialize_namespace_references(),
+            # Full analysis caching
+            keyword_references=self._serialize_keyword_references()
+            if self._analyzed
+            else (),
+            variable_references=self._serialize_variable_references()
+            if self._analyzed
+            else (),
+            local_variable_assignments=self._serialize_local_variable_assignments()
+            if self._analyzed
+            else (),
+            fully_analyzed=self._analyzed,
+        )
+
+    @classmethod
+    def _restore_libraries_from_cache(
+        cls,
+        ns: "Namespace",
+        cached_libraries: tuple[tuple[str, CachedLibraryEntry], ...],
+        imports_manager: "ImportsManager",
+    ) -> bool:
+        """Restore library entries from cache. Returns False if cache is stale."""
+        for key, cached_entry in cached_libraries:
+            library_doc = imports_manager.get_libdoc_for_source(
+                cached_entry.library_doc_source, cached_entry.name
+            )
+            if library_doc is None:
+                ns._logger.debug(
+                    lambda: f"Library cache miss: {cached_entry.name} (source={cached_entry.library_doc_source})"
+                )
+                return False
+            ns._libraries[key] = LibraryEntry(
+                name=cached_entry.name,
+                import_name=cached_entry.import_name,
+                library_doc=library_doc,
+                args=cached_entry.args,
+                alias=cached_entry.alias,
+                import_range=cached_entry.import_range,
+                import_source=cached_entry.import_source,
+                alias_range=cached_entry.alias_range,
+            )
+        return True
+
+    @classmethod
+    def _restore_resources_from_cache(
+        cls,
+        ns: "Namespace",
+        cached_resources: tuple[tuple[str, CachedResourceEntry], ...],
+        imports_manager: "ImportsManager",
+    ) -> bool:
+        """Restore resource entries from cache. Returns False if cache is stale."""
+        for key, cached_entry in cached_resources:
+            library_doc = imports_manager.get_resource_libdoc_for_source(
+                cached_entry.library_doc_source
+            )
+            if library_doc is None:
+                ns._logger.debug(
+                    lambda: f"Resource cache miss: {cached_entry.name} (source={cached_entry.library_doc_source})"
+                )
+                return False
+            ns._resources[key] = ResourceEntry(
+                name=cached_entry.name,
+                import_name=cached_entry.import_name,
+                library_doc=library_doc,
+                args=cached_entry.args,
+                alias=cached_entry.alias,
+                import_range=cached_entry.import_range,
+                import_source=cached_entry.import_source,
+                alias_range=cached_entry.alias_range,
+                imports=list(cached_entry.imports),
+                variables=list(cached_entry.variables),
+            )
+        return True
+
+    @classmethod
+    def _restore_variables_from_cache(
+        cls,
+        ns: "Namespace",
+        cached_variables: tuple[tuple[str, CachedVariablesEntry], ...],
+        imports_manager: "ImportsManager",
+    ) -> bool:
+        """Restore variables entries from cache. Returns False if cache is stale."""
+        for key, cached_entry in cached_variables:
+            library_doc = imports_manager.get_variables_libdoc_for_source(
+                cached_entry.library_doc_source
+            )
+            if library_doc is None:
+                ns._logger.debug(
+                    lambda: f"Variables cache miss: {cached_entry.name} (source={cached_entry.library_doc_source})"
+                )
+                return False
+            ns._variables_imports[key] = VariablesEntry(
+                name=cached_entry.name,
+                import_name=cached_entry.import_name,
+                library_doc=library_doc,
+                args=cached_entry.args,
+                alias=cached_entry.alias,
+                import_range=cached_entry.import_range,
+                import_source=cached_entry.import_source,
+                alias_range=cached_entry.alias_range,
+                variables=list(cached_entry.variables),
+            )
+        return True
+
+    @classmethod
+    def _match_library_import(
+        cls,
+        imp: LibraryImport,
+        entry: LibraryEntry,
+    ) -> bool:
+        """Match a library import to an entry using resolution-based matching.
+
+        Priority order:
+        1. Exact alias match (if import has alias)
+        2. Exact import_name match
+        3. Exact library name match
+        4. Source path match (for path-based imports)
+
+        Does NOT use substring matching to avoid false positives like
+        "MyLib" matching "MyLibExtended".
+        """
+        # 1. Best: alias match (most specific)
+        if imp.alias and entry.name == imp.alias:
+            return True
+
+        # 2. Exact import_name match
+        if imp.name and entry.import_name == imp.name:
+            return True
+
+        # 3. Exact library name match (case-insensitive for standard libs)
+        if imp.name and entry.name:
+            if entry.name == imp.name:
+                return True
+            # Case-insensitive match for library names
+            if entry.name.lower() == imp.name.lower():
+                return True
+
+        # 4. Source path match for path-based imports
+        if imp.name and entry.library_doc.source:
+            # Check if import name ends with the library filename
+            lib_filename = Path(entry.library_doc.source).stem
+            imp_path = Path(imp.name)
+            if imp_path.stem == lib_filename:
+                return True
+            # Also check the full library doc name
+            if entry.library_doc.name and entry.library_doc.name == imp.name:
+                return True
+
+        return False
+
+    @classmethod
+    def _rebuild_import_entries(cls, ns: "Namespace") -> None:
+        """Rebuild _import_entries mapping from restored imports and library/resource/variables entries.
+
+        This is needed after restoring from cache so the analyzer can find namespace references.
+        The _import_entries dict maps Import objects to their corresponding LibraryEntry.
+
+        Note: When the same library/resource is imported multiple times, each import gets its
+        own entry in _import_entries (with the same library_doc but different import_range/source).
+        """
+        if ns._imports is None:
+            return
+
+        for imp in ns._imports:
+            if isinstance(imp, LibraryImport):
+                # Find a library entry using resolution-based matching
+                for entry in ns._libraries.values():
+                    if cls._match_library_import(imp, entry):
+                        # Create a new entry for this import with the correct range/source
+                        ns._import_entries[imp] = LibraryEntry(
+                            name=entry.name,
+                            import_name=imp.name or "",
+                            library_doc=entry.library_doc,
+                            args=imp.args,
+                            alias=imp.alias,
+                            import_range=imp.range,
+                            import_source=imp.source,
+                            alias_range=imp.alias_range,
+                        )
+                        break
+            elif isinstance(imp, ResourceImport):
+                for entry in ns._resources.values():
+                    if entry.import_name == imp.name or entry.name == imp.name:
+                        ns._import_entries[imp] = ResourceEntry(
+                            name=entry.name,
+                            import_name=imp.name or "",
+                            library_doc=entry.library_doc,
+                            args=(),
+                            alias=None,
+                            import_range=imp.range,
+                            import_source=imp.source,
+                            imports=entry.imports,
+                            variables=entry.variables,
+                        )
+                        break
+            elif isinstance(imp, VariablesImport):
+                for entry in ns._variables_imports.values():
+                    if entry.import_name == imp.name or entry.name == imp.name:
+                        ns._import_entries[imp] = VariablesEntry(
+                            name=entry.name,
+                            import_name=imp.name or "",
+                            library_doc=entry.library_doc,
+                            args=imp.args,
+                            alias=None,
+                            import_range=imp.range,
+                            import_source=imp.source,
+                            variables=entry.variables,
+                        )
+                        break
+
+    @classmethod
+    def _restore_namespace_references(
+        cls,
+        ns: "Namespace",
+        cached_refs: tuple[tuple[int, tuple[Location, ...]], ...],
+    ) -> None:
+        """Restore _namespace_references from cached import indices.
+
+        Maps import indices back to LibraryEntry objects using _import_entries.
+        """
+        if not cached_refs or ns._imports is None:
+            ns._namespace_references = {}
+            return
+
+        # Build mapping: import index -> LibraryEntry
+        index_to_entry: dict[int, LibraryEntry] = {}
+        for i, imp in enumerate(ns._imports):
+            if imp in ns._import_entries:
+                index_to_entry[i] = ns._import_entries[imp]
+
+        # Restore namespace references
+        ns._namespace_references = {}
+        for import_idx, locations in cached_refs:
+            if import_idx in index_to_entry:
+                entry = index_to_entry[import_idx]
+                ns._namespace_references[entry] = set(locations)
+
+    @classmethod
+    def _restore_keyword_references(
+        cls,
+        ns: "Namespace",
+        cached_refs: tuple[tuple[KeywordRefKey, tuple[Location, ...]], ...],
+    ) -> dict[KeywordDoc, set[Location]] | None:
+        """Restore _keyword_references from cached stable keys.
+
+        Returns None if >10% of references are missing (cache likely stale),
+        otherwise returns the restored dictionary.
+        """
+        if not cached_refs:
+            return {}
+
+        lookup: dict[KeywordRefKey, KeywordDoc] = {}
+
+        # Include keywords from all imported libraries
+        for entry in ns._libraries.values():
+            for kw in entry.library_doc.keywords:
+                key = KeywordRefKey(kw.source or "", kw.name, kw.line_no)
+                lookup[key] = kw
+
+        # Include keywords from all imported resources
+        for entry in ns._resources.values():
+            for kw in entry.library_doc.keywords:
+                key = KeywordRefKey(kw.source or "", kw.name, kw.line_no)
+                lookup[key] = kw
+
+        # Include own keywords if this file has a library_doc
+        if ns._library_doc is not None:
+            for kw in ns._library_doc.keywords:
+                key = KeywordRefKey(kw.source or "", kw.name, kw.line_no)
+                lookup[key] = kw
+
+        # Restore references with validation
+        result: dict[KeywordDoc, set[Location]] = {}
+        missing = 0
+        missing_keys: list[KeywordRefKey] = []
+
+        for key, locations in cached_refs:
+            if key in lookup:
+                result[lookup[key]] = set(locations)
+            else:
+                missing += 1
+                if len(missing_keys) < 5:  # Log first 5 missing keys for debugging
+                    missing_keys.append(key)
+
+        # If >10% missing, cache is likely stale - signal to recompute
+        if missing > len(cached_refs) * 0.1:
+            ns._logger.debug(
+                lambda: f"Keyword reference restoration failed: {missing}/{len(cached_refs)} missing "
+                f"(>{int(len(cached_refs) * 0.1)} threshold). "
+                f"Sample missing keys: {missing_keys}"
+            )
+            return None
+
+        return result
+
+    @staticmethod
+    def _get_variable_name_length(name: str) -> int:
+        """Get the length of just the variable name, excluding ${} or @{} etc.
+
+        For example:
+            "${first}" -> 5 (length of "first")
+            "${a}" -> 1 (length of "a")
+            "@{items}" -> 5 (length of "items")
+        """
+        if name.startswith(("${", "@{", "&{", "%{")) and name.endswith("}"):
+            return len(name) - _VAR_WRAPPER_LEN
+        return len(name)
+
+    @classmethod
+    def _strip_argument_definition(
+        cls, arg_def: "ArgumentDefinition"
+    ) -> tuple["ArgumentDefinition", "VariableRefKey"]:
+        """Convert an ArgumentDefinition from original positions to stripped positions.
+
+        _get_argument_definitions_from_line creates ArgumentDefinitions with positions
+        pointing to the full variable syntax (e.g., col_offset points to '$' in '${first}').
+
+        _visit_Arguments creates ArgumentDefinitions with stripped positions
+        (e.g., col_offset points to 'f' in '${first}').
+
+        This function converts from original to stripped positions for cache restoration.
+
+        Note: Library arguments have col_offset=-1 (sentinel value for "no position").
+        These should NOT be adjusted - return them as-is.
+        """
+        # Library arguments have col_offset=-1 (no position info) - don't adjust
+        if arg_def.col_offset < 0:
+            return arg_def, cls._make_variable_ref_key(arg_def)
+
+        var_name_len = cls._get_variable_name_length(arg_def.name)
+        stripped_col = arg_def.col_offset + _VAR_PREFIX_LEN
+        stripped_end = stripped_col + var_name_len
+
+        stripped_arg_def = replace(
+            arg_def,
+            col_offset=stripped_col,
+            end_col_offset=stripped_end,
+        )
+
+        return stripped_arg_def, cls._make_variable_ref_key(stripped_arg_def)
+
+    @classmethod
+    def _add_argument_definitions_from_keywords(
+        cls,
+        keywords: KeywordStore,
+        lookup: dict["VariableRefKey", VariableDefinition],
+    ) -> None:
+        """Add ArgumentDefinitions from keywords to the lookup dictionary.
+
+        This helper extracts argument definitions from keyword [Arguments] sections
+        and adds them to the lookup with stripped positions (pointing to variable name
+        rather than the full ${var} syntax).
+        """
+        for kw_doc in keywords.values():
+            if kw_doc.argument_definitions:
+                for arg_def in kw_doc.argument_definitions:
+                    stripped_arg_def, stripped_key = cls._strip_argument_definition(
+                        arg_def
+                    )
+                    if stripped_key not in lookup:
+                        lookup[stripped_key] = stripped_arg_def
+
+    @classmethod
+    def _add_embedded_argument_definitions_from_keywords(
+        cls,
+        keywords: KeywordStore,
+        lookup: dict["VariableRefKey", VariableDefinition],
+    ) -> None:
+        """Add EmbeddedArgumentDefinitions from keyword names to the lookup dictionary.
+
+        This helper extracts embedded argument definitions from keyword names like
+        'My Keyword ${arg}' and adds them to the lookup. These are NOT included in
+        kw_doc.argument_definitions (which only has [Arguments] line arguments).
+
+        Embedded arguments use original positions (pointing to '$' in '${arg}'),
+        unlike regular arguments which use stripped positions.
+        """
+        for kw_doc in keywords.values():
+            if not kw_doc.is_embedded or not kw_doc.name_token:
+                continue
+
+            # Parse embedded arguments from keyword name, similar to visit_KeywordName
+            name_token = kw_doc.name_token
+            for variable_token in filter(
+                lambda e: e.type == Token.VARIABLE,
+                tokenize_variables(name_token, identifiers="$", ignore_errors=True),
+            ):
+                if not variable_token.value:
+                    continue
+
+                matcher = search_variable(variable_token.value, "$", ignore_errors=True)
+                if matcher.base is None:
+                    continue
+
+                # Extract name (without pattern/type for embedded args with patterns)
+                if ":" not in matcher.base:
+                    name = matcher.base
+                else:
+                    # Handle ${name:pattern} or ${name: type: pattern} (RF 7.3+)
+                    name = matcher.base.split(":")[0]
+
+                full_name = f"{matcher.identifier}{{{name}}}"
+                # Use stripped positions (pointing to variable name, not $)
+                # This matches how references are found during live analysis
+                stripped_col = variable_token.col_offset + _VAR_PREFIX_LEN
+                arg_def = EmbeddedArgumentDefinition(
+                    name=full_name,
+                    name_token=None,
+                    line_no=variable_token.lineno,
+                    col_offset=stripped_col,
+                    end_line_no=variable_token.lineno,
+                    end_col_offset=stripped_col + len(name),
+                    source=kw_doc.source,
+                    keyword_doc=kw_doc,
+                )
+                key = cls._make_variable_ref_key(arg_def)
+                if key not in lookup:
+                    lookup[key] = arg_def
+
+    @classmethod
+    def _create_variable_definition_from_key(
+        cls,
+        key: "VariableRefKey",
+    ) -> VariableDefinition:
+        """Create a VariableDefinition from a VariableRefKey.
+
+        Used to recreate local variables from cache keys when the original
+        VariableDefinition is not available (e.g., for ${result}= assignments).
+        """
+        var_name_len = cls._get_variable_name_length(key.name)
+        return VariableDefinition(
+            line_no=key.line_no,
+            col_offset=key.col_offset,
+            end_line_no=key.line_no,
+            end_col_offset=key.col_offset + var_name_len,
+            source=key.source or None,
+            name=key.name,
+            name_token=None,
+            type=VariableDefinitionType(key.var_type),
+        )
+
+    @classmethod
+    def _restore_variable_references(
+        cls,
+        ns: "Namespace",
+        cached_refs: tuple[tuple[VariableRefKey, tuple[Location, ...]], ...],
+        cached_local_var_assigns: tuple[
+            tuple[VariableRefKey, tuple[Range, ...]], ...
+        ] = (),
+    ) -> dict[VariableDefinition, set[Location]] | None:
+        """Restore _variable_references from cached stable keys.
+
+        Returns None if >10% of references are missing (cache likely stale),
+        otherwise returns the restored dictionary.
+
+        Args:
+            cached_local_var_assigns: Local variable assignment keys - used to create
+                VariableDefinition objects for local variables (like ${result}=) that
+                aren't in _own_variables but may be referenced.
+        """
+        if not cached_refs:
+            return {}
+
+        lookup: dict[VariableRefKey, VariableDefinition] = {}
+
+        # Include built-in variables (${TEST_NAME}, ${SUITE_NAME}, etc.)
+        # These have source="" and are shared across all namespaces
+        for var in cls.get_builtin_variables():
+            lookup[cls._make_variable_ref_key(var)] = var
+
+        # Include own variables
+        if ns._own_variables is not None:
+            for var in ns._own_variables:
+                lookup[cls._make_variable_ref_key(var)] = var
+
+        # Include variables from imported resources
+        for res_entry in ns._resources.values():
+            for var in res_entry.variables:
+                lookup[cls._make_variable_ref_key(var)] = var
+
+        # Include variables from variables imports
+        for var_entry in ns._variables_imports.values():
+            for var in var_entry.variables:
+                lookup[cls._make_variable_ref_key(var)] = var
+
+        # Include ArgumentDefinitions from keywords' [Arguments] sections.
+        # These are needed because during analysis, KeywordDoc.argument_definitions
+        # are added to _variable_references when named arguments are used.
+        # Note: _get_argument_definitions_from_line uses original positions (pointing to ${),
+        # while _visit_Arguments uses stripped positions (pointing to variable name).
+        # We convert to stripped positions to match _visit_Arguments behavior.
+        #
+        # Also include EmbeddedArgumentDefinitions from keyword names (like "My Keyword ${arg}").
+        # These are NOT in argument_definitions and use original positions.
+
+        # From resource keywords
+        for res_entry in ns._resources.values():
+            if res_entry.library_doc:
+                cls._add_argument_definitions_from_keywords(
+                    res_entry.library_doc.keywords, lookup
+                )
+                cls._add_embedded_argument_definitions_from_keywords(
+                    res_entry.library_doc.keywords, lookup
+                )
+
+        # From library keywords
+        for lib_entry in ns._libraries.values():
+            if lib_entry.library_doc:
+                cls._add_argument_definitions_from_keywords(
+                    lib_entry.library_doc.keywords, lookup
+                )
+                cls._add_embedded_argument_definitions_from_keywords(
+                    lib_entry.library_doc.keywords, lookup
+                )
+
+        # From the file's own keywords (*** Keywords *** section)
+        if ns._library_doc:
+            cls._add_argument_definitions_from_keywords(
+                ns._library_doc.keywords, lookup
+            )
+            cls._add_embedded_argument_definitions_from_keywords(
+                ns._library_doc.keywords, lookup
+            )
+
+        # Include local variables from assignments (e.g., ${result}= keyword call)
+        # These need to be recreated from the cache since they aren't in _own_variables
+        for local_key, _ in cached_local_var_assigns:
+            if local_key not in lookup:
+                lookup[local_key] = cls._create_variable_definition_from_key(local_key)
+
+        # Restore references with validation
+        result: dict[VariableDefinition, set[Location]] = {}
+        missing = 0
+        missing_keys: list[VariableRefKey] = []
+
+        for key, locations in cached_refs:
+            if key in lookup:
+                result[lookup[key]] = set(locations)
+            else:
+                # Try adjusted position for arguments (different position encoding paths)
+                # Some cached references have col_offset with additional offset that needs
+                # to be adjusted to match the stripped positions in the lookup
+                if key.var_type == "argument":
+                    adjusted_key = VariableRefKey(
+                        key.source,
+                        key.name,
+                        key.var_type,
+                        key.line_no,
+                        key.col_offset - _VAR_PREFIX_LEN,
+                    )
+                    if adjusted_key in lookup:
+                        result[lookup[adjusted_key]] = set(locations)
+                        continue
+                missing += 1
+                if len(missing_keys) < 5:
+                    missing_keys.append(key)
+
+        # If >10% missing, cache is likely stale - signal to recompute
+        if missing > len(cached_refs) * 0.1:
+            ns._logger.debug(
+                lambda: f"Variable reference restoration failed: {missing}/{len(cached_refs)} missing "
+                f"(>{int(len(cached_refs) * 0.1)} threshold). "
+                f"Sample missing keys: {missing_keys}"
+            )
+            return None
+
+        return result
+
+    @classmethod
+    def _restore_local_variable_assignments(
+        cls,
+        ns: "Namespace",
+        cached_refs: tuple[tuple[VariableRefKey, tuple[Range, ...]], ...],
+    ) -> dict[VariableDefinition, set[Range]]:
+        """Restore _local_variable_assignments from cached stable keys.
+
+        Unlike _restore_variable_references, this method always succeeds because
+        local variables (like ${result}= from keyword calls) aren't in _own_variables
+        and must be recreated from the cache keys. Missing variables are expected
+        and created on-demand rather than treated as cache staleness.
+        """
+        if not cached_refs:
+            return {}
+
+        lookup: dict[VariableRefKey, VariableDefinition] = {}
+
+        if ns._own_variables is not None:
+            for var in ns._own_variables:
+                lookup[cls._make_variable_ref_key(var)] = var
+
+        # Also check resources for local variables defined there
+        for res_entry in ns._resources.values():
+            for var in res_entry.variables:
+                lookup[cls._make_variable_ref_key(var)] = var
+
+        # Restore assignments - create VariableDefinition for missing local variables
+        result: dict[VariableDefinition, set[Range]] = {}
+
+        for key, ranges in cached_refs:
+            if key in lookup:
+                result[lookup[key]] = set(ranges)
+            else:
+                # Create a VariableDefinition from the cached key for local variables
+                # These are variables like ${result}= that aren't in _own_variables
+                local_var = cls._create_variable_definition_from_key(key)
+                lookup[key] = local_var
+                result[local_var] = set(ranges)
+
+        return result
+
+    @classmethod
+    def from_cache_data(
+        cls,
+        cache_data: NamespaceCacheData,
+        imports_manager: "ImportsManager",
+        model: ast.AST,
+        source: str,
+        document: TextDocument | None = None,
+        document_type: "DocumentType | None" = None,
+        languages: Languages | None = None,
+        workspace_languages: Languages | None = None,
+    ) -> "Namespace | None":
+        """Create a pre-initialized namespace from cached data."""
+        # Create namespace instance without initializing
+        ns = cls(
+            imports_manager=imports_manager,
+            model=model,
+            source=source,
+            document=document,
+            document_type=document_type,
+            languages=languages,
+            workspace_languages=workspace_languages,
+        )
+
+        # Restore libraries
+        if not cls._restore_libraries_from_cache(
+            ns, cache_data.libraries, imports_manager
+        ):
+            ns._logger.debug(
+                lambda: f"Failed to restore libraries from cache for {source}"
+            )
+            return None
+
+        # Restore resources
+        if not cls._restore_resources_from_cache(
+            ns, cache_data.resources, imports_manager
+        ):
+            ns._logger.debug(
+                lambda: f"Failed to restore resources from cache for {source}"
+            )
+            return None
+
+        # Restore resources_files mapping
+        for src, key in cache_data.resources_files:
+            if key in ns._resources:
+                ns._resources_files[src] = ns._resources[key]
+
+        # Restore variables
+        if not cls._restore_variables_from_cache(
+            ns, cache_data.variables_imports, imports_manager
+        ):
+            ns._logger.debug(
+                lambda: f"Failed to restore variables from cache for {source}"
+            )
+            return None
+
+        # Restore other state
+        ns._own_variables = list(cache_data.own_variables)
+        ns._imports = list(cache_data.imports)
+        ns._library_doc = cache_data.library_doc
+
+        # Rebuild _import_entries mapping from restored imports and entries
+        # This is needed for the analyzer to find namespace references
+        cls._rebuild_import_entries(ns)
+
+        # Mark as initialized
+        ns._initialized = True
+
+        # Restore cached diagnostics if available
+        if cache_data.analyzed and cache_data.diagnostics:
+            ns._diagnostics = list(cache_data.diagnostics)
+
+        # Restore cached test case and tag definitions
+        if cache_data.test_case_definitions:
+            ns._test_case_definitions = list(cache_data.test_case_definitions)
+        if cache_data.tag_definitions:
+            ns._tag_definitions = list(cache_data.tag_definitions)
+
+        # Restore namespace references
+        if cache_data.namespace_references:
+            cls._restore_namespace_references(ns, cache_data.namespace_references)
+
+        # Attempt full analysis restoration if available
+        # This allows skipping the analysis phase entirely on warm start
+        if cache_data.fully_analyzed:
+            keyword_refs = cls._restore_keyword_references(
+                ns, cache_data.keyword_references
+            )
+            variable_refs = cls._restore_variable_references(
+                ns,
+                cache_data.variable_references,
+                cache_data.local_variable_assignments,
+            )
+            # Note: _restore_local_variable_assignments always succeeds (creates missing vars from cache)
+            local_var_assigns = cls._restore_local_variable_assignments(
+                ns, cache_data.local_variable_assignments
+            )
+
+            # Only set _analyzed=True if keyword and variable references were restored successfully
+            # If any returned None (>10% missing), fall back to recomputing
+            if keyword_refs is not None and variable_refs is not None:
+                ns._keyword_references = keyword_refs
+                ns._variable_references = variable_refs
+                ns._local_variable_assignments = local_var_assigns
+                ns._analyzed = True
+                ns._logger.debug(
+                    lambda: f"Restored full analysis state from cache for {source}"
+                )
+            else:
+                ns._logger.debug(
+                    lambda: f"Could not restore full analysis from cache for {source}: "
+                    f"keyword_refs={keyword_refs is not None}, "
+                    f"variable_refs={variable_refs is not None}"
+                )
+        else:
+            ns._logger.debug(
+                lambda: f"Cache for {source} does not have fully_analyzed=True"
+            )
+
+        return ns
 
     class DataEntry(NamedTuple):
         libraries: Dict[str, LibraryEntry] = OrderedDict()
@@ -981,7 +2271,8 @@ class Namespace:
         with self._initialize_lock:
             if not self._initialized:
                 with self._logger.measure_time(
-                    lambda: f"Initialize Namespace for {self.source}", context_name="import"
+                    lambda: f"Initialize Namespace for {self.source}",
+                    context_name="import",
                 ):
                     succeed = False
                     try:
@@ -1043,7 +2334,10 @@ class Namespace:
     @classmethod
     def get_builtin_variables(cls) -> List[VariableDefinition]:
         if cls._builtin_variables is None:
-            cls._builtin_variables = [BuiltInVariableDefinition(0, 0, 0, 0, "", n, None) for n in BUILTIN_VARIABLES]
+            cls._builtin_variables = [
+                BuiltInVariableDefinition(0, 0, 0, 0, "", n, None)
+                for n in BUILTIN_VARIABLES
+            ]
 
         return cls._builtin_variables
 
@@ -1102,11 +2396,19 @@ class Namespace:
                     nodes if nodes else [],
                 )
             )
-            test_or_keyword = test_or_keyword_nodes[0] if test_or_keyword_nodes else None
+            test_or_keyword = (
+                test_or_keyword_nodes[0] if test_or_keyword_nodes else None
+            )
 
-        in_args = isinstance(test_or_keyword_nodes[-1], Arguments) if test_or_keyword_nodes else False
+        in_args = (
+            isinstance(test_or_keyword_nodes[-1], Arguments)
+            if test_or_keyword_nodes
+            else False
+        )
         only_args = (
-            isinstance(test_or_keyword_nodes[-1], (Arguments, Setup, Timeout)) if test_or_keyword_nodes else False
+            isinstance(test_or_keyword_nodes[-1], (Arguments, Setup, Timeout))
+            if test_or_keyword_nodes
+            else False
         )
 
         yield from (
@@ -1115,13 +2417,19 @@ class Namespace:
                 (
                     (
                         (OnlyArgumentsVisitor if only_args else BlockVariableVisitor)(
-                            self, nodes, position, in_args, resolved_variables=self.get_global_resolved_variables()
+                            self,
+                            nodes,
+                            position,
+                            in_args,
+                            resolved_variables=self.get_global_resolved_variables(),
                         ).get(test_or_keyword)
                     )
                     if test_or_keyword is not None and not skip_local_variables
                     else []
                 ),
-                [] if skip_global_variables or skip_commandline_variables else self.get_command_line_variables(),
+                []
+                if skip_global_variables or skip_commandline_variables
+                else self.get_command_line_variables(),
                 [] if skip_global_variables else self.get_imported_variables(),
                 [] if skip_global_variables else self.get_own_variables(),
                 [] if skip_global_variables else self.get_builtin_variables(),
@@ -1143,7 +2451,9 @@ class Namespace:
     def get_suite_variables(self) -> Dict[str, Any]:
         with self._suite_variables_lock:
             if self._suite_variables is None:
-                self._suite_variables = {v.name: v.value for v in reversed(self.get_global_variables())}
+                self._suite_variables = {
+                    v.name: v.value for v in reversed(self.get_global_variables())
+                }
 
         return self._suite_variables
 
@@ -1155,7 +2465,9 @@ class Namespace:
         if nodes:
             return {
                 v.convertable_name: v.value
-                for k, v in self.yield_variables(nodes, position, skip_commandline_variables=True)
+                for k, v in self.yield_variables(
+                    nodes, position, skip_commandline_variables=True
+                )
                 if v.has_value
             }
 
@@ -1163,7 +2475,9 @@ class Namespace:
             if self._global_resolvable_variables is None:
                 self._global_resolvable_variables = {
                     v.convertable_name: v.value
-                    for k, v in self.yield_variables(nodes, position, skip_commandline_variables=True)
+                    for k, v in self.yield_variables(
+                        nodes, position, skip_commandline_variables=True
+                    )
                     if v.has_value
                 }
             return self._global_resolvable_variables
@@ -1282,7 +2596,10 @@ class Namespace:
                 if (
                     top_level
                     and result.library_doc.errors is None
-                    and (len(result.library_doc.keywords) == 0 and not bool(result.library_doc.has_listener))
+                    and (
+                        len(result.library_doc.keywords) == 0
+                        and not bool(result.library_doc.has_listener)
+                    )
                 ):
                     self.append_diagnostics(
                         range=value.range,
@@ -1295,18 +2612,24 @@ class Namespace:
                 if value.name is None:
                     raise NameSpaceError("Resource setting requires value.")
 
-                source = self.imports_manager.find_resource(value.name, base_dir, variables=variables)
+                source = self.imports_manager.find_resource(
+                    value.name, base_dir, variables=variables
+                )
 
                 allread_imported_resource = next(
                     (
                         v
                         for k, v in self._resources.items()
-                        if v.library_doc.source is not None and same_file(v.library_doc.source, source)
+                        if v.library_doc.source is not None
+                        and same_file(v.library_doc.source, source)
                     ),
                     None,
                 )
                 if allread_imported_resource is not None:
-                    self._logger.debug(lambda: f"Resource '{value.name}' already imported.", context_name="import")
+                    self._logger.debug(
+                        lambda: f"Resource '{value.name}' already imported.",
+                        context_name="import",
+                    )
                     if top_level:
                         self.append_diagnostics(
                             range=value.range,
@@ -1317,7 +2640,11 @@ class Namespace:
                                 [
                                     DiagnosticRelatedInformation(
                                         location=Location(
-                                            uri=str(Uri.from_path(allread_imported_resource.import_source)),
+                                            uri=str(
+                                                Uri.from_path(
+                                                    allread_imported_resource.import_source
+                                                )
+                                            ),
                                             range=allread_imported_resource.import_range,
                                         ),
                                         message="",
@@ -1414,7 +2741,10 @@ class Namespace:
 
             if top_level and result is not None:
                 if result.library_doc.source is not None and result.library_doc.errors:
-                    if any(err.source and Path(err.source).is_absolute() for err in result.library_doc.errors):
+                    if any(
+                        err.source and Path(err.source).is_absolute()
+                        for err in result.library_doc.errors
+                    ):
                         self.append_diagnostics(
                             range=value.range,
                             message="Import definition contains errors.",
@@ -1499,7 +2829,9 @@ class Namespace:
                         (
                             [
                                 DiagnosticRelatedInformation(
-                                    location=Location(str(Uri.from_path(parent_source)), value.range),
+                                    location=Location(
+                                        str(Uri.from_path(parent_source)), value.range
+                                    ),
                                     message=str(e),
                                 ),
                             ]
@@ -1543,9 +2875,14 @@ class Namespace:
                 if entry is not None:
                     if isinstance(entry, ResourceEntry):
                         assert entry.library_doc.source is not None
-                        allread_imported_resource = self._resources_files.get(entry.library_doc.source, None)
+                        allread_imported_resource = self._resources_files.get(
+                            entry.library_doc.source, None
+                        )
 
-                        if allread_imported_resource is None and entry.library_doc.source != self.source:
+                        if (
+                            allread_imported_resource is None
+                            and entry.library_doc.source != self.source
+                        ):
                             self._resources[entry.library_doc.source] = entry
                             self._resources_files[entry.library_doc.source] = entry
                             if entry.variables:
@@ -1559,7 +2896,9 @@ class Namespace:
                                     variables=variables,
                                     source=entry.library_doc.source,
                                     parent_import=imp if top_level else parent_import,
-                                    parent_source=parent_source if top_level else source,
+                                    parent_source=parent_source
+                                    if top_level
+                                    else source,
                                 )
                             except (SystemExit, KeyboardInterrupt):
                                 raise
@@ -1581,7 +2920,10 @@ class Namespace:
                                     source=DIAGNOSTICS_SOURCE_NAME,
                                     code=Error.RECURSIVE_IMPORT,
                                 )
-                            elif allread_imported_resource is not None and allread_imported_resource.library_doc.source:
+                            elif (
+                                allread_imported_resource is not None
+                                and allread_imported_resource.library_doc.source
+                            ):
                                 self.append_diagnostics(
                                     range=entry.import_range,
                                     message=f"Resource {entry} already imported.",
@@ -1591,7 +2933,11 @@ class Namespace:
                                         [
                                             DiagnosticRelatedInformation(
                                                 location=Location(
-                                                    uri=str(Uri.from_path(allread_imported_resource.import_source)),
+                                                    uri=str(
+                                                        Uri.from_path(
+                                                            allread_imported_resource.import_source
+                                                        )
+                                                    ),
                                                     range=allread_imported_resource.import_range,
                                                 ),
                                                 message="",
@@ -1612,9 +2958,15 @@ class Namespace:
                                     (
                                         e.library_doc.source is not None
                                         and entry.library_doc.source is not None
-                                        and same_file(e.library_doc.source, entry.library_doc.source)
+                                        and same_file(
+                                            e.library_doc.source,
+                                            entry.library_doc.source,
+                                        )
                                     )
-                                    or (e.library_doc.source is None and entry.library_doc.source is None)
+                                    or (
+                                        e.library_doc.source is None
+                                        and entry.library_doc.source is None
+                                    )
                                 )
                                 and e.alias == entry.alias
                                 and e.args == entry.args
@@ -1626,10 +2978,16 @@ class Namespace:
                             and entry.library_doc is not None
                             and entry.library_doc.source_or_origin
                         ):
-                            self._variables_imports[entry.library_doc.source_or_origin] = entry
+                            self._variables_imports[
+                                entry.library_doc.source_or_origin
+                            ] = entry
                             if entry.variables:
                                 variables = self.get_suite_variables()
-                        elif top_level and already_imported_variables and already_imported_variables.library_doc.source:
+                        elif (
+                            top_level
+                            and already_imported_variables
+                            and already_imported_variables.library_doc.source
+                        ):
                             self.append_diagnostics(
                                 range=entry.import_range,
                                 message=f'Variables "{entry}" already imported.',
@@ -1639,7 +2997,11 @@ class Namespace:
                                     [
                                         DiagnosticRelatedInformation(
                                             location=Location(
-                                                uri=str(Uri.from_path(already_imported_variables.import_source)),
+                                                uri=str(
+                                                    Uri.from_path(
+                                                        already_imported_variables.import_source
+                                                    )
+                                                ),
                                                 range=already_imported_variables.import_range,
                                             ),
                                             message="",
@@ -1652,7 +3014,11 @@ class Namespace:
                             )
 
                     elif isinstance(entry, LibraryEntry):
-                        if top_level and entry.name == BUILTIN_LIBRARY_NAME and entry.alias is None:
+                        if (
+                            top_level
+                            and entry.name == BUILTIN_LIBRARY_NAME
+                            and entry.alias is None
+                        ):
                             self.append_diagnostics(
                                 range=entry.import_range,
                                 message=f'Library "{entry}" is not imported,'
@@ -1663,7 +3029,9 @@ class Namespace:
                                     [
                                         DiagnosticRelatedInformation(
                                             location=Location(
-                                                uri=str(Uri.from_path(entry.import_source)),
+                                                uri=str(
+                                                    Uri.from_path(entry.import_source)
+                                                ),
                                                 range=entry.import_range,
                                             ),
                                             message="",
@@ -1684,11 +3052,18 @@ class Namespace:
                                     (
                                         e.library_doc.source is not None
                                         and entry.library_doc.source is not None
-                                        and same_file(e.library_doc.source, entry.library_doc.source)
+                                        and same_file(
+                                            e.library_doc.source,
+                                            entry.library_doc.source,
+                                        )
                                     )
-                                    or (e.library_doc.source is None and entry.library_doc.source is None)
+                                    or (
+                                        e.library_doc.source is None
+                                        and entry.library_doc.source is None
+                                    )
                                 )
-                                and e.library_doc.member_name == entry.library_doc.member_name
+                                and e.library_doc.member_name
+                                == entry.library_doc.member_name
                                 and e.alias == entry.alias
                                 and e.args == entry.args
                             ),
@@ -1696,10 +3071,17 @@ class Namespace:
                         )
                         if (
                             already_imported_library is None
-                            and (entry.alias or entry.name or entry.import_name) not in self._libraries
+                            and (entry.alias or entry.name or entry.import_name)
+                            not in self._libraries
                         ):
-                            self._libraries[entry.alias or entry.name or entry.import_name] = entry
-                        elif top_level and already_imported_library and already_imported_library.library_doc.source:
+                            self._libraries[
+                                entry.alias or entry.name or entry.import_name
+                            ] = entry
+                        elif (
+                            top_level
+                            and already_imported_library
+                            and already_imported_library.library_doc.source
+                        ):
                             self.append_diagnostics(
                                 range=entry.import_range,
                                 message=f'Library "{entry}" already imported.',
@@ -1709,7 +3091,11 @@ class Namespace:
                                     [
                                         DiagnosticRelatedInformation(
                                             location=Location(
-                                                uri=str(Uri.from_path(already_imported_library.import_source)),
+                                                uri=str(
+                                                    Uri.from_path(
+                                                        already_imported_library.import_source
+                                                    )
+                                                ),
                                                 range=already_imported_library.import_range,
                                             ),
                                             message="",
@@ -1723,7 +3109,9 @@ class Namespace:
 
         return variables
 
-    def _import_lib(self, library: str, variables: Optional[Dict[str, Any]] = None) -> Optional[LibraryEntry]:
+    def _import_lib(
+        self, library: str, variables: Optional[Dict[str, Any]] = None
+    ) -> Optional[LibraryEntry]:
         try:
             return self._get_library_entry(
                 library,
@@ -1745,8 +3133,13 @@ class Namespace:
             )
             return None
 
-    def _import_default_libraries(self, variables: Optional[Dict[str, Any]] = None) -> None:
-        with self._logger.measure_time(lambda: f"importing default libraries for {self.source}", context_name="import"):
+    def _import_default_libraries(
+        self, variables: Optional[Dict[str, Any]] = None
+    ) -> None:
+        with self._logger.measure_time(
+            lambda: f"importing default libraries for {self.source}",
+            context_name="import",
+        ):
             if variables is None:
                 variables = self.get_suite_variables()
 
@@ -1796,7 +3189,10 @@ class Namespace:
             (
                 v.library_doc
                 for e, v in self._import_entries.items()
-                if isinstance(e, LibraryImport) and v.import_name == name and v.args == args and v.alias == alias
+                if isinstance(e, LibraryImport)
+                and v.import_name == name
+                and v.args == args
+                and v.alias == alias
             ),
             None,
         )
@@ -1812,7 +3208,10 @@ class Namespace:
         if variables is None:
             variables = self.get_suite_variables()
 
-        (namespace, library_doc) = self.imports_manager.get_namespace_and_libdoc_for_resource_import(
+        (
+            namespace,
+            library_doc,
+        ) = self.imports_manager.get_namespace_and_libdoc_for_resource_import(
             name, base_dir, sentinel=self, variables=variables
         )
 
@@ -1866,14 +3265,18 @@ class Namespace:
         )
 
     @_logger.call
-    def get_variables_import_libdoc(self, name: str, args: Tuple[str, ...] = ()) -> Optional[LibraryDoc]:
+    def get_variables_import_libdoc(
+        self, name: str, args: Tuple[str, ...] = ()
+    ) -> Optional[LibraryDoc]:
         self.ensure_initialized()
 
         return next(
             (
                 v.library_doc
                 for e, v in self._import_entries.items()
-                if isinstance(e, VariablesImport) and v.import_name == name and v.args == args
+                if isinstance(e, VariablesImport)
+                and v.import_name == name
+                and v.args == args
             ),
             None,
         )
@@ -1960,7 +3363,9 @@ class Namespace:
 
                 self.ensure_initialized()
 
-                with self._logger.measure_time(lambda: f"analyzing document {self.source}", context_name="analyze"):
+                with self._logger.measure_time(
+                    lambda: f"analyzing document {self.source}", context_name="analyze"
+                ):
                     analyzer = NamespaceAnalyzer(self.model, self, self.create_finder())
 
                     try:
@@ -1971,9 +3376,15 @@ class Namespace:
                         self._diagnostics += analyzer_result.diagnostics
                         self._keyword_references = analyzer_result.keyword_references
                         self._variable_references = analyzer_result.variable_references
-                        self._local_variable_assignments = analyzer_result.local_variable_assignments
-                        self._namespace_references = analyzer_result.namespace_references
-                        self._test_case_definitions = analyzer_result.test_case_definitions
+                        self._local_variable_assignments = (
+                            analyzer_result.local_variable_assignments
+                        )
+                        self._namespace_references = (
+                            analyzer_result.namespace_references
+                        )
+                        self._test_case_definitions = (
+                            analyzer_result.test_case_definitions
+                        )
                         self._tag_definitions = analyzer_result.tag_definitions
 
                         lib_doc = self.get_library_doc()
@@ -1983,11 +3394,19 @@ class Namespace:
                                 self.append_diagnostics(
                                     range=Range(
                                         start=Position(
-                                            line=((err.line_no - 1) if err.line_no is not None else 0),
+                                            line=(
+                                                (err.line_no - 1)
+                                                if err.line_no is not None
+                                                else 0
+                                            ),
                                             character=0,
                                         ),
                                         end=Position(
-                                            line=((err.line_no - 1) if err.line_no is not None else 0),
+                                            line=(
+                                                (err.line_no - 1)
+                                                if err.line_no is not None
+                                                else 0
+                                            ),
                                             character=0,
                                         ),
                                     ),
@@ -2015,7 +3434,10 @@ class Namespace:
         self.ensure_initialized()
         return KeywordFinder(self)
 
-    @_logger.call(condition=lambda self, name, **kwargs: self._finder is not None and name not in self._finder._cache)
+    @_logger.call(
+        condition=lambda self, name, **kwargs: self._finder is not None
+        and name not in self._finder._cache
+    )
     def find_keyword(
         self,
         name: Optional[str],

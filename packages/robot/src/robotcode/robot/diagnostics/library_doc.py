@@ -620,9 +620,7 @@ class KeywordDoc(SourceEntity):
     name_token: Optional[Token] = field(default=None, compare=False)
     arguments: List[ArgumentInfo] = field(default_factory=list, compare=False)
     arguments_spec: Optional[ArgumentSpec] = field(default=None, compare=False)
-    argument_definitions: Optional[List[ArgumentDefinition]] = field(
-        default=None, compare=False, metadata={"nosave": True}
-    )
+    argument_definitions: Optional[List[ArgumentDefinition]] = field(default=None, compare=False)
     doc: str = field(default="", compare=False)
     tags: List[str] = field(default_factory=list)
     type: str = "keyword"

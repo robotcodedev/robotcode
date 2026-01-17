@@ -18,8 +18,9 @@ from robotcode.robot.diagnostics.entities import (
     EnvironmentVariableDefinition,
     GlobalVariableDefinition,
     LibraryArgumentDefinition,
+    VariableDefinition,
 )
-from robotcode.robot.diagnostics.library_doc import LibraryDoc
+from robotcode.robot.diagnostics.library_doc import KeywordDoc, LibraryDoc
 from robotcode.robot.diagnostics.namespace import Namespace
 
 from ...common.parts.diagnostics import DiagnosticsCollectType, DiagnosticsResult
@@ -54,20 +55,18 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
         self.parent.documents_cache.variables_changed.add(self._on_variables_changed)
 
     def _on_libraries_changed(self, sender: Any, libraries: List[LibraryDoc]) -> None:
-        for doc in self.parent.documents.documents:
-            namespace = self.parent.documents_cache.get_only_initialized_namespace(doc)
-            if namespace is not None:
-                lib_docs = (e.library_doc for e in namespace.get_libraries().values())
-                if any(lib_doc in lib_docs for lib_doc in libraries):
-                    self.parent.diagnostics.force_refresh_document(doc)
+        docs_to_refresh: set[TextDocument] = set()
+        for lib_doc in libraries:
+            docs_to_refresh.update(self.parent.documents_cache.get_library_users(lib_doc))
+        for doc in docs_to_refresh:
+            self.parent.diagnostics.force_refresh_document(doc)
 
     def _on_variables_changed(self, sender: Any, variables: List[LibraryDoc]) -> None:
-        for doc in self.parent.documents.documents:
-            namespace = self.parent.documents_cache.get_only_initialized_namespace(doc)
-            if namespace is not None:
-                lib_docs = (e.library_doc for e in namespace.get_variables_imports().values())
-                if any(lib_doc in lib_docs for lib_doc in variables):
-                    self.parent.diagnostics.force_refresh_document(doc)
+        docs_to_refresh: set[TextDocument] = set()
+        for var_doc in variables:
+            docs_to_refresh.update(self.parent.documents_cache.get_variables_users(var_doc))
+        for doc in docs_to_refresh:
+            self.parent.diagnostics.force_refresh_document(doc)
 
     @language_id("robotframework")
     def analyze(self, sender: Any, document: TextDocument) -> None:
@@ -83,37 +82,25 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
         namespace = self.parent.documents_cache.get_only_initialized_namespace(document)
         if namespace is None:
             return None
-
-        result = []
-
-        lib_doc = namespace.get_library_doc()
-        for doc in self.parent.documents.documents:
-            if doc.language_id != "robotframework":
-                continue
-
-            doc_namespace = self.parent.documents_cache.get_only_initialized_namespace(doc)
-            if doc_namespace is None:
-                continue
-
-            if doc_namespace.is_analyzed():
-                for ref in doc_namespace.get_namespace_references():
-                    if ref.library_doc == lib_doc:
-                        result.append(doc)
-
-        return result
+        source = str(document.uri.to_path())
+        return self.parent.documents_cache.get_importers(source)
 
     def modify_diagnostics(self, document: TextDocument, diagnostics: List[Diagnostic]) -> List[Diagnostic]:
         return self.parent.documents_cache.get_diagnostic_modifier(document).modify_diagnostics(diagnostics)
 
     @language_id("robotframework")
     def collect_namespace_diagnostics(
-        self, sender: Any, document: TextDocument, diagnostics_type: DiagnosticsCollectType
+        self,
+        sender: Any,
+        document: TextDocument,
+        diagnostics_type: DiagnosticsCollectType,
     ) -> DiagnosticsResult:
         try:
             namespace = self.parent.documents_cache.get_namespace(document)
 
             return DiagnosticsResult(
-                self.collect_namespace_diagnostics, self.modify_diagnostics(document, namespace.get_diagnostics())
+                self.collect_namespace_diagnostics,
+                self.modify_diagnostics(document, namespace.get_diagnostics()),
             )
         except (CancelledError, SystemExit, KeyboardInterrupt):
             raise
@@ -138,10 +125,47 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
                 ],
             )
 
+    def _is_keyword_used_anywhere(
+        self,
+        document: TextDocument,
+        kw: KeywordDoc,
+        namespace: Namespace,
+    ) -> bool:
+        """Check if keyword is used anywhere, using index with safe fallback."""
+        if self.parent.documents_cache.get_keyword_ref_users(kw):
+            return True
+
+        if namespace.get_keyword_references().get(kw):
+            return True
+
+        # Safe fallback: workspace scan if index might be incomplete
+        refs = self.parent.robot_references.find_keyword_references(document, kw, False, True)
+        return bool(refs)
+
+    def _is_variable_used_anywhere(
+        self,
+        document: TextDocument,
+        var: VariableDefinition,
+        namespace: Namespace,
+    ) -> bool:
+        """Check if variable is used anywhere, using index with safe fallback."""
+        if self.parent.documents_cache.get_variable_ref_users(var):
+            return True
+
+        if namespace.get_variable_references().get(var):
+            return True
+
+        # Safe fallback: workspace scan if index might be incomplete
+        refs = self.parent.robot_references.find_variable_references(document, var, False, True)
+        return bool(refs)
+
     @language_id("robotframework")
     @_logger.call
     def collect_unused_keyword_references(
-        self, sender: Any, document: TextDocument, diagnostics_type: DiagnosticsCollectType
+        self,
+        sender: Any,
+        document: TextDocument,
+        diagnostics_type: DiagnosticsCollectType,
     ) -> DiagnosticsResult:
         config = self.parent.workspace.get_configuration(AnalysisConfig, document.uri)
 
@@ -161,8 +185,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
             for kw in (namespace.get_library_doc()).keywords.values():
                 check_current_task_canceled()
 
-                references = self.parent.robot_references.find_keyword_references(document, kw, False, True)
-                if not references:
+                if not self._is_keyword_used_anywhere(document, kw, namespace):
                     result.append(
                         Diagnostic(
                             range=kw.name_range,
@@ -174,7 +197,10 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
                         )
                     )
 
-            return DiagnosticsResult(self.collect_unused_keyword_references, self.modify_diagnostics(document, result))
+            return DiagnosticsResult(
+                self.collect_unused_keyword_references,
+                self.modify_diagnostics(document, result),
+            )
         except (CancelledError, SystemExit, KeyboardInterrupt):
             raise
         except BaseException as e:
@@ -200,7 +226,10 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
     @language_id("robotframework")
     @_logger.call
     def collect_unused_variable_references(
-        self, sender: Any, document: TextDocument, diagnostics_type: DiagnosticsCollectType
+        self,
+        sender: Any,
+        document: TextDocument,
+        diagnostics_type: DiagnosticsCollectType,
     ) -> DiagnosticsResult:
         config = self.parent.workspace.get_configuration(AnalysisConfig, document.uri)
 
@@ -222,15 +251,19 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
                 check_current_task_canceled()
 
                 if isinstance(
-                    var, (LibraryArgumentDefinition, EnvironmentVariableDefinition, GlobalVariableDefinition)
+                    var,
+                    (
+                        LibraryArgumentDefinition,
+                        EnvironmentVariableDefinition,
+                        GlobalVariableDefinition,
+                    ),
                 ):
                     continue
 
                 if var.name_token is not None and var.name_token.value and var.name_token.value.startswith("_"):
                     continue
 
-                references = self.parent.robot_references.find_variable_references(document, var, False, True)
-                if not references:
+                if not self._is_variable_used_anywhere(document, var, namespace):
                     result.append(
                         Diagnostic(
                             range=var.name_range,
@@ -243,7 +276,10 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
                         )
                     )
 
-            return DiagnosticsResult(self.collect_unused_variable_references, self.modify_diagnostics(document, result))
+            return DiagnosticsResult(
+                self.collect_unused_variable_references,
+                self.modify_diagnostics(document, result),
+            )
         except (CancelledError, SystemExit, KeyboardInterrupt):
             raise
         except BaseException as e:
