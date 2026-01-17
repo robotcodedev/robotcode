@@ -607,6 +607,10 @@ class ImportsManager:
         self._resource_libdoc_cache: "weakref.WeakKeyDictionary[ast.AST, Dict[str, LibraryDoc]]" = (
             weakref.WeakKeyDictionary()
         )
+        self._libdoc_by_source: dict[str, LibraryDoc] = {}
+        self._libdoc_by_name: dict[str, LibraryDoc] = {}  # For standard libraries cached by name
+        self._resource_libdoc_by_source: dict[str, LibraryDoc] = {}
+        self._variables_libdoc_by_source: dict[str, LibraryDoc] = {}
 
         self._diagnostics: List[Diagnostic] = []
 
@@ -927,6 +931,7 @@ class ImportsManager:
         entry: _LibrariesEntry,
         now: bool = False,
     ) -> None:
+        removed_lib_doc: Optional[LibraryDoc] = None
         try:
             if len(entry.references) == 0 or now:
                 self._logger.debug(lambda: f"Remove Library Entry {entry_key}")
@@ -934,11 +939,17 @@ class ImportsManager:
                     if len(entry.references) == 0:
                         e1 = self._libaries.get(entry_key, None)
                         if e1 == entry:
+                            removed_lib_doc = entry.get_libdoc()
                             self._libaries.pop(entry_key, None)
                             entry.invalidate()
                 self._logger.debug(lambda: f"Library Entry {entry_key} removed")
         finally:
             self._library_files_cache.clear()
+            if removed_lib_doc is not None:
+                if removed_lib_doc.source:
+                    self._libdoc_by_source.pop(removed_lib_doc.source, None)
+                if removed_lib_doc.name:
+                    self._libdoc_by_name.pop(removed_lib_doc.name, None)
 
     def __remove_resource_entry(
         self,
@@ -946,6 +957,7 @@ class ImportsManager:
         entry: _ResourcesEntry,
         now: bool = False,
     ) -> None:
+        removed_lib_doc: Optional[LibraryDoc] = None
         try:
             if len(entry.references) == 0 or now:
                 self._logger.debug(lambda: f"Remove Resource Entry {entry_key}")
@@ -953,12 +965,14 @@ class ImportsManager:
                     if len(entry.references) == 0 or now:
                         e1 = self._resources.get(entry_key, None)
                         if e1 == entry:
+                            removed_lib_doc = entry.get_libdoc()
                             self._resources.pop(entry_key, None)
-
                             entry.invalidate()
                 self._logger.debug(lambda: f"Resource Entry {entry_key} removed")
         finally:
             self._resource_files_cache.clear()
+            if removed_lib_doc is not None and removed_lib_doc.source:
+                self._resource_libdoc_by_source.pop(removed_lib_doc.source, None)
 
     def __remove_variables_entry(
         self,
@@ -966,6 +980,7 @@ class ImportsManager:
         entry: _VariablesEntry,
         now: bool = False,
     ) -> None:
+        removed_lib_doc: Optional[VariablesDoc] = None
         try:
             if len(entry.references) == 0 or now:
                 self._logger.debug(lambda: f"Remove Variables Entry {entry_key}")
@@ -973,11 +988,14 @@ class ImportsManager:
                     if len(entry.references) == 0:
                         e1 = self._variables.get(entry_key, None)
                         if e1 == entry:
+                            removed_lib_doc = entry.get_libdoc()
                             self._variables.pop(entry_key, None)
                             entry.invalidate()
                 self._logger.debug(lambda: f"Variables Entry {entry_key} removed")
         finally:
             self._variables_files_cache.clear()
+            if removed_lib_doc is not None and removed_lib_doc.source:
+                self._variables_libdoc_by_source.pop(removed_lib_doc.source, None)
 
     def get_library_meta(
         self,
@@ -1471,11 +1489,30 @@ class ImportsManager:
 
         return result
 
+    def _cache_libdoc(
+        self,
+        lib_doc: LibraryDoc,
+        name: Optional[str] = None,
+        source: Optional[str] = None,
+    ) -> LibraryDoc:
+        """Cache a LibraryDoc for future lookups and return it."""
+        effective_source = source or lib_doc.source
+        if effective_source:
+            self._libdoc_by_source[effective_source] = lib_doc
+        if name:
+            self._libdoc_by_name[name] = lib_doc
+        elif lib_doc.name:
+            self._libdoc_by_name[lib_doc.name] = lib_doc
+        return lib_doc
+
     def get_libdoc_for_source(self, source: Optional[str], name: Optional[str] = None) -> Optional[LibraryDoc]:
-        """Look up a library LibraryDoc by its source path from disk cache.
+        """Look up a library LibraryDoc by its source path or name.
 
         Used when restoring namespace from cache - looks up cached library data.
         Returns None if not found (cache miss or no source).
+
+        Uses in-memory index first, then falls back to loaded libraries
+        and disk cache if needed.
 
         Args:
             source: The source path of the library
@@ -1485,10 +1522,22 @@ class ImportsManager:
         if source is None and name is None:
             return None
 
-        # Check in-memory cache first by iterating through loaded libraries
+        if source is not None and source in self._libdoc_by_source:
+            return self._libdoc_by_source[source]
+
+        if name is not None and name in self._libdoc_by_name:
+            return self._libdoc_by_name[name]
+
+        # Check loaded libraries (and populate index for future lookups)
         with self._libaries_lock:
             for entry in self._libaries.values():
                 lib_doc = entry.get_libdoc()
+                # Populate index while iterating
+                if lib_doc.source and lib_doc.source not in self._libdoc_by_source:
+                    self._libdoc_by_source[lib_doc.source] = lib_doc
+                if lib_doc.name and lib_doc.name not in self._libdoc_by_name:
+                    self._libdoc_by_name[lib_doc.name] = lib_doc
+
                 if source is not None and lib_doc.source == source:
                     return lib_doc
                 if name is not None and lib_doc.name == name:
@@ -1501,12 +1550,14 @@ class ImportsManager:
                 # First try the name directly (for libraries with dots like "mypackage.MyLibrary")
                 spec_file = name.replace(".", "/") + ".spec"
                 if self.data_cache.cache_data_exists(CacheSection.LIBRARY, spec_file):
-                    return self.data_cache.read_cache_data(CacheSection.LIBRARY, spec_file, LibraryDoc)
+                    lib_doc = self.data_cache.read_cache_data(CacheSection.LIBRARY, spec_file, LibraryDoc)
+                    return self._cache_libdoc(lib_doc, name=name)
 
                 # Try standard Robot Framework library path
                 spec_file = "robot/libraries/" + name + ".spec"
                 if self.data_cache.cache_data_exists(CacheSection.LIBRARY, spec_file):
-                    return self.data_cache.read_cache_data(CacheSection.LIBRARY, spec_file, LibraryDoc)
+                    lib_doc = self.data_cache.read_cache_data(CacheSection.LIBRARY, spec_file, LibraryDoc)
+                    return self._cache_libdoc(lib_doc, name=name)
 
             # Try disk cache using source path to build cache key (for by_path libraries)
             if source is not None:
@@ -1516,7 +1567,8 @@ class ImportsManager:
 
                     spec_file = cache_key + ".spec"
                     if self.data_cache.cache_data_exists(CacheSection.LIBRARY, spec_file):
-                        return self.data_cache.read_cache_data(CacheSection.LIBRARY, spec_file, LibraryDoc)
+                        lib_doc = self.data_cache.read_cache_data(CacheSection.LIBRARY, spec_file, LibraryDoc)
+                        return self._cache_libdoc(lib_doc, source=source)
         except Exception as e:
             self._logger.debug(
                 lambda e=e: f"get_libdoc_for_source failed for source={source}, name={name}: {e}",  # type: ignore[misc]
@@ -1526,13 +1578,18 @@ class ImportsManager:
         return None
 
     def get_resource_libdoc_for_source(self, source: Optional[str]) -> Optional[LibraryDoc]:
-        """Look up a resource LibraryDoc by its source path from disk cache.
+        """Look up a resource LibraryDoc by its source path.
 
         Used when restoring namespace from cache - looks up cached resource data.
         Returns None if not found (cache miss or no source).
+
+        Uses in-memory cache first, then falls back to disk cache.
         """
         if source is None:
             return None
+
+        if source in self._resource_libdoc_by_source:
+            return self._resource_libdoc_by_source[source]
 
         source_path = Path(source)
         if not source_path.exists():
@@ -1544,7 +1601,10 @@ class ImportsManager:
 
         if self.data_cache.cache_data_exists(CacheSection.RESOURCE, spec_file):
             try:
-                return self.data_cache.read_cache_data(CacheSection.RESOURCE, spec_file, LibraryDoc)
+                lib_doc = self.data_cache.read_cache_data(CacheSection.RESOURCE, spec_file, LibraryDoc)
+                # Cache for future lookups
+                self._resource_libdoc_by_source[source] = lib_doc
+                return lib_doc
             except (OSError, TypeError, EOFError, AttributeError, ImportError) as e:
                 self._logger.debug(
                     lambda e=e: f"get_resource_libdoc_for_source failed for {source}: {e}",  # type: ignore[misc]
@@ -1554,13 +1614,18 @@ class ImportsManager:
         return None
 
     def get_variables_libdoc_for_source(self, source: Optional[str]) -> Optional[LibraryDoc]:
-        """Look up a variables LibraryDoc by its source path from disk cache.
+        """Look up a variables LibraryDoc by its source path.
 
         Used when restoring namespace from cache - looks up cached variables data.
         Returns None if not found (cache miss or no source).
+
+        Uses in-memory cache first, then falls back to disk cache.
         """
         if source is None:
             return None
+
+        if source in self._variables_libdoc_by_source:
+            return self._variables_libdoc_by_source[source]
 
         source_path = Path(source)
         if not source_path.exists():
@@ -1572,7 +1637,10 @@ class ImportsManager:
 
         if self.data_cache.cache_data_exists(CacheSection.VARIABLES, spec_file):
             try:
-                return self.data_cache.read_cache_data(CacheSection.VARIABLES, spec_file, LibraryDoc)
+                lib_doc = self.data_cache.read_cache_data(CacheSection.VARIABLES, spec_file, LibraryDoc)
+                # Cache for future lookups
+                self._variables_libdoc_by_source[source] = lib_doc
+                return lib_doc
             except (OSError, TypeError, EOFError, AttributeError, ImportError) as e:
                 self._logger.debug(
                     lambda e=e: f"get_variables_libdoc_for_source failed for {source}: {e}",  # type: ignore[misc]
