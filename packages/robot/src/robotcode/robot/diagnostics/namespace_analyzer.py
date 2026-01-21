@@ -1367,6 +1367,7 @@ class NamespaceAnalyzer(Visitor):
                     )
                     self._variables[var_def.matcher] = var_def
                     self._variable_references[var_def] = set()
+                    self._local_variable_assignments[var_def].add(var_def.range)
                 else:
                     if existing_var.type in [
                         VariableDefinitionType.ARGUMENT,
@@ -1403,7 +1404,7 @@ class NamespaceAnalyzer(Visitor):
                     )
                     is None
                 ):
-                    self._variables[matcher] = LocalVariableDefinition(
+                    var_def = LocalVariableDefinition(
                         name=variable_token.value,
                         name_token=strip_variable_token(variable_token),
                         line_no=variable_token.lineno,
@@ -1412,6 +1413,9 @@ class NamespaceAnalyzer(Visitor):
                         end_col_offset=variable_token.end_col_offset,
                         source=self._namespace.source,
                     )
+                    self._variables[matcher] = var_def
+                    self._variable_references[var_def] = set()
+                    self._local_variable_assignments[var_def].add(var_def.range)
 
             except (VariableError, InvalidVariableError):
                 pass

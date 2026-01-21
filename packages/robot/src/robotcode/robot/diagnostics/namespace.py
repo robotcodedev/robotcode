@@ -204,6 +204,7 @@ class VariableRefKey:
     - source + line_no + col_offset uniquely identifies a location
     - name ensures we match the right variable at that location
     - var_type distinguishes between different variable definition types
+    - end_col_offset allows accurate range restoration
     """
 
     source: str  # File path
@@ -211,6 +212,7 @@ class VariableRefKey:
     var_type: str  # VariableDefinitionType.value
     line_no: int
     col_offset: int
+    end_col_offset: int = 0  # Default 0 for backward compatibility
 
 
 @dataclass(frozen=True)
@@ -1047,6 +1049,7 @@ class Namespace:
             var.type.value,
             var.line_no,
             var.col_offset,
+            var.end_col_offset,
         )
 
     @property
@@ -1851,12 +1854,27 @@ class Namespace:
 
         Note: Library arguments have col_offset=-1 (sentinel value for "no position").
         These should NOT be adjusted - return them as-is.
+
+        Note: In RF 7.3+, arg_def.name may include type annotations (e.g., "${timeout: int}"),
+        but the analyzer normalizes names (e.g., "${timeout}"). We must use the NORMALIZED
+        name length for position calculations to match what the analyzer stored.
         """
         # Library arguments have col_offset=-1 (no position info) - don't adjust
         if arg_def.col_offset < 0:
             return arg_def, cls._make_variable_ref_key(arg_def)
 
-        var_name_len = cls._get_variable_name_length(arg_def.name)
+        # Use normalized name for length calculation (RF 7.3+ may have type annotations)
+        # _make_variable_ref_key normalizes names, so we need to match that behavior
+        normalized_name = arg_def.name
+        if arg_def.name and arg_def.name.startswith(("${", "@{", "&{", "%{")):
+            try:
+                matcher = VariableMatcher(arg_def.name, parse_type=True, ignore_errors=True)
+                if matcher.name:
+                    normalized_name = matcher.name
+            except Exception:
+                pass
+
+        var_name_len = cls._get_variable_name_length(normalized_name)
         stripped_col = arg_def.col_offset + _VAR_PREFIX_LEN
         stripped_end = stripped_col + var_name_len
 
@@ -1921,26 +1939,38 @@ class Namespace:
                 if matcher.base is None:
                     continue
 
-                # Extract name (without pattern/type for embedded args with patterns)
+                # Extract name, type, and pattern (matching namespace_analyzer.py logic)
+                type_annotation = None
+                pattern = None
+
                 if ":" not in matcher.base:
                     name = matcher.base
+                elif get_robot_version() >= (7, 3):
+                    # RF 7.3+ format: ${name: type: pattern} or ${name: type}
+                    re_match = NamespaceAnalyzer.EMBEDDED_ARGUMENTS_MATCHER.fullmatch(matcher.base)
+                    if re_match:
+                        name, type_annotation, _, pattern = re_match.groups()
+                    else:
+                        # Fallback: ${name:pattern} format
+                        name, pattern = matcher.base.split(":", 1)
                 else:
-                    # Handle ${name:pattern} or ${name: type: pattern} (RF 7.3+)
-                    name = matcher.base.split(":")[0]
+                    # Pre-7.3: ${name:pattern} format only
+                    name, pattern = matcher.base.split(":", 1)
 
                 full_name = f"{matcher.identifier}{{{name}}}"
-                # Use stripped positions (pointing to variable name, not $)
-                # This matches how references are found during live analysis
-                stripped_col = variable_token.col_offset + _VAR_PREFIX_LEN
+                # Use ORIGINAL positions (pointing to '$' in '${arg}') to match
+                # what namespace_analyzer.py does in visit_KeywordName
                 arg_def = EmbeddedArgumentDefinition(
                     name=full_name,
                     name_token=None,
                     line_no=variable_token.lineno,
-                    col_offset=stripped_col,
+                    col_offset=variable_token.col_offset,
                     end_line_no=variable_token.lineno,
-                    end_col_offset=stripped_col + len(name),
+                    end_col_offset=variable_token.end_col_offset,
                     source=kw_doc.source,
                     keyword_doc=kw_doc,
+                    value_type=type_annotation,
+                    pattern=pattern,
                 )
                 key = cls._make_variable_ref_key(arg_def)
                 if key not in lookup:
@@ -1955,13 +1985,22 @@ class Namespace:
 
         Used to recreate local variables from cache keys when the original
         VariableDefinition is not available (e.g., for ${result}= assignments).
+
+        Uses end_col_offset from the key if available (non-zero), otherwise
+        falls back to calculating from name length for backward compatibility.
         """
-        var_name_len = cls._get_variable_name_length(key.name)
+        if key.end_col_offset > 0:
+            end_col = key.end_col_offset
+        else:
+            # Fallback for old cache entries without end_col_offset
+            var_name_len = cls._get_variable_name_length(key.name)
+            end_col = key.col_offset + var_name_len
+
         return VariableDefinition(
             line_no=key.line_no,
             col_offset=key.col_offset,
             end_line_no=key.line_no,
-            end_col_offset=key.col_offset + var_name_len,
+            end_col_offset=end_col,
             source=key.source or None,
             name=key.name,
             name_token=None,
