@@ -305,6 +305,9 @@ hatch run devel.py3.13-rf73:test # Python 3.13 with Robot Framework 7.3.x (singl
 hatch run rfbeta:test         # Robot Framework beta/RC versions
 hatch run rfmaster:test       # Robot Framework master branch
 hatch run rfdevel:test        # Local Robot Framework development version
+
+# Test with Robocop development version
+hatch run robocopmain:test  # Robocop main branch
 ```
 
 **⚠️ Important Matrix Behavior:**

@@ -78,7 +78,6 @@ class RobotRoboCopDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
     @_logger.call
     def collect(self, document: TextDocument, workspace_folder: WorkspaceFolder) -> List[Diagnostic]:
         from robocop.linter.rules import RuleSeverity
-        from robocop.linter.runner import RobocopLinter
 
         linter = self.get_linter(workspace_folder)
 
