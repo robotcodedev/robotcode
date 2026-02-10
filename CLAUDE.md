@@ -98,7 +98,7 @@ cd intellij-client
 hatch run test
 
 # Test specific environment
-hatch run devel.py312-rf73:test
+hatch run devel.py3.12-rf73:test
 
 # Coverage reporting
 hatch run cov
