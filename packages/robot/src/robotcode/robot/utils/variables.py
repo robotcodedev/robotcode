@@ -215,7 +215,7 @@ def is_variable(string: str, identifiers: str = "$@&") -> bool:
     return cast(bool, robot_is_variable(string, identifiers))
 
 
-@functools.lru_cache(maxsize=1024)
+@functools.lru_cache(maxsize=100_000)
 def search_variable(
     string: str, identifiers: str = "$@&%*", parse_type: bool = False, ignore_errors: bool = False
 ) -> VariableMatcher:
