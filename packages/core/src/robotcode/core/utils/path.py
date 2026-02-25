@@ -62,7 +62,7 @@ def normalized_path_full(path: Union[str, "os.PathLike[str]"]) -> Path:
     return Path(*parents)
 
 
-@functools.cache
+@functools.lru_cache(maxsize=100_000)
 def same_file(path1: Union[str, "os.PathLike[str]", Path], path2: Union[str, "os.PathLike[str]", Path]) -> bool:
     try:
         return os.path.samefile(path1, path2)
