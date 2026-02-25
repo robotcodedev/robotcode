@@ -1,3 +1,4 @@
+import functools
 import os
 import re
 import sys
@@ -61,6 +62,7 @@ def normalized_path_full(path: Union[str, "os.PathLike[str]"]) -> Path:
     return Path(*parents)
 
 
+@functools.cache
 def same_file(path1: Union[str, "os.PathLike[str]", Path], path2: Union[str, "os.PathLike[str]", Path]) -> bool:
     try:
         return os.path.samefile(path1, path2)
