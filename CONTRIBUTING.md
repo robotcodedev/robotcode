@@ -243,7 +243,7 @@ You can also check available environments with: `hatch env show`
 
 1. **Create a branch:** `git checkout -b feature/your-feature-name`
 2. **Make your changes** following the project's coding standards
-3. **Run tests:** `hatch run devel.py3.12-rf73:test` (single combination for faster development)
+3. **Run tests:** `hatch run devel.py312-rf73:test` (single combination for faster development)
 4. **Run linting:** `hatch run lint:all` (or use the VS Code task)
 5. **Fix linting issues:** `hatch run lint:style` for formatting
 6. **Commit your changes** with a descriptive commit message
@@ -297,23 +297,20 @@ hatch run test.rf41:test      # Robot Framework 4.1.x
 
 # Run tests in specific development environments (single combination)
 hatch run devel:test          # ⚠️ Runs ALL matrix combinations (Python 3.10-3.14 × RF 4.1-7.3)
-hatch run devel.py3.11-rf70:test # Python 3.11 with Robot Framework 7.0.x (single combination)
-hatch run devel.py3.12-rf73:test # Python 3.12 with Robot Framework 7.3.x (single combination)
-hatch run devel.py3.13-rf73:test # Python 3.13 with Robot Framework 7.3.x (single combination)
+hatch run devel.py311-rf70:test # Python 3.11 with Robot Framework 7.0.x (single combination)
+hatch run devel.py312-rf73:test # Python 3.12 with Robot Framework 7.3.x (single combination)
+hatch run devel.py313-rf73:test # Python 3.13 with Robot Framework 7.3.x (single combination)
 
 # Test against development versions of Robot Framework
 hatch run rfbeta:test         # Robot Framework beta/RC versions
 hatch run rfmaster:test       # Robot Framework master branch
 hatch run rfdevel:test        # Local Robot Framework development version
-
-# Test with Robocop development version
-hatch run robocopmain:test  # Robocop main branch
 ```
 
 **⚠️ Important Matrix Behavior:**
 - `hatch run test` executes tests for **all combinations** in the matrix (48 combinations: 6 Python versions × 8 RF versions)
 - `hatch run devel:test` also runs **all matrix combinations**
-- For faster development, use specific combinations like `hatch run devel.py3.12-rf73:test`
+- For faster development, use specific combinations like `hatch run devel.py312-rf73:test`
 - For CI/full testing, use the matrix commands
 
 **Available Environment Matrix:**

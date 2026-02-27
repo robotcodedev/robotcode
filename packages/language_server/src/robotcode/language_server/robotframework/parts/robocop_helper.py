@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from ..protocol import RobotLanguageServerProtocol
 
 if TYPE_CHECKING:
-    from robocop.config import ConfigManager
+    from robocop.config.manager import ConfigManager
 
 
 class RobocopConfigError(Exception):
@@ -59,7 +59,10 @@ class RoboCopHelper(RobotLanguageServerProtocolPart):
         return self.parent.workspace.get_configuration(RoboCopConfig, folder.uri)
 
     def get_config_manager(self, workspace_folder: WorkspaceFolder) -> "ConfigManager":
-        from robocop.config import ConfigManager
+        if self.parent.robocop_helper.robocop_version >= (8, 0):
+            from robocop.config.manager import ConfigManager
+        else:
+            from robocop.config import ConfigManager
 
         if workspace_folder in self._config_managers:
             return self._config_managers[workspace_folder]
