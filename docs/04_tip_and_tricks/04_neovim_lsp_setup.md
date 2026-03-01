@@ -68,6 +68,13 @@ you may have installed in your project's virtual environment.
 
 ## Setup Alternatives
 
+If you want a simple LSP configuration and have RobotCode installed in your
+project anyway (or don't mind adding it), [Option 1](#option-1-use-local-installation-of-robotcode)
+is ideal.
+
+If you prefer to install RobotCode globally via `Mason`, you need to tweak
+the LSP configuration a bit - see [Option 2](#option-2-use-globally-installed-robotcode-and-set-pythonpath).
+
 ### Option 1: Use Local Installation of RobotCode
 
 The easiest way to run RobotCode in the context of your project's virtual environment
@@ -143,26 +150,45 @@ Next, create the LSP configuration under
 --- https://robotcode.io
 ---
 --- RobotCode - Language Server Protocol implementation for Robot Framework.
+
+---@return string|nil
 local function get_python_path()
- local project_site_packages = vim.fn.glob(vim.loop.cwd() .. "/.venv/lib/python*/site-packages", true, true)[1]
- local pythonpath = project_site_packages
- if vim.env.PYTHONPATH then
-  pythonpath = project_site_packages .. ":" .. vim.env.PYTHONPATH
- end
- return pythonpath
+  -- Search for the site-packages directory in the .venv folder.
+  -- The folder structure differs between Windows and Unix,
+  -- but this function handles both.
+  local cwd = vim.uv.cwd()
+  local project_site_packages = vim.fs.find("site-packages", {
+    path = cwd .. "/.venv",
+    type = "directory",
+    limit = 1,
+  })[1]
+
+  if not project_site_packages then
+    -- If the site-packages were not found, RobotCode will still work,
+    -- but import errors will appear for third party libraries.
+    vim.notify("RobotCode: project virtual environment not found.")
+    return nil
+  end
+
+  local pythonpath = project_site_packages
+  if vim.env.PYTHONPATH then
+    -- Preserve original PYTHONPATH if already set by some other plugin
+    pythonpath = project_site_packages .. ":" .. vim.env.PYTHONPATH
+  end
+  return pythonpath
 end
+
+local python_path = get_python_path()
 
 ---@type vim.lsp.Config
 return {
- cmd = { 'robotcode', 'language-server' },
- cmd_env = {
-  PYTHONPATH = get_python_path(),
- },
- filetypes = { 'robot', 'resource' },
- root_markers = { 'robot.toml', 'pyproject.toml', 'Pipfile', '.git' },
- get_language_id = function(_, _)
-  return 'robotframework'
- end,
+  cmd = { "robotcode", "language-server" },
+  cmd_env = python_path and { PYTHONPATH = python_path } or nil,
+  filetypes = { "robot", "resource" },
+  root_markers = { "robot.toml", "pyproject.toml", "Pipfile", ".git" },
+  get_language_id = function(_, _)
+    return "robotframework"
+  end,
 }
 ```
 
