@@ -1,3 +1,5 @@
+import threading
+
 import pytest
 
 from robotcode.core.lsp.types import Position, Range
@@ -340,3 +342,39 @@ third
     del dummy
 
     assert len(document._cache) == 0
+
+
+def test_document_get_cache_concurrent_should_wait_for_first_calculation() -> None:
+    document = TextDocument(
+        document_uri="file:///test.robot",
+        language_id="robotframework",
+        version=1,
+        text="*** Test Cases ***\nExample\n    No Operation\n",
+    )
+
+    started = threading.Event()
+    release = threading.Event()
+
+    def get_data(doc: TextDocument) -> str:
+        started.set()
+        release.wait(timeout=5)
+        return "computed"
+
+    worker_result: list[str] = []
+
+    def worker() -> None:
+        worker_result.append(document.get_cache(get_data))
+
+    t = threading.Thread(target=worker)
+    t.start()
+
+    assert started.wait(timeout=5)
+
+    main_result = document.get_cache(get_data)
+
+    release.set()
+    t.join(timeout=5)
+
+    assert not t.is_alive()
+    assert main_result == "computed"
+    assert worker_result == ["computed"]

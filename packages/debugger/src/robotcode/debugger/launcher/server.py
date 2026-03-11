@@ -125,6 +125,9 @@ class LauncherDebugAdapterProtocol(DebugAdapterProtocol):
         outputLog: Optional[bool] = False,  # noqa: N803
         outputTimestamps: Optional[bool] = False,  # noqa: N803
         groupOutput: Optional[bool] = False,  # noqa: N803
+        logCommandArgs: Optional[bool] = False,  # noqa: N803
+        listenerLogLevel: Optional[str] = "TRACE",  # noqa: N803
+        listenerLogTraffic: Optional[str] = "all",  # noqa: N803
         stopOnEntry: Optional[bool] = False,  # noqa: N803
         dryRun: Optional[bool] = None,  # noqa: N803
         mode: Optional[str] = None,
@@ -239,6 +242,9 @@ class LauncherDebugAdapterProtocol(DebugAdapterProtocol):
             run_args.insert(0, "--")
 
         env = {k: ("" if v is None else str(v)) for k, v in env.items()} if env else {}
+        env["ROBOTCODE_DEBUG_LOG_COMMAND_ARGS"] = "1" if logCommandArgs else "0"
+        env["ROBOTCODE_DEBUG_LISTENER_LOG_LEVEL"] = (listenerLogLevel or "TRACE").strip()
+        env["ROBOTCODE_DEBUG_LISTENER_LOG_TRAFFIC"] = (listenerLogTraffic or "all").strip()
 
         if console in ["integratedTerminal", "externalTerminal"]:
             await self.send_request_async(

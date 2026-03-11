@@ -60,6 +60,10 @@ class AnalysisConfig(ConfigBase):
     diagnostic_mode: DiagnosticsMode = DiagnosticsMode.OPENFILESONLY
     progress_mode: AnalysisProgressMode = AnalysisProgressMode.OFF
     references_code_lens: bool = False
+    # Controls whether the language server should eagerly load all workspace
+    # Robot Framework documents for analysis. This is independent from
+    # diagnostic_mode to avoid coupling references behavior to diagnostics.
+    load_workspace_documents: bool = True
     find_unused_references: bool = False
     cache: CacheConfig = field(default_factory=CacheConfig)
     robot: AnalysisRobotConfig = field(default_factory=AnalysisRobotConfig)

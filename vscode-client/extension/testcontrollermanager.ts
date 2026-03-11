@@ -1,9 +1,12 @@
 import { red, yellow, blue } from "ansi-colors";
+import { spawn } from "child_process";
 import * as vscode from "vscode";
 import { DebugManager } from "./debugmanager";
 import * as fs from "fs";
+import * as path from "path";
 
 import { ClientState, LanguageClientsManager, toVsCodeRange } from "./languageclientsmanger";
+import type { IncrementalDiscoverEvent } from "./pythonmanger";
 import { escapeRobotGlobPatterns, filterAsync, Mutex, truncateAndReplaceNewlines, WeakValueMap } from "./utils";
 import { CONFIG_SECTION } from "./config";
 import { Range, Diagnostic, DiagnosticSeverity } from "vscode-languageclient/node";
@@ -30,6 +33,13 @@ function diagnosticsSeverityToVsCode(severity?: DiagnosticSeverity): vscode.Diag
       return undefined;
   }
 }
+
+const LEGACY_DISCOVER_ARG_CANDIDATE_COUNT_LIMIT = 512;
+const LEGACY_DISCOVER_ARG_TOTAL_LENGTH_LIMIT = 64_000;
+const FAST_DISCOVERY_TIMEOUT_DEFAULT_MS = 120_000;
+const FAST_DISCOVERY_TIMEOUT_MIN_MS = 1_000;
+const FAST_DISCOVERY_TIMEOUT_MAX_MS = 900_000;
+const FAST_DISCOVERY_TIMEOUT_PER_CANDIDATE_MS = 25;
 
 enum RobotItemType {
   WORKSPACE = "workspace",
@@ -60,6 +70,10 @@ interface RobotCodeDiscoverResult {
   items?: RobotTestItem[];
   diagnostics?: { [Key: string]: Diagnostic[] };
 }
+
+type FastIncrementalDiscoverItemEvent = Extract<IncrementalDiscoverEvent, { event: "item" }>;
+
+type FastDiscoveryPrefilterCommand = "auto" | "gitGrep" | "ripGrep" | "grep" | "none";
 
 interface RobotCodeProfileInfo {
   name: string;
@@ -216,8 +230,9 @@ export class TestControllerManager {
     this.testController = vscode.tests.createTestController("robotCode.RobotFramework", "Robot Framework Tests/Tasks");
 
     this.testController.resolveHandler = async (item) => {
-      // resolveHandler has no token parameter in the VS Code API — refresh() itself
-      // takes care of cancelling older calls via the single-inflight pattern.
+      if (item !== undefined && item.children.size > 0) {
+        return;
+      }
       await this.refresh(item);
     };
 
@@ -716,10 +731,63 @@ export class TestControllerManager {
 
   public readonly robotTestItems = new WeakMap<vscode.WorkspaceFolder, WorkspaceFolderEntry | undefined>();
 
+  private findRobotItemInTree(items: RobotTestItem[] | undefined, id: string): RobotTestItem | undefined {
+    if (items === undefined) {
+      return undefined;
+    }
+
+    for (const item of items) {
+      if (item.id === id) {
+        return item;
+      }
+
+      const nested = this.findRobotItemInTree(item.children, id);
+      if (nested !== undefined) {
+        return nested;
+      }
+    }
+
+    return undefined;
+  }
+
   public findRobotItem(item: vscode.TestItem): RobotTestItem | undefined {
-    // The index is kept consistent with robotTestItems (populated in getTestsFromWorkspaceFolder /
-    // getTestsFromDocument, cleaned in removeNotAddedTestItems / removeWorkspaceFolderItems).
-    return this.robotItemIndex.get(item.id);
+    const indexedItem = this.robotItemIndex.get(item.id);
+    if (indexedItem !== undefined) {
+      return indexedItem;
+    }
+
+    if (item.parent) {
+      const parentRobotItem = this.findRobotItem(item.parent);
+      const directParentChildMatch = parentRobotItem?.children?.find((i) => i.id === item.id);
+      if (directParentChildMatch !== undefined) {
+        return directParentChildMatch;
+      }
+
+      if (parentRobotItem?.type === RobotItemType.WORKSPACE && parentRobotItem.children?.length === 1) {
+        const workspace = this.findWorkspaceFolderForItem(item.parent);
+        const rootSuite = parentRobotItem.children[0];
+        if (workspace !== undefined && this.matchesWorkspaceRootSuite(workspace, rootSuite)) {
+          const flattenedChildMatch = rootSuite.children?.find((i) => i.id === item.id);
+          if (flattenedChildMatch !== undefined) {
+            return flattenedChildMatch;
+          }
+        }
+      }
+    }
+
+    for (const workspace of vscode.workspace.workspaceFolders ?? []) {
+      if (!this.robotTestItems.has(workspace)) {
+        continue;
+      }
+
+      const workspaceItems = this.robotTestItems.get(workspace)?.items;
+      const foundItem = this.findRobotItemInTree(workspaceItems, item.id);
+      if (foundItem !== undefined) {
+        return foundItem;
+      }
+    }
+
+    return undefined;
   }
 
   // Recursively walks a RobotTestItem subtree and calls cb for each item.
@@ -809,26 +877,28 @@ export class TestControllerManager {
           }
 
           const item = this.findTestItemForDocument(document);
+          const documentFolder = vscode.workspace.getWorkspaceFolder(document.uri);
           if (item)
             this.refresh(item, cancelationTokenSource.token).then(
               () => {
                 if (item?.canResolveChildren && item.children.size === 0) {
-                  this.refreshWorkspace(
-                    vscode.workspace.getWorkspaceFolder(document.uri),
-                    cancelationTokenSource.token,
-                  ).then(
-                    () => undefined,
-                    () => undefined,
-                  );
+                  if (this.shouldAllowWorkspaceRefreshFallbackOnDocumentInteraction(documentFolder)) {
+                    this.refreshWorkspace(documentFolder, cancelationTokenSource.token).then(
+                      () => undefined,
+                      () => undefined,
+                    );
+                  }
                 }
               },
               () => undefined,
             );
           else {
-            this.refreshWorkspace(vscode.workspace.getWorkspaceFolder(document.uri), cancelationTokenSource.token).then(
-              () => undefined,
-              () => undefined,
-            );
+            if (this.shouldAllowWorkspaceRefreshFallbackOnDocumentInteraction(documentFolder)) {
+              this.refreshWorkspace(documentFolder, cancelationTokenSource.token).then(
+                () => undefined,
+                () => undefined,
+              );
+            }
           }
         }, TestControllerManager.DEBOUNCE_MS),
         cancelationTokenSource,
@@ -856,6 +926,10 @@ export class TestControllerManager {
     return undefined;
   }
 
+  private findWorkspaceTestItem(folder: vscode.WorkspaceFolder): vscode.TestItem | undefined {
+    return this.testController.items.get(folder.uri.fsPath) ?? this.findTestItemByUri(folder.uri.toString());
+  }
+
   public findTestItemById(id: string): vscode.TestItem | undefined {
     return this.testItems.get(id);
   }
@@ -866,13 +940,30 @@ export class TestControllerManager {
   // Earlier refreshes still waiting on the mutex abort right after acquiring it because
   // their CTS is already cancelled — effectively only the newest call really runs.
   private currentRefreshCts: vscode.CancellationTokenSource | undefined;
+  private currentRefreshScope: "workspace" | "item" | undefined;
 
   public async refresh(item?: vscode.TestItem, externalToken?: vscode.CancellationToken): Promise<void> {
-    // Cancel any in-flight predecessor.
-    this.currentRefreshCts?.cancel();
+    const requestedScope: "workspace" | "item" = item === undefined ? "workspace" : "item";
+
+    if (this.currentRefreshCts !== undefined && this.currentRefreshScope === "workspace") {
+      this.outputChannel.appendLine(
+        requestedScope === "workspace"
+          ? "discover tests: coalescing overlapping workspace refresh request"
+          : "discover tests: coalescing item refresh while workspace refresh is in progress",
+      );
+      return;
+    }
+
+    if (requestedScope === "workspace") {
+      // no-op, workspace refresh starts normally when none is running.
+    } else {
+      // Item-scoped refreshes should supersede an in-flight predecessor.
+      this.currentRefreshCts?.cancel();
+    }
 
     const cts = new vscode.CancellationTokenSource();
     this.currentRefreshCts = cts;
+    this.currentRefreshScope = requestedScope;
 
     // Bridge external cancellation (e.g. from VS Code's refreshHandler) onto our CTS.
     const externalSub = externalToken?.onCancellationRequested(() => cts.cancel());
@@ -886,6 +977,7 @@ export class TestControllerManager {
       externalSub?.dispose();
       if (this.currentRefreshCts === cts) {
         this.currentRefreshCts = undefined;
+        this.currentRefreshScope = undefined;
       }
       cts.dispose();
     }
@@ -899,13 +991,33 @@ export class TestControllerManager {
     extraArgs: string[],
     stdioData?: string,
     prune?: boolean,
+    discoveryDumpLabel?: string,
+    executionTimeoutMs?: number,
     token?: vscode.CancellationToken,
+    onIncrementalDiscoverEvent?: (event: IncrementalDiscoverEvent) => void,
   ): Promise<RobotCodeDiscoverResult> {
     if (!(await this.languageClientsManager.isValidRobotEnvironmentInFolder(folder))) {
       return {};
     }
 
     const config = vscode.workspace.getConfiguration(CONFIG_SECTION, folder);
+    const shouldLogArgs = config.get<boolean>("testExplorer.discovery.logCommandArgs", false);
+    const startTime = Date.now();
+    this.outputChannel.appendLine(
+      shouldLogArgs
+        ? `discover tests: start workspace=${folder.name} discoverArgs=${discoverArgs.join(" ")} extraArgsCount=${extraArgs.length}`
+        : `discover tests: start workspace=${folder.name} discoverArgsCount=${discoverArgs.length} extraArgsCount=${extraArgs.length}`,
+    );
+
+    if (discoveryDumpLabel !== undefined) {
+      await this.writeDiscoveryDump(folder, `${discoveryDumpLabel}_request`, {
+        workspace: folder.name,
+        discoverArgs,
+        extraArgs,
+        stdioData,
+      });
+    }
+
     const profiles = config.get<string[]>("profiles", []);
     const pythonPath = config.get<string[]>("robot.pythonPath", []);
     const paths = config.get<string[] | undefined>("robot.paths", undefined);
@@ -924,24 +1036,89 @@ export class TestControllerManager {
         mode_args.push("--rpa");
         break;
     }
-    const result = (await this.languageClientsManager.pythonManager.executeRobotCode(
-      folder,
-      [
-        ...(paths?.length ? paths.flatMap((v) => ["-dp", v]) : ["-dp", "."]),
-        ...discoverArgs,
-        ...mode_args,
-        ...pythonPath.flatMap((v) => ["-P", v]),
-        ...languages.flatMap((v) => ["--language", v]),
-        ...robotArgs,
-        ...extraArgs,
-      ],
-      profiles,
-      "json",
-      true,
-      true,
-      stdioData,
-      token,
-    )) as RobotCodeDiscoverResult;
+    const discoverRunEmptySuiteArg = this.isRunEmptySuiteEnabledForDiscovery(folder)
+      ? "--run-empty-suite"
+      : "--no-run-empty-suite";
+    const useIncrementalDiscoveryTransport = this.isFastDiscoveryEnabled(folder) && discoverArgs.includes("fast");
+    const discoverArgsWithRunEmptySuiteOption =
+      discoverArgs.length > 0 && discoverArgs[0] === "discover"
+        ? ["discover", discoverRunEmptySuiteArg, ...discoverArgs.slice(1)]
+        : [...discoverArgs, discoverRunEmptySuiteArg];
+
+    const discoverCommandArgs = [
+      ...(paths?.length ? paths.flatMap((v) => ["-dp", v]) : ["-dp", "."]),
+      ...discoverArgsWithRunEmptySuiteOption,
+      ...mode_args,
+      ...pythonPath.flatMap((v) => ["-P", v]),
+      ...languages.flatMap((v) => ["--language", v]),
+      ...robotArgs,
+      ...(useIncrementalDiscoveryTransport ? ["--incremental-output"] : []),
+      ...(extraArgs.length ? ["--", ...extraArgs] : []),
+    ];
+    this.outputChannel.appendLine(
+      `discover tests: transport=${useIncrementalDiscoveryTransport ? "incremental" : "json"}`,
+    );
+    if (executionTimeoutMs !== undefined && executionTimeoutMs > 0) {
+      this.outputChannel.appendLine(
+        shouldLogArgs
+          ? `discover tests: timeout configured ${executionTimeoutMs}ms workspace=${folder.name} discoverArgs=${discoverArgs.join(" ")}`
+          : `discover tests: timeout configured ${executionTimeoutMs}ms workspace=${folder.name} argsRedacted=true`,
+      );
+    }
+
+    let timeoutHandle: NodeJS.Timeout | undefined;
+    let timeoutTriggered = false;
+    const timeoutTokenSource = new vscode.CancellationTokenSource();
+    const timeoutDisposables: vscode.Disposable[] = [timeoutTokenSource];
+
+    if (token) {
+      timeoutDisposables.push(
+        token.onCancellationRequested(() => {
+          timeoutTokenSource.cancel();
+        }),
+      );
+    }
+
+    if (executionTimeoutMs !== undefined && executionTimeoutMs > 0) {
+      timeoutHandle = setTimeout(() => {
+        timeoutTriggered = true;
+        this.outputChannel.appendLine(
+          shouldLogArgs
+            ? `discover tests: timeout after ${executionTimeoutMs}ms workspace=${folder.name} discoverArgs=${discoverArgs.join(" ")} commandArgs=${discoverCommandArgs.join(" ")}`
+            : `discover tests: timeout after ${executionTimeoutMs}ms workspace=${folder.name} argsRedacted=true`,
+        );
+        timeoutTokenSource.cancel();
+      }, executionTimeoutMs);
+    }
+
+    let result: RobotCodeDiscoverResult;
+    try {
+      result = (await this.languageClientsManager.pythonManager.executeRobotCode(
+        folder,
+        discoverCommandArgs,
+        profiles,
+        "json",
+        true,
+        true,
+        stdioData,
+        timeoutTokenSource.token,
+        onIncrementalDiscoverEvent,
+      )) as RobotCodeDiscoverResult;
+    } catch (error) {
+      if (timeoutTriggered) {
+        throw new Error(
+          shouldLogArgs
+            ? `discover command timed out after ${executionTimeoutMs}ms workspace=${folder.name} discoverArgs=${discoverArgs.join(" ")}`
+            : `discover command timed out after ${executionTimeoutMs}ms workspace=${folder.name}`,
+        );
+      }
+      throw error;
+    } finally {
+      if (timeoutHandle !== undefined) {
+        clearTimeout(timeoutHandle);
+      }
+      timeoutDisposables.forEach((d) => d.dispose());
+    }
 
     const added_uris = new Set<string>();
 
@@ -972,10 +1149,485 @@ export class TestControllerManager {
       });
     }
 
+    this.outputChannel.appendLine(
+      `discover tests: done workspace=${folder.name} elapsedMs=${Date.now() - startTime} items=${result?.items?.length ?? 0}`,
+    );
+
+    if (discoveryDumpLabel !== undefined) {
+      await this.writeDiscoveryDump(folder, `${discoveryDumpLabel}_result`, {
+        workspace: folder.name,
+        discoverArgs,
+        extraArgs,
+        result,
+      });
+    }
+
     return result;
   }
 
+  // eslint-disable-next-line class-methods-use-this
+  private sanitizeDiscoveryDumpSegment(value: string): string {
+    const sanitized = value.replace(/[^a-zA-Z0-9._-]+/g, "_").replace(/^_+|_+$/g, "");
+    return sanitized.length > 0 ? sanitized : "discover";
+  }
+
+  private getDiscoveryDumpDir(): string {
+    return path.join(
+      this.extensionContext.globalStorageUri?.fsPath ?? this.extensionContext.extensionPath,
+      "discover-dumps",
+    );
+  }
+
+  private async writeDiscoveryDump(
+    folder: vscode.WorkspaceFolder,
+    label: string,
+    content: unknown,
+  ): Promise<string | undefined> {
+    try {
+      const dir = this.getDiscoveryDumpDir();
+      await fs.promises.mkdir(dir, { recursive: true });
+
+      const timestamp = new Date().toISOString().replace(/[.:]/g, "-");
+      const fileName = `${timestamp}_${this.sanitizeDiscoveryDumpSegment(folder.name)}_${this.sanitizeDiscoveryDumpSegment(label)}.json`;
+      const filePath = path.join(dir, fileName);
+
+      await fs.promises.writeFile(filePath, `${JSON.stringify(content, null, 2)}\n`, "utf8");
+      this.outputChannel.appendLine(`discover tests: dumped ${label} output to ${filePath}`);
+      return filePath;
+    } catch (error) {
+      this.outputChannel.appendLine(`discover tests: failed to dump ${label} output (${(error as Error).message})`);
+      return undefined;
+    }
+  }
+
+  // eslint-disable-next-line class-methods-use-this
+  private estimateCandidateArgumentSize(candidates: string[]): number {
+    return candidates.reduce((size, candidate) => size + candidate.length + 1, 0);
+  }
+
   private readonly lastDiscoverResults = new WeakMap<vscode.WorkspaceFolder, RobotCodeDiscoverResult>();
+  private readonly documentDiscoverResultsCache = new Map<
+    string,
+    {
+      version: number;
+      items: RobotTestItem[] | undefined;
+    }
+  >();
+
+  // eslint-disable-next-line class-methods-use-this
+  private isFastDiscoveryEnabled(folder: vscode.WorkspaceFolder): boolean {
+    return vscode.workspace
+      .getConfiguration(CONFIG_SECTION, folder)
+      .get<boolean>("testExplorer.fastDiscovery.enabled", false);
+  }
+
+  // eslint-disable-next-line class-methods-use-this
+  private isRunEmptySuiteEnabledForDiscovery(folder: vscode.WorkspaceFolder): boolean {
+    return vscode.workspace
+      .getConfiguration(CONFIG_SECTION, folder)
+      .get<boolean>("testExplorer.discovery.runEmptySuite", true);
+  }
+
+  // eslint-disable-next-line class-methods-use-this
+  private getFastDiscoveryPrefilterCommand(folder: vscode.WorkspaceFolder): FastDiscoveryPrefilterCommand {
+    return vscode.workspace
+      .getConfiguration(CONFIG_SECTION, folder)
+      .get<FastDiscoveryPrefilterCommand>("testExplorer.fastDiscovery.prefilterCommand", "auto");
+  }
+
+  // eslint-disable-next-line class-methods-use-this
+  private getFastDiscoveryRoots(folder: vscode.WorkspaceFolder): string[] {
+    const configuredPaths = vscode.workspace
+      .getConfiguration(CONFIG_SECTION, folder)
+      .get<string[] | undefined>("robot.paths");
+    const roots = configuredPaths?.length ? configuredPaths : ["."];
+    return roots.map((v) => v.trim()).filter((v) => v.length > 0);
+  }
+
+  // eslint-disable-next-line class-methods-use-this
+  private getConfiguredFastDiscoveryTimeoutMs(folder: vscode.WorkspaceFolder): number | undefined {
+    const configuredTimeout = vscode.workspace
+      .getConfiguration(CONFIG_SECTION, folder)
+      .get<number>("testExplorer.discovery.fastTimeoutMs", 0);
+
+    if (!Number.isFinite(configuredTimeout) || configuredTimeout <= 0) {
+      return undefined;
+    }
+
+    return Math.max(FAST_DISCOVERY_TIMEOUT_MIN_MS, Math.floor(configuredTimeout));
+  }
+
+  private getFastDiscoveryTimeout(
+    folder: vscode.WorkspaceFolder,
+    candidateCount: number,
+  ): { timeoutMs: number; source: "adaptive" | "configured" } {
+    const configuredTimeout = this.getConfiguredFastDiscoveryTimeoutMs(folder);
+    if (configuredTimeout !== undefined) {
+      return { timeoutMs: configuredTimeout, source: "configured" };
+    }
+
+    if (candidateCount <= 0) {
+      return { timeoutMs: FAST_DISCOVERY_TIMEOUT_DEFAULT_MS, source: "adaptive" };
+    }
+
+    const adaptiveTimeoutMs = candidateCount * FAST_DISCOVERY_TIMEOUT_PER_CANDIDATE_MS;
+
+    return {
+      timeoutMs: Math.min(
+        FAST_DISCOVERY_TIMEOUT_MAX_MS,
+        Math.max(FAST_DISCOVERY_TIMEOUT_DEFAULT_MS, adaptiveTimeoutMs),
+      ),
+      source: "adaptive",
+    };
+  }
+
+  private shouldAllowWorkspaceRefreshFallbackOnDocumentInteraction(
+    folder: vscode.WorkspaceFolder | undefined,
+  ): boolean {
+    if (folder === undefined) {
+      return true;
+    }
+
+    return !this.isFastDiscoveryEnabled(folder);
+  }
+
+  private isFastDiscoveryCommandEnabled(folder: vscode.WorkspaceFolder): boolean {
+    const fastDiscoveryEnabled = this.isFastDiscoveryEnabled(folder);
+    const config = vscode.workspace.getConfiguration(CONFIG_SECTION, folder);
+    const inspected = config.inspect<boolean>("testExplorer.fastDiscovery.command.enabled");
+    const explicitlyConfigured =
+      inspected?.globalValue !== undefined ||
+      inspected?.workspaceValue !== undefined ||
+      inspected?.workspaceFolderValue !== undefined;
+
+    if (!explicitlyConfigured) {
+      return fastDiscoveryEnabled;
+    }
+
+    return config.get<boolean>("testExplorer.fastDiscovery.command.enabled", fastDiscoveryEnabled);
+  }
+
+  // eslint-disable-next-line class-methods-use-this
+  private async runShellCommand(
+    command: string,
+    args: string[],
+    cwd: string,
+    token?: vscode.CancellationToken,
+  ): Promise<{ exitCode: number | null; stdout: string; stderr: string; error?: unknown }> {
+    return await new Promise((resolve) => {
+      const abortController = new AbortController();
+
+      token?.onCancellationRequested(() => {
+        abortController.abort();
+      });
+
+      const process = spawn(command, args, {
+        cwd,
+        signal: abortController.signal,
+      });
+
+      const stdoutChunks: Buffer[] = [];
+      const stderrChunks: Buffer[] = [];
+      let exitCode: number | null = null;
+
+      process.stdout.on("data", (data: Buffer | string) => {
+        stdoutChunks.push(typeof data === "string" ? Buffer.from(data, "utf8") : data);
+      });
+      process.stderr.on("data", (data: Buffer | string) => {
+        stderrChunks.push(typeof data === "string" ? Buffer.from(data, "utf8") : data);
+      });
+
+      process.on("error", (error) => {
+        resolve({
+          exitCode: null,
+          stdout: Buffer.concat(stdoutChunks).toString("utf8"),
+          stderr: Buffer.concat(stderrChunks).toString("utf8"),
+          error,
+        });
+      });
+
+      process.on("exit", (code) => {
+        exitCode = code;
+      });
+
+      process.on("close", () => {
+        resolve({
+          exitCode,
+          stdout: Buffer.concat(stdoutChunks).toString("utf8"),
+          stderr: Buffer.concat(stderrChunks).toString("utf8"),
+        });
+      });
+    });
+  }
+
+  // eslint-disable-next-line class-methods-use-this
+  private toDiscoverPathArg(folder: vscode.WorkspaceFolder, filePath: string): string {
+    const absolutePath = path.isAbsolute(filePath) ? filePath : path.resolve(folder.uri.fsPath, filePath);
+    const relativePath = path.relative(folder.uri.fsPath, absolutePath);
+    if (relativePath && !relativePath.startsWith("..") && !path.isAbsolute(relativePath)) {
+      return relativePath;
+    }
+
+    return absolutePath;
+  }
+
+  // eslint-disable-next-line class-methods-use-this
+  private parsePrefilterFileList(stdout: string): string[] {
+    if (!stdout) return [];
+    if (stdout.includes("\0")) {
+      return stdout
+        .split("\0")
+        .map((v) => v.trim())
+        .filter((v) => v.length > 0);
+    }
+    return stdout
+      .split(/\r?\n/)
+      .map((v) => v.trim())
+      .filter((v) => v.length > 0);
+  }
+
+  // eslint-disable-next-line class-methods-use-this
+  private normalizeRootForSearch(folder: vscode.WorkspaceFolder, root: string): string | undefined {
+    const normalizedRoot = root.trim();
+    if (!normalizedRoot) return undefined;
+    if (!path.isAbsolute(normalizedRoot)) return normalizedRoot;
+
+    const relativeRoot = path.relative(folder.uri.fsPath, normalizedRoot);
+    if (!relativeRoot || relativeRoot.startsWith("..")) return undefined;
+    return relativeRoot;
+  }
+
+  private getGrepExcludeDirPatterns(folder: vscode.WorkspaceFolder): string[] {
+    const result = new Set<string>([".git", ".svn", "CVS"]);
+    const ignoreFiles = [".robotignore", ".gitignore"];
+
+    const addPattern = (pattern: string): void => {
+      let normalized = pattern.trim();
+      if (!normalized || normalized.startsWith("#") || normalized.startsWith("!")) {
+        return;
+      }
+
+      if (normalized.startsWith("\\#")) {
+        normalized = normalized.slice(1);
+      }
+
+      normalized = normalized.replaceAll("\\", "/").replace(/^\/+/, "");
+
+      const isDirectoryPattern = normalized.endsWith("/") || normalized.endsWith("/*");
+      if (!isDirectoryPattern) {
+        return;
+      }
+
+      if (normalized.endsWith("/*")) {
+        normalized = normalized.slice(0, -2);
+      }
+      normalized = normalized.replace(/\/+$/, "");
+      if (!normalized || normalized.includes("**")) {
+        return;
+      }
+
+      const basename = normalized
+        .split("/")
+        .filter((v) => v.length > 0)
+        .at(-1);
+      if (basename) {
+        result.add(basename);
+      }
+    };
+
+    for (const ignoreFile of ignoreFiles) {
+      const ignorePath = path.join(folder.uri.fsPath, ignoreFile);
+      if (!fs.existsSync(ignorePath)) {
+        continue;
+      }
+
+      try {
+        const content = fs.readFileSync(ignorePath, "utf8");
+        for (const line of content.split(/\r?\n/)) {
+          addPattern(line);
+        }
+      } catch (error) {
+        this.outputChannel.appendLine(
+          `fast discovery: unable to read ${ignoreFile} for grep excludes (${(error as Error).message})`,
+        );
+      }
+    }
+
+    return Array.from(result);
+  }
+
+  private async prefilterWithGitGrep(
+    folder: vscode.WorkspaceFolder,
+    roots: string[],
+    token?: vscode.CancellationToken,
+  ): Promise<string[] | undefined> {
+    const fileExtensions = this.languageClientsManager.fileExtensions;
+    const normalizedRoots = roots
+      .map((v) => this.normalizeRootForSearch(folder, v))
+      .filter((v) => v !== undefined)
+      .map((v) => v.replaceAll("\\", "/").replace(/^\.\//, "").replace(/\/+$/, ""));
+    if (normalizedRoots.length === 0) return [];
+    const pathSpecs = normalizedRoots.flatMap((root) =>
+      fileExtensions.map((ext) => `:(glob)${root.length > 0 && root !== "." ? `${root}/` : ""}**/*.${ext}`),
+    );
+
+    const result = await this.runShellCommand(
+      "git",
+      ["grep", "-z", "-l", "-E", "^\\*\\*\\*\\s*(Test Cases|Tasks)\\s*\\*\\*\\*\\s*$", "--", ...pathSpecs],
+      folder.uri.fsPath,
+      token,
+    );
+
+    if (result.error !== undefined) {
+      this.outputChannel.appendLine(
+        `fast discovery: git grep unavailable (${result.error?.toString() ?? "unknown error"})`,
+      );
+      return undefined;
+    }
+
+    if (result.exitCode !== 0 && result.exitCode !== 1) {
+      this.outputChannel.appendLine(
+        `fast discovery: git grep failed with exit code ${result.exitCode?.toString() ?? "null"}: ${result.stderr}`,
+      );
+      return undefined;
+    }
+
+    return this.parsePrefilterFileList(result.stdout).map((v) => this.toDiscoverPathArg(folder, v));
+  }
+
+  private async prefilterWithRipGrep(
+    folder: vscode.WorkspaceFolder,
+    roots: string[],
+    token?: vscode.CancellationToken,
+  ): Promise<string[] | undefined> {
+    const normalizedRoots = roots.map((v) => this.normalizeRootForSearch(folder, v)).filter((v) => v !== undefined);
+    if (normalizedRoots.length === 0) return [];
+
+    const robotIgnorePath = path.join(folder.uri.fsPath, ".robotignore");
+    const includeArgs = this.languageClientsManager.fileExtensions.flatMap((ext) => ["--glob", `*.${ext}`]);
+    const rgArgs = [
+      "-l",
+      "--null",
+      "--no-messages",
+      ...(fs.existsSync(robotIgnorePath) ? ["--ignore-file", robotIgnorePath] : []),
+      ...includeArgs,
+      "^\\*\\*\\*\\s*(Test Cases|Tasks)\\s*\\*\\*\\*\\s*$",
+      ...normalizedRoots,
+    ];
+
+    const result = await this.runShellCommand("rg", rgArgs, folder.uri.fsPath, token);
+
+    if (result.error !== undefined) {
+      this.outputChannel.appendLine(
+        `fast discovery: ripgrep unavailable (${result.error?.toString() ?? "unknown error"})`,
+      );
+      return undefined;
+    }
+
+    if (result.exitCode !== 0 && result.exitCode !== 1) {
+      this.outputChannel.appendLine(
+        `fast discovery: ripgrep failed with exit code ${result.exitCode?.toString() ?? "null"}: ${result.stderr}`,
+      );
+      return undefined;
+    }
+
+    return this.parsePrefilterFileList(result.stdout).map((v) => this.toDiscoverPathArg(folder, v));
+  }
+
+  private async prefilterWithGrep(
+    folder: vscode.WorkspaceFolder,
+    roots: string[],
+    token?: vscode.CancellationToken,
+  ): Promise<string[] | undefined> {
+    const normalizedRoots = roots.map((v) => this.normalizeRootForSearch(folder, v)).filter((v) => v !== undefined);
+    if (normalizedRoots.length === 0) return [];
+
+    const includeArgs = this.languageClientsManager.fileExtensions.map((ext) => `--include=*.${ext}`);
+    const excludeDirArgs = this.getGrepExcludeDirPatterns(folder).flatMap((pattern) => ["--exclude-dir", pattern]);
+    const result = await this.runShellCommand(
+      "grep",
+      [
+        "-RIlE",
+        "-Z",
+        "^\\*\\*\\*\\s*(Test Cases|Tasks)\\s*\\*\\*\\*\\s*$",
+        ...includeArgs,
+        ...excludeDirArgs,
+        ...normalizedRoots,
+      ],
+      folder.uri.fsPath,
+      token,
+    );
+
+    if (result.error !== undefined) {
+      this.outputChannel.appendLine(
+        `fast discovery: grep unavailable (${result.error?.toString() ?? "unknown error"})`,
+      );
+      return undefined;
+    }
+
+    if (result.exitCode !== 0 && result.exitCode !== 1) {
+      this.outputChannel.appendLine(
+        `fast discovery: grep failed with exit code ${result.exitCode?.toString() ?? "null"}: ${result.stderr}`,
+      );
+      return undefined;
+    }
+
+    return this.parsePrefilterFileList(result.stdout).map((v) => this.toDiscoverPathArg(folder, v));
+  }
+
+  private async getFastDiscoveryCandidates(
+    folder: vscode.WorkspaceFolder,
+    token?: vscode.CancellationToken,
+  ): Promise<string[] | undefined> {
+    if (!this.isFastDiscoveryEnabled(folder)) return undefined;
+
+    const roots = this.getFastDiscoveryRoots(folder);
+    const prefilterMode = this.getFastDiscoveryPrefilterCommand(folder);
+    this.outputChannel.appendLine(
+      `fast discovery: start workspace=${folder.name} mode=${prefilterMode} roots=${roots.join(",")}`,
+    );
+
+    const runGit = async () => await this.prefilterWithGitGrep(folder, roots, token);
+    const runRipGrep = async () => await this.prefilterWithRipGrep(folder, roots, token);
+    const runGrep = async () => await this.prefilterWithGrep(folder, roots, token);
+
+    let files: string[] | undefined;
+
+    switch (prefilterMode) {
+      case "gitGrep":
+        files = await runGit();
+        break;
+      case "ripGrep":
+        files = await runRipGrep();
+        break;
+      case "grep":
+        files = await runGrep();
+        break;
+      case "none":
+        return undefined;
+      case "auto":
+      default:
+        files = (await runGit()) ?? (await runRipGrep()) ?? (await runGrep());
+        break;
+    }
+
+    if (files === undefined) return undefined;
+
+    this.outputChannel.appendLine(
+      `fast discovery: prefilter mode=${prefilterMode} candidates=${files.length} in workspace ${folder.name}`,
+    );
+    return files;
+  }
+
+  // eslint-disable-next-line class-methods-use-this
+  private isLegacyDiscoverStdinFormatError(error: unknown): boolean {
+    if (!(error instanceof Error)) return false;
+    const message = error.message ?? "";
+    return (
+      message.includes('Invalid value for "documents"') ||
+      message.includes("must be of type `<class 'str'>` but is `dict`")
+    );
+  }
 
   public async getTestsFromWorkspaceFolder(
     folder: vscode.WorkspaceFolder,
@@ -1004,20 +1656,207 @@ export class TestControllerManager {
         }
       }
 
-      const result = await this.discoverTests(
-        folder,
-        ["discover", "--read-from-stdin", "all"],
-        [],
-        JSON.stringify(o),
-        true,
-        token,
+      const fastDiscoveryEnabled = this.isFastDiscoveryEnabled(folder);
+      const fastDiscoveryCommandEnabled = this.isFastDiscoveryCommandEnabled(folder);
+      this.outputChannel.appendLine(
+        `fast discovery: config workspace=${folder.name} enabled=${fastDiscoveryEnabled} commandEnabled=${fastDiscoveryCommandEnabled}`,
       );
 
-      this.lastDiscoverResults.set(folder, result);
-      // Index the freshly discovered subtree for O(1) findRobotItem lookups.
-      this.indexRobotTree(result?.items);
+      const fastDiscoveryCandidates = await this.getFastDiscoveryCandidates(folder, token);
+      if (token?.isCancellationRequested) return undefined;
 
-      return result?.items;
+      const useFastDiscoveryCommand = fastDiscoveryCandidates !== undefined && fastDiscoveryCommandEnabled;
+      const initialDiscoverSubCommand = useFastDiscoveryCommand ? "fast" : "all";
+      const fastDiscoveryTimeout = this.getFastDiscoveryTimeout(folder, fastDiscoveryCandidates?.length ?? 0);
+      if (useFastDiscoveryCommand) {
+        this.outputChannel.appendLine(
+          `fast discovery: timeoutMs=${fastDiscoveryTimeout.timeoutMs} source=${fastDiscoveryTimeout.source} candidates=${fastDiscoveryCandidates?.length ?? 0}`,
+        );
+      }
+      const incrementalParentAliases = new Map<string, string>();
+      let incrementalParentOrderError: Error | undefined;
+
+      const isRobotTestItemLike = (value: unknown): value is RobotTestItem => {
+        if (value === undefined || value === null || typeof value !== "object") {
+          return false;
+        }
+
+        const candidate = value as Partial<RobotTestItem>;
+        return (
+          typeof candidate.id === "string" &&
+          typeof candidate.name === "string" &&
+          typeof candidate.longname === "string" &&
+          typeof candidate.type === "string"
+        );
+      };
+
+      const applyIncrementalItem = (event: FastIncrementalDiscoverItemEvent): void => {
+        if (token?.isCancellationRequested) return;
+        if (incrementalParentOrderError !== undefined) return;
+
+        const rawItem = event.item;
+        if (!isRobotTestItemLike(rawItem)) {
+          return;
+        }
+
+        const item = rawItem;
+        const parentId = typeof event.parentId === "string" ? event.parentId : undefined;
+
+        const resolveIncrementalParentId = (targetParentId: string | undefined): string | undefined => {
+          let resolvedId = targetParentId;
+          const seen = new Set<string>();
+
+          while (resolvedId !== undefined && incrementalParentAliases.has(resolvedId) && !seen.has(resolvedId)) {
+            seen.add(resolvedId);
+            resolvedId = incrementalParentAliases.get(resolvedId);
+          }
+
+          return resolvedId;
+        };
+
+        const applyItem = (targetItem: RobotTestItem, targetParentId: string | undefined): void => {
+          const resolvedParentId = resolveIncrementalParentId(targetParentId);
+          const parentTestItem = resolvedParentId ? this.findTestItemById(resolvedParentId) : undefined;
+          if (resolvedParentId !== undefined && parentTestItem === undefined) {
+            incrementalParentOrderError = new Error(
+              `fast discovery incremental stream: missing parent item '${resolvedParentId}' for child '${targetItem.id}'`,
+            );
+            this.outputChannel.appendLine(incrementalParentOrderError.message);
+            return;
+          }
+
+          if (parentTestItem !== undefined && this.isSyntheticWorkspaceRootSuite(parentTestItem, targetItem)) {
+            incrementalParentAliases.set(targetItem.id, parentTestItem.id);
+            return;
+          }
+
+          this.addOrUpdateTestItem(parentTestItem, targetItem);
+        };
+
+        applyItem(item, parentId);
+      };
+
+      const onIncrementalDiscoverEvent = (event: IncrementalDiscoverEvent): void => {
+        if (!(this.isFastDiscoveryEnabled(folder) && event.event === "item")) {
+          return;
+        }
+
+        applyIncrementalItem(event);
+      };
+
+      if (fastDiscoveryCandidates !== undefined && fastDiscoveryCandidates.length === 0) {
+        this.lastDiscoverResults.set(folder, { items: [] });
+        return [];
+      }
+
+      const fullStdioData = JSON.stringify(o);
+      const prefilteredStdioData =
+        fastDiscoveryCandidates !== undefined
+          ? JSON.stringify({ documents: o, candidates: fastDiscoveryCandidates })
+          : fullStdioData;
+
+      const runWorkspaceDiscover = async (
+        subCommand: "all" | "fast",
+        extraArgs: string[],
+        stdioData: string,
+      ): Promise<RobotCodeDiscoverResult> => {
+        if (subCommand === "fast") {
+          incrementalParentOrderError = undefined;
+        }
+
+        const discoveryDumpLabel = `workspace_${subCommand}${extraArgs.length > 0 ? "_legacy_candidates" : "_stdin_candidates"}`;
+
+        const discoverResult = await this.discoverTests(
+          folder,
+          ["discover", "--read-from-stdin", subCommand],
+          extraArgs,
+          stdioData,
+          true,
+          discoveryDumpLabel,
+          subCommand === "fast" ? fastDiscoveryTimeout.timeoutMs : undefined,
+          token,
+          subCommand === "fast" ? onIncrementalDiscoverEvent : undefined,
+        );
+
+        if (subCommand === "fast" && incrementalParentOrderError !== undefined) {
+          throw incrementalParentOrderError;
+        }
+
+        return discoverResult;
+      };
+
+      const runWorkspaceDiscoverWithLegacyRetry = async (
+        subCommand: "all" | "fast",
+      ): Promise<RobotCodeDiscoverResult> => {
+        try {
+          return await runWorkspaceDiscover(subCommand, [], prefilteredStdioData);
+        } catch (error) {
+          if (fastDiscoveryCandidates !== undefined && this.isLegacyDiscoverStdinFormatError(error)) {
+            const candidateArgSize = this.estimateCandidateArgumentSize(fastDiscoveryCandidates);
+            const canRetryWithLegacyArgs =
+              fastDiscoveryCandidates.length <= LEGACY_DISCOVER_ARG_CANDIDATE_COUNT_LIMIT &&
+              candidateArgSize <= LEGACY_DISCOVER_ARG_TOTAL_LENGTH_LIMIT;
+
+            if (!canRetryWithLegacyArgs) {
+              this.outputChannel.appendLine(
+                `fast discovery: skipping legacy argv retry candidates=${fastDiscoveryCandidates.length} totalChars=${candidateArgSize}`,
+              );
+              if (subCommand === "all") {
+                return await runWorkspaceDiscover("all", [], fullStdioData);
+              }
+              throw error;
+            }
+
+            this.outputChannel.appendLine(
+              "fast discovery: stdin candidates payload not supported by bundled runner, retrying with legacy argv candidates",
+            );
+            return await runWorkspaceDiscover(subCommand, fastDiscoveryCandidates, fullStdioData);
+          }
+          throw error;
+        }
+      };
+
+      let result: RobotCodeDiscoverResult;
+      try {
+        result = await runWorkspaceDiscoverWithLegacyRetry(initialDiscoverSubCommand);
+      } catch (error) {
+        if (useFastDiscoveryCommand) {
+          if (error instanceof Error && error.name === "AbortError") {
+            this.outputChannel.appendLine(
+              `fast discovery: discover ${initialDiscoverSubCommand} aborted, skipping discover all fallback`,
+            );
+            throw error;
+          }
+          this.outputChannel.appendLine(
+            `fast discovery: discover ${initialDiscoverSubCommand} failed, retrying discover all (${(error as Error).message ?? String(error)})`,
+          );
+          result = await runWorkspaceDiscoverWithLegacyRetry("all");
+        } else {
+          throw error;
+        }
+      }
+
+      let finalResult = result;
+      if (fastDiscoveryCandidates !== undefined && (result?.items?.length ?? 0) === 0) {
+        this.outputChannel.appendLine(
+          `fast discovery: empty result for workspace=${folder.name}, rerunning full discovery without prefilter candidates`,
+        );
+        finalResult = await this.discoverTests(
+          folder,
+          ["discover", "--read-from-stdin", "all"],
+          [],
+          fullStdioData,
+          true,
+          "workspace_all_fallback",
+          undefined,
+          token,
+        );
+      }
+
+      this.lastDiscoverResults.set(folder, finalResult);
+      this.indexRobotTree(finalResult?.items);
+
+      return finalResult?.items;
     } catch (e) {
       if (e instanceof Error) {
         if (e.name === "AbortError") {
@@ -1050,11 +1889,17 @@ export class TestControllerManager {
     testItem: RobotTestItem,
     token?: vscode.CancellationToken,
   ): Promise<RobotTestItem[] | undefined> {
+    const cacheKey = `${document.uri.toString()}::${testItem.id}`;
+    const cachedResult = this.documentDiscoverResultsCache.get(cacheKey);
+    if (cachedResult !== undefined && cachedResult.version === document.version) {
+      return cachedResult.items;
+    }
+
     const folder = vscode.workspace.getWorkspaceFolder(document.uri);
 
     if (!folder) return undefined;
 
-    const workspaceItem = this.findTestItemByUri(folder.uri.toString());
+    const workspaceItem = this.findWorkspaceTestItem(folder);
     const robotWorkspaceItem = workspaceItem ? this.findRobotItem(workspaceItem) : undefined;
 
     try {
@@ -1079,15 +1924,18 @@ export class TestControllerManager {
           ...(robotWorkspaceItem?.needsParseInclude && testItem.relSource
             ? ["-I", escapeRobotGlobPatterns(testItem.relSource)]
             : []),
-          "--suite",
-          escapeRobotGlobPatterns(testItem.longname),
         ],
         JSON.stringify(o),
         false,
+        undefined,
+        undefined,
         token,
       );
 
-      // Index the freshly discovered items.
+      this.documentDiscoverResultsCache.set(cacheKey, {
+        version: document.version,
+        items: result?.items,
+      });
       this.indexRobotTree(result?.items);
 
       return result?.items;
@@ -1166,20 +2014,30 @@ export class TestControllerManager {
         if (token?.isCancellationRequested) return;
 
         if (robotItem) {
-          // Result compare: if the current children structurally match the last seen
-          // state, there is nothing to update in the tree. The comparison is against the
-          // children that are currently in the TestController tree, represented by the
-          // lastKnownChildren entry for the parent TestItem.
+          const renderableTests = this.getRenderableChildrenForItem(item, robotItem, tests);
+          const shouldKeepExistingChildren =
+            robotItem.type === RobotItemType.WORKSPACE &&
+            item.children.size > 0 &&
+            renderableTests !== undefined &&
+            renderableTests.length === 0;
+
+          if (shouldKeepExistingChildren) {
+            this.outputChannel.appendLine(
+              `discover tests: preserving existing workspace children for ${item.label} due to empty refresh result`,
+            );
+            return;
+          }
+
           const lastKnown = this.lastKnownChildren.get(item.id);
-          if (robotItemListsEqual(lastKnown, tests)) return;
+          if (robotItemListsEqual(lastKnown, renderableTests)) return;
 
           const addedIds = new Set<string>();
 
-          for (const test of tests ?? []) {
+          for (const test of renderableTests ?? []) {
             addedIds.add(test.id);
           }
 
-          for (const test of tests ?? []) {
+          for (const test of renderableTests ?? []) {
             if (token?.isCancellationRequested) return;
             const newItem = this.addOrUpdateTestItem(item, test);
             await this.refreshItem(newItem, token, skipPerDocumentDiscover);
@@ -1191,7 +2049,7 @@ export class TestControllerManager {
           }
 
           this.removeNotAddedTestItems(item, addedIds);
-          this.lastKnownChildren.set(item.id, this.snapshotChildren(tests));
+          this.lastKnownChildren.set(item.id, this.snapshotChildren(renderableTests));
         }
       } finally {
         item.busy = false;
@@ -1247,6 +2105,32 @@ export class TestControllerManager {
       : this.testController.items.get(robotTestItem.id);
 
     if (testItem === undefined) {
+      const existingItem = this.testItems.get(robotTestItem.id);
+      if (existingItem !== undefined) {
+        const currentParent = existingItem.parent;
+        const needsReparent =
+          (parentTestItem !== undefined && currentParent?.id !== parentTestItem.id) ||
+          (parentTestItem === undefined && currentParent !== undefined);
+
+        if (needsReparent) {
+          if (currentParent !== undefined) {
+            currentParent.children.delete(existingItem.id);
+          } else {
+            this.testController.items.delete(existingItem.id);
+          }
+
+          if (parentTestItem !== undefined) {
+            parentTestItem.children.add(existingItem);
+          } else {
+            this.testController.items.add(existingItem);
+          }
+        }
+
+        testItem = existingItem;
+      }
+    }
+
+    if (testItem === undefined) {
       testItem = this.testController.createTestItem(
         robotTestItem.id,
         robotTestItem.name,
@@ -1283,6 +2167,8 @@ export class TestControllerManager {
       testItem.label = robotTestItem.name;
     }
 
+    testItem.sortText = this.getSortTextForRobotItem(robotTestItem);
+
     const newDescription =
       robotTestItem.type == RobotItemType.TEST ||
       robotTestItem.type == RobotItemType.TASK ||
@@ -1310,6 +2196,20 @@ export class TestControllerManager {
     }
 
     return testItem;
+  }
+
+  // eslint-disable-next-line class-methods-use-this
+  private getSortTextForRobotItem(robotTestItem: RobotTestItem): string | undefined {
+    if (robotTestItem.type !== RobotItemType.SUITE) {
+      return undefined;
+    }
+
+    const sourcePath = robotTestItem.relSource ?? robotTestItem.source;
+    if (sourcePath && sourcePath.length > 0) {
+      return sourcePath.toLowerCase();
+    }
+
+    return robotTestItem.name.toLowerCase();
   }
 
   private removeNotAddedTestItems(parentTestItem: vscode.TestItem | undefined, addedIds: Set<string>): boolean {
@@ -1364,6 +2264,80 @@ export class TestControllerManager {
     }
 
     return result;
+  }
+
+  private isSyntheticWorkspaceRootSuite(parentItem: vscode.TestItem, childItem: RobotTestItem): boolean {
+    const parentRobotItem = this.findRobotItem(parentItem);
+    if (parentRobotItem?.type !== RobotItemType.WORKSPACE || childItem.type !== RobotItemType.SUITE) {
+      return false;
+    }
+
+    const workspace = this.findWorkspaceFolderForItem(parentItem);
+    if (workspace === undefined) {
+      return false;
+    }
+
+    return this.matchesWorkspaceRootSuite(workspace, childItem);
+  }
+
+  // eslint-disable-next-line class-methods-use-this
+  private matchesWorkspaceRootSuite(workspace: vscode.WorkspaceFolder, suiteItem: RobotTestItem): boolean {
+    if (suiteItem.type !== RobotItemType.SUITE) {
+      return false;
+    }
+
+    const workspacePath = path.normalize(workspace.uri.fsPath);
+    const workspaceName = workspace.name.toLowerCase();
+    const suiteName = suiteItem.name.toLowerCase();
+    const suiteLongname = suiteItem.longname.toLowerCase();
+
+    const sourcePath = suiteItem.source ? path.normalize(suiteItem.source) : undefined;
+    if (sourcePath !== undefined && sourcePath === workspacePath) {
+      return true;
+    }
+
+    if (suiteItem.uri !== undefined) {
+      try {
+        const suiteUriPath = path.normalize(vscode.Uri.parse(suiteItem.uri).fsPath);
+        if (suiteUriPath === workspacePath) {
+          return true;
+        }
+      } catch {
+        // ignore invalid uri values in discovery payload
+      }
+    }
+
+    if (suiteItem.id === workspace.uri.fsPath || suiteItem.id === workspace.uri.toString()) {
+      return true;
+    }
+
+    if (suiteItem.relSource === "." || suiteItem.relSource === "") {
+      return true;
+    }
+
+    return suiteName === workspaceName || suiteLongname === workspaceName;
+  }
+
+  private getRenderableChildrenForItem(
+    item: vscode.TestItem,
+    robotItem: RobotTestItem,
+    children: RobotTestItem[] | undefined,
+  ): RobotTestItem[] | undefined {
+    if (robotItem.type !== RobotItemType.WORKSPACE || children === undefined || children.length !== 1) {
+      return children;
+    }
+
+    const workspace = this.findWorkspaceFolderForItem(item);
+    if (workspace === undefined) {
+      return children;
+    }
+
+    const rootSuite = children[0];
+    if (!this.matchesWorkspaceRootSuite(workspace, rootSuite)) {
+      return children;
+    }
+
+    return rootSuite.children ?? [];
   }
 
   private readonly refreshFromUriMutex = new Mutex();
@@ -1480,6 +2454,97 @@ export class TestControllerManager {
     return folders;
   }
 
+  private static extractLongnameFromTestItemId(item: vscode.TestItem): string | undefined {
+    const firstSeparator = item.id.indexOf(";");
+    if (firstSeparator < 0) {
+      return undefined;
+    }
+
+    if (item.canResolveChildren) {
+      const value = item.id.slice(firstSeparator + 1);
+      return value.length > 0 ? value : undefined;
+    }
+
+    const lastSeparator = item.id.lastIndexOf(";");
+    if (lastSeparator <= firstSeparator + 1) {
+      return undefined;
+    }
+
+    return item.id.slice(firstSeparator + 1, lastSeparator);
+  }
+
+  private static extractSourcePathFromTestItemId(item: vscode.TestItem): string | undefined {
+    const firstSeparator = item.id.indexOf(";");
+    if (firstSeparator < 0) {
+      return undefined;
+    }
+
+    const value = item.id.slice(0, firstSeparator);
+    return value.length > 0 ? value : undefined;
+  }
+
+  private getSelectionRelSource(folder: vscode.WorkspaceFolder, item: vscode.TestItem): string | undefined {
+    const robotItem = this.findRobotItem(item);
+
+    const sourceCandidate =
+      robotItem?.relSource ??
+      robotItem?.source ??
+      TestControllerManager.extractSourcePathFromTestItemId(item) ??
+      item.uri?.fsPath;
+
+    if (!sourceCandidate) {
+      return undefined;
+    }
+
+    return this.toDiscoverPathArg(folder, sourceCandidate);
+  }
+
+  private getSelectionLongname(item: vscode.TestItem): string | undefined {
+    const robotItem = this.findRobotItem(item);
+    if (robotItem?.type === RobotItemType.WORKSPACE) {
+      return undefined;
+    }
+
+    return robotItem?.longname ?? TestControllerManager.extractLongnameFromTestItemId(item);
+  }
+
+  private getWorkspaceRootSuiteFromRobotTree(
+    folder: vscode.WorkspaceFolder,
+    workspaceRobotItem: RobotTestItem | undefined,
+  ): RobotTestItem | undefined {
+    const candidateRoots =
+      workspaceRobotItem?.type === RobotItemType.WORKSPACE
+        ? workspaceRobotItem.children
+        : this.robotTestItems.get(folder)?.items;
+
+    if (!candidateRoots || candidateRoots.length !== 1) {
+      return undefined;
+    }
+
+    const rootSuite = candidateRoots[0];
+    if (!this.matchesWorkspaceRootSuite(folder, rootSuite)) {
+      return undefined;
+    }
+
+    return rootSuite;
+  }
+
+  private getWorkspaceRootSuite(
+    folder: vscode.WorkspaceFolder,
+    workspaceItem: vscode.TestItem | undefined,
+    workspaceRobotItem: RobotTestItem | undefined,
+  ): { workspaceSelectionItem: vscode.TestItem | undefined; topLevelSuiteName: string | undefined } {
+    const rootSuite = this.getWorkspaceRootSuiteFromRobotTree(folder, workspaceRobotItem);
+    if (!rootSuite) {
+      return { workspaceSelectionItem: workspaceItem, topLevelSuiteName: undefined };
+    }
+
+    return {
+      workspaceSelectionItem: workspaceItem?.children.get(rootSuite.id) ?? workspaceItem,
+      topLevelSuiteName: rootSuite.longname || rootSuite.name,
+    };
+  }
+
   private static _runIdCounter = 0;
 
   private static nextRunId(): string {
@@ -1552,24 +2617,44 @@ export class TestControllerManager {
         options.noDebug = true;
       }
 
-      let workspaceItem = this.findTestItemByUri(folder.uri.toString());
+      const workspaceItem = this.findWorkspaceTestItem(folder);
       const workspaceRobotItem = workspaceItem ? this.findRobotItem(workspaceItem) : undefined;
 
-      if (workspaceRobotItem?.type == RobotItemType.WORKSPACE && workspaceRobotItem.children?.length) {
-        workspaceItem = workspaceItem?.children.get(workspaceRobotItem.children[0].id);
-      }
+      const { workspaceSelectionItem, topLevelSuiteName } = this.getWorkspaceRootSuite(
+        folder,
+        workspaceItem,
+        workspaceRobotItem,
+      );
+      const resolvedTopLevelSuiteName = topLevelSuiteName ?? folder.name;
 
-      if (testItems.length === 1 && testItems[0] === workspaceItem && excluded.size === 0) {
+      const ensureTopLevelSuitePrefix = (longname: string | undefined): string | undefined => {
+        if (!longname || !resolvedTopLevelSuiteName) {
+          return longname;
+        }
+
+        if (longname === resolvedTopLevelSuiteName || longname.startsWith(`${resolvedTopLevelSuiteName}.`)) {
+          return longname;
+        }
+
+        return `${resolvedTopLevelSuiteName}.${longname}`;
+      };
+      const allowParseInclude = this.isFastDiscoveryEnabled(folder);
+
+      if (testItems.length === 1 && testItems[0] === workspaceSelectionItem && excluded.size === 0) {
+        const workspaceParseInclude = allowParseInclude && (workspaceRobotItem?.needsParseInclude ?? false);
+        this.outputChannel.appendLine(
+          `run tests selection: workspace=${folder.name} includedInWs=[] suites=[] relSources=[] excludedInWs=[] parseInclude=${workspaceParseInclude} topLevelSuiteName=${topLevelSuiteName ?? "<undefined>"} resolvedTopLevelSuiteName=${resolvedTopLevelSuiteName}`,
+        );
         const started = await DebugManager.runTests(
           folder,
           [],
           [],
-          workspaceRobotItem?.needsParseInclude ?? false,
+          workspaceParseInclude,
           [],
           [],
           runId,
           options,
-          undefined,
+          resolvedTopLevelSuiteName,
           profiles,
           testConfiguration,
         );
@@ -1578,10 +2663,10 @@ export class TestControllerManager {
         const includedInWs = testItems
           .map((i) => {
             const ritem = this.findRobotItem(i);
-            if (ritem?.type == RobotItemType.WORKSPACE && ritem.children?.length) {
-              return ritem.children[0].longname;
+            if (ritem?.type == RobotItemType.WORKSPACE) {
+              return resolvedTopLevelSuiteName;
             }
-            return ritem?.longname;
+            return ensureTopLevelSuitePrefix(this.getSelectionLongname(i));
           })
           .filter((i) => i !== undefined) as string[];
         const excludedInWs =
@@ -1589,10 +2674,10 @@ export class TestControllerManager {
             .get(folder)
             ?.map((i) => {
               const ritem = this.findRobotItem(i);
-              if (ritem?.type == RobotItemType.WORKSPACE && ritem.children?.length) {
-                return ritem.children[0].longname;
+              if (ritem?.type == RobotItemType.WORKSPACE) {
+                return resolvedTopLevelSuiteName;
               }
-              return ritem?.longname;
+              return ensureTopLevelSuitePrefix(this.getSelectionLongname(i));
             })
             .filter((i) => i !== undefined) as string[]) ?? [];
 
@@ -1602,43 +2687,52 @@ export class TestControllerManager {
         for (const testItem of [...testItems, ...(excluded.get(folder) || [])]) {
           if (!testItem?.canResolveChildren) {
             if (testItem?.parent) {
-              const ritem = this.findRobotItem(testItem?.parent);
-              const longname = ritem?.longname;
+              const longname = ensureTopLevelSuitePrefix(this.getSelectionLongname(testItem.parent));
+              const relSource = this.getSelectionRelSource(folder, testItem.parent);
 
               if (longname) {
                 suites.add(longname);
-                if (ritem?.relSource) rel_sources.add(ritem?.relSource);
+              }
+              if (relSource) {
+                rel_sources.add(relSource);
               }
             }
           } else {
             const ritem = this.findRobotItem(testItem);
-            let longname = ritem?.longname;
-            if (ritem?.type == RobotItemType.WORKSPACE && ritem.children?.length) {
-              longname = ritem.children[0].longname;
+            const relSource = this.getSelectionRelSource(folder, testItem);
+            const suiteSelectionItem = allowParseInclude && relSource && testItem.parent ? testItem.parent : testItem;
+            let longname = this.getSelectionLongname(suiteSelectionItem);
+            if (ritem?.type == RobotItemType.WORKSPACE) {
+              longname = resolvedTopLevelSuiteName;
             }
+            longname = ensureTopLevelSuitePrefix(longname);
             if (longname) {
               suites.add(longname);
-              if (ritem?.relSource) rel_sources.add(ritem?.relSource);
+            }
+            if (relSource) {
+              rel_sources.add(relSource);
             }
           }
         }
 
-        let suiteName: string | undefined = undefined;
-
-        if (workspaceRobotItem?.type == RobotItemType.WORKSPACE && workspaceRobotItem.children?.length) {
-          suiteName = workspaceRobotItem.children[0].longname;
-        }
+        const suitesArray = Array.from(suites);
+        const relSourcesArray = Array.from(rel_sources);
+        const effectiveParseInclude =
+          allowParseInclude && ((workspaceRobotItem?.needsParseInclude ?? false) || relSourcesArray.length > 0);
+        this.outputChannel.appendLine(
+          `run tests selection: workspace=${folder.name} includedInWs=${JSON.stringify(includedInWs)} suites=${JSON.stringify(suitesArray)} relSources=${JSON.stringify(relSourcesArray)} excludedInWs=${JSON.stringify(excludedInWs)} parseInclude=${effectiveParseInclude} topLevelSuiteName=${topLevelSuiteName ?? "<undefined>"} resolvedTopLevelSuiteName=${resolvedTopLevelSuiteName}`,
+        );
 
         const started = await DebugManager.runTests(
           folder,
-          Array.from(suites),
-          Array.from(rel_sources),
-          workspaceRobotItem?.needsParseInclude ?? false,
+          suitesArray,
+          relSourcesArray,
+          effectiveParseInclude,
           includedInWs,
           excludedInWs,
           runId,
           options,
-          suiteName,
+          resolvedTopLevelSuiteName,
           profiles,
           testConfiguration,
         );

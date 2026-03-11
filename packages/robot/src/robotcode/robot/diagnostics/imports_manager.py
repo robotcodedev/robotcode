@@ -1571,10 +1571,14 @@ class ImportsManager:
         extensions) and cannot be safely re-imported after on-disk changes.
         """
         executor = ProcessPoolExecutor(max_workers=1, mp_context=mp.get_context("spawn"))
+        wait_for_shutdown = True
         try:
+            future = executor.submit(func, *func_args)
             try:
-                return executor.submit(func, *func_args).result(self.load_library_timeout)
+                return future.result(self.load_library_timeout)
             except TimeoutError as e:
+                wait_for_shutdown = False
+                future.cancel()
                 raise RuntimeError(
                     f"{timeout_msg} "
                     f"timed out after {self.load_library_timeout} seconds. "
@@ -1588,7 +1592,7 @@ class ImportsManager:
             self._logger.exception(e)
             raise
         finally:
-            executor.shutdown(wait=True)
+            executor.shutdown(wait=wait_for_shutdown, cancel_futures=not wait_for_shutdown)
 
     def _save_import_cache(
         self,

@@ -1,4 +1,5 @@
 import os
+import shlex
 import weakref
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple, Union, cast
@@ -26,6 +27,58 @@ from ._search import SearchMatcher, SearchModifier
 _app: Optional[Application] = None
 
 __patched = False
+
+
+def _should_log_command_args() -> bool:
+    value = os.getenv("ROBOTCODE_DEBUG_LOG_COMMAND_ARGS")
+    if value is None:
+        return True
+
+    return value.lower() in ["on", "1", "yes", "true"]
+
+
+def _format_robot_options_for_verbose(options: List[str]) -> str:
+    quoted = [f'"{o}"' for o in options]
+    return " ".join(quoted)
+
+
+def _format_robot_shell_command(options: List[str], positional_args: List[str]) -> str:
+    command = ["robot", *options, *positional_args]
+    return " ".join(shlex.quote(part) for part in command)
+
+
+def _get_robot_option_values(options: Tuple[str, ...], *names: str) -> List[str]:
+    def _option_equals(arg: str, name: str) -> bool:
+        if name.startswith("--"):
+            return arg.lower() == name.lower()
+        return arg == name
+
+    def _option_startswith(arg: str, name: str) -> bool:
+        if name.startswith("--"):
+            return arg.lower().startswith(f"{name.lower()}=")
+        return arg.startswith(f"{name}=")
+
+    result: List[str] = []
+    i = 0
+    while i < len(options):
+        arg = options[i]
+
+        matched_name: Optional[str] = next((name for name in names if _option_equals(arg, name)), None)
+        if matched_name is not None:
+            if i + 1 < len(options):
+                result.append(options[i + 1])
+                i += 2
+                continue
+            break
+
+        for name in names:
+            if _option_startswith(arg, name):
+                result.append(arg[len(name) + 1 :])
+                break
+
+        i += 1
+
+    return result
 
 
 def _patch() -> None:
@@ -280,10 +333,41 @@ def handle_robot_options(
 
     cmd_options = profile.build_command_line()
 
+    cmd_options_tuple = tuple(cmd_options)
+    cmd_include_tags = _get_robot_option_values(cmd_options_tuple, "--include", "-i")
+    cmd_exclude_tags = _get_robot_option_values(cmd_options_tuple, "--exclude", "-e")
+    cmd_suite_filters = _get_robot_option_values(cmd_options_tuple, "--suite")
+    cmd_test_filters = _get_robot_option_values(cmd_options_tuple, "--test")
+
+    cli_include_tags = _get_robot_option_values(robot_options_and_args, "--include", "-i")
+    cli_exclude_tags = _get_robot_option_values(robot_options_and_args, "--exclude", "-e")
+    cli_suite_filters = _get_robot_option_values(robot_options_and_args, "--suite")
+    cli_test_filters = _get_robot_option_values(robot_options_and_args, "--test")
+
+    merged_options = cmd_options + list(robot_options_and_args)
+    merged_options_tuple = tuple(merged_options)
+    include_tags = _get_robot_option_values(merged_options_tuple, "--include", "-i")
+    exclude_tags = _get_robot_option_values(merged_options_tuple, "--exclude", "-e")
+    suite_filters = _get_robot_option_values(merged_options_tuple, "--suite")
+    test_filters = _get_robot_option_values(merged_options_tuple, "--test")
+
+    app.verbose(
+        lambda: "Executing robot with following options:\n    " + _format_robot_options_for_verbose(merged_options)
+    )
     app.verbose(
         lambda: (
-            "Executing robot with following options:\n    "
-            + " ".join(f'"{o}"' for o in (cmd_options + list(robot_options_and_args)))
+            "robot run filter sources: "
+            f"profile(include={cmd_include_tags}, exclude={cmd_exclude_tags}, "
+            f"suite={cmd_suite_filters}, test={cmd_test_filters}) "
+            f"cli(include={cli_include_tags}, exclude={cli_exclude_tags}, "
+            f"suite={cli_suite_filters}, test={cli_test_filters})"
+        )
+    )
+    app.verbose(
+        lambda: (
+            "robot run filters: "
+            f"include_tags={include_tags} exclude_tags={exclude_tags} "
+            f"suite_filters={suite_filters} test_filters={test_filters}"
         )
     )
 
@@ -324,7 +408,6 @@ def robot(
     """
 
     root_folder, profile, cmd_options = handle_robot_options(app, robot_options_and_args)
-
     with app.chdir(root_folder) as orig_folder:
         console_links_args = []
         if RF_VERSION >= (7, 1) and os.getenv("ROBOTCODE_DISABLE_ANSI_LINKS", "").lower() in [
@@ -335,23 +418,49 @@ def robot(
         ]:
             console_links_args = ["--consolelinks", "off"]
 
+        full_execute_cli_args = tuple([*cmd_options, *console_links_args, *robot_options_and_args])
+        execute_paths = (
+            [*(app.config.default_paths if app.config.default_paths else ())]
+            if profile.paths is None
+            else profile.paths
+            if isinstance(profile.paths, list)
+            else [profile.paths]
+        )
+
+        if _should_log_command_args():
+            selection_args: List[str] = []
+            if execute_paths:
+                app.echo("robot data sources: " + " ".join(shlex.quote(str(path)) for path in execute_paths))
+            if by_longname or exclude_by_longname:
+                selection_args = [
+                    *[item for value in by_longname for item in ("--by-longname", value)],
+                    *[item for value in exclude_by_longname for item in ("--exclude-by-longname", value)],
+                ]
+                app.echo("robot selection filters argv: " + " ".join(shlex.quote(part) for part in selection_args))
+
+            execute_cli_log_args = list(full_execute_cli_args)
+            execute_cli_log_paths = [str(path) for path in execute_paths]
+            app.echo(
+                "robot execute_cli argv: " + _format_robot_shell_command(execute_cli_log_args, execute_cli_log_paths)
+            )
+        app.verbose(
+            lambda: (
+                "robot python api execute_cli args:\n    "
+                + _format_robot_options_for_verbose(list(full_execute_cli_args))
+            )
+        )
+
         app.exit(
             cast(
                 int,
                 RobotFrameworkEx(
                     app,
-                    (
-                        [*(app.config.default_paths if app.config.default_paths else ())]
-                        if profile.paths is None
-                        else profile.paths
-                        if isinstance(profile.paths, list)
-                        else [profile.paths]
-                    ),
+                    execute_paths,
                     app.config.dry,
                     root_folder,
                     orig_folder,
                     by_longname,
                     exclude_by_longname,
-                ).execute_cli((*cmd_options, *console_links_args, *robot_options_and_args), exit=False),
+                ).execute_cli(full_execute_cli_args, exit=False),
             )
         )

@@ -313,6 +313,8 @@ def _iter_files(
     verbose_callback: Optional[Callable[[str], None]] = None,
     verbose_trace: bool = False,
 ) -> Iterator[Path]:
+    ignore_file_names = tuple(ignore_files)
+
     if verbose_callback is not None and verbose_trace:
         verbose_callback(f"iter_files: {path}")
 
@@ -334,27 +336,29 @@ def _iter_files(
                 parents.insert(0, p)
 
             for p in parents:
-                ignore_file = next((p / f for f in ignore_files if (p / f).is_file()), None)
-
-                if ignore_file is not None:
+                for ignore_file in (p / f for f in ignore_file_names if (p / f).is_file()):
                     if verbose_callback is not None:
                         verbose_callback(f"using ignore file: '{ignore_file}'")
                     parent_spec = parent_spec + IgnoreSpec.from_gitignore(ignore_file)
-                    ignore_files = [ignore_file.name]
 
-    ignore_file = next((path / f for f in ignore_files if (path / f).is_file()), None)
-
-    if ignore_file is not None:
+    spec = parent_spec
+    for ignore_file in (path / f for f in ignore_file_names if (path / f).is_file()):
         if verbose_callback is not None:
             verbose_callback(f"using ignore file: '{ignore_file}'")
-        spec = parent_spec + IgnoreSpec.from_gitignore(ignore_file)
-        ignore_files = [ignore_file.name]
-    else:
-        spec = parent_spec
+        spec = spec + IgnoreSpec.from_gitignore(ignore_file)
 
     if not path.is_dir():
         if spec is not None and spec.matches(path):
             return
+
+        parent = path.parent
+        while True:
+            if spec is not None and spec.matches(parent):
+                return
+            if parent == parent.parent:
+                break
+            parent = parent.parent
+
         yield path
         return
 
@@ -368,7 +372,7 @@ def _iter_files(
         if p.is_dir():
             yield from _iter_files(
                 p,
-                ignore_files=ignore_files,
+                ignore_files=ignore_file_names,
                 include_hidden=include_hidden,
                 parent_spec=spec,
                 verbose_callback=verbose_callback,

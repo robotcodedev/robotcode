@@ -19,7 +19,7 @@
   },
   "qna": "https://github.com/robotcodedev/robotcode/discussions/categories/q-a",
   "engines": {
-    "vscode": "^1.108.0"
+    "vscode": "^1.105.0"
   },
   "categories": [
     "Programming Languages",
@@ -883,6 +883,53 @@
             "default": false,
             "scope": "resource"
           },
+          "robotcode.debug.logCommandArgs": {
+            "type": "boolean",
+            "description": "Log full command arguments for debug launcher and robot run commands.",
+            "default": false,
+            "scope": "resource"
+          },
+          "robotcode.debug.listenerLogLevel": {
+            "type": "string",
+            "enum": [
+              "TRACE",
+              "DEBUG",
+              "INFO",
+              "WARN",
+              "ERROR",
+              "FAIL",
+              "OFF"
+            ],
+            "enumDescriptions": [
+              "Process listener log/message callbacks at TRACE and above.",
+              "Process listener log/message callbacks at DEBUG and above.",
+              "Process listener log/message callbacks at INFO and above.",
+              "Process listener log/message callbacks at WARN and above.",
+              "Process listener log/message callbacks at ERROR and above.",
+              "Process listener log/message callbacks at FAIL and above.",
+              "Disable listener log/message callback processing."
+            ],
+            "description": "Minimum Robot Framework message level processed by RobotCode listener log/message hooks during test/debug runs.",
+            "default": "TRACE",
+            "scope": "resource"
+          },
+          "robotcode.debug.listenerLogTraffic": {
+            "type": "string",
+            "enum": [
+              "all",
+              "warnAndAbove",
+              "off"
+            ],
+            "enumDescriptions": [
+              "Process all listener log/message callbacks.",
+              "Process only WARN/ERROR/FAIL listener log/message callbacks.",
+              "Disable listener log/message callback processing."
+            ],
+            "description": "Controls how much Robot Framework log/message traffic RobotCode listeners process during test/debug runs.",
+            "default": "all",
+            "scope": "resource",
+            "markdownDeprecationMessage": "Deprecated in favor of `robotcode.debug.listenerLogLevel`."
+          },
           "robotcode.debug.useExternalDebugpy": {
             "type": "boolean",
             "description": "Use the debugpy in python environment, not from the python extension.",
@@ -1285,6 +1332,44 @@
             "type": "boolean",
             "default": true,
             "description": "Enable/disable whether Robot Framework tests and tasks are integrated into the VSCode Test/Test Explorer view.",
+            "scope": "resource"
+          },
+          "robotcode.testExplorer.fastDiscovery.enabled": {
+            "type": "boolean",
+            "default": false,
+            "description": "Experimental optimization for very large workspaces. Prefilters files containing Test Cases/Tasks before full discovery.",
+            "scope": "resource"
+          },
+          "robotcode.testExplorer.fastDiscovery.prefilterCommand": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "gitGrep",
+              "ripGrep",
+              "grep",
+              "none"
+            ],
+            "default": "auto",
+            "markdownDescription": "Selects prefilter command for fast discovery. `auto` tries `git grep` first, then `ripgrep`, then `grep`, and falls back to normal discovery if unavailable. `none` disables prefiltering.",
+            "scope": "resource"
+          },
+          "robotcode.testExplorer.fastDiscovery.command.enabled": {
+            "type": "boolean",
+            "default": false,
+            "description": "Use `robotcode discover fast` for workspace discovery when fast discovery prefiltering is enabled. Automatically falls back to full discovery if unsupported options are detected.",
+            "scope": "resource"
+          },
+          "robotcode.testExplorer.discovery.runEmptySuite": {
+            "type": "boolean",
+            "default": true,
+            "markdownDescription": "Keep empty suites in Test Explorer discovery results. Disable to show only suites with executable tests/tasks.",
+            "scope": "resource"
+          },
+          "robotcode.testExplorer.discovery.fastTimeoutMs": {
+            "type": "integer",
+            "default": 0,
+            "minimum": 0,
+            "markdownDescription": "Override fast discovery timeout in milliseconds. `0` uses adaptive timeout based on candidate count.",
             "scope": "resource"
           }
         }
@@ -2158,7 +2243,7 @@
     "@jgoz/esbuild-plugin-typecheck": "^4.0.4",
     "@types/fs-extra": "^11.0.4",
     "@types/node": "^22.17.0",
-    "@types/vscode": "^1.108.0",
+    "@types/vscode": "^1.105.0",
     "@types/vscode-notebook-renderer": "^1.72.4",
     "@vscode/python-extension": "^1.0.6",
     "@vscode/vsce": "^3.9.1",

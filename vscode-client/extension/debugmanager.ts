@@ -17,6 +17,19 @@ const DEBUG_ADAPTER_DEFAULT_HOST = "127.0.0.1";
 const DEBUG_ATTACH_DEFAULT_TCP_PORT = 6612;
 const DEBUG_ATTACH_DEFAULT_HOST = "127.0.0.1";
 
+function mapLegacyListenerLogTrafficToLevel(value: string | undefined): string {
+  switch ((value ?? "").trim().toLowerCase()) {
+    case "off":
+      return "OFF";
+    case "warnandabove":
+    case "warn_and_above":
+    case "warn-and-above":
+      return "WARN";
+    default:
+      return "TRACE";
+  }
+}
+
 const DEBUG_CONFIGURATIONS = [
   {
     label: "RobotCode: Run Current",
@@ -175,6 +188,20 @@ class RobotCodeDebugConfigurationProvider implements vscode.DebugConfigurationPr
       debugConfiguration.groupOutput =
         (debugConfiguration?.groupOutput as boolean | undefined) ?? config.get<boolean>("debug.groupOutput");
 
+      debugConfiguration.logCommandArgs =
+        (debugConfiguration?.logCommandArgs as boolean | undefined) ??
+        config.get<boolean>("debug.logCommandArgs", false);
+
+      const legacyListenerLogTraffic =
+        (debugConfiguration?.listenerLogTraffic as string | undefined) ??
+        config.get<string>("debug.listenerLogTraffic", "all");
+
+      debugConfiguration.listenerLogLevel =
+        (debugConfiguration?.listenerLogLevel as string | undefined) ??
+        config.get<string>("debug.listenerLogLevel", mapLegacyListenerLogTrafficToLevel(legacyListenerLogTraffic));
+
+      debugConfiguration.listenerLogTraffic = legacyListenerLogTraffic;
+
       if (!debugConfiguration.attachPython || debugConfiguration.noDebug) {
         debugConfiguration.attachPython = false;
       }
@@ -253,7 +280,12 @@ class RobotCodeDebugAdapterDescriptorFactory implements vscode.DebugAdapterDescr
             cwd: session.workspaceFolder?.uri.fsPath,
           };
 
-          this.outputChannel.appendLine(`Starting debug launcher in stdio mode: ${pythonCommand} ${args.join(" ")}`);
+          const shouldLogArgs = config.get<boolean>("debug.logCommandArgs", false);
+          this.outputChannel.appendLine(
+            shouldLogArgs
+              ? `Starting debug launcher in stdio mode: ${pythonCommand} ${args.join(" ")}`
+              : `Starting debug launcher in stdio mode: ${pythonCommand} argsRedacted=true count=${args.length}`,
+          );
 
           return new vscode.DebugAdapterExecutable(pythonCommand, args, options);
         }
@@ -340,7 +372,12 @@ class RobotCodeDebugAdapterDescriptorFactory implements vscode.DebugAdapterDescr
 
     const args: string[] = ["-u", this.pythonManager.robotCodeMain, ...robotcodeExtraArgs, ...launchArgs];
 
-    this.outputChannel.appendLine(`Starting debug launcher with command: ${pythonCommand} ${args.join(" ")}`);
+    const shouldLogArgs = config.get<boolean>("debug.logCommandArgs", false);
+    this.outputChannel.appendLine(
+      shouldLogArgs
+        ? `Starting debug launcher with command: ${pythonCommand} ${args.join(" ")}`
+        : `Starting debug launcher with command: ${pythonCommand} argsRedacted=true count=${args.length}`,
+    );
 
     const p = cp.spawn(pythonCommand, args, options);
     p.stdout?.on("data", (data) => {
@@ -364,7 +401,7 @@ class RobotCodeDebugAdapterDescriptorFactory implements vscode.DebugAdapterDescr
   }
 }
 
-export class DebugManager {
+export class DebugManager implements vscode.Disposable {
   private _disposables: vscode.Disposable;
   private _attachedSessions = new WeakValueSet<vscode.DebugSession>();
 
@@ -493,13 +530,6 @@ export class DebugManager {
 
     const args = [];
 
-    if (needs_parse_include) {
-      for (const s of rel_sources) {
-        args.push("-I");
-        args.push(escapeRobotGlobPatterns(s));
-      }
-    }
-
     if (topLevelSuiteName) {
       args.push("-N");
       args.push(topLevelSuiteName);
@@ -540,8 +570,16 @@ export class DebugManager {
       testLaunchConfig.target = "";
     }
 
+    const hasExplicitLaunchPaths = "paths" in testLaunchConfig;
     let paths = config.get<string[]>("robot.paths", []);
-    paths = "paths" in testLaunchConfig ? [...(testLaunchConfig.paths as string[]), ...paths] : paths;
+    paths = hasExplicitLaunchPaths ? [...(testLaunchConfig.paths as string[]), ...paths] : paths;
+
+    if (needs_parse_include) {
+      for (const s of rel_sources) {
+        args.push("-I");
+        args.push(escapeRobotGlobPatterns(s));
+      }
+    }
 
     if (profiles) testLaunchConfig.profiles = profiles;
 

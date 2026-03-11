@@ -248,7 +248,18 @@ export class KeywordsTreeViewProvider
             .sort((a, b) => (a.label as string).localeCompare(b.label as string));
         }
       } catch (e) {
-        this.outputChannel.appendLine(`Error: Can't get items for keywords treeview: ${e?.toString()}`);
+        const message = `${e?.toString() ?? ""}`.toLowerCase();
+        const isCanceled =
+          message.includes("request canceled") ||
+          message.includes("request cancelled") ||
+          message.includes("canceled") ||
+          message.includes("cancelled");
+
+        if (isCanceled) {
+          this.outputChannel.appendLine("Keywords treeview request canceled.");
+        } else {
+          this.outputChannel.appendLine(`Error: Can't get items for keywords treeview: ${e?.toString()}`);
+        }
 
         this._currentDocumentData = undefined;
       } finally {

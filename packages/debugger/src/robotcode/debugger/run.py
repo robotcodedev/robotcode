@@ -102,6 +102,14 @@ config_done_callback: Optional[Callable[["DebugAdapterServer"], None]] = None
 debugpy_connected = threading.Event()
 
 
+def _should_log_command_args() -> bool:
+    value = os.getenv("ROBOTCODE_DEBUG_LOG_COMMAND_ARGS")
+    if value is None:
+        return True
+
+    return value.lower() in ["on", "1", "yes", "true"]
+
+
 @_logger.call
 def start_debugpy(
     app: Application,
@@ -167,6 +175,8 @@ def run_debugger(
     output_timestamps: bool = False,
     group_output: bool = False,
 ) -> int:
+    app.verbose(lambda: f"debug run: initial robot args={args}")
+
     if debug and debugpy and not is_debugpy_installed():
         app.warning("Debugpy not installed")
 
@@ -222,6 +232,7 @@ def run_debugger(
             "robotcode.debugger.listeners.ListenerV2",
             *args,
         ]
+        app.verbose(lambda: f"debug run: robot args with listeners={args}")
 
         Debugger.instance.stop_on_entry = stop_on_entry
         Debugger.instance.output_messages = output_messages
@@ -241,6 +252,8 @@ def run_debugger(
 
             app.verbose("Start robot")
             try:
+                if _should_log_command_args():
+                    app.echo(f"robot python api argv: {args}")
                 app.verbose(f"Create robot context with args: {args}")
                 robot_ctx = robot.make_context("robot", args, parent=ctx)
                 robot.invoke(robot_ctx)

@@ -1,5 +1,7 @@
+import os
 import re
 from dataclasses import dataclass
+from functools import lru_cache
 from pathlib import Path
 from typing import Any, Dict, Iterator, List, Optional, Union, cast
 
@@ -54,6 +56,57 @@ def source_from_attributes(attributes: Dict[str, Any]) -> str:
         return str(normalized_path(Path(s)))
 
     return s or ""
+
+
+_LISTENER_LOG_LEVEL_VALUES = {
+    "TRACE": 10,
+    "DEBUG": 20,
+    "INFO": 30,
+    "WARN": 40,
+    "ERROR": 50,
+    "FAIL": 60,
+    "OFF": 100,
+}
+
+
+def _normalize_log_level(value: Optional[str], *, default: str) -> str:
+    normalized = (value or "").strip().upper()
+
+    if normalized in ["WARNING", "WARN"]:
+        return "WARN"
+
+    if normalized in _LISTENER_LOG_LEVEL_VALUES:
+        return normalized
+
+    return default
+
+
+def _legacy_listener_log_traffic_to_level() -> str:
+    value = (os.getenv("ROBOTCODE_DEBUG_LISTENER_LOG_TRAFFIC") or "all").strip().lower()
+
+    if value in ["warnandabove", "warn_and_above", "warn-and-above"]:
+        return "WARN"
+    if value == "off":
+        return "OFF"
+
+    return "TRACE"
+
+
+@lru_cache(maxsize=1)
+def _get_listener_log_level_threshold() -> int:
+    configured_level = os.getenv("ROBOTCODE_DEBUG_LISTENER_LOG_LEVEL")
+    level_name = _normalize_log_level(configured_level, default=_legacy_listener_log_traffic_to_level())
+    return _LISTENER_LOG_LEVEL_VALUES[level_name]
+
+
+def _should_process_listener_log(level: Optional[str]) -> bool:
+    threshold = _get_listener_log_level_threshold()
+    if threshold >= _LISTENER_LOG_LEVEL_VALUES["OFF"]:
+        return False
+
+    message_level = _normalize_log_level(level, default="INFO")
+
+    return _LISTENER_LOG_LEVEL_VALUES[message_level] >= threshold
 
 
 class ListenerV2:
@@ -221,6 +274,9 @@ class ListenerV2:
     RE_FILE_LINE_MATCHER = re.compile(r".+\sin\sfile\s'(?P<file>.*)'\son\sline\s(?P<line>\d+):(?P<message>.*)")
 
     def log_message(self, message: LogMessage) -> None:
+        if not _should_process_listener_log(message.get("level")):
+            return
+
         if message["level"] in ["FAIL", "ERROR", "WARN"]:
             current_frame = Debugger.instance.full_stack_frames[0] if Debugger.instance.full_stack_frames else None
 
@@ -274,6 +330,9 @@ class ListenerV2:
         Debugger.instance.log_message(message)
 
     def message(self, message: LogMessage) -> None:
+        if not _should_process_listener_log(message.get("level")):
+            return
+
         if message["level"] in ["FAIL", "ERROR", "WARN"]:
             current_frame = Debugger.instance.full_stack_frames[0] if Debugger.instance.full_stack_frames else None
 

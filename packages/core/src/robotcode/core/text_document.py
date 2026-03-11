@@ -344,7 +344,7 @@ class TextDocument:
 
         e = self._cache[reference]
 
-        with e.lock:
+        with e.lock(timeout=-1):
             if not e.has_data:
                 e.data = entry(self, *args, **kwargs)
                 e.has_data = True

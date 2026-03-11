@@ -349,7 +349,12 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
                 self._break_diagnostics_loop_event.clear()
 
                 documents = sorted(
-                    [doc for doc in self.parent.documents.documents if self._doc_need_update(doc)],
+                    [
+                        doc
+                        for doc in self.parent.documents.documents
+                        if self._doc_need_update(doc)
+                        and (doc.opened_in_editor or self.get_diagnostics_mode(doc.uri) == DiagnosticsMode.WORKSPACE)
+                    ],
                     key=lambda d: not d.opened_in_editor,
                 )
 
