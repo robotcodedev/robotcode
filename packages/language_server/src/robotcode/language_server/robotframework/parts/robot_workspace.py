@@ -58,6 +58,16 @@ class RobotWorkspaceProtocolPart(RobotLanguageServerProtocolPart):
                 for folder in self.parent.workspace.workspace_folders:
                     config = self.parent.workspace.get_configuration(RobotCodeConfig, folder.uri)
 
+                    if config.analysis.diagnostic_mode != DiagnosticsMode.WORKSPACE:
+                        self._logger.debug(
+                            lambda: (
+                                f"Skip loading workspace documents for {folder.uri.to_path()} "
+                                f"because analysis.diagnosticMode={config.analysis.diagnostic_mode.value!r}"
+                            ),
+                            context_name="load_workspace_documents",
+                        )
+                        continue
+
                     extensions = [ROBOT_FILE_EXTENSION, RESOURCE_FILE_EXTENSION]
 
                     exclude_patterns = [
