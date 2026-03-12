@@ -33,7 +33,8 @@ jobs:
       matrix:
         os: [macos-latest, ubuntu-latest, windows-latest]
         python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
-        robot-version: ["rf50", "rf60", "rf61", "rf70", "rf71", "rf72", "rf73", "rf74"]
+        robot-version:
+          ["rf50", "rf60", "rf61", "rf70", "rf71", "rf72", "rf73", "rf74"]
 
     steps:
       - uses: actions/checkout@v6
@@ -48,15 +49,11 @@ jobs:
         uses: pypa/hatch@install
 
       - name: Test Python Packages
-        uses: nick-fields/retry@v3
-        with:
-          max_attempts: 3
-          timeout_minutes: 30
-          command: hatch run test.${{ matrix.robot-version }}:test "--junitxml=test-results/os-${{ matrix.os }}-py-${{ matrix.python-version }}-${{ matrix.robot-version }}/test-results.xml"
+        run: hatch run test.${{ matrix.robot-version }}:test "--junitxml=test-results/os-${{ matrix.os }}-py-${{ matrix.python-version }}-${{ matrix.robot-version }}/test-results.xml"
 
       - name: Upload Test Results
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: test-results-os-${{ matrix.os }}-py-${{ matrix.python-version }}-${{ matrix.robot-version }}
           path: test-results
@@ -142,7 +139,7 @@ jobs:
 
       # - name: Collect Plugin Verifier Result
       #   if: ${{ always() }}
-      #   uses: actions/upload-artifact@v6
+      #   uses: actions/upload-artifact@v7
       #   with:
       #     name: pluginVerifier-result
       #     path: ./intellij-client/build/reports/pluginVerifier
@@ -213,28 +210,28 @@ jobs:
 
       - name: Upload VSCode package
         id: upload-vscode-package
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: vscode-package
           path: dist/robotcode*.vsix
 
       - name: Upload python package
         id: upload-python-packages
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: python-packages
           path: dist/*.tar.gz
 
       - name: Upload python wheel package
         id: upload-wheel-packages
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: wheel-packages
           path: dist/*.whl
 
       - name: Upload intellij plugin
         id: upload-intellij-package
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: intellij-package
           path: intellij-client/build/distributions/*.zip
