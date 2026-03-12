@@ -83,17 +83,26 @@ class RobotFormattingProtocolPart(RobotLanguageServerProtocolPart):
 
         config_manager = self.parent.robocop_helper.get_config_manager(workspace_folder)
 
+        source = document.uri.to_path()
         config = config_manager.get_config_for_source_file(document.uri.to_path())
 
         if range is not None:
             config.formatter.start_line = range.start.line + 1
             config.formatter.end_line = range.end.line + 1
 
+        # TODO: not cached, we load all formatters everytime - but it's small cost
         runner = RobocopFormatter(config_manager)
         runner.config = config
 
         model = self.parent.documents_cache.get_model(document, False)
-        _, _, new, _ = runner.format_until_stable(model)
+        if get_robot_version() >= (8, 0):
+            from robocop.source_file import SourceFile
+
+            # overwrite _model to stop Robocop from loading it
+            source_file = SourceFile(path=source, config=config, _model=model)
+            _, _, new, _ = runner.format_until_stable(source_file)
+        else:
+            _, _, new, _ = runner.format_until_stable(model)
 
         if new.text == document.text():
             return None

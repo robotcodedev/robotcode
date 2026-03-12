@@ -44,6 +44,15 @@ class RobotRoboCopDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
 
         return self.parent.workspace.get_configuration(RoboCopConfig, folder.uri)
 
+    def get_linter(self, workspace_folder: WorkspaceFolder) -> "RobocopLinter":
+        linter = self._robocop_linters.get(workspace_folder, None)
+
+        if linter is None:
+            config_manager = self.parent.robocop_helper.get_config_manager(workspace_folder)
+            linter = RobocopLinter(config_manager)
+            self._robocop_linters[workspace_folder] = linter
+        return linter
+
     @language_id("robotframework")
     @_logger.call
     def collect_diagnostics(
@@ -69,23 +78,21 @@ class RobotRoboCopDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
     @_logger.call
     def collect(self, document: TextDocument, workspace_folder: WorkspaceFolder) -> List[Diagnostic]:
         from robocop.linter.rules import RuleSeverity
-        from robocop.linter.runner import RobocopLinter
 
-        linter = self._robocop_linters.get(workspace_folder, None)
-
-        if linter is None:
-            config_manager = self.parent.robocop_helper.get_config_manager(workspace_folder)
-
-            config = config_manager.get_config_for_source_file(document.uri.to_path())
-
-            linter = RobocopLinter(config_manager)
-            self._robocop_linters[workspace_folder] = linter
+        linter = self.get_linter(workspace_folder)
 
         source = document.uri.to_path()
-
         config = linter.config_manager.get_config_for_source_file(source)
         model = self.parent.documents_cache.get_model(document, False)
-        diagnostics = linter.run_check(model, source, config)
+
+        if self.parent.robocop_helper.robocop_version >= (8, 0):
+            from robocop.source_file import SourceFile
+
+            # overwrite _model to stop Robocop from loading it
+            source_file = SourceFile(path=source, config=config, _model=model)
+            diagnostics = linter.run_check(source_file)
+        else:
+            diagnostics = linter.run_check(model, source, config)
 
         return [
             Diagnostic(
