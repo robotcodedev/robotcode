@@ -2120,7 +2120,6 @@
     "ovsx": "^0.10.9",
     "preact": "^10.29.0",
     "prettier": "^3.8.1",
-    "ts-loader": "^9.5.4",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.57.0"
   },
