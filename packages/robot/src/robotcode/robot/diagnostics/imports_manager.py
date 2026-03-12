@@ -1005,8 +1005,10 @@ class ImportsManager:
                     for p in self.ignored_libraries_patters
                 ):
                     self._logger.debug(
-                        lambda: f"Ignore library {result.name or '' if result is not None else ''}"
-                        f" {result.origin or '' if result is not None else ''} for caching.",
+                        lambda: (
+                            f"Ignore library {result.name or '' if result is not None else ''}"
+                            f" {result.origin or '' if result is not None else ''} for caching."
+                        ),
                         context_name="import",
                     )
                     return None, import_name, ignore_arguments
@@ -1075,8 +1077,10 @@ class ImportsManager:
                     for p in self.ignored_variables_patters
                 ):
                     self._logger.debug(
-                        lambda: f"Ignore Variables {result.name or '' if result is not None else ''}"
-                        f" {result.origin or '' if result is not None else ''} for caching."
+                        lambda: (
+                            f"Ignore Variables {result.name or '' if result is not None else ''}"
+                            f" {result.origin or '' if result is not None else ''} for caching."
+                        )
                     )
                     return None, import_name
 

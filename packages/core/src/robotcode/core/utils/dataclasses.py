@@ -551,7 +551,7 @@ __as_dict_handlers: List[Tuple[Callable[[Any], bool], Callable[[Any, bool, bool]
     (dataclasses.is_dataclass, _handle_dataclass),
     (lambda value: isinstance(value, enum.Enum), _as_dict_handle_enum),
     (
-        lambda value: (isinstance(value, tuple) and hasattr(value, "_fields")),
+        lambda value: isinstance(value, tuple) and hasattr(value, "_fields"),
         _as_dict_handle_named_tuple,
     ),
     (

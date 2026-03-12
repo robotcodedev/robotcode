@@ -839,8 +839,10 @@ class Debugger:
             while True:
                 with self.condition:
                     self.condition.wait_for(
-                        lambda: self.state in [State.Running, State.Stopped, State.CallKeyword]
-                        or self.requested_state != RequestedState.Nothing
+                        lambda: (
+                            self.state in [State.Running, State.Stopped, State.CallKeyword]
+                            or self.requested_state != RequestedState.Nothing
+                        )
                     )
 
                 if self.state == State.CallKeyword:

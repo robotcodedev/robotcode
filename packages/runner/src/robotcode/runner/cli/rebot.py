@@ -94,8 +94,10 @@ def rebot(app: Application, robot_options_and_args: Tuple[str, ...]) -> None:
             raise click.ClickException(str(e)) from e
 
         app.verbose(
-            lambda: "Executing rebot with the following options:\n    "
-            + " ".join(f'"{o}"' for o in (options + list(robot_options_and_args)))
+            lambda: (
+                "Executing rebot with the following options:\n    "
+                + " ".join(f'"{o}"' for o in (options + list(robot_options_and_args)))
+            )
         )
 
         console_links_args = []

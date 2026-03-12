@@ -275,8 +275,10 @@ def handle_robot_options(
     cmd_options = profile.build_command_line()
 
     app.verbose(
-        lambda: "Executing robot with following options:\n    "
-        + " ".join(f'"{o}"' for o in (cmd_options + list(robot_options_and_args)))
+        lambda: (
+            "Executing robot with following options:\n    "
+            + " ".join(f'"{o}"' for o in (cmd_options + list(robot_options_and_args)))
+        )
     )
 
     if root_folder is not None:

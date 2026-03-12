@@ -277,8 +277,9 @@ class RpcRegistry:
                     lambda m1: (m1, cast(RpcMethod, m1)),
                     iter_methods(
                         obj,
-                        lambda m2: isinstance(m2, RpcMethod)
-                        or (inspect.ismethod(m2) and isinstance(m2.__func__, RpcMethod)),
+                        lambda m2: (
+                            isinstance(m2, RpcMethod) or (inspect.ismethod(m2) and isinstance(m2.__func__, RpcMethod))
+                        ),
                     ),
                 )
             }

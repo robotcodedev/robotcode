@@ -89,8 +89,10 @@ def libdoc(app: Application, robot_options_and_args: Tuple[str, ...]) -> None:
         options = libdoc_options.build_command_line()
 
         app.verbose(
-            lambda: "Executing libdoc robot with the following options:\n    "
-            + " ".join(f'"{o}"' for o in (options + list(robot_options_and_args)))
+            lambda: (
+                "Executing libdoc robot with the following options:\n    "
+                + " ".join(f'"{o}"' for o in (options + list(robot_options_and_args)))
+            )
         )
 
         app.exit(
