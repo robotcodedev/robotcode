@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [2.3.0](https://github.com/robotcodedev/robotcode/compare/v2.2.0..v2.3.0) - 2026-03-12
+
+### Documentation
+
+- **tips-and-tricks:** Make LSP config OS independent ([e1abda2](https://github.com/robotcodedev/robotcode/commit/e1abda26de71f447dee3fbdc94e400a2ed1ac504))
+
+  More robust implementation of get_python_path helper function.
+
+- **tips-and-tricks:** LSP setup guide for Neovim ([c63c125](https://github.com/robotcodedev/robotcode/commit/c63c125b39e904ceaa85bc48c78accfbd63d53e1))
+
+
+### Features
+
+- **robocop:** Robocop 8.0 support ([f723d98](https://github.com/robotcodedev/robotcode/commit/f723d98bd3ec9ac4234ab5661681f09220c942ac))
+
+
 ## [2.2.0](https://github.com/robotcodedev/robotcode/compare/v2.1.0..v2.2.0) - 2026-01-02
 
 ### Bug Fixes
