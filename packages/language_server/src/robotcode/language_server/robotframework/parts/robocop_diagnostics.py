@@ -45,6 +45,8 @@ class RobotRoboCopDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
         return self.parent.workspace.get_configuration(RoboCopConfig, folder.uri)
 
     def get_linter(self, workspace_folder: WorkspaceFolder) -> "RobocopLinter":
+        from robocop.linter.runner import RobocopLinter
+
         linter = self._robocop_linters.get(workspace_folder, None)
 
         if linter is None:

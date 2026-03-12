@@ -95,7 +95,7 @@ class RobotFormattingProtocolPart(RobotLanguageServerProtocolPart):
         runner.config = config
 
         model = self.parent.documents_cache.get_model(document, False)
-        if get_robot_version() >= (8, 0):
+        if self.parent.robocop_helper.robocop_version >= (8, 0):
             from robocop.source_file import SourceFile
 
             # overwrite _model to stop Robocop from loading it
