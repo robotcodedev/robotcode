@@ -2,7 +2,7 @@ import os
 import re
 import sys
 from pathlib import Path
-from typing import Any, Union
+from typing import Any, Optional, Tuple, Union
 
 
 def path_is_relative_to(
@@ -61,8 +61,30 @@ def normalized_path_full(path: Union[str, "os.PathLike[str]"]) -> Path:
     return Path(*parents)
 
 
+FileId = Tuple[int, int]
+
+
+def file_id(path: Union[str, "os.PathLike[str]", Path]) -> Optional[FileId]:
+    """Return the (st_dev, st_ino) tuple for *path*, or ``None`` on error."""
+    try:
+        st = os.stat(path)
+        return (st.st_dev, st.st_ino)
+    except OSError:
+        return None
+
+
 def same_file(path1: Union[str, "os.PathLike[str]", Path], path2: Union[str, "os.PathLike[str]", Path]) -> bool:
     try:
         return os.path.samefile(path1, path2)
     except OSError:
         return False
+
+
+def same_file_id(
+    id1: Optional[FileId],
+    id2: Optional[FileId],
+) -> bool:
+    """Compare two :func:`file_id` values. ``None`` never matches anything."""
+    if id1 is None or id2 is None:
+        return False
+    return id1 == id2

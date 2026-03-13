@@ -44,7 +44,7 @@ from robotcode.core.lsp.types import (
 from robotcode.core.text_document import TextDocument
 from robotcode.core.uri import Uri
 from robotcode.core.utils.logging import LoggingDescriptor
-from robotcode.core.utils.path import same_file
+from robotcode.core.utils.path import file_id, same_file_id
 
 from ..utils import get_robot_version
 from ..utils.ast import (
@@ -713,6 +713,7 @@ class Namespace:
 
         self.model = model
         self.source = source
+        self.source_id = file_id(source)
         self._document = weakref.ref(document) if document is not None else None
         self.document_type: Optional[DocumentType] = document_type
         self.languages = languages
@@ -1296,12 +1297,13 @@ class Namespace:
                     raise NameSpaceError("Resource setting requires value.")
 
                 source = self.imports_manager.find_resource(value.name, base_dir, variables=variables)
+                source_fid = file_id(source)
 
                 allread_imported_resource = next(
                     (
                         v
                         for k, v in self._resources.items()
-                        if v.library_doc.source is not None and same_file(v.library_doc.source, source)
+                        if v.library_doc.source_id is not None and same_file_id(v.library_doc.source_id, source_fid)
                     ),
                     None,
                 )
@@ -1330,7 +1332,7 @@ class Namespace:
                         )
                     return None
 
-                if same_file(self.source, source):
+                if same_file_id(self.source_id, source_fid):
                     if parent_import:
                         self.append_diagnostics(
                             range=parent_import.range,
@@ -1609,12 +1611,8 @@ class Namespace:
                                 e
                                 for e in self._variables_imports.values()
                                 if (
-                                    (
-                                        e.library_doc.source is not None
-                                        and entry.library_doc.source is not None
-                                        and same_file(e.library_doc.source, entry.library_doc.source)
-                                    )
-                                    or (e.library_doc.source is None and entry.library_doc.source is None)
+                                    same_file_id(e.library_doc.source_id, entry.library_doc.source_id)
+                                    or (e.library_doc.source_id is None and entry.library_doc.source_id is None)
                                 )
                                 and e.alias == entry.alias
                                 and e.args == entry.args
@@ -1681,12 +1679,8 @@ class Namespace:
                                 e
                                 for e in self._libraries.values()
                                 if (
-                                    (
-                                        e.library_doc.source is not None
-                                        and entry.library_doc.source is not None
-                                        and same_file(e.library_doc.source, entry.library_doc.source)
-                                    )
-                                    or (e.library_doc.source is None and entry.library_doc.source is None)
+                                    same_file_id(e.library_doc.source_id, entry.library_doc.source_id)
+                                    or (e.library_doc.source_id is None and entry.library_doc.source_id is None)
                                 )
                                 and e.library_doc.member_name == entry.library_doc.member_name
                                 and e.alias == entry.alias

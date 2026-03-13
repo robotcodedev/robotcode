@@ -62,7 +62,7 @@ from robot.variables.filesetter import PythonImporter, YamlImporter
 from robot.variables.finders import VariableFinder
 from robot.variables.replacer import VariableReplacer
 from robotcode.core.lsp.types import Position, Range
-from robotcode.core.utils.path import normalized_path
+from robotcode.core.utils.path import FileId, file_id, normalized_path
 
 from ..utils import get_robot_version
 from ..utils.ast import (
@@ -1023,6 +1023,13 @@ class LibraryDoc:
     stdout: Optional[str] = field(default=None, compare=False)
     has_listener: Optional[bool] = None
     library_type: Optional[LibraryType] = None
+    _source_id: Optional[FileId] = field(default=None, init=False, compare=False, hash=False, repr=False)
+
+    @property
+    def source_id(self) -> Optional[FileId]:
+        if self._source_id is None and self.source is not None:
+            self._source_id = file_id(self.source)
+        return self._source_id
 
     @property
     def inits(self) -> KeywordStore:
@@ -1052,6 +1059,17 @@ class LibraryDoc:
     def __post_init__(self) -> None:
         self._update_keywords(self._inits)
         self._update_keywords(self._keywords)
+
+    def _all_slots(self) -> Iterator[str]:
+        for cls in type(self).__mro__:
+            yield from getattr(cls, "__slots__", ())
+
+    def __getstate__(self) -> Dict[str, Any]:
+        return {slot: getattr(self, slot) for slot in self._all_slots() if slot != "_source_id"}
+
+    def __setstate__(self, state: Dict[str, Any]) -> None:
+        for slot in self._all_slots():
+            object.__setattr__(self, slot, state.get(slot, None))
 
     def __hash__(self) -> int:
         return hash(
