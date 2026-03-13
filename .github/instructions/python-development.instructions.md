@@ -15,7 +15,7 @@ applyTo: **/*.py
   <file_conventions>
     - encoding: UTF-8
     - line_endings: LF
-    - indent: 2 spaces
+    - indent: 4 spaces
     - package_structure: packages/ directory
   </file_conventions>
 </ai_meta>
@@ -28,37 +28,51 @@ applyTo: **/*.py
 - **MUST** use proper __init__.py files for package imports
 
 ### Code Style Standards
-- **Formatting:** we use ruff for formatting
-- **Type Hints:** Required for all APIs
-- **Docstrings:** Google style for modules, classes, and functions, but follows clean code principles
-- **linting:** use ruff for static analysis and mypy for type checking
+- **Formatting:** ruff for formatting (4-space indent, line length 120)
+- **Linting:** ruff for static analysis, mypy for type checking
+- **Type Hints:** Required for all public APIs
+- **Docstrings:** Google style for modules, classes, and functions
 
-
-### Code Quality
+### Code Quality Commands
 ```bash
-hatch run lint:all            # All linting checks (black, isort, flake8)
-hatch run lint:fix            # Auto-fix style issues
+hatch run lint:all            # All checks (ruff check + ruff format --diff + mypy)
+hatch run lint:fix            # Auto-fix (ruff check --fix + ruff format)
 ```
 
-### Testing Requirements
+### Namespace Package Pattern
+- All packages share the `robotcode` namespace: `packages/{name}/src/robotcode/{name}/`
+- `__init__.py` in `robotcode/` dirs are **empty** — never add imports to them
+- Each package has its own `pyproject.toml` with version and `[project.entry-points.robotcode]`
+
+### Plugin Hook Pattern
+To add a CLI command or tool config, implement a hook in `hooks.py`:
+```python
+from robotcode.plugin import hookimpl
+
+@hookimpl
+def register_cli_commands() -> List[click.Command]:
+    return [my_command]
+```
+Then register the entry point in the package's `pyproject.toml`:
+```toml
+[project.entry-points.robotcode]
+my_feature = "robotcode.my_package.hooks"
+```
 
 ### Python Interpreter
-- **ask your tools** wich python interpreter to use for the project/workspace
+- **Ask your tools** which Python interpreter to use for the project/workspace
 
-### Matrix Testing
-- **COMPREHENSIVE** testing across Python 3.10-3.14
-- **MATRIX** testing with Robot Framework 5.0-7.3
-- **INTEGRATION** tests in tests/robotcode/ with real scenarios
-- **SNAPSHOT** testing with pytest regtest2
+### Testing
 
-### Test Execution
+**IMPORTANT:** Use the correct Python environment selected in your IDE.
 
-**IMPORTANT**use the correct Python environment selected in your IDE
-
-- **USE** `pytest .` to run unit tests,
-- **USE** `pytest --regtest2-reset` to update snapshots
-- **RUN** specific environments: `hatch run test.rf70.py311:test`
-- **COVERAGE** reporting with `hatch run cov`
+- **Run tests:** `pytest .`
+- **Update snapshots:** `pytest --regtest2-reset`
+- **Specific matrix env:** `hatch run test.rf70.py311:test`
+- **Coverage:** `hatch run cov`
+- **Matrix:** Python 3.10–3.14 × Robot Framework 5.0–7.4
+- **Integration tests** in `tests/robotcode/` with real scenarios
+- **Snapshot testing** with pytest regtest2
 
 ## Multi-Platform Consistency
 - **ENSURE** consistent behavior across VS Code and IntelliJ

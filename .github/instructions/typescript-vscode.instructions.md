@@ -62,8 +62,16 @@ class XyzManager {
 
 ### Building & Packaging
 ```bash
-npm run compile && npm run package  # VS Code extension (.vsix)
+npm run compile                     # Dev build (esbuild)
+npm run package                     # Production build (esbuild --production)
+npm run lint                        # ESLint
+npm run lint-fix                    # ESLint auto-fix
 ```
+
+### Key Build Notes
+- Uses **esbuild** (not webpack) — configured in `esbuild.mjs`
+- Main entry compiles to `./out/extension.js`
+- Log renderer compiles to `./out/rendererLog.js`
 
 ## Critical Development Patterns
 
@@ -97,6 +105,11 @@ await this.refreshMutex.dispatch(async () => {
 - **HANDLE** Multiple Robot Framework projects simultaneously
 - **ISOLATE** Error handling per workspace
 - **ENSURE** Proper context switching
+
+### Activation & File Types
+- Extension activates on `*.robot`, `*.resource`, `*.robotrepl`, `*.robotscript`, `robot.toml`, or debug sessions
+- Supports `robotframework-repl` notebook type (`.robotbook` files)
+- Custom notebook renderer for log output
 
 ## Error Handling Standards
 
