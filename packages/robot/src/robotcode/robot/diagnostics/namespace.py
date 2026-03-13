@@ -1369,6 +1369,7 @@ class Namespace:
                         value.name,
                         base_dir,
                         variables=variables,
+                        source=source,
                     )
                     result.import_range = value.range
                     result.import_source = value.source
@@ -1802,12 +1803,13 @@ class Namespace:
         base_dir: str,
         *,
         variables: Optional[Dict[str, Any]] = None,
+        source: Optional[str] = None,
     ) -> ResourceEntry:
         if variables is None:
             variables = self.get_suite_variables()
 
         (namespace, library_doc) = self.imports_manager.get_namespace_and_libdoc_for_resource_import(
-            name, base_dir, sentinel=self, variables=variables
+            name, base_dir, sentinel=self, variables=variables, source=source
         )
 
         return ResourceEntry(

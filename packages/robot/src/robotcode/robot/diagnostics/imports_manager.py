@@ -15,7 +15,6 @@ from pathlib import Path
 from typing import (
     TYPE_CHECKING,
     Any,
-    Callable,
     Dict,
     List,
     Mapping,
@@ -101,22 +100,10 @@ ENV_LOAD_LIBRARY_TIMEOUT_VAR = "ROBOTCODE_LOAD_LIBRARY_TIMEOUT"
 COMPLETE_LIBRARY_IMPORT_TIMEOUT = COMPLETE_RESOURCE_IMPORT_TIMEOUT = COMPLETE_VARIABLES_IMPORT_TIMEOUT = 5
 
 
-class _EntryKey:
-    pass
-
-
-@dataclass()
-class _LibrariesEntryKey(_EntryKey):
+@dataclass(frozen=True, slots=True)
+class _LibrariesEntryKey:
     name: str
     args: Tuple[Any, ...]
-
-    def __eq__(self, __value: object) -> bool:
-        if isinstance(__value, _LibrariesEntryKey):
-            return __value.name == self.name and __value.args == self.args
-        return super().__eq__(__value)
-
-    def __hash__(self) -> int:
-        return hash((self.name, self.args))
 
 
 class _ImportEntry(ABC):
@@ -164,7 +151,7 @@ class _LibrariesEntry(_ImportEntry):
         args: Tuple[Any, ...],
         working_dir: str,
         base_dir: str,
-        get_libdoc_callback: Callable[[str, Tuple[Any, ...], str, str], LibraryDoc],
+        variables: Optional[Dict[str, Any]] = None,
         ignore_reference: bool = False,
     ) -> None:
         super().__init__(parent)
@@ -172,7 +159,7 @@ class _LibrariesEntry(_ImportEntry):
         self.args = args
         self.working_dir = working_dir
         self.base_dir = base_dir
-        self._get_libdoc_callback = get_libdoc_callback
+        self.variables = variables
         self._lib_doc: Optional[LibraryDoc] = None
         self.ignore_reference = ignore_reference
 
@@ -222,7 +209,9 @@ class _LibrariesEntry(_ImportEntry):
             return None
 
     def _update(self) -> None:
-        self._lib_doc = self._get_libdoc_callback(self.name, self.args, self.working_dir, self.base_dir)
+        self._lib_doc = self.parent._get_library_libdoc(
+            self.name, self.args, self.working_dir, self.base_dir, self.variables
+        )
 
         source_or_origin = (
             self._lib_doc.source
@@ -290,12 +279,9 @@ class _LibrariesEntry(_ImportEntry):
             return self._lib_doc
 
 
-@dataclass()
-class _ResourcesEntryKey(_EntryKey):
+@dataclass(frozen=True, slots=True)
+class _ResourcesEntryKey:
     name: str
-
-    def __hash__(self) -> int:
-        return hash(self.name)
 
 
 class _ResourcesEntry(_ImportEntry):
@@ -303,11 +289,11 @@ class _ResourcesEntry(_ImportEntry):
         self,
         name: str,
         parent: "ImportsManager",
-        get_document_callback: Callable[[], TextDocument],
+        source_path: Path,
     ) -> None:
         super().__init__(parent)
         self.name = name
-        self._get_document_callback = get_document_callback
+        self.source_path = source_path
         self._document: Optional[TextDocument] = None
         self._lib_doc: Optional[LibraryDoc] = None
 
@@ -316,16 +302,20 @@ class _ResourcesEntry(_ImportEntry):
 
     def check_file_changed(self, changes: List[FileEvent]) -> Optional[FileChangeType]:
         with self._lock:
+            if self._document is None:
+                return None
+
             for change in changes:
                 uri = Uri(change.uri)
                 if uri.scheme != "file":
                     continue
 
                 path = uri.to_path()
-                if (
-                    self._document is not None
-                    and (normalized_path(path) == normalized_path(self._document.uri.to_path()))
-                ) or self._document is None:
+                try:
+                    is_same = path.samefile(self._document.uri.to_path())
+                except OSError:
+                    is_same = not self._document.uri.to_path().exists()
+                if is_same:
                     self._invalidate()
 
                     return change.type
@@ -333,7 +323,18 @@ class _ResourcesEntry(_ImportEntry):
             return None
 
     def _update(self) -> None:
-        self._document = self._get_document_callback()
+        self.parent._logger.debug(
+            lambda: f"Load resource {self.name} from source {self.source_path}", context_name="import"
+        )
+
+        extension = self.source_path.suffix
+        if extension.lower() not in RESOURCE_EXTENSIONS:
+            raise ImportError(
+                f"Invalid resource file extension '{extension}'. "
+                f"Supported extensions are {', '.join(repr(s) for s in RESOURCE_EXTENSIONS)}."
+            )
+
+        self._document = self.parent.documents_manager.get_or_open_document(self.source_path)
 
         if self._document._version is None:
             self.file_watchers.append(
@@ -387,13 +388,10 @@ class _ResourcesEntry(_ImportEntry):
             return self._lib_doc
 
 
-@dataclass()
-class _VariablesEntryKey(_EntryKey):
+@dataclass(frozen=True, slots=True)
+class _VariablesEntryKey:
     name: str
     args: Tuple[Any, ...]
-
-    def __hash__(self) -> int:
-        return hash((self.name, self.args))
 
 
 class _VariablesEntry(_ImportEntry):
@@ -404,14 +402,18 @@ class _VariablesEntry(_ImportEntry):
         working_dir: str,
         base_dir: str,
         parent: "ImportsManager",
-        get_variables_doc_handler: Callable[[str, Tuple[Any, ...], str, str], VariablesDoc],
+        variables: Optional[Dict[str, Any]] = None,
+        resolve_variables: bool = True,
+        resolve_command_line_vars: bool = True,
     ) -> None:
         super().__init__(parent)
         self.name = name
         self.args = args
         self.working_dir = working_dir
         self.base_dir = base_dir
-        self._get_variables_doc_handler = get_variables_doc_handler
+        self.variables = variables
+        self.resolve_variables = resolve_variables
+        self.resolve_command_line_vars = resolve_command_line_vars
         self._lib_doc: Optional[VariablesDoc] = None
 
     def __repr__(self) -> str:
@@ -431,15 +433,28 @@ class _VariablesEntry(_ImportEntry):
                     continue
 
                 path = uri.to_path()
-                if self._lib_doc.source and path.exists() and path.samefile(Path(self._lib_doc.source)):
-                    self._invalidate()
+                if self._lib_doc.source:
+                    try:
+                        is_same = path.samefile(Path(self._lib_doc.source))
+                    except OSError:
+                        is_same = not Path(self._lib_doc.source).exists()
+                    if is_same:
+                        self._invalidate()
 
-                    return change.type
+                        return change.type
 
             return None
 
     def _update(self) -> None:
-        self._lib_doc = self._get_variables_doc_handler(self.name, self.args, self.working_dir, self.base_dir)
+        self._lib_doc = self.parent._get_variables_libdoc(
+            self.name,
+            self.args,
+            self.working_dir,
+            self.base_dir,
+            self.variables,
+            self.resolve_variables,
+            self.resolve_command_line_vars,
+        )
 
         if self._lib_doc is not None:
             self.file_watchers.append(
@@ -624,10 +639,8 @@ class ImportsManager:
 
         self.load_library_timeout = load_library_timeout
 
-        self._logger.trace(lambda: f"Using LoadLibrary timeout of {self.load_library_timeout} seconds")
-
         self._logger.trace(
-            lambda: f"Using load_library_timeout={self.load_library_timeout} (config/env/default)",
+            lambda: f"Using load_library_timeout={self.load_library_timeout}s",
             context_name="imports",
         )
 
@@ -915,7 +928,7 @@ class ImportsManager:
             if len(entry.references) == 0 or now:
                 self._logger.debug(lambda: f"Remove Library Entry {entry_key}")
                 with self._libaries_lock:
-                    if len(entry.references) == 0:
+                    if len(entry.references) == 0 or now:
                         e1 = self._libaries.get(entry_key, None)
                         if e1 == entry:
                             self._libaries.pop(entry_key, None)
@@ -954,7 +967,7 @@ class ImportsManager:
             if len(entry.references) == 0 or now:
                 self._logger.debug(lambda: f"Remove Variables Entry {entry_key}")
                 with self._variables_lock:
-                    if len(entry.references) == 0:
+                    if len(entry.references) == 0 or now:
                         e1 = self._variables.get(entry_key, None)
                         if e1 == entry:
                             self._variables.pop(entry_key, None)
@@ -1240,20 +1253,6 @@ class ImportsManager:
 
         return self._executor
 
-    def _get_library_libdoc_handler(
-        self,
-        variables: Optional[Dict[str, Any]] = None,
-    ) -> Callable[[str, Tuple[Any, ...], str, str], LibraryDoc]:
-        def _call(
-            name: str,
-            args: Tuple[Any, ...],
-            working_dir: str,
-            base_dir: str,
-        ) -> LibraryDoc:
-            return self._get_library_libdoc(name, args, working_dir, base_dir, variables)
-
-        return _call
-
     def _get_library_libdoc(
         self,
         name: str,
@@ -1297,9 +1296,9 @@ class ImportsManager:
                     self._logger.exception(e)
 
         self._logger.debug(lambda: f"Load library in process {name}{args!r}", context_name="import")
-        # if self._process_pool_executor is None:
-        #     self._process_pool_executor = ProcessPoolExecutor(max_workers=1, mp_context=mp.get_context("spawn"))
-        # executor = self._process_pool_executor
+        # A fresh process per import is intentional: libraries can pollute the interpreter
+        # (e.g. via sys.modules, global state, native extensions) and cannot be safely
+        # re-imported after on-disk changes without unknown side effects.
         executor = ProcessPoolExecutor(max_workers=1, mp_context=mp.get_context("spawn"))
         try:
             try:
@@ -1383,7 +1382,7 @@ class ImportsManager:
                         args,
                         str(self.root_folder),
                         base_dir,
-                        self._get_library_libdoc_handler(variables),
+                        variables=variables,
                         ignore_reference=sentinel is None,
                     )
 
@@ -1401,41 +1400,18 @@ class ImportsManager:
         model: ast.AST,
         source: str,
     ) -> LibraryDoc:
-        key = source
-
-        entry = None
-        if model in self._resource_libdoc_cache:
-            entry = self._resource_libdoc_cache.get(model, None)
-
-            if entry and key in entry:
-                return entry[key]
+        entry = self._resource_libdoc_cache.get(model)
+        if entry is not None and source in entry:
+            return entry[source]
 
         result = get_model_doc(model=model, source=source)
         if entry is None:
             entry = {}
             self._resource_libdoc_cache[model] = entry
 
-        entry[key] = result
+        entry[source] = result
 
         return result
-
-    def _get_variables_libdoc_handler(
-        self,
-        variables: Optional[Dict[str, Any]] = None,
-        resolve_variables: bool = True,
-        resolve_command_line_vars: bool = True,
-    ) -> Callable[[str, Tuple[Any, ...], str, str], VariablesDoc]:
-        def _call(
-            name: str,
-            args: Tuple[Any, ...],
-            working_dir: str,
-            base_dir: str,
-        ) -> VariablesDoc:
-            return self._get_variables_libdoc(
-                name, args, working_dir, base_dir, variables, resolve_variables, resolve_command_line_vars
-            )
-
-        return _call
 
     def _get_variables_libdoc(
         self,
@@ -1478,6 +1454,8 @@ class ImportsManager:
                 except BaseException as e:
                     self._logger.exception(e)
 
+        # A fresh process per import is intentional: variable files can pollute the
+        # interpreter and cannot be safely re-imported after on-disk changes.
         executor = ProcessPoolExecutor(max_workers=1, mp_context=mp.get_context("spawn"))
         try:
             try:
@@ -1565,7 +1543,9 @@ class ImportsManager:
                         str(self.root_folder),
                         base_dir,
                         self,
-                        self._get_variables_libdoc_handler(variables, resolve_variables, resolve_command_line_vars),
+                        variables=variables,
+                        resolve_variables=resolve_variables,
+                        resolve_command_line_vars=resolve_command_line_vars,
                     )
 
             entry = self._variables[entry_key]
@@ -1583,27 +1563,17 @@ class ImportsManager:
         base_dir: str,
         sentinel: Any = None,
         variables: Optional[Dict[str, Any]] = None,
+        *,
+        source: Optional[str] = None,
     ) -> _ResourcesEntry:
-        source = self.find_resource(name, base_dir, variables=variables)
+        source = source or self.find_resource(name, base_dir, variables=variables)
         source_path = normalized_path(Path(source))
-
-        def _get_document() -> TextDocument:
-            self._logger.debug(lambda: f"Load resource {name} from source {source_path}", context_name="import")
-
-            extension = source_path.suffix
-            if extension.lower() not in RESOURCE_EXTENSIONS:
-                raise ImportError(
-                    f"Invalid resource file extension '{extension}'. "
-                    f"Supported extensions are {', '.join(repr(s) for s in RESOURCE_EXTENSIONS)}."
-                )
-
-            return self.documents_manager.get_or_open_document(source_path)
 
         entry_key = _ResourcesEntryKey(str(source_path))
 
         with self._resources_lock:
             if entry_key not in self._resources:
-                self._resources[entry_key] = _ResourcesEntry(name, self, _get_document)
+                self._resources[entry_key] = _ResourcesEntry(name, self, source_path)
 
         entry = self._resources[entry_key]
 
@@ -1619,10 +1589,12 @@ class ImportsManager:
         base_dir: str,
         sentinel: Any = None,
         variables: Optional[Dict[str, Any]] = None,
+        *,
+        source: Optional[str] = None,
     ) -> Tuple["Namespace", LibraryDoc]:
         with self._logger.measure_time(lambda: f"getting namespace and libdoc for {name}", context_name="import"):
             with self._logger.measure_time(lambda: f"getting resource entry {name}", context_name="import"):
-                entry = self._get_entry_for_resource_import(name, base_dir, sentinel, variables)
+                entry = self._get_entry_for_resource_import(name, base_dir, sentinel, variables, source=source)
 
             with self._logger.measure_time(lambda: f"getting namespace {name}", context_name="import"):
                 namespace = entry.get_namespace()
@@ -1637,8 +1609,10 @@ class ImportsManager:
         base_dir: str,
         sentinel: Any = None,
         variables: Optional[Dict[str, Any]] = None,
+        *,
+        source: Optional[str] = None,
     ) -> "Namespace":
-        entry = self._get_entry_for_resource_import(name, base_dir, sentinel, variables)
+        entry = self._get_entry_for_resource_import(name, base_dir, sentinel, variables, source=source)
 
         return entry.get_namespace()
 
@@ -1648,8 +1622,10 @@ class ImportsManager:
         base_dir: str,
         sentinel: Any = None,
         variables: Optional[Dict[str, Any]] = None,
+        *,
+        source: Optional[str] = None,
     ) -> LibraryDoc:
-        entry = self._get_entry_for_resource_import(name, base_dir, sentinel, variables)
+        entry = self._get_entry_for_resource_import(name, base_dir, sentinel, variables, source=source)
 
         return entry.get_libdoc()
 
