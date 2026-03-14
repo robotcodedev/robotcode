@@ -12,6 +12,7 @@ _T = TypeVar("_T")
 class CacheSection(Enum):
     LIBRARY = "libdoc"
     VARIABLES = "variables"
+    RESOURCE = "resource"
 
 
 class DataCache(ABC):

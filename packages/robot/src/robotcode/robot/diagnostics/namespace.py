@@ -21,13 +21,8 @@ from typing import (
 
 from robot.errors import VariableError
 from robot.parsing.lexer.tokens import Token
-from robot.parsing.model.blocks import Keyword, SettingSection, TestCase, VariableSection
+from robot.parsing.model.blocks import Keyword, TestCase
 from robot.parsing.model.statements import Arguments, Setup, Statement, Timeout
-from robot.parsing.model.statements import LibraryImport as RobotLibraryImport
-from robot.parsing.model.statements import ResourceImport as RobotResourceImport
-from robot.parsing.model.statements import (
-    VariablesImport as RobotVariablesImport,
-)
 from robotcode.core.concurrent import RLock
 from robotcode.core.event import event
 from robotcode.core.lsp.types import (
@@ -90,6 +85,7 @@ from .library_doc import (
     KeywordDoc,
     KeywordMatcher,
     LibraryDoc,
+    ResourceDoc,
     resolve_robot_variables,
 )
 from .namespace_analyzer import NamespaceAnalyzer
@@ -112,56 +108,6 @@ class ImportError(DiagnosticsError):
 
 class NameSpaceError(Exception):
     pass
-
-
-class VariablesVisitor(Visitor):
-    def get(self, source: str, model: ast.AST) -> List[VariableDefinition]:
-        self._results: List[VariableDefinition] = []
-        self.source = source
-        self.visit(model)
-        return self._results
-
-    def visit_Section(self, node: ast.AST) -> None:  # noqa: N802
-        if isinstance(node, VariableSection):
-            self.generic_visit(node)
-
-    def visit_Variable(self, node: Statement) -> None:  # noqa: N802
-        name_token = node.get_token(Token.VARIABLE)
-        if name_token is None:
-            return
-
-        if name_token.value is not None:
-            matcher = search_variable(name_token.value, ignore_errors=True, parse_type=True)
-            if not matcher.is_assign(allow_assign_mark=True) or matcher.name is None:
-                return
-
-            values = node.get_values(Token.ARGUMENT)
-            has_value = bool(values)
-            value = tuple(
-                s.replace(
-                    "${CURDIR}",
-                    str(Path(self.source).parent).replace("\\", "\\\\"),
-                )
-                for s in values
-            )
-
-            stripped_name_token = strip_variable_token(name_token, matcher=matcher, parse_type=True)
-
-            self._results.append(
-                VariableDefinition(
-                    name=matcher.name,
-                    name_token=stripped_name_token,
-                    line_no=stripped_name_token.lineno,
-                    col_offset=stripped_name_token.col_offset,
-                    end_line_no=stripped_name_token.lineno,
-                    end_col_offset=stripped_name_token.end_col_offset,
-                    source=self.source,
-                    has_value=has_value,
-                    resolvable=True,
-                    value=value,
-                    value_type=matcher.type,
-                )
-            )
 
 
 class VariableVisitorBase(Visitor):
@@ -580,112 +526,6 @@ class BlockVariableVisitor(OnlyArgumentsVisitor):
                 pass
 
 
-class ImportVisitor(Visitor):
-    def get(self, source: str, model: ast.AST) -> List[Import]:
-        self._results: List[Import] = []
-        self.source = source
-        self.visit(model)
-        return self._results
-
-    def visit_Section(self, node: ast.AST) -> None:  # noqa: N802
-        if isinstance(node, SettingSection):
-            self.generic_visit(node)
-
-    def visit_LibraryImport(self, node: RobotLibraryImport) -> None:  # noqa: N802
-        name = node.get_token(Token.NAME)
-
-        separator = node.get_token(Token.WITH_NAME)
-        alias_token = node.get_tokens(Token.NAME)[-1] if separator else None
-
-        last_data_token = next(v for v in reversed(node.tokens) if v.type not in Token.NON_DATA_TOKENS)
-        if node.name:
-            self._results.append(
-                LibraryImport(
-                    name=node.name,
-                    name_token=name if name is not None else None,
-                    args=node.args,
-                    alias=node.alias,
-                    alias_token=alias_token,
-                    line_no=node.lineno,
-                    col_offset=node.col_offset,
-                    end_line_no=(
-                        last_data_token.lineno
-                        if last_data_token is not None
-                        else node.end_lineno
-                        if node.end_lineno is not None
-                        else -1
-                    ),
-                    end_col_offset=(
-                        last_data_token.end_col_offset
-                        if last_data_token is not None
-                        else node.end_col_offset
-                        if node.end_col_offset is not None
-                        else -1
-                    ),
-                    source=self.source,
-                )
-            )
-
-    def visit_ResourceImport(self, node: RobotResourceImport) -> None:  # noqa: N802
-        name = node.get_token(Token.NAME)
-
-        last_data_token = next(v for v in reversed(node.tokens) if v.type not in Token.NON_DATA_TOKENS)
-        if node.name:
-            self._results.append(
-                ResourceImport(
-                    name=node.name,
-                    name_token=name if name is not None else None,
-                    line_no=node.lineno,
-                    col_offset=node.col_offset,
-                    end_line_no=(
-                        last_data_token.lineno
-                        if last_data_token is not None
-                        else node.end_lineno
-                        if node.end_lineno is not None
-                        else -1
-                    ),
-                    end_col_offset=(
-                        last_data_token.end_col_offset
-                        if last_data_token is not None
-                        else node.end_col_offset
-                        if node.end_col_offset is not None
-                        else -1
-                    ),
-                    source=self.source,
-                )
-            )
-
-    def visit_VariablesImport(self, node: RobotVariablesImport) -> None:  # noqa: N802
-        name = node.get_token(Token.NAME)
-
-        last_data_token = next(v for v in reversed(node.tokens) if v.type not in Token.NON_DATA_TOKENS)
-        if node.name:
-            self._results.append(
-                VariablesImport(
-                    name=node.name,
-                    name_token=name if name is not None else None,
-                    args=node.args,
-                    line_no=node.lineno,
-                    col_offset=node.col_offset,
-                    end_line_no=(
-                        last_data_token.lineno
-                        if last_data_token is not None
-                        else node.end_lineno
-                        if node.end_lineno is not None
-                        else -1
-                    ),
-                    end_col_offset=(
-                        last_data_token.end_col_offset
-                        if last_data_token is not None
-                        else node.end_col_offset
-                        if node.end_col_offset is not None
-                        else -1
-                    ),
-                    source=self.source,
-                )
-            )
-
-
 class DocumentType(enum.Enum):
     UNKNOWN = "unknown"
     GENERAL = "robot"
@@ -731,7 +571,7 @@ class Namespace:
         self._initialize_lock = RLock(default_timeout=120, name="Namespace.initialize")
         self._analyzed = False
         self._analyze_lock = RLock(default_timeout=120, name="Namespace.analyze")
-        self._library_doc: Optional[LibraryDoc] = None
+        self._library_doc: Optional[ResourceDoc] = None
         self._library_doc_lock = RLock(default_timeout=120, name="Namespace.library_doc")
         self._imports: Optional[List[Import]] = None
         self._import_entries: Dict[Import, LibraryEntry] = OrderedDict()
@@ -962,7 +802,7 @@ class Namespace:
         return self._variables_imports
 
     @_logger.call
-    def get_library_doc(self) -> LibraryDoc:
+    def get_library_doc(self) -> ResourceDoc:
         with self._library_doc_lock:
             if self._library_doc is None:
                 self._library_doc = self.imports_manager.get_libdoc_from_model(self.model, self.source)
@@ -1027,7 +867,7 @@ class Namespace:
     @_logger.call
     def get_imports(self) -> List[Import]:
         if self._imports is None:
-            self._imports = ImportVisitor().get(self.source, self.model)
+            self._imports = self.get_library_doc().resource_imports
 
         return self._imports
 
@@ -1035,7 +875,7 @@ class Namespace:
     def get_own_variables(self) -> List[VariableDefinition]:
         with self._own_variables_lock:
             if self._own_variables is None:
-                self._own_variables = VariablesVisitor().get(self.source, self.model)
+                self._own_variables = self.get_library_doc().resource_variables
 
             return self._own_variables
 
@@ -1296,8 +1136,9 @@ class Namespace:
                 if value.name is None:
                     raise NameSpaceError("Resource setting requires value.")
 
-                source = self.imports_manager.find_resource(value.name, base_dir, variables=variables)
-                source_fid = file_id(source)
+                res_entry = self._get_resource_entry(value.name, base_dir, variables=variables)
+
+                source_fid = res_entry.library_doc.source_id
 
                 allread_imported_resource = next(
                     (
@@ -1358,19 +1199,13 @@ class Namespace:
                     else:
                         self.append_diagnostics(
                             range=value.range,
-                            message=f"Circular import detected, Resource file '{Path(source).name}' "
-                            "is importing itself",
+                            message=f"Circular import detected, Resource file '{value.name}' is importing itself",
                             severity=DiagnosticSeverity.INFORMATION,
                             source=DIAGNOSTICS_SOURCE_NAME,
                             code=Error.CIRCULAR_IMPORT,
                         )
                 else:
-                    result = self._get_resource_entry(
-                        value.name,
-                        base_dir,
-                        variables=variables,
-                        source=source,
-                    )
+                    result = res_entry
                     result.import_range = value.range
                     result.import_source = value.source
 
@@ -1808,16 +1643,16 @@ class Namespace:
         if variables is None:
             variables = self.get_suite_variables()
 
-        (namespace, library_doc) = self.imports_manager.get_namespace_and_libdoc_for_resource_import(
+        resource_doc = self.imports_manager.get_resource_doc_for_resource_import(
             name, base_dir, sentinel=self, variables=variables, source=source
         )
 
         return ResourceEntry(
-            name=library_doc.name,
+            name=resource_doc.name,
             import_name=name,
-            library_doc=library_doc,
-            imports=namespace.get_imports(),
-            variables=namespace.get_own_variables(),
+            library_doc=resource_doc,
+            imports=resource_doc.resource_imports,
+            variables=resource_doc.resource_variables,
         )
 
     @_logger.call

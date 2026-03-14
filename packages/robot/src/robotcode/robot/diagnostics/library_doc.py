@@ -43,8 +43,11 @@ from robot.output.logger import LOGGER
 from robot.output.loggerhelper import AbstractLogger
 from robot.parsing.lexer.tokens import Token
 from robot.parsing.lexer.tokens import Token as RobotToken
-from robot.parsing.model.blocks import Keyword, KeywordSection, Section, SettingSection
-from robot.parsing.model.statements import Arguments, KeywordName
+from robot.parsing.model.blocks import Keyword, KeywordSection, Section, SettingSection, VariableSection
+from robot.parsing.model.statements import Arguments, KeywordName, Statement
+from robot.parsing.model.statements import LibraryImport as RobotLibraryImport
+from robot.parsing.model.statements import ResourceImport as RobotResourceImport
+from robot.parsing.model.statements import VariablesImport as RobotVariablesImport
 from robot.running.arguments.argumentresolver import ArgumentResolver, DictToKwargs, NamedArgumentResolver
 from robot.running.arguments.argumentresolver import VariableReplacer as ArgumentsVariableReplacer
 from robot.running.arguments.argumentspec import ArgInfo
@@ -73,13 +76,18 @@ from ..utils.ast import (
 )
 from ..utils.markdownformatter import MarkDownFormatter
 from ..utils.match import normalize, normalize_namespace
-from ..utils.variables import contains_variable
+from ..utils.variables import contains_variable, search_variable
 from .entities import (
     ArgumentDefinition,
+    Import,
     ImportedVariableDefinition,
     LibraryArgumentDefinition,
+    LibraryImport,
     NativeValue,
+    ResourceImport,
     SourceEntity,
+    VariableDefinition,
+    VariablesImport,
 )
 
 if get_robot_version() < (7, 0):
@@ -1295,6 +1303,18 @@ class VariablesDoc(LibraryDoc):
             result += "\n```"
 
         return result
+
+
+@dataclass(slots=True)
+class ResourceDoc(LibraryDoc):
+    type: str = "RESOURCE"
+    scope: str = "GLOBAL"
+
+    resource_imports: List[Import] = field(default_factory=list, compare=False)
+    resource_variables: List[VariableDefinition] = field(default_factory=list, compare=False)
+
+    def __hash__(self) -> int:
+        return LibraryDoc.__hash__(self)
 
 
 @functools.lru_cache(maxsize=1024)
@@ -2814,13 +2834,16 @@ def _get_argument_definitions_from_line(
 
 
 class _MyResourceBuilder(ResourceBuilder):
-    def __init__(self, resource: Any) -> None:
+    def __init__(self, resource: Any, source: str) -> None:
         super().__init__(resource)
+        self.source = source
         self.keyword_name_nodes: Dict[int, KeywordName] = {}
         self.keywords_nodes: Dict[int, Keyword] = {}
+        self.imports: List[Import] = []
+        self.variables: List[VariableDefinition] = []
 
     def visit_Section(self, node: Section) -> None:  # noqa: N802
-        if isinstance(node, (SettingSection, KeywordSection)):
+        if isinstance(node, (SettingSection, KeywordSection, VariableSection)):
             self.generic_visit(node)
 
     def visit_Keyword(self, node: Keyword) -> None:  # noqa: N802
@@ -2828,6 +2851,134 @@ class _MyResourceBuilder(ResourceBuilder):
         super().visit_Keyword(node)
         if node.header is not None:
             self.keyword_name_nodes[node.lineno] = node.header
+
+    def visit_LibraryImport(self, node: RobotLibraryImport) -> None:  # noqa: N802
+        name = node.get_token(Token.NAME)
+        separator = node.get_token(Token.WITH_NAME)
+        alias_token = node.get_tokens(Token.NAME)[-1] if separator else None
+        last_data_token = next(v for v in reversed(node.tokens) if v.type not in Token.NON_DATA_TOKENS)
+        if node.name:
+            self.imports.append(
+                LibraryImport(
+                    name=node.name,
+                    name_token=name if name is not None else None,
+                    args=node.args,
+                    alias=node.alias,
+                    alias_token=alias_token,
+                    line_no=node.lineno,
+                    col_offset=node.col_offset,
+                    end_line_no=(
+                        last_data_token.lineno
+                        if last_data_token is not None
+                        else node.end_lineno
+                        if node.end_lineno is not None
+                        else -1
+                    ),
+                    end_col_offset=(
+                        last_data_token.end_col_offset
+                        if last_data_token is not None
+                        else node.end_col_offset
+                        if node.end_col_offset is not None
+                        else -1
+                    ),
+                    source=self.source,
+                )
+            )
+
+    def visit_ResourceImport(self, node: RobotResourceImport) -> None:  # noqa: N802
+        name = node.get_token(Token.NAME)
+        last_data_token = next(v for v in reversed(node.tokens) if v.type not in Token.NON_DATA_TOKENS)
+        if node.name:
+            self.imports.append(
+                ResourceImport(
+                    name=node.name,
+                    name_token=name if name is not None else None,
+                    line_no=node.lineno,
+                    col_offset=node.col_offset,
+                    end_line_no=(
+                        last_data_token.lineno
+                        if last_data_token is not None
+                        else node.end_lineno
+                        if node.end_lineno is not None
+                        else -1
+                    ),
+                    end_col_offset=(
+                        last_data_token.end_col_offset
+                        if last_data_token is not None
+                        else node.end_col_offset
+                        if node.end_col_offset is not None
+                        else -1
+                    ),
+                    source=self.source,
+                )
+            )
+
+    def visit_VariablesImport(self, node: RobotVariablesImport) -> None:  # noqa: N802
+        name = node.get_token(Token.NAME)
+        last_data_token = next(v for v in reversed(node.tokens) if v.type not in Token.NON_DATA_TOKENS)
+        if node.name:
+            self.imports.append(
+                VariablesImport(
+                    name=node.name,
+                    name_token=name if name is not None else None,
+                    args=node.args,
+                    line_no=node.lineno,
+                    col_offset=node.col_offset,
+                    end_line_no=(
+                        last_data_token.lineno
+                        if last_data_token is not None
+                        else node.end_lineno
+                        if node.end_lineno is not None
+                        else -1
+                    ),
+                    end_col_offset=(
+                        last_data_token.end_col_offset
+                        if last_data_token is not None
+                        else node.end_col_offset
+                        if node.end_col_offset is not None
+                        else -1
+                    ),
+                    source=self.source,
+                )
+            )
+
+    def visit_Variable(self, node: Statement) -> None:  # noqa: N802
+        name_token = node.get_token(Token.VARIABLE)
+        if name_token is None:
+            return
+
+        if name_token.value is not None:
+            matcher = search_variable(name_token.value, ignore_errors=True, parse_type=True)
+            if not matcher.is_assign(allow_assign_mark=True) or matcher.name is None:
+                return
+
+            values = node.get_values(Token.ARGUMENT)
+            has_value = bool(values)
+            value = tuple(
+                s.replace(
+                    "${CURDIR}",
+                    str(Path(self.source).parent).replace("\\\\", "\\\\\\\\"),
+                )
+                for s in values
+            )
+
+            stripped_name_token = strip_variable_token(name_token, matcher=matcher, parse_type=True)
+
+            self.variables.append(
+                VariableDefinition(
+                    name=matcher.name,
+                    name_token=stripped_name_token,
+                    line_no=stripped_name_token.lineno,
+                    col_offset=stripped_name_token.col_offset,
+                    end_line_no=stripped_name_token.lineno,
+                    end_col_offset=stripped_name_token.end_col_offset,
+                    source=self.source,
+                    has_value=has_value,
+                    resolvable=True,
+                    value=value,
+                    value_type=matcher.type,
+                )
+            )
 
 
 def _get_kw_errors(kw: Any) -> Any:
@@ -2849,10 +3000,10 @@ def _get_kw_errors(kw: Any) -> Any:
 def get_model_doc(
     model: ast.AST,
     source: str,
-) -> LibraryDoc:
+) -> ResourceDoc:
     res = ResourceFile(source=source)
 
-    res_builder = _MyResourceBuilder(res)
+    res_builder = _MyResourceBuilder(res, source)
     with LOGGER.cache_only:
         res_builder.visit(model)
 
@@ -2864,13 +3015,13 @@ def get_model_doc(
     else:
         lib = res
 
-    libdoc = LibraryDoc(
+    libdoc = ResourceDoc(
         name=lib.name or "",
         doc=lib.doc,
-        type="RESOURCE",
-        scope="GLOBAL",
         source=source,
         line_no=1,
+        resource_imports=res_builder.imports,
+        resource_variables=res_builder.variables,
     )
 
     libdoc.keywords = KeywordStore(

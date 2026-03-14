@@ -64,6 +64,7 @@ from .library_doc import (
     CompleteResult,
     LibraryDoc,
     ModuleSpec,
+    ResourceDoc,
     VariablesDoc,
     complete_library_import,
     complete_resource_import,
@@ -307,7 +308,7 @@ class _ResourcesEntry(_ImportEntry):
         self.name = name
         self.source_path = source_path
         self._document: Optional[TextDocument] = None
-        self._lib_doc: Optional[LibraryDoc] = None
+        self._lib_doc: Optional[ResourceDoc] = None
 
     def __repr__(self) -> str:
         return f"{type(self).__qualname__}(name={self.name!r}, file_watchers={self.file_watchers!r}, id={id(self)!r}"
@@ -392,12 +393,15 @@ class _ResourcesEntry(_ImportEntry):
     def _get_namespace(self) -> "Namespace":
         return self.parent.get_namespace_for_resource(self._get_document())
 
-    def get_libdoc(self) -> LibraryDoc:
+    def get_resource_doc(self) -> ResourceDoc:
         with self._lock:
             if self._lib_doc is None:
-                self._lib_doc = self._get_namespace().get_library_doc()
+                self._lib_doc = self.parent.get_resource_doc_from_document(self._get_document())
 
             return self._lib_doc
+
+    def get_libdoc(self) -> ResourceDoc:
+        return self.get_resource_doc()
 
 
 @dataclass(frozen=True, slots=True)
@@ -525,6 +529,18 @@ class LibraryMetaData:
         raise ValueError("Cannot determine filepath base.")
 
 
+@dataclass
+class RobotFileMeta:
+    meta_version: str
+    source: str
+    mtime_ns: int
+
+    @property
+    def filepath_base(self) -> str:
+        p = Path(self.source)
+        return f"{zlib.adler32(str(p.parent).encode('utf-8')):08x}_{p.stem}{p.suffix}"
+
+
 class ImportsManager:
     _logger = LoggingDescriptor()
 
@@ -613,7 +629,7 @@ class ImportsManager:
         self._resource_document_changed_timer_interval = 1
         self._resource_document_changed_documents: Set[TextDocument] = set()
 
-        self._resource_libdoc_cache: "weakref.WeakKeyDictionary[ast.AST, Dict[str, LibraryDoc]]" = (
+        self._resource_libdoc_cache: "weakref.WeakKeyDictionary[ast.AST, Dict[str, ResourceDoc]]" = (
             weakref.WeakKeyDictionary()
         )
 
@@ -675,6 +691,17 @@ class ImportsManager:
 
     def get_namespace_for_resource(self, document: TextDocument) -> "Namespace":
         return self.document_cache_helper.get_resource_namespace(document)
+
+    def get_resource_doc_from_document(self, document: TextDocument) -> ResourceDoc:
+        source = str(document.uri.to_path())
+
+        if not self._is_document_loaded(source):
+            cached = self._get_model_doc_cached(source)
+            if cached is not None:
+                return cached
+
+        model = self.document_cache_helper.get_resource_model(document)
+        return self.get_libdoc_from_model(model, source)
 
     def clear_cache(self) -> None:
         if self.cache_path.exists():
@@ -1407,17 +1434,29 @@ class ImportsManager:
 
             return entry.get_libdoc()
 
+    def _is_document_loaded(self, source: str) -> bool:
+        doc = self.documents_manager.get(Uri.from_path(source))
+        return doc is not None and doc.version is not None
+
     @_logger.call
     def get_libdoc_from_model(
         self,
         model: ast.AST,
         source: str,
-    ) -> LibraryDoc:
+    ) -> ResourceDoc:
+
         entry = self._resource_libdoc_cache.get(model)
         if entry is not None and source in entry:
             return entry[source]
 
-        result = get_model_doc(model=model, source=source)
+        use_disk_cache = not self._is_document_loaded(source)
+
+        result = self._get_model_doc_cached(source) if use_disk_cache else None
+        if result is None:
+            result = get_model_doc(model=model, source=source)
+            if use_disk_cache:
+                self._save_model_doc_cache(source, result)
+
         if entry is None:
             entry = {}
             self._resource_libdoc_cache[model] = entry
@@ -1425,6 +1464,62 @@ class ImportsManager:
         entry[source] = result
 
         return result
+
+    @staticmethod
+    def get_resource_meta(source: str) -> Optional[RobotFileMeta]:
+        try:
+            source_path = normalized_path(source)
+            if source_path.exists():
+                return RobotFileMeta(
+                    __version__,
+                    str(source_path),
+                    os.stat(source_path, follow_symlinks=False).st_mtime_ns,
+                )
+        except OSError:
+            pass
+        return None
+
+    def _get_model_doc_cached(self, source: str) -> Optional[ResourceDoc]:
+        meta = self.get_resource_meta(source)
+        if meta is None:
+            return None
+
+        meta_file = meta.filepath_base + ".meta"
+        if not self.data_cache.cache_data_exists(CacheSection.RESOURCE, meta_file):
+            return None
+
+        try:
+            saved_meta = self.data_cache.read_cache_data(CacheSection.RESOURCE, meta_file, RobotFileMeta)
+            if saved_meta == meta:
+                spec_file = meta.filepath_base + ".spec"
+                return self.data_cache.read_cache_data(CacheSection.RESOURCE, spec_file, ResourceDoc)
+        except (SystemExit, KeyboardInterrupt):
+            raise
+        except BaseException as e:
+            ex = e
+            self._logger.debug(
+                lambda: f"Failed to load cached model doc for {source}: {ex}",
+                context_name="import",
+            )
+
+        return None
+
+    def _save_model_doc_cache(self, source: str, result: ResourceDoc) -> None:
+        meta = self.get_resource_meta(source)
+        if meta is None:
+            return
+
+        try:
+            self.data_cache.save_cache_data(CacheSection.RESOURCE, meta.filepath_base + ".spec", result)
+            self.data_cache.save_cache_data(CacheSection.RESOURCE, meta.filepath_base + ".meta", meta)
+        except (SystemExit, KeyboardInterrupt):
+            raise
+        except BaseException as e:
+            ex = e
+            self._logger.debug(
+                lambda: f"Failed to save model doc cache for {source}: {ex}",
+                context_name="import",
+            )
 
     def _get_variables_libdoc(
         self,
@@ -1629,6 +1724,20 @@ class ImportsManager:
 
         return entry.get_namespace()
 
+    def get_resource_doc_for_resource_import(
+        self,
+        name: str,
+        base_dir: str,
+        sentinel: Any = None,
+        variables: Optional[Dict[str, Any]] = None,
+        *,
+        source: Optional[str] = None,
+    ) -> ResourceDoc:
+        with self._logger.measure_time(lambda: f"getting resource doc for {name}", context_name="import"):
+            entry = self._get_entry_for_resource_import(name, base_dir, sentinel, variables, source=source)
+
+            return entry.get_resource_doc()
+
     def get_libdoc_for_resource_import(
         self,
         name: str,
@@ -1637,10 +1746,10 @@ class ImportsManager:
         variables: Optional[Dict[str, Any]] = None,
         *,
         source: Optional[str] = None,
-    ) -> LibraryDoc:
+    ) -> ResourceDoc:
         entry = self._get_entry_for_resource_import(name, base_dir, sentinel, variables, source=source)
 
-        return entry.get_libdoc()
+        return entry.get_resource_doc()
 
     def complete_library_import(
         self,
