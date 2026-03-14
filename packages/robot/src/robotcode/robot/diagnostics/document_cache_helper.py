@@ -8,7 +8,6 @@ from logging import CRITICAL
 from pathlib import Path
 from typing import (
     Any,
-    Callable,
     Iterable,
     Iterator,
     List,
@@ -176,42 +175,15 @@ class DocumentsCacheHelper:
         return DocumentType.UNKNOWN
 
     def get_tokens(self, document: TextDocument, data_only: bool = False) -> List[Token]:
-        if data_only:
-            return self.__get_tokens_data_only(document)
-        return self.__get_tokens(document)
-
-    def __get_tokens_data_only(self, document: TextDocument) -> List[Token]:
         document_type = self.get_document_type(document)
         if document_type == DocumentType.INIT:
-            return self.get_init_tokens(document, True)
+            return self.__get_init_tokens(document, data_only)
         if document_type == DocumentType.GENERAL:
-            return self.get_general_tokens(document, True)
+            return self.__get_general_tokens(document, data_only)
         if document_type == DocumentType.RESOURCE:
-            return self.get_resource_tokens(document, True)
+            return self.__get_resource_tokens(document, data_only)
 
         raise UnknownFileTypeError(str(document.uri))
-
-    def __get_tokens(self, document: TextDocument) -> List[Token]:
-        document_type = self.get_document_type(document)
-        if document_type == DocumentType.INIT:
-            return self.get_init_tokens(document)
-        if document_type == DocumentType.GENERAL:
-            return self.get_general_tokens(document)
-        if document_type == DocumentType.RESOURCE:
-            return self.get_resource_tokens(document)
-
-        raise UnknownFileTypeError(str(document.uri))
-
-    def get_general_tokens(self, document: TextDocument, data_only: bool = False) -> List[Token]:
-        if document.version is None:
-            if data_only:
-                return self.__get_general_tokens_data_only(document)
-
-            return self.__get_general_tokens(document)
-
-        if data_only:
-            return document.get_cache(self.__get_general_tokens_data_only)
-        return document.get_cache(self.__get_general_tokens)
 
     def __internal_get_tokens(
         self,
@@ -270,85 +242,20 @@ class DocumentsCacheHelper:
 
         return robot.api.get_init_tokens(source, data_only=data_only, tokenize_variables=tokenize_variables)
 
-    def __get_general_tokens_data_only(self, document: TextDocument) -> List[Token]:
+    def __get_general_tokens(self, document: TextDocument, data_only: bool = False) -> List[Token]:
         lang = self.get_languages_for_document(document)
+        with io.StringIO(document.text()) as content:
+            return [e for e in self.__internal_get_tokens(content, data_only, lang=lang)]
 
-        def get(text: str) -> List[Token]:
-            with io.StringIO(text) as content:
-                return [e for e in self.__internal_get_tokens(content, True, lang=lang)]
-
-        return self.__get_tokens_internal(document, get)
-
-    def __get_general_tokens(self, document: TextDocument) -> List[Token]:
+    def __get_resource_tokens(self, document: TextDocument, data_only: bool = False) -> List[Token]:
         lang = self.get_languages_for_document(document)
+        with io.StringIO(document.text()) as content:
+            return [e for e in self.__internal_get_resource_tokens(content, data_only, lang=lang)]
 
-        def get(text: str) -> List[Token]:
-            with io.StringIO(text) as content:
-                return [e for e in self.__internal_get_tokens(content, lang=lang)]
-
-        return self.__get_tokens_internal(document, get)
-
-    def __get_tokens_internal(self, document: TextDocument, get: Callable[[str], List[Token]]) -> List[Token]:
-        return get(document.text())
-
-    def get_resource_tokens(self, document: TextDocument, data_only: bool = False) -> List[Token]:
-        if document.version is None:
-            if data_only:
-                return self.__get_resource_tokens_data_only(document)
-
-            return self.__get_resource_tokens(document)
-
-        if data_only:
-            return document.get_cache(self.__get_resource_tokens_data_only)
-
-        return document.get_cache(self.__get_resource_tokens)
-
-    def __get_resource_tokens_data_only(self, document: TextDocument) -> List[Token]:
+    def __get_init_tokens(self, document: TextDocument, data_only: bool = False) -> List[Token]:
         lang = self.get_languages_for_document(document)
-
-        def get(text: str) -> List[Token]:
-            with io.StringIO(text) as content:
-                return [e for e in self.__internal_get_resource_tokens(content, True, lang=lang)]
-
-        return self.__get_tokens_internal(document, get)
-
-    def __get_resource_tokens(self, document: TextDocument) -> List[Token]:
-        lang = self.get_languages_for_document(document)
-
-        def get(text: str) -> List[Token]:
-            with io.StringIO(text) as content:
-                return [e for e in self.__internal_get_resource_tokens(content, lang=lang)]
-
-        return self.__get_tokens_internal(document, get)
-
-    def get_init_tokens(self, document: TextDocument, data_only: bool = False) -> List[Token]:
-        if document.version is None:
-            if data_only:
-                return self.__get_init_tokens_data_only(document)
-
-            return self.__get_init_tokens(document)
-
-        if data_only:
-            return document.get_cache(self.__get_init_tokens_data_only)
-        return document.get_cache(self.__get_init_tokens)
-
-    def __get_init_tokens_data_only(self, document: TextDocument) -> List[Token]:
-        lang = self.get_languages_for_document(document)
-
-        def get(text: str) -> List[Token]:
-            with io.StringIO(text) as content:
-                return [e for e in self.__internal_get_init_tokens(content, True, lang=lang)]
-
-        return self.__get_tokens_internal(document, get)
-
-    def __get_init_tokens(self, document: TextDocument) -> List[Token]:
-        lang = self.get_languages_for_document(document)
-
-        def get(text: str) -> List[Token]:
-            with io.StringIO(text) as content:
-                return [e for e in self.__internal_get_init_tokens(content, lang=lang)]
-
-        return self.__get_tokens_internal(document, get)
+        with io.StringIO(document.text()) as content:
+            return [e for e in self.__internal_get_init_tokens(content, data_only, lang=lang)]
 
     def get_model(self, document: TextDocument, data_only: bool = True) -> ast.AST:
         document_type = self.get_document_type(document)
@@ -387,59 +294,56 @@ class DocumentsCacheHelper:
     def get_general_model(self, document: TextDocument, data_only: bool = True) -> ast.AST:
         if document.version is None:
             if data_only:
-                return self.__get_general_model_data_only(document, self.get_general_tokens(document, True))
+                return self.__get_general_model_data_only(document)
 
-            return self.__get_general_model(document, self.get_general_tokens(document))
+            return self.__get_general_model(document)
 
         if data_only:
-            return document.get_cache(self.__get_general_model_data_only, self.get_general_tokens(document, True))
+            return document.get_cache(self.__get_general_model_data_only)
 
-        return document.get_cache(self.__get_general_model, self.get_general_tokens(document))
+        return document.get_cache(self.__get_general_model)
 
-    def __get_general_model_data_only(self, document: TextDocument, tokens: Iterable[Any]) -> ast.AST:
-        return self.__get_model(document, tokens, DocumentType.GENERAL)
+    def __get_general_model_data_only(self, document: TextDocument) -> ast.AST:
+        return self.__get_model(document, self.__get_general_tokens(document, True), DocumentType.GENERAL)
 
-    def __get_general_model(self, document: TextDocument, tokens: Iterable[Any]) -> ast.AST:
-        return self.__get_model(document, tokens, DocumentType.GENERAL)
+    def __get_general_model(self, document: TextDocument) -> ast.AST:
+        return self.__get_model(document, self.__get_general_tokens(document), DocumentType.GENERAL)
 
     def get_resource_model(self, document: TextDocument, data_only: bool = True) -> ast.AST:
         if document.version is None:
             if data_only:
-                return self.__get_resource_model_data_only(document, self.get_resource_tokens(document, True))
+                return self.__get_resource_model_data_only(document)
 
-            return self.__get_resource_model(document, self.get_resource_tokens(document))
+            return self.__get_resource_model(document)
 
         if data_only:
-            return document.get_cache(
-                self.__get_resource_model_data_only,
-                self.get_resource_tokens(document, True),
-            )
+            return document.get_cache(self.__get_resource_model_data_only)
 
-        return document.get_cache(self.__get_resource_model, self.get_resource_tokens(document))
+        return document.get_cache(self.__get_resource_model)
 
-    def __get_resource_model_data_only(self, document: TextDocument, tokens: Iterable[Any]) -> ast.AST:
-        return self.__get_model(document, tokens, DocumentType.RESOURCE)
+    def __get_resource_model_data_only(self, document: TextDocument) -> ast.AST:
+        return self.__get_model(document, self.__get_resource_tokens(document, True), DocumentType.RESOURCE)
 
-    def __get_resource_model(self, document: TextDocument, tokens: Iterable[Any]) -> ast.AST:
-        return self.__get_model(document, tokens, DocumentType.RESOURCE)
+    def __get_resource_model(self, document: TextDocument) -> ast.AST:
+        return self.__get_model(document, self.__get_resource_tokens(document), DocumentType.RESOURCE)
 
     def get_init_model(self, document: TextDocument, data_only: bool = True) -> ast.AST:
         if document.version is None:
             if data_only:
-                return self.__get_init_model_data_only(document, self.get_init_tokens(document, True))
+                return self.__get_init_model_data_only(document)
 
-            return self.__get_init_model(document, self.get_init_tokens(document))
+            return self.__get_init_model(document)
 
         if data_only:
-            return document.get_cache(self.__get_init_model_data_only, self.get_init_tokens(document, True))
+            return document.get_cache(self.__get_init_model_data_only)
 
-        return document.get_cache(self.__get_init_model, self.get_init_tokens(document))
+        return document.get_cache(self.__get_init_model)
 
-    def __get_init_model_data_only(self, document: TextDocument, tokens: Iterable[Any]) -> ast.AST:
-        return self.__get_model(document, tokens, DocumentType.INIT)
+    def __get_init_model_data_only(self, document: TextDocument) -> ast.AST:
+        return self.__get_model(document, self.__get_init_tokens(document, True), DocumentType.INIT)
 
-    def __get_init_model(self, document: TextDocument, tokens: Iterable[Any]) -> ast.AST:
-        return self.__get_model(document, tokens, DocumentType.INIT)
+    def __get_init_model(self, document: TextDocument) -> ast.AST:
+        return self.__get_model(document, self.__get_init_tokens(document), DocumentType.INIT)
 
     def get_namespace(self, document: TextDocument) -> Namespace:
         document_type = self.get_document_type(document)
