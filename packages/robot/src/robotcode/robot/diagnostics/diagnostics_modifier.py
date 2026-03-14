@@ -46,6 +46,10 @@ _translation_table = str.maketrans("", "", "_- ")
 ROBOTCODE_MARKER = "robotcode:"
 
 
+def text_contains_diagnostic_modifier(text: str) -> bool:
+    return ROBOTCODE_MARKER in text
+
+
 class ModifiersVisitor(Visitor):
     def __init__(self) -> None:
         super().__init__()
@@ -181,7 +185,7 @@ class DiagnosticModifiersConfig:
 
 
 class DiagnosticsModifier:
-    def __init__(self, model: AST, config: Optional[DiagnosticModifiersConfig] = None) -> None:
+    def __init__(self, model: Optional[AST], config: Optional[DiagnosticModifiersConfig] = None) -> None:
         self.config = config or DiagnosticModifiersConfig()
 
         self.config.ignore = [i.translate(_translation_table).lower() for i in self.config.ignore]
@@ -190,12 +194,13 @@ class DiagnosticsModifier:
         self.config.information = [i.translate(_translation_table).lower() for i in self.config.information]
         self.config.hint = [i.translate(_translation_table).lower() for i in self.config.hint]
 
-        self.model = model
+        self._model = model
 
     @functools.cached_property
     def rules_and_codes(self) -> RulesAndCodes:
         visitor = ModifiersVisitor()
-        visitor.visit(self.model)
+        if self._model is not None:
+            visitor.visit(self._model)
         return visitor.rules_and_codes
 
     def modify_diagnostic(self, diagnostic: Diagnostic) -> Optional[Diagnostic]:

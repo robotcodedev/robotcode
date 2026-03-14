@@ -26,7 +26,11 @@ from robotcode.core.text_document import TextDocument
 from robotcode.core.uri import Uri
 from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.core.workspace import Workspace, WorkspaceFolder
-from robotcode.robot.diagnostics.diagnostics_modifier import DiagnosticModifiersConfig, DiagnosticsModifier
+from robotcode.robot.diagnostics.diagnostics_modifier import (
+    DiagnosticModifiersConfig,
+    DiagnosticsModifier,
+    text_contains_diagnostic_modifier,
+)
 
 from ..config.model import RobotBaseProfile
 from ..utils import get_robot_version
@@ -627,8 +631,16 @@ class DocumentsCacheHelper:
 
     def __get_diagnostic_modifier(self, document: TextDocument) -> DiagnosticsModifier:
         modifiers_config = self.workspace.get_configuration(AnalysisDiagnosticModifiersConfig, document.uri)
+
+        has_modifier = text_contains_diagnostic_modifier(document.text())
+
+        if has_modifier:
+            self._logger.debug(
+                lambda: f"Document {document.uri} contains diagnostic modifier comment, analyzing model for it"
+            )
+
         return DiagnosticsModifier(
-            self.get_model(document, False),
+            self.get_model(document, False) if has_modifier else None,
             DiagnosticModifiersConfig(
                 ignore=self.analysis_config.modifiers.ignore + modifiers_config.ignore,
                 error=self.analysis_config.modifiers.error + modifiers_config.error,
