@@ -112,18 +112,30 @@ class _ImportEntry(ABC):
         self.references: weakref.WeakSet[Any] = weakref.WeakSet()
         self.file_watchers: List[FileWatcherEntry] = []
         self._lock = RLock(default_timeout=120, name="ImportEntryLock")
+        self._release_watchers_finalizer = weakref.finalize(
+            self,
+            _ImportEntry._release_watchers,
+            self.file_watchers,
+            parent.file_watcher_manager,
+        )
 
-    def __del__(self) -> None:
-        try:
-            self._remove_file_watcher()
-        except RuntimeError:
-            pass
+    @staticmethod
+    def _release_watchers(
+        watchers: List[FileWatcherEntry],
+        manager: FileWatcherManagerBase,
+    ) -> None:
+        for watcher in watchers:
+            try:
+                manager.remove_file_watcher_entry(watcher)
+            except RuntimeError:
+                pass
+        watchers.clear()
 
     def _remove_file_watcher(self) -> None:
         if self.file_watchers:
             for watcher in self.file_watchers:
                 self.parent.file_watcher_manager.remove_file_watcher_entry(watcher)
-        self.file_watchers = []
+        self.file_watchers.clear()
 
     @abstractmethod
     def check_file_changed(self, changes: List[FileEvent]) -> Optional[FileChangeType]: ...
@@ -644,10 +656,10 @@ class ImportsManager:
             context_name="imports",
         )
 
-    def __del__(self) -> None:
+    @staticmethod
+    def _shutdown_executor(executor: ProcessPoolExecutor) -> None:
         try:
-            if self._executor is not None:
-                self._executor.shutdown(wait=False)
+            executor.shutdown(wait=False)
         except RuntimeError:
             pass
 
@@ -1250,6 +1262,7 @@ class ImportsManager:
         with self._executor_lock:
             if self._executor is None:
                 self._executor = ProcessPoolExecutor(mp_context=mp.get_context("spawn"))
+                weakref.finalize(self, ImportsManager._shutdown_executor, self._executor)
 
         return self._executor
 
