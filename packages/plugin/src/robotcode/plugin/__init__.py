@@ -335,9 +335,12 @@ class Application:
         self.verbose("Aborted!", file=sys.stderr)
         sys.exit(253)
 
-    def exit(self, code: int = 0) -> None:
+    def exit(self, code: int = 0, fast: bool = False) -> None:
         self.verbose(f"Exit with code {code}")
-        sys.exit(code)
+        if fast:
+            os._exit(code)
+        else:
+            sys.exit(code)
 
     @contextmanager
     def chdir(self, path: Union[str, Path, None]) -> Iterator[Optional[Path]]:

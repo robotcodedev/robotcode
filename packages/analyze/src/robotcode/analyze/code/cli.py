@@ -427,7 +427,7 @@ def code(
 
         app.echo(statistics_str)
 
-        app.exit(result_collector.calculate_return_code().value)
+        app.exit(result_collector.calculate_return_code().value, fast=True)
 
     except (TypeError, ValueError) as e:
         raise click.ClickException(str(e)) from e
