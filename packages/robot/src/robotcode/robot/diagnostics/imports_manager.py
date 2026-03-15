@@ -526,6 +526,19 @@ class RobotFileMeta:
         return f"{zlib.adler32(str(p.parent).encode('utf-8')):08x}_{p.stem}{p.suffix}"
 
 
+@dataclass
+class NamespaceCacheMeta:
+    meta_version: str
+    source: str
+    mtime_ns: int
+    python_executable: str
+
+    @property
+    def filepath_base(self) -> str:
+        p = Path(self.source)
+        return f"{zlib.adler32(str(p.parent).encode('utf-8')):08x}_{p.stem}{p.suffix}"
+
+
 class ImportsManager:
     _logger = LoggingDescriptor()
 
@@ -681,7 +694,7 @@ class ImportsManager:
         source = str(document.uri.to_path())
 
         if not self._is_document_loaded(source):
-            cached = self._get_model_doc_cached(source)
+            cached = self._get_namespace_doc_cached(source)
             if cached is not None:
                 return cached
 
@@ -1437,11 +1450,11 @@ class ImportsManager:
 
         use_disk_cache = not self._is_document_loaded(source)
 
-        result = self._get_model_doc_cached(source) if use_disk_cache else None
+        result = self._get_namespace_doc_cached(source) if use_disk_cache else None
         if result is None:
             result = get_model_doc(model=model, source=source)
             if use_disk_cache:
-                self._save_model_doc_cache(source, result)
+                self._save_namespace_doc_cache(source, result)
 
         if entry is None:
             entry = {}
@@ -1504,6 +1517,63 @@ class ImportsManager:
             ex = e
             self._logger.debug(
                 lambda: f"Failed to save model doc cache for {source}: {ex}",
+                context_name="import",
+            )
+
+    @staticmethod
+    def get_namespace_meta(source: str) -> Optional[NamespaceCacheMeta]:
+        try:
+            source_path = normalized_path(source)
+            if source_path.exists():
+                return NamespaceCacheMeta(
+                    __version__,
+                    str(source_path),
+                    os.stat(source_path, follow_symlinks=False).st_mtime_ns,
+                    sys.executable,
+                )
+        except OSError:
+            pass
+        return None
+
+    def _get_namespace_doc_cached(self, source: str) -> Optional[ResourceDoc]:
+        meta = self.get_namespace_meta(source)
+        if meta is None:
+            return None
+
+        meta_file = meta.filepath_base + ".meta"
+        if not self.data_cache.cache_data_exists(CacheSection.NAMESPACE, meta_file):
+            return None
+
+        try:
+            saved_meta = self.data_cache.read_cache_data(CacheSection.NAMESPACE, meta_file, NamespaceCacheMeta)
+            if saved_meta == meta:
+                spec_file = meta.filepath_base + ".spec"
+                return self.data_cache.read_cache_data(CacheSection.NAMESPACE, spec_file, ResourceDoc)
+        except (SystemExit, KeyboardInterrupt):
+            raise
+        except BaseException as e:
+            ex = e
+            self._logger.debug(
+                lambda: f"Failed to load cached namespace doc for {source}: {ex}",
+                context_name="import",
+            )
+
+        return None
+
+    def _save_namespace_doc_cache(self, source: str, result: ResourceDoc) -> None:
+        meta = self.get_namespace_meta(source)
+        if meta is None:
+            return
+
+        try:
+            self.data_cache.save_cache_data(CacheSection.NAMESPACE, meta.filepath_base + ".spec", result)
+            self.data_cache.save_cache_data(CacheSection.NAMESPACE, meta.filepath_base + ".meta", meta)
+        except (SystemExit, KeyboardInterrupt):
+            raise
+        except BaseException as e:
+            ex = e
+            self._logger.debug(
+                lambda: f"Failed to save namespace doc cache for {source}: {ex}",
                 context_name="import",
             )
 

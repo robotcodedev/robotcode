@@ -624,6 +624,9 @@ class Namespace:
 
         self._in_initialize = False
 
+        fin = weakref.finalize(self, Namespace._finalize, weakref.ref(imports_manager))
+        fin.atexit = False  # type: ignore[misc]
+
     @event
     def has_invalidated(sender) -> None: ...
 
@@ -632,6 +635,18 @@ class Namespace:
 
     @event
     def has_analysed(sender) -> None: ...
+
+    @staticmethod
+    def _finalize(imports_manager_ref: "weakref.ref[ImportsManager]") -> None:
+        """Called when this Namespace is garbage collected.
+
+        Event listeners registered with the imports_manager are cleaned up
+        automatically by the WeakMethod mechanism in the event system when this
+        namespace is collected. Import entry sentinels are cleaned up via
+        weakref.finalize registrations in ImportsManager. This finalizer serves
+        as an explicit marker that the namespace has been finalized and provides
+        a hook for any future cleanup that cannot be handled automatically.
+        """
 
     @property
     def document(self) -> Optional[TextDocument]:
