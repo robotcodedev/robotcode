@@ -415,14 +415,6 @@ class Workspace(LanguageServerProtocolPart, CoreWorkspace, FileWatcherManagerBas
                     # TODO: implement own filewatcher if not supported by language server client
                     self._logger.warning("client did not support workspace/didChangeWatchedFiles.")
 
-            def remove() -> None:
-                try:
-                    self.remove_file_watcher_entry(entry)
-                except RuntimeError:
-                    pass
-
-            weakref.finalize(entry, remove)
-
             self._file_watchers.add(entry)
 
             return entry

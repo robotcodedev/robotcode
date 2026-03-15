@@ -113,30 +113,15 @@ class _ImportEntry(ABC):
         self.references: weakref.WeakSet[Any] = weakref.WeakSet()
         self.file_watchers: List[FileWatcherEntry] = []
         self._lock = RLock(default_timeout=120, name="ImportEntryLock")
-        self._release_watchers_finalizer = weakref.finalize(
-            self,
-            _ImportEntry._release_watchers,
-            self.file_watchers,
-            parent.file_watcher_manager,
-        )
-
-    @staticmethod
-    def _release_watchers(
-        watchers: List[FileWatcherEntry],
-        manager: FileWatcherManagerBase,
-    ) -> None:
-        for watcher in watchers:
-            try:
-                manager.remove_file_watcher_entry(watcher)
-            except RuntimeError:
-                pass
-        watchers.clear()
 
     def _remove_file_watcher(self) -> None:
         if self.file_watchers:
             for watcher in self.file_watchers:
-                self.parent.file_watcher_manager.remove_file_watcher_entry(watcher)
-        self.file_watchers.clear()
+                try:
+                    self.parent.file_watcher_manager.remove_file_watcher_entry(watcher)
+                except RuntimeError:
+                    pass
+            self.file_watchers.clear()
 
     @abstractmethod
     def check_file_changed(self, changes: List[FileEvent]) -> Optional[FileChangeType]: ...
@@ -1429,7 +1414,8 @@ class ImportsManager:
             entry = self._libaries[entry_key]
 
             if not entry.ignore_reference and sentinel is not None and sentinel not in entry.references:
-                weakref.finalize(sentinel, self.__remove_library_entry, entry_key, entry)
+                fin = weakref.finalize(sentinel, self.__remove_library_entry, entry_key, entry)
+                fin.atexit = False  # type: ignore[misc]
                 entry.references.add(sentinel)
 
             return entry.get_libdoc()
@@ -1660,7 +1646,8 @@ class ImportsManager:
 
             if sentinel is not None and sentinel not in entry.references:
                 entry.references.add(sentinel)
-                weakref.finalize(sentinel, self.__remove_variables_entry, entry_key, entry)
+                fin = weakref.finalize(sentinel, self.__remove_variables_entry, entry_key, entry)
+                fin.atexit = False  # type: ignore[misc]
 
             return entry.get_libdoc()
 
@@ -1687,7 +1674,8 @@ class ImportsManager:
 
         if sentinel is not None and sentinel not in entry.references:
             entry.references.add(sentinel)
-            weakref.finalize(sentinel, self.__remove_resource_entry, entry_key, entry)
+            fin = weakref.finalize(sentinel, self.__remove_resource_entry, entry_key, entry)
+            fin.atexit = False  # type: ignore[misc]
 
         return entry
 

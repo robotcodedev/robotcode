@@ -398,13 +398,14 @@ def code(
 
         result_collector = ResultCollector(mask)
         result_collector.start()
+        analyzer = CodeAnalyzer(
+            app=app,
+            analysis_config=analyzer_config.to_workspace_analysis_config(),
+            robot_profile=robot_profile,
+            root_folder=root_folder,
+        )
         try:
-            for e in CodeAnalyzer(
-                app=app,
-                analysis_config=analyzer_config.to_workspace_analysis_config(),
-                robot_profile=robot_profile,
-                root_folder=root_folder,
-            ).run(paths=paths, filter=filter):
+            for e in analyzer.run(paths=paths, filter=filter):
                 result_collector.add_diagnostics_report(e)
 
             for e in result_collector.diagnostics:
