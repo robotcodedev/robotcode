@@ -27,7 +27,7 @@ classifiers = [
   "Framework :: Robot Framework :: Tool",
 ]
 dependencies = [
-  "click>=8.1.0",
+  "click>=8.2.0",
   "pluggy>=1.0.0",
   "tomli_w>=1.0.0",
   "colorama>=0.4.6",
