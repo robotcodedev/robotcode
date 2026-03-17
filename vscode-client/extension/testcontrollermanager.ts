@@ -505,7 +505,7 @@ export class TestControllerManager {
         async (v) =>
           (
             await vscode.workspace.findFiles(
-              new vscode.RelativePattern(v, `**/*.{${this.languageClientsManager.fileExtensions.join(",")}}}`),
+              new vscode.RelativePattern(v, `**/*.{${this.languageClientsManager.fileExtensions.join(",")}}`),
               null,
               1,
             )
