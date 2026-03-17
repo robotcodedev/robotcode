@@ -2,6 +2,107 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [2.4.0](https://github.com/robotcodedev/robotcode/compare/v2.3.1..v2.4.0) - 2026-03-17
+
+### Bug Fixes
+
+- **dependencies:** Update click version to 8.2.0 in requirements files ([6e1220e](https://github.com/robotcodedev/robotcode/commit/6e1220e0542dc12a37dcb6c489d1653238ffbe8e))
+- **vscode:** Fix invalid glob pattern in selectConfigurationProfiles ([58b5a8f](https://github.com/robotcodedev/robotcode/commit/58b5a8f1d1b8a2363a08b7872e20519316a44025))
+
+  Remove extra closing brace in the file extension glob pattern that
+  caused workspace folder detection to fail when selecting configuration
+  profiles.
+
+
+
+### Features
+
+- **plugin:** Add fast exit option to Application.exit method ([acfa7e9](https://github.com/robotcodedev/robotcode/commit/acfa7e9a2d6b138f487183e19b8700d2e88db313))
+
+
+### Performance
+
+- **diagnostics:** Skip full AST model parsing when no robotcode: markers present ([7b3999e](https://github.com/robotcodedev/robotcode/commit/7b3999e203209c67613f27fecacc943ac981d824))
+- **robot:** Cache LibraryDoc for robot and resource files on disk ([9b89623](https://github.com/robotcodedev/robotcode/commit/9b896236c2590571fd5cb4cd95fbb156d0929cb1))
+
+  Resource and robot files are now cached on disk between sessions.
+  On subsequent opens, imports, keywords, and variables from these
+  files are loaded from cache instead of being re-parsed, resulting
+  in faster startup and quicker response times when navigating
+  projects with many resource files.
+
+  The cache is automatically invalidated when a file is modified
+  on disk. Files that are currently open in the editor always use
+  the live content and bypass the disk cache.
+
+- **robot:** Remove unnecessary token list caching from document cache ([5f8591d](https://github.com/robotcodedev/robotcode/commit/5f8591d9a079261769d4a2c718c53124c22d510b))
+
+  Token lists were cached separately in document._cache, but only used
+  as intermediate input for AST model building. No external caller ever
+  accessed the cached token lists directly.
+
+  Move token generation into model builder methods so tokens are only
+  produced on cache miss. On cache hit, neither tokenization nor model
+  building occurs.
+
+  - Eliminates up to 6 cached token lists per document in Language Server
+  - No behavior change for CLI (tokens were already uncached for version=None)
+  - Remove ~80 lines of redundant caching infrastructure
+
+- **robot:** Use file_id tuples instead of os.path.samefile for path comparison ([3f3bd84](https://github.com/robotcodedev/robotcode/commit/3f3bd8430a5c745bae6d0274ab4001acbe73044e))
+
+  Replace repeated os.path.samefile() calls (2x stat per call) in namespace
+  import loops with pre-computed (st_dev, st_ino) tuple comparisons.
+
+  - Add FileId type, file_id() and same_file_id() to core utils
+  - Add lazy source_id property to LibraryDoc (excluded from pickle)
+  - Pre-compute source_id on Namespace init
+  - Compute file_id once per find_resource result instead of per-iteration
+
+
+
+### Refactor
+
+- **imports_manager:** Cleanup and fix correctness issues ([25ef49c](https://github.com/robotcodedev/robotcode/commit/25ef49c3ea0fec68f4f36a702e8f20a3c32c5537))
+- **robot:** Remove unnecessary finalizers and dispose chain ([eaa7e14](https://github.com/robotcodedev/robotcode/commit/eaa7e14e2672cbf8da49a2eb58205384bd34c9cf))
+
+  Remove redundant _release_watchers_finalizer from _ImportEntry — file
+  watcher cleanup is already handled explicitly by _remove_file_watcher()
+  during invalidation and by server_shutdown() at LS shutdown.
+
+  Remove the _dispose_finalizer/dispose() chain through ImportsManager,
+  DocumentsCacheHelper, RobotFrameworkLanguageProvider, CodeAnalyzer, and
+  CLI. With the per-entry finalizers gone, these only cleared dicts that
+  Python already cleans up at process exit.
+
+  Fix broken finalizer in Workspace.add_file_watchers() where the closure
+  captured the entry object, preventing it from ever being garbage
+  collected.
+
+  Set atexit=False on sentinel finalizers so they only fire during normal
+  GC (needed for LS live cleanup), not at interpreter shutdown.
+
+- **robot:** Replace __del__ with weakref.finalize in imports_manager ([e0e8d81](https://github.com/robotcodedev/robotcode/commit/e0e8d81219d1da8682839ab804cbc94408cf7d3f))
+
+  Replace fragile `__del__` methods with `weakref.finalize` in both
+  `_ImportEntry` and `ImportsManager` for reliable cleanup:
+
+  - _ImportEntry: register finalizer in __init__ with file_watchers list
+    and file_watcher_manager as strong refs (no self access needed);
+    change _remove_file_watcher to use .clear() instead of = []
+  - ImportsManager: register finalizer lazily in executor property when
+    ProcessPoolExecutor is created; add static _shutdown_executor callback
+
+  weakref.finalize is guaranteed to run even with circular references
+  and does not prevent garbage collection of reference cycles.
+
+
+
+### Testing
+
+- Add library folder to test project ([45c410f](https://github.com/robotcodedev/robotcode/commit/45c410f452393068afbff24b68f28ef6cd0936d0))
+
+
 ## [2.3.1](https://github.com/robotcodedev/robotcode/compare/v2.3.0..v2.3.1) - 2026-03-12
 
 ### Bug Fixes
