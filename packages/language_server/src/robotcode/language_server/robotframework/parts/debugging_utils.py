@@ -56,7 +56,7 @@ class RobotDebuggingUtilsProtocolPart(RobotLanguageServerProtocolPart, ModelHelp
             return None
 
         namespace = self.parent.documents_cache.get_namespace(document)
-        model = self.parent.documents_cache.get_model(document, False)
+        model = self.parent.documents_cache.get_model(document)
 
         nodes = get_nodes_at_position(model, position)
         node = nodes[-1]

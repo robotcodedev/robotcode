@@ -174,21 +174,20 @@ class DocumentsCacheHelper:
 
         return DocumentType.UNKNOWN
 
-    def get_tokens(self, document: TextDocument, data_only: bool = False) -> List[Token]:
+    def get_tokens(self, document: TextDocument) -> List[Token]:
         document_type = self.get_document_type(document)
         if document_type == DocumentType.INIT:
-            return self.__get_init_tokens(document, data_only)
+            return self.__get_init_tokens(document)
         if document_type == DocumentType.GENERAL:
-            return self.__get_general_tokens(document, data_only)
+            return self.__get_general_tokens(document)
         if document_type == DocumentType.RESOURCE:
-            return self.__get_resource_tokens(document, data_only)
+            return self.__get_resource_tokens(document)
 
         raise UnknownFileTypeError(str(document.uri))
 
     def __internal_get_tokens(
         self,
         source: Any,
-        data_only: bool = False,
         tokenize_variables: bool = False,
         lang: Any = None,
     ) -> Any:
@@ -197,17 +196,16 @@ class DocumentsCacheHelper:
         if get_robot_version() >= (6, 0):
             return robot.api.get_tokens(
                 source,
-                data_only=data_only,
+                data_only=False,
                 tokenize_variables=tokenize_variables,
                 lang=lang,
             )
 
-        return robot.api.get_tokens(source, data_only=data_only, tokenize_variables=tokenize_variables)
+        return robot.api.get_tokens(source, data_only=False, tokenize_variables=tokenize_variables)
 
     def __internal_get_resource_tokens(
         self,
         source: Any,
-        data_only: bool = False,
         tokenize_variables: bool = False,
         lang: Any = None,
     ) -> Any:
@@ -216,17 +214,16 @@ class DocumentsCacheHelper:
         if get_robot_version() >= (6, 0):
             return robot.api.get_resource_tokens(
                 source,
-                data_only=data_only,
+                data_only=False,
                 tokenize_variables=tokenize_variables,
                 lang=lang,
             )
 
-        return robot.api.get_resource_tokens(source, data_only=data_only, tokenize_variables=tokenize_variables)
+        return robot.api.get_resource_tokens(source, data_only=False, tokenize_variables=tokenize_variables)
 
     def __internal_get_init_tokens(
         self,
         source: Any,
-        data_only: bool = False,
         tokenize_variables: bool = False,
         lang: Any = None,
     ) -> Any:
@@ -235,39 +232,39 @@ class DocumentsCacheHelper:
         if get_robot_version() >= (6, 0):
             return robot.api.get_init_tokens(
                 source,
-                data_only=data_only,
+                data_only=False,
                 tokenize_variables=tokenize_variables,
                 lang=lang,
             )
 
-        return robot.api.get_init_tokens(source, data_only=data_only, tokenize_variables=tokenize_variables)
+        return robot.api.get_init_tokens(source, data_only=False, tokenize_variables=tokenize_variables)
 
-    def __get_general_tokens(self, document: TextDocument, data_only: bool = False) -> List[Token]:
+    def __get_general_tokens(self, document: TextDocument) -> List[Token]:
         lang = self.get_languages_for_document(document)
         with io.StringIO(document.text()) as content:
-            return [e for e in self.__internal_get_tokens(content, data_only, lang=lang)]
+            return [e for e in self.__internal_get_tokens(content, lang=lang)]
 
-    def __get_resource_tokens(self, document: TextDocument, data_only: bool = False) -> List[Token]:
+    def __get_resource_tokens(self, document: TextDocument) -> List[Token]:
         lang = self.get_languages_for_document(document)
         with io.StringIO(document.text()) as content:
-            return [e for e in self.__internal_get_resource_tokens(content, data_only, lang=lang)]
+            return [e for e in self.__internal_get_resource_tokens(content, lang=lang)]
 
-    def __get_init_tokens(self, document: TextDocument, data_only: bool = False) -> List[Token]:
+    def __get_init_tokens(self, document: TextDocument) -> List[Token]:
         lang = self.get_languages_for_document(document)
         with io.StringIO(document.text()) as content:
-            return [e for e in self.__internal_get_init_tokens(content, data_only, lang=lang)]
+            return [e for e in self.__internal_get_init_tokens(content, lang=lang)]
 
-    def get_model(self, document: TextDocument, data_only: bool = True) -> ast.AST:
+    def get_model(self, document: TextDocument) -> ast.AST:
         document_type = self.get_document_type(document)
 
         if document_type == DocumentType.INIT:
-            return self.get_init_model(document, data_only)
+            return self.get_init_model(document)
         if document_type == DocumentType.GENERAL:
-            return self.get_general_model(document, data_only)
+            return self.get_general_model(document)
         if document_type == DocumentType.RESOURCE:
-            return self.get_resource_model(document, data_only)
+            return self.get_resource_model(document)
 
-        return self.get_general_model(document, data_only)
+        return self.get_general_model(document)
 
     def __get_model(
         self,
@@ -291,56 +288,29 @@ class DocumentsCacheHelper:
 
         return cast(ast.AST, model)
 
-    def get_general_model(self, document: TextDocument, data_only: bool = True) -> ast.AST:
+    def get_general_model(self, document: TextDocument) -> ast.AST:
         if document.version is None:
-            if data_only:
-                return self.__get_general_model_data_only(document)
-
             return self.__get_general_model(document)
 
-        if data_only:
-            return document.get_cache(self.__get_general_model_data_only)
-
         return document.get_cache(self.__get_general_model)
-
-    def __get_general_model_data_only(self, document: TextDocument) -> ast.AST:
-        return self.__get_model(document, self.__get_general_tokens(document, True), DocumentType.GENERAL)
 
     def __get_general_model(self, document: TextDocument) -> ast.AST:
         return self.__get_model(document, self.__get_general_tokens(document), DocumentType.GENERAL)
 
-    def get_resource_model(self, document: TextDocument, data_only: bool = True) -> ast.AST:
+    def get_resource_model(self, document: TextDocument) -> ast.AST:
         if document.version is None:
-            if data_only:
-                return self.__get_resource_model_data_only(document)
-
             return self.__get_resource_model(document)
 
-        if data_only:
-            return document.get_cache(self.__get_resource_model_data_only)
-
         return document.get_cache(self.__get_resource_model)
-
-    def __get_resource_model_data_only(self, document: TextDocument) -> ast.AST:
-        return self.__get_model(document, self.__get_resource_tokens(document, True), DocumentType.RESOURCE)
 
     def __get_resource_model(self, document: TextDocument) -> ast.AST:
         return self.__get_model(document, self.__get_resource_tokens(document), DocumentType.RESOURCE)
 
-    def get_init_model(self, document: TextDocument, data_only: bool = True) -> ast.AST:
+    def get_init_model(self, document: TextDocument) -> ast.AST:
         if document.version is None:
-            if data_only:
-                return self.__get_init_model_data_only(document)
-
             return self.__get_init_model(document)
 
-        if data_only:
-            return document.get_cache(self.__get_init_model_data_only)
-
         return document.get_cache(self.__get_init_model)
-
-    def __get_init_model_data_only(self, document: TextDocument) -> ast.AST:
-        return self.__get_model(document, self.__get_init_tokens(document, True), DocumentType.INIT)
 
     def __get_init_model(self, document: TextDocument) -> ast.AST:
         return self.__get_model(document, self.__get_init_tokens(document), DocumentType.INIT)
@@ -544,7 +514,7 @@ class DocumentsCacheHelper:
             )
 
         return DiagnosticsModifier(
-            self.get_model(document, False) if has_modifier else None,
+            self.get_model(document) if has_modifier else None,
             DiagnosticModifiersConfig(
                 ignore=self.analysis_config.modifiers.ignore + modifiers_config.ignore,
                 error=self.analysis_config.modifiers.error + modifiers_config.error,

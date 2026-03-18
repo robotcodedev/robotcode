@@ -85,7 +85,7 @@ class RobotRoboCopDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
 
         source = document.uri.to_path()
         config = linter.config_manager.get_config_for_source_file(source)
-        model = self.parent.documents_cache.get_model(document, False)
+        model = self.parent.documents_cache.get_model(document)
 
         if self.parent.robocop_helper.robocop_version >= (8, 0):
             from robocop.source_file import SourceFile
@@ -201,7 +201,7 @@ class RobotRoboCopDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
 
             # TODO find a way to cancel the run_check
             issues = analyser.run_check(
-                self.parent.documents_cache.get_model(document, False),
+                self.parent.documents_cache.get_model(document),
                 str(document.uri.to_path()),
                 document.text(),
             )  # type: ignore[no-untyped-call]

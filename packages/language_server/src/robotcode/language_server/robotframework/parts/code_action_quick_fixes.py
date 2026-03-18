@@ -155,7 +155,7 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
             CodeActionTriggerKind.INVOKED,
             CodeActionTriggerKind.AUTOMATIC,
         ]:
-            model = self.parent.documents_cache.get_model(document, False)
+            model = self.parent.documents_cache.get_model(document)
             namespace = self.parent.documents_cache.get_namespace(document)
 
             for diagnostic in (
@@ -218,7 +218,7 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
         if document is None:
             return None
 
-        model = self.parent.documents_cache.get_model(document, False)
+        model = self.parent.documents_cache.get_model(document)
         node = get_node_at_position(model, data.range.start)
 
         if isinstance(node, (KeywordCall, Fixture, TestTemplate, Template)):
@@ -282,7 +282,7 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
         return None
 
     def _apply_create_keyword(self, document: TextDocument, insert_text: str) -> Tuple[WorkspaceEdit, Range]:
-        model = self.parent.documents_cache.get_model(document, False)
+        model = self.parent.documents_cache.get_model(document)
         namespace = self.parent.documents_cache.get_namespace(document)
 
         insert_text, insert_range = self.create_insert_keyword_workspace_edit(document, model, namespace, insert_text)
@@ -406,7 +406,7 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
                     diagnostic.range.start.line == diagnostic.range.end.line
                     and diagnostic.range.start.character < diagnostic.range.end.character
                 ):
-                    model = self.parent.documents_cache.get_model(document, False)
+                    model = self.parent.documents_cache.get_model(document)
                     nodes = get_nodes_at_position(model, range.start)
 
                     if not any(n for n in nodes if isinstance(n, (Keyword, TestCase))):
@@ -451,7 +451,7 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
             if document is None:
                 return None
 
-            model = self.parent.documents_cache.get_model(document, False)
+            model = self.parent.documents_cache.get_model(document)
             nodes = get_nodes_at_position(model, data.range.start)
 
             if not any(n for n in nodes if isinstance(n, (Keyword, TestCase))):
@@ -554,7 +554,7 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
             if document is None:
                 return None
 
-            model = self.parent.documents_cache.get_model(document, False)
+            model = self.parent.documents_cache.get_model(document)
             nodes = get_nodes_at_position(model, data.range.start)
 
             node = nodes[-1] if nodes else None
@@ -679,7 +679,7 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
                     if not text:
                         continue
 
-                    model = self.parent.documents_cache.get_model(document, False)
+                    model = self.parent.documents_cache.get_model(document)
                     nodes = get_nodes_at_position(model, range.start)
 
                     if not any(n for n in nodes if isinstance(n, Keyword)):
@@ -713,7 +713,7 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
             if not text:
                 return None
 
-            model = self.parent.documents_cache.get_model(document, False)
+            model = self.parent.documents_cache.get_model(document)
             nodes = get_nodes_at_position(model, data.range.start)
 
             keyword = next((n for n in nodes if isinstance(n, Keyword)), None)

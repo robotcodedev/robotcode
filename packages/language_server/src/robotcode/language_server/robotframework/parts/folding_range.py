@@ -151,4 +151,4 @@ class RobotFoldingRangeProtocolPart(RobotLanguageServerProtocolPart):
     @language_id("robotframework")
     @_logger.call
     def collect(self, sender: Any, document: TextDocument) -> Optional[List[FoldingRange]]:
-        return _Visitor.find_from(self.parent.documents_cache.get_model(document, False), self)
+        return _Visitor.find_from(self.parent.documents_cache.get_model(document), self)

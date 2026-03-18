@@ -94,7 +94,7 @@ class RobotFormattingProtocolPart(RobotLanguageServerProtocolPart):
         runner = RobocopFormatter(config_manager)
         runner.config = config
 
-        model = self.parent.documents_cache.get_model(document, False)
+        model = self.parent.documents_cache.get_model(document)
         if self.parent.robocop_helper.robocop_version >= (8, 0):
             from robocop.source_file import SourceFile
 
@@ -131,7 +131,7 @@ class RobotFormattingProtocolPart(RobotLanguageServerProtocolPart):
             SeparatorNormalizer,
         )
 
-        model = cast(File, self.parent.documents_cache.get_model(document, False))
+        model = cast(File, self.parent.documents_cache.get_model(document))
 
         Cleaner().visit(model)
         NewlineNormalizer(self.line_separator, self.short_test_name_length).visit(model)

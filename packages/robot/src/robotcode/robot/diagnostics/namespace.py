@@ -551,7 +551,7 @@ class Namespace:
 
         self.imports_manager = imports_manager
 
-        self.model = model
+        self.model: Optional[ast.AST] = model
         self.source = source
         self.source_id = file_id(source)
         self._document = weakref.ref(document) if document is not None else None
@@ -805,6 +805,7 @@ class Namespace:
     def get_library_doc(self) -> ResourceDoc:
         with self._library_doc_lock:
             if self._library_doc is None:
+                assert self.model is not None
                 self._library_doc = self.imports_manager.get_libdoc_from_model(self.model, self.source)
 
             return self._library_doc
@@ -1792,6 +1793,7 @@ class Namespace:
                 self.ensure_initialized()
 
                 with self._logger.measure_time(lambda: f"analyzing document {self.source}", context_name="analyze"):
+                    assert self.model is not None
                     analyzer = NamespaceAnalyzer(self.model, self, self.create_finder())
 
                     try:
@@ -1834,6 +1836,8 @@ class Namespace:
                     finally:
                         del analyzer
                         self._analyzed = not canceled
+                        if self._analyzed:
+                            self.model = None
 
                 self.has_analysed(self)
 

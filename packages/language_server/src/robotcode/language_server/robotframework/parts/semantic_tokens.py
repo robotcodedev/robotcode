@@ -1651,7 +1651,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
         Returns:
             SemanticTokens with encoded token data
         """
-        model = self.parent.documents_cache.get_model(document, False)
+        model = self.parent.documents_cache.get_model(document)
         namespace = self.parent.documents_cache.get_namespace(document)
 
         builtin_library_doc = next(

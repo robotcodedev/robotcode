@@ -42,7 +42,7 @@ class RobotDocumentSymbolsProtocolPart(RobotLanguageServerProtocolPart):
     def collect(
         self, sender: Any, document: TextDocument
     ) -> Optional[Union[List[DocumentSymbol], List[SymbolInformation], None]]:
-        return _Visitor.find_from(self.parent.documents_cache.get_model(document, False), self)
+        return _Visitor.find_from(self.parent.documents_cache.get_model(document), self)
 
 
 class _Visitor(Visitor):

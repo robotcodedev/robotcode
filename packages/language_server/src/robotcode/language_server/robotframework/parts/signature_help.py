@@ -83,7 +83,7 @@ class RobotSignatureHelpProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
         context: Optional[SignatureHelpContext] = None,
     ) -> Optional[SignatureHelp]:
         result_node = get_node_at_position(
-            self.parent.documents_cache.get_model(document, False),
+            self.parent.documents_cache.get_model(document),
             position,
             include_end=True,
         )

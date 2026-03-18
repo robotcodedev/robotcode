@@ -168,7 +168,7 @@ class RobotCompletionProtocolPart(RobotLanguageServerProtocolPart):
         context: Optional[CompletionContext],
     ) -> Union[List[CompletionItem], CompletionList, None]:
         namespace = self.parent.documents_cache.get_initialized_namespace(document)
-        model = self.parent.documents_cache.get_model(document, False)
+        model = self.parent.documents_cache.get_model(document)
 
         config = self.get_config(document)
         self.doc_cache = {}
@@ -190,7 +190,7 @@ class RobotCompletionProtocolPart(RobotLanguageServerProtocolPart):
                 document = self.parent.documents.get(document_uri)
                 if document is not None:
                     namespace = self.parent.documents_cache.get_initialized_namespace(document)
-                    model = self.parent.documents_cache.get_model(document, False)
+                    model = self.parent.documents_cache.get_model(document)
                     if namespace is not None:
                         config = self.get_config(document)
 

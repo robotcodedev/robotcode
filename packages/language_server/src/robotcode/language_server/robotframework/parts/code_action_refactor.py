@@ -267,7 +267,7 @@ class RobotCodeActionRefactorProtocolPart(RobotLanguageServerProtocolPart, Model
         if range.start == range.end:
             return None
 
-        model = self.parent.documents_cache.get_model(document, False)
+        model = self.parent.documents_cache.get_model(document)
         start_nodes = get_nodes_at_position(model, range.start)
 
         enabled = False
@@ -427,7 +427,7 @@ class RobotCodeActionRefactorProtocolPart(RobotLanguageServerProtocolPart, Model
             (context.only and CodeActionKind.REFACTOR_EXTRACT in context.only)
             or context.trigger_kind in [CodeActionTriggerKind.INVOKED, CodeActionTriggerKind.AUTOMATIC]
         ):
-            model = self.parent.documents_cache.get_model(document, False)
+            model = self.parent.documents_cache.get_model(document)
             node = get_node_at_position(model, range.start)
 
             if not isinstance(node, KeywordCall) or node.assign:
@@ -480,7 +480,7 @@ class RobotCodeActionRefactorProtocolPart(RobotLanguageServerProtocolPart, Model
         if document is None:
             return None
 
-        model = self.parent.documents_cache.get_model(document, False)
+        model = self.parent.documents_cache.get_model(document)
         nodes = get_nodes_at_position(model, range.start)
         if not nodes:
             return None
@@ -544,7 +544,7 @@ class RobotCodeActionRefactorProtocolPart(RobotLanguageServerProtocolPart, Model
         if range.start == range.end:
             return None
 
-        model = self.parent.documents_cache.get_model(document, False)
+        model = self.parent.documents_cache.get_model(document)
         start_nodes = get_nodes_at_position(model, range.start)
 
         enabled = False
@@ -595,7 +595,7 @@ class RobotCodeActionRefactorProtocolPart(RobotLanguageServerProtocolPart, Model
         lines = document.get_lines()
         spaces = "".join(itertools.takewhile(str.isspace, lines[data.range.start.line]))
 
-        model = self.parent.documents_cache.get_model(document, False)
+        model = self.parent.documents_cache.get_model(document)
         namespace = self.parent.documents_cache.get_namespace(document)
 
         orig_keyword_name = "New Keyword"

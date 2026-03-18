@@ -51,7 +51,7 @@ class RobotInlineValueProtocolPart(RobotLanguageServerProtocolPart, ModelHelper)
 
         namespace = self.parent.documents_cache.get_namespace(document)
 
-        model = self.parent.documents_cache.get_model(document, False)
+        model = self.parent.documents_cache.get_model(document)
 
         real_range = Range(range.start, min(range.end, context.stopped_location.end))
 

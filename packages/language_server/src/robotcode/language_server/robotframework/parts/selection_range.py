@@ -35,7 +35,7 @@ class RobotSelectionRangeProtocolPart(RobotLanguageServerProtocolPart, ModelHelp
 
         results: List[SelectionRange] = []
         for position in positions:
-            nodes = get_nodes_at_position(self.parent.documents_cache.get_model(document, True), position)
+            nodes = get_nodes_at_position(self.parent.documents_cache.get_model(document), position)
 
             if not nodes:
                 break

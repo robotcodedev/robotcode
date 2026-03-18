@@ -67,7 +67,7 @@ class RobotCodeActionDocumentationProtocolPart(RobotLanguageServerProtocolPart, 
 
         namespace = self.parent.documents_cache.get_namespace(document)
 
-        model = self.parent.documents_cache.get_model(document, False)
+        model = self.parent.documents_cache.get_model(document)
         node = get_node_at_position(model, range.start)
 
         if context.only and isinstance(node, (LibraryImport, ResourceImport)):
