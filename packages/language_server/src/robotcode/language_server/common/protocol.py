@@ -161,9 +161,6 @@ class LanguageServerProtocol(JsonRPCProtocol):
 
         self.is_initialized = Event()
 
-    def __del__(self) -> None:
-        self.trace = TraceValues.OFF
-
     @event
     def on_shutdown(sender) -> None:  # pragma: no cover, NOSONAR
         ...

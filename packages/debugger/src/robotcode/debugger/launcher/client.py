@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import asyncio
+import logging
+import weakref
 from typing import Any, Optional, Sequence
 
 from robotcode.core.event import event
@@ -38,6 +40,17 @@ class DAPClientError(Exception):
     pass
 
 
+class _DAPClientState:
+    __slots__ = ("closed", "logger", "loop", "protocol", "transport")
+
+    def __init__(self, logger: logging.Logger) -> None:
+        self.logger = logger
+        self.loop: Optional[asyncio.AbstractEventLoop] = None
+        self.protocol: Optional[DAPClientProtocol] = None
+        self.transport: Optional[asyncio.BaseTransport] = None
+        self.closed = False
+
+
 class DAPClient:
     _logger = LoggingDescriptor()
 
@@ -48,8 +61,43 @@ class DAPClient:
     ) -> None:
         self.parent = parent
         self.tcp_params = tcp_params
-        self._protocol: Optional[DAPClientProtocol] = None
-        self._transport: Optional[asyncio.BaseTransport] = None
+        self._state = _DAPClientState(
+            logging.getLogger(f"{type(self).__module__}.{type(self).__qualname__}"),
+        )
+        self._finalizer = weakref.finalize(self, DAPClient._finalize_resources, self._state)
+
+    @staticmethod
+    def _finalize_resources(state: _DAPClientState) -> None:
+        if state.closed or state.transport is None:
+            return
+
+        try:
+            if state.loop is not None and not state.loop.is_closed() and state.loop.is_running():
+                state.loop.call_soon_threadsafe(state.transport.close)
+            else:
+                state.transport.close()
+        except BaseException:
+            pass
+
+        state.logger.debug(
+            "DAPClient was garbage collected without calling close(); the transport was closed best-effort only.",
+        )
+
+    @property
+    def _protocol(self) -> Optional[DAPClientProtocol]:
+        return self._state.protocol
+
+    @_protocol.setter
+    def _protocol(self, value: Optional[DAPClientProtocol]) -> None:
+        self._state.protocol = value
+
+    @property
+    def _transport(self) -> Optional[asyncio.BaseTransport]:
+        return self._state.transport
+
+    @_transport.setter
+    def _transport(self, value: Optional[asyncio.BaseTransport]) -> None:
+        self._state.transport = value
 
     @event
     def on_closed(sender) -> None: ...
@@ -61,10 +109,9 @@ class DAPClient:
             self._transport = None
             self._protocol = None
 
+        self._state.closed = True
+        self._finalizer.detach()
         self.on_closed(self)
-
-    def __del__(self) -> None:
-        self.close()
 
     @_logger.call
     def on_connection_lost(self, sender: Any, exc: Optional[BaseException]) -> None:
@@ -76,6 +123,8 @@ class DAPClient:
         async def wait() -> None:
             while self._protocol is None:
                 try:
+                    current_loop = asyncio.get_running_loop()
+                    self._state.loop = current_loop
                     if self.tcp_params.host is not None:
                         if isinstance(self.tcp_params.host, Sequence):
                             host = self.tcp_params.host[0]
@@ -86,7 +135,7 @@ class DAPClient:
                     (
                         self._transport,
                         protocol,
-                    ) = await asyncio.get_running_loop().create_connection(
+                    ) = await current_loop.create_connection(
                         self._create_protocol,
                         host=host,
                         port=self.tcp_params.port,

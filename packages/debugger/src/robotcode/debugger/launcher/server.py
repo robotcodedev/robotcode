@@ -85,6 +85,11 @@ class LauncherDebugAdapterProtocol(DebugAdapterProtocol):
     def connected(self) -> bool:
         return self._client is not None and self._client.connected
 
+    def close(self) -> None:
+        if self._client is not None:
+            self._client.close()
+            self._client = None
+
     @rpc_method(name="initialize", param_type=InitializeRequestArguments)
     async def _initialize(self, arguments: InitializeRequestArguments, *args: Any, **kwargs: Any) -> Capabilities:
         self._initialize_arguments = arguments
@@ -352,3 +357,9 @@ class LauncherServer(JsonRPCServer[LauncherDebugAdapterProtocol]):
         self.protocol = LauncherDebugAdapterProtocol(debugger_script=self.debugger_script)
 
         return self.protocol
+
+    def _close(self) -> None:
+        if self.protocol is not None:
+            self.protocol.close()
+
+        super()._close()

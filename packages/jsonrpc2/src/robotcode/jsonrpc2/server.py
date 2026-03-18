@@ -1,8 +1,10 @@
 import abc
 import asyncio
 import io
+import logging
 import sys
 import threading
+import weakref
 from concurrent.futures import ThreadPoolExecutor
 from types import TracebackType
 from typing import (
@@ -50,6 +52,18 @@ class StdOutTransportAdapter(asyncio.Transport):
         self.wfile.flush()
 
 
+class _JsonRPCServerState:
+    __slots__ = ("closed", "in_closing", "logger", "loop", "server", "stdio_stop_event")
+
+    def __init__(self, loop: asyncio.AbstractEventLoop, logger: logging.Logger) -> None:
+        self.logger = logger
+        self.loop = loop
+        self.server: Optional[asyncio.AbstractServer] = None
+        self.stdio_stop_event: Optional[threading.Event] = None
+        self.in_closing = False
+        self.closed = False
+
+
 class JsonRPCServer(Generic[TProtocol], abc.ABC):
     _logger = LoggingDescriptor()
 
@@ -65,24 +79,78 @@ class JsonRPCServer(Generic[TProtocol], abc.ABC):
 
         self._run_func: Optional[Callable[[], None]] = None
         self._serve_func: Optional[Callable[[], Coroutine[None, None, None]]] = None
-        self._server: Optional[asyncio.AbstractServer] = None
-
-        self._stdio_stop_event: Optional[threading.Event] = None
-
-        self._in_closing = False
-        self._closed = False
 
         try:
-            self.loop = asyncio.get_event_loop()
+            loop = asyncio.get_event_loop()
         except RuntimeError:
-            self.loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(self.loop)
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+
+        self._state = _JsonRPCServerState(
+            loop,
+            logging.getLogger(f"{type(self).__module__}.{type(self).__qualname__}"),
+        )
+        self._finalizer = weakref.finalize(self, JsonRPCServer._finalize_resources, self._state)
 
         if self.loop is not None:
             self.loop.slow_callback_duration = 10
 
-    def __del__(self) -> None:
-        self.close()
+    @staticmethod
+    def _finalize_resources(state: _JsonRPCServerState) -> None:
+        if state.closed:
+            return
+
+        if state.stdio_stop_event is not None:
+            state.stdio_stop_event.set()
+
+        if state.server is not None:
+            try:
+                if not state.loop.is_closed() and state.loop.is_running():
+                    state.loop.call_soon_threadsafe(state.server.close)
+                else:
+                    state.server.close()
+            except BaseException:
+                pass
+
+        state.logger.debug(
+            "JsonRPCServer was garbage collected without calling close(); resources were cleaned up best-effort only.",
+        )
+
+    @property
+    def loop(self) -> asyncio.AbstractEventLoop:
+        return self._state.loop
+
+    @property
+    def _server(self) -> Optional[asyncio.AbstractServer]:
+        return self._state.server
+
+    @_server.setter
+    def _server(self, value: Optional[asyncio.AbstractServer]) -> None:
+        self._state.server = value
+
+    @property
+    def _stdio_stop_event(self) -> Optional[threading.Event]:
+        return self._state.stdio_stop_event
+
+    @_stdio_stop_event.setter
+    def _stdio_stop_event(self, value: Optional[threading.Event]) -> None:
+        self._state.stdio_stop_event = value
+
+    @property
+    def _in_closing(self) -> bool:
+        return self._state.in_closing
+
+    @_in_closing.setter
+    def _in_closing(self, value: bool) -> None:
+        self._state.in_closing = value
+
+    @property
+    def _closed(self) -> bool:
+        return self._state.closed
+
+    @_closed.setter
+    def _closed(self, value: bool) -> None:
+        self._state.closed = value
 
     @_logger.call
     def start(self) -> None:
@@ -122,6 +190,36 @@ class JsonRPCServer(Generic[TProtocol], abc.ABC):
         if self._server and self._server.is_serving():
             self._server.close()
 
+    def _close_on_loop_thread(self) -> None:
+        if self.loop.is_running() and getattr(self.loop, "_thread_id", None) != threading.get_ident():
+            closed_event = threading.Event()
+
+            def close_on_loop() -> None:
+                try:
+                    self._close()
+                finally:
+                    closed_event.set()
+
+            self.loop.call_soon_threadsafe(close_on_loop)
+            closed_event.wait()
+            return
+
+        self._close()
+
+    def _wait_closed_sync(self) -> None:
+        if self._server is None or self.loop.is_closed():
+            return
+
+        if self.loop.is_running():
+            if getattr(self.loop, "_thread_id", None) == threading.get_ident():
+                asyncio.create_task(self._server.wait_closed(), name=f"{type(self).__name__}.wait_closed")
+                return
+
+            asyncio.run_coroutine_threadsafe(self._server.wait_closed(), self.loop).result()
+            return
+
+        self.loop.run_until_complete(self._server.wait_closed())
+
     @_logger.call
     def close(self) -> None:
         if self._in_closing or self._closed:
@@ -129,10 +227,12 @@ class JsonRPCServer(Generic[TProtocol], abc.ABC):
 
         self._in_closing = True
         try:
-            self._close()
+            self._close_on_loop_thread()
+            self._wait_closed_sync()
         finally:
             self._in_closing = False
             self._closed = True
+            self._finalizer.detach()
 
     @_logger.call
     async def close_async(self) -> None:
@@ -147,6 +247,7 @@ class JsonRPCServer(Generic[TProtocol], abc.ABC):
         finally:
             self._in_closing = False
             self._closed = True
+            self._finalizer.detach()
 
     async def __aenter__(self) -> Self:
         await self.start_async()
