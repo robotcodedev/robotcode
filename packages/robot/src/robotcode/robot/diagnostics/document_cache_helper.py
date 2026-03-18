@@ -77,6 +77,7 @@ class DocumentsCacheHelper:
         self._imports_managers_lock = threading.RLock()
         self._imports_managers: weakref.WeakKeyDictionary[WorkspaceFolder, ImportsManager] = weakref.WeakKeyDictionary()
         self._default_imports_manager: Optional[ImportsManager] = None
+        self._workspace_languages_lock = threading.RLock()
         self._workspace_languages: weakref.WeakKeyDictionary[WorkspaceFolder, Optional[Languages]] = (
             weakref.WeakKeyDictionary()
         )
@@ -101,32 +102,33 @@ class DocumentsCacheHelper:
         if folder is None:
             return None
 
-        if folder in self._workspace_languages:
-            return self._workspace_languages[folder]
+        with self._workspace_languages_lock:
+            if folder in self._workspace_languages:
+                return self._workspace_languages[folder]
 
-        self._logger.debug(lambda: f"Get language config for {uri} in workspace {folder.uri}")
-        config = self.workspace.get_configuration(RobotConfig, folder.uri)
+            self._logger.debug(lambda: f"Get language config for {uri} in workspace {folder.uri}")
+            config = self.workspace.get_configuration(RobotConfig, folder.uri)
 
-        languages = [str(v) for v in self.robot_profile.languages or []]
-        languages += config.languages or []
+            languages = [str(v) for v in self.robot_profile.languages or []]
+            languages += config.languages or []
 
-        if not languages:
-            self._workspace_languages[folder] = None
-            return None
+            if not languages:
+                self._workspace_languages[folder] = None
+                return None
 
-        result = RobotLanguages()
-        for lang in languages:
-            try:
-                result.add_language(lang)
-            except ValueError as e:
-                ex = e
-                self._logger.exception(
-                    lambda: f"Language configuration is not valid: {ex}",
-                    exc_info=ex,
-                    level=CRITICAL,
-                )
+            result = RobotLanguages()
+            for lang in languages:
+                try:
+                    result.add_language(lang)
+                except ValueError as e:
+                    ex = e
+                    self._logger.exception(
+                        lambda: f"Language configuration is not valid: {ex}",
+                        exc_info=ex,
+                        level=CRITICAL,
+                    )
 
-        self._workspace_languages[folder] = result
+            self._workspace_languages[folder] = result
 
         return cast(Languages, RobotLanguages(result.languages))
 
