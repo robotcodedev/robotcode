@@ -335,3 +335,7 @@ results/
 
 # kilocode
 .kilocode/
+
+# .agents
+.agents/
+skills-lock.json
