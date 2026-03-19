@@ -1155,27 +1155,7 @@
             "default": true,
             "markdownDescription": "Enables 'robocop' code analysis, if installed. See [robocop](https://robocop.readthedocs.io/)",
             "scope": "resource"
-          },
-          "robotcode.robocop.include": {
-            "type": "array",
-            "default": [],
-            "items": {
-              "type": "string"
-            },
-            "description": "Include specified 'robocop' rules. You can define rule by its name or id. Glob patterns are supported",
-            "scope": "resource",
-            "markdownDeprecationMessage": "This is a setting for an old `robotframework-robocop` version `<6.0` and will be removed in the future and will be removed in the future and is ignored if you have `robotframework-robocop>=6.0` installed."
-          },
-          "robotcode.robocop.exclude": {
-            "type": "array",
-            "default": [],
-            "items": {
-              "type": "string"
-            },
-            "description": "Exclude specified 'robocop' rules. You can define rule by its name or id. Glob patterns are supported",
-            "scope": "resource",
-            "markdownDeprecationMessage": "This is a setting for an old `robotframework-robocop` version `<6.0` and will be removed in the future and is ignored if you have `robotframework-robocop>=6.0` installed."
-          },
+          },          
           "robotcode.robocop.ignoreGitDir": {
             "type": "boolean",
             "default": false,
@@ -1193,16 +1173,6 @@
             "default": false,
             "markdownDescription": "Do not load configuration files. Corresponds to the `--ignore-file-config` option of _robocop_ See [robocop](https://robocop.readthedocs.io/)",
             "scope": "resource"
-          },
-          "robotcode.robocop.configurations": {
-            "type": "array",
-            "default": [],
-            "items": {
-              "type": "string"
-            },
-            "description": "Configure checker or report with parameter value. Corresponds to the `--configure` option of _robocop_ See [robocop](https://robocop.readthedocs.io/)",
-            "scope": "resource",
-            "markdownDeprecationMessage": "This is a setting for an old `robotframework-robocop` version `<6.0` and will be removed in the future and will be removed in the future and is ignored if you have `robotframework-robocop>=6.0` installed."
           }
         }
       },
