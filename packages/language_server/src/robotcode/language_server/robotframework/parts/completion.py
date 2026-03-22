@@ -493,7 +493,7 @@ class CompletionCollector(ModelHelper):
 
                         elif (name := data.get("name", None)) is not None:
                             try:
-                                lib_doc = self.namespace.imports_manager.get_libdoc_for_resource_import(
+                                lib_doc = self.namespace.imports_manager.get_resource_doc_for_resource_import(
                                     name,
                                     str(document.uri.to_path().parent),
                                     variables=self.namespace.get_resolvable_variables(),
@@ -623,7 +623,7 @@ class CompletionCollector(ModelHelper):
                 text_edit=TextEdit(range=range, new_text=s.name[2:-1]),
                 filter_text=s.name[2:-1] if range is not None else None,
             )
-            for s in (self.namespace.get_variable_matchers(list(reversed(nodes)), position)).values()
+            for s in (self.namespace.get_variable_matchers(position)).values()
             if s.name is not None and (s.name_token is None or not position.is_in_range(range_from_token(s.name_token)))
         ]
 
@@ -1705,7 +1705,7 @@ class CompletionCollector(ModelHelper):
                 complete_list = self.namespace.imports_manager.complete_library_import(
                     first_part if first_part else None,
                     str(self.document.uri.to_path().parent),
-                    self.namespace.get_resolvable_variables(nodes_at_position, position),
+                    self.namespace.get_resolvable_variables(position),
                 )
                 if not complete_list:
                     return None
@@ -1907,7 +1907,7 @@ class CompletionCollector(ModelHelper):
             complete_list = self.namespace.imports_manager.complete_resource_import(
                 first_part if first_part else None,
                 str(self.document.uri.to_path().parent),
-                self.namespace.get_resolvable_variables(nodes_at_position, position),
+                self.namespace.get_resolvable_variables(position),
             )
             if not complete_list:
                 return None
@@ -2031,7 +2031,7 @@ class CompletionCollector(ModelHelper):
                 complete_list = self.namespace.imports_manager.complete_variables_import(
                     first_part if first_part else None,
                     str(self.document.uri.to_path().parent),
-                    self.namespace.get_resolvable_variables(nodes_at_position, position),
+                    self.namespace.get_resolvable_variables(position),
                 )
                 if not complete_list:
                     return None

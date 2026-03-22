@@ -16,7 +16,6 @@ from robotcode.core.text_document import TextDocument
 from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.robot.diagnostics.model_helper import ModelHelper
 from robotcode.robot.utils.ast import (
-    get_nodes_at_position,
     iter_nodes,
     range_from_node,
     range_from_token,
@@ -55,8 +54,6 @@ class RobotInlineValueProtocolPart(RobotLanguageServerProtocolPart, ModelHelper)
 
         real_range = Range(range.start, min(range.end, context.stopped_location.end))
 
-        nodes = get_nodes_at_position(model, context.stopped_location.start)
-
         def get_tokens() -> Iterator[Tuple[Token, ast.AST]]:
             for n in iter_nodes(model):
                 r = range_from_node(n)
@@ -76,12 +73,12 @@ class RobotInlineValueProtocolPart(RobotLanguageServerProtocolPart, ModelHelper)
         ):
             if token.type == RobotToken.ARGUMENT and isinstance(node, self.get_expression_statement_types()):
                 for t, var in self.iter_expression_variables_from_token(
-                    token, namespace, nodes, context.stopped_location.start
+                    token, namespace, context.stopped_location.start
                 ):
                     if var.name != "${CURDIR}":
                         result.append(InlineValueEvaluatableExpression(range_from_token(t), var.name))
 
-            for t, var in self.iter_variables_from_token(token, namespace, nodes, context.stopped_location.start):
+            for t, var in self.iter_variables_from_token(token, namespace, context.stopped_location.start):
                 if var.name != "${CURDIR}":
                     result.append(InlineValueEvaluatableExpression(range_from_token(t), var.name))
 

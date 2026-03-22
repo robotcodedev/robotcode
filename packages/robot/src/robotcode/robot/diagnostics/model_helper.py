@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import ast
 import re
 import token as python_token
 from io import StringIO
@@ -210,7 +209,7 @@ class ModelHelper:
         position: Position,
         analyse_run_keywords: bool = True,
     ) -> Optional[Tuple[Optional[KeywordDoc], Token]]:
-        finder = namespace.get_finder()
+        finder = namespace.finder
         keyword_doc = finder.find_keyword(keyword_name, raise_keyword_error=False)
         if keyword_doc is None:
             return None
@@ -265,7 +264,6 @@ class ModelHelper:
     def iter_expression_variables_from_token(
         expression: Token,
         namespace: "Namespace",
-        nodes: Optional[List[ast.AST]],
         position: Optional[Position] = None,
         skip_commandline_variables: bool = False,
         skip_local_variables: bool = False,
@@ -278,11 +276,9 @@ class ModelHelper:
                     if toknum == python_token.NAME:
                         var = namespace.find_variable(
                             f"${{{tokval}}}",
-                            nodes,
                             position,
                             skip_commandline_variables=skip_commandline_variables,
                             skip_local_variables=skip_local_variables,
-                            ignore_error=True,
                         )
                         sub_token = Token(
                             expression.type,
@@ -394,7 +390,6 @@ class ModelHelper:
         cls,
         token: Token,
         namespace: "Namespace",
-        nodes: Optional[List[ast.AST]],
         position: Optional[Position] = None,
         skip_commandline_variables: bool = False,
         skip_local_variables: bool = False,
@@ -424,7 +419,6 @@ class ModelHelper:
                                 sub_token.error,
                             ),
                             namespace,
-                            nodes,
                             position,
                             skip_commandline_variables=skip_commandline_variables,
                             skip_local_variables=skip_local_variables,
@@ -481,11 +475,9 @@ class ModelHelper:
                 name = sub_token.value
                 var = namespace.find_variable(
                     name,
-                    nodes,
                     position,
                     skip_commandline_variables=skip_commandline_variables,
                     skip_local_variables=skip_local_variables,
-                    ignore_error=True,
                 )
                 if var is not None:
                     yield strip_variable_token(sub_token), var
@@ -506,11 +498,9 @@ class ModelHelper:
                         name = f"{name[0]}{{{base_name.strip()}}}"
                         var = namespace.find_variable(
                             name,
-                            nodes,
                             position,
                             skip_commandline_variables=skip_commandline_variables,
                             skip_local_variables=skip_local_variables,
-                            ignore_error=True,
                         )
                         sub_sub_token = Token(
                             sub_token.type,

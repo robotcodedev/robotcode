@@ -1,8 +1,7 @@
 import functools
 import re
-import weakref
 from itertools import chain
-from typing import TYPE_CHECKING, Dict, Iterable, Iterator, List, NamedTuple, Optional, Sequence, Tuple
+from typing import Dict, Iterable, Iterator, List, NamedTuple, Optional, Sequence, Tuple
 
 from robot.libraries import STDLIBS
 from robotcode.core.lsp.types import (
@@ -11,6 +10,7 @@ from robotcode.core.lsp.types import (
 
 from ..utils import get_robot_version
 from ..utils.match import eq_namespace
+from ..utils.stubs import Languages
 from .entities import (
     LibraryEntry,
     ResourceEntry,
@@ -21,9 +21,6 @@ from .library_doc import (
     KeywordError,
     LibraryDoc,
 )
-
-if TYPE_CHECKING:
-    from .namespace import Namespace
 
 
 class DiagnosticsEntry(NamedTuple):
@@ -40,8 +37,21 @@ DEFAULT_BDD_PREFIXES = {"Given ", "When ", "Then ", "And ", "But "}
 
 
 class KeywordFinder:
-    def __init__(self, namespace: "Namespace") -> None:
-        self._namespace: "Namespace" = weakref.proxy(namespace)
+    def __init__(
+        self,
+        library_doc: LibraryDoc,
+        libraries: Dict[str, LibraryEntry],
+        resources: Dict[str, ResourceEntry],
+        source: str,
+        languages: Optional[Languages] = None,
+        search_order: Tuple[str, ...] = (),
+    ) -> None:
+        self._library_doc = library_doc
+        self._libraries = libraries
+        self._resources = resources
+        self._source = source
+        self._languages = languages
+        self._search_order = search_order
 
         self.diagnostics: List[DiagnosticsEntry] = []
         self.result_bdd_prefix: Optional[str] = None
@@ -56,10 +66,6 @@ class KeywordFinder:
                 Optional[str],
             ],
         ] = {}
-
-    @functools.cached_property
-    def _library_doc(self) -> LibraryDoc:
-        return self._namespace.get_library_doc()
 
     def reset_diagnostics(self) -> None:
         self.diagnostics = []
@@ -232,8 +238,8 @@ class KeywordFinder:
     def _all_keywords(self) -> List[LibraryEntry]:
         return list(
             chain(
-                self._namespace._libraries.values(),
-                self._namespace._resources.values(),
+                self._libraries.values(),
+                self._resources.values(),
             )
         )
 
@@ -287,7 +293,7 @@ class KeywordFinder:
     def _prioritize_same_file_or_public(
         self, entries: List[Tuple[Optional[LibraryEntry], KeywordDoc]]
     ) -> List[Tuple[Optional[LibraryEntry], KeywordDoc]]:
-        matches = [h for h in entries if h[1].source == self._namespace.source]
+        matches = [h for h in entries if h[1].source == self._source]
         if matches:
             return matches
 
@@ -351,7 +357,7 @@ class KeywordFinder:
 
     @functools.cached_property
     def _resource_imports(self) -> List[ResourceEntry]:
-        return list(chain(self._namespace._resources.values()))
+        return list(chain(self._resources.values()))
 
     def _get_keyword_from_resource_files(self, name: str) -> Optional[KeywordDoc]:
         if get_robot_version() >= (6, 0):
@@ -397,7 +403,7 @@ class KeywordFinder:
     def _get_keyword_based_on_search_order(
         self, entries: List[Tuple[Optional[LibraryEntry], KeywordDoc]]
     ) -> List[Tuple[Optional[LibraryEntry], KeywordDoc]]:
-        for libname in self._namespace.search_order:
+        for libname in self._search_order:
             for e in entries:
                 if e[0] is not None and eq_namespace(libname, e[0].alias or e[0].name):
                     return [e]
@@ -406,7 +412,7 @@ class KeywordFinder:
 
     @functools.cached_property
     def _library_imports(self) -> List[LibraryEntry]:
-        return list(chain(self._namespace._libraries.values()))
+        return list(chain(self._libraries.values()))
 
     def _get_keyword_from_libraries(self, name: str) -> Optional[KeywordDoc]:
         if get_robot_version() >= (6, 0):
@@ -495,9 +501,7 @@ class KeywordFinder:
     def bdd_prefix_regexp(self) -> "re.Pattern[str]":
         prefixes = (
             "|".join(
-                self._namespace.languages.bdd_prefixes
-                if self._namespace.languages is not None
-                else ["given", "when", "then", "and", "but"]
+                self._languages.bdd_prefixes if self._languages is not None else ["given", "when", "then", "and", "but"]
             )
             .replace(" ", r"\s")
             .lower()

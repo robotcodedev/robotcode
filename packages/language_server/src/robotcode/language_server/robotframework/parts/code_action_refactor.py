@@ -502,7 +502,7 @@ class RobotCodeActionRefactorProtocolPart(RobotLanguageServerProtocolPart, Model
         counter = 0
         namespace = self.parent.documents_cache.get_namespace(document)
         while True:
-            if namespace.find_variable(f"${{{var_name}}}", nodes, range.start, ignore_error=True) is None:
+            if namespace.find_variable(f"${{{var_name}}}", range.start) is None:
                 break
             counter += 1
             var_name = f"new_variable_{counter}"

@@ -51,6 +51,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
         self.parent.diagnostics.analyze.add(self.analyze)
         self.parent.documents_cache.namespace_initialized(self._on_namespace_initialized)
         self.parent.documents_cache.libraries_changed.add(self._on_libraries_changed)
+        self.parent.documents_cache.resources_changed.add(self._on_resources_changed)
         self.parent.documents_cache.variables_changed.add(self._on_variables_changed)
 
     def _on_libraries_changed(self, sender: Any, libraries: List[LibraryDoc]) -> None:
@@ -59,6 +60,14 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
             if namespace is not None:
                 lib_docs = (e.library_doc for e in namespace.get_libraries().values())
                 if any(lib_doc in lib_docs for lib_doc in libraries):
+                    self.parent.diagnostics.force_refresh_document(doc)
+
+    def _on_resources_changed(self, sender: Any, resources: List[LibraryDoc]) -> None:
+        for doc in self.parent.documents.documents:
+            namespace = self.parent.documents_cache.get_only_initialized_namespace(doc)
+            if namespace is not None:
+                lib_docs = (e.library_doc for e in namespace.get_resources().values())
+                if any(lib_doc.source == changed.source for lib_doc in lib_docs for changed in resources):
                     self.parent.diagnostics.force_refresh_document(doc)
 
     def _on_variables_changed(self, sender: Any, variables: List[LibraryDoc]) -> None:

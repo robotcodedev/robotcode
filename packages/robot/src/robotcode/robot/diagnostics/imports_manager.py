@@ -8,7 +8,6 @@ import threading
 import weakref
 import zlib
 from abc import ABC, abstractmethod
-from collections import OrderedDict
 from concurrent.futures import ProcessPoolExecutor, TimeoutError
 from dataclasses import dataclass
 from pathlib import Path
@@ -159,6 +158,7 @@ class _LibrariesEntry(_ImportEntry):
         self.base_dir = base_dir
         self.variables = variables
         self._lib_doc: Optional[LibraryDoc] = None
+        self._meta: Optional[LibraryMetaData] = None
         self.ignore_reference = ignore_reference
 
     def __repr__(self) -> str:
@@ -206,9 +206,17 @@ class _LibrariesEntry(_ImportEntry):
 
             return None
 
+    @property
+    def meta(self) -> Optional["LibraryMetaData"]:
+        return self._meta
+
     def _update(self) -> None:
-        self._lib_doc = self.parent._get_library_libdoc(
-            self.name, self.args, self.working_dir, self.base_dir, self.variables
+        self._lib_doc, self._meta = self.parent._get_library_libdoc(
+            self.name,
+            self.args,
+            self.working_dir,
+            self.base_dir,
+            self.variables,
         )
 
         source_or_origin = (
@@ -262,6 +270,7 @@ class _LibrariesEntry(_ImportEntry):
 
         self._remove_file_watcher()
         self._lib_doc = None
+        self._meta = None
 
     def is_valid(self) -> bool:
         with self._lock:
@@ -294,6 +303,7 @@ class _ResourcesEntry(_ImportEntry):
         self.source_path = source_path
         self._document: Optional[TextDocument] = None
         self._lib_doc: Optional[ResourceDoc] = None
+        self._meta: Optional[RobotFileMeta] = None
 
     def __repr__(self) -> str:
         return f"{type(self).__qualname__}(name={self.name!r}, file_watchers={self.file_watchers!r}, id={id(self)!r}"
@@ -320,6 +330,10 @@ class _ResourcesEntry(_ImportEntry):
 
             return None
 
+    @property
+    def meta(self) -> Optional["RobotFileMeta"]:
+        return self._meta
+
     def _update(self) -> None:
         self.parent._logger.debug(
             lambda: f"Load resource {self.name} from source {self.source_path}", context_name="import"
@@ -333,6 +347,7 @@ class _ResourcesEntry(_ImportEntry):
             )
 
         self._document = self.parent.documents_manager.get_or_open_document(self.source_path)
+        self._meta = ImportsManager.get_resource_meta(str(self.source_path))
 
         if self._document._version is None:
             self.file_watchers.append(
@@ -350,6 +365,7 @@ class _ResourcesEntry(_ImportEntry):
 
         self._document = None
         self._lib_doc = None
+        self._meta = None
 
     def is_valid(self) -> bool:
         with self._lock:
@@ -416,6 +432,7 @@ class _VariablesEntry(_ImportEntry):
         self.resolve_variables = resolve_variables
         self.resolve_command_line_vars = resolve_command_line_vars
         self._lib_doc: Optional[VariablesDoc] = None
+        self._meta: Optional[LibraryMetaData] = None
 
     def __repr__(self) -> str:
         return (
@@ -446,8 +463,12 @@ class _VariablesEntry(_ImportEntry):
 
             return None
 
+    @property
+    def meta(self) -> Optional["LibraryMetaData"]:
+        return self._meta
+
     def _update(self) -> None:
-        self._lib_doc = self.parent._get_variables_libdoc(
+        self._lib_doc, self._meta = self.parent._get_variables_libdoc(
             self.name,
             self.args,
             self.working_dir,
@@ -472,6 +493,7 @@ class _VariablesEntry(_ImportEntry):
         self._remove_file_watcher()
 
         self._lib_doc = None
+        self._meta = None
 
     def is_valid(self) -> bool:
         with self._lock:
@@ -581,11 +603,11 @@ class ImportsManager:
         self.global_library_search_order = global_library_search_order
 
         self._libaries_lock = RLock(default_timeout=120, name="ImportsManager._libaries_lock")
-        self._libaries: OrderedDict[_LibrariesEntryKey, _LibrariesEntry] = OrderedDict()
+        self._libaries: Dict[_LibrariesEntryKey, _LibrariesEntry] = {}
         self._resources_lock = RLock(default_timeout=120, name="ImportsManager._resources_lock")
-        self._resources: OrderedDict[_ResourcesEntryKey, _ResourcesEntry] = OrderedDict()
+        self._resources: Dict[_ResourcesEntryKey, _ResourcesEntry] = {}
         self._variables_lock = RLock(default_timeout=120, name="ImportsManager._variables_lock")
-        self._variables: OrderedDict[_VariablesEntryKey, _VariablesEntry] = OrderedDict()
+        self._variables: Dict[_VariablesEntryKey, _VariablesEntry] = {}
         self.file_watchers: List[FileWatcherEntry] = []
         self._command_line_variables: Optional[List[VariableDefinition]] = None
         self._command_line_variables_lock = RLock(
@@ -681,7 +703,7 @@ class ImportsManager:
         source = str(document.uri.to_path())
 
         if not self._is_document_loaded(source):
-            cached = self._get_model_doc_cached(source)
+            cached, _meta = self._get_model_doc_cached(source)
             if cached is not None:
                 return cached
 
@@ -1285,7 +1307,7 @@ class ImportsManager:
         working_dir: str,
         base_dir: str,
         variables: Optional[Dict[str, Any]] = None,
-    ) -> LibraryDoc:
+    ) -> Tuple[LibraryDoc, Optional[LibraryMetaData]]:
         meta, _source, ignore_arguments = self.get_library_meta(name, base_dir, variables)
 
         if meta is not None and not meta.has_errors:
@@ -1307,7 +1329,7 @@ class ImportsManager:
                             self._logger.debug(
                                 lambda: f"Use cached library meta data for {name}", context_name="import"
                             )
-                            return self.data_cache.read_cache_data(CacheSection.LIBRARY, spec_path, LibraryDoc)
+                            return self.data_cache.read_cache_data(CacheSection.LIBRARY, spec_path, LibraryDoc), meta
 
                     except (SystemExit, KeyboardInterrupt):
                         raise
@@ -1376,7 +1398,7 @@ class ImportsManager:
         except BaseException as e:
             self._logger.exception(e)
 
-        return result
+        return result, meta
 
     @_logger.call
     def get_libdoc_for_library_import(
@@ -1411,12 +1433,12 @@ class ImportsManager:
                         ignore_reference=sentinel is None,
                     )
 
-            entry = self._libaries[entry_key]
+                entry = self._libaries[entry_key]
 
-            if not entry.ignore_reference and sentinel is not None and sentinel not in entry.references:
-                fin = weakref.finalize(sentinel, self.__remove_library_entry, entry_key, entry)
-                fin.atexit = False  # type: ignore[misc]
-                entry.references.add(sentinel)
+                if not entry.ignore_reference and sentinel is not None and sentinel not in entry.references:
+                    fin = weakref.finalize(sentinel, self.__remove_library_entry, entry_key, entry)
+                    fin.atexit = False  # type: ignore[misc]
+                    entry.references.add(sentinel)
 
             return entry.get_libdoc()
 
@@ -1437,11 +1459,17 @@ class ImportsManager:
 
         use_disk_cache = not self._is_document_loaded(source)
 
-        result = self._get_model_doc_cached(source) if use_disk_cache else None
+        result: Optional[ResourceDoc] = None
+        meta: Optional[RobotFileMeta] = None
+        if use_disk_cache:
+            result, meta = self._get_model_doc_cached(source)
         if result is None:
             result = get_model_doc(model=model, source=source)
             if use_disk_cache:
-                self._save_model_doc_cache(source, result)
+                if meta is None:
+                    meta = self.get_resource_meta(source)
+                if meta is not None:
+                    self._save_model_doc_cache(source, result, meta)
 
         if entry is None:
             entry = {}
@@ -1465,20 +1493,20 @@ class ImportsManager:
             pass
         return None
 
-    def _get_model_doc_cached(self, source: str) -> Optional[ResourceDoc]:
+    def _get_model_doc_cached(self, source: str) -> Tuple[Optional[ResourceDoc], Optional["RobotFileMeta"]]:
         meta = self.get_resource_meta(source)
         if meta is None:
-            return None
+            return None, None
 
         meta_file = meta.filepath_base + ".meta"
         if not self.data_cache.cache_data_exists(CacheSection.RESOURCE, meta_file):
-            return None
+            return None, meta
 
         try:
             saved_meta = self.data_cache.read_cache_data(CacheSection.RESOURCE, meta_file, RobotFileMeta)
             if saved_meta == meta:
                 spec_file = meta.filepath_base + ".spec"
-                return self.data_cache.read_cache_data(CacheSection.RESOURCE, spec_file, ResourceDoc)
+                return self.data_cache.read_cache_data(CacheSection.RESOURCE, spec_file, ResourceDoc), meta
         except (SystemExit, KeyboardInterrupt):
             raise
         except BaseException as e:
@@ -1488,12 +1516,9 @@ class ImportsManager:
                 context_name="import",
             )
 
-        return None
+        return None, meta
 
-    def _save_model_doc_cache(self, source: str, result: ResourceDoc) -> None:
-        meta = self.get_resource_meta(source)
-        if meta is None:
-            return
+    def _save_model_doc_cache(self, source: str, result: ResourceDoc, meta: "RobotFileMeta") -> None:
 
         try:
             self.data_cache.save_cache_data(CacheSection.RESOURCE, meta.filepath_base + ".spec", result)
@@ -1516,7 +1541,7 @@ class ImportsManager:
         variables: Optional[Dict[str, Any]] = None,
         resolve_variables: bool = True,
         resolve_command_line_vars: bool = True,
-    ) -> VariablesDoc:
+    ) -> Tuple[VariablesDoc, Optional[LibraryMetaData]]:
         meta, _source = self.get_variables_meta(
             name,
             base_dir,
@@ -1536,7 +1561,8 @@ class ImportsManager:
                         if saved_meta == meta:
                             spec_path = meta.filepath_base + ".spec"
 
-                            return self.data_cache.read_cache_data(CacheSection.VARIABLES, spec_path, VariablesDoc)
+                            result = self.data_cache.read_cache_data(CacheSection.VARIABLES, spec_path, VariablesDoc)
+                            return result, meta
                     except (SystemExit, KeyboardInterrupt):
                         raise
                     except BaseException as e:
@@ -1600,7 +1626,7 @@ class ImportsManager:
         except BaseException as e:
             self._logger.exception(e)
 
-        return result
+        return result, meta
 
     @_logger.call
     def get_libdoc_for_variables_import(
@@ -1642,12 +1668,12 @@ class ImportsManager:
                         resolve_command_line_vars=resolve_command_line_vars,
                     )
 
-            entry = self._variables[entry_key]
+                entry = self._variables[entry_key]
 
-            if sentinel is not None and sentinel not in entry.references:
-                entry.references.add(sentinel)
-                fin = weakref.finalize(sentinel, self.__remove_variables_entry, entry_key, entry)
-                fin.atexit = False  # type: ignore[misc]
+                if sentinel is not None and sentinel not in entry.references:
+                    entry.references.add(sentinel)
+                    fin = weakref.finalize(sentinel, self.__remove_variables_entry, entry_key, entry)
+                    fin.atexit = False  # type: ignore[misc]
 
             return entry.get_libdoc()
 
@@ -1670,12 +1696,12 @@ class ImportsManager:
             if entry_key not in self._resources:
                 self._resources[entry_key] = _ResourcesEntry(name, self, source_path)
 
-        entry = self._resources[entry_key]
+            entry = self._resources[entry_key]
 
-        if sentinel is not None and sentinel not in entry.references:
-            entry.references.add(sentinel)
-            fin = weakref.finalize(sentinel, self.__remove_resource_entry, entry_key, entry)
-            fin.atexit = False  # type: ignore[misc]
+            if sentinel is not None and sentinel not in entry.references:
+                entry.references.add(sentinel)
+                fin = weakref.finalize(sentinel, self.__remove_resource_entry, entry_key, entry)
+                fin.atexit = False  # type: ignore[misc]
 
         return entry
 
@@ -1699,19 +1725,6 @@ class ImportsManager:
 
             return namespace, libdoc
 
-    def get_namespace_for_resource_import(
-        self,
-        name: str,
-        base_dir: str,
-        sentinel: Any = None,
-        variables: Optional[Dict[str, Any]] = None,
-        *,
-        source: Optional[str] = None,
-    ) -> "Namespace":
-        entry = self._get_entry_for_resource_import(name, base_dir, sentinel, variables, source=source)
-
-        return entry.get_namespace()
-
     def get_resource_doc_for_resource_import(
         self,
         name: str,
@@ -1725,19 +1738,6 @@ class ImportsManager:
             entry = self._get_entry_for_resource_import(name, base_dir, sentinel, variables, source=source)
 
             return entry.get_resource_doc()
-
-    def get_libdoc_for_resource_import(
-        self,
-        name: str,
-        base_dir: str,
-        sentinel: Any = None,
-        variables: Optional[Dict[str, Any]] = None,
-        *,
-        source: Optional[str] = None,
-    ) -> ResourceDoc:
-        entry = self._get_entry_for_resource_import(name, base_dir, sentinel, variables, source=source)
-
-        return entry.get_resource_doc()
 
     def complete_library_import(
         self,

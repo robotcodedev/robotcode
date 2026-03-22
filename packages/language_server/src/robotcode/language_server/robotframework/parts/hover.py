@@ -143,7 +143,7 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
                                 real_value = namespace.imports_manager.resolve_variable(
                                     variable.name,
                                     str(document.uri.to_path().parent),
-                                    namespace.get_resolvable_variables(nodes, position),
+                                    namespace.get_resolvable_variables(position),
                                 )
 
                                 value = _my_repr.repr(real_value)

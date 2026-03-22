@@ -69,7 +69,7 @@ class RobotDebuggingUtilsProtocolPart(RobotLanguageServerProtocolPart, ModelHelp
         token_and_var = next(
             (
                 (t, v)
-                for t, v in self.iter_variables_from_token(token, namespace, nodes, position)
+                for t, v in self.iter_variables_from_token(token, namespace, position)
                 if position in range_from_token(t)
             ),
             None,
@@ -84,7 +84,7 @@ class RobotDebuggingUtilsProtocolPart(RobotLanguageServerProtocolPart, ModelHelp
             token_and_var = next(
                 (
                     (var_token, var)
-                    for var_token, var in self.iter_expression_variables_from_token(token, namespace, nodes, position)
+                    for var_token, var in self.iter_expression_variables_from_token(token, namespace, position)
                     if position in range_from_token(var_token)
                 ),
                 None,

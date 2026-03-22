@@ -55,7 +55,6 @@ class RobotSelectionRangeProtocolPart(RobotLanguageServerProtocolPart, ModelHelp
                             for var_token, _ in self.iter_variables_from_token(
                                 token,
                                 namespace,
-                                nodes,
                                 position,
                                 return_not_found=True,
                             ):

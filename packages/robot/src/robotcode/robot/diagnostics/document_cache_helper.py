@@ -36,7 +36,7 @@ from ..utils import get_robot_version
 from ..utils.stubs import Languages
 from .imports_manager import ImportsManager
 from .library_doc import LibraryDoc
-from .namespace import DocumentType, Namespace
+from .namespace import DocumentType, Namespace, NamespaceBuilder
 from .workspace_config import (
     AnalysisDiagnosticModifiersConfig,
     AnalysisRobotConfig,
@@ -351,7 +351,7 @@ class DocumentsCacheHelper:
     @event
     def namespace_invalidated(sender, namespace: Namespace) -> None: ...
 
-    def __invalidate_namespace(self, sender: Namespace) -> None:
+    def _invalidate_namespace(self, sender: Namespace) -> None:
         document = sender.document
         if document is not None:
             document.remove_cache_entry(self.__get_general_namespace)
@@ -360,10 +360,10 @@ class DocumentsCacheHelper:
 
             self.namespace_invalidated(self, sender)
 
-    def __namespace_initialized(self, sender: Namespace) -> None:
-        if sender.document is not None:
-            sender.document.set_data(self.INITIALIZED_NAMESPACE, sender)
-            self.namespace_initialized(self, sender)
+    def __namespace_initialized(self, namespace: Namespace) -> None:
+        if namespace.document is not None:
+            namespace.document.set_data(self.INITIALIZED_NAMESPACE, namespace)
+            self.namespace_initialized(self, namespace)
 
     def get_initialized_namespace(self, document: TextDocument) -> Namespace:
         result: Optional[Namespace] = document.get_data(self.INITIALIZED_NAMESPACE)
@@ -391,7 +391,7 @@ class DocumentsCacheHelper:
 
         languages, workspace_languages = self.build_languages_from_model(document, model)
 
-        result = Namespace(
+        builder = NamespaceBuilder(
             imports_manager,
             model,
             str(document.uri.to_path()),
@@ -400,8 +400,15 @@ class DocumentsCacheHelper:
             languages,
             workspace_languages,
         )
-        result.has_invalidated.add(self.__invalidate_namespace)
-        result.has_initialized.add(self.__namespace_initialized)
+
+        result = builder.build()
+
+        # When the namespace detects dependency changes, evict the
+        # document cache entry so it gets rebuilt on next access.
+        result.invalidated.add(self._invalidate_namespace)
+
+        # Mark as initialized for consumers that need early access
+        self.__namespace_initialized(result)
 
         return result
 
