@@ -135,6 +135,7 @@ class RobotLanguageServerProtocol(LanguageServerProtocol):
         "py",
         "yaml",
         "yml",
+        "json",
     }
 
     language_definitions: ClassVar[List[LanguageDefinition]] = [

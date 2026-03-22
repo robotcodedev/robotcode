@@ -844,7 +844,8 @@ class ImportsManager:
     def imports_changed(sender, uri: DocumentUri) -> None: ...
 
     def _on_possible_imports_modified(self, sender: Any, uri: DocumentUri) -> None:
-        # TODO: do we really need this?
+        # Fires on FileChangeType.CREATED — needed so namespaces with previously
+        # unresolved imports (file didn't exist yet) get invalidated and re-analyzed.
         self.imports_changed(self, uri)
 
     @language_id("robotframework")
