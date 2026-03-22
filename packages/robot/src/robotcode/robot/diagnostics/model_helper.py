@@ -239,7 +239,7 @@ class ModelHelper:
         for lib, keyword in iter_over_keyword_names_and_owners(keyword_token.value):
             if lib is not None:
                 lib_entries = next(
-                    (v for k, v in (namespace.get_namespaces()).items() if k == lib),
+                    (v for k, v in namespace.namespaces.items() if k == lib),
                     None,
                 )
                 if lib_entries is not None:

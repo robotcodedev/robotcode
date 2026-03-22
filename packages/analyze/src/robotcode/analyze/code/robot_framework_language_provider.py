@@ -121,7 +121,7 @@ class RobotFrameworkLanguageProvider(LanguageProvider):
     def collect_diagnostics(self, sender: Any, document: TextDocument) -> Optional[List[Diagnostic]]:
         namespace = self._document_cache.get_namespace(document)
 
-        return self._document_cache.get_diagnostic_modifier(document).modify_diagnostics(namespace.get_diagnostics())
+        return self._document_cache.get_diagnostic_modifier(document).modify_diagnostics(namespace.diagnostics)
 
     def collect_unused_keywords(self, sender: Any, document: TextDocument) -> Optional[List[Diagnostic]]:
         namespace = self._document_cache.get_namespace(document)
@@ -134,10 +134,10 @@ class RobotFrameworkLanguageProvider(LanguageProvider):
 
         result: List[Diagnostic] = []
 
-        for kw in (namespace.get_library_doc()).keywords.values():
+        for kw in namespace.library_doc.keywords.values():
             has_reference = False
             for doc in documents:
-                refs = self._document_cache.get_namespace(doc).get_keyword_references()
+                refs = self._document_cache.get_namespace(doc).keyword_references
                 if refs.get(kw):
                     has_reference = True
                     break
@@ -160,7 +160,7 @@ class RobotFrameworkLanguageProvider(LanguageProvider):
 
         namespace = self._document_cache.get_namespace(document)
 
-        for var, locations in (namespace.get_variable_references()).items():
+        for var, locations in namespace.variable_references.items():
             if var.type in (
                 VariableDefinitionType.LIBRARY_ARGUMENT,
                 VariableDefinitionType.ENVIRONMENT_VARIABLE,
@@ -189,7 +189,7 @@ class RobotFrameworkLanguageProvider(LanguageProvider):
                     )
 
                 has_reference = any(
-                    len(self._document_cache.get_namespace(doc).get_variable_references().get(var, set())) > 0
+                    len(self._document_cache.get_namespace(doc).variable_references.get(var, set())) > 0
                     for doc in self.diagnostics_context.workspace.documents.documents
                 )
 

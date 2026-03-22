@@ -419,7 +419,7 @@ class CompletionCollector(ModelHelper):
                                 lib_doc = next(
                                     (
                                         ld.library_doc
-                                        for ld in (self.namespace.get_libraries()).values()
+                                        for ld in self.namespace.libraries.values()
                                         if str(id(ld.library_doc)) == lib_id
                                     ),
                                     None,
@@ -467,7 +467,7 @@ class CompletionCollector(ModelHelper):
                                 lib_doc = next(
                                     (
                                         ld.library_doc
-                                        for ld in (self.namespace.get_resources()).values()
+                                        for ld in self.namespace.resources.values()
                                         if str(id(ld.library_doc)) == res_id
                                     ),
                                     None,
@@ -514,7 +514,7 @@ class CompletionCollector(ModelHelper):
                         if kw_id is not None:
                             try:
                                 kw_doc = next(
-                                    (kw for kw in self.namespace.get_keywords() if str(id(kw)) == kw_id),
+                                    (kw for kw in self.namespace.keywords if str(id(kw)) == kw_id),
                                     None,
                                 )
 
@@ -881,7 +881,7 @@ class CompletionCollector(ModelHelper):
                 if lib_name_index >= 0:
                     namespace_name = token.value[0 : lib_name_index - r.start.character]
 
-                    libraries = self.namespace.get_libraries()
+                    libraries = self.namespace.libraries
 
                     namespace_matcher = KeywordMatcher(namespace_name, is_namespace=True)
                     namespace_name = next(
@@ -931,7 +931,7 @@ class CompletionCollector(ModelHelper):
 
                     resources = {
                         k: v
-                        for k, v in self.namespace.get_resources().items()
+                        for k, v in self.namespace.resources.items()
                         if namespace_matcher == KeywordMatcher(v.name, is_namespace=True)
                     }
 
@@ -983,7 +983,7 @@ class CompletionCollector(ModelHelper):
         if namespace_matcher is not None:
             namespace_matcher = KeywordMatcher(namespace_matcher.name)
 
-        for kw in self.namespace.get_keywords():
+        for kw in self.namespace.keywords:
             if kw.is_error_handler:
                 continue
             if (
@@ -1019,7 +1019,7 @@ class CompletionCollector(ModelHelper):
         if valid_namespace and namespace_matcher is not None:
             return result
 
-        for k, v in (self.namespace.get_libraries()).items():
+        for k, v in self.namespace.libraries.items():
             result.append(
                 CompletionItem(
                     label=k,
@@ -1042,7 +1042,7 @@ class CompletionCollector(ModelHelper):
                 )
             )
 
-        for k, v in self.namespace.get_resources().items():
+        for k, v in self.namespace.resources.items():
             result.append(
                 CompletionItem(
                     label=v.name,

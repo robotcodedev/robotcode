@@ -105,7 +105,7 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
     def _hover_default(self, nodes: List[ast.AST], document: TextDocument, position: Position) -> Optional[Hover]:
         namespace = self.parent.documents_cache.get_namespace(document)
 
-        all_variable_refs = namespace.get_variable_references()
+        all_variable_refs = namespace.variable_references
         if all_variable_refs:
             text = None
             highlight_range = None
@@ -174,7 +174,7 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
                     range=highlight_range,
                 )
 
-        all_kw_refs = namespace.get_keyword_references()
+        all_kw_refs = namespace.keyword_references
         if all_kw_refs:
             result: List[Tuple[Range, str]] = []
 
@@ -214,7 +214,7 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
                         range=r,
                     )
 
-        all_namespace_refs = namespace.get_namespace_references()
+        all_namespace_refs = namespace.namespace_references
         if all_namespace_refs:
             for ns, ns_refs in all_namespace_refs.items():
                 check_current_task_canceled()

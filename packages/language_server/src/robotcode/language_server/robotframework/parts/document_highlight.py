@@ -30,7 +30,7 @@ class RobotDocumentHighlightProtocolPart(RobotLanguageServerProtocolPart):
     def collect(self, sender: Any, document: TextDocument, position: Position) -> Optional[List[DocumentHighlight]]:
         namespace = self.parent.documents_cache.get_namespace(document)
 
-        all_variable_refs = namespace.get_variable_references()
+        all_variable_refs = namespace.variable_references
         if all_variable_refs:
             for var, var_refs in all_variable_refs.items():
                 check_current_task_canceled()
@@ -66,7 +66,7 @@ class RobotDocumentHighlightProtocolPart(RobotLanguageServerProtocolPart):
                             )
                         ]
 
-        all_kw_refs = namespace.get_keyword_references()
+        all_kw_refs = namespace.keyword_references
         if all_kw_refs:
             for kw, kw_refs in all_kw_refs.items():
                 check_current_task_canceled()
@@ -92,7 +92,7 @@ class RobotDocumentHighlightProtocolPart(RobotLanguageServerProtocolPart):
                             )
                         ]
 
-        all_namespace_refs = namespace.get_namespace_references()
+        all_namespace_refs = namespace.namespace_references
         if all_namespace_refs:
             for ns, ns_refs in all_namespace_refs.items():
                 check_current_task_canceled()

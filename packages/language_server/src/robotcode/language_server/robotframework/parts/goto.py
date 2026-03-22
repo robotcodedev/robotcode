@@ -44,7 +44,7 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart):
     ) -> Union[Location, List[Location], List[LocationLink], None]:
         namespace = self.parent.documents_cache.get_namespace(document)
 
-        all_variable_refs = namespace.get_variable_references()
+        all_variable_refs = namespace.variable_references
 
         if all_variable_refs:
             result = []
@@ -77,7 +77,7 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart):
             if result:
                 return result
 
-        all_kw_refs = namespace.get_keyword_references()
+        all_kw_refs = namespace.keyword_references
         if all_kw_refs:
             result = []
 
@@ -106,7 +106,7 @@ class RobotGotoProtocolPart(RobotLanguageServerProtocolPart):
             if result:
                 return result
 
-        all_namespace_refs = namespace.get_namespace_references()
+        all_namespace_refs = namespace.namespace_references
         if all_namespace_refs:
             check_current_task_canceled()
 

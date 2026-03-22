@@ -58,7 +58,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
         for doc in self.parent.documents.documents:
             namespace = self.parent.documents_cache.get_only_initialized_namespace(doc)
             if namespace is not None:
-                lib_docs = (e.library_doc for e in namespace.get_libraries().values())
+                lib_docs = (e.library_doc for e in namespace.libraries.values())
                 if any(lib_doc in lib_docs for lib_doc in libraries):
                     self.parent.diagnostics.force_refresh_document(doc)
 
@@ -66,7 +66,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
         for doc in self.parent.documents.documents:
             namespace = self.parent.documents_cache.get_only_initialized_namespace(doc)
             if namespace is not None:
-                lib_docs = (e.library_doc for e in namespace.get_resources().values())
+                lib_docs = (e.library_doc for e in namespace.resources.values())
                 if any(lib_doc.source == changed.source for lib_doc in lib_docs for changed in resources):
                     self.parent.diagnostics.force_refresh_document(doc)
 
@@ -74,7 +74,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
         for doc in self.parent.documents.documents:
             namespace = self.parent.documents_cache.get_only_initialized_namespace(doc)
             if namespace is not None:
-                lib_docs = (e.library_doc for e in namespace.get_variables_imports().values())
+                lib_docs = (e.library_doc for e in namespace.variables_imports.values())
                 if any(lib_doc in lib_docs for lib_doc in variables):
                     self.parent.diagnostics.force_refresh_document(doc)
 
@@ -95,7 +95,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
 
         result = []
 
-        lib_doc = namespace.get_library_doc()
+        lib_doc = namespace.library_doc
         for doc in self.parent.documents.documents:
             if doc.language_id != "robotframework":
                 continue
@@ -105,7 +105,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
                 continue
 
             if doc_namespace.is_analyzed():
-                for ref in doc_namespace.get_namespace_references():
+                for ref in doc_namespace.namespace_references:
                     if ref.library_doc == lib_doc:
                         result.append(doc)
 
@@ -122,7 +122,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
             namespace = self.parent.documents_cache.get_namespace(document)
 
             return DiagnosticsResult(
-                self.collect_namespace_diagnostics, self.modify_diagnostics(document, namespace.get_diagnostics())
+                self.collect_namespace_diagnostics, self.modify_diagnostics(document, namespace.diagnostics)
             )
         except (CancelledError, SystemExit, KeyboardInterrupt):
             raise
@@ -167,7 +167,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
             namespace = self.parent.documents_cache.get_namespace(document)
 
             result: List[Diagnostic] = []
-            for kw in (namespace.get_library_doc()).keywords.values():
+            for kw in namespace.library_doc.keywords.values():
                 check_current_task_canceled()
 
                 references = self.parent.robot_references.find_keyword_references(document, kw, False, True)
@@ -227,7 +227,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
 
             result: List[Diagnostic] = []
 
-            for var in (namespace.get_variable_references()).keys():
+            for var in namespace.variable_references.keys():
                 check_current_task_canceled()
 
                 if isinstance(

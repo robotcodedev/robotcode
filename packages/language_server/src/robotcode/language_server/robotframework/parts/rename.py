@@ -157,7 +157,7 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
     ) -> Optional[Tuple[VariableDefinition, Range]]:
         namespace = self.parent.documents_cache.get_namespace(document)
 
-        all_variable_refs = namespace.get_variable_references()
+        all_variable_refs = namespace.variable_references
         if all_variable_refs:
             for variable, var_refs in all_variable_refs.items():
                 check_current_task_canceled()
@@ -231,7 +231,7 @@ class RobotRenameProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
     ) -> Optional[Tuple[KeywordDoc, Range]]:
         namespace = self.parent.documents_cache.get_namespace(document)
 
-        all_refs = namespace.get_keyword_references()
+        all_refs = namespace.keyword_references
         if all_refs:
             for keyword, kw_refs in all_refs.items():
                 check_current_task_canceled()

@@ -95,7 +95,7 @@ class RobotKeywordsTreeViewPart(RobotLanguageServerProtocolPart, ModelHelper):
 
         result = []
 
-        for _k, v in namespace.get_libraries().items():
+        for _k, v in namespace.libraries.items():
             result.append(
                 DocumentImport(
                     name=v.name,
@@ -116,7 +116,7 @@ class RobotKeywordsTreeViewPart(RobotLanguageServerProtocolPart, ModelHelper):
                     else None,
                 )
             )
-        for _k, v in namespace.get_resources().items():
+        for _k, v in namespace.resources.items():
             result.append(
                 DocumentImport(
                     name=v.name,
@@ -162,7 +162,7 @@ class RobotKeywordsTreeViewPart(RobotLanguageServerProtocolPart, ModelHelper):
                 l.parameter_signature(),
                 l.to_markdown(add_signature=False) if not no_documentation else None,
             )
-            for l in namespace.get_library_doc().keywords.values()
+            for l in namespace.library_doc.keywords.values()
         ]
 
     @rpc_method(name="robot/keywordsview/getDocumentationUrl", param_type=GetDocumentationUrl, threaded=True)
@@ -185,9 +185,7 @@ class RobotKeywordsTreeViewPart(RobotLanguageServerProtocolPart, ModelHelper):
 
         if import_id is None:
             if keyword_id is not None:
-                keyword = next(
-                    (l for l in namespace.get_library_doc().keywords.values() if str(hash(l)) == keyword_id), None
-                )
+                keyword = next((l for l in namespace.library_doc.keywords.values() if str(hash(l)) == keyword_id), None)
                 if keyword is not None:
                     keyword_name = keyword.name
 
@@ -195,9 +193,9 @@ class RobotKeywordsTreeViewPart(RobotLanguageServerProtocolPart, ModelHelper):
                 str(document.uri.to_path().name), (), document, namespace, keyword_name
             )
 
-        entry = next((l for l in namespace.get_libraries().values() if str(hash(l)) == import_id), None)
+        entry = next((l for l in namespace.libraries.values() if str(hash(l)) == import_id), None)
         if entry is None:
-            entry = next((l for l in namespace.get_resources().values() if str(hash(l)) == import_id), None)
+            entry = next((l for l in namespace.resources.values() if str(hash(l)) == import_id), None)
 
         if keyword_id and entry is not None:
             keyword = next((l for l in entry.library_doc.keywords.values() if str(hash(l)) == keyword_id), None)

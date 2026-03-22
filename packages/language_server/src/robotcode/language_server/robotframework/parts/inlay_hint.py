@@ -194,7 +194,7 @@ class RobotInlayHintProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
                     lib = next(
                         (
                             lib
-                            for lib in (namespace.get_libraries()).values()
+                            for lib in namespace.libraries.values()
                             if lib.name == kw_doc.libname and kw_doc in lib.library_doc.keywords.keywords
                         ),
                         None,
@@ -203,7 +203,7 @@ class RobotInlayHintProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
                     lib = next(
                         (
                             lib
-                            for lib in (namespace.get_resources()).values()
+                            for lib in namespace.resources.values()
                             if lib.name == kw_doc.libname and kw_doc in lib.library_doc.keywords.keywords
                         ),
                         None,

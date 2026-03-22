@@ -1657,7 +1657,7 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
         builtin_library_doc = next(
             (
                 library.library_doc
-                for library in namespace.get_libraries().values()
+                for library in namespace.libraries.values()
                 if library.name == BUILTIN_LIBRARY_NAME
                 and library.import_name == BUILTIN_LIBRARY_NAME
                 and library.import_range == Range.zero()

@@ -174,7 +174,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
     ) -> Optional[List[Location]]:
         namespace = self.parent.documents_cache.get_namespace(document)
 
-        all_variable_refs = namespace.get_variable_references()
+        all_variable_refs = namespace.variable_references
         if all_variable_refs:
             for var, var_refs in all_variable_refs.items():
                 if var.source == namespace.source and position in var.name_range:
@@ -183,7 +183,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
                     if (var.source == namespace.source and position in var.name_range) or position in r.range:
                         return self.find_variable_references(document, var, context.include_declaration)
 
-        all_kw_refs = namespace.get_keyword_references()
+        all_kw_refs = namespace.keyword_references
         if all_kw_refs:
             for kw, kw_refs in all_kw_refs.items():
                 if kw.source == namespace.source and position in kw.name_range:
@@ -253,7 +253,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
         try:
             namespace = self.parent.documents_cache.get_namespace(doc)
 
-            refs = namespace.get_variable_references()
+            refs = namespace.variable_references
             if variable in refs:
                 if include_declaration and variable.source == namespace.source:
                     yield Location(str(Uri.from_path(variable.source)), variable.name_range)
@@ -275,7 +275,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
         try:
             namespace = self.parent.documents_cache.get_namespace(doc)
 
-            refs = namespace.get_keyword_references()
+            refs = namespace.keyword_references
             if kw_doc in refs:
                 if include_declaration and kw_doc.source == namespace.source:
                     yield Location(str(Uri.from_path(kw_doc.source)), kw_doc.range)
@@ -339,14 +339,14 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
         namespace = self.parent.documents_cache.get_namespace(doc)
 
         result: List[Location] = []
-        for lib_entry in (namespace.get_libraries()).values():
+        for lib_entry in namespace.libraries.values():
             if (
                 lib_entry.import_source == str(doc.uri.to_path())
                 and lib_entry.library_doc.source_or_origin == library_doc.source_or_origin
             ):
                 result.append(Location(str(doc.uri), lib_entry.import_range))
 
-        references = namespace.get_namespace_references()
+        references = namespace.namespace_references
         for k, v in references.items():
             if not k.alias and k.library_doc == library_doc:
                 result.extend(v)
@@ -357,7 +357,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
     def _find_library_alias_in_file(self, doc: TextDocument, entry: LibraryEntry) -> List[Location]:
         namespace = self.parent.documents_cache.get_namespace(doc)
 
-        references = namespace.get_namespace_references()
+        references = namespace.namespace_references
         if entry not in references:
             return []
 
@@ -399,7 +399,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
         if not alias_token:
             return None
 
-        entries = namespace.get_libraries()
+        entries = namespace.libraries
         entry = next(
             (
                 v
@@ -424,14 +424,14 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
         namespace = self.parent.documents_cache.get_namespace(doc)
 
         result: List[Location] = []
-        for lib_entry in (namespace.get_resources()).values():
+        for lib_entry in namespace.resources.values():
             if (
                 lib_entry.import_source == str(doc.uri.to_path())
                 and lib_entry.library_doc.source == entry.library_doc.source
             ):
                 result.append(Location(str(doc.uri), lib_entry.import_range))
 
-        references = namespace.get_namespace_references()
+        references = namespace.namespace_references
         if entry in references:
             result.extend(references[entry])
 
@@ -456,7 +456,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
         if not name_token:
             return None
 
-        entries = namespace.get_resources()
+        entries = namespace.resources
         entry = next(
             (
                 v
@@ -493,7 +493,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
         namespace = self.parent.documents_cache.get_namespace(doc)
 
         result: List[Location] = []
-        for lib_entry in namespace.get_variables_imports().values():
+        for lib_entry in namespace.variables_imports.values():
             if lib_entry.import_source == str(doc.uri.to_path()) and lib_entry.library_doc.source == library_doc.source:
                 result.append(Location(str(doc.uri), lib_entry.import_range))
 

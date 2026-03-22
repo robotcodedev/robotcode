@@ -35,11 +35,11 @@ class RobotWorkspaceSymbolsProtocolPart(RobotLanguageServerProtocolPart):
             if document.language_id == "robotframework":
                 namespace = self.parent.documents_cache.get_only_initialized_namespace(document)
                 if namespace is not None:
-                    container_name = namespace.get_library_doc().name
+                    container_name = namespace.library_doc.name
 
                     for kw_doc in [
                         v
-                        for v in namespace.get_keyword_references().keys()
+                        for v in namespace.keyword_references.keys()
                         if v.source == namespace.source and contains_characters_in_order(v.name, query)
                     ]:
                         result.append(
@@ -56,7 +56,7 @@ class RobotWorkspaceSymbolsProtocolPart(RobotLanguageServerProtocolPart):
                         )
                     for var in [
                         v
-                        for v in namespace.get_variable_references().keys()
+                        for v in namespace.variable_references.keys()
                         if v.source == namespace.source and contains_characters_in_order(v.name, query)
                     ]:
                         result.append(
@@ -72,7 +72,7 @@ class RobotWorkspaceSymbolsProtocolPart(RobotLanguageServerProtocolPart):
                         )
 
                     for test in [
-                        v for v in namespace.get_testcase_definitions() if contains_characters_in_order(v.name, query)
+                        v for v in namespace.testcase_definitions if contains_characters_in_order(v.name, query)
                     ]:
                         result.append(
                             WorkspaceSymbol(

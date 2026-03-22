@@ -163,60 +163,74 @@ class Namespace:
     def document_uri(self) -> str:
         return self.document.document_uri if self.document is not None else str(Uri.from_path(self.source))
 
+    @property
     @_logger.call
-    def get_diagnostics(self) -> List[Diagnostic]:
+    def diagnostics(self) -> List[Diagnostic]:
         return self._diagnostics
 
+    @property
     @_logger.call
-    def get_keyword_references(self) -> Dict[KeywordDoc, Set[Location]]:
+    def keyword_references(self) -> Dict[KeywordDoc, Set[Location]]:
         return self._keyword_references
 
-    def get_variable_references(self) -> Dict[VariableDefinition, Set[Location]]:
+    @property
+    def variable_references(self) -> Dict[VariableDefinition, Set[Location]]:
         return self._variable_references
 
-    def get_testcase_definitions(self) -> List[TestCaseDefinition]:
+    @property
+    def testcase_definitions(self) -> List[TestCaseDefinition]:
         return self._test_case_definitions
 
-    def get_local_variable_assignments(self) -> Dict[VariableDefinition, Set[Range]]:
+    @property
+    def local_variable_assignments(self) -> Dict[VariableDefinition, Set[Range]]:
         return self._local_variable_assignments
 
-    def get_namespace_references(self) -> Dict[LibraryEntry, Set[Location]]:
+    @property
+    def namespace_references(self) -> Dict[LibraryEntry, Set[Location]]:
         return self._namespace_references
 
-    def get_import_entries(self) -> Dict[Import, LibraryEntry]:
+    @property
+    def import_entries(self) -> Dict[Import, LibraryEntry]:
         return self._import_entries
 
-    def get_libraries(self) -> Dict[str, LibraryEntry]:
+    @property
+    def libraries(self) -> Dict[str, LibraryEntry]:
         return self._libraries
 
-    def get_namespaces(self) -> Dict[KeywordMatcher, List[LibraryEntry]]:
+    @property
+    def namespaces(self) -> Dict[KeywordMatcher, List[LibraryEntry]]:
         if self._namespaces is None:
             self._namespaces = defaultdict(list)
 
-            for v in (self.get_libraries()).values():
+            for v in self.libraries.values():
                 self._namespaces[KeywordMatcher(v.alias or v.name or v.import_name, is_namespace=True)].append(v)
-            for v in (self.get_resources()).values():
+            for v in self.resources.values():
                 self._namespaces[KeywordMatcher(v.alias or v.name or v.import_name, is_namespace=True)].append(v)
 
         return self._namespaces
 
-    def get_resources(self) -> Dict[str, ResourceEntry]:
+    @property
+    def resources(self) -> Dict[str, ResourceEntry]:
         return self._resources
 
-    def get_variables_imports(self) -> Dict[str, VariablesEntry]:
+    @property
+    def variables_imports(self) -> Dict[str, VariablesEntry]:
         return self._variables_imports
 
+    @property
     @_logger.call
-    def get_library_doc(self) -> ResourceDoc:
+    def library_doc(self) -> ResourceDoc:
         return self._library_doc
 
+    @property
     @_logger.call
-    def get_imports(self) -> List[Import]:
-        return self.get_library_doc().resource_imports
+    def imports(self) -> List[Import]:
+        return self.library_doc.resource_imports
 
+    @property
     @_logger.call
-    def get_own_variables(self) -> List[VariableDefinition]:
-        return self.get_library_doc().resource_variables
+    def own_variables(self) -> List[VariableDefinition]:
+        return self.library_doc.resource_variables
 
     _builtin_variables: Optional[List[VariableDefinition]] = None
 
@@ -289,25 +303,28 @@ class Namespace:
             None,
         )
 
-    def get_imported_keywords(self) -> Iterator[KeywordDoc]:
+    @property
+    def imported_keywords(self) -> Iterator[KeywordDoc]:
         return itertools.chain(
             *(e.library_doc.keywords for e in self._libraries.values()),
             *(e.library_doc.keywords for e in self._resources.values()),
         )
 
+    @property
     @_logger.call
-    def iter_all_keywords(self) -> Iterator[KeywordDoc]:
+    def all_keywords(self) -> Iterator[KeywordDoc]:
         return itertools.chain(
-            self.get_imported_keywords(),
-            self.get_library_doc().keywords,
+            self.imported_keywords,
+            self.library_doc.keywords,
         )
 
+    @property
     @_logger.call
-    def get_keywords(self) -> List[KeywordDoc]:
+    def keywords(self) -> List[KeywordDoc]:
         if self._keywords is None:
             result: Dict[KeywordMatcher, KeywordDoc] = {}
 
-            for doc in self.iter_all_keywords():
+            for doc in self.all_keywords:
                 result[doc.matcher] = doc
 
             self._keywords = list(result.values())
@@ -322,19 +339,19 @@ class Namespace:
 
     def _on_libraries_changed(self, sender: Any, libraries: Any) -> None:
         for p in libraries:
-            if any(e for e in self.get_libraries().values() if e.library_doc == p):
+            if any(e for e in self.libraries.values() if e.library_doc == p):
                 self.invalidated(self)
                 return
 
     def _on_resources_changed(self, sender: Any, resources: Any) -> None:
         for p in resources:
-            if any(e for e in self.get_resources().values() if e.library_doc.source == p.source):
+            if any(e for e in self.resources.values() if e.library_doc.source == p.source):
                 self.invalidated(self)
                 return
 
     def _on_variables_changed(self, sender: Any, variables: Any) -> None:
         for p in variables:
-            if any(e for e in self.get_variables_imports().values() if e.library_doc.source == p.source):
+            if any(e for e in self.variables_imports.values() if e.library_doc.source == p.source):
                 self.invalidated(self)
                 return
 

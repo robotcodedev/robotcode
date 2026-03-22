@@ -619,8 +619,8 @@ class RobotCodeActionRefactorProtocolPart(RobotLanguageServerProtocolPart, Model
         if block is None:
             return None
 
-        variable_references = namespace.get_variable_references()
-        local_variable_assignments = namespace.get_local_variable_assignments()
+        variable_references = namespace.variable_references
+        local_variable_assignments = namespace.local_variable_assignments
 
         block_range = range_from_node(block, skip_non_data=True, allow_comments=True)
         argument_variables = {
