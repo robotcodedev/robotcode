@@ -1,3 +1,4 @@
+import hashlib
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import (
@@ -36,6 +37,7 @@ class SourceEntity:
     def __hash__(self) -> int:
         return hash(
             (
+                type(self),
                 self.line_no,
                 self.col_offset,
                 self.end_line_no,
@@ -45,7 +47,7 @@ class SourceEntity:
         )
 
 
-@dataclass(slots=True)
+@dataclass(slots=True, eq=False)
 class Import(SourceEntity):
     name: Optional[str]
     name_token: Optional[Token]
@@ -115,7 +117,7 @@ class VariableDefinitionType(Enum):
     VARIABLE_NOT_FOUND = "variable not found"
 
 
-@dataclass(slots=True)
+@dataclass(slots=True, eq=False)
 class VariableDefinition(SourceEntity):
     name: str
     name_token: Optional[Token]  # TODO: this is not needed anymore, but kept for compatibility
@@ -129,6 +131,47 @@ class VariableDefinition(SourceEntity):
     value_is_native: bool = field(default=False, compare=False)
     value_type: Optional[str] = field(default=None, compare=False)
 
+    _hash_value: int = field(default=0, init=False, compare=False, hash=False, repr=False)
+    _stable_id: str = field(default="", init=False, compare=False, hash=False, repr=False)
+
+    def __post_init__(self) -> None:
+        self._hash_value = hash(
+            (
+                type(self),
+                self.type.value,
+                self.name,
+                self.source,
+                self.line_no,
+                self.col_offset,
+                self.end_line_no,
+                self.end_col_offset,
+            )
+        )
+
+    def _compute_stable_id(self) -> str:
+        h = hashlib.sha256()
+        h.update(
+            "\0".join(
+                (
+                    type(self).__qualname__,
+                    self.type.value,
+                    self.name,
+                    self.source or "",
+                    str(self.line_no),
+                    str(self.col_offset),
+                    str(self.end_line_no),
+                    str(self.end_col_offset),
+                )
+            ).encode()
+        )
+        return h.hexdigest()
+
+    @property
+    def stable_id(self) -> str:
+        if not self._stable_id:
+            self._stable_id = self._compute_stable_id()
+        return self._stable_id
+
     @property
     def matcher(self) -> VariableMatcher:
         return search_variable(self.name)
@@ -139,8 +182,22 @@ class VariableDefinition(SourceEntity):
         value_type = f": {self.value_type}" if self.value_type else ""
         return f"{m.identifier}{{{m.base.strip()}{value_type}}}"
 
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, VariableDefinition):
+            return NotImplemented
+        return (
+            type(self) is type(other)
+            and self.type is other.type
+            and self.name == other.name
+            and self.source == other.source
+            and self.line_no == other.line_no
+            and self.col_offset == other.col_offset
+            and self.end_line_no == other.end_line_no
+            and self.end_col_offset == other.end_col_offset
+        )
+
     def __hash__(self) -> int:
-        return hash((self.type, self.name, self.source, self.range))
+        return self._hash_value
 
     @property
     def name_range(self) -> Range:
@@ -157,74 +214,50 @@ class VariableDefinition(SourceEntity):
         )
 
 
-@dataclass(slots=True)
+@dataclass(slots=True, eq=False)
 class TestVariableDefinition(VariableDefinition):
     type: VariableDefinitionType = VariableDefinitionType.TEST_VARIABLE
 
-    def __hash__(self) -> int:
-        return hash((self.type, self.name, self.source, self.range))
 
-
-@dataclass(slots=True)
+@dataclass(slots=True, eq=False)
 class LocalVariableDefinition(VariableDefinition):
     type: VariableDefinitionType = VariableDefinitionType.LOCAL_VARIABLE
 
-    def __hash__(self) -> int:
-        return hash((self.type, self.name, self.source, self.range))
 
-
-@dataclass(slots=True)
+@dataclass(slots=True, eq=False)
 class GlobalVariableDefinition(VariableDefinition):
     type: VariableDefinitionType = VariableDefinitionType.GLOBAL_VARIABLE
 
-    def __hash__(self) -> int:
-        return hash((self.type, self.name, self.source, self.range))
 
-
-@dataclass(slots=True)
+@dataclass(slots=True, eq=False)
 class BuiltInVariableDefinition(GlobalVariableDefinition):
     type: VariableDefinitionType = VariableDefinitionType.BUILTIN_VARIABLE
     resolvable: bool = True
 
-    def __hash__(self) -> int:
-        return hash((self.type, self.name, self.source, self.range))
 
-
-@dataclass(slots=True)
+@dataclass(slots=True, eq=False)
 class CommandLineVariableDefinition(GlobalVariableDefinition):
     type: VariableDefinitionType = VariableDefinitionType.COMMAND_LINE_VARIABLE
     resolvable: bool = True
 
-    def __hash__(self) -> int:
-        return hash((self.type, self.name, self.source, self.range))
 
-
-@dataclass(slots=True)
+@dataclass(slots=True, eq=False)
 class ArgumentDefinition(LocalVariableDefinition):
     type: VariableDefinitionType = VariableDefinitionType.ARGUMENT
     keyword_doc: Optional["KeywordDoc"] = field(default=None, compare=False, metadata={"nosave": True})
 
-    def __hash__(self) -> int:
-        return hash((self.type, self.name, self.source, self.range))
 
-
-@dataclass(slots=True)
+@dataclass(slots=True, eq=False)
 class EmbeddedArgumentDefinition(ArgumentDefinition):
     pattern: Optional[str] = field(default=None, compare=False)
 
-    def __hash__(self) -> int:
-        return hash((self.type, self.name, self.source, self.range))
 
-
-@dataclass(slots=True)
+@dataclass(slots=True, eq=False)
 class LibraryArgumentDefinition(ArgumentDefinition):
     type: VariableDefinitionType = VariableDefinitionType.LIBRARY_ARGUMENT
 
-    def __hash__(self) -> int:
-        return hash((self.type, self.name, self.source, self.range))
 
-
-@dataclass(slots=True, frozen=True, eq=False, repr=False)
+@dataclass(slots=True, eq=False, repr=False)
 class NativeValue:
     value: Any
 
@@ -235,33 +268,24 @@ class NativeValue:
         return str(self.value)
 
 
-@dataclass(slots=True)
+@dataclass(slots=True, eq=False)
 class ImportedVariableDefinition(VariableDefinition):
     type: VariableDefinitionType = VariableDefinitionType.IMPORTED_VARIABLE
     value: Optional[NativeValue] = field(default=None, compare=False)
 
-    def __hash__(self) -> int:
-        return hash((self.type, self.name, self.source, self.range))
 
-
-@dataclass(slots=True)
+@dataclass(slots=True, eq=False)
 class EnvironmentVariableDefinition(VariableDefinition):
     type: VariableDefinitionType = VariableDefinitionType.ENVIRONMENT_VARIABLE
     resolvable: bool = True
 
     default_value: Any = field(default=None, compare=False)
 
-    def __hash__(self) -> int:
-        return hash((self.type, self.name, self.source, self.range))
 
-
-@dataclass(slots=True)
+@dataclass(slots=True, eq=False)
 class VariableNotFoundDefinition(VariableDefinition):
     type: VariableDefinitionType = VariableDefinitionType.VARIABLE_NOT_FOUND
     resolvable: bool = False
-
-    def __hash__(self) -> int:
-        return hash((self.type, self.name, self.source, self.range))
 
 
 @dataclass(slots=True)
@@ -339,6 +363,7 @@ class TestCaseDefinition(SourceEntity):
     def __hash__(self) -> int:
         return hash(
             (
+                type(self),
                 self.line_no,
                 self.col_offset,
                 self.end_line_no,
@@ -356,6 +381,7 @@ class TagDefinition(SourceEntity):
     def __hash__(self) -> int:
         return hash(
             (
+                type(self),
                 self.line_no,
                 self.col_offset,
                 self.end_line_no,
