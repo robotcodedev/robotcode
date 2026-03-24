@@ -10,7 +10,7 @@ import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.modules
 import com.intellij.openapi.util.Key
-import com.jetbrains.python.sdk.pythonSdk
+import com.jetbrains.python.sdk.PythonSdkUtil
 import dev.robotcode.robotcode4ij.lsp.langServerManager
 import dev.robotcode.robotcode4ij.testing.testManger
 import kotlinx.coroutines.CoroutineScope
@@ -39,9 +39,7 @@ class RobotCodeHelpers {
 
 val Project.robotPythonSdk: com.intellij.openapi.projectRoots.Sdk?
     get() {
-        return this.pythonSdk ?: this.projectFile?.let {
-            this.modules.firstNotNullOfOrNull { it.pythonSdk }
-        }
+        return this.modules.firstNotNullOfOrNull { PythonSdkUtil.findPythonSdk(it) }
     }
 
 enum class CheckPythonAndRobotVersionResult(val errorMessage: String? = null) {
