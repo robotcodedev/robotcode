@@ -37,6 +37,7 @@ from ..utils.stubs import Languages
 from .imports_manager import ImportsManager
 from .library_doc import LibraryDoc
 from .namespace import DocumentType, Namespace, NamespaceBuilder
+from .project_index import ProjectIndex
 from .workspace_config import (
     AnalysisDiagnosticModifiersConfig,
     AnalysisRobotConfig,
@@ -81,6 +82,33 @@ class DocumentsCacheHelper:
         self._workspace_languages: weakref.WeakKeyDictionary[WorkspaceFolder, Optional[Languages]] = (
             weakref.WeakKeyDictionary()
         )
+        self._project_indexes_lock = threading.RLock()
+        self._project_indexes: weakref.WeakKeyDictionary[WorkspaceFolder, ProjectIndex] = weakref.WeakKeyDictionary()
+        self._default_project_index: Optional[ProjectIndex] = None
+
+    def get_project_index(self, document: TextDocument) -> ProjectIndex:
+        return self.get_project_index_for_uri(document.uri)
+
+    def get_project_index_for_uri(self, uri: Uri) -> ProjectIndex:
+        return self.get_project_index_for_workspace_folder(self.workspace.get_workspace_folder(uri))
+
+    def get_project_index_for_workspace_folder(self, folder: Optional[WorkspaceFolder]) -> ProjectIndex:
+        if folder is None:
+            if len(self.workspace.workspace_folders) == 1:
+                folder = self.workspace.workspace_folders[0]
+            else:
+                return self.default_project_index()
+
+        with self._project_indexes_lock:
+            if folder not in self._project_indexes:
+                self._project_indexes[folder] = ProjectIndex()
+            return self._project_indexes[folder]
+
+    def default_project_index(self) -> ProjectIndex:
+        with self._project_indexes_lock:
+            if self._default_project_index is None:
+                self._default_project_index = ProjectIndex()
+            return self._default_project_index
 
     def get_languages_for_document(self, document_or_uri: Union[TextDocument, Uri, str]) -> Optional[Languages]:
         if get_robot_version() < (6, 0):
@@ -352,6 +380,9 @@ class DocumentsCacheHelper:
     def namespace_invalidated(sender, namespace: Namespace) -> None: ...
 
     def _invalidate_namespace(self, sender: Namespace) -> None:
+        if sender.document is not None:
+            self.get_project_index(sender.document).remove_file(sender.source)
+
         document = sender.document
         if document is not None:
             document.remove_cache_entry(self.__get_general_namespace)
@@ -402,6 +433,9 @@ class DocumentsCacheHelper:
         )
 
         result = builder.build()
+
+        # Update the folder-scoped reference index
+        self.get_project_index(document).update_file(result.source, result)
 
         # When the namespace detects dependency changes, evict the
         # document cache entry so it gets rebuilt on next access.

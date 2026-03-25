@@ -232,15 +232,11 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
         if variable.type == VariableDefinitionType.LOCAL_VARIABLE:
             result.extend(self.find_variable_references_in_file(document, variable, False))
         else:
-            result.extend(
-                self._find_references_in_workspace(
-                    document,
-                    stop_at_first,
-                    self.find_variable_references_in_file,
-                    variable,
-                    False,
-                )
-            )
+            refs = self.parent.documents_cache.get_project_index(document).find_variable_references(variable)
+            if stop_at_first and refs:
+                result.append(next(iter(refs)))
+            else:
+                result.extend(refs)
         return result
 
     @_logger.call
@@ -322,15 +318,11 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
         if include_declaration and kw_doc.source:
             result.append(Location(str(Uri.from_path(kw_doc.source)), kw_doc.range))
 
-        result.extend(
-            self._find_references_in_workspace(
-                document,
-                stop_at_first,
-                self.find_keyword_references_in_file,
-                kw_doc,
-                False,
-            )
-        )
+        refs = self.parent.documents_cache.get_project_index(document).find_keyword_references(kw_doc)
+        if stop_at_first and refs:
+            result.append(next(iter(refs)))
+        else:
+            result.extend(refs)
 
         return result
 
@@ -412,7 +404,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
         if entry is None:
             return None
 
-        result = self._find_references_in_workspace(document, False, self._find_library_alias_in_file, entry)
+        result = list(self.parent.documents_cache.get_project_index(document).find_namespace_references(entry))
 
         if context.include_declaration and entry.import_source:
             result.append(Location(str(Uri.from_path(entry.import_source)), entry.alias_range))

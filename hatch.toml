@@ -20,6 +20,7 @@ dependencies = [
   "pytest_asyncio>=0.23",
   "pytest-rerunfailures",
   "pytest-cov",
+  "pytest-mock",
   "mypy",
   "ruff",
   "debugpy",
@@ -92,7 +93,7 @@ matrix.rf.dependencies = [
 ]
 
 [envs.hatch-test]
-dependencies = ["pytest", "pytest-html", "pytest_asyncio>=0.23", "pyyaml"]
+dependencies = ["pytest", "pytest-html", "pytest-mock", "pytest_asyncio>=0.23", "pyyaml"]
 pre-install-commands = ["python ./scripts/install_packages.py"]
 
 [[envs.test.matrix]]

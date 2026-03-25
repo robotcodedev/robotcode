@@ -57,8 +57,8 @@ class RobotFrameworkLanguageProvider(LanguageProvider):
         self.diagnostics_context.diagnostics.folder_analyzers.add(self.analyze_folder)
         self.diagnostics_context.diagnostics.document_analyzers.add(self.analyze_document)
         self.diagnostics_context.diagnostics.document_collectors.add(self.collect_diagnostics)
-        # self.diagnostics_context.diagnostics.document_collectors.add(self.collect_unused_keywords)
-        # self.diagnostics_context.diagnostics.document_collectors.add(self.collect_unused_variables)
+        self.diagnostics_context.diagnostics.document_collectors.add(self.collect_unused_keywords)
+        self.diagnostics_context.diagnostics.document_collectors.add(self.collect_unused_variables)
 
     def _update_python_path(self) -> None:
         root_path = (
@@ -126,22 +126,12 @@ class RobotFrameworkLanguageProvider(LanguageProvider):
     def collect_unused_keywords(self, sender: Any, document: TextDocument) -> Optional[List[Diagnostic]]:
         namespace = self._document_cache.get_namespace(document)
 
-        documents = (
-            [document]
-            if self._document_cache.get_document_type(document) != DocumentType.RESOURCE
-            else self.diagnostics_context.workspace.documents.documents
-        )
+        project_index = self._document_cache.get_project_index(document)
 
         result: List[Diagnostic] = []
 
         for kw in namespace.library_doc.keywords.values():
-            has_reference = False
-            for doc in documents:
-                refs = self._document_cache.get_namespace(doc).keyword_references
-                if refs.get(kw):
-                    has_reference = True
-                    break
-            if not has_reference:
+            if not project_index.find_keyword_references(kw):
                 result.append(
                     Diagnostic(
                         range=kw.name_range,
@@ -159,6 +149,7 @@ class RobotFrameworkLanguageProvider(LanguageProvider):
         result: List[Diagnostic] = []
 
         namespace = self._document_cache.get_namespace(document)
+        project_index = self._document_cache.get_project_index(document)
 
         for var, locations in namespace.variable_references.items():
             if var.type in (
@@ -182,16 +173,7 @@ class RobotFrameworkLanguageProvider(LanguageProvider):
                 )
                 and self._document_cache.get_document_type(document) == DocumentType.RESOURCE
             ):
-                if self.verbose_callback is not None:
-                    self.verbose_callback(f"Checking variable '{var.name}' {var.type} for usage. {document.uri}")
-                    self.verbose_callback(
-                        f"Searching references in {len(self.diagnostics_context.workspace.documents)} documents."
-                    )
-
-                has_reference = any(
-                    len(self._document_cache.get_namespace(doc).variable_references.get(var, set())) > 0
-                    for doc in self.diagnostics_context.workspace.documents.documents
-                )
+                has_reference = bool(project_index.find_variable_references(var))
 
             if not has_reference:
                 result.append(
