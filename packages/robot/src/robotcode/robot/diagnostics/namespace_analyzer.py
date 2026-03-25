@@ -56,6 +56,7 @@ from ..utils.ast import (
     strip_variable_token,
     tokenize_variables,
 )
+from ..utils.match import normalize
 from ..utils.stubs import Languages
 from ..utils.variables import (
     BUILTIN_VARIABLES,
@@ -74,7 +75,6 @@ from .entities import (
     GlobalVariableDefinition,
     LibraryEntry,
     LocalVariableDefinition,
-    TagDefinition,
     TestCaseDefinition,
     TestVariableDefinition,
     VariableDefinition,
@@ -106,10 +106,10 @@ class AnalyzerResult:
     local_variable_assignments: Dict[VariableDefinition, Set[Range]]
     namespace_references: Dict[LibraryEntry, Set[Location]]
     test_case_definitions: List[TestCaseDefinition]
-    tag_definitions: List[TagDefinition]
+    keyword_tag_references: Dict[str, Set[Location]]
+    testcase_tag_references: Dict[str, Set[Location]]
+    metadata_references: Dict[str, Set[Location]]
     scope_tree: ScopeTree = None  # type: ignore[assignment]  # set by run()
-
-    # TODO Tag references
 
 
 _builtin_variables: Optional[List[VariableDefinition]] = None
@@ -150,7 +150,9 @@ class NamespaceAnalyzer(Visitor):
         self._local_variable_assignments: Dict[VariableDefinition, Set[Range]] = defaultdict(set)
         self._namespace_references: Dict[LibraryEntry, Set[Location]] = defaultdict(set)
         self._test_case_definitions: List[TestCaseDefinition] = []
-        self._tag_definitions: List[TagDefinition] = []
+        self._keyword_tag_references: Dict[str, Set[Location]] = defaultdict(set)
+        self._testcase_tag_references: Dict[str, Set[Location]] = defaultdict(set)
+        self._metadata_references: Dict[str, Set[Location]] = defaultdict(set)
 
         # Phase 1+2 results (set by resolve())
         self._library_doc: ResourceDoc = None  # type: ignore[assignment]  # set by resolve()
@@ -246,7 +248,9 @@ class NamespaceAnalyzer(Visitor):
             self._local_variable_assignments,
             self._namespace_references,
             self._test_case_definitions,
-            self._tag_definitions,
+            self._keyword_tag_references,
+            self._testcase_tag_references,
+            self._metadata_references,
             self._scope_builder.build(self._variable_scope),
         )
 
@@ -1595,11 +1599,18 @@ class NamespaceAnalyzer(Visitor):
 
         self.generic_visit(node)
 
+    def _collect_tag_references(self, node: Statement, refs: Dict[str, Set[Location]]) -> None:
+        for token in node.get_tokens(Token.ARGUMENT):
+            if token.value:
+                refs[normalize(token.value)].add(Location(self._document_uri, range_from_token(token)))
+
     def visit_DefaultTags(self, node: Statement) -> None:  # noqa: N802
         self._analyze_statement_variables(node, DiagnosticSeverity.HINT)
+        self._collect_tag_references(node, self._testcase_tag_references)
 
     def visit_ForceTags(self, node: Statement) -> None:  # noqa: N802
         self._analyze_statement_variables(node, DiagnosticSeverity.HINT)
+        self._collect_tag_references(node, self._testcase_tag_references)
 
         if get_robot_version() >= (6, 0):
             tag = node.get_token(Token.FORCE_TAGS)
@@ -1614,6 +1625,7 @@ class NamespaceAnalyzer(Visitor):
 
     def visit_TestTags(self, node: Statement) -> None:  # noqa: N802
         self._analyze_statement_variables(node, DiagnosticSeverity.HINT)
+        self._collect_tag_references(node, self._testcase_tag_references)
 
         if get_robot_version() >= (6, 0):
             tag = node.get_token(Token.FORCE_TAGS)
@@ -1629,8 +1641,17 @@ class NamespaceAnalyzer(Visitor):
     def visit_Arguments(self, node: Statement) -> None:  # noqa: N802
         pass
 
+    def visit_KeywordTags(self, node: Statement) -> None:  # noqa: N802
+        self._visit_settings_statement(node, DiagnosticSeverity.HINT)
+        self._collect_tag_references(node, self._keyword_tag_references)
+
     def visit_DocumentationOrMetadata(self, node: Statement) -> None:  # noqa: N802
         self._visit_settings_statement(node, DiagnosticSeverity.HINT)
+
+        if hasattr(node, "name") and node.name:
+            name_token = node.get_token(Token.NAME)
+            if name_token is not None:
+                self._metadata_references[node.name].add(Location(self._document_uri, range_from_token(name_token)))
 
     def visit_Timeout(self, node: Statement) -> None:  # noqa: N802
         self._visit_block_settings_statement(node)
@@ -1643,6 +1664,10 @@ class NamespaceAnalyzer(Visitor):
 
     def visit_Tags(self, node: Statement) -> None:  # noqa: N802
         self._visit_settings_statement(node, DiagnosticSeverity.HINT)
+        if any(isinstance(n, Keyword) for n in self._node_stack):
+            self._collect_tag_references(node, self._keyword_tag_references)
+        else:
+            self._collect_tag_references(node, self._testcase_tag_references)
 
         if (6, 0) < get_robot_version() < (7, 0):
             for tag in node.get_tokens(Token.ARGUMENT):

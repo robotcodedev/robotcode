@@ -38,7 +38,6 @@ from .entities import (
     LibraryImport,
     ResourceEntry,
     ResourceImport,
-    TagDefinition,
     TestCaseDefinition,
     VariableDefinition,
     VariablesEntry,
@@ -116,7 +115,9 @@ class Namespace:
         local_variable_assignments: Dict[VariableDefinition, Set[Range]],
         namespace_references: Dict[LibraryEntry, Set[Location]],
         test_case_definitions: List[TestCaseDefinition],
-        tag_definitions: List[TagDefinition],
+        keyword_tag_references: Dict[str, Set[Location]],
+        testcase_tag_references: Dict[str, Set[Location]],
+        metadata_references: Dict[str, Set[Location]],
         scope_tree: ScopeTree,
         finder: KeywordFinder,
         sentinel: object,
@@ -140,7 +141,9 @@ class Namespace:
         self._local_variable_assignments = local_variable_assignments
         self._namespace_references = namespace_references
         self._test_case_definitions = test_case_definitions
-        self._tag_definitions = tag_definitions
+        self._keyword_tag_references = keyword_tag_references
+        self._testcase_tag_references = testcase_tag_references
+        self._metadata_references = metadata_references
         self._scope_tree = scope_tree
         self._finder: KeywordFinder = finder
         self._sentinel = sentinel  # prevent GC — ref-counted by imports_manager
@@ -188,6 +191,18 @@ class Namespace:
     @property
     def namespace_references(self) -> Dict[LibraryEntry, Set[Location]]:
         return self._namespace_references
+
+    @property
+    def keyword_tag_references(self) -> Dict[str, Set[Location]]:
+        return self._keyword_tag_references
+
+    @property
+    def testcase_tag_references(self) -> Dict[str, Set[Location]]:
+        return self._testcase_tag_references
+
+    @property
+    def metadata_references(self) -> Dict[str, Set[Location]]:
+        return self._metadata_references
 
     @property
     def import_entries(self) -> Dict[Import, LibraryEntry]:
@@ -494,7 +509,9 @@ class NamespaceBuilder:
                 local_variable_assignments=analyzer_result.local_variable_assignments,
                 namespace_references=analyzer_result.namespace_references,
                 test_case_definitions=analyzer_result.test_case_definitions,
-                tag_definitions=analyzer_result.tag_definitions,
+                keyword_tag_references=analyzer_result.keyword_tag_references,
+                testcase_tag_references=analyzer_result.testcase_tag_references,
+                metadata_references=analyzer_result.metadata_references,
                 scope_tree=analyzer_result.scope_tree,
                 finder=finder,
                 sentinel=sentinel,

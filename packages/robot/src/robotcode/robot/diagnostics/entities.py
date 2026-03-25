@@ -372,21 +372,3 @@ class TestCaseDefinition(SourceEntity):
                 self.name,
             )
         )
-
-
-@dataclass(slots=True)
-class TagDefinition(SourceEntity):
-    name: str
-
-    def __hash__(self) -> int:
-        return hash(
-            (
-                type(self),
-                self.line_no,
-                self.col_offset,
-                self.end_line_no,
-                self.end_col_offset,
-                self.source,
-                self.name,
-            )
-        )
