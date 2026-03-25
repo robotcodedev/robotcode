@@ -73,5 +73,5 @@ API_URL = "https://api.test1.company.com"
 APP_URL = "https://app.test1.company.com"
 
 
-#[tool.robotcode-analyze.modifiers]
-#warning = ["KeywordNotFound"]
+[tool.robotcode-analyze.code]
+collect-unused = true

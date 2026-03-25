@@ -124,6 +124,9 @@ class RobotFrameworkLanguageProvider(LanguageProvider):
         return self._document_cache.get_diagnostic_modifier(document).modify_diagnostics(namespace.diagnostics)
 
     def collect_unused_keywords(self, sender: Any, document: TextDocument) -> Optional[List[Diagnostic]]:
+        if not self.diagnostics_context.collect_unused:
+            return None
+
         namespace = self._document_cache.get_namespace(document)
 
         project_index = self._document_cache.get_project_index(document)
@@ -146,6 +149,9 @@ class RobotFrameworkLanguageProvider(LanguageProvider):
         return result
 
     def collect_unused_variables(self, sender: Any, document: TextDocument) -> Optional[List[Diagnostic]]:
+        if not self.diagnostics_context.collect_unused:
+            return None
+
         result: List[Diagnostic] = []
 
         namespace = self._document_cache.get_namespace(document)

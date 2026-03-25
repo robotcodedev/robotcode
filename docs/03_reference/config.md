@@ -155,11 +155,11 @@ Selects the Default profile if no profile is given at command line.
 
 Examples:
 ```toml
-default_profiles = "default"
+default-profiles = "default"
 ```
 
 ```toml
-default_profiles = ["default", "Firefox"]
+default-profiles = ["default", "Firefox"]
 ```
 
 ## doc
@@ -507,9 +507,9 @@ in the `all` mode.
 **passed:** remove data only from keywords in passed
 test cases and suites
 
-**for:** remove passed iterations from for loops
+**for:** remove passed iterations from FOR loops
 
-**while:** remove passed iterations from while loops
+**while:** remove passed iterations from WHILE loops
 
 **wuks:** remove all but the last failing keyword
 inside `BuiltIn.Wait Until Keyword Succeeds`
@@ -604,7 +604,6 @@ Add documentation to tags matching the given
 pattern. Documentation is shown in `Test Details` and
 also as a tooltip in `Statistics by Tag`. Pattern can
 use `*`, `?` and `[]` as wildcards like --test.
-Documentation can contain formatting like --doc.
 
 Examples:
 
@@ -893,7 +892,7 @@ corresponds to the `-P --pythonpath path *` option of _libdoc_
 Type: `bool | Flag | None`
 
 Do not print the path of the generated output file
-to the console. New in RF 4.0.
+to the console.
 
 corresponds to the `--quiet` option of _libdoc_
 
@@ -906,7 +905,7 @@ JSON spec files. RAW means preserving the original
 documentation format and HTML means converting
 documentation to HTML. The default is RAW with XML
 spec files and HTML with JSON specs and when using
-the special LIBSPEC format. New in RF 4.0.
+the special LIBSPEC format.
 
 corresponds to the `-s --specdocformat RAW|HTML` option of _libdoc_
 
@@ -1438,9 +1437,9 @@ in the `all` mode.
 **passed:** remove data only from keywords in passed
 test cases and suites
 
-**for:** remove passed iterations from for loops
+**for:** remove passed iterations from FOR loops
 
-**while:** remove passed iterations from while loops
+**while:** remove passed iterations from WHILE loops
 
 **wuks:** remove all but the last failing keyword
 inside `BuiltIn.Wait Until Keyword Succeeds`
@@ -1513,7 +1512,6 @@ Add documentation to tags matching the given
 pattern. Documentation is shown in `Test Details` and
 also as a tooltip in `Statistics by Tag`. Pattern can
 use `*`, `?` and `[]` as wildcards like --test.
-Documentation can contain formatting like --doc.
 
 Examples:
 
@@ -1802,7 +1800,6 @@ Type: `bool | Flag | None`
 Processes output also if the top level suite is
 empty. Useful e.g. with --include/--exclude when it
 is not an error that there are no matches.
-Use --skiponfailure when starting execution instead.
 
 corresponds to the `--processemptysuite` option of _rebot_
 
@@ -1839,9 +1836,9 @@ in the `all` mode.
 **passed:** remove data only from keywords in passed
 test cases and suites
 
-**for:** remove passed iterations from for loops
+**for:** remove passed iterations from FOR loops
 
-**while:** remove passed iterations from while loops
+**while:** remove passed iterations from WHILE loops
 
 **wuks:** remove all but the last failing keyword
 inside `BuiltIn.Wait Until Keyword Succeeds`
@@ -1989,7 +1986,6 @@ Add documentation to tags matching the given
 pattern. Documentation is shown in `Test Details` and
 also as a tooltip in `Statistics by Tag`. Pattern can
 use `*`, `?` and `[]` as wildcards like --test.
-Documentation can contain formatting like --doc.
 
 Examples:
 
@@ -2114,9 +2110,9 @@ in the `all` mode.
 **passed:** remove data only from keywords in passed
 test cases and suites
 
-**for:** remove passed iterations from for loops
+**for:** remove passed iterations from FOR loops
 
-**while:** remove passed iterations from while loops
+**while:** remove passed iterations from WHILE loops
 
 **wuks:** remove all but the last failing keyword
 inside `BuiltIn.Wait Until Keyword Succeeds`
@@ -2286,7 +2282,6 @@ Add documentation to tags matching the given
 pattern. Documentation is shown in `Test Details` and
 also as a tooltip in `Statistics by Tag`. Pattern can
 use `*`, `?` and `[]` as wildcards like --test.
-Documentation can contain formatting like --doc.
 
 Examples:
 
@@ -2628,6 +2623,20 @@ Examples:
 exit_code_mask = "error|warn"
 ```
 
+## tool.robotcode-analyze.code.collect-unused
+
+Type: `bool | None`
+
+Enables collection of unused keyword and unused variable diagnostics.
+By default this is disabled. Set to `true` to report unused keywords and variables.
+
+Examples:
+
+```toml
+[tool.robotcode-analyze.code]
+collect_unused = true
+```
+
 ## tool.robotcode-analyze.code.exit-code-mask
 
 Type: `list[Literal['error', 'warn', 'warning', 'info', 'information', 'hint', 'all']] | None`
@@ -2738,6 +2747,20 @@ Examples:
 Type: `CodeConfig | None`
 
 Extend the code analysis configuration.
+
+## tool.robotcode-analyze.extend-code.collect-unused
+
+Type: `bool | None`
+
+Enables collection of unused keyword and unused variable diagnostics.
+By default this is disabled. Set to `true` to report unused keywords and variables.
+
+Examples:
+
+```toml
+[tool.robotcode-analyze.code]
+collect_unused = true
+```
 
 ## tool.robotcode-analyze.extend-code.exit-code-mask
 
@@ -2926,6 +2949,37 @@ analyze the library search order in a file specified with
 [`Set Library Search Order`](https://robotframework.org/robotframework/latest/libraries/BuiltIn.html#Set%20Library%20Search%20Order),
 so you can define a global order here. Just make sure to call the `Set Library Search Order`
 keyword somewhere in your robot file or internally in your library.
+
+## tool.robotcode-analyze.load-library-timeout
+
+Type: `int | None`
+
+Specifies the timeout in seconds for loading (importing) libraries and variable files during
+analysis. Increase this if your libraries perform heavy initialization (network calls, large
+dependency graphs, model loading, etc.).
+
+Must be > 0 when set. If you omit this key, RobotCode will instead look for the environment
+variable `ROBOTCODE_LOAD_LIBRARY_TIMEOUT`; otherwise it will use the internal default `10`.
+
+Examples:
+
+```toml
+[tool.robotcode-analyze]
+# Fast fail if libraries normally import in < 2s
+load_library_timeout = 5
+```
+
+```toml
+[tool.robotcode-analyze]
+# Allow heavy bootstrap (e.g. Selenium + large resource trees)
+load_library_timeout = 30
+```
+
+```toml
+[tool.robotcode-analyze]
+# Omit to use default
+# load_library_timeout = 15
+```
 
 ## tool.robotcode-analyze.modifiers
 
@@ -3116,50 +3170,5 @@ xUnit compatible result file. Not created unless this
 option is specified.
 
 corresponds to the `-x --xunit file` option of _robot_
-
-
-## tool.robotcode-analyze.global-library-search-order
-
-Type: `list[str] | None`
-
-Specifies a global search order for libraries and resources used during static analysis.
-This helps disambiguate keywords with identical names coming from multiple sources.
-RobotCode cannot infer dynamic changes done at runtime via `Set Library Search Order`, so
-define a deterministic order here if needed.
-
-Examples:
-
-```toml
-[tool.robotcode-analyze]
-global_library_search_order = ["MyLib", "BuiltIn", "Collections"]
-```
-
-## tool.robotcode-analyze.load-library-timeout
-
-Type: `int | None`
-
-Specifies the timeout in seconds for loading (importing) libraries and variable files during analysis. Increase this if your libraries perform heavy initialization (network calls, large dependency graphs, model loading, etc.).
-
-Must be > 0 when set. If you omit this key, RobotCode will instead look for the environment variable `ROBOTCODE_LOAD_LIBRARY_TIMEOUT`; otherwise it will use the internal default `10`.
-
-Examples:
-
-```toml
-[tool.robotcode-analyze]
-# Fast fail if libraries normally import in < 2s
-load_library_timeout = 5
-```
-
-```toml
-[tool.robotcode-analyze]
-# Allow heavy bootstrap (e.g. Selenium + large resource trees)
-load_library_timeout = 30
-```
-
-```toml
-[tool.robotcode-analyze]
-# Omit to use default
-# load_library_timeout = 15
-```
 
 

@@ -242,6 +242,15 @@
       "additionalProperties": false,
       "description": "robotcode-analyze code configuration.",
       "properties": {
+        "collect-unused": {
+          "default": null,
+          "description": "Enables collection of unused keyword and unused variable diagnostics.\nBy default this is disabled. Set to `true` to report unused keywords and variables.\n\nExamples:\n\n```toml\n[tool.robotcode-analyze.code]\ncollect_unused = true\n```\n",
+          "title": "Collect unused",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
         "exit-code-mask": {
           "default": null,
           "description": "Specifies the exit code mask for the code analysis.\nThis is useful if you want to ignore certain types of diagnostics in the result code.\n\nExamples:\n```toml\n[tool.robotcode-analyze.code]\nexit_code_mask = [\"error\", \"warn\"]\n```\n",
@@ -408,11 +417,11 @@
             }
           ],
           "default": null,
-          "description": "Do not print the path of the generated output file\nto the console. New in RF 4.0.\n\ncorresponds to the `--quiet` option of _libdoc_\n",
+          "description": "Do not print the path of the generated output file\nto the console.\n\ncorresponds to the `--quiet` option of _libdoc_\n",
           "title": "Quiet"
         },
         "spec-doc-format": {
-          "description": "Specifies the documentation format used with XML and\nJSON spec files. RAW means preserving the original\ndocumentation format and HTML means converting\ndocumentation to HTML. The default is RAW with XML\nspec files and HTML with JSON specs and when using\nthe special LIBSPEC format. New in RF 4.0.\n\ncorresponds to the `-s --specdocformat RAW|HTML` option of _libdoc_\n",
+          "description": "Specifies the documentation format used with XML and\nJSON spec files. RAW means preserving the original\ndocumentation format and HTML means converting\ndocumentation to HTML. The default is RAW with XML\nspec files and HTML with JSON specs and when using\nthe special LIBSPEC format.\n\ncorresponds to the `-s --specdocformat RAW|HTML` option of _libdoc_\n",
           "enum": [
             "RAW",
             "HTML"
@@ -856,7 +865,7 @@
           ]
         },
         "extend-remove-keywords": {
-          "description": "Appends entries to the --removekeywords option.\n\nRemove keyword data from the generated log file.\nKeywords containing warnings are not removed except\nin the `all` mode.\n\n**all:** remove data from all keywords\n\n**passed:** remove data only from keywords in passed\ntest cases and suites\n\n**for:** remove passed iterations from for loops\n\n**while:** remove passed iterations from while loops\n\n**wuks:** remove all but the last failing keyword\ninside `BuiltIn.Wait Until Keyword Succeeds`\n\n**name:\\<pattern>:** remove data from keywords that match\nthe given pattern. The pattern is matched\nagainst the full name of the keyword (e.g.\n'MyLib.Keyword', 'resource.Second Keyword'),\nis case, space, and underscore insensitive,\nand may contain `*`, `?` and `[]` wildcards.\n\nExamples:\n\n```\n--removekeywords name:Lib.HugeKw\n--removekeywords name:myresource.*\n```\n\n\n\n**tag:\\<pattern>:** remove data from keywords that match\nthe given pattern. Tags are case and space\ninsensitive and patterns can contain `*`,\n`?` and `[]` wildcards. Tags and patterns\ncan also be combined together with `AND`,\n`OR`, and `NOT` operators.\n\nExamples:\n\n```\n--removekeywords foo\n--removekeywords fooANDbar*\n```\n\ncorresponds to the `--removekeywords all|passed|for|wuks|name:<pattern>|tag:<pattern> *` option of _robot_\n",
+          "description": "Appends entries to the --removekeywords option.\n\nRemove keyword data from the generated log file.\nKeywords containing warnings are not removed except\nin the `all` mode.\n\n**all:** remove data from all keywords\n\n**passed:** remove data only from keywords in passed\ntest cases and suites\n\n**for:** remove passed iterations from FOR loops\n\n**while:** remove passed iterations from WHILE loops\n\n**wuks:** remove all but the last failing keyword\ninside `BuiltIn.Wait Until Keyword Succeeds`\n\n**name:\\<pattern>:** remove data from keywords that match\nthe given pattern. The pattern is matched\nagainst the full name of the keyword (e.g.\n'MyLib.Keyword', 'resource.Second Keyword'),\nis case, space, and underscore insensitive,\nand may contain `*`, `?` and `[]` wildcards.\n\nExamples:\n\n```\n--removekeywords name:Lib.HugeKw\n--removekeywords name:myresource.*\n```\n\n\n\n**tag:\\<pattern>:** remove data from keywords that match\nthe given pattern. Tags are case and space\ninsensitive and patterns can contain `*`,\n`?` and `[]` wildcards. Tags and patterns\ncan also be combined together with `AND`,\n`OR`, and `NOT` operators.\n\nExamples:\n\n```\n--removekeywords foo\n--removekeywords fooANDbar*\n```\n\ncorresponds to the `--removekeywords all|passed|for|wuks|name:<pattern>|tag:<pattern> *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
@@ -935,7 +944,7 @@
             ]
           },
           "default": null,
-          "description": "Appends entries to the --tagdoc option.\n\nAdd documentation to tags matching the given\npattern. Documentation is shown in `Test Details` and\nalso as a tooltip in `Statistics by Tag`. Pattern can\nuse `*`, `?` and `[]` as wildcards like --test.\nDocumentation can contain formatting like --doc.\n\nExamples:\n\n```\n--tagdoc mytag:Example\n--tagdoc \"owner-*:Original author\"\n```\n\ncorresponds to the `--tagdoc pattern:doc *` option of _robot_\n",
+          "description": "Appends entries to the --tagdoc option.\n\nAdd documentation to tags matching the given\npattern. Documentation is shown in `Test Details` and\nalso as a tooltip in `Statistics by Tag`. Pattern can\nuse `*`, `?` and `[]` as wildcards like --test.\n\nExamples:\n\n```\n--tagdoc mytag:Example\n--tagdoc \"owner-*:Original author\"\n```\n\ncorresponds to the `--tagdoc pattern:doc *` option of _robot_\n",
           "title": "Extend tag doc",
           "type": [
             "object",
@@ -1344,7 +1353,7 @@
             }
           ],
           "default": null,
-          "description": "Processes output also if the top level suite is\nempty. Useful e.g. with --include/--exclude when it\nis not an error that there are no matches.\nUse --skiponfailure when starting execution instead.\n\ncorresponds to the `--processemptysuite` option of _rebot_\n",
+          "description": "Processes output also if the top level suite is\nempty. Useful e.g. with --include/--exclude when it\nis not an error that there are no matches.\n\ncorresponds to the `--processemptysuite` option of _rebot_\n",
           "title": "Process empty suite"
         },
         "python-path": {
@@ -1367,7 +1376,7 @@
           ]
         },
         "remove-keywords": {
-          "description": "Remove keyword data from the generated log file.\nKeywords containing warnings are not removed except\nin the `all` mode.\n\n**all:** remove data from all keywords\n\n**passed:** remove data only from keywords in passed\ntest cases and suites\n\n**for:** remove passed iterations from for loops\n\n**while:** remove passed iterations from while loops\n\n**wuks:** remove all but the last failing keyword\ninside `BuiltIn.Wait Until Keyword Succeeds`\n\n**name:\\<pattern>:** remove data from keywords that match\nthe given pattern. The pattern is matched\nagainst the full name of the keyword (e.g.\n'MyLib.Keyword', 'resource.Second Keyword'),\nis case, space, and underscore insensitive,\nand may contain `*`, `?` and `[]` wildcards.\n\nExamples:\n\n```\n--removekeywords name:Lib.HugeKw\n--removekeywords name:myresource.*\n```\n\n\n\n**tag:\\<pattern>:** remove data from keywords that match\nthe given pattern. Tags are case and space\ninsensitive and patterns can contain `*`,\n`?` and `[]` wildcards. Tags and patterns\ncan also be combined together with `AND`,\n`OR`, and `NOT` operators.\n\nExamples:\n\n```\n--removekeywords foo\n--removekeywords fooANDbar*\n```\n\ncorresponds to the `--removekeywords all|passed|for|wuks|name:<pattern>|tag:<pattern> *` option of _robot_\n",
+          "description": "Remove keyword data from the generated log file.\nKeywords containing warnings are not removed except\nin the `all` mode.\n\n**all:** remove data from all keywords\n\n**passed:** remove data only from keywords in passed\ntest cases and suites\n\n**for:** remove passed iterations from FOR loops\n\n**while:** remove passed iterations from WHILE loops\n\n**wuks:** remove all but the last failing keyword\ninside `BuiltIn.Wait Until Keyword Succeeds`\n\n**name:\\<pattern>:** remove data from keywords that match\nthe given pattern. The pattern is matched\nagainst the full name of the keyword (e.g.\n'MyLib.Keyword', 'resource.Second Keyword'),\nis case, space, and underscore insensitive,\nand may contain `*`, `?` and `[]` wildcards.\n\nExamples:\n\n```\n--removekeywords name:Lib.HugeKw\n--removekeywords name:myresource.*\n```\n\n\n\n**tag:\\<pattern>:** remove data from keywords that match\nthe given pattern. Tags are case and space\ninsensitive and patterns can contain `*`,\n`?` and `[]` wildcards. Tags and patterns\ncan also be combined together with `AND`,\n`OR`, and `NOT` operators.\n\nExamples:\n\n```\n--removekeywords foo\n--removekeywords fooANDbar*\n```\n\ncorresponds to the `--removekeywords all|passed|for|wuks|name:<pattern>|tag:<pattern> *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
@@ -1561,7 +1570,7 @@
             ]
           },
           "default": null,
-          "description": "Add documentation to tags matching the given\npattern. Documentation is shown in `Test Details` and\nalso as a tooltip in `Statistics by Tag`. Pattern can\nuse `*`, `?` and `[]` as wildcards like --test.\nDocumentation can contain formatting like --doc.\n\nExamples:\n\n```\n--tagdoc mytag:Example\n--tagdoc \"owner-*:Original author\"\n```\n\ncorresponds to the `--tagdoc pattern:doc *` option of _robot_\n",
+          "description": "Add documentation to tags matching the given\npattern. Documentation is shown in `Test Details` and\nalso as a tooltip in `Statistics by Tag`. Pattern can\nuse `*`, `?` and `[]` as wildcards like --test.\n\nExamples:\n\n```\n--tagdoc mytag:Example\n--tagdoc \"owner-*:Original author\"\n```\n\ncorresponds to the `--tagdoc pattern:doc *` option of _robot_\n",
           "title": "Tag doc",
           "type": [
             "object",
@@ -2315,7 +2324,7 @@
           ]
         },
         "extend-remove-keywords": {
-          "description": "Appends entries to the --removekeywords option.\n\nRemove keyword data from the generated log file.\nKeywords containing warnings are not removed except\nin the `all` mode.\n\n**all:** remove data from all keywords\n\n**passed:** remove data only from keywords in passed\ntest cases and suites\n\n**for:** remove passed iterations from for loops\n\n**while:** remove passed iterations from while loops\n\n**wuks:** remove all but the last failing keyword\ninside `BuiltIn.Wait Until Keyword Succeeds`\n\n**name:\\<pattern>:** remove data from keywords that match\nthe given pattern. The pattern is matched\nagainst the full name of the keyword (e.g.\n'MyLib.Keyword', 'resource.Second Keyword'),\nis case, space, and underscore insensitive,\nand may contain `*`, `?` and `[]` wildcards.\n\nExamples:\n\n```\n--removekeywords name:Lib.HugeKw\n--removekeywords name:myresource.*\n```\n\n\n\n**tag:\\<pattern>:** remove data from keywords that match\nthe given pattern. Tags are case and space\ninsensitive and patterns can contain `*`,\n`?` and `[]` wildcards. Tags and patterns\ncan also be combined together with `AND`,\n`OR`, and `NOT` operators.\n\nExamples:\n\n```\n--removekeywords foo\n--removekeywords fooANDbar*\n```\n\ncorresponds to the `--removekeywords all|passed|for|wuks|name:<pattern>|tag:<pattern> *` option of _robot_\n",
+          "description": "Appends entries to the --removekeywords option.\n\nRemove keyword data from the generated log file.\nKeywords containing warnings are not removed except\nin the `all` mode.\n\n**all:** remove data from all keywords\n\n**passed:** remove data only from keywords in passed\ntest cases and suites\n\n**for:** remove passed iterations from FOR loops\n\n**while:** remove passed iterations from WHILE loops\n\n**wuks:** remove all but the last failing keyword\ninside `BuiltIn.Wait Until Keyword Succeeds`\n\n**name:\\<pattern>:** remove data from keywords that match\nthe given pattern. The pattern is matched\nagainst the full name of the keyword (e.g.\n'MyLib.Keyword', 'resource.Second Keyword'),\nis case, space, and underscore insensitive,\nand may contain `*`, `?` and `[]` wildcards.\n\nExamples:\n\n```\n--removekeywords name:Lib.HugeKw\n--removekeywords name:myresource.*\n```\n\n\n\n**tag:\\<pattern>:** remove data from keywords that match\nthe given pattern. Tags are case and space\ninsensitive and patterns can contain `*`,\n`?` and `[]` wildcards. Tags and patterns\ncan also be combined together with `AND`,\n`OR`, and `NOT` operators.\n\nExamples:\n\n```\n--removekeywords foo\n--removekeywords fooANDbar*\n```\n\ncorresponds to the `--removekeywords all|passed|for|wuks|name:<pattern>|tag:<pattern> *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
@@ -2432,7 +2441,7 @@
             ]
           },
           "default": null,
-          "description": "Appends entries to the --tagdoc option.\n\nAdd documentation to tags matching the given\npattern. Documentation is shown in `Test Details` and\nalso as a tooltip in `Statistics by Tag`. Pattern can\nuse `*`, `?` and `[]` as wildcards like --test.\nDocumentation can contain formatting like --doc.\n\nExamples:\n\n```\n--tagdoc mytag:Example\n--tagdoc \"owner-*:Original author\"\n```\n\ncorresponds to the `--tagdoc pattern:doc *` option of _robot_\n",
+          "description": "Appends entries to the --tagdoc option.\n\nAdd documentation to tags matching the given\npattern. Documentation is shown in `Test Details` and\nalso as a tooltip in `Statistics by Tag`. Pattern can\nuse `*`, `?` and `[]` as wildcards like --test.\n\nExamples:\n\n```\n--tagdoc mytag:Example\n--tagdoc \"owner-*:Original author\"\n```\n\ncorresponds to the `--tagdoc pattern:doc *` option of _robot_\n",
           "title": "Extend tag doc",
           "type": [
             "object",
@@ -3107,7 +3116,7 @@
           "title": "Rebot"
         },
         "remove-keywords": {
-          "description": "Remove keyword data from the generated log file.\nKeywords containing warnings are not removed except\nin the `all` mode.\n\n**all:** remove data from all keywords\n\n**passed:** remove data only from keywords in passed\ntest cases and suites\n\n**for:** remove passed iterations from for loops\n\n**while:** remove passed iterations from while loops\n\n**wuks:** remove all but the last failing keyword\ninside `BuiltIn.Wait Until Keyword Succeeds`\n\n**name:\\<pattern>:** remove data from keywords that match\nthe given pattern. The pattern is matched\nagainst the full name of the keyword (e.g.\n'MyLib.Keyword', 'resource.Second Keyword'),\nis case, space, and underscore insensitive,\nand may contain `*`, `?` and `[]` wildcards.\n\nExamples:\n\n```\n--removekeywords name:Lib.HugeKw\n--removekeywords name:myresource.*\n```\n\n\n\n**tag:\\<pattern>:** remove data from keywords that match\nthe given pattern. Tags are case and space\ninsensitive and patterns can contain `*`,\n`?` and `[]` wildcards. Tags and patterns\ncan also be combined together with `AND`,\n`OR`, and `NOT` operators.\n\nExamples:\n\n```\n--removekeywords foo\n--removekeywords fooANDbar*\n```\n\ncorresponds to the `--removekeywords all|passed|for|wuks|name:<pattern>|tag:<pattern> *` option of _robot_\n",
+          "description": "Remove keyword data from the generated log file.\nKeywords containing warnings are not removed except\nin the `all` mode.\n\n**all:** remove data from all keywords\n\n**passed:** remove data only from keywords in passed\ntest cases and suites\n\n**for:** remove passed iterations from FOR loops\n\n**while:** remove passed iterations from WHILE loops\n\n**wuks:** remove all but the last failing keyword\ninside `BuiltIn.Wait Until Keyword Succeeds`\n\n**name:\\<pattern>:** remove data from keywords that match\nthe given pattern. The pattern is matched\nagainst the full name of the keyword (e.g.\n'MyLib.Keyword', 'resource.Second Keyword'),\nis case, space, and underscore insensitive,\nand may contain `*`, `?` and `[]` wildcards.\n\nExamples:\n\n```\n--removekeywords name:Lib.HugeKw\n--removekeywords name:myresource.*\n```\n\n\n\n**tag:\\<pattern>:** remove data from keywords that match\nthe given pattern. Tags are case and space\ninsensitive and patterns can contain `*`,\n`?` and `[]` wildcards. Tags and patterns\ncan also be combined together with `AND`,\n`OR`, and `NOT` operators.\n\nExamples:\n\n```\n--removekeywords foo\n--removekeywords fooANDbar*\n```\n\ncorresponds to the `--removekeywords all|passed|for|wuks|name:<pattern>|tag:<pattern> *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
@@ -3365,7 +3374,7 @@
             ]
           },
           "default": null,
-          "description": "Add documentation to tags matching the given\npattern. Documentation is shown in `Test Details` and\nalso as a tooltip in `Statistics by Tag`. Pattern can\nuse `*`, `?` and `[]` as wildcards like --test.\nDocumentation can contain formatting like --doc.\n\nExamples:\n\n```\n--tagdoc mytag:Example\n--tagdoc \"owner-*:Original author\"\n```\n\ncorresponds to the `--tagdoc pattern:doc *` option of _robot_\n",
+          "description": "Add documentation to tags matching the given\npattern. Documentation is shown in `Test Details` and\nalso as a tooltip in `Statistics by Tag`. Pattern can\nuse `*`, `?` and `[]` as wildcards like --test.\n\nExamples:\n\n```\n--tagdoc mytag:Example\n--tagdoc \"owner-*:Original author\"\n```\n\ncorresponds to the `--tagdoc pattern:doc *` option of _robot_\n",
           "title": "Tag doc",
           "type": [
             "object",
@@ -4190,7 +4199,7 @@
           ]
         },
         "extend-remove-keywords": {
-          "description": "Appends entries to the --removekeywords option.\n\nRemove keyword data from the generated log file.\nKeywords containing warnings are not removed except\nin the `all` mode.\n\n**all:** remove data from all keywords\n\n**passed:** remove data only from keywords in passed\ntest cases and suites\n\n**for:** remove passed iterations from for loops\n\n**while:** remove passed iterations from while loops\n\n**wuks:** remove all but the last failing keyword\ninside `BuiltIn.Wait Until Keyword Succeeds`\n\n**name:\\<pattern>:** remove data from keywords that match\nthe given pattern. The pattern is matched\nagainst the full name of the keyword (e.g.\n'MyLib.Keyword', 'resource.Second Keyword'),\nis case, space, and underscore insensitive,\nand may contain `*`, `?` and `[]` wildcards.\n\nExamples:\n\n```\n--removekeywords name:Lib.HugeKw\n--removekeywords name:myresource.*\n```\n\n\n\n**tag:\\<pattern>:** remove data from keywords that match\nthe given pattern. Tags are case and space\ninsensitive and patterns can contain `*`,\n`?` and `[]` wildcards. Tags and patterns\ncan also be combined together with `AND`,\n`OR`, and `NOT` operators.\n\nExamples:\n\n```\n--removekeywords foo\n--removekeywords fooANDbar*\n```\n\ncorresponds to the `--removekeywords all|passed|for|wuks|name:<pattern>|tag:<pattern> *` option of _robot_\n",
+          "description": "Appends entries to the --removekeywords option.\n\nRemove keyword data from the generated log file.\nKeywords containing warnings are not removed except\nin the `all` mode.\n\n**all:** remove data from all keywords\n\n**passed:** remove data only from keywords in passed\ntest cases and suites\n\n**for:** remove passed iterations from FOR loops\n\n**while:** remove passed iterations from WHILE loops\n\n**wuks:** remove all but the last failing keyword\ninside `BuiltIn.Wait Until Keyword Succeeds`\n\n**name:\\<pattern>:** remove data from keywords that match\nthe given pattern. The pattern is matched\nagainst the full name of the keyword (e.g.\n'MyLib.Keyword', 'resource.Second Keyword'),\nis case, space, and underscore insensitive,\nand may contain `*`, `?` and `[]` wildcards.\n\nExamples:\n\n```\n--removekeywords name:Lib.HugeKw\n--removekeywords name:myresource.*\n```\n\n\n\n**tag:\\<pattern>:** remove data from keywords that match\nthe given pattern. Tags are case and space\ninsensitive and patterns can contain `*`,\n`?` and `[]` wildcards. Tags and patterns\ncan also be combined together with `AND`,\n`OR`, and `NOT` operators.\n\nExamples:\n\n```\n--removekeywords foo\n--removekeywords fooANDbar*\n```\n\ncorresponds to the `--removekeywords all|passed|for|wuks|name:<pattern>|tag:<pattern> *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
@@ -4307,7 +4316,7 @@
             ]
           },
           "default": null,
-          "description": "Appends entries to the --tagdoc option.\n\nAdd documentation to tags matching the given\npattern. Documentation is shown in `Test Details` and\nalso as a tooltip in `Statistics by Tag`. Pattern can\nuse `*`, `?` and `[]` as wildcards like --test.\nDocumentation can contain formatting like --doc.\n\nExamples:\n\n```\n--tagdoc mytag:Example\n--tagdoc \"owner-*:Original author\"\n```\n\ncorresponds to the `--tagdoc pattern:doc *` option of _robot_\n",
+          "description": "Appends entries to the --tagdoc option.\n\nAdd documentation to tags matching the given\npattern. Documentation is shown in `Test Details` and\nalso as a tooltip in `Statistics by Tag`. Pattern can\nuse `*`, `?` and `[]` as wildcards like --test.\n\nExamples:\n\n```\n--tagdoc mytag:Example\n--tagdoc \"owner-*:Original author\"\n```\n\ncorresponds to the `--tagdoc pattern:doc *` option of _robot_\n",
           "title": "Extend tag doc",
           "type": [
             "object",
@@ -5025,7 +5034,7 @@
           "title": "Rebot"
         },
         "remove-keywords": {
-          "description": "Remove keyword data from the generated log file.\nKeywords containing warnings are not removed except\nin the `all` mode.\n\n**all:** remove data from all keywords\n\n**passed:** remove data only from keywords in passed\ntest cases and suites\n\n**for:** remove passed iterations from for loops\n\n**while:** remove passed iterations from while loops\n\n**wuks:** remove all but the last failing keyword\ninside `BuiltIn.Wait Until Keyword Succeeds`\n\n**name:\\<pattern>:** remove data from keywords that match\nthe given pattern. The pattern is matched\nagainst the full name of the keyword (e.g.\n'MyLib.Keyword', 'resource.Second Keyword'),\nis case, space, and underscore insensitive,\nand may contain `*`, `?` and `[]` wildcards.\n\nExamples:\n\n```\n--removekeywords name:Lib.HugeKw\n--removekeywords name:myresource.*\n```\n\n\n\n**tag:\\<pattern>:** remove data from keywords that match\nthe given pattern. Tags are case and space\ninsensitive and patterns can contain `*`,\n`?` and `[]` wildcards. Tags and patterns\ncan also be combined together with `AND`,\n`OR`, and `NOT` operators.\n\nExamples:\n\n```\n--removekeywords foo\n--removekeywords fooANDbar*\n```\n\ncorresponds to the `--removekeywords all|passed|for|wuks|name:<pattern>|tag:<pattern> *` option of _robot_\n",
+          "description": "Remove keyword data from the generated log file.\nKeywords containing warnings are not removed except\nin the `all` mode.\n\n**all:** remove data from all keywords\n\n**passed:** remove data only from keywords in passed\ntest cases and suites\n\n**for:** remove passed iterations from FOR loops\n\n**while:** remove passed iterations from WHILE loops\n\n**wuks:** remove all but the last failing keyword\ninside `BuiltIn.Wait Until Keyword Succeeds`\n\n**name:\\<pattern>:** remove data from keywords that match\nthe given pattern. The pattern is matched\nagainst the full name of the keyword (e.g.\n'MyLib.Keyword', 'resource.Second Keyword'),\nis case, space, and underscore insensitive,\nand may contain `*`, `?` and `[]` wildcards.\n\nExamples:\n\n```\n--removekeywords name:Lib.HugeKw\n--removekeywords name:myresource.*\n```\n\n\n\n**tag:\\<pattern>:** remove data from keywords that match\nthe given pattern. Tags are case and space\ninsensitive and patterns can contain `*`,\n`?` and `[]` wildcards. Tags and patterns\ncan also be combined together with `AND`,\n`OR`, and `NOT` operators.\n\nExamples:\n\n```\n--removekeywords foo\n--removekeywords fooANDbar*\n```\n\ncorresponds to the `--removekeywords all|passed|for|wuks|name:<pattern>|tag:<pattern> *` option of _robot_\n",
           "items": {
             "anyOf": [
               {
@@ -5283,7 +5292,7 @@
             ]
           },
           "default": null,
-          "description": "Add documentation to tags matching the given\npattern. Documentation is shown in `Test Details` and\nalso as a tooltip in `Statistics by Tag`. Pattern can\nuse `*`, `?` and `[]` as wildcards like --test.\nDocumentation can contain formatting like --doc.\n\nExamples:\n\n```\n--tagdoc mytag:Example\n--tagdoc \"owner-*:Original author\"\n```\n\ncorresponds to the `--tagdoc pattern:doc *` option of _robot_\n",
+          "description": "Add documentation to tags matching the given\npattern. Documentation is shown in `Test Details` and\nalso as a tooltip in `Statistics by Tag`. Pattern can\nuse `*`, `?` and `[]` as wildcards like --test.\n\nExamples:\n\n```\n--tagdoc mytag:Example\n--tagdoc \"owner-*:Original author\"\n```\n\ncorresponds to the `--tagdoc pattern:doc *` option of _robot_\n",
           "title": "Tag doc",
           "type": [
             "object",

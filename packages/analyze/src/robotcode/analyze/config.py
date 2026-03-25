@@ -247,6 +247,20 @@ class CodeConfig(BaseOptions):
     )
     extend_exit_code_mask: Optional[ExitCodeMaskList] = field(description="Extend the exit code mask setting.")
 
+    collect_unused: Optional[bool] = field(
+        description="""\
+            Enables collection of unused keyword and unused variable diagnostics.
+            By default this is disabled. Set to `true` to report unused keywords and variables.
+
+            Examples:
+
+            ```toml
+            [tool.robotcode-analyze.code]
+            collect_unused = true
+            ```
+        """,
+    )
+
 
 @dataclass
 class AnalyzeConfig(BaseOptions):

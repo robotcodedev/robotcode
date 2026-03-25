@@ -35,9 +35,11 @@ class CodeAnalyzer(DiagnosticsContext):
         analysis_config: WorkspaceAnalysisConfig,
         robot_profile: RobotBaseProfile,
         root_folder: Optional[Path],
+        collect_unused: bool = False,
     ):
         self.app = app
         self._analysis_config = analysis_config or WorkspaceAnalysisConfig()
+        self._collect_unused = collect_unused
 
         self._robot_profile = robot_profile
         self._root_folder = root_folder if root_folder is not None else Path.cwd()
@@ -61,6 +63,10 @@ class CodeAnalyzer(DiagnosticsContext):
     @property
     def analysis_config(self) -> WorkspaceAnalysisConfig:
         return self._analysis_config
+
+    @property
+    def collect_unused(self) -> bool:
+        return self._collect_unused
 
     @property
     def profile(self) -> RobotBaseProfile:

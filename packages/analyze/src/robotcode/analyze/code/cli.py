@@ -19,7 +19,7 @@ from robotcode.robot.config.loader import (
 from robotcode.robot.config.utils import get_config_files
 
 from ..__version__ import __version__
-from ..config import AnalyzeConfig, ExitCodeMask, ModifiersConfig
+from ..config import AnalyzeConfig, CodeConfig, ExitCodeMask, ModifiersConfig
 from .code_analyzer import CodeAnalyzer, DocumentDiagnosticReport, FolderDiagnosticReport
 
 SEVERITY_COLORS = {
@@ -270,6 +270,12 @@ def _validate_load_library_timeout(ctx: click.Context, param: click.Option, valu
         "Must be > 0. Overrides config file and environment variable when set."
     ),
 )
+@click.option(
+    "--collect-unused/--no-collect-unused",
+    default=None,
+    help="Enable or disable collection of unused keyword and unused variable diagnostics. "
+    "Overrides the config file setting when specified.",
+)
 @click.argument(
     "paths", nargs=-1, type=click.Path(exists=True, dir_okay=True, file_okay=True, readable=True, path_type=Path)
 )
@@ -289,6 +295,7 @@ def code(
     extend_exit_code_mask: ExitCodeMask,
     paths: Tuple[Path],
     load_library_timeout: Optional[int],
+    collect_unused: Optional[bool],
 ) -> None:
     """\
         Performs static code analysis to identify potential issues in the specified *PATHS*. The analysis detects syntax
@@ -393,6 +400,11 @@ def code(
         if load_library_timeout is not None:
             analyzer_config.load_library_timeout = load_library_timeout
 
+        if collect_unused is not None:
+            if analyzer_config.code is None:
+                analyzer_config.code = CodeConfig()
+            analyzer_config.code.collect_unused = collect_unused
+
         app.verbose(f"Using analyzer_config: {analyzer_config}")
         app.verbose(f"Using exit code mask: {mask}")
 
@@ -403,6 +415,11 @@ def code(
             analysis_config=analyzer_config.to_workspace_analysis_config(),
             robot_profile=robot_profile,
             root_folder=root_folder,
+            collect_unused=bool(
+                analyzer_config.code.collect_unused
+                if analyzer_config.code is not None and analyzer_config.code.collect_unused is not None
+                else False
+            ),
         )
         try:
             for e in analyzer.run(paths=paths, filter=filter):

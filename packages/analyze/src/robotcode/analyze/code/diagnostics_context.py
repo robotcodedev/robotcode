@@ -50,6 +50,10 @@ class DiagnosticsContext(ABC):
 
     @property
     @abstractmethod
+    def collect_unused(self) -> bool: ...
+
+    @property
+    @abstractmethod
     def profile(self) -> RobotBaseProfile: ...
 
     @property
