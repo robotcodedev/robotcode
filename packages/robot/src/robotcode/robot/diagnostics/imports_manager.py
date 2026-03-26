@@ -9,7 +9,7 @@ import weakref
 import zlib
 from abc import ABC, abstractmethod
 from concurrent.futures import ProcessPoolExecutor, TimeoutError
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import (
     TYPE_CHECKING,
@@ -548,6 +548,26 @@ class RobotFileMeta:
         return f"{zlib.adler32(str(p.parent).encode('utf-8')):08x}_{p.stem}{p.suffix}"
 
 
+@dataclass
+class NamespaceMetaData:
+    """Lightweight metadata for fast cache freshness checks.
+
+    Stored alongside NamespaceData in the disk cache. Checked before
+    loading the full NamespaceData pickle to avoid unnecessary I/O.
+    """
+
+    meta_version: str
+    source: str
+    source_mtime_ns: int
+    config_fingerprint: Any
+    dependency_fingerprints: Dict[str, Any] = field(default_factory=dict)
+
+    @property
+    def filepath_base(self) -> str:
+        p = Path(self.source)
+        return f"{zlib.adler32(str(p.parent).encode('utf-8')):08x}_{p.stem}{p.suffix}"
+
+
 class ImportsManager:
     _logger = LoggingDescriptor()
 
@@ -622,6 +642,26 @@ class ImportsManager:
         if environment:
             self._environment.update(environment)
 
+        workspace_langs = self.document_cache_helper.get_languages_for_document(Uri.from_path(self.root_folder))
+        if workspace_langs is not None:
+            languages_fingerprint: Any = (
+                tuple(sorted(workspace_langs.bdd_prefixes)),
+                tuple(sorted(workspace_langs.headers.items())),
+                tuple(sorted(workspace_langs.settings.items())),
+                tuple(sorted(workspace_langs.true_strings)),
+                tuple(sorted(workspace_langs.false_strings)),
+            )
+        else:
+            languages_fingerprint = None
+
+        self._config_fingerprint: Any = (
+            tuple(sorted(self.cmd_variables.items())),
+            tuple(self.cmd_variable_files),
+            tuple(sorted((k, v) for k, v in self._environment.items() if k not in os.environ)),
+            tuple(self.global_library_search_order),
+            languages_fingerprint,
+        )
+
         self._library_files_cache = SimpleLRUCache(2048)
         self._resource_files_cache = SimpleLRUCache(2048)
         self._variables_files_cache = SimpleLRUCache(2048)
@@ -695,6 +735,148 @@ class ImportsManager:
     @property
     def environment(self) -> Mapping[str, str]:
         return self._environment
+
+    @property
+    def config_fingerprint(self) -> Any:
+        """Cached configuration snapshot.
+
+        Computed once at init from cmd_variables, cmd_variable_files,
+        environment, and global_library_search_order. Changes are
+        detected via direct ``==`` comparison.
+        """
+        return self._config_fingerprint
+
+    def compute_dependency_fingerprints(self, namespace: "Namespace") -> Dict[str, Any]:
+        """Collect current metadata for all dependencies of a namespace.
+
+        Each value is the metadata object itself (LibraryMetaData, RobotFileMeta,
+        or an mtime int). Changes are detected via direct ``==`` comparison
+        against the saved metadata — no hashing needed.
+
+        Uses already-cached metadata from the internal import cache to avoid
+        expensive module resolution (find_library / get_module_spec).
+        Falls back to the full get_*_meta methods when no cached entry exists.
+        """
+        fingerprints: Dict[str, Any] = {}
+
+        for entry in namespace.libraries.values():
+            try:
+                lib_meta = self.get_cached_library_meta(entry.import_name, entry.args)
+                if lib_meta is None:
+                    lib_meta, _, _ = self.get_library_meta(entry.import_name)
+                if lib_meta is not None:
+                    fingerprints[f"lib:{entry.import_name}"] = lib_meta
+            except (SystemExit, KeyboardInterrupt):
+                raise
+            except BaseException:
+                pass
+
+        for entry in namespace.resources.values():
+            source = entry.library_doc.source
+            if source:
+                try:
+                    res_meta = self.get_cached_resource_meta(source)
+                    if res_meta is None:
+                        res_meta = self.get_resource_meta(source)
+                    if res_meta is not None:
+                        fingerprints[f"res:{source}"] = res_meta
+                    else:
+                        mtime = os.stat(source, follow_symlinks=False).st_mtime_ns
+                        fingerprints[f"res:{source}"] = mtime
+                except OSError:
+                    pass
+
+        for entry in namespace.variables_imports.values():
+            try:
+                var_meta = self.get_cached_variables_meta(entry.import_name, entry.args)
+                if var_meta is None:
+                    var_meta, _ = self.get_variables_meta(entry.import_name)
+                if var_meta is not None:
+                    fingerprints[f"var:{entry.import_name}"] = var_meta
+            except (SystemExit, KeyboardInterrupt):
+                raise
+            except BaseException:
+                pass
+
+        return fingerprints
+
+    def build_namespace_meta(self, source: str, namespace: "Namespace") -> NamespaceMetaData:
+        """Build a NamespaceMetaData for the given namespace and its dependencies."""
+        try:
+            source_mtime_ns = os.stat(source, follow_symlinks=False).st_mtime_ns
+        except OSError:
+            source_mtime_ns = 0
+
+        return NamespaceMetaData(
+            meta_version=__version__,
+            source=source,
+            source_mtime_ns=source_mtime_ns,
+            config_fingerprint=self.config_fingerprint,
+            dependency_fingerprints=self.compute_dependency_fingerprints(namespace),
+        )
+
+    def validate_namespace_meta(self, meta: NamespaceMetaData) -> bool:
+        """Check whether a cached NamespaceMetaData is still fresh.
+
+        Performs a 2-level validation:
+        Level 1 (fast): meta_version, source_mtime_ns, config_fingerprint
+        Level 2 (dependency check): each dependency fingerprint
+        """
+        # Level 1: fast checks
+        if meta.meta_version != __version__:
+            return False
+
+        try:
+            current_mtime = os.stat(meta.source, follow_symlinks=False).st_mtime_ns
+        except OSError:
+            return False
+
+        if meta.source_mtime_ns != current_mtime:
+            return False
+
+        if meta.config_fingerprint != self.config_fingerprint:
+            return False
+
+        # Level 2: dependency checks — direct comparison, no hashing
+        for key, saved_value in meta.dependency_fingerprints.items():
+            if key.startswith("lib:"):
+                lib_name = key[4:]
+                try:
+                    lib_meta = self.get_cached_library_meta(lib_name)
+                    if lib_meta is None:
+                        lib_meta, _, _ = self.get_library_meta(lib_name)
+                    if lib_meta is None or lib_meta != saved_value:
+                        return False
+                except (SystemExit, KeyboardInterrupt):
+                    raise
+                except BaseException:
+                    return False
+            elif key.startswith("res:"):
+                res_source = key[4:]
+                try:
+                    res_meta = self.get_cached_resource_meta(res_source)
+                    if res_meta is None:
+                        res_meta = self.get_resource_meta(res_source)
+                    if res_meta is None or res_meta != saved_value:
+                        return False
+                except (SystemExit, KeyboardInterrupt):
+                    raise
+                except BaseException:
+                    return False
+            elif key.startswith("var:"):
+                var_name = key[4:]
+                try:
+                    var_meta = self.get_cached_variables_meta(var_name)
+                    if var_meta is None:
+                        var_meta, _ = self.get_variables_meta(var_name)
+                    if var_meta is None or var_meta != saved_value:
+                        return False
+                except (SystemExit, KeyboardInterrupt):
+                    raise
+                except BaseException:
+                    return False
+
+        return True
 
     def get_namespace_for_resource(self, document: TextDocument) -> "Namespace":
         return self.document_cache_helper.get_resource_namespace(document)
@@ -1166,6 +1348,39 @@ class ImportsManager:
             pass
 
         return None, name
+
+    def get_cached_library_meta(self, import_name: str, args: Tuple[Any, ...] = ()) -> Optional[LibraryMetaData]:
+        """Return already-computed LibraryMetaData from the internal cache, or None.
+
+        Matches by import name and args to find the correct entry, since
+        the same library with different args may produce different keywords.
+        """
+        with self._libaries_lock:
+            for entry in self._libaries.values():
+                if entry.name == import_name and entry.args == args:
+                    return entry.meta
+        return None
+
+    def get_cached_resource_meta(self, source: str) -> Optional[RobotFileMeta]:
+        """Return already-computed RobotFileMeta from the internal cache, or None."""
+        entry_key = _ResourcesEntryKey(str(normalized_path(Path(source))))
+        with self._resources_lock:
+            entry = self._resources.get(entry_key)
+            if entry is not None:
+                return entry.meta
+        return None
+
+    def get_cached_variables_meta(self, import_name: str, args: Tuple[Any, ...] = ()) -> Optional[LibraryMetaData]:
+        """Return already-computed LibraryMetaData for a variables import, or None.
+
+        Matches by import name and args, since variable files can return
+        different content depending on the arguments.
+        """
+        with self._variables_lock:
+            for entry in self._variables.values():
+                if entry.name == import_name and entry.args == args:
+                    return entry.meta
+        return None
 
     def find_library(
         self,

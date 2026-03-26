@@ -3,6 +3,7 @@ import enum
 import itertools
 import weakref
 from collections import defaultdict
+from dataclasses import dataclass, field
 from typing import (
     Any,
     Dict,
@@ -44,6 +45,7 @@ from .entities import (
     VariablesImport,
 )
 from .errors import DIAGNOSTICS_SOURCE_NAME
+from .import_resolver import ImportResolver
 from .imports_manager import ImportsManager
 from .keyword_finder import KeywordFinder
 from .library_doc import (
@@ -52,7 +54,8 @@ from .library_doc import (
     LibraryDoc,
     ResourceDoc,
 )
-from .scope_tree import ScopeTree
+from .scope_tree import LocalScope, ScopeTree
+from .variable_scope import VariableScope
 
 
 class _Sentinel:
@@ -82,6 +85,46 @@ class DocumentType(enum.Enum):
     GENERAL = "robot"
     RESOURCE = "resource"
     INIT = "init"
+
+
+@dataclass
+class NamespaceData:
+    """Serializable data container for Namespace analysis results.
+
+    Contains only lightweight data (~5-20 KB per file).
+    Heavy object references (KeywordDoc, VariableDefinition, LibraryEntry)
+    are stored as stable_id strings.
+    """
+
+    # --- Identity ---
+    source: str
+    source_id: Optional[str] = None
+    document_type: Optional[str] = None  # DocumentType.value
+
+    # --- Languages ---
+    languages: Optional[Any] = None
+    workspace_languages: Optional[Any] = None
+
+    # --- Import structure (lightweight Import objects, no LibraryDoc) ---
+    imports: List[Import] = field(default_factory=list)
+
+    # --- Analysis results (directly serializable) ---
+    diagnostics: List[Diagnostic] = field(default_factory=list)
+    test_case_definitions: List[TestCaseDefinition] = field(default_factory=list)
+
+    # --- References via stable_id ---
+    keyword_references: Dict[str, Set[Location]] = field(default_factory=dict)
+    variable_references: Dict[str, Set[Location]] = field(default_factory=dict)
+    local_variable_assignments: Dict[str, Set[Range]] = field(default_factory=dict)
+    namespace_references: Dict[str, Set[Location]] = field(default_factory=dict)
+
+    # --- Tag/metadata references (directly serializable) ---
+    keyword_tag_references: Dict[str, Set[Location]] = field(default_factory=dict)
+    testcase_tag_references: Dict[str, Set[Location]] = field(default_factory=dict)
+    metadata_references: Dict[str, Set[Location]] = field(default_factory=dict)
+
+    # --- ScopeTree (local scopes only, file_scope is reconstructed) ---
+    local_scopes: List[LocalScope] = field(default_factory=list)
 
 
 class Namespace:
@@ -392,6 +435,177 @@ class Namespace:
             name,
             raise_keyword_error=raise_keyword_error,
             handle_bdd_style=handle_bdd_style,
+        )
+
+    def to_data(self) -> NamespaceData:
+        """Convert this Namespace into a serializable NamespaceData instance.
+
+        Replaces heavy object references (KeywordDoc, VariableDefinition,
+        LibraryEntry) with their stable_id strings. Lightweight data
+        (diagnostics, tag references, etc.) is copied directly.
+        """
+        # Build namespace_references key from LibraryEntry identity
+        ns_refs: Dict[str, Set[Location]] = {}
+        for entry, locs in self._namespace_references.items():
+            key = f"{type(entry).__name__}:{entry.import_name}:{entry.args!r}:{entry.alias or ''}"
+            ns_refs[key] = locs
+
+        return NamespaceData(
+            source=self.source,
+            source_id=str(self.source_id) if self.source_id else None,
+            document_type=self.document_type.value if self.document_type else None,
+            languages=self.languages,
+            workspace_languages=self.workspace_languages,
+            imports=list(self._import_entries.keys()),
+            diagnostics=list(self._diagnostics),
+            test_case_definitions=list(self._test_case_definitions),
+            keyword_references={kw.stable_id: set(locs) for kw, locs in self._keyword_references.items()},
+            variable_references={var.stable_id: set(locs) for var, locs in self._variable_references.items()},
+            local_variable_assignments={
+                var.stable_id: set(ranges) for var, ranges in self._local_variable_assignments.items()
+            },
+            namespace_references=ns_refs,
+            keyword_tag_references={k: set(v) for k, v in self._keyword_tag_references.items()},
+            testcase_tag_references={k: set(v) for k, v in self._testcase_tag_references.items()},
+            metadata_references={k: set(v) for k, v in self._metadata_references.items()},
+            local_scopes=list(self._scope_tree.local_scopes),
+        )
+
+    @classmethod
+    def from_data(
+        cls,
+        data: NamespaceData,
+        imports_manager: ImportsManager,
+        library_doc: ResourceDoc,
+        document: Optional[TextDocument] = None,
+    ) -> "Namespace":
+        """Reconstruct a functional Namespace from cached NamespaceData.
+
+        Re-runs import resolution (Phase 1+2, cheap — ImportsManager caches
+        LibraryDocs) to obtain live LibraryEntry/ResourceEntry/VariablesEntry
+        objects. Then maps cached stable_id references back to live
+        KeywordDoc/VariableDefinition objects. Phase 3 (AST analysis) is
+        skipped entirely — its results come from the cached data.
+        """
+        from .namespace_analyzer import _get_builtin_variables
+
+        # --- Phase 1+2: Re-resolve imports ---
+        sentinel = _Sentinel()
+
+        scope = VariableScope(
+            command_line=imports_manager.get_command_line_variables(),
+            own=library_doc.resource_variables,
+            builtin=_get_builtin_variables(),
+        )
+
+        resolver = ImportResolver(imports_manager, data.source, scope, sentinel=sentinel)
+        resolved = resolver.resolve(data.imports)
+
+        # Add imported variables to scope (needed for variable lookup)
+        for resource_entry in resolved.resources.values():
+            scope.add_imported(resource_entry.variables)
+        for variables_entry in resolved.variables_imports.values():
+            scope.add_imported(variables_entry.variables)
+
+        # --- Build stable_id → object lookup maps ---
+        kw_by_id: Dict[str, KeywordDoc] = {}
+        var_by_id: Dict[str, VariableDefinition] = {}
+
+        # Keywords from all resolved libraries + resources + file's own
+        for lib_entry in itertools.chain(
+            resolved.libraries.values(),
+            resolved.resources.values(),
+        ):
+            for kw in lib_entry.library_doc.keywords:
+                kw_by_id[kw.stable_id] = kw
+            for kw in lib_entry.library_doc.inits:
+                kw_by_id[kw.stable_id] = kw
+
+        for kw in library_doc.keywords:
+            kw_by_id[kw.stable_id] = kw
+
+        # Variables from scope layers (command_line, own, imported, builtin)
+        for var in scope.iter_all():
+            var_by_id[var.stable_id] = var
+
+        # Variables from local scopes (block-level LOCAL_VARIABLE, arguments, etc.)
+        for ls in data.local_scopes:
+            for sv in ls.variables:
+                var_by_id[sv.variable.stable_id] = sv.variable
+
+        # --- Reconstruct reference dicts ---
+        keyword_references: Dict[KeywordDoc, Set[Location]] = {}
+        for sid, locs in data.keyword_references.items():
+            if sid in kw_by_id:
+                keyword_references[kw_by_id[sid]] = set(locs)
+
+        variable_references: Dict[VariableDefinition, Set[Location]] = {}
+        for sid, locs in data.variable_references.items():
+            if sid in var_by_id:
+                variable_references[var_by_id[sid]] = set(locs)
+
+        local_variable_assignments: Dict[VariableDefinition, Set[Range]] = {}
+        for sid, ranges in data.local_variable_assignments.items():
+            if sid in var_by_id:
+                local_variable_assignments[var_by_id[sid]] = set(ranges)
+
+        # Reconstruct namespace_references: key format "ClassName:import_name:args:alias"
+        all_entries: Dict[str, LibraryEntry] = {}
+        for entry in itertools.chain(
+            resolved.libraries.values(),
+            resolved.resources.values(),
+            resolved.variables_imports.values(),
+        ):
+            key = f"{type(entry).__name__}:{entry.import_name}:{entry.args!r}:{entry.alias or ''}"
+            all_entries[key] = entry
+
+        namespace_references: Dict[LibraryEntry, Set[Location]] = {}
+        for key, locs in data.namespace_references.items():
+            if key in all_entries:
+                namespace_references[all_entries[key]] = set(locs)
+
+        # --- Build ScopeTree from cached local scopes + reconstructed file scope ---
+        scope_tree = ScopeTree(file_scope=scope, local_scopes=list(data.local_scopes))
+
+        # --- Build KeywordFinder ---
+        search_order = tuple(imports_manager.global_library_search_order)
+        finder = KeywordFinder(
+            library_doc=library_doc,
+            libraries=resolved.libraries,
+            resources=resolved.resources,
+            source=data.source,
+            languages=data.languages,
+            search_order=search_order,
+        )
+
+        # --- Construct Namespace ---
+        document_type = DocumentType(data.document_type) if data.document_type else None
+
+        return cls(
+            imports_manager=imports_manager,
+            source=data.source,
+            source_id=file_id(data.source),
+            document=document,
+            document_type=document_type,
+            languages=data.languages,
+            workspace_languages=data.workspace_languages,
+            library_doc=library_doc,
+            libraries=resolved.libraries,
+            resources=resolved.resources,
+            variables_imports=resolved.variables_imports,
+            import_entries=resolved.import_entries,
+            diagnostics=list(data.diagnostics),
+            keyword_references=keyword_references,
+            variable_references=variable_references,
+            local_variable_assignments=local_variable_assignments,
+            namespace_references=namespace_references,
+            test_case_definitions=list(data.test_case_definitions),
+            keyword_tag_references={k: set(v) for k, v in data.keyword_tag_references.items()},
+            testcase_tag_references={k: set(v) for k, v in data.testcase_tag_references.items()},
+            metadata_references={k: set(v) for k, v in data.metadata_references.items()},
+            scope_tree=scope_tree,
+            finder=finder,
+            sentinel=sentinel,
         )
 
 

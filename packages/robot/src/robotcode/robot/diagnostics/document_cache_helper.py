@@ -34,9 +34,15 @@ from robotcode.robot.diagnostics.diagnostics_modifier import (
 from ..config.model import RobotBaseProfile
 from ..utils import get_robot_version
 from ..utils.stubs import Languages
-from .imports_manager import ImportsManager
+from .data_cache import CacheSection
+from .imports_manager import ImportsManager, NamespaceMetaData
 from .library_doc import LibraryDoc
-from .namespace import DocumentType, Namespace, NamespaceBuilder
+from .namespace import (
+    DocumentType,
+    Namespace,
+    NamespaceBuilder,
+    NamespaceData,
+)
 from .project_index import ProjectIndex
 from .workspace_config import (
     AnalysisDiagnosticModifiersConfig,
@@ -409,6 +415,16 @@ class DocumentsCacheHelper:
     def __get_namespace_for_document_type(
         self, document: TextDocument, document_type: Optional[DocumentType]
     ) -> Namespace:
+        source = str(document.uri.to_path())
+        imports_manager = self.get_imports_manager(document)
+
+        # --- Try disk cache (cold-start acceleration) ---
+        if document.version is None:
+            result = self._try_load_cached_namespace(source, document, document_type, imports_manager)
+            if result is not None:
+                return result
+
+        # --- Cache miss: full build ---
         if document_type is not None and document_type == DocumentType.INIT:
             model = self.get_init_model(document)
         elif document_type is not None and document_type == DocumentType.RESOURCE:
@@ -418,14 +434,12 @@ class DocumentsCacheHelper:
         else:
             model = self.get_model(document)
 
-        imports_manager = self.get_imports_manager(document)
-
         languages, workspace_languages = self.build_languages_from_model(document, model)
 
         builder = NamespaceBuilder(
             imports_manager,
             model,
-            str(document.uri.to_path()),
+            source,
             document,
             document_type,
             languages,
@@ -433,6 +447,9 @@ class DocumentsCacheHelper:
         )
 
         result = builder.build()
+
+        # Save to disk cache
+        self._save_namespace_to_cache(source, result, imports_manager)
 
         # Update the folder-scoped reference index
         self.get_project_index(document).update_file(result.source, result)
@@ -445,6 +462,119 @@ class DocumentsCacheHelper:
         self.__namespace_initialized(result)
 
         return result
+
+    def _try_load_cached_namespace(
+        self,
+        source: str,
+        document: TextDocument,
+        document_type: Optional[DocumentType],
+        imports_manager: ImportsManager,
+    ) -> Optional[Namespace]:
+        """Attempt to load a Namespace from the disk cache.
+
+        Returns None on cache miss or validation failure.
+        """
+        data_cache = imports_manager.data_cache
+
+        # Check source file exists before attempting cache lookup
+        if not Path(source).exists():
+            return None
+
+        # Compute filepath_base from source path
+        temp_filepath_base = NamespaceMetaData(
+            meta_version="",
+            source=source,
+            source_mtime_ns=0,
+            config_fingerprint="",
+        ).filepath_base
+
+        meta_file = temp_filepath_base + ".meta"
+        if not data_cache.cache_data_exists(CacheSection.NAMESPACE, meta_file):
+            return None
+
+        try:
+            saved_meta = data_cache.read_cache_data(CacheSection.NAMESPACE, meta_file, NamespaceMetaData)
+        except (SystemExit, KeyboardInterrupt):
+            raise
+        except BaseException as e:
+            ex = e
+            self._logger.debug(
+                lambda: f"Failed to read namespace meta for {source}: {ex}",
+                context_name="import",
+            )
+            return None
+
+        if not imports_manager.validate_namespace_meta(saved_meta):
+            return None
+
+        # Meta is valid — load the full NamespaceData
+        data_file = temp_filepath_base + ".data"
+        try:
+            namespace_data = data_cache.read_cache_data(CacheSection.NAMESPACE, data_file, NamespaceData)
+        except (SystemExit, KeyboardInterrupt):
+            raise
+        except BaseException as e:
+            ex = e
+            self._logger.debug(
+                lambda: f"Failed to read namespace data for {source}: {ex}",
+                context_name="import",
+            )
+            return None
+
+        # Reconstruct the Namespace from cached data.
+        # Try to get the file's ResourceDoc from the RESOURCE disk cache first
+        # (avoids parsing the model if already cached). Falls back to parsing.
+        try:
+            library_doc = imports_manager.get_resource_doc_from_document(document)
+            result = Namespace.from_data(namespace_data, imports_manager, library_doc, document)
+        except (SystemExit, KeyboardInterrupt):
+            raise
+        except BaseException as e:
+            ex = e
+            self._logger.debug(
+                lambda: f"Failed to reconstruct namespace from cache for {source}: {ex}",
+                context_name="import",
+            )
+            return None
+
+        self._logger.debug(
+            lambda: f"Loaded namespace from disk cache for {source}",
+            context_name="import",
+        )
+
+        # Update the folder-scoped reference index
+        self.get_project_index(document).update_file(result.source, result)
+
+        result.invalidated.add(self._invalidate_namespace)
+        self.__namespace_initialized(result)
+
+        return result
+
+    def _save_namespace_to_cache(
+        self,
+        source: str,
+        namespace: Namespace,
+        imports_manager: ImportsManager,
+    ) -> None:
+        """Save a Namespace to the disk cache."""
+        try:
+            meta = imports_manager.build_namespace_meta(source, namespace)
+            data = namespace.to_data()
+
+            data_cache = imports_manager.data_cache
+            data_file = meta.filepath_base + ".data"
+            meta_file = meta.filepath_base + ".meta"
+
+            data_cache.save_cache_data(CacheSection.NAMESPACE, data_file, data)
+            data_cache.save_cache_data(CacheSection.NAMESPACE, meta_file, meta)
+        except (SystemExit, KeyboardInterrupt):
+            raise
+        except BaseException as e:
+            ex = e
+            self._logger.debug(
+                lambda: f"Failed to save namespace cache for {source}: {ex}",
+                context_name="import",
+            )
 
     def create_imports_manager(self, root_uri: Uri) -> ImportsManager:
         cache_base_path = self.calc_cache_path(root_uri)
