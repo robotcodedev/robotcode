@@ -126,6 +126,14 @@ class NamespaceData:
     # --- ScopeTree (local scopes only, file_scope is reconstructed) ---
     local_scopes: List[LocalScope] = field(default_factory=list)
 
+    # --- Authoritative variable definitions (stable_id → VariableDefinition) ---
+    # Stores the exact VariableDefinition objects that were referenced during
+    # analysis. Used as fallback in from_data() when the re-parsed resource doc
+    # produces variables with different stable_ids (e.g. col_offset differences
+    # for variables with '=' suffix, or keyword argument definitions from
+    # imported keywords that aren't in the file's own scope).
+    variable_definitions: Dict[str, VariableDefinition] = field(default_factory=dict)
+
 
 class Namespace:
     """Data container holding all results of a namespace build.
@@ -450,6 +458,42 @@ class Namespace:
             key = f"{type(entry).__name__}:{entry.import_name}:{entry.args!r}:{entry.alias or ''}"
             ns_refs[key] = locs
 
+        # Collect all referenced variable definitions for stable_id → object lookup
+        all_var_defs: Dict[str, VariableDefinition] = {}
+        for var in self._variable_references:
+            all_var_defs[var.stable_id] = var
+        for var in self._local_variable_assignments:
+            all_var_defs[var.stable_id] = var
+
+        # Build keyword_references merging locations when different KeywordDoc
+        # objects share the same stable_id (e.g. same library imported with
+        # different aliases like "errorlib" and "noerrorlib").
+        kw_refs_merged: Dict[str, Set[Location]] = {}
+        for kw, locs in self._keyword_references.items():
+            sid = kw.stable_id
+            if sid in kw_refs_merged:
+                kw_refs_merged[sid].update(locs)
+            else:
+                kw_refs_merged[sid] = set(locs)
+
+        # Same merge for variable_references (different VariableDefinition
+        # objects could theoretically share a stable_id).
+        var_refs_merged: Dict[str, Set[Location]] = {}
+        for var, locs in self._variable_references.items():
+            sid = var.stable_id
+            if sid in var_refs_merged:
+                var_refs_merged[sid].update(locs)
+            else:
+                var_refs_merged[sid] = set(locs)
+
+        var_assigns_merged: Dict[str, Set[Range]] = {}
+        for var, ranges in self._local_variable_assignments.items():
+            sid = var.stable_id
+            if sid in var_assigns_merged:
+                var_assigns_merged[sid].update(ranges)
+            else:
+                var_assigns_merged[sid] = set(ranges)
+
         return NamespaceData(
             source=self.source,
             source_id=str(self.source_id) if self.source_id else None,
@@ -459,16 +503,15 @@ class Namespace:
             imports=list(self._import_entries.keys()),
             diagnostics=list(self._diagnostics),
             test_case_definitions=list(self._test_case_definitions),
-            keyword_references={kw.stable_id: set(locs) for kw, locs in self._keyword_references.items()},
-            variable_references={var.stable_id: set(locs) for var, locs in self._variable_references.items()},
-            local_variable_assignments={
-                var.stable_id: set(ranges) for var, ranges in self._local_variable_assignments.items()
-            },
+            keyword_references=kw_refs_merged,
+            variable_references=var_refs_merged,
+            local_variable_assignments=var_assigns_merged,
             namespace_references=ns_refs,
             keyword_tag_references={k: set(v) for k, v in self._keyword_tag_references.items()},
             testcase_tag_references={k: set(v) for k, v in self._testcase_tag_references.items()},
             metadata_references={k: set(v) for k, v in self._metadata_references.items()},
             local_scopes=list(self._scope_tree.local_scopes),
+            variable_definitions=all_var_defs,
         )
 
     @classmethod
@@ -528,10 +571,28 @@ class Namespace:
         for var in scope.iter_all():
             var_by_id[var.stable_id] = var
 
+        # Add keyword argument_definitions from all resolved keywords
+        # to var_by_id. This covers ArgumentDefinition and
+        # LibraryArgumentDefinition objects that are created during
+        # Phase 3 analysis but aren't part of the file's own scope.
+        for kw in kw_by_id.values():
+            if kw.argument_definitions:
+                for arg_var in kw.argument_definitions:
+                    var_by_id[arg_var.stable_id] = arg_var
+
         # Variables from local scopes (block-level LOCAL_VARIABLE, arguments, etc.)
         for ls in data.local_scopes:
             for sv in ls.variables:
                 var_by_id[sv.variable.stable_id] = sv.variable
+
+        # Fallback: use stored variable definitions for any stable_ids
+        # not found in the rebuilt scope. This handles variables whose
+        # stable_ids differ due to re-parsing differences (e.g. col_offset
+        # for variables with '=' suffix) and keyword argument definitions
+        # from imported keywords that aren't in the file's own scope.
+        for sid, var_def in data.variable_definitions.items():
+            if sid not in var_by_id:
+                var_by_id[sid] = var_def
 
         # --- Reconstruct reference dicts ---
         keyword_references: Dict[KeywordDoc, Set[Location]] = {}

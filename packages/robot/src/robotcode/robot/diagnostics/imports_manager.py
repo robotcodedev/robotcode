@@ -53,7 +53,7 @@ from ..utils import get_robot_version, get_robot_version_str
 from ..utils.robot_path import find_file_ex
 from ..utils.variables import contains_variable
 from .data_cache import CacheSection
-from .data_cache import PickleDataCache as DefaultDataCache
+from .data_cache import SqliteDataCache as DefaultDataCache
 from .entities import (
     CommandLineVariableDefinition,
     VariableDefinition,
@@ -612,6 +612,7 @@ class ImportsManager:
             / f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
             / get_robot_version_str()
         )
+        weakref.finalize(self, DefaultDataCache.close, self.data_cache)
 
         self.cmd_variables = variables
         self.cmd_variable_files = variable_files
