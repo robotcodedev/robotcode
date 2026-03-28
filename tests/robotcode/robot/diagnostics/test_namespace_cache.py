@@ -447,8 +447,11 @@ class TestValidateNamespaceMeta:
 
         meta = ImportsManager.build_namespace_meta(im, str(source), ns)
 
-        # Modify resource file
-        res_file.write_text("*** Keywords ***\nModified\n")
+        # Simulate resource file modification by shifting the stored mtime.
+        # More reliable than writing the file again (Windows NTFS mtime
+        # resolution can cause identical timestamps for fast writes).
+        res_key = f"res:{res_file}"
+        meta.dependency_fingerprints[res_key].mtime_ns -= 1
         assert ImportsManager.validate_namespace_meta(im, meta) is False
 
     def test_resource_dependency_deleted_fails(self, tmp_path: Path) -> None:
