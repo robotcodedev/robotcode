@@ -1,13 +1,11 @@
 import pickle
 import sqlite3
-from abc import ABC, abstractmethod
 from enum import Enum
 from pathlib import Path
-from typing import Any, Tuple, Type, TypeVar, Union, cast
+from typing import Any, Generic, Optional, Tuple, Type, TypeVar, Union, cast
 
-from robotcode.core.utils.dataclasses import as_json, from_json
-
-_T = TypeVar("_T")
+_M = TypeVar("_M")
+_D = TypeVar("_D")
 
 
 class CacheSection(Enum):
@@ -17,90 +15,64 @@ class CacheSection(Enum):
     NAMESPACE = "namespace"
 
 
-class DataCache(ABC):
-    @abstractmethod
-    def cache_data_exists(self, section: CacheSection, entry_name: str) -> bool: ...
+class CacheEntry(Generic[_M, _D]):
+    """Lazy-deserializing cache entry.
 
-    @abstractmethod
-    def read_cache_data(
-        self, section: CacheSection, entry_name: str, types: Union[Type[_T], Tuple[Type[_T], ...]]
-    ) -> _T: ...
+    Meta and data blobs are deserialized on first property access, not when read from DB.
+    """
 
-    @abstractmethod
-    def save_cache_data(self, section: CacheSection, entry_name: str, data: Any) -> None: ...
+    def __init__(
+        self,
+        meta_blob: Optional[bytes],
+        data_blob: bytes,
+        meta_type: Union[Type[_M], Tuple[Type[_M], ...]],
+        data_type: Union[Type[_D], Tuple[Type[_D], ...]],
+    ) -> None:
+        self._meta_blob = meta_blob
+        self._data_blob = data_blob
+        self._meta_type = meta_type
+        self._data_type = data_type
+        self._meta_cache: Optional[_M] = None
+        self._data_cache: Optional[_D] = None
+        self._meta_loaded = False
+        self._data_loaded = False
 
-    def close(self) -> None:
-        pass
+    @property
+    def meta(self) -> Optional[_M]:
+        if not self._meta_loaded:
+            if self._meta_blob is not None:
+                result = pickle.loads(self._meta_blob)
+                if not isinstance(result, self._meta_type):
+                    raise TypeError(f"Expected {self._meta_type} but got {type(result)}")
+                self._meta_cache = cast(_M, result)
+            self._meta_loaded = True
+        return self._meta_cache
 
+    @property
+    def data(self) -> _D:
+        if not self._data_loaded:
+            result = pickle.loads(self._data_blob)
+            if not isinstance(result, self._data_type):
+                raise TypeError(f"Expected {self._data_type} but got {type(result)}")
+            self._data_cache = cast(_D, result)
+            self._data_loaded = True
 
-class FileCacheDataBase(DataCache, ABC):
-    def __init__(self, cache_dir: Path) -> None:
-        self.cache_dir = cache_dir
-
-        if not Path.exists(self.cache_dir):
-            Path.mkdir(self.cache_dir, parents=True)
-            Path(self.cache_dir / ".gitignore").write_text(
-                "# Created by robotcode\n*\n",
-                "utf-8",
-            )
-
-
-class JsonDataCache(FileCacheDataBase):
-    def build_cache_data_filename(self, section: CacheSection, entry_name: str) -> Path:
-        return self.cache_dir / section.value / (entry_name + ".json")
-
-    def cache_data_exists(self, section: CacheSection, entry_name: str) -> bool:
-        cache_file = self.build_cache_data_filename(section, entry_name)
-        return cache_file.exists()
-
-    def read_cache_data(
-        self, section: CacheSection, entry_name: str, types: Union[Type[_T], Tuple[Type[_T], ...]]
-    ) -> _T:
-        cache_file = self.build_cache_data_filename(section, entry_name)
-        return from_json(cache_file.read_text("utf-8"), types)
-
-    def save_cache_data(self, section: CacheSection, entry_name: str, data: Any) -> None:
-        cached_file = self.build_cache_data_filename(section, entry_name)
-
-        cached_file.parent.mkdir(parents=True, exist_ok=True)
-        cached_file.write_text(as_json(data), "utf-8")
+        assert self._data_cache is not None
+        return self._data_cache
 
 
-class PickleDataCache(FileCacheDataBase):
-    def build_cache_data_filename(self, section: CacheSection, entry_name: str) -> Path:
-        return self.cache_dir / section.value / (entry_name + ".pkl")
-
-    def cache_data_exists(self, section: CacheSection, entry_name: str) -> bool:
-        cache_file = self.build_cache_data_filename(section, entry_name)
-        return cache_file.exists()
-
-    def read_cache_data(
-        self, section: CacheSection, entry_name: str, types: Union[Type[_T], Tuple[Type[_T], ...]]
-    ) -> _T:
-        cache_file = self.build_cache_data_filename(section, entry_name)
-
-        with cache_file.open("rb") as f:
-            result = pickle.load(f)
-
-            if isinstance(result, types):
-                return cast(_T, result)
-
-            raise TypeError(f"Expected {types} but got {type(result)}")
-
-    def save_cache_data(self, section: CacheSection, entry_name: str, data: Any) -> None:
-        cached_file = self.build_cache_data_filename(section, entry_name)
-
-        cached_file.parent.mkdir(parents=True, exist_ok=True)
-        with cached_file.open("wb") as f:
-            pickle.dump(data, f)
+_TABLE_NAMES = [s.value for s in CacheSection]
 
 
-class SqliteDataCache(DataCache):
-    """Cache backend using a single SQLite database with zlib-compressed pickle blobs."""
+class SqliteDataCache:
+    """Cache backend using a single SQLite database with per-section tables.
 
-    _SCHEMA_VERSION = 1
+    Each CacheSection gets its own table with entry_name as PK, plus meta and data
+    BLOB columns. An app_version is stored in a metadata table; on version mismatch
+    all tables are dropped and recreated.
+    """
 
-    def __init__(self, cache_dir: Path) -> None:
+    def __init__(self, cache_dir: Path, app_version: str = "") -> None:
         self.cache_dir = cache_dir
 
         if not cache_dir.exists():
@@ -116,46 +88,55 @@ class SqliteDataCache(DataCache):
         self._conn.execute("PRAGMA synchronous=NORMAL")
         self._conn.execute("PRAGMA cache_size=-8000")
         self._conn.execute("PRAGMA mmap_size=67108864")
-        self._conn.execute(
-            "CREATE TABLE IF NOT EXISTS cache_entries ("
-            "  section TEXT NOT NULL,"
-            "  entry_name TEXT NOT NULL,"
-            "  data BLOB NOT NULL,"
-            "  PRIMARY KEY (section, entry_name)"
-            ")"
-        )
+
+        self._ensure_schema(app_version)
+
+    def _ensure_schema(self, app_version: str) -> None:
+        self._conn.execute("CREATE TABLE IF NOT EXISTS _meta (  key TEXT PRIMARY KEY,  value TEXT NOT NULL)")
+
+        row = self._conn.execute("SELECT value FROM _meta WHERE key = 'app_version'").fetchone()
+        stored_version = row[0] if row else None
+
+        if stored_version != app_version:
+            for table in _TABLE_NAMES:
+                self._conn.execute(f"DROP TABLE IF EXISTS {table}")
+            self._conn.execute("INSERT OR REPLACE INTO _meta (key, value) VALUES ('app_version', ?)", (app_version,))
+
+        for table in _TABLE_NAMES:
+            self._conn.execute(
+                f"CREATE TABLE IF NOT EXISTS {table} (  entry_name TEXT PRIMARY KEY,  meta BLOB,  data BLOB NOT NULL)"
+            )
         self._conn.commit()
 
-    def cache_data_exists(self, section: CacheSection, entry_name: str) -> bool:
+    def read_entry(
+        self,
+        section: CacheSection,
+        entry_name: str,
+        meta_type: Union[Type[_M], Tuple[Type[_M], ...]],
+        data_type: Union[Type[_D], Tuple[Type[_D], ...]],
+    ) -> Optional[CacheEntry[_M, _D]]:
         row = self._conn.execute(
-            "SELECT 1 FROM cache_entries WHERE section = ? AND entry_name = ?",
-            (section.value, entry_name),
-        ).fetchone()
-        return row is not None
-
-    def read_cache_data(
-        self, section: CacheSection, entry_name: str, types: Union[Type[_T], Tuple[Type[_T], ...]]
-    ) -> _T:
-        row = self._conn.execute(
-            "SELECT data FROM cache_entries WHERE section = ? AND entry_name = ?",
-            (section.value, entry_name),
+            f"SELECT meta, data FROM {section.value} WHERE entry_name = ?",
+            (entry_name,),
         ).fetchone()
 
         if row is None:
-            raise FileNotFoundError(f"No cache entry for {section.value}/{entry_name}")
+            return None
 
-        result = pickle.loads(row[0])
+        return CacheEntry(row[0], row[1], meta_type, data_type)
 
-        if isinstance(result, types):
-            return cast(_T, result)
-
-        raise TypeError(f"Expected {types} but got {type(result)}")
-
-    def save_cache_data(self, section: CacheSection, entry_name: str, data: Any) -> None:
-        blob = pickle.dumps(data, protocol=pickle.HIGHEST_PROTOCOL)
+    def save_entry(
+        self,
+        section: CacheSection,
+        entry_name: str,
+        meta: Any,
+        data: Any,
+    ) -> None:
+        meta_blob = pickle.dumps(meta, protocol=pickle.HIGHEST_PROTOCOL) if meta is not None else None
+        data_blob = pickle.dumps(data, protocol=pickle.HIGHEST_PROTOCOL)
         self._conn.execute(
-            "INSERT OR REPLACE INTO cache_entries (section, entry_name, data) VALUES (?, ?, ?)",
-            (section.value, entry_name, blob),
+            f"INSERT OR REPLACE INTO {section.value} (entry_name, meta, data) VALUES (?, ?, ?)",
+            (entry_name, meta_blob, data_blob),
         )
         self._conn.commit()
 

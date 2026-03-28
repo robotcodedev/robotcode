@@ -1,7 +1,7 @@
 """Tests for namespace disk cache integration (1e-e through 1e-h).
 
 Tests for NamespaceMetaData, fingerprint computation, cache validation,
-and the disk cache save/load roundtrip via PickleDataCache.
+and the disk cache save/load roundtrip via SqliteDataCache.
 """
 
 import os
@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Dict, List, Optional
 from unittest.mock import MagicMock
 
-from robotcode.robot.diagnostics.data_cache import CacheSection, PickleDataCache
+from robotcode.robot.diagnostics.data_cache import CacheSection, SqliteDataCache
 from robotcode.robot.diagnostics.imports_manager import ImportsManager, NamespaceMetaData
 
 
@@ -112,38 +112,8 @@ def _mock_namespace(
 
 
 class TestNamespaceMetaData:
-    def test_filepath_base_includes_adler32_prefix(self) -> None:
-        meta = NamespaceMetaData(
-            meta_version="1.0",
-            source="/project/test.robot",
-            source_mtime_ns=1000,
-            config_fingerprint=(),
-        )
-        base = meta.filepath_base
-        # Format: 8-hex-digits + underscore + stem + suffix
-        assert "_" in base
-        assert base.endswith("test.robot")
-        assert len(base.split("_", 1)[0]) == 8
-
-    def test_filepath_base_deterministic(self) -> None:
-        meta1 = NamespaceMetaData("1.0", "/a/b/c.robot", 0, ())
-        meta2 = NamespaceMetaData("2.0", "/a/b/c.robot", 999, ())
-        # Same source path -> same filepath_base
-        assert meta1.filepath_base == meta2.filepath_base
-
-    def test_filepath_base_differs_for_different_dirs(self) -> None:
-        meta1 = NamespaceMetaData("1.0", "/dir1/test.robot", 0, ())
-        meta2 = NamespaceMetaData("1.0", "/dir2/test.robot", 0, ())
-        assert meta1.filepath_base != meta2.filepath_base
-
-    def test_filepath_base_differs_for_different_files(self) -> None:
-        meta1 = NamespaceMetaData("1.0", "/dir/a.robot", 0, ())
-        meta2 = NamespaceMetaData("1.0", "/dir/b.robot", 0, ())
-        assert meta1.filepath_base != meta2.filepath_base
-
     def test_meta_pickle_roundtrip(self) -> None:
         meta = NamespaceMetaData(
-            meta_version="2.4.0",
             source="/project/test.robot",
             source_mtime_ns=123456789,
             config_fingerprint=(("BROWSER", "chrome"),),
@@ -156,18 +126,13 @@ class TestNamespaceMetaData:
         assert restored == meta
 
     def test_meta_equality(self) -> None:
-        meta1 = NamespaceMetaData("1.0", "/a.robot", 100, ("fp",), {"k": "v"})
-        meta2 = NamespaceMetaData("1.0", "/a.robot", 100, ("fp",), {"k": "v"})
+        meta1 = NamespaceMetaData("/a.robot", 100, ("fp",), {"k": "v"})
+        meta2 = NamespaceMetaData("/a.robot", 100, ("fp",), {"k": "v"})
         assert meta1 == meta2
 
-    def test_meta_inequality_version(self) -> None:
-        meta1 = NamespaceMetaData("1.0", "/a.robot", 100, ())
-        meta2 = NamespaceMetaData("2.0", "/a.robot", 100, ())
-        assert meta1 != meta2
-
     def test_meta_inequality_mtime(self) -> None:
-        meta1 = NamespaceMetaData("1.0", "/a.robot", 100, ())
-        meta2 = NamespaceMetaData("1.0", "/a.robot", 200, ())
+        meta1 = NamespaceMetaData("/a.robot", 100, ())
+        meta2 = NamespaceMetaData("/a.robot", 200, ())
         assert meta1 != meta2
 
 
@@ -291,7 +256,7 @@ class TestBuildNamespaceMeta:
         assert isinstance(meta.config_fingerprint, tuple)
         assert isinstance(meta.dependency_fingerprints, dict)
 
-    def test_meta_version_set(self, tmp_path: Path) -> None:
+    def test_source_set(self, tmp_path: Path) -> None:
         source = tmp_path / "test.robot"
         source.write_text("")
 
@@ -299,7 +264,7 @@ class TestBuildNamespaceMeta:
         im = _mock_imports_manager()
 
         meta = ImportsManager.build_namespace_meta(im, str(source), ns)
-        assert meta.meta_version  # Non-empty
+        assert meta.source == str(source)  # source is set
 
     def test_missing_source_gets_zero_mtime(self) -> None:
         ns = _mock_namespace(source="/nonexistent/test.robot")
@@ -321,6 +286,8 @@ class TestValidateNamespaceMeta:
         assert ImportsManager.validate_namespace_meta(im, meta) is True
 
     def test_version_mismatch_fails(self, tmp_path: Path) -> None:
+        """Version mismatch is now handled at DB level (app_version), not meta level.
+        This test verifies that mtime changes are detected instead."""
         source = tmp_path / "test.robot"
         source.write_text("")
 
@@ -328,7 +295,7 @@ class TestValidateNamespaceMeta:
         im = _mock_imports_manager()
 
         meta = ImportsManager.build_namespace_meta(im, str(source), ns)
-        meta.meta_version = "0.0.0-invalid"
+        meta.source_mtime_ns -= 1  # Simulate mtime change
         assert ImportsManager.validate_namespace_meta(im, meta) is False
 
     def test_source_mtime_changed_fails(self, tmp_path: Path) -> None:
@@ -470,15 +437,14 @@ class TestValidateNamespaceMeta:
 
 
 # ===========================================================================
-# 1e-g: PickleDataCache integration (save + load roundtrip)
+# 1e-g: SqliteDataCache integration (save + load roundtrip)
 # ===========================================================================
 
 
 class TestNamespaceMetaCacheRoundtrip:
     def test_save_and_load_meta(self, tmp_path: Path) -> None:
-        cache = PickleDataCache(tmp_path / "cache")
+        cache = SqliteDataCache(tmp_path / "cache")
         meta = NamespaceMetaData(
-            meta_version="2.4.0",
             source="/project/test.robot",
             source_mtime_ns=123456789,
             config_fingerprint=(("BROWSER", "chrome"),),
@@ -488,29 +454,30 @@ class TestNamespaceMetaCacheRoundtrip:
             },
         )
 
-        meta_file = meta.filepath_base + ".meta"
-        cache.save_cache_data(CacheSection.NAMESPACE, meta_file, meta)
+        cache.save_entry(CacheSection.NAMESPACE, meta.source, meta, "dummy_data")
 
-        assert cache.cache_data_exists(CacheSection.NAMESPACE, meta_file)
-
-        loaded = cache.read_cache_data(CacheSection.NAMESPACE, meta_file, NamespaceMetaData)
-        assert loaded == meta
-        assert loaded.meta_version == "2.4.0"
-        assert loaded.dependency_fingerprints == meta.dependency_fingerprints
+        entry = cache.read_entry(CacheSection.NAMESPACE, meta.source, NamespaceMetaData, str)
+        assert entry is not None
+        assert entry.meta == meta
+        assert entry.meta.dependency_fingerprints == meta.dependency_fingerprints
 
     def test_cache_section_namespace_exists(self) -> None:
         assert CacheSection.NAMESPACE.value == "namespace"
 
-    def test_different_sources_different_cache_files(self, tmp_path: Path) -> None:
-        cache = PickleDataCache(tmp_path / "cache")
-        meta1 = NamespaceMetaData("1.0", "/dir1/a.robot", 100, ())
-        meta2 = NamespaceMetaData("1.0", "/dir2/b.robot", 200, ())
+    def test_different_sources_different_cache_entries(self, tmp_path: Path) -> None:
+        cache = SqliteDataCache(tmp_path / "cache")
+        meta1 = NamespaceMetaData("/dir1/a.robot", 100, ())
+        meta2 = NamespaceMetaData("/dir2/b.robot", 200, ())
 
-        cache.save_cache_data(CacheSection.NAMESPACE, meta1.filepath_base + ".meta", meta1)
-        cache.save_cache_data(CacheSection.NAMESPACE, meta2.filepath_base + ".meta", meta2)
+        cache.save_entry(CacheSection.NAMESPACE, meta1.source, meta1, "data1")
+        cache.save_entry(CacheSection.NAMESPACE, meta2.source, meta2, "data2")
 
-        loaded1 = cache.read_cache_data(CacheSection.NAMESPACE, meta1.filepath_base + ".meta", NamespaceMetaData)
-        loaded2 = cache.read_cache_data(CacheSection.NAMESPACE, meta2.filepath_base + ".meta", NamespaceMetaData)
+        entry1 = cache.read_entry(CacheSection.NAMESPACE, meta1.source, NamespaceMetaData, str)
+        entry2 = cache.read_entry(CacheSection.NAMESPACE, meta2.source, NamespaceMetaData, str)
 
-        assert loaded1.source == "/dir1/a.robot"
-        assert loaded2.source == "/dir2/b.robot"
+        assert entry1 is not None
+        assert entry1.meta is not None
+        assert entry2 is not None
+        assert entry2.meta is not None
+        assert entry1.meta.source == "/dir1/a.robot"
+        assert entry2.meta.source == "/dir2/b.robot"

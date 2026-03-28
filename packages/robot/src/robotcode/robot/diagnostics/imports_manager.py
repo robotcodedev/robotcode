@@ -6,7 +6,6 @@ import shutil
 import sys
 import threading
 import weakref
-import zlib
 from abc import ABC, abstractmethod
 from concurrent.futures import ProcessPoolExecutor, TimeoutError
 from dataclasses import dataclass, field
@@ -511,7 +510,6 @@ class _VariablesEntry(_ImportEntry):
 
 @dataclass
 class LibraryMetaData:
-    meta_version: str
     name: Optional[str]
     member_name: Optional[str]
     origin: Optional[str]
@@ -523,29 +521,21 @@ class LibraryMetaData:
     has_errors: bool = False
 
     @property
-    def filepath_base(self) -> str:
+    def cache_key(self) -> str:
         if self.by_path:
             if self.origin is not None:
-                p = Path(self.origin)
-
-                return f"{zlib.adler32(str(p.parent).encode('utf-8')):08x}_{p.stem}"
+                return self.origin
         else:
             if self.name is not None:
-                return self.name.replace(".", "/") + (f".{self.member_name}" if self.member_name else "")
+                return self.name + (f".{self.member_name}" if self.member_name else "")
 
-        raise ValueError("Cannot determine filepath base.")
+        raise ValueError("Cannot determine cache key.")
 
 
 @dataclass
 class RobotFileMeta:
-    meta_version: str
     source: str
     mtime_ns: int
-
-    @property
-    def filepath_base(self) -> str:
-        p = Path(self.source)
-        return f"{zlib.adler32(str(p.parent).encode('utf-8')):08x}_{p.stem}{p.suffix}"
 
 
 @dataclass
@@ -556,16 +546,10 @@ class NamespaceMetaData:
     loading the full NamespaceData pickle to avoid unnecessary I/O.
     """
 
-    meta_version: str
     source: str
     source_mtime_ns: int
     config_fingerprint: Any
     dependency_fingerprints: Dict[str, Any] = field(default_factory=dict)
-
-    @property
-    def filepath_base(self) -> str:
-        p = Path(self.source)
-        return f"{zlib.adler32(str(p.parent).encode('utf-8')):08x}_{p.stem}{p.suffix}"
 
 
 class ImportsManager:
@@ -610,7 +594,8 @@ class ImportsManager:
         self.data_cache = DefaultDataCache(
             self.cache_path
             / f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
-            / get_robot_version_str()
+            / get_robot_version_str(),
+            app_version=__version__,
         )
         weakref.finalize(self, DefaultDataCache.close, self.data_cache)
 
@@ -809,7 +794,6 @@ class ImportsManager:
             source_mtime_ns = 0
 
         return NamespaceMetaData(
-            meta_version=__version__,
             source=source,
             source_mtime_ns=source_mtime_ns,
             config_fingerprint=self.config_fingerprint,
@@ -820,13 +804,10 @@ class ImportsManager:
         """Check whether a cached NamespaceMetaData is still fresh.
 
         Performs a 2-level validation:
-        Level 1 (fast): meta_version, source_mtime_ns, config_fingerprint
+        Level 1 (fast): source_mtime_ns, config_fingerprint
         Level 2 (dependency check): each dependency fingerprint
         """
         # Level 1: fast checks
-        if meta.meta_version != __version__:
-            return False
-
         try:
             current_mtime = os.stat(meta.source, follow_symlinks=False).st_mtime_ns
         except OSError:
@@ -1220,12 +1201,11 @@ class ImportsManager:
             module_spec: Optional[ModuleSpec] = None
             if is_library_by_path(import_name):
                 if (p := Path(import_name)).exists():
-                    result = LibraryMetaData(__version__, p.stem, None, import_name, None, True)
+                    result = LibraryMetaData(p.stem, None, import_name, None, True)
             else:
                 module_spec = get_module_spec(import_name)
                 if module_spec is not None and module_spec.origin is not None:
                     result = LibraryMetaData(
-                        __version__,
                         module_spec.name,
                         module_spec.member_name,
                         module_spec.origin,
@@ -1300,12 +1280,11 @@ class ImportsManager:
             module_spec: Optional[ModuleSpec] = None
             if is_variables_by_path(import_name):
                 if (p := Path(import_name)).exists():
-                    result = LibraryMetaData(__version__, p.stem, None, import_name, None, True)
+                    result = LibraryMetaData(p.stem, None, import_name, None, True)
             else:
                 module_spec = get_module_spec(import_name)
                 if module_spec is not None and module_spec.origin is not None:
                     result = LibraryMetaData(
-                        __version__,
                         module_spec.name,
                         module_spec.member_name,
                         module_spec.origin,
@@ -1528,36 +1507,21 @@ class ImportsManager:
         meta, _source, ignore_arguments = self.get_library_meta(name, base_dir, variables)
 
         if meta is not None and not meta.has_errors:
-            meta_file = meta.filepath_base + ".meta"
-            if self.data_cache.cache_data_exists(CacheSection.LIBRARY, meta_file):
-                try:
-                    spec_path = None
-                    try:
-                        saved_meta = self.data_cache.read_cache_data(CacheSection.LIBRARY, meta_file, LibraryMetaData)
-                        if saved_meta.has_errors:
-                            self._logger.debug(
-                                lambda: f"Saved library spec for {name}{args!r} is not used due to errors in meta data",
-                                context_name="import",
-                            )
-
-                        if not saved_meta.has_errors and saved_meta == meta:
-                            spec_path = meta.filepath_base + ".spec"
-
-                            self._logger.debug(
-                                lambda: f"Use cached library meta data for {name}", context_name="import"
-                            )
-                            return self.data_cache.read_cache_data(CacheSection.LIBRARY, spec_path, LibraryDoc), meta
-
-                    except (SystemExit, KeyboardInterrupt):
-                        raise
-                    except BaseException as e:
-                        raise RuntimeError(
-                            f"Failed to load library meta data for library {name} from {spec_path}"
-                        ) from e
-                except (SystemExit, KeyboardInterrupt):
-                    raise
-                except BaseException as e:
-                    self._logger.exception(e)
+            try:
+                entry = self.data_cache.read_entry(CacheSection.LIBRARY, meta.cache_key, LibraryMetaData, LibraryDoc)
+                if entry is not None and entry.meta is not None:
+                    if entry.meta.has_errors:
+                        self._logger.debug(
+                            lambda: f"Saved library spec for {name}{args!r} is not used due to errors in meta data",
+                            context_name="import",
+                        )
+                    elif entry.meta == meta:
+                        self._logger.debug(lambda: f"Use cached library meta data for {name}", context_name="import")
+                        return entry.data, meta
+            except (SystemExit, KeyboardInterrupt):
+                raise
+            except BaseException as e:
+                self._logger.exception(e)
 
         self._logger.debug(lambda: f"Load library in process {name}{args!r}", context_name="import")
         # A fresh process per import is intentional: libraries can pollute the interpreter
@@ -1597,17 +1561,12 @@ class ImportsManager:
             if meta is not None:
                 meta.has_errors = bool(result.errors)
 
-                meta_file = meta.filepath_base + ".meta"
-                spec_file = meta.filepath_base + ".spec"
-
                 try:
-                    self.data_cache.save_cache_data(CacheSection.LIBRARY, spec_file, result)
+                    self.data_cache.save_entry(CacheSection.LIBRARY, meta.cache_key, meta, result)
                 except (SystemExit, KeyboardInterrupt):
                     raise
                 except BaseException as e:
-                    raise RuntimeError(f"Cannot write spec file for library '{name}' to '{spec_file}'") from e
-
-                self.data_cache.save_cache_data(CacheSection.LIBRARY, meta_file, meta)
+                    raise RuntimeError(f"Cannot write cache entry for library '{name}'") from e
             else:
                 self._logger.debug(lambda: f"Skip caching library {name}{args!r}", context_name="import")
         except (SystemExit, KeyboardInterrupt):
@@ -1702,7 +1661,6 @@ class ImportsManager:
             source_path = normalized_path(source)
             if source_path.exists():
                 return RobotFileMeta(
-                    __version__,
                     str(source_path),
                     os.stat(source_path, follow_symlinks=False).st_mtime_ns,
                 )
@@ -1715,15 +1673,10 @@ class ImportsManager:
         if meta is None:
             return None, None
 
-        meta_file = meta.filepath_base + ".meta"
-        if not self.data_cache.cache_data_exists(CacheSection.RESOURCE, meta_file):
-            return None, meta
-
         try:
-            saved_meta = self.data_cache.read_cache_data(CacheSection.RESOURCE, meta_file, RobotFileMeta)
-            if saved_meta == meta:
-                spec_file = meta.filepath_base + ".spec"
-                return self.data_cache.read_cache_data(CacheSection.RESOURCE, spec_file, ResourceDoc), meta
+            entry = self.data_cache.read_entry(CacheSection.RESOURCE, meta.source, RobotFileMeta, ResourceDoc)
+            if entry is not None and entry.meta == meta:
+                return entry.data, meta
         except (SystemExit, KeyboardInterrupt):
             raise
         except BaseException as e:
@@ -1738,8 +1691,7 @@ class ImportsManager:
     def _save_model_doc_cache(self, source: str, result: ResourceDoc, meta: "RobotFileMeta") -> None:
 
         try:
-            self.data_cache.save_cache_data(CacheSection.RESOURCE, meta.filepath_base + ".spec", result)
-            self.data_cache.save_cache_data(CacheSection.RESOURCE, meta.filepath_base + ".meta", meta)
+            self.data_cache.save_entry(CacheSection.RESOURCE, meta.source, meta, result)
         except (SystemExit, KeyboardInterrupt):
             raise
         except BaseException as e:
@@ -1768,28 +1720,16 @@ class ImportsManager:
         )
 
         if meta is not None:
-            meta_file = meta.filepath_base + ".meta"
-
-            if self.data_cache.cache_data_exists(CacheSection.VARIABLES, meta_file):
-                try:
-                    spec_path = None
-                    try:
-                        saved_meta = self.data_cache.read_cache_data(CacheSection.VARIABLES, meta_file, LibraryMetaData)
-                        if saved_meta == meta:
-                            spec_path = meta.filepath_base + ".spec"
-
-                            result = self.data_cache.read_cache_data(CacheSection.VARIABLES, spec_path, VariablesDoc)
-                            return result, meta
-                    except (SystemExit, KeyboardInterrupt):
-                        raise
-                    except BaseException as e:
-                        raise RuntimeError(
-                            f"Failed to load library meta data for library {name} from {spec_path}"
-                        ) from e
-                except (SystemExit, KeyboardInterrupt):
-                    raise
-                except BaseException as e:
-                    self._logger.exception(e)
+            try:
+                entry = self.data_cache.read_entry(
+                    CacheSection.VARIABLES, meta.cache_key, LibraryMetaData, VariablesDoc
+                )
+                if entry is not None and entry.meta == meta:
+                    return entry.data, meta
+            except (SystemExit, KeyboardInterrupt):
+                raise
+            except BaseException as e:
+                self._logger.exception(e)
 
         # A fresh process per import is intentional: variable files can pollute the
         # interpreter and cannot be safely re-imported after on-disk changes.
@@ -1826,16 +1766,12 @@ class ImportsManager:
 
         try:
             if meta is not None:
-                meta_file = meta.filepath_base + ".meta"
-                spec_file = meta.filepath_base + ".spec"
-
                 try:
-                    self.data_cache.save_cache_data(CacheSection.VARIABLES, spec_file, result)
+                    self.data_cache.save_entry(CacheSection.VARIABLES, meta.cache_key, meta, result)
                 except (SystemExit, KeyboardInterrupt):
                     raise
                 except BaseException as e:
-                    raise RuntimeError(f"Cannot write spec file for variables '{name}' to '{spec_file}'") from e
-                self.data_cache.save_cache_data(CacheSection.VARIABLES, meta_file, meta)
+                    raise RuntimeError(f"Cannot write cache entry for variables '{name}'") from e
             else:
                 self._logger.debug(lambda: f"Skip caching variables {name}{args!r}", context_name="import")
         except (SystemExit, KeyboardInterrupt):

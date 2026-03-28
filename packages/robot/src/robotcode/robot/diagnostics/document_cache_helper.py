@@ -482,37 +482,27 @@ class DocumentsCacheHelper:
         if not Path(source).exists():
             return None
 
-        # Compute filepath_base from source path
-        temp_filepath_base = NamespaceMetaData(
-            meta_version="",
-            source=source,
-            source_mtime_ns=0,
-            config_fingerprint="",
-        ).filepath_base
-
-        meta_file = temp_filepath_base + ".meta"
-        if not data_cache.cache_data_exists(CacheSection.NAMESPACE, meta_file):
-            return None
-
         try:
-            saved_meta = data_cache.read_cache_data(CacheSection.NAMESPACE, meta_file, NamespaceMetaData)
+            entry = data_cache.read_entry(CacheSection.NAMESPACE, source, NamespaceMetaData, NamespaceData)
         except (SystemExit, KeyboardInterrupt):
             raise
         except BaseException as e:
             ex = e
             self._logger.debug(
-                lambda: f"Failed to read namespace meta for {source}: {ex}",
+                lambda: f"Failed to read namespace cache for {source}: {ex}",
                 context_name="import",
             )
             return None
 
-        if not imports_manager.validate_namespace_meta(saved_meta):
+        if entry is None or entry.meta is None:
             return None
 
-        # Meta is valid — load the full NamespaceData
-        data_file = temp_filepath_base + ".data"
+        if not imports_manager.validate_namespace_meta(entry.meta):
+            return None
+
+        # Meta is valid — load the full NamespaceData (lazy deserialization)
         try:
-            namespace_data = data_cache.read_cache_data(CacheSection.NAMESPACE, data_file, NamespaceData)
+            namespace_data = entry.data
         except (SystemExit, KeyboardInterrupt):
             raise
         except BaseException as e:
@@ -564,11 +554,7 @@ class DocumentsCacheHelper:
             data = namespace.to_data()
 
             data_cache = imports_manager.data_cache
-            data_file = meta.filepath_base + ".data"
-            meta_file = meta.filepath_base + ".meta"
-
-            data_cache.save_cache_data(CacheSection.NAMESPACE, data_file, data)
-            data_cache.save_cache_data(CacheSection.NAMESPACE, meta_file, meta)
+            data_cache.save_entry(CacheSection.NAMESPACE, source, meta, data)
         except (SystemExit, KeyboardInterrupt):
             raise
         except BaseException as e:
