@@ -1037,6 +1037,12 @@
             "markdownDescription": "Specifies a list of libraries for which arguments will be ignored during analysis. This is usefull if you have library that gets variables from a python file as arguments that contains complex data like big dictionaries or complex objects that **RobotCode** can't handle. You can specify a glob pattern that matches the library name or the source file. \n\nExamples:\n- `**/mylibfolder/mylib.py`\n- `MyLib`\n- `mylib.subpackage.subpackage` \n\nIf you change this setting, you may need to run the command `RobotCode: Clear Cache and Restart Language Servers`.\n\n _Ensure your library functions correctly without arguments e.g. by defining default values for all arguments._",
             "scope": "resource"
           },
+          "robotcode.analysis.cache.cacheNamespaces": {
+            "type": "boolean",
+            "default": false,
+            "markdownDescription": "If enabled, caches fully analyzed namespace data (diagnostics, references, scopes) to disk. This can speed up startup for large projects by skipping re-analysis of unchanged files. If you experience issues, disable this setting.\n\nIf you change this setting, you may need to run the command `RobotCode: Clear Cache and Restart Language Servers`.",
+            "scope": "resource"
+          },
           "robotcode.analysis.robot.globalLibrarySearchOrder": {
             "type": "array",
             "default": [],
@@ -1155,7 +1161,7 @@
             "default": true,
             "markdownDescription": "Enables 'robocop' code analysis, if installed. See [robocop](https://robocop.readthedocs.io/)",
             "scope": "resource"
-          },          
+          },
           "robotcode.robocop.ignoreGitDir": {
             "type": "boolean",
             "default": false,

@@ -419,7 +419,8 @@ class DocumentsCacheHelper:
         imports_manager = self.get_imports_manager(document)
 
         # --- Try disk cache (cold-start acceleration) ---
-        if document.version is None:
+        cache_namespaces = self.analysis_config.cache.cache_namespaces
+        if cache_namespaces and document.version is None:
             result = self._try_load_cached_namespace(source, document, document_type, imports_manager)
             if result is not None:
                 return result
@@ -449,7 +450,8 @@ class DocumentsCacheHelper:
         result = builder.build()
 
         # Save to disk cache
-        self._save_namespace_to_cache(source, result, imports_manager)
+        if cache_namespaces:
+            self._save_namespace_to_cache(source, result, imports_manager)
 
         # Update the folder-scoped reference index
         self.get_project_index(document).update_file(result.source, result)

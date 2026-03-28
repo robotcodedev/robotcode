@@ -75,26 +75,32 @@ def generate(command: click.Command, depth: int = 2, parent_ctx: Optional[click.
         yield ""
         yield ""
 
-    if isinstance(command, click.MultiCommand):
+    if isinstance(command, click.Group):
         yield "**Commands:**"
         yield ""
 
         sub_commands = command.list_commands(ctx)
         if sub_commands:
             for sub_command in sub_commands:
+                cmd = command.get_command(ctx, sub_command)
+                if cmd is None:
+                    continue
+
                 yield (f"- [`{sub_command}`](#{sub_command})")
                 yield ""
-                yield f"   {command.get_command(ctx, sub_command).get_short_help_str(5000)}"
+                yield f"   {cmd.get_short_help_str(5000)}"
                 yield ""
 
             yield ""
 
         if isinstance(command, AliasedGroup):
-            aliased_commands: List[AliasedCommand] = []
+            aliased_commands: List[tuple[str, AliasedCommand]] = []
             for sub_command in sub_commands:
                 cmd = command.get_command(ctx, sub_command)
+
                 if cmd is None:
                     continue
+
                 if cmd.hidden:
                     continue
 
@@ -116,13 +122,17 @@ def generate(command: click.Command, depth: int = 2, parent_ctx: Optional[click.
 
         if sub_commands:
             for sub_command in sub_commands:
-                yield from generate(command.get_command(ctx, sub_command), depth + 1, ctx)
+                cmd = command.get_command(ctx, sub_command)
+                if cmd is None:
+                    continue
+
+                yield from generate(cmd, depth + 1, ctx)
 
             yield ""
             yield ""
 
 
-def main():
+def main() -> None:
     cli_doc = Path("docs/03_reference/cli.md")
 
     regex = re.compile(

@@ -2542,6 +2542,21 @@ Type: `str | None`
 
 Path to the cache directory.
 
+## tool.robotcode-analyze.cache.cache-namespaces
+
+Type: `bool | None`
+
+Enable or disable caching of fully analyzed namespace data to disk.
+Can speed up startup for large projects by skipping re-analysis of unchanged files.
+Defaults to enabled.
+
+Examples:
+
+```toml
+[tool.robotcode-analyze.cache]
+cache_namespaces = false
+```
+
 ## tool.robotcode-analyze.cache.extend-ignore-arguments-for-library
 
 Type: `list[str] | None`
@@ -2673,6 +2688,21 @@ Extend the cache configuration.
 Type: `str | None`
 
 Path to the cache directory.
+
+## tool.robotcode-analyze.extend-cache.cache-namespaces
+
+Type: `bool | None`
+
+Enable or disable caching of fully analyzed namespace data to disk.
+Can speed up startup for large projects by skipping re-analysis of unchanged files.
+Defaults to enabled.
+
+Examples:
+
+```toml
+[tool.robotcode-analyze.cache]
+cache_namespaces = false
+```
 
 ## tool.robotcode-analyze.extend-cache.extend-ignore-arguments-for-library
 

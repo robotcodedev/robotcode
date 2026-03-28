@@ -19,7 +19,7 @@ from robotcode.robot.config.loader import (
 from robotcode.robot.config.utils import get_config_files
 
 from ..__version__ import __version__
-from ..config import AnalyzeConfig, CodeConfig, ExitCodeMask, ModifiersConfig
+from ..config import AnalyzeConfig, CacheConfig, CodeConfig, ExitCodeMask, ModifiersConfig
 from .code_analyzer import CodeAnalyzer, DocumentDiagnosticReport, FolderDiagnosticReport
 
 SEVERITY_COLORS = {
@@ -276,6 +276,12 @@ def _validate_load_library_timeout(ctx: click.Context, param: click.Option, valu
     help="Enable or disable collection of unused keyword and unused variable diagnostics. "
     "Overrides the config file setting when specified.",
 )
+@click.option(
+    "--cache-namespaces/--no-cache-namespaces",
+    default=None,
+    help="Enable or disable caching of fully analyzed namespace data to disk. "
+    "Can speed up startup for large projects by skipping re-analysis of unchanged files.",
+)
 @click.argument(
     "paths", nargs=-1, type=click.Path(exists=True, dir_okay=True, file_okay=True, readable=True, path_type=Path)
 )
@@ -296,6 +302,7 @@ def code(
     paths: Tuple[Path],
     load_library_timeout: Optional[int],
     collect_unused: Optional[bool],
+    cache_namespaces: Optional[bool],
 ) -> None:
     """\
         Performs static code analysis to identify potential issues in the specified *PATHS*. The analysis detects syntax
@@ -404,6 +411,11 @@ def code(
             if analyzer_config.code is None:
                 analyzer_config.code = CodeConfig()
             analyzer_config.code.collect_unused = collect_unused
+
+        if cache_namespaces is not None:
+            if analyzer_config.cache is None:
+                analyzer_config.cache = CacheConfig()
+            analyzer_config.cache.cache_namespaces = cache_namespaces
 
         app.verbose(f"Using analyzer_config: {analyzer_config}")
         app.verbose(f"Using exit code mask: {mask}")

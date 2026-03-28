@@ -197,6 +197,21 @@ class CacheConfig(BaseOptions):
         description="Extend the ignore arguments for library settings."
     )
 
+    cache_namespaces: Optional[bool] = field(
+        description="""\
+            Enable or disable caching of fully analyzed namespace data to disk.
+            Can speed up startup for large projects by skipping re-analysis of unchanged files.
+            Defaults to enabled.
+
+            Examples:
+
+            ```toml
+            [tool.robotcode-analyze.cache]
+            cache_namespaces = false
+            ```
+        """,
+    )
+
 
 class ExitCodeMask(IntFlag):
     NONE = 0
@@ -372,6 +387,9 @@ class AnalyzeConfig(BaseOptions):
                     ignored_libraries=self.cache.ignored_libraries or [],
                     ignored_variables=self.cache.ignored_variables or [],
                     ignore_arguments_for_library=self.cache.ignore_arguments_for_library or [],
+                    cache_namespaces=(
+                        self.cache.cache_namespaces if self.cache.cache_namespaces is not None else False
+                    ),
                 )
                 if self.cache is not None
                 else WorkspaceCacheConfig()
