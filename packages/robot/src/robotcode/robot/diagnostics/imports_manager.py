@@ -651,6 +651,7 @@ class ImportsManager:
         self._library_files_cache = SimpleLRUCache(2048)
         self._resource_files_cache = SimpleLRUCache(2048)
         self._variables_files_cache = SimpleLRUCache(2048)
+        self._module_spec_cache: Dict[str, ModuleSpec] = {}
 
         self._executor_lock = RLock(default_timeout=120, name="ImportsManager._executor_lock")
         self._executor: Optional[ProcessPoolExecutor] = None
@@ -1187,6 +1188,16 @@ class ImportsManager:
         finally:
             self._variables_files_cache.clear()
 
+    def _get_module_spec_cached(self, module_name: str) -> Optional[ModuleSpec]:
+        cached = self._module_spec_cache.get(module_name)
+        if cached is not None:
+            return cached
+
+        spec = get_module_spec(module_name)
+        if spec is not None:
+            self._module_spec_cache[module_name] = spec
+        return spec
+
     def get_library_meta(
         self,
         name: str,
@@ -1203,7 +1214,7 @@ class ImportsManager:
                 if (p := Path(import_name)).exists():
                     result = LibraryMetaData(p.stem, None, import_name, None, True)
             else:
-                module_spec = get_module_spec(import_name)
+                module_spec = self._get_module_spec_cached(import_name)
                 if module_spec is not None and module_spec.origin is not None:
                     result = LibraryMetaData(
                         module_spec.name,
@@ -1282,7 +1293,7 @@ class ImportsManager:
                 if (p := Path(import_name)).exists():
                     result = LibraryMetaData(p.stem, None, import_name, None, True)
             else:
-                module_spec = get_module_spec(import_name)
+                module_spec = self._get_module_spec_cached(import_name)
                 if module_spec is not None and module_spec.origin is not None:
                     result = LibraryMetaData(
                         module_spec.name,
