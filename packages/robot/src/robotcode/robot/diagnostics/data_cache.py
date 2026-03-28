@@ -16,20 +16,26 @@ class CacheSection(Enum):
 
 
 class CacheEntry(Generic[_M, _D]):
-    """Lazy-deserializing cache entry.
+    """Lazy cache entry that defers both deserialization and data blob loading.
 
-    Meta and data blobs are deserialized on first property access, not when read from DB.
+    Only the meta blob is read from the DB initially. The data blob is fetched
+    lazily on first `.data` access, avoiding the transfer of large blobs when
+    only meta validation is needed (e.g. on cache misses).
     """
 
     def __init__(
         self,
+        conn: sqlite3.Connection,
+        section: "CacheSection",
+        entry_name: str,
         meta_blob: Optional[bytes],
-        data_blob: bytes,
         meta_type: Union[Type[_M], Tuple[Type[_M], ...]],
         data_type: Union[Type[_D], Tuple[Type[_D], ...]],
     ) -> None:
+        self._conn = conn
+        self._section = section
+        self._entry_name = entry_name
         self._meta_blob = meta_blob
-        self._data_blob = data_blob
         self._meta_type = meta_type
         self._data_type = data_type
         self._meta_cache: Optional[_M] = None
@@ -51,7 +57,13 @@ class CacheEntry(Generic[_M, _D]):
     @property
     def data(self) -> _D:
         if not self._data_loaded:
-            result = pickle.loads(self._data_blob)
+            row = self._conn.execute(
+                f"SELECT data FROM {self._section.value} WHERE entry_name = ?",
+                (self._entry_name,),
+            ).fetchone()
+            if row is None:
+                raise RuntimeError(f"Cache entry '{self._entry_name}' disappeared from DB")
+            result = pickle.loads(row[0])
             if not isinstance(result, self._data_type):
                 raise TypeError(f"Expected {self._data_type} but got {type(result)}")
             self._data_cache = cast(_D, result)
@@ -116,14 +128,14 @@ class SqliteDataCache:
         data_type: Union[Type[_D], Tuple[Type[_D], ...]],
     ) -> Optional[CacheEntry[_M, _D]]:
         row = self._conn.execute(
-            f"SELECT meta, data FROM {section.value} WHERE entry_name = ?",
+            f"SELECT meta FROM {section.value} WHERE entry_name = ?",
             (entry_name,),
         ).fetchone()
 
         if row is None:
             return None
 
-        return CacheEntry(row[0], row[1], meta_type, data_type)
+        return CacheEntry(self._conn, section, entry_name, row[0], meta_type, data_type)
 
     def save_entry(
         self,

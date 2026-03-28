@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Optional
 
 import pytest
 
@@ -21,12 +22,31 @@ class _SampleData:
 
 
 class TestCacheEntry:
+    def _make_entry(
+        self,
+        meta_blob: "Optional[bytes]",
+        data_blob: bytes,
+        meta_type: type,
+        data_type: type,
+    ) -> CacheEntry:  # type: ignore[type-arg]
+        """Create a CacheEntry backed by a temporary in-memory DB."""
+        import sqlite3
+
+        conn = sqlite3.connect(":memory:")
+        table = CacheSection.LIBRARY.value
+        conn.execute(f"CREATE TABLE {table} (entry_name TEXT PRIMARY KEY, meta BLOB, data BLOB NOT NULL)")
+        conn.execute(
+            f"INSERT INTO {table} (entry_name, meta, data) VALUES (?, ?, ?)",
+            ("test_entry", meta_blob, data_blob),
+        )
+        return CacheEntry(conn, CacheSection.LIBRARY, "test_entry", meta_blob, meta_type, data_type)
+
     def test_lazy_meta_deserialization(self) -> None:
         import pickle
 
         meta = _SampleMeta(name="test", version=1)
         data = _SampleData(name="hello", value=42)
-        entry = CacheEntry(
+        entry = self._make_entry(
             pickle.dumps(meta),
             pickle.dumps(data),
             _SampleMeta,
@@ -40,7 +60,7 @@ class TestCacheEntry:
         import pickle
 
         data = _SampleData(name="hello", value=42)
-        entry = CacheEntry(
+        entry = self._make_entry(
             None,
             pickle.dumps(data),
             _SampleMeta,
@@ -52,7 +72,7 @@ class TestCacheEntry:
     def test_meta_type_mismatch_raises(self) -> None:
         import pickle
 
-        entry = CacheEntry(
+        entry = self._make_entry(
             pickle.dumps("not a meta"),
             pickle.dumps("data"),
             _SampleMeta,
@@ -64,7 +84,7 @@ class TestCacheEntry:
     def test_data_type_mismatch_raises(self) -> None:
         import pickle
 
-        entry = CacheEntry(
+        entry = self._make_entry(
             None,
             pickle.dumps("not data"),
             _SampleMeta,
