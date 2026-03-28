@@ -340,11 +340,11 @@ class TestValidateNamespaceMeta:
 
         meta = ImportsManager.build_namespace_meta(im, str(source), ns)
 
-        # Modify the file → mtime changes
-        source.write_text("modified content!")
-        # Ensure mtime differs even on filesystems with coarse resolution (e.g. Windows NTFS)
-        stat = source.stat()
-        os.utime(source, ns=(stat.st_atime_ns + 1_000_000_000, stat.st_mtime_ns + 1_000_000_000))
+        # Simulate a file modification by shifting the stored mtime.
+        # This is more reliable than writing the file again and hoping
+        # the filesystem updates the mtime (Windows NTFS has coarse
+        # resolution and can keep the same mtime for fast writes).
+        meta.source_mtime_ns -= 1
         assert ImportsManager.validate_namespace_meta(im, meta) is False
 
     def test_source_deleted_fails(self, tmp_path: Path) -> None:
