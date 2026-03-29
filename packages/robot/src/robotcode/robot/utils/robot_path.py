@@ -66,4 +66,4 @@ def _find_relative_path(
 
 def _is_valid_file(path: Union[Path, "PathLike[str]", str]) -> bool:
     path = Path(path)
-    return path.is_file() or (path.is_dir() and Path(path, "__init__.py").is_fifo())
+    return path.is_file() or (path.is_dir() and Path(path, "__init__.py").is_file())
