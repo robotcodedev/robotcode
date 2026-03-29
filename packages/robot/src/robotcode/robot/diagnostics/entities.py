@@ -244,7 +244,7 @@ class CommandLineVariableDefinition(GlobalVariableDefinition):
 @dataclass(slots=True, eq=False)
 class ArgumentDefinition(LocalVariableDefinition):
     type: VariableDefinitionType = VariableDefinitionType.ARGUMENT
-    keyword_doc: Optional["KeywordDoc"] = field(default=None, compare=False, metadata={"nosave": True})
+    keyword_doc: Optional["KeywordDoc"] = field(default=None, compare=False)
 
 
 @dataclass(slots=True, eq=False)

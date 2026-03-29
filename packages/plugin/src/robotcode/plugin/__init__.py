@@ -333,7 +333,7 @@ class Application:
 
     def keyboard_interrupt(self) -> None:
         self.verbose("Aborted!", file=sys.stderr)
-        sys.exit(253)
+        self.exit(253, fast=True)
 
     def exit(self, code: int = 0, fast: bool = False) -> None:
         self.verbose(f"Exit with code {code}")

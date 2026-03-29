@@ -629,9 +629,7 @@ class KeywordDoc(SourceEntity):
     name_token: Optional[Token] = field(default=None, compare=False)
     arguments: List[ArgumentInfo] = field(default_factory=list, compare=False)
     arguments_spec: Optional[ArgumentSpec] = field(default=None, compare=False)
-    argument_definitions: Optional[List[ArgumentDefinition]] = field(
-        default=None, compare=False, metadata={"nosave": True}
-    )
+    argument_definitions: Optional[List[ArgumentDefinition]] = field(default=None, compare=False)
     doc: str = field(default="", compare=False)
     tags: List[str] = field(default_factory=list)
     type: str = "keyword"
@@ -648,10 +646,11 @@ class KeywordDoc(SourceEntity):
     deprecated: bool = field(default=False, compare=False)
     return_type: Optional[str] = field(default=None, compare=False)
 
-    parent: Optional[LibraryDoc] = field(default=None, init=False, metadata={"nosave": True})
+    parent: Optional[LibraryDoc] = field(default=None, init=False)
     _hash_value: int = field(default=0, init=False, compare=False, hash=False, repr=False)
     _stable_id: str = field(default="", init=False, compare=False, hash=False, repr=False)
     _parent_stable_id: str = field(default="", init=False, compare=False, hash=False, repr=False)
+    _matcher: Optional[KeywordMatcher] = field(default=None, init=False, compare=False, hash=False, repr=False)
 
     def _get_argument_definitions(self) -> Optional[List[ArgumentDefinition]]:
         return (
@@ -718,6 +717,40 @@ class KeywordDoc(SourceEntity):
             )
         )
 
+    def _all_slots(self) -> Iterator[str]:
+        for cls in type(self).__mro__:
+            yield from getattr(cls, "__slots__", ())
+
+    _EXCLUDED_FROM_STATE = frozenset({"_matcher", "parent", "_hash_value", "_stable_id"})
+
+    def __getstate__(self) -> Dict[str, Any]:
+        return {slot: getattr(self, slot) for slot in self._all_slots() if slot not in self._EXCLUDED_FROM_STATE}
+
+    def __setstate__(self, state: Dict[str, Any]) -> None:
+        for slot in self._all_slots():
+            setattr(self, slot, state.get(slot, None))
+        self._matcher = None
+        self.parent = None
+        self._stable_id = ""
+        self._hash_value = hash(
+            (
+                self.name,
+                self.longname,
+                self.source,
+                self.line_no,
+                self.col_offset,
+                self.end_line_no,
+                self.end_col_offset,
+                self.type,
+                self.libname,
+                self.libtype,
+                self.is_initializer,
+                self.is_error_handler,
+                self.doc_format,
+                tuple(self.tags) if self.tags else (),
+            )
+        )
+
     @property
     def stable_id(self) -> str:
         if not self._stable_id:
@@ -737,7 +770,9 @@ class KeywordDoc(SourceEntity):
 
     @property
     def matcher(self) -> KeywordMatcher:
-        return KeywordMatcher(self.name)
+        if self._matcher is None:
+            self._matcher = KeywordMatcher(self.name)
+        return self._matcher
 
     @property
     def is_deprecated(self) -> bool:
@@ -985,9 +1020,44 @@ class KeywordStore:
     source: Optional[str] = None
     source_type: Optional[str] = None
     keywords: List[KeywordDoc] = field(default_factory=list)
+    _index: Optional[Dict[str, List[KeywordDoc]]] = field(default=None, init=False, compare=False, repr=False)
+    _embedded: Optional[List[KeywordDoc]] = field(default=None, init=False, compare=False, repr=False)
+
+    def _ensure_index(self) -> Tuple[Dict[str, List[KeywordDoc]], List[KeywordDoc]]:
+        if self._index is not None:
+            return self._index, self._embedded  # type: ignore[return-value]
+        index: Dict[str, List[KeywordDoc]] = {}
+        embedded: List[KeywordDoc] = []
+        for kw in self.keywords:
+            if kw.matcher.embedded_arguments is not None:
+                embedded.append(kw)
+            else:
+                key = kw.matcher.normalized_name
+                bucket = index.get(key)
+                if bucket is None:
+                    index[key] = [kw]
+                else:
+                    bucket.append(kw)
+        self._index = index
+        self._embedded = embedded
+        return index, embedded
+
+    def __getstate__(self) -> Dict[str, Any]:
+        return {
+            "source": self.source,
+            "source_type": self.source_type,
+            "keywords": self.keywords,
+        }
+
+    def __setstate__(self, state: Dict[str, Any]) -> None:
+        self.source = state.get("source")
+        self.source_type = state.get("source_type")
+        self.keywords = state.get("keywords", [])
+        self._index = None
+        self._embedded = None
 
     def __getitem__(self, key: str) -> KeywordDoc:
-        items = [v for v in self.keywords if v.matcher == key]
+        items = list(self.iter_all(key))
 
         if not items:
             raise KeyError
@@ -1014,7 +1084,15 @@ class KeywordStore:
         )
 
     def __contains__(self, _x: object) -> bool:
-        return any(v.matcher == _x for v in self.keywords)
+        if type(_x) is KeywordMatcher:
+            _x = _x.name
+        if type(_x) is not str:
+            return False
+        index, embedded = self._ensure_index()
+        normalized = normalize(_x)
+        if index.get(normalized):
+            return True
+        return any(kw.matcher.match_string(_x) for kw in embedded)
 
     def __len__(self) -> int:
         return len(self.keywords)
@@ -1044,7 +1122,13 @@ class KeywordStore:
         return list(self.iter_all(key))
 
     def iter_all(self, key: str) -> Iterable[KeywordDoc]:
-        return (v for v in self.keywords if v.matcher.match_string(key))
+        index, embedded = self._ensure_index()
+        normalized = normalize(key)
+        matches = index.get(normalized, [])
+        embedded_matches = [kw for kw in embedded if kw.matcher.match_string(key)]
+        if embedded_matches:
+            return [*embedded_matches, *matches]
+        return matches
 
 
 @dataclass(slots=True)
@@ -1191,6 +1275,8 @@ class LibraryDoc:
                 self.member_name,
             )
         )
+        self._update_keywords(self._inits)
+        self._update_keywords(self._keywords)
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, LibraryDoc):
