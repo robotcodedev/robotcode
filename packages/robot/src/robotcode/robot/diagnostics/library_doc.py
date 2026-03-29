@@ -535,6 +535,21 @@ class ArgumentSpec:
     defaults: Any
     types: Optional[Dict[str, str]] = None
     return_type: Optional[str] = None
+    _robot_arguments: Any = field(init=False, default=None, repr=False, compare=False)
+
+    def __getstate__(self) -> Dict[str, Any]:
+        return {k: getattr(self, k) for k in self.__slots__ if k != "_robot_arguments"}
+
+    def __setstate__(self, state: Any) -> None:
+        if isinstance(state, dict):
+            for k, v in state.items():
+                object.__setattr__(self, k, v)
+        else:
+            # Legacy pickle format: tuple of (dict_or_none, slot_dict)
+            _, slot_state = state
+            for k, v in slot_state.items():
+                object.__setattr__(self, k, v)
+        object.__setattr__(self, "_robot_arguments", None)
 
     @staticmethod
     def from_robot_argument_spec(spec: Any) -> ArgumentSpec:
@@ -561,9 +576,9 @@ class ArgumentSpec:
         dict_to_kwargs: bool = False,
         validate: bool = True,
     ) -> Tuple[List[Any], List[Tuple[str, Any]]]:
-        if not hasattr(self, "__robot_arguments"):
+        if self._robot_arguments is None:
             if get_robot_version() < (7, 0):
-                __robot_arguments = RobotArgumentSpec(
+                self._robot_arguments = RobotArgumentSpec(
                     self.name,
                     self.type,
                     self.positional_only,
@@ -575,7 +590,7 @@ class ArgumentSpec:
                     None,
                 )
             else:
-                __robot_arguments = RobotArgumentSpec(
+                self._robot_arguments = RobotArgumentSpec(
                     self.name,
                     self.type,
                     self.positional_only,
@@ -587,18 +602,18 @@ class ArgumentSpec:
                     self.embedded,
                     None,
                 )
-        __robot_arguments.name = self.name
+        self._robot_arguments.name = self.name
         if validate:
             if get_robot_version() < (7, 0):
                 resolver = ArgumentResolver(
-                    __robot_arguments,
+                    self._robot_arguments,
                     resolve_named=resolve_named,
                     resolve_variables_until=resolve_variables_until,
                     dict_to_kwargs=dict_to_kwargs,
                 )
             else:
                 resolver = ArgumentResolver(
-                    __robot_arguments,
+                    self._robot_arguments,
                     resolve_named=resolve_named,
                     resolve_args_until=resolve_variables_until,
                     dict_to_kwargs=dict_to_kwargs,
@@ -612,14 +627,14 @@ class ArgumentSpec:
             def _raise_positional_after_named(self) -> None:
                 pass
 
-        positional, named = MyNamedArgumentResolver(__robot_arguments).resolve(arguments, variables)
+        positional, named = MyNamedArgumentResolver(self._robot_arguments).resolve(arguments, variables)
         if get_robot_version() < (7, 0):
             positional, named = ArgumentsVariableReplacer(resolve_variables_until).replace(positional, named, variables)
         else:
-            positional, named = ArgumentsVariableReplacer(__robot_arguments, resolve_variables_until).replace(
+            positional, named = ArgumentsVariableReplacer(self._robot_arguments, resolve_variables_until).replace(
                 positional, named, variables
             )
-        positional, named = DictToKwargs(__robot_arguments, dict_to_kwargs).handle(positional, named)
+        positional, named = DictToKwargs(self._robot_arguments, dict_to_kwargs).handle(positional, named)
         return positional, named
 
 
