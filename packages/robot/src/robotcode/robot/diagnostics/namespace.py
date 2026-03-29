@@ -126,6 +126,12 @@ class NamespaceData:
     # --- ScopeTree (local scopes only, file_scope is reconstructed) ---
     local_scopes: List[LocalScope] = field(default_factory=list)
 
+    # --- Resolved resource import sources ---
+    # Maps (import_name\0source_file) → resolved absolute path for resources.
+    # Used as source hints in from_data() to skip find_resource() filesystem
+    # lookups during import re-resolution.
+    resolved_resource_sources: Dict[str, str] = field(default_factory=dict)
+
     # --- Authoritative variable definitions (stable_id → VariableDefinition) ---
     # Stores the exact VariableDefinition objects that were referenced during
     # analysis. Used as fallback in from_data() when the re-parsed resource doc
@@ -494,13 +500,19 @@ class Namespace:
             else:
                 var_assigns_merged[sid] = set(ranges)
 
+        # Build resolved resource source hints for from_data() optimization
+        resolved_res_sources: Dict[str, str] = {}
+        for imp, entry in self._import_entries.items():
+            if isinstance(entry, ResourceEntry) and entry.library_doc.source:
+                resolved_res_sources[imp.hint_key] = entry.library_doc.source
+
         return NamespaceData(
             source=self.source,
             source_id=str(self.source_id) if self.source_id else None,
             document_type=self.document_type.value if self.document_type else None,
             languages=self.languages,
             workspace_languages=self.workspace_languages,
-            imports=list(self._import_entries.keys()),
+            imports=[imp for imp in self._import_entries if imp.source is None or imp.source == self.source],
             diagnostics=list(self._diagnostics),
             test_case_definitions=list(self._test_case_definitions),
             keyword_references=kw_refs_merged,
@@ -511,6 +523,7 @@ class Namespace:
             testcase_tag_references={k: set(v) for k, v in self._testcase_tag_references.items()},
             metadata_references={k: set(v) for k, v in self._metadata_references.items()},
             local_scopes=list(self._scope_tree.local_scopes),
+            resolved_resource_sources=resolved_res_sources,
             variable_definitions=all_var_defs,
         )
 
@@ -542,7 +555,7 @@ class Namespace:
         )
 
         resolver = ImportResolver(imports_manager, data.source, scope, sentinel=sentinel)
-        resolved = resolver.resolve(data.imports)
+        resolved = resolver.resolve(data.imports, source_hints=data.resolved_resource_sources)
 
         # Add imported variables to scope (needed for variable lookup)
         for resource_entry in resolved.resources.values():

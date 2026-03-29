@@ -9,6 +9,7 @@ The resolver takes imports + a VariableScope and returns ResolvedImports
 containing all resolved entries and collected diagnostics.
 """
 
+import os
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Union
@@ -85,6 +86,7 @@ class ImportResolver:
         "_scope",
         "_sentinel",
         "_source",
+        "_source_hints",
         "_source_id",
         "_variables",
         "_variables_dirty",
@@ -112,9 +114,12 @@ class ImportResolver:
         self._diagnostics: List[Diagnostic] = []
         self._variables: Dict[str, Any] = {}
         self._variables_dirty = True
+        self._source_hints: Dict[str, str] = {}
 
-    def resolve(self, imports: Iterable[Import]) -> ResolvedImports:
+    def resolve(self, imports: Iterable[Import], *, source_hints: Optional[Dict[str, str]] = None) -> ResolvedImports:
         """Resolve all imports and return the result."""
+        if source_hints:
+            self._source_hints = source_hints
         self._refresh_variables()
         self._import_default_libraries()
         self._handle_imports(imports, self._base_dir, top_level=True)
@@ -395,11 +400,19 @@ class ImportResolver:
     ) -> None:
         assert imp.name is not None
 
+        # Look up cached source hint to skip find_resource() filesystem search
+        source_hint: Optional[str] = None
+        if self._source_hints:
+            hint = self._source_hints.get(imp.hint_key)
+            if hint is not None and os.path.isfile(hint):
+                source_hint = hint
+
         resource_doc = self._imports_manager.get_resource_doc_for_resource_import(
             imp.name,
             base_dir,
             sentinel=self._sentinel,
             variables=self._variables,
+            source=source_hint,
         )
         entry = ResourceEntry(
             name=resource_doc.name,

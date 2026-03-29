@@ -53,6 +53,10 @@ class Import(SourceEntity):
     name_token: Optional[Token]
 
     @property
+    def hint_key(self) -> str:
+        return f"{self.name}\0{self.source or ''}\0{self.line_no}"
+
+    @property
     def range(self) -> Range:
         return Range(
             start=Position(

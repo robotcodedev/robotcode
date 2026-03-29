@@ -1852,13 +1852,13 @@ class ImportsManager:
         source: Optional[str] = None,
     ) -> _ResourcesEntry:
         source = source or self.find_resource(name, base_dir, variables=variables)
-        source_path = normalized_path(Path(source))
+        normalized_source = os.path.normpath(os.path.abspath(source))
 
-        entry_key = _ResourcesEntryKey(str(source_path))
+        entry_key = _ResourcesEntryKey(normalized_source)
 
         with self._resources_lock:
             if entry_key not in self._resources:
-                self._resources[entry_key] = _ResourcesEntry(name, self, source_path)
+                self._resources[entry_key] = _ResourcesEntry(name, self, Path(normalized_source))
 
             entry = self._resources[entry_key]
 
