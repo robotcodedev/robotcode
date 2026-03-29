@@ -13,16 +13,16 @@ result:
       line: 75
   target_range:
     end:
-      character: 0
-      line: 0
+      character: 14
+      line: 4
     start:
       character: 0
-      line: 0
+      line: 4
   target_selection_range:
     end:
-      character: 0
-      line: 0
+      character: 14
+      line: 4
     start:
       character: 0
-      line: 0
+      line: 4
   target_uri: myvariables.py
