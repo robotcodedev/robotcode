@@ -1,20 +1,39 @@
+import os
+import os.path
 import sys
 from os import PathLike
-from pathlib import Path
-from typing import Optional, Union
+from typing import List, Optional, Union
+
+_PathLike = Union[str, "PathLike[str]"]
+
+# Cache of sys.path entries that are valid directories.
+# Populated lazily on first use; call invalidate_sys_path_cache()
+# if sys.path changes during the process lifetime.
+_valid_sys_path: Optional[List[str]] = None
+
+
+def _get_valid_sys_path() -> List[str]:
+    global _valid_sys_path
+    if _valid_sys_path is None:
+        _valid_sys_path = [p for p in sys.path if p and os.path.isdir(p)]
+    return _valid_sys_path
+
+
+def invalidate_sys_path_cache() -> None:
+    global _valid_sys_path
+    _valid_sys_path = None
 
 
 def find_file_ex(
-    path: Union[Path, "PathLike[str]", str],
-    basedir: Union[Path, "PathLike[str]", str] = ".",
+    path: _PathLike,
+    basedir: _PathLike = ".",
     file_type: Optional[str] = None,
 ) -> str:
     from robot.errors import DataError
 
-    path = Path(path)
-    ret = _find_absolute_path(path) if path.is_absolute() else _find_relative_path(path, basedir)
+    ret = _find_absolute_path(path) if os.path.isabs(path) else _find_relative_path(path, basedir)
     if ret:
-        return str(ret)
+        return ret
 
     default = file_type or "File"
 
@@ -32,38 +51,32 @@ def find_file_ex(
 
 
 def find_file(
-    path: Union[Path, "PathLike[str]", str],
-    basedir: Union[Path, "PathLike[str]", str] = ".",
+    path: _PathLike,
+    basedir: _PathLike = ".",
     file_type: Optional[str] = None,
 ) -> str:
     return find_file_ex(path, basedir, file_type)
 
 
-def _find_absolute_path(path: Union[Path, "PathLike[str]", str]) -> Optional[str]:
+def _find_absolute_path(path: _PathLike) -> Optional[str]:
     if _is_valid_file(path):
-        return str(path)
+        return os.fspath(path)
     return None
 
 
-def _find_relative_path(
-    path: Union[Path, "PathLike[str]", str],
-    basedir: Union[Path, "PathLike[str]", str],
-) -> Optional[str]:
-    for base in [basedir, *sys.path]:
-        if not base:
-            continue
-        base_path = Path(base)
+def _find_relative_path(path: _PathLike, basedir: _PathLike) -> Optional[str]:
+    if basedir and os.path.isdir(basedir):
+        candidate = os.path.abspath(os.path.join(basedir, path))
+        if _is_valid_file(candidate):
+            return candidate
 
-        if not base_path.is_dir():
-            continue
+    for base in _get_valid_sys_path():
+        candidate = os.path.abspath(os.path.join(base, path))
+        if _is_valid_file(candidate):
+            return candidate
 
-        ret = Path(base, path).absolute()
-
-        if _is_valid_file(ret):
-            return str(ret)
     return None
 
 
-def _is_valid_file(path: Union[Path, "PathLike[str]", str]) -> bool:
-    path = Path(path)
-    return path.is_file() or (path.is_dir() and Path(path, "__init__.py").is_file())
+def _is_valid_file(path: _PathLike) -> bool:
+    return os.path.isfile(path) or (os.path.isdir(path) and os.path.isfile(os.path.join(path, "__init__.py")))
