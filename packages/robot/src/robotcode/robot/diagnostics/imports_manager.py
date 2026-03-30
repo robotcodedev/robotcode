@@ -1,5 +1,4 @@
 import ast
-import itertools
 import multiprocessing as mp
 import os
 import shutil
@@ -508,7 +507,7 @@ class _VariablesEntry(_ImportEntry):
             return self._lib_doc
 
 
-@dataclass
+@dataclass(slots=True)
 class LibraryMetaData:
     name: Optional[str]
     member_name: Optional[str]
@@ -532,13 +531,45 @@ class LibraryMetaData:
         raise ValueError("Cannot determine cache key.")
 
 
-@dataclass
+def _collect_library_mtimes(
+    origin: Optional[str],
+    submodule_search_locations: Optional[List[str]],
+) -> Optional[Dict[str, int]]:
+    """Collect mtimes from origin and submodule_search_locations."""
+    mtimes: Dict[str, int] = {}
+
+    if origin is not None:
+        mtimes[origin] = os.stat(origin, follow_symlinks=False).st_mtime_ns
+
+    if submodule_search_locations:
+        for loc in submodule_search_locations:
+            for dirpath, _dirnames, filenames in os.walk(loc):
+                for filename in filenames:
+                    if filename.endswith(".py"):
+                        filepath = os.path.join(dirpath, filename)
+                        mtimes[filepath] = os.stat(filepath, follow_symlinks=False).st_mtime_ns
+
+    return mtimes or None
+
+
+def _matches_any_pattern(
+    patterns: List[Pattern],
+    name: Optional[str],
+    origin: Optional[str],
+) -> bool:
+    return any(
+        (p.matches(name) if name is not None else False) or (p.matches(origin) if origin is not None else False)
+        for p in patterns
+    )
+
+
+@dataclass(slots=True)
 class RobotFileMeta:
     source: str
     mtime_ns: int
 
 
-@dataclass
+@dataclass(slots=True)
 class NamespaceMetaData:
     """Lightweight metadata for fast cache freshness checks.
 
@@ -1214,7 +1245,14 @@ class ImportsManager:
             module_spec: Optional[ModuleSpec] = None
             if is_library_by_path(import_name):
                 if (p := Path(import_name)).exists():
-                    result = LibraryMetaData(p.stem, None, import_name, None, True)
+                    result = LibraryMetaData(
+                        p.stem,
+                        None,
+                        import_name,
+                        None,
+                        True,
+                        mtimes=_collect_library_mtimes(import_name, None),
+                    )
             else:
                 module_spec = self._get_module_spec_cached(import_name)
                 if module_spec is not None and module_spec.origin is not None:
@@ -1224,22 +1262,15 @@ class ImportsManager:
                         module_spec.origin,
                         module_spec.submodule_search_locations,
                         False,
+                        mtimes=_collect_library_mtimes(module_spec.origin, module_spec.submodule_search_locations),
                     )
 
             if result is not None:
-                # TODO: use IgnoreSpec instead of this
-                ignore_arguments = any(
-                    (p.matches(result.name) if result.name is not None else False)
-                    or (p.matches(result.origin) if result.origin is not None else False)
-                    for p in self.ignore_arguments_for_library_patters
+                ignore_arguments = _matches_any_pattern(
+                    self.ignore_arguments_for_library_patters, result.name, result.origin
                 )
 
-                # TODO: use IgnoreSpec instead of this
-                if any(
-                    (p.matches(result.name) if result.name is not None else False)
-                    or (p.matches(result.origin) if result.origin is not None else False)
-                    for p in self.ignored_libraries_patters
-                ):
+                if _matches_any_pattern(self.ignored_libraries_patters, result.name, result.origin):
                     self._logger.debug(
                         lambda: (
                             f"Ignore library {result.name or '' if result is not None else ''}"
@@ -1248,21 +1279,6 @@ class ImportsManager:
                         context_name="import",
                     )
                     return None, import_name, ignore_arguments
-
-                if result.origin is not None:
-                    result.mtimes = {result.origin: os.stat(result.origin, follow_symlinks=False).st_mtime_ns}
-
-                if result.submodule_search_locations:
-                    if result.mtimes is None:
-                        result.mtimes = {}
-                    result.mtimes.update(
-                        {
-                            str(f): os.stat(f, follow_symlinks=False).st_mtime_ns
-                            for f in itertools.chain(
-                                *(Path(loc).rglob("**/*.py") for loc in result.submodule_search_locations)
-                            )
-                        }
-                    )
 
             return result, import_name, ignore_arguments
         except (SystemExit, KeyboardInterrupt):
@@ -1294,7 +1310,14 @@ class ImportsManager:
             module_spec: Optional[ModuleSpec] = None
             if is_variables_by_path(import_name):
                 if (p := Path(import_name)).exists():
-                    result = LibraryMetaData(p.stem, None, import_name, None, True)
+                    result = LibraryMetaData(
+                        p.stem,
+                        None,
+                        import_name,
+                        None,
+                        True,
+                        mtimes=_collect_library_mtimes(import_name, None),
+                    )
             else:
                 module_spec = self._get_module_spec_cached(import_name)
                 if module_spec is not None and module_spec.origin is not None:
@@ -1304,14 +1327,11 @@ class ImportsManager:
                         module_spec.origin,
                         module_spec.submodule_search_locations,
                         False,
+                        mtimes=_collect_library_mtimes(module_spec.origin, module_spec.submodule_search_locations),
                     )
 
             if result is not None:
-                if any(
-                    (p.matches(result.name) if result.name is not None else False)
-                    or (p.matches(result.origin) if result.origin is not None else False)
-                    for p in self.ignored_variables_patters
-                ):
+                if _matches_any_pattern(self.ignored_variables_patters, result.name, result.origin):
                     self._logger.debug(
                         lambda: (
                             f"Ignore Variables {result.name or '' if result is not None else ''}"
@@ -1319,21 +1339,6 @@ class ImportsManager:
                         )
                     )
                     return None, import_name
-
-                if result.origin is not None:
-                    result.mtimes = {result.origin: os.stat(result.origin, follow_symlinks=False).st_mtime_ns}
-
-                if result.submodule_search_locations:
-                    if result.mtimes is None:
-                        result.mtimes = {}
-                    result.mtimes.update(
-                        {
-                            str(f): os.stat(f, follow_symlinks=False).st_mtime_ns
-                            for f in itertools.chain(
-                                *(Path(loc).rglob("**/*.py") for loc in result.submodule_search_locations)
-                            )
-                        }
-                    )
 
             return result, import_name
         except (SystemExit, KeyboardInterrupt):
