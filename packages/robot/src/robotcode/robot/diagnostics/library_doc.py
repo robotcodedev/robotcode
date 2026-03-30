@@ -818,12 +818,17 @@ class KeywordDoc(SourceEntity):
     def normalized_tags(self) -> List[str]:
         return [normalize(tag) for tag in self.tags]
 
-    @property
-    def is_private(self) -> bool:
-        if RF_VERSION < (6, 0):
-            return False
+    if RF_VERSION >= (6, 0):
 
-        return "robot:private" in self.normalized_tags
+        @property
+        def is_private(self) -> bool:
+            return "robot:private" in self.normalized_tags
+
+    else:
+
+        @property
+        def is_private(self) -> bool:
+            return False
 
     @property
     def range(self) -> Range:
@@ -967,11 +972,15 @@ class KeywordDoc(SourceEntity):
             + ")"
         )
 
-    def is_reserved(self) -> bool:
-        if RF_VERSION < (7, 0):
+    if RF_VERSION < (7, 0):
+
+        def is_reserved(self) -> bool:
             return self.libname == RESERVED_LIBRARY_NAME
 
-        return False
+    else:
+
+        def is_reserved(self) -> bool:
+            return False
 
     def is_any_run_keyword(self) -> bool:
         return self.libname == BUILTIN_LIBRARY_NAME and self.name in ALL_RUN_KEYWORDS

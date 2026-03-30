@@ -116,27 +116,25 @@ class TestSemanticTokenMapper:
         """Test that version-specific token mappings are correct."""
         mapper = SemanticTokenMapper()
         mapping = mapper.mapping()
-        rf_version = RF_VERSION
 
-        # RF 5.0+ tokens
-        if rf_version >= (5, 0):
-            rf5_tokens = [Token.TRY, Token.EXCEPT, Token.FINALLY, Token.WHILE, Token.CONTINUE, Token.BREAK]
-            for token_type in rf5_tokens:
-                if hasattr(Token, token_type):  # Check if token exists in this RF version
-                    token_val = getattr(Token, token_type)
-                    assert token_val in mapping, f"RF 5.0+ token {token_type} should be in mapping"
-                    sem_type, _ = mapping[token_val]
-                    assert sem_type == RobotSemTokenTypes.CONTROL_FLOW
+        # RF 5.0+ tokens (always present, RF >= 5.0 is minimum)
+        rf5_tokens = [Token.TRY, Token.EXCEPT, Token.FINALLY, Token.WHILE, Token.CONTINUE, Token.BREAK]
+        for token_type in rf5_tokens:
+            if hasattr(Token, token_type):  # Check if token exists in this RF version
+                token_val = getattr(Token, token_type)
+                assert token_val in mapping, f"RF 5.0+ token {token_type} should be in mapping"
+                sem_type, _ = mapping[token_val]
+                assert sem_type == RobotSemTokenTypes.CONTROL_FLOW
 
         # RF 6.0+ tokens
-        if rf_version >= (6, 0):
+        if RF_VERSION >= (6, 0):
             if hasattr(Token, "CONFIG"):
                 assert Token.CONFIG in mapping
                 sem_type, _ = mapping[Token.CONFIG]
                 assert sem_type == RobotSemTokenTypes.CONFIG
 
         # RF 7.0+ tokens
-        if rf_version >= (7, 0):
+        if RF_VERSION >= (7, 0):
             if hasattr(Token, "VAR"):
                 assert Token.VAR in mapping
                 sem_type, _ = mapping[Token.VAR]

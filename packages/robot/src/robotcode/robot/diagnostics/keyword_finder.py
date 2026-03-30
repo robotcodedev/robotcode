@@ -22,6 +22,8 @@ from .library_doc import (
     LibraryDoc,
 )
 
+_RF7_PLUS = RF_VERSION >= (7, 0)
+
 
 class DiagnosticsEntry(NamedTuple):
     message: str
@@ -163,7 +165,7 @@ class KeywordFinder:
 
         result: Optional[KeywordDoc] = None
 
-        if RF_VERSION >= (7, 0) and handle_bdd_style:
+        if _RF7_PLUS and handle_bdd_style:
             result = self._get_bdd_style_keyword(name)
 
         if not result:
@@ -175,7 +177,7 @@ class KeywordFinder:
         if not result:
             result = self._get_implicit_keyword(name)
 
-        if RF_VERSION < (7, 0) and not result and handle_bdd_style:
+        if not _RF7_PLUS and not result and handle_bdd_style:
             return self._get_bdd_style_keyword(name)
 
         return result
@@ -511,7 +513,7 @@ class KeywordFinder:
     def _get_bdd_style_keyword(self, name: str) -> Optional[KeywordDoc]:
         match = self.bdd_prefix_regexp.match(name)
         if match:
-            result = self._find_keyword(name[match.end() :], handle_bdd_style=False if RF_VERSION >= (7, 0) else True)
+            result = self._find_keyword(name[match.end() :], handle_bdd_style=not _RF7_PLUS)
             if result:
                 self.result_bdd_prefix = str(match.group(0))
 

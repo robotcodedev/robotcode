@@ -843,7 +843,7 @@ class NamespaceAnalyzer(Visitor):
                         code=Error.RESERVED_KEYWORD,
                     )
 
-                if RF_VERSION >= (6, 0) and result.is_resource_keyword and result.is_private:
+                if result.is_resource_keyword and result.is_private:
                     if self._source != result.source:
                         self._append_diagnostics(
                             range=kw_range,

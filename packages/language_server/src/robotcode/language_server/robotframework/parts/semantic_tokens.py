@@ -27,6 +27,7 @@ from robot.parsing.model.blocks import Section
 from robot.parsing.model.statements import (
     Arguments,
     Documentation,
+    ExceptHeader,
     Fixture,
     KeywordCall,
     LibraryImport,
@@ -38,6 +39,7 @@ from robot.parsing.model.statements import (
     TestTemplate,
     Variable,
     VariablesImport,
+    WhileHeader,
 )
 from robot.utils.escaping import unescape
 
@@ -76,13 +78,7 @@ from robotcode.robot.utils.variables import split_from_equals
 
 from .protocol_part import RobotLanguageServerProtocolPart
 
-# Cache robot version at module level for conditional imports
-_ROBOT_VERSION = RF_VERSION
-
-if _ROBOT_VERSION >= (5, 0):
-    from robot.parsing.model.statements import ExceptHeader, WhileHeader
-
-if _ROBOT_VERSION >= (7, 0):
+if RF_VERSION >= (7, 0):
     from robot.parsing.model.blocks import InvalidSection
 
 if TYPE_CHECKING:
@@ -293,27 +289,26 @@ class SemanticTokenMapper:
             ),
         }
 
-        if _ROBOT_VERSION >= (5, 0):
-            definition.update(
-                {
-                    frozenset(
-                        {
-                            Token.INLINE_IF,
-                            Token.TRY,
-                            Token.EXCEPT,
-                            Token.FINALLY,
-                            Token.AS,
-                            Token.WHILE,
-                            Token.RETURN_STATEMENT,
-                            Token.CONTINUE,
-                            Token.BREAK,
-                            Token.OPTION,
-                        }
-                    ): (RobotSemTokenTypes.CONTROL_FLOW, None)
-                }
-            )
+        definition.update(
+            {
+                frozenset(
+                    {
+                        Token.INLINE_IF,
+                        Token.TRY,
+                        Token.EXCEPT,
+                        Token.FINALLY,
+                        Token.AS,
+                        Token.WHILE,
+                        Token.RETURN_STATEMENT,
+                        Token.CONTINUE,
+                        Token.BREAK,
+                        Token.OPTION,
+                    }
+                ): (RobotSemTokenTypes.CONTROL_FLOW, None)
+            }
+        )
 
-        if _ROBOT_VERSION >= (6, 0):
+        if RF_VERSION >= (6, 0):
             definition.update(
                 {
                     frozenset({Token.CONFIG}): (
@@ -326,7 +321,7 @@ class SemanticTokenMapper:
                     ),
                 }
             )
-        if _ROBOT_VERSION >= (7, 0):
+        if RF_VERSION >= (7, 0):
             definition.update(
                 {
                     frozenset({Token.VAR}): (RobotSemTokenTypes.VAR, None),
@@ -346,7 +341,7 @@ class SemanticTokenMapper:
                 }
             )
 
-        if _ROBOT_VERSION >= (7, 2):
+        if RF_VERSION >= (7, 2):
             definition.update(
                 {
                     frozenset({Token.GROUP}): (RobotSemTokenTypes.CONTROL_FLOW, None),
@@ -1116,7 +1111,7 @@ class SemanticTokenGenerator:
                 ):
                     bdd_len = 0
 
-                    if _ROBOT_VERSION < (6, 0):
+                    if RF_VERSION < (6, 0):
                         bdd_match = self.token_mapper.BDD_TOKEN_REGEX.match(token.value)
                         if bdd_match:
                             bdd_len = len(bdd_match.group(1))
@@ -1214,9 +1209,9 @@ class SemanticTokenGenerator:
                         sem_mod.add(RobotSemTokenModifiers.BUILTIN)
 
                 if kw_doc is not None and kw_doc.is_embedded and kw_doc.matcher.embedded_arguments:
-                    if _ROBOT_VERSION >= (7, 3):
+                    if RF_VERSION >= (7, 3):
                         m = kw_doc.matcher.embedded_arguments.name.fullmatch(kw)
-                    elif _ROBOT_VERSION >= (6, 0):
+                    elif RF_VERSION >= (6, 0):
                         m = kw_doc.matcher.embedded_arguments.match(kw)
                     else:
                         m = kw_doc.matcher.embedded_arguments.name.match(kw)
@@ -1285,7 +1280,7 @@ class SemanticTokenGenerator:
                         col_offset,
                         length,
                     )
-            elif _ROBOT_VERSION >= (5, 0) and token.type == Token.OPTION:
+            elif token.type == Token.OPTION:
                 if (
                     cached_isinstance(node, ExceptHeader) or cached_isinstance(node, WhileHeader)
                 ) and "=" in token.value:
@@ -1464,7 +1459,7 @@ class SemanticTokenGenerator:
             for node in iter_nodes(model):
                 if cached_isinstance(node, Section):
                     current_section = node
-                    if _ROBOT_VERSION >= (7, 0):
+                    if RF_VERSION >= (7, 0):
                         in_invalid_section = cached_isinstance(current_section, InvalidSection)
 
                 check_current_task_canceled()
