@@ -1515,6 +1515,58 @@ class ImportsManager:
 
         return self._executor
 
+    def _run_in_subprocess(self, func: Any, func_args: Tuple[Any, ...], timeout_msg: str) -> Any:
+        """Run a callable in a fresh single-use subprocess and return the result.
+
+        A fresh process per import is intentional: libraries and variable files
+        can pollute the interpreter (e.g. via sys.modules, global state, native
+        extensions) and cannot be safely re-imported after on-disk changes.
+        """
+        executor = ProcessPoolExecutor(max_workers=1, mp_context=mp.get_context("spawn"))
+        try:
+            try:
+                return executor.submit(func, *func_args).result(self.load_library_timeout)
+            except TimeoutError as e:
+                raise RuntimeError(
+                    f"{timeout_msg} "
+                    f"timed out after {self.load_library_timeout} seconds. "
+                    "The import may be slow or blocked. "
+                    "If required, increase the timeout by setting the ROBOTCODE_LOAD_LIBRARY_TIMEOUT "
+                    "environment variable."
+                ) from e
+        except (SystemExit, KeyboardInterrupt):
+            raise
+        except BaseException as e:
+            self._logger.exception(e)
+            raise
+        finally:
+            executor.shutdown(wait=True)
+
+    def _save_import_cache(
+        self,
+        section: CacheSection,
+        meta: Optional[LibraryMetaData],
+        result: Any,
+        kind: str,
+        name: str,
+        args: Tuple[Any, ...],
+    ) -> None:
+        """Save an import result to the disk cache, or log skip if no meta."""
+        try:
+            if meta is not None:
+                try:
+                    self.data_cache.save_entry(section, meta.cache_key, meta, result)
+                except (SystemExit, KeyboardInterrupt):
+                    raise
+                except BaseException as e:
+                    raise RuntimeError(f"Cannot write cache entry for {kind} '{name}'") from e
+            else:
+                self._logger.debug(lambda: f"Skip caching {kind} {name}{args!r}", context_name="import")
+        except (SystemExit, KeyboardInterrupt):
+            raise
+        except BaseException as e:
+            self._logger.exception(e)
+
     def _get_library_libdoc(
         self,
         name: str,
@@ -1543,55 +1595,24 @@ class ImportsManager:
                 self._logger.exception(e)
 
         self._logger.debug(lambda: f"Load library in process {name}{args!r}", context_name="import")
-        # A fresh process per import is intentional: libraries can pollute the interpreter
-        # (e.g. via sys.modules, global state, native extensions) and cannot be safely
-        # re-imported after on-disk changes without unknown side effects.
-        executor = ProcessPoolExecutor(max_workers=1, mp_context=mp.get_context("spawn"))
-        try:
-            try:
-                result = executor.submit(
-                    get_library_doc,
-                    name,
-                    args if not ignore_arguments else (),
-                    working_dir,
-                    base_dir,
-                    self.get_resolvable_command_line_variables(),
-                    variables,
-                ).result(self.load_library_timeout)
 
-            except TimeoutError as e:
-                raise RuntimeError(
-                    f"Loading library {name!r} with args {args!r} (working_dir={working_dir!r}, base_dir={base_dir!r}) "
-                    f"timed out after {self.load_library_timeout} seconds. "
-                    "The library may be slow or blocked during import. "
-                    "If required, increase the timeout by setting the ROBOTCODE_LOAD_LIBRARY_TIMEOUT "
-                    "environment variable."
-                ) from e
+        result = self._run_in_subprocess(
+            get_library_doc,
+            (
+                name,
+                args if not ignore_arguments else (),
+                working_dir,
+                base_dir,
+                self.get_resolvable_command_line_variables(),
+                variables,
+            ),
+            f"Loading library {name!r} with args {args!r} (working_dir={working_dir!r}, base_dir={base_dir!r})",
+        )
 
-        except (SystemExit, KeyboardInterrupt):
-            raise
-        except BaseException as e:
-            self._logger.exception(e)
-            raise
-        finally:
-            executor.shutdown(wait=True)
+        if meta is not None:
+            meta.has_errors = bool(result.errors)
 
-        try:
-            if meta is not None:
-                meta.has_errors = bool(result.errors)
-
-                try:
-                    self.data_cache.save_entry(CacheSection.LIBRARY, meta.cache_key, meta, result)
-                except (SystemExit, KeyboardInterrupt):
-                    raise
-                except BaseException as e:
-                    raise RuntimeError(f"Cannot write cache entry for library '{name}'") from e
-            else:
-                self._logger.debug(lambda: f"Skip caching library {name}{args!r}", context_name="import")
-        except (SystemExit, KeyboardInterrupt):
-            raise
-        except BaseException as e:
-            self._logger.exception(e)
+        self._save_import_cache(CacheSection.LIBRARY, meta, result, "library", name, args)
 
         return result, meta
 
@@ -1746,53 +1767,20 @@ class ImportsManager:
             except BaseException as e:
                 self._logger.exception(e)
 
-        # A fresh process per import is intentional: variable files can pollute the
-        # interpreter and cannot be safely re-imported after on-disk changes.
-        executor = ProcessPoolExecutor(max_workers=1, mp_context=mp.get_context("spawn"))
-        try:
-            try:
-                result = executor.submit(
-                    get_variables_doc,
-                    name,
-                    args,
-                    working_dir,
-                    base_dir,
-                    self.get_resolvable_command_line_variables() if resolve_command_line_vars else None,
-                    variables,
-                ).result(self.load_library_timeout)
+        result = self._run_in_subprocess(
+            get_variables_doc,
+            (
+                name,
+                args,
+                working_dir,
+                base_dir,
+                self.get_resolvable_command_line_variables() if resolve_command_line_vars else None,
+                variables,
+            ),
+            f"Loading variables {name!r} with args {args!r} (working_dir={working_dir!r}, base_dir={base_dir!r})",
+        )
 
-            except TimeoutError as e:
-                raise RuntimeError(
-                    f"Loading variables {name!r} with args {args!r} (working_dir={working_dir!r}, "
-                    f"base_dir={base_dir!r}) "
-                    f"timed out after {self.load_library_timeout} seconds. "
-                    "The variables may be slow or blocked during import. "
-                    "If required, increase the timeout by setting the ROBOTCODE_LOAD_LIBRARY_TIMEOUT "
-                    "environment variable."
-                ) from e
-
-        except (SystemExit, KeyboardInterrupt):
-            raise
-        except BaseException as e:
-            self._logger.exception(e)
-            raise
-        finally:
-            executor.shutdown(True)
-
-        try:
-            if meta is not None:
-                try:
-                    self.data_cache.save_entry(CacheSection.VARIABLES, meta.cache_key, meta, result)
-                except (SystemExit, KeyboardInterrupt):
-                    raise
-                except BaseException as e:
-                    raise RuntimeError(f"Cannot write cache entry for variables '{name}'") from e
-            else:
-                self._logger.debug(lambda: f"Skip caching variables {name}{args!r}", context_name="import")
-        except (SystemExit, KeyboardInterrupt):
-            raise
-        except BaseException as e:
-            self._logger.exception(e)
+        self._save_import_cache(CacheSection.VARIABLES, meta, result, "variables", name, args)
 
         return result, meta
 
