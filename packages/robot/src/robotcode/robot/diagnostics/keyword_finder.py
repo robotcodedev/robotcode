@@ -8,7 +8,7 @@ from robotcode.core.lsp.types import (
     DiagnosticSeverity,
 )
 
-from ..utils import get_robot_version
+from ..utils import RF_VERSION
 from ..utils.match import eq_namespace
 from ..utils.stubs import Languages
 from .entities import (
@@ -163,7 +163,7 @@ class KeywordFinder:
 
         result: Optional[KeywordDoc] = None
 
-        if get_robot_version() >= (7, 0) and handle_bdd_style:
+        if RF_VERSION >= (7, 0) and handle_bdd_style:
             result = self._get_bdd_style_keyword(name)
 
         if not result:
@@ -175,13 +175,13 @@ class KeywordFinder:
         if not result:
             result = self._get_implicit_keyword(name)
 
-        if get_robot_version() < (7, 0) and not result and handle_bdd_style:
+        if RF_VERSION < (7, 0) and not result and handle_bdd_style:
             return self._get_bdd_style_keyword(name)
 
         return result
 
     def _get_keyword_from_self(self, name: str) -> Optional[KeywordDoc]:
-        if get_robot_version() >= (6, 0):
+        if RF_VERSION >= (6, 0):
             found: List[Tuple[Optional[LibraryEntry], KeywordDoc]] = [
                 (None, v) for v in self._library_doc.keywords.iter_all(name)
             ]
@@ -219,7 +219,7 @@ class KeywordFinder:
         for owner_name, kw_name in self._yield_owner_and_kw_names(name):
             found.extend(self.find_keywords(owner_name, kw_name))
 
-        if get_robot_version() >= (6, 0) and len(found) > 1:
+        if RF_VERSION >= (6, 0) and len(found) > 1:
             found = self._select_best_matches(found)
 
         if len(found) > 1:
@@ -244,7 +244,7 @@ class KeywordFinder:
         )
 
     def find_keywords(self, owner_name: str, name: str) -> List[Tuple[LibraryEntry, KeywordDoc]]:
-        if get_robot_version() >= (6, 0):
+        if RF_VERSION >= (6, 0):
             result: List[Tuple[LibraryEntry, KeywordDoc]] = []
             for v in self._all_keywords:
                 if eq_namespace(v.alias or v.name, owner_name):
@@ -328,7 +328,7 @@ class KeywordFinder:
                 return True
         return False
 
-    if get_robot_version() >= (7, 3):
+    if RF_VERSION >= (7, 3):
 
         def _is_better_match(
             self,
@@ -360,7 +360,7 @@ class KeywordFinder:
         return list(chain(self._resources.values()))
 
     def _get_keyword_from_resource_files(self, name: str) -> Optional[KeywordDoc]:
-        if get_robot_version() >= (6, 0):
+        if RF_VERSION >= (6, 0):
             found: List[Tuple[Optional[LibraryEntry], KeywordDoc]] = [
                 (v, k) for v in self._resource_imports for k in v.library_doc.keywords.iter_all(name)
             ]
@@ -374,7 +374,7 @@ class KeywordFinder:
         if not found:
             return None
 
-        if get_robot_version() >= (6, 0):
+        if RF_VERSION >= (6, 0):
             if len(found) > 1:
                 found = self._prioritize_same_file_or_public(found)
 
@@ -415,7 +415,7 @@ class KeywordFinder:
         return list(chain(self._libraries.values()))
 
     def _get_keyword_from_libraries(self, name: str) -> Optional[KeywordDoc]:
-        if get_robot_version() >= (6, 0):
+        if RF_VERSION >= (6, 0):
             found: List[Tuple[Optional[LibraryEntry], KeywordDoc]] = [
                 (v, k) for v in self._library_imports for k in v.library_doc.keywords.iter_all(name)
             ]
@@ -431,7 +431,7 @@ class KeywordFinder:
         if not found:
             return None
 
-        if get_robot_version() >= (6, 0):
+        if RF_VERSION >= (6, 0):
             if len(found) > 1:
                 found = self._select_best_matches(found)
                 if len(found) > 1:
@@ -511,9 +511,7 @@ class KeywordFinder:
     def _get_bdd_style_keyword(self, name: str) -> Optional[KeywordDoc]:
         match = self.bdd_prefix_regexp.match(name)
         if match:
-            result = self._find_keyword(
-                name[match.end() :], handle_bdd_style=False if get_robot_version() >= (7, 0) else True
-            )
+            result = self._find_keyword(name[match.end() :], handle_bdd_style=False if RF_VERSION >= (7, 0) else True)
             if result:
                 self.result_bdd_prefix = str(match.group(0))
 

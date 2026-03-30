@@ -24,7 +24,7 @@ from robot.utils.escaping import unescape
 from robot.variables.finders import NOT_FOUND, NumberFinder
 from robotcode.core.lsp.types import Position
 
-from ..utils import get_robot_version
+from ..utils import RF_VERSION
 from ..utils.ast import (
     iter_over_keyword_names_and_owners,
     range_from_token,
@@ -545,20 +545,17 @@ class ModelHelper:
             else:
                 yield token_or_var
 
-    __expression_statement_types: Optional[Tuple[Type[Any]]] = None
+    __expression_statement_types: Optional[Tuple[Type[Any], ...]] = None
 
     @classmethod
-    def get_expression_statement_types(cls) -> Tuple[Type[Any]]:
+    def get_expression_statement_types(cls) -> Tuple[Type[Any], ...]:
         import robot.parsing.model.statements
 
         if cls.__expression_statement_types is None:
-            cls.__expression_statement_types = (robot.parsing.model.statements.IfHeader,)
-
-            if get_robot_version() >= (5, 0):
-                cls.__expression_statement_types = (  # type: ignore[assignment]
-                    robot.parsing.model.statements.IfElseHeader,
-                    robot.parsing.model.statements.WhileHeader,
-                )
+            cls.__expression_statement_types = (
+                robot.parsing.model.statements.IfElseHeader,
+                robot.parsing.model.statements.WhileHeader,
+            )
 
         return cls.__expression_statement_types
 
@@ -600,7 +597,7 @@ class ModelHelper:
 
     @classmethod
     def strip_bdd_prefix(cls, namespace: "Namespace", token: Token) -> Token:
-        if get_robot_version() < (6, 0):
+        if RF_VERSION < (6, 0):
             bdd_match = cls.BDD_TOKEN_REGEX.match(token.value)
             if bdd_match:
                 bdd_len = len(bdd_match.group(1))
@@ -637,7 +634,7 @@ class ModelHelper:
 
     @classmethod
     def is_bdd_token(cls, namespace: "Namespace", token: Token) -> bool:
-        if get_robot_version() < (6, 0):
+        if RF_VERSION < (6, 0):
             bdd_match = cls.BDD_TOKEN.match(token.value)
             return bool(bdd_match)
 

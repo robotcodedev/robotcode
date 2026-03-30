@@ -27,7 +27,6 @@ from robotcode.core.utils.dataclasses import as_dict, from_dict
 from robotcode.core.utils.inspect import iter_methods
 from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.robot.diagnostics.model_helper import ModelHelper
-from robotcode.robot.utils import get_robot_version
 from robotcode.robot.utils.ast import (
     get_node_at_position,
     get_nodes_at_position,
@@ -152,35 +151,30 @@ class RobotCodeActionRefactorProtocolPart(RobotLanguageServerProtocolPart, Model
 
     def get_valid_nodes_in_range(self, model: ast.AST, range: Range, also_return: bool = False) -> List[ast.AST]:
         from robot.parsing.lexer.tokens import Token as RobotToken
-        from robot.parsing.model.blocks import Block, Keyword, TestCase
+        from robot.parsing.model.blocks import Block, Keyword, TestCase, Try
         from robot.parsing.model.statements import (
+            Break,
             Comment,
+            Continue,
             Documentation,
             ElseHeader,
             ElseIfHeader,
             EmptyLine,
             End,
+            ExceptHeader,
+            FinallyHeader,
             Fixture,
             ForHeader,
             IfHeader,
             KeywordName,
             MultiValue,
+            ReturnStatement,
             SingleValue,
             TemplateArguments,
             TestCaseName,
+            TryHeader,
+            WhileHeader,
         )
-
-        if get_robot_version() >= (5, 0, 0):
-            from robot.parsing.model.blocks import Try
-            from robot.parsing.model.statements import (
-                Break,
-                Continue,
-                ExceptHeader,
-                FinallyHeader,
-                ReturnStatement,
-                TryHeader,
-                WhileHeader,
-            )
 
         if not isinstance(model, (Keyword, TestCase)):
             return []
@@ -205,7 +199,7 @@ class RobotCodeActionRefactorProtocolPart(RobotLanguageServerProtocolPart, Model
                         KeywordName,
                         TemplateArguments,
                     ),
-                ) or (also_return and get_robot_version() >= (5, 0, 0) and isinstance(node, ReturnStatement)):
+                ) or (also_return and isinstance(node, ReturnStatement)):
                     return []
 
                 result.append(node)
@@ -241,11 +235,11 @@ class RobotCodeActionRefactorProtocolPart(RobotLanguageServerProtocolPart, Model
             n
             for n in result
             if isinstance(n, (IfHeader, ElseIfHeader, ElseHeader, ForHeader, End))
-            or (get_robot_version() >= (5, 0) and isinstance(n, (WhileHeader, TryHeader, ExceptHeader, FinallyHeader)))
+            or isinstance(n, (WhileHeader, TryHeader, ExceptHeader, FinallyHeader))
         ):
             return []
 
-        if get_robot_version() >= (5, 0, 0) and any(
+        if any(
             n
             for n in result
             if isinstance(n, (Continue, Break))

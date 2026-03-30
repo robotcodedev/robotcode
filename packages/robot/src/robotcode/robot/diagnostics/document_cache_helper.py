@@ -32,7 +32,7 @@ from robotcode.robot.diagnostics.diagnostics_modifier import (
 )
 
 from ..config.model import RobotBaseProfile
-from ..utils import get_robot_version
+from ..utils import RF_VERSION
 from ..utils.stubs import Languages
 from .data_cache import CacheSection
 from .imports_manager import ImportsManager, NamespaceMetaData
@@ -117,7 +117,7 @@ class DocumentsCacheHelper:
             return self._default_project_index
 
     def get_languages_for_document(self, document_or_uri: Union[TextDocument, Uri, str]) -> Optional[Languages]:
-        if get_robot_version() < (6, 0):
+        if RF_VERSION < (6, 0):
             return None
 
         from robot.conf.languages import (
@@ -169,7 +169,7 @@ class DocumentsCacheHelper:
     def build_languages_from_model(
         self, document: TextDocument, model: ast.AST
     ) -> Tuple[Optional[Languages], Optional[Languages]]:
-        if get_robot_version() < (6, 0):
+        if RF_VERSION < (6, 0):
             return (None, None)
 
         from robot.conf.languages import (
@@ -229,7 +229,7 @@ class DocumentsCacheHelper:
     ) -> Any:
         import robot.api
 
-        if get_robot_version() >= (6, 0):
+        if RF_VERSION >= (6, 0):
             return robot.api.get_tokens(
                 source,
                 data_only=False,
@@ -247,7 +247,7 @@ class DocumentsCacheHelper:
     ) -> Any:
         import robot.api
 
-        if get_robot_version() >= (6, 0):
+        if RF_VERSION >= (6, 0):
             return robot.api.get_resource_tokens(
                 source,
                 data_only=False,
@@ -265,7 +265,7 @@ class DocumentsCacheHelper:
     ) -> Any:
         import robot.api
 
-        if get_robot_version() >= (6, 0):
+        if RF_VERSION >= (6, 0):
             return robot.api.get_init_tokens(
                 source,
                 data_only=False,
@@ -314,7 +314,7 @@ class DocumentsCacheHelper:
             for t in tokens:
                 yield t
 
-        if get_robot_version() >= (6, 0):
+        if RF_VERSION >= (6, 0):
             model = _get_model(get_tokens, document.uri.to_path(), False, None, None)
         else:
             model = _get_model(get_tokens, document.uri.to_path(), False, None)

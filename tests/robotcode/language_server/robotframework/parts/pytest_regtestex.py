@@ -1,10 +1,10 @@
 from pathlib import Path
 
-from robotcode.robot.utils import get_robot_version
+from robotcode.robot.utils import RF_VERSION
 
 from .....conftest import RegTestFixture
 
-rf_version = f"rf{get_robot_version()[0]}{get_robot_version()[1]}"
+rf_version = f"rf{RF_VERSION[0]}{RF_VERSION[1]}"
 
 
 class RegTestFixtureEx(RegTestFixture):

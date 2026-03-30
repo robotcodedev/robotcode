@@ -45,7 +45,7 @@ from robotcode.core.lsp.types import (
 from robotcode.core.uri import Uri
 from robotcode.core.utils.logging import LoggingDescriptor
 
-from ..utils import get_robot_version
+from ..utils import RF_VERSION
 from ..utils.ast import (
     get_first_variable_token,
     is_not_variable_token,
@@ -90,7 +90,7 @@ from .model_helper import ModelHelper
 from .scope_tree import ScopeTree, ScopeTreeBuilder
 from .variable_scope import VariableScope
 
-if get_robot_version() < (7, 0):
+if RF_VERSION < (7, 0):
     from robot.variables.search import VariableIterator
 
 else:
@@ -415,7 +415,7 @@ class NamespaceAnalyzer(Visitor):
             if add_to_references:
                 self._variable_references[var_def] = set()
 
-    if get_robot_version() >= (7, 0):
+    if RF_VERSION >= (7, 0):
 
         def visit_Var(self, node: Var) -> None:  # noqa: N802
             self._analyze_statement_variables(node)
@@ -843,7 +843,7 @@ class NamespaceAnalyzer(Visitor):
                         code=Error.RESERVED_KEYWORD,
                     )
 
-                if get_robot_version() >= (6, 0) and result.is_resource_keyword and result.is_private:
+                if RF_VERSION >= (6, 0) and result.is_resource_keyword and result.is_private:
                     if self._source != result.source:
                         self._append_diagnostics(
                             range=kw_range,
@@ -1210,7 +1210,7 @@ class NamespaceAnalyzer(Visitor):
                 self._keyword_references[self._current_keyword_doc] = set()
 
             if (
-                get_robot_version() < (6, 1)
+                RF_VERSION < (6, 1)
                 and is_embedded_keyword(node.name)
                 and any(isinstance(v, Arguments) and len(v.values) > 0 for v in node.body)
             ):
@@ -1271,7 +1271,7 @@ class NamespaceAnalyzer(Visitor):
                         name = matcher.base
                         pattern = None
                         type = None
-                    elif get_robot_version() >= (7, 3):
+                    elif RF_VERSION >= (7, 3):
                         re_match = self.EMBEDDED_ARGUMENTS_MATCHER.fullmatch(matcher.base)
                         if re_match:
                             name, type, _, pattern = re_match.groups()
@@ -1538,7 +1538,7 @@ class NamespaceAnalyzer(Visitor):
                 pass
 
     def _format_template(self, template: str, arguments: Tuple[str, ...]) -> Tuple[str, Tuple[str, ...]]:
-        if get_robot_version() < (7, 0):
+        if RF_VERSION < (7, 0):
             variables = VariableIterator(template, identifiers="$")
             count = len(variables)
             if count == 0 or count != len(arguments):
@@ -1612,7 +1612,7 @@ class NamespaceAnalyzer(Visitor):
         self._analyze_statement_variables(node, DiagnosticSeverity.HINT)
         self._collect_tag_references(node, self._testcase_tag_references)
 
-        if get_robot_version() >= (6, 0):
+        if RF_VERSION >= (6, 0):
             tag = node.get_token(Token.FORCE_TAGS)
             if tag is not None and tag.value.upper() == "FORCE TAGS":
                 self._append_diagnostics(
@@ -1627,7 +1627,7 @@ class NamespaceAnalyzer(Visitor):
         self._analyze_statement_variables(node, DiagnosticSeverity.HINT)
         self._collect_tag_references(node, self._testcase_tag_references)
 
-        if get_robot_version() >= (6, 0):
+        if RF_VERSION >= (6, 0):
             tag = node.get_token(Token.FORCE_TAGS)
             if tag is not None and tag.value.upper() == "FORCE TAGS":
                 self._append_diagnostics(
@@ -1669,7 +1669,7 @@ class NamespaceAnalyzer(Visitor):
         else:
             self._collect_tag_references(node, self._testcase_tag_references)
 
-        if (6, 0) < get_robot_version() < (7, 0):
+        if (6, 0) < RF_VERSION < (7, 0):
             for tag in node.get_tokens(Token.ARGUMENT):
                 if tag.value and tag.value.startswith("-"):
                     self._append_diagnostics(
@@ -1686,7 +1686,7 @@ class NamespaceAnalyzer(Visitor):
     def visit_SectionHeader(self, node: Statement) -> None:  # noqa: N802
         self._analyze_statement_variables(node)
 
-        if get_robot_version() >= (7, 0):
+        if RF_VERSION >= (7, 0):
             token = node.get_token(*Token.HEADER_TOKENS)
             if not token.error:
                 return
@@ -1706,7 +1706,7 @@ class NamespaceAnalyzer(Visitor):
                     code=Error.DEPRECATED_HEADER,
                 )
 
-    if get_robot_version() >= (7, 0):
+    if RF_VERSION >= (7, 0):
 
         def visit_ReturnSetting(self, node: Statement) -> None:  # noqa: N802
             def _handler() -> None:
@@ -1715,7 +1715,7 @@ class NamespaceAnalyzer(Visitor):
             if self._end_block_handlers is not None:
                 self._end_block_handlers.append(_handler)
 
-            if get_robot_version() >= (7, 0):
+            if RF_VERSION >= (7, 0):
                 token = node.get_token(Token.RETURN_SETTING)
                 if token is not None and token.error:
                     self._append_diagnostics(
@@ -1745,7 +1745,7 @@ class NamespaceAnalyzer(Visitor):
             )
 
     def _visit_import_node(self, node: Statement, import_type: str) -> None:
-        if get_robot_version() >= (6, 1):
+        if RF_VERSION >= (6, 1):
             self._check_import_name(node.name, node, import_type)
 
         name_token = node.get_token(Token.NAME)

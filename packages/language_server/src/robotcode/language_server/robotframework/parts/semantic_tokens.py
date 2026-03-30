@@ -65,7 +65,7 @@ from robotcode.robot.diagnostics.library_doc import (
 )
 from robotcode.robot.diagnostics.model_helper import ModelHelper
 from robotcode.robot.diagnostics.namespace import Namespace
-from robotcode.robot.utils import get_robot_version
+from robotcode.robot.utils import RF_VERSION
 from robotcode.robot.utils.ast import (
     cached_isinstance,
     iter_nodes,
@@ -77,7 +77,7 @@ from robotcode.robot.utils.variables import split_from_equals
 from .protocol_part import RobotLanguageServerProtocolPart
 
 # Cache robot version at module level for conditional imports
-_ROBOT_VERSION = get_robot_version()
+_ROBOT_VERSION = RF_VERSION
 
 if _ROBOT_VERSION >= (5, 0):
     from robot.parsing.model.statements import ExceptHeader, WhileHeader

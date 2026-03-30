@@ -68,7 +68,7 @@ from robot.variables.replacer import VariableReplacer
 from robotcode.core.lsp.types import Position, Range
 from robotcode.core.utils.path import FileId, file_id, normalized_path
 
-from ..utils import get_robot_version
+from ..utils import RF_VERSION
 from ..utils.ast import (
     cached_isinstance,
     get_first_variable_token,
@@ -91,7 +91,7 @@ from .entities import (
     VariablesImport,
 )
 
-if get_robot_version() < (7, 0):
+if RF_VERSION < (7, 0):
     from robot.running.handlers import _PythonHandler, _PythonInitHandler  # pyright: ignore[reportMissingImports]
     from robot.running.model import ResourceFile  # pyright: ignore[reportMissingImports]
     from robot.running.usererrorhandler import UserErrorHandler  # pyright: ignore[reportMissingImports]
@@ -99,14 +99,14 @@ if get_robot_version() < (7, 0):
 
     robot_notset = ArgInfo.NOTSET
 
-if get_robot_version() >= (6, 1):
+if RF_VERSION >= (6, 1):
     from robot.libdocpkg.datatypes import (
         TypeDoc as RobotTypeDoc,
     )
     from robot.running.arguments.argumentspec import TypeInfo
     from robot.variables.filesetter import JsonImporter
 
-if get_robot_version() >= (7, 0):
+if RF_VERSION >= (7, 0):
     from robot.running.invalidkeyword import InvalidKeyword
     from robot.running.invalidkeyword import (
         InvalidKeyword as UserErrorHandler,
@@ -153,7 +153,7 @@ ALL_RUN_KEYWORDS = [
 BUILTIN_LIBRARY_NAME = "BuiltIn"
 RESERVED_LIBRARY_NAME = "Reserved"
 
-if get_robot_version() < (7, 0):
+if RF_VERSION < (7, 0):
     DEFAULT_LIBRARIES = {BUILTIN_LIBRARY_NAME, RESERVED_LIBRARY_NAME, "Easter"}
 else:
     DEFAULT_LIBRARIES = {BUILTIN_LIBRARY_NAME, "Easter"}
@@ -174,12 +174,12 @@ ALLOWED_RESOURCE_FILE_EXTENSIONS = (
         *REST_EXTENSIONS,
         *JSON_EXTENSIONS,
     }
-    if get_robot_version() >= (6, 1)
+    if RF_VERSION >= (6, 1)
     else {ROBOT_FILE_EXTENSION, RESOURCE_FILE_EXTENSION, *REST_EXTENSIONS}
 )
 
 ALLOWED_VARIABLES_FILE_EXTENSIONS = (
-    {".py", ".yml", ".yaml", ".json"} if get_robot_version() >= (6, 1) else {".py", ".yml", ".yaml"}
+    {".py", ".yml", ".yaml", ".json"} if RF_VERSION >= (6, 1) else {".py", ".yml", ".yaml"}
 )
 ROBOT_DOC_FORMAT = "ROBOT"
 REST_DOC_FORMAT = "REST"
@@ -205,7 +205,7 @@ def convert_from_rest(text: str) -> str:
     return text
 
 
-if get_robot_version() >= (6, 0):
+if RF_VERSION >= (6, 0):
     # monkey patch robot framework for performance reasons
     _old_from_name = EmbeddedArguments.from_name
 
@@ -221,7 +221,7 @@ if get_robot_version() >= (6, 0):
         except (VariableError, DataError):
             return ()
 
-    if get_robot_version() >= (7, 3):
+    if RF_VERSION >= (7, 3):
 
         def _match_embedded(embedded_arguments: EmbeddedArguments, name: str) -> bool:
             return bool(embedded_arguments.matches(name))
@@ -476,7 +476,7 @@ class ArgumentInfo:
             str_repr=str(arg),
             types=(
                 robot_arg.types_reprs
-                if get_robot_version() < (7, 0)
+                if RF_VERSION < (7, 0)
                 else (
                     ([str(robot_arg.type)] if not robot_arg.type.is_union else [str(t) for t in robot_arg.type.nested])
                     if robot_arg.type
@@ -561,10 +561,10 @@ class ArgumentSpec:
             var_positional=spec.var_positional,
             named_only=spec.named_only,
             var_named=spec.var_named,
-            embedded=spec.embedded if get_robot_version() >= (7, 0) else None,
+            embedded=spec.embedded if RF_VERSION >= (7, 0) else None,
             defaults={k: str(v) for k, v in spec.defaults.items()} if spec.defaults else {},
-            types={k: str(v) for k, v in spec.types.items()} if get_robot_version() > (7, 0) and spec.types else None,
-            return_type=str(spec.return_type) if get_robot_version() > (7, 0) and spec.return_type else None,
+            types={k: str(v) for k, v in spec.types.items()} if RF_VERSION > (7, 0) and spec.types else None,
+            return_type=str(spec.return_type) if RF_VERSION > (7, 0) and spec.return_type else None,
         )
 
     def resolve(
@@ -577,7 +577,7 @@ class ArgumentSpec:
         validate: bool = True,
     ) -> Tuple[List[Any], List[Tuple[str, Any]]]:
         if self._robot_arguments is None:
-            if get_robot_version() < (7, 0):
+            if RF_VERSION < (7, 0):
                 self._robot_arguments = RobotArgumentSpec(
                     self.name,
                     self.type,
@@ -604,7 +604,7 @@ class ArgumentSpec:
                 )
         self._robot_arguments.name = self.name
         if validate:
-            if get_robot_version() < (7, 0):
+            if RF_VERSION < (7, 0):
                 resolver = ArgumentResolver(
                     self._robot_arguments,
                     resolve_named=resolve_named,
@@ -628,7 +628,7 @@ class ArgumentSpec:
                 pass
 
         positional, named = MyNamedArgumentResolver(self._robot_arguments).resolve(arguments, variables)
-        if get_robot_version() < (7, 0):
+        if RF_VERSION < (7, 0):
             positional, named = ArgumentsVariableReplacer(resolve_variables_until).replace(positional, named, variables)
         else:
             positional, named = ArgumentsVariableReplacer(self._robot_arguments, resolve_variables_until).replace(
@@ -820,7 +820,7 @@ class KeywordDoc(SourceEntity):
 
     @property
     def is_private(self) -> bool:
-        if get_robot_version() < (6, 0):
+        if RF_VERSION < (6, 0):
             return False
 
         return "robot:private" in self.normalized_tags
@@ -968,7 +968,7 @@ class KeywordDoc(SourceEntity):
         )
 
     def is_reserved(self) -> bool:
-        if get_robot_version() < (7, 0):
+        if RF_VERSION < (7, 0):
             return self.libname == RESERVED_LIBRARY_NAME
 
         return False
@@ -1539,7 +1539,7 @@ def is_library_by_path(path: str) -> bool:
 
 @functools.lru_cache(maxsize=1024)
 def is_variables_by_path(path: str) -> bool:
-    if get_robot_version() >= (6, 1):
+    if RF_VERSION >= (6, 1):
         return path.lower().endswith((".py", ".yml", ".yaml", ".json", "/", os.sep))
     return path.lower().endswith((".py", ".yml", ".yaml", "/", os.sep))
 
@@ -1647,7 +1647,7 @@ class KeywordWrapper:
         except BaseException:
             return ""
 
-    if get_robot_version() < (7, 0):
+    if RF_VERSION < (7, 0):
 
         @property
         def is_error_handler(self) -> bool:
@@ -1815,7 +1815,7 @@ def resolve_robot_variables(
         vars = [
             _Variable(k, v) for k, v in variables.items() if v is not None and not cached_isinstance(v, NativeValue)
         ]
-        if get_robot_version() < (7, 0):
+        if RF_VERSION < (7, 0):
             result.set_from_variable_table(vars)
         else:
             result.set_from_variable_section(vars)
@@ -1840,7 +1840,7 @@ def resolve_variable(
 
     if contains_variable(name, "$@&%"):
         robot_variables = resolve_robot_variables(working_dir, base_dir, command_line_variables, variables)
-        if get_robot_version() >= (6, 1):
+        if RF_VERSION >= (6, 1):
             return VariableFinder(robot_variables).find(name.replace("\\", "\\\\"))
 
         return VariableFinder(robot_variables.store).find(name.replace("\\", "\\\\"))
@@ -1860,7 +1860,7 @@ def replace_variables_scalar(
 
     if contains_variable(scalar, "$@&%"):
         robot_variables = resolve_robot_variables(working_dir, base_dir, command_line_variables, variables)
-        if get_robot_version() >= (6, 1):
+        if RF_VERSION >= (6, 1):
             return VariableReplacer(robot_variables).replace_scalar(
                 scalar.replace("\\", "\\\\"), ignore_errors=ignore_errors
             )
@@ -1950,7 +1950,7 @@ def get_robot_library_html_doc_str(
     robot_libdoc = LibraryDocumentation(name + ("::" + args if args else ""))
     robot_libdoc.convert_docs_to_html()
     with io.StringIO() as output:
-        if get_robot_version() > (6, 0):
+        if RF_VERSION > (6, 0):
             writer = LibdocHtmlWriter(theme=theme)
         else:
             writer = LibdocHtmlWriter()
@@ -1983,7 +1983,7 @@ def _get_test_library(
     create_handlers: bool = True,
     logger: Any = LOGGER,
 ) -> Any:
-    if get_robot_version() < (7, 0):
+    if RF_VERSION < (7, 0):
         libclass = robot.running.testlibraries._get_lib_class(libcode)
         lib = libclass(libcode, name, args or [], source, logger, variables)
         if create_handlers:
@@ -2095,7 +2095,7 @@ def get_library_doc(
                     else resolve_robot_variables(working_dir, base_dir, command_line_variables, variables)
                 ),
             )
-            if get_robot_version() < (7, 0):
+            if RF_VERSION < (7, 0):
                 _ = lib.get_instance()
             else:
                 _ = lib.instance
@@ -2114,7 +2114,7 @@ def get_library_doc(
             if args:
                 try:
                     lib = _get_test_library(libcode, source, library_name, (), create_handlers=False)
-                    if get_robot_version() < (7, 0):
+                    if RF_VERSION < (7, 0):
                         _ = lib.get_instance()
                     else:
                         _ = lib.instance
@@ -2168,7 +2168,7 @@ def get_library_doc(
 
                 libdoc.doc = _get(lambda: str(lib.doc) if lib is not None else "") or ""
 
-                if get_robot_version() < (7, 0):
+                if RF_VERSION < (7, 0):
                     libdoc.has_listener = lib.has_listener
 
                     if isinstance(lib, robot.running.testlibraries._ModuleLibrary):
@@ -2214,7 +2214,7 @@ def get_library_doc(
                                 is_initializer=True,
                                 arguments_spec=_get(
                                     lambda: ArgumentSpec.from_robot_argument_spec(
-                                        kw[1].arguments if get_robot_version() < (7, 0) else kw[1].args
+                                        kw[1].arguments if RF_VERSION < (7, 0) else kw[1].args
                                     )
                                 ),
                             )
@@ -2225,7 +2225,7 @@ def get_library_doc(
 
                 logger = _Logger()
 
-                if get_robot_version() < (7, 0):
+                if RF_VERSION < (7, 0):
                     lib.logger = logger
                     lib.create_handlers()
                 else:
@@ -2243,7 +2243,7 @@ def get_library_doc(
                             )
                         )
 
-                if get_robot_version() < (7, 0):
+                if RF_VERSION < (7, 0):
                     keyword_wrappers = [KeywordWrapper(k, source) for k in lib.handlers]
                 else:
                     keyword_wrappers = [KeywordWrapper(k, source) for k in lib.keywords]
@@ -2283,7 +2283,7 @@ def get_library_doc(
                                 arguments_spec=_get(
                                     lambda: (
                                         ArgumentSpec.from_robot_argument_spec(
-                                            kw[1].arguments if get_robot_version() < (7, 0) else kw[1].args
+                                            kw[1].arguments if RF_VERSION < (7, 0) else kw[1].args
                                         )
                                         if not kw[1].is_error_handler
                                         else None
@@ -2297,7 +2297,7 @@ def get_library_doc(
                                             and kw[1].args.return_type is not type(None)
                                             else None
                                         )
-                                        if get_robot_version() >= (7, 0)
+                                        if RF_VERSION >= (7, 0)
                                         else None
                                     )
                                 ),
@@ -2307,7 +2307,7 @@ def get_library_doc(
                     )
                 )
 
-                if get_robot_version() >= (6, 1):
+                if RF_VERSION >= (6, 1):
 
                     def _yield_type_info(info: TypeInfo) -> Iterable[TypeInfo]:
                         if not info.is_union:
@@ -2323,7 +2323,7 @@ def get_library_doc(
                                 kw.type_docs[arg.name] = {}
                                 for type_info in _yield_type_info(arg.type):
                                     if type_info.type is not None:
-                                        if get_robot_version() < (7, 0):
+                                        if RF_VERSION < (7, 0):
                                             type_doc = RobotTypeDoc.for_type(
                                                 type_info.type,
                                                 custom_converters,
@@ -2436,17 +2436,7 @@ def find_variables(
     command_line_variables: Optional[Dict[str, Optional[Any]]] = None,
     variables: Optional[Dict[str, Optional[Any]]] = None,
 ) -> str:
-    if get_robot_version() >= (5, 0):
-        return _find_variables_internal(name, working_dir, base_dir, command_line_variables, variables)
-
-    return find_file(
-        name,
-        working_dir,
-        base_dir,
-        command_line_variables,
-        variables,
-        file_type="Variables",
-    )
+    return _find_variables_internal(name, working_dir, base_dir, command_line_variables, variables)
 
 
 def get_variables_doc(
@@ -2472,7 +2462,7 @@ def get_variables_doc(
                 source = import_name
                 importer = YamlImporter()
                 stem = Path(import_name).stem
-            elif get_robot_version() >= (6, 1) and import_name.lower().endswith(".json"):
+            elif RF_VERSION >= (6, 1) and import_name.lower().endswith(".json"):
                 source = import_name
                 importer = JsonImporter()
                 stem = Path(import_name).stem
@@ -2502,15 +2492,11 @@ def get_variables_doc(
 
                 module_importer = Importer("variable file", LOGGER)
 
-                if get_robot_version() >= (5, 0):
-                    libcode, source = module_importer.import_class_or_module(
-                        import_name,
-                        instantiate_with_args=(),
-                        return_source=True,
-                    )
-                else:
-                    source = import_name
-                    libcode = module_importer.import_class_or_module_by_path(import_name, instantiate_with_args=())
+                libcode, source = module_importer.import_class_or_module(
+                    import_name,
+                    instantiate_with_args=(),
+                    return_source=True,
+                )
 
                 importer = MyPythonImporter(libcode)
 
@@ -2527,7 +2513,7 @@ def get_variables_doc(
 
             if python_import:
                 if get_variables is not None:
-                    if get_robot_version() >= (7, 0):
+                    if RF_VERSION >= (7, 0):
                         # TODO: variables initializer for RF7
                         # from robot.running.librarykeyword import StaticKeywordCreator, LibraryInitCreator
 
@@ -2578,7 +2564,7 @@ def get_variables_doc(
                             )
                         )
                 else:
-                    if get_robot_version() >= (7, 0):
+                    if RF_VERSION >= (7, 0):
                         # TODO: variables initializer for RF7
 
                         pass
@@ -2642,7 +2628,7 @@ def get_variables_doc(
                         end_line_no=1,
                         end_col_offset=0,
                         source=source or (module_spec.origin if module_spec is not None else None) or "",
-                        name=name if get_robot_version() < (7, 0) else f"${{{name}}}",
+                        name=name if RF_VERSION < (7, 0) else f"${{{name}}}",
                         name_token=None,
                         value=(
                             NativeValue(value) if value is None or isinstance(value, (int, float, bool, str)) else None
@@ -2928,9 +2914,9 @@ def complete_variables_import(
 
         name = robot_variables.replace_string(name, ignore_errors=True)
 
-    file_like = get_robot_version() < (5, 0) or is_file_like(name)
+    file_like = is_file_like(name)
 
-    if get_robot_version() >= (5, 0) and (name is None or not file_like):
+    if name is None or not file_like:
         result += list(iter_modules_from_python_path(name))
 
     if name is None or file_like:
@@ -2964,7 +2950,7 @@ def complete_variables_import(
     return list(set(result))
 
 
-if get_robot_version() < (7, 0):
+if RF_VERSION < (7, 0):
 
     class _MyUserLibrary(UserLibrary):
         current_kw: Any = None
@@ -3206,7 +3192,7 @@ class _MyResourceBuilder(ResourceBuilder):
 
 def _get_kw_errors(kw: Any) -> Any:
     r = kw.errors if hasattr(kw, "errors") else None
-    if get_robot_version() >= (7, 0) and kw.error:
+    if RF_VERSION >= (7, 0) and kw.error:
         if not r:
             r = []
         r.append(
@@ -3233,7 +3219,7 @@ def get_model_doc(
     keyword_name_nodes: Dict[int, KeywordName] = res_builder.keyword_name_nodes
     keywords_nodes: Dict[int, Keyword] = res_builder.keywords_nodes
 
-    if get_robot_version() < (7, 0):
+    if RF_VERSION < (7, 0):
         lib = _MyUserLibrary(res)
     else:
         lib = res
@@ -3272,13 +3258,13 @@ def get_model_doc(
                         str(cast(UserErrorHandler, kw[1]).error) if isinstance(kw[1], UserErrorHandler) else None
                     ),
                     arguments_spec=ArgumentSpec.from_robot_argument_spec(
-                        kw[1].arguments if get_robot_version() < (7, 0) else kw[1].args
+                        kw[1].arguments if RF_VERSION < (7, 0) else kw[1].args
                     ),
                     argument_definitions=_get_argument_definitions_from_line(keywords_nodes, source, kw[0].lineno),
                 )
                 for kw in [
                     (KeywordDocBuilder(resource=True).build_keyword(lw), lw)
-                    for lw in (lib.handlers if get_robot_version() < (7, 0) else lib.keywords)
+                    for lw in (lib.handlers if RF_VERSION < (7, 0) else lib.keywords)
                 ]
             ],
         )

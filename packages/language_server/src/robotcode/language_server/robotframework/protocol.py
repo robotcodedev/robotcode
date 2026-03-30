@@ -23,7 +23,7 @@ from robotcode.language_server.common.parts.document_symbols import symbol_infor
 from robotcode.language_server.common.protocol import LanguageServerProtocol
 from robotcode.robot.config.model import RobotBaseProfile
 from robotcode.robot.diagnostics.workspace_config import RobotConfig, WorkspaceAnalysisConfig
-from robotcode.robot.utils import get_robot_version
+from robotcode.robot.utils import RF_VERSION
 
 from ..__version__ import __version__
 from .parts.code_action_documentation import RobotCodeActionDocumentationProtocolPart
@@ -79,8 +79,8 @@ def check_robotframework() -> None:
             "RobotFramework not installed in current Python environment, please install it."
         ) from e
 
-    if get_robot_version() < (4, 1):
-        raise RobotVersionDontMatchError("Wrong RobotFramework version. Expect version >= 4.1")
+    if RF_VERSION < (5, 0):
+        raise RobotVersionDontMatchError("Wrong RobotFramework version. Expect version >= 5.0")
 
 
 @dataclass

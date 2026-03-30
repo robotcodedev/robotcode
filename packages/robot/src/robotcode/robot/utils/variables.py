@@ -8,7 +8,7 @@ from robot.variables.search import is_variable as robot_is_variable
 from robot.variables.search import search_variable as robot_search_variable
 from robotcode.robot.utils.match import normalize
 
-from . import get_robot_version
+from . import RF_VERSION
 
 
 class InvalidVariableError(Exception):
@@ -16,7 +16,7 @@ class InvalidVariableError(Exception):
 
 
 class VariableMatcher:
-    if get_robot_version() >= (7, 3):
+    if RF_VERSION >= (7, 3):
 
         def __init__(
             self, string: str, identifiers: str = "$@&%", parse_type: bool = False, ignore_errors: bool = True
@@ -108,7 +108,7 @@ class VariableMatcher:
     def is_dict_variable(self) -> bool:
         return bool(self.match.is_dict_variable())
 
-    if get_robot_version() >= (6, 1):
+    if RF_VERSION >= (6, 1):
 
         def is_assign(
             self, allow_assign_mark: bool = False, allow_nested: bool = False, allow_items: bool = False
@@ -125,7 +125,7 @@ class VariableMatcher:
         ) -> bool:
             return bool(self.match.is_assign(allow_assign_mark=allow_assign_mark))
 
-    if get_robot_version() >= (6, 1):
+    if RF_VERSION >= (6, 1):
 
         def is_scalar_assign(self, allow_assign_mark: bool = False, allow_nested: bool = False) -> bool:
             return bool(self.match.is_scalar_assign(allow_assign_mark=allow_assign_mark, allow_nested=allow_nested))
@@ -134,7 +134,7 @@ class VariableMatcher:
         def is_scalar_assign(self, allow_assign_mark: bool = False, allow_nested: bool = False) -> bool:
             return bool(self.match.is_scalar_assign(allow_assign_mark=allow_assign_mark))
 
-    if get_robot_version() >= (6, 1):
+    if RF_VERSION >= (6, 1):
 
         def is_list_assign(
             self,
@@ -151,7 +151,7 @@ class VariableMatcher:
         ) -> bool:
             return bool(self.match.is_list_assign(allow_assign_mark=allow_assign_mark))
 
-    if get_robot_version() >= (6, 1):
+    if RF_VERSION >= (6, 1):
 
         def is_dict_assign(self, allow_assign_mark: bool = False, allow_nested: bool = False) -> bool:
             return bool(self.match.is_dict_assign(allow_assign_mark=allow_assign_mark, allow_nested=allow_nested))

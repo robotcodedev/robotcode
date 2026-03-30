@@ -35,7 +35,7 @@ from robotcode.robot.diagnostics.library_doc import (
 )
 from robotcode.robot.diagnostics.model_helper import ModelHelper
 from robotcode.robot.diagnostics.namespace import Namespace
-from robotcode.robot.utils import get_robot_version
+from robotcode.robot.utils import RF_VERSION
 from robotcode.robot.utils.ast import (
     get_nodes_at_position,
     get_tokens_at_position,
@@ -527,7 +527,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
 
     TAG_STATEMENTS = (
         (statements.Tags, statements.ForceTags, statements.DefaultTags)
-        if get_robot_version() < (6, 0)
+        if RF_VERSION < (6, 0)
         else (
             (
                 statements.Tags,
@@ -535,7 +535,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
                 statements.DefaultTags,
                 statements.KeywordTags,
             )
-            if get_robot_version() < (7, 0)
+            if RF_VERSION < (7, 0)
             else (
                 statements.Tags,
                 statements.TestTags,

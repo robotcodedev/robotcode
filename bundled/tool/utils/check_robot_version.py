@@ -27,6 +27,6 @@ if __name__ == "__main__":
         print("Robot Framework not installed", file=sys.stderr)
         sys.exit(1)
 
-    from robotcode.robot.utils import get_robot_version
+    from robotcode.robot.utils import RF_VERSION
 
-    print(get_robot_version() >= (4, 1))
+    print(RF_VERSION >= (5, 0))

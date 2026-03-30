@@ -36,11 +36,13 @@ from robot.api.parsing import get_model
 from robot.errors import VariableError
 from robot.output import LOGGER
 from robot.running import EXECUTION_CONTEXTS, Keyword, TestCase, TestSuite
+from robot.running.model import Try
+from robot.utils import Matcher as RobotMatcher
 from robot.variables import evaluate_expression
 
 from robotcode.core.event import event
 from robotcode.core.utils.logging import LoggingDescriptor
-from robotcode.robot.utils import get_robot_version
+from robotcode.robot.utils import RF_VERSION
 
 from .dap_types import (
     Breakpoint,
@@ -72,16 +74,12 @@ from .dap_types import (
 )
 from .id_manager import IdManager
 
-if get_robot_version() >= (5, 0):
-    from robot.running.model import Try
-    from robot.utils import Matcher as RobotMatcher
-
-if get_robot_version() >= (7, 0):
+if RF_VERSION >= (7, 0):
     from robot.running import UserKeyword as UserKeywordHandler
 else:
     from robot.running.userkeyword import UserKeywordHandler
 
-if get_robot_version() >= (6, 1):
+if RF_VERSION >= (6, 1):
 
     def internal_evaluate_expression(expression: str, variable_store: Any) -> Any:
         return evaluate_expression(expression, variable_store)
@@ -303,7 +301,7 @@ class DebugLoggerBase:
         self.steps: List[Any] = []
 
 
-if get_robot_version() < (7, 0):
+if RF_VERSION < (7, 0):
 
     class DebugLogger(DebugLoggerBase):
         def start_keyword(self, kw: Any) -> None:
@@ -1119,7 +1117,7 @@ class Debugger:
 
         self.remove_stackframe_entry(longname, type, source, line_no)
 
-    if get_robot_version() >= (7, 0):
+    if RF_VERSION >= (7, 0):
 
         def get_current_keyword_handler(self, name: str) -> UserKeywordHandler:
             return EXECUTION_CONTEXTS.current.namespace.get_runner(name).keyword
@@ -1252,7 +1250,7 @@ class Debugger:
 
         return False
 
-    if get_robot_version() >= (7, 0):
+    if RF_VERSION >= (7, 0):
 
         def _get_step_data(self, step: Any) -> Any:
             return step
@@ -1262,31 +1260,23 @@ class Debugger:
         def _get_step_data(self, step: Any) -> Any:
             return step.data
 
-    if get_robot_version() < (5, 0):
-
-        def is_not_caugthed_by_except(self, message: Optional[str]) -> bool:
-            if not message:
-                return True
-            return False
-    else:
-
-        def is_not_caugthed_by_except(self, message: Optional[str]) -> bool:
-            if not message:
-                return True
-
-            # TODO resolve variables in exception message
-
-            if self.debug_logger:
-                if self.debug_logger.steps:
-                    for branch in [
-                        self._get_step_data(f)
-                        for f in reversed(self.debug_logger.steps)
-                        if isinstance(self._get_step_data(f), Try)
-                    ]:
-                        for except_branch in branch.except_branches:
-                            if self._should_run_except(except_branch, message):
-                                return False
+    def is_not_caugthed_by_except(self, message: Optional[str]) -> bool:
+        if not message:
             return True
+
+        # TODO resolve variables in exception message
+
+        if self.debug_logger:
+            if self.debug_logger.steps:
+                for branch in [
+                    self._get_step_data(f)
+                    for f in reversed(self.debug_logger.steps)
+                    if isinstance(self._get_step_data(f), Try)
+                ]:
+                    for except_branch in branch.except_branches:
+                        if self._should_run_except(except_branch, message):
+                            return False
+        return True
 
     def end_keyword(self, name: str, attributes: AttributeDict) -> None:
         if self.state == State.CallKeyword:
@@ -1602,7 +1592,7 @@ class Debugger:
 
         return Variable(name=name, value=self.debug_repr.repr(value), type=repr(type(value)))
 
-    if get_robot_version() >= (7, 0):
+    if RF_VERSION >= (7, 0):
 
         def get_handler_args(self, handler: UserKeywordHandler) -> Any:
             return handler.args
@@ -1764,7 +1754,7 @@ class Debugger:
     SPLIT_LINE: ClassVar = re.compile(r"(?= {2,}| ?\t)\s*")
     CURRDIR: ClassVar = re.compile(r"(?i)\$\{CURDIR\}")
 
-    if get_robot_version() >= (7, 0):
+    if RF_VERSION >= (7, 0):
 
         def _run_keyword(self, kw: Keyword, context: Any) -> Any:
             return kw.run(context.steps[-1][1], context)
@@ -1774,7 +1764,7 @@ class Debugger:
         def _run_keyword(self, kw: Keyword, context: Any) -> Any:
             return kw.run(context)
 
-    if get_robot_version() >= (7, 2):
+    if RF_VERSION >= (7, 2):
 
         @staticmethod
         def check_message_is_logged(listener: Any, msg: Any) -> bool:
@@ -1963,7 +1953,7 @@ class Debugger:
             result = None
 
             if len(test.body):
-                if get_robot_version() >= (7, 3):
+                if RF_VERSION >= (7, 3):
                     result = self._execute_keywords_with_delayed_logging_v73(test.body, evaluate_context)
                 else:
                     result = self._execute_keywords_with_delayed_logging_legacy(test.body, evaluate_context)
@@ -2003,7 +1993,7 @@ class Debugger:
                     result = e
                     break
                 finally:
-                    if get_robot_version() <= (7, 2):
+                    if RF_VERSION <= (7, 2):
                         self._process_delayed_log_messages()
         return result
 
@@ -2161,7 +2151,7 @@ class Debugger:
 
         return result or None
 
-    if get_robot_version() >= (7, 0):
+    if RF_VERSION >= (7, 0):
 
         def _get_keywords_from_lib(self, lib: Any) -> Any:
             return lib.keywords

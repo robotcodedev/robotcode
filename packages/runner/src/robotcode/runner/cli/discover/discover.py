@@ -48,7 +48,7 @@ from robotcode.plugin import (
     pass_application,
 )
 from robotcode.plugin.click_helper.types import add_options
-from robotcode.robot.utils import get_robot_version
+from robotcode.robot.utils import RF_VERSION
 
 from ..robot import ROBOT_OPTIONS, ROBOT_VERSION_OPTIONS, RobotFrameworkEx, handle_robot_options
 
@@ -71,8 +71,8 @@ def _patch() -> None:
         return
     __patched = True
 
-    if get_robot_version() < (6, 1):
-        if (get_robot_version() > (5, 0) and get_robot_version() < (6, 0)) or get_robot_version() < (5, 0):
+    if RF_VERSION < (6, 1):
+        if RF_VERSION < (6, 0):
             from robot.running.builder.testsettings import (  # pyright: ignore[reportMissingImports]
                 TestDefaults,
             )
@@ -100,7 +100,7 @@ def _patch() -> None:
             except DataError as e:
                 LOGGER.error(str(e))
                 parent_defaults = self._stack[-1][-1] if self._stack else None
-                if get_robot_version() < (6, 1):
+                if RF_VERSION < (6, 1):
                     from robot.running.builder.parsers import format_name
 
                     return ErroneousTestSuite(
@@ -127,7 +127,7 @@ def _patch() -> None:
 
         SuiteStructureParser._validate_execution_mode = _validate_execution_mode
 
-    elif get_robot_version() >= (6, 1):
+    elif RF_VERSION >= (6, 1):
         from robot.parsing.suitestructure import SuiteDirectory, SuiteFile
         from robot.running.builder.settings import (  # pyright: ignore[reportMissingImports]
             TestDefaults,
@@ -175,7 +175,7 @@ def _patch() -> None:
 
         SuiteStructureParser._build_suite_directory = build_suite_directory
 
-        if get_robot_version() < (6, 1, 1):
+        if RF_VERSION < (6, 1, 1):
             old_validate_execution_mode = SuiteStructureParser._validate_execution_mode
 
             def _validate_execution_mode(self: SuiteStructureParser, suite: TestSuite) -> None:
@@ -256,7 +256,7 @@ class Collector(SuiteVisitor):
             uri=str(Uri.from_path(absolute_path)),
             source=str(absolute_path),
             rel_source=get_rel_source(absolute_path),
-            needs_parse_include=get_robot_version() >= (6, 1),
+            needs_parse_include=RF_VERSION >= (6, 1),
         )
         self._current = self.all
         self.suites: List[TestItem] = []
@@ -510,11 +510,10 @@ def handle_options(
 
             LOGGER.register_logger(diagnostics_logger)
 
-            if get_robot_version() >= (5, 0):
-                if settings.pythonpath:
-                    sys.path = settings.pythonpath + sys.path
+            if settings.pythonpath:
+                sys.path = settings.pythonpath + sys.path
 
-            if get_robot_version() > (6, 1):
+            if RF_VERSION > (6, 1):
                 builder = TestSuiteBuilder(
                     included_extensions=settings.extension,
                     included_files=settings.parse_include,
@@ -523,7 +522,7 @@ def handle_options(
                     lang=settings.languages,
                     allow_empty_suite=settings.run_empty_suite,
                 )
-            elif get_robot_version() >= (6, 0):
+            elif RF_VERSION >= (6, 0):
                 builder = TestSuiteBuilder(
                     settings["SuiteNames"],
                     included_extensions=settings.extension,

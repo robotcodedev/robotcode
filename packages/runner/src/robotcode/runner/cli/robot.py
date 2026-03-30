@@ -18,7 +18,7 @@ from robotcode.plugin.click_helper.types import add_options
 from robotcode.robot.config.loader import load_robot_config_from_path
 from robotcode.robot.config.model import RobotBaseProfile
 from robotcode.robot.config.utils import get_config_files
-from robotcode.robot.utils import get_robot_version
+from robotcode.robot.utils import RF_VERSION
 
 from ..__version__ import __version__
 
@@ -33,7 +33,7 @@ def _patch() -> None:
         return
     __patched = True
 
-    if get_robot_version() < (6, 1):
+    if RF_VERSION < (6, 1):
         old_is_included = SuiteStructureBuilder._is_included
 
         def _is_included_lt_61(self: SuiteStructureBuilder, path: str, base: str, ext: Any, incl_suites: Any) -> bool:
@@ -43,7 +43,7 @@ def _patch() -> None:
             return not _is_ignored(self, Path(path))
 
         SuiteStructureBuilder._is_included = _is_included_lt_61
-    elif get_robot_version() >= (6, 1):
+    elif RF_VERSION >= (6, 1):
         old_is_included = SuiteStructureBuilder._is_included
 
         def _is_included(self: SuiteStructureBuilder, path: Path) -> bool:
@@ -321,7 +321,7 @@ def robot(
 
     with app.chdir(root_folder) as orig_folder:
         console_links_args = []
-        if get_robot_version() >= (7, 1) and os.getenv("ROBOTCODE_DISABLE_ANSI_LINKS", "").lower() in [
+        if RF_VERSION >= (7, 1) and os.getenv("ROBOTCODE_DISABLE_ANSI_LINKS", "").lower() in [
             "on",
             "1",
             "yes",

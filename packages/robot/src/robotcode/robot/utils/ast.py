@@ -12,10 +12,10 @@ from robot.parsing.model.statements import EmptyLine, Statement
 from robotcode.core.lsp.types import Position, Range
 
 from ..utils.variables import VariableMatcher, search_variable
-from . import get_robot_version
+from . import RF_VERSION
 from .visitor import Visitor
 
-if get_robot_version() < (7, 0):
+if RF_VERSION < (7, 0):
     from robot.variables.search import VariableIterator
 else:
     from robot.variables.search import VariableMatches as VariableIterator
@@ -247,19 +247,12 @@ def _tokenize_no_variables(token: Token) -> Iterator[Token]:
     yield token
 
 
-if get_robot_version() < (5, 0):
-    ALLOWED_TOKEN_TYPES = {
-        *Token.ALLOW_VARIABLES,
-        Token.KEYWORD,
-        Token.ASSIGN,
-    }
-else:
-    ALLOWED_TOKEN_TYPES = {
-        *Token.ALLOW_VARIABLES,
-        Token.KEYWORD,
-        Token.ASSIGN,
-        Token.OPTION,
-    }
+ALLOWED_TOKEN_TYPES = {
+    *Token.ALLOW_VARIABLES,
+    Token.KEYWORD,
+    Token.ASSIGN,
+    Token.OPTION,
+}
 
 
 def tokenize_variables(
@@ -312,7 +305,7 @@ def _tokenize_variables_v7(token: Token, variables: Any) -> Iterator[Token]:
         yield Token(token.type, after, lineno, col_offset)
 
 
-_tokenize_variables = _tokenize_variables_before7 if get_robot_version() < (7, 0) else _tokenize_variables_v7
+_tokenize_variables = _tokenize_variables_before7 if RF_VERSION < (7, 0) else _tokenize_variables_v7
 
 
 def iter_over_keyword_names_and_owners(

@@ -11,7 +11,7 @@ from robot.utils.robottime import elapsed_time_to_string
 
 from robotcode.core.utils.dataclasses import as_json
 from robotcode.repl.base_interpreter import BaseInterpreter, is_true
-from robotcode.robot.utils import get_robot_version
+from robotcode.robot.utils import RF_VERSION
 
 if TYPE_CHECKING:
     from robot import result, running
@@ -84,7 +84,7 @@ class KeywordResultData(ResultData):
     node_type: str = "keyword"
 
 
-if get_robot_version() < (7, 0):
+if RF_VERSION < (7, 0):
 
     def make_elapsed_time_str(elapsed_time: Union[timedelta, int, float, None]) -> Optional[str]:
         if elapsed_time is None:
@@ -238,7 +238,7 @@ class Interpreter(BaseInterpreter):
                 end_time=result.endtime,
                 elapsed_time=(
                     make_elapsed_time_str(result.elapsedtime)
-                    if get_robot_version() < (7, 0)
+                    if RF_VERSION < (7, 0)
                     else make_elapsed_time_str(result.elapsed_time)
                 ),
             )
@@ -256,7 +256,7 @@ class Interpreter(BaseInterpreter):
                 self._result_data.end_time = result.endtime
                 self._result_data.elapsed_time = (
                     make_elapsed_time_str(result.elapsedtime)
-                    if get_robot_version() < (7, 0)
+                    if RF_VERSION < (7, 0)
                     else make_elapsed_time_str(result.elapsed_time)
                 )
                 self._result_data.status = result.status

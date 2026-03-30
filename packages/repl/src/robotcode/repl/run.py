@@ -13,7 +13,6 @@ from robotcode.core.utils.path import normalized_path
 from robotcode.plugin import (
     Application,
 )
-from robotcode.robot.utils import get_robot_version
 from robotcode.runner.cli.robot import RobotFrameworkEx, handle_robot_options
 
 from .base_interpreter import BaseInterpreter
@@ -110,9 +109,8 @@ def run_repl(
             else:
                 LOGGER.unregister_console_logger()
 
-            if get_robot_version() >= (5, 0):
-                if settings.pythonpath:
-                    sys.path = settings.pythonpath + sys.path
+            if settings.pythonpath:
+                sys.path = settings.pythonpath + sys.path
 
             with io.StringIO(REPL_SUITE) as suite_io:
                 model = get_model(suite_io, curdir=str(curdir).replace("\\", "\\\\"))

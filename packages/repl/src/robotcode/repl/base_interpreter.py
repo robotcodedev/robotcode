@@ -13,7 +13,7 @@ from robot.running.context import EXECUTION_CONTEXTS
 from robot.running.signalhandler import STOP_SIGNAL_MONITOR, _StopSignalMonitor
 
 from robotcode.core.utils.path import normalized_path
-from robotcode.robot.utils import get_robot_version
+from robotcode.robot.utils import RF_VERSION
 from robotcode.robot.utils.ast import iter_nodes
 
 if TYPE_CHECKING:
@@ -51,7 +51,7 @@ def _patch() -> None:
     _patched = True
 
 
-if get_robot_version() >= (7, 0):
+if RF_VERSION >= (7, 0):
 
     def _run_keyword(kw: Keyword, context: Any) -> Any:
         return kw.run(context.steps[-1][1], context)
@@ -62,7 +62,7 @@ else:
         return kw.run(context)
 
 
-if get_robot_version() < (7, 0):
+if RF_VERSION < (7, 0):
 
     class InterpreterLogger:
         def __init__(self, interpreter: "BaseInterpreter") -> None:

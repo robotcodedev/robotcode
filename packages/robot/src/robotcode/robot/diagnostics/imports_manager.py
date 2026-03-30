@@ -47,7 +47,7 @@ from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.core.utils.path import normalized_path, path_is_relative_to
 
 from ..__version__ import __version__
-from ..utils import get_robot_version, get_robot_version_str
+from ..utils import RF_VERSION, get_robot_version_str
 from ..utils.robot_path import find_file_ex
 from ..utils.variables import contains_variable
 from .data_cache import CacheSection
@@ -87,7 +87,7 @@ if TYPE_CHECKING:
 
 RESOURCE_EXTENSIONS = (
     {".resource", ".robot", ".txt", ".tsv", ".rst", ".rest", ".json", ".rsrc"}
-    if get_robot_version() >= (6, 1)
+    if RF_VERSION >= (6, 1)
     else {".resource", ".robot", ".txt", ".tsv", ".rst", ".rest"}
 )
 REST_EXTENSIONS = (".rst", ".rest")
@@ -1498,13 +1498,10 @@ class ImportsManager:
         name: str,
         base_dir: str,
     ) -> str:
-        if get_robot_version() >= (5, 0):
-            if is_variables_by_path(name):
-                return find_file_ex(name, base_dir, "Variables")
+        if is_variables_by_path(name):
+            return find_file_ex(name, base_dir, "Variables")
 
-            return name
-
-        return find_file_ex(name, base_dir, "Variables")
+        return name
 
     @property
     def executor(self) -> ProcessPoolExecutor:

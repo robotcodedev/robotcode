@@ -12,3 +12,6 @@ def get_robot_version() -> Version:
 @functools.lru_cache(maxsize=1)
 def get_robot_version_str() -> str:
     return str(robot.version.get_version())
+
+
+RF_VERSION = get_robot_version()

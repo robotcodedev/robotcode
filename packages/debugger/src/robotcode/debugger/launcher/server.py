@@ -11,7 +11,7 @@ from robotcode.core.types import ServerMode, TcpParams
 from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.jsonrpc2.protocol import rpc_method
 from robotcode.jsonrpc2.server import JsonRPCServer
-from robotcode.robot.utils import get_robot_version
+from robotcode.robot.utils import RF_VERSION
 
 from ..cli import DEBUGGER_DEFAULT_PORT, DEBUGPY_DEFAULT_PORT
 from ..dap_types import (
@@ -194,7 +194,7 @@ class LauncherDebugAdapterProtocol(DebugAdapterProtocol):
 
         run_args = []
 
-        if get_robot_version() >= (6, 0) and languages:
+        if RF_VERSION >= (6, 0) and languages:
             for lang in languages:
                 run_args += ["--language", lang]
 

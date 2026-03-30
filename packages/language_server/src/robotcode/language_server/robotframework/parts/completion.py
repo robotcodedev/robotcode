@@ -71,7 +71,7 @@ from robotcode.robot.diagnostics.library_doc import (
 )
 from robotcode.robot.diagnostics.model_helper import ModelHelper
 from robotcode.robot.diagnostics.namespace import DocumentType, Namespace
-from robotcode.robot.utils import get_robot_version
+from robotcode.robot.utils import RF_VERSION
 from robotcode.robot.utils.ast import (
     get_nodes_at_position,
     get_tokens_at_position,
@@ -85,7 +85,7 @@ from ...common.decorators import trigger_characters
 from ..configuration import CompletionConfig
 from .protocol_part import RobotLanguageServerProtocolPart
 
-if get_robot_version() >= (6, 1):
+if RF_VERSION >= (6, 1):
     from robot.parsing.lexer.settings import SuiteFileSettings
 else:
     from robot.parsing.lexer.settings import (
@@ -95,27 +95,19 @@ else:
 if TYPE_CHECKING:
     from ..protocol import RobotLanguageServerProtocol
 
-if get_robot_version() < (7, 0):
+if RF_VERSION < (7, 0):
     from robot.variables.search import VariableIterator
 else:
     from robot.variables.search import VariableMatches
 
 
-if get_robot_version() < (5, 0):
-    ALLOWED_VARIABLE_TOKENS = [
-        Token.NAME,
-        Token.ARGUMENT,
-        Token.KEYWORD,
-        Token.ASSIGN,
-    ]
-else:
-    ALLOWED_VARIABLE_TOKENS = [
-        Token.NAME,
-        Token.ARGUMENT,
-        Token.KEYWORD,
-        Token.ASSIGN,
-        Token.OPTION,
-    ]
+ALLOWED_VARIABLE_TOKENS = [
+    Token.NAME,
+    Token.ARGUMENT,
+    Token.KEYWORD,
+    Token.ASSIGN,
+    Token.OPTION,
+]
 
 
 DEFAULT_HEADER_STYLE = "*** {name}s ***"
@@ -141,7 +133,7 @@ class RobotCompletionProtocolPart(RobotLanguageServerProtocolPart):
         if config.header_style is not None:
             return config.header_style
 
-        return DEFAULT_HEADER_STYLE if get_robot_version() < (6, 0) else DEFAULT_HEADER_STYLE_51
+        return DEFAULT_HEADER_STYLE if RF_VERSION < (6, 0) else DEFAULT_HEADER_STYLE_51
 
     @language_id("robotframework")
     @trigger_characters(
@@ -231,29 +223,28 @@ def get_snippets() -> Dict[str, List[str]]:
             "IF": [r"IF    \${${1}}", "    $0", "END", ""],
         }
 
-        if get_robot_version() >= (5, 0):
-            __snippets.update(
-                {
-                    "TRYEX": [
-                        "TRY",
-                        "    $0",
-                        r"EXCEPT    message",
-                        "    ",
-                        "END",
-                        "",
-                    ],
-                    "TRYEXAS": [
-                        "TRY",
-                        "    $0",
-                        r"EXCEPT    message    AS    \${ex}",
-                        "    ",
-                        "END",
-                        "",
-                    ],
-                    "WHILE": [r"WHILE    ${1:expression}", "    $0", "END", ""],
-                }
-            )
-        if get_robot_version() >= (7, 0):
+        __snippets.update(
+            {
+                "TRYEX": [
+                    "TRY",
+                    "    $0",
+                    r"EXCEPT    message",
+                    "    ",
+                    "END",
+                    "",
+                ],
+                "TRYEXAS": [
+                    "TRY",
+                    "    $0",
+                    r"EXCEPT    message    AS    \${ex}",
+                    "    ",
+                    "END",
+                    "",
+                ],
+                "WHILE": [r"WHILE    ${1:expression}", "    $0", "END", ""],
+            }
+        )
+        if RF_VERSION >= (7, 0):
             __snippets.update(
                 {
                     "VAR ${}": [r"VAR    \${${1}}    ${0}"],
@@ -262,7 +253,7 @@ def get_snippets() -> Dict[str, List[str]]:
                 }
             )
 
-        if get_robot_version() >= (7, 2):
+        if RF_VERSION >= (7, 2):
             __snippets.update(
                 {
                     "GROUP": [
@@ -283,23 +274,25 @@ def get_reserved_keywords() -> List[str]:
     global __reserved_keywords
 
     if __reserved_keywords is None:
-        __reserved_keywords = ["FOR", "END", "IF", "ELSE", "ELSE IF"]
+        __reserved_keywords = [
+            "FOR",
+            "END",
+            "IF",
+            "ELSE",
+            "ELSE IF",
+            "TRY",
+            "EXCEPT",
+            "FINALLY",
+            "WHILE",
+            "BREAK",
+            "CONTINUE",
+            "RETURN",
+        ]
 
-        if get_robot_version() >= (5, 0):
-            __reserved_keywords += [
-                "TRY",
-                "EXCEPT",
-                "FINALLY",
-                "WHILE",
-                "BREAK",
-                "CONTINUE",
-                "RETURN",
-            ]
-
-        if get_robot_version() >= (7, 0):
+        if RF_VERSION >= (7, 0):
             __reserved_keywords += ["VAR"]
 
-        if get_robot_version() >= (7, 2):
+        if RF_VERSION >= (7, 2):
             __reserved_keywords += ["GROUP"]
 
         __reserved_keywords = sorted(__reserved_keywords)
@@ -774,7 +767,7 @@ class CompletionCollector(ModelHelper):
         if not kw.is_embedded:
             return kw.name
 
-        if get_robot_version() < (7, 0):
+        if RF_VERSION < (7, 0):
             for index, (before, variable, after) in enumerate(
                 VariableIterator(kw.name, identifiers="$", ignore_errors=True)
             ):
@@ -1816,7 +1809,7 @@ class CompletionCollector(ModelHelper):
                 ):
                     return [
                         CompletionItem(
-                            label="AS" if get_robot_version() >= (6, 0) else "WITH NAME",
+                            label="AS" if RF_VERSION >= (6, 0) else "WITH NAME",
                             kind=CompletionItemKind.KEYWORD,
                             # detail=e.detail,
                             sort_text="99_NAMESPACE_MARKER",
@@ -2270,7 +2263,7 @@ class CompletionCollector(ModelHelper):
             type_infos = keyword_doc.parent.get_types(kw_arguments[argument_index].types)
             for i, type_info in enumerate(type_infos):
                 if type_info.name == "boolean":
-                    if get_robot_version() >= (6, 0) and self.namespace.languages:
+                    if RF_VERSION >= (6, 0) and self.namespace.languages:
                         languages = self.namespace.languages.languages
 
                         if self.config.filter_default_language:
@@ -2495,19 +2488,17 @@ class CompletionCollector(ModelHelper):
             "robot:stop-on-failure",
             "robot:no-dry-run",
             "robot:exit",
+            "robot:skip",
+            "robot:skip-on-failure",
+            "robot:exclude",
+            "robot:recursive-continue-on-failure",
         }
 
-        if get_robot_version() >= (5, 0):
-            built_in_tags.add("robot:skip")
-            built_in_tags.add("robot:skip-on-failure")
-            built_in_tags.add("robot:exclude")
-            built_in_tags.add("robot:recursive-continue-on-failure")
-
-        if get_robot_version() >= (6, 0):
+        if RF_VERSION >= (6, 0):
             built_in_tags.add("robot:recursive-stop-on-failure")
             built_in_tags.add("robot:private")
 
-        if get_robot_version() >= (6, 1):
+        if RF_VERSION >= (6, 1):
             built_in_tags.add("robot:flatten")
 
         return [

@@ -1,6 +1,5 @@
-import io
 import os
-from typing import TYPE_CHECKING, Any, List, Optional, cast
+from typing import TYPE_CHECKING, Any, List, Optional
 
 from robotcode.core.language import language_id
 from robotcode.core.lsp.types import (
@@ -12,7 +11,6 @@ from robotcode.core.lsp.types import (
 )
 from robotcode.core.text_document import TextDocument
 from robotcode.core.utils.logging import LoggingDescriptor
-from robotcode.robot.utils import get_robot_version
 
 from ..configuration import RoboCopConfig
 from .protocol_part import RobotLanguageServerProtocolPart
@@ -57,9 +55,6 @@ class RobotFormattingProtocolPart(RobotLanguageServerProtocolPart):
     ) -> Optional[List[TextEdit]]:
         if self.parent.robocop_helper.robocop_installed and self.parent.robocop_helper.robocop_version >= (6, 0):
             return self.format_robocop(document, options, **further_options)
-
-        if get_robot_version() < (5, 0):
-            return self.format_internal(document, options, **further_options)
 
         self.parent.window.show_message(
             "RobotFramework formatter is not available, please install 'robotframework-robocop'.",
@@ -116,44 +111,6 @@ class RobotFormattingProtocolPart(RobotLanguageServerProtocolPart):
                 new_text=new.text,
             )
         ]
-
-    def format_internal(
-        self,
-        document: TextDocument,
-        options: FormattingOptions,
-        **further_options: Any,
-    ) -> Optional[List[TextEdit]]:
-        from robot.parsing.model.blocks import File
-        from robot.tidypkg import (  # pyright: ignore [reportMissingImports]
-            Aligner,
-            Cleaner,
-            NewlineNormalizer,
-            SeparatorNormalizer,
-        )
-
-        model = cast(File, self.parent.documents_cache.get_model(document))
-
-        Cleaner().visit(model)
-        NewlineNormalizer(self.line_separator, self.short_test_name_length).visit(model)
-        SeparatorNormalizer(self.use_pipes, self.space_count).visit(model)
-        Aligner(
-            self.short_test_name_length,
-            self.setting_and_variable_name_length,
-            self.use_pipes,
-        ).visit(model)
-
-        with io.StringIO() as s:
-            model.save(s)
-
-            return [
-                TextEdit(
-                    range=Range(
-                        start=Position(line=0, character=0),
-                        end=Position(line=len(document.get_lines()), character=0),
-                    ),
-                    new_text=s.getvalue(),
-                )
-            ]
 
     @language_id("robotframework")
     def format_range(

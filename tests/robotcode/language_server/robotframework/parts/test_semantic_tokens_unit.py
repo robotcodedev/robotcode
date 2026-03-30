@@ -23,7 +23,7 @@ from robotcode.robot.diagnostics.library_doc import (
     KeywordDoc,
     LibraryDoc,
 )
-from robotcode.robot.utils import get_robot_version
+from robotcode.robot.utils import RF_VERSION
 
 
 class TestSemanticTokenMapper:
@@ -116,7 +116,7 @@ class TestSemanticTokenMapper:
         """Test that version-specific token mappings are correct."""
         mapper = SemanticTokenMapper()
         mapping = mapper.mapping()
-        rf_version = get_robot_version()
+        rf_version = RF_VERSION
 
         # RF 5.0+ tokens
         if rf_version >= (5, 0):
