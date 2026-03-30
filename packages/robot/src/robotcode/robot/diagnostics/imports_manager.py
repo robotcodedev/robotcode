@@ -1677,15 +1677,11 @@ class ImportsManager:
     @staticmethod
     def get_resource_meta(source: str) -> Optional[RobotFileMeta]:
         try:
-            source_path = normalized_path(source)
-            if source_path.exists():
-                return RobotFileMeta(
-                    str(source_path),
-                    os.stat(source_path, follow_symlinks=False).st_mtime_ns,
-                )
+            normalized = str(normalized_path(source))
+            mtime_ns = os.stat(normalized, follow_symlinks=False).st_mtime_ns
+            return RobotFileMeta(normalized, mtime_ns)
         except OSError:
-            pass
-        return None
+            return None
 
     def _get_model_doc_cached(self, source: str) -> Tuple[Optional[ResourceDoc], Optional["RobotFileMeta"]]:
         meta = self.get_resource_meta(source)
