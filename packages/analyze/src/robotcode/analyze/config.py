@@ -387,9 +387,7 @@ class AnalyzeConfig(BaseOptions):
                     ignored_libraries=self.cache.ignored_libraries or [],
                     ignored_variables=self.cache.ignored_variables or [],
                     ignore_arguments_for_library=self.cache.ignore_arguments_for_library or [],
-                    cache_namespaces=(
-                        self.cache.cache_namespaces if self.cache.cache_namespaces is not None else False
-                    ),
+                    cache_namespaces=(self.cache.cache_namespaces if self.cache.cache_namespaces is not None else True),
                 )
                 if self.cache is not None
                 else WorkspaceCacheConfig()

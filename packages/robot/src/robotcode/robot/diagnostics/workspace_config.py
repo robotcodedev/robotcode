@@ -49,7 +49,7 @@ class CacheConfig(ConfigBase):
     ignored_libraries: List[str] = field(default_factory=list)
     ignored_variables: List[str] = field(default_factory=list)
     ignore_arguments_for_library: List[str] = field(default_factory=list)
-    cache_namespaces: bool = False
+    cache_namespaces: bool = True
 
 
 @config_section("robotcode.analysis.robot")

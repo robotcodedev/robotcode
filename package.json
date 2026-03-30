@@ -1039,7 +1039,7 @@
           },
           "robotcode.analysis.cache.cacheNamespaces": {
             "type": "boolean",
-            "default": false,
+            "default": true,
             "markdownDescription": "If enabled, caches fully analyzed namespace data (diagnostics, references, scopes) to disk. This can speed up startup for large projects by skipping re-analysis of unchanged files. If you experience issues, disable this setting.\n\nIf you change this setting, you may need to run the command `RobotCode: Clear Cache and Restart Language Servers`.",
             "scope": "resource"
           },
