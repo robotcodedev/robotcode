@@ -77,6 +77,7 @@ from ..utils.ast import (
 )
 from ..utils.markdownformatter import MarkDownFormatter
 from ..utils.match import normalize, normalize_namespace
+from ..utils.robot_patching import patch_variable_not_found
 from ..utils.variables import contains_variable, search_variable
 from .entities import (
     ArgumentDefinition,
@@ -114,6 +115,7 @@ if RF_VERSION >= (7, 0):
     from robot.running.resourcemodel import ResourceFile
     from robot.utils import NOT_SET as robot_notset  # type: ignore[no-redef] # noqa: N811
 
+patch_variable_not_found()
 
 RUN_KEYWORD_NAMES = [
     "Run Keyword",
