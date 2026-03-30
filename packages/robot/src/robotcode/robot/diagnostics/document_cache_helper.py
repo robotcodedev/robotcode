@@ -319,7 +319,8 @@ class DocumentsCacheHelper:
         else:
             model = _get_model(get_tokens, document.uri.to_path(), False, None)
 
-        model.source = str(document.uri.to_path())
+        if not hasattr(model, "source"):
+            model.source = str(document.uri.to_path())
         model.model_type = document_type
 
         return cast(ast.AST, model)
