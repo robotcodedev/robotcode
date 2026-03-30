@@ -821,13 +821,14 @@ class ImportsManager:
             return False
 
         # Level 2: dependency checks — direct comparison, no hashing
+        base_dir = os.path.dirname(meta.source)
         for key, saved_value in meta.dependency_fingerprints.items():
             if key.startswith("lib:"):
                 lib_name = key[4:]
                 try:
                     lib_meta = self.get_cached_library_meta(lib_name)
                     if lib_meta is None:
-                        lib_meta, _, _ = self.get_library_meta(lib_name)
+                        lib_meta, _, _ = self.get_library_meta(lib_name, base_dir=base_dir)
                     if lib_meta is None or lib_meta != saved_value:
                         return False
                 except (SystemExit, KeyboardInterrupt):
@@ -851,7 +852,7 @@ class ImportsManager:
                 try:
                     var_meta = self.get_cached_variables_meta(var_name)
                     if var_meta is None:
-                        var_meta, _ = self.get_variables_meta(var_name)
+                        var_meta, _ = self.get_variables_meta(var_name, base_dir=base_dir)
                     if var_meta is None or var_meta != saved_value:
                         return False
                 except (SystemExit, KeyboardInterrupt):
@@ -1204,6 +1205,7 @@ class ImportsManager:
         base_dir: str = ".",
         variables: Optional[Dict[str, Optional[Any]]] = None,
     ) -> Tuple[Optional[LibraryMetaData], str, bool]:
+        import_name = name
         ignore_arguments = False
         try:
             import_name = self.find_library(name, base_dir=base_dir, variables=variables)
@@ -1278,6 +1280,7 @@ class ImportsManager:
         resolve_variables: bool = True,
         resolve_command_line_vars: bool = True,
     ) -> Tuple[Optional[LibraryMetaData], str]:
+        import_name = name
         try:
             import_name = self.find_variables(
                 name,
