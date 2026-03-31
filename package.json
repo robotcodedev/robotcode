@@ -1373,6 +1373,11 @@
         "command": "robotcode.createNewNotebook"
       },
       {
+        "title": "Show What's New",
+        "category": "RobotCode",
+        "command": "robotcode.showWhatsNew"
+      },
+      {
         "command": "robotcode.notebookEditor.restartKernel",
         "title": "Restart Kernel",
         "category": "RobotCode",

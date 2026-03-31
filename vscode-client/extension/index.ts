@@ -39,6 +39,48 @@ export async function activateAsync(context: vscode.ExtensionContext): Promise<v
 
   outputChannel.appendLine("Activate RobotCode Extension.");
 
+  const currentVersion = context.extension.packageJSON.version as string;
+  const previousVersion = context.globalState.get<string>("robotcode.lastVersion");
+
+  if (previousVersion !== currentVersion) {
+    vscode.window
+      .showInformationMessage(
+        `RobotCode has been updated to v${currentVersion}. Want to know what's new? Click below to see all the latest changes and improvements.`,
+        "What's New?",
+      )
+      .then(async (action) => {
+        if (action === "What's New?") {
+          await vscode.commands.executeCommand("robotcode.showWhatsNew");
+        }
+      });
+  }
+
+  context.globalState.update("robotcode.lastVersion", currentVersion);
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("robotcode.showWhatsNew", async () => {
+      await vscode.commands.executeCommand("simpleBrowser.api.open", "https://robotcode.io/news/", {
+        preserveFocus: false,
+        viewColumn: vscode.ViewColumn.Active,
+      });
+    }),
+    vscode.commands.registerCommand("robotcode.testWhatsNew", async () => {
+      const action = await vscode.window.showQuickPick(
+        [
+          { label: "Set to 0.0.0", description: "Simulate upgrade from old version" },
+          { label: "Delete", description: "Remove stored version (simulate fresh install)" },
+        ],
+        { placeHolder: "Choose how to reset robotcode.lastVersion" },
+      );
+      if (action) {
+        await context.globalState.update("robotcode.lastVersion", action.label === "Delete" ? undefined : "0.0.0");
+        vscode.window.showInformationMessage(
+          `robotcode.lastVersion ${action.label === "Delete" ? "deleted" : "set to 0.0.0"}. Reload window to see notification.`,
+        );
+      }
+    }),
+  );
+
   const pythonManager = new PythonManager(context, outputChannel);
 
   languageClientManger = new LanguageClientsManager(context, pythonManager, outputChannel);
