@@ -156,7 +156,7 @@ def cache_info(app: Application, paths: Tuple[Path, ...]) -> None:
             )
 
         if app.config.output_format is None or app.config.output_format == OutputFormat.TEXT:
-            if app.colored:
+            if app.colored and app.has_rich:
                 lines = [
                     f"- **Directory:** {cache_dir}",
                     f"- **Database:** {db_path.name} ({_format_bytes(db_size)})",
@@ -252,7 +252,7 @@ def cache_list(app: Application, sections: Tuple[str, ...], patterns: Tuple[str,
             return any(fnmatch(name, p) for p in patterns)
 
         if app.config.output_format is None or app.config.output_format == OutputFormat.TEXT:
-            if app.colored:
+            if app.colored and app.has_rich:
                 lines: list[str] = []
                 for section in target_sections:
                     entries = [e for e in db.list_entries(section) if _matches(e.entry_name)]

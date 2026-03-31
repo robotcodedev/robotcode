@@ -122,6 +122,15 @@ class Application:
             ColoredOutput.YES,
         ]
 
+    @property
+    def has_rich(self) -> bool:
+        try:
+            import rich  # noqa: F401
+
+            return True
+        except ImportError:
+            return False
+
     def verbose(
         self,
         message: Union[str, Callable[[], Any], None],
