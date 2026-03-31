@@ -3168,7 +3168,11 @@ class _MyResourceBuilder(ResourceBuilder):
             return
 
         if name_token.value is not None:
-            matcher = search_variable(name_token.value, ignore_errors=True, parse_type=True)
+            matcher = search_variable(
+                name_token.value[:-1].rstrip() if name_token.value.endswith("=") else name_token.value,
+                ignore_errors=True,
+                parse_type=True,
+            )
             if not matcher.is_assign(allow_assign_mark=True) or matcher.name is None:
                 return
 
