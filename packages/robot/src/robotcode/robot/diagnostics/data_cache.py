@@ -6,7 +6,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Any, Generic, Iterator, List, Optional, Tuple, Type, TypeVar, Union, cast
+from typing import Any, Generic, Iterator, List, Optional, Tuple, Type, TypeVar, Union
 
 from ..utils import get_robot_version_str
 
@@ -56,7 +56,7 @@ class CacheEntry(Generic[_M, _D]):
                 result = pickle.loads(self._meta_blob)
                 if not isinstance(result, self._meta_type):
                     raise TypeError(f"Expected {self._meta_type} but got {type(result)}")
-                self._meta_cache = cast(_M, result)
+                self._meta_cache = result
             self._meta_loaded = True
         return self._meta_cache
 
@@ -72,7 +72,7 @@ class CacheEntry(Generic[_M, _D]):
             result = pickle.loads(row[0])
             if not isinstance(result, self._data_type):
                 raise TypeError(f"Expected {self._data_type} but got {type(result)}")
-            self._data_cache = cast(_D, result)
+            self._data_cache = result
             self._data_loaded = True
 
         assert self._data_cache is not None
