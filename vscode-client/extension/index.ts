@@ -187,6 +187,10 @@ export async function activateAsync(context: vscode.ExtensionContext): Promise<v
   collection.replace("ROBOTCODE_DISABLE_ANSI_LINKS", "1");
   collection.replace("ROBOTCODE_BUNDLED_ROBOTCODE_MAIN", pythonManager.robotCodeMain);
 
+  if (context.storageUri) {
+    collection.replace("ROBOTCODE_CACHE_DIR", context.storageUri.fsPath);
+  }
+
   languageClientManger.refresh();
 }
 

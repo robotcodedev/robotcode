@@ -1,7 +1,6 @@
 import ast
 import multiprocessing as mp
 import os
-import shutil
 import threading
 import weakref
 from abc import ABC, abstractmethod
@@ -905,10 +904,8 @@ class ImportsManager:
         return self.get_libdoc_from_model(model, source)
 
     def clear_cache(self) -> None:
-        if self.cache_path.exists():
-            shutil.rmtree(self.cache_path, ignore_errors=True)
-
-            self._logger.debug(lambda: f"Cleared cache {self.cache_path}")
+        count = self.data_cache.clear_all()
+        self._logger.debug(lambda: f"Cleared {count} cache entries from {self.cache_path}")
 
     @_logger.call
     def get_command_line_variables(self) -> List[VariableDefinition]:

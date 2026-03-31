@@ -152,6 +152,14 @@ def exclusive_cache_lock(cache_dir: Path) -> Iterator[bool]:
         os.close(fd)
 
 
+def resolve_cache_base_path(base_path: Path) -> Path:
+    """Apply ROBOTCODE_CACHE_DIR env var override to a cache base path."""
+    env_cache_dir = os.environ.get("ROBOTCODE_CACHE_DIR")
+    if env_cache_dir:
+        return Path(env_cache_dir)
+    return base_path
+
+
 def build_cache_dir(base_path: Path) -> Path:
     return (
         base_path

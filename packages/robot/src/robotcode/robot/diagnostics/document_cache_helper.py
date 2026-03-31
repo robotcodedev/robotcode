@@ -660,7 +660,9 @@ class DocumentsCacheHelper:
             return self._imports_managers[folder]
 
     def calc_cache_path(self, folder_uri: Uri) -> Path:
-        return folder_uri.to_path()
+        from .data_cache import resolve_cache_base_path
+
+        return resolve_cache_base_path(folder_uri.to_path())
 
     def get_diagnostic_modifier(self, document: TextDocument) -> DiagnosticsModifier:
         return document.get_cache(self.__get_diagnostic_modifier)
