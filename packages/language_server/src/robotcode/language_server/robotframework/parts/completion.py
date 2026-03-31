@@ -2393,6 +2393,20 @@ class CompletionCollector(ModelHelper):
                                 )
                             )
 
+            argument = kw_arguments[argument_index]
+            if argument.literal_values:
+                for literal_index, literal_value in enumerate(argument.literal_values):
+                    result.append(
+                        CompletionItem(
+                            label=literal_value,
+                            kind=CompletionItemKind.ENUM_MEMBER,
+                            detail="Literal",
+                            sort_text=f"09_{literal_index:09}_{literal_value}",
+                            insert_text_format=InsertTextFormat.PLAIN_TEXT,
+                            text_edit=TextEdit(range=completion_range, new_text=literal_value),
+                        )
+                    )
+
         if complete_argument_names:
             known_names = []
 

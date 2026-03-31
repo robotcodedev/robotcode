@@ -24,6 +24,7 @@ from typing import (
     Iterable,
     Iterator,
     List,
+    Literal,
     NamedTuple,
     Optional,
     Sequence,
@@ -467,6 +468,25 @@ class ArgumentInfo:
     required: bool
     default_value: Optional[Any] = None
     types: Optional[List[str]] = None
+    literal_values: Optional[List[str]] = None
+
+    @staticmethod
+    def _extract_literal_values(type_info: Any) -> Optional[List[str]]:
+        if RF_VERSION < (7, 0) or type_info is None:
+            return None
+
+        values: List[str] = []
+
+        def _collect(ti: Any) -> None:
+            if ti.type is Literal and ti.nested:
+                for nested in ti.nested:
+                    values.append(nested.name.strip("'"))
+            elif ti.is_union and ti.nested:
+                for nested in ti.nested:
+                    _collect(nested)
+
+        _collect(type_info)
+        return values or None
 
     @staticmethod
     def from_robot(arg: Any) -> ArgumentInfo:
@@ -487,6 +507,7 @@ class ArgumentInfo:
             ),
             kind=KeywordArgumentKind[robot_arg.kind],
             required=robot_arg.required,
+            literal_values=ArgumentInfo._extract_literal_values(robot_arg.type if RF_VERSION >= (7, 0) else None),
         )
 
     def __str__(self) -> str:
@@ -2323,7 +2344,7 @@ def get_library_doc(
                     def _yield_type_info(info: TypeInfo) -> Iterable[TypeInfo]:
                         if not info.is_union:
                             yield info
-                        if info.nested:
+                        if info.nested and info.type is not Literal:
                             for nested in info.nested:
                                 yield from _yield_type_info(nested)
 

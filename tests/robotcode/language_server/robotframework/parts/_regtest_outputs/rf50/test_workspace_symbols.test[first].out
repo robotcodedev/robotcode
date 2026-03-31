@@ -300,6 +300,21 @@ result:
   name: first
   tags: null
 - !WorkspaceSymbol
+  container_name: literal
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 5
+        line: 4
+      start:
+        character: 0
+        line: 4
+    uri: literal.robot
+  name: first
+  tags: null
+- !WorkspaceSymbol
   container_name: old_for
   data: null
   kind: 5

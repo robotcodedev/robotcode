@@ -3511,6 +3511,81 @@ result:
   name: first
   tags: null
 - !WorkspaceSymbol
+  container_name: literal
+  data: null
+  kind: 13
+  location:
+    range:
+      end:
+        character: 41
+        line: 12
+      start:
+        character: 21
+        line: 12
+    uri: literal.robot
+  name: '${a: Literal["q", "b"]}'
+  tags: null
+- !WorkspaceSymbol
+  container_name: literal
+  data: null
+  kind: 13
+  location:
+    range:
+      end:
+        character: 74
+        line: 12
+      start:
+        character: 48
+        line: 12
+    uri: literal.robot
+  name: '${b: Literal["x", "y"] | int}'
+  tags: null
+- !WorkspaceSymbol
+  container_name: literal
+  data: null
+  kind: 12
+  location:
+    range:
+      end:
+        character: 22
+        line: 11
+      start:
+        character: 0
+        line: 11
+    uri: literal.robot
+  name: A Keyword With Literal
+  tags: null
+- !WorkspaceSymbol
+  container_name: literal
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 5
+        line: 4
+      start:
+        character: 0
+        line: 4
+    uri: literal.robot
+  name: first
+  tags: null
+- !WorkspaceSymbol
+  container_name: literal
+  data: null
+  kind: 5
+  location:
+    range:
+      end:
+        character: 6
+        line: 7
+      start:
+        character: 0
+        line: 7
+    uri: literal.robot
+  name: second
+  tags: null
+- !WorkspaceSymbol
   container_name: old_for
   data: null
   kind: 13
