@@ -6,7 +6,14 @@ import click
 from robotcode.plugin import Application, OutputFormat, pass_application
 from robotcode.robot.config.loader import load_robot_config_from_path
 from robotcode.robot.config.utils import get_config_files
-from robotcode.robot.diagnostics.data_cache import CACHE_DIR_NAME, CacheSection, SqliteDataCache, build_cache_dir
+from robotcode.robot.diagnostics.data_cache import (
+    _LOCK_FILE_NAME,
+    CACHE_DIR_NAME,
+    CacheSection,
+    SqliteDataCache,
+    build_cache_dir,
+    exclusive_cache_lock,
+)
 
 from ..config import AnalyzeConfig
 
@@ -371,11 +378,12 @@ def _resolve_cache_root(
 
 
 @cache_group.command(name="prune")
+@click.option("--force", is_flag=True, help="Force prune even if cache is in use by another process.")
 @click.argument(
     "paths", nargs=-1, type=click.Path(exists=True, dir_okay=True, file_okay=True, readable=True, path_type=Path)
 )
 @pass_application
-def cache_prune(app: Application, paths: Tuple[Path, ...]) -> None:
+def cache_prune(app: Application, force: bool, paths: Tuple[Path, ...]) -> None:
     """\
     Remove the entire cache directory.
 
@@ -389,6 +397,20 @@ def cache_prune(app: Application, paths: Tuple[Path, ...]) -> None:
     if not cache_root.exists():
         app.echo(f"Cache directory does not exist: {cache_root}")
         return
+
+    if not force:
+        locked_dirs = []
+        for lock_file in cache_root.rglob(_LOCK_FILE_NAME):
+            with exclusive_cache_lock(lock_file.parent) as acquired:
+                if not acquired:
+                    locked_dirs.append(lock_file.parent)
+
+        if locked_dirs:
+            app.echo("Cannot prune: cache is in use by another process.")
+            for d in locked_dirs:
+                app.echo(f"  Locked: {d}")
+            app.echo("Use --force to override.")
+            return
 
     shutil.rmtree(cache_root)
     app.echo(f"Removed {cache_root}")

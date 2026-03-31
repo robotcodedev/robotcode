@@ -1,10 +1,12 @@
+import os
 import pickle
 import sqlite3
 import sys
+from contextlib import contextmanager
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Any, Generic, List, Optional, Tuple, Type, TypeVar, Union, cast
+from typing import Any, Generic, Iterator, List, Optional, Tuple, Type, TypeVar, Union, cast
 
 from ..utils import get_robot_version_str
 
@@ -80,6 +82,74 @@ class CacheEntry(Generic[_M, _D]):
 _TABLE_NAMES = [s.value for s in CacheSection]
 
 CACHE_DIR_NAME = ".robotcode_cache"
+_LOCK_FILE_NAME = "cache.lock"
+
+
+def _acquire_shared_lock(cache_dir: Path) -> Optional[int]:
+    """Acquire a shared advisory lock on the cache directory.
+
+    Returns the file descriptor on Unix, None on Windows
+    (Windows already prevents deletion of open files).
+    """
+    if sys.platform == "win32":
+        return None
+
+    import fcntl
+
+    lock_path = cache_dir / _LOCK_FILE_NAME
+    fd = os.open(str(lock_path), os.O_RDWR | os.O_CREAT, 0o666)
+    try:
+        fcntl.flock(fd, fcntl.LOCK_SH)
+    except Exception:
+        os.close(fd)
+        raise
+    return fd
+
+
+def _release_lock(fd: Optional[int]) -> None:
+    """Release an advisory lock acquired via _acquire_shared_lock."""
+    if fd is None:
+        return
+    try:
+        if sys.platform != "win32":
+            import fcntl
+
+            fcntl.flock(fd, fcntl.LOCK_UN)
+    finally:
+        os.close(fd)
+
+
+@contextmanager
+def exclusive_cache_lock(cache_dir: Path) -> Iterator[bool]:
+    """Context manager that tries to acquire an exclusive lock on a cache directory.
+
+    Yields True if the lock was acquired (cache is not in use),
+    False if another process holds a shared lock (cache is in use).
+    The lock is held until the context manager exits.
+    """
+    if sys.platform == "win32":
+        yield True
+        return
+
+    import fcntl
+
+    lock_path = cache_dir / _LOCK_FILE_NAME
+    if not lock_path.exists():
+        yield True
+        return
+
+    fd = os.open(str(lock_path), os.O_RDWR)
+    try:
+        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        yield True
+    except OSError:
+        yield False
+    finally:
+        try:
+            fcntl.flock(fd, fcntl.LOCK_UN)
+        except OSError:
+            pass
+        os.close(fd)
 
 
 def build_cache_dir(base_path: Path) -> Path:
@@ -108,6 +178,8 @@ class SqliteDataCache:
                 "# Created by robotcode\n*\n",
                 "utf-8",
             )
+
+        self._lock_fd = _acquire_shared_lock(cache_dir)
 
         db_path = cache_dir / "cache.db"
         self._conn = sqlite3.connect(str(db_path), check_same_thread=False)
@@ -177,6 +249,8 @@ class SqliteDataCache:
 
     def close(self) -> None:
         self._conn.close()
+        _release_lock(self._lock_fd)
+        self._lock_fd = None
 
     @property
     def db_path(self) -> Path:
