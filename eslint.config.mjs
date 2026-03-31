@@ -19,6 +19,7 @@ export default [
       "**/packages/",
       "**/js",
       "**/build/",
+      "**/intellij-client/",
     ],
   },
   { files: ["**/*.{ts,tsx}"] },
