@@ -8,13 +8,13 @@
         "preview": "vitepress preview"
     },
     "devDependencies": {
-        "esbuild": "^0.27.3",
+        "esbuild": "^0.27.4",
         "lite-youtube-embed": "^0.3.4",
         "markdown-it-abbr": "^2.0.0",
         "markdown-it-kbd": "^3.0.2",
         "markdown-it-task-lists": "^2.1.1",
         "typescript": "^5.9.3",
-        "typescript-eslint": "^8.57.0",
+        "typescript-eslint": "^8.58.0",
         "vitepress": "^1.6.4",
         "vitepress-plugin-llmstxt": "^0.5.1",
         "vitepress-plugin-tabs": "^0.8.0",
