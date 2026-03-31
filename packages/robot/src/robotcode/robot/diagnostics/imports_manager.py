@@ -2,7 +2,6 @@ import ast
 import multiprocessing as mp
 import os
 import shutil
-import sys
 import threading
 import weakref
 from abc import ABC, abstractmethod
@@ -47,10 +46,10 @@ from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.core.utils.path import normalized_path, path_is_relative_to
 
 from ..__version__ import __version__
-from ..utils import RF_VERSION, get_robot_version_str
+from ..utils import RF_VERSION
 from ..utils.robot_path import find_file_ex
 from ..utils.variables import contains_variable
-from .data_cache import CacheSection
+from .data_cache import CACHE_DIR_NAME, CacheSection, build_cache_dir
 from .data_cache import SqliteDataCache as DefaultDataCache
 from .entities import (
     CommandLineVariableDefinition,
@@ -621,11 +620,9 @@ class ImportsManager:
 
         self._logger.trace(lambda: f"use {cache_base_path} as base for caching")
 
-        self.cache_path = cache_base_path / ".robotcode_cache"
+        self.cache_path = cache_base_path / CACHE_DIR_NAME
         self.data_cache = DefaultDataCache(
-            self.cache_path
-            / f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
-            / get_robot_version_str(),
+            build_cache_dir(cache_base_path),
             app_version=__version__,
         )
         weakref.finalize(self, DefaultDataCache.close, self.data_cache)

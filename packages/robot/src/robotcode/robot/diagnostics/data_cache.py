@@ -1,8 +1,12 @@
 import pickle
 import sqlite3
+import sys
+from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Any, Generic, Optional, Tuple, Type, TypeVar, Union, cast
+from typing import Any, Generic, List, Optional, Tuple, Type, TypeVar, Union, cast
+
+from ..utils import get_robot_version_str
 
 _M = TypeVar("_M")
 _D = TypeVar("_D")
@@ -75,6 +79,17 @@ class CacheEntry(Generic[_M, _D]):
 
 _TABLE_NAMES = [s.value for s in CacheSection]
 
+CACHE_DIR_NAME = ".robotcode_cache"
+
+
+def build_cache_dir(base_path: Path) -> Path:
+    return (
+        base_path
+        / CACHE_DIR_NAME
+        / f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
+        / get_robot_version_str()
+    )
+
 
 class SqliteDataCache:
     """Cache backend using a single SQLite database with per-section tables.
@@ -116,7 +131,12 @@ class SqliteDataCache:
 
         for table in _TABLE_NAMES:
             self._conn.execute(
-                f"CREATE TABLE IF NOT EXISTS {table} (  entry_name TEXT PRIMARY KEY,  meta BLOB,  data BLOB NOT NULL)"
+                f"CREATE TABLE IF NOT EXISTS {table} ("
+                f"  entry_name TEXT PRIMARY KEY,"
+                f"  meta BLOB,"
+                f"  data BLOB NOT NULL,"
+                f"  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,"
+                f"  modified_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP)"
             )
         self._conn.commit()
 
@@ -147,10 +167,88 @@ class SqliteDataCache:
         meta_blob = pickle.dumps(meta, protocol=pickle.HIGHEST_PROTOCOL) if meta is not None else None
         data_blob = pickle.dumps(data, protocol=pickle.HIGHEST_PROTOCOL)
         self._conn.execute(
-            f"INSERT OR REPLACE INTO {section.value} (entry_name, meta, data) VALUES (?, ?, ?)",
+            f"INSERT INTO {section.value} (entry_name, meta, data)"
+            f" VALUES (?, ?, ?)"
+            f" ON CONFLICT(entry_name) DO UPDATE SET"
+            f" meta = excluded.meta, data = excluded.data, modified_at = CURRENT_TIMESTAMP",
             (entry_name, meta_blob, data_blob),
         )
         self._conn.commit()
 
     def close(self) -> None:
         self._conn.close()
+
+    @property
+    def db_path(self) -> Path:
+        return self.cache_dir / "cache.db"
+
+    @property
+    def app_version(self) -> Optional[str]:
+        row = self._conn.execute("SELECT value FROM _meta WHERE key = 'app_version'").fetchone()
+        return row[0] if row else None
+
+    def get_section_stats(self, section: CacheSection) -> "SectionStats":
+        row = self._conn.execute(
+            f"SELECT COUNT(*),"
+            f" COALESCE(SUM(LENGTH(meta) + LENGTH(data)), 0),"
+            f" MIN(created_at),"
+            f" MAX(modified_at)"
+            f" FROM {section.value}",
+        ).fetchone()
+        assert row is not None
+        return SectionStats(
+            section=section,
+            entry_count=row[0],
+            total_blob_bytes=row[1],
+            oldest_created=row[2],
+            newest_modified=row[3],
+        )
+
+    def list_entries(self, section: CacheSection) -> List["EntryInfo"]:
+        rows = self._conn.execute(
+            f"SELECT entry_name, created_at, modified_at,"
+            f" LENGTH(meta), LENGTH(data)"
+            f" FROM {section.value}"
+            f" ORDER BY entry_name",
+        ).fetchall()
+        return [
+            EntryInfo(
+                entry_name=r[0],
+                created_at=r[1],
+                modified_at=r[2],
+                meta_bytes=r[3] or 0,
+                data_bytes=r[4] or 0,
+            )
+            for r in rows
+        ]
+
+    def clear_section(self, section: CacheSection) -> int:
+        cursor = self._conn.execute(f"DELETE FROM {section.value}")
+        self._conn.commit()
+        return cursor.rowcount
+
+    def clear_all(self) -> int:
+        total = 0
+        for table in _TABLE_NAMES:
+            cursor = self._conn.execute(f"DELETE FROM {table}")
+            total += cursor.rowcount
+        self._conn.commit()
+        return total
+
+
+@dataclass
+class SectionStats:
+    section: CacheSection
+    entry_count: int
+    total_blob_bytes: int
+    oldest_created: Optional[str]
+    newest_modified: Optional[str]
+
+
+@dataclass
+class EntryInfo:
+    entry_name: str
+    created_at: Optional[str]
+    modified_at: Optional[str]
+    meta_bytes: int
+    data_bytes: int
