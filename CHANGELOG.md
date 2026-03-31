@@ -2,6 +2,358 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [2.5.0](https://github.com/robotcodedev/robotcode/compare/v2.4.0..v2.5.0) - 2026-03-31
+
+### Bug Fixes
+
+- **robot:** Strip trailing `=` from variable names in resource builder ([e11ca60](https://github.com/robotcodedev/robotcode/commit/e11ca6061ecf7b1659e74a72ddecb6baadc545a3))
+- **robot:** Do not override the source on a model if there is already a source field ([7e74c2d](https://github.com/robotcodedev/robotcode/commit/7e74c2dfbe57367edacc81fd0f6460d23337eccc))
+
+  Newer Robot Framework versions already set the source field on File AST blocks, so overriding it here is unnecessary.
+
+- **robot:** Resolve relative library paths in namespace cache validation ([45d8f9f](https://github.com/robotcodedev/robotcode/commit/45d8f9f92a01987955df48325ea16f4a10fbcf75))
+
+  Namespace cache validation failed for files importing libraries via
+  relative paths (e.g. ../../resources/libraries/common.py), causing
+  unnecessary full rebuilds on every warm start.
+
+  Two issues fixed:
+  - validate_namespace_meta now passes the source file's directory as
+    base_dir when falling back to get_library_meta/get_variables_meta,
+    so relative paths resolve correctly
+  - get_library_meta and get_variables_meta initialize import_name
+    before the try block to avoid UnboundLocalError when find_library
+    or find_variables fails
+
+- **robot:** Correct check for __init__.py file in _is_valid_file function ([ffad219](https://github.com/robotcodedev/robotcode/commit/ffad219d9bc4311a2f1a70d272feb942467b1bfb))
+- **robot:** Add lock for _workspace_languages to prevent race condition ([9bf0ee6](https://github.com/robotcodedev/robotcode/commit/9bf0ee619d20d1f676b35797867260aab924a2af))
+
+  WeakKeyDictionary is not thread-safe for concurrent read/write.
+  Protect all access to _workspace_languages with a dedicated RLock.
+
+
+
+### Documentation
+
+- **news:** Add supplementary release note for v2.5.0 ([a8c39a3](https://github.com/robotcodedev/robotcode/commit/a8c39a377a74db9fe2a93e165415d0e805470d2d))
+- Update release notes for v2.5.0 with ([9978a88](https://github.com/robotcodedev/robotcode/commit/9978a8869359ca7dbfbbde7ac3ddc96dd1eb1996))
+- Add news section to documentation site ([7f14925](https://github.com/robotcodedev/robotcode/commit/7f1492508bef6f487e31bbd8f532449d7c05d392))
+
+
+  Add a dedicated news section for release announcements with
+  auto-generated sidebar (sorted newest-first), content loader,
+  and redirect from /news/ to the latest article.
+
+
+### Features
+
+- **analyze:** Add cache management CLI commands ([1421107](https://github.com/robotcodedev/robotcode/commit/1421107e20473b441861958feca96262832946bb))
+
+  Add `robotcode analyze cache` subcommand group with five commands:
+  - `path`: print resolved cache directory
+  - `info`: show cache statistics with per-section breakdown
+  - `list`: list cached entries with glob pattern filtering (-p)
+  - `clear`: remove cached entries by section
+  - `prune`: delete entire .robotcode_cache directory
+
+  Output adapts to the global --format flag (text/json/toml) and
+  --no-color mode. Text output uses rich-rendered markdown tables
+  when color is enabled, plain aligned tables otherwise.
+
+- **analyze:** Enable namespace caching by default ([d896213](https://github.com/robotcodedev/robotcode/commit/d8962139775144697c2d3e41fe37f6595bc272d6))
+
+  Namespace caching speeds up startup for large projects by skipping
+  re-analysis of unchanged files. It is now mature enough to be enabled
+  by default.
+
+- **analyze:** Add --cache-namespaces/--no-cache-namespaces CLI option ([b050c32](https://github.com/robotcodedev/robotcode/commit/b050c32e94989f638ec0cfcafe5122bfdf3a4945))
+
+  Add option to enable/disable caching of fully analyzed namespace data
+  to disk. Disabled by default until the cache is fully optimized and
+  validated. When enabled, skips re-analysis of unchanged files on
+  startup, which can significantly speed up large projects.
+
+  Available as CLI flag (--cache-namespaces/--no-cache-namespaces),
+  robot.toml setting (tool.robotcode-analyze.cache.cache_namespaces),
+  and VS Code setting (robotcode.analysis.cache.cacheNamespaces).
+
+- **analyze:** Add collection of unused keywords and variables on the CLI ([5734690](https://github.com/robotcodedev/robotcode/commit/5734690b4a9a627306751c704b6fc0934739a1fc))
+
+  Add support for collecting unused keyword and variable diagnostics when
+  running `robotcode analyze code` from the command line.
+
+  The feature can be enabled in `robot.toml`:
+
+  ```toml
+  [tool.robotcode-analyze.code]
+  collect-unused = true
+  ```
+
+  or controlled directly per invocation:
+
+  ```bash
+  robotcode analyze code --collect-unused
+  robotcode analyze code --no-collect-unused
+  ```
+
+- **langserver:** Add code completion for `Literal` type hint values ([42ab3a0](https://github.com/robotcodedev/robotcode/commit/42ab3a073e562c21474d39667ef653948128abe6))
+
+  Keywords with `Literal["fast", "slow", "auto"]` type hints now show
+  their allowed values in the completion list, making it easier to
+  discover and select valid argument values without checking the
+  keyword documentation.
+
+  Also supports `Union` types containing `Literal`, e.g.
+  `Union[Literal["x", "y"], int]`.
+
+- **language_server:** Add json to watched file extensions ([74e92b0](https://github.com/robotcodedev/robotcode/commit/74e92b00ef947291e7e6bd0fe09f37b919292b85))
+- **plugin:** Add `has_rich` property to detect `rich` availability ([4581cc6](https://github.com/robotcodedev/robotcode/commit/4581cc6e7594798a28c0795a0f56b7e5fca62a9b))
+
+  Fall back to plain-text output in cache CLI commands when the `rich`
+  package is not installed, instead of dumping raw unformatted markdown.
+
+- **robot:** Add `ROBOTCODE_CACHE_DIR` env var for cache path override ([a778cd5](https://github.com/robotcodedev/robotcode/commit/a778cd58542b841966047278ad6fa91049f38c25))
+
+  Enable redirecting the analysis cache to a custom directory via the
+  `ROBOTCODE_CACHE_DIR` environment variable. This allows all RobotCode
+  tools — CLI commands, analyze runs, and the language server — to
+  share the same cache regardless of where it is stored.
+
+  The VS Code extension automatically sets this variable in the
+  integrated terminal, so CLI commands find the correct cache
+  without any manual setup.
+
+  Cache clearing now operates on the database directly instead of
+  removing the directory, preventing errors when multiple processes
+  access the cache concurrently.
+
+- **robot:** Add advisory file locking to SQLite cache ([b9351fc](https://github.com/robotcodedev/robotcode/commit/b9351fc3f4c9515e56ebfbd13a9b744ac88bee52))
+
+  Add shared/exclusive advisory file locking (fcntl.flock) to prevent
+  `prune` from deleting a cache database while another process (language
+  server, analyze run) is using it.
+
+- **robot:** Add SQLite cache backend for library and namespace data ([edaea47](https://github.com/robotcodedev/robotcode/commit/edaea473b9d51f52b1a91c705facf2a31ad571c3))
+
+  Replace file-based pickle caching with a single SQLite database per
+  workspace, consolidating all cache entries into one file instead of
+  many individual .pkl files scattered across directories.
+
+- **robot:** Add namespace disk cache for cold-start acceleration ([abf3387](https://github.com/robotcodedev/robotcode/commit/abf33871b16b1b344c85c2ae77a344a2a5dcd6b1))
+
+  Speed up first-time file analysis by caching fully resolved
+  namespace results to disk. On subsequent IDE starts, cached
+  namespaces are reused instead of re-analyzing every file from
+  scratch, significantly reducing the time until diagnostics,
+  code completion, and navigation become available.
+
+  The cache is automatically invalidated when source files,
+  library dependencies, environment variables, command-line
+  variables, language configuration, or the RobotCode version
+  change.
+
+- **robot:** Add ProjectIndex for O(1) workspace-wide reference lookups ([6ef90f1](https://github.com/robotcodedev/robotcode/commit/6ef90f111f367af51924f1f991ba02ae6e807298))
+
+  Add an incrementally maintained inverse reference index (ProjectIndex)
+  scoped per WorkspaceFolder. On each file build, references are updated
+  in-place instead of scanning all files. All six reference types are
+  supported: keywords, variables, namespace entries, keyword tags,
+  testcase tags, and metadata.
+
+- **robot:** Track tag and metadata references in namespace analysis ([6a372fe](https://github.com/robotcodedev/robotcode/commit/6a372febb092055b4fec4528b5f5870233c854da))
+
+  Add structured reference tracking for tags and metadata during analysis.
+  Tags are split into keyword_tag_references and testcase_tag_references
+  to reflect their different semantics in Robot Framework (keyword visibility
+  vs test selection/reporting). Metadata references track settings-level
+  metadata entries by key. All reference keys are normalized for consistent
+  lookups. Remove unused TagDefinition class.
+
+- **settings:** Remove deprecated robocop configuration options ([fa2217e](https://github.com/robotcodedev/robotcode/commit/fa2217eaeae800023c6961970ee93ec715f28d53))
+- **vscode:** Show "What's New" notification after extension update ([7fb2071](https://github.com/robotcodedev/robotcode/commit/7fb2071104be976d0099f54c65aa58476e01a806))
+
+  Display an info notification when the extension version changes,
+  linking to the news page on robotcode.io via the built-in Simple Browser.
+  Also adds a public "RobotCode: Show What's New" command to the palette.
+
+
+
+### Performance
+
+- **cache:** Defer data blob loading in CacheEntry until first access ([795c420](https://github.com/robotcodedev/robotcode/commit/795c42073b49071eabc9a8afd4c4e7eb1659dceb))
+- **diagnostics:** Remove redundant exists() check in get_resource_meta ([5696868](https://github.com/robotcodedev/robotcode/commit/569686849ffc2f286e3af93095cfef8e5b5767ce))
+- **diagnostics:** Consolidate to single AST model and remove data_only parameter ([e2e4cbd](https://github.com/robotcodedev/robotcode/commit/e2e4cbd04d58d2d775742c0fddaee63f948c335d))
+
+  This eliminates the second cached AST model per document, saving ~500KB/doc
+  in CLI and ~200KB/doc in the Language Server. Releasing the model reference
+  after analysis frees an additional ~100-500KB/doc in CLI mode.
+
+- **imports:** Cache get_module_spec results in ImportsManager ([fa83b30](https://github.com/robotcodedev/robotcode/commit/fa83b3045dc4f87f91952bb1ab0ec64e492be28a))
+- **robot:** Patch RF's variable_not_found to skip slow RecommendationFinder ([78a26c3](https://github.com/robotcodedev/robotcode/commit/78a26c3004717f06edadda114d8d196fd9729e7e))
+
+  Robot Framework's variable_not_found() calls RecommendationFinder for
+  fuzzy "Did you mean...?" suggestions on every unresolved variable. This
+  is O(n*m) over all variable candidates and extremely slow for large
+  projects (see #587: 30+ min for 375 files).
+
+  RobotCode never uses the recommendation text — all VariableError catch
+  sites either ignore the error or use it for unrelated diagnostics.
+
+  The monkey-patch replaces variable_not_found in all 5 RF modules that
+  import it (notfound, finders, evaluation, store, __init__) with a fast
+  version that raises VariableError with just the base message.
+
+- **robot:** Speed up namespace cache loading with source hints and top-level-only imports ([1d4ba6b](https://github.com/robotcodedev/robotcode/commit/1d4ba6b73f0e1b57341b5f116084c0ab0902dcc7))
+
+  Add resolved_resource_sources to NamespaceData that maps import hint
+  keys to resolved file paths. During from_data() re-resolution, these
+  hints skip expensive find_resource() filesystem searches when the
+  cached path still exists on disk.
+
+  Also limit cached imports to top-level only (recursive imports are
+  re-discovered during resolution), replace Path-based normalization
+  with string-only os.path calls in imports_manager, and add a hint_key
+  property to Import for consistent key computation.
+
+- **robot:** Fix ArgumentSpec.resolve() caching bug for RobotArgumentSpec ([05142c8](https://github.com/robotcodedev/robotcode/commit/05142c821a64136453a1388c2d30dccb08093bd7))
+
+  The RobotArgumentSpec was recreated on every call (100K times) because:
+  - hasattr() always returned False with @dataclass(slots=True)
+  - Assignment went to a local variable instead of self
+
+  RobotArgumentSpec.__init__ calls: 100K → 1.3K (-98.7%)
+  resolve cumtime: 3.93s → 3.29s (-0.64s)
+  Warm no-NS total: 30.78s → 29.81s (-0.97s, -3.2%)
+
+- **robot:** Replace pathlib with os.path in file resolution ([f3118bd](https://github.com/robotcodedev/robotcode/commit/f3118bd2d5213f0e6404e476025a40799205c383))
+
+  Replace pathlib.Path operations with os.path string functions
+  in robot_path.py for significantly faster file resolution:
+
+  - Use os.path.join/abspath/isfile/isdir instead of Path objects
+  - Cache validated sys.path entries lazily (_get_valid_sys_path)
+  - Separate basedir check from sys.path iteration
+  - Introduce _PathLike type alias for cleaner signatures
+  - Fix is_fifo() bug: use os.path.isfile() for __init__.py check
+
+  Warm namespace-cache scenario: 19.30s -> 13.84s (-28.3%).
+  Pathlib calls reduced by 78-100%, posix.stat calls by 35%.
+
+- **robot:** Cache KeywordMatcher and add dict-index to KeywordStore ([5d21baf](https://github.com/robotcodedev/robotcode/commit/5d21bafb711091112d473f3d5c9c47865a22796d))
+
+  - Cache KeywordMatcher on KeywordDoc via lazy-init _matcher slot,
+    eliminating 7.5M redundant instantiations per analysis run
+  - Add dict-index (_index + _embedded) to KeywordStore for O(1)
+    keyword lookup by normalized name; linear scan only for embedded
+    keywords
+  - Add __getstate__/__setstate__ to KeywordDoc and KeywordStore to
+    exclude transient fields (_matcher, _index, _embedded, parent,
+    _hash_value, _stable_id) from pickle serialization
+  - Restore parent references in LibraryDoc.__setstate__ via
+    _update_keywords after deserialization
+  - Remove unused nosave metadata from argument_definitions, parent,
+    and keyword_doc fields
+  - Fix Application.keyboard_interrupt to use self.exit() for
+    consistent shutdown behavior
+
+  Measured improvement (cProfile, 1065 Robot files):
+  - Warm no-NS: 37.46s -> 29.25s (-22%)
+  - Cold no-NS: 42.94s -> 33.39s (-22%)
+  - Keyword matching: ~9.0s -> ~0.5s (-94%)
+  - Function calls: 118M -> 81M (-31%)
+
+- **robot:** Optimize dataclass identity for ProjectIndex caching ([deedd7b](https://github.com/robotcodedev/robotcode/commit/deedd7be944b426f4f9d65ff90fbfae464f33086))
+
+  Prepare VariableDefinition, KeywordDoc, and LibraryDoc for efficient
+  use as dictionary keys in the upcoming ProjectIndex disk cache and
+  cross-process worker communication.
+
+
+
+### Refactor
+
+- **cache:** Optimize SqliteDataCache with lazy deserialization and per-section tables ([eeec613](https://github.com/robotcodedev/robotcode/commit/eeec61379aa9bca255389d8f60246a140b0bc0db))
+
+  Replace single cache_entries table with per-section tables (libdoc,
+  variables, resource, namespace) for better query performance.
+
+  Introduce CacheEntry with lazy meta/data deserialization — data blobs
+  are only unpickled on cache hit, avoiding expensive deserialization on
+  meta mismatch.
+
+  Move version checking from per-entry meta_version field to DB-level
+  app_version parameter. On version mismatch all tables are dropped and
+  recreated automatically.
+
+  Simplify cache API from 3 methods (cache_data_exists, read_cache_data,
+  save_cache_data) to 2 (read_entry, save_entry), reducing DB
+  round-trips from 3 to 1 for reads and 2 to 1 for writes.
+
+  Remove filepath_base property (adler32 hash-based keys) from all
+  metadata classes — cache keys now use source paths or library names
+  directly.
+
+- **diagnostics:** Extract _run_in_subprocess and _save_import_cache helpers ([0c347fd](https://github.com/robotcodedev/robotcode/commit/0c347fd9a55f4e9cca8a86628addd297df52e468))
+
+  - Unify duplicated ProcessPoolExecutor lifecycle from
+    _get_library_libdoc and _get_variables_libdoc into _run_in_subprocess
+  - Unify duplicated cache save logic into _save_import_cache
+
+- **diagnostics:** Deduplicate and optimize metadata classes in imports_manager ([a0cb4c6](https://github.com/robotcodedev/robotcode/commit/a0cb4c6820f895e2e56bbeb20a406ba2270f2a46))
+
+  - Extract _collect_library_mtimes() to unify duplicated mtime collection
+    from get_library_meta and get_variables_meta, using os.walk instead of
+    Path.rglob for better performance
+  - Extract _matches_any_pattern() to unify triplicated pattern matching
+  - Add slots=True to LibraryMetaData, RobotFileMeta, and NamespaceMetaData
+  - Move mtime collection into dataclass constructors to avoid post-init mutation
+  - Remove unused itertools import
+
+- **jsonrpc2:** Harden resource lifecycle without __del__ ([5cb7bb7](https://github.com/robotcodedev/robotcode/commit/5cb7bb71fac305a8dc7039187c4b076ab7d90bbd))
+
+  - remove __del__-based resource cleanup from server, debugger client, and protocol
+  - move shutdown to explicit close/close_async paths
+  - make JsonRPCServer.close wait for server shutdown when safe
+  - add best-effort weakref finalizers for forgotten cleanup without noisy warnings
+  - unify runtime and finalizer bookkeeping into shared state objects
+
+- **robot:** Remove unnecessary type casting in CacheEntry ([c4eb160](https://github.com/robotcodedev/robotcode/commit/c4eb160b6d02ce95e51f3c0084cdf9ccf209bd75))
+- **robot:** Optimize RF_VERSION checks with module-level dispatch ([eec1627](https://github.com/robotcodedev/robotcode/commit/eec1627f7777d17b8928ea6678b7905b9f933d5e))
+
+  - Remove redundant _ROBOT_VERSION alias in semantic_tokens.py
+  - Remove always-true RF >= 5.0 guards (minimum supported version)
+  - Use conditional class-level property/method definitions for
+    is_private and is_reserved in library_doc.py
+  - Add _RF7_PLUS module-level bool for BDD keyword search hot path
+  - Move ExceptHeader/WhileHeader imports to top-level (always available)
+
+- **robot:** Replace Namespace getter methods with read-only properties ([127ad65](https://github.com/robotcodedev/robotcode/commit/127ad6550e691011b8916620b28765c5b3c039ed))
+- **robot:** Extract Namespace into DTO with event-driven invalidation ([4f37419](https://github.com/robotcodedev/robotcode/commit/4f3741906798e9ff5a5263c7f1a8413b4e55ff66))
+
+  Split the monolithic Namespace class into focused modules to reduce
+  complexity and improve maintainability. The Namespace is now a pure data
+  container built by NamespaceBuilder, with dedicated modules for import
+  resolution, AST analysis, variable scoping, and scope trees.
+
+- Introduce RF_VERSION constant and remove RF < 5.0 dead code ([02cf495](https://github.com/robotcodedev/robotcode/commit/02cf495faa1683a3ff6f62552cf1fb5d7f86454d))
+
+
+  - Add module-level RF_VERSION constant to robotcode.robot.utils,
+    resolved once at import time instead of repeated lru_cache lookups
+  - Remove dead code paths for Robot Framework < 5.0 (no longer supported),
+    including the internal tidy-based formatter and obsolete version branches
+  - Replace all ~134 get_robot_version() call sites across 27 files with
+    the RF_VERSION constant
+
+
+### Testing
+
+- **namespace:** Ensure mtime differs on coarse resolution filesystems ([c2b6a79](https://github.com/robotcodedev/robotcode/commit/c2b6a7958dacb3efbb7d102ef0839dca7c05f92f))
+- Add unit tests for SqliteDataCache backend functionality ([f315426](https://github.com/robotcodedev/robotcode/commit/f315426b5179c083eee8475734612bb5dddf4433))
+- Improve resource file modification simulation for validation ([a3107fd](https://github.com/robotcodedev/robotcode/commit/a3107fda390dd4407526d3d32dfd15e76577cf51))
+- Improve mtime simulation for file modification in namespace validation ([9a58278](https://github.com/robotcodedev/robotcode/commit/9a58278903b5bacdc1713fb454aa46fc71cbe8d9))
+
+
 ## [2.4.0](https://github.com/robotcodedev/robotcode/compare/v2.3.1..v2.4.0) - 2026-03-17
 
 ### Bug Fixes
