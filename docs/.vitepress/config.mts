@@ -60,6 +60,7 @@ export default defineConfig({
     },
     nav: [
       { text: "Home", link: "/" },
+      { text: "News", link: "/news/" },
       { text: "Documentation", link: "/01_about" },
       { text: "Support & Contribute", link: "/05_contributing" },
       { text: "Q&A", link: "https://github.com/robotcodedev/robotcode/discussions/categories/q-a" },
@@ -97,14 +98,29 @@ export default defineConfig({
     //     ]
     //   }
     // ],
-    sidebar: generateSidebar({
-      documentRootPath: ".",
-      collapsed: true,
-      useTitleFromFileHeading: true,
-      useTitleFromFrontmatter: true,
-      useFolderLinkFromIndexFile: true,
-      useFolderTitleFromIndexFile: true,
-    }),
+    sidebar: generateSidebar([
+      {
+        documentRootPath: ".",
+        collapsed: true,
+        useTitleFromFileHeading: true,
+        useTitleFromFrontmatter: true,
+        useFolderLinkFromIndexFile: true,
+        useFolderTitleFromIndexFile: true,
+        excludeByGlobPattern: ["news/**"],
+      },
+      {
+        documentRootPath: ".",
+        scanStartPath: "news",
+        resolvePath: "/news/",
+        collapsed: false,
+        useTitleFromFileHeading: true,
+        useTitleFromFrontmatter: true,
+        useFolderLinkFromIndexFile: true,
+        useFolderTitleFromIndexFile: true,
+        sortMenusByFrontmatterDate: true,
+        sortMenusOrderByDescending: true,
+      },
+    ]),
     socialLinks: [
       { icon: "github", link: "https://github.com/robotcodedev/robotcode" },
       { icon: { svg: python_svg }, link: "https://pypi.org/project/robotcode/" },
