@@ -835,20 +835,37 @@ class ImportsManager:
         Level 1 (fast): source_mtime_ns, config_fingerprint
         Level 2 (dependency check): each dependency fingerprint
         """
+        source = meta.source
+
         # Level 1: fast checks
         try:
-            current_mtime = os.stat(meta.source, follow_symlinks=False).st_mtime_ns
+            current_mtime = os.stat(source, follow_symlinks=False).st_mtime_ns
         except OSError:
+            self._logger.debug(
+                lambda: f"Cache miss for {source}: source file no longer exists",
+                context_name="cache",
+            )
             return False
 
         if meta.source_mtime_ns != current_mtime:
+            self._logger.debug(
+                lambda: (
+                    f"Cache miss for {source}: source mtime changed"
+                    f" (cached={meta.source_mtime_ns}, current={current_mtime})"
+                ),
+                context_name="cache",
+            )
             return False
 
         if meta.config_fingerprint != self.config_fingerprint:
+            self._logger.debug(
+                lambda: f"Cache miss for {source}: config fingerprint changed",
+                context_name="cache",
+            )
             return False
 
         # Level 2: dependency checks — direct comparison, no hashing
-        base_dir = os.path.dirname(meta.source)
+        base_dir = os.path.dirname(source)
         for key, saved_value in meta.dependency_fingerprints.items():
             if key.startswith("lib:"):
                 lib_name = key[4:]
@@ -857,10 +874,22 @@ class ImportsManager:
                     if lib_meta is None:
                         lib_meta, _, _ = self.get_library_meta(lib_name, base_dir=base_dir)
                     if lib_meta is None or lib_meta != saved_value:
+                        self._logger.debug(
+                            lambda: (
+                                f"Cache miss for {source}: library {lib_name!r} changed"
+                                f" (found={'yes' if lib_meta is not None else 'no'})"
+                            ),
+                            context_name="cache",
+                        )
                         return False
                 except (SystemExit, KeyboardInterrupt):
                     raise
-                except BaseException:
+                except BaseException as e:
+                    ex = e
+                    self._logger.debug(
+                        lambda: f"Cache miss for {source}: error checking library {lib_name!r}: {ex}",
+                        context_name="cache",
+                    )
                     return False
             elif key.startswith("res:"):
                 res_source = key[4:]
@@ -869,10 +898,22 @@ class ImportsManager:
                     if res_meta is None:
                         res_meta = self.get_resource_meta(res_source)
                     if res_meta is None or res_meta != saved_value:
+                        self._logger.debug(
+                            lambda: (
+                                f"Cache miss for {source}: resource {res_source!r} changed"
+                                f" (found={'yes' if res_meta is not None else 'no'})"
+                            ),
+                            context_name="cache",
+                        )
                         return False
                 except (SystemExit, KeyboardInterrupt):
                     raise
-                except BaseException:
+                except BaseException as e:
+                    ex = e
+                    self._logger.debug(
+                        lambda: f"Cache miss for {source}: error checking resource {res_source!r}: {ex}",
+                        context_name="cache",
+                    )
                     return False
             elif key.startswith("var:"):
                 var_name = key[4:]
@@ -881,10 +922,22 @@ class ImportsManager:
                     if var_meta is None:
                         var_meta, _ = self.get_variables_meta(var_name, base_dir=base_dir)
                     if var_meta is None or var_meta != saved_value:
+                        self._logger.debug(
+                            lambda: (
+                                f"Cache miss for {source}: variables {var_name!r} changed"
+                                f" (found={'yes' if var_meta is not None else 'no'})"
+                            ),
+                            context_name="cache",
+                        )
                         return False
                 except (SystemExit, KeyboardInterrupt):
                     raise
-                except BaseException:
+                except BaseException as e:
+                    ex = e
+                    self._logger.debug(
+                        lambda: f"Cache miss for {source}: error checking variables {var_name!r}: {ex}",
+                        context_name="cache",
+                    )
                     return False
 
         return True

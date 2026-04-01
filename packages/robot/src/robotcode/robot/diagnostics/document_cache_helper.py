@@ -496,9 +496,17 @@ class DocumentsCacheHelper:
             return None
 
         if entry is None or entry.meta is None:
+            self._logger.debug(
+                lambda: f"Cache miss for {source}: no cached entry found",
+                context_name="cache",
+            )
             return None
 
         if not imports_manager.validate_namespace_meta(entry.meta):
+            self._logger.debug(
+                lambda: f"Cache miss for {source}: cached entry is stale, re-analyzing",
+                context_name="cache",
+            )
             return None
 
         # Meta is valid — load the full NamespaceData (lazy deserialization)
