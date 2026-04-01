@@ -691,6 +691,7 @@ class NamespaceAnalyzer(Visitor):
         allow_variables: bool = False,
         ignore_errors_if_contains_variables: bool = False,
         unescape_keyword: bool = True,
+        is_template: bool = False,
     ) -> Optional[KeywordDoc]:
         result: Optional[KeywordDoc] = None
 
@@ -776,7 +777,7 @@ class NamespaceAnalyzer(Visitor):
             else:
                 self._keyword_references[result].add(Location(self._document_uri, kw_range))
 
-                if result.is_embedded:
+                if result.is_embedded and not is_template:
                     self._analyze_token_variables(keyword_token)
 
                 if result.errors:
@@ -1099,6 +1100,7 @@ class NamespaceAnalyzer(Visitor):
                 [],
                 analyze_run_keywords=False,
                 allow_variables=True,
+                is_template=True,
             )
 
         self._test_template = node
@@ -1116,6 +1118,7 @@ class NamespaceAnalyzer(Visitor):
                 [],
                 analyze_run_keywords=False,
                 allow_variables=True,
+                is_template=True,
             )
         self._template = node
 
