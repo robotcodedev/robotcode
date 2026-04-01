@@ -79,7 +79,7 @@ from ..utils.ast import (
 from ..utils.markdownformatter import MarkDownFormatter
 from ..utils.match import normalize, normalize_namespace
 from ..utils.robot_patching import patch_variable_not_found
-from ..utils.variables import contains_variable, search_variable
+from ..utils.variables import contains_variable, replace_curdir_in_variable_values, search_variable
 from .entities import (
     ArgumentDefinition,
     Import,
@@ -3199,13 +3199,7 @@ class _MyResourceBuilder(ResourceBuilder):
 
             values = node.get_values(Token.ARGUMENT)
             has_value = bool(values)
-            value = tuple(
-                s.replace(
-                    "${CURDIR}",
-                    str(Path(self.source).parent).replace("\\\\", "\\\\\\\\"),
-                )
-                for s in values
-            )
+            value = replace_curdir_in_variable_values(values, self.source)
 
             stripped_name_token = strip_variable_token(name_token, matcher=matcher, parse_type=True)
 

@@ -7,7 +7,6 @@ from collections import defaultdict
 from concurrent.futures import CancelledError
 from dataclasses import dataclass
 from io import StringIO
-from pathlib import Path
 from tokenize import TokenError, generate_tokens
 from typing import Any, Callable, Dict, Iterator, List, Optional, Set, Tuple, Union, cast
 
@@ -63,6 +62,7 @@ from ..utils.variables import (
     InvalidVariableError,
     VariableMatcher,
     contains_variable,
+    replace_curdir_in_variable_values,
     search_variable,
     split_from_equals,
 )
@@ -283,13 +283,7 @@ class NamespaceAnalyzer(Visitor):
 
             values = node.get_values(Token.ARGUMENT)
             has_value = bool(values)
-            value = tuple(
-                s.replace(
-                    "${CURDIR}",
-                    str(Path(self._source).parent).replace("\\", "\\\\"),
-                )
-                for s in values
-            )
+            value = replace_curdir_in_variable_values(values, self._source)
 
             var_def = VariableDefinition(
                 name=name,

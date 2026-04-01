@@ -1,5 +1,6 @@
 import functools
-from typing import Any, Optional, Tuple, cast
+from pathlib import Path
+from typing import Any, Optional, Sequence, Tuple, cast
 
 from robot.utils.escaping import split_from_equals as robot_split_from_equals
 from robot.variables.search import contains_variable as robot_contains_variable
@@ -225,3 +226,9 @@ def search_variable(
 @functools.lru_cache(maxsize=1024)
 def split_from_equals(string: str) -> Tuple[str, Optional[str]]:
     return cast(Tuple[str, Optional[str]], robot_split_from_equals(string))
+
+
+def replace_curdir_in_variable_values(values: Sequence[str], source: str) -> Tuple[str, ...]:
+    """Replace ${CURDIR} in variable values with the escaped parent directory of source."""
+    curdir = str(Path(source).parent).replace("\\", "\\\\")
+    return tuple(s.replace("${CURDIR}", curdir) for s in values)
