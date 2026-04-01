@@ -2,6 +2,56 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [2.5.1](https://github.com/robotcodedev/robotcode/compare/v2.5.0..v2.5.1) - 2026-04-01
+
+### Bug Fixes
+
+- **analyzer:** Do not report embedded arguments as VariableNotFound in template keywords ([c34455f](https://github.com/robotcodedev/robotcode/commit/c34455fe3a2a485bf361b65a6b52b55650d674b7))
+
+  When a test case uses [Template] or Test Template with a keyword that has
+  embedded arguments (e.g. "The result of ${calculation} should be ${expected}"),
+  the embedded argument placeholders were incorrectly analyzed as unresolved
+  variables, producing false VariableNotFound diagnostics.
+
+  Skip variable analysis for embedded argument tokens when the keyword call
+  originates from a template declaration.
+
+- **robot:** Match longest BDD prefix first for multi-word prefixes ([dad536e](https://github.com/robotcodedev/robotcode/commit/dad536ecc44e4cdad9f222b3387f276dc7e6ee0a))
+
+  French BDD prefixes like "Étant donné que", "Et que",
+  "Mais que" were not fully recognized because shorter prefixes (e.g.
+  "Et") matched before longer ones (e.g. "Et que").
+
+  Replaced manual iteration and set lookups with a regex-based approach
+  matching Robot Framework's own strategy: prefixes sorted by length
+  (longest first), compiled into a cached regex pattern. This applies to
+  keyword_finder, model_helper (split/strip/is_bdd), and semantic tokens.
+
+- **robot:** Fix ${CURDIR} replacement in variable values and unify handling ([13bf36b](https://github.com/robotcodedev/robotcode/commit/13bf36b8639887ff21d807a0045f8432b81fce8c))
+
+  Extract replace_curdir_in_variable_values() helper into utils/variables.py
+  to deduplicate the ${CURDIR} substitution logic from _MyResourceBuilder and
+  NamespaceAnalyzer. Fixes incorrect double-backslash escaping in
+  _MyResourceBuilder that caused ${CURDIR} resolution to fail on Windows.
+
+
+
+### Documentation
+
+- **news:** Add v2.5.1 release notes ([b0d9fb9](https://github.com/robotcodedev/robotcode/commit/b0d9fb94fc6dc36ae4ff9fba0f8a5c3ba3888dd0))
+
+
+### Refactor
+
+- **diagnostics:** Add debug logging for namespace cache misses ([99e322d](https://github.com/robotcodedev/robotcode/commit/99e322d8d9be298fbb22bb46d2283fa2db26e223))
+
+  Log specific reasons when namespace cache entries are invalidated,
+  including source mtime changes, config fingerprint mismatches, and
+  dependency changes (libraries, resources, variables). Uses debug
+  level with context_name="cache" for targeted activation.
+
+
+
 ## [2.5.0](https://github.com/robotcodedev/robotcode/compare/v2.4.0..v2.5.0) - 2026-03-31
 
 ### Bug Fixes
