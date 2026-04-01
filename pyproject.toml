@@ -145,7 +145,10 @@ build_command = "pip install hatch && hatch build"
 [tool.pytest.ini_options]
 minversion = "6.0"
 addopts = "-ra -vv -rf --ignore=bundled --ignore=.hatch"
-filterwarnings = "ignore:.*Using or importing the ABCs from 'collections' instead of from 'collections.abc'.*:DeprecationWarning"
+filterwarnings = [
+    "ignore:.*Using or importing the ABCs from 'collections' instead of from 'collections.abc'.*:DeprecationWarning",
+    "ignore:cannot collect test class 'TestCaseDefinition'.*:pytest.PytestCollectionWarning",
+]
 testpaths = ["tests"]
 junit_suite_name = "robotcode"
 # console_output_style = "classic"
