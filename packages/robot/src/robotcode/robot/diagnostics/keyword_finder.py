@@ -1,7 +1,7 @@
 import functools
 import re
 from itertools import chain
-from typing import Dict, Iterable, Iterator, List, NamedTuple, Optional, Sequence, Tuple
+from typing import Dict, FrozenSet, Iterable, Iterator, List, NamedTuple, Optional, Sequence, Tuple
 
 from robot.libraries import STDLIBS
 from robotcode.core.lsp.types import (
@@ -36,6 +36,16 @@ class CancelSearchError(Exception):
 
 
 DEFAULT_BDD_PREFIXES = {"Given ", "When ", "Then ", "And ", "But "}
+
+
+@functools.lru_cache(maxsize=None)
+def build_bdd_prefix_regexp(prefixes: FrozenSet[str]) -> "re.Pattern[str]":
+    sorted_prefixes = sorted(prefixes, key=len, reverse=True)
+    pattern = "|".join(p.strip().replace(" ", r"\s") for p in sorted_prefixes).lower()
+    return re.compile(rf"({pattern})\s", re.IGNORECASE)
+
+
+DEFAULT_BDD_PREFIX_REGEXP = build_bdd_prefix_regexp(frozenset(DEFAULT_BDD_PREFIXES))
 
 
 class KeywordFinder:
@@ -501,14 +511,9 @@ class KeywordFinder:
 
     @functools.cached_property
     def bdd_prefix_regexp(self) -> "re.Pattern[str]":
-        prefixes = (
-            "|".join(
-                self._languages.bdd_prefixes if self._languages is not None else ["given", "when", "then", "and", "but"]
-            )
-            .replace(" ", r"\s")
-            .lower()
-        )
-        return re.compile(rf"({prefixes})\s", re.IGNORECASE)
+        if self._languages is not None:
+            return build_bdd_prefix_regexp(frozenset(self._languages.bdd_prefixes))
+        return DEFAULT_BDD_PREFIX_REGEXP
 
     def _get_bdd_style_keyword(self, name: str) -> Optional[KeywordDoc]:
         match = self.bdd_prefix_regexp.match(name)

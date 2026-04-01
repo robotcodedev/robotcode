@@ -1842,5 +1842,142 @@ Custom Keyword With Complex Args
         assert successful_tokens >= total_tokens * 0.7  # 70% success rate minimum
 
 
+class TestBddPrefixSemanticTokens:
+    """Test that generate_sem_sub_tokens correctly emits BDD_PREFIX tokens for multi-word and French prefixes."""
+
+    FRENCH_BDD_PREFIXES = {
+        "Étant Donné",
+        "Étant Donné Que",
+        "Étant Donné Qu'",
+        "Soit",
+        "Sachant Que",
+        "Sachant Qu'",
+        "Sachant",
+        "Etant Donné",
+        "Etant Donné Que",
+        "Etant Donné Qu'",
+        "Etant Donnée",
+        "Etant Données",
+        "Lorsque",
+        "Quand",
+        "Lorsqu'",
+        "Alors",
+        "Donc",
+        "Et",
+        "Et Que",
+        "Et Qu'",
+        "Mais",
+        "Mais Que",
+        "Mais Qu'",
+    }
+
+    @staticmethod
+    def _make_namespace(bdd_prefixes: Any = None) -> Any:
+        ns = type(
+            "MockNamespace",
+            (),
+            {
+                "find_keyword": lambda self, name, **kwargs: None,
+                "languages": None,
+                "namespaces": {},
+            },
+        )()
+        if bdd_prefixes is not None:
+            ns.languages = type("MockLanguages", (), {"bdd_prefixes": bdd_prefixes})()
+        return ns
+
+    def setup_method(self) -> None:
+        self.generator = SemanticTokenGenerator()
+
+    def _get_bdd_tokens(self, token_value: str, bdd_prefixes: Any = None) -> list[SemTokenInfo]:
+        token = Token(Token.KEYWORD, token_value, 1, 4)
+        node = KeywordCall([])
+        ns = self._make_namespace(bdd_prefixes)
+        return list(self.generator.generate_sem_sub_tokens(ns, None, token, node))
+
+    def _assert_bdd_prefix_token(self, tokens: list[SemTokenInfo], expected_prefix: str, start_col: int = 4) -> None:
+        bdd_tokens = [t for t in tokens if t.sem_token_type == RobotSemTokenTypes.BDD_PREFIX]
+        assert len(bdd_tokens) == 1, (
+            f"Expected exactly 1 BDD_PREFIX token for '{expected_prefix}', "
+            f"got {len(bdd_tokens)}: {[(t.col_offset, t.length) for t in bdd_tokens]}"
+        )
+        bdd = bdd_tokens[0]
+        assert bdd.col_offset == start_col
+        assert bdd.length == len(expected_prefix), (
+            f"Expected BDD prefix length {len(expected_prefix)} for '{expected_prefix}', got {bdd.length}"
+        )
+
+    @pytest.mark.parametrize(
+        ("text", "expected_prefix"),
+        [
+            ("Given something", "Given"),
+            ("When something", "When"),
+            ("Then something", "Then"),
+            ("And something", "And"),
+            ("But something", "But"),
+        ],
+    )
+    def test_english_bdd_prefix_tokens(self, text: str, expected_prefix: str) -> None:
+        tokens = self._get_bdd_tokens(text)
+        self._assert_bdd_prefix_token(tokens, expected_prefix)
+
+    @pytest.mark.skipif(RF_VERSION < (6, 0), reason="Language support requires RF >= 6.0")
+    @pytest.mark.parametrize(
+        ("text", "expected_prefix"),
+        [
+            ("Et que My Keyword", "Et que"),
+            ("Et My Keyword", "Et"),
+            ("Étant donné que My Keyword", "Étant donné que"),
+            ("Étant donné My Keyword", "Étant donné"),
+            ("Mais que My Keyword", "Mais que"),
+            ("Mais My Keyword", "Mais"),
+            ("Sachant que My Keyword", "Sachant que"),
+            ("Sachant My Keyword", "Sachant"),
+            ("Lorsque My Keyword", "Lorsque"),
+            ("Alors My Keyword", "Alors"),
+            ("Donc My Keyword", "Donc"),
+            ("Etant donné que My Keyword", "Etant donné que"),
+        ],
+    )
+    def test_french_bdd_prefix_tokens(self, text: str, expected_prefix: str) -> None:
+        tokens = self._get_bdd_tokens(text, self.FRENCH_BDD_PREFIXES)
+        self._assert_bdd_prefix_token(tokens, expected_prefix)
+
+    @pytest.mark.skipif(RF_VERSION < (6, 0), reason="Language support requires RF >= 6.0")
+    def test_french_no_bdd_prefix(self) -> None:
+        tokens = self._get_bdd_tokens("My Keyword", self.FRENCH_BDD_PREFIXES)
+        bdd_tokens = [t for t in tokens if t.sem_token_type == RobotSemTokenTypes.BDD_PREFIX]
+        assert len(bdd_tokens) == 0
+
+    @pytest.mark.skipif(RF_VERSION < (6, 0), reason="Language support requires RF >= 6.0")
+    def test_french_longest_prefix_wins_et_que_vs_et(self) -> None:
+        """Regression: 'Et que' must match as full prefix, not just 'Et'."""
+        tokens = self._get_bdd_tokens("Et que My Keyword", self.FRENCH_BDD_PREFIXES)
+        self._assert_bdd_prefix_token(tokens, "Et que")
+
+    @pytest.mark.skipif(RF_VERSION < (6, 0), reason="Language support requires RF >= 6.0")
+    def test_french_longest_prefix_wins_mais_que_vs_mais(self) -> None:
+        """Regression: 'Mais que' must match as full prefix, not just 'Mais'."""
+        tokens = self._get_bdd_tokens("Mais que My Keyword", self.FRENCH_BDD_PREFIXES)
+        self._assert_bdd_prefix_token(tokens, "Mais que")
+
+    @pytest.mark.skipif(RF_VERSION < (6, 0), reason="Language support requires RF >= 6.0")
+    def test_french_longest_prefix_wins_etant_donne_que_vs_etant_donne(self) -> None:
+        """Regression: 'Étant donné que' must match as full prefix, not just 'Étant donné'."""
+        tokens = self._get_bdd_tokens("Étant donné que My Keyword", self.FRENCH_BDD_PREFIXES)
+        self._assert_bdd_prefix_token(tokens, "Étant donné que")
+
+    @pytest.mark.skipif(RF_VERSION < (6, 0), reason="Language support requires RF >= 6.0")
+    def test_separator_token_after_bdd_prefix(self) -> None:
+        """The space after BDD prefix must also be emitted as a token."""
+        tokens = self._get_bdd_tokens("Et que My Keyword", self.FRENCH_BDD_PREFIXES)
+        bdd_tokens = [t for t in tokens if t.sem_token_type == RobotSemTokenTypes.BDD_PREFIX]
+        assert len(bdd_tokens) == 1
+        bdd = bdd_tokens[0]
+        # Separator token is the space between prefix and keyword, length=1
+        sep_candidates = [t for t in tokens if t.col_offset == bdd.col_offset + bdd.length and t.length == 1]
+        assert len(sep_candidates) == 1, "Expected a separator token (space) after BDD prefix"
+
+
 if __name__ == "__main__":
     pytest.main([__file__])

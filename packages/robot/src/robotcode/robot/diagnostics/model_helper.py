@@ -39,7 +39,7 @@ from .entities import (
     VariableDefinition,
     VariableNotFoundDefinition,
 )
-from .keyword_finder import DEFAULT_BDD_PREFIXES
+from .keyword_finder import DEFAULT_BDD_PREFIX_REGEXP, build_bdd_prefix_regexp
 from .library_doc import (
     ArgumentInfo,
     KeywordArgumentKind,
@@ -563,37 +563,34 @@ class ModelHelper:
     BDD_TOKEN = re.compile(r"^(Given|When|Then|And|But)$", flags=re.IGNORECASE)
 
     @classmethod
+    def _get_bdd_prefix_regexp(cls, namespace: "Namespace") -> "re.Pattern[str]":
+        if namespace.languages is not None:
+            return build_bdd_prefix_regexp(frozenset(namespace.languages.bdd_prefixes))
+        return DEFAULT_BDD_PREFIX_REGEXP
+
+    @classmethod
     def split_bdd_prefix(cls, namespace: "Namespace", token: Token) -> Tuple[Optional[Token], Optional[Token]]:
-        bdd_token = None
+        bdd_match = cls._get_bdd_prefix_regexp(namespace).match(token.value)
+        if bdd_match:
+            bdd_len = len(bdd_match.group(1))
+            bdd_token = Token(
+                token.type,
+                token.value[:bdd_len],
+                token.lineno,
+                token.col_offset,
+                token.error,
+            )
 
-        parts = token.value.split()
-        if len(parts) < 2:
-            return None, token
+            token = Token(
+                token.type,
+                token.value[bdd_len + 1 :],
+                token.lineno,
+                token.col_offset + bdd_len + 1,
+                token.error,
+            )
+            return bdd_token, token
 
-        for index in range(1, len(parts)):
-            prefix = " ".join(parts[:index]).title()
-            if prefix in (
-                namespace.languages.bdd_prefixes if namespace.languages is not None else DEFAULT_BDD_PREFIXES
-            ):
-                bdd_len = len(prefix)
-                bdd_token = Token(
-                    token.type,
-                    token.value[:bdd_len],
-                    token.lineno,
-                    token.col_offset,
-                    token.error,
-                )
-
-                token = Token(
-                    token.type,
-                    token.value[bdd_len + 1 :],
-                    token.lineno,
-                    token.col_offset + bdd_len + 1,
-                    token.error,
-                )
-                break
-
-        return bdd_token, token
+        return None, token
 
     @classmethod
     def strip_bdd_prefix(cls, namespace: "Namespace", token: Token) -> Token:
@@ -611,24 +608,16 @@ class ModelHelper:
                 )
             return token
 
-        parts = token.value.split()
-        if len(parts) < 2:
-            return token
-
-        for index in range(1, len(parts)):
-            prefix = " ".join(parts[:index]).title()
-            if prefix in (
-                namespace.languages.bdd_prefixes if namespace.languages is not None else DEFAULT_BDD_PREFIXES
-            ):
-                bdd_len = len(prefix)
-                token = Token(
-                    token.type,
-                    token.value[bdd_len + 1 :],
-                    token.lineno,
-                    token.col_offset + bdd_len + 1,
-                    token.error,
-                )
-                break
+        bdd_match = cls._get_bdd_prefix_regexp(namespace).match(token.value)
+        if bdd_match:
+            bdd_len = len(bdd_match.group(1))
+            token = Token(
+                token.type,
+                token.value[bdd_len + 1 :],
+                token.lineno,
+                token.col_offset + bdd_len + 1,
+                token.error,
+            )
 
         return token
 
@@ -638,17 +627,8 @@ class ModelHelper:
             bdd_match = cls.BDD_TOKEN.match(token.value)
             return bool(bdd_match)
 
-        parts = token.value.split()
-
-        for index in range(len(parts)):
-            prefix = " ".join(parts[: index + 1]).title()
-
-            if prefix.title() in (
-                namespace.languages.bdd_prefixes if namespace.languages is not None else DEFAULT_BDD_PREFIXES
-            ):
-                return True
-
-        return False
+        bdd_match = cls._get_bdd_prefix_regexp(namespace).match(token.value + " ")
+        return bdd_match is not None and len(bdd_match.group(1)) == len(token.value)
 
     @classmethod
     def get_keyword_definition_at_token(cls, library_doc: LibraryDoc, token: Token) -> Optional[KeywordDoc]:

@@ -56,7 +56,7 @@ from robotcode.core.lsp.types import (
     SemanticTokenTypes,
 )
 from robotcode.core.text_document import TextDocument, range_to_utf16
-from robotcode.robot.diagnostics.keyword_finder import DEFAULT_BDD_PREFIXES
+from robotcode.robot.diagnostics.keyword_finder import DEFAULT_BDD_PREFIX_REGEXP, build_bdd_prefix_regexp
 from robotcode.robot.diagnostics.library_doc import (
     ALL_RUN_KEYWORDS_MATCHERS,
     BUILTIN_LIBRARY_NAME,
@@ -1116,24 +1116,15 @@ class SemanticTokenGenerator:
                         if bdd_match:
                             bdd_len = len(bdd_match.group(1))
                     else:
-                        bdd_prefixes = (
-                            namespace.languages.bdd_prefixes
+                        bdd_regexp = (
+                            build_bdd_prefix_regexp(frozenset(namespace.languages.bdd_prefixes))
                             if namespace.languages is not None
-                            else DEFAULT_BDD_PREFIXES
+                            else DEFAULT_BDD_PREFIX_REGEXP
                         )
 
-                        for prefix in bdd_prefixes:
-                            if token.value.startswith(prefix + " "):
-                                bdd_len = len(prefix)
-                                break
-                        else:
-                            parts = token.value.split()
-                            if len(parts) > 1:
-                                for index in range(1, len(parts)):
-                                    prefix = " ".join(parts[:index]).title()
-                                    if prefix in bdd_prefixes:
-                                        bdd_len = len(prefix)
-                                        break
+                        bdd_match = bdd_regexp.match(token.value)
+                        if bdd_match:
+                            bdd_len = len(bdd_match.group(1))
 
                     if bdd_len > 0:
                         yield SemTokenInfo.from_token(
