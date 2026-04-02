@@ -2107,7 +2107,7 @@
     "ovsx": "^0.10.10",
     "preact": "^10.29.0",
     "prettier": "^3.8.1",
-    "typescript": "^5.9.3",
+    "typescript": "^6.0.2",
     "typescript-eslint": "^8.58.0"
   },
   "workspaces": [
