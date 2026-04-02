@@ -684,6 +684,12 @@
         "id": "robotcode.general",
         "type": "object",
         "properties": {
+          "robotcode.showWhatsNewOnUpdate": {
+            "type": "boolean",
+            "default": true,
+            "markdownDescription": "Show a notification with a link to the release notes when RobotCode is updated.",
+            "scope": "application"
+          },
           "robotcode.disableExtension": {
             "type": "boolean",
             "default": false,

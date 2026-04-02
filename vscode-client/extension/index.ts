@@ -43,16 +43,19 @@ export async function activateAsync(context: vscode.ExtensionContext): Promise<v
   const previousVersion = context.globalState.get<string>("robotcode.lastVersion");
 
   if (previousVersion !== currentVersion) {
-    vscode.window
-      .showInformationMessage(
-        `RobotCode has been updated to v${currentVersion}. Want to know what's new? Click below to see all the latest changes and improvements.`,
-        "What's New?",
-      )
-      .then(async (action) => {
-        if (action === "What's New?") {
-          await vscode.commands.executeCommand("robotcode.showWhatsNew");
-        }
-      });
+    const showNotification = vscode.workspace.getConfiguration("robotcode").get<boolean>("showWhatsNewOnUpdate", true);
+    if (showNotification) {
+      vscode.window
+        .showInformationMessage(
+          `RobotCode has been updated to v${currentVersion}. Want to know what's new? Click below to see all the latest changes and improvements.`,
+          "What's New?",
+        )
+        .then(async (action) => {
+          if (action === "What's New?") {
+            await vscode.commands.executeCommand("robotcode.showWhatsNew");
+          }
+        });
+    }
   }
 
   context.globalState.update("robotcode.lastVersion", currentVersion);
