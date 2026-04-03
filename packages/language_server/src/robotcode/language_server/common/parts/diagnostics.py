@@ -349,7 +349,15 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
                 self._break_diagnostics_loop_event.clear()
 
                 documents = sorted(
-                    [doc for doc in self.parent.documents.documents if self._doc_need_update(doc)],
+                    [
+                        doc
+                        for doc in self.parent.documents.documents
+                        if self._doc_need_update(doc)
+                        and (
+                            doc.opened_in_editor
+                            or self.get_diagnostics_mode(doc.uri) == DiagnosticsMode.WORKSPACE
+                        )
+                    ],
                     key=lambda d: not d.opened_in_editor,
                 )
 
@@ -436,7 +444,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
                 documents_to_collect = [
                     doc
                     for doc in documents
-                    if doc.opened_in_editor or self.get_diagnostics_mode(document.uri) == DiagnosticsMode.WORKSPACE
+                    if doc.opened_in_editor or self.get_diagnostics_mode(doc.uri) == DiagnosticsMode.WORKSPACE
                 ]
 
                 with self._logger.measure_time(
