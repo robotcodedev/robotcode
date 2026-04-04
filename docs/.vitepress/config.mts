@@ -98,29 +98,40 @@ export default defineConfig({
     //     ]
     //   }
     // ],
-    sidebar: generateSidebar([
-      {
-        documentRootPath: ".",
-        collapsed: true,
-        useTitleFromFileHeading: true,
-        useTitleFromFrontmatter: true,
-        useFolderLinkFromIndexFile: true,
-        useFolderTitleFromIndexFile: true,
-        excludeByGlobPattern: ["news/**"],
-      },
-      {
-        documentRootPath: ".",
-        scanStartPath: "news",
-        resolvePath: "/news/",
-        collapsed: false,
-        useTitleFromFileHeading: true,
-        useTitleFromFrontmatter: true,
-        useFolderLinkFromIndexFile: true,
-        useFolderTitleFromIndexFile: true,
-        sortMenusByFrontmatterDate: true,
+    sidebar: (() => {
+      const sidebar = generateSidebar([
+        {
+          documentRootPath: ".",
+          collapsed: false,
+          useTitleFromFileHeading: true,
+          useTitleFromFrontmatter: true,
+          useFolderLinkFromIndexFile: true,
+          useFolderTitleFromIndexFile: true,
+          excludeByGlobPattern: ["news/**"],
+        },
+        {
+          documentRootPath: ".",
+          scanStartPath: "news",
+          resolvePath: "/news/",
+          collapsed: false,
+          useTitleFromFileHeading: true,
+          useTitleFromFrontmatter: true,
+          useFolderLinkFromIndexFile: true,
+          useFolderTitleFromIndexFile: true,
+          sortMenusByFrontmatterDate: true,
         sortMenusOrderByDescending: true,
       },
-    ]),
+    ]);
+      // Fix vitepress-sidebar generating base:"/" with absolute links starting
+      // with "/", which causes VitePress to produce protocol-relative URLs
+      // ("//path") that are treated as external links.
+      for (const key of Object.keys(sidebar)) {
+        if (sidebar[key]?.base === "/") {
+          delete sidebar[key].base;
+        }
+      }
+      return sidebar;
+    })(),
     socialLinks: [
       { icon: "github", link: "https://github.com/robotcodedev/robotcode" },
       { icon: { svg: python_svg }, link: "https://pypi.org/project/robotcode/" },
