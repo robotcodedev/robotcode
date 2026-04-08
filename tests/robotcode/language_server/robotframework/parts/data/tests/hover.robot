@@ -32,14 +32,29 @@ ${A VAR}=          i'm a var
 # ^^^^^  variable declaration
 #       ^ not the equal sign
 &{A DICT}         a=1    b=2    c=3
-# ^^^^^^  variable declarations
 
 ${LIB_ARG}    from lib
 
-${INVALID VAR ${}}    2
+${A}=    1
+${VALID VAR ${A}}    2
+# ^^^^^^^^^ valid var with inline var
+#             ^  inner var in nested variable definition
+
+${INVALID VAR ${}}
 # ^^^^^^^^^^^^^^^  no hover for invalid variable
 
-${A}=    1
+${VALID VAR @{A DICT}}    1
+# ^^^^^^^^^ valid var with inline dict
+${VALID VAR %{ENV_VAR=env_value}}    2
+# ^^^^^^^^^  valid var with inline env var
+#             ^^^^^^^ env var in inline var
+
+${INVALID VAR %{UNKNOWN_ENV_VAR}}    2
+# ^^^^^^^^^^^  invalid var with inline unknown env var with default
+
+${VALID VAR %{UNKNOWN_ENV_VAR=env_value}}    2
+# ^^^^^^^^^   valid var with inline unknown env var with default
+
 ${B}    2
 ${C}    ${A + '${B+"${D}"}'}
 #         ^  complex var expression
@@ -72,6 +87,10 @@ first
     Log    ${EMPTY+'1'}
     Log    ${INVALID VAR ${}}
 #           ^^^^^^^^^^^^^^^^  no hover for invalid variable reference
+
+    Log    ${VALID VAR ${A}}
+#                        ^  inner var in nested variable reference
+    Log    ${VALID VAR 1}
 
     Log    Hello ${A VAR}
 #   ^^^ Keyword from Library

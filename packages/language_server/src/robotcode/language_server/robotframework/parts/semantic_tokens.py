@@ -67,6 +67,8 @@ from robotcode.robot.diagnostics.library_doc import (
 )
 from robotcode.robot.diagnostics.model_helper import ModelHelper
 from robotcode.robot.diagnostics.namespace import Namespace
+from robotcode.robot.diagnostics.semantic_analyzer.enums import TokenKind
+from robotcode.robot.diagnostics.semantic_analyzer.model import SemanticModel
 from robotcode.robot.utils import RF_VERSION
 from robotcode.robot.utils.ast import (
     cached_isinstance,
@@ -1032,10 +1034,130 @@ class SemanticTokenGenerator:
     creating and managing its own token mapper and keyword analyzer.
     """
 
+    # Mapping from SemanticModel TokenKind to LSP semantic token types.
+    # Used by collect_tokens_from_model() for the new model-based path.
+    _TOKEN_KIND_TO_SEM_TOKEN: Dict[TokenKind, Tuple[AnyTokenType, Optional[Set[AnyTokenModifier]]]] = {
+        TokenKind.KEYWORD: (RobotSemTokenTypes.KEYWORD, None),
+        TokenKind.BDD_PREFIX: (RobotSemTokenTypes.BDD_PREFIX, None),
+        TokenKind.NAMESPACE: (RobotSemTokenTypes.NAMESPACE, None),
+        TokenKind.VARIABLE: (RobotSemTokenTypes.VARIABLE, None),
+        TokenKind.VARIABLE_NOT_FOUND: (RobotSemTokenTypes.VARIABLE, None),
+        TokenKind.VARIABLE_PREFIX: (RobotSemTokenTypes.VARIABLE_BEGIN, None),
+        TokenKind.VARIABLE_OPEN_BRACE: (RobotSemTokenTypes.VARIABLE_BEGIN, None),
+        TokenKind.VARIABLE_CLOSE_BRACE: (RobotSemTokenTypes.VARIABLE_END, None),
+        TokenKind.VARIABLE_BASE: (RobotSemTokenTypes.VARIABLE, None),
+        TokenKind.VARIABLE_EXTENDED: (RobotSemTokenTypes.VARIABLE, None),
+        TokenKind.VARIABLE_TYPE_SEPARATOR: (SemanticTokenTypes.OPERATOR, None),
+        TokenKind.VARIABLE_TYPE_HINT: (SemanticTokenTypes.TYPE, None),
+        TokenKind.VARIABLE_DEFAULT_SEPARATOR: (SemanticTokenTypes.OPERATOR, None),
+        TokenKind.VARIABLE_DEFAULT_VALUE: (RobotSemTokenTypes.ARGUMENT, None),
+        TokenKind.VARIABLE_PATTERN_SEPARATOR: (SemanticTokenTypes.OPERATOR, None),
+        TokenKind.VARIABLE_PATTERN: (RobotSemTokenTypes.ARGUMENT, None),
+        TokenKind.VARIABLE_ASSIGN_MARK: (RobotSemTokenTypes.VARIABLE, None),
+        TokenKind.VARIABLE_EXPRESSION_OPEN: (RobotSemTokenTypes.EXPRESSION_BEGIN, None),
+        TokenKind.VARIABLE_EXPRESSION_CLOSE: (RobotSemTokenTypes.EXPRESSION_END, None),
+        TokenKind.PYTHON_EXPRESSION: (RobotSemTokenTypes.VARIABLE_EXPRESSION, None),
+        TokenKind.PYTHON_VARIABLE_REF: (RobotSemTokenTypes.VARIABLE, None),
+        TokenKind.VARIABLE_INDEX: (RobotSemTokenTypes.VARIABLE, None),
+        TokenKind.VARIABLE_INDEX_OPEN: (RobotSemTokenTypes.VARIABLE_BEGIN, None),
+        TokenKind.VARIABLE_INDEX_CLOSE: (RobotSemTokenTypes.VARIABLE_END, None),
+        TokenKind.VARIABLE_INDEX_CONTENT: (RobotSemTokenTypes.VARIABLE, None),
+        TokenKind.TEXT_FRAGMENT: (RobotSemTokenTypes.ARGUMENT, None),
+        TokenKind.ARGUMENT: (RobotSemTokenTypes.ARGUMENT, None),
+        TokenKind.NAMED_ARGUMENT_NAME: (RobotSemTokenTypes.NAMED_ARGUMENT, None),
+        TokenKind.NAMED_ARGUMENT_VALUE: (RobotSemTokenTypes.ARGUMENT, None),
+        TokenKind.CONTROL_FLOW: (RobotSemTokenTypes.CONTROL_FLOW, None),
+        TokenKind.CONDITION: (RobotSemTokenTypes.ARGUMENT, None),
+        TokenKind.TEST_NAME: (RobotSemTokenTypes.TESTCASE_NAME, {SemanticTokenModifiers.DECLARATION}),
+        TokenKind.KEYWORD_NAME: (RobotSemTokenTypes.KEYWORD_NAME, {SemanticTokenModifiers.DECLARATION}),
+        TokenKind.VARIABLE_NAME: (RobotSemTokenTypes.VARIABLE, {SemanticTokenModifiers.DECLARATION}),
+        TokenKind.SETTING_NAME: (RobotSemTokenTypes.SETTING, None),
+        TokenKind.IMPORT_NAME: (RobotSemTokenTypes.SETTING_IMPORT, None),
+        TokenKind.HEADER: (RobotSemTokenTypes.HEADER, None),
+        TokenKind.SEPARATOR: (RobotSemTokenTypes.SEPARATOR, None),
+        TokenKind.CONTINUATION: (RobotSemTokenTypes.CONTINUATION, None),
+        TokenKind.COMMENT: (SemanticTokenTypes.COMMENT, None),
+        TokenKind.TAG: (RobotSemTokenTypes.ARGUMENT, None),
+        TokenKind.CONFIG: (RobotSemTokenTypes.CONFIG, None),
+        TokenKind.ERROR: (RobotSemTokenTypes.ERROR, None),
+    }
+
     def __init__(self) -> None:
         """Initialize the generator with its own dependencies."""
         self.token_mapper = SemanticTokenMapper()
         self.keyword_analyzer = KeywordTokenAnalyzer(self.token_mapper)
+
+    def collect_tokens_from_model(
+        self,
+        document: TextDocument,
+        semantic_model: SemanticModel,
+        range: Optional[Range],
+        token_types: Sequence[Enum],
+        token_modifiers: Sequence[Enum],
+    ) -> Union[SemanticTokens, SemanticTokensPartialResult, None]:
+        """Collect semantic tokens from the pre-built SemanticModel.
+
+        This is the Tier 1 model-based path, used when the semantic model
+        feature flag is enabled. It maps SemanticModel TokenKind values
+        to LSP semantic token types via _TOKEN_KIND_TO_SEM_TOKEN.
+        """
+        data: List[int] = []
+        last_line = 0
+        last_col = 0
+        lines = document.get_lines()
+
+        for stmt in semantic_model.statements:
+            check_current_task_canceled()
+
+            for token in stmt.tokens:
+                if token.length == 0:
+                    continue
+
+                # Range filtering
+                token_line_0 = token.line - 1
+                if range is not None:
+                    if token_line_0 < range.start.line:
+                        continue
+                    if token_line_0 > range.end.line:
+                        break
+
+                sem_info = self._TOKEN_KIND_TO_SEM_TOKEN.get(token.kind)
+                if sem_info is None:
+                    continue
+
+                sem_type, sem_mods = sem_info
+
+                # Convert to UTF-16 positions
+                token_range = range_to_utf16(
+                    lines,
+                    Range(
+                        start=Position(line=token_line_0, character=token.col_offset),
+                        end=Position(line=token_line_0, character=token.col_offset + token.length),
+                    ),
+                )
+
+                token_col_offset = token_range.start.character
+                token_length = token_range.end.character - token_range.start.character
+
+                current_line = token_line_0
+
+                data.append(current_line - last_line)
+
+                if last_line != current_line:
+                    last_col = token_col_offset
+                    data.append(last_col)
+                else:
+                    delta = token_col_offset - last_col
+                    data.append(delta)
+                    last_col += delta
+
+                last_line = current_line
+
+                data.append(token_length)
+                data.append(token_types.index(sem_type))
+                data.append(reduce(operator.or_, [2 ** token_modifiers.index(e) for e in sem_mods]) if sem_mods else 0)
+
+        return SemanticTokens(data=data)
 
     def _get_tokens_after(self, tokens: List[Token], target_token: Token) -> List[Token]:
         """Get all tokens after target token efficiently.
@@ -1639,6 +1761,16 @@ class RobotSemanticTokenProtocolPart(RobotLanguageServerProtocolPart):
         """
         model = self.parent.documents_cache.get_model(document)
         namespace = self.parent.documents_cache.get_namespace(document)
+
+        semantic_model = namespace.semantic_model
+        if semantic_model is not None:
+            return self.token_generator.collect_tokens_from_model(
+                document,
+                semantic_model,
+                range,
+                self.parent.semantic_tokens.token_types,
+                self.parent.semantic_tokens.token_modifiers,
+            )
 
         builtin_library_doc = next(
             (

@@ -667,10 +667,10 @@ result:
     range:
       end:
         character: 21
-        line: 266
+        line: 285
       start:
         character: 0
-        line: 266
+        line: 285
     uri: hover.robot
   name: a keyword with params
   tags: null
@@ -682,10 +682,10 @@ result:
     range:
       end:
         character: 16
-        line: 258
+        line: 277
       start:
         character: 0
-        line: 258
+        line: 277
     uri: hover.robot
   name: a simple keyword
   tags: null
@@ -697,10 +697,10 @@ result:
     range:
       end:
         character: 27
-        line: 285
+        line: 304
       start:
         character: 0
-        line: 285
+        line: 304
     uri: hover.robot
   name: again a keyword with params
   tags: null
@@ -712,10 +712,10 @@ result:
     range:
       end:
         character: 27
-        line: 275
+        line: 294
       start:
         character: 0
-        line: 275
+        line: 294
     uri: hover.robot
   name: another keyword with params
   tags: null
@@ -732,7 +732,7 @@ result:
         character: 2
         line: 3
     uri: indexed_variables.robot
-  name: ${A_LIST ${index}}
+  name: ${A_LIST 1}
   tags: null
 - !WorkspaceSymbol
   container_name: indexed_variables

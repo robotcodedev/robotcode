@@ -1,0 +1,103 @@
+statement_count: 10
+statements:
+- type: SemanticStatement
+  kind: unknown
+  line_start: 1
+  line_end: 1
+  name: null
+  setting_name: null
+  import_type: null
+  import_name: null
+  token_count: 1
+- type: ImportStatement
+  kind: import
+  line_start: 2
+  line_end: 2
+  name: null
+  setting_name: null
+  import_type: LIBRARY
+  import_name: Collections
+  token_count: 3
+- type: SemanticStatement
+  kind: unknown
+  line_start: 3
+  line_end: 3
+  name: null
+  setting_name: null
+  import_type: null
+  import_name: null
+  token_count: 0
+- type: SemanticStatement
+  kind: unknown
+  line_start: 4
+  line_end: 4
+  name: null
+  setting_name: null
+  import_type: null
+  import_name: null
+  token_count: 1
+- type: DefinitionStatement
+  kind: test_case_def
+  line_start: 5
+  line_end: 10
+  name: My Test
+  setting_name: null
+  import_type: null
+  import_name: null
+  token_count: 0
+- type: SettingStatement
+  kind: setting
+  line_start: 6
+  line_end: 6
+  name: null
+  setting_name: Tags
+  import_type: null
+  import_name: null
+  token_count: 6
+- type: KeywordCallStatement
+  kind: keyword_call
+  line_start: 7
+  line_end: 7
+  name: null
+  setting_name: null
+  import_type: null
+  import_name: null
+  token_count: 6
+- type: ForStatement
+  kind: for_header
+  line_start: 8
+  line_end: 8
+  name: null
+  setting_name: null
+  import_type: null
+  import_name: null
+  token_count: 10
+- type: KeywordCallStatement
+  kind: keyword_call
+  line_start: 9
+  line_end: 9
+  name: null
+  setting_name: null
+  import_type: null
+  import_name: null
+  token_count: 4
+- type: SemanticStatement
+  kind: unknown
+  line_start: 10
+  line_end: 10
+  name: null
+  setting_name: null
+  import_type: null
+  import_name: null
+  token_count: 2
+diagnostic_count: 0
+diagnostics: []
+test_case_definitions:
+- My Test
+variable_references:
+- name: ${item}
+  type: local variable
+  count: 1
+- name: ${x}
+  type: local variable
+  count: 0

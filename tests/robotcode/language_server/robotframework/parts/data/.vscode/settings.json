@@ -17,7 +17,7 @@
     "robotcode.analysis.referencesCodeLens": false,
     "robotcode.analysis.diagnosticMode": "openFilesOnly",
     "robotcode.analysis.progressMode": "detailed",
-    "robotcode.analysis.findUnusedReferences": true,
+    "robotcode.analysis.findUnusedReferences": false,
     "robotcode.analysis.cache.saveLocation": "workspaceFolder",
     "robotcode.analysis.cache.ignoredLibraries": [
         //"robot.libraries.Remote",
@@ -44,5 +44,6 @@
         "DEBUG",
         // "--debugpy"
     ],
+    "robotcode.disableExtension": false,
 
 }

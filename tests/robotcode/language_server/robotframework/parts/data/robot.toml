@@ -72,6 +72,8 @@ enabled = { if = "environ.get('DISABLED_PROFILE') in ['true', '1']" }
 API_URL = "https://api.test1.company.com"
 APP_URL = "https://app.test1.company.com"
 
+[tool.robotcode-analyze]
+semantic-model = true
 
 [tool.robotcode-analyze.code]
-collect-unused = true
+collect-unused = false

@@ -13,7 +13,7 @@ import sys
 import tempfile
 import traceback
 from contextlib import contextmanager
-from dataclasses import dataclass, field
+from dataclasses import MISSING, dataclass, field, fields
 from enum import Enum
 from pathlib import Path
 from typing import (
@@ -115,6 +115,10 @@ if RF_VERSION >= (7, 0):
     )
     from robot.running.resourcemodel import ResourceFile
     from robot.utils import NOT_SET as robot_notset  # type: ignore[no-redef] # noqa: N811
+
+if RF_VERSION >= (7, 4):
+    from robot.api.types import KeywordArgument as _KeywordArgument
+    from robot.api.types import KeywordName as _KeywordName
 
 patch_variable_not_found()
 
@@ -469,28 +473,80 @@ class ArgumentInfo:
     default_value: Optional[Any] = None
     types: Optional[List[str]] = None
     literal_values: Optional[List[str]] = None
+    is_keyword_name: bool = False
+    is_keyword_argument: bool = False
 
-    @staticmethod
-    def _extract_literal_values(type_info: Any) -> Optional[List[str]]:
-        if RF_VERSION < (7, 0) or type_info is None:
+    def __setstate__(self, state: Any) -> None:
+        if isinstance(state, tuple):
+            _, state = state
+        if isinstance(state, dict):
+            defaults = {f.name: f.default for f in fields(self) if f.default is not MISSING}
+            for slot in self.__slots__:
+                object.__setattr__(self, slot, state.get(slot, defaults.get(slot)))
+
+    if RF_VERSION >= (7, 0):
+
+        @staticmethod
+        def _extract_literal_values(type_info: Any) -> Optional[List[str]]:
+            if type_info is None:
+                return None
+
+            values: List[str] = []
+
+            def _collect(ti: Any) -> None:
+                if ti.type is Literal and ti.nested:
+                    for nested in ti.nested:
+                        values.append(nested.name.strip("'"))
+                elif ti.is_union and ti.nested:
+                    for nested in ti.nested:
+                        _collect(nested)
+
+            _collect(type_info)
+            return values or None
+
+    else:
+
+        @staticmethod
+        def _extract_literal_values(type_info: Any) -> Optional[List[str]]:
             return None
 
-        values: List[str] = []
+    if RF_VERSION >= (7, 4):
 
-        def _collect(ti: Any) -> None:
-            if ti.type is Literal and ti.nested:
-                for nested in ti.nested:
-                    values.append(nested.name.strip("'"))
-            elif ti.is_union and ti.nested:
-                for nested in ti.nested:
-                    _collect(nested)
+        @staticmethod
+        def _is_keyword_name_type(type_info: Any) -> bool:
+            if type_info is None:
+                return False
+            if type_info.type is _KeywordName:
+                return True
+            if type_info.is_union and type_info.nested:
+                return any(n.type is _KeywordName for n in type_info.nested)
+            return False
 
-        _collect(type_info)
-        return values or None
+        @staticmethod
+        def _is_keyword_argument_type(type_info: Any) -> bool:
+            if type_info is None:
+                return False
+            if type_info.type is _KeywordArgument:
+                return True
+            if type_info.is_union and type_info.nested:
+                return any(n.type is _KeywordArgument for n in type_info.nested)
+            return False
+
+    else:
+
+        @staticmethod
+        def _is_keyword_name_type(type_info: Any) -> bool:
+            return False
+
+        @staticmethod
+        def _is_keyword_argument_type(type_info: Any) -> bool:
+            return False
 
     @staticmethod
     def from_robot(arg: Any) -> ArgumentInfo:
         robot_arg = cast(ArgInfo, arg)
+
+        type_info = robot_arg.type if RF_VERSION >= (7, 0) else None
 
         return ArgumentInfo(
             name=robot_arg.name,
@@ -507,7 +563,9 @@ class ArgumentInfo:
             ),
             kind=KeywordArgumentKind[robot_arg.kind],
             required=robot_arg.required,
-            literal_values=ArgumentInfo._extract_literal_values(robot_arg.type if RF_VERSION >= (7, 0) else None),
+            literal_values=ArgumentInfo._extract_literal_values(type_info),
+            is_keyword_name=ArgumentInfo._is_keyword_name_type(type_info),
+            is_keyword_argument=ArgumentInfo._is_keyword_argument_type(type_info),
         )
 
     def __str__(self) -> str:

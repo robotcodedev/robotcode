@@ -5,6 +5,7 @@ import weakref
 from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import (
+    TYPE_CHECKING,
     Any,
     Dict,
     Iterator,
@@ -56,6 +57,9 @@ from .library_doc import (
 )
 from .scope_tree import LocalScope, ScopeTree
 from .variable_scope import VariableScope
+
+if TYPE_CHECKING:
+    from .semantic_analyzer.model import SemanticModel
 
 
 class _Sentinel:
@@ -111,6 +115,7 @@ class NamespaceData:
     # --- Analysis results (directly serializable) ---
     diagnostics: List[Diagnostic] = field(default_factory=list)
     test_case_definitions: List[TestCaseDefinition] = field(default_factory=list)
+    semantic_model: Optional["SemanticModel"] = None
 
     # --- References via stable_id ---
     keyword_references: Dict[str, Set[Location]] = field(default_factory=dict)
@@ -178,6 +183,7 @@ class Namespace:
         scope_tree: ScopeTree,
         finder: KeywordFinder,
         sentinel: object,
+        semantic_model: Optional["SemanticModel"] = None,
     ) -> None:
         self.imports_manager = imports_manager
         self.source = source
@@ -204,6 +210,7 @@ class Namespace:
         self._scope_tree = scope_tree
         self._finder: KeywordFinder = finder
         self._sentinel = sentinel  # prevent GC — ref-counted by imports_manager
+        self._semantic_model = semantic_model
 
         # Lazy-computed caches
         self._namespaces: Optional[Dict[KeywordMatcher, List[LibraryEntry]]] = None
@@ -437,6 +444,10 @@ class Namespace:
     def finder(self) -> "KeywordFinder":
         return self._finder
 
+    @property
+    def semantic_model(self) -> Optional["SemanticModel"]:
+        return self._semantic_model
+
     @_logger.call(condition=lambda self, name, **kwargs: name not in self._finder._cache)
     def find_keyword(
         self,
@@ -515,6 +526,7 @@ class Namespace:
             imports=[imp for imp in self._import_entries if imp.source is None or imp.source == self.source],
             diagnostics=list(self._diagnostics),
             test_case_definitions=list(self._test_case_definitions),
+            semantic_model=self._semantic_model,
             keyword_references=kw_refs_merged,
             variable_references=var_refs_merged,
             local_variable_assignments=var_assigns_merged,
@@ -641,6 +653,15 @@ class Namespace:
         # --- Build ScopeTree from cached local scopes + reconstructed file scope ---
         scope_tree = ScopeTree(file_scope=scope, local_scopes=list(data.local_scopes))
 
+        semantic_model = data.semantic_model
+        if semantic_model is not None:
+            semantic_model.file_scope = scope
+            semantic_model.build_index()
+
+            from .semantic_analyzer.serialization import resolve_references
+
+            resolve_references(semantic_model, kw_by_id, all_entries)
+
         # --- Build KeywordFinder ---
         search_order = tuple(imports_manager.global_library_search_order)
         finder = KeywordFinder(
@@ -680,6 +701,7 @@ class Namespace:
             scope_tree=scope_tree,
             finder=finder,
             sentinel=sentinel,
+            semantic_model=semantic_model,
         )
 
 
@@ -710,6 +732,10 @@ class NamespaceBuilder:
         self._document_type = document_type
         self._languages = languages
         self._workspace_languages = workspace_languages
+        self._enable_semantic_model = False
+
+    def set_semantic_model_enabled(self, enabled: bool) -> None:
+        self._enable_semantic_model = enabled
 
     @_logger.call
     def build(self) -> Namespace:
@@ -718,6 +744,7 @@ class NamespaceBuilder:
         Returns a fully populated Namespace instance.
         """
         from .namespace_analyzer import NamespaceAnalyzer
+        from .semantic_analyzer.analyzer import SemanticAnalyzer
 
         with self._logger.measure_time(lambda: f"Build Namespace for {self._source}", context_name="import"):
             library_doc = self._imports_manager.get_libdoc_from_model(self._model, self._source)
@@ -730,8 +757,16 @@ class NamespaceBuilder:
             # removes library/resource/variables entries from its caches.
             sentinel = _Sentinel()
 
+            # Choose analyzer based on feature flag
+            if self._enable_semantic_model:
+                self._logger.info(lambda: f"Using SemanticAnalyzer for {self._source}")
+                analyzer: NamespaceAnalyzer | SemanticAnalyzer = SemanticAnalyzer(
+                    self._model, self._source, document_uri, self._languages
+                )
+            else:
+                analyzer = NamespaceAnalyzer(self._model, self._source, document_uri, self._languages)
+
             # Phase 1+2: Build VariableScope and resolve imports
-            analyzer = NamespaceAnalyzer(self._model, self._source, document_uri, self._languages)
             resolved = analyzer.resolve(library_doc, self._imports_manager, sentinel=sentinel)
             assert analyzer.variable_scope is not None
 
@@ -803,4 +838,5 @@ class NamespaceBuilder:
                 scope_tree=analyzer_result.scope_tree,
                 finder=finder,
                 sentinel=sentinel,
+                semantic_model=analyzer_result.semantic_model,
             )

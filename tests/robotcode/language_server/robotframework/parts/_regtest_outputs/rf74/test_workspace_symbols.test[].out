@@ -2903,10 +2903,10 @@ result:
     range:
       end:
         character: 26
-        line: 267
+        line: 286
       start:
         character: 21
-        line: 267
+        line: 286
     uri: hover.robot
   name: ${A VAR}
   tags: null
@@ -2918,10 +2918,10 @@ result:
     range:
       end:
         character: 35
-        line: 276
+        line: 295
       start:
         character: 30
-        line: 276
+        line: 295
     uri: hover.robot
   name: ${A VAR}
   tags: null
@@ -2933,10 +2933,10 @@ result:
     range:
       end:
         character: 3
-        line: 41
+        line: 37
       start:
         character: 2
-        line: 41
+        line: 37
     uri: hover.robot
   name: ${A}
   tags: null
@@ -2948,10 +2948,10 @@ result:
     range:
       end:
         character: 3
-        line: 42
+        line: 57
       start:
         character: 2
-        line: 42
+        line: 57
     uri: hover.robot
   name: ${B}
   tags: null
@@ -2963,10 +2963,10 @@ result:
     range:
       end:
         character: 3
-        line: 43
+        line: 58
       start:
         character: 2
-        line: 43
+        line: 58
     uri: hover.robot
   name: ${C}
   tags: null
@@ -2978,10 +2978,10 @@ result:
     range:
       end:
         character: 3
-        line: 56
+        line: 71
       start:
         character: 2
-        line: 56
+        line: 71
     uri: hover.robot
   name: ${D}
   tags: null
@@ -2993,10 +2993,10 @@ result:
     range:
       end:
         character: 3
-        line: 57
+        line: 72
       start:
         character: 2
-        line: 57
+        line: 72
     uri: hover.robot
   name: ${E}
   tags: null
@@ -3008,10 +3008,10 @@ result:
     range:
       end:
         character: 3
-        line: 58
+        line: 73
       start:
         character: 2
-        line: 58
+        line: 73
     uri: hover.robot
   name: ${F}
   tags: null
@@ -3022,26 +3022,11 @@ result:
   location:
     range:
       end:
-        character: 17
-        line: 38
-      start:
-        character: 2
-        line: 38
-    uri: hover.robot
-  name: ${INVALID VAR ${}}
-  tags: null
-- !WorkspaceSymbol
-  container_name: hover
-  data: null
-  kind: 13
-  location:
-    range:
-      end:
         character: 3
-        line: 48
+        line: 63
       start:
         character: 2
-        line: 48
+        line: 63
     uri: hover.robot
   name: ${K}
   tags: null
@@ -3053,10 +3038,10 @@ result:
     range:
       end:
         character: 9
-        line: 36
+        line: 35
       start:
         character: 2
-        line: 36
+        line: 35
     uri: hover.robot
   name: ${LIB_ARG}
   tags: null
@@ -3067,11 +3052,71 @@ result:
   location:
     range:
       end:
+        character: 16
+        line: 38
+      start:
+        character: 2
+        line: 38
+    uri: hover.robot
+  name: ${VALID VAR 1}
+  tags: null
+- !WorkspaceSymbol
+  container_name: hover
+  data: null
+  kind: 13
+  location:
+    range:
+      end:
+        character: 32
+        line: 47
+      start:
+        character: 2
+        line: 47
+    uri: hover.robot
+  name: ${VALID VAR 1}
+  tags: null
+- !WorkspaceSymbol
+  container_name: hover
+  data: null
+  kind: 13
+  location:
+    range:
+      end:
+        character: 21
+        line: 45
+      start:
+        character: 2
+        line: 45
+    uri: hover.robot
+  name: ${VALID VAR ['a', 'b', 'c']}
+  tags: null
+- !WorkspaceSymbol
+  container_name: hover
+  data: null
+  kind: 13
+  location:
+    range:
+      end:
+        character: 40
+        line: 54
+      start:
+        character: 2
+        line: 54
+    uri: hover.robot
+  name: ${VALID VAR env_value}
+  tags: null
+- !WorkspaceSymbol
+  container_name: hover
+  data: null
+  kind: 13
+  location:
+    range:
+      end:
         character: 22
-        line: 286
+        line: 305
       start:
         character: 21
-        line: 286
+        line: 305
     uri: hover.robot
   name: ${a}
   tags: null
@@ -3083,10 +3128,10 @@ result:
     range:
       end:
         character: 30
-        line: 286
+        line: 305
       start:
         character: 29
-        line: 286
+        line: 305
     uri: hover.robot
   name: ${b}
   tags: null
@@ -3098,10 +3143,10 @@ result:
     range:
       end:
         character: 20
-        line: 298
+        line: 317
       start:
         character: 16
-        line: 298
+        line: 317
     uri: hover.robot
   name: ${e}
   tags: null
@@ -3113,10 +3158,10 @@ result:
     range:
       end:
         character: 16
-        line: 81
+        line: 100
       start:
         character: 13
-        line: 81
+        line: 100
     uri: hover.robot
   name: ${key}
   tags: null
@@ -3128,10 +3173,10 @@ result:
     range:
       end:
         character: 12
-        line: 111
+        line: 130
       start:
         character: 6
-        line: 111
+        line: 130
     uri: hover.robot
   name: ${result}
   tags: null
@@ -3143,10 +3188,10 @@ result:
     range:
       end:
         character: 23
-        line: 276
+        line: 295
       start:
         character: 21
-        line: 276
+        line: 295
     uri: hover.robot
   name: ${tt}
   tags: null
@@ -3158,10 +3203,10 @@ result:
     range:
       end:
         character: 28
-        line: 81
+        line: 100
       start:
         character: 23
-        line: 81
+        line: 100
     uri: hover.robot
   name: ${value}
   tags: null
@@ -3188,10 +3233,10 @@ result:
     range:
       end:
         character: 9
-        line: 241
+        line: 260
       start:
         character: 0
-        line: 241
+        line: 260
     uri: hover.robot
   name: a keyword
   tags: null
@@ -3203,10 +3248,10 @@ result:
     range:
       end:
         character: 21
-        line: 266
+        line: 285
       start:
         character: 0
-        line: 266
+        line: 285
     uri: hover.robot
   name: a keyword with params
   tags: null
@@ -3218,10 +3263,10 @@ result:
     range:
       end:
         character: 25
-        line: 295
+        line: 314
       start:
         character: 0
-        line: 295
+        line: 314
     uri: hover.robot
   name: a keyword with try except
   tags: null
@@ -3233,10 +3278,10 @@ result:
     range:
       end:
         character: 16
-        line: 258
+        line: 277
       start:
         character: 0
-        line: 258
+        line: 277
     uri: hover.robot
   name: a simple keyword
   tags: null
@@ -3248,10 +3293,10 @@ result:
     range:
       end:
         character: 27
-        line: 285
+        line: 304
       start:
         character: 0
-        line: 285
+        line: 304
     uri: hover.robot
   name: again a keyword with params
   tags: null
@@ -3263,10 +3308,10 @@ result:
     range:
       end:
         character: 27
-        line: 275
+        line: 294
       start:
         character: 0
-        line: 275
+        line: 294
     uri: hover.robot
   name: another keyword with params
   tags: null
@@ -3278,10 +3323,10 @@ result:
     range:
       end:
         character: 5
-        line: 192
+        line: 211
       start:
         character: 0
-        line: 192
+        line: 211
     uri: hover.robot
   name: eight
   tags: null
@@ -3293,10 +3338,10 @@ result:
     range:
       end:
         character: 8
-        line: 217
+        line: 236
       start:
         character: 0
-        line: 217
+        line: 236
     uri: hover.robot
   name: eleventh
   tags: null
@@ -3308,10 +3353,10 @@ result:
     range:
       end:
         character: 5
-        line: 62
+        line: 77
       start:
         character: 0
-        line: 62
+        line: 77
     uri: hover.robot
   name: first
   tags: null
@@ -3323,10 +3368,10 @@ result:
     range:
       end:
         character: 5
-        line: 119
+        line: 138
       start:
         character: 0
-        line: 119
+        line: 138
     uri: hover.robot
   name: forth
   tags: null
@@ -3338,10 +3383,10 @@ result:
     range:
       end:
         character: 6
-        line: 199
+        line: 218
       start:
         character: 0
-        line: 199
+        line: 218
     uri: hover.robot
   name: nineth
   tags: null
@@ -3353,10 +3398,10 @@ result:
     range:
       end:
         character: 6
-        line: 102
+        line: 121
       start:
         character: 0
-        line: 102
+        line: 121
     uri: hover.robot
   name: second
   tags: null
@@ -3368,10 +3413,10 @@ result:
     range:
       end:
         character: 7
-        line: 150
+        line: 169
       start:
         character: 0
-        line: 150
+        line: 169
     uri: hover.robot
   name: seventh
   tags: null
@@ -3383,10 +3428,10 @@ result:
     range:
       end:
         character: 8
-        line: 187
+        line: 206
       start:
         character: 0
-        line: 187
+        line: 206
     uri: hover.robot
   name: seventh1
   tags: null
@@ -3398,10 +3443,10 @@ result:
     range:
       end:
         character: 5
-        line: 125
+        line: 144
       start:
         character: 0
-        line: 125
+        line: 144
     uri: hover.robot
   name: sixth
   tags: null
@@ -3413,10 +3458,10 @@ result:
     range:
       end:
         character: 13
-        line: 262
+        line: 281
       start:
         character: 0
-        line: 262
+        line: 281
     uri: hover.robot
   name: sleep a while
   tags: null
@@ -3428,10 +3473,10 @@ result:
     range:
       end:
         character: 5
-        line: 213
+        line: 232
       start:
         character: 0
-        line: 213
+        line: 232
     uri: hover.robot
   name: tenth
   tags: null
@@ -3443,10 +3488,10 @@ result:
     range:
       end:
         character: 5
-        line: 110
+        line: 129
       start:
         character: 0
-        line: 110
+        line: 129
     uri: hover.robot
   name: third
   tags: null
@@ -3458,10 +3503,10 @@ result:
     range:
       end:
         character: 7
-        line: 234
+        line: 253
       start:
         character: 0
-        line: 234
+        line: 253
     uri: hover.robot
   name: twelfth
   tags: null
@@ -3478,7 +3523,7 @@ result:
         character: 2
         line: 3
     uri: indexed_variables.robot
-  name: ${A_LIST ${index}}
+  name: ${A_LIST 1}
   tags: null
 - !WorkspaceSymbol
   container_name: indexed_variables

@@ -1,0 +1,5 @@
+data: !GeneratedTestData
+  character: 7
+  line: 51
+  name: invalid var with inline unknown env var with default
+result: null

@@ -1,0 +1,15 @@
+data: !GeneratedTestData
+  character: 10
+  line: 47
+  name: valid var with inline env var
+result: !Hover
+  contents:
+    kind: markdown
+    value: '### Suite Variable `${VALID VAR %{ENV_VAR=env_value}}`'
+  range:
+    end:
+      character: 32
+      line: 47
+    start:
+      character: 2
+      line: 47

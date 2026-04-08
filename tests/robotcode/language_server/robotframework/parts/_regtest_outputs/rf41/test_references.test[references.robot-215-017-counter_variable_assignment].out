@@ -1,5 +1,0 @@
-data: !GeneratedTestData
-  character: 17
-  line: 215
-  name: counter variable assignment
-result: null

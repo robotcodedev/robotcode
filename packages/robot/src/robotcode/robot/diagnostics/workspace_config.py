@@ -77,9 +77,16 @@ class WorkspaceConfig(ConfigBase):
     exclude_patterns: List[str] = field(default_factory=list)
 
 
+@config_section("robotcode.experimental")
+@dataclass
+class ExperimentalConfig(ConfigBase):
+    semantic_model: bool = False
+
+
 @dataclass
 class WorkspaceAnalysisConfig:
     exclude_patterns: List[str] = field(default_factory=list)
     cache: CacheConfig = field(default_factory=CacheConfig)
     robot: AnalysisRobotConfig = field(default_factory=AnalysisRobotConfig)
     modifiers: AnalysisDiagnosticModifiersConfig = field(default_factory=AnalysisDiagnosticModifiersConfig)
+    semantic_model: bool = False

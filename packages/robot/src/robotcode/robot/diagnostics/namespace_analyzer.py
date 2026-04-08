@@ -5,10 +5,9 @@ import re
 import token as python_token
 from collections import defaultdict
 from concurrent.futures import CancelledError
-from dataclasses import dataclass
 from io import StringIO
 from tokenize import TokenError, generate_tokens
-from typing import Any, Callable, Dict, Iterator, List, Optional, Set, Tuple, Union, cast
+from typing import Any, Callable, Dict, Iterator, List, Literal, Optional, Set, Tuple, Union, cast
 
 from robot.errors import VariableError
 from robot.parsing.lexer.tokens import Token
@@ -67,6 +66,7 @@ from ..utils.variables import (
     split_from_equals,
 )
 from ..utils.visitor import Visitor
+from .analyzer_result import AnalyzerResult
 from .entities import (
     ArgumentDefinition,
     BuiltInVariableDefinition,
@@ -87,7 +87,7 @@ from .imports_manager import ImportsManager
 from .keyword_finder import KeywordFinder
 from .library_doc import KeywordDoc, KeywordMatcher, LibraryDoc, ResourceDoc, is_embedded_keyword
 from .model_helper import ModelHelper
-from .scope_tree import ScopeTree, ScopeTreeBuilder
+from .scope_tree import ScopeTreeBuilder
 from .variable_scope import VariableScope
 
 if RF_VERSION < (7, 0):
@@ -96,20 +96,6 @@ if RF_VERSION < (7, 0):
 else:
     from robot.parsing.model.statements import Var
     from robot.variables.search import VariableMatches
-
-
-@dataclass(slots=True, frozen=True)
-class AnalyzerResult:
-    diagnostics: List[Diagnostic]
-    keyword_references: Dict[KeywordDoc, Set[Location]]
-    variable_references: Dict[VariableDefinition, Set[Location]]
-    local_variable_assignments: Dict[VariableDefinition, Set[Range]]
-    namespace_references: Dict[LibraryEntry, Set[Location]]
-    test_case_definitions: List[TestCaseDefinition]
-    keyword_tag_references: Dict[str, Set[Location]]
-    testcase_tag_references: Dict[str, Set[Location]]
-    metadata_references: Dict[str, Set[Location]]
-    scope_tree: ScopeTree = None  # type: ignore[assignment]  # set by run()
 
 
 _builtin_variables: Optional[List[VariableDefinition]] = None
@@ -155,12 +141,12 @@ class NamespaceAnalyzer(Visitor):
         self._metadata_references: Dict[str, Set[Location]] = defaultdict(set)
 
         # Phase 1+2 results (set by resolve())
-        self._library_doc: ResourceDoc = None  # type: ignore[assignment]  # set by resolve()
+        self._library_doc: ResourceDoc = cast(ResourceDoc, None)  # set by resolve()
         self._variable_scope: Optional[VariableScope] = None
         self._resolved_imports: Optional[ResolvedImports] = None
 
         # Phase 3 state (set at start of run())
-        self._finder: KeywordFinder = None  # type: ignore[assignment]  # set in run()
+        self._finder: KeywordFinder = cast(KeywordFinder, None)  # set in run()
         self._namespaces: Dict[KeywordMatcher, List[LibraryEntry]] = {}
         self._variables: Dict[VariableMatcher, VariableDefinition] = {}
         self._overridden_variables: Dict[VariableDefinition, VariableDefinition] = {}
@@ -273,7 +259,48 @@ class NamespaceAnalyzer(Visitor):
             if not matcher.is_assign(allow_assign_mark=True, allow_nested=True) or matcher.name is None:
                 return
 
-            name = matcher.name
+            # RF 7+ resolves variables inside variable names at runtime.
+            # Detect clearly invalid nested variables (e.g. empty ${}) and
+            # report an error mirroring what RF itself would emit.
+            if RF_VERSION >= (7, 0) and contains_variable(matcher.base, "$@&%"):
+                for ident in ("$", "@", "&", "%"):
+                    empty_var = f"{ident}{{}}"
+                    if empty_var in matcher.base:
+                        self._append_diagnostics(
+                            range_from_token(name_token),
+                            f"Setting variable '{matcher.name}' failed: Variable '{empty_var}' not found.",
+                            DiagnosticSeverity.ERROR,
+                            Error.VARIABLE_NAME_NOT_RESOLVABLE,
+                        )
+                        return
+
+                # Resolve nested variable references inside the variable name
+                # so that e.g. ${a} in ${INVALID VAR ${a}} gets hover/go-to-definition.
+                inner_token = Token(Token.ARGUMENT, matcher.base, name_token.lineno, name_token.col_offset + 2)
+                for var_token, var in self._iter_variables_from_token(inner_token):
+                    self._handle_find_variable_result(var_token, var)
+
+                resolved = self._try_resolve_nested_variable_base(matcher.identifier, matcher.base, name_token)
+                if resolved is False:
+                    self._append_diagnostics(
+                        range_from_token(name_token),
+                        f"Variable name '{matcher.name}' contains values that cannot be statically resolved.",
+                        DiagnosticSeverity.HINT,
+                        Error.VARIABLE_NAME_NOT_STATICALLY_RESOLVABLE,
+                    )
+                    return
+                if isinstance(resolved, tuple):
+                    _, failed_var = resolved
+                    self._append_diagnostics(
+                        range_from_token(name_token),
+                        f"Setting variable '{matcher.name}' failed: Variable '{failed_var}' not found.",
+                        DiagnosticSeverity.ERROR,
+                        Error.VARIABLE_NAME_NOT_RESOLVABLE,
+                    )
+                    return
+                name = resolved
+            else:
+                name = matcher.name
 
             stripped_name_token = strip_variable_token(name_token, matcher=matcher, parse_type=True)
 
@@ -424,8 +451,46 @@ class NamespaceAnalyzer(Visitor):
                     parse_type=True,
                     ignore_errors=True,
                 )
-                if not matcher.is_assign(allow_assign_mark=True) or matcher.name is None:
+                if not matcher.is_assign(allow_assign_mark=True, allow_nested=True) or matcher.name is None:
                     return
+
+                if contains_variable(matcher.base, "$@&%"):
+                    for ident in ("$", "@", "&", "%"):
+                        empty_var = f"{ident}{{}}"
+                        if empty_var in matcher.base:
+                            self._append_diagnostics(
+                                range_from_token(name_token),
+                                f"Setting variable '{matcher.name}' failed: Variable '{empty_var}' not found.",
+                                DiagnosticSeverity.ERROR,
+                                Error.VARIABLE_NAME_NOT_RESOLVABLE,
+                            )
+                            return
+
+                    inner_token = Token(Token.ARGUMENT, matcher.base, name_token.lineno, name_token.col_offset + 2)
+                    for var_token, var in self._iter_variables_from_token(inner_token):
+                        self._handle_find_variable_result(var_token, var)
+
+                    resolved = self._try_resolve_nested_variable_base(matcher.identifier, matcher.base, name_token)
+                    if resolved is False:
+                        self._append_diagnostics(
+                            range_from_token(name_token),
+                            f"Variable name '{matcher.name}' contains values that cannot be statically resolved.",
+                            DiagnosticSeverity.HINT,
+                            Error.VARIABLE_NAME_NOT_STATICALLY_RESOLVABLE,
+                        )
+                        return
+                    if isinstance(resolved, tuple):
+                        _, failed_var = resolved
+                        self._append_diagnostics(
+                            range_from_token(name_token),
+                            f"Setting variable '{matcher.name}' failed: Variable '{failed_var}' not found.",
+                            DiagnosticSeverity.ERROR,
+                            Error.VARIABLE_NAME_NOT_RESOLVABLE,
+                        )
+                        return
+                    name = resolved
+                else:
+                    name = matcher.name
 
                 stripped_name_token = strip_variable_token(name_token, matcher=matcher, parse_type=True)
 
@@ -443,7 +508,7 @@ class NamespaceAnalyzer(Visitor):
                     var_type = LocalVariableDefinition
 
                 var = var_type(
-                    name=matcher.name,
+                    name=name,
                     name_token=stripped_name_token,
                     line_no=stripped_name_token.lineno,
                     col_offset=stripped_name_token.col_offset,
@@ -1383,13 +1448,45 @@ class NamespaceAnalyzer(Visitor):
                     ignore_errors=True,
                 )
 
-                if not matcher.is_assign(allow_assign_mark=True) or matcher.name is None:
+                if not matcher.is_assign(allow_assign_mark=True, allow_nested=True) or matcher.name is None:
                     return
+
+                if RF_VERSION >= (7, 0) and contains_variable(matcher.base, "$@&%"):
+                    for ident in ("$", "@", "&", "%"):
+                        empty_var = f"{ident}{{}}"
+                        if empty_var in matcher.base:
+                            return
+
+                    inner_token = Token(Token.ARGUMENT, matcher.base, assign_token.lineno, assign_token.col_offset + 2)
+                    for var_token, var in self._iter_variables_from_token(inner_token):
+                        self._handle_find_variable_result(var_token, var)
+
+                    resolved = self._try_resolve_nested_variable_base(matcher.identifier, matcher.base, assign_token)
+                    if resolved is False:
+                        self._append_diagnostics(
+                            range_from_token(assign_token),
+                            f"Variable name '{matcher.name}' contains values that cannot be statically resolved.",
+                            DiagnosticSeverity.HINT,
+                            Error.VARIABLE_NAME_NOT_STATICALLY_RESOLVABLE,
+                        )
+                        return
+                    if isinstance(resolved, tuple):
+                        _, failed_var = resolved
+                        self._append_diagnostics(
+                            range_from_token(assign_token),
+                            f"Setting variable '{matcher.name}' failed: Variable '{failed_var}' not found.",
+                            DiagnosticSeverity.ERROR,
+                            Error.VARIABLE_NAME_NOT_RESOLVABLE,
+                        )
+                        return
+                    name = resolved
+                else:
+                    name = matcher.name
 
                 stripped_name_token = strip_variable_token(assign_token, matcher=matcher, parse_type=True)
 
                 if matcher.items:
-                    existing_var = self._find_variable(matcher.name)
+                    existing_var = self._find_variable(name)
                     if existing_var is None:
                         self._handle_find_variable_result(
                             stripped_name_token,
@@ -1399,7 +1496,7 @@ class NamespaceAnalyzer(Visitor):
                                 stripped_name_token.lineno,
                                 stripped_name_token.end_col_offset,
                                 self._source,
-                                matcher.name,
+                                name,
                                 stripped_name_token,
                             ),
                         )
@@ -1417,7 +1514,7 @@ class NamespaceAnalyzer(Visitor):
 
                 if existing_var is None:
                     var_def = LocalVariableDefinition(
-                        name=matcher.name,
+                        name=name,
                         name_token=stripped_name_token,
                         line_no=stripped_name_token.lineno,
                         col_offset=stripped_name_token.col_offset,
@@ -1828,6 +1925,245 @@ class NamespaceAnalyzer(Visitor):
             return bool(finder.find(name) != NOT_FOUND)
         return False
 
+    def _try_resolve_nested_variable_base(
+        self, identifier: str, base: str, name_token: Token
+    ) -> Union[str, Literal[False], tuple[None, str]]:
+        """Try to resolve nested variables in a variable base using known values.
+
+        Mimics RF's ``resolve_base`` which calls ``replace_string`` on the base,
+        i.e. standard variable replacement converting all values to strings.
+
+        Example: identifier='$', base='VAR ${a}' with ${a}=1 → '${VAR 1}'
+
+        Returns:
+            str: The resolved variable name (e.g. '${VAR 1}')
+            False: Variable name cannot be statically resolved (caller should emit HINT)
+            (None, var_ref): A nested variable was not found; var_ref is the failing reference
+        """
+        inner_token = Token(Token.ARGUMENT, base, name_token.lineno, name_token.col_offset + 2)
+        parts: List[str] = []
+        for sub in tokenize_variables(inner_token, "$@&%", ignore_errors=True):
+            if sub.type != Token.VARIABLE:
+                parts.append(sub.value)
+                continue
+
+            resolved = self._resolve_variable_to_string(sub.value)
+            if resolved is None:
+                return None, sub.value
+            if resolved is False:
+                return False
+            parts.append(resolved)
+
+        resolved_base = "".join(parts)
+        return f"{identifier}{{{resolved_base}}}"
+
+    def _resolve_variable_to_string(self, var_ref: str, depth: int = 0) -> Union[str, Literal[False], None]:
+        """Resolve a variable reference to its string value like RF's ``replace_string``.
+
+        Mimics the full RF variable resolution pipeline:
+        - ``${scalar}`` → resolved value converted to string, multi-values joined with space
+        - ``@{list}`` → ``str(list_value)`` e.g. ``"['a', 'b']"
+        - ``&{dict}`` → ``str(dict_value)`` e.g. ``"{'a': '1'}"
+        - ``%{ENV}`` → environment variable value or default
+        - ``${{expr}}`` → cannot evaluate statically → ``False``
+
+        Returns:
+            str: The resolved string value
+            False: Cannot be statically resolved (expression, unknown runtime value)
+            None: A referenced variable was not found
+        """
+        if depth > 10:
+            return False
+
+        sub_id = var_ref[0]
+
+        # Expression ${{...}} — requires code evaluation
+        if sub_id == "$" and var_ref.startswith("${{") and var_ref.endswith("}}"):
+            return False
+
+        # Environment variable %{VAR} or %{VAR=default}
+        if sub_id == "%":
+            env_inner = var_ref[2:-1]
+            env_name, sep, default = env_inner.partition("=")
+            env_val = os.environ.get(env_name)
+            if env_val is not None:
+                return env_val
+            if sep:
+                return default
+            return None
+
+        # List variable @{...} — RF converts to str(list) in string context
+        if sub_id == "@":
+            return self._resolve_list_var_to_string(var_ref, depth)
+
+        # Dict variable &{...} — RF converts to str(dict) in string context
+        if sub_id == "&":
+            return self._resolve_dict_var_to_string(var_ref, depth)
+
+        # Scalar variable ${...}
+        var_def = self._find_variable(var_ref)
+        if var_def is None:
+            # RF's NumberFinder: ${1}, ${3.14}, ${0xFF}, ${0b1010}, ${0o17}
+            number_str = self._try_resolve_number_literal(var_ref)
+            if number_str is not None:
+                return number_str
+            # RF's ExtendedFinder: ${VAR.attr}, ${VAR[key]}, ${1-2}, etc.
+            # If the base part exists, the expression may be evaluable at runtime.
+            if self._is_extended_with_known_base(var_ref):
+                return False
+            return None
+        if not var_def.has_value or not var_def.value:
+            return False
+        if not isinstance(var_def.value, (tuple, list)) or not var_def.value:
+            return False
+
+        # Resolve each value item (RF joins multiple values with space)
+        resolved_items: List[str] = []
+        for raw_val in var_def.value:
+            raw_str = str(raw_val)
+            resolved = self._resolve_string_expression(raw_str, depth + 1)
+            if resolved is None:
+                return None
+            if resolved is False:
+                return False
+            resolved_items.append(resolved)
+
+        return " ".join(resolved_items)
+
+    @staticmethod
+    def _try_resolve_number_literal(var_ref: str) -> Optional[str]:
+        """Detect RF number literals like ``${1}``, ``${3.14}``, ``${0xFF}``.
+
+        Mimics RF's ``NumberFinder``: strips spaces, lowercases, then tries
+        ``int()`` (with ``0b``/``0o``/``0x`` prefix support) and ``float()``.
+        Returns the string representation of the number, or ``None``.
+        """
+        inner = "".join(var_ref[2:-1].split()).casefold()
+        if not inner:
+            return None
+        bases = {"0b": 2, "0o": 8, "0x": 16}
+        for prefix, base in bases.items():
+            if inner.startswith(prefix):
+                try:
+                    return str(int(inner[2:], base))
+                except ValueError:
+                    return None
+        try:
+            return str(int(inner))
+        except ValueError:
+            pass
+        try:
+            return str(float(inner))
+        except ValueError:
+            return None
+
+    def _is_extended_with_known_base(self, var_ref: str) -> bool:
+        """Check if ``var_ref`` matches RF's extended variable syntax with a resolvable base.
+
+        RF's ``ExtendedFinder`` splits e.g. ``${VAR.attr}`` into base ``VAR`` and
+        extended ``.attr``, then evaluates ``base_value.attr`` via ``eval()``.
+        If the base is a known variable or number literal, the expression may be
+        evaluable at runtime even though we cannot resolve it statically.
+        """
+        inner = var_ref[2:-1]
+        match = ModelHelper.MATCH_EXTENDED.match(inner)
+        if match is None:
+            return False
+        base_name = match.group(1)
+        base_ref = f"${{{base_name}}}"
+        if self._find_variable(base_ref) is not None:
+            return True
+        if self._try_resolve_number_literal(base_ref) is not None:
+            return True
+        return False
+
+    def _resolve_list_var_to_string(self, var_ref: str, depth: int) -> Union[str, Literal[False], None]:
+        """Resolve ``@{var}`` to its string representation like RF's ``str(list_value)``."""
+        var_def = self._find_variable(var_ref)
+        if var_def is None:
+            return None
+
+        orig_id = var_def.name[0] if var_def.name else "$"
+        values = var_def.value if isinstance(var_def.value, (tuple, list)) else None
+        if values is None:
+            return False
+
+        if orig_id == "&":
+            # Dict accessed as list → RF returns keys
+            keys: List[str] = []
+            for raw_val in values:
+                raw_str = str(raw_val)
+                resolved = self._resolve_string_expression(raw_str, depth + 1)
+                if resolved is None:
+                    return None
+                if resolved is False:
+                    return False
+                key, _, _ = resolved.partition("=")
+                keys.append(key)
+            return str(keys)
+
+        if orig_id not in ("@", "$"):
+            return False
+
+        # List items
+        items: List[str] = []
+        for raw_val in values:
+            raw_str = str(raw_val)
+            resolved = self._resolve_string_expression(raw_str, depth + 1)
+            if resolved is None:
+                return None
+            if resolved is False:
+                return False
+            items.append(resolved)
+        return str(items)
+
+    def _resolve_dict_var_to_string(self, var_ref: str, depth: int) -> Union[str, Literal[False], None]:
+        """Resolve ``&{var}`` to its string representation like RF's ``str(dict_value)``."""
+        var_def = self._find_variable(var_ref)
+        if var_def is None:
+            return None
+
+        orig_id = var_def.name[0] if var_def.name else "$"
+        if orig_id != "&":
+            return False
+
+        values = var_def.value if isinstance(var_def.value, (tuple, list)) else None
+        if values is None:
+            return False
+
+        result: dict[str, str] = {}
+        for raw_val in values:
+            raw_str = str(raw_val)
+            resolved = self._resolve_string_expression(raw_str, depth + 1)
+            if resolved is None:
+                return None
+            if resolved is False:
+                return False
+            if "=" not in resolved:
+                return False
+            key, _, value = resolved.partition("=")
+            result[key] = value
+        return str(result)
+
+    def _resolve_string_expression(self, raw_str: str, depth: int) -> Union[str, Literal[False], None]:
+        """Resolve embedded variables in a string value, like RF's ``replace_string``."""
+        if not contains_variable(raw_str, "$@&%"):
+            return raw_str
+
+        inner_token = Token(Token.ARGUMENT, raw_str, 0, 0)
+        parts: List[str] = []
+        for sub in tokenize_variables(inner_token, "$@&%", ignore_errors=True):
+            if sub.type != Token.VARIABLE:
+                parts.append(sub.value)
+                continue
+            resolved = self._resolve_variable_to_string(sub.value, depth)
+            if resolved is None:
+                return None
+            if resolved is False:
+                return False
+            parts.append(resolved)
+        return "".join(parts)
+
     def _iter_variables_token(
         self,
         to: Token,
@@ -1903,6 +2239,43 @@ class NamespaceAnalyzer(Visitor):
                     yield strip_variable_token(var_token), var
                     continue
 
+                if (
+                    RF_VERSION >= (7, 0)
+                    and var_token.type == Token.VARIABLE
+                    and var_token.value.startswith(("${", "@{", "&{", "%{"))
+                    and var_token.value.endswith("}")
+                    and contains_variable(var_token.value[2:-1], "$@&%")
+                ):
+                    inner = var_token.value[2:-1]
+                    # Skip when the ExtendedFinder regex matches with a non-variable
+                    # extension (e.g. ${A + '${B}'}  →  base "A", ext " + '${B}'").
+                    # These are handled by the ExtendedFinder block below.
+                    extended_match = ModelHelper.MATCH_EXTENDED.match(inner)
+                    is_pure_nested = True
+                    if extended_match is not None:
+                        ext_part = extended_match.group(2)
+                        if not ext_part.startswith(("${", "@{", "&{", "%{")):
+                            is_pure_nested = False
+
+                    if is_pure_nested:
+                        resolved = self._try_resolve_nested_variable_base(var_token.value[0], inner, var_token)
+                        if isinstance(resolved, str):
+                            var = self._find_variable(resolved)
+                            if var is not None:
+                                yield strip_variable_token(var_token), var
+                                continue
+                        elif resolved is False:
+                            self._append_diagnostics(
+                                range=range_from_token(var_token),
+                                message=(
+                                    f"Variable reference '{var_token.value}' contains values"
+                                    " that cannot be statically resolved."
+                                ),
+                                severity=DiagnosticSeverity.HINT,
+                                code=Error.VARIABLE_REFERENCE_NOT_STATICALLY_RESOLVABLE,
+                            )
+                            continue
+
                 if self._is_number(var_token.value):
                     continue
 
@@ -1929,7 +2302,7 @@ class NamespaceAnalyzer(Visitor):
                         if self._is_number(name):
                             continue
                         else:
-                            if contains_variable(var_token.value[2:-1]):
+                            if contains_variable(var_token.value[2:-1], "$@&%"):
                                 continue
                             else:
                                 yield (

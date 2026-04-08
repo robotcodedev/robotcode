@@ -106,10 +106,10 @@ result:
   range:
     end:
       character: 19
-      line: 89
+      line: 108
     start:
       character: 13
-      line: 89
+      line: 108
   uri: tests/hover.robot
 - !Location
   range:

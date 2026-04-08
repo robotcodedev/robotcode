@@ -1,5 +1,0 @@
-data: !GeneratedTestData
-  character: 31
-  line: 213
-  name: counter variable usage
-result: null

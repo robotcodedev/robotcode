@@ -1,5 +1,0 @@
-data: !GeneratedTestData
-  character: 16
-  line: 229
-  name: local variable assignment
-result: null

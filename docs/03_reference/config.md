@@ -3156,6 +3156,27 @@ Examples:
 warning = ["VariableNotFound", "multiple-keywords"]
 ```
 
+## tool.robotcode-analyze.semantic-model
+
+Type: `bool | None`
+
+Enable the experimental Semantic Model for code analysis. When enabled, LSP features
+use the new SemanticAnalyzer instead of the legacy NamespaceAnalyzer. This provides
+richer analysis including static resolution of nested variables and improved semantic
+highlighting.
+
+**This is experimental and may change without notice.**
+
+Can also be set via VS Code setting `robotcode.experimental.semanticModel`.
+If set in both places, either `true` value enables the feature.
+
+Examples:
+
+```toml
+[tool.robotcode-analyze]
+semantic-model = true
+```
+
 ## variable-files
 
 Type: `list[str | StringExpression] | None`

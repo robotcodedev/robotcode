@@ -218,6 +218,7 @@ select = [
   #"TRY",
   "RUF",
   # "TID"
+  # "PLC0415", # TODO enable this
 ]
 
 [tool.ruff.lint.per-file-ignores]

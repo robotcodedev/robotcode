@@ -1,5 +1,0 @@
-data: !GeneratedTestData
-  character: 67
-  line: 219
-  name: an argument in doc
-result: null

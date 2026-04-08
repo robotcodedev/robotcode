@@ -1,7 +1,7 @@
 """Tests for NamespaceData serialization (to_data + Pickle roundtrip)."""
 
 import pickle
-from typing import Dict, Set, Tuple
+from typing import Dict, Optional, Set, Tuple
 from unittest.mock import MagicMock
 
 from pytest_mock import MockerFixture
@@ -22,8 +22,14 @@ from robotcode.robot.diagnostics.entities import (
 )
 from robotcode.robot.diagnostics.keyword_finder import KeywordFinder
 from robotcode.robot.diagnostics.library_doc import KeywordDoc, LibraryDoc, ResourceDoc
-from robotcode.robot.diagnostics.namespace import DocumentType, Namespace, NamespaceData, _Sentinel
+from robotcode.robot.diagnostics.namespace import (
+    DocumentType,
+    Namespace,
+    NamespaceData,
+    _Sentinel,
+)
 from robotcode.robot.diagnostics.scope_tree import LocalScope, ScopedVariable, ScopeTree
+from robotcode.robot.diagnostics.semantic_analyzer.model import SemanticModel
 from robotcode.robot.diagnostics.variable_scope import VariableScope
 
 
@@ -75,7 +81,7 @@ def _resource_doc(source: str = "test.robot") -> ResourceDoc:
     return ResourceDoc(name="test", source=source)
 
 
-def _make_namespace(mocker: MockerFixture) -> Namespace:
+def _make_namespace(mocker: MockerFixture, semantic_model: Optional[SemanticModel] = None) -> Namespace:
     """Build a realistic Namespace with representative data."""
     imports_manager = mocker.create_autospec(MagicMock, instance=True)
     imports_manager.imports_changed = MagicMock()
@@ -236,6 +242,7 @@ def _make_namespace(mocker: MockerFixture) -> Namespace:
         scope_tree=scope_tree,
         finder=finder,
         sentinel=_Sentinel(),
+        semantic_model=semantic_model,
     )
 
 
@@ -364,6 +371,13 @@ class TestToData:
         assert scope.variables[0].variable.name == "${result}"
         assert scope.variables[0].visible_from == Position(12, 4)
 
+    def test_to_data_preserves_semantic_model(self, mocker: MockerFixture) -> None:
+        model = SemanticModel()
+        ns = _make_namespace(mocker, semantic_model=model)
+        data = ns.to_data()
+
+        assert data.semantic_model is model
+
 
 class TestPickleRoundtrip:
     """Tests for NamespaceData Pickle serialization roundtrip."""
@@ -454,7 +468,7 @@ class TestPickleRoundtrip:
 
     def test_pickle_roundtrip_data_equality(self, mocker: MockerFixture) -> None:
         """Full equality check: all fields of NamespaceData survive roundtrip."""
-        ns = _make_namespace(mocker)
+        ns = _make_namespace(mocker, semantic_model=SemanticModel())
         data = ns.to_data()
 
         pickled = pickle.dumps(data)
@@ -463,6 +477,7 @@ class TestPickleRoundtrip:
         assert restored.source == data.source
         assert restored.source_id == data.source_id
         assert restored.document_type == data.document_type
+        assert restored.semantic_model is not None
         assert restored.keyword_references == data.keyword_references
         assert restored.variable_references == data.variable_references
         assert restored.local_variable_assignments == data.local_variable_assignments

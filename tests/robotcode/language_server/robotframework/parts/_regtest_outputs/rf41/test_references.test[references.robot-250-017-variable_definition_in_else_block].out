@@ -1,5 +1,0 @@
-data: !GeneratedTestData
-  character: 17
-  line: 250
-  name: variable definition in else block
-result: null

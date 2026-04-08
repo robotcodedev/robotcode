@@ -1,0 +1,5 @@
+data: !GeneratedTestData
+  character: 14
+  line: 38
+  name: inner var in nested variable definition
+result: null

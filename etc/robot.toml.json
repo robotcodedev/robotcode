@@ -144,6 +144,15 @@
           "default": null,
           "description": "Defines the modifiers for the analysis.\n\nExamples:\n\n```toml\n[tool.robotcode-analyze.modifiers]\nignore = [\"VariableNotFound\"]\nhint = [\"KeywordNotFound\"]\ninformation = [\"MultipleKeywords\"]\n```\n",
           "title": "Modifiers"
+        },
+        "semantic-model": {
+          "default": null,
+          "description": "Enable the experimental Semantic Model for code analysis. When enabled, LSP features\nuse the new SemanticAnalyzer instead of the legacy NamespaceAnalyzer. This provides\nricher analysis including static resolution of nested variables and improved semantic\nhighlighting.\n\n**This is experimental and may change without notice.**\n\nCan also be set via VS Code setting `robotcode.experimental.semanticModel`.\nIf set in both places, either `true` value enables the feature.\n\nExamples:\n\n```toml\n[tool.robotcode-analyze]\nsemantic-model = true\n```\n",
+          "title": "Semantic model",
+          "type": [
+            "boolean",
+            "null"
+          ]
         }
       },
       "title": "AnalyzeConfig",
@@ -159,6 +168,15 @@
           "title": "Cache dir",
           "type": [
             "string",
+            "null"
+          ]
+        },
+        "cache-namespaces": {
+          "default": null,
+          "description": "Enable or disable caching of fully analyzed namespace data to disk.\nCan speed up startup for large projects by skipping re-analysis of unchanged files.\nDefaults to enabled.\n\nExamples:\n\n```toml\n[tool.robotcode-analyze.cache]\ncache_namespaces = false\n```\n",
+          "title": "Cache namespaces",
+          "type": [
+            "boolean",
             "null"
           ]
         },

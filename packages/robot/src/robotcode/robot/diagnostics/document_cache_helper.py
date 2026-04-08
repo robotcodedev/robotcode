@@ -48,6 +48,7 @@ from .workspace_config import (
     AnalysisDiagnosticModifiersConfig,
     AnalysisRobotConfig,
     CacheConfig,
+    ExperimentalConfig,
     RobotConfig,
     WorkspaceAnalysisConfig,
 )
@@ -437,6 +438,7 @@ class DocumentsCacheHelper:
             model = self.get_model(document)
 
         languages, workspace_languages = self.build_languages_from_model(document, model)
+        experimental_config = self.workspace.get_configuration(ExperimentalConfig, document.uri)
 
         builder = NamespaceBuilder(
             imports_manager,
@@ -447,6 +449,7 @@ class DocumentsCacheHelper:
             languages,
             workspace_languages,
         )
+        builder.set_semantic_model_enabled(self.analysis_config.semantic_model or experimental_config.semantic_model)
 
         result = builder.build()
 

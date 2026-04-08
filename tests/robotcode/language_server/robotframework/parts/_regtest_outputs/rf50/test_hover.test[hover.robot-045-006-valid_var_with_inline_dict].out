@@ -1,0 +1,5 @@
+data: !GeneratedTestData
+  character: 6
+  line: 45
+  name: valid var with inline dict
+result: null

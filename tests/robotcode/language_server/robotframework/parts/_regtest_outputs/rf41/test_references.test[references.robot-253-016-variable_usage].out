@@ -1,5 +1,0 @@
-data: !GeneratedTestData
-  character: 16
-  line: 253
-  name: variable usage
-result: null

@@ -1,5 +1,0 @@
-data: !GeneratedTestData
-  character: 53
-  line: 19
-  name: unknown lib namespace
-result: null

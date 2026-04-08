@@ -1284,6 +1284,17 @@
             "scope": "resource"
           }
         }
+      },
+      {
+        "id": "robotcode.experimental",
+        "properties": {
+          "robotcode.experimental.semanticModel": {
+            "type": "boolean",
+            "default": false,
+            "markdownDescription": "Enable the experimental Semantic Model for code analysis. When enabled, LSP features use the new SemanticAnalyzer instead of the legacy NamespaceAnalyzer. **This is experimental and may change without notice.**",
+            "scope": "resource"
+          }
+        }
       }
     ],
     "commands": [

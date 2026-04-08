@@ -347,6 +347,27 @@ class AnalyzeConfig(BaseOptions):
         description="Extend the global library search order setting."
     )
 
+    semantic_model: Optional[bool] = field(
+        description="""\
+            Enable the experimental Semantic Model for code analysis. When enabled, LSP features
+            use the new SemanticAnalyzer instead of the legacy NamespaceAnalyzer. This provides
+            richer analysis including static resolution of nested variables and improved semantic
+            highlighting.
+
+            **This is experimental and may change without notice.**
+
+            Can also be set via VS Code setting `robotcode.experimental.semanticModel`.
+            If set in both places, either `true` value enables the feature.
+
+            Examples:
+
+            ```toml
+            [tool.robotcode-analyze]
+            semantic-model = true
+            ```
+        """,
+    )
+
     load_library_timeout: Optional[int] = field(
         description="""\
             Specifies the timeout in seconds for loading (importing) libraries and variable files during
@@ -381,6 +402,7 @@ class AnalyzeConfig(BaseOptions):
     def to_workspace_analysis_config(self) -> WorkspaceAnalysisConfig:
         return WorkspaceAnalysisConfig(
             exclude_patterns=self.exclude_patterns or [],
+            semantic_model=self.semantic_model if self.semantic_model is not None else False,
             cache=(
                 WorkspaceCacheConfig(
                     # TODO savelocation
