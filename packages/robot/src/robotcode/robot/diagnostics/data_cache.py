@@ -10,6 +10,13 @@ from typing import Any, Generic, Iterator, List, Optional, Tuple, Type, TypeVar,
 
 from ..utils import get_robot_version_str
 
+if sys.platform == "win32":
+    import ctypes
+    import msvcrt
+    from ctypes import wintypes
+else:
+    import fcntl
+
 _M = TypeVar("_M")
 _D = TypeVar("_D")
 
@@ -83,23 +90,103 @@ _TABLE_NAMES = [s.value for s in CacheSection]
 
 CACHE_DIR_NAME = ".robotcode_cache"
 _LOCK_FILE_NAME = "cache.lock"
+_LOCK_LENGTH = 1
+
+
+if sys.platform == "win32":
+    _LOCKFILE_FAIL_IMMEDIATELY = 0x00000001
+    _LOCKFILE_EXCLUSIVE_LOCK = 0x00000002
+    _ERROR_LOCK_VIOLATION = 33
+    _ERROR_IO_PENDING = 997
+
+    class _Overlapped(ctypes.Structure):
+        _fields_ = [
+            ("Internal", ctypes.c_void_p),
+            ("InternalHigh", ctypes.c_void_p),
+            ("Offset", wintypes.DWORD),
+            ("OffsetHigh", wintypes.DWORD),
+            ("hEvent", wintypes.HANDLE),
+        ]
+
+    _kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    _kernel32.LockFileEx.argtypes = [
+        wintypes.HANDLE,
+        wintypes.DWORD,
+        wintypes.DWORD,
+        wintypes.DWORD,
+        wintypes.DWORD,
+        ctypes.POINTER(_Overlapped),
+    ]
+    _kernel32.LockFileEx.restype = wintypes.BOOL
+    _kernel32.UnlockFileEx.argtypes = [
+        wintypes.HANDLE,
+        wintypes.DWORD,
+        wintypes.DWORD,
+        wintypes.DWORD,
+        ctypes.POINTER(_Overlapped),
+    ]
+    _kernel32.UnlockFileEx.restype = wintypes.BOOL
+
+
+def _open_lock_file(cache_dir: Path) -> int:
+    lock_path = cache_dir / _LOCK_FILE_NAME
+    return os.open(str(lock_path), os.O_RDWR | os.O_CREAT, 0o666)
+
+
+if sys.platform == "win32":
+
+    def _lock_file(fd: int, *, exclusive: bool, blocking: bool) -> bool:
+        flags = 0
+        if exclusive:
+            flags |= _LOCKFILE_EXCLUSIVE_LOCK
+        if not blocking:
+            flags |= _LOCKFILE_FAIL_IMMEDIATELY
+
+        overlapped = _Overlapped()
+        handle = wintypes.HANDLE(msvcrt.get_osfhandle(fd))
+        result = _kernel32.LockFileEx(handle, flags, 0, _LOCK_LENGTH, 0, ctypes.byref(overlapped))
+        if result:
+            return True
+
+        error = ctypes.get_last_error()
+        if not blocking and error in {_ERROR_LOCK_VIOLATION, _ERROR_IO_PENDING}:
+            return False
+
+        raise ctypes.WinError(error)
+
+    def _unlock_file(fd: int) -> None:
+        overlapped = _Overlapped()
+        handle = wintypes.HANDLE(msvcrt.get_osfhandle(fd))
+        result = _kernel32.UnlockFileEx(handle, 0, _LOCK_LENGTH, 0, ctypes.byref(overlapped))
+        if not result:
+            raise ctypes.WinError(ctypes.get_last_error())
+
+
+else:
+
+    def _lock_file(fd: int, *, exclusive: bool, blocking: bool) -> bool:
+        flags = fcntl.LOCK_EX if exclusive else fcntl.LOCK_SH
+        if not blocking:
+            flags |= fcntl.LOCK_NB
+
+        try:
+            fcntl.flock(fd, flags)
+        except OSError:
+            if not blocking:
+                return False
+            raise
+
+        return True
+
+    def _unlock_file(fd: int) -> None:
+        fcntl.flock(fd, fcntl.LOCK_UN)
 
 
 def _acquire_shared_lock(cache_dir: Path) -> Optional[int]:
-    """Acquire a shared advisory lock on the cache directory.
-
-    Returns the file descriptor on Unix, None on Windows
-    (Windows already prevents deletion of open files).
-    """
-    if sys.platform == "win32":
-        return None
-
-    import fcntl
-
-    lock_path = cache_dir / _LOCK_FILE_NAME
-    fd = os.open(str(lock_path), os.O_RDWR | os.O_CREAT, 0o666)
+    """Acquire a shared lock on the cache directory."""
+    fd = _open_lock_file(cache_dir)
     try:
-        fcntl.flock(fd, fcntl.LOCK_SH)
+        _lock_file(fd, exclusive=False, blocking=True)
     except Exception:
         os.close(fd)
         raise
@@ -111,10 +198,7 @@ def _release_lock(fd: Optional[int]) -> None:
     if fd is None:
         return
     try:
-        if sys.platform != "win32":
-            import fcntl
-
-            fcntl.flock(fd, fcntl.LOCK_UN)
+        _unlock_file(fd)
     finally:
         os.close(fd)
 
@@ -127,26 +211,20 @@ def exclusive_cache_lock(cache_dir: Path) -> Iterator[bool]:
     False if another process holds a shared lock (cache is in use).
     The lock is held until the context manager exits.
     """
-    if sys.platform == "win32":
-        yield True
-        return
-
-    import fcntl
-
     lock_path = cache_dir / _LOCK_FILE_NAME
     if not lock_path.exists():
         yield True
         return
 
     fd = os.open(str(lock_path), os.O_RDWR)
+    acquired = False
     try:
-        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        yield True
-    except OSError:
-        yield False
+        acquired = _lock_file(fd, exclusive=True, blocking=False)
+        yield acquired
     finally:
         try:
-            fcntl.flock(fd, fcntl.LOCK_UN)
+            if acquired:
+                _unlock_file(fd)
         except OSError:
             pass
         os.close(fd)

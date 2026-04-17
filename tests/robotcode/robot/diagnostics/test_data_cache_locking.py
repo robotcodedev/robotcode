@@ -1,5 +1,6 @@
-"""Tests for SqliteDataCache advisory file locking."""
+"""Tests for SqliteDataCache file locking."""
 
+import os
 import sys
 from pathlib import Path
 
@@ -11,8 +12,6 @@ from robotcode.robot.diagnostics.data_cache import (
     SqliteDataCache,
     exclusive_cache_lock,
 )
-
-pytestmark = pytest.mark.skipif(sys.platform == "win32", reason="Advisory file locking is Unix-only")
 
 
 class TestSharedLocking:
@@ -27,7 +26,6 @@ class TestSharedLocking:
         cache1 = SqliteDataCache(cache_dir)
         cache2 = SqliteDataCache(cache_dir)
 
-        # Both can read and write
         cache1.save_entry(CacheSection.LIBRARY, "e1", None, "data1")
         cache2.save_entry(CacheSection.LIBRARY, "e2", None, "data2")
 
@@ -67,13 +65,11 @@ class TestExclusiveLocking:
 
         cache1.close()
 
-        # Still blocked by cache2
         with exclusive_cache_lock(cache_dir) as acquired:
             assert not acquired
 
         cache2.close()
 
-        # Now should succeed
         with exclusive_cache_lock(cache_dir) as acquired:
             assert acquired
 
@@ -88,7 +84,6 @@ class TestExclusiveLocking:
     def test_exclusive_succeeds_when_no_lock_file(self, tmp_path: Path) -> None:
         cache_dir = tmp_path / "cache"
         cache_dir.mkdir(parents=True)
-        # No lock file exists
 
         with exclusive_cache_lock(cache_dir) as acquired:
             assert acquired
@@ -100,19 +95,18 @@ class TestExclusiveLocking:
 
         with exclusive_cache_lock(cache_dir) as acquired:
             assert acquired
-            # While we hold exclusive, a new shared lock should block
-            # (opening a new SqliteDataCache would try LOCK_SH which
-            # is compatible with LOCK_EX held by the same process on Linux,
-            # so we test with a raw flock instead)
-            import fcntl
-            import os
+            if sys.platform != "win32":
+                import fcntl
 
-            fd = os.open(str(cache_dir / _LOCK_FILE_NAME), os.O_RDWR)
-            try:
-                with pytest.raises(BlockingIOError):
-                    fcntl.flock(fd, fcntl.LOCK_SH | fcntl.LOCK_NB)
-            finally:
-                os.close(fd)
+                fd = os.open(str(cache_dir / _LOCK_FILE_NAME), os.O_RDWR)
+                try:
+                    with pytest.raises(BlockingIOError):
+                        fcntl.flock(fd, fcntl.LOCK_SH | fcntl.LOCK_NB)
+                finally:
+                    os.close(fd)
+            else:
+                with exclusive_cache_lock(cache_dir) as nested_acquired:
+                    assert not nested_acquired
 
 
 class TestLockingWithPrune:
@@ -126,7 +120,8 @@ class TestLockingWithPrune:
 
         with exclusive_cache_lock(cache_dir) as acquired:
             assert acquired
-            shutil.rmtree(cache_dir)
+
+        shutil.rmtree(cache_dir)
 
         assert not cache_dir.exists()
 
@@ -136,7 +131,6 @@ class TestLockingWithPrune:
 
         with exclusive_cache_lock(cache_dir) as acquired:
             assert not acquired
-            # Cache dir should still exist
             assert cache_dir.exists()
 
         cache.close()
