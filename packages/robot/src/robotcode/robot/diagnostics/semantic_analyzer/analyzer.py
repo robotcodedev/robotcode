@@ -119,6 +119,7 @@ from .nodes import (
     ImportStatement,
     KeywordCallStatement,
     ReturnStatement,
+    RunKeywordCallStatement,
     SemanticStatement,
     SemanticToken,
     SettingStatement,
@@ -222,6 +223,9 @@ class SemanticAnalyzer(Visitor):
         # Semantic Model state
         self._semantic_model = SemanticModel()
         self._current_definition: Optional[DefinitionStatement] = None
+
+        # RunKeywordCallStatement support: inner calls collected during _analyze_run_keyword
+        self._last_inner_calls: list[KeywordCallStatement] = []
 
     def resolve(
         self, library_doc: ResourceDoc, imports_manager: ImportsManager, sentinel: object = None
@@ -1180,10 +1184,34 @@ class SemanticAnalyzer(Visitor):
                                 )
                             )
 
+        self._last_inner_calls = []
         if result is not None and analyze_run_keywords:
             self._analyze_run_keyword(result, node, argument_tokens)
 
         return result
+
+    def _make_inner_keyword_call(
+        self,
+        kw_doc: Optional[KeywordDoc],
+        kw_token: Token,
+        nested_inner_calls: list[KeywordCallStatement],
+    ) -> KeywordCallStatement:
+        """Build an inner KeywordCallStatement (or RunKeywordCallStatement if nested)."""
+        line = kw_token.lineno
+        if nested_inner_calls:
+            return RunKeywordCallStatement(
+                kind=NodeKind.KEYWORD_CALL,
+                line_start=line,
+                line_end=line,
+                keyword_doc=kw_doc,
+                inner_calls=nested_inner_calls,
+            )
+        return KeywordCallStatement(
+            kind=NodeKind.KEYWORD_CALL,
+            line_start=line,
+            line_end=line,
+            keyword_doc=kw_doc,
+        )
 
     # --- Run Keyword analysis ---
 
@@ -1226,13 +1254,15 @@ class SemanticAnalyzer(Visitor):
                 # Collect inner keyword args: all remaining tokens that map to
                 # is_keyword_argument parameters (VAR_POSITIONAL covers all remaining)
                 inner_arg_tokens = tokens[token_idx:]
-                self._analyze_keyword_call(
+                kw_doc = self._analyze_keyword_call(
                     node,
                     kw_name_token,
                     inner_arg_tokens,
                     allow_variables=True,
                     ignore_errors_if_contains_variables=True,
                 )
+                nested = self._last_inner_calls
+                self._last_inner_calls = [self._make_inner_keyword_call(kw_doc, kw_name_token, nested)]
                 return inner_arg_tokens
 
             # Regular arg (not a keyword name): advance token index
@@ -1254,28 +1284,35 @@ class SemanticAnalyzer(Visitor):
     ) -> List[Token]:
         """Layer 3: hardcoded BuiltIn Run Keyword variants."""
         if keyword_doc.is_run_keyword() and len(argument_tokens) > 0:
-            self._analyze_keyword_call(
+            kw_name_token = argument_tokens[0]
+            kw_doc = self._analyze_keyword_call(
                 node,
-                argument_tokens[0],
+                kw_name_token,
                 argument_tokens[1:],
                 allow_variables=True,
                 ignore_errors_if_contains_variables=True,
             )
+            nested = self._last_inner_calls
+            self._last_inner_calls = [self._make_inner_keyword_call(kw_doc, kw_name_token, nested)]
             return argument_tokens[1:]
 
         if keyword_doc.is_run_keyword_with_condition() and len(argument_tokens) > (
             cond_count := keyword_doc.run_keyword_condition_count()
         ):
-            self._analyze_keyword_call(
+            kw_name_token = argument_tokens[cond_count]
+            kw_doc = self._analyze_keyword_call(
                 node,
-                argument_tokens[cond_count],
+                kw_name_token,
                 argument_tokens[cond_count + 1 :],
                 allow_variables=True,
                 ignore_errors_if_contains_variables=True,
             )
+            nested = self._last_inner_calls
+            self._last_inner_calls = [self._make_inner_keyword_call(kw_doc, kw_name_token, nested)]
             return argument_tokens[cond_count + 1 :]
 
         if keyword_doc.is_run_keywords():
+            collected: list[KeywordCallStatement] = []
             has_and = False
             while argument_tokens:
                 t = argument_tokens[0]
@@ -1299,17 +1336,21 @@ class SemanticAnalyzer(Visitor):
                     args = argument_tokens
                     argument_tokens = []
 
-                self._analyze_keyword_call(
+                kw_doc = self._analyze_keyword_call(
                     node,
                     t,
                     args,
                     allow_variables=True,
                     ignore_errors_if_contains_variables=True,
                 )
+                nested = self._last_inner_calls
+                collected.append(self._make_inner_keyword_call(kw_doc, t, nested))
 
+            self._last_inner_calls = collected
             return []
 
         if keyword_doc.is_run_keyword_if() and len(argument_tokens) > 1:
+            collected_rki: list[KeywordCallStatement] = []
 
             def skip_args() -> List[Token]:
                 nonlocal argument_tokens
@@ -1322,23 +1363,19 @@ class SemanticAnalyzer(Visitor):
                     argument_tokens = argument_tokens[1:]
                 return result
 
-            result = self._finder.find_keyword(argument_tokens[1].value)
-
-            if result is not None and result.is_any_run_keyword():
-                argument_tokens = argument_tokens[2:]
-                argument_tokens = self._analyze_run_keyword(result, node, argument_tokens)
-            else:
-                kwt = argument_tokens[1]
-                argument_tokens = argument_tokens[2:]
-                args = skip_args()
-                self._analyze_keyword_call(
-                    node,
-                    kwt,
-                    args,
-                    analyze_run_keywords=False,
-                    allow_variables=True,
-                    ignore_errors_if_contains_variables=True,
-                )
+            kwt = argument_tokens[1]
+            argument_tokens = argument_tokens[2:]
+            args = skip_args()
+            kw_doc = self._analyze_keyword_call(
+                node,
+                kwt,
+                args,
+                analyze_run_keywords=True,
+                allow_variables=True,
+                ignore_errors_if_contains_variables=True,
+            )
+            nested = self._last_inner_calls
+            collected_rki.append(self._make_inner_keyword_call(kw_doc, kwt, nested))
 
             while argument_tokens:
                 if argument_tokens[0].value == "ELSE" and len(argument_tokens) > 1:
@@ -1349,10 +1386,10 @@ class SemanticAnalyzer(Visitor):
                         node,
                         kwt,
                         args,
-                        analyze_run_keywords=False,
+                        analyze_run_keywords=True,
                     )
-                    if result is not None and result.is_any_run_keyword():
-                        argument_tokens = self._analyze_run_keyword(result, node, argument_tokens)
+                    nested = self._last_inner_calls
+                    collected_rki.append(self._make_inner_keyword_call(result, kwt, nested))
                     break
 
                 if argument_tokens[0].value == "ELSE IF" and len(argument_tokens) > 2:
@@ -1363,12 +1400,14 @@ class SemanticAnalyzer(Visitor):
                         node,
                         kwt,
                         args,
-                        analyze_run_keywords=False,
+                        analyze_run_keywords=True,
                     )
-                    if result is not None and result.is_any_run_keyword():
-                        argument_tokens = self._analyze_run_keyword(result, node, argument_tokens)
+                    nested = self._last_inner_calls
+                    collected_rki.append(self._make_inner_keyword_call(result, kwt, nested))
                 else:
                     break
+
+            self._last_inner_calls = collected_rki
 
         return argument_tokens
 
@@ -1393,13 +1432,16 @@ class SemanticAnalyzer(Visitor):
             # Layer 2: use args_to_process to skip N positional args before the keyword name
             skip = keyword_doc.args_to_process or 0
             if len(argument_tokens) > skip:
-                self._analyze_keyword_call(
+                kw_name_token = argument_tokens[skip]
+                kw_doc = self._analyze_keyword_call(
                     node,
-                    argument_tokens[skip],
+                    kw_name_token,
                     argument_tokens[skip + 1 :],
                     allow_variables=True,
                     ignore_errors_if_contains_variables=True,
                 )
+                nested = self._last_inner_calls
+                self._last_inner_calls = [self._make_inner_keyword_call(kw_doc, kw_name_token, nested)]
                 return argument_tokens[skip + 1 :]
             return argument_tokens
 
@@ -1421,14 +1463,26 @@ class SemanticAnalyzer(Visitor):
                 allow_variables=True,
                 ignore_errors_if_contains_variables=True,
             )
+            inner_calls = self._last_inner_calls
 
-            stmt = KeywordCallStatement(
-                kind=NodeKind.SETUP,
-                line_start=node.lineno,
-                line_end=node.end_lineno or node.lineno,
-                keyword_doc=kw_doc,
-                tokens=self._build_tokens_from_node(node),
-            )
+            tokens = self._build_tokens_from_node(node)
+            if inner_calls:
+                stmt: KeywordCallStatement = RunKeywordCallStatement(
+                    kind=NodeKind.SETUP,
+                    line_start=node.lineno,
+                    line_end=node.end_lineno or node.lineno,
+                    keyword_doc=kw_doc,
+                    tokens=tokens,
+                    inner_calls=inner_calls,
+                )
+            else:
+                stmt = KeywordCallStatement(
+                    kind=NodeKind.SETUP,
+                    line_start=node.lineno,
+                    line_end=node.end_lineno or node.lineno,
+                    keyword_doc=kw_doc,
+                    tokens=tokens,
+                )
             self._add_statement(stmt)
 
     def visit_Teardown(self, node: Fixture) -> None:  # noqa: N802
@@ -1449,14 +1503,26 @@ class SemanticAnalyzer(Visitor):
                 allow_variables=True,
                 ignore_errors_if_contains_variables=True,
             )
+            inner_calls = self._last_inner_calls
 
-            stmt = KeywordCallStatement(
-                kind=NodeKind.TEARDOWN,
-                line_start=node.lineno,
-                line_end=node.end_lineno or node.lineno,
-                keyword_doc=kw_doc,
-                tokens=self._build_tokens_from_node(node),
-            )
+            tokens = self._build_tokens_from_node(node)
+            if inner_calls:
+                stmt: KeywordCallStatement = RunKeywordCallStatement(
+                    kind=NodeKind.TEARDOWN,
+                    line_start=node.lineno,
+                    line_end=node.end_lineno or node.lineno,
+                    keyword_doc=kw_doc,
+                    tokens=tokens,
+                    inner_calls=inner_calls,
+                )
+            else:
+                stmt = KeywordCallStatement(
+                    kind=NodeKind.TEARDOWN,
+                    line_start=node.lineno,
+                    line_end=node.end_lineno or node.lineno,
+                    keyword_doc=kw_doc,
+                    tokens=tokens,
+                )
             self._add_statement(stmt)
 
     # --- Template ---
@@ -1529,6 +1595,7 @@ class SemanticAnalyzer(Visitor):
         kw_doc = self._analyze_keyword_call(
             node, keyword_token, [e for e in node.get_tokens(Token.ARGUMENT)], unescape_keyword=False
         )
+        inner_calls = self._last_inner_calls
 
         if not self._current_testcase_or_keyword_name:
             self._append_diagnostics(
@@ -1541,13 +1608,24 @@ class SemanticAnalyzer(Visitor):
 
         self._analyze_assign_statement(node)
 
-        stmt = KeywordCallStatement(
-            kind=NodeKind.KEYWORD_CALL,
-            line_start=node.lineno,
-            line_end=node.end_lineno or node.lineno,
-            keyword_doc=kw_doc,
-            tokens=self._build_tokens_from_node(node),
-        )
+        tokens = self._build_tokens_from_node(node)
+        if inner_calls:
+            stmt: KeywordCallStatement = RunKeywordCallStatement(
+                kind=NodeKind.KEYWORD_CALL,
+                line_start=node.lineno,
+                line_end=node.end_lineno or node.lineno,
+                keyword_doc=kw_doc,
+                tokens=tokens,
+                inner_calls=inner_calls,
+            )
+        else:
+            stmt = KeywordCallStatement(
+                kind=NodeKind.KEYWORD_CALL,
+                line_start=node.lineno,
+                line_end=node.end_lineno or node.lineno,
+                keyword_doc=kw_doc,
+                tokens=tokens,
+            )
         self._add_statement(stmt)
 
     # --- Test Case / Keyword blocks ---
