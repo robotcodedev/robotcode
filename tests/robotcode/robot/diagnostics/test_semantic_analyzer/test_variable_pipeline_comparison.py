@@ -478,6 +478,11 @@ _LSP_ROBOT_FILES = sorted(_LSP_DATA_PATH.rglob("*.robot")) if _LSP_DATA_PATH.exi
 # old analyzer is still in place.
 _XFAIL_FILES: dict[str, str] = {
     "tests/variables.robot": "SemanticAnalyzer correctly omits spurious ${%%} diagnostics for %%{ENV} vars",
+    "tests/versions/rf73/variable_conversion.robot": (
+        "SemanticAnalyzer correctly emits a single 'Variable not found' error for type-hinted variable"
+        " references (e.g. '${i: int}') without stripping the type hint, while NamespaceAnalyzer"
+        " emits two diagnostics (legacy stripped name + full name)"
+    ),
 }
 
 # RF < 7 doesn't resolve variables inside variable names at runtime,
@@ -504,7 +509,7 @@ def _run_file_with_bypass(analyzer: SemanticAnalyzer | NamespaceAnalyzer, path: 
 )
 def test_full_analyzer_parity_on_lsp_data(robot_file: Path) -> None:
     """Run both analyzers on real .robot files from the LSP test suite and compare all outputs."""
-    rel = str(robot_file.relative_to(_LSP_DATA_PATH))
+    rel = robot_file.relative_to(_LSP_DATA_PATH).as_posix()
     if rel in _XFAIL_FILES:
         pytest.xfail(_XFAIL_FILES[rel])
 

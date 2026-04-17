@@ -354,8 +354,7 @@ class SemanticAnalyzer(Visitor):
 
                 # Resolve nested variable references inside the variable name
                 # so that e.g. ${a} in ${INVALID VAR ${a}} gets hover/go-to-definition.
-                inner_token = Token(Token.ARGUMENT, matcher.base, name_token.lineno, name_token.col_offset + 2)
-                for var_token, var in self._iter_variables_from_occurrences(inner_token):
+                for var_token, var in self._iter_nested_variables_from_declaration_token(name_token):
                     self._handle_find_variable_result(var_token, var)
 
                 resolved = self._try_resolve_nested_variable_base(matcher.identifier, matcher.base, name_token)
@@ -542,8 +541,7 @@ class SemanticAnalyzer(Visitor):
                             )
                             return
 
-                    inner_token = Token(Token.ARGUMENT, matcher.base, name_token.lineno, name_token.col_offset + 2)
-                    for var_token, var in self._iter_variables_from_occurrences(inner_token):
+                    for var_token, var in self._iter_nested_variables_from_declaration_token(name_token):
                         self._handle_find_variable_result(var_token, var)
 
                     resolved = self._try_resolve_nested_variable_base(matcher.identifier, matcher.base, name_token)
@@ -846,8 +844,14 @@ class SemanticAnalyzer(Visitor):
         finally:
             self._node_stack.pop()
 
-    def _analyze_token_variables(self, token: Token, severity: DiagnosticSeverity = DiagnosticSeverity.ERROR) -> None:
-        for var_token, var in self._iter_variables_from_occurrences(token):
+    def _analyze_token_variables(
+        self,
+        token: Token,
+        severity: DiagnosticSeverity = DiagnosticSeverity.ERROR,
+        *,
+        parse_type: bool = False,
+    ) -> None:
+        for var_token, var in self._iter_variables_from_occurrences(token, parse_type=parse_type):
             self._handle_find_variable_result(var_token, var, severity)
 
     def _handle_find_variable_result(
@@ -1820,8 +1824,14 @@ class SemanticAnalyzer(Visitor):
                         if empty_var in matcher.base:
                             return
 
-                    inner_token = Token(Token.ARGUMENT, matcher.base, assign_token.lineno, assign_token.col_offset + 2)
-                    for var_token, var in self._iter_variables_from_occurrences(inner_token):
+                    assign_name_token = Token(
+                        Token.VARIABLE,
+                        assign_token.value[:-1].rstrip() if assign_token.value.endswith("=") else assign_token.value,
+                        assign_token.lineno,
+                        assign_token.col_offset,
+                        assign_token.error,
+                    )
+                    for var_token, var in self._iter_nested_variables_from_declaration_token(assign_name_token):
                         self._handle_find_variable_result(var_token, var)
 
                     resolved = self._try_resolve_nested_variable_base(matcher.identifier, matcher.base, assign_token)
@@ -2721,11 +2731,16 @@ class SemanticAnalyzer(Visitor):
 
     # --- Variable token iteration ---
 
-    def _iter_variables_from_occurrences(self, token: Token) -> Iterator[Tuple[Token, VariableDefinition]]:
-        for occurrence in self._iter_variable_occurrences(token):
+    def _iter_variables_from_occurrences(
+        self,
+        token: Token,
+        *,
+        parse_type: bool = False,
+    ) -> Iterator[Tuple[Token, VariableDefinition]]:
+        for occurrence in self._iter_variable_occurrences(token, parse_type=parse_type):
             yield from self._resolve_variable_occurrence(occurrence)
 
-    def _iter_variable_occurrences(self, token: Token) -> Iterator[VariableOccurrence]:
+    def _iter_variable_occurrences(self, token: Token, *, parse_type: bool = False) -> Iterator[VariableOccurrence]:
         def exception_handler(e: BaseException, t: Token) -> None:
             self._append_diagnostics(
                 range_from_token(t),
@@ -2737,10 +2752,21 @@ class SemanticAnalyzer(Visitor):
         yield from iter_variable_occurrences_from_token(
             token,
             identifiers="$@&%",
+            parse_type=parse_type,
             ignore_errors=True,
             extra_types=None,
             exception_handler=exception_handler,
         )
+
+    def _iter_nested_variables_from_declaration_token(self, token: Token) -> Iterator[Tuple[Token, VariableDefinition]]:
+        skipped_root = False
+
+        for occurrence in self._iter_variable_occurrences(token, parse_type=True):
+            if not skipped_root:
+                skipped_root = True
+                continue
+
+            yield from self._resolve_variable_occurrence(occurrence)
 
     def _resolve_variable_occurrence(
         self,

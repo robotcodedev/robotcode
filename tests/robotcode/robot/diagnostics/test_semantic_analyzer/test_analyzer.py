@@ -13,6 +13,7 @@ from ast import AST
 from typing import List
 from unittest.mock import MagicMock
 
+import pytest
 from robot.api import get_model
 
 from robotcode.robot.diagnostics.analyzer_result import AnalyzerResult
@@ -32,6 +33,7 @@ from robotcode.robot.diagnostics.semantic_analyzer.nodes import (
     WhileStatement,
 )
 from robotcode.robot.diagnostics.variable_scope import VariableScope
+from robotcode.robot.utils import RF_VERSION
 
 
 def _parse(text: str) -> AST:
@@ -646,6 +648,82 @@ My Test
         )
         assert result.semantic_model is not None
         assert len(result.semantic_model.statements) >= 4
+
+
+@pytest.mark.skipif(RF_VERSION < (7, 3), reason="Argument type hints require RF >= 7.3")
+class TestArgumentTypeHints:
+    def test_typed_arguments_define_untyped_lookup_variable(self) -> None:
+        result = _run_analyzer(
+            """\
+*** Keywords ***
+K
+    [Arguments]    ${a: int}
+    Log    ${a}
+
+*** Test Cases ***
+T
+    K    1
+"""
+        )
+
+        var_names = {v.name for v in result.variable_references}
+        assert "${a}" in var_names
+
+        variable_not_found = [d for d in result.diagnostics if str(d.code) == "VariableNotFound"]
+        assert len(variable_not_found) == 0
+
+    def test_typed_argument_reference_is_not_normalized_in_usage(self) -> None:
+        result = _run_analyzer(
+            """\
+*** Keywords ***
+K
+    [Arguments]    ${a: int}
+    Log    ${a: int}
+
+*** Test Cases ***
+T
+    K    1
+"""
+        )
+
+        assert any(str(d.code) == "VariableNotFound" and "${a: int}" in d.message for d in result.diagnostics)
+
+    def test_complex_typed_arguments_define_untyped_lookup_variable(self) -> None:
+        result = _run_analyzer(
+            """\
+*** Keywords ***
+K
+    [Arguments]    ${a: Literal["abc", ":", ";"] | List[Literal[1,2,3]]}
+    Log    ${a}
+
+*** Test Cases ***
+T
+    K    abc
+"""
+        )
+
+        var_names = {v.name for v in result.variable_references}
+        assert "${a}" in var_names
+        assert not any(str(d.code) == "VariableNotFound" and "${a}" in d.message for d in result.diagnostics)
+
+    def test_complex_typed_argument_reference_is_not_normalized_in_usage(self) -> None:
+        result = _run_analyzer(
+            """\
+*** Keywords ***
+K
+    [Arguments]    ${a: Literal["abc", ":", ";"] | List[Literal[1,2,3]]}
+    Log    ${a: Literal["abc", ":", ";"] | List[Literal[1,2,3]]}
+
+*** Test Cases ***
+T
+    K    abc
+"""
+        )
+
+        assert any(
+            str(d.code) == "VariableNotFound" and '${a: Literal["abc", ":", ";"] | List[Literal[1,2,3]]}' in d.message
+            for d in result.diagnostics
+        )
 
 
 # --- Structural statement visitors (END, BREAK, CONTINUE, TRY, ELSE, FINALLY) ---

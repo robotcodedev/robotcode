@@ -131,20 +131,55 @@ class TestTypeHints:
         assert inner[1].value == ": "
         assert inner[2].value == "int"
 
-    def test_type_hint_with_pattern(self) -> None:
+    def test_type_hint_with_colon_in_hint(self) -> None:
+        # RF uses ': ' (colon + space) as the sole type separator. Any ':' that
+        # appears inside the type expression itself is NOT a pattern separator —
+        # ${name: str:\w+} has 'str:\w+' as the full type hint.
         tokens = build_variable_sub_tokens("${name: str:\\w+}", 1, 0)
         inner = tokens[2:-1]
         assert _kinds(inner) == [
             TokenKind.VARIABLE_BASE,
             TokenKind.VARIABLE_TYPE_SEPARATOR,
             TokenKind.VARIABLE_TYPE_HINT,
-            TokenKind.VARIABLE_PATTERN_SEPARATOR,
-            TokenKind.VARIABLE_PATTERN,
         ]
         assert inner[0].value == "name"
-        assert inner[2].value == "str"
-        assert inner[3].value == ":"
-        assert inner[4].value == "\\w+"
+        assert inner[1].value == ": "
+        assert inner[2].value == "str:\\w+"
+
+    def test_complex_type_hint_with_colon_literal_is_tokenized_correctly(self) -> None:
+        # ':' inside a Literal string within the type hint must NOT be treated as a
+        # pattern separator. The entire expression after ': ' is the type hint.
+        value = '${x: Literal["abc", ":", ";"] | List[Literal[1,2,3]]}'
+        tokens = build_variable_sub_tokens(value, 1, 0)
+        inner = tokens[2:-1]
+
+        assert _kinds(inner) == [
+            TokenKind.VARIABLE_BASE,
+            TokenKind.VARIABLE_TYPE_SEPARATOR,
+            TokenKind.VARIABLE_TYPE_HINT,
+        ]
+        assert inner[0].value == "x"
+        assert inner[1].value == ": "
+        assert inner[2].value == 'Literal["abc", ":", ";"] | List[Literal[1,2,3]]'
+
+    def test_type_hint_with_colon_space_in_literal_is_tokenized_correctly(self) -> None:
+        # When ': ' (colon + space) appears inside a Literal string, RF's rsplit-based
+        # type parsing gets confused and produces an 'Invalid variable' error at collection
+        # time. Our tokenizer correctly splits at the FIRST ': ' (position 1 → base='x'),
+        # so the visual representation is as accurate as possible given RF's limitation.
+        # The RF parse-time error is already surfaced via Variable.errors diagnostics.
+        value = '${x: Literal["abc", ": ", ";"]}'
+        tokens = build_variable_sub_tokens(value, 1, 0)
+        inner = tokens[2:-1]
+
+        assert _kinds(inner) == [
+            TokenKind.VARIABLE_BASE,
+            TokenKind.VARIABLE_TYPE_SEPARATOR,
+            TokenKind.VARIABLE_TYPE_HINT,
+        ]
+        assert inner[0].value == "x"
+        assert inner[1].value == ": "
+        assert inner[2].value == 'Literal["abc", ": ", ";"]'
 
 
 # --- Embedded patterns ---
@@ -384,6 +419,9 @@ class TestLookupNormalization:
     def test_simple_variable(self) -> None:
         assert normalize_variable_lookup_name("${name}") == "${name}"
 
+    def test_builtin_path_separator_variable(self) -> None:
+        assert normalize_variable_lookup_name("${:}") == "${:}"
+
     def test_extended_variable(self) -> None:
         assert normalize_variable_lookup_name("${obj.attr}") == "${obj}"
 
@@ -394,7 +432,16 @@ class TestLookupNormalization:
         assert normalize_variable_lookup_name("%{HOME=/tmp}") == "%{HOME}"
 
     def test_type_hint_variable(self) -> None:
-        assert normalize_variable_lookup_name("${age: int}") == "${age}"
+        # In reference contexts (parse_type=False, the default), RF does NOT strip the type hint.
+        # Only declaration contexts (Variables section, [Arguments], VAR, FOR, Assignment) use
+        # parse_type=True, mirroring Robot Framework's own search_variable(parse_type=True) behavior.
+        assert normalize_variable_lookup_name("${age: int}") == "${age: int}"
+        assert normalize_variable_lookup_name("${age: int}", parse_type=True) == "${age}"
+
+    def test_complex_type_hint_variable(self) -> None:
+        value = '${x: Literal["abc", ":", ";"] | List[Literal[1,2,3]]}'
+        assert normalize_variable_lookup_name(value) == value
+        assert normalize_variable_lookup_name(value, parse_type=True) == "${x}"
 
     def test_pattern_variable(self) -> None:
         assert normalize_variable_lookup_name("${arg:\\d+}") == "${arg}"
@@ -496,3 +543,12 @@ class TestTokenToOccurrences:
 
         assert len(occ) == 1
         assert occ[0].value == "${x}"
+
+    def test_declaration_occurrence_strips_type_when_enabled(self) -> None:
+        token = Token(Token.VARIABLE, "${age: int}", 6, 2)
+
+        reference_occurrences = list(iter_variable_occurrences_from_token(token, ignore_errors=True))
+        declaration_occurrences = list(iter_variable_occurrences_from_token(token, ignore_errors=True, parse_type=True))
+
+        assert reference_occurrences[0].lookup_name == "${age: int}"
+        assert declaration_occurrences[0].lookup_name == "${age}"

@@ -50,7 +50,9 @@ class VariableOccurrence:
     strip_for_reference: bool = True
 
 
-def build_variable_occurrence(value: str, line: int, col_offset: int) -> VariableOccurrence:
+def build_variable_occurrence(
+    value: str, line: int, col_offset: int, *, parse_type: bool = False
+) -> VariableOccurrence:
     """Parse a single variable expression once and return shared occurrence data."""
     sub_tokens = build_variable_sub_tokens(value, line, col_offset)
     return VariableOccurrence(
@@ -58,7 +60,7 @@ def build_variable_occurrence(value: str, line: int, col_offset: int) -> Variabl
         line=line,
         col_offset=col_offset,
         length=len(value),
-        lookup_name=normalize_variable_lookup_name(value),
+        lookup_name=normalize_variable_lookup_name(value, parse_type=parse_type),
         semantic_sub_tokens=sub_tokens if sub_tokens else None,
     )
 
@@ -157,6 +159,7 @@ def iter_variable_occurrences_from_token(
     token: Token,
     identifiers: str = "$@&%",
     *,
+    parse_type: bool = False,
     ignore_errors: bool = False,
     extra_types: Optional[Set[str]] = None,
     exception_handler: Optional[Callable[[Exception, Token], None]] = None,
@@ -168,7 +171,7 @@ def iter_variable_occurrences_from_token(
     """
     parsed_token = token
     if token.type == Token.VARIABLE and token.value.endswith("="):
-        match = search_variable(token.value, ignore_errors=True)
+        match = search_variable(token.value, ignore_errors=True, parse_type=parse_type)
         if not match.is_assign(allow_assign_mark=True):
             return
 
@@ -190,11 +193,16 @@ def iter_variable_occurrences_from_token(
         if sub_token.type != Token.VARIABLE:
             continue
 
-        occurrence = build_variable_occurrence(sub_token.value, sub_token.lineno, sub_token.col_offset)
+        occurrence = build_variable_occurrence(
+            sub_token.value,
+            sub_token.lineno,
+            sub_token.col_offset,
+            parse_type=parse_type,
+        )
         yield from iter_related_occurrences(occurrence)
 
 
-def normalize_variable_lookup_name(value: str) -> Optional[str]:
+def normalize_variable_lookup_name(value: str, *, parse_type: bool = False) -> Optional[str]:
     """Normalize a variable expression to a lookup name for static resolution.
 
     Examples:
@@ -202,6 +210,7 @@ def normalize_variable_lookup_name(value: str) -> Optional[str]:
     - `${var}[0][x]` -> `${var}`
     - `%{HOME=default}` -> `%{HOME}`
     - `${{expr}}` -> None
+    - `${age: int}` -> `${age}` only when ``parse_type=True`` (declaration context)
     """
     if not value or len(value) < 3:
         return None
@@ -238,28 +247,41 @@ def normalize_variable_lookup_name(value: str) -> Optional[str]:
     if not inner:
         return None
 
-    # Try extended syntax first: extract the base variable name before any
-    # operator/expression.  This must happen *before* the nested-variable
-    # guard because the tail may contain nested variables (e.g.
-    # ``${A + '${B}'}``) while the base name ``A`` is perfectly resolvable.
-    # Skip when the extension starts with a variable identifier (``${``,
-    # ``@{`` etc.) — that indicates a **nested variable name** like
-    # ``${cfg_${env}}``, not an expression.
-    extended_match = _MATCH_EXTENDED.match(inner)
-    if extended_match:
-        ext_part = extended_match.group(2)
-        if not ext_part.startswith(("${", "@{", "&{", "%{")):
-            inner = extended_match.group(1)
+    # Type hint check must precede extended-syntax matching: `: ` in `${age: int}` would
+    # otherwise be consumed by _MATCH_EXTENDED (which accepts any [^\s\w] operator) and
+    # silently strip the type even in reference contexts.  RF itself only strips the type
+    # hint when search_variable() is called with parse_type=True — i.e. in declaration
+    # contexts (Variables section, [Arguments], VAR, FOR, Assignment).
+    if prefix == "$" and ": " in inner:
+        if parse_type:
+            inner = inner.split(": ", 1)[0]
+        # else: keep inner with type hint intact; the full `${age: int}` is the lookup name.
+    else:
+        # Try extended syntax first: extract the base variable name before any
+        # operator/expression.  This must happen *before* the nested-variable
+        # guard because the tail may contain nested variables (e.g.
+        # ``${A + '${B}'}``) while the base name ``A`` is perfectly resolvable.
+        # Skip when the extension starts with a variable identifier (``${``,
+        # ``@{`` etc.) — that indicates a **nested variable name** like
+        # ``${cfg_${env}}``, not an expression.
+        extended_match = _MATCH_EXTENDED.match(inner)
+        if extended_match:
+            ext_part = extended_match.group(2)
+            if not ext_part.startswith(("${", "@{", "&{", "%{")):
+                inner = extended_match.group(1)
 
     if "${" in inner or "@{" in inner or "&{" in inner or "%{" in inner:
         return None
 
     if prefix == "%" and "=" in inner:
         inner = inner.split("=", 1)[0]
-    elif prefix == "$" and ": " in inner:
-        inner = inner.split(": ", 1)[0]
-    elif prefix == "$" and ":" in inner:
-        inner = inner.split(":", 1)[0]
+    elif prefix == "$" and ":" in inner and ": " not in inner:
+        # Bare colon: embedded argument pattern ${arg:\d+}.
+        # Type hints (`: ` with space) are handled above, gated by parse_type.
+        # Preserve builtin ${:}; only treat ':' as pattern separator when both sides exist.
+        head, _, tail = inner.partition(":")
+        if head and tail:
+            inner = head
 
     inner = inner.strip()
     if not inner:
@@ -491,7 +513,9 @@ def _decompose_variable_inner(
     if "${" in inner or "@{" in inner or "&{" in inner or "%{" in inner:
         return _decompose_nested_variable(inner, line, col_offset)
 
-    # Check for type hint: ${age: int} or ${name: str:\w+}
+    # Check for type hint: ${age: int}
+    # RF uses ': ' (colon + space) as the type separator.
+    # Everything after ': ' is the type hint — no further splitting.
     if ": " in inner and prefix_char == "$":
         colon_pos = inner.index(": ")
         base = inner[:colon_pos]
@@ -516,48 +540,15 @@ def _decompose_variable_inner(
             )
         )
 
-        # Check for pattern after type: ${name: str:\w+}
-        if ":" in rest:
-            pattern_sep = rest.index(":")
-            type_hint = rest[:pattern_sep]
-            pattern = rest[pattern_sep + 1 :]
-            tokens.append(
-                SemanticToken(
-                    kind=TokenKind.VARIABLE_TYPE_HINT,
-                    value=type_hint,
-                    line=line,
-                    col_offset=col_offset + colon_pos + 2,
-                    length=len(type_hint),
-                )
+        tokens.append(
+            SemanticToken(
+                kind=TokenKind.VARIABLE_TYPE_HINT,
+                value=rest,
+                line=line,
+                col_offset=col_offset + colon_pos + 2,
+                length=len(rest),
             )
-            tokens.append(
-                SemanticToken(
-                    kind=TokenKind.VARIABLE_PATTERN_SEPARATOR,
-                    value=":",
-                    line=line,
-                    col_offset=col_offset + colon_pos + 2 + len(type_hint),
-                    length=1,
-                )
-            )
-            tokens.append(
-                SemanticToken(
-                    kind=TokenKind.VARIABLE_PATTERN,
-                    value=pattern,
-                    line=line,
-                    col_offset=col_offset + colon_pos + 2 + len(type_hint) + 1,
-                    length=len(pattern),
-                )
-            )
-        else:
-            tokens.append(
-                SemanticToken(
-                    kind=TokenKind.VARIABLE_TYPE_HINT,
-                    value=rest,
-                    line=line,
-                    col_offset=col_offset + colon_pos + 2,
-                    length=len(rest),
-                )
-            )
+        )
         return tokens
 
     # Check for embedded pattern without type: ${arg:\d+}
@@ -855,7 +846,7 @@ def _iter_related_occurrences_from_token(
             line=token.line,
             col_offset=token.col_offset,
             length=token.length,
-            lookup_name=normalize_variable_lookup_name(token.value),
+            lookup_name=normalize_variable_lookup_name(token.value, parse_type=False),
             semantic_sub_tokens=token.sub_tokens if token.sub_tokens else None,
         )
         yield nested

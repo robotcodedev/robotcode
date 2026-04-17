@@ -1436,3 +1436,76 @@ Example
 """
         )
         _assert_nested_var_parity(s, n)
+
+
+@pytest.mark.skipif(RF_VERSION < (7, 3), reason="Variable type conversion requires RF >= 7.3")
+class TestTypeHintedNestedDeclarationResolution:
+    """Typed nested variable references in declaration contexts must resolve correctly."""
+
+    def test_variables_section_nested_typed_reference_resolves(self) -> None:
+        result = _run_analyzer(
+            """\
+*** Variables ***
+${A}    1
+${NESTED ${A}: int}    value
+"""
+        )
+
+        names = _var_names(result)
+        errors = _diagnostics_with_code(result, Error.VARIABLE_NAME_NOT_RESOLVABLE)
+
+        assert "${A}" in names
+        assert "${NESTED 1}" in names
+        assert len(errors) == 0
+
+    def test_var_statement_typed_nested_name_reports_static_hint(self) -> None:
+        result = _run_analyzer(
+            """\
+*** Test Cases ***
+Example
+    VAR    ${A}    1
+    VAR    ${NESTED ${A}: int}    value
+"""
+        )
+
+        names = _var_names(result)
+        hints = _diagnostics_with_code(result, Error.VARIABLE_NAME_NOT_STATICALLY_RESOLVABLE)
+        errors = _diagnostics_with_code(result, Error.VARIABLE_NAME_NOT_RESOLVABLE)
+
+        assert "${A}" in names
+        assert len(hints) == 1
+        assert len(errors) == 0
+
+    def test_assignment_typed_nested_name_reports_static_hint(self) -> None:
+        result = _run_analyzer(
+            """\
+*** Test Cases ***
+Example
+    ${A}    Evaluate    1
+    ${NESTED ${A}: int}    Evaluate    2
+"""
+        )
+
+        names = _var_names(result)
+        hints = _diagnostics_with_code(result, Error.VARIABLE_NAME_NOT_STATICALLY_RESOLVABLE)
+        errors = _diagnostics_with_code(result, Error.VARIABLE_NAME_NOT_RESOLVABLE)
+
+        assert "${A}" in names
+        assert len(hints) == 1
+        assert len(errors) == 0
+
+    def test_typed_reference_is_not_normalized_in_usage_context(self) -> None:
+        result = _run_analyzer(
+            """\
+*** Test Cases ***
+Example
+    VAR    ${i: int}    1
+    Log    ${i: int}
+"""
+        )
+
+        names = _var_names(result)
+        errors = _diagnostics_with_code(result, Error.VARIABLE_NOT_FOUND)
+
+        assert "${i}" in names
+        assert len(errors) == 1
