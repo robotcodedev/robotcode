@@ -366,7 +366,7 @@ export class LanguageClientsManager {
           id: "select",
           label: "Select Python Interpreter...",
           detail:
-            "Choose a Python interpreter version 3.10 or newer that has `robotframework` version 4.1 or higher installed",
+            "Choose a Python interpreter version 3.10 or newer that has `robotframework` version 5.0 or higher installed",
         },
         {
           id: "create",
@@ -379,7 +379,7 @@ export class LanguageClientsManager {
                 id: "retry",
                 label: "Retry",
                 detail:
-                  "Install `robotframework` version 4.1 or higher manually in the current environment, then restart the language server",
+                  "Install `robotframework` version 5.0 or higher manually in the current environment, then restart the language server",
               },
             ]
           : []),
