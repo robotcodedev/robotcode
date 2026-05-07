@@ -223,6 +223,9 @@ select = [
 
 [tool.ruff.lint.per-file-ignores]
 #"__init__.py" = ["F401"]
+# `field` is a local wrapper around dataclasses.field — see the long note
+# under tool.ruff.lint.flake8-bugbear.extend-immutable-calls below.
+"packages/robot/src/robotcode/robot/config/model.py" = ["RUF009"]
 
 [tool.ruff.lint.isort]
 detect-same-package = true
@@ -231,6 +234,16 @@ known-first-party = ["robotcode"]
 [tool.ruff.lint.flake8-pytest-style]
 fixture-parentheses = false
 mark-parentheses = false
+
+[tool.ruff.lint.flake8-bugbear]
+# Our local `field()` wrapper around `dataclasses.field` is safe to use as a
+# dataclass default — extend the allowlist so RUF009/B008 don't flag it
+# at call sites that import the wrapper. The defining module itself
+# (model.py) needs an additional per-file ignore (see above) because ruff
+# resolves the local name independently.
+extend-immutable-calls = [
+  "robotcode.robot.config.model.field",
+]
 
 
 [tool.mypy]

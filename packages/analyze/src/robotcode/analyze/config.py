@@ -1,4 +1,3 @@
-# ruff: noqa: RUF009
 from dataclasses import dataclass
 from enum import IntFlag
 from typing import Iterable, List, Literal, Optional, Union

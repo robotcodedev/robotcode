@@ -15,12 +15,12 @@ from robotcode.robot.config.model import field
 class ToolConfig:
     """Tool configurations."""
 
-    robotcode_analyze: Optional[AnalyzeConfig] = field(description=AnalyzeConfig.__doc__)  # noqa: RUF009
+    robotcode_analyze: Optional[AnalyzeConfig] = field(description=AnalyzeConfig.__doc__)
 
 
 @dataclass
 class RobotConfig(OrigRobotConfig):
-    tool: Union[ToolConfig, Dict[str, Any], None] = field(description="Tool configurations.")  # noqa: RUF009
+    tool: Union[ToolConfig, Dict[str, Any], None] = field(description="Tool configurations.")
 
 
 RobotConfig.__doc__ = OrigRobotConfig.__doc__

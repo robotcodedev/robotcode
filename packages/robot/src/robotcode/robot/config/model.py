@@ -1,4 +1,3 @@
-# ruff: noqa: RUF009
 import dataclasses
 import datetime
 import fnmatch
@@ -433,6 +432,12 @@ class CommonOptions(RobotBaseOptions):
 
             **off:** disable colors altogether
 
+            Examples:
+
+            ```toml
+            console-colors = "on"
+            ```
+
             corresponds to the `-C --consolecolors auto|on|ansi|off` option of _robot_
             """,
         robot_name="consolecolors",
@@ -446,6 +451,12 @@ class CommonOptions(RobotBaseOptions):
             **auto:** use links when colors are enabled (default)
 
             **off:** disable links unconditionally
+
+            Examples:
+
+            ```toml
+            console-links = "off"
+            ```
 
             corresponds to the `--consolelinks auto|off` option of _robot_
             """,
@@ -462,9 +473,13 @@ class CommonOptions(RobotBaseOptions):
 
             Examples:
 
+            ```toml
+            doc = "Very *good* example"
             ```
-            --doc "Very *good* example"
-            --doc doc_from_file.txt
+
+            ```toml
+            # read documentation from a file
+            doc = "doc_from_file.txt"
             ```
 
             corresponds to the `-D --doc documentation` option of _robot_
@@ -478,6 +493,12 @@ class CommonOptions(RobotBaseOptions):
             Select test cases not to run by tag. These tests are
             not run even if included with --include. Tags are
             matched using same rules as with --include.
+
+            Examples:
+
+            ```toml
+            excludes = ["smoke", "wip*"]
+            ```
 
             corresponds to the `-e --exclude tag *` option of _robot_
             """,
@@ -493,9 +514,8 @@ class CommonOptions(RobotBaseOptions):
 
             Examples:
 
-            ```
-            --expandkeywords name:BuiltIn.Log
-            --expandkeywords tag:expand
+            ```toml
+            expand-keywords = ["name:BuiltIn.Log", "tag:expand"]
             ```
 
             corresponds to the `--expandkeywords name:<pattern>|tag:<pattern> *` option of _robot_
@@ -525,6 +545,12 @@ class CommonOptions(RobotBaseOptions):
             matching rules as with
             `--removekeywords tag:<pattern>`
 
+            Examples:
+
+            ```toml
+            flatten-keywords = ["for", "name:Lib.HugeKw", "tag:flatten"]
+            ```
+
             corresponds to the `--flattenkeywords for|while|iteration|name:<pattern>|tag:<pattern> *` option of _robot_
             """,
         robot_name="flattenkeywords",
@@ -540,9 +566,14 @@ class CommonOptions(RobotBaseOptions):
 
             Examples:
 
+            ```toml
+            # match tests tagged "foo" or "bar*"
+            includes = ["foo", "bar*"]
             ```
-            --include foo --include bar*
-            --include fooANDbar*
+
+            ```toml
+            # tests with both "foo" and "bar*" tags
+            includes = ["fooANDbar*"]
             ```
 
             corresponds to the `-i --include tag *` option of _robot_
@@ -555,6 +586,12 @@ class CommonOptions(RobotBaseOptions):
         description="""\
             Create XML output file in format compatible with
             Robot Framework 6.x and earlier.
+
+            Examples:
+
+            ```toml
+            legacy-output = true
+            ```
 
             corresponds to the `--legacyoutput` option of _robot_
             """,
@@ -569,8 +606,13 @@ class CommonOptions(RobotBaseOptions):
 
             Examples:
 
+            ```toml
+            log = "mylog.html"
             ```
-            `--log mylog.html`, `-l NONE`
+
+            ```toml
+            # disable log file generation
+            log = "NONE"
             ```
 
             corresponds to the `-l --log file` option of _robot_
@@ -584,6 +626,12 @@ class CommonOptions(RobotBaseOptions):
             Title for the generated log file. The default title
             is `<SuiteName> Log`.
 
+            Examples:
+
+            ```toml
+            log-title = "My Project Log"
+            ```
+
             corresponds to the `--logtitle title` option of _robot_
             """,
         robot_name="logtitle",
@@ -594,6 +642,15 @@ class CommonOptions(RobotBaseOptions):
             Set metadata of the top level suite. Value can
             contain formatting and be read from a file similarly
             as --doc. Example: --metadata Version:1.2
+
+            Examples:
+
+            ```toml
+            [metadata]
+            Version = "1.2"
+            # value can be read from a file (same rules as --doc)
+            ReleaseNotes = "release_notes.txt"
+            ```
 
             corresponds to the `-M --metadata name:value *` option of _robot_
             """,
@@ -607,6 +664,12 @@ class CommonOptions(RobotBaseOptions):
             name is created based on the executed file or
             directory.
 
+            Examples:
+
+            ```toml
+            name = "My Project"
+            ```
+
             corresponds to the `-N --name name` option of _robot_
             """,
         robot_name="name",
@@ -617,6 +680,13 @@ class CommonOptions(RobotBaseOptions):
         description="""\
             Sets the return code to zero regardless of failures
             in test cases. Error codes are returned normally.
+
+            Examples:
+
+            ```toml
+            # always exit 0 regardless of failed tests
+            no-status-rc = true
+            ```
 
             corresponds to the `--nostatusrc` option of _robot_
             """,
@@ -630,6 +700,12 @@ class CommonOptions(RobotBaseOptions):
             Where to create output files. The default is the
             directory where tests are run from and the given path
             is considered relative to that unless it is absolute.
+
+            Examples:
+
+            ```toml
+            output-dir = "results"
+            ```
 
             corresponds to the `-d --outputdir dir` option of _robot_
             """,
@@ -646,6 +722,12 @@ class CommonOptions(RobotBaseOptions):
             - a directory path like `path/to/example` to parse
             all files in that directory, recursively.
 
+            Examples:
+
+            ```toml
+            parse-include = ["*.robot", "tests/**/*.robot"]
+            ```
+
             corresponds to the `-I --parseinclude pattern *` option of _robot_
             """,
         robot_name="parseinclude",
@@ -657,6 +739,13 @@ class CommonOptions(RobotBaseOptions):
             Class to programmatically modify the result
             model before creating reports and logs. Accepts
             arguments the same way as with --listener.
+
+            Examples:
+
+            ```toml
+            [pre-rebot-modifiers]
+            "path/to/Modifier.py" = ["arg1"]
+            ```
 
             corresponds to the `--prerebotmodifier modifier *` option of _robot_
             """,
@@ -674,9 +763,8 @@ class CommonOptions(RobotBaseOptions):
 
             Examples:
 
-            ```
-            --pythonpath libs/
-            --pythonpath /opt/libs:libraries.zip
+            ```toml
+            python-path = ["libs/", "/opt/libs", "libraries.zip"]
             ```
 
             corresponds to the `-P --pythonpath path *` option of _robot_
@@ -711,13 +799,6 @@ class CommonOptions(RobotBaseOptions):
             is case, space, and underscore insensitive,
             and may contain `*`, `?` and `[]` wildcards.
 
-            Examples:
-
-            ```
-            --removekeywords name:Lib.HugeKw
-            --removekeywords name:myresource.*
-            ```
-
 
 
             **tag:\\<pattern>:** remove data from keywords that match
@@ -729,9 +810,14 @@ class CommonOptions(RobotBaseOptions):
 
             Examples:
 
+            ```toml
+            # match by keyword name
+            remove-keywords = ["name:Lib.HugeKw", "name:myresource.*"]
             ```
-            --removekeywords foo
-            --removekeywords fooANDbar*
+
+            ```toml
+            # match by tag pattern (same rules as --include)
+            remove-keywords = ["foo", "fooANDbar*"]
             ```
 
             corresponds to the `--removekeywords all|passed|for|wuks|name:<pattern>|tag:<pattern> *` option of _robot_
@@ -744,6 +830,12 @@ class CommonOptions(RobotBaseOptions):
         description="""\
             HTML report file. Can be disabled with `NONE`
             similarly as --log. Default: report.html
+
+            Examples:
+
+            ```toml
+            report = "report.html"
+            ```
 
             corresponds to the `-r --report file` option of _robot_
             """,
@@ -760,9 +852,14 @@ class CommonOptions(RobotBaseOptions):
 
             Examples:
 
+            ```toml
+            # pass:fail:skip colours
+            report-background = "green:red:yellow"
             ```
-            --reportbackground green:red:yellow
-            --reportbackground #00E:#E00
+
+            ```toml
+            # pass:fail (skip uses the fail colour)
+            report-background = "#00E:#E00"
             ```
 
             corresponds to the `--reportbackground colors` option of _robot_
@@ -774,6 +871,12 @@ class CommonOptions(RobotBaseOptions):
         description="""\
             Title for the generated report file. The default
             title is `<SuiteName> Report`.
+
+            Examples:
+
+            ```toml
+            report-title = "My Project Report"
+            ```
 
             corresponds to the `--reporttitle title` option of _robot_
             """,
@@ -787,6 +890,12 @@ class CommonOptions(RobotBaseOptions):
             in logs and reports. By default the mode is got
             from test/task header in data files.
 
+            Examples:
+
+            ```toml
+            rpa = true
+            ```
+
             corresponds to the `--rpa` option of _robot_
             """,
         robot_name="rpa",
@@ -796,6 +905,12 @@ class CommonOptions(RobotBaseOptions):
     set_tag: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
             Sets given tag(s) to all executed tests.
+
+            Examples:
+
+            ```toml
+            set-tag = ["my-suite-tag", "ci"]
+            ```
 
             corresponds to the `-G --settag tag *` option of _robot_
             """,
@@ -807,6 +922,12 @@ class CommonOptions(RobotBaseOptions):
         description="""\
             Split the log file into smaller pieces that open in
             browsers transparently.
+
+            Examples:
+
+            ```toml
+            split-log = true
+            ```
 
             corresponds to the `--splitlog` option of _robot_
             """,
@@ -824,6 +945,13 @@ class CommonOptions(RobotBaseOptions):
             name separated with a dot. For example, `-s X.Y`
             selects suite `Y` only if its parent is `X`.
 
+            Examples:
+
+            ```toml
+            # match a suite by name or by parent.child path
+            suites = ["MySuite", "Tests.SubSuite"]
+            ```
+
             corresponds to the `-s --suite name *` option of _robot_
             """,
         robot_name="suite",
@@ -835,6 +963,12 @@ class CommonOptions(RobotBaseOptions):
             How many levels to show in `Statistics by Suite`
             in log and report. By default all suite levels are
             shown. Example:  --suitestatlevel 3
+
+            Examples:
+
+            ```toml
+            suite-stat-level = 2
+            ```
 
             corresponds to the `--suitestatlevel level` option of _robot_
             """,
@@ -850,9 +984,10 @@ class CommonOptions(RobotBaseOptions):
 
             Examples:
 
-            ```
-            --tagdoc mytag:Example
-            --tagdoc "owner-*:Original author"
+            ```toml
+            [tag-doc]
+            mytag = "Example"
+            "owner-*" = "Original author"
             ```
 
             corresponds to the `--tagdoc pattern:doc *` option of _robot_
@@ -870,9 +1005,8 @@ class CommonOptions(RobotBaseOptions):
 
             Examples:
 
-            ```
-            --tagstatcombine requirement-*
-            --tagstatcombine tag1ANDtag2:My_name
+            ```toml
+            tag-stat-combine = ["requirement-*", { "tag1ANDtag2" = "My_name" }]
             ```
 
             corresponds to the `--tagstatcombine tags:name *` option of _robot_
@@ -886,6 +1020,12 @@ class CommonOptions(RobotBaseOptions):
             This option can be used with --tagstatinclude
             similarly as --exclude is used with --include.
 
+            Examples:
+
+            ```toml
+            tag-stat-exclude = ["bug-*"]
+            ```
+
             corresponds to the `--tagstatexclude tag *` option of _robot_
             """,
         robot_name="tagstatexclude",
@@ -896,6 +1036,12 @@ class CommonOptions(RobotBaseOptions):
             Include only matching tags in `Statistics by Tag`
             in log and report. By default all tags are shown.
             Given tag can be a pattern like with --include.
+
+            Examples:
+
+            ```toml
+            tag-stat-include = ["owner-*", "feature-*"]
+            ```
 
             corresponds to the `--tagstatinclude tag *` option of _robot_
             """,
@@ -912,9 +1058,10 @@ class CommonOptions(RobotBaseOptions):
 
             Examples:
 
-            ```
-            --tagstatlink mytag:http://my.domain:Title
-            --tagstatlink "bug-*:http://url/id=%1:Issue Tracker"
+            ```toml
+            [tag-stat-link]
+            mytag = "http://my.domain:Title"
+            "bug-*" = "http://url/id=%1:Issue Tracker"
             ```
 
             corresponds to the `--tagstatlink pattern:link:title *` option of _robot_
@@ -925,6 +1072,12 @@ class CommonOptions(RobotBaseOptions):
     tasks: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
             Alias to --test. Especially applicable with --rpa.
+
+            Examples:
+
+            ```toml
+            tasks = ["My Task", "Smoke*"]
+            ```
 
             corresponds to the `--task name *` option of _robot_
             """,
@@ -939,6 +1092,12 @@ class CommonOptions(RobotBaseOptions):
             pattern where `*` matches anything, `?` matches any
             single character, and `[chars]` matches one character
             in brackets.
+
+            Examples:
+
+            ```toml
+            tests = ["My Test", "Smoke*"]
+            ```
 
             corresponds to the `-t --test name *` option of _robot_
             """,
@@ -955,6 +1114,12 @@ class CommonOptions(RobotBaseOptions):
             creates files like `output-20070503-154410.xml` and
             `report-20070503-154410.html`.
 
+            Examples:
+
+            ```toml
+            timestamp-outputs = true
+            ```
+
             corresponds to the `-T --timestampoutputs` option of _robot_
             """,
         robot_name="timestampoutputs",
@@ -966,6 +1131,12 @@ class CommonOptions(RobotBaseOptions):
         description="""\
             xUnit compatible result file. Not created unless this
             option is specified.
+
+            Examples:
+
+            ```toml
+            xunit = "xunit.xml"
+            ```
 
             corresponds to the `-x --xunit file` option of _robot_
             """,
@@ -987,6 +1158,12 @@ class CommonExtendOptions(RobotBaseOptions):
             not run even if included with --include. Tags are
             matched using same rules as with --include.
 
+            Examples:
+
+            ```toml
+            extend-excludes = ["smoke", "wip*"]
+            ```
+
             corresponds to the `-e --exclude tag *` option of _robot_
             """,
     )
@@ -1000,9 +1177,8 @@ class CommonExtendOptions(RobotBaseOptions):
 
             Examples:
 
-            ```
-            --expandkeywords name:BuiltIn.Log
-            --expandkeywords tag:expand
+            ```toml
+            extend-expand-keywords = ["name:BuiltIn.Log", "tag:expand"]
             ```
 
             corresponds to the `--expandkeywords name:<pattern>|tag:<pattern> *` option of _robot_
@@ -1034,6 +1210,12 @@ class CommonExtendOptions(RobotBaseOptions):
             matching rules as with
             `--removekeywords tag:<pattern>`
 
+            Examples:
+
+            ```toml
+            extend-flatten-keywords = ["for", "name:Lib.HugeKw", "tag:flatten"]
+            ```
+
             corresponds to the `--flattenkeywords for|while|iteration|name:<pattern>|tag:<pattern> *` option of _robot_
             """,
     )
@@ -1049,9 +1231,14 @@ class CommonExtendOptions(RobotBaseOptions):
 
             Examples:
 
+            ```toml
+            # match tests tagged "foo" or "bar*"
+            extend-includes = ["foo", "bar*"]
             ```
-            --include foo --include bar*
-            --include fooANDbar*
+
+            ```toml
+            # tests with both "foo" and "bar*" tags
+            extend-includes = ["fooANDbar*"]
             ```
 
             corresponds to the `-i --include tag *` option of _robot_
@@ -1064,6 +1251,15 @@ class CommonExtendOptions(RobotBaseOptions):
             Set metadata of the top level suite. Value can
             contain formatting and be read from a file similarly
             as --doc. Example: --metadata Version:1.2
+
+            Examples:
+
+            ```toml
+            [extend-metadata]
+            Version = "1.2"
+            # value can be read from a file (same rules as --doc)
+            ReleaseNotes = "release_notes.txt"
+            ```
 
             corresponds to the `-M --metadata name:value *` option of _robot_
             """,
@@ -1079,6 +1275,12 @@ class CommonExtendOptions(RobotBaseOptions):
             - a directory path like `path/to/example` to parse
             all files in that directory, recursively.
 
+            Examples:
+
+            ```toml
+            extend-parse-include = ["*.robot", "tests/**/*.robot"]
+            ```
+
             corresponds to the `-I --parseinclude pattern *` option of _robot_
             """,
     )
@@ -1089,6 +1291,13 @@ class CommonExtendOptions(RobotBaseOptions):
             Class to programmatically modify the result
             model before creating reports and logs. Accepts
             arguments the same way as with --listener.
+
+            Examples:
+
+            ```toml
+            [extend-pre-rebot-modifiers]
+            "path/to/Modifier.py" = ["arg1"]
+            ```
 
             corresponds to the `--prerebotmodifier modifier *` option of _robot_
             """,
@@ -1106,9 +1315,8 @@ class CommonExtendOptions(RobotBaseOptions):
 
             Examples:
 
-            ```
-            --pythonpath libs/
-            --pythonpath /opt/libs:libraries.zip
+            ```toml
+            extend-python-path = ["libs/", "/opt/libs", "libraries.zip"]
             ```
 
             corresponds to the `-P --pythonpath path *` option of _robot_
@@ -1143,13 +1351,6 @@ class CommonExtendOptions(RobotBaseOptions):
             is case, space, and underscore insensitive,
             and may contain `*`, `?` and `[]` wildcards.
 
-            Examples:
-
-            ```
-            --removekeywords name:Lib.HugeKw
-            --removekeywords name:myresource.*
-            ```
-
 
 
             **tag:\\<pattern>:** remove data from keywords that match
@@ -1161,9 +1362,14 @@ class CommonExtendOptions(RobotBaseOptions):
 
             Examples:
 
+            ```toml
+            # match by keyword name
+            extend-remove-keywords = ["name:Lib.HugeKw", "name:myresource.*"]
             ```
-            --removekeywords foo
-            --removekeywords fooANDbar*
+
+            ```toml
+            # match by tag pattern (same rules as --include)
+            extend-remove-keywords = ["foo", "fooANDbar*"]
             ```
 
             corresponds to the `--removekeywords all|passed|for|wuks|name:<pattern>|tag:<pattern> *` option of _robot_
@@ -1174,6 +1380,12 @@ class CommonExtendOptions(RobotBaseOptions):
             Appends entries to the --settag option.
 
             Sets given tag(s) to all executed tests.
+
+            Examples:
+
+            ```toml
+            extend-set-tag = ["my-suite-tag", "ci"]
+            ```
 
             corresponds to the `-G --settag tag *` option of _robot_
             """,
@@ -1190,6 +1402,13 @@ class CommonExtendOptions(RobotBaseOptions):
             name separated with a dot. For example, `-s X.Y`
             selects suite `Y` only if its parent is `X`.
 
+            Examples:
+
+            ```toml
+            # match a suite by name or by parent.child path
+            extend-suites = ["MySuite", "Tests.SubSuite"]
+            ```
+
             corresponds to the `-s --suite name *` option of _robot_
             """,
     )
@@ -1204,9 +1423,10 @@ class CommonExtendOptions(RobotBaseOptions):
 
             Examples:
 
-            ```
-            --tagdoc mytag:Example
-            --tagdoc "owner-*:Original author"
+            ```toml
+            [extend-tag-doc]
+            mytag = "Example"
+            "owner-*" = "Original author"
             ```
 
             corresponds to the `--tagdoc pattern:doc *` option of _robot_
@@ -1224,9 +1444,8 @@ class CommonExtendOptions(RobotBaseOptions):
 
             Examples:
 
-            ```
-            --tagstatcombine requirement-*
-            --tagstatcombine tag1ANDtag2:My_name
+            ```toml
+            extend-tag-stat-combine = ["requirement-*", { "tag1ANDtag2" = "My_name" }]
             ```
 
             corresponds to the `--tagstatcombine tags:name *` option of _robot_
@@ -1240,6 +1459,12 @@ class CommonExtendOptions(RobotBaseOptions):
             This option can be used with --tagstatinclude
             similarly as --exclude is used with --include.
 
+            Examples:
+
+            ```toml
+            extend-tag-stat-exclude = ["bug-*"]
+            ```
+
             corresponds to the `--tagstatexclude tag *` option of _robot_
             """,
     )
@@ -1250,6 +1475,12 @@ class CommonExtendOptions(RobotBaseOptions):
             Include only matching tags in `Statistics by Tag`
             in log and report. By default all tags are shown.
             Given tag can be a pattern like with --include.
+
+            Examples:
+
+            ```toml
+            extend-tag-stat-include = ["owner-*", "feature-*"]
+            ```
 
             corresponds to the `--tagstatinclude tag *` option of _robot_
             """,
@@ -1266,9 +1497,10 @@ class CommonExtendOptions(RobotBaseOptions):
 
             Examples:
 
-            ```
-            --tagstatlink mytag:http://my.domain:Title
-            --tagstatlink "bug-*:http://url/id=%1:Issue Tracker"
+            ```toml
+            [extend-tag-stat-link]
+            mytag = "http://my.domain:Title"
+            "bug-*" = "http://url/id=%1:Issue Tracker"
             ```
 
             corresponds to the `--tagstatlink pattern:link:title *` option of _robot_
@@ -1279,6 +1511,12 @@ class CommonExtendOptions(RobotBaseOptions):
             Appends entries to the --task option.
 
             Alias to --test. Especially applicable with --rpa.
+
+            Examples:
+
+            ```toml
+            extend-tasks = ["My Task", "Smoke*"]
+            ```
 
             corresponds to the `--task name *` option of _robot_
             """,
@@ -1293,6 +1531,12 @@ class CommonExtendOptions(RobotBaseOptions):
             pattern where `*` matches anything, `?` matches any
             single character, and `[chars]` matches one character
             in brackets.
+
+            Examples:
+
+            ```toml
+            extend-tests = ["My Test", "Smoke*"]
+            ```
 
             corresponds to the `-t --test name *` option of _robot_
             """,
@@ -1316,6 +1560,12 @@ class RobotOptions(RobotBaseOptions):
 
             **none:** no output whatsoever
 
+            Examples:
+
+            ```toml
+            console = "dotted"
+            ```
+
             corresponds to the `--console type` option of _robot_
             """,
         robot_name="console",
@@ -1327,6 +1577,12 @@ class RobotOptions(RobotBaseOptions):
             keywords in a test case end. Values have same
             semantics as with --consolecolors.
 
+            Examples:
+
+            ```toml
+            console-markers = "off"
+            ```
+
             corresponds to the `-K --consolemarkers auto|on|off` option of _robot_
             """,
         robot_name="consolemarkers",
@@ -1336,6 +1592,12 @@ class RobotOptions(RobotBaseOptions):
     console_width: Optional[int] = field(
         description="""\
             Width of the console output. Default is 78.
+
+            Examples:
+
+            ```toml
+            console-width = 100
+            ```
 
             corresponds to the `-W --consolewidth chars` option of _robot_
             """,
@@ -1348,6 +1610,12 @@ class RobotOptions(RobotBaseOptions):
             Debug file written during execution. Not created
             unless this option is specified.
 
+            Examples:
+
+            ```toml
+            debug-file = "debug.log"
+            ```
+
             corresponds to the `-b --debugfile file` option of _robot_
             """,
         robot_name="debugfile",
@@ -1357,6 +1625,12 @@ class RobotOptions(RobotBaseOptions):
     dotted: Union[bool, Flag, None] = field(
         description="""\
             Shortcut for `--console dotted`.
+
+            Examples:
+
+            ```toml
+            dotted = true
+            ```
 
             corresponds to the `-. --dotted` option of _robot_
             """,
@@ -1370,6 +1644,12 @@ class RobotOptions(RobotBaseOptions):
             Verifies test data and runs tests so that library
             keywords are not executed.
 
+            Examples:
+
+            ```toml
+            dry-run = true
+            ```
+
             corresponds to the `--dryrun` option of _robot_
             """,
         robot_name="dryrun",
@@ -1381,6 +1661,12 @@ class RobotOptions(RobotBaseOptions):
             Stops test execution if any error occurs when parsing
             test data, importing libraries, and so on.
 
+            Examples:
+
+            ```toml
+            exit-on-error = true
+            ```
+
             corresponds to the `--exitonerror` option of _robot_
             """,
         robot_name="exitonerror",
@@ -1390,6 +1676,12 @@ class RobotOptions(RobotBaseOptions):
     exit_on_failure: Union[bool, Flag, None] = field(
         description="""\
             Stops test execution if any test fails.
+
+            Examples:
+
+            ```toml
+            exit-on-failure = true
+            ```
 
             corresponds to the `-X --exitonfailure` option of _robot_
             """,
@@ -1405,14 +1697,19 @@ class RobotOptions(RobotBaseOptions):
             files or when using resource files. If more than one
             extension is needed, separate them with a colon.
 
-            Examples:
-
-            ```
-            `--extension txt`, `--extension robot:txt`
-            ```
-
 
             Only `*.robot` files are parsed by default.
+
+            Examples:
+
+            ```toml
+            extensions = "txt"
+            ```
+
+            ```toml
+            # parse multiple extensions (separator: colon)
+            extensions = "robot:txt"
+            ```
 
             corresponds to the `-F --extension value` option of _robot_
             """,
@@ -1425,6 +1722,12 @@ class RobotOptions(RobotBaseOptions):
             Activate localization. `lang` can be a name or a code
             of a built-in language, or a path or a module name of
             a custom language file.
+
+            Examples:
+
+            ```toml
+            languages = ["German", "Finnish"]
+            ```
 
             corresponds to the `--language lang *` option of _robot_
             """,
@@ -1440,9 +1743,10 @@ class RobotOptions(RobotBaseOptions):
 
             Examples:
 
-            ```
-            --listener MyListener
-            --listener path/to/Listener.py:arg1:arg2
+            ```toml
+            [listeners]
+            MyListener = []
+            "path/to/Listener.py" = ["arg1", "arg2"]
             ```
 
             corresponds to the `--listener listener *` option of _robot_
@@ -1459,9 +1763,13 @@ class RobotOptions(RobotBaseOptions):
 
             Examples:
 
+            ```toml
+            log-level = "DEBUG"
             ```
-            --loglevel DEBUG
-            --loglevel DEBUG:INFO
+
+            ```toml
+            # explicit visible level (default: INFO)
+            log-level = "DEBUG:INFO"
             ```
 
             corresponds to the `-L --loglevel level` option of _robot_
@@ -1477,6 +1785,12 @@ class RobotOptions(RobotBaseOptions):
             can be used to avoid showing assigned values at all.
             Default is 200.
 
+            Examples:
+
+            ```toml
+            max-assign-length = 200
+            ```
+
             corresponds to the `--maxassignlength characters` option of _robot_
             """,
         robot_name="maxassignlength",
@@ -1487,6 +1801,12 @@ class RobotOptions(RobotBaseOptions):
             Maximum number of error message lines to show in
             report when tests fail. Default is 40, minimum is 10
             and `NONE` can be used to show the full message.
+
+            Examples:
+
+            ```toml
+            max-error-lines = 40
+            ```
 
             corresponds to the `--maxerrorlines lines` option of _robot_
             """,
@@ -1505,6 +1825,12 @@ class RobotOptions(RobotBaseOptions):
 
             **Default:** output.xml
 
+            Examples:
+
+            ```toml
+            output = "output.xml"
+            ```
+
             corresponds to the `-o --output file` option of _robot_
             """,
         robot_name="output",
@@ -1515,6 +1841,14 @@ class RobotOptions(RobotBaseOptions):
         description="""\
             Custom parser class or module. Parser classes accept
             arguments the same way as with --listener.
+
+            Examples:
+
+            ```toml
+            [parsers]
+            MyParser = []
+            "path/to/MyParser.py" = ["arg1", "arg2"]
+            ```
 
             corresponds to the `--parser parser *` option of _robot_
             """,
@@ -1527,6 +1861,14 @@ class RobotOptions(RobotBaseOptions):
             structure before execution. Accepts arguments the
             same way as with --listener.
 
+            Examples:
+
+            ```toml
+            [pre-run-modifiers]
+            MyModifier = []
+            "path/to/Modifier.py" = ["arg1"]
+            ```
+
             corresponds to the `--prerunmodifier modifier *` option of _robot_
             """,
         robot_name="prerunmodifier",
@@ -1535,6 +1877,12 @@ class RobotOptions(RobotBaseOptions):
     quiet: Union[bool, Flag, None] = field(
         description="""\
             Shortcut for `--console quiet`.
+
+            Examples:
+
+            ```toml
+            quiet = true
+            ```
 
             corresponds to the `--quiet` option of _robot_
             """,
@@ -1558,9 +1906,13 @@ class RobotOptions(RobotBaseOptions):
 
             Examples:
 
+            ```toml
+            randomize = "all"
             ```
-            --randomize all
-            --randomize tests:1234
+
+            ```toml
+            # randomize tests with a fixed seed
+            randomize = "tests:1234"
             ```
 
             corresponds to the `--randomize all|suites|tests|none` option of _robot_
@@ -1574,6 +1926,12 @@ class RobotOptions(RobotBaseOptions):
             re-executed. Equivalent to selecting same tests
             individually using --test.
 
+            Examples:
+
+            ```toml
+            re-run-failed = "output.xml"
+            ```
+
             corresponds to the `-R --rerunfailed output` option of _robot_
             """,
         robot_name="rerunfailed",
@@ -1584,6 +1942,12 @@ class RobotOptions(RobotBaseOptions):
         description="""\
             Select failed suites from an earlier output
             file to be re-executed.
+
+            Examples:
+
+            ```toml
+            re-run-failed-suites = "output.xml"
+            ```
 
             corresponds to the `-S --rerunfailedsuites output` option of _robot_
             """,
@@ -1597,6 +1961,12 @@ class RobotOptions(RobotBaseOptions):
             e.g. with --include/--exclude when it is not an error
             that no test matches the condition.
 
+            Examples:
+
+            ```toml
+            run-empty-suite = true
+            ```
+
             corresponds to the `--runemptysuite` option of _robot_
             """,
         robot_name="runemptysuite",
@@ -1608,6 +1978,12 @@ class RobotOptions(RobotBaseOptions):
             Tests having given tag will be skipped. Tag can be
             a pattern.
 
+            Examples:
+
+            ```toml
+            skip = ["bug-*", "wip"]
+            ```
+
             corresponds to the `--skip tag *` option of _robot_
             """,
         robot_name="skip",
@@ -1618,6 +1994,12 @@ class RobotOptions(RobotBaseOptions):
             Tests having given tag will be skipped if they fail.
             Tag can be a pattern
 
+            Examples:
+
+            ```toml
+            skip-on-failure = ["unstable"]
+            ```
+
             corresponds to the `--skiponfailure tag *` option of _robot_
             """,
         robot_name="skiponfailure",
@@ -1627,6 +2009,12 @@ class RobotOptions(RobotBaseOptions):
         description="""\
             Causes teardowns to be skipped if test execution is
             stopped prematurely.
+
+            Examples:
+
+            ```toml
+            skip-teardown-on-exit = true
+            ```
 
             corresponds to the `--skipteardownonexit` option of _robot_
             """,
@@ -1643,10 +2031,10 @@ class RobotOptions(RobotBaseOptions):
 
             Examples:
 
-            ```
-            --variable name:Robot  =>  ${name} = `Robot`
-            -v "hello:Hello world" =>  ${hello} = `Hello world`
-            -v x: -v y:42          =>  ${x} = ``, ${y} = `42`
+            ```toml
+            # sets ${name} to "Robot"
+            [variables]
+            name = "Robot"
             ```
 
             corresponds to the `-v --variable name:value *` option of _robot_
@@ -1663,9 +2051,8 @@ class RobotOptions(RobotBaseOptions):
 
             Examples:
 
-            ```
-            --variablefile path/vars.yaml
-            --variablefile environment.py:testing
+            ```toml
+            variable-files = ["path/vars.yaml", "environment.py:testing"]
             ```
 
             corresponds to the `-V --variablefile path *` option of _robot_
@@ -1688,6 +2075,12 @@ class RobotExtendOptions(RobotBaseOptions):
             of a built-in language, or a path or a module name of
             a custom language file.
 
+            Examples:
+
+            ```toml
+            extend-languages = ["German", "Finnish"]
+            ```
+
             corresponds to the `--language lang *` option of _rebot_
             """,
     )
@@ -1702,9 +2095,10 @@ class RobotExtendOptions(RobotBaseOptions):
 
             Examples:
 
-            ```
-            --listener MyListener
-            --listener path/to/Listener.py:arg1:arg2
+            ```toml
+            [extend-listeners]
+            MyListener = []
+            "path/to/Listener.py" = ["arg1", "arg2"]
             ```
 
             corresponds to the `--listener listener *` option of _rebot_
@@ -1717,6 +2111,14 @@ class RobotExtendOptions(RobotBaseOptions):
             Custom parser class or module. Parser classes accept
             arguments the same way as with --listener.
 
+            Examples:
+
+            ```toml
+            [extend-parsers]
+            MyParser = []
+            "path/to/MyParser.py" = ["arg1", "arg2"]
+            ```
+
             corresponds to the `--parser parser *` option of _rebot_
             """,
     )
@@ -1728,6 +2130,14 @@ class RobotExtendOptions(RobotBaseOptions):
             structure before execution. Accepts arguments the
             same way as with --listener.
 
+            Examples:
+
+            ```toml
+            [extend-pre-run-modifiers]
+            MyModifier = []
+            "path/to/Modifier.py" = ["arg1"]
+            ```
+
             corresponds to the `--prerunmodifier modifier *` option of _rebot_
             """,
     )
@@ -1738,6 +2148,12 @@ class RobotExtendOptions(RobotBaseOptions):
             Tests having given tag will be skipped. Tag can be
             a pattern.
 
+            Examples:
+
+            ```toml
+            extend-skip = ["bug-*", "wip"]
+            ```
+
             corresponds to the `--skip tag *` option of _rebot_
             """,
     )
@@ -1747,6 +2163,12 @@ class RobotExtendOptions(RobotBaseOptions):
 
             Tests having given tag will be skipped if they fail.
             Tag can be a pattern
+
+            Examples:
+
+            ```toml
+            extend-skip-on-failure = ["unstable"]
+            ```
 
             corresponds to the `--skiponfailure tag *` option of _rebot_
             """,
@@ -1762,10 +2184,10 @@ class RobotExtendOptions(RobotBaseOptions):
 
             Examples:
 
-            ```
-            --variable name:Robot  =>  ${name} = `Robot`
-            -v "hello:Hello world" =>  ${hello} = `Hello world`
-            -v x: -v y:42          =>  ${x} = ``, ${y} = `42`
+            ```toml
+            # sets ${name} to "Robot"
+            [extend-variables]
+            name = "Robot"
             ```
 
             corresponds to the `-v --variable name:value *` option of _rebot_
@@ -1781,9 +2203,8 @@ class RobotExtendOptions(RobotBaseOptions):
 
             Examples:
 
-            ```
-            --variablefile path/vars.yaml
-            --variablefile environment.py:testing
+            ```toml
+            extend-variable-files = ["path/vars.yaml", "environment.py:testing"]
             ```
 
             corresponds to the `-V --variablefile path *` option of _rebot_
@@ -1803,6 +2224,12 @@ class RebotOptions(RobotBaseOptions):
             calculated by adding elapsed times of the combined
             suites together.
 
+            Examples:
+
+            ```toml
+            end-time = "2024-12-15 14:35:42.123"
+            ```
+
             corresponds to the `--endtime timestamp` option of _rebot_
             """,
         robot_name="endtime",
@@ -1817,9 +2244,13 @@ class RebotOptions(RobotBaseOptions):
 
             Examples:
 
+            ```toml
+            log-level = "DEBUG"
             ```
-            --loglevel DEBUG
-            --loglevel DEBUG:INFO
+
+            ```toml
+            # explicit visible level (default: INFO)
+            log-level = "DEBUG:INFO"
             ```
 
             corresponds to the `-L --loglevel level` option of _rebot_
@@ -1835,6 +2266,12 @@ class RebotOptions(RobotBaseOptions):
 
             **Example:** rebot --merge orig.xml rerun.xml
 
+            Examples:
+
+            ```toml
+            merge = true
+            ```
+
             corresponds to the `-R --merge` option of _rebot_
             """,
         robot_name="merge",
@@ -1849,6 +2286,12 @@ class RebotOptions(RobotBaseOptions):
             --log, --report and --xunit, is relative to
             --outputdir unless given as an absolute path.
 
+            Examples:
+
+            ```toml
+            output = "output.xml"
+            ```
+
             corresponds to the `-o --output file` option of _rebot_
             """,
         robot_name="output",
@@ -1860,6 +2303,12 @@ class RebotOptions(RobotBaseOptions):
             Processes output also if the top level suite is
             empty. Useful e.g. with --include/--exclude when it
             is not an error that there are no matches.
+
+            Examples:
+
+            ```toml
+            process-empty-suite = true
+            ```
 
             corresponds to the `--processemptysuite` option of _rebot_
             """,
@@ -1877,6 +2326,12 @@ class RebotOptions(RobotBaseOptions):
             to override start time of a single suite or to set
             start time for a combined suite, which would
             otherwise be `N/A`.
+
+            Examples:
+
+            ```toml
+            start-time = "2024-12-15 14:30:00.000"
+            ```
 
             corresponds to the `--starttime timestamp` option of _rebot_
             """,
@@ -1897,6 +2352,12 @@ class LibDocOptions(RobotBaseOptions):
             value can be specified in library source code and
             the initial default value is ROBOT.
 
+            Examples:
+
+            ```toml
+            doc-format = "REST"
+            ```
+
             corresponds to the `-F --docformat ROBOT|HTML|TEXT|REST` option of _libdoc_
             """,
         robot_name="docformat",
@@ -1911,6 +2372,12 @@ class LibDocOptions(RobotBaseOptions):
             documentations converted to HTML. The default format
             is got from the output file extension.
 
+            Examples:
+
+            ```toml
+            format = "HTML"
+            ```
+
             corresponds to the `-f --format HTML|XML|JSON|LIBSPEC` option of _libdoc_
             """,
         robot_name="format",
@@ -1920,6 +2387,12 @@ class LibDocOptions(RobotBaseOptions):
     name: Optional[Union[str, StringExpression]] = field(
         description="""\
             Sets the name of the documented library or resource.
+
+            Examples:
+
+            ```toml
+            name = "My Project"
+            ```
 
             corresponds to the `-n --name name` option of _libdoc_
             """,
@@ -1932,6 +2405,12 @@ class LibDocOptions(RobotBaseOptions):
             Additional locations where to search for libraries
             and resources.
 
+            Examples:
+
+            ```toml
+            python-path = ["libs/", "/opt/libs", "libraries.zip"]
+            ```
+
             corresponds to the `-P --pythonpath path *` option of _libdoc_
             """,
         robot_name="pythonpath",
@@ -1942,6 +2421,12 @@ class LibDocOptions(RobotBaseOptions):
         description="""\
             Do not print the path of the generated output file
             to the console.
+
+            Examples:
+
+            ```toml
+            quiet = true
+            ```
 
             corresponds to the `--quiet` option of _libdoc_
             """,
@@ -1958,6 +2443,12 @@ class LibDocOptions(RobotBaseOptions):
             spec files and HTML with JSON specs and when using
             the special LIBSPEC format.
 
+            Examples:
+
+            ```toml
+            spec-doc-format = "HTML"
+            ```
+
             corresponds to the `-s --specdocformat RAW|HTML` option of _libdoc_
             """,
         robot_name="specdocformat",
@@ -1969,6 +2460,12 @@ class LibDocOptions(RobotBaseOptions):
             Use dark or light HTML theme. If this option is not
             used, or the value is NONE, the theme is selected
             based on the browser color scheme. New in RF 6.0.
+
+            Examples:
+
+            ```toml
+            theme = "DARK"
+            ```
 
             corresponds to the `--theme DARK|LIGHT|NONE` option of _libdoc_
             """,
@@ -1988,6 +2485,12 @@ class LibDocExtendOptions(RobotBaseOptions):
             Additional locations where to search for libraries
             and resources.
 
+            Examples:
+
+            ```toml
+            extend-python-path = ["libs/", "/opt/libs", "libraries.zip"]
+            ```
+
             corresponds to the `-P --pythonpath path *` option of _libdoc_
             """,
     )
@@ -2001,6 +2504,17 @@ class TestDocOptions(RobotBaseOptions):
         description="""\
             Override the documentation of the top level suite.
 
+            Examples:
+
+            ```toml
+            doc = "Very *good* example"
+            ```
+
+            ```toml
+            # read documentation from a file
+            doc = "doc_from_file.txt"
+            ```
+
             corresponds to the `-D --doc document` option of _testdoc_
             """,
         robot_name="doc",
@@ -2010,6 +2524,12 @@ class TestDocOptions(RobotBaseOptions):
     excludes: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
             Exclude tests by tags.
+
+            Examples:
+
+            ```toml
+            excludes = ["smoke", "wip*"]
+            ```
 
             corresponds to the `-e --exclude tag *` option of _testdoc_
             """,
@@ -2021,6 +2541,18 @@ class TestDocOptions(RobotBaseOptions):
         description="""\
             Include tests by tags.
 
+            Examples:
+
+            ```toml
+            # match tests tagged "foo" or "bar*"
+            includes = ["foo", "bar*"]
+            ```
+
+            ```toml
+            # tests with both "foo" and "bar*" tags
+            includes = ["fooANDbar*"]
+            ```
+
             corresponds to the `-i --include tag *` option of _testdoc_
             """,
         robot_name="include",
@@ -2030,6 +2562,15 @@ class TestDocOptions(RobotBaseOptions):
     metadata: Optional[Dict[str, Union[str, StringExpression]]] = field(
         description="""\
             Set/override metadata of the top level suite.
+
+            Examples:
+
+            ```toml
+            [metadata]
+            Version = "1.2"
+            # value can be read from a file (same rules as --doc)
+            ReleaseNotes = "release_notes.txt"
+            ```
 
             corresponds to the `-M --metadata name:value *` option of _testdoc_
             """,
@@ -2041,6 +2582,12 @@ class TestDocOptions(RobotBaseOptions):
         description="""\
             Override the name of the top level suite.
 
+            Examples:
+
+            ```toml
+            name = "My Project"
+            ```
+
             corresponds to the `-N --name name` option of _testdoc_
             """,
         robot_name="name",
@@ -2050,6 +2597,12 @@ class TestDocOptions(RobotBaseOptions):
     set_tag: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
             Set given tag(s) to all test cases.
+
+            Examples:
+
+            ```toml
+            set-tag = ["my-suite-tag", "ci"]
+            ```
 
             corresponds to the `-G --settag tag *` option of _testdoc_
             """,
@@ -2061,6 +2614,13 @@ class TestDocOptions(RobotBaseOptions):
         description="""\
             Include suites by name.
 
+            Examples:
+
+            ```toml
+            # match a suite by name or by parent.child path
+            suites = ["MySuite", "Tests.SubSuite"]
+            ```
+
             corresponds to the `-s --suite name *` option of _testdoc_
             """,
         robot_name="suite",
@@ -2070,6 +2630,12 @@ class TestDocOptions(RobotBaseOptions):
     tests: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
             Include tests by name.
+
+            Examples:
+
+            ```toml
+            tests = ["My Test", "Smoke*"]
+            ```
 
             corresponds to the `-t --test name *` option of _testdoc_
             """,
@@ -2082,6 +2648,12 @@ class TestDocOptions(RobotBaseOptions):
             Set the title of the generated documentation.
             Underscores in the title are converted to spaces.
             The default title is the name of the top level suite.
+
+            Examples:
+
+            ```toml
+            title = "My Library"
+            ```
 
             corresponds to the `-T --title title` option of _testdoc_
             """,
@@ -2101,6 +2673,12 @@ class TestDocExtendOptions(RobotBaseOptions):
 
             Exclude tests by tags.
 
+            Examples:
+
+            ```toml
+            extend-excludes = ["smoke", "wip*"]
+            ```
+
             corresponds to the `-e --exclude tag *` option of _testdoc_
             """,
     )
@@ -2109,6 +2687,18 @@ class TestDocExtendOptions(RobotBaseOptions):
             Appends entries to the --include option.
 
             Include tests by tags.
+
+            Examples:
+
+            ```toml
+            # match tests tagged "foo" or "bar*"
+            extend-includes = ["foo", "bar*"]
+            ```
+
+            ```toml
+            # tests with both "foo" and "bar*" tags
+            extend-includes = ["fooANDbar*"]
+            ```
 
             corresponds to the `-i --include tag *` option of _testdoc_
             """,
@@ -2119,6 +2709,15 @@ class TestDocExtendOptions(RobotBaseOptions):
 
             Set/override metadata of the top level suite.
 
+            Examples:
+
+            ```toml
+            [extend-metadata]
+            Version = "1.2"
+            # value can be read from a file (same rules as --doc)
+            ReleaseNotes = "release_notes.txt"
+            ```
+
             corresponds to the `-M --metadata name:value *` option of _testdoc_
             """,
     )
@@ -2127,6 +2726,12 @@ class TestDocExtendOptions(RobotBaseOptions):
             Appends entries to the --settag option.
 
             Set given tag(s) to all test cases.
+
+            Examples:
+
+            ```toml
+            extend-set-tag = ["my-suite-tag", "ci"]
+            ```
 
             corresponds to the `-G --settag tag *` option of _testdoc_
             """,
@@ -2137,6 +2742,13 @@ class TestDocExtendOptions(RobotBaseOptions):
 
             Include suites by name.
 
+            Examples:
+
+            ```toml
+            # match a suite by name or by parent.child path
+            extend-suites = ["MySuite", "Tests.SubSuite"]
+            ```
+
             corresponds to the `-s --suite name *` option of _testdoc_
             """,
     )
@@ -2145,6 +2757,12 @@ class TestDocExtendOptions(RobotBaseOptions):
             Appends entries to the --test option.
 
             Include tests by name.
+
+            Examples:
+
+            ```toml
+            extend-tests = ["My Test", "Smoke*"]
+            ```
 
             corresponds to the `-t --test name *` option of _testdoc_
             """,

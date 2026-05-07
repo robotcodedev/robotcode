@@ -16,6 +16,205 @@ OPTIONS_RE = re.compile(
     re.DOTALL | re.MULTILINE,
 )
 
+# Robot Framework's CLI help embeds example blocks of the form
+#   Examples:
+#   ```
+#   --foo bar
+#   ```
+# When these descriptions are surfaced in `robot.toml` documentation we want
+# the examples to use TOML syntax instead of CLI flags. The mapping below holds
+# one or more curated TOML snippets per long option; the generator drops the
+# original CLI examples and emits these snippets as ```toml fenced blocks.
+TOML_EXAMPLES: Dict[str, List[str]] = {
+    # --- options that already had CLI examples in Robot Framework's help ---
+    "--doc": [
+        'doc = "Very *good* example"',
+        '# read documentation from a file\ndoc = "doc_from_file.txt"',
+    ],
+    "--expandkeywords": [
+        'expand-keywords = ["name:BuiltIn.Log", "tag:expand"]',
+    ],
+    "--include": [
+        '# match tests tagged "foo" or "bar*"\nincludes = ["foo", "bar*"]',
+        '# tests with both "foo" and "bar*" tags\nincludes = ["fooANDbar*"]',
+    ],
+    "--listener": [
+        '[listeners]\nMyListener = []\n"path/to/Listener.py" = ["arg1", "arg2"]',
+    ],
+    "--loglevel": [
+        'log-level = "DEBUG"',
+        '# explicit visible level (default: INFO)\nlog-level = "DEBUG:INFO"',
+    ],
+    "--pythonpath": [
+        'python-path = ["libs/", "/opt/libs", "libraries.zip"]',
+    ],
+    "--randomize": [
+        'randomize = "all"',
+        '# randomize tests with a fixed seed\nrandomize = "tests:1234"',
+    ],
+    "--removekeywords": [
+        '# match by keyword name\nremove-keywords = ["name:Lib.HugeKw", "name:myresource.*"]',
+        '# match by tag pattern (same rules as --include)\nremove-keywords = ["foo", "fooANDbar*"]',
+    ],
+    "--reportbackground": [
+        '# pass:fail:skip colours\nreport-background = "green:red:yellow"',
+        '# pass:fail (skip uses the fail colour)\nreport-background = "#00E:#E00"',
+    ],
+    "--tagdoc": [
+        '[tag-doc]\nmytag = "Example"\n"owner-*" = "Original author"',
+    ],
+    "--tagstatcombine": [
+        'tag-stat-combine = ["requirement-*", { "tag1ANDtag2" = "My_name" }]',
+    ],
+    "--tagstatlink": [
+        '[tag-stat-link]\nmytag = "http://my.domain:Title"\n"bug-*" = "http://url/id=%1:Issue Tracker"',
+    ],
+    "--variable": [
+        '# sets ${name} to "Robot"\n[variables]\nname = "Robot"',
+    ],
+    "--variablefile": [
+        'variable-files = ["path/vars.yaml", "environment.py:testing"]',
+    ],
+    # --- literal/enum options (one-of values) ---
+    "--console": ['console = "dotted"'],
+    "--consolecolors": ['console-colors = "on"'],
+    "--consolelinks": ['console-links = "off"'],
+    "--consolemarkers": ['console-markers = "off"'],
+    "--docformat": ['doc-format = "REST"'],
+    "--format": ['format = "HTML"'],
+    "--specdocformat": ['spec-doc-format = "HTML"'],
+    "--theme": ['theme = "DARK"'],
+    # --- numeric options ---
+    "--consolewidth": ["console-width = 100"],
+    "--maxassignlength": ["max-assign-length = 200"],
+    "--maxerrorlines": ["max-error-lines = 40"],
+    "--suitestatlevel": ["suite-stat-level = 2"],
+    # --- single-string options (paths, names, titles, timestamps) ---
+    "--debugfile": ['debug-file = "debug.log"'],
+    "--extension": [
+        'extensions = "txt"',
+        '# parse multiple extensions (separator: colon)\nextensions = "robot:txt"',
+    ],
+    "--log": [
+        'log = "mylog.html"',
+        '# disable log file generation\nlog = "NONE"',
+    ],
+    "--logtitle": ['log-title = "My Project Log"'],
+    "--name": ['name = "My Project"'],
+    "--output": ['output = "output.xml"'],
+    "--outputdir": ['output-dir = "results"'],
+    "--report": ['report = "report.html"'],
+    "--reporttitle": ['report-title = "My Project Report"'],
+    "--rerunfailed": ['re-run-failed = "output.xml"'],
+    "--rerunfailedsuites": ['re-run-failed-suites = "output.xml"'],
+    "--starttime": ['start-time = "2024-12-15 14:30:00.000"'],
+    "--endtime": ['end-time = "2024-12-15 14:35:42.123"'],
+    "--title": ['title = "My Library"'],
+    "--xunit": ['xunit = "xunit.xml"'],
+    # --- list-of-strings options ---
+    "--exclude": ['excludes = ["smoke", "wip*"]'],
+    "--language": ['languages = ["German", "Finnish"]'],
+    "--parseinclude": ['parse-include = ["*.robot", "tests/**/*.robot"]'],
+    "--settag": ['set-tag = ["my-suite-tag", "ci"]'],
+    "--skip": ['skip = ["bug-*", "wip"]'],
+    "--skiponfailure": ['skip-on-failure = ["unstable"]'],
+    "--suite": [
+        '# match a suite by name or by parent.child path\nsuites = ["MySuite", "Tests.SubSuite"]',
+    ],
+    "--task": ['tasks = ["My Task", "Smoke*"]'],
+    "--test": ['tests = ["My Test", "Smoke*"]'],
+    "--tagstatexclude": ['tag-stat-exclude = ["bug-*"]'],
+    "--tagstatinclude": ['tag-stat-include = ["owner-*", "feature-*"]'],
+    "--flattenkeywords": [
+        'flatten-keywords = ["for", "name:Lib.HugeKw", "tag:flatten"]',
+    ],
+    # --- dict options (metadata, parsers, modifiers) ---
+    "--metadata": [
+        (
+            "[metadata]\n"
+            'Version = "1.2"\n'
+            "# value can be read from a file (same rules as --doc)\n"
+            'ReleaseNotes = "release_notes.txt"'
+        ),
+    ],
+    "--parser": [
+        '[parsers]\nMyParser = []\n"path/to/MyParser.py" = ["arg1", "arg2"]',
+    ],
+    "--prerebotmodifier": [
+        '[pre-rebot-modifiers]\n"path/to/Modifier.py" = ["arg1"]',
+    ],
+    "--prerunmodifier": [
+        '[pre-run-modifiers]\nMyModifier = []\n"path/to/Modifier.py" = ["arg1"]',
+    ],
+    # --- boolean flag options ---
+    "--dotted": ["dotted = true"],
+    "--dryrun": ["dry-run = true"],
+    "--exitonerror": ["exit-on-error = true"],
+    "--exitonfailure": ["exit-on-failure = true"],
+    "--legacyoutput": ["legacy-output = true"],
+    "--merge": ["merge = true"],
+    "--processemptysuite": ["process-empty-suite = true"],
+    "--quiet": ["quiet = true"],
+    "--rpa": ["rpa = true"],
+    "--runemptysuite": ["run-empty-suite = true"],
+    "--skipteardownonexit": ["skip-teardown-on-exit = true"],
+    "--splitlog": ["split-log = true"],
+    "--nostatusrc": [
+        "# always exit 0 regardless of failed tests\nno-status-rc = true",
+    ],
+    "--timestampoutputs": ["timestamp-outputs = true"],
+}
+
+# Matches an "Examples:" block parsed from the RF help text — see how the
+# generator builds these in the loop below.
+EXAMPLES_BLOCK_RE = re.compile(
+    r"\n*Examples:\s*\n+```[a-zA-Z]*\n.*?\n```",
+    re.DOTALL,
+)
+
+
+def rewrite_for_extend(snippet: str, base_kebab: str) -> str:
+    """Rewrite a TOML example snippet so its top-level key/table uses the
+    `extend-` prefix. Only the canonical field name is rewritten — nested
+    keys inside a table (like inner listener/variable names) are left alone.
+    """
+    escaped = re.escape(base_kebab)
+    # `key = ...` at the start of a line
+    after_assign = re.sub(rf"^{escaped}(\s*=)", rf"extend-{base_kebab}\1", snippet, flags=re.MULTILINE)
+    # `[key]` table header at the start of a line
+    return re.sub(rf"^\[{escaped}\]", f"[extend-{base_kebab}]", after_assign, flags=re.MULTILINE)
+
+
+MAX_LINE_LENGTH = 120
+
+
+def format_field_decl(name: str, type_str: str) -> str:
+    """Render a `<name>: <type_str> = field(` line, breaking the type
+    annotation across lines when the single-line form would exceed
+    MAX_LINE_LENGTH. Wrapping happens inside the outermost `Optional[...]`
+    bracket — the same form the existing model.py used by hand.
+    """
+    one_line = f"    {name}: {type_str} = field("
+    if len(one_line) <= MAX_LINE_LENGTH:
+        return one_line
+    if type_str.startswith("Optional[") and type_str.endswith("]"):
+        inner = type_str[len("Optional[") : -1]
+        return f"    {name}: Optional[\n        {inner}\n    ] = field("
+    # No structural break point we know how to handle — leave it long and
+    # let ruff format decide.
+    return one_line
+
+
+def apply_toml_examples(desc: str, long: str, base_kebab: str, extend: bool) -> str:
+    if long not in TOML_EXAMPLES:
+        return desc
+    cleaned = EXAMPLES_BLOCK_RE.sub("", desc).rstrip()
+    snippets = TOML_EXAMPLES[long]
+    if extend and base_kebab:
+        snippets = [rewrite_for_extend(s, base_kebab) for s in snippets]
+    blocks = "\n\n".join(f"```toml\n{snippet}\n```" for snippet in snippets)
+    return f"{cleaned}\n\nExamples:\n\n{blocks}\n"
+
 
 type_templates = {
     "console": 'Literal["verbose", "dotted", "skipped", "quiet", "none"]',
@@ -115,13 +314,14 @@ def generate(
     for k, v in options.items():
         internal_options[v[0]] = {"option": k, "long": v[0], "default": v[1]}
 
-    def create_desc(v: Dict[str, str], extra: bool = False) -> str:
+    def create_desc(v: Dict[str, str], extra: bool = False, base_kebab: str = "") -> str:
         if extra:
             result = f"            Appends entries to the {v['long']} option.\n\n"
         else:
             result = ""
+        desc = apply_toml_examples(v["desc"], v["long"], base_kebab, extra)
         result += (
-            "\n".join(f"            {v}".rstrip() for v in v["desc"].splitlines()) + "\n\n"
+            "\n".join(f"            {line}".rstrip() for line in desc.splitlines()) + "\n\n"
             "            corresponds to the "
             f"`{v['short'] or ''}"
             f"{' ' if v['short'] else ''}"
@@ -203,13 +403,13 @@ def generate(
                 if isinstance(internal_options[long_name]["default"], (list, dict)):
                     result.update({k: v})
 
-                name = ("extend_" if extend else "") + to_snake_case(
-                    name_corrections.get(long_name) or internal_options[long_name]["option"]
-                )
+                base_name = to_snake_case(name_corrections.get(long_name) or internal_options[long_name]["option"])
+                name = ("extend_" if extend else "") + base_name
+                base_kebab = base_name.replace("_", "-")
+                type_str = get_type(name, internal_options[long_name]["default"], v, is_flag, extend)
+                field_decl = format_field_decl(name, type_str)
                 output.append(
-                    f"    {name}"
-                    f": {get_type(name, internal_options[long_name]['default'], v, is_flag, extend)} = field(\n"
-                    f'        description="""\\\n{create_desc(v, extend)}\n            """,'
+                    f'{field_decl}\n        description="""\\\n{create_desc(v, extend, base_kebab)}\n            """,'
                 )
                 if not extend:
                     output.append(f'        robot_name="{long_name}",')
