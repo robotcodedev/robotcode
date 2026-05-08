@@ -13,7 +13,7 @@ import tempfile
 from hashlib import sha512
 from io import StringIO
 from pathlib import Path
-from typing import Type, cast
+from typing import Any, Callable, Type, cast
 
 import pytest
 from _pytest._code.code import ExceptionInfo, TerminalRepr
@@ -29,8 +29,8 @@ IS_WIN = sys.platform == "win32"
 open = functools.partial(open, encoding="utf-8")
 
 
-_converters_pre = []
-_converters_post = []
+_converters_pre: list[Callable[..., Any]] = []
+_converters_post: list[Callable[..., Any]] = []
 
 
 def register_converter_pre(function):
