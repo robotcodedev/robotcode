@@ -146,8 +146,8 @@ build_command = "pip install hatch && hatch build"
 minversion = "6.0"
 addopts = "-ra -vv -rf --ignore=bundled --ignore=.hatch"
 filterwarnings = [
-    "ignore:.*Using or importing the ABCs from 'collections' instead of from 'collections.abc'.*:DeprecationWarning",
-    "ignore:cannot collect test class 'TestCaseDefinition'.*:pytest.PytestCollectionWarning",
+  "ignore:.*Using or importing the ABCs from 'collections' instead of from 'collections.abc'.*:DeprecationWarning",
+  "ignore:cannot collect test class 'TestCaseDefinition'.*:pytest.PytestCollectionWarning",
 ]
 testpaths = ["tests"]
 junit_suite_name = "robotcode"
@@ -241,9 +241,7 @@ mark-parentheses = false
 # at call sites that import the wrapper. The defining module itself
 # (model.py) needs an additional per-file ignore (see above) because ruff
 # resolves the local name independently.
-extend-immutable-calls = [
-  "robotcode.robot.config.model.field",
-]
+extend-immutable-calls = ["robotcode.robot.config.model.field"]
 
 
 [tool.mypy]
@@ -321,6 +319,8 @@ exclude = [
   "**/__pycache__",
   "bundled/libs",
   "intellij-client/build",
+  "**/.*",
+  ".venv",
 ]
 typeCheckingMode = "off"
 pythonVersion = "3.10"
