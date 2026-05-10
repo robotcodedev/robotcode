@@ -28,7 +28,6 @@ from robotcode.robot.diagnostics.semantic_analyzer.nodes import (
     DefinitionStatement,
     ImportStatement,
     KeywordCallStatement,
-    SemanticToken,
 )
 from robotcode.robot.utils.ast import get_node_at_position, range_from_token
 
@@ -42,24 +41,6 @@ if TYPE_CHECKING:
 @dataclass(repr=False)
 class ConvertUriParams(CamelSnakeMixin):
     uri: str
-
-
-def _range_in_semantic_token(rng: Range, tok: SemanticToken) -> bool:
-    """Return True iff both endpoints of `rng` lie within `tok`'s span.
-
-    LSP `Range` is 0-indexed, `SemanticToken.line` is 1-indexed; both
-    `col_offset` and `character` are 0-indexed. Mirrors the legacy
-    `range in range_from_token(token)` semantics, including the inclusive
-    end (`<=`) so a cursor exactly at the end of the token still matches.
-    """
-    line0 = tok.line - 1
-    end_col = tok.col_offset + tok.length
-    return (
-        rng.start.line == line0
-        and tok.col_offset <= rng.start.character <= end_col
-        and rng.end.line == line0
-        and tok.col_offset <= rng.end.character <= end_col
-    )
 
 
 class RobotCodeActionDocumentationProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
@@ -222,7 +203,7 @@ class RobotCodeActionDocumentationProtocolPart(RobotLanguageServerProtocolPart, 
         # (legacy doesn't gate this branch either).
         if isinstance(stmt, DefinitionStatement) and stmt.kind is NodeKind.KEYWORD_DEF:
             name_tok = next((t for t in stmt.tokens if t.kind is TokenKind.KEYWORD_NAME), None)
-            if name_tok is None or not _range_in_semantic_token(range, name_tok):
+            if name_tok is None or range not in name_tok.range:
                 return None
             url = self.build_url(
                 str(document.uri.to_path().name),
@@ -251,7 +232,7 @@ class RobotCodeActionDocumentationProtocolPart(RobotLanguageServerProtocolPart, 
         - Resource imports never carry args (RF API returns ()).
         """
         name_tok = next((t for t in stmt.tokens if t.kind is TokenKind.IMPORT_NAME), None)
-        if name_tok is None or not _range_in_semantic_token(range, name_tok):
+        if name_tok is None or range not in name_tok.range:
             return None
 
         if stmt.import_type is ImportType.LIBRARY:
@@ -270,21 +251,17 @@ class RobotCodeActionDocumentationProtocolPart(RobotLanguageServerProtocolPart, 
 
     @staticmethod
     def _cursor_on_keyword_reference(pos: Position, stmt: KeywordCallStatement) -> bool:
-        """Cursor is within the union of NAMESPACE + SEPARATOR + KEYWORD
-        SemanticTokens — i.e. inside the keyword reference excluding any
-        BDD prefix. Mirrors the legacy
-        `position.is_in_range(range_from_token(keyword_token))` after the
-        BDD-prefix strip that `get_keyworddoc_and_token_from_position` does.
+        """Cursor is within the NAMESPACE / SEPARATOR / KEYWORD SemanticTokens
+        that make up the keyword reference (BDD prefix excluded). Mirrors
+        the legacy `position.is_in_range(range_from_token(keyword_token))`
+        after the BDD-prefix strip that
+        `get_keyworddoc_and_token_from_position` does.
         """
-        relevant = [t for t in stmt.tokens if t.kind in (TokenKind.NAMESPACE, TokenKind.SEPARATOR, TokenKind.KEYWORD)]
-        if not relevant:
-            return False
-        line0 = relevant[0].line - 1  # SemanticToken.line is 1-indexed
-        if pos.line != line0:
-            return False
-        start_col = min(t.col_offset for t in relevant)
-        end_col = max(t.col_offset + t.length for t in relevant)
-        return start_col <= pos.character <= end_col
+        return any(
+            pos in t.range
+            for t in stmt.tokens
+            if t.kind in (TokenKind.NAMESPACE, TokenKind.SEPARATOR, TokenKind.KEYWORD)
+        )
 
     def _build_keyword_action(
         self,

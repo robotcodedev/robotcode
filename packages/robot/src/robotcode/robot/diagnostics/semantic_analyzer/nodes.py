@@ -1,6 +1,8 @@
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, List, Optional, Tuple
 
+from robotcode.core.lsp.types import Position, Range
+
 from .enums import (
     ForFlavor,
     ForZipMode,
@@ -35,6 +37,22 @@ class SemanticToken:
     length: int
 
     sub_tokens: Optional[List["SemanticToken"]] = None
+
+    # Pre-computed LSP `Range` covering this token. Built once in
+    # `__post_init__` so consumers get the canonical (0-indexed) Range
+    # without re-deriving it from `line - 1` / `col_offset` / `length`.
+    # Enables direct use of LSP semantics — `position in tok.range`,
+    # `other_range in tok.range`, `tok.range.extend(end_character=2)`,
+    # `position < tok.range.end`, etc. — instead of bespoke per-coordinate
+    # arithmetic at every call site.
+    range: Range = field(init=False, repr=False)
+
+    def __post_init__(self) -> None:
+        line0 = self.line - 1  # SemanticToken.line is 1-indexed; LSP is 0-indexed
+        self.range = Range(
+            start=Position(line=line0, character=self.col_offset),
+            end=Position(line=line0, character=self.col_offset + self.length),
+        )
 
 
 @dataclass(slots=True)
