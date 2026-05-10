@@ -10,6 +10,7 @@ from robotcode.core.lsp.types import (
     CodeActionContext,
     CodeActionKind,
     Command,
+    Position,
     Range,
 )
 from robotcode.core.text_document import TextDocument
@@ -18,9 +19,17 @@ from robotcode.core.utils.dataclasses import CamelSnakeMixin
 from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.jsonrpc2.protocol import rpc_method
 from robotcode.robot.diagnostics.entities import LibraryEntry
-from robotcode.robot.diagnostics.library_doc import resolve_robot_variables
+from robotcode.robot.diagnostics.library_doc import KeywordDoc, resolve_robot_variables
 from robotcode.robot.diagnostics.model_helper import ModelHelper
 from robotcode.robot.diagnostics.namespace import Namespace
+from robotcode.robot.diagnostics.semantic_analyzer.enums import ImportType, NodeKind, TokenKind
+from robotcode.robot.diagnostics.semantic_analyzer.model import SemanticModel
+from robotcode.robot.diagnostics.semantic_analyzer.nodes import (
+    DefinitionStatement,
+    ImportStatement,
+    KeywordCallStatement,
+    SemanticToken,
+)
 from robotcode.robot.utils.ast import get_node_at_position, range_from_token
 
 from ...common.decorators import code_action_kinds
@@ -33,6 +42,24 @@ if TYPE_CHECKING:
 @dataclass(repr=False)
 class ConvertUriParams(CamelSnakeMixin):
     uri: str
+
+
+def _range_in_semantic_token(rng: Range, tok: SemanticToken) -> bool:
+    """Return True iff both endpoints of `rng` lie within `tok`'s span.
+
+    LSP `Range` is 0-indexed, `SemanticToken.line` is 1-indexed; both
+    `col_offset` and `character` are 0-indexed. Mirrors the legacy
+    `range in range_from_token(token)` semantics, including the inclusive
+    end (`<=`) so a cursor exactly at the end of the token still matches.
+    """
+    line0 = tok.line - 1
+    end_col = tok.col_offset + tok.length
+    return (
+        rng.start.line == line0
+        and tok.col_offset <= rng.start.character <= end_col
+        and rng.end.line == line0
+        and tok.col_offset <= rng.end.character <= end_col
+    )
 
 
 class RobotCodeActionDocumentationProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
@@ -54,6 +81,26 @@ class RobotCodeActionDocumentationProtocolPart(RobotLanguageServerProtocolPart, 
         range: Range,
         context: CodeActionContext,
     ) -> Optional[List[Union[Command, CodeAction]]]:
+        namespace = self.parent.documents_cache.get_namespace(document)
+
+        # Tier 2 model-based path — used when the experimental SemanticAnalyzer
+        # is enabled. Reads everything off the SemanticModel: statement kind
+        # via `model.statement_at()`, the pre-resolved `keyword_doc`, the
+        # `import_name`, and SemanticTokens for cursor-position checks. No
+        # `find_keyword`, no AST walk.
+        semantic_model = namespace.semantic_model
+        if semantic_model is not None:
+            return self._collect_from_model(document, range, context, namespace, semantic_model)
+
+        return self._collect_legacy(document, range, context, namespace)
+
+    def _collect_legacy(
+        self,
+        document: TextDocument,
+        range: Range,
+        context: CodeActionContext,
+        namespace: Namespace,
+    ) -> Optional[List[Union[Command, CodeAction]]]:
         from robot.parsing.lexer import Token as RobotToken
         from robot.parsing.model.statements import (
             Fixture,
@@ -64,8 +111,6 @@ class RobotCodeActionDocumentationProtocolPart(RobotLanguageServerProtocolPart, 
             Template,
             TestTemplate,
         )
-
-        namespace = self.parent.documents_cache.get_namespace(document)
 
         model = self.parent.documents_cache.get_model(document)
         node = get_node_at_position(model, range.start)
@@ -111,40 +156,7 @@ class RobotCodeActionDocumentationProtocolPart(RobotLanguageServerProtocolPart, 
 
                 if kw_doc is not None:
                     if context.only and CodeActionKind.SOURCE.value in context.only:
-                        entry: Optional[LibraryEntry] = None
-
-                        if kw_doc.libtype == "LIBRARY":
-                            entry = next(
-                                (v for v in namespace.libraries.values() if v.library_doc == kw_doc.parent),
-                                None,
-                            )
-
-                        elif kw_doc.libtype == "RESOURCE":
-                            entry = next(
-                                (v for v in namespace.resources.values() if v.library_doc == kw_doc.parent),
-                                None,
-                            )
-
-                            self_libdoc = namespace.library_doc
-                            if entry is None and self_libdoc == kw_doc.parent:
-                                entry = LibraryEntry(
-                                    self_libdoc.name,
-                                    str(document.uri.to_path().name),
-                                    self_libdoc,
-                                )
-
-                        if entry is None:
-                            return None
-
-                        url = self.build_url(
-                            entry.import_name,
-                            entry.args,
-                            document,
-                            namespace,
-                            kw_doc.name,
-                        )
-
-                        return [self.open_documentation_code_action(url)]
+                        return self._build_keyword_action(kw_doc, document, namespace)
 
         if isinstance(node, KeywordName):
             name_token = node.get_token(RobotToken.KEYWORD_NAME)
@@ -160,6 +172,163 @@ class RobotCodeActionDocumentationProtocolPart(RobotLanguageServerProtocolPart, 
                 return [self.open_documentation_code_action(url)]
 
         return None
+
+    # ------------------------------------------------------------------
+    # Tier 2 model-based collection
+    # ------------------------------------------------------------------
+
+    def _collect_from_model(
+        self,
+        document: TextDocument,
+        range: Range,
+        context: CodeActionContext,
+        namespace: Namespace,
+        model: SemanticModel,
+    ) -> Optional[List[Union[Command, CodeAction]]]:
+        """Mirror legacy three-branch logic (import / keyword-call / keyword-def)
+        purely off the SemanticModel — no AST walks, no `find_keyword`.
+
+        Position checks use SemanticTokens; URL inputs read from pre-resolved
+        statement fields (`import_name`, `keyword_doc`, `name`).
+        """
+        # SemanticModel uses 1-indexed lines; LSP positions are 0-indexed.
+        stmt = model.statement_at(range.start.line + 1)
+        if stmt is None:
+            return None
+
+        # Branch 1: Library / Resource import — gated on context.only at entry.
+        if (
+            context.only
+            and isinstance(stmt, ImportStatement)
+            and stmt.import_type in (ImportType.LIBRARY, ImportType.RESOURCE)
+            and CodeActionKind.SOURCE.value in context.only
+        ):
+            return self._import_action_from_model(stmt, document, range, namespace)
+
+        # Branch 2: keyword call / fixture / template.
+        if isinstance(stmt, KeywordCallStatement):
+            if range.start != range.end:
+                return None
+            kw_doc = stmt.keyword_doc
+            if kw_doc is None:
+                return None
+            if not self._cursor_on_keyword_reference(range.start, stmt):
+                return None
+            if not (context.only and CodeActionKind.SOURCE.value in context.only):
+                return None
+            return self._build_keyword_action(kw_doc, document, namespace)
+
+        # Branch 3: keyword definition header — no context.only check
+        # (legacy doesn't gate this branch either).
+        if isinstance(stmt, DefinitionStatement) and stmt.kind is NodeKind.KEYWORD_DEF:
+            name_tok = next((t for t in stmt.tokens if t.kind is TokenKind.KEYWORD_NAME), None)
+            if name_tok is None or not _range_in_semantic_token(range, name_tok):
+                return None
+            url = self.build_url(
+                str(document.uri.to_path().name),
+                (),
+                document,
+                namespace,
+                name_tok.value,
+            )
+            return [self.open_documentation_code_action(url)]
+
+        return None
+
+    def _import_action_from_model(
+        self,
+        stmt: ImportStatement,
+        document: TextDocument,
+        range: Range,
+        namespace: Namespace,
+    ) -> Optional[List[Union[Command, CodeAction]]]:
+        """Library / Resource import branch built off SemanticTokens.
+
+        - The import path lives in the IMPORT_NAME token (cursor-position check).
+        - Library `args` are the ARGUMENT tokens BEFORE the optional WITH NAME
+          marker (CONTROL_FLOW); anything after is the alias and must be
+          excluded — matches RF's `LibraryImport.args` semantics.
+        - Resource imports never carry args (RF API returns ()).
+        """
+        name_tok = next((t for t in stmt.tokens if t.kind is TokenKind.IMPORT_NAME), None)
+        if name_tok is None or not _range_in_semantic_token(range, name_tok):
+            return None
+
+        if stmt.import_type is ImportType.LIBRARY:
+            arg_values: List[str] = []
+            for tok in stmt.tokens:
+                if tok.kind is TokenKind.CONTROL_FLOW:
+                    break  # WITH NAME — everything after is the alias
+                if tok.kind is TokenKind.ARGUMENT:
+                    arg_values.append(tok.value)
+            args: Tuple[str, ...] = tuple(arg_values)
+        else:
+            args = ()
+
+        url = self.build_url(stmt.import_name or "", args, document, namespace)
+        return [self.open_documentation_code_action(url)]
+
+    @staticmethod
+    def _cursor_on_keyword_reference(pos: Position, stmt: KeywordCallStatement) -> bool:
+        """Cursor is within the union of NAMESPACE + SEPARATOR + KEYWORD
+        SemanticTokens — i.e. inside the keyword reference excluding any
+        BDD prefix. Mirrors the legacy
+        `position.is_in_range(range_from_token(keyword_token))` after the
+        BDD-prefix strip that `get_keyworddoc_and_token_from_position` does.
+        """
+        relevant = [t for t in stmt.tokens if t.kind in (TokenKind.NAMESPACE, TokenKind.SEPARATOR, TokenKind.KEYWORD)]
+        if not relevant:
+            return False
+        line0 = relevant[0].line - 1  # SemanticToken.line is 1-indexed
+        if pos.line != line0:
+            return False
+        start_col = min(t.col_offset for t in relevant)
+        end_col = max(t.col_offset + t.length for t in relevant)
+        return start_col <= pos.character <= end_col
+
+    def _build_keyword_action(
+        self,
+        kw_doc: KeywordDoc,
+        document: TextDocument,
+        namespace: Namespace,
+    ) -> Optional[List[Union[Command, CodeAction]]]:
+        """Resolve the LibraryEntry that owns `kw_doc` and build the
+        Open-Documentation action. Shared between legacy and model paths so
+        the URL construction stays identical."""
+        entry: Optional[LibraryEntry] = None
+
+        if kw_doc.libtype == "LIBRARY":
+            entry = next(
+                (v for v in namespace.libraries.values() if v.library_doc == kw_doc.parent),
+                None,
+            )
+
+        elif kw_doc.libtype == "RESOURCE":
+            entry = next(
+                (v for v in namespace.resources.values() if v.library_doc == kw_doc.parent),
+                None,
+            )
+
+            self_libdoc = namespace.library_doc
+            if entry is None and self_libdoc == kw_doc.parent:
+                entry = LibraryEntry(
+                    self_libdoc.name,
+                    str(document.uri.to_path().name),
+                    self_libdoc,
+                )
+
+        if entry is None:
+            return None
+
+        url = self.build_url(
+            entry.import_name,
+            entry.args,
+            document,
+            namespace,
+            kw_doc.name,
+        )
+
+        return [self.open_documentation_code_action(url)]
 
     def open_documentation_code_action(self, url: str) -> CodeAction:
         return CodeAction(

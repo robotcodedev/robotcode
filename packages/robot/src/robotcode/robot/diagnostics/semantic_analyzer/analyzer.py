@@ -2365,12 +2365,15 @@ class SemanticAnalyzer(Visitor):
         self._end_block_handlers = []
         self._scope_builder.push_scope(node.name or "", range_from_node(node))
 
-        # Create definition statement (header) and definition block (tree container)
+        # Create definition statement (header) and definition block (tree container).
+        # Tokens come from the header AST node (TestCaseName) so consumers can
+        # find the TEST_NAME SemanticToken without reaching back into the AST.
         defn = DefinitionStatement(
             kind=NodeKind.TEST_CASE_DEF,
             line_start=node.lineno,
             line_end=node.end_lineno or node.lineno,
             name=node.name,
+            tokens=self._build_tokens_from_node(node.header),
         )
         defn_block = DefinitionBlock(
             kind=NodeKind.TESTCASE,
@@ -2466,7 +2469,9 @@ class SemanticAnalyzer(Visitor):
         self._end_block_handlers = []
         self._scope_builder.push_scope(node.name or "", range_from_node(node))
 
-        # Create definition statement (header) and definition block (tree container)
+        # Create definition statement (header) and definition block (tree container).
+        # Tokens come from the header AST node (KeywordName) so consumers can
+        # find the KEYWORD_NAME SemanticToken without reaching back into the AST.
         arguments_spec = self._current_keyword_doc.arguments_spec if self._current_keyword_doc else None
         defn = DefinitionStatement(
             kind=NodeKind.KEYWORD_DEF,
@@ -2474,6 +2479,7 @@ class SemanticAnalyzer(Visitor):
             line_end=node.end_lineno or node.lineno,
             name=node.name,
             arguments_spec=arguments_spec,
+            tokens=self._build_tokens_from_node(node.header),
         )
         defn_block = DefinitionBlock(
             kind=NodeKind.KEYWORD,

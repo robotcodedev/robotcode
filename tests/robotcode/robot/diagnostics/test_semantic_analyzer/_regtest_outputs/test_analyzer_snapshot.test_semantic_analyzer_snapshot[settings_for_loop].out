@@ -44,7 +44,7 @@ statements:
   setting_name: null
   import_type: null
   import_name: null
-  token_count: 0
+  token_count: 1
 - type: SettingStatement
   kind: setting_tags
   line_start: 6
