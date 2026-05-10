@@ -1,12 +1,25 @@
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Dict, List, Optional
+from typing import TYPE_CHECKING, Dict, FrozenSet, List, Optional
 
+from .enums import NodeKind
 from .nodes import (
     DefinitionBlock,
     DefinitionStatement,
     SemanticBlock,
+    SemanticNode,
     SemanticStatement,
     SemanticToken,
+)
+
+_SECTION_KINDS: FrozenSet[NodeKind] = frozenset(
+    {
+        NodeKind.SETTING_SECTION,
+        NodeKind.TESTCASE_SECTION,
+        NodeKind.KEYWORD_SECTION,
+        NodeKind.VARIABLE_SECTION,
+        NodeKind.COMMENT_SECTION,
+        NodeKind.INVALID_SECTION,
+    }
 )
 
 if TYPE_CHECKING:
@@ -25,8 +38,11 @@ class SemanticModel:
       queries (outline, folding, breadcrumbs, scoping).
     - Flat list (`statements`) provides O(1) indexed access via `statement_at()`.
 
-    Optimized for queries: statement_at(), token_at(), find_variable(),
-    block_at(), enclosing_definition().
+    Optimized for queries:
+    - line/position based: statement_at(), token_at(), token_path_at(),
+      block_at(), enclosing_definition(), find_variable(), get_variables_at()
+    - node-based parent walks: enclosing_definition_block(),
+      enclosing_block_of_kind(), enclosing_section(), path_from_root()
 
     Replaces ScopeTree by integrating variable scope tracking:
     - File-level variables are in `file_scope` (VariableScope)
@@ -206,6 +222,66 @@ class SemanticModel:
     def block_at(self, line: int) -> Optional[SemanticBlock]:
         """Get the most specific (smallest range) block at a given line. O(1)."""
         return self._block_line_index.get(line)
+
+    # --- Node-based parent walks (use SemanticNode.parent back-pointer) ---
+
+    @staticmethod
+    def enclosing_block_of_kind(
+        node: SemanticNode,
+        kinds: FrozenSet[NodeKind],
+    ) -> Optional[SemanticBlock]:
+        """Walk parent chain from `node` upward and return the first
+        SemanticBlock whose kind is in `kinds`, or None if no match exists
+        before reaching the root.
+
+        Use this for control-flow / section lookups when you already have a
+        node (e.g. from `statement_at()`) and don't want to round-trip
+        through a line-based query.
+        """
+        current = node.parent
+        while current is not None:
+            if isinstance(current, SemanticBlock) and current.kind in kinds:
+                return current
+            current = current.parent
+        return None
+
+    @staticmethod
+    def enclosing_definition_block(node: SemanticNode) -> Optional[DefinitionBlock]:
+        """Walk parent chain and return the enclosing DefinitionBlock
+        (TestCase / Keyword), or None if `node` is at file level (e.g. an
+        import statement or a section-header).
+
+        Cheaper than `enclosing_definition(line)` when you already have the
+        node — no line-range scan, just parent pointer hops.
+        """
+        current = node.parent
+        while current is not None:
+            if isinstance(current, DefinitionBlock):
+                return current
+            current = current.parent
+        return None
+
+    @staticmethod
+    def enclosing_section(node: SemanticNode) -> Optional[SemanticBlock]:
+        """Walk parent chain and return the enclosing section block
+        (SETTING / TESTCASE / KEYWORD / VARIABLE / COMMENT / INVALID),
+        or None if `node` is outside any section (i.e. on the FILE root)."""
+        return SemanticModel.enclosing_block_of_kind(node, _SECTION_KINDS)
+
+    @staticmethod
+    def path_from_root(node: SemanticNode) -> List[SemanticNode]:
+        """Return the chain `[root, ..., node]` by walking parents.
+
+        Useful for breadcrumb UI, debugging, and tests asserting structural
+        placement without depending on line ranges.
+        """
+        chain: List[SemanticNode] = [node]
+        current = node.parent
+        while current is not None:
+            chain.append(current)
+            current = current.parent
+        chain.reverse()
+        return chain
 
     def find_variable(
         self,

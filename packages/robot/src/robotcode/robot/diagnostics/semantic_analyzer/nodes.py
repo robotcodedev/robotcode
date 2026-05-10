@@ -42,12 +42,25 @@ class SemanticNode:
     """Common base for all nodes in the SemanticModel.
 
     Both statements (leaf nodes with tokens) and blocks (structural containers
-    with children) share kind and position fields.
+    with children) share kind, position fields, and a back-pointer to their
+    direct parent in the tree.
     """
 
     kind: NodeKind
     line_start: int = 0  # 1-indexed
     line_end: int = 0  # 1-indexed, inclusive
+
+    # Back-pointer to the directly enclosing node (block OR statement).
+    # `None` only for the root SemanticBlock(kind=FILE).
+    #
+    # Type is `SemanticNode` (not `SemanticBlock`) because some statements
+    # logically contain other statements without a wrapping block:
+    # `RunKeywordCallStatement.inner_calls` are `KeywordCallStatement`s whose
+    # parent is the outer Run-Keyword statement, not a block.
+    #
+    # Excluded from `repr` / compare to avoid infinite recursion through the
+    # cycle (block → body → child → parent → block → …).
+    parent: Optional["SemanticNode"] = field(default=None, repr=False, compare=False)
 
 
 @dataclass(slots=True)
@@ -118,6 +131,13 @@ class RunKeywordCallStatement(KeywordCallStatement):
     """
 
     inner_calls: List["KeywordCallStatement"] = field(default_factory=list)
+
+    def __post_init__(self) -> None:
+        # Wire up parent back-pointers for inner calls. Their direct parent is
+        # this Run-Keyword statement, not the enclosing block — that's why
+        # SemanticNode.parent is typed as SemanticNode (not SemanticBlock).
+        for inner in self.inner_calls:
+            inner.parent = self
 
 
 # --- Control flow statements ---

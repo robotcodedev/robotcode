@@ -427,13 +427,15 @@ class SemanticAnalyzer(Visitor):
 
         If the current block is a control-flow block (For/While/If/Try/Group)
         and has no header yet, and the statement is the matching header kind,
-        it is also wired up as `block.header`.
+        it is also wired up as `block.header`. The header's parent is the block
+        it heads — matching "the block owns its header".
         """
         self._semantic_model.statements.append(stmt)
         if not self._block_stack:
             return
         parent = self._block_stack[-1]
         parent.body.append(stmt)
+        stmt.parent = parent
         if (
             parent.header is None
             and stmt.kind in self._CONTROL_FLOW_HEADER_KINDS
@@ -444,7 +446,9 @@ class SemanticAnalyzer(Visitor):
     def _add_block(self, block: SemanticBlock) -> None:
         """Append a child block to the currently open parent block."""
         if self._block_stack:
-            self._block_stack[-1].body.append(block)
+            parent = self._block_stack[-1]
+            parent.body.append(block)
+            block.parent = parent
 
     def _push_block(self, block: SemanticBlock) -> None:
         self._block_stack.append(block)
@@ -2388,7 +2392,10 @@ class SemanticAnalyzer(Visitor):
         # Header goes into the flat list; the block goes into the parent's body.
         # _add_statement would also add to the parent body — we don't want that
         # for the header (it lives inside the block as `header`, not as a sibling).
+        # Wire the header's parent to its block manually (the block-owns-its-header
+        # invariant) since we bypass _add_statement here.
         self._semantic_model.statements.append(defn)
+        defn.parent = defn_block
         self._add_block(defn_block)
         self._push_block(defn_block)
 
@@ -2483,7 +2490,10 @@ class SemanticAnalyzer(Visitor):
         self._current_definition = defn
         self._current_definition_block = defn_block
 
+        # See visit_TestCase: header bypasses _add_statement so its parent is
+        # set explicitly to the owning DefinitionBlock.
         self._semantic_model.statements.append(defn)
+        defn.parent = defn_block
         self._add_block(defn_block)
         self._push_block(defn_block)
 
