@@ -28,6 +28,13 @@ from robotcode.core.text_document import TextDocument
 from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.robot.diagnostics.library_doc import KeywordDoc, LibraryDoc
 from robotcode.robot.diagnostics.model_helper import ModelHelper
+from robotcode.robot.diagnostics.namespace import Namespace
+from robotcode.robot.diagnostics.semantic_analyzer.enums import ImportType, NodeKind
+from robotcode.robot.diagnostics.semantic_analyzer.model import SemanticModel
+from robotcode.robot.diagnostics.semantic_analyzer.nodes import (
+    ImportStatement,
+    KeywordCallStatement,
+)
 from robotcode.robot.utils.ast import (
     get_node_at_position,
     get_tokens_at_position,
@@ -47,6 +54,15 @@ _SignatureHelpMethod = Callable[
     [ast.AST, TextDocument, Position, Optional[SignatureHelpContext]],
     Optional[SignatureHelp],
 ]
+
+# AST node types the model-based path handles. KeywordCall and Fixture
+# (Setup / Teardown) collapse to `KeywordCallStatement` in the model;
+# LibraryImport / VariablesImport collapse to `ImportStatement`. Other
+# node types — including TestTemplate / Template — fall through to the
+# legacy `_find_method` lookup so we don't accidentally introduce
+# signature help where the legacy path produces None (legacy has no
+# `signature_help_TestTemplate` / `signature_help_Template` handler).
+_MODEL_HANDLED_AST_NAMES: frozenset[str] = frozenset({"KeywordCall", "Fixture", "LibraryImport", "VariablesImport"})
 
 
 class RobotSignatureHelpProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
@@ -82,6 +98,26 @@ class RobotSignatureHelpProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
         position: Position,
         context: Optional[SignatureHelpContext] = None,
     ) -> Optional[SignatureHelp]:
+        namespace = self.parent.documents_cache.get_namespace(document)
+
+        # Tier 2 model-based path — used when the experimental SemanticAnalyzer
+        # is enabled (semantic_model is populated). The arg-index math still
+        # uses the RF token list (battle-tested via `get_argument_info_at_position`);
+        # the model's contribution is skipping the second `find_keyword` /
+        # libdoc lookup and reading the pre-resolved `keyword_doc` /
+        # `init_keyword_doc` directly off the statement.
+        semantic_model = namespace.semantic_model
+        if semantic_model is not None:
+            return self._collect_from_model(document, position, namespace, semantic_model)
+
+        return self._collect_legacy(document, position, context)
+
+    def _collect_legacy(
+        self,
+        document: TextDocument,
+        position: Position,
+        context: Optional[SignatureHelpContext],
+    ) -> Optional[SignatureHelp]:
         result_node = get_node_at_position(
             self.parent.documents_cache.get_model(document),
             position,
@@ -95,6 +131,149 @@ class RobotSignatureHelpProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
             return None
 
         return method(result_node, document, position, context)
+
+    # ------------------------------------------------------------------
+    # Tier 2 model-based collection
+    # ------------------------------------------------------------------
+
+    def _collect_from_model(
+        self,
+        document: TextDocument,
+        position: Position,
+        namespace: Namespace,
+        model: SemanticModel,
+    ) -> Optional[SignatureHelp]:
+        """Resolve the SemanticStatement at the cursor and reuse the legacy
+        `_get_signature_help` arg-index math with the pre-resolved
+        `keyword_doc` / `init_keyword_doc`.
+
+        The cursor-on-keyword-name early-return and the WITH-NAME alias
+        guard mirror the legacy path exactly so output is byte-equivalent.
+        """
+        # SemanticModel uses 1-indexed lines; LSP positions are 0-indexed.
+        stmt = model.statement_at(position.line + 1)
+        if stmt is None:
+            return None
+
+        # We still need the RF AST node for its raw token list — that's what
+        # the existing `get_argument_info_at_position` walks. The SemanticModel
+        # filters SEPARATOR / CONTINUATION tokens out, so we can't reuse its
+        # tokens for the position math without re-implementing the whitespace /
+        # multi-line edge cases. Hybrid-by-design: model for resolution, RF
+        # tokens for position math.
+        ast_model = self.parent.documents_cache.get_model(document)
+        ast_node = get_node_at_position(ast_model, position, include_end=True)
+        if ast_node is None:
+            return None
+
+        ast_node_name = type(ast_node).__name__
+        if ast_node_name not in _MODEL_HANDLED_AST_NAMES:
+            # Statement type the model doesn't pre-resolve (yet) — fall back
+            # so we don't silently drop signature help that legacy supported.
+            method = self._find_method(type(ast_node))
+            if method is None:
+                return None
+            return method(ast_node, document, position, None)
+
+        if isinstance(stmt, KeywordCallStatement):
+            return self._signature_help_for_keyword_call_model(stmt, ast_node, document, position)
+
+        if isinstance(stmt, ImportStatement) and stmt.import_type in (ImportType.LIBRARY, ImportType.VARIABLES):
+            return self._signature_help_for_import_model(stmt, ast_node, document, position, namespace)
+
+        return None
+
+    def _signature_help_for_keyword_call_model(
+        self,
+        stmt: KeywordCallStatement,
+        ast_node: ast.AST,
+        document: TextDocument,
+        position: Position,
+    ) -> Optional[SignatureHelp]:
+        from robot.parsing.lexer.tokens import Token as RobotToken
+
+        kw_doc = stmt.keyword_doc
+        if kw_doc is None:
+            return None
+
+        kw_node = cast(Statement, ast_node)
+
+        tokens_at_position = get_tokens_at_position(kw_node, position, include_end=True)
+        if not tokens_at_position:
+            return None
+
+        token_at_position = tokens_at_position[-1]
+        if token_at_position.type not in (RobotToken.ARGUMENT, RobotToken.EOL, RobotToken.SEPARATOR):
+            return None
+
+        # Cursor must be past the keyword name (with the same +2 grace the
+        # legacy path uses, so " " right after the name still counts as "on
+        # the name" — no signature popup until you've typed past the gap).
+        keyword_token_type = (
+            RobotToken.NAME
+            if stmt.kind in (NodeKind.SETUP, NodeKind.TEARDOWN, NodeKind.TEMPLATE_KEYWORD)
+            else RobotToken.KEYWORD
+        )
+        keyword_token = kw_node.get_token(keyword_token_type)
+        if keyword_token is None:
+            return None
+        if position < range_from_token(keyword_token).extend(end_character=2).end:
+            return None
+
+        return self._get_signature_help(kw_doc, kw_node.tokens, token_at_position, position)
+
+    def _signature_help_for_import_model(
+        self,
+        stmt: ImportStatement,
+        ast_node: ast.AST,
+        document: TextDocument,
+        position: Position,
+        namespace: Namespace,
+    ) -> Optional[SignatureHelp]:
+        from robot.parsing.lexer.tokens import Token as RobotToken
+        from robot.parsing.model.statements import LibraryImport, VariablesImport
+
+        kw_doc = stmt.init_keyword_doc
+        if kw_doc is None:
+            return None
+
+        import_node = cast(Statement, ast_node)
+
+        # Library imports have a NAME token + arguments + optional WITH NAME alias.
+        # Variables imports have a NAME + arguments. Cursor on/before the NAME
+        # token, on the alias, or in the alias keyword should not produce a
+        # signature.
+        name_token = import_node.get_token(RobotToken.NAME)
+        if name_token is None or not name_token.value:
+            return None
+        if position <= range_from_token(name_token).extend(end_character=1).end:
+            return None
+
+        with_name_token: Optional[Token] = None
+        if isinstance(import_node, LibraryImport):
+            with_name_token = next((t for t in import_node.tokens if t.value == "WITH NAME"), None)
+            if with_name_token is not None and position >= range_from_token(with_name_token).start:
+                return None
+
+        tokens_at_position = get_tokens_at_position(import_node, position)
+        if not tokens_at_position:
+            return None
+        token_at_position = tokens_at_position[-1]
+        if token_at_position.type not in (RobotToken.ARGUMENT, RobotToken.EOL, RobotToken.SEPARATOR):
+            return None
+
+        # For library imports, anything past WITH NAME belongs to the alias and
+        # is not part of the init signature. Trim the token list before passing
+        # to the arg-index math, mirroring the legacy `signature_help_LibraryImport`.
+        tokens: Sequence[Token]
+        if isinstance(import_node, LibraryImport) and with_name_token is not None:
+            tokens = import_node.tokens[: import_node.tokens.index(with_name_token)]
+        elif isinstance(import_node, VariablesImport):
+            tokens = import_node.tokens
+        else:
+            tokens = import_node.tokens
+
+        return self._get_signature_help(kw_doc, tokens, token_at_position, position)
 
     def _signature_help_KeywordCall_or_Fixture(  # noqa: N802
         self,
