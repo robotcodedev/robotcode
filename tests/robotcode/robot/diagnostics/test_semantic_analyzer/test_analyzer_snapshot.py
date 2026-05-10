@@ -4,50 +4,13 @@ These tests serialize the analyzer result into deterministic YAML and guard
 against structural regressions in statements, diagnostics, and references.
 """
 
-import io
-from ast import AST
-from typing import Any, Dict, List, cast
-from unittest.mock import MagicMock
+from typing import Any, Callable, Dict, List, cast
 
 import pytest
 import yaml
-from robot.api import get_model
 
 from robotcode.robot.diagnostics.analyzer_result import AnalyzerResult
-from robotcode.robot.diagnostics.import_resolver import ResolvedImports
-from robotcode.robot.diagnostics.keyword_finder import KeywordFinder
-from robotcode.robot.diagnostics.library_doc import ResourceDoc
-from robotcode.robot.diagnostics.semantic_analyzer.analyzer import SemanticAnalyzer, _get_builtin_variables
 from robotcode.robot.diagnostics.semantic_analyzer.nodes import DefinitionStatement
-from robotcode.robot.diagnostics.variable_scope import VariableScope
-
-
-def _parse(text: str) -> AST:
-    return get_model(io.StringIO(text))  # type: ignore[no-any-return]
-
-
-def _make_finder() -> KeywordFinder:
-    finder = MagicMock(spec=KeywordFinder)
-    finder.find_keyword.return_value = None
-    finder.result_bdd_prefix = None
-    finder.multiple_keywords_result = None
-    finder.diagnostics = []
-    return finder
-
-
-def _run_analyzer(text: str, source: str = "/test.robot") -> AnalyzerResult:
-    model = _parse(text)
-    analyzer = SemanticAnalyzer(model, source, f"file://{source}")
-
-    analyzer._library_doc = ResourceDoc(name="test", source=source)
-    analyzer._variable_scope = VariableScope(
-        command_line=[],
-        own=[],
-        builtin=_get_builtin_variables(),
-    )
-    analyzer._resolved_imports = ResolvedImports()
-
-    return analyzer.run(_make_finder())
 
 
 def _diagnostic_sort_key(item: Dict[str, Any]) -> tuple[List[int], str]:
@@ -152,16 +115,16 @@ My Test
     END
 """,
             [
-                "unknown",
+                "section_header",
                 "import",
-                "unknown",
-                "unknown",
+                "empty_line",
+                "section_header",
                 "test_case_def",
-                "setting",
+                "setting_tags",
                 "keyword_call",
                 "for_header",
                 "keyword_call",
-                "unknown",
+                "end",
             ],
             {"My Test": ["${item}", "${x}"]},
             ["${item}", "${x}"],
@@ -180,14 +143,14 @@ Use Keyword
     My Keyword    world
 """,
             [
-                "unknown",
+                "section_header",
                 "keyword_def",
-                "setting",
+                "setting_arguments",
                 "if_header",
                 "keyword_call",
-                "unknown",
-                "unknown",
-                "unknown",
+                "end",
+                "empty_line",
+                "section_header",
                 "test_case_def",
                 "keyword_call",
             ],
@@ -203,8 +166,9 @@ def test_semantic_analyzer_snapshot(
     expected_kind_sequence: List[str],
     expected_definition_locals: Dict[str, List[str]],
     expected_referenced_variables: List[str],
+    analyzer_factory: Callable[..., AnalyzerResult],
 ) -> None:
-    result = _run_analyzer(text)
+    result = analyzer_factory(text)
 
     assert _statement_kind_sequence(result) == expected_kind_sequence
     assert _definition_locals(result) == expected_definition_locals

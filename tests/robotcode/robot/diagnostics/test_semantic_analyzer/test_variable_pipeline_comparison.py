@@ -4,13 +4,11 @@ These tests intentionally compare SemanticAnalyzer against NamespaceAnalyzer.
 They can be removed once the old analyzer is retired (Phase 4).
 """
 
-import io
-from ast import AST
 from pathlib import Path
 from typing import Any
-from unittest.mock import MagicMock
 
 import pytest
+from pytest_mock import MockerFixture
 from robot.api import get_model
 from robot.parsing.lexer.tokens import Token
 
@@ -24,9 +22,7 @@ from robotcode.robot.diagnostics.semantic_analyzer.analyzer import SemanticAnaly
 from robotcode.robot.diagnostics.variable_scope import VariableScope
 from robotcode.robot.utils import RF_VERSION
 
-
-def _parse(text: str) -> AST:
-    return get_model(io.StringIO(text))  # type: ignore[no-any-return]
+from .conftest import parse_robot as _parse
 
 
 def _var(name: str, source: str = "/test.robot") -> VariableDefinition:
@@ -97,19 +93,20 @@ def test_semantic_and_namespace_variable_pipeline_match(value: str, token_type: 
     assert _collect(semantic, token) == _collect(namespace, token)
 
 
-def _make_finder() -> KeywordFinder:
-    finder = MagicMock(spec=KeywordFinder)
+def _run_with_bypass(
+    mocker: MockerFixture,
+    analyzer: SemanticAnalyzer | NamespaceAnalyzer,
+    source: str,
+    text: str,
+) -> Any:
+    analyzer._model = _parse(text)
+    _prepare_analyzer(analyzer, source)
+    finder = mocker.create_autospec(KeywordFinder, instance=True)
     finder.find_keyword.return_value = None
     finder.result_bdd_prefix = None
     finder.multiple_keywords_result = None
     finder.diagnostics = []
-    return finder
-
-
-def _run_with_bypass(analyzer: SemanticAnalyzer | NamespaceAnalyzer, source: str, text: str) -> Any:
-    analyzer._model = _parse(text)
-    _prepare_analyzer(analyzer, source)
-    return analyzer.run(_make_finder())
+    return analyzer.run(finder)
 
 
 def _diag_signature(result: Any) -> list[tuple[int, int, int, int, str, Any, Any]]:
@@ -154,7 +151,7 @@ def _var_refs_signature(result: Any) -> list[tuple[str, str, tuple[tuple[int, in
     return sorted(items)
 
 
-def test_semantic_and_namespace_run_parity_for_variable_diagnostics_and_refs() -> None:
+def test_semantic_and_namespace_run_parity_for_variable_diagnostics_and_refs(mocker: MockerFixture) -> None:
     source = "/test.robot"
     text = """*** Test Cases ***
 T
@@ -168,8 +165,8 @@ T
     semantic = SemanticAnalyzer(_parse(text), source, f"file://{source}")
     namespace = NamespaceAnalyzer(_parse(text), source, f"file://{source}")
 
-    semantic_result = _run_with_bypass(semantic, source, text)
-    namespace_result = _run_with_bypass(namespace, source, text)
+    semantic_result = _run_with_bypass(mocker, semantic, source, text)
+    namespace_result = _run_with_bypass(mocker, namespace, source, text)
 
     assert _diag_signature(semantic_result) == _diag_signature(namespace_result)
     assert _var_refs_signature(semantic_result) == _var_refs_signature(namespace_result)
@@ -453,7 +450,7 @@ Second KW
 
 
 @pytest.mark.parametrize("case_name", list(_PARITY_CASES.keys()))
-def test_full_analyzer_parity(case_name: str) -> None:
+def test_full_analyzer_parity(case_name: str, mocker: MockerFixture) -> None:
     """Compare ALL AnalyzerResult fields between SemanticAnalyzer and NamespaceAnalyzer."""
     source = "/test.robot"
     text = _PARITY_CASES[case_name]
@@ -461,8 +458,8 @@ def test_full_analyzer_parity(case_name: str) -> None:
     semantic = SemanticAnalyzer(_parse(text), source, f"file://{source}")
     namespace = NamespaceAnalyzer(_parse(text), source, f"file://{source}")
 
-    semantic_result = _run_with_bypass(semantic, source, text)
-    namespace_result = _run_with_bypass(namespace, source, text)
+    semantic_result = _run_with_bypass(mocker, semantic, source, text)
+    namespace_result = _run_with_bypass(mocker, namespace, source, text)
 
     _assert_full_parity(semantic_result, namespace_result)
 
@@ -494,12 +491,17 @@ if RF_VERSION < (7, 0):
     )
 
 
-def _run_file_with_bypass(analyzer: SemanticAnalyzer | NamespaceAnalyzer, path: Path) -> Any:
+def _run_file_with_bypass(mocker: MockerFixture, analyzer: SemanticAnalyzer | NamespaceAnalyzer, path: Path) -> Any:
     source = str(path)
     model = get_model(source)
     analyzer._model = model
     _prepare_analyzer(analyzer, source)
-    return analyzer.run(_make_finder())
+    finder = mocker.create_autospec(KeywordFinder, instance=True)
+    finder.find_keyword.return_value = None
+    finder.result_bdd_prefix = None
+    finder.multiple_keywords_result = None
+    finder.diagnostics = []
+    return analyzer.run(finder)
 
 
 @pytest.mark.parametrize(
@@ -507,7 +509,7 @@ def _run_file_with_bypass(analyzer: SemanticAnalyzer | NamespaceAnalyzer, path: 
     _LSP_ROBOT_FILES,
     ids=[str(f.relative_to(_LSP_DATA_PATH)) for f in _LSP_ROBOT_FILES],
 )
-def test_full_analyzer_parity_on_lsp_data(robot_file: Path) -> None:
+def test_full_analyzer_parity_on_lsp_data(robot_file: Path, mocker: MockerFixture) -> None:
     """Run both analyzers on real .robot files from the LSP test suite and compare all outputs."""
     rel = robot_file.relative_to(_LSP_DATA_PATH).as_posix()
     if rel in _XFAIL_FILES:
@@ -519,7 +521,7 @@ def test_full_analyzer_parity_on_lsp_data(robot_file: Path) -> None:
     semantic = SemanticAnalyzer(model, source, f"file://{source}")
     namespace = NamespaceAnalyzer(model, source, f"file://{source}")
 
-    semantic_result = _run_file_with_bypass(semantic, robot_file)
-    namespace_result = _run_file_with_bypass(namespace, robot_file)
+    semantic_result = _run_file_with_bypass(mocker, semantic, robot_file)
+    namespace_result = _run_file_with_bypass(mocker, namespace, robot_file)
 
     _assert_full_parity(semantic_result, namespace_result)

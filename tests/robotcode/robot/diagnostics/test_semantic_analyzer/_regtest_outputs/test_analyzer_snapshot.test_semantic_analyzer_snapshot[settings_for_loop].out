@@ -1,7 +1,7 @@
 statement_count: 10
 statements:
 - type: SemanticStatement
-  kind: unknown
+  kind: section_header
   line_start: 1
   line_end: 1
   name: null
@@ -19,7 +19,7 @@ statements:
   import_name: Collections
   token_count: 3
 - type: SemanticStatement
-  kind: unknown
+  kind: empty_line
   line_start: 3
   line_end: 3
   name: null
@@ -28,7 +28,7 @@ statements:
   import_name: null
   token_count: 0
 - type: SemanticStatement
-  kind: unknown
+  kind: section_header
   line_start: 4
   line_end: 4
   name: null
@@ -46,7 +46,7 @@ statements:
   import_name: null
   token_count: 0
 - type: SettingStatement
-  kind: setting
+  kind: setting_tags
   line_start: 6
   line_end: 6
   name: null
@@ -82,7 +82,7 @@ statements:
   import_name: null
   token_count: 4
 - type: SemanticStatement
-  kind: unknown
+  kind: end
   line_start: 10
   line_end: 10
   name: null

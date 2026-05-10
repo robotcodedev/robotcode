@@ -45,5 +45,6 @@
         // "--debugpy"
     ],
     "robotcode.disableExtension": false,
+    "robotcode.experimental.semanticModel": true,
 
 }

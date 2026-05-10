@@ -8,37 +8,25 @@ Also includes parity tests that verify both SemanticAnalyzer and NamespaceAnalyz
 produce identical results for nested variable name resolution.
 """
 
-import io
-from ast import AST
-from typing import Any, Dict, List
-from unittest.mock import MagicMock
+from typing import Any, Callable, Dict, List
 
 import pytest
-from robot.api import get_model
 
 from robotcode.robot.diagnostics.analyzer_result import AnalyzerResult
 from robotcode.robot.diagnostics.entities import VariableDefinition
 from robotcode.robot.diagnostics.errors import Error
 from robotcode.robot.diagnostics.import_resolver import ResolvedImports
-from robotcode.robot.diagnostics.keyword_finder import KeywordFinder
 from robotcode.robot.diagnostics.library_doc import ResourceDoc
 from robotcode.robot.diagnostics.namespace_analyzer import NamespaceAnalyzer
 from robotcode.robot.diagnostics.semantic_analyzer.analyzer import SemanticAnalyzer, _get_builtin_variables
 from robotcode.robot.diagnostics.variable_scope import VariableScope
 from robotcode.robot.utils import RF_VERSION
 
+from .conftest import parse_robot
 
-def _parse(text: str) -> AST:
-    return get_model(io.StringIO(text))  # type: ignore[no-any-return]
-
-
-def _make_finder() -> KeywordFinder:
-    finder = MagicMock(spec=KeywordFinder)
-    finder.find_keyword.return_value = None
-    finder.result_bdd_prefix = None
-    finder.multiple_keywords_result = None
-    finder.diagnostics = []
-    return finder
+# Type aliases keep test signatures readable.
+AnalyzerFactory = Callable[..., AnalyzerResult]
+RunBoth = Callable[..., tuple[AnalyzerResult, AnalyzerResult]]
 
 
 def _prepare_analyzer(analyzer: SemanticAnalyzer | NamespaceAnalyzer, source: str) -> None:
@@ -51,25 +39,26 @@ def _prepare_analyzer(analyzer: SemanticAnalyzer | NamespaceAnalyzer, source: st
     analyzer._resolved_imports = ResolvedImports()
 
 
-def _run_analyzer(text: str, source: str = "/test.robot") -> AnalyzerResult:
-    model = _parse(text)
-    analyzer = SemanticAnalyzer(model, source, f"file://{source}")
-    _prepare_analyzer(analyzer, source)
-    return analyzer.run(_make_finder())
+@pytest.fixture
+def run_both(make_finder: Callable[..., Any]) -> Callable[..., tuple[AnalyzerResult, AnalyzerResult]]:
+    """Factory: run both `SemanticAnalyzer` and `NamespaceAnalyzer` on the
+    same text, returning `(semantic_result, namespace_result)` for parity
+    comparisons.
+    """
 
+    def factory(text: str, source: str = "/test.robot") -> tuple[AnalyzerResult, AnalyzerResult]:
+        model_s = parse_robot(text)
+        model_n = parse_robot(text)
 
-def _run_both(text: str, source: str = "/test.robot") -> tuple[AnalyzerResult, AnalyzerResult]:
-    """Run both analyzers on the same text. Returns (semantic_result, namespace_result)."""
-    model_s = _parse(text)
-    model_n = _parse(text)
+        semantic = SemanticAnalyzer(model_s, source, f"file://{source}")
+        namespace = NamespaceAnalyzer(model_n, source, f"file://{source}")
 
-    semantic = SemanticAnalyzer(model_s, source, f"file://{source}")
-    namespace = NamespaceAnalyzer(model_n, source, f"file://{source}")
+        _prepare_analyzer(semantic, source)
+        _prepare_analyzer(namespace, source)
 
-    _prepare_analyzer(semantic, source)
-    _prepare_analyzer(namespace, source)
+        return semantic.run(make_finder()), namespace.run(make_finder())
 
-    return semantic.run(_make_finder()), namespace.run(_make_finder())
+    return factory
 
 
 def _var_names(result: AnalyzerResult) -> Dict[str, VariableDefinition]:
@@ -96,8 +85,8 @@ def _diagnostics_with_code(result: AnalyzerResult, code: str) -> List[object]:
 class TestVariablesSectionNestedResolution:
     """Tests for nested variable name resolution in *** Variables *** section."""
 
-    def test_scalar_variable_resolved_in_name(self) -> None:
-        result = _run_analyzer(
+    def test_scalar_variable_resolved_in_name(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
+        result = analyzer_factory(
             """\
 *** Variables ***
 ${A}    1
@@ -107,8 +96,8 @@ ${NESTED ${A}}    value
         names = _var_names(result)
         assert "${NESTED 1}" in names
 
-    def test_multi_value_variable_joined_with_space(self) -> None:
-        result = _run_analyzer(
+    def test_multi_value_variable_joined_with_space(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
+        result = analyzer_factory(
             """\
 *** Variables ***
 ${MULTI}    a    b    c
@@ -118,8 +107,8 @@ ${NESTED ${MULTI}}    value
         names = _var_names(result)
         assert "${NESTED a b c}" in names
 
-    def test_list_variable_resolved_to_str_list(self) -> None:
-        result = _run_analyzer(
+    def test_list_variable_resolved_to_str_list(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
+        result = analyzer_factory(
             """\
 *** Variables ***
 @{LIST}    x    y    z
@@ -129,8 +118,8 @@ ${NESTED @{LIST}}    value
         names = _var_names(result)
         assert "${NESTED ['x', 'y', 'z']}" in names
 
-    def test_dict_variable_resolved_to_str_dict(self) -> None:
-        result = _run_analyzer(
+    def test_dict_variable_resolved_to_str_dict(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
+        result = analyzer_factory(
             """\
 *** Variables ***
 &{DICT}    a=1    b=2
@@ -140,8 +129,8 @@ ${NESTED &{DICT}}    value
         names = _var_names(result)
         assert "${NESTED {'a': '1', 'b': '2'}}" in names
 
-    def test_dict_accessed_as_list_returns_keys(self) -> None:
-        result = _run_analyzer(
+    def test_dict_accessed_as_list_returns_keys(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
+        result = analyzer_factory(
             """\
 *** Variables ***
 &{DICT}    a=1    b=2    c=3
@@ -151,8 +140,8 @@ ${NESTED @{DICT}}    value
         names = _var_names(result)
         assert "${NESTED ['a', 'b', 'c']}" in names
 
-    def test_env_variable_with_default_resolved(self) -> None:
-        result = _run_analyzer(
+    def test_env_variable_with_default_resolved(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
+        result = analyzer_factory(
             """\
 *** Variables ***
 ${NESTED %{UNLIKELY_ROBOTCODE_TEST_VAR=fallback}}    value
@@ -161,8 +150,8 @@ ${NESTED %{UNLIKELY_ROBOTCODE_TEST_VAR=fallback}}    value
         names = _var_names(result)
         assert "${NESTED fallback}" in names
 
-    def test_expression_produces_hint(self) -> None:
-        result = _run_analyzer(
+    def test_expression_produces_hint(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
+        result = analyzer_factory(
             """\
 *** Variables ***
 ${NESTED ${{1+1}}}    value
@@ -171,8 +160,8 @@ ${NESTED ${{1+1}}}    value
         hints = _diagnostics_with_code(result, Error.VARIABLE_NAME_NOT_STATICALLY_RESOLVABLE)
         assert len(hints) >= 1
 
-    def test_unknown_variable_produces_error(self) -> None:
-        result = _run_analyzer(
+    def test_unknown_variable_produces_error(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
+        result = analyzer_factory(
             """\
 *** Variables ***
 ${NESTED ${UNKNOWN}}    value
@@ -181,8 +170,8 @@ ${NESTED ${UNKNOWN}}    value
         errors = _diagnostics_with_code(result, Error.VARIABLE_NAME_NOT_RESOLVABLE)
         assert len(errors) >= 1
 
-    def test_empty_nested_variable_produces_error(self) -> None:
-        result = _run_analyzer(
+    def test_empty_nested_variable_produces_error(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
+        result = analyzer_factory(
             """\
 *** Variables ***
 ${NESTED ${}}    value
@@ -191,8 +180,8 @@ ${NESTED ${}}    value
         errors = _diagnostics_with_code(result, Error.VARIABLE_NAME_NOT_RESOLVABLE)
         assert len(errors) >= 1
 
-    def test_recursive_resolution(self) -> None:
-        result = _run_analyzer(
+    def test_recursive_resolution(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
+        result = analyzer_factory(
             """\
 *** Variables ***
 ${A}    1
@@ -203,8 +192,8 @@ ${NESTED ${B}}    value
         names = _var_names(result)
         assert "${NESTED 1}" in names
 
-    def test_multiple_nested_vars_in_name(self) -> None:
-        result = _run_analyzer(
+    def test_multiple_nested_vars_in_name(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
+        result = analyzer_factory(
             """\
 *** Variables ***
 ${X}    hello
@@ -215,8 +204,10 @@ ${NESTED ${X}_${Y}}    value
         names = _var_names(result)
         assert "${NESTED hello_world}" in names
 
-    def test_no_diagnostic_for_successful_resolution(self) -> None:
-        result = _run_analyzer(
+    def test_no_diagnostic_for_successful_resolution(
+        self, analyzer_factory: AnalyzerFactory, run_both: RunBoth
+    ) -> None:
+        result = analyzer_factory(
             """\
 *** Variables ***
 ${A}    1
@@ -238,8 +229,8 @@ ${NESTED ${A}}    value
 class TestVarStatementNestedResolution:
     """Tests for nested variable name resolution in VAR statements."""
 
-    def test_scalar_variable_resolved_in_var_name(self) -> None:
-        result = _run_analyzer(
+    def test_scalar_variable_resolved_in_var_name(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
+        result = analyzer_factory(
             """\
 *** Variables ***
 ${A}    1
@@ -252,8 +243,8 @@ Example
         names = _var_names(result)
         assert "${NESTED 1}" in names
 
-    def test_multi_value_joined_in_var_statement(self) -> None:
-        result = _run_analyzer(
+    def test_multi_value_joined_in_var_statement(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
+        result = analyzer_factory(
             """\
 *** Variables ***
 ${MULTI}    a    b    c
@@ -266,8 +257,8 @@ Example
         names = _var_names(result)
         assert "${NESTED a b c}" in names
 
-    def test_list_variable_in_var_statement(self) -> None:
-        result = _run_analyzer(
+    def test_list_variable_in_var_statement(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
+        result = analyzer_factory(
             """\
 *** Variables ***
 @{LIST}    x    y    z
@@ -280,8 +271,8 @@ Example
         names = _var_names(result)
         assert "${NESTED ['x', 'y', 'z']}" in names
 
-    def test_dict_variable_in_var_statement(self) -> None:
-        result = _run_analyzer(
+    def test_dict_variable_in_var_statement(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
+        result = analyzer_factory(
             """\
 *** Variables ***
 &{DICT}    a=1    b=2
@@ -294,8 +285,8 @@ Example
         names = _var_names(result)
         assert "${NESTED {'a': '1', 'b': '2'}}" in names
 
-    def test_dict_as_list_in_var_statement(self) -> None:
-        result = _run_analyzer(
+    def test_dict_as_list_in_var_statement(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
+        result = analyzer_factory(
             """\
 *** Variables ***
 &{DICT}    a=1    b=2    c=3
@@ -308,8 +299,10 @@ Example
         names = _var_names(result)
         assert "${NESTED ['a', 'b', 'c']}" in names
 
-    def test_env_variable_with_default_in_var_statement(self) -> None:
-        result = _run_analyzer(
+    def test_env_variable_with_default_in_var_statement(
+        self, analyzer_factory: AnalyzerFactory, run_both: RunBoth
+    ) -> None:
+        result = analyzer_factory(
             """\
 *** Test Cases ***
 Example
@@ -319,8 +312,10 @@ Example
         names = _var_names(result)
         assert "${NESTED fallback}" in names
 
-    def test_expression_in_var_statement_produces_hint(self) -> None:
-        result = _run_analyzer(
+    def test_expression_in_var_statement_produces_hint(
+        self, analyzer_factory: AnalyzerFactory, run_both: RunBoth
+    ) -> None:
+        result = analyzer_factory(
             """\
 *** Test Cases ***
 Example
@@ -330,8 +325,10 @@ Example
         hints = _diagnostics_with_code(result, Error.VARIABLE_NAME_NOT_STATICALLY_RESOLVABLE)
         assert len(hints) >= 1
 
-    def test_unknown_variable_in_var_statement_produces_error(self) -> None:
-        result = _run_analyzer(
+    def test_unknown_variable_in_var_statement_produces_error(
+        self, analyzer_factory: AnalyzerFactory, run_both: RunBoth
+    ) -> None:
+        result = analyzer_factory(
             """\
 *** Test Cases ***
 Example
@@ -341,8 +338,10 @@ Example
         errors = _diagnostics_with_code(result, Error.VARIABLE_NAME_NOT_RESOLVABLE)
         assert len(errors) >= 1
 
-    def test_empty_nested_in_var_statement_produces_error(self) -> None:
-        result = _run_analyzer(
+    def test_empty_nested_in_var_statement_produces_error(
+        self, analyzer_factory: AnalyzerFactory, run_both: RunBoth
+    ) -> None:
+        result = analyzer_factory(
             """\
 *** Test Cases ***
 Example
@@ -352,8 +351,8 @@ Example
         errors = _diagnostics_with_code(result, Error.VARIABLE_NAME_NOT_RESOLVABLE)
         assert len(errors) >= 1
 
-    def test_recursive_resolution_in_var_statement(self) -> None:
-        result = _run_analyzer(
+    def test_recursive_resolution_in_var_statement(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
+        result = analyzer_factory(
             """\
 *** Variables ***
 ${A}    1
@@ -367,8 +366,8 @@ Example
         names = _var_names(result)
         assert "${NESTED 1}" in names
 
-    def test_var_scope_suite_with_nested_name(self) -> None:
-        result = _run_analyzer(
+    def test_var_scope_suite_with_nested_name(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
+        result = analyzer_factory(
             """\
 *** Variables ***
 ${A}    1
@@ -381,8 +380,8 @@ Example
         names = _var_names(result)
         assert "${NESTED 1}" in names
 
-    def test_var_scope_global_with_nested_name(self) -> None:
-        result = _run_analyzer(
+    def test_var_scope_global_with_nested_name(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
+        result = analyzer_factory(
             """\
 *** Variables ***
 ${A}    1
@@ -395,8 +394,10 @@ Example
         names = _var_names(result)
         assert "${NESTED 1}" in names
 
-    def test_no_diagnostic_for_successful_var_resolution(self) -> None:
-        result = _run_analyzer(
+    def test_no_diagnostic_for_successful_var_resolution(
+        self, analyzer_factory: AnalyzerFactory, run_both: RunBoth
+    ) -> None:
+        result = analyzer_factory(
             """\
 *** Variables ***
 ${A}    1
@@ -411,8 +412,8 @@ Example
         assert len(hint_codes) == 0
         assert len(error_codes) == 0
 
-    def test_var_in_keyword_with_nested_name(self) -> None:
-        result = _run_analyzer(
+    def test_var_in_keyword_with_nested_name(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
+        result = analyzer_factory(
             """\
 *** Variables ***
 ${A}    1
@@ -491,8 +492,8 @@ def _assert_nested_var_parity(semantic_result: Any, namespace_result: Any) -> No
 class TestVariablesSectionNestedParity:
     """Both analyzers must produce identical results for nested variable names."""
 
-    def test_scalar_resolution_parity(self) -> None:
-        s, n = _run_both(
+    def test_scalar_resolution_parity(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
+        s, n = run_both(
             """\
 *** Variables ***
 ${A}    1
@@ -501,8 +502,8 @@ ${NESTED ${A}}    value
         )
         _assert_nested_var_parity(s, n)
 
-    def test_multi_value_parity(self) -> None:
-        s, n = _run_both(
+    def test_multi_value_parity(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
+        s, n = run_both(
             """\
 *** Variables ***
 ${MULTI}    a    b    c
@@ -511,8 +512,8 @@ ${NESTED ${MULTI}}    value
         )
         _assert_nested_var_parity(s, n)
 
-    def test_list_variable_parity(self) -> None:
-        s, n = _run_both(
+    def test_list_variable_parity(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
+        s, n = run_both(
             """\
 *** Variables ***
 @{LIST}    x    y    z
@@ -521,8 +522,8 @@ ${NESTED @{LIST}}    value
         )
         _assert_nested_var_parity(s, n)
 
-    def test_dict_variable_parity(self) -> None:
-        s, n = _run_both(
+    def test_dict_variable_parity(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
+        s, n = run_both(
             """\
 *** Variables ***
 &{DICT}    a=1    b=2
@@ -531,8 +532,8 @@ ${NESTED &{DICT}}    value
         )
         _assert_nested_var_parity(s, n)
 
-    def test_dict_as_list_parity(self) -> None:
-        s, n = _run_both(
+    def test_dict_as_list_parity(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
+        s, n = run_both(
             """\
 *** Variables ***
 &{DICT}    a=1    b=2    c=3
@@ -541,8 +542,8 @@ ${NESTED @{DICT}}    value
         )
         _assert_nested_var_parity(s, n)
 
-    def test_env_variable_parity(self) -> None:
-        s, n = _run_both(
+    def test_env_variable_parity(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
+        s, n = run_both(
             """\
 *** Variables ***
 ${NESTED %{UNLIKELY_ROBOTCODE_TEST_VAR=fallback}}    value
@@ -550,8 +551,8 @@ ${NESTED %{UNLIKELY_ROBOTCODE_TEST_VAR=fallback}}    value
         )
         _assert_nested_var_parity(s, n)
 
-    def test_expression_hint_parity(self) -> None:
-        s, n = _run_both(
+    def test_expression_hint_parity(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
+        s, n = run_both(
             """\
 *** Variables ***
 ${NESTED ${{1+1}}}    value
@@ -559,8 +560,8 @@ ${NESTED ${{1+1}}}    value
         )
         _assert_nested_var_parity(s, n)
 
-    def test_unknown_variable_error_parity(self) -> None:
-        s, n = _run_both(
+    def test_unknown_variable_error_parity(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
+        s, n = run_both(
             """\
 *** Variables ***
 ${NESTED ${UNKNOWN}}    value
@@ -568,8 +569,8 @@ ${NESTED ${UNKNOWN}}    value
         )
         _assert_nested_var_parity(s, n)
 
-    def test_empty_nested_error_parity(self) -> None:
-        s, n = _run_both(
+    def test_empty_nested_error_parity(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
+        s, n = run_both(
             """\
 *** Variables ***
 ${NESTED ${}}    value
@@ -577,8 +578,8 @@ ${NESTED ${}}    value
         )
         _assert_nested_var_parity(s, n)
 
-    def test_recursive_resolution_parity(self) -> None:
-        s, n = _run_both(
+    def test_recursive_resolution_parity(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
+        s, n = run_both(
             """\
 *** Variables ***
 ${A}    1
@@ -588,8 +589,8 @@ ${NESTED ${B}}    value
         )
         _assert_nested_var_parity(s, n)
 
-    def test_multiple_nested_vars_parity(self) -> None:
-        s, n = _run_both(
+    def test_multiple_nested_vars_parity(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
+        s, n = run_both(
             """\
 *** Variables ***
 ${X}    hello
@@ -609,8 +610,8 @@ ${NESTED ${X}_${Y}}    value
 class TestVarStatementNestedParity:
     """Both analyzers must produce identical results for VAR with nested names."""
 
-    def test_scalar_resolution_parity(self) -> None:
-        s, n = _run_both(
+    def test_scalar_resolution_parity(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
+        s, n = run_both(
             """\
 *** Variables ***
 ${A}    1
@@ -622,8 +623,8 @@ Example
         )
         _assert_nested_var_parity(s, n)
 
-    def test_list_variable_parity(self) -> None:
-        s, n = _run_both(
+    def test_list_variable_parity(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
+        s, n = run_both(
             """\
 *** Variables ***
 @{LIST}    x    y    z
@@ -635,8 +636,8 @@ Example
         )
         _assert_nested_var_parity(s, n)
 
-    def test_dict_variable_parity(self) -> None:
-        s, n = _run_both(
+    def test_dict_variable_parity(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
+        s, n = run_both(
             """\
 *** Variables ***
 &{DICT}    a=1    b=2
@@ -648,8 +649,8 @@ Example
         )
         _assert_nested_var_parity(s, n)
 
-    def test_dict_as_list_parity(self) -> None:
-        s, n = _run_both(
+    def test_dict_as_list_parity(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
+        s, n = run_both(
             """\
 *** Variables ***
 &{DICT}    a=1    b=2    c=3
@@ -661,8 +662,8 @@ Example
         )
         _assert_nested_var_parity(s, n)
 
-    def test_expression_hint_parity(self) -> None:
-        s, n = _run_both(
+    def test_expression_hint_parity(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
+        s, n = run_both(
             """\
 *** Test Cases ***
 Example
@@ -671,8 +672,8 @@ Example
         )
         _assert_nested_var_parity(s, n)
 
-    def test_unknown_variable_error_parity(self) -> None:
-        s, n = _run_both(
+    def test_unknown_variable_error_parity(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
+        s, n = run_both(
             """\
 *** Test Cases ***
 Example
@@ -681,8 +682,8 @@ Example
         )
         _assert_nested_var_parity(s, n)
 
-    def test_empty_nested_error_parity(self) -> None:
-        s, n = _run_both(
+    def test_empty_nested_error_parity(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
+        s, n = run_both(
             """\
 *** Test Cases ***
 Example
@@ -691,8 +692,8 @@ Example
         )
         _assert_nested_var_parity(s, n)
 
-    def test_var_scope_suite_parity(self) -> None:
-        s, n = _run_both(
+    def test_var_scope_suite_parity(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
+        s, n = run_both(
             """\
 *** Variables ***
 ${A}    1
@@ -704,8 +705,8 @@ Example
         )
         _assert_nested_var_parity(s, n)
 
-    def test_var_scope_global_parity(self) -> None:
-        s, n = _run_both(
+    def test_var_scope_global_parity(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
+        s, n = run_both(
             """\
 *** Variables ***
 ${A}    1
@@ -717,8 +718,8 @@ Example
         )
         _assert_nested_var_parity(s, n)
 
-    def test_var_in_keyword_parity(self) -> None:
-        s, n = _run_both(
+    def test_var_in_keyword_parity(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
+        s, n = run_both(
             """\
 *** Variables ***
 ${A}    1
@@ -730,8 +731,8 @@ My Keyword
         )
         _assert_nested_var_parity(s, n)
 
-    def test_recursive_in_var_statement_parity(self) -> None:
-        s, n = _run_both(
+    def test_recursive_in_var_statement_parity(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
+        s, n = run_both(
             """\
 *** Variables ***
 ${A}    1
@@ -754,8 +755,8 @@ Example
 class TestVariablesSectionNumberLiterals:
     """Tests for number literal resolution in nested variable names (Variables section)."""
 
-    def test_integer_literal_resolved(self) -> None:
-        result = _run_analyzer(
+    def test_integer_literal_resolved(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
+        result = analyzer_factory(
             """\
 *** Variables ***
 ${NESTED ${1}}    value
@@ -764,8 +765,8 @@ ${NESTED ${1}}    value
         names = _var_names(result)
         assert "${NESTED 1}" in names
 
-    def test_negative_integer_literal_resolved(self) -> None:
-        result = _run_analyzer(
+    def test_negative_integer_literal_resolved(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
+        result = analyzer_factory(
             """\
 *** Variables ***
 ${NESTED ${-42}}    value
@@ -774,8 +775,8 @@ ${NESTED ${-42}}    value
         names = _var_names(result)
         assert "${NESTED -42}" in names
 
-    def test_float_literal_resolved(self) -> None:
-        result = _run_analyzer(
+    def test_float_literal_resolved(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
+        result = analyzer_factory(
             """\
 *** Variables ***
 ${NESTED ${3.14}}    value
@@ -784,8 +785,8 @@ ${NESTED ${3.14}}    value
         names = _var_names(result)
         assert "${NESTED 3.14}" in names
 
-    def test_hex_literal_resolved(self) -> None:
-        result = _run_analyzer(
+    def test_hex_literal_resolved(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
+        result = analyzer_factory(
             """\
 *** Variables ***
 ${NESTED ${0xFF}}    value
@@ -794,8 +795,8 @@ ${NESTED ${0xFF}}    value
         names = _var_names(result)
         assert "${NESTED 255}" in names
 
-    def test_octal_literal_resolved(self) -> None:
-        result = _run_analyzer(
+    def test_octal_literal_resolved(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
+        result = analyzer_factory(
             """\
 *** Variables ***
 ${NESTED ${0o17}}    value
@@ -804,8 +805,8 @@ ${NESTED ${0o17}}    value
         names = _var_names(result)
         assert "${NESTED 15}" in names
 
-    def test_binary_literal_resolved(self) -> None:
-        result = _run_analyzer(
+    def test_binary_literal_resolved(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
+        result = analyzer_factory(
             """\
 *** Variables ***
 ${NESTED ${0b1010}}    value
@@ -814,8 +815,8 @@ ${NESTED ${0b1010}}    value
         names = _var_names(result)
         assert "${NESTED 10}" in names
 
-    def test_number_literal_no_error_diagnostic(self) -> None:
-        result = _run_analyzer(
+    def test_number_literal_no_error_diagnostic(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
+        result = analyzer_factory(
             """\
 *** Variables ***
 ${NESTED ${1}}    value
@@ -826,8 +827,8 @@ ${NESTED ${1}}    value
         assert len(errors) == 0
         assert len(hints) == 0
 
-    def test_zero_literal_resolved(self) -> None:
-        result = _run_analyzer(
+    def test_zero_literal_resolved(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
+        result = analyzer_factory(
             """\
 *** Variables ***
 ${NESTED ${0}}    value
@@ -836,8 +837,8 @@ ${NESTED ${0}}    value
         names = _var_names(result)
         assert "${NESTED 0}" in names
 
-    def test_scientific_notation_resolved(self) -> None:
-        result = _run_analyzer(
+    def test_scientific_notation_resolved(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
+        result = analyzer_factory(
             """\
 *** Variables ***
 ${NESTED ${1e3}}    value
@@ -846,9 +847,9 @@ ${NESTED ${1e3}}    value
         names = _var_names(result)
         assert "${NESTED 1000.0}" in names
 
-    def test_number_with_spaces_resolved(self) -> None:
+    def test_number_with_spaces_resolved(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
         """RF normalizes by stripping spaces before number parsing."""
-        result = _run_analyzer(
+        result = analyzer_factory(
             """\
 *** Variables ***
 ${NESTED ${ 42 }}    value
@@ -867,8 +868,8 @@ ${NESTED ${ 42 }}    value
 class TestVarStatementNumberLiterals:
     """Tests for number literal resolution in nested variable names (VAR statements)."""
 
-    def test_integer_literal_in_var_statement(self) -> None:
-        result = _run_analyzer(
+    def test_integer_literal_in_var_statement(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
+        result = analyzer_factory(
             """\
 *** Test Cases ***
 Example
@@ -878,8 +879,8 @@ Example
         names = _var_names(result)
         assert "${NESTED 1}" in names
 
-    def test_negative_integer_in_var_statement(self) -> None:
-        result = _run_analyzer(
+    def test_negative_integer_in_var_statement(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
+        result = analyzer_factory(
             """\
 *** Test Cases ***
 Example
@@ -889,8 +890,8 @@ Example
         names = _var_names(result)
         assert "${NESTED -42}" in names
 
-    def test_float_literal_in_var_statement(self) -> None:
-        result = _run_analyzer(
+    def test_float_literal_in_var_statement(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
+        result = analyzer_factory(
             """\
 *** Test Cases ***
 Example
@@ -900,8 +901,8 @@ Example
         names = _var_names(result)
         assert "${NESTED 3.14}" in names
 
-    def test_hex_literal_in_var_statement(self) -> None:
-        result = _run_analyzer(
+    def test_hex_literal_in_var_statement(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
+        result = analyzer_factory(
             """\
 *** Test Cases ***
 Example
@@ -911,8 +912,8 @@ Example
         names = _var_names(result)
         assert "${NESTED 255}" in names
 
-    def test_octal_literal_in_var_statement(self) -> None:
-        result = _run_analyzer(
+    def test_octal_literal_in_var_statement(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
+        result = analyzer_factory(
             """\
 *** Test Cases ***
 Example
@@ -922,8 +923,8 @@ Example
         names = _var_names(result)
         assert "${NESTED 15}" in names
 
-    def test_binary_literal_in_var_statement(self) -> None:
-        result = _run_analyzer(
+    def test_binary_literal_in_var_statement(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
+        result = analyzer_factory(
             """\
 *** Test Cases ***
 Example
@@ -933,8 +934,8 @@ Example
         names = _var_names(result)
         assert "${NESTED 10}" in names
 
-    def test_number_no_diagnostic_in_var_statement(self) -> None:
-        result = _run_analyzer(
+    def test_number_no_diagnostic_in_var_statement(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
+        result = analyzer_factory(
             """\
 *** Test Cases ***
 Example
@@ -946,8 +947,8 @@ Example
         assert len(errors) == 0
         assert len(hints) == 0
 
-    def test_scientific_notation_in_var_statement(self) -> None:
-        result = _run_analyzer(
+    def test_scientific_notation_in_var_statement(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
+        result = analyzer_factory(
             """\
 *** Test Cases ***
 Example
@@ -957,8 +958,8 @@ Example
         names = _var_names(result)
         assert "${NESTED 1000.0}" in names
 
-    def test_number_in_keyword_var_statement(self) -> None:
-        result = _run_analyzer(
+    def test_number_in_keyword_var_statement(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
+        result = analyzer_factory(
             """\
 *** Keywords ***
 My Keyword
@@ -978,8 +979,8 @@ My Keyword
 class TestVariablesSectionNumberLiteralParity:
     """Both analyzers must produce identical results for number literals in nested names."""
 
-    def test_integer_literal_parity(self) -> None:
-        s, n = _run_both(
+    def test_integer_literal_parity(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
+        s, n = run_both(
             """\
 *** Variables ***
 ${NESTED ${1}}    value
@@ -987,8 +988,8 @@ ${NESTED ${1}}    value
         )
         _assert_nested_var_parity(s, n)
 
-    def test_float_literal_parity(self) -> None:
-        s, n = _run_both(
+    def test_float_literal_parity(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
+        s, n = run_both(
             """\
 *** Variables ***
 ${NESTED ${3.14}}    value
@@ -996,8 +997,8 @@ ${NESTED ${3.14}}    value
         )
         _assert_nested_var_parity(s, n)
 
-    def test_hex_literal_parity(self) -> None:
-        s, n = _run_both(
+    def test_hex_literal_parity(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
+        s, n = run_both(
             """\
 *** Variables ***
 ${NESTED ${0xFF}}    value
@@ -1005,8 +1006,8 @@ ${NESTED ${0xFF}}    value
         )
         _assert_nested_var_parity(s, n)
 
-    def test_binary_literal_parity(self) -> None:
-        s, n = _run_both(
+    def test_binary_literal_parity(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
+        s, n = run_both(
             """\
 *** Variables ***
 ${NESTED ${0b1010}}    value
@@ -1014,8 +1015,8 @@ ${NESTED ${0b1010}}    value
         )
         _assert_nested_var_parity(s, n)
 
-    def test_octal_literal_parity(self) -> None:
-        s, n = _run_both(
+    def test_octal_literal_parity(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
+        s, n = run_both(
             """\
 *** Variables ***
 ${NESTED ${0o17}}    value
@@ -1023,8 +1024,8 @@ ${NESTED ${0o17}}    value
         )
         _assert_nested_var_parity(s, n)
 
-    def test_negative_integer_parity(self) -> None:
-        s, n = _run_both(
+    def test_negative_integer_parity(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
+        s, n = run_both(
             """\
 *** Variables ***
 ${NESTED ${-42}}    value
@@ -1032,8 +1033,8 @@ ${NESTED ${-42}}    value
         )
         _assert_nested_var_parity(s, n)
 
-    def test_scientific_notation_parity(self) -> None:
-        s, n = _run_both(
+    def test_scientific_notation_parity(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
+        s, n = run_both(
             """\
 *** Variables ***
 ${NESTED ${1e3}}    value
@@ -1051,8 +1052,8 @@ ${NESTED ${1e3}}    value
 class TestVarStatementNumberLiteralParity:
     """Both analyzers must produce identical results for number literals in VAR statements."""
 
-    def test_integer_literal_parity(self) -> None:
-        s, n = _run_both(
+    def test_integer_literal_parity(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
+        s, n = run_both(
             """\
 *** Test Cases ***
 Example
@@ -1061,8 +1062,8 @@ Example
         )
         _assert_nested_var_parity(s, n)
 
-    def test_float_literal_parity(self) -> None:
-        s, n = _run_both(
+    def test_float_literal_parity(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
+        s, n = run_both(
             """\
 *** Test Cases ***
 Example
@@ -1071,8 +1072,8 @@ Example
         )
         _assert_nested_var_parity(s, n)
 
-    def test_hex_literal_parity(self) -> None:
-        s, n = _run_both(
+    def test_hex_literal_parity(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
+        s, n = run_both(
             """\
 *** Test Cases ***
 Example
@@ -1081,8 +1082,8 @@ Example
         )
         _assert_nested_var_parity(s, n)
 
-    def test_binary_literal_parity(self) -> None:
-        s, n = _run_both(
+    def test_binary_literal_parity(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
+        s, n = run_both(
             """\
 *** Test Cases ***
 Example
@@ -1091,8 +1092,8 @@ Example
         )
         _assert_nested_var_parity(s, n)
 
-    def test_octal_literal_parity(self) -> None:
-        s, n = _run_both(
+    def test_octal_literal_parity(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
+        s, n = run_both(
             """\
 *** Test Cases ***
 Example
@@ -1101,8 +1102,8 @@ Example
         )
         _assert_nested_var_parity(s, n)
 
-    def test_negative_integer_parity(self) -> None:
-        s, n = _run_both(
+    def test_negative_integer_parity(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
+        s, n = run_both(
             """\
 *** Test Cases ***
 Example
@@ -1111,8 +1112,8 @@ Example
         )
         _assert_nested_var_parity(s, n)
 
-    def test_scientific_notation_parity(self) -> None:
-        s, n = _run_both(
+    def test_scientific_notation_parity(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
+        s, n = run_both(
             """\
 *** Test Cases ***
 Example
@@ -1135,9 +1136,9 @@ class TestVariablesSectionExtendedSyntax:
     so they should produce a HINT, not an ERROR.
     """
 
-    def test_number_subtraction_is_hint(self) -> None:
+    def test_number_subtraction_is_hint(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
         """${1-2} → base '1' is a number, extended '-2' is evaluable at runtime."""
-        result = _run_analyzer(
+        result = analyzer_factory(
             """\
 *** Variables ***
 ${NESTED ${1-2}}    value
@@ -1148,9 +1149,9 @@ ${NESTED ${1-2}}    value
         assert len(errors) == 0
         assert len(hints) >= 1
 
-    def test_dict_attribute_access_is_hint(self) -> None:
+    def test_dict_attribute_access_is_hint(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
         """${A DICT.a} → base 'A DICT' exists, '.a' is attribute access."""
-        result = _run_analyzer(
+        result = analyzer_factory(
             """\
 *** Variables ***
 &{A DICT}    a=1    b=2
@@ -1162,9 +1163,9 @@ ${NESTED ${A DICT.a}}    value
         assert len(errors) == 0
         assert len(hints) >= 1
 
-    def test_list_index_access_is_hint(self) -> None:
+    def test_list_index_access_is_hint(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
         """${A LIST[0]} → base 'A LIST' exists, '[0]' is index access."""
-        result = _run_analyzer(
+        result = analyzer_factory(
             """\
 *** Variables ***
 @{A LIST}    x    y    z
@@ -1176,9 +1177,9 @@ ${NESTED ${A LIST[0]}}    value
         assert len(errors) == 0
         assert len(hints) >= 1
 
-    def test_unknown_base_is_error(self) -> None:
+    def test_unknown_base_is_error(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
         """${UNKNOWN.a} → base 'UNKNOWN' not defined → ERROR, not HINT."""
-        result = _run_analyzer(
+        result = analyzer_factory(
             """\
 *** Variables ***
 ${NESTED ${UNKNOWN.a}}    value
@@ -1187,9 +1188,9 @@ ${NESTED ${UNKNOWN.a}}    value
         errors = _diagnostics_with_code(result, Error.VARIABLE_NAME_NOT_RESOLVABLE)
         assert len(errors) >= 1
 
-    def test_number_with_attribute_is_hint(self) -> None:
+    def test_number_with_attribute_is_hint(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
         """${1.q} → base '1' is a number, '.q' is attribute → HINT (may fail at runtime)."""
-        result = _run_analyzer(
+        result = analyzer_factory(
             """\
 *** Variables ***
 ${NESTED ${1.q}}    value
@@ -1200,9 +1201,9 @@ ${NESTED ${1.q}}    value
         assert len(errors) == 0
         assert len(hints) >= 1
 
-    def test_scalar_base_with_method_call_is_hint(self) -> None:
+    def test_scalar_base_with_method_call_is_hint(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
         """${MYVAR.upper()} → base 'MYVAR' exists, '.upper()' is method call."""
-        result = _run_analyzer(
+        result = analyzer_factory(
             """\
 *** Variables ***
 ${MYVAR}    hello
@@ -1214,9 +1215,9 @@ ${NESTED ${MYVAR.upper()}}    value
         assert len(errors) == 0
         assert len(hints) >= 1
 
-    def test_number_addition_is_hint(self) -> None:
+    def test_number_addition_is_hint(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
         """${1+2} → base '1' is a number, '+2' is evaluable."""
-        result = _run_analyzer(
+        result = analyzer_factory(
             """\
 *** Variables ***
 ${NESTED ${1+2}}    value
@@ -1232,8 +1233,8 @@ ${NESTED ${1+2}}    value
 class TestVarStatementExtendedSyntax:
     """Extended variable syntax in VAR statements within *** Test Cases ***."""
 
-    def test_number_subtraction_is_hint(self) -> None:
-        result = _run_analyzer(
+    def test_number_subtraction_is_hint(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
+        result = analyzer_factory(
             """\
 *** Test Cases ***
 Example
@@ -1245,8 +1246,8 @@ Example
         assert len(errors) == 0
         assert len(hints) >= 1
 
-    def test_dict_attribute_access_is_hint(self) -> None:
-        result = _run_analyzer(
+    def test_dict_attribute_access_is_hint(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
+        result = analyzer_factory(
             """\
 *** Variables ***
 &{A DICT}    a=1    b=2
@@ -1261,8 +1262,8 @@ Example
         assert len(errors) == 0
         assert len(hints) >= 1
 
-    def test_list_index_access_is_hint(self) -> None:
-        result = _run_analyzer(
+    def test_list_index_access_is_hint(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
+        result = analyzer_factory(
             """\
 *** Variables ***
 @{A LIST}    x    y    z
@@ -1277,8 +1278,8 @@ Example
         assert len(errors) == 0
         assert len(hints) >= 1
 
-    def test_unknown_base_is_error(self) -> None:
-        result = _run_analyzer(
+    def test_unknown_base_is_error(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
+        result = analyzer_factory(
             """\
 *** Test Cases ***
 Example
@@ -1288,8 +1289,8 @@ Example
         errors = _diagnostics_with_code(result, Error.VARIABLE_NAME_NOT_RESOLVABLE)
         assert len(errors) >= 1
 
-    def test_number_with_attribute_is_hint(self) -> None:
-        result = _run_analyzer(
+    def test_number_with_attribute_is_hint(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
+        result = analyzer_factory(
             """\
 *** Test Cases ***
 Example
@@ -1301,8 +1302,8 @@ Example
         assert len(errors) == 0
         assert len(hints) >= 1
 
-    def test_scalar_base_with_method_call_is_hint(self) -> None:
-        result = _run_analyzer(
+    def test_scalar_base_with_method_call_is_hint(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
+        result = analyzer_factory(
             """\
 *** Variables ***
 ${MYVAR}    hello
@@ -1317,8 +1318,8 @@ Example
         assert len(errors) == 0
         assert len(hints) >= 1
 
-    def test_number_addition_is_hint(self) -> None:
-        result = _run_analyzer(
+    def test_number_addition_is_hint(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
+        result = analyzer_factory(
             """\
 *** Test Cases ***
 Example
@@ -1335,8 +1336,8 @@ Example
 class TestExtendedSyntaxParity:
     """Both analyzers must produce identical results for extended variable syntax."""
 
-    def test_number_subtraction_parity(self) -> None:
-        s, n = _run_both(
+    def test_number_subtraction_parity(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
+        s, n = run_both(
             """\
 *** Variables ***
 ${NESTED ${1-2}}    value
@@ -1344,8 +1345,8 @@ ${NESTED ${1-2}}    value
         )
         _assert_nested_var_parity(s, n)
 
-    def test_dict_attribute_parity(self) -> None:
-        s, n = _run_both(
+    def test_dict_attribute_parity(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
+        s, n = run_both(
             """\
 *** Variables ***
 &{A DICT}    a=1    b=2
@@ -1354,8 +1355,8 @@ ${NESTED ${A DICT.a}}    value
         )
         _assert_nested_var_parity(s, n)
 
-    def test_list_index_parity(self) -> None:
-        s, n = _run_both(
+    def test_list_index_parity(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
+        s, n = run_both(
             """\
 *** Variables ***
 @{A LIST}    x    y    z
@@ -1364,8 +1365,8 @@ ${NESTED ${A LIST[0]}}    value
         )
         _assert_nested_var_parity(s, n)
 
-    def test_unknown_base_parity(self) -> None:
-        s, n = _run_both(
+    def test_unknown_base_parity(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
+        s, n = run_both(
             """\
 *** Variables ***
 ${NESTED ${UNKNOWN.a}}    value
@@ -1373,8 +1374,8 @@ ${NESTED ${UNKNOWN.a}}    value
         )
         _assert_nested_var_parity(s, n)
 
-    def test_number_with_attribute_parity(self) -> None:
-        s, n = _run_both(
+    def test_number_with_attribute_parity(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
+        s, n = run_both(
             """\
 *** Variables ***
 ${NESTED ${1.q}}    value
@@ -1382,8 +1383,8 @@ ${NESTED ${1.q}}    value
         )
         _assert_nested_var_parity(s, n)
 
-    def test_scalar_base_method_call_parity(self) -> None:
-        s, n = _run_both(
+    def test_scalar_base_method_call_parity(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
+        s, n = run_both(
             """\
 *** Variables ***
 ${MYVAR}    hello
@@ -1392,8 +1393,8 @@ ${NESTED ${MYVAR.upper()}}    value
         )
         _assert_nested_var_parity(s, n)
 
-    def test_number_addition_parity(self) -> None:
-        s, n = _run_both(
+    def test_number_addition_parity(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
+        s, n = run_both(
             """\
 *** Variables ***
 ${NESTED ${1+2}}    value
@@ -1401,8 +1402,8 @@ ${NESTED ${1+2}}    value
         )
         _assert_nested_var_parity(s, n)
 
-    def test_var_statement_dict_attr_parity(self) -> None:
-        s, n = _run_both(
+    def test_var_statement_dict_attr_parity(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
+        s, n = run_both(
             """\
 *** Variables ***
 &{A DICT}    a=1    b=2
@@ -1414,8 +1415,8 @@ Example
         )
         _assert_nested_var_parity(s, n)
 
-    def test_var_statement_list_index_parity(self) -> None:
-        s, n = _run_both(
+    def test_var_statement_list_index_parity(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
+        s, n = run_both(
             """\
 *** Variables ***
 @{A LIST}    x    y    z
@@ -1427,8 +1428,8 @@ Example
         )
         _assert_nested_var_parity(s, n)
 
-    def test_var_statement_unknown_base_parity(self) -> None:
-        s, n = _run_both(
+    def test_var_statement_unknown_base_parity(self, analyzer_factory: AnalyzerFactory, run_both: RunBoth) -> None:
+        s, n = run_both(
             """\
 *** Test Cases ***
 Example
@@ -1442,8 +1443,10 @@ Example
 class TestTypeHintedNestedDeclarationResolution:
     """Typed nested variable references in declaration contexts must resolve correctly."""
 
-    def test_variables_section_nested_typed_reference_resolves(self) -> None:
-        result = _run_analyzer(
+    def test_variables_section_nested_typed_reference_resolves(
+        self, analyzer_factory: AnalyzerFactory, run_both: RunBoth
+    ) -> None:
+        result = analyzer_factory(
             """\
 *** Variables ***
 ${A}    1
@@ -1458,8 +1461,10 @@ ${NESTED ${A}: int}    value
         assert "${NESTED 1}" in names
         assert len(errors) == 0
 
-    def test_var_statement_typed_nested_name_reports_static_hint(self) -> None:
-        result = _run_analyzer(
+    def test_var_statement_typed_nested_name_reports_static_hint(
+        self, analyzer_factory: AnalyzerFactory, run_both: RunBoth
+    ) -> None:
+        result = analyzer_factory(
             """\
 *** Test Cases ***
 Example
@@ -1476,8 +1481,10 @@ Example
         assert len(hints) == 1
         assert len(errors) == 0
 
-    def test_assignment_typed_nested_name_reports_static_hint(self) -> None:
-        result = _run_analyzer(
+    def test_assignment_typed_nested_name_reports_static_hint(
+        self, analyzer_factory: AnalyzerFactory, run_both: RunBoth
+    ) -> None:
+        result = analyzer_factory(
             """\
 *** Test Cases ***
 Example
@@ -1494,8 +1501,10 @@ Example
         assert len(hints) == 1
         assert len(errors) == 0
 
-    def test_typed_reference_is_not_normalized_in_usage_context(self) -> None:
-        result = _run_analyzer(
+    def test_typed_reference_is_not_normalized_in_usage_context(
+        self, analyzer_factory: AnalyzerFactory, run_both: RunBoth
+    ) -> None:
+        result = analyzer_factory(
             """\
 *** Test Cases ***
 Example

@@ -125,61 +125,62 @@ class RunKeywordCallStatement(KeywordCallStatement):
 
 @dataclass(slots=True)
 class ForStatement(SemanticStatement):
-    """FOR loop header.
+    """FOR loop header (the single line `FOR ... IN ...`).
 
-    Completable options depend on flavor:
-    - IN RANGE: start, end, step
-    - IN ENUMERATE: start= (starting index)
-    - IN ZIP: mode= (SHORTEST|LONGEST|STRICT), fill=
-    - IN: no options
+    Block-level data (`flavor`, `loop_variables`, options) lives on the
+    enclosing `ForBlock`, not on this header statement.
     """
-
-    flavor: Optional[ForFlavor] = None
-    loop_variables: List[SemanticToken] = field(default_factory=list)
-
-    start: Optional[str] = None  # IN ENUMERATE: start=
-    mode: Optional[ForZipMode] = None  # IN ZIP: mode=
-    fill: Optional[str] = None  # IN ZIP: fill=
 
 
 @dataclass(slots=True)
 class WhileStatement(SemanticStatement):
-    """WHILE loop header.
+    """WHILE loop header (the single line `WHILE ... [limit=...]`).
 
-    Completable options: limit=, on_limit=, on_limit_message=
+    Block-level data (`condition`, `limit`, `on_limit`, `on_limit_message`)
+    lives on the enclosing `WhileBlock`, not on this header statement.
     """
-
-    condition: Optional[str] = None
-    limit: Optional[str] = None
-    on_limit: Optional[OnLimitAction] = None
-    on_limit_message: Optional[str] = None
 
 
 @dataclass(slots=True)
 class IfStatement(SemanticStatement):
-    """IF or ELSE IF header.
+    """Block-form IF or ELSE IF header (the single line `IF ${cond}`).
 
-    Covers NodeKind: IF_HEADER, ELSE_IF_HEADER.
+    Covers NodeKind: IF_HEADER, ELSE_IF_HEADER. The block is closed by an END.
+    Block-level data (`condition`, branch structure) lives on the enclosing
+    `IfBlock`, not on this header statement. For the single-line form (no END,
+    optional assign target, keyword inline) see `InlineIfStatement`.
+    """
+
+
+@dataclass(slots=True)
+class InlineIfStatement(SemanticStatement):
+    """Single-line inline IF.
+
+    Covers NodeKind: INLINE_IF_HEADER.
+
+    Distinct from the block-form `IfStatement`:
+    - no `END` closes it,
+    - it can have an optional assign target (``${result}=    IF    ...``),
+    - the body keyword + arguments live on the same line as the header.
+
+    Inline IF is *not* a block (no `IfBlock` wraps it), so condition and
+    assign target are kept on the statement directly.
     """
 
     condition: Optional[str] = None
 
-    # Inline IF assign variable: ${result}=    IF    ...
+    # Optional assign target: ${result}=    IF    ${cond}    My Keyword
     assign_variable: Optional[SemanticToken] = None
 
 
 @dataclass(slots=True)
 class ExceptStatement(SemanticStatement):
-    """EXCEPT header.
+    """EXCEPT header (the single line `EXCEPT pattern [type=...] [AS ${err}]`).
 
-    Completable options: type= (GLOB|REGEXP|START|LITERAL), AS variable
+    Lives inside a `TryBlock`; pattern values, option, and AS variable are
+    surfaced via the header tokens. Detailed branch state (which TRY this
+    EXCEPT belongs to) is implicit in the parent block hierarchy.
     """
-
-    patterns: List[str] = field(default_factory=list)
-    pattern_type: Optional[str] = None
-
-    # AS variable: EXCEPT    error    AS    ${err}
-    as_variable: Optional[SemanticToken] = None
 
 
 # --- Variable / Return statements ---
@@ -224,6 +225,10 @@ class ImportStatement(SemanticStatement):
     alias: Optional[str] = None
     arguments: List[SemanticToken] = field(default_factory=list)
     lib_entry: Optional["LibraryEntry"] = None
+    # First __init__ KeywordDoc of the imported library/variables file, if any.
+    # Pre-resolved so consumers (inlay hints, signature help) don't need a
+    # second AST walk + libdoc lookup.
+    init_keyword_doc: Optional["KeywordDoc"] = None
 
 
 # --- Settings ---
@@ -297,9 +302,13 @@ class SemanticBlock(SemanticNode):
     and nested blocks.
 
     Subclass hierarchy:
-        SemanticBlock (base)
+        SemanticBlock (base — used directly for File, Sections)
         ├── DefinitionBlock  — TestCase / Keyword with scope data
-        └── (base used directly for File, Sections, control flow)
+        ├── ForBlock         — FOR ... END loop
+        ├── WhileBlock       — WHILE ... END loop
+        ├── IfBlock          — IF / ELSE IF / ELSE ... END
+        ├── TryBlock         — TRY / EXCEPT / ELSE / FINALLY ... END
+        └── GroupBlock       — GROUP ... END (RF 7.3+)
     """
 
     header: Optional[SemanticStatement] = None
@@ -326,3 +335,79 @@ class DefinitionBlock(SemanticBlock):
     # Each entry is (VariableDefinition, visible_from_line: int).
     # Variables are visible from their definition line to the end of this block.
     local_variables: List[Tuple["VariableDefinition", int]] = field(default_factory=list)
+
+
+@dataclass(slots=True)
+class ForBlock(SemanticBlock):
+    """Container for a complete `FOR ... END` construct.
+
+    Covers NodeKind: FOR.
+
+    `header` is a `ForStatement` (the `FOR ${item} IN ...` line). `body`
+    contains the loop body statements plus the closing END statement.
+    Block-level data (`flavor`, loop variables, options) lives here for
+    direct access without walking back through the header tokens.
+
+    Completable options depend on flavor:
+    - IN RANGE: start, end, step
+    - IN ENUMERATE: start= (starting index)
+    - IN ZIP: mode= (SHORTEST|LONGEST|STRICT), fill=
+    - IN: no options
+    """
+
+    flavor: Optional[ForFlavor] = None
+    loop_variables: List[SemanticToken] = field(default_factory=list)
+    start: Optional[str] = None  # IN ENUMERATE: start=
+    mode: Optional[ForZipMode] = None  # IN ZIP: mode=
+    fill: Optional[str] = None  # IN ZIP: fill=
+
+
+@dataclass(slots=True)
+class WhileBlock(SemanticBlock):
+    """Container for a complete `WHILE ... END` construct.
+
+    Covers NodeKind: WHILE.
+
+    Completable options: limit=, on_limit=, on_limit_message=
+    """
+
+    condition: Optional[str] = None
+    limit: Optional[str] = None
+    on_limit: Optional[OnLimitAction] = None
+    on_limit_message: Optional[str] = None
+
+
+@dataclass(slots=True)
+class IfBlock(SemanticBlock):
+    """Container for a complete `IF / ELSE IF / ELSE ... END` construct.
+
+    Covers NodeKind: IF.
+
+    The `header` is the IF / ELSE IF / ELSE statement that opens this
+    branch (`IfStatement` for IF / ELSE IF, base `SemanticStatement(kind=ELSE_HEADER)`
+    for ELSE). Multi-branch IF/ELSE IF/ELSE chains are represented as nested
+    `IfBlock` entries inside the parent's body — mirroring RF's recursive
+    `If` AST. `condition` is set on IF / ELSE IF blocks; ELSE has none.
+    """
+
+    condition: Optional[str] = None
+
+
+@dataclass(slots=True)
+class TryBlock(SemanticBlock):
+    """Container for a complete `TRY / EXCEPT* / [ELSE] / [FINALLY] ... END` construct.
+
+    Covers NodeKind: TRY.
+
+    The TRY-block's body holds the protected statements followed by nested
+    `TryBlock` entries for the EXCEPT / ELSE / FINALLY branches (each with
+    its own header statement and body), then the closing END statement.
+    """
+
+
+@dataclass(slots=True)
+class GroupBlock(SemanticBlock):
+    """Container for a complete `GROUP ... END` construct (RF 7.3+).
+
+    Covers NodeKind: GROUP.
+    """

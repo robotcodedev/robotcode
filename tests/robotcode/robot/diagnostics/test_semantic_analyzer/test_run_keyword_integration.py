@@ -5,34 +5,26 @@ correctly populated inner_calls, and that normal keyword calls still
 produce plain KeywordCallStatement.
 """
 
-import io
-from ast import AST
-from typing import Optional
-from unittest.mock import MagicMock
+from typing import Any, Callable, Optional
 
-from robot.api import get_model
+import pytest
 
 from robotcode.robot.diagnostics.analyzer_result import AnalyzerResult
-from robotcode.robot.diagnostics.import_resolver import ResolvedImports
-from robotcode.robot.diagnostics.keyword_finder import KeywordFinder
 from robotcode.robot.diagnostics.library_doc import (
     BUILTIN_LIBRARY_NAME,
     KeywordDoc,
 )
-from robotcode.robot.diagnostics.semantic_analyzer.analyzer import SemanticAnalyzer, _get_builtin_variables
 from robotcode.robot.diagnostics.semantic_analyzer.enums import NodeKind
 from robotcode.robot.diagnostics.semantic_analyzer.nodes import (
     KeywordCallStatement,
     RunKeywordCallStatement,
 )
-from robotcode.robot.diagnostics.variable_scope import VariableScope
+
+# Type alias keeps test signatures readable.
+AnalyzerFactory = Callable[..., AnalyzerResult]
 
 
-def _parse(text: str) -> AST:
-    return get_model(io.StringIO(text))  # type: ignore[no-any-return]
-
-
-def _builtin_kw(name: str, args_to_process: int | None = None) -> KeywordDoc:
+def _builtin_kw(name: str, args_to_process: Optional[int] = None) -> KeywordDoc:
     """Create a BuiltIn KeywordDoc that is recognized as a run keyword."""
     return KeywordDoc(
         line_no=-1,
@@ -63,53 +55,37 @@ def _regular_kw(name: str, libname: str = "MyLib") -> KeywordDoc:
     )
 
 
-def _make_finder(keyword_map: dict[str, KeywordDoc | None] | None = None) -> KeywordFinder:
-    """Create a KeywordFinder mock that resolves keywords from a map."""
-    finder = MagicMock(spec=KeywordFinder)
-    finder.result_bdd_prefix = None
-    finder.multiple_keywords_result = None
-    finder.diagnostics = []
-
-    kw_map = keyword_map or {}
-
-    def find_keyword(name: str, raise_keyword_error: bool = True) -> Optional[KeywordDoc]:
-        return kw_map.get(name)
-
-    finder.find_keyword.side_effect = find_keyword
-    return finder
-
-
-def _run_analyzer(text: str, keyword_map: dict[str, KeywordDoc | None] | None = None) -> AnalyzerResult:
-    """Parse RF text and run analyzer with a configurable keyword finder."""
-    model = _parse(text)
-    analyzer = SemanticAnalyzer(model, "/test.robot", "file:///test.robot")
-
-    analyzer._library_doc = MagicMock()
-    analyzer._library_doc.resource_variables = []
-    analyzer._library_doc.resource_imports = []
-    analyzer._variable_scope = VariableScope(
-        command_line=[],
-        own=[],
-        builtin=_get_builtin_variables(),
-    )
-    analyzer._resolved_imports = ResolvedImports()
-
-    finder = _make_finder(keyword_map)
-    return analyzer.run(finder)
-
-
 def _keyword_call_stmts(result: AnalyzerResult) -> list[KeywordCallStatement]:
     """Extract all KeywordCallStatement (including RunKeywordCallStatement) from model."""
     assert result.semantic_model is not None
     return [s for s in result.semantic_model.statements if isinstance(s, KeywordCallStatement)]
 
 
+@pytest.fixture
+def run_kw_analyzer(
+    analyzer_factory: Callable[..., AnalyzerResult],
+    make_library_doc_mock: Callable[..., Any],
+) -> Callable[..., AnalyzerResult]:
+    """Local convenience: this module's tests want a `library_doc`-shaped
+    mock (with `resource_variables` / `resource_imports`) instead of the
+    real `ResourceDoc`. Wrap the shared `analyzer_factory` to inject that.
+    """
+
+    def factory(
+        text: str,
+        keyword_map: Optional[dict[str, Optional[KeywordDoc]]] = None,
+    ) -> AnalyzerResult:
+        return analyzer_factory(text, keyword_map=keyword_map, library_doc=make_library_doc_mock())
+
+    return factory
+
+
 # --- Normal keyword calls: no inner_calls ---
 
 
 class TestNormalKeywordCall:
-    def test_plain_keyword_produces_keyword_call_statement(self) -> None:
-        result = _run_analyzer(
+    def test_plain_keyword_produces_keyword_call_statement(self, run_kw_analyzer: AnalyzerFactory) -> None:
+        result = run_kw_analyzer(
             """\
 *** Test Cases ***
 Example
@@ -122,8 +98,8 @@ Example
         assert type(stmts[0]) is KeywordCallStatement
         assert not isinstance(stmts[0], RunKeywordCallStatement)
 
-    def test_unknown_keyword_produces_keyword_call_statement(self) -> None:
-        result = _run_analyzer(
+    def test_unknown_keyword_produces_keyword_call_statement(self, run_kw_analyzer: AnalyzerFactory) -> None:
+        result = run_kw_analyzer(
             """\
 *** Test Cases ***
 Example
@@ -139,8 +115,8 @@ Example
 
 
 class TestRunKeyword:
-    def test_run_keyword_creates_run_keyword_call_statement(self) -> None:
-        result = _run_analyzer(
+    def test_run_keyword_creates_run_keyword_call_statement(self, run_kw_analyzer: AnalyzerFactory) -> None:
+        result = run_kw_analyzer(
             """\
 *** Test Cases ***
 Example
@@ -163,8 +139,8 @@ Example
         assert inner.keyword_doc is not None
         assert inner.keyword_doc.name == "Log"
 
-    def test_run_keyword_with_unresolved_inner_keyword(self) -> None:
-        result = _run_analyzer(
+    def test_run_keyword_with_unresolved_inner_keyword(self, run_kw_analyzer: AnalyzerFactory) -> None:
+        result = run_kw_analyzer(
             """\
 *** Test Cases ***
 Example
@@ -180,9 +156,9 @@ Example
         inner = stmt.inner_calls[0]
         assert inner.keyword_doc is None
 
-    def test_run_keyword_without_arguments_is_plain(self) -> None:
+    def test_run_keyword_without_arguments_is_plain(self, run_kw_analyzer: AnalyzerFactory) -> None:
         """Run Keyword with no arguments does not produce inner calls."""
-        result = _run_analyzer(
+        result = run_kw_analyzer(
             """\
 *** Test Cases ***
 Example
@@ -199,8 +175,8 @@ Example
 
 
 class TestRunKeywordVariants:
-    def test_run_keyword_and_continue_on_failure(self) -> None:
-        result = _run_analyzer(
+    def test_run_keyword_and_continue_on_failure(self, run_kw_analyzer: AnalyzerFactory) -> None:
+        result = run_kw_analyzer(
             """\
 *** Test Cases ***
 Example
@@ -224,8 +200,8 @@ Example
 
 
 class TestRunKeywordWithCondition:
-    def test_wait_until_keyword_succeeds(self) -> None:
-        result = _run_analyzer(
+    def test_wait_until_keyword_succeeds(self, run_kw_analyzer: AnalyzerFactory) -> None:
+        result = run_kw_analyzer(
             """\
 *** Test Cases ***
 Example
@@ -244,8 +220,8 @@ Example
         assert stmt.inner_calls[0].keyword_doc is not None
         assert stmt.inner_calls[0].keyword_doc.name == "Log"
 
-    def test_run_keyword_and_expect_error(self) -> None:
-        result = _run_analyzer(
+    def test_run_keyword_and_expect_error(self, run_kw_analyzer: AnalyzerFactory) -> None:
+        result = run_kw_analyzer(
             """\
 *** Test Cases ***
 Example
@@ -267,9 +243,9 @@ Example
 
 
 class TestRunKeywords:
-    def test_run_keywords_single(self) -> None:
+    def test_run_keywords_single(self, run_kw_analyzer: AnalyzerFactory) -> None:
         """Without AND separators, each token is a separate keyword name."""
-        result = _run_analyzer(
+        result = run_kw_analyzer(
             """\
 *** Test Cases ***
 Example
@@ -288,9 +264,9 @@ Example
         assert stmt.inner_calls[0].keyword_doc is not None
         assert stmt.inner_calls[0].keyword_doc.name == "Log"
 
-    def test_run_keywords_without_and_treats_each_token_as_keyword(self) -> None:
+    def test_run_keywords_without_and_treats_each_token_as_keyword(self, run_kw_analyzer: AnalyzerFactory) -> None:
         """Without AND, 'Log' and 'hello' are both treated as keyword names."""
-        result = _run_analyzer(
+        result = run_kw_analyzer(
             """\
 *** Test Cases ***
 Example
@@ -308,8 +284,8 @@ Example
         # Without AND separators, both "Log" and "hello" are separate keyword calls
         assert len(stmt.inner_calls) == 2
 
-    def test_run_keywords_with_and_separator(self) -> None:
-        result = _run_analyzer(
+    def test_run_keywords_with_and_separator(self, run_kw_analyzer: AnalyzerFactory) -> None:
+        result = run_kw_analyzer(
             """\
 *** Test Cases ***
 Example
@@ -327,8 +303,8 @@ Example
         assert len(stmt.inner_calls) == 2
         assert all(inner.keyword_doc is not None and inner.keyword_doc.name == "Log" for inner in stmt.inner_calls)
 
-    def test_run_keywords_three_keywords(self) -> None:
-        result = _run_analyzer(
+    def test_run_keywords_three_keywords(self, run_kw_analyzer: AnalyzerFactory) -> None:
+        result = run_kw_analyzer(
             """\
 *** Test Cases ***
 Example
@@ -350,8 +326,8 @@ Example
 
 
 class TestRunKeywordIf:
-    def test_run_keyword_if_single_branch(self) -> None:
-        result = _run_analyzer(
+    def test_run_keyword_if_single_branch(self, run_kw_analyzer: AnalyzerFactory) -> None:
+        result = run_kw_analyzer(
             """\
 *** Test Cases ***
 Example
@@ -370,8 +346,8 @@ Example
         assert stmt.inner_calls[0].keyword_doc is not None
         assert stmt.inner_calls[0].keyword_doc.name == "Log"
 
-    def test_run_keyword_if_with_else(self) -> None:
-        result = _run_analyzer(
+    def test_run_keyword_if_with_else(self, run_kw_analyzer: AnalyzerFactory) -> None:
+        result = run_kw_analyzer(
             """\
 *** Test Cases ***
 Example
@@ -389,8 +365,8 @@ Example
         assert len(stmt.inner_calls) == 2
         assert all(inner.keyword_doc is not None and inner.keyword_doc.name == "Log" for inner in stmt.inner_calls)
 
-    def test_run_keyword_if_with_else_if_and_else(self) -> None:
-        result = _run_analyzer(
+    def test_run_keyword_if_with_else_if_and_else(self, run_kw_analyzer: AnalyzerFactory) -> None:
+        result = run_kw_analyzer(
             """\
 *** Test Cases ***
 Example
@@ -407,9 +383,9 @@ Example
         assert isinstance(stmt, RunKeywordCallStatement)
         assert len(stmt.inner_calls) == 3
 
-    def test_run_keyword_if_with_nested_run_keyword_in_if_branch(self) -> None:
+    def test_run_keyword_if_with_nested_run_keyword_in_if_branch(self, run_kw_analyzer: AnalyzerFactory) -> None:
         """IF branch contains a nested Run Keyword — must not consume ELSE tokens."""
-        result = _run_analyzer(
+        result = run_kw_analyzer(
             """\
 *** Test Cases ***
 Example
@@ -440,9 +416,9 @@ Example
         assert else_branch.keyword_doc is not None
         assert else_branch.keyword_doc.name == "Log"
 
-    def test_run_keyword_if_with_nested_run_keyword_in_else_branch(self) -> None:
+    def test_run_keyword_if_with_nested_run_keyword_in_else_branch(self, run_kw_analyzer: AnalyzerFactory) -> None:
         """ELSE branch contains a nested Run Keyword."""
-        result = _run_analyzer(
+        result = run_kw_analyzer(
             """\
 *** Test Cases ***
 Example
@@ -472,9 +448,9 @@ Example
         assert else_branch.inner_calls[0].keyword_doc is not None
         assert else_branch.inner_calls[0].keyword_doc.name == "Log"
 
-    def test_run_keyword_if_with_nested_run_keyword_in_else_if_branch(self) -> None:
+    def test_run_keyword_if_with_nested_run_keyword_in_else_if_branch(self, run_kw_analyzer: AnalyzerFactory) -> None:
         """ELSE IF branch contains a nested Run Keyword."""
-        result = _run_analyzer(
+        result = run_kw_analyzer(
             """\
 *** Test Cases ***
 Example
@@ -511,8 +487,8 @@ Example
 
 
 class TestNestedRunKeyword:
-    def test_run_keyword_nested_in_run_keyword(self) -> None:
-        result = _run_analyzer(
+    def test_run_keyword_nested_in_run_keyword(self, run_kw_analyzer: AnalyzerFactory) -> None:
+        result = run_kw_analyzer(
             """\
 *** Test Cases ***
 Example
@@ -543,8 +519,8 @@ Example
 
 
 class TestRunKeywordInFixtures:
-    def test_setup_with_run_keyword(self) -> None:
-        result = _run_analyzer(
+    def test_setup_with_run_keyword(self, run_kw_analyzer: AnalyzerFactory) -> None:
+        result = run_kw_analyzer(
             """\
 *** Test Cases ***
 Example
@@ -567,8 +543,8 @@ Example
         assert isinstance(stmt, RunKeywordCallStatement)
         assert len(stmt.inner_calls) == 1
 
-    def test_teardown_with_run_keyword(self) -> None:
-        result = _run_analyzer(
+    def test_teardown_with_run_keyword(self, run_kw_analyzer: AnalyzerFactory) -> None:
+        result = run_kw_analyzer(
             """\
 *** Test Cases ***
 Example
@@ -596,8 +572,8 @@ Example
 
 
 class TestInnerCallLineInfo:
-    def test_inner_call_has_correct_line_number(self) -> None:
-        result = _run_analyzer(
+    def test_inner_call_has_correct_line_number(self, run_kw_analyzer: AnalyzerFactory) -> None:
+        result = run_kw_analyzer(
             """\
 *** Test Cases ***
 Example
@@ -617,13 +593,64 @@ Example
         assert inner.line_end == 3
 
 
+# --- Inner-call tokens are populated ---
+
+
+class TestInnerCallTokens:
+    def test_run_keyword_inner_call_has_keyword_and_argument_tokens(self, run_kw_analyzer: AnalyzerFactory) -> None:
+        from robotcode.robot.diagnostics.semantic_analyzer.enums import TokenKind
+
+        result = run_kw_analyzer(
+            """\
+*** Test Cases ***
+Example
+    Run Keyword    Log    hello
+""",
+            {
+                "Run Keyword": _builtin_kw("Run Keyword"),
+                "Log": _regular_kw("Log"),
+            },
+        )
+        stmts = _keyword_call_stmts(result)
+        assert isinstance(stmts[0], RunKeywordCallStatement)
+        inner = stmts[0].inner_calls[0]
+        kw_tokens = [t for t in inner.tokens if t.kind == TokenKind.KEYWORD]
+        arg_tokens = [t for t in inner.tokens if t.kind == TokenKind.ARGUMENT]
+        assert len(kw_tokens) == 1
+        assert kw_tokens[0].value == "Log"
+        assert len(arg_tokens) == 1
+        assert arg_tokens[0].value == "hello"
+
+    def test_run_keywords_each_inner_call_has_tokens(self, run_kw_analyzer: AnalyzerFactory) -> None:
+        from robotcode.robot.diagnostics.semantic_analyzer.enums import TokenKind
+
+        result = run_kw_analyzer(
+            """\
+*** Test Cases ***
+Example
+    Run Keywords    Log    hello    AND    Log    world
+""",
+            {
+                "Run Keywords": _builtin_kw("Run Keywords"),
+                "Log": _regular_kw("Log"),
+            },
+        )
+        stmts = _keyword_call_stmts(result)
+        assert isinstance(stmts[0], RunKeywordCallStatement)
+        assert len(stmts[0].inner_calls) == 2
+        for i, expected_arg in enumerate(["hello", "world"]):
+            inner = stmts[0].inner_calls[i]
+            assert any(t.kind == TokenKind.KEYWORD and t.value == "Log" for t in inner.tokens)
+            assert any(t.kind == TokenKind.ARGUMENT and t.value == expected_arg for t in inner.tokens)
+
+
 # --- Template keywords: never produce RunKeywordCallStatement ---
 
 
 class TestTemplateNoRunKeyword:
-    def test_test_template_is_always_plain(self) -> None:
+    def test_test_template_is_always_plain(self, run_kw_analyzer: AnalyzerFactory) -> None:
         """Templates pass analyze_run_keywords=False, so no inner calls."""
-        result = _run_analyzer(
+        result = run_kw_analyzer(
             """\
 *** Test Cases ***
 Example

@@ -7,7 +7,6 @@ from robotcode.robot.diagnostics.semantic_analyzer.nodes import (
     DefinitionStatement,
     ExceptStatement,
     ForStatement,
-    IfStatement,
     ImportStatement,
     KeywordCallStatement,
     ReturnStatement,
@@ -18,7 +17,6 @@ from robotcode.robot.diagnostics.semantic_analyzer.nodes import (
     SettingStatement,
     TemplateDataStatement,
     VarStatement,
-    WhileStatement,
 )
 
 
@@ -52,8 +50,8 @@ class TestSemanticToken:
 
 class TestSemanticStatement:
     def test_base_statement(self) -> None:
-        stmt = SemanticStatement(kind=NodeKind.UNKNOWN, line_start=5, line_end=5)
-        assert stmt.kind == NodeKind.UNKNOWN
+        stmt = SemanticStatement(kind=NodeKind.COMMENT, line_start=5, line_end=5)
+        assert stmt.kind == NodeKind.COMMENT
         assert stmt.tokens == []
 
     def test_keyword_call_statement(self) -> None:
@@ -77,37 +75,52 @@ class TestSemanticStatement:
         assert isinstance(stmt, KeywordCallStatement)
         assert stmt.inner_calls == []
 
-    def test_for_statement(self) -> None:
+    def test_for_block(self) -> None:
         from robotcode.robot.diagnostics.semantic_analyzer.enums import ForFlavor, ForZipMode
+        from robotcode.robot.diagnostics.semantic_analyzer.nodes import ForBlock
 
-        stmt = ForStatement(
-            kind=NodeKind.FOR_HEADER,
+        block = ForBlock(
+            kind=NodeKind.FOR,
             flavor=ForFlavor.IN_ZIP,
             mode=ForZipMode.STRICT,
             line_start=4,
-            line_end=4,
+            line_end=6,
         )
-        assert stmt.flavor == ForFlavor.IN_ZIP
-        assert stmt.mode == ForZipMode.STRICT
-        assert stmt.loop_variables == []
+        assert block.flavor == ForFlavor.IN_ZIP
+        assert block.mode == ForZipMode.STRICT
+        assert block.loop_variables == []
 
-    def test_while_statement(self) -> None:
+    def test_for_statement_is_header_only(self) -> None:
+        # ForStatement is the header line; block-level fields live on ForBlock.
+        stmt = ForStatement(kind=NodeKind.FOR_HEADER, line_start=4, line_end=4)
+        assert stmt.tokens == []
+
+    def test_while_block(self) -> None:
         from robotcode.robot.diagnostics.semantic_analyzer.enums import OnLimitAction
+        from robotcode.robot.diagnostics.semantic_analyzer.nodes import WhileBlock
 
-        stmt = WhileStatement(
-            kind=NodeKind.WHILE_HEADER,
+        block = WhileBlock(
+            kind=NodeKind.WHILE,
             condition="${x} > 0",
             limit="10",
             on_limit=OnLimitAction.PASS,
             line_start=6,
-            line_end=6,
+            line_end=8,
         )
-        assert stmt.condition == "${x} > 0"
-        assert stmt.on_limit == OnLimitAction.PASS
+        assert block.condition == "${x} > 0"
+        assert block.on_limit == OnLimitAction.PASS
 
-    def test_if_statement(self) -> None:
-        stmt = IfStatement(
-            kind=NodeKind.IF_HEADER,
+    def test_if_block(self) -> None:
+        from robotcode.robot.diagnostics.semantic_analyzer.nodes import IfBlock
+
+        block = IfBlock(kind=NodeKind.IF, condition="${flag}", line_start=7, line_end=9)
+        assert block.condition == "${flag}"
+
+    def test_inline_if_statement(self) -> None:
+        from robotcode.robot.diagnostics.semantic_analyzer.nodes import InlineIfStatement
+
+        stmt = InlineIfStatement(
+            kind=NodeKind.INLINE_IF_HEADER,
             condition="${flag}",
             line_start=7,
             line_end=7,
@@ -115,16 +128,11 @@ class TestSemanticStatement:
         assert stmt.condition == "${flag}"
         assert stmt.assign_variable is None
 
-    def test_except_statement(self) -> None:
-        stmt = ExceptStatement(
-            kind=NodeKind.EXCEPT_HEADER,
-            patterns=["ValueError", "TypeError"],
-            pattern_type="GLOB",
-            line_start=10,
-            line_end=10,
-        )
-        assert len(stmt.patterns) == 2
-        assert stmt.as_variable is None
+    def test_except_statement_is_header_only(self) -> None:
+        # ExceptStatement is the header line inside a TryBlock; pattern values
+        # are read from header tokens, not from statement fields.
+        stmt = ExceptStatement(kind=NodeKind.EXCEPT_HEADER, line_start=10, line_end=10)
+        assert stmt.tokens == []
 
     def test_var_statement(self) -> None:
         from robotcode.robot.diagnostics.semantic_analyzer.enums import VarScope
@@ -142,7 +150,7 @@ class TestSemanticStatement:
 
     def test_return_statement(self) -> None:
         stmt = ReturnStatement(
-            kind=NodeKind.RETURN_STATEMENT,
+            kind=NodeKind.RETURN_SETTING,
             return_values=[_token(TokenKind.ARGUMENT, "${x}", 8, 11, 4)],
             line_start=8,
             line_end=8,
@@ -164,7 +172,7 @@ class TestSemanticStatement:
 
     def test_setting_statement(self) -> None:
         stmt = SettingStatement(
-            kind=NodeKind.SETTING,
+            kind=NodeKind.SETTING_TAGS,
             setting_name="Tags",
             tag_values=["smoke", "regression"],
             line_start=3,
@@ -207,7 +215,7 @@ class TestSemanticModelBuildIndex:
         assert model.token_path_at(1, 0) == []
 
     def test_single_statement(self) -> None:
-        stmt = SemanticStatement(kind=NodeKind.UNKNOWN, line_start=1, line_end=1)
+        stmt = SemanticStatement(kind=NodeKind.COMMENT, line_start=1, line_end=1)
         model = self._build_model([stmt])
         assert model.statement_at(1) is stmt
         assert model.statement_at(2) is None

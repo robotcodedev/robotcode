@@ -6,9 +6,17 @@ class NodeKind(Enum):
 
     Covers both structural blocks (FILE, sections, control flow containers)
     and leaf statements (keyword calls, settings, imports, etc.).
+
+    Every concrete RF AST node maps to a dedicated NodeKind — there is no
+    catch-all UNKNOWN value. The analyzer is expected to know what every
+    statement is.
     """
 
     # --- Block kinds (structural containers) ---
+    # Built during Phase 2 — visit_File / visit_*Section / visit_TestCase /
+    # visit_Keyword / visit_For / visit_While / visit_If / visit_Try / visit_Group
+    # produce SemanticBlock / DefinitionBlock entries hooked into the parent
+    # block's body; `model.root` is always populated.
     FILE = "file"
     SETTING_SECTION = "setting_section"
     TESTCASE_SECTION = "testcase_section"
@@ -27,43 +35,61 @@ class NodeKind(Enum):
     # --- Statement kinds (leaf nodes) ---
 
     # Definitions
-    TEST_CASE_DEF = "test_case_def"
-    KEYWORD_DEF = "keyword_def"
-    VARIABLE_DEF = "variable_def"
+    TEST_CASE_DEF = "test_case_def"  # TestCaseName (covers tasks too)
+    KEYWORD_DEF = "keyword_def"  # KeywordName
+    VARIABLE_DEF = "variable_def"  # Var (RF 7.0+) and Variable (Variables section)
 
     # Keyword calls
-    KEYWORD_CALL = "keyword_call"
-    TEMPLATE_KEYWORD = "template_keyword"
-    TEMPLATE_DATA = "template_data"
-    SETUP = "setup"
-    TEARDOWN = "teardown"
+    KEYWORD_CALL = "keyword_call"  # KeywordCall
+    TEMPLATE_KEYWORD = "template_keyword"  # TestTemplate / Template
+    TEMPLATE_DATA = "template_data"  # TemplateArguments
+    SETUP = "setup"  # Fixture/Setup/TestSetup/SuiteSetup
+    TEARDOWN = "teardown"  # Fixture/Teardown/TestTeardown/SuiteTeardown
 
-    # Control flow
-    FOR_HEADER = "for_header"
-    IF_HEADER = "if_header"
-    ELSE_IF_HEADER = "else_if_header"
-    ELSE_HEADER = "else_header"
-    WHILE_HEADER = "while_header"
-    TRY_HEADER = "try_header"
-    EXCEPT_HEADER = "except_header"
-    FINALLY_HEADER = "finally_header"
-    END = "end"
-    RETURN_STATEMENT = "return_statement"
-    RETURN_SETTING = "return_setting"
-    BREAK_STATEMENT = "break_statement"
-    CONTINUE_STATEMENT = "continue_statement"
+    # Control flow headers
+    FOR_HEADER = "for_header"  # ForHeader
+    IF_HEADER = "if_header"  # IfHeader
+    ELSE_IF_HEADER = "else_if_header"  # ElseIfHeader
+    ELSE_HEADER = "else_header"  # ElseHeader
+    INLINE_IF_HEADER = "inline_if_header"  # InlineIfHeader (no END, optional assign)
+    WHILE_HEADER = "while_header"  # WhileHeader
+    TRY_HEADER = "try_header"  # TryHeader
+    EXCEPT_HEADER = "except_header"  # ExceptHeader
+    FINALLY_HEADER = "finally_header"  # FinallyHeader
+    GROUP_HEADER = "group_header"  # GroupHeader (RF 7.3+)
 
-    # Imports and settings
-    IMPORT = "import"
-    SETTING = "setting"
-    COMMENT = "comment"
+    # Control flow body statements
+    END = "end"  # End (closes FOR/IF/WHILE/TRY/GROUP)
+    RETURN_STATEMENT = "return_statement"  # ReturnStatement (RETURN keyword, RF 5.0+)
+    RETURN_SETTING = "return_setting"  # Return / ReturnSetting ([Return] setting)
+    BREAK_STATEMENT = "break_statement"  # Break
+    CONTINUE_STATEMENT = "continue_statement"  # Continue
 
-    # Unknown / unresolvable
-    UNKNOWN = "unknown"
+    # Imports
+    IMPORT = "import"  # LibraryImport / ResourceImport / VariablesImport
 
+    # Settings — every concrete RF setting statement has its own NodeKind.
+    # The SettingStatement subclass still carries setting_name for display
+    # (e.g. "Test Tags") but downstream code should branch on NodeKind.
+    SETTING_TAGS = "setting_tags"  # [Tags] (test- or keyword-level)
+    SETTING_KEYWORD_TAGS = "setting_keyword_tags"  # *** Settings *** Keyword Tags
+    SETTING_DEFAULT_TAGS = "setting_default_tags"  # Default Tags (deprecated, RF < 6.0)
+    SETTING_FORCE_TAGS = "setting_force_tags"  # Force Tags (deprecated)
+    SETTING_TEST_TAGS = "setting_test_tags"  # Test Tags
+    SETTING_DOCUMENTATION = "setting_documentation"  # [Documentation] / Documentation
+    SETTING_METADATA = "setting_metadata"  # Metadata
+    SETTING_TIMEOUT = "setting_timeout"  # [Timeout] / Test Timeout
+    SETTING_ARGUMENTS = "setting_arguments"  # [Arguments]
+    SETTING_SUITE_NAME = "setting_suite_name"  # Name (RF 7.0+)
+    SETTING_OTHER = "setting_other"  # Fallback for unrecognized
+    # SingleValue/MultiValue subclasses
 
-# Backward-compatible alias during migration.
-StatementKind = NodeKind
+    # Document structure
+    SECTION_HEADER = "section_header"  # SectionHeader (*** Test Cases *** etc.)
+    COMMENT = "comment"  # Comment lines
+    EMPTY_LINE = "empty_line"  # EmptyLine
+    CONFIG = "config"  # Config (RF 7.3+)
+    ERROR = "error"  # Error statement (parse error)
 
 
 class TokenKind(Enum):
