@@ -21,7 +21,6 @@ from robot.parsing.lexer.tokens import Token
 from robotcode.core.lsp.types import InlayHint, InlayHintKind, Position
 from robotcode.core.lsp.types import Range as LspRange
 from robotcode.core.text_document import TextDocument
-from robotcode.core.uri import Uri
 from robotcode.language_server.robotframework.configuration import InlayHintsConfig
 from robotcode.language_server.robotframework.parts.inlay_hint import RobotInlayHintProtocolPart
 from robotcode.robot.diagnostics.import_resolver import ResolvedImports
@@ -101,7 +100,7 @@ def _semantic_token(kind: TokenKind, value: str, line: int, col: int) -> Semanti
 
 def _make_text_document(text: str, source: str = "/test.robot") -> TextDocument:
     return TextDocument(
-        document_uri=str(Uri.from_path(source)),
+        document_uri=f"file://{source}",
         language_id="robotframework",
         version=0,
         text=text,
