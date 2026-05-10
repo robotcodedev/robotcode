@@ -183,6 +183,7 @@ export async function activateAsync(context: vscode.ExtensionContext): Promise<v
         "robotcode.documentationServer",
         "robotcode.completion",
         "robotcode.inlayHints",
+        "robotcode.experimental",
         "robotcode.disableExtension",
       ]) {
         for (const ws of vscode.workspace.workspaceFolders ?? []) {

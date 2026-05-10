@@ -419,11 +419,14 @@ class DocumentsCacheHelper:
     ) -> Namespace:
         source = str(document.uri.to_path())
         imports_manager = self.get_imports_manager(document)
+        semantic_model_enabled = self._is_semantic_model_enabled(document)
 
         # --- Try disk cache (cold-start acceleration) ---
         cache_namespaces = self.analysis_config.cache.cache_namespaces
         if cache_namespaces and document.version is None:
-            result = self._try_load_cached_namespace(source, document, document_type, imports_manager)
+            result = self._try_load_cached_namespace(
+                source, document, document_type, imports_manager, semantic_model_enabled
+            )
             if result is not None:
                 return result
 
@@ -438,8 +441,6 @@ class DocumentsCacheHelper:
             model = self.get_model(document)
 
         languages, workspace_languages = self.build_languages_from_model(document, model)
-        experimental_config = self.workspace.get_configuration(ExperimentalConfig, document.uri)
-
         builder = NamespaceBuilder(
             imports_manager,
             model,
@@ -449,13 +450,13 @@ class DocumentsCacheHelper:
             languages,
             workspace_languages,
         )
-        builder.set_semantic_model_enabled(self.analysis_config.semantic_model or experimental_config.semantic_model)
+        builder.set_semantic_model_enabled(semantic_model_enabled)
 
         result = builder.build()
 
         # Save to disk cache
         if cache_namespaces:
-            self._save_namespace_to_cache(source, result, imports_manager)
+            self._save_namespace_to_cache(source, result, imports_manager, semantic_model_enabled)
 
         # Update the folder-scoped reference index
         self.get_project_index(document).update_file(result.source, result)
@@ -469,12 +470,17 @@ class DocumentsCacheHelper:
 
         return result
 
+    def _is_semantic_model_enabled(self, document: TextDocument) -> bool:
+        experimental_config = self.workspace.get_configuration(ExperimentalConfig, document.uri)
+        return self.analysis_config.semantic_model or experimental_config.semantic_model
+
     def _try_load_cached_namespace(
         self,
         source: str,
         document: TextDocument,
         document_type: Optional[DocumentType],
         imports_manager: ImportsManager,
+        semantic_model_enabled: bool,
     ) -> Optional[Namespace]:
         """Attempt to load a Namespace from the disk cache.
 
@@ -498,14 +504,22 @@ class DocumentsCacheHelper:
             )
             return None
 
-        if entry is None or entry.meta is None:
+        meta = entry.meta if entry is not None else None
+        if entry is None or meta is None:
             self._logger.debug(
                 lambda: f"Cache miss for {source}: no cached entry found",
                 context_name="cache",
             )
             return None
 
-        if not imports_manager.validate_namespace_meta(entry.meta):
+        if getattr(meta, "semantic_model_enabled", None) != semantic_model_enabled:
+            self._logger.debug(
+                lambda: f"Cache miss for {source}: semantic model setting changed",
+                context_name="cache",
+            )
+            return None
+
+        if not imports_manager.validate_namespace_meta(meta):
             self._logger.debug(
                 lambda: f"Cache miss for {source}: cached entry is stale, re-analyzing",
                 context_name="cache",
@@ -559,10 +573,13 @@ class DocumentsCacheHelper:
         source: str,
         namespace: Namespace,
         imports_manager: ImportsManager,
+        semantic_model_enabled: bool,
     ) -> None:
         """Save a Namespace to the disk cache."""
         try:
-            meta = imports_manager.build_namespace_meta(source, namespace)
+            meta = imports_manager.build_namespace_meta(
+                source, namespace, semantic_model_enabled=semantic_model_enabled
+            )
             data = namespace.to_data()
 
             data_cache = imports_manager.data_cache

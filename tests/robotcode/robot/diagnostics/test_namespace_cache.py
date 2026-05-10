@@ -138,6 +138,15 @@ class TestNamespaceMetaData:
         meta2 = NamespaceMetaData("/a.robot", 200, ())
         assert meta1 != meta2
 
+    def test_meta_default_semantic_model_disabled(self, mocker: MockerFixture) -> None:
+        meta = NamespaceMetaData("/a.robot", 100, ())
+        assert meta.semantic_model_enabled is False
+
+    def test_meta_inequality_semantic_model_mode(self, mocker: MockerFixture) -> None:
+        meta1 = NamespaceMetaData("/a.robot", 100, (), semantic_model_enabled=False)
+        meta2 = NamespaceMetaData("/a.robot", 100, (), semantic_model_enabled=True)
+        assert meta1 != meta2
+
 
 # ===========================================================================
 # 1e-f: Fingerprint computation
@@ -258,6 +267,17 @@ class TestBuildNamespaceMeta:
         assert meta.source_mtime_ns > 0
         assert isinstance(meta.config_fingerprint, tuple)
         assert isinstance(meta.dependency_fingerprints, dict)
+        assert meta.semantic_model_enabled is False
+
+    def test_builds_meta_with_semantic_model_enabled(self, tmp_path: Path, mocker: MockerFixture) -> None:
+        source = tmp_path / "test.robot"
+        source.write_text("*** Test Cases ***\n")
+
+        ns = _mock_namespace(mocker, source=str(source))
+        im = _mock_imports_manager(mocker)
+
+        meta = ImportsManager.build_namespace_meta(im, str(source), ns, semantic_model_enabled=True)
+        assert meta.semantic_model_enabled is True
 
     def test_source_set(self, tmp_path: Path, mocker: MockerFixture) -> None:
         source = tmp_path / "test.robot"

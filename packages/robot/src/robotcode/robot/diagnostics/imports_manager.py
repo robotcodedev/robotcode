@@ -579,6 +579,7 @@ class NamespaceMetaData:
     source_mtime_ns: int
     config_fingerprint: Any
     dependency_fingerprints: Dict[str, Any] = field(default_factory=dict)
+    semantic_model_enabled: bool = False
 
 
 class ImportsManager:
@@ -814,7 +815,9 @@ class ImportsManager:
 
         return fingerprints
 
-    def build_namespace_meta(self, source: str, namespace: "Namespace") -> NamespaceMetaData:
+    def build_namespace_meta(
+        self, source: str, namespace: "Namespace", *, semantic_model_enabled: bool = False
+    ) -> NamespaceMetaData:
         """Build a NamespaceMetaData for the given namespace and its dependencies."""
         try:
             source_mtime_ns = os.stat(source, follow_symlinks=False).st_mtime_ns
@@ -826,6 +829,7 @@ class ImportsManager:
             source_mtime_ns=source_mtime_ns,
             config_fingerprint=self.config_fingerprint,
             dependency_fingerprints=self.compute_dependency_fingerprints(namespace),
+            semantic_model_enabled=semantic_model_enabled,
         )
 
     def validate_namespace_meta(self, meta: NamespaceMetaData) -> bool:
