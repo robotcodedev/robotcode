@@ -9,8 +9,9 @@ import pickle
 import types
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, List, Optional
-from unittest.mock import MagicMock
+from typing import Any, Dict, List, Optional
+
+from pytest_mock import MockerFixture
 
 from robotcode.robot.diagnostics.data_cache import CacheSection, SqliteDataCache
 from robotcode.robot.diagnostics.imports_manager import ImportsManager, NamespaceMetaData
@@ -30,13 +31,14 @@ class _FakeMeta:
 
 
 def _mock_imports_manager(
+    mocker: MockerFixture,
     cmd_variables: Optional[Dict[str, str]] = None,
     cmd_variable_files: Optional[List[str]] = None,
     global_library_search_order: Optional[List[str]] = None,
     environment: Optional[Dict[str, str]] = None,
-) -> MagicMock:
+) -> Any:
     """Create a mock ImportsManager with configurable attributes."""
-    im = MagicMock()
+    im = mocker.MagicMock()
     im.cmd_variables = cmd_variables or {}
     im.cmd_variable_files = cmd_variable_files or []
     im.global_library_search_order = global_library_search_order or []
@@ -67,19 +69,20 @@ def _mock_imports_manager(
 
 
 def _mock_namespace(
+    mocker: MockerFixture,
     source: str = "/project/test.robot",
     libraries: Optional[Dict[str, str]] = None,
     resources: Optional[Dict[str, str]] = None,
     variables_imports: Optional[Dict[str, str]] = None,
-) -> MagicMock:
+) -> Any:
     """Create a mock Namespace with configurable dependency dicts."""
-    ns = MagicMock()
+    ns = mocker.MagicMock()
     ns.source = source
 
     lib_entries = {}
     if libraries:
         for name, lib_doc_source in libraries.items():
-            entry = MagicMock()
+            entry = mocker.MagicMock()
             entry.import_name = name
             entry.library_doc.source = lib_doc_source
             lib_entries[name] = entry
@@ -88,7 +91,7 @@ def _mock_namespace(
     res_entries = {}
     if resources:
         for name, res_source in resources.items():
-            entry = MagicMock()
+            entry = mocker.MagicMock()
             entry.import_name = name
             entry.library_doc.source = res_source
             res_entries[name] = entry
@@ -97,7 +100,7 @@ def _mock_namespace(
     var_entries = {}
     if variables_imports:
         for name, var_source in variables_imports.items():
-            entry = MagicMock()
+            entry = mocker.MagicMock()
             entry.import_name = name
             entry.library_doc.source = var_source
             var_entries[name] = entry
@@ -112,7 +115,7 @@ def _mock_namespace(
 
 
 class TestNamespaceMetaData:
-    def test_meta_pickle_roundtrip(self) -> None:
+    def test_meta_pickle_roundtrip(self, mocker: MockerFixture) -> None:
         meta = NamespaceMetaData(
             source="/project/test.robot",
             source_mtime_ns=123456789,
@@ -125,12 +128,12 @@ class TestNamespaceMetaData:
         restored = pickle.loads(pickle.dumps(meta))
         assert restored == meta
 
-    def test_meta_equality(self) -> None:
+    def test_meta_equality(self, mocker: MockerFixture) -> None:
         meta1 = NamespaceMetaData("/a.robot", 100, ("fp",), {"k": "v"})
         meta2 = NamespaceMetaData("/a.robot", 100, ("fp",), {"k": "v"})
         assert meta1 == meta2
 
-    def test_meta_inequality_mtime(self) -> None:
+    def test_meta_inequality_mtime(self, mocker: MockerFixture) -> None:
         meta1 = NamespaceMetaData("/a.robot", 100, ())
         meta2 = NamespaceMetaData("/a.robot", 200, ())
         assert meta1 != meta2
@@ -142,48 +145,48 @@ class TestNamespaceMetaData:
 
 
 class TestConfigFingerprint:
-    def test_deterministic(self) -> None:
-        im = _mock_imports_manager(cmd_variables={"BROWSER": "chrome"})
+    def test_deterministic(self, mocker: MockerFixture) -> None:
+        im = _mock_imports_manager(mocker, cmd_variables={"BROWSER": "chrome"})
         fp1 = im.config_fingerprint
         fp2 = im.config_fingerprint
         assert fp1 == fp2
 
-    def test_changes_with_variables(self) -> None:
-        im1 = _mock_imports_manager(cmd_variables={"BROWSER": "chrome"})
-        im2 = _mock_imports_manager(cmd_variables={"BROWSER": "firefox"})
+    def test_changes_with_variables(self, mocker: MockerFixture) -> None:
+        im1 = _mock_imports_manager(mocker, cmd_variables={"BROWSER": "chrome"})
+        im2 = _mock_imports_manager(mocker, cmd_variables={"BROWSER": "firefox"})
         assert im1.config_fingerprint != im2.config_fingerprint
 
-    def test_changes_with_variable_files(self) -> None:
-        im1 = _mock_imports_manager(cmd_variable_files=["vars1.py"])
-        im2 = _mock_imports_manager(cmd_variable_files=["vars2.py"])
+    def test_changes_with_variable_files(self, mocker: MockerFixture) -> None:
+        im1 = _mock_imports_manager(mocker, cmd_variable_files=["vars1.py"])
+        im2 = _mock_imports_manager(mocker, cmd_variable_files=["vars2.py"])
         assert im1.config_fingerprint != im2.config_fingerprint
 
-    def test_changes_with_search_order(self) -> None:
-        im1 = _mock_imports_manager(global_library_search_order=["Lib1"])
-        im2 = _mock_imports_manager(global_library_search_order=["Lib2"])
+    def test_changes_with_search_order(self, mocker: MockerFixture) -> None:
+        im1 = _mock_imports_manager(mocker, global_library_search_order=["Lib1"])
+        im2 = _mock_imports_manager(mocker, global_library_search_order=["Lib2"])
         assert im1.config_fingerprint != im2.config_fingerprint
 
-    def test_returns_tuple(self) -> None:
-        im = _mock_imports_manager()
+    def test_returns_tuple(self, mocker: MockerFixture) -> None:
+        im = _mock_imports_manager(mocker)
         fp = im.config_fingerprint
         assert isinstance(fp, tuple)
 
-    def test_empty_config(self) -> None:
-        im = _mock_imports_manager()
+    def test_empty_config(self, mocker: MockerFixture) -> None:
+        im = _mock_imports_manager(mocker)
         fp = im.config_fingerprint
         assert isinstance(fp, tuple)
 
 
 class TestDependencyFingerprints:
-    def test_empty_namespace(self) -> None:
-        ns = _mock_namespace()
-        im = _mock_imports_manager()
+    def test_empty_namespace(self, mocker: MockerFixture) -> None:
+        ns = _mock_namespace(mocker)
+        im = _mock_imports_manager(mocker)
         fps = ImportsManager.compute_dependency_fingerprints(im, ns)
         assert fps == {}
 
-    def test_library_fingerprint(self) -> None:
-        ns = _mock_namespace(libraries={"BuiltIn": "builtin.py"})
-        im = _mock_imports_manager()
+    def test_library_fingerprint(self, mocker: MockerFixture) -> None:
+        ns = _mock_namespace(mocker, libraries={"BuiltIn": "builtin.py"})
+        im = _mock_imports_manager(mocker)
 
         fake_meta = _FakeMeta(name="BuiltIn")
         im.get_library_meta.return_value = (fake_meta, "BuiltIn", False)
@@ -192,19 +195,19 @@ class TestDependencyFingerprints:
         assert "lib:BuiltIn" in fps
         assert fps["lib:BuiltIn"] == fake_meta
 
-    def test_resource_fingerprint(self, tmp_path: Path) -> None:
+    def test_resource_fingerprint(self, tmp_path: Path, mocker: MockerFixture) -> None:
         resource_file = tmp_path / "common.resource"
         resource_file.write_text("*** Keywords ***\n")
 
-        ns = _mock_namespace(resources={"common.resource": str(resource_file)})
-        im = _mock_imports_manager()
+        ns = _mock_namespace(mocker, resources={"common.resource": str(resource_file)})
+        im = _mock_imports_manager(mocker)
 
         fps = ImportsManager.compute_dependency_fingerprints(im, ns)
         assert f"res:{resource_file}" in fps
 
-    def test_variables_fingerprint(self) -> None:
-        ns = _mock_namespace(variables_imports={"vars.py": "vars.py"})
-        im = _mock_imports_manager()
+    def test_variables_fingerprint(self, mocker: MockerFixture) -> None:
+        ns = _mock_namespace(mocker, variables_imports={"vars.py": "vars.py"})
+        im = _mock_imports_manager(mocker)
 
         fake_meta = _FakeMeta(name="vars")
         im.get_variables_meta.return_value = (fake_meta, "vars.py")
@@ -213,24 +216,24 @@ class TestDependencyFingerprints:
         assert "var:vars.py" in fps
         assert fps["var:vars.py"] == fake_meta
 
-    def test_library_meta_none_skipped(self) -> None:
-        ns = _mock_namespace(libraries={"Unknown": "unknown.py"})
-        im = _mock_imports_manager()
+    def test_library_meta_none_skipped(self, mocker: MockerFixture) -> None:
+        ns = _mock_namespace(mocker, libraries={"Unknown": "unknown.py"})
+        im = _mock_imports_manager(mocker)
         im.get_library_meta.return_value = (None, "Unknown", False)
 
         fps = ImportsManager.compute_dependency_fingerprints(im, ns)
         assert "lib:Unknown" not in fps
 
-    def test_resource_missing_file_skipped(self) -> None:
-        ns = _mock_namespace(resources={"missing": "/nonexistent/file.resource"})
-        im = _mock_imports_manager()
+    def test_resource_missing_file_skipped(self, mocker: MockerFixture) -> None:
+        ns = _mock_namespace(mocker, resources={"missing": "/nonexistent/file.resource"})
+        im = _mock_imports_manager(mocker)
 
         fps = ImportsManager.compute_dependency_fingerprints(im, ns)
         assert len(fps) == 0
 
-    def test_library_meta_exception_skipped(self) -> None:
-        ns = _mock_namespace(libraries={"Bad": "bad.py"})
-        im = _mock_imports_manager()
+    def test_library_meta_exception_skipped(self, mocker: MockerFixture) -> None:
+        ns = _mock_namespace(mocker, libraries={"Bad": "bad.py"})
+        im = _mock_imports_manager(mocker)
         im.get_library_meta.side_effect = RuntimeError("cannot resolve")
 
         fps = ImportsManager.compute_dependency_fingerprints(im, ns)
@@ -243,12 +246,12 @@ class TestDependencyFingerprints:
 
 
 class TestBuildNamespaceMeta:
-    def test_builds_meta_with_correct_fields(self, tmp_path: Path) -> None:
+    def test_builds_meta_with_correct_fields(self, tmp_path: Path, mocker: MockerFixture) -> None:
         source = tmp_path / "test.robot"
         source.write_text("*** Test Cases ***\n")
 
-        ns = _mock_namespace(source=str(source))
-        im = _mock_imports_manager()
+        ns = _mock_namespace(mocker, source=str(source))
+        im = _mock_imports_manager(mocker)
 
         meta = ImportsManager.build_namespace_meta(im, str(source), ns)
         assert meta.source == str(source)
@@ -256,54 +259,54 @@ class TestBuildNamespaceMeta:
         assert isinstance(meta.config_fingerprint, tuple)
         assert isinstance(meta.dependency_fingerprints, dict)
 
-    def test_source_set(self, tmp_path: Path) -> None:
+    def test_source_set(self, tmp_path: Path, mocker: MockerFixture) -> None:
         source = tmp_path / "test.robot"
         source.write_text("")
 
-        ns = _mock_namespace(source=str(source))
-        im = _mock_imports_manager()
+        ns = _mock_namespace(mocker, source=str(source))
+        im = _mock_imports_manager(mocker)
 
         meta = ImportsManager.build_namespace_meta(im, str(source), ns)
         assert meta.source == str(source)  # source is set
 
-    def test_missing_source_gets_zero_mtime(self) -> None:
-        ns = _mock_namespace(source="/nonexistent/test.robot")
-        im = _mock_imports_manager()
+    def test_missing_source_gets_zero_mtime(self, mocker: MockerFixture) -> None:
+        ns = _mock_namespace(mocker, source="/nonexistent/test.robot")
+        im = _mock_imports_manager(mocker)
 
         meta = ImportsManager.build_namespace_meta(im, "/nonexistent/test.robot", ns)
         assert meta.source_mtime_ns == 0
 
 
 class TestValidateNamespaceMeta:
-    def test_valid_meta_passes(self, tmp_path: Path) -> None:
+    def test_valid_meta_passes(self, tmp_path: Path, mocker: MockerFixture) -> None:
         source = tmp_path / "test.robot"
         source.write_text("*** Test Cases ***\n")
 
-        ns = _mock_namespace(source=str(source))
-        im = _mock_imports_manager()
+        ns = _mock_namespace(mocker, source=str(source))
+        im = _mock_imports_manager(mocker)
 
         meta = ImportsManager.build_namespace_meta(im, str(source), ns)
         assert ImportsManager.validate_namespace_meta(im, meta) is True
 
-    def test_version_mismatch_fails(self, tmp_path: Path) -> None:
+    def test_version_mismatch_fails(self, tmp_path: Path, mocker: MockerFixture) -> None:
         """Version mismatch is now handled at DB level (app_version), not meta level.
         This test verifies that mtime changes are detected instead."""
         source = tmp_path / "test.robot"
         source.write_text("")
 
-        ns = _mock_namespace(source=str(source))
-        im = _mock_imports_manager()
+        ns = _mock_namespace(mocker, source=str(source))
+        im = _mock_imports_manager(mocker)
 
         meta = ImportsManager.build_namespace_meta(im, str(source), ns)
         meta.source_mtime_ns -= 1  # Simulate mtime change
         assert ImportsManager.validate_namespace_meta(im, meta) is False
 
-    def test_source_mtime_changed_fails(self, tmp_path: Path) -> None:
+    def test_source_mtime_changed_fails(self, tmp_path: Path, mocker: MockerFixture) -> None:
         source = tmp_path / "test.robot"
         source.write_text("original")
 
-        ns = _mock_namespace(source=str(source))
-        im = _mock_imports_manager()
+        ns = _mock_namespace(mocker, source=str(source))
+        im = _mock_imports_manager(mocker)
 
         meta = ImportsManager.build_namespace_meta(im, str(source), ns)
 
@@ -314,38 +317,38 @@ class TestValidateNamespaceMeta:
         meta.source_mtime_ns -= 1
         assert ImportsManager.validate_namespace_meta(im, meta) is False
 
-    def test_source_deleted_fails(self, tmp_path: Path) -> None:
+    def test_source_deleted_fails(self, tmp_path: Path, mocker: MockerFixture) -> None:
         source = tmp_path / "test.robot"
         source.write_text("")
 
-        ns = _mock_namespace(source=str(source))
-        im = _mock_imports_manager()
+        ns = _mock_namespace(mocker, source=str(source))
+        im = _mock_imports_manager(mocker)
 
         meta = ImportsManager.build_namespace_meta(im, str(source), ns)
         source.unlink()
         assert ImportsManager.validate_namespace_meta(im, meta) is False
 
-    def test_config_fingerprint_changed_fails(self, tmp_path: Path) -> None:
+    def test_config_fingerprint_changed_fails(self, tmp_path: Path, mocker: MockerFixture) -> None:
         source = tmp_path / "test.robot"
         source.write_text("")
 
-        ns = _mock_namespace(source=str(source))
-        im = _mock_imports_manager(cmd_variables={"BROWSER": "chrome"})
+        ns = _mock_namespace(mocker, source=str(source))
+        im = _mock_imports_manager(mocker, cmd_variables={"BROWSER": "chrome"})
 
         meta = ImportsManager.build_namespace_meta(im, str(source), ns)
 
         # Change the configuration
-        im2 = _mock_imports_manager(cmd_variables={"BROWSER": "firefox"})
+        im2 = _mock_imports_manager(mocker, cmd_variables={"BROWSER": "firefox"})
         assert ImportsManager.validate_namespace_meta(im2, meta) is False
 
-    def test_workspace_languages_changed_fails(self, tmp_path: Path) -> None:
+    def test_workspace_languages_changed_fails(self, tmp_path: Path, mocker: MockerFixture) -> None:
         source = tmp_path / "test.robot"
         source.write_text("")
 
-        ns = _mock_namespace(source=str(source))
+        ns = _mock_namespace(mocker, source=str(source))
 
         # Build meta with Finnish workspace languages
-        im = _mock_imports_manager()
+        im = _mock_imports_manager(mocker)
         im._config_fingerprint = (
             *im._config_fingerprint[:4],
             (("Oletetaan", "Kun", "Niin"), (), (), (), ()),  # Finnish BDD prefixes
@@ -355,7 +358,7 @@ class TestValidateNamespaceMeta:
         meta = ImportsManager.build_namespace_meta(im, str(source), ns)
 
         # Validate with German workspace languages -> should fail
-        im2 = _mock_imports_manager()
+        im2 = _mock_imports_manager(mocker)
         im2._config_fingerprint = (
             *im2._config_fingerprint[:4],
             (("Angenommen", "Wenn", "Dann"), (), (), (), ()),  # German BDD prefixes
@@ -364,14 +367,14 @@ class TestValidateNamespaceMeta:
 
         assert ImportsManager.validate_namespace_meta(im2, meta) is False
 
-    def test_workspace_languages_unchanged_passes(self, tmp_path: Path) -> None:
+    def test_workspace_languages_unchanged_passes(self, tmp_path: Path, mocker: MockerFixture) -> None:
         source = tmp_path / "test.robot"
         source.write_text("")
 
-        ns = _mock_namespace(source=str(source))
+        ns = _mock_namespace(mocker, source=str(source))
 
         # Build meta with Finnish workspace languages
-        im = _mock_imports_manager()
+        im = _mock_imports_manager(mocker)
         lang_fp = (("Oletetaan", "Kun", "Niin"), (), (), (), ())
         im._config_fingerprint = (*im._config_fingerprint[:4], lang_fp)
         im.config_fingerprint = im._config_fingerprint
@@ -379,18 +382,18 @@ class TestValidateNamespaceMeta:
         meta = ImportsManager.build_namespace_meta(im, str(source), ns)
 
         # Validate with same languages -> should pass
-        im2 = _mock_imports_manager()
+        im2 = _mock_imports_manager(mocker)
         im2._config_fingerprint = (*im2._config_fingerprint[:4], lang_fp)
         im2.config_fingerprint = im2._config_fingerprint
 
         assert ImportsManager.validate_namespace_meta(im2, meta) is True
 
-    def test_library_dependency_changed_fails(self, tmp_path: Path) -> None:
+    def test_library_dependency_changed_fails(self, tmp_path: Path, mocker: MockerFixture) -> None:
         source = tmp_path / "test.robot"
         source.write_text("")
 
-        ns = _mock_namespace(source=str(source), libraries={"MyLib": "mylib.py"})
-        im = _mock_imports_manager()
+        ns = _mock_namespace(mocker, source=str(source), libraries={"MyLib": "mylib.py"})
+        im = _mock_imports_manager(mocker)
 
         im.get_library_meta.return_value = (_FakeMeta(name="MyLib", mtimes={"/mylib.py": 100}), "MyLib", False)
 
@@ -402,15 +405,15 @@ class TestValidateNamespaceMeta:
 
         assert ImportsManager.validate_namespace_meta(im, meta) is False
 
-    def test_resource_dependency_changed_fails(self, tmp_path: Path) -> None:
+    def test_resource_dependency_changed_fails(self, tmp_path: Path, mocker: MockerFixture) -> None:
         source = tmp_path / "test.robot"
         source.write_text("")
 
         res_file = tmp_path / "common.resource"
         res_file.write_text("*** Keywords ***\n")
 
-        ns = _mock_namespace(source=str(source), resources={"common": str(res_file)})
-        im = _mock_imports_manager()
+        ns = _mock_namespace(mocker, source=str(source), resources={"common": str(res_file)})
+        im = _mock_imports_manager(mocker)
 
         meta = ImportsManager.build_namespace_meta(im, str(source), ns)
 
@@ -421,15 +424,15 @@ class TestValidateNamespaceMeta:
         meta.dependency_fingerprints[res_key].mtime_ns -= 1
         assert ImportsManager.validate_namespace_meta(im, meta) is False
 
-    def test_resource_dependency_deleted_fails(self, tmp_path: Path) -> None:
+    def test_resource_dependency_deleted_fails(self, tmp_path: Path, mocker: MockerFixture) -> None:
         source = tmp_path / "test.robot"
         source.write_text("")
 
         res_file = tmp_path / "common.resource"
         res_file.write_text("*** Keywords ***\n")
 
-        ns = _mock_namespace(source=str(source), resources={"common": str(res_file)})
-        im = _mock_imports_manager()
+        ns = _mock_namespace(mocker, source=str(source), resources={"common": str(res_file)})
+        im = _mock_imports_manager(mocker)
 
         meta = ImportsManager.build_namespace_meta(im, str(source), ns)
         res_file.unlink()
@@ -442,7 +445,7 @@ class TestValidateNamespaceMeta:
 
 
 class TestNamespaceMetaCacheRoundtrip:
-    def test_save_and_load_meta(self, tmp_path: Path) -> None:
+    def test_save_and_load_meta(self, tmp_path: Path, mocker: MockerFixture) -> None:
         cache = SqliteDataCache(tmp_path / "cache")
         meta = NamespaceMetaData(
             source="/project/test.robot",
@@ -461,10 +464,10 @@ class TestNamespaceMetaCacheRoundtrip:
         assert entry.meta == meta
         assert entry.meta.dependency_fingerprints == meta.dependency_fingerprints
 
-    def test_cache_section_namespace_exists(self) -> None:
+    def test_cache_section_namespace_exists(self, mocker: MockerFixture) -> None:
         assert CacheSection.NAMESPACE.value == "namespace"
 
-    def test_different_sources_different_cache_entries(self, tmp_path: Path) -> None:
+    def test_different_sources_different_cache_entries(self, tmp_path: Path, mocker: MockerFixture) -> None:
         cache = SqliteDataCache(tmp_path / "cache")
         meta1 = NamespaceMetaData("/dir1/a.robot", 100, ())
         meta2 = NamespaceMetaData("/dir2/b.robot", 200, ())

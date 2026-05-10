@@ -5,10 +5,10 @@ and that model_helper methods (split_bdd_prefix, strip_bdd_prefix, is_bdd_token)
 work correctly with non-English BDD prefixes like French.
 """
 
-from typing import Optional, Set
-from unittest.mock import MagicMock
+from typing import Any, Optional, Set
 
 import pytest
+from pytest_mock import MockerFixture
 from robot.parsing.lexer.tokens import Token
 
 from robotcode.robot.diagnostics.keyword_finder import (
@@ -62,8 +62,8 @@ FINNISH_BDD_PREFIXES: Set[str] = {
 }
 
 
-def _mock_namespace(bdd_prefixes: Optional[Set[str]] = None) -> MagicMock:
-    ns = MagicMock()
+def _mock_namespace(mocker: MockerFixture, bdd_prefixes: Optional[Set[str]] = None) -> Any:
+    ns = mocker.MagicMock()
     if bdd_prefixes is not None:
         ns.languages.bdd_prefixes = bdd_prefixes
     else:
@@ -180,8 +180,8 @@ class TestBuildBddPrefixRegexp:
 
 
 class TestModelHelperSplitBddPrefix:
-    def test_english_default(self) -> None:
-        ns = _mock_namespace(None)
+    def test_english_default(self, mocker: MockerFixture) -> None:
+        ns = _mock_namespace(mocker, None)
         token = _make_token("Given something happens")
         bdd, rest = ModelHelper.split_bdd_prefix(ns, token)
         assert bdd is not None
@@ -190,16 +190,16 @@ class TestModelHelperSplitBddPrefix:
         assert rest.value == "something happens"
         assert rest.col_offset == 6
 
-    def test_no_prefix(self) -> None:
-        ns = _mock_namespace(None)
+    def test_no_prefix(self, mocker: MockerFixture) -> None:
+        ns = _mock_namespace(mocker, None)
         token = _make_token("Do Something")
         bdd, rest = ModelHelper.split_bdd_prefix(ns, token)
         assert bdd is None
         assert rest is not None
         assert rest.value == "Do Something"
 
-    def test_single_word_no_split(self) -> None:
-        ns = _mock_namespace(None)
+    def test_single_word_no_split(self, mocker: MockerFixture) -> None:
+        ns = _mock_namespace(mocker, None)
         token = _make_token("Keyword")
         bdd, rest = ModelHelper.split_bdd_prefix(ns, token)
         assert bdd is None
@@ -220,8 +220,8 @@ class TestModelHelperSplitBddPrefix:
             ("Sachant My Keyword", "Sachant", "My Keyword"),
         ],
     )
-    def test_french_split(self, text: str, expected_prefix: str, expected_rest: str) -> None:
-        ns = _mock_namespace(FRENCH_BDD_PREFIXES)
+    def test_french_split(self, mocker: MockerFixture, text: str, expected_prefix: str, expected_rest: str) -> None:
+        ns = _mock_namespace(mocker, FRENCH_BDD_PREFIXES)
         token = _make_token(text)
         bdd, rest = ModelHelper.split_bdd_prefix(ns, token)
         assert bdd is not None, f"Should find BDD prefix in '{text}'"
@@ -231,8 +231,8 @@ class TestModelHelperSplitBddPrefix:
         assert rest.col_offset == len(expected_prefix) + 1
 
     @pytest.mark.skipif(RF_VERSION < (6, 0), reason="Language support requires RF >= 6.0")
-    def test_french_no_prefix(self) -> None:
-        ns = _mock_namespace(FRENCH_BDD_PREFIXES)
+    def test_french_no_prefix(self, mocker: MockerFixture) -> None:
+        ns = _mock_namespace(mocker, FRENCH_BDD_PREFIXES)
         token = _make_token("My Keyword")
         bdd, rest = ModelHelper.split_bdd_prefix(ns, token)
         assert bdd is None
@@ -241,15 +241,15 @@ class TestModelHelperSplitBddPrefix:
 
 
 class TestModelHelperStripBddPrefix:
-    def test_english_default(self) -> None:
-        ns = _mock_namespace(None)
+    def test_english_default(self, mocker: MockerFixture) -> None:
+        ns = _mock_namespace(mocker, None)
         token = _make_token("Given something happens")
         result = ModelHelper.strip_bdd_prefix(ns, token)
         assert result.value == "something happens"
         assert result.col_offset == 6
 
-    def test_no_prefix_unchanged(self) -> None:
-        ns = _mock_namespace(None)
+    def test_no_prefix_unchanged(self, mocker: MockerFixture) -> None:
+        ns = _mock_namespace(mocker, None)
         token = _make_token("Do Something")
         result = ModelHelper.strip_bdd_prefix(ns, token)
         assert result.value == "Do Something"
@@ -264,8 +264,8 @@ class TestModelHelperStripBddPrefix:
             ("Mais que My Keyword", "My Keyword"),
         ],
     )
-    def test_french_strip(self, text: str, expected_rest: str) -> None:
-        ns = _mock_namespace(FRENCH_BDD_PREFIXES)
+    def test_french_strip(self, mocker: MockerFixture, text: str, expected_rest: str) -> None:
+        ns = _mock_namespace(mocker, FRENCH_BDD_PREFIXES)
         token = _make_token(text)
         result = ModelHelper.strip_bdd_prefix(ns, token)
         assert result.value == expected_rest
@@ -289,13 +289,13 @@ class TestModelHelperIsBddToken:
             ("Et que keyword", False),
         ],
     )
-    def test_french_is_bdd_token(self, text: str, expected: bool) -> None:
-        ns = _mock_namespace(FRENCH_BDD_PREFIXES)
+    def test_french_is_bdd_token(self, mocker: MockerFixture, text: str, expected: bool) -> None:
+        ns = _mock_namespace(mocker, FRENCH_BDD_PREFIXES)
         token = _make_token(text)
         assert ModelHelper.is_bdd_token(ns, token) == expected, f"is_bdd_token('{text}') should be {expected}"
 
-    def test_english_default(self) -> None:
-        ns = _mock_namespace(None)
+    def test_english_default(self, mocker: MockerFixture) -> None:
+        ns = _mock_namespace(mocker, None)
         for prefix in ["Given", "When", "Then", "And", "But"]:
             token = _make_token(prefix)
             assert ModelHelper.is_bdd_token(ns, token) is True, f"'{prefix}' should be a BDD token"
@@ -304,8 +304,8 @@ class TestModelHelperIsBddToken:
         assert ModelHelper.is_bdd_token(ns, token) is False
 
     @pytest.mark.skipif(RF_VERSION < (6, 0), reason="Language support requires RF >= 6.0")
-    def test_german_prefixes(self) -> None:
-        ns = _mock_namespace(GERMAN_BDD_PREFIXES)
+    def test_german_prefixes(self, mocker: MockerFixture) -> None:
+        ns = _mock_namespace(mocker, GERMAN_BDD_PREFIXES)
         for prefix in ["Angenommen", "Wenn", "Dann", "Und", "Aber"]:
             token = _make_token(prefix)
             assert ModelHelper.is_bdd_token(ns, token) is True, f"'{prefix}' should be a BDD token"

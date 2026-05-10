@@ -2,7 +2,6 @@
 
 import pickle
 from typing import Dict, Optional, Set, Tuple
-from unittest.mock import MagicMock
 
 from pytest_mock import MockerFixture
 
@@ -83,15 +82,15 @@ def _resource_doc(source: str = "test.robot") -> ResourceDoc:
 
 def _make_namespace(mocker: MockerFixture, semantic_model: Optional[SemanticModel] = None) -> Namespace:
     """Build a realistic Namespace with representative data."""
-    imports_manager = mocker.create_autospec(MagicMock, instance=True)
-    imports_manager.imports_changed = MagicMock()
-    imports_manager.imports_changed.add = MagicMock()
-    imports_manager.libraries_changed = MagicMock()
-    imports_manager.libraries_changed.add = MagicMock()
-    imports_manager.resources_changed = MagicMock()
-    imports_manager.resources_changed.add = MagicMock()
-    imports_manager.variables_changed = MagicMock()
-    imports_manager.variables_changed.add = MagicMock()
+    imports_manager = mocker.MagicMock()
+    imports_manager.imports_changed = mocker.MagicMock()
+    imports_manager.imports_changed.add = mocker.MagicMock()
+    imports_manager.libraries_changed = mocker.MagicMock()
+    imports_manager.libraries_changed.add = mocker.MagicMock()
+    imports_manager.resources_changed = mocker.MagicMock()
+    imports_manager.resources_changed.add = mocker.MagicMock()
+    imports_manager.variables_changed = mocker.MagicMock()
+    imports_manager.variables_changed.add = mocker.MagicMock()
 
     library_doc = _resource_doc("/project/test.robot")
 
@@ -495,15 +494,15 @@ class TestEmptyNamespace:
     """Tests for to_data() with minimal/empty data."""
 
     def test_empty_namespace(self, mocker: MockerFixture) -> None:
-        imports_manager = mocker.create_autospec(MagicMock, instance=True)
-        imports_manager.imports_changed = MagicMock()
-        imports_manager.imports_changed.add = MagicMock()
-        imports_manager.libraries_changed = MagicMock()
-        imports_manager.libraries_changed.add = MagicMock()
-        imports_manager.resources_changed = MagicMock()
-        imports_manager.resources_changed.add = MagicMock()
-        imports_manager.variables_changed = MagicMock()
-        imports_manager.variables_changed.add = MagicMock()
+        imports_manager = mocker.MagicMock()
+        imports_manager.imports_changed = mocker.MagicMock()
+        imports_manager.imports_changed.add = mocker.MagicMock()
+        imports_manager.libraries_changed = mocker.MagicMock()
+        imports_manager.libraries_changed.add = mocker.MagicMock()
+        imports_manager.resources_changed = mocker.MagicMock()
+        imports_manager.resources_changed.add = mocker.MagicMock()
+        imports_manager.variables_changed = mocker.MagicMock()
+        imports_manager.variables_changed.add = mocker.MagicMock()
 
         ns = Namespace(
             imports_manager=imports_manager,
@@ -569,7 +568,7 @@ def _make_roundtrip(mocker: MockerFixture) -> Tuple[Namespace, Namespace, Namesp
         elif isinstance(imp, VariablesImport):
             import_entries[imp] = vars_entry
 
-    mock_resolved = MagicMock()
+    mock_resolved = mocker.MagicMock()
     mock_resolved.libraries = {"BuiltIn": lib_entry, "SeleniumLibrary": selenium_entry}
     mock_resolved.resources = {"common.resource": resource_entry}
     mock_resolved.variables_imports = {"vars.py": vars_entry}
@@ -587,7 +586,7 @@ def _make_roundtrip(mocker: MockerFixture) -> Tuple[Namespace, Namespace, Namesp
     )
 
     # Set up imports_manager mock
-    imports_manager = MagicMock()
+    imports_manager = mocker.MagicMock()
     imports_manager.get_command_line_variables.return_value = []
     imports_manager.global_library_search_order = []
 
@@ -749,7 +748,7 @@ class TestToNamespaceRoundtrip:
             elif isinstance(imp, VariablesImport):
                 import_entries[imp] = vars_entry
 
-        mock_resolved = MagicMock()
+        mock_resolved = mocker.MagicMock()
         mock_resolved.libraries = {"BuiltIn": lib_entry, "SeleniumLibrary": selenium_entry}
         mock_resolved.resources = {"common.resource": resource_entry}
         mock_resolved.variables_imports = {"vars.py": vars_entry}
@@ -766,7 +765,7 @@ class TestToNamespaceRoundtrip:
             return_value=[],
         )
 
-        imports_manager = MagicMock()
+        imports_manager = mocker.MagicMock()
         imports_manager.get_command_line_variables.return_value = []
         imports_manager.global_library_search_order = []
 
