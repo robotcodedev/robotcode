@@ -341,11 +341,11 @@
     "tomlValidation": [
       {
         "fileMatch": "robot.toml",
-        "url": "https://raw.githubusercontent.com/robotcodedev/robotcode/main/etc/robot.toml.json"
+        "url": "https://www.robotcode.io/schemas/robot.toml.json"
       },
       {
         "fileMatch": ".robot.toml",
-        "url": "https://raw.githubusercontent.com/robotcodedev/robotcode/main/etc/robot.toml.json"
+        "url": "https://www.robotcode.io/schemas/robot.toml.json"
       }
     ],
     "configurationDefaults": {

@@ -27,7 +27,7 @@ dependencies = [
   "GitPython",
   "semantic-version",
   "robotremoteserver",
-  "apischema",
+  "mashumaro",
 ]
 dependency-groups = ["all"]
 workspace.members = [

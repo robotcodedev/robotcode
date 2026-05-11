@@ -443,6 +443,7 @@ class CommonOptions(RobotBaseOptions):
         robot_name="consolecolors",
         robot_priority=500,
         robot_short_name="C",
+        alias="console-colors",
     )
     console_links: Optional[Literal["auto", "off"]] = field(
         description="""\
@@ -462,6 +463,7 @@ class CommonOptions(RobotBaseOptions):
             """,
         robot_name="consolelinks",
         robot_priority=500,
+        alias="console-links",
     )
     doc: Optional[Union[str, StringExpression]] = field(
         description="""\
@@ -522,6 +524,7 @@ class CommonOptions(RobotBaseOptions):
             """,
         robot_name="expandkeywords",
         robot_priority=500,
+        alias="expand-keywords",
     )
     flatten_keywords: Optional[List[Union[str, Literal["for", "while", "iteration"], NamePattern, TagPattern]]] = field(
         description="""\
@@ -555,6 +558,7 @@ class CommonOptions(RobotBaseOptions):
             """,
         robot_name="flattenkeywords",
         robot_priority=500,
+        alias="flatten-keywords",
     )
     includes: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
@@ -598,6 +602,7 @@ class CommonOptions(RobotBaseOptions):
         robot_name="legacyoutput",
         robot_priority=500,
         robot_is_flag=True,
+        alias="legacy-output",
     )
     log: Optional[Union[str, StringExpression]] = field(
         description="""\
@@ -636,6 +641,7 @@ class CommonOptions(RobotBaseOptions):
             """,
         robot_name="logtitle",
         robot_priority=500,
+        alias="log-title",
     )
     metadata: Optional[Dict[str, Union[str, StringExpression]]] = field(
         description="""\
@@ -694,6 +700,7 @@ class CommonOptions(RobotBaseOptions):
         robot_priority=500,
         robot_is_flag=True,
         robot_flag_default=False,
+        alias="no-status-rc",
     )
     output_dir: Optional[Union[str, StringExpression]] = field(
         description="""\
@@ -712,6 +719,7 @@ class CommonOptions(RobotBaseOptions):
         robot_name="outputdir",
         robot_priority=500,
         robot_short_name="d",
+        alias="output-dir",
     )
     parse_include: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
@@ -733,6 +741,7 @@ class CommonOptions(RobotBaseOptions):
         robot_name="parseinclude",
         robot_priority=500,
         robot_short_name="I",
+        alias="parse-include",
     )
     pre_rebot_modifiers: Optional[Dict[str, List[Union[str, StringExpression]]]] = field(
         description="""\
@@ -751,6 +760,7 @@ class CommonOptions(RobotBaseOptions):
             """,
         robot_name="prerebotmodifier",
         robot_priority=500,
+        alias="pre-rebot-modifiers",
     )
     python_path: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
@@ -772,6 +782,7 @@ class CommonOptions(RobotBaseOptions):
         robot_name="pythonpath",
         robot_priority=500,
         robot_short_name="P",
+        alias="python-path",
     )
     remove_keywords: Optional[List[Union[str, Literal["all", "passed", "for", "wuks"], NamePattern, TagPattern]]] = (
         field(
@@ -824,6 +835,7 @@ class CommonOptions(RobotBaseOptions):
             """,
             robot_name="removekeywords",
             robot_priority=500,
+            alias="remove-keywords",
         )
     )
     report: Optional[Union[str, StringExpression]] = field(
@@ -866,6 +878,7 @@ class CommonOptions(RobotBaseOptions):
             """,
         robot_name="reportbackground",
         robot_priority=500,
+        alias="report-background",
     )
     report_title: Optional[Union[str, StringExpression]] = field(
         description="""\
@@ -882,6 +895,7 @@ class CommonOptions(RobotBaseOptions):
             """,
         robot_name="reporttitle",
         robot_priority=500,
+        alias="report-title",
     )
     rpa: Union[bool, Flag, None] = field(
         description="""\
@@ -917,6 +931,7 @@ class CommonOptions(RobotBaseOptions):
         robot_name="settag",
         robot_priority=500,
         robot_short_name="G",
+        alias="set-tag",
     )
     split_log: Union[bool, Flag, None] = field(
         description="""\
@@ -934,6 +949,7 @@ class CommonOptions(RobotBaseOptions):
         robot_name="splitlog",
         robot_priority=500,
         robot_is_flag=True,
+        alias="split-log",
     )
     suites: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
@@ -974,6 +990,7 @@ class CommonOptions(RobotBaseOptions):
             """,
         robot_name="suitestatlevel",
         robot_priority=500,
+        alias="suite-stat-level",
     )
     tag_doc: Optional[Dict[str, Union[str, StringExpression]]] = field(
         description="""\
@@ -994,6 +1011,7 @@ class CommonOptions(RobotBaseOptions):
             """,
         robot_name="tagdoc",
         robot_priority=500,
+        alias="tag-doc",
     )
     tag_stat_combine: Optional[List[Union[str, Dict[str, str]]]] = field(
         description="""\
@@ -1013,6 +1031,7 @@ class CommonOptions(RobotBaseOptions):
             """,
         robot_name="tagstatcombine",
         robot_priority=500,
+        alias="tag-stat-combine",
     )
     tag_stat_exclude: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
@@ -1030,6 +1049,7 @@ class CommonOptions(RobotBaseOptions):
             """,
         robot_name="tagstatexclude",
         robot_priority=500,
+        alias="tag-stat-exclude",
     )
     tag_stat_include: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
@@ -1047,6 +1067,7 @@ class CommonOptions(RobotBaseOptions):
             """,
         robot_name="tagstatinclude",
         robot_priority=500,
+        alias="tag-stat-include",
     )
     tag_stat_link: Optional[Dict[str, Union[str, StringExpression]]] = field(
         description="""\
@@ -1068,6 +1089,7 @@ class CommonOptions(RobotBaseOptions):
             """,
         robot_name="tagstatlink",
         robot_priority=500,
+        alias="tag-stat-link",
     )
     tasks: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
@@ -1126,6 +1148,7 @@ class CommonOptions(RobotBaseOptions):
         robot_priority=500,
         robot_short_name="T",
         robot_is_flag=True,
+        alias="timestamp-outputs",
     )
     xunit: Optional[Union[str, StringExpression]] = field(
         description="""\
@@ -1166,6 +1189,7 @@ class CommonExtendOptions(RobotBaseOptions):
 
             corresponds to the `-e --exclude tag *` option of _robot_
             """,
+        alias="extend-excludes",
     )
     extend_expand_keywords: Optional[List[Union[str, NamePattern, TagPattern]]] = field(
         description="""\
@@ -1183,6 +1207,7 @@ class CommonExtendOptions(RobotBaseOptions):
 
             corresponds to the `--expandkeywords name:<pattern>|tag:<pattern> *` option of _robot_
             """,
+        alias="extend-expand-keywords",
     )
     extend_flatten_keywords: Optional[
         List[Union[str, Literal["for", "while", "iteration"], NamePattern, TagPattern]]
@@ -1218,6 +1243,7 @@ class CommonExtendOptions(RobotBaseOptions):
 
             corresponds to the `--flattenkeywords for|while|iteration|name:<pattern>|tag:<pattern> *` option of _robot_
             """,
+        alias="extend-flatten-keywords",
     )
     extend_includes: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
@@ -1243,6 +1269,7 @@ class CommonExtendOptions(RobotBaseOptions):
 
             corresponds to the `-i --include tag *` option of _robot_
             """,
+        alias="extend-includes",
     )
     extend_metadata: Optional[Dict[str, Union[str, StringExpression]]] = field(
         description="""\
@@ -1263,6 +1290,7 @@ class CommonExtendOptions(RobotBaseOptions):
 
             corresponds to the `-M --metadata name:value *` option of _robot_
             """,
+        alias="extend-metadata",
     )
     extend_parse_include: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
@@ -1283,6 +1311,7 @@ class CommonExtendOptions(RobotBaseOptions):
 
             corresponds to the `-I --parseinclude pattern *` option of _robot_
             """,
+        alias="extend-parse-include",
     )
     extend_pre_rebot_modifiers: Optional[Dict[str, List[Union[str, StringExpression]]]] = field(
         description="""\
@@ -1301,6 +1330,7 @@ class CommonExtendOptions(RobotBaseOptions):
 
             corresponds to the `--prerebotmodifier modifier *` option of _robot_
             """,
+        alias="extend-pre-rebot-modifiers",
     )
     extend_python_path: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
@@ -1321,6 +1351,7 @@ class CommonExtendOptions(RobotBaseOptions):
 
             corresponds to the `-P --pythonpath path *` option of _robot_
             """,
+        alias="extend-python-path",
     )
     extend_remove_keywords: Optional[
         List[Union[str, Literal["all", "passed", "for", "wuks"], NamePattern, TagPattern]]
@@ -1374,6 +1405,7 @@ class CommonExtendOptions(RobotBaseOptions):
 
             corresponds to the `--removekeywords all|passed|for|wuks|name:<pattern>|tag:<pattern> *` option of _robot_
             """,
+        alias="extend-remove-keywords",
     )
     extend_set_tag: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
@@ -1389,6 +1421,7 @@ class CommonExtendOptions(RobotBaseOptions):
 
             corresponds to the `-G --settag tag *` option of _robot_
             """,
+        alias="extend-set-tag",
     )
     extend_suites: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
@@ -1411,6 +1444,7 @@ class CommonExtendOptions(RobotBaseOptions):
 
             corresponds to the `-s --suite name *` option of _robot_
             """,
+        alias="extend-suites",
     )
     extend_tag_doc: Optional[Dict[str, Union[str, StringExpression]]] = field(
         description="""\
@@ -1431,6 +1465,7 @@ class CommonExtendOptions(RobotBaseOptions):
 
             corresponds to the `--tagdoc pattern:doc *` option of _robot_
             """,
+        alias="extend-tag-doc",
     )
     extend_tag_stat_combine: Optional[List[Union[str, Dict[str, str]]]] = field(
         description="""\
@@ -1450,6 +1485,7 @@ class CommonExtendOptions(RobotBaseOptions):
 
             corresponds to the `--tagstatcombine tags:name *` option of _robot_
             """,
+        alias="extend-tag-stat-combine",
     )
     extend_tag_stat_exclude: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
@@ -1467,6 +1503,7 @@ class CommonExtendOptions(RobotBaseOptions):
 
             corresponds to the `--tagstatexclude tag *` option of _robot_
             """,
+        alias="extend-tag-stat-exclude",
     )
     extend_tag_stat_include: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
@@ -1484,6 +1521,7 @@ class CommonExtendOptions(RobotBaseOptions):
 
             corresponds to the `--tagstatinclude tag *` option of _robot_
             """,
+        alias="extend-tag-stat-include",
     )
     extend_tag_stat_link: Optional[Dict[str, Union[str, StringExpression]]] = field(
         description="""\
@@ -1505,6 +1543,7 @@ class CommonExtendOptions(RobotBaseOptions):
 
             corresponds to the `--tagstatlink pattern:link:title *` option of _robot_
             """,
+        alias="extend-tag-stat-link",
     )
     extend_tasks: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
@@ -1520,6 +1559,7 @@ class CommonExtendOptions(RobotBaseOptions):
 
             corresponds to the `--task name *` option of _robot_
             """,
+        alias="extend-tasks",
     )
     extend_tests: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
@@ -1540,6 +1580,7 @@ class CommonExtendOptions(RobotBaseOptions):
 
             corresponds to the `-t --test name *` option of _robot_
             """,
+        alias="extend-tests",
     )
 
 
@@ -1588,6 +1629,7 @@ class RobotOptions(RobotBaseOptions):
         robot_name="consolemarkers",
         robot_priority=500,
         robot_short_name="K",
+        alias="console-markers",
     )
     console_width: Optional[int] = field(
         description="""\
@@ -1604,6 +1646,7 @@ class RobotOptions(RobotBaseOptions):
         robot_name="consolewidth",
         robot_priority=500,
         robot_short_name="W",
+        alias="console-width",
     )
     debug_file: Optional[Union[str, StringExpression]] = field(
         description="""\
@@ -1621,6 +1664,7 @@ class RobotOptions(RobotBaseOptions):
         robot_name="debugfile",
         robot_priority=500,
         robot_short_name="b",
+        alias="debug-file",
     )
     dotted: Union[bool, Flag, None] = field(
         description="""\
@@ -1655,6 +1699,7 @@ class RobotOptions(RobotBaseOptions):
         robot_name="dryrun",
         robot_priority=500,
         robot_is_flag=True,
+        alias="dry-run",
     )
     exit_on_error: Union[bool, Flag, None] = field(
         description="""\
@@ -1672,6 +1717,7 @@ class RobotOptions(RobotBaseOptions):
         robot_name="exitonerror",
         robot_priority=500,
         robot_is_flag=True,
+        alias="exit-on-error",
     )
     exit_on_failure: Union[bool, Flag, None] = field(
         description="""\
@@ -1689,6 +1735,7 @@ class RobotOptions(RobotBaseOptions):
         robot_priority=500,
         robot_short_name="X",
         robot_is_flag=True,
+        alias="exit-on-failure",
     )
     extensions: Optional[Union[str, StringExpression]] = field(
         description="""\
@@ -1777,6 +1824,7 @@ class RobotOptions(RobotBaseOptions):
         robot_name="loglevel",
         robot_priority=500,
         robot_short_name="L",
+        alias="log-level",
     )
     max_assign_length: Optional[int] = field(
         description="""\
@@ -1795,6 +1843,7 @@ class RobotOptions(RobotBaseOptions):
             """,
         robot_name="maxassignlength",
         robot_priority=500,
+        alias="max-assign-length",
     )
     max_error_lines: Optional[int] = field(
         description="""\
@@ -1812,6 +1861,7 @@ class RobotOptions(RobotBaseOptions):
             """,
         robot_name="maxerrorlines",
         robot_priority=500,
+        alias="max-error-lines",
     )
     output: Optional[Union[str, StringExpression]] = field(
         description="""\
@@ -1873,6 +1923,7 @@ class RobotOptions(RobotBaseOptions):
             """,
         robot_name="prerunmodifier",
         robot_priority=500,
+        alias="pre-run-modifiers",
     )
     quiet: Union[bool, Flag, None] = field(
         description="""\
@@ -1937,6 +1988,7 @@ class RobotOptions(RobotBaseOptions):
         robot_name="rerunfailed",
         robot_priority=500,
         robot_short_name="R",
+        alias="re-run-failed",
     )
     re_run_failed_suites: Optional[Union[str, StringExpression]] = field(
         description="""\
@@ -1954,6 +2006,7 @@ class RobotOptions(RobotBaseOptions):
         robot_name="rerunfailedsuites",
         robot_priority=500,
         robot_short_name="S",
+        alias="re-run-failed-suites",
     )
     run_empty_suite: Union[bool, Flag, None] = field(
         description="""\
@@ -1972,6 +2025,7 @@ class RobotOptions(RobotBaseOptions):
         robot_name="runemptysuite",
         robot_priority=500,
         robot_is_flag=True,
+        alias="run-empty-suite",
     )
     skip: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
@@ -2004,6 +2058,7 @@ class RobotOptions(RobotBaseOptions):
             """,
         robot_name="skiponfailure",
         robot_priority=500,
+        alias="skip-on-failure",
     )
     skip_teardown_on_exit: Union[bool, Flag, None] = field(
         description="""\
@@ -2021,6 +2076,7 @@ class RobotOptions(RobotBaseOptions):
         robot_name="skipteardownonexit",
         robot_priority=500,
         robot_is_flag=True,
+        alias="skip-teardown-on-exit",
     )
     variables: Optional[Dict[str, Union[str, StringExpression]]] = field(
         description="""\
@@ -2060,6 +2116,7 @@ class RobotOptions(RobotBaseOptions):
         robot_name="variablefile",
         robot_priority=500,
         robot_short_name="V",
+        alias="variable-files",
     )
 
 
@@ -2083,6 +2140,7 @@ class RobotExtendOptions(RobotBaseOptions):
 
             corresponds to the `--language lang *` option of _rebot_
             """,
+        alias="extend-languages",
     )
     extend_listeners: Optional[Dict[str, List[Union[str, StringExpression]]]] = field(
         description="""\
@@ -2103,6 +2161,7 @@ class RobotExtendOptions(RobotBaseOptions):
 
             corresponds to the `--listener listener *` option of _rebot_
             """,
+        alias="extend-listeners",
     )
     extend_parsers: Optional[Dict[str, List[Union[str, StringExpression]]]] = field(
         description="""\
@@ -2121,6 +2180,7 @@ class RobotExtendOptions(RobotBaseOptions):
 
             corresponds to the `--parser parser *` option of _rebot_
             """,
+        alias="extend-parsers",
     )
     extend_pre_run_modifiers: Optional[Dict[str, List[Union[str, StringExpression]]]] = field(
         description="""\
@@ -2140,6 +2200,7 @@ class RobotExtendOptions(RobotBaseOptions):
 
             corresponds to the `--prerunmodifier modifier *` option of _rebot_
             """,
+        alias="extend-pre-run-modifiers",
     )
     extend_skip: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
@@ -2156,6 +2217,7 @@ class RobotExtendOptions(RobotBaseOptions):
 
             corresponds to the `--skip tag *` option of _rebot_
             """,
+        alias="extend-skip",
     )
     extend_skip_on_failure: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
@@ -2172,6 +2234,7 @@ class RobotExtendOptions(RobotBaseOptions):
 
             corresponds to the `--skiponfailure tag *` option of _rebot_
             """,
+        alias="extend-skip-on-failure",
     )
     extend_variables: Optional[Dict[str, Union[str, StringExpression]]] = field(
         description="""\
@@ -2192,6 +2255,7 @@ class RobotExtendOptions(RobotBaseOptions):
 
             corresponds to the `-v --variable name:value *` option of _rebot_
             """,
+        alias="extend-variables",
     )
     extend_variable_files: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
@@ -2209,6 +2273,7 @@ class RobotExtendOptions(RobotBaseOptions):
 
             corresponds to the `-V --variablefile path *` option of _rebot_
             """,
+        alias="extend-variable-files",
     )
 
 
@@ -2234,6 +2299,7 @@ class RebotOptions(RobotBaseOptions):
             """,
         robot_name="endtime",
         robot_priority=500,
+        alias="end-time",
     )
     log_level: Optional[Union[str, StringExpression]] = field(
         description="""\
@@ -2258,6 +2324,7 @@ class RebotOptions(RobotBaseOptions):
         robot_name="loglevel",
         robot_priority=500,
         robot_short_name="L",
+        alias="log-level",
     )
     merge: Union[bool, Flag, None] = field(
         description="""\
@@ -2315,6 +2382,7 @@ class RebotOptions(RobotBaseOptions):
         robot_name="processemptysuite",
         robot_priority=500,
         robot_is_flag=True,
+        alias="process-empty-suite",
     )
     start_time: Optional[Union[str, StringExpression]] = field(
         description="""\
@@ -2337,6 +2405,7 @@ class RebotOptions(RobotBaseOptions):
             """,
         robot_name="starttime",
         robot_priority=500,
+        alias="start-time",
     )
 
 
@@ -2363,6 +2432,7 @@ class LibDocOptions(RobotBaseOptions):
         robot_name="docformat",
         robot_priority=500,
         robot_short_name="F",
+        alias="doc-format",
     )
     format: Optional[Literal["HTML", "XML", "JSON", "LIBSPEC"]] = field(
         description="""\
@@ -2416,6 +2486,7 @@ class LibDocOptions(RobotBaseOptions):
         robot_name="pythonpath",
         robot_priority=500,
         robot_short_name="P",
+        alias="python-path",
     )
     quiet: Union[bool, Flag, None] = field(
         description="""\
@@ -2454,6 +2525,7 @@ class LibDocOptions(RobotBaseOptions):
         robot_name="specdocformat",
         robot_priority=500,
         robot_short_name="s",
+        alias="spec-doc-format",
     )
     theme: Optional[Literal["DARK", "LIGHT", "NONE"]] = field(
         description="""\
@@ -2493,6 +2565,7 @@ class LibDocExtendOptions(RobotBaseOptions):
 
             corresponds to the `-P --pythonpath path *` option of _libdoc_
             """,
+        alias="extend-python-path",
     )
 
 
@@ -2609,6 +2682,7 @@ class TestDocOptions(RobotBaseOptions):
         robot_name="settag",
         robot_priority=500,
         robot_short_name="G",
+        alias="set-tag",
     )
     suites: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
@@ -2681,6 +2755,7 @@ class TestDocExtendOptions(RobotBaseOptions):
 
             corresponds to the `-e --exclude tag *` option of _testdoc_
             """,
+        alias="extend-excludes",
     )
     extend_includes: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
@@ -2702,6 +2777,7 @@ class TestDocExtendOptions(RobotBaseOptions):
 
             corresponds to the `-i --include tag *` option of _testdoc_
             """,
+        alias="extend-includes",
     )
     extend_metadata: Optional[Dict[str, Union[str, StringExpression]]] = field(
         description="""\
@@ -2720,6 +2796,7 @@ class TestDocExtendOptions(RobotBaseOptions):
 
             corresponds to the `-M --metadata name:value *` option of _testdoc_
             """,
+        alias="extend-metadata",
     )
     extend_set_tag: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
@@ -2735,6 +2812,7 @@ class TestDocExtendOptions(RobotBaseOptions):
 
             corresponds to the `-G --settag tag *` option of _testdoc_
             """,
+        alias="extend-set-tag",
     )
     extend_suites: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
@@ -2751,6 +2829,7 @@ class TestDocExtendOptions(RobotBaseOptions):
 
             corresponds to the `-s --suite name *` option of _testdoc_
             """,
+        alias="extend-suites",
     )
     extend_tests: Optional[List[Union[str, StringExpression]]] = field(
         description="""\
@@ -2766,6 +2845,7 @@ class TestDocExtendOptions(RobotBaseOptions):
 
             corresponds to the `-t --test name *` option of _testdoc_
             """,
+        alias="extend-tests",
     )
 
 
@@ -2877,7 +2957,8 @@ class RobotExtendBaseProfile(RobotBaseProfile):
             ```toml
             extend-args = ["-t", "abc"]
             ```
-            """
+            """,
+        alias="extend-args",
     )
 
     extend_env: Optional[Dict[str, Union[str, StringExpression]]] = field(
@@ -2890,7 +2971,8 @@ class RobotExtendBaseProfile(RobotBaseProfile):
             EXTRA_VAR = "value"
 
             ```
-            """
+            """,
+        alias="extend-env",
     )
 
     extend_paths: Union[str, List[str], None] = field(
@@ -2901,7 +2983,8 @@ class RobotExtendBaseProfile(RobotBaseProfile):
             ```toml
             extend-paths = ["tests"]
             ```
-            """
+            """,
+        alias="extend-paths",
     )
 
 
@@ -2992,11 +3075,14 @@ class RobotConfig(RobotExtendBaseProfile):
             ```toml
             default-profiles = ["default", "Firefox"]
             ```
-            """
+            """,
+        alias="default-profiles",
     )
     profiles: Optional[Dict[str, RobotProfile]] = field(description="Execution profiles.")
 
-    extend_profiles: Optional[Dict[str, RobotProfile]] = field(description="Extra execution profiles.")
+    extend_profiles: Optional[Dict[str, RobotProfile]] = field(
+        description="Extra execution profiles.", alias="extend-profiles"
+    )
 
     tool: Optional[Dict[str, Any]] = field(description="Tool configurations.")
 

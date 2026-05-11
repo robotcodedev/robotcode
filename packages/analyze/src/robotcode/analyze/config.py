@@ -37,7 +37,8 @@ class ModifiersConfig(BaseOptions):
             [tool.robotcode-analyze.modifiers]
             extend_ignore = ["VariableNotFound", "multiple-keywords"]
             ```
-        """
+        """,
+        alias="extend-ignore",
     )
     error: Optional[List[str]] = field(
         description="""
@@ -61,7 +62,8 @@ class ModifiersConfig(BaseOptions):
             [tool.robotcode-analyze.modifiers]
             extend_error = ["VariableNotFound", "multiple-keywords"]
             ```
-        """
+        """,
+        alias="extend-error",
     )
     warning: Optional[List[str]] = field(
         description="""
@@ -85,7 +87,8 @@ class ModifiersConfig(BaseOptions):
             [tool.robotcode-analyze.modifiers]
             extend_warning = ["VariableNotFound", "multiple-keywords"]
             ```
-        """
+        """,
+        alias="extend-warning",
     )
     information: Optional[List[str]] = field(
         description="""
@@ -109,7 +112,8 @@ class ModifiersConfig(BaseOptions):
             [tool.robotcode-analyze.modifiers]
             extend_information = ["VariableNotFound", "multiple-keywords"]
             ```
-        """
+        """,
+        alias="extend-information",
     )
     hint: Optional[List[str]] = field(
         description="""
@@ -133,7 +137,8 @@ class ModifiersConfig(BaseOptions):
             [tool.robotcode-analyze.modifiers]
             extend_hint = ["VariableNotFound", "multiple-keywords"]
             ```
-        """
+        """,
+        alias="extend-hint",
     )
 
 
@@ -141,7 +146,7 @@ class ModifiersConfig(BaseOptions):
 class CacheConfig(BaseOptions):
     """Cache configuration."""
 
-    cache_dir: Optional[str] = field(description="Path to the cache directory.")
+    cache_dir: Optional[str] = field(description="Path to the cache directory.", alias="cache-dir")
 
     ignored_libraries: Optional[List[str]] = field(
         description="""\
@@ -156,8 +161,12 @@ class CacheConfig(BaseOptions):
             For robot framework internal libraries, you have to specify the full module name like
             `robot.libraries.Remote`.
             """,
+        alias="ignored-libraries",
     )
-    extend_ignored_libraries: Optional[List[str]] = field(description="Extend the ignored libraries setting.")
+    extend_ignored_libraries: Optional[List[str]] = field(
+        description="Extend the ignored libraries setting.",
+        alias="extend-ignored-libraries",
+    )
 
     ignored_variables: Optional[List[str]] = field(
         description="""\
@@ -171,8 +180,12 @@ class CacheConfig(BaseOptions):
             - `MyVariables`
             - `myvars.subpackage.subpackage`
             """,
+        alias="ignored-variables",
     )
-    extend_ignored_variables: Optional[List[str]] = field(description="Extend the ignored variables setting.")
+    extend_ignored_variables: Optional[List[str]] = field(
+        description="Extend the ignored variables setting.",
+        alias="extend-ignored-variables",
+    )
 
     ignore_arguments_for_library: Optional[List[str]] = field(
         description="""\
@@ -190,10 +203,12 @@ class CacheConfig(BaseOptions):
 
             _Ensure your library functions correctly without arguments e.g. by defining default
             values for all arguments._
-        """
+        """,
+        alias="ignore-arguments-for-library",
     )
     extend_ignore_arguments_for_library: Optional[List[str]] = field(
-        description="Extend the ignore arguments for library settings."
+        description="Extend the ignore arguments for library settings.",
+        alias="extend-ignore-arguments-for-library",
     )
 
     cache_namespaces: Optional[bool] = field(
@@ -209,6 +224,7 @@ class CacheConfig(BaseOptions):
             cache_namespaces = false
             ```
         """,
+        alias="cache-namespaces",
     )
 
 
@@ -258,8 +274,12 @@ class CodeConfig(BaseOptions):
             exit_code_mask = ["error", "warn"]
             ```
             """,
+        alias="exit-code-mask",
     )
-    extend_exit_code_mask: Optional[ExitCodeMaskList] = field(description="Extend the exit code mask setting.")
+    extend_exit_code_mask: Optional[ExitCodeMaskList] = field(
+        description="Extend the exit code mask setting.",
+        alias="extend-exit-code-mask",
+    )
 
     collect_unused: Optional[bool] = field(
         description="""\
@@ -273,6 +293,7 @@ class CodeConfig(BaseOptions):
             collect_unused = true
             ```
         """,
+        alias="collect-unused",
     )
 
 
@@ -292,7 +313,10 @@ class AnalyzeConfig(BaseOptions):
             ```
         """
     )
-    extend_code: Optional[CodeConfig] = field(description="Extend the code analysis configuration.")
+    extend_code: Optional[CodeConfig] = field(
+        description="Extend the code analysis configuration.",
+        alias="extend-code",
+    )
 
     modifiers: Optional[ModifiersConfig] = field(
         description="""\
@@ -320,16 +344,24 @@ class AnalyzeConfig(BaseOptions):
             extend-hint = ["KeywordNotFound"]
             extend-information = ["MultipleKeywords"]
             ```
-        """
+        """,
+        alias="extend-modifiers",
     )
 
     cache: Optional[CacheConfig] = field(description="Defines the cache configuration.")
-    extend_cache: Optional[CacheConfig] = field(description="Extend the cache configuration.")
+    extend_cache: Optional[CacheConfig] = field(
+        description="Extend the cache configuration.",
+        alias="extend-cache",
+    )
 
     exclude_patterns: Optional[List[str]] = field(
         description="Specifies glob patterns for excluding files and folders from analysing by the language server.",
+        alias="exclude-patterns",
     )
-    extend_exclude_patterns: Optional[List[str]] = field(description="Extend the exclude patterns.")
+    extend_exclude_patterns: Optional[List[str]] = field(
+        description="Extend the exclude patterns.",
+        alias="extend-exclude-patterns",
+    )
 
     global_library_search_order: Optional[List[str]] = field(
         description="""\
@@ -341,9 +373,11 @@ class AnalyzeConfig(BaseOptions):
             so you can define a global order here. Just make sure to call the `Set Library Search Order`
             keyword somewhere in your robot file or internally in your library.
         """,
+        alias="global-library-search-order",
     )
     extend_global_library_search_order: Optional[List[str]] = field(
-        description="Extend the global library search order setting."
+        description="Extend the global library search order setting.",
+        alias="extend-global-library-search-order",
     )
 
     semantic_model: Optional[bool] = field(
@@ -365,6 +399,7 @@ class AnalyzeConfig(BaseOptions):
             semantic-model = true
             ```
         """,
+        alias="semantic-model",
     )
 
     load_library_timeout: Optional[int] = field(
@@ -396,6 +431,7 @@ class AnalyzeConfig(BaseOptions):
             # load_library_timeout = 15
             ```
         """,
+        alias="load-library-timeout",
     )
 
     def to_workspace_analysis_config(self) -> WorkspaceAnalysisConfig:
