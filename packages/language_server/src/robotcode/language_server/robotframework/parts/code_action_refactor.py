@@ -26,13 +26,14 @@ from robotcode.core.text_document import TextDocument
 from robotcode.core.utils.dataclasses import as_dict, from_dict
 from robotcode.core.utils.inspect import iter_methods
 from robotcode.core.utils.logging import LoggingDescriptor
-from robotcode.robot.diagnostics.model_helper import ModelHelper
+from robotcode.robot.diagnostics.namespace import Namespace
+from robotcode.robot.diagnostics.semantic_analyzer.enums import NodeKind, TokenKind
+from robotcode.robot.diagnostics.semantic_analyzer.model import SemanticModel
+from robotcode.robot.diagnostics.semantic_analyzer.nodes import KeywordCallStatement
 from robotcode.robot.utils.ast import (
-    get_node_at_position,
     get_nodes_at_position,
     iter_nodes,
     range_from_node,
-    range_from_token,
 )
 
 from ...common.decorators import code_action_kinds
@@ -95,7 +96,7 @@ ${spaces}END
 )
 
 
-class RobotCodeActionRefactorProtocolPart(RobotLanguageServerProtocolPart, ModelHelper, CodeActionHelperMixin):
+class RobotCodeActionRefactorProtocolPart(RobotLanguageServerProtocolPart, CodeActionHelperMixin):
     _logger = LoggingDescriptor()
 
     def __init__(self, parent: "RobotLanguageServerProtocol") -> None:
@@ -406,64 +407,118 @@ class RobotCodeActionRefactorProtocolPart(RobotLanguageServerProtocolPart, Model
 
         return code_action
 
+    def _assign_result_insert_position(
+        self,
+        document: TextDocument,
+        position: Position,
+        namespace: Namespace,
+    ) -> Optional[Position]:
+        """Determine the insert position for the `${var}=    ` prefix when
+        offering "Assign keyword result to variable". Returns the Position
+        right at the start of the keyword reference, or None if cursor isn't
+        on a KeywordCall without an existing assignment.
+
+        SemanticModel-based when available; falls back to the AST walk
+        otherwise. Both paths must agree on the insert column.
+        """
+        semantic_model = namespace.semantic_model
+        if semantic_model is not None:
+            return self._assign_result_insert_position_from_model(position, semantic_model)
+        return self._assign_result_insert_position_legacy(document, position)
+
+    def _assign_result_insert_position_from_model(
+        self,
+        position: Position,
+        model: SemanticModel,
+    ) -> Optional[Position]:
+        """SemanticModel branch: KEYWORD_CALL statement without
+        `assign_variables`, cursor inside the keyword reference (BDD
+        prefix + namespace + keyword span). Insert at the leftmost
+        column of that span — same as legacy
+        `range_from_token(keyword_token).start` for the un-split RF
+        KEYWORD token.
+
+        SEPARATOR tokens are NOT used for the span: a KEYWORD_CALL
+        statement carries multiple SEPARATORs (leading indent, the
+        namespace `.`, inter-arg whitespace) and we only care about the
+        ones inside the keyword reference. BDD_PREFIX / NAMESPACE /
+        KEYWORD are sufficient — the namespace `.` always sits between
+        NAMESPACE and KEYWORD, so the [min start, max end] span of those
+        three covers it.
+        """
+        stmt = model.statement_at(position.line + 1)
+        if not isinstance(stmt, KeywordCallStatement) or stmt.kind is not NodeKind.KEYWORD_CALL:
+            return None
+        if stmt.assign_variables:
+            return None
+        ref_toks = [t for t in stmt.tokens if t.kind in (TokenKind.BDD_PREFIX, TokenKind.NAMESPACE, TokenKind.KEYWORD)]
+        if not ref_toks:
+            return None
+        # All keyword-name parts live on the same line (RF tokens are
+        # single-line; the analyzer's split preserves this).
+        line = ref_toks[0].range.start.line
+        start_char = min(t.range.start.character for t in ref_toks)
+        end_char = max(t.range.end.character for t in ref_toks)
+        ref_range = Range(
+            start=Position(line=line, character=start_char),
+            end=Position(line=line, character=end_char),
+        )
+        if position not in ref_range:
+            return None
+        return ref_range.start
+
+    def _assign_result_insert_position_legacy(
+        self,
+        document: TextDocument,
+        position: Position,
+    ) -> Optional[Position]:
+        """AST fallback. Mirrors the original inline check exactly so the
+        model-path migration stays output-equivalent."""
+        from robot.parsing.lexer import Token as RobotToken
+        from robot.parsing.model.statements import KeywordCall
+
+        from robotcode.robot.utils.ast import get_node_at_position, range_from_token
+
+        model = self.parent.documents_cache.get_model(document)
+        node = get_node_at_position(model, position)
+        if not isinstance(node, KeywordCall) or node.assign:
+            return None
+        keyword_token = node.get_token(RobotToken.KEYWORD)
+        if keyword_token is None or position not in range_from_token(keyword_token):
+            return None
+        return range_from_token(keyword_token).start
+
     def code_action_assign_result_to_variable(
         self, document: TextDocument, range: Range, context: CodeActionContext
     ) -> Optional[List[Union[Command, CodeAction]]]:
-        from robot.parsing.lexer import Token as RobotToken
-        from robot.parsing.model.statements import (
-            Fixture,
-            KeywordCall,
-            Template,
-            TestTemplate,
-        )
-
-        if range.start.line == range.end.line and (
+        if range.start.line != range.end.line or not (
             (context.only and CodeActionKind.REFACTOR_EXTRACT in context.only)
             or context.trigger_kind in [CodeActionTriggerKind.INVOKED, CodeActionTriggerKind.AUTOMATIC]
         ):
-            model = self.parent.documents_cache.get_model(document)
-            node = get_node_at_position(model, range.start)
+            return None
 
-            if not isinstance(node, KeywordCall) or node.assign:
-                return None
+        namespace = self.parent.documents_cache.get_namespace(document)
+        if self._assign_result_insert_position(document, range.start, namespace) is None:
+            return None
 
-            keyword_token = (
-                node.get_token(RobotToken.NAME)
-                if isinstance(node, (TestTemplate, Template, Fixture))
-                else node.get_token(RobotToken.KEYWORD)
+        return [
+            CodeAction(
+                "Assign keyword result to variable",
+                kind=CODE_ACTION_KIND_REFACTOR_EXTRACT_VARIABLE,
+                data=as_dict(
+                    CodeActionData(
+                        "refactor",
+                        "assign_result_to_variable",
+                        document.document_uri,
+                        range,
+                    )
+                ),
             )
-
-            if keyword_token is None or range.start not in range_from_token(keyword_token):
-                return None
-
-            return [
-                CodeAction(
-                    "Assign keyword result to variable",
-                    kind=CODE_ACTION_KIND_REFACTOR_EXTRACT_VARIABLE,
-                    data=as_dict(
-                        CodeActionData(
-                            "refactor",
-                            "assign_result_to_variable",
-                            document.document_uri,
-                            range,
-                        )
-                    ),
-                )
-            ]
-
-        return None
+        ]
 
     def resolve_code_action_assign_result_to_variable(
         self, code_action: CodeAction, data: CodeActionData
     ) -> Optional[CodeAction]:
-        from robot.parsing.lexer import Token as RobotToken
-        from robot.parsing.model.statements import (
-            Fixture,
-            KeywordCall,
-            Template,
-            TestTemplate,
-        )
-
         range = data.range
         document_uri = data.document_uri
 
@@ -474,27 +529,13 @@ class RobotCodeActionRefactorProtocolPart(RobotLanguageServerProtocolPart, Model
         if document is None:
             return None
 
-        model = self.parent.documents_cache.get_model(document)
-        nodes = get_nodes_at_position(model, range.start)
-        if not nodes:
-            return None
-        node = nodes[-1]
-
-        if not isinstance(node, KeywordCall) or node.assign:
-            return None
-
-        keyword_token = (
-            node.get_token(RobotToken.NAME)
-            if isinstance(node, (TestTemplate, Template, Fixture))
-            else node.get_token(RobotToken.KEYWORD)
-        )
-
-        if keyword_token is None or range.start not in range_from_token(keyword_token):
+        namespace = self.parent.documents_cache.get_namespace(document)
+        start = self._assign_result_insert_position(document, range.start, namespace)
+        if start is None:
             return None
 
         var_name = "new_variable"
         counter = 0
-        namespace = self.parent.documents_cache.get_namespace(document)
         while True:
             if namespace.find_variable(f"${{{var_name}}}", range.start) is None:
                 break
@@ -503,7 +544,6 @@ class RobotCodeActionRefactorProtocolPart(RobotLanguageServerProtocolPart, Model
             if counter > 100:
                 return None
 
-        start = range_from_token(keyword_token).start
         code_action.edit = WorkspaceEdit(
             document_changes=[
                 TextDocumentEdit(

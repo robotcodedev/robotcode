@@ -4,6 +4,7 @@ from string import Template as StringTemplate
 from typing import (
     TYPE_CHECKING,
     Any,
+    Iterable,
     List,
     Mapping,
     Optional,
@@ -49,8 +50,13 @@ from robotcode.core.text_document import TextDocument
 from robotcode.core.utils.dataclasses import as_dict, from_dict
 from robotcode.core.utils.inspect import iter_methods
 from robotcode.core.utils.logging import LoggingDescriptor
+from robotcode.robot.diagnostics.entities import LibraryEntry
 from robotcode.robot.diagnostics.errors import DIAGNOSTICS_SOURCE_NAME, Error
 from robotcode.robot.diagnostics.model_helper import ModelHelper
+from robotcode.robot.diagnostics.namespace import Namespace
+from robotcode.robot.diagnostics.semantic_analyzer.enums import TokenKind
+from robotcode.robot.diagnostics.semantic_analyzer.model import SemanticModel
+from robotcode.robot.diagnostics.semantic_analyzer.nodes import KeywordCallStatement
 from robotcode.robot.utils.ast import (
     FirstAndLastRealStatementFinder,
     get_node_at_position,
@@ -95,6 +101,26 @@ ${name}
     Fail    Not Implemented
 """
 )
+
+
+def _format_create_keyword_args(arg_values: Iterable[str]) -> List[str]:
+    """Build the placeholder list for the new keyword's `[Arguments]` line.
+
+    For each argument value:
+    - `name=value` with a literal `name` (no variables in it) → `${name}`
+    - everything else → `${argN}` (N counted across all arguments)
+
+    Pure function so both the AST and SemanticModel paths produce
+    identical output for the same set of argument values.
+    """
+    out: List[str] = []
+    for value in arg_values:
+        name, val = split_from_equals(value)
+        if val is not None and not contains_variable(name, "$@&%"):
+            out.append(f"${{{name}}}")
+        else:
+            out.append(f"${{arg{len(out) + 1}}}")
+    return out
 
 
 class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, ModelHelper, CodeActionHelperMixin):
@@ -155,7 +181,6 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
             CodeActionTriggerKind.INVOKED,
             CodeActionTriggerKind.AUTOMATIC,
         ]:
-            model = self.parent.documents_cache.get_model(document)
             namespace = self.parent.documents_cache.get_namespace(document)
 
             for diagnostic in (
@@ -163,123 +188,176 @@ class RobotCodeActionQuickFixesProtocolPart(RobotLanguageServerProtocolPart, Mod
                 for d in context.diagnostics
                 if d.source == DIAGNOSTICS_SOURCE_NAME and d.code == Error.KEYWORD_NOT_FOUND
             ):
+                resolved = self._resolve_create_keyword_target(document, diagnostic.range.start, namespace)
+                if resolved is None:
+                    continue
+                text, lib_entry = resolved
+
                 disabled = None
-                node = get_node_at_position(model, diagnostic.range.start)
+                if lib_entry is not None and lib_entry.library_doc.type == "LIBRARY":
+                    disabled = CodeActionDisabledType("Keyword is from a library")
 
-                if isinstance(node, (KeywordCall, Fixture, TestTemplate, Template)):
-                    tokens = get_tokens_at_position(node, diagnostic.range.start)
-                    if not tokens:
-                        continue
-
-                    keyword_token = tokens[-1]
-
-                    bdd_token, token = self.split_bdd_prefix(namespace, keyword_token)
-                    if bdd_token is not None and token is not None:
-                        keyword_token = token
-
-                    (
-                        lib_entry,
-                        kw_namespace,
-                    ) = self.get_namespace_info_from_keyword_token(namespace, keyword_token)
-
-                    if lib_entry is not None and lib_entry.library_doc.type == "LIBRARY":
-                        disabled = CodeActionDisabledType("Keyword is from a library")
-
-                    text = keyword_token.value
-
-                    if lib_entry and kw_namespace:
-                        text = text[len(kw_namespace) + 1 :].strip()
-
-                    if not text:
-                        continue
-
-                    result.append(
-                        CodeAction(
-                            f"Create Keyword `{text}`",
-                            kind=CodeActionKind.QUICK_FIX,
-                            data=as_dict(
-                                CodeActionData(
-                                    "quickfix",
-                                    "create_keyword",
-                                    document.document_uri,
-                                    diagnostic.range,
-                                )
-                            ),
-                            diagnostics=[diagnostic],
-                            disabled=disabled,
-                            is_preferred=True,
-                        )
+                result.append(
+                    CodeAction(
+                        f"Create Keyword `{text}`",
+                        kind=CodeActionKind.QUICK_FIX,
+                        data=as_dict(
+                            CodeActionData(
+                                "quickfix",
+                                "create_keyword",
+                                document.document_uri,
+                                diagnostic.range,
+                            )
+                        ),
+                        diagnostics=[diagnostic],
+                        disabled=disabled,
+                        is_preferred=True,
                     )
+                )
 
         return result if result else None
+
+    # ------------------------------------------------------------------
+    # Tier 2 model-based resolution for the "Create Keyword" quick fix
+    # ------------------------------------------------------------------
+
+    def _resolve_create_keyword_target(
+        self,
+        document: TextDocument,
+        position: Position,
+        namespace: Namespace,
+    ) -> Optional[Tuple[str, Optional[LibraryEntry]]]:
+        """Resolve the bare keyword name + owning LibraryEntry for the
+        "Create Keyword" quick fix at `position`.
+
+        Returns `(text, lib_entry)` or `None` if the position isn't a
+        KeywordCall / Fixture / Template AST node, or the keyword name is
+        empty after stripping the BDD / namespace prefix.
+
+        When the experimental SemanticAnalyzer is enabled the data comes
+        directly from the SemanticStatement; otherwise we fall back to
+        the legacy AST + `ModelHelper` path.
+        """
+        semantic_model = namespace.semantic_model
+        if semantic_model is not None:
+            return self._resolve_create_keyword_target_from_model(position, semantic_model)
+        return self._resolve_create_keyword_target_legacy(document, position, namespace)
+
+    def _resolve_create_keyword_target_from_model(
+        self,
+        position: Position,
+        model: SemanticModel,
+    ) -> Optional[Tuple[str, Optional[LibraryEntry]]]:
+        """SemanticModel branch: KEYWORD SemanticToken already has the bare
+        name (BDD prefix and namespace are split into their own tokens),
+        and `KeywordCallStatement.lib_entry` is the pre-resolved owner."""
+        stmt = model.statement_at(position.line + 1)
+        if not isinstance(stmt, KeywordCallStatement):
+            return None
+        kw_tok = next((t for t in stmt.tokens if t.kind is TokenKind.KEYWORD), None)
+        if kw_tok is None or not kw_tok.value:
+            return None
+        return kw_tok.value, stmt.lib_entry
+
+    def _resolve_create_keyword_target_legacy(
+        self,
+        document: TextDocument,
+        position: Position,
+        namespace: Namespace,
+    ) -> Optional[Tuple[str, Optional[LibraryEntry]]]:
+        """AST + `ModelHelper` fallback (used when the experimental
+        analyzer is off). Mirrors the original inline logic exactly so
+        the model-path migration stays output-equivalent."""
+        model = self.parent.documents_cache.get_model(document)
+        node = get_node_at_position(model, position)
+        if not isinstance(node, (KeywordCall, Fixture, TestTemplate, Template)):
+            return None
+
+        tokens = get_tokens_at_position(node, position)
+        if not tokens:
+            return None
+        keyword_token = tokens[-1]
+
+        bdd_token, token = self.split_bdd_prefix(namespace, keyword_token)
+        if bdd_token is not None and token is not None:
+            keyword_token = token
+
+        lib_entry, kw_namespace = self.get_namespace_info_from_keyword_token(namespace, keyword_token)
+
+        text = keyword_token.value
+        if lib_entry and kw_namespace:
+            text = text[len(kw_namespace) + 1 :].strip()
+        if not text:
+            return None
+
+        return text, lib_entry
 
     def resolve_code_action_create_keyword(self, code_action: CodeAction, data: CodeActionData) -> Optional[CodeAction]:
         document = self.parent.documents.get(data.document_uri)
         if document is None:
             return None
 
-        model = self.parent.documents_cache.get_model(document)
-        node = get_node_at_position(model, data.range.start)
+        namespace = self.parent.documents_cache.get_namespace(document)
 
-        if isinstance(node, (KeywordCall, Fixture, TestTemplate, Template)):
-            tokens = get_tokens_at_position(node, data.range.start)
-            if not tokens:
-                return None
+        resolved = self._resolve_create_keyword_target(document, data.range.start, namespace)
+        if resolved is None:
+            return None
+        text, lib_entry = resolved
 
-            keyword_token = tokens[-1]
+        # Library keywords can't be auto-created; legacy returns None here.
+        if lib_entry is not None and lib_entry.library_doc.type == "LIBRARY":
+            return None
 
-            namespace = self.parent.documents_cache.get_namespace(document)
+        arguments = self._collect_create_keyword_arguments(document, data.range.start, namespace)
 
-            bdd_token, token = self.split_bdd_prefix(namespace, keyword_token)
-            if bdd_token is not None and token is not None:
-                keyword_token = token
+        insert_text = (
+            KEYWORD_WITH_ARGS_TEMPLATE.substitute(name=text, args="    ".join(arguments))
+            if arguments
+            else KEYWORD_TEMPLATE.substitute(name=text)
+        )
 
-            (
-                lib_entry,
-                kw_namespace,
-            ) = self.get_namespace_info_from_keyword_token(namespace, keyword_token)
+        if lib_entry is not None and lib_entry.library_doc.type == "RESOURCE" and lib_entry.library_doc.source:
+            dest_document = self.parent.documents.get_or_open_document(lib_entry.library_doc.source)
+        else:
+            dest_document = document
 
-            if lib_entry is not None and lib_entry.library_doc.type == "LIBRARY":
-                return None
+        code_action.edit, select_range = self._apply_create_keyword(dest_document, insert_text)
 
-            text = keyword_token.value
+        code_action.command = Command(
+            SHOW_DOCUMENT_SELECT_AND_RENAME_COMMAND,
+            SHOW_DOCUMENT_SELECT_AND_RENAME_COMMAND,
+            [dest_document.document_uri, select_range, False],
+        )
+        return code_action
 
-            if lib_entry and kw_namespace:
-                text = text[len(kw_namespace) + 1 :].strip()
+    def _collect_create_keyword_arguments(
+        self,
+        document: TextDocument,
+        position: Position,
+        namespace: Namespace,
+    ) -> List[str]:
+        """Build the `${name}` / `${argN}` placeholder list for the new
+        keyword's `[Arguments]` line, derived from the offending call's
+        ARGUMENT tokens.
 
-            if not text:
-                return None
+        SemanticModel-based when available (iterates `stmt.tokens`),
+        falls back to the AST `node.get_tokens(ARGUMENT)` walk otherwise.
+        Both paths apply the same `name=value` heuristic via
+        `split_from_equals`.
+        """
+        semantic_model = namespace.semantic_model
+        if semantic_model is not None:
+            stmt = semantic_model.statement_at(position.line + 1)
+            if isinstance(stmt, KeywordCallStatement):
+                arg_tokens = [t for t in stmt.tokens if t.kind is TokenKind.ARGUMENT]
+                return _format_create_keyword_args(t.value for t in arg_tokens)
+            return []
 
-            arguments = []
-
-            for t in node.get_tokens(Token.ARGUMENT):
-                name, value = split_from_equals(cast(Token, t).value)
-                if value is not None and not contains_variable(name, "$@&%"):
-                    arguments.append(f"${{{name}}}")
-                else:
-                    arguments.append(f"${{arg{len(arguments) + 1}}}")
-
-            insert_text = (
-                KEYWORD_WITH_ARGS_TEMPLATE.substitute(name=text, args="    ".join(arguments))
-                if arguments
-                else KEYWORD_TEMPLATE.substitute(name=text)
-            )
-
-            if lib_entry is not None and lib_entry.library_doc.type == "RESOURCE" and lib_entry.library_doc.source:
-                dest_document = self.parent.documents.get_or_open_document(lib_entry.library_doc.source)
-            else:
-                dest_document = document
-
-            code_action.edit, select_range = self._apply_create_keyword(dest_document, insert_text)
-
-            code_action.command = Command(
-                SHOW_DOCUMENT_SELECT_AND_RENAME_COMMAND,
-                SHOW_DOCUMENT_SELECT_AND_RENAME_COMMAND,
-                [dest_document.document_uri, select_range, False],
-            )
-            return code_action
-
-        return None
+        ast_model = self.parent.documents_cache.get_model(document)
+        node = get_node_at_position(ast_model, position)
+        if not isinstance(node, (KeywordCall, Fixture, TestTemplate, Template)):
+            return []
+        return _format_create_keyword_args(cast(Token, t).value for t in node.get_tokens(Token.ARGUMENT))
 
     def _apply_create_keyword(self, document: TextDocument, insert_text: str) -> Tuple[WorkspaceEdit, Range]:
         model = self.parent.documents_cache.get_model(document)

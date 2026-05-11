@@ -303,9 +303,12 @@ class SemanticAnalyzer(Visitor):
 
         # Token-decomposition info populated by _analyze_keyword_call() for the
         # current keyword call. Visitors read these after the analysis call to
-        # build BDD_PREFIX / NAMESPACE / SEPARATOR / KEYWORD splits.
+        # build BDD_PREFIX / NAMESPACE / SEPARATOR / KEYWORD splits, and to
+        # surface the namespace's owning LibraryEntry on the resulting
+        # KeywordCallStatement.
         self._last_bdd_prefix: Optional[str] = None  # e.g. "Given " (with trailing space if present)
         self._last_kw_namespace: Optional[str] = None  # e.g. "BuiltIn" (None when no namespace prefix)
+        self._last_lib_entry: Optional[LibraryEntry] = None  # entry owning the namespace prefix, if any
 
         # Optional ImportsManager reference. Captured in `resolve()` so that
         # `_visit_import_node` can fall back to a "default" libdoc lookup when
@@ -1650,9 +1653,11 @@ class SemanticAnalyzer(Visitor):
     ) -> Optional[KeywordDoc]:
         # Reset token-decomposition outputs for this call. Visitors read them
         # after we return to build BDD_PREFIX / NAMESPACE / SEPARATOR / KEYWORD
-        # split tokens.
+        # split tokens, and to surface the resolved namespace's LibraryEntry
+        # on the produced KeywordCallStatement.
         self._last_bdd_prefix = None
         self._last_kw_namespace = None
+        self._last_lib_entry = None
 
         result: Optional[KeywordDoc] = None
 
@@ -1698,6 +1703,7 @@ class SemanticAnalyzer(Visitor):
 
                 if lib_entry and kw_namespace:
                     self._last_kw_namespace = kw_namespace
+                    self._last_lib_entry = lib_entry
                     r = range_from_token(keyword_token)
                     lib_range = r
                     r.end.character = r.start.character + len(kw_namespace)
@@ -1870,15 +1876,17 @@ class SemanticAnalyzer(Visitor):
         if result is not None and analyze_run_keywords:
             # Save outer-call decomposition state — `_analyze_run_keyword` recurses
             # into `_analyze_keyword_call` for each inner keyword and overwrites
-            # `_last_bdd_prefix` / `_last_kw_namespace`. The caller (visitor)
-            # needs these for the *outer* call's token decomposition.
+            # `_last_bdd_prefix` / `_last_kw_namespace` / `_last_lib_entry`. The
+            # caller (visitor) needs these for the *outer* call.
             saved_bdd = self._last_bdd_prefix
             saved_ns = self._last_kw_namespace
+            saved_lib = self._last_lib_entry
             try:
                 self._analyze_run_keyword(result, node, argument_tokens)
             finally:
                 self._last_bdd_prefix = saved_bdd
                 self._last_kw_namespace = saved_ns
+                self._last_lib_entry = saved_lib
 
         return result
 
@@ -1916,6 +1924,7 @@ class SemanticAnalyzer(Visitor):
                 line_start=line,
                 line_end=end_line,
                 keyword_doc=kw_doc,
+                lib_entry=self._last_lib_entry,
                 tokens=tokens,
                 inner_calls=nested_inner_calls,
             )
@@ -1924,6 +1933,7 @@ class SemanticAnalyzer(Visitor):
             line_start=line,
             line_end=end_line,
             keyword_doc=kw_doc,
+            lib_entry=self._last_lib_entry,
             tokens=tokens,
         )
 
@@ -2191,6 +2201,7 @@ class SemanticAnalyzer(Visitor):
                     line_start=node.lineno,
                     line_end=node.end_lineno or node.lineno,
                     keyword_doc=kw_doc,
+                    lib_entry=self._last_lib_entry,
                     tokens=tokens,
                     inner_calls=inner_calls,
                 )
@@ -2200,6 +2211,7 @@ class SemanticAnalyzer(Visitor):
                     line_start=node.lineno,
                     line_end=node.end_lineno or node.lineno,
                     keyword_doc=kw_doc,
+                    lib_entry=self._last_lib_entry,
                     tokens=tokens,
                 )
             self._add_statement(stmt)
@@ -2231,6 +2243,7 @@ class SemanticAnalyzer(Visitor):
                     line_start=node.lineno,
                     line_end=node.end_lineno or node.lineno,
                     keyword_doc=kw_doc,
+                    lib_entry=self._last_lib_entry,
                     tokens=tokens,
                     inner_calls=inner_calls,
                 )
@@ -2240,6 +2253,7 @@ class SemanticAnalyzer(Visitor):
                     line_start=node.lineno,
                     line_end=node.end_lineno or node.lineno,
                     keyword_doc=kw_doc,
+                    lib_entry=self._last_lib_entry,
                     tokens=tokens,
                 )
             self._add_statement(stmt)
@@ -2267,6 +2281,7 @@ class SemanticAnalyzer(Visitor):
             line_start=node.lineno,
             line_end=node.end_lineno or node.lineno,
             keyword_doc=kw_doc,
+            lib_entry=self._last_lib_entry,
             tokens=self._build_keyword_call_tokens(node, keyword_token_type=Token.NAME),
         )
         self._add_statement(stmt)
@@ -2291,6 +2306,7 @@ class SemanticAnalyzer(Visitor):
             line_start=node.lineno,
             line_end=node.end_lineno or node.lineno,
             keyword_doc=kw_doc,
+            lib_entry=self._last_lib_entry,
             tokens=self._build_keyword_call_tokens(node, keyword_token_type=Token.NAME),
         )
         self._add_statement(stmt)
@@ -2328,12 +2344,30 @@ class SemanticAnalyzer(Visitor):
         self._analyze_assign_statement(node)
 
         tokens = self._build_keyword_call_tokens(node, keyword_token_type=Token.KEYWORD, keyword_doc=kw_doc)
+        # Surface ASSIGN tokens as VARIABLE_NAME SemanticTokens so consumers
+        # can detect "this keyword call has an assignment" without going
+        # through `node.assign`. The tokens that `_build_keyword_call_tokens`
+        # produces map ASSIGN to VARIABLE (the kind for variable references);
+        # `assign_variables` exposes them as the *defining* tokens.
+        assign_variables = [
+            SemanticToken(
+                kind=TokenKind.VARIABLE_NAME,
+                value=t.value,
+                line=t.lineno,
+                col_offset=t.col_offset,
+                length=len(t.value),
+            )
+            for t in node.get_tokens(Token.ASSIGN)
+            if t.value and t.col_offset is not None
+        ]
         if inner_calls:
             stmt: KeywordCallStatement = RunKeywordCallStatement(
                 kind=NodeKind.KEYWORD_CALL,
                 line_start=node.lineno,
                 line_end=node.end_lineno or node.lineno,
                 keyword_doc=kw_doc,
+                lib_entry=self._last_lib_entry,
+                assign_variables=assign_variables,
                 tokens=tokens,
                 inner_calls=inner_calls,
             )
@@ -2343,6 +2377,8 @@ class SemanticAnalyzer(Visitor):
                 line_start=node.lineno,
                 line_end=node.end_lineno or node.lineno,
                 keyword_doc=kw_doc,
+                lib_entry=self._last_lib_entry,
+                assign_variables=assign_variables,
                 tokens=tokens,
             )
         self._add_statement(stmt)
