@@ -11,7 +11,7 @@ configured `color` flag in `echo_via_pager`.
 """
 
 import os
-from typing import Dict, Iterable, List, Optional
+from typing import Any, Dict, Iterable, List, Optional
 
 import click
 
@@ -20,6 +20,8 @@ from ._models import (
     LogEntry,
     LogResult,
     ShowResult,
+    StatsResult,
+    StatsSection,
     SummaryResult,
     TestResultItem,
 )
@@ -281,6 +283,102 @@ def render_show(
         direction = "desc" if natural_desc ^ reverse else "asc"
         yield click.style(f"Sorted by {sort_field.lower()} ({direction})", dim=True, italic=True)
         yield os.linesep
+
+
+_STATS_DIMENSION_HEADING = {
+    "tag": "By Tag",
+    "suite": "By Suite",
+    "status": "By Status",
+}
+
+
+def render_stats(data: StatsResult) -> Iterable[str]:
+    sections = data.sections
+    if not sections:
+        yield click.style("(no aggregation dimensions selected)", dim=True)
+        yield os.linesep
+        return
+
+    for idx, section in enumerate(sections):
+        if idx:
+            yield os.linesep
+        heading = _STATS_DIMENSION_HEADING.get(section.dimension, section.dimension.title())
+        yield click.style(f"{heading}:", underline=True, fg="blue")
+        yield os.linesep
+
+        if not section.groups:
+            yield "    "
+            yield click.style("(no groups matched)", dim=True, italic=True)
+            yield os.linesep
+            continue
+
+        yield from _render_stats_table(section)
+
+        if section.truncated:
+            yield "    "
+            yield click.style(
+                f"… {section.truncated} more not shown (use `--top 0` for all)",
+                dim=True,
+            )
+            yield os.linesep
+
+    if data.filters_applied:
+        yield os.linesep
+        yield click.style("  Filters: ", bold=True, fg="blue")
+        yield _format_filters(data.filters_applied)
+        yield os.linesep
+
+
+def _render_stats_table(section: StatsSection) -> Iterable[str]:
+    name_header = "STATUS" if section.dimension == "status" else "NAME"
+    headers = [name_header, "TOTAL", "PASS", "FAIL", "SKIP", "ELAPSED"]
+    rows = []
+    for g in section.groups:
+        rows.append(
+            [
+                g.name,
+                str(g.counts.total),
+                str(g.counts.passed),
+                str(g.counts.failed),
+                str(g.counts.skipped),
+                _fmt_elapsed(g.elapsed_seconds) if g.elapsed_seconds is not None else "",
+            ]
+        )
+    widths = [max(len(headers[i]), max((len(r[i]) for r in rows), default=0)) for i in range(len(headers))]
+
+    def _fmt_cell(text: str, width: int, align: str = "left") -> str:
+        return text.ljust(width) if align == "left" else text.rjust(width)
+
+    aligns = ["left", "right", "right", "right", "right", "right"]
+    yield "    "
+    yield "  ".join(_fmt_cell(headers[i], widths[i], aligns[i]) for i in range(len(headers)))
+    yield os.linesep
+
+    for r, g in zip(rows, section.groups):
+        name_cell = _fmt_cell(r[0], widths[0])
+        if section.dimension == "status":
+            name_cell = click.style(name_cell, **_status_style(g.name))
+        cells = [
+            name_cell,
+            _fmt_cell(r[1], widths[1], "right"),
+            _colored_count(r[2], widths[2], g.counts.passed, "green"),
+            _colored_count(r[3], widths[3], g.counts.failed, "red"),
+            _colored_count(r[4], widths[4], g.counts.skipped, "yellow"),
+            _fmt_cell(r[5], widths[5], "right"),
+        ]
+        yield "    "
+        yield "  ".join(cells)
+        yield os.linesep
+
+
+def _colored_count(text: str, width: int, value: int, color: str) -> str:
+    cell = text.rjust(width)
+    return click.style(cell, fg=color) if value else cell
+
+
+def _status_style(status: str) -> Dict[str, Any]:
+    color = _STATUS_COLOR.get(status)
+    return {"fg": color, "bold": True} if color else {}
 
 
 _CONTROL_TYPES = {

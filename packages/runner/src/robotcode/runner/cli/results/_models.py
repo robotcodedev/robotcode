@@ -155,3 +155,24 @@ class LogResult(CamelSnakeMixin):
     start_time: Optional[str] = None
     end_time: Optional[str] = None
     filters_applied: Optional[Dict[str, List[str]]] = None
+
+
+@dataclass
+class StatsGroup(CamelSnakeMixin):
+    name: str
+    counts: Counts
+    elapsed_seconds: Optional[float] = None
+
+
+@dataclass
+class StatsSection(CamelSnakeMixin):
+    dimension: str  # "tag" | "suite" | "status"
+    groups: List[StatsGroup]
+    truncated: int = 0
+
+
+@dataclass
+class StatsResult(CamelSnakeMixin):
+    file: ResultFileInfo
+    sections: List[StatsSection]
+    filters_applied: Optional[Dict[str, List[str]]] = None

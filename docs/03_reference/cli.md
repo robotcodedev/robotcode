@@ -833,32 +833,32 @@ robotcode debug [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
 
 - `--tcp [<ADDRESS>:]<PORT>`
 
-   Run in `tcp` server mode and listen at the given port. (Equivalent to `--mode tcp --port <port>`) *NOTE:* This option is mutually exclusive with options: pipe-name, mode, pipe-server, port.
+   Run in `tcp` server mode and listen at the given port. (Equivalent to `--mode tcp --port <port>`) *NOTE:* This option is mutually exclusive with options: mode, pipe-server, port, pipe-name.
 
 
 - `--pipe-server NAME`
 
-   Run in `pipe-server` mode and listen at the given pipe name. (Equivalent to `--mode pipe-server --pipe-name <name>`) *NOTE:* This option is mutually exclusive with options: mode, tcp, bind, pipe-name, port.
+   Run in `pipe-server` mode and listen at the given pipe name. (Equivalent to `--mode pipe-server --pipe-name <name>`) *NOTE:* This option is mutually exclusive with options: pipe-name, tcp, port, mode, bind.
 
 
-- `--mode [pipe_server|tcp]`
+- `--mode [tcp|pipe_server]`
 
-   The mode to use for the debug launch server. *NOTE:* This option is mutually exclusive with options: pipe-server, tcp.  [env var: ROBOTCODE_MODE; default: TCP]
+   The mode to use for the debug launch server. *NOTE:* This option is mutually exclusive with options: tcp, pipe-server.  [env var: ROBOTCODE_MODE; default: TCP]
 
 
 - `--port PORT`
 
-   The port to listen on or connect to. (Only valid for `tcp` and `socket mode`) *NOTE:* This option is mutually exclusive with options: pipe-server, pipe-name.  [env var: ROBOTCODE_PORT; default: 6612; 1<=x<=65535]
+   The port to listen on or connect to. (Only valid for `tcp` and `socket mode`) *NOTE:* This option is mutually exclusive with options: pipe-name, pipe-server.  [env var: ROBOTCODE_PORT; default: 6612; 1<=x<=65535]
 
 
 - `--bind ADDRESS *`
 
-   Specify alternate bind address. If no address is specified `localhost` is used. (Only valid for tcp and socket mode) *NOTE:* This option is mutually exclusive with options: pipe-server, pipe-name.  [env var: ROBOTCODE_BIND; default: 127.0.0.1]
+   Specify alternate bind address. If no address is specified `localhost` is used. (Only valid for tcp and socket mode) *NOTE:* This option is mutually exclusive with options: pipe-name, pipe-server.  [env var: ROBOTCODE_BIND; default: 127.0.0.1]
 
 
 - `--pipe-name NAME`
 
-   The pipe to listen on or connect to. (Only valid in `pipe` and `pipe-server` mode) *NOTE:* This option is mutually exclusive with options: pipe-server, port, bind, tcp.  [env var: ROBOTCODE_PIPE_NAME]
+   The pipe to listen on or connect to. (Only valid in `pipe` and `pipe-server` mode) *NOTE:* This option is mutually exclusive with options: tcp, bind, port, pipe-server.  [env var: ROBOTCODE_PIPE_NAME]
 
 
 - `--version`
@@ -885,47 +885,47 @@ robotcode debug-launch [OPTIONS]
 **Options:**
 - `--stdio`
 
-   Run in `stdio` mode. (Equivalent to `--mode stdio`) *NOTE:* This option is mutually exclusive with options: mode, tcp, bind, pipe-name, pipe-server, port, socket, pipe.  [env var: ROBOTCODE_STDIO]
+   Run in `stdio` mode. (Equivalent to `--mode stdio`) *NOTE:* This option is mutually exclusive with options: pipe-server, pipe-name, socket, tcp, port, pipe, mode, bind.  [env var: ROBOTCODE_STDIO]
 
 
 - `--tcp [<ADDRESS>:]<PORT>`
 
-   Run in `tcp` server mode and listen at the given port. (Equivalent to `--mode tcp --port <port>`) *NOTE:* This option is mutually exclusive with options: mode, pipe-name, pipe-server, port, socket, pipe, stdio.
+   Run in `tcp` server mode and listen at the given port. (Equivalent to `--mode tcp --port <port>`) *NOTE:* This option is mutually exclusive with options: pipe-server, pipe-name, socket, port, pipe, mode, stdio.
 
 
 - `--socket [<ADDRESS>:]<PORT>`
 
-   Run in `socket` mode and connect to the given port. (Equivalent to `--mode socket --port <port>`) *NOTE:* This option is mutually exclusive with options: mode, tcp, pipe-name, pipe-server, port, pipe, stdio.
+   Run in `socket` mode and connect to the given port. (Equivalent to `--mode socket --port <port>`) *NOTE:* This option is mutually exclusive with options: pipe-server, pipe-name, tcp, port, pipe, mode, stdio.
 
 
 - `--pipe NAME`
 
-   Run in `pipe` mode and connect to the given pipe name. (Equivalent to `--mode pipe --pipe-name <name>`) *NOTE:* This option is mutually exclusive with options: mode, tcp, bind, pipe-name, pipe-server, port, socket, stdio.
+   Run in `pipe` mode and connect to the given pipe name. (Equivalent to `--mode pipe --pipe-name <name>`) *NOTE:* This option is mutually exclusive with options: pipe-server, pipe-name, socket, tcp, port, mode, bind, stdio.
 
 
 - `--pipe-server NAME`
 
-   Run in `pipe-server` mode and listen at the given pipe name. (Equivalent to `--mode pipe-server --pipe-name <name>`) *NOTE:* This option is mutually exclusive with options: mode, tcp, bind, pipe-name, port, socket, pipe, stdio.
+   Run in `pipe-server` mode and listen at the given pipe name. (Equivalent to `--mode pipe-server --pipe-name <name>`) *NOTE:* This option is mutually exclusive with options: pipe-name, socket, tcp, port, pipe, mode, bind, stdio.
 
 
 - `--mode [stdio|tcp|socket|pipe|pipe_server]`
 
-   The mode to use for the debug launch server. *NOTE:* This option is mutually exclusive with options: tcp, pipe-server, socket, pipe, stdio.  [env var: ROBOTCODE_MODE; default: STDIO]
+   The mode to use for the debug launch server. *NOTE:* This option is mutually exclusive with options: socket, pipe-server, tcp, pipe, stdio.  [env var: ROBOTCODE_MODE; default: STDIO]
 
 
 - `--port PORT`
 
-   The port to listen on or connect to. (Only valid for `tcp` and `socket mode`) *NOTE:* This option is mutually exclusive with options: pipe-server, pipe, pipe-name.  [env var: ROBOTCODE_PORT; default: 6611; 1<=x<=65535]
+   The port to listen on or connect to. (Only valid for `tcp` and `socket mode`) *NOTE:* This option is mutually exclusive with options: pipe, pipe-name, pipe-server.  [env var: ROBOTCODE_PORT; default: 6611; 1<=x<=65535]
 
 
 - `--bind ADDRESS *`
 
-   Specify alternate bind address. If no address is specified `localhost` is used. (Only valid for tcp and socket mode) *NOTE:* This option is mutually exclusive with options: pipe-server, pipe, pipe-name.  [env var: ROBOTCODE_BIND; default: 127.0.0.1]
+   Specify alternate bind address. If no address is specified `localhost` is used. (Only valid for tcp and socket mode) *NOTE:* This option is mutually exclusive with options: pipe, pipe-name, pipe-server.  [env var: ROBOTCODE_BIND; default: 127.0.0.1]
 
 
 - `--pipe-name NAME`
 
-   The pipe to listen on or connect to. (Only valid in `pipe` and `pipe-server` mode) *NOTE:* This option is mutually exclusive with options: tcp, bind, pipe-server, port, socket, pipe, stdio.  [env var: ROBOTCODE_PIPE_NAME]
+   The pipe to listen on or connect to. (Only valid in `pipe` and `pipe-server` mode) *NOTE:* This option is mutually exclusive with options: socket, pipe-server, tcp, port, pipe, bind, stdio.  [env var: ROBOTCODE_PIPE_NAME]
 
 
 - `--version`
@@ -1355,42 +1355,42 @@ robotcode language-server [OPTIONS] [PATHS]...
 **Options:**
 - `--stdio`
 
-   Run in `stdio` mode. (Equivalent to `--mode stdio`) *NOTE:* This option is mutually exclusive with options: mode, tcp, bind, pipe-name, port, socket, pipe.  [env var: ROBOTCODE_STDIO]
+   Run in `stdio` mode. (Equivalent to `--mode stdio`) *NOTE:* This option is mutually exclusive with options: pipe-name, socket, tcp, port, pipe, mode, bind.  [env var: ROBOTCODE_STDIO]
 
 
 - `--tcp [<ADDRESS>:]<PORT>`
 
-   Run in `tcp` server mode and listen at the given port. (Equivalent to `--mode tcp --port <port>`) *NOTE:* This option is mutually exclusive with options: mode, pipe-name, port, pipe, socket, stdio.
+   Run in `tcp` server mode and listen at the given port. (Equivalent to `--mode tcp --port <port>`) *NOTE:* This option is mutually exclusive with options: socket, pipe-name, port, pipe, mode, stdio.
 
 
 - `--socket [<ADDRESS>:]<PORT>`
 
-   Run in `socket` mode and connect to the given port. (Equivalent to `--mode socket --port <port>`) *NOTE:* This option is mutually exclusive with options: mode, tcp, pipe-name, port, pipe, stdio.
+   Run in `socket` mode and connect to the given port. (Equivalent to `--mode socket --port <port>`) *NOTE:* This option is mutually exclusive with options: pipe-name, tcp, port, pipe, mode, stdio.
 
 
 - `--pipe NAME`
 
-   Run in `pipe` mode and connect to the given pipe name. (Equivalent to `--mode pipe --pipe-name <name>`) *NOTE:* This option is mutually exclusive with options: mode, tcp, bind, pipe-name, port, socket, stdio.
+   Run in `pipe` mode and connect to the given pipe name. (Equivalent to `--mode pipe --pipe-name <name>`) *NOTE:* This option is mutually exclusive with options: socket, pipe-name, tcp, port, mode, bind, stdio.
 
 
-- `--mode [pipe|socket|stdio|tcp]`
+- `--mode [tcp|pipe|stdio|socket]`
 
-   The mode to use for the debug launch server. *NOTE:* This option is mutually exclusive with options: pipe, socket, stdio, tcp.  [env var: ROBOTCODE_MODE; default: STDIO]
+   The mode to use for the debug launch server. *NOTE:* This option is mutually exclusive with options: tcp, pipe, stdio, socket.  [env var: ROBOTCODE_MODE; default: STDIO]
 
 
 - `--port PORT`
 
-   The port to listen on or connect to. (Only valid for `tcp` and `socket mode`) *NOTE:* This option is mutually exclusive with options: pipe-name, pipe.  [env var: ROBOTCODE_PORT; default: 6610; 1<=x<=65535]
+   The port to listen on or connect to. (Only valid for `tcp` and `socket mode`) *NOTE:* This option is mutually exclusive with options: pipe, pipe-name.  [env var: ROBOTCODE_PORT; default: 6610; 1<=x<=65535]
 
 
 - `--bind ADDRESS *`
 
-   Specify alternate bind address. If no address is specified `localhost` is used. (Only valid for tcp and socket mode) *NOTE:* This option is mutually exclusive with options: pipe-name, pipe.  [env var: ROBOTCODE_BIND; default: 127.0.0.1]
+   Specify alternate bind address. If no address is specified `localhost` is used. (Only valid for tcp and socket mode) *NOTE:* This option is mutually exclusive with options: pipe, pipe-name.  [env var: ROBOTCODE_BIND; default: 127.0.0.1]
 
 
 - `--pipe-name NAME`
 
-   The pipe to listen on or connect to. (Only valid in `pipe` and `pipe-server` mode) *NOTE:* This option is mutually exclusive with options: tcp, bind, port, socket, pipe, stdio.  [env var: ROBOTCODE_PIPE_NAME]
+   The pipe to listen on or connect to. (Only valid in `pipe` and `pipe-server` mode) *NOTE:* This option is mutually exclusive with options: socket, tcp, port, pipe, bind, stdio.  [env var: ROBOTCODE_PIPE_NAME]
 
 
 - `--version`
@@ -1632,47 +1632,47 @@ robotcode repl-server [OPTIONS] [FILES]...
 **Options:**
 - `--stdio`
 
-   Run in `stdio` mode. (Equivalent to `--mode stdio`) *NOTE:* This option is mutually exclusive with options: mode, tcp, bind, pipe-name, pipe-server, port, socket, pipe.  [env var: ROBOTCODE_STDIO]
+   Run in `stdio` mode. (Equivalent to `--mode stdio`) *NOTE:* This option is mutually exclusive with options: pipe-server, pipe-name, socket, tcp, port, pipe, mode, bind.  [env var: ROBOTCODE_STDIO]
 
 
 - `--tcp [<ADDRESS>:]<PORT>`
 
-   Run in `tcp` server mode and listen at the given port. (Equivalent to `--mode tcp --port <port>`) *NOTE:* This option is mutually exclusive with options: mode, pipe-name, pipe-server, port, socket, pipe, stdio.
+   Run in `tcp` server mode and listen at the given port. (Equivalent to `--mode tcp --port <port>`) *NOTE:* This option is mutually exclusive with options: pipe-server, pipe-name, socket, port, pipe, mode, stdio.
 
 
 - `--socket [<ADDRESS>:]<PORT>`
 
-   Run in `socket` mode and connect to the given port. (Equivalent to `--mode socket --port <port>`) *NOTE:* This option is mutually exclusive with options: mode, tcp, pipe-name, pipe-server, port, pipe, stdio.
+   Run in `socket` mode and connect to the given port. (Equivalent to `--mode socket --port <port>`) *NOTE:* This option is mutually exclusive with options: pipe-server, pipe-name, tcp, port, pipe, mode, stdio.
 
 
 - `--pipe NAME`
 
-   Run in `pipe` mode and connect to the given pipe name. (Equivalent to `--mode pipe --pipe-name <name>`) *NOTE:* This option is mutually exclusive with options: mode, tcp, bind, pipe-name, pipe-server, port, socket, stdio.
+   Run in `pipe` mode and connect to the given pipe name. (Equivalent to `--mode pipe --pipe-name <name>`) *NOTE:* This option is mutually exclusive with options: pipe-server, pipe-name, socket, tcp, port, mode, bind, stdio.
 
 
 - `--pipe-server NAME`
 
-   Run in `pipe-server` mode and listen at the given pipe name. (Equivalent to `--mode pipe-server --pipe-name <name>`) *NOTE:* This option is mutually exclusive with options: mode, tcp, bind, pipe-name, port, socket, pipe, stdio.
+   Run in `pipe-server` mode and listen at the given pipe name. (Equivalent to `--mode pipe-server --pipe-name <name>`) *NOTE:* This option is mutually exclusive with options: pipe-name, socket, tcp, port, pipe, mode, bind, stdio.
 
 
 - `--mode [stdio|tcp|socket|pipe|pipe_server]`
 
-   The mode to use for the debug launch server. *NOTE:* This option is mutually exclusive with options: tcp, pipe-server, socket, pipe, stdio.  [env var: ROBOTCODE_MODE; default: STDIO]
+   The mode to use for the debug launch server. *NOTE:* This option is mutually exclusive with options: socket, pipe-server, tcp, pipe, stdio.  [env var: ROBOTCODE_MODE; default: STDIO]
 
 
 - `--port PORT`
 
-   The port to listen on or connect to. (Only valid for `tcp` and `socket mode`) *NOTE:* This option is mutually exclusive with options: pipe-server, pipe, pipe-name.  [env var: ROBOTCODE_PORT; default: 6601; 1<=x<=65535]
+   The port to listen on or connect to. (Only valid for `tcp` and `socket mode`) *NOTE:* This option is mutually exclusive with options: pipe, pipe-name, pipe-server.  [env var: ROBOTCODE_PORT; default: 6601; 1<=x<=65535]
 
 
 - `--bind ADDRESS *`
 
-   Specify alternate bind address. If no address is specified `localhost` is used. (Only valid for tcp and socket mode) *NOTE:* This option is mutually exclusive with options: pipe-server, pipe, pipe-name.  [env var: ROBOTCODE_BIND; default: 127.0.0.1]
+   Specify alternate bind address. If no address is specified `localhost` is used. (Only valid for tcp and socket mode) *NOTE:* This option is mutually exclusive with options: pipe, pipe-name, pipe-server.  [env var: ROBOTCODE_BIND; default: 127.0.0.1]
 
 
 - `--pipe-name NAME`
 
-   The pipe to listen on or connect to. (Only valid in `pipe` and `pipe-server` mode) *NOTE:* This option is mutually exclusive with options: tcp, bind, pipe-server, port, socket, pipe, stdio.  [env var: ROBOTCODE_PIPE_NAME]
+   The pipe to listen on or connect to. (Only valid in `pipe` and `pipe-server` mode) *NOTE:* This option is mutually exclusive with options: socket, pipe-server, tcp, port, pipe, bind, stdio.  [env var: ROBOTCODE_PIPE_NAME]
 
 
 - `-v, --variable name:value *`
@@ -1770,6 +1770,10 @@ robotcode results [OPTIONS] COMMAND [ARGS]...
 - [`show`](#show)
 
    List individual tests with status, source and failure message.
+
+- [`stats`](#stats)
+
+   Aggregate results by tag, suite, or status.
 
 - [`summary`](#summary)
 
@@ -1966,6 +1970,80 @@ robotcode results show [OPTIONS]
 - `--reverse / --no-reverse`
 
    Reverse the sort order (only applies with `--sort`).  [default: no-reverse]
+
+
+- `--help`
+
+   Show this message and exit.
+
+
+##### stats
+
+Aggregate results by tag, suite, or status.
+
+Mirrors `report.html`'s "Statistics by Tag" / "Statistics by Suite" panels.
+Repeat `--by` to render multiple sections in one go.
+
+Examples:
+```
+robotcode results stats
+robotcode results stats --by tag
+robotcode results stats --by tag --by suite
+robotcode results stats --by tag --sort elapsed --top 20
+robotcode --format json results stats --by tag
+```
+
+
+**Usage:**
+```text
+robotcode results stats [OPTIONS]
+```
+
+
+**Options:**
+- `--status [pass|fail|skip|not-run] *`
+
+   Only include tests with one of these statuses. Repeat to add more (OR).
+
+
+- `-i, --include TAG_PATTERN *`
+
+   Include tests matching the tag pattern. Supports Robot's tag pattern syntax (AND, OR, NOT, *, ?). Repeat for additional patterns (OR-joined).
+
+
+- `-e, --exclude TAG_PATTERN *`
+
+   Exclude tests matching the tag pattern. Same syntax as --include.
+
+
+- `-s, --suite NAME *`
+
+   Only include tests inside the named suite (glob against full suite name).
+
+
+- `-t, --test, --task NAME *`
+
+   Only include tests whose name matches (glob against full test name). `--task` is an alias for `--test` (Robot's RPA terminology).
+
+
+- `-o, --output PATH`
+
+   Path to output.xml/output.json (Robot's `--output`). If omitted, auto-discovered from the active profile's `output_dir` + `output` settings (with timestamp glob fallback and ./output.xml as last resort). A directory may also be passed — then auto-discovery happens inside it.
+
+
+- `--by DIMENSION *`
+
+   Aggregation dimension. Repeat for multiple sections in one call.  [default: status]
+
+
+- `--sort [name|total|failed|elapsed]`
+
+   Within each section: sort groups by this metric (descending).  [default: failed]
+
+
+- `--top INTEGER RANGE`
+
+   Show at most N groups per section (0 = all).  [default: 0; x>=0]
 
 
 - `--help`

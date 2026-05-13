@@ -36,6 +36,9 @@ from ._models import (
     LogTest,
     ResultFileInfo,
     ShowResult,
+    StatsGroup,
+    StatsResult,
+    StatsSection,
     SummaryResult,
     TestResultItem,
 )
@@ -540,6 +543,144 @@ def log(
             )
         else:
             app.print_data(data, remove_defaults=True)
+
+
+@results.command()
+@add_options(*RESULT_FILTER_OPTIONS, OUTPUT_OPTION)
+@click.option(
+    "--by",
+    "group_by",
+    type=click.Choice(["tag", "suite", "status"], case_sensitive=False),
+    multiple=True,
+    default=("status",),
+    show_default=True,
+    metavar="DIMENSION",
+    help="Aggregation dimension. Repeat for multiple sections in one call.",
+)
+@click.option(
+    "--sort",
+    "group_sort",
+    type=click.Choice(["name", "total", "failed", "elapsed"], case_sensitive=False),
+    default="failed",
+    show_default=True,
+    help="Within each section: sort groups by this metric (descending).",
+)
+@click.option(
+    "--top",
+    "top_n",
+    type=click.IntRange(min=0),
+    default=0,
+    show_default=True,
+    help="Show at most N groups per section (0 = all).",
+)
+@pass_application
+def stats(
+    app: Application,
+    status_filters: Tuple[str, ...],
+    include_tags: Tuple[str, ...],
+    exclude_tags: Tuple[str, ...],
+    suite_globs: Tuple[str, ...],
+    test_globs: Tuple[str, ...],
+    output_file: Optional[Path],
+    group_by: Tuple[str, ...],
+    group_sort: str,
+    top_n: int,
+) -> None:
+    """\
+    Aggregate results by tag, suite, or status.
+
+    Mirrors `report.html`'s "Statistics by Tag" / "Statistics by Suite"
+    panels. Repeat `--by` to render multiple sections in one go.
+
+    \b
+    Examples:
+    ```
+    robotcode results stats
+    robotcode results stats --by tag
+    robotcode results stats --by tag --by suite
+    robotcode results stats --by tag --sort elapsed --top 20
+    robotcode --format json results stats --by tag
+    ```
+    """
+    profile, root_folder = _resolve_profile(app)
+    with app.chdir(root_folder):
+        path = _resolve_output_file(app, profile, output_file)
+        execution = _load_execution_result(path)
+
+        if include_tags or exclude_tags or suite_globs or test_globs:
+            _apply_tree_filters(execution.suite, include_tags, exclude_tags, suite_globs, test_globs)
+
+        wanted = _normalise_statuses(status_filters)
+        tests = [t for t in _iter_all_tests(execution.suite) if not wanted or t.status in wanted]
+
+        seen_dimensions: List[str] = []
+        for dim in group_by:
+            d = dim.lower()
+            if d not in seen_dimensions:
+                seen_dimensions.append(d)
+
+        sections = [_build_stats_section(d, tests, group_sort.lower(), top_n) for d in seen_dimensions]
+
+        filters_active = bool(status_filters or include_tags or exclude_tags or suite_globs or test_globs)
+        data = StatsResult(
+            file=_make_file_info(path),
+            sections=sections,
+            filters_applied=_filters_dict(status_filters, include_tags, exclude_tags, suite_globs, test_globs)
+            if filters_active
+            else None,
+        )
+
+        if app.config.output_format in (None, OutputFormat.TEXT):
+            app.echo_via_pager(_render.render_stats(data))
+        else:
+            app.print_data(data, remove_defaults=True)
+
+
+def _build_stats_section(dimension: str, tests: List[Any], group_sort: str, top_n: int) -> StatsSection:
+    buckets: Dict[str, Counts] = {}
+    elapsed: Dict[str, float] = {}
+
+    def _bump(name: str, status: str, secs: Optional[float]) -> None:
+        c = buckets.setdefault(name, Counts())
+        _bump_counts(c, status)
+        if secs is not None:
+            elapsed[name] = elapsed.get(name, 0.0) + secs
+
+    for t in tests:
+        secs = _elapsed_seconds(t)
+        if dimension == "status":
+            _bump(t.status, t.status, secs)
+        elif dimension == "suite":
+            suite = getattr(t, "parent", None)
+            suite_name = getattr(suite, "name", None) or "(root)"
+            _bump(suite_name, t.status, secs)
+        elif dimension == "tag":
+            tags = list(getattr(t, "tags", None) or [])
+            if not tags:
+                continue
+            for tag in tags:
+                _bump(str(tag), t.status, secs)
+
+    groups = [
+        StatsGroup(name=name, counts=counts, elapsed_seconds=elapsed.get(name) or None)
+        for name, counts in buckets.items()
+    ]
+
+    group_key_map: Dict[str, Tuple[Callable[[StatsGroup], Any], bool]] = {
+        "name": (lambda g: g.name.lower(), False),
+        "total": (lambda g: g.counts.total, True),
+        "elapsed": (lambda g: g.elapsed_seconds or 0.0, True),
+        "failed": (lambda g: g.counts.failed, True),
+    }
+    sort_key, reverse = group_key_map.get(group_sort, group_key_map["failed"])
+    groups.sort(key=sort_key, reverse=reverse)
+
+    truncated = 0
+    if top_n > 0 and len(groups) > top_n:
+        truncated = len(groups) - top_n
+        groups = groups[:top_n]
+
+    return StatsSection(dimension=dimension, groups=groups, truncated=truncated)
 
 
 def _resolve_profile(app: Application) -> Tuple[Any, Optional[Path]]:
