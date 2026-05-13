@@ -331,7 +331,7 @@ output.xml
 bundled/libs
 
 # robotframework
-results/
+/results/
 
 # kilocode
 .kilocode/
@@ -339,3 +339,4 @@ results/
 # .agents
 .agents/
 skills-lock.json
+.claude
