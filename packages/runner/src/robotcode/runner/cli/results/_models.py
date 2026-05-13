@@ -176,3 +176,26 @@ class StatsResult(CamelSnakeMixin):
     file: ResultFileInfo
     sections: List[StatsSection]
     filters_applied: Optional[Dict[str, List[str]]] = None
+
+
+@dataclass
+class DiffChange(CamelSnakeMixin):
+    full_name: str
+    baseline_status: Optional[str] = None
+    current_status: Optional[str] = None
+    baseline_message: Optional[str] = None
+    current_message: Optional[str] = None
+    source: Optional[str] = None
+    rel_source: Optional[str] = None
+    lineno: Optional[int] = None
+
+
+@dataclass
+class DiffResult(CamelSnakeMixin):
+    baseline: ResultFileInfo
+    current: ResultFileInfo
+    new_failures: Optional[List[DiffChange]] = None
+    new_passes: Optional[List[DiffChange]] = None
+    status_changes: Optional[List[DiffChange]] = None
+    added: Optional[List[DiffChange]] = None
+    removed: Optional[List[DiffChange]] = None

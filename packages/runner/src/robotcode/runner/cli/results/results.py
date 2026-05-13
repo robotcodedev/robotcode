@@ -31,6 +31,8 @@ from . import _html, _render
 from ._models import (
     ArtifactRef,
     Counts,
+    DiffChange,
+    DiffResult,
     LogEntry,
     LogResult,
     LogTest,
@@ -743,6 +745,158 @@ def _build_stats_section(dimension: str, tests: List[Any], group_sort: str, top_
         groups = groups[:top_n]
 
     return StatsSection(dimension=dimension, groups=groups, truncated=truncated)
+
+
+_DIFF_CATEGORIES = ("new-failures", "new-passes", "status-changes", "added", "removed")
+
+
+@results.command()
+@click.argument(
+    "baseline",
+    type=click.Path(path_type=Path, exists=True, dir_okay=False, readable=True),
+)
+@click.argument(
+    "current",
+    type=click.Path(path_type=Path, exists=True, dir_okay=False, readable=True),
+    required=False,
+)
+@click.option(
+    "--full-paths/--no-full-paths",
+    default=False,
+    show_default=True,
+    help="Show absolute source paths instead of paths relative to cwd.",
+)
+@click.option(
+    "--message-chars",
+    type=click.IntRange(min=0),
+    default=120,
+    show_default=True,
+    help="Truncate failure messages to N characters (0 = no truncation).",
+)
+@click.option(
+    "--only",
+    "only_categories",
+    type=click.Choice(_DIFF_CATEGORIES, case_sensitive=False),
+    multiple=True,
+    default=(),
+    help="Restrict output to these categories. Repeat for multiple. Default: all.",
+)
+@pass_application
+def diff(
+    app: Application,
+    baseline: Path,
+    current: Optional[Path],
+    full_paths: bool,
+    message_chars: int,
+    only_categories: Tuple[str, ...],
+) -> None:
+    """\
+    Compare two output files: status changes plus added/removed tests.
+
+    If `CURRENT` is omitted, it is auto-discovered from the active profile
+    so you can diff a saved baseline against the latest run.
+
+    \b
+    Examples:
+    ```
+    robotcode results diff baseline.xml
+    robotcode results diff prev/output.xml curr/output.xml
+    robotcode results diff baseline.xml --only new-failures
+    robotcode --format json results diff baseline.xml
+    ```
+    """
+    profile, root_folder = _resolve_profile(app)
+    with app.chdir(root_folder):
+        baseline_path = baseline.resolve()
+        if current is not None:
+            current_path = current.resolve()
+        else:
+            current_path = _resolve_output_file(app, profile, None)
+
+        baseline_exec = _load_execution_result(baseline_path)
+        current_exec = _load_execution_result(current_path)
+
+        baseline_tests = {_get_full_name(t): t for t in _iter_all_tests(baseline_exec.suite)}
+        current_tests = {_get_full_name(t): t for t in _iter_all_tests(current_exec.suite)}
+
+        new_failures: List[DiffChange] = []
+        new_passes: List[DiffChange] = []
+        status_changes: List[DiffChange] = []
+        added: List[DiffChange] = []
+        removed: List[DiffChange] = []
+
+        for name, cur in current_tests.items():
+            base = baseline_tests.get(name)
+            if base is None:
+                added.append(_make_diff_change(name, None, cur, message_chars=message_chars, full_paths=full_paths))
+                continue
+            if base.status == cur.status:
+                continue
+            change = _make_diff_change(name, base, cur, message_chars=message_chars, full_paths=full_paths)
+            if base.status == "PASS" and cur.status in ("FAIL", "ERROR"):
+                new_failures.append(change)
+            elif base.status in ("FAIL", "ERROR", "SKIP") and cur.status == "PASS":
+                new_passes.append(change)
+            else:
+                status_changes.append(change)
+
+        for name, base in baseline_tests.items():
+            if name not in current_tests:
+                removed.append(_make_diff_change(name, base, None, message_chars=message_chars, full_paths=full_paths))
+
+        selected = {c.lower() for c in only_categories} if only_categories else None
+
+        data = DiffResult(
+            baseline=_make_file_info(baseline_path),
+            current=_make_file_info(current_path),
+            new_failures=new_failures if selected is None or "new-failures" in selected else None,
+            new_passes=new_passes if selected is None or "new-passes" in selected else None,
+            status_changes=status_changes if selected is None or "status-changes" in selected else None,
+            added=added if selected is None or "added" in selected else None,
+            removed=removed if selected is None or "removed" in selected else None,
+        )
+
+        if app.config.output_format in (None, OutputFormat.TEXT):
+            app.echo_via_pager(_render.render_diff(data, full_paths=full_paths))
+        else:
+            app.print_data(data, remove_defaults=True)
+
+
+def _make_diff_change(
+    full_name: str,
+    baseline_test: Any,
+    current_test: Any,
+    *,
+    message_chars: int,
+    full_paths: bool,
+) -> DiffChange:
+    """Build a DiffChange capturing baseline/current status, message, and source."""
+    src_test = current_test if current_test is not None else baseline_test
+    src = getattr(src_test, "source", None)
+    src_str = str(src) if src else None
+    return DiffChange(
+        full_name=full_name,
+        baseline_status=baseline_test.status if baseline_test is not None else None,
+        current_status=current_test.status if current_test is not None else None,
+        baseline_message=_truncate(getattr(baseline_test, "message", None), message_chars)
+        if baseline_test is not None
+        else None,
+        current_message=_truncate(getattr(current_test, "message", None), message_chars)
+        if current_test is not None
+        else None,
+        source=src_str,
+        rel_source=None if full_paths else _rel_to_cwd(src_str),
+        lineno=getattr(src_test, "lineno", None) or None,
+    )
+
+
+def _truncate(text: Optional[str], limit: int) -> Optional[str]:
+    if not text:
+        return None
+    first_line = text.splitlines()[0]
+    if limit and len(first_line) > limit:
+        return first_line[:limit].rstrip() + "…"
+    return first_line
 
 
 def _resolve_profile(app: Application) -> Tuple[Any, Optional[Path]]:

@@ -18,6 +18,8 @@ import click
 
 from ._models import (
     ArtifactRef,
+    DiffChange,
+    DiffResult,
     LogEntry,
     LogResult,
     ShowResult,
@@ -411,6 +413,81 @@ def _colored_count(text: str, width: int, value: int, color: str) -> str:
 def _status_style(status: str) -> Dict[str, Any]:
     color = _STATUS_COLOR.get(status)
     return {"fg": color, "bold": True} if color else {}
+
+
+_DIFF_SECTION_META = [
+    ("new_failures", "New failures", "❌", "red"),
+    ("new_passes", "New passes", "✅", "green"),
+    ("status_changes", "Status changes", "⚠", "yellow"),
+    ("added", "Added in current", "+", "cyan"),
+    ("removed", "Removed from current", "-", "magenta"),
+]
+
+
+def render_diff(data: DiffResult, *, full_paths: bool = False) -> Iterable[str]:
+    baseline_label = data.baseline.rel_source or data.baseline.source
+    current_label = data.current.rel_source or data.current.source
+    yield click.style("Diff: ", underline=True, fg="blue")
+    yield baseline_label
+    yield " → "
+    yield current_label
+    yield os.linesep
+
+    summary_counts: Dict[str, int] = {}
+
+    for attr, heading, marker, color in _DIFF_SECTION_META:
+        items: Optional[List[DiffChange]] = getattr(data, attr)
+        if not items:
+            continue
+        summary_counts[heading] = len(items)
+        yield os.linesep
+        yield click.style(f"{heading} ({len(items)}):", bold=True, fg=color)
+        yield os.linesep
+        for change in items:
+            yield from _render_diff_change(change, marker=marker, color=color, full_paths=full_paths)
+
+    if not summary_counts:
+        yield os.linesep
+        yield click.style("No differences.", dim=True)
+        yield os.linesep
+        return
+
+    yield os.linesep
+    yield click.style("Summary: ", bold=True, fg="blue")
+    yield ", ".join(f"{count} {label.lower()}" for label, count in summary_counts.items())
+    yield "."
+    yield os.linesep
+
+
+def _render_diff_change(change: DiffChange, *, marker: str, color: str, full_paths: bool) -> Iterable[str]:
+    yield "  "
+    yield click.style(marker, fg=color, bold=True)
+    yield " "
+    yield click.style(change.full_name, bold=True)
+
+    if change.source:
+        path = change.source if full_paths else (change.rel_source or change.source)
+        yield f" ({path}:{change.lineno or 1})"
+
+    if change.baseline_status and change.current_status:
+        yield "    "
+        yield _status_inline(change.baseline_status)
+        yield " → "
+        yield _status_inline(change.current_status)
+    elif change.current_status:
+        yield "    "
+        yield _status_inline(change.current_status)
+    elif change.baseline_status:
+        yield "    "
+        yield _status_inline(change.baseline_status)
+    yield os.linesep
+
+    msg = change.current_message or change.baseline_message
+    if msg:
+        for line in msg.splitlines():
+            yield "    > "
+            yield click.style(line, italic=True, dim=True)
+            yield os.linesep
 
 
 _CONTROL_TYPES = {
