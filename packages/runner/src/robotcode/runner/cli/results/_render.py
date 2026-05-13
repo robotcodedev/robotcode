@@ -216,6 +216,8 @@ def render_show(
     show_tags: bool,
     full_paths: bool = False,
     show_timing: bool = False,
+    sort_field: Optional[str] = None,
+    reverse: bool = False,
 ) -> Iterable[str]:
     name = data.file.rel_source or data.file.source
 
@@ -272,6 +274,12 @@ def render_show(
         yield os.linesep
         yield click.style("  Filters: ", bold=True, fg="blue")
         yield _format_filters(data.filters_applied)
+        yield os.linesep
+
+    if sort_field:
+        natural_desc = sort_field.lower() == "elapsed"
+        direction = "desc" if natural_desc ^ reverse else "asc"
+        yield click.style(f"Sorted by {sort_field.lower()} ({direction})", dim=True, italic=True)
         yield os.linesep
 
 

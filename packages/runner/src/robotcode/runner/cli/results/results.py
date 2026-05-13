@@ -254,6 +254,24 @@ def summary(
         "run to the statistics block. Use `--no-timing` to suppress."
     ),
 )
+@click.option(
+    "--sort",
+    "sort_field",
+    type=click.Choice(["name", "status", "elapsed", "start", "suite"], case_sensitive=False),
+    default=None,
+    metavar="FIELD",
+    help=(
+        "Sort tests before display. `name`/`suite` = lexicographic full-name/suite. "
+        "`status` = FAIL → SKIP → PASS → NOT RUN. `elapsed` = duration (longest first). "
+        "`start` = start time. Default: execution order from the output file."
+    ),
+)
+@click.option(
+    "--reverse/--no-reverse",
+    default=False,
+    show_default=True,
+    help="Reverse the sort order (only applies with `--sort`).",
+)
 @pass_application
 def show(
     app: Application,
@@ -268,6 +286,8 @@ def show(
     full_paths: bool,
     show_tags: bool,
     show_timing: bool,
+    sort_field: Optional[str],
+    reverse: bool,
 ) -> None:
     """\
     List individual tests with status, source and failure message.
@@ -301,6 +321,7 @@ def show(
             if not wanted or t.status in wanted
         ]
         counts = _tally_items(all_items)
+        all_items = _sort_items(all_items, sort_field, reverse)
         if top_n > 0:
             shown = all_items[:top_n]
             truncated = max(0, len(all_items) - top_n)
@@ -329,6 +350,8 @@ def show(
                     show_tags=show_tags,
                     full_paths=full_paths,
                     show_timing=show_timing,
+                    sort_field=sort_field,
+                    reverse=reverse,
                 )
             )
         else:
@@ -778,6 +801,25 @@ def _tally_items(items: Iterable[TestResultItem]) -> Counts:
     for i in items:
         _bump_counts(c, i.status)
     return c
+
+
+_STATUS_SORT_RANK = {"FAIL": 0, "SKIP": 1, "PASS": 2, "NOT RUN": 3}
+
+
+def _sort_items(items: List[TestResultItem], field: Optional[str], reverse: bool) -> List[TestResultItem]:
+    if not field:
+        return items
+    f = field.lower()
+    key_map: Dict[str, Callable[[TestResultItem], Any]] = {
+        "name": lambda i: (i.full_name or "").lower(),
+        "suite": lambda i: (i.suite or "").lower(),
+        "status": lambda i: _STATUS_SORT_RANK.get(i.status, 99),
+        "elapsed": lambda i: i.elapsed_seconds if i.elapsed_seconds is not None else -1.0,
+        "start": lambda i: i.start_time or "",
+    }
+    # `elapsed` is naturally descending; --reverse flips the meaning either way
+    natural_desc = f == "elapsed"
+    return sorted(items, key=key_map[f], reverse=natural_desc ^ reverse)
 
 
 def _rel_to_cwd(p: Optional[str]) -> Optional[str]:
