@@ -102,6 +102,28 @@ RESULT_FILTER_OPTIONS = [
 ]
 
 
+SEARCH_OPTIONS = [
+    click.option(
+        "--search",
+        "search_pattern",
+        metavar="TEXT",
+        default=None,
+        help=(
+            "Only include tests with at least one match against TEXT. "
+            "Searches in test name, full name, failure message, keyword "
+            "names, keyword arguments, and log messages. Case-insensitive "
+            "substring match by default."
+        ),
+    ),
+    click.option(
+        "--search-regex/--no-search-regex",
+        default=False,
+        show_default=True,
+        help="Treat `--search` as a Python regular expression instead of a substring.",
+    ),
+]
+
+
 OUTPUT_OPTION = click.option(
     "-o",
     "--output",
@@ -218,7 +240,7 @@ def summary(
 
 
 @results.command()
-@add_options(*RESULT_FILTER_OPTIONS, OUTPUT_OPTION)
+@add_options(*RESULT_FILTER_OPTIONS, *SEARCH_OPTIONS, OUTPUT_OPTION)
 @click.option(
     "--top",
     "top_n",
@@ -283,6 +305,8 @@ def show(
     exclude_tags: Tuple[str, ...],
     suite_globs: Tuple[str, ...],
     test_globs: Tuple[str, ...],
+    search_pattern: Optional[str],
+    search_regex: bool,
     output_file: Optional[Path],
     top_n: int,
     message_chars: int,
@@ -307,6 +331,7 @@ def show(
     robotcode results show -i smoke -e wipANDnotready
     robotcode results show -s "MyProject.Login.*"
     robotcode results show --top 20
+    robotcode results show --search "AssertionError"
     ```
     """
     profile, root_folder = _resolve_profile(app)
@@ -318,10 +343,11 @@ def show(
             _apply_tree_filters(execution.suite, include_tags, exclude_tags, suite_globs, test_globs)
 
         wanted = _normalise_statuses(status_filters)
+        match = _make_matcher(search_pattern, search_regex)
         all_items = [
             _make_test_item(t, message_chars=message_chars, full_paths=full_paths)
             for t in _iter_all_tests(execution.suite)
-            if not wanted or t.status in wanted
+            if (not wanted or t.status in wanted) and _show_item_matches(t, match)
         ]
         counts = _tally_items(all_items)
         all_items = _sort_items(all_items, sort_field, reverse)
@@ -332,13 +358,23 @@ def show(
             shown = all_items
             truncated = 0
 
-        filters_active = bool(status_filters or include_tags or exclude_tags or suite_globs or test_globs)
+        filters_active = bool(
+            status_filters or include_tags or exclude_tags or suite_globs or test_globs or search_pattern
+        )
         data = ShowResult(
             file=_make_file_info(path),
             counts=counts,
             tests=shown,
             truncated=truncated,
-            filters_applied=_filters_dict(status_filters, include_tags, exclude_tags, suite_globs, test_globs)
+            filters_applied=_filters_dict(
+                status_filters,
+                include_tags,
+                exclude_tags,
+                suite_globs,
+                test_globs,
+                search_pattern,
+                search_regex,
+            )
             if filters_active
             else None,
             elapsed_seconds=_elapsed_seconds(execution.suite),
@@ -355,6 +391,8 @@ def show(
                     show_timing=show_timing,
                     sort_field=sort_field,
                     reverse=reverse,
+                    search_pattern=search_pattern,
+                    search_regex=search_regex,
                 )
             )
         else:
@@ -362,7 +400,7 @@ def show(
 
 
 @results.command()
-@add_options(*RESULT_FILTER_OPTIONS, OUTPUT_OPTION)
+@add_options(*RESULT_FILTER_OPTIONS, *SEARCH_OPTIONS, OUTPUT_OPTION)
 @click.option(
     "--level",
     type=click.Choice(["TRACE", "DEBUG", "INFO", "WARN", "ERROR", "FAIL"], case_sensitive=False),
@@ -441,6 +479,8 @@ def log(
     exclude_tags: Tuple[str, ...],
     suite_globs: Tuple[str, ...],
     test_globs: Tuple[str, ...],
+    search_pattern: Optional[str],
+    search_regex: bool,
     output_file: Optional[Path],
     level: str,
     max_depth: int,
@@ -467,6 +507,7 @@ def log(
     robotcode results log --level WARN
     robotcode results log --max-depth 2
     robotcode results log -i smoke --extract /tmp/artefacts
+    robotcode results log --search "TimeoutError"
     robotcode results log --execution-messages
     ```
     """
@@ -479,6 +520,7 @@ def log(
             _apply_tree_filters(execution.suite, include_tags, exclude_tags, suite_globs, test_globs)
 
         wanted = _normalise_statuses(status_filters)
+        match = _make_matcher(search_pattern, search_regex)
 
         base_dir = path.parent
         matched: List[LogTest] = []
@@ -487,6 +529,14 @@ def log(
                 continue
             full_name = _get_full_name(test)
             body, artefacts = _collect_test_body(test, level=level.upper(), base_dir=base_dir, raw_html=raw_html)
+            if match is not None:
+                test_hit = (
+                    match(full_name)
+                    or match(getattr(test, "message", None))
+                    or any(match(t) for t in (getattr(test, "tags", None) or []))
+                )
+                if not test_hit and not _entries_match(body, match):
+                    continue
             src = getattr(test, "source", None)
             src_str = str(src) if src else None
             matched.append(
@@ -515,7 +565,9 @@ def log(
             extract_abs.mkdir(parents=True, exist_ok=True)
             extracted_count = _extract_artifacts(matched, target=extract_abs)
 
-        filters_active = bool(status_filters or include_tags or exclude_tags or suite_globs or test_globs)
+        filters_active = bool(
+            status_filters or include_tags or exclude_tags or suite_globs or test_globs or search_pattern
+        )
         data = LogResult(
             file=_make_file_info(path),
             tests=matched,
@@ -525,7 +577,15 @@ def log(
             elapsed_seconds=_elapsed_seconds(execution.suite),
             start_time=_iso(getattr(execution.suite, "start_time", None)),
             end_time=_iso(getattr(execution.suite, "end_time", None)),
-            filters_applied=_filters_dict(status_filters, include_tags, exclude_tags, suite_globs, test_globs)
+            filters_applied=_filters_dict(
+                status_filters,
+                include_tags,
+                exclude_tags,
+                suite_globs,
+                test_globs,
+                search_pattern,
+                search_regex,
+            )
             if filters_active
             else None,
         )
@@ -537,6 +597,8 @@ def log(
                     full_paths=full_paths,
                     level=level,
                     max_depth=max_depth,
+                    search_pattern=search_pattern,
+                    search_regex=search_regex,
                     show_timestamps=show_timestamps,
                     show_timing=show_timing,
                 )
@@ -900,6 +962,8 @@ def _filters_dict(
     exclude_tags: Tuple[str, ...],
     suite_globs: Tuple[str, ...],
     test_globs: Tuple[str, ...],
+    search_pattern: Optional[str] = None,
+    search_regex: bool = False,
 ) -> Dict[str, List[str]]:
     out: Dict[str, List[str]] = {}
     if status_filters:
@@ -912,6 +976,8 @@ def _filters_dict(
         out["suite"] = list(suite_globs)
     if test_globs:
         out["test"] = list(test_globs)
+    if search_pattern:
+        out["search-regex" if search_regex else "search"] = [search_pattern]
     return out
 
 
@@ -945,6 +1011,51 @@ def _tally_items(items: Iterable[TestResultItem]) -> Counts:
 
 
 _STATUS_SORT_RANK = {"FAIL": 0, "SKIP": 1, "PASS": 2, "NOT RUN": 3}
+
+
+def _make_matcher(pattern: Optional[str], regex: bool) -> Optional[Callable[[Optional[str]], bool]]:
+    """Compile `pattern` once and return a `match(text) -> bool` predicate.
+
+    Substring case-insensitive by default; `regex=True` uses `re.search` with
+    `re.IGNORECASE`.
+    """
+    if not pattern:
+        return None
+    if regex:
+        try:
+            rx = re.compile(pattern, re.IGNORECASE)
+        except re.error as e:
+            raise click.UsageError(f"--search-regex: invalid pattern: {e}") from e
+        return lambda s: bool(s and rx.search(s))
+    needle = pattern.lower()
+    return lambda s: bool(s and needle in s.lower())
+
+
+def _show_item_matches(test: Any, match: Optional[Callable[[Optional[str]], bool]]) -> bool:
+    """Decide whether a test should appear in `show` output given the search matcher.
+
+    `show` doesn't render keyword bodies, so we only inspect the test itself:
+    name, message, and tags.
+    """
+    if match is None:
+        return True
+    if match(_get_full_name(test)) or match(getattr(test, "message", None)):
+        return True
+    return any(match(t) for t in (getattr(test, "tags", None) or []))
+
+
+def _entries_match(entries: List[LogEntry], match: Callable[[Optional[str]], bool]) -> bool:
+    """Recurse through LogEntry tree looking for any match in name/text/args/assign."""
+    for e in entries:
+        if match(e.name) or match(e.text) or match(e.message):
+            return True
+        if e.args and any(match(a) for a in e.args):
+            return True
+        if e.assign and any(match(a) for a in e.assign):
+            return True
+        if e.body and _entries_match(e.body, match):
+            return True
+    return False
 
 
 def _sort_items(items: List[TestResultItem], field: Optional[str], reverse: bool) -> List[TestResultItem]:

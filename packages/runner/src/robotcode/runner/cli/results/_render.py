@@ -11,7 +11,8 @@ configured `color` flag in `echo_via_pager`.
 """
 
 import os
-from typing import Any, Dict, Iterable, List, Optional
+import re
+from typing import Any, Callable, Dict, Iterable, List, Optional
 
 import click
 
@@ -146,11 +147,38 @@ def _message_color(status: str) -> Optional[str]:
     return None
 
 
-def _format_test_entry(t: TestResultItem, *, full_paths: bool, show_timing: bool = False) -> Iterable[str]:
+def _make_highlighter(pattern: Optional[str], regex: bool) -> Optional[Callable[[str], str]]:
+    """Return a `highlight(text) -> styled_text` function or None when no pattern.
+
+    Wraps each match in a yellow-on-black bold span via `click.style`.
+    """
+    if not pattern:
+        return None
+    try:
+        rx = re.compile(pattern if regex else re.escape(pattern), re.IGNORECASE)
+    except re.error:
+        return None
+
+    def highlight(text: str) -> str:
+        if not text:
+            return text
+        return rx.sub(lambda m: click.style(m.group(0), fg="black", bg="yellow", bold=True), text)
+
+    return highlight
+
+
+def _format_test_entry(
+    t: TestResultItem,
+    *,
+    full_paths: bool,
+    show_timing: bool = False,
+    highlight: Optional[Callable[[str], str]] = None,
+) -> Iterable[str]:
     """Yield one line per test: `<STATUS> name (path:line)` + indented msg."""
     yield _status_badge(t.status)
     yield " "
-    yield click.style(t.full_name, bold=True)
+    name = highlight(t.full_name) if highlight else t.full_name
+    yield click.style(name, bold=True)
     yield _source_paren(t, full_paths=full_paths)
     if show_timing:
         yield _timing_suffix(t.elapsed_seconds, t.start_time, show_timing=show_timing)
@@ -158,8 +186,9 @@ def _format_test_entry(t: TestResultItem, *, full_paths: bool, show_timing: bool
     if t.message:
         color = _message_color(t.status)
         for line in t.message.splitlines():
+            styled = highlight(line) if highlight else line
             yield "        "
-            yield click.style(line, fg=color, italic=True) if color else click.style(line, italic=True)
+            yield click.style(styled, fg=color, italic=True) if color else click.style(styled, italic=True)
             yield os.linesep
 
 
@@ -220,8 +249,11 @@ def render_show(
     show_timing: bool = False,
     sort_field: Optional[str] = None,
     reverse: bool = False,
+    search_pattern: Optional[str] = None,
+    search_regex: bool = False,
 ) -> Iterable[str]:
     name = data.file.rel_source or data.file.source
+    highlight = _make_highlighter(search_pattern, search_regex)
 
     if not data.tests:
         if data.filters_applied:
@@ -233,11 +265,11 @@ def render_show(
         return
 
     for t in data.tests:
-        yield from _format_test_entry(t, full_paths=full_paths, show_timing=show_timing)
+        yield from _format_test_entry(t, full_paths=full_paths, show_timing=show_timing, highlight=highlight)
         if show_tags and t.tags:
             yield "        "
             yield click.style("Tags: ", bold=True, fg="blue")
-            yield ", ".join(t.tags)
+            yield ", ".join((highlight(tag) if highlight else tag) for tag in t.tags)
             yield os.linesep
 
     if data.truncated:
@@ -408,8 +440,11 @@ def render_log(
     max_depth: int = 0,
     show_timestamps: bool = False,
     show_timing: bool = False,
+    search_pattern: Optional[str] = None,
+    search_regex: bool = False,
 ) -> Iterable[str]:
     threshold = _LEVEL_ORDER.get(level.upper(), 2)
+    highlight = _make_highlighter(search_pattern, search_regex)
 
     if not data.tests and not data.execution_messages:
         yield click.style("(no tests matched)", dim=True)
@@ -420,7 +455,8 @@ def render_log(
         if i:
             yield os.linesep
         yield click.style("Test: ", fg="blue")
-        yield click.style(t.full_name, bold=True)
+        full_name = highlight(t.full_name) if highlight else t.full_name
+        yield click.style(full_name, bold=True)
         if t.source:
             path = t.source if full_paths else (t.rel_source or t.source)
             yield f" ({path}:{t.lineno or 1})"
@@ -436,8 +472,9 @@ def render_log(
         if t.message:
             color = _message_color(t.status)
             for line in t.message.splitlines():
+                styled = highlight(line) if highlight else line
                 yield "  > "
-                yield (click.style(line, fg=color, italic=True) if color else click.style(line, italic=True))
+                yield (click.style(styled, fg=color, italic=True) if color else click.style(styled, italic=True))
                 yield os.linesep
 
         yield from _render_entries(
@@ -449,6 +486,7 @@ def render_log(
             show_timestamps=show_timestamps,
             show_timing=show_timing,
             full_paths=full_paths,
+            highlight=highlight,
         )
 
     if data.execution_messages:
@@ -466,7 +504,8 @@ def render_log(
             if show_timestamps and msg.timestamp:
                 yield f" [{msg.timestamp}]"
             yield " "
-            yield msg.text or ""
+            text = msg.text or ""
+            yield highlight(text) if highlight else text
             yield os.linesep
 
     if data.extract_dir and data.extracted_count:
@@ -502,6 +541,7 @@ def _render_entries(
     show_timestamps: bool,
     show_timing: bool,
     full_paths: bool,
+    highlight: Optional[Callable[[str], str]] = None,
 ) -> Iterable[str]:
     """Render each entry on a header line with its children indented below."""
     for entry in entries:
@@ -514,6 +554,7 @@ def _render_entries(
             show_timestamps=show_timestamps,
             show_timing=show_timing,
             full_paths=full_paths,
+            highlight=highlight,
         )
 
 
@@ -527,6 +568,7 @@ def _render_entry(
     show_timestamps: bool,
     show_timing: bool,
     full_paths: bool,
+    highlight: Optional[Callable[[str], str]] = None,
 ) -> Iterable[str]:
     indent = "  " * depth
     etype = entry.type
@@ -543,28 +585,30 @@ def _render_entry(
         text = entry.text or ""
         lines = text.splitlines() or [""]
         for j, line in enumerate(lines):
+            styled_line = highlight(line) if highlight else line
             if j == 0:
-                yield line
+                yield styled_line
             else:
                 yield os.linesep
                 yield indent
                 yield "       "  # align under level badge
-                yield line
+                yield styled_line
         yield os.linesep
         if entry.artifacts:
             yield from _render_artifacts(entry.artifacts, indent=indent + "  ", full_paths=full_paths)
         return
 
     yield indent
-    yield from _format_entry_header(entry, show_timing=show_timing)
+    yield from _format_entry_header(entry, show_timing=show_timing, highlight=highlight)
     yield os.linesep
 
     if entry.message and entry.status in ("FAIL", "SKIP"):
         color = _message_color(entry.status)
         for line in entry.message.splitlines():
+            styled = highlight(line) if highlight else line
             yield indent
             yield "  > "
-            yield (click.style(line, fg=color, italic=True) if color else click.style(line, italic=True))
+            yield (click.style(styled, fg=color, italic=True) if color else click.style(styled, italic=True))
             yield os.linesep
 
     if not entry.body:
@@ -593,6 +637,7 @@ def _render_entry(
         show_timestamps=show_timestamps,
         show_timing=show_timing,
         full_paths=full_paths,
+        highlight=highlight,
     )
 
 
@@ -606,21 +651,29 @@ def _count_hidden(entries: List[LogEntry]) -> int:
     return total
 
 
-def _format_entry_header(entry: LogEntry, *, show_timing: bool = False) -> Iterable[str]:
+def _format_entry_header(
+    entry: LogEntry,
+    *,
+    show_timing: bool = False,
+    highlight: Optional[Callable[[str], str]] = None,
+) -> Iterable[str]:
     """Yield the styled header line for a non-MESSAGE entry (no newline)."""
     t = entry.type
+
+    def _hi(s: str) -> str:
+        return highlight(s) if highlight else s
 
     if t in ("KEYWORD", "SETUP", "TEARDOWN"):
         label_prefix = "" if t == "KEYWORD" else f"[{t}] "
         if label_prefix:
             yield click.style(label_prefix, fg="cyan", bold=True)
         if entry.assign:
-            yield click.style("  ".join(entry.assign) + "  ", fg="magenta")
+            yield click.style("  ".join(_hi(a) for a in entry.assign) + "  ", fg="magenta")
         if entry.name:
-            yield click.style(entry.name, bold=True)
+            yield click.style(_hi(entry.name), bold=True)
         if entry.args:
             yield "    "
-            yield "    ".join(entry.args)
+            yield "    ".join(_hi(a) for a in entry.args)
     elif t == "FOR":
         yield click.style("FOR", fg="cyan", bold=True)
         if entry.assign:
