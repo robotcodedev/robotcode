@@ -13,6 +13,7 @@ from robotcode.core.lsp.types import (
 from robotcode.core.text_document import TextDocument
 from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.language_server.robotframework.configuration import AnalysisConfig
+from robotcode.robot.diagnostics.diagnostic_rules import is_variable_name_intentionally_unused
 from robotcode.robot.diagnostics.entities import (
     ArgumentDefinition,
     EnvironmentVariableDefinition,
@@ -235,7 +236,7 @@ class RobotDiagnosticsProtocolPart(RobotLanguageServerProtocolPart):
                 ):
                     continue
 
-                if var.name_token is not None and var.name_token.value and var.name_token.value.startswith("_"):
+                if is_variable_name_intentionally_unused(var):
                     continue
 
                 references = self.parent.robot_references.find_variable_references(document, var, False, True)

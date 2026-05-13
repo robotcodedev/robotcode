@@ -13,6 +13,7 @@ from robotcode.core.lsp.types import Diagnostic, DiagnosticSeverity, DiagnosticT
 from robotcode.core.text_document import TextDocument
 from robotcode.core.uri import Uri
 from robotcode.core.workspace import WorkspaceFolder
+from robotcode.robot.diagnostics.diagnostic_rules import is_variable_name_intentionally_unused
 from robotcode.robot.diagnostics.document_cache_helper import DocumentsCacheHelper
 from robotcode.robot.diagnostics.entities import (
     ArgumentDefinition,
@@ -163,6 +164,9 @@ class RobotFrameworkLanguageProvider(LanguageProvider):
                 VariableDefinitionType.ENVIRONMENT_VARIABLE,
                 VariableDefinitionType.GLOBAL_VARIABLE,
             ):
+                continue
+
+            if is_variable_name_intentionally_unused(var):
                 continue
 
             if var.source != namespace.source:
