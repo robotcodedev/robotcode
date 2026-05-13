@@ -407,7 +407,7 @@ def show(
     "show_execution_messages",
     default=False,
     show_default=True,
-    help=("Also show parser/discovery messages from output.xml's <errors> section (deduplicated)."),
+    help=("Also show parser/discovery messages from output.xml's `<errors>` section (deduplicated)."),
 )
 @add_options(OUTPUT_OPTION)
 @pass_application

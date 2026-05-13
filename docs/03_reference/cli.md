@@ -477,7 +477,7 @@ robotcode analyze code [OPTIONS] [PATHS]...
 
 - `-f, --filter PATTERN *`
 
-   Glob pattern to filter files to analyze. Can be specified multiple times.         
+   Glob pattern to filter files to analyze. Can be specified multiple times.
 
 
 - `-v, --variable name:value *`
@@ -1848,7 +1848,7 @@ robotcode results log [OPTIONS] [TEST_PATTERNS]...
 
 - `--execution-messages / --no-execution-messages`
 
-   Also show parser/discovery messages from output.xml's <errors> section (deduplicated).  [default: no-execution-messages]
+   Also show parser/discovery messages from output.xml's `<errors>` section (deduplicated).  [default: no-execution-messages]
 
 
 - `-o, --output PATH`
