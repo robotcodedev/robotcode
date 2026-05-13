@@ -105,7 +105,10 @@ class RobotCodeFormatter(logging.Formatter):
     "--color / --no-color",
     "color",
     default=None,
-    help="Whether or not to display colored output (default is auto-detection).",
+    help=(
+        "Force or disable colored output. Default (no flag): auto-detect — colors only when stdout is a TTY,"
+        " disabled if `NO_COLOR` is set, forced if `FORCE_COLOR` is set."
+    ),
     show_envvar=True,
 )
 @click.option(

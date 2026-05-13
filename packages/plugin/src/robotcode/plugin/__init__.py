@@ -115,12 +115,35 @@ class Application:
     def show_diagnostics(self, value: bool) -> None:
         self._show_diagnostics = value
 
+    def color_for(self, file: Optional[IO[Any]] = None, err: bool = False) -> bool:
+        """Resolve the color decision for a specific output destination.
+
+        Honors the explicit ``--color`` / ``--no-color`` choice first, then the
+        ``FORCE_COLOR`` / ``NO_COLOR`` conventions (https://no-color.org/), and
+        finally the TTY status of the relevant stream — which may be stdout,
+        stderr, or an explicit ``file=``.  This matters because stdout and
+        stderr can be redirected independently: piping ``stdout`` into a file
+        should not disable colour on warnings written to ``stderr`` if that
+        is still attached to a terminal.
+        """
+        pref = self.config.colored_output
+        if pref == ColoredOutput.NO:
+            return False
+        if pref == ColoredOutput.YES:
+            return True
+        if os.environ.get("FORCE_COLOR"):
+            return True
+        if os.environ.get("NO_COLOR"):
+            return False
+        stream = file if file is not None else (sys.stderr if err else sys.stdout)
+        isatty = getattr(stream, "isatty", None)
+        return bool(isatty()) if callable(isatty) else False
+
     @property
     def colored(self) -> bool:
-        return self.config.colored_output in [
-            ColoredOutput.AUTO,
-            ColoredOutput.YES,
-        ]
+        """Shortcut for the color decision on stdout — used for branching
+        between rich and plain rendering paths that always target stdout."""
+        return self.color_for()
 
     @property
     def has_rich(self) -> bool:
@@ -139,12 +162,13 @@ class Application:
         err: Optional[bool] = True,
     ) -> None:
         if self.config.verbose:
+            err_resolved = err if err is not None else True
             click.secho(
                 message() if callable(message) else message,
                 file=file,
                 nl=nl if nl is not None else True,
-                err=err if err is not None else True,
-                color=self.colored,
+                err=err_resolved,
+                color=self.color_for(file=file, err=err_resolved),
                 fg="bright_black",
             )
 
@@ -167,7 +191,7 @@ class Application:
             show_percent=show_percent,
             show_pos=show_pos,
             file=sys.stderr,
-            color=self.colored,
+            color=self.color_for(file=sys.stderr),
         )
 
     def warning(
@@ -177,12 +201,13 @@ class Application:
         nl: Optional[bool] = True,
         err: Optional[bool] = True,
     ) -> None:
+        err_resolved = err if err is not None else True
         click.secho(
             f"[ {click.style('WARN', fg='yellow')} ] {message() if callable(message) else message}",
             file=file,
             nl=nl if nl is not None else True,
-            err=err if err is not None else True,
-            color=self.colored,
+            err=err_resolved,
+            color=self.color_for(file=file, err=err_resolved),
             fg="bright_yellow",
         )
 
@@ -193,12 +218,13 @@ class Application:
         nl: Optional[bool] = True,
         err: Optional[bool] = True,
     ) -> None:
+        err_resolved = err if err is not None else True
         click.secho(
             f"[ {click.style('ERROR', fg='red')} ] {message() if callable(message) else message}",
             file=file,
             nl=nl if nl is not None else True,
-            err=err if err is not None else True,
-            color=self.colored,
+            err=err_resolved,
+            color=self.color_for(file=file, err=err_resolved),
         )
 
     def print_data(
@@ -267,7 +293,7 @@ class Application:
             message() if callable(message) else message,
             file=file,
             nl=nl,
-            color=self.colored,
+            color=self.color_for(file=file, err=err),
             err=err,
         )
 
