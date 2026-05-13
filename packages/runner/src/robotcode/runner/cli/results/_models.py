@@ -154,3 +154,4 @@ class LogResult(CamelSnakeMixin):
     elapsed_seconds: Optional[float] = None
     start_time: Optional[str] = None
     end_time: Optional[str] = None
+    filters_applied: Optional[Dict[str, List[str]]] = None

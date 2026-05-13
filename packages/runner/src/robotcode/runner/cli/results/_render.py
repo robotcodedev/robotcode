@@ -299,7 +299,7 @@ def render_log(
     *,
     full_paths: bool = False,
     level: str = "INFO",
-    with_keywords: bool = True,
+    max_depth: int = 0,
     show_timestamps: bool = False,
     show_timing: bool = False,
 ) -> Iterable[str]:
@@ -334,22 +334,16 @@ def render_log(
                 yield (click.style(line, fg=color, italic=True) if color else click.style(line, italic=True))
                 yield os.linesep
 
-        if with_keywords:
-            yield from _render_entries(
-                t.body or [],
-                depth=1,
-                threshold=threshold,
-                show_timestamps=show_timestamps,
-                show_timing=show_timing,
-                full_paths=full_paths,
-            )
-        else:
-            yield from _render_messages_flat(
-                t.body or [],
-                threshold=threshold,
-                show_timestamps=show_timestamps,
-                full_paths=full_paths,
-            )
+        yield from _render_entries(
+            t.body or [],
+            depth=1,
+            kw_depth=0,
+            max_depth=max_depth,
+            threshold=threshold,
+            show_timestamps=show_timestamps,
+            show_timing=show_timing,
+            full_paths=full_paths,
+        )
 
     if data.execution_messages:
         if data.tests:
@@ -389,10 +383,15 @@ def render_log(
             yield from _format_stats_row(label + ":", value, width=width)
 
 
+_KEYWORD_ENTRY_TYPES = {"KEYWORD", "SETUP", "TEARDOWN"}
+
+
 def _render_entries(
     entries: List[LogEntry],
     *,
     depth: int,
+    kw_depth: int,
+    max_depth: int,
     threshold: int,
     show_timestamps: bool,
     show_timing: bool,
@@ -403,6 +402,8 @@ def _render_entries(
         yield from _render_entry(
             entry,
             depth=depth,
+            kw_depth=kw_depth,
+            max_depth=max_depth,
             threshold=threshold,
             show_timestamps=show_timestamps,
             show_timing=show_timing,
@@ -414,6 +415,8 @@ def _render_entry(
     entry: LogEntry,
     *,
     depth: int,
+    kw_depth: int,
+    max_depth: int,
     threshold: int,
     show_timestamps: bool,
     show_timing: bool,
@@ -458,15 +461,43 @@ def _render_entry(
             yield (click.style(line, fg=color, italic=True) if color else click.style(line, italic=True))
             yield os.linesep
 
-    if entry.body:
-        yield from _render_entries(
-            entry.body,
-            depth=depth + 1,
-            threshold=threshold,
-            show_timestamps=show_timestamps,
-            show_timing=show_timing,
-            full_paths=full_paths,
-        )
+    if not entry.body:
+        return
+
+    is_call = etype in _KEYWORD_ENTRY_TYPES
+    new_kw_depth = kw_depth + 1 if is_call else kw_depth
+    if is_call and max_depth > 0 and new_kw_depth >= max_depth:
+        hidden = _count_hidden(entry.body)
+        if hidden:
+            yield indent + "  "
+            yield click.style(
+                f"… {hidden} hidden (--max-depth {max_depth})",
+                dim=True,
+                italic=True,
+            )
+            yield os.linesep
+        return
+
+    yield from _render_entries(
+        entry.body,
+        depth=depth + 1,
+        kw_depth=new_kw_depth,
+        max_depth=max_depth,
+        threshold=threshold,
+        show_timestamps=show_timestamps,
+        show_timing=show_timing,
+        full_paths=full_paths,
+    )
+
+
+def _count_hidden(entries: List[LogEntry]) -> int:
+    """Total number of body items (keywords + messages + control structures) recursively."""
+    total = 0
+    for e in entries:
+        total += 1
+        if e.body:
+            total += _count_hidden(e.body)
+    return total
 
 
 def _format_entry_header(entry: LogEntry, *, show_timing: bool = False) -> Iterable[str]:
@@ -566,51 +597,6 @@ def _format_entry_header(entry: LogEntry, *, show_timing: bool = False) -> Itera
         yield _status_inline(entry.status)
     if (entry.elapsed_seconds is not None and entry.elapsed_seconds > 0) or (show_timing and entry.start_time):
         yield _timing_suffix(entry.elapsed_seconds, entry.start_time, show_timing=show_timing)
-
-
-def _render_messages_flat(
-    entries: List[LogEntry],
-    *,
-    threshold: int,
-    show_timestamps: bool,
-    full_paths: bool,
-    path: Optional[List[str]] = None,
-) -> Iterable[str]:
-    """Recursively yield only MESSAGE entries, preserving their keyword path."""
-    path = path or []
-    for entry in entries:
-        if entry.type == "MESSAGE":
-            lvl = (entry.level or "INFO").upper()
-            if _LEVEL_ORDER.get(lvl, 2) < threshold:
-                continue
-            yield "  "
-            yield _level_badge(lvl)
-            if show_timestamps and entry.timestamp:
-                yield f" [{entry.timestamp}]"
-            yield " "
-            yield (entry.text or "").splitlines()[0] if entry.text else ""
-            if path:
-                yield click.style("  (in " + " → ".join(path) + ")", dim=True)
-            yield os.linesep
-            if entry.artifacts:
-                yield from _render_artifacts(entry.artifacts, indent="    ", full_paths=full_paths)
-            continue
-
-        new_path = [*path, _short_label(entry)] if entry.body else path
-        if entry.body:
-            yield from _render_messages_flat(
-                entry.body,
-                threshold=threshold,
-                show_timestamps=show_timestamps,
-                full_paths=full_paths,
-                path=new_path,
-            )
-
-
-def _short_label(entry: LogEntry) -> str:
-    if entry.type in ("KEYWORD", "SETUP", "TEARDOWN") and entry.name:
-        return entry.name
-    return entry.type
 
 
 def _artefact_display(ref: ArtifactRef, *, full_paths: bool) -> str:

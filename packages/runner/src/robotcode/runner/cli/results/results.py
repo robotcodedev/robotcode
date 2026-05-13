@@ -15,7 +15,6 @@ All subcommands respect the global `-f/--format` option:
 
 import re
 import shutil
-from fnmatch import fnmatchcase
 from pathlib import Path
 from typing import Any, Callable, Dict, Iterable, Iterator, List, Optional, Tuple
 
@@ -337,7 +336,7 @@ def show(
 
 
 @results.command()
-@click.argument("test_patterns", nargs=-1)
+@add_options(*RESULT_FILTER_OPTIONS, OUTPUT_OPTION)
 @click.option(
     "--level",
     type=click.Choice(["TRACE", "DEBUG", "INFO", "WARN", "ERROR", "FAIL"], case_sensitive=False),
@@ -346,11 +345,17 @@ def show(
     help="Minimum message level to include.",
 )
 @click.option(
-    "--keywords/--no-keywords",
-    "with_keywords",
-    default=True,
+    "--max-depth",
+    "max_depth",
+    type=click.IntRange(min=0),
+    default=0,
     show_default=True,
-    help="With --keywords (default), group messages under their keyword tree.",
+    metavar="N",
+    help=(
+        "Limit nested keyword calls to N levels (0 = unlimited). When a "
+        "keyword sits below the limit, its body is collapsed and the "
+        "hidden child count is shown instead."
+    ),
 )
 @click.option(
     "--extract",
@@ -396,71 +401,65 @@ def show(
     ),
 )
 @click.option(
-    "--failures-only/--no-failures-only",
-    "failures_only",
-    default=False,
-    show_default=True,
-    help="Only show tests with status FAIL.",
-)
-@click.option(
     "--execution-messages/--no-execution-messages",
     "show_execution_messages",
     default=False,
     show_default=True,
     help=("Also show parser/discovery messages from output.xml's `<errors>` section (deduplicated)."),
 )
-@add_options(OUTPUT_OPTION)
 @pass_application
 def log(
     app: Application,
-    test_patterns: Tuple[str, ...],
+    status_filters: Tuple[str, ...],
+    include_tags: Tuple[str, ...],
+    exclude_tags: Tuple[str, ...],
+    suite_globs: Tuple[str, ...],
+    test_globs: Tuple[str, ...],
+    output_file: Optional[Path],
     level: str,
-    with_keywords: bool,
+    max_depth: int,
     extract_dir: Optional[Path],
     full_paths: bool,
     show_timestamps: bool,
     show_timing: bool,
     raw_html: bool,
-    failures_only: bool,
     show_execution_messages: bool,
-    output_file: Optional[Path],
 ) -> None:
     """\
-    Render the full per-test execution log, like `report.html` in plain text.
+    Show the execution log of each test: keywords, control flow and messages.
 
-    For every matching test, prints a faithful tree of keyword calls,
-    control structures (FOR / WHILE / IF / TRY / VAR / RETURN / ...) and
-    log messages — nothing is collapsed. `TEST_PATTERN` positionals are
-    full-name globs (omit for all tests). With `--extract DIR`,
-    referenced screenshots and base64 blobs are written into per-test
-    subdirectories.
+    Filter the same way as `show` — by status, tag, suite, or test name.
+    Without filters, all tests are included. Use `--max-depth` to collapse
+    deeply nested keyword calls.
 
     \b
     Examples:
     ```
     robotcode results log
-    robotcode results log --failures-only
-    robotcode results log "*Login*"
-    robotcode results log --level WARN --no-keywords
-    robotcode results log "*Login*" --extract /tmp/artefacts
+    robotcode results log --status fail
+    robotcode results log -t "*Login*"
+    robotcode results log --level WARN
+    robotcode results log --max-depth 2
+    robotcode results log -i smoke --extract /tmp/artefacts
     robotcode results log --execution-messages
     ```
-
-    HTML conversion quality is best with `pip install robotcode-runner[html]`.
     """
     profile, root_folder = _resolve_profile(app)
     with app.chdir(root_folder):
         path = _resolve_output_file(app, profile, output_file)
         execution = _load_execution_result(path)
 
+        if include_tags or exclude_tags or suite_globs or test_globs:
+            _apply_tree_filters(execution.suite, include_tags, exclude_tags, suite_globs, test_globs)
+
+        wanted = _normalise_statuses(status_filters)
+
         base_dir = path.parent
         matched: List[LogTest] = []
         for test in _iter_all_tests(execution.suite):
+            if wanted and test.status not in wanted:
+                continue
             full_name = _get_full_name(test)
-            if test_patterns and not _match_any_glob(full_name, test_patterns):
-                continue
-            if failures_only and test.status != "FAIL":
-                continue
             body, artefacts = _collect_test_body(test, level=level.upper(), base_dir=base_dir, raw_html=raw_html)
             src = getattr(test, "source", None)
             src_str = str(src) if src else None
@@ -490,6 +489,7 @@ def log(
             extract_abs.mkdir(parents=True, exist_ok=True)
             extracted_count = _extract_artifacts(matched, target=extract_abs)
 
+        filters_active = bool(status_filters or include_tags or exclude_tags or suite_globs or test_globs)
         data = LogResult(
             file=_make_file_info(path),
             tests=matched,
@@ -499,6 +499,9 @@ def log(
             elapsed_seconds=_elapsed_seconds(execution.suite),
             start_time=_iso(getattr(execution.suite, "start_time", None)),
             end_time=_iso(getattr(execution.suite, "end_time", None)),
+            filters_applied=_filters_dict(status_filters, include_tags, exclude_tags, suite_globs, test_globs)
+            if filters_active
+            else None,
         )
 
         if app.config.output_format in (None, OutputFormat.TEXT):
@@ -507,7 +510,7 @@ def log(
                     data,
                     full_paths=full_paths,
                     level=level,
-                    with_keywords=with_keywords,
+                    max_depth=max_depth,
                     show_timestamps=show_timestamps,
                     show_timing=show_timing,
                 )
@@ -899,13 +902,6 @@ def _collect_execution_messages(errors: Any, *, raw_html: bool = False) -> List[
             text = _html.html_to_markdown(text, base_dir=Path("."), on_artifact=lambda _r: None)
         out.append(LogEntry(type="MESSAGE", level=level, timestamp=ts, text=text, is_html=is_html))
     return out
-
-
-def _match_any_glob(name: str, patterns: Tuple[str, ...]) -> bool:
-    for p in patterns:
-        if fnmatchcase(name, p):
-            return True
-    return False
 
 
 _LEVEL_ORDER = {"TRACE": 0, "DEBUG": 1, "INFO": 2, "WARN": 3, "ERROR": 4, "FAIL": 5}
