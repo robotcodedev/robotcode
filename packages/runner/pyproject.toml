@@ -35,6 +35,9 @@ dependencies = [
   "robotcode",
 ]
 
+[project.optional-dependencies]
+html = ["html-to-markdown>=2.0"]
+
 [project.entry-points.robotcode]
 runner = "robotcode.runner.hooks"
 

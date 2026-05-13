@@ -117,7 +117,7 @@ robotcode [OPTIONS] COMMAND [ARGS]...
 
 - `--pager / --no-pager`
 
-   Whether or not use a pager to display long text or data.  [env var: ROBOTCODE_PAGER]
+   Force or disable the pager. Default (no flag): auto-page when the rendered output exceeds the terminal height.  [env var: ROBOTCODE_PAGER]
 
 
 - `-v, --verbose`
@@ -215,6 +215,10 @@ robotcode [OPTIONS] COMMAND [ARGS]...
 - [`repl-server`](#repl-server)
 
    Start a REPL server, client can connect to the server and run the REPL scripts.
+
+- [`results`](#results)
+
+   Inspect a finished run's `output.xml` / `output.json` — counts, failures, and per-test execution tree, without re-running.
 
 - [`robot`](#robot)
 
@@ -829,12 +833,12 @@ robotcode debug [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
 
 - `--tcp [<ADDRESS>:]<PORT>`
 
-   Run in `tcp` server mode and listen at the given port. (Equivalent to `--mode tcp --port <port>`) *NOTE:* This option is mutually exclusive with options: port, mode, pipe-name, pipe-server.
+   Run in `tcp` server mode and listen at the given port. (Equivalent to `--mode tcp --port <port>`) *NOTE:* This option is mutually exclusive with options: pipe-server, port, mode, pipe-name.
 
 
 - `--pipe-server NAME`
 
-   Run in `pipe-server` mode and listen at the given pipe name. (Equivalent to `--mode pipe-server --pipe-name <name>`) *NOTE:* This option is mutually exclusive with options: mode, pipe-name, port, tcp, bind.
+   Run in `pipe-server` mode and listen at the given pipe name. (Equivalent to `--mode pipe-server --pipe-name <name>`) *NOTE:* This option is mutually exclusive with options: mode, tcp, pipe-name, bind, port.
 
 
 - `--mode [tcp|pipe_server]`
@@ -844,17 +848,17 @@ robotcode debug [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
 
 - `--port PORT`
 
-   The port to listen on or connect to. (Only valid for `tcp` and `socket mode`) *NOTE:* This option is mutually exclusive with options: pipe-server, pipe-name.  [env var: ROBOTCODE_PORT; default: 6612; 1<=x<=65535]
+   The port to listen on or connect to. (Only valid for `tcp` and `socket mode`) *NOTE:* This option is mutually exclusive with options: pipe-name, pipe-server.  [env var: ROBOTCODE_PORT; default: 6612; 1<=x<=65535]
 
 
 - `--bind ADDRESS *`
 
-   Specify alternate bind address. If no address is specified `localhost` is used. (Only valid for tcp and socket mode) *NOTE:* This option is mutually exclusive with options: pipe-server, pipe-name.  [env var: ROBOTCODE_BIND; default: 127.0.0.1]
+   Specify alternate bind address. If no address is specified `localhost` is used. (Only valid for tcp and socket mode) *NOTE:* This option is mutually exclusive with options: pipe-name, pipe-server.  [env var: ROBOTCODE_BIND; default: 127.0.0.1]
 
 
 - `--pipe-name NAME`
 
-   The pipe to listen on or connect to. (Only valid in `pipe` and `pipe-server` mode) *NOTE:* This option is mutually exclusive with options: tcp, bind, pipe-server, port.  [env var: ROBOTCODE_PIPE_NAME]
+   The pipe to listen on or connect to. (Only valid in `pipe` and `pipe-server` mode) *NOTE:* This option is mutually exclusive with options: bind, tcp, port, pipe-server.  [env var: ROBOTCODE_PIPE_NAME]
 
 
 - `--version`
@@ -881,47 +885,47 @@ robotcode debug-launch [OPTIONS]
 **Options:**
 - `--stdio`
 
-   Run in `stdio` mode. (Equivalent to `--mode stdio`) *NOTE:* This option is mutually exclusive with options: mode, pipe-name, pipe-server, port, pipe, tcp, bind, socket.  [env var: ROBOTCODE_STDIO]
+   Run in `stdio` mode. (Equivalent to `--mode stdio`) *NOTE:* This option is mutually exclusive with options: pipe, mode, pipe-server, tcp, pipe-name, bind, socket, port.  [env var: ROBOTCODE_STDIO]
 
 
 - `--tcp [<ADDRESS>:]<PORT>`
 
-   Run in `tcp` server mode and listen at the given port. (Equivalent to `--mode tcp --port <port>`) *NOTE:* This option is mutually exclusive with options: mode, pipe-name, pipe-server, port, pipe, stdio, socket.
+   Run in `tcp` server mode and listen at the given port. (Equivalent to `--mode tcp --port <port>`) *NOTE:* This option is mutually exclusive with options: pipe, mode, pipe-server, pipe-name, socket, stdio, port.
 
 
 - `--socket [<ADDRESS>:]<PORT>`
 
-   Run in `socket` mode and connect to the given port. (Equivalent to `--mode socket --port <port>`) *NOTE:* This option is mutually exclusive with options: mode, pipe-name, pipe-server, port, pipe, stdio, tcp.
+   Run in `socket` mode and connect to the given port. (Equivalent to `--mode socket --port <port>`) *NOTE:* This option is mutually exclusive with options: pipe, mode, pipe-server, tcp, pipe-name, stdio, port.
 
 
 - `--pipe NAME`
 
-   Run in `pipe` mode and connect to the given pipe name. (Equivalent to `--mode pipe --pipe-name <name>`) *NOTE:* This option is mutually exclusive with options: mode, pipe-name, pipe-server, port, stdio, tcp, bind, socket.
+   Run in `pipe` mode and connect to the given pipe name. (Equivalent to `--mode pipe --pipe-name <name>`) *NOTE:* This option is mutually exclusive with options: mode, pipe-server, tcp, pipe-name, bind, socket, stdio, port.
 
 
 - `--pipe-server NAME`
 
-   Run in `pipe-server` mode and listen at the given pipe name. (Equivalent to `--mode pipe-server --pipe-name <name>`) *NOTE:* This option is mutually exclusive with options: mode, pipe-name, port, pipe, stdio, tcp, bind, socket.
+   Run in `pipe-server` mode and listen at the given pipe name. (Equivalent to `--mode pipe-server --pipe-name <name>`) *NOTE:* This option is mutually exclusive with options: pipe, mode, tcp, pipe-name, bind, socket, stdio, port.
 
 
 - `--mode [stdio|tcp|socket|pipe|pipe_server]`
 
-   The mode to use for the debug launch server. *NOTE:* This option is mutually exclusive with options: pipe-server, stdio, pipe, tcp, socket.  [env var: ROBOTCODE_MODE; default: STDIO]
+   The mode to use for the debug launch server. *NOTE:* This option is mutually exclusive with options: pipe, pipe-server, tcp, socket, stdio.  [env var: ROBOTCODE_MODE; default: STDIO]
 
 
 - `--port PORT`
 
-   The port to listen on or connect to. (Only valid for `tcp` and `socket mode`) *NOTE:* This option is mutually exclusive with options: pipe, pipe-server, pipe-name.  [env var: ROBOTCODE_PORT; default: 6611; 1<=x<=65535]
+   The port to listen on or connect to. (Only valid for `tcp` and `socket mode`) *NOTE:* This option is mutually exclusive with options: pipe, pipe-name, pipe-server.  [env var: ROBOTCODE_PORT; default: 6611; 1<=x<=65535]
 
 
 - `--bind ADDRESS *`
 
-   Specify alternate bind address. If no address is specified `localhost` is used. (Only valid for tcp and socket mode) *NOTE:* This option is mutually exclusive with options: pipe, pipe-server, pipe-name.  [env var: ROBOTCODE_BIND; default: 127.0.0.1]
+   Specify alternate bind address. If no address is specified `localhost` is used. (Only valid for tcp and socket mode) *NOTE:* This option is mutually exclusive with options: pipe, pipe-name, pipe-server.  [env var: ROBOTCODE_BIND; default: 127.0.0.1]
 
 
 - `--pipe-name NAME`
 
-   The pipe to listen on or connect to. (Only valid in `pipe` and `pipe-server` mode) *NOTE:* This option is mutually exclusive with options: pipe-server, port, pipe, stdio, tcp, bind, socket.  [env var: ROBOTCODE_PIPE_NAME]
+   The pipe to listen on or connect to. (Only valid in `pipe` and `pipe-server` mode) *NOTE:* This option is mutually exclusive with options: pipe, pipe-server, tcp, bind, socket, stdio, port.  [env var: ROBOTCODE_PIPE_NAME]
 
 
 - `--version`
@@ -1026,6 +1030,11 @@ robotcode discover all [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
    Show the tags that are present.  [default: tags]
 
 
+- `-ebl, --exclude-by-longname TEXT *`
+
+   Excludes tests/tasks or suites by longname.
+
+
 - `-bl, --by-longname TEXT *`
 
    Select tests/tasks or suites by longname.
@@ -1034,11 +1043,6 @@ robotcode discover all [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
 - `--version`
 
    Show the version and exit.
-
-
-- `-ebl, --exclude-by-longname TEXT *`
-
-   Excludes tests/tasks or suites by longname.
 
 
 - `--full-paths / --no-full-paths`
@@ -1125,6 +1129,11 @@ robotcode discover suites [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
 
 
 **Options:**
+- `-ebl, --exclude-by-longname TEXT *`
+
+   Excludes tests/tasks or suites by longname.
+
+
 - `-bl, --by-longname TEXT *`
 
    Select tests/tasks or suites by longname.
@@ -1133,11 +1142,6 @@ robotcode discover suites [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
 - `--version`
 
    Show the version and exit.
-
-
-- `-ebl, --exclude-by-longname TEXT *`
-
-   Excludes tests/tasks or suites by longname.
 
 
 - `--full-paths / --no-full-paths`
@@ -1197,6 +1201,11 @@ robotcode discover tags [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
    Show full paths instead of releative.  [default: no-full-paths]
 
 
+- `-ebl, --exclude-by-longname TEXT *`
+
+   Excludes tests/tasks or suites by longname.
+
+
 - `-bl, --by-longname TEXT *`
 
    Select tests/tasks or suites by longname.
@@ -1205,11 +1214,6 @@ robotcode discover tags [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
 - `--version`
 
    Show the version and exit.
-
-
-- `-ebl, --exclude-by-longname TEXT *`
-
-   Excludes tests/tasks or suites by longname.
 
 
 - `--help`
@@ -1254,6 +1258,11 @@ robotcode discover tasks [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
    Show full paths instead of releative.  [default: no-full-paths]
 
 
+- `-ebl, --exclude-by-longname TEXT *`
+
+   Excludes tests/tasks or suites by longname.
+
+
 - `-bl, --by-longname TEXT *`
 
    Select tests/tasks or suites by longname.
@@ -1262,11 +1271,6 @@ robotcode discover tasks [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
 - `--version`
 
    Show the version and exit.
-
-
-- `-ebl, --exclude-by-longname TEXT *`
-
-   Excludes tests/tasks or suites by longname.
 
 
 - `--help`
@@ -1311,6 +1315,11 @@ robotcode discover tests [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
    Show full paths instead of releative.  [default: no-full-paths]
 
 
+- `-ebl, --exclude-by-longname TEXT *`
+
+   Excludes tests/tasks or suites by longname.
+
+
 - `-bl, --by-longname TEXT *`
 
    Select tests/tasks or suites by longname.
@@ -1319,11 +1328,6 @@ robotcode discover tests [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
 - `--version`
 
    Show the version and exit.
-
-
-- `-ebl, --exclude-by-longname TEXT *`
-
-   Excludes tests/tasks or suites by longname.
 
 
 - `--help`
@@ -1351,27 +1355,27 @@ robotcode language-server [OPTIONS] [PATHS]...
 **Options:**
 - `--stdio`
 
-   Run in `stdio` mode. (Equivalent to `--mode stdio`) *NOTE:* This option is mutually exclusive with options: mode, pipe-name, port, pipe, tcp, bind, socket.  [env var: ROBOTCODE_STDIO]
+   Run in `stdio` mode. (Equivalent to `--mode stdio`) *NOTE:* This option is mutually exclusive with options: pipe, mode, tcp, pipe-name, bind, socket, port.  [env var: ROBOTCODE_STDIO]
 
 
 - `--tcp [<ADDRESS>:]<PORT>`
 
-   Run in `tcp` server mode and listen at the given port. (Equivalent to `--mode tcp --port <port>`) *NOTE:* This option is mutually exclusive with options: mode, pipe-name, port, pipe, stdio, socket.
+   Run in `tcp` server mode and listen at the given port. (Equivalent to `--mode tcp --port <port>`) *NOTE:* This option is mutually exclusive with options: pipe, mode, pipe-name, socket, stdio, port.
 
 
 - `--socket [<ADDRESS>:]<PORT>`
 
-   Run in `socket` mode and connect to the given port. (Equivalent to `--mode socket --port <port>`) *NOTE:* This option is mutually exclusive with options: mode, pipe-name, port, pipe, stdio, tcp.
+   Run in `socket` mode and connect to the given port. (Equivalent to `--mode socket --port <port>`) *NOTE:* This option is mutually exclusive with options: pipe, mode, tcp, pipe-name, stdio, port.
 
 
 - `--pipe NAME`
 
-   Run in `pipe` mode and connect to the given pipe name. (Equivalent to `--mode pipe --pipe-name <name>`) *NOTE:* This option is mutually exclusive with options: mode, pipe-name, port, stdio, tcp, bind, socket.
+   Run in `pipe` mode and connect to the given pipe name. (Equivalent to `--mode pipe --pipe-name <name>`) *NOTE:* This option is mutually exclusive with options: mode, tcp, pipe-name, bind, socket, stdio, port.
 
 
-- `--mode [tcp|stdio|pipe|socket]`
+- `--mode [pipe|tcp|stdio|socket]`
 
-   The mode to use for the debug launch server. *NOTE:* This option is mutually exclusive with options: tcp, stdio, pipe, socket.  [env var: ROBOTCODE_MODE; default: STDIO]
+   The mode to use for the debug launch server. *NOTE:* This option is mutually exclusive with options: pipe, tcp, stdio, socket.  [env var: ROBOTCODE_MODE; default: STDIO]
 
 
 - `--port PORT`
@@ -1386,7 +1390,7 @@ robotcode language-server [OPTIONS] [PATHS]...
 
 - `--pipe-name NAME`
 
-   The pipe to listen on or connect to. (Only valid in `pipe` and `pipe-server` mode) *NOTE:* This option is mutually exclusive with options: stdio, pipe, port, tcp, bind, socket.  [env var: ROBOTCODE_PIPE_NAME]
+   The pipe to listen on or connect to. (Only valid in `pipe` and `pipe-server` mode) *NOTE:* This option is mutually exclusive with options: pipe, tcp, bind, socket, stdio, port.  [env var: ROBOTCODE_PIPE_NAME]
 
 
 - `--version`
@@ -1628,47 +1632,47 @@ robotcode repl-server [OPTIONS] [FILES]...
 **Options:**
 - `--stdio`
 
-   Run in `stdio` mode. (Equivalent to `--mode stdio`) *NOTE:* This option is mutually exclusive with options: mode, pipe-name, pipe-server, port, pipe, tcp, bind, socket.  [env var: ROBOTCODE_STDIO]
+   Run in `stdio` mode. (Equivalent to `--mode stdio`) *NOTE:* This option is mutually exclusive with options: pipe, mode, pipe-server, tcp, pipe-name, bind, socket, port.  [env var: ROBOTCODE_STDIO]
 
 
 - `--tcp [<ADDRESS>:]<PORT>`
 
-   Run in `tcp` server mode and listen at the given port. (Equivalent to `--mode tcp --port <port>`) *NOTE:* This option is mutually exclusive with options: mode, pipe-name, pipe-server, port, pipe, stdio, socket.
+   Run in `tcp` server mode and listen at the given port. (Equivalent to `--mode tcp --port <port>`) *NOTE:* This option is mutually exclusive with options: pipe, mode, pipe-server, pipe-name, socket, stdio, port.
 
 
 - `--socket [<ADDRESS>:]<PORT>`
 
-   Run in `socket` mode and connect to the given port. (Equivalent to `--mode socket --port <port>`) *NOTE:* This option is mutually exclusive with options: mode, pipe-name, pipe-server, port, pipe, stdio, tcp.
+   Run in `socket` mode and connect to the given port. (Equivalent to `--mode socket --port <port>`) *NOTE:* This option is mutually exclusive with options: pipe, mode, pipe-server, tcp, pipe-name, stdio, port.
 
 
 - `--pipe NAME`
 
-   Run in `pipe` mode and connect to the given pipe name. (Equivalent to `--mode pipe --pipe-name <name>`) *NOTE:* This option is mutually exclusive with options: mode, pipe-name, pipe-server, port, stdio, tcp, bind, socket.
+   Run in `pipe` mode and connect to the given pipe name. (Equivalent to `--mode pipe --pipe-name <name>`) *NOTE:* This option is mutually exclusive with options: mode, pipe-server, tcp, pipe-name, bind, socket, stdio, port.
 
 
 - `--pipe-server NAME`
 
-   Run in `pipe-server` mode and listen at the given pipe name. (Equivalent to `--mode pipe-server --pipe-name <name>`) *NOTE:* This option is mutually exclusive with options: mode, pipe-name, port, pipe, stdio, tcp, bind, socket.
+   Run in `pipe-server` mode and listen at the given pipe name. (Equivalent to `--mode pipe-server --pipe-name <name>`) *NOTE:* This option is mutually exclusive with options: pipe, mode, tcp, pipe-name, bind, socket, stdio, port.
 
 
 - `--mode [stdio|tcp|socket|pipe|pipe_server]`
 
-   The mode to use for the debug launch server. *NOTE:* This option is mutually exclusive with options: pipe-server, stdio, pipe, tcp, socket.  [env var: ROBOTCODE_MODE; default: STDIO]
+   The mode to use for the debug launch server. *NOTE:* This option is mutually exclusive with options: pipe, pipe-server, tcp, socket, stdio.  [env var: ROBOTCODE_MODE; default: STDIO]
 
 
 - `--port PORT`
 
-   The port to listen on or connect to. (Only valid for `tcp` and `socket mode`) *NOTE:* This option is mutually exclusive with options: pipe, pipe-server, pipe-name.  [env var: ROBOTCODE_PORT; default: 6601; 1<=x<=65535]
+   The port to listen on or connect to. (Only valid for `tcp` and `socket mode`) *NOTE:* This option is mutually exclusive with options: pipe, pipe-name, pipe-server.  [env var: ROBOTCODE_PORT; default: 6601; 1<=x<=65535]
 
 
 - `--bind ADDRESS *`
 
-   Specify alternate bind address. If no address is specified `localhost` is used. (Only valid for tcp and socket mode) *NOTE:* This option is mutually exclusive with options: pipe, pipe-server, pipe-name.  [env var: ROBOTCODE_BIND; default: 127.0.0.1]
+   Specify alternate bind address. If no address is specified `localhost` is used. (Only valid for tcp and socket mode) *NOTE:* This option is mutually exclusive with options: pipe, pipe-name, pipe-server.  [env var: ROBOTCODE_BIND; default: 127.0.0.1]
 
 
 - `--pipe-name NAME`
 
-   The pipe to listen on or connect to. (Only valid in `pipe` and `pipe-server` mode) *NOTE:* This option is mutually exclusive with options: pipe-server, port, pipe, stdio, tcp, bind, socket.  [env var: ROBOTCODE_PIPE_NAME]
+   The pipe to listen on or connect to. (Only valid in `pipe` and `pipe-server` mode) *NOTE:* This option is mutually exclusive with options: pipe, pipe-server, tcp, bind, socket, stdio, port.  [env var: ROBOTCODE_PIPE_NAME]
 
 
 - `-v, --variable name:value *`
@@ -1726,6 +1730,292 @@ robotcode repl-server [OPTIONS] [FILES]...
    Show this message and exit.
 
 
+#### results
+
+Inspect a finished run's `output.xml` / `output.json` — counts, failures,
+and per-test execution tree, without re-running.
+
+The result file is auto-discovered from the active profile's `output_dir` /
+`output` settings; override with `-o/--output PATH`. Use `-f json` (or
+`toml`) for a structured payload.
+
+Examples:
+```
+robotcode results summary
+robotcode results summary --failures
+robotcode results show --status fail
+robotcode results log "*Login*"
+robotcode --format json results summary
+```
+
+
+**Usage:**
+```text
+robotcode results [OPTIONS] COMMAND [ARGS]...
+```
+
+
+**Options:**
+- `--help`
+
+   Show this message and exit.
+
+
+**Commands:**
+
+- [`log`](#log)
+
+   Render the full per-test execution log, like `report.html` in plain text.
+
+- [`show`](#show)
+
+   List individual tests with status, source and failure message.
+
+- [`summary`](#summary)
+
+   Print headline counts and overall status for a finished run.
+
+
+##### log
+
+Render the full per-test execution log, like `report.html` in plain text.
+
+For every matching test, prints a faithful tree of keyword calls, control
+structures (FOR / WHILE / IF / TRY / VAR / RETURN / ...) and log messages —
+nothing is collapsed. `TEST_PATTERN` positionals are full-name globs (omit
+for all tests). With `--extract DIR`, referenced screenshots and base64
+blobs are written into per-test subdirectories.
+
+Examples:
+```
+robotcode results log
+robotcode results log --failures-only
+robotcode results log "*Login*"
+robotcode results log --level WARN --no-keywords
+robotcode results log "*Login*" --extract /tmp/artefacts
+robotcode results log --execution-messages
+```
+
+HTML conversion quality is best with `pip install robotcode-runner[html]`.
+
+
+**Usage:**
+```text
+robotcode results log [OPTIONS] [TEST_PATTERNS]...
+```
+
+
+**Options:**
+- `--level [trace|debug|info|warn|error|fail]`
+
+   Minimum message level to include.  [default: INFO]
+
+
+- `--keywords / --no-keywords`
+
+   With --keywords (default), group messages under their keyword tree.  [default: keywords]
+
+
+- `--extract DIRECTORY`
+
+   Copy/decode referenced artefacts into this directory. Each test's artefacts go into a per-test subdirectory.
+
+
+- `--full-paths / --no-full-paths`
+
+   [default: no-full-paths]
+
+
+- `--timestamps / --no-timestamps`
+
+   Show timestamps next to log messages.  [default: no-timestamps]
+
+
+- `--timing / --no-timing`
+
+   Show start time per test/keyword and append start / end / elapsed of the run as a footer. Use `--no-timing` to suppress.  [default: timing]
+
+
+- `--raw-html / --no-raw-html`
+
+   Emit HTML messages as raw markup instead of converting them to plain text. Useful when the HTML is the payload of interest. Embedded base64 images and external file refs are NOT extracted in raw mode.  [default: no-raw-html]
+
+
+- `--failures-only / --no-failures-only`
+
+   Only show tests with status FAIL.  [default: no-failures-only]
+
+
+- `--execution-messages / --no-execution-messages`
+
+   Also show parser/discovery messages from output.xml's <errors> section (deduplicated).  [default: no-execution-messages]
+
+
+- `-o, --output PATH`
+
+   Path to output.xml/output.json (Robot's `--output`). If omitted, auto-discovered from the active profile's `output_dir` + `output` settings (with timestamp glob fallback and ./output.xml as last resort). A directory may also be passed — then auto-discovery happens inside it.
+
+
+- `--help`
+
+   Show this message and exit.
+
+
+##### show
+
+List individual tests with status, source and failure message.
+
+One line per test: status badge, full name, `(path:line)` link, and the
+first line of any failure/skip message.
+
+Examples:
+```
+robotcode results show
+robotcode results show --status fail
+robotcode results show --status fail --status skip --tags
+robotcode results show -i smoke -e wipANDnotready
+robotcode results show -s "MyProject.Login.*"
+robotcode results show --top 20
+```
+
+
+**Usage:**
+```text
+robotcode results show [OPTIONS]
+```
+
+
+**Options:**
+- `--status [pass|fail|skip|not-run] *`
+
+   Only include tests with one of these statuses. Repeat to add more (OR).
+
+
+- `-i, --include TAG_PATTERN *`
+
+   Include tests matching the tag pattern. Supports Robot's tag pattern syntax (AND, OR, NOT, *, ?). Repeat for additional patterns (OR-joined).
+
+
+- `-e, --exclude TAG_PATTERN *`
+
+   Exclude tests matching the tag pattern. Same syntax as --include.
+
+
+- `-s, --suite NAME *`
+
+   Only include tests inside the named suite (glob against full suite name).
+
+
+- `-t, --test, --task NAME *`
+
+   Only include tests whose name matches (glob against full test name). `--task` is an alias for `--test` (Robot's RPA terminology).
+
+
+- `-o, --output PATH`
+
+   Path to output.xml/output.json (Robot's `--output`). If omitted, auto-discovered from the active profile's `output_dir` + `output` settings (with timestamp glob fallback and ./output.xml as last resort). A directory may also be passed — then auto-discovery happens inside it.
+
+
+- `--top INTEGER RANGE`
+
+   Show at most N tests (0 = no limit, default).  [default: 0; x>=0]
+
+
+- `--message-chars INTEGER RANGE`
+
+   Truncate each message to N characters (0 = no truncation).  [default: 120; x>=0]
+
+
+- `--full-paths / --no-full-paths`
+
+   Show absolute source paths instead of paths relative to cwd.  [default: no-full-paths]
+
+
+- `--tags / --no-tags`
+
+   Append the tag list after each test.  [default: no-tags]
+
+
+- `--timing / --no-timing`
+
+   Show start time per test and append start / end / elapsed of the run to the statistics block. Use `--no-timing` to suppress.  [default: timing]
+
+
+- `--help`
+
+   Show this message and exit.
+
+
+##### summary
+
+Print headline counts and overall status for a finished run.
+
+Pass `--failures` to also list failed tests above the counts. Filter options
+narrow what is counted.
+
+Examples:
+```
+robotcode results summary
+robotcode results summary --failures
+robotcode results summary -i smoke --status fail
+robotcode --format json results summary
+```
+
+
+**Usage:**
+```text
+robotcode results summary [OPTIONS]
+```
+
+
+**Options:**
+- `--status [pass|fail|skip|not-run] *`
+
+   Only include tests with one of these statuses. Repeat to add more (OR).
+
+
+- `-i, --include TAG_PATTERN *`
+
+   Include tests matching the tag pattern. Supports Robot's tag pattern syntax (AND, OR, NOT, *, ?). Repeat for additional patterns (OR-joined).
+
+
+- `-e, --exclude TAG_PATTERN *`
+
+   Exclude tests matching the tag pattern. Same syntax as --include.
+
+
+- `-s, --suite NAME *`
+
+   Only include tests inside the named suite (glob against full suite name).
+
+
+- `-t, --test, --task NAME *`
+
+   Only include tests whose name matches (glob against full test name). `--task` is an alias for `--test` (Robot's RPA terminology).
+
+
+- `-o, --output PATH`
+
+   Path to output.xml/output.json (Robot's `--output`). If omitted, auto-discovered from the active profile's `output_dir` + `output` settings (with timestamp glob fallback and ./output.xml as last resort). A directory may also be passed — then auto-discovery happens inside it.
+
+
+- `--failures / --no-failures`
+
+   Include the list of failed tests (with messages) above the counts table.  [default: no-failures]
+
+
+- `--full-paths / --no-full-paths`
+
+   Show absolute source paths instead of paths relative to cwd.  [default: no-full-paths]
+
+
+- `--help`
+
+   Show this message and exit.
+
+
+
+
 #### robot
 
 Runs `robot` with the selected configuration, profiles, options and
@@ -1750,6 +2040,11 @@ robotcode robot [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
 
 
 **Options:**
+- `-ebl, --exclude-by-longname TEXT *`
+
+   Excludes tests/tasks or suites by longname.
+
+
 - `-bl, --by-longname TEXT *`
 
    Select tests/tasks or suites by longname.
@@ -1758,11 +2053,6 @@ robotcode robot [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
 - `--version`
 
    Show the version and exit.
-
-
-- `-ebl, --exclude-by-longname TEXT *`
-
-   Excludes tests/tasks or suites by longname.
 
 
 - `--help`

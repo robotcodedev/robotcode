@@ -240,21 +240,19 @@ class Application:
                 if format == OutputFormat.JSON_INDENT:
                     format = OutputFormat.JSON
                 console = Console(soft_wrap=True)
-                if self.config.pager:
+                syntax = Syntax(text, format, background_color="default")
+                if self._should_page(lambda: text.count("\n")):
                     with console.pager(styles=True, links=True):
-                        console.print(Syntax(text, format, background_color="default"))
+                        console.print(syntax)
                 else:
-                    console.print(Syntax(text, format, background_color="default"))
+                    console.print(syntax)
 
                 return
             except ImportError:
                 if self.config.colored_output == ColoredOutput.YES:
                     self.warning('Package "rich" is required to use colored output.')
 
-        if self.config.pager:
-            self.echo_via_pager(text)
-        else:
-            self.echo(text)
+        self.echo_via_pager(text)
 
         return
 
@@ -272,6 +270,30 @@ class Application:
             color=self.colored,
             err=err,
         )
+
+    def _should_page(self, measure_lines: Callable[[], int]) -> bool:
+        """Tri-state pager decision.
+
+        - `config.pager` is True  → always page.
+        - `config.pager` is False → never page.
+        - `config.pager` is None  → auto: page only when stdout is a TTY AND
+                                     the rendered output exceeds the terminal
+                                     height (measured via the callback).
+        """
+        pref = self.config.pager
+        if pref is True:
+            return True
+        if pref is False:
+            return False
+        if not sys.stdout.isatty():
+            return False
+        try:
+            from shutil import get_terminal_size
+
+            term_lines = get_terminal_size(fallback=(80, 24)).lines
+            return measure_lines() > term_lines - 2
+        except Exception:
+            return False
 
     def echo_as_markdown(self, text: str) -> None:
         if self.colored:
@@ -307,7 +329,14 @@ class Application:
                 markdown = Markdown(text, justify="left", code_theme="default")
 
                 console = Console()
-                if self.config.pager:
+
+                def _measure() -> int:
+                    measure = Console(width=console.size.width, record=False, soft_wrap=True)
+                    with measure.capture() as cap:
+                        measure.print(markdown)
+                    return cap.get().count("\n")
+
+                if self._should_page(_measure):
                     with console.pager(styles=True, links=True):
                         console.print(markdown)
                 else:
@@ -325,18 +354,20 @@ class Application:
         color: Optional[bool] = None,
     ) -> None:
         try:
-            if not self.config.pager:
-                text = (
-                    text_or_generator
-                    if isinstance(text_or_generator, str)
-                    else "".join(text_or_generator() if callable(text_or_generator) else text_or_generator)
-                )
-                click.echo(text, color=color if color is not None else self.colored)
+            text = (
+                text_or_generator
+                if isinstance(text_or_generator, str)
+                else "".join(text_or_generator() if callable(text_or_generator) else text_or_generator)
+            )
+            use_color = color if color is not None else self.colored
+            if self._should_page(lambda: text.count("\n")):
+                if use_color:
+                    # click only sets `LESS=-R` when color=None — set it here so
+                    # less renders ANSI styles instead of showing raw ESC codes.
+                    os.environ.setdefault("LESS", "-R")
+                click.echo_via_pager(text, color=use_color)
             else:
-                click.echo_via_pager(
-                    text_or_generator,
-                    color=color if color is not None else self.colored,
-                )
+                click.echo(text, color=use_color)
         except OSError:
             pass
 

@@ -111,8 +111,10 @@ class RobotCodeFormatter(logging.Formatter):
 @click.option(
     "--pager / --no-pager",
     "pager",
-    default=False,
-    help="Whether or not use a pager to display long text or data.",
+    default=None,
+    help=(
+        "Force or disable the pager. Default (no flag): auto-page when the rendered output exceeds the terminal height."
+    ),
     show_envvar=True,
 )
 @click.option(

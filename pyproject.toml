@@ -62,10 +62,11 @@ rest = ["docutils"]
 repl = ["robotcode-repl==2.5.1"]
 replserver = ["robotcode-repl-server==2.5.1"]
 colored = ["rich"]
+html = ["robotcode-runner[html]==2.5.1"]
 all = [
   "robotcode-debugger",
   "robotcode-language-server",
-  "robotcode-runner",
+  "robotcode-runner[html]",
   "robotcode-analyze",
   "robotcode-repl",
   "robotcode-repl-server",
@@ -86,6 +87,7 @@ yaml = ["PyYAML>=5.4"]
 lint = ["robotframework-robocop>=6.0.0"]
 rest = ["docutils"]
 colored = ["rich"]
+html = ["html-to-markdown>=2.0"]
 all = [
   { "include-group" = "debugger" },
   { "include-group" = "languageserver" },
@@ -97,6 +99,7 @@ all = [
   { "include-group" = "lint" },
   { "include-group" = "rest" },
   { "include-group" = "colored" },
+  { "include-group" = "html" },
 ]
 
 [project.urls]
@@ -289,7 +292,7 @@ mypy_path = [
 
 
 [[tool.mypy.overrides]]
-module = ["robot.*", "robotremoteserver.*", "debugpy.*", "robocop.*", "pluggy"]
+module = ["robot.*", "robotremoteserver.*", "debugpy.*", "robocop.*", "pluggy", "html_to_markdown"]
 ignore_missing_imports = true
 no_implicit_reexport = false
 
