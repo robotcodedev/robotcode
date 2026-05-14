@@ -1,9 +1,8 @@
 """click.style-based renderers for `robotcode results` TEXT-mode output.
 
-Mirrors the visual style of `robotcode discover`: per-entry single line with a
-colored status prefix, bold name, parenthesised `(path:line)` suffix (which
-VS Code's terminal link detector picks up natively), plus a `Statistics:`
-footer with bold blue labels.
+Per-entry single line with a colored status prefix, bold name, parenthesised
+`(path:line)` suffix (which VS Code's terminal link detector picks up
+natively), plus a `Statistics:` footer with bold blue labels.
 
 Renderers yield strings so they can stream into `app.echo_via_pager(...)`.
 `click.style` handles colour vs. no-colour automatically based on the

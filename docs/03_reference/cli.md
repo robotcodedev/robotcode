@@ -833,12 +833,12 @@ robotcode debug [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
 
 - `--tcp [<ADDRESS>:]<PORT>`
 
-   Run in `tcp` server mode and listen at the given port. (Equivalent to `--mode tcp --port <port>`) *NOTE:* This option is mutually exclusive with options: pipe-server, pipe-name, port, mode.
+   Run in `tcp` server mode and listen at the given port. (Equivalent to `--mode tcp --port <port>`) *NOTE:* This option is mutually exclusive with options: pipe-server, port, mode, pipe-name.
 
 
 - `--pipe-server NAME`
 
-   Run in `pipe-server` mode and listen at the given pipe name. (Equivalent to `--mode pipe-server --pipe-name <name>`) *NOTE:* This option is mutually exclusive with options: mode, port, tcp, bind, pipe-name.
+   Run in `pipe-server` mode and listen at the given pipe name. (Equivalent to `--mode pipe-server --pipe-name <name>`) *NOTE:* This option is mutually exclusive with options: bind, port, tcp, mode, pipe-name.
 
 
 - `--mode [pipe_server|tcp]`
@@ -858,7 +858,7 @@ robotcode debug [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
 
 - `--pipe-name NAME`
 
-   The pipe to listen on or connect to. (Only valid in `pipe` and `pipe-server` mode) *NOTE:* This option is mutually exclusive with options: pipe-server, port, tcp, bind.  [env var: ROBOTCODE_PIPE_NAME]
+   The pipe to listen on or connect to. (Only valid in `pipe` and `pipe-server` mode) *NOTE:* This option is mutually exclusive with options: pipe-server, bind, port, tcp.  [env var: ROBOTCODE_PIPE_NAME]
 
 
 - `--version`
@@ -885,32 +885,32 @@ robotcode debug-launch [OPTIONS]
 **Options:**
 - `--stdio`
 
-   Run in `stdio` mode. (Equivalent to `--mode stdio`) *NOTE:* This option is mutually exclusive with options: socket, mode, port, tcp, pipe, pipe-server, bind, pipe-name.  [env var: ROBOTCODE_STDIO]
+   Run in `stdio` mode. (Equivalent to `--mode stdio`) *NOTE:* This option is mutually exclusive with options: socket, bind, pipe, pipe-server, port, tcp, mode, pipe-name.  [env var: ROBOTCODE_STDIO]
 
 
 - `--tcp [<ADDRESS>:]<PORT>`
 
-   Run in `tcp` server mode and listen at the given port. (Equivalent to `--mode tcp --port <port>`) *NOTE:* This option is mutually exclusive with options: socket, mode, stdio, port, pipe, pipe-server, pipe-name.
+   Run in `tcp` server mode and listen at the given port. (Equivalent to `--mode tcp --port <port>`) *NOTE:* This option is mutually exclusive with options: socket, pipe, pipe-server, port, mode, stdio, pipe-name.
 
 
 - `--socket [<ADDRESS>:]<PORT>`
 
-   Run in `socket` mode and connect to the given port. (Equivalent to `--mode socket --port <port>`) *NOTE:* This option is mutually exclusive with options: mode, stdio, port, tcp, pipe, pipe-server, pipe-name.
+   Run in `socket` mode and connect to the given port. (Equivalent to `--mode socket --port <port>`) *NOTE:* This option is mutually exclusive with options: pipe, pipe-server, port, tcp, mode, stdio, pipe-name.
 
 
 - `--pipe NAME`
 
-   Run in `pipe` mode and connect to the given pipe name. (Equivalent to `--mode pipe --pipe-name <name>`) *NOTE:* This option is mutually exclusive with options: socket, mode, stdio, port, tcp, pipe-server, bind, pipe-name.
+   Run in `pipe` mode and connect to the given pipe name. (Equivalent to `--mode pipe --pipe-name <name>`) *NOTE:* This option is mutually exclusive with options: socket, bind, pipe-server, port, tcp, mode, stdio, pipe-name.
 
 
 - `--pipe-server NAME`
 
-   Run in `pipe-server` mode and listen at the given pipe name. (Equivalent to `--mode pipe-server --pipe-name <name>`) *NOTE:* This option is mutually exclusive with options: socket, mode, stdio, port, tcp, pipe, bind, pipe-name.
+   Run in `pipe-server` mode and listen at the given pipe name. (Equivalent to `--mode pipe-server --pipe-name <name>`) *NOTE:* This option is mutually exclusive with options: socket, bind, pipe, port, tcp, mode, stdio, pipe-name.
 
 
 - `--mode [stdio|tcp|socket|pipe|pipe_server]`
 
-   The mode to use for the debug launch server. *NOTE:* This option is mutually exclusive with options: socket, tcp, pipe, pipe-server, stdio.  [env var: ROBOTCODE_MODE; default: STDIO]
+   The mode to use for the debug launch server. *NOTE:* This option is mutually exclusive with options: socket, pipe, pipe-server, tcp, stdio.  [env var: ROBOTCODE_MODE; default: STDIO]
 
 
 - `--port PORT`
@@ -925,7 +925,7 @@ robotcode debug-launch [OPTIONS]
 
 - `--pipe-name NAME`
 
-   The pipe to listen on or connect to. (Only valid in `pipe` and `pipe-server` mode) *NOTE:* This option is mutually exclusive with options: socket, port, tcp, pipe, pipe-server, bind, stdio.  [env var: ROBOTCODE_PIPE_NAME]
+   The pipe to listen on or connect to. (Only valid in `pipe` and `pipe-server` mode) *NOTE:* This option is mutually exclusive with options: socket, bind, pipe, pipe-server, port, tcp, stdio.  [env var: ROBOTCODE_PIPE_NAME]
 
 
 - `--version`
@@ -1355,27 +1355,27 @@ robotcode language-server [OPTIONS] [PATHS]...
 **Options:**
 - `--stdio`
 
-   Run in `stdio` mode. (Equivalent to `--mode stdio`) *NOTE:* This option is mutually exclusive with options: socket, mode, port, tcp, pipe, bind, pipe-name.  [env var: ROBOTCODE_STDIO]
+   Run in `stdio` mode. (Equivalent to `--mode stdio`) *NOTE:* This option is mutually exclusive with options: socket, bind, pipe, port, tcp, mode, pipe-name.  [env var: ROBOTCODE_STDIO]
 
 
 - `--tcp [<ADDRESS>:]<PORT>`
 
-   Run in `tcp` server mode and listen at the given port. (Equivalent to `--mode tcp --port <port>`) *NOTE:* This option is mutually exclusive with options: socket, mode, stdio, port, pipe, pipe-name.
+   Run in `tcp` server mode and listen at the given port. (Equivalent to `--mode tcp --port <port>`) *NOTE:* This option is mutually exclusive with options: socket, pipe, port, mode, stdio, pipe-name.
 
 
 - `--socket [<ADDRESS>:]<PORT>`
 
-   Run in `socket` mode and connect to the given port. (Equivalent to `--mode socket --port <port>`) *NOTE:* This option is mutually exclusive with options: mode, stdio, port, tcp, pipe, pipe-name.
+   Run in `socket` mode and connect to the given port. (Equivalent to `--mode socket --port <port>`) *NOTE:* This option is mutually exclusive with options: pipe, port, tcp, mode, stdio, pipe-name.
 
 
 - `--pipe NAME`
 
-   Run in `pipe` mode and connect to the given pipe name. (Equivalent to `--mode pipe --pipe-name <name>`) *NOTE:* This option is mutually exclusive with options: socket, mode, stdio, port, tcp, bind, pipe-name.
+   Run in `pipe` mode and connect to the given pipe name. (Equivalent to `--mode pipe --pipe-name <name>`) *NOTE:* This option is mutually exclusive with options: socket, bind, port, tcp, mode, stdio, pipe-name.
 
 
-- `--mode [stdio|socket|tcp|pipe]`
+- `--mode [tcp|stdio|socket|pipe]`
 
-   The mode to use for the debug launch server. *NOTE:* This option is mutually exclusive with options: stdio, socket, tcp, pipe.  [env var: ROBOTCODE_MODE; default: STDIO]
+   The mode to use for the debug launch server. *NOTE:* This option is mutually exclusive with options: tcp, stdio, socket, pipe.  [env var: ROBOTCODE_MODE; default: STDIO]
 
 
 - `--port PORT`
@@ -1390,7 +1390,7 @@ robotcode language-server [OPTIONS] [PATHS]...
 
 - `--pipe-name NAME`
 
-   The pipe to listen on or connect to. (Only valid in `pipe` and `pipe-server` mode) *NOTE:* This option is mutually exclusive with options: socket, port, tcp, pipe, bind, stdio.  [env var: ROBOTCODE_PIPE_NAME]
+   The pipe to listen on or connect to. (Only valid in `pipe` and `pipe-server` mode) *NOTE:* This option is mutually exclusive with options: socket, bind, pipe, port, tcp, stdio.  [env var: ROBOTCODE_PIPE_NAME]
 
 
 - `--version`
@@ -1632,32 +1632,32 @@ robotcode repl-server [OPTIONS] [FILES]...
 **Options:**
 - `--stdio`
 
-   Run in `stdio` mode. (Equivalent to `--mode stdio`) *NOTE:* This option is mutually exclusive with options: socket, mode, port, tcp, pipe, pipe-server, bind, pipe-name.  [env var: ROBOTCODE_STDIO]
+   Run in `stdio` mode. (Equivalent to `--mode stdio`) *NOTE:* This option is mutually exclusive with options: socket, bind, pipe, pipe-server, port, tcp, mode, pipe-name.  [env var: ROBOTCODE_STDIO]
 
 
 - `--tcp [<ADDRESS>:]<PORT>`
 
-   Run in `tcp` server mode and listen at the given port. (Equivalent to `--mode tcp --port <port>`) *NOTE:* This option is mutually exclusive with options: socket, mode, stdio, port, pipe, pipe-server, pipe-name.
+   Run in `tcp` server mode and listen at the given port. (Equivalent to `--mode tcp --port <port>`) *NOTE:* This option is mutually exclusive with options: socket, pipe, pipe-server, port, mode, stdio, pipe-name.
 
 
 - `--socket [<ADDRESS>:]<PORT>`
 
-   Run in `socket` mode and connect to the given port. (Equivalent to `--mode socket --port <port>`) *NOTE:* This option is mutually exclusive with options: mode, stdio, port, tcp, pipe, pipe-server, pipe-name.
+   Run in `socket` mode and connect to the given port. (Equivalent to `--mode socket --port <port>`) *NOTE:* This option is mutually exclusive with options: pipe, pipe-server, port, tcp, mode, stdio, pipe-name.
 
 
 - `--pipe NAME`
 
-   Run in `pipe` mode and connect to the given pipe name. (Equivalent to `--mode pipe --pipe-name <name>`) *NOTE:* This option is mutually exclusive with options: socket, mode, stdio, port, tcp, pipe-server, bind, pipe-name.
+   Run in `pipe` mode and connect to the given pipe name. (Equivalent to `--mode pipe --pipe-name <name>`) *NOTE:* This option is mutually exclusive with options: socket, bind, pipe-server, port, tcp, mode, stdio, pipe-name.
 
 
 - `--pipe-server NAME`
 
-   Run in `pipe-server` mode and listen at the given pipe name. (Equivalent to `--mode pipe-server --pipe-name <name>`) *NOTE:* This option is mutually exclusive with options: socket, mode, stdio, port, tcp, pipe, bind, pipe-name.
+   Run in `pipe-server` mode and listen at the given pipe name. (Equivalent to `--mode pipe-server --pipe-name <name>`) *NOTE:* This option is mutually exclusive with options: socket, bind, pipe, port, tcp, mode, stdio, pipe-name.
 
 
 - `--mode [stdio|tcp|socket|pipe|pipe_server]`
 
-   The mode to use for the debug launch server. *NOTE:* This option is mutually exclusive with options: socket, tcp, pipe, pipe-server, stdio.  [env var: ROBOTCODE_MODE; default: STDIO]
+   The mode to use for the debug launch server. *NOTE:* This option is mutually exclusive with options: socket, pipe, pipe-server, tcp, stdio.  [env var: ROBOTCODE_MODE; default: STDIO]
 
 
 - `--port PORT`
@@ -1672,7 +1672,7 @@ robotcode repl-server [OPTIONS] [FILES]...
 
 - `--pipe-name NAME`
 
-   The pipe to listen on or connect to. (Only valid in `pipe` and `pipe-server` mode) *NOTE:* This option is mutually exclusive with options: socket, port, tcp, pipe, pipe-server, bind, stdio.  [env var: ROBOTCODE_PIPE_NAME]
+   The pipe to listen on or connect to. (Only valid in `pipe` and `pipe-server` mode) *NOTE:* This option is mutually exclusive with options: socket, bind, pipe, pipe-server, port, tcp, stdio.  [env var: ROBOTCODE_PIPE_NAME]
 
 
 - `-v, --variable name:value *`
@@ -2050,8 +2050,8 @@ robotcode results show [OPTIONS]
 
 Aggregate results by tag, suite, or status.
 
-Mirrors `report.html`'s "Statistics by Tag" / "Statistics by Suite" panels.
-Repeat `--by` to render multiple sections in one go.
+Each section is a table with pass/fail/skip counts and total elapsed per
+group. Repeat `--by` to render multiple sections in one go.
 
 Examples:
 ```

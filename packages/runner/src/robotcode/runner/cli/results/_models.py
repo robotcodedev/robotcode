@@ -99,10 +99,10 @@ class ShowResult(CamelSnakeMixin):
 class LogEntry(CamelSnakeMixin):
     """One body item from a test execution log.
 
-    Mirrors Robot Framework's body-item types so the rendered log matches
-    `report.html`: keywords with arguments+assignments, control structures
-    (FOR/WHILE/IF/TRY/VAR/RETURN/CONTINUE/BREAK), iterations, group blocks,
-    and leaf messages. Children live in `body`.
+    Covers Robot Framework's body-item types: keywords with arguments and
+    assignments, control structures (FOR/WHILE/IF/TRY/VAR/RETURN/CONTINUE/
+    BREAK), iterations, group blocks, and leaf messages. Children live in
+    `body`.
     """
 
     type: str

@@ -618,8 +618,7 @@ def log(
     multiple=True,
     default=("status",),
     show_default=True,
-    metavar="DIMENSION",
-    help="Aggregation dimension. Repeat for multiple sections in one call.",
+    help="Group tests by this attribute. Repeat to render multiple sections in one call.",
 )
 @click.option(
     "--sort",
@@ -653,8 +652,8 @@ def stats(
     """\
     Aggregate results by tag, suite, or status.
 
-    Mirrors `report.html`'s "Statistics by Tag" / "Statistics by Suite"
-    panels. Repeat `--by` to render multiple sections in one go.
+    Each section is a table with pass/fail/skip counts and total elapsed
+    per group. Repeat `--by` to render multiple sections in one go.
 
     \b
     Examples:
@@ -716,8 +715,8 @@ def _build_stats_section(dimension: str, tests: List[Any], group_sort: str, top_
             _bump(t.status, t.status, secs)
         elif dimension == "suite":
             suite = getattr(t, "parent", None)
-            suite_name = getattr(suite, "name", None) or "(root)"
-            _bump(suite_name, t.status, secs)
+            suite_name = _get_full_name(suite) if suite is not None else ""
+            _bump(suite_name or "(root)", t.status, secs)
         elif dimension == "tag":
             tags = list(getattr(t, "tags", None) or [])
             if not tags:
