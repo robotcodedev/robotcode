@@ -20,6 +20,7 @@ from typing import Any, Callable, Dict, Iterable, Iterator, List, Optional, Tupl
 
 import click
 from robot.errors import DataError
+from robot.result import ForIteration
 
 from robotcode.plugin import Application, OutputFormat, pass_application
 from robotcode.plugin.click_helper.types import add_options
@@ -247,8 +248,8 @@ def summary(
             status=execution.suite.status,
             counts=counts,
             elapsed_seconds=_elapsed_seconds(execution.suite),
-            start_time=_iso(getattr(execution.suite, "start_time", None)),
-            end_time=_iso(getattr(execution.suite, "end_time", None)),
+            start_time=_iso(_start_time(execution.suite)),
+            end_time=_iso(_end_time(execution.suite)),
             failures=failures or None,
             messages_count=msg_counts or None,
             execution_messages_count=exec_msg_counts or None,
@@ -416,8 +417,8 @@ def show(
             if filters_active
             else None,
             elapsed_seconds=_elapsed_seconds(execution.suite),
-            start_time=_iso(getattr(execution.suite, "start_time", None)),
-            end_time=_iso(getattr(execution.suite, "end_time", None)),
+            start_time=_iso(_start_time(execution.suite)),
+            end_time=_iso(_end_time(execution.suite)),
         )
 
         if app.config.output_format in (None, OutputFormat.TEXT):
@@ -582,7 +583,7 @@ def log(
                     rel_source=None if full_paths else _rel_to_cwd(src_str),
                     lineno=getattr(test, "lineno", None) or None,
                     elapsed_seconds=_elapsed_seconds(test),
-                    start_time=_iso(getattr(test, "start_time", None)),
+                    start_time=_iso(_start_time(test)),
                 )
             )
 
@@ -613,8 +614,8 @@ def log(
             extract_dir=str(extract_abs) if extract_abs else None,
             extracted_count=extracted_count,
             elapsed_seconds=_elapsed_seconds(execution.suite),
-            start_time=_iso(getattr(execution.suite, "start_time", None)),
-            end_time=_iso(getattr(execution.suite, "end_time", None)),
+            start_time=_iso(_start_time(execution.suite)),
+            end_time=_iso(_end_time(execution.suite)),
             filters_applied=_filters_dict(
                 status_filters,
                 include_tags,
@@ -1104,7 +1105,7 @@ if RF_VERSION >= (7, 0):
         return item.owner, str(item.name or "")
 
     def _loop_variables(item: Any) -> Any:
-        """Return the loop variables of a FOR or ITERATION body item."""
+        """Loop variables for a `For` or `ForIteration` body item (RF 7+ name)."""
         return item.assign
 
 else:
@@ -1121,22 +1122,39 @@ else:
         return item.libname, str(item.kwname or item.name or "")
 
     def _loop_variables(item: Any) -> Any:
-        """Return the loop variables of a FOR or ITERATION body item.
-
-        RF 7 renamed `For.variables` → `For.assign` (same for ForIteration)."""
+        """Loop variables for a `For` or `ForIteration` body item (RF <7 name)."""
         return item.variables
 
 
 def _elapsed_seconds(item: Any) -> Optional[float]:
     elapsed = getattr(item, "elapsed_time", None)
-    if elapsed is None:
-        return None
-    if hasattr(elapsed, "total_seconds"):
-        return float(elapsed.total_seconds())
-    try:
-        return float(elapsed)
-    except (TypeError, ValueError):
-        return None
+    if elapsed is not None:
+        if hasattr(elapsed, "total_seconds"):
+            return float(elapsed.total_seconds())
+        try:
+            return float(elapsed)
+        except (TypeError, ValueError):
+            return None
+    legacy = getattr(item, "elapsedtime", None)
+    if legacy is not None:
+        try:
+            return float(legacy) / 1000.0
+        except (TypeError, ValueError):
+            return None
+    return None
+
+
+def _start_time(item: Any) -> Any:
+    """Read a body-item's start time, accepting RF 7+ `start_time` and RF <7 `starttime`."""
+    return getattr(item, "start_time", None) or getattr(item, "starttime", None)
+
+
+def _end_time(item: Any) -> Any:
+    """Read a body-item's end time, accepting RF 7+ `end_time` and RF <7 `endtime`."""
+    return getattr(item, "end_time", None) or getattr(item, "endtime", None)
+
+
+_LEGACY_TS_RE = re.compile(r"^(\d{4})(\d{2})(\d{2})\s+(\d{2}:\d{2}:\d{2}(?:\.\d+)?)$")
 
 
 def _iso(value: Any) -> Optional[str]:
@@ -1144,7 +1162,12 @@ def _iso(value: Any) -> Optional[str]:
         return None
     if hasattr(value, "isoformat"):
         return str(value.isoformat())
-    return str(value)
+    text = str(value)
+    m = _LEGACY_TS_RE.match(text)
+    if m:
+        y, mo, d, time_part = m.groups()
+        return f"{y}-{mo}-{d}T{time_part}"
+    return text
 
 
 def _apply_tree_filters(
@@ -1392,7 +1415,7 @@ def _make_test_item(test: Any, *, message_chars: int, full_paths: bool) -> TestR
         full_message=full_msg,
         tags=list(test.tags) if getattr(test, "tags", None) else None,
         elapsed_seconds=_elapsed_seconds(test),
-        start_time=_iso(getattr(test, "start_time", None)),
+        start_time=_iso(_start_time(test)),
         source=src_str,
         rel_source=None if full_paths else rel_src,
         lineno=getattr(test, "lineno", None) or None,
@@ -1523,7 +1546,7 @@ def _collect_test_body(
             "status": getattr(item, "status", None),
             "message": getattr(item, "message", None) or None,
             "elapsed_seconds": _elapsed_seconds(item),
-            "start_time": _iso(getattr(item, "start_time", None)),
+            "start_time": _iso(_start_time(item)),
             "body": children or None,
         }
 
@@ -1548,9 +1571,10 @@ def _collect_test_body(
             )
 
         if t == "ITERATION":
+            iter_vars = _loop_variables(item) if isinstance(item, ForIteration) else None
             return LogEntry(
                 type="ITERATION",
-                assign=list(_loop_variables(item) or []) or None,
+                assign=list(iter_vars or []) or None,
                 **common,
             )
 
