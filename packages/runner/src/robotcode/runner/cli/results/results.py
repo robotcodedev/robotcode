@@ -22,6 +22,7 @@ import click
 from robot.errors import DataError
 from robot.result import ForIteration
 
+from robotcode.modifiers import ByLongName, ExcludedByLongName
 from robotcode.plugin import Application, OutputFormat, pass_application
 from robotcode.plugin.click_helper.types import add_options
 from robotcode.robot.config.loader import load_robot_config_from_path
@@ -61,7 +62,7 @@ RESULT_FILTER_OPTIONS = [
         "status_filters",
         multiple=True,
         type=click.Choice(["pass", "fail", "skip", "not-run"], case_sensitive=False),
-        help="Only include tests with one of these statuses. Repeat to add more (OR).",
+        help="Only include tests with one of these statuses.",
     ),
     click.option(
         "-i",
@@ -69,10 +70,7 @@ RESULT_FILTER_OPTIONS = [
         "include_tags",
         multiple=True,
         metavar="TAG_PATTERN",
-        help=(
-            "Include tests matching the tag pattern. Supports Robot's tag pattern "
-            "syntax (AND, OR, NOT, *, ?). Repeat for additional patterns (OR-joined)."
-        ),
+        help=("Include tests matching the tag pattern. Supports Robot's tag pattern syntax (AND, OR, NOT, *, ?)."),
     ),
     click.option(
         "-e",
@@ -101,6 +99,22 @@ RESULT_FILTER_OPTIONS = [
             "Only include tests whose name matches (glob against full test name). "
             "`--task` is an alias for `--test` (Robot's RPA terminology)."
         ),
+    ),
+    click.option(
+        "-bl",
+        "--by-longname",
+        "by_longname",
+        multiple=True,
+        metavar="NAME",
+        help="Select tests/tasks or suites by long name (exact match).",
+    ),
+    click.option(
+        "-ebl",
+        "--exclude-by-longname",
+        "exclude_by_longname",
+        multiple=True,
+        metavar="NAME",
+        help="Exclude tests/tasks or suites by long name (exact match).",
     ),
 ]
 
@@ -195,6 +209,8 @@ def summary(
     exclude_tags: Tuple[str, ...],
     suite_globs: Tuple[str, ...],
     test_globs: Tuple[str, ...],
+    by_longname: Tuple[str, ...],
+    exclude_by_longname: Tuple[str, ...],
     search_substring: Optional[str],
     search_regex: Optional[str],
     output_file: Optional[Path],
@@ -228,11 +244,21 @@ def summary(
             or exclude_tags
             or suite_globs
             or test_globs
+            or by_longname
+            or exclude_by_longname
             or search_substring
             or search_regex
         )
-        if include_tags or exclude_tags or suite_globs or test_globs:
-            _apply_tree_filters(execution.suite, include_tags, exclude_tags, suite_globs, test_globs)
+        if include_tags or exclude_tags or suite_globs or test_globs or by_longname or exclude_by_longname:
+            _apply_tree_filters(
+                execution.suite,
+                include_tags,
+                exclude_tags,
+                suite_globs,
+                test_globs,
+                by_longname,
+                exclude_by_longname,
+            )
         match = _make_matcher(search_substring, search_regex)
         counts = _collect_counts(execution.suite, status_filters, match)
         failures = (
@@ -259,6 +285,8 @@ def summary(
                 exclude_tags,
                 suite_globs,
                 test_globs,
+                by_longname,
+                exclude_by_longname,
                 search_substring,
                 search_regex,
             )
@@ -338,6 +366,8 @@ def show(
     exclude_tags: Tuple[str, ...],
     suite_globs: Tuple[str, ...],
     test_globs: Tuple[str, ...],
+    by_longname: Tuple[str, ...],
+    exclude_by_longname: Tuple[str, ...],
     search_substring: Optional[str],
     search_regex: Optional[str],
     output_file: Optional[Path],
@@ -372,8 +402,16 @@ def show(
         path = _resolve_output_file(app, profile, output_file)
         execution = _load_execution_result(path)
 
-        if include_tags or exclude_tags or suite_globs or test_globs:
-            _apply_tree_filters(execution.suite, include_tags, exclude_tags, suite_globs, test_globs)
+        if include_tags or exclude_tags or suite_globs or test_globs or by_longname or exclude_by_longname:
+            _apply_tree_filters(
+                execution.suite,
+                include_tags,
+                exclude_tags,
+                suite_globs,
+                test_globs,
+                by_longname,
+                exclude_by_longname,
+            )
 
         wanted = _normalise_statuses(status_filters)
         match = _make_matcher(search_substring, search_regex)
@@ -397,6 +435,8 @@ def show(
             or exclude_tags
             or suite_globs
             or test_globs
+            or by_longname
+            or exclude_by_longname
             or search_substring
             or search_regex
         )
@@ -411,6 +451,8 @@ def show(
                 exclude_tags,
                 suite_globs,
                 test_globs,
+                by_longname,
+                exclude_by_longname,
                 search_substring,
                 search_regex,
             )
@@ -518,6 +560,8 @@ def log(
     exclude_tags: Tuple[str, ...],
     suite_globs: Tuple[str, ...],
     test_globs: Tuple[str, ...],
+    by_longname: Tuple[str, ...],
+    exclude_by_longname: Tuple[str, ...],
     search_substring: Optional[str],
     search_regex: Optional[str],
     output_file: Optional[Path],
@@ -555,8 +599,16 @@ def log(
         path = _resolve_output_file(app, profile, output_file)
         execution = _load_execution_result(path)
 
-        if include_tags or exclude_tags or suite_globs or test_globs:
-            _apply_tree_filters(execution.suite, include_tags, exclude_tags, suite_globs, test_globs)
+        if include_tags or exclude_tags or suite_globs or test_globs or by_longname or exclude_by_longname:
+            _apply_tree_filters(
+                execution.suite,
+                include_tags,
+                exclude_tags,
+                suite_globs,
+                test_globs,
+                by_longname,
+                exclude_by_longname,
+            )
 
         wanted = _normalise_statuses(status_filters)
         match = _make_matcher(search_substring, search_regex)
@@ -604,6 +656,8 @@ def log(
             or exclude_tags
             or suite_globs
             or test_globs
+            or by_longname
+            or exclude_by_longname
             or search_substring
             or search_regex
         )
@@ -622,6 +676,8 @@ def log(
                 exclude_tags,
                 suite_globs,
                 test_globs,
+                by_longname,
+                exclude_by_longname,
                 search_substring,
                 search_regex,
             )
@@ -655,7 +711,7 @@ def log(
     multiple=True,
     default=("status",),
     show_default=True,
-    help="Group tests by this attribute. Repeat to render multiple sections in one call.",
+    help="Group tests by this attribute (one section per value).",
 )
 @click.option(
     "--sort",
@@ -681,6 +737,8 @@ def stats(
     exclude_tags: Tuple[str, ...],
     suite_globs: Tuple[str, ...],
     test_globs: Tuple[str, ...],
+    by_longname: Tuple[str, ...],
+    exclude_by_longname: Tuple[str, ...],
     search_substring: Optional[str],
     search_regex: Optional[str],
     output_file: Optional[Path],
@@ -710,8 +768,16 @@ def stats(
         path = _resolve_output_file(app, profile, output_file)
         execution = _load_execution_result(path)
 
-        if include_tags or exclude_tags or suite_globs or test_globs:
-            _apply_tree_filters(execution.suite, include_tags, exclude_tags, suite_globs, test_globs)
+        if include_tags or exclude_tags or suite_globs or test_globs or by_longname or exclude_by_longname:
+            _apply_tree_filters(
+                execution.suite,
+                include_tags,
+                exclude_tags,
+                suite_globs,
+                test_globs,
+                by_longname,
+                exclude_by_longname,
+            )
 
         wanted = _normalise_statuses(status_filters)
         match = _make_matcher(search_substring, search_regex)
@@ -735,6 +801,8 @@ def stats(
             or exclude_tags
             or suite_globs
             or test_globs
+            or by_longname
+            or exclude_by_longname
             or search_substring
             or search_regex
         )
@@ -747,6 +815,8 @@ def stats(
                 exclude_tags,
                 suite_globs,
                 test_globs,
+                by_longname,
+                exclude_by_longname,
                 search_substring,
                 search_regex,
             )
@@ -839,7 +909,7 @@ _DIFF_CATEGORIES = ("new-failures", "new-passes", "status-changes", "added", "re
     type=click.Choice(_DIFF_CATEGORIES, case_sensitive=False),
     multiple=True,
     default=(),
-    help="Restrict output to these categories. Repeat for multiple. Default: all.",
+    help="Restrict output to these categories. Default: all.",
 )
 @pass_application
 def diff(
@@ -1176,6 +1246,8 @@ def _apply_tree_filters(
     exclude_tags: Tuple[str, ...],
     suite_globs: Tuple[str, ...],
     test_globs: Tuple[str, ...],
+    by_longname: Tuple[str, ...] = (),
+    exclude_by_longname: Tuple[str, ...] = (),
 ) -> None:
     try:
         suite.filter(
@@ -1186,6 +1258,10 @@ def _apply_tree_filters(
         )
     except DataError as e:
         raise click.ClickException(f"invalid filter pattern: {e}") from e
+    if by_longname:
+        suite.visit(ByLongName(*by_longname))
+    if exclude_by_longname:
+        suite.visit(ExcludedByLongName(*exclude_by_longname))
 
 
 def _normalise_statuses(statuses: Tuple[str, ...]) -> set[str]:
@@ -1198,6 +1274,8 @@ def _filters_dict(
     exclude_tags: Tuple[str, ...],
     suite_globs: Tuple[str, ...],
     test_globs: Tuple[str, ...],
+    by_longname: Tuple[str, ...] = (),
+    exclude_by_longname: Tuple[str, ...] = (),
     search_substring: Optional[str] = None,
     search_regex: Optional[str] = None,
 ) -> Dict[str, List[str]]:
@@ -1212,6 +1290,10 @@ def _filters_dict(
         out["suite"] = list(suite_globs)
     if test_globs:
         out["test"] = list(test_globs)
+    if by_longname:
+        out["by-longname"] = list(by_longname)
+    if exclude_by_longname:
+        out["exclude-by-longname"] = list(exclude_by_longname)
     if search_substring:
         out["search"] = [search_substring]
     if search_regex:
