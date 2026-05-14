@@ -148,15 +148,24 @@ def _message_color(status: str) -> Optional[str]:
     return None
 
 
-def _make_highlighter(pattern: Optional[str], regex: bool) -> Optional[Callable[[str], str]]:
+def _make_highlighter(substring: Optional[str], regex: Optional[str]) -> Optional[Callable[[str], str]]:
     """Return a `highlight(text) -> styled_text` function or None when no pattern.
 
     Wraps each match in a yellow-on-black bold span via `click.style`.
+    Substring matches are highlighted case-insensitively (matching the
+    `--search` semantics); regex patterns are honoured as the user wrote
+    them so `(?i)` opts into case-insensitive highlighting too.
     """
-    if not pattern:
+    if not substring and not regex:
         return None
+    if regex:
+        flags = 0
+        raw = regex
+    else:
+        flags = re.IGNORECASE
+        raw = re.escape(substring or "")
     try:
-        rx = re.compile(pattern if regex else re.escape(pattern), re.IGNORECASE)
+        rx = re.compile(raw, flags)
     except re.error:
         return None
 
@@ -250,11 +259,11 @@ def render_show(
     show_timing: bool = False,
     sort_field: Optional[str] = None,
     reverse: bool = False,
-    search_pattern: Optional[str] = None,
-    search_regex: bool = False,
+    search_substring: Optional[str] = None,
+    search_regex: Optional[str] = None,
 ) -> Iterable[str]:
     name = data.file.rel_source or data.file.source
-    highlight = _make_highlighter(search_pattern, search_regex)
+    highlight = _make_highlighter(search_substring, search_regex)
 
     if not data.tests:
         if data.filters_applied:
@@ -516,11 +525,11 @@ def render_log(
     max_depth: int = 0,
     show_timestamps: bool = False,
     show_timing: bool = False,
-    search_pattern: Optional[str] = None,
-    search_regex: bool = False,
+    search_substring: Optional[str] = None,
+    search_regex: Optional[str] = None,
 ) -> Iterable[str]:
     threshold = _LEVEL_ORDER.get(level.upper(), 2)
-    highlight = _make_highlighter(search_pattern, search_regex)
+    highlight = _make_highlighter(search_substring, search_regex)
 
     if not data.tests and not data.execution_messages:
         yield click.style("(no tests matched)", dim=True)

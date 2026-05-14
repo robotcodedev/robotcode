@@ -107,21 +107,27 @@ RESULT_FILTER_OPTIONS = [
 SEARCH_OPTIONS = [
     click.option(
         "--search",
-        "search_pattern",
+        "search_substring",
         metavar="TEXT",
         default=None,
         help=(
-            "Only include tests with at least one match against TEXT. "
-            "Searches in test name, full name, failure message, keyword "
-            "names, keyword arguments, and log messages. Case-insensitive "
-            "substring match by default."
+            "Only include tests with at least one case-insensitive substring "
+            "match against TEXT. Searches test name, full name, failure "
+            "message, tags, keyword names, keyword arguments, and log "
+            "messages. Mutually exclusive with `--search-regex`."
         ),
     ),
     click.option(
-        "--search-regex/--no-search-regex",
-        default=False,
-        show_default=True,
-        help="Treat `--search` as a Python regular expression instead of a substring.",
+        "--search-regex",
+        "search_regex",
+        metavar="PATTERN",
+        default=None,
+        help=(
+            "Only include tests with at least one match against PATTERN "
+            "(Python regular expression, case-sensitive — prefix with `(?i)` "
+            "for case-insensitive). Same target fields as `--search`. "
+            "Mutually exclusive with `--search`."
+        ),
     ),
 ]
 
@@ -166,7 +172,7 @@ def results() -> None:
 
 
 @results.command()
-@add_options(*RESULT_FILTER_OPTIONS, OUTPUT_OPTION)
+@add_options(*RESULT_FILTER_OPTIONS, *SEARCH_OPTIONS, OUTPUT_OPTION)
 @click.option(
     "--failures/--no-failures",
     "show_failures",
@@ -188,6 +194,8 @@ def summary(
     exclude_tags: Tuple[str, ...],
     suite_globs: Tuple[str, ...],
     test_globs: Tuple[str, ...],
+    search_substring: Optional[str],
+    search_regex: Optional[str],
     output_file: Optional[Path],
     show_failures: bool,
     full_paths: bool,
@@ -204,6 +212,7 @@ def summary(
     robotcode results summary
     robotcode results summary --failures
     robotcode results summary -i smoke --status fail
+    robotcode results summary --search TimeoutError
     robotcode --format json results summary
     ```
     """
@@ -212,11 +221,24 @@ def summary(
         path = _resolve_output_file(app, profile, output_file)
         execution = _load_execution_result(path)
 
-        filters_active = bool(status_filters or include_tags or exclude_tags or suite_globs or test_globs)
+        filters_active = bool(
+            status_filters
+            or include_tags
+            or exclude_tags
+            or suite_globs
+            or test_globs
+            or search_substring
+            or search_regex
+        )
         if include_tags or exclude_tags or suite_globs or test_globs:
             _apply_tree_filters(execution.suite, include_tags, exclude_tags, suite_globs, test_globs)
-        counts = _collect_counts(execution.suite, status_filters)
-        failures = _collect_failures(execution.suite, status_filters, full_paths=full_paths) if show_failures else None
+        match = _make_matcher(search_substring, search_regex)
+        counts = _collect_counts(execution.suite, status_filters, match)
+        failures = (
+            _collect_failures(execution.suite, status_filters, full_paths=full_paths, match=match)
+            if show_failures
+            else None
+        )
         exec_msg_counts = _count_execution_messages(getattr(execution, "errors", None))
         msg_counts = _count_all_messages(execution)
 
@@ -230,7 +252,15 @@ def summary(
             failures=failures or None,
             messages_count=msg_counts or None,
             execution_messages_count=exec_msg_counts or None,
-            filters_applied=_filters_dict(status_filters, include_tags, exclude_tags, suite_globs, test_globs)
+            filters_applied=_filters_dict(
+                status_filters,
+                include_tags,
+                exclude_tags,
+                suite_globs,
+                test_globs,
+                search_substring,
+                search_regex,
+            )
             if filters_active
             else None,
         )
@@ -307,8 +337,8 @@ def show(
     exclude_tags: Tuple[str, ...],
     suite_globs: Tuple[str, ...],
     test_globs: Tuple[str, ...],
-    search_pattern: Optional[str],
-    search_regex: bool,
+    search_substring: Optional[str],
+    search_regex: Optional[str],
     output_file: Optional[Path],
     top_n: int,
     message_chars: int,
@@ -345,11 +375,11 @@ def show(
             _apply_tree_filters(execution.suite, include_tags, exclude_tags, suite_globs, test_globs)
 
         wanted = _normalise_statuses(status_filters)
-        match = _make_matcher(search_pattern, search_regex)
+        match = _make_matcher(search_substring, search_regex)
         all_items = [
             _make_test_item(t, message_chars=message_chars, full_paths=full_paths)
             for t in _iter_all_tests(execution.suite)
-            if (not wanted or t.status in wanted) and _show_item_matches(t, match)
+            if (not wanted or t.status in wanted) and (match is None or _raw_test_search_matches(t, match))
         ]
         counts = _tally_items(all_items)
         all_items = _sort_items(all_items, sort_field, reverse)
@@ -361,7 +391,13 @@ def show(
             truncated = 0
 
         filters_active = bool(
-            status_filters or include_tags or exclude_tags or suite_globs or test_globs or search_pattern
+            status_filters
+            or include_tags
+            or exclude_tags
+            or suite_globs
+            or test_globs
+            or search_substring
+            or search_regex
         )
         data = ShowResult(
             file=_make_file_info(path),
@@ -374,7 +410,7 @@ def show(
                 exclude_tags,
                 suite_globs,
                 test_globs,
-                search_pattern,
+                search_substring,
                 search_regex,
             )
             if filters_active
@@ -393,7 +429,7 @@ def show(
                     show_timing=show_timing,
                     sort_field=sort_field,
                     reverse=reverse,
-                    search_pattern=search_pattern,
+                    search_substring=search_substring,
                     search_regex=search_regex,
                 )
             )
@@ -481,8 +517,8 @@ def log(
     exclude_tags: Tuple[str, ...],
     suite_globs: Tuple[str, ...],
     test_globs: Tuple[str, ...],
-    search_pattern: Optional[str],
-    search_regex: bool,
+    search_substring: Optional[str],
+    search_regex: Optional[str],
     output_file: Optional[Path],
     level: str,
     max_depth: int,
@@ -522,23 +558,17 @@ def log(
             _apply_tree_filters(execution.suite, include_tags, exclude_tags, suite_globs, test_globs)
 
         wanted = _normalise_statuses(status_filters)
-        match = _make_matcher(search_pattern, search_regex)
+        match = _make_matcher(search_substring, search_regex)
 
         base_dir = path.parent
         matched: List[LogTest] = []
         for test in _iter_all_tests(execution.suite):
             if wanted and test.status not in wanted:
                 continue
+            if match is not None and not _raw_test_search_matches(test, match):
+                continue
             full_name = _get_full_name(test)
             body, artefacts = _collect_test_body(test, level=level.upper(), base_dir=base_dir, raw_html=raw_html)
-            if match is not None:
-                test_hit = (
-                    match(full_name)
-                    or match(getattr(test, "message", None))
-                    or any(match(t) for t in (getattr(test, "tags", None) or []))
-                )
-                if not test_hit and not _entries_match(body, match):
-                    continue
             src = getattr(test, "source", None)
             src_str = str(src) if src else None
             matched.append(
@@ -568,7 +598,13 @@ def log(
             extracted_count = _extract_artifacts(matched, target=extract_abs)
 
         filters_active = bool(
-            status_filters or include_tags or exclude_tags or suite_globs or test_globs or search_pattern
+            status_filters
+            or include_tags
+            or exclude_tags
+            or suite_globs
+            or test_globs
+            or search_substring
+            or search_regex
         )
         data = LogResult(
             file=_make_file_info(path),
@@ -585,7 +621,7 @@ def log(
                 exclude_tags,
                 suite_globs,
                 test_globs,
-                search_pattern,
+                search_substring,
                 search_regex,
             )
             if filters_active
@@ -599,7 +635,7 @@ def log(
                     full_paths=full_paths,
                     level=level,
                     max_depth=max_depth,
-                    search_pattern=search_pattern,
+                    search_substring=search_substring,
                     search_regex=search_regex,
                     show_timestamps=show_timestamps,
                     show_timing=show_timing,
@@ -610,7 +646,7 @@ def log(
 
 
 @results.command()
-@add_options(*RESULT_FILTER_OPTIONS, OUTPUT_OPTION)
+@add_options(*RESULT_FILTER_OPTIONS, *SEARCH_OPTIONS, OUTPUT_OPTION)
 @click.option(
     "--by",
     "group_by",
@@ -644,6 +680,8 @@ def stats(
     exclude_tags: Tuple[str, ...],
     suite_globs: Tuple[str, ...],
     test_globs: Tuple[str, ...],
+    search_substring: Optional[str],
+    search_regex: Optional[str],
     output_file: Optional[Path],
     group_by: Tuple[str, ...],
     group_sort: str,
@@ -662,6 +700,7 @@ def stats(
     robotcode results stats --by tag
     robotcode results stats --by tag --by suite
     robotcode results stats --by tag --sort elapsed --top 20
+    robotcode results stats --by tag --search Browser
     robotcode --format json results stats --by tag
     ```
     """
@@ -674,7 +713,12 @@ def stats(
             _apply_tree_filters(execution.suite, include_tags, exclude_tags, suite_globs, test_globs)
 
         wanted = _normalise_statuses(status_filters)
-        tests = [t for t in _iter_all_tests(execution.suite) if not wanted or t.status in wanted]
+        match = _make_matcher(search_substring, search_regex)
+        tests = [
+            t
+            for t in _iter_all_tests(execution.suite)
+            if (not wanted or t.status in wanted) and (match is None or _raw_test_search_matches(t, match))
+        ]
 
         seen_dimensions: List[str] = []
         for dim in group_by:
@@ -684,11 +728,27 @@ def stats(
 
         sections = [_build_stats_section(d, tests, group_sort.lower(), top_n) for d in seen_dimensions]
 
-        filters_active = bool(status_filters or include_tags or exclude_tags or suite_globs or test_globs)
+        filters_active = bool(
+            status_filters
+            or include_tags
+            or exclude_tags
+            or suite_globs
+            or test_globs
+            or search_substring
+            or search_regex
+        )
         data = StatsResult(
             file=_make_file_info(path),
             sections=sections,
-            filters_applied=_filters_dict(status_filters, include_tags, exclude_tags, suite_globs, test_globs)
+            filters_applied=_filters_dict(
+                status_filters,
+                include_tags,
+                exclude_tags,
+                suite_globs,
+                test_globs,
+                search_substring,
+                search_regex,
+            )
             if filters_active
             else None,
         )
@@ -1115,8 +1175,8 @@ def _filters_dict(
     exclude_tags: Tuple[str, ...],
     suite_globs: Tuple[str, ...],
     test_globs: Tuple[str, ...],
-    search_pattern: Optional[str] = None,
-    search_regex: bool = False,
+    search_substring: Optional[str] = None,
+    search_regex: Optional[str] = None,
 ) -> Dict[str, List[str]]:
     out: Dict[str, List[str]] = {}
     if status_filters:
@@ -1129,8 +1189,10 @@ def _filters_dict(
         out["suite"] = list(suite_globs)
     if test_globs:
         out["test"] = list(test_globs)
-    if search_pattern:
-        out["search-regex" if search_regex else "search"] = [search_pattern]
+    if search_substring:
+        out["search"] = [search_substring]
+    if search_regex:
+        out["search-regex"] = [search_regex]
     return out
 
 
@@ -1146,11 +1208,17 @@ def _bump_counts(c: Counts, status: str) -> None:
         c.not_run += 1
 
 
-def _collect_counts(suite: Any, status_filters: Tuple[str, ...]) -> Counts:
+def _collect_counts(
+    suite: Any,
+    status_filters: Tuple[str, ...],
+    match: Optional[Callable[[Optional[str]], bool]] = None,
+) -> Counts:
     wanted = _normalise_statuses(status_filters)
     c = Counts()
     for t in _iter_all_tests(suite):
         if wanted and t.status not in wanted:
+            continue
+        if match is not None and not _raw_test_search_matches(t, match):
             continue
         _bump_counts(c, t.status)
     return c
@@ -1166,47 +1234,103 @@ def _tally_items(items: Iterable[TestResultItem]) -> Counts:
 _STATUS_SORT_RANK = {"FAIL": 0, "SKIP": 1, "PASS": 2, "NOT RUN": 3}
 
 
-def _make_matcher(pattern: Optional[str], regex: bool) -> Optional[Callable[[Optional[str]], bool]]:
-    """Compile `pattern` once and return a `match(text) -> bool` predicate.
+def _make_matcher(substring: Optional[str], regex: Optional[str]) -> Optional[Callable[[Optional[str]], bool]]:
+    """Compile a search predicate once.
 
-    Substring case-insensitive by default; `regex=True` uses `re.search` with
-    `re.IGNORECASE`.
+    Exactly one of `substring` / `regex` may be set. `substring` is matched
+    case-insensitively as a plain `in` check. `regex` is compiled as a plain
+    `re.search` — case sensitivity follows standard regex conventions, so use
+    `(?i)pattern` to make a regex case-insensitive. Returns `None` if neither
+    is given.
     """
-    if not pattern:
-        return None
+    if substring and regex:
+        raise click.UsageError("--search and --search-regex are mutually exclusive.")
+    if substring:
+        needle = substring.lower()
+        return lambda s: bool(s and needle in s.lower())
     if regex:
         try:
-            rx = re.compile(pattern, re.IGNORECASE)
+            rx = re.compile(regex)
         except re.error as e:
             raise click.UsageError(f"--search-regex: invalid pattern: {e}") from e
         return lambda s: bool(s and rx.search(s))
-    needle = pattern.lower()
-    return lambda s: bool(s and needle in s.lower())
+    return None
 
 
-def _show_item_matches(test: Any, match: Optional[Callable[[Optional[str]], bool]]) -> bool:
-    """Decide whether a test should appear in `show` output given the search matcher.
+def _raw_test_search_matches(test: Any, match: Callable[[Optional[str]], bool]) -> bool:
+    """True if the raw Robot test (or anything in its body tree) matches.
 
-    `show` doesn't render keyword bodies, so we only inspect the test itself:
-    name, message, and tags.
+    Walks the raw `output.xml` model so callers don't have to materialise the
+    body as LogEntry objects first.
     """
-    if match is None:
+    if (
+        match(_get_full_name(test))
+        or match(getattr(test, "message", None))
+        or any(match(t) for t in (getattr(test, "tags", None) or []))
+    ):
         return True
-    if match(_get_full_name(test)) or match(getattr(test, "message", None)):
-        return True
-    return any(match(t) for t in (getattr(test, "tags", None) or []))
+    return _raw_body_matches(getattr(test, "body", None), match)
 
 
-def _entries_match(entries: List[LogEntry], match: Callable[[Optional[str]], bool]) -> bool:
-    """Recurse through LogEntry tree looking for any match in name/text/args/assign."""
-    for e in entries:
-        if match(e.name) or match(e.text) or match(e.message):
+def _raw_body_matches(body: Any, match: Callable[[Optional[str]], bool]) -> bool:
+    """Recurse through a raw body iterable looking for any match.
+
+    Inspects body-item attributes per type (mirrors `_collect_test_body`'s
+    dispatch), so we never read attributes that Robot has deprecated for a
+    given item type (e.g. `name`/`args` on `If`/`Try` body items).
+    """
+    if not body:
+        return False
+    for item in body:
+        t = getattr(item, "type", "") or ""
+
+        if t == "MESSAGE" or (not t and hasattr(item, "level") and hasattr(item, "message")):
+            if match(getattr(item, "message", None)):
+                return True
+            continue
+
+        if match(getattr(item, "message", None)):
             return True
-        if e.args and any(match(a) for a in e.args):
-            return True
-        if e.assign and any(match(a) for a in e.assign):
-            return True
-        if e.body and _entries_match(e.body, match):
+
+        if t in _KEYWORD_TYPES:
+            owner, short = _keyword_name_and_owner(item)
+            full_name = f"{owner}.{short}" if owner and short else short
+            if match(full_name):
+                return True
+            if any(match(a) for a in (item.args or [])):
+                return True
+            if any(match(a) for a in (item.assign or [])):
+                return True
+        elif t == "FOR":
+            if any(match(v) for v in (_loop_variables(item) or [])):
+                return True
+            if any(match(v) for v in (item.values or [])):
+                return True
+            if match(item.flavor):
+                return True
+        elif t in ("WHILE", "IF", "ELSE IF"):
+            if match(getattr(item, "condition", None)):
+                return True
+        elif t == "VAR":
+            if match(getattr(item, "name", None)):
+                return True
+            if any(match(v) for v in (getattr(item, "value", None) or [])):
+                return True
+        elif t == "RETURN":
+            if any(match(v) for v in (getattr(item, "values", None) or [])):
+                return True
+        elif t == "EXCEPT":
+            if any(match(v) for v in (getattr(item, "patterns", None) or [])):
+                return True
+            ex_assign = getattr(item, "assign", None)
+            if ex_assign and match(ex_assign):
+                return True
+        elif t == "GROUP":
+            if match(getattr(item, "name", None)):
+                return True
+
+        sub = getattr(item, "body", None)
+        if sub and _raw_body_matches(sub, match):
             return True
     return False
 
@@ -1275,7 +1399,13 @@ def _make_test_item(test: Any, *, message_chars: int, full_paths: bool) -> TestR
     )
 
 
-def _collect_failures(suite: Any, status_filters: Tuple[str, ...], *, full_paths: bool = False) -> List[TestResultItem]:
+def _collect_failures(
+    suite: Any,
+    status_filters: Tuple[str, ...],
+    *,
+    full_paths: bool = False,
+    match: Optional[Callable[[Optional[str]], bool]] = None,
+) -> List[TestResultItem]:
     """Return all failed tests (post-tree-filter, after status filter) with msgs."""
     wanted = _normalise_statuses(status_filters)
     out: List[TestResultItem] = []
@@ -1283,6 +1413,8 @@ def _collect_failures(suite: Any, status_filters: Tuple[str, ...], *, full_paths
         if wanted and t.status not in wanted:
             continue
         if t.status != "FAIL":
+            continue
+        if match is not None and not _raw_test_search_matches(t, match):
             continue
         out.append(_make_test_item(t, message_chars=0, full_paths=full_paths))
     return out
