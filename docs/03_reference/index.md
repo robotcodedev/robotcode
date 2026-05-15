@@ -8,4 +8,6 @@ This reference provides a comprehensive resource for effectively using and confi
 
 - [**Diagnostic Modifiers**](diagnostics-modifiers.md): Explains how to control static analysis diagnostics (errors, warnings, hints) using inline `# robotcode:` comments and configuration in `robot.toml`. It covers the available modifier actions, their scope within Robot Framework files, and how global and inline settings interact across CLI, language server, and editor integrations.
 
+- [**Analyzing Run Results**](analyzing-results.md): A task-oriented guide to the `robotcode results` family of commands — turning a finished run's `output.xml` into headline counts, per-test listings, full execution traces, tag/suite aggregations, and run-to-run diffs. Covers filtering, search, JSON-for-CI patterns, and the most common day-to-day recipes.
+
 Together, these sections provide the knowledge needed to fully customize `robotcode` for a flexible and efficient testing workflow.
