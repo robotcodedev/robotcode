@@ -1174,54 +1174,58 @@ def files(
     matcher = make_search_matcher(search_substring, search_regex)
     root_folder, profile, _cmd_options = handle_robot_options(app, ())
 
-    search_paths = set(
-        (
+    # Match the other discover subcommands: chdir into root_folder so
+    # `get_rel_source` produces paths relative to the project root rather
+    # than to whatever the caller's process cwd happens to be.
+    with app.chdir(root_folder):
+        search_paths = set(
             (
-                [*(app.config.default_paths if app.config.default_paths else ())]
-                if profile.paths is None
-                else profile.paths
-                if isinstance(profile.paths, list)
-                else [profile.paths]
+                (
+                    [*(app.config.default_paths if app.config.default_paths else ())]
+                    if profile.paths is None
+                    else profile.paths
+                    if isinstance(profile.paths, list)
+                    else [profile.paths]
+                )
+                if not paths
+                else [str(p) for p in paths]
             )
-            if not paths
-            else [str(p) for p in paths]
         )
-    )
-    if not search_paths:
-        raise click.UsageError("Expected at least 1 argument.")
+        if not search_paths:
+            raise click.UsageError("Expected at least 1 argument.")
 
-    def filter_extensions(p: Path) -> bool:
-        return p.suffix in [".robot", ".resource"]
+        def filter_extensions(p: Path) -> bool:
+            return p.suffix in [".robot", ".resource"]
 
-    result: List[str] = list(
-        map(
-            lambda p: os.path.abspath(p) if full_paths else (get_rel_source(str(p)) or str(p)),
-            filter(
-                filter_extensions,
-                iter_files(
-                    (Path(s) for s in search_paths),
-                    root=root_folder,
-                    ignore_files=[ROBOT_IGNORE_FILE, GIT_IGNORE_FILE],
-                    include_hidden=False,
-                    verbose_callback=app.verbose,
+        result: List[str] = list(
+            map(
+                lambda p: os.path.abspath(p) if full_paths else (get_rel_source(str(p)) or str(p)),
+                filter(
+                    filter_extensions,
+                    iter_files(
+                        (Path(s) for s in search_paths),
+                        root=root_folder,
+                        ignore_files=[ROBOT_IGNORE_FILE, GIT_IGNORE_FILE],
+                        include_hidden=False,
+                        verbose_callback=app.verbose,
+                    ),
                 ),
-            ),
+            )
         )
-    )
-    if matcher is not None:
-        result = [p for p in result if matcher.general(p)]
-    if app.config.output_format is None or app.config.output_format == OutputFormat.TEXT:
-        highlight = make_highlighter(search_substring, search_regex)
-        hl = highlight if highlight is not None else (lambda s: s)
+        if matcher is not None:
+            result = [p for p in result if matcher.general(p)]
+        if app.config.output_format is None or app.config.output_format == OutputFormat.TEXT:
+            highlight = make_highlighter(search_substring, search_regex)
+            hl = highlight if highlight is not None else (lambda s: s)
 
-        def print() -> Iterable[str]:
-            for p in result:
-                yield f"{hl(p)}{os.linesep}"
+            def print() -> Iterable[str]:
+                for p in result:
+                    yield f"{hl(p)}{os.linesep}"
 
-            yield os.linesep
-            yield click.style("Total: ", underline=True, bold=True, fg="blue")
-            yield click.style(f"{len(result)} file(s){os.linesep}")
+                yield os.linesep
+                yield click.style("Total: ", underline=True, bold=True, fg="blue")
+                yield click.style(f"{len(result)} file(s){os.linesep}")
 
-        app.echo_via_pager(print())
-    else:
-        app.print_data(result, remove_defaults=True)
+            app.echo_via_pager(print())
+        else:
+            app.print_data(result, remove_defaults=True)

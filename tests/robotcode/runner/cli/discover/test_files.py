@@ -59,8 +59,9 @@ def test_files_full_paths_absolute(robotcode_cli: CliRunner, files_tree: Path) -
 
 
 def test_files_default_relative(robotcode_cli: CliRunner, files_tree: Path) -> None:
+    """Without `--full-paths`, paths are reported relative to the
+    `--root` folder (the project root passed in via the fixture)."""
     files = _files_json(robotcode_cli, suite_path=files_tree)
-    # Relative paths must not start at the filesystem root.
     assert all(not p.startswith("/") for p in files)
 
 
