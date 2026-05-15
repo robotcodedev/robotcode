@@ -30,7 +30,7 @@ class EnumChoice(click.Choice, Generic[T]):  # type: ignore[type-arg]
         excluded: Optional[Set[T]] = None,
     ) -> None:
         super().__init__(
-            choices if excluded is None else (set(choices).difference(excluded)),
+            choices if excluded is None else [c for c in choices if c not in excluded],
             case_sensitive,
         )
 
@@ -113,7 +113,7 @@ class MutuallyExclusiveOption(click.Option):
         self.mutually_exclusive = mutually_exclusive
         help = kwargs.get("help", "")
         if self.mutually_exclusive:
-            ex_str = ", ".join(self.mutually_exclusive)
+            ex_str = ", ".join(sorted(self.mutually_exclusive))
             kwargs["help"] = help + ("\n*NOTE:* This option is mutually exclusive with options: " + ex_str + ".")
         super(MutuallyExclusiveOption, self).__init__(*args, **kwargs)
 
