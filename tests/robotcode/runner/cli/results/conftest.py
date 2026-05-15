@@ -1,18 +1,22 @@
 """Acceptance-test fixtures for `robotcode results`.
 
-These tests spawn a real `robotcode` subprocess (so the bundled-script /
-quoting layer is exercised too) and feed it `output.xml` files that are
-generated *once per pytest session* by running the matching Robot Framework
-suite under `tests/.../suites/` with the currently installed RF version.
+The tests feed the `robotcode` Click group via `click.testing.CliRunner`
+(in-process — no Python-startup overhead per call) with `output.xml`
+files that are generated *once per pytest session* by running the
+matching Robot Framework suite under `tests/.../suites/` with the
+currently installed RF version.
 
-Three architectural choices, set by the plan:
+Three architectural choices:
 
-1. **subprocess** for CLI invocation — real process, real exit codes.
-2. **Live fixture generation** — RF runs the suites once per session, so the
-   test matrix automatically covers every supported RF version.
-3. **JSON-structural + selective text snapshots** — parse `--format json`
-   output and assert on fields; only specific text-render cases are pinned
-   with regtest2.
+1. **CliRunner** for CLI invocation — in-process invocation of the
+   actual `robotcode` Click group. Cuts test runtime from ~50 s to a
+   few seconds; trade-off: doesn't exercise the bundled-script
+   shell wrapper.
+2. **Live fixture generation** — `python -m robot` runs the fixture
+   suites once per session via subprocess (only ~11 calls total).
+3. **JSON-structural + selective text snapshots** — parse `--format
+   json` output and assert on fields; only specific text-render cases
+   are pinned with regtest2.
 """
 
 import json
@@ -25,7 +29,9 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence
 
 import pytest
+from click.testing import CliRunner as _ClickCliRunner
 
+from robotcode.cli import robotcode as _robotcode_group
 from robotcode.core.utils.version import Version
 from robotcode.robot.utils import RF_VERSION
 
@@ -118,31 +124,45 @@ JsonRunner = Callable[..., Any]
 
 @pytest.fixture
 def robotcode_cli() -> CliRunner:
-    """Callable: `(args, *, cwd=None, expect_ok=True) -> CliResult`.
+    """Callable: `(args, *, expect_ok=True) -> CliResult`.
 
-    Runs `python -m robotcode.cli` so the test never depends on the
-    `robotcode` script being on PATH. The global flags `--no-color` and
-    `--no-pager` are pre-injected.
+    Invokes the `robotcode` Click group in-process via
+    `click.testing.CliRunner` — no Python startup per call, so the suite
+    runs in seconds instead of minutes. The global flags `--no-color`
+    and `--no-pager` are pre-injected so output is deterministic.
+
+    Unexpected exceptions (i.e. bugs inside the CLI, not regular
+    UsageErrors) propagate when `expect_ok=True` so they fail loudly
+    instead of being masked as a non-zero exit.
     """
+    runner = _ClickCliRunner()
 
     def run(
         args: Sequence[str],
         *,
-        cwd: Optional[Path] = None,
         expect_ok: bool = True,
-        timeout: float = 60.0,
     ) -> CliResult:
-        full = ["-m", "robotcode.cli", "--no-color", "--no-pager", *args]
-        proc = _run(full, cwd=cwd, timeout=timeout)
-        result = CliResult(
+        full = ["--no-color", "--no-pager", *args]
+        result = runner.invoke(_robotcode_group, full)
+        cli_result = CliResult(
             args=full,
-            returncode=proc.returncode,
-            stdout=proc.stdout,
-            stderr=proc.stderr,
+            returncode=result.exit_code,
+            stdout=result.stdout,
+            stderr=result.stderr or "",
         )
         if expect_ok:
-            result.expect_ok()
-        return result
+            # Surface unexpected exceptions (anything other than SystemExit
+            # raised inside the command) so they don't disguise themselves
+            # as a "just" non-zero exit.
+            if result.exception is not None and not isinstance(result.exception, SystemExit):
+                raise AssertionError(
+                    f"robotcode raised {type(result.exception).__name__}: {result.exception}\n"
+                    f"args:   {full}\n"
+                    f"stdout: {cli_result.stdout!r}\n"
+                    f"stderr: {cli_result.stderr!r}"
+                ) from result.exception
+            cli_result.expect_ok()
+        return cli_result
 
     return run
 
@@ -159,14 +179,13 @@ def json_result(robotcode_cli: CliRunner) -> JsonRunner:
         subcommand: str,
         *extra: str,
         output_path: Optional[Path] = None,
-        cwd: Optional[Path] = None,
         expect_ok: bool = True,
     ) -> Any:
         args: List[str] = ["--format", "json", "results", subcommand]
         args.extend(extra)
         if output_path is not None:
             args.extend(["--output", str(output_path)])
-        result = robotcode_cli(args, cwd=cwd, expect_ok=expect_ok)
+        result = robotcode_cli(args, expect_ok=expect_ok)
         if not expect_ok or not result.stdout.strip():
             return result
         try:
@@ -189,13 +208,12 @@ def text_result(robotcode_cli: CliRunner) -> CliRunner:
         subcommand: str,
         *extra: str,
         output_path: Optional[Path] = None,
-        cwd: Optional[Path] = None,
         expect_ok: bool = True,
     ) -> CliResult:
         args: List[str] = ["results", subcommand, *extra]
         if output_path is not None:
             args.extend(["--output", str(output_path)])
-        return robotcode_cli(args, cwd=cwd, expect_ok=expect_ok)
+        return robotcode_cli(args, expect_ok=expect_ok)
 
     return run
 
