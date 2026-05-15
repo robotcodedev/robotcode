@@ -252,6 +252,18 @@ def basic_output(session_output_dir: Path) -> Path:
     return _run_robot(SUITES_DIR / "basic.robot", session_output_dir, "basic")
 
 
+@pytest.fixture(scope="session")
+def tagged_output(session_output_dir: Path) -> Path:
+    """`output.xml` from running `suites/tagged.robot` once per session."""
+    return _run_robot(SUITES_DIR / "tagged.robot", session_output_dir, "tagged")
+
+
+@pytest.fixture(scope="session")
+def nested_output(session_output_dir: Path) -> Path:
+    """`output.xml` from running the `suites/nested/` 3-level hierarchy."""
+    return _run_robot(SUITES_DIR / "nested", session_output_dir, "nested")
+
+
 # ---------------------------------------------------------------------------
 # Misc helpers exposed as fixtures
 # ---------------------------------------------------------------------------
