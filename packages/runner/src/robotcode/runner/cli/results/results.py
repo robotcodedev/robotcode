@@ -890,6 +890,7 @@ _DIFF_CATEGORIES = ("new-failures", "new-passes", "status-changes", "added", "re
     type=click.Path(path_type=Path, exists=True, dir_okay=False, readable=True),
     required=False,
 )
+@add_options(*RESULT_FILTER_OPTIONS, *SEARCH_OPTIONS)
 @click.option(
     "--full-paths/--no-full-paths",
     default=False,
@@ -916,6 +917,15 @@ def diff(
     app: Application,
     baseline: Path,
     current: Optional[Path],
+    status_filters: Tuple[str, ...],
+    include_tags: Tuple[str, ...],
+    exclude_tags: Tuple[str, ...],
+    suite_globs: Tuple[str, ...],
+    test_globs: Tuple[str, ...],
+    by_longname: Tuple[str, ...],
+    exclude_by_longname: Tuple[str, ...],
+    search_substring: Optional[str],
+    search_regex: Optional[str],
     full_paths: bool,
     message_chars: int,
     only_categories: Tuple[str, ...],
@@ -932,6 +942,8 @@ def diff(
     robotcode results diff baseline.xml
     robotcode results diff prev/output.xml curr/output.xml
     robotcode results diff baseline.xml --only new-failures
+    robotcode results diff baseline.xml -i smoke
+    robotcode results diff baseline.xml --search TimeoutError
     robotcode --format json results diff baseline.xml
     ```
     """
@@ -946,8 +958,39 @@ def diff(
         baseline_exec = _load_execution_result(baseline_path)
         current_exec = _load_execution_result(current_path)
 
-        baseline_tests = {_get_full_name(t): t for t in _iter_all_tests(baseline_exec.suite)}
-        current_tests = {_get_full_name(t): t for t in _iter_all_tests(current_exec.suite)}
+        tree_filter = any([include_tags, exclude_tags, suite_globs, test_globs, by_longname, exclude_by_longname])
+        if tree_filter:
+            _apply_tree_filters(
+                baseline_exec.suite,
+                include_tags,
+                exclude_tags,
+                suite_globs,
+                test_globs,
+                by_longname,
+                exclude_by_longname,
+            )
+            _apply_tree_filters(
+                current_exec.suite,
+                include_tags,
+                exclude_tags,
+                suite_globs,
+                test_globs,
+                by_longname,
+                exclude_by_longname,
+            )
+
+        wanted = _normalise_statuses(status_filters)
+        match = _make_matcher(search_substring, search_regex)
+
+        def _eligible(t: Any) -> bool:
+            if wanted and t.status not in wanted:
+                return False
+            if match is not None and not _raw_test_search_matches(t, match):
+                return False
+            return True
+
+        baseline_tests = {_get_full_name(t): t for t in _iter_all_tests(baseline_exec.suite) if _eligible(t)}
+        current_tests = {_get_full_name(t): t for t in _iter_all_tests(current_exec.suite) if _eligible(t)}
 
         new_failures: List[DiffChange] = []
         new_passes: List[DiffChange] = []
@@ -976,6 +1019,17 @@ def diff(
 
         selected = {c.lower() for c in only_categories} if only_categories else None
 
+        filters_active = bool(
+            status_filters
+            or include_tags
+            or exclude_tags
+            or suite_globs
+            or test_globs
+            or by_longname
+            or exclude_by_longname
+            or search_substring
+            or search_regex
+        )
         data = DiffResult(
             baseline=_make_file_info(baseline_path),
             current=_make_file_info(current_path),
@@ -984,6 +1038,19 @@ def diff(
             status_changes=status_changes if selected is None or "status-changes" in selected else None,
             added=added if selected is None or "added" in selected else None,
             removed=removed if selected is None or "removed" in selected else None,
+            filters_applied=_filters_dict(
+                status_filters,
+                include_tags,
+                exclude_tags,
+                suite_globs,
+                test_globs,
+                by_longname,
+                exclude_by_longname,
+                search_substring,
+                search_regex,
+            )
+            if filters_active
+            else None,
         )
 
         if app.config.output_format in (None, OutputFormat.TEXT):

@@ -199,3 +199,4 @@ class DiffResult(CamelSnakeMixin):
     status_changes: Optional[List[DiffChange]] = None
     added: Optional[List[DiffChange]] = None
     removed: Optional[List[DiffChange]] = None
+    filters_applied: Optional[Dict[str, List[str]]] = None
