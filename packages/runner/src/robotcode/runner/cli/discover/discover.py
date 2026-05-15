@@ -63,7 +63,6 @@ __patched = False
 
 
 _stdin_data: Optional[Dict[Uri, str]] = None
-_app: Optional[Application] = None
 
 
 def _patch() -> None:
@@ -400,8 +399,6 @@ def discover(app: Application, show_diagnostics: bool, read_from_stdin: bool) ->
     robotcode --profile regression discover tests
     ```
     """
-    global _app
-    _app = app
     app.show_diagnostics = show_diagnostics or app.config.log_enabled
     if read_from_stdin:
         global _stdin_data
@@ -630,7 +627,7 @@ def all(
     if collector.all.children:
         if app.config.output_format is None or app.config.output_format == OutputFormat.TEXT:
 
-            def print(item: TestItem, indent: int = 0) -> Iterable[str]:
+            def print(item: TestItem) -> Iterable[str]:
                 if item.type in ["test", "task"]:
                     yield "    "
                     yield click.style(f"{item.type.capitalize()}: ", fg="blue")
@@ -647,7 +644,7 @@ def all(
                     yield click.style(item.longname, bold=True)
                     yield click.style(f" ({item.source if full_paths else item.rel_source}){os.linesep}")
                 for child in item.children or []:
-                    yield from print(child, indent + 2)
+                    yield from print(child)
 
             app.echo_via_pager(chain(print(collector.all.children[0]), format_statistics(collector)))
 
@@ -929,7 +926,8 @@ def tags(
                                 if show_tasks and t.type != "task":
                                     continue
                             yield click.style(f"    {t.type.capitalize()}: ", fg="blue")
-                            yield click.style(t.longname, bold=True) + click.style(
+                            yield click.style(t.longname, bold=True)
+                            yield click.style(
                                 f" ({t.source if full_paths else t.rel_source}"
                                 f":{t.range.start.line + 1 if t.range is not None else 1}){os.linesep}"
                             )
