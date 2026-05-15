@@ -15,12 +15,14 @@ All subcommands respect the global `-f/--format` option:
 
 import re
 import shutil
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Dict, Iterable, Iterator, List, Optional, Tuple
 
 import click
 from robot.errors import DataError
 from robot.result import ForIteration
+from robot.utils import normalize
 
 from robotcode.modifiers import ByLongName, ExcludedByLongName
 from robotcode.plugin import Application, OutputFormat, pass_application
@@ -852,8 +854,12 @@ def _build_stats_section(dimension: str, tests: List[Any], group_sort: str, top_
             tags = list(getattr(t, "tags", None) or [])
             if not tags:
                 continue
+            # Robot Framework treats tags as equal when they only differ in
+            # case, whitespace or underscores (`Bug 1` ≡ `bug_1` ≡ `bug1`).
+            # We bucket *and* display by the normalized form so semantically-
+            # equal tags both merge into one group and surface that fact.
             for tag in tags:
-                _bump(str(tag), t.status, secs)
+                _bump(normalize(str(tag), ignore="_"), t.status, secs)
 
     groups = [
         StatsGroup(name=name, counts=counts, elapsed_seconds=elapsed.get(name) or None)
@@ -1335,6 +1341,28 @@ def _normalise_statuses(statuses: Tuple[str, ...]) -> set[str]:
     return {_STATUS_KEY_MAP.get(s.lower(), s.upper()) for s in statuses}
 
 
+# Robot Framework treats any uppercase `AND` / `OR` / `NOT` substring inside
+# a tag pattern as a logical operator — even without surrounding whitespace,
+# and even when embedded in a longer word (so `MEMORY` parses as `mem OR y`).
+# We mirror that detection so we don't accidentally lower-case an operator.
+_TAG_PATTERN_OPERATOR_RE = re.compile(r"AND|OR|NOT")
+
+
+def _canonical_tag_pattern(pattern: str) -> str:
+    """Echo a tag pattern in its canonical form.
+
+    For plain single tags this normalises the way Robot does for tag
+    matching: lowercase, no whitespace, no underscores (so `Bug 1` becomes
+    `bug1`). For patterns Robot parses as a logical expression (containing
+    an uppercase `AND` / `OR` / `NOT`) we echo the input verbatim, since
+    each operand would need to be normalised individually and the structure
+    carries meaning the user typed deliberately.
+    """
+    if _TAG_PATTERN_OPERATOR_RE.search(pattern):
+        return pattern
+    return str(normalize(pattern, ignore="_"))
+
+
 def _filters_dict(
     status_filters: Tuple[str, ...],
     include_tags: Tuple[str, ...],
@@ -1350,9 +1378,9 @@ def _filters_dict(
     if status_filters:
         out["status"] = list(status_filters)
     if include_tags:
-        out["include"] = list(include_tags)
+        out["include"] = [_canonical_tag_pattern(p) for p in include_tags]
     if exclude_tags:
-        out["exclude"] = list(exclude_tags)
+        out["exclude"] = [_canonical_tag_pattern(p) for p in exclude_tags]
     if suite_globs:
         out["suite"] = list(suite_globs)
     if test_globs:
@@ -1383,7 +1411,7 @@ def _bump_counts(c: Counts, status: str) -> None:
 def _collect_counts(
     suite: Any,
     status_filters: Tuple[str, ...],
-    match: Optional[Callable[[Optional[str]], bool]] = None,
+    match: Optional["_SearchMatcher"] = None,
 ) -> Counts:
     wanted = _normalise_statuses(status_filters)
     c = Counts()
@@ -1406,42 +1434,72 @@ def _tally_items(items: Iterable[TestResultItem]) -> Counts:
 _STATUS_SORT_RANK = {"FAIL": 0, "SKIP": 1, "PASS": 2, "NOT RUN": 3}
 
 
-def _make_matcher(substring: Optional[str], regex: Optional[str]) -> Optional[Callable[[Optional[str]], bool]]:
+@dataclass(frozen=True)
+class _SearchMatcher:
+    """A pair of predicates: one for general targets, one for tags.
+
+    `tag` applies Robot's tag-normalization (lowercase, no whitespace, no
+    underscores) on both sides before comparing, so a search for `bug 123`
+    matches tests tagged `bug_123` and vice versa. `general` is the plain
+    substring or regex predicate used for everything else (names, messages,
+    keyword arguments, …).
+    """
+
+    general: Callable[[Optional[str]], bool]
+    tag: Callable[[Optional[str]], bool]
+
+
+def _make_matcher(substring: Optional[str], regex: Optional[str]) -> Optional[_SearchMatcher]:
     """Compile a search predicate once.
 
     Exactly one of `substring` / `regex` may be set. `substring` is matched
-    case-insensitively as a plain `in` check. `regex` is compiled as a plain
-    `re.search` — case sensitivity follows standard regex conventions, so use
-    `(?i)pattern` to make a regex case-insensitive. Returns `None` if neither
-    is given.
+    case-insensitively as a plain `in` check. `regex` is matched without any
+    case-folding by default — use `(?i)pattern` to make a regex
+    case-insensitive. Returns `None` if neither is given.
     """
     if substring and regex:
         raise click.UsageError("--search and --search-regex are mutually exclusive.")
     if substring:
         needle = substring.lower()
-        return lambda s: bool(s and needle in s.lower())
+        needle_norm = normalize(substring, ignore="_")
+
+        def general(s: Optional[str]) -> bool:
+            return bool(s and needle in s.lower())
+
+        def tag(s: Optional[str]) -> bool:
+            return bool(s and needle_norm in normalize(s, ignore="_"))
+
+        return _SearchMatcher(general=general, tag=tag)
     if regex:
         try:
             rx = re.compile(regex)
         except re.error as e:
             raise click.UsageError(f"--search-regex: invalid pattern: {e}") from e
-        return lambda s: bool(s and rx.search(s))
+
+        def general(s: Optional[str]) -> bool:
+            return bool(s and rx.search(s))
+
+        def tag(s: Optional[str]) -> bool:
+            return bool(s and rx.search(normalize(s, ignore="_")))
+
+        return _SearchMatcher(general=general, tag=tag)
     return None
 
 
-def _raw_test_search_matches(test: Any, match: Callable[[Optional[str]], bool]) -> bool:
+def _raw_test_search_matches(test: Any, matcher: _SearchMatcher) -> bool:
     """True if the raw Robot test (or anything in its body tree) matches.
 
     Walks the raw `output.xml` model so callers don't have to materialise the
-    body as LogEntry objects first.
+    body as LogEntry objects first. Tags are matched in their normalised form
+    so `bug 123`, `bug_123`, and `Bug123` are treated as the same tag.
     """
     if (
-        match(_get_full_name(test))
-        or match(getattr(test, "message", None))
-        or any(match(t) for t in (getattr(test, "tags", None) or []))
+        matcher.general(_get_full_name(test))
+        or matcher.general(getattr(test, "message", None))
+        or any(matcher.tag(str(t)) for t in (getattr(test, "tags", None) or []))
     ):
         return True
-    return _raw_body_matches(getattr(test, "body", None), match)
+    return _raw_body_matches(getattr(test, "body", None), matcher.general)
 
 
 def _raw_body_matches(body: Any, match: Callable[[Optional[str]], bool]) -> bool:
@@ -1562,7 +1620,7 @@ def _make_test_item(test: Any, *, message_chars: int, full_paths: bool) -> TestR
         status=test.status,
         message=truncated_msg,
         full_message=full_msg,
-        tags=list(test.tags) if getattr(test, "tags", None) else None,
+        tags=[normalize(str(t), ignore="_") for t in test.tags] if getattr(test, "tags", None) else None,
         elapsed_seconds=_elapsed_seconds(test),
         start_time=_iso(_start_time(test)),
         source=src_str,
@@ -1576,7 +1634,7 @@ def _collect_failures(
     status_filters: Tuple[str, ...],
     *,
     full_paths: bool = False,
-    match: Optional[Callable[[Optional[str]], bool]] = None,
+    match: Optional["_SearchMatcher"] = None,
 ) -> List[TestResultItem]:
     """Return all failed tests (post-tree-filter, after status filter) with msgs."""
     wanted = _normalise_statuses(status_filters)

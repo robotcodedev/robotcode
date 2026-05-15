@@ -49,6 +49,16 @@ def test_show_tags_always_present_in_json(json_result: JsonRunner, basic_output:
     assert smoke_test.get("tags") == ["smoke"]
 
 
+def test_show_tags_emitted_in_normalised_form(json_result: JsonRunner, tagged_output: Path) -> None:
+    """Tags in `tests[].tags` come out normalised (`bug 1` -> `bug1`)."""
+    data = json_result("show", output_path=tagged_output)
+    norm_tests = [t for t in data["tests"] if t["name"].startswith("Tag Norm Variant")]
+    assert len(norm_tests) == 3
+    # All three Norm-Variant tests carry the same single tag, normalised.
+    for t in norm_tests:
+        assert t["tags"] == ["normtag"]
+
+
 def test_show_text_tags_flag_controls_visibility(text_result: CliRunner, basic_output: Path) -> None:
     """In TEXT mode the `smoke` tag appears only when `--tags` is set."""
     without = strip_ansi(text_result("show", output_path=basic_output).stdout)

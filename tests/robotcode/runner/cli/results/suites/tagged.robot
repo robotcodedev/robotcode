@@ -34,3 +34,15 @@ Tagged Bug Fail
 Tagged Bug Smoke Pass
     [Tags]    bug-123    smoke
     Log    pass 5
+
+Tag Norm Variant A
+    [Tags]    norm tag
+    Log    same tag, with space
+
+Tag Norm Variant B
+    [Tags]    norm_tag
+    Log    same tag, with underscore
+
+Tag Norm Variant C
+    [Tags]    NormTag
+    Log    same tag, different case

@@ -83,6 +83,19 @@ def test_search_in_log_matches_keyword_argument(json_result: JsonRunner, loops_a
     assert "Loops And Branches.For In Test" in names
 
 
+def test_search_against_tags_is_normalisation_aware(json_result: JsonRunner, tagged_output: Path) -> None:
+    """`--search` against tags normalises both sides (Robot tag rules).
+
+    `tagged.robot` has three tests tagged `norm tag`, `norm_tag`, `NormTag` —
+    all the same tag under Robot's normalization. Searching for `norm_tag`
+    (with underscore) finds them all even though only one test is literally
+    tagged that way.
+    """
+    data = json_result("show", "--search", "norm_tag", output_path=tagged_output)
+    names = {t["name"] for t in data["tests"]}
+    assert names == {"Tag Norm Variant A", "Tag Norm Variant B", "Tag Norm Variant C"}
+
+
 # ---------------------------------------------------------------------------
 # Errors
 # ---------------------------------------------------------------------------

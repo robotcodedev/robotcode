@@ -49,9 +49,9 @@ def test_filter_include_tag_uniform(subcommand: str, json_result: JsonRunner, ta
 
 @pytest.mark.parametrize("subcommand", SUBCOMMANDS)
 def test_filter_exclude_tag_uniform(subcommand: str, json_result: JsonRunner, tagged_output: Path) -> None:
-    """`--exclude regression` removes 3 regression-tagged tests, leaving 5."""
+    """`--exclude regression` removes 3 regression-tagged tests, leaving 8."""
     data = json_result(subcommand, "--exclude", "regression", output_path=tagged_output)
-    assert _effective_test_count(subcommand, data) == 5
+    assert _effective_test_count(subcommand, data) == 8
 
 
 @pytest.mark.parametrize("subcommand", SUBCOMMANDS)
@@ -116,6 +116,29 @@ def test_filters_applied_field_present_when_filtering(
     assert isinstance(applied, dict)
     assert "include" in applied
     assert "status" in applied
+
+
+@pytest.mark.parametrize("subcommand", SUBCOMMANDS)
+def test_filters_applied_echoes_canonical_tag_pattern(
+    subcommand: str, json_result: JsonRunner, tagged_output: Path
+) -> None:
+    """`include` / `exclude` echo the canonical form of the tag pattern.
+
+    Single tags are normalised (`Bug 1` -> `bug1`); patterns Robot parses as
+    a logical expression are echoed verbatim because each operand would
+    need to be normalised individually.
+    """
+    data = json_result(
+        subcommand,
+        "--include",
+        "BUG 1",
+        "--exclude",
+        "smokeANDregression",
+        output_path=tagged_output,
+    )
+    applied = data["filtersApplied"]
+    assert applied["include"] == ["bug1"]
+    assert applied["exclude"] == ["smokeANDregression"]
 
 
 @pytest.mark.parametrize("subcommand", SUBCOMMANDS)

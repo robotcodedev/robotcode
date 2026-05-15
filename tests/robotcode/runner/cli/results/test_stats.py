@@ -30,8 +30,8 @@ def test_stats_by_status_default(json_result: JsonRunner, tagged_output: Path) -
     section = data["sections"][0]
     assert section["dimension"] == "status"
     groups = _groups_by_name(section)
-    # tagged.robot: 5 pass, 2 fail, 1 skip
-    assert groups["PASS"]["counts"]["total"] == 5
+    # tagged.robot: 8 pass, 2 fail, 1 skip
+    assert groups["PASS"]["counts"]["total"] == 8
     assert groups["FAIL"]["counts"]["total"] == 2
     assert groups["SKIP"]["counts"]["total"] == 1
 
@@ -59,6 +59,24 @@ def test_stats_by_tag_failed_first_by_default(json_result: JsonRunner, tagged_ou
     data = json_result("stats", "--by", "tag", output_path=tagged_output)
     failed_counts = [g["counts"]["failed"] for g in _section(data, "tag")["groups"]]
     assert failed_counts == sorted(failed_counts, reverse=True)
+
+
+def test_stats_by_tag_merges_equivalent_tags(json_result: JsonRunner, tagged_output: Path) -> None:
+    """Tags that differ only in case/whitespace/underscore merge into one bucket.
+
+    `tagged.robot` has three tests tagged `norm tag`, `norm_tag`, and
+    `NormTag` — semantically the same tag under Robot's normalization rules.
+    They must aggregate to a single group, named in normalised form.
+    """
+    data = json_result("stats", "--by", "tag", output_path=tagged_output)
+    groups = _groups_by_name(_section(data, "tag"))
+    # All three variants land in one bucket whose label is the normalised
+    # form: lowercase, no whitespace, no underscores.
+    assert "normtag" in groups
+    assert groups["normtag"]["counts"]["total"] == 3
+    # And no un-normalised variants leaked through as separate buckets.
+    for variant in ("norm tag", "norm_tag", "NormTag"):
+        assert variant not in groups
 
 
 # ---------------------------------------------------------------------------
@@ -107,7 +125,7 @@ def test_stats_top_n_truncates(json_result: JsonRunner, tagged_output: Path) -> 
     data = json_result("stats", "--by", "tag", "--top", "2", output_path=tagged_output)
     section = _section(data, "tag")
     assert len(section["groups"]) == 2
-    assert section["truncated"] == 2  # 4 tags - 2 shown
+    assert section["truncated"] == 3  # 5 distinct tags (after normalisation) - 2 shown
 
 
 # ---------------------------------------------------------------------------
