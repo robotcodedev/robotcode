@@ -1,0 +1,1 @@
+This file should be skipped by `discover files` because its extension is neither `.robot` nor `.resource`.

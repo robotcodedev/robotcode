@@ -74,8 +74,17 @@ def robotcode_cli() -> CliRunner:
 def json_discover(robotcode_cli: CliRunner) -> JsonRunner:
     """Callable: `(subcommand, *args, suite_path) -> dict`.
 
-    Wraps `robotcode --format json discover <subcommand> ... <path>` and
-    returns the parsed JSON object.
+    Wraps `robotcode --root <SUITES_DIR> --format json discover
+    --no-diagnostics <subcommand> ... <path>` and returns the parsed JSON.
+
+    - `--root SUITES_DIR` isolates the tests from the project's
+      `robot.toml`, which sets `rpa = false` globally and would suppress
+      Robot's auto-detection of Task suites.
+    - `--no-diagnostics` keeps stdout clean of Robot's WARN/ERROR
+      console-logger lines when the suite has parse issues — those would
+      otherwise be interleaved with the JSON document. The JSON
+      `diagnostics` field is still populated because it comes from a
+      separate `DiagnosticsLogger`.
     """
 
     def run(
@@ -84,7 +93,17 @@ def json_discover(robotcode_cli: CliRunner) -> JsonRunner:
         suite_path: Path,
         expect_ok: bool = True,
     ) -> Any:
-        args: List[str] = ["--format", "json", "discover", subcommand, *extra, str(suite_path)]
+        args: List[str] = [
+            "--root",
+            str(SUITES_DIR),
+            "--format",
+            "json",
+            "discover",
+            "--no-diagnostics",
+            subcommand,
+            *extra,
+            str(suite_path),
+        ]
         result = robotcode_cli(args, expect_ok=expect_ok)
         if not expect_ok or not result.stdout.strip():
             return result
@@ -98,7 +117,10 @@ def json_discover(robotcode_cli: CliRunner) -> JsonRunner:
 
 @pytest.fixture
 def text_discover(robotcode_cli: CliRunner) -> CliRunner:
-    """Callable: `(subcommand, *args, suite_path) -> CliResult`. Default TEXT format."""
+    """Callable: `(subcommand, *args, suite_path) -> CliResult`. Default TEXT format.
+
+    Same `--root SUITES_DIR` isolation as `json_discover`.
+    """
 
     def run(
         subcommand: str,
@@ -106,7 +128,7 @@ def text_discover(robotcode_cli: CliRunner) -> CliRunner:
         suite_path: Optional[Path] = None,
         expect_ok: bool = True,
     ) -> CliResult:
-        args: List[str] = ["discover", subcommand, *extra]
+        args: List[str] = ["--root", str(SUITES_DIR), "discover", subcommand, *extra]
         if suite_path is not None:
             args.append(str(suite_path))
         return robotcode_cli(args, expect_ok=expect_ok)
@@ -127,3 +149,56 @@ def flat_suite() -> Path:
 @pytest.fixture
 def nested_suite() -> Path:
     return SUITES_DIR / "nested"
+
+
+@pytest.fixture
+def tasks_suite() -> Path:
+    return SUITES_DIR / "tasks.robot"
+
+
+@pytest.fixture
+def mixed_suite() -> Path:
+    """Directory with one `Tests` and one `Tasks` .robot file side-by-side."""
+    return SUITES_DIR / "mixed_dir"
+
+
+@pytest.fixture
+def tagged_suite() -> Path:
+    return SUITES_DIR / "tagged.robot"
+
+
+@pytest.fixture
+def parse_error_suite() -> Path:
+    return SUITES_DIR / "parse_error.robot"
+
+
+@pytest.fixture
+def files_tree() -> Path:
+    return SUITES_DIR / "files_tree"
+
+
+# ---------------------------------------------------------------------------
+# Walk helpers
+# ---------------------------------------------------------------------------
+
+
+def walk_test_items(item: Any) -> List[Any]:
+    """Recursively collect TestItem dicts of type "test"/"task" from a tree."""
+    out: List[Any] = []
+    if isinstance(item, dict):
+        if item.get("type") in ("test", "task"):
+            out.append(item)
+        for child in item.get("children") or []:
+            out.extend(walk_test_items(child))
+    return out
+
+
+def walk_suite_items(item: Any) -> List[Any]:
+    """Recursively collect TestItem dicts of type "suite" from a tree."""
+    out: List[Any] = []
+    if isinstance(item, dict):
+        if item.get("type") == "suite":
+            out.append(item)
+        for child in item.get("children") or []:
+            out.extend(walk_suite_items(child))
+    return out
