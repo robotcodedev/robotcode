@@ -599,7 +599,7 @@ def format_statistics(collector: Collector) -> Iterable[str]:
     "full_paths",
     default=False,
     show_default=True,
-    help="Show full paths instead of releative.",
+    help="Show full paths instead of relative.",
 )
 @pass_application
 def all(
@@ -708,7 +708,7 @@ def _test_or_tasks(
     "full_paths",
     default=False,
     show_default=True,
-    help="Show full paths instead of releative.",
+    help="Show full paths instead of relative.",
 )
 @add_options(*ROBOT_OPTIONS)
 @pass_application
@@ -755,7 +755,7 @@ def tests(
     "full_paths",
     default=False,
     show_default=True,
-    help="Show full paths instead of releative.",
+    help="Show full paths instead of relative.",
 )
 @add_options(*ROBOT_OPTIONS)
 @pass_application
@@ -795,7 +795,7 @@ def tasks(
     "full_paths",
     default=False,
     show_default=True,
-    help="Show full paths instead of releative.",
+    help="Show full paths instead of relative.",
 )
 @pass_application
 def suites(
@@ -879,7 +879,7 @@ class TagsResult:
     "full_paths",
     default=False,
     show_default=True,
-    help="Show full paths instead of releative.",
+    help="Show full paths instead of relative.",
 )
 @add_options(*ROBOT_OPTIONS)
 @pass_application
@@ -1027,7 +1027,7 @@ def info(app: Application) -> None:
     "full_paths",
     default=False,
     show_default=True,
-    help="Show full paths instead of releative.",
+    help="Show full paths instead of relative.",
 )
 @click.argument(
     "paths",
