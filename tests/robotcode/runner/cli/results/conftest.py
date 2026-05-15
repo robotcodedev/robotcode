@@ -36,17 +36,13 @@ SUITES_DIR = Path(__file__).parent / "suites"
 # RF-version markers
 # ---------------------------------------------------------------------------
 
-needs_rf_52 = pytest.mark.skipif(
-    RF_VERSION < (5, 2),
-    reason="requires Robot Framework 5.2+ (WHILE / TRY / RETURN / BREAK / CONTINUE)",
-)
-needs_rf_61 = pytest.mark.skipif(
-    RF_VERSION < (6, 1),
-    reason="requires Robot Framework 6.1+ (VAR statement)",
-)
 needs_rf_70 = pytest.mark.skipif(
     RF_VERSION < (7, 0),
-    reason="requires Robot Framework 7.0+ (GROUP statement, JSON output, attribute renames)",
+    reason="requires Robot Framework 7.0+ (VAR, JSON output, attribute renames)",
+)
+needs_rf_72 = pytest.mark.skipif(
+    RF_VERSION < (7, 2),
+    reason="requires Robot Framework 7.2+ (GROUP block)",
 )
 
 
@@ -276,11 +272,25 @@ def loops_and_branches_output(session_output_dir: Path) -> Path:
 
 
 @pytest.fixture(scope="session")
-def statements_output(session_output_dir: Path) -> Path:
-    """`output.xml` from the RF 7+ statements suite. Skips on older RF."""
+def statements_modern_output(session_output_dir: Path) -> Path:
+    """WHILE / TRY / RETURN / BREAK / CONTINUE — available on every supported RF."""
+    return _run_robot(SUITES_DIR / "statements_modern.robot", session_output_dir, "statements_modern")
+
+
+@pytest.fixture(scope="session")
+def statements_var_output(session_output_dir: Path) -> Path:
+    """RF 7.0+ VAR statement."""
     if RF_VERSION < (7, 0):
-        pytest.skip("statements.robot requires Robot Framework 7.0+")
-    return _run_robot(SUITES_DIR / "statements.robot", session_output_dir, "statements")
+        pytest.skip("statements_var.robot requires Robot Framework 7.0+")
+    return _run_robot(SUITES_DIR / "statements_var.robot", session_output_dir, "statements_var")
+
+
+@pytest.fixture(scope="session")
+def statements_group_output(session_output_dir: Path) -> Path:
+    """RF 7.2+ GROUP block."""
+    if RF_VERSION < (7, 2):
+        pytest.skip("statements_group.robot requires Robot Framework 7.2+")
+    return _run_robot(SUITES_DIR / "statements_group.robot", session_output_dir, "statements_group")
 
 
 @pytest.fixture(scope="session")

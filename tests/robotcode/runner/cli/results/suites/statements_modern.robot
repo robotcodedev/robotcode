@@ -1,7 +1,6 @@
 *** Settings ***
-Documentation    Exercises every body-item type the `log` JSON dispatch
-...              touches. Requires Robot Framework 7.0+ (uses GROUP and the
-...              RF 7 attribute names).
+Documentation    WHILE / TRY-EXCEPT-FINALLY / RETURN / BREAK / CONTINUE.
+...              Requires Robot Framework 5.2+.
 
 
 *** Keywords ***
@@ -27,11 +26,6 @@ Try Except Test
         Log    Cleanup ran
     END
 
-Var Statement Test
-    VAR    ${local}    local-value
-    VAR    ${suite_var}    suite-value    scope=SUITE
-    Log    ${local} and ${suite_var}
-
 For With Continue And Break Test
     FOR    ${i}    IN RANGE    5
         IF    ${i} == 1
@@ -46,10 +40,3 @@ For With Continue And Break Test
 Return Test
     ${value}=    Return Early
     Log    Got ${value}
-
-Group Test
-    GROUP    Setup phase
-        Log    First inside group
-        Log    Second inside group
-    END
-    Log    After group

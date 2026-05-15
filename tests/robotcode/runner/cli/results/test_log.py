@@ -14,7 +14,7 @@ from typing import Any, Dict, List, Optional
 import pytest
 
 from ._helpers import count_entries_of_type, find_test, iter_body, strip_ansi
-from .conftest import CliRunner, JsonRunner, needs_rf_70
+from .conftest import CliRunner, JsonRunner, needs_rf_70, needs_rf_72
 
 # ---------------------------------------------------------------------------
 # Helpers local to this file
@@ -115,14 +115,14 @@ def test_log_body_if_else_chain(json_result: JsonRunner, loops_and_branches_outp
 
 
 # ---------------------------------------------------------------------------
-# RF 7+ statements
+# Modern statements (WHILE, TRY/EXCEPT/FINALLY, RETURN, BREAK, CONTINUE) —
+# available on every supported RF version.
 # ---------------------------------------------------------------------------
 
 
-@needs_rf_70
-def test_log_body_while(json_result: JsonRunner, statements_output: Path) -> None:
-    data = json_result("log", output_path=statements_output)
-    body = _test_body(data, "Statements.While Loop Test")
+def test_log_body_while(json_result: JsonRunner, statements_modern_output: Path) -> None:
+    data = json_result("log", output_path=statements_modern_output)
+    body = _test_body(data, "Statements Modern.While Loop Test")
     while_entry = _first_entry_of_type(body, "WHILE")
     assert while_entry is not None
     assert "${i}" in (while_entry.get("condition") or "")
@@ -130,10 +130,9 @@ def test_log_body_while(json_result: JsonRunner, statements_output: Path) -> Non
     assert _entries_of_type(while_entry.get("body") or [], "ITERATION")
 
 
-@needs_rf_70
-def test_log_body_try_except_finally(json_result: JsonRunner, statements_output: Path) -> None:
-    data = json_result("log", output_path=statements_output)
-    body = _test_body(data, "Statements.Try Except Test")
+def test_log_body_try_except_finally(json_result: JsonRunner, statements_modern_output: Path) -> None:
+    data = json_result("log", output_path=statements_modern_output)
+    body = _test_body(data, "Statements Modern.Try Except Test")
     try_entry = _first_entry_of_type(body, "TRY")
     assert try_entry is not None
     branches = try_entry.get("body") or []
@@ -146,11 +145,32 @@ def test_log_body_try_except_finally(json_result: JsonRunner, statements_output:
     assert except_branch.get("patternType") == "GLOB"
 
 
+def test_log_body_return(json_result: JsonRunner, statements_modern_output: Path) -> None:
+    data = json_result("log", output_path=statements_modern_output)
+    body = _test_body(data, "Statements Modern.Return Test")
+    # RETURN lives inside the KEYWORD body, recurse the whole tree
+    return_entry = _first_entry_of_type(body, "RETURN")
+    assert return_entry is not None
+    assert return_entry.get("args") == ["early-value"]
+
+
+def test_log_body_break_continue(json_result: JsonRunner, statements_modern_output: Path) -> None:
+    data = json_result("log", output_path=statements_modern_output)
+    body = _test_body(data, "Statements Modern.For With Continue And Break Test")
+    assert count_entries_of_type(body, "CONTINUE") >= 1
+    assert count_entries_of_type(body, "BREAK") >= 1
+
+
+# ---------------------------------------------------------------------------
+# RF 7.0+ VAR statement
+# ---------------------------------------------------------------------------
+
+
 @needs_rf_70
-def test_log_body_var_statement(json_result: JsonRunner, statements_output: Path) -> None:
+def test_log_body_var_statement(json_result: JsonRunner, statements_var_output: Path) -> None:
     """VAR records the variable name on `assign` and the value on `args`."""
-    data = json_result("log", output_path=statements_output)
-    body = _test_body(data, "Statements.Var Statement Test")
+    data = json_result("log", output_path=statements_var_output)
+    body = _test_body(data, "Statements Var.Var Statement Test")
     var_entries = _entries_of_type(body, "VAR")
     assert len(var_entries) == 2
     first = var_entries[0]
@@ -162,28 +182,15 @@ def test_log_body_var_statement(json_result: JsonRunner, statements_output: Path
     assert suite_var.get("scope") == "SUITE"
 
 
-@needs_rf_70
-def test_log_body_return(json_result: JsonRunner, statements_output: Path) -> None:
-    data = json_result("log", output_path=statements_output)
-    body = _test_body(data, "Statements.Return Test")
-    # RETURN lives inside the KEYWORD body, recurse the whole tree
-    return_entry = _first_entry_of_type(body, "RETURN")
-    assert return_entry is not None
-    assert return_entry.get("args") == ["early-value"]
+# ---------------------------------------------------------------------------
+# RF 7.2+ GROUP block
+# ---------------------------------------------------------------------------
 
 
-@needs_rf_70
-def test_log_body_break_continue(json_result: JsonRunner, statements_output: Path) -> None:
-    data = json_result("log", output_path=statements_output)
-    body = _test_body(data, "Statements.For With Continue And Break Test")
-    assert count_entries_of_type(body, "CONTINUE") >= 1
-    assert count_entries_of_type(body, "BREAK") >= 1
-
-
-@needs_rf_70
-def test_log_body_group(json_result: JsonRunner, statements_output: Path) -> None:
-    data = json_result("log", output_path=statements_output)
-    body = _test_body(data, "Statements.Group Test")
+@needs_rf_72
+def test_log_body_group(json_result: JsonRunner, statements_group_output: Path) -> None:
+    data = json_result("log", output_path=statements_group_output)
+    body = _test_body(data, "Statements Group.Group Test")
     group_entry = _first_entry_of_type(body, "GROUP")
     assert group_entry is not None
     assert group_entry.get("name") == "Setup phase"
