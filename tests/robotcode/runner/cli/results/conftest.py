@@ -215,24 +215,29 @@ def session_output_dir(tmp_path_factory: pytest.TempPathFactory) -> Path:
     return tmp_path_factory.mktemp("results_acceptance")
 
 
-def _run_robot(suite_path: Path, output_dir: Path, name: str) -> Path:
-    """Run RF once and return the path to the generated `output.xml`."""
+def _run_robot(suite_path: Path, output_dir: Path, name: str, *, suite_name: Optional[str] = None) -> Path:
+    """Run RF once and return the path to the generated `output.xml`.
+
+    Passing `suite_name` overrides the top-level suite name via `--name`
+    (useful for the diff fixtures, where baseline and current must share
+    a longname prefix so diffing can match tests across both runs).
+    """
     output_xml = output_dir / f"{name}.xml"
     # Don't bother generating html/log/report — we only need output.xml.
-    proc = _run(
-        [
-            "-m",
-            "robot",
-            "--output",
-            str(output_xml),
-            "--report",
-            "NONE",
-            "--log",
-            "NONE",
-            str(suite_path),
-        ],
-        timeout=120.0,
-    )
+    args = [
+        "-m",
+        "robot",
+        "--output",
+        str(output_xml),
+        "--report",
+        "NONE",
+        "--log",
+        "NONE",
+    ]
+    if suite_name is not None:
+        args.extend(["--name", suite_name])
+    args.append(str(suite_path))
+    proc = _run(args, timeout=120.0)
     # Robot exits non-zero on test failures, which is *expected* for our
     # mixed-outcome fixture suites. We only care that the output.xml is
     # produced and well-formed.
@@ -282,6 +287,34 @@ def statements_output(session_output_dir: Path) -> Path:
 def artifacts_output(session_output_dir: Path) -> Path:
     """`output.xml` from the artifacts suite (embedded + external refs)."""
     return _run_robot(SUITES_DIR / "artifacts.robot", session_output_dir, "artifacts")
+
+
+@pytest.fixture(scope="session")
+def errors_output(session_output_dir: Path) -> Path:
+    """`output.xml` from a suite with a deliberate import error."""
+    return _run_robot(SUITES_DIR / "errors.robot", session_output_dir, "errors")
+
+
+@pytest.fixture(scope="session")
+def diff_baseline_output(session_output_dir: Path) -> Path:
+    """Baseline `output.xml` for the diff tests — A,B,C all pass."""
+    return _run_robot(
+        SUITES_DIR / "diff_baseline.robot",
+        session_output_dir,
+        "diff_baseline",
+        suite_name="Diff",
+    )
+
+
+@pytest.fixture(scope="session")
+def diff_current_output(session_output_dir: Path) -> Path:
+    """Current `output.xml` for the diff tests — A passes, B fails, C gone, D added."""
+    return _run_robot(
+        SUITES_DIR / "diff_current.robot",
+        session_output_dir,
+        "diff_current",
+        suite_name="Diff",
+    )
 
 
 # ---------------------------------------------------------------------------
