@@ -264,6 +264,26 @@ def nested_output(session_output_dir: Path) -> Path:
     return _run_robot(SUITES_DIR / "nested", session_output_dir, "nested")
 
 
+@pytest.fixture(scope="session")
+def loops_and_branches_output(session_output_dir: Path) -> Path:
+    """`output.xml` from the cross-version FOR/IF/ELSE suite."""
+    return _run_robot(SUITES_DIR / "loops_and_branches.robot", session_output_dir, "loops_and_branches")
+
+
+@pytest.fixture(scope="session")
+def statements_output(session_output_dir: Path) -> Path:
+    """`output.xml` from the RF 7+ statements suite. Skips on older RF."""
+    if RF_VERSION < (7, 0):
+        pytest.skip("statements.robot requires Robot Framework 7.0+")
+    return _run_robot(SUITES_DIR / "statements.robot", session_output_dir, "statements")
+
+
+@pytest.fixture(scope="session")
+def artifacts_output(session_output_dir: Path) -> Path:
+    """`output.xml` from the artifacts suite (embedded + external refs)."""
+    return _run_robot(SUITES_DIR / "artifacts.robot", session_output_dir, "artifacts")
+
+
 # ---------------------------------------------------------------------------
 # Misc helpers exposed as fixtures
 # ---------------------------------------------------------------------------
