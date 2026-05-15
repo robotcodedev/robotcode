@@ -21,6 +21,7 @@ from robotcode.robot.config.utils import get_config_files
 from robotcode.robot.utils import RF_VERSION
 
 from ..__version__ import __version__
+from ._search import SearchMatcher, SearchModifier
 
 _app: Optional[Application] = None
 
@@ -157,6 +158,7 @@ class RobotFrameworkEx(RobotFramework):
         orig_folder: Optional[Path],
         by_longname: Tuple[str, ...] = (),
         exclude_by_longname: Tuple[str, ...] = (),
+        search_matcher: Optional[SearchMatcher] = None,
     ) -> None:
         super().__init__()
         self.app = app
@@ -166,6 +168,7 @@ class RobotFrameworkEx(RobotFramework):
         self._orig_cwd = Path.cwd() if orig_folder is None else orig_folder
         self.by_longname = by_longname
         self.exclude_by_longname = exclude_by_longname
+        self.search_matcher = search_matcher
 
     def parse_arguments(self, cli_args: Any) -> Any:
         try:
@@ -199,6 +202,9 @@ class RobotFrameworkEx(RobotFramework):
 
         if self.exclude_by_longname:
             modifiers.append(robotcode.modifiers.ExcludedByLongName(*self.exclude_by_longname, root_name=root_name))
+
+        if self.search_matcher is not None:
+            modifiers.append(SearchModifier(self.search_matcher))
 
         if modifiers:
             options["prerunmodifier"] = options.get("prerunmodifier", []) + modifiers

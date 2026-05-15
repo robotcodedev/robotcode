@@ -10,11 +10,11 @@ configured `color` flag in `echo_via_pager`.
 """
 
 import os
-import re
 from typing import Any, Callable, Dict, Iterable, List, Optional
 
 import click
 
+from .._search import make_highlighter
 from ._models import (
     ArtifactRef,
     DiffChange,
@@ -148,35 +148,6 @@ def _message_color(status: str) -> Optional[str]:
     return None
 
 
-def _make_highlighter(substring: Optional[str], regex: Optional[str]) -> Optional[Callable[[str], str]]:
-    """Return a `highlight(text) -> styled_text` function or None when no pattern.
-
-    Wraps each match in a yellow-on-black bold span via `click.style`.
-    Substring matches are highlighted case-insensitively (matching the
-    `--search` semantics); regex patterns are honoured as the user wrote
-    them so `(?i)` opts into case-insensitive highlighting too.
-    """
-    if not substring and not regex:
-        return None
-    if regex:
-        flags = 0
-        raw = regex
-    else:
-        flags = re.IGNORECASE
-        raw = re.escape(substring or "")
-    try:
-        rx = re.compile(raw, flags)
-    except re.error:
-        return None
-
-    def highlight(text: str) -> str:
-        if not text:
-            return text
-        return rx.sub(lambda m: click.style(m.group(0), fg="black", bg="yellow", bold=True), text)
-
-    return highlight
-
-
 def _format_test_entry(
     t: TestResultItem,
     *,
@@ -263,7 +234,7 @@ def render_show(
     search_regex: Optional[str] = None,
 ) -> Iterable[str]:
     name = data.file.rel_source or data.file.source
-    highlight = _make_highlighter(search_substring, search_regex)
+    highlight = make_highlighter(search_substring, search_regex)
 
     if not data.tests:
         if data.filters_applied:
@@ -529,7 +500,7 @@ def render_log(
     search_regex: Optional[str] = None,
 ) -> Iterable[str]:
     threshold = _LEVEL_ORDER.get(level.upper(), 2)
-    highlight = _make_highlighter(search_substring, search_regex)
+    highlight = make_highlighter(search_substring, search_regex)
 
     if not data.tests and not data.execution_messages:
         yield click.style("(no tests matched)", dim=True)

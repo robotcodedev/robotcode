@@ -51,7 +51,37 @@ from robotcode.plugin import (
 from robotcode.plugin.click_helper.types import add_options
 from robotcode.robot.utils import RF_VERSION
 
+from .._search import SearchMatcher, make_highlighter, make_search_matcher
 from ..robot import ROBOT_OPTIONS, ROBOT_VERSION_OPTIONS, RobotFrameworkEx, handle_robot_options
+
+DISCOVER_SEARCH_OPTIONS = [
+    click.option(
+        "--search",
+        "search_substring",
+        metavar="TEXT",
+        default=None,
+        help=(
+            "Only include items where TEXT case-insensitively matches the "
+            "name, full name, source path, documentation, template name, "
+            "timeout, any tag (normalisation-aware), or anything inside "
+            "the test body — keyword names, keyword arguments, assigned "
+            "variables, FOR/WHILE/IF conditions, VAR/RETURN values, "
+            "EXCEPT patterns, GROUP names. Mutually exclusive with "
+            "`--search-regex`."
+        ),
+    ),
+    click.option(
+        "--search-regex",
+        "search_regex",
+        metavar="PATTERN",
+        default=None,
+        help=(
+            "Only include items where PATTERN (Python regex, case-sensitive — "
+            "prefix with `(?i)` for case-insensitive) matches any of the "
+            "same targets as `--search`. Mutually exclusive with `--search`."
+        ),
+    ),
+]
 
 
 class ErroneousTestSuite(running_model.TestSuite):
@@ -224,6 +254,7 @@ class TestItem(CamelSnakeMixin):
 class ResultItem(CamelSnakeMixin):
     items: List[TestItem]
     diagnostics: Optional[Dict[str, List[Diagnostic]]] = None
+    filters_applied: Optional[Dict[str, str]] = None
 
 
 @dataclass
@@ -475,6 +506,7 @@ def handle_options(
     by_longname: Tuple[str, ...],
     exclude_by_longname: Tuple[str, ...],
     robot_options_and_args: Tuple[str, ...],
+    search_matcher: Optional[SearchMatcher] = None,
 ) -> Tuple[TestSuite, Collector, Optional[Dict[str, List[Diagnostic]]]]:
     root_folder, profile, cmd_options = handle_robot_options(app, robot_options_and_args)
 
@@ -497,6 +529,7 @@ def handle_options(
                 orig_folder,
                 by_longname,
                 exclude_by_longname,
+                search_matcher=search_matcher,
             ).parse_arguments((*cmd_options, "--runemptysuite", *robot_options_and_args))
 
             settings = RobotSettings(options)
@@ -558,6 +591,14 @@ def handle_options(
         raise UnknownError("Unexpected error happened.")
 
 
+def _filters_applied(search_substring: Optional[str], search_regex: Optional[str]) -> Optional[Dict[str, str]]:
+    if search_substring:
+        return {"search": search_substring}
+    if search_regex:
+        return {"search-regex": search_regex}
+    return None
+
+
 def format_statistics(collector: Collector) -> Iterable[str]:
     yield os.linesep
     yield click.style("Statistics:", underline=True, fg="blue")
@@ -591,6 +632,7 @@ def format_statistics(collector: Collector) -> Iterable[str]:
     help="Show the tags that are present.",
 )
 @add_options(*ROBOT_OPTIONS)
+@add_options(*DISCOVER_SEARCH_OPTIONS)
 @click.option(
     "--full-paths / --no-full-paths",
     "full_paths",
@@ -603,6 +645,8 @@ def all(
     app: Application,
     full_paths: bool,
     show_tags: bool,
+    search_substring: Optional[str],
+    search_regex: Optional[str],
     by_longname: Tuple[str, ...],
     exclude_by_longname: Tuple[str, ...],
     robot_options_and_args: Tuple[str, ...],
@@ -622,34 +666,45 @@ def all(
     ```
     """
 
-    _suite, collector, diagnostics = handle_options(app, by_longname, exclude_by_longname, robot_options_and_args)
+    matcher = make_search_matcher(search_substring, search_regex)
+    _suite, collector, diagnostics = handle_options(
+        app, by_longname, exclude_by_longname, robot_options_and_args, search_matcher=matcher
+    )
 
     if collector.all.children:
         if app.config.output_format is None or app.config.output_format == OutputFormat.TEXT:
+            highlight = make_highlighter(search_substring, search_regex)
+            hl = highlight if highlight is not None else (lambda s: s)
 
             def print(item: TestItem) -> Iterable[str]:
                 if item.type in ["test", "task"]:
                     yield "    "
                     yield click.style(f"{item.type.capitalize()}: ", fg="blue")
-                    yield click.style(item.longname, bold=True)
+                    yield click.style(hl(item.longname), bold=True)
                     yield click.style(
-                        f" ({item.source if full_paths else item.rel_source}"
+                        f" ({hl(str(item.source if full_paths else item.rel_source))}"
                         f":{item.range.start.line + 1 if item.range is not None else 1}){os.linesep}"
                     )
                     if show_tags and item.tags:
                         yield click.style("        Tags:", bold=True, fg="yellow")
-                        yield f" {', '.join(normalize(str(tag), ignore='_') for tag in sorted(item.tags))}{os.linesep}"
+                        tags_text = ", ".join(hl(normalize(str(tag), ignore="_")) for tag in sorted(item.tags))
+                        yield f" {tags_text}{os.linesep}"
                 else:
                     yield click.style(f"{item.type.capitalize()}: ", fg="green")
-                    yield click.style(item.longname, bold=True)
-                    yield click.style(f" ({item.source if full_paths else item.rel_source}){os.linesep}")
+                    yield click.style(hl(item.longname), bold=True)
+                    yield click.style(f" ({hl(str(item.source if full_paths else item.rel_source))}){os.linesep}")
                 for child in item.children or []:
                     yield from print(child)
 
             app.echo_via_pager(chain(print(collector.all.children[0]), format_statistics(collector)))
 
         else:
-            app.print_data(ResultItem([collector.all], diagnostics), remove_defaults=True)
+            app.print_data(
+                ResultItem(
+                    [collector.all], diagnostics, filters_applied=_filters_applied(search_substring, search_regex)
+                ),
+                remove_defaults=True,
+            )
 
 
 def _test_or_tasks(
@@ -657,14 +712,21 @@ def _test_or_tasks(
     app: Application,
     full_paths: bool,
     show_tags: bool,
+    search_substring: Optional[str],
+    search_regex: Optional[str],
     by_longname: Tuple[str, ...],
     exclude_by_longname: Tuple[str, ...],
     robot_options_and_args: Tuple[str, ...],
 ) -> None:
-    _suite, collector, diagnostics = handle_options(app, by_longname, exclude_by_longname, robot_options_and_args)
+    matcher = make_search_matcher(search_substring, search_regex)
+    _suite, collector, diagnostics = handle_options(
+        app, by_longname, exclude_by_longname, robot_options_and_args, search_matcher=matcher
+    )
 
     if collector.all.children:
         if app.config.output_format is None or app.config.output_format == OutputFormat.TEXT:
+            highlight = make_highlighter(search_substring, search_regex)
+            hl = highlight if highlight is not None else (lambda s: s)
 
             def print(items: List[TestItem]) -> Iterable[str]:
                 for item in items:
@@ -672,20 +734,28 @@ def _test_or_tasks(
                         continue
 
                     yield click.style(f"{item.type.capitalize()}: ", fg="blue")
-                    yield click.style(item.longname, bold=True)
+                    yield click.style(hl(item.longname), bold=True)
                     yield click.style(
-                        f" ({item.source if full_paths else item.rel_source}"
+                        f" ({hl(str(item.source if full_paths else item.rel_source))}"
                         f":{item.range.start.line + 1 if item.range is not None else 1}){os.linesep}"
                     )
                     if show_tags and item.tags:
                         yield click.style("    Tags:", bold=True, fg="yellow")
-                        yield f" {', '.join(normalize(str(tag), ignore='_') for tag in sorted(item.tags))}{os.linesep}"
+                        tags_text = ", ".join(hl(normalize(str(tag), ignore="_")) for tag in sorted(item.tags))
+                        yield f" {tags_text}{os.linesep}"
 
             if collector.test_and_tasks:
                 app.echo_via_pager(chain(print(collector.test_and_tasks), format_statistics(collector)))
 
         else:
-            app.print_data(ResultItem(collector.test_and_tasks, diagnostics), remove_defaults=True)
+            app.print_data(
+                ResultItem(
+                    collector.test_and_tasks,
+                    diagnostics,
+                    filters_applied=_filters_applied(search_substring, search_regex),
+                ),
+                remove_defaults=True,
+            )
 
 
 @discover.command(
@@ -708,11 +778,14 @@ def _test_or_tasks(
     help="Show full paths instead of relative.",
 )
 @add_options(*ROBOT_OPTIONS)
+@add_options(*DISCOVER_SEARCH_OPTIONS)
 @pass_application
 def tests(
     app: Application,
     full_paths: bool,
     show_tags: bool,
+    search_substring: Optional[str],
+    search_regex: Optional[str],
     by_longname: Tuple[str, ...],
     exclude_by_longname: Tuple[str, ...],
     robot_options_and_args: Tuple[str, ...],
@@ -732,7 +805,17 @@ def tests(
     ```
     """
 
-    _test_or_tasks("test", app, full_paths, show_tags, by_longname, exclude_by_longname, robot_options_and_args)
+    _test_or_tasks(
+        "test",
+        app,
+        full_paths,
+        show_tags,
+        search_substring,
+        search_regex,
+        by_longname,
+        exclude_by_longname,
+        robot_options_and_args,
+    )
 
 
 @discover.command(
@@ -755,11 +838,14 @@ def tests(
     help="Show full paths instead of relative.",
 )
 @add_options(*ROBOT_OPTIONS)
+@add_options(*DISCOVER_SEARCH_OPTIONS)
 @pass_application
 def tasks(
     app: Application,
     full_paths: bool,
     show_tags: bool,
+    search_substring: Optional[str],
+    search_regex: Optional[str],
     by_longname: Tuple[str, ...],
     exclude_by_longname: Tuple[str, ...],
     robot_options_and_args: Tuple[str, ...],
@@ -778,7 +864,17 @@ def tasks(
     robotcode --profile regression discover tasks --include regression --exclude wipANDnotready
     ```
     """
-    _test_or_tasks("task", app, full_paths, show_tags, by_longname, exclude_by_longname, robot_options_and_args)
+    _test_or_tasks(
+        "task",
+        app,
+        full_paths,
+        show_tags,
+        search_substring,
+        search_regex,
+        by_longname,
+        exclude_by_longname,
+        robot_options_and_args,
+    )
 
 
 @discover.command(
@@ -787,6 +883,7 @@ def tasks(
     epilog="Use `-- --help` to see `robot` help.",
 )
 @add_options(*ROBOT_OPTIONS)
+@add_options(*DISCOVER_SEARCH_OPTIONS)
 @click.option(
     "--full-paths / --no-full-paths",
     "full_paths",
@@ -798,6 +895,8 @@ def tasks(
 def suites(
     app: Application,
     full_paths: bool,
+    search_substring: Optional[str],
+    search_regex: Optional[str],
     by_longname: Tuple[str, ...],
     exclude_by_longname: Tuple[str, ...],
     robot_options_and_args: Tuple[str, ...],
@@ -817,19 +916,20 @@ def suites(
     ```
     """
 
-    _suite, collector, diagnostics = handle_options(app, by_longname, exclude_by_longname, robot_options_and_args)
+    matcher = make_search_matcher(search_substring, search_regex)
+    _suite, collector, diagnostics = handle_options(
+        app, by_longname, exclude_by_longname, robot_options_and_args, search_matcher=matcher
+    )
 
     if collector.all.children:
         if app.config.output_format is None or app.config.output_format == OutputFormat.TEXT:
+            highlight = make_highlighter(search_substring, search_regex)
+            hl = highlight if highlight is not None else (lambda s: s)
 
             def print(items: List[TestItem]) -> Iterable[str]:
                 for item in items:
-                    # yield f"{item.longname}{os.linesep}"
-                    yield click.style(
-                        f"{item.longname}",
-                        bold=True,
-                    )
-                    yield click.style(f" ({item.source if full_paths else item.rel_source}){os.linesep}")
+                    yield click.style(hl(item.longname), bold=True)
+                    yield click.style(f" ({hl(str(item.source if full_paths else item.rel_source))}){os.linesep}")
 
             if collector.suites:
                 app.echo_via_pager(chain(print(collector.suites), format_statistics(collector)))
@@ -837,12 +937,18 @@ def suites(
                 app.echo_via_pager(format_statistics(collector))
 
         else:
-            app.print_data(ResultItem(collector.suites, diagnostics), remove_defaults=True)
+            app.print_data(
+                ResultItem(
+                    collector.suites, diagnostics, filters_applied=_filters_applied(search_substring, search_regex)
+                ),
+                remove_defaults=True,
+            )
 
 
 @dataclass
-class TagsResult:
+class TagsResult(CamelSnakeMixin):
     tags: Dict[str, List[TestItem]]
+    filters_applied: Optional[Dict[str, str]] = None
 
 
 @discover.command(
@@ -879,6 +985,7 @@ class TagsResult:
     help="Show full paths instead of relative.",
 )
 @add_options(*ROBOT_OPTIONS)
+@add_options(*DISCOVER_SEARCH_OPTIONS)
 @pass_application
 def tags(
     app: Application,
@@ -886,6 +993,8 @@ def tags(
     show_tests: bool,
     show_tasks: bool,
     full_paths: bool,
+    search_substring: Optional[str],
+    search_regex: Optional[str],
     by_longname: Tuple[str, ...],
     exclude_by_longname: Tuple[str, ...],
     robot_options_and_args: Tuple[str, ...],
@@ -906,15 +1015,20 @@ def tags(
     ```
     """
 
-    _suite, collector, _diagnostics = handle_options(app, by_longname, exclude_by_longname, robot_options_and_args)
+    matcher = make_search_matcher(search_substring, search_regex)
+    _suite, collector, _diagnostics = handle_options(
+        app, by_longname, exclude_by_longname, robot_options_and_args, search_matcher=matcher
+    )
 
     if collector.all.children:
         if app.config.output_format is None or app.config.output_format == OutputFormat.TEXT:
+            highlight = make_highlighter(search_substring, search_regex)
+            hl = highlight if highlight is not None else (lambda s: s)
 
             def print(tags: Dict[str, List[TestItem]]) -> Iterable[str]:
                 for tag, items in sorted(tags.items()):
                     yield click.style(
-                        f"{tag}{os.linesep}",
+                        f"{hl(tag)}{os.linesep}",
                         bold=show_tests,
                         fg="yellow" if show_tests else None,
                     )
@@ -926,9 +1040,9 @@ def tags(
                                 if show_tasks and t.type != "task":
                                     continue
                             yield click.style(f"    {t.type.capitalize()}: ", fg="blue")
-                            yield click.style(t.longname, bold=True)
+                            yield click.style(hl(t.longname), bold=True)
                             yield click.style(
-                                f" ({t.source if full_paths else t.rel_source}"
+                                f" ({hl(str(t.source if full_paths else t.rel_source))}"
                                 f":{t.range.start.line + 1 if t.range is not None else 1}){os.linesep}"
                             )
 
@@ -943,7 +1057,10 @@ def tags(
                 app.echo_via_pager(format_statistics(collector))
 
         else:
-            app.print_data(TagsResult(collector.normalized_tags), remove_defaults=True)
+            app.print_data(
+                TagsResult(collector.normalized_tags, filters_applied=_filters_applied(search_substring, search_regex)),
+                remove_defaults=True,
+            )
 
 
 @dataclass
@@ -1027,13 +1144,20 @@ def info(app: Application) -> None:
     show_default=True,
     help="Show full paths instead of relative.",
 )
+@add_options(*DISCOVER_SEARCH_OPTIONS)
 @click.argument(
     "paths",
     nargs=-1,
     type=click.Path(exists=True, file_okay=True, dir_okay=True),
 )
 @pass_application
-def files(app: Application, full_paths: bool, paths: Iterable[Path]) -> None:
+def files(
+    app: Application,
+    full_paths: bool,
+    search_substring: Optional[str],
+    search_regex: Optional[str],
+    paths: Iterable[Path],
+) -> None:
     """\
     Shows all files that are used to discover the tests.
 
@@ -1045,6 +1169,7 @@ def files(app: Application, full_paths: bool, paths: Iterable[Path]) -> None:
     ```
     """
 
+    matcher = make_search_matcher(search_substring, search_regex)
     root_folder, profile, _cmd_options = handle_robot_options(app, ())
 
     search_paths = set(
@@ -1081,11 +1206,15 @@ def files(app: Application, full_paths: bool, paths: Iterable[Path]) -> None:
             ),
         )
     )
+    if matcher is not None:
+        result = [p for p in result if matcher.general(p)]
     if app.config.output_format is None or app.config.output_format == OutputFormat.TEXT:
+        highlight = make_highlighter(search_substring, search_regex)
+        hl = highlight if highlight is not None else (lambda s: s)
 
         def print() -> Iterable[str]:
             for p in result:
-                yield f"{p}{os.linesep}"
+                yield f"{hl(p)}{os.linesep}"
 
             yield os.linesep
             yield click.style("Total: ", underline=True, bold=True, fg="blue")

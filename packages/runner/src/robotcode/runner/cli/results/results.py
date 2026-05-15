@@ -15,7 +15,6 @@ All subcommands respect the global `-f/--format` option:
 
 import re
 import shutil
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Dict, Iterable, Iterator, List, Optional, Tuple
 
@@ -31,6 +30,7 @@ from robotcode.robot.config.loader import load_robot_config_from_path
 from robotcode.robot.config.utils import get_config_files
 from robotcode.robot.utils import RF_VERSION
 
+from .._search import SearchMatcher, make_search_matcher
 from . import _html, _render
 from ._models import (
     ArtifactRef,
@@ -130,8 +130,9 @@ SEARCH_OPTIONS = [
         help=(
             "Only include tests with at least one case-insensitive substring "
             "match against TEXT. Searches test name, full name, failure "
-            "message, tags, keyword names, keyword arguments, and log "
-            "messages. Mutually exclusive with `--search-regex`."
+            "message, documentation, template name, timeout, tags, keyword "
+            "names, keyword arguments, and log messages. Mutually exclusive "
+            "with `--search-regex`."
         ),
     ),
     click.option(
@@ -261,7 +262,7 @@ def summary(
                 by_longname,
                 exclude_by_longname,
             )
-        match = _make_matcher(search_substring, search_regex)
+        match = make_search_matcher(search_substring, search_regex)
         counts = _collect_counts(execution.suite, status_filters, match)
         failures = (
             _collect_failures(execution.suite, status_filters, full_paths=full_paths, match=match)
@@ -416,7 +417,7 @@ def show(
             )
 
         wanted = _normalise_statuses(status_filters)
-        match = _make_matcher(search_substring, search_regex)
+        match = make_search_matcher(search_substring, search_regex)
         all_items = [
             _make_test_item(t, message_chars=message_chars, full_paths=full_paths)
             for t in _iter_all_tests(execution.suite)
@@ -613,7 +614,7 @@ def log(
             )
 
         wanted = _normalise_statuses(status_filters)
-        match = _make_matcher(search_substring, search_regex)
+        match = make_search_matcher(search_substring, search_regex)
 
         base_dir = path.parent
         matched: List[LogTest] = []
@@ -782,7 +783,7 @@ def stats(
             )
 
         wanted = _normalise_statuses(status_filters)
-        match = _make_matcher(search_substring, search_regex)
+        match = make_search_matcher(search_substring, search_regex)
         tests = [
             t
             for t in _iter_all_tests(execution.suite)
@@ -986,7 +987,7 @@ def diff(
             )
 
         wanted = _normalise_statuses(status_filters)
-        match = _make_matcher(search_substring, search_regex)
+        match = make_search_matcher(search_substring, search_regex)
 
         def _eligible(t: Any) -> bool:
             if wanted and t.status not in wanted:
@@ -1411,7 +1412,7 @@ def _bump_counts(c: Counts, status: str) -> None:
 def _collect_counts(
     suite: Any,
     status_filters: Tuple[str, ...],
-    match: Optional["_SearchMatcher"] = None,
+    match: Optional["SearchMatcher"] = None,
 ) -> Counts:
     wanted = _normalise_statuses(status_filters)
     c = Counts()
@@ -1434,59 +1435,7 @@ def _tally_items(items: Iterable[TestResultItem]) -> Counts:
 _STATUS_SORT_RANK = {"FAIL": 0, "SKIP": 1, "PASS": 2, "NOT RUN": 3}
 
 
-@dataclass(frozen=True)
-class _SearchMatcher:
-    """A pair of predicates: one for general targets, one for tags.
-
-    `tag` applies Robot's tag-normalization (lowercase, no whitespace, no
-    underscores) on both sides before comparing, so a search for `bug 123`
-    matches tests tagged `bug_123` and vice versa. `general` is the plain
-    substring or regex predicate used for everything else (names, messages,
-    keyword arguments, …).
-    """
-
-    general: Callable[[Optional[str]], bool]
-    tag: Callable[[Optional[str]], bool]
-
-
-def _make_matcher(substring: Optional[str], regex: Optional[str]) -> Optional[_SearchMatcher]:
-    """Compile a search predicate once.
-
-    Exactly one of `substring` / `regex` may be set. `substring` is matched
-    case-insensitively as a plain `in` check. `regex` is matched without any
-    case-folding by default — use `(?i)pattern` to make a regex
-    case-insensitive. Returns `None` if neither is given.
-    """
-    if substring and regex:
-        raise click.UsageError("--search and --search-regex are mutually exclusive.")
-    if substring:
-        needle = substring.lower()
-        needle_norm = normalize(substring, ignore="_")
-
-        def general(s: Optional[str]) -> bool:
-            return bool(s and needle in s.lower())
-
-        def tag(s: Optional[str]) -> bool:
-            return bool(s and needle_norm in normalize(s, ignore="_"))
-
-        return _SearchMatcher(general=general, tag=tag)
-    if regex:
-        try:
-            rx = re.compile(regex)
-        except re.error as e:
-            raise click.UsageError(f"--search-regex: invalid pattern: {e}") from e
-
-        def general(s: Optional[str]) -> bool:
-            return bool(s and rx.search(s))
-
-        def tag(s: Optional[str]) -> bool:
-            return bool(s and rx.search(normalize(s, ignore="_")))
-
-        return _SearchMatcher(general=general, tag=tag)
-    return None
-
-
-def _raw_test_search_matches(test: Any, matcher: _SearchMatcher) -> bool:
+def _raw_test_search_matches(test: Any, matcher: SearchMatcher) -> bool:
     """True if the raw Robot test (or anything in its body tree) matches.
 
     Walks the raw `output.xml` model so callers don't have to materialise the
@@ -1496,73 +1445,13 @@ def _raw_test_search_matches(test: Any, matcher: _SearchMatcher) -> bool:
     if (
         matcher.general(_get_full_name(test))
         or matcher.general(getattr(test, "message", None))
+        or matcher.general(getattr(test, "doc", None))
+        or matcher.general(getattr(test, "template", None))
+        or matcher.general(getattr(test, "timeout", None))
         or any(matcher.tag(str(t)) for t in (getattr(test, "tags", None) or []))
     ):
         return True
-    return _raw_body_matches(getattr(test, "body", None), matcher.general)
-
-
-def _raw_body_matches(body: Any, match: Callable[[Optional[str]], bool]) -> bool:
-    """Recurse through a raw body iterable looking for any match.
-
-    Inspects body-item attributes per type (mirrors `_collect_test_body`'s
-    dispatch), so we never read attributes that Robot has deprecated for a
-    given item type (e.g. `name`/`args` on `If`/`Try` body items).
-    """
-    if not body:
-        return False
-    for item in body:
-        t = getattr(item, "type", "") or ""
-
-        if t == "MESSAGE" or (not t and hasattr(item, "level") and hasattr(item, "message")):
-            if match(getattr(item, "message", None)):
-                return True
-            continue
-
-        if match(getattr(item, "message", None)):
-            return True
-
-        if t in _KEYWORD_TYPES:
-            owner, short = _keyword_name_and_owner(item)
-            full_name = f"{owner}.{short}" if owner and short else short
-            if match(full_name):
-                return True
-            if any(match(a) for a in (item.args or [])):
-                return True
-            if any(match(a) for a in (item.assign or [])):
-                return True
-        elif t == "FOR":
-            if any(match(v) for v in (_loop_variables(item) or [])):
-                return True
-            if any(match(v) for v in (item.values or [])):
-                return True
-            if match(item.flavor):
-                return True
-        elif t in ("WHILE", "IF", "ELSE IF"):
-            if match(getattr(item, "condition", None)):
-                return True
-        elif t == "VAR":
-            if match(getattr(item, "name", None)):
-                return True
-            if any(match(v) for v in (getattr(item, "value", None) or [])):
-                return True
-        elif t == "RETURN":
-            if any(match(v) for v in (getattr(item, "values", None) or [])):
-                return True
-        elif t == "EXCEPT":
-            if any(match(v) for v in (getattr(item, "patterns", None) or [])):
-                return True
-            ex_assign = getattr(item, "assign", None)
-            if ex_assign and match(ex_assign):
-                return True
-        elif t == "GROUP":
-            if match(getattr(item, "name", None)):
-                return True
-
-        sub = getattr(item, "body", None)
-        if sub and _raw_body_matches(sub, match):
-            return True
-    return False
+    return matcher.matches_body(getattr(test, "body", None))
 
 
 def _sort_items(items: List[TestResultItem], field: Optional[str], reverse: bool) -> List[TestResultItem]:
@@ -1634,7 +1523,7 @@ def _collect_failures(
     status_filters: Tuple[str, ...],
     *,
     full_paths: bool = False,
-    match: Optional["_SearchMatcher"] = None,
+    match: Optional["SearchMatcher"] = None,
 ) -> List[TestResultItem]:
     """Return all failed tests (post-tree-filter, after status filter) with msgs."""
     wanted = _normalise_statuses(status_filters)
