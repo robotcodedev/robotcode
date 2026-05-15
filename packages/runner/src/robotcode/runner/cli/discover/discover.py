@@ -5,6 +5,7 @@ import sys
 from collections import defaultdict
 from dataclasses import dataclass
 from io import IOBase
+from itertools import chain
 from pathlib import Path
 from typing import (
     Any,
@@ -560,26 +561,24 @@ def handle_options(
         raise UnknownError("Unexpected error happened.")
 
 
-def print_statistics(app: Application, suite: TestSuite, collector: Collector) -> None:
-    def print() -> Iterable[str]:
-        yield click.style("Statistics:", underline=True, fg="blue")
-        yield os.linesep
-        yield click.style("  - Suites: ", bold=True, fg="blue")
-        yield f"{collector.statistics.suites}{os.linesep}"
-        if collector.statistics.suites_with_tests:
-            yield click.style("  - Suites with tests: ", bold=True, fg="blue")
-            yield f"{collector.statistics.suites_with_tests}{os.linesep}"
-        if collector.statistics.suites_with_tasks:
-            yield click.style("  - Suites with tasks: ", bold=True, fg="blue")
-            yield f"{collector.statistics.suites_with_tasks}{os.linesep}"
-        if collector.statistics.tests:
-            yield click.style("  - Tests: ", bold=True, fg="blue")
-            yield f"{collector.statistics.tests}{os.linesep}"
-        if collector.statistics.tasks:
-            yield click.style("  - Tasks: ", bold=True, fg="blue")
-            yield f"{collector.statistics.tasks}{os.linesep}"
-
-    app.echo_via_pager(print())
+def format_statistics(collector: Collector) -> Iterable[str]:
+    yield os.linesep
+    yield click.style("Statistics:", underline=True, fg="blue")
+    yield os.linesep
+    yield click.style("  - Suites: ", bold=True, fg="blue")
+    yield f"{collector.statistics.suites}{os.linesep}"
+    if collector.statistics.suites_with_tests:
+        yield click.style("  - Suites with tests: ", bold=True, fg="blue")
+        yield f"{collector.statistics.suites_with_tests}{os.linesep}"
+    if collector.statistics.suites_with_tasks:
+        yield click.style("  - Suites with tasks: ", bold=True, fg="blue")
+        yield f"{collector.statistics.suites_with_tasks}{os.linesep}"
+    if collector.statistics.tests:
+        yield click.style("  - Tests: ", bold=True, fg="blue")
+        yield f"{collector.statistics.tests}{os.linesep}"
+    if collector.statistics.tasks:
+        yield click.style("  - Tasks: ", bold=True, fg="blue")
+        yield f"{collector.statistics.tasks}{os.linesep}"
 
 
 @discover.command(
@@ -626,7 +625,7 @@ def all(
     ```
     """
 
-    suite, collector, diagnostics = handle_options(app, by_longname, exclude_by_longname, robot_options_and_args)
+    _suite, collector, diagnostics = handle_options(app, by_longname, exclude_by_longname, robot_options_and_args)
 
     if collector.all.children:
         if app.config.output_format is None or app.config.output_format == OutputFormat.TEXT:
@@ -650,8 +649,7 @@ def all(
                 for child in item.children or []:
                     yield from print(child, indent + 2)
 
-            app.echo_via_pager(print(collector.all.children[0]))
-            print_statistics(app, suite, collector)
+            app.echo_via_pager(chain(print(collector.all.children[0]), format_statistics(collector)))
 
         else:
             app.print_data(ResultItem([collector.all], diagnostics), remove_defaults=True)
@@ -666,7 +664,7 @@ def _test_or_tasks(
     exclude_by_longname: Tuple[str, ...],
     robot_options_and_args: Tuple[str, ...],
 ) -> None:
-    suite, collector, diagnostics = handle_options(app, by_longname, exclude_by_longname, robot_options_and_args)
+    _suite, collector, diagnostics = handle_options(app, by_longname, exclude_by_longname, robot_options_and_args)
 
     if collector.all.children:
         if app.config.output_format is None or app.config.output_format == OutputFormat.TEXT:
@@ -687,8 +685,7 @@ def _test_or_tasks(
                         yield f" {', '.join(normalize(str(tag), ignore='_') for tag in sorted(item.tags))}{os.linesep}"
 
             if collector.test_and_tasks:
-                app.echo_via_pager(print(collector.test_and_tasks))
-                print_statistics(app, suite, collector)
+                app.echo_via_pager(chain(print(collector.test_and_tasks), format_statistics(collector)))
 
         else:
             app.print_data(ResultItem(collector.test_and_tasks, diagnostics), remove_defaults=True)
@@ -823,7 +820,7 @@ def suites(
     ```
     """
 
-    suite, collector, diagnostics = handle_options(app, by_longname, exclude_by_longname, robot_options_and_args)
+    _suite, collector, diagnostics = handle_options(app, by_longname, exclude_by_longname, robot_options_and_args)
 
     if collector.all.children:
         if app.config.output_format is None or app.config.output_format == OutputFormat.TEXT:
@@ -838,9 +835,9 @@ def suites(
                     yield click.style(f" ({item.source if full_paths else item.rel_source}){os.linesep}")
 
             if collector.suites:
-                app.echo_via_pager(print(collector.suites))
-
-            print_statistics(app, suite, collector)
+                app.echo_via_pager(chain(print(collector.suites), format_statistics(collector)))
+            else:
+                app.echo_via_pager(format_statistics(collector))
 
         else:
             app.print_data(ResultItem(collector.suites, diagnostics), remove_defaults=True)
@@ -912,7 +909,7 @@ def tags(
     ```
     """
 
-    suite, collector, _diagnostics = handle_options(app, by_longname, exclude_by_longname, robot_options_and_args)
+    _suite, collector, _diagnostics = handle_options(app, by_longname, exclude_by_longname, robot_options_and_args)
 
     if collector.all.children:
         if app.config.output_format is None or app.config.output_format == OutputFormat.TEXT:
@@ -938,9 +935,14 @@ def tags(
                             )
 
             if collector.normalized_tags:
-                app.echo_via_pager(print(collector.normalized_tags if normalized else collector.tags))
-
-            print_statistics(app, suite, collector)
+                app.echo_via_pager(
+                    chain(
+                        print(collector.normalized_tags if normalized else collector.tags),
+                        format_statistics(collector),
+                    )
+                )
+            else:
+                app.echo_via_pager(format_statistics(collector))
 
         else:
             app.print_data(TagsResult(collector.normalized_tags), remove_defaults=True)
@@ -1009,8 +1011,12 @@ def info(app: Application) -> None:
     )
 
     if app.config.output_format is None or app.config.output_format == OutputFormat.TEXT:
-        for key, value in as_dict(info, remove_defaults=True).items():
-            app.echo_via_pager(f"{key}: {value}")
+
+        def print_info() -> Iterable[str]:
+            for key, value in as_dict(info, remove_defaults=True).items():
+                yield f"{key}: {value}{os.linesep}"
+
+        app.echo_via_pager(print_info())
     else:
         app.print_data(info, remove_defaults=True)
 
