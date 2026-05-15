@@ -264,11 +264,7 @@ def summary(
             )
         match = make_search_matcher(search_substring, search_regex)
         counts = _collect_counts(execution.suite, status_filters, match)
-        failures = (
-            _collect_failures(execution.suite, status_filters, full_paths=full_paths, match=match)
-            if show_failures
-            else None
-        )
+        failures = _collect_failures(execution.suite, status_filters, match=match) if show_failures else None
         exec_msg_counts = _count_execution_messages(getattr(execution, "errors", None))
         msg_counts = _count_all_messages(execution)
 
@@ -419,7 +415,7 @@ def show(
         wanted = _normalise_statuses(status_filters)
         match = make_search_matcher(search_substring, search_regex)
         all_items = [
-            _make_test_item(t, message_chars=message_chars, full_paths=full_paths)
+            _make_test_item(t, message_chars=message_chars)
             for t in _iter_all_tests(execution.suite)
             if (not wanted or t.status in wanted) and (match is None or _raw_test_search_matches(t, match))
         ]
@@ -635,7 +631,7 @@ def log(
                     body=body,
                     artifacts=artefacts or None,
                     source=src_str,
-                    rel_source=None if full_paths else _rel_to_cwd(src_str),
+                    rel_source=_rel_to_cwd(src_str),
                     lineno=getattr(test, "lineno", None) or None,
                     elapsed_seconds=_elapsed_seconds(test),
                     start_time=_iso(_start_time(test)),
@@ -1008,11 +1004,11 @@ def diff(
         for name, cur in current_tests.items():
             base = baseline_tests.get(name)
             if base is None:
-                added.append(_make_diff_change(name, None, cur, message_chars=message_chars, full_paths=full_paths))
+                added.append(_make_diff_change(name, None, cur, message_chars=message_chars))
                 continue
             if base.status == cur.status:
                 continue
-            change = _make_diff_change(name, base, cur, message_chars=message_chars, full_paths=full_paths)
+            change = _make_diff_change(name, base, cur, message_chars=message_chars)
             if base.status == "PASS" and cur.status in ("FAIL", "ERROR"):
                 new_failures.append(change)
             elif base.status in ("FAIL", "ERROR", "SKIP") and cur.status == "PASS":
@@ -1022,7 +1018,7 @@ def diff(
 
         for name, base in baseline_tests.items():
             if name not in current_tests:
-                removed.append(_make_diff_change(name, base, None, message_chars=message_chars, full_paths=full_paths))
+                removed.append(_make_diff_change(name, base, None, message_chars=message_chars))
 
         selected = {c.lower() for c in only_categories} if only_categories else None
 
@@ -1072,7 +1068,6 @@ def _make_diff_change(
     current_test: Any,
     *,
     message_chars: int,
-    full_paths: bool,
 ) -> DiffChange:
     """Build a DiffChange capturing baseline/current status, message, and source."""
     src_test = current_test if current_test is not None else baseline_test
@@ -1089,7 +1084,7 @@ def _make_diff_change(
         if current_test is not None
         else None,
         source=src_str,
-        rel_source=None if full_paths else _rel_to_cwd(src_str),
+        rel_source=_rel_to_cwd(src_str),
         lineno=getattr(src_test, "lineno", None) or None,
     )
 
@@ -1471,23 +1466,29 @@ def _sort_items(items: List[TestResultItem], field: Optional[str], reverse: bool
 
 
 def _rel_to_cwd(p: Optional[str]) -> Optional[str]:
+    """Return the source path as relative-to-cwd if possible, else the
+    original path. Mirrors `discover.get_rel_source`: `rel_source` in
+    JSON is always non-None when `source` is set, falling back to the
+    absolute path when the source isn't anchored under cwd. The schema
+    invariant matters for consumers like the VS Code extension which
+    rely on `relSource` being present.
+    """
     if p is None:
         return None
     try:
         return str(Path(p).relative_to(Path.cwd()).as_posix())
     except ValueError:
-        return None
+        return p
 
 
 def _make_file_info(path: Path) -> ResultFileInfo:
-    rel = _rel_to_cwd(str(path))
     return ResultFileInfo(
         source=str(path),
-        rel_source=rel if rel and rel != str(path) else None,
+        rel_source=_rel_to_cwd(str(path)),
     )
 
 
-def _make_test_item(test: Any, *, message_chars: int, full_paths: bool) -> TestResultItem:
+def _make_test_item(test: Any, *, message_chars: int) -> TestResultItem:
     msg = test.message or ""
     first_line = msg.splitlines()[0] if msg else ""
     truncated_msg = first_line
@@ -1513,7 +1514,7 @@ def _make_test_item(test: Any, *, message_chars: int, full_paths: bool) -> TestR
         elapsed_seconds=_elapsed_seconds(test),
         start_time=_iso(_start_time(test)),
         source=src_str,
-        rel_source=None if full_paths else rel_src,
+        rel_source=rel_src,
         lineno=getattr(test, "lineno", None) or None,
     )
 
@@ -1522,7 +1523,6 @@ def _collect_failures(
     suite: Any,
     status_filters: Tuple[str, ...],
     *,
-    full_paths: bool = False,
     match: Optional["SearchMatcher"] = None,
 ) -> List[TestResultItem]:
     """Return all failed tests (post-tree-filter, after status filter) with msgs."""
@@ -1535,7 +1535,7 @@ def _collect_failures(
             continue
         if match is not None and not _raw_test_search_matches(t, match):
             continue
-        out.append(_make_test_item(t, message_chars=0, full_paths=full_paths))
+        out.append(_make_test_item(t, message_chars=0))
     return out
 
 

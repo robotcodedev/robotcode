@@ -220,13 +220,21 @@ def test_log_max_depth_collapses_text(text_result: CliRunner, basic_output: Path
     assert "--max-depth 1" in plain
 
 
-def test_log_full_paths(json_result: JsonRunner, basic_output: Path) -> None:
-    """`--full-paths` makes `tests[].source` absolute."""
+def test_log_full_paths_keeps_rel_source(json_result: JsonRunner, basic_output: Path) -> None:
+    """`--full-paths` is a TEXT-render hint; JSON keeps both `source`
+    (absolute) and `relSource` so consumers have a stable schema."""
     data = json_result("log", "--full-paths", output_path=basic_output)
     for t in data["tests"]:
         src = t.get("source")
         assert src is not None
         assert Path(src).is_absolute()
+        assert t.get("relSource") is not None
+
+
+def test_log_default_includes_rel_source(json_result: JsonRunner, basic_output: Path) -> None:
+    data = json_result("log", output_path=basic_output)
+    for t in data["tests"]:
+        assert t.get("relSource") is not None
 
 
 # ---------------------------------------------------------------------------

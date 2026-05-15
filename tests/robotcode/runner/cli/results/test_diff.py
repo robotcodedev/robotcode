@@ -212,3 +212,33 @@ def test_diff_identity_yields_no_changes(robotcode_cli: CliRunner, diff_baseline
     assert data.get("statusChanges", []) == []
     assert data.get("added", []) == []
     assert data.get("removed", []) == []
+
+
+# ---------------------------------------------------------------------------
+# --full-paths
+# ---------------------------------------------------------------------------
+
+
+def test_diff_full_paths_keeps_rel_source(
+    robotcode_cli: CliRunner,
+    diff_baseline_output: Path,
+    diff_current_output: Path,
+) -> None:
+    """`--full-paths` doesn't strip `relSource` from the JSON — both
+    fields are always present so consumers have a stable schema."""
+    data = _diff_via_cli(robotcode_cli, diff_baseline_output, diff_current_output, "--full-paths")
+    new_failure = data["newFailures"][0]
+    src = new_failure.get("source")
+    assert src is not None
+    assert Path(src).is_absolute()
+    assert new_failure.get("relSource") is not None
+
+
+def test_diff_default_includes_rel_source(
+    robotcode_cli: CliRunner,
+    diff_baseline_output: Path,
+    diff_current_output: Path,
+) -> None:
+    data = _diff_via_cli(robotcode_cli, diff_baseline_output, diff_current_output)
+    new_failure = data["newFailures"][0]
+    assert new_failure.get("relSource") is not None

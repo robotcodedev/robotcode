@@ -68,3 +68,14 @@ def test_tags_dict_values_are_testitems(json_discover: JsonRunner, tagged_suite:
             assert "type" in item
             assert "longname" in item
             assert "source" in item
+
+
+def test_tags_full_paths_text_uses_absolute(robotcode_cli: CliRunner, tagged_suite: Path) -> None:
+    """`--full-paths --tests` in TEXT mode prints the absolute child path."""
+    abs_str = str(tagged_suite.resolve())
+    full = robotcode_cli(
+        ["--root", str(tagged_suite.parent), "discover", "tags", "--tests", "--full-paths", str(tagged_suite)]
+    )
+    short = robotcode_cli(["--root", str(tagged_suite.parent), "discover", "tags", "--tests", str(tagged_suite)])
+    assert abs_str in full.stdout
+    assert abs_str not in short.stdout

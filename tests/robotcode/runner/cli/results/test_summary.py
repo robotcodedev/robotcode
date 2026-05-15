@@ -54,3 +54,32 @@ def test_summary_text_output_contains_counts(text_result: CliRunner, basic_outpu
     # Counts are rendered as a line containing the totals
     assert "5" in plain  # total
     assert "FAIL" in plain  # overall status
+
+
+# ---------------------------------------------------------------------------
+# --full-paths
+# ---------------------------------------------------------------------------
+
+
+def test_summary_full_paths_keeps_rel_source(json_result: JsonRunner, basic_output: Path) -> None:
+    """`--full-paths` is a TEXT-rendering hint; JSON always carries
+    both `source` (absolute) and `relSource` so consumers like the
+    VS Code extension can rely on the schema being stable across the
+    flag."""
+    data = json_result("summary", "--failures", "--full-paths", output_path=basic_output)
+    failures = data["failures"]
+    assert failures, "expected at least one failure"
+    failure = failures[0]
+    src = get_field(failure, "source")
+    assert src is not None
+    assert Path(src).is_absolute()
+    # rel_source is *still* present (it would have been omitted under
+    # the old behaviour where `--full-paths` cleared it).
+    assert get_field(failure, "relSource", "rel_source") is not None
+
+
+def test_summary_default_includes_rel_source(json_result: JsonRunner, basic_output: Path) -> None:
+    data = json_result("summary", "--failures", output_path=basic_output)
+    failures = data["failures"]
+    assert failures
+    assert get_field(failures[0], "relSource", "rel_source") is not None

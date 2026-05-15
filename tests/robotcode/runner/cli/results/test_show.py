@@ -185,8 +185,11 @@ def test_show_search_highlight_visible_in_text(text_result: CliRunner, basic_out
 # ---------------------------------------------------------------------------
 
 
-def test_show_full_paths(json_result: JsonRunner, basic_output: Path) -> None:
-    """`--full-paths` makes `tests[].source` an absolute path."""
+def test_show_full_paths_keeps_both_source_fields(json_result: JsonRunner, basic_output: Path) -> None:
+    """`--full-paths` only affects TEXT rendering. JSON always carries
+    both `source` (absolute) and `relSource` (relative-to-cwd or omitted
+    when not anchored) so consumers like the VS Code extension can
+    consistently rely on the schema."""
     data = json_result("show", "--full-paths", output_path=basic_output)
     for t in data["tests"]:
         src = t.get("source")
@@ -194,11 +197,10 @@ def test_show_full_paths(json_result: JsonRunner, basic_output: Path) -> None:
         assert Path(src).is_absolute()
 
 
-def test_show_no_full_paths_uses_relative(json_result: JsonRunner, basic_output: Path) -> None:
-    """Without the flag, sources are tracked relative (or absolute when no anchor)."""
+def test_show_default_includes_rel_source(json_result: JsonRunner, basic_output: Path) -> None:
+    """Without the flag, JSON has both fields (relSource present when
+    the source is anchored under cwd)."""
     data = json_result("show", output_path=basic_output)
-    # We don't assert relative vs absolute strictly — depends on the run cwd —
-    # but the field must at least be present and non-empty for every test.
     for t in data["tests"]:
         assert get_field(t, "source", "relSource") is not None
 
