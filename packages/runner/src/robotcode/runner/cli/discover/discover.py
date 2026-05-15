@@ -748,9 +748,10 @@ def _test_or_tasks(
                 app.echo_via_pager(chain(print(collector.test_and_tasks), format_statistics(collector)))
 
         else:
+            filtered = [item for item in collector.test_and_tasks if item.type == selected_type]
             app.print_data(
                 ResultItem(
-                    collector.test_and_tasks,
+                    filtered,
                     diagnostics,
                     filters_applied=_filters_applied(search_substring, search_regex),
                 ),
@@ -1057,8 +1058,9 @@ def tags(
                 app.echo_via_pager(format_statistics(collector))
 
         else:
+            tags_data = collector.normalized_tags if normalized else collector.tags
             app.print_data(
-                TagsResult(collector.normalized_tags, filters_applied=_filters_applied(search_substring, search_regex)),
+                TagsResult(tags_data, filters_applied=_filters_applied(search_substring, search_regex)),
                 remove_defaults=True,
             )
 
