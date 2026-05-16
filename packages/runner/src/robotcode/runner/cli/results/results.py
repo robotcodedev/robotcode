@@ -23,7 +23,7 @@ from robot.api import SuiteVisitor
 from robot.errors import DataError
 from robot.model import ModelModifier
 from robot.output import LOGGER
-from robot.result import ForIteration, Result, TestCase, TestSuite
+from robot.result import ForIteration, Message, Result, TestCase, TestSuite
 from robot.result.executionerrors import ExecutionErrors
 from robot.utils import normalize
 
@@ -1087,7 +1087,7 @@ def _resolve_profile(app: Application) -> Tuple[RobotBaseProfile, Optional[Path]
     return profile, root_folder
 
 
-def _eval_str(value: Any) -> Optional[str]:
+def _eval_str(value: object) -> Optional[str]:
     if value is None:
         return None
     if isinstance(value, str):
@@ -1187,48 +1187,52 @@ def _load_execution_result(path: Path) -> Result:
 # Each helper below is bound to one of two implementations at import time —
 # the differences between Robot Framework versions are confined to this block.
 
-if RF_VERSION >= (6, 1):
 
-    def _iter_all_tests(suite: Any) -> Iterator[Any]:
-        yield from suite.all_tests
+def _iter_all_tests(suite: TestSuite) -> Iterator[TestCase]:
+    """Yield every test in the suite tree.
 
-else:
-
-    def _iter_all_tests(suite: Any) -> Iterator[Any]:
+    RF 6.1 added `TestSuite.all_tests`; on older versions we walk the
+    tree by hand. `getattr` keeps mypy happy without `# type: ignore`
+    when running against an RF where the new attribute doesn't exist.
+    """
+    if RF_VERSION >= (6, 1):
+        yield from getattr(suite, "all_tests")
+    else:
         yield from suite.tests
         for child in suite.suites:
             yield from _iter_all_tests(child)
 
 
-if RF_VERSION >= (7, 0):
+def _get_full_name(test: TestCase) -> str:
+    """Test full name. RF 7+ exposes `full_name`; RF <7 uses `longname`."""
+    if RF_VERSION >= (7, 0):
+        return str(getattr(test, "full_name", None) or "")
+    return str(getattr(test, "longname", None) or test.name or "")
 
-    def _get_full_name(test: Any) -> str:
-        return str(test.full_name or "")
 
-    def _keyword_name_and_owner(item: Any) -> Tuple[Optional[str], str]:
-        """Return `(owner, short_name)` for a Keyword/Setup/Teardown body item."""
-        return item.owner, str(item.name or "")
+def _keyword_name_and_owner(item: Any) -> Tuple[Optional[str], str]:
+    """Return `(owner, short_name)` for a Keyword/Setup/Teardown body item.
 
-    def _loop_variables(item: Any) -> Any:
-        """Loop variables for a `For` or `ForIteration` body item (RF 7+ name)."""
-        return item.assign
+    RF 7+ stores them as `Keyword.owner` + `Keyword.name`. RF <7 splits
+    them into `libname` + `kwname` (with `name` already qualified). Item
+    stays `Any` because body items are heterogeneous (Keyword / Setup /
+    Teardown / others would be filtered out by the caller).
+    """
+    if RF_VERSION >= (7, 0):
+        return getattr(item, "owner", None), str(item.name or "")
+    return getattr(item, "libname", None), str(getattr(item, "kwname", None) or item.name or "")
 
-else:
 
-    def _get_full_name(test: Any) -> str:
-        return str(test.longname or test.name or "")
+def _loop_variables(item: Any) -> Any:
+    """Loop variables for a `For` / `ForIteration` body item.
 
-    def _keyword_name_and_owner(item: Any) -> Tuple[Optional[str], str]:
-        """Return `(owner, short_name)` for a Keyword/Setup/Teardown body item.
-
-        On RF <7 `Keyword.name` already contains the `libname.` prefix; the
-        unqualified short name lives in `kwname`.
-        """
-        return item.libname, str(item.kwname or item.name or "")
-
-    def _loop_variables(item: Any) -> Any:
-        """Loop variables for a `For` or `ForIteration` body item (RF <7 name)."""
-        return item.variables
+    RF 7+ calls them `assign`; older versions use `variables`. `Any` on
+    both sides because the body-item type union would be heavy and the
+    return is just forwarded to the matcher / renderer.
+    """
+    if RF_VERSION >= (7, 0):
+        return getattr(item, "assign", None)
+    return getattr(item, "variables", None)
 
 
 def _elapsed_seconds(item: Any) -> Optional[float]:
@@ -1249,12 +1253,12 @@ def _elapsed_seconds(item: Any) -> Optional[float]:
     return None
 
 
-def _start_time(item: Any) -> Any:
+def _start_time(item: Any) -> Optional[object]:
     """Read a body-item's start time, accepting RF 7+ `start_time` and RF <7 `starttime`."""
     return getattr(item, "start_time", None) or getattr(item, "starttime", None)
 
 
-def _end_time(item: Any) -> Any:
+def _end_time(item: Any) -> Optional[object]:
     """Read a body-item's end time, accepting RF 7+ `end_time` and RF <7 `endtime`."""
     return getattr(item, "end_time", None) or getattr(item, "endtime", None)
 
@@ -1262,7 +1266,7 @@ def _end_time(item: Any) -> Any:
 _LEGACY_TS_RE = re.compile(r"^(\d{4})(\d{2})(\d{2})\s+(\d{2}:\d{2}:\d{2}(?:\.\d+)?)$")
 
 
-def _iso(value: Any) -> Optional[str]:
+def _iso(value: object) -> Optional[str]:
     if value is None:
         return None
     if hasattr(value, "isoformat"):
@@ -1694,7 +1698,7 @@ def _collect_test_body(
 
 
 def _make_message_entry(
-    msg: Any,
+    msg: Message,
     base_dir: Path,
     on_artifact: Callable[[ArtifactRef], None],
     *,
