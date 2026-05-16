@@ -19,16 +19,19 @@ from pathlib import Path
 from typing import Any, Callable, Dict, Iterable, Iterator, List, Optional, Tuple
 
 import click
+from robot.api import SuiteVisitor
 from robot.errors import DataError
 from robot.model import ModelModifier
 from robot.output import LOGGER
-from robot.result import ForIteration
+from robot.result import ForIteration, Result, TestCase, TestSuite
+from robot.result.executionerrors import ExecutionErrors
 from robot.utils import normalize
 
 from robotcode.modifiers import ByLongName, ExcludedByLongName
 from robotcode.plugin import Application, OutputFormat, pass_application
 from robotcode.plugin.click_helper.types import add_options
 from robotcode.robot.config.loader import load_robot_config_from_path
+from robotcode.robot.config.model import RobotBaseProfile
 from robotcode.robot.config.utils import get_config_files
 from robotcode.robot.utils import RF_VERSION
 
@@ -809,7 +812,7 @@ def stats(
             app.print_data(data, remove_defaults=True)
 
 
-def _build_stats_section(dimension: str, tests: List[Any], group_sort: str, top_n: int) -> StatsSection:
+def _build_stats_section(dimension: str, tests: List[TestCase], group_sort: str, top_n: int) -> StatsSection:
     buckets: Dict[str, Counts] = {}
     elapsed: Dict[str, float] = {}
 
@@ -1027,8 +1030,8 @@ def diff(
 
 def _make_diff_change(
     full_name: str,
-    baseline_test: Any,
-    current_test: Any,
+    baseline_test: Optional[TestCase],
+    current_test: Optional[TestCase],
     *,
     message_chars: int,
 ) -> DiffChange:
@@ -1061,7 +1064,7 @@ def _truncate(text: Optional[str], limit: int) -> Optional[str]:
     return first_line
 
 
-def _resolve_profile(app: Application) -> Tuple[Any, Optional[Path]]:
+def _resolve_profile(app: Application) -> Tuple[RobotBaseProfile, Optional[Path]]:
     config_files, root_folder, _ = get_config_files(
         None,
         app.config.config_files,
@@ -1092,7 +1095,7 @@ def _eval_str(value: Any) -> Optional[str]:
     return getattr(value, "value", None) or str(value)
 
 
-def _resolve_output_file(app: Application, profile: Any, explicit: Optional[Path]) -> Path:
+def _resolve_output_file(app: Application, profile: RobotBaseProfile, explicit: Optional[Path]) -> Path:
     cwd = Path.cwd()
     if explicit is not None:
         target = explicit if explicit.is_absolute() else cwd / explicit
@@ -1106,7 +1109,7 @@ def _resolve_output_file(app: Application, profile: Any, explicit: Optional[Path
     return _auto_discover(app, profile, search_root=cwd)
 
 
-def _auto_discover(app: Application, profile: Any, search_root: Path) -> Path:
+def _auto_discover(app: Application, profile: RobotBaseProfile, search_root: Path) -> Path:
     raw_output = _eval_str(getattr(profile, "output", None))
     if raw_output is not None and raw_output.upper() == "NONE":
         raise click.UsageError(
@@ -1163,7 +1166,7 @@ def _candidate_paths(*, search_root: Path, out_dir: Path, out_name: str) -> List
     return cands
 
 
-def _load_execution_result(path: Path) -> Any:
+def _load_execution_result(path: Path) -> Result:
     if path.suffix.lower() == ".json" and RF_VERSION < (7, 0):
         raise click.ClickException(
             f"Reading JSON result files requires Robot Framework 7.0+; "
@@ -1273,7 +1276,7 @@ def _iso(value: Any) -> Optional[str]:
 
 
 def _apply_tree_filters(
-    suite: Any,
+    suite: TestSuite,
     include_tags: Tuple[str, ...],
     exclude_tags: Tuple[str, ...],
     suite_globs: Tuple[str, ...],
@@ -1281,7 +1284,7 @@ def _apply_tree_filters(
     by_longname: Tuple[str, ...] = (),
     exclude_by_longname: Tuple[str, ...] = (),
     status_filters: Tuple[str, ...] = (),
-    matcher: Optional["SearchMatcher"] = None,
+    matcher: Optional[SearchMatcher] = None,
 ) -> None:
     """Apply every filter to the result tree in-place.
 
@@ -1301,7 +1304,7 @@ def _apply_tree_filters(
     except DataError as e:
         raise click.ClickException(f"invalid filter pattern: {e}") from e
 
-    modifiers: List[Any] = []
+    modifiers: List[SuiteVisitor] = []
     if by_longname:
         modifiers.append(ByLongName(*by_longname))
     if exclude_by_longname:
@@ -1382,7 +1385,7 @@ def _bump_counts(c: Counts, status: str) -> None:
         c.not_run += 1
 
 
-def _collect_counts(suite: Any) -> Counts:
+def _collect_counts(suite: TestSuite) -> Counts:
     """Tally test statuses across a (filtered) suite tree."""
     c = Counts()
     for t in _iter_all_tests(suite):
@@ -1439,7 +1442,7 @@ def _make_file_info(path: Path) -> ResultFileInfo:
     )
 
 
-def _make_test_item(test: Any, *, message_chars: int) -> TestResultItem:
+def _make_test_item(test: TestCase, *, message_chars: int) -> TestResultItem:
     msg = test.message or ""
     first_line = msg.splitlines()[0] if msg else ""
     truncated_msg = first_line
@@ -1470,12 +1473,12 @@ def _make_test_item(test: Any, *, message_chars: int) -> TestResultItem:
     )
 
 
-def _collect_failures(suite: Any) -> List[TestResultItem]:
+def _collect_failures(suite: TestSuite) -> List[TestResultItem]:
     """Return failed tests with messages from a (filtered) suite tree."""
     return [_make_test_item(t, message_chars=0) for t in _iter_all_tests(suite) if t.status == "FAIL"]
 
 
-def _count_execution_messages(errors: Any) -> Dict[str, int]:
+def _count_execution_messages(errors: Optional[ExecutionErrors]) -> Dict[str, int]:
     """Count execution.errors messages grouped by level. Returns empty dict if none."""
     if errors is None:
         return {}
@@ -1486,7 +1489,7 @@ def _count_execution_messages(errors: Any) -> Dict[str, int]:
     return counts
 
 
-def _count_all_messages(execution: Any) -> Dict[str, int]:
+def _count_all_messages(execution: Result) -> Dict[str, int]:
     """Tally WARN/ERROR/FAIL across parser/discovery AND test runtime messages."""
     counts: Dict[str, int] = {}
 
@@ -1521,7 +1524,7 @@ def _count_all_messages(execution: Any) -> Dict[str, int]:
     return counts
 
 
-def _collect_execution_messages(errors: Any, *, raw_html: bool = False) -> List[LogEntry]:
+def _collect_execution_messages(errors: Optional[ExecutionErrors], *, raw_html: bool = False) -> List[LogEntry]:
     """Collect parser/discovery messages from `output.xml`'s <errors> section
     as LogEntry items, preserving order and individual timestamps."""
     if errors is None:
@@ -1543,7 +1546,7 @@ _KEYWORD_TYPES = {"KEYWORD", "SETUP", "TEARDOWN"}
 
 
 def _collect_test_body(
-    test: Any, *, level: str, base_dir: Path, raw_html: bool = False
+    test: TestCase, *, level: str, base_dir: Path, raw_html: bool = False
 ) -> Tuple[List[LogEntry], List[ArtifactRef]]:
     threshold = _LEVEL_ORDER.get(level, 2)
     test_artefacts: List[ArtifactRef] = []
