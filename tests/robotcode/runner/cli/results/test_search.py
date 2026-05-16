@@ -56,15 +56,13 @@ def test_search_regex_inline_case_insensitive(json_result: JsonRunner, basic_out
 
 
 def test_search_regex_anchors_and_alternation(json_result: JsonRunner, basic_output: Path) -> None:
-    """Regex metacharacters work normally."""
-    data = json_result("show", "--search-regex", "^Pass.*Three$", output_path=basic_output)
-    # full_name = "Basic.Passing Test Three" — the regex matches against full_name
-    # so test by substring within full_name only if anchored differently.
-    # Use a clearly anchored pattern against the full_name field:
+    """Regex metacharacters (anchors, alternation) work normally."""
+    # `Three$` anchors at the end of the name → matches the single test.
     data2 = json_result("show", "--search-regex", "Three$", output_path=basic_output)
     assert {t["name"] for t in data2["tests"]} == {"Passing Test Three"}
-    # The first pattern was anchored ^Pass which fails against "Basic.Passing..."
-    # — verifying that anchors are honoured.
+
+    # An anchored pattern that can't match any searched field yields nothing.
+    data = json_result("show", "--search-regex", "^XYZ_definitely_no_field$", output_path=basic_output)
     assert data["tests"] == []
 
 

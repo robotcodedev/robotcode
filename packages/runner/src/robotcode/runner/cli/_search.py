@@ -232,3 +232,34 @@ class SearchModifier(SuiteVisitor):
         if teardown and self.matcher.matches_body([teardown]):
             return True
         return self.matcher.matches_body(getattr(test, "body", None))
+
+
+_STATUS_ALIASES = {
+    "pass": "PASS",
+    "fail": "FAIL",
+    "skip": "SKIP",
+    "not-run": "NOT RUN",
+    "not_run": "NOT RUN",
+}
+
+
+class ByStatus(SuiteVisitor):
+    """Prune `suite.tests` to those whose status is in the wanted set.
+
+    Robot Framework has no native filter equivalent (its `--include`/
+    `--exclude` are tag-based; `suite.filter` doesn't accept a status
+    selector), so we apply this as a post-step on the already-loaded
+    result tree. Same shape as `ByLongName`/`SearchModifier` so it slots
+    into the same `ModelModifier` pipeline.
+    """
+
+    def __init__(self, *statuses: str) -> None:
+        super().__init__()
+        self.wanted = {_STATUS_ALIASES.get(s.lower(), s.upper()) for s in statuses}
+
+    def start_suite(self, suite: TestSuite) -> None:
+        if self.wanted:
+            suite.tests = [t for t in suite.tests if t.status in self.wanted]
+
+    def end_suite(self, suite: TestSuite) -> None:
+        suite.suites = [s for s in suite.suites if s.test_count > 0]

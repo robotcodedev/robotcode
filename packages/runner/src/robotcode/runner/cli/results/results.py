@@ -20,6 +20,8 @@ from typing import Any, Callable, Dict, Iterable, Iterator, List, Optional, Tupl
 
 import click
 from robot.errors import DataError
+from robot.model import ModelModifier
+from robot.output import LOGGER
 from robot.result import ForIteration
 from robot.utils import normalize
 
@@ -30,7 +32,7 @@ from robotcode.robot.config.loader import load_robot_config_from_path
 from robotcode.robot.config.utils import get_config_files
 from robotcode.robot.utils import RF_VERSION
 
-from .._search import SearchMatcher, make_search_matcher
+from .._search import ByStatus, SearchMatcher, SearchModifier, make_search_matcher
 from . import _html, _render
 from ._models import (
     ArtifactRef,
@@ -48,15 +50,6 @@ from ._models import (
     SummaryResult,
     TestResultItem,
 )
-
-_STATUS_KEY_MAP = {
-    "pass": "PASS",
-    "fail": "FAIL",
-    "skip": "SKIP",
-    "not-run": "NOT RUN",
-    "not_run": "NOT RUN",
-}
-
 
 RESULT_FILTER_OPTIONS = [
     click.option(
@@ -252,19 +245,20 @@ def summary(
             or search_substring
             or search_regex
         )
-        if include_tags or exclude_tags or suite_globs or test_globs or by_longname or exclude_by_longname:
-            _apply_tree_filters(
-                execution.suite,
-                include_tags,
-                exclude_tags,
-                suite_globs,
-                test_globs,
-                by_longname,
-                exclude_by_longname,
-            )
-        match = make_search_matcher(search_substring, search_regex)
-        counts = _collect_counts(execution.suite, status_filters, match)
-        failures = _collect_failures(execution.suite, status_filters, match=match) if show_failures else None
+        matcher = make_search_matcher(search_substring, search_regex)
+        _apply_tree_filters(
+            execution.suite,
+            include_tags,
+            exclude_tags,
+            suite_globs,
+            test_globs,
+            by_longname,
+            exclude_by_longname,
+            status_filters,
+            matcher,
+        )
+        counts = _collect_counts(execution.suite)
+        failures = _collect_failures(execution.suite) if show_failures else None
         exec_msg_counts = _count_execution_messages(getattr(execution, "errors", None))
         msg_counts = _count_all_messages(execution)
 
@@ -401,24 +395,20 @@ def show(
         path = _resolve_output_file(app, profile, output_file)
         execution = _load_execution_result(path)
 
-        if include_tags or exclude_tags or suite_globs or test_globs or by_longname or exclude_by_longname:
-            _apply_tree_filters(
-                execution.suite,
-                include_tags,
-                exclude_tags,
-                suite_globs,
-                test_globs,
-                by_longname,
-                exclude_by_longname,
-            )
+        matcher = make_search_matcher(search_substring, search_regex)
+        _apply_tree_filters(
+            execution.suite,
+            include_tags,
+            exclude_tags,
+            suite_globs,
+            test_globs,
+            by_longname,
+            exclude_by_longname,
+            status_filters,
+            matcher,
+        )
 
-        wanted = _normalise_statuses(status_filters)
-        match = make_search_matcher(search_substring, search_regex)
-        all_items = [
-            _make_test_item(t, message_chars=message_chars)
-            for t in _iter_all_tests(execution.suite)
-            if (not wanted or t.status in wanted) and (match is None or _raw_test_search_matches(t, match))
-        ]
+        all_items = [_make_test_item(t, message_chars=message_chars) for t in _iter_all_tests(execution.suite)]
         counts = _tally_items(all_items)
         all_items = _sort_items(all_items, sort_field, reverse)
         if top_n > 0:
@@ -598,27 +588,22 @@ def log(
         path = _resolve_output_file(app, profile, output_file)
         execution = _load_execution_result(path)
 
-        if include_tags or exclude_tags or suite_globs or test_globs or by_longname or exclude_by_longname:
-            _apply_tree_filters(
-                execution.suite,
-                include_tags,
-                exclude_tags,
-                suite_globs,
-                test_globs,
-                by_longname,
-                exclude_by_longname,
-            )
-
-        wanted = _normalise_statuses(status_filters)
-        match = make_search_matcher(search_substring, search_regex)
+        matcher = make_search_matcher(search_substring, search_regex)
+        _apply_tree_filters(
+            execution.suite,
+            include_tags,
+            exclude_tags,
+            suite_globs,
+            test_globs,
+            by_longname,
+            exclude_by_longname,
+            status_filters,
+            matcher,
+        )
 
         base_dir = path.parent
         matched: List[LogTest] = []
         for test in _iter_all_tests(execution.suite):
-            if wanted and test.status not in wanted:
-                continue
-            if match is not None and not _raw_test_search_matches(test, match):
-                continue
             full_name = _get_full_name(test)
             body, artefacts = _collect_test_body(test, level=level.upper(), base_dir=base_dir, raw_html=raw_html)
             src = getattr(test, "source", None)
@@ -767,24 +752,19 @@ def stats(
         path = _resolve_output_file(app, profile, output_file)
         execution = _load_execution_result(path)
 
-        if include_tags or exclude_tags or suite_globs or test_globs or by_longname or exclude_by_longname:
-            _apply_tree_filters(
-                execution.suite,
-                include_tags,
-                exclude_tags,
-                suite_globs,
-                test_globs,
-                by_longname,
-                exclude_by_longname,
-            )
-
-        wanted = _normalise_statuses(status_filters)
-        match = make_search_matcher(search_substring, search_regex)
-        tests = [
-            t
-            for t in _iter_all_tests(execution.suite)
-            if (not wanted or t.status in wanted) and (match is None or _raw_test_search_matches(t, match))
-        ]
+        matcher = make_search_matcher(search_substring, search_regex)
+        _apply_tree_filters(
+            execution.suite,
+            include_tags,
+            exclude_tags,
+            suite_globs,
+            test_globs,
+            by_longname,
+            exclude_by_longname,
+            status_filters,
+            matcher,
+        )
+        tests = list(_iter_all_tests(execution.suite))
 
         seen_dimensions: List[str] = []
         for dim in group_by:
@@ -961,39 +941,22 @@ def diff(
         baseline_exec = _load_execution_result(baseline_path)
         current_exec = _load_execution_result(current_path)
 
-        tree_filter = any([include_tags, exclude_tags, suite_globs, test_globs, by_longname, exclude_by_longname])
-        if tree_filter:
+        matcher = make_search_matcher(search_substring, search_regex)
+        for suite in (baseline_exec.suite, current_exec.suite):
             _apply_tree_filters(
-                baseline_exec.suite,
+                suite,
                 include_tags,
                 exclude_tags,
                 suite_globs,
                 test_globs,
                 by_longname,
                 exclude_by_longname,
-            )
-            _apply_tree_filters(
-                current_exec.suite,
-                include_tags,
-                exclude_tags,
-                suite_globs,
-                test_globs,
-                by_longname,
-                exclude_by_longname,
+                status_filters,
+                matcher,
             )
 
-        wanted = _normalise_statuses(status_filters)
-        match = make_search_matcher(search_substring, search_regex)
-
-        def _eligible(t: Any) -> bool:
-            if wanted and t.status not in wanted:
-                return False
-            if match is not None and not _raw_test_search_matches(t, match):
-                return False
-            return True
-
-        baseline_tests = {_get_full_name(t): t for t in _iter_all_tests(baseline_exec.suite) if _eligible(t)}
-        current_tests = {_get_full_name(t): t for t in _iter_all_tests(current_exec.suite) if _eligible(t)}
+        baseline_tests = {_get_full_name(t): t for t in _iter_all_tests(baseline_exec.suite)}
+        current_tests = {_get_full_name(t): t for t in _iter_all_tests(current_exec.suite)}
 
         new_failures: List[DiffChange] = []
         new_passes: List[DiffChange] = []
@@ -1317,7 +1280,17 @@ def _apply_tree_filters(
     test_globs: Tuple[str, ...],
     by_longname: Tuple[str, ...] = (),
     exclude_by_longname: Tuple[str, ...] = (),
+    status_filters: Tuple[str, ...] = (),
+    matcher: Optional["SearchMatcher"] = None,
 ) -> None:
+    """Apply every filter to the result tree in-place.
+
+    Delegates the standard Robot filters (`--include`/`--exclude`,
+    `--suite`, `--test`) to `TestSuite.filter()`, then bundles the
+    project-specific filters (`-bl`/`-ebl`, `--status`, search) into a
+    single `ModelModifier` pass so subsequent code can iterate the
+    suite naturally — every surviving test has passed every filter.
+    """
     try:
         suite.filter(
             included_suites=list(suite_globs) or None,
@@ -1327,14 +1300,19 @@ def _apply_tree_filters(
         )
     except DataError as e:
         raise click.ClickException(f"invalid filter pattern: {e}") from e
+
+    modifiers: List[Any] = []
     if by_longname:
-        suite.visit(ByLongName(*by_longname))
+        modifiers.append(ByLongName(*by_longname))
     if exclude_by_longname:
-        suite.visit(ExcludedByLongName(*exclude_by_longname))
+        modifiers.append(ExcludedByLongName(*exclude_by_longname))
+    if matcher is not None:
+        modifiers.append(SearchModifier(matcher))
+    if status_filters:
+        modifiers.append(ByStatus(*status_filters))
 
-
-def _normalise_statuses(statuses: Tuple[str, ...]) -> set[str]:
-    return {_STATUS_KEY_MAP.get(s.lower(), s.upper()) for s in statuses}
+    if modifiers:
+        suite.visit(ModelModifier(modifiers, empty_suite_ok=True, logger=LOGGER))
 
 
 # Robot Framework treats any uppercase `AND` / `OR` / `NOT` substring inside
@@ -1404,18 +1382,10 @@ def _bump_counts(c: Counts, status: str) -> None:
         c.not_run += 1
 
 
-def _collect_counts(
-    suite: Any,
-    status_filters: Tuple[str, ...],
-    match: Optional["SearchMatcher"] = None,
-) -> Counts:
-    wanted = _normalise_statuses(status_filters)
+def _collect_counts(suite: Any) -> Counts:
+    """Tally test statuses across a (filtered) suite tree."""
     c = Counts()
     for t in _iter_all_tests(suite):
-        if wanted and t.status not in wanted:
-            continue
-        if match is not None and not _raw_test_search_matches(t, match):
-            continue
         _bump_counts(c, t.status)
     return c
 
@@ -1428,25 +1398,6 @@ def _tally_items(items: Iterable[TestResultItem]) -> Counts:
 
 
 _STATUS_SORT_RANK = {"FAIL": 0, "SKIP": 1, "PASS": 2, "NOT RUN": 3}
-
-
-def _raw_test_search_matches(test: Any, matcher: SearchMatcher) -> bool:
-    """True if the raw Robot test (or anything in its body tree) matches.
-
-    Walks the raw `output.xml` model so callers don't have to materialise the
-    body as LogEntry objects first. Tags are matched in their normalised form
-    so `bug 123`, `bug_123`, and `Bug123` are treated as the same tag.
-    """
-    if (
-        matcher.general(_get_full_name(test))
-        or matcher.general(getattr(test, "message", None))
-        or matcher.general(getattr(test, "doc", None))
-        or matcher.general(getattr(test, "template", None))
-        or matcher.general(getattr(test, "timeout", None))
-        or any(matcher.tag(str(t)) for t in (getattr(test, "tags", None) or []))
-    ):
-        return True
-    return matcher.matches_body(getattr(test, "body", None))
 
 
 def _sort_items(items: List[TestResultItem], field: Optional[str], reverse: bool) -> List[TestResultItem]:
@@ -1519,24 +1470,9 @@ def _make_test_item(test: Any, *, message_chars: int) -> TestResultItem:
     )
 
 
-def _collect_failures(
-    suite: Any,
-    status_filters: Tuple[str, ...],
-    *,
-    match: Optional["SearchMatcher"] = None,
-) -> List[TestResultItem]:
-    """Return all failed tests (post-tree-filter, after status filter) with msgs."""
-    wanted = _normalise_statuses(status_filters)
-    out: List[TestResultItem] = []
-    for t in _iter_all_tests(suite):
-        if wanted and t.status not in wanted:
-            continue
-        if t.status != "FAIL":
-            continue
-        if match is not None and not _raw_test_search_matches(t, match):
-            continue
-        out.append(_make_test_item(t, message_chars=0))
-    return out
+def _collect_failures(suite: Any) -> List[TestResultItem]:
+    """Return failed tests with messages from a (filtered) suite tree."""
+    return [_make_test_item(t, message_chars=0) for t in _iter_all_tests(suite) if t.status == "FAIL"]
 
 
 def _count_execution_messages(errors: Any) -> Dict[str, int]:
