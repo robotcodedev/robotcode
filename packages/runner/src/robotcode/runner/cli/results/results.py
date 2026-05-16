@@ -16,15 +16,33 @@ All subcommands respect the global `-f/--format` option:
 import re
 import shutil
 from pathlib import Path
-from typing import Any, Callable, Dict, Iterable, Iterator, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Callable, Dict, Iterable, Iterator, List, Optional, Tuple
 
 import click
 from robot.api import SuiteVisitor
 from robot.errors import DataError
 from robot.model import ModelModifier
 from robot.output import LOGGER
-from robot.result import ForIteration, Message, Result, TestCase, TestSuite
+from robot.result import (
+    Break,
+    Continue,
+    For,
+    ForIteration,
+    If,
+    IfBranch,
+    Keyword,
+    Message,
+    Result,
+    ResultVisitor,
+    Return,
+    TestCase,
+    TestSuite,
+    Try,
+    TryBranch,
+    While,
+)
 from robot.result.executionerrors import ExecutionErrors
+from robot.result.model import BodyItem, StatusMixin
 from robot.utils import normalize
 
 from robotcode.modifiers import ByLongName, ExcludedByLongName
@@ -34,6 +52,16 @@ from robotcode.robot.config.loader import load_robot_config_from_path
 from robotcode.robot.config.model import RobotBaseProfile
 from robotcode.robot.config.utils import get_config_files
 from robotcode.robot.utils import RF_VERSION
+
+# RF 7+ body-item classes — visitor methods overriding `end_var`/`end_error`/
+# `end_group` need a type annotation that resolves on every matrix RF. The
+# TYPE_CHECKING import gives mypy the real class on installed-RF-7+ stubs;
+# on older RF stubs the import fails and the `# type: ignore` makes mypy
+# treat `Var`/`Error`/`Group` as `Any` (the visitor methods are never called
+# in those versions anyway, since the underlying items don't appear in the
+# result tree).
+if TYPE_CHECKING:
+    from robot.result import Error, Group, Var  # type: ignore[attr-defined,unused-ignore]
 
 from .._search import ByStatus, SearchMatcher, SearchModifier, make_search_matcher
 from . import _html, _render
@@ -163,6 +191,14 @@ OUTPUT_OPTION = click.option(
 )
 
 
+FULL_PATHS_OPTION = click.option(
+    "--full-paths/--no-full-paths",
+    default=False,
+    show_default=True,
+    help="Show absolute source paths instead of paths relative to cwd.",
+)
+
+
 @click.group(invoke_without_command=False)
 def results() -> None:
     """\
@@ -194,12 +230,7 @@ def results() -> None:
     show_default=True,
     help="Include the list of failed tests (with messages) above the counts table.",
 )
-@click.option(
-    "--full-paths/--no-full-paths",
-    default=False,
-    show_default=True,
-    help="Show absolute source paths instead of paths relative to cwd.",
-)
+@FULL_PATHS_OPTION
 @pass_application
 def summary(
     app: Application,
@@ -262,7 +293,7 @@ def summary(
         )
         counts = _collect_counts(execution.suite)
         failures = _collect_failures(execution.suite) if show_failures else None
-        exec_msg_counts = _count_execution_messages(getattr(execution, "errors", None))
+        exec_msg_counts = _count_execution_messages(execution.errors)
         msg_counts = _count_all_messages(execution)
 
         data = SummaryResult(
@@ -313,12 +344,7 @@ def summary(
     show_default=True,
     help="Truncate each message to N characters (0 = no truncation).",
 )
-@click.option(
-    "--full-paths/--no-full-paths",
-    default=False,
-    show_default=True,
-    help="Show absolute source paths instead of paths relative to cwd.",
-)
+@FULL_PATHS_OPTION
 @click.option(
     "--tags/--no-tags",
     "show_tags",
@@ -604,31 +630,13 @@ def log(
             matcher,
         )
 
-        base_dir = path.parent
-        matched: List[LogTest] = []
-        for test in _iter_all_tests(execution.suite):
-            full_name = _get_full_name(test)
-            body, artefacts = _collect_test_body(test, level=level.upper(), base_dir=base_dir, raw_html=raw_html)
-            src = getattr(test, "source", None)
-            src_str = str(src) if src else None
-            matched.append(
-                LogTest(
-                    full_name=full_name,
-                    status=test.status,
-                    message=test.message or None,
-                    body=body,
-                    artifacts=artefacts or None,
-                    source=src_str,
-                    rel_source=_rel_to_cwd(src_str),
-                    lineno=getattr(test, "lineno", None) or None,
-                    elapsed_seconds=_elapsed_seconds(test),
-                    start_time=_iso(_start_time(test)),
-                )
-            )
+        collector = _LogCollector(level=level.upper(), base_dir=path.parent, raw_html=raw_html)
+        execution.suite.visit(collector)
+        matched = collector.tests
 
         exec_messages: Optional[List[LogEntry]] = None
         if show_execution_messages:
-            exec_messages = _collect_execution_messages(getattr(execution, "errors", None), raw_html=raw_html) or None
+            exec_messages = _collect_execution_messages(execution.errors, raw_html=raw_html) or None
 
         extracted_count = 0
         extract_abs: Optional[Path] = None
@@ -827,11 +835,10 @@ def _build_stats_section(dimension: str, tests: List[TestCase], group_sort: str,
         if dimension == "status":
             _bump(t.status, t.status, secs)
         elif dimension == "suite":
-            suite = getattr(t, "parent", None)
-            suite_name = _get_full_name(suite) if suite is not None else ""
+            suite_name = _get_full_name(t.parent) if t.parent is not None else ""
             _bump(suite_name or "(root)", t.status, secs)
         elif dimension == "tag":
-            tags = list(getattr(t, "tags", None) or [])
+            tags = list(t.tags or [])
             if not tags:
                 continue
             # Robot Framework treats tags as equal when they only differ in
@@ -877,12 +884,7 @@ _DIFF_CATEGORIES = ("new-failures", "new-passes", "status-changes", "added", "re
     required=False,
 )
 @add_options(*RESULT_FILTER_OPTIONS, *SEARCH_OPTIONS)
-@click.option(
-    "--full-paths/--no-full-paths",
-    default=False,
-    show_default=True,
-    help="Show absolute source paths instead of paths relative to cwd.",
-)
+@FULL_PATHS_OPTION
 @click.option(
     "--message-chars",
     type=click.IntRange(min=0),
@@ -1037,21 +1039,16 @@ def _make_diff_change(
 ) -> DiffChange:
     """Build a DiffChange capturing baseline/current status, message, and source."""
     src_test = current_test if current_test is not None else baseline_test
-    src = getattr(src_test, "source", None)
-    src_str = str(src) if src else None
+    src_str = str(src_test.source) if src_test is not None and src_test.source else None
     return DiffChange(
         full_name=full_name,
         baseline_status=baseline_test.status if baseline_test is not None else None,
         current_status=current_test.status if current_test is not None else None,
-        baseline_message=_truncate(getattr(baseline_test, "message", None), message_chars)
-        if baseline_test is not None
-        else None,
-        current_message=_truncate(getattr(current_test, "message", None), message_chars)
-        if current_test is not None
-        else None,
+        baseline_message=_truncate(baseline_test.message, message_chars) if baseline_test is not None else None,
+        current_message=_truncate(current_test.message, message_chars) if current_test is not None else None,
         source=src_str,
         rel_source=_rel_to_cwd(src_str),
-        lineno=getattr(src_test, "lineno", None) or None,
+        lineno=(src_test.lineno if src_test is not None else None) or None,
     )
 
 
@@ -1087,14 +1084,6 @@ def _resolve_profile(app: Application) -> Tuple[RobotBaseProfile, Optional[Path]
     return profile, root_folder
 
 
-def _eval_str(value: object) -> Optional[str]:
-    if value is None:
-        return None
-    if isinstance(value, str):
-        return value
-    return getattr(value, "value", None) or str(value)
-
-
 def _resolve_output_file(app: Application, profile: RobotBaseProfile, explicit: Optional[Path]) -> Path:
     cwd = Path.cwd()
     if explicit is not None:
@@ -1110,13 +1099,13 @@ def _resolve_output_file(app: Application, profile: RobotBaseProfile, explicit: 
 
 
 def _auto_discover(app: Application, profile: RobotBaseProfile, search_root: Path) -> Path:
-    raw_output = _eval_str(getattr(profile, "output", None))
+    raw_output = str(profile.output) if profile.output is not None else None
     if raw_output is not None and raw_output.upper() == "NONE":
         raise click.UsageError(
             "Profile sets `output = NONE` — no result file to inspect. Pass `--output PATH` explicitly."
         )
 
-    out_dir_raw = _eval_str(getattr(profile, "output_dir", None)) or "."
+    out_dir_raw = str(profile.output_dir) if profile.output_dir is not None else "."
     out_dir = (search_root / out_dir_raw).resolve() if not Path(out_dir_raw).is_absolute() else Path(out_dir_raw)
     out_name = raw_output or "output.xml"
 
@@ -1188,79 +1177,80 @@ def _load_execution_result(path: Path) -> Result:
 # the differences between Robot Framework versions are confined to this block.
 
 
-def _iter_all_tests(suite: TestSuite) -> Iterator[TestCase]:
-    """Yield every test in the suite tree.
+if RF_VERSION >= (6, 1):
 
-    RF 6.1 added `TestSuite.all_tests`; on older versions we walk the
-    tree by hand. `getattr` keeps mypy happy without `# type: ignore`
-    when running against an RF where the new attribute doesn't exist.
-    """
-    if RF_VERSION >= (6, 1):
-        yield from getattr(suite, "all_tests")
-    else:
+    def _iter_all_tests(suite: TestSuite) -> Iterator[TestCase]:
+        yield from suite.all_tests
+
+else:
+
+    def _iter_all_tests(suite: TestSuite) -> Iterator[TestCase]:
         yield from suite.tests
         for child in suite.suites:
             yield from _iter_all_tests(child)
 
 
-def _get_full_name(test: TestCase) -> str:
-    """Test full name. RF 7+ exposes `full_name`; RF <7 uses `longname`."""
-    if RF_VERSION >= (7, 0):
-        return str(getattr(test, "full_name", None) or "")
-    return str(getattr(test, "longname", None) or test.name or "")
+if RF_VERSION >= (7, 0):
 
+    def _get_full_name(test: TestCase) -> str:
+        return str(test.full_name or "")  # type: ignore[attr-defined,unused-ignore]
 
-def _keyword_name_and_owner(item: Any) -> Tuple[Optional[str], str]:
-    """Return `(owner, short_name)` for a Keyword/Setup/Teardown body item.
+    def _keyword_name_and_owner(item: Keyword) -> Tuple[Optional[str], str]:
+        """Return `(owner, short_name)` for a Keyword/Setup/Teardown body item."""
+        return item.owner, str(item.name or "")  # type: ignore[attr-defined,unused-ignore]
 
-    RF 7+ stores them as `Keyword.owner` + `Keyword.name`. RF <7 splits
-    them into `libname` + `kwname` (with `name` already qualified). Item
-    stays `Any` because body items are heterogeneous (Keyword / Setup /
-    Teardown / others would be filtered out by the caller).
-    """
-    if RF_VERSION >= (7, 0):
-        return getattr(item, "owner", None), str(item.name or "")
-    return getattr(item, "libname", None), str(getattr(item, "kwname", None) or item.name or "")
+    def _loop_variables(item: For) -> Any:
+        """Loop variables for a `For` or `ForIteration` body item (RF 7+ name)."""
+        return item.assign  # type: ignore[attr-defined,unused-ignore]
 
-
-def _loop_variables(item: Any) -> Any:
-    """Loop variables for a `For` / `ForIteration` body item.
-
-    RF 7+ calls them `assign`; older versions use `variables`. `Any` on
-    both sides because the body-item type union would be heavy and the
-    return is just forwarded to the matcher / renderer.
-    """
-    if RF_VERSION >= (7, 0):
-        return getattr(item, "assign", None)
-    return getattr(item, "variables", None)
-
-
-def _elapsed_seconds(item: Any) -> Optional[float]:
-    elapsed = getattr(item, "elapsed_time", None)
-    if elapsed is not None:
+    def _elapsed_seconds(item: StatusMixin) -> Optional[float]:
+        elapsed = item.elapsed_time
+        if elapsed is None:
+            return None
         if hasattr(elapsed, "total_seconds"):
             return float(elapsed.total_seconds())
         try:
             return float(elapsed)
         except (TypeError, ValueError):
             return None
-    legacy = getattr(item, "elapsedtime", None)
-    if legacy is not None:
+
+    def _start_time(item: StatusMixin) -> Optional[object]:
+        return item.start_time  # type: ignore[no-any-return,unused-ignore]
+
+    def _end_time(item: StatusMixin) -> Optional[object]:
+        return item.end_time  # type: ignore[no-any-return,unused-ignore]
+
+else:
+
+    def _get_full_name(test: TestCase) -> str:
+        return str(test.longname or test.name or "")
+
+    def _keyword_name_and_owner(item: Keyword) -> Tuple[Optional[str], str]:
+        """Return `(owner, short_name)` for a Keyword/Setup/Teardown body item.
+
+        On RF <7 `Keyword.name` already contains the `libname.` prefix; the
+        unqualified short name lives in `kwname`.
+        """
+        return item.libname, str(item.kwname or item.name or "")  # type: ignore[attr-defined,unused-ignore]
+
+    def _loop_variables(item: For) -> Any:
+        """Loop variables for a `For` or `ForIteration` body item (RF <7 name)."""
+        return item.variables  # type: ignore[attr-defined,unused-ignore]
+
+    def _elapsed_seconds(item: StatusMixin) -> Optional[float]:
+        legacy = item.elapsedtime  # type: ignore[attr-defined,unused-ignore]
+        if legacy is None:
+            return None
         try:
             return float(legacy) / 1000.0
         except (TypeError, ValueError):
             return None
-    return None
 
+    def _start_time(item: StatusMixin) -> Optional[object]:
+        return item.starttime  # type: ignore[attr-defined,no-any-return,unused-ignore]
 
-def _start_time(item: Any) -> Optional[object]:
-    """Read a body-item's start time, accepting RF 7+ `start_time` and RF <7 `starttime`."""
-    return getattr(item, "start_time", None) or getattr(item, "starttime", None)
-
-
-def _end_time(item: Any) -> Optional[object]:
-    """Read a body-item's end time, accepting RF 7+ `end_time` and RF <7 `endtime`."""
-    return getattr(item, "end_time", None) or getattr(item, "endtime", None)
+    def _end_time(item: StatusMixin) -> Optional[object]:
+        return item.endtime  # type: ignore[attr-defined,no-any-return,unused-ignore]
 
 
 _LEGACY_TS_RE = re.compile(r"^(\d{4})(\d{2})(\d{2})\s+(\d{2}:\d{2}:\d{2}(?:\.\d+)?)$")
@@ -1457,9 +1447,8 @@ def _make_test_item(test: TestCase, *, message_chars: int) -> TestResultItem:
         full_msg = msg
 
     full_name = _get_full_name(test)
-    parent_name = _get_full_name(test.parent) if getattr(test, "parent", None) else ""
-    src = getattr(test, "source", None)
-    src_str = str(src) if src else None
+    parent_name = _get_full_name(test.parent) if test.parent else ""
+    src_str = str(test.source) if test.source else None
     rel_src = _rel_to_cwd(src_str) if src_str else None
     return TestResultItem(
         name=test.name,
@@ -1468,12 +1457,12 @@ def _make_test_item(test: TestCase, *, message_chars: int) -> TestResultItem:
         status=test.status,
         message=truncated_msg,
         full_message=full_msg,
-        tags=[normalize(str(t), ignore="_") for t in test.tags] if getattr(test, "tags", None) else None,
+        tags=[normalize(str(t), ignore="_") for t in test.tags] if test.tags else None,
         elapsed_seconds=_elapsed_seconds(test),
         start_time=_iso(_start_time(test)),
         source=src_str,
         rel_source=rel_src,
-        lineno=getattr(test, "lineno", None) or None,
+        lineno=test.lineno or None,
     )
 
 
@@ -1487,45 +1476,34 @@ def _count_execution_messages(errors: Optional[ExecutionErrors]) -> Dict[str, in
     if errors is None:
         return {}
     counts: Dict[str, int] = {}
-    for m in getattr(errors, "messages", None) or []:
-        level = (getattr(m, "level", "INFO") or "INFO").upper()
+    for m in errors.messages:
+        level = (m.level or "INFO").upper()
         counts[level] = counts.get(level, 0) + 1
     return counts
 
 
+class _MessageCounter(ResultVisitor):
+    """Tally WARN/ERROR/FAIL messages across a result tree."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.counts: Dict[str, int] = {}
+
+    def visit_message(self, msg: Message) -> None:
+        level = (msg.level or "INFO").upper()
+        if level in ("WARN", "ERROR", "FAIL"):
+            self.counts[level] = self.counts.get(level, 0) + 1
+
+
 def _count_all_messages(execution: Result) -> Dict[str, int]:
     """Tally WARN/ERROR/FAIL across parser/discovery AND test runtime messages."""
-    counts: Dict[str, int] = {}
-
-    def bump(level: str) -> None:
-        if level in ("WARN", "ERROR", "FAIL"):
-            counts[level] = counts.get(level, 0) + 1
-
-    for m in getattr(getattr(execution, "errors", None), "messages", None) or []:
-        bump((getattr(m, "level", "INFO") or "INFO").upper())
-
-    def walk(items: Iterable[Any]) -> None:
-        for item in items:
-            t = getattr(item, "type", None)
-            if t == "MESSAGE" or (t is None and hasattr(item, "level") and hasattr(item, "message")):
-                bump((getattr(item, "level", "INFO") or "INFO").upper())
-                continue
-            body = getattr(item, "body", None)
-            if body is not None:
-                walk(body)
-            if getattr(item, "has_setup", False):
-                walk([item.setup])
-            if getattr(item, "has_teardown", False):
-                walk([item.teardown])
-
-    for test in _iter_all_tests(execution.suite):
-        if getattr(test, "has_setup", False):
-            walk([test.setup])
-        walk(getattr(test, "body", []) or [])
-        if getattr(test, "has_teardown", False):
-            walk([test.teardown])
-
-    return counts
+    counter = _MessageCounter()
+    # Parser / discovery errors live next to the suite tree, not inside it.
+    for m in execution.errors.messages:
+        counter.visit_message(m)
+    # Runtime messages — the visitor handles all suite/test/keyword traversal.
+    execution.suite.visit(counter)
+    return counter.counts
 
 
 def _collect_execution_messages(errors: Optional[ExecutionErrors], *, raw_html: bool = False) -> List[LogEntry]:
@@ -1534,11 +1512,11 @@ def _collect_execution_messages(errors: Optional[ExecutionErrors], *, raw_html: 
     if errors is None:
         return []
     out: List[LogEntry] = []
-    for m in getattr(errors, "messages", None) or []:
-        level = (getattr(m, "level", "INFO") or "INFO").upper()
-        text = getattr(m, "message", "") or ""
-        is_html = bool(getattr(m, "html", False))
-        ts = _iso(getattr(m, "timestamp", None))
+    for m in errors.messages:
+        level = (m.level or "INFO").upper()
+        text = m.message or ""
+        is_html = bool(m.html)
+        ts = _iso(m.timestamp)
         if is_html and not raw_html:
             text = _html.html_to_markdown(text, base_dir=Path("."), on_artifact=lambda _r: None)
         out.append(LogEntry(type="MESSAGE", level=level, timestamp=ts, text=text, is_html=is_html))
@@ -1546,155 +1524,225 @@ def _collect_execution_messages(errors: Optional[ExecutionErrors], *, raw_html: 
 
 
 _LEVEL_ORDER = {"TRACE": 0, "DEBUG": 1, "INFO": 2, "WARN": 3, "ERROR": 4, "FAIL": 5}
-_KEYWORD_TYPES = {"KEYWORD", "SETUP", "TEARDOWN"}
 
 
-def _collect_test_body(
-    test: TestCase, *, level: str, base_dir: Path, raw_html: bool = False
-) -> Tuple[List[LogEntry], List[ArtifactRef]]:
-    threshold = _LEVEL_ORDER.get(level, 2)
-    test_artefacts: List[ArtifactRef] = []
+def _status_common(item: StatusMixin, children: Optional[List[LogEntry]]) -> Dict[str, Any]:
+    """Status / timing / body fields shared by every non-MESSAGE LogEntry."""
+    return {
+        "status": item.status,
+        "message": item.message or None,
+        "elapsed_seconds": _elapsed_seconds(item),
+        "start_time": _iso(_start_time(item)),
+        "body": children or None,
+    }
 
-    def collect(ref: ArtifactRef) -> None:
-        test_artefacts.append(ref)
 
-    def build(item: Any) -> Optional[LogEntry]:
-        t = getattr(item, "type", "") or ""
+class _LogCollector(ResultVisitor):
+    """Walks a result suite, emitting one `LogTest` per visited test.
 
-        if t == "MESSAGE" or (not t and hasattr(item, "level") and hasattr(item, "message")):
-            lvl = (getattr(item, "level", "INFO") or "INFO").upper()
-            if _LEVEL_ORDER.get(lvl, 2) < threshold:
-                return None
-            return _make_message_entry(item, base_dir, collect, raw_html=raw_html)
+    Robot's visitor handles all tree traversal — body items, branches,
+    setup/teardown — so we only react to per-type start/end hooks and
+    accumulate `LogEntry` objects on a per-nesting-level children stack.
+    Each test pushes a fresh stack frame in `start_test`; every body
+    item pushes one via `start_body_item`; the type-specific `end_*`
+    pops the children list and builds the right `LogEntry`.
+    """
 
-        children: List[LogEntry] = []
-        if getattr(item, "has_setup", False):
-            e = build(item.setup)
-            if e is not None:
-                children.append(e)
-        for child in getattr(item, "body", None) or []:
-            e = build(child)
-            if e is not None:
-                children.append(e)
-        if getattr(item, "has_teardown", False):
-            e = build(item.teardown)
-            if e is not None:
-                children.append(e)
+    def __init__(self, *, level: str, base_dir: Path, raw_html: bool) -> None:
+        super().__init__()
+        self.threshold = _LEVEL_ORDER.get(level, 2)
+        self.base_dir = base_dir
+        self.raw_html = raw_html
+        self.tests: List[LogTest] = []
+        self._stack: List[List[LogEntry]] = []
+        self._test_artefacts: List[ArtifactRef] = []
 
-        common: Dict[str, Any] = {
-            "status": getattr(item, "status", None),
-            "message": getattr(item, "message", None) or None,
-            "elapsed_seconds": _elapsed_seconds(item),
-            "start_time": _iso(_start_time(item)),
-            "body": children or None,
-        }
+    # -- Suite-level: skip suite setup/teardown, only descend into tests + subsuites.
 
-        if t in _KEYWORD_TYPES:
-            owner, short = _keyword_name_and_owner(item)
-            full_name = f"{owner}.{short}" if owner and short else short
-            return LogEntry(
-                type=t,
+    def visit_suite(self, suite: TestSuite) -> None:
+        suite.tests.visit(self)
+        suite.suites.visit(self)
+
+    # -- Test boundaries.
+
+    def start_test(self, test: TestCase) -> None:
+        self._stack.append([])
+        self._test_artefacts = []
+
+    def end_test(self, test: TestCase) -> None:
+        body = self._stack.pop()
+        src_str = str(test.source) if test.source else None
+        self.tests.append(
+            LogTest(
+                full_name=_get_full_name(test),
+                status=test.status,
+                message=test.message or None,
+                body=body,
+                artifacts=_html.dedup_artefacts(self._test_artefacts) or None,
+                source=src_str,
+                rel_source=_rel_to_cwd(src_str),
+                lineno=test.lineno or None,
+                elapsed_seconds=_elapsed_seconds(test),
+                start_time=_iso(_start_time(test)),
+            )
+        )
+
+    # -- Common entry helpers: every body item pushes a children list on entry,
+    #    and the per-type `end_*` hooks call `_emit` to attach the built entry
+    #    to its parent.
+
+    def start_body_item(self, item: BodyItem) -> None:
+        self._stack.append([])
+
+    def _emit(self, entry: LogEntry) -> None:
+        if self._stack:
+            self._stack[-1].append(entry)
+
+    # -- Per-type end hooks.
+
+    def end_keyword(self, kw: Keyword) -> None:
+        children = self._stack.pop()
+        owner, short = _keyword_name_and_owner(kw)
+        full_name = f"{owner}.{short}" if owner and short else short
+        self._emit(
+            LogEntry(
+                type=kw.type,
                 name=full_name or None,
-                args=list(item.args or []) or None,
-                assign=list(item.assign or []) or None,
-                **common,
+                args=list(kw.args or []) or None,
+                assign=list(kw.assign or []) or None,
+                **_status_common(kw, children),
             )
+        )
 
-        if t == "FOR":
-            return LogEntry(
+    def end_for(self, for_: For) -> None:
+        children = self._stack.pop()
+        self._emit(
+            LogEntry(
                 type="FOR",
-                assign=list(_loop_variables(item) or []) or None,
-                flavor=item.flavor or None,
-                args=list(item.values or []) or None,
-                **common,
+                assign=list(_loop_variables(for_) or []) or None,
+                flavor=for_.flavor or None,
+                args=list(for_.values or []) or None,
+                **_status_common(for_, children),
             )
+        )
 
-        if t == "ITERATION":
-            iter_vars = _loop_variables(item) if isinstance(item, ForIteration) else None
-            return LogEntry(
+    def end_for_iteration(self, it: ForIteration) -> None:
+        children = self._stack.pop()
+        self._emit(
+            LogEntry(
                 type="ITERATION",
-                assign=list(iter_vars or []) or None,
-                **common,
+                assign=list(_loop_variables(it) or []) or None,
+                **_status_common(it, children),
             )
+        )
 
-        if t == "WHILE":
-            return LogEntry(
+    def end_while(self, w: While) -> None:
+        children = self._stack.pop()
+        self._emit(
+            LogEntry(
                 type="WHILE",
-                condition=getattr(item, "condition", None) or None,
-                **common,
+                condition=w.condition or None,
+                **_status_common(w, children),
             )
+        )
 
-        if t in ("IF/ELSE ROOT", "TRY/EXCEPT ROOT"):
-            label = "IF" if t == "IF/ELSE ROOT" else "TRY"
-            common["status"] = None
-            common["message"] = None
-            common["elapsed_seconds"] = None
-            common["start_time"] = None
-            return LogEntry(type=label, **common)
+    def end_while_iteration(self, it: StatusMixin) -> None:
+        children = self._stack.pop()
+        self._emit(LogEntry(type="ITERATION", **_status_common(it, children)))
 
-        if t in ("IF", "ELSE IF", "ELSE"):
-            return LogEntry(
-                type=t,
-                condition=getattr(item, "condition", None) or None,
-                **common,
+    def end_if(self, if_: If) -> None:
+        # IF/ELSE ROOT — container only, no own status/timing.
+        children = self._stack.pop()
+        self._emit(LogEntry(type="IF", body=children or None))
+
+    def end_try(self, try_: Try) -> None:
+        # TRY/EXCEPT ROOT — same idea.
+        children = self._stack.pop()
+        self._emit(LogEntry(type="TRY", body=children or None))
+
+    def end_if_branch(self, branch: IfBranch) -> None:
+        children = self._stack.pop()
+        self._emit(
+            LogEntry(
+                type=branch.type,  # "IF" | "ELSE IF" | "ELSE"
+                condition=branch.condition or None,
+                **_status_common(branch, children),
             )
+        )
 
-        if t in ("EXCEPT", "FINALLY"):
-            return LogEntry(
-                type=t,
-                patterns=list(getattr(item, "patterns", []) or []) or None,
-                pattern_type=getattr(item, "pattern_type", None) or None,
-                assign=([getattr(item, "assign")] if getattr(item, "assign", None) else None),
-                **common,
+    def end_try_branch(self, branch: TryBranch) -> None:
+        children = self._stack.pop()
+        self._emit(
+            LogEntry(
+                type=branch.type,  # "EXCEPT" | "FINALLY"
+                patterns=list(branch.patterns or []) or None,
+                pattern_type=branch.pattern_type or None,
+                assign=[branch.assign] if branch.assign else None,
+                **_status_common(branch, children),
             )
+        )
 
-        if t == "VAR":
-            return LogEntry(
-                type="VAR",
-                assign=[getattr(item, "name", "")] if getattr(item, "name", None) else None,
-                args=list(getattr(item, "value", []) or []) or None,
-                scope=getattr(item, "scope", None) or None,
-                separator=getattr(item, "separator", None) or None,
-                **common,
-            )
-
-        if t == "RETURN":
-            return LogEntry(
+    def end_return(self, ret: Return) -> None:
+        children = self._stack.pop()
+        self._emit(
+            LogEntry(
                 type="RETURN",
-                args=list(getattr(item, "values", []) or []) or None,
-                **common,
+                args=list(ret.values or []) or None,
+                **_status_common(ret, children),
             )
+        )
 
-        if t in ("CONTINUE", "BREAK"):
-            return LogEntry(type=t, **common)
+    def end_continue(self, c: Continue) -> None:
+        children = self._stack.pop()
+        self._emit(LogEntry(type=c.type, **_status_common(c, children)))
 
-        if t == "GROUP":
-            return LogEntry(type="GROUP", name=getattr(item, "name", None) or None, **common)
+    def end_break(self, b: Break) -> None:
+        children = self._stack.pop()
+        self._emit(LogEntry(type=b.type, **_status_common(b, children)))
 
-        if t == "ERROR":
-            return LogEntry(
+    # RF 7+ — these methods exist on every supported RF version's visitor
+    # superclass, but the underlying classes (Var, Error) only ship on RF 7+,
+    # so the methods are never reached on older RFs.
+    def end_var(self, var: "Var") -> None:
+        children = self._stack.pop()
+        self._emit(
+            LogEntry(
+                type="VAR",
+                assign=[var.name] if var.name else None,
+                args=list(var.value or []) or None,
+                scope=var.scope or None,
+                separator=var.separator or None,
+                **_status_common(var, children),
+            )
+        )
+
+    def end_error(self, err: "Error") -> None:
+        children = self._stack.pop()
+        self._emit(
+            LogEntry(
                 type="ERROR",
-                args=list(getattr(item, "values", []) or []) or None,
-                **common,
+                args=list(err.values or []) or None,
+                **_status_common(err, children),
             )
+        )
 
-        return LogEntry(type=t or "UNKNOWN", **common)
+    # RF 7.2+ — same caveat.
+    def end_group(self, grp: "Group") -> None:
+        children = self._stack.pop()
+        self._emit(LogEntry(type="GROUP", name=grp.name or None, **_status_common(grp, children)))
 
-    out: List[LogEntry] = []
-    if getattr(test, "has_setup", False):
-        e = build(test.setup)
-        if e is not None:
-            out.append(e)
-    for child in getattr(test, "body", None) or []:
-        e = build(child)
-        if e is not None:
-            out.append(e)
-    if getattr(test, "has_teardown", False):
-        e = build(test.teardown)
-        if e is not None:
-            out.append(e)
+    # -- Messages: leaf items, level-filtered, appended directly. Override
+    #    `visit_message` to skip the start/end pair entirely (no push/pop).
 
-    return out, _html.dedup_artefacts(test_artefacts)
+    def visit_message(self, msg: Message) -> None:
+        lvl = (msg.level or "INFO").upper()
+        if _LEVEL_ORDER.get(lvl, 2) < self.threshold:
+            return
+        entry = _make_message_entry(msg, self.base_dir, self._collect_artifact, raw_html=self.raw_html)
+        self._emit(entry)
+
+    def _collect_artifact(self, ref: ArtifactRef) -> None:
+        self._test_artefacts.append(ref)
 
 
 def _make_message_entry(
@@ -1704,8 +1752,8 @@ def _make_message_entry(
     *,
     raw_html: bool = False,
 ) -> LogEntry:
-    is_html = bool(getattr(msg, "html", False))
-    raw = getattr(msg, "message", "") or ""
+    is_html = bool(msg.html)
+    raw = msg.message or ""
     msg_artefacts: List[ArtifactRef] = []
 
     def collect(ref: ArtifactRef) -> None:
@@ -1720,8 +1768,8 @@ def _make_message_entry(
     msg_artefacts = _html.dedup_artefacts(msg_artefacts)
     return LogEntry(
         type="MESSAGE",
-        level=(getattr(msg, "level", "INFO") or "INFO").upper(),
-        timestamp=_iso(getattr(msg, "timestamp", None)),
+        level=(msg.level or "INFO").upper(),
+        timestamp=_iso(msg.timestamp),
         text=text,
         is_html=is_html,
         artifacts=msg_artefacts or None,
