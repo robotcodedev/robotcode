@@ -128,6 +128,12 @@ class LogEntry(CamelSnakeMixin):
     is_html: bool = False
     artifacts: Optional[List[ArtifactRef]] = None
     body: Optional[List["LogEntry"]] = None
+    # Populated for KEYWORD/SETUP/TEARDOWN entries only when
+    # `log --keyword-info` is on. Mirror the executed keyword's
+    # [Documentation] / [Tags] / [Timeout].
+    doc: Optional[str] = None
+    tags: Optional[List[str]] = None
+    timeout: Optional[str] = None
 
 
 @dataclass
@@ -140,6 +146,30 @@ class LogTest(CamelSnakeMixin):
     source: Optional[str] = None
     rel_source: Optional[str] = None
     lineno: Optional[int] = None
+    elapsed_seconds: Optional[float] = None
+    start_time: Optional[str] = None
+    # Populated when `log --suite-info` is on — `fullName` of the parent
+    # suite. Lets the TEXT renderer group tests under suite headers and
+    # JSON consumers cross-reference `LogResult.suites`.
+    suite: Optional[str] = None
+
+
+@dataclass
+class LogSuite(CamelSnakeMixin):
+    """Suite metadata for the `log --suite-info` view.
+
+    Mirrors Robot's `TestSuite` settings: `Documentation` (`doc`),
+    `Metadata` (a `name: value` dict), the `*.robot` / `__init__.robot`
+    source file, and the suite's executed status.
+    """
+
+    full_name: str
+    name: str
+    status: str
+    doc: Optional[str] = None
+    metadata: Optional[Dict[str, str]] = None
+    source: Optional[str] = None
+    rel_source: Optional[str] = None
     elapsed_seconds: Optional[float] = None
     start_time: Optional[str] = None
 
@@ -155,6 +185,9 @@ class LogResult(CamelSnakeMixin):
     start_time: Optional[str] = None
     end_time: Optional[str] = None
     filters_applied: Optional[Dict[str, List[str]]] = None
+    # Populated when `log --suite-info` is on — one entry per suite that
+    # contains at least one surviving test, ordered by traversal.
+    suites: Optional[List[LogSuite]] = None
 
 
 @dataclass

@@ -131,6 +131,34 @@ def test_search_in_all_empty_when_no_match(json_discover: JsonRunner, nested_sui
 
 
 # ---------------------------------------------------------------------------
+# Suite-level Documentation / Metadata search
+# ---------------------------------------------------------------------------
+
+
+def test_search_matches_suite_documentation(json_discover: JsonRunner, flat_suite: Path) -> None:
+    """Hitting a suite's `Documentation` keeps every test underneath it.
+
+    `flat.robot` has the docstring 'A flat suite with mixed names and tags
+    for search tests.' — searching for `mixed names` matches no individual
+    test name/tag/body but every test should survive via the suite hit.
+    """
+    data = json_discover("tests", "--search", "mixed names", suite_path=flat_suite)
+    names = set(_names(data["items"]))
+    # All flat-suite tests are kept (the full set, regardless of which ones).
+    assert "Login Smoke" in names
+    assert "Plain Other" in names
+
+
+def test_search_matches_suite_metadata(json_discover: JsonRunner, flat_suite: Path) -> None:
+    """`Metadata` values are part of the suite-level search target."""
+    data = json_discover("tests", "--search", "SUITE_META_TOKEN_qrs", suite_path=flat_suite)
+    names = set(_names(data["items"]))
+    # No test name/tag/body contains the token — only the suite metadata does.
+    assert "Login Smoke" in names
+    assert "Plain Other" in names
+
+
+# ---------------------------------------------------------------------------
 # `discover tags` reflects the filtered suite
 # ---------------------------------------------------------------------------
 

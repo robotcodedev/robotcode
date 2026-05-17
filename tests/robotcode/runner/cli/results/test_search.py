@@ -95,6 +95,55 @@ def test_search_against_tags_is_normalisation_aware(json_result: JsonRunner, tag
 
 
 # ---------------------------------------------------------------------------
+# Suite-level Documentation / Metadata
+# ---------------------------------------------------------------------------
+
+
+def test_search_matches_suite_documentation(json_result: JsonRunner, keyword_meta_output: Path) -> None:
+    """A hit on a suite's `Documentation` keeps every test underneath."""
+    data = json_result("show", "--search", "SUITE_DOC_TOKEN_alpha", output_path=keyword_meta_output)
+    assert {t["name"] for t in data["tests"]} == {"Tagged Caller", "Plain Test"}
+
+
+def test_search_matches_suite_metadata_value(json_result: JsonRunner, keyword_meta_output: Path) -> None:
+    """Suite `Metadata` values are searched alongside the docstring."""
+    data = json_result("show", "--search", "payments-squad", output_path=keyword_meta_output)
+    assert {t["name"] for t in data["tests"]} == {"Tagged Caller", "Plain Test"}
+
+
+def test_search_matches_suite_metadata_name(json_result: JsonRunner, keyword_meta_output: Path) -> None:
+    """Suite `Metadata` names match too (`OwnerTeam` here)."""
+    data = json_result("show", "--search", "OwnerTeam", output_path=keyword_meta_output)
+    assert {t["name"] for t in data["tests"]} == {"Tagged Caller", "Plain Test"}
+
+
+# ---------------------------------------------------------------------------
+# Result-tree keyword metadata (doc / tags / timeout)
+# ---------------------------------------------------------------------------
+
+
+def test_search_matches_keyword_documentation(json_result: JsonRunner, keyword_meta_output: Path) -> None:
+    """A user keyword's `[Documentation]` is searchable in the result tree."""
+    data = json_result("show", "--search", "KW_DOC_TOKEN_beta", output_path=keyword_meta_output)
+    # Only the test that calls `Helper With Metadata` should match.
+    assert {t["name"] for t in data["tests"]} == {"Tagged Caller"}
+
+
+def test_search_matches_keyword_tag(json_result: JsonRunner, keyword_meta_output: Path) -> None:
+    """A user keyword's `[Tags]` are searchable (Robot's tag normalisation:
+    case + whitespace + underscore are folded, so `kw tag probe` matches
+    `KWTagProbe`)."""
+    data = json_result("show", "--search", "kw tag probe", output_path=keyword_meta_output)
+    assert {t["name"] for t in data["tests"]} == {"Tagged Caller"}
+
+
+def test_search_matches_keyword_timeout(json_result: JsonRunner, keyword_meta_output: Path) -> None:
+    """A user keyword's `[Timeout]` value is searchable as plain text."""
+    data = json_result("show", "--search", "7 days", output_path=keyword_meta_output)
+    assert {t["name"] for t in data["tests"]} == {"Tagged Caller"}
+
+
+# ---------------------------------------------------------------------------
 # Errors
 # ---------------------------------------------------------------------------
 

@@ -20,6 +20,7 @@ from robot.model import Keyword as ModelKeyword
 from robot.model import TestCase as ModelTestCase
 from robot.model.control import For, IfBranch, Return, TryBranch, While
 from robot.model.message import Message
+from robot.result import Keyword as ResultKeyword
 from robot.result.model import StatusMixin
 from robot.running import TestCase as RunningTestCase
 from robot.running import TestSuite
@@ -61,12 +62,13 @@ class SearchMatcher:
         Uses Robot's `SuiteVisitor` dispatch, which works against both the
         `robot.running` model (parse-time, used by `discover`) and the
         `robot.result` model (runtime `output.xml`, used by `results`).
-        Result-tree-only fields (`.message`) are guarded with isinstance
-        checks against `StatusMixin`.
+        Result-tree-only fields (`.message`, keyword `.doc`/`.tags`/
+        `.timeout`) are guarded with isinstance checks against the
+        respective result-model classes.
         """
         if not body:
             return False
-        visitor = _BodyMatchVisitor(self.general)
+        visitor = _BodyMatchVisitor(self.general, self.tag)
         for item in body:
             item.visit(visitor)  # type: ignore[attr-defined]
             if visitor.found:
@@ -152,9 +154,14 @@ class _BodyMatchVisitor(SuiteVisitor):
     gate is needed there.
     """
 
-    def __init__(self, match: Callable[[Optional[str]], bool]) -> None:
+    def __init__(
+        self,
+        match: Callable[[Optional[str]], bool],
+        match_tag: Callable[[Optional[str]], bool],
+    ) -> None:
         super().__init__()
         self.match = match
+        self.match_tag = match_tag
         self.found = False
 
     def _hit(self) -> bool:
@@ -182,8 +189,19 @@ class _BodyMatchVisitor(SuiteVisitor):
             return self._hit()
         if any(self.match(str(a)) for a in (kw.assign or ())):
             return self._hit()
-        if self._match_message(kw):
-            return self._hit()
+        # The keyword *call* in the running model has no doc/tags/timeout —
+        # those live on the keyword *definition* and only get copied into
+        # the result tree at execution time. Gate on ResultKeyword so the
+        # discover path (running model) just sees args/assign/name.
+        if isinstance(kw, ResultKeyword):
+            if self._match_message(kw):
+                return self._hit()
+            if self.match(kw.doc):
+                return self._hit()
+            if any(self.match_tag(str(t)) for t in (kw.tags or ())):
+                return self._hit()
+            if self.match(kw.timeout):
+                return self._hit()
         return None
 
     def start_for(self, for_: For) -> Optional[bool]:
@@ -282,6 +300,11 @@ class SearchModifier(SuiteVisitor):
     - any keyword name, keyword argument, assigned variable, FOR/WHILE
       condition or VAR/RETURN/EXCEPT/GROUP element inside the test body,
       setup or teardown
+    - any executed keyword's `[Documentation]`, `[Tags]` or `[Timeout]`
+      (result-tree only — the running model's keyword calls don't carry
+      these; they live on the keyword *definition*)
+    - the `Documentation` or `Metadata` of any ancestor suite (so a hit
+      on a suite-level doc string keeps every test underneath)
     """
 
     def __init__(self, matcher: SearchMatcher) -> None:
@@ -313,7 +336,19 @@ class SearchModifier(SuiteVisitor):
             return True
         if test.has_teardown and self.matcher.matches_body([test.teardown]):
             return True
-        return self.matcher.matches_body(test.body)
+        if self.matcher.matches_body(test.body):
+            return True
+        # Walk up ancestor suites: a match on a suite's `Documentation` or
+        # `Metadata` keeps every test underneath that suite.
+        parent = test.parent
+        while parent is not None:
+            if self.matcher.general(parent.doc):
+                return True
+            for name, value in (parent.metadata or {}).items():
+                if self.matcher.general(name) or self.matcher.general(str(value)):
+                    return True
+            parent = parent.parent
+        return False
 
 
 _STATUS_ALIASES = {

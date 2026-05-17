@@ -296,6 +296,12 @@ def statements_modern_output(session_output_dir: Path) -> Path:
 
 
 @pytest.fixture(scope="session")
+def keyword_meta_output(session_output_dir: Path) -> Path:
+    """Suite/keyword documentation/metadata fixture for search tests."""
+    return _run_robot(SUITES_DIR / "keyword_meta.robot", session_output_dir, "keyword_meta")
+
+
+@pytest.fixture(scope="session")
 def statements_var_output(session_output_dir: Path) -> Path:
     """RF 7.0+ VAR statement."""
     if RF_VERSION < (7, 0):

@@ -1,5 +1,6 @@
 *** Settings ***
 Documentation    A flat suite with mixed names and tags for search tests.
+Metadata         OwnerProbe    SUITE_META_TOKEN_qrs
 
 *** Test Cases ***
 Login Smoke

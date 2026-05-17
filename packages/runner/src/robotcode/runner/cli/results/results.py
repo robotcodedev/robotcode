@@ -72,6 +72,7 @@ from ._models import (
     DiffResult,
     LogEntry,
     LogResult,
+    LogSuite,
     LogTest,
     ResultFileInfo,
     ShowResult,
@@ -154,9 +155,11 @@ SEARCH_OPTIONS = [
         help=(
             "Only include tests with at least one case-insensitive substring "
             "match against TEXT. Searches test name, full name, failure "
-            "message, documentation, template name, timeout, tags, keyword "
-            "names, keyword arguments, and log messages. Mutually exclusive "
-            "with `--search-regex`."
+            "message, documentation, template name, timeout, tags, the "
+            "parent suite's Documentation / Metadata, every executed "
+            "keyword's name / arguments / [Documentation] / [Tags] / "
+            "[Timeout] / failure message, and log messages. Mutually "
+            "exclusive with `--search-regex`."
         ),
     ),
     click.option(
@@ -570,6 +573,28 @@ def show(
     show_default=True,
     help=("Also show parser/discovery messages from output.xml's `<errors>` section (deduplicated)."),
 )
+@click.option(
+    "--keyword-info/--no-keyword-info",
+    "with_keyword_info",
+    default=False,
+    show_default=True,
+    help=(
+        "Include each executed keyword's [Documentation], [Tags] and "
+        "[Timeout] from the keyword definition. Off by default to keep "
+        "the log compact."
+    ),
+)
+@click.option(
+    "--suite-info/--no-suite-info",
+    "with_suite_info",
+    default=False,
+    show_default=True,
+    help=(
+        "Group tests under suite headers (name, source, Documentation, "
+        "Metadata, status). In JSON, populates `suites` and a per-test "
+        "`suite` reference. Off by default to keep the log compact."
+    ),
+)
 @pass_application
 def log(
     app: Application,
@@ -591,6 +616,8 @@ def log(
     show_timing: bool,
     raw_html: bool,
     show_execution_messages: bool,
+    with_keyword_info: bool,
+    with_suite_info: bool,
 ) -> None:
     """\
     Show the execution log of each test: keywords, control flow and messages.
@@ -630,7 +657,13 @@ def log(
             matcher,
         )
 
-        collector = _LogCollector(level=level.upper(), base_dir=path.parent, raw_html=raw_html)
+        collector = _LogCollector(
+            level=level.upper(),
+            base_dir=path.parent,
+            raw_html=raw_html,
+            with_keyword_info=with_keyword_info,
+            with_suite_info=with_suite_info,
+        )
         execution.suite.visit(collector)
         matched = collector.tests
 
@@ -659,6 +692,7 @@ def log(
         data = LogResult(
             file=_make_file_info(path),
             tests=matched,
+            suites=collector.suites or None,
             execution_messages=exec_messages,
             extract_dir=str(extract_abs) if extract_abs else None,
             extracted_count=extracted_count,
@@ -691,6 +725,7 @@ def log(
                     search_regex=search_regex,
                     show_timestamps=show_timestamps,
                     show_timing=show_timing,
+                    with_suite_info=with_suite_info,
                 )
             )
         else:
@@ -1548,18 +1583,46 @@ class _LogCollector(ResultVisitor):
     pops the children list and builds the right `LogEntry`.
     """
 
-    def __init__(self, *, level: str, base_dir: Path, raw_html: bool) -> None:
+    def __init__(
+        self,
+        *,
+        level: str,
+        base_dir: Path,
+        raw_html: bool,
+        with_keyword_info: bool = False,
+        with_suite_info: bool = False,
+    ) -> None:
         super().__init__()
         self.threshold = _LEVEL_ORDER.get(level, 2)
         self.base_dir = base_dir
         self.raw_html = raw_html
+        self.with_keyword_info = with_keyword_info
+        self.with_suite_info = with_suite_info
         self.tests: List[LogTest] = []
+        self.suites: List[LogSuite] = []
         self._stack: List[List[LogEntry]] = []
         self._test_artefacts: List[ArtifactRef] = []
 
     # -- Suite-level: skip suite setup/teardown, only descend into tests + subsuites.
+    #    The filter pipeline already pruned empty branches, so `test_count`
+    #    here is the count of surviving tests in this subtree.
 
     def visit_suite(self, suite: TestSuite) -> None:
+        if self.with_suite_info and suite.test_count > 0:
+            src_str = str(suite.source) if suite.source else None
+            self.suites.append(
+                LogSuite(
+                    full_name=_get_full_name(suite),
+                    name=suite.name,
+                    status=suite.status,
+                    doc=suite.doc or None,
+                    metadata=dict(suite.metadata) if suite.metadata else None,
+                    source=src_str,
+                    rel_source=_rel_to_cwd(src_str),
+                    elapsed_seconds=_elapsed_seconds(suite),
+                    start_time=_iso(_start_time(suite)),
+                )
+            )
         suite.tests.visit(self)
         suite.suites.visit(self)
 
@@ -1572,6 +1635,9 @@ class _LogCollector(ResultVisitor):
     def end_test(self, test: TestCase) -> None:
         body = self._stack.pop()
         src_str = str(test.source) if test.source else None
+        parent_full_name: Optional[str] = None
+        if self.with_suite_info and test.parent is not None:
+            parent_full_name = _get_full_name(test.parent)
         self.tests.append(
             LogTest(
                 full_name=_get_full_name(test),
@@ -1584,6 +1650,7 @@ class _LogCollector(ResultVisitor):
                 lineno=test.lineno or None,
                 elapsed_seconds=_elapsed_seconds(test),
                 start_time=_iso(_start_time(test)),
+                suite=parent_full_name,
             )
         )
 
@@ -1610,6 +1677,9 @@ class _LogCollector(ResultVisitor):
                 name=full_name or None,
                 args=list(kw.args or []) or None,
                 assign=list(kw.assign or []) or None,
+                doc=(kw.doc or None) if self.with_keyword_info else None,
+                tags=(list(kw.tags) or None) if self.with_keyword_info else None,
+                timeout=(str(kw.timeout) if kw.timeout else None) if self.with_keyword_info else None,
                 **_status_common(kw, children),
             )
         )

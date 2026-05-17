@@ -1,6 +1,6 @@
 *** Settings ***
 Documentation    Current half of the diff-test pair. Compared to the
-...              baseline: Beta now fails, Gamma is gone, Delta is new.
+...              baseline one test flips status, one disappears, one is new.
 
 
 *** Test Cases ***

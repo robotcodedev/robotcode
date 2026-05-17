@@ -21,6 +21,7 @@ from ._models import (
     DiffResult,
     LogEntry,
     LogResult,
+    LogSuite,
     ShowResult,
     StatsResult,
     StatsSection,
@@ -488,6 +489,57 @@ _CONTROL_TYPES = {
 }
 
 
+def _render_suite_header(
+    suite: Optional[LogSuite],
+    *,
+    full_paths: bool,
+    show_timing: bool,
+    highlight: Optional[Callable[[str], str]] = None,
+) -> Iterable[str]:
+    """Yield the `Suite: ...` header block for one group of tests.
+
+    Renders name + (source:1) + status badge + optional doc/metadata
+    lines. Mirrors the `Test:` header look so the eye can scan grouped
+    output naturally. A `None` suite (the JSON record was missing for
+    some reason) falls back to no header rather than failing.
+    """
+    if suite is None:
+        return
+
+    def _hi(s: str) -> str:
+        return highlight(s) if highlight else s
+
+    yield click.style("Suite: ", fg="blue")
+    yield click.style(_hi(suite.full_name), bold=True)
+    if suite.source:
+        path = suite.source if full_paths else (suite.rel_source or suite.source)
+        yield f" ({path})"
+    if suite.status:
+        yield " "
+        yield _status_inline(suite.status)
+    yield _timing_suffix(suite.elapsed_seconds, suite.start_time, show_timing=show_timing)
+    yield os.linesep
+
+    if suite.doc:
+        lines = suite.doc.splitlines() or [suite.doc]
+        for j, line in enumerate(lines):
+            yield "  "
+            yield click.style("[Documentation]" if j == 0 else "...            ", fg="blue")
+            yield " "
+            yield _hi(line)
+            yield os.linesep
+    if suite.metadata:
+        for k, v in suite.metadata.items():
+            yield "  "
+            yield click.style("[Metadata]", fg="blue")
+            yield " "
+            yield _hi(k)
+            yield " = "
+            yield _hi(v)
+            yield os.linesep
+    yield os.linesep
+
+
 def render_log(
     data: LogResult,
     *,
@@ -498,6 +550,7 @@ def render_log(
     show_timing: bool = False,
     search_substring: Optional[str] = None,
     search_regex: Optional[str] = None,
+    with_suite_info: bool = False,
 ) -> Iterable[str]:
     threshold = _LEVEL_ORDER.get(level.upper(), 2)
     highlight = make_highlighter(search_substring, search_regex)
@@ -507,9 +560,26 @@ def render_log(
         yield os.linesep
         return
 
+    # Indexed lookup of LogSuite-by-full-name plus an inner indent when
+    # `--suite-info` is on (tests become children of their suite header).
+    suite_index = {s.full_name: s for s in (data.suites or [])}
+    inner_indent = "  " if with_suite_info else ""
+    current_suite: Optional[str] = object()  # type: ignore[assignment]
+
     for i, t in enumerate(data.tests):
-        if i:
+        if with_suite_info and t.suite != current_suite:
+            current_suite = t.suite
+            if i:
+                yield os.linesep
+            yield from _render_suite_header(
+                suite_index.get(t.suite or ""),
+                full_paths=full_paths,
+                show_timing=show_timing,
+                highlight=highlight,
+            )
+        elif i:
             yield os.linesep
+        yield inner_indent
         yield click.style("Test: ", fg="blue")
         full_name = highlight(t.full_name) if highlight else t.full_name
         yield click.style(full_name, bold=True)
@@ -529,13 +599,14 @@ def render_log(
             color = _message_color(t.status)
             for line in t.message.splitlines():
                 styled = highlight(line) if highlight else line
+                yield inner_indent
                 yield "  > "
                 yield (click.style(styled, fg=color, italic=True) if color else click.style(styled, italic=True))
                 yield os.linesep
 
         yield from _render_entries(
             t.body or [],
-            depth=1,
+            depth=2 if with_suite_info else 1,
             kw_depth=0,
             max_depth=max_depth,
             threshold=threshold,
@@ -614,6 +685,39 @@ def _render_entries(
         )
 
 
+def _render_keyword_info(
+    entry: LogEntry,
+    *,
+    indent: str,
+    highlight: Optional[Callable[[str], str]] = None,
+) -> Iterable[str]:
+    """Render the keyword's [Documentation] / [Tags] / [Timeout] under its header."""
+
+    def _hi(s: str) -> str:
+        return highlight(s) if highlight else s
+
+    if entry.doc:
+        lines = entry.doc.splitlines() or [entry.doc]
+        for j, line in enumerate(lines):
+            yield indent
+            yield click.style("[Documentation]" if j == 0 else "...            ", fg="blue")
+            yield " "
+            yield _hi(line)
+            yield os.linesep
+    if entry.tags:
+        yield indent
+        yield click.style("[Tags]", fg="blue")
+        yield " "
+        yield "    ".join(_hi(t) for t in entry.tags)
+        yield os.linesep
+    if entry.timeout:
+        yield indent
+        yield click.style("[Timeout]", fg="blue")
+        yield " "
+        yield _hi(entry.timeout)
+        yield os.linesep
+
+
 def _render_entry(
     entry: LogEntry,
     *,
@@ -657,6 +761,9 @@ def _render_entry(
     yield indent
     yield from _format_entry_header(entry, show_timing=show_timing, highlight=highlight)
     yield os.linesep
+
+    if etype in _KEYWORD_ENTRY_TYPES and (entry.doc or entry.tags or entry.timeout):
+        yield from _render_keyword_info(entry, indent=indent + "  ", highlight=highlight)
 
     if entry.message and entry.status in ("FAIL", "SKIP"):
         color = _message_color(entry.status)

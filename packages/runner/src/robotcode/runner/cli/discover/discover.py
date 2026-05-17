@@ -63,11 +63,11 @@ DISCOVER_SEARCH_OPTIONS = [
         help=(
             "Only include items where TEXT case-insensitively matches the "
             "name, full name, source path, documentation, template name, "
-            "timeout, any tag (normalisation-aware), or anything inside "
-            "the test body — keyword names, keyword arguments, assigned "
-            "variables, FOR/WHILE/IF conditions, VAR/RETURN values, "
-            "EXCEPT patterns, GROUP names. Mutually exclusive with "
-            "`--search-regex`."
+            "timeout, any tag (normalisation-aware), the parent suite's "
+            "Documentation / Metadata, or anything inside the test body "
+            "— keyword names, keyword arguments, assigned variables, "
+            "FOR/WHILE/IF conditions, VAR/RETURN values, EXCEPT patterns, "
+            "GROUP names. Mutually exclusive with `--search-regex`."
         ),
     ),
     click.option(

@@ -304,3 +304,195 @@ def test_log_filter_integration(
 ) -> None:
     data = json_result("log", *filter_args, output_path=basic_output)
     assert len(data["tests"]) == expected_count
+
+
+# ---------------------------------------------------------------------------
+# `--keyword-info` flag: doc / tags / timeout on KEYWORD entries
+# ---------------------------------------------------------------------------
+
+
+def test_log_keyword_info_off_by_default(json_result: JsonRunner, keyword_meta_output: Path) -> None:
+    """Without `--keyword-info` the new fields are absent from JSON."""
+    data = json_result("log", output_path=keyword_meta_output)
+    test = find_test(data["tests"], "Keyword Meta.Tagged Caller")
+    assert test is not None
+    helper = next((e for e in iter_body(test.get("body") or []) if e.get("name") == "Helper With Metadata"), None)
+    assert helper is not None
+    assert "doc" not in helper
+    assert "tags" not in helper
+    assert "timeout" not in helper
+
+
+def test_log_keyword_info_populates_doc_tags_timeout(json_result: JsonRunner, keyword_meta_output: Path) -> None:
+    """`--keyword-info` adds the executed keyword's [Documentation]/[Tags]/[Timeout]."""
+    data = json_result("log", "--keyword-info", output_path=keyword_meta_output)
+    test = find_test(data["tests"], "Keyword Meta.Tagged Caller")
+    assert test is not None
+    helper = next((e for e in iter_body(test.get("body") or []) if e.get("name") == "Helper With Metadata"), None)
+    assert helper is not None
+    assert helper.get("doc") == "Helper keyword documentation token: KW_DOC_TOKEN_beta."
+    assert helper.get("tags") == ["KWTagProbe"]
+    assert helper.get("timeout") == "7 days"
+
+
+def test_log_keyword_info_renders_inline_in_text(robotcode_cli: CliRunner, keyword_meta_output: Path) -> None:
+    """TEXT renderer shows [Documentation]/[Tags]/[Timeout] beneath the keyword."""
+    result = robotcode_cli(
+        ["results", "log", "--keyword-info", "--output", str(keyword_meta_output)],
+    )
+    out = strip_ansi(result.stdout)
+    assert "[Documentation]" in out
+    assert "KW_DOC_TOKEN_beta" in out
+    assert "[Tags]" in out
+    assert "KWTagProbe" in out
+    assert "[Timeout]" in out
+    assert "7 days" in out
+
+
+def test_log_default_text_omits_keyword_info(robotcode_cli: CliRunner, keyword_meta_output: Path) -> None:
+    """Without `--keyword-info`, the TEXT output never prints those lines —
+    even for keywords that have a [Documentation] in their definition.
+
+    Guards against an accidental change that always renders the keyword
+    info (the inverse risk to the JSON default-off check above)."""
+    result = robotcode_cli(["results", "log", "--output", str(keyword_meta_output)])
+    out = strip_ansi(result.stdout)
+    assert "[Documentation]" not in out
+    assert "[Tags]" not in out
+    assert "[Timeout]" not in out
+    assert "KW_DOC_TOKEN_beta" not in out
+
+
+def test_log_keyword_info_omits_lines_for_keywords_without_metadata(
+    json_result: JsonRunner, keyword_meta_output: Path
+) -> None:
+    """Built-in keywords have a [Documentation] (from the library) but no
+    [Tags] / [Timeout]. With `--keyword-info` JSON should include `doc`
+    but leave `tags` / `timeout` absent (defaults dropped)."""
+    data = json_result("log", "--keyword-info", output_path=keyword_meta_output)
+    test = find_test(data["tests"], "Keyword Meta.Plain Test")
+    assert test is not None
+    log = next((e for e in iter_body(test.get("body") or []) if e.get("name") == "BuiltIn.Log"), None)
+    assert log is not None
+    assert log.get("doc")  # BuiltIn.Log has a docstring
+    assert "tags" not in log
+    assert "timeout" not in log
+
+
+def test_log_keyword_info_combines_with_search(robotcode_cli: CliRunner, keyword_meta_output: Path) -> None:
+    """`--keyword-info` + `--search` co-exist: the search filters the test
+    set, and `--keyword-info` still renders the keyword metadata on the
+    surviving tests. Regression guard against either flag clobbering the
+    other in `render_log`."""
+    result = robotcode_cli(
+        [
+            "results",
+            "log",
+            "--keyword-info",
+            "--search",
+            "KW_DOC_TOKEN_beta",
+            "--output",
+            str(keyword_meta_output),
+        ],
+    )
+    out = strip_ansi(result.stdout)
+    # `KW_DOC_TOKEN_beta` only appears in the helper keyword's doc, so
+    # `Plain Test` should not survive the search.
+    assert "Tagged Caller" in out
+    assert "Plain Test" not in out
+    # And the surviving test's keyword info is rendered.
+    assert "[Documentation]" in out
+    assert "KW_DOC_TOKEN_beta" in out
+
+
+# ---------------------------------------------------------------------------
+# `--suite-info` flag: suite headers (name/doc/metadata/source) in TEXT & JSON
+# ---------------------------------------------------------------------------
+
+
+def test_log_suite_info_off_by_default(json_result: JsonRunner, keyword_meta_output: Path) -> None:
+    """Without `--suite-info` JSON has neither `suites` nor per-test `suite`."""
+    data = json_result("log", output_path=keyword_meta_output)
+    assert "suites" not in data
+    for t in data["tests"]:
+        assert "suite" not in t
+
+
+def test_log_suite_info_populates_json(json_result: JsonRunner, keyword_meta_output: Path) -> None:
+    """`--suite-info` adds `suites` (with doc/metadata) and `suite` per test."""
+    data = json_result("log", "--suite-info", output_path=keyword_meta_output)
+
+    suites = data.get("suites") or []
+    assert len(suites) == 1
+    s = suites[0]
+    assert s["fullName"] == "Keyword Meta"
+    assert s["name"] == "Keyword Meta"
+    assert s["status"] == "PASS"
+    assert "SUITE_DOC_TOKEN_alpha" in (s.get("doc") or "")
+    assert s.get("metadata") == {"OwnerTeam": "payments-squad", "BuildBadge": "green"}
+
+    # Every test carries the parent suite's `fullName` for cross-reference.
+    for t in data["tests"]:
+        assert t["suite"] == "Keyword Meta"
+
+
+def test_log_suite_info_renders_text_header(robotcode_cli: CliRunner, keyword_meta_output: Path) -> None:
+    """TEXT renders a `Suite:` header with name, doc and metadata, then
+    indents the tests underneath it."""
+    result = robotcode_cli(["results", "log", "--suite-info", "--output", str(keyword_meta_output)])
+    out = strip_ansi(result.stdout)
+    assert "Suite: Keyword Meta" in out
+    assert "[Documentation] Suite-level documentation token: SUITE_DOC_TOKEN_alpha." in out
+    assert "[Metadata] OwnerTeam = payments-squad" in out
+    assert "[Metadata] BuildBadge = green" in out
+    # Tests get printed indented under the suite header.
+    assert "  Test: Keyword Meta.Tagged Caller" in out
+    assert "  Test: Keyword Meta.Plain Test" in out
+
+
+def test_log_default_text_omits_suite_header(robotcode_cli: CliRunner, keyword_meta_output: Path) -> None:
+    """Default TEXT (no flag) keeps the flat-tests layout — no `Suite:` line."""
+    result = robotcode_cli(["results", "log", "--output", str(keyword_meta_output)])
+    out = strip_ansi(result.stdout)
+    assert "Suite:" not in out
+    assert "[Metadata]" not in out
+    # Tests are still listed (unindented) without a wrapping header.
+    assert "Test: Keyword Meta.Tagged Caller" in out
+
+
+def test_log_suite_info_groups_nested_suites_separately(json_result: JsonRunner, nested_output: Path) -> None:
+    """Each leaf suite gets its own entry; tests reference the correct parent."""
+    data = json_result("log", "--suite-info", output_path=nested_output)
+    suites = data.get("suites") or []
+    full_names = {s["fullName"] for s in suites}
+    # The nested fixture has at least `Nested.Child.A` and `Nested.Child.B`.
+    assert {"Nested.Child.A", "Nested.Child.B"}.issubset(full_names)
+
+    # Tests reference their immediate parent suite, not the root.
+    by_test = {t["fullName"]: t["suite"] for t in data["tests"]}
+    assert by_test["Nested.Child.A.Test In A One"] == "Nested.Child.A"
+    assert by_test["Nested.Child.B.Test In B One"] == "Nested.Child.B"
+
+
+def test_log_suite_info_omits_doc_metadata_when_absent(
+    json_result: JsonRunner, loops_and_branches_output: Path
+) -> None:
+    """A suite without `Metadata` gets no `metadata` field (defaults dropped)."""
+    data = json_result("log", "--suite-info", output_path=loops_and_branches_output)
+    s = (data.get("suites") or [None])[0]
+    assert s is not None
+    assert "metadata" not in s
+
+
+def test_log_keyword_info_populates_setup_keywords(json_result: JsonRunner, keyword_meta_output: Path) -> None:
+    """`--keyword-info` populates SETUP entries too (Tagged Caller's
+    `[Setup]    Helper With Metadata` carries the user keyword's
+    documentation/tags/timeout)."""
+    data = json_result("log", "--keyword-info", output_path=keyword_meta_output)
+    test = find_test(data["tests"], "Keyword Meta.Tagged Caller")
+    assert test is not None
+    setup = next((e for e in iter_body(test.get("body") or []) if e.get("type") == "SETUP"), None)
+    assert setup is not None
+    assert setup.get("doc") == "Helper keyword documentation token: KW_DOC_TOKEN_beta."
+    assert setup.get("tags") == ["KWTagProbe"]
+    assert setup.get("timeout") == "7 days"
