@@ -12,7 +12,7 @@
     "skipLibCheck": true,
     "jsx": "preserve",
     "noUnusedLocals": true,
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "forceConsistentCasingInFileNames": true,
   },
