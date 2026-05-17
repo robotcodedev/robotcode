@@ -219,6 +219,8 @@ robotcode results log --search "Timeout"   # only tests matching the search
 | `--extract DIR` | Decode embedded `data:` URIs and copy externally-referenced files into `DIR`. |
 | `--raw-html` | Keep the original HTML markup in log messages. No artefact decoding happens in this mode. |
 | `--execution-messages` | Include parser/discovery errors that fired before the run (library import failures, syntax errors, …). |
+| `--keyword-info` | Print each executed keyword's `[Documentation]`, `[Tags]` and `[Timeout]` under its header (and add them to the JSON entry). Off by default; see [`--keyword-info` and `--suite-info`](#--keyword-info-and---suite-info). |
+| `--suite-info` | Group tests under suite headers showing the suite name, source, `Documentation` and `Metadata` (and add a `suites` array plus per-test `suite` ref to the JSON). Off by default. |
 | `--timestamps` | Show per-message timestamps. |
 | `--timing / --no-timing` | Show / hide start times and elapsed totals. |
 | `--full-paths` | Absolute source paths. |
@@ -245,6 +247,34 @@ By default, log messages tagged as HTML (Robot Framework's `Log    ...    HTML`)
 
 With `--raw-html` the conversion is skipped — the original HTML markup is preserved verbatim and no artefacts are extracted. Use this when you want to feed the output into something that renders HTML itself.
 
+### `--keyword-info` and `--suite-info`
+
+Both flags add **structured metadata** to the log output and are independent — you can pass either or both. They default to off so the standard `log` view stays compact.
+
+**`--keyword-info`** — for every executed `KEYWORD` / `SETUP` / `TEARDOWN`, the keyword's own `[Documentation]`, `[Tags]` and `[Timeout]` (taken from the keyword definition, not the call) are emitted. In TEXT the renderer prints them as indented `[Documentation] / [Tags] / [Timeout]` lines under the keyword header; in JSON they appear as `doc` / `tags` / `timeout` keys on the matching body-item entry. Fields whose underlying setting is empty are dropped, so `BuiltIn.Log` (which has a docstring but no tags) shows only `doc`.
+
+**`--suite-info`** — tests get grouped under one `Suite:` header per parent suite. The header carries the suite's `fullName`, source path, executed status, plus the suite's `Documentation` (with `...` continuation lines for multi-line docs) and one `[Metadata]` line per key. In JSON, `LogResult.suites` is populated with one entry per surviving suite, and every test gains a `suite` field cross-referencing the parent suite by `fullName`.
+
+Combine both for a maximal view that mirrors the structure of the original `.robot` files:
+
+```bash
+robotcode results log --suite-info --keyword-info
+```
+
+Example TEXT output:
+
+```
+Suite: MyProject.Login (tests/login.robot) PASS
+  [Documentation] Exercises the login flow against the staging environment.
+  [Metadata] OwnerTeam = identity-squad
+
+  Test: MyProject.Login.Bad Password (tests/login.robot:42) FAIL
+    [SETUP] Open Browser    PASS
+      [Documentation] Launches a fresh Chromium with our shared profile.
+      [Tags] browser    setup
+      ...
+```
+
 ### Recipes
 
 ```bash
@@ -262,6 +292,9 @@ robotcode results log --status fail --extract ./extracted
 
 # Diagnose suites that broke before they even ran
 robotcode results log --execution-messages --level WARN
+
+# Full structured view — suite headers + per-keyword doc/tags/timeout
+robotcode results log --suite-info --keyword-info
 ```
 
 ## `stats` — aggregate by tag, suite, or status
@@ -437,8 +470,11 @@ Use `-bl` when you have a precise name to filter against (often pasted from the 
 - the test's `name` and full longname
 - the test's failure message
 - the test's tags
-- every keyword's name, arguments and assignments within the test body
+- the test's `[Documentation]`, `[Template]` and `[Timeout]`
+- every keyword call's name, arguments and assignments within the test body
+- every executed keyword's `[Documentation]`, `[Tags]` and `[Timeout]` (taken from the keyword definition; result-tree only)
 - every log message's text
+- any **ancestor suite**'s `Documentation` or `Metadata` (a hit on a suite-level field keeps every test underneath it)
 
 A test matches if **any** of those targets matches. Once `log` decides a test matches, all of its body items are emitted as usual — the search is a test-level filter, not a per-message filter.
 
@@ -592,7 +628,20 @@ Field notes:
       "source": "tests/login/test_login.robot",
       "lineno": 42,
       "elapsedSeconds": 0.234,
-      "startTime": "2026-05-15T08:11:04"
+      "startTime": "2026-05-15T08:11:04",
+      "suite": "MyProject.Login"
+    }
+  ],
+  "suites": [
+    {
+      "fullName": "MyProject.Login",
+      "name": "Login",
+      "status": "FAIL",
+      "doc": "Exercises the login flow against staging.",
+      "metadata": { "OwnerTeam": "identity-squad" },
+      "source": "tests/login.robot",
+      "elapsedSeconds": 12.7,
+      "startTime": "2026-05-15T08:11:02"
     }
   ],
   "executionMessages": [ /* only with --execution-messages */ ],
@@ -605,6 +654,7 @@ The `body` array of each test is a recursive tree of body items. Field notes:
 
 - `extractDir` / `extractedCount` appear only with `--extract DIR`.
 - `executionMessages` appears only with `--execution-messages`.
+- `suites` and the per-test `suite` cross-reference appear only with `--suite-info`. One `suites` entry per parent suite that has at least one surviving test, in traversal order. Empty `metadata` / `doc` are dropped.
 - Artefact entries carry `kind` (`"image"` | `"file"`), `src`, and — when extraction happened — `extractedTo` (absolute path of the written file). Failed extractions get a `skippedReason` instead (e.g. `"missing-source"`, `"target-traversal"`).
 
 ### Body-item types
@@ -627,6 +677,16 @@ Every body-item entry has a `type` field. The vocabulary tracks Robot Framework'
 | `MESSAGE` | A log message | `level`, `text`, `timestamp`, `isHtml`, `artifacts` |
 
 Every entry carries `status`, `elapsedSeconds` and `startTime` where applicable. The recursive `body` field is what makes the tree walkable — you can drill into a `FOR` loop's `ITERATION` and then into the `KEYWORD` calls inside each iteration.
+
+With **`--keyword-info`**, every `KEYWORD` / `SETUP` / `TEARDOWN` entry additionally carries the keyword's own definition metadata:
+
+| Field | When it appears |
+|---|---|
+| `doc` | Keyword has a `[Documentation]` setting (library keywords always do; user keywords only when written). |
+| `tags` | Keyword has at least one `[Tags]` entry. |
+| `timeout` | Keyword has a `[Timeout]` setting. |
+
+Empty entries are dropped — a user keyword without `[Tags]` will not have a `tags` key.
 
 ## `stats` JSON
 

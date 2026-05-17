@@ -1030,6 +1030,11 @@ robotcode discover all [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
    Show the tags that are present.  [default: tags]
 
 
+- `-bl, --by-longname TEXT *`
+
+   Select tests/tasks or suites by longname.
+
+
 - `--version`
 
    Show the version and exit.
@@ -1040,14 +1045,9 @@ robotcode discover all [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
    Excludes tests/tasks or suites by longname.
 
 
-- `-bl, --by-longname TEXT *`
-
-   Select tests/tasks or suites by longname.
-
-
 - `--search TEXT`
 
-   Only include items where TEXT case-insensitively matches the name, full name, source path, documentation, template name, timeout, any tag (normalisation-aware), or anything inside the test body — keyword names, keyword arguments, assigned variables, FOR/WHILE/IF conditions, VAR/RETURN values, EXCEPT patterns, GROUP names. Mutually exclusive with `--search-regex`.
+   Only include items where TEXT case-insensitively matches the name, full name, source path, documentation, template name, timeout, any tag (normalisation-aware), the parent suite's Documentation / Metadata, or anything inside the test body — keyword names, keyword arguments, assigned variables, FOR/WHILE/IF conditions, VAR/RETURN values, EXCEPT patterns, GROUP names. Mutually exclusive with `--search-regex`.
 
 
 - `--search-regex PATTERN`
@@ -1091,7 +1091,7 @@ robotcode discover files [OPTIONS] [PATHS]...
 
 - `--search TEXT`
 
-   Only include items where TEXT case-insensitively matches the name, full name, source path, documentation, template name, timeout, any tag (normalisation-aware), or anything inside the test body — keyword names, keyword arguments, assigned variables, FOR/WHILE/IF conditions, VAR/RETURN values, EXCEPT patterns, GROUP names. Mutually exclusive with `--search-regex`.
+   Only include items where TEXT case-insensitively matches the name, full name, source path, documentation, template name, timeout, any tag (normalisation-aware), the parent suite's Documentation / Metadata, or anything inside the test body — keyword names, keyword arguments, assigned variables, FOR/WHILE/IF conditions, VAR/RETURN values, EXCEPT patterns, GROUP names. Mutually exclusive with `--search-regex`.
 
 
 - `--search-regex PATTERN`
@@ -1149,6 +1149,11 @@ robotcode discover suites [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
 
 
 **Options:**
+- `-bl, --by-longname TEXT *`
+
+   Select tests/tasks or suites by longname.
+
+
 - `--version`
 
    Show the version and exit.
@@ -1159,14 +1164,9 @@ robotcode discover suites [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
    Excludes tests/tasks or suites by longname.
 
 
-- `-bl, --by-longname TEXT *`
-
-   Select tests/tasks or suites by longname.
-
-
 - `--search TEXT`
 
-   Only include items where TEXT case-insensitively matches the name, full name, source path, documentation, template name, timeout, any tag (normalisation-aware), or anything inside the test body — keyword names, keyword arguments, assigned variables, FOR/WHILE/IF conditions, VAR/RETURN values, EXCEPT patterns, GROUP names. Mutually exclusive with `--search-regex`.
+   Only include items where TEXT case-insensitively matches the name, full name, source path, documentation, template name, timeout, any tag (normalisation-aware), the parent suite's Documentation / Metadata, or anything inside the test body — keyword names, keyword arguments, assigned variables, FOR/WHILE/IF conditions, VAR/RETURN values, EXCEPT patterns, GROUP names. Mutually exclusive with `--search-regex`.
 
 
 - `--search-regex PATTERN`
@@ -1231,6 +1231,11 @@ robotcode discover tags [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
    Show full paths instead of relative.  [default: no-full-paths]
 
 
+- `-bl, --by-longname TEXT *`
+
+   Select tests/tasks or suites by longname.
+
+
 - `--version`
 
    Show the version and exit.
@@ -1241,14 +1246,9 @@ robotcode discover tags [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
    Excludes tests/tasks or suites by longname.
 
 
-- `-bl, --by-longname TEXT *`
-
-   Select tests/tasks or suites by longname.
-
-
 - `--search TEXT`
 
-   Only include items where TEXT case-insensitively matches the name, full name, source path, documentation, template name, timeout, any tag (normalisation-aware), or anything inside the test body — keyword names, keyword arguments, assigned variables, FOR/WHILE/IF conditions, VAR/RETURN values, EXCEPT patterns, GROUP names. Mutually exclusive with `--search-regex`.
+   Only include items where TEXT case-insensitively matches the name, full name, source path, documentation, template name, timeout, any tag (normalisation-aware), the parent suite's Documentation / Metadata, or anything inside the test body — keyword names, keyword arguments, assigned variables, FOR/WHILE/IF conditions, VAR/RETURN values, EXCEPT patterns, GROUP names. Mutually exclusive with `--search-regex`.
 
 
 - `--search-regex PATTERN`
@@ -1298,6 +1298,11 @@ robotcode discover tasks [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
    Show full paths instead of relative.  [default: no-full-paths]
 
 
+- `-bl, --by-longname TEXT *`
+
+   Select tests/tasks or suites by longname.
+
+
 - `--version`
 
    Show the version and exit.
@@ -1308,14 +1313,9 @@ robotcode discover tasks [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
    Excludes tests/tasks or suites by longname.
 
 
-- `-bl, --by-longname TEXT *`
-
-   Select tests/tasks or suites by longname.
-
-
 - `--search TEXT`
 
-   Only include items where TEXT case-insensitively matches the name, full name, source path, documentation, template name, timeout, any tag (normalisation-aware), or anything inside the test body — keyword names, keyword arguments, assigned variables, FOR/WHILE/IF conditions, VAR/RETURN values, EXCEPT patterns, GROUP names. Mutually exclusive with `--search-regex`.
+   Only include items where TEXT case-insensitively matches the name, full name, source path, documentation, template name, timeout, any tag (normalisation-aware), the parent suite's Documentation / Metadata, or anything inside the test body — keyword names, keyword arguments, assigned variables, FOR/WHILE/IF conditions, VAR/RETURN values, EXCEPT patterns, GROUP names. Mutually exclusive with `--search-regex`.
 
 
 - `--search-regex PATTERN`
@@ -1365,6 +1365,11 @@ robotcode discover tests [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
    Show full paths instead of relative.  [default: no-full-paths]
 
 
+- `-bl, --by-longname TEXT *`
+
+   Select tests/tasks or suites by longname.
+
+
 - `--version`
 
    Show the version and exit.
@@ -1375,14 +1380,9 @@ robotcode discover tests [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
    Excludes tests/tasks or suites by longname.
 
 
-- `-bl, --by-longname TEXT *`
-
-   Select tests/tasks or suites by longname.
-
-
 - `--search TEXT`
 
-   Only include items where TEXT case-insensitively matches the name, full name, source path, documentation, template name, timeout, any tag (normalisation-aware), or anything inside the test body — keyword names, keyword arguments, assigned variables, FOR/WHILE/IF conditions, VAR/RETURN values, EXCEPT patterns, GROUP names. Mutually exclusive with `--search-regex`.
+   Only include items where TEXT case-insensitively matches the name, full name, source path, documentation, template name, timeout, any tag (normalisation-aware), the parent suite's Documentation / Metadata, or anything inside the test body — keyword names, keyword arguments, assigned variables, FOR/WHILE/IF conditions, VAR/RETURN values, EXCEPT patterns, GROUP names. Mutually exclusive with `--search-regex`.
 
 
 - `--search-regex PATTERN`
@@ -1906,7 +1906,7 @@ robotcode results diff [OPTIONS] BASELINE [CURRENT]
 
 - `--search TEXT`
 
-   Only include tests with at least one case-insensitive substring match against TEXT. Searches test name, full name, failure message, documentation, template name, timeout, tags, keyword names, keyword arguments, and log messages. Mutually exclusive with `--search-regex`.
+   Only include tests with at least one case-insensitive substring match against TEXT. Searches test name, full name, failure message, documentation, template name, timeout, tags, the parent suite's Documentation / Metadata, every executed keyword's name / arguments / [Documentation] / [Tags] / [Timeout] / failure message, and log messages. Mutually exclusive with `--search-regex`.
 
 
 - `--search-regex PATTERN`
@@ -1999,7 +1999,7 @@ robotcode results log [OPTIONS]
 
 - `--search TEXT`
 
-   Only include tests with at least one case-insensitive substring match against TEXT. Searches test name, full name, failure message, documentation, template name, timeout, tags, keyword names, keyword arguments, and log messages. Mutually exclusive with `--search-regex`.
+   Only include tests with at least one case-insensitive substring match against TEXT. Searches test name, full name, failure message, documentation, template name, timeout, tags, the parent suite's Documentation / Metadata, every executed keyword's name / arguments / [Documentation] / [Tags] / [Timeout] / failure message, and log messages. Mutually exclusive with `--search-regex`.
 
 
 - `--search-regex PATTERN`
@@ -2050,6 +2050,16 @@ robotcode results log [OPTIONS]
 - `--execution-messages / --no-execution-messages`
 
    Also show parser/discovery messages from output.xml's `<errors>` section (deduplicated).  [default: no-execution-messages]
+
+
+- `--keyword-info / --no-keyword-info`
+
+   Include each executed keyword's [Documentation], [Tags] and [Timeout] from the keyword definition. Off by default to keep the log compact.  [default: no-keyword-info]
+
+
+- `--suite-info / --no-suite-info`
+
+   Group tests under suite headers (name, source, Documentation, Metadata, status). In JSON, populates `suites` and a per-test `suite` reference. Off by default to keep the log compact.  [default: no-suite-info]
 
 
 - `--help`
@@ -2120,7 +2130,7 @@ robotcode results show [OPTIONS]
 
 - `--search TEXT`
 
-   Only include tests with at least one case-insensitive substring match against TEXT. Searches test name, full name, failure message, documentation, template name, timeout, tags, keyword names, keyword arguments, and log messages. Mutually exclusive with `--search-regex`.
+   Only include tests with at least one case-insensitive substring match against TEXT. Searches test name, full name, failure message, documentation, template name, timeout, tags, the parent suite's Documentation / Metadata, every executed keyword's name / arguments / [Documentation] / [Tags] / [Timeout] / failure message, and log messages. Mutually exclusive with `--search-regex`.
 
 
 - `--search-regex PATTERN`
@@ -2235,7 +2245,7 @@ robotcode results stats [OPTIONS]
 
 - `--search TEXT`
 
-   Only include tests with at least one case-insensitive substring match against TEXT. Searches test name, full name, failure message, documentation, template name, timeout, tags, keyword names, keyword arguments, and log messages. Mutually exclusive with `--search-regex`.
+   Only include tests with at least one case-insensitive substring match against TEXT. Searches test name, full name, failure message, documentation, template name, timeout, tags, the parent suite's Documentation / Metadata, every executed keyword's name / arguments / [Documentation] / [Tags] / [Timeout] / failure message, and log messages. Mutually exclusive with `--search-regex`.
 
 
 - `--search-regex PATTERN`
@@ -2329,7 +2339,7 @@ robotcode results summary [OPTIONS]
 
 - `--search TEXT`
 
-   Only include tests with at least one case-insensitive substring match against TEXT. Searches test name, full name, failure message, documentation, template name, timeout, tags, keyword names, keyword arguments, and log messages. Mutually exclusive with `--search-regex`.
+   Only include tests with at least one case-insensitive substring match against TEXT. Searches test name, full name, failure message, documentation, template name, timeout, tags, the parent suite's Documentation / Metadata, every executed keyword's name / arguments / [Documentation] / [Tags] / [Timeout] / failure message, and log messages. Mutually exclusive with `--search-regex`.
 
 
 - `--search-regex PATTERN`
@@ -2383,6 +2393,11 @@ robotcode robot [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
 
 
 **Options:**
+- `-bl, --by-longname TEXT *`
+
+   Select tests/tasks or suites by longname.
+
+
 - `--version`
 
    Show the version and exit.
@@ -2391,11 +2406,6 @@ robotcode robot [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
 - `-ebl, --exclude-by-longname TEXT *`
 
    Excludes tests/tasks or suites by longname.
-
-
-- `-bl, --by-longname TEXT *`
-
-   Select tests/tasks or suites by longname.
 
 
 - `--help`
