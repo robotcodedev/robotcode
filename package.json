@@ -1286,6 +1286,7 @@
         }
       },
       {
+        "title": "Experimental",
         "id": "robotcode.experimental",
         "properties": {
           "robotcode.experimental.semanticModel": {
@@ -2101,7 +2102,7 @@
     "vscode-languageclient": "^9.0.1"
   },
   "devDependencies": {
-    "@eslint/compat": "^2.0.3",
+    "@eslint/compat": "^2.1.0",
     "@eslint/eslintrc": "^3.3.5",
     "@jgoz/esbuild-plugin-typecheck": "^4.0.4",
     "@types/fs-extra": "^11.0.4",
@@ -2111,15 +2112,15 @@
     "@vscode/python-extension": "^1.0.6",
     "@vscode/vsce": "^3.9.1",
     "esbuild": "^0.28.0",
-    "eslint": "^10.3.0",
+    "eslint": "^10.4.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.5",
     "globals": "^17.6.0",
     "ovsx": "^0.10.12",
-    "preact": "^10.29.1",
+    "preact": "^10.29.2",
     "prettier": "^3.8.3",
     "typescript": "^6.0.3",
-    "typescript-eslint": "^8.59.2"
+    "typescript-eslint": "^8.59.3"
   },
   "workspaces": [
     "docs"
