@@ -11,15 +11,16 @@ from pathlib import Path
 from .conftest import CliRunner
 
 
-def test_discover_tests_nonexistent_path(robotcode_cli: CliRunner) -> None:
+def test_discover_tests_nonexistent_path(robotcode_cli: CliRunner, tmp_path: Path) -> None:
     """A path that doesn't exist on disk yields a non-zero exit."""
-    result = robotcode_cli(["discover", "tests", "/tmp/no-such-dir-discover-tests"], expect_ok=False)
+    missing = tmp_path / "no-such-dir-discover-tests"
+    result = robotcode_cli(["discover", "tests", str(missing)], expect_ok=False)
     assert result.returncode != 0
 
 
-def test_discover_files_without_argument_errors(robotcode_cli: CliRunner) -> None:
+def test_discover_files_without_argument_errors(robotcode_cli: CliRunner, tmp_path: Path) -> None:
     """`discover files` without PATHS argument and no default_paths config → UsageError."""
-    result = robotcode_cli(["--root", "/tmp", "discover", "files"], expect_ok=False)
+    result = robotcode_cli(["--root", str(tmp_path), "discover", "files"], expect_ok=False)
     assert result.returncode != 0
     assert "argument" in (result.stderr or result.stdout).lower()
 
