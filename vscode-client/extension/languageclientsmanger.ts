@@ -103,17 +103,6 @@ export interface ClientStateChangedEvent {
   state: ClientState;
 }
 
-interface DiscoverInfoResult {
-  robot_version_string?: string;
-  python_version_string?: string;
-  executable?: string;
-  machine?: string;
-  platform?: string;
-  system?: string;
-  system_version?: string;
-  [key: string]: string | undefined;
-}
-
 export interface ProjectInfo {
   robotVersionString?: string;
   robocopVersionString?: string;
@@ -141,7 +130,6 @@ export class LanguageClientsManager {
   private _disposables: vscode.Disposable;
   public _pythonCanceledPythonAndRobotEnv = new WeakMap<vscode.WorkspaceFolder, boolean>();
   public _pythonValidPythonAndRobotEnv = new WeakMap<vscode.WorkspaceFolder, boolean>();
-  private _workspaceFolderDiscoverInfo = new WeakMap<vscode.WorkspaceFolder, DiscoverInfoResult>();
 
   private readonly _onClientStateChangedEmitter = new vscode.EventEmitter<ClientStateChangedEvent>();
 
@@ -226,7 +214,6 @@ export class LanguageClientsManager {
         if (event.resource !== undefined) {
           this.inselectPythonEnvironment = true;
 
-          this._workspaceFolderDiscoverInfo.delete(event.resource);
           this._pythonValidPythonAndRobotEnv.delete(event.resource);
           this._pythonCanceledPythonAndRobotEnv.delete(event.resource);
           this.selectPythonEnvironmentCancelTokenSource?.cancel();
@@ -781,7 +768,6 @@ export class LanguageClientsManager {
 
   public async restart(uri?: vscode.Uri): Promise<void> {
     this._pythonValidPythonAndRobotEnv = new WeakMap<vscode.WorkspaceFolder, boolean>();
-    this._workspaceFolderDiscoverInfo = new WeakMap<vscode.WorkspaceFolder, DiscoverInfoResult>();
     await this.refresh(uri, true);
   }
 
