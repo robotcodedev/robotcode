@@ -77,3 +77,5 @@ esbuild.mjs
 CLAUDE.md
 AGENT.md
 AGENTS.md
+.agents/
+.claude/
