@@ -76,7 +76,7 @@ class AddressesPort(NamedTuple):
     port: Optional[int] = None
 
 
-class AddressPortParamType(click.ParamType):
+class AddressPortParamType(click.ParamType):  # type: ignore[type-arg]
     name = "[<address>:]<port>"
 
     def convert(
