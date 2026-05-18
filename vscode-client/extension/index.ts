@@ -5,9 +5,9 @@ import { PythonManager } from "./pythonmanger";
 import { TestControllerManager } from "./testcontrollermanager";
 import { KeywordsTreeViewProvider } from "./keywordsTreeViewProvider";
 import { LanguageToolsManager } from "./languageToolsManager";
+import { LanguageModelToolsManager } from "./languageModelToolsManager";
 import { NotebookManager } from "./notebook";
 import path from "path";
-import { GetDocumentImportsTool, GetEnvironmentDetails, GetKeywordInfoTool, GetLibraryInfoTool } from "./lmTools";
 
 class TerminalLink extends vscode.TerminalLink {
   constructor(
@@ -98,6 +98,7 @@ export async function activateAsync(context: vscode.ExtensionContext): Promise<v
     debugManager,
     testControllerManger,
     new LanguageToolsManager(context, languageClientManger, pythonManager, testControllerManger, outputChannel),
+    new LanguageModelToolsManager(context, languageClientManger, outputChannel),
     new NotebookManager(context, pythonManager, languageClientManger, outputChannel),
     vscode.commands.registerCommand("robotcode.showDocumentation", async (url: string) => {
       if (url.indexOf("&theme=%24%7Btheme%7D") > 0) {
@@ -200,22 +201,6 @@ export async function activateAsync(context: vscode.ExtensionContext): Promise<v
         }, 1000);
       }
     }),
-    vscode.lm.registerTool(
-      "robot-get_library_documentation",
-      new GetLibraryInfoTool(context, languageClientManger, outputChannel),
-    ),
-    vscode.lm.registerTool(
-      "robot-get_keyword_documentation",
-      new GetKeywordInfoTool(context, languageClientManger, outputChannel),
-    ),
-    vscode.lm.registerTool(
-      "robot-get_file_imports",
-      new GetDocumentImportsTool(context, languageClientManger, outputChannel),
-    ),
-    vscode.lm.registerTool(
-      "robot-get_environment_details",
-      new GetEnvironmentDetails(context, languageClientManger, outputChannel),
-    ),
   );
 
   const collection = context.environmentVariableCollection;

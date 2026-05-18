@@ -1296,6 +1296,18 @@
             "scope": "resource"
           }
         }
+      },
+      {
+        "title": "AI",
+        "id": "robotcode.ai",
+        "properties": {
+          "robotcode.ai.enableLanguageModelTools": {
+            "type": "boolean",
+            "default": false,
+            "markdownDescription": "Enable AI language model tools that can be used in chat to retrieve information about keywords, libraries, or the Robot Framework environment.\n\n**Note:** This setting is planned to be deprecated in an upcoming release and removed in a later release. Use the new chat plugins, skills, and agents based on the `robotcode` CLI instead.",
+            "scope": "resource"
+          }
+        }
       }
     ],
     "commands": [
@@ -1956,9 +1968,9 @@
         ]
       }
     ],
-    "chatParticipants": [],
     "languageModelTools": [
       {
+        "when": "config.robotcode.ai.enableLanguageModelTools",
         "name": "robot-get_library_documentation",
         "displayName": "Get Library Documentation",
         "toolReferenceName": "robotGetLibraryDocumentation",
@@ -1991,6 +2003,7 @@
         }
       },
       {
+        "when": "config.robotcode.ai.enableLanguageModelTools",
         "name": "robot-get_keyword_documentation",
         "displayName": "Get Keyword Documentation",
         "toolReferenceName": "robotGetKeywordDoc",
@@ -2027,6 +2040,7 @@
         }
       },
       {
+        "when": "config.robotcode.ai.enableLanguageModelTools",
         "name": "robot-get_file_imports",
         "displayName": "List imported libraries, resources and variable files for a Robot Framework Document",
         "toolReferenceName": "robotGetDocumentImports",
@@ -2055,6 +2069,7 @@
         }
       },
       {
+        "when": "config.robotcode.ai.enableLanguageModelTools",
         "name": "robot-get_environment_details",
         "displayName": "Get Robot Framework Environment Informations",
         "toolReferenceName": "robotGetEnvironmentInfo",

@@ -4,3 +4,4 @@ export const CONFIG_ANALYSIS_DIAGNOSTICMODE = "analysis.diagnosticMode";
 export const CONFIG_ANALYSIS_DIAGNOSTICMODE_OPENFILESONLY = "openFilesOnly";
 export const CONFIG_ANALYSIS_DIAGNOSTICMODE_WORKSPACE = "workspace";
 export const CONFIG_PROFILES = "profiles";
+export const CONFIG_AI_ENABLE_LANGUAGE_MODEL_TOOLS = "ai.enableLanguageModelTools";
