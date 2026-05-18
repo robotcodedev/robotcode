@@ -10,4 +10,6 @@ This reference provides a comprehensive resource for effectively using and confi
 
 - [**Analyzing Run Results**](analyzing-results.md): A task-oriented guide to the `robotcode results` family of commands — turning a finished run's `output.xml` into headline counts, per-test listings, full execution traces, tag/suite aggregations, and run-to-run diffs. Covers filtering, search, JSON-for-CI patterns, and the most common day-to-day recipes.
 
+- [**Discovering Tests, Tasks and Suites**](discovering-tests.md): A task-oriented guide to the `robotcode discover` family of commands — turning a project's source files into a tree, flat lists, tag indexes, or a file inventory without ever executing a test. Covers Robot-native and search filters, the `TestItem` JSON schema used by editor integrations, and CI recipes for sharding, tag reports, and parse-error gates.
+
 Together, these sections provide the knowledge needed to fully customize `robotcode` for a flexible and efficient testing workflow.
