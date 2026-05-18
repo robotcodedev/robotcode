@@ -270,18 +270,16 @@ robotcode --format json discover info
 TEXT output:
 
 ```
-robot_version_string: 7.4.2
-robotcode_version_string: 1.6.0
-python_version_string: 3.13.2
+robotVersionString: 7.4.2
+robotcodeVersionString: 1.6.0
+pythonVersionString: 3.13.2
 executable: .venv/bin/python
 platform: linux
 system: Linux
 …
 ```
 
-Set `ROBOT_OPTIONS`, `ROBOT_SYSLOG_FILE`, `ROBOT_SYSLOG_LEVEL` or `ROBOT_INTERNAL_TRACES` and they're echoed back under `robot_env`, so you can verify the run environment matches expectations.
-
-> **Note:** `info` is the only `discover` subcommand whose JSON keys use `snake_case` (e.g. `robot_version_string`) rather than the `camelCase` used everywhere else. This matches the underlying `platform` / `sys` field names and is intentional.
+Set `ROBOT_OPTIONS`, `ROBOT_SYSLOG_FILE`, `ROBOT_SYSLOG_LEVEL` or `ROBOT_INTERNAL_TRACES` and they're echoed back under `robotEnv`, so you can verify the run environment matches expectations.
 
 ## Robot-native filters
 
@@ -371,9 +369,9 @@ robotcode --format json discover tags --tests
 
 ## Schema rules
 
-A few rules hold across every subcommand (with one exception called out below):
+A few rules hold across every subcommand:
 
-- **camelCase keys.** `fullName`, `relSource`, `needsParseInclude`, etc. *Exception:* `info` uses `snake_case` to match the underlying `platform` / `sys` field names.
+- **camelCase keys.** `fullName`, `relSource`, `needsParseInclude`, etc.
 - **Optional fields are omitted, not `null`.** A `null` literal never appears. If a field has no value (a test with no tags, a suite with no children), the key is simply absent.
 - **Empty array ≠ missing field.** A field listed in the schema may be `[]` if the section "exists but is empty"; a field absent entirely means the section wasn't computed for this run. `// []` in jq smooths over the difference.
 - **Stability.** Fields are appended over time, never renamed or removed in place. Existing consumers keep working.
@@ -471,25 +469,24 @@ Field notes:
 
 ```json
 {
-  "robot_version_string": "7.4.2",
-  "robot_env": {
+  "robotVersionString": "7.4.2",
+  "robotEnv": {
     "ROBOT_OPTIONS": "--include smoke"
   },
-  "robotcode_version_string": "1.6.0",
-  "python_version_string": "3.13.2",
+  "robotcodeVersionString": "1.6.0",
+  "pythonVersionString": "3.13.2",
   "executable": ".venv/bin/python",
   "machine": "x86_64",
   "processor": "x86_64",
   "platform": "linux",
   "system": "Linux",
-  "system_version": "#1 SMP …"
+  "systemVersion": "#1 SMP …"
 }
 ```
 
 Field notes:
 
-- **Snake-case keys**, deliberately — see the schema note above.
-- `robot_env` echoes back any of `ROBOT_OPTIONS`, `ROBOT_SYSLOG_FILE`, `ROBOT_SYSLOG_LEVEL`, `ROBOT_INTERNAL_TRACES` that were set, and is absent (or `{}`) when none of them are.
+- `robotEnv` echoes back any of `ROBOT_OPTIONS`, `ROBOT_SYSLOG_FILE`, `ROBOT_SYSLOG_LEVEL`, `ROBOT_INTERNAL_TRACES` that were set, and is absent (or `{}`) when none of them are.
 
 ## `diagnostics`
 
@@ -578,7 +575,7 @@ robotcode --format json discover tags \
 ### Check the Robot version in CI
 
 ```bash
-robotcode --format json discover info | jq -r .robot_version_string
+robotcode --format json discover info | jq -r .robotVersionString
 ```
 
 ### Find tests touched by a specific keyword

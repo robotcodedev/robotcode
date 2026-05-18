@@ -3,7 +3,6 @@ import platform
 import re
 import sys
 from collections import defaultdict
-from dataclasses import dataclass
 from io import IOBase
 from itertools import chain
 from pathlib import Path
@@ -34,13 +33,12 @@ from robotcode.core.ignore_spec import GIT_IGNORE_FILE, ROBOT_IGNORE_FILE, iter_
 from robotcode.core.lsp.types import (
     Diagnostic,
     DiagnosticSeverity,
-    DocumentUri,
     Position,
     Range,
 )
 from robotcode.core.uri import Uri
 from robotcode.core.utils.cli import show_hidden_arguments
-from robotcode.core.utils.dataclasses import CamelSnakeMixin, from_json
+from robotcode.core.utils.dataclasses import from_json
 from robotcode.core.utils.path import normalized_path
 from robotcode.plugin import (
     Application,
@@ -53,6 +51,7 @@ from robotcode.robot.utils import RF_VERSION
 
 from .._search import SearchMatcher, make_highlighter, make_search_matcher
 from ..robot import ROBOT_OPTIONS, ROBOT_VERSION_OPTIONS, RobotFrameworkEx, handle_robot_options
+from ._models import Info, ResultItem, Statistics, TagsResult, TestItem
 
 DISCOVER_SEARCH_OPTIONS = [
     click.option(
@@ -229,41 +228,6 @@ def _patch() -> None:
         return old_get_file(self, source, accept_text)
 
     FileReader._get_file = get_file
-
-
-@dataclass
-class TestItem(CamelSnakeMixin):
-    type: str
-    id: str
-    name: str
-    longname: str
-    lineno: Optional[int] = None
-    uri: Optional[DocumentUri] = None
-    rel_source: Optional[str] = None
-    source: Optional[str] = None
-    needs_parse_include: bool = False
-    children: Optional[List["TestItem"]] = None
-    description: Optional[str] = None
-    range: Optional[Range] = None
-    tags: Optional[List[str]] = None
-    error: Optional[str] = None
-    rpa: Optional[bool] = None
-
-
-@dataclass
-class ResultItem(CamelSnakeMixin):
-    items: List[TestItem]
-    diagnostics: Optional[Dict[str, List[Diagnostic]]] = None
-    filters_applied: Optional[Dict[str, str]] = None
-
-
-@dataclass
-class Statistics(CamelSnakeMixin):
-    suites: int = 0
-    suites_with_tests: int = 0
-    suites_with_tasks: int = 0
-    tests: int = 0
-    tasks: int = 0
 
 
 def get_rel_source(source: Union[str, Path, None]) -> Optional[str]:
@@ -946,12 +910,6 @@ def suites(
             )
 
 
-@dataclass
-class TagsResult(CamelSnakeMixin):
-    tags: Dict[str, List[TestItem]]
-    filters_applied: Optional[Dict[str, str]] = None
-
-
 @discover.command(
     context_settings={"allow_extra_args": True, "ignore_unknown_options": True},
     add_help_option=True,
@@ -1063,20 +1021,6 @@ def tags(
                 TagsResult(tags_data, filters_applied=_filters_applied(search_substring, search_regex)),
                 remove_defaults=True,
             )
-
-
-@dataclass
-class Info:
-    robot_version_string: str
-    robot_env: Dict[str, str]
-    robotcode_version_string: str
-    python_version_string: str
-    executable: str
-    machine: str
-    processor: str
-    platform: str
-    system: str
-    system_version: str
 
 
 @discover.command(add_help_option=True)
