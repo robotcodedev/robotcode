@@ -9,29 +9,74 @@ If `readline` isn't importable, this module raises `ImportError` at
 load time so `pick_backend()` skips it.
 """
 
-import readline  # type: ignore[import-not-found,unused-ignore]
+from typing import List, Optional
 
+# Prefer `gnureadline` over stdlib `readline` when available. On macOS
+# (and some Linux Pythons built via python-build-standalone / uv) the
+# stdlib's `readline` is linked against libedit, which silently ignores
+# the GNU-specific bindings we depend on (Tab→complete syntax,
+# `set completion-query-items` etc.). The `gnureadline` PyPI package
+# ships a real GNU libreadline + Python binding and resolves all those
+# gaps transparently — drop-in replacement, same module API.
+try:
+    import gnureadline as readline  # type: ignore[import-not-found,unused-ignore]
+except ImportError:
+    import readline  # type: ignore[import-not-found,unused-ignore]
+
+from .._completion import candidates_for, tokenize
 from .._history import attach_save_on_exit, dedup_last_entry, load_into_readline
 
 
+def _is_libedit() -> bool:
+    """True when Python's readline is backed by libedit instead of GNU readline.
+
+    libedit (used by macOS' system Python and by venvs whose Python was
+    built against it) accepts a completely different bind syntax —
+    ``parse_and_bind("tab: complete")`` is silently ignored, leaving
+    Tab as a literal whitespace insert. We have to detect the backend
+    and emit the right binding so Tab triggers completion at all.
+
+    Python 3.13+ exposes ``readline.backend``; older Pythons need the
+    library-version sniff.
+    """
+    backend = getattr(readline, "backend", None)
+    if backend is not None:
+        return bool(backend == "editline")
+    return "EditLine" in str(getattr(readline, "_READLINE_LIBRARY_VERSION", ""))
+
+
 class ReadlineBackend:
-    """Wraps `input()` with persistent, fish-style deduplicated history.
+    """Wraps `input()` with persistent, fish-style deduplicated history
+    *and* Robot-aware tab completion.
 
     Once `readline` is imported, the builtin `input()` honours it for
     line editing, arrow-up recall and Ctrl-R incremental search. We
-    add fish-style dedup on top: when the user re-enters a line that's
-    already in the history, the older occurrences are removed so the
-    entry appears only once at its newest position.
+    layer on:
+
+    - **fish-style dedup**: re-entering a line removes its older copies
+      so arrow-up cycles through unique commands only.
+    - **Tab-completion** for keyword names, variables (after `${` /
+      `@{` / `&{` / `%{`), library names (after `Import Library`) and
+      resource paths (after `Import Resource`). Robot's case +
+      whitespace + underscore insensitive matching is used throughout.
 
     When `no_history=True`, the persistent history file is neither
     loaded nor saved. In-session recall still works because readline
     accumulates lines in its own ring buffer automatically.
+
+    The candidate list is rendered with readline's default display —
+    so multi-match completions show the full replaced cell on every
+    row (`Import Library  Collections` / `Import Library  Colorama`
+    / …). Users who want a polished display (popup, hidden prefix,
+    Ctrl-R search, Multi-Line-Editor) can install ``prompt_toolkit``;
+    `pick_backend()` will pick the richer backend automatically.
     """
 
     def __init__(self, *, no_history: bool = False) -> None:
         if not no_history:
             load_into_readline(readline)
             attach_save_on_exit(readline)
+        self._install_completer()
 
     def read_line(
         self,
@@ -50,3 +95,69 @@ class ReadlineBackend:
             # unconditionally — `dedup_last_entry` short-circuits on
             # blank entries on its own.
             dedup_last_entry(readline)
+
+    # ------------------------------------------------------------------
+    # Completion machinery
+    # ------------------------------------------------------------------
+
+    def _install_completer(self) -> None:
+        """Register the Robot-aware completer with readline.
+
+        Setting `set_completer_delims("")` makes readline pass the
+        entire line (up to the cursor) to the completer — we need that
+        because Robot's cell separator is "2+ spaces or a tab", which
+        readline's single-character delim model can't express. We then
+        do our own tokenizing inside `tokenize()`.
+        """
+        readline.set_completer_delims("")
+        readline.set_completer(self._complete)
+        if _is_libedit():
+            # libedit accepts a different bind syntax — without this
+            # Tab is left as the default editor binding (which on libedit
+            # inserts a literal tab character, making the completer look
+            # dead). libedit ignores the `set show-all-if-ambiguous` /
+            # `set completion-query-items` directives, so no point
+            # emitting them; behaviour matches libedit defaults.
+            readline.parse_and_bind("bind ^I rl_complete")
+        else:
+            readline.parse_and_bind("tab: complete")
+            # Show the candidate list on the first Tab press when matches
+            # are ambiguous. Without this, multi-match completions ring
+            # the bell twice and never reveal what's available — which
+            # looks like "Tab does nothing" to the user.
+            readline.parse_and_bind("set show-all-if-ambiguous on")
+            readline.parse_and_bind("set completion-ignore-case on")
+            # Suppress the "Display all NNN possibilities? (y or n)"
+            # prompt — Robot's discovery legitimately returns hundreds
+            # of entries (every Python module on sys.path) and the
+            # yes/no dialog adds friction without useful information.
+            readline.parse_and_bind("set completion-query-items 0")
+
+    def _complete(self, text: str, state: int) -> Optional[str]:
+        """Readline-protocol completer.
+
+        Called once per candidate (`state=0,1,…`) for a single Tab
+        press. We compute all matches on `state==0` and cache them on
+        the instance; later calls just index into the cache.
+        """
+        del text  # we read the live buffer via `get_line_buffer()`
+        if state == 0:
+            self._matches = self._build_matches()
+        if 0 <= state < len(self._matches):
+            return self._matches[state]
+        return None
+
+    def _build_matches(self) -> List[str]:
+        """Inspect the current line, compute completions, return the
+        substituted full-line strings readline expects.
+
+        With `set_completer_delims("")`, readline replaces the entire
+        `line[:cursor]` with each returned candidate — so each match
+        must be the full line *after* applying the completion.
+        """
+        line = readline.get_line_buffer()
+        cursor = readline.get_endidx()
+        ctx = tokenize(line, cursor)
+        labels = candidates_for(ctx)
+        stable_prefix = line[: ctx.replace_start]
+        return [stable_prefix + label for label in labels]

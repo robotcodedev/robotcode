@@ -31,6 +31,17 @@ dependencies = [
   "robotcode-runner"
 ]
 
+[project.optional-dependencies]
+# `gnureadline` ships a real GNU libreadline with the Python bindings —
+# install it when your interpreter's stdlib `readline` is backed by
+# libedit (macOS system Python, some Linux Pythons built via
+# python-build-standalone / uv). libedit silently ignores the
+# GNU-specific completion bindings the REPL relies on
+# (`set completion-query-items`, `tab: complete`, …), so without
+# `gnureadline` Tab-completion falls back to the verbose default
+# layout with the "Display all NNN possibilities?" prompt.
+gnureadline = ["gnureadline; sys_platform != 'win32'"]
+
 [project.entry-points.robotcode]
 repl = "robotcode.repl.hooks"
 
