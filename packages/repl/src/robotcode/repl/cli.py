@@ -128,8 +128,8 @@ def repl(
     run_repl(
         interpreter=interpreter,
         app=app,
-        variablefile=variable,
-        variable=variablefile,
+        variable=variable,
+        variablefile=variablefile,
         pythonpath=pythonpath,
         outputdir=outputdir,
         output=output,
