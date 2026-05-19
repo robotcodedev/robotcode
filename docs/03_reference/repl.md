@@ -118,6 +118,24 @@ Tab understands Robot's cell-separator semantics (2+ spaces or a tab) and its ca
 
 When the prefix is ambiguous the full candidate list appears on the first Tab press — no double-tap, no `Display all NNN possibilities? (y or n)` prompt.
 
+### A richer prompt with `prompt_toolkit`
+
+Install the `prompt-toolkit` extra to swap the readline frontend for a `PromptSession`-driven one:
+
+```bash
+pip install 'robotcode-repl[prompt-toolkit]'
+```
+
+What you get on top of the readline behaviour:
+
+- **Live candidate popup** — completions appear *as you type*, in an inline menu under the cursor, with arrow-keys to pick and Enter to accept. No Tab needed (though Tab still works). The verbose `Import Library  Foo` / `Import Library  Bar` row layout is replaced by just the labels.
+- **Fish-style auto-suggest** — as you type, the rest of the line you typed last time (matching the same prefix) appears greyed-out behind the cursor. Right-arrow accepts it.
+- **Bracket auto-match**, multi-line cursor movement (up/down inside an open block), `Ctrl-R` reverse search with a dedicated UI.
+
+The completer runs in a background thread (`complete_in_thread=True`), and Robot's library / resource discovery is cached for the session, so the popup stays responsive even when there are hundreds of importable modules on `sys.path`.
+
+History is shared with the readline backend — same plain-text file, so swapping between the two extras (or having neither) doesn't lose arrow-up recall.
+
 ### libedit-backed Pythons
 
 macOS' system Python and some Linux interpreters built via `python-build-standalone` (used by `uv`, `rye`, …) link `readline` against **libedit** instead of GNU readline. libedit silently ignores most of the bindings the REPL relies on, so you'd see Tab inserting a literal tab character and the verbose default completion display.
@@ -129,6 +147,8 @@ pip install 'robotcode-repl[gnureadline]'
 ```
 
 The package isn't published for Windows (where readline works differently and isn't needed) and is harmless to install on Pythons whose stdlib `readline` is already GNU-backed.
+
+Both extras can be combined: `pip install 'robotcode-repl[prompt-toolkit,gnureadline]'` covers the case where you've installed prompt-toolkit but also want a clean fallback if you uninstall it later.
 
 ## What syntax the REPL accepts
 
