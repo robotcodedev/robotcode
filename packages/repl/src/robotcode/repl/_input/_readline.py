@@ -22,11 +22,16 @@ class ReadlineBackend:
     add fish-style dedup on top: when the user re-enters a line that's
     already in the history, the older occurrences are removed so the
     entry appears only once at its newest position.
+
+    When `no_history=True`, the persistent history file is neither
+    loaded nor saved. In-session recall still works because readline
+    accumulates lines in its own ring buffer automatically.
     """
 
-    def __init__(self) -> None:
-        load_into_readline(readline)
-        attach_save_on_exit(readline)
+    def __init__(self, *, no_history: bool = False) -> None:
+        if not no_history:
+            load_into_readline(readline)
+            attach_save_on_exit(readline)
 
     def read_line(
         self,

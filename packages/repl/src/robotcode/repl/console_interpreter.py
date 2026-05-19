@@ -20,6 +20,7 @@ class ConsoleInterpreter(BaseInterpreter):
         files: Optional[List[Path]] = None,
         show_keywords: bool = False,
         inspect: Optional[bool] = False,
+        no_history: bool = False,
     ) -> None:
         super().__init__()
 
@@ -29,7 +30,7 @@ class ConsoleInterpreter(BaseInterpreter):
         self.inspect = inspect
 
         self.executed_files: List[Path] = []
-        self._input: InputBackend = pick_backend()
+        self._input: InputBackend = pick_backend(no_history=no_history)
 
     def get_input(self) -> Iterator[Optional[Keyword]]:
         if self.executed_files and not self.files and not self.inspect:

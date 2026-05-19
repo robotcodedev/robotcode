@@ -70,3 +70,39 @@ def test_pick_backend_picks_readline_when_prompt_toolkit_blocked(
     # We don't import ReadlineBackend at top-level (it may be unavailable),
     # so check by class name to keep the test platform-independent.
     assert type(backend).__name__ == "ReadlineBackend"
+
+
+def test_pick_backend_threads_no_history_to_readline(monkeypatch: pytest.MonkeyPatch) -> None:
+    """`pick_backend(no_history=True)` must skip the history file calls in
+    the readline backend — verified by patching the load/save helpers."""
+    pytest.importorskip("readline")
+    _block_module(monkeypatch, "robotcode.repl._input._prompt_toolkit")
+
+    from robotcode.repl._input import _readline as readline_backend_mod
+
+    load_calls: list[Any] = []
+    save_calls: list[Any] = []
+    monkeypatch.setattr(readline_backend_mod, "load_into_readline", lambda *a, **kw: load_calls.append(a))
+    monkeypatch.setattr(readline_backend_mod, "attach_save_on_exit", lambda *a, **kw: save_calls.append(a))
+
+    backend = pick_backend(no_history=True)
+    assert type(backend).__name__ == "ReadlineBackend"
+    assert load_calls == [], "no_history must skip load_into_readline"
+    assert save_calls == [], "no_history must skip attach_save_on_exit"
+
+
+def test_pick_backend_default_loads_and_saves_readline_history(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Default `pick_backend()` keeps the readline backend's load+save behaviour."""
+    pytest.importorskip("readline")
+    _block_module(monkeypatch, "robotcode.repl._input._prompt_toolkit")
+
+    from robotcode.repl._input import _readline as readline_backend_mod
+
+    load_calls: list[Any] = []
+    save_calls: list[Any] = []
+    monkeypatch.setattr(readline_backend_mod, "load_into_readline", lambda *a, **kw: load_calls.append(a))
+    monkeypatch.setattr(readline_backend_mod, "attach_save_on_exit", lambda *a, **kw: save_calls.append(a))
+
+    pick_backend()
+    assert load_calls, "default must call load_into_readline"
+    assert save_calls, "default must call attach_save_on_exit"

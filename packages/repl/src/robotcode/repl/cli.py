@@ -51,6 +51,16 @@ from .run import run_repl
     help="Activate inspection mode. This forces a prompt to appear after the REPL script is executed.",
 )
 @click.option(
+    "--no-history",
+    is_flag=True,
+    default=False,
+    envvar="ROBOTCODE_REPL_NO_HISTORY",
+    help="Don't load or save the persistent history file. In-session "
+    "arrow-up recall still works, but nothing crosses session boundaries. "
+    "Useful for AI-agent invocations or quick spike sessions you don't "
+    "want polluting your shell's REPL history.",
+)
+@click.option(
     "-d",
     "--outputdir",
     metavar="DIR",
@@ -111,6 +121,7 @@ def repl(
     pythonpath: Tuple[str, ...],
     show_keywords: bool,
     inspect: bool,
+    no_history: bool,
     outputdir: Optional[str],
     output: Optional[str],
     report: Optional[str],
@@ -125,7 +136,13 @@ def repl(
     if files:
         files = tuple(f.absolute() for f in files)
 
-    interpreter = ConsoleInterpreter(app, files=list(files), show_keywords=show_keywords, inspect=inspect)
+    interpreter = ConsoleInterpreter(
+        app,
+        files=list(files),
+        show_keywords=show_keywords,
+        inspect=inspect,
+        no_history=no_history,
+    )
 
     run_repl(
         interpreter=interpreter,

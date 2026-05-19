@@ -1637,6 +1637,11 @@ robotcode repl [OPTIONS] [FILES]...
    Activate inspection mode. This forces a prompt to appear after the REPL script is executed.
 
 
+- `--no-history`
+
+   Don't load or save the persistent history file. In-session arrow-up recall still works, but nothing crosses session boundaries. Useful for AI-agent invocations or quick spike sessions you don't want polluting your shell's REPL history.
+
+
 - `-d, --outputdir DIR`
 
    Where to create output files. see `robot --outputdir` option.

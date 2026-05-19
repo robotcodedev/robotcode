@@ -47,12 +47,18 @@ class InputBackend(Protocol):
         ...
 
 
-def pick_backend() -> InputBackend:
+def pick_backend(*, no_history: bool = False) -> InputBackend:
     """Return the best available input backend.
 
-    The cascade is intentionally tight: pure import-or-skip, no
-    user-facing config. The PlainBackend is always returnable, so this
-    function never raises.
+    Parameters
+    ----------
+    no_history:
+        When True, the readline / prompt_toolkit backends skip loading
+        and saving the persistent history file — in-session arrow-up
+        recall still works, but nothing crosses session boundaries.
+        PlainBackend is unaffected (it has no history either way).
+
+    The PlainBackend is always returnable, so this function never raises.
     """
     # PromptToolkit (Stage 3) — wins if the user installed the extra.
     try:
@@ -60,7 +66,7 @@ def pick_backend() -> InputBackend:
     except ImportError:
         pass
     else:
-        return PromptToolkitBackend()  # type: ignore[no-any-return,unused-ignore]
+        return PromptToolkitBackend(no_history=no_history)  # type: ignore[no-any-return,unused-ignore]
 
     # Readline (Stage 1+2) — stdlib on Unix, PyREPL on Win 3.13+.
     try:
@@ -68,7 +74,7 @@ def pick_backend() -> InputBackend:
     except ImportError:
         pass
     else:
-        return ReadlineBackend()
+        return ReadlineBackend(no_history=no_history)
 
     return PlainBackend()
 
