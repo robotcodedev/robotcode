@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 from typing import Callable, Optional, Sequence, Tuple, Union
 
@@ -10,6 +11,8 @@ from .loader import (
     get_config_files_from_folder,
     get_default_config,
 )
+
+PROJECT_CACHE_DIR_NAME = ".robotcode_cache"
 
 
 def get_user_config_file(
@@ -38,6 +41,34 @@ def get_user_config_file(
         if verbose_callback:
             verbose_callback(f"Cannot create user configuration file `{result}`:\n    {e}")
         return None
+
+
+def get_cache_dir(project_root: Optional[Path] = None, *, create: bool = True) -> Path:
+    """Return the robotcode cache directory, project-aware.
+
+    Resolution order:
+
+    1. ``ROBOTCODE_CACHE_DIR`` environment variable (absolute override —
+       wins over both project and user-cache).
+    2. ``{project_root}/.robotcode_cache/`` if ``project_root`` is given.
+    3. ``platformdirs.user_cache_dir("robotcode", appauthor=False)`` —
+       the per-user cache directory (e.g. ``~/.cache/robotcode`` on
+       Linux, ``%LOCALAPPDATA%\\robotcode\\Cache`` on Windows).
+
+    The directory is created if ``create=True`` and missing. The caller
+    is responsible for any sub-paths beneath it.
+    """
+    env_override = os.environ.get("ROBOTCODE_CACHE_DIR")
+    if env_override:
+        result = Path(env_override)
+    elif project_root is not None:
+        result = project_root / PROJECT_CACHE_DIR_NAME
+    else:
+        result = Path(platformdirs.user_cache_dir("robotcode", appauthor=False))
+
+    if create:
+        result.mkdir(parents=True, exist_ok=True)
+    return result
 
 
 def get_config_files(

@@ -9,6 +9,7 @@ from robot.running import Keyword
 
 from robotcode.plugin import Application
 
+from ._input import InputBackend, pick_backend
 from .base_interpreter import BaseInterpreter, is_true
 
 
@@ -28,6 +29,7 @@ class ConsoleInterpreter(BaseInterpreter):
         self.inspect = inspect
 
         self.executed_files: List[Path] = []
+        self._input: InputBackend = pick_backend()
 
     def get_input(self) -> Iterator[Optional[Keyword]]:
         if self.executed_files and not self.files and not self.inspect:
@@ -55,7 +57,7 @@ class ConsoleInterpreter(BaseInterpreter):
                     prompt = ">>> " if not lines else "... "
 
                 try:
-                    text = input(prompt)
+                    text = self._input.read_line(prompt, multiline_continuation=bool(lines))
                     if len(lines) == 0 and text == "":
                         break
                 except KeyboardInterrupt:
