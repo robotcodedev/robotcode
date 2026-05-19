@@ -154,9 +154,11 @@ def run_jsonrpc_server(
     "--source",
     type=click.Path(path_type=Path),
     metavar="FILE",
-    help="Specifies the path to a source file. This file must not exist and will neither be read nor written. "
-    "It is used solely to set the current working directory for the REPL script "
-    "and to assign a name to the internal suite.",
+    help="Use the parent directory of FILE as the REPL's working directory. "
+    "Relative paths inside `Import Resource`, `Import Library`, "
+    "file-based variables, etc. resolve against that directory. "
+    "The file itself is never read or written, so the path doesn't "
+    "need to exist.",
 )
 @click.argument(
     "files",
