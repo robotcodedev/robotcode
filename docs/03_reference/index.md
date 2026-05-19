@@ -12,4 +12,6 @@ This reference provides a comprehensive resource for effectively using and confi
 
 - [**Discovering Tests, Tasks and Suites**](discovering-tests.md): A task-oriented guide to the `robotcode discover` family of commands — turning a project's source files into a tree, flat lists, tag indexes, or a file inventory without ever executing a test. Covers Robot-native and search filters, the `TestItem` JSON schema used by editor integrations, and CI recipes for sharding, tag reports, and parse-error gates.
 
+- [**Interactive Robot Framework REPL**](repl.md): A task-oriented guide to the `robotcode repl` command — a live keyword-driven shell for exploring libraries, prototyping snippets, debugging keyword behaviour and capturing ad-hoc sessions as a normal `output.xml` / `log.html`. Covers the prompt model, state persistence, file-execution and `--inspect` mode, output capture, and recipes for library exploration and CI smoke checks.
+
 Together, these sections provide the knowledge needed to fully customize `robotcode` for a flexible and efficient testing workflow.
