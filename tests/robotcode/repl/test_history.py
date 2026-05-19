@@ -5,16 +5,19 @@ import os
 import sys
 from pathlib import Path
 from types import ModuleType
-from typing import Any, List
+from typing import Any, List, Optional
 from unittest.mock import MagicMock
 
 import pytest
 
 from robotcode.repl._history import (
-    MAX_HISTORY,
+    DEFAULT_MAX_HISTORY,
+    HISTORY_SIZE_ENV_VAR,
     attach_save_on_exit,
+    dedup_last_entry,
     history_path,
     load_into_readline,
+    max_history_size,
 )
 
 # ---------------------------------------------------------------------------
@@ -66,8 +69,32 @@ def test_history_path_env_override_wins(monkeypatch: pytest.MonkeyPatch, tmp_pat
 # ---------------------------------------------------------------------------
 
 
-def _fake_readline(read_history_raises: bool = False) -> ModuleType:
-    fake = MagicMock(spec=["set_history_length", "read_history_file", "write_history_file"])
+def _fake_readline(read_history_raises: bool = False, initial: Optional[List[str]] = None) -> ModuleType:
+    """Build a `readline`-like Mock with a working in-memory history.
+
+    `initial` seeds the history buffer (1-based indexing per readline's
+    API). All four mutation methods we exercise — `set_history_length`,
+    `read_history_file`, `write_history_file`, `get_history_item`,
+    `remove_history_item`, `get_current_history_length` — are wired so
+    tests can inspect both call-record and state.
+    """
+    fake = MagicMock(
+        spec=[
+            "set_history_length",
+            "read_history_file",
+            "write_history_file",
+            "get_current_history_length",
+            "get_history_item",
+            "remove_history_item",
+        ]
+    )
+    state: List[str] = list(initial or [])
+    fake.get_current_history_length.side_effect = lambda: len(state)
+    # readline's get_history_item is 1-based; returns None for out-of-range.
+    fake.get_history_item.side_effect = lambda i: state[i - 1] if 1 <= i <= len(state) else None
+    # remove_history_item is 0-based.
+    fake.remove_history_item.side_effect = lambda i: state.pop(i)
+    fake._state = state
     if read_history_raises:
         fake.read_history_file.side_effect = FileNotFoundError
     return fake
@@ -78,7 +105,7 @@ def test_load_into_readline_sets_max_history(tmp_path: Path) -> None:
     target = tmp_path / "hist"
     target.write_text("Log    earlier\n")
     load_into_readline(fake, target)
-    fake.set_history_length.assert_called_once_with(MAX_HISTORY)
+    fake.set_history_length.assert_called_once_with(DEFAULT_MAX_HISTORY)
 
 
 def test_load_into_readline_reads_existing_file(tmp_path: Path) -> None:
@@ -95,6 +122,90 @@ def test_load_into_readline_tolerates_missing_file(tmp_path: Path) -> None:
     target = tmp_path / "does-not-exist"
     load_into_readline(fake, target)  # must not raise
     fake.read_history_file.assert_called_once_with(str(target))
+
+
+def test_load_into_readline_dedupes_legacy_file(tmp_path: Path) -> None:
+    """A history file from a pre-dedup version (with duplicates) gets cleaned
+    up on load — the newest occurrence of each line survives, older copies
+    are dropped."""
+    target = tmp_path / "hist"
+    target.write_text("placeholder\n")  # presence triggers read_history_file
+    fake = _fake_readline(initial=["Log    a", "Log    b", "Log    a", "Log    c", "Log    b"])
+    load_into_readline(fake, target)
+    # Expected survivors (newest occurrence per unique line, in order):
+    #   Log    a (idx 3 was newer than idx 1 → idx 1 dropped)
+    #   Log    c (idx 4 unique)
+    #   Log    b (idx 5 was newer than idx 2 → idx 2 dropped)
+    # Result after dedup: ['Log    a', 'Log    c', 'Log    b']
+    assert fake._state == ["Log    a", "Log    c", "Log    b"]
+
+
+# ---------------------------------------------------------------------------
+# max_history_size() — env-var configurable, sane defaults
+# ---------------------------------------------------------------------------
+
+
+def test_max_history_size_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv(HISTORY_SIZE_ENV_VAR, raising=False)
+    assert max_history_size() == DEFAULT_MAX_HISTORY
+
+
+def test_max_history_size_honours_env_var(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv(HISTORY_SIZE_ENV_VAR, "250")
+    assert max_history_size() == 250
+
+
+@pytest.mark.parametrize("bad_value", ["", "foo", "0", "-5", "1.5"])
+def test_max_history_size_falls_back_on_bad_input(monkeypatch: pytest.MonkeyPatch, bad_value: str) -> None:
+    """Empty / non-numeric / non-positive values never raise — just default."""
+    monkeypatch.setenv(HISTORY_SIZE_ENV_VAR, bad_value)
+    assert max_history_size() == DEFAULT_MAX_HISTORY
+
+
+def test_load_into_readline_uses_configured_size(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    monkeypatch.setenv(HISTORY_SIZE_ENV_VAR, "42")
+    fake = _fake_readline(read_history_raises=True)
+    load_into_readline(fake, tmp_path / "hist")
+    fake.set_history_length.assert_called_once_with(42)
+
+
+# ---------------------------------------------------------------------------
+# dedup_last_entry() — fish-style: older copies drop, newest stays
+# ---------------------------------------------------------------------------
+
+
+def test_dedup_last_entry_removes_older_duplicates() -> None:
+    fake = _fake_readline(initial=["Log    a", "Log    b", "Log    a"])
+    dedup_last_entry(fake)
+    # Newest 'Log    a' stays, the older one (index 1) is gone.
+    assert fake._state == ["Log    b", "Log    a"]
+
+
+def test_dedup_last_entry_noop_when_unique() -> None:
+    fake = _fake_readline(initial=["Log    a", "Log    b", "Log    c"])
+    dedup_last_entry(fake)
+    assert fake._state == ["Log    a", "Log    b", "Log    c"]
+
+
+def test_dedup_last_entry_handles_empty_history() -> None:
+    fake = _fake_readline(initial=[])
+    dedup_last_entry(fake)  # must not raise
+    assert fake._state == []
+
+
+def test_dedup_last_entry_keeps_only_latest_among_many_duplicates() -> None:
+    fake = _fake_readline(initial=["x", "Log    a", "y", "Log    a", "z", "Log    a"])
+    dedup_last_entry(fake)
+    # Only the trailing 'Log    a' (the latest) survives.
+    assert fake._state == ["x", "y", "z", "Log    a"]
+
+
+def test_dedup_last_entry_ignores_blank_latest() -> None:
+    """A blank line at the top of the buffer never triggers dedup."""
+    fake = _fake_readline(initial=["Log    a", "Log    a", ""])
+    dedup_last_entry(fake)
+    # The blank entry doesn't match-and-purge the duplicates above it.
+    assert fake._state == ["Log    a", "Log    a", ""]
 
 
 # ---------------------------------------------------------------------------
