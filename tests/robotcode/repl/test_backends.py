@@ -106,3 +106,15 @@ def test_pick_backend_default_loads_and_saves_readline_history(monkeypatch: pyte
     pick_backend()
     assert load_calls, "default must call load_into_readline"
     assert save_calls, "default must call attach_save_on_exit"
+
+
+# ---------------------------------------------------------------------------
+# prompt_toolkit backend — only runs when the optional extra is installed.
+# ---------------------------------------------------------------------------
+
+
+def test_pick_backend_prefers_prompt_toolkit_when_available() -> None:
+    """When `prompt_toolkit` is importable, `pick_backend()` returns it."""
+    pytest.importorskip("prompt_toolkit")
+    backend = pick_backend()
+    assert type(backend).__name__ == "PromptToolkitBackend"

@@ -83,6 +83,11 @@ runner = ["robotcode-runner"]
 analyze = ["robotcode-analyze"]
 replserver = ["robotcode-repl-server"]
 repl = ["robotcode-repl"]
+# `prompt_toolkit` is an *optional* runtime dep of `robotcode-repl`,
+# but we always install it in the dev / test workspace so the
+# prompt_toolkit-backed tests actually exercise that code path
+# (rather than being silently skipped by `pytest.importorskip`).
+prompt-toolkit = ["prompt_toolkit>=3.0"]
 yaml = ["PyYAML>=5.4"]
 lint = ["robotframework-robocop>=6.0.0"]
 rest = ["docutils"]
@@ -94,6 +99,7 @@ all = [
   { "include-group" = "runner" },
   { "include-group" = "analyze" },
   { "include-group" = "repl" },
+  { "include-group" = "prompt-toolkit" },
   { "include-group" = "replserver" },
   { "include-group" = "yaml" },
   { "include-group" = "lint" },

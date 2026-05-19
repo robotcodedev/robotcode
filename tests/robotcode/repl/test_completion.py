@@ -16,9 +16,22 @@ from robot.running.context import EXECUTION_CONTEXTS
 from robotcode.repl._completion import (
     _LIB_KEYWORDS_ATTR,
     CompletionContext,
+    _clear_full_list_cache,
     candidates_for,
     tokenize,
 )
+
+
+@pytest.fixture(autouse=True)
+def _drop_full_list_cache() -> Iterable[None]:
+    """`candidates_for()` caches `complete_*_import(None, …)` results
+    for the REPL-session lifetime. Tests swap the api mock between
+    invocations, so the cache must be flushed between them — otherwise
+    later tests would see the first test's cached results."""
+    _clear_full_list_cache()
+    yield
+    _clear_full_list_cache()
+
 
 # ---------------------------------------------------------------------------
 # tokenize() — cell detection, variable detection, special-form dispatch
@@ -290,6 +303,25 @@ def test_candidates_for_library_plain_prefix_matches_installed_modules(
     assert "Log" not in out  # kind-filtered
     # Plain prefix → only the no-arg installed-module list is queried.
     assert calls == [None]
+
+
+def test_full_discovery_result_is_cached_across_invocations(monkeypatch: pytest.MonkeyPatch) -> None:
+    """`api(None, …)` is walked once per session — not once per keystroke."""
+    from robotcode.robot.diagnostics.library_doc import CompleteResult, CompleteResultKind
+
+    calls = _patch_library_import(
+        monkeypatch,
+        {None: [CompleteResult("Collections", CompleteResultKind.MODULE_INTERNAL)]},
+    )
+
+    # Three different "live-as-you-type" keystrokes — `""`, `"C"`, `"Co"` —
+    # all land in the `name=None` branch (empty + plain prefix). prompt_toolkit
+    # in live-completion mode would call us once per keystroke; the api must
+    # still only be hit *once*.
+    candidates_for(CompletionContext("library", "", 0))
+    candidates_for(CompletionContext("library", "C", 0))
+    candidates_for(CompletionContext("library", "Co", 0))
+    assert calls == [None], f"expected exactly one full-discovery call, got: {calls}"
 
 
 def test_candidates_for_library_empty_prefix_returns_full_list(monkeypatch: pytest.MonkeyPatch) -> None:

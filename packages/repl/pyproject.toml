@@ -41,6 +41,11 @@ dependencies = [
 # `gnureadline` Tab-completion falls back to the verbose default
 # layout with the "Display all NNN possibilities?" prompt.
 gnureadline = ["gnureadline; sys_platform != 'win32'"]
+# `prompt_toolkit` lights up a richer prompt — candidate popup,
+# Ctrl-R reverse search, fish-style auto-suggest, multi-line cursor
+# movement. The REPL works fine without it (falls back to readline),
+# but power users will want it.
+prompt-toolkit = ["prompt_toolkit>=3.0"]
 
 [project.entry-points.robotcode]
 repl = "robotcode.repl.hooks"

@@ -24,7 +24,7 @@ completion handlers in
 import os
 import re
 from dataclasses import dataclass
-from typing import Any, Callable, Iterable, Iterator, List, Optional, Set
+from typing import Any, Callable, Dict, Iterable, Iterator, List, Optional, Set, Tuple
 
 from robot.running.context import EXECUTION_CONTEXTS
 from robot.utils import normalize
@@ -119,6 +119,22 @@ _LIBRARY_KINDS = {"MODULE_INTERNAL", "MODULE", "FILE", "FOLDER"}
 _RESOURCE_KINDS = {"RESOURCE", "FILE", "FOLDER"}
 _VARIABLES_KINDS = {"MODULE_INTERNAL", "MODULE", "VARIABLES_MODULE", "VARIABLES", "FILE", "FOLDER"}
 
+# Session-lifetime cache of the "full discovery" result for each
+# `complete_*_import(None, working_dir=…)` call. That branch walks
+# `sys.path` + the project filesystem and returns hundreds of
+# CompleteResult objects — expensive enough that re-running it on
+# every keystroke (with `complete_while_typing=True` in the
+# prompt_toolkit backend) would lag the popup. The cache is keyed
+# by `(api-name, working_dir)`; nothing under our feet changes the
+# discoverable-modules set during a REPL session, so we never need
+# to invalidate.
+_FULL_LIST_CACHE: Dict[Tuple[str, str], List[Any]] = {}
+
+
+def _clear_full_list_cache() -> None:
+    """Test-only: drop the discovery cache so a fresh patched `api()` runs again."""
+    _FULL_LIST_CACHE.clear()
+
 
 def candidates_for(ctx: CompletionContext, *, working_dir: str = ".") -> List[str]:
     """Return completion strings appropriate for `ctx`.
@@ -203,6 +219,22 @@ def _import_completions(
     """
 
     def _fetch(name: Optional[str]) -> List[Any]:
+        # The `name=None` branch (full discovery) is the expensive one —
+        # serve it from the session cache so live-as-you-type completion
+        # in the prompt_toolkit backend doesn't re-walk `sys.path` on
+        # every keystroke. Subdir / dotted-head lookups are cheap and
+        # bypass the cache (their result depends on the partial input).
+        if name is None:
+            key = (api.__name__, working_dir)
+            cached = _FULL_LIST_CACHE.get(key)
+            if cached is not None:
+                return cached
+            try:
+                results = list(api(None, working_dir=working_dir, base_dir=working_dir) or [])
+            except Exception:
+                results = []
+            _FULL_LIST_CACHE[key] = results
+            return results
         try:
             return list(api(name, working_dir=working_dir, base_dir=working_dir) or [])
         except Exception:
