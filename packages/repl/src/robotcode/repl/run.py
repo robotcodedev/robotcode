@@ -92,7 +92,6 @@ def run_repl(
 
             settings = RobotSettings(
                 options,
-                outputdir=str(curdir),
                 console="NONE",
                 output=output,
                 log=log,
