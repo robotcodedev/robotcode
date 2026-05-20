@@ -23,10 +23,12 @@ from prompt_toolkit.completion import CompleteEvent, Completer, Completion
 from prompt_toolkit.document import Document
 from prompt_toolkit.history import History
 from prompt_toolkit.key_binding import KeyBindings, KeyPressEvent
+from prompt_toolkit.styles import Style
 
 from .._completion import candidates_for, tokenize
 from .._history import history_path
 from .._indent import compute_indent, has_open_block
+from ._lexer import RobotLexer
 
 
 class _ReadlineCompatHistory(History):
@@ -142,6 +144,29 @@ def _continuation_prompt(width: int, line_number: int, soft_wrapped: int) -> str
     return ("... ").rjust(width)
 
 
+# Default colour theme. Maps the style classes the `RobotLexer` emits
+# (and the completion-popup default classes) to ANSI / true-colour
+# CSS-style declarations. Spätere PR könnte env-var-/config-toggle
+# für theme-switching nachreichen.
+_DEFAULT_STYLE = Style.from_dict(
+    {
+        "rf.keyword": "#5fafd7 bold",
+        "rf.argument": "",
+        "rf.assign": "#d75f87",
+        "rf.comment": "#5f5f5f italic",
+        "rf.block": "#d78700 bold",
+        "rf.bdd": "#d78700 italic",
+        "rf.variable.brace": "#5fd7af",
+        "rf.variable.name": "#af87d7",
+        "rf.variable.extended": "#af87d7 italic",
+        "rf.variable.operator": "#5fd7af",
+        "rf.variable.type": "#d7af5f",
+        "rf.variable.expr": "#d75faf bold",
+        "rf.variable.python": "#af87d7",
+    }
+)
+
+
 class PromptToolkitBackend:
     """Power-user backend on top of `PromptSession`.
 
@@ -171,6 +196,8 @@ class PromptToolkitBackend:
             multiline=True,
             key_bindings=_build_keybindings(),
             prompt_continuation=_continuation_prompt,
+            lexer=RobotLexer(),
+            style=_DEFAULT_STYLE,
         )
 
     def read_line(

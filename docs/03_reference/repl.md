@@ -166,6 +166,14 @@ The completer runs in a background thread (`complete_in_thread=True`), and Robot
 
 History is shared with the readline backend — same plain-text file, so swapping between the two extras (or having neither) doesn't lose arrow-up recall.
 
+#### Syntax highlighting
+
+Coloured Robot syntax is automatically on when you install the `prompt-toolkit` extra — keywords, variables, assigns, comments, block constructs (`FOR`, `IF`, `END`, …) and BDD prefixes (`Given`, `When`, `Then`, … plus localised variants from RF 6+ languages) each get their own colour. Variables decompose to the part level: the sigil and braces, the name, type hints (`${age: int}`), default values (`%{HOME=default}`), subscripts (`${dict}[key]`), nested variables (`${${inner}}`), and inline-Python expressions (`${{expr}}`) all render distinctly.
+
+The highlighter uses Robot Framework's own production tokenizer (`robot.api.get_tokens`) plus the `robotcode` semantic analyzer's variable decomposer — the same code path RobotCode's VS Code extension uses for semantic-token rendering. Colour assignments match the LSP semantic-token mapping, so the REPL prompt and the VS Code editor use a consistent palette.
+
+No additional dependency: Robot is already required by `robotcode-repl`, and the variable decomposer ships with `robotcode-robot`.
+
 ### libedit-backed Pythons
 
 macOS' system Python and some Linux interpreters built via `python-build-standalone` (used by `uv`, `rye`, …) link `readline` against **libedit** instead of GNU readline. libedit silently ignores most of the bindings the REPL relies on, so you'd see Tab inserting a literal tab character and the verbose default completion display.
