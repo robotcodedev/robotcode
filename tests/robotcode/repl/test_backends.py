@@ -118,3 +118,31 @@ def test_pick_backend_prefers_prompt_toolkit_when_available() -> None:
     pytest.importorskip("prompt_toolkit")
     backend = pick_backend()
     assert type(backend).__name__ == "PromptToolkitBackend"
+
+
+# ---------------------------------------------------------------------------
+# --plain escape hatch — forces PlainBackend regardless of installed extras.
+# ---------------------------------------------------------------------------
+
+
+def test_pick_backend_plain_returns_plain_even_with_prompt_toolkit() -> None:
+    """`plain=True` must bypass the cascade — no popup, no readline, no
+    ANSI codes leaking into AI-agent stdout capture."""
+    backend = pick_backend(plain=True)
+    assert isinstance(backend, PlainBackendClass)
+
+
+def test_pick_backend_plain_is_orthogonal_to_no_history() -> None:
+    """Plain mode has no history file anyway, but setting both must
+    still return PlainBackend (no conflict, no error)."""
+    backend = pick_backend(plain=True, no_history=True)
+    assert isinstance(backend, PlainBackendClass)
+
+
+def test_pick_backend_plain_false_keeps_default_cascade(monkeypatch: pytest.MonkeyPatch) -> None:
+    """`plain=False` (the default) must NOT short-circuit; cascade as
+    before."""
+    pytest.importorskip("readline")
+    _block_module(monkeypatch, "robotcode.repl._input._prompt_toolkit")
+    backend = pick_backend(plain=False)
+    assert type(backend).__name__ == "ReadlineBackend"

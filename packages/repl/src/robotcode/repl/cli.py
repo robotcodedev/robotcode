@@ -61,6 +61,17 @@ from .run import run_repl
     "want polluting your shell's REPL history.",
 )
 @click.option(
+    "--plain",
+    is_flag=True,
+    default=False,
+    envvar="ROBOTCODE_REPL_PLAIN",
+    help="Disable all prompt enhancements — completion, syntax highlighting, "
+    "candidate popup, auto-suggest, history file. The prompt becomes a bare "
+    "`input()` call. Recommended for AI-agent invocations, automation "
+    "pipelines, and any context where ANSI escapes or completion popups "
+    "would interfere with stdin/stdout capture.",
+)
+@click.option(
     "-d",
     "--outputdir",
     metavar="DIR",
@@ -122,6 +133,7 @@ def repl(
     show_keywords: bool,
     inspect: bool,
     no_history: bool,
+    plain: bool,
     outputdir: Optional[str],
     output: Optional[str],
     report: Optional[str],
@@ -142,6 +154,7 @@ def repl(
         show_keywords=show_keywords,
         inspect=inspect,
         no_history=no_history,
+        plain=plain,
     )
 
     run_repl(
