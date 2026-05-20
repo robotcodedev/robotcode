@@ -95,6 +95,52 @@ def test_readline_compat_history_no_history_skips_store(tmp_path: Path) -> None:
     assert histfile.read_text() == "existing\n"
 
 
+def test_readline_compat_history_round_trips_multi_line_entry(tmp_path: Path) -> None:
+    """Bug fix: a multi-line buffer (FOR/IF/etc.) must survive a
+    store-then-reload cycle as ONE entry, not get split into N
+    separate single-line entries on the next session."""
+    histfile = tmp_path / "repl_history"
+    history = _ReadlineCompatHistory(histfile)
+
+    multi_line = "FOR    ${i}    IN RANGE    3\n    Log    ${i}\nEND"
+    history.store_string(multi_line)
+
+    # New instance — simulates a fresh REPL session opening the file.
+    reloaded = list(_ReadlineCompatHistory(histfile).load_history_strings())
+    assert reloaded == [multi_line]
+
+
+def test_readline_compat_history_file_stays_single_line_per_entry(tmp_path: Path) -> None:
+    """Even with multi-line content, each stored entry must be exactly
+    one line in the file — otherwise readline's own loader (used by
+    the other backend if the user uninstalls prompt_toolkit) would
+    parse it as separate entries."""
+    histfile = tmp_path / "repl_history"
+    history = _ReadlineCompatHistory(histfile)
+    history.store_string("first\nentry\nwith\nnewlines")
+    history.store_string("second-plain")
+
+    on_disk = histfile.read_text()
+    # Each store_string appends exactly one `\n`-terminated line.
+    assert on_disk.count("\n") == 2, f"file: {on_disk!r}"
+    # The multi-line content is encoded — actual newlines became `\n` escapes.
+    assert "first\\nentry\\nwith\\nnewlines" in on_disk
+
+
+def test_readline_compat_history_preserves_literal_backslash_n(tmp_path: Path) -> None:
+    """A user typing literal `\\n` (backslash-n) must NOT decode back
+    to a newline — the escape is unambiguous because backslashes get
+    doubled at write time."""
+    histfile = tmp_path / "repl_history"
+    history = _ReadlineCompatHistory(histfile)
+
+    # User typed two characters: backslash, then n. Not a newline.
+    history.store_string("Log    \\n")
+
+    reloaded = list(_ReadlineCompatHistory(histfile).load_history_strings())
+    assert reloaded == ["Log    \\n"]
+
+
 # ---------------------------------------------------------------------------
 # _RobotCompleter — bridge from candidates_for() to Completion objects.
 # ---------------------------------------------------------------------------
@@ -184,6 +230,21 @@ def test_prompt_toolkit_backend_threads_no_history(monkeypatch: pytest.MonkeyPat
     assert list(history.load_history_strings()) == []
     history.store_string("nope")
     assert histfile.read_text() == "ancient_line\n"
+
+
+# ---------------------------------------------------------------------------
+# _bottom_toolbar — Stage 7 session-context status line
+# ---------------------------------------------------------------------------
+
+
+def test_bottom_toolbar_shows_rf_version_and_cwd() -> None:
+    """Toolbar must always render the running RF version and cwd —
+    no execution-context lookup needed."""
+    from robotcode.repl._input._prompt_toolkit import _bottom_toolbar
+
+    toolbar = _bottom_toolbar()
+    assert "RF " in toolbar
+    assert "cwd:" in toolbar
 
 
 def test_prompt_toolkit_backend_read_line_delegates_to_session(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:

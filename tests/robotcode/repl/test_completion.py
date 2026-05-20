@@ -20,6 +20,7 @@ from robotcode.repl._completion import (
     _clear_full_list_cache,
     candidates_for,
     candidates_for_rich,
+    find_cell_end,
     tokenize,
 )
 
@@ -323,6 +324,37 @@ def test_candidates_for_rich_env_variable_uses_environ(monkeypatch: pytest.Monke
     out = candidates_for_rich(CompletionContext("variable", "ROBOTCODE_TEST_RICH", 0, sigil="%"))
     [cand] = [c for c in out if c.label == "%{ROBOTCODE_TEST_RICH_ENV}"]
     assert cand.detail == "'hello'"
+
+
+def test_find_cell_end_stops_at_double_space() -> None:
+    """`Log Many  arg` — cell end is at the `  ` cell separator."""
+    text = "Log Many  arg"
+    assert find_cell_end(text, 0) == 8  # `Log Many` is 8 chars, then `  `
+
+
+def test_find_cell_end_stops_at_tab() -> None:
+    """Tab is also a Robot cell separator."""
+    text = "Log\targ"
+    assert find_cell_end(text, 0) == 3
+
+
+def test_find_cell_end_stops_at_newline() -> None:
+    """A line ends at `\\n`; the next cell start lives on the next line."""
+    text = "Log\nLog    arg"
+    assert find_cell_end(text, 0) == 3
+
+
+def test_find_cell_end_reaches_eot_when_no_separator() -> None:
+    """A single-cell line ends at end-of-text."""
+    text = "Log To Console"
+    assert find_cell_end(text, 0) == len(text)
+
+
+def test_find_cell_end_from_mid_cell() -> None:
+    """Starting from inside a cell scans forward to that cell's end."""
+    text = "Log To Console  arg"
+    # Cursor at position 3 (after `Log`), should still find the `  ` at 14.
+    assert find_cell_end(text, 3) == 14
 
 
 def test_candidates_for_rich_library_import_carries_kind(monkeypatch: pytest.MonkeyPatch) -> None:

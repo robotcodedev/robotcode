@@ -166,6 +166,17 @@ The completer runs in a background thread (`complete_in_thread=True`), and Robot
 
 History is shared with the readline backend — same plain-text file, so swapping between the two extras (or having neither) doesn't lose arrow-up recall.
 
+#### Session-context bottom toolbar
+
+A status line at the bottom of the prompt shows two pieces of orientation info at a glance:
+
+```
+ RF 7.4 · cwd: ~/projects/my-suite
+```
+
+- **RF version** — which Robot Framework is actually running (handy when juggling several venvs).
+- **Working directory** — where relative paths in `Import Resource`, `Import Library`, and file-based variables resolve from.
+
 #### Documentation hints in the popup
 
 Each candidate in the completion popup now shows a short context string to its right (prompt-toolkit's `display_meta`), so you know *what* a candidate is before picking it:
