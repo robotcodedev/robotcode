@@ -41,6 +41,12 @@ from robotcode.robot.utils import RF_VERSION
 # name once at import time so the iteration loops below stay readable.
 _LIB_KEYWORDS_ATTR = "keywords" if RF_VERSION >= (7, 0) else "handlers"
 
+# Same story for the keyword doc-string attribute: RF 7+ uses
+# `.short_doc` (matches RF's own naming convention), RF 5/6 used
+# `.shortdoc`. Used by `candidates_for_rich()` to feed the
+# `display_meta` next to each keyword candidate in the popup.
+_KW_SHORT_DOC_ATTR = "short_doc" if RF_VERSION >= (7, 0) else "shortdoc"
+
 # Robot's cell separator: 2+ consecutive spaces or a tab.
 _CELL_SEP = re.compile(r"  +|\t")
 # Variable opener anywhere in the current cell: `[$@&%]{<partial>` with an
@@ -134,6 +140,21 @@ _FULL_LIST_CACHE: Dict[Tuple[str, str], List[Any]] = {}
 def _clear_full_list_cache() -> None:
     """Test-only: drop the discovery cache so a fresh patched `api()` runs again."""
     _FULL_LIST_CACHE.clear()
+
+
+@dataclass(frozen=True)
+class Candidate:
+    """A completion candidate plus its display metadata.
+
+    `label` is the full text that gets inserted into the buffer when
+    the user picks the candidate — same string `candidates_for()`
+    returns. `detail` is the short-form context shown next to the
+    label in the completion popup (e.g. the keyword's first-doc-line,
+    the import kind, the variable's repr()-ed value).
+    """
+
+    label: str
+    detail: str = ""
 
 
 def candidates_for(ctx: CompletionContext, *, working_dir: str = ".") -> List[str]:
@@ -333,6 +354,203 @@ def _iter_variables() -> Iterator[str]:
             yield name[2:-1]
         else:
             yield name
+
+
+# ---------------------------------------------------------------------------
+# Rich candidates — same sourcing as `candidates_for` plus a `detail`
+# string for prompt_toolkit's `Completion(display_meta=…)`. Kept as a
+# parallel API so the readline backend's `candidates_for()` path stays
+# zero-cost (no per-call doc-string lookups it would just throw away).
+# ---------------------------------------------------------------------------
+
+
+def candidates_for_rich(ctx: CompletionContext, *, working_dir: str = ".") -> List[Candidate]:
+    """Same dispatch as `candidates_for` but each result carries a
+    `detail` string for the completion popup:
+
+    - **keyword**: first line of the keyword's docstring (`short_doc`
+      on RF 7+, `shortdoc` on RF 5/6) — empty if missing.
+    - **variable** (`${…}` / `@{…}` / `&{…}`): `repr(value)[:40]` from
+      the live suite scope.
+    - **variable** (`%{…}` env var): `repr(os.environ[name])[:40]`.
+    - **library / resource / variables import**: `CompleteResult.kind`
+      value (e.g. `MODULE`, `MODULE_INTERNAL`, `RESOURCE`, `FILE`).
+    """
+    if ctx.kind == "keyword":
+        return _filter_candidates_robot_normalised(_iter_keywords_with_doc(), ctx.prefix)
+    if ctx.kind == "variable":
+        items: Iterable[Tuple[str, str]]
+        if ctx.sigil == "%":
+            items = ((k, _short_repr(v)) for k, v in os.environ.items())
+        else:
+            items = _iter_variables_with_value()
+        filtered = _filter_candidates_robot_normalised(items, ctx.prefix)
+        return [Candidate(label=f"{ctx.sigil}{{{c.label}}}", detail=c.detail) for c in filtered]
+    if ctx.kind == "library":
+        return _import_completions_rich(
+            ctx.prefix, working_dir, api=complete_library_import, allow_kinds=_LIBRARY_KINDS, support_dotted=True
+        )
+    if ctx.kind == "resource":
+        return _import_completions_rich(
+            ctx.prefix, working_dir, api=complete_resource_import, allow_kinds=_RESOURCE_KINDS, support_dotted=False
+        )
+    if ctx.kind == "variables":
+        return _import_completions_rich(
+            ctx.prefix, working_dir, api=complete_variables_import, allow_kinds=_VARIABLES_KINDS, support_dotted=True
+        )
+    return []
+
+
+def _import_completions_rich(
+    prefix: str,
+    working_dir: str,
+    *,
+    api: Callable[..., Optional[List[Any]]],
+    allow_kinds: Set[str],
+    support_dotted: bool,
+) -> List[Candidate]:
+    """Rich variant of `_import_completions` — preserves
+    `CompleteResult.kind.name` as the candidate's `detail`. Mirrors
+    the three-mode dispatch (plain / filesystem / dotted) verbatim;
+    the only difference is the output type."""
+
+    def _fetch(name: Optional[str]) -> List[Any]:
+        if name is None:
+            key = (api.__name__, working_dir)
+            cached = _FULL_LIST_CACHE.get(key)
+            if cached is not None:
+                return cached
+            try:
+                results = list(api(None, working_dir=working_dir, base_dir=working_dir) or [])
+            except Exception:
+                results = []
+            _FULL_LIST_CACHE[key] = results
+            return results
+        try:
+            return list(api(name, working_dir=working_dir, base_dir=working_dir) or [])
+        except Exception:
+            return []
+
+    def _by_label(c: Candidate) -> str:
+        return c.label
+
+    if not prefix:
+        results = _fetch(None)
+        seen: Dict[str, Candidate] = {}
+        for r in results:
+            if r.kind.name in allow_kinds:
+                seen.setdefault(r.label, Candidate(label=r.label, detail=r.kind.name))
+        return sorted(seen.values(), key=_by_label)
+
+    if "/" in prefix or "\\" in prefix:
+        sep_idx = max(prefix.rfind("/"), prefix.rfind("\\"))
+        dir_part = prefix[: sep_idx + 1]
+        partial = prefix[sep_idx + 1 :]
+        results = _fetch(dir_part)
+        partial_cf = partial.casefold()
+        seen = {}
+        for r in results:
+            if r.kind.name in allow_kinds and r.label.casefold().startswith(partial_cf):
+                seen.setdefault(dir_part + r.label, Candidate(label=dir_part + r.label, detail=r.kind.name))
+        return sorted(seen.values(), key=_by_label)
+
+    if support_dotted and "." in prefix:
+        base, _, partial = prefix.rpartition(".")
+        results = _fetch(base + ".")
+        partial_cf = partial.casefold()
+        seen = {}
+        for r in results:
+            if r.kind.name in allow_kinds and r.label.casefold().startswith(partial_cf):
+                full = f"{base}.{r.label}"
+                seen.setdefault(full, Candidate(label=full, detail=r.kind.name))
+        return sorted(seen.values(), key=_by_label)
+
+    results = _fetch(None)
+    prefix_cf = prefix.casefold()
+    seen = {}
+    for r in results:
+        if r.kind.name in allow_kinds and r.label.casefold().startswith(prefix_cf):
+            seen.setdefault(r.label, Candidate(label=r.label, detail=r.kind.name))
+    return sorted(seen.values(), key=_by_label)
+
+
+def _iter_keywords_with_doc() -> Iterator[Tuple[str, str]]:
+    """Yield `(name, short_doc)` for every keyword in scope.
+
+    `short_doc` is the first line of the keyword's docstring — empty
+    string if the keyword has no docstring. The attribute name
+    differs across RF versions (see `_KW_SHORT_DOC_ATTR`).
+    """
+    context = EXECUTION_CONTEXTS.current
+    if context is None:
+        return
+    store = getattr(context.namespace, "_kw_store", None)
+    if store is None:
+        return
+    seen: Set[str] = set()
+    for lib in store.libraries.values():
+        for kw in getattr(lib, _LIB_KEYWORDS_ATTR, ()) or ():
+            name = getattr(kw, "name", None)
+            if name and name not in seen:
+                seen.add(name)
+                yield name, getattr(kw, _KW_SHORT_DOC_ATTR, "") or ""
+    for resource in store.resources.values():
+        for kw in getattr(resource, _LIB_KEYWORDS_ATTR, ()) or ():
+            name = getattr(kw, "name", None)
+            if name and name not in seen:
+                seen.add(name)
+                yield name, getattr(kw, _KW_SHORT_DOC_ATTR, "") or ""
+
+
+def _iter_variables_with_value() -> Iterator[Tuple[str, str]]:
+    """Yield `(name, repr(value)[:40])` for every variable in scope.
+
+    Unwraps `${…}` decoration from Robot's `as_dict()` keys, same as
+    `_iter_variables`. The `repr` is truncated so a giant list /
+    dict / object doesn't blow out the popup width.
+    """
+    context = EXECUTION_CONTEXTS.current
+    if context is None:
+        return
+    raw = context.variables.as_dict()
+    for decorated, value in raw.items():
+        name = str(decorated)
+        if len(name) >= 3 and name[0] in _VALID_SIGILS and name[1] == "{" and name[-1] == "}":
+            name = name[2:-1]
+        yield name, _short_repr(value)
+
+
+def _short_repr(value: object, max_len: int = 40) -> str:
+    """``repr(value)`` truncated to `max_len` chars with an ellipsis."""
+    try:
+        r = repr(value)
+    except Exception:
+        return ""
+    if len(r) > max_len:
+        return r[: max_len - 1] + "…"
+    return r
+
+
+def _filter_candidates_robot_normalised(items: Iterable[Tuple[str, str]], prefix: str) -> List[Candidate]:
+    """Robot-normalised prefix filter for `(name, detail)` pairs.
+
+    Dedupes by name (keeping the first detail seen — keyword
+    iteration order means library-defined keywords win over
+    resource-defined ones with the same name, matching the order
+    `_iter_keywords_with_doc` yields).
+    """
+    target = _norm(prefix) if prefix else ""
+    seen_names: Set[str] = set()
+    result: List[Candidate] = []
+    for name, detail in items:
+        if target and not _norm(name).startswith(target):
+            continue
+        if name in seen_names:
+            continue
+        seen_names.add(name)
+        result.append(Candidate(label=name, detail=detail))
+    result.sort(key=lambda c: c.label)
+    return result
 
 
 # ---------------------------------------------------------------------------

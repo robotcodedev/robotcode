@@ -25,7 +25,7 @@ from prompt_toolkit.history import History
 from prompt_toolkit.key_binding import KeyBindings, KeyPressEvent
 from prompt_toolkit.styles import Style
 
-from .._completion import candidates_for, tokenize
+from .._completion import candidates_for_rich, tokenize
 from .._history import history_path
 from .._indent import compute_indent, has_open_block
 from ._lexer import RobotLexer
@@ -71,19 +71,25 @@ class _ReadlineCompatHistory(History):
 
 
 class _RobotCompleter(Completer):
-    """Adapts `candidates_for()` to prompt_toolkit's Completion protocol."""
+    """Adapts `candidates_for_rich()` to prompt_toolkit's Completion protocol.
+
+    Each candidate's `detail` (first-line keyword docstring, import
+    kind, variable repr) becomes the popup's `display_meta` — shown
+    grey-italic next to the label so users can see *what* a keyword
+    does without leaving the prompt.
+    """
 
     def get_completions(self, document: Document, complete_event: CompleteEvent) -> Iterator[Completion]:
         del complete_event
         text = document.text_before_cursor
         ctx = tokenize(text, len(text))
-        labels = candidates_for(ctx)
+        candidates = candidates_for_rich(ctx)
         # `start_position` is signed and negative — it tells
         # prompt_toolkit how many chars *before* the cursor to replace
         # with the completion's text.
         start = ctx.replace_start - len(text)
-        for label in labels:
-            yield Completion(label, start_position=start)
+        for cand in candidates:
+            yield Completion(cand.label, start_position=start, display_meta=cand.detail)
 
 
 def _insert_indented_newline(buf: Buffer) -> None:

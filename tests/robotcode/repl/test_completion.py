@@ -15,9 +15,11 @@ from robot.running.context import EXECUTION_CONTEXTS
 
 from robotcode.repl._completion import (
     _LIB_KEYWORDS_ATTR,
+    Candidate,
     CompletionContext,
     _clear_full_list_cache,
     candidates_for,
+    candidates_for_rich,
     tokenize,
 )
 
@@ -240,6 +242,104 @@ def test_candidates_for_argument_returns_empty(monkeypatch: pytest.MonkeyPatch) 
     _patch_context(monkeypatch, _fake_namespace(["Log"], []))
     out = candidates_for(CompletionContext("argument", "anything", 0))
     assert out == []
+
+
+# ---------------------------------------------------------------------------
+# candidates_for_rich — Stage 6 doc-hints / display_meta sourcing
+# ---------------------------------------------------------------------------
+
+
+def _fake_namespace_with_docs(library_keywords: "List[tuple[str, str]]") -> SimpleNamespace:
+    """Like `_fake_namespace` but each keyword carries a `short_doc` /
+    `shortdoc` attribute (depending on the RF version mock-target)."""
+    from robotcode.repl._completion import _KW_SHORT_DOC_ATTR
+
+    def _lib(name: str, kws: "List[tuple[str, str]]") -> SimpleNamespace:
+        return SimpleNamespace(
+            name=name,
+            **{_LIB_KEYWORDS_ATTR: [SimpleNamespace(name=n, **{_KW_SHORT_DOC_ATTR: d}) for n, d in kws]},
+        )
+
+    libraries = {"BuiltIn": _lib("BuiltIn", library_keywords)}
+
+    class _FakeResources:
+        def values(self) -> Iterable[SimpleNamespace]:
+            return []
+
+    return SimpleNamespace(
+        namespace=SimpleNamespace(_kw_store=SimpleNamespace(libraries=libraries, resources=_FakeResources())),
+        variables=SimpleNamespace(as_dict=dict),
+    )
+
+
+def test_candidates_for_rich_keyword_includes_short_doc(monkeypatch: pytest.MonkeyPatch) -> None:
+    _patch_context(
+        monkeypatch,
+        _fake_namespace_with_docs(
+            [
+                ("Log", "Log a message with the given level"),
+                ("Log To Console", "Log a message to the console"),
+            ]
+        ),
+    )
+    out = candidates_for_rich(CompletionContext("keyword", "Lo", 0))
+    by_label = {c.label: c.detail for c in out}
+    assert by_label.get("Log") == "Log a message with the given level"
+    assert by_label.get("Log To Console") == "Log a message to the console"
+
+
+def test_candidates_for_rich_keyword_handles_missing_short_doc(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A keyword without a docstring must return an empty `detail`,
+    not error out."""
+    _patch_context(monkeypatch, _fake_namespace_with_docs([("Log", "")]))
+    out = candidates_for_rich(CompletionContext("keyword", "Log", 0))
+    assert out == [Candidate(label="Log", detail="")]
+
+
+def test_candidates_for_rich_variable_includes_value_repr(monkeypatch: pytest.MonkeyPatch) -> None:
+    fake = _fake_namespace([], [])
+    fake.variables.as_dict = lambda: {"${TEST_NAME}": "Smoke", "${COUNT}": 42}
+    _patch_context(monkeypatch, fake)
+    out = candidates_for_rich(CompletionContext("variable", "TEST", 0, sigil="$"))
+    assert any(c.label == "${TEST_NAME}" and c.detail == "'Smoke'" for c in out)
+
+
+def test_candidates_for_rich_variable_value_truncated_at_40_chars(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Huge values mustn't blow out the popup width."""
+    fake = _fake_namespace([], [])
+    fake.variables.as_dict = lambda: {"${BIG}": "x" * 500}
+    _patch_context(monkeypatch, fake)
+    out = candidates_for_rich(CompletionContext("variable", "BIG", 0, sigil="$"))
+    [cand] = [c for c in out if c.label == "${BIG}"]
+    assert len(cand.detail) <= 40
+
+
+def test_candidates_for_rich_env_variable_uses_environ(monkeypatch: pytest.MonkeyPatch) -> None:
+    fake = _fake_namespace([], [])
+    _patch_context(monkeypatch, fake)
+    monkeypatch.setenv("ROBOTCODE_TEST_RICH_ENV", "hello")
+    out = candidates_for_rich(CompletionContext("variable", "ROBOTCODE_TEST_RICH", 0, sigil="%"))
+    [cand] = [c for c in out if c.label == "%{ROBOTCODE_TEST_RICH_ENV}"]
+    assert cand.detail == "'hello'"
+
+
+def test_candidates_for_rich_library_import_carries_kind(monkeypatch: pytest.MonkeyPatch) -> None:
+    from robotcode.robot.diagnostics.library_doc import CompleteResult, CompleteResultKind
+
+    _patch_library_import(
+        monkeypatch,
+        {
+            None: [
+                CompleteResult("Collections", CompleteResultKind.MODULE_INTERNAL),
+                CompleteResult("SeleniumLibrary", CompleteResultKind.MODULE),
+            ]
+        },
+    )
+    out = candidates_for_rich(CompletionContext("library", "Coll", 0))
+    [cand] = [c for c in out if c.label == "Collections"]
+    assert cand.detail == "MODULE_INTERNAL"
 
 
 # ---------------------------------------------------------------------------

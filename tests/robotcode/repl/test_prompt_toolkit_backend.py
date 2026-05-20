@@ -104,10 +104,14 @@ def test_robot_completer_yields_candidates_with_correct_start_position(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """`start_position` is signed-negative: chars before cursor to replace."""
+    from robotcode.repl._completion import Candidate
+
     # Patch in the consumer namespace (see [[feedback-mock-where-used]]).
+    # Stage 6 switched the completer to `candidates_for_rich` which
+    # returns `Candidate(label, detail)` objects.
     monkeypatch.setattr(
-        "robotcode.repl._input._prompt_toolkit.candidates_for",
-        lambda ctx: ["Log", "Log To Console"],
+        "robotcode.repl._input._prompt_toolkit.candidates_for_rich",
+        lambda ctx: [Candidate("Log", "Log a message"), Candidate("Log To Console", "Log to stdout")],
     )
 
     completer = _RobotCompleter()
@@ -123,12 +127,34 @@ def test_robot_completer_empty_candidate_list_yields_nothing(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(
-        "robotcode.repl._input._prompt_toolkit.candidates_for",
+        "robotcode.repl._input._prompt_toolkit.candidates_for_rich",
         lambda ctx: [],
     )
     completer = _RobotCompleter()
     completions = list(completer.get_completions(Document("anything"), CompleteEvent()))
     assert completions == []
+
+
+def test_robot_completer_passes_detail_through_to_display_meta(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """`Candidate.detail` flows into `Completion.display_meta` so the
+    popup shows what each candidate is (first-line doc, import kind,
+    variable value, …)."""
+    from robotcode.repl._completion import Candidate
+
+    monkeypatch.setattr(
+        "robotcode.repl._input._prompt_toolkit.candidates_for_rich",
+        lambda ctx: [Candidate("Log", "Log a message with the given level")],
+    )
+
+    completer = _RobotCompleter()
+    completions = list(completer.get_completions(Document("Lo"), CompleteEvent()))
+
+    assert len(completions) == 1
+    # prompt_toolkit stores display_meta as either FormattedText or
+    # a plain string — coerce to str for the assertion.
+    assert "Log a message" in str(completions[0].display_meta)
 
 
 # ---------------------------------------------------------------------------

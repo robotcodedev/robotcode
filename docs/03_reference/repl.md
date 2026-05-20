@@ -166,6 +166,15 @@ The completer runs in a background thread (`complete_in_thread=True`), and Robot
 
 History is shared with the readline backend — same plain-text file, so swapping between the two extras (or having neither) doesn't lose arrow-up recall.
 
+#### Documentation hints in the popup
+
+Each candidate in the completion popup now shows a short context string to its right (prompt-toolkit's `display_meta`), so you know *what* a candidate is before picking it:
+
+- **Keywords**: the first line of the keyword's docstring (`Log a message with the given level` next to `Log`, etc.). Sourced from `library_doc.keywords[name].short_doc` on RF 7+ and `.shortdoc` on RF 5/6.
+- **Library / resource / variables imports**: the discovery kind — `MODULE_INTERNAL` for built-in libraries, `MODULE` for third-party ones, `RESOURCE` for `.resource` files, `FILE` for filesystem-discovered Python files.
+- **Variables (`${…}` / `@{…}` / `&{…}`)**: `repr(value)[:40]` of the current value in the live suite scope — handy when you're trying to remember whether `${COUNT}` is `42` or `"42"`.
+- **Environment variables (`%{…}`)**: `repr(os.environ[name])[:40]`.
+
 #### Syntax highlighting
 
 Coloured Robot syntax is automatically on when you install the `prompt-toolkit` extra — keywords, variables, assigns, comments, block constructs (`FOR`, `IF`, `END`, …) and BDD prefixes (`Given`, `When`, `Then`, … plus localised variants from RF 6+ languages) each get their own colour. Variables decompose to the part level: the sigil and braces, the name, type hints (`${age: int}`), default values (`%{HOME=default}`), subscripts (`${dict}[key]`), nested variables (`${${inner}}`), and inline-Python expressions (`${{expr}}`) all render distinctly.
