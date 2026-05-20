@@ -308,6 +308,44 @@ def test_profiles_flatten_keywords_supports_literals_and_patterns() -> None:
     ]
 
 
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        ("10", "10"),
+        ("40", "40"),
+        ('"NONE"', "NONE"),
+    ],
+)
+def test_max_error_lines_builds_command_line(value: str, expected: str) -> None:
+    data = f"""\
+        max-error-lines = {value}
+        """
+    config = load_robot_config_from_robot_toml_str(data)
+    cmd_line = config.combine_profiles().evaluated().build_command_line()
+    assert config.max_error_lines == (int(expected) if expected.isdigit() else expected)
+    assert cmd_line == ["--maxerrorlines", expected]
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        ("10", "10"),
+        ("40", "40"),
+        ('"NONE"', "NONE"),
+    ],
+)
+def test_profile_max_error_lines_builds_command_line(value: str, expected: str) -> None:
+    data = f"""\
+        [profiles.full-errors]
+        max-error-lines = {value}
+        """
+    config = load_robot_config_from_robot_toml_str(data)
+    profile = config.combine_profiles("full-errors")
+    cmd_line = config.combine_profiles("full-errors").evaluated().build_command_line()
+    assert profile.max_error_lines == (int(expected) if expected.isdigit() else expected)
+    assert cmd_line == ["--maxerrorlines", expected]
+
+
 def test_set_and_evaluates_environment_var_correctly() -> None:
     os.environ.pop("ENV_TEST_VAR", None)
     os.environ.pop("ENV_TEST_VAR_CALCULATED", None)

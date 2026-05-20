@@ -4741,15 +4741,19 @@
               "type": "integer"
             },
             {
+              "const": "NONE"
+            },
+            {
               "type": "null"
             }
           ],
           "default": null,
-          "description": "Maximum number of error message lines to show in\nreport when tests fail. Default is 40, minimum is 10\nand `NONE` can be used to show the full message.\n\nExamples:\n\n```toml\nmax-error-lines = 40\n```\n\ncorresponds to the `--maxerrorlines lines` option of _robot_\n",
+          "description": "Maximum number of error message lines to show in\nreport when tests fail. Default is 40, minimum is 10\nand `NONE` can be used to show the full message.\n\nExamples:\n\n```toml\nmax-error-lines = 40\n```\n\n```toml\nmax-error-lines = \"NONE\"\n```\n\ncorresponds to the `--maxerrorlines lines` option of _robot_\n",
           "examples": [
-            "max-error-lines = 40"
+            "max-error-lines = 40",
+            "max-error-lines = \"NONE\""
           ],
-          "markdownDescription": "Maximum number of error message lines to show in\nreport when tests fail. Default is 40, minimum is 10\nand `NONE` can be used to show the full message.\n\nExamples:\n\n```toml\nmax-error-lines = 40\n```\n\ncorresponds to the `--maxerrorlines lines` option of _robot_\n",
+          "markdownDescription": "Maximum number of error message lines to show in\nreport when tests fail. Default is 40, minimum is 10\nand `NONE` can be used to show the full message.\n\nExamples:\n\n```toml\nmax-error-lines = 40\n```\n\n```toml\nmax-error-lines = \"NONE\"\n```\n\ncorresponds to the `--maxerrorlines lines` option of _robot_\n",
           "title": "Max Error Lines",
           "x-taplo": {
             "links": {
@@ -7914,15 +7918,19 @@
               "type": "integer"
             },
             {
+              "const": "NONE"
+            },
+            {
               "type": "null"
             }
           ],
           "default": null,
-          "description": "Maximum number of error message lines to show in\nreport when tests fail. Default is 40, minimum is 10\nand `NONE` can be used to show the full message.\n\nExamples:\n\n```toml\nmax-error-lines = 40\n```\n\ncorresponds to the `--maxerrorlines lines` option of _robot_\n",
+          "description": "Maximum number of error message lines to show in\nreport when tests fail. Default is 40, minimum is 10\nand `NONE` can be used to show the full message.\n\nExamples:\n\n```toml\nmax-error-lines = 40\n```\n\n```toml\nmax-error-lines = \"NONE\"\n```\n\ncorresponds to the `--maxerrorlines lines` option of _robot_\n",
           "examples": [
-            "max-error-lines = 40"
+            "max-error-lines = 40",
+            "max-error-lines = \"NONE\""
           ],
-          "markdownDescription": "Maximum number of error message lines to show in\nreport when tests fail. Default is 40, minimum is 10\nand `NONE` can be used to show the full message.\n\nExamples:\n\n```toml\nmax-error-lines = 40\n```\n\ncorresponds to the `--maxerrorlines lines` option of _robot_\n",
+          "markdownDescription": "Maximum number of error message lines to show in\nreport when tests fail. Default is 40, minimum is 10\nand `NONE` can be used to show the full message.\n\nExamples:\n\n```toml\nmax-error-lines = 40\n```\n\n```toml\nmax-error-lines = \"NONE\"\n```\n\ncorresponds to the `--maxerrorlines lines` option of _robot_\n",
           "title": "Max Error Lines",
           "x-taplo": {
             "links": {

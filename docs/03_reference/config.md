@@ -1266,7 +1266,7 @@ corresponds to the `--maxassignlength characters` option of _robot_
 
 ## max-error-lines
 
-Type: `int | None`
+Type: `int | Literal["NONE"] | None`
 
 Maximum number of error message lines to show in
 report when tests fail. Default is 40, minimum is 10
@@ -1276,6 +1276,10 @@ Examples:
 
 ```toml
 max-error-lines = 40
+```
+
+```toml
+max-error-lines = "NONE"
 ```
 
 corresponds to the `--maxerrorlines lines` option of _robot_
@@ -4085,5 +4089,3 @@ xunit = "xunit.xml"
 ```
 
 corresponds to the `-x --xunit file` option of _robot_
-
-

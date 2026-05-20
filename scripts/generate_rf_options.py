@@ -87,7 +87,7 @@ TOML_EXAMPLES: Dict[str, List[str]] = {
     # --- numeric options ---
     "--consolewidth": ["console-width = 100"],
     "--maxassignlength": ["max-assign-length = 200"],
-    "--maxerrorlines": ["max-error-lines = 40"],
+    "--maxerrorlines": ["max-error-lines = 40", 'max-error-lines = "NONE"'],
     "--suitestatlevel": ["suite-stat-level = 2"],
     # --- single-string options (paths, names, titles, timestamps) ---
     "--debugfile": ['debug-file = "debug.log"'],
@@ -188,21 +188,21 @@ def rewrite_for_extend(snippet: str, base_kebab: str) -> str:
 MAX_LINE_LENGTH = 120
 
 
-def format_field_decl(name: str, type_str: str) -> str:
-    """Render a `<name>: <type_str> = field(` line, breaking the type
-    annotation across lines when the single-line form would exceed
-    MAX_LINE_LENGTH. Wrapping happens inside the outermost `Optional[...]`
-    bracket — the same form the existing model.py used by hand.
-    """
+def format_field_decl(name: str, type_str: str) -> Tuple[str, str, str]:
+    """Render a field declaration plus attribute indent and close line."""
     one_line = f"    {name}: {type_str} = field("
     if len(one_line) <= MAX_LINE_LENGTH:
-        return one_line
+        return one_line, "        ", "    )"
+
+    wrapped_assign = f"    {name}: {type_str} = ("
+    if len(wrapped_assign) <= MAX_LINE_LENGTH:
+        return f"{wrapped_assign}\n        field(", "            ", "        )\n    )"
+
     if type_str.startswith("Optional[") and type_str.endswith("]"):
         inner = type_str[len("Optional[") : -1]
-        return f"    {name}: Optional[\n        {inner}\n    ] = field("
-    # No structural break point we know how to handle — leave it long and
-    # let ruff format decide.
-    return one_line
+        return f"    {name}: Optional[\n        {inner}\n    ] = field(", "        ", "    )"
+
+    return f"{wrapped_assign}\n        field(", "            ", "        )\n    )"
 
 
 def apply_toml_examples(desc: str, long: str, base_kebab: str, extend: bool) -> str:
@@ -219,6 +219,7 @@ def apply_toml_examples(desc: str, long: str, base_kebab: str, extend: bool) -> 
 type_templates = {
     "console": 'Literal["verbose", "dotted", "skipped", "quiet", "none"]',
     "listeners": "Dict[str, List[Union[str, StringExpression]]]",
+    "max_error_lines": 'Union[int, Literal["NONE"]]',
     "parsers": "Dict[str, List[Union[str, StringExpression]]]",
     "pre_rebot_modifiers": "Dict[str, List[Union[str, StringExpression]]]",
     "pre_run_modifiers": "Dict[str, List[Union[str, StringExpression]]]",
@@ -407,20 +408,24 @@ def generate(
                 name = ("extend_" if extend else "") + base_name
                 base_kebab = base_name.replace("_", "-")
                 type_str = get_type(name, internal_options[long_name]["default"], v, is_flag, extend)
-                field_decl = format_field_decl(name, type_str)
+                field_decl, field_indent, field_close = format_field_decl(name, type_str)
                 output.append(
-                    f'{field_decl}\n        description="""\\\n{create_desc(v, extend, base_kebab)}\n            """,'
+                    f'{field_decl}\n{field_indent}description="""\\\n'
+                    f'{create_desc(v, extend, base_kebab)}\n            """,'
                 )
                 if not extend:
-                    output.append(f'        robot_name="{long_name}",')
-                    output.append("        robot_priority=500,")
+                    output.append(f'{field_indent}robot_name="{long_name}",')
+                    output.append(f"{field_indent}robot_priority=500,")
                     if v["short"] is not None:
-                        output.append(f'        robot_short_name="{v["short"][1:]}",')
+                        output.append(f'{field_indent}robot_short_name="{v["short"][1:]}",')
                     if is_flag:
-                        output.append("        robot_is_flag=True,")
+                        output.append(f"{field_indent}robot_is_flag=True,")
                         if not flag_default:
-                            output.append(f"        robot_flag_default={flag_default},")
-                output.append("    )")
+                            output.append(f"{field_indent}robot_flag_default={flag_default},")
+                alias = ("extend-" if extend else "") + base_kebab
+                if alias != name:
+                    output.append(f'{field_indent}alias="{alias}",')
+                output.append(field_close)
 
         return result
 
@@ -547,6 +552,7 @@ generate(
     extra=True,
     tool="testdoc",
 )
+output.extend(["", ""])
 
 model_file = Path("packages/robot/src/robotcode/robot/config/model.py")
 original_lines = model_file.read_text().splitlines()
