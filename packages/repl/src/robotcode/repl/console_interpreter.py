@@ -9,6 +9,7 @@ from robot.running import Keyword
 
 from robotcode.plugin import Application
 
+from ._indent import compute_indent
 from ._input import InputBackend, pick_backend
 from .base_interpreter import BaseInterpreter, is_true
 
@@ -58,8 +59,13 @@ class ConsoleInterpreter(BaseInterpreter):
                 if sys.stdin.isatty():
                     prompt = ">>> " if not lines else "... "
 
+                prefill = compute_indent(lines) if lines else ""
                 try:
-                    text = self._input.read_line(prompt, multiline_continuation=bool(lines))
+                    text = self._input.read_line(
+                        prompt,
+                        multiline_continuation=bool(lines),
+                        prefill=prefill,
+                    )
                     if len(lines) == 0 and text == "":
                         break
                 except KeyboardInterrupt:

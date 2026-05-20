@@ -18,12 +18,15 @@ from typing import Iterator
 
 from prompt_toolkit import PromptSession
 from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
+from prompt_toolkit.buffer import Buffer
 from prompt_toolkit.completion import CompleteEvent, Completer, Completion
 from prompt_toolkit.document import Document
 from prompt_toolkit.history import History
+from prompt_toolkit.key_binding import KeyBindings, KeyPressEvent
 
 from .._completion import candidates_for, tokenize
 from .._history import history_path
+from .._indent import compute_indent, has_open_block
 
 
 class _ReadlineCompatHistory(History):
@@ -81,14 +84,73 @@ class _RobotCompleter(Completer):
             yield Completion(label, start_position=start)
 
 
+def _insert_indented_newline(buf: Buffer) -> None:
+    """Append a newline followed by the Auto-Indent for the next line.
+
+    `+ [""]` extends the line list with an empty sentinel so the
+    indent is computed for the line the user is *about to type*, not
+    the line they just finished. Module-level for direct unit-test
+    access — the key-binding handlers in `_build_keybindings()` just
+    forward to here.
+    """
+    indent = compute_indent([*buf.text.splitlines(), ""])
+    buf.insert_text("\n" + indent)
+
+
+def _build_keybindings() -> KeyBindings:
+    """Bindings for the multi-line buffer:
+
+    - `Enter` is *smart*: submits when the buffer has no open Robot
+      block, otherwise inserts a newline with Auto-Indent so the user
+      keeps typing inside the block. Mirrors the auto-multi-line
+      behaviour of the readline backend, but lives inside one prompt.
+    - `Alt-Enter` (`Esc` then `Enter`) and `Ctrl-J` *always* insert a
+      newline with Auto-Indent, regardless of block state — useful
+      when the user wants to add an extra statement to a block whose
+      structure already balances (e.g. you typed `FOR…END` and then
+      decide to add another step before submitting).
+
+    Shift-Enter is *not* bound by default: most terminals send the
+    same byte (`\\r`) for `S-Enter` as for plain `Enter`, so a binding
+    would never fire portably. Terminals that emit a distinct sequence
+    (iTerm2, Kitty, modern Windows Terminal with custom keymap, …)
+    can be wired up by the user via their own `KeyBindings` if they
+    really want it — but Alt-Enter and Ctrl-J are universally portable.
+    """
+    kb = KeyBindings()
+
+    @kb.add("escape", "enter")
+    @kb.add("c-j")
+    def _insert_newline(event: KeyPressEvent) -> None:
+        _insert_indented_newline(event.current_buffer)
+
+    @kb.add("enter")
+    def _smart_submit(event: KeyPressEvent) -> None:
+        buf = event.current_buffer
+        if has_open_block(buf.text):
+            _insert_indented_newline(buf)
+        else:
+            buf.validate_and_handle()
+
+    return kb
+
+
+def _continuation_prompt(width: int, line_number: int, soft_wrapped: int) -> str:
+    """Show `... ` on every continuation line of the multi-line buffer,
+    matching the `>>> ` / `... ` pair the readline backend produces."""
+    del line_number, soft_wrapped
+    return ("... ").rjust(width)
+
+
 class PromptToolkitBackend:
     """Power-user backend on top of `PromptSession`.
 
     Most of the polish — candidate popup, Ctrl-R reverse search,
     bracket auto-match, Cursor-up/down inside multi-line buffers —
     comes from `PromptSession` directly; we just plug in the
-    Robot-aware completer and a history shim that shares the
-    readline backend's file.
+    Robot-aware completer, a history shim that shares the readline
+    backend's file, and multi-line key bindings that mirror Robot's
+    block syntax (Smart-Enter / Shift-Enter / Auto-Indent).
 
     Completions appear **as you type** (`complete_while_typing=True`)
     and are computed in a background thread (`complete_in_thread=True`)
@@ -106,6 +168,9 @@ class PromptToolkitBackend:
             auto_suggest=AutoSuggestFromHistory(),
             complete_while_typing=True,
             complete_in_thread=True,
+            multiline=True,
+            key_bindings=_build_keybindings(),
+            prompt_continuation=_continuation_prompt,
         )
 
     def read_line(
@@ -115,7 +180,7 @@ class PromptToolkitBackend:
         multiline_continuation: bool = False,
         prefill: str = "",
     ) -> str:
-        del multiline_continuation  # Stage-5 hook lands here
+        del multiline_continuation  # PromptSession handles continuation inline
         # `PromptSession.prompt` raises `KeyboardInterrupt` on Ctrl-C
         # and `EOFError` on Ctrl-D — same exceptions as the builtin
         # `input()`, so `ConsoleInterpreter`'s existing handlers cover

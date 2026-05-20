@@ -85,10 +85,27 @@ class ReadlineBackend:
         multiline_continuation: bool = False,
         prefill: str = "",
     ) -> str:
-        del multiline_continuation, prefill  # Stage-4 hooks land here
+        del multiline_continuation
+        # Seed the line with `prefill` (typically the indent string for
+        # the next continuation line) via `set_pre_input_hook`. readline
+        # fires the hook *after* drawing the prompt and *before* the
+        # first read — `insert_text` puts the chars into the buffer so
+        # the user's cursor sits past them, ready to keep typing.
+        if prefill:
+
+            def _seed() -> None:
+                readline.insert_text(prefill)
+                readline.redisplay()
+
+            readline.set_pre_input_hook(_seed)
         try:
             return input(prompt)
         finally:
+            if prefill:
+                # Clear the hook so subsequent single-line reads don't
+                # inherit a stale indent (would surface as ghost spaces
+                # at the next `>>> ` prompt).
+                readline.set_pre_input_hook(None)
             # `input()` (via readline) appends the line to history just
             # before returning, regardless of whether the user pressed
             # Enter on real content or hit Ctrl-C / EOF. Run dedup

@@ -131,6 +131,23 @@ Tab understands Robot's cell-separator semantics (2+ spaces or a tab) and its ca
 
 When the prefix is ambiguous the full candidate list appears on the first Tab press — no double-tap, no `Display all NNN possibilities? (y or n)` prompt.
 
+### Multi-line blocks with auto-indent
+
+When you open a Robot block construct (`FOR`, `WHILE`, `IF`, `TRY`, `GROUP`), the next continuation line (`... ` prompt) is automatically indented to the matching depth. Nested blocks stack — `FOR` inside `IF` inside `FOR` gets three levels. `END` closes the innermost block and the line after it pops one level of indent.
+
+```
+>>> FOR    ${i}    IN RANGE    2
+...     Log To Console    ${i}      # cursor lands here, already indented
+...     IF    ${i} == 1
+...         Log    inner             # two levels deep now
+...     END
+... END
+```
+
+With the `prompt-toolkit` extra installed (see below) you get a real multi-line buffer instead of one prompt per line. Plain **Enter** is *smart*: it submits when your buffer has no open block, otherwise it inserts a newline + auto-indent so you stay inside the block. **Alt-Enter** (`Esc` then `Enter`) and **Ctrl-J** always insert a newline + auto-indent, even when the block is balanced — useful when you want to add one more statement before committing. You can also use `Cursor-Up` / `Cursor-Down` to navigate back into earlier lines of the same buffer and edit them.
+
+Shift-Enter isn't bound by default: most terminals send the same byte (`\r`) for Shift-Enter as for plain Enter, so a binding would never fire portably. Use Alt-Enter or Ctrl-J — both work in every terminal.
+
 ### A richer prompt with `prompt_toolkit`
 
 Install the `prompt-toolkit` extra to swap the readline frontend for a `PromptSession`-driven one:
