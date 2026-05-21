@@ -1,30 +1,23 @@
 """Robot-aware completion candidates for the REPL.
 
-This module is backend-agnostic: it understands Robot's syntax (cells
-separated by 2+ spaces or tab, `${...}` / `@{...}` / `&{...}` / `%{...}`
-variable wrappers, special leading-cell forms like `Import Library`,
-`Import Resource`, `Import Variables`) and answers "what should the
-user be offered as a completion here?". Both `ReadlineBackend`
-(Stage 2) and `PromptToolkitBackend` (Stage 3) consume the same
-`tokenize()` and `candidates_for()` API.
+Backend-agnostic: both `ReadlineBackend` and `PromptToolkitBackend`
+consume the same `tokenize()` + `candidates_for()` API. Data is pulled
+straight from `EXECUTION_CONTEXTS.current`, which is populated by the
+time the user hits Tab because the REPL runs synchronously inside
+`suite.run()`.
 
-We pull live data straight from `EXECUTION_CONTEXTS.current` — the
-REPL runs synchronously inside `suite.run()`, so the active namespace
-and variable scope are populated by the time the user hits Tab.
-
-Library / Resource / Variables imports each have **their own** Robot
-discovery function (`complete_library_import`, `complete_resource_import`,
+Library / Resource / Variables imports each have their own discovery
+function (`complete_library_import`, `complete_resource_import`,
 `complete_variables_import`) — they live in different namespaces and
-recognise different file extensions, so we never share their result
-sets. The dispatch logic mirrors the Language Server's per-form
-completion handlers in
-`packages/language_server/.../robotframework/parts/completion.py`.
+recognise different file extensions, so we never share their results.
+The dispatch logic mirrors the Language Server's per-form completion
+handlers in `packages/language_server/.../parts/completion.py`.
 """
 
 import os
 import re
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, Iterable, Iterator, List, Optional, Set, Tuple
+from typing import Any, Callable, Dict, Iterable, Iterator, List, Literal, Optional, Set, Tuple
 
 from robot.running.context import EXECUTION_CONTEXTS
 from robot.utils import normalize
@@ -68,9 +61,88 @@ def find_cell_end(text: str, pos: int) -> int:
     return m.start() if m else line_end
 
 
-# Variable opener anywhere in the current cell: `[$@&%]{<partial>` with an
-# unclosed brace. `(.*)` is the partial variable name typed so far.
+def current_named_arg_in_cell(buffer: str, cursor: int) -> Optional[str]:
+    """Return the ``name`` part of a ``name=…`` cell at the cursor, or ``None``.
+
+    Doesn't check whether ``name`` is actually declared on any
+    keyword — callers must verify against the spec separately.
+    """
+    line_start = buffer.rfind("\n", 0, cursor) + 1
+    line_text = buffer[line_start:cursor]
+    cells = _CELL_SEP.split(line_text)
+    while cells and not cells[0].strip():
+        cells.pop(0)
+    if len(cells) < 2:
+        return None
+    m = _NAMED_ARG.match(cells[-1])
+    return m.group(1) if m else None
+
+
+def spec_arg_position(spec: Any, name: str) -> Optional[int]:
+    """Position of ``name`` in the keyword's flat argument list.
+
+    Order matches `_spec_arg_items` (positional_only → positional_or_named
+    → var_positional → named_only → var_named). When the spec has a
+    ``**kwargs`` catch-all, an unknown ``name`` resolves to that slot;
+    otherwise it returns ``None``.
+    """
+    if spec is None:
+        return None
+    idx = 0
+    for declared in getattr(spec, "positional_only", ()) or ():
+        if declared == name:
+            return idx
+        idx += 1
+    for declared in getattr(spec, "positional_or_named", ()) or ():
+        if declared == name:
+            return idx
+        idx += 1
+    var_positional = getattr(spec, "var_positional", None)
+    if var_positional:
+        if var_positional == name:
+            return idx
+        idx += 1
+    for declared in getattr(spec, "named_only", ()) or ():
+        if declared == name:
+            return idx
+        idx += 1
+    if getattr(spec, "var_named", None):
+        return idx
+    return None
+
+
+def current_keyword_and_arg_index(buffer: str, cursor: int) -> Optional[Tuple[str, int]]:
+    """``(keyword_name, positional_arg_index)`` for the cursor, or ``None``.
+
+    Returns ``None`` when the cursor sits in cell 0 (still typing the
+    keyword name). Indices are scoped to the current logical line, so
+    continuation lines inside a ``FOR``/``IF`` body report cells
+    relative to that line.
+    """
+    line_start = buffer.rfind("\n", 0, cursor) + 1
+    line_text = buffer[line_start:cursor]
+    cells = _CELL_SEP.split(line_text)
+    # Leading indent in a block body produces empty cells before the
+    # keyword — skip them so the keyword is always cells[0].
+    leading_empty = 0
+    while leading_empty < len(cells) and not cells[leading_empty].strip():
+        leading_empty += 1
+    cells = cells[leading_empty:]
+    if len(cells) < 2:
+        return None
+    keyword = cells[0].strip()
+    if not keyword:
+        return None
+    return keyword, len(cells) - 2
+
+
+# Unclosed variable opener: `[$@&%]{<partial>`.
 _VAR_OPEN = re.compile(r"([\$@&%])\{([^{}]*)$")
+
+# `name=value` at the start of an argument cell. Identifier is the safe
+# alphanum + underscore subset; libraries that use hyphens in named args
+# degrade gracefully to plain argument-cell completion.
+_NAMED_ARG = re.compile(r"^([A-Za-z_]\w*)=(.*)$")
 
 _VALID_SIGILS = "$@&%"
 
@@ -84,26 +156,25 @@ def _norm(s: Optional[str]) -> str:
 class CompletionContext:
     """Where the cursor is and what kind of completion fits.
 
-    `kind` is one of "keyword", "variable", "library", "resource",
-    "argument". `replace_start` is the buffer offset where the
-    *replaceable token* begins — the caller substitutes
-    `buffer[replace_start:cursor]` with the chosen candidate. `prefix`
-    is the partial token the user has typed (for variable-context, the
-    name without sigil/brace).
+    ``kind`` is one of ``"keyword"``, ``"variable"``, ``"library"``,
+    ``"resource"``, ``"variables"``, ``"argument"``, ``"named_arg_value"``.
+    Callers substitute ``buffer[replace_start:cursor]`` with the chosen
+    candidate. ``sigil`` is only set for ``"variable"``;
+    ``keyword_name`` and ``arg_name`` only for ``"named_arg_value"``.
     """
 
     kind: str
     prefix: str
     replace_start: int
-    sigil: str = ""  # only set for `kind == "variable"`
+    sigil: str = ""
+    keyword_name: str = ""
+    arg_name: str = ""
 
 
 def tokenize(buffer: str, cursor: int) -> CompletionContext:
-    """Inspect the buffer up to `cursor` and classify the typing context."""
+    """Classify the typing context at `cursor`."""
     text = buffer[:cursor]
 
-    # Locate the current cell start by walking back past the last cell
-    # separator. Default: cursor is in the first cell, cell starts at 0.
     cell_start = 0
     prior_cells: List[str] = []
     matches = list(_CELL_SEP.finditer(text))
@@ -114,17 +185,15 @@ def tokenize(buffer: str, cursor: int) -> CompletionContext:
 
     current_cell = text[cell_start:]
 
-    # Variable-completion: unclosed `[$@&%]{...` anywhere in the current cell.
     var_m = _VAR_OPEN.search(current_cell)
     if var_m:
         sigil = var_m.group(1)
         name_partial = var_m.group(2)
-        # `replace_start` points at the sigil so the substitution wipes
-        # the entire `${partial` and writes `${NAME}` back in.
+        # Point `replace_start` at the sigil so the whole `${partial`
+        # gets replaced when a candidate is picked.
         replace_start = cell_start + var_m.start()
         return CompletionContext("variable", name_partial, replace_start, sigil=sigil)
 
-    # Cell-level dispatch.
     if not prior_cells:
         return CompletionContext("keyword", current_cell, cell_start)
 
@@ -136,6 +205,26 @@ def tokenize(buffer: str, cursor: int) -> CompletionContext:
         return CompletionContext("resource", current_cell, cell_start)
     if folded == "import variables":
         return CompletionContext("variables", current_cell, cell_start)
+
+    # `name=value` is a named arg only when `name` is actually declared
+    # on the keyword. Robot itself binds `Log    foo=bar` (where `foo`
+    # isn't a `Log` argument) as a positional `message="foo=bar"` —
+    # mirroring that here keeps Tab's cell-separator behaviour for the
+    # literal case instead of opening an empty completion popup.
+    named_m = _NAMED_ARG.match(current_cell)
+    if named_m and first_cell:
+        arg_name = named_m.group(1)
+        kw = lookup_keyword_doc(first_cell)
+        if kw is not None and _spec_accepts_named_arg(getattr(kw, "args", None), arg_name):
+            partial = named_m.group(2)
+            value_start = cell_start + named_m.start(2)
+            return CompletionContext(
+                kind="named_arg_value",
+                prefix=partial,
+                replace_start=value_start,
+                keyword_name=first_cell,
+                arg_name=arg_name,
+            )
 
     return CompletionContext("argument", current_cell, cell_start)
 
@@ -163,13 +252,11 @@ def _clear_full_list_cache() -> None:
 
 @dataclass(frozen=True)
 class Candidate:
-    """A completion candidate plus its display metadata.
+    """A completion candidate plus its `display_meta`-side context.
 
-    `label` is the full text that gets inserted into the buffer when
-    the user picks the candidate — same string `candidates_for()`
-    returns. `detail` is the short-form context shown next to the
-    label in the completion popup (e.g. the keyword's first-doc-line,
-    the import kind, the variable's repr()-ed value).
+    ``label`` is the text that goes into the buffer; ``detail`` is the
+    short context (first-doc-line, import kind, variable repr) shown
+    beside it in the popup.
     """
 
     label: str
@@ -177,31 +264,27 @@ class Candidate:
 
 
 def candidates_for(ctx: CompletionContext, *, working_dir: str = ".") -> List[str]:
-    """Return completion strings appropriate for `ctx`.
+    """Completion strings (labels only) for ``ctx``.
 
-    Variable references (`kind == "variable"`) come back fully wrapped
-    (e.g. ``${TEST_NAME}``) so they're drop-in replacements for the
-    partial ``${TEST`` the user is editing. Keyword candidates are
-    raw labels. Import-form candidates carry the full user-typed
-    prefix back (``robot.libraries.Coll`` → ``robot.libraries.Collections``).
-
-    Thin projection over `candidates_for_rich` — the rich path is the
-    single source of truth, this just strips the `detail` field for
-    callers that don't render two-column popups.
+    Variables come back fully wrapped (``${TEST_NAME}``); keywords are
+    raw labels; import-form candidates carry their full reconstructed
+    path. Thin projection over `candidates_for_rich`.
     """
     return [c.label for c in candidates_for_rich(ctx, working_dir=working_dir)]
 
 
 def candidates_for_rich(ctx: CompletionContext, *, working_dir: str = ".") -> List[Candidate]:
-    """Return completion candidates with their `display_meta` detail:
+    """Completion candidates with their `display_meta` detail.
 
-    - **keyword**: first line of the keyword's docstring (`short_doc`
-      on RF 7+, `shortdoc` on RF 5/6) — empty if missing.
-    - **variable** (`${…}` / `@{…}` / `&{…}`): `repr(value)[:40]` from
-      the live suite scope.
-    - **variable** (`%{…}` env var): `repr(os.environ[name])[:40]`.
-    - **library / resource / variables import**: `CompleteResult.kind`
-      value (e.g. `MODULE`, `MODULE_INTERNAL`, `RESOURCE`, `FILE`).
+    Per `ctx.kind` the detail carries:
+
+    - ``keyword`` — first line of the keyword's docstring.
+    - ``variable`` (``${…}`` / ``@{…}`` / ``&{…}``) — truncated
+      ``repr(value)`` from the live suite scope.
+    - ``variable`` (``%{…}``) — truncated ``repr(os.environ[name])``.
+    - ``library`` / ``resource`` / ``variables`` — ``CompleteResult.kind``
+      (``MODULE``, ``RESOURCE``, ``FILE``, …).
+    - ``named_arg_value`` — empty (Literal values have no extra context).
     """
     if ctx.kind == "keyword":
         return _filter_robot_normalised(_iter_keywords(), ctx.prefix)
@@ -214,10 +297,6 @@ def candidates_for_rich(ctx: CompletionContext, *, working_dir: str = ".") -> Li
             items = _iter_variables()
         filtered = _filter_robot_normalised(items, ctx.prefix)
         return [Candidate(label=f"{ctx.sigil}{{{c.label}}}", detail=c.detail) for c in filtered]
-    # Library / Resource / Variables map to the matching `Settings`
-    # entries — same separator-semantics dispatch as the language
-    # server's `complete_LibraryImport` / `…ResourceImport` / `…VariablesImport`:
-    # library + variables accept dotted module paths, resource doesn't.
     if ctx.kind == "library":
         return _import_completions(
             ctx.prefix, working_dir, api=complete_library_import, allow_kinds=_LIBRARY_KINDS, support_dotted=True
@@ -230,7 +309,71 @@ def candidates_for_rich(ctx: CompletionContext, *, working_dir: str = ".") -> Li
         return _import_completions(
             ctx.prefix, working_dir, api=complete_variables_import, allow_kinds=_VARIABLES_KINDS, support_dotted=True
         )
+    if ctx.kind == "named_arg_value":
+        return _named_arg_value_candidates(ctx)
     return []
+
+
+def _named_arg_value_candidates(ctx: CompletionContext) -> List[Candidate]:
+    kw = lookup_keyword_doc(ctx.keyword_name)
+    if kw is None:
+        return []
+    literals = _literal_values_for_named_arg(getattr(kw, "args", None), ctx.arg_name)
+    if not literals:
+        return []
+    target = ctx.prefix.casefold()
+    return [Candidate(label=str(v), detail="") for v in literals if str(v).casefold().startswith(target)]
+
+
+def _spec_accepts_named_arg(spec: Any, name: str) -> bool:
+    """True when ``name`` could be passed as a named argument.
+
+    Matches Robot's binding rules: ``positional_or_named`` /
+    ``named_only`` accept ``name``, and a ``**kwargs`` catch-all
+    accepts anything.
+    """
+    if spec is None:
+        return False
+    if name in (getattr(spec, "positional_or_named", ()) or ()):
+        return True
+    if name in (getattr(spec, "named_only", ()) or ()):
+        return True
+    if getattr(spec, "var_named", None):
+        return True
+    return False
+
+
+def _literal_values_for_named_arg(spec: Any, name: str) -> List[str]:
+    """``Literal[…]`` values declared on argument ``name``, or ``[]``.
+
+    RF 7+ exposes ``Literal`` via ``ArgumentSpec.types[name]`` as a
+    ``TypeInfo``; older Robot versions store bare classes there, so
+    the walk silently yields ``[]``.
+    """
+    if spec is None:
+        return []
+    types = getattr(spec, "types", None) or {}
+    type_info = types.get(name)
+    if type_info is None:
+        return []
+    values: List[str] = []
+
+    def _collect(ti: Any) -> None:
+        if ti is None:
+            return
+        ti_type = getattr(ti, "type", None)
+        nested = getattr(ti, "nested", None)
+        if ti_type is Literal and nested:
+            for n in nested:
+                literal_name = getattr(n, "name", None)
+                if literal_name:
+                    values.append(str(literal_name).strip("'\""))
+        elif getattr(ti, "is_union", False) and nested:
+            for n in nested:
+                _collect(n)
+
+    _collect(type_info)
+    return values
 
 
 def _import_completions(
@@ -241,29 +384,21 @@ def _import_completions(
     allow_kinds: Set[str],
     support_dotted: bool,
 ) -> List[Candidate]:
-    """Three-mode dispatch for library / resource / variables imports.
+    """Dispatch library / resource / variables import completion.
 
-    Each Robot discovery API behaves as a directory listing — pass a
-    head (or ``None`` for the global namespace), get back the entries
-    reachable from there. Candidates carry the full reconstructed
-    cell (head + matching child).
+    The prefix syntax selects the lookup mode:
 
-    Modes picked from the prefix syntax:
-
-    1. Plain identifier / empty prefix: `api(None)`, filter by prefix.
-    2. Filesystem path (`/` or `\\`): split at last separator,
-       `api(dir_part)`, filter by partial.
-    3. Dotted module path (`support_dotted=True` only): split at last
-       `.`, `api(base + ".")`. Resource imports skip this because
-       Robot treats `common.resource` as a filename, not a path.
+    1. Plain identifier or empty: full discovery via ``api(None)``.
+    2. Filesystem path (``/`` or ``\\``): listing of ``dir_part``.
+    3. Dotted module path (only when ``support_dotted``): listing of
+       ``base + "."``. Resource imports skip this since Robot treats
+       ``common.resource`` as a filename, not a module path.
     """
 
     def _fetch(name: Optional[str]) -> List[Any]:
-        # Cache the full-discovery (`name=None`) call — it walks
-        # `sys.path` + the project filesystem and is the only branch
-        # expensive enough to lag live-as-you-type completion.
-        # Subdir / dotted-head lookups bypass the cache.
         if name is None:
+            # Full discovery walks `sys.path` and the project tree —
+            # cache it for the session so live-as-you-type stays snappy.
             key = (api.__name__, working_dir)
             cached = _FULL_LIST_CACHE.get(key)
             if cached is not None:
@@ -304,20 +439,64 @@ def _import_completions(
 
 
 # ---------------------------------------------------------------------------
-# Robot runtime introspection — private helpers, isolated so a future
-# RF-API change only touches this section.
+# Robot runtime introspection — isolated so a future RF-API change only
+# touches this section.
 # ---------------------------------------------------------------------------
 
 
-def _iter_keywords() -> Iterator[Tuple[str, str]]:
-    """Yield `(name, short_doc)` for every keyword in scope.
+def lookup_keyword_doc(name: str) -> Optional[Any]:
+    """Resolve ``name`` to a loaded keyword object, or ``None``.
 
-    The keyword container moved between Robot versions (see
-    `_LIB_KEYWORDS_ATTR`); the doc-attribute name moved too
-    (`short_doc` on RF 7+, `shortdoc` on RF 5/6, via
-    `_KW_SHORT_DOC_ATTR`). Library-defined keywords win over
-    resource-defined ones with the same name (first-seen-wins).
+    Matches Robot's case/whitespace/underscore-insensitive lookup
+    (``Set Variable`` == ``set_variable``); library-defined keywords
+    win over resource-defined ones on name collisions. The returned
+    object is whatever ``_kw_store`` holds — typically a Robot runtime
+    keyword with ``.name``, ``.args`` (``ArgumentSpec``), ``.doc``,
+    ``.tags``, ``.source``. Callers should access fields defensively.
     """
+    context = EXECUTION_CONTEXTS.current
+    if context is None:
+        return None
+    store = getattr(context.namespace, "_kw_store", None)
+    if store is None:
+        return None
+    target = _norm(name)
+    if not target:
+        return None
+    for src in (*store.libraries.values(), *store.resources.values()):
+        for kw in getattr(src, _LIB_KEYWORDS_ATTR, ()) or ():
+            kw_name = getattr(kw, "name", None)
+            if kw_name and _norm(kw_name) == target:
+                return kw
+    return None
+
+
+def lookup_library_doc(name: str) -> Optional[Any]:
+    """Resolve ``name`` to a loaded library or resource, or ``None``.
+
+    Case-insensitive lookup against `_kw_store`. The returned object
+    exposes ``.name``, ``.keywords`` / ``.handlers``, ``.doc``,
+    ``.doc_format``, ``.source``. For libraries that aren't currently
+    imported, callers can fall back to
+    `robotcode.robot.diagnostics.library_doc.get_library_doc`.
+    """
+    context = EXECUTION_CONTEXTS.current
+    if context is None:
+        return None
+    store = getattr(context.namespace, "_kw_store", None)
+    if store is None:
+        return None
+    target = name.casefold()
+    if not target:
+        return None
+    for src in (*store.libraries.values(), *store.resources.values()):
+        src_name = getattr(src, "name", None)
+        if src_name and str(src_name).casefold() == target:
+            return src
+    return None
+
+
+def _iter_keywords() -> Iterator[Tuple[str, str]]:
     context = EXECUTION_CONTEXTS.current
     if context is None:
         return
@@ -335,12 +514,6 @@ def _iter_keywords() -> Iterator[Tuple[str, str]]:
 
 
 def _iter_variables() -> Iterator[Tuple[str, str]]:
-    """Yield `(name, repr(value)[:40])` for every variable in scope.
-
-    Strips Robot's `${…}` decoration from `as_dict()` keys so the
-    name matches what the user types inside `${`. The repr is
-    truncated so a huge list / dict can't blow out the popup width.
-    """
     context = EXECUTION_CONTEXTS.current
     if context is None:
         return
@@ -352,7 +525,6 @@ def _iter_variables() -> Iterator[Tuple[str, str]]:
 
 
 def _short_repr(value: object, max_len: int = 40) -> str:
-    """``repr(value)`` truncated to `max_len` chars with an ellipsis."""
     try:
         r = repr(value)
     except Exception:
@@ -363,11 +535,10 @@ def _short_repr(value: object, max_len: int = 40) -> str:
 
 
 def _filter_robot_normalised(items: Iterable[Tuple[str, str]], prefix: str) -> List[Candidate]:
-    """Robot-normalised prefix filter for `(name, detail)` pairs.
+    """Robot-normalised prefix filter over ``(name, detail)`` pairs.
 
-    Dedupes by name (first-seen-wins, matching the iteration order
-    of `_iter_keywords` / `_iter_variables`). Sorted by label for
-    predictable menu order.
+    Dedupes by name (first-seen-wins, matching `_iter_keywords` /
+    `_iter_variables` order) and sorts by label.
     """
     target = _norm(prefix) if prefix else ""
     seen_names: Set[str] = set()

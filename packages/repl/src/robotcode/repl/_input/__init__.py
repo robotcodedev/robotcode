@@ -12,7 +12,7 @@ available implementation:
 Each backend implements `read_line(prompt, multiline_continuation, prefill)`.
 """
 
-from typing import Protocol
+from typing import List, Protocol
 
 from ._plain import PlainBackend
 
@@ -43,6 +43,31 @@ class InputBackend(Protocol):
             (auto-indent) to seed block-body lines with the right
             indent. Backends that have no editor (PlainBackend) ignore
             this.
+        """
+        ...
+
+    def get_history(self) -> List[str]:
+        """Return persistent history entries, oldest → newest.
+
+        PlainBackend returns ``[]`` (no history). Readline /
+        prompt_toolkit return the in-memory buffer that mirrors the
+        history file.
+        """
+        ...
+
+    def clear_history(self) -> None:
+        """Drop all history entries (in-memory + on-disk).
+
+        PlainBackend is a no-op. The other backends truncate the
+        shared history file and the in-memory ring.
+        """
+        ...
+
+    def delete_history_entry(self, idx: int) -> bool:
+        """Delete the 1-based history entry at ``idx``.
+
+        Returns ``True`` on success, ``False`` when ``idx`` is out of
+        range. PlainBackend always returns ``False``.
         """
         ...
 

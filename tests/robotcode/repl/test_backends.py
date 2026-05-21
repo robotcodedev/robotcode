@@ -146,3 +146,66 @@ def test_pick_backend_plain_false_keeps_default_cascade(monkeypatch: pytest.Monk
     _block_module(monkeypatch, "robotcode.repl._input._prompt_toolkit")
     backend = pick_backend(plain=False)
     assert type(backend).__name__ == "ReadlineBackend"
+
+
+# ---------------------------------------------------------------------------
+# History-protocol methods (InputBackend.get_history / clear / delete)
+# ---------------------------------------------------------------------------
+
+
+def test_plain_backend_history_methods_are_no_ops() -> None:
+    backend = PlainBackend()
+    assert backend.get_history() == []
+    backend.clear_history()  # must not raise
+    assert backend.delete_history_entry(1) is False
+
+
+def test_readline_backend_history_round_trip(monkeypatch: pytest.MonkeyPatch, tmp_path: Any) -> None:
+    """`.get_history()` mirrors what was loaded; `.clear_history()`
+    wipes both in-memory and on-disk; `.delete_history_entry(idx)`
+    removes a single line from both."""
+    pytest.importorskip("readline")
+    histfile = tmp_path / "histfile"
+    histfile.write_text("first\nsecond\nthird\n")
+
+    import robotcode.repl._history as history_mod
+
+    monkeypatch.setattr(history_mod, "history_path", lambda: histfile)
+
+    from robotcode.repl._input import _readline as readline_mod
+    from robotcode.repl._input._readline import ReadlineBackend
+
+    _rl = readline_mod.readline  # type: ignore[attr-defined]
+
+    _rl.clear_history()
+    backend = ReadlineBackend()
+    assert backend.get_history() == ["first", "second", "third"]
+
+    assert backend.delete_history_entry(2) is True
+    assert backend.get_history() == ["first", "third"]
+    assert "second" not in histfile.read_text()
+
+    backend.clear_history()
+    assert backend.get_history() == []
+    assert histfile.read_text() == ""
+
+
+def test_readline_backend_delete_out_of_range(monkeypatch: pytest.MonkeyPatch, tmp_path: Any) -> None:
+    pytest.importorskip("readline")
+    histfile = tmp_path / "histfile"
+    histfile.write_text("only\n")
+
+    import robotcode.repl._history as history_mod
+
+    monkeypatch.setattr(history_mod, "history_path", lambda: histfile)
+
+    from robotcode.repl._input import _readline as readline_mod
+    from robotcode.repl._input._readline import ReadlineBackend
+
+    _rl = readline_mod.readline  # type: ignore[attr-defined]
+
+    _rl.clear_history()
+    backend = ReadlineBackend()
+    assert backend.delete_history_entry(99) is False
+    assert backend.delete_history_entry(0) is False
+    assert backend.get_history() == ["only"]

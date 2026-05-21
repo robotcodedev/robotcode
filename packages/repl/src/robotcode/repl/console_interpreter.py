@@ -1,11 +1,12 @@
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Iterator, List, Optional, Union
+from typing import Any, Iterator, List, Optional, Union
 
 import click
 from robot import result, running
 from robot.running import Keyword
+from robot.running.context import EXECUTION_CONTEXTS
 
 from robotcode.plugin import Application
 
@@ -33,6 +34,33 @@ class ConsoleInterpreter(BaseInterpreter):
 
         self.executed_files: List[Path] = []
         self._input: InputBackend = pick_backend(no_history=no_history, plain=plain)
+        # REPL inputs that parsed cleanly — `.save` exports them as a
+        # runnable `.robot` file. Each entry may be multi-line.
+        self._session_lines: List[str] = []
+        # Wire the backend's F1 / future dispatcher-aware bindings into
+        # the dot-command registry. Plain / readline backends don't
+        # expose this method and are skipped.
+        if hasattr(self._input, "bind_dispatcher") and self.app is not None:
+            self._input.bind_dispatcher(self.app, self)
+
+    def set_last_result(self, result: Any) -> None:
+        """Mirror the last keyword's return value into Robot as ``${_}``.
+
+        ``None`` results are skipped so noisy ``Log`` / ``Set Suite
+        Variable`` calls don't wipe a meaningful previous value.
+        """
+        super().set_last_result(result)
+        if result is None:
+            return
+        ctx = EXECUTION_CONTEXTS.current
+        if ctx is None:
+            return
+        try:
+            ctx.variables["${_}"] = result
+        except Exception:
+            # Locked scope / shutdown phase — drop the binding rather
+            # than crash the REPL.
+            pass
 
     def get_input(self) -> Iterator[Optional[Keyword]]:
         if self.executed_files and not self.files and not self.inspect:
@@ -68,6 +96,14 @@ class ConsoleInterpreter(BaseInterpreter):
                     )
                     if len(lines) == 0 and text == "":
                         break
+                    # Only at the start of a fresh input — inside a
+                    # multi-line block `.foo` could be a user keyword
+                    # name and shouldn't be shadowed.
+                    if not lines and text.lstrip().startswith(".") and self.app is not None:
+                        from ._dot_commands import dispatch
+
+                        if dispatch(text, self.app, self):
+                            return
                 except KeyboardInterrupt:
                     if len(lines) > 0:
                         lines = []
@@ -85,6 +121,11 @@ class ConsoleInterpreter(BaseInterpreter):
                 if errors:
                     if not last_one:
                         continue
+
+                # Record cleanly-parsed inputs for `.save`. Error-only
+                # inputs are skipped so the exported file stays runnable.
+                if test.body:
+                    self._session_lines.append("\n".join(lines))
 
                 for kw in test.body:
                     yield kw

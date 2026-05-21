@@ -233,18 +233,272 @@ def test_prompt_toolkit_backend_threads_no_history(monkeypatch: pytest.MonkeyPat
 
 
 # ---------------------------------------------------------------------------
-# _bottom_toolbar — Stage 7 session-context status line
+# _bottom_toolbar — signature hint only; otherwise the row is hidden
 # ---------------------------------------------------------------------------
 
 
-def test_bottom_toolbar_shows_rf_version_and_cwd() -> None:
-    """Toolbar must always render the running RF version and cwd —
-    no execution-context lookup needed."""
+def test_bottom_toolbar_returns_none_outside_prompt_session() -> None:
+    """With no running prompt application `get_app()` raises — the
+    toolbar function returns `None` so prompt_toolkit collapses the
+    row instead of rendering a placeholder."""
     from robotcode.repl._input._prompt_toolkit import _bottom_toolbar
 
-    toolbar = _bottom_toolbar()
-    assert "RF " in toolbar
-    assert "cwd:" in toolbar
+    assert _bottom_toolbar() is None
+
+
+def test_spec_arg_items_flattens_argument_spec() -> None:
+    """`_spec_arg_items` flattens a Robot ArgumentSpec to ordered labels,
+    keeping `*args` / `**kwargs` markers and inlining defaults."""
+    from types import SimpleNamespace
+
+    from robotcode.repl._input._prompt_toolkit import _spec_arg_items
+
+    spec = SimpleNamespace(
+        positional_only=(),
+        positional_or_named=("message", "level"),
+        var_positional=None,
+        named_only=("html",),
+        var_named="kwargs",
+        defaults={"level": "INFO", "html": False},
+    )
+    items = _spec_arg_items(spec)
+    assert items == ["message", "level='INFO'", "html=False", "**kwargs"]
+
+
+def test_spec_arg_items_renders_varargs_marker() -> None:
+    from types import SimpleNamespace
+
+    from robotcode.repl._input._prompt_toolkit import _spec_arg_items
+
+    spec = SimpleNamespace(
+        positional_only=(),
+        positional_or_named=("list_",),
+        var_positional="values",
+        named_only=(),
+        var_named=None,
+        defaults={},
+    )
+    assert _spec_arg_items(spec) == ["list_", "*values"]
+
+
+def test_render_signature_highlights_active_arg() -> None:
+    """The keyword name carries `rf.keyword`; the active arg index
+    carries `rf.toolbar.active-arg`; other args carry `rf.argument`."""
+    from types import SimpleNamespace
+
+    from robotcode.repl._input._prompt_toolkit import _render_signature
+
+    spec = SimpleNamespace(
+        positional_only=(),
+        positional_or_named=("message", "level"),
+        var_positional=None,
+        named_only=(),
+        var_named=None,
+        defaults={"level": "INFO"},
+    )
+    parts = _render_signature("Log", spec, active=1)
+    styles = [s for s, _ in parts]
+    texts = [t for _, t in parts]
+    assert ("class:rf.keyword", "Log") in parts
+    # Active arg has the active-arg style; the inactive arg the default one.
+    assert "class:rf.toolbar.active-arg" in styles
+    active_label = parts[styles.index("class:rf.toolbar.active-arg")][1]
+    assert active_label == "level='INFO'"
+    assert "class:rf.argument" in styles
+    # The keyword name is followed by a separator.
+    assert "    " in texts
+
+
+def test_render_signature_no_args_keyword_only() -> None:
+    """A keyword without arguments renders just the name."""
+    from types import SimpleNamespace
+
+    from robotcode.repl._input._prompt_toolkit import _render_signature
+
+    spec = SimpleNamespace(
+        positional_only=(),
+        positional_or_named=(),
+        var_positional=None,
+        named_only=(),
+        var_named=None,
+        defaults={},
+    )
+    parts = _render_signature("No Operation", spec, active=0)
+    assert parts == [("class:rf.keyword", "No Operation")]
+
+
+def test_bottom_toolbar_renders_signature_when_cursor_in_arg_cell(monkeypatch: pytest.MonkeyPatch) -> None:
+    """When `get_app().current_buffer` reports a cursor in an argument
+    cell and the keyword is known, the toolbar returns styled tuples
+    with the keyword's signature."""
+    from types import SimpleNamespace
+
+    import robotcode.repl._input._prompt_toolkit as backend_mod
+
+    spec = SimpleNamespace(
+        positional_only=(),
+        positional_or_named=("message", "level"),
+        var_positional=None,
+        named_only=(),
+        var_named=None,
+        defaults={"level": "INFO"},
+    )
+    fake_kw = SimpleNamespace(name="Log", args=spec)
+
+    fake_buffer = SimpleNamespace(text="Log    hi", cursor_position=9)
+    fake_app = SimpleNamespace(current_buffer=fake_buffer)
+    monkeypatch.setattr(backend_mod, "get_app", lambda: fake_app)
+    monkeypatch.setattr(backend_mod, "lookup_keyword_doc", lambda name: fake_kw if name == "Log" else None)
+
+    toolbar = backend_mod._bottom_toolbar()
+    assert isinstance(toolbar, list)
+    styles = [s for s, _ in toolbar]
+    assert "class:rf.keyword" in styles
+    assert "class:rf.toolbar.active-arg" in styles
+
+
+def test_bottom_toolbar_returns_none_when_keyword_unknown(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Cursor in arg cell but no matching keyword → toolbar hidden."""
+    from types import SimpleNamespace
+
+    import robotcode.repl._input._prompt_toolkit as backend_mod
+
+    fake_buffer = SimpleNamespace(text="UnknownKW    hi", cursor_position=15)
+    fake_app = SimpleNamespace(current_buffer=fake_buffer)
+    monkeypatch.setattr(backend_mod, "get_app", lambda: fake_app)
+    monkeypatch.setattr(backend_mod, "lookup_keyword_doc", lambda name: None)
+
+    assert backend_mod._bottom_toolbar() is None
+
+
+def test_bottom_toolbar_highlights_named_arg_by_spec_position(monkeypatch: pytest.MonkeyPatch) -> None:
+    """When the cursor sits in `name=value`, the bar highlights the
+    spec position of `name`, not the cell index. So `Log    msg
+    html=True` with the cursor on `html=True` lights up `html`, not
+    `level` (which is what the positional cell index 1 would point at)."""
+    from types import SimpleNamespace
+
+    import robotcode.repl._input._prompt_toolkit as backend_mod
+
+    spec = SimpleNamespace(
+        positional_only=(),
+        positional_or_named=("message", "level", "html"),
+        var_positional=None,
+        named_only=(),
+        var_named=None,
+    )
+    fake_kw = SimpleNamespace(name="Log", args=spec)
+
+    text = "Log    msg    html=True"
+    fake_buffer = SimpleNamespace(text=text, cursor_position=len(text))
+    fake_app = SimpleNamespace(current_buffer=fake_buffer)
+    monkeypatch.setattr(backend_mod, "get_app", lambda: fake_app)
+    monkeypatch.setattr(backend_mod, "lookup_keyword_doc", lambda name: fake_kw if name == "Log" else None)
+
+    toolbar = backend_mod._bottom_toolbar()
+    assert toolbar is not None
+    # Find which arg label carries `rf.toolbar.active-arg`.
+    active = [text for style, text in toolbar if style == "class:rf.toolbar.active-arg"]
+    assert active == ["html"]
+
+
+def test_bottom_toolbar_keeps_positional_idx_for_unknown_named_arg(monkeypatch: pytest.MonkeyPatch) -> None:
+    """`name=value` where `name` is NOT a real arg → fall back to the
+    positional cell index, since Robot would treat it as a literal
+    positional value."""
+    from types import SimpleNamespace
+
+    import robotcode.repl._input._prompt_toolkit as backend_mod
+
+    spec = SimpleNamespace(
+        positional_only=(),
+        positional_or_named=("message", "level"),
+        var_positional=None,
+        named_only=(),
+        var_named=None,
+    )
+    fake_kw = SimpleNamespace(name="Log", args=spec)
+
+    # `foo=bar` in cell 1 — foo isn't a Log arg, so highlight the
+    # positional slot at index 0 (= message).
+    text = "Log    foo=bar"
+    fake_buffer = SimpleNamespace(text=text, cursor_position=len(text))
+    fake_app = SimpleNamespace(current_buffer=fake_buffer)
+    monkeypatch.setattr(backend_mod, "get_app", lambda: fake_app)
+    monkeypatch.setattr(backend_mod, "lookup_keyword_doc", lambda name: fake_kw if name == "Log" else None)
+
+    toolbar = backend_mod._bottom_toolbar()
+    assert toolbar is not None
+    active = [text for style, text in toolbar if style == "class:rf.toolbar.active-arg"]
+    assert active == ["message"]
+
+
+def test_bottom_toolbar_returns_none_when_cursor_in_keyword_cell(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Cursor still typing the keyword (cell 0) → no signature → row hidden."""
+    from types import SimpleNamespace
+
+    import robotcode.repl._input._prompt_toolkit as backend_mod
+
+    fake_buffer = SimpleNamespace(text="Lo", cursor_position=2)
+    fake_app = SimpleNamespace(current_buffer=fake_buffer)
+    monkeypatch.setattr(backend_mod, "get_app", lambda: fake_app)
+
+    assert backend_mod._bottom_toolbar() is None
+
+
+def test_prompt_toolkit_backend_get_history_reads_from_file(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """`get_history()` reflects the file content in oldest → newest order."""
+    histfile = tmp_path / "h"
+    histfile.write_text("a\nb\nc\n")
+    monkeypatch.setattr("robotcode.repl._input._prompt_toolkit.history_path", lambda: histfile)
+    backend = PromptToolkitBackend()
+    assert backend.get_history() == ["a", "b", "c"]
+
+
+def test_prompt_toolkit_backend_clear_history_truncates_file(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    histfile = tmp_path / "h"
+    histfile.write_text("a\nb\n")
+    monkeypatch.setattr("robotcode.repl._input._prompt_toolkit.history_path", lambda: histfile)
+    import robotcode.repl._history as history_mod
+
+    monkeypatch.setattr(history_mod, "history_path", lambda: histfile)
+    backend = PromptToolkitBackend()
+    backend.clear_history()
+    assert histfile.read_text() == ""
+    assert backend.get_history() == []
+
+
+def test_prompt_toolkit_backend_delete_history_entry_removes_line(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    histfile = tmp_path / "h"
+    histfile.write_text("first\nsecond\nthird\n")
+    monkeypatch.setattr("robotcode.repl._input._prompt_toolkit.history_path", lambda: histfile)
+    import robotcode.repl._history as history_mod
+
+    monkeypatch.setattr(history_mod, "history_path", lambda: histfile)
+    backend = PromptToolkitBackend()
+    assert backend.delete_history_entry(2) is True
+    assert backend.get_history() == ["first", "third"]
+    assert "second" not in histfile.read_text()
+
+
+def test_prompt_toolkit_backend_history_no_history_mode_is_read_only(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """With `--no-history`, the file is never written: clear/delete are
+    no-ops on disk."""
+    histfile = tmp_path / "h"
+    histfile.write_text("a\nb\n")
+    monkeypatch.setattr("robotcode.repl._input._prompt_toolkit.history_path", lambda: histfile)
+    import robotcode.repl._history as history_mod
+
+    monkeypatch.setattr(history_mod, "history_path", lambda: histfile)
+    backend = PromptToolkitBackend(no_history=True)
+    backend.clear_history()
+    backend.delete_history_entry(1)
+    # File untouched, since both ops short-circuit in no-history mode.
+    assert histfile.read_text() == "a\nb\n"
 
 
 def test_prompt_toolkit_backend_read_line_delegates_to_session(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:

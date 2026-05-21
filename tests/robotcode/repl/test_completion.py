@@ -18,9 +18,16 @@ from robotcode.repl._completion import (
     Candidate,
     CompletionContext,
     _clear_full_list_cache,
+    _literal_values_for_named_arg,
+    _spec_accepts_named_arg,
     candidates_for,
     candidates_for_rich,
+    current_keyword_and_arg_index,
+    current_named_arg_in_cell,
     find_cell_end,
+    lookup_keyword_doc,
+    lookup_library_doc,
+    spec_arg_position,
     tokenize,
 )
 
@@ -710,3 +717,377 @@ def test_candidates_for_variables_dotted_module_path(monkeypatch: pytest.MonkeyP
     )
     out = candidates_for(CompletionContext("variables", "myproject.config.dev", 0))
     assert out == ["myproject.config.dev"]
+
+
+# ---------------------------------------------------------------------------
+# current_keyword_and_arg_index — cursor-position → (keyword, arg_idx)
+# ---------------------------------------------------------------------------
+
+
+def test_current_kw_and_arg_in_first_cell_returns_none() -> None:
+    assert current_keyword_and_arg_index("Log", 3) is None
+
+
+def test_current_kw_and_arg_returns_arg0_in_first_arg_cell() -> None:
+    assert current_keyword_and_arg_index("Log    hello", 9) == ("Log", 0)
+
+
+def test_current_kw_and_arg_walks_cells_for_second_arg() -> None:
+    assert current_keyword_and_arg_index("Log    hello    level=DEBUG", 23) == ("Log", 1)
+
+
+def test_current_kw_and_arg_tab_separator_counts_as_cell() -> None:
+    assert current_keyword_and_arg_index("Log\thello", 6) == ("Log", 0)
+
+
+def test_current_kw_and_arg_empty_keyword_returns_none() -> None:
+    """Leading whitespace produces an empty first cell — that's not a keyword."""
+    assert current_keyword_and_arg_index("    hello", 8) is None
+
+
+def test_current_kw_and_arg_stops_at_logical_line_boundary() -> None:
+    """Cursor on the second line of a multi-line buffer reports the
+    second line's cells, not the buffer's accumulated cells."""
+    buf = "FOR    ${i}    IN RANGE    3\n    Log    hello"
+    pos = len(buf)
+    assert current_keyword_and_arg_index(buf, pos) == ("Log", 0)
+
+
+# ---------------------------------------------------------------------------
+# lookup_keyword_doc / lookup_library_doc — _kw_store walk
+# ---------------------------------------------------------------------------
+
+
+def test_lookup_keyword_doc_finds_loaded_keyword(monkeypatch: pytest.MonkeyPatch) -> None:
+    _patch_context(monkeypatch, _fake_namespace(["Log", "Set Variable"], []))
+    kw = lookup_keyword_doc("Log")
+    assert kw is not None
+    assert kw.name == "Log"
+
+
+def test_lookup_keyword_doc_normalises_case_and_whitespace(monkeypatch: pytest.MonkeyPatch) -> None:
+    _patch_context(monkeypatch, _fake_namespace(["Set Variable"], []))
+    assert lookup_keyword_doc("set variable") is not None
+    assert lookup_keyword_doc("SetVariable") is not None
+    assert lookup_keyword_doc("set_variable") is not None
+
+
+def test_lookup_keyword_doc_returns_none_for_unknown(monkeypatch: pytest.MonkeyPatch) -> None:
+    _patch_context(monkeypatch, _fake_namespace(["Log"], []))
+    assert lookup_keyword_doc("Definitely Not A Keyword") is None
+
+
+def test_lookup_keyword_doc_returns_none_without_context(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(EXECUTION_CONTEXTS, "_contexts", [])
+    assert lookup_keyword_doc("Log") is None
+
+
+def test_lookup_keyword_doc_walks_resources(monkeypatch: pytest.MonkeyPatch) -> None:
+    _patch_context(monkeypatch, _fake_namespace([], ["Custom Keyword"]))
+    kw = lookup_keyword_doc("Custom Keyword")
+    assert kw is not None
+    assert kw.name == "Custom Keyword"
+
+
+def test_lookup_library_doc_matches_loaded_library(monkeypatch: pytest.MonkeyPatch) -> None:
+    """`_fake_namespace` names its library `BuiltIn` — case-insensitive match."""
+    _patch_context(monkeypatch, _fake_namespace(["Log"], []))
+    lib = lookup_library_doc("builtin")
+    assert lib is not None
+    assert lib.name == "BuiltIn"
+
+
+def test_lookup_library_doc_returns_none_for_unknown(monkeypatch: pytest.MonkeyPatch) -> None:
+    _patch_context(monkeypatch, _fake_namespace(["Log"], []))
+    assert lookup_library_doc("ThisLibIsNotLoaded") is None
+
+
+# ---------------------------------------------------------------------------
+# Embedded-argument completion — `name=<partial>` in an argument cell
+# ---------------------------------------------------------------------------
+
+
+def _kw_with_named_arg(
+    name: str,
+    arg_name: str,
+    *,
+    literals: Any = None,
+    var_named: Any = None,
+) -> Any:
+    """Stand-in for a runtime keyword with `kw.args` ArgumentSpec.
+
+    `literals=None` builds a spec where `arg_name` exists but carries
+    no Literal type (testing the RF 5/6 fallback). `literals=[...]`
+    builds a `TypeInfo` shape with `type=Literal` so the runtime
+    literal-extraction path yields the listed values.
+    """
+    from typing import Literal as _Literal
+
+    types: Dict[str, Any] = {}
+    if literals is not None:
+        # Robot's runtime TypeInfo stores nested literal names *with*
+        # surrounding quotes — `_literal_values_for_named_arg` strips
+        # them, so we mirror that here for fidelity.
+        nested = [SimpleNamespace(name=f"'{v}'") for v in literals]
+        types[arg_name] = SimpleNamespace(type=_Literal, nested=nested, is_union=False)
+    spec = SimpleNamespace(
+        positional_or_named=(arg_name,),
+        named_only=(),
+        var_named=var_named,
+        types=types,
+    )
+    return SimpleNamespace(name=name, args=spec)
+
+
+def _patch_kw_lookup(monkeypatch: pytest.MonkeyPatch, kws_by_name: Dict[str, Any]) -> None:
+    """Replace `_completion.lookup_keyword_doc` with a dict lookup.
+
+    Both `tokenize` (for verifying the arg name is real) and
+    `candidates_for_rich` (for extracting Literal values) go through
+    `lookup_keyword_doc`, so patching once covers both paths."""
+    import robotcode.repl._completion as completion_mod
+
+    monkeypatch.setattr(completion_mod, "lookup_keyword_doc", lambda name: kws_by_name.get(name))
+
+
+def test_tokenize_detects_named_arg_value_when_arg_is_real(monkeypatch: pytest.MonkeyPatch) -> None:
+    _patch_kw_lookup(monkeypatch, {"Log": _kw_with_named_arg("Log", "level")})
+    ctx = tokenize("Log    level=DE", cursor=15)
+    assert ctx.kind == "named_arg_value"
+    assert ctx.keyword_name == "Log"
+    assert ctx.arg_name == "level"
+    assert ctx.prefix == "DE"
+
+
+def test_tokenize_named_arg_empty_value(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Cursor right after `=` → empty prefix, ready to receive a literal."""
+    _patch_kw_lookup(monkeypatch, {"Log": _kw_with_named_arg("Log", "level")})
+    ctx = tokenize("Log    level=", cursor=13)
+    assert ctx.kind == "named_arg_value"
+    assert ctx.arg_name == "level"
+    assert ctx.prefix == ""
+
+
+def test_tokenize_name_equals_value_for_unknown_arg_is_plain_argument(monkeypatch: pytest.MonkeyPatch) -> None:
+    """`Log    foo=bar` — `foo` is NOT a Log argument, so Robot would
+    pass `foo=bar` as a literal positional value. Tokenize mirrors
+    that classification: `argument`, not `named_arg_value`."""
+    _patch_kw_lookup(monkeypatch, {"Log": _kw_with_named_arg("Log", "level")})
+    ctx = tokenize("Log    foo=bar", cursor=14)
+    assert ctx.kind == "argument"
+
+
+def test_tokenize_name_equals_value_for_unknown_keyword_is_plain_argument(monkeypatch: pytest.MonkeyPatch) -> None:
+    """No matching keyword in the live context → fall back to plain
+    argument context (can't verify, so don't assume)."""
+    _patch_kw_lookup(monkeypatch, {})
+    ctx = tokenize("UnknownKW    foo=bar", cursor=20)
+    assert ctx.kind == "argument"
+
+
+def test_tokenize_kwargs_keyword_accepts_any_named_arg(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A keyword with `**kwargs` accepts arbitrary `name=value` pairs,
+    so even an unfamiliar name is a valid named-arg context."""
+    _patch_kw_lookup(
+        monkeypatch,
+        {"Kwargs Kw": _kw_with_named_arg("Kwargs Kw", "known", var_named="kwargs")},
+    )
+    ctx = tokenize("Kwargs Kw    anything=42", cursor=24)
+    assert ctx.kind == "named_arg_value"
+    assert ctx.arg_name == "anything"
+
+
+def test_tokenize_argument_without_equals_stays_plain_argument() -> None:
+    ctx = tokenize("Log    hello", cursor=12)
+    assert ctx.kind == "argument"
+
+
+def test_candidates_for_rich_named_arg_returns_filtered_literals(monkeypatch: pytest.MonkeyPatch) -> None:
+    _patch_kw_lookup(
+        monkeypatch,
+        {"Log": _kw_with_named_arg("Log", "level", literals=["DEBUG", "INFO", "WARN", "ERROR"])},
+    )
+    ctx = tokenize("Log    level=DE", cursor=15)
+    out = candidates_for_rich(ctx)
+    assert [c.label for c in out] == ["DEBUG"]
+
+
+def test_candidates_for_rich_named_arg_case_insensitive_match(monkeypatch: pytest.MonkeyPatch) -> None:
+    _patch_kw_lookup(monkeypatch, {"Log": _kw_with_named_arg("Log", "level", literals=["DEBUG", "INFO"])})
+    ctx = tokenize("Log    level=de", cursor=15)
+    out = candidates_for_rich(ctx)
+    assert [c.label for c in out] == ["DEBUG"]
+
+
+def test_candidates_for_rich_named_arg_empty_prefix_returns_all(monkeypatch: pytest.MonkeyPatch) -> None:
+    _patch_kw_lookup(
+        monkeypatch,
+        {"Log": _kw_with_named_arg("Log", "level", literals=["DEBUG", "INFO", "WARN"])},
+    )
+    ctx = tokenize("Log    level=", cursor=13)
+    out = candidates_for_rich(ctx)
+    assert {c.label for c in out} == {"DEBUG", "INFO", "WARN"}
+
+
+def test_candidates_for_rich_named_arg_no_literal_type(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Argument exists but has no `Literal[...]` type → no candidates,
+    no crash. Covers RF 5/6 too: `spec.types` there stores bare classes
+    that the TypeInfo walk simply doesn't match on."""
+    _patch_kw_lookup(monkeypatch, {"Set Variable": _kw_with_named_arg("Set Variable", "value", literals=None)})
+    ctx = tokenize("Set Variable    value=foo", cursor=25)
+    # Tokenize still classifies as named_arg_value (arg name is valid)
+    # but the literal-value lookup finds nothing.
+    assert ctx.kind == "named_arg_value"
+    assert candidates_for_rich(ctx) == []
+
+
+# ---------------------------------------------------------------------------
+# `_spec_accepts_named_arg` — direct unit tests against the helper
+# ---------------------------------------------------------------------------
+
+
+def test_spec_accepts_named_arg_in_positional_or_named() -> None:
+    spec = SimpleNamespace(positional_or_named=("level", "msg"), named_only=(), var_named=None)
+    assert _spec_accepts_named_arg(spec, "level") is True
+    assert _spec_accepts_named_arg(spec, "msg") is True
+    assert _spec_accepts_named_arg(spec, "unknown") is False
+
+
+def test_spec_accepts_named_arg_in_named_only() -> None:
+    spec = SimpleNamespace(positional_or_named=(), named_only=("flag",), var_named=None)
+    assert _spec_accepts_named_arg(spec, "flag") is True
+    assert _spec_accepts_named_arg(spec, "other") is False
+
+
+def test_spec_accepts_named_arg_with_var_named_accepts_anything() -> None:
+    spec = SimpleNamespace(positional_or_named=(), named_only=(), var_named="kwargs")
+    assert _spec_accepts_named_arg(spec, "whatever_name") is True
+
+
+def test_spec_accepts_named_arg_handles_none_spec() -> None:
+    assert _spec_accepts_named_arg(None, "anything") is False
+
+
+# ---------------------------------------------------------------------------
+# `_literal_values_for_named_arg` — TypeInfo walk
+# ---------------------------------------------------------------------------
+
+
+def test_literal_values_for_named_arg_extracts_literals() -> None:
+    from typing import Literal as _Literal
+
+    nested = [SimpleNamespace(name=f"'{v}'") for v in ("DEBUG", "INFO")]
+    spec = SimpleNamespace(
+        types={"level": SimpleNamespace(type=_Literal, nested=nested, is_union=False)},
+    )
+    assert _literal_values_for_named_arg(spec, "level") == ["DEBUG", "INFO"]
+
+
+def test_literal_values_for_named_arg_handles_union_of_literal() -> None:
+    """`level: Literal['A'] | None` shows up as union — walk it."""
+    from typing import Literal as _Literal
+
+    literal_branch = SimpleNamespace(
+        type=_Literal,
+        nested=[SimpleNamespace(name="'A'")],
+        is_union=False,
+    )
+    none_branch = SimpleNamespace(type=type(None), nested=None, is_union=False)
+    union_ti = SimpleNamespace(type=None, nested=[literal_branch, none_branch], is_union=True)
+    spec = SimpleNamespace(types={"x": union_ti})
+    assert _literal_values_for_named_arg(spec, "x") == ["A"]
+
+
+def test_literal_values_for_named_arg_arg_not_in_types() -> None:
+    spec = SimpleNamespace(types={})
+    assert _literal_values_for_named_arg(spec, "level") == []
+
+
+def test_literal_values_for_named_arg_none_spec() -> None:
+    assert _literal_values_for_named_arg(None, "level") == []
+
+
+# ---------------------------------------------------------------------------
+# `current_named_arg_in_cell` — read the `name=` from the active cell
+# ---------------------------------------------------------------------------
+
+
+def test_current_named_arg_in_cell_finds_name() -> None:
+    assert current_named_arg_in_cell("Log    level=DEBUG", 18) == "level"
+
+
+def test_current_named_arg_in_cell_empty_value_after_equals() -> None:
+    assert current_named_arg_in_cell("Log    level=", 13) == "level"
+
+
+def test_current_named_arg_in_cell_no_equals_returns_none() -> None:
+    assert current_named_arg_in_cell("Log    hello", 12) is None
+
+
+def test_current_named_arg_in_cell_first_cell_returns_none() -> None:
+    assert current_named_arg_in_cell("Log", 3) is None
+
+
+def test_current_named_arg_in_cell_walks_past_indent() -> None:
+    """Continuation-line indent shouldn't trick the cell walk."""
+    buf = "FOR    ${i}    IN RANGE    3\n    Log    level=DEBUG"
+    assert current_named_arg_in_cell(buf, len(buf)) == "level"
+
+
+# ---------------------------------------------------------------------------
+# `spec_arg_position` — flat-list display index for highlighting
+# ---------------------------------------------------------------------------
+
+
+def test_spec_arg_position_first_positional() -> None:
+    spec = SimpleNamespace(
+        positional_only=(),
+        positional_or_named=("message", "level", "html"),
+        var_positional=None,
+        named_only=(),
+        var_named=None,
+    )
+    assert spec_arg_position(spec, "message") == 0
+    assert spec_arg_position(spec, "level") == 1
+    assert spec_arg_position(spec, "html") == 2
+
+
+def test_spec_arg_position_accounts_for_var_positional() -> None:
+    spec = SimpleNamespace(
+        positional_only=(),
+        positional_or_named=("a",),
+        var_positional="rest",
+        named_only=("flag",),
+        var_named=None,
+    )
+    # Display order: a, *rest, flag.
+    assert spec_arg_position(spec, "a") == 0
+    assert spec_arg_position(spec, "rest") == 1
+    assert spec_arg_position(spec, "flag") == 2
+
+
+def test_spec_arg_position_unknown_with_var_named_falls_into_kwargs() -> None:
+    spec = SimpleNamespace(
+        positional_only=(),
+        positional_or_named=("a",),
+        var_positional=None,
+        named_only=(),
+        var_named="kw",
+    )
+    # Unknown name → the **kw slot (index 1, after `a`).
+    assert spec_arg_position(spec, "unknown") == 1
+
+
+def test_spec_arg_position_unknown_without_kwargs_is_none() -> None:
+    spec = SimpleNamespace(
+        positional_only=(),
+        positional_or_named=("a",),
+        var_positional=None,
+        named_only=(),
+        var_named=None,
+    )
+    assert spec_arg_position(spec, "unknown") is None
+
+
+def test_spec_arg_position_none_spec() -> None:
+    assert spec_arg_position(None, "a") is None

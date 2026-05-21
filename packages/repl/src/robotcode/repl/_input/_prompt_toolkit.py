@@ -14,9 +14,10 @@ arrow-up recall.
 """
 
 from pathlib import Path
-from typing import Any, Iterator, Optional
+from typing import Any, Callable, Iterator, List, Optional, Tuple
 
 from prompt_toolkit import PromptSession
+from prompt_toolkit.application import get_app
 from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
 from prompt_toolkit.buffer import Buffer
 from prompt_toolkit.completion import CompleteEvent, Completer, Completion
@@ -26,10 +27,17 @@ from prompt_toolkit.history import History
 from prompt_toolkit.key_binding import KeyBindings, KeyPressEvent
 from prompt_toolkit.styles import Style
 
-from robotcode.robot.utils import get_robot_version_str
-
-from .._completion import CELL_SEPARATOR, candidates_for_rich, find_cell_end, tokenize
-from .._history import history_path
+from .._completion import (
+    CELL_SEPARATOR,
+    candidates_for_rich,
+    current_keyword_and_arg_index,
+    current_named_arg_in_cell,
+    find_cell_end,
+    lookup_keyword_doc,
+    spec_arg_position,
+    tokenize,
+)
+from .._history import delete_history_line_in_file, history_path, truncate_history_file
 from .._indent import compute_indent, has_open_block
 from ._lexer import RobotLexer
 
@@ -119,18 +127,12 @@ class _ReadlineCompatHistory(History):
 
 
 class _RobotCompleter(Completer):
-    """Adapts `candidates_for_rich()` to prompt_toolkit's Completion protocol.
+    """Adapts `candidates_for_rich` to prompt_toolkit's Completion protocol.
 
-    Each candidate's `detail` (first-line keyword docstring, import
-    kind, variable repr) becomes the popup's `display_meta` — shown
-    grey-italic next to the label so users can see *what* a keyword
-    does without leaving the prompt.
-
-    `suppress_once` is a one-shot fuse used by the Esc-revert path:
-    when the Esc handler restores text via `buf.document = …`,
-    `complete_while_typing` would normally re-fire and re-open the
-    popup. Setting this flag right before the restore makes the next
-    `get_completions` call yield nothing, closing that loop.
+    Each candidate's ``detail`` becomes the popup's ``display_meta``,
+    shown grey-italic beside the label. ``suppress_once`` is a one-shot
+    fuse the Esc-revert path sets to keep ``complete_while_typing``
+    from re-firing on the restored buffer.
     """
 
     def __init__(self) -> None:
@@ -145,18 +147,15 @@ class _RobotCompleter(Completer):
         text = document.text_before_cursor
         ctx = tokenize(text, len(text))
         candidates = candidates_for_rich(ctx)
-        # `start_position` is signed and negative — it tells
-        # prompt_toolkit how many chars *before* the cursor to replace
-        # with the completion's text.
+        # `start_position` is signed and negative — chars before the
+        # cursor that prompt_toolkit should replace.
         start = ctx.replace_start - len(text)
         for cand in candidates:
             yield Completion(cand.label, start_position=start, display_meta=cand.detail)
 
 
 def _find_robot_completer(buf: Buffer) -> Optional["_RobotCompleter"]:
-    """Walk past any wrapping completers (e.g. `ThreadedCompleter`)
-    to find our `_RobotCompleter` instance — so the Esc handler can
-    poke `suppress_once` on it."""
+    """Locate the buffer's `_RobotCompleter`, walking past wrappers like `ThreadedCompleter`."""
     c: Any = buf.completer
     while c is not None:
         if isinstance(c, _RobotCompleter):
@@ -166,18 +165,14 @@ def _find_robot_completer(buf: Buffer) -> Optional["_RobotCompleter"]:
 
 
 def _accept_highlighted_completion(buf: Buffer) -> None:
-    """Close the popup, keeping the highlighted candidate's preview.
+    """Commit the popup's highlighted candidate as-is.
 
-    prompt_toolkit's menu writes the candidate's text into the buffer
-    as a live preview when the user arrows onto it; clearing
-    `complete_state` makes that preview permanent. Calling
-    `apply_completion` here would re-do delete+insert from the wrong
-    (post-preview) cursor and produce `LoLog`/`LLog` duplication.
-
-    For *keyword* completions we then prep the cell for argument
-    input: delete any leftover text in the current keyword cell (so a
-    mid-cell completion replaces the whole keyword, not just the
-    prefix) and append a cell separator if no argument follows yet.
+    Clearing ``complete_state`` keeps prompt_toolkit's live preview as
+    the final buffer text. (Calling ``apply_completion`` here would
+    re-do delete+insert from the post-preview cursor and produce
+    duplicated prefixes like ``LoLog``.) For keyword completions we
+    also trim any leftover text in the current cell and append a cell
+    separator so the user can start typing the first argument.
     """
     buf.complete_state = None
     text = buf.text
@@ -194,31 +189,21 @@ def _accept_highlighted_completion(buf: Buffer) -> None:
 
 
 def _on_completion_state_changed(buf: Buffer) -> None:
-    """Bookkeeping that runs whenever `complete_state` changes:
+    """Bookkeeping fired once when the completion popup first opens.
 
-    1. **Snapshot the literal original** on `state` so the Esc-revert
-       path can restore the buffer to exactly what it looked like
-       before the popup opened (cell-trim below modifies
-       `original_document`, so we can't recover the literal from
-       there afterwards).
-    2. **Trim the forward-cell** from `original_document` when the
-       cursor sits mid-keyword-cell — prompt_toolkit's
-       `Completion.start_position` only deletes text *before* the
-       cursor; without this trim, picking `Log To Console` while the
-       cursor sits before the `o` in `Log  hello` would render as
-       `Log To Consoleog  hello`.
-
-    Both steps fire only when the popup first opens
-    (`complete_index is None`); arrow navigation re-fires this
-    handler but we no-op on it.
+    Snapshots the buffer state under ``state._literal_original`` so
+    the Esc handler can restore it, and trims any forward-cell text
+    from ``state.original_document`` so picking a longer keyword
+    mid-cell renders cleanly (otherwise ``Log<cursor>  hello`` →
+    ``Log To Console`` would render as ``Log To Consoleog  hello``).
     """
     state = buf.complete_state
     if state is None:
         return
     if state.complete_index is not None:
-        return  # navigation, not a fresh popup
+        return  # arrow navigation, not a fresh popup
     if getattr(state, "_literal_original", None) is not None:
-        return  # already snapshotted
+        return
     text = state.original_document.text
     pos = state.original_document.cursor_position
     state._literal_original = (text, pos)  # type: ignore[attr-defined]
@@ -231,19 +216,16 @@ def _on_completion_state_changed(buf: Buffer) -> None:
 
 
 def _insert_indented_newline(buf: Buffer) -> None:
-    """Append a newline followed by the Auto-Indent for the next line.
-
-    `+ [""]` extends the line list with an empty sentinel so the
-    indent is computed for the line the user is *about to type*, not
-    the line they just finished. Module-level for direct unit-test
-    access — the key-binding handlers in `_build_keybindings()` just
-    forward to here.
-    """
+    """Insert a newline + auto-indent for the line the user is about to type."""
+    # `+ [""]` extends the list with an empty sentinel so `compute_indent`
+    # works out the indent for the *next* line, not the one just finished.
     indent = compute_indent([*buf.text.splitlines(), ""])
     buf.insert_text("\n" + indent)
 
 
-def _build_keybindings() -> KeyBindings:
+def _build_keybindings(
+    get_dispatcher: Optional[Callable[[], Optional[Tuple[Any, Any]]]] = None,
+) -> KeyBindings:
     """Bindings for the multi-line buffer:
 
     - `Enter` is smart: accepts a highlighted completion if the popup
@@ -266,6 +248,11 @@ def _build_keybindings() -> KeyBindings:
       argument-name completions, so Tab is repurposed as a typing
       accelerator. In keyword / variable / import contexts Tab keeps
       prompt_toolkit's default completion behaviour.
+    - `F1` runs `.help` when a dispatcher (Application + interpreter)
+      has been supplied. Other dot-command shortcuts (`^L` clear,
+      `^D` exit, `^R` reverse-search) stay on prompt_toolkit's
+      built-in bindings — overriding them would mean re-implementing
+      a feature we already get for free.
 
     Shift-Enter is not bound: most terminals send the same byte as
     plain Enter, so the binding couldn't fire portably. Alt-Enter
@@ -320,6 +307,21 @@ def _build_keybindings() -> KeyBindings:
             buf.document = Document(text, pos)
         buf.cancel_completion()
 
+    if get_dispatcher is not None:
+
+        @kb.add("f1")
+        def _help_shortcut(event: KeyPressEvent) -> None:
+            del event
+            disp = get_dispatcher()
+            if disp is None:
+                return
+            # Import locally so circular-import risk stays nil — the
+            # dot-commands module imports from `_completion`, which
+            # this backend also touches transitively.
+            from .._dot_commands import dispatch
+
+            dispatch(".help", *disp)
+
     @kb.add("tab")
     def _smart_tab(event: KeyPressEvent) -> None:
         # Tab's role depends on what's on screen, *and* on the buffer
@@ -342,7 +344,11 @@ def _build_keybindings() -> KeyBindings:
             buf.complete_next()
             return
         text = buf.document.text_before_cursor
-        if tokenize(text, len(text)).kind == "argument":
+        # Both `argument` and `named_arg_value` are argument cells —
+        # Tab inserts a cell separator in either case. The Literal-value
+        # popup for valid named-args appears via complete_while_typing
+        # as the user types past the `=`.
+        if tokenize(text, len(text)).kind in ("argument", "named_arg_value"):
             buf.insert_text(CELL_SEPARATOR)
         else:
             buf.start_completion(insert_common_part=True)
@@ -351,30 +357,92 @@ def _build_keybindings() -> KeyBindings:
 
 
 def _continuation_prompt(width: int, line_number: int, soft_wrapped: int) -> str:
-    """Show `... ` on every continuation line of the multi-line buffer,
-    matching the `>>> ` / `... ` pair the readline backend produces."""
     del line_number, soft_wrapped
     return ("... ").rjust(width)
 
 
-def _bottom_toolbar() -> str:
-    """Render the bottom status line: RF version + cwd.
+def _spec_arg_items(spec: Any) -> List[str]:
+    """Flatten an ``ArgumentSpec`` into ordered display labels.
 
-    Called on every render cycle of the prompt — must stay cheap.
+    Each label carries its kind marker (``*args``, ``**kwargs``) and
+    default value when one is set. The order matches the indices
+    `spec_arg_position` returns.
+    """
+    items: List[str] = []
+    defaults = getattr(spec, "defaults", None) or {}
+    for name in getattr(spec, "positional_only", ()) or ():
+        items.append(name)
+    for name in getattr(spec, "positional_or_named", ()) or ():
+        items.append(name)
+    var_positional = getattr(spec, "var_positional", None)
+    if var_positional:
+        items.append(f"*{var_positional}")
+    for name in getattr(spec, "named_only", ()) or ():
+        items.append(name)
+    var_named = getattr(spec, "var_named", None)
+    if var_named:
+        items.append(f"**{var_named}")
+
+    def with_default(label: str) -> str:
+        bare = label.lstrip("*")
+        if bare in defaults:
+            return f"{label}={defaults[bare]!r}"
+        return label
+
+    return [with_default(i) for i in items]
+
+
+def _render_signature(name: str, spec: Any, active: int) -> List[Tuple[str, str]]:
+    """Styled `<keyword>    arg1 · arg2 · …` with `active` highlighted."""
+    parts: List[Tuple[str, str]] = [("class:rf.keyword", name)]
+    items = _spec_arg_items(spec)
+    if not items:
+        return parts
+    parts.append(("", "    "))
+    for i, label in enumerate(items):
+        if i > 0:
+            parts.append(("", " · "))
+        style = "class:rf.toolbar.active-arg" if i == active else "class:rf.argument"
+        parts.append((style, label))
+    return parts
+
+
+def _bottom_toolbar() -> Optional[List[Tuple[str, str]]]:
+    """Bottom status line — keyword signature when the cursor sits in an
+    argument cell, else nothing (the bar is hidden).
+
+    Returning ``None`` lets prompt_toolkit collapse the toolbar row
+    entirely, so the prompt stays clean when there's no context-specific
+    help to render.
     """
     try:
-        cwd = str(Path.cwd())
-    except OSError:
-        # Working directory was deleted under us — happens in CI
-        # cleanup races. Drop the cwd rather than crash the toolbar.
-        cwd = "?"
-    return f" RF {get_robot_version_str()} · cwd: {cwd}"
+        buf = get_app().current_buffer
+    except Exception:
+        return None
+
+    pos = current_keyword_and_arg_index(buf.text, buf.cursor_position)
+    if pos is None:
+        return None
+    name, idx = pos
+    kw = lookup_keyword_doc(name)
+    if kw is None:
+        return None
+    spec = getattr(kw, "args", None) or getattr(kw, "arguments", None)
+    if spec is None:
+        return None
+    # If the cursor sits in a `name=value` cell, follow the named arg's
+    # spec position instead of the positional cell index — otherwise
+    # `Log    msg    html=True` would still highlight `level`.
+    named = current_named_arg_in_cell(buf.text, buf.cursor_position)
+    if named is not None:
+        named_idx = spec_arg_position(spec, named)
+        if named_idx is not None:
+            idx = named_idx
+    return [("", " "), *_render_signature(name, spec, idx)]
 
 
 # Default colour theme. Maps the style classes the `RobotLexer` emits
-# (and the completion-popup default classes) to ANSI / true-colour
-# CSS-style declarations. Spätere PR könnte env-var-/config-toggle
-# für theme-switching nachreichen.
+# (and the popup default classes) to ANSI / true-colour declarations.
 _DEFAULT_STYLE = Style.from_dict(
     {
         "rf.keyword": "#5fafd7 bold",
@@ -390,6 +458,7 @@ _DEFAULT_STYLE = Style.from_dict(
         "rf.variable.type": "#d7af5f",
         "rf.variable.expr": "#d75faf bold",
         "rf.variable.python": "#af87d7",
+        "rf.toolbar.active-arg": "bold #d75f87",
     }
 )
 
@@ -397,39 +466,31 @@ _DEFAULT_STYLE = Style.from_dict(
 class PromptToolkitBackend:
     """Power-user backend on top of `PromptSession`.
 
-    Most of the polish — candidate popup, Ctrl-R reverse search,
-    bracket auto-match, Cursor-up/down inside multi-line buffers —
-    comes from `PromptSession` directly; we just plug in the
-    Robot-aware completer, a history shim that shares the readline
-    backend's file, and multi-line key bindings that mirror Robot's
-    block syntax (Smart-Enter / Shift-Enter / Auto-Indent).
-
-    Completions appear **as you type** (`complete_while_typing=True`)
-    and are computed in a background thread (`complete_in_thread=True`)
-    so the UI never blocks on Robot's library / resource discovery.
-    The expensive `complete_*_import(None, …)` calls are also cached
-    for the lifetime of the session in `_completion._FULL_LIST_CACHE`,
-    so even the first keystroke after `Import Library    ` only walks
-    `sys.path` once.
+    Brings the candidate popup, Ctrl-R reverse search, multi-line
+    cursor movement, Robot-aware syntax highlighting and the
+    signature-aware bottom toolbar. Selected by `pick_backend` when
+    ``prompt_toolkit>=3.0`` is installed.
     """
 
     def __init__(self, *, no_history: bool = False) -> None:
+        self._no_history = no_history
+        self._history = _ReadlineCompatHistory(history_path(), no_history=no_history)
+        # Filled by `bind_dispatcher`. F1 reaches the dispatcher via a
+        # getter closure so a late binding still wires in correctly.
+        self._dispatcher: Optional[Tuple[Any, Any]] = None
         self._session: PromptSession[str] = PromptSession(
-            history=_ReadlineCompatHistory(history_path(), no_history=no_history),
+            history=self._history,
             completer=_RobotCompleter(),
             auto_suggest=AutoSuggestFromHistory(),
             complete_while_typing=True,
             complete_in_thread=True,
             multiline=True,
-            key_bindings=_build_keybindings(),
+            key_bindings=_build_keybindings(lambda: self._dispatcher),
             prompt_continuation=_continuation_prompt,
             lexer=RobotLexer(),
             style=_DEFAULT_STYLE,
             bottom_toolbar=_bottom_toolbar,
         )
-        # Hook the buffer so the completion state carries (a) a snapshot
-        # of the literal original (for Esc-revert) and (b) a trimmed
-        # original_document (for clean mid-keyword preview rendering).
         self._session.default_buffer.on_completions_changed += _on_completion_state_changed
 
     def read_line(
@@ -440,8 +501,32 @@ class PromptToolkitBackend:
         prefill: str = "",
     ) -> str:
         del multiline_continuation  # PromptSession handles continuation inline
-        # `PromptSession.prompt` raises `KeyboardInterrupt` on Ctrl-C
-        # and `EOFError` on Ctrl-D — same exceptions as the builtin
-        # `input()`, so `ConsoleInterpreter`'s existing handlers cover
-        # both without further glue.
         return self._session.prompt(prompt, default=prefill)
+
+    def bind_dispatcher(self, app: Any, interpreter: Any) -> None:
+        """Wire the ``(app, interpreter)`` pair the F1-help shortcut routes to."""
+        self._dispatcher = (app, interpreter)
+
+    # ------------------------------------------------------------------
+    # History access for `.history`. The on-disk file is the source of
+    # truth (shared with the readline backend); prompt_toolkit's lazy
+    # in-memory cache is invalidated whenever we write through.
+    # ------------------------------------------------------------------
+
+    def get_history(self) -> List[str]:
+        return list(reversed(list(self._history.load_history_strings())))
+
+    def clear_history(self) -> None:
+        if not self._no_history:
+            truncate_history_file()
+        self._history._loaded = False
+        self._history._loaded_strings = []
+
+    def delete_history_entry(self, idx: int) -> bool:
+        if self._no_history:
+            return False
+        ok = delete_history_line_in_file(idx)
+        if ok:
+            self._history._loaded = False
+            self._history._loaded_strings = []
+        return ok

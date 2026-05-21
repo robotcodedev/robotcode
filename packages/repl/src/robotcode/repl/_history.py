@@ -4,10 +4,8 @@ The history file lives under the robotcode cache directory: inside a
 project (`{project_root}/.robotcode_cache/`) when one is detected, or
 in the per-user platform cache otherwise. The `ROBOTCODE_CACHE_DIR`
 env var overrides both, matching the analyzer's existing convention.
-
-Stage 1 wires this into the readline backend. Stage 3 reuses
-`history_path()` for prompt_toolkit's `FileHistory`, so switching
-backends never loses history.
+Readline and prompt_toolkit both consume `history_path()` so switching
+between backends doesn't lose entries.
 """
 
 import atexit
@@ -115,6 +113,40 @@ def _dedup_history(readline_module: ModuleType) -> None:
     # Remove from highest index down so earlier indices stay valid.
     for idx in to_drop:
         readline_module.remove_history_item(idx)
+
+
+def truncate_history_file(path: Optional[Path] = None) -> None:
+    """Wipe the on-disk history file (zero-byte truncate).
+
+    Used by `.history clear`. Missing file is treated as already-empty.
+    """
+    target = path or history_path()
+    try:
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text("", encoding="utf-8")
+    except OSError:
+        pass
+
+
+def delete_history_line_in_file(idx: int, path: Optional[Path] = None) -> bool:
+    """Remove the 1-based line at ``idx`` from the history file.
+
+    Returns ``True`` when a line was actually dropped, ``False`` when
+    the file is missing or the index falls outside its bounds.
+    """
+    target = path or history_path()
+    try:
+        lines = target.read_text(encoding="utf-8", errors="replace").splitlines()
+    except (FileNotFoundError, OSError):
+        return False
+    if not (1 <= idx <= len(lines)):
+        return False
+    del lines[idx - 1]
+    try:
+        target.write_text("\n".join(lines) + ("\n" if lines else ""), encoding="utf-8")
+    except OSError:
+        return False
+    return True
 
 
 def attach_save_on_exit(readline_module: ModuleType, path: Optional[Path] = None) -> None:

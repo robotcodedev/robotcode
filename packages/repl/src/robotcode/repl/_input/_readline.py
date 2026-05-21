@@ -24,7 +24,13 @@ except ImportError:
     import readline  # type: ignore[import-not-found,unused-ignore]
 
 from .._completion import candidates_for, tokenize
-from .._history import attach_save_on_exit, dedup_last_entry, load_into_readline
+from .._history import (
+    attach_save_on_exit,
+    dedup_last_entry,
+    delete_history_line_in_file,
+    load_into_readline,
+    truncate_history_file,
+)
 
 
 def _is_libedit() -> bool:
@@ -73,10 +79,38 @@ class ReadlineBackend:
     """
 
     def __init__(self, *, no_history: bool = False) -> None:
+        self._no_history = no_history
         if not no_history:
             load_into_readline(readline)
             attach_save_on_exit(readline)
         self._install_completer()
+
+    # ------------------------------------------------------------------
+    # History access — backs the `.history` dot-command. Reads from
+    # readline's in-memory ring (always up-to-date with the current
+    # session, even when --no-history is set) and writes through to
+    # the shared on-disk file the prompt_toolkit backend also uses.
+    # ------------------------------------------------------------------
+
+    def get_history(self) -> List[str]:
+        length = readline.get_current_history_length()
+        # readline indices are 1-based.
+        return [readline.get_history_item(i) or "" for i in range(1, length + 1)]
+
+    def clear_history(self) -> None:
+        readline.clear_history()
+        if not self._no_history:
+            truncate_history_file()
+
+    def delete_history_entry(self, idx: int) -> bool:
+        length = readline.get_current_history_length()
+        if not (1 <= idx <= length):
+            return False
+        # `remove_history_item` is 0-based.
+        readline.remove_history_item(idx - 1)
+        if not self._no_history:
+            delete_history_line_in_file(idx)
+        return True
 
     def read_line(
         self,

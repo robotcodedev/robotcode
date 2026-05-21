@@ -388,6 +388,56 @@ def test_esc_after_arrow_reverts_to_literal_original() -> None:
     assert buf.complete_state is None
 
 
+def test_build_keybindings_does_not_shadow_ctrl_r_for_reverse_search() -> None:
+    """`Ctrl-R` is prompt_toolkit's default reverse-history-search binding
+    in Emacs mode. We must NOT add our own `c-r` binding — otherwise we
+    accidentally disable a feature users expect from every modern REPL."""
+    kb = _build_keybindings()
+    bound_keys = [[str(k) for k in b.keys] for b in kb.bindings]
+    assert ["Keys.ControlR"] not in bound_keys, (
+        "Ctrl-R must stay unbound so prompt_toolkit's reverse-history-search runs."
+    )
+
+
+def test_build_keybindings_omits_f1_when_no_dispatcher() -> None:
+    """Without a dispatcher (typical test setup), F1 stays unbound so
+    we don't accidentally fire `dispatch` against a stale reference."""
+    kb = _build_keybindings()
+    bound_keys = [[str(k) for k in b.keys] for b in kb.bindings]
+    assert ["Keys.F1"] not in bound_keys
+
+
+def test_build_keybindings_binds_f1_when_dispatcher_provided() -> None:
+    """A non-None dispatcher getter installs the F1 → `.help` binding."""
+    kb = _build_keybindings(lambda: (object(), object()))
+    bound_keys = [[str(k) for k in b.keys] for b in kb.bindings]
+    assert ["Keys.F1"] in bound_keys
+
+
+def test_f1_calls_dispatch_with_help(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Pressing F1 with a dispatcher set fires `dispatch('.help', ...)`."""
+    calls: list[tuple[str, object, object]] = []
+
+    import robotcode.repl._dot_commands as dot_mod
+
+    def fake_dispatch(line: str, app: object, interp: object) -> bool:
+        calls.append((line, app, interp))
+        return True
+
+    monkeypatch.setattr(dot_mod, "dispatch", fake_dispatch)
+
+    fake_app = object()
+    fake_interp = object()
+    kb = _build_keybindings(lambda: (fake_app, fake_interp))
+    f1_handler = next(b for b in kb.bindings if [str(k) for k in b.keys] == ["Keys.F1"]).handler
+
+    # Build a stub KeyPressEvent — only what the handler touches.
+    event = type("Ev", (), {})()
+    f1_handler(event)
+
+    assert calls == [(".help", fake_app, fake_interp)]
+
+
 def test_build_keybindings_registers_single_smart_tab() -> None:
     """`Tab` is bound to a single handler that dispatches by runtime
     state: popup-open → cycle to next candidate, popup-closed in

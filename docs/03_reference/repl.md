@@ -128,6 +128,7 @@ Tab understands Robot's cell-separator semantics (2+ spaces or a tab) and its ca
 | After `Import Library    ` | Library names — installed modules (`Coll<Tab>` → `Collections`), dotted module paths (`robot.libraries.Coll<Tab>`), filesystem paths (`./libs/My<Tab>` → `./libs/MyLib.py`) |
 | After `Import Resource    ` | `.robot` / `.resource` files on disk |
 | After `Import Variables    ` | `.py` / `.yaml` / `.yml` / `.json` variable files, plus discoverable variables modules |
+| After `<keyword>    <arg>=` (RF 7+) | Literal values declared on the argument's type — e.g. for a library keyword `my_kw(level: Literal['DEBUG', 'INFO', 'WARN'])`, typing `my_kw    level=<Tab>` shows the three options. Activation rules mirror Robot itself: the name before `=` must be a real positional-or-named / named-only argument of the keyword (or the keyword takes `**kwargs`). Otherwise the cell stays a literal positional value — same as Robot's own runtime behaviour. |
 
 When the prefix is ambiguous the full candidate list appears on the first Tab press — no double-tap, no `Display all NNN possibilities? (y or n)` prompt.
 
@@ -166,16 +167,18 @@ The completer runs in a background thread (`complete_in_thread=True`), and Robot
 
 History is shared with the readline backend — same plain-text file, so swapping between the two extras (or having neither) doesn't lose arrow-up recall.
 
-#### Session-context bottom toolbar
+#### Argument signature in the bottom row
 
-A status line at the bottom of the prompt shows two pieces of orientation info at a glance:
+When the cursor sits in an argument cell of a recognised keyword, a single status line appears at the bottom of the prompt with the keyword's signature and the active argument highlighted:
 
 ```
- RF 7.4 · cwd: ~/projects/my-suite
+ Log    message · level='INFO' · html=False · console=False · repr=False
+                  ─────────
 ```
 
-- **RF version** — which Robot Framework is actually running (handy when juggling several venvs).
-- **Working directory** — where relative paths in `Import Resource`, `Import Library`, and file-based variables resolve from.
+Highlight follows `name=…` syntax: typing `Log    msg    html=True` lights up `html`, not the positional cell at that index. Falls back to the positional cell index when the name before `=` isn't a real argument of the keyword.
+
+The row only shows up when there's a signature to render — outside of an argument cell (or for an unrecognised keyword) the prompt has no toolbar at all. Discover dot-commands and shortcuts through `.help` instead; `.cwd` prints the working directory on demand.
 
 #### Documentation hints in the popup
 
@@ -193,6 +196,60 @@ Coloured Robot syntax is automatically on when you install the `prompt-toolkit` 
 The highlighter uses Robot Framework's own production tokenizer (`robot.api.get_tokens`) plus the `robotcode` semantic analyzer's variable decomposer — the same code path RobotCode's VS Code extension uses for semantic-token rendering. Colour assignments match the LSP semantic-token mapping, so the REPL prompt and the VS Code editor use a consistent palette.
 
 No additional dependency: Robot is already required by `robotcode-repl`, and the variable decomposer ships with `robotcode-robot`.
+
+### Interactive shortcuts
+
+Across all backends (PlainBackend / Readline / prompt_toolkit, with the obvious caveat that Plain has no editor):
+
+- **`${_}` — last result** — like Python's interactive shell. After every keyword call the return value is mirrored into the Robot variable `${_}`. Use it directly in the next argument: `Evaluate    1 + 2` → `Log    ${_}` prints `3`. Keywords that return `None` (e.g. `Log` itself) don't overwrite `${_}`, so the most recent meaningful value stays reachable across "noisy" interleaved calls.
+- **Ctrl-R reverse-history search** — type a substring and press `Ctrl-R` to walk backwards through past entries. Enter accepts, Esc cancels. Works in both the readline and prompt_toolkit backends — we deliberately leave the binding to the framework's default so users don't lose a feature they expect from every modern REPL.
+- **Argument signature in the bottom row** — only on the prompt_toolkit backend. When the cursor is in an argument cell of a recognised keyword, a row at the bottom shows the full signature with the active argument highlighted. Outside that context the row is hidden.
+
+### REPL meta-commands
+
+Dot-prefixed commands (lines that start with `.<word>`) are intercepted **before** Robot's parser sees them and run REPL-internal logic — no keyword call, no test step, no log entry. Robot syntax can't legitimately start with a dot, so the prefix is collision-free.
+
+| Command | Effect |
+| ----- | ------ |
+| `.help [cmd]` | Without an argument: list all dot-commands. With an argument: print detailed help (usage, flags, examples) for that command — e.g. `.help save`. |
+| `.imports` | Show loaded libraries and resource files with their source path and keyword count. |
+| `.vars [--user]` | Variables in the current scope, name + truncated `repr` of the value. `--user` filters out Robot's internal variables (`${OUTPUT_DIR}`, `${SUITE_NAME}`, …). |
+| `.kw <name>` | Rich-rendered Markdown documentation for the keyword: signature, tags, docstring, source path. |
+| `.doc <name>` | Rich-rendered Markdown documentation for a library or resource: name, version, intro doc, list of contained keywords with one-line descriptions. Falls back to a fresh `get_library_doc()` load when the library isn't currently imported. |
+| `.history [N]` | Show the last N entries (default 20), numbered. |
+| `.history clear` | Truncate the in-memory history and the persistent history file. |
+| `.history del <N>` | Drop the single entry at index N from both. |
+| `.cwd` | Print the current working directory (where relative paths in imports resolve from). |
+| `.clear` | Erase the screen. |
+| `.save [-a] [-t NAME] <file>` | Export the session as a runnable `.robot` file (see below). |
+| `.exit` / `.quit` | Leave the REPL — equivalent to `Ctrl-D` on an empty prompt. |
+
+The `.kw` and `.doc` output goes through `rich.markdown.Markdown` (already a dependency of the `robotcode-plugin` package), so headings, lists, code blocks and inline emphasis render properly in any modern terminal. Robot's docstring format (the default for built-in libraries) is converted to Markdown via `MarkDownFormatter` first, so `*bold*`, `_italic_`, lists, tables and preformatted blocks all survive the round-trip.
+
+### Saving a session as a runnable `.robot` file
+
+`.save scratch.robot` writes the inputs you typed (the ones that round-tripped through Robot's parser without errors) to a `.robot` file you can re-run with `robot scratch.robot`:
+
+```
+robotcode repl
+>>> Import Library    Collections
+>>> ${d}=    Create Dictionary    a=1    b=2
+>>> Log    ${d}[a]
+1
+>>> .save scratch.robot
+Wrote scratch.robot (3 entries)
+>>> .exit
+$ robot scratch.robot
+```
+
+The exporter does two things automatically:
+
+- **Hoists imports.** `Import Library / Resource / Variables` calls in the session move to a `*** Settings ***` section as `Library / Resource / Variables    <name>` (so the resulting file is canonical Robot syntax, not literal REPL replays).
+- **Wraps the body** in a single `*** Test Cases ***` block named `REPL Session <ISO-timestamp>`. Override the name with `-t MyTest`.
+
+`-a` appends to an existing file instead of overwriting, so you can build a test suite incrementally across multiple REPL sessions.
+
+Failed entries — anything Robot's parser rejected — are silently skipped, which is why the exported file is always runnable.
 
 ### libedit-backed Pythons
 
