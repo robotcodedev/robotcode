@@ -209,6 +209,53 @@ def test_dedup_last_entry_ignores_blank_latest() -> None:
 
 
 # ---------------------------------------------------------------------------
+# pyreadline3 fallback — clear + re-add when remove_history_item is missing
+# ---------------------------------------------------------------------------
+
+
+def _fake_readline_without_remove(initial: Optional[List[str]] = None) -> ModuleType:
+    """Mimics pyreadline3 on Windows: every history method is there *except*
+    `remove_history_item`. Uses `clear_history` + `add_history` instead."""
+    fake = MagicMock(
+        spec=[
+            "set_history_length",
+            "read_history_file",
+            "write_history_file",
+            "get_current_history_length",
+            "get_history_item",
+            "clear_history",
+            "add_history",
+        ]
+    )
+    state: List[str] = list(initial or [])
+    fake.get_current_history_length.side_effect = lambda: len(state)
+    fake.get_history_item.side_effect = lambda i: state[i - 1] if 1 <= i <= len(state) else None
+    fake.clear_history.side_effect = lambda: state.clear()
+    fake.add_history.side_effect = lambda line: state.append(line)
+    fake._state = state
+    return fake
+
+
+def test_dedup_last_entry_uses_clear_add_fallback_when_remove_missing() -> None:
+    """The pyreadline3 path: `remove_history_item` is absent, so the dedup
+    rebuilds the buffer via `clear_history` + `add_history`. This is the
+    regression test for the Windows startup crash."""
+    fake = _fake_readline_without_remove(initial=["Log    a", "Log    b", "Log    a"])
+    dedup_last_entry(fake)
+    assert fake._state == ["Log    b", "Log    a"]
+    fake.clear_history.assert_called_once()
+
+
+def test_load_into_readline_dedupes_via_fallback_when_remove_missing(tmp_path: Path) -> None:
+    target = tmp_path / "hist"
+    target.write_text("placeholder\n")
+    fake = _fake_readline_without_remove(initial=["Log    a", "Log    b", "Log    a", "Log    c", "Log    b"])
+    load_into_readline(fake, target)
+    assert fake._state == ["Log    a", "Log    c", "Log    b"]
+    fake.clear_history.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
 # attach_save_on_exit() — TTY-gated, writes via atexit
 # ---------------------------------------------------------------------------
 

@@ -29,6 +29,7 @@ from .._history import (
     dedup_last_entry,
     delete_history_line_in_file,
     load_into_readline,
+    remove_history_items,
     truncate_history_file,
 )
 
@@ -106,8 +107,7 @@ class ReadlineBackend:
         length = readline.get_current_history_length()
         if not (1 <= idx <= length):
             return False
-        # `remove_history_item` is 0-based.
-        readline.remove_history_item(idx - 1)
+        remove_history_items(readline, [idx - 1])
         if not self._no_history:
             delete_history_line_in_file(idx)
         return True

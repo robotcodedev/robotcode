@@ -71,6 +71,32 @@ def load_into_readline(readline_module: ModuleType, path: Optional[Path] = None)
         _dedup_history(readline_module)
 
 
+def remove_history_items(readline_module: ModuleType, indices: list[int]) -> None:
+    """Remove history entries at the given 0-based indices.
+
+    Prefers `readline.remove_history_item` when the module exposes it
+    (CPython's GNU readline, gnureadline, libedit). Falls back to a
+    `clear_history` + re-`add_history` rebuild for shims that don't
+    implement it — notably ``pyreadline3`` on Windows, where the
+    missing attr would otherwise crash REPL startup the first time
+    legacy duplicate entries are dedup'd.
+    """
+    if not indices:
+        return
+    if hasattr(readline_module, "remove_history_item"):
+        # Sort high → low so each removal keeps the lower indices stable.
+        for idx in sorted(set(indices), reverse=True):
+            readline_module.remove_history_item(idx)
+        return
+    drop = set(indices)
+    length = readline_module.get_current_history_length()
+    survivors = [readline_module.get_history_item(i) for i in range(1, length + 1) if (i - 1) not in drop]
+    readline_module.clear_history()
+    for item in survivors:
+        if item is not None:
+            readline_module.add_history(item)
+
+
 def dedup_last_entry(readline_module: ModuleType) -> None:
     """Remove older duplicates of the most recently added history entry.
 
@@ -85,11 +111,8 @@ def dedup_last_entry(readline_module: ModuleType) -> None:
     latest = readline_module.get_history_item(length)
     if not latest or not latest.strip():
         return
-    # Walk from second-newest down to oldest, removing matches. Iterating
-    # backwards keeps the indices we still need to inspect stable.
-    for i in range(length - 1, 0, -1):
-        if readline_module.get_history_item(i) == latest:
-            readline_module.remove_history_item(i - 1)  # 0-based index
+    to_drop = [i - 1 for i in range(length - 1, 0, -1) if readline_module.get_history_item(i) == latest]
+    remove_history_items(readline_module, to_drop)
 
 
 def _dedup_history(readline_module: ModuleType) -> None:
@@ -107,12 +130,10 @@ def _dedup_history(readline_module: ModuleType) -> None:
     for i in range(length, 0, -1):
         item = readline_module.get_history_item(i)
         if item in seen:
-            to_drop.append(i - 1)  # 0-based for remove
+            to_drop.append(i - 1)  # 0-based
         else:
             seen.add(item)
-    # Remove from highest index down so earlier indices stay valid.
-    for idx in to_drop:
-        readline_module.remove_history_item(idx)
+    remove_history_items(readline_module, to_drop)
 
 
 def truncate_history_file(path: Optional[Path] = None) -> None:
