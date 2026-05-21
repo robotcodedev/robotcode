@@ -10,6 +10,25 @@ from robotcode.repl._input import PlainBackend, pick_backend
 from robotcode.repl._input._plain import PlainBackend as PlainBackendClass
 
 
+def _detect_libedit() -> bool:
+    """Evaluate at import time whether the active readline is libedit-backed.
+
+    The result drives `pytest.mark.skipif` on history-file tests below: the
+    two `readline` implementations write fundamentally different on-disk
+    formats (GNU readline: plain lines; libedit / editline: `_HiStOrY_V2_`
+    header + escape-encoded entries), so a single fixture file can't satisfy
+    both.
+    """
+    try:
+        from robotcode.repl._input._readline import _is_libedit
+    except ImportError:
+        return False
+    return _is_libedit()
+
+
+_IS_LIBEDIT = _detect_libedit()
+
+
 def test_plain_backend_wraps_input(monkeypatch: pytest.MonkeyPatch) -> None:
     captured: dict[str, Any] = {}
 
@@ -201,10 +220,43 @@ def test_plain_backend_history_methods_are_no_ops() -> None:
     assert backend.delete_history_entry(1) is False
 
 
-def test_readline_backend_history_round_trip(monkeypatch: pytest.MonkeyPatch, tmp_path: Any) -> None:
-    """`.get_history()` mirrors what was loaded; `.clear_history()`
-    wipes both in-memory and on-disk; `.delete_history_entry(idx)`
-    removes a single line from both."""
+def _seed_history_via_readline(monkeypatch: pytest.MonkeyPatch, tmp_path: Any, lines: list[str]) -> Any:
+    """Populate `tmp_path/histfile` using `readline.write_history_file`.
+
+    The on-disk format matches whichever backend (GNU readline or libedit)
+    is in use — libedit adds the `_HiStOrY_V2_` marker it later expects when
+    reading back, GNU readline writes plain lines. Tests that go through
+    this seed step therefore behave the same way under both backends.
+    """
+    histfile = tmp_path / "histfile"
+
+    import robotcode.repl._history as history_mod
+
+    monkeypatch.setattr(history_mod, "history_path", lambda: histfile)
+
+    from robotcode.repl._input import _readline as readline_mod
+
+    _rl = readline_mod.readline  # type: ignore[attr-defined]
+    _rl.clear_history()
+    for line in lines:
+        _rl.add_history(line)
+    _rl.write_history_file(str(histfile))
+    _rl.clear_history()
+    return histfile
+
+
+@pytest.mark.skipif(
+    _IS_LIBEDIT,
+    reason="plain-text fixture only loads on GNU readline; libedit variant below",
+)
+def test_readline_backend_history_round_trip_gnu_format(monkeypatch: pytest.MonkeyPatch, tmp_path: Any) -> None:
+    """GNU readline reads a hand-written plain-text history file as-is.
+
+    `delete_history_line_in_file` and `truncate_history_file` operate on
+    the file as plain text, so the on-disk content here is asserted
+    directly. The libedit equivalent (next test) goes through readline's
+    own writer for seeding because the libedit format isn't plain text.
+    """
     pytest.importorskip("readline")
     histfile = tmp_path / "histfile"
     histfile.write_text("first\nsecond\nthird\n")
@@ -231,21 +283,40 @@ def test_readline_backend_history_round_trip(monkeypatch: pytest.MonkeyPatch, tm
     assert histfile.read_text() == ""
 
 
-def test_readline_backend_delete_out_of_range(monkeypatch: pytest.MonkeyPatch, tmp_path: Any) -> None:
+@pytest.mark.skipif(not _IS_LIBEDIT, reason="libedit-specific round-trip; the GNU variant runs above")
+def test_readline_backend_history_round_trip_libedit_format(monkeypatch: pytest.MonkeyPatch, tmp_path: Any) -> None:
+    """libedit equivalent of the GNU round-trip: seed via readline's own
+    `write_history_file` so the file gets libedit's expected header.
+
+    `delete_history_line_in_file` is text-line-based and gets out of sync
+    with the in-memory ring by one (the header) on libedit, so file-content
+    invariants from the GNU test are deliberately not asserted here —
+    only the in-memory ring is the authoritative store on libedit.
+    """
     pytest.importorskip("readline")
-    histfile = tmp_path / "histfile"
-    histfile.write_text("only\n")
+    histfile = _seed_history_via_readline(monkeypatch, tmp_path, ["first", "second", "third"])
 
-    import robotcode.repl._history as history_mod
-
-    monkeypatch.setattr(history_mod, "history_path", lambda: histfile)
-
-    from robotcode.repl._input import _readline as readline_mod
     from robotcode.repl._input._readline import ReadlineBackend
 
-    _rl = readline_mod.readline  # type: ignore[attr-defined]
+    backend = ReadlineBackend()
+    assert backend.get_history() == ["first", "second", "third"]
 
-    _rl.clear_history()
+    assert backend.delete_history_entry(2) is True
+    assert backend.get_history() == ["first", "third"]
+
+    backend.clear_history()
+    assert backend.get_history() == []
+    assert histfile.read_text() == ""
+
+
+def test_readline_backend_delete_out_of_range(monkeypatch: pytest.MonkeyPatch, tmp_path: Any) -> None:
+    """Out-of-range index returns False and leaves history intact, on
+    either backend (seeded via the readline-native writer so both formats work)."""
+    pytest.importorskip("readline")
+    _seed_history_via_readline(monkeypatch, tmp_path, ["only"])
+
+    from robotcode.repl._input._readline import ReadlineBackend
+
     backend = ReadlineBackend()
     assert backend.delete_history_entry(99) is False
     assert backend.delete_history_entry(0) is False
