@@ -490,6 +490,17 @@ def _exit(app: Application, interpreter: Any, arg: str) -> None:
 # ---------------------------------------------------------------------------
 
 
+def _split_command_args(arg: str) -> List[str]:
+    """Tokenise a dot-command argument string the way shells do — but
+    keep backslashes literal so Windows paths (``C:\\Users\\…``) survive
+    unmangled. Quotes still work for spaces in paths."""
+    lex = shlex.shlex(arg, posix=True)
+    lex.whitespace_split = True
+    lex.escape = ""
+    lex.commenters = ""
+    return list(lex)
+
+
 def _build_save_parser() -> argparse.ArgumentParser:
     # `exit_on_error=False` so a bad invocation reports "Usage: …" via
     # `_save` instead of tearing down the REPL on argparse's sys.exit.
@@ -532,7 +543,7 @@ def _save(app: Application, interpreter: Any, arg: str) -> None:
     """
     parser = _build_save_parser()
     try:
-        opts = parser.parse_args(shlex.split(arg))
+        opts = parser.parse_args(_split_command_args(arg))
     except (argparse.ArgumentError, SystemExit, ValueError):
         app.echo("Usage: .save [-a] [-t NAME] FILENAME")
         return
