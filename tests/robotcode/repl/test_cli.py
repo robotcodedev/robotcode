@@ -47,9 +47,9 @@ def test_cli_backend_default_is_auto(capture_interpreter_kwargs: Dict[str, Any])
 
 
 def test_cli_backend_explicit_value_passed_through(capture_interpreter_kwargs: Dict[str, Any]) -> None:
-    result = CliRunner().invoke(cli_mod.repl, ["--backend", "readline"])
+    result = CliRunner().invoke(cli_mod.repl, ["--backend", "prompt-toolkit"])
     assert result.exit_code == 0, result.output
-    assert capture_interpreter_kwargs["backend"] == "readline"
+    assert capture_interpreter_kwargs["backend"] == "prompt-toolkit"
 
 
 def test_cli_plain_translates_to_backend_plain(capture_interpreter_kwargs: Dict[str, Any]) -> None:
@@ -68,7 +68,7 @@ def test_cli_plain_with_redundant_backend_plain_is_ok(capture_interpreter_kwargs
 
 def test_cli_plain_with_conflicting_backend_errors(capture_interpreter_kwargs: Dict[str, Any]) -> None:
     del capture_interpreter_kwargs  # the conflict must be detected before the interpreter is built
-    result = CliRunner().invoke(cli_mod.repl, ["--plain", "--backend", "readline"])
+    result = CliRunner().invoke(cli_mod.repl, ["--plain", "--backend", "prompt-toolkit"])
     assert result.exit_code != 0
     assert "--plain conflicts" in result.output
 
@@ -106,10 +106,10 @@ def test_cli_backend_unavailable_translates_to_usage_error(monkeypatch: pytest.M
 def test_cli_backend_env_var_picked_up(
     capture_interpreter_kwargs: Dict[str, Any], monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setenv("ROBOTCODE_REPL_BACKEND", "readline")
+    monkeypatch.setenv("ROBOTCODE_REPL_BACKEND", "prompt-toolkit")
     result = CliRunner().invoke(cli_mod.repl, [])
     assert result.exit_code == 0, result.output
-    assert capture_interpreter_kwargs["backend"] == "readline"
+    assert capture_interpreter_kwargs["backend"] == "prompt-toolkit"
 
 
 # ---------------------------------------------------------------------------
@@ -133,19 +133,19 @@ def test_cli_explicit_backend_beats_agent_detection(
     capture_interpreter_kwargs: Dict[str, Any], monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setenv("CLAUDECODE", "1")
-    result = CliRunner().invoke(cli_mod.repl, ["--backend", "readline"])
+    result = CliRunner().invoke(cli_mod.repl, ["--backend", "prompt-toolkit"])
     assert result.exit_code == 0, result.output
-    assert capture_interpreter_kwargs["backend"] == "readline"
+    assert capture_interpreter_kwargs["backend"] == "prompt-toolkit"
 
 
 def test_cli_repl_backend_env_var_beats_agent_detection(
     capture_interpreter_kwargs: Dict[str, Any], monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setenv("CLAUDECODE", "1")
-    monkeypatch.setenv("ROBOTCODE_REPL_BACKEND", "readline")
+    monkeypatch.setenv("ROBOTCODE_REPL_BACKEND", "prompt-toolkit")
     result = CliRunner().invoke(cli_mod.repl, [])
     assert result.exit_code == 0, result.output
-    assert capture_interpreter_kwargs["backend"] == "readline"
+    assert capture_interpreter_kwargs["backend"] == "prompt-toolkit"
 
 
 def test_cli_repl_plain_env_var_satisfies_agent_path(

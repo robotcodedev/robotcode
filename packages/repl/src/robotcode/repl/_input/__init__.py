@@ -1,18 +1,19 @@
 """Backend abstraction for the REPL's interactive line-input.
 
-`pick_backend()` picks an explicit backend when one is named, else
-walks a fallback cascade and returns the best available implementation:
+Two implementations, picked by `pick_backend()`:
 
-1. `PromptToolkitBackend` — if `prompt_toolkit>=3.0` is installed.
-2. `ReadlineBackend` — if `readline` is importable (stdlib on Unix,
-   transparent on Windows + Python 3.13+, or with `pyreadline3`).
-3. `PlainBackend` — fallback that wraps the bare `input()`, preserving
-   the historical behaviour with no history and no completion.
+1. `PromptToolkitBackend` — if `prompt_toolkit>=3.0` is installed
+   (via the ``[prompt-toolkit]`` extra). Rich editor with completion
+   popup, syntax highlighting, history, signature toolbar.
+2. `PlainBackend` — fallback. A thin wrapper around the built-in
+   `input()`, with no editing features.
 
-Each backend implements `read_line(prompt, multiline_continuation, prefill)`.
+The `InputProvider` protocol only mandates `read_line`. History and
+dispatcher methods live as concrete methods on `PromptToolkitBackend`
+only; consumers reach for them via `hasattr` capability checks.
 """
 
-from typing import List, Protocol
+from typing import Protocol
 
 from ._plain import PlainBackend
 
@@ -25,8 +26,8 @@ class BackendUnavailableError(ImportError):
     """
 
 
-class InputBackend(Protocol):
-    """Protocol every line-input backend implements."""
+class InputProvider(Protocol):
+    """The minimum every input backend implements: read a single line."""
 
     def read_line(
         self,
@@ -35,7 +36,7 @@ class InputBackend(Protocol):
         multiline_continuation: bool = False,
         prefill: str = "",
     ) -> str:
-        """Read a single line of input.
+        """Read one line of input.
 
         Parameters
         ----------
@@ -47,105 +48,51 @@ class InputBackend(Protocol):
             FOR/IF/TRY body) — backends may render a continuation
             prompt.
         prefill:
-            Optional pre-filled text the user can edit. Used by Stage 4
-            (auto-indent) to seed block-body lines with the right
-            indent. Backends that have no editor (PlainBackend) ignore
-            this.
-        """
-        ...
-
-    def get_history(self) -> List[str]:
-        """Return persistent history entries, oldest → newest.
-
-        PlainBackend returns ``[]`` (no history). Readline /
-        prompt_toolkit return the in-memory buffer that mirrors the
-        history file.
-        """
-        ...
-
-    def clear_history(self) -> None:
-        """Drop all history entries (in-memory + on-disk).
-
-        PlainBackend is a no-op. The other backends truncate the
-        shared history file and the in-memory ring.
-        """
-        ...
-
-    def delete_history_entry(self, idx: int) -> bool:
-        """Delete the 1-based history entry at ``idx``.
-
-        Returns ``True`` on success, ``False`` when ``idx`` is out of
-        range. PlainBackend always returns ``False``.
+            Optional pre-filled text the user can edit. Used by
+            auto-indent to seed block-body lines with the right indent.
+            Backends that have no editor (PlainBackend) ignore this.
         """
         ...
 
 
-BACKEND_CHOICES = ("auto", "prompt-toolkit", "readline", "plain")
+BACKEND_CHOICES = ("auto", "prompt-toolkit", "plain")
 
 
-def pick_backend(*, no_history: bool = False, backend: str = "auto") -> InputBackend:
+def pick_backend(*, no_history: bool = False, backend: str = "auto") -> InputProvider:
     """Return an input backend.
 
     Parameters
     ----------
     no_history:
-        When True, the readline / prompt_toolkit backends skip loading
-        and saving the persistent history file — in-session arrow-up
-        recall still works, but nothing crosses session boundaries.
-        PlainBackend is unaffected (it has no history either way).
+        When True, the prompt_toolkit backend skips loading and saving the
+        persistent history file — in-session arrow-up recall still works,
+        but nothing crosses session boundaries. PlainBackend ignores this
+        (it has no history either way).
     backend:
-        One of ``"auto"``, ``"prompt-toolkit"``, ``"readline"``,
-        ``"plain"``. ``"auto"`` runs the fallback cascade. The other
-        values force a specific backend and raise
-        `BackendUnavailableError` when that backend can't be imported
-        — no silent fallback, so the caller learns that the explicit
-        choice was not honoured.
+        One of ``"auto"``, ``"prompt-toolkit"``, ``"plain"``. ``"auto"``
+        prefers prompt_toolkit if installed, else falls back to plain.
+        Explicit ``"prompt-toolkit"`` raises `BackendUnavailableError`
+        when the extra isn't installed — no silent fallback, so the
+        caller learns that the explicit choice was not honoured.
     """
     if backend == "plain":
         return PlainBackend()
 
-    if backend == "prompt-toolkit":
-        try:
-            from ._prompt_toolkit import (
-                PromptToolkitBackend,  # type: ignore[import-not-found,import-untyped,unused-ignore]
-            )
-        except ImportError as exc:
+    if backend not in ("auto", "prompt-toolkit"):
+        raise ValueError(f"Unknown backend: {backend!r}. Choose from {BACKEND_CHOICES}.")
+
+    try:
+        from ._prompt_toolkit import (
+            PromptToolkitBackend,  # type: ignore[import-not-found,import-untyped,unused-ignore]
+        )
+    except ImportError as exc:
+        if backend == "prompt-toolkit":
             raise BackendUnavailableError(
                 "prompt_toolkit backend requested but not installed. "
                 "Install with: pip install 'robotcode-repl[prompt-toolkit]'"
             ) from exc
-        return PromptToolkitBackend(no_history=no_history)  # type: ignore[no-any-return,unused-ignore]
-
-    if backend == "readline":
-        try:
-            from ._readline import ReadlineBackend
-        except ImportError as exc:
-            raise BackendUnavailableError(
-                "readline backend not available on this Python build. "
-                "Install with: pip install 'robotcode-repl[gnureadline]'"
-            ) from exc
-        return ReadlineBackend(no_history=no_history)
-
-    if backend == "auto":
-        try:
-            from ._prompt_toolkit import (
-                PromptToolkitBackend,  # type: ignore[import-not-found,import-untyped,unused-ignore]
-            )
-        except ImportError:
-            pass
-        else:
-            return PromptToolkitBackend(no_history=no_history)  # type: ignore[no-any-return,unused-ignore]
-
-        try:
-            from ._readline import ReadlineBackend
-        except ImportError:
-            pass
-        else:
-            return ReadlineBackend(no_history=no_history)
-
         return PlainBackend()
+    return PromptToolkitBackend(no_history=no_history)  # type: ignore[no-any-return,unused-ignore]
 
-    raise ValueError(f"Unknown backend: {backend!r}. Choose from {BACKEND_CHOICES}.")
 
-
-__all__ = ["BACKEND_CHOICES", "BackendUnavailableError", "InputBackend", "PlainBackend", "pick_backend"]
+__all__ = ["BACKEND_CHOICES", "BackendUnavailableError", "InputProvider", "PlainBackend", "pick_backend"]

@@ -70,10 +70,10 @@ from .run import run_repl
     show_default=True,
     envvar="ROBOTCODE_REPL_BACKEND",
     help="Force a specific input backend instead of auto-picking. "
-    "`auto` runs the fallback cascade (prompt-toolkit → readline → plain). "
-    "Use the explicit values to test the readline / plain code paths "
-    "even when `prompt_toolkit` is installed. Requesting a backend that "
-    "is not available aborts startup with a clear error — no silent "
+    "`auto` prefers `prompt-toolkit` when it's installed, otherwise falls "
+    "back to `plain`. Use the explicit values to force `plain` even when "
+    "`prompt_toolkit` is installed. Requesting `prompt-toolkit` when the "
+    "extra isn't installed aborts startup with a clear error — no silent "
     "fallback.",
 )
 @click.option(

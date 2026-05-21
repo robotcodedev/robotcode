@@ -81,20 +81,28 @@ Log To Console    answer is ${x}
 
 ## Prompt features
 
-The prompt is a real line editor — arrow-keys for cursor movement, `Ctrl-R` for reverse history search, Tab for Robot-aware completion. On Unix and on Windows with Python 3.13+ this is wired up out of the box via Python's stdlib `readline`; on older Windows Pythons you only get plain `input()` unless you install `pyreadline3`.
+Two backends, no platform-specific caveats:
+
+- **`prompt_toolkit`** — rich line editor with candidate popup, syntax highlighting, signature toolbar, Ctrl-R reverse search, fish-style auto-suggest, multi-line cursor movement, persistent history. Active when the optional `[prompt-toolkit]` extra is installed.
+- **`plain`** — bare `input()` fallback. No history, no completion, no popup. Active when the extra isn't installed, or when the user / AI-agent detection chose plain explicitly.
+
+Install the rich backend with:
+
+```bash
+pip install 'robotcode-repl[prompt-toolkit]'
+```
 
 ### Picking a specific input backend
 
-The REPL auto-picks the best available input backend on startup (`prompt_toolkit` → `readline` → bare `input()`). Pass `--backend` (or set `ROBOTCODE_REPL_BACKEND`) to force a specific one:
+The REPL auto-picks: prompt_toolkit when the extra is importable, otherwise plain. Pass `--backend` (or set `ROBOTCODE_REPL_BACKEND`) to force a specific one:
 
 | Value | Effect |
 | ----- | ------ |
-| `auto` (default) | Run the fallback cascade. |
-| `prompt-toolkit` | Use the prompt_toolkit backend. Requires the `[prompt-toolkit]` extra. |
-| `readline` | Use the readline backend even when prompt_toolkit is installed. Useful for testing the readline code path or for users who prefer it. |
-| `plain` | Bypass every editor layer and fall back to a bare `input()` prompt. |
+| `auto` (default) | prompt_toolkit if installed, else plain. |
+| `prompt-toolkit` | Force prompt_toolkit. Hard error if the extra isn't installed. |
+| `plain` | Bypass the editor layer and fall back to a bare `input()` prompt. |
 
-Requesting a backend that isn't importable on the current Python aborts startup with a clear error and a `pip install` hint — there is no silent fallback, so the explicit choice is always honoured (or visibly refused).
+Requesting `prompt-toolkit` when the extra isn't installed aborts startup with a `pip install` hint — there is no silent fallback, so the explicit choice is always honoured (or visibly refused).
 
 #### Disabling all enhancements (AI agents, automation)
 
@@ -113,9 +121,7 @@ Combining `--plain` with a non-`plain` `--backend` value is rejected as a usage 
 
 ### History across sessions
 
-Every command you press Enter on is saved to a history file. Arrow-up recalls the previous line, `Ctrl-R` runs incremental reverse-search over the whole history — same keybindings as bash or Python's own shell.
-
-Re-entering a line that's already in the history removes the older copy (fish-style), so arrow-up cycles through *unique* commands.
+Requires the `[prompt-toolkit]` extra — the plain backend has no history. Every command you press Enter on is saved to a history file. Arrow-up recalls the previous line, `Ctrl-R` runs incremental reverse-search over the whole history — same keybindings as bash or Python's own shell.
 
 The history file lives in:
 
@@ -123,11 +129,13 @@ The history file lives in:
 - the per-user cache directory otherwise — `~/.cache/robotcode/repl_history` on Linux, `~/Library/Caches/robotcode/repl_history` on macOS, `%LOCALAPPDATA%\robotcode\Cache\repl_history` on Windows
 - `${ROBOTCODE_CACHE_DIR}/repl_history` if the env var is set — overrides both of the above
 
+On-disk format is prompt_toolkit's native `FileHistory` layout — timestamped multi-line entries. If you upgrade from an earlier build of robotcode whose history file used a different format, the existing file is ignored on first read (silently — prompt_toolkit just skips lines that don't fit) and new entries get appended in the proper format. The REPL keeps working; you only lose the old history.
+
 | Flag / env var | Effect |
 |---|---|
 | `--no-history` | Skip loading and saving the history file. In-session arrow-up still works; nothing crosses session boundaries. |
 | `ROBOTCODE_REPL_NO_HISTORY=1` | Same as `--no-history`, handy when the REPL is launched by a wrapper script. |
-| `ROBOTCODE_REPL_HISTORY_SIZE=N` | Cap the buffer at N entries (default: 1000). |
+| `ROBOTCODE_REPL_HISTORY_SIZE=N` | Cap the history at N entries (default: 10000). Each new entry that would push the file past the cap evicts the oldest, so the file stays bounded as you keep using the REPL. |
 
 `--no-history` is useful for AI-agent invocations, quick spike sessions, or working with secrets you don't want sitting on disk.
 
@@ -160,27 +168,22 @@ When you open a Robot block construct (`FOR`, `WHILE`, `IF`, `TRY`, `GROUP`), th
 ... END
 ```
 
-With the `prompt-toolkit` extra installed (see below) you get a real multi-line buffer instead of one prompt per line. Plain **Enter** is *smart*: it submits when your buffer has no open block, otherwise it inserts a newline + auto-indent so you stay inside the block. **Alt-Enter** (`Esc` then `Enter`) and **Ctrl-J** always insert a newline + auto-indent, even when the block is balanced — useful when you want to add one more statement before committing. You can also use `Cursor-Up` / `Cursor-Down` to navigate back into earlier lines of the same buffer and edit them.
+With the `[prompt-toolkit]` extra installed you get a real multi-line buffer instead of one prompt per line. Plain **Enter** is *smart*: it submits when your buffer has no open block, otherwise it inserts a newline + auto-indent so you stay inside the block. **Alt-Enter** (`Esc` then `Enter`) and **Ctrl-J** always insert a newline + auto-indent, even when the block is balanced — useful when you want to add one more statement before committing. You can also use `Cursor-Up` / `Cursor-Down` to navigate back into earlier lines of the same buffer and edit them.
 
 Shift-Enter isn't bound by default: most terminals send the same byte (`\r`) for Shift-Enter as for plain Enter, so a binding would never fire portably. Use Alt-Enter or Ctrl-J — both work in every terminal.
 
-### A richer prompt with `prompt_toolkit`
+Multi-line buffers without the extra fall back to one prompt per line; the auto-indent still works as a prefill on the next `... ` prompt.
 
-Install the `prompt-toolkit` extra to swap the readline frontend for a `PromptSession`-driven one:
+### What the `[prompt-toolkit]` extra adds
 
-```bash
-pip install 'robotcode-repl[prompt-toolkit]'
-```
+Once installed (`pip install 'robotcode-repl[prompt-toolkit]'`) the prompt grows several capabilities that aren't available on the plain backend:
 
-What you get on top of the readline behaviour:
-
-- **Live candidate popup** — completions appear *as you type*, in an inline menu under the cursor, with arrow-keys to pick and Enter to accept. No Tab needed (though Tab still works). The verbose `Import Library  Foo` / `Import Library  Bar` row layout is replaced by just the labels.
+- **Live candidate popup** — completions appear *as you type*, in an inline menu under the cursor, with arrow-keys to pick and Enter to accept. No Tab needed (though Tab still works).
 - **Fish-style auto-suggest** — as you type, the rest of the line you typed last time (matching the same prefix) appears greyed-out behind the cursor. Right-arrow accepts it.
 - **Bracket auto-match**, multi-line cursor movement (up/down inside an open block), `Ctrl-R` reverse search with a dedicated UI.
+- **Persistent history** — see *History across sessions* above. The plain backend has none.
 
 The completer runs in a background thread (`complete_in_thread=True`), and Robot's library / resource discovery is cached for the session, so the popup stays responsive even when there are hundreds of importable modules on `sys.path`.
-
-History is shared with the readline backend — same plain-text file, so swapping between the two extras (or having neither) doesn't lose arrow-up recall.
 
 #### Argument signature in the bottom row
 
@@ -217,7 +220,7 @@ No additional dependency: Robot is already required by `robotcode-repl`, and the
 Across all backends (PlainBackend / Readline / prompt_toolkit, with the obvious caveat that Plain has no editor):
 
 - **`${_}` — last result** — like Python's interactive shell. After every keyword call the return value is mirrored into the Robot variable `${_}`. Use it directly in the next argument: `Evaluate    1 + 2` → `Log    ${_}` prints `3`. Keywords that return `None` (e.g. `Log` itself) don't overwrite `${_}`, so the most recent meaningful value stays reachable across "noisy" interleaved calls.
-- **Ctrl-R reverse-history search** — type a substring and press `Ctrl-R` to walk backwards through past entries. Enter accepts, Esc cancels. Works in both the readline and prompt_toolkit backends — we deliberately leave the binding to the framework's default so users don't lose a feature they expect from every modern REPL.
+- **Ctrl-R reverse-history search** — type a substring and press `Ctrl-R` to walk backwards through past entries. Enter accepts, Esc cancels. Requires the `[prompt-toolkit]` extra.
 - **Argument signature in the bottom row** — only on the prompt_toolkit backend. When the cursor is in an argument cell of a recognised keyword, a row at the bottom shows the full signature with the active argument highlighted. Outside that context the row is hidden.
 
 ### REPL meta-commands
@@ -231,7 +234,7 @@ Dot-prefixed commands (lines that start with `.<word>`) are intercepted **before
 | `.vars [--user]` | Variables in the current scope, name + truncated `repr` of the value. `--user` filters out Robot's internal variables (`${OUTPUT_DIR}`, `${SUITE_NAME}`, …). |
 | `.kw <name>` | Rich-rendered Markdown documentation for the keyword: signature, tags, docstring, source path. |
 | `.doc <name>` | Rich-rendered Markdown documentation for a library or resource: name, version, intro doc, list of contained keywords with one-line descriptions. Falls back to a fresh `get_library_doc()` load when the library isn't currently imported. |
-| `.history [N]` | Show the last N entries (default 20), numbered. |
+| `.history [N]` | Show the last N entries (default 20), numbered. Requires the `[prompt-toolkit]` extra; plain backend has no history. |
 | `.history clear` | Truncate the in-memory history and the persistent history file. |
 | `.history del <N>` | Drop the single entry at index N from both. |
 | `.cwd` | Print the current working directory (where relative paths in imports resolve from). |
@@ -265,20 +268,6 @@ The exporter does two things automatically:
 `-a` appends to an existing file instead of overwriting, so you can build a test suite incrementally across multiple REPL sessions.
 
 Failed entries — anything Robot's parser rejected — are silently skipped, which is why the exported file is always runnable.
-
-### libedit-backed Pythons
-
-macOS' system Python and some Linux interpreters built via `python-build-standalone` (used by `uv`, `rye`, …) link `readline` against **libedit** instead of GNU readline. libedit silently ignores most of the bindings the REPL relies on, so you'd see Tab inserting a literal tab character and the verbose default completion display.
-
-Install the `gnureadline` extra to switch to a real GNU readline that the REPL drives correctly:
-
-```bash
-pip install 'robotcode-repl[gnureadline]'
-```
-
-The package isn't published for Windows (where readline works differently and isn't needed) and is harmless to install on Pythons whose stdlib `readline` is already GNU-backed.
-
-Both extras can be combined: `pip install 'robotcode-repl[prompt-toolkit,gnureadline]'` covers the case where you've installed prompt-toolkit but also want a clean fallback if you uninstall it later.
 
 ## What syntax the REPL accepts
 
@@ -471,3 +460,13 @@ Log To Console    pinging ${BASE_URL}
 - **Not persistent.** Closing the prompt throws away the session unless you've passed `-o` / `-l` / `-r` / `-x` to capture artefacts.
 
 For the exhaustive option list see the auto-generated [CLI reference](cli.md#repl).
+
+## Why no `readline` backend?
+
+Earlier versions of robotcode shipped a third backend that talked to the OS-level `readline` library (GNU readline on Linux, libedit on macOS, `pyreadline3` on Windows). It's gone — after testing on all three platforms, it was clean on only one of them:
+
+- **Linux** with GNU readline → worked.
+- **macOS** → linked to libedit (Apple's BSD readline-alike); silently ignored most of the bindings the REPL relied on. Tab would insert a literal tab character, completion fell back to the verbose default layout. Workable only after installing the `[gnureadline]` extra.
+- **Windows** with `pyreadline3` → known upstream bugs ([pyreadline3#40](https://github.com/pyreadline3/pyreadline3/issues/40), #43) desynced prompt position with VS Code's integrated terminal — the prompt vanished after the first scrolled output, and the next redraw overwrote the last output line.
+
+`prompt_toolkit` speaks ANSI on every platform (no OS-level readline in its path) and renders incrementally instead of caching absolute cursor positions, so it sidesteps every one of those problems. The plain `input()` fallback is enough for the rest.

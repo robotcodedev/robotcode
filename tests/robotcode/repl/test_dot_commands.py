@@ -464,6 +464,41 @@ def test_history_renders_multi_line_entries() -> None:
 
 
 # ---------------------------------------------------------------------------
+# .history on the plain backend — capability check, friendly fallback
+# ---------------------------------------------------------------------------
+
+
+class _PlainStubInput:
+    """Stand-in for a PlainBackend — no `get_history` and friends."""
+
+
+class _PlainStubInterpreter:
+    def __init__(self) -> None:
+        self._input = _PlainStubInput()
+        self._session_lines: List[str] = []
+
+
+def test_history_on_plain_backend_reports_capability_gap() -> None:
+    """The plain backend doesn't expose `get_history`; the dot-command
+    must detect that and point the user at the `[prompt-toolkit]` extra."""
+    app, interp = _StubApp(), _PlainStubInterpreter()
+    dispatch(".history", app, interp)
+    assert any("prompt_toolkit" in m and "History is only available" in m for m in app.messages)
+
+
+def test_history_clear_on_plain_backend_reports_capability_gap() -> None:
+    app, interp = _StubApp(), _PlainStubInterpreter()
+    dispatch(".history clear", app, interp)
+    assert any("History is only available" in m for m in app.messages)
+
+
+def test_history_del_on_plain_backend_reports_capability_gap() -> None:
+    app, interp = _StubApp(), _PlainStubInterpreter()
+    dispatch(".history del 1", app, interp)
+    assert any("History is only available" in m for m in app.messages)
+
+
+# ---------------------------------------------------------------------------
 # .save — session export
 # ---------------------------------------------------------------------------
 

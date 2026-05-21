@@ -4,17 +4,16 @@ fish-style auto-suggest, sane multi-line cursor movement.
 Activated when `prompt_toolkit>=3.0` is installed via the optional
 extra (`pip install robotcode-repl[prompt-toolkit]`). Without it,
 this module raises `ImportError` at load time so `pick_backend()`
-falls through to the readline backend.
+falls through to the plain backend.
 
-The candidate sourcing reuses `_completion.candidates_for()` — same
-Robot-aware tokenizing as the readline backend. History is a thin
-shim that reads and writes the **same plain-text file** the readline
-backend uses, so switching between the two backends preserves
-arrow-up recall.
+The candidate sourcing reuses `_completion.candidates_for_rich()`.
+History is prompt_toolkit's native `FileHistory` — timestamped,
+multi-line entries — owned and managed directly by this backend.
 """
 
+import itertools
 from pathlib import Path
-from typing import Any, Callable, Iterator, List, Optional, Tuple
+from typing import Any, Callable, Iterable, Iterator, List, Optional, Tuple
 
 from prompt_toolkit import PromptSession
 from prompt_toolkit.application import get_app
@@ -23,7 +22,7 @@ from prompt_toolkit.buffer import Buffer
 from prompt_toolkit.completion import CompleteEvent, Completer, Completion
 from prompt_toolkit.document import Document
 from prompt_toolkit.filters import has_completions
-from prompt_toolkit.history import History
+from prompt_toolkit.history import FileHistory, History, InMemoryHistory
 from prompt_toolkit.key_binding import KeyBindings, KeyPressEvent
 from prompt_toolkit.styles import Style
 
@@ -37,93 +36,82 @@ from .._completion import (
     spec_arg_position,
     tokenize,
 )
-from .._history import delete_history_line_in_file, history_path, truncate_history_file
+from .._history import history_path, max_history_size
 from .._indent import compute_indent, has_open_block
 from ._lexer import RobotLexer
 
 
-def _escape_for_history(text: str) -> str:
-    r"""Encode `text` so it occupies exactly one line of the history file.
+class _ReplFileHistory(FileHistory):
+    """`FileHistory` with first-class `clear` / `delete` and a bounded size.
 
-    readline's plain-text history format is one-entry-per-line — a
-    raw ``\n`` inside a multi-line buffer (FOR…END) would split it
-    into multiple bogus history entries on next load. We escape:
-
-    - ``\\``  → ``\\\\``  (so the round-trip stays unambiguous)
-    - ``\n``  → ``\\n``
-
-    Order matters — backslashes are doubled *first* so the literal
-    backslash-n we inject for newlines doesn't get unescaped further.
-    """
-    return text.replace("\\", "\\\\").replace("\n", "\\n")
-
-
-def _unescape_from_history(text: str) -> str:
-    r"""Inverse of `_escape_for_history`. Walks the string once so
-    ``\\\\n`` decodes to literal ``\\n`` (backslash + n), not to a
-    newline — the naive two-pass `replace` would corrupt that case.
-    """
-    out: list[str] = []
-    i = 0
-    while i < len(text):
-        if text[i] == "\\" and i + 1 < len(text):
-            nxt = text[i + 1]
-            if nxt == "n":
-                out.append("\n")
-                i += 2
-                continue
-            if nxt == "\\":
-                out.append("\\")
-                i += 2
-                continue
-        out.append(text[i])
-        i += 1
-    return "".join(out)
-
-
-class _ReadlineCompatHistory(History):
-    """File-backed history in readline's plain-text format.
-
-    prompt_toolkit's stock ``FileHistory`` writes timestamped, prefixed
-    entries readline can't parse. This shim keeps the file readable
-    by both backends so users can swap between them — `pip install`
-    `[prompt-toolkit]` today, uninstall tomorrow — without losing
-    arrow-up history.
-
-    Multi-line buffers (FOR/IF/TRY blocks typed as one input) survive
-    a round-trip via simple ``\\n``-escape encoding (see
-    `_escape_for_history`). The on-disk file stays valid for
-    readline's loader — every entry is still exactly one line — but
-    arrow-up brings the whole block back in one piece.
+    `append_string` drops the oldest entry whenever a new one would push
+    the file past `max_entries`, so the on-disk size stays bounded as
+    the REPL is used over many sessions. Reads are also sliced to the
+    cap as defense-in-depth against externally-edited files.
     """
 
-    def __init__(self, path: Path, *, no_history: bool = False) -> None:
-        super().__init__()
-        self._path = path
-        self._no_history = no_history
+    def __init__(self, filename: str, *, max_entries: Optional[int] = None) -> None:
+        super().__init__(filename)
+        self._max_entries = max_entries if max_entries is not None else max_history_size()
 
-    def load_history_strings(self) -> Iterator[str]:
-        if self._no_history:
+    def load_history_strings(self) -> Iterable[str]:
+        # FileHistory yields newest-first; cap the iterator so prompt_toolkit
+        # never sees more than `max_entries` regardless of file size.
+        return itertools.islice(super().load_history_strings(), self._max_entries)
+
+    def append_string(self, string: str) -> None:
+        """Append, then enforce the cap by dropping the oldest entries."""
+        super().append_string(string)
+        # Read uncapped to learn the actual on-disk count after the append.
+        entries = list(super().load_history_strings())  # newest-first
+        if len(entries) <= self._max_entries:
             return
+        survivors = entries[: self._max_entries]
         try:
-            with self._path.open(encoding="utf-8", errors="replace") as fh:
-                lines = [_unescape_from_history(line.rstrip("\n")) for line in fh if line.strip()]
-        except (FileNotFoundError, OSError):
-            return
-        # prompt_toolkit consumes the iterator newest-first.
-        yield from reversed(lines)
-
-    def store_string(self, string: str) -> None:
-        if self._no_history or not string.strip():
-            return
-        try:
-            self._path.parent.mkdir(parents=True, exist_ok=True)
-            with self._path.open("a", encoding="utf-8") as fh:
-                fh.write(_escape_for_history(string) + "\n")
+            Path(str(self.filename)).write_text("", encoding="utf-8")
         except OSError:
-            # Disk full / permission denied / read-only FS — losing a
-            # history entry beats crashing the REPL on exit.
-            pass
+            return
+        # store_string appends to file → write oldest-first to preserve order.
+        for entry in reversed(survivors):
+            super().store_string(entry)
+        if self._loaded:
+            self._loaded_strings = survivors
+
+    def clear(self) -> bool:
+        """Wipe all entries — file and in-memory cache.
+
+        Returns True on success; False on OSError (e.g. permission denied).
+        """
+        try:
+            Path(str(self.filename)).write_text("", encoding="utf-8")
+        except OSError:
+            return False
+        self._loaded = False
+        self._loaded_strings = []
+        return True
+
+    def delete(self, idx: int) -> bool:
+        """Drop the 1-based entry at `idx`. Returns True on success.
+
+        FileHistory's on-disk format is multi-line per entry, so there's
+        no line-index-based delete that would work — we read the entries,
+        drop the one at `idx-1`, and re-store the survivors. Their
+        timestamps get refreshed to "now"; the dot-commands don't surface
+        timestamps so the user sees no difference.
+        """
+        entries = list(reversed(list(self.load_history_strings())))
+        if not (1 <= idx <= len(entries)):
+            return False
+        del entries[idx - 1]
+        try:
+            Path(str(self.filename)).write_text("", encoding="utf-8")
+        except OSError:
+            return False
+        self._loaded = False
+        self._loaded_strings = []
+        for entry in entries:
+            self.store_string(entry)
+        return True
 
 
 class _RobotCompleter(Completer):
@@ -334,7 +322,7 @@ def _build_keybindings(
         # 1. Popup open → cycle to next candidate (and back to top after
         #    the last). prompt_toolkit's COLUMN-style menu navigates
         #    with arrow keys by default; we bind Tab here too because
-        #    that's what users expect from IDE / readline conventions.
+        #    that's what users expect from IDE conventions.
         # 2. No popup, argument cell → insert a cell separator so Tab
         #    works as a typing accelerator (no useful argument
         #    completions exist anyway).
@@ -474,7 +462,13 @@ class PromptToolkitBackend:
 
     def __init__(self, *, no_history: bool = False) -> None:
         self._no_history = no_history
-        self._history = _ReadlineCompatHistory(history_path(), no_history=no_history)
+        self._history: History
+        if no_history:
+            self._history = InMemoryHistory()
+        else:
+            path = history_path()
+            path.parent.mkdir(parents=True, exist_ok=True)
+            self._history = _ReplFileHistory(str(path))
         # Filled by `bind_dispatcher`. F1 reaches the dispatcher via a
         # getter closure so a late binding still wires in correctly.
         self._dispatcher: Optional[Tuple[Any, Any]] = None
@@ -508,25 +502,17 @@ class PromptToolkitBackend:
         self._dispatcher = (app, interpreter)
 
     # ------------------------------------------------------------------
-    # History access for `.history`. The on-disk file is the source of
-    # truth (shared with the readline backend); prompt_toolkit's lazy
-    # in-memory cache is invalidated whenever we write through.
+    # History access for the `.history` dot-commands.
     # ------------------------------------------------------------------
 
     def get_history(self) -> List[str]:
         return list(reversed(list(self._history.load_history_strings())))
 
     def clear_history(self) -> None:
-        if not self._no_history:
-            truncate_history_file()
-        self._history._loaded = False
-        self._history._loaded_strings = []
+        if isinstance(self._history, _ReplFileHistory):
+            self._history.clear()
 
     def delete_history_entry(self, idx: int) -> bool:
-        if self._no_history:
+        if not isinstance(self._history, _ReplFileHistory):
             return False
-        ok = delete_history_line_in_file(idx)
-        if ok:
-            self._history._loaded = False
-            self._history._loaded_strings = []
-        return ok
+        return self._history.delete(idx)

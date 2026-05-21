@@ -32,19 +32,11 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# `gnureadline` ships a real GNU libreadline with the Python bindings —
-# install it when your interpreter's stdlib `readline` is backed by
-# libedit (macOS system Python, some Linux Pythons built via
-# python-build-standalone / uv). libedit silently ignores the
-# GNU-specific completion bindings the REPL relies on
-# (`set completion-query-items`, `tab: complete`, …), so without
-# `gnureadline` Tab-completion falls back to the verbose default
-# layout with the "Display all NNN possibilities?" prompt.
-gnureadline = ["gnureadline; sys_platform != 'win32'"]
-# `prompt_toolkit` lights up a richer prompt — candidate popup,
+# `prompt_toolkit` lights up the rich prompt — candidate popup,
 # Ctrl-R reverse search, fish-style auto-suggest, multi-line cursor
-# movement. The REPL works fine without it (falls back to readline),
-# but power users will want it.
+# movement, syntax highlighting, signature toolbar, persistent
+# history. Without it the REPL degrades to a bare `input()` prompt
+# (no editor, no completion, no history).
 prompt-toolkit = ["prompt_toolkit>=3.0"]
 
 [project.entry-points.robotcode]

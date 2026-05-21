@@ -1,13 +1,13 @@
-"""Plain input backend — the historical behaviour, no history / no completion."""
-
-from typing import List
+"""Plain input backend — the historical behaviour, no editor."""
 
 
 class PlainBackend:
     """Wraps `builtins.input` 1:1.
 
-    Used as the final fallback when no richer backend is available.
-    `prefill` is intentionally ignored — there is no editor to seed.
+    The fallback when prompt_toolkit isn't installed (or when the user /
+    agent-detection picked plain explicitly). No history, no completion,
+    no popup — just stdin/stdout. `prefill` is intentionally ignored;
+    there is no editor to seed.
     """
 
     def read_line(
@@ -17,15 +17,5 @@ class PlainBackend:
         multiline_continuation: bool = False,
         prefill: str = "",
     ) -> str:
-        del multiline_continuation, prefill  # plain input has no editor
+        del multiline_continuation, prefill
         return input(prompt)
-
-    def get_history(self) -> List[str]:
-        return []
-
-    def clear_history(self) -> None:
-        pass
-
-    def delete_history_entry(self, idx: int) -> bool:
-        del idx
-        return False

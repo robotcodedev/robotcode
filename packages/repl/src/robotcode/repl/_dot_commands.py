@@ -392,11 +392,18 @@ def _doc(app: Application, interpreter: Any, arg: str) -> None:
 # ---------------------------------------------------------------------------
 
 
+_HISTORY_REQUIRES_PROMPT_TOOLKIT = (
+    "History is only available with the prompt_toolkit backend. "
+    "Install it with: pip install 'robotcode-repl[prompt-toolkit]'"
+)
+
+
 @register("history", help="Show / manage history: .history [N] | .history clear | .history del <N>")
 def _history(app: Application, interpreter: Any, arg: str) -> None:
     """
     Show or manage the persistent REPL history. Entries are numbered
-    so subsequent subcommands can refer to them by index.
+    so subsequent subcommands can refer to them by index. Requires the
+    `[prompt-toolkit]` extra — the plain backend has no history file.
 
     Usage:
       .history [N]        Show the last N entries (default 20).
@@ -408,6 +415,10 @@ def _history(app: Application, interpreter: Any, arg: str) -> None:
       .history 50
       .history del 12
     """
+    if not hasattr(interpreter._input, "get_history"):
+        app.echo(_HISTORY_REQUIRES_PROMPT_TOOLKIT)
+        return
+
     tokens = arg.split()
     if tokens and tokens[0] == "clear":
         interpreter._input.clear_history()

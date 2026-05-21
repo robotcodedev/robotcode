@@ -11,7 +11,7 @@ from robot.running.context import EXECUTION_CONTEXTS
 from robotcode.plugin import Application
 
 from ._indent import compute_indent
-from ._input import InputBackend, pick_backend
+from ._input import InputProvider, pick_backend
 from .base_interpreter import BaseInterpreter, is_true
 
 
@@ -33,13 +33,13 @@ class ConsoleInterpreter(BaseInterpreter):
         self.inspect = inspect
 
         self.executed_files: List[Path] = []
-        self._input: InputBackend = pick_backend(no_history=no_history, backend=backend)
+        self._input: InputProvider = pick_backend(no_history=no_history, backend=backend)
         # REPL inputs that parsed cleanly — `.save` exports them as a
         # runnable `.robot` file. Each entry may be multi-line.
         self._session_lines: List[str] = []
         # Wire the backend's F1 / future dispatcher-aware bindings into
-        # the dot-command registry. Plain / readline backends don't
-        # expose this method and are skipped.
+        # the dot-command registry. Plain backend has no such bindings
+        # and is skipped via the capability check.
         if hasattr(self._input, "bind_dispatcher") and self.app is not None:
             self._input.bind_dispatcher(self.app, self)
 

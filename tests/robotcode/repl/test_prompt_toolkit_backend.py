@@ -1,8 +1,7 @@
 """Tests for the `prompt_toolkit` REPL backend.
 
-Skipped wholesale when `prompt_toolkit` isn't installed — Stage 3
-makes the dependency optional, and the readline / plain backends
-have their own coverage.
+Skipped wholesale when `prompt_toolkit` isn't installed — the prompt_toolkit
+extra is optional, and the plain backend has its own coverage.
 """
 
 from pathlib import Path
@@ -14,131 +13,23 @@ pytest.importorskip("prompt_toolkit")
 
 from prompt_toolkit.completion import CompleteEvent
 from prompt_toolkit.document import Document
+from prompt_toolkit.history import FileHistory
 
 from robotcode.repl._input._prompt_toolkit import (
     PromptToolkitBackend,
-    _ReadlineCompatHistory,
+    _ReplFileHistory,
     _RobotCompleter,
 )
 
-# ---------------------------------------------------------------------------
-# _ReadlineCompatHistory — round-trips the readline plain-text format.
-# ---------------------------------------------------------------------------
 
-
-def test_readline_compat_history_loads_newest_first(tmp_path: Path) -> None:
-    """prompt_toolkit consumes the iterator newest-first."""
-    histfile = tmp_path / "repl_history"
-    histfile.write_text("first\nsecond\nthird\n")
-
-    history = _ReadlineCompatHistory(histfile)
-    assert list(history.load_history_strings()) == ["third", "second", "first"]
-
-
-def test_readline_compat_history_skips_blank_lines(tmp_path: Path) -> None:
-    histfile = tmp_path / "repl_history"
-    histfile.write_text("a\n\n   \nb\n")
-
-    history = _ReadlineCompatHistory(histfile)
-    assert list(history.load_history_strings()) == ["b", "a"]
-
-
-def test_readline_compat_history_load_missing_file_is_silent(tmp_path: Path) -> None:
-    """A missing history file means 'no prior history' — no crash."""
-    history = _ReadlineCompatHistory(tmp_path / "nope")
-    assert list(history.load_history_strings()) == []
-
-
-def test_readline_compat_history_store_appends(tmp_path: Path) -> None:
-    histfile = tmp_path / "repl_history"
-    history = _ReadlineCompatHistory(histfile)
-    history.store_string("alpha")
-    history.store_string("beta")
-
-    assert histfile.read_text() == "alpha\nbeta\n"
-
-
-def test_readline_compat_history_store_creates_parent_dirs(tmp_path: Path) -> None:
-    histfile = tmp_path / "nested" / "subdir" / "repl_history"
-    history = _ReadlineCompatHistory(histfile)
-    history.store_string("only line")
-
-    assert histfile.read_text() == "only line\n"
-
-
-def test_readline_compat_history_store_ignores_blank(tmp_path: Path) -> None:
-    """Blank / whitespace-only lines mustn't pollute the file."""
-    histfile = tmp_path / "repl_history"
-    history = _ReadlineCompatHistory(histfile)
-    history.store_string("")
-    history.store_string("   ")
-    history.store_string("real entry")
-
-    assert histfile.read_text() == "real entry\n"
-
-
-def test_readline_compat_history_no_history_skips_load(tmp_path: Path) -> None:
-    histfile = tmp_path / "repl_history"
-    histfile.write_text("existing\n")
-
-    history = _ReadlineCompatHistory(histfile, no_history=True)
-    assert list(history.load_history_strings()) == []
-
-
-def test_readline_compat_history_no_history_skips_store(tmp_path: Path) -> None:
-    histfile = tmp_path / "repl_history"
-    histfile.write_text("existing\n")
-
-    history = _ReadlineCompatHistory(histfile, no_history=True)
-    history.store_string("should not land")
-
-    assert histfile.read_text() == "existing\n"
-
-
-def test_readline_compat_history_round_trips_multi_line_entry(tmp_path: Path) -> None:
-    """Bug fix: a multi-line buffer (FOR/IF/etc.) must survive a
-    store-then-reload cycle as ONE entry, not get split into N
-    separate single-line entries on the next session."""
-    histfile = tmp_path / "repl_history"
-    history = _ReadlineCompatHistory(histfile)
-
-    multi_line = "FOR    ${i}    IN RANGE    3\n    Log    ${i}\nEND"
-    history.store_string(multi_line)
-
-    # New instance — simulates a fresh REPL session opening the file.
-    reloaded = list(_ReadlineCompatHistory(histfile).load_history_strings())
-    assert reloaded == [multi_line]
-
-
-def test_readline_compat_history_file_stays_single_line_per_entry(tmp_path: Path) -> None:
-    """Even with multi-line content, each stored entry must be exactly
-    one line in the file — otherwise readline's own loader (used by
-    the other backend if the user uninstalls prompt_toolkit) would
-    parse it as separate entries."""
-    histfile = tmp_path / "repl_history"
-    history = _ReadlineCompatHistory(histfile)
-    history.store_string("first\nentry\nwith\nnewlines")
-    history.store_string("second-plain")
-
-    on_disk = histfile.read_text()
-    # Each store_string appends exactly one `\n`-terminated line.
-    assert on_disk.count("\n") == 2, f"file: {on_disk!r}"
-    # The multi-line content is encoded — actual newlines became `\n` escapes.
-    assert "first\\nentry\\nwith\\nnewlines" in on_disk
-
-
-def test_readline_compat_history_preserves_literal_backslash_n(tmp_path: Path) -> None:
-    """A user typing literal `\\n` (backslash-n) must NOT decode back
-    to a newline — the escape is unambiguous because backslashes get
-    doubled at write time."""
-    histfile = tmp_path / "repl_history"
-    history = _ReadlineCompatHistory(histfile)
-
-    # User typed two characters: backslash, then n. Not a newline.
-    history.store_string("Log    \\n")
-
-    reloaded = list(_ReadlineCompatHistory(histfile).load_history_strings())
-    assert reloaded == ["Log    \\n"]
+def _seed_history(path: Path, entries: list[str]) -> None:
+    """Populate a history file via prompt_toolkit's own FileHistory writer
+    so the on-disk format matches what the backend reads back."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("", encoding="utf-8")
+    history = FileHistory(str(path))
+    for entry in entries:
+        history.store_string(entry)
 
 
 # ---------------------------------------------------------------------------
@@ -208,28 +99,165 @@ def test_robot_completer_passes_detail_through_to_display_meta(
 # ---------------------------------------------------------------------------
 
 
-def test_prompt_toolkit_backend_uses_shared_history_file(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    """The backend's history must point at the *same* file the readline
-    backend uses — that's how recall survives a backend swap."""
-    shared = tmp_path / "shared_history"
-    monkeypatch.setattr("robotcode.repl._input._prompt_toolkit.history_path", lambda: shared)
+def test_prompt_toolkit_backend_uses_filehistory_at_history_path(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """The backend wires a stock `FileHistory` against the file `history_path()` returns."""
+    target = tmp_path / "h"
+    monkeypatch.setattr("robotcode.repl._input._prompt_toolkit.history_path", lambda: target)
 
     backend = PromptToolkitBackend()
     history = backend._session.history
-    assert isinstance(history, _ReadlineCompatHistory)
-    assert history._path == shared
+    assert isinstance(history, FileHistory)
+    assert Path(str(history.filename)) == target
 
 
 def test_prompt_toolkit_backend_threads_no_history(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """`no_history=True` swaps in an InMemoryHistory — the on-disk file is left alone."""
+    from prompt_toolkit.history import InMemoryHistory
+
     histfile = tmp_path / "h"
-    histfile.write_text("ancient_line\n")
+    _seed_history(histfile, ["ancient_line"])
+    pristine = histfile.read_text()
     monkeypatch.setattr("robotcode.repl._input._prompt_toolkit.history_path", lambda: histfile)
 
     backend = PromptToolkitBackend(no_history=True)
     history = backend._session.history
-    assert list(history.load_history_strings()) == []
+    assert isinstance(history, InMemoryHistory)
     history.store_string("nope")
-    assert histfile.read_text() == "ancient_line\n"
+    # File untouched — InMemoryHistory writes to memory only.
+    assert histfile.read_text() == pristine
+
+
+def test_prompt_toolkit_backend_survives_malformed_history(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """A history file in an unrecognised format must not crash startup.
+    prompt_toolkit's FileHistory uses `errors='replace'` on UTF-8 decode
+    and ignores lines that don't start with `+`, so we just inherit
+    that behaviour — the file appears empty to the REPL and new entries
+    get appended in the proper format."""
+    histfile = tmp_path / "h"
+    histfile.write_bytes(b"\xff\xfe legacy junk\nfirst\nsecond\n")
+    monkeypatch.setattr("robotcode.repl._input._prompt_toolkit.history_path", lambda: histfile)
+
+    backend = PromptToolkitBackend()
+    assert backend.get_history() == []
+
+
+def test_prompt_toolkit_backend_caps_load_to_max_entries(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """`load_history_strings` is sliced to `max_entries` so prompt_toolkit
+    only sees the newest N even if the file is externally oversized."""
+    histfile = tmp_path / "h"
+    _seed_history(histfile, ["a", "b", "c", "d", "e"])
+    monkeypatch.setattr("robotcode.repl._input._prompt_toolkit.history_path", lambda: histfile)
+    monkeypatch.setenv("ROBOTCODE_REPL_HISTORY_SIZE", "3")
+
+    backend = PromptToolkitBackend()
+    # Newest three survive in the load, oldest → newest order.
+    assert backend.get_history() == ["c", "d", "e"]
+
+
+def test_prompt_toolkit_backend_under_cap_returns_all_entries(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """When the file holds fewer entries than the cap, all of them load."""
+    histfile = tmp_path / "h"
+    _seed_history(histfile, ["a", "b"])
+    monkeypatch.setattr("robotcode.repl._input._prompt_toolkit.history_path", lambda: histfile)
+    monkeypatch.setenv("ROBOTCODE_REPL_HISTORY_SIZE", "10")
+
+    backend = PromptToolkitBackend()
+    assert backend.get_history() == ["a", "b"]
+
+
+def test_prompt_toolkit_backend_append_evicts_oldest_when_over_cap(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """When an `append_string` would push the file past the cap, the
+    oldest entry is dropped on disk. Keeps the file bounded over a long
+    interactive session, not just at startup."""
+    histfile = tmp_path / "h"
+    _seed_history(histfile, ["a", "b", "c"])
+    monkeypatch.setattr("robotcode.repl._input._prompt_toolkit.history_path", lambda: histfile)
+    monkeypatch.setenv("ROBOTCODE_REPL_HISTORY_SIZE", "3")
+
+    backend = PromptToolkitBackend()
+    # Sanity: we start at the cap.
+    assert backend.get_history() == ["a", "b", "c"]
+    # Adding one more should evict "a" (oldest).
+    backend._session.history.append_string("d")
+    assert backend.get_history() == ["b", "c", "d"]
+    # And another append evicts "b".
+    backend._session.history.append_string("e")
+    assert backend.get_history() == ["c", "d", "e"]
+
+
+# ---------------------------------------------------------------------------
+# _ReplFileHistory — direct unit coverage of the History-class contract
+# ---------------------------------------------------------------------------
+
+
+def test_repl_file_history_clear_returns_true_and_wipes_cache(tmp_path: Path) -> None:
+    """`clear()` returns True on success and leaves the in-memory cache empty
+    so prompt_toolkit's next arrow-up reflects the empty state."""
+    histfile = tmp_path / "h"
+    _seed_history(histfile, ["a", "b"])
+    history = _ReplFileHistory(str(histfile), max_entries=10)
+    # Prime the cache.
+    list(history.load_history_strings())
+
+    assert history.clear() is True
+    assert list(history.load_history_strings()) == []
+    assert history._loaded_strings == []
+
+
+def test_repl_file_history_delete_returns_true_when_in_range(tmp_path: Path) -> None:
+    histfile = tmp_path / "h"
+    _seed_history(histfile, ["a", "b", "c"])
+    history = _ReplFileHistory(str(histfile), max_entries=10)
+
+    assert history.delete(2) is True
+    # Newest-first: c, then a (b was at idx 2 in oldest-first listing → dropped).
+    assert list(history.load_history_strings()) == ["c", "a"]
+
+
+def test_repl_file_history_delete_returns_false_when_out_of_range(tmp_path: Path) -> None:
+    histfile = tmp_path / "h"
+    _seed_history(histfile, ["only"])
+    history = _ReplFileHistory(str(histfile), max_entries=10)
+
+    assert history.delete(99) is False
+    assert history.delete(0) is False
+    # Original entry untouched.
+    assert list(history.load_history_strings()) == ["only"]
+
+
+def test_repl_file_history_append_keeps_cache_in_sync_after_eviction(tmp_path: Path) -> None:
+    """When `append_string` triggers an eviction, `_loaded_strings` must
+    match the on-disk state — otherwise prompt_toolkit's in-memory
+    arrow-up walks a list that disagrees with the file."""
+    histfile = tmp_path / "h"
+    _seed_history(histfile, ["a", "b", "c"])
+    history = _ReplFileHistory(str(histfile), max_entries=3)
+    # Force the cache to be populated.
+    list(history.load_history_strings())
+    history._loaded = True
+    history._loaded_strings = ["c", "b", "a"]  # newest-first, mirrors file
+
+    history.append_string("d")
+
+    # File should now hold b, c, d (oldest-first); newest-first is d, c, b.
+    on_disk = list(history.load_history_strings())
+    assert on_disk == ["d", "c", "b"]
+    assert history._loaded_strings == on_disk, "cache must match disk after eviction"
+
+
+def test_repl_file_history_load_islice_caps_externally_oversized_file(tmp_path: Path) -> None:
+    """If the file was externally edited and now holds more than max_entries,
+    `load_history_strings` still returns at most max_entries (defense in depth)."""
+    histfile = tmp_path / "h"
+    _seed_history(histfile, ["a", "b", "c", "d", "e"])
+    history = _ReplFileHistory(str(histfile), max_entries=2)
+
+    # Newest-first, capped to 2.
+    assert list(history.load_history_strings()) == ["e", "d"]
 
 
 # ---------------------------------------------------------------------------
@@ -449,7 +477,7 @@ def test_bottom_toolbar_returns_none_when_cursor_in_keyword_cell(monkeypatch: py
 def test_prompt_toolkit_backend_get_history_reads_from_file(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     """`get_history()` reflects the file content in oldest → newest order."""
     histfile = tmp_path / "h"
-    histfile.write_text("a\nb\nc\n")
+    _seed_history(histfile, ["a", "b", "c"])
     monkeypatch.setattr("robotcode.repl._input._prompt_toolkit.history_path", lambda: histfile)
     backend = PromptToolkitBackend()
     assert backend.get_history() == ["a", "b", "c"]
@@ -457,11 +485,8 @@ def test_prompt_toolkit_backend_get_history_reads_from_file(monkeypatch: pytest.
 
 def test_prompt_toolkit_backend_clear_history_truncates_file(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     histfile = tmp_path / "h"
-    histfile.write_text("a\nb\n")
+    _seed_history(histfile, ["a", "b"])
     monkeypatch.setattr("robotcode.repl._input._prompt_toolkit.history_path", lambda: histfile)
-    import robotcode.repl._history as history_mod
-
-    monkeypatch.setattr(history_mod, "history_path", lambda: histfile)
     backend = PromptToolkitBackend()
     backend.clear_history()
     assert histfile.read_text() == ""
@@ -472,33 +497,39 @@ def test_prompt_toolkit_backend_delete_history_entry_removes_line(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     histfile = tmp_path / "h"
-    histfile.write_text("first\nsecond\nthird\n")
+    _seed_history(histfile, ["first", "second", "third"])
     monkeypatch.setattr("robotcode.repl._input._prompt_toolkit.history_path", lambda: histfile)
-    import robotcode.repl._history as history_mod
-
-    monkeypatch.setattr(history_mod, "history_path", lambda: histfile)
     backend = PromptToolkitBackend()
     assert backend.delete_history_entry(2) is True
     assert backend.get_history() == ["first", "third"]
-    assert "second" not in histfile.read_text()
+
+
+def test_prompt_toolkit_backend_delete_history_entry_out_of_range_returns_false(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    histfile = tmp_path / "h"
+    _seed_history(histfile, ["only"])
+    monkeypatch.setattr("robotcode.repl._input._prompt_toolkit.history_path", lambda: histfile)
+    backend = PromptToolkitBackend()
+    assert backend.delete_history_entry(99) is False
+    assert backend.delete_history_entry(0) is False
+    assert backend.get_history() == ["only"]
 
 
 def test_prompt_toolkit_backend_history_no_history_mode_is_read_only(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """With `--no-history`, the file is never written: clear/delete are
-    no-ops on disk."""
+    """With `no_history=True`, the file is never written: clear/delete short-circuit."""
     histfile = tmp_path / "h"
-    histfile.write_text("a\nb\n")
+    _seed_history(histfile, ["a", "b"])
+    pristine = histfile.read_text()
     monkeypatch.setattr("robotcode.repl._input._prompt_toolkit.history_path", lambda: histfile)
-    import robotcode.repl._history as history_mod
 
-    monkeypatch.setattr(history_mod, "history_path", lambda: histfile)
     backend = PromptToolkitBackend(no_history=True)
     backend.clear_history()
-    backend.delete_history_entry(1)
-    # File untouched, since both ops short-circuit in no-history mode.
-    assert histfile.read_text() == "a\nb\n"
+    assert backend.delete_history_entry(1) is False
+    # File untouched.
+    assert histfile.read_text() == pristine
 
 
 def test_prompt_toolkit_backend_read_line_delegates_to_session(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
