@@ -19,7 +19,7 @@ def _make_interpreter() -> ConsoleInterpreter:
     """Build a minimal `ConsoleInterpreter` — `app=None`, plain backend
     so we don't drag in prompt_toolkit / readline. Only the
     `set_last_result` path is exercised here."""
-    return ConsoleInterpreter(app=None, plain=True)
+    return ConsoleInterpreter(app=None, backend="plain")
 
 
 def _patch_context_with_vars(monkeypatch: pytest.MonkeyPatch, store: Dict[str, Any]) -> None:

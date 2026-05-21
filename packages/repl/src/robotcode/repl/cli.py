@@ -6,6 +6,7 @@ import click
 from robotcode.plugin import Application, pass_application
 
 from .__version__ import __version__
+from ._input import BACKEND_CHOICES, BackendUnavailableError
 from .console_interpreter import ConsoleInterpreter
 from .run import run_repl
 
@@ -61,15 +62,29 @@ from .run import run_repl
     "want polluting your shell's REPL history.",
 )
 @click.option(
+    "--backend",
+    type=click.Choice(list(BACKEND_CHOICES)),
+    default="auto",
+    show_default=True,
+    envvar="ROBOTCODE_REPL_BACKEND",
+    help="Force a specific input backend instead of auto-picking. "
+    "`auto` runs the fallback cascade (prompt-toolkit → readline → plain). "
+    "Use the explicit values to test the readline / plain code paths "
+    "even when `prompt_toolkit` is installed. Requesting a backend that "
+    "is not available aborts startup with a clear error — no silent "
+    "fallback.",
+)
+@click.option(
     "--plain",
     is_flag=True,
     default=False,
     envvar="ROBOTCODE_REPL_PLAIN",
-    help="Disable all prompt enhancements — completion, syntax highlighting, "
-    "candidate popup, auto-suggest, history file. The prompt becomes a bare "
-    "`input()` call. Recommended for AI-agent invocations, automation "
-    "pipelines, and any context where ANSI escapes or completion popups "
-    "would interfere with stdin/stdout capture.",
+    help="Shorthand for `--backend=plain`. Disables all prompt enhancements — "
+    "completion, syntax highlighting, candidate popup, auto-suggest, history "
+    "file. The prompt becomes a bare `input()` call. Recommended for "
+    "AI-agent invocations, automation pipelines, and any context where ANSI "
+    "escapes or completion popups would interfere with stdin/stdout capture. "
+    "Conflicts with `--backend=<other>`.",
 )
 @click.option(
     "-d",
@@ -133,6 +148,7 @@ def repl(
     show_keywords: bool,
     inspect: bool,
     no_history: bool,
+    backend: str,
     plain: bool,
     outputdir: Optional[str],
     output: Optional[str],
@@ -148,14 +164,22 @@ def repl(
     if files:
         files = tuple(f.absolute() for f in files)
 
-    interpreter = ConsoleInterpreter(
-        app,
-        files=list(files),
-        show_keywords=show_keywords,
-        inspect=inspect,
-        no_history=no_history,
-        plain=plain,
-    )
+    if plain and backend not in ("auto", "plain"):
+        raise click.UsageError(f"--plain conflicts with --backend={backend}. Use one or the other.")
+    if plain:
+        backend = "plain"
+
+    try:
+        interpreter = ConsoleInterpreter(
+            app,
+            files=list(files),
+            show_keywords=show_keywords,
+            inspect=inspect,
+            no_history=no_history,
+            backend=backend,
+        )
+    except BackendUnavailableError as exc:
+        raise click.UsageError(str(exc)) from exc
 
     run_repl(
         interpreter=interpreter,

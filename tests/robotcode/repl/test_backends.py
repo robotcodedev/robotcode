@@ -121,31 +121,72 @@ def test_pick_backend_prefers_prompt_toolkit_when_available() -> None:
 
 
 # ---------------------------------------------------------------------------
-# --plain escape hatch — forces PlainBackend regardless of installed extras.
+# Explicit `backend=` selection — forces a specific backend, errors on miss.
 # ---------------------------------------------------------------------------
 
 
 def test_pick_backend_plain_returns_plain_even_with_prompt_toolkit() -> None:
-    """`plain=True` must bypass the cascade — no popup, no readline, no
-    ANSI codes leaking into AI-agent stdout capture."""
-    backend = pick_backend(plain=True)
+    """`backend="plain"` bypasses the cascade — no popup, no readline,
+    no ANSI codes leaking into AI-agent stdout capture."""
+    backend = pick_backend(backend="plain")
     assert isinstance(backend, PlainBackendClass)
 
 
 def test_pick_backend_plain_is_orthogonal_to_no_history() -> None:
     """Plain mode has no history file anyway, but setting both must
     still return PlainBackend (no conflict, no error)."""
-    backend = pick_backend(plain=True, no_history=True)
+    backend = pick_backend(backend="plain", no_history=True)
     assert isinstance(backend, PlainBackendClass)
 
 
-def test_pick_backend_plain_false_keeps_default_cascade(monkeypatch: pytest.MonkeyPatch) -> None:
-    """`plain=False` (the default) must NOT short-circuit; cascade as
+def test_pick_backend_auto_keeps_default_cascade(monkeypatch: pytest.MonkeyPatch) -> None:
+    """`backend="auto"` (the default) must NOT short-circuit; cascade as
     before."""
     pytest.importorskip("readline")
     _block_module(monkeypatch, "robotcode.repl._input._prompt_toolkit")
-    backend = pick_backend(plain=False)
+    backend = pick_backend(backend="auto")
     assert type(backend).__name__ == "ReadlineBackend"
+
+
+def test_pick_backend_explicit_readline_returns_readline_even_with_prompt_toolkit() -> None:
+    """Core feature: `backend="readline"` must ignore prompt_toolkit
+    even when it's installed. Lets devs (and users) exercise the
+    readline code path without uninstalling the prompt_toolkit extra."""
+    pytest.importorskip("readline")
+    pytest.importorskip("prompt_toolkit")
+    backend = pick_backend(backend="readline")
+    assert type(backend).__name__ == "ReadlineBackend"
+
+
+def test_pick_backend_explicit_prompt_toolkit_returns_prompt_toolkit() -> None:
+    pytest.importorskip("prompt_toolkit")
+    backend = pick_backend(backend="prompt-toolkit")
+    assert type(backend).__name__ == "PromptToolkitBackend"
+
+
+def test_pick_backend_explicit_readline_raises_when_unavailable(monkeypatch: pytest.MonkeyPatch) -> None:
+    """An explicit request for an uninstalled backend is a hard error —
+    silent fallback would defeat the purpose of the flag."""
+    from robotcode.repl._input import BackendUnavailableError
+
+    _block_module(monkeypatch, "robotcode.repl._input._readline")
+    with pytest.raises(BackendUnavailableError, match="readline backend not available"):
+        pick_backend(backend="readline")
+
+
+def test_pick_backend_explicit_prompt_toolkit_raises_when_unavailable(monkeypatch: pytest.MonkeyPatch) -> None:
+    from robotcode.repl._input import BackendUnavailableError
+
+    _block_module(monkeypatch, "robotcode.repl._input._prompt_toolkit")
+    with pytest.raises(BackendUnavailableError, match="prompt_toolkit backend requested"):
+        pick_backend(backend="prompt-toolkit")
+
+
+def test_pick_backend_unknown_value_raises() -> None:
+    """Defense in depth: the CLI uses `click.Choice` to filter values,
+    but a direct API caller could still pass garbage. Surface it loudly."""
+    with pytest.raises(ValueError, match="Unknown backend"):
+        pick_backend(backend="xyz")
 
 
 # ---------------------------------------------------------------------------

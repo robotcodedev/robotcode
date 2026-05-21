@@ -83,9 +83,22 @@ Log To Console    answer is ${x}
 
 The prompt is a real line editor — arrow-keys for cursor movement, `Ctrl-R` for reverse history search, Tab for Robot-aware completion. On Unix and on Windows with Python 3.13+ this is wired up out of the box via Python's stdlib `readline`; on older Windows Pythons you only get plain `input()` unless you install `pyreadline3`.
 
-### Disabling all enhancements (AI agents, automation)
+### Picking a specific input backend
 
-Pass `--plain` (or set `ROBOTCODE_REPL_PLAIN=1`) to bypass every layer above and fall back to a bare `input()` prompt. That means no history, no completion, no candidate popup, no auto-suggest, no syntax highlighting — just a plain line read. Use this for AI-agent invocations or automation pipelines where ANSI escape sequences and completion popups would corrupt stdin/stdout capture.
+The REPL auto-picks the best available input backend on startup (`prompt_toolkit` → `readline` → bare `input()`). Pass `--backend` (or set `ROBOTCODE_REPL_BACKEND`) to force a specific one:
+
+| Value | Effect |
+| ----- | ------ |
+| `auto` (default) | Run the fallback cascade. |
+| `prompt-toolkit` | Use the prompt_toolkit backend. Requires the `[prompt-toolkit]` extra. |
+| `readline` | Use the readline backend even when prompt_toolkit is installed. Useful for testing the readline code path or for users who prefer it. |
+| `plain` | Bypass every editor layer and fall back to a bare `input()` prompt. |
+
+Requesting a backend that isn't importable on the current Python aborts startup with a clear error and a `pip install` hint — there is no silent fallback, so the explicit choice is always honoured (or visibly refused).
+
+#### Disabling all enhancements (AI agents, automation)
+
+`--plain` (or `ROBOTCODE_REPL_PLAIN=1`) is a shorthand for `--backend=plain`. It bypasses every layer above and falls back to a bare `input()` prompt — no history, no completion, no candidate popup, no auto-suggest, no syntax highlighting. Use this for AI-agent invocations or automation pipelines where ANSI escape sequences and completion popups would corrupt stdin/stdout capture.
 
 ```bash
 # AI-agent style: pipe input, capture clean output
@@ -94,7 +107,7 @@ Log To Console    hello from agent
 EOF
 ```
 
-`--plain` and `--no-history` can be combined safely (plain mode has no history file anyway).
+Combining `--plain` with a non-`plain` `--backend` value is rejected as a usage error; combining it with `--no-history` is fine (plain mode has no history file anyway).
 
 ### History across sessions
 

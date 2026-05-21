@@ -23,7 +23,7 @@ class ConsoleInterpreter(BaseInterpreter):
         show_keywords: bool = False,
         inspect: Optional[bool] = False,
         no_history: bool = False,
-        plain: bool = False,
+        backend: str = "auto",
     ) -> None:
         super().__init__()
 
@@ -33,7 +33,7 @@ class ConsoleInterpreter(BaseInterpreter):
         self.inspect = inspect
 
         self.executed_files: List[Path] = []
-        self._input: InputBackend = pick_backend(no_history=no_history, plain=plain)
+        self._input: InputBackend = pick_backend(no_history=no_history, backend=backend)
         # REPL inputs that parsed cleanly — `.save` exports them as a
         # runnable `.robot` file. Each entry may be multi-line.
         self._session_lines: List[str] = []
