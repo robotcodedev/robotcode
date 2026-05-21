@@ -39,6 +39,9 @@ Copy the messages from VSCode "Output" view for RobotCode and RobotCode Language
 **Additional context**
 Add any other context about the problem here.
 
+**AI / tooling disclosure**
+If this report was drafted with help from AI tools or automated agents, please mention which tool(s) you used and confirm you reviewed the content. Trivial grammar/autocomplete help does not need to be disclosed. See [AI_POLICY.md](../../AI_POLICY.md).
+
 **Desktop (please complete the following information):**
 - VS Code Version [e.g. 1.60]
 - RobotCode Version [e.g. 0.3.2]

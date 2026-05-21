@@ -17,12 +17,16 @@ And if you like the project, but just don't have time to contribute, that's fine
 
 - [Code of Conduct](#code-of-conduct)
 - [I Have a Question](#i-have-a-question)
+- [Project-Wide Rules](#project-wide-rules)
+  - [AI and Automated Contributions](#ai-and-automated-contributions)
+  - [Payment, Bounty, and Monetization Requests](#payment-bounty-and-monetization-requests)
 - [I Want To Contribute](#i-want-to-contribute)
   - [Reporting Bugs](#reporting-bugs)
   - [Suggesting Enhancements](#suggesting-enhancements)
   - [Your First Code Contribution](#your-first-code-contribution)
     - [Development Environment Setup](#development-environment-setup)
     - [IDE Configuration](#ide-configuration)
+    - [Pre-commit Hooks](#pre-commit-hooks)
     - [Development Workflow](#development-workflow)
     - [Pull Request Guidelines](#pull-request-guidelines)
     - [Running Tests](#running-tests)
@@ -74,6 +78,26 @@ Depending on how large the project is, you may want to outsource the questioning
 - E-Mail List
 - Forum
 -->
+
+## Project-Wide Rules
+
+These rules apply to all interactions with the robotcode project — pull requests, issues, discussions, comments, code review replies, and any other contribution. Please read them before opening a contribution of any kind.
+
+### AI and Automated Contributions
+
+AI-assisted or automated contributions, including agent-generated ones, must follow our [AI and Automated Contribution Policy](AI_POLICY.md). In short: the human submitter must understand, review, test, and maintain the contribution, and must disclose AI or tool assistance in the pull request, issue, or comment.
+
+### Payment, Bounty, and Monetization Requests
+
+robotcode is an open-source project, not a lead-generation or micro-bounty platform.
+
+Do not include payment links, invoices, donation requests, wallet addresses, "paid fix" notes, bounty claims, sponsorship requests, or similar monetization requests in pull requests, issues, discussions, comments, or any other project interaction unless paid work or a bounty process was explicitly agreed with the maintainers before the work started.
+
+Unsolicited monetization requests attached to contributions are not accepted. Pull requests containing such requests may be closed without review, and issues or discussions containing such requests may be declined or closed.
+
+If a contribution is part of an agreed paid engagement, sponsored work, or bounty process, disclose that context clearly and follow the agreed process. Do not add ad-hoc payment requests to the contribution body.
+
+Contributions are reviewed on their technical merit, usefulness to robotcode users, and compliance with the project's contribution standards — not on payment requests attached to them.
 
 ## I Want To Contribute
 
@@ -201,11 +225,18 @@ If you prefer to set up locally:
    # Fedora: sudo dnf install hatch
    # Arch: sudo pacman -S hatch
 
-   # Option B: Using pipx (recommended if not in package manager)
+   # Option B: Using uv (fast — install uv first: https://docs.astral.sh/uv/getting-started/installation/)
+   # B.1 ephemeral, no permanent install — prefix every hatch invocation with `uvx`:
+   uvx hatch env create devel
+   uvx hatch run test:test
+   # B.2 or install hatch as a persistent uv tool (then call `hatch ...` directly):
+   uv tool install hatch
+
+   # Option C: Using pipx
    pip install pipx
    pipx install hatch
 
-   # Option C: Check https://hatch.pypa.io/latest/install/ for other methods
+   # Option D: Check https://hatch.pypa.io/latest/install/ for other methods
 
    # Create development environment
    hatch env create devel
@@ -239,12 +270,39 @@ Hatch creates separate Python environments for each supported Python/Robot Frame
 
 You can also check available environments with: `hatch env show`
 
+#### Pre-commit Hooks
+
+The project ships a [`.pre-commit-config.yaml`](.pre-commit-config.yaml) that runs the same checks CI enforces, locally and automatically before every commit/push:
+
+- Conventional Commits check on the commit message
+- Python style (`hatch run lint:style`) and typing (`hatch run lint:typing`)
+- JavaScript/TypeScript lint (`npm run lint`)
+
+We strongly recommend installing the hooks once — they catch most lint/format/commit-message issues before CI does:
+
+```bash
+# Option A: Run ephemerally via uvx (no permanent install)
+uvx pre-commit install --install-hooks
+# later, to run manually:
+uvx pre-commit run --all-files
+
+# Option B: Install permanently via uv
+uv tool install pre-commit
+pre-commit install --install-hooks
+
+# Option C: Install permanently via pipx / pip
+pipx install pre-commit          # or: pip install --user pre-commit
+pre-commit install --install-hooks
+```
+
+This installs the `pre-commit`, `commit-msg` and `pre-push` hooks. To run all hooks manually against the whole repo: `pre-commit run --all-files`.
+
 #### Development Workflow
 
 1. **Create a branch:** `git checkout -b feature/your-feature-name`
 2. **Make your changes** following the project's coding standards
-3. **Run tests:** `hatch run devel.py3.12-rf73:test` (single combination for faster development)
-4. **Run linting:** `hatch run lint:all` (or use the VS Code task)
+3. **Run tests:** `hatch run test:test` (runs against all supported Robot Framework versions with the default Python — the recommended check before pushing)
+4. **Run linting:** `hatch run lint:all` (or use the VS Code task) — the [pre-commit hooks](#pre-commit-hooks) run style and typing checks automatically if installed
 5. **Fix linting issues:** `hatch run lint:style` for formatting
 6. **Commit your changes** with a descriptive commit message
 7. **Push and create a pull request**
@@ -253,69 +311,74 @@ Note on Python versions: the project tests across Python 3.10–3.14; active dev
 
 #### Pull Request Guidelines
 
-Before submitting your pull request:
+When you open a pull request, GitHub will pre-fill the [pull request template](.github/PULL_REQUEST_TEMPLATE.md). Please keep its checklist intact and tick the boxes that apply.
 
-1. **Ensure all tests pass:** Run `hatch run test.rf73:test` (or your preferred combination)
-2. **Check linting:** Run `hatch run lint:all` and fix any issues
-3. **Write descriptive PR description:**
-   - Explain what changes you made and why
-   - Reference any related issues
-   - Include screenshots for UI changes
-   - List any breaking changes
-4. **Keep PRs focused:** One feature/fix per PR when possible
-5. **Update documentation:** Include relevant documentation updates
-6. **Sign your commits:** All commits must be signed (see [Signed Commits](#signed-commits-required))
+##### PR Checklist
 
-**PR Review Process:**
-- Automated checks must pass (tests, linting, etc.)
-- At least one maintainer review is required
-- Address any feedback promptly
-- Keep your PR up to date with the main branch
+Before submitting your pull request, make sure that:
+
+- [ ] The change is **focused** on a single concern (no unrelated refactors or formatting noise).
+- [ ] **Tests** for the change have been added or updated, and `hatch run test:test` passes locally (RF matrix against the default Python). See [Running Tests](#running-tests) for faster iteration options and the full matrix.
+- [ ] **Linting** passes: `hatch run lint:all` (also enforced by the [pre-commit hooks](#pre-commit-hooks) if installed).
+- [ ] **Documentation** has been updated where relevant (user docs, code comments, README).
+- [ ] **Generated files** (if any) were regenerated with the documented script, not edited by hand.
+- [ ] **Commits** follow [Conventional Commits](#commit-messages) and are [signed](#signed-commits-required).
+- [ ] **AI / tooling disclosure** is included if AI tools or automated agents were used for a substantial part of the change (see [AI_POLICY.md](AI_POLICY.md)).
+- [ ] No payment, bounty, or monetization requests are attached (see [Payment, Bounty, and Monetization Requests](#payment-bounty-and-monetization-requests)).
+
+##### PR Description
+
+A good PR description:
+- Explains **what** changed and **why**.
+- References any related issues (e.g. `Fixes #123`).
+- Includes screenshots for UI changes.
+- Lists any breaking changes explicitly.
+
+##### PR Review Process
+
+- Automated checks must pass (tests, linting, etc.).
+- At least one maintainer review is required.
+- Address feedback promptly.
+- Keep your PR up to date with the main branch.
 
 #### Running Tests
 
-**Basic Test Execution:**
-- Use VS Code's built-in test runner (Testing tab in the sidebar)
-- Or run from terminal: `hatch run test` (⚠️ **Warning**: This runs tests against ALL Python/Robot Framework combinations in the matrix - can take a very long time!)
-- Run specific tests: `hatch run test tests/specific_test.py` (also runs against all matrix combinations)
-
-**Testing with Specific Python/Robot Framework Versions:**
-
-The project supports multiple Python and Robot Framework versions. You can run tests against specific combinations:
+**Recommended default:**
 
 ```bash
-# Run tests with specific Robot Framework versions (single combination)
-hatch run test:test          # ⚠️ Runs ALL matrix combinations (RF 4.1-7.3)
-hatch run test.rf70:test      # Robot Framework 7.0.x
-hatch run test.rf71:test      # Robot Framework 7.1.x
-hatch run test.rf72:test      # Robot Framework 7.2.x
-hatch run test.rf73:test      # Robot Framework 7.3.x (recommended for development)
-hatch run test.rf61:test      # Robot Framework 6.1.x
-hatch run test.rf60:test      # Robot Framework 6.0.x
-hatch run test.rf50:test      # Robot Framework 5.0.x
-hatch run test.rf41:test      # Robot Framework 4.1.x
-
-# Run tests in specific development environments (single combination)
-hatch run devel:test          # ⚠️ Runs ALL matrix combinations (Python 3.10-3.14 × RF 4.1-7.3)
-hatch run devel.py3.11-rf70:test # Python 3.11 with Robot Framework 7.0.x (single combination)
-hatch run devel.py3.12-rf73:test # Python 3.12 with Robot Framework 7.3.x (single combination)
-hatch run devel.py3.13-rf73:test # Python 3.13 with Robot Framework 7.3.x (single combination)
-
-# Test against development versions of Robot Framework
-hatch run rfbeta:test         # Robot Framework beta/RC versions
-hatch run rfmaster:test       # Robot Framework master branch
-hatch run rfdevel:test        # Local Robot Framework development version
+hatch run test:test
 ```
 
-**⚠️ Important Matrix Behavior:**
-- `hatch run test` executes tests for **all combinations** in the matrix (48 combinations: 6 Python versions × 8 RF versions)
-- `hatch run devel:test` also runs **all matrix combinations**
-- For faster development, use specific combinations like `hatch run devel.py3.12-rf73:test`
-- For CI/full testing, use the matrix commands
+This runs the full test suite across all supported Robot Framework versions (5.0 – 7.4) using the default Python interpreter. It is the recommended check before pushing a pull request: it gives good coverage without spinning up the full Python × RF matrix.
 
-**Available Environment Matrix:**
-- **Python versions**: 3.10, 3.11, 3.12, 3.13, 3.14
-- **Robot Framework versions**: 4.1.x, 5.0.x, 6.0.x, 6.1.x, 7.0.x, 7.1.x, 7.2.x, 7.3.x
+**Fast iteration during development:**
+
+Run a single Robot Framework version:
+
+```bash
+hatch run test.rf74:test      # Robot Framework 7.4.x
+hatch run test.rf73:test      # Robot Framework 7.3.x
+hatch run test.rf72:test      # Robot Framework 7.2.x
+# … rf50 … rf74 available
+```
+
+For running individual tests or test files interactively, use VS Code's built-in test runner (Testing tab in the sidebar) — it's the most convenient way to iterate on a single test or debug a failure.
+
+**Full Python × RF matrix (CI-style, slow):**
+
+```bash
+hatch run devel:test                  # all combinations: 5 Python versions × 8 RF versions = 40 envs
+hatch run devel.py3.12-rf74:test      # a specific Python × RF combination
+```
+
+Only use this when you suspect a Python-version-specific issue — it is significantly slower than `test:test`.
+
+**Available environment matrix:**
+
+- **Python versions:** 3.10, 3.11, 3.12, 3.13, 3.14
+- **Robot Framework versions:** 5.0.x, 6.0.x, 6.1.x, 7.0.x, 7.1.x, 7.2.x, 7.3.x, 7.4.x
+
+> ℹ️ `hatch run test` (without an env prefix) runs only in the `default` environment against the Robot Framework version pinned there — it does **not** cover the RF matrix. Use `hatch run test:test` for the full RF matrix, or `hatch run devel:test` for the full Python × RF matrix (slow).
 
 #### Building the Project
 
