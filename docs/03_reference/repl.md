@@ -107,6 +107,8 @@ Log To Console    hello from agent
 EOF
 ```
 
+You usually don't need `--plain` when invoking the REPL from inside a known AI agent — `robotcode` detects popular agent environments (Claude Code, Cursor, Copilot CLI, OpenCode, Codex, …) and falls through to `plain` automatically. See [AI-agent detection](./cli.md#ai-agent-detection) for the full list of marker env vars and the override hatches.
+
 Combining `--plain` with a non-`plain` `--backend` value is rejected as a usage error; combining it with `--no-history` is fine (plain mode has no history file anyway).
 
 ### History across sessions

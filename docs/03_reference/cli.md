@@ -112,12 +112,12 @@ robotcode [OPTIONS] COMMAND [ARGS]...
 
 - `--color / --no-color`
 
-   Force or disable colored output. Default (no flag): auto-detect — colors only when stdout is a TTY, disabled if `NO_COLOR` is set, forced if `FORCE_COLOR` is set.  [env var: ROBOTCODE_COLOR]
+   Force or disable colored output. Default (no flag): auto-detect — colors only when stdout is a TTY, disabled if `NO_COLOR` is set, forced if `FORCE_COLOR` is set, disabled when an [AI agent session](#ai-agent-detection) is detected.  [env var: ROBOTCODE_COLOR]
 
 
 - `--pager / --no-pager`
 
-   Force or disable the pager. Default (no flag): auto-page when the rendered output exceeds the terminal height.  [env var: ROBOTCODE_PAGER]
+   Force or disable the pager. Default (no flag): auto-page when the rendered output exceeds the terminal height; disabled when an [AI agent session](#ai-agent-detection) is detected.  [env var: ROBOTCODE_PAGER]
 
 
 - `-v, --verbose`
@@ -2451,6 +2451,35 @@ robotcode testdoc [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
 Use `-- --help` to see `testdoc` help.
 
 
+## AI-agent detection
+
+When `robotcode` runs inside an AI agent session it auto-disables coloured output and the pager, and the `repl` subcommand falls through to the `plain` input backend. The agent gets clean stdin/stdout — no ANSI escapes leaking into its capture, no pager blocking on a keypress that never comes, no live completion popup polluting the buffer — without you having to remember `--no-color --no-pager --plain` on every invocation.
+
+Detection is purely environment-variable based and covers the popular agents:
+
+| Agent | Marker env var(s) |
+| ----- | ----------------- |
+| Claude Code | `CLAUDECODE`, `CLAUDE_CODE` |
+| Cursor | `CURSOR_AGENT`, `CURSOR_TRACE_ID` |
+| GitHub Copilot CLI | `COPILOT_MODEL`, `COPILOT_ALLOW_ALL` |
+| VS Code agent flow (1.121+) | `VSCODE_AGENT` |
+| OpenAI Codex CLI | `CODEX_CI`, `CODEX_THREAD_ID`, `CODEX_SANDBOX` |
+| Google Gemini / Antigravity | `GEMINI_CLI`, `ANTIGRAVITY_AGENT` |
+| OpenCode | `OPENCODE`, `OPENCODE_CLIENT`, `AGENT` |
+| Augment, Cline | `AUGMENT_AGENT`, `CLINE_ACTIVE` |
+| Generic / proposed standard | `AI_AGENT`, `AGENT` |
+
+Explicit signals always win. The precedence is:
+
+1. CLI flags (`--color`, `--no-color`, `--pager`, `--no-pager`, REPL `--plain`, `--backend`)
+2. Dedicated env vars (`NO_COLOR`, `FORCE_COLOR`, `ROBOTCODE_REPL_PLAIN`, `ROBOTCODE_REPL_BACKEND`)
+3. AI-agent detection (this section)
+4. TTY-based auto detection
+
+Two override hatches help in edge cases:
+
+- `ROBOTCODE_FORCE_AI_AGENT=1` — force the agent code path on (testing the AI-agent UX without an actual agent running).
+- `ROBOTCODE_NO_AI_AGENT=1` — disable the detection even when a marker is present.
 
 
 <!-- END -->

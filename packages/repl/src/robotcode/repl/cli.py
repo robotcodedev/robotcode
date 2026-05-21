@@ -1,9 +1,11 @@
+import os
 from pathlib import Path
 from typing import Optional, Tuple
 
 import click
 
 from robotcode.plugin import Application, pass_application
+from robotcode.plugin._agent_detection import is_running_in_ai_agent
 
 from .__version__ import __version__
 from ._input import BACKEND_CHOICES, BackendUnavailableError
@@ -167,6 +169,18 @@ def repl(
     if plain and backend not in ("auto", "plain"):
         raise click.UsageError(f"--plain conflicts with --backend={backend}. Use one or the other.")
     if plain:
+        backend = "plain"
+
+    # AI-agent auto-detect: when no explicit `--plain` / `--backend` /
+    # env-var was given and we're running inside a recognised agent,
+    # fall through to the plain backend so the popup, syntax-highlighter,
+    # and ANSI escapes don't pollute the agent's stdout capture.
+    if (
+        backend == "auto"
+        and not os.environ.get("ROBOTCODE_REPL_PLAIN")
+        and not os.environ.get("ROBOTCODE_REPL_BACKEND")
+        and is_running_in_ai_agent()
+    ):
         backend = "plain"
 
     try:
