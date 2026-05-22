@@ -1,10 +1,10 @@
 # AI and Automated Contribution Policy
 
-AI tools and automated coding agents are permitted in robotcode contributions. They can be useful development aids. However, low-context, low-effort, or poorly reviewed automated contributions create real maintenance work for the robotcode project.
+AI tools and automated coding agents are permitted in RobotCode contributions. They can be useful development aids. However, low-context, low-effort, or poorly reviewed automated contributions create real maintenance work for the RobotCode project.
 
-This policy applies to AI-assisted or automated contributions and project interactions, including pull requests, issues, discussions, comments, code review replies, documentation changes, generated files, and any other content submitted to the robotcode project.
+This policy applies to AI-assisted or automated contributions and project interactions, including pull requests, issues, discussions, comments, code review replies, documentation changes, generated files, and any other content submitted to the RobotCode project.
 
-This policy exists to protect the sustainability of robotcode and the time of its maintainers. It complements, and does not replace, the [Contribution Guide](CONTRIBUTING.md) and the [Code of Conduct](CODE_OF_CONDUCT.md).
+This policy exists to protect the sustainability of RobotCode and the time of its maintainers. It complements, and does not replace, the [Contribution Guide](CONTRIBUTING.md) and the [Code of Conduct](CODE_OF_CONDUCT.md).
 
 ## Human responsibility
 
@@ -28,7 +28,9 @@ If AI tools or automated agents were used to create a pull request or other subs
 
 Place the disclosure where reviewers will see it: the pull request description, the issue body, or the comment itself. A short note is enough, for example:
 
-> AI/tooling disclosure: This contribution was prepared with assistance from `<tool name>`. I reviewed the result manually and verified it locally.
+> AI/tooling disclosure: This contribution was prepared with assistance from `<tool name>`. I reviewed the result manually, understand the changes, verified them locally, and confirm that I have the right to submit this contribution under the project license.
+
+See [Licensing, provenance, and right to submit](#licensing-provenance-and-right-to-submit) for what this confirmation entails.
 
 Optionally, a machine-readable trailer in commits is welcome, for example:
 
@@ -37,6 +39,20 @@ Optionally, a machine-readable trailer in commits is welcome, for example:
 For small grammar fixes, formatting help, or ordinary editor completions, disclosure is not required.
 
 Disclosure does not replace review, testing, or responsibility for the contribution.
+
+## Licensing, provenance, and right to submit
+
+AI-assisted or automated contributions must be suitable for contribution under the RobotCode project license.
+
+By submitting AI-assisted or automated content, you confirm that you have the right to submit the contribution under the project license and that your use of AI tools or automated agents does not impose terms that conflict with the project license.
+
+See the [Legal Notice in CONTRIBUTING.md](CONTRIBUTING.md#legal-notice) for the project-wide right-to-submit statement and the recommended DCO sign-off.
+
+Treat AI-generated or tool-generated output as untrusted input. Do not submit generated content if you cannot reasonably assess its origin, if it appears to contain copied third-party code, or if its licensing status is unclear or incompatible with this project.
+
+If generated output includes or is based on pre-existing third-party material, disclose that material and its license or attribution where required.
+
+AI tools and automated agents are not a substitute for a human contributor. The human submitter remains the contributor of record and must be able to explain the review, judgment, testing, and verification that make the contribution suitable for this project.
 
 ## Issues, discussions, comments, and pull request descriptions
 
@@ -87,4 +103,4 @@ For pull requests, this may mean requesting changes, closing the pull request wi
 
 If you believe a decision was made in error, you are welcome to follow up on the same pull request, issue, or discussion to clarify context. Respectful disagreement is fine; repeating the same low-context submission is not.
 
-This policy is not intended to discourage responsible contributors. It is intended to keep robotcode maintainable and to make clear that contributors are responsible for understanding, verifying, testing, and cleaning up automated output before submitting it.
+This policy is not intended to discourage responsible contributors. It is intended to keep RobotCode maintainable and to make clear that contributors are responsible for understanding, verifying, testing, and cleaning up automated output before submitting it.

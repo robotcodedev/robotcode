@@ -1,5 +1,5 @@
 <!-- omit in toc -->
-# Contributing to robotcode
+# Contributing to RobotCode
 
 First off, thanks for taking the time to contribute! ❤️
 
@@ -43,7 +43,7 @@ And if you like the project, but just don't have time to contribute, that's fine
 ## Code of Conduct
 
 This project and everyone participating in it is governed by the
-[robotcode Code of Conduct](https://github.com/robotcodedev/robotcode/blob/main/CODE_OF_CONDUCT.md).
+[RobotCode Code of Conduct](https://github.com/robotcodedev/robotcode/blob/main/CODE_OF_CONDUCT.md).
 By participating, you are expected to uphold this code. Please report unacceptable behavior
 to <support@robotcode.io>.
 
@@ -81,7 +81,7 @@ Depending on how large the project is, you may want to outsource the questioning
 
 ## Project-Wide Rules
 
-These rules apply to all interactions with the robotcode project — pull requests, issues, discussions, comments, code review replies, and any other contribution. Please read them before opening a contribution of any kind.
+These rules apply to all interactions with the RobotCode project — pull requests, issues, discussions, comments, code review replies, and any other contribution. Please read them before opening a contribution of any kind.
 
 ### AI and Automated Contributions
 
@@ -89,7 +89,7 @@ AI-assisted or automated contributions, including agent-generated ones, must fol
 
 ### Payment, Bounty, and Monetization Requests
 
-robotcode is an open-source project, not a lead-generation or micro-bounty platform.
+RobotCode is an open-source project, not a lead-generation or micro-bounty platform.
 
 Do not include payment links, invoices, donation requests, wallet addresses, "paid fix" notes, bounty claims, sponsorship requests, or similar monetization requests in pull requests, issues, discussions, comments, or any other project interaction unless paid work or a bounty process was explicitly agreed with the maintainers before the work started.
 
@@ -97,12 +97,19 @@ Unsolicited monetization requests attached to contributions are not accepted. Pu
 
 If a contribution is part of an agreed paid engagement, sponsored work, or bounty process, disclose that context clearly and follow the agreed process. Do not add ad-hoc payment requests to the contribution body.
 
-Contributions are reviewed on their technical merit, usefulness to robotcode users, and compliance with the project's contribution standards — not on payment requests attached to them.
+Contributions are reviewed on their technical merit, usefulness to RobotCode users, and compliance with the project's contribution standards — not on payment requests attached to them.
 
 ## I Want To Contribute
 
-> ### Legal Notice <!-- omit in toc -->
-> When contributing to this project, you must agree that you have authored 100% of the content, that you have the necessary rights to the content and that the content you contribute may be provided under the project license.
+> ### Legal Notice
+>
+> When contributing to this project, you must agree that you have the right to submit the contribution under the project license.
+>
+> This means that the contribution was created in whole or in part by you, is based on previous work that you are allowed to submit under a compatible license, or was otherwise lawfully provided to you for contribution.
+>
+> This corresponds to the spirit of the [Developer Certificate of Origin](https://developercertificate.org/). You are encouraged to add a DCO sign-off to your commits with `git commit -s` — this only adds a `Signed-off-by` trailer and is separate from the cryptographic commit signature (`-S`, GPG/SSH) required by [Signed Commits Required](#signed-commits-required) below.
+>
+> If AI tools or automated agents were used, you remain the human submitter responsible for the contribution and must follow the AI and Automated Contribution Policy.
 
 ### Reporting Bugs
 
@@ -148,7 +155,7 @@ Once it's filed:
 
 ### Suggesting Enhancements
 
-This section guides you through submitting an enhancement suggestion for robotcode, **including completely new features and minor improvements to existing functionality**. Following these guidelines will help maintainers and the community to understand your suggestion and find related suggestions.
+This section guides you through submitting an enhancement suggestion for RobotCode, **including completely new features and minor improvements to existing functionality**. Following these guidelines will help maintainers and the community to understand your suggestion and find related suggestions.
 
 <!-- omit in toc -->
 #### Before Submitting an Enhancement
@@ -167,7 +174,7 @@ Enhancement suggestions are tracked as [GitHub issues](https://github.com/robotc
 - Provide a **step-by-step description of the suggested enhancement** in as many details as possible.
 - **Describe the current behavior** and **explain which behavior you expected to see instead** and why. At this point you can also tell which alternatives do not work for you.
 - You may want to **include screenshots and animated GIFs** which help you demonstrate the steps or point out the part which the suggestion is related to. <!-- this should only be included if the project has a GUI -->
-- **Explain why this enhancement would be useful** to most robotcode users. You may also want to point out the other projects that solved it better and which could serve as inspiration.
+- **Explain why this enhancement would be useful** to most RobotCode users. You may also want to point out the other projects that solved it better and which could serve as inspiration.
 
 <!-- You might want to create an issue template for enhancement suggestions that can be used as a guide and that defines the structure of the information to be included. If you do so, reference it here in the description. -->
 
@@ -182,7 +189,7 @@ Welcome to your first code contribution! Here's how to set up your development e
 The quickest way to get started without any local setup:
 
 1. **Setup:**
-   - Go to the [robotcode repository](https://github.com/robotcodedev/robotcode)
+   - Go to the [RobotCode repository](https://github.com/robotcodedev/robotcode)
    - Click the green "Code" button
    - Select "Codespaces" tab
    - Click "Create codespace on main"
@@ -322,7 +329,7 @@ Before submitting your pull request, make sure that:
 - [ ] **Linting** passes: `hatch run lint:all` (also enforced by the [pre-commit hooks](#pre-commit-hooks) if installed).
 - [ ] **Documentation** has been updated where relevant (user docs, code comments, README).
 - [ ] **Generated files** (if any) were regenerated with the documented script, not edited by hand.
-- [ ] **Commits** follow [Conventional Commits](#commit-messages) and are [signed](#signed-commits-required).
+- [ ] **Commits** follow [Conventional Commits](#commit-messages) and are [cryptographically signed](#signed-commits-required) (`git commit -S`, GPG/SSH).
 - [ ] **AI / tooling disclosure** is included if AI tools or automated agents were used for a substantial part of the change (see [AI_POLICY.md](AI_POLICY.md)).
 - [ ] No payment, bounty, or monetization requests are attached (see [Payment, Bounty, and Monetization Requests](#payment-bounty-and-monetization-requests)).
 
@@ -433,7 +440,7 @@ Only use this when you suspect a Python-version-specific issue — it is signifi
 
 #### Development Tools & Code Generation
 
-The robotcode project includes several development tools and code generation scripts:
+The RobotCode project includes several development tools and code generation scripts:
 
 **Syntax & Language Support:**
 - `hatch run generate-tmlanguage` - Regenerate VS Code syntax highlighting files for Robot Framework
@@ -450,7 +457,7 @@ These tools are typically used by maintainers, but contributors might need some 
 
 ### Improving The Documentation
 
-Documentation is crucial for helping users understand and use robotcode effectively. Here are ways you can help improve it:
+Documentation is crucial for helping users understand and use RobotCode effectively. Here are ways you can help improve it:
 
 #### Types of Documentation Contributions
 
@@ -579,6 +586,8 @@ and improved local development instructions.
 
 **All commits and pull requests must be signed** to be accepted into the project. This helps ensure the authenticity and integrity of the codebase.
 
+This refers to the **cryptographic commit signature** (`git commit -S`, GPG/SSH/X.509) — not to be confused with the DCO `Signed-off-by` trailer (`git commit -s`) mentioned in the [Legal Notice](#i-want-to-contribute).
+
 **Setting up commit signing:**
 - Follow GitHub's guide: [Managing commit signature verification](https://docs.github.com/en/authentication/managing-commit-signature-verification)
 - Configure Git to sign commits automatically: `git config --global commit.gpgsign true`
@@ -591,7 +600,7 @@ and improved local development instructions.
 
 ## Join The Project Team
 
-We're always looking for dedicated contributors to join the robotcode project team! If you've been actively contributing and are interested in taking on more responsibility, here's how you can get involved:
+We're always looking for dedicated contributors to join the RobotCode project team! If you've been actively contributing and are interested in taking on more responsibility, here's how you can get involved:
 
 #### Ways to Get More Involved
 
@@ -624,4 +633,4 @@ If you're interested in joining the project team:
 - **Collaborative mindset** and willingness to help others
 - **Alignment** with project goals and values
 
-We value diversity and welcome contributors from all backgrounds. The robotcode project benefits from different perspectives and experiences.
+We value diversity and welcome contributors from all backgrounds. The RobotCode project benefits from different perspectives and experiences.
