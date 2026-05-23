@@ -13,8 +13,8 @@ from typing import Any, Dict, Iterable, List
 import pytest
 from robot.running.context import EXECUTION_CONTEXTS
 
-from robotcode.repl._completion import (
-    _LIB_KEYWORDS_ATTR,
+from robotcode.repl._keyword_lookup import _LIB_KEYWORDS_ATTR, lookup_keyword_doc, lookup_library_doc
+from robotcode.repl._pt.completion import (
     Candidate,
     CompletionContext,
     _clear_full_list_cache,
@@ -25,8 +25,6 @@ from robotcode.repl._completion import (
     current_keyword_and_arg_index,
     current_named_arg_in_cell,
     find_cell_end,
-    lookup_keyword_doc,
-    lookup_library_doc,
     spec_arg_position,
     tokenize,
 )
@@ -260,7 +258,7 @@ def test_candidates_for_argument_returns_empty(monkeypatch: pytest.MonkeyPatch) 
 def _fake_namespace_with_docs(library_keywords: "List[tuple[str, str]]") -> SimpleNamespace:
     """Like `_fake_namespace` but each keyword carries a `short_doc` /
     `shortdoc` attribute (depending on the RF version mock-target)."""
-    from robotcode.repl._completion import _KW_SHORT_DOC_ATTR
+    from robotcode.repl._pt.completion import _KW_SHORT_DOC_ATTR
 
     def _lib(name: str, kws: "List[tuple[str, str]]") -> SimpleNamespace:
         return SimpleNamespace(
@@ -411,7 +409,7 @@ def _patch_import_api(
         calls.append(name)
         return behaviour.get(name, [])
 
-    monkeypatch.setattr(f"robotcode.repl._completion.{api_name}", fake)
+    monkeypatch.setattr(f"robotcode.repl._pt.completion.{api_name}", fake)
     return calls
 
 
@@ -845,7 +843,7 @@ def _patch_kw_lookup(monkeypatch: pytest.MonkeyPatch, kws_by_name: Dict[str, Any
     Both `tokenize` (for verifying the arg name is real) and
     `candidates_for_rich` (for extracting Literal values) go through
     `lookup_keyword_doc`, so patching once covers both paths."""
-    import robotcode.repl._completion as completion_mod
+    import robotcode.repl._pt.completion as completion_mod
 
     monkeypatch.setattr(completion_mod, "lookup_keyword_doc", lambda name: kws_by_name.get(name))
 

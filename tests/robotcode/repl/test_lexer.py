@@ -7,22 +7,14 @@ We test the lexer at three layers:
 2. The full `RobotLexer.lex_document` flow on a hand-built
    `Document` — verifies the prefix-wrap / line-mapping logic.
 3. A handful of locale-aware spot-checks (BDD in EN + DE).
-
-`prompt_toolkit` is installed in the test environment via the
-workspace `prompt-toolkit` dependency group, so no
-`pytest.importorskip` is strictly required — but we keep one at the
-top so a stripped-down env without the extra still skips cleanly.
 """
 
 from typing import List, Tuple
 
 import pytest
-
-pytest.importorskip("prompt_toolkit")
-
 from prompt_toolkit.document import Document
 
-from robotcode.repl._input._lexer import (
+from robotcode.repl._pt.lexer import (
     RobotLexer,
     _split_keyword_for_bdd,
     _split_variable,

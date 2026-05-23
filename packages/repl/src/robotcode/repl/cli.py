@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from typing import Optional, Tuple
+from typing import List, Optional, Tuple
 
 import click
 
@@ -8,9 +8,45 @@ from robotcode.plugin import Application, pass_application
 from robotcode.plugin._agent_detection import is_running_in_ai_agent
 
 from .__version__ import __version__
-from ._input import BACKEND_CHOICES, BackendUnavailableError
+from ._backends import BACKEND_CHOICES
 from .console_interpreter import ConsoleInterpreter
+from .prompt_toolkit_interpreter import PromptToolkitConsoleInterpreter
 from .run import run_repl
+
+
+def _pick_interpreter(
+    *,
+    app: Application,
+    files: List[Path],
+    show_keywords: bool,
+    inspect: bool,
+    no_history: bool,
+    backend: str,
+) -> ConsoleInterpreter:
+    """Construct the interpreter that matches ``backend``.
+
+    ``plain`` yields `ConsoleInterpreter` (no editor surface). Both
+    ``auto`` and ``prompt-toolkit`` yield `PromptToolkitConsoleInterpreter` —
+    ``prompt_toolkit`` is a hard runtime dependency, so the two are
+    equivalent and ``auto`` exists purely as the user-facing default.
+    """
+    if backend == "plain":
+        return ConsoleInterpreter(
+            app=app,
+            files=files,
+            show_keywords=show_keywords,
+            inspect=inspect,
+            no_history=no_history,
+        )
+    if backend not in ("auto", "prompt-toolkit"):
+        raise ValueError(f"Unknown backend: {backend!r}. Choose from {BACKEND_CHOICES}.")
+    return PromptToolkitConsoleInterpreter(
+        app=app,
+        files=files,
+        show_keywords=show_keywords,
+        inspect=inspect,
+        no_history=no_history,
+    )
 
 
 @click.command(add_help_option=True)
@@ -70,11 +106,10 @@ from .run import run_repl
     show_default=True,
     envvar="ROBOTCODE_REPL_BACKEND",
     help="Force a specific input backend instead of auto-picking. "
-    "`auto` prefers `prompt-toolkit` when it's installed, otherwise falls "
-    "back to `plain`. Use the explicit values to force `plain` even when "
-    "`prompt_toolkit` is installed. Requesting `prompt-toolkit` when the "
-    "extra isn't installed aborts startup with a clear error — no silent "
-    "fallback.",
+    "`auto` and `prompt-toolkit` both pick the prompt-toolkit-driven "
+    "interpreter (completion, syntax highlighting, history, doc viewer). "
+    "`plain` drops to a bare `input()` prompt — useful when ANSI escapes "
+    "or popups would interfere with the surrounding capture.",
 )
 @click.option(
     "--plain",
@@ -183,17 +218,14 @@ def repl(
     ):
         backend = "plain"
 
-    try:
-        interpreter = ConsoleInterpreter(
-            app,
-            files=list(files),
-            show_keywords=show_keywords,
-            inspect=inspect,
-            no_history=no_history,
-            backend=backend,
-        )
-    except BackendUnavailableError as exc:
-        raise click.UsageError(str(exc)) from exc
+    interpreter = _pick_interpreter(
+        app=app,
+        files=list(files),
+        show_keywords=show_keywords,
+        inspect=inspect,
+        no_history=no_history,
+        backend=backend,
+    )
 
     run_repl(
         interpreter=interpreter,

@@ -83,26 +83,18 @@ Log To Console    answer is ${x}
 
 Two backends, no platform-specific caveats:
 
-- **`prompt_toolkit`** — rich line editor with candidate popup, syntax highlighting, signature toolbar, Ctrl-R reverse search, fish-style auto-suggest, multi-line cursor movement, persistent history. Active when the optional `[prompt-toolkit]` extra is installed.
-- **`plain`** — bare `input()` fallback. No history, no completion, no popup. Active when the extra isn't installed, or when the user / AI-agent detection chose plain explicitly.
-
-Install the rich backend with:
-
-```bash
-pip install 'robotcode-repl[prompt-toolkit]'
-```
+- **`prompt_toolkit`** (default) — rich line editor with candidate popup, syntax highlighting, signature toolbar, Ctrl-R reverse search, fish-style auto-suggest, multi-line cursor movement, persistent history, fullscreen doc viewer with mouse + search.
+- **`plain`** — bare `input()` fallback. No history, no completion, no popup. Active when the user / AI-agent detection chose plain explicitly.
 
 ### Picking a specific input backend
 
-The REPL auto-picks: prompt_toolkit when the extra is importable, otherwise plain. Pass `--backend` (or set `ROBOTCODE_REPL_BACKEND`) to force a specific one:
+The REPL uses the prompt_toolkit backend by default. Pass `--backend` (or set `ROBOTCODE_REPL_BACKEND`) to force a specific one:
 
 | Value | Effect |
 | ----- | ------ |
-| `auto` (default) | prompt_toolkit if installed, else plain. |
-| `prompt-toolkit` | Force prompt_toolkit. Hard error if the extra isn't installed. |
+| `auto` (default) | Use prompt_toolkit. |
+| `prompt-toolkit` | Use prompt_toolkit (same as `auto`; explicit form for clarity in scripts). |
 | `plain` | Bypass the editor layer and fall back to a bare `input()` prompt. |
-
-Requesting `prompt-toolkit` when the extra isn't installed aborts startup with a `pip install` hint — there is no silent fallback, so the explicit choice is always honoured (or visibly refused).
 
 #### Disabling all enhancements (AI agents, automation)
 
@@ -121,7 +113,7 @@ Combining `--plain` with a non-`plain` `--backend` value is rejected as a usage 
 
 ### History across sessions
 
-Requires the `[prompt-toolkit]` extra — the plain backend has no history. Every command you press Enter on is saved to a history file. Arrow-up recalls the previous line, `Ctrl-R` runs incremental reverse-search over the whole history — same keybindings as bash or Python's own shell.
+Available on the prompt_toolkit backend; the plain backend has no history. Every command you press Enter on is saved to a history file. Arrow-up recalls the previous line, `Ctrl-R` runs incremental reverse-search over the whole history — same keybindings as bash or Python's own shell.
 
 The history file lives in:
 
@@ -168,15 +160,15 @@ When you open a Robot block construct (`FOR`, `WHILE`, `IF`, `TRY`, `GROUP`), th
 ... END
 ```
 
-With the `[prompt-toolkit]` extra installed you get a real multi-line buffer instead of one prompt per line. Plain **Enter** is *smart*: it submits when your buffer has no open block, otherwise it inserts a newline + auto-indent so you stay inside the block. **Alt-Enter** (`Esc` then `Enter`) and **Ctrl-J** always insert a newline + auto-indent, even when the block is balanced — useful when you want to add one more statement before committing. You can also use `Cursor-Up` / `Cursor-Down` to navigate back into earlier lines of the same buffer and edit them.
+On the prompt_toolkit backend you get a real multi-line buffer instead of one prompt per line. Plain **Enter** is *smart*: it submits when your buffer has no open block, otherwise it inserts a newline + auto-indent so you stay inside the block. **Alt-Enter** (`Esc` then `Enter`) and **Ctrl-J** always insert a newline + auto-indent, even when the block is balanced — useful when you want to add one more statement before committing. You can also use `Cursor-Up` / `Cursor-Down` to navigate back into earlier lines of the same buffer and edit them.
 
 Shift-Enter isn't bound by default: most terminals send the same byte (`\r`) for Shift-Enter as for plain Enter, so a binding would never fire portably. Use Alt-Enter or Ctrl-J — both work in every terminal.
 
-Multi-line buffers without the extra fall back to one prompt per line; the auto-indent still works as a prefill on the next `... ` prompt.
+The plain backend falls back to one prompt per line; the auto-indent still works as a prefill on the next `... ` prompt.
 
-### What the `[prompt-toolkit]` extra adds
+### What the prompt_toolkit backend adds
 
-Once installed (`pip install 'robotcode-repl[prompt-toolkit]'`) the prompt grows several capabilities that aren't available on the plain backend:
+Beyond the plain `input()` fallback, the default backend gives you several extra capabilities:
 
 - **Live candidate popup** — completions appear *as you type*, in an inline menu under the cursor, with arrow-keys to pick and Enter to accept. No Tab needed (though Tab still works).
 - **Fish-style auto-suggest** — as you type, the rest of the line you typed last time (matching the same prefix) appears greyed-out behind the cursor. Right-arrow accepts it.
@@ -209,7 +201,7 @@ Each candidate in the completion popup now shows a short context string to its r
 
 #### Syntax highlighting
 
-Coloured Robot syntax is automatically on when you install the `prompt-toolkit` extra — keywords, variables, assigns, comments, block constructs (`FOR`, `IF`, `END`, …) and BDD prefixes (`Given`, `When`, `Then`, … plus localised variants from RF 6+ languages) each get their own colour. Variables decompose to the part level: the sigil and braces, the name, type hints (`${age: int}`), default values (`%{HOME=default}`), subscripts (`${dict}[key]`), nested variables (`${${inner}}`), and inline-Python expressions (`${{expr}}`) all render distinctly.
+Coloured Robot syntax is on by default on the prompt_toolkit backend — keywords, variables, assigns, comments, block constructs (`FOR`, `IF`, `END`, …) and BDD prefixes (`Given`, `When`, `Then`, … plus localised variants from RF 6+ languages) each get their own colour. Variables decompose to the part level: the sigil and braces, the name, type hints (`${age: int}`), default values (`%{HOME=default}`), subscripts (`${dict}[key]`), nested variables (`${${inner}}`), and inline-Python expressions (`${{expr}}`) all render distinctly.
 
 The highlighter uses Robot Framework's own production tokenizer (`robot.api.get_tokens`) plus the `robotcode` semantic analyzer's variable decomposer — the same code path RobotCode's VS Code extension uses for semantic-token rendering. Colour assignments match the LSP semantic-token mapping, so the REPL prompt and the VS Code editor use a consistent palette.
 
@@ -217,10 +209,10 @@ No additional dependency: Robot is already required by `robotcode-repl`, and the
 
 ### Interactive shortcuts
 
-Across all backends (PlainBackend / Readline / prompt_toolkit, with the obvious caveat that Plain has no editor):
+Across both backends (plain / prompt_toolkit, with the obvious caveat that plain has no editor):
 
 - **`${_}` — last result** — like Python's interactive shell. After every keyword call the return value is mirrored into the Robot variable `${_}`. Use it directly in the next argument: `Evaluate    1 + 2` → `Log    ${_}` prints `3`. Keywords that return `None` (e.g. `Log` itself) don't overwrite `${_}`, so the most recent meaningful value stays reachable across "noisy" interleaved calls.
-- **Ctrl-R reverse-history search** — type a substring and press `Ctrl-R` to walk backwards through past entries. Enter accepts, Esc cancels. Requires the `[prompt-toolkit]` extra.
+- **Ctrl-R reverse-history search** — type a substring and press `Ctrl-R` to walk backwards through past entries. Enter accepts, Esc cancels. Available on the prompt_toolkit backend.
 - **Argument signature in the bottom row** — only on the prompt_toolkit backend. When the cursor is in an argument cell of a recognised keyword, a row at the bottom shows the full signature with the active argument highlighted. Outside that context the row is hidden.
 
 ### REPL meta-commands
@@ -229,12 +221,12 @@ Dot-prefixed commands (lines that start with `.<word>`) are intercepted **before
 
 | Command | Effect |
 | ----- | ------ |
-| `.help [cmd]` | Without an argument: list all dot-commands. With an argument: print detailed help (usage, flags, examples) for that command — e.g. `.help save`. |
+| `.help [cmd]` | Without an argument: list all dot-commands. With an argument: detailed help (usage, flags, examples) for that command — e.g. `.help save`. Opens in the doc viewer (see below). |
 | `.imports` | Show loaded libraries and resource files with their source path and keyword count. |
 | `.vars [--user]` | Variables in the current scope, name + truncated `repr` of the value. `--user` filters out Robot's internal variables (`${OUTPUT_DIR}`, `${SUITE_NAME}`, …). |
-| `.kw <name>` | Rich-rendered Markdown documentation for the keyword: signature, tags, docstring, source path. |
-| `.doc <name>` | Rich-rendered Markdown documentation for a library or resource: name, version, intro doc, list of contained keywords with one-line descriptions. Falls back to a fresh `get_library_doc()` load when the library isn't currently imported. |
-| `.history [N]` | Show the last N entries (default 20), numbered. Requires the `[prompt-toolkit]` extra; plain backend has no history. |
+| `.kw <name>` | Full keyword documentation in the doc viewer — signature, argument table (types + defaults), tags, docstring body. Same renderer the editor's hover uses. |
+| `.doc <name>` | Full library or resource documentation in the doc viewer — version + scope, introduction (with the auto-linked Table of Contents), every keyword with its own signature + arguments + body. Falls back to a fresh `get_library_doc()` load when the library isn't currently imported. |
+| `.history [N]` | Show the last N entries (default 20), numbered. Available on the prompt_toolkit backend; plain backend has no history. |
 | `.history clear` | Truncate the in-memory history and the persistent history file. |
 | `.history del <N>` | Drop the single entry at index N from both. |
 | `.cwd` | Print the current working directory (where relative paths in imports resolve from). |
@@ -242,7 +234,31 @@ Dot-prefixed commands (lines that start with `.<word>`) are intercepted **before
 | `.save [-a] [-t NAME] <file>` | Export the session as a runnable `.robot` file (see below). |
 | `.exit` / `.quit` | Leave the REPL — equivalent to `Ctrl-D` on an empty prompt. |
 
-The `.kw` and `.doc` output goes through `rich.markdown.Markdown` (already a dependency of the `robotcode-plugin` package), so headings, lists, code blocks and inline emphasis render properly in any modern terminal. Robot's docstring format (the default for built-in libraries) is converted to Markdown via `MarkDownFormatter` first, so `*bold*`, `_italic_`, lists, tables and preformatted blocks all survive the round-trip.
+`.kw` and `.doc` render via the same `KeywordDoc.to_markdown` / `LibraryDoc.to_markdown` pipeline the language server uses for hover and signature help — full per-keyword pages with signature, argument table (types + defaults), tags, and docstring body. `rich.markdown.Markdown` then paints the result, so headings, lists, code blocks, tables, and inline emphasis show up styled in any modern terminal.
+
+#### The doc viewer
+
+`.help`, `.kw`, `.doc` (and `F1`, which is the keyboard shortcut for `.help`) open the rendered output in a fullscreen viewer that uses the terminal's alternate-screen buffer — same trick `less` / `man` / `vim` use. Your prompt and scrollback are untouched: when you close the viewer the terminal snaps back to exactly where you were.
+
+| Key | Effect |
+| --- | ------ |
+| `j` / `↓` / Mouse wheel down | Scroll one line down |
+| `k` / `↑` / Mouse wheel up | Scroll one line up |
+| `PgDn` / `Ctrl-D` / `Space` | Scroll one page down |
+| `PgUp` / `Ctrl-U` / `b` | Scroll one page up |
+| `g` / `Home` | Jump to top |
+| `G` / `End` | Jump to bottom |
+| `/` | Open search input |
+| `n` / `N` | Next / previous search match |
+| `Tab` / `Shift-Tab` | Cycle through links in the current viewport |
+| `f` / `Enter` (on a focused link), mouse click | Follow link — `#anchor` scrolls to the section, `http(s)://` opens in your browser |
+| `[` / `]` | Browser-style back / forward through anchor follows |
+| `Shift` + drag | Native terminal text selection (mouse capture is suspended while Shift is held) |
+| `q` / `Esc` / `Enter` (with no link focused) | Close the viewer |
+
+Search is case-insensitive substring. The current match is highlighted in reverse; `n`/`N` walk through all matches and scroll them into view. Link cycling skips back to the user's current scroll position if you've scrolled away, so `Tab` always lands on something you can see.
+
+On the plain backend the doc-display commands still work — they print the rendered markdown through the pager with no colour, no fullscreen overlay. Useful in AI-agent sessions and headless environments where ANSI escape sequences would corrupt stdout capture.
 
 ### Saving a session as a runnable `.robot` file
 

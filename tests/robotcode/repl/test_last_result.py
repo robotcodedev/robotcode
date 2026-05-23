@@ -16,10 +16,10 @@ from robotcode.repl.console_interpreter import ConsoleInterpreter
 
 
 def _make_interpreter() -> ConsoleInterpreter:
-    """Build a minimal `ConsoleInterpreter` — `app=None`, plain backend
-    so we don't drag in prompt_toolkit / readline. Only the
-    `set_last_result` path is exercised here."""
-    return ConsoleInterpreter(app=None, backend="plain")
+    """Build a minimal `ConsoleInterpreter` — `app=None` so we don't
+    drag in prompt_toolkit / readline. Only the `set_last_result`
+    path is exercised here."""
+    return ConsoleInterpreter(app=None)
 
 
 def _patch_context_with_vars(monkeypatch: pytest.MonkeyPatch, store: Dict[str, Any]) -> None:

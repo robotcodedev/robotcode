@@ -1,113 +1,119 @@
-"""Tests for the input-backend selection cascade."""
+"""Tests for `cli._pick_interpreter` — picks the interpreter class per `--backend`.
 
-import builtins
-import sys
-from typing import Any
+`prompt_toolkit` is a hard runtime dependency of the package, so
+`auto` and `prompt-toolkit` always succeed (no install-hint fallback
+to verify); only `plain` opts out of the editor surface.
+"""
+
+from pathlib import Path
+from typing import Any, Optional
 
 import pytest
 
-from robotcode.repl._input import BackendUnavailableError, PlainBackend, pick_backend
+from robotcode.plugin import Application
+from robotcode.repl.cli import _pick_interpreter
+from robotcode.repl.console_interpreter import ConsoleInterpreter
+
+
+def _pick(
+    *,
+    backend: str,
+    files: Any = None,
+    no_history: bool = False,
+    app: Optional[Application] = None,
+) -> ConsoleInterpreter:
+    """Test wrapper that supplies the boring defaults — keeps each test
+    focused on what's actually relevant (backend + maybe one flag).
+
+    Typed strictly so mypy is satisfied; `**dict` would lose the per-arg
+    types because the values have mixed types."""
+    return _pick_interpreter(
+        app=app,  # type: ignore[arg-type]
+        files=files or [],
+        show_keywords=False,
+        inspect=False,
+        no_history=no_history,
+        backend=backend,
+    )
+
 
 # ---------------------------------------------------------------------------
-# PlainBackend
+# `_pick_interpreter` — backend dispatch
 # ---------------------------------------------------------------------------
 
 
-def test_plain_backend_wraps_input(monkeypatch: pytest.MonkeyPatch) -> None:
-    captured: dict[str, Any] = {}
+def test_pick_interpreter_auto_returns_prompt_toolkit() -> None:
+    """`auto` picks the prompt-toolkit-driven interpreter."""
+    interp = _pick(backend="auto")
+    assert type(interp).__name__ == "PromptToolkitConsoleInterpreter"
+    assert isinstance(interp, ConsoleInterpreter)
+
+
+def test_pick_interpreter_explicit_prompt_toolkit_returns_prompt_toolkit() -> None:
+    interp = _pick(backend="prompt-toolkit")
+    assert type(interp).__name__ == "PromptToolkitConsoleInterpreter"
+
+
+def test_pick_interpreter_explicit_plain_returns_plain() -> None:
+    """`backend="plain"` skips the editor surface — no popup, no ANSI codes
+    leaking into AI-agent stdout capture."""
+    interp = _pick(backend="plain")
+    assert type(interp) is ConsoleInterpreter
+
+
+def test_pick_interpreter_explicit_plain_is_orthogonal_to_no_history() -> None:
+    interp = _pick(backend="plain", no_history=True)
+    assert type(interp) is ConsoleInterpreter
+
+
+def test_pick_interpreter_unknown_value_raises() -> None:
+    """Defense in depth: the CLI uses `click.Choice` to filter values,
+    but a direct API caller could still pass garbage. Surface it loudly."""
+    with pytest.raises(ValueError, match="Unknown backend"):
+        _pick(backend="xyz")
+
+
+# ---------------------------------------------------------------------------
+# `ConsoleInterpreter` plain `read_line` — uses stdlib `input()` directly.
+# ---------------------------------------------------------------------------
+
+
+def test_console_interpreter_read_line_wraps_input(monkeypatch: pytest.MonkeyPatch) -> None:
+    import builtins
+
+    captured: dict[str, str] = {}
 
     def fake_input(prompt: str = "") -> str:
         captured["prompt"] = prompt
         return "from-fake-input"
 
     monkeypatch.setattr(builtins, "input", fake_input)
-    backend = PlainBackend()
-    result = backend.read_line(">>> ")
-    assert result == "from-fake-input"
+    interp = ConsoleInterpreter(app=None)
+    assert interp.read_line(">>> ") == "from-fake-input"
     assert captured["prompt"] == ">>> "
 
 
-def test_plain_backend_ignores_prefill(monkeypatch: pytest.MonkeyPatch) -> None:
-    """`prefill` is a no-op for PlainBackend (no editor to seed)."""
+def test_console_interpreter_read_line_ignores_prefill(monkeypatch: pytest.MonkeyPatch) -> None:
+    """`prefill` is a no-op for the plain implementation (no editor to seed)."""
+    import builtins
+
     monkeypatch.setattr(builtins, "input", lambda _prompt="": "value")
-    backend = PlainBackend()
-    assert backend.read_line(">>> ", prefill="ignored") == "value"
+    interp = ConsoleInterpreter(app=None)
+    assert interp.read_line(">>> ", prefill="ignored") == "value"
 
 
-def test_plain_backend_has_no_history_capability() -> None:
-    """PlainBackend exposes only `read_line` — the `.history` dot-command
-    detects that and tells the user to install the prompt_toolkit extra."""
-    backend = PlainBackend()
-    assert not hasattr(backend, "get_history")
-    assert not hasattr(backend, "clear_history")
-    assert not hasattr(backend, "delete_history_entry")
+def test_console_interpreter_has_no_history_methods() -> None:
+    """Plain mode exposes none of the history-management API — the
+    `.history` dot-command lives only on the prompt_toolkit subclass."""
+    interp = ConsoleInterpreter(app=None)
+    assert not hasattr(interp, "get_history")
+    assert not hasattr(interp, "clear_history")
+    assert not hasattr(interp, "delete_history_entry")
 
 
-# ---------------------------------------------------------------------------
-# pick_backend — the 2-tier cascade
-# ---------------------------------------------------------------------------
-
-
-def _block_module(monkeypatch: pytest.MonkeyPatch, *names: str) -> None:
-    """Make `import X` raise ImportError for the given module names."""
-    for name in names:
-        monkeypatch.setitem(sys.modules, name, None)
-
-
-def test_pick_backend_returns_an_input_backend() -> None:
-    """In *any* environment, `pick_backend()` returns something with `read_line`."""
-    backend = pick_backend()
-    assert hasattr(backend, "read_line")
-
-
-def test_pick_backend_prefers_prompt_toolkit_when_available() -> None:
-    pytest.importorskip("prompt_toolkit")
-    backend = pick_backend()
-    assert type(backend).__name__ == "PromptToolkitBackend"
-
-
-def test_pick_backend_falls_back_to_plain_when_prompt_toolkit_unavailable(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """Blocking the prompt_toolkit import drops `auto` to plain."""
-    _block_module(monkeypatch, "robotcode.repl._input._prompt_toolkit")
-    backend = pick_backend()
-    assert isinstance(backend, PlainBackend)
-
-
-# ---------------------------------------------------------------------------
-# Explicit `backend=` selection
-# ---------------------------------------------------------------------------
-
-
-def test_pick_backend_explicit_plain_returns_plain_even_with_prompt_toolkit() -> None:
-    """`backend="plain"` bypasses the cascade — no popup, no ANSI codes
-    leaking into AI-agent stdout capture."""
-    backend = pick_backend(backend="plain")
-    assert isinstance(backend, PlainBackend)
-
-
-def test_pick_backend_explicit_plain_is_orthogonal_to_no_history() -> None:
-    backend = pick_backend(backend="plain", no_history=True)
-    assert isinstance(backend, PlainBackend)
-
-
-def test_pick_backend_explicit_prompt_toolkit_returns_prompt_toolkit() -> None:
-    pytest.importorskip("prompt_toolkit")
-    backend = pick_backend(backend="prompt-toolkit")
-    assert type(backend).__name__ == "PromptToolkitBackend"
-
-
-def test_pick_backend_explicit_prompt_toolkit_raises_when_unavailable(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Explicit request for the missing extra is a hard error — silent
-    fallback would defeat the purpose of the flag."""
-    _block_module(monkeypatch, "robotcode.repl._input._prompt_toolkit")
-    with pytest.raises(BackendUnavailableError, match="prompt_toolkit backend requested"):
-        pick_backend(backend="prompt-toolkit")
-
-
-def test_pick_backend_unknown_value_raises() -> None:
-    """Defense in depth: the CLI uses `click.Choice` to filter values,
-    but a direct API caller could still pass garbage. Surface it loudly."""
-    with pytest.raises(ValueError, match="Unknown backend"):
-        pick_backend(backend="xyz")
+def test_pick_interpreter_passes_files(tmp_path: Path) -> None:
+    """`files=` reaches the constructed interpreter for replay."""
+    f = tmp_path / "a.robot"
+    f.write_text("")
+    interp = _pick(backend="plain", files=[f])
+    assert interp.files == [f]

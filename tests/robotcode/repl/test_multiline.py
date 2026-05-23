@@ -6,20 +6,17 @@ submit / continue branches via a pipe input."""
 from typing import Iterator
 
 import pytest
-
-pytest.importorskip("prompt_toolkit")
-
 from prompt_toolkit.application import create_app_session
 from prompt_toolkit.buffer import Buffer
 from prompt_toolkit.input import PipeInput, create_pipe_input
 from prompt_toolkit.output import DummyOutput
 
-from robotcode.repl._input._prompt_toolkit import (
-    PromptToolkitBackend,
+from robotcode.repl._pt.components import (
     _accept_highlighted_completion,
     _build_keybindings,
     _insert_indented_newline,
 )
+from robotcode.repl.prompt_toolkit_interpreter import PromptToolkitConsoleInterpreter
 
 
 @pytest.fixture
@@ -80,7 +77,7 @@ def test_smart_enter_submits_when_no_open_block(pipe_input: PipeInput) -> None:
     # Note: `\n` (Keys.ControlJ) is the *newline-insert* binding in our
     # multi-line setup, so it would NOT submit.
     pipe_input.send_text("Log To Console    hello\r")
-    backend = PromptToolkitBackend(no_history=True)
+    backend = PromptToolkitConsoleInterpreter(app=None, no_history=True)
     result = backend.read_line(">>> ")
     assert result == "Log To Console    hello"
 
@@ -94,7 +91,7 @@ def test_smart_enter_submits_when_block_is_balanced_via_alt_enter(pipe_input: Pi
     # without submitting. The final `\r` is plain Enter, which lands on
     # a balanced buffer (FOR…END), so smart-submit commits.
     pipe_input.send_text("FOR    ${i}    IN RANGE    1\x1b\rLog    ${i}\x1b\rEND\r")
-    backend = PromptToolkitBackend(no_history=True)
+    backend = PromptToolkitConsoleInterpreter(app=None, no_history=True)
     result = backend.read_line(">>> ")
     # The buffer at submit time contains FOR…\n…\nEND with the
     # auto-indents that Alt-Enter inserted. We don't dictate exact
@@ -244,7 +241,7 @@ def test_on_completion_state_changed_drops_forward_tail() -> None:
     from prompt_toolkit.completion import Completion as _Completion
     from prompt_toolkit.document import Document
 
-    from robotcode.repl._input._prompt_toolkit import _on_completion_state_changed
+    from robotcode.repl._pt.components import _on_completion_state_changed
 
     buf = Buffer()
     # User has `Log  hello`, cursor between `L` and `o`.
@@ -272,7 +269,7 @@ def test_on_completion_state_changed_skips_non_keyword_context() -> None:
     from prompt_toolkit.completion import Completion as _Completion
     from prompt_toolkit.document import Document
 
-    from robotcode.repl._input._prompt_toolkit import _on_completion_state_changed
+    from robotcode.repl._pt.components import _on_completion_state_changed
 
     buf = Buffer()
     # Cursor is in an argument cell (`Log    arg`, cursor at end of `arg`).
@@ -298,7 +295,7 @@ def test_on_completion_state_changed_is_idempotent() -> None:
     from prompt_toolkit.completion import Completion as _Completion
     from prompt_toolkit.document import Document
 
-    from robotcode.repl._input._prompt_toolkit import _on_completion_state_changed
+    from robotcode.repl._pt.components import _on_completion_state_changed
 
     buf = Buffer()
     buf.text = "Log  hello"
@@ -324,7 +321,7 @@ def test_on_completion_state_changed_snapshots_literal_even_outside_keyword() ->
     from prompt_toolkit.completion import Completion as _Completion
     from prompt_toolkit.document import Document
 
-    from robotcode.repl._input._prompt_toolkit import _on_completion_state_changed
+    from robotcode.repl._pt.components import _on_completion_state_changed
 
     buf = Buffer()
     # Argument context — no trim should happen, but snapshot still taken.
@@ -354,7 +351,7 @@ def test_esc_after_arrow_reverts_to_literal_original() -> None:
     from prompt_toolkit.completion import Completion as _Completion
     from prompt_toolkit.document import Document
 
-    from robotcode.repl._input._prompt_toolkit import _on_completion_state_changed
+    from robotcode.repl._pt.components import _on_completion_state_changed
 
     buf = Buffer()
     # 1. Literal state pre-popup.
@@ -399,43 +396,46 @@ def test_build_keybindings_does_not_shadow_ctrl_r_for_reverse_search() -> None:
     )
 
 
-def test_build_keybindings_omits_f1_when_no_dispatcher() -> None:
-    """Without a dispatcher (typical test setup), F1 stays unbound so
-    we don't accidentally fire `dispatch` against a stale reference."""
+def test_build_keybindings_omits_f1_when_not_requested() -> None:
+    """Default (``bind_help_key=False``) leaves F1 unbound — used in
+    tests and any caller that doesn't want the shortcut wired."""
     kb = _build_keybindings()
     bound_keys = [[str(k) for k in b.keys] for b in kb.bindings]
     assert ["Keys.F1"] not in bound_keys
 
 
-def test_build_keybindings_binds_f1_when_dispatcher_provided() -> None:
-    """A non-None dispatcher getter installs the F1 → `.help` binding."""
-    kb = _build_keybindings(lambda: (object(), object()))
+def test_build_keybindings_binds_f1_when_requested() -> None:
+    """``bind_help_key=True`` installs the F1 → `.help` binding."""
+    kb = _build_keybindings(bind_help_key=True)
     bound_keys = [[str(k) for k in b.keys] for b in kb.bindings]
     assert ["Keys.F1"] in bound_keys
 
 
-def test_f1_calls_dispatch_with_help(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Pressing F1 with a dispatcher set fires `dispatch('.help', ...)`."""
-    calls: list[tuple[str, object, object]] = []
-
-    import robotcode.repl._dot_commands as dot_mod
-
-    def fake_dispatch(line: str, app: object, interp: object) -> bool:
-        calls.append((line, app, interp))
-        return True
-
-    monkeypatch.setattr(dot_mod, "dispatch", fake_dispatch)
-
-    fake_app = object()
-    fake_interp = object()
-    kb = _build_keybindings(lambda: (fake_app, fake_interp))
+def test_f1_types_help_into_buffer_and_submits() -> None:
+    """F1 doesn't dispatch `.help` directly — that would try to run the
+    doc viewer's separate fullscreen Application from inside the
+    prompt's event loop (prompt_toolkit doesn't support nested
+    `run()` calls). Instead F1 types `.help` into the buffer and
+    submits, so the outer `get_input` loop dispatches it after the
+    prompt cleanly exits."""
+    kb = _build_keybindings(bind_help_key=True)
     f1_handler = next(b for b in kb.bindings if [str(k) for k in b.keys] == ["Keys.F1"]).handler
 
-    # Build a stub KeyPressEvent — only what the handler touches.
+    submitted: list[str] = []
+
+    class _FakeBuffer:
+        text = ""
+
+        def validate_and_handle(self) -> None:
+            submitted.append(self.text)
+
+    fake_buf = _FakeBuffer()
     event = type("Ev", (), {})()
+    event.current_buffer = fake_buf
     f1_handler(event)
 
-    assert calls == [(".help", fake_app, fake_interp)]
+    assert fake_buf.text == ".help"
+    assert submitted == [".help"]
 
 
 def test_build_keybindings_registers_single_smart_tab() -> None:

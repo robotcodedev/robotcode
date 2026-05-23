@@ -1,15 +1,15 @@
 """Tests for the REPL's persistent history infrastructure.
 
 Covers the file-location resolver and the size-cap env-var parser.
-Actual history I/O lives inside `PromptToolkitBackend` and is tested
-in `test_prompt_toolkit_backend.py`.
+Actual history I/O lives inside `PromptToolkitConsoleInterpreter`
+and is tested in `test_prompt_toolkit_interpreter.py`.
 """
 
 from pathlib import Path
 
 import pytest
 
-from robotcode.repl._history import (
+from robotcode.repl._pt.history import (
     DEFAULT_MAX_HISTORY,
     HISTORY_SIZE_ENV_VAR,
     history_path,

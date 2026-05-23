@@ -7,7 +7,7 @@ name = "robotcode-repl"
 description = 'RobotCode REPL for Robot Framework'
 readme = { "file" = "README.md", "content-type" = "text/markdown" }
 requires-python = ">=3.10"
-license = {text = "Apache-2.0"}
+license = { text = "Apache-2.0" }
 keywords = []
 authors = [{ name = "Daniel Biehl", email = "dbiehl@live.de" }]
 classifiers = [
@@ -28,16 +28,10 @@ classifiers = [
 ]
 dynamic = ["version"]
 dependencies = [
-  "robotcode-runner"
+  "robotcode-runner",
+  "prompt_toolkit!=3.0.52",
+  "rich>=14.0.0",
 ]
-
-[project.optional-dependencies]
-# `prompt_toolkit` lights up the rich prompt — candidate popup,
-# Ctrl-R reverse search, fish-style auto-suggest, multi-line cursor
-# movement, syntax highlighting, signature toolbar, persistent
-# history. Without it the REPL degrades to a bare `input()` prompt
-# (no editor, no completion, no history).
-prompt-toolkit = ["prompt_toolkit>=3.0"]
 
 [project.entry-points.robotcode]
 repl = "robotcode.repl.hooks"

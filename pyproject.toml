@@ -61,8 +61,6 @@ lint = ["robotframework-robocop>=2.0.0"]
 rest = ["docutils"]
 repl = ["robotcode-repl==2.5.1"]
 replserver = ["robotcode-repl-server==2.5.1"]
-colored = ["rich"]
-html = ["robotcode-runner[html]==2.5.1"]
 all = [
   "robotcode-debugger",
   "robotcode-language-server",
@@ -72,8 +70,7 @@ all = [
   "robotcode-repl-server",
   "PyYAML>=5.4",
   "robotframework-robocop>=6.0.0",
-  "docutils",
-  "rich",
+  "docutils"
 ]
 
 [dependency-groups]
@@ -83,15 +80,9 @@ runner = ["robotcode-runner"]
 analyze = ["robotcode-analyze"]
 replserver = ["robotcode-repl-server"]
 repl = ["robotcode-repl"]
-# `prompt_toolkit` is an *optional* runtime dep of `robotcode-repl`,
-# but we always install it in the dev / test workspace so the
-# prompt_toolkit-backed tests actually exercise that code path
-# (rather than being silently skipped by `pytest.importorskip`).
-prompt-toolkit = ["prompt_toolkit>=3.0"]
 yaml = ["PyYAML>=5.4"]
 lint = ["robotframework-robocop>=6.0.0"]
 rest = ["docutils"]
-colored = ["rich"]
 html = ["html-to-markdown>=2.0"]
 all = [
   { "include-group" = "debugger" },
@@ -99,12 +90,10 @@ all = [
   { "include-group" = "runner" },
   { "include-group" = "analyze" },
   { "include-group" = "repl" },
-  { "include-group" = "prompt-toolkit" },
   { "include-group" = "replserver" },
   { "include-group" = "yaml" },
   { "include-group" = "lint" },
   { "include-group" = "rest" },
-  { "include-group" = "colored" },
   { "include-group" = "html" },
 ]
 

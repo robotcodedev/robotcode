@@ -1,44 +1,36 @@
-"""prompt_toolkit-based input backend — candidate popup, Ctrl-R search,
-fish-style auto-suggest, sane multi-line cursor movement.
+"""prompt_toolkit pieces shared by `PromptToolkitConsoleInterpreter`.
 
-Activated when `prompt_toolkit>=3.0` is installed via the optional
-extra (`pip install robotcode-repl[prompt-toolkit]`). Without it,
-this module raises `ImportError` at load time so `pick_backend()`
-falls through to the plain backend.
-
-The candidate sourcing reuses `_completion.candidates_for_rich()`.
-History is prompt_toolkit's native `FileHistory` — timestamped,
-multi-line entries — owned and managed directly by this backend.
+Everything in this module is a leaf — completer, history class,
+key-bindings builder, bottom toolbar callback, style sheet,
+continuation-prompt helper. The interpreter wires them together;
+each is unit-testable in isolation.
 """
 
 import itertools
 from pathlib import Path
-from typing import Any, Callable, Iterable, Iterator, List, Optional, Tuple
+from typing import Any, Iterable, Iterator, List, Optional, Tuple
 
-from prompt_toolkit import PromptSession
 from prompt_toolkit.application import get_app
-from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
 from prompt_toolkit.buffer import Buffer
 from prompt_toolkit.completion import CompleteEvent, Completer, Completion
 from prompt_toolkit.document import Document
 from prompt_toolkit.filters import has_completions
-from prompt_toolkit.history import FileHistory, History, InMemoryHistory
+from prompt_toolkit.history import FileHistory
 from prompt_toolkit.key_binding import KeyBindings, KeyPressEvent
 from prompt_toolkit.styles import Style
 
-from .._completion import (
+from .._indent import compute_indent, has_open_block
+from .._keyword_lookup import lookup_keyword_doc
+from .completion import (
     CELL_SEPARATOR,
     candidates_for_rich,
     current_keyword_and_arg_index,
     current_named_arg_in_cell,
     find_cell_end,
-    lookup_keyword_doc,
     spec_arg_position,
     tokenize,
 )
-from .._history import history_path, max_history_size
-from .._indent import compute_indent, has_open_block
-from ._lexer import RobotLexer
+from .history import max_history_size
 
 
 class _ReplFileHistory(FileHistory):
@@ -144,10 +136,12 @@ class _RobotCompleter(Completer):
 
 def _find_robot_completer(buf: Buffer) -> Optional["_RobotCompleter"]:
     """Locate the buffer's `_RobotCompleter`, walking past wrappers like `ThreadedCompleter`."""
-    c: Any = buf.completer
+    c: Optional[Completer] = buf.completer
     while c is not None:
         if isinstance(c, _RobotCompleter):
             return c
+        # Wrapper chain (`ThreadedCompleter.completer`, …) — the attribute
+        # isn't on the `Completer` base class, so the read stays defensive.
         c = getattr(c, "completer", None)
     return None
 
@@ -211,9 +205,7 @@ def _insert_indented_newline(buf: Buffer) -> None:
     buf.insert_text("\n" + indent)
 
 
-def _build_keybindings(
-    get_dispatcher: Optional[Callable[[], Optional[Tuple[Any, Any]]]] = None,
-) -> KeyBindings:
+def _build_keybindings(bind_help_key: bool = False) -> KeyBindings:
     """Bindings for the multi-line buffer:
 
     - `Enter` is smart: accepts a highlighted completion if the popup
@@ -236,9 +228,13 @@ def _build_keybindings(
       argument-name completions, so Tab is repurposed as a typing
       accelerator. In keyword / variable / import contexts Tab keeps
       prompt_toolkit's default completion behaviour.
-    - `F1` runs `.help` when a dispatcher (Application + interpreter)
-      has been supplied. Other dot-command shortcuts (`^L` clear,
-      `^D` exit, `^R` reverse-search) stay on prompt_toolkit's
+    - `F1` types `.help` into the buffer and submits when
+      ``bind_help_key`` is true. The outer `get_input` loop then
+      dispatches it — running `.help` directly from inside the
+      prompt's event loop is unsafe (the doc viewer is a separate
+      fullscreen Application, and prompt_toolkit doesn't support
+      nested ``run()`` calls). Other dot-command shortcuts (`^L`
+      clear, `^D` exit, `^R` reverse-search) stay on prompt_toolkit's
       built-in bindings — overriding them would mean re-implementing
       a feature we already get for free.
 
@@ -274,11 +270,7 @@ def _build_keybindings(
         buf = event.current_buffer
         state = buf.complete_state
         # If the user previewed a candidate (arrowed), restore the
-        # literal buffer state from before the popup opened. The
-        # snapshot lives on the CompletionState because
-        # `_on_completion_state_changed` may have trimmed
-        # `original_document` for clean preview navigation — so we
-        # can't recover the literal from `original_document` alone.
+        # literal buffer state from before the popup opened.
         if state is not None and state.complete_index is not None:
             snapshot = getattr(state, "_literal_original", None)
             if snapshot is None:
@@ -286,29 +278,24 @@ def _build_keybindings(
                 pos = state.original_document.cursor_position
             else:
                 text, pos = snapshot
-            # Suppress complete_while_typing's re-trigger on the
-            # restored text so the popup doesn't immediately come
-            # back. The completer's one-shot fuse handles it.
             completer = _find_robot_completer(buf)
             if completer is not None:
                 completer.suppress_once = True
             buf.document = Document(text, pos)
         buf.cancel_completion()
 
-    if get_dispatcher is not None:
+    if bind_help_key:
 
         @kb.add("f1")
         def _help_shortcut(event: KeyPressEvent) -> None:
-            del event
-            disp = get_dispatcher()
-            if disp is None:
-                return
-            # Import locally so circular-import risk stays nil — the
-            # dot-commands module imports from `_completion`, which
-            # this backend also touches transitively.
-            from .._dot_commands import dispatch
-
-            dispatch(".help", *disp)
+            # Type `.help` and submit instead of dispatching directly:
+            # the doc viewer runs a separate fullscreen Application and
+            # prompt_toolkit doesn't support nested `run()`. The outer
+            # `get_input` loop picks the `.help` line up after the
+            # prompt exits and dispatches it then.
+            buf = event.current_buffer
+            buf.text = ".help"
+            buf.validate_and_handle()
 
     @kb.add("tab")
     def _smart_tab(event: KeyPressEvent) -> None:
@@ -318,24 +305,13 @@ def _build_keybindings(
         # as `argument` (closed `${var}` in cell 2), so a context-first
         # check would jump from "cycle" to "insert cell-sep" mid-cycle.
         # Popup-state-first keeps cycling sane.
-        #
-        # 1. Popup open → cycle to next candidate (and back to top after
-        #    the last). prompt_toolkit's COLUMN-style menu navigates
-        #    with arrow keys by default; we bind Tab here too because
-        #    that's what users expect from IDE conventions.
-        # 2. No popup, argument cell → insert a cell separator so Tab
-        #    works as a typing accelerator (no useful argument
-        #    completions exist anyway).
-        # 3. No popup, anything else → open the completion menu.
         buf = event.current_buffer
         if buf.complete_state:
             buf.complete_next()
             return
         text = buf.document.text_before_cursor
         # Both `argument` and `named_arg_value` are argument cells —
-        # Tab inserts a cell separator in either case. The Literal-value
-        # popup for valid named-args appears via complete_while_typing
-        # as the user types past the `=`.
+        # Tab inserts a cell separator in either case.
         if tokenize(text, len(text)).kind in ("argument", "named_arg_value"):
             buf.insert_text(CELL_SEPARATOR)
         else:
@@ -431,6 +407,9 @@ def _bottom_toolbar() -> Optional[List[Tuple[str, str]]]:
 
 # Default colour theme. Maps the style classes the `RobotLexer` emits
 # (and the popup default classes) to ANSI / true-colour declarations.
+# `rf.log.*` entries colour `log_message` / `message` output emitted by
+# `PromptToolkitConsoleInterpreter` so the prompt and the Robot log lines
+# share one palette.
 _DEFAULT_STYLE = Style.from_dict(
     {
         "rf.keyword": "#5fafd7 bold",
@@ -447,72 +426,27 @@ _DEFAULT_STYLE = Style.from_dict(
         "rf.variable.expr": "#d75faf bold",
         "rf.variable.python": "#af87d7",
         "rf.toolbar.active-arg": "bold #d75f87",
+        "rf.log.info": "#5faf5f",
+        "rf.log.warn": "#d7af00",
+        "rf.log.error": "#d75f5f",
+        "rf.log.fail": "#d75f5f bold",
+        "rf.log.skip": "#5f5f5f",
+        "rf.log.debug": "#5f5f5f",
+        "rf.log.trace": "#5f5f5f italic",
+        "rf.kw.indicator": "#5fafd7",
     }
 )
 
 
-class PromptToolkitBackend:
-    """Power-user backend on top of `PromptSession`.
-
-    Brings the candidate popup, Ctrl-R reverse search, multi-line
-    cursor movement, Robot-aware syntax highlighting and the
-    signature-aware bottom toolbar. Selected by `pick_backend` when
-    ``prompt_toolkit>=3.0`` is installed.
-    """
-
-    def __init__(self, *, no_history: bool = False) -> None:
-        self._no_history = no_history
-        self._history: History
-        if no_history:
-            self._history = InMemoryHistory()
-        else:
-            path = history_path()
-            path.parent.mkdir(parents=True, exist_ok=True)
-            self._history = _ReplFileHistory(str(path))
-        # Filled by `bind_dispatcher`. F1 reaches the dispatcher via a
-        # getter closure so a late binding still wires in correctly.
-        self._dispatcher: Optional[Tuple[Any, Any]] = None
-        self._session: PromptSession[str] = PromptSession(
-            history=self._history,
-            completer=_RobotCompleter(),
-            auto_suggest=AutoSuggestFromHistory(),
-            complete_while_typing=True,
-            complete_in_thread=True,
-            multiline=True,
-            key_bindings=_build_keybindings(lambda: self._dispatcher),
-            prompt_continuation=_continuation_prompt,
-            lexer=RobotLexer(),
-            style=_DEFAULT_STYLE,
-            bottom_toolbar=_bottom_toolbar,
-        )
-        self._session.default_buffer.on_completions_changed += _on_completion_state_changed
-
-    def read_line(
-        self,
-        prompt: str,
-        *,
-        multiline_continuation: bool = False,
-        prefill: str = "",
-    ) -> str:
-        del multiline_continuation  # PromptSession handles continuation inline
-        return self._session.prompt(prompt, default=prefill)
-
-    def bind_dispatcher(self, app: Any, interpreter: Any) -> None:
-        """Wire the ``(app, interpreter)`` pair the F1-help shortcut routes to."""
-        self._dispatcher = (app, interpreter)
-
-    # ------------------------------------------------------------------
-    # History access for the `.history` dot-commands.
-    # ------------------------------------------------------------------
-
-    def get_history(self) -> List[str]:
-        return list(reversed(list(self._history.load_history_strings())))
-
-    def clear_history(self) -> None:
-        if isinstance(self._history, _ReplFileHistory):
-            self._history.clear()
-
-    def delete_history_entry(self, idx: int) -> bool:
-        if not isinstance(self._history, _ReplFileHistory):
-            return False
-        return self._history.delete(idx)
+# Map Robot log levels to the corresponding `_DEFAULT_STYLE` class.
+# Used by `PromptToolkitConsoleInterpreter.log_message` to colour the
+# level tag without re-implementing `click.style`.
+_LOG_LEVEL_STYLES = {
+    "INFO": "class:rf.log.info",
+    "WARN": "class:rf.log.warn",
+    "ERROR": "class:rf.log.error",
+    "FAIL": "class:rf.log.fail",
+    "SKIP": "class:rf.log.skip",
+    "DEBUG": "class:rf.log.debug",
+    "TRACE": "class:rf.log.trace",
+}

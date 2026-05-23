@@ -4,14 +4,13 @@ Focused on flag parsing and translation — the interpreter itself is
 mocked out so the test never starts a real prompt session.
 """
 
-from typing import Any, Dict, List
+from typing import Any, Dict
 
 import pytest
 from click.testing import CliRunner
 
 from robotcode.plugin._agent_detection import _AGENT_ENV_VARS
 from robotcode.repl import cli as cli_mod
-from robotcode.repl._input import BackendUnavailableError
 
 
 @pytest.fixture(autouse=True)
@@ -26,16 +25,19 @@ def _scrub_agent_env(monkeypatch: pytest.MonkeyPatch) -> None:
 
 @pytest.fixture
 def capture_interpreter_kwargs(monkeypatch: pytest.MonkeyPatch) -> Dict[str, Any]:
-    """Patch `ConsoleInterpreter` + `run_repl` so the test never enters a real
-    prompt loop. The dict the fixture returns receives the captured kwargs."""
+    """Patch `_pick_interpreter` + `run_repl` so the test never enters a
+    real prompt loop. The dict the fixture returns receives the kwargs
+    the CLI passed to the factory — `backend` and friends."""
     captured: Dict[str, Any] = {}
 
     class _DummyInterpreter:
-        def __init__(self, app: Any, **kwargs: Any) -> None:
-            del app
-            captured.update(kwargs)
+        pass
 
-    monkeypatch.setattr(cli_mod, "ConsoleInterpreter", _DummyInterpreter)
+    def fake_pick(**kwargs: Any) -> _DummyInterpreter:
+        captured.update(kwargs)
+        return _DummyInterpreter()
+
+    monkeypatch.setattr(cli_mod, "_pick_interpreter", fake_pick)
     monkeypatch.setattr(cli_mod, "run_repl", lambda **_: None)
     return captured
 
@@ -79,28 +81,6 @@ def test_cli_backend_unknown_value_rejected_by_click(capture_interpreter_kwargs:
     assert result.exit_code != 0
     # click.Choice's error message lists the valid values.
     assert "Invalid value" in result.output or "invalid choice" in result.output.lower()
-
-
-def test_cli_backend_unavailable_translates_to_usage_error(monkeypatch: pytest.MonkeyPatch) -> None:
-    """When the interpreter can't load the requested backend, the CLI
-    surfaces it as a usage error with the original install hint."""
-    calls: List[str] = []
-
-    class _RaisingInterpreter:
-        def __init__(self, app: Any, **kwargs: Any) -> None:
-            del app
-            calls.append(kwargs["backend"])
-            raise BackendUnavailableError(
-                "prompt_toolkit backend requested but not installed. Install with: pip install foo"
-            )
-
-    monkeypatch.setattr(cli_mod, "ConsoleInterpreter", _RaisingInterpreter)
-    monkeypatch.setattr(cli_mod, "run_repl", lambda **_: None)
-
-    result = CliRunner().invoke(cli_mod.repl, ["--backend", "prompt-toolkit"])
-    assert result.exit_code != 0
-    assert calls == ["prompt-toolkit"]
-    assert "prompt_toolkit backend requested but not installed" in result.output
 
 
 def test_cli_backend_env_var_picked_up(

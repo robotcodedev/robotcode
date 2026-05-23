@@ -1,25 +1,17 @@
-"""Tests for the `prompt_toolkit` REPL backend.
-
-Skipped wholesale when `prompt_toolkit` isn't installed — the prompt_toolkit
-extra is optional, and the plain backend has its own coverage.
+"""Tests for `PromptToolkitConsoleInterpreter` — the prompt_toolkit-driven
+REPL interpreter. `ConsoleInterpreter` has its own coverage for plain mode.
 """
 
 from pathlib import Path
 from typing import Any, List
 
 import pytest
-
-pytest.importorskip("prompt_toolkit")
-
 from prompt_toolkit.completion import CompleteEvent
 from prompt_toolkit.document import Document
 from prompt_toolkit.history import FileHistory
 
-from robotcode.repl._input._prompt_toolkit import (
-    PromptToolkitBackend,
-    _ReplFileHistory,
-    _RobotCompleter,
-)
+from robotcode.repl._pt.components import _ReplFileHistory, _RobotCompleter
+from robotcode.repl.prompt_toolkit_interpreter import PromptToolkitConsoleInterpreter
 
 
 def _seed_history(path: Path, entries: list[str]) -> None:
@@ -41,13 +33,13 @@ def test_robot_completer_yields_candidates_with_correct_start_position(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """`start_position` is signed-negative: chars before cursor to replace."""
-    from robotcode.repl._completion import Candidate
+    from robotcode.repl._pt.completion import Candidate
 
     # Patch in the consumer namespace (see [[feedback-mock-where-used]]).
     # Stage 6 switched the completer to `candidates_for_rich` which
     # returns `Candidate(label, detail)` objects.
     monkeypatch.setattr(
-        "robotcode.repl._input._prompt_toolkit.candidates_for_rich",
+        "robotcode.repl._pt.components.candidates_for_rich",
         lambda ctx: [Candidate("Log", "Log a message"), Candidate("Log To Console", "Log to stdout")],
     )
 
@@ -64,7 +56,7 @@ def test_robot_completer_empty_candidate_list_yields_nothing(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(
-        "robotcode.repl._input._prompt_toolkit.candidates_for_rich",
+        "robotcode.repl._pt.components.candidates_for_rich",
         lambda ctx: [],
     )
     completer = _RobotCompleter()
@@ -78,10 +70,10 @@ def test_robot_completer_passes_detail_through_to_display_meta(
     """`Candidate.detail` flows into `Completion.display_meta` so the
     popup shows what each candidate is (first-line doc, import kind,
     variable value, …)."""
-    from robotcode.repl._completion import Candidate
+    from robotcode.repl._pt.completion import Candidate
 
     monkeypatch.setattr(
-        "robotcode.repl._input._prompt_toolkit.candidates_for_rich",
+        "robotcode.repl._pt.components.candidates_for_rich",
         lambda ctx: [Candidate("Log", "Log a message with the given level")],
     )
 
@@ -95,41 +87,41 @@ def test_robot_completer_passes_detail_through_to_display_meta(
 
 
 # ---------------------------------------------------------------------------
-# PromptToolkitBackend — wiring smoke tests (no real terminal involved).
+# PromptToolkitConsoleInterpreter — wiring smoke tests (no real terminal involved).
 # ---------------------------------------------------------------------------
 
 
-def test_prompt_toolkit_backend_uses_filehistory_at_history_path(
+def test_prompt_toolkit_interpreter_uses_filehistory_at_history_path(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     """The backend wires a stock `FileHistory` against the file `history_path()` returns."""
     target = tmp_path / "h"
-    monkeypatch.setattr("robotcode.repl._input._prompt_toolkit.history_path", lambda: target)
+    monkeypatch.setattr("robotcode.repl.prompt_toolkit_interpreter.history_path", lambda: target)
 
-    backend = PromptToolkitBackend()
-    history = backend._session.history
+    interp = PromptToolkitConsoleInterpreter(app=None)
+    history = interp._session.history
     assert isinstance(history, FileHistory)
     assert Path(str(history.filename)) == target
 
 
-def test_prompt_toolkit_backend_threads_no_history(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_prompt_toolkit_interpreter_threads_no_history(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     """`no_history=True` swaps in an InMemoryHistory — the on-disk file is left alone."""
     from prompt_toolkit.history import InMemoryHistory
 
     histfile = tmp_path / "h"
     _seed_history(histfile, ["ancient_line"])
     pristine = histfile.read_text()
-    monkeypatch.setattr("robotcode.repl._input._prompt_toolkit.history_path", lambda: histfile)
+    monkeypatch.setattr("robotcode.repl.prompt_toolkit_interpreter.history_path", lambda: histfile)
 
-    backend = PromptToolkitBackend(no_history=True)
-    history = backend._session.history
+    interp = PromptToolkitConsoleInterpreter(app=None, no_history=True)
+    history = interp._session.history
     assert isinstance(history, InMemoryHistory)
     history.store_string("nope")
     # File untouched — InMemoryHistory writes to memory only.
     assert histfile.read_text() == pristine
 
 
-def test_prompt_toolkit_backend_survives_malformed_history(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_prompt_toolkit_interpreter_survives_malformed_history(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     """A history file in an unrecognised format must not crash startup.
     prompt_toolkit's FileHistory uses `errors='replace'` on UTF-8 decode
     and ignores lines that don't start with `+`, so we just inherit
@@ -137,37 +129,39 @@ def test_prompt_toolkit_backend_survives_malformed_history(monkeypatch: pytest.M
     get appended in the proper format."""
     histfile = tmp_path / "h"
     histfile.write_bytes(b"\xff\xfe legacy junk\nfirst\nsecond\n")
-    monkeypatch.setattr("robotcode.repl._input._prompt_toolkit.history_path", lambda: histfile)
+    monkeypatch.setattr("robotcode.repl.prompt_toolkit_interpreter.history_path", lambda: histfile)
 
-    backend = PromptToolkitBackend()
-    assert backend.get_history() == []
+    interp = PromptToolkitConsoleInterpreter(app=None)
+    assert interp.get_history() == []
 
 
-def test_prompt_toolkit_backend_caps_load_to_max_entries(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_prompt_toolkit_interpreter_caps_load_to_max_entries(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     """`load_history_strings` is sliced to `max_entries` so prompt_toolkit
     only sees the newest N even if the file is externally oversized."""
     histfile = tmp_path / "h"
     _seed_history(histfile, ["a", "b", "c", "d", "e"])
-    monkeypatch.setattr("robotcode.repl._input._prompt_toolkit.history_path", lambda: histfile)
+    monkeypatch.setattr("robotcode.repl.prompt_toolkit_interpreter.history_path", lambda: histfile)
     monkeypatch.setenv("ROBOTCODE_REPL_HISTORY_SIZE", "3")
 
-    backend = PromptToolkitBackend()
+    interp = PromptToolkitConsoleInterpreter(app=None)
     # Newest three survive in the load, oldest → newest order.
-    assert backend.get_history() == ["c", "d", "e"]
+    assert interp.get_history() == ["c", "d", "e"]
 
 
-def test_prompt_toolkit_backend_under_cap_returns_all_entries(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_prompt_toolkit_interpreter_under_cap_returns_all_entries(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     """When the file holds fewer entries than the cap, all of them load."""
     histfile = tmp_path / "h"
     _seed_history(histfile, ["a", "b"])
-    monkeypatch.setattr("robotcode.repl._input._prompt_toolkit.history_path", lambda: histfile)
+    monkeypatch.setattr("robotcode.repl.prompt_toolkit_interpreter.history_path", lambda: histfile)
     monkeypatch.setenv("ROBOTCODE_REPL_HISTORY_SIZE", "10")
 
-    backend = PromptToolkitBackend()
-    assert backend.get_history() == ["a", "b"]
+    interp = PromptToolkitConsoleInterpreter(app=None)
+    assert interp.get_history() == ["a", "b"]
 
 
-def test_prompt_toolkit_backend_append_evicts_oldest_when_over_cap(
+def test_prompt_toolkit_interpreter_append_evicts_oldest_when_over_cap(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     """When an `append_string` would push the file past the cap, the
@@ -175,18 +169,18 @@ def test_prompt_toolkit_backend_append_evicts_oldest_when_over_cap(
     interactive session, not just at startup."""
     histfile = tmp_path / "h"
     _seed_history(histfile, ["a", "b", "c"])
-    monkeypatch.setattr("robotcode.repl._input._prompt_toolkit.history_path", lambda: histfile)
+    monkeypatch.setattr("robotcode.repl.prompt_toolkit_interpreter.history_path", lambda: histfile)
     monkeypatch.setenv("ROBOTCODE_REPL_HISTORY_SIZE", "3")
 
-    backend = PromptToolkitBackend()
+    interp = PromptToolkitConsoleInterpreter(app=None)
     # Sanity: we start at the cap.
-    assert backend.get_history() == ["a", "b", "c"]
+    assert interp.get_history() == ["a", "b", "c"]
     # Adding one more should evict "a" (oldest).
-    backend._session.history.append_string("d")
-    assert backend.get_history() == ["b", "c", "d"]
+    interp._session.history.append_string("d")
+    assert interp.get_history() == ["b", "c", "d"]
     # And another append evicts "b".
-    backend._session.history.append_string("e")
-    assert backend.get_history() == ["c", "d", "e"]
+    interp._session.history.append_string("e")
+    assert interp.get_history() == ["c", "d", "e"]
 
 
 # ---------------------------------------------------------------------------
@@ -269,7 +263,7 @@ def test_bottom_toolbar_returns_none_outside_prompt_session() -> None:
     """With no running prompt application `get_app()` raises — the
     toolbar function returns `None` so prompt_toolkit collapses the
     row instead of rendering a placeholder."""
-    from robotcode.repl._input._prompt_toolkit import _bottom_toolbar
+    from robotcode.repl._pt.components import _bottom_toolbar
 
     assert _bottom_toolbar() is None
 
@@ -279,7 +273,7 @@ def test_spec_arg_items_flattens_argument_spec() -> None:
     keeping `*args` / `**kwargs` markers and inlining defaults."""
     from types import SimpleNamespace
 
-    from robotcode.repl._input._prompt_toolkit import _spec_arg_items
+    from robotcode.repl._pt.components import _spec_arg_items
 
     spec = SimpleNamespace(
         positional_only=(),
@@ -296,7 +290,7 @@ def test_spec_arg_items_flattens_argument_spec() -> None:
 def test_spec_arg_items_renders_varargs_marker() -> None:
     from types import SimpleNamespace
 
-    from robotcode.repl._input._prompt_toolkit import _spec_arg_items
+    from robotcode.repl._pt.components import _spec_arg_items
 
     spec = SimpleNamespace(
         positional_only=(),
@@ -314,7 +308,7 @@ def test_render_signature_highlights_active_arg() -> None:
     carries `rf.toolbar.active-arg`; other args carry `rf.argument`."""
     from types import SimpleNamespace
 
-    from robotcode.repl._input._prompt_toolkit import _render_signature
+    from robotcode.repl._pt.components import _render_signature
 
     spec = SimpleNamespace(
         positional_only=(),
@@ -341,7 +335,7 @@ def test_render_signature_no_args_keyword_only() -> None:
     """A keyword without arguments renders just the name."""
     from types import SimpleNamespace
 
-    from robotcode.repl._input._prompt_toolkit import _render_signature
+    from robotcode.repl._pt.components import _render_signature
 
     spec = SimpleNamespace(
         positional_only=(),
@@ -361,7 +355,7 @@ def test_bottom_toolbar_renders_signature_when_cursor_in_arg_cell(monkeypatch: p
     with the keyword's signature."""
     from types import SimpleNamespace
 
-    import robotcode.repl._input._prompt_toolkit as backend_mod
+    import robotcode.repl._pt.components as backend_mod
 
     spec = SimpleNamespace(
         positional_only=(),
@@ -389,7 +383,7 @@ def test_bottom_toolbar_returns_none_when_keyword_unknown(monkeypatch: pytest.Mo
     """Cursor in arg cell but no matching keyword → toolbar hidden."""
     from types import SimpleNamespace
 
-    import robotcode.repl._input._prompt_toolkit as backend_mod
+    import robotcode.repl._pt.components as backend_mod
 
     fake_buffer = SimpleNamespace(text="UnknownKW    hi", cursor_position=15)
     fake_app = SimpleNamespace(current_buffer=fake_buffer)
@@ -406,7 +400,7 @@ def test_bottom_toolbar_highlights_named_arg_by_spec_position(monkeypatch: pytes
     `level` (which is what the positional cell index 1 would point at)."""
     from types import SimpleNamespace
 
-    import robotcode.repl._input._prompt_toolkit as backend_mod
+    import robotcode.repl._pt.components as backend_mod
 
     spec = SimpleNamespace(
         positional_only=(),
@@ -436,7 +430,7 @@ def test_bottom_toolbar_keeps_positional_idx_for_unknown_named_arg(monkeypatch: 
     positional value."""
     from types import SimpleNamespace
 
-    import robotcode.repl._input._prompt_toolkit as backend_mod
+    import robotcode.repl._pt.components as backend_mod
 
     spec = SimpleNamespace(
         positional_only=(),
@@ -465,7 +459,7 @@ def test_bottom_toolbar_returns_none_when_cursor_in_keyword_cell(monkeypatch: py
     """Cursor still typing the keyword (cell 0) → no signature → row hidden."""
     from types import SimpleNamespace
 
-    import robotcode.repl._input._prompt_toolkit as backend_mod
+    import robotcode.repl._pt.components as backend_mod
 
     fake_buffer = SimpleNamespace(text="Lo", cursor_position=2)
     fake_app = SimpleNamespace(current_buffer=fake_buffer)
@@ -474,68 +468,74 @@ def test_bottom_toolbar_returns_none_when_cursor_in_keyword_cell(monkeypatch: py
     assert backend_mod._bottom_toolbar() is None
 
 
-def test_prompt_toolkit_backend_get_history_reads_from_file(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_prompt_toolkit_interpreter_get_history_reads_from_file(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     """`get_history()` reflects the file content in oldest → newest order."""
     histfile = tmp_path / "h"
     _seed_history(histfile, ["a", "b", "c"])
-    monkeypatch.setattr("robotcode.repl._input._prompt_toolkit.history_path", lambda: histfile)
-    backend = PromptToolkitBackend()
-    assert backend.get_history() == ["a", "b", "c"]
+    monkeypatch.setattr("robotcode.repl.prompt_toolkit_interpreter.history_path", lambda: histfile)
+    interp = PromptToolkitConsoleInterpreter(app=None)
+    assert interp.get_history() == ["a", "b", "c"]
 
 
-def test_prompt_toolkit_backend_clear_history_truncates_file(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_prompt_toolkit_interpreter_clear_history_truncates_file(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     histfile = tmp_path / "h"
     _seed_history(histfile, ["a", "b"])
-    monkeypatch.setattr("robotcode.repl._input._prompt_toolkit.history_path", lambda: histfile)
-    backend = PromptToolkitBackend()
-    backend.clear_history()
+    monkeypatch.setattr("robotcode.repl.prompt_toolkit_interpreter.history_path", lambda: histfile)
+    interp = PromptToolkitConsoleInterpreter(app=None)
+    interp.clear_history()
     assert histfile.read_text() == ""
-    assert backend.get_history() == []
+    assert interp.get_history() == []
 
 
-def test_prompt_toolkit_backend_delete_history_entry_removes_line(
+def test_prompt_toolkit_interpreter_delete_history_entry_removes_line(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     histfile = tmp_path / "h"
     _seed_history(histfile, ["first", "second", "third"])
-    monkeypatch.setattr("robotcode.repl._input._prompt_toolkit.history_path", lambda: histfile)
-    backend = PromptToolkitBackend()
-    assert backend.delete_history_entry(2) is True
-    assert backend.get_history() == ["first", "third"]
+    monkeypatch.setattr("robotcode.repl.prompt_toolkit_interpreter.history_path", lambda: histfile)
+    interp = PromptToolkitConsoleInterpreter(app=None)
+    assert interp.delete_history_entry(2) is True
+    assert interp.get_history() == ["first", "third"]
 
 
-def test_prompt_toolkit_backend_delete_history_entry_out_of_range_returns_false(
+def test_prompt_toolkit_interpreter_delete_history_entry_out_of_range_returns_false(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     histfile = tmp_path / "h"
     _seed_history(histfile, ["only"])
-    monkeypatch.setattr("robotcode.repl._input._prompt_toolkit.history_path", lambda: histfile)
-    backend = PromptToolkitBackend()
-    assert backend.delete_history_entry(99) is False
-    assert backend.delete_history_entry(0) is False
-    assert backend.get_history() == ["only"]
+    monkeypatch.setattr("robotcode.repl.prompt_toolkit_interpreter.history_path", lambda: histfile)
+    interp = PromptToolkitConsoleInterpreter(app=None)
+    assert interp.delete_history_entry(99) is False
+    assert interp.delete_history_entry(0) is False
+    assert interp.get_history() == ["only"]
 
 
-def test_prompt_toolkit_backend_history_no_history_mode_is_read_only(
+def test_prompt_toolkit_interpreter_history_no_history_mode_is_read_only(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     """With `no_history=True`, the file is never written: clear/delete short-circuit."""
     histfile = tmp_path / "h"
     _seed_history(histfile, ["a", "b"])
     pristine = histfile.read_text()
-    monkeypatch.setattr("robotcode.repl._input._prompt_toolkit.history_path", lambda: histfile)
+    monkeypatch.setattr("robotcode.repl.prompt_toolkit_interpreter.history_path", lambda: histfile)
 
-    backend = PromptToolkitBackend(no_history=True)
-    backend.clear_history()
-    assert backend.delete_history_entry(1) is False
+    interp = PromptToolkitConsoleInterpreter(app=None, no_history=True)
+    interp.clear_history()
+    assert interp.delete_history_entry(1) is False
     # File untouched.
     assert histfile.read_text() == pristine
 
 
-def test_prompt_toolkit_backend_read_line_delegates_to_session(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_prompt_toolkit_interpreter_read_line_delegates_to_session(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     """`read_line` forwards prompt + `default=prefill` to PromptSession.prompt."""
-    monkeypatch.setattr("robotcode.repl._input._prompt_toolkit.history_path", lambda: tmp_path / "h")
-    backend = PromptToolkitBackend()
+    monkeypatch.setattr("robotcode.repl.prompt_toolkit_interpreter.history_path", lambda: tmp_path / "h")
+    interp = PromptToolkitConsoleInterpreter(app=None)
 
     captured: List[dict[str, Any]] = []
 
@@ -543,8 +543,126 @@ def test_prompt_toolkit_backend_read_line_delegates_to_session(monkeypatch: pyte
         captured.append({"prompt": prompt_text, **kwargs})
         return "user input"
 
-    monkeypatch.setattr(backend._session, "prompt", fake_prompt)
+    monkeypatch.setattr(interp._session, "prompt", fake_prompt)
 
-    result = backend.read_line(">>> ", prefill="seed")
+    result = interp.read_line(">>> ", prefill="seed")
     assert result == "user input"
-    assert captured == [{"prompt": ">>> ", "default": "seed"}]
+    assert len(captured) == 1
+    call = captured[0]
+    assert call["prompt"] == ">>> "
+    assert call["default"] == "seed"
+    # The doc viewer now runs as its own fullscreen Application, so
+    # `read_line` no longer needs a `pre_run` hook to surface a Float —
+    # `show_doc` blocks on `viewer._app.run()` instead.
+    assert "pre_run" not in call
+
+
+# ---------------------------------------------------------------------------
+# `.history` dot-command — registered only on `PromptToolkitConsoleInterpreter`.
+# The plain interpreter doesn't carry it, so `test_dot_commands.py` only
+# verifies that typing `.history` there falls through to "Unknown dot-command".
+# ---------------------------------------------------------------------------
+
+
+class _StubApp:
+    """Minimal app stub — only `.history` needs `app.echo` to capture output."""
+
+    def __init__(self) -> None:
+        self.messages: List[str] = []
+
+    def echo(self, message: Any, **_: Any) -> None:
+        self.messages.append(str(message))
+
+
+def _make_pt_interpreter(monkeypatch: pytest.MonkeyPatch, tmp_path: Path, entries: List[str]) -> Any:
+    """Build a `PromptToolkitConsoleInterpreter` whose history file is
+    seeded with ``entries`` (oldest first). Returns ``(interpreter, app)``
+    so the caller can drive `.history` and assert on `app.messages`."""
+    histfile = tmp_path / "h"
+    _seed_history(histfile, entries)
+    monkeypatch.setattr("robotcode.repl.prompt_toolkit_interpreter.history_path", lambda: histfile)
+    app = _StubApp()
+    interp = PromptToolkitConsoleInterpreter(app=app)  # type: ignore[arg-type]
+    return interp, app
+
+
+def test_history_dotcommand_default_shows_last_20(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+
+    interp, app = _make_pt_interpreter(monkeypatch, tmp_path, [f"line {i}" for i in range(1, 31)])
+    interp._dispatch_dot_command(".history")
+    blob = "\n".join(app.messages)
+    # Should show entries 11..30 (the last 20).
+    assert "line 30" in blob
+    assert "line 11" in blob
+    assert "line 10" not in blob
+
+
+def test_history_dotcommand_n_shows_last_n(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+
+    interp, app = _make_pt_interpreter(monkeypatch, tmp_path, [f"line {i}" for i in range(1, 11)])
+    interp._dispatch_dot_command(".history 3")
+    blob = "\n".join(app.messages)
+    assert "line 10" in blob
+    assert "line 9" in blob
+    assert "line 8" in blob
+    assert "line 7" not in blob
+
+
+def test_history_dotcommand_clear_wipes_file(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+
+    interp, app = _make_pt_interpreter(monkeypatch, tmp_path, ["a", "b"])
+    interp._dispatch_dot_command(".history clear")
+    assert interp.get_history() == []
+    assert any("History cleared" in m for m in app.messages)
+
+
+def test_history_dotcommand_del_n_removes_entry(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+
+    interp, app = _make_pt_interpreter(monkeypatch, tmp_path, ["one", "two", "three"])
+    interp._dispatch_dot_command(".history del 2")
+    assert interp.get_history() == ["one", "three"]
+    assert any("Deleted history entry 2" in m for m in app.messages)
+
+
+def test_history_dotcommand_del_out_of_range_reports_failure(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+
+    interp, app = _make_pt_interpreter(monkeypatch, tmp_path, ["one"])
+    interp._dispatch_dot_command(".history del 99")
+    assert any("No history entry at index 99" in m for m in app.messages)
+
+
+def test_history_dotcommand_del_missing_arg_prints_usage(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+
+    interp, app = _make_pt_interpreter(monkeypatch, tmp_path, ["one"])
+    interp._dispatch_dot_command(".history del")
+    assert any("Usage: .history del" in m for m in app.messages)
+
+
+def test_history_dotcommand_empty(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+
+    interp, app = _make_pt_interpreter(monkeypatch, tmp_path, [])
+    interp._dispatch_dot_command(".history")
+    assert any("no history" in m for m in app.messages)
+
+
+def test_history_dotcommand_renders_multi_line_entries(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """Each newline-separated piece of an entry goes on its own
+    indented line so the numbering stays readable."""
+
+    entries = ["FOR    ${i}    IN RANGE    3\n    Log    ${i}\n    END"]
+    interp, app = _make_pt_interpreter(monkeypatch, tmp_path, entries)
+    interp._dispatch_dot_command(".history")
+    # The first line carries the index; the next two lines are indented continuation.
+    assert any(line.lstrip().startswith("1") and "FOR" in line for line in app.messages)
+    assert any("Log    ${i}" in line for line in app.messages)
+    assert any(line.strip() == "END" for line in app.messages)
+
+
+def test_history_dotcommand_listed_in_help(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """`.help` on the prompt_toolkit interpreter MUST list `.history` —
+    the plain `test_dispatch_help_lists_all_commands` asserts the
+    opposite (that plain mode omits it), so this is the matching
+    positive check that the per-interpreter registry actually adds
+    the subclass command."""
+    interp, _ = _make_pt_interpreter(monkeypatch, tmp_path, [])
+    assert "history" in type(interp)._dot_command_table()

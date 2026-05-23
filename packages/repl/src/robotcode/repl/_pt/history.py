@@ -5,8 +5,9 @@ project (`{project_root}/.robotcode_cache/`) when one is detected, or
 in the per-user platform cache otherwise. `ROBOTCODE_CACHE_DIR`
 overrides both, matching the analyzer's existing convention.
 
-Only the `PromptToolkitBackend` owns the file at runtime; this module
-just exposes the path and the configured cap.
+Only `PromptToolkitConsoleInterpreter` owns the file at runtime
+(through `_ReplFileHistory` in `_pt.components`); this module just
+exposes the path and the configured cap.
 """
 
 import os

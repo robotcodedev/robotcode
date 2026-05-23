@@ -5,9 +5,9 @@ Pure-Python, deterministic, no Robot-runtime dependency. Used by:
 - `ConsoleInterpreter.get_input()` to pre-compute the indent string
   passed via `prefill=` to the next `read_line()` call (so the
   continuation prompt seeds the user's cursor at the right column).
-- `PromptToolkitBackend` smart-Enter / Shift-Enter key bindings to
-  decide whether the buffer still has an open block and what indent
-  the inserted newline should carry.
+- `_pt.components` smart-Enter / Shift-Enter key bindings to decide
+  whether the buffer still has an open block and what indent the
+  inserted newline should carry.
 
 Indent width defaults to 4 spaces — the Robot Framework convention
 for test-case-body content inside `*** Test Cases ***`. Not
