@@ -36,11 +36,12 @@ _AGENT_ENV_VARS: Final[Tuple[str, ...]] = (
     # Google
     "GEMINI_CLI",
     "ANTIGRAVITY_AGENT",
-    # GitHub Copilot CLI — high-signal markers only.
-    # COPILOT_GITHUB_TOKEN is omitted: false-positive risk when users
-    # export it as a regular OAuth credential outside Copilot.
-    "COPILOT_MODEL",
-    "COPILOT_ALLOW_ALL",
+    # GitHub Copilot — COPILOT_AGENT is set in terminals launched from
+    # VS Code Copilot Chat / agent mode (see microsoft/vscode#311734);
+    # COPILOT_AGENT_SESSION_ID is set on every shell command and MCP
+    # server the standalone Copilot CLI spawns (>= 0.0.429, April 2026).
+    "COPILOT_AGENT",
+    "COPILOT_AGENT_SESSION_ID",
     # Microsoft VS Code (1.121+): set when a terminal command is launched
     # by the VS Code agent flow (Copilot Chat) rather than a human.
     "VSCODE_AGENT",
