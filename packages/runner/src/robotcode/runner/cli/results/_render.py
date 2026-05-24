@@ -183,10 +183,10 @@ def _format_stats_row(label: str, value: str, *, width: int) -> Iterable[str]:
 def render_summary(data: SummaryResult, *, full_paths: bool = False) -> Iterable[str]:
     name = data.file.rel_source or data.file.source
 
-    if data.failures:
-        yield click.style(f"Failures ({len(data.failures)}):", underline=True, fg="blue")
+    if data.failed:
+        yield click.style(f"Failures ({len(data.failed)}):", underline=True, fg="blue")
         yield os.linesep
-        for t in data.failures:
+        for t in data.failed:
             yield from _format_test_entry(t, full_paths=full_paths)
         yield os.linesep
 

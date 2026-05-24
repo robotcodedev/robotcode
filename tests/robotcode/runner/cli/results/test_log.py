@@ -9,7 +9,7 @@ there; render-only flags are checked against TEXT output.
 """
 
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Set
 
 import pytest
 
@@ -304,6 +304,26 @@ def test_log_filter_integration(
 ) -> None:
     data = json_result("log", *filter_args, output_path=basic_output)
     assert len(data["tests"]) == expected_count
+
+
+@pytest.mark.parametrize(
+    ("shortcut", "expected_statuses"),
+    [
+        (["--failed"], {"FAIL"}),
+        (["--passed"], {"PASS"}),
+        (["--skipped"], {"SKIP"}),
+        (["--failed", "--skipped"], {"FAIL", "SKIP"}),
+        (["--failed", "--status", "skip"], {"FAIL", "SKIP"}),
+    ],
+)
+def test_log_status_shortcuts(
+    shortcut: List[str], expected_statuses: Set[str], json_result: JsonRunner, basic_output: Path
+) -> None:
+    """`--failed`/`--passed`/`--skipped` are shorthands for `--status fail|pass|skip`;
+    they stack and combine additively with `--status`."""
+    data = json_result("log", *shortcut, output_path=basic_output)
+    statuses = {t["status"] for t in data["tests"]}
+    assert statuses == expected_statuses
 
 
 # ---------------------------------------------------------------------------

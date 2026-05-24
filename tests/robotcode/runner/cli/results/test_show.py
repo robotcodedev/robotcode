@@ -154,6 +154,55 @@ def test_show_filters_applied_reflected_in_json(json_result: JsonRunner, tagged_
 
 
 # ---------------------------------------------------------------------------
+# Status shortcuts (--failed / --passed / --skipped)
+# ---------------------------------------------------------------------------
+
+
+def test_show_failed_shortcut_keeps_only_failed(json_result: JsonRunner, basic_output: Path) -> None:
+    """`--failed` is shorthand for `--status fail`."""
+    data = json_result("show", "--failed", output_path=basic_output)
+    statuses = {t["status"] for t in data["tests"]}
+    assert statuses == {"FAIL"}
+
+
+def test_show_passed_shortcut_keeps_only_passed(json_result: JsonRunner, basic_output: Path) -> None:
+    """`--passed` is shorthand for `--status pass`."""
+    data = json_result("show", "--passed", output_path=basic_output)
+    statuses = {t["status"] for t in data["tests"]}
+    assert statuses == {"PASS"}
+
+
+def test_show_skipped_shortcut_keeps_only_skipped(json_result: JsonRunner, basic_output: Path) -> None:
+    """`--skipped` is shorthand for `--status skip`."""
+    data = json_result("show", "--skipped", output_path=basic_output)
+    statuses = {t["status"] for t in data["tests"]}
+    assert statuses == {"SKIP"}
+
+
+def test_show_shortcuts_stack_additively(json_result: JsonRunner, basic_output: Path) -> None:
+    """`--failed --skipped` is `--status fail --status skip` (OR semantics)."""
+    data = json_result("show", "--failed", "--skipped", output_path=basic_output)
+    statuses = {t["status"] for t in data["tests"]}
+    assert statuses == {"FAIL", "SKIP"}
+
+
+def test_show_failed_with_explicit_status_is_idempotent(json_result: JsonRunner, basic_output: Path) -> None:
+    """`--failed --status fail` doesn't duplicate the filter — same result as `--failed`."""
+    data = json_result("show", "--failed", "--status", "fail", output_path=basic_output)
+    statuses = {t["status"] for t in data["tests"]}
+    assert statuses == {"FAIL"}
+    applied = data.get("filtersApplied") or {}
+    assert applied.get("status") == ["fail"]
+
+
+def test_show_failed_combines_with_explicit_status(json_result: JsonRunner, basic_output: Path) -> None:
+    """`--failed --status skip` is `--status fail --status skip` (additive OR)."""
+    data = json_result("show", "--failed", "--status", "skip", output_path=basic_output)
+    statuses = {t["status"] for t in data["tests"]}
+    assert statuses == {"FAIL", "SKIP"}
+
+
+# ---------------------------------------------------------------------------
 # Search
 # ---------------------------------------------------------------------------
 

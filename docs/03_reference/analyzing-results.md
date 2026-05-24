@@ -41,10 +41,10 @@ For the exhaustive option list see the auto-generated [CLI reference](cli.md#res
 robotcode results summary
 
 # Headline status + the list of failing tests with their messages
-robotcode results summary --failures
+robotcode results summary --failed
 
 # Just the failing tests, sorted by who took longest
-robotcode results show --status fail --sort elapsed
+robotcode results show --failed --sort elapsed
 
 # Full execution trace of every test that touches "Login"
 robotcode results log --search Login
@@ -115,7 +115,7 @@ Use the positive forms (`--pager`, `--color`) to *force* either feature even whe
 robotcode results summary
 ```
 
-Output is a short block with the overall status, the test counts, the wall-clock time, and (with `--failures`) the list of failed tests above it.
+Output is a short block with the overall status, the test counts, the wall-clock time, and (with `--failed`) the list of failed tests above it.
 
 ```text
 Failures (2):
@@ -140,7 +140,7 @@ Summary: results/output.xml
 
 | Flag | Purpose |
 |---|---|
-| `--failures` | Append the list of failed tests, each with its message and source location |
+| `--failed` | Append the list of failed tests, each with its message and source location |
 | `--full-paths` | Show absolute source paths instead of paths relative to the working directory |
 
 Filter flags (`--status`, `-i`, `-e`, `-s`, `-t`, `-bl`, `-ebl`) and `--search` work here too and narrow the underlying test set **before** the counts are computed. See [Filters](#filters) and [Search](#search).
@@ -150,9 +150,9 @@ Filter flags (`--status`, `-i`, `-e`, `-s`, `-t`, `-bl`, `-ebl`) and `--search` 
 `show` prints one row per test with status, source location, and (for failures) the truncated failure message. Use it to scan or to pull a specific subset.
 
 ```bash
-robotcode results show                # all tests, execution order
-robotcode results show --top 10       # only the first 10
-robotcode results show --status fail  # only failures
+robotcode results show            # all tests, execution order
+robotcode results show --top 10   # only the first 10
+robotcode results show --failed   # only failures (shorthand for --status fail)
 ```
 
 ### Flag reference
@@ -185,13 +185,13 @@ Tests with no value for the sort field (e.g. no recorded start time, no elapsed 
 
 ```bash
 # What broke that's tagged smoke, sorted by who took longest?
-robotcode results show --include smoke --status fail --sort elapsed
+robotcode results show --include smoke --failed --sort elapsed
 
 # 10 slowest tests overall
 robotcode results show --sort elapsed --top 10
 
 # Failing tests with full message (no truncation) and tags
-robotcode results show --status fail --message-chars 0 --tags
+robotcode results show --failed --message-chars 0 --tags
 
 # Find tests by name match
 robotcode results show --search "TimeoutError" --tags
@@ -206,7 +206,7 @@ robotcode results show --suite "MyProject.Login" --sort name
 
 ```bash
 robotcode results log                      # every test, every body item
-robotcode results log --status fail        # only failed tests
+robotcode results log --failed             # only failed tests (shorthand for --status fail)
 robotcode results log --search "Timeout"   # only tests matching the search
 ```
 
@@ -282,13 +282,13 @@ Suite: MyProject.Login (tests/login.robot) PASS
 robotcode results log -bl MyProject.Login.Bad_Password
 
 # Walk only the FAIL-level messages of every failed test
-robotcode results log --status fail --level FAIL
+robotcode results log --failed --level FAIL
 
 # Top-level keyword calls only, with everything nested collapsed
 robotcode results log --max-depth 1
 
 # Pull screenshots out of a failed run
-robotcode results log --status fail --extract ./extracted
+robotcode results log --failed --extract ./extracted
 
 # Diagnose suites that broke before they even ran
 robotcode results log --execution-messages --level WARN
@@ -426,6 +426,7 @@ Every subcommand accepts the same filter set. Filters combine with **AND** — e
 | Flag | Behavior |
 |---|---|
 | `--status pass\|fail\|skip\|not-run` | Repeatable; tests whose status is in the chosen set. |
+| `--failed` / `--passed` / `--skipped` | Shorthands for `--status fail` / `--status pass` / `--status skip`. Additive with `--status` and with each other (OR semantics). Available on `show`, `log`, `stats`. |
 | `-i/--include TAG_PATTERN` | Robot tag-pattern syntax (see below). Repeatable. |
 | `-e/--exclude TAG_PATTERN` | Same syntax, exclusion side. Repeatable. |
 | `-s/--suite GLOB` | Match against the suite's full longname. Repeatable. |
@@ -523,8 +524,8 @@ When you set `-f json` (or `-f json_indent` for pretty-printed, or `-f toml`) be
 
 ```bash
 robotcode --format json results summary
-robotcode --format json results show --status fail --sort elapsed
-robotcode --format json results log --status fail
+robotcode --format json results show --failed --sort elapsed
+robotcode --format json results log --failed
 ```
 
 This part of the guide is the schema reference: what fields each subcommand emits, when they're present, and how to consume them safely.
@@ -535,7 +536,7 @@ A few rules hold across every subcommand:
 
 - **camelCase keys.** `fullName`, `elapsedSeconds`, `messagesCount`, etc.
 - **ISO-8601 timestamps** with microsecond resolution.
-- **Optional fields are omitted, not `null`.** A `null` literal never appears in the output. If a field has no value (e.g. `failures` without `--failures`, `tags` on an untagged test), the key is simply absent from the JSON object.
+- **Optional fields are omitted, not `null`.** A `null` literal never appears in the output. If a field has no value (e.g. `failed` without `--failed`, `tags` on an untagged test), the key is simply absent from the JSON object.
 - **Scalar fields with a meaningful zero are always emitted.** `counts.failed = 0`, `truncated = 0`, `elapsedSeconds = 0.0` all stay in the object. Only optional fields disappear when unset.
 - **Empty array ≠ missing field.** Sections that "exist but are empty" come through as `[]`; sections that were never requested (e.g. anything excluded by `diff --only`) are absent. The two are different and your queries should handle both, typically via `// []` in jq.
 - **Stability.** Fields are appended over time, never renamed or removed in place. New fields are additive; existing consumers keep working.
@@ -553,7 +554,7 @@ A few rules hold across every subcommand:
   "elapsedSeconds": 83.4,
   "startTime": "2026-05-15T08:11:02",
   "endTime": "2026-05-15T08:12:25",
-  "failures": [
+  "failed": [
     {
       "name": "Bad Password",
       "fullName": "MyProject.Login.Bad Password",
@@ -574,7 +575,7 @@ A few rules hold across every subcommand:
 
 Field notes:
 
-- `failures` only appears when `--failures` was passed.
+- `failed` only appears when `--failed` was passed.
 - `messagesCount` aggregates log messages by level (`TRACE` / `DEBUG` / `INFO` / `WARN` / `ERROR` / `FAIL`). Only levels with at least one message appear — empty buckets are omitted, not emitted as `0`.
 - `executionMessagesCount` (parser / discovery errors that fired outside of test execution) appears **only** when there were any.
 - `filtersApplied` (see [below](#filtersapplied)) appears when any filter was passed.
@@ -814,7 +815,7 @@ robotcode --format json results diff baseline.xml \
 
 ```bash
 # After a failed CI run: pull screenshots out for upload
-robotcode results log --status fail --extract ./extracted
+robotcode results log --failed --extract ./extracted
 
 # Then: zip the lot
 zip -r artefacts.zip ./extracted
@@ -832,6 +833,6 @@ robotcode --format json results diff run-1.xml run-2.xml \
 
 - **Pin the output format.** Always say `-f json` (between `robotcode` and the subcommand). The TEXT format is meant for humans and may evolve.
 - **Empty array ≠ missing field.** Sections that exist but are empty come through as `[]`. Sections excluded by `diff --only` are absent. Use `// []` in jq to handle both.
-- **Optional fields are absent, never `null`.** Test for presence of the key rather than for a `null` value; in jq use `(.failures // empty)`.
+- **Optional fields are absent, never `null`.** Test for presence of the key rather than for a `null` value; in jq use `(.failed // empty)`.
 - **Trust `filtersApplied`.** If you're not sure your filters are being honoured, the field echoes them back — tag patterns in their canonical (normalised) form, everything else verbatim.
-- **For AI agents:** when feeding tool output into an LLM, prefer the narrowest subcommand call you can make (`summary` over `show`, `show --top 5` over a full listing, `log --status fail --level FAIL` over an unfiltered log). Each layer of filtering saves tokens and reduces the amount of reasoning the model has to spend on parsing.
+- **For AI agents:** when feeding tool output into an LLM, prefer the narrowest subcommand call you can make (`summary` over `show`, `show --top 5` over a full listing, `log --failed --level FAIL` over an unfiltered log). Each layer of filtering saves tokens and reduces the amount of reasoning the model has to spend on parsing.

@@ -30,21 +30,21 @@ def test_summary_overall_status_is_fail(json_result: JsonRunner, basic_output: P
     assert data["status"] == "FAIL"
 
 
-def test_summary_failures_flag_lists_failures(json_result: JsonRunner, basic_output: Path) -> None:
-    """`--failures` populates the `failures` array with one entry."""
-    data = json_result("summary", "--failures", output_path=basic_output)
-    failures = data.get("failures")
-    assert isinstance(failures, list)
-    assert len(failures) == 1
-    failure = failures[0]
+def test_summary_failed_flag_lists_failed(json_result: JsonRunner, basic_output: Path) -> None:
+    """`--failed` populates the `failed` array with one entry."""
+    data = json_result("summary", "--failed", output_path=basic_output)
+    failed = data.get("failed")
+    assert isinstance(failed, list)
+    assert len(failed) == 1
+    failure = failed[0]
     assert get_field(failure, "fullName", "full_name").endswith("Failing Test")
     assert "Boom" in get_field(failure, "message", default="")
 
 
-def test_summary_no_failures_field_by_default(json_result: JsonRunner, basic_output: Path) -> None:
-    """Without `--failures`, the field is omitted (CamelSnakeMixin removes defaults)."""
+def test_summary_no_failed_field_by_default(json_result: JsonRunner, basic_output: Path) -> None:
+    """Without `--failed`, the field is omitted (CamelSnakeMixin removes defaults)."""
     data = json_result("summary", output_path=basic_output)
-    assert "failures" not in data
+    assert "failed" not in data
 
 
 def test_summary_text_output_contains_counts(text_result: CliRunner, basic_output: Path) -> None:
@@ -66,10 +66,10 @@ def test_summary_full_paths_keeps_rel_source(json_result: JsonRunner, basic_outp
     both `source` (absolute) and `relSource` so consumers like the
     VS Code extension can rely on the schema being stable across the
     flag."""
-    data = json_result("summary", "--failures", "--full-paths", output_path=basic_output)
-    failures = data["failures"]
-    assert failures, "expected at least one failure"
-    failure = failures[0]
+    data = json_result("summary", "--failed", "--full-paths", output_path=basic_output)
+    failed = data["failed"]
+    assert failed, "expected at least one failure"
+    failure = failed[0]
     src = get_field(failure, "source")
     assert src is not None
     assert Path(src).is_absolute()
@@ -79,7 +79,7 @@ def test_summary_full_paths_keeps_rel_source(json_result: JsonRunner, basic_outp
 
 
 def test_summary_default_includes_rel_source(json_result: JsonRunner, basic_output: Path) -> None:
-    data = json_result("summary", "--failures", output_path=basic_output)
-    failures = data["failures"]
-    assert failures
-    assert get_field(failures[0], "relSource", "rel_source") is not None
+    data = json_result("summary", "--failed", output_path=basic_output)
+    failed = data["failed"]
+    assert failed
+    assert get_field(failed[0], "relSource", "rel_source") is not None

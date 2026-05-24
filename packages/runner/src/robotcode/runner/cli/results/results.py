@@ -146,6 +146,50 @@ RESULT_FILTER_OPTIONS = [
 ]
 
 
+STATUS_SHORTCUT_OPTIONS = [
+    click.option(
+        "--failed",
+        "shortcut_failed",
+        is_flag=True,
+        default=False,
+        help="Shortcut for `--status fail`. Additive with `--status` / `--passed` / `--skipped`.",
+    ),
+    click.option(
+        "--passed",
+        "shortcut_passed",
+        is_flag=True,
+        default=False,
+        help="Shortcut for `--status pass`. Additive with `--status` / `--failed` / `--skipped`.",
+    ),
+    click.option(
+        "--skipped",
+        "shortcut_skipped",
+        is_flag=True,
+        default=False,
+        help="Shortcut for `--status skip`. Additive with `--status` / `--failed` / `--passed`.",
+    ),
+]
+
+
+def _apply_status_shortcuts(
+    status_filters: Tuple[str, ...],
+    shortcut_failed: bool,
+    shortcut_passed: bool,
+    shortcut_skipped: bool,
+) -> Tuple[str, ...]:
+    extras: List[str] = []
+    if shortcut_failed:
+        extras.append("fail")
+    if shortcut_passed:
+        extras.append("pass")
+    if shortcut_skipped:
+        extras.append("skip")
+    if not extras:
+        return status_filters
+    seen = {s.lower() for s in status_filters}
+    return status_filters + tuple(e for e in extras if e not in seen)
+
+
 SEARCH_OPTIONS = [
     click.option(
         "--search",
@@ -216,8 +260,8 @@ def results() -> None:
     Examples:
     ```
     robotcode results summary
-    robotcode results summary --failures
-    robotcode results show --status fail
+    robotcode results summary --failed
+    robotcode results show --failed
     robotcode results log "*Login*"
     robotcode --format json results summary
     ```
@@ -227,8 +271,8 @@ def results() -> None:
 @results.command()
 @add_options(*RESULT_FILTER_OPTIONS, *SEARCH_OPTIONS, OUTPUT_OPTION)
 @click.option(
-    "--failures/--no-failures",
-    "show_failures",
+    "--failed/--no-failed",
+    "show_failed",
     default=False,
     show_default=True,
     help="Include the list of failed tests (with messages) above the counts table.",
@@ -247,20 +291,20 @@ def summary(
     search_substring: Optional[str],
     search_regex: Optional[str],
     output_file: Optional[Path],
-    show_failures: bool,
+    show_failed: bool,
     full_paths: bool,
 ) -> None:
     """\
     Print headline counts and overall status for a finished run.
 
-    Pass `--failures` to also list failed tests above the counts.
+    Pass `--failed` to also list failed tests above the counts.
     Filter options narrow what is counted.
 
     \b
     Examples:
     ```
     robotcode results summary
-    robotcode results summary --failures
+    robotcode results summary --failed
     robotcode results summary -i smoke --status fail
     robotcode results summary --search TimeoutError
     robotcode --format json results summary
@@ -295,7 +339,7 @@ def summary(
             matcher,
         )
         counts = _collect_counts(execution.suite)
-        failures = _collect_failures(execution.suite) if show_failures else None
+        failed = _collect_failures(execution.suite) if show_failed else None
         exec_msg_counts = _count_execution_messages(execution.errors)
         msg_counts = _count_all_messages(execution)
 
@@ -306,7 +350,7 @@ def summary(
             elapsed_seconds=_elapsed_seconds(execution.suite),
             start_time=_iso(_start_time(execution.suite)),
             end_time=_iso(_end_time(execution.suite)),
-            failures=failures or None,
+            failed=failed or None,
             messages_count=msg_counts or None,
             execution_messages_count=exec_msg_counts or None,
             filters_applied=_filters_dict(
@@ -331,7 +375,7 @@ def summary(
 
 
 @results.command()
-@add_options(*RESULT_FILTER_OPTIONS, *SEARCH_OPTIONS, OUTPUT_OPTION)
+@add_options(*RESULT_FILTER_OPTIONS, *STATUS_SHORTCUT_OPTIONS, *SEARCH_OPTIONS, OUTPUT_OPTION)
 @click.option(
     "--top",
     "top_n",
@@ -393,6 +437,9 @@ def show(
     test_globs: Tuple[str, ...],
     by_longname: Tuple[str, ...],
     exclude_by_longname: Tuple[str, ...],
+    shortcut_failed: bool,
+    shortcut_passed: bool,
+    shortcut_skipped: bool,
     search_substring: Optional[str],
     search_regex: Optional[str],
     output_file: Optional[Path],
@@ -414,8 +461,8 @@ def show(
     Examples:
     ```
     robotcode results show
-    robotcode results show --status fail
-    robotcode results show --status fail --status skip --tags
+    robotcode results show --failed
+    robotcode results show --failed --skipped --tags
     robotcode results show -i smoke -e wipANDnotready
     robotcode results show -s "MyProject.Login.*"
     robotcode results show --top 20
@@ -427,6 +474,7 @@ def show(
         path = _resolve_output_file(app, profile, output_file)
         execution = _load_execution_result(path)
 
+        status_filters = _apply_status_shortcuts(status_filters, shortcut_failed, shortcut_passed, shortcut_skipped)
         matcher = make_search_matcher(search_substring, search_regex)
         _apply_tree_filters(
             execution.suite,
@@ -502,7 +550,7 @@ def show(
 
 
 @results.command()
-@add_options(*RESULT_FILTER_OPTIONS, *SEARCH_OPTIONS, OUTPUT_OPTION)
+@add_options(*RESULT_FILTER_OPTIONS, *STATUS_SHORTCUT_OPTIONS, *SEARCH_OPTIONS, OUTPUT_OPTION)
 @click.option(
     "--level",
     type=click.Choice(["TRACE", "DEBUG", "INFO", "WARN", "ERROR", "FAIL"], case_sensitive=False),
@@ -605,6 +653,9 @@ def log(
     test_globs: Tuple[str, ...],
     by_longname: Tuple[str, ...],
     exclude_by_longname: Tuple[str, ...],
+    shortcut_failed: bool,
+    shortcut_passed: bool,
+    shortcut_skipped: bool,
     search_substring: Optional[str],
     search_regex: Optional[str],
     output_file: Optional[Path],
@@ -630,7 +681,7 @@ def log(
     Examples:
     ```
     robotcode results log
-    robotcode results log --status fail
+    robotcode results log --failed
     robotcode results log -t "*Login*"
     robotcode results log --level WARN
     robotcode results log --max-depth 2
@@ -644,6 +695,7 @@ def log(
         path = _resolve_output_file(app, profile, output_file)
         execution = _load_execution_result(path)
 
+        status_filters = _apply_status_shortcuts(status_filters, shortcut_failed, shortcut_passed, shortcut_skipped)
         matcher = make_search_matcher(search_substring, search_regex)
         _apply_tree_filters(
             execution.suite,
@@ -733,7 +785,7 @@ def log(
 
 
 @results.command()
-@add_options(*RESULT_FILTER_OPTIONS, *SEARCH_OPTIONS, OUTPUT_OPTION)
+@add_options(*RESULT_FILTER_OPTIONS, *STATUS_SHORTCUT_OPTIONS, *SEARCH_OPTIONS, OUTPUT_OPTION)
 @click.option(
     "--by",
     "group_by",
@@ -769,6 +821,9 @@ def stats(
     test_globs: Tuple[str, ...],
     by_longname: Tuple[str, ...],
     exclude_by_longname: Tuple[str, ...],
+    shortcut_failed: bool,
+    shortcut_passed: bool,
+    shortcut_skipped: bool,
     search_substring: Optional[str],
     search_regex: Optional[str],
     output_file: Optional[Path],
@@ -798,6 +853,7 @@ def stats(
         path = _resolve_output_file(app, profile, output_file)
         execution = _load_execution_result(path)
 
+        status_filters = _apply_status_shortcuts(status_filters, shortcut_failed, shortcut_passed, shortcut_skipped)
         matcher = make_search_matcher(search_substring, search_regex)
         _apply_tree_filters(
             execution.suite,

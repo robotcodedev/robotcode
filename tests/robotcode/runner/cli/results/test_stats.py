@@ -150,6 +150,20 @@ def test_stats_search_reduces_groups(json_result: JsonRunner, tagged_output: Pat
     assert groups["bug-123"]["counts"]["total"] == 2
 
 
+def test_stats_failed_shortcut_equivalent_to_status_fail(json_result: JsonRunner, tagged_output: Path) -> None:
+    """`stats --by tag --failed` is `--by tag --status fail`."""
+    via_shortcut = json_result("stats", "--by", "tag", "--failed", output_path=tagged_output)
+    via_status = json_result("stats", "--by", "tag", "--status", "fail", output_path=tagged_output)
+    assert _groups_by_name(_section(via_shortcut, "tag")) == _groups_by_name(_section(via_status, "tag"))
+
+
+def test_stats_passed_shortcut_equivalent_to_status_pass(json_result: JsonRunner, tagged_output: Path) -> None:
+    """`stats --by tag --passed` is `--by tag --status pass`."""
+    via_shortcut = json_result("stats", "--by", "tag", "--passed", output_path=tagged_output)
+    via_status = json_result("stats", "--by", "tag", "--status", "pass", output_path=tagged_output)
+    assert _groups_by_name(_section(via_shortcut, "tag")) == _groups_by_name(_section(via_status, "tag"))
+
+
 # ---------------------------------------------------------------------------
 # TEXT smoke
 # ---------------------------------------------------------------------------
