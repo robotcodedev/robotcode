@@ -66,6 +66,9 @@ def test_files_default_relative(robotcode_cli: CliRunner, files_tree: Path) -> N
 
 
 def test_files_text_format_lists_paths(robotcode_cli: CliRunner, files_tree: Path) -> None:
+    """TEXT output: H1 heading + bullet list of paths + italic `_Total:_` footer."""
     result = robotcode_cli(["--root", str(files_tree.parent), "discover", "files", str(files_tree)])
+    assert "# Files" in result.stdout
     assert "sub1.robot" in result.stdout
-    assert "Total:" in result.stdout
+    # Italic-label convention for the count footer.
+    assert "_Total:_" in result.stdout

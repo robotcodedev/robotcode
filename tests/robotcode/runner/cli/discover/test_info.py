@@ -49,12 +49,28 @@ def test_info_python_version_string_is_a_version(robotcode_cli: CliRunner) -> No
 
 
 def test_info_text_lists_key_value_pairs(robotcode_cli: CliRunner) -> None:
+    """TEXT output is an italic-label bullet list with human-friendly labels."""
     result = robotcode_cli(["discover", "info"])
-    assert re.search(r"robotVersionString:\s+\d+\.\d+", result.stdout)
-    assert re.search(r"pythonVersionString:\s+\d+\.\d+", result.stdout)
+    assert "# Info" in result.stdout
+    # Field labels appear in italic with their values inline.
+    assert re.search(r"- _Robot Framework:_\s+\d+\.\d+", result.stdout)
+    assert re.search(r"- _Python:_\s+\d+\.\d+", result.stdout)
 
 
 def test_info_robot_env_echoed_when_set(robotcode_cli: CliRunner, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("ROBOT_OPTIONS", "--loglevel TRACE")
     data = json.loads(robotcode_cli(["--format", "json", "discover", "info"]).stdout)
     assert data["robotEnv"].get("ROBOT_OPTIONS") == "--loglevel TRACE"
+
+
+def test_info_text_emits_italic_label_bullet_list(robotcode_cli: CliRunner) -> None:
+    """The TEXT output is an italic-label bullet list (one bullet per
+    info field). 2-column Field/Value tables would just carry a
+    redundant "Field | Value" header, so we render them as bullets
+    instead — same convention used by results' summary block."""
+    out = robotcode_cli(["discover", "info"]).stdout
+    assert out.startswith("# Info")
+    # Every value line is an italic-label bullet; no markdown table appears.
+    bullets = [line for line in out.splitlines() if line.startswith("- _")]
+    assert bullets, "expected italic-label bullets in `discover info` output"
+    assert not any(line.startswith("|") for line in out.splitlines())

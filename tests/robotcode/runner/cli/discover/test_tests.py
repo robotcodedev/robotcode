@@ -101,6 +101,17 @@ def test_tests_suite_glob_filter(json_discover: JsonRunner, nested_suite: Path) 
 
 
 def test_tests_text_lists_names_and_paths(robotcode_cli: CliRunner, flat_suite: Path) -> None:
+    """TEXT output: H1 heading, bullets per test, `## Statistics` table footer."""
     result = robotcode_cli(["discover", "tests", str(flat_suite)])
+    assert "# Tests" in result.stdout
     assert "Login Smoke" in result.stdout
-    assert "Statistics:" in result.stdout
+    assert "## Statistics" in result.stdout
+
+
+def test_tests_text_tags_emit_italic_label_sub_bullet(robotcode_cli: CliRunner, flat_suite: Path) -> None:
+    """`discover tests --tags` adds `- _Tags:_` italic-label sub-bullets
+    beneath each test bullet (style convention: bold names, italic labels)."""
+    out = robotcode_cli(["discover", "tests", "--tags", str(flat_suite)]).stdout
+    assert "- _Tags:_" in out
+    # Tag values are inline-code-spanned tokens.
+    assert "`smoke`" in out

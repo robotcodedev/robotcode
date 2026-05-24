@@ -117,11 +117,26 @@ def test_all_nested_suites_appear_in_tree(json_discover: JsonRunner, nested_suit
 
 
 def test_all_text_lists_suites_tests_and_statistics(robotcode_cli: CliRunner, flat_suite: Path) -> None:
+    """TEXT output is a nested markdown list with a `## Statistics`
+    bullet-list footer (italic-label convention)."""
     result = robotcode_cli(["discover", "all", str(flat_suite)])
-    assert "Suite:" in result.stdout
-    assert "Test:" in result.stdout
-    assert "Statistics:" in result.stdout
-    assert "Tests:" in result.stdout
+    # H1 heading + bullets for suite and tests
+    assert "# All" in result.stdout
+    assert "- **Flat**" in result.stdout  # suite as bullet
+    assert "  - **Flat." in result.stdout  # tests indented under suite
+    # Statistics renders as an H2 with italic-label bullets underneath.
+    assert "## Statistics" in result.stdout
+    assert "- _Tests:_" in result.stdout
+
+
+def test_all_text_nests_beyond_two_levels(robotcode_cli: CliRunner, nested_suite: Path) -> None:
+    """A nested suite tree produces a markdown list that goes deeper
+    than two levels — the workspace bullet at column 0, intermediate
+    suites at columns 2 and 4, leaf tests at column 6+. Guards against
+    a regression to a flat layout when the tree has real depth."""
+    out = robotcode_cli(["discover", "all", str(nested_suite)]).stdout
+    # At least one bullet at indentation 4 (third level: workspace → outer → inner).
+    assert "\n    - **" in out
 
 
 # ---------------------------------------------------------------------------

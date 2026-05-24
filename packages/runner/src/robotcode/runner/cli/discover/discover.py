@@ -4,7 +4,6 @@ import re
 import sys
 from collections import defaultdict
 from io import IOBase
-from itertools import chain
 from pathlib import Path
 from typing import (
     Any,
@@ -49,8 +48,10 @@ from robotcode.plugin import (
 from robotcode.plugin.click_helper.types import add_options
 from robotcode.robot.utils import RF_VERSION
 
-from .._search import SearchMatcher, make_highlighter, make_search_matcher
+from .._markdown import make_md_highlighter
+from .._search import SearchMatcher, make_search_matcher
 from ..robot import ROBOT_OPTIONS, ROBOT_VERSION_OPTIONS, RobotFrameworkEx, handle_robot_options
+from . import _render
 from ._models import Info, ResultItem, Statistics, TagsResult, TestItem
 
 DISCOVER_SEARCH_OPTIONS = [
@@ -563,26 +564,6 @@ def _filters_applied(search_substring: Optional[str], search_regex: Optional[str
     return None
 
 
-def format_statistics(collector: Collector) -> Iterable[str]:
-    yield os.linesep
-    yield click.style("Statistics:", underline=True, fg="blue")
-    yield os.linesep
-    yield click.style("  - Suites: ", bold=True, fg="blue")
-    yield f"{collector.statistics.suites}{os.linesep}"
-    if collector.statistics.suites_with_tests:
-        yield click.style("  - Suites with tests: ", bold=True, fg="blue")
-        yield f"{collector.statistics.suites_with_tests}{os.linesep}"
-    if collector.statistics.suites_with_tasks:
-        yield click.style("  - Suites with tasks: ", bold=True, fg="blue")
-        yield f"{collector.statistics.suites_with_tasks}{os.linesep}"
-    if collector.statistics.tests:
-        yield click.style("  - Tests: ", bold=True, fg="blue")
-        yield f"{collector.statistics.tests}{os.linesep}"
-    if collector.statistics.tasks:
-        yield click.style("  - Tasks: ", bold=True, fg="blue")
-        yield f"{collector.statistics.tasks}{os.linesep}"
-
-
 @discover.command(
     context_settings={"allow_extra_args": True, "ignore_unknown_options": True},
     add_help_option=True,
@@ -637,30 +618,17 @@ def all(
 
     if collector.all.children:
         if app.config.output_format is None or app.config.output_format == OutputFormat.TEXT:
-            highlight = make_highlighter(search_substring, search_regex)
-            hl = highlight if highlight is not None else (lambda s: s)
-
-            def print(item: TestItem) -> Iterable[str]:
-                if item.type in ["test", "task"]:
-                    yield "    "
-                    yield click.style(f"{item.type.capitalize()}: ", fg="blue")
-                    yield click.style(hl(item.longname), bold=True)
-                    yield click.style(
-                        f" ({hl(str(item.source if full_paths else item.rel_source))}"
-                        f":{item.range.start.line + 1 if item.range is not None else 1}){os.linesep}"
-                    )
-                    if show_tags and item.tags:
-                        yield click.style("        Tags:", bold=True, fg="yellow")
-                        tags_text = ", ".join(hl(normalize(str(tag), ignore="_")) for tag in sorted(item.tags))
-                        yield f" {tags_text}{os.linesep}"
-                else:
-                    yield click.style(f"{item.type.capitalize()}: ", fg="green")
-                    yield click.style(hl(item.longname), bold=True)
-                    yield click.style(f" ({hl(str(item.source if full_paths else item.rel_source))}){os.linesep}")
-                for child in item.children or []:
-                    yield from print(child)
-
-            app.echo_via_pager(chain(print(collector.all.children[0]), format_statistics(collector)))
+            app.echo_as_markdown(
+                _render.render_all(
+                    collector.all.children[0],
+                    collector.statistics,
+                    show_tags=show_tags,
+                    full_paths=full_paths,
+                    highlight=make_md_highlighter(search_substring, search_regex),
+                    search_substring=search_substring,
+                    search_regex=search_regex,
+                )
+            )
 
         else:
             app.print_data(
@@ -689,27 +657,18 @@ def _test_or_tasks(
 
     if collector.all.children:
         if app.config.output_format is None or app.config.output_format == OutputFormat.TEXT:
-            highlight = make_highlighter(search_substring, search_regex)
-            hl = highlight if highlight is not None else (lambda s: s)
-
-            def print(items: List[TestItem]) -> Iterable[str]:
-                for item in items:
-                    if item.type != selected_type:
-                        continue
-
-                    yield click.style(f"{item.type.capitalize()}: ", fg="blue")
-                    yield click.style(hl(item.longname), bold=True)
-                    yield click.style(
-                        f" ({hl(str(item.source if full_paths else item.rel_source))}"
-                        f":{item.range.start.line + 1 if item.range is not None else 1}){os.linesep}"
-                    )
-                    if show_tags and item.tags:
-                        yield click.style("    Tags:", bold=True, fg="yellow")
-                        tags_text = ", ".join(hl(normalize(str(tag), ignore="_")) for tag in sorted(item.tags))
-                        yield f" {tags_text}{os.linesep}"
-
-            if collector.test_and_tasks:
-                app.echo_via_pager(chain(print(collector.test_and_tasks), format_statistics(collector)))
+            app.echo_as_markdown(
+                _render.render_tests_or_tasks(
+                    collector.test_and_tasks,
+                    collector.statistics,
+                    selected_type=selected_type,
+                    show_tags=show_tags,
+                    full_paths=full_paths,
+                    highlight=make_md_highlighter(search_substring, search_regex),
+                    search_substring=search_substring,
+                    search_regex=search_regex,
+                )
+            )
 
         else:
             filtered = [item for item in collector.test_and_tasks if item.type == selected_type]
@@ -888,18 +847,16 @@ def suites(
 
     if collector.all.children:
         if app.config.output_format is None or app.config.output_format == OutputFormat.TEXT:
-            highlight = make_highlighter(search_substring, search_regex)
-            hl = highlight if highlight is not None else (lambda s: s)
-
-            def print(items: List[TestItem]) -> Iterable[str]:
-                for item in items:
-                    yield click.style(hl(item.longname), bold=True)
-                    yield click.style(f" ({hl(str(item.source if full_paths else item.rel_source))}){os.linesep}")
-
-            if collector.suites:
-                app.echo_via_pager(chain(print(collector.suites), format_statistics(collector)))
-            else:
-                app.echo_via_pager(format_statistics(collector))
+            app.echo_as_markdown(
+                _render.render_suites(
+                    collector.suites,
+                    collector.statistics,
+                    full_paths=full_paths,
+                    highlight=make_md_highlighter(search_substring, search_regex),
+                    search_substring=search_substring,
+                    search_regex=search_regex,
+                )
+            )
 
         else:
             app.print_data(
@@ -981,39 +938,19 @@ def tags(
 
     if collector.all.children:
         if app.config.output_format is None or app.config.output_format == OutputFormat.TEXT:
-            highlight = make_highlighter(search_substring, search_regex)
-            hl = highlight if highlight is not None else (lambda s: s)
-
-            def print(tags: Dict[str, List[TestItem]]) -> Iterable[str]:
-                for tag, items in sorted(tags.items()):
-                    yield click.style(
-                        f"{hl(tag)}{os.linesep}",
-                        bold=show_tests,
-                        fg="yellow" if show_tests else None,
-                    )
-                    if show_tests or show_tasks:
-                        for t in items:
-                            if show_tests != show_tasks:
-                                if show_tests and t.type != "test":
-                                    continue
-                                if show_tasks and t.type != "task":
-                                    continue
-                            yield click.style(f"    {t.type.capitalize()}: ", fg="blue")
-                            yield click.style(hl(t.longname), bold=True)
-                            yield click.style(
-                                f" ({hl(str(t.source if full_paths else t.rel_source))}"
-                                f":{t.range.start.line + 1 if t.range is not None else 1}){os.linesep}"
-                            )
-
-            if collector.normalized_tags:
-                app.echo_via_pager(
-                    chain(
-                        print(collector.normalized_tags if normalized else collector.tags),
-                        format_statistics(collector),
-                    )
+            tags_data = collector.normalized_tags if normalized else collector.tags
+            app.echo_as_markdown(
+                _render.render_tags(
+                    tags_data,
+                    collector.statistics,
+                    show_tests=show_tests,
+                    show_tasks=show_tasks,
+                    full_paths=full_paths,
+                    highlight=make_md_highlighter(search_substring, search_regex),
+                    search_substring=search_substring,
+                    search_regex=search_regex,
                 )
-            else:
-                app.echo_via_pager(format_statistics(collector))
+            )
 
         else:
             tags_data = collector.normalized_tags if normalized else collector.tags
@@ -1037,8 +974,6 @@ def info(app: Application) -> None:
     """
 
     from robot.version import get_version as get_version
-
-    from robotcode.core.utils.dataclasses import as_dict
 
     from ...__version__ import __version__
 
@@ -1072,12 +1007,7 @@ def info(app: Application) -> None:
     )
 
     if app.config.output_format is None or app.config.output_format == OutputFormat.TEXT:
-
-        def print_info() -> Iterable[str]:
-            for key, value in as_dict(info, remove_defaults=True).items():
-                yield f"{key}: {value}{os.linesep}"
-
-        app.echo_via_pager(print_info())
+        app.echo_as_markdown(_render.render_info(info))
     else:
         app.print_data(info, remove_defaults=True)
 
@@ -1159,17 +1089,6 @@ def files(
         if matcher is not None:
             result = [p for p in result if matcher.general(p)]
         if app.config.output_format is None or app.config.output_format == OutputFormat.TEXT:
-            highlight = make_highlighter(search_substring, search_regex)
-            hl = highlight if highlight is not None else (lambda s: s)
-
-            def print() -> Iterable[str]:
-                for p in result:
-                    yield f"{hl(p)}{os.linesep}"
-
-                yield os.linesep
-                yield click.style("Total: ", underline=True, bold=True, fg="blue")
-                yield click.style(f"{len(result)} file(s){os.linesep}")
-
-            app.echo_via_pager(print())
+            app.echo_as_markdown(_render.render_files(result))
         else:
             app.print_data(result, remove_defaults=True)

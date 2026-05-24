@@ -57,16 +57,18 @@ def test_summary_text_output_contains_counts(text_result: CliRunner, basic_outpu
 
 
 def test_summary_text_output_is_markdown(text_result: CliRunner, basic_output: Path) -> None:
-    """The TEXT output is markdown — H1 heading, a `Field | Value` table,
-    and the status field paints both an icon and the bold word."""
+    """The TEXT output is markdown — H1 heading, italic-label bullets
+    for the summary fields, and the status field paints both an icon
+    and the bold word."""
     plain = strip_ansi(text_result("summary", output_path=basic_output).stdout)
     assert plain.startswith("# Summary")
-    # Status row in the field/value table carries icon + bold word.
+    # Status bullet carries the icon + bold word in the value column.
+    assert "- _Status:_" in plain
     assert "❌" in plain
     assert "**FAIL**" in plain
-    # The counts come through a real markdown table (pipe-delimited).
-    assert "| Field" in plain
-    assert "| Status" in plain
+    # Other summary metrics also come through as italic-label bullets.
+    assert "- _Total:_" in plain
+    assert "- _Passed:_" in plain
 
 
 # ---------------------------------------------------------------------------

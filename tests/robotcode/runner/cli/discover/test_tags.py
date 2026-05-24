@@ -31,24 +31,29 @@ def test_tags_not_normalized_keeps_originals(json_discover: JsonRunner, tagged_s
 
 
 def test_tags_text_default_lists_only_tag_names(robotcode_cli: CliRunner, tagged_suite: Path) -> None:
-    """Without `--tests`/`--tasks`, TEXT just lists tag names."""
+    """Without `--tests`/`--tasks`, TEXT lists tag-name bullets only;
+    no nested children appear."""
     result = robotcode_cli(["discover", "tags", str(tagged_suite)])
-    assert "smoke" in result.stdout
-    # No `Test: ...` indentation expected.
-    assert "    Test:" not in result.stdout
+    assert "- **smoke**" in result.stdout
+    # No 2-space indented sub-bullet (children) should appear.
+    assert "\n  - **" not in result.stdout
 
 
 def test_tags_text_tests_flag_expands_children(robotcode_cli: CliRunner, tagged_suite: Path) -> None:
-    """`--tests` adds indented `Test: ...` lines under each tag."""
+    """`--tests` adds nested test bullets indented under each tag."""
     result = robotcode_cli(["discover", "tags", "--tests", str(tagged_suite)])
-    assert "    Test:" in result.stdout
+    # tag bullet at top level, test bullet indented two spaces underneath
+    assert "- **smoke**" in result.stdout
+    assert "\n  - **Tagged." in result.stdout
 
 
 def test_tags_text_tasks_flag_expands_tasks(robotcode_cli: CliRunner, tasks_suite: Path) -> None:
     """Need --root to escape the project's robot.toml `rpa=false`,
     otherwise Robot's auto-detect of `*** Tasks ***` is suppressed."""
     result = robotcode_cli(["--root", str(tasks_suite.parent), "discover", "tags", "--tasks", str(tasks_suite)])
-    assert "    Task:" in result.stdout
+    # tag bullet at top level, task bullet indented two spaces underneath
+    assert "- **rpa**" in result.stdout
+    assert "\n  - **Tasks." in result.stdout
 
 
 def test_tags_filter_chain_applies_before_aggregation(json_discover: JsonRunner, tagged_suite: Path) -> None:

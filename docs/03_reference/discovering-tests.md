@@ -350,6 +350,7 @@ An unparseable regex (e.g. `[unclosed`) yields a usage error pinpointing where t
 
 ## Tips for terminal use
 
+- **TEXT output is markdown.** On a coloured TTY the markdown is rendered to themed ANSI via `rich` (and paged if longer than your terminal); on pipes or with `--no-color` the raw markdown goes through verbatim — paste it into a PR description, a Slack message, or feed it straight to an LLM.
 - **Quote your globs.** `--suite "*.Login.*"` and `--test "Test ?"` need quotes so the shell doesn't expand them against the local filesystem first.
 - **`-bl` is for exact names, `-t` is for patterns.** When you copy a test long-name out of another tool's output, `-bl` is usually what you want — no need to escape glob characters.
 - **Pre-filter before piping into `robot`.** `robotcode discover tests --include smoke -f json | jq -r '.items[].longname'` gives you a stable list of long names you can hand back to `robotcode robot -bl ...` for sharded CI runs.
