@@ -559,8 +559,8 @@ def test_prompt_toolkit_interpreter_read_line_delegates_to_session(
 
 # ---------------------------------------------------------------------------
 # `.history` dot-command — registered only on `PromptToolkitConsoleInterpreter`.
-# The plain interpreter doesn't carry it, so `test_dot_commands.py` only
-# verifies that typing `.history` there falls through to "Unknown dot-command".
+# On the plain interpreter typing `.history` falls through to the standard
+# "Unknown dot-command" message.
 # ---------------------------------------------------------------------------
 
 
