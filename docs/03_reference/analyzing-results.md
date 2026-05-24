@@ -510,6 +510,7 @@ An unparseable regex (e.g. `[unclosed`) yields a usage error pinpointing where t
 
 ## Tips for terminal use
 
+- **TEXT output is markdown.** On a coloured TTY the markdown is rendered to themed ANSI via `rich` (and paged if longer than your terminal); on pipes or with `--no-color` the raw markdown goes through verbatim — paste it into a PR description, a Slack message, or feed it straight to an LLM.
 - **Quote your globs.** `--suite "*.Login.*"` and `--test "Test ?"` need quotes so the shell doesn't expand them against the local filesystem first.
 - **Filters apply before aggregation.** `stats`, `summary` and `diff` all run the filter pipeline first, so `--search Login` followed by `--by tag` gives you tag stats over the Login subset, not all tags whose name happens to contain "Login".
 - **`-bl` is for exact names, `-t` is for patterns.** When you copy a failing-test name out of the failure list, `-bl` is usually what you want — no need to escape glob characters.

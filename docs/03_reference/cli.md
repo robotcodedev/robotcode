@@ -1030,11 +1030,6 @@ robotcode discover all [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
    Show the tags that are present.  [default: tags]
 
 
-- `--version`
-
-   Show the version and exit.
-
-
 - `-ebl, --exclude-by-longname TEXT *`
 
    Excludes tests/tasks or suites by longname.
@@ -1043,6 +1038,11 @@ robotcode discover all [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
 - `-bl, --by-longname TEXT *`
 
    Select tests/tasks or suites by longname.
+
+
+- `--version`
+
+   Show the version and exit.
 
 
 - `--search TEXT`
@@ -1149,11 +1149,6 @@ robotcode discover suites [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
 
 
 **Options:**
-- `--version`
-
-   Show the version and exit.
-
-
 - `-ebl, --exclude-by-longname TEXT *`
 
    Excludes tests/tasks or suites by longname.
@@ -1162,6 +1157,11 @@ robotcode discover suites [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
 - `-bl, --by-longname TEXT *`
 
    Select tests/tasks or suites by longname.
+
+
+- `--version`
+
+   Show the version and exit.
 
 
 - `--search TEXT`
@@ -1231,11 +1231,6 @@ robotcode discover tags [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
    Show full paths instead of relative.  [default: no-full-paths]
 
 
-- `--version`
-
-   Show the version and exit.
-
-
 - `-ebl, --exclude-by-longname TEXT *`
 
    Excludes tests/tasks or suites by longname.
@@ -1244,6 +1239,11 @@ robotcode discover tags [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
 - `-bl, --by-longname TEXT *`
 
    Select tests/tasks or suites by longname.
+
+
+- `--version`
+
+   Show the version and exit.
 
 
 - `--search TEXT`
@@ -1298,11 +1298,6 @@ robotcode discover tasks [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
    Show full paths instead of relative.  [default: no-full-paths]
 
 
-- `--version`
-
-   Show the version and exit.
-
-
 - `-ebl, --exclude-by-longname TEXT *`
 
    Excludes tests/tasks or suites by longname.
@@ -1311,6 +1306,11 @@ robotcode discover tasks [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
 - `-bl, --by-longname TEXT *`
 
    Select tests/tasks or suites by longname.
+
+
+- `--version`
+
+   Show the version and exit.
 
 
 - `--search TEXT`
@@ -1365,11 +1365,6 @@ robotcode discover tests [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
    Show full paths instead of relative.  [default: no-full-paths]
 
 
-- `--version`
-
-   Show the version and exit.
-
-
 - `-ebl, --exclude-by-longname TEXT *`
 
    Excludes tests/tasks or suites by longname.
@@ -1378,6 +1373,11 @@ robotcode discover tests [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
 - `-bl, --by-longname TEXT *`
 
    Select tests/tasks or suites by longname.
+
+
+- `--version`
+
+   Show the version and exit.
 
 
 - `--search TEXT`
@@ -2453,11 +2453,6 @@ robotcode robot [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
 
 
 **Options:**
-- `--version`
-
-   Show the version and exit.
-
-
 - `-ebl, --exclude-by-longname TEXT *`
 
    Excludes tests/tasks or suites by longname.
@@ -2466,6 +2461,11 @@ robotcode robot [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
 - `-bl, --by-longname TEXT *`
 
    Select tests/tasks or suites by longname.
+
+
+- `--version`
+
+   Show the version and exit.
 
 
 - `--help`

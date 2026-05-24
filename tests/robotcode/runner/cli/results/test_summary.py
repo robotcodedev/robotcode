@@ -56,6 +56,19 @@ def test_summary_text_output_contains_counts(text_result: CliRunner, basic_outpu
     assert "FAIL" in plain  # overall status
 
 
+def test_summary_text_output_is_markdown(text_result: CliRunner, basic_output: Path) -> None:
+    """The TEXT output is markdown — H1 heading, a `Field | Value` table,
+    and the status field paints both an icon and the bold word."""
+    plain = strip_ansi(text_result("summary", output_path=basic_output).stdout)
+    assert plain.startswith("# Summary")
+    # Status row in the field/value table carries icon + bold word.
+    assert "❌" in plain
+    assert "**FAIL**" in plain
+    # The counts come through a real markdown table (pipe-delimited).
+    assert "| Field" in plain
+    assert "| Status" in plain
+
+
 # ---------------------------------------------------------------------------
 # --full-paths
 # ---------------------------------------------------------------------------

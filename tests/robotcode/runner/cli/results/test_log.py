@@ -457,27 +457,33 @@ def test_log_suite_info_populates_json(json_result: JsonRunner, keyword_meta_out
 
 
 def test_log_suite_info_renders_text_header(robotcode_cli: CliRunner, keyword_meta_output: Path) -> None:
-    """TEXT renders a `Suite:` header with name, doc and metadata, then
-    indents the tests underneath it."""
+    """TEXT renders a `## Suite:` markdown heading with name, doc as a
+    blockquote, and metadata as a bullet list; tests follow as `### Test:`
+    sub-headings."""
     result = robotcode_cli(["results", "log", "--suite-info", "--output", str(keyword_meta_output)])
     out = strip_ansi(result.stdout)
-    assert "Suite: Keyword Meta" in out
-    assert "[Documentation] Suite-level documentation token: SUITE_DOC_TOKEN_alpha." in out
-    assert "[Metadata] OwnerTeam = payments-squad" in out
-    assert "[Metadata] BuildBadge = green" in out
-    # Tests get printed indented under the suite header.
-    assert "  Test: Keyword Meta.Tagged Caller" in out
-    assert "  Test: Keyword Meta.Plain Test" in out
+    assert "## Suite: Keyword Meta" in out
+    # Suite docs are emitted as a blockquote (`> …`).
+    assert "Suite-level documentation token" in out
+    assert "SUITE_DOC_TOKEN_alpha" in out.replace("\\_", "_")
+    # Metadata renders as bullet items.
+    assert "OwnerTeam:" in out
+    assert "payments-squad" in out
+    assert "BuildBadge:" in out
+    assert "green" in out
+    # Tests render as third-level headings beneath the suite.
+    assert "### Test: Keyword Meta.Tagged Caller" in out
+    assert "### Test: Keyword Meta.Plain Test" in out
 
 
 def test_log_default_text_omits_suite_header(robotcode_cli: CliRunner, keyword_meta_output: Path) -> None:
-    """Default TEXT (no flag) keeps the flat-tests layout — no `Suite:` line."""
+    """Default TEXT (no flag) keeps the flat-tests layout — no `## Suite:` heading."""
     result = robotcode_cli(["results", "log", "--output", str(keyword_meta_output)])
     out = strip_ansi(result.stdout)
-    assert "Suite:" not in out
-    assert "[Metadata]" not in out
-    # Tests are still listed (unindented) without a wrapping header.
-    assert "Test: Keyword Meta.Tagged Caller" in out
+    assert "## Suite:" not in out
+    assert "OwnerTeam:" not in out  # metadata only appears with --suite-info
+    # Tests are still listed (as `### Test:` headings) without a wrapping suite header.
+    assert "### Test: Keyword Meta.Tagged Caller" in out
 
 
 def test_log_suite_info_groups_nested_suites_separately(json_result: JsonRunner, nested_output: Path) -> None:
@@ -516,3 +522,77 @@ def test_log_keyword_info_populates_setup_keywords(json_result: JsonRunner, keyw
     assert setup.get("doc") == "Helper keyword documentation token: KW_DOC_TOKEN_beta."
     assert setup.get("tags") == ["KWTagProbe"]
     assert setup.get("timeout") == "7 days"
+
+
+# ---------------------------------------------------------------------------
+# Markdown shape — keyword/control-flow entries as nested list, MESSAGE
+# entries as inline-code spans, artefacts as markdown links / images.
+# ---------------------------------------------------------------------------
+
+
+def test_log_body_renders_as_nested_markdown_list(robotcode_cli: CliRunner, keyword_meta_output: Path) -> None:
+    """The test body emits as a nested markdown list — one bullet per
+    keyword call, with the keyword name bolded and arguments wrapped in
+    inline-code spans. Guards against an accidental return to the
+    fenced-code-block layout for the body."""
+    out = strip_ansi(robotcode_cli(["results", "log", "--output", str(keyword_meta_output)]).stdout)
+    # Each test is an H3 heading.
+    assert "### Test: Keyword Meta." in out
+    # Keyword calls show up as bullets with bold name + code-span args.
+    assert "- **BuiltIn.Log** `helper ran`" in out
+    # SETUP / TEARDOWN carry a bold ``[SETUP]`` / ``[TEARDOWN]`` prefix.
+    assert "- **[SETUP]**" in out
+
+
+def test_log_message_renders_as_inline_code_span(robotcode_cli: CliRunner, keyword_meta_output: Path) -> None:
+    """Single-line log messages render as ``- `[LEVEL] text` `` —
+    inline-code keeps the level badge and the text visually grouped and
+    survives raw-markdown paste cleanly."""
+    out = strip_ansi(robotcode_cli(["results", "log", "--output", str(keyword_meta_output)]).stdout)
+    # `Tagged Caller` logs `helper ran` at INFO level.
+    assert "- `[INFO] helper ran`" in out
+
+
+def test_log_artifact_image_uses_markdown_image_syntax(
+    robotcode_cli: CliRunner, artifacts_output: Path, tmp_path: Path
+) -> None:
+    """Extracted image artefacts render as ``![<filename>](url)`` so
+    renderers that display images inline (GitHub, Slack, VS Code markdown
+    preview) show them rather than the link text."""
+    extract = tmp_path / "shots"
+    out = strip_ansi(
+        robotcode_cli(
+            [
+                "results",
+                "log",
+                "--extract",
+                str(extract),
+                "--output",
+                str(artifacts_output),
+            ],
+        ).stdout
+    )
+    assert "![embedded-0.png]" in out
+
+
+def test_log_artifact_full_paths_uses_file_uri(
+    robotcode_cli: CliRunner, artifacts_output: Path, tmp_path: Path
+) -> None:
+    """`--full-paths` forces artefact link targets to absolute ``file://``
+    URLs — useful for OSC 8 click-to-open in terminals that don't resolve
+    relative paths."""
+    extract = tmp_path / "shots"
+    out = strip_ansi(
+        robotcode_cli(
+            [
+                "results",
+                "log",
+                "--extract",
+                str(extract),
+                "--full-paths",
+                "--output",
+                str(artifacts_output),
+            ],
+        ).stdout
+    )
+    assert "](file://" in out

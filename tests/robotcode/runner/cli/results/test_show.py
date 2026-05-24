@@ -221,12 +221,14 @@ def test_show_search_no_match(json_result: JsonRunner, basic_output: Path) -> No
 
 
 def test_show_search_highlight_visible_in_text(text_result: CliRunner, basic_output: Path) -> None:
-    """The TEXT renderer highlights the matched substring (ANSI markers present)."""
-    raw = text_result("show", "--search", "Failing", output_path=basic_output).stdout
-    # Highlight uses click.style — there must be ANSI escapes around the match.
-    assert "\x1b[" in raw or "Failing" in strip_ansi(raw)
-    # The strip-ANSI version still contains the literal match
-    assert "Failing" in strip_ansi(raw)
+    """The TEXT renderer marks search matches by wrapping them in
+    markdown inline-code spans (`` `match` ``). `rich` themes the span;
+    raw-markdown output keeps the backticks as visible markers."""
+    plain = strip_ansi(text_result("show", "--search", "Failing", output_path=basic_output).stdout)
+    # The literal match is in the output.
+    assert "Failing" in plain
+    # The match is wrapped in an inline-code span — the markdown highlight form.
+    assert "`Failing`" in plain
 
 
 # ---------------------------------------------------------------------------

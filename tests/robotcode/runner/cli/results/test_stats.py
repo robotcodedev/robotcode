@@ -173,3 +173,31 @@ def test_stats_text_smoke(text_result: CliRunner, tagged_output: Path) -> None:
     plain = strip_ansi(text_result("stats", "--by", "tag", output_path=tagged_output).stdout)
     for tag in ("smoke", "regression", "slow", "bug-123"):
         assert tag in plain
+
+
+def test_stats_by_status_table_has_status_icons(text_result: CliRunner, tagged_output: Path) -> None:
+    """The `By Status` table renders each row's name as ``<icon> **STATUS**``
+    so the status is scannable both as colour-on-render and as bold text."""
+    plain = strip_ansi(text_result("stats", "--by", "status", output_path=tagged_output).stdout)
+    assert "❌ **FAIL**" in plain
+    assert "✅ **PASS**" in plain
+    assert "⏭ **SKIP**" in plain
+
+
+def test_stats_status_table_aligns_with_emoji_padding(text_result: CliRunner, tagged_output: Path) -> None:
+    """Status icons (✅ ❌ ⏭ ⚪) are double-width emoji; the markdown
+    table padder must account for that so header, separator, and all
+    data rows have the same display width. Guards against a regression
+    where ⏭ / ⏸ were missed by the double-width heuristic and shifted
+    the SKIP / NOT RUN rows by one cell."""
+    # Emoji set matching the renderer's `_DOUBLE_WIDTH_ICONS`.
+    double_wide = {"✅", "❌", "⏭", "⏸", "⚪"}
+
+    def display_width(s: str) -> int:
+        return len(s) + sum(1 for ch in s if ch in double_wide)
+
+    plain = strip_ansi(text_result("stats", "--by", "status", output_path=tagged_output).stdout)
+    table_rows = [line for line in plain.splitlines() if line.startswith("|")]
+    assert table_rows, "expected a markdown table in `stats --by status` output"
+    widths = {display_width(row) for row in table_rows}
+    assert len(widths) == 1, f"table rows have differing display widths: {widths}\n" + "\n".join(table_rows)

@@ -6,9 +6,9 @@ Subcommands:
 - `log`: per-test keyword and message tree; can extract referenced artefacts.
 
 All subcommands respect the global `-f/--format` option:
-- TEXT (default) renders via `app.echo_via_pager` using click.style — same
-  visual style as `robotcode discover` (bold names, blue labels, colored
-  status badges, `(path:line)` suffix for VS Code's terminal link detector).
+- TEXT (default) emits markdown via `app.echo_as_markdown` — `rich`
+  renders themed ANSI on a colored TTY, raw markdown goes through on
+  pipes / `--no-color` (pipe- and LLM-friendly).
 - JSON/JSON-INDENT/TOML go through `app.print_data` with the dataclass schema
   defined in `_models`.
 """
@@ -369,7 +369,7 @@ def summary(
         )
 
         if app.config.output_format in (None, OutputFormat.TEXT):
-            app.echo_via_pager(_render.render_summary(data, full_paths=full_paths))
+            app.echo_as_markdown(_render.render_summary(data, full_paths=full_paths))
         else:
             app.print_data(data, remove_defaults=True)
 
@@ -533,7 +533,7 @@ def show(
         )
 
         if app.config.output_format in (None, OutputFormat.TEXT):
-            app.echo_via_pager(
+            app.echo_as_markdown(
                 _render.render_show(
                     data,
                     show_tags=show_tags,
@@ -767,7 +767,7 @@ def log(
         )
 
         if app.config.output_format in (None, OutputFormat.TEXT):
-            app.echo_via_pager(
+            app.echo_as_markdown(
                 _render.render_log(
                     data,
                     full_paths=full_paths,
@@ -906,7 +906,7 @@ def stats(
         )
 
         if app.config.output_format in (None, OutputFormat.TEXT):
-            app.echo_via_pager(_render.render_stats(data))
+            app.echo_as_markdown(_render.render_stats(data))
         else:
             app.print_data(data, remove_defaults=True)
 
@@ -1116,7 +1116,7 @@ def diff(
         )
 
         if app.config.output_format in (None, OutputFormat.TEXT):
-            app.echo_via_pager(_render.render_diff(data, full_paths=full_paths))
+            app.echo_as_markdown(_render.render_diff(data, full_paths=full_paths))
         else:
             app.print_data(data, remove_defaults=True)
 
