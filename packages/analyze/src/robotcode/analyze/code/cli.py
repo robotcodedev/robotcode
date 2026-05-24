@@ -138,15 +138,6 @@ def _parse_exit_code_mask(ctx: click.Context, param: click.Option, value: Tuple[
         raise click.BadParameter(str(e)) from e
 
 
-def _split_comma(ctx: click.Context, param: click.Option, value: Optional[List[str]]) -> List[str]:
-    if value is None:
-        return []
-    result: List[str] = []
-    for item in value:
-        result.extend([x.strip() for x in item.split(",") if x.strip()])
-    return result
-
-
 def _validate_load_library_timeout(ctx: click.Context, param: click.Option, value: Optional[int]) -> Optional[int]:
     """Validate --load-library-timeout (>0) or pass through None."""
     if value is None:

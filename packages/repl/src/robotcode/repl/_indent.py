@@ -29,12 +29,10 @@ _OPENERS = frozenset({"FOR", "WHILE", "IF", "TRY", "GROUP"})
 # Closer — pops one level of indent.
 _CLOSERS = frozenset({"END"})
 
-# Branch markers stay at the *current* depth — they don't open or
-# close a block, but they live inside one. Tracking them isn't
-# strictly necessary for the indent counter (they're net-zero), but
-# we keep the constant for clarity and to make it obvious why the
-# counter doesn't touch them.
-_BRANCHES = frozenset({"ELSE", "ELSE IF", "EXCEPT", "FINALLY"})
+# Branch markers (`ELSE`, `ELSE IF`, `EXCEPT`, `FINALLY`) are net-zero
+# for the depth counter — they live inside an open block but neither
+# open nor close one. The counter ignores them by default; no
+# enumeration needed.
 
 _DEFAULT_WIDTH = 4
 

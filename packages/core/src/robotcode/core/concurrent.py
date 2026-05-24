@@ -10,7 +10,6 @@ from typing import (
     Dict,
     Generic,
     Iterator,
-    List,
     Optional,
     Protocol,
     Tuple,
@@ -255,15 +254,3 @@ def run_as_debugpy_hidden_task(callable: Callable[_P, _TResult], *args: _P.args,
     thread.start()
 
     return future
-
-
-def _cancel_all_running_tasks(timeout: Optional[float] = None) -> None:
-    threads: List[threading.Thread] = []
-    with _running_tasks_lock:
-        for future, thread in _running_tasks.items():
-            if not future.cancelation_requested:
-                future.cancel()
-                threads.append(thread)
-    for thread in threads:
-        if thread is not threading.current_thread():
-            thread.join(timeout=timeout)
