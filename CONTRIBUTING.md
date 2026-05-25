@@ -30,10 +30,8 @@ And if you like the project, but just don't have time to contribute, that's fine
     - [Development Workflow](#development-workflow)
     - [Pull Request Guidelines](#pull-request-guidelines)
     - [Running Tests](#running-tests)
-    - [Building the Project](#building-the-project)
     - [Additional Development Commands](#additional-development-commands)
     - [Troubleshooting Development Setup](#troubleshooting-development-setup)
-    - [Development Tools & Code Generation](#development-tools--code-generation)
   - [Improving The Documentation](#improving-the-documentation)
 - [Styleguides](#styleguides)
   - [Commit Messages](#commit-messages)
@@ -64,21 +62,6 @@ We will then take care of the issue as soon as possible.
 
 You can also ask questions in the Robot Frameworks [Slack](https://robotframework.slack.com) in the channel [#vscode](https://robotframework.slack.com/archives/C0103745J7P) or in the [Robot Framework Forum](https://forum.robotframework.org) in the [Tools/Visual Studio Code(ium)](https://forum.robotframework.org/c/tools/vscode/28) category.
 
-<!--
-You might want to create a separate issue tag for questions and include it in this description. People should then tag their issues accordingly.
-
-Depending on how large the project is, you may want to outsource the questioning, e.g. to Stack Overflow or Gitter. You may add additional contact and information possibilities:
-- IRC
-- Slack
-- Gitter
-- Stack Overflow tag
-- Blog
-- FAQ
-- Roadmap
-- E-Mail List
-- Forum
--->
-
 ## Project-Wide Rules
 
 These rules apply to all interactions with the RobotCode project — pull requests, issues, discussions, comments, code review replies, and any other contribution. Please read them before opening a contribution of any kind.
@@ -101,7 +84,8 @@ Contributions are reviewed on their technical merit, usefulness to RobotCode use
 
 ## I Want To Contribute
 
-> ### Legal Notice
+> [!IMPORTANT]
+> **Legal Notice**
 >
 > When contributing to this project, you must agree that you have the right to submit the contribution under the project license.
 >
@@ -121,8 +105,8 @@ A good bug report shouldn't leave others needing to chase you up for more inform
 - Make sure that you are using the latest version.
 - Determine if your bug is really a bug and not an error on your side e.g. using incompatible environment components/versions (Make sure that you have read the [documentation](https://robotcode.io). If you are looking for support, you might want to check [this section](#i-have-a-question)).
 - To see if other users have experienced (and potentially already solved) the same issue you are having, check if there is not already a bug report existing for your bug or error in the [bug tracker](https://github.com/robotcodedev/robotcode/issues?q=label%3Abug).
-- Look or ask in the [Robot Framework Slack](https://robotframework.slack.com) in the channel [#vscode](https://robotframework.slack.com/archives/C0103745J7P) or in the [Robot Framework Forum](https://forum.robotframework.org) in the [Tools/Visual Studio Code(ium)](https://forum.robotframework.org/c/tools/vscode/28) category to see if other users have experienced (and potentially already solved) the same issue you are having.
-  - for questions about the intellj plugin there are also channels for pycharm
+- Look or ask in the [Robot Framework Slack](https://robotframework.slack.com) in the channel [#vscode](https://robotframework.slack.com/archives/C0103745J7P) or in the [Robot Framework Forum](https://forum.robotframework.org) in the [Tools/Visual Studio Code(ium)](https://forum.robotframework.org/c/tools/vscode/28) category.
+  - for questions about the IntelliJ plugin there are also channels for PyCharm
 - Also make sure to search the internet (including Stack Overflow) to see if users outside of the GitHub community have discussed the issue.
 - Collect information about the bug:
   - Stack trace (Traceback)
@@ -134,8 +118,8 @@ A good bug report shouldn't leave others needing to chase you up for more inform
 <!-- omit in toc -->
 #### How Do I Submit a Good Bug Report?
 
-> You must never report security related issues, vulnerabilities or bugs including sensitive information to the issue tracker, or elsewhere in public. Instead sensitive bugs must be sent by email to <support@robotcode.io>.
-<!-- You may add a PGP key to allow the messages to be sent encrypted as well. -->
+> [!WARNING]
+> Never report security related issues, vulnerabilities or bugs including sensitive information to the issue tracker, or elsewhere in public. Send sensitive bugs by email to <support@robotcode.io> instead.
 
 We use GitHub issues to track bugs and errors. If you run into an issue with the project:
 
@@ -149,9 +133,6 @@ Once it's filed:
 - The project team will label the issue accordingly.
 - A team member will try to reproduce the issue with your provided steps. If there are no reproduction steps or no obvious way to reproduce the issue, the team will ask you for those steps and mark the issue as `needs-repro`. Bugs with the `needs-repro` tag will not be addressed until they are reproduced.
 - If the team is able to reproduce the issue, it will be marked `needs-fix`, as well as possibly other tags (such as `critical`), and the issue will be left to be [implemented by someone](#your-first-code-contribution).
-
-<!-- You might want to create an issue template for bugs and errors that can be used as a guide and that defines the structure of the information to be included. If you do so, reference it here in the description. -->
-
 
 ### Suggesting Enhancements
 
@@ -173,10 +154,8 @@ Enhancement suggestions are tracked as [GitHub issues](https://github.com/robotc
 - Use a **clear and descriptive title** for the issue to identify the suggestion.
 - Provide a **step-by-step description of the suggested enhancement** in as many details as possible.
 - **Describe the current behavior** and **explain which behavior you expected to see instead** and why. At this point you can also tell which alternatives do not work for you.
-- You may want to **include screenshots and animated GIFs** which help you demonstrate the steps or point out the part which the suggestion is related to. <!-- this should only be included if the project has a GUI -->
+- You may want to **include screenshots and animated GIFs** which help you demonstrate the steps or point out the part which the suggestion is related to.
 - **Explain why this enhancement would be useful** to most RobotCode users. You may also want to point out the other projects that solved it better and which could serve as inspiration.
-
-<!-- You might want to create an issue template for enhancement suggestions that can be used as a guide and that defines the structure of the information to be included. If you do so, reference it here in the description. -->
 
 ### Your First Code Contribution
 
@@ -188,12 +167,11 @@ Welcome to your first code contribution! Here's how to set up your development e
 
 The quickest way to get started without any local setup:
 
-1. **Setup:**
-   - Go to the [RobotCode repository](https://github.com/robotcodedev/robotcode)
-   - Click the green "Code" button
-   - Select "Codespaces" tab
-   - Click "Create codespace on main"
-   - Wait for the codespace to initialize (this uses the same dev container configuration)
+1. Go to the [RobotCode repository](https://github.com/robotcodedev/robotcode).
+2. Click the green "Code" button.
+3. Select the "Codespaces" tab.
+4. Click "Create codespace on main".
+5. Wait for the codespace to initialize — it uses the same dev container configuration as Option 2.
 
 GitHub Codespaces provides a full VS Code environment in your browser with all dependencies pre-installed.
 
@@ -201,58 +179,36 @@ GitHub Codespaces provides a full VS Code environment in your browser with all d
 
 For local development with containers:
 
-1. **Prerequisites:**
-   - Install [Docker](https://www.docker.com/get-started)
-   - Install [Visual Studio Code](https://code.visualstudio.com/)
-   - Install the [Dev Containers extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers)
+1. **Prerequisites** (see each project's site for install instructions):
+   - [Docker](https://www.docker.com/get-started)
+   - [Visual Studio Code](https://code.visualstudio.com/)
+   - [Dev Containers extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers) for VS Code
 
 2. **Setup:**
-   - Clone the repository: `git clone https://github.com/robotcodedev/robotcode.git`
-   - Open the project in VS Code
-   - When prompted, click "Reopen in Container" or use the Command Palette (`Cmd+Shift+P` / `Ctrl+Shift+P`) and select "Dev Containers: Reopen in Container"
-   - The container will automatically install all dependencies including Python, Node.js, and required packages
+   - Clone the repository: `git clone https://github.com/robotcodedev/robotcode.git`.
+   - Open the project in VS Code.
+   - When prompted, click "Reopen in Container" — or use the Command Palette (`Cmd+Shift+P` / `Ctrl+Shift+P`) and run "Dev Containers: Reopen in Container".
+   - The container automatically installs all dependencies (Python, Node.js, etc.).
 
 **Option 3: Local Development**
 
 If you prefer to set up locally:
 
-1. **Prerequisites:**
-   - Python 3.10+ (system Python is fine)
-   - Node.js 22+
-   - Git
+1. **Prerequisites** (see each project's site for install instructions):
+   - [Python](https://www.python.org/) (system Python is fine)
+   - [Node.js](https://nodejs.org/)
+   - [Git](https://git-scm.com/)
+   - [Hatch](https://hatch.pypa.io/latest/install/)
+
+   Supported Python and Node.js versions are declared in [`pyproject.toml`](pyproject.toml) and [`package.json`](package.json) respectively. Hatch will tell you if your interpreter is too old when you create the dev environment.
 
 2. **Setup:**
    ```bash
    git clone https://github.com/robotcodedev/robotcode.git
    cd robotcode
-
-   # Install Hatch (choose one method):
-   # Option A: Using system package manager (if available)
-   # Ubuntu/Debian: sudo apt install hatch
-   # Fedora: sudo dnf install hatch
-   # Arch: sudo pacman -S hatch
-
-   # Option B: Using uv (fast — install uv first: https://docs.astral.sh/uv/getting-started/installation/)
-   # B.1 ephemeral, no permanent install — prefix every hatch invocation with `uvx`:
-   uvx hatch env create devel
-   uvx hatch run test:test
-   # B.2 or install hatch as a persistent uv tool (then call `hatch ...` directly):
-   uv tool install hatch
-
-   # Option C: Using pipx
-   pip install pipx
-   pipx install hatch
-
-   # Option D: Check https://hatch.pypa.io/latest/install/ for other methods
-
-   # Create development environment
    hatch env create devel
-
-   # install needed packages for the vscode and intellij packaging
-   hatch run build:install-bundled-editable
-
-   # Install Node.js dependencies
-   npm install --also-dev
+   hatch run build:install-bundled-editable   # bundled packages for VS Code / IntelliJ packaging
+   npm install --also-dev                     # Node.js deps for the extension and docs
    ```
 
 #### IDE Configuration
@@ -264,18 +220,15 @@ The project includes VS Code settings optimized for development:
 - Debugging configuration
 - Recommended extensions are automatically suggested
 
-**Important: Python Interpreter Selection**
+> [!IMPORTANT]
+> After setting up the development environment with `hatch env create devel`, you need to select the correct Python interpreter in VS Code:
+>
+> 1. Open the Command Palette (`Cmd+Shift+P` or `Ctrl+Shift+P` or `F1`).
+> 2. Type "Python: Select Interpreter".
+> 3. Choose the interpreter from the Hatch environment.
+> 4. Select the desired Python/Robot Framework version environment.
 
-After setting up the development environment with `hatch env create devel`, you need to select the correct Python interpreter in VS Code:
-
-1. Open the Command Palette (`Cmd+Shift+P` or `Ctrl+Shift+P` or `F1`)
-2. Type "Python: Select Interpreter"
-3. Choose the interpreter from the Hatch environment
-4. Select the desired Python/Robot Framework version environment
-
-Hatch creates separate Python environments for each supported Python/Robot Framework version combination in your system's cache directory.
-
-You can also check available environments with: `hatch env show`
+Hatch creates separate Python environments for each supported Python/Robot Framework version combination in your system's cache directory. See [Running Tests](#running-tests) for how to list and locate them with `hatch env show` and `hatch env find`.
 
 #### Pre-commit Hooks
 
@@ -285,20 +238,9 @@ The project ships a [`.pre-commit-config.yaml`](.pre-commit-config.yaml) that ru
 - Python style (`hatch run lint:style`) and typing (`hatch run lint:typing`)
 - JavaScript/TypeScript lint (`npm run lint`)
 
-We strongly recommend installing the hooks once — they catch most lint/format/commit-message issues before CI does:
+We strongly recommend installing the hooks once — they catch most lint/format/commit-message issues before CI does. Install [pre-commit](https://pre-commit.com/#install), then from the repo root:
 
 ```bash
-# Option A: Run ephemerally via uvx (no permanent install)
-uvx pre-commit install --install-hooks
-# later, to run manually:
-uvx pre-commit run --all-files
-
-# Option B: Install permanently via uv
-uv tool install pre-commit
-pre-commit install --install-hooks
-
-# Option C: Install permanently via pipx / pip
-pipx install pre-commit          # or: pip install --user pre-commit
 pre-commit install --install-hooks
 ```
 
@@ -308,13 +250,11 @@ This installs the `pre-commit`, `commit-msg` and `pre-push` hooks. To run all ho
 
 1. **Create a branch:** `git checkout -b feature/your-feature-name`
 2. **Make your changes** following the project's coding standards
-3. **Run tests:** `hatch run test:test` (runs against all supported Robot Framework versions with the default Python — the recommended check before pushing)
+3. **Run tests:** `hatch run test:test` (runs the full test suite against all supported Robot Framework versions with the default Python — run this before committing or pushing, not only the tests you added or changed)
 4. **Run linting:** `hatch run lint:all` (or use the VS Code task) — the [pre-commit hooks](#pre-commit-hooks) run style and typing checks automatically if installed
 5. **Fix linting issues:** `hatch run lint:style` for formatting
 6. **Commit your changes** with a descriptive commit message
 7. **Push and create a pull request**
-
-Note on Python versions: the project tests across Python 3.10–3.14; active development and production usage target Python 3.10+.
 
 #### Pull Request Guidelines
 
@@ -356,17 +296,14 @@ A good PR description:
 hatch run test:test
 ```
 
-This runs the full test suite across all supported Robot Framework versions (5.0 – 7.4) using the default Python interpreter. It is the recommended check before pushing a pull request: it gives good coverage without spinning up the full Python × RF matrix.
+This runs the full test suite across all supported Robot Framework versions using the default Python interpreter. Run it before committing or pushing a change, even if you already ran the newly added or modified tests locally: it gives good coverage without spinning up the full Python × RF matrix.
 
 **Fast iteration during development:**
 
 Run a single Robot Framework version:
 
 ```bash
-hatch run test.rf74:test      # Robot Framework 7.4.x
-hatch run test.rf73:test      # Robot Framework 7.3.x
-hatch run test.rf72:test      # Robot Framework 7.2.x
-# … rf50 … rf74 available
+hatch run test.<rf-env>:test      # e.g. hatch run test.rf74:test
 ```
 
 For running individual tests or test files interactively, use VS Code's built-in test runner (Testing tab in the sidebar) — it's the most convenient way to iterate on a single test or debug a failure.
@@ -374,43 +311,40 @@ For running individual tests or test files interactively, use VS Code's built-in
 **Full Python × RF matrix (CI-style, slow):**
 
 ```bash
-hatch run devel:test                  # all combinations: 5 Python versions × 8 RF versions = 40 envs
-hatch run devel.py3.12-rf74:test      # a specific Python × RF combination
+hatch run devel:test                       # all combinations in the matrix
+hatch run devel.<py-env>-<rf-env>:test     # e.g. hatch run devel.py3.12-rf74:test
 ```
 
 Only use this when you suspect a Python-version-specific issue — it is significantly slower than `test:test`.
 
-**Available environment matrix:**
+**Discovering available environments:**
 
-- **Python versions:** 3.10, 3.11, 3.12, 3.13, 3.14
-- **Robot Framework versions:** 5.0.x, 6.0.x, 6.1.x, 7.0.x, 7.1.x, 7.2.x, 7.3.x, 7.4.x
+Run `hatch env show` to list every environment, including the `test.*` and `devel.*` matrix combinations and their Python/Robot Framework versions. Use `hatch env find <env-name>` to print the interpreter path for a specific env.
 
-> ℹ️ `hatch run test` (without an env prefix) runs only in the `default` environment against the Robot Framework version pinned there — it does **not** cover the RF matrix. Use `hatch run test:test` for the full RF matrix, or `hatch run devel:test` for the full Python × RF matrix (slow).
-
-#### Building the Project
-
-- Package for distribution: `hatch run build:package`
+> [!NOTE]
+> `hatch run test` (without an env prefix) runs only in the `default` environment against the Robot Framework version pinned there — it does **not** cover the RF matrix. Use `hatch run test:test` for the full RF matrix, or `hatch run devel:test` for the full Python × RF matrix (slow).
 
 #### Additional Development Commands
 
+These commands are mainly used by maintainers, but contributors may need some of them when working on specific features (e.g., syntax-highlighting changes require `generate-tmlanguage`).
+
 **Code Quality & Linting:**
-- Type checking: `hatch run lint:typing`
-- Code style check and formatting: `hatch run lint:style`
-- Run all linting checks: `hatch run lint:all`
+- `hatch run lint:typing` — Type checking with mypy.
+- `hatch run lint:style` — Code style check and formatting.
+- `hatch run lint:all` — Run all linting checks.
 
-**Project Maintenance & Code Generation:**
-- Generate Robot Framework syntax files: `hatch run generate-tmlanguage`
-- Create JSON schema for robot.toml: `hatch run create-json-schema`
-- Generate Robot Framework options: `hatch run generate-rf-options`
-- Install bundled packages in editable mode: `hatch run build:install-bundled-editable`
+**Code Generation:**
+- `hatch run generate-tmlanguage` — Regenerate VS Code syntax-highlighting files for Robot Framework.
+- `hatch run create-json-schema` — Create JSON schema for `robot.toml` configuration validation.
 
-**Release & Documentation:**
-- Update changelog: `hatch run build:update-changelog`
-- Update git versions: `hatch run build:update-git-versions`
-- Bump version: `hatch run build:bump [major|minor|patch]`
-- Package for distribution: `hatch run build:package`
-- Publish to PyPI, VS Code Marketplace, etc.: `hatch run build:publish`
-  - you need the specific credentials set up in your environment for this to work
+**Build & Release:**
+- `hatch run build:install-bundled-editable` — Install bundled packages in editable mode.
+- `hatch run build:update-changelog` — Update project changelog.
+- `hatch run build:update-git-versions` — Update version information from git.
+- `hatch run build:update-doc-links` — Update documentation links.
+- `hatch run build:bump [major|minor|patch]` — Bump project version using semantic versioning.
+- `hatch run build:package` — Package for distribution.
+- `hatch run build:publish` — Publish to PyPI, VS Code Marketplace, etc. (requires the specific credentials set up in your environment).
 
 #### Troubleshooting Development Setup
 
@@ -438,23 +372,6 @@ Only use this when you suspect a Python-version-specific issue — it is signifi
    npm install --also-dev
    ```
 
-#### Development Tools & Code Generation
-
-The RobotCode project includes several development tools and code generation scripts:
-
-**Syntax & Language Support:**
-- `hatch run generate-tmlanguage` - Regenerate VS Code syntax highlighting files for Robot Framework
-- `hatch run create-json-schema` - Create JSON schema for robot.toml configuration validation
-- `hatch run generate-rf-options` - Generate Robot Framework command-line options documentation
-
-**Maintenance & Release Tools:**
-- `hatch run build:update-changelog` - Update project changelog
-- `hatch run build:update-git-versions` - Update version information from git
-- `hatch run build:update-doc-links` - Update documentation links
-- `hatch run build:bump [major|minor|patch]` - Bump project version using semantic versioning
-
-These tools are typically used by maintainers, but contributors might need some of them when working on specific features (e.g., syntax highlighting changes require `generate-tmlanguage`).
-
 ### Improving The Documentation
 
 Documentation is crucial for helping users understand and use RobotCode effectively. Here are ways you can help improve it:
@@ -479,15 +396,15 @@ Documentation is crucial for helping users understand and use RobotCode effectiv
 
 #### Documentation Setup
 
-The documentation is built using modern web technologies and is located in the `docs/` folder:
+The documentation is built using modern web technologies and is located in the `docs/` folder. Node.js dependencies are already installed by the [dev environment setup](#development-environment-setup):
 
 ```bash
-cd docs
-npm install
-npm run dev  # Start development server at http://localhost:3000
-npm run build  # Build for production
-npm run preview  # Preview production build
+npm run docs:dev      # Start documentation development server
+npm run docs:build    # Build documentation for production
+npm run docs:preview  # Preview production documentation build
 ```
+
+You can also run the equivalent commands from the `docs/` folder: `npm run dev`, `npm run build`, and `npm run preview`.
 
 #### Documentation Standards
 
@@ -602,7 +519,7 @@ This refers to the **cryptographic commit signature** (`git commit -S`, GPG/SSH/
 
 We're always looking for dedicated contributors to join the RobotCode project team! If you've been actively contributing and are interested in taking on more responsibility, here's how you can get involved:
 
-#### Ways to Get More Involved
+### Ways to Get More Involved
 
 **Regular Contributors:**
 - Consistently submit high-quality pull requests
@@ -616,7 +533,7 @@ We're always looking for dedicated contributors to join the RobotCode project te
 - Guide project direction and roadmap
 - Mentor new contributors
 
-#### How to Apply
+### How to Apply
 
 If you're interested in joining the project team:
 
@@ -625,7 +542,7 @@ If you're interested in joining the project team:
 3. **Reach out** to existing maintainers via email at <support@robotcode.io>
 4. **Express your interest** in specific areas where you'd like to contribute more
 
-#### What We Look For
+### What We Look For
 
 - **Technical expertise** in relevant areas (Python, Robot Framework, VS Code extensions)
 - **Communication skills** for working with contributors and users
