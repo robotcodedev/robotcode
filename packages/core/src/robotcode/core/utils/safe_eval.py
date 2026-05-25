@@ -54,9 +54,9 @@ class Transformer(ast.NodeTransformer):
         return self.generic_visit(node)
 
 
-def safe_eval(source: str, globals: Dict[str, Any] = {}, filename: str = "<expression>") -> Any:
-    transformer = Transformer(list(globals.keys()))
+def safe_eval(source: str, filename: str = "<expression>") -> Any:
+    transformer = Transformer(None)
     tree = ast.parse(source, mode="eval")
     tree = transformer.visit(tree)
     clause = compile(tree, filename, "eval", dont_inherit=True)
-    return eval(clause, globals, {})
+    return eval(clause, {}, {})
