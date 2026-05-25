@@ -8,11 +8,18 @@ In most cases, not all CLI components are required within a single project. For 
 
 To accommodate these varied needs, `robotcode` is organized into separate packages that each focus on specific functions. The core package, `robotcode`, provides foundational support for working with `robot.toml` configuration files and profile management. Here’s a more detailed breakdown of each package and its capabilities:
 
+- **`robotcode` Core Package**:
+  Always installed, the core package provides the top-level `robotcode` command together with the global options (config files, profiles, output format, paging, …) shared by every other command. It also includes commands to inspect the resolved configuration and the profiles defined for a project.
+  - **Commands**:
+    - `config`: Shows the merged `robot.toml` configuration and which files contributed to it, making it easy to understand how settings are resolved.
+    - `profiles`: Lists the profiles defined for the project and shows their resulting configuration, helping verify which profile applies in a given context.
+
 - **`runner` Package**:
   This package is essential for users who need to run and manage tests within Robot Framework projects. It includes commands for executing tests, generating documentation, and discovering test elements. This package is especially important in CI/CD pipelines, where automation of test execution is a primary focus.
   - **Commands**:
-    - `robot`, `rebot`, `libdoc`: Enhanced versions of the standard Robot Framework tools, with support for `robot.toml` configuration files and profiles, allowing customized setups for different environments or testing requirements.
+    - `robot`, `rebot`, `libdoc`, `testdoc`: Enhanced versions of the standard Robot Framework tools, with support for `robot.toml` configuration files and profiles, allowing customized setups for different environments or testing requirements.
     - `discover`: Searches the project for tests, suites, tags, tasks, and other elements, providing a quick overview of available test cases and project structure.
+    - `results`: Inspects a finished run's `output.xml`/`output.json` — summaries, failures, the per-test execution log, and diffs between two runs — without re-executing the tests.
 
 - **`analyze` Package**:
   This package provides tools for detailed inspection and validation of Robot Framework code, helping users identify errors and improve code quality. The `analyze` package is typically more useful in development environments where code quality checks and error detection are needed before moving tests to a CI or production environment.
@@ -2509,3 +2516,16 @@ Use `-- --help` to see `testdoc` help.
 
 
 <!-- END -->
+
+## Getting Help
+
+The command reference above is generated directly from the CLI, so it always matches the installed version. To get the same information on the command line, append `--help` to any command or sub-command, for example `robotcode analyze --help` or `robotcode results summary --help`.
+
+For the commands that wrap a standard Robot Framework tool (`robot`, `rebot`, `libdoc`, `testdoc`), use `-- --help` to see the help of the underlying tool, e.g. `robotcode robot -- --help`.
+
+## See Also
+
+- [Configuration](./config.md) — how `robot.toml` and profiles work, the foundation for the `config` and `profiles` commands.
+- [Discovering Tests](./discovering-tests.md) — details on the `discover` command.
+- [Analyzing Results](./analyzing-results.md) — working with the `analyze` and `results` commands.
+- [REPL](./repl.md) — using the interactive `repl` shell.
