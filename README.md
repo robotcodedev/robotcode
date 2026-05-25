@@ -14,91 +14,68 @@
 
 ## What is RobotCode?
 
-RobotCode is a comprehensive toolkit for Robot Framework development, offering advanced features to enhance your productivity and streamline your workflow. Whether you're using Visual Studio Code, IntelliJ, or other LSP-compatible editors, RobotCode ensures a consistent and seamless experience.
+RobotCode is a complete Robot Framework toolkit: a language server, IDE extensions for VS Code and the JetBrains platform, a powerful command-line interface, and a unified `robot.toml`-based configuration model. It is designed for everyday Robot Framework work — from your first keyword to scaling multi-team test suites in CI.
 
-### Key Advantages:
-
-- **Built on Robot Framework Core**
-  RobotCode uses Robot Framework's native parser for syntax validation, error messages, and behavior, ensuring full compatibility and reliability in your projects.
-
-- **Powered by the Language Server Protocol (LSP)**
-  By leveraging the LSP, RobotCode provides real-time code navigation, intelligent auto-completion, and refactoring capabilities across various editors and IDEs.
-
-- **Multi-Platform IDE Extensions**
-  RobotCode offers robust extensions for Visual Studio Code and IntelliJ Platform, delivering the same high-quality features regardless of your preferred development environment. Thanks to LSP, it also works with editors like Neovim and Sublime Text.
-
-- **Enhanced CLI Tools**
-  Extend Robot Framework's command-line capabilities with tools for test execution, debugging, and code analysis. Features include `robot.toml` support, a Debug Adapter Protocol (DAP) debugger, and an interactive REPL for quick experimentation.
-
-With RobotCode, you can focus on building and testing your automation workflows while enjoying an integrated and efficient development experience.
+Built on Robot Framework Core, RobotCode is developed in close collaboration with the Robot Framework Core team and supported by the [Robot Framework Foundation](https://robotframework.org/foundation/).
 
 
 ## Key Features
 
-- **Code Editing**: Enjoy code auto-completion, navigation and more.
-- **IntelliSense**: Get code completion suggestions for keywords, variables, and more.
-- **Refactoring**: Rename variables, keywords, arguments and more with ease and project wide.
-- **Enhanced Syntax Highlighting**: Easily identify and read your Robot Framework code with support highlight embedded arguments, python expressions, environment variables with default values, and more.
-- **Code Snippets**: Quickly insert common Robot Framework code snippets.
-- **Test Discovery**: Discover and run Robot Framework test cases directly within VS Code.
-- **Test Execution**: Execute Robot Framework test cases and suites directly within VS Code.
-- **Test Reports**: View test reports directly within VS Code.
-- **Debugging**: Debug your Robot Framework tests with ease.
-- **Command Line Tools**: A wide array of tools to assist in setting up and managing Robot Framework environments.
-- **Code Analysis with Robocop**: Install [Robocop](https://robocop.readthedocs.io/) for additional code analysis.
-- **Code Formatting**: Use [Robocop's formatter](https://robocop.readthedocs.io/) for consistent code formatting.
-- **Multi-root Workspace Support**: Manage multiple Robot Framework projects with different Python environments simultaneously.
-- **Customizable Settings**: Configure the extension to fit your needs.
-- **RobotCode Repl and Notebooks**: Play with Robot Framework in a Jupyter Notebook-like environment.
-- **And More!**: Check out the [official documentation](https://robotcode.io) for more details.
+### Editor / IDE
+
+- **Code intelligence** — completion for keywords, variables, libraries, and resources; hover documentation; go-to-definition; find references; signature help.
+- **Keywords explorer** — browse, navigate, and insert keywords from imported libraries and resources via a dedicated sidebar view.
+- **Refactoring** — project-wide rename of keywords, variables, and arguments.
+- **Live diagnostics** — errors and warnings as you type, out of the box. Optional [Robocop](https://robocop.readthedocs.io/) integration adds further linting and formatting checks on top.
+- **Debugging** — Robot Framework debugging via the [Debug Adapter Protocol](https://microsoft.github.io/debug-adapter-protocol/), with breakpoints in keywords and step-through control.
+- **Syntax highlighting** — full Robot Framework grammar including embedded arguments, Python expressions, and environment variables with defaults.
+- **Snippets** — quick insertion of common Robot Framework patterns.
+- **Test view** — discover, run, debug, and inspect Robot Framework tests in the editor's test panel.
+- **Interactive REPL & `.robotbook` notebooks** — try keywords live in a REPL or work in a Jupyter Notebook-style notebook format.
+- **Multi-root workspaces** — manage multiple projects with different Python environments side by side.
+
+### Configuration
+
+One configuration model that follows your project from the editor into CI — no scattered command-line flags, no duplicated setups.
+
+- **A single source of truth** — paths, variables, Python paths, listeners, modifiers, and every Robot Framework option live in `robot.toml` (or `pyproject.toml`). Editor, CLI, and CI all read the same setup; personal tweaks stay out of git via `.robot.toml`.
+- **Profiles for every scenario** — keep dev, staging, CI, OS-specific, or browser-specific settings as named overlays. Activate with a single flag, layer them, inherit between them.
+- **Total transparency** — see exactly what Robot Framework will receive after all files, profile overlays, and CLI flags are merged.
+- **Schema-guided editing** — autocomplete and validation while you write your config catches typos and unsupported keys before you run.
+
+### Command line
+
+A complete command-line toolkit that knows your project as well as the editor does — same `robot.toml`, same profiles, same Python environment — so what runs in the IDE runs the same way on the CLI and in CI.
+
+- **Run with everything wired up** — execute Robot Framework with your profiles, paths, variables, listeners, and modifiers automatically applied.
+- **Find tests by anything** — search and filter suites, tasks, tags, sources, documentation, or even keyword calls inside test bodies, and narrow the run accordingly.
+- **Drill into failures fast** — explore logs, stats, and diffs across runs, and compare today's run against yesterday's in a single command — without ever parsing `output.xml` by hand.
+- **CI gates with editor-quality diagnostics** — project-wide static analysis that matches what you see while typing; reclassify, mask, or ignore categories per project.
+- **Docs that actually find your project** — library and keyword documentation that resolves your project's resources, custom libraries, and Python paths the way Robot itself does.
+- **Live experimentation** — try keywords interactively inside your project's environment before they land in a test.
+- **Built for automation** — every command can speak JSON, so CI pipelines, dashboards, AI agents, and other tools consume the output without screen-scraping.
+
+For the complete feature reference, see the [official documentation](https://robotcode.io).
 
 ## Requirements
 
-### Python and Robot Framework Versions
+**Runtime (always required):**
 - Python 3.10 or newer
 - Robot Framework 5.0 or newer
 
-### IDE Support
+**Editor / IDE — any LSP-capable editor works.** For the dedicated extensions you need one of:
+- Visual Studio Code 1.108.0 or newer
+- PyCharm / IntelliJ IDEA 2025.3 or newer
 
-- Visual Studio Code 1.99.0 or newer
-- PyCharm 2025.1 or newer or IntelliJ IDEA 2025.1 or newer
-
-### Python and Robot Framework Version Requirements
-
-**Python Version Requirements:**
-RobotCode requires Python 3.10 or newer. Python 3.8 and 3.9 are no longer supported as they have reached or are approaching end-of-life status. Python 3.10 provides several important improvements that enable cleaner, more efficient code:
-	•	Structural pattern matching
-	•	More informative error messages
-	•	Simplified type hints using the | operator
-	•	Performance enhancements
-
-**Robot Framework Version Requirements:**
-RobotCode supports Robot Framework 5.0 or later. Older versions like Robot Framework 4.1 are no longer supported due to their outdated nature and the regular release cadence of Robot Framework.
-
-**Why These Requirements:**
-Many key tools in the Robot Framework ecosystem—such as robocop and the Browser library—have already moved to similar requirements. This alignment ensures compatibility and allows RobotCode to leverage modern Python features for improved performance and developer experience.
-
-**Recommendation:**
-To get the most out of RobotCode, we recommend using:
-	•	Python 3.10 or newer
-	•	Robot Framework 5.0 or newer
+Other editors (Neovim, Sublime Text, Helix, Emacs, …) connect to the language server via the `languageserver` extra from PyPI — see [Command Line and Other Editors](#command-line-and-other-editors) below.
 
 
 ## Getting Started
 
 ### Visual Studio Code
 
-1. **Install the RobotCode Extension**
-   Open the [Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=d-biehl.robotcode) and install the RobotCode extension.
-
-2. **Set Up Your Environment**
-   Configure your Robot Framework environment using the tools and commands provided by the extension or the `robot.toml` file.
-
-3. **Start Testing**
-   Begin writing and running your Robot Framework tests directly in VS Code.
-
-4. **Explore More**
-   Visit the [Getting Started Guide](https://robotcode.io/02_get_started/) for detailed setup instructions and advanced features.
+1. **Install the RobotCode Extension** from the [Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=d-biehl.robotcode).
+2. **Continue with the [Getting Started Guide](https://robotcode.io/02_get_started/)** for setup, your first `robot.toml`, and running your first test.
 
 **Extensions:**
 RobotCode declares dependencies on the [Python](https://marketplace.visualstudio.com/items?itemName=ms-python.python) and [Python Debugger](https://marketplace.visualstudio.com/items?itemName=ms-python.debugpy) extensions so VS Code installs them when required. Additional extensions may be needed depending on your project.
@@ -106,64 +83,63 @@ RobotCode declares dependencies on the [Python](https://marketplace.visualstudio
 
 ### IntelliJ IDEA or PyCharm
 
-1. **Install the RobotCode Plugin**
-   Choose one of the following methods to install the RobotCode plugin in your IDE:
+1. **Install the RobotCode Plugin** — choose one of:
 
-   - **Install via the Built-in Plugin Marketplace**
-      Navigate to:
-      <kbd>Settings/Preferences</kbd> > <kbd>Plugins</kbd> > <kbd>Marketplace</kbd> > Search for "RobotCode" and click <kbd>Install</kbd>.
+   - **Built-in Plugin Marketplace:** <kbd>Settings/Preferences</kbd> > <kbd>Plugins</kbd> > <kbd>Marketplace</kbd> > search for "RobotCode" > <kbd>Install</kbd>.
+   - **[JetBrains Marketplace](https://plugins.jetbrains.com/plugin/26216):** click <kbd>Install to ...</kbd> if your IDE is running.
+   - **Manual:** download the [latest release](https://github.com/robotcodedev/robotcode/releases/latest) and use <kbd>Settings/Preferences</kbd> > <kbd>Plugins</kbd> > <kbd>⚙️</kbd> > <kbd>Install plugin from disk...</kbd>.
 
-   - **Use the JetBrains Marketplace**
-      Alternatively, install the plugin directly from the [JetBrains Marketplace](https://plugins.jetbrains.com/plugin/26216). Click the <kbd>Install to ...</kbd> button if your IDE is running.
-
-   - **Manual Installation**
-      Download the [latest release](https://github.com/robotcodedev/robotcode/releases/latest) and install it manually:
-      <kbd>Settings/Preferences</kbd> > <kbd>Plugins</kbd> > <kbd>⚙️</kbd> > <kbd>Install plugin from disk...</kbd>.
-
-2. **Set Up Your Environment**
-   Configure your Robot Framework environment using the tools and commands provided by the plugin or the `robot.toml` file.
-
-3. **Start Testing**
-   Begin developing and executing your Robot Framework tests.
-
-4. **Explore More**
-   Visit the [Getting Started Guide](https://robotcode.io/02_get_started/) for detailed setup instructions and advanced features.
+2. **Continue with the [Getting Started Guide](https://robotcode.io/02_get_started/)** for setup, your first `robot.toml`, and running your first test.
 
 **Plugins:**
 RobotCode declares a dependency on [LSP4IJ](https://plugins.jetbrains.com/plugin/23257) so your IDE installs it automatically. Additional plugins may be required depending on your project needs.
 
 
+### Command Line and Other Editors
+
+For CI pipelines, the command line, or LSP-compatible editors like Neovim, Sublime Text, or Helix, install RobotCode from PyPI. The base `robotcode` package is only the CLI core; the actual commands live in extras such as `runner`, `analyze`, `debugger`, `languageserver`, and `repl`:
+
+```bash
+pip install robotcode[runner,analyze]
+```
+
+Pick the extras that match your use case — see the [CLI reference](https://robotcode.io/03_reference/cli) for the available packages and how to install them.
+
+
 ## Documentation
 
-For detailed instructions, visit our **[official documentation](https://robotcode.io)**.
-Here are some additional resources to help you troubleshoot or learn more:
+For detailed instructions, visit our **[official documentation](https://robotcode.io)**. Additional resources:
 
 - **[Q&A](https://github.com/robotcodedev/robotcode/discussions/categories/q-a):** Answers to common questions about RobotCode.
-- **[Troubleshooting Guide](https://robotcode.io/04_tip_and_tricks/troubleshooting):** Solutions for setup issues, performance problems, and debugging errors.
-- **[Command Line Tools Reference](https://robotcode.io/03_reference/):** Comprehensive documentation on using RobotCode’s CLI tools.
+- **[Tips & Tricks](https://robotcode.io/04_tip_and_tricks/):** Common pitfalls, editor customization, and setup recipes.
+- **[Command Line Tools Reference](https://robotcode.io/03_reference/cli):** Comprehensive documentation on using RobotCode's CLI tools.
 - **[Changelog](https://github.com/robotcodedev/robotcode/blob/main/CHANGELOG.md):** Track changes, updates, and new features in each release.
-- **[Support](https://robotcode.io/support/):** Learn how to get help and report issues.
+- **[Support & Contribute](https://robotcode.io/05_contributing/):** Ways to back the project — financial, code, feedback.
 
 
-## Support RobotCode
+## Sponsor RobotCode
 
-RobotCode is driven by the passion of its lead developer and the support of a growing community. To continue adding new features, improving stability, and expanding the ecosystem, your involvement is essential. Whether you contribute code, offer feedback, or provide financial support, you help shape the future of RobotCode.
+RobotCode is driven by the passion of its lead developer and a growing community. Financial support keeps the project sustainable and lets us continue adding features, improving stability, and expanding the ecosystem.
 
-**Become a Sponsor:**
-- [GitHub Sponsors](https://github.com/sponsors/robotcodedev) - Monthly or one-time sponsorship
-- [Open Collective](https://opencollective.com/robotcode) - One-time or recurring donations
+**Individual:**
+- [GitHub Sponsors](https://github.com/sponsors/robotcodedev) – monthly or one-time
+- [Open Collective](https://opencollective.com/robotcode) – one-time or recurring
 
-**Corporate Sponsorship:**
-- Direct & transparent: Open Collective (https://opencollective.com/robotcode) – invoices, public ledger
-- Ecosystem support: Robot Framework Foundation membership (https://robotframework.org/foundation/) – indirectly benefits RobotCode
+**Corporate:**
+- [Open Collective](https://opencollective.com/robotcode) – direct, transparent, invoices, public ledger
+- [Robot Framework Foundation membership](https://robotframework.org/foundation/) – ecosystem support, indirectly benefits RobotCode
 
-**Other Ways to Support:**
+
+## Get Involved
+
+You don't need to sponsor to help. Every contribution — feedback, code, advocacy — moves the project forward.
+
 - Star the repository
 - Leave a review on the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=d-biehl.robotcode) and [JetBrains Marketplace](https://plugins.jetbrains.com/plugin/26216)
-- Ask questions & help others ([Slack #robotcode](https://slack.robotframework.org/) / [Forum](https://forum.robotframework.org) / [Discussions](https://github.com/robotcodedev/robotcode/discussions))
+- Ask questions & help others on [Slack #robotcode](https://slack.robotframework.org/), the [Forum](https://forum.robotframework.org), or [Discussions](https://github.com/robotcodedev/robotcode/discussions)
 - Report bugs in the [issue tracker](https://github.com/robotcodedev/robotcode/issues)
 - Suggest enhancements or features (issues or [Discussions](https://github.com/robotcodedev/robotcode/discussions))
-- Share usage patterns & integration ideas ([Discussions](https://github.com/robotcodedev/robotcode/discussions))
+- Share usage patterns & integration ideas in [Discussions](https://github.com/robotcodedev/robotcode/discussions)
 - Improve tests (edge cases, large suites, multi-root, versions)
 - Contribute code ([good first issue](https://github.com/robotcodedev/robotcode/labels/good%20first%20issue) / [help wanted](https://github.com/robotcodedev/robotcode/labels/help%20wanted))
 
