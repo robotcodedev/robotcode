@@ -223,7 +223,7 @@ if _HAS_EXT:
             whitespace_mode="normalized",
             extract_metadata=False,
         )
-        result = _ext_convert(text, opts)  # type: ignore[arg-type]
+        result = _ext_convert(text, opts)
         md = result.content or ""
 
         embedded_urls: set[str] = set()
