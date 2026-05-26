@@ -28,7 +28,6 @@ from robot.parsing.model.statements import (
     VariablesImport,
 )
 from robot.utils.escaping import unescape
-from robot.variables.finders import NOT_FOUND, NumberFinder
 from robotcode.core.concurrent import check_current_task_canceled
 from robotcode.core.lsp.types import (
     CodeDescription,
@@ -61,9 +60,11 @@ from ..utils.variables import (
     InvalidVariableError,
     VariableMatcher,
     contains_variable,
+    is_number_literal,
     replace_curdir_in_variable_values,
     search_variable,
     split_from_equals,
+    try_resolve_number_literal,
 )
 from ..utils.visitor import Visitor
 from .analyzer_result import AnalyzerResult
@@ -1919,12 +1920,6 @@ class NamespaceAnalyzer(Visitor):
         except (VariableError, InvalidVariableError):
             return None
 
-    def _is_number(self, name: str) -> bool:
-        if name.startswith("$"):
-            finder = NumberFinder()
-            return bool(finder.find(name) != NOT_FOUND)
-        return False
-
     def _try_resolve_nested_variable_base(
         self, identifier: str, base: str, name_token: Token
     ) -> Union[str, Literal[False], tuple[None, str]]:
@@ -2004,7 +1999,7 @@ class NamespaceAnalyzer(Visitor):
         var_def = self._find_variable(var_ref)
         if var_def is None:
             # RF's NumberFinder: ${1}, ${3.14}, ${0xFF}, ${0b1010}, ${0o17}
-            number_str = self._try_resolve_number_literal(var_ref)
+            number_str = try_resolve_number_literal(var_ref)
             if number_str is not None:
                 return number_str
             # RF's ExtendedFinder: ${VAR.attr}, ${VAR[key]}, ${1-2}, etc.
@@ -2030,33 +2025,6 @@ class NamespaceAnalyzer(Visitor):
 
         return " ".join(resolved_items)
 
-    @staticmethod
-    def _try_resolve_number_literal(var_ref: str) -> Optional[str]:
-        """Detect RF number literals like ``${1}``, ``${3.14}``, ``${0xFF}``.
-
-        Mimics RF's ``NumberFinder``: strips spaces, lowercases, then tries
-        ``int()`` (with ``0b``/``0o``/``0x`` prefix support) and ``float()``.
-        Returns the string representation of the number, or ``None``.
-        """
-        inner = "".join(var_ref[2:-1].split()).casefold()
-        if not inner:
-            return None
-        bases = {"0b": 2, "0o": 8, "0x": 16}
-        for prefix, base in bases.items():
-            if inner.startswith(prefix):
-                try:
-                    return str(int(inner[2:], base))
-                except ValueError:
-                    return None
-        try:
-            return str(int(inner))
-        except ValueError:
-            pass
-        try:
-            return str(float(inner))
-        except ValueError:
-            return None
-
     def _is_extended_with_known_base(self, var_ref: str) -> bool:
         """Check if ``var_ref`` matches RF's extended variable syntax with a resolvable base.
 
@@ -2073,7 +2041,7 @@ class NamespaceAnalyzer(Visitor):
         base_ref = f"${{{base_name}}}"
         if self._find_variable(base_ref) is not None:
             return True
-        if self._try_resolve_number_literal(base_ref) is not None:
+        if try_resolve_number_literal(base_ref) is not None:
             return True
         return False
 
@@ -2276,7 +2244,7 @@ class NamespaceAnalyzer(Visitor):
                             )
                             continue
 
-                if self._is_number(var_token.value):
+                if is_number_literal(var_token.value):
                     continue
 
                 if (
@@ -2299,7 +2267,7 @@ class NamespaceAnalyzer(Visitor):
                         if var is not None:
                             yield strip_variable_token(sub_sub_token), var
                             continue
-                        if self._is_number(name):
+                        if is_number_literal(name):
                             continue
                         else:
                             if contains_variable(var_token.value[2:-1], "$@&%"):

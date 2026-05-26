@@ -21,7 +21,6 @@ from typing import (
 from robot.errors import VariableError
 from robot.parsing.lexer.tokens import Token
 from robot.utils.escaping import unescape
-from robot.variables.finders import NOT_FOUND, NumberFinder
 from robotcode.core.lsp.types import Position
 
 from ..utils import RF_VERSION
@@ -33,7 +32,7 @@ from ..utils.ast import (
     whitespace_at_begin_of_token,
     whitespace_from_begin_of_token,
 )
-from ..utils.variables import contains_variable, search_variable, split_from_equals
+from ..utils.variables import contains_variable, is_number_literal, search_variable, split_from_equals
 from .entities import (
     LibraryEntry,
     VariableDefinition,
@@ -395,12 +394,6 @@ class ModelHelper:
         skip_local_variables: bool = False,
         return_not_found: bool = False,
     ) -> Iterator[Tuple[Token, VariableDefinition]]:
-        def is_number(name: str) -> bool:
-            if name.startswith("$"):
-                finder = NumberFinder()
-                return bool(finder.find(name) != NOT_FOUND)
-            return False
-
         def iter_token(
             to: Token, ignore_errors: bool = False
         ) -> Iterator[Union[Token, Tuple[Token, VariableDefinition]]]:
@@ -483,7 +476,7 @@ class ModelHelper:
                     yield strip_variable_token(sub_token), var
                     continue
 
-                if is_number(sub_token.value):
+                if is_number_literal(sub_token.value):
                     continue
 
                 if (
@@ -511,7 +504,7 @@ class ModelHelper:
                         if var is not None:
                             yield strip_variable_token(sub_sub_token), var
                             continue
-                        if is_number(name):
+                        if is_number_literal(name):
                             continue
                         elif return_not_found:
                             if contains_variable(sub_token.value[2:-1]):

@@ -228,6 +228,46 @@ def split_from_equals(string: str) -> Tuple[str, Optional[str]]:
     return cast(Tuple[str, Optional[str]], robot_split_from_equals(string))
 
 
+_NUMBER_LITERAL_BASES = {"0b": 2, "0o": 8, "0x": 16}
+
+
+@functools.lru_cache(maxsize=1024)
+def try_resolve_number_literal(var_ref: str) -> Optional[str]:
+    """Detect RF number literals like ``${1}``, ``${3.14}``, ``${0xFF}``.
+
+    Static reimplementation of RF's ``NumberFinder`` (which we avoid depending on
+    directly for compatibility): strips spaces, lowercases, then tries ``int()``
+    with ``0b`` / ``0o`` / ``0x`` prefix support, falling back to ``float()``.
+    Only ``${...}`` form is accepted; anything else returns ``None``.
+
+    Returns the canonical string representation of the number, or ``None``.
+    """
+    if not (var_ref.startswith("${") and var_ref.endswith("}")):
+        return None
+    inner = "".join(var_ref[2:-1].split()).casefold()
+    if not inner:
+        return None
+    for prefix, base in _NUMBER_LITERAL_BASES.items():
+        if inner.startswith(prefix):
+            try:
+                return str(int(inner[2:], base))
+            except ValueError:
+                return None
+    try:
+        return str(int(inner))
+    except ValueError:
+        pass
+    try:
+        return str(float(inner))
+    except ValueError:
+        return None
+
+
+def is_number_literal(name: str) -> bool:
+    """Check if ``name`` is an RF scalar number literal like ``${1}``, ``${3.14}``."""
+    return try_resolve_number_literal(name) is not None
+
+
 def replace_curdir_in_variable_values(values: Sequence[str], source: str) -> Tuple[str, ...]:
     """Replace ${CURDIR} in variable values with the escaped parent directory of source."""
     curdir = str(Path(source).parent).replace("\\", "\\\\")
