@@ -4,9 +4,17 @@ import { DebugManager } from "./debugmanager";
 import * as fs from "fs";
 
 import { ClientState, LanguageClientsManager, toVsCodeRange } from "./languageclientsmanger";
-import { escapeRobotGlobPatterns, filterAsync, Mutex, sleep, truncateAndReplaceNewlines, WeakValueMap } from "./utils";
+import { escapeRobotGlobPatterns, filterAsync, Mutex, truncateAndReplaceNewlines, WeakValueMap } from "./utils";
 import { CONFIG_SECTION } from "./config";
 import { Range, Diagnostic, DiagnosticSeverity } from "vscode-languageclient/node";
+
+function arraysEqual<T>(a: T[] | undefined, b: T[] | undefined): boolean {
+  if (a === b) return true;
+  if (a === undefined || b === undefined) return false;
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+  return true;
+}
 
 function diagnosticsSeverityToVsCode(severity?: DiagnosticSeverity): vscode.DiagnosticSeverity | undefined {
   switch (severity) {
@@ -103,6 +111,42 @@ interface RobotLogMessageEvent {
   html: string;
 }
 
+function robotItemsEqual(a: RobotTestItem | undefined, b: RobotTestItem | undefined): boolean {
+  if (a === b) return true;
+  if (a === undefined || b === undefined) return false;
+  if (a.id !== b.id) return false;
+  if (a.type !== b.type) return false;
+  if (a.name !== b.name) return false;
+  if (a.longname !== b.longname) return false;
+  if (a.description !== b.description) return false;
+  if (a.error !== b.error) return false;
+  if (!arraysEqual(a.tags, b.tags)) return false;
+  const aRange = a.range;
+  const bRange = b.range;
+  if ((aRange === undefined) !== (bRange === undefined)) return false;
+  if (aRange && bRange) {
+    if (
+      aRange.start.line !== bRange.start.line ||
+      aRange.start.character !== bRange.start.character ||
+      aRange.end.line !== bRange.end.line ||
+      aRange.end.character !== bRange.end.character
+    ) {
+      return false;
+    }
+  }
+  return robotItemListsEqual(a.children, b.children);
+}
+
+function robotItemListsEqual(a: RobotTestItem[] | undefined, b: RobotTestItem[] | undefined): boolean {
+  if (a === b) return true;
+  if (a === undefined || b === undefined) return false;
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    if (!robotItemsEqual(a[i], b[i])) return false;
+  }
+  return true;
+}
+
 class DidChangeEntry {
   constructor(timerHandle: NodeJS.Timeout, tokenSource: vscode.CancellationTokenSource) {
     this.timer = timerHandle;
@@ -118,21 +162,10 @@ class DidChangeEntry {
 }
 
 class WorkspaceFolderEntry {
-  private _valid: boolean;
-
-  public get valid(): boolean {
-    return this._valid;
-  }
-  public set valid(v: boolean) {
-    this._valid = v;
-  }
-
   public constructor(
-    valid: boolean,
-    readonly items: RobotTestItem[] | undefined,
-  ) {
-    this._valid = valid;
-  }
+    public valid: boolean,
+    public readonly items: RobotTestItem[] | undefined,
+  ) {}
 }
 
 class TestRunInfo {
@@ -143,7 +176,7 @@ class TestRunInfo {
 }
 
 export class TestControllerManager {
-  private _disposables: vscode.Disposable;
+  private _disposables!: vscode.Disposable;
   public readonly testController: vscode.TestController;
 
   private readonly runProfilesMutex = new Mutex();
@@ -158,6 +191,21 @@ export class TestControllerManager {
   private activeStepDecorationType: vscode.TextEditorDecorationType;
   showEditorRunDecorations = false;
   private readonly profilesCache = new WeakMap<vscode.WorkspaceFolder, RobotCodeProfilesResult>();
+  // O(1) lookup for RobotTestItem by id — derived from robotTestItems, not source of truth.
+  private readonly robotItemIndex = new Map<string, RobotTestItem>();
+  // O(1) lookup for vscode.TestItem by URI — derived from testItems, not source of truth.
+  private readonly testItemByUri = new Map<string, vscode.TestItem>();
+  // Cache of the last set tag IDs per TestItem ID. Used for tag diffing in addOrUpdateTestItem.
+  private readonly lastSetTags = new Map<string, string[]>();
+  // Deep snapshot of the last successfully processed children per TestItem ID
+  // (key "__root__" for the workspace top level). Used in refreshItem for the result
+  // compare — if the new children are structurally identical, no UI update is triggered.
+  private readonly lastKnownChildren = new Map<string, RobotTestItem[] | undefined>();
+  // CTS for the config-change refresh path. Cancelled on the next config change so an
+  // in-flight refresh terminates before the next refreshWorkspace queues behind it on
+  // refreshFromUriMutex. Direct-to-refresh() events don't need this — refresh()'s
+  // single-inflight pattern already cancels predecessors.
+  private configChangeCts: vscode.CancellationTokenSource | undefined;
 
   constructor(
     public readonly extensionContext: vscode.ExtensionContext,
@@ -168,11 +216,13 @@ export class TestControllerManager {
     this.testController = vscode.tests.createTestController("robotCode.RobotFramework", "Robot Framework Tests/Tasks");
 
     this.testController.resolveHandler = async (item) => {
+      // resolveHandler has no token parameter in the VS Code API — refresh() itself
+      // takes care of cancelling older calls via the single-inflight pattern.
       await this.refresh(item);
     };
 
     this.testController.refreshHandler = async (token) => {
-      await this.refreshWorkspace(undefined, undefined, token);
+      await this.refreshWorkspace(undefined, token);
     };
 
     this.updateRunProfiles().then(
@@ -185,13 +235,13 @@ export class TestControllerManager {
     );
 
     fileWatcher.onDidCreate(async (uri) => {
-      await this.refreshUri(uri, "create");
+      await this.refreshUri(uri);
     });
     fileWatcher.onDidDelete(async (uri) => {
-      await this.refreshUri(uri, "delete");
+      await this.refreshUri(uri);
     });
     fileWatcher.onDidChange(async (uri) => {
-      await this.refreshUri(uri, "change");
+      await this.refreshUri(uri);
     });
 
     this.activeStepDecorationType = vscode.window.createTextEditorDecorationType({
@@ -215,6 +265,7 @@ export class TestControllerManager {
         }
         switch (event.state) {
           case ClientState.Running: {
+            // refresh()'s single-inflight handles cancellation of any predecessor.
             await this.refresh();
             break;
           }
@@ -227,24 +278,27 @@ export class TestControllerManager {
         await this.updateRunProfiles();
       }),
       vscode.workspace.onDidChangeConfiguration(async (event) => {
-        let refresh = false;
-
+        let testExplorerChanged = false;
         for (const ws of vscode.workspace.workspaceFolders ?? []) {
           if (event.affectsConfiguration("robotcode.testExplorer", ws)) {
-            refresh = true;
+            testExplorerChanged = true;
+            break;
           }
         }
 
-        if (refresh) {
-          await this.refreshWorkspace();
+        if (testExplorerChanged) {
+          this.configChangeCts?.cancel();
+          this.configChangeCts = new vscode.CancellationTokenSource();
+          await this.refreshWorkspace(undefined, this.configChangeCts.token);
+          await this.updateRunProfiles();
+        } else if (event.affectsConfiguration("launch.configurations")) {
           await this.updateRunProfiles();
         }
       }),
-      vscode.workspace.onDidCloseTextDocument((document) => this.refreshDocument(document)),
       vscode.workspace.onDidSaveTextDocument((document) => this.refreshDocument(document)),
-      vscode.workspace.onDidOpenTextDocument((document) => this.refreshDocument(document)),
-
       vscode.workspace.onDidChangeTextDocument((event) => {
+        // Skip events without actual content changes (e.g. dirty marker updates).
+        if (event.contentChanges.length === 0) return;
         this.refreshDocument(event.document);
       }),
       vscode.workspace.onDidChangeWorkspaceFolders(async (event) => {
@@ -253,7 +307,10 @@ export class TestControllerManager {
         for (const r of event.removed) {
           this.removeWorkspaceFolderItems(r);
         }
-        if (event.added.length > 0) await this.refresh();
+        if (event.added.length > 0) {
+          // refresh()'s single-inflight handles cancellation of any predecessor.
+          await this.refresh();
+        }
       }),
 
       vscode.debug.onDidStartDebugSession((session) => {
@@ -321,13 +378,6 @@ export class TestControllerManager {
           await this.selectConfigurationProfiles(folder);
         },
       ),
-      vscode.workspace.onDidChangeConfiguration(async (event) => {
-        for (const s of ["launch.configurations"]) {
-          if (event.affectsConfiguration(s)) {
-            await this.updateRunProfiles();
-          }
-        }
-      }),
     );
   }
 
@@ -583,10 +633,19 @@ export class TestControllerManager {
 
       this.robotTestItems.delete(folder);
 
+      // Index/cache cleanup for the entire subtree.
+      this.unindexRobotTree(robotItems);
+
       for (const id of robotItems?.map((i) => i.id) ?? []) {
         const deleteItem = (itemId: string) => {
           const item = this.testItems.get(itemId);
           this.testItems.delete(itemId);
+          if (item?.uri !== undefined) {
+            const uriStr = item.uri.toString();
+            if (this.testItemByUri.get(uriStr) === item) {
+              this.testItemByUri.delete(uriStr);
+            }
+          }
           item?.children.forEach((v) => deleteItem(v.id));
         };
 
@@ -608,6 +667,18 @@ export class TestControllerManager {
       this.refreshWorkspaceChangeTimer = undefined;
     }
 
+    this.robotItemIndex.clear();
+    this.testItemByUri.clear();
+    this.lastSetTags.clear();
+    this.lastKnownChildren.clear();
+
+    this.currentRefreshCts?.cancel();
+    this.currentRefreshCts?.dispose();
+    this.currentRefreshCts = undefined;
+    this.configChangeCts?.cancel();
+    this.configChangeCts?.dispose();
+    this.configChangeCts = undefined;
+
     this._disposables.dispose();
     this.testController.dispose();
   }
@@ -615,24 +686,59 @@ export class TestControllerManager {
   public readonly robotTestItems = new WeakMap<vscode.WorkspaceFolder, WorkspaceFolderEntry | undefined>();
 
   public findRobotItem(item: vscode.TestItem): RobotTestItem | undefined {
-    if (item.parent) {
-      return this.findRobotItem(item.parent)?.children?.find((i) => i.id === item.id);
-    } else {
-      for (const workspace of vscode.workspace.workspaceFolders ?? []) {
-        if (this.robotTestItems.has(workspace)) {
-          const items = this.robotTestItems.get(workspace)?.items;
-          if (items) {
-            for (const i of items) {
-              if (i.id === item.id) {
-                return i;
-              }
-            }
-          }
-        }
-      }
-      return undefined;
+    // The index is kept consistent with robotTestItems (populated in getTestsFromWorkspaceFolder /
+    // getTestsFromDocument, cleaned in removeNotAddedTestItems / removeWorkspaceFolderItems).
+    return this.robotItemIndex.get(item.id);
+  }
+
+  // Recursively walks a RobotTestItem subtree and calls cb for each item.
+  private walkRobotTree(items: RobotTestItem[] | undefined, cb: (item: RobotTestItem) => void): void {
+    if (!items) return;
+    for (const item of items) {
+      cb(item);
+      this.walkRobotTree(item.children, cb);
     }
   }
+
+  private indexRobotTree(items: RobotTestItem[] | undefined): void {
+    this.walkRobotTree(items, (i) => this.robotItemIndex.set(i.id, i));
+  }
+
+  private unindexRobotTree(items: RobotTestItem[] | undefined): void {
+    this.walkRobotTree(items, (i) => {
+      this.robotItemIndex.delete(i.id);
+      this.lastSetTags.delete(i.id);
+      this.lastKnownChildren.delete(i.id);
+    });
+  }
+
+  // Deep clone of the fields of a RobotTestItem subtree that are relevant for
+  // robotItemsEqual. Stored as a snapshot in lastKnownChildren so the next refresh can
+  // perform a structural comparison without relying on a live reference that may have
+  // been mutated in the meantime.
+  private snapshotChildren(items: RobotTestItem[] | undefined): RobotTestItem[] | undefined {
+    if (!items) return undefined;
+    return items.map(
+      (i): RobotTestItem => ({
+        id: i.id,
+        type: i.type,
+        name: i.name,
+        longname: i.longname,
+        description: i.description,
+        error: i.error,
+        tags: i.tags ? [...i.tags] : undefined,
+        range: i.range ? { start: { ...i.range.start }, end: { ...i.range.end } } : undefined,
+        children: this.snapshotChildren(i.children),
+      }),
+    );
+  }
+
+  // Threshold for burst coalescing: when this many per-file refreshes are pending at
+  // once, we drop them and fire a single workspace refresh instead — which is no more
+  // expensive than a per-file discover but covers all files.
+  private static readonly BURST_THRESHOLD = 5;
+  // Debounce window for batching rapid file/document changes before triggering discover.
+  private static readonly DEBOUNCE_MS = 1000;
 
   public refreshDocument(document: vscode.TextDocument): void {
     if (!this.languageClientsManager.supportedLanguages.includes(document.languageId)) return;
@@ -652,14 +758,32 @@ export class TestControllerManager {
       uri_str,
       new DidChangeEntry(
         setTimeout(() => {
+          // Remove the entry from the map immediately — it only represents *pending*
+          // refreshes. Without this, didChangedTimer.size would grow monotonically and
+          // burst coalescing would trigger false positives.
+          this.didChangedTimer.delete(uri_str);
+
+          // Burst coalescing: when many per-file timers fire close together (e.g. an
+          // AI agent applies 10+ edits at once), drop the remaining per-file refreshes
+          // and replace them with a single workspace refresh.
+          // Using >=THRESHOLD because we just removed ourselves from the map.
+          if (this.didChangedTimer.size >= TestControllerManager.BURST_THRESHOLD) {
+            for (const [, entry] of this.didChangedTimer) entry.cancel();
+            this.didChangedTimer.clear();
+            this.refreshWorkspace(vscode.workspace.getWorkspaceFolder(document.uri), cancelationTokenSource.token).then(
+              () => undefined,
+              () => undefined,
+            );
+            return;
+          }
+
           const item = this.findTestItemForDocument(document);
           if (item)
-            this.refresh(item).then(
+            this.refresh(item, cancelationTokenSource.token).then(
               () => {
                 if (item?.canResolveChildren && item.children.size === 0) {
                   this.refreshWorkspace(
                     vscode.workspace.getWorkspaceFolder(document.uri),
-                    undefined,
                     cancelationTokenSource.token,
                   ).then(
                     () => undefined,
@@ -670,16 +794,12 @@ export class TestControllerManager {
               () => undefined,
             );
           else {
-            this.refreshWorkspace(
-              vscode.workspace.getWorkspaceFolder(document.uri),
-              undefined,
-              cancelationTokenSource.token,
-            ).then(
+            this.refreshWorkspace(vscode.workspace.getWorkspaceFolder(document.uri), cancelationTokenSource.token).then(
               () => undefined,
               () => undefined,
             );
           }
-        }, 1000),
+        }, TestControllerManager.DEBOUNCE_MS),
         cancelationTokenSource,
       ),
     );
@@ -690,8 +810,17 @@ export class TestControllerManager {
   }
 
   public findTestItemByUri(documentUri: string): vscode.TestItem | undefined {
+    const indexed = this.testItemByUri.get(documentUri);
+    if (indexed !== undefined) {
+      return indexed;
+    }
+    // Fallback: linear scan over the WeakValueMap. Containers only (suite/workspace) —
+    // tests share the URI with their suite and a refresh on a test does nothing useful.
     for (const item of this.testItems.values()) {
-      if (item.uri?.toString() === documentUri) return item;
+      if (item.uri?.toString() === documentUri && item.canResolveChildren) {
+        this.testItemByUri.set(documentUri, item);
+        return item;
+      }
     }
     return undefined;
   }
@@ -700,10 +829,35 @@ export class TestControllerManager {
     return this.testItems.get(id);
   }
 
-  public async refresh(item?: vscode.TestItem, token?: vscode.CancellationToken): Promise<void> {
-    await this.refreshMutex.dispatch(async () => {
-      await this.refreshItem(item, token);
-    });
+  // Tracks the currently active refresh token — single-inflight + latest-pending pattern.
+  // Every new refresh() call cancels the running one so that the in-flight subprocess
+  // gets killed immediately via the AbortController in pythonmanger.ts:executeRobotCode.
+  // Earlier refreshes still waiting on the mutex abort right after acquiring it because
+  // their CTS is already cancelled — effectively only the newest call really runs.
+  private currentRefreshCts: vscode.CancellationTokenSource | undefined;
+
+  public async refresh(item?: vscode.TestItem, externalToken?: vscode.CancellationToken): Promise<void> {
+    // Cancel any in-flight predecessor.
+    this.currentRefreshCts?.cancel();
+
+    const cts = new vscode.CancellationTokenSource();
+    this.currentRefreshCts = cts;
+
+    // Bridge external cancellation (e.g. from VS Code's refreshHandler) onto our CTS.
+    const externalSub = externalToken?.onCancellationRequested(() => cts.cancel());
+
+    try {
+      await this.refreshMutex.dispatch(async () => {
+        if (cts.token.isCancellationRequested) return;
+        await this.refreshItem(item, cts.token);
+      });
+    } finally {
+      externalSub?.dispose();
+      if (this.currentRefreshCts === cts) {
+        this.currentRefreshCts = undefined;
+      }
+      cts.dispose();
+    }
   }
 
   private testItems = new WeakValueMap<string, vscode.TestItem>();
@@ -829,6 +983,8 @@ export class TestControllerManager {
       );
 
       this.lastDiscoverResults.set(folder, result);
+      // Index the freshly discovered subtree for O(1) findRobotItem lookups.
+      this.indexRobotTree(result?.items);
 
       return result?.items;
     } catch (e) {
@@ -837,6 +993,10 @@ export class TestControllerManager {
           if (this.lastDiscoverResults.has(folder)) {
             return this.lastDiscoverResults.get(folder)?.items;
           }
+          // Abort without a cached result — return undefined so refreshItem skips this
+          // folder and tries again on the next refresh. Do NOT build an error item into
+          // the tree — otherwise the user sees "AbortError" as a workspace entry.
+          return undefined;
         }
       }
 
@@ -896,6 +1056,9 @@ export class TestControllerManager {
         token,
       );
 
+      // Index the freshly discovered items.
+      this.indexRobotTree(result?.items);
+
       return result?.items;
     } catch (e) {
       if (e instanceof Error) {
@@ -918,7 +1081,11 @@ export class TestControllerManager {
     return result === undefined || result;
   }
 
-  private async refreshItem(item?: vscode.TestItem, token?: vscode.CancellationToken): Promise<void> {
+  private async refreshItem(
+    item?: vscode.TestItem,
+    token?: vscode.CancellationToken,
+    skipPerDocumentDiscover: boolean = false,
+  ): Promise<void> {
     if (token?.isCancellationRequested) return;
 
     if (item) {
@@ -928,39 +1095,53 @@ export class TestControllerManager {
 
         let tests = robotItem?.children;
 
-        if (robotItem?.type === RobotItemType.SUITE && item.uri !== undefined) {
+        // The per-document discover only runs when we refresh a specific TestItem
+        // (resolveHandler, refreshDocument, refreshUri). When the workspace refresh
+        // walks recursively, the workspace discover has already covered every file via
+        // dirty-stdin — a per-document discover would be redundant.
+        if (!skipPerDocumentDiscover && robotItem?.type === RobotItemType.SUITE && item.uri !== undefined) {
           if (robotItem.children === undefined) robotItem.children = [];
 
           const openDoc = vscode.workspace.textDocuments.find((d) => d.uri.toString() === item.uri?.toString());
 
           if (openDoc !== undefined) {
-            tests = await this.getTestsFromDocument(openDoc, robotItem, token);
-            if (tests !== undefined) {
-              for (const test of tests) {
-                const index = robotItem.children.findIndex((v) => v.id === test.id);
-                if (index >= 0 && robotItem.children) {
-                  robotItem.children[index] = test;
-                } else {
-                  robotItem.children.push(test);
-                }
+            const newTests = await this.getTestsFromDocument(openDoc, robotItem, token);
+            // If newTests is undefined: discovery was aborted or failed. We can NOT be
+            // sure that robotItem.children still reflects the current file state — so
+            // return early without a result compare. Otherwise the compare against the
+            // old snapshot would wrongly say "everything is the same" and the tree
+            // would stay stale. The next refresh trigger will retry.
+            if (newTests === undefined) return;
+            tests = newTests;
+            const freshIds = new Set(newTests.map((t) => t.id));
+            for (const test of newTests) {
+              const index = robotItem.children.findIndex((v) => v.id === test.id);
+              if (index >= 0) {
+                robotItem.children[index] = test;
+              } else {
+                robotItem.children.push(test);
               }
-
-              const removed = robotItem.children.filter((v) => tests?.find((w) => w.id === v.id) === undefined);
-
-              robotItem.children = robotItem.children.filter((v) => removed.find((w) => w.id == v.id) === undefined);
-            } else {
-              robotItem.children = [];
             }
+            // Keep only items that exist in the fresh discover result, then sort by line.
+            robotItem.children = robotItem.children
+              .filter((v) => freshIds.has(v.id))
+              .sort((a, b) => (a.range?.start.line || -1) - (b.range?.start.line || -1));
 
-            robotItem.children = robotItem.children.sort(
-              (a, b) => (a.range?.start.line || -1) - (b.range?.start.line || -1),
-            );
+            // Update the index after the mutations.
+            this.indexRobotTree(robotItem.children);
           }
         }
 
         if (token?.isCancellationRequested) return;
 
         if (robotItem) {
+          // Result compare: if the current children structurally match the last seen
+          // state, there is nothing to update in the tree. The comparison is against the
+          // children that are currently in the TestController tree, represented by the
+          // lastKnownChildren entry for the parent TestItem.
+          const lastKnown = this.lastKnownChildren.get(item.id);
+          if (robotItemListsEqual(lastKnown, tests)) return;
+
           const addedIds = new Set<string>();
 
           for (const test of tests ?? []) {
@@ -968,25 +1149,29 @@ export class TestControllerManager {
           }
 
           for (const test of tests ?? []) {
+            if (token?.isCancellationRequested) return;
             const newItem = this.addOrUpdateTestItem(item, test);
-            await this.refreshItem(newItem, token);
-            if (newItem.canResolveChildren && newItem.children.size === 0) {
+            await this.refreshItem(newItem, token, skipPerDocumentDiscover);
+            // Don't keep container items that resolved to nothing (no children, no
+            // error) — they'd just sit in the tree as confusing empty nodes.
+            if (newItem.canResolveChildren && newItem.children.size === 0 && newItem.error === undefined) {
               addedIds.delete(newItem.id);
             }
           }
 
-          // TODO: we need a sleep after deletion here, it seem's there is a bug in vscode
-          if (this.removeNotAddedTestItems(item, addedIds)) await sleep(5);
+          this.removeNotAddedTestItems(item, addedIds);
+          this.lastKnownChildren.set(item.id, this.snapshotChildren(tests));
         }
       } finally {
         item.busy = false;
       }
     } else {
-      const addedIds = new Set<string>();
+      const rootKey = "__root__";
 
+      // Phase 1: collect the new root children (re-discover if needed) without UI calls.
+      const newRootChildren: RobotTestItem[] = [];
       for (const folder of vscode.workspace.workspaceFolders ?? []) {
         if (token?.isCancellationRequested) return;
-
         if (!this.isTestExplorerEnabledForWorkspace(folder)) continue;
 
         if (this.robotTestItems.get(folder) === undefined || !this.robotTestItems.get(folder)?.valid) {
@@ -994,27 +1179,38 @@ export class TestControllerManager {
           if (items === undefined) continue;
           this.robotTestItems.set(folder, new WorkspaceFolderEntry(true, items));
         }
-
         const tests = this.robotTestItems.get(folder)?.items;
-
         if (tests) {
-          for (const test of tests) {
-            addedIds.add(test.id);
-            const newItem = this.addOrUpdateTestItem(undefined, test);
-            await this.refreshItem(newItem, token);
-            if (newItem.canResolveChildren && newItem.children.size === 0 && newItem.error === undefined) {
-              addedIds.delete(newItem.id);
-            }
-          }
+          for (const t of tests) newRootChildren.push(t);
         }
       }
 
-      // TODO: we need a sleep after deletion here, it seem's there is a bug in vscode
-      if (this.removeNotAddedTestItems(undefined, addedIds)) await sleep(5);
+      // Phase 2: result compare against the last snapshot — if identical, no UI update.
+      const lastKnown = this.lastKnownChildren.get(rootKey);
+      if (robotItemListsEqual(lastKnown, newRootChildren)) return;
+
+      // Phase 3: actual UI updates.
+      const addedIds = new Set<string>();
+      for (const test of newRootChildren) {
+        if (token?.isCancellationRequested) return;
+        addedIds.add(test.id);
+        const newItem = this.addOrUpdateTestItem(undefined, test);
+        // Recursion path from the workspace refresh → skip the per-document discover.
+        await this.refreshItem(newItem, token, true);
+        if (newItem.canResolveChildren && newItem.children.size === 0 && newItem.error === undefined) {
+          addedIds.delete(newItem.id);
+        }
+      }
+
+      this.removeNotAddedTestItems(undefined, addedIds);
+      this.lastKnownChildren.set(rootKey, this.snapshotChildren(newRootChildren));
     }
   }
 
   private addOrUpdateTestItem(parentTestItem: vscode.TestItem | undefined, robotTestItem: RobotTestItem) {
+    const newCanResolveChildren =
+      robotTestItem.type === RobotItemType.SUITE || robotTestItem.type === RobotItemType.WORKSPACE;
+
     let testItem = parentTestItem
       ? parentTestItem.children.get(robotTestItem.id)
       : this.testController.items.get(robotTestItem.id);
@@ -1027,6 +1223,12 @@ export class TestControllerManager {
       );
 
       this.testItems.set(robotTestItem.id, testItem);
+      // testItemByUri only for containers — tests share the URI with their suite and
+      // would overwrite the suite entry. findTestItemForDocument is expected to return
+      // the suite item, not an individual test.
+      if (testItem.uri !== undefined && newCanResolveChildren) {
+        this.testItemByUri.set(testItem.uri.toString(), testItem);
+      }
 
       if (parentTestItem) {
         parentTestItem.children.add(testItem);
@@ -1035,33 +1237,46 @@ export class TestControllerManager {
       }
     }
 
-    testItem.canResolveChildren =
-      robotTestItem.type === RobotItemType.SUITE || robotTestItem.type === RobotItemType.WORKSPACE;
-
-    if (robotTestItem.range !== undefined) {
-      testItem.range = toVsCodeRange(robotTestItem.range);
+    if (testItem.canResolveChildren !== newCanResolveChildren) {
+      testItem.canResolveChildren = newCanResolveChildren;
     }
 
-    testItem.label = robotTestItem.name;
-    if (
+    if (robotTestItem.range !== undefined) {
+      const newRange = toVsCodeRange(robotTestItem.range);
+      if (testItem.range === undefined || !testItem.range.isEqual(newRange)) {
+        testItem.range = newRange;
+      }
+    }
+
+    if (testItem.label !== robotTestItem.name) {
+      testItem.label = robotTestItem.name;
+    }
+
+    const newDescription =
       robotTestItem.type == RobotItemType.TEST ||
       robotTestItem.type == RobotItemType.TASK ||
       robotTestItem.type == RobotItemType.SUITE
-    ) {
-      testItem.description = `${robotTestItem.type} ${robotTestItem.description ? ` - ${robotTestItem.description}` : ""}`;
-    } else {
-      testItem.description = robotTestItem.description;
+        ? `${robotTestItem.type} ${robotTestItem.description ? ` - ${robotTestItem.description}` : ""}`
+        : robotTestItem.description;
+    if (testItem.description !== newDescription) {
+      testItem.description = newDescription;
     }
 
-    if (robotTestItem.error !== undefined) {
+    if (robotTestItem.error !== undefined && testItem.error !== robotTestItem.error) {
       testItem.error = robotTestItem.error;
     }
 
-    const tags = this.convertTags(robotTestItem.tags) ?? [];
-
+    // Tag diff via cache of the last set tag IDs.
     const folderTag = this.getFolderTag(this.findWorkspaceFolderForItem(testItem));
-    if (folderTag !== undefined) tags?.push(folderTag);
-    if (tags) testItem.tags = tags;
+    const newTagIds = [...(robotTestItem.tags ?? [])];
+    if (folderTag !== undefined) newTagIds.push(folderTag.id);
+    const previousTagIds = this.lastSetTags.get(robotTestItem.id);
+    if (!arraysEqual(previousTagIds, newTagIds)) {
+      const tags = this.convertTags(robotTestItem.tags) ?? [];
+      if (folderTag !== undefined) tags.push(folderTag);
+      testItem.tags = tags;
+      this.lastSetTags.set(robotTestItem.id, newTagIds);
+    }
 
     return testItem;
   }
@@ -1083,6 +1298,14 @@ export class TestControllerManager {
       }
       items.delete(i);
       this.testItems.delete(i);
+      if (item?.uri !== undefined) {
+        const uriStr = item.uri.toString();
+        if (this.testItemByUri.get(uriStr) === item) {
+          this.testItemByUri.delete(uriStr);
+        }
+      }
+      this.lastSetTags.delete(i);
+      this.robotItemIndex.delete(i);
     });
 
     return itemsToRemove.size > 0;
@@ -1114,30 +1337,31 @@ export class TestControllerManager {
 
   private readonly refreshFromUriMutex = new Mutex();
 
-  private async refreshWorkspace(
-    workspace?: vscode.WorkspaceFolder,
-    _reason?: string,
-    token?: vscode.CancellationToken,
-  ): Promise<void> {
+  private async refreshWorkspace(workspace?: vscode.WorkspaceFolder, token?: vscode.CancellationToken): Promise<void> {
     return this.refreshFromUriMutex.dispatch(async () => {
+      // Incremental re-discover: only reset `valid` so refreshItem re-fetches the tests.
+      // removeWorkspaceFolderItems would be a wipe-and-recreate and would destroy the
+      // tree expansion state in VS Code. The result compare in refreshItem instead
+      // ensures that only actual differences are propagated.
       if (workspace) {
         const entry = this.robotTestItems.get(workspace);
         if (entry !== undefined) {
           entry.valid = false;
-        } else {
-          this.removeWorkspaceFolderItems(workspace);
         }
+        // Special case: never discovered → entry === undefined; refreshItem fetches fresh anyway.
       } else {
         for (const w of vscode.workspace.workspaceFolders ?? []) {
-          this.removeWorkspaceFolderItems(w);
+          const entry = this.robotTestItems.get(w);
+          if (entry !== undefined) {
+            entry.valid = false;
+          }
         }
       }
-      await sleep(5);
       await this.refresh(undefined, token);
     });
   }
 
-  private async refreshUri(uri?: vscode.Uri, reason?: string) {
+  private async refreshUri(uri?: vscode.Uri) {
     if (uri) {
       if (uri?.scheme !== "file") return;
 
@@ -1174,11 +1398,11 @@ export class TestControllerManager {
 
       this.refreshWorkspaceChangeTimer = new DidChangeEntry(
         setTimeout(() => {
-          this.refreshWorkspace(workspace, reason, cancelationTokenSource.token).then(
+          this.refreshWorkspace(workspace, cancelationTokenSource.token).then(
             () => undefined,
             () => undefined,
           );
-        }, 1000),
+        }, TestControllerManager.DEBOUNCE_MS),
         cancelationTokenSource,
       );
     } else {
@@ -1187,6 +1411,7 @@ export class TestControllerManager {
         this.refreshWorkspaceChangeTimer = undefined;
       }
 
+      // refresh()'s single-inflight handles cancellation of any predecessor.
       this.refresh().then(
         (_) => undefined,
         (_) => undefined,
@@ -1194,26 +1419,11 @@ export class TestControllerManager {
     }
   }
 
+  // eslint-disable-next-line class-methods-use-this
   private findWorkspaceFolderForItem(item: vscode.TestItem): vscode.WorkspaceFolder | undefined {
-    if (item.uri !== undefined) {
-      return vscode.workspace.getWorkspaceFolder(item.uri);
-    }
-
-    let parent: vscode.TestItem | undefined = item;
-    while (parent?.parent !== undefined) {
-      parent = parent.parent;
-    }
-
-    if (parent) item = parent;
-
-    for (const ws of vscode.workspace.workspaceFolders ?? []) {
-      if (this.robotTestItems.has(ws)) {
-        if (this.robotTestItems.get(ws)?.items?.find((w) => w.id === item.id) !== undefined) {
-          return ws;
-        }
-      }
-    }
-    return undefined;
+    // RobotTestItems always have a URI (workspace folder URI, suite file URI, or test
+    // file URI). Resolving via the URI is O(1) and correct in all cases.
+    return item.uri !== undefined ? vscode.workspace.getWorkspaceFolder(item.uri) : undefined;
   }
 
   private readonly testRunInfos = new Map<string, TestRunInfo>();
@@ -1241,13 +1451,9 @@ export class TestControllerManager {
 
   private static _runIdCounter = 0;
 
-  private static *runIdGenerator(): Iterator<string> {
-    while (true) {
-      yield (this._runIdCounter++).toString();
-    }
+  private static nextRunId(): string {
+    return (this._runIdCounter++).toString();
   }
-
-  private static readonly runId = TestControllerManager.runIdGenerator();
 
   public async runTests(
     request: vscode.TestRunRequest,
@@ -1305,7 +1511,7 @@ export class TestControllerManager {
       )
         continue;
 
-      const runId = TestControllerManager.runId.next().value;
+      const runId = TestControllerManager.nextRunId();
       this.testRunInfos.set(runId, new TestRunInfo(testRun));
 
       const options: vscode.DebugSessionOptions = {

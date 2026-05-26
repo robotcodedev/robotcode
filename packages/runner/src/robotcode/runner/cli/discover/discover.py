@@ -350,7 +350,7 @@ class Collector(SuiteVisitor):
                     start=Position(line=test.lineno - 1, character=0),
                     end=Position(line=test.lineno - 1, character=0),
                 ),
-                tags=list(set(normalize(str(t), ignore="_") for t in test.tags)) if test.tags else None,
+                tags=sorted(set(normalize(str(t), ignore="_") for t in test.tags)) if test.tags else None,
                 rpa=self._current.rpa,
             )
         except ValueError as e:
