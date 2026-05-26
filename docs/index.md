@@ -3,8 +3,7 @@ layout: home
 
 hero:
   name: RobotCode
-  text: Robot Framework IDE & CLI, the friendly way.
-  tagline: Language server, debugger, analyzer, REPL, and shareable profiles for IDE & CI
+  text: The complete Robot Framework toolkit
   image:
     src: /robotcode-toy-tray.png
     alt: RobotCode Logo
@@ -19,94 +18,68 @@ hero:
       text: Install JetBrains
       link: https://plugins.jetbrains.com/plugin/26216
     - theme: alt
-      text: CLI Reference
-      link: /03_reference
-    - theme: alt
       text: Star on GitHub
       link: https://github.com/robotcodedev/robotcode
     - theme: alt
       text: Sponsor
-      link: /05_contributing/#how-you-can-support-robotcode
+      link: /#sponsor-robotcode
 
 features:
   - icon: "🧠"
-    title: Autocomplete and IntelliSense
+    title: Code intelligence
     details: |
-      Get fast, context‑aware suggestions for libraries, resources, keywords (incl. embedded args), variables and namespaces.
-      Signature help, hover docs and inline diagnostics are powered by Robot Framework’s native parser for accuracy in both IDEs.
-
+      Context-aware completion for keywords (incl. embedded args), variables, libraries and resources. Hover docs, go-to-definition, find references, signature help, and live diagnostics — all powered by Robot Framework's own parser. Optional <a href="https://robocop.readthedocs.io">Robocop</a> integration adds further linting and formatting checks on top.
     link: /01_about
     linkText: Learn more
 
-  - icon: "🐞"
-    title: Run and Debug
-    details: |
-      Execute and debug tests directly from the editor or CLI. Set breakpoints, step through keywords, inspect variables,
-      and jump to failures. Works with suites, folders or single tests and integrates with Robot Framework logs/reports.
-
-    link: /02_get_started
-    linkText: Get Started
-
   - icon: "✏️"
-    title: Refactor with Confidence
+    title: Project-wide refactoring
     details: |
-      Project‑wide rename for keywords, arguments, variables and files with safe previews. References in resources,
-      libraries and tests are updated consistently across your workspace (incl. multi‑root setups).
+      Rename keywords, arguments, variables and files safely across your entire workspace, including resources, libraries and multi-root setups. Preview every change before applying it.
     link: /01_about
     linkText: Learn refactoring
 
+  - icon: "🐞"
+    title: Run, debug & test explorer
+    details: |
+      Discover and run tests from the editor's test panel or the CLI. Set breakpoints, step through keywords, inspect variables via the Debug Adapter Protocol, and jump straight to failures.
+    link: /02_get_started
+    linkText: Get Started
+
   - icon: "⚙️"
-    title: Powerful CLI + robot.toml
+    title: One config everywhere
     details: |
-      A unified CLI (enhanced <code>robot</code>, <code>rebot</code>, <code>libdoc</code>, <code>discover</code>) plus a central <a href="/03_reference/config">robot.toml</a> for profiles,
-      environments and repeatable execution. Ideal for local dev and CI pipelines.
+      A unified <a href="/03_reference/config">robot.toml</a> with profiles for dev, staging, CI, OS-specific or browser-specific setups. Editor, CLI and CI all read the same configuration — what works locally works in CI.
     link: /03_reference/config
-    linkText: robot.toml Reference
+    linkText: robot.toml reference
 
-  - icon: "🧪"
-    title: Test Discovery & Explorer
+  - icon: "🧰"
+    title: Powerful CLI
     details: |
-      Automatically discover tests and suites. Filter by tags, names and glob patterns. Use the Test Explorer to run suites,
-      folders or single cases — or leverage the <code>discover</code> command from the CLI.
-
+      A complete command-line interface for running, discovering, analyzing and inspecting Robot Framework projects. Every command is project-aware, JSON-friendly, and CI-ready.
     link: /03_reference/cli
-    linkText: CLI discover
+    linkText: CLI reference
 
-  - icon: "🔎"
-    title: Hover, Go to Definition & Peek
+  - icon: "📓"
+    title: REPL & notebooks
     details: |
-      Navigate precisely across libraries, resources, variables and keywords. Peek to definitions inline, jump with F12,
-      and rely on consistent cross‑references — the same engine powers VS Code and JetBrains.
-
-    link: /01_about
-    linkText: Navigation features
-
-  - icon: "🧹"
-    title: Linting and Formatting with Robocop
-    details: |
-      Optional integration with <a href="https://robocop.readthedocs.io">Robocop</a>: configurable rules, severities and ignores.
-      Run in the IDE or via CLI; keep quality high with actionable diagnostics and rule links. Configure via <code>robot.toml</code>.
-
-    link: https://robocop.readthedocs.io
-    linkText: Robocop Docs
+      Try keywords interactively with <code>robotcode repl</code> or work in <code>.robotbook</code> files with a Jupyter Notebook-style UI. Great for experimentation, demos, and debugging snippets.
+    link: /03_reference/cli#repl
+    linkText: REPL docs
 
   - icon: "🧩"
-    title: Multi‑IDE, same core
+    title: Multi-IDE, same core
     details: |
-      One LSP core powers both VS Code and JetBrains for a consistent experience: completion, navigation, refactoring and diagnostics.
-      Choose your IDE — capabilities stay aligned.
-
+      One Robot Framework language server powers VS Code, JetBrains, Neovim, Sublime Text and any LSP-capable editor. Choose your IDE — capabilities stay aligned.
     link: /01_about
     linkText: IDE overview
 
-  - icon: "📓"
-    title: REPL & Notebooks
+  - icon: "🤝"
+    title: Open source, built with the community
     details: |
-      Try keywords interactively and prototype flows quickly. Use <code>robotcode repl</code> for local sessions or <code>repl-server</code> in headless setups.
-      Great for experimentation, demos and debugging snippets.
-
-    link: /03_reference/cli#repl
-    linkText: REPL Docs
+      Free and open source — developed in close collaboration with the Robot Framework Core team and a worldwide community of testers, developers, and contributors.
+    link: https://github.com/robotcodedev/robotcode
+    linkText: GitHub
 
 ---
 
@@ -139,10 +112,17 @@ What you will learn:
 - Using the built-in REPL and test discovery features to explore and iterate quickly.
 - and many more...
 
-## Support RobotCode
+## Sponsor RobotCode
 
-- [GitHub Sponsors](https://github.com/sponsors/robotcodedev)
-- [Open Collective](https://opencollective.com/robotcode)
+**Individual:**
+- [GitHub Sponsors](https://github.com/sponsors/robotcodedev) – monthly or one-time
+- [Open Collective](https://opencollective.com/robotcode) – one-time or recurring
+
+**Corporate:**
+- [Open Collective](https://opencollective.com/robotcode) – direct, transparent, invoices, public ledger
+- [Robot Framework Foundation membership](https://robotframework.org/foundation/) – ecosystem support, indirectly benefits RobotCode
+
+See [Support & Contribute](/05_contributing/) for non-financial ways to help — bug reports, PRs, community help, and more.
 
 
 ## Powered by
