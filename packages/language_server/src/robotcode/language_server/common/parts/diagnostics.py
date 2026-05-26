@@ -436,7 +436,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
                 documents_to_collect = [
                     doc
                     for doc in documents
-                    if doc.opened_in_editor or self.get_diagnostics_mode(document.uri) == DiagnosticsMode.WORKSPACE
+                    if doc.opened_in_editor or self.get_diagnostics_mode(doc.uri) == DiagnosticsMode.WORKSPACE
                 ]
 
                 with self._logger.measure_time(

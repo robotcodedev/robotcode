@@ -1128,8 +1128,8 @@
             ],
             "default": "openFilesOnly",
             "enumDescriptions": [
-              "Analyzes and reports problems only on open files.",
-              "Analyzes and reports problems on all files in the workspace."
+              "Reports problems only on open files.",
+              "Reports problems on all files in the workspace."
             ],
             "description": "Analysis mode for diagnostics.",
             "scope": "resource"
