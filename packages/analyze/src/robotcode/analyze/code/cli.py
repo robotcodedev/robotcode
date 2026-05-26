@@ -158,7 +158,7 @@ def _validate_load_library_timeout(ctx: click.Context, param: click.Option, valu
 @click.option(
     "-f",
     "--filter",
-    "filter",
+    "filter_patterns",
     metavar="PATTERN",
     type=str,
     multiple=True,
@@ -279,7 +279,7 @@ def _validate_load_library_timeout(ctx: click.Context, param: click.Option, valu
 @pass_application
 def code(
     app: Application,
-    filter: Tuple[str, ...],
+    filter_patterns: Tuple[str, ...],
     variable: Tuple[str, ...],
     variablefile: Tuple[str, ...],
     pythonpath: Tuple[str, ...],
@@ -290,7 +290,7 @@ def code(
     modifiers_hint: Tuple[str, ...],
     exit_code_mask: ExitCodeMask,
     extend_exit_code_mask: ExitCodeMask,
-    paths: Tuple[Path],
+    paths: Tuple[Path, ...],
     load_library_timeout: Optional[int],
     collect_unused: Optional[bool],
     cache_namespaces: Optional[bool],
@@ -425,25 +425,31 @@ def code(
             ),
         )
         try:
-            for e in analyzer.run(paths=paths, filter=filter):
+            for e in analyzer.run(paths=paths, filter_patterns=filter_patterns):
                 result_collector.add_diagnostics_report(e)
 
             for e in result_collector.diagnostics:
                 if isinstance(e, FolderDiagnosticReport):
                     if e.items:
-                        _print_diagnostics(app, root_folder, e.items, e.folder.uri.to_path())
+                        folder_path = try_get_relative_path(e.folder.uri.to_path(), root_folder)
+                        _print_diagnostics(app, root_folder, e.items, folder_path, print_range=False)
                 elif isinstance(e, DocumentDiagnosticReport):
-                    doc_path = (
-                        e.document.uri.to_path().relative_to(root_folder) if root_folder else e.document.uri.to_path()
-                    )
+                    doc_path = try_get_relative_path(e.document.uri.to_path(), root_folder)
                     if e.items:
                         _print_diagnostics(app, root_folder, e.items, doc_path)
         finally:
             result_collector.stop()
 
         statistics_str = str(result_collector)
-        if result_collector.errors > 0:
-            statistics_str = click.style(statistics_str, fg="red")
+        for count, severity in (
+            (result_collector.errors, DiagnosticSeverity.ERROR),
+            (result_collector.warnings, DiagnosticSeverity.WARNING),
+            (result_collector.infos, DiagnosticSeverity.INFORMATION),
+            (result_collector.hints, DiagnosticSeverity.HINT),
+        ):
+            if count > 0:
+                statistics_str = click.style(statistics_str, fg=SEVERITY_COLORS[severity])
+                break
 
         app.echo(statistics_str)
 
@@ -469,7 +475,7 @@ def _print_diagnostics(
                     f"{folder_path}:"
                     + (f"{item.range.start.line + 1}:{item.range.start.character + 1}: " if print_range else " ")
                 )
-                if folder_path and folder_path != root_folder
+                if folder_path
                 else ""
             )
             + click.style(f"[{severity.name[0]}] {item.code}", fg=SEVERITY_COLORS[severity])
@@ -482,10 +488,6 @@ def _print_diagnostics(
 
                 app.echo(
                     f"    {related_path}:"
-                    + (
-                        f"{related.location.range.start.line + 1}:{related.location.range.start.character + 1}: "
-                        if print_range
-                        else " "
-                    )
-                    + f"{indent(related.message, prefix='      ').strip()}",
+                    f"{related.location.range.start.line + 1}:{related.location.range.start.character + 1}: "
+                    f"{indent(related.message, prefix='      ').strip()}",
                 )

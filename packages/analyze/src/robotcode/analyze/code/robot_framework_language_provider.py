@@ -58,8 +58,9 @@ class RobotFrameworkLanguageProvider(LanguageProvider):
         self.diagnostics_context.diagnostics.folder_analyzers.add(self.analyze_folder)
         self.diagnostics_context.diagnostics.document_analyzers.add(self.analyze_document)
         self.diagnostics_context.diagnostics.document_collectors.add(self.collect_diagnostics)
-        self.diagnostics_context.diagnostics.document_collectors.add(self.collect_unused_keywords)
-        self.diagnostics_context.diagnostics.document_collectors.add(self.collect_unused_variables)
+        if self.diagnostics_context.collect_unused:
+            self.diagnostics_context.diagnostics.document_collectors.add(self.collect_unused_keywords)
+            self.diagnostics_context.diagnostics.document_collectors.add(self.collect_unused_variables)
 
     def _update_python_path(self) -> None:
         root_path = (
@@ -125,9 +126,6 @@ class RobotFrameworkLanguageProvider(LanguageProvider):
         return self._document_cache.get_diagnostic_modifier(document).modify_diagnostics(namespace.diagnostics)
 
     def collect_unused_keywords(self, sender: Any, document: TextDocument) -> Optional[List[Diagnostic]]:
-        if not self.diagnostics_context.collect_unused:
-            return None
-
         namespace = self._document_cache.get_namespace(document)
 
         project_index = self._document_cache.get_project_index(document)
@@ -150,9 +148,6 @@ class RobotFrameworkLanguageProvider(LanguageProvider):
         return result
 
     def collect_unused_variables(self, sender: Any, document: TextDocument) -> Optional[List[Diagnostic]]:
-        if not self.diagnostics_context.collect_unused:
-            return None
-
         result: List[Diagnostic] = []
 
         namespace = self._document_cache.get_namespace(document)

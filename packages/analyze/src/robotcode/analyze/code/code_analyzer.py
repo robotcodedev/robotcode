@@ -6,7 +6,7 @@ from robotcode.core.ignore_spec import IgnoreSpec
 from robotcode.core.lsp.types import Diagnostic
 from robotcode.core.text_document import TextDocument
 from robotcode.core.uri import Uri
-from robotcode.core.utils.path import normalized_path
+from robotcode.core.utils.path import normalized_path, path_is_relative_to
 from robotcode.core.workspace import Workspace, WorkspaceFolder
 from robotcode.plugin import Application
 from robotcode.robot.config.model import RobotBaseProfile
@@ -85,7 +85,7 @@ class CodeAnalyzer(DiagnosticsContext):
         return self._dispatcher
 
     def run(
-        self, paths: Iterable[Path] = {}, filter: Iterable[str] = {}
+        self, paths: Iterable[Path] = (), filter_patterns: Iterable[str] = ()
     ) -> Iterable[Union[DocumentDiagnosticReport, FolderDiagnosticReport]]:
         for folder in self.workspace.workspace_folders:
             self.app.verbose(f"Initialize folder {folder.uri.to_path()}")
@@ -102,7 +102,7 @@ class CodeAnalyzer(DiagnosticsContext):
 
                 yield FolderDiagnosticReport(folder, diagnostics)
 
-            documents = self.collect_documents(folder, paths=paths, filter=filter)
+            documents = self.collect_documents(folder, paths=paths, filter_patterns=filter_patterns)
 
             with self.app.progressbar(documents, label="Analyzing Documents") as progressbar:
                 for document in progressbar:
@@ -117,13 +117,14 @@ class CodeAnalyzer(DiagnosticsContext):
                             else:
                                 diagnostics.extend(item)
 
-                        yield DocumentDiagnosticReport(document, diagnostics)
+                        if diagnostics:
+                            yield DocumentDiagnosticReport(document, diagnostics)
 
             with self.app.progressbar(documents, label="Collecting Diagnostics") as progressbar:
                 for document in progressbar:
                     analyze_result = self.diagnostics.collect_diagnostics(document)
+                    diagnostics = []
                     if analyze_result is not None:
-                        diagnostics = []
                         for item in analyze_result:
                             if item is None:
                                 continue
@@ -132,15 +133,16 @@ class CodeAnalyzer(DiagnosticsContext):
                             else:
                                 diagnostics.extend(item)
 
-                        yield DocumentDiagnosticReport(document, diagnostics)
+                    # Always yield, even when empty: the result collector uses this to count analyzed files.
+                    yield DocumentDiagnosticReport(document, diagnostics)
 
     def collect_documents(
-        self, folder: WorkspaceFolder, paths: Iterable[Path] = {}, filter: Iterable[str] = {}
+        self, folder: WorkspaceFolder, paths: Iterable[Path] = (), filter_patterns: Iterable[str] = ()
     ) -> List[TextDocument]:
         folder_root = folder.uri.to_path()
-        full_paths = [normalized_path(p).as_posix() for p in paths]
+        full_paths = [normalized_path(p) for p in paths]
 
-        ignore_spec = IgnoreSpec.from_list(filter, folder_root)
+        ignore_spec = IgnoreSpec.from_list(filter_patterns, folder_root)
 
         documents: List[TextDocument] = []
 
@@ -151,8 +153,8 @@ class CodeAnalyzer(DiagnosticsContext):
                 file_counter += 1
                 try:
                     document = self.workspace.documents.get_or_open_document(file)
-                    document_path = normalized_path(document.uri.to_path()).as_posix()
-                    if full_paths and not any(document_path.startswith(p) for p in full_paths):
+                    document_path = normalized_path(document.uri.to_path())
+                    if full_paths and not any(path_is_relative_to(document_path, p) for p in full_paths):
                         continue
 
                     if ignore_spec.rules and not ignore_spec.matches(document.uri.to_path()):
