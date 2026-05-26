@@ -42,7 +42,6 @@ def test_cli_unused_variable_diagnostics_ignore_intentionally_unused_variables(m
     document_cache.get_document_type.return_value = DocumentType.GENERAL
 
     provider = cast(Any, object.__new__(RobotFrameworkLanguageProvider))
-    provider.diagnostics_context = SimpleNamespace(collect_unused=True)
     provider._document_cache = document_cache
 
     diagnostics = cast(list[Diagnostic], provider.collect_unused_variables(mocker.Mock(), mocker.Mock()))
