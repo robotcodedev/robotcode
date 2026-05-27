@@ -2,8 +2,7 @@ import functools
 import time
 from enum import Flag
 from pathlib import Path
-from textwrap import indent
-from typing import List, Optional, Set, Tuple, Union
+from typing import Dict, List, Optional, Set, Tuple, Union
 
 import click
 
@@ -27,6 +26,13 @@ SEVERITY_COLORS = {
     DiagnosticSeverity.WARNING: "yellow",
     DiagnosticSeverity.INFORMATION: "blue",
     DiagnosticSeverity.HINT: "cyan",
+}
+
+SEVERITY_NAMES = {
+    DiagnosticSeverity.ERROR: "ERROR",
+    DiagnosticSeverity.WARNING: "WARNING",
+    DiagnosticSeverity.INFORMATION: "INFO",
+    DiagnosticSeverity.HINT: "HINT",
 }
 
 
@@ -273,6 +279,12 @@ def _validate_load_library_timeout(ctx: click.Context, param: click.Option, valu
     help="Enable or disable caching of fully analyzed namespace data to disk. "
     "Can speed up startup for large projects by skipping re-analysis of unchanged files.",
 )
+@click.option(
+    "--show-tracebacks/--no-show-tracebacks",
+    default=False,
+    help="Include the full diagnostic message in the output, including Python tracebacks and PYTHONPATH "
+    "listings that Robot Framework appends to import errors. Off by default to keep output concise.",
+)
 @click.argument(
     "paths", nargs=-1, type=click.Path(exists=True, dir_okay=True, file_okay=True, readable=True, path_type=Path)
 )
@@ -294,6 +306,7 @@ def code(
     load_library_timeout: Optional[int],
     collect_unused: Optional[bool],
     cache_namespaces: Optional[bool],
+    show_tracebacks: bool,
 ) -> None:
     """\
         Performs static code analysis to identify potential issues in the specified *PATHS*. The analysis detects syntax
@@ -428,15 +441,28 @@ def code(
             for e in analyzer.run(paths=paths, filter_patterns=filter_patterns):
                 result_collector.add_diagnostics_report(e)
 
+            # Folder-level diagnostics first (workspace-wide problems), then document
+            # diagnostics merged per file and sorted by (path, line, column) so the
+            # output is stable regardless of the analyzer pass order.
             for e in result_collector.diagnostics:
-                if isinstance(e, FolderDiagnosticReport):
-                    if e.items:
-                        folder_path = try_get_relative_path(e.folder.uri.to_path(), root_folder)
-                        _print_diagnostics(app, root_folder, e.items, folder_path, print_range=False)
-                elif isinstance(e, DocumentDiagnosticReport):
+                if isinstance(e, FolderDiagnosticReport) and e.items:
+                    folder_path = try_get_relative_path(e.folder.uri.to_path(), root_folder)
+                    _print_diagnostics(
+                        app, root_folder, e.items, folder_path, print_range=False, show_tracebacks=show_tracebacks
+                    )
+
+            documents_to_items: Dict[Path, List[Diagnostic]] = {}
+            for e in result_collector.diagnostics:
+                if isinstance(e, DocumentDiagnosticReport) and e.items:
                     doc_path = try_get_relative_path(e.document.uri.to_path(), root_folder)
-                    if e.items:
-                        _print_diagnostics(app, root_folder, e.items, doc_path)
+                    documents_to_items.setdefault(doc_path, []).extend(e.items)
+
+            for doc_path in sorted(documents_to_items):
+                items = sorted(
+                    documents_to_items[doc_path],
+                    key=lambda d: (d.range.start.line, d.range.start.character),
+                )
+                _print_diagnostics(app, root_folder, items, doc_path, show_tracebacks=show_tracebacks)
         finally:
             result_collector.stop()
 
@@ -459,15 +485,44 @@ def code(
         raise click.ClickException(str(e)) from e
 
 
+# Markers that Robot Framework appends to error messages for debugging.
+# In default mode they get trimmed; with -v / --verbose they stay.
+_DEBUG_SECTION_MARKERS = ("Traceback (most recent call last):", "PYTHONPATH:")
+
+
+def _trim_debug_sections(message: str) -> str:
+    """Cut a Robot Framework error message at the first debug section marker."""
+    kept: List[str] = []
+    for line in message.split("\n"):
+        if any(line.lstrip().startswith(m) for m in _DEBUG_SECTION_MARKERS):
+            break
+        kept.append(line)
+    return "\n".join(kept).rstrip()
+
+
+def _normalize_indent(message: str, indent: str) -> str:
+    """Normalize a multi-line message: keep the first line as-is, re-indent every
+    subsequent non-empty line with the given prefix (replacing whatever indent the
+    source string had). Empty lines are dropped."""
+    lines = message.splitlines()
+    if not lines:
+        return ""
+    head = lines[0].strip()
+    tail = [f"{indent}{line.strip()}" for line in lines[1:] if line.strip()]
+    return "\n".join([head, *tail])
+
+
 def _print_diagnostics(
     app: Application,
     root_folder: Optional[Path],
     diagnostics: List[Diagnostic],
     folder_path: Optional[Path],
     print_range: bool = True,
+    show_tracebacks: bool = False,
 ) -> None:
     for item in diagnostics:
         severity = item.severity if item.severity is not None else DiagnosticSeverity.ERROR
+        message = item.message if show_tracebacks else _trim_debug_sections(item.message)
 
         app.echo(
             (
@@ -478,16 +533,18 @@ def _print_diagnostics(
                 if folder_path
                 else ""
             )
-            + click.style(f"[{severity.name[0]}] {item.code}", fg=SEVERITY_COLORS[severity])
-            + f": {indent(item.message, prefix='  ').strip()}",
+            + click.style(f"[{SEVERITY_NAMES[severity]}] {item.code}", fg=SEVERITY_COLORS[severity])
+            + f": {_normalize_indent(message, '    ')}",
         )
 
         if item.related_information:
             for related in item.related_information or []:
                 related_path = try_get_relative_path(Uri(related.location.uri).to_path(), root_folder)
+                related_message = related.message if show_tracebacks else _trim_debug_sections(related.message)
+                rendered = _normalize_indent(related_message, "        ") or "(see related location)"
 
                 app.echo(
-                    f"    {related_path}:"
+                    f"    -> {related_path}:"
                     f"{related.location.range.start.line + 1}:{related.location.range.start.character + 1}: "
-                    f"{indent(related.message, prefix='      ').strip()}",
+                    f"{rendered}",
                 )

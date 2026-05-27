@@ -5,7 +5,13 @@ import click
 import pytest
 from pytest_mock import MockerFixture
 
-from robotcode.analyze.code.cli import SEVERITY_COLORS, _print_diagnostics
+from robotcode.analyze.code.cli import (
+    SEVERITY_COLORS,
+    SEVERITY_NAMES,
+    _normalize_indent,
+    _print_diagnostics,
+    _trim_debug_sections,
+)
 from robotcode.core.lsp.types import (
     Diagnostic,
     DiagnosticRelatedInformation,
@@ -53,6 +59,10 @@ def _capture(mocker: MockerFixture) -> Tuple[Any, List[str]]:
     return app, lines
 
 
+def _label(severity: DiagnosticSeverity, code: str) -> str:
+    return click.style(f"[{SEVERITY_NAMES[severity]}] {code}", fg=SEVERITY_COLORS[severity])
+
+
 class TestDocumentDiagnostics:
     def test_renders_path_severity_code_and_message(self, mocker: MockerFixture, tmp_path: Path) -> None:
         app, lines = _capture(mocker)
@@ -69,7 +79,7 @@ class TestDocumentDiagnostics:
         line = lines[0]
         assert line.startswith("tests/api/foo.robot:4:5: ")
         # ANSI red, severity label, code, then message.
-        assert click.style("[E] KeywordNotFound", fg=SEVERITY_COLORS[DiagnosticSeverity.ERROR]) in line
+        assert _label(DiagnosticSeverity.ERROR, "KeywordNotFound") in line
         assert line.endswith(": boom")
 
     def test_warning_uses_yellow(self, mocker: MockerFixture, tmp_path: Path) -> None:
@@ -77,14 +87,14 @@ class TestDocumentDiagnostics:
 
         _print_diagnostics(app, tmp_path, [_diag(severity=DiagnosticSeverity.WARNING, code="W")], Path("x.robot"))
 
-        assert click.style("[W] W", fg=SEVERITY_COLORS[DiagnosticSeverity.WARNING]) in lines[0]
+        assert _label(DiagnosticSeverity.WARNING, "W") in lines[0]
 
     def test_diagnostic_without_severity_falls_back_to_error(self, mocker: MockerFixture, tmp_path: Path) -> None:
         app, lines = _capture(mocker)
 
         _print_diagnostics(app, tmp_path, [_diag(severity=None, code="X")], Path("y.robot"))
 
-        assert click.style("[E] X", fg=SEVERITY_COLORS[DiagnosticSeverity.ERROR]) in lines[0]
+        assert _label(DiagnosticSeverity.ERROR, "X") in lines[0]
 
 
 class TestFolderDiagnostics:
@@ -110,7 +120,7 @@ class TestFolderDiagnostics:
         _print_diagnostics(app, tmp_path, [_diag(code="X")], None)
 
         # No path prefix at all when folder_path is None: the line starts directly with the styled label.
-        assert lines[0].startswith(click.style("[E] X", fg=SEVERITY_COLORS[DiagnosticSeverity.ERROR]))
+        assert lines[0].startswith(_label(DiagnosticSeverity.ERROR, "X"))
 
 
 class TestRelatedInformation:
@@ -155,22 +165,154 @@ class TestRelatedInformation:
 
         assert "sub/deep.py:1:1:" in lines[1]
 
+    def test_related_message_trimmed_by_default(self, mocker: MockerFixture, tmp_path: Path) -> None:
+        app, lines = _capture(mocker)
+        related_file = tmp_path / "x.py"
+        multi = "headline\nTraceback (most recent call last):\n  None\nPYTHONPATH:\n  /a"
+
+        _print_diagnostics(
+            app,
+            tmp_path,
+            [_diag(related=[_related(related_file, message=multi)])],
+            Path("doc.robot"),
+        )
+
+        assert "headline" in lines[1]
+        assert "Traceback" not in lines[1]
+        assert "PYTHONPATH" not in lines[1]
+
+    def test_related_line_has_arrow_marker(self, mocker: MockerFixture, tmp_path: Path) -> None:
+        app, lines = _capture(mocker)
+        related_file = tmp_path / "x.py"
+
+        _print_diagnostics(
+            app,
+            tmp_path,
+            [_diag(related=[_related(related_file, message="something")])],
+            Path("doc.robot"),
+        )
+
+        # Marker `-> ` makes related lines visually distinct from regular diagnostics.
+        assert lines[1].startswith("    -> ")
+
+    def test_empty_related_message_gets_fallback(self, mocker: MockerFixture, tmp_path: Path) -> None:
+        app, lines = _capture(mocker)
+        related_file = tmp_path / "x.py"
+
+        _print_diagnostics(
+            app,
+            tmp_path,
+            [_diag(related=[_related(related_file, message="")])],
+            Path("doc.robot"),
+        )
+
+        assert "(see related location)" in lines[1]
+
+    def test_related_message_full_when_show_tracebacks(self, mocker: MockerFixture, tmp_path: Path) -> None:
+        app, lines = _capture(mocker)
+        related_file = tmp_path / "x.py"
+        multi = "headline\nTraceback (most recent call last):\n  None"
+
+        _print_diagnostics(
+            app,
+            tmp_path,
+            [_diag(related=[_related(related_file, message=multi)])],
+            Path("doc.robot"),
+            show_tracebacks=True,
+        )
+
+        assert "headline" in lines[1]
+        assert "Traceback" in lines[1]
+
+
+class TestTrimDebugSections:
+    def test_keeps_message_without_markers_unchanged(self) -> None:
+        msg = "Multiple keywords matching name 'x' found:\n  alt one\n  alt two"
+        assert _trim_debug_sections(msg) == msg
+
+    def test_drops_python_traceback(self) -> None:
+        msg = "headline\nTraceback (most recent call last):\n  None"
+        assert _trim_debug_sections(msg) == "headline"
+
+    def test_drops_pythonpath_block(self) -> None:
+        msg = "headline\nPYTHONPATH:\n  /a\n  /b"
+        assert _trim_debug_sections(msg) == "headline"
+
+    def test_drops_indented_markers(self) -> None:
+        # Markers can appear indented (as Robot's error.message sometimes wraps them).
+        msg = "headline\n    Traceback (most recent call last):\n      None"
+        assert _trim_debug_sections(msg) == "headline"
+
+    def test_item_message_drops_traceback_by_default(self, mocker: MockerFixture, tmp_path: Path) -> None:
+        app, lines = _capture(mocker)
+        long_msg = "Importing test library 'X' failed: ModuleNotFoundError\nTraceback (most recent call last):\n  None"
+
+        _print_diagnostics(app, tmp_path, [_diag(message=long_msg, code="DataError")], Path("doc.robot"))
+
+        assert "Importing test library" in lines[0]
+        assert "Traceback" not in lines[0]
+
+    def test_item_message_full_when_show_tracebacks(self, mocker: MockerFixture, tmp_path: Path) -> None:
+        app, lines = _capture(mocker)
+        long_msg = "Importing test library 'X' failed: ModuleNotFoundError\nTraceback (most recent call last):\n  None"
+
+        _print_diagnostics(
+            app, tmp_path, [_diag(message=long_msg, code="DataError")], Path("doc.robot"), show_tracebacks=True
+        )
+
+        assert "Importing test library" in lines[0]
+        assert "Traceback" in lines[0]
+
+
+class TestNormalizeIndent:
+    def test_single_line_passes_through(self) -> None:
+        assert _normalize_indent("just one line", "    ") == "just one line"
+
+    def test_multiline_reindents_subsequent_lines(self) -> None:
+        msg = "headline:\n      alt one\n      alt two"
+        assert _normalize_indent(msg, "    ") == "headline:\n    alt one\n    alt two"
+
+    def test_blank_lines_dropped(self) -> None:
+        msg = "headline:\n\n  alt\n   \n  alt2"
+        assert _normalize_indent(msg, "    ") == "headline:\n    alt\n    alt2"
+
+    def test_first_line_is_stripped(self) -> None:
+        assert _normalize_indent("   leading\n  child", "    ") == "leading\n    child"
+
+    def test_empty_input(self) -> None:
+        assert _normalize_indent("", "    ") == ""
+
+
+class TestMultiLineItemMessage:
+    def test_multiline_item_message_is_reindented(self, mocker: MockerFixture, tmp_path: Path) -> None:
+        app, lines = _capture(mocker)
+        msg = "Multiple keywords found:\n        alt one\n        alt two"
+
+        _print_diagnostics(app, tmp_path, [_diag(message=msg, code="MultipleKeywords")], Path("doc.robot"))
+
+        # Single echo call carrying multi-line content.
+        assert len(lines) == 1
+        out_lines = lines[0].split("\n")
+        assert out_lines[0].endswith(": Multiple keywords found:")
+        assert out_lines[1] == "    alt one"
+        assert out_lines[2] == "    alt two"
+
 
 class TestSeverityColors:
     @pytest.mark.parametrize(
-        ("severity", "label"),
+        "severity",
         [
-            (DiagnosticSeverity.ERROR, "[E]"),
-            (DiagnosticSeverity.WARNING, "[W]"),
-            (DiagnosticSeverity.INFORMATION, "[I]"),
-            (DiagnosticSeverity.HINT, "[H]"),
+            DiagnosticSeverity.ERROR,
+            DiagnosticSeverity.WARNING,
+            DiagnosticSeverity.INFORMATION,
+            DiagnosticSeverity.HINT,
         ],
     )
     def test_each_severity_uses_its_color(
-        self, mocker: MockerFixture, tmp_path: Path, severity: DiagnosticSeverity, label: str
+        self, mocker: MockerFixture, tmp_path: Path, severity: DiagnosticSeverity
     ) -> None:
         app, lines = _capture(mocker)
 
         _print_diagnostics(app, tmp_path, [_diag(severity=severity, code="C")], Path("x.robot"))
 
-        assert click.style(f"{label} C", fg=SEVERITY_COLORS[severity]) in lines[0]
+        assert _label(severity, "C") in lines[0]
