@@ -48,7 +48,7 @@ classifiers = [
   "Framework :: Robot Framework :: Tool",
 ]
 requires-python = ">=3.10"
-dependencies = ["robotcode-core", "robotcode-plugin", "robotcode-robot"]
+dependencies = ["robotcode-core==2.5.1", "robotcode-plugin==2.5.1", "robotcode-robot==2.5.1"]
 dynamic = ["version"]
 
 [project.optional-dependencies]
@@ -62,12 +62,12 @@ rest = ["docutils"]
 repl = ["robotcode-repl==2.5.1"]
 replserver = ["robotcode-repl-server==2.5.1"]
 all = [
-  "robotcode-debugger",
-  "robotcode-language-server",
-  "robotcode-runner[html]",
-  "robotcode-analyze",
-  "robotcode-repl",
-  "robotcode-repl-server",
+  "robotcode-debugger==2.5.1",
+  "robotcode-language-server==2.5.1",
+  "robotcode-runner[html]==2.5.1",
+  "robotcode-analyze==2.5.1",
+  "robotcode-repl==2.5.1",
+  "robotcode-repl-server==2.5.1",
   "PyYAML>=5.4",
   "robotframework-robocop>=6.0.0",
   "docutils"

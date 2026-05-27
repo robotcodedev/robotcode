@@ -28,7 +28,7 @@ classifiers = [
 ]
 dynamic = ["version"]
 dependencies = [
-  "robotcode-runner",
+  "robotcode-runner==2.5.1",
   "prompt_toolkit!=3.0.52"
 ]
 
