@@ -114,16 +114,22 @@ hint = ["KeywordNotUsed"]
 
 Because the severity is configurable, the text and SARIF/GitHub/GitLab output always carries the **effective** severity, not a hard-coded one. For the full modifier system — including inline `# robotcode:` comments — see [Controlling Diagnostics with Modifiers](diagnostics-modifiers.md).
 
-### Reporting only some severities
+### Reporting only some diagnostics
 
-`--severity` restricts the result to certain severities. Unlike the modifiers above (which *remap* a code's severity), this *filters*: severities you don't list are dropped from the output, the summary **and** the exit code alike. The flag is repeatable and comma-separated; valid values are `error`, `warn`/`warning`, `info`/`information`, `hint`.
+Two flags narrow the result to a subset. Unlike the modifiers above (which *remap* a code's severity), these *filter*: whatever you don't list is dropped from the output, the summary **and** the exit code alike — the severity of what remains is unchanged.
+
+- **`--severity`** — keep only the given severities. Values: `error`, `warn`/`warning`, `info`/`information`, `hint`.
+- **`--code`** — keep only the given diagnostic codes (e.g. `KeywordNotFound`); matching is case-insensitive.
+
+Both are repeatable and comma-separated. When both are given they combine with **AND** — a diagnostic must match both.
 
 ```bash
-robotcode analyze code --severity warning,hint   # only warnings and hints
-robotcode analyze code --severity error          # only errors — the exit code then reflects errors only
+robotcode analyze code --severity warning,hint               # only warnings and hints
+robotcode analyze code --code KeywordNotFound                # only KeywordNotFound, with its real severity
+robotcode analyze code --code KeywordNotUsed --severity hint  # only KeywordNotUsed that are hints
 ```
 
-When `--severity` is omitted, all severities are reported.
+When neither is given, everything is reported.
 
 ## Exit codes
 
