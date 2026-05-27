@@ -112,6 +112,15 @@ error = ["MultipleKeywords"]
 hint = ["KeywordNotUsed"]
 ```
 
+`*` is a wildcard that matches every code, so `-mi "*"` silences all diagnostics. Re-introducing specific codes at a chosen severity then gives you an allow-list:
+
+```bash
+# show only KeywordNotFound — reported as a warning
+robotcode analyze code -mi "*" -mw KeywordNotFound
+```
+
+This is a *remap* (the kept codes take the severity you assign). If you instead want to keep a code at its original severity, use the [`--code` filter](#reporting-only-some-diagnostics).
+
 Because the severity is configurable, the text and SARIF/GitHub/GitLab output always carries the **effective** severity, not a hard-coded one. For the full modifier system — including inline `# robotcode:` comments — see [Controlling Diagnostics with Modifiers](diagnostics-modifiers.md).
 
 ### Reporting only some diagnostics
