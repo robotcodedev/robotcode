@@ -40,6 +40,8 @@ def test_cli_unused_variable_diagnostics_ignore_intentionally_unused_variables(m
     document_cache.get_namespace.return_value = namespace
     document_cache.get_project_index.return_value = mocker.Mock()
     document_cache.get_document_type.return_value = DocumentType.GENERAL
+    # No modifiers configured: the diagnostic modifier passes diagnostics through unchanged.
+    document_cache.get_diagnostic_modifier.return_value.modify_diagnostics.side_effect = lambda diags: diags
 
     provider = cast(Any, object.__new__(RobotFrameworkLanguageProvider))
     provider._document_cache = document_cache
@@ -48,3 +50,24 @@ def test_cli_unused_variable_diagnostics_ignore_intentionally_unused_variables(m
 
     assert [diagnostic.message for diagnostic in diagnostics] == ["Variable '${unused}' is not used."]
     assert [diagnostic.code for diagnostic in diagnostics] == ["VariableNotUsed"]
+
+
+def test_unused_variable_diagnostics_pass_through_diagnostic_modifier(mocker: MockerFixture) -> None:
+    # Regression: unused diagnostics must go through the diagnostic modifier so they can be
+    # ignored/restyled via -mi/-mX or `# robotcode:` comments, like every other diagnostic.
+    unused = _local_variable("unused", 1)
+    namespace = SimpleNamespace(source=SOURCE, variable_references={unused: set()})
+    document_cache = mocker.Mock()
+    document_cache.get_namespace.return_value = namespace
+    document_cache.get_project_index.return_value = mocker.Mock()
+    document_cache.get_document_type.return_value = DocumentType.GENERAL
+    # Simulate a modifier that drops everything (e.g. `-mi "*"`).
+    document_cache.get_diagnostic_modifier.return_value.modify_diagnostics.side_effect = lambda *_: []
+
+    provider = cast(Any, object.__new__(RobotFrameworkLanguageProvider))
+    provider._document_cache = document_cache
+
+    diagnostics = cast(list[Diagnostic], provider.collect_unused_variables(mocker.Mock(), mocker.Mock()))
+
+    document_cache.get_diagnostic_modifier.return_value.modify_diagnostics.assert_called_once()
+    assert diagnostics == []

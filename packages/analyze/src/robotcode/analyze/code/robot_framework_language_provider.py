@@ -145,7 +145,7 @@ class RobotFrameworkLanguageProvider(LanguageProvider):
                     )
                 )
 
-        return result
+        return self._document_cache.get_diagnostic_modifier(document).modify_diagnostics(result)
 
     def collect_unused_variables(self, sender: Any, document: TextDocument) -> Optional[List[Diagnostic]]:
         result: List[Diagnostic] = []
@@ -193,4 +193,4 @@ class RobotFrameworkLanguageProvider(LanguageProvider):
                     )
                 )
 
-        return result
+        return self._document_cache.get_diagnostic_modifier(document).modify_diagnostics(result)
