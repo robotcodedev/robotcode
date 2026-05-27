@@ -82,6 +82,8 @@ This adds two diagnostics:
 - **`KeywordNotUsed`** — a keyword defined in the project that nothing references.
 - **`VariableNotUsed`** — a variable/argument that's never read. Names that are intentionally unused (`${_}`, `${_ignored}`) are skipped.
 
+They behave like any other diagnostic — you can remap or ignore them with the [modifiers](#severities-and-diagnostic-modifiers) (e.g. `-mh KeywordNotUsed`) or `# robotcode:` comments.
+
 You can also turn this on permanently in `robot.toml`:
 
 ```toml
@@ -111,6 +113,17 @@ hint = ["KeywordNotUsed"]
 ```
 
 Because the severity is configurable, the text and SARIF/GitHub/GitLab output always carries the **effective** severity, not a hard-coded one. For the full modifier system — including inline `# robotcode:` comments — see [Controlling Diagnostics with Modifiers](diagnostics-modifiers.md).
+
+### Reporting only some severities
+
+`--severity` restricts the result to certain severities. Unlike the modifiers above (which *remap* a code's severity), this *filters*: severities you don't list are dropped from the output, the summary **and** the exit code alike. The flag is repeatable and comma-separated; valid values are `error`, `warn`/`warning`, `info`/`information`, `hint`.
+
+```bash
+robotcode analyze code --severity warning,hint   # only warnings and hints
+robotcode analyze code --severity error          # only errors — the exit code then reflects errors only
+```
+
+When `--severity` is omitted, all severities are reported.
 
 ## Exit codes
 
