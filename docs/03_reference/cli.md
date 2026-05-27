@@ -537,6 +537,16 @@ robotcode analyze code [OPTIONS] [PATHS]...
    Extend the exit code mask with the specified values. This appends to the default mask, defined in the config file.
 
 
+- `--severity [error|warn|warning|info|information|hint] *`
+
+   Only report diagnostics of these severities. Repeatable and comma-separated. Filtered-out severities are ignored entirely — they don't appear in the output, the summary or the exit code. When omitted, all severities are reported.
+
+
+- `--code CODE *`
+
+   Only report diagnostics with these codes (e.g. `KeywordNotFound`). Repeatable and comma-separated; matching is case-insensitive. Unlike the modifiers, this filters without changing severity. Combined with --severity, both must match. When omitted, all codes are reported.
+
+
 - `--load-library-timeout SECONDS`
 
    Timeout (in seconds) for loading libraries and variable files during analysis. Must be > 0. Overrides config file and environment variable when set.  [env var: ROBOTCODE_LOAD_LIBRARY_TIMEOUT]
@@ -550,6 +560,26 @@ robotcode analyze code [OPTIONS] [PATHS]...
 - `--cache-namespaces / --no-cache-namespaces`
 
    Enable or disable caching of fully analyzed namespace data to disk. Can speed up startup for large projects by skipping re-analysis of unchanged files.
+
+
+- `--show-tracebacks / --no-show-tracebacks`
+
+   Include the full diagnostic message in the text output, including Python tracebacks and PYTHONPATH listings that Robot Framework appends to import errors. Off by default to keep output concise. Has no effect on JSON output, which always carries the full message.
+
+
+- `--full-paths / --no-full-paths`
+
+   Show full paths instead of paths relative to the project root. Applies to both text and JSON output.  [default: no-full-paths]
+
+
+- `--output-format [concise|json|json-indent|sarif|github|gitlab]`
+
+   Output format for the analysis result. Overrides the global `--format` for this command. `concise` (default) is the human-readable text output; `sarif` emits a SARIF 2.1.0 log; `github` emits GitHub Actions workflow annotations; `gitlab` emits a GitLab Code Quality report.
+
+
+- `--output-file FILE`
+
+   Write the report to FILE instead of stdout. Useful with `--output-format sarif`/`gitlab` to produce an artifact for CI upload.
 
 
 - `--help`
