@@ -3,7 +3,7 @@ from typing import Any, List, Optional, Set
 import click
 import pytest
 
-from robotcode.analyze.code.cli import ResultCollector, ReturnCode, _parse_severities
+from robotcode.analyze.code.cli import ResultCollector, ReturnCode, _parse_codes, _parse_severities
 from robotcode.analyze.code.code_analyzer import DocumentDiagnosticReport
 from robotcode.analyze.config import ExitCodeMask
 from robotcode.core.lsp.types import Diagnostic, DiagnosticSeverity, Position, Range
@@ -21,6 +21,16 @@ def _report(severities: List[DiagnosticSeverity]) -> DocumentDiagnosticReport:
     # The collector only inspects `.items` and `.document`; the document
     # identity matters only for de-duplication via the internal set.
     return DocumentDiagnosticReport(document=object(), items=[_diag(s) for s in severities])  # type: ignore[arg-type]
+
+
+def _diag_code(code: str, severity: DiagnosticSeverity = DiagnosticSeverity.WARNING) -> Diagnostic:
+    d = _diag(severity)
+    d.code = code
+    return d
+
+
+def _report_items(items: List[Diagnostic]) -> DocumentDiagnosticReport:
+    return DocumentDiagnosticReport(document=object(), items=items)  # type: ignore[arg-type]
 
 
 class TestResultCollectorCounts:
@@ -183,6 +193,48 @@ class TestParseSeverities:
     def test_invalid_value_raises(self) -> None:
         with pytest.raises(click.BadParameter, match="bogus"):
             _parse_severities(None, None, ("bogus",))  # type: ignore[arg-type]
+
+
+class TestCodeFilter:
+    def test_keeps_only_matching_codes(self) -> None:
+        collector = ResultCollector(ExitCodeMask.NONE, codes={"keywordnotfound"})
+        collector.add_diagnostics_report(_report_items([_diag_code("KeywordNotFound"), _diag_code("VariableNotFound")]))
+        kept = collector.diagnostics[0].items
+        assert [d.code for d in kept] == ["KeywordNotFound"]
+
+    def test_match_is_case_and_separator_insensitive(self) -> None:
+        # The filter normalizes like the modifiers: "keyword-not-found" matches "KeywordNotFound".
+        collector = ResultCollector(ExitCodeMask.NONE, codes={"keywordnotfound"})
+        collector.add_diagnostics_report(_report_items([_diag_code("KeywordNotFound")]))
+        assert len(collector.diagnostics[0].items) == 1
+
+    def test_does_not_change_severity(self) -> None:
+        collector = ResultCollector(ExitCodeMask.NONE, codes={"keywordnotused"})
+        collector.add_diagnostics_report(_report_items([_diag_code("KeywordNotUsed", DiagnosticSeverity.WARNING)]))
+        assert collector.diagnostics[0].items[0].severity == DiagnosticSeverity.WARNING
+
+    def test_combined_with_severity_is_and(self) -> None:
+        # code matches but severity doesn't -> dropped.
+        collector = ResultCollector(ExitCodeMask.NONE, severities={DiagnosticSeverity.ERROR}, codes={"keywordnotused"})
+        collector.add_diagnostics_report(_report_items([_diag_code("KeywordNotUsed", DiagnosticSeverity.WARNING)]))
+        assert collector.diagnostics[0].items == []
+
+
+class TestParseCodes:
+    @pytest.mark.parametrize(
+        ("value", "expected"),
+        [
+            ((), None),
+            (("KeywordNotFound",), {"keywordnotfound"}),
+            (("keyword-not-found",), {"keywordnotfound"}),
+            (("Keyword Not Found",), {"keywordnotfound"}),
+            (("A,B",), {"a", "b"}),
+            (("A", "B"), {"a", "b"}),
+            ((",, A ,",), {"a"}),
+        ],
+    )
+    def test_valid_values(self, value: Any, expected: Optional[Set[str]]) -> None:
+        assert _parse_codes(None, None, value) == expected  # type: ignore[arg-type]
 
 
 class TestFormatDuration:

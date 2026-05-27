@@ -82,11 +82,17 @@ class ReturnCode(Flag):
 
 
 class ResultCollector:
-    def __init__(self, exit_code_mask: ExitCodeMask, severities: Optional[Set[DiagnosticSeverity]] = None) -> None:
+    def __init__(
+        self,
+        exit_code_mask: ExitCodeMask,
+        severities: Optional[Set[DiagnosticSeverity]] = None,
+        codes: Optional[Set[str]] = None,
+    ) -> None:
         self.exit_code_mask = exit_code_mask
-        # When set, only diagnostics with one of these severities are kept — affecting the
-        # output, the summary counts and the exit code alike.
+        # When set, only diagnostics matching these filters are kept — affecting the output,
+        # the summary counts and the exit code alike. Severity and code filters combine with AND.
         self._severities = severities
+        self._codes = codes
         self._folders: Set[WorkspaceFolder] = set()
         self._files: Set[TextDocument] = set()
         self.diagnostics: List[Union[DocumentDiagnosticReport, FolderDiagnosticReport]] = []
@@ -151,16 +157,24 @@ class ResultCollector:
     def files(self) -> int:
         return len(self._files)
 
+    def _keep(self, diagnostic: Diagnostic) -> bool:
+        if self._severities is not None:
+            severity = diagnostic.severity if diagnostic.severity is not None else DiagnosticSeverity.ERROR
+            if severity not in self._severities:
+                return False
+        if self._codes is not None:
+            code = normalize_code(str(diagnostic.code)) if diagnostic.code is not None else None
+            if code not in self._codes:
+                return False
+        return True
+
     def add_diagnostics_report(
         self, diagnostics_report: Union[DocumentDiagnosticReport, FolderDiagnosticReport]
     ) -> None:
-        if self._severities is not None:
-            kept = [
-                d
-                for d in diagnostics_report.items
-                if (d.severity if d.severity is not None else DiagnosticSeverity.ERROR) in self._severities
-            ]
-            diagnostics_report = replace(diagnostics_report, items=kept)
+        if self._severities is not None or self._codes is not None:
+            diagnostics_report = replace(
+                diagnostics_report, items=[d for d in diagnostics_report.items if self._keep(d)]
+            )
 
         self.diagnostics.append(diagnostics_report)
 
@@ -220,6 +234,26 @@ def _parse_severities(
             if severity is None:
                 raise click.BadParameter(f"invalid severity: {part_orig}")
             result.add(severity)
+    return result or None
+
+
+# Same normalization the diagnostic modifiers use, so `--code keyword-not-found`,
+# `KeywordNotFound` and `keywordnotfound` all match.
+_CODE_TRANSLATION = str.maketrans("", "", "_- ")
+
+
+def normalize_code(code: str) -> str:
+    return code.translate(_CODE_TRANSLATION).lower()
+
+
+def _parse_codes(ctx: click.Context, param: click.Option, value: Tuple[str, ...]) -> Optional[Set[str]]:
+    """Parse repeated/comma-separated --code values into a normalized set, or None when unset."""
+    result: Set[str] = set()
+    for entry in value:
+        for part_orig in entry.split(","):
+            part = normalize_code(part_orig.strip())
+            if part:
+                result.add(part)
     return result or None
 
 
@@ -344,6 +378,16 @@ def _validate_load_library_timeout(ctx: click.Context, param: click.Option, valu
     "When omitted, all severities are reported.",
 )
 @click.option(
+    "--code",
+    "codes",
+    multiple=True,
+    callback=_parse_codes,
+    metavar="CODE",
+    help="Only report diagnostics with these codes (e.g. `KeywordNotFound`). Repeatable and comma-separated; "
+    "matching is case-insensitive. Unlike the modifiers, this filters without changing severity. "
+    "Combined with --severity, both must match. When omitted, all codes are reported.",
+)
+@click.option(
     "--load-library-timeout",
     type=int,
     callback=_validate_load_library_timeout,
@@ -415,6 +459,7 @@ def code(
     exit_code_mask: ExitCodeMask,
     extend_exit_code_mask: ExitCodeMask,
     severity: Optional[Set[DiagnosticSeverity]],
+    codes: Optional[Set[str]],
     paths: Tuple[Path, ...],
     load_library_timeout: Optional[int],
     collect_unused: Optional[bool],
@@ -540,7 +585,7 @@ def code(
         app.verbose(f"Using analyzer_config: {analyzer_config}")
         app.verbose(f"Using exit code mask: {mask}")
 
-        result_collector = ResultCollector(mask, severities=severity)
+        result_collector = ResultCollector(mask, severities=severity, codes=codes)
         result_collector.start()
         analyzer = CodeAnalyzer(
             app=app,
