@@ -1,8 +1,9 @@
-from typing import List
+from typing import Any, List, Optional, Set
 
+import click
 import pytest
 
-from robotcode.analyze.code.cli import ResultCollector, ReturnCode
+from robotcode.analyze.code.cli import ResultCollector, ReturnCode, _parse_severities
 from robotcode.analyze.code.code_analyzer import DocumentDiagnosticReport
 from robotcode.analyze.config import ExitCodeMask
 from robotcode.core.lsp.types import Diagnostic, DiagnosticSeverity, Position, Range
@@ -126,6 +127,62 @@ class TestExitCodeMaskParse:
     def test_invalid_value_raises_keyerror(self) -> None:
         with pytest.raises(KeyError, match="bogus"):
             ExitCodeMask.parse(("bogus",))
+
+
+class TestSeverityFilter:
+    def test_no_filter_keeps_everything(self) -> None:
+        collector = ResultCollector(ExitCodeMask.NONE, severities=None)
+        collector.add_diagnostics_report(
+            _report([DiagnosticSeverity.ERROR, DiagnosticSeverity.WARNING, DiagnosticSeverity.HINT])
+        )
+        assert (collector.errors, collector.warnings, collector.hints) == (1, 1, 1)
+
+    def test_filter_drops_other_severities_from_counts(self) -> None:
+        collector = ResultCollector(ExitCodeMask.NONE, severities={DiagnosticSeverity.WARNING})
+        collector.add_diagnostics_report(
+            _report([DiagnosticSeverity.ERROR, DiagnosticSeverity.WARNING, DiagnosticSeverity.HINT])
+        )
+        assert (collector.errors, collector.warnings, collector.infos, collector.hints) == (0, 1, 0, 0)
+
+    def test_filter_affects_the_stored_diagnostics(self) -> None:
+        collector = ResultCollector(ExitCodeMask.NONE, severities={DiagnosticSeverity.ERROR})
+        collector.add_diagnostics_report(_report([DiagnosticSeverity.ERROR, DiagnosticSeverity.WARNING]))
+        items = collector.diagnostics[0].items
+        assert [d.severity for d in items] == [DiagnosticSeverity.ERROR]
+
+    def test_filter_affects_exit_code(self) -> None:
+        # Only warnings are kept, so even though an error exists, the exit code reflects warnings only.
+        collector = ResultCollector(ExitCodeMask.NONE, severities={DiagnosticSeverity.WARNING})
+        collector.add_diagnostics_report(_report([DiagnosticSeverity.ERROR, DiagnosticSeverity.WARNING]))
+        rc = collector.calculate_return_code()
+        assert ReturnCode.WARNINGS in rc
+        assert ReturnCode.ERRORS not in rc
+
+
+class TestParseSeverities:
+    @pytest.mark.parametrize(
+        ("value", "expected"),
+        [
+            ((), None),
+            (("error",), {DiagnosticSeverity.ERROR}),
+            (("warn",), {DiagnosticSeverity.WARNING}),
+            (("warning",), {DiagnosticSeverity.WARNING}),
+            (("info",), {DiagnosticSeverity.INFORMATION}),
+            (("information",), {DiagnosticSeverity.INFORMATION}),
+            (("hint",), {DiagnosticSeverity.HINT}),
+            (("ERROR",), {DiagnosticSeverity.ERROR}),
+            (("  warn  ",), {DiagnosticSeverity.WARNING}),
+            (("error,hint",), {DiagnosticSeverity.ERROR, DiagnosticSeverity.HINT}),
+            (("error", "hint"), {DiagnosticSeverity.ERROR, DiagnosticSeverity.HINT}),
+            ((",,error,",), {DiagnosticSeverity.ERROR}),
+        ],
+    )
+    def test_valid_values(self, value: Any, expected: Optional[Set[DiagnosticSeverity]]) -> None:
+        assert _parse_severities(None, None, value) == expected  # type: ignore[arg-type]
+
+    def test_invalid_value_raises(self) -> None:
+        with pytest.raises(click.BadParameter, match="bogus"):
+            _parse_severities(None, None, ("bogus",))  # type: ignore[arg-type]
 
 
 class TestFormatDuration:

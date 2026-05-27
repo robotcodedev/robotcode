@@ -1,6 +1,7 @@
 import functools
 import hashlib
 import time
+from dataclasses import replace
 from enum import Flag
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Set, Tuple, Union
@@ -81,8 +82,11 @@ class ReturnCode(Flag):
 
 
 class ResultCollector:
-    def __init__(self, exit_code_mask: ExitCodeMask) -> None:
+    def __init__(self, exit_code_mask: ExitCodeMask, severities: Optional[Set[DiagnosticSeverity]] = None) -> None:
         self.exit_code_mask = exit_code_mask
+        # When set, only diagnostics with one of these severities are kept — affecting the
+        # output, the summary counts and the exit code alike.
+        self._severities = severities
         self._folders: Set[WorkspaceFolder] = set()
         self._files: Set[TextDocument] = set()
         self.diagnostics: List[Union[DocumentDiagnosticReport, FolderDiagnosticReport]] = []
@@ -150,6 +154,14 @@ class ResultCollector:
     def add_diagnostics_report(
         self, diagnostics_report: Union[DocumentDiagnosticReport, FolderDiagnosticReport]
     ) -> None:
+        if self._severities is not None:
+            kept = [
+                d
+                for d in diagnostics_report.items
+                if (d.severity if d.severity is not None else DiagnosticSeverity.ERROR) in self._severities
+            ]
+            diagnostics_report = replace(diagnostics_report, items=kept)
+
         self.diagnostics.append(diagnostics_report)
 
         if isinstance(diagnostics_report, FolderDiagnosticReport):
@@ -182,6 +194,33 @@ def _parse_exit_code_mask(ctx: click.Context, param: click.Option, value: Tuple[
         return ExitCodeMask.parse(value)
     except KeyError as e:
         raise click.BadParameter(str(e)) from e
+
+
+_SEVERITY_BY_NAME = {
+    "error": DiagnosticSeverity.ERROR,
+    "warn": DiagnosticSeverity.WARNING,
+    "warning": DiagnosticSeverity.WARNING,
+    "info": DiagnosticSeverity.INFORMATION,
+    "information": DiagnosticSeverity.INFORMATION,
+    "hint": DiagnosticSeverity.HINT,
+}
+
+
+def _parse_severities(
+    ctx: click.Context, param: click.Option, value: Tuple[str, ...]
+) -> Optional[Set[DiagnosticSeverity]]:
+    """Parse repeated/comma-separated --severity values into a set, or None when unset."""
+    result: Set[DiagnosticSeverity] = set()
+    for entry in value:
+        for part_orig in entry.split(","):
+            part = part_orig.strip().lower()
+            if not part:
+                continue
+            severity = _SEVERITY_BY_NAME.get(part)
+            if severity is None:
+                raise click.BadParameter(f"invalid severity: {part_orig}")
+            result.add(severity)
+    return result or None
 
 
 def _validate_load_library_timeout(ctx: click.Context, param: click.Option, value: Optional[int]) -> Optional[int]:
@@ -296,6 +335,15 @@ def _validate_load_library_timeout(ctx: click.Context, param: click.Option, valu
     " file.",
 )
 @click.option(
+    "--severity",
+    multiple=True,
+    callback=_parse_severities,
+    metavar="[error|warn|warning|info|information|hint]",
+    help="Only report diagnostics of these severities. Repeatable and comma-separated. "
+    "Filtered-out severities are ignored entirely — they don't appear in the output, the summary or the exit code. "
+    "When omitted, all severities are reported.",
+)
+@click.option(
     "--load-library-timeout",
     type=int,
     callback=_validate_load_library_timeout,
@@ -366,6 +414,7 @@ def code(
     modifiers_hint: Tuple[str, ...],
     exit_code_mask: ExitCodeMask,
     extend_exit_code_mask: ExitCodeMask,
+    severity: Optional[Set[DiagnosticSeverity]],
     paths: Tuple[Path, ...],
     load_library_timeout: Optional[int],
     collect_unused: Optional[bool],
@@ -491,7 +540,7 @@ def code(
         app.verbose(f"Using analyzer_config: {analyzer_config}")
         app.verbose(f"Using exit code mask: {mask}")
 
-        result_collector = ResultCollector(mask)
+        result_collector = ResultCollector(mask, severities=severity)
         result_collector.start()
         analyzer = CodeAnalyzer(
             app=app,
@@ -543,14 +592,14 @@ def code(
                 _print_diagnostics(app, root_folder, items, doc_path, show_tracebacks=show_tracebacks)
 
             statistics_str = str(result_collector)
-            for count, severity in (
+            for count, sev in (
                 (result_collector.errors, DiagnosticSeverity.ERROR),
                 (result_collector.warnings, DiagnosticSeverity.WARNING),
                 (result_collector.infos, DiagnosticSeverity.INFORMATION),
                 (result_collector.hints, DiagnosticSeverity.HINT),
             ):
                 if count > 0:
-                    statistics_str = click.style(statistics_str, fg=SEVERITY_COLORS[severity])
+                    statistics_str = click.style(statistics_str, fg=SEVERITY_COLORS[sev])
                     break
 
             app.echo(statistics_str)
