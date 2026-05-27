@@ -13,12 +13,7 @@ Which diagnostics are reported, and at what severity, can be configured per proj
 - **Code review / security tooling** — the SARIF output plugs straight into GitHub code scanning; the GitLab format into Merge Request Code Quality widgets.
 - **AI-driven workflows** — a coding agent gets a precise, machine-readable list of what's wrong instead of having to run the suite and parse a traceback.
 
-The `analyze` command is a small group with two subcommands:
-
-| Subcommand | Use it when you want to … |
-|---|---|
-| [`code`](#code-static-analysis) | … statically analyze the project and report diagnostics |
-| [`cache`](#cache-managing-the-analysis-cache) | … inspect or clear the on-disk analysis cache |
+This guide covers **`analyze code`**. The `analyze` group has one other subcommand, [`cache`](#managing-the-analysis-cache), for inspecting and clearing the on-disk analysis cache — covered briefly at the end.
 
 For the exhaustive, auto-generated option list see the [CLI reference](cli.md#code).
 
@@ -47,7 +42,7 @@ robotcode analyze code --output-format json
 robotcode analyze code --output-format sarif --output-file robotcode.sarif
 ```
 
-If you don't pass any paths, `analyze code` falls back to the **default paths from your active `robot.toml` profile** — the same logic `robotcode robot` uses.
+If you don't pass any paths, `analyze code` analyzes the **whole project** — every `.robot` / `.resource` file under the project root, minus the configured exclude patterns. (This is unlike `robotcode robot`, which would run only the default paths/suites from your profile.)
 
 ## How `analyze code` finds your project
 
@@ -58,6 +53,8 @@ If you don't pass any paths, `analyze code` falls back to the **default paths fr
 3. It honours `--variable`, `--variablefile` and `--pythonpath` (mirroring the corresponding `robot` options) so that imports and variable resolution behave exactly as they would at run time.
 
 This matters: a keyword that only resolves because of a `--pythonpath` entry or a variable file resolves during analysis too, instead of being wrongly reported as missing.
+
+The project's imports and libraries are always resolved up front, across the whole project — that part can't be narrowed. The per-file diagnostics are then computed only for the files selected by `paths` / `--filter`, so a narrower selection does make a run faster.
 
 ## What it checks
 
@@ -70,9 +67,11 @@ The diagnostics are exactly those the language server produces. Among the most c
 - **deprecation warnings** — `DeprecatedReturnSetting`, `DeprecatedHeader`, `DeprecatedHyphenTag`, …
 - **model errors** — empty tests/keywords, invalid headers, and other structural problems.
 
+This is *static* analysis, so it isn't the last word: actually running the suite — or even discovering it with [`robotcode discover`](discovering-tests.md) — can surface errors that `analyze code` doesn't. Building the real test suite runs additional, suite-wide checks (for example duplicate test case names), and a `PreRunModifier` may have changed the suite before it's executed — neither of which the per-file static analysis sees. A clean `analyze code` result is a strong signal, not a guarantee that a run will start without errors.
+
 ### Unused keywords and variables
 
-By default `analyze code` does **not** flag unused definitions, because for libraries/resources "unused in this project" is often expected. Enable it explicitly:
+By default `analyze code` does **not** flag unused definitions. Unlike the per-file diagnostics, deciding whether a keyword or variable is unused needs the reference data of the *whole* project — not just the selected files — so it can't take the `paths` / `--filter` shortcut, and it adds an extra pass that is noticeably slower on projects with many keywords and variables. Enable it explicitly:
 
 ```bash
 robotcode analyze code --collect-unused
@@ -144,6 +143,15 @@ Valid mask values: `error`, `warn` (alias `warning`), `info` (alias `information
 exit_code_mask = ["warn", "info", "hint"]   # CI fails only on errors
 ```
 
+Any non-zero exit means something was reported, which is what makes a CI step fail by default. To branch on a specific severity, test the corresponding bit — in bash:
+
+```bash
+robotcode analyze code
+code=$?
+(( code & 1 )) && echo "errors present"
+(( code & 2 )) && echo "warnings present"
+```
+
 ## Output formats
 
 The local `--output-format` flag selects how results are rendered. It **overrides the global `--format`** for this command:
@@ -163,26 +171,6 @@ The local `--output-format` flag selects how results are rendered. It **override
 robotcode analyze code --output-format sarif --output-file reports/robotcode.sarif
 ```
 
-## Flag reference
-
-| Flag | Effect |
-|---|---|
-| `-f`, `--filter PATTERN` | Glob pattern selecting which files to analyze. Repeatable. |
-| `-v`, `--variable name:value` | Set a variable, like `robot --variable`. Repeatable. |
-| `-V`, `--variablefile PATH` | Load variables from a Python/YAML file, like `robot --variablefile`. Repeatable. |
-| `-P`, `--pythonpath PATH` | Extra import search path, like `robot --pythonpath`. Repeatable. |
-| `-mi/-me/-mw/-mI/-mh CODE` | Remap a diagnostic code's severity (ignore/error/warning/information/hint). See [above](#severities-and-diagnostic-modifiers). |
-| `-xm`, `--exit-code-mask MASK` | Severities that must **not** affect the exit code. |
-| `-xe`, `--extend-exit-code-mask MASK` | Append to the configured exit-code mask. |
-| `--collect-unused / --no-collect-unused` | Report unused keywords/variables. Default: off. |
-| `--cache-namespaces / --no-cache-namespaces` | Cache analyzed namespaces to disk for faster repeat runs. |
-| `--load-library-timeout SECONDS` | Timeout for importing libraries/variable files during analysis. |
-| `--full-paths / --no-full-paths` | Absolute paths instead of project-relative. Applies to text **and** machine formats. Default: relative. |
-| `--show-tracebacks / --no-show-tracebacks` | Include Python tracebacks / PYTHONPATH dumps that Robot appends to import errors. Affects **text** output only; JSON/SARIF/etc. always carry the full message. Default: off. |
-| `--output-format FORMAT` | `concise` (default), `json`, `json-indent`, `sarif`, `github`, `gitlab`. |
-| `--output-file FILE` | Write the report to FILE instead of stdout. |
-| *any standard `robot` flag* | passed through to the analysis pipeline. |
-
 ## Text output (`concise`)
 
 The default format prints one finding per line:
@@ -201,64 +189,39 @@ Files: 12, Errors: 1, Warnings: 1, Infos: 0, Hints: 0 (in 0.42s)
 
 By default RobotCode trims the Python traceback and `PYTHONPATH` listing that Robot Framework appends to import errors. Pass `--show-tracebacks` to keep the full message.
 
-## JSON reference
-
-`--output-format json` (or `json-indent`) emits a single object with two keys, using the same LSP `Diagnostic` shape as `robotcode discover` and `robotcode results`:
-
-```json
-{
-  "diagnostics": {
-    "tests/login.robot": [
-      {
-        "range": { "start": { "line": 3, "character": 4 },
-                   "end":   { "line": 3, "character": 13 } },
-        "message": "No keyword with name 'Lgin User' found.",
-        "severity": 1,
-        "code": "KeywordNotFound",
-        "source": "robotcode"
-      }
-    ]
-  },
-  "summary": { "files": 12, "errors": 1, "warnings": 0, "infos": 0, "hints": 0 }
-}
-```
-
-Field notes:
-
-- Keys in `diagnostics` are source paths (project-relative POSIX, or absolute with `--full-paths`). Workspace-level diagnostics key on `.`.
-- `severity` follows the LSP enum: `1` = Error, `2` = Warning, `3` = Information, `4` = Hint.
-- Positions are **0-based** (LSP convention), unlike SARIF/GitHub which are 1-based.
-- The JSON always carries the full diagnostic message — `--show-tracebacks` does not apply.
-- `summary` is always present, even for a clean run (all counts `0`), so consumers get a stable schema.
-
 ## SARIF
 
 `--output-format sarif` emits a [SARIF 2.1.0](https://docs.oasis-open.org/sarif/sarif/v2.1.0/errata01/os/sarif-v2.1.0-errata01-os.html) log — the format GitHub code scanning, Azure DevOps and the VS Code SARIF Viewer consume.
-
-- Positions are converted from LSP's 0-based to SARIF's **1-based** lines/columns.
-- Severities map onto SARIF levels: Error → `error`, Warning → `warning`, Information/Hint → `note`.
-- Artifact URIs are POSIX and **relative to the project root** (what code scanning expects); `--full-paths` switches to absolute URIs.
-- `tool.driver.rules` is emitted dynamically for the diagnostic codes that actually occur.
-- Related information becomes `relatedLocations`.
-- Each result carries a stable `partialFingerprints` value (independent of line number) so an alert survives unrelated edits that merely shift it.
 
 ```bash
 robotcode analyze code --output-format sarif --output-file robotcode.sarif
 ```
 
+Paths are written relative to the project root, which is what GitHub code scanning expects (use `--full-paths` for absolute paths). Once uploaded, an alert stays stable as long as the finding does — an unrelated edit that merely shifts its line number won't create a duplicate.
+
 ## GitHub Actions annotations
 
-`--output-format github` emits [workflow command annotations](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-commands). When printed in a GitHub Actions job, they show up inline on the affected lines in the PR diff:
+`--output-format github` emits [workflow annotations](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-commands). Printed in a GitHub Actions job, they appear inline on the affected lines in the PR diff and in the run summary.
+
+```bash
+robotcode analyze code --output-format github
+```
+
+Each diagnostic becomes one annotation line:
 
 ```
-::error file=tests/login.robot,line=4,col=5,endLine=4,endColumn=14,title=KeywordNotFound::No keyword with name 'Lgin User' found.
+::error file=tests/login.robot,line=4,col=5,endColumn=14,title=KeywordNotFound::No keyword with name 'Lgin User' found.
 ```
-
-Error → `::error`, Warning → `::warning`, Information/Hint → `::notice`. Positions are 1-based; values are escaped per the GitHub toolkit rules.
 
 ## GitLab Code Quality
 
-`--output-format gitlab` emits a [Code Quality report](https://docs.gitlab.com/ci/testing/code_quality/) — a JSON array that GitLab renders in the Merge Request Code Quality widget:
+`--output-format gitlab` emits a [Code Quality report](https://docs.gitlab.com/ci/testing/code_quality/) that GitLab renders in the Merge Request Code Quality widget.
+
+```bash
+robotcode analyze code --output-format gitlab --output-file gl-code-quality.json
+```
+
+Each diagnostic becomes one entry in the JSON array:
 
 ```json
 [
@@ -271,8 +234,6 @@ Error → `::error`, Warning → `::warning`, Information/Hint → `::notice`. P
   }
 ]
 ```
-
-Severity maps: Error → `major`, Warning → `minor`, Information/Hint → `info`.
 
 ## CI recipes
 
@@ -294,6 +255,8 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: "3.x"
+      # Set up the project with whatever package manager it uses (pip, uv,
+      # poetry, pdm, hatch, ...); analysis just needs robotcode[analyze] available.
       - run: pip install robotcode[analyze]
       - run: robotcode analyze code --output-format sarif --output-file robotcode.sarif
         continue-on-error: true
@@ -318,6 +281,8 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: "3.x"
+      # Set up the project with whatever package manager it uses (pip, uv,
+      # poetry, pdm, hatch, ...); analysis just needs robotcode[analyze] available.
       - run: pip install robotcode[analyze]
       - run: robotcode analyze code --output-format github
 ```
@@ -330,6 +295,7 @@ Write the GitLab report and expose it as a `codequality` artifact; GitLab render
 robotcode-analyze:
   image: python:3
   script:
+    # set up the project with whatever package manager it uses (pip shown here)
     - pip install robotcode[analyze]
     - robotcode analyze code --output-format gitlab --output-file gl-code-quality.json
   artifacts:
@@ -350,7 +316,7 @@ robotcode analyze code --exit-code-mask warn,info,hint
 robotcode analyze code --output-format json | jq '.summary'
 ```
 
-## `cache` — managing the analysis cache
+## Managing the analysis cache
 
 To speed up repeat analysis, RobotCode caches resolved library/variable imports (and, with `--cache-namespaces`, analyzed namespaces) on disk. The `analyze cache` subcommands let you inspect and clear it:
 
@@ -387,3 +353,33 @@ ignored-libraries = ["MyDynamicLibrary"]
 ```
 
 See the [`robot.toml` configuration reference](config.md) for the complete list of settings.
+
+## JSON reference
+
+`--output-format json` (or `json-indent`) emits a single object with two keys, using the same LSP `Diagnostic` shape as `robotcode discover` and `robotcode results`:
+
+```json
+{
+  "diagnostics": {
+    "tests/login.robot": [
+      {
+        "range": { "start": { "line": 3, "character": 4 },
+                   "end":   { "line": 3, "character": 13 } },
+        "message": "No keyword with name 'Lgin User' found.",
+        "severity": 1,
+        "code": "KeywordNotFound",
+        "source": "robotcode"
+      }
+    ]
+  },
+  "summary": { "files": 12, "errors": 1, "warnings": 0, "infos": 0, "hints": 0 }
+}
+```
+
+Field notes:
+
+- Keys in `diagnostics` are source paths (project-relative POSIX, or absolute with `--full-paths`). Workspace-level diagnostics key on `.`.
+- `severity` follows the LSP enum: `1` = Error, `2` = Warning, `3` = Information, `4` = Hint.
+- Positions are **0-based** (LSP convention), unlike SARIF/GitHub which are 1-based.
+- The JSON always carries the full diagnostic message — `--show-tracebacks` does not apply.
+- `summary` is always present, even for a clean run (all counts `0`), so consumers get a stable schema.
