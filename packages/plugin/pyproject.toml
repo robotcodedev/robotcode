@@ -31,6 +31,7 @@ dependencies = [
   "pluggy>=1.0.0",
   "tomli_w>=1.0.0",
   "colorama>=0.4.6",
+  "rich>=14.0.0",
 ]
 dynamic = ["version"]
 

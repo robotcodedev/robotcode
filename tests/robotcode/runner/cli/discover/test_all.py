@@ -139,6 +139,37 @@ def test_all_text_nests_beyond_two_levels(robotcode_cli: CliRunner, nested_suite
     assert "\n    - **" in out
 
 
+def test_all_text_emits_full_tree_at_arbitrary_depth() -> None:
+    """The raw markdown from `render_all` carries one bullet per item
+    no matter how deep the tree goes — no implicit cap, no truncation
+    at the renderer layer. (The companion guard against rich's
+    markdown-it-py `maxNesting` limit lives in
+    `tests/robotcode/plugin/test_echo_as_markdown.py`.)"""
+    from robotcode.runner.cli.discover._models import Statistics, TestItem
+    from robotcode.runner.cli.discover._render import render_all
+
+    # 15-level chain: workspace → 14 nested suites → 1 leaf test.
+    leaf = TestItem(type="test", id="leaf", name="leaf", longname="L0.L1.L2.L3.L4.L5.L6.L7.L8.L9.L10.L11.L12.L13.t")
+    cursor: TestItem = leaf
+    for i in range(13, -1, -1):
+        cursor = TestItem(
+            type="suite" if i > 0 else "workspace",
+            id=f"L{i}",
+            name=f"L{i}",
+            longname=".".join(f"L{n}" for n in range(i + 1)),
+            children=[cursor],
+        )
+
+    out = render_all(cursor, Statistics(suites=14, tests=1), show_tags=False, full_paths=False)
+    # All 15 items render and indent grows monotonically (no cap).
+    assert out.count("- **") == 15
+    # Level 7's bullet is indented two spaces per ancestor (7 * 2 = 14).
+    level7_indent = "  " * 7
+    assert f"{level7_indent}- **L0.L1.L2.L3.L4.L5.L6.L7" in out
+    # Statistics footer is part of the same string.
+    assert "## Statistics" in out
+
+
 # ---------------------------------------------------------------------------
 # Filter interactions
 # ---------------------------------------------------------------------------
