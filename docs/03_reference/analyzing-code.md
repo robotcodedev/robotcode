@@ -278,25 +278,59 @@ Severity maps: Error → `major`, Warning → `minor`, Information/Hint → `inf
 
 ### GitHub: upload to code scanning
 
+Produce a SARIF file and upload it so the findings appear under **Security → Code scanning**. The `security-events: write` permission is required for the upload, and `continue-on-error` lets the upload run even when `analyze code` exits non-zero because it found problems.
+
 ```yaml
-- run: robotcode analyze code --output-format sarif --output-file robotcode.sarif
-  continue-on-error: true        # let the upload run even when findings exist
-- uses: github/codeql-action/upload-sarif@v3
-  with:
-    sarif_file: robotcode.sarif
+name: RobotCode Analyze
+on: [push, pull_request]
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write      # required for upload-sarif
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.x"
+      - run: pip install robotcode[analyze]
+      - run: robotcode analyze code --output-format sarif --output-file robotcode.sarif
+        continue-on-error: true
+      - uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: robotcode.sarif
 ```
 
 ### GitHub: inline PR annotations
 
+Print the `github` format directly — the diagnostics show up as inline annotations on the run and in the PR diff. No upload and no extra permissions needed.
+
 ```yaml
-- run: robotcode analyze code --output-format github
+name: RobotCode Analyze
+on: [push, pull_request]
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.x"
+      - run: pip install robotcode[analyze]
+      - run: robotcode analyze code --output-format github
 ```
 
 ### GitLab: Code Quality artifact
 
+Write the GitLab report and expose it as a `codequality` artifact; GitLab renders it in the Merge Request Code Quality widget.
+
 ```yaml
 robotcode-analyze:
+  image: python:3
   script:
+    - pip install robotcode[analyze]
     - robotcode analyze code --output-format gitlab --output-file gl-code-quality.json
   artifacts:
     reports:
