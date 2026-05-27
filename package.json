@@ -68,7 +68,11 @@
     "onDebugResolve:robotcode",
     "onDebugInitialConfigurations",
     "onDebugDynamicConfigurations:robotcode",
-    "onNotebook:robotframework-repl"
+    "onNotebook:robotframework-repl",
+    "onLanguageModelTool:robot-get_library_documentation",
+    "onLanguageModelTool:robot-get_keyword_documentation",
+    "onLanguageModelTool:robot-get_file_imports",
+    "onLanguageModelTool:robot-get_environment_details"
   ],
   "galleryBanner": {
     "theme": "dark",
@@ -1301,6 +1305,12 @@
         "title": "AI",
         "id": "robotcode.ai",
         "properties": {
+          "robotcode.ai.enableChatPlugins": {
+            "type": "boolean",
+            "default": true,
+            "markdownDescription": "Enable **RobotCode chat plugins** for AI chat.\n\nThe plugins use the project-aware `robotcode` CLI to discover and run tests, analyze `.robot` and `.resource` files, inspect keywords, libraries, configuration, and profiles, use the REPL, and summarize run results.",
+            "scope": "resource"
+          },
           "robotcode.ai.enableLanguageModelTools": {
             "type": "boolean",
             "default": false,
@@ -1968,6 +1978,12 @@
         ]
       }
     ],
+    "chatPlugins": [
+      {
+        "path": "chat-plugins/robotcode",
+        "when": "config.robotcode.ai.enableChatPlugins"
+      }
+    ],
     "languageModelTools": [
       {
         "when": "config.robotcode.ai.enableLanguageModelTools",
@@ -2135,7 +2151,7 @@
     "preact": "^10.29.2",
     "prettier": "^3.8.3",
     "typescript": "^6.0.3",
-    "typescript-eslint": "^8.59.3"
+    "typescript-eslint": "^8.60.0"
   },
   "workspaces": [
     "docs"
