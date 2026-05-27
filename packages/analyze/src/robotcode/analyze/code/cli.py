@@ -1,14 +1,16 @@
 import functools
+import hashlib
 import time
 from enum import Flag
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional, Set, Tuple, Union
+from typing import Any, Dict, Iterable, List, Optional, Set, Tuple, Union
 
 import click
 
-from robotcode.core.lsp.types import Diagnostic, DiagnosticSeverity
+from robotcode.core.lsp.types import Diagnostic, DiagnosticSeverity, Range
 from robotcode.core.text_document import TextDocument
 from robotcode.core.uri import Uri
+from robotcode.core.utils.dataclasses import as_json
 from robotcode.core.utils.path import try_get_relative_path
 from robotcode.core.workspace import WorkspaceFolder
 from robotcode.plugin import Application, OutputFormat, pass_application
@@ -20,6 +22,39 @@ from robotcode.robot.config.utils import get_config_files
 from ..__version__ import __version__
 from ..config import AnalyzeConfig, CacheConfig, CodeConfig, ExitCodeMask, ModifiersConfig
 from ._models import CodeAnalysisResult, CodeAnalysisSummary
+from ._sarif import (
+    ArtifactLocation as SarifArtifactLocation,
+)
+from ._sarif import (
+    Location as SarifLocation,
+)
+from ._sarif import (
+    Message as SarifMessage,
+)
+from ._sarif import (
+    PhysicalLocation as SarifPhysicalLocation,
+)
+from ._sarif import (
+    Region as SarifRegion,
+)
+from ._sarif import (
+    ReportingDescriptor as SarifReportingDescriptor,
+)
+from ._sarif import (
+    Result as SarifResult,
+)
+from ._sarif import (
+    Run as SarifRun,
+)
+from ._sarif import (
+    SarifLog,
+)
+from ._sarif import (
+    Tool as SarifTool,
+)
+from ._sarif import (
+    ToolComponent as SarifToolComponent,
+)
 from .code_analyzer import CodeAnalyzer, DocumentDiagnosticReport, FolderDiagnosticReport
 
 SEVERITY_COLORS = {
@@ -298,6 +333,22 @@ def _validate_load_library_timeout(ctx: click.Context, param: click.Option, valu
     show_default=True,
     help="Show full paths instead of paths relative to the project root. Applies to both text and JSON output.",
 )
+@click.option(
+    "--output-format",
+    type=click.Choice(["concise", "json", "json-indent", "sarif", "github", "gitlab"]),
+    default=None,
+    help="Output format for the analysis result. Overrides the global `--format` for this command. "
+    "`concise` (default) is the human-readable text output; `sarif` emits a SARIF 2.1.0 log; "
+    "`github` emits GitHub Actions workflow annotations; `gitlab` emits a GitLab Code Quality report.",
+)
+@click.option(
+    "--output-file",
+    "output_file",
+    type=click.Path(dir_okay=False, writable=True, path_type=Path),
+    default=None,
+    help="Write the report to FILE instead of stdout. Useful with `--output-format sarif`/`gitlab` "
+    "to produce an artifact for CI upload.",
+)
 @click.argument(
     "paths", nargs=-1, type=click.Path(exists=True, dir_okay=True, file_okay=True, readable=True, path_type=Path)
 )
@@ -321,6 +372,8 @@ def code(
     cache_namespaces: Optional[bool],
     show_tracebacks: bool,
     full_paths: bool,
+    output_format: Optional[str],
+    output_file: Optional[Path],
 ) -> None:
     """\
         Performs static code analysis to identify potential issues in the specified *PATHS*. The analysis detects syntax
@@ -461,7 +514,27 @@ def code(
             result_collector.diagnostics, root_folder, full_paths
         )
 
-        if app.config.output_format in (None, OutputFormat.TEXT):
+        # The local --output-format wins over the global --format; default is concise text.
+        resolved_format = output_format or {
+            OutputFormat.JSON: "json",
+            OutputFormat.JSON_INDENT: "json-indent",
+            OutputFormat.TOML: "toml",
+        }.get(app.config.output_format or OutputFormat.TEXT, "concise")
+
+        if output_file is not None and resolved_format in ("concise", "toml"):
+            raise click.UsageError(
+                "--output-file is only supported with the json, json-indent, sarif, github or gitlab formats."
+            )
+
+        summary = CodeAnalysisSummary(
+            files=result_collector.files,
+            errors=result_collector.errors,
+            warnings=result_collector.warnings,
+            infos=result_collector.infos,
+            hints=result_collector.hints,
+        )
+
+        if resolved_format == "concise":
             for folder_path, items in folder_entries:
                 _print_diagnostics(
                     app, root_folder, items, folder_path, print_range=False, show_tracebacks=show_tracebacks
@@ -481,26 +554,54 @@ def code(
                     break
 
             app.echo(statistics_str)
+        elif resolved_format == "sarif":
+            text = as_json(
+                build_sarif_log(folder_entries, sorted_documents, root_folder, full_paths, __version__), indent=True
+            )
+            _write_or_echo(app, text, output_file)
+        elif resolved_format == "github":
+            _write_or_echo(app, "\n".join(build_github_annotations(folder_entries, sorted_documents)), output_file)
+        elif resolved_format == "gitlab":
+            report = build_gitlab_report(folder_entries, sorted_documents)
+            _write_or_echo(app, as_json(report, indent=True), output_file)
+        elif output_file is not None:
+            # json / json-indent written to a file (always plain, no color/pager).
+            result = _build_analysis_result(folder_entries, sorted_documents, summary)
+            _write_or_echo(app, as_json(result, indent=resolved_format == "json-indent"), output_file)
         else:
+            # json / json-indent / toml on stdout via the shared renderer (keeps color/paging).
             app.print_data(
-                _build_analysis_result(
-                    folder_entries,
-                    sorted_documents,
-                    CodeAnalysisSummary(
-                        files=result_collector.files,
-                        errors=result_collector.errors,
-                        warnings=result_collector.warnings,
-                        infos=result_collector.infos,
-                        hints=result_collector.hints,
-                    ),
-                ),
+                _build_analysis_result(folder_entries, sorted_documents, summary),
                 remove_defaults=True,
+                default_output_format={
+                    "json": OutputFormat.JSON,
+                    "json-indent": OutputFormat.JSON_INDENT,
+                    "toml": OutputFormat.TOML,
+                }.get(resolved_format),
             )
 
         app.exit(result_collector.calculate_return_code().value, fast=True)
 
     except (TypeError, ValueError) as e:
         raise click.ClickException(str(e)) from e
+
+
+def _write_or_echo(app: Application, text: str, output_path: Optional[Path]) -> None:
+    if output_path is None:
+        app.echo(text)
+        return
+
+    if not output_path.parent.exists():
+        raise click.UsageError(f"Cannot write to '{output_path}': the directory '{output_path.parent}' does not exist.")
+    try:
+        output_path.write_text(text + "\n", encoding="utf-8")
+    except OSError as e:
+        raise click.ClickException(f"Could not write output to '{output_path}': {e}") from e
+    app.verbose(f"Wrote output to {output_path}")
+
+
+def _display_path(path: Path, root_folder: Optional[Path], full_paths: bool) -> Path:
+    return path if full_paths else try_get_relative_path(path, root_folder)
 
 
 def _collect_sorted_diagnostics(
@@ -516,7 +617,7 @@ def _collect_sorted_diagnostics(
     """
 
     def display_path(path: Path) -> Path:
-        return path if full_paths else try_get_relative_path(path, root_folder)
+        return _display_path(path, root_folder, full_paths)
 
     folder_entries: List[Tuple[Path, List[Diagnostic]]] = [
         (display_path(e.folder.uri.to_path()), e.items)
@@ -548,6 +649,216 @@ def _build_analysis_result(
     for doc_path, items in sorted_documents.items():
         diagnostics_by_source.setdefault(doc_path.as_posix(), []).extend(items)
     return CodeAnalysisResult(diagnostics=diagnostics_by_source, summary=summary)
+
+
+# LSP severities collapse onto SARIF's four levels (it has no dedicated "hint").
+_SARIF_LEVELS = {
+    DiagnosticSeverity.ERROR: "error",
+    DiagnosticSeverity.WARNING: "warning",
+    DiagnosticSeverity.INFORMATION: "note",
+    DiagnosticSeverity.HINT: "note",
+}
+
+
+def _sarif_region(rng: Range) -> SarifRegion:
+    # LSP ranges are 0-based; SARIF regions are 1-based.
+    return SarifRegion(
+        start_line=rng.start.line + 1,
+        start_column=rng.start.character + 1,
+        end_line=rng.end.line + 1,
+        end_column=rng.end.character + 1,
+    )
+
+
+def _fingerprint(uri: str, rule_id: str, message: str, occurrence: int) -> str:
+    # Deliberately excludes line/column so an alert survives unrelated edits that
+    # shift it; `occurrence` disambiguates identical findings in the same file.
+    raw = f"{uri}\x00{rule_id}\x00{message}\x00{occurrence}"
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+
+def build_sarif_log(
+    folder_entries: List[Tuple[Path, List[Diagnostic]]],
+    sorted_documents: Dict[Path, List[Diagnostic]],
+    root_folder: Optional[Path],
+    full_paths: bool,
+    version: str,
+) -> SarifLog:
+    """Map collected diagnostics to a SARIF 2.1.0 log.
+
+    Rules are emitted dynamically for the codes that actually occur. Locations use
+    POSIX URIs (relative to the project root unless `full_paths`), which is what
+    GitHub code scanning expects. Workspace-level diagnostics key on `.`.
+    """
+    rules: List[SarifReportingDescriptor] = []
+    rule_index: Dict[str, int] = {}
+    results: List[SarifResult] = []
+    fingerprint_seen: Dict[Tuple[str, str, str], int] = {}
+
+    def index_of_rule(rule_id: str) -> int:
+        if rule_id not in rule_index:
+            rule_index[rule_id] = len(rules)
+            rules.append(SarifReportingDescriptor(id=rule_id, name=rule_id))
+        return rule_index[rule_id]
+
+    def related_locations(diag: Diagnostic) -> Optional[List[SarifLocation]]:
+        if not diag.related_information:
+            return None
+        locations = []
+        for related in diag.related_information:
+            rel_uri = _display_path(Uri(related.location.uri).to_path(), root_folder, full_paths).as_posix()
+            locations.append(
+                SarifLocation(
+                    physical_location=SarifPhysicalLocation(
+                        artifact_location=SarifArtifactLocation(uri=rel_uri),
+                        region=_sarif_region(related.location.range),
+                    ),
+                    message=SarifMessage(text=related.message) if related.message else None,
+                )
+            )
+        return locations
+
+    def add_result(uri: str, diag: Diagnostic) -> None:
+        rule_id = str(diag.code) if diag.code is not None else "robotcode"
+        severity = diag.severity if diag.severity is not None else DiagnosticSeverity.ERROR
+
+        occurrence_key = (uri, rule_id, diag.message)
+        occurrence = fingerprint_seen.get(occurrence_key, 0)
+        fingerprint_seen[occurrence_key] = occurrence + 1
+
+        results.append(
+            SarifResult(
+                rule_id=rule_id,
+                rule_index=index_of_rule(rule_id),
+                level=_SARIF_LEVELS[severity],
+                message=SarifMessage(text=diag.message),
+                locations=[
+                    SarifLocation(
+                        physical_location=SarifPhysicalLocation(
+                            artifact_location=SarifArtifactLocation(uri=uri),
+                            region=_sarif_region(diag.range),
+                        )
+                    )
+                ],
+                related_locations=related_locations(diag),
+                partial_fingerprints={"robotcode/v1": _fingerprint(uri, rule_id, diag.message, occurrence)},
+            )
+        )
+
+    for path, items in folder_entries:
+        for diag in items:
+            add_result(path.as_posix(), diag)
+    for doc_path, items in sorted_documents.items():
+        for diag in items:
+            add_result(doc_path.as_posix(), diag)
+
+    return SarifLog(
+        runs=[
+            SarifRun(
+                tool=SarifTool(
+                    driver=SarifToolComponent(
+                        name="RobotCode",
+                        version=version,
+                        information_uri="https://robotcode.io",
+                        rules=rules,
+                    )
+                ),
+                results=results,
+            )
+        ]
+    )
+
+
+def _all_entries(
+    folder_entries: List[Tuple[Path, List[Diagnostic]]],
+    sorted_documents: Dict[Path, List[Diagnostic]],
+) -> Iterable[Tuple[Path, List[Diagnostic]]]:
+    yield from folder_entries
+    yield from sorted_documents.items()
+
+
+# GitHub Actions workflow command per severity (it has no dedicated hint level).
+_GITHUB_COMMANDS = {
+    DiagnosticSeverity.ERROR: "error",
+    DiagnosticSeverity.WARNING: "warning",
+    DiagnosticSeverity.INFORMATION: "notice",
+    DiagnosticSeverity.HINT: "notice",
+}
+
+
+def _gh_escape_data(value: str) -> str:
+    return value.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
+
+
+def _gh_escape_property(value: str) -> str:
+    return _gh_escape_data(value).replace(":", "%3A").replace(",", "%2C")
+
+
+def build_github_annotations(
+    folder_entries: List[Tuple[Path, List[Diagnostic]]],
+    sorted_documents: Dict[Path, List[Diagnostic]],
+) -> List[str]:
+    """Render diagnostics as GitHub Actions workflow command annotations.
+
+    Lines look like `::error file=...,line=...,col=...,title=Code::message`. Positions
+    are 1-based; values are escaped per the @actions/toolkit rules.
+    """
+    lines: List[str] = []
+    for path, items in _all_entries(folder_entries, sorted_documents):
+        uri = path.as_posix()
+        for diag in items:
+            severity = diag.severity if diag.severity is not None else DiagnosticSeverity.ERROR
+            props = [
+                f"file={_gh_escape_property(uri)}",
+                f"line={diag.range.start.line + 1}",
+                f"endLine={diag.range.end.line + 1}",
+                f"col={diag.range.start.character + 1}",
+                f"endColumn={diag.range.end.character + 1}",
+            ]
+            if diag.code is not None:
+                props.append(f"title={_gh_escape_property(str(diag.code))}")
+            lines.append(f"::{_GITHUB_COMMANDS[severity]} {','.join(props)}::{_gh_escape_data(diag.message)}")
+    return lines
+
+
+# GitLab Code Quality severity (info | minor | major | critical | blocker).
+_GITLAB_SEVERITIES = {
+    DiagnosticSeverity.ERROR: "major",
+    DiagnosticSeverity.WARNING: "minor",
+    DiagnosticSeverity.INFORMATION: "info",
+    DiagnosticSeverity.HINT: "info",
+}
+
+
+def build_gitlab_report(
+    folder_entries: List[Tuple[Path, List[Diagnostic]]],
+    sorted_documents: Dict[Path, List[Diagnostic]],
+) -> List[Dict[str, Any]]:
+    """Render diagnostics as a GitLab Code Quality report (a JSON array).
+
+    Field names are snake_case as required by GitLab (so this uses plain dicts, not
+    the CamelSnakeMixin models). Each entry carries a stable fingerprint.
+    """
+    report: List[Dict[str, Any]] = []
+    fingerprint_seen: Dict[Tuple[str, str, str], int] = {}
+    for path, items in _all_entries(folder_entries, sorted_documents):
+        uri = path.as_posix()
+        for diag in items:
+            severity = diag.severity if diag.severity is not None else DiagnosticSeverity.ERROR
+            check_name = str(diag.code) if diag.code is not None else "robotcode"
+            key = (uri, check_name, diag.message)
+            occurrence = fingerprint_seen.get(key, 0)
+            fingerprint_seen[key] = occurrence + 1
+            report.append(
+                {
+                    "description": diag.message,
+                    "check_name": check_name,
+                    "fingerprint": _fingerprint(uri, check_name, diag.message, occurrence),
+                    "severity": _GITLAB_SEVERITIES[severity],
+                    "location": {"path": uri, "lines": {"begin": diag.range.start.line + 1}},
+                }
+            )
+    return report
 
 
 # Markers that Robot Framework appends to error messages for debugging.
