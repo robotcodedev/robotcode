@@ -79,3 +79,6 @@ AGENT.md
 AGENTS.md
 .agents/
 .claude/
+
+# sarif files
+/**/*.sarif.json
