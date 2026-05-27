@@ -2,7 +2,7 @@ import functools
 import time
 from enum import Flag
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Tuple, Union
+from typing import Dict, Iterable, List, Optional, Set, Tuple, Union
 
 import click
 
@@ -11,7 +11,7 @@ from robotcode.core.text_document import TextDocument
 from robotcode.core.uri import Uri
 from robotcode.core.utils.path import try_get_relative_path
 from robotcode.core.workspace import WorkspaceFolder
-from robotcode.plugin import Application, pass_application
+from robotcode.plugin import Application, OutputFormat, pass_application
 from robotcode.robot.config.loader import (
     load_robot_config_from_path,
 )
@@ -19,6 +19,7 @@ from robotcode.robot.config.utils import get_config_files
 
 from ..__version__ import __version__
 from ..config import AnalyzeConfig, CacheConfig, CodeConfig, ExitCodeMask, ModifiersConfig
+from ._models import CodeAnalysisResult, CodeAnalysisSummary
 from .code_analyzer import CodeAnalyzer, DocumentDiagnosticReport, FolderDiagnosticReport
 
 SEVERITY_COLORS = {
@@ -106,6 +107,10 @@ class ResultCollector:
         return sum(
             len([i for i in e.items if i.severity == DiagnosticSeverity.HINT]) for e in self.diagnostics if e.items
         )
+
+    @property
+    def files(self) -> int:
+        return len(self._files)
 
     def add_diagnostics_report(
         self, diagnostics_report: Union[DocumentDiagnosticReport, FolderDiagnosticReport]
@@ -282,8 +287,16 @@ def _validate_load_library_timeout(ctx: click.Context, param: click.Option, valu
 @click.option(
     "--show-tracebacks/--no-show-tracebacks",
     default=False,
-    help="Include the full diagnostic message in the output, including Python tracebacks and PYTHONPATH "
-    "listings that Robot Framework appends to import errors. Off by default to keep output concise.",
+    help="Include the full diagnostic message in the text output, including Python tracebacks and PYTHONPATH "
+    "listings that Robot Framework appends to import errors. Off by default to keep output concise. "
+    "Has no effect on JSON output, which always carries the full message.",
+)
+@click.option(
+    "--full-paths/--no-full-paths",
+    "full_paths",
+    default=False,
+    show_default=True,
+    help="Show full paths instead of paths relative to the project root. Applies to both text and JSON output.",
 )
 @click.argument(
     "paths", nargs=-1, type=click.Path(exists=True, dir_okay=True, file_okay=True, readable=True, path_type=Path)
@@ -307,6 +320,7 @@ def code(
     collect_unused: Optional[bool],
     cache_namespaces: Optional[bool],
     show_tracebacks: bool,
+    full_paths: bool,
 ) -> None:
     """\
         Performs static code analysis to identify potential issues in the specified *PATHS*. The analysis detects syntax
@@ -440,49 +454,100 @@ def code(
         try:
             for e in analyzer.run(paths=paths, filter_patterns=filter_patterns):
                 result_collector.add_diagnostics_report(e)
-
-            # Folder-level diagnostics first (workspace-wide problems), then document
-            # diagnostics merged per file and sorted by (path, line, column) so the
-            # output is stable regardless of the analyzer pass order.
-            for e in result_collector.diagnostics:
-                if isinstance(e, FolderDiagnosticReport) and e.items:
-                    folder_path = try_get_relative_path(e.folder.uri.to_path(), root_folder)
-                    _print_diagnostics(
-                        app, root_folder, e.items, folder_path, print_range=False, show_tracebacks=show_tracebacks
-                    )
-
-            documents_to_items: Dict[Path, List[Diagnostic]] = {}
-            for e in result_collector.diagnostics:
-                if isinstance(e, DocumentDiagnosticReport) and e.items:
-                    doc_path = try_get_relative_path(e.document.uri.to_path(), root_folder)
-                    documents_to_items.setdefault(doc_path, []).extend(e.items)
-
-            for doc_path in sorted(documents_to_items):
-                items = sorted(
-                    documents_to_items[doc_path],
-                    key=lambda d: (d.range.start.line, d.range.start.character),
-                )
-                _print_diagnostics(app, root_folder, items, doc_path, show_tracebacks=show_tracebacks)
         finally:
             result_collector.stop()
 
-        statistics_str = str(result_collector)
-        for count, severity in (
-            (result_collector.errors, DiagnosticSeverity.ERROR),
-            (result_collector.warnings, DiagnosticSeverity.WARNING),
-            (result_collector.infos, DiagnosticSeverity.INFORMATION),
-            (result_collector.hints, DiagnosticSeverity.HINT),
-        ):
-            if count > 0:
-                statistics_str = click.style(statistics_str, fg=SEVERITY_COLORS[severity])
-                break
+        folder_entries, sorted_documents = _collect_sorted_diagnostics(
+            result_collector.diagnostics, root_folder, full_paths
+        )
 
-        app.echo(statistics_str)
+        if app.config.output_format in (None, OutputFormat.TEXT):
+            for folder_path, items in folder_entries:
+                _print_diagnostics(
+                    app, root_folder, items, folder_path, print_range=False, show_tracebacks=show_tracebacks
+                )
+            for doc_path, items in sorted_documents.items():
+                _print_diagnostics(app, root_folder, items, doc_path, show_tracebacks=show_tracebacks)
+
+            statistics_str = str(result_collector)
+            for count, severity in (
+                (result_collector.errors, DiagnosticSeverity.ERROR),
+                (result_collector.warnings, DiagnosticSeverity.WARNING),
+                (result_collector.infos, DiagnosticSeverity.INFORMATION),
+                (result_collector.hints, DiagnosticSeverity.HINT),
+            ):
+                if count > 0:
+                    statistics_str = click.style(statistics_str, fg=SEVERITY_COLORS[severity])
+                    break
+
+            app.echo(statistics_str)
+        else:
+            app.print_data(
+                _build_analysis_result(
+                    folder_entries,
+                    sorted_documents,
+                    CodeAnalysisSummary(
+                        files=result_collector.files,
+                        errors=result_collector.errors,
+                        warnings=result_collector.warnings,
+                        infos=result_collector.infos,
+                        hints=result_collector.hints,
+                    ),
+                ),
+                remove_defaults=True,
+            )
 
         app.exit(result_collector.calculate_return_code().value, fast=True)
 
     except (TypeError, ValueError) as e:
         raise click.ClickException(str(e)) from e
+
+
+def _collect_sorted_diagnostics(
+    reports: Iterable[Union[DocumentDiagnosticReport, FolderDiagnosticReport]],
+    root_folder: Optional[Path],
+    full_paths: bool,
+) -> Tuple[List[Tuple[Path, List[Diagnostic]]], Dict[Path, List[Diagnostic]]]:
+    """Split reports into folder-level and per-document diagnostics, keyed by display path.
+
+    Folder-level reports keep their original order; document diagnostics are merged per
+    file and sorted by (line, column) so the output is stable regardless of analyzer pass
+    order. `full_paths` selects absolute vs. root-relative display paths.
+    """
+
+    def display_path(path: Path) -> Path:
+        return path if full_paths else try_get_relative_path(path, root_folder)
+
+    folder_entries: List[Tuple[Path, List[Diagnostic]]] = [
+        (display_path(e.folder.uri.to_path()), e.items)
+        for e in reports
+        if isinstance(e, FolderDiagnosticReport) and e.items
+    ]
+
+    documents_to_items: Dict[Path, List[Diagnostic]] = {}
+    for e in reports:
+        if isinstance(e, DocumentDiagnosticReport) and e.items:
+            documents_to_items.setdefault(display_path(e.document.uri.to_path()), []).extend(e.items)
+
+    sorted_documents = {
+        doc_path: sorted(documents_to_items[doc_path], key=lambda d: (d.range.start.line, d.range.start.character))
+        for doc_path in sorted(documents_to_items)
+    }
+
+    return folder_entries, sorted_documents
+
+
+def _build_analysis_result(
+    folder_entries: List[Tuple[Path, List[Diagnostic]]],
+    sorted_documents: Dict[Path, List[Diagnostic]],
+    summary: CodeAnalysisSummary,
+) -> CodeAnalysisResult:
+    """Build the JSON result model. Paths are rendered as POSIX strings so the
+    output is stable across platforms; workspace-level reports key on `.`."""
+    diagnostics_by_source: Dict[str, List[Diagnostic]] = {path.as_posix(): items for path, items in folder_entries}
+    for doc_path, items in sorted_documents.items():
+        diagnostics_by_source.setdefault(doc_path.as_posix(), []).extend(items)
+    return CodeAnalysisResult(diagnostics=diagnostics_by_source, summary=summary)
 
 
 # Markers that Robot Framework appends to error messages for debugging.
