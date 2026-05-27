@@ -1,8 +1,9 @@
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 import pytest
 
 from robotcode.core.utils.dataclasses import (
+    NamedTypeError,
     TypeValidationError,
     as_dict,
     from_dict,
@@ -51,3 +52,21 @@ def test_robot_config_can_created_from_dict() -> None:
     model_dict = as_dict(model)
     for key in data:
         assert model_dict[key] == data[key], key
+
+
+@pytest.mark.parametrize(
+    ("value", "expected_args"),
+    [
+        (40, ["--maxerrorlines", "40"]),
+        ("NONE", ["--maxerrorlines", "NONE"]),
+    ],
+)
+def test_max_error_lines_accepts_int_and_none_string(value: Any, expected_args: List[str]) -> None:
+    model = from_dict({"max-error-lines": value}, RobotConfig)
+    assert model.max_error_lines == value
+    assert model.build_command_line() == expected_args
+
+
+def test_max_error_lines_rejects_other_strings() -> None:
+    with pytest.raises(NamedTypeError):
+        from_dict({"max-error-lines": "foo"}, RobotConfig)

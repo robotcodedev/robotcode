@@ -1845,7 +1845,7 @@ class RobotOptions(RobotBaseOptions):
         robot_priority=500,
         alias="max-assign-length",
     )
-    max_error_lines: Optional[int] = field(
+    max_error_lines: Optional[Union[int, Literal["NONE"]]] = field(
         description="""\
             Maximum number of error message lines to show in
             report when tests fail. Default is 40, minimum is 10
@@ -1855,6 +1855,10 @@ class RobotOptions(RobotBaseOptions):
 
             ```toml
             max-error-lines = 40
+            ```
+
+            ```toml
+            max-error-lines = "NONE"
             ```
 
             corresponds to the `--maxerrorlines lines` option of _robot_
