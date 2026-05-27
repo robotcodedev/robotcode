@@ -13,7 +13,7 @@ jobs:
   annotations:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up Python
         uses: actions/setup-python@v6
@@ -38,7 +38,7 @@ jobs:
       # required so github/codeql-action/upload-sarif can publish the results
       security-events: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up Python
         uses: actions/setup-python@v6
@@ -57,6 +57,6 @@ jobs:
         run: hatch run robotcode analyze code --output-format sarif --output-file robotcode.sarif
 
       - name: Upload SARIF to code scanning
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: robotcode.sarif
