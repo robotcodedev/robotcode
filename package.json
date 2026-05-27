@@ -678,7 +678,7 @@
         "args": {
           "text": "    "
         },
-        "when": "editorTextFocus && (editorLangId == robotframework || editorLangId == robotframework-repl) && config.robotcode.editor.4SpacesTab && !editorHasSelection && !inSnippetMode && !suggestWidgetVisible && !inlineSuggestionVisible"
+        "when": "editorTextFocus && (editorLangId == robotframework || editorLangId == robotframework-repl) && config.robotcode.editor.4SpacesTab && !editorHasSelection && !inSnippetMode && !suggestWidgetVisible && !inlineSuggestionVisible && !tabShouldAcceptInlineEdit && !tabShouldJumpToInlineEdit"
       }
     ],
     "configuration": [
