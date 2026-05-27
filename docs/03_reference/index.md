@@ -8,6 +8,8 @@ This reference provides a comprehensive resource for effectively using and confi
 
 - [**Diagnostic Modifiers**](diagnostics-modifiers.md): Explains how to control static analysis diagnostics (errors, warnings, hints) using inline `# robotcode:` comments and configuration in `robot.toml`. It covers the available modifier actions, their scope within Robot Framework files, and how global and inline settings interact across CLI, language server, and editor integrations.
 
+- [**Analyzing Code**](analyzing-code.md): A task-oriented guide to the `robotcode analyze code` command — static analysis of a Robot Framework project without executing it. Covers the diagnostics it reports, severity remapping, exit codes and masks, the human-readable and machine-readable output formats (JSON, SARIF, GitHub annotations, GitLab Code Quality), and CI recipes for code scanning and build gating.
+
 - [**Analyzing Run Results**](analyzing-results.md): A task-oriented guide to the `robotcode results` family of commands — turning a finished run's `output.xml` into headline counts, per-test listings, full execution traces, tag/suite aggregations, and run-to-run diffs. Covers filtering, search, JSON-for-CI patterns, and the most common day-to-day recipes.
 
 - [**Discovering Tests, Tasks and Suites**](discovering-tests.md): A task-oriented guide to the `robotcode discover` family of commands — turning a project's source files into a tree, flat lists, tag indexes, or a file inventory without ever executing a test. Covers Robot-native and search filters, the `TestItem` JSON schema used by editor integrations, and CI recipes for sharding, tag reports, and parse-error gates.
