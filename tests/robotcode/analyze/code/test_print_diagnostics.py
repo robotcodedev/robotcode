@@ -77,7 +77,8 @@ class TestDocumentDiagnostics:
 
         assert len(lines) == 1
         line = lines[0]
-        assert line.startswith("tests/api/foo.robot:4:5: ")
+        # Path is rendered with the native separator (backslash on Windows).
+        assert line.startswith(f"{doc_path}:4:5: ")
         # ANSI red, severity label, code, then message.
         assert _label(DiagnosticSeverity.ERROR, "KeywordNotFound") in line
         assert line.endswith(": boom")
@@ -163,7 +164,7 @@ class TestRelatedInformation:
             Path("doc.robot"),
         )
 
-        assert "sub/deep.py:1:1:" in lines[1]
+        assert f"{Path('sub/deep.py')}:1:1:" in lines[1]
 
     def test_related_message_trimmed_by_default(self, mocker: MockerFixture, tmp_path: Path) -> None:
         app, lines = _capture(mocker)
