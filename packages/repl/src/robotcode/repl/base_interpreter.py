@@ -1,6 +1,7 @@
 import abc
 import signal
 from datetime import datetime
+from io import StringIO
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Iterator, List, Optional, Tuple, Union, cast
 
@@ -12,7 +13,6 @@ from robot.running import Keyword, TestCase, TestSuite
 from robot.running.context import EXECUTION_CONTEXTS
 from robot.running.signalhandler import STOP_SIGNAL_MONITOR, _StopSignalMonitor
 
-from robotcode.core.utils.path import normalized_path
 from robotcode.robot.utils import RF_VERSION
 from robotcode.robot.utils.ast import iter_nodes
 
@@ -137,6 +137,13 @@ class BaseInterpreter(abc.ABC):
         self.last_result: Any = None
         self.indent = 0
         self.source: Optional[Path] = None
+        self._curdir: Optional[Path] = None
+
+    @property
+    def curdir(self) -> Path:
+        if self._curdir is None:
+            self._curdir = self.source.parent if self.source is not None else Path.cwd()
+        return self._curdir
 
     def check_for_errors(self, node: Any) -> List[str]:
         if hasattr(node, "tokens"):
@@ -158,9 +165,11 @@ class BaseInterpreter(abc.ABC):
             + ("\n  ".join(command.split("\n")) if "\n" in command else command)
         ) + "\n"
 
-        curdir = normalized_path(self.source).parent if self.source is not None else Path.cwd()
+        with StringIO(suite_str) as source:
+            model = get_model(source, curdir=str(self.curdir).replace("\\", "\\\\"))
 
-        model = get_model(suite_str, curdir=str(curdir).replace("\\", "\\\\"))
+        model.source = self.source
+
         suite: TestSuite = TestSuite.from_model(model)
 
         errors: List[str] = []

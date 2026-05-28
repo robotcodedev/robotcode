@@ -336,6 +336,8 @@ robotcode repl -P ./libs -P ./vendor/python-libs
 
 `-P` accepts the same `PATH` strings as `robot --pythonpath`.
 
+> **Heads-up for Robot Framework < 7.4.** Bare relative paths in the BuiltIn import keywords `Import Resource` / `Import Library` / `Import Variables` (e.g. `Import Resource    foo/my.resource`) only resolve against the directory of the importing file starting with RF 7.4. On older RF versions these keywords look the path up via the module search path only, so a bare relative form will fail with `Resource file '…' does not exist.` On those versions, either prefix the path with `${CURDIR}/` (e.g. `Import Resource    ${CURDIR}/foo/my.resource`) or put the directory on the module search path. On RF 7.4+ the bare form just works.
+
 ## Pre-seeding variables
 
 Variables can be set up before the prompt opens:

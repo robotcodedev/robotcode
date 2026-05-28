@@ -76,6 +76,9 @@ def run_repl(
 
     root_folder, _profile, cmd_options = handle_robot_options(app, (*robot_options_and_args, *(str(f) for f in files)))
 
+    if source is None:
+        source = Path.cwd() / "__repl_internal__.robot"
+
     with app.chdir(root_folder) as orig_folder:
         try:
             curdir = normalized_path(source).parent if source is not None else Path.cwd()
@@ -88,7 +91,7 @@ def run_repl(
                 orig_folder=orig_folder,
             ).parse_arguments((*cmd_options, *robot_options_and_args))
 
-            interpreter.source = source
+            interpreter.source = normalized_path(source) if source is not None else None
 
             settings = RobotSettings(
                 options,
@@ -113,6 +116,7 @@ def run_repl(
 
             with io.StringIO(REPL_SUITE) as suite_io:
                 model = get_model(suite_io, curdir=str(curdir).replace("\\", "\\\\"))
+                model.source = source
 
                 suite = TestSuite.from_model(model)
                 suite.configure(**settings.suite_config)
