@@ -29,8 +29,10 @@ from robotcode.robot.diagnostics.library_doc import (
     convert_from_rest,
     get_library_doc,
 )
+from robotcode.robot.utils import get_robot_version_str
 from robotcode.robot.utils.markdownformatter import MarkDownFormatter
 
+from .__version__ import __version__
 from ._indent import compute_indent
 from ._keyword_lookup import _LIB_KEYWORDS_ATTR, lookup_keyword_doc, lookup_library_doc
 from ._session_export import render_robot_file
@@ -340,6 +342,28 @@ class ConsoleInterpreter(BaseInterpreter):
         body = f"{title}\n{'=' * len(title)}\n\n{markdown}"
         if self.app is not None:
             self.app.echo_via_pager(body, color=False)
+
+    def show_banner(self) -> None:
+        """Print a Python-REPL-style banner before the first prompt.
+
+        Skipped when stdin isn't a TTY (input piped/redirected) or
+        when running non-interactively from ``--files`` without
+        ``--inspect`` — neither case ever reaches an interactive prompt.
+        """
+        if self.app is None or not sys.stdin.isatty():
+            return
+        if self.files and not self.inspect:
+            return
+
+        py = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
+        rf = get_robot_version_str()
+        header = f"RobotCode REPL {__version__} (Robot Framework {rf}, Python {py} on {sys.platform})"
+        self.app.echo(click.style(header, bold=True))
+        self.app.echo('Type ".help" for commands, ".exit" to quit.')
+
+    def run(self) -> Any:
+        self.show_banner()
+        return super().run()
 
     # ------------------------------------------------------------------
     # Robot integration
