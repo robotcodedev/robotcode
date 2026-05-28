@@ -13,7 +13,13 @@ from typing import Any, Dict, Iterable, List
 import pytest
 from robot.running.context import EXECUTION_CONTEXTS
 
-from robotcode.repl._keyword_lookup import _LIB_KEYWORDS_ATTR, lookup_keyword_doc, lookup_library_doc
+from robotcode.repl._keyword_lookup import (
+    _LIB_KEYWORDS_ATTR,
+    lookup_keyword_doc,
+    lookup_keyword_owner,
+    lookup_library,
+    lookup_resource,
+)
 from robotcode.repl._pt.completion import (
     Candidate,
     CompletionContext,
@@ -752,7 +758,7 @@ def test_current_kw_and_arg_stops_at_logical_line_boundary() -> None:
 
 
 # ---------------------------------------------------------------------------
-# lookup_keyword_doc / lookup_library_doc — _kw_store walk
+# lookup_keyword_doc / lookup_library / lookup_resource — _kw_store walk
 # ---------------------------------------------------------------------------
 
 
@@ -787,17 +793,104 @@ def test_lookup_keyword_doc_walks_resources(monkeypatch: pytest.MonkeyPatch) -> 
     assert kw.name == "Custom Keyword"
 
 
-def test_lookup_library_doc_matches_loaded_library(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_lookup_library_matches_loaded_library(monkeypatch: pytest.MonkeyPatch) -> None:
     """`_fake_namespace` names its library `BuiltIn` — case-insensitive match."""
     _patch_context(monkeypatch, _fake_namespace(["Log"], []))
-    lib = lookup_library_doc("builtin")
+    lib = lookup_library("builtin")
     assert lib is not None
     assert lib.name == "BuiltIn"
 
 
-def test_lookup_library_doc_returns_none_for_unknown(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_lookup_library_returns_none_for_unknown(monkeypatch: pytest.MonkeyPatch) -> None:
     _patch_context(monkeypatch, _fake_namespace(["Log"], []))
-    assert lookup_library_doc("ThisLibIsNotLoaded") is None
+    assert lookup_library("ThisLibIsNotLoaded") is None
+
+
+def test_lookup_library_does_not_match_resource(monkeypatch: pytest.MonkeyPatch) -> None:
+    """`MyResource` lives in the resource section, not the library section."""
+    _patch_context(monkeypatch, _fake_namespace([], ["Custom Keyword"]))
+    assert lookup_library("MyResource") is None
+
+
+def test_lookup_resource_matches_loaded_resource(monkeypatch: pytest.MonkeyPatch) -> None:
+    """`_fake_namespace` names its resource `MyResource` — case-insensitive match."""
+    _patch_context(monkeypatch, _fake_namespace([], ["Custom Keyword"]))
+    res = lookup_resource("myresource")
+    assert res is not None
+    assert res.name == "MyResource"
+
+
+def test_lookup_resource_does_not_match_library(monkeypatch: pytest.MonkeyPatch) -> None:
+    _patch_context(monkeypatch, _fake_namespace(["Log"], []))
+    assert lookup_resource("BuiltIn") is None
+
+
+def test_lookup_keyword_owner_finds_library_keyword(monkeypatch: pytest.MonkeyPatch) -> None:
+    _patch_context(monkeypatch, _fake_namespace(["Log"], []))
+    found = lookup_keyword_owner("Log")
+    assert found is not None
+    owner, kw, is_resource = found
+    assert owner.name == "BuiltIn"
+    assert kw.name == "Log"
+    assert is_resource is False
+
+
+def test_lookup_keyword_owner_flags_resource_keyword(monkeypatch: pytest.MonkeyPatch) -> None:
+    _patch_context(monkeypatch, _fake_namespace([], ["Custom Keyword"]))
+    found = lookup_keyword_owner("Custom Keyword")
+    assert found is not None
+    owner, _kw, is_resource = found
+    assert owner.name == "MyResource"
+    assert is_resource is True
+
+
+def test_lookup_keyword_owner_library_wins_over_resource(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A name defined in both sections resolves to the library, matching
+    `lookup_keyword_doc`'s precedence."""
+    _patch_context(monkeypatch, _fake_namespace(["Shared"], ["Shared"]))
+    found = lookup_keyword_owner("Shared")
+    assert found is not None
+    owner, _kw, is_resource = found
+    assert owner.name == "BuiltIn"
+    assert is_resource is False
+
+
+def test_lookup_keyword_owner_resolves_explicit_library_name(monkeypatch: pytest.MonkeyPatch) -> None:
+    """`.kw BuiltIn.Log` — explicit ``Owner.Keyword`` form."""
+    _patch_context(monkeypatch, _fake_namespace(["Log"], []))
+    found = lookup_keyword_owner("BuiltIn.Log")
+    assert found is not None
+    owner, kw, is_resource = found
+    assert owner.name == "BuiltIn"
+    assert kw.name == "Log"
+    assert is_resource is False
+
+
+def test_lookup_keyword_owner_resolves_explicit_resource_name(monkeypatch: pytest.MonkeyPatch) -> None:
+    _patch_context(monkeypatch, _fake_namespace([], ["Custom Keyword"]))
+    found = lookup_keyword_owner("MyResource.Custom Keyword")
+    assert found is not None
+    owner, kw, is_resource = found
+    assert owner.name == "MyResource"
+    assert kw.name == "Custom Keyword"
+    assert is_resource is True
+
+
+def test_lookup_keyword_owner_explicit_name_is_case_insensitive(monkeypatch: pytest.MonkeyPatch) -> None:
+    _patch_context(monkeypatch, _fake_namespace(["Log"], []))
+    found = lookup_keyword_owner("builtin.log")
+    assert found is not None
+    assert found[0].name == "BuiltIn"
+
+
+def test_lookup_keyword_owner_explicit_unknown_owner_returns_none(monkeypatch: pytest.MonkeyPatch) -> None:
+    _patch_context(monkeypatch, _fake_namespace(["Log"], []))
+    assert lookup_keyword_owner("Nope.Log") is None
+
+
+def test_lookup_keyword_owner_returns_none_for_unknown(monkeypatch: pytest.MonkeyPatch) -> None:
+    _patch_context(monkeypatch, _fake_namespace(["Log"], []))
+    assert lookup_keyword_owner("Definitely Not A Keyword") is None
 
 
 # ---------------------------------------------------------------------------

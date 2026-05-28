@@ -26,15 +26,17 @@ from robotcode.plugin import Application
 from robotcode.robot.diagnostics.library_doc import (
     REST_DOC_FORMAT,
     ROBOT_DOC_FORMAT,
+    LibraryDoc,
     convert_from_rest,
-    get_library_doc,
+    get_library_doc_from_library,
+    get_resource_doc_from_resource,
 )
 from robotcode.robot.utils import get_robot_version_str
 from robotcode.robot.utils.markdownformatter import MarkDownFormatter
 
 from .__version__ import __version__
 from ._indent import compute_indent
-from ._keyword_lookup import _LIB_KEYWORDS_ATTR, lookup_keyword_doc, lookup_library_doc
+from ._keyword_lookup import _LIB_KEYWORDS_ATTR, lookup_keyword_owner, lookup_library, lookup_resource
 from ._session_export import render_robot_file
 from .base_interpreter import BaseInterpreter, is_true
 
@@ -99,84 +101,28 @@ def _format_doc_to_md(text: str, doc_format: str) -> str:
     return text
 
 
-def _upgrade_to_diagnostics_keyword(runtime_kw: Any, kw_name: str) -> Optional[Any]:
-    """Try to load the diagnostics `KeywordDoc` for a runtime keyword.
+def _diagnostics_keyword_doc(owner: Any, is_resource: bool, kw_name: str) -> Optional[Any]:
+    """The diagnostics `KeywordDoc` for `kw_name` from a loaded owner.
 
-    `lookup_keyword_doc` returns the runtime object (a `StaticKeyword`
-    in RF 7+, an old-style handler before that) — those carry `name` /
-    `args` / `doc` strings but no `to_markdown`. The diagnostics
-    `KeywordDoc` does, with proper signature + arg table rendering.
-
-    We bridge by reading the runtime keyword's library name (`owner`
-    in RF 7+, falls back to the `libname` carried on some keyword
-    types), re-loading that library via `get_library_doc`, and
-    looking up the keyword by name in the resulting `KeywordStore`.
-
-    Returns ``None`` for resource keywords, user keywords, or any
-    case where the diagnostics loader can't help — the caller falls
-    back to hand-building markdown from runtime fields.
+    The runtime keyword object (a `StaticKeyword` on RF 7+, an old-style
+    handler before that) carries `name` / `args` / `doc` strings but no
+    `to_markdown`. The diagnostics `KeywordDoc` does, with proper
+    signature + arg table rendering. We get it by converting the
+    already-loaded `owner` instance in place — no reimport or re-parse —
+    and looking the keyword up by name (which also matches embedded
+    keywords). Returns ``None`` when the conversion or lookup fails, so
+    the caller can fall back to a runtime-only rendering.
     """
-    owner = getattr(runtime_kw, "owner", None) or getattr(runtime_kw, "parent", None)
-    owner_name = getattr(owner, "name", None) or getattr(runtime_kw, "libname", None)
-    if not owner_name:
-        return None
     try:
-        lib_doc = get_library_doc(owner_name)
+        lib_doc: LibraryDoc = (
+            get_resource_doc_from_resource(owner)
+            if is_resource
+            else get_library_doc_from_library(owner, name=str(owner.name))
+        )
+        matches = list(lib_doc.keywords.get_all(kw_name))
     except Exception:
         return None
-    matches: List[Any] = []
-    keywords = getattr(lib_doc, "keywords", None)
-    if keywords is None:
-        return None
-    get_all = getattr(keywords, "get_all", None)
-    if callable(get_all):
-        try:
-            matches = list(get_all(kw_name))
-        except Exception:
-            matches = []
     return matches[0] if matches else None
-
-
-def _render_runtime_library_md(lib: Any, arg: str) -> str:
-    """Hand-built fallback library page for resources / dynamic libs.
-
-    Used only when `get_library_doc(arg)` can't load the import — the
-    diagnostics path covers every regular library so this code only
-    fires for `Import Resource` files and similar. Keeps the rendering
-    minimal: heading, optional version + scope, raw markdown of the
-    doc, then a flat keyword listing.
-    """
-    lib_name = getattr(lib, "name", arg)
-    md: List[str] = []
-    header = f"## {lib_name}"
-    version = getattr(lib, "version", None)
-    if version:
-        header += f"  _v{version}_"
-    md.append(header)
-    md.append("")
-    scope = getattr(lib, "scope", None)
-    if scope:
-        md.append(f"_Scope: {scope}_")
-        md.append("")
-
-    doc = getattr(lib, "doc", None) or ""
-    if doc:
-        md.append(_format_doc_to_md(doc, getattr(lib, "doc_format", ROBOT_DOC_FORMAT)))
-
-    keywords = list(getattr(lib, _LIB_KEYWORDS_ATTR, None) or [])
-    if keywords:
-        md.append("")
-        md.append("### Keywords")
-        md.append("")
-        for kw in keywords:
-            kw_name = getattr(kw, "name", "?")
-            md.append(f"- **{kw_name}**")
-
-    source = getattr(lib, "source", None)
-    if source:
-        md.append("")
-        md.append(f"_Source: {source}_")
-    return "\n".join(md)
 
 
 def _render_runtime_keyword_md(kw: Any, kw_name: str) -> str:
@@ -649,16 +595,14 @@ class ConsoleInterpreter(BaseInterpreter):
 
     @dot_command("kw")
     def _kw(self, arg: str) -> None:
-        """Show full documentation for a keyword: .kw <name>
+        """Show the documentation for a keyword: .kw <name>
 
-        Renders the keyword's signature (with argument types + defaults),
-        full docstring, tags, and source via the project's own
-        `KeywordDoc.to_markdown(...)` — the same routine the language
-        server uses for hover/signature help, so the bash view matches
-        what the editor surfaces.
+        Shows the keyword's signature (arguments with their types and
+        defaults), description, tags, and where it comes from.
 
-        Name lookup is case-/whitespace-/underscore-insensitive
-        (`Set Variable`, `set variable`, `set_variable` all match).
+        Names are resolved just like in a Robot Framework suite, so the
+        `Owner.Keyword` form works too when the same name comes from more
+        than one imported library or resource.
 
         Usage:
           .kw <keyword-name>
@@ -666,47 +610,47 @@ class ConsoleInterpreter(BaseInterpreter):
         Examples:
           .kw Log
           .kw Get From Dictionary
+          .kw BuiltIn.Log
         """
         if self.app is None:
             return
         if not arg:
             self.app.echo("Usage: .kw <keyword-name>")
             return
-        kw = lookup_keyword_doc(arg)
-        if kw is None:
+        found = lookup_keyword_owner(arg)
+        if found is None:
             self.app.echo(f"No keyword found: {arg!r}")
             return
+        owner, runtime_kw, is_resource = found
 
-        kw_name = getattr(kw, "name", arg)
+        kw_name = getattr(runtime_kw, "name", arg)
 
         # Prefer the diagnostics `KeywordDoc` — it carries
         # `to_markdown(...)` with proper signature + arg table + types,
         # which the runtime keyword object (`StaticKeyword`) doesn't.
-        diag_kw = _upgrade_to_diagnostics_keyword(kw, kw_name)
+        diag_kw = _diagnostics_keyword_doc(owner, is_resource, kw_name)
         if diag_kw is not None:
             self.show_doc(kw_name, diag_kw.to_markdown(header_level=1))
             return
 
-        # Fallback for resource keywords / dynamic libraries the
-        # diagnostics loader can't introspect — hand-build a minimal
-        # page from whatever the runtime object exposes.
-        self.show_doc(kw_name, _render_runtime_keyword_md(kw, kw_name))
+        # Fallback for keywords the diagnostics conversion can't surface
+        # — hand-build a minimal page from whatever the runtime object
+        # exposes.
+        self.show_doc(kw_name, _render_runtime_keyword_md(runtime_kw, kw_name))
 
     @dot_command("doc")
     def _doc(self, arg: str) -> None:
-        """Show full documentation for a library or resource: .doc <name>
+        """Show the documentation for a library or resource: .doc <name>
 
-        Renders the full library page via
-        `LibraryDoc.to_markdown(only_doc=False, header_level=1)` —
-        version + scope table, introduction (with `%TOC%` expanded
-        and inline `[Other Kw](\\#anchor)` links resolved), then every
-        keyword with its signature, argument table, and full doc body.
-        Same renderer the language server uses for hover info, so this
-        view stays in sync with what the editor shows.
+        Shows the full page for a library or resource file: its
+        introduction, followed by every keyword with its signature,
+        arguments, and description.
 
-        Libraries that aren't currently imported are loaded fresh via
-        `get_library_doc()` — heavier call, but acceptable since it's
-        an explicit user action.
+        Only libraries and resources the current session has imported can
+        be shown, addressed by their name in the suite's namespace. For a
+        library imported with an alias (`AS`, or the older `WITH NAME`),
+        that means the alias rather than the original library name; for a
+        resource, its file name without the extension.
 
         Usage:
           .doc <library-or-resource-name>
@@ -714,6 +658,7 @@ class ConsoleInterpreter(BaseInterpreter):
         Examples:
           .doc BuiltIn
           .doc Collections
+          .doc MyResource
         """
         if self.app is None:
             return
@@ -721,31 +666,38 @@ class ConsoleInterpreter(BaseInterpreter):
             self.app.echo("Usage: .doc <library-or-resource-name>")
             return
 
-        # Try the diagnostics loader first — it returns a `LibraryDoc`
-        # whose `to_markdown` is the renderer we want. Resources
-        # imported via `Import Resource` aren't libraries; for those
-        # the diagnostics loader raises and we fall back to the
-        # runtime store, where we hand-build a minimal page.
-        diag_error: Optional[Exception] = None
-        lib: Optional[Any] = None
-        try:
-            lib = get_library_doc(arg)
-        except Exception as e:
-            diag_error = e
-            lib = lookup_library_doc(arg)
-
-        if lib is None:
-            self.app.echo(f"Could not load {arg!r}: {diag_error}")
+        lib_doc, error = self._resolve_doc_target(arg)
+        if lib_doc is None:
+            self.app.echo(error or f"Could not load {arg!r}.")
             return
 
-        lib_name = getattr(lib, "name", arg)
+        self.show_doc(lib_doc.name, lib_doc.to_markdown(only_doc=False, header_level=1))
 
-        if hasattr(lib, "to_markdown"):
-            body = lib.to_markdown(only_doc=False, header_level=1)
-        else:
-            body = _render_runtime_library_md(lib, arg)
+    def _resolve_doc_target(self, arg: str) -> Tuple[Optional[LibraryDoc], Optional[str]]:
+        """Build the `LibraryDoc` for an imported library or resource.
 
-        self.show_doc(lib_name, body)
+        Only items currently loaded in `EXECUTION_CONTEXTS.current` are
+        considered — `.doc` reflects what the user has imported. The
+        library and resource sections of the store are looked up
+        separately, so the instance type is known and no file-name
+        guessing is needed; it is converted in place without reimporting
+        or re-parsing.
+        """
+        library = lookup_library(arg)
+        if library is not None:
+            try:
+                return get_library_doc_from_library(library, name=str(library.name)), None
+            except Exception as e:
+                return None, f"Could not render documentation for {arg!r}: {e}"
+
+        resource = lookup_resource(arg)
+        if resource is not None:
+            try:
+                return get_resource_doc_from_resource(resource), None
+            except Exception as e:
+                return None, f"Could not render documentation for {arg!r}: {e}"
+
+        return None, f"{arg!r} is not loaded. Import it as a library or resource first."
 
     @dot_command("clear")
     def _clear(self, arg: str) -> None:
@@ -790,13 +742,12 @@ class ConsoleInterpreter(BaseInterpreter):
         """Save session as a .robot file: .save [-a] [-t NAME] FILENAME
 
         Save the current REPL session as a runnable `.robot` file. Only
-        inputs that round-tripped through Robot's parser are exported;
-        failed lines are silently skipped so the result stays runnable
-        with `robot <filename>`.
+        lines Robot could parse are exported; lines that failed are
+        skipped so the result stays runnable with `robot <filename>`.
 
-        Imports are hoisted into a `*** Settings ***` section (so
-        `Import Library    Collections` becomes `Library    Collections`).
-        Everything else lands in a single `*** Test Cases ***` block.
+        Imports become a `*** Settings ***` section (so
+        `Import Library    Collections` becomes `Library    Collections`),
+        and everything else goes into a single `*** Test Cases ***` block.
 
         Usage:
           .save [-a] [-t NAME] FILENAME

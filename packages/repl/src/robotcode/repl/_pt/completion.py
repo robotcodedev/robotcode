@@ -14,7 +14,7 @@ The dispatch logic mirrors the Language Server's per-form completion
 handlers in `packages/language_server/.../parts/completion.py`.
 
 Robot-runtime lookup helpers used by both interpreters
-(`lookup_keyword_doc`, `lookup_library_doc`) live in
+(`lookup_keyword_doc`, `lookup_library`, `lookup_resource`) live in
 `robotcode.repl._keyword_lookup` — those don't depend on
 prompt_toolkit and shouldn't import this module.
 """

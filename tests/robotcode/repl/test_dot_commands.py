@@ -230,7 +230,12 @@ def test_help_with_arg_routes_to_show_doc_with_command_title() -> None:
 
 def test_kw_routes_to_show_doc_override(monkeypatch: pytest.MonkeyPatch) -> None:
     fake = _fake_kw("Log", doc="Logs the given message.", source=None, args=None, tags=())
-    monkeypatch.setattr("robotcode.repl.console_interpreter.lookup_keyword_doc", lambda n: fake if n == "Log" else None)
+    monkeypatch.setattr(
+        "robotcode.repl.console_interpreter.lookup_keyword_owner",
+        lambda n: (SimpleNamespace(name="BuiltIn"), fake, False) if n == "Log" else None,
+    )
+    # Force the hand-built fallback so the test stays focused on routing.
+    monkeypatch.setattr("robotcode.repl.console_interpreter._diagnostics_keyword_doc", lambda *a: None)
     interp = _CapturingShowDocInterpreter(_StubApp())
     interp._dispatch_dot_command(".kw Log")
     assert len(interp.shown) == 1
@@ -241,18 +246,16 @@ def test_kw_routes_to_show_doc_override(monkeypatch: pytest.MonkeyPatch) -> None
 
 
 def test_doc_routes_to_show_doc_override(monkeypatch: pytest.MonkeyPatch) -> None:
-    fake_lib = SimpleNamespace(
+    fake_doc = SimpleNamespace(
         name="Collections",
-        version="1.0",
-        doc="A library.",
-        doc_format="ROBOT",
-        scope=None,
-        source=None,
-        keywords=[],
+        to_markdown=lambda only_doc=True, header_level=2: "## Library *Collections*",
     )
     monkeypatch.setattr(
-        "robotcode.repl.console_interpreter.lookup_library_doc", lambda n: fake_lib if n == "Collections" else None
+        "robotcode.repl.console_interpreter.lookup_library",
+        lambda n: SimpleNamespace(name="Collections") if n == "Collections" else None,
     )
+    monkeypatch.setattr("robotcode.repl.console_interpreter.lookup_resource", lambda n: None)
+    monkeypatch.setattr("robotcode.repl.console_interpreter.get_library_doc_from_library", lambda lib, **kw: fake_doc)
     interp = _CapturingShowDocInterpreter(_StubApp())
     interp._dispatch_dot_command(".doc Collections")
     assert len(interp.shown) == 1
@@ -406,10 +409,10 @@ def test_kw_unknown_name(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_kw_uses_diagnostics_to_markdown_when_owner_resolves(monkeypatch: pytest.MonkeyPatch) -> None:
-    """When the runtime keyword's `owner` matches a library the
-    diagnostics loader can introspect, `.kw <name>` renders via
-    `KeywordDoc.to_markdown(...)` — same renderer the editor's
-    hover uses, with proper signature + arguments table."""
+    """When the keyword's owner is a loaded library, `.kw <name>`
+    renders via `KeywordDoc.to_markdown(...)` — same renderer the
+    editor's hover uses, with proper signature + arguments table —
+    built from the already-loaded instance (no reimport)."""
 
     class _FakeKwDoc:
         name = "Log"
@@ -423,10 +426,12 @@ def test_kw_uses_diagnostics_to_markdown_when_owner_resolves(monkeypatch: pytest
 
     fake_lib_doc = SimpleNamespace(keywords=_FakeKwStore())
     owner = SimpleNamespace(name="BuiltIn")
-    runtime_kw = _fake_kw("Log", owner=owner, doc="runtime fallback", args=None, tags=[])
+    runtime_kw = _fake_kw("Log", doc="runtime fallback", args=None, tags=[])
 
-    monkeypatch.setattr("robotcode.repl.console_interpreter.lookup_keyword_doc", lambda n: runtime_kw)
-    monkeypatch.setattr("robotcode.repl.console_interpreter.get_library_doc", lambda n, **kw: fake_lib_doc)
+    monkeypatch.setattr("robotcode.repl.console_interpreter.lookup_keyword_owner", lambda n: (owner, runtime_kw, False))
+    monkeypatch.setattr(
+        "robotcode.repl.console_interpreter.get_library_doc_from_library", lambda lib, **kw: fake_lib_doc
+    )
 
     app = _StubApp()
     _make_interp(app)._dispatch_dot_command(".kw Log")
@@ -436,10 +441,10 @@ def test_kw_uses_diagnostics_to_markdown_when_owner_resolves(monkeypatch: pytest
 
 
 def test_kw_falls_back_to_hand_built_when_diagnostics_unavailable(monkeypatch: pytest.MonkeyPatch) -> None:
-    """If the runtime keyword has no `owner` (user keywords from a
-    resource file, dynamic libraries with no metadata), the
-    diagnostics upgrade returns None and we hand-build the page so
-    the user still sees *something*."""
+    """If converting the owner instance can't surface a `KeywordDoc`
+    (e.g. user keywords whose owner the diagnostics path can't build),
+    the upgrade returns None and we hand-build the page so the user
+    still sees *something*."""
     kw = _fake_kw("Local Step", args=None, tags=["local"], doc="My step.", doc_format="ROBOT", source=None)
     _patch_context(monkeypatch, _fake_namespace(library_keywords=[kw]))
     app = _StubApp()
@@ -459,9 +464,7 @@ def test_doc_uses_diagnostics_to_markdown(monkeypatch: pytest.MonkeyPatch) -> No
     """`.doc <Library>` defers to `LibraryDoc.to_markdown(only_doc=False)`
     so the rendered page matches what the language server surfaces
     on hover — full intro + version/scope table + every keyword
-    with signature, arg table, and full docstring. The plain
-    hand-built shape is only a fallback for resources where the
-    diagnostics loader can't help."""
+    with signature, arg table, and full docstring."""
 
     class _FakeLibDoc:
         name = "FakeLib"
@@ -471,54 +474,66 @@ def test_doc_uses_diagnostics_to_markdown(monkeypatch: pytest.MonkeyPatch) -> No
             # page (`only_doc=False`) and not just the intro.
             return f"## Library *FakeLib* (only_doc={only_doc}, header={header_level})"
 
-    monkeypatch.setattr("robotcode.repl.console_interpreter.get_library_doc", lambda n, **kw: _FakeLibDoc())
+    monkeypatch.setattr("robotcode.repl.console_interpreter.lookup_library", lambda n: SimpleNamespace(name="FakeLib"))
+    monkeypatch.setattr("robotcode.repl.console_interpreter.lookup_resource", lambda n: None)
+    monkeypatch.setattr(
+        "robotcode.repl.console_interpreter.get_library_doc_from_library", lambda lib, **kw: _FakeLibDoc()
+    )
     app = _StubApp()
     _make_interp(app)._dispatch_dot_command(".doc FakeLib")
     assert app.paged == ["FakeLib\n=======\n\n## Library *FakeLib* (only_doc=False, header=1)"]
 
 
-def test_doc_resource_falls_back_to_runtime_when_diagnostics_fails(monkeypatch: pytest.MonkeyPatch) -> None:
-    """For `Import Resource`-loaded files the diagnostics loader
-    raises (resources aren't python libraries). We then reach for
-    the runtime store; that object has no `to_markdown`, so we
-    hand-build a minimal page from its plain fields."""
+def test_doc_resource_uses_resource_doc_renderer(monkeypatch: pytest.MonkeyPatch) -> None:
+    """`.doc <resource>` renders the already-loaded resource instance
+    via `get_resource_doc_from_resource` — no re-parsing from disk."""
 
-    fake_resource = SimpleNamespace(name="MyResource", version=None, scope=None, doc="A custom resource.", source=None)
-    setattr(fake_resource, _LIB_KEYWORDS_ATTR, [_fake_kw("Step One"), _fake_kw("Step Two")])
+    class _FakeResDoc:
+        name = "MyResource"
 
-    def _diag_raises(name: str, **_: Any) -> Any:
-        raise RuntimeError(f"not a library: {name}")
+        def to_markdown(self, only_doc: bool = True, header_level: int = 2) -> str:
+            return "## Resource *MyResource*\n\nA custom resource."
 
-    monkeypatch.setattr("robotcode.repl.console_interpreter.get_library_doc", _diag_raises)
+    monkeypatch.setattr("robotcode.repl.console_interpreter.lookup_library", lambda n: None)
     monkeypatch.setattr(
-        "robotcode.repl.console_interpreter.lookup_library_doc",
-        lambda n: fake_resource if n == "MyResource" else None,
+        "robotcode.repl.console_interpreter.lookup_resource",
+        lambda n: SimpleNamespace(name="MyResource") if n == "MyResource" else None,
+    )
+    monkeypatch.setattr(
+        "robotcode.repl.console_interpreter.get_resource_doc_from_resource", lambda res, **kw: _FakeResDoc()
     )
 
     app = _StubApp()
     _make_interp(app)._dispatch_dot_command(".doc MyResource")
     md = app.paged[0]
-    assert "## MyResource" in md
+    assert "## Resource *MyResource*" in md
     assert "A custom resource." in md
-    assert "### Keywords" in md
-    assert "- **Step One**" in md
-    assert "- **Step Two**" in md
 
 
-def test_doc_reports_diagnostics_error_when_nothing_resolves(monkeypatch: pytest.MonkeyPatch) -> None:
-    """When both the diagnostics loader AND the runtime lookup come
-    up empty, surface the diagnostics error message — it's
-    more informative than the bare "not found" hint."""
-
-    def _diag_raises(name: str, **_: Any) -> Any:
-        raise RuntimeError("import failed: boom")
-
-    monkeypatch.setattr("robotcode.repl.console_interpreter.get_library_doc", _diag_raises)
-    monkeypatch.setattr("robotcode.repl.console_interpreter.lookup_library_doc", lambda n: None)
+def test_doc_reports_not_loaded_when_nothing_resolves(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Neither a library nor a resource by that name is imported."""
+    monkeypatch.setattr("robotcode.repl.console_interpreter.lookup_library", lambda n: None)
+    monkeypatch.setattr("robotcode.repl.console_interpreter.lookup_resource", lambda n: None)
 
     app = _StubApp()
     _make_interp(app)._dispatch_dot_command(".doc Nope")
-    assert any("Could not load 'Nope'" in m and "boom" in m for m in app.messages)
+    assert any("'Nope' is not loaded" in m for m in app.messages)
+
+
+def test_doc_reports_render_error_on_conversion_failure(monkeypatch: pytest.MonkeyPatch) -> None:
+    """If converting the loaded instance throws, surface the error
+    rather than an empty page."""
+    monkeypatch.setattr("robotcode.repl.console_interpreter.lookup_library", lambda n: SimpleNamespace(name="Boom"))
+    monkeypatch.setattr("robotcode.repl.console_interpreter.lookup_resource", lambda n: None)
+
+    def _boom(lib: Any, **_: Any) -> Any:
+        raise RuntimeError("kaboom")
+
+    monkeypatch.setattr("robotcode.repl.console_interpreter.get_library_doc_from_library", _boom)
+
+    app = _StubApp()
+    _make_interp(app)._dispatch_dot_command(".doc Boom")
+    assert any("Could not render documentation for 'Boom'" in m and "kaboom" in m for m in app.messages)
 
 
 def test_doc_without_argument_prints_usage() -> None:
@@ -527,30 +542,16 @@ def test_doc_without_argument_prints_usage() -> None:
     assert any("Usage" in m for m in app.messages)
 
 
-def test_doc_falls_back_to_get_library_doc_for_unloaded(monkeypatch: pytest.MonkeyPatch) -> None:
-    """When the library isn't in `_kw_store`, fall through to
-    `get_library_doc(name)` (mocked here)."""
-    _patch_context(monkeypatch, _fake_namespace())  # no matching library
-    fake_doc = SimpleNamespace(name="Selenium", version="9.9", doc="", scope=None)
-    setattr(fake_doc, _LIB_KEYWORDS_ATTR, [])
-
-    monkeypatch.setattr("robotcode.repl.console_interpreter.get_library_doc", lambda name, **kw: fake_doc)
+def test_doc_reports_not_loaded_for_unimported_via_store_walk(monkeypatch: pytest.MonkeyPatch) -> None:
+    """`.doc` only shows imported items. A name that is in neither the
+    library nor the resource section of the store reports "not loaded"
+    — exercised through the real `lookup_library` / `lookup_resource`
+    walk over `_fake_namespace` (which holds only `BuiltIn` and
+    `MyResource`)."""
+    _patch_context(monkeypatch, _fake_namespace())
     app = _StubApp()
     _make_interp(app)._dispatch_dot_command(".doc Selenium")
-    assert app.paged
-    assert "## Selenium" in app.paged[0]
-
-
-def test_doc_reports_error_when_load_fails(monkeypatch: pytest.MonkeyPatch) -> None:
-    _patch_context(monkeypatch, _fake_namespace())
-
-    def _raise(*_a: Any, **_kw: Any) -> None:
-        raise RuntimeError("boom")
-
-    monkeypatch.setattr("robotcode.repl.console_interpreter.get_library_doc", _raise)
-    app = _StubApp()
-    _make_interp(app)._dispatch_dot_command(".doc MissingLib")
-    assert any("Could not load" in m for m in app.messages)
+    assert any("'Selenium' is not loaded" in m for m in app.messages)
 
 
 # ---------------------------------------------------------------------------

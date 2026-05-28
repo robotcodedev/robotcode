@@ -2,17 +2,17 @@
 
 Backend-agnostic: both `ConsoleInterpreter` (plain) and
 `PromptToolkitConsoleInterpreter` use these to resolve `.kw <name>`
-and `.doc <library>` dot-commands against the currently-imported
-`_kw_store`. The richer completion machinery (tokenize / candidates
-/ CompletionContext / Candidate) is prompt_toolkit-only and lives
-in `_pt.completion`.
+and `.doc <library-or-resource>` dot-commands against the
+currently-imported `_kw_store`. The richer completion machinery
+(tokenize / candidates / CompletionContext / Candidate) is
+prompt_toolkit-only and lives in `_pt.completion`.
 
 Data is pulled straight from `EXECUTION_CONTEXTS.current`, which is
 populated by the time the user hits Enter because the REPL runs
 synchronously inside `suite.run()`.
 """
 
-from typing import Any, Optional
+from typing import Any, List, Optional, Tuple
 
 from robot.running.context import EXECUTION_CONTEXTS
 from robot.utils import normalize
@@ -30,6 +30,19 @@ def _norm(s: Optional[str]) -> str:
     return normalize(s, ignore="_") if s else ""
 
 
+def _current_kw_store() -> Optional[Any]:
+    """The running namespace's keyword store, or ``None`` outside a run.
+
+    `_kw_store` is a private attribute of Robot's `Namespace`; the
+    ``getattr`` guards the one boundary where we reach into RF
+    internals whose shape isn't part of its public API.
+    """
+    context = EXECUTION_CONTEXTS.current
+    if context is None:
+        return None
+    return getattr(context.namespace, "_kw_store", None)
+
+
 def lookup_keyword_doc(name: str) -> Optional[Any]:
     """Resolve ``name`` to a loaded keyword object, or ``None``.
 
@@ -40,43 +53,127 @@ def lookup_keyword_doc(name: str) -> Optional[Any]:
     keyword with ``.name``, ``.args`` (``ArgumentSpec``), ``.doc``,
     ``.tags``, ``.source``. Callers should access fields defensively.
     """
-    context = EXECUTION_CONTEXTS.current
-    if context is None:
-        return None
-    store = getattr(context.namespace, "_kw_store", None)
+    store = _current_kw_store()
     if store is None:
         return None
     target = _norm(name)
     if not target:
         return None
     for src in (*store.libraries.values(), *store.resources.values()):
-        for kw in getattr(src, _LIB_KEYWORDS_ATTR, ()) or ():
-            kw_name = getattr(kw, "name", None)
-            if kw_name and _norm(kw_name) == target:
-                return kw
+        kw = _find_keyword_in_owner(src, target)
+        if kw is not None:
+            return kw
     return None
 
 
-def lookup_library_doc(name: str) -> Optional[Any]:
-    """Resolve ``name`` to a loaded library or resource, or ``None``.
+def lookup_keyword_owner(name: str) -> Optional[Tuple[Any, Any, bool]]:
+    """Resolve ``name`` to ``(owner, keyword, is_resource)``, or ``None``.
 
-    Case-insensitive lookup against `_kw_store`. The returned object
-    exposes ``.name``, ``.keywords`` / ``.handlers``, ``.doc``,
-    ``.doc_format``, ``.source``. For libraries that aren't currently
-    imported, callers can fall back to
-    `robotcode.robot.diagnostics.library_doc.get_library_doc`.
+    ``owner`` is the loaded library / resource instance that defines the
+    keyword, ``keyword`` the runtime keyword object, and ``is_resource``
+    tells which store section it came from. Libraries are searched
+    before resources, so library keywords win on name collisions — the
+    same precedence as `lookup_keyword_doc`. Callers use ``owner`` to
+    render a rich `KeywordDoc` without reimporting it from disk.
+
+    Both the plain keyword name (``Log``) and the explicit
+    ``Owner.Keyword`` form (``BuiltIn.Log``) are accepted; the plain
+    name is tried first so a keyword whose own name contains a dot still
+    resolves, mirroring how Robot itself dispatches keyword calls.
     """
-    context = EXECUTION_CONTEXTS.current
-    if context is None:
-        return None
-    store = getattr(context.namespace, "_kw_store", None)
+    store = _current_kw_store()
     if store is None:
         return None
+    target = _norm(name)
+    if not target:
+        return None
+    for owner in store.libraries.values():
+        kw = _find_keyword_in_owner(owner, target)
+        if kw is not None:
+            return owner, kw, False
+    for owner in store.resources.values():
+        kw = _find_keyword_in_owner(owner, target)
+        if kw is not None:
+            return owner, kw, True
+    if "." in name:
+        return _lookup_explicit_keyword_owner(store, name)
+    return None
+
+
+def _lookup_explicit_keyword_owner(store: Any, full_name: str) -> Optional[Tuple[Any, Any, bool]]:
+    """Resolve an explicit ``Owner.Keyword`` name against the store.
+
+    Every ``owner . keyword`` split of ``full_name`` is tried (so both
+    ``BuiltIn.Log`` and dotted owner/keyword names resolve), matching an
+    owner by name in the library section before the resource section.
+    """
+    for owner_name, kw_name in _owner_and_keyword_splits(full_name):
+        owner_target = owner_name.casefold()
+        kw_target = _norm(kw_name)
+        for owner in store.libraries.values():
+            if str(owner.name).casefold() == owner_target:
+                kw = _find_keyword_in_owner(owner, kw_target)
+                if kw is not None:
+                    return owner, kw, False
+        for owner in store.resources.values():
+            if str(owner.name).casefold() == owner_target:
+                kw = _find_keyword_in_owner(owner, kw_target)
+                if kw is not None:
+                    return owner, kw, True
+    return None
+
+
+def _owner_and_keyword_splits(full_name: str) -> List[Tuple[str, str]]:
+    """``Owner.Keyword`` partitions of ``full_name``, e.g.
+    ``a.b.c`` → ``[(a, b.c), (a.b, c)]`` — same scheme Robot uses."""
+    tokens = full_name.split(".")
+    return [(".".join(tokens[:i]), ".".join(tokens[i:])) for i in range(1, len(tokens))]
+
+
+def _find_keyword_in_owner(owner: Any, normalized_name: str) -> Optional[Any]:
+    """First keyword on ``owner`` whose name folds to ``normalized_name``."""
+    for kw in getattr(owner, _LIB_KEYWORDS_ATTR, ()) or ():
+        kw_name = getattr(kw, "name", None)
+        if kw_name and _norm(kw_name) == normalized_name:
+            return kw
+    return None
+
+
+def lookup_library(name: str) -> Optional[Any]:
+    """The loaded library instance named ``name``, or ``None``.
+
+    Looks only in the store's library section, so the result is always
+    a Robot `TestLibrary` (RF >= 7) / `_BaseTestLibrary` (RF < 7) —
+    suitable for
+    `robotcode.robot.diagnostics.library_doc.get_library_doc_from_library`.
+    """
+    store = _current_kw_store()
+    if store is None:
+        return None
+    return _find_owner_by_name(store.libraries.values(), name)
+
+
+def lookup_resource(name: str) -> Optional[Any]:
+    """The loaded resource instance named ``name``, or ``None``.
+
+    Looks only in the store's resource section, so the result is a
+    `UserLibrary` (RF < 7) / running `ResourceFile` (RF >= 7) —
+    suitable for
+    `robotcode.robot.diagnostics.library_doc.get_resource_doc_from_resource`.
+    """
+    store = _current_kw_store()
+    if store is None:
+        return None
+    return _find_owner_by_name(store.resources.values(), name)
+
+
+def _find_owner_by_name(owners: Any, name: str) -> Optional[Any]:
+    """First owner in ``owners`` whose ``.name`` case-folds to ``name``."""
     target = name.casefold()
     if not target:
         return None
-    for src in (*store.libraries.values(), *store.resources.values()):
-        src_name = getattr(src, "name", None)
-        if src_name and str(src_name).casefold() == target:
-            return src
+    for owner in owners:
+        owner_name = owner.name
+        if owner_name and str(owner_name).casefold() == target:
+            return owner
     return None

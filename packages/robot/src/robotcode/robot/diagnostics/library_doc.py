@@ -2213,106 +2213,150 @@ def get_library_doc(
                 except BaseException:
                     lib = None
 
-        real_source = str(lib.source) if lib is not None else source
-
-        libdoc = LibraryDoc(
+        libdoc = get_library_doc_from_library(
+            lib,
             name=library_name,
-            source=real_source,
-            line_no=lib.lineno if lib is not None else -1,
-            version=str(lib.version) if lib is not None else "",
-            scope=str(lib.scope) if lib is not None else ROBOT_DEFAULT_SCOPE,
-            doc_format=(str(lib.doc_format) or ROBOT_DOC_FORMAT) if lib is not None else ROBOT_DOC_FORMAT,
-            module_spec=(
-                module_spec
-                if module_spec is not None
-                and module_spec.origin != real_source
-                and module_spec.submodule_search_locations is None
-                else None
-            ),
-            python_path=sys.path,
-            member_name=module_spec.member_name if module_spec is not None else None,
+            source=source,
+            module_spec=module_spec,
+            create_keywords=True,
+            errors=errors,
         )
 
-        if lib is not None:
-            try:
+    libdoc.stdout = std_capturer.getvalue()
 
-                def _get(handler: Callable[[], _T]) -> Optional[_T]:
-                    try:
-                        return handler()
-                    except (SystemExit, KeyboardInterrupt):
-                        raise
-                    except BaseException as e:
-                        errors.append(
-                            error_from_exception(
-                                e,
-                                source or module_spec.origin if module_spec is not None else None,
-                                (
-                                    1
-                                    if source is not None
-                                    or (module_spec is not None and module_spec.origin is not None)
-                                    else None
-                                ),
-                            )
+    return libdoc
+
+
+def get_library_doc_from_library(
+    lib: Any,
+    name: str,
+    source: Optional[str] = None,
+    module_spec: Optional[ModuleSpec] = None,
+    *,
+    create_keywords: bool = False,
+    errors: Optional[List[Error]] = None,
+) -> LibraryDoc:
+    """Build a `LibraryDoc` from an already-instantiated Robot library.
+
+    `lib` is a Robot `TestLibrary` (RF >= 7) / `_BaseTestLibrary`
+    (RF < 7) — the same object `get_library_doc` creates internally and
+    the kind the running namespace's keyword store holds. Passing a
+    store instance lets callers render docs for a library that was
+    already imported (possibly with import arguments) without reloading
+    it from disk.
+
+    When `create_keywords` is ``True`` the library's keywords are
+    (re)built with a capturing logger so creation errors surface in
+    `LibraryDoc.errors` — this is the fresh-import path used by
+    `get_library_doc`. Pass ``False`` to reuse the keywords the library
+    already has (the runtime-store case), which leaves `lib` untouched.
+
+    `lib` may be ``None`` to mirror `get_library_doc`'s behaviour of
+    still returning a `LibraryDoc` carrying the accumulated `errors`.
+    """
+    errors = errors if errors is not None else []
+
+    real_source = str(lib.source) if lib is not None else source
+
+    libdoc = LibraryDoc(
+        name=name,
+        source=real_source,
+        line_no=lib.lineno if lib is not None else -1,
+        version=str(lib.version) if lib is not None else "",
+        scope=str(lib.scope) if lib is not None else ROBOT_DEFAULT_SCOPE,
+        doc_format=(str(lib.doc_format) or ROBOT_DOC_FORMAT) if lib is not None else ROBOT_DOC_FORMAT,
+        module_spec=(
+            module_spec
+            if module_spec is not None
+            and module_spec.origin != real_source
+            and module_spec.submodule_search_locations is None
+            else None
+        ),
+        python_path=sys.path,
+        member_name=module_spec.member_name if module_spec is not None else None,
+    )
+
+    if lib is not None:
+        try:
+
+            def _get(handler: Callable[[], _T]) -> Optional[_T]:
+                try:
+                    return handler()
+                except (SystemExit, KeyboardInterrupt):
+                    raise
+                except BaseException as e:
+                    errors.append(
+                        error_from_exception(
+                            e,
+                            source or module_spec.origin if module_spec is not None else None,
+                            (
+                                1
+                                if source is not None or (module_spec is not None and module_spec.origin is not None)
+                                else None
+                            ),
                         )
-                    return None
-
-                libdoc.doc = _get(lambda: str(lib.doc) if lib is not None else "") or ""
-
-                if RF_VERSION < (7, 0):
-                    libdoc.has_listener = lib.has_listener
-
-                    if isinstance(lib, robot.running.testlibraries._ModuleLibrary):
-                        libdoc.library_type = LibraryType.MODULE
-                    elif isinstance(lib, robot.running.testlibraries._ClassLibrary):
-                        libdoc.library_type = LibraryType.CLASS
-                    elif isinstance(lib, robot.running.testlibraries._DynamicLibrary):
-                        libdoc.library_type = LibraryType.DYNAMIC
-                    elif isinstance(lib, robot.running.testlibraries._HybridLibrary):
-                        libdoc.library_type = LibraryType.HYBRID
-                else:
-                    libdoc.has_listener = bool(lib.listeners)
-
-                    if isinstance(lib, robot.running.testlibraries.ModuleLibrary):
-                        libdoc.library_type = LibraryType.MODULE
-                    elif isinstance(lib, robot.running.testlibraries.ClassLibrary):
-                        libdoc.library_type = LibraryType.CLASS
-                    elif isinstance(lib, robot.running.testlibraries.DynamicLibrary):
-                        libdoc.library_type = LibraryType.DYNAMIC
-                    elif isinstance(lib, robot.running.testlibraries.HybridLibrary):
-                        libdoc.library_type = LibraryType.HYBRID
-
-                init_wrappers = [KeywordWrapper(lib.init, source)]
-                init_keywords = [(KeywordDocBuilder().build_keyword(k), k) for k in init_wrappers]
-                libdoc._set_inits(
-                    KeywordStore(
-                        keywords=[
-                            KeywordDoc(
-                                name=libdoc.name,
-                                arguments=_get(lambda: [ArgumentInfo.from_robot(a) for a in kw[0].args]) or [],
-                                doc=_get(lambda: kw[0].doc) or "",
-                                tags=_get(lambda: list(kw[0].tags)) or [],
-                                source=_get(lambda: kw[0].source) or "",
-                                line_no=kw[0].lineno if kw[0].lineno is not None else -1,
-                                col_offset=-1,
-                                end_col_offset=-1,
-                                end_line_no=-1,
-                                type="library",
-                                libname=libdoc.name,
-                                libtype=libdoc.type,
-                                longname=f"{libdoc.name}.{kw[0].name}",
-                                doc_format=str(lib.doc_format) or ROBOT_DOC_FORMAT,
-                                is_initializer=True,
-                                arguments_spec=_get(
-                                    lambda: ArgumentSpec.from_robot_argument_spec(
-                                        kw[1].arguments if RF_VERSION < (7, 0) else kw[1].args
-                                    )
-                                ),
-                            )
-                            for kw in init_keywords
-                        ]
                     )
-                )
+                return None
 
+            libdoc.doc = _get(lambda: str(lib.doc) if lib is not None else "") or ""
+
+            if RF_VERSION < (7, 0):
+                libdoc.has_listener = lib.has_listener
+
+                if isinstance(lib, robot.running.testlibraries._ModuleLibrary):
+                    libdoc.library_type = LibraryType.MODULE
+                elif isinstance(lib, robot.running.testlibraries._ClassLibrary):
+                    libdoc.library_type = LibraryType.CLASS
+                elif isinstance(lib, robot.running.testlibraries._DynamicLibrary):
+                    libdoc.library_type = LibraryType.DYNAMIC
+                elif isinstance(lib, robot.running.testlibraries._HybridLibrary):
+                    libdoc.library_type = LibraryType.HYBRID
+            else:
+                libdoc.has_listener = bool(lib.listeners)
+
+                if isinstance(lib, robot.running.testlibraries.ModuleLibrary):
+                    libdoc.library_type = LibraryType.MODULE
+                elif isinstance(lib, robot.running.testlibraries.ClassLibrary):
+                    libdoc.library_type = LibraryType.CLASS
+                elif isinstance(lib, robot.running.testlibraries.DynamicLibrary):
+                    libdoc.library_type = LibraryType.DYNAMIC
+                elif isinstance(lib, robot.running.testlibraries.HybridLibrary):
+                    libdoc.library_type = LibraryType.HYBRID
+
+            kw_source: str = source if source is not None else str(lib.source)
+            init_wrappers = [KeywordWrapper(lib.init, kw_source)]
+            init_keywords = [(KeywordDocBuilder().build_keyword(k), k) for k in init_wrappers]
+            libdoc._set_inits(
+                KeywordStore(
+                    keywords=[
+                        KeywordDoc(
+                            name=libdoc.name,
+                            arguments=_get(lambda: [ArgumentInfo.from_robot(a) for a in kw[0].args]) or [],
+                            doc=_get(lambda: kw[0].doc) or "",
+                            tags=_get(lambda: list(kw[0].tags)) or [],
+                            source=_get(lambda: kw[0].source) or "",
+                            line_no=kw[0].lineno if kw[0].lineno is not None else -1,
+                            col_offset=-1,
+                            end_col_offset=-1,
+                            end_line_no=-1,
+                            type="library",
+                            libname=libdoc.name,
+                            libtype=libdoc.type,
+                            longname=f"{libdoc.name}.{kw[0].name}",
+                            doc_format=str(lib.doc_format) or ROBOT_DOC_FORMAT,
+                            is_initializer=True,
+                            arguments_spec=_get(
+                                lambda: ArgumentSpec.from_robot_argument_spec(
+                                    kw[1].arguments if RF_VERSION < (7, 0) else kw[1].args
+                                )
+                            ),
+                        )
+                        for kw in init_keywords
+                    ]
+                )
+            )
+
+            if create_keywords:
                 logger = _Logger()
 
                 if RF_VERSION < (7, 0):
@@ -2333,139 +2377,133 @@ def get_library_doc(
                             )
                         )
 
-                if RF_VERSION < (7, 0):
-                    keyword_wrappers = [KeywordWrapper(k, source) for k in lib.handlers]
-                else:
-                    keyword_wrappers = [KeywordWrapper(k, source) for k in lib.keywords]
+            if RF_VERSION < (7, 0):
+                keyword_wrappers = [KeywordWrapper(k, kw_source) for k in lib.handlers]
+            else:
+                keyword_wrappers = [KeywordWrapper(k, kw_source) for k in lib.keywords]
 
-                def get_args_to_process(libdoc_name: str, kw_name: str) -> Any:
-                    result = RUN_KW_REGISTER.get_args_to_process(libdoc_name, kw_name)
-                    if result == -1:
-                        return None
+            def get_args_to_process(libdoc_name: str, kw_name: str) -> Any:
+                result = RUN_KW_REGISTER.get_args_to_process(libdoc_name, kw_name)
+                if result == -1:
+                    return None
 
-                    return result
+                return result
 
-                keyword_docs = [(KeywordDocBuilder().build_keyword(k), k) for k in keyword_wrappers]
-                libdoc._set_keywords(
-                    KeywordStore(
-                        source=libdoc.name,
-                        source_type=libdoc.type,
-                        keywords=[
-                            KeywordDoc(
-                                name=kw[0].name,
-                                arguments=_get(lambda: [ArgumentInfo.from_robot(a) for a in kw[0].args]) or [],
-                                doc=_get(lambda: kw[0].doc) or "",
-                                tags=_get(lambda: list(kw[0].tags)) or [],
-                                source=_get(lambda: kw[0].source) or "",
-                                line_no=kw[0].lineno if kw[0].lineno is not None else -1,
-                                col_offset=-1,
-                                end_col_offset=-1,
-                                end_line_no=-1,
-                                libname=libdoc.name,
-                                libtype=libdoc.type,
-                                longname=f"{libdoc.name}.{kw[0].name}",
-                                doc_format=str(lib.doc_format) or ROBOT_DOC_FORMAT,
-                                is_error_handler=kw[1].is_error_handler,
-                                error_handler_message=kw[1].error_handler_message,
-                                is_registered_run_keyword=RUN_KW_REGISTER.is_run_keyword(libdoc.name, kw[0].name),
-                                args_to_process=get_args_to_process(libdoc.name, kw[0].name),
-                                deprecated=kw[0].deprecated,
-                                arguments_spec=_get(
-                                    lambda: (
-                                        ArgumentSpec.from_robot_argument_spec(
-                                            kw[1].arguments if RF_VERSION < (7, 0) else kw[1].args
-                                        )
-                                        if not kw[1].is_error_handler
-                                        else None
-                                    )
-                                ),
-                                return_type=_get(
-                                    lambda: (
-                                        (
-                                            str(kw[1].args.return_type)
-                                            if kw[1].args.return_type is not None
-                                            and kw[1].args.return_type is not type(None)
-                                            else None
-                                        )
-                                        if RF_VERSION >= (7, 0)
-                                        else None
-                                    )
-                                ),
-                            )
-                            for kw in keyword_docs
-                        ],
-                    )
-                )
-
-                if RF_VERSION >= (6, 1):
-
-                    def _yield_type_info(info: TypeInfo) -> Iterable[TypeInfo]:
-                        if not info.is_union:
-                            yield info
-                        if info.nested and info.type is not Literal:
-                            for nested in info.nested:
-                                yield from _yield_type_info(nested)
-
-                    def _get_type_docs(keywords: List[Any], custom_converters: List[Any]) -> Set[RobotTypeDoc]:
-                        type_docs: Dict[RobotTypeDoc, Set[str]] = {}
-                        for kw in keywords:
-                            for arg in kw.args:
-                                kw.type_docs[arg.name] = {}
-                                for type_info in _yield_type_info(arg.type):
-                                    if type_info.type is not None:
-                                        if RF_VERSION < (7, 0):
-                                            type_doc = RobotTypeDoc.for_type(
-                                                type_info.type,
-                                                custom_converters,
-                                            )
-                                        else:
-                                            type_doc = RobotTypeDoc.for_type(type_info, custom_converters)
-                                        if type_doc:
-                                            kw.type_docs[arg.name][type_info.name] = type_doc.name
-                                            type_docs.setdefault(type_doc, set()).add(kw.name)
-                        for type_doc, usages in type_docs.items():
-                            type_doc.usages = sorted(usages, key=str.lower)
-                        return set(type_docs)
-
-                    libdoc.types = [
-                        TypeDoc(
-                            td.type,
-                            td.name,
-                            td.doc,
-                            td.accepts,
-                            td.usages,
-                            [EnumMember(m.name, m.value) for m in td.members] if td.members else None,
-                            [TypedDictItem(i.key, i.type, i.required) for i in td.items] if td.items else None,
-                            # TODO nested types like Literals
+            keyword_docs = [(KeywordDocBuilder().build_keyword(k), k) for k in keyword_wrappers]
+            libdoc._set_keywords(
+                KeywordStore(
+                    source=libdoc.name,
+                    source_type=libdoc.type,
+                    keywords=[
+                        KeywordDoc(
+                            name=kw[0].name,
+                            arguments=_get(lambda: [ArgumentInfo.from_robot(a) for a in kw[0].args]) or [],
+                            doc=_get(lambda: kw[0].doc) or "",
+                            tags=_get(lambda: list(kw[0].tags)) or [],
+                            source=_get(lambda: kw[0].source) or "",
+                            line_no=kw[0].lineno if kw[0].lineno is not None else -1,
+                            col_offset=-1,
+                            end_col_offset=-1,
+                            end_line_no=-1,
                             libname=libdoc.name,
                             libtype=libdoc.type,
-                            doc_format=libdoc.doc_format,
+                            longname=f"{libdoc.name}.{kw[0].name}",
+                            doc_format=str(lib.doc_format) or ROBOT_DOC_FORMAT,
+                            is_error_handler=kw[1].is_error_handler,
+                            error_handler_message=kw[1].error_handler_message,
+                            is_registered_run_keyword=RUN_KW_REGISTER.is_run_keyword(libdoc.name, kw[0].name),
+                            args_to_process=get_args_to_process(libdoc.name, kw[0].name),
+                            deprecated=kw[0].deprecated,
+                            arguments_spec=_get(
+                                lambda: (
+                                    ArgumentSpec.from_robot_argument_spec(
+                                        kw[1].arguments if RF_VERSION < (7, 0) else kw[1].args
+                                    )
+                                    if not kw[1].is_error_handler
+                                    else None
+                                )
+                            ),
+                            return_type=_get(
+                                lambda: (
+                                    (
+                                        str(kw[1].args.return_type)
+                                        if kw[1].args.return_type is not None
+                                        and kw[1].args.return_type is not type(None)
+                                        else None
+                                    )
+                                    if RF_VERSION >= (7, 0)
+                                    else None
+                                )
+                            ),
                         )
-                        for td in _get_type_docs(
-                            [kw[0] for kw in keyword_docs + init_keywords],
-                            lib.converters,
-                        )
-                    ]
-
-            except (SystemExit, KeyboardInterrupt):
-                raise
-            except BaseException as e:
-                errors.append(
-                    error_from_exception(
-                        e,
-                        source or module_spec.origin if module_spec is not None else None,
-                        (
-                            1
-                            if source is not None or (module_spec is not None and module_spec.origin is not None)
-                            else None
-                        ),
-                    )
+                        for kw in keyword_docs
+                    ],
                 )
+            )
 
-        if errors:
-            libdoc.errors = errors
+            if RF_VERSION >= (6, 1):
 
-    libdoc.stdout = std_capturer.getvalue()
+                def _yield_type_info(info: TypeInfo) -> Iterable[TypeInfo]:
+                    if not info.is_union:
+                        yield info
+                    if info.nested and info.type is not Literal:
+                        for nested in info.nested:
+                            yield from _yield_type_info(nested)
+
+                def _get_type_docs(keywords: List[Any], custom_converters: List[Any]) -> Set[RobotTypeDoc]:
+                    type_docs: Dict[RobotTypeDoc, Set[str]] = {}
+                    for kw in keywords:
+                        for arg in kw.args:
+                            kw.type_docs[arg.name] = {}
+                            for type_info in _yield_type_info(arg.type):
+                                if type_info.type is not None:
+                                    if RF_VERSION < (7, 0):
+                                        type_doc = RobotTypeDoc.for_type(
+                                            type_info.type,
+                                            custom_converters,
+                                        )
+                                    else:
+                                        type_doc = RobotTypeDoc.for_type(type_info, custom_converters)
+                                    if type_doc:
+                                        kw.type_docs[arg.name][type_info.name] = type_doc.name
+                                        type_docs.setdefault(type_doc, set()).add(kw.name)
+                    for type_doc, usages in type_docs.items():
+                        type_doc.usages = sorted(usages, key=str.lower)
+                    return set(type_docs)
+
+                libdoc.types = [
+                    TypeDoc(
+                        td.type,
+                        td.name,
+                        td.doc,
+                        td.accepts,
+                        td.usages,
+                        [EnumMember(m.name, m.value) for m in td.members] if td.members else None,
+                        [TypedDictItem(i.key, i.type, i.required) for i in td.items] if td.items else None,
+                        # TODO nested types like Literals
+                        libname=libdoc.name,
+                        libtype=libdoc.type,
+                        doc_format=libdoc.doc_format,
+                    )
+                    for td in _get_type_docs(
+                        [kw[0] for kw in keyword_docs + init_keywords],
+                        lib.converters,
+                    )
+                ]
+
+        except (SystemExit, KeyboardInterrupt):
+            raise
+        except BaseException as e:
+            errors.append(
+                error_from_exception(
+                    e,
+                    source or module_spec.origin if module_spec is not None else None,
+                    (1 if source is not None or (module_spec is not None and module_spec.origin is not None) else None),
+                )
+            )
+
+    if errors:
+        libdoc.errors = errors
 
     return libdoc
 
@@ -3294,31 +3332,33 @@ def _get_kw_errors(kw: Any) -> Any:
     return r
 
 
-def get_model_doc(
-    model: ast.AST,
+def _build_resource_doc(
+    lib: Any,
     source: str,
+    *,
+    keyword_name_nodes: Optional[Dict[int, KeywordName]] = None,
+    keywords_nodes: Optional[Dict[int, Keyword]] = None,
+    resource_imports: Optional[List[Import]] = None,
+    resource_variables: Optional[List[VariableDefinition]] = None,
 ) -> ResourceDoc:
-    res = ResourceFile(source=source)
+    """Build a `ResourceDoc` from a running `ResourceFile` (or RF < 7
+    `UserLibrary` wrapper).
 
-    res_builder = _MyResourceBuilder(res, source)
-    with LOGGER.cache_only:
-        res_builder.visit(model)
-
-    keyword_name_nodes: Dict[int, KeywordName] = res_builder.keyword_name_nodes
-    keywords_nodes: Dict[int, Keyword] = res_builder.keywords_nodes
-
-    if RF_VERSION < (7, 0):
-        lib = _MyUserLibrary(res)
-    else:
-        lib = res
+    The optional AST-derived maps add source-position metadata
+    (keyword `name_token`, `argument_definitions`) and the import /
+    variable definitions carrying token positions. When omitted, those
+    are left empty — fine for rendering, but not for editor navigation.
+    """
+    keyword_name_nodes = keyword_name_nodes if keyword_name_nodes is not None else {}
+    keywords_nodes = keywords_nodes if keywords_nodes is not None else {}
 
     libdoc = ResourceDoc(
         name=lib.name or "",
         doc=lib.doc,
         source=source,
         line_no=1,
-        resource_imports=res_builder.imports,
-        resource_variables=res_builder.variables,
+        resource_imports=resource_imports if resource_imports is not None else [],
+        resource_variables=resource_variables if resource_variables is not None else [],
     )
 
     libdoc._set_keywords(
@@ -3359,3 +3399,56 @@ def get_model_doc(
     )
 
     return libdoc
+
+
+def get_model_doc(
+    model: ast.AST,
+    source: str,
+) -> ResourceDoc:
+    res = ResourceFile(source=source)
+
+    res_builder = _MyResourceBuilder(res, source)
+    with LOGGER.cache_only:
+        res_builder.visit(model)
+
+    if RF_VERSION < (7, 0):
+        lib = _MyUserLibrary(res)
+    else:
+        lib = res
+
+    return _build_resource_doc(
+        lib,
+        source,
+        keyword_name_nodes=res_builder.keyword_name_nodes,
+        keywords_nodes=res_builder.keywords_nodes,
+        resource_imports=res_builder.imports,
+        resource_variables=res_builder.variables,
+    )
+
+
+def get_resource_doc_from_resource(resource: Any, source: Optional[str] = None) -> ResourceDoc:
+    """Build a `ResourceDoc` from an already-loaded resource instance.
+
+    `resource` is whatever the running namespace's keyword store holds
+    for an imported resource — a `UserLibrary` on RF < 7, a running
+    `ResourceFile` on RF >= 7. A raw running `ResourceFile` is accepted
+    on RF < 7 too and wrapped on the fly. Using the loaded instance
+    avoids re-reading and re-parsing the file from disk and renders
+    exactly what the session has loaded.
+
+    Unlike `get_model_doc`, no AST is available, so source-position
+    metadata (keyword `name_token`, `argument_definitions`, and the
+    token positions of resource imports / variables) is omitted. That
+    info is only needed for editor navigation, not for `to_markdown`,
+    so this suits doc display (e.g. the REPL `.doc` command) rather
+    than the language server.
+    """
+    if source is None:
+        source = str(resource.source) if getattr(resource, "source", None) else ""
+
+    if RF_VERSION < (7, 0) and not isinstance(resource, UserLibrary):
+        lib = _MyUserLibrary(resource)
+    else:
+        lib = resource
+
+    return _build_resource_doc(lib, source)
