@@ -7,11 +7,11 @@ we verify the rendering helper and the internal scroll math in
 isolation, plus the keybinding wiring on the standalone Application.
 """
 
-from typing import Any
+from typing import Any, List, Tuple
 
 import pytest
 
-from robotcode.repl._pt.doc_viewer import DocViewer, render_markdown_to_ansi
+from robotcode.repl._pt.doc_viewer import DocViewer, _NavState, render_markdown_to_ansi
 
 
 def test_render_markdown_to_ansi_empty_input_returns_empty() -> None:
@@ -612,8 +612,8 @@ def test_reflow_after_resize_drops_position_dependent_state() -> None:
     # Seed stale position state.
     viewer._matches = [(0, 4)]
     viewer._current_match = 0
-    viewer._back_stack = [(10, 0)]
-    viewer._forward_stack = [(20, 1)]
+    viewer._back_stack = [_NavState("", "", 10, 0)]
+    viewer._forward_stack = [_NavState("", "", 20, 1)]
     viewer._current_link = 5
     viewer._reflow_after_resize(40)
     assert viewer._matches == []
@@ -650,7 +650,7 @@ def test_back_forward_round_trip_restores_position() -> None:
     viewer._current_link = 0
     viewer._follow_current_link()
     assert viewer._body_window.vertical_scroll == 42
-    assert viewer._back_stack == [(10, 0)]
+    assert viewer._back_stack == [_NavState("", "", 10, 0)]
     assert viewer._forward_stack == []
 
     # Back — restore pre-follow state.
@@ -658,12 +658,12 @@ def test_back_forward_round_trip_restores_position() -> None:
     assert viewer._body_window.vertical_scroll == 10
     assert viewer._current_link == 0
     assert viewer._back_stack == []
-    assert viewer._forward_stack == [(42, 0)]
+    assert viewer._forward_stack == [_NavState("", "", 42, 0)]
 
     # Forward — return to followed state.
     assert viewer._go_forward() is True
     assert viewer._body_window.vertical_scroll == 42
-    assert viewer._back_stack == [(10, 0)]
+    assert viewer._back_stack == [_NavState("", "", 10, 0)]
     assert viewer._forward_stack == []
 
 
@@ -686,8 +686,8 @@ def test_new_follow_clears_forward_stack() -> None:
 
     viewer._current_link = 0
     viewer._follow_current_link()  # → line 10
-    viewer._go_back()  # → forward stack now holds (10, 0)
-    assert viewer._forward_stack == [(10, 0)]
+    viewer._go_back()  # → forward stack now holds the followed position
+    assert viewer._forward_stack == [_NavState("", "", 10, 0)]
 
     # Following something else clears forward.
     viewer._current_link = 1
@@ -726,6 +726,78 @@ def test_follow_current_link_swallows_browser_open_failure(monkeypatch: pytest.M
     viewer._links = [(0, 25, "https://example.com/foo")]
     viewer._current_link = 0
     viewer._follow_current_link()  # Must not raise.
+
+
+# ---------------------------------------------------------------------------
+# Content-follow links — `link_resolver` loads a new document in place.
+# ---------------------------------------------------------------------------
+
+
+def test_follow_resolver_link_loads_resolved_document(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A link that is neither `#anchor` nor a URL is handed to
+    `link_resolver`; the returned document is loaded in place and the
+    pre-follow position is pushed so `[` can return to it."""
+    viewer = DocViewer(link_resolver=lambda t: ("Append To List", "# Append To List") if t == "kw:C.Append" else None)
+    loaded: List[Tuple[str, str]] = []
+    monkeypatch.setattr(viewer, "_load_document", lambda title, md: loaded.append((title, md)))
+    viewer._title = "Keywords"
+    viewer._md_source = "# Keywords"
+    viewer._body_window.vertical_scroll = 5
+    viewer._links = [(0, 6, "kw:C.Append")]
+    viewer._current_link = 0
+
+    viewer._follow_current_link()
+
+    assert loaded == [("Append To List", "# Append To List")]
+    assert viewer._back_stack == [_NavState("Keywords", "# Keywords", 5, 0)]
+    assert viewer._forward_stack == []
+
+
+def test_follow_unresolved_link_is_noop(monkeypatch: pytest.MonkeyPatch) -> None:
+    """When the resolver returns ``None`` (unknown target) nothing is
+    loaded and no history is pushed."""
+    viewer = DocViewer(link_resolver=lambda _t: None)
+    monkeypatch.setattr(viewer, "_load_document", lambda *_a: pytest.fail("must not load"))
+    viewer._links = [(0, 9, "kw:Unknown")]
+    viewer._current_link = 0
+
+    viewer._follow_current_link()
+
+    assert viewer._back_stack == []
+
+
+def test_follow_resolver_link_without_resolver_is_noop(monkeypatch: pytest.MonkeyPatch) -> None:
+    """No resolver configured → a non-anchor/non-URL target does nothing."""
+    viewer = DocViewer()
+    monkeypatch.setattr(viewer, "_load_document", lambda *_a: pytest.fail("must not load"))
+    viewer._links = [(0, 6, "kw:C.Append")]
+    viewer._current_link = 0
+
+    viewer._follow_current_link()
+
+    assert viewer._back_stack == []
+
+
+def test_back_after_content_follow_reloads_previous_document(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Going back from a followed keyword page reloads the document the
+    user came from (different `md_source`), then restores its scroll +
+    focused link."""
+    viewer = DocViewer()
+    loaded: List[Tuple[str, str]] = []
+    monkeypatch.setattr(viewer, "_load_document", lambda title, md: loaded.append((title, md)))
+    # Currently on the keyword page, list page on the back stack.
+    viewer._title = "Append To List"
+    viewer._md_source = "# Append To List"
+    viewer._body_window.vertical_scroll = 3
+    viewer._current_link = -1
+    viewer._back_stack = [_NavState("Keywords", "# Keywords", 7, 2)]
+
+    assert viewer._go_back() is True
+
+    assert loaded == [("Keywords", "# Keywords")]  # previous doc reloaded
+    assert viewer._body_window.vertical_scroll == 7
+    assert viewer._current_link == 2
+    assert viewer._forward_stack == [_NavState("Append To List", "# Append To List", 3, -1)]
 
 
 # ---------------------------------------------------------------------------

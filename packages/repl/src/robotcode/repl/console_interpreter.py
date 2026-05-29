@@ -36,7 +36,13 @@ from robotcode.robot.utils.markdownformatter import MarkDownFormatter
 
 from .__version__ import __version__
 from ._indent import compute_indent
-from ._keyword_lookup import _LIB_KEYWORDS_ATTR, lookup_keyword_owner, lookup_library, lookup_resource
+from ._keyword_lookup import (
+    _LIB_KEYWORDS_ATTR,
+    iter_keyword_owners,
+    lookup_keyword_owner,
+    lookup_library,
+    lookup_resource,
+)
 from ._session_export import render_robot_file
 from .base_interpreter import BaseInterpreter, is_true
 
@@ -595,48 +601,95 @@ class ConsoleInterpreter(BaseInterpreter):
 
     @dot_command("kw")
     def _kw(self, arg: str) -> None:
-        """Show the documentation for a keyword: .kw <name>
+        """Show or search keyword documentation: .kw [name-or-text]
 
-        Shows the keyword's signature (arguments with their types and
-        defaults), description, tags, and where it comes from.
+        With a keyword name, shows its full documentation: signature
+        (arguments with their types and defaults), description, tags, and
+        where it comes from. Names are resolved just like in a Robot
+        Framework suite, so the `Owner.Keyword` form works too.
 
-        Names are resolved just like in a Robot Framework suite, so the
-        `Owner.Keyword` form works too when the same name comes from more
-        than one imported library or resource.
+        With no argument, lists every keyword grouped by the library or
+        resource it belongs to. With text that isn't an exact keyword
+        name, lists the keywords whose name contains that text.
 
         Usage:
-          .kw <keyword-name>
+          .kw                 list every loaded keyword
+          .kw <text>          list keywords whose name contains <text>
+          .kw <keyword-name>  show full documentation for one keyword
 
         Examples:
-          .kw Log
+          .kw
+          .kw append
           .kw Get From Dictionary
           .kw BuiltIn.Log
         """
         if self.app is None:
             return
         if not arg:
-            self.app.echo("Usage: .kw <keyword-name>")
+            self._list_keywords(None)
             return
-        found = lookup_keyword_owner(arg)
+
+        doc = self._keyword_doc(arg)
+        if doc is None:
+            # Not an exact keyword — treat the argument as a search filter.
+            self._list_keywords(arg)
+            return
+        self.show_doc(*doc)
+
+    def _keyword_doc(self, name: str) -> Optional[Tuple[str, str]]:
+        """`(title, markdown)` for an exactly-named keyword, or ``None``.
+
+        Shared by `.kw <name>` and the doc-viewer link resolver. Prefers
+        the diagnostics `KeywordDoc` (proper signature + arg table +
+        types); falls back to a hand-built page from the runtime object
+        when that conversion can't surface one.
+        """
+        found = lookup_keyword_owner(name)
         if found is None:
-            self.app.echo(f"No keyword found: {arg!r}")
-            return
+            return None
         owner, runtime_kw, is_resource = found
-
-        kw_name = getattr(runtime_kw, "name", arg)
-
-        # Prefer the diagnostics `KeywordDoc` — it carries
-        # `to_markdown(...)` with proper signature + arg table + types,
-        # which the runtime keyword object (`StaticKeyword`) doesn't.
+        kw_name = getattr(runtime_kw, "name", name)
         diag_kw = _diagnostics_keyword_doc(owner, is_resource, kw_name)
         if diag_kw is not None:
-            self.show_doc(kw_name, diag_kw.to_markdown(header_level=1))
+            return kw_name, diag_kw.to_markdown(header_level=1)
+        return kw_name, _render_runtime_keyword_md(runtime_kw, kw_name)
+
+    def _list_keywords(self, pattern: Optional[str]) -> None:
+        """List loaded keywords grouped by owner, optionally filtered by a
+        case-insensitive substring of the keyword name."""
+        if self.app is None:
+            return
+        needle = pattern.casefold() if pattern else None
+
+        sections: List[str] = []
+        total = 0
+        for owner_name, is_resource, names in iter_keyword_owners():
+            if needle is not None:
+                names = [n for n in names if needle in n.casefold()]
+            if not names:
+                continue
+            kind = "Resource" if is_resource else "Library"
+            sections.append(f"## {owner_name} ({kind})")
+            sections.extend(self._keyword_list_entry(owner_name, n) for n in names)
+            sections.append("")
+            total += len(names)
+
+        if total == 0:
+            if pattern:
+                self.app.echo(f"No keywords found matching {pattern!r}.")
+            else:
+                self.app.echo("(no keywords loaded)")
             return
 
-        # Fallback for keywords the diagnostics conversion can't surface
-        # — hand-build a minimal page from whatever the runtime object
-        # exposes.
-        self.show_doc(kw_name, _render_runtime_keyword_md(runtime_kw, kw_name))
+        title = f"Keywords matching '{pattern}'" if pattern else "Keywords"
+        self.show_doc(title, f"# {title}\n\n" + "\n".join(sections))
+
+    def _keyword_list_entry(self, owner_name: str, kw_name: str) -> str:
+        """One bullet line for `_list_keywords`. Plain text here; the
+        prompt_toolkit backend overrides this to emit a follow-able link
+        into the keyword's documentation."""
+        del owner_name
+        return f"- {kw_name}"
 
     @dot_command("doc")
     def _doc(self, arg: str) -> None:

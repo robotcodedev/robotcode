@@ -91,6 +91,36 @@ def test_robot_completer_passes_detail_through_to_display_meta(
 # ---------------------------------------------------------------------------
 
 
+def test_keyword_list_entry_emits_followable_link() -> None:
+    """The `.kw` list renders each keyword as a `kw:` link with the
+    space-containing qualified name percent-encoded so markdown keeps
+    it as one link target."""
+    interp = PromptToolkitConsoleInterpreter(app=None)
+    entry = interp._keyword_list_entry("Collections", "Append To List")
+    assert entry == "- [Append To List](kw:Collections.Append%20To%20List)"
+
+
+def test_resolve_doc_link_decodes_kw_target(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Following a `kw:` link decodes the target and asks `_keyword_doc`
+    for that keyword's page."""
+    interp = PromptToolkitConsoleInterpreter(app=None)
+    seen: List[str] = []
+
+    def _fake_doc(name: str) -> Any:
+        seen.append(name)
+        return ("Append To List", "# Append To List")
+
+    monkeypatch.setattr(interp, "_keyword_doc", _fake_doc)
+    assert interp._resolve_doc_link("kw:Collections.Append%20To%20List") == ("Append To List", "# Append To List")
+    assert seen == ["Collections.Append To List"]
+
+
+def test_resolve_doc_link_ignores_non_kw_targets() -> None:
+    interp = PromptToolkitConsoleInterpreter(app=None)
+    assert interp._resolve_doc_link("#section") is None
+    assert interp._resolve_doc_link("https://example.com") is None
+
+
 def test_prompt_toolkit_interpreter_uses_filehistory_at_history_path(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:

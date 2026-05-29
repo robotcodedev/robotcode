@@ -393,18 +393,36 @@ def test_kw_renders_markdown_with_signature_and_doc(monkeypatch: pytest.MonkeyPa
     assert "/path/to/BuiltIn.py" in md
 
 
-def test_kw_without_argument_prints_usage_to_echo() -> None:
+def test_kw_without_argument_lists_all_keywords(monkeypatch: pytest.MonkeyPatch) -> None:
+    _patch_context(monkeypatch, _fake_namespace(library_keywords=[_fake_kw("Log"), _fake_kw("Sleep")]))
     app = _StubApp()
     _make_interp(app)._dispatch_dot_command(".kw")
-    assert any("Usage" in m for m in app.messages)
-    assert app.paged == []
+    md = app.paged[0]
+    assert "## BuiltIn (Library)" in md
+    assert "- Log" in md
+    assert "- Sleep" in md
 
 
-def test_kw_unknown_name(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_kw_with_partial_name_lists_matches(monkeypatch: pytest.MonkeyPatch) -> None:
+    _patch_context(
+        monkeypatch,
+        _fake_namespace(library_keywords=[_fake_kw("Log"), _fake_kw("Log Many"), _fake_kw("Sleep")]),
+    )
+    app = _StubApp()
+    # "Lo" is not an exact keyword, so it filters rather than showing one doc.
+    _make_interp(app)._dispatch_dot_command(".kw Lo")
+    md = app.paged[0]
+    assert "Keywords matching 'Lo'" in md
+    assert "- Log" in md
+    assert "- Log Many" in md
+    assert "- Sleep" not in md
+
+
+def test_kw_unknown_name_reports_no_matches(monkeypatch: pytest.MonkeyPatch) -> None:
     _patch_context(monkeypatch, _fake_namespace(library_keywords=[_fake_kw("Log")]))
     app = _StubApp()
     _make_interp(app)._dispatch_dot_command(".kw Nope")
-    assert any("No keyword found" in m for m in app.messages)
+    assert any("No keywords found matching 'Nope'" in m for m in app.messages)
     assert app.paged == []
 
 

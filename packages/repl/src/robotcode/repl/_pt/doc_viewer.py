@@ -269,6 +269,22 @@ class _RenderSnapshot(NamedTuple):
     anchor_to_line: Dict[str, int]
 
 
+class _NavState(NamedTuple):
+    """One entry in the back / forward navigation stacks.
+
+    Captures everything needed to return to a position the user was at:
+    the document itself (`title` + `md_source`) plus the scroll offset
+    and focused link. Carrying the source means a follow that loaded a
+    *different* document — e.g. a keyword page opened from a list — can
+    be reversed by reloading the previous document, not just scrolling.
+    """
+
+    title: str
+    md_source: str
+    scroll: int
+    current_link: int
+
+
 # Viewer-only style entries. The host interpreter's `_DEFAULT_STYLE`
 # is for the prompt + log output; the viewer is its own Application
 # with its own narrow palette, so we don't grow `_pt.components` for
@@ -459,7 +475,14 @@ class DocViewer:
     prompt's scrollback is undisturbed.
     """
 
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        link_resolver: Optional[Callable[[str], Optional[Tuple[str, str]]]] = None,
+    ) -> None:
+        # Resolves a followed link target that is neither an `#anchor`
+        # nor an `http(s)://` URL into new `(title, markdown)` content,
+        # loaded in place. Used to open a keyword's page from a list.
+        self._link_resolver = link_resolver
         self._title = ""
 
         # Body content: stored as fragments so we can re-render with
@@ -489,14 +512,13 @@ class DocViewer:
         self._current_link = -1
         self._anchor_to_line: Dict[str, int] = {}
 
-        # Browser-style back / forward stacks for `#anchor` follows.
-        # Each entry is `(vertical_scroll, current_link)`; only the
-        # scroll position + focused link are restored, search state
-        # is intentionally untouched (going back shouldn't drop the
-        # user's current search). External URL follows don't push
-        # since the viewer itself doesn't move.
-        self._back_stack: List[Tuple[int, int]] = []
-        self._forward_stack: List[Tuple[int, int]] = []
+        # Browser-style back / forward stacks for `#anchor` jumps and
+        # in-place content follows (see `_NavState`). Search state is
+        # intentionally untouched on back/forward (going back shouldn't
+        # drop the user's current search). External URL follows don't
+        # push since the viewer itself doesn't move.
+        self._back_stack: List[_NavState] = []
+        self._forward_stack: List[_NavState] = []
 
         # Resize state. `_md_source` keeps the markdown around so we
         # can re-render at the new width when the terminal resizes.
@@ -601,25 +623,10 @@ class DocViewer:
         screen buffer, so the host prompt's terminal state survives
         the call untouched.
         """
-        self._title = title
-        self._md_source = markdown
-        # New doc → all cached renders are for the OLD markdown. Wipe.
-        self._render_cache = {}
-        size = self._app.output.get_size()
-        # Account for the frame border (1 char on each side = 2 chars).
-        body_width = max(size.columns - 2, 40)
-        self._render_at_width(body_width)
-
-        # Reset interaction state for a fresh document.
-        self._current_link = -1
+        # A fresh top-level invocation starts with empty history.
         self._back_stack = []
         self._forward_stack = []
-        self._in_search_mode = False
-        self._search_query = ""
-        self._matches = []
-        self._current_match = -1
-        self._search_buffer.reset()
-        self._body_window.vertical_scroll = 0
+        self._load_document(title, markdown)
 
         try:
             self._app.run()
@@ -631,6 +638,41 @@ class DocViewer:
             if self._resize_task is not None:
                 self._resize_task.cancel()
                 self._resize_task = None
+
+    def _load_document(self, title: str, markdown: str) -> None:
+        """Adopt ``markdown`` as the current document and reset per-doc
+        state (scroll, focused link, search). Leaves the back / forward
+        stacks alone so it can be reused for in-place link follows;
+        `run` clears them for a fresh top-level invocation.
+        """
+        self._title = title
+        self._md_source = markdown
+        # New doc → all cached renders are for the OLD markdown. Wipe.
+        self._render_cache = {}
+        size = self._app.output.get_size()
+        # Account for the frame border (1 char on each side = 2 chars).
+        body_width = max(size.columns - 2, 40)
+        self._render_at_width(body_width)
+
+        self._current_link = -1
+        self._in_search_mode = False
+        self._search_query = ""
+        self._matches = []
+        self._current_match = -1
+        self._search_buffer.reset()
+        self._body_window.vertical_scroll = 0
+
+    def _current_state(self) -> _NavState:
+        """Snapshot the current document + position for the nav stacks."""
+        return _NavState(self._title, self._md_source, self._body_window.vertical_scroll, self._current_link)
+
+    def _restore_state(self, state: _NavState) -> None:
+        """Return to a `_NavState`, reloading its document first if the
+        current one differs."""
+        if state.md_source != self._md_source:
+            self._load_document(state.title, state.md_source)
+        self._body_window.vertical_scroll = state.scroll
+        self._current_link = state.current_link
 
     def _render_at_width(self, body_width: int) -> None:
         """Render the markdown at ``body_width`` and adopt the result.
@@ -923,13 +965,14 @@ class DocViewer:
         didn't match the markdown source title). For `http(s)://`
         targets, hand off to the OS's default browser via
         `webbrowser.open` — caught so an SSH session or headless
-        environment can't take the viewer down.
+        environment can't take the viewer down. Any other target is
+        handed to `link_resolver` (if configured); when it returns
+        content, that document is loaded in place.
 
-        Anchor jumps push the current scroll + focused link onto the
-        back stack so `[` returns to the previous position
-        (browser-style). The forward stack is cleared because the
-        new jump branches the history. External URL follows don't
-        push — the viewer didn't move.
+        Anchor jumps and content follows push the current position onto
+        the back stack so `[` returns to it (browser-style). The forward
+        stack is cleared because the new jump branches the history.
+        External URL follows don't push — the viewer didn't move.
         """
         if self._current_link < 0 or not self._links:
             return
@@ -937,7 +980,7 @@ class DocViewer:
         if target.startswith("#"):
             line = self._anchor_to_line.get(target[1:])
             if line is not None:
-                self._back_stack.append((self._body_window.vertical_scroll, self._current_link))
+                self._back_stack.append(self._current_state())
                 self._forward_stack.clear()
                 # `_max_scroll()` returns 0 before the first render —
                 # only clamp when we have real render_info, otherwise
@@ -949,31 +992,34 @@ class DocViewer:
                 webbrowser.open(target)
             except Exception:
                 pass
+        elif self._link_resolver is not None:
+            resolved = self._link_resolver(target)
+            if resolved is not None:
+                self._back_stack.append(self._current_state())
+                self._forward_stack.clear()
+                self._load_document(resolved[0], resolved[1])
 
     def _go_back(self) -> bool:
-        """Restore the previous scroll position from the back stack.
+        """Return to the previous position from the back stack.
 
         Returns True if there was something to restore (so the
         keybinding can decide whether to invalidate the layout).
         Symmetric with `_go_forward` — pushing the *current* state
         onto the opposite stack before popping, so back→forward
-        round-trips return the user to where they were.
+        round-trips return the user to where they were. The previous
+        document is reloaded if a content follow had replaced it.
         """
         if not self._back_stack:
             return False
-        self._forward_stack.append((self._body_window.vertical_scroll, self._current_link))
-        scroll, link = self._back_stack.pop()
-        self._body_window.vertical_scroll = scroll
-        self._current_link = link
+        self._forward_stack.append(self._current_state())
+        self._restore_state(self._back_stack.pop())
         return True
 
     def _go_forward(self) -> bool:
         if not self._forward_stack:
             return False
-        self._back_stack.append((self._body_window.vertical_scroll, self._current_link))
-        scroll, link = self._forward_stack.pop()
-        self._body_window.vertical_scroll = scroll
-        self._current_link = link
+        self._back_stack.append(self._current_state())
+        self._restore_state(self._forward_stack.pop())
         return True
 
     # ------------------------------------------------------------------

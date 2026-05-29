@@ -12,7 +12,7 @@ populated by the time the user hits Enter because the REPL runs
 synchronously inside `suite.run()`.
 """
 
-from typing import Any, List, Optional, Tuple
+from typing import Any, Iterator, List, Optional, Tuple
 
 from robot.running.context import EXECUTION_CONTEXTS
 from robot.utils import normalize
@@ -137,6 +137,25 @@ def _find_keyword_in_owner(owner: Any, normalized_name: str) -> Optional[Any]:
         if kw_name and _norm(kw_name) == normalized_name:
             return kw
     return None
+
+
+def iter_keyword_owners() -> Iterator[Tuple[str, bool, List[str]]]:
+    """Yield ``(owner_name, is_resource, keyword_names)`` for each loaded
+    library and resource, libraries first. ``keyword_names`` is sorted.
+    Used to list / search what the session has imported.
+    """
+    store = _current_kw_store()
+    if store is None:
+        return
+    for owner in store.libraries.values():
+        yield str(owner.name), False, _keyword_names(owner)
+    for owner in store.resources.values():
+        yield str(owner.name), True, _keyword_names(owner)
+
+
+def _keyword_names(owner: Any) -> List[str]:
+    names = [str(kw.name) for kw in (getattr(owner, _LIB_KEYWORDS_ATTR, ()) or ()) if getattr(kw, "name", None)]
+    return sorted(names)
 
 
 def lookup_library(name: str) -> Optional[Any]:

@@ -18,7 +18,8 @@ from prompt_toolkit's editor surface:
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import List, Optional, Union
+from typing import List, Optional, Tuple, Union
+from urllib.parse import quote, unquote
 
 from prompt_toolkit import PromptSession, print_formatted_text
 from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
@@ -81,8 +82,10 @@ class PromptToolkitConsoleInterpreter(ConsoleInterpreter):
 
         # The doc viewer is a *separate* fullscreen Application — see
         # the module docstring of `_pt/doc_viewer.py`. We instantiate
-        # it eagerly so the layout objects are built once.
-        self._doc_viewer = DocViewer()
+        # it eagerly so the layout objects are built once. The link
+        # resolver lets `kw:` links — emitted by the `.kw` keyword list
+        # (see `_keyword_list_entry`) — open a keyword's page in place.
+        self._doc_viewer = DocViewer(link_resolver=self._resolve_doc_link)
 
         self._session: PromptSession[str] = PromptSession(
             history=self._history_store,
@@ -117,6 +120,24 @@ class PromptToolkitConsoleInterpreter(ConsoleInterpreter):
         runs between two `read_line` invocations.
         """
         self._doc_viewer.run(title, markdown)
+
+    def _keyword_list_entry(self, owner_name: str, kw_name: str) -> str:
+        """Render a `.kw` list entry as a link into the keyword's page.
+
+        The target encodes the explicit `Owner.Keyword` name (percent-
+        encoded, since keyword names contain spaces) behind a `kw:`
+        scheme that `_resolve_doc_link` turns back into documentation.
+        Tab/Enter in the doc viewer then opens the keyword in place.
+        """
+        return f"- [{kw_name}](kw:{quote(f'{owner_name}.{kw_name}')})"
+
+    def _resolve_doc_link(self, target: str) -> Optional[Tuple[str, str]]:
+        """Resolve a `kw:<owner.keyword>` doc-viewer link to a keyword
+        page; returns ``None`` for any other target so the viewer falls
+        back to its anchor / external-URL handling."""
+        if target.startswith("kw:"):
+            return self._keyword_doc(unquote(target[3:]))
+        return None
 
     def log_message(
         self,
