@@ -1305,6 +1305,12 @@
         "title": "AI",
         "id": "robotcode.ai",
         "properties": {
+          "robotcode.ai.enableChatPlugins": {
+            "type": "boolean",
+            "default": true,
+            "markdownDescription": "Enable **RobotCode chat plugins** for AI chat.\n\nThe plugins use the project-aware `robotcode` CLI to discover and run tests, analyze `.robot` and `.resource` files, inspect keywords, libraries, configuration, and profiles, use the REPL, and summarize run results.",
+            "scope": "resource"
+          },
           "robotcode.ai.enableLanguageModelTools": {
             "type": "boolean",
             "default": false,
@@ -1970,6 +1976,12 @@
             }
           }
         ]
+      }
+    ],
+    "chatPlugins": [
+      {
+        "path": "chat-plugins/robotcode",
+        "when": "config.robotcode.ai.enableChatPlugins"
       }
     ],
     "languageModelTools": [

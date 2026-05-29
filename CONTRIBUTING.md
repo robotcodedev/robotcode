@@ -339,6 +339,7 @@ These commands are mainly used by maintainers, but contributors may need some of
 
 **Build & Release:**
 - `hatch run build:install-bundled-editable` — Install bundled packages in editable mode.
+- `hatch run build:sync-chat-plugin` — Refresh the bundled chat-plugin under `chat-plugins/robotcode/` from a local clone of [robotframework-agent-plugins](https://github.com/robotcodedev/robotframework-agent-plugins) (source of truth; expects the clone as a sibling directory or pass `--source <path>`). Add `--check` to verify the mirror without writing.
 - `hatch run build:update-changelog` — Update project changelog.
 - `hatch run build:update-git-versions` — Update version information from git.
 - `hatch run build:update-doc-links` — Update documentation links.

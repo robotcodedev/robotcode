@@ -170,6 +170,7 @@ is-prerelease = ["python scripts/is_prerelease.py"]
 get-release-version = ["python scripts/get_release_version.py"]
 bump = ["cz bump {args}"]
 install-bundled-editable = "python ./scripts/install_bundled_editable.py"
+sync-chat-plugin = ["python scripts/sync_chat_plugin.py {args}"]
 
 
 [envs.hatch-static-analysis]

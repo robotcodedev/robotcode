@@ -1,0 +1,19 @@
+{
+	"name": "robotcode",
+	"version": "1.0.0",
+	"description": "Agent skill that teaches AI coding agents to drive robotcode properly in Robot Framework projects",
+	"author": {
+		"name": "Daniel Biehl",
+		"email": "dbiehl@live.de"
+	},
+	"homepage": "https://robotcode.io",
+	"repository": "https://github.com/robotcodedev/robotcode",
+	"license": "Apache-2.0",
+	"keywords": [
+		"robotframework",
+		"robotcode",
+		"testing",
+		"test-automation",
+		"cli"
+	]
+}
