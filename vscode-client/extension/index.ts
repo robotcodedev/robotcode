@@ -6,6 +6,7 @@ import { TestControllerManager } from "./testcontrollermanager";
 import { KeywordsTreeViewProvider } from "./keywordsTreeViewProvider";
 import { LanguageToolsManager } from "./languageToolsManager";
 import { LanguageModelToolsManager } from "./languageModelToolsManager";
+import { ChatPluginsManager } from "./chatPluginsManager";
 import { NotebookManager } from "./notebook";
 import path from "path";
 
@@ -99,6 +100,7 @@ export async function activateAsync(context: vscode.ExtensionContext): Promise<v
     testControllerManger,
     new LanguageToolsManager(context, languageClientManger, pythonManager, testControllerManger, outputChannel),
     new LanguageModelToolsManager(context, languageClientManger, outputChannel),
+    new ChatPluginsManager(context, outputChannel),
     new NotebookManager(context, pythonManager, languageClientManger, outputChannel),
     vscode.commands.registerCommand("robotcode.showDocumentation", async (url: string) => {
       if (url.indexOf("&theme=%24%7Btheme%7D") > 0) {

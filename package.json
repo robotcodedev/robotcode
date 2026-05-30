@@ -1426,9 +1426,29 @@
           "dark": "./resources/dark/restart-kernel.svg",
           "light": "./resources/light/restart-kernel.svg"
         }
+      },
+      {
+        "title": "Add Chat Plugins Marketplace",
+        "category": "RobotCode",
+        "command": "robotcode.chatPlugins.addMarketplace"
+      },
+      {
+        "title": "Remove Chat Plugins Marketplace",
+        "category": "RobotCode",
+        "command": "robotcode.chatPlugins.removeMarketplace"
       }
     ],
     "menus": {
+      "commandPalette": [
+        {
+          "command": "robotcode.chatPlugins.addMarketplace",
+          "when": "!robotcode.chatPlugins.marketplaceRegistered"
+        },
+        {
+          "command": "robotcode.chatPlugins.removeMarketplace",
+          "when": "robotcode.chatPlugins.marketplaceRegistered"
+        }
+      ],
       "explorer/context": [
         {
           "command": "robotcode.createNewFile",
