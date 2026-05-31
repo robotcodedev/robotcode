@@ -315,6 +315,9 @@ class ConsoleInterpreter(BaseInterpreter):
 
     def run(self) -> Any:
         self.show_banner()
+        # Seed ``${_}`` so it resolves to ``None`` even before the first
+        # keyword runs, rather than raising "Variable not found".
+        self.set_last_result(None)
         return super().run()
 
     # ------------------------------------------------------------------
@@ -324,12 +327,11 @@ class ConsoleInterpreter(BaseInterpreter):
     def set_last_result(self, result: Any) -> None:
         """Mirror the last keyword's return value into Robot as ``${_}``.
 
-        ``None`` results are skipped so noisy ``Log`` / ``Set Suite
-        Variable`` calls don't wipe a meaningful previous value.
+        Every keyword updates ``${_}`` — including those returning
+        ``None`` (e.g. ``Log``), so ``${_}`` always reflects the most
+        recent keyword's result rather than the last non-``None`` one.
         """
         super().set_last_result(result)
-        if result is None:
-            return
         ctx = EXECUTION_CONTEXTS.current
         if ctx is None:
             return

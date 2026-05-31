@@ -211,7 +211,7 @@ No additional dependency: Robot is already required by `robotcode-repl`, and the
 
 Across both backends (plain / prompt_toolkit, with the obvious caveat that plain has no editor):
 
-- **`${_}` — last result** — like Python's interactive shell. After every keyword call the return value is mirrored into the Robot variable `${_}`. Use it directly in the next argument: `Evaluate    1 + 2` → `Log    ${_}` prints `3`. Keywords that return `None` (e.g. `Log` itself) don't overwrite `${_}`, so the most recent meaningful value stays reachable across "noisy" interleaved calls.
+- **`${_}` — last result** — like Python's interactive shell. After every keyword call the return value is mirrored into the Robot variable `${_}`, so it always reflects the most recent keyword — including keywords that return `None` (e.g. `Log` itself), which set `${_}` to `None`. Use it directly in the next argument: `Evaluate    1 + 2` → `Log    ${_}` prints `3`. It's seeded to `None` at startup, so `${_}` resolves even before the first keyword runs.
 - **Ctrl-R reverse-history search** — type a substring and press `Ctrl-R` to walk backwards through past entries. Enter accepts, Esc cancels. Available on the prompt_toolkit backend.
 - **Argument signature in the bottom row** — only on the prompt_toolkit backend. When the cursor is in an argument cell of a recognised keyword, a row at the bottom shows the full signature with the active argument highlighted. Outside that context the row is hidden.
 

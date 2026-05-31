@@ -47,16 +47,16 @@ def test_set_last_result_overwrites_on_new_result(monkeypatch: pytest.MonkeyPatc
     assert store["${_}"] == "second"
 
 
-def test_set_last_result_none_does_not_overwrite(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A keyword that returns `None` (e.g. `Log`) keeps the previous
-    meaningful value reachable via `${_}`."""
+def test_set_last_result_none_overwrites(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A keyword that returns `None` (e.g. `Log`) resets `${_}` to
+    `None`, so `${_}` always mirrors the most recent keyword's result."""
     store: Dict[str, Any] = {}
     _patch_context_with_vars(monkeypatch, store)
     interp = _make_interpreter()
 
     interp.set_last_result(123)
     interp.set_last_result(None)
-    assert store["${_}"] == 123
+    assert store["${_}"] is None
 
 
 def test_set_last_result_without_context_is_silent(monkeypatch: pytest.MonkeyPatch) -> None:
