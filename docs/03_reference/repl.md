@@ -19,7 +19,7 @@ Typical things you can do with it:
 - import a library and call any of its keywords with arguments
 - assign and reference variables across multiple lines (state persists for the session)
 - run control structures (FOR, WHILE, IF, TRY) interactively, multi-line
-- execute a `.robot`-style snippet from a file and either exit or drop into the prompt afterwards
+- execute a `.robotrepl` script and either exit or drop into the prompt afterwards
 - generate a `log.html` / `report.html` / `output.xml` from the interactive session, just like a normal `robot` run
 
 This is intentionally **not** a replacement for writing real test files. It's the lightweight cousin: same engine, immediate feedback, no persistence unless you ask for it.
@@ -30,11 +30,11 @@ This is intentionally **not** a replacement for writing real test files. It's th
 # Interactive prompt
 robotcode repl
 
-# Execute a snippet file, then exit
-robotcode repl spike.robot
+# Execute a REPL script, then exit
+robotcode repl spike.robotrepl
 
-# Execute a snippet file, then drop into the prompt
-robotcode repl --inspect spike.robot
+# Execute a REPL script, then drop into the prompt
+robotcode repl --inspect spike.robotrepl
 
 # Pre-set variables for the whole session
 robotcode repl -v BASE_URL:https://staging.example.com -v RETRIES:3
@@ -84,7 +84,7 @@ Log To Console    answer is ${x}
 Two backends, no platform-specific caveats:
 
 - **`prompt_toolkit`** (default) — rich line editor with candidate popup, syntax highlighting, signature toolbar, Ctrl-R reverse search, fish-style auto-suggest, multi-line cursor movement, persistent history, fullscreen doc viewer with mouse + search.
-- **`plain`** — bare `input()` fallback. No history, no completion, no popup. Active when the user / AI-agent detection chose plain explicitly.
+- **`plain`** — bare `input()` fallback. No history, no completion, no popup. Active when you select it explicitly (`--plain` / `--backend=plain`) or when AI-agent detection falls back to it.
 
 ### Picking a specific input backend
 
@@ -188,7 +188,7 @@ When the cursor sits in an argument cell of a recognised keyword, a single statu
 
 Highlight follows `name=…` syntax: typing `Log    msg    html=True` lights up `html`, not the positional cell at that index. Falls back to the positional cell index when the name before `=` isn't a real argument of the keyword.
 
-The row only shows up when there's a signature to render — outside of an argument cell (or for an unrecognised keyword) the prompt has no toolbar at all. Discover dot-commands and shortcuts through `.help` instead; `.cwd` prints the working directory on demand.
+The row only shows up when there's a signature to render — outside of an argument cell (or for an unrecognised keyword) the prompt has no toolbar at all.
 
 #### Documentation hints in the popup
 
@@ -209,11 +209,11 @@ No additional dependency: Robot is already required by `robotcode-repl`, and the
 
 ### Interactive shortcuts
 
-Across both backends (plain / prompt_toolkit, with the obvious caveat that plain has no editor):
+Available on both backends:
 
 - **`${_}` — last result** — like Python's interactive shell. After every keyword call the return value is mirrored into the Robot variable `${_}`, so it always reflects the most recent keyword — including keywords that return `None` (e.g. `Log` itself), which set `${_}` to `None`. Use it directly in the next argument: `Evaluate    1 + 2` → `Log    ${_}` prints `3`. It's seeded to `None` at startup, so `${_}` resolves even before the first keyword runs.
-- **Ctrl-R reverse-history search** — type a substring and press `Ctrl-R` to walk backwards through past entries. Enter accepts, Esc cancels. Available on the prompt_toolkit backend.
-- **Argument signature in the bottom row** — only on the prompt_toolkit backend. When the cursor is in an argument cell of a recognised keyword, a row at the bottom shows the full signature with the active argument highlighted. Outside that context the row is hidden.
+
+`Ctrl-R` reverse-history search and the argument-signature toolbar are prompt_toolkit-only — see *History across sessions* and *Argument signature in the bottom row* above.
 
 ### REPL meta-commands
 
@@ -283,11 +283,11 @@ The exporter does two things automatically:
 
 `-a` appends to an existing file instead of overwriting, so you can build a test suite incrementally across multiple REPL sessions.
 
-Failed entries — anything Robot's parser rejected — are silently skipped, which is why the exported file is always runnable.
+Failed entries — anything Robot's parser rejected — are silently skipped, so the exported file always parses cleanly. One caveat: REPL-only variables such as `${_}` parse fine but don't exist in a standalone `robot` run, so a session that relied on them may need a small edit before the exported file runs on its own.
 
 ## What syntax the REPL accepts
 
-The REPL treats each input as a **test case body** — the lines you'd write inside `*** Test Cases ***`. So you can use:
+The REPL treats each input as a **test-case body** — the lines you'd write inside `*** Test Cases ***`. So you can use:
 
 - keyword calls with positional and named arguments
 - variable assignment (`${x}=    Set Variable    42`) and references (`Log    ${x}`)
@@ -360,19 +360,19 @@ https://staging.example.com
 
 You can also define variables inline via the `VAR` statement (RF 7+) or classic assignment.
 
-## Running a `.robot` snippet file
+## Running REPL scripts
 
-Pass one or more **files** to execute their content before the prompt. The files are read as test-case bodies — same syntax constraints as the prompt itself (no `*** Settings ***` headers; just keyword lines and control structures).
+Pass one or more **REPL scripts** to execute their content before the prompt. Each is read as a **test-case body** — the same syntax as the prompt itself: just keyword calls and control structures, one entry per line. These scripts conventionally use the `.robotrepl` (or `.robotscript`) extension, which the RobotCode VS Code extension highlights as REPL input.
+
+> **These are REPL scripts, not full `.robot` suites.** Because the content runs as the body of a single implicit test, section headers like `*** Settings ***` or `*** Test Cases ***` are **not** allowed — a file containing them fails with `No keyword with name '*** Settings ***' found`. Import libraries and resources from inside the body with the `Import Library` / `Import Resource` keywords instead of a Settings section.
 
 ```bash
-robotcode repl smoke.robot                    # execute, then exit
-robotcode repl smoke.robot setup.robot        # multiple files, in order, then exit
-robotcode repl --inspect smoke.robot          # execute, then drop into the prompt
+robotcode repl setup.robotrepl                  # execute, then exit
+robotcode repl setup.robotrepl more.robotrepl   # multiple files, in order, then exit
+robotcode repl --inspect setup.robotrepl        # execute, then drop into the prompt
 ```
 
-`--inspect` is the bridge between "run my snippet" and "let me poke at the result interactively". It runs the file the same way, but instead of exiting it leaves you at `>>>` with all the variables and imports the file set up still in scope.
-
-This is useful for testing what `${RESULT}` looks like after a long sequence of setup keywords without rerunning everything every time.
+With `--inspect`, the file runs the same way but, instead of exiting, leaves you at `>>>` with everything it set up still in scope — variables, plus any libraries or resources imported via `Import Library` / `Import Resource`. Handy for inspecting the state a long setup sequence produced without rerunning it each time.
 
 ## Capturing the session as a Robot run
 
@@ -455,15 +455,15 @@ printf 'Run Keyword And Expect Error    *    Fail    sanity\n' \
 robotcode repl -V ./vars.yaml
 >>> Log To Console    ${SOME_KEY_FROM_VARS}
 
-# Run a snippet file then poke at the resulting state
-robotcode repl --inspect ./scratch/setup_world.robot
+# Run a REPL script then poke at the resulting state
+robotcode repl --inspect ./scratch/setup_world.robotrepl
 ```
 
 ```powershell
 # CI smoke check on Windows / PowerShell
 'Run Keyword And Expect Error    *    Fail    sanity' | robotcode repl
 
-# Multi-line snippet through a here-string
+# Multi-line input through a here-string
 @'
 ${BASE_URL}=    Set Variable    https://staging.example.com
 Log To Console    pinging ${BASE_URL}
@@ -478,13 +478,3 @@ Log To Console    pinging ${BASE_URL}
 - **Not persistent.** Closing the prompt throws away the session unless you've passed `-o` / `-l` / `-r` / `-x` to capture artefacts.
 
 For the exhaustive option list see the auto-generated [CLI reference](cli.md#repl).
-
-## Why no `readline` backend?
-
-Earlier versions of robotcode shipped a third backend that talked to the OS-level `readline` library (GNU readline on Linux, libedit on macOS, `pyreadline3` on Windows). It's gone — after testing on all three platforms, it was clean on only one of them:
-
-- **Linux** with GNU readline → worked.
-- **macOS** → linked to libedit (Apple's BSD readline-alike); silently ignored most of the bindings the REPL relied on. Tab would insert a literal tab character, completion fell back to the verbose default layout. Workable only after installing the `[gnureadline]` extra.
-- **Windows** with `pyreadline3` → known upstream bugs ([pyreadline3#40](https://github.com/pyreadline3/pyreadline3/issues/40), #43) desynced prompt position with VS Code's integrated terminal — the prompt vanished after the first scrolled output, and the next redraw overwrote the last output line.
-
-`prompt_toolkit` speaks ANSI on every platform (no OS-level readline in its path) and renders incrementally instead of caching absolute cursor positions, so it sidesteps every one of those problems. The plain `input()` fallback is enough for the rest.
