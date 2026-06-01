@@ -34,6 +34,7 @@ class ReplListener:
         ReplListener.instance = self
         self.app = app
         self.interpreter = interpreter
+        self._in_repl = False
 
     def start_keyword(
         self,
@@ -43,7 +44,14 @@ class ReplListener:
         if name != "robotcode.repl.Repl.Repl":
             return
 
-        self.interpreter.run()
+        if self._in_repl:
+            return
+
+        self._in_repl = True
+        try:
+            self.interpreter.run()
+        finally:
+            self._in_repl = False
 
 
 def run_repl(
