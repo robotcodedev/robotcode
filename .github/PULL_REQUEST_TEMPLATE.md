@@ -19,8 +19,8 @@
 
 - [ ] I have read the [Contribution Guide](../CONTRIBUTING.md) and the [AI and Automated Contribution Policy](../AI_POLICY.md).
 - [ ] The change is focused on a single concern (no unrelated refactors or formatting noise).
-- [ ] Tests for the change have been added or updated, and `hatch run test:test` passes locally (RF matrix against the default Python). See [Running Tests](../CONTRIBUTING.md#running-tests) for faster iteration options and the full matrix.
-- [ ] `hatch run lint:all` passes (also enforced by the [pre-commit hooks](../CONTRIBUTING.md#pre-commit-hooks) if installed).
+- [ ] Tests for the change have been added or updated, and `hatch run test:test` passes locally (RF matrix against the default Python) — *or N/A for documentation-only / non-code changes*. See [Running Tests](../CONTRIBUTING.md#running-tests) for faster iteration options and the full matrix.
+- [ ] `hatch run lint:all` passes (also enforced by the [pre-commit hooks](../CONTRIBUTING.md#pre-commit-hooks) if installed) — *or N/A for documentation-only / non-code changes*.
 - [ ] Documentation has been updated where relevant (user docs, code comments, README).
 - [ ] Generated files (if any) were regenerated with the documented script, not edited by hand.
 - [ ] Commits follow [Conventional Commits](../CONTRIBUTING.md#commit-messages) and are [cryptographically signed](../CONTRIBUTING.md#signed-commits-required) (`git commit -S`, GPG/SSH).

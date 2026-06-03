@@ -1,10 +1,12 @@
 # AI and Automated Contribution Policy
 
-AI tools and automated coding agents are permitted in RobotCode contributions. They can be useful development aids. However, low-context, low-effort, or poorly reviewed automated contributions create real maintenance work for the RobotCode project.
+AI tools and automated coding agents are welcome in RobotCode contributions — they can be genuinely useful development aids.
+
+Whether a change was written, discovered, or produced by an autonomous agent does not matter. What matters is that a human then takes over, fully understands the change, and remains accountable for it — through review, testing, and any follow-up. Agent-assisted work followed by genuine human ownership is welcome.
 
 This policy applies to AI-assisted or automated contributions and project interactions, including pull requests, issues, discussions, comments, code review replies, documentation changes, generated files, and any other content submitted to the RobotCode project.
 
-This policy exists to protect the sustainability of RobotCode and the time of its maintainers. It complements, and does not replace, the [Contribution Guide](CONTRIBUTING.md) and the [Code of Conduct](CODE_OF_CONDUCT.md).
+This policy exists to protect the maintainers' time — time that would otherwise go into fixing real bugs and building new features, and that ultimately keeps RobotCode sustainable. It complements, and does not replace, the [Contribution Guide](CONTRIBUTING.md) and the [Code of Conduct](CODE_OF_CONDUCT.md).
 
 ## Human responsibility
 

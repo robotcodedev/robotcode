@@ -1,9 +1,18 @@
 <!-- omit in toc -->
 # Contributing to RobotCode
 
-First off, thanks for taking the time to contribute! ❤️
+First off, thanks for taking the time to contribute!
 
-All types of contributions are encouraged and valued. See the [Table of Contents](#table-of-contents) for different ways to help and details about how this project handles them. Please make sure to read the relevant section before making your contribution. It will make it a lot easier for us maintainers and smooth out the experience for all involved. The community looks forward to your contributions. 🎉
+All types of contributions are encouraged and valued. See the [Table of Contents](#table-of-contents) for different ways to help and details about how this project handles them. Please make sure to read the relevant section before making your contribution. It will make it a lot easier for us maintainers and smooth out the experience for all involved. The community looks forward to your contributions.
+
+**New here? Find your path:**
+
+- Have a question → [I Have a Question](#i-have-a-question)
+- Found a bug → [Reporting Bugs](#reporting-bugs)
+- Have an idea → [Suggesting Enhancements](#suggesting-enhancements)
+- Want to change code or docs → [Your First Code Contribution](#your-first-code-contribution)
+
+Whatever you bring, two short ground rules apply to everything — please skim the [AI and Automated Contribution Policy](AI_POLICY.md) and our note on [payment and bounty requests](#payment-bounty-and-monetization-requests). Everything after that is about *how* to contribute.
 
 And if you like the project, but just don't have time to contribute, that's fine. There are other easy ways to support the project and show your appreciation, which we would also be very happy about:
 - Star the project
@@ -64,7 +73,7 @@ You can also ask questions in the Robot Frameworks [Slack](https://robotframewor
 
 ## Project-Wide Rules
 
-These rules apply to all interactions with the RobotCode project — pull requests, issues, discussions, comments, code review replies, and any other contribution. Please read them before opening a contribution of any kind.
+Just two ground rules, and they apply to every interaction with the RobotCode project — pull requests, issues, discussions, comments, code review replies, and anything else. They're short; please read them before opening a contribution of any kind.
 
 ### AI and Automated Contributions
 
@@ -265,8 +274,8 @@ When you open a pull request, GitHub will pre-fill the [pull request template](.
 Before submitting your pull request, make sure that:
 
 - [ ] The change is **focused** on a single concern (no unrelated refactors or formatting noise).
-- [ ] **Tests** for the change have been added or updated, and `hatch run test:test` passes locally (RF matrix against the default Python). See [Running Tests](#running-tests) for faster iteration options and the full matrix.
-- [ ] **Linting** passes: `hatch run lint:all` (also enforced by the [pre-commit hooks](#pre-commit-hooks) if installed).
+- [ ] **Tests** for the change have been added or updated, and `hatch run test:test` passes locally (RF matrix against the default Python) — *not required for documentation-only or other non-code changes; note that in the PR*. See [Running Tests](#running-tests) for faster iteration options and the full matrix.
+- [ ] **Linting** passes: `hatch run lint:all` (also enforced by the [pre-commit hooks](#pre-commit-hooks) if installed) — *not applicable to documentation-only or other non-code changes; there is no Markdown linter*.
 - [ ] **Documentation** has been updated where relevant (user docs, code comments, README).
 - [ ] **Generated files** (if any) were regenerated with the documented script, not edited by hand.
 - [ ] **Commits** follow [Conventional Commits](#commit-messages) and are [cryptographically signed](#signed-commits-required) (`git commit -S`, GPG/SSH).
@@ -297,6 +306,9 @@ hatch run test:test
 ```
 
 This runs the full test suite across all supported Robot Framework versions using the default Python interpreter. Run it before committing or pushing a change, even if you already ran the newly added or modified tests locally: it gives good coverage without spinning up the full Python × RF matrix.
+
+> [!NOTE]
+> **Documentation-only or other non-code changes** (typo fixes, prose, Markdown docs) need neither the test matrix nor linting: `hatch run lint:all` only checks source code (ruff/mypy for Python, eslint for JS/TS), there is no Markdown linter, and the pre-commit hooks skip automatically when no code files are staged. Run the tests and linting whenever you touch source code, even slightly.
 
 **Fast iteration during development:**
 
@@ -507,9 +519,18 @@ and improved local development instructions.
 This refers to the **cryptographic commit signature** (`git commit -S`, GPG/SSH/X.509) — not to be confused with the DCO `Signed-off-by` trailer (`git commit -s`) mentioned in the [Legal Notice](#i-want-to-contribute).
 
 **Setting up commit signing:**
-- Follow GitHub's guide: [Managing commit signature verification](https://docs.github.com/en/authentication/managing-commit-signature-verification)
-- Configure Git to sign commits automatically: `git config --global commit.gpgsign true`
-- Verify your commits are signed: `git log --show-signature`
+
+The simplest setup is SSH signing — reuse the SSH key you already use for GitHub (or create one), no GPG toolchain needed:
+
+```bash
+git config --global gpg.format ssh
+git config --global user.signingkey ~/.ssh/id_ed25519.pub   # your public key
+git config --global commit.gpgsign true
+```
+
+Then add that key on GitHub once more as a **Signing Key** under *Settings → SSH and GPG keys*. Every commit is now signed automatically — verify with `git log --show-signature`.
+
+Prefer GPG (or already have a GPG key)? Follow GitHub's [Managing commit signature verification](https://docs.github.com/en/authentication/managing-commit-signature-verification) guide, then set `commit.gpgsign true` the same way.
 
 **For pull requests:**
 - All commits in the PR must be signed
