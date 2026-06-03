@@ -8,6 +8,7 @@ a stub `Application`. Pure command-resolution tests need no run.
 """
 
 import io
+import tempfile
 from pathlib import Path
 from typing import IO, Any, AnyStr, Callable, List, Optional, Tuple, Union, cast
 
@@ -22,7 +23,8 @@ from robotcode.repl._debug.types import ResumeAction, StackFrame, StopEvent, Sto
 from robotcode.repl.console_interpreter import ConsoleInterpreter
 from robotcode.robot.utils import RF_VERSION
 
-_SOURCE = "/tmp/dbg_console_suite.robot"
+# A writable temp path (not a hardcoded "/tmp/…", which is not writable on Windows).
+_SOURCE = str(Path(tempfile.gettempdir()) / "dbg_console_suite.robot")
 
 #  11 = `Log    before`, 12 = `Outer`
 STEP_SUITE = """\
@@ -464,7 +466,7 @@ def test_break_with_path_line_format_triggers() -> None:
     assert len(stops) == 2
     assert stops[0].startswith("* entry")
     # The location is shown relative to the cwd (a `…/`-prefixed path here, since
-    # the test source lives under /tmp); assert the filename:line suffix, which
+    # the test source lives in a temp dir); assert the filename:line suffix, which
     # is stable regardless of where the tests run from.
     assert "dbg_console_suite.robot:12)" in stops[1]  # the line breakpoint fired
 
@@ -939,7 +941,9 @@ def test_source_suite_local_keyword_not_resolved() -> None:
 def test_source_resource_keyword(tmp_path: Path) -> None:
     res = tmp_path / "kw.resource"
     res.write_text("*** Keywords ***\nCustom Step\n    Log    hi\n", encoding="utf-8")
-    suite_text = f"*** Settings ***\nResource    {res}\n\n*** Test Cases ***\nT\n    Custom Step\n"
+    # Forward slashes: a raw Windows path (backslashes) in .robot source would be
+    # mangled by Robot's escape handling, so the resource import would fail.
+    suite_text = f"*** Settings ***\nResource    {res.as_posix()}\n\n*** Test Cases ***\nT\n    Custom Step\n"
     messages = _run_debug(suite_text, [".source Custom Step", ".continue"], stop_on_entry=True)
     assert any(m.startswith("Custom Step  (") and "kw.resource:" in m for m in messages)
     assert any(m.lstrip().startswith("->") for m in messages)
