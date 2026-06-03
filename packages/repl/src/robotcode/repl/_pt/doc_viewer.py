@@ -148,6 +148,10 @@ def _strip_osc8_hyperlinks(ansi: str) -> Tuple[str, List[Tuple[int, int, str]]]:
 # them as separate links rather than one wrapped link.
 _WRAP_GAP_TOLERANCE = 4
 
+# Lines of context kept above a `scroll_to` target so it opens clearly visible
+# (mid-file, with a little preceding context) rather than jammed at the top edge.
+_SCROLL_TO_CONTEXT = 3
+
 
 def _coalesce_link_spans(spans: List[Tuple[int, int, str]]) -> List[Tuple[int, int, str]]:
     """Merge adjacent spans that point to the same URL.
@@ -615,18 +619,28 @@ class DocViewer:
             full_screen=True,
             mouse_support=True,
         )
+        # Re-apply a `scroll_to` target after the first render (see
+        # `_apply_pending_scroll`). Registered once — the app is reused across
+        # `run()` calls — and gated on `self._pending_scroll` so it no-ops
+        # unless a fresh `run(scroll_to=…)` armed it.
+        self._pending_scroll: Optional[str] = None
+        self._app.after_render += self._apply_pending_scroll
 
-    def run(self, title: str, markdown: str) -> None:
+    def run(self, title: str, markdown: str, *, scroll_to: Optional[str] = None) -> None:
         """Render ``markdown`` into the body and run the viewer fullscreen.
 
         Blocks until the user presses Esc / q / Enter. Uses the alt
         screen buffer, so the host prompt's terminal state survives
-        the call untouched.
+        the call untouched. ``scroll_to`` opens the viewer scrolled to the
+        first rendered line containing that text (e.g. a marked source line).
         """
         # A fresh top-level invocation starts with empty history.
         self._back_stack = []
         self._forward_stack = []
-        self._load_document(title, markdown)
+        self._load_document(title, markdown, scroll_to=scroll_to)
+        # The pre-render scroll above gets reset by the first render; arm the
+        # `after_render` hook to re-apply it once the body is really on screen.
+        self._pending_scroll = scroll_to
 
         try:
             self._app.run()
@@ -639,11 +653,12 @@ class DocViewer:
                 self._resize_task.cancel()
                 self._resize_task = None
 
-    def _load_document(self, title: str, markdown: str) -> None:
+    def _load_document(self, title: str, markdown: str, *, scroll_to: Optional[str] = None) -> None:
         """Adopt ``markdown`` as the current document and reset per-doc
         state (scroll, focused link, search). Leaves the back / forward
         stacks alone so it can be reused for in-place link follows;
-        `run` clears them for a fresh top-level invocation.
+        `run` clears them for a fresh top-level invocation. ``scroll_to``
+        opens scrolled to the first rendered line containing that text.
         """
         self._title = title
         self._md_source = markdown
@@ -661,6 +676,33 @@ class DocViewer:
         self._current_match = -1
         self._search_buffer.reset()
         self._body_window.vertical_scroll = 0
+        if scroll_to:
+            self._scroll_to_text(scroll_to)
+
+    def _scroll_to_text(self, text: str) -> None:
+        """Scroll so the first rendered line containing ``text`` is visible near
+        the top, with a few lines of context above. Leaves the scroll untouched
+        if the text isn't present. Mirrors anchor-follow's clamping (`_max_scroll`
+        is 0 before the first render, so set the raw value and let render clamp)."""
+        for idx, rendered_line in enumerate(self._plain.split("\n")):
+            if text in rendered_line:
+                target = max(0, idx - _SCROLL_TO_CONTEXT)
+                max_scroll = self._max_scroll()
+                self._body_window.vertical_scroll = min(target, max_scroll) if max_scroll else target
+                return
+
+    def _apply_pending_scroll(self, _app: object) -> None:
+        """`after_render` hook: re-apply a pending `scroll_to` once, after the
+        first real render. The pre-render scroll set in `_load_document` is reset
+        by prompt_toolkit's first render (the cursor-pin only protects the scroll
+        once render-info exists), so the target must be re-applied here — when
+        `self._plain` reflects the real terminal width and `_max_scroll` is valid."""
+        if self._pending_scroll is None:
+            return
+        target = self._pending_scroll
+        self._pending_scroll = None
+        self._scroll_to_text(target)
+        self._app.invalidate()
 
     def _current_state(self) -> _NavState:
         """Snapshot the current document + position for the nav stacks."""

@@ -1,7 +1,7 @@
 import io
 import sys
 from pathlib import Path
-from typing import Any, ClassVar, Dict, Optional, Tuple
+from typing import Optional, Tuple
 
 from robot.api import TestSuite, get_model
 from robot.conf import RobotSettings
@@ -24,34 +24,6 @@ Library  robotcode.repl.Repl
 RobotCode REPL
     repl
 """
-
-
-class ReplListener:
-    ROBOT_LISTENER_API_VERSION = 2
-    instance: ClassVar["ReplListener"]
-
-    def __init__(self, app: Application, interpreter: BaseInterpreter) -> None:
-        ReplListener.instance = self
-        self.app = app
-        self.interpreter = interpreter
-        self._in_repl = False
-
-    def start_keyword(
-        self,
-        name: str,
-        attributes: Dict[str, Any],
-    ) -> None:
-        if name != "robotcode.repl.Repl.Repl":
-            return
-
-        if self._in_repl:
-            return
-
-        self._in_repl = True
-        try:
-            self.interpreter.run()
-        finally:
-            self._in_repl = False
 
 
 def run_repl(
@@ -109,9 +81,6 @@ def run_repl(
                 report=report,
                 xunit=xunit,
                 quiet=True,
-                listener=[
-                    ReplListener(app, interpreter),
-                ],
             )
 
             if app is not None and app.show_diagnostics:

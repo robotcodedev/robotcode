@@ -4,9 +4,9 @@ import click
 
 from robotcode.plugin import hookimpl
 
-from .cli import repl
+from .cli import repl, robot_debug
 
 
 @hookimpl
 def register_cli_commands() -> List[click.Command]:
-    return [repl]
+    return [repl, robot_debug]

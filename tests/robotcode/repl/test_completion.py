@@ -1182,3 +1182,39 @@ def test_spec_arg_position_unknown_without_kwargs_is_none() -> None:
 
 def test_spec_arg_position_none_spec() -> None:
     assert spec_arg_position(None, "a") is None
+
+
+# ---------------------------------------------------------------------------
+# Phase 4: dot-command completion + frame/scope-aware variable completion
+# ---------------------------------------------------------------------------
+
+
+def test_command_prefix_detects_bare_dot_token() -> None:
+    from robotcode.repl._pt.completion import command_prefix
+
+    assert command_prefix(".co") == "co"
+    assert command_prefix(".") == ""
+    assert command_prefix("Log    x") is None
+    assert command_prefix("${x") is None
+    assert command_prefix(".step over") is None  # has an argument cell → not a bare token
+
+
+def test_complete_commands_filters_sorts_and_labels() -> None:
+    from robotcode.repl._pt.completion import complete_commands
+
+    labels = [c.label for c in complete_commands("c", ["continue", "step", "catch"])]
+    assert labels == [".catch", ".continue"]  # only c-prefixed, sorted, dot-prefixed
+
+
+def test_candidates_for_uses_explicit_variables_scope() -> None:
+    """Variable completion honours an explicit `variables` store (a paused
+    frame's scope) instead of the global execution context."""
+    from types import SimpleNamespace
+
+    from robotcode.repl._pt.completion import candidates_for, tokenize
+
+    store = SimpleNamespace(as_dict=lambda: {"${MY_FRAME_VAR}": "hi", "${OTHER}": 1})
+    ctx = tokenize("${MY", 4)
+    labels = candidates_for(ctx, variables=store)
+    assert "${MY_FRAME_VAR}" in labels
+    assert "${OTHER}" not in labels  # prefix-filtered

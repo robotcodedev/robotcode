@@ -18,7 +18,7 @@ from prompt_toolkit's editor surface:
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import List, Optional, Tuple, Union
+from typing import Any, Callable, List, Optional, Tuple, Union
 from urllib.parse import quote, unquote
 
 from prompt_toolkit import PromptSession, print_formatted_text
@@ -56,6 +56,9 @@ class PromptToolkitConsoleInterpreter(ConsoleInterpreter):
     standard "Unknown dot-command" message takes over.
     """
 
+    # `show_doc` here is the scrollable fullscreen viewer — `.source` uses it.
+    has_scrollable_viewer = True
+
     def __init__(
         self,
         app: Optional[Application] = None,
@@ -89,7 +92,7 @@ class PromptToolkitConsoleInterpreter(ConsoleInterpreter):
 
         self._session: PromptSession[str] = PromptSession(
             history=self._history_store,
-            completer=_RobotCompleter(),
+            completer=_RobotCompleter(command_names=list(type(self)._dot_command_index()[0])),
             auto_suggest=AutoSuggestFromHistory(),
             complete_while_typing=True,
             complete_in_thread=True,
@@ -106,20 +109,32 @@ class PromptToolkitConsoleInterpreter(ConsoleInterpreter):
     # `ConsoleInterpreter` overrides — same contract, richer surface.
     # ------------------------------------------------------------------
 
-    def read_line(self, prompt: str, *, multiline_continuation: bool = False, prefill: str = "") -> str:
+    def read_line(
+        self, prompt: str, *, multiline_continuation: bool = False, prefill: str = "", completer: Any = None
+    ) -> str:
         del multiline_continuation  # PromptSession handles continuation inline
+        # A debug prompt passes its own (frame-aware, debug-command) completer;
+        # otherwise the session's default REPL completer is used.
+        if completer is not None:
+            return self._session.prompt(prompt, default=prefill, completer=completer)
         return self._session.prompt(prompt, default=prefill)
 
-    def show_doc(self, title: str, markdown: str) -> None:
+    def make_completer(
+        self, command_names: List[str], context_provider: Callable[[], Tuple[Any, Any]]
+    ) -> Optional[Any]:
+        return _RobotCompleter(command_names=command_names, context_provider=context_provider)
+
+    def show_doc(self, title: str, markdown: str, *, scroll_to: Optional[str] = None) -> None:
         """Display ``markdown`` in the fullscreen doc viewer.
 
         Blocks until the user closes the viewer (Esc / q / Enter). The
         viewer switches the terminal to the alternate screen buffer
         for the duration, so the host prompt and its scrollback survive
         untouched. Safe to call from inside a dot-command handler that
-        runs between two `read_line` invocations.
+        runs between two `read_line` invocations. ``scroll_to`` opens the
+        viewer scrolled to the first rendered line containing that text.
         """
-        self._doc_viewer.run(title, markdown)
+        self._doc_viewer.run(title, markdown, scroll_to=scroll_to)
 
     def _keyword_list_entry(self, owner_name: str, kw_name: str) -> str:
         """Render a `.kw` list entry as a link into the keyword's page.

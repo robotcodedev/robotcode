@@ -11,8 +11,8 @@ Pure-Python, deterministic, no Robot-runtime dependency. Used by:
 
 Indent width defaults to 4 spaces — the Robot Framework convention
 for test-case-body content inside `*** Test Cases ***`. Not
-configurable in Stage 4; can be ergonomically added later via env
-var or `robot.toml` setting if there's demand.
+configurable; could be added later via env var or `robot.toml`
+setting if there's demand.
 """
 
 import re

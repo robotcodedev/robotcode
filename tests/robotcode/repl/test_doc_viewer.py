@@ -11,7 +11,7 @@ from typing import Any, List, Tuple
 
 import pytest
 
-from robotcode.repl._pt.doc_viewer import DocViewer, _NavState, render_markdown_to_ansi
+from robotcode.repl._pt.doc_viewer import _SCROLL_TO_CONTEXT, DocViewer, _NavState, render_markdown_to_ansi
 
 
 def test_render_markdown_to_ansi_empty_input_returns_empty() -> None:
@@ -336,6 +336,51 @@ def test_follow_current_link_jumps_to_anchor() -> None:
     viewer._current_link = 0
     viewer._follow_current_link()
     assert viewer._body_window.vertical_scroll == 7
+
+
+def test_load_document_scroll_to_opens_at_matching_line() -> None:
+    """`scroll_to` opens the viewer scrolled to the first rendered line that
+    contains the given text (used by `.source` to land on the marked line);
+    missing text or no target leaves it at the top."""
+    viewer = DocViewer()
+    md = "```\n" + "\n".join(f"   {n}  line{n}" for n in range(1, 60)) + "\n```"
+
+    viewer._load_document("T", md, scroll_to="line40")
+    rendered = viewer._plain.split("\n")
+    top = viewer._body_window.vertical_scroll
+    idx40 = next(i for i, ln in enumerate(rendered) if "line40" in ln)
+    # The marked line is visible near the top — at or just below the scroll
+    # position (a few lines of context kept above), never off-screen above it.
+    assert top <= idx40 <= top + _SCROLL_TO_CONTEXT
+
+    viewer._load_document("T", md)
+    assert viewer._body_window.vertical_scroll == 0  # no target → top
+
+    viewer._load_document("T", md, scroll_to="absent-xyz")
+    assert viewer._body_window.vertical_scroll == 0  # not found → top
+
+
+def test_pending_scroll_reapplied_after_first_render() -> None:
+    """prompt_toolkit's first render resets the pre-render scroll; the
+    `after_render` hook re-applies the armed `scroll_to` once (one-shot), so the
+    target lands on screen instead of the viewer opening at line 1."""
+    viewer = DocViewer()
+    md = "```\n" + "\n".join(f"   {n}  line{n}" for n in range(1, 60)) + "\n```"
+    viewer._load_document("T", md)
+    viewer._body_window.vertical_scroll = 0  # simulate the first-render reset
+    viewer._pending_scroll = "line40"  # armed by run(scroll_to=…)
+
+    viewer._apply_pending_scroll(viewer._app)  # fires after the first render
+
+    rendered = viewer._plain.split("\n")
+    top = viewer._body_window.vertical_scroll
+    idx40 = next(i for i, ln in enumerate(rendered) if "line40" in ln)
+    assert top <= idx40 <= top + _SCROLL_TO_CONTEXT  # now visible near the top
+
+    # one-shot: once consumed, a later render does not re-scroll
+    viewer._body_window.vertical_scroll = 0
+    viewer._apply_pending_scroll(viewer._app)  # later renders are no-ops
+    assert viewer._body_window.vertical_scroll == 0
 
 
 def test_follow_current_link_opens_browser_for_external_url(monkeypatch: pytest.MonkeyPatch) -> None:

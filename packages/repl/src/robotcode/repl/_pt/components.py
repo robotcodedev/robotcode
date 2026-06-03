@@ -8,7 +8,7 @@ each is unit-testable in isolation.
 
 import itertools
 from pathlib import Path
-from typing import Any, Iterable, Iterator, List, Optional, Tuple
+from typing import Any, Callable, Iterable, Iterator, List, Optional, Tuple
 
 from prompt_toolkit.application import get_app
 from prompt_toolkit.buffer import Buffer
@@ -24,6 +24,8 @@ from .._keyword_lookup import lookup_keyword_doc
 from .completion import (
     CELL_SEPARATOR,
     candidates_for_rich,
+    command_prefix,
+    complete_commands,
     current_keyword_and_arg_index,
     current_named_arg_in_cell,
     find_cell_end,
@@ -115,9 +117,19 @@ class _RobotCompleter(Completer):
     from re-firing on the restored buffer.
     """
 
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        *,
+        command_names: Iterable[str] = (),
+        context_provider: Optional[Callable[[], Tuple[Any, Any]]] = None,
+    ) -> None:
         super().__init__()
         self.suppress_once = False
+        # Dot-commands to offer (REPL or debugger); empty disables that path.
+        self._command_names = tuple(command_names)
+        # () -> (namespace_context, variables_store) to complete against; a paused
+        # frame's scope for the debugger. None ⇒ the live execution context.
+        self._context_provider = context_provider
 
     def get_completions(self, document: Document, complete_event: CompleteEvent) -> Iterator[Completion]:
         del complete_event
@@ -125,8 +137,18 @@ class _RobotCompleter(Completer):
             self.suppress_once = False
             return
         text = document.text_before_cursor
+
+        if self._command_names:
+            cmd_prefix = command_prefix(text)
+            if cmd_prefix is not None:
+                start = -len(text.lstrip())  # replace the whole `.word`
+                for cand in complete_commands(cmd_prefix, self._command_names):
+                    yield Completion(cand.label, start_position=start, display_meta=cand.detail)
+                return
+
         ctx = tokenize(text, len(text))
-        candidates = candidates_for_rich(ctx)
+        context, variables = self._context_provider() if self._context_provider is not None else (None, None)
+        candidates = candidates_for_rich(ctx, context=context, variables=variables)
         # `start_position` is signed and negative — chars before the
         # cursor that prompt_toolkit should replace.
         start = ctx.replace_start - len(text)

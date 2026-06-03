@@ -86,7 +86,7 @@ class _CapturingShowDocInterpreter(ConsoleInterpreter):
         super().__init__(app=app)
         self.shown: List[Tuple[str, str]] = []
 
-    def show_doc(self, title: str, markdown: str) -> None:
+    def show_doc(self, title: str, markdown: str, *, scroll_to: Optional[str] = None) -> None:
         self.shown.append((title, markdown))
 
 
@@ -167,6 +167,9 @@ def test_dispatch_help_lists_all_commands() -> None:
     blob = "\n".join(app.paged)
     for cmd in (".help", ".imports", ".vars", ".kw", ".doc", ".cwd", ".clear", ".save", ".exit", ".quit"):
         assert cmd in blob, f"{cmd} missing from .help output"
+    # The unified listing includes the debugger commands too (one command set).
+    assert "### Debugger" in blob
+    assert ".continue" in blob
     assert ".history" not in blob, "plain interpreter must not advertise the prompt-toolkit-only `.history` command"
     assert "Shortcuts" in blob
     assert "F1=help" in blob

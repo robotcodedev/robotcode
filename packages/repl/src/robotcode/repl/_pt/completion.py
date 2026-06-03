@@ -1,10 +1,13 @@
-"""Robot-aware completion candidates for the REPL (prompt_toolkit-only).
+"""Robot-aware completion candidates for the REPL — the pure core logic.
 
-Drives the `_RobotCompleter` (in `_pt.components`) and the
-bottom-toolbar signature hint via `tokenize()` + `candidates_for()`.
-Data is pulled straight from `EXECUTION_CONTEXTS.current`, which is
-populated by the time the user hits Tab because the REPL runs
-synchronously inside `suite.run()`.
+Despite living under `_pt/`, this module has **no** prompt_toolkit dependency:
+it's the shared completion service driven by the `_RobotCompleter` renderer (in
+`_pt.components`), the bottom-toolbar signature hint, and the debugger prompt,
+via `tokenize()` + `candidates_for()` / `complete_commands()`. It is
+context/scope-aware — `_iter_keywords`/`_iter_variables` and `candidates_for*`
+take an optional `context`/`variables` (a paused frame's scope), defaulting to
+`EXECUTION_CONTEXTS.current` (populated by the time the user hits Tab, because
+the REPL runs synchronously inside `suite.run()`).
 
 Library / Resource / Variables imports each have their own discovery
 function (`complete_library_import`, `complete_resource_import`,
@@ -257,17 +260,49 @@ class Candidate:
     detail: str = ""
 
 
-def candidates_for(ctx: CompletionContext, *, working_dir: str = ".") -> List[str]:
+# A bare leading dot-command token (`.`, `.co`, …) — no cell separator yet.
+_DOT_COMMAND_RE = re.compile(r"^\.(\w*)$")
+
+
+def command_prefix(text: str) -> Optional[str]:
+    """If `text` (the line before the cursor) is a bare dot-command token like
+    ``.co``, return the word after the dot (``"co"``); otherwise ``None``.
+
+    Lets a prompt renderer switch into dot-command completion before falling
+    through to Robot keyword/variable completion.
+    """
+    if "\n" in text:
+        return None
+    m = _DOT_COMMAND_RE.match(text.lstrip())
+    return m.group(1) if m else None
+
+
+def complete_commands(prefix: str, names: Iterable[str]) -> List[Candidate]:
+    """Completion candidates for dot-commands (`.continue`, `.help`, …).
+
+    `prefix` is the word *after* the dot (no dot); each candidate's label is the
+    full ``.name``. Shared by the REPL and debugger prompt renderers — the
+    available command names differ per prompt and are passed in by the caller.
+    """
+    target = prefix.casefold()
+    return [Candidate(label="." + name) for name in sorted(set(names)) if name.casefold().startswith(target)]
+
+
+def candidates_for(
+    ctx: CompletionContext, *, context: Any = None, variables: Any = None, working_dir: str = "."
+) -> List[str]:
     """Completion strings (labels only) for ``ctx``.
 
     Variables come back fully wrapped (``${TEST_NAME}``); keywords are
     raw labels; import-form candidates carry their full reconstructed
     path. Thin projection over `candidates_for_rich`.
     """
-    return [c.label for c in candidates_for_rich(ctx, working_dir=working_dir)]
+    return [c.label for c in candidates_for_rich(ctx, context=context, variables=variables, working_dir=working_dir)]
 
 
-def candidates_for_rich(ctx: CompletionContext, *, working_dir: str = ".") -> List[Candidate]:
+def candidates_for_rich(
+    ctx: CompletionContext, *, context: Any = None, variables: Any = None, working_dir: str = "."
+) -> List[Candidate]:
     """Completion candidates with their `display_meta` detail.
 
     Per `ctx.kind` the detail carries:
@@ -281,14 +316,14 @@ def candidates_for_rich(ctx: CompletionContext, *, working_dir: str = ".") -> Li
     - ``named_arg_value`` — empty (Literal values have no extra context).
     """
     if ctx.kind == "keyword":
-        return _filter_robot_normalised(_iter_keywords(), ctx.prefix)
+        return _filter_robot_normalised(_iter_keywords(context), ctx.prefix)
     if ctx.kind == "variable":
         # `%{X}` resolves against `os.environ`, not Robot's suite scope.
         items: Iterable[Tuple[str, str]]
         if ctx.sigil == "%":
             items = ((k, _short_repr(v)) for k, v in os.environ.items())
         else:
-            items = _iter_variables()
+            items = _iter_variables(variables, context)
         filtered = _filter_robot_normalised(items, ctx.prefix)
         return [Candidate(label=f"{ctx.sigil}{{{c.label}}}", detail=c.detail) for c in filtered]
     if ctx.kind == "library":
@@ -432,8 +467,9 @@ def _import_completions(
     return _collect(_fetch(None), "", prefix)
 
 
-def _iter_keywords() -> Iterator[Tuple[str, str]]:
-    context = EXECUTION_CONTEXTS.current
+def _iter_keywords(context: Any = None) -> Iterator[Tuple[str, str]]:
+    if context is None:
+        context = EXECUTION_CONTEXTS.current
     if context is None:
         return
     store = getattr(context.namespace, "_kw_store", None)
@@ -449,11 +485,16 @@ def _iter_keywords() -> Iterator[Tuple[str, str]]:
                 yield name, getattr(kw, _KW_SHORT_DOC_ATTR, "") or ""
 
 
-def _iter_variables() -> Iterator[Tuple[str, str]]:
-    context = EXECUTION_CONTEXTS.current
-    if context is None:
-        return
-    for decorated, value in context.variables.as_dict().items():
+def _iter_variables(variables: Any = None, context: Any = None) -> Iterator[Tuple[str, str]]:
+    # `variables` is a variable store (`.as_dict()`) — e.g. a paused frame's
+    # scope, for frame-aware completion. Falls back to the context's variables.
+    if variables is None:
+        if context is None:
+            context = EXECUTION_CONTEXTS.current
+        if context is None:
+            return
+        variables = context.variables
+    for decorated, value in variables.as_dict().items():
         name = str(decorated)
         if len(name) >= 3 and name[0] in _VALID_SIGILS and name[1] == "{" and name[-1] == "}":
             name = name[2:-1]

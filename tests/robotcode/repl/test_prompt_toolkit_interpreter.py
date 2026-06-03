@@ -40,7 +40,7 @@ def test_robot_completer_yields_candidates_with_correct_start_position(
     # returns `Candidate(label, detail)` objects.
     monkeypatch.setattr(
         "robotcode.repl._pt.components.candidates_for_rich",
-        lambda ctx: [Candidate("Log", "Log a message"), Candidate("Log To Console", "Log to stdout")],
+        lambda ctx, **kwargs: [Candidate("Log", "Log a message"), Candidate("Log To Console", "Log to stdout")],
     )
 
     completer = _RobotCompleter()
@@ -57,7 +57,7 @@ def test_robot_completer_empty_candidate_list_yields_nothing(
 ) -> None:
     monkeypatch.setattr(
         "robotcode.repl._pt.components.candidates_for_rich",
-        lambda ctx: [],
+        lambda ctx, **kwargs: [],
     )
     completer = _RobotCompleter()
     completions = list(completer.get_completions(Document("anything"), CompleteEvent()))
@@ -74,7 +74,7 @@ def test_robot_completer_passes_detail_through_to_display_meta(
 
     monkeypatch.setattr(
         "robotcode.repl._pt.components.candidates_for_rich",
-        lambda ctx: [Candidate("Log", "Log a message with the given level")],
+        lambda ctx, **kwargs: [Candidate("Log", "Log a message with the given level")],
     )
 
     completer = _RobotCompleter()
@@ -696,3 +696,26 @@ def test_history_dotcommand_listed_in_help(monkeypatch: pytest.MonkeyPatch, tmp_
     the subclass command."""
     interp, _ = _make_pt_interpreter(monkeypatch, tmp_path, [])
     assert "history" in type(interp)._dot_command_table()
+
+
+def test_robot_completer_completes_dot_commands() -> None:
+    """With `command_names`, a bare `.c` completes debugger/REPL commands."""
+    completer = _RobotCompleter(command_names=["continue", "step", "catch"])
+    comps = list(completer.get_completions(Document(".c"), CompleteEvent()))
+    labels = [c.text for c in comps]
+    assert labels == [".catch", ".continue"]  # c-prefixed, sorted; `step` excluded
+    assert all(c.start_position == -2 for c in comps)  # replaces the typed `.c`
+
+
+def test_robot_completer_threads_frame_context_to_candidates(monkeypatch: pytest.MonkeyPatch) -> None:
+    """`context_provider` feeds the (context, variables) into the core service."""
+    seen: List[Any] = []
+
+    def fake_candidates(ctx: Any, *, context: Any = None, variables: Any = None) -> List[Any]:
+        seen.append((context, variables))
+        return []
+
+    monkeypatch.setattr("robotcode.repl._pt.components.candidates_for_rich", fake_candidates)
+    completer = _RobotCompleter(context_provider=lambda: ("CTX", "VARS"))
+    list(completer.get_completions(Document("Lo"), CompleteEvent()))
+    assert seen == [("CTX", "VARS")]
