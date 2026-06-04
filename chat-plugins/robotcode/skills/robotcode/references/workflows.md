@@ -1,15 +1,16 @@
 # Common workflows
 
-Stringing the right commands together matters as much as picking the right command. Four multi-step flows where the orchestration isn't obvious from the individual sections in [SKILL.md](../SKILL.md).
+Stringing the right commands together matters as much as picking the right command. Five multi-step flows where the orchestration isn't obvious from the individual sections in [SKILL.md](../SKILL.md).
 
 > **Note**: RobotCode auto-detects non-interactive use and disables paging/colors automatically — no extra flags needed.
 
 ## Contents
 
 - **A. Run tests and report what failed** — the default `run → summarise` lifecycle
-- **B. Investigate a failing test** — drill down without re-running
+- **B. Investigate a failing test** — drill down on *one* failure without re-running
 - **C. Lint only the files about to commit** — git-diff-driven `analyze code`
 - **D. Analyse a project for code issues** — full static-analysis sweep, including unused-keyword/variable detection and how to suppress noise
+- **E. Fix a whole failing run** — *many* failures: triage by cause, debug one representative per cause, re-validate in a loop without clobbering `output.xml`
 
 ## A. Run tests and report what failed
 
@@ -51,11 +52,17 @@ When the user asks "why did `X` fail?", drill down to that specific test without
    robotcode libdoc <Library> show "<Keyword Name>"
    ```
 
-4. **Re-run just that one test to confirm a fix.**
+4. **If the recorded log isn't enough, re-run under the debugger** to capture the *live* state at the failure. The recorded tree from step 2 is usually sufficient, but when you need a variable's value at a specific point, the live call stack, or to try keywords against the paused context, re-run the test under `robotcode robot-debug` and **step through it interactively**:
+   ```bash
+   robotcode robot-debug -bl "<full longname from step 1>"   # -bl scopes the run to that one test, so the pause lands in it
+   ```
+   Select the failing test by name (`-bl` exact, or `-t "<name>"`) rather than handing over the file — only that test runs, and the pause is guaranteed to land inside it instead of on whichever test in the file fails first. It pauses (at the first uncaught failure by default, or a breakpoint you set); inspect with `.where` / `.vars` / `.print ${x}`, move with `.step` / `.next` / `.continue`, and decide each step from what you see. **Always end with a resuming command** (`.continue`/`.detach`/`.abort`) and never start it and wait for its exit — with no input the prompt blocks forever. See [debugging.md](debugging.md).
+
+5. **Re-run just that one test to confirm a fix.**
    ```bash
    robotcode robot -bl "<full longname from step 1>"
    ```
-   For re-validating multiple previously failing tests at once instead, use `robotcode robot --rerunfailed output.xml`.
+   For re-validating *several* previously failing tests at once — or making a whole run of failures green — see **workflow E**, which feeds `--rerunfailed` from a *pinned* output file (the default `output.xml` is overwritten by intermediate runs, including the `robot-debug` run in step 4, so it's not a reliable rerun source).
 
 ## C. Lint only the files about to commit
 
@@ -143,3 +150,50 @@ When the user asks "find issues in my robot code", "are there unused keywords?",
      ```
 
    Inspect what's cached with `robotcode analyze cache info` (or `list` / `path`). `cache clear` empties the cache contents; `cache prune` removes the entire cache directory.
+
+## E. Fix a whole failing run
+
+When a run comes back with several failures and the job is to make it green, fix **by root cause, not by test** — and don't try to do it inside one long debugger session. Two anti-patterns to avoid up front:
+
+- **Debugging test-by-test from the start.** Multiple failures usually trace to *one or two* causes — a broken shared keyword, a changed locator, a config/resource/environment change. Blindly debugging every failure debugs the same cause repeatedly. The recorded messages already cluster the failures; read them first.
+- **Stepping through the whole run in one paused session.** You *could* `.continue` from failure to failure, but it buys nothing: the actual fix is a file edit, which the running, paused process won't pick up. You'd exit, edit, and re-run anyway.
+
+So the loop is: **triage with `results` → fix per cause → re-validate** — using the debugger only on a single representative test when a recorded log isn't enough.
+
+The one thing to get right is that **`output.xml` is not a stable snapshot across this loop.** Every run through the runner overwrites the default `output.xml` — including `robotcode robot-debug` and any confirm-the-fix run. So pin the full run's output to its own filename, treat it as the immutable source for both `results` and `--rerunfailed`, and keep intermediate runs from writing over it.
+
+1. **Run once and pin the output.** Give the full run its own file (or copy `output.xml` aside immediately):
+   ```bash
+   robotcode robot --output results/full.xml          # the immutable source of truth for this loop
+   ```
+
+2. **Triage against the pinned file — cluster failures, don't debug yet.** Pass `-o` explicitly so you never read a clobbered default:
+   ```bash
+   robotcode results summary --failed -o results/full.xml
+   robotcode results show --failed --message-chars 0 -o results/full.xml   # full messages, to group by cause
+   robotcode results stats --by suite --failed -o results/full.xml         # is failure clustered in one area?
+   ```
+   Failures sharing a message, a keyword, or a suite are almost certainly one cause. The recorded error often already names it (an unresolved/mis-composed variable, a wrong value, a missing import) — no debugger needed.
+
+3. **Per cause, debug one representative test — only if the log isn't enough.** Scope the debug run to that single test (workflow B), and suppress its outputs so it doesn't overwrite the pinned file:
+   ```bash
+   robotcode robot-debug -bl "<one failing longname>" --output NONE --log NONE --report NONE
+   ```
+   Step through it (`.where` / `.vars` / `.print ${x}` → `.continue`/`.detach`/`.abort`) to confirm the cause. `--output NONE` (with `--log NONE --report NONE`) tells Robot to write no result files at all. See [debugging.md](debugging.md).
+
+4. **Fix the cause** — edit the keyword / resource / config — then `robotcode analyze code <changed files>` before re-running, to catch the obvious breakage statically.
+
+5. **Re-validate from the pinned file into a *new* file, and iterate.** `--rerunfailed` selects the tests that failed *in the file you hand it*, so feed it the pinned full run — not the mutated default — and write the rerun somewhere new so each round is preserved:
+   ```bash
+   robotcode robot --rerunfailed results/full.xml --output results/rerun1.xml
+   robotcode results summary --failed -o results/rerun1.xml
+   ```
+   Still red? Repeat from the rerun file (`--rerunfailed results/rerun1.xml --output results/rerun2.xml`) — the source advances `full → rerun1 → rerun2`, each one kept. For a consolidated final report where reruns supersede the originals:
+   ```bash
+   robotcode rebot --merge results/full.xml results/rerun1.xml
+   ```
+
+**The exception — when you genuinely debug the *whole* run.** If a test fails only as part of the full run but passes in isolation — state leaking between tests, execution-order dependence, shared suite setup/teardown — then scoping to one test with `-bl`/`-t` *hides* the bug. Run the whole suite under the debugger and let it stop at each failing test so you can watch the interplay:
+   ```bash
+   robotcode robot-debug --break-on-failed-test tests/ --output NONE --log NONE --report NONE
+   ```

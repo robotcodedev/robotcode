@@ -1,6 +1,8 @@
 # Interpreting test results — the `robotcode results` subcommands
 
-Read this after a finished run (or when working with an existing `output.xml` / `output.json` from CI, a colleague, etc.) — the agent needs **never** to parse those files directly; the `results` subcommand covers every common case.
+`robotcode results` inspects a finished Robot Framework run — the `output.xml` / `output.json` it wrote — from the terminal. It reads the file **server-side** and returns only the slice you ask for: headline counts, per-test listings, the execution tree, aggregates, or a run-to-run diff. The output file is auto-discovered from the active profile (override with `-o`), so it works the same on your own run, a CI artifact, or a colleague's — without ever loading the raw file into context.
+
+Reach for it whenever a run has finished and the question is "did it pass, what failed, why, or what changed?" — five subcommands (`summary`, `show`, `log`, `stats`, `diff`) cover those, detailed below. Parsing `output.xml` directly is almost always the wrong move (see §1 for why); let `results` filter server-side instead.
 
 > **Note**: RobotCode auto-detects non-interactive use and disables paging/colors automatically — no extra flags needed. (If a wrapper ever forces a pager, `--no-pager --no-color` before the subcommand makes it explicit.)
 
@@ -81,11 +83,13 @@ robotcode results log -bl "MyProject.Login.Login Works"          # exact-match b
 robotcode results log --search TimeoutError                      # only tests where the substring appears (name/message/keywords/logs)
 robotcode results log --level WARN                               # raise the message-level threshold (default INFO)
 robotcode results log --max-depth 2                              # show keyword levels 1-2; deeper calls collapsed to a child-count summary
+robotcode results log --failed --keyword-info                    # add per-keyword detail (args, status, timing) to each call
+robotcode results log --suite-info                               # add suite-level metadata to the tree
 robotcode results log --failed --extract /tmp/artefacts          # write referenced screenshots / base64 blobs out
 robotcode results log --execution-messages                       # also include parser/discovery `<errors>` section
 ```
 
-Renders the per-test execution tree — keyword calls, control structures (`FOR` / `WHILE` / `IF` / `TRY` / `VAR` / `RETURN`), log messages — same content `report.html` shows but in plain text an agent can read directly. Use this when you need to *understand why* a test failed, not just *that* it failed. `--max-depth N` is your friend on deeply nested suites: it collapses everything below level `N` to a child-count summary. For HTML-rich messages, `pip install robotcode-runner[html]` improves conversion quality.
+Renders the per-test execution tree — keyword calls, control structures (`FOR` / `WHILE` / `IF` / `TRY` / `VAR` / `RETURN`), log messages — same content `report.html` shows but in plain text an agent can read directly. Use this when you need to *understand why* a test failed, not just *that* it failed. `--max-depth N` is your friend on deeply nested suites: it collapses everything below level `N` to a child-count summary. For deeper inspection add `--keyword-info` (per-keyword arguments, status, and timing) or `--suite-info` (suite-level metadata). For HTML-rich messages, `pip install robotcode-runner[html]` improves conversion quality.
 
 ## 5. `robotcode results stats` — aggregate by tag / suite / status
 

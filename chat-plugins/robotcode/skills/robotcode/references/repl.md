@@ -1,6 +1,6 @@
 # Interactive development & exploration — `robotcode repl`
 
-Read this for **interactive, step-by-step work with Robot Framework** inside the project's configuration — both *exploring* (drive a system under test, try a keyword or library, debug why a test fails, stabilize a locator or wait) and *developing* (build up a test case or reusable keyword one line at a time, confirm each step, then save it). Even if the user never says "REPL" — they might just say "try this keyword interactively" or "let's build the test as we go" — this is the workflow.
+`robotcode repl` is an interactive Robot Framework shell that runs inside the project's configuration — the same `robot.toml`, profiles, Python environment, and imports a real run uses. You type keyword calls one line at a time and they execute immediately, and the session's state — variables, imports, library instances, open browsers and connections — persists for as long as it stays open. That makes it the tool for **interactive, step-by-step work**: *exploring* (drive a system under test, try a keyword or library, debug a misbehaving keyword as you call it, stabilize a locator or wait) and *developing* (build up a test case or reusable keyword one line at a time, confirm each step, then save it). Reach for it even when the user never says "REPL" — "try this keyword interactively" or "let's build the test as we go" both point here.
 
 The REPL serves **two distinct purposes** — use whichever fits the request:
 
@@ -10,6 +10,17 @@ The REPL serves **two distinct purposes** — use whichever fits the request:
 Do **not** default to writing a test file when the intent is purely exploratory. Start in the REPL, complete the task, report the result — and only write a test afterwards if the user then asks for one. With Browser Library that means `New Browser    headless=False` (Playwright); with SeleniumLibrary a normal `Open Browser` is already visible.
 
 Before guessing keyword arguments, inspect them with `robotcode libdoc <Library> list` and `robotcode libdoc <Library> show "<Keyword>"` (see the `libdoc` section in [SKILL.md](../SKILL.md)). Honor the existing `robot.toml` / `tests/*.robot` conventions.
+
+## Contents
+
+- **Start or reuse a REPL** — launch, agent backend, startup flags, imports
+- **What you can run** — keywords, persistent assignments, control structures, inline Python
+- **Dot commands** — `.vars`, `.imports`, `.kw`, `.doc`, `.save`, …
+- **Debugging from the REPL** — interactive breakpoints and the `(rdb)` debugger
+- **Gotchas** — no section headers, RF 7.4+ relative imports, clean shutdown
+- **Explore the system under test** — the get-state → act → re-check pattern
+- **Move experiments into tests** — `.save` and promotion *(optional)*
+- **Validate changes** — `analyze code` + targeted run
 
 ## Start or reuse a REPL
 
@@ -84,6 +95,22 @@ Available at the `>>>` prompt (work in the plain agent backend too; `.help` list
 - `.exit` / `.quit` — clean exit (aliases).
 
 A **human** on the rich backend also gets Tab completion, syntax highlighting, persistent history, and shortcuts (F1 help · Ctrl-R search · Ctrl-L clear · Ctrl-D exit). In the doc viewer that `.kw`/`.doc` open, the keyword names in a `.kw` listing are follow-able links — Tab to one and press Enter to open its documentation, `[` to go back to the list. An agent on the plain backend uses the dot commands instead (the list comes back as plain text).
+
+## Debugging from the REPL
+
+A debugger is attached for the **whole REPL session** — always on, nothing to start. That lets you debug a keyword *as you build it*: arm a breakpoint, run the keyword, and when it's hit, execution pauses in a `(rdb)` prompt with the live call stack, the variables in each frame, a source listing, and the ability to run further keywords in the paused context.
+
+This is for debugging a keyword **you call yourself at the prompt** while building or exploring it. To debug an **existing failing test**, don't paste or rebuild it in here — run the real one in place with [`robotcode robot-debug`](debugging.md), scoped to that one test by name (`-bl "<longname>"` / `-t "<name>"`, not the whole file), which keeps the suite's setup/teardown, variables, and imports intact.
+
+Breakpoints can be armed three ways — the interactive one is unique to the REPL:
+
+- **Interactively, at the `>>>` prompt** (no restart): `.break "<Keyword>"`, `.break file.robot:42`, or conditional `.break Login, ${retries} > 3` — then run a keyword and it stops on the next hit (when that keyword runs, or when execution reaches that line). `.tbreak` is one-shot, `.breakpoints` lists them, `.delete` / `.disable` remove or pause them, and `.catch uncaught|all|test|suite` pauses on failures instead of locations. (The *stepping/resume* commands — `.continue`, `.step`, … — only act once you're actually stopped; before that they report `Not at a breakpoint.`)
+- **From the start, via flags**: `robotcode repl --break "<Keyword>"` / `--break file.robot:42`, plus the `--break-on-*` exception flags, arm breakpoints before the first prompt.
+- **From the file**: an embedded `Breakpoint` keyword (after `Library    robotcode.repl.Repl`) pauses whenever the debugger is attached — a no-op in a normal `robot` run.
+
+At a `(rdb)` stop you get the full debug command set — `.where` (stack), `.vars` (variables), `.print ${x}`, `.step` / `.next` / `.continue`, and the rest. It is the *same* debugger as [`robotcode robot-debug`](debugging.md), which attaches it to a real run through the runner (scoped to whatever test/suite you select) rather than to single keywords typed at the prompt — **[debugging.md](debugging.md) is the full reference** for the breakpoint types, every debug command, and stepping through a session interactively.
+
+One trap: at the `(rdb)` prompt `Ctrl-C` / `Ctrl-D` **resume** the run (the opposite of the `>>>` prompt, where they exit) — leave a stop with `.continue` / `.detach` / `.abort`.
 
 ## Gotchas
 

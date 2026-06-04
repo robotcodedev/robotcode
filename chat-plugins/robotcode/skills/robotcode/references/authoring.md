@@ -1,8 +1,8 @@
 # Authoring tests and keywords with RobotCode
 
-Read this when the task is to **write, create, or extend** a `.robot`/`.resource` test, task, or reusable keyword. This is *not* a one-off exploration (that's [repl.md](repl.md)) and not running existing tests (that's workflows A in [workflows.md](workflows.md)). The focus here is the **robotcode-supported authoring loop**: reuse what already exists, prototype the uncertain parts live, write, check statically *before* running, then validate — using RobotCode's project-aware tooling at each step instead of guessing.
+Authoring tests, tasks, and reusable keywords with RobotCode follows a project-aware loop: **reuse** what already exists → **prototype** the uncertain parts live → **write** → **check statically before running** → **validate** — leaning on RobotCode's tooling at each step instead of guessing. This file covers that loop and the `robotcode` commands behind each step.
 
-This file is about the workflow and the RobotCode commands that support it; Robot Framework's own syntax is assumed knowledge (or look it up with `libdoc`).
+It applies whenever the task is to write, create, or extend a `.robot`/`.resource` test, task, or keyword — as opposed to a one-off exploration ([repl.md](repl.md)) or running existing tests (workflow A in [workflows.md](workflows.md)). Robot Framework's own syntax is assumed knowledge (or look it up with `libdoc`).
 
 ## Contents
 
