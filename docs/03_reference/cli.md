@@ -32,9 +32,10 @@ To accommodate these varied needs, `robotcode` is organized into separate packag
     - `debug`: Starts a DAP-compatible debug session for Robot Framework tests. This tool requires a DAP client to connect to the debug session, such as Visual Studio Code, which can then interface with the debugger and provide interactive debugging tools to analyze code behavior and troubleshoot issues effectively.
 
 - **`repl` Package**:
-  The REPL (Read-Eval-Print Loop) package provides an interactive, real-time environment for executing Robot Framework commands. It’s ideal for experimenting with keywords, testing ideas, and performing quick debugging without needing to create full test files. This package is mainly used in local development or testing environments where users can quickly prototype or troubleshoot commands.
+  The REPL (Read-Eval-Print Loop) package provides an interactive, real-time environment for executing Robot Framework commands. It’s ideal for experimenting with keywords, testing ideas, and performing quick debugging without needing to create full test files. It also ships a command-line debugger for Robot Framework runs. This package is mainly used in local development or testing environments where users can quickly prototype or troubleshoot commands.
   - **Commands**:
     - `repl`: Launches an interactive Robot Framework shell where users can execute commands line-by-line, ideal for quick testing and experimentation.
+    - `robot-debug`: Runs a real `.robot` suite with the command-line debugger attached, pausing at breakpoints to step through execution, inspect the call stack and variables, and run keywords in the paused context.
 
 - **`language-server` Package**:
   This package provides language server capabilities, supporting IDE integration for Robot Framework with real-time code insights. Compatible with editors that support the Language Server Protocol (LSP), such as Visual Studio Code, it enables enhanced productivity and convenience. It is most useful in local development environments where interactive IDE support aids in code writing and refactoring but is generally not needed in CI or production environments.
@@ -217,7 +218,7 @@ robotcode [OPTIONS] COMMAND [ARGS]...
 
 - [`repl`](#repl)
 
-   Run Robot Framework interactively.
+   Run Robot Framework interactively (alias `shell`).
 
 - [`repl-server`](#repl-server)
 
@@ -231,6 +232,10 @@ robotcode [OPTIONS] COMMAND [ARGS]...
 
    Runs `robot` with the selected configuration, profiles, options and arguments.
 
+- [`robot-debug`](#robot-debug)
+
+   Run a real Robot Framework suite with the debugger attached (alias `run-debug`).
+
 - [`testdoc`](#testdoc)
 
    Runs `testdoc` with the selected configuration, profiles, options and arguments.
@@ -238,9 +243,17 @@ robotcode [OPTIONS] COMMAND [ARGS]...
 
 **Aliases:**
 
+- [`shell`](#repl)
+
+   Run Robot Framework interactively (alias `shell`).
+
 - [`run`](#robot)
 
    Runs `robot` with the selected configuration, profiles, options and arguments.
+
+- [`run-debug`](#robot-debug)
+
+   Run a real Robot Framework suite with the debugger attached (alias `run-debug`).
 
 
 #### analyze
@@ -1639,7 +1652,12 @@ Use `-- --help` to see `rebot` help.
 
 #### repl
 
-Run Robot Framework interactively.
+Run Robot Framework interactively (alias `shell`).
+
+The debugger is attached, so an embedded `Breakpoint` keyword, `--break`, or
+a failing keyword (uncaught exceptions break by default) drops you into the
+debug prompt while a keyword you run at the prompt executes. To debug a real
+suite, use `robotcode robot-debug`.
 
 
 **Usage:**
@@ -1649,31 +1667,6 @@ robotcode repl [OPTIONS] [FILES]...
 
 
 **Options:**
-- `-v, --variable name:value *`
-
-   Set variables in the test data. see `robot --variable` option.
-
-
-- `-V, --variablefile PATH *`
-
-   Python or YAML file file to read variables from. see `robot --variablefile` option.
-
-
-- `-P, --pythonpath PATH *`
-
-   Additional locations where to search test libraries and other extensions when they are imported. see `robot --pythonpath` option.
-
-
-- `-k, --show-keywords`
-
-   Executed keywords will be shown in the output.
-
-
-- `-i, --inspect`
-
-   Activate inspection mode. This forces a prompt to appear after the REPL script is executed.
-
-
 - `--no-history`
 
    Don't load or save the persistent history file. In-session arrow-up recall still works, but nothing crosses session boundaries. Useful for AI-agent invocations or quick spike sessions you don't want polluting your shell's REPL history.
@@ -1689,34 +1682,84 @@ robotcode repl [OPTIONS] [FILES]...
    Shorthand for `--backend=plain`. Disables all prompt enhancements — completion, syntax highlighting, candidate popup, auto-suggest, history file. The prompt becomes a bare `input()` call. Recommended for AI-agent invocations, automation pipelines, and any context where ANSI escapes or completion popups would interfere with stdin/stdout capture. Conflicts with `--backend=<other>`.
 
 
+- `-v, --variable name:value *`
+
+   Set variables in the test data. See `robot --variable` option.
+
+
+- `-V, --variablefile PATH *`
+
+   Python or YAML file to read variables from. See `robot --variablefile` option.
+
+
+- `-P, --pythonpath PATH *`
+
+   Additional locations where to search test libraries and other extensions when they are imported. See `robot --pythonpath` option.
+
+
+- `-k, --show-keywords`
+
+   Executed keywords will be shown in the output.
+
+
+- `-i, --inspect`
+
+   Activate inspection mode. This forces a prompt to appear after the REPL script is executed.
+
+
 - `-d, --outputdir DIR`
 
-   Where to create output files. see `robot --outputdir` option.
+   Where to create output files. See `robot --outputdir` option.
 
 
 - `-o, --output FILE`
 
-   XML output file. see `robot --output` option.
+   XML output file. See `robot --output` option.
 
 
 - `-r, --report FILE`
 
-   HTML output file. see `robot --report` option.
+   HTML output file. See `robot --report` option.
 
 
 - `-l, --log FILE`
 
-   HTML log file. see `robot --log` option.
+   HTML log file. See `robot --log` option.
 
 
 - `-x, --xunit FILE`
 
-   xUnit output file. see `robot --xunit` option.
+   xUnit output file. See `robot --xunit` option.
 
 
 - `-s, --source FILE`
 
    Use the parent directory of FILE as the REPL's working directory. Relative paths inside `Import Resource`, `Import Library`, file-based variables, etc. resolve against that directory. The file itself is never read or written, so the path doesn't need to exist.
+
+
+- `--break LOCATION *`
+
+   Break at LOCATION — a `file:line` or a keyword name. Repeatable.
+
+
+- `--break-on-exception / --no-break-on-exception`
+
+   Break at an uncaught failing keyword (not caught by TRY/EXCEPT or `Run Keyword And …`), before the failure unwinds. On by default.  [default: break-on-exception]
+
+
+- `--break-on-all-exceptions / --no-break-on-all-exceptions`
+
+   Break at EVERY failing keyword, even ones caught by TRY/EXCEPT or `Run Keyword And …`.  [default: no-break-on-all-exceptions]
+
+
+- `--break-on-failed-test / --no-break-on-failed-test`
+
+   Break at the end of a failing test.  [default: no-break-on-failed-test]
+
+
+- `--break-on-failed-suite / --no-break-on-failed-suite`
+
+   Break at the end of a failing suite.  [default: no-break-on-failed-suite]
 
 
 - `--version`
@@ -2503,6 +2546,94 @@ robotcode robot [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
 - `-bl, --by-longname TEXT *`
 
    Select tests/tasks or suites by longname.
+
+
+- `--help`
+
+   Show this message and exit.
+
+
+
+Use `-- --help` to see `robot` help.
+
+
+#### robot-debug
+
+Run a real Robot Framework suite with the debugger attached (alias `run-
+debug`).
+
+Takes the same arguments as `robotcode robot`. The debugger is always
+attached (so an embedded `Breakpoint` keyword pauses the run, and uncaught
+failing keywords break by default); `--break`, `--stop-on-entry`, and the
+`--break-on-*` flags add or remove pause triggers. At a pause you drop into
+a debug prompt with the live context.
+
+
+**Usage:**
+```text
+robotcode robot-debug [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
+```
+
+
+**Options:**
+- `--no-history`
+
+   Don't load or save the persistent history file. In-session arrow-up recall still works, but nothing crosses session boundaries. Useful for AI-agent invocations or quick spike sessions you don't want polluting your shell's REPL history.
+
+
+- `--backend [auto|prompt-toolkit|plain]`
+
+   Force a specific input backend instead of auto-picking. `auto` and `prompt-toolkit` both pick the prompt-toolkit-driven interpreter (completion, syntax highlighting, history, doc viewer). `plain` drops to a bare `input()` prompt — useful when ANSI escapes or popups would interfere with the surrounding capture.  [default: auto]
+
+
+- `--plain`
+
+   Shorthand for `--backend=plain`. Disables all prompt enhancements — completion, syntax highlighting, candidate popup, auto-suggest, history file. The prompt becomes a bare `input()` call. Recommended for AI-agent invocations, automation pipelines, and any context where ANSI escapes or completion popups would interfere with stdin/stdout capture. Conflicts with `--backend=<other>`.
+
+
+- `-ebl, --exclude-by-longname TEXT *`
+
+   Excludes tests/tasks or suites by longname.
+
+
+- `-bl, --by-longname TEXT *`
+
+   Select tests/tasks or suites by longname.
+
+
+- `--break LOCATION *`
+
+   Break at LOCATION — a `file:line` or a keyword name. Repeatable.
+
+
+- `--break-on-exception / --no-break-on-exception`
+
+   Break at an uncaught failing keyword (not caught by TRY/EXCEPT or `Run Keyword And …`), before the failure unwinds. On by default.  [default: break-on-exception]
+
+
+- `--break-on-all-exceptions / --no-break-on-all-exceptions`
+
+   Break at EVERY failing keyword, even ones caught by TRY/EXCEPT or `Run Keyword And …`.  [default: no-break-on-all-exceptions]
+
+
+- `--break-on-failed-test / --no-break-on-failed-test`
+
+   Break at the end of a failing test.  [default: no-break-on-failed-test]
+
+
+- `--break-on-failed-suite / --no-break-on-failed-suite`
+
+   Break at the end of a failing suite.  [default: no-break-on-failed-suite]
+
+
+- `--stop-on-entry`
+
+   Break at the very first keyword.
+
+
+- `--version`
+
+   Show the version and exit.
 
 
 - `--help`

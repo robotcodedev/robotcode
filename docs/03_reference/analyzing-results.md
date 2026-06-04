@@ -1,5 +1,13 @@
 # Analyzing Run Results
 
+::: tip Installation
+The `robotcode results` command comes from the optional **`runner`** package. If it isn't installed yet, add it:
+
+```bash
+pip install robotcode[runner]   # or: pip install robotcode[all]
+```
+:::
+
 Every Robot Framework run leaves a result file behind that captures everything the run did — counts, statuses, messages, the per-test keyword tree, timing. `report.html` and `log.html` are the visual face of that data; **`robotcode results`** is the scriptable one. Same data, on the terminal or in a pipeline, without leaving the shell.
 
 **Who this is for:**

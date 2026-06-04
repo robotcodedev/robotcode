@@ -1,5 +1,13 @@
 # Discovering Tests, Tasks and Suites
 
+::: tip Installation
+The `robotcode discover` command comes from the optional **`runner`** package. If it isn't installed yet, add it:
+
+```bash
+pip install robotcode[runner]   # or: pip install robotcode[all]
+```
+:::
+
 Before you can run, filter, or report on a Robot Framework project you usually want to know what's actually *in* it: which suites live in which directories, what tags each test carries, which `.robot` files Robot would even pick up. **`robotcode discover`** answers those questions without executing a single test.
 
 It applies the same configuration and profile pipeline that `robotcode robot` would use to *run* the project — so what `discover` reports is exactly what `robot` would see — and surfaces the result either as a human-readable tree on the terminal or as structured data for scripts, CI pipelines, and editors.

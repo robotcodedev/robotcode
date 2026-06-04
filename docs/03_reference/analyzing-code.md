@@ -1,5 +1,13 @@
 # Analyzing Code
 
+::: tip Installation
+The `robotcode analyze` command comes from the optional **`analyze`** package. If it isn't installed yet, add it:
+
+```bash
+pip install robotcode[analyze]   # or: pip install robotcode[all]
+```
+:::
+
 **`robotcode analyze code`** performs static analysis on a Robot Framework project: it parses the `.robot` and `.resource` files, resolves their imports, libraries, and variables, and reports diagnostics for problems such as unknown keywords, unresolved variables, wrong argument counts, duplicate or failing imports, and deprecated syntax. No tests are executed.
 
 The analysis is performed by the same code that powers the RobotCode language server, so the diagnostics are identical to the ones shown in the editor (the VS Code extension, the IntelliJ plugin, or any other LSP client); `analyze code` applies that analysis to the whole project from the command line. Configuration and profile resolution work the same as for `robotcode robot`, so imports and variables resolve as they would at run time. The result is printed as a human-readable list or, for CI use, as a structured report (JSON, SARIF, GitHub annotations, or GitLab Code Quality).
