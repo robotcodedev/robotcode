@@ -57,11 +57,11 @@ This is the one case where JSON beats text: pulling specific fields out of a hug
 
 ```bash
 # Just longnames, then count — never materializes the full payload in your context
-robotcode -f json discover --no-diagnostics tests \
+robotcode --format json discover --no-diagnostics tests \
   | jq -r '..|.longname? // empty' | wc -l
 
 # Tests grouped by source file
-robotcode -f json discover --no-diagnostics tests \
+robotcode --format json discover --no-diagnostics tests \
   | jq -r '..|select(.type? == "test") | .source' | sort -u | head
 ```
 
@@ -80,7 +80,7 @@ Robot Framework's `output.xml` for 100k tests can be gigabytes. Don't load it wh
 - `robotcode results show --failed --top 50` — capped failure listing
 - `robotcode results log -bl "<full longname>"` — drill into one specific test's tree rather than the whole report (exact-match, no glob ambiguity)
 - Add `-o PATH` (file or directory) to any of the above when the file isn't in the auto-discovered location — typical for CI artefacts downloaded locally, runs from a colleague, or older runs you've archived
-- Write JSON output (`--output results.json`, RF 7.2+) instead of XML — smaller file, faster parse, same `robotcode results` interface
+- Write JSON output (`--output results.json`, RF 7.0+) instead of XML — smaller file, faster parse, same `robotcode results` interface
 - For truly gigantic XML and bounded-memory custom analysis, fall back to `xml.etree.ElementTree.iterparse(..., events=("end",))` with `el.clear()` after each `test` element
 
 Regardless of which path: lead with the headline counts and offer to drill into a specific suite or tag — don't try to summarize 100k results in one response.

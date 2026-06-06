@@ -36,7 +36,6 @@ When the user asks "why did `X` fail?", drill down to that specific test without
 1. **List the failures and pick the exact test.**
    ```bash
    robotcode results show --failed                                # short list with messages
-   robotcode results show --failed --message-chars 0              # full failure messages (no truncation)
    robotcode results show --search "<error fragment>"             # narrow if the user mentioned a symptom
    ```
    The output gives one line per test with the **full longname** (e.g. `MyProject.Acceptance.Login.Login With Invalid Password`). Copy that for the next steps.
@@ -56,13 +55,13 @@ When the user asks "why did `X` fail?", drill down to that specific test without
    ```bash
    robotcode robot-debug -bl "<full longname from step 1>"   # -bl scopes the run to that one test, so the pause lands in it
    ```
-   Select the failing test by name (`-bl` exact, or `-t "<name>"`) rather than handing over the file — only that test runs, and the pause is guaranteed to land inside it instead of on whichever test in the file fails first. It pauses (at the first uncaught failure by default, or a breakpoint you set); inspect with `.where` / `.vars` / `.print ${x}`, move with `.step` / `.next` / `.continue`, and decide each step from what you see. **Always end with a resuming command** (`.continue`/`.detach`/`.abort`) and never start it and wait for its exit — with no input the prompt blocks forever. See [debugging.md](debugging.md).
+   Select the failing test by its **longname** (`-bl`, exact) rather than handing over the file — a bare `.robot` file skips the parent suites' `__init__.robot` (suite setup/variables/tags), so the test runs unlike a real run; selecting by longname builds the full suite tree (its `__init__.robot` runs), only that test executes, and the pause lands inside it instead of on whichever test in the file fails first. It pauses (at the first uncaught failure by default, or a breakpoint you set); inspect with `.where` / `.vars` / `.print ${x}`, move with `.step` / `.next` / `.continue`, and decide each step from what you see. **Always end with a resuming command** (`.continue`/`.detach`/`.abort`) and never start it and wait for its exit — with no input the prompt blocks forever. See [debugging.md](debugging.md).
 
 5. **Re-run just that one test to confirm a fix.**
    ```bash
    robotcode robot -bl "<full longname from step 1>"
    ```
-   For re-validating *several* previously failing tests at once — or making a whole run of failures green — see **workflow E**, which feeds `--rerunfailed` from a *pinned* output file (the default `output.xml` is overwritten by intermediate runs, including the `robot-debug` run in step 4, so it's not a reliable rerun source).
+   By longname, not the file path — so the parent suites' `__init__.robot` runs and the confirm-run matches a real run (a bare `.robot` file would skip that directory-level setup). For re-validating *several* previously failing tests at once — or making a whole run of failures green — see **workflow E**, which feeds `--rerunfailed` from a *pinned* output file (the default `output.xml` is overwritten by intermediate runs, including the `robot-debug` run in step 4, so it's not a reliable rerun source).
 
 ## C. Lint only the files about to commit
 
@@ -73,83 +72,18 @@ git diff --name-only --diff-filter=ACMR HEAD | grep -E '\.(robot|resource)$' \
   | xargs -r robotcode analyze code
 ```
 
-Exit code is a bitmask (see "Static analysis" in SKILL.md): non-zero with bit 1 set means errors — block the commit; only bits 2+ (warnings/infos/hints) means non-blocking.
+Exit code is a bitmask (see [analyze.md](analyze.md)): non-zero with bit 1 set means errors — block the commit; only bits 2+ (warnings/infos/hints) means non-blocking.
 
 ## D. Analyse a project for code issues
 
-When the user asks "find issues in my robot code", "are there unused keywords?", "analyse the project", etc. — `analyze code` is the entry point. Output format is one diagnostic per line: `path:line:col: [SEVERITY] CODE: message`, plus a `Files: N, Errors: N, Warnings: N, Infos: N, Hints: N` summary at the end. Exit code is a **bitmask** (1=errors, 2=warnings, 4=infos, 8=hints — see "Static analysis" in SKILL.md).
+Full static-analysis sweep and cleanup. `analyze code` is the entry point — **[analyze.md](analyze.md)** is the full reference (every flag, the diagnostic codes, the four suppression scopes, exit-code masking, the cache). The order that works:
 
-1. **Baseline scan.** No path = whatever `paths` in `robot.toml` covers.
-   ```bash
-   robotcode analyze code
-   robotcode analyze code --filter '**/*.robot'        # narrow by glob
-   robotcode analyze code tests/acceptance/billing/    # narrow by path
-   ```
-
-2. **Focus on errors first** if the output is long. Errors are usually the only diagnostics CI should block on. Use the built-in severity filter rather than grepping the text (the severity tag is the full word `[ERROR]`, so `grep '\[E\]'` would match nothing):
-   ```bash
-   robotcode analyze code --severity error          # only errors in output, summary, and exit code
-   robotcode analyze code --code KeywordNotFound     # only one diagnostic code (severity unchanged)
-   ```
-   For machine consumption, `analyze code` honors the global `-f json` and also has its own report formats:
-   ```bash
-   robotcode -f json analyze code                                   # JSON to stdout
-   robotcode analyze code --output-format sarif --output-file r.sarif   # SARIF artefact for CI upload
-   robotcode analyze code --output-format github                    # GitHub Actions annotations
-   robotcode analyze code --output-format gitlab --output-file cq.json  # GitLab Code Quality report
-   ```
-
-3. **Find unused keywords and variables** — this is **off by default**; the flag must be added explicitly:
-   ```bash
-   robotcode analyze code --collect-unused
-   ```
-   Surfaces `KeywordNotUsed` / `VariableNotUsed` diagnostics. Useful for cleanup, but generates noise on libraries that *intentionally* export keywords for other projects to use — combine with `-mi KeywordNotUsed` on `lib/` paths if needed, or persist the policy in config (step 4).
-
-4. **Suppress diagnostics that genuinely don't apply.** Four scopes, pick the lowest one that solves the problem:
-
-   - **One line of code**, end-of-line comment:
-     ```robotframework
-     Log    ${maybe_undefined}    # robotcode: ignore[VariableNotFound]
-     ```
-   - **A whole block / file**, column-0 comment (applies until block ends):
-     ```robotframework
-     # robotcode: ignore[KeywordNotFound]
-     Some Keyword That Resolves At Runtime
-     ```
-   - **One command invocation**:
-     ```bash
-     robotcode analyze code -mi MultipleKeywords
-     ```
-   - **Project-wide** (when a diagnostic is genuinely wrong for this whole project), in `robot.toml`:
-     ```toml
-     [tool.robotcode-analyze.code]
-     modifiers = { ignore = ["MultipleKeywords"] }
-     ```
-   You can also **re-classify** rather than ignore — `-me <CODE>` to promote to error, `-mw` to warning, `-mI` to info, `-mh` to hint (and the matching keys in `[tool.robotcode-analyze.code].modifiers`: `error = [...]`, `warning = [...]`, `information = [...]`, `hint = [...]`).
-
-5. **Decide what fails CI** by masking severities out of the exit code:
-   ```bash
-   robotcode analyze code -xm warn -xm info -xm hint
-   ```
-   Or persistently in `robot.toml`:
-   ```toml
-   [tool.robotcode-analyze.code]
-   exit-code-mask = ["warn", "info", "hint"]   # only errors fail the build
-   ```
-   `-xe`/`extend-exit-code-mask` appends to whatever the config already defines instead of replacing it.
-
-6. **When the cache might mislead you.** `analyze code` reuses analyzed library/resource data across runs to keep subsequent runs fast. Two situations where the cache matters:
-
-   - **Stale results** — after refactoring imports, upgrading libraries, or switching branches, cached namespace data may not match the current code. Symptoms: diagnostics that don't make sense, or new issues that should appear but don't. Wipe the cache:
-     ```bash
-     robotcode analyze cache clear
-     ```
-   - **Verify against a fresh analysis** — to rule out a stale-cache effect without permanently wiping, run once with caching off:
-     ```bash
-     robotcode analyze code --no-cache-namespaces
-     ```
-
-   Inspect what's cached with `robotcode analyze cache info` (or `list` / `path`). `cache clear` empties the cache contents; `cache prune` removes the entire cache directory.
+1. **Baseline scan** — `robotcode analyze code` (no path = `robot.toml` `paths`; narrow with a path or `--filter '<glob>'`).
+2. **Errors first** — `--severity error` (CI usually blocks only on errors; the severity tag is a full word, so filter, don't `grep`).
+3. **Unused items** — add `--collect-unused` for `KeywordNotUsed` / `VariableNotUsed` (off by default; noisy on intentionally-exported keywords).
+4. **Suppress what genuinely doesn't apply** — inline `# robotcode: ignore[CODE]`, `-mi CODE` for one run, or project-wide in `robot.toml`.
+5. **Gate CI** — the exit code is a bitmask (`1` errors, `2` warnings, `4` infos, `8` hints); mask the non-blocking ones (`-xm warn -xm info -xm hint`, or `exit-code-mask` in `robot.toml`).
+6. **Stale cache?** — after refactors, upgrades, or branch switches, `robotcode analyze cache clear` (or `--no-cache-namespaces` for a one-off).
 
 ## E. Fix a whole failing run
 
@@ -170,7 +104,7 @@ The one thing to get right is that **`output.xml` is not a stable snapshot acros
 2. **Triage against the pinned file — cluster failures, don't debug yet.** Pass `-o` explicitly so you never read a clobbered default:
    ```bash
    robotcode results summary --failed -o results/full.xml
-   robotcode results show --failed --message-chars 0 -o results/full.xml   # full messages, to group by cause
+   robotcode results show --failed -o results/full.xml                     # per-test messages, to group by cause
    robotcode results stats --by suite --failed -o results/full.xml         # is failure clustered in one area?
    ```
    Failures sharing a message, a keyword, or a suite are almost certainly one cause. The recorded error often already names it (an unresolved/mis-composed variable, a wrong value, a missing import) — no debugger needed.

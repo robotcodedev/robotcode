@@ -24,10 +24,10 @@ Reach for it whenever a run has finished and the question is "did it pass, what 
 Five subcommands share a consistent option surface — auto-discovering the output file from the active profile, accepting:
 
 - Standard Robot filters: `-i <tag>` / `-e <tag>` / `-s <suite>` / `-t <test>` / `--status pass|fail|skip|not-run` (with `--failed` / `--passed` / `--skipped` as shortcuts on `show` / `log` / `stats`)
-- Longname-exact filters: `-bl <longname>` / `-ebl <longname>` — use these when you already have the test's full name (e.g. copied from a previous `show` output); no glob ambiguity. Available on `summary` / `show` / `log` / `stats` (not `diff`)
-- Full-text search: `--search TEXT` / `--search-regex PATTERN` — searches name + message + tags + keyword names/args + log messages
+- Longname-exact filters: `-bl <longname>` / `-ebl <longname>` — use these when you already have the test's full name (e.g. copied from a previous `show` output); no glob ambiguity. Available on all five subcommands
+- Full-text search: `--search TEXT` / `--search-regex PATTERN` — searches across names, messages, tags, documentation, metadata, and keyword names/args/docs/messages
 - Output-file override: `-o PATH` (file or directory)
-- Output format: `-f json` / `-f text`
+- Output format: `--format json` / `--format text`
 
 All five emit text or JSON:
 
@@ -47,7 +47,7 @@ robotcode results summary --failed                              # list every fai
 robotcode results summary -i smoke --status fail                # combine tag + status filters
 robotcode results summary --search TimeoutError                 # full-text search across name/message/keywords/logs
 robotcode results summary -bl "MyProject.Login.Login Works"     # exact-match by full longname
-robotcode -f json results summary                               # structured payload (counts, status, elapsed, ...)
+robotcode --format json results summary                               # structured payload (counts, status, elapsed, ...)
 robotcode results summary -o results/old-run.xml                # specific output file (XML or JSON)
 robotcode results summary -o /tmp/ci-results/                   # directory — auto-discovery runs inside it
 ```
@@ -64,14 +64,13 @@ robotcode results show -i smoke -e wipANDnotready     # tag filters
 robotcode results show -s "MyProject.Login.*"         # suite glob
 robotcode results show --top 20                       # cap output
 robotcode results show --tags                         # append the tag list after each test
-robotcode results show --failed --message-chars 0     # full failure messages (no truncation)
 robotcode results show --search AssertionError        # full-text search across all fields
 robotcode results show --sort elapsed --top 10        # sort by duration (longest first), cap to 10
 robotcode results show --sort status                  # FAIL → SKIP → PASS → NOT RUN
 robotcode results show -bl "MyProject.Login.Login Works"  # exact-match by full longname
 ```
 
-One line per test: status badge, full name, `(path:line)`, plus the first line of any failure/skip message. Reach for `show` over `summary --failed` when you need finer filters (combined status + tag + suite + search), a cap, full untruncated messages (`--message-chars 0`), tag info (`--tags`), or a specific sort order (`--sort name|suite|status|elapsed|start`). `--failed` / `--passed` / `--skipped` are additive shortcuts for `--status fail|pass|skip`.
+One line per test: status badge, full name, `(path:line)`, plus the first line of any failure/skip message. Reach for `show` over `summary --failed` when you need finer filters (combined status + tag + suite + search), a cap, tag info (`--tags`), or a specific sort order (`--sort name|suite|status|elapsed|start`). `--failed` / `--passed` / `--skipped` are additive shortcuts for `--status fail|pass|skip`.
 
 ## 4. `robotcode results log` — the report.html in plain text
 
@@ -83,13 +82,13 @@ robotcode results log -bl "MyProject.Login.Login Works"          # exact-match b
 robotcode results log --search TimeoutError                      # only tests where the substring appears (name/message/keywords/logs)
 robotcode results log --level WARN                               # raise the message-level threshold (default INFO)
 robotcode results log --max-depth 2                              # show keyword levels 1-2; deeper calls collapsed to a child-count summary
-robotcode results log --failed --keyword-info                    # add per-keyword detail (args, status, timing) to each call
+robotcode results log --failed --keyword-info                    # add each keyword's [Documentation]/[Tags]/[Timeout]
 robotcode results log --suite-info                               # add suite-level metadata to the tree
 robotcode results log --failed --extract /tmp/artefacts          # write referenced screenshots / base64 blobs out
 robotcode results log --execution-messages                       # also include parser/discovery `<errors>` section
 ```
 
-Renders the per-test execution tree — keyword calls, control structures (`FOR` / `WHILE` / `IF` / `TRY` / `VAR` / `RETURN`), log messages — same content `report.html` shows but in plain text an agent can read directly. Use this when you need to *understand why* a test failed, not just *that* it failed. `--max-depth N` is your friend on deeply nested suites: it collapses everything below level `N` to a child-count summary. For deeper inspection add `--keyword-info` (per-keyword arguments, status, and timing) or `--suite-info` (suite-level metadata). For HTML-rich messages, `pip install robotcode-runner[html]` improves conversion quality.
+Renders the per-test execution tree — keyword calls, control structures (`FOR` / `WHILE` / `IF` / `TRY` / `VAR` / `RETURN`), log messages — same content `report.html` shows but in plain text an agent can read directly. Use this when you need to *understand why* a test failed, not just *that* it failed. `--max-depth N` is your friend on deeply nested suites: it collapses everything below level `N` to a child-count summary. For deeper inspection add `--keyword-info` (each keyword's `[Documentation]`/`[Tags]`/`[Timeout]`) or `--suite-info` (suite-level metadata). For HTML-rich messages, `pip install robotcode-runner[html]` improves conversion quality.
 
 ## 5. `robotcode results stats` — aggregate by tag / suite / status
 
@@ -100,10 +99,10 @@ robotcode results stats --by tag --by suite          # both sections in one call
 robotcode results stats --by tag --sort elapsed --top 20   # 20 slowest tags
 robotcode results stats --by suite --search Browser  # only suites touching the Browser keyword
 robotcode results stats --by tag -bl "MyProject.Login.Login Works"   # stats limited to one specific test (rarely needed but possible)
-robotcode -f json results stats --by tag             # structured for downstream tools
+robotcode --format json results stats --by tag             # structured for downstream tools
 ```
 
-Each section is a table with pass/fail/skip counts and total elapsed per group. Sort orders: `name` / `total` / `failed` / `elapsed` (descending). Reach for `stats` over `summary` when the user asks "which tags fail most", "which suite is slowest", "is failure clustered in one area", etc.
+Each section is a table with pass/fail/skip counts and total elapsed per group. Sort orders: `name` (ascending) / `total` / `failed` / `elapsed` (descending). Reach for `stats` over `summary` when the user asks "which tags fail most", "which suite is slowest", "is failure clustered in one area", etc.
 
 ## 6. `robotcode results diff` — compare two runs
 
@@ -112,7 +111,7 @@ robotcode results diff baseline.xml                            # baseline vs aut
 robotcode results diff prev/output.xml curr/output.xml         # two explicit files
 robotcode results diff baseline.xml --only new-failures        # restrict to regressions
 robotcode results diff baseline.xml --only new-passes --only added  # combine categories
-robotcode -f json results diff baseline.xml                    # structured diff
+robotcode --format json results diff baseline.xml                    # structured diff
 ```
 
 `BASELINE` is required; `CURRENT` defaults to auto-discovery. Categories the `--only` filter takes: `new-failures` (regressions), `new-passes` (fixes), `status-changes` (any), `added` (test exists in current but not baseline), `removed`. The plain output is a structured table — perfect for "what changed since the last green run".
@@ -123,7 +122,7 @@ Auto-discovery (when `-o` is omitted) picks the active profile's configured outp
 
 ## 8. For custom analysis: `robot.api.ExecutionResult`
 
-**Only when `robotcode results` genuinely doesn't have a slice you need.** Most "I want a custom view" cases are already covered by `summary --failed`, `show --failed`/`--top`/`--sort`, `log --failed`/`--search`/`--max-depth`, `stats --by tag`, `diff`, or `-f json` piped through `jq` — try those first. For genuine raw access, use the Python API the `results` command uses internally:
+**Only when `robotcode results` genuinely doesn't have a slice you need.** Most "I want a custom view" cases are already covered by `summary --failed`, `show --failed`/`--top`/`--sort`, `log --failed`/`--search`/`--max-depth`, `stats --by tag`, `diff`, or `--format json` piped through `jq` — try those first. For genuine raw access, use the Python API the `results` command uses internally:
 
 ```python
 from robot.api import ExecutionResult
@@ -142,7 +141,7 @@ for t in r.suite.all_tests:
 `robotcode results` reads both XML and JSON outputs, so there's rarely a reason to switch formats. The exceptions — both for downstream tooling, not for agent consumption:
 
 ```bash
-robotcode robot --output output.json ...           # RF 7.2+: smaller file / external JSON consumer
+robotcode robot --output output.json ...           # RF 7+: smaller file / external JSON consumer
 robotcode robot --xunit xunit.xml ...              # JUnit for CI dashboards (Jenkins, GitLab, GitHub)
 ```
 

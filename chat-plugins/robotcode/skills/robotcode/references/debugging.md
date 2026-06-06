@@ -8,21 +8,21 @@ Reach for the debugger when a recorded log isn't enough and you need the **live*
 - **[REPL](repl.md)** builds state up from scratch to *explore* — no suite is running.
 - **The debugger** re-runs the suite and stops it **mid-flight** to inspect the actual live state. Use it only when the recorded log doesn't answer the question.
 
-**To debug why a test fails, debug *that* test — fast.** Select the single failing test by name — `-t "<name>"`, or `-bl "<longname>"` for an exact match copied from [`results`](results.md) / `discover` — rather than handing `robot-debug` the whole file or directory. Narrowing the run to one test means only it executes and the pause lands inside it; a bare path (`tests/login.robot`) runs *every* test in the file and, with break-on-failure on by default, stops at the **first** uncaught failure in execution order — which may be a different test. Read the recorded error with [`results`](results.md) first — it often already names the cause (a variable or value, not what poking the live system would suggest) — then bring up the debugger for the live values if you still need them. Do **not** reconstruct or paste the test into a REPL (that runs a *copy* in a different context, dropping the suite's setup/teardown, variables, and imports), and do **not** detour into external tools or a separate exploration of the system under test first: that debugs the wrong context and routinely chases the wrong cause — a symptom in the live system, when the real fault was a variable, value, or setup in the test.
+**To debug why a test fails, debug *that* test — fast.** Find the test's **longname** (from [`results`](results.md) or `discover`) and select it with `-bl "<longname>"` — **do not pass the `.robot` file**. Pointing `robot-debug` at a single file (just like `robotcode robot`) makes that file the top suite, so the parent suites' `__init__.robot` never loads: its **Suite Setup/Teardown**, suite variables, and the setup/teardown, tags, and timeouts it applies to the tests below don't run, and the test can fail — or pass — for the wrong reason. Selecting by longname builds the full suite tree from the project root / `robot.toml` paths, so that initialization runs exactly as in a real run, and the pause still lands in the one test you picked (a bare path also runs *every* test in the file and, with break-on-failure on by default, stops at the **first** failure — which may be a different test). Read the recorded error with [`results`](results.md) first — it often already names the cause (a variable or value, not what poking the live system would suggest) — then bring up the debugger for the live values if you still need them. Do **not** reconstruct or paste the test into a REPL (that runs a *copy* in a different context, dropping the suite's setup/teardown, variables, and imports), and do **not** detour into external tools or a separate exploration of the system under test first: that debugs the wrong context and routinely chases the wrong cause — a symptom in the live system, when the real fault was a variable, value, or setup in the test.
 
 ## Contents
 
-- **Two ways in** — `robot-debug` (a real run, scoped to the tests you select) vs. `repl` (keywords typed at the prompt)
-- **How a debug session works** — the pause → inspect → resume loop
-- **Setting breakpoints** — line, keyword, location vs. run scope, embedded `Breakpoint`, stop-on-entry, exceptions
-- **At a stop: inspecting state** — stack & frames, variables, source, what's loaded (keywords / libraries / resources)
-- **Stepping & resuming**
-- **Managing breakpoints at runtime** — conditions, ignore counts, logpoints
-- **Exception breakpoints** — `.catch`
-- **Ending a session** — `.continue` / `.detach` / `.abort`
-- **Driving the session from an agent** — step through it interactively (the normal way)
-- **A session, end to end**
-- **Relationship to the VS Code debugger**
+- **[Two ways in](#two-ways-in)** — `robot-debug` (a real run, scoped to the tests you select) vs. `repl` (keywords typed at the prompt)
+- **[How a debug session works](#how-a-debug-session-works)** — the pause → inspect → resume loop
+- **[Setting breakpoints](#setting-breakpoints)** — line, keyword, location vs. run scope, embedded `Breakpoint`, stop-on-entry, exceptions
+- **[At a stop: inspecting state](#at-a-stop-inspecting-state)** — stack & frames, variables, source, what's loaded (keywords / libraries / resources)
+- **[Stepping & resuming](#stepping--resuming)**
+- **[Managing breakpoints at runtime](#managing-breakpoints-at-runtime)** — conditions, ignore counts, logpoints
+- **[Exception breakpoints](#exception-breakpoints)** — `.catch`
+- **[Ending a session](#ending-a-session)** — `.continue` / `.detach` / `.abort`
+- **[Driving the session from an agent](#driving-the-session-from-an-agent)** — step through it interactively (the normal way)
+- **[A session, end to end](#a-session-end-to-end)**
+- **[Relationship to the VS Code debugger](#relationship-to-the-vs-code-debugger)**
 
 ## Two ways in
 
@@ -70,7 +70,7 @@ robotcode robot-debug -bl "MyProject.Login.Login Works"                  # only 
 robotcode robot-debug --break login.robot:42 -t "Login Works"            # break at the line, but only run that test
 ```
 
-Handing over a bare path (`tests/login.robot`) instead runs every test in the file — slower, and it can stop on a *different* test that reaches the line or fails first. Reserve the bare-path form for when you genuinely want the whole file/suite (e.g. hunting an unknown failure).
+Handing over a bare **file** path (`tests/login.robot`) instead runs *every* test in the file — so, with break-on-failure on, it can stop on a *different* test first — **and** skips the parent suites' `__init__.robot` (the setup/variables loss described above). Select by longname; reserve a path for a whole suite — and note a *directory* like `tests/` still loads its `__init__.robot`, whereas a single file does not.
 
 ### The embedded `Breakpoint` keyword
 
