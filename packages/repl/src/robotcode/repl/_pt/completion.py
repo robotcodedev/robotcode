@@ -22,12 +22,14 @@ Robot-runtime lookup helpers used by both interpreters
 prompt_toolkit and shouldn't import this module.
 """
 
+import inspect
 import os
 import re
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, Iterable, Iterator, List, Literal, Optional, Set, Tuple
 
 from robot.running.context import EXECUTION_CONTEXTS
+from robot.variables.search import is_assign as _rf_is_assign
 
 from robotcode.robot.diagnostics.library_doc import (
     complete_library_import,
@@ -134,12 +136,9 @@ def current_keyword_and_arg_index(buffer: str, cursor: int) -> Optional[Tuple[st
     line_start = buffer.rfind("\n", 0, cursor) + 1
     line_text = buffer[line_start:cursor]
     cells = _CELL_SEP.split(line_text)
-    # Leading indent in a block body produces empty cells before the
-    # keyword — skip them so the keyword is always cells[0].
-    leading_empty = 0
-    while leading_empty < len(cells) and not cells[leading_empty].strip():
-        leading_empty += 1
-    cells = cells[leading_empty:]
+    # Skip block-body indentation and return-value assignment targets so the
+    # keyword (not a `${x}=` assignment) anchors the argument index.
+    cells = cells[_assignment_prefix_len(cells) :]
     if len(cells) < 2:
         return None
     keyword = cells[0].strip()
@@ -158,10 +157,37 @@ _NAMED_ARG = re.compile(r"^([A-Za-z_]\w*)=(.*)$")
 
 _VALID_SIGILS = "$@&%"
 
-# A return-value assignment target: `${x}` / `@{x}` / `&{x}` (no `%{env}`), with
-# an optional trailing `=` (Robot attaches it to the last target). Used to skip
-# the assignment prefix before the keyword cell, e.g. `${r}=    Some Keyword`.
-_ASSIGN_CELL = re.compile(r"^[$@&]\{[^{}]*\}\s*=?$")
+# Robot Framework's own variable parser recognises every assignment-target form
+# — scalar/list/dict, item subscripts (`${x}[0]`, RF 6.1+), and type hints
+# (`${x: int}`, RF 7.3+). The `allow_*` keywords were added over time, so pass
+# only the ones the installed RF (5.0+) actually accepts (resolved once here).
+_IS_ASSIGN_KWARGS = {
+    name: True for name in ("allow_nested", "allow_items") if name in inspect.signature(_rf_is_assign).parameters
+}
+
+
+def _is_assign_target(cell: str) -> bool:
+    """Whether `cell` is a return-value assignment target — `${x}` / `@{x}` /
+    `&{x}`, optionally with an item subscript, a type hint, and/or a trailing
+    `=` — using Robot Framework's own parser so we match real syntax exactly."""
+    cell = cell.strip()
+    if cell.endswith("="):  # the assignment sign (RF allows it on the last target)
+        cell = cell[:-1].rstrip()
+    return bool(_rf_is_assign(cell, **_IS_ASSIGN_KWARGS))
+
+
+def _assignment_prefix_len(cells: List[str]) -> int:
+    """How many leading cells to skip to reach the keyword cell.
+
+    Skips block-body indentation (empty cells) and any return-value assignment
+    targets, so `${r}=    Some Keyword` anchors on `Some Keyword`, not `${r}=`.
+    """
+    i = 0
+    while i < len(cells) and not cells[i].strip():
+        i += 1
+    while i < len(cells) and _is_assign_target(cells[i]):
+        i += 1
+    return i
 
 
 @dataclass(frozen=True)
@@ -214,21 +240,15 @@ def tokenize(buffer: str, cursor: int, *, setting_import_aliases: bool = False) 
     if not prior_cells:
         return CompletionContext("keyword", current_cell, cell_start)
 
-    # Return-value assignment: skip block-body indentation (leading empty cells)
-    # and any leading assignment targets (`${x}` / `@{x}` / `&{x}`, the last
-    # optionally ending with `=`) so the keyword cell still gets keyword
-    # completion and what follows is classified against the real keyword.
-    lead = 0
-    while lead < len(prior_cells) and not prior_cells[lead].strip():
-        lead += 1
-    assign_end = lead
-    while assign_end < len(prior_cells) and _ASSIGN_CELL.match(prior_cells[assign_end].strip()):
-        assign_end += 1
-    if assign_end == len(prior_cells):
+    # Skip block-body indentation and any return-value assignment targets so the
+    # keyword cell still gets keyword completion and what follows is classified
+    # against the real keyword. (General Robot syntax — not gated by the flag.)
+    keyword_cell = _assignment_prefix_len(prior_cells)
+    if keyword_cell == len(prior_cells):
         # nothing but indentation and assignment targets so far → keyword cell
         return CompletionContext("keyword", current_cell, cell_start)
 
-    first_cell = prior_cells[assign_end].strip()
+    first_cell = prior_cells[keyword_cell].strip()
     folded = first_cell.casefold()
     if folded == "import library" or (setting_import_aliases and folded == "library"):
         return CompletionContext("library", current_cell, cell_start)

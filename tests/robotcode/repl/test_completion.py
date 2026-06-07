@@ -34,6 +34,7 @@ from robotcode.repl._pt.completion import (
     spec_arg_position,
     tokenize,
 )
+from robotcode.robot.utils import RF_VERSION
 
 
 @pytest.fixture(autouse=True)
@@ -132,13 +133,32 @@ def test_tokenize_setting_aliases_not_routed_without_optin() -> None:
 def test_tokenize_return_assignment_keeps_keyword_completion() -> None:
     # A leading return-value assignment must not steal keyword completion from
     # the keyword cell. The `=` is optional and may sit on the last of several
-    # targets; `${}`/`@{}`/`&{}` all count.
+    # targets; `${}`/`@{}`/`&{}` all count. (These forms work on every RF.)
     for buf in (
         "${result}=    Log To Con",
         "${result}    Log To Con",
         "${a}    ${b}=    Some Key",
         "@{items}=    Create Lis",
         "&{opts}=    Create Dic",
+    ):
+        assert tokenize(buf, len(buf)).kind == "keyword", buf
+
+
+@pytest.mark.skipif(RF_VERSION < (6, 1), reason="item assignment (${x}[0] =) requires Robot Framework >= 6.1")
+def test_tokenize_item_assignment_keeps_keyword_completion() -> None:
+    for buf in (
+        "${list}[0]=    Set Variabl",
+        "${dict}[key] =    Get Valu",
+        "${res}[users][0] =    Get Use",
+    ):
+        assert tokenize(buf, len(buf)).kind == "keyword", buf
+
+
+@pytest.mark.skipif(RF_VERSION < (7, 3), reason="variable type hints (${x: int}) require Robot Framework >= 7.3")
+def test_tokenize_type_hint_assignment_keeps_keyword_completion() -> None:
+    for buf in (
+        "${x: int} =    Convert To In",
+        "@{nums: int}    Create Lis",
     ):
         assert tokenize(buf, len(buf)).kind == "keyword", buf
 
@@ -823,6 +843,31 @@ def test_current_kw_and_arg_stops_at_logical_line_boundary() -> None:
     buf = "FOR    ${i}    IN RANGE    3\n    Log    hello"
     pos = len(buf)
     assert current_keyword_and_arg_index(buf, pos) == ("Log", 0)
+
+
+def test_current_kw_and_arg_skips_return_value_assignment() -> None:
+    # A leading `${x}=` assignment must anchor on the keyword, not the target —
+    # otherwise the status-bar argument hint resolves the wrong keyword.
+    s = "${r}=    Log    hello"
+    assert current_keyword_and_arg_index(s, len(s)) == ("Log", 0)
+    # still in the keyword cell (no argument yet) → no hint
+    k = "${r}=    Log"
+    assert current_keyword_and_arg_index(k, len(k)) is None
+    # several targets, the last carrying the `=`
+    m = "${a}    ${b}=    Run Keyword    x"
+    assert current_keyword_and_arg_index(m, len(m)) == ("Run Keyword", 0)
+
+
+@pytest.mark.skipif(RF_VERSION < (6, 1), reason="item assignment (${x}[0] =) requires Robot Framework >= 6.1")
+def test_current_kw_and_arg_skips_item_assignment() -> None:
+    i = "${list}[0] =    Log    hi"
+    assert current_keyword_and_arg_index(i, len(i)) == ("Log", 0)
+
+
+@pytest.mark.skipif(RF_VERSION < (7, 3), reason="variable type hints (${x: int}) require Robot Framework >= 7.3")
+def test_current_kw_and_arg_skips_type_hint_assignment() -> None:
+    t = "${x: int} =    Set Variable    42"
+    assert current_keyword_and_arg_index(t, len(t)) == ("Set Variable", 0)
 
 
 # ---------------------------------------------------------------------------
