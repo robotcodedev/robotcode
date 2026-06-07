@@ -273,11 +273,11 @@ def test_candidates_for_keyword_empty_when_no_context(monkeypatch: pytest.Monkey
 
 
 def test_candidates_for_keyword_includes_setting_aliases_when_enabled(monkeypatch: pytest.MonkeyPatch) -> None:
-    # The `>>>` prompt opts in via `include_setting_aliases=True`, so the
+    # The `>>>` prompt opts in via `setting_import_aliases=True`, so the
     # Settings-style aliases show up as keyword candidates alongside the real
     # `Import …` keywords, with a detail pointing at the canonical keyword.
     _patch_context(monkeypatch, _fake_namespace(["Import Library", "Log"], []))
-    cands = candidates_for_rich(CompletionContext("keyword", "Lib", 0), include_setting_aliases=True)
+    cands = candidates_for_rich(CompletionContext("keyword", "Lib", 0), setting_import_aliases=True)
     by_label = {c.label: c.detail for c in cands}
     assert "Library" in by_label
     assert "Import Library" in by_label["Library"]
@@ -285,8 +285,8 @@ def test_candidates_for_keyword_includes_setting_aliases_when_enabled(monkeypatc
 
 def test_candidates_for_keyword_setting_aliases_match_their_prefixes(monkeypatch: pytest.MonkeyPatch) -> None:
     _patch_context(monkeypatch, _fake_namespace([], []))
-    res = [c.label for c in candidates_for_rich(CompletionContext("keyword", "Res", 0), include_setting_aliases=True)]
-    var = [c.label for c in candidates_for_rich(CompletionContext("keyword", "Var", 0), include_setting_aliases=True)]
+    res = [c.label for c in candidates_for_rich(CompletionContext("keyword", "Res", 0), setting_import_aliases=True)]
+    var = [c.label for c in candidates_for_rich(CompletionContext("keyword", "Var", 0), setting_import_aliases=True)]
     assert "Resource" in res
     assert "Variables" in var
 

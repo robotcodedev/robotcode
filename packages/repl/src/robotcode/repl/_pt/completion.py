@@ -64,6 +64,38 @@ _CELL_SEP = re.compile(r"  +|\t")
 # prompt, 2 keeps typing compact.
 CELL_SEPARATOR = "  "
 
+# Robot Framework's own variable parser recognises every assignment-target form
+# — scalar/list/dict, item subscripts (`${x}[0]`, RF 6.1+), and type hints
+# (`${x: int}`, RF 7.3+). The `allow_*` keywords were added over time, so pass
+# only the ones the installed RF (5.0+) actually accepts (resolved once here).
+_IS_ASSIGN_KWARGS = {
+    name: True for name in ("allow_nested", "allow_items") if name in inspect.signature(_rf_is_assign).parameters
+}
+
+
+def _is_assign_target(cell: str) -> bool:
+    """Whether `cell` is a return-value assignment target — `${x}` / `@{x}` /
+    `&{x}`, optionally with an item subscript, a type hint, and/or a trailing
+    `=` — using Robot Framework's own parser so we match real syntax exactly."""
+    cell = cell.strip()
+    if cell.endswith("="):  # the assignment sign (RF allows it on the last target)
+        cell = cell[:-1].rstrip()
+    return bool(_rf_is_assign(cell, **_IS_ASSIGN_KWARGS))
+
+
+def _assignment_prefix_len(cells: List[str]) -> int:
+    """How many leading cells to skip to reach the keyword cell.
+
+    Skips block-body indentation (empty cells) and any return-value assignment
+    targets, so `${r}=    Some Keyword` anchors on `Some Keyword`, not `${r}=`.
+    """
+    i = 0
+    while i < len(cells) and not cells[i].strip():
+        i += 1
+    while i < len(cells) and _is_assign_target(cells[i]):
+        i += 1
+    return i
+
 
 def find_cell_end(text: str, pos: int) -> int:
     """Position of the next cell separator (2+ spaces / tab) at or
@@ -156,38 +188,6 @@ _VAR_OPEN = re.compile(r"([\$@&%])\{([^{}]*)$")
 _NAMED_ARG = re.compile(r"^([A-Za-z_]\w*)=(.*)$")
 
 _VALID_SIGILS = "$@&%"
-
-# Robot Framework's own variable parser recognises every assignment-target form
-# — scalar/list/dict, item subscripts (`${x}[0]`, RF 6.1+), and type hints
-# (`${x: int}`, RF 7.3+). The `allow_*` keywords were added over time, so pass
-# only the ones the installed RF (5.0+) actually accepts (resolved once here).
-_IS_ASSIGN_KWARGS = {
-    name: True for name in ("allow_nested", "allow_items") if name in inspect.signature(_rf_is_assign).parameters
-}
-
-
-def _is_assign_target(cell: str) -> bool:
-    """Whether `cell` is a return-value assignment target — `${x}` / `@{x}` /
-    `&{x}`, optionally with an item subscript, a type hint, and/or a trailing
-    `=` — using Robot Framework's own parser so we match real syntax exactly."""
-    cell = cell.strip()
-    if cell.endswith("="):  # the assignment sign (RF allows it on the last target)
-        cell = cell[:-1].rstrip()
-    return bool(_rf_is_assign(cell, **_IS_ASSIGN_KWARGS))
-
-
-def _assignment_prefix_len(cells: List[str]) -> int:
-    """How many leading cells to skip to reach the keyword cell.
-
-    Skips block-body indentation (empty cells) and any return-value assignment
-    targets, so `${r}=    Some Keyword` anchors on `Some Keyword`, not `${r}=`.
-    """
-    i = 0
-    while i < len(cells) and not cells[i].strip():
-        i += 1
-    while i < len(cells) and _is_assign_target(cells[i]):
-        i += 1
-    return i
 
 
 @dataclass(frozen=True)
@@ -359,7 +359,7 @@ def candidates_for_rich(
     context: Any = None,
     variables: Any = None,
     working_dir: str = ".",
-    include_setting_aliases: bool = False,
+    setting_import_aliases: bool = False,
 ) -> List[Candidate]:
     """Completion candidates with their `display_meta` detail.
 
@@ -375,7 +375,7 @@ def candidates_for_rich(
     """
     if ctx.kind == "keyword":
         keywords: Iterable[Tuple[str, str]] = _iter_keywords(context)
-        if include_setting_aliases:
+        if setting_import_aliases:
             keywords = [*keywords, *_SETTING_IMPORT_ALIAS_COMPLETIONS]
         return _filter_robot_normalised(keywords, ctx.prefix)
     if ctx.kind == "variable":

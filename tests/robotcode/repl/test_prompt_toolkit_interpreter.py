@@ -719,3 +719,19 @@ def test_robot_completer_threads_frame_context_to_candidates(monkeypatch: pytest
     completer = _RobotCompleter(context_provider=lambda: ("CTX", "VARS"))
     list(completer.get_completions(Document("Lo"), CompleteEvent()))
     assert seen == [("CTX", "VARS")]
+
+
+def test_robot_completer_threads_setting_alias_flag(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The `>>>` completer forwards `setting_import_aliases=True` into the
+    candidate service (so the `Library`/`Resource`/`Variables` aliases show up);
+    the debugger completer (default) forwards `False`."""
+    seen: List[bool] = []
+
+    def fake_candidates(ctx: Any, *, setting_import_aliases: bool = False, **_: Any) -> List[Any]:
+        seen.append(setting_import_aliases)
+        return []
+
+    monkeypatch.setattr("robotcode.repl._pt.components.candidates_for_rich", fake_candidates)
+    list(_RobotCompleter(setting_import_aliases=True).get_completions(Document("Lib"), CompleteEvent()))
+    list(_RobotCompleter().get_completions(Document("Lib"), CompleteEvent()))
+    assert seen == [True, False]

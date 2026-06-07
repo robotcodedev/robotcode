@@ -3,7 +3,8 @@ key bindings. Stage 4 — exercises `_insert_indented_newline` directly on a
 real `Buffer`, plus an end-to-end PromptSession test for the smart-Enter
 submit / continue branches via a pipe input."""
 
-from typing import Iterator
+from types import SimpleNamespace
+from typing import Any, Iterator
 
 import pytest
 from prompt_toolkit.application import create_app_session
@@ -15,6 +16,7 @@ from robotcode.repl._pt.components import (
     _accept_highlighted_completion,
     _build_keybindings,
     _insert_indented_newline,
+    _RobotCompleter,
 )
 from robotcode.repl.prompt_toolkit_interpreter import PromptToolkitConsoleInterpreter
 
@@ -512,3 +514,31 @@ def test_build_keybindings_registers_escape_with_completion_filter() -> None:
     assert binding.filter is has_completions, (
         f"Escape binding should be gated by `has_completions`, got: {binding.filter!r}"
     )
+
+
+def test_smart_tab_opens_completion_after_setting_alias() -> None:
+    """At the `>>>` prompt (alias opt-in), Tab after a setting alias
+    (`Library␣␣`) is an import cell → open completion, don't insert a separator.
+    The debugger completer (no opt-in) treats it as a plain argument cell."""
+    kb = _build_keybindings()
+    tab = next(b for b in kb.bindings if getattr(b.handler, "__name__", "") == "_smart_tab")
+
+    # `>>>` completer: completion is opened, no cell separator appended.
+    buf = Buffer(completer=_RobotCompleter(setting_import_aliases=True))
+    buf.text = "Library  "
+    buf.cursor_position = len(buf.text)
+    opened: list[Any] = []
+    buf.start_completion = lambda **kw: opened.append(kw)  # type: ignore[method-assign]
+    tab.handler(SimpleNamespace(current_buffer=buf))  # type: ignore[arg-type]  # _smart_tab only reads .current_buffer
+    assert opened
+    assert buf.text == "Library  "
+
+    # debugger completer (no opt-in): Tab inserts a cell separator instead.
+    buf2 = Buffer(completer=_RobotCompleter())
+    buf2.text = "Library  "
+    buf2.cursor_position = len(buf2.text)
+    opened2: list[Any] = []
+    buf2.start_completion = lambda **kw: opened2.append(kw)  # type: ignore[method-assign]
+    tab.handler(SimpleNamespace(current_buffer=buf2))  # type: ignore[arg-type]  # _smart_tab only reads .current_buffer
+    assert not opened2
+    assert buf2.text == "Library    "

@@ -132,8 +132,9 @@ class _RobotCompleter(Completer):
         # frame's scope for the debugger. None ⇒ the live execution context.
         self._context_provider = context_provider
         # Offer the `Library`/`Resource`/`Variables` setting-import aliases as
-        # keyword candidates — only on the `>>>` prompt, where they apply.
-        self._setting_import_aliases = setting_import_aliases
+        # keyword candidates — only on the `>>>` prompt, where they apply. Public
+        # so the `_smart_tab` key binding can read it off the active completer.
+        self.setting_import_aliases = setting_import_aliases
 
     def get_completions(self, document: Document, complete_event: CompleteEvent) -> Iterator[Completion]:
         del complete_event
@@ -150,10 +151,10 @@ class _RobotCompleter(Completer):
                     yield Completion(cand.label, start_position=start, display_meta=cand.detail)
                 return
 
-        ctx = tokenize(text, len(text), setting_import_aliases=self._setting_import_aliases)
+        ctx = tokenize(text, len(text), setting_import_aliases=self.setting_import_aliases)
         context, variables = self._context_provider() if self._context_provider is not None else (None, None)
         candidates = candidates_for_rich(
-            ctx, context=context, variables=variables, include_setting_aliases=self._setting_import_aliases
+            ctx, context=context, variables=variables, setting_import_aliases=self.setting_import_aliases
         )
         # `start_position` is signed and negative — chars before the
         # cursor that prompt_toolkit should replace.
@@ -341,7 +342,7 @@ def _build_keybindings(bind_help_key: bool = False) -> KeyBindings:
         # Honour the active completer's setting-alias flag so `Library␣␣<tab>`
         # opens import completion (like `Import Library`) at the `>>>` prompt.
         completer = _find_robot_completer(buf)
-        aliases = completer._setting_import_aliases if completer is not None else False
+        aliases = completer.setting_import_aliases if completer is not None else False
         # Both `argument` and `named_arg_value` are argument cells —
         # Tab inserts a cell separator in either case.
         if tokenize(text, len(text), setting_import_aliases=aliases).kind in ("argument", "named_arg_value"):
