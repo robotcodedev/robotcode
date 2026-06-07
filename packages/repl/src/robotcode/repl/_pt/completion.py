@@ -158,6 +158,11 @@ _NAMED_ARG = re.compile(r"^([A-Za-z_]\w*)=(.*)$")
 
 _VALID_SIGILS = "$@&%"
 
+# A return-value assignment target: `${x}` / `@{x}` / `&{x}` (no `%{env}`), with
+# an optional trailing `=` (Robot attaches it to the last target). Used to skip
+# the assignment prefix before the keyword cell, e.g. `${r}=    Some Keyword`.
+_ASSIGN_CELL = re.compile(r"^[$@&]\{[^{}]*\}\s*=?$")
+
 
 @dataclass(frozen=True)
 class CompletionContext:
@@ -209,7 +214,21 @@ def tokenize(buffer: str, cursor: int, *, setting_import_aliases: bool = False) 
     if not prior_cells:
         return CompletionContext("keyword", current_cell, cell_start)
 
-    first_cell = prior_cells[0].strip()
+    # Return-value assignment: skip block-body indentation (leading empty cells)
+    # and any leading assignment targets (`${x}` / `@{x}` / `&{x}`, the last
+    # optionally ending with `=`) so the keyword cell still gets keyword
+    # completion and what follows is classified against the real keyword.
+    lead = 0
+    while lead < len(prior_cells) and not prior_cells[lead].strip():
+        lead += 1
+    assign_end = lead
+    while assign_end < len(prior_cells) and _ASSIGN_CELL.match(prior_cells[assign_end].strip()):
+        assign_end += 1
+    if assign_end == len(prior_cells):
+        # nothing but indentation and assignment targets so far → keyword cell
+        return CompletionContext("keyword", current_cell, cell_start)
+
+    first_cell = prior_cells[assign_end].strip()
     folded = first_cell.casefold()
     if folded == "import library" or (setting_import_aliases and folded == "library"):
         return CompletionContext("library", current_cell, cell_start)

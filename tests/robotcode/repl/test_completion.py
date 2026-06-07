@@ -129,6 +129,31 @@ def test_tokenize_setting_aliases_not_routed_without_optin() -> None:
     assert tokenize("Library    Coll", cursor=15).kind == "argument"
 
 
+def test_tokenize_return_assignment_keeps_keyword_completion() -> None:
+    # A leading return-value assignment must not steal keyword completion from
+    # the keyword cell. The `=` is optional and may sit on the last of several
+    # targets; `${}`/`@{}`/`&{}` all count.
+    for buf in (
+        "${result}=    Log To Con",
+        "${result}    Log To Con",
+        "${a}    ${b}=    Some Key",
+        "@{items}=    Create Lis",
+        "&{opts}=    Create Dic",
+    ):
+        assert tokenize(buf, len(buf)).kind == "keyword", buf
+
+
+def test_tokenize_return_assignment_then_keyword_args_route_normally() -> None:
+    # After the assignment, the keyword and its args classify against the real
+    # keyword — import routing and plain argument cells still work.
+    lib = "${x}=    Import Library    Coll"
+    assert tokenize(lib, len(lib)).kind == "library"
+    alias = "${x}=    Library    Coll"
+    assert tokenize(alias, len(alias), setting_import_aliases=True).kind == "library"
+    arg = "${x}=    Log    msg"
+    assert tokenize(arg, len(arg)).kind == "argument"
+
+
 @pytest.mark.parametrize("sigil", ["$", "@", "&", "%"])
 def test_tokenize_variable_opener_anywhere_in_cell(sigil: str) -> None:
     line = f"Log    Hello {sigil}{{world"
