@@ -174,7 +174,7 @@ robotcode libdoc resources/common.resource list
 robotcode libdoc "MyLib::config.yaml::strict" show
 ```
 
-Use `robotcode repl` for interactive, step-by-step work inside the project configuration — trying out keywords/libraries, debugging against the live application, or developing a test case or keyword one line at a time and saving it. REPL input is not a `.robot` file: no section headers, no indentation, and imports are BuiltIn keyword calls such as `Import Library    Collections`. No agent-specific flags are needed — RobotCode auto-detects when it runs under an AI agent and drops to a plain, capture-safe backend on its own. For the full step-by-step exploration → validate → promote-into-tests workflow (dot commands, `.save`, clean shutdown), see [references/repl.md](references/repl.md).
+Use `robotcode repl` for interactive, step-by-step work inside the project configuration — trying out keywords/libraries, debugging against the live application, or developing a test case or keyword one line at a time and saving it. REPL input is not a `.robot` file: no section headers, no indentation, and imports are keyword calls — `Import Library    Collections` (the Settings-style `Library    Collections` works too, as a REPL alias). No agent-specific flags are needed — RobotCode auto-detects when it runs under an AI agent and drops to a plain, capture-safe backend on its own. For the full step-by-step exploration → validate → promote-into-tests workflow (dot commands, `.save`, clean shutdown), see [references/repl.md](references/repl.md).
 
 `robotcode repl-server` is for external clients that attach to a REPL session; use it only when such an integration is explicitly needed.
 
@@ -201,7 +201,7 @@ Robot returns the number of failed tests, capped at 250. Non-zero means failures
 
 ## Debugging a run — `robotcode robot-debug`
 
-`robotcode robot-debug` (alias `run-debug`) runs a real suite through the same runner as `robotcode robot` but pauses at breakpoints and opens a `pdb`-style debug prompt with the live call stack, per-frame variables, introspection of the loaded keywords / libraries / resources (with their docs and sources), and the ability to run any keyword in the paused context. It takes the **full `robotcode robot` option set** plus trigger flags; the same debugger is always attached to `robotcode repl`, where breakpoints can be set up front with `--break` or interactively at the prompt with `.break`. Comes from the `repl` extra.
+`robotcode robot-debug` (alias `run-debug`) runs a real suite through the same runner as `robotcode robot` but pauses at breakpoints and opens a `pdb`-style debug prompt with the live call stack, per-frame variables, introspection of the loaded keywords / libraries / resources (with their docs and sources), and the ability to run any keyword in the paused context. It takes the **full `robotcode robot` option set** plus trigger flags; the same debugger is available in `robotcode repl`, where it starts **detached** (attach with `.debug on`, `--debugger-attached`, or by passing `--break …`) and breakpoints can be set up front with `--break` or interactively at the prompt with `.break`. Comes from the `repl` extra.
 
 ```bash
 robotcode robot-debug -bl "Suite.Login Works"            # debug ONE known test by longname (preferred — never a bare .robot file)

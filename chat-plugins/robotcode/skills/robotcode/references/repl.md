@@ -52,11 +52,11 @@ Import Library    RequestsLibrary
 Import Library    Collections
 ```
 
-There is **no `*** Settings ***` section** — section headers fail with `No keyword with name '*** Settings ***' found`. Use the BuiltIn import keywords directly:
+There is **no `*** Settings ***` section** — section headers fail with `No keyword with name '*** Settings ***' found`. Import via the BuiltIn keywords — and the Settings-style names work too, as **REPL-only aliases**, so `Library    Browser` and `Import Library    Browser` are equivalent at the prompt:
 
-- `Import Library    <Name>    [args]    [AS    <alias>]` — same as `Library` in a Settings section. (`WITH NAME` still works; `AS` is the current syntax.)
-- `Import Resource    path/to/resource.robot` — same as `Resource`.
-- `Import Variables    path/to/vars.py` — same as `Variables`.
+- `Import Library    <Name>    [args]    [AS    <alias>]` — or just `Library    <Name>    …`. (`WITH NAME` still works; `AS` is the current syntax.)
+- `Import Resource    path/to/resource.robot` — or `Resource    …`.
+- `Import Variables    path/to/vars.py` — or `Variables    …`.
 
 Library search paths are normally configured in `robot.toml` (`python-path`) and picked up automatically, so you should not need to set them manually. For libraries needing import-time arguments, pass them as positional/named args, e.g. `Import Library    DatabaseLibrary    db_api_module_name=sqlite3`.
 
@@ -98,15 +98,15 @@ A **human** on the rich backend also gets Tab completion, syntax highlighting, p
 
 ## Debugging from the REPL
 
-A debugger is attached for the **whole REPL session** — always on, nothing to start. That lets you debug a keyword *as you build it*: arm a breakpoint, run the keyword, and when it's hit, execution pauses in a `(rdb)` prompt with the live call stack, the variables in each frame, a source listing, and the ability to run further keywords in the paused context.
+The same debugger is available for the **whole REPL session**, but it starts **detached** — attach it with `.debug on` (or start with `--debugger-attached`, or just pass `--break …`). Once attached you can debug a keyword *as you build it*: arm a breakpoint, run the keyword, and when it's hit, execution pauses in a `(rdb)` prompt with the live call stack, the variables in each frame, a source listing, and the ability to run further keywords in the paused context. `.debug off` detaches again without losing your breakpoints.
 
 This is for debugging a keyword **you call yourself at the prompt** while building or exploring it. To debug an **existing failing test**, don't paste or rebuild it in here — run the real one in place with [`robotcode robot-debug`](debugging.md), scoped to that one test by name (`-bl "<longname>"` / `-t "<name>"`, not the whole file), which keeps the suite's setup/teardown, variables, and imports intact.
 
 Breakpoints can be armed three ways — the interactive one is unique to the REPL:
 
-- **Interactively, at the `>>>` prompt** (no restart): `.break "<Keyword>"`, `.break file.robot:42`, or conditional `.break Login, ${retries} > 3` — then run a keyword and it stops on the next hit (when that keyword runs, or when execution reaches that line). `.tbreak` is one-shot, `.breakpoints` lists them, `.delete` / `.disable` remove or pause them, and `.catch uncaught|all|test|suite` pauses on failures instead of locations. (The *stepping/resume* commands — `.continue`, `.step`, … — only act once you're actually stopped; before that they report `Not at a breakpoint.`)
-- **From the start, via flags**: `robotcode repl --break "<Keyword>"` / `--break file.robot:42`, plus the `--break-on-*` exception flags, arm breakpoints before the first prompt.
-- **From the file**: an embedded `Breakpoint` keyword (after `Library    robotcode.repl.Repl`) pauses whenever the debugger is attached — a no-op in a normal `robot` run.
+- **Interactively, at the `>>>` prompt** (no restart): `.debug on` attaches the debugger (`.debug off` detaches, bare `.debug` shows the state); `.break "<Keyword>"`, `.break file.robot:42`, or conditional `.break Login, ${retries} > 3` — then run a keyword and it stops on the next hit (when that keyword runs, or when execution reaches that line). `.tbreak` is one-shot, `.breakpoints` lists them, `.delete` / `.disable` remove or pause them, and `.catch uncaught|all|test|suite` pauses on failures instead of locations. (The *stepping/resume* commands — `.continue`, `.step`, … — only act once you're actually stopped; before that they report `not at a breakpoint`.)
+- **From the start, via flags**: `robotcode repl --break "<Keyword>"` / `--break file.robot:42`, plus the `--break-on-*` exception flags, arm breakpoints before the first prompt — and passing any of them (or `--debugger-attached`) attaches the debugger from the start.
+- **From the file**: an embedded `Breakpoint` keyword (after `Library    robotcode.repl.Repl`) pauses whenever the debugger is attached (in the REPL, once you've attached with `.debug on`) — a no-op in a normal `robot` run.
 
 At a `(rdb)` stop you get the full debug command set — `.where` (stack), `.vars` (variables), `.print ${x}`, `.step` / `.next` / `.continue`, and the rest. It is the *same* debugger as [`robotcode robot-debug`](debugging.md), which attaches it to a real run through the runner (scoped to whatever test/suite you select) rather than to single keywords typed at the prompt — **[debugging.md](debugging.md) is the full reference** for the breakpoint types, every debug command, and stepping through a session interactively.
 
@@ -114,7 +114,8 @@ One trap: at the `(rdb)` prompt `Ctrl-C` / `Ctrl-D` **resume** the run (the oppo
 
 ## Gotchas
 
-- **No section headers in the REPL**: `*** Settings ***` / `*** Keywords ***` / `*** Test Cases ***` fail with `No keyword with name '...' found`. Use `Import Library` / `Import Resource` / `Import Variables` instead.
+- **No section headers in the REPL**: `*** Settings ***` / `*** Keywords ***` / `*** Test Cases ***` fail with `No keyword with name '...' found`. Import with `Import Library` / `Import Resource` / `Import Variables` — or the Settings-style aliases `Library` / `Resource` / `Variables`, which work at the prompt too.
+- **The REPL debugger starts detached** — a failing keyword just prints its error and leaves you at the `>>>` prompt; nothing pauses (unlike `robotcode robot-debug`, which is attached). Attach with `.debug on` (or `--debugger-attached`, or by passing `--break …`) to make breakpoints and failures pause into `(rdb)`; `.debug off` detaches again, keeping your breakpoints and `.catch` filters.
 - **Bare relative paths in the BuiltIn import keywords need RF 7.4+**: `Import Resource    foo/my.resource` (and the `Import Library` / `Import Variables` path forms) only resolve against the importing file's directory starting in RF 7.4. On RF ≤ 7.3 such calls fail with `Resource file '...' does not exist.` — fall back to `${CURDIR}/foo/my.resource` or put the directory on the module search path.
 - **Send one statement at a time and wait for the prompt** before the next, so output doesn't interleave — but a "statement" can be a whole multi-line `FOR`/`IF`/`TRY` block (send its lines through to `END`), not only a single keyword. (The auto-selected plain backend keeps echo/escape sequences from corrupting captured I/O — see *Start or reuse a REPL*.)
 - **`.exit` is the clean exit** — `Ctrl+D` may leave child processes (browser, DB connection, server, …) lingering.

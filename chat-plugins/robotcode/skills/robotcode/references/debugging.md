@@ -27,7 +27,7 @@ Reach for the debugger when a recorded log isn't enough and you need the **live*
 ## Two ways in
 
 - **`robotcode robot-debug`** (alias `run-debug`) — debug a run, scoped however you need: narrow it to a single test with `-t`/`-bl` (the usual case when debugging one failure), to a suite or tag, or run the lot. Takes the **full [`robotcode robot`](../SKILL.md) option set** (paths, `-v`, `-i`/`-e`/`-s`/`-t`, `--profile`, …) plus the trigger flags below.
-- **`robotcode repl`** — the *same* debugger is **always attached** to the [REPL](repl.md). Arm a breakpoint up front with `--break …`, or interactively at the prompt with `.break` (a keyword name *or* a `file:line`, no restart); running a keyword that reaches it drops you into the same `(rdb)` prompt. Use it to debug a keyword while you build it up — see [repl.md](repl.md#debugging-from-the-repl).
+- **`robotcode repl`** — the *same* debugger is available in the [REPL](repl.md), but it **starts detached**: attach it with `.debug on` or `--debugger-attached` (passing `--break …` attaches too). Arm a breakpoint up front with `--break …`, or interactively at the prompt with `.break` (a keyword name *or* a `file:line`, no restart); running a keyword that reaches it drops you into the same `(rdb)` prompt. Use it to debug a keyword while you build it up — see [repl.md](repl.md#debugging-from-the-repl).
 
 Both come from the optional **`repl`** extra. `Error: No such command 'robot-debug'` means it's missing — see [install.md](install.md) (`pip install robotcode[repl]`, or `[all]`).
 
@@ -87,7 +87,7 @@ Login
     Input Text    id=user    ${USER}
 ```
 
-`Breakpoint` is a **no-op in a normal `robot` run** and a **hard breakpoint** whenever the debugger is attached (via `robot-debug`, or a keyword run at the `repl` prompt). Leave it in while iterating — it only bites when you're actually debugging, and needs no flag. (`Breakpoint` is the only keyword from `robotcode.repl.Repl` meant for your own suites; `Repl` and `Exit` are internal.)
+`Breakpoint` is a **no-op in a normal `robot` run** and a **hard breakpoint** whenever the debugger is attached (under `robot-debug`, or in `repl` once you've attached with `.debug on`). Leave it in while iterating — it only bites when you're actually debugging, and needs no flag. (`Breakpoint` is the only keyword from `robotcode.repl.Repl` meant for your own suites; `Repl` and `Exit` are internal.)
 
 ## At a stop: inspecting state
 
@@ -187,7 +187,7 @@ Pause on *failures* rather than locations. The CLI flags set the initial filters
 | Command | Effect |
 | --- | --- |
 | `.continue` / `.c` | Run on to the next stop or the end. |
-| `.detach` | Stop debugging but let the run **finish normally** — clears all breakpoints and runs to the end. |
+| `.detach` | Detach the debugger and let the run **finish normally** — no more stops. Your breakpoints/filters are kept (re-arm with `.debug on`); like `.debug off` then `.continue`. |
 | `.abort` | Abort the run **immediately** — no further keywords, no reports. |
 
 Two things that surprise people:
