@@ -131,10 +131,29 @@ def _resolve_backend(plain: bool, backend: str) -> str:
     return backend
 
 
+def _resolve_attached(
+    debugger_attached: Optional[bool],
+    *,
+    default: bool,
+    has_explicit_triggers: bool,
+) -> bool:
+    """Resolve the tri-state `--debugger-attached` flag to a concrete state.
+
+    An explicit `--debugger-attached` / `--no-debugger-attached` always wins.
+    Otherwise the debugger attaches when an explicit pause trigger was given
+    (so `repl --break …` just works), falling back to `default`."""
+    if debugger_attached is not None:
+        return debugger_attached
+    if has_explicit_triggers:
+        return True
+    return default
+
+
 def _attach_debugger(
     interpreter: ConsoleInterpreter,
     *,
     break_at: Tuple[str, ...],
+    attached: bool = True,
     stop_on_entry: bool = False,
     break_on_exception: bool = True,
     break_on_all_exceptions: bool = False,
@@ -145,7 +164,12 @@ def _attach_debugger(
 
     The interpreter *is* the debug front-end: its logger feeds the controller,
     and a pause drops into its own prompt (`wait_at_stop`) with the full
-    dot-command set — session commands and debugger commands together."""
+    dot-command set — session commands and debugger commands together.
+
+    The controller is always wired and its breakpoints/exception filters are
+    always armed; `attached` only decides whether it actively pauses. A detached
+    debugger keeps its configuration, so `.debug on` resumes with the same
+    triggers."""
     controller = DebugController()
     controller.set_frontend(interpreter)
     interpreter.set_controller(controller)
@@ -166,6 +190,7 @@ def _attach_debugger(
     if exception_filters:
         controller.set_exception_breakpoints(exception_filters)
     _apply_break_specs(controller, break_at)
+    controller.set_attached(attached)
     return controller
 
 
@@ -304,9 +329,21 @@ SHELL_OPTIONS = [
     ),
 ]
 
-# Debugger pause triggers — shared by `repl` and `robot-debug`. (`robot-debug`
-# adds `--stop-on-entry`, which has no meaning for the interactive shell.)
+# Debugger options — shared by `repl` and `robot-debug`. `--debugger-attached`
+# is the master switch (does anything pause at all?); the `--break*` flags are
+# the individual pause triggers. (`robot-debug` adds `--stop-on-entry`, which
+# has no meaning for the interactive shell.)
 DEBUG_OPTIONS = [
+    click.option(
+        "--debugger-attached/--no-debugger-attached",
+        default=None,
+        help="Whether the debugger is active. While detached nothing pauses — a "
+        "failing keyword just prints its error and you stay at the prompt — but "
+        "breakpoints and exception filters stay configured. Default: attached "
+        "for `robot-debug`; for `repl` detached, unless a pause trigger "
+        "(`--break`, a `--break-on-*` flag) is given. Toggle at runtime with "
+        "`.debug on` / `.debug off`.",
+    ),
     click.option(
         "--break",
         "break_at",
@@ -316,10 +353,10 @@ DEBUG_OPTIONS = [
     ),
     click.option(
         "--break-on-exception/--no-break-on-exception",
-        default=True,
-        show_default=True,
+        default=None,
         help="Break at an uncaught failing keyword (not caught by TRY/EXCEPT or "
-        "`Run Keyword And …`), before the failure unwinds. On by default.",
+        "`Run Keyword And …`), before the failure unwinds. Armed by default; it "
+        "only pauses while the debugger is attached (see `--debugger-attached`).",
     ),
     click.option(
         "--break-on-all-exceptions/--no-break-on-all-exceptions",
@@ -365,21 +402,32 @@ def repl(
     xunit: Optional[str],
     source: Optional[Path],
     files: Tuple[Path, ...],
+    debugger_attached: Optional[bool],
     break_at: Tuple[str, ...],
-    break_on_exception: bool,
+    break_on_exception: Optional[bool],
     break_on_all_exceptions: bool,
     break_on_failed_test: bool,
     break_on_failed_suite: bool,
 ) -> None:
     """Run Robot Framework interactively (alias `shell`).
 
-    The debugger is attached, so an embedded `Breakpoint` keyword, `--break`,
-    or a failing keyword (uncaught exceptions break by default) drops you into
-    the debug prompt while a keyword you run at the prompt executes. To debug a
-    real suite, use `robotcode robot-debug`.
+    Starts an interactive session where you enter Robot Framework keywords and
+    run them immediately. Pass FILES to execute them in the session.
     """
     if files:
         files = tuple(f.absolute() for f in files)
+
+    # The shell starts with the debugger *detached* — a failing keyword prints
+    # its error and you stay at the prompt — unless a pause trigger was given
+    # (then attach so `--break …` just works) or `--debugger-attached` forces it.
+    # `.debug on` / `.debug off` toggles it at runtime. Exception breaking is
+    # armed by default; it only fires while attached.
+    has_explicit_triggers = (
+        bool(break_at)
+        or break_on_exception is True
+        or (break_on_all_exceptions or break_on_failed_test or break_on_failed_suite)
+    )
+    attached = _resolve_attached(debugger_attached, default=False, has_explicit_triggers=has_explicit_triggers)
 
     backend = _resolve_backend(plain, backend)
 
@@ -391,13 +439,14 @@ def repl(
         no_history=no_history,
         backend=backend,
     )
-    # The debugger stays attached for the whole interactive session (it is the
-    # always-on shell debugger) and is torn down with the interpreter when the
-    # session ends — so, unlike `robot`, there is no per-run unregister here.
+    # The debugger stays wired for the whole interactive session and is torn down
+    # with the interpreter when the session ends — so, unlike `robot`, there is no
+    # per-run unregister here. `attached` decides whether it actually pauses.
     _attach_debugger(
         interpreter,
         break_at=break_at,
-        break_on_exception=break_on_exception,
+        attached=attached,
+        break_on_exception=break_on_exception is not False,
         break_on_all_exceptions=break_on_all_exceptions,
         break_on_failed_test=break_on_failed_test,
         break_on_failed_suite=break_on_failed_suite,
@@ -447,21 +496,24 @@ def robot_debug(
     no_history: bool,
     backend: str,
     plain: bool,
+    debugger_attached: Optional[bool],
     break_at: Tuple[str, ...],
     stop_on_entry: bool,
-    break_on_exception: bool,
+    break_on_exception: Optional[bool],
     break_on_all_exceptions: bool,
     break_on_failed_test: bool,
     break_on_failed_suite: bool,
 ) -> None:
     """Run a real Robot Framework suite with the debugger attached (alias `run-debug`).
 
-    Takes the same arguments as `robotcode robot`. The debugger is always
-    attached (so an embedded `Breakpoint` keyword pauses the run, and uncaught
-    failing keywords break by default); `--break`, `--stop-on-entry`, and the
-    `--break-on-*` flags add or remove pause triggers. At a pause you drop into
-    a debug prompt with the live context.
+    Takes the same arguments as `robotcode robot`, but pauses at breakpoints so
+    you can inspect and step through the run at a debug prompt.
     """
+    # Debugging a real run: the debugger is attached by default (the point of the
+    # command), breaking on the first uncaught failure unless turned off. Only an
+    # explicit `--no-debugger-attached` detaches it (then it runs like `robot`).
+    attached = _resolve_attached(debugger_attached, default=True, has_explicit_triggers=False)
+
     backend = _resolve_backend(plain, backend)
 
     interpreter = _pick_interpreter(
@@ -470,8 +522,9 @@ def robot_debug(
     controller = _attach_debugger(
         interpreter,
         break_at=break_at,
+        attached=attached,
         stop_on_entry=stop_on_entry,
-        break_on_exception=break_on_exception,
+        break_on_exception=break_on_exception is not False,
         break_on_all_exceptions=break_on_all_exceptions,
         break_on_failed_test=break_on_failed_test,
         break_on_failed_suite=break_on_failed_suite,

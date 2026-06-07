@@ -81,6 +81,16 @@ _CATCH_SHORTHANDS = {
     "failed_suite": "failed_suite",
 }
 
+# REPL-only setting-import aliases: a top-level `Library`/`Resource`/`Variables`
+# keyword call (the `*** Settings ***` muscle-memory form) is rewritten to the
+# matching BuiltIn `Import …` keyword. (`_session_export._IMPORT_HEADS` knows the
+# same bare names so `.save` hoists them back into a `*** Settings ***` block.)
+_SETTING_IMPORT_ALIASES = {
+    "library": "Import Library",
+    "resource": "Import Resource",
+    "variables": "Import Variables",
+}
+
 # `.help` groups, in display order. A command's group is set on `@dot_command`.
 _GROUP_ORDER = ("Session", "Debugger")
 
@@ -553,14 +563,15 @@ class ConsoleInterpreter(BaseInterpreter):
     def _require_stop(self) -> bool:
         """Guard for commands that only mean something while paused."""
         if self._stop is None:
-            self._echo("Not at a breakpoint.")
+            self._echo("not at a breakpoint")
             return False
         return True
 
     def _require_controller(self) -> bool:
-        """Guard for commands that need an attached debugger."""
+        """Guard for commands that need a wired debug controller. (Distinct from
+        the attach/detach *state* — a detached controller is still wired.)"""
         if self._controller is None:
-            self._echo("The debugger is not attached.")
+            self._echo("no debugger available")
             return False
         return True
 
@@ -706,6 +717,22 @@ class ConsoleInterpreter(BaseInterpreter):
             # than crash the REPL.
             pass
 
+    def _alias_setting_imports(self, test: "running.TestCase") -> None:
+        """REPL-only: rewrite top-level ``Library`` / ``Resource`` / ``Variables``
+        keyword calls into the BuiltIn ``Import …`` keywords.
+
+        Lets ``*** Settings ***`` muscle memory (``Library    Browser``) work at
+        the ``>>>`` prompt — both for a single line and for every import line of
+        a multi-line / file input. Applied only on this interactive/file input
+        path; the ``(rdb)`` prompt parses via ``_evaluate_at_stop`` and is
+        intentionally *not* aliased.
+        """
+        for item in test.body:
+            if isinstance(item, Keyword) and item.name is not None:
+                target = _SETTING_IMPORT_ALIASES.get(item.name.strip().lower())
+                if target is not None:
+                    item.name = target
+
     def get_input(self) -> Iterator[Optional[Keyword]]:
         if self.executed_files and not self.files and not self.inspect:
             raise EOFError
@@ -721,6 +748,7 @@ class ConsoleInterpreter(BaseInterpreter):
             if errors:
                 return
 
+            self._alias_setting_imports(test)
             for kw in test.body:
                 yield kw
         else:
@@ -769,6 +797,7 @@ class ConsoleInterpreter(BaseInterpreter):
                 if test.body:
                     self._session_lines.append("\n".join(lines))
 
+                self._alias_setting_imports(test)
                 for kw in test.body:
                     yield kw
 
@@ -1186,7 +1215,7 @@ class ConsoleInterpreter(BaseInterpreter):
         """
         del arg
         if self._stop is not None:
-            self._echo("At a debug stop — use .continue or .detach to resume, or .abort to quit the run.")
+            self._echo("at a debug stop — use .continue or .detach to resume, or .abort to quit the run")
             return
         raise EOFError
 
@@ -1359,7 +1388,7 @@ class ConsoleInterpreter(BaseInterpreter):
         (default 10) — `.source Open Browser 25`.
         """
         if not arg:
-            self._echo("Usage: .source <keyword-name> [lines]")
+            self._echo("usage: .source <keyword-name> [lines]")
             return
         # Split off a trailing line-count (the plain-backend window size). Keyword
         # names contain spaces, so only a trailing integer token counts.
@@ -1369,7 +1398,7 @@ class ConsoleInterpreter(BaseInterpreter):
             name, count = head[0], max(1, int(head[1]))
         found = lookup_keyword_owner(name)
         if found is None:
-            self._echo(f"Keyword {name!r} not found.")
+            self._echo(f"keyword {name!r} not found")
             return
         owner, runtime_kw, is_resource = found
         kw_name = getattr(runtime_kw, "name", name)
@@ -1410,7 +1439,7 @@ class ConsoleInterpreter(BaseInterpreter):
             target = int(arg)
         except ValueError:
             top = len(self._stop.stack) - 1 if self._stop else 0
-            self._echo(f"Usage: .frame <n>  (0..{top})")
+            self._echo(f"usage: .frame <n>  (0..{top})")
             return
         self._move_frame(target)
 
@@ -1420,7 +1449,7 @@ class ConsoleInterpreter(BaseInterpreter):
         if not self._require_stop():
             return
         if not arg:
-            self._echo("Usage: .print <variable-or-expression>")
+            self._echo("usage: .print <variable-or-expression>")
             return
         try:
             value = self._controller.evaluate_expression(self._selected_frame(), arg)  # type: ignore[union-attr]
@@ -1435,7 +1464,7 @@ class ConsoleInterpreter(BaseInterpreter):
         if not self._require_stop():
             return
         if not arg:
-            self._echo("Usage: .pprint <variable-or-expression>")
+            self._echo("usage: .pprint <variable-or-expression>")
             return
         try:
             value = self._controller.evaluate_expression(self._selected_frame(), arg)  # type: ignore[union-attr]
@@ -1450,7 +1479,7 @@ class ConsoleInterpreter(BaseInterpreter):
         if not self._require_stop():
             return
         if not arg:
-            self._echo("Usage: .whatis <variable-or-expression>")
+            self._echo("usage: .whatis <variable-or-expression>")
             return
         try:
             value = self._controller.evaluate_expression(self._selected_frame(), arg)  # type: ignore[union-attr]
@@ -1481,13 +1510,13 @@ class ConsoleInterpreter(BaseInterpreter):
         """Stop displaying an expression — `.undisplay ${x}`; bare `.undisplay` clears all."""
         if not arg:
             self._display_exprs.clear()
-            self._echo("Display list cleared.")
+            self._echo("display list cleared")
             return
         if arg in self._display_exprs:
             self._display_exprs.remove(arg)
             self._echo(f"no longer displaying {arg}")
         else:
-            self._echo(f"Not displaying: {arg}")
+            self._echo(f"not displaying: {arg}")
 
     @dot_command("set", group="Debugger")
     def _set(self, arg: str) -> None:
@@ -1503,7 +1532,7 @@ class ConsoleInterpreter(BaseInterpreter):
             return
         parts = arg.split(None, 1)
         if len(parts) < 2:
-            self._echo("Usage: .set ${name} <value>")
+            self._echo("usage: .set ${name} <value>")
             return
         name, value = parts[0], parts[1]
         if not (name.startswith("${") and name.endswith("}")) or "[" in name:
@@ -1522,7 +1551,7 @@ class ConsoleInterpreter(BaseInterpreter):
         if not self._require_controller():
             return
         if not arg:
-            self._echo("Usage: .break <file:line | keyword name> [, <condition>]")
+            self._echo("usage: .break <file:line | keyword name> [, <condition>]")
             return
         spec, condition = arg, None
         if "," in arg:  # `.break <loc>, <condition>`
@@ -1539,7 +1568,7 @@ class ConsoleInterpreter(BaseInterpreter):
         else:
             bp = controller.add_keyword_breakpoint(spec, condition=condition, temporary=temporary)
             where = f"keyword {spec!r}"
-        label = "Temporary breakpoint" if temporary else "Breakpoint"
+        label = "temporary breakpoint" if temporary else "breakpoint"
         cond = f" if {condition}" if condition else ""
         self._echo(f"{label} {bp.id} at {where}{cond}")
 
@@ -1592,11 +1621,11 @@ class ConsoleInterpreter(BaseInterpreter):
         try:
             bp_id = int(token)
         except (TypeError, ValueError):
-            self._echo(f"Not a breakpoint number: {token}")
+            self._echo(f"not a breakpoint number: {token}")
             return None
         bp = controller.get_breakpoint(bp_id)
         if bp is None:
-            self._echo(f"No breakpoint {bp_id}.")
+            self._echo(f"no breakpoint {bp_id}")
         return bp
 
     @dot_command("condition", group="Debugger")
@@ -1606,16 +1635,16 @@ class ConsoleInterpreter(BaseInterpreter):
             return
         parts = arg.split(None, 1)
         if not parts:
-            self._echo("Usage: .condition <breakpoint-number> [<expression>]")
+            self._echo("usage: .condition <breakpoint-number> [<expression>]")
             return
         bp = self._bp_by_arg(parts[0])
         if bp is None:
             return
         bp.condition = parts[1].strip() if len(parts) > 1 and parts[1].strip() else None
         if bp.condition:
-            self._echo(f"Breakpoint {bp.id}: condition {bp.condition}")
+            self._echo(f"breakpoint {bp.id}: condition {bp.condition}")
         else:
-            self._echo(f"Breakpoint {bp.id}: condition cleared")
+            self._echo(f"breakpoint {bp.id}: condition cleared")
 
     @dot_command("ignore", group="Debugger")
     def _ignore(self, arg: str) -> None:
@@ -1624,7 +1653,7 @@ class ConsoleInterpreter(BaseInterpreter):
             return
         parts = arg.split()
         if len(parts) != 2:
-            self._echo("Usage: .ignore <breakpoint-number> <count>")
+            self._echo("usage: .ignore <breakpoint-number> <count>")
             return
         bp = self._bp_by_arg(parts[0])
         if bp is None:
@@ -1632,14 +1661,14 @@ class ConsoleInterpreter(BaseInterpreter):
         try:
             count = int(parts[1])
         except ValueError:
-            self._echo(f"Not a count: {parts[1]}")
+            self._echo(f"not a count: {parts[1]}")
             return
         bp.ignore_count = max(0, count)
         bp.hits = 0  # the next `count` triggering hits are skipped from now
         if bp.ignore_count:
-            self._echo(f"Breakpoint {bp.id}: ignoring the next {bp.ignore_count} hit(s)")
+            self._echo(f"breakpoint {bp.id}: ignoring the next {bp.ignore_count} hit(s)")
         else:
-            self._echo(f"Breakpoint {bp.id}: no longer ignored")
+            self._echo(f"breakpoint {bp.id}: no longer ignored")
 
     @dot_command("delete", group="Debugger")
     def _delete(self, arg: str) -> None:
@@ -1651,13 +1680,13 @@ class ConsoleInterpreter(BaseInterpreter):
         if not arg.strip():
             count = len(controller.breakpoints)
             controller.breakpoints.clear()
-            self._echo(f"Removed {count} breakpoint(s).")
+            self._echo(f"removed {count} breakpoint(s)")
             return
         bp = self._bp_by_arg(arg.strip())
         if bp is None:
             return
         controller.remove_breakpoint(bp.id)
-        self._echo(f"Deleted breakpoint {bp.id}.")
+        self._echo(f"deleted breakpoint {bp.id}")
 
     def _set_bp_enabled(self, arg: str, enabled: bool) -> None:
         if not self._require_controller():
@@ -1668,13 +1697,13 @@ class ConsoleInterpreter(BaseInterpreter):
         if not arg.strip():
             for existing in controller.breakpoints:
                 existing.enabled = enabled
-            self._echo(f"All breakpoints {word}.")
+            self._echo(f"all breakpoints {word}")
             return
         bp = self._bp_by_arg(arg.strip())
         if bp is None:
             return
         bp.enabled = enabled
-        self._echo(f"Breakpoint {bp.id} {word}.")
+        self._echo(f"breakpoint {bp.id} {word}")
 
     @dot_command("disable", group="Debugger")
     def _disable(self, arg: str) -> None:
@@ -1697,12 +1726,12 @@ class ConsoleInterpreter(BaseInterpreter):
         if not self._require_controller():
             return
         if not arg.strip():
-            self._echo("Usage: .commands <breakpoint-number>")
+            self._echo("usage: .commands <breakpoint-number>")
             return
         bp = self._bp_by_arg(arg.strip())
         if bp is None:
             return
-        self._echo(f"Enter commands for breakpoint {bp.id}, one per line; `end` to finish:")
+        self._echo(f"enter commands for breakpoint {bp.id}, one per line; `end` to finish:")
         collected: List[str] = []
         while True:
             try:
@@ -1716,9 +1745,9 @@ class ConsoleInterpreter(BaseInterpreter):
                 collected.append(line)
         bp.commands = collected
         if collected:
-            self._echo(f"Breakpoint {bp.id}: {len(collected)} command(s)")
+            self._echo(f"breakpoint {bp.id}: {len(collected)} command(s)")
         else:
-            self._echo(f"Breakpoint {bp.id}: commands cleared")
+            self._echo(f"breakpoint {bp.id}: commands cleared")
 
     @dot_command("catch", group="Debugger")
     def _catch(self, arg: str) -> None:
@@ -1734,37 +1763,73 @@ class ConsoleInterpreter(BaseInterpreter):
             return
         if tokens in (["off"], ["none"]):
             controller.set_exception_breakpoints([])
-            self._echo("Exception breakpoints off.")
+            self._echo("catching: (none)")
             return
         mapped: Set[str] = set()
         for token in tokens:
             target = _CATCH_SHORTHANDS.get(token.lower())
             if target is None:
-                self._echo(f"Unknown catch filter: {token}. Try: uncaught, all, test, suite, off.")
+                self._echo(f"unknown catch filter: {token}; try uncaught, all, test, suite, off")
                 return
             mapped.add(target)
         controller.set_exception_breakpoints(mapped)
         self._echo(f"catching: {', '.join(sorted(mapped))}")
 
+    @dot_command("debug", group="Debugger")
+    def _debug(self, arg: str) -> None:
+        """Attach or detach the debugger — `.debug on|off`, or bare to show state.
+
+        When **attached** (`.debug on`) breakpoints, an embedded `Breakpoint`
+        keyword, and the armed exception breaks (`.catch`) pause a keyword you
+        run into the `(rdb)` prompt. When **detached** (`.debug off`, the default
+        for `robotcode repl`) nothing pauses — a failing keyword just prints its
+        error and you stay at the prompt. Detaching keeps your breakpoints and
+        `.catch` filters intact, so `.debug on` resumes with the same setup.
+        """
+        if not self._require_controller():
+            return
+        controller = self._controller
+        assert controller is not None  # narrowed by _require_controller
+        token = arg.strip().lower()
+        if not token:
+            self._echo(f"debugger: {'attached' if controller.attached else 'detached'}")
+            return
+        if token == "on":
+            controller.set_attached(True)
+            self._echo("debugger: attached")
+        elif token == "off":
+            controller.set_attached(False)
+            self._echo("debugger: detached")
+        else:
+            self._echo("usage: .debug on|off")
+
     @dot_command("detach", group="Debugger")
     def _detach(self, arg: str) -> None:
-        """Stop debugging but let the run finish normally — no more stops."""
+        """Detach the debugger; at a stop, also let the run finish without pausing.
+
+        Keeps your breakpoints and `.catch` filters (re-arm with `.debug on`).
+        """
         del arg
-        if not self._require_stop():
+        if not self._require_controller():
             return
-        if self._controller is not None:
-            self._controller.detach()
-        self._echo("Detached — the run will finish without stopping again.")
-        self._pending_action = ResumeAction.CONTINUE
+        controller = self._controller
+        assert controller is not None  # narrowed by _require_controller
+        controller.set_attached(False)
+        if self._stop is not None:
+            self._pending_action = ResumeAction.CONTINUE
+            self._echo("debugger: detached")
+        else:
+            self._echo("debugger: detached (cannot continue)")
 
     @dot_command("abort", group="Debugger")
     def _abort(self, arg: str) -> None:
         """Abort the run and exit. Use `.detach` to let the suite finish instead."""
         del arg
-        if not self._require_stop():
+        if self._stop is None:
+            self._echo("no run to abort")
             return
         # Robot can't be cleanly stopped mid-keyword from a logger callback — a
         # raised exception is swallowed by suite.run() — so exit via SystemExit,
         # the one exception Robot does propagate.
-        self._echo("Aborting the run.")
+        self._echo("aborting the run")
         sys.exit(1)

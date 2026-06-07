@@ -13,7 +13,7 @@ pip install robotcode[repl]   # or: pip install robotcode[all]
 There are two ways in:
 
 - **`robotcode robot-debug`** (alias `run-debug`) runs a real `.robot` suite through the normal runner with the debugger attached. It takes the same options and arguments as [`robotcode robot`](cli.md#robot) — paths, `--variable`, `--include`, profiles, … — plus the trigger flags below.
-- **[`robotcode repl`](repl.md)** (the interactive shell) has the *same* debugger attached: a breakpoint that matches a keyword you run at the prompt drops you into the debug prompt too.
+- **[`robotcode repl`](repl.md)** (the interactive shell) has the *same* debugger available — though it starts **detached**, so attach it (`.debug on` or `--debugger-attached`) to have a breakpoint that matches a keyword you run at the prompt drop you into the debug prompt too.
 
 The debugger sees every keyword and control-structure (FOR / IF / TRY / WHILE / …) start and end, on every supported Robot Framework version (5.0 – 7.x). For graphical step-debugging inside the editor, use the VS Code extension instead — see [Relationship to the VS Code debugger](#relationship-to-the-vs-code-debugger).
 
@@ -53,13 +53,13 @@ There are several ways to make a run pause; they combine freely.
 | **Keyword breakpoint** | `--break "Open Browser"` — pause whenever a keyword with that name is about to run. Repeatable. |
 | **Embedded `Breakpoint` keyword** | Add `Breakpoint` as a step in your `.robot` / `.resource` (after `Library    robotcode.repl.Repl`). It's a no-op when run normally and a hard breakpoint under the debugger — no flag needed. |
 | **Stop on entry** | `--stop-on-entry` (`robot-debug` only) — pause at the very first keyword. |
-| **Uncaught exception** | **On by default** — pause at an uncaught failing keyword (not caught by `TRY`/`EXCEPT` or `Run Keyword And …`), *before* the failure unwinds. Turn off with `--no-break-on-exception`. |
+| **Uncaught exception** | Pause at an uncaught failing keyword (not caught by `TRY`/`EXCEPT` or `Run Keyword And …`), *before* the failure unwinds. **Armed by default**, but it only fires while the debugger is attached — so it triggers out of the box under `robot-debug`, while the interactive `repl` (detached by default) just prints the error until you attach with `.debug on` / `--debugger-attached`. Disarm the filter with `--no-break-on-exception`. |
 | **Every exception** | `--break-on-all-exceptions` — pause at *every* failing keyword, even ones caught by `TRY`/`EXCEPT` or `Run Keyword And …`. |
 | **Failing test / suite** | `--break-on-failed-test` / `--break-on-failed-suite` — pause at the end of a failing test / suite. |
 
 A **keyword breakpoint** matches by exact name — either the bare keyword name (`--break "Open Browser"`) or its fully-qualified `Library.Keyword` form (`--break "SeleniumLibrary.Open Browser"`, to disambiguate a name two libraries share). Unlike Robot's own keyword lookup, the match is case- and whitespace-sensitive, so spell it as it appears in the run.
 
-The exception breakpoints are armed in both `repl` and `robot-debug` (the on-by-default `--break-on-exception` ↔ off-switch `--no-break-on-exception`); each is toggleable at runtime with `.catch` (see [Exception breakpoints](#exception-breakpoints) below).
+The exception breakpoints are armed on both `repl` and `robot-debug` (`--break-on-exception` on by default, `--no-break-on-exception` to disarm), but they only pause **while the debugger is attached**. `robot-debug` is attached out of the box; the interactive `repl` starts detached — a failing keyword just prints its error — until you attach with `.debug on` or `--debugger-attached`. (Conversely, `robotcode robot-debug --no-debugger-attached` runs the suite straight through without ever pausing — the same as `robotcode robot`.) Adjust the active exception filters at runtime with `.catch`, and attach/detach with `.debug` (see [Exception breakpoints](#exception-breakpoints) below).
 
 ```bash
 # Triggers combine, and the default can be turned off:
@@ -106,7 +106,7 @@ The banner is `* <reason>  <keyword>  (<file>:<line>)`, where reason is `breakpo
 
 ## Debug commands
 
-Each command has a canonical long name and, where it helps, a single-letter shortcut; long names also accept any unambiguous prefix (`.bre` → `.break`). At the *shell* prompt, where there is no active stop, the navigation/resume commands simply report `Not at a breakpoint.`
+Each command has a canonical long name and, where it helps, a single-letter shortcut; long names also accept any unambiguous prefix (`.bre` → `.break`). At the *shell* prompt, where there is no active stop, the navigation/resume commands simply report `not at a breakpoint`.
 
 **Stepping and resuming**
 
@@ -184,14 +184,15 @@ Now every hit on `Process Item` prints `${item}` and runs on without pausing. (G
 | `.catch all` | Pause at *every* keyword failure, even ones caught by `TRY`/`EXCEPT` or `Run Keyword And …`. |
 | `.catch test` / `.catch suite` | Pause at a failing test end / suite end. |
 | `.catch off` | Clear all exception breakpoints. Bare `.catch` shows what's armed. |
+| `.debug on` / `.debug off` | Attach / detach the debugger — the master switch over *all* pausing (breakpoints, stepping, and exception breaks). Detaching keeps your breakpoints and `.catch` filters configured, so `.debug on` resumes with the same setup; bare `.debug` shows `attached` / `detached`. |
 
-The CLI flags set the *initial* filters — `--break-on-exception` (on by default) ↔ `.catch uncaught`, `--break-on-all-exceptions` ↔ `.catch all`, `--break-on-failed-test` ↔ `.catch test`, `--break-on-failed-suite` ↔ `.catch suite` — and `.catch` adjusts them at runtime.
+The CLI flags set the *initial* filters — `--break-on-exception` ↔ `.catch uncaught`, `--break-on-all-exceptions` ↔ `.catch all`, `--break-on-failed-test` ↔ `.catch test`, `--break-on-failed-suite` ↔ `.catch suite` — and `.catch` adjusts them at runtime. The filters are armed by default but only pause **while the debugger is attached**: `robot-debug` is attached out of the box, while the interactive `repl` starts detached (attach with `.debug on` or `--debugger-attached`).
 
 **Ending the session**
 
 | Command | Effect |
 | --- | --- |
-| `.detach` | Stop debugging but let the run finish normally — clears all breakpoints and runs to the end. |
+| `.detach` | Detach and let the run finish without stopping again — like `.debug off` then `.continue` in one step. Your breakpoints and `.catch` filters are kept, so you can re-arm pausing later with `.debug on`. |
 | `.abort` | Abort the run immediately and exit (no further keywords, no reports). |
 
 At a stop, `.exit` / `.quit` (which leave the *shell*) would be ambiguous, so they point you at `.continue` / `.detach` / `.abort` instead of quitting.

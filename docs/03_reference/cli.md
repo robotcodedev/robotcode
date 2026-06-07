@@ -1080,11 +1080,6 @@ robotcode discover all [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
    Show the tags that are present.  [default: tags]
 
 
-- `--version`
-
-   Show the version and exit.
-
-
 - `-ebl, --exclude-by-longname TEXT *`
 
    Excludes tests/tasks or suites by longname.
@@ -1093,6 +1088,11 @@ robotcode discover all [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
 - `-bl, --by-longname TEXT *`
 
    Select tests/tasks or suites by longname.
+
+
+- `--version`
+
+   Show the version and exit.
 
 
 - `--search TEXT`
@@ -1199,11 +1199,6 @@ robotcode discover suites [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
 
 
 **Options:**
-- `--version`
-
-   Show the version and exit.
-
-
 - `-ebl, --exclude-by-longname TEXT *`
 
    Excludes tests/tasks or suites by longname.
@@ -1212,6 +1207,11 @@ robotcode discover suites [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
 - `-bl, --by-longname TEXT *`
 
    Select tests/tasks or suites by longname.
+
+
+- `--version`
+
+   Show the version and exit.
 
 
 - `--search TEXT`
@@ -1281,11 +1281,6 @@ robotcode discover tags [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
    Show full paths instead of relative.  [default: no-full-paths]
 
 
-- `--version`
-
-   Show the version and exit.
-
-
 - `-ebl, --exclude-by-longname TEXT *`
 
    Excludes tests/tasks or suites by longname.
@@ -1294,6 +1289,11 @@ robotcode discover tags [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
 - `-bl, --by-longname TEXT *`
 
    Select tests/tasks or suites by longname.
+
+
+- `--version`
+
+   Show the version and exit.
 
 
 - `--search TEXT`
@@ -1348,11 +1348,6 @@ robotcode discover tasks [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
    Show full paths instead of relative.  [default: no-full-paths]
 
 
-- `--version`
-
-   Show the version and exit.
-
-
 - `-ebl, --exclude-by-longname TEXT *`
 
    Excludes tests/tasks or suites by longname.
@@ -1361,6 +1356,11 @@ robotcode discover tasks [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
 - `-bl, --by-longname TEXT *`
 
    Select tests/tasks or suites by longname.
+
+
+- `--version`
+
+   Show the version and exit.
 
 
 - `--search TEXT`
@@ -1415,11 +1415,6 @@ robotcode discover tests [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
    Show full paths instead of relative.  [default: no-full-paths]
 
 
-- `--version`
-
-   Show the version and exit.
-
-
 - `-ebl, --exclude-by-longname TEXT *`
 
    Excludes tests/tasks or suites by longname.
@@ -1428,6 +1423,11 @@ robotcode discover tests [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
 - `-bl, --by-longname TEXT *`
 
    Select tests/tasks or suites by longname.
+
+
+- `--version`
+
+   Show the version and exit.
 
 
 - `--search TEXT`
@@ -1654,10 +1654,8 @@ Use `-- --help` to see `rebot` help.
 
 Run Robot Framework interactively (alias `shell`).
 
-The debugger is attached, so an embedded `Breakpoint` keyword, `--break`, or
-a failing keyword (uncaught exceptions break by default) drops you into the
-debug prompt while a keyword you run at the prompt executes. To debug a real
-suite, use `robotcode robot-debug`.
+Starts an interactive session where you enter Robot Framework keywords and
+run them immediately. Pass FILES to execute them in the session.
 
 
 **Usage:**
@@ -1737,6 +1735,11 @@ robotcode repl [OPTIONS] [FILES]...
    Use the parent directory of FILE as the REPL's working directory. Relative paths inside `Import Resource`, `Import Library`, file-based variables, etc. resolve against that directory. The file itself is never read or written, so the path doesn't need to exist.
 
 
+- `--debugger-attached / --no-debugger-attached`
+
+   Whether the debugger is active. While detached nothing pauses — a failing keyword just prints its error and you stay at the prompt — but breakpoints and exception filters stay configured. Default: attached for `robot-debug`; for `repl` detached, unless a pause trigger (`--break`, a `--break-on-*` flag) is given. Toggle at runtime with `.debug on` / `.debug off`.
+
+
 - `--break LOCATION *`
 
    Break at LOCATION — a `file:line` or a keyword name. Repeatable.
@@ -1744,7 +1747,7 @@ robotcode repl [OPTIONS] [FILES]...
 
 - `--break-on-exception / --no-break-on-exception`
 
-   Break at an uncaught failing keyword (not caught by TRY/EXCEPT or `Run Keyword And …`), before the failure unwinds. On by default.  [default: break-on-exception]
+   Break at an uncaught failing keyword (not caught by TRY/EXCEPT or `Run Keyword And …`), before the failure unwinds. Armed by default; it only pauses while the debugger is attached (see `--debugger-attached`).
 
 
 - `--break-on-all-exceptions / --no-break-on-all-exceptions`
@@ -2533,11 +2536,6 @@ robotcode robot [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
 
 
 **Options:**
-- `--version`
-
-   Show the version and exit.
-
-
 - `-ebl, --exclude-by-longname TEXT *`
 
    Excludes tests/tasks or suites by longname.
@@ -2546,6 +2544,11 @@ robotcode robot [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
 - `-bl, --by-longname TEXT *`
 
    Select tests/tasks or suites by longname.
+
+
+- `--version`
+
+   Show the version and exit.
 
 
 - `--help`
@@ -2562,11 +2565,8 @@ Use `-- --help` to see `robot` help.
 Run a real Robot Framework suite with the debugger attached (alias `run-
 debug`).
 
-Takes the same arguments as `robotcode robot`. The debugger is always
-attached (so an embedded `Breakpoint` keyword pauses the run, and uncaught
-failing keywords break by default); `--break`, `--stop-on-entry`, and the
-`--break-on-*` flags add or remove pause triggers. At a pause you drop into
-a debug prompt with the live context.
+Takes the same arguments as `robotcode robot`, but pauses at breakpoints so
+you can inspect and step through the run at a debug prompt.
 
 
 **Usage:**
@@ -2601,6 +2601,11 @@ robotcode robot-debug [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
    Select tests/tasks or suites by longname.
 
 
+- `--debugger-attached / --no-debugger-attached`
+
+   Whether the debugger is active. While detached nothing pauses — a failing keyword just prints its error and you stay at the prompt — but breakpoints and exception filters stay configured. Default: attached for `robot-debug`; for `repl` detached, unless a pause trigger (`--break`, a `--break-on-*` flag) is given. Toggle at runtime with `.debug on` / `.debug off`.
+
+
 - `--break LOCATION *`
 
    Break at LOCATION — a `file:line` or a keyword name. Repeatable.
@@ -2608,7 +2613,7 @@ robotcode robot-debug [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
 
 - `--break-on-exception / --no-break-on-exception`
 
-   Break at an uncaught failing keyword (not caught by TRY/EXCEPT or `Run Keyword And …`), before the failure unwinds. On by default.  [default: break-on-exception]
+   Break at an uncaught failing keyword (not caught by TRY/EXCEPT or `Run Keyword And …`), before the failure unwinds. Armed by default; it only pauses while the debugger is attached (see `--debugger-attached`).
 
 
 - `--break-on-all-exceptions / --no-break-on-all-exceptions`

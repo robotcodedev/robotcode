@@ -643,7 +643,7 @@ def test_history_dotcommand_clear_wipes_file(monkeypatch: pytest.MonkeyPatch, tm
     interp, app = _make_pt_interpreter(monkeypatch, tmp_path, ["a", "b"])
     interp._dispatch_dot_command(".history clear")
     assert interp.get_history() == []
-    assert any("History cleared" in m for m in app.messages)
+    assert any("history cleared" in m for m in app.messages)
 
 
 def test_history_dotcommand_del_n_removes_entry(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
@@ -651,21 +651,21 @@ def test_history_dotcommand_del_n_removes_entry(monkeypatch: pytest.MonkeyPatch,
     interp, app = _make_pt_interpreter(monkeypatch, tmp_path, ["one", "two", "three"])
     interp._dispatch_dot_command(".history del 2")
     assert interp.get_history() == ["one", "three"]
-    assert any("Deleted history entry 2" in m for m in app.messages)
+    assert any("deleted history entry 2" in m for m in app.messages)
 
 
 def test_history_dotcommand_del_out_of_range_reports_failure(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
 
     interp, app = _make_pt_interpreter(monkeypatch, tmp_path, ["one"])
     interp._dispatch_dot_command(".history del 99")
-    assert any("No history entry at index 99" in m for m in app.messages)
+    assert any("no history entry at index 99" in m for m in app.messages)
 
 
 def test_history_dotcommand_del_missing_arg_prints_usage(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
 
     interp, app = _make_pt_interpreter(monkeypatch, tmp_path, ["one"])
     interp._dispatch_dot_command(".history del")
-    assert any("Usage: .history del" in m for m in app.messages)
+    assert any("usage: .history del" in m for m in app.messages)
 
 
 def test_history_dotcommand_empty(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:

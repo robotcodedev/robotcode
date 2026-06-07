@@ -13,10 +13,16 @@ from typing import List, Tuple
 _CELL_SEP = re.compile(r"  +|\t")
 
 # `import library` etc. are case-insensitive in Robot — fold for the match.
+# The bare `library` / `resource` / `variables` forms are the REPL-only setting
+# aliases (see `ConsoleInterpreter._alias_setting_imports`); hoist them too so a
+# session typed with Settings-style syntax round-trips into `*** Settings ***`.
 _IMPORT_HEADS = {
     "import library": "Library",
     "import resource": "Resource",
     "import variables": "Variables",
+    "library": "Library",
+    "resource": "Resource",
+    "variables": "Variables",
 }
 
 

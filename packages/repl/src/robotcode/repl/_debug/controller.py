@@ -139,8 +139,9 @@ class DebugController:
         self._exception_filters: Set[str] = set()
         self._fail_depth_floor: Optional[int] = None
 
-        # set by `detach()` (the `.detach` command): stop pausing entirely so the
-        # run finishes uninterrupted, without tearing down the run.
+        # toggled via `set_attached()` (the `.debug on`/`.debug off` toggles and
+        # the `.detach` command): when True nothing pauses, but the configured
+        # breakpoints/filters are kept so re-attaching resumes the same setup.
         self._detached = False
 
     # --- configuration ------------------------------------------------------
@@ -217,18 +218,24 @@ class DebugController:
     def set_stop_on_entry(self, enabled: bool) -> None:
         self._stop_on_entry = enabled
 
-    def detach(self) -> None:
-        """Stop pausing for the rest of the run (the `.detach` command).
+    @property
+    def attached(self) -> bool:
+        """Whether the debugger is active. ``False`` (detached) means no pause
+        origin fires, but the configured breakpoints and exception filters stay
+        in place so a later attach resumes with the same setup."""
+        return not self._detached
 
-        Clears all breakpoints/stepping/exception filters and latches a flag so
-        nothing — not even an embedded `Breakpoint` — pauses again. The run
-        itself keeps going and finishes normally.
+    def set_attached(self, attached: bool) -> None:
+        """Attach or detach the debugger — the single switch for *whether
+        anything pauses*.
+
+        Detaching latches ``_detached`` so nothing (a breakpoint, an embedded
+        ``Breakpoint``, an exception break, or stepping) pauses, but it keeps the
+        configured breakpoints/filters intact, so ``set_attached(True)`` resumes
+        with the same setup. Drives the ``.debug on`` / ``.debug off`` toggles and
+        the ``.detach`` command (detach + resume the current run).
         """
-        self._detached = True
-        self._breakpoints.clear()
-        self._exception_filters.clear()
-        self._stepping = None
-        self._stop_on_entry = False
+        self._detached = not attached
 
     def request_pause(self) -> None:
         """Pause at the next executed keyword (on-demand pause)."""
@@ -457,7 +464,7 @@ class DebugController:
     # --- exception breakpoints ----------------------------------------------
 
     def _maybe_exception_stop(self, frame: StackFrame, result: "result.Keyword") -> None:
-        if self._suppressed or not self._exception_filters:
+        if self._detached or self._suppressed or not self._exception_filters:
             return
         # Only an actual keyword call is the origin of a failure; a control
         # structure ending FAIL is the same failure propagating through it.
@@ -512,7 +519,7 @@ class DebugController:
 
     def _end_exec(self, result: Any, filter_id: str) -> None:
         # The SUITE/TEST frame pushed at the matching start is on top of the stack.
-        if not self._suppressed:
+        if not self._detached and not self._suppressed:
             # A test/suite end means any in-flight keyword unwind is over.
             self._fail_depth_floor = None
             if filter_id in self._exception_filters and getattr(result, "status", None) == _FAIL and self._stack:

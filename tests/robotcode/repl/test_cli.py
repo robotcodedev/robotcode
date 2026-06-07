@@ -237,6 +237,128 @@ def test_robot_debug_forwards_args_to_runner(capture_robot_delegation: Dict[str,
     # `robot-debug` forwards args unchanged — no console mode is forced, so the run
     # produces the same output as `robotcode robot`.
     assert capture_robot_delegation["args"] == ["--by-longname", "Suite.Test", "tests/"]
+
+
+# ---------------------------------------------------------------------------
+# debugger attach/detach: `repl` starts detached (unless a trigger or
+# `--debugger-attached` is given), `robot-debug` starts attached. Exception
+# breaking is armed by default and only fires while attached.
+# ---------------------------------------------------------------------------
+
+
+def _capture_attach_kwargs(monkeypatch: pytest.MonkeyPatch) -> Dict[str, Any]:
+    """Wrap (not replace) `_attach_debugger` so the real wiring still runs while
+    we record the keyword args the command resolved (`attached`,
+    `break_on_exception`, …)."""
+    captured: Dict[str, Any] = {}
+    real_attach = cli_mod._attach_debugger
+
+    def capturing(interpreter: Any, **kw: Any) -> Any:
+        captured.update(kw)
+        return real_attach(interpreter, **kw)
+
+    monkeypatch.setattr(cli_mod, "_attach_debugger", capturing)
+    return captured
+
+
+def test_cli_repl_is_detached_by_default(
+    monkeypatch: pytest.MonkeyPatch, capture_interpreter_kwargs: Dict[str, Any]
+) -> None:
+    captured = _capture_attach_kwargs(monkeypatch)
+    result = CliRunner().invoke(cli_mod.repl, [])
+    assert result.exit_code == 0, result.output
+    assert captured["attached"] is False
+    # exception breaking stays armed — it just won't fire until attached
+    assert captured["break_on_exception"] is True
+
+
+def test_cli_repl_debugger_attached_flag(
+    monkeypatch: pytest.MonkeyPatch, capture_interpreter_kwargs: Dict[str, Any]
+) -> None:
+    captured = _capture_attach_kwargs(monkeypatch)
+    result = CliRunner().invoke(cli_mod.repl, ["--debugger-attached"])
+    assert result.exit_code == 0, result.output
+    assert captured["attached"] is True
+
+
+def test_cli_repl_break_trigger_auto_attaches(
+    monkeypatch: pytest.MonkeyPatch, capture_interpreter_kwargs: Dict[str, Any]
+) -> None:
+    captured = _capture_attach_kwargs(monkeypatch)
+    result = CliRunner().invoke(cli_mod.repl, ["--break", "Some Keyword"])
+    assert result.exit_code == 0, result.output
+    assert captured["attached"] is True
+
+
+def test_cli_repl_no_debugger_attached_overrides_trigger(
+    monkeypatch: pytest.MonkeyPatch, capture_interpreter_kwargs: Dict[str, Any]
+) -> None:
+    captured = _capture_attach_kwargs(monkeypatch)
+    result = CliRunner().invoke(cli_mod.repl, ["--break", "Some Keyword", "--no-debugger-attached"])
+    assert result.exit_code == 0, result.output
+    assert captured["attached"] is False
+
+
+def test_cli_repl_break_on_exception_opt_in_auto_attaches(
+    monkeypatch: pytest.MonkeyPatch, capture_interpreter_kwargs: Dict[str, Any]
+) -> None:
+    captured = _capture_attach_kwargs(monkeypatch)
+    result = CliRunner().invoke(cli_mod.repl, ["--break-on-exception"])
+    assert result.exit_code == 0, result.output
+    assert captured["attached"] is True
+    assert captured["break_on_exception"] is True
+
+
+@pytest.mark.parametrize(
+    "flag",
+    ["--break-on-all-exceptions", "--break-on-failed-test", "--break-on-failed-suite"],
+)
+def test_cli_repl_break_on_star_flags_auto_attach(
+    flag: str, monkeypatch: pytest.MonkeyPatch, capture_interpreter_kwargs: Dict[str, Any]
+) -> None:
+    captured = _capture_attach_kwargs(monkeypatch)
+    result = CliRunner().invoke(cli_mod.repl, [flag])
+    assert result.exit_code == 0, result.output
+    assert captured["attached"] is True
+
+
+def test_cli_repl_no_break_on_exception_disarms_and_stays_detached(
+    monkeypatch: pytest.MonkeyPatch, capture_interpreter_kwargs: Dict[str, Any]
+) -> None:
+    captured = _capture_attach_kwargs(monkeypatch)
+    result = CliRunner().invoke(cli_mod.repl, ["--no-break-on-exception"])
+    assert result.exit_code == 0, result.output
+    assert captured["break_on_exception"] is False
+    assert captured["attached"] is False
+
+
+def test_cli_robot_debug_is_attached_by_default(
+    monkeypatch: pytest.MonkeyPatch, capture_robot_delegation: Dict[str, Any]
+) -> None:
+    captured = _capture_attach_kwargs(monkeypatch)
+    result = CliRunner().invoke(cli_mod.robot_debug, ["tests/"], catch_exceptions=False)
+    assert result.exit_code == 0, result.output
+    assert captured["attached"] is True
+    assert captured["break_on_exception"] is True
+
+
+def test_cli_robot_debug_no_debugger_attached_opt_out(
+    monkeypatch: pytest.MonkeyPatch, capture_robot_delegation: Dict[str, Any]
+) -> None:
+    captured = _capture_attach_kwargs(monkeypatch)
+    result = CliRunner().invoke(cli_mod.robot_debug, ["--no-debugger-attached", "tests/"], catch_exceptions=False)
+    assert result.exit_code == 0, result.output
+    assert captured["attached"] is False
+
+
+def test_cli_robot_debug_no_break_on_exception_disarms_but_stays_attached(
+    monkeypatch: pytest.MonkeyPatch, capture_robot_delegation: Dict[str, Any]
+) -> None:
+    captured = _capture_attach_kwargs(monkeypatch)
+    result = CliRunner().invoke(cli_mod.robot_debug, ["--no-break-on-exception", "tests/"], catch_exceptions=False)
+    assert result.exit_code == 0, result.output
+    assert captured["break_on_exception"] is False
+    assert captured["attached"] is True
     assert capture_robot_delegation.get("invoked")
 
 
@@ -370,7 +492,7 @@ def test_robot_debug_abort_aborts_end_to_end(tmp_path: Path) -> None:
         ["--plain", "--stop-on-entry", "-d", str(tmp_path), str(suite)],
         input=".abort\n",
     )
-    assert "Aborting the run." in result.output
+    assert "aborting the run" in result.output
     assert result.exit_code != 0  # SystemExit from .abort
 
 
@@ -393,9 +515,9 @@ def test_robot_debug_no_break_on_exception_runs_through(tmp_path: Path) -> None:
 
 
 def test_repl_shell_debugger_breaks_on_keyword(tmp_path: Path) -> None:
-    # The interactive `repl` attaches the debugger too: running `Log` at the
-    # prompt with a keyword breakpoint set drops into the debug prompt;
-    # `.continue` resumes.
+    # Passing `--break` auto-attaches the otherwise-detached `repl` debugger, so
+    # running `Log` at the prompt with that keyword breakpoint set drops into the
+    # debug prompt; `.continue` resumes.
     result = CliRunner().invoke(
         cli_mod.repl,
         ["--plain", "--break", "Log", "-d", str(tmp_path)],
@@ -404,6 +526,22 @@ def test_repl_shell_debugger_breaks_on_keyword(tmp_path: Path) -> None:
     assert result.exit_code == 0, result.output
     assert "* breakpoint" in result.output
     assert "Log" in result.output
+
+
+def test_repl_shell_detached_by_default_does_not_break_on_failure(tmp_path: Path) -> None:
+    # The headline of the redesign: a bare `repl` (no trigger flags) starts
+    # detached, so a failing keyword does NOT drop into the `(rdb)` debugger —
+    # an attached session would echo `* exception` / `(rdb)` into the output
+    # (as the breakpoint test above shows for `* breakpoint`); here neither
+    # appears, and the session exits cleanly after the failure.
+    result = CliRunner().invoke(
+        cli_mod.repl,
+        ["--plain", "-d", str(tmp_path)],
+        input="NotARealKeyword123\nLog    after\n\n",
+    )
+    assert result.exit_code == 0, result.output
+    assert "* exception" not in result.output
+    assert "(rdb)" not in result.output
 
 
 def test_robot_debug_translates_debug_terminated(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

@@ -62,6 +62,25 @@ def test_split_imports_and_body_blank_entry() -> None:
     assert body == [""]
 
 
+def test_split_imports_and_body_hoists_bare_setting_aliases() -> None:
+    """The REPL setting aliases (`Library`/`Resource`/`Variables`, recorded as
+    raw text) hoist into `*** Settings ***` just like the `Import …` forms."""
+    settings, body = split_imports_and_body(
+        [
+            "Library    Browser    timeout=20s",
+            "Resource    my.resource",
+            "Variables    vars.py",
+            "Log    body line",
+        ]
+    )
+    assert settings == [
+        "Library    Browser    timeout=20s",
+        "Resource    my.resource",
+        "Variables    vars.py",
+    ]
+    assert body == ["Log    body line"]
+
+
 # ---------------------------------------------------------------------------
 # render_robot_file — full file output
 # ---------------------------------------------------------------------------

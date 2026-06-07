@@ -14,7 +14,7 @@ Trying out a single Robot Framework keyword usually means more ceremony than the
 
 Reach for it whenever "let me just *try* it" would be faster than writing a one-off test file — library exploration, keyword debugging, environment sanity checks, ad-hoc spikes.
 
-`robotcode repl` also has a **command-line debugger** attached: a breakpoint that matches a keyword you run at the prompt drops you into a debug prompt with the live call stack, per-frame variables, and a source listing. Its companion command, `robotcode robot-debug`, runs a real `.robot` suite under the same debugger. Both are documented in [Command-line debugging](robot-debug.md).
+`robotcode repl` also has a **command-line debugger** available — it starts detached, but once you attach it (`.debug on`, `--debugger-attached`, or by passing `--break …`) a breakpoint that matches a keyword you run at the prompt drops you into a debug prompt with the live call stack, per-frame variables, and a source listing. Its companion command, `robotcode robot-debug`, runs a real `.robot` suite under the same debugger (attached by default). Both are documented in [Command-line debugging](robot-debug.md).
 
 **Who this is for:**
 
@@ -65,7 +65,7 @@ Two commands:
 
 | Command | What it does |
 | --- | --- |
-| `robotcode repl` (alias `shell`) | The interactive shell described on this page. Every existing `robotcode repl …` invocation keeps working unchanged. The debugger is attached (an embedded `Breakpoint`, `--break`, or an uncaught failure — on by default — pauses a keyword you run at the prompt). |
+| `robotcode repl` (alias `shell`) | The interactive shell described on this page. Every existing `robotcode repl …` invocation keeps working unchanged. The debugger starts **detached** — a failing keyword just prints its error and you stay at the prompt, and nothing pauses. Attach it with `.debug on` (or start with `--debugger-attached`, or pass `--break …`) to make breakpoints, an embedded `Breakpoint`, and failures pause into the `(rdb)` prompt. |
 | `robotcode robot-debug` (alias `run-debug`) | Runs a real `.robot` suite through the normal runner with the debugger attached. Takes the same arguments as [`robotcode robot`](cli.md#robot) plus the debugger trigger flags. See [Command-line debugging](robot-debug.md). |
 
 The shell-specific flags (`-v`, `-P`, `-d/-o/-l/-r/-x`, `--source`, `--inspect`, `--show-keywords`, and `.robotrepl` file arguments) live on `repl`. `robot-debug` instead accepts the full `robotcode robot` option set. The prompt/backend flags (`--backend`, `--plain`, `--no-history`) and the debugger triggers (`--break`, the `--break-on-*` exception flags, and — on `robot-debug` — `--stop-on-entry`) work on both.
@@ -350,6 +350,8 @@ Variables behave the way they would inside a single test case.
 >>> Import Resource   ./resources/common.resource
 ```
 
+The Settings-style `Library` / `Resource` / `Variables` also work at the prompt — they're **REPL-only aliases** for `Import Library` / `Import Resource` / `Import Variables`, so `*** Settings ***` muscle memory just works (`Library    Browser    timeout=20s    AS    B`). Both spellings are fine, and `.save` records either as the matching `Settings` line.
+
 If your libraries live in a directory that isn't on `sys.path`, add it with `-P` at startup:
 
 ```bash
@@ -452,14 +454,25 @@ hi
 
 ## Debugging at the prompt
 
-The same debugger that powers [`robotcode robot-debug`](robot-debug.md) is attached to the interactive shell. A breakpoint that matches a keyword you run at the prompt — set with `--break`, an embedded `Breakpoint` keyword, or an uncaught failure (on by default) — pauses execution and drops you into the `(rdb)` debug prompt, where the full debug command set sits alongside every shell command.
+The same debugger that powers [`robotcode robot-debug`](robot-debug.md) is available in the interactive shell, but it starts **detached**: nothing pauses, and a failing keyword just prints its error and leaves you at the `>>>` prompt. **Attach it** to make breakpoints, an embedded `Breakpoint` keyword, and failures drop you into the `(rdb)` debug prompt:
+
+- `.debug on` attaches at the prompt; `.debug off` detaches again; bare `.debug` shows the current state.
+- `--debugger-attached` attaches from the start.
+- Passing a pause trigger (`--break`, a `--break-on-*` flag) attaches automatically, so `robotcode repl --break "Submit Login"` just works.
+
+Detaching is non-destructive: your breakpoints and `.catch` exception filters (see [Exception breakpoints](robot-debug.md#exception-breakpoints)) stay configured, so `.debug on` resumes with the same setup.
+
+Attaching also arms the default uncaught-failure break, so an attached session pauses on *any* uncaught failure (a typo, a `Fail`), not just your breakpoint — add `--no-break-on-exception` to keep only the explicit breakpoint.
 
 ```bash
-# Pause whenever you call "Submit Login" at the prompt
+# Pause on "Submit Login" — auto-attaches, so uncaught failures pause too
 robotcode repl --break "Submit Login"
 
-# Don't pause on uncaught failures at the prompt
-robotcode repl --no-break-on-exception
+# ...but only on the breakpoint, not on every failure
+robotcode repl --break "Submit Login" --no-break-on-exception
+
+# Start with the debugger attached (breaks on an uncaught failure by default)
+robotcode repl --debugger-attached
 ```
 
 To debug a **real `.robot` suite** — and for the full reference on breakpoints, stepping, the call stack, inspecting variables, and the complete debug command set — see [Command-line debugging with `robotcode robot-debug`](robot-debug.md).

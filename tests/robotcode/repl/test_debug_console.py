@@ -457,7 +457,7 @@ def test_frame_up_down_and_select_by_number() -> None:
 
 def test_frame_invalid_number_shows_usage() -> None:
     messages = _run_debug(VAR_SUITE, [".frame nope", ".continue"], keyword_breakpoints=["Log"])
-    assert any("Usage: .frame" in m for m in messages)
+    assert any("usage: .frame" in m for m in messages)
 
 
 def test_break_with_path_line_format_triggers() -> None:
@@ -476,8 +476,8 @@ def test_catch_multiple_filters_then_off() -> None:
     text = "\n".join(messages)
     assert "failed_test" in text  # both set at once
     assert "uncaught_failed_keyword" in text
-    assert "Exception breakpoints off." in text
-    assert "catching: (none)" in text  # bare .catch after off
+    # `.catch off` and the bare `.catch` after it both report the empty set
+    assert text.count("catching: (none)") == 2
 
 
 # ---------------------------------------------------------------------------
@@ -516,8 +516,8 @@ def test_debugger_command_without_stop_reports_not_at_breakpoint() -> None:
     finally:
         LOGGER.unregister_logger(interpreter._logger)
     text = "\n".join(app.messages)
-    assert text.count("Not at a breakpoint.") == 2  # .continue and .where
-    assert "Breakpoint 1 at keyword 'Login'" in text
+    assert text.count("not at a breakpoint") == 2  # .continue and .where
+    assert "breakpoint 1 at keyword 'Login'" in text
     assert "Login" in controller.keyword_breakpoints
 
 
@@ -526,7 +526,7 @@ def test_exit_at_stop_guides_instead_of_leaving() -> None:
     # ambiguous, so it points at the resume/abort commands rather than raising.
     messages = _run_debug(STEP_SUITE, [".exit", ".continue"], stop_on_entry=True)
     text = "\n".join(messages)
-    assert "At a debug stop" in text
+    assert "at a debug stop" in text
     assert ".abort" in text
     assert not any("EOFError" in m for m in messages)
 
@@ -858,7 +858,7 @@ def test_logpoint_logs_and_continues() -> None:
 
 def test_commands_requires_breakpoint_number() -> None:
     messages = _run_debug(STEP_SUITE, [".commands", ".continue"], stop_on_entry=True)
-    assert any("Usage: .commands" in m for m in messages)
+    assert any("usage: .commands" in m for m in messages)
 
 
 def test_commands_replay_silent_and_resume() -> None:
@@ -872,7 +872,7 @@ def test_commands_replay_silent_and_resume() -> None:
     )
     text = "\n".join(messages)
     stops = _stop_lines(messages)
-    assert "Breakpoint 1: 3 command(s)" in text  # collection echo (silent counts)
+    assert "breakpoint 1: 3 command(s)" in text  # collection echo (silent counts)
     assert sum(s.startswith("* breakpoint") for s in stops) == 0  # Outer hit was silent
     assert "#0  Outer" in text  # the replayed `.where` ran at the hit
 
@@ -935,7 +935,7 @@ def test_source_suite_local_keyword_not_resolved() -> None:
     # enumerate the executing suite's own keywords, so it reports "not found".
     Path(_SOURCE).write_text(STEP_SUITE, encoding="utf-8")
     messages = _run_debug(STEP_SUITE, [".source Outer", ".continue"], stop_on_entry=True)
-    assert any("Keyword 'Outer' not found." in m for m in messages)
+    assert any("keyword 'Outer' not found" in m for m in messages)
 
 
 def test_source_resource_keyword(tmp_path: Path) -> None:
@@ -967,21 +967,21 @@ def test_source_without_line_reports_no_source(monkeypatch: "pytest.MonkeyPatch"
 
 def test_bare_delete_removes_all_breakpoints() -> None:
     messages = _run_debug(STEP_SUITE, [".break Outer", ".break Inner", ".delete", ".continue"], stop_on_entry=True)
-    assert any("Removed 2 breakpoint(s)." in m for m in messages)
+    assert any("removed 2 breakpoint(s)" in m for m in messages)
     assert sum(s.startswith("* breakpoint") for s in _stop_lines(messages)) == 0
 
 
 def test_bare_disable_disables_all_breakpoints() -> None:
     messages = _run_debug(STEP_SUITE, [".break Outer", ".break Inner", ".disable", ".continue"], stop_on_entry=True)
-    assert any("All breakpoints disabled." in m for m in messages)
+    assert any("all breakpoints disabled" in m for m in messages)
     assert sum(s.startswith("* breakpoint") for s in _stop_lines(messages)) == 0
 
 
 def test_breakpoint_reference_errors() -> None:
     messages = _run_debug(STEP_SUITE, [".delete abc", ".delete 99", ".continue"], stop_on_entry=True)
     text = "\n".join(messages)
-    assert "Not a breakpoint number: abc" in text
-    assert "No breakpoint 99." in text
+    assert "not a breakpoint number: abc" in text
+    assert "no breakpoint 99" in text
 
 
 def test_condition_command_sets_then_clears() -> None:
@@ -989,7 +989,7 @@ def test_condition_command_sets_then_clears() -> None:
     gated = _run_debug(
         COND_SUITE, [".break Log", ".condition 1 ${i} == 1", ".continue", ".continue"], stop_on_entry=True
     )
-    assert "Breakpoint 1: condition ${i} == 1" in "\n".join(gated)
+    assert "breakpoint 1: condition ${i} == 1" in "\n".join(gated)
     assert sum(s.startswith("* breakpoint") for s in _stop_lines(gated)) == 1
     # Clearing it echoes the cleared message.
     cleared = _run_debug(
@@ -997,7 +997,7 @@ def test_condition_command_sets_then_clears() -> None:
         [".break Log", ".condition 1 ${i} == 1", ".condition 1", ".continue", ".continue", ".continue", ".continue"],
         stop_on_entry=True,
     )
-    assert "Breakpoint 1: condition cleared" in "\n".join(cleared)
+    assert "breakpoint 1: condition cleared" in "\n".join(cleared)
 
 
 def test_tbreak_with_condition_fires_once() -> None:
@@ -1026,7 +1026,7 @@ def test_commands_empty_collection_clears_attached_list() -> None:
         ],
         stop_on_entry=True,
     )
-    assert "Breakpoint 1: commands cleared" in "\n".join(messages)
+    assert "breakpoint 1: commands cleared" in "\n".join(messages)
     # commands gone -> Outer stops interactively (banner shown again)
     assert any(s.startswith("* breakpoint") and "Outer" in s for s in _stop_lines(messages))
 
@@ -1057,7 +1057,7 @@ def test_commands_short_circuit_after_resuming_command() -> None:
 def test_commands_eof_during_collection_commits_partial() -> None:
     # Reader EOFs before `end`: whatever was collected so far is committed.
     messages = _run_debug(STEP_SUITE, [".break Outer", ".commands 1", "silent"], stop_on_entry=True)
-    assert any("Breakpoint 1: 1 command(s)" in m for m in messages)
+    assert any("breakpoint 1: 1 command(s)" in m for m in messages)
 
 
 # Cluster 1 follow-up — prefix-abbreviation collisions among the new commands
@@ -1108,3 +1108,128 @@ def test_help_lists_phase5_commands_and_shows_detail() -> None:
     until_pages = [markdown for title, markdown in shown if title == ".until"]
     assert until_pages  # `.help until` opened the per-command detail page
     assert "later line in the current frame" in until_pages[0]
+
+
+# ---------------------------------------------------------------------------
+# `.debug on|off` — attach / detach the debugger from the >>> prompt
+# ---------------------------------------------------------------------------
+
+
+def _debug_interp() -> "tuple[ConsoleInterpreter, DebugController, _CaptureApp]":
+    app = _CaptureApp()
+    interp = ConsoleInterpreter(app=app)
+    controller = DebugController()
+    interp.set_controller(controller)
+    return interp, controller, app
+
+
+def test_debug_on_off_attaches_and_detaches() -> None:
+    interp, controller, _ = _debug_interp()
+    interp._dispatch_dot_command(".debug off")
+    assert controller.attached is False
+    interp._dispatch_dot_command(".debug on")
+    assert controller.attached is True
+
+
+def test_debug_bare_shows_attached_state() -> None:
+    interp, _, app = _debug_interp()
+    interp._dispatch_dot_command(".debug")  # a fresh controller is attached
+    assert any("debugger: attached" in m for m in app.messages)
+    app.messages.clear()
+    interp._dispatch_dot_command(".debug off")
+    app.messages.clear()
+    interp._dispatch_dot_command(".debug")
+    assert any("debugger: detached" in m for m in app.messages)
+
+
+def test_debug_off_preserves_breakpoints_and_catch_filters() -> None:
+    # Detaching must NOT discard configuration, so a later `.debug on` resumes
+    # with the same breakpoints and `.catch` filters still in place.
+    interp, controller, _ = _debug_interp()
+    controller.set_exception_breakpoints(["failed_test"])
+    controller.set_keyword_breakpoints(["Open Browser"])
+    interp._dispatch_dot_command(".debug off")
+    assert controller.exception_filters == {"failed_test"}
+    assert controller.keyword_breakpoints == {"Open Browser"}
+    interp._dispatch_dot_command(".debug on")  # re-attach keeps the same config
+    assert controller.exception_filters == {"failed_test"}
+    assert controller.keyword_breakpoints == {"Open Browser"}
+
+
+def test_detach_command_is_non_destructive() -> None:
+    # The `.detach` command detaches and resumes the run, but (like `.debug off`)
+    # KEEPS the configured breakpoints/filters — so a later `.debug on` resumes
+    # with the same setup. It also disables further stops for this run.
+    holder: "dict[str, DebugController]" = {}
+
+    def grab(interp: ConsoleInterpreter) -> None:
+        assert interp._controller is not None
+        holder["controller"] = interp._controller
+
+    messages = _run_debug(STEP_SUITE, [".detach"], stop_on_entry=True, keyword_breakpoints=["Outer"], prepare=grab)
+    controller = holder["controller"]
+    assert controller.attached is False
+    # config survived the detach (non-destructive contract)...
+    assert controller.keyword_breakpoints == {"Outer"}
+    # ...yet the later `Outer` breakpoint never fired (detached silences stops)
+    assert not any(s.startswith("* breakpoint") for s in _stop_lines(messages))
+
+
+def test_debug_unknown_arg_shows_usage() -> None:
+    interp, _, app = _debug_interp()
+    interp._dispatch_dot_command(".debug bogus")
+    assert any("usage: .debug" in m for m in app.messages)
+
+
+# ---------------------------------------------------------------------------
+# A detached controller silences pauses (incl. exceptions) without losing config
+# ---------------------------------------------------------------------------
+
+FAIL_SUITE = """\
+*** Test Cases ***
+T
+    Log    before
+    Fail    boom
+    Log    after
+"""
+
+
+def test_attached_controller_stops_on_uncaught_failure() -> None:
+    # Sanity baseline: armed + attached → the uncaught failure pauses.
+    messages = _run_debug(FAIL_SUITE, [".continue", ".continue"], exception_filters=["uncaught_failed_keyword"])
+    assert any(m.startswith("* exception") for m in _stop_lines(messages))
+
+
+def test_detached_controller_does_not_stop_on_failure() -> None:
+    # Armed to break on uncaught failures, but detached → nothing pauses, even
+    # though the filter stays set (the non-destructive detach contract).
+    def detach(interp: ConsoleInterpreter) -> None:
+        assert interp._controller is not None
+        interp._controller.set_attached(False)
+
+    messages = _run_debug(
+        FAIL_SUITE, [".continue", ".continue"], exception_filters=["uncaught_failed_keyword"], prepare=detach
+    )
+    assert not any(m.startswith("* exception") for m in messages)
+
+
+def test_setting_alias_does_not_fire_at_rdb_prompt() -> None:
+    # The `Library`/`Resource`/`Variables` setting aliases are a >>>-prompt-only
+    # convenience. At the (rdb) prompt `Library    Collections` must be evaluated
+    # as an ordinary keyword (and fail as unknown), NOT rewritten to `Import
+    # Library` — which would otherwise silently import the library.
+    messages = _run_debug(STEP_SUITE, ["Library    Collections", ".continue"], stop_on_entry=True)
+    assert any("No keyword with name 'Library'" in m for m in messages)
+
+
+def test_debug_off_at_a_live_stop_resumes_without_further_pauses() -> None:
+    # The interactive path the redesign is for: armed to break on BOTH the
+    # uncaught failure and the failing test, pause at the first (rdb) stop, type
+    # `.debug off` to detach, then `.continue` — the test-end stop that would
+    # otherwise fire is suppressed, so exactly one stop occurs and the run ends.
+    messages = _run_debug(
+        FAIL_SUITE,
+        [".debug off", ".continue", ".continue"],
+        exception_filters=["uncaught_failed_keyword", "failed_test"],
+    )
+    assert len(_stop_lines(messages)) == 1

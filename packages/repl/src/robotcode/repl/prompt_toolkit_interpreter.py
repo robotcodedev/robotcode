@@ -265,17 +265,17 @@ class PromptToolkitConsoleInterpreter(ConsoleInterpreter):
         tokens = arg.split()
         if tokens and tokens[0] == "clear":
             self.clear_history()
-            self.app.echo("History cleared.")
+            self.app.echo("history cleared")
             return
         if tokens and tokens[0] == "del":
             if len(tokens) < 2 or not tokens[1].lstrip("-").isdigit():
-                self.app.echo("Usage: .history del <N>")
+                self.app.echo("usage: .history del <N>")
                 return
             idx = int(tokens[1])
             if self.delete_history_entry(idx):
-                self.app.echo(f"Deleted history entry {idx}.")
+                self.app.echo(f"deleted history entry {idx}")
             else:
-                self.app.echo(f"No history entry at index {idx}.")
+                self.app.echo(f"no history entry at index {idx}")
             return
 
         n = int(tokens[0]) if tokens and tokens[0].isdigit() else 20
