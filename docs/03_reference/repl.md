@@ -350,7 +350,7 @@ Variables behave the way they would inside a single test case.
 >>> Import Resource   ./resources/common.resource
 ```
 
-The Settings-style `Library` / `Resource` / `Variables` also work at the prompt — they're **REPL-only aliases** for `Import Library` / `Import Resource` / `Import Variables`, so `*** Settings ***` muscle memory just works (`Library    Browser    timeout=20s    AS    B`). Both spellings are fine, and `.save` records either as the matching `Settings` line.
+The Settings-style `Library` / `Resource` / `Variables` also work at the prompt — they're **REPL-only aliases** for `Import Library` / `Import Resource` / `Import Variables`, so `*** Settings ***` muscle memory just works (`Library    Browser    timeout=20s    AS    B`). Both spellings are fine, they show up in tab-completion, and `.save` records either as the matching `Settings` line.
 
 If your libraries live in a directory that isn't on `sys.path`, add it with `-P` at startup:
 

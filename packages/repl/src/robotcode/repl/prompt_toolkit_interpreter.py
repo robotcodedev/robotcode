@@ -92,7 +92,9 @@ class PromptToolkitConsoleInterpreter(ConsoleInterpreter):
 
         self._session: PromptSession[str] = PromptSession(
             history=self._history_store,
-            completer=_RobotCompleter(command_names=list(type(self)._dot_command_index()[0])),
+            completer=_RobotCompleter(
+                command_names=list(type(self)._dot_command_index()[0]), setting_import_aliases=True
+            ),
             auto_suggest=AutoSuggestFromHistory(),
             complete_while_typing=True,
             complete_in_thread=True,

@@ -44,6 +44,15 @@ from .._keyword_lookup import _LIB_KEYWORDS_ATTR, _norm, lookup_keyword_doc
 # to each keyword candidate in the popup.
 _KW_SHORT_DOC_ATTR = "short_doc" if RF_VERSION >= (7, 0) else "shortdoc"
 
+# REPL-only setting-import aliases offered alongside keyword completions at the
+# `>>>` prompt (see `ConsoleInterpreter._alias_setting_imports`). Offered only
+# there — not at the `(rdb)` prompt, where the aliases don't apply.
+_SETTING_IMPORT_ALIAS_COMPLETIONS: Tuple[Tuple[str, str], ...] = (
+    ("Library", "alias for Import Library"),
+    ("Resource", "alias for Import Resource"),
+    ("Variables", "alias for Import Variables"),
+)
+
 # Robot's cell separator: 2+ consecutive spaces or a tab.
 _CELL_SEP = re.compile(r"  +|\t")
 
@@ -169,8 +178,13 @@ class CompletionContext:
     arg_name: str = ""
 
 
-def tokenize(buffer: str, cursor: int) -> CompletionContext:
-    """Classify the typing context at `cursor`."""
+def tokenize(buffer: str, cursor: int, *, setting_import_aliases: bool = False) -> CompletionContext:
+    """Classify the typing context at `cursor`.
+
+    With `setting_import_aliases` (the `>>>` prompt), a bare `Library` /
+    `Resource` / `Variables` first cell routes its argument to import completion,
+    exactly like the `Import …` keyword it aliases.
+    """
     text = buffer[:cursor]
 
     cell_start = 0
@@ -197,11 +211,11 @@ def tokenize(buffer: str, cursor: int) -> CompletionContext:
 
     first_cell = prior_cells[0].strip()
     folded = first_cell.casefold()
-    if folded == "import library":
+    if folded == "import library" or (setting_import_aliases and folded == "library"):
         return CompletionContext("library", current_cell, cell_start)
-    if folded == "import resource":
+    if folded == "import resource" or (setting_import_aliases and folded == "resource"):
         return CompletionContext("resource", current_cell, cell_start)
-    if folded == "import variables":
+    if folded == "import variables" or (setting_import_aliases and folded == "variables"):
         return CompletionContext("variables", current_cell, cell_start)
 
     # `name=value` is a named arg only when `name` is actually declared
@@ -301,7 +315,12 @@ def candidates_for(
 
 
 def candidates_for_rich(
-    ctx: CompletionContext, *, context: Any = None, variables: Any = None, working_dir: str = "."
+    ctx: CompletionContext,
+    *,
+    context: Any = None,
+    variables: Any = None,
+    working_dir: str = ".",
+    include_setting_aliases: bool = False,
 ) -> List[Candidate]:
     """Completion candidates with their `display_meta` detail.
 
@@ -316,7 +335,10 @@ def candidates_for_rich(
     - ``named_arg_value`` — empty (Literal values have no extra context).
     """
     if ctx.kind == "keyword":
-        return _filter_robot_normalised(_iter_keywords(context), ctx.prefix)
+        keywords: Iterable[Tuple[str, str]] = _iter_keywords(context)
+        if include_setting_aliases:
+            keywords = [*keywords, *_SETTING_IMPORT_ALIAS_COMPLETIONS]
+        return _filter_robot_normalised(keywords, ctx.prefix)
     if ctx.kind == "variable":
         # `%{X}` resolves against `os.environ`, not Robot's suite scope.
         items: Iterable[Tuple[str, str]]

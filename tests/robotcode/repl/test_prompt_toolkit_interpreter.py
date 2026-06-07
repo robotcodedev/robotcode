@@ -711,7 +711,7 @@ def test_robot_completer_threads_frame_context_to_candidates(monkeypatch: pytest
     """`context_provider` feeds the (context, variables) into the core service."""
     seen: List[Any] = []
 
-    def fake_candidates(ctx: Any, *, context: Any = None, variables: Any = None) -> List[Any]:
+    def fake_candidates(ctx: Any, *, context: Any = None, variables: Any = None, **_: Any) -> List[Any]:
         seen.append((context, variables))
         return []
 

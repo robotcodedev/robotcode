@@ -113,6 +113,22 @@ def test_tokenize_import_variables_is_case_insensitive() -> None:
     assert ctx.kind == "variables"
 
 
+def test_tokenize_setting_aliases_route_argument_to_import_completion() -> None:
+    # With the `>>>`-prompt opt-in, a bare alias routes its argument cell the
+    # same way the `Import …` keyword does.
+    assert tokenize("Library    Coll", cursor=15, setting_import_aliases=True).kind == "library"
+    assert tokenize("Resource    ./common", cursor=20, setting_import_aliases=True).kind == "resource"
+    assert tokenize("Variables    creds.yaml", cursor=23, setting_import_aliases=True).kind == "variables"
+    # case-insensitive, like the `Import …` forms
+    assert tokenize("library    Coll", cursor=15, setting_import_aliases=True).kind == "library"
+
+
+def test_tokenize_setting_aliases_not_routed_without_optin() -> None:
+    # Without the opt-in (e.g. the `(rdb)` prompt) a bare `Library` is an
+    # ordinary keyword, so its second cell is a plain argument, not an import.
+    assert tokenize("Library    Coll", cursor=15).kind == "argument"
+
+
 @pytest.mark.parametrize("sigil", ["$", "@", "&", "%"])
 def test_tokenize_variable_opener_anywhere_in_cell(sigil: str) -> None:
     line = f"Log    Hello {sigil}{{world"
@@ -209,6 +225,33 @@ def test_candidates_for_keyword_empty_when_no_context(monkeypatch: pytest.Monkey
     monkeypatch.setattr(EXECUTION_CONTEXTS, "_contexts", [])
     out = candidates_for(CompletionContext("keyword", "anything", 0))
     assert out == []
+
+
+def test_candidates_for_keyword_includes_setting_aliases_when_enabled(monkeypatch: pytest.MonkeyPatch) -> None:
+    # The `>>>` prompt opts in via `include_setting_aliases=True`, so the
+    # Settings-style aliases show up as keyword candidates alongside the real
+    # `Import …` keywords, with a detail pointing at the canonical keyword.
+    _patch_context(monkeypatch, _fake_namespace(["Import Library", "Log"], []))
+    cands = candidates_for_rich(CompletionContext("keyword", "Lib", 0), include_setting_aliases=True)
+    by_label = {c.label: c.detail for c in cands}
+    assert "Library" in by_label
+    assert "Import Library" in by_label["Library"]
+
+
+def test_candidates_for_keyword_setting_aliases_match_their_prefixes(monkeypatch: pytest.MonkeyPatch) -> None:
+    _patch_context(monkeypatch, _fake_namespace([], []))
+    res = [c.label for c in candidates_for_rich(CompletionContext("keyword", "Res", 0), include_setting_aliases=True)]
+    var = [c.label for c in candidates_for_rich(CompletionContext("keyword", "Var", 0), include_setting_aliases=True)]
+    assert "Resource" in res
+    assert "Variables" in var
+
+
+def test_candidates_for_keyword_omits_setting_aliases_by_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Without the opt-in (e.g. the `(rdb)` prompt) the aliases are NOT offered —
+    # they don't apply there.
+    _patch_context(monkeypatch, _fake_namespace(["Import Library", "Log"], []))
+    labels = [c.label for c in candidates_for_rich(CompletionContext("keyword", "Lib", 0))]
+    assert "Library" not in labels
 
 
 def test_candidates_for_variable_strips_wrapper_and_re_wraps(monkeypatch: pytest.MonkeyPatch) -> None:

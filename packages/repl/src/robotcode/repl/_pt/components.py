@@ -122,6 +122,7 @@ class _RobotCompleter(Completer):
         *,
         command_names: Iterable[str] = (),
         context_provider: Optional[Callable[[], Tuple[Any, Any]]] = None,
+        setting_import_aliases: bool = False,
     ) -> None:
         super().__init__()
         self.suppress_once = False
@@ -130,6 +131,9 @@ class _RobotCompleter(Completer):
         # () -> (namespace_context, variables_store) to complete against; a paused
         # frame's scope for the debugger. None ⇒ the live execution context.
         self._context_provider = context_provider
+        # Offer the `Library`/`Resource`/`Variables` setting-import aliases as
+        # keyword candidates — only on the `>>>` prompt, where they apply.
+        self._setting_import_aliases = setting_import_aliases
 
     def get_completions(self, document: Document, complete_event: CompleteEvent) -> Iterator[Completion]:
         del complete_event
@@ -146,9 +150,11 @@ class _RobotCompleter(Completer):
                     yield Completion(cand.label, start_position=start, display_meta=cand.detail)
                 return
 
-        ctx = tokenize(text, len(text))
+        ctx = tokenize(text, len(text), setting_import_aliases=self._setting_import_aliases)
         context, variables = self._context_provider() if self._context_provider is not None else (None, None)
-        candidates = candidates_for_rich(ctx, context=context, variables=variables)
+        candidates = candidates_for_rich(
+            ctx, context=context, variables=variables, include_setting_aliases=self._setting_import_aliases
+        )
         # `start_position` is signed and negative — chars before the
         # cursor that prompt_toolkit should replace.
         start = ctx.replace_start - len(text)
@@ -332,9 +338,13 @@ def _build_keybindings(bind_help_key: bool = False) -> KeyBindings:
             buf.complete_next()
             return
         text = buf.document.text_before_cursor
+        # Honour the active completer's setting-alias flag so `Library␣␣<tab>`
+        # opens import completion (like `Import Library`) at the `>>>` prompt.
+        completer = _find_robot_completer(buf)
+        aliases = completer._setting_import_aliases if completer is not None else False
         # Both `argument` and `named_arg_value` are argument cells —
         # Tab inserts a cell separator in either case.
-        if tokenize(text, len(text)).kind in ("argument", "named_arg_value"):
+        if tokenize(text, len(text), setting_import_aliases=aliases).kind in ("argument", "named_arg_value"):
             buf.insert_text(CELL_SEPARATOR)
         else:
             buf.start_completion(insert_common_part=True)
