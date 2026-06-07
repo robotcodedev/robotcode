@@ -15,6 +15,9 @@ description: >-
   read a raw `output.xml` or grep `.robot` / `.resource` files yourself; load this
   skill first.
 license: Apache-2.0
+compatibility: Runs from the project's Python environment with robotcode installed (Robot Framework 5.0+).
+metadata:
+  version: "1.0.0"
 ---
 
 # robotcode CLI
@@ -25,9 +28,9 @@ RobotCode must run from the project's Python environment. Do not use isolated ru
 
 ## Pick the mode first
 
-Decide what the user actually wants *before* reaching for a command — these intents have different entry points, and mixing them up is the most common mistake (especially writing a `.robot` test file when the user asked you to *do* something). Several can chain in one task (explore → author → run → inspect).
+Decide what the user actually wants *before* reaching for a command — these intents have different entry points, and mixing them up is the most common mistake: especially writing a `.robot` test file when the user asked you to *do* something, or reaching for the REPL to fix/debug a real test when that's the **debugger's** job. Several can chain in one task (explore → author → run → inspect).
 
-- **Use the REPL — explore or do it for me** — *"go to … and check", "fetch …", "try this keyword", "open a Robot shell", "build this keyword step by step", "does X work?", "so I can watch".* Standalone interactive work with **no existing test or suite in play**. If it's about a *real* test or suite — its behavior, its variables, or a failure — use **Debug** instead (try keywords at its `(rdb)` stop): the REPL runs in a *different context*, without the suite's setup, variables, or `__init__.robot`. See [references/repl.md](references/repl.md).
+- **Use the REPL — explore, with no existing test in play** — *"try this keyword", "open a Robot shell", "go to … and check", "fetch …", "build this keyword step by step", "does this keyword/library work?", "so I can watch".* Standalone interactive work: poke at a keyword, drive the application, prototype a keyword/test line by line. **Not for fixing or debugging a real test or suite** — its behavior, its variables, or *why it fails*: the REPL runs in a *different context* (no suite setup, variables, or `__init__.robot`), so for that use **Debug** (run keywords at its `(rdb)` stop, in the real context). See [references/repl.md](references/repl.md).
 - **Author tests or keywords** — *"write / create / add a test or suite".* See [references/authoring.md](references/authoring.md).
 - **Run a suite or tests** — *"run the tests", "execute the smoke suite", "run only tag X", "run just suite Y / this one test".* A whole suite, or a subset filtered by tag/suite/name. **To run one test, select it by longname (`-bl`), not the `.robot` file** — the file may hold other tests, and a bare file skips the parent suites' `__init__.robot`. See [Running tests](#running-tests--robotcode-robot).
 - **Inspect or compare a finished run** — *"what failed?", "did it pass?", "why did X fail?", "did this regress?", "what changed since the last run?".* No re-run; try this **first** for "why did X fail?". See [references/results.md](references/results.md).
@@ -37,7 +40,7 @@ Decide what the user actually wants *before* reaching for a command — these in
 - **Configure the project** — *"set up robot.toml", "add a CI profile", "configure variables/paths", "what's my effective config?".* See [Configuration & profiles](#configuration--profiles).
 - **Look up a keyword or library** — *"what does X do?", "what args does it take?".* See [Documentation lookup priority](#documentation-lookup-priority).
 
-When a request is action-oriented or "watch me", default to the REPL over writing a file: promoting a working REPL session into a test later is cheap (`.save`), but a prematurely written test wastes effort, can't be watched, and tears its browser/connection down at the end of the run. But when the interactive work is about an *existing* test or suite — its behavior, variables, or a failure — that's **Debug** (real context), not the REPL.
+For **standalone exploration** ("watch me", "try …", "do it for me") prefer the REPL over writing a throwaway `.robot` file — a working session promotes into a test cheaply (`.save`), whereas a prematurely written test wastes effort, can't be watched, and tears its browser/connection down at the run's end. But the moment a **real test or suite** is in play — fixing it, stepping it, or asking *why it fails* — use the **debugger** (or read the recorded failure with [`results`](references/results.md) first), **not the REPL**, because only the debugger runs the test in its real context. In short: **the REPL is for trying things out; the debugger is for debugging a test.**
 
 ## Documentation lookup priority
 
@@ -174,7 +177,7 @@ robotcode libdoc resources/common.resource list
 robotcode libdoc "MyLib::config.yaml::strict" show
 ```
 
-Use `robotcode repl` for interactive, step-by-step work inside the project configuration — trying out keywords/libraries, debugging against the live application, or developing a test case or keyword one line at a time and saving it. REPL input is not a `.robot` file: no section headers, no indentation, and imports are keyword calls — `Import Library    Collections` (the Settings-style `Library    Collections` works too, as a REPL alias). No agent-specific flags are needed — RobotCode auto-detects when it runs under an AI agent and drops to a plain, capture-safe backend on its own. For the full step-by-step exploration → validate → promote-into-tests workflow (dot commands, `.save`, clean shutdown), see [references/repl.md](references/repl.md).
+Use `robotcode repl` for interactive, step-by-step work inside the project configuration — trying out keywords/libraries, exploring against the live application, or developing a test case or keyword one line at a time and saving it. (To debug a *real* failing test, reach for `robotcode robot-debug`, not the REPL — see [references/debugging.md](references/debugging.md).) REPL input is not a `.robot` file: no section headers, no indentation, and imports are keyword calls — `Import Library    Collections` (the Settings-style `Library    Collections` works too, as a REPL alias). No agent-specific flags are needed — RobotCode auto-detects when it runs under an AI agent and drops to a plain, capture-safe backend on its own. For the full step-by-step exploration → validate → promote-into-tests workflow (dot commands, `.save`, clean shutdown), see [references/repl.md](references/repl.md).
 
 `robotcode repl-server` is for external clients that attach to a REPL session; use it only when such an integration is explicitly needed.
 
@@ -226,7 +229,22 @@ Target one test by its **longname** (`-bl`), never a bare `.robot` file — a fi
 | List profiles | `robotcode profiles list` |
 | Show a profile | `robotcode --profile <name> profiles show` |
 
-Use `config show` for resolution questions. Use `config info` for supported keys and setting descriptions. Select profiles with the global `--profile <name>` option before the subcommand.
+Use `config show` for resolution questions ("what's my effective config?"). **When writing or editing `robot.toml` or a profile, look up the exact key, its type, and a TOML example with `config info desc <key>` (wildcards work: `*tag*`, `rebot.*`) or `config info list` — don't guess settings — then confirm the merged result with `config show`.** Select profiles with the global `--profile <name>` option before the subcommand.
+
+For example, to add a library search path — look the key up, write it, then verify:
+
+```bash
+robotcode config info desc python-path     # exact key, its type, and a TOML example
+```
+
+```toml
+# robot.toml
+python-path = ["libs/", "resources/"]
+```
+
+```bash
+robotcode config show                       # confirm it resolved as expected
+```
 
 **Multiple profiles merge.** `--profile` is repeatable and each value is a glob against the defined profile names, so `-p ci -p "docker*"` selects and combines several profiles into one effective configuration:
 
