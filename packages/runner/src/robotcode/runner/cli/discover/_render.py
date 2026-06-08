@@ -14,7 +14,11 @@ Style conventions (shared with `results`):
 """
 
 from dataclasses import fields
-from typing import Callable, Dict, Iterable, List, Optional
+from pathlib import Path
+from typing import Callable, Dict, Iterable, List, Optional, Tuple
+
+from robotcode.core.lsp.types import Diagnostic, DiagnosticSeverity
+from robotcode.core.uri import Uri
 
 from .._markdown import (
     field_list_md,
@@ -91,14 +95,28 @@ def _block_md(
     heading: str,
     body_md: str,
     statistics: Statistics,
+    diagnostics: Optional[Dict[str, List[Diagnostic]]] = None,
+    show_diagnostics: bool = False,
+    full_paths: bool = False,
+    root_folder: Optional[Path] = None,
     search_substring: Optional[str] = None,
     search_regex: Optional[str] = None,
 ) -> str:
-    """Standard discover-renderer shape: H1 heading, body content,
-    `## Statistics` block, optional filters footer. Pull the per-
-    subcommand variation into the caller's `body_md` (a pre-rendered
-    markdown string)."""
-    parts = [f"# {heading}", "", body_md, "", render_statistics_md(statistics)]
+    """Standard discover-renderer shape: H1 heading, the discovered
+    listing, and a `## Statistics` block, with diagnostics kept as their
+    own section: the full message listing goes *before* the results (only
+    with `--diagnostics`), and otherwise a compact `## Diagnostics` counts
+    block follows the statistics. An optional filters footer comes last.
+    Pull the per-subcommand variation into the caller's `body_md` (a
+    pre-rendered markdown string)."""
+    parts = [f"# {heading}", ""]
+    if diagnostics and show_diagnostics:
+        parts.append(render_diagnostics_md(diagnostics, root_folder=root_folder, full_paths=full_paths))
+        parts.append("")
+    parts += [body_md, "", render_statistics_md(statistics)]
+    if diagnostics and not show_diagnostics:
+        parts.append("")
+        parts.append(render_diagnostics_summary_md(diagnostics))
     footer = filters_footer_md(_search_filters_dict(search_substring, search_regex))
     if footer:
         parts.append("")
@@ -122,6 +140,60 @@ def render_statistics_md(statistics: Statistics) -> str:
         if attr == "suites" or value:
             rows.append([label, str(value)])
     return "## Statistics\n\n" + field_list_md(rows)
+
+
+def _diagnostics_counts(diagnostics: Optional[Dict[str, List[Diagnostic]]]) -> Tuple[int, int]:
+    """`(errors, warnings)` across every collected diagnostic."""
+    errors = warnings = 0
+    for diags in (diagnostics or {}).values():
+        for d in diags:
+            if d.severity == DiagnosticSeverity.ERROR:
+                errors += 1
+            else:
+                warnings += 1
+    return errors, warnings
+
+
+def render_diagnostics_summary_md(diagnostics: Dict[str, List[Diagnostic]]) -> str:
+    """Compact `## Diagnostics` counts block — a sibling of `## Statistics`,
+    shown when the full message listing is suppressed. Only non-zero
+    severities get a row (same skip-zero convention as the statistics)."""
+    errors, warnings = _diagnostics_counts(diagnostics)
+    rows: List[List[str]] = []
+    if errors:
+        rows.append(["Errors", str(errors)])
+    if warnings:
+        rows.append(["Warnings", str(warnings)])
+    return "## Diagnostics\n\n" + field_list_md(rows) + "\n\n_Use `--diagnostics` to list the messages._"
+
+
+def _diag_path(uri: str, *, root_folder: Optional[Path], full_paths: bool) -> str:
+    """Display path for a diagnostic's file URI. Mirrors the tree's
+    `get_rel_source`: relative to the project `root_folder` (posix-style)
+    unless `--full-paths` is set or the file lives outside the root."""
+    path = Uri(uri).to_path()
+    if not full_paths and root_folder is not None:
+        try:
+            return path.relative_to(root_folder).as_posix()
+        except ValueError:
+            pass
+    return str(path)
+
+
+def render_diagnostics_md(
+    diagnostics: Dict[str, List[Diagnostic]], *, root_folder: Optional[Path], full_paths: bool
+) -> str:
+    """Full `## Diagnostics` block: one bullet per message, grouped by
+    file in path order. The `` `path:line` `` code span doubles as a
+    clickable terminal link in VS Code."""
+    lines = ["## Diagnostics", ""]
+    for uri in sorted(diagnostics):
+        display = _diag_path(uri, root_folder=root_folder, full_paths=full_paths)
+        for d in sorted(diagnostics[uri], key=lambda d: (d.range.start.line, d.range.start.character)):
+            line = d.range.start.line + 1
+            severity = "error" if d.severity == DiagnosticSeverity.ERROR else "warning"
+            lines.append(f"- `{display}:{line}` _({severity})_ {md_escape(d.message.strip())}")
+    return "\n".join(lines)
 
 
 # ---------------------------------------------------------------------------
@@ -194,6 +266,9 @@ def render_suites(
     highlight: Optional[Callable[[str], str]] = None,
     search_substring: Optional[str] = None,
     search_regex: Optional[str] = None,
+    diagnostics: Optional[Dict[str, List[Diagnostic]]] = None,
+    show_diagnostics: bool = False,
+    root_folder: Optional[Path] = None,
 ) -> str:
     if not suites:
         body_md = "_(no suites matched)_"
@@ -206,6 +281,10 @@ def render_suites(
         heading="Suites",
         body_md=body_md,
         statistics=statistics,
+        diagnostics=diagnostics,
+        show_diagnostics=show_diagnostics,
+        full_paths=full_paths,
+        root_folder=root_folder,
         search_substring=search_substring,
         search_regex=search_regex,
     )
@@ -226,6 +305,9 @@ def render_tests_or_tasks(
     highlight: Optional[Callable[[str], str]] = None,
     search_substring: Optional[str] = None,
     search_regex: Optional[str] = None,
+    diagnostics: Optional[Dict[str, List[Diagnostic]]] = None,
+    show_diagnostics: bool = False,
+    root_folder: Optional[Path] = None,
 ) -> str:
     """Render the flat list of `tests` or `tasks` (`selected_type`
     drives both the heading and the filter)."""
@@ -249,6 +331,10 @@ def render_tests_or_tasks(
         heading=heading,
         body_md=body_md,
         statistics=statistics,
+        diagnostics=diagnostics,
+        show_diagnostics=show_diagnostics,
+        full_paths=full_paths,
+        root_folder=root_folder,
         search_substring=search_substring,
         search_regex=search_regex,
     )
@@ -269,6 +355,9 @@ def render_tags(
     highlight: Optional[Callable[[str], str]] = None,
     search_substring: Optional[str] = None,
     search_regex: Optional[str] = None,
+    diagnostics: Optional[Dict[str, List[Diagnostic]]] = None,
+    show_diagnostics: bool = False,
+    root_folder: Optional[Path] = None,
 ) -> str:
     if not tags:
         body_md = "_(no tags matched)_"
@@ -293,6 +382,10 @@ def render_tags(
         heading="Tags",
         body_md=body_md,
         statistics=statistics,
+        diagnostics=diagnostics,
+        show_diagnostics=show_diagnostics,
+        full_paths=full_paths,
+        root_folder=root_folder,
         search_substring=search_substring,
         search_regex=search_regex,
     )
@@ -312,6 +405,9 @@ def render_all(
     highlight: Optional[Callable[[str], str]] = None,
     search_substring: Optional[str] = None,
     search_regex: Optional[str] = None,
+    diagnostics: Optional[Dict[str, List[Diagnostic]]] = None,
+    show_diagnostics: bool = False,
+    root_folder: Optional[Path] = None,
 ) -> str:
     """The full discovery tree: workspace at depth 0, suites at
     increasing depth, tests/tasks as leaves with their line number."""
@@ -321,6 +417,10 @@ def render_all(
         heading="All",
         body_md="\n".join(tree_lines),
         statistics=statistics,
+        diagnostics=diagnostics,
+        show_diagnostics=show_diagnostics,
+        full_paths=full_paths,
+        root_folder=root_folder,
         search_substring=search_substring,
         search_regex=search_regex,
     )

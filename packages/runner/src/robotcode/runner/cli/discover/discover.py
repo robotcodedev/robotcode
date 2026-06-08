@@ -372,9 +372,9 @@ class Collector(SuiteVisitor):
 @click.option(
     "--diagnostics / --no-diagnostics",
     "show_diagnostics",
-    default=True,
+    default=False,
     show_default=True,
-    help="Display `robot` parsing errors and warning that occur during discovering.",
+    help="List the full `robot` parsing errors and warnings before the results.",
 )
 @click.option(
     "--read-from-stdin",
@@ -499,11 +499,18 @@ def handle_options(
 
             settings = RobotSettings(options)
 
-            if app.show_diagnostics:
-                LOGGER.register_console_logger(**settings.console_output_config)
-            else:
-                LOGGER.unregister_console_logger()
-
+            # Diagnostics are rendered by robotcode itself (a summary in the
+            # statistics block, and — with `--diagnostics` — a full block
+            # before the listing), so Robot's own console logger stays off to
+            # avoid noisy, interleaved WARN/ERROR lines on stderr.
+            LOGGER.unregister_console_logger()
+            # Robot's global LOGGER replays its message cache to every newly
+            # registered logger. Across in-process discover runs (tests, a
+            # reused language-server process) that cache carries earlier runs'
+            # messages and would double-count diagnostics; disabling it keeps
+            # each run's collector to its own messages. A fresh CLI process is
+            # unaffected either way.
+            LOGGER.disable_message_cache()
             LOGGER.register_logger(diagnostics_logger)
 
             if settings.pythonpath:
@@ -552,6 +559,10 @@ def handle_options(
         except DataError as err:
             app.error(str(err))
             app.exit(DATA_ERROR)
+        finally:
+            # Don't leave our collector attached to the global LOGGER — it
+            # would keep receiving messages from later in-process runs.
+            LOGGER.unregister_logger(diagnostics_logger)
 
         raise UnknownError("Unexpected error happened.")
 
@@ -627,6 +638,9 @@ def all(
                     highlight=make_md_highlighter(search_substring, search_regex),
                     search_substring=search_substring,
                     search_regex=search_regex,
+                    diagnostics=diagnostics,
+                    show_diagnostics=app.show_diagnostics,
+                    root_folder=app.root_folder,
                 )
             )
 
@@ -667,6 +681,9 @@ def _test_or_tasks(
                     highlight=make_md_highlighter(search_substring, search_regex),
                     search_substring=search_substring,
                     search_regex=search_regex,
+                    diagnostics=diagnostics,
+                    show_diagnostics=app.show_diagnostics,
+                    root_folder=app.root_folder,
                 )
             )
 
@@ -855,6 +872,9 @@ def suites(
                     highlight=make_md_highlighter(search_substring, search_regex),
                     search_substring=search_substring,
                     search_regex=search_regex,
+                    diagnostics=diagnostics,
+                    show_diagnostics=app.show_diagnostics,
+                    root_folder=app.root_folder,
                 )
             )
 
@@ -932,7 +952,7 @@ def tags(
     """
 
     matcher = make_search_matcher(search_substring, search_regex)
-    _suite, collector, _diagnostics = handle_options(
+    _suite, collector, diagnostics = handle_options(
         app, by_longname, exclude_by_longname, robot_options_and_args, search_matcher=matcher
     )
 
@@ -949,6 +969,9 @@ def tags(
                     highlight=make_md_highlighter(search_substring, search_regex),
                     search_substring=search_substring,
                     search_regex=search_regex,
+                    diagnostics=diagnostics,
+                    show_diagnostics=app.show_diagnostics,
+                    root_folder=app.root_folder,
                 )
             )
 

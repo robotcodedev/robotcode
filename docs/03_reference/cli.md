@@ -1008,7 +1008,7 @@ robotcode discover [OPTIONS] COMMAND [ARGS]...
 **Options:**
 - `--diagnostics / --no-diagnostics`
 
-   Display `robot` parsing errors and warning that occur during discovering.  [default: diagnostics]
+   List the full `robot` parsing errors and warnings before the results.  [default: no-diagnostics]
 
 
 - `--version`
