@@ -6,7 +6,8 @@ description: >-
   or runs a suite (or a single test or task), or narrows a run to a subset by tag,
   suite, or name; asks why a suite or test failed or won't run, or wants to fix,
   debug, or step through a failing one; asks what a keyword or library does or
-  which arguments it takes; configures the project via `robot.toml` and profiles;
+  which arguments it takes; configures, reviews, troubleshoots, or explains the project's `robot.toml` /
+  profile configuration or a single setting;
   statically analyzes the project — errors, undefined keywords, wrong arguments,
   and unused keywords/variables — before running; inspects a finished run (its
   `output.xml`) or compares two runs to see what changed before and after; or
@@ -37,7 +38,7 @@ Decide what the user actually wants *before* reaching for a command — these in
 - **Debug a live run** — *"fix this test", "why does this test fail / won't it run?", "step through it", "break at line X", "what is `${response}` there?", "try this in the actual test/suite".* Pause the real run; inspect the live stack/variables **and run keywords at the `(rdb)` prompt in the real context**. This — not the REPL — is how you experiment *inside* a real test or suite. See [references/debugging.md](references/debugging.md).
 - **Analyze / lint the code** — *"find issues", "check my robot code", "any undefined keywords / wrong arguments?", "are there unused keywords or variables?".* Static analysis (errors, undefined keywords, wrong args, unresolved/unused variables), no run. See [references/analyze.md](references/analyze.md).
 - **Inventory / understand the project** — *"what tests/tags/suites exist?", "which tests have tag X?", "how big is this?".* See [Discovery](#discovery--whats-in-the-project).
-- **Configure the project** — *"set up robot.toml", "add a CI profile", "configure variables/paths", "what's my effective config?".* See [Configuration & profiles](#configuration--profiles).
+- **Configure the project** — *"set up robot.toml", "add a CI profile", "configure variables/paths", "what's my effective config?".* See [references/config.md](references/config.md).
 - **Look up a keyword or library** — *"what does X do?", "what args does it take?".* See [Documentation lookup priority](#documentation-lookup-priority).
 
 For **standalone exploration** ("watch me", "try …", "do it for me") prefer the REPL over writing a throwaway `.robot` file — a working session promotes into a test cheaply (`.save`), whereas a prematurely written test wastes effort, can't be watched, and tears its browser/connection down at the run's end. But the moment a **real test or suite** is in play — fixing it, stepping it, or asking *why it fails* — use the **debugger** (or read the recorded failure with [`results`](references/results.md) first), **not the REPL**, because only the debugger runs the test in its real context. In short: **the REPL is for trying things out; the debugger is for debugging a test.**
@@ -70,6 +71,7 @@ For non-obvious RobotCode CLI details that are not library/resource keyword docu
 - **REPL** — Interactive exploration and step-by-step development of tests and keywords in [references/repl.md](references/repl.md).
 - **Debugging** — Pausing a live run at a breakpoint and inspecting the stack/variables (`robotcode robot-debug`, `repl --break`) in [references/debugging.md](references/debugging.md).
 - **Authoring** — Writing/extending tests and reusable keywords (reuse → prototype → analyze → run) in [references/authoring.md](references/authoring.md).
+- **Configuration** — `robot.toml` and profiles (loading order, inheritance, `extend-`, computed `{ expr }` / `{ if }` values, previewing a profile with `discover`) in [references/config.md](references/config.md).
 - **Reference** — Gotchas that prevent common agent mistakes.
 
 ## If robotcode isn't installed (or a command is missing)
@@ -221,40 +223,16 @@ Target one test by its **longname** (`-bl`), never a bare `.robot` file — a fi
 | Goal | Command |
 | --- | --- |
 | List setting keys | `robotcode config info list` |
-| Describe one setting | `robotcode config info desc <key>` |
-| Config files used | `robotcode config files` |
-| Effective configuration | `robotcode config show` |
-| Effective configuration for a profile | `robotcode --profile <name> config show` |
-| Detected root | `robotcode config root` |
-| List profiles | `robotcode profiles list` |
-| Show a profile | `robotcode --profile <name> profiles show` |
+| Explain a setting — read its docs (type, description, TOML example) | `robotcode config info desc <key>` |
+| Config files used / detected root | `robotcode config files` / `robotcode config root` |
+| Effective config — all files merged, incl. user-global defaults | `robotcode config show` (`-s` shows each setting's source; `--format json`) |
+| Effective config for a profile | `robotcode --profile <name> config show` |
+| List / show profiles | `robotcode profiles list` / `robotcode --profile <name> profiles show` |
+| Preview a profile's effect on a run | `robotcode --profile <name> discover tests` |
 
-Use `config show` for resolution questions ("what's my effective config?"). **When writing or editing `robot.toml` or a profile, look up the exact key, its type, and a TOML example with `config info desc <key>` (wildcards work: `*tag*`, `rebot.*`) or `config info list` — don't guess settings — then confirm the merged result with `config show`.** Select profiles with the global `--profile <name>` option before the subcommand.
+**To explain, write, or edit a setting, read its documentation from `config info desc <key>`** (type, description, and a TOML example; wildcards `*tag*`, `rebot.*`) instead of guessing, then confirm the result with `config show`. **A setting's effective value can come from a profile** — when explaining what is actually in effect, account for the active profile(s): `robotcode --profile <name> config show` shows the value under that profile, and `config show -s` attributes each setting to the file or profile it came from. Profiles (`[profiles.<name>]`) layer onto the top-level settings; `--profile` is repeatable and globbed, and multiple profiles merge by `precedence`.
 
-For example, to add a library search path — look the key up, write it, then verify:
-
-```bash
-robotcode config info desc python-path     # exact key, its type, and a TOML example
-```
-
-```toml
-# robot.toml
-python-path = ["libs/", "resources/"]
-```
-
-```bash
-robotcode config show                       # confirm it resolved as expected
-```
-
-**Multiple profiles merge.** `--profile` is repeatable and each value is a glob against the defined profile names, so `-p ci -p "docker*"` selects and combines several profiles into one effective configuration:
-
-- **Order / conflicts** — profiles are applied in ascending `precedence` (default `0`); on a conflicting scalar key, the higher-precedence profile wins.
-- **Override vs. append** — within the merge, a plain key (e.g. `args`, `paths`) **replaces** the accumulated value, while its `extend-`-prefixed twin (`extend-args`, `extend-paths`, `extend-variables`, …) **appends** to it. This is how a profile adds to the base config instead of clobbering it.
-- **`inherits`** — a profile can pull in other profiles by name (string or list); parents are selected and merged too.
-- **`enabled` / `hidden`** — a profile can switch itself off (`enabled = false`, or an `if` condition) or hide from listings; disabled profiles are skipped during merge.
-- **`default-profiles`** — config key choosing what runs when no `--profile` is given.
-
-To see the merged result of a selection, run `robotcode -p <a> -p <b> config show` (or `profiles show` for a single profile's own definition).
+**Full reference — loading order, profile inheritance / `precedence` / `enabled` / `extend-`, recipes, and previewing a profile with `discover` — see [references/config.md](references/config.md).**
 
 ## Interpreting results
 
