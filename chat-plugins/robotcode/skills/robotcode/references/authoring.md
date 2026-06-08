@@ -49,7 +49,9 @@ If locators, keyword sequencing, or a library's behavior are uncertain, **verify
 
 ## 4. Write the file
 
-Standard sections — `*** Settings ***` (Library / Resource / Variables, Suite/Test Setup + Teardown), `*** Variables ***`, `*** Keywords ***`, and `*** Test Cases ***` (or `*** Tasks ***` for RPA). Build calls from the keywords found in step 1; add `[Tags]` so the test is selectable later. Keep each test a complete user/system flow and push mechanical detail down into keywords.
+Standard sections — `*** Settings ***` (Library / Resource / Variables, Suite/Test Setup + Teardown), `*** Variables ***`, `*** Keywords ***`, and `*** Test Cases ***`. Build calls from the keywords found in step 1; add `[Tags]` so the test is selectable later. Keep each test a complete user/system flow and push mechanical detail down into keywords.
+
+For an **RPA task suite**, use `*** Tasks ***` in place of `*** Test Cases ***` (don't put both kinds in one run — Robot Framework errors), and the `Test*` settings have `Task*` equivalents: `Task Setup` / `Task Teardown` / `Task Template` / `Task Timeout`, plus the `Set Task Variable` keyword. The rest of this loop is identical.
 
 ## 5. Check statically before you run
 

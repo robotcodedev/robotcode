@@ -29,11 +29,11 @@ If the user asks "how big is this project" / "what tags exist" / "is there a smo
 
 ```bash
 # Counts only — last few lines of any discover command are a stats block
-robotcode discover --no-diagnostics tests | tail -5
+robotcode discover tests | tail -5
 # Tag names only (the default; pass --tests to list the tests under each tag)
-robotcode discover --no-diagnostics tags
+robotcode discover tags
 # Suite-level inventory
-robotcode discover --no-diagnostics suites
+robotcode discover suites
 ```
 
 ## 3. Stream to disk + use shell tools
@@ -41,7 +41,7 @@ robotcode discover --no-diagnostics suites
 Once an enumeration is too large to read inline, write it once and grep it many times — the data stays out of your context:
 
 ```bash
-robotcode discover --no-diagnostics tests > /tmp/tests.txt
+robotcode discover tests > /tmp/tests.txt
 wc -l /tmp/tests.txt                          # count
 grep -i 'billing'  /tmp/tests.txt | head -50  # sample matches
 grep -c 'goto'     /tmp/tests.txt             # how many tests have "goto" in the longname
@@ -55,11 +55,11 @@ This is the one case where JSON beats text: pulling specific fields out of a hug
 
 ```bash
 # Just longnames, then count — never materializes the full payload in your context
-robotcode --format json discover --no-diagnostics tests \
+robotcode --format json discover tests \
   | jq -r '..|.longname? // empty' | wc -l
 
 # Tests grouped by source file
-robotcode --format json discover --no-diagnostics tests \
+robotcode --format json discover tests \
   | jq -r '..|select(.type? == "test") | .source' | sort -u | head
 ```
 
