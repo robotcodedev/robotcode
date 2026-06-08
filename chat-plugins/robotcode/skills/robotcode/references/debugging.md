@@ -77,7 +77,7 @@ robotcode robot-debug -bl "MyProject.Login.Login Works"                  # only 
 robotcode robot-debug --break login.robot:42 -t "Login Works"            # break at the line, but only run that test
 ```
 
-Handing over a bare **file** path (`tests/login.robot`) instead runs *every* test in the file — so, with break-on-failure on, it can stop on a *different* test first — **and** skips the parent suites' `__init__.robot` (the setup/variables loss described above). Select by longname; reserve a path for a whole suite — and note a *directory* like `tests/` still loads its `__init__.robot`, whereas a single file does not.
+Handing over a bare **file** path (`tests/login.robot`) instead runs *every* test in the file — so, with break-on-failure on, it can stop on a *different* test first — **and** skips the parent suites' `__init__.robot` (the setup/variables loss described above). Select a test, task, or single suite by longname; the one path form that's fine is a whole **directory** (`tests/` loads its `__init__.robot`), never a single file.
 
 ### The embedded `Breakpoint` keyword
 
