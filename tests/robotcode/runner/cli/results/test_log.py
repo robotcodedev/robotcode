@@ -13,8 +13,9 @@ from typing import Any, Dict, List, Optional, Set
 
 import pytest
 
+from ..rf_markers import needs_rf_70, needs_rf_72
 from ._helpers import count_entries_of_type, find_test, iter_body, strip_ansi
-from .conftest import CliRunner, JsonRunner, needs_rf_70, needs_rf_72
+from .conftest import CliRunner, JsonRunner
 
 # ---------------------------------------------------------------------------
 # Helpers local to this file

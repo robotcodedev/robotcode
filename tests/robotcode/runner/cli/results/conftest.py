@@ -39,20 +39,6 @@ SUITES_DIR = Path(__file__).parent / "suites"
 
 
 # ---------------------------------------------------------------------------
-# RF-version markers
-# ---------------------------------------------------------------------------
-
-needs_rf_70 = pytest.mark.skipif(
-    RF_VERSION < (7, 0),
-    reason="requires Robot Framework 7.0+ (VAR, JSON output, attribute renames)",
-)
-needs_rf_72 = pytest.mark.skipif(
-    RF_VERSION < (7, 2),
-    reason="requires Robot Framework 7.2+ (GROUP block)",
-)
-
-
-# ---------------------------------------------------------------------------
 # Subprocess wiring
 # ---------------------------------------------------------------------------
 

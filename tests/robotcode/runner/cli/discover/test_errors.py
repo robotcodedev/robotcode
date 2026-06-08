@@ -8,6 +8,7 @@ format errors.
 import json
 from pathlib import Path
 
+from ..rf_markers import needs_rf_70
 from .conftest import CliRunner
 
 
@@ -58,6 +59,7 @@ def test_parse_warnings_dont_fail_the_command(robotcode_cli: CliRunner, parse_er
     assert data.get("diagnostics"), "expected non-empty diagnostics"
 
 
+@needs_rf_70
 def test_text_default_shows_diagnostics_summary_only(text_discover: CliRunner, parse_error_suite: Path) -> None:
     """By default a compact `## Diagnostics` counts section follows the
     statistics (a separate block, not folded into them) plus a pointer to
@@ -82,6 +84,7 @@ def test_text_clean_suite_has_no_diagnostics_section(text_discover: CliRunner, f
     assert "--diagnostics" not in result.stdout
 
 
+@needs_rf_70
 def test_text_diagnostics_flag_shows_full_block_before_listing(
     text_discover: CliRunner, parse_error_suite: Path
 ) -> None:
@@ -100,6 +103,7 @@ def test_text_diagnostics_flag_shows_full_block_before_listing(
     assert str(parse_error_suite) not in result.stdout
 
 
+@needs_rf_70
 def test_text_error_severity_in_diagnostics(robotcode_cli: CliRunner, tmp_path: Path) -> None:
     """An error-level parse problem (here an invalid argument spec) shows an
     `Errors` row in the counts section and an `_(error)_` label in the full
