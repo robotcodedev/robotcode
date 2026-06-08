@@ -6,15 +6,15 @@ Stringing the right commands together matters as much as picking the right comma
 
 ## Contents
 
-- **A. Run tests and report what failed** — the default `run → summarise` lifecycle
-- **B. Investigate a failing test** — drill down on *one* failure without re-running
-- **C. Lint only the files about to commit** — git-diff-driven `analyze code`
-- **D. Analyse a project for code issues** — full static-analysis sweep, including unused-keyword/variable detection and how to suppress noise
-- **E. Fix a whole failing run** — *many* failures: triage by cause, debug one representative per cause, re-validate in a loop without clobbering `output.xml`
+- [A. Run tests and report what failed](#a-run-tests-and-report-what-failed) — the default `run → summarize` lifecycle
+- [B. Investigate a failing test](#b-investigate-a-failing-test) — drill down on *one* failure without re-running
+- [C. Lint only the files about to commit](#c-lint-only-the-files-about-to-commit) — git-diff-driven `analyze code`
+- [D. Analyze a project for code issues](#d-analyze-a-project-for-code-issues) — full static-analysis sweep, including unused-keyword/variable detection and how to suppress noise
+- [E. Fix a whole failing run](#e-fix-a-whole-failing-run) — *many* failures: triage by cause, debug one representative per cause, re-validate in a loop without clobbering `output.xml`
 
 ## A. Run tests and report what failed
 
-The default lifecycle: invoke a run, wait for *completion*, then summarise — never reach for the `output.xml` file directly even though the run prints its path.
+The default lifecycle: invoke a run, wait for *completion*, then summarize — never reach for the `output.xml` file directly even though the run prints its path.
 
 1. **Run** with whatever filters / profile the task needs:
    ```bash
@@ -22,7 +22,7 @@ The default lifecycle: invoke a run, wait for *completion*, then summarise — n
    ```
    **Set the shell timeout to the maximum your tool supports, or run in background** — never guess "how long this will take" and pick a number. The run's `Output: …/output.xml` printout is a human-facing pointer, not a parsing target.
 2. **Wait for the process to exit.** The exit code is the completion signal (0 = all passed, `N` = N failed tests, capped at 250). `output.xml` is *not* a completion marker — it's written continuously throughout the run.
-3. **Summarise via the CLI:**
+3. **Summarize via the CLI:**
    ```bash
    robotcode results summary --failed
    ```
@@ -74,9 +74,9 @@ git diff --name-only --diff-filter=ACMR HEAD | grep -E '\.(robot|resource)$' \
 
 Exit code is a bitmask (see [analyze.md](analyze.md)): non-zero with bit 1 set means errors — block the commit; only bits 2+ (warnings/infos/hints) means non-blocking.
 
-## D. Analyse a project for code issues
+## D. Analyze a project for code issues
 
-Full static-analysis sweep and cleanup. `analyze code` is the entry point — **[analyze.md](analyze.md)** is the full reference (every flag, the diagnostic codes, the four suppression scopes, exit-code masking, the cache). The order that works:
+Full static-analysis sweep and cleanup. `analyze code` is the entry point — **[analyze.md](analyze.md)** is the full reference (every flag, the diagnostic codes, the suppression scopes, exit-code masking, the cache). The order that works:
 
 1. **Baseline scan** — `robotcode analyze code` (no path = `robot.toml` `paths`; narrow with a path or `--filter '<glob>'`).
 2. **Errors first** — `--severity error` (CI usually blocks only on errors; the severity tag is a full word, so filter, don't `grep`).
@@ -127,7 +127,7 @@ The one thing to get right is that **`output.xml` is not a stable snapshot acros
    robotcode rebot --merge results/full.xml results/rerun1.xml
    ```
 
-**The exception — when you genuinely debug the *whole* run.** If a test fails only as part of the full run but passes in isolation — state leaking between tests, execution-order dependence, shared suite setup/teardown — then scoping to one test with `-bl`/`-t` *hides* the bug. Run the whole suite under the debugger and let it stop at each failing test so you can watch the interplay:
+**The exception — when you genuinely debug the *whole* run.** If a test fails only as part of the full run but passes in isolation — state leaking between tests, execution-order dependence, shared suite setup/teardown — then scoping to one test with `-bl`/`-t` *hides* the bug. Run the whole suite under the debugger and let it stop at each failing test so you can watch the interplay. `--break-on-failed-test` pauses at each failing test's **end** (after the keyword has unwound) — which is what you want here: you inspect the accumulated suite/global state, not a mid-keyword frame. The `--output NONE --log NONE --report NONE` triple is here for the same reason as step 3 — keep this whole-suite debug run from overwriting the pinned `full.xml`:
    ```bash
    robotcode robot-debug --break-on-failed-test tests/ --output NONE --log NONE --report NONE
    ```

@@ -1,6 +1,8 @@
 # Installing robotcode in a project
 
-Getting `robotcode` into a project's own Python environment — and the right sub-packages (extras) alongside it — so the CLI sees the project's libraries, resources, and local modules. This is the workflow for two situations: `command -v robotcode` (or `Get-Command robotcode` on Windows) comes up empty, **or** a `robotcode <X>` invocation fails with `Error: No such command 'X'` (which means the sub-package shipping `X` isn't installed).
+Getting `robotcode` into a project's own Python environment — and the right sub-packages (extras) alongside it — so the CLI sees the project's libraries, resources, and local modules.
+
+**Before you install, confirm it's really missing.** robotcode is often already in the project's environment (the RobotCode IDE extension and typical setups install it), so first get *into* that environment — activate its venv, or invoke through the manager (`hatch run` / `uv run` / `poetry run` / `pdm run` + `robotcode …`), or use the IDE-configured interpreter — and just try the command. An empty `command -v robotcode` in an unactivated or base shell is **not** a reason to install. This workflow applies only once robotcode is genuinely absent from the project's own environment: `command -v robotcode` (or `Get-Command robotcode` on Windows) comes up empty *with the environment active*, **or** a `robotcode <X>` invocation fails with `Error: No such command 'X'` (which means the sub-package shipping `X` isn't installed).
 
 ## Contents
 
@@ -66,7 +68,7 @@ pdm run pip install "robotcode[runner,analyze,repl]"     # PDM
 pip install "robotcode[runner,analyze,repl]"             # any activated venv
 ```
 
-Hatch and Pipenv use config-file-based dependency management — for dev-dependency scope, edit `hatch.toml` / `Pipfile` and sync; for venv-only, use `hatch run pip install ...` or `pipenv run pip install ...`.
+Hatch and Pipenv use config-file-based dependency management. **Pipenv** has a one-step dev-dependency command — `pipenv install --dev "robotcode[runner,analyze,repl]"` (writes the `Pipfile` and syncs). **Hatch** has no single add command: put `robotcode[runner,analyze,repl]` in the relevant environment's `dependencies` in `hatch.toml` / `[tool.hatch.envs.<env>]`, and it syncs on the next `hatch run`. For venv-only scope either way, `hatch run pip install "robotcode[runner,analyze,repl]"` / `pipenv run pip install "robotcode[runner,analyze,repl]"`.
 
 ## 4. Verify
 

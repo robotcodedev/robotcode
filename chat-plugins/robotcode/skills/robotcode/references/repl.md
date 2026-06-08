@@ -4,10 +4,10 @@
 
 The REPL serves **two distinct purposes** — use whichever fits the request:
 
-- **Pure exploration / one-off task**: open a browser, call an API, query a database, gather information, report back. No test file is produced. Right when the user says "go to the site and check …", "look up …", "fetch …", "do X for me". If they want to **watch** ("so I can see it", "live", "non-headless"), open the browser non-headless and keep the session open — a test run would close it the moment it finishes.
+- **Pure exploration / one-off task**: open a browser, call an API, query a database, gather information, report back. No test file is produced. Right when the user says "go to the site and check …", "look up …", "fetch …", "do X for me". If they want to **watch** ("so I can see it", "live", "non-headless"), open the browser non-headless and keep the session open (`New Browser    headless=False` with Browser/Playwright; a normal `Open Browser` is already visible in SeleniumLibrary) — a test run would close it the moment it finishes.
 - **Test development**: try a keyword sequence, confirm it works, then optionally promote it into a `.robot` test or reusable keyword (see *Move experiments into tests*).
 
-Do **not** default to writing a test file when the intent is purely exploratory. Start in the REPL, complete the task, report the result — and only write a test afterwards if the user then asks for one. With Browser Library that means `New Browser    headless=False` (Playwright); with SeleniumLibrary a normal `Open Browser` is already visible.
+Do **not** default to writing a test file when the intent is purely exploratory. Start in the REPL, complete the task, report the result — and only write a test afterwards if the user then asks for one.
 
 Before guessing keyword arguments, inspect them with `robotcode libdoc <Library> list` and `robotcode libdoc <Library> show "<Keyword>"` (see the `libdoc` section in [SKILL.md](../SKILL.md)). Honor the existing `robot.toml` / `tests/*.robot` conventions.
 
@@ -31,6 +31,8 @@ Otherwise just start it:
 ```bash
 robotcode repl
 ```
+
+It is an **interactive terminal session — run it in a terminal and drive it turn by turn.** Send one statement, wait for the prompt to come back, read the result, then pick the next line from what you saw — the same back-and-forth a person has at the prompt. Don't start it as a one-shot, non-interactive command and block on its exit: with no input it just waits at the prompt forever. This is the normal way to use it — the *same* goes for its debugger (see [debugging.md](debugging.md#driving-the-session-from-an-agent)).
 
 **No agent-specific flags are needed.** RobotCode detects when it runs under an AI agent (via env vars like `CLAUDECODE`, `CURSOR_AGENT`, `COPILOT_AGENT`, the generic `AI_AGENT`/`AGENT`, …) and automatically drops to the plain input backend — no completion popups, syntax highlighting, or ANSI escapes that would corrupt captured stdin/stdout, and no persistent history pollution. A human at a terminal gets the rich prompt-toolkit backend instead.
 
@@ -114,15 +116,14 @@ One trap: at the `(rdb)` prompt `Ctrl-C` / `Ctrl-D` **resume** the run (the oppo
 
 ## Gotchas
 
-- **No section headers in the REPL**: `*** Settings ***` / `*** Keywords ***` / `*** Test Cases ***` fail with `No keyword with name '...' found`. Import with `Import Library` / `Import Resource` / `Import Variables` — or the Settings-style aliases `Library` / `Resource` / `Variables`, which work at the prompt too.
-- **The REPL debugger starts detached** — a failing keyword just prints its error and leaves you at the `>>>` prompt; nothing pauses (unlike `robotcode robot-debug`, which is attached). Attach with `.debug on` (or `--debugger-attached`, or by passing `--break …`) to make breakpoints and failures pause into `(rdb)`; `.debug off` detaches again, keeping your breakpoints and `.catch` filters.
+- **No section headers in the REPL**: `*** Settings ***` / `*** Keywords ***` / `*** Test Cases ***` fail with `No keyword with name '...' found` — import with the `Import Library` / `Import Resource` / `Import Variables` keywords instead (see *Start or reuse a REPL* for the Settings-style aliases).
+- **The REPL debugger starts detached** — a failing keyword just prints its error and leaves you at the `>>>` prompt; nothing pauses (unlike `robotcode robot-debug`, which is attached). Attach with `.debug on` to make breakpoints and failures pause into `(rdb)` — see *Debugging from the REPL* for the attach/detach mechanics.
 - **Bare relative paths in the BuiltIn import keywords need RF 7.4+**: `Import Resource    foo/my.resource` (and the `Import Library` / `Import Variables` path forms) only resolve against the importing file's directory starting in RF 7.4. On RF ≤ 7.3 such calls fail with `Resource file '...' does not exist.` — fall back to `${CURDIR}/foo/my.resource` or put the directory on the module search path.
-- **Send one statement at a time and wait for the prompt** before the next, so output doesn't interleave — but a "statement" can be a whole multi-line `FOR`/`IF`/`TRY` block (send its lines through to `END`), not only a single keyword. (The auto-selected plain backend keeps echo/escape sequences from corrupting captured I/O — see *Start or reuse a REPL*.)
-- **`.exit` is the clean exit** — `Ctrl+D` may leave child processes (browser, DB connection, server, …) lingering.
+- **A "statement" can be a whole multi-line block**, not only a single keyword — send a `FOR`/`IF`/`TRY` block's lines through to its `END` before waiting for the prompt. (Driving the session one statement at a time, and why the plain backend keeps captured I/O clean, is in *Start or reuse a REPL*.)
 
 ### Close the REPL when done
 
-Shut the REPL down so spawned subprocesses don't linger:
+Shut the REPL down so spawned subprocesses (browser, DB connection, server, …) don't linger — `.exit` is the clean exit; a bare `Ctrl+D` may orphan them:
 
 1. Type `.exit` (or `.quit`) at the `>>>` prompt and press Enter.
 2. If that doesn't return to the shell, send `Ctrl+C` (once for graceful stop, twice if stuck).
@@ -186,4 +187,4 @@ robotcode results summary --failed
 robotcode results log -bl "<full longname>"
 ```
 
-Use the REPL again to reproduce the failing state and refine the keyword sequence, locator, or wait condition before editing the test.
+If a test fails, debug it in place with [`robotcode robot-debug -bl "<longname>"`](debugging.md) — not by rebuilding it in the REPL (a REPL copy runs in a different context, without the suite's setup/teardown, variables, and imports). Use the REPL only to refine an *isolated* building block — a locator, a wait, a keyword sequence — before editing the test.

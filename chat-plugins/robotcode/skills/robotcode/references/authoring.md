@@ -59,7 +59,7 @@ This is RobotCode's biggest authoring advantage — a fast feedback loop that ne
 robotcode analyze code path/to/new.robot
 ```
 
-Catches missing keywords, wrong/missing arguments, unresolved variables, and duplicate/unused imports. Loop write → `analyze code` → fix *before* spending time on a real run. The diagnostic format and severity/exit-code rules are in *Static analysis* in [SKILL.md](../SKILL.md); for suppression and `--collect-unused`, see workflow D in [workflows.md](workflows.md).
+Catches missing keywords, wrong/missing arguments, unresolved variables, and duplicate/unused imports. Loop write → `analyze code` → fix *before* spending time on a real run. For the diagnostic format, severity/exit-code rules, suppression, and `--collect-unused`, see [analyze.md](analyze.md) — the full reference (*Static analysis* in [SKILL.md](../SKILL.md) is the summary).
 
 > If you author inside an editor with the RobotCode extension, the language server surfaces these same diagnostics inline as you type — the CLI `analyze code` is the headless equivalent.
 
@@ -76,11 +76,11 @@ Don't run the whole suite to test one new case:
 ```bash
 robotcode discover tests path/to/new.robot          # confirm it's picked up; copy the longname
 robotcode robot -bl "Suite.Sub.New Test Name"        # run only it (exact longname, no glob ambiguity)
-robotcode results summary --failed                   # then inspect — see references/results.md
+robotcode results summary --failed                   # then inspect — see results.md
 robotcode results log -bl "Suite.Sub.New Test Name"  # full execution tree if it failed
 ```
 
-Reproduce any failure back in the REPL to refine the keyword sequence, locator, or wait before editing the file again.
+That run-and-read loop confirms the test is wired up and shows a recorded failure. **When a test fails and you want to fix it live, switch to the debugger:** run it through `robotcode robot-debug -bl "<longname>"` rather than a plain `robot` run, so the failure stops you in the live context to inspect and prove a fix on the spot. That trial is ephemeral — so **write the proven fix back into the `.robot` / `.resource` file** and re-run to confirm; running a keyword at the prompt doesn't change your source. (The session mechanics — break-on-failure, `.where` / `.vars` / `.print`, `.continue` — are in [debugging.md](debugging.md).) Drop to the REPL only to refine an *isolated* building block (a locator, a wait, a keyword sequence), not to reproduce a failing *test*.
 
 ## 7. Refactor into reusable keywords / resources
 
@@ -101,7 +101,7 @@ robotcode libdoc resources/items.resource show "Item Should Exist"  # your keywo
 robotcode analyze code --collect-unused                              # spot keywords/variables nothing references
 ```
 
-`--collect-unused` is noisy on resource files that *intentionally* export keywords for other suites — scope it or suppress `KeywordNotUsed` there (workflow D in [workflows.md](workflows.md)).
+`--collect-unused` is noisy on resource files that *intentionally* export keywords for other suites — scope it or suppress `KeywordNotUsed` there (see [analyze.md](analyze.md), or workflow D in [workflows.md](workflows.md)).
 
 ## 8. Best practices
 

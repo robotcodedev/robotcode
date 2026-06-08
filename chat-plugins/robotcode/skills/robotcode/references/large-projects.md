@@ -15,7 +15,7 @@ At scale, enumerating everything floods the terminal and the context window — 
 
 ## 1. Filter at the source, not after the fact
 
-Use the standard Robot Framework filter options (`-i`, `-e`, `-s`, `-t`, `-bl`, `-ebl`) *before* the output is generated — combining a path argument with `-i <tag>` is usually enough to cut 100k tests down to a workable subset:
+Filter *before* the output is generated: the standard Robot Framework filters `-i` / `-e` / `-s` / `-t` are what bulk-narrow a huge run — combining a path argument with `-i <tag>` is usually enough to cut 100k tests down to a workable subset. (`-bl` / `-ebl` are RobotCode-added *exact-longname* selectors for when you already have a specific test's full name, not bulk filters.)
 
 ```bash
 robotcode discover tests tests/acceptance/billing/ -i smoke -e wip
@@ -35,8 +35,6 @@ robotcode discover --no-diagnostics tags
 # Suite-level inventory
 robotcode discover --no-diagnostics suites
 ```
-
-`discover info` answers "what versions" without scanning anything.
 
 ## 3. Stream to disk + use shell tools
 
@@ -70,11 +68,11 @@ robotcode --format json discover --no-diagnostics tests \
 - Pass narrow `PATHS` or use `--filter '**/billing/**/*.robot'` instead of analyzing the whole tree
 - Let the namespace cache warm on the first run — subsequent runs are much faster. If results look stale (after refactoring imports or upgrading libraries), `robotcode analyze cache clear`; to bypass the cache for one run, `--no-cache-namespaces`
 - Inspect / manage the cache with `robotcode analyze cache info|list|path|clear`
-- Use `--severity error` to focus on errors first (the severity tag is the full word `[ERROR]`, so `grep '\[E\]'` matches nothing); leave warnings/infos for a follow-up pass. Add `--code <CODE>` to zoom in on one diagnostic type
+- Use `--severity error` to focus on errors first (filter, don't `grep` — see [analyze.md](analyze.md)); leave warnings/infos for a follow-up pass. Add `--code <CODE>` to zoom in on one diagnostic type
 
 ## 6. Handling huge result files
 
-Robot Framework's `output.xml` for 100k tests can be gigabytes. Don't load it whole — `robotcode results` is already the right tool, but combine it with bounded queries:
+Robot Framework's `output.xml` for 100k tests can be gigabytes. Don't load it whole — `robotcode results` is the right tool (full reference: [results.md](results.md)); combine it with bounded queries:
 
 - `robotcode results summary --failed -i <tag>` — totals plus only failures in a narrow scope; never materializes all 100k tests in your context
 - `robotcode results show --failed --top 50` — capped failure listing

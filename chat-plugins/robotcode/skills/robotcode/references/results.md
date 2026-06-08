@@ -16,7 +16,7 @@ Reach for it whenever a run has finished and the question is "did it pass, what 
 6. `diff` — compare two runs
 7. Auto-discovery and `-o` overrides
 8. For custom analysis: `robot.api.ExecutionResult`
-9. JSON output during the run (RF 7+) and JUnit XML
+9. JSON output during the run (RF 7+) and xUnit XML
 10. Reporting back to the user
 
 ## 1. The shared option surface
@@ -27,7 +27,8 @@ Five subcommands share a consistent option surface — auto-discovering the outp
 - Longname-exact filters: `-bl <longname>` / `-ebl <longname>` — use these when you already have the test's full name (e.g. copied from a previous `show` output); no glob ambiguity. Available on all five subcommands
 - Full-text search: `--search TEXT` / `--search-regex PATTERN` — searches across names, messages, tags, documentation, metadata, and keyword names/args/docs/messages
 - Output-file override: `-o PATH` (file or directory)
-- Output format: `--format json` / `--format text`
+
+`--format json` / `--format text` is a **global** flag — put it *before* the subcommand (`robotcode --format json results summary`), not after it, the same as for `analyze` / `discover`.
 
 All five emit text or JSON:
 
@@ -47,7 +48,7 @@ robotcode results summary --failed                              # list every fai
 robotcode results summary -i smoke --status fail                # combine tag + status filters
 robotcode results summary --search TimeoutError                 # full-text search across name/message/keywords/logs
 robotcode results summary -bl "MyProject.Login.Login Works"     # exact-match by full longname
-robotcode --format json results summary                               # structured payload (counts, status, elapsed, ...)
+robotcode --format json results summary                         # structured payload (counts, status, elapsed, ...)
 robotcode results summary -o results/old-run.xml                # specific output file (XML or JSON)
 robotcode results summary -o /tmp/ci-results/                   # directory — auto-discovery runs inside it
 ```
@@ -99,7 +100,7 @@ robotcode results stats --by tag --by suite          # both sections in one call
 robotcode results stats --by tag --sort elapsed --top 20   # 20 slowest tags
 robotcode results stats --by suite --search Browser  # only suites touching the Browser keyword
 robotcode results stats --by tag -bl "MyProject.Login.Login Works"   # stats limited to one specific test (rarely needed but possible)
-robotcode --format json results stats --by tag             # structured for downstream tools
+robotcode --format json results stats --by tag       # structured for downstream tools
 ```
 
 Each section is a table with pass/fail/skip counts and total elapsed per group. Sort orders: `name` (ascending) / `total` / `failed` / `elapsed` (descending). Reach for `stats` over `summary` when the user asks "which tags fail most", "which suite is slowest", "is failure clustered in one area", etc.
@@ -111,7 +112,7 @@ robotcode results diff baseline.xml                            # baseline vs aut
 robotcode results diff prev/output.xml curr/output.xml         # two explicit files
 robotcode results diff baseline.xml --only new-failures        # restrict to regressions
 robotcode results diff baseline.xml --only new-passes --only added  # combine categories
-robotcode --format json results diff baseline.xml                    # structured diff
+robotcode --format json results diff baseline.xml              # structured diff
 ```
 
 `BASELINE` is required; `CURRENT` defaults to auto-discovery. Categories the `--only` filter takes: `new-failures` (regressions), `new-passes` (fixes), `status-changes` (any), `added` (test exists in current but not baseline), `removed`. The plain output is a structured table — perfect for "what changed since the last green run".
@@ -136,13 +137,13 @@ for t in r.suite.all_tests:
 
 `r.suite.statistics`, iterable `r.suite.all_tests`, `test.full_name`, `test.message`, `test.status`, `test.elapsed_time`, etc. — no ElementTree, no XPath. Run it via the project's runtime so the same Robot Framework version reads what wrote.
 
-## 9. JSON output during the run (RF 7+) and JUnit XML
+## 9. JSON output during the run (RF 7+) and xUnit XML
 
 `robotcode results` reads both XML and JSON outputs, so there's rarely a reason to switch formats. The exceptions — both for downstream tooling, not for agent consumption:
 
 ```bash
 robotcode robot --output output.json ...           # RF 7+: smaller file / external JSON consumer
-robotcode robot --xunit xunit.xml ...              # JUnit for CI dashboards (Jenkins, GitLab, GitHub)
+robotcode robot --xunit xunit.xml ...              # xUnit-format XML for CI dashboards (Jenkins, GitLab, GitHub)
 ```
 
 ## 10. Reporting back to the user

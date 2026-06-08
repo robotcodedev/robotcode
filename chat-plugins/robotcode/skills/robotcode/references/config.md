@@ -2,6 +2,15 @@
 
 `robot.toml` centralizes a Robot Framework project's settings — paths, variables, output options, and environment-specific **profiles** — so they live in version control instead of scattered argument files or CLI flags. `robotcode` honors it for every command (`robot`, `discover`, `robot-debug`, …).
 
+## Contents
+
+- What goes in it
+- Computed values (`expr` / `if`)
+- Where config lives, and the loading order
+- Profiles
+- Common patterns
+- Gotchas
+
 ## What goes in it
 
 Every `robot` / `rebot` command-line option is a key (multi-word options use hyphens: `--outputdir` → `output-dir`), plus RobotCode-specific settings:

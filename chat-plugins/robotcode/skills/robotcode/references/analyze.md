@@ -33,7 +33,7 @@ Typical diagnostics:
 
 ```bash
 robotcode analyze code                              # no path → whatever robot.toml `paths` covers
-robotcode analyze code tests/acceptance/billing/    # narrow by pathih
+robotcode analyze code tests/acceptance/billing/    # narrow by path
 robotcode analyze code --filter '**/*.robot'        # narrow by glob
 ```
 
@@ -70,7 +70,7 @@ Pick the **lowest** scope that solves the problem:
 | One command run | `robotcode analyze code -mi MultipleKeywords` |
 | Project-wide | `robot.toml` → `[tool.robotcode-analyze.modifiers]`, `ignore = ["MultipleKeywords"]` |
 
-**Re-classify** instead of ignoring: `-me` → error, `-mw` → warning, `-mI` → info, `-mh` → hint (the matching keys under `[tool.robotcode-analyze.modifiers]`: `error`, `warning`, `information`, `hint`).
+**Re-classify** instead of ignoring: `-me` → error, `-mw` → warning, `-mI` → info, `-mh` → hint (the matching keys under `[tool.robotcode-analyze.modifiers]`: `error`, `warning`, `information`, `hint`). Mind the case: lowercase `-mi` *ignores* a code, capital `-mI` re-classifies it to info.
 
 ## Exit code (CI gating)
 
