@@ -108,6 +108,22 @@ Source = "https://github.com/robotcodedev/robotcode"
 [project.scripts]
 robotcode = "robotcode.cli.__main__:main"
 
+[tool.uv.workspace]
+members = ["packages/*"]
+
+[tool.uv.sources]
+robotcode = { workspace = true }
+robotcode-core = { workspace = true }
+robotcode-jsonrpc2 = { workspace = true }
+robotcode-modifiers = { workspace = true }
+robotcode-plugin = { workspace = true }
+robotcode-robot = { workspace = true }
+robotcode-debugger = { workspace = true }
+robotcode-language-server = { workspace = true }
+robotcode-runner = { workspace = true }
+robotcode-analyze = { workspace = true }
+robotcode-repl = { workspace = true }
+robotcode-repl-server = { workspace = true }
 
 [tool.semantic_release]
 version_variable = [
