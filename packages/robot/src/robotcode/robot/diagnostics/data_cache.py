@@ -2,11 +2,14 @@ import os
 import pickle
 import sqlite3
 import sys
+import threading
 from contextlib import contextmanager
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Any, Generic, Iterator, List, Optional, Tuple, Type, TypeVar, Union
+from typing import Any, Callable, Generic, Iterator, List, Optional, Tuple, Type, TypeVar, Union
+
+from robotcode.core.utils.logging import LoggingDescriptor
 
 from ..utils import get_robot_version_str
 
@@ -19,6 +22,7 @@ else:
 
 _M = TypeVar("_M")
 _D = TypeVar("_D")
+_R = TypeVar("_R")
 
 
 class CacheSection(Enum):
@@ -38,14 +42,14 @@ class CacheEntry(Generic[_M, _D]):
 
     def __init__(
         self,
-        conn: sqlite3.Connection,
+        cache: "SqliteDataCache",
         section: "CacheSection",
         entry_name: str,
         meta_blob: Optional[bytes],
         meta_type: Union[Type[_M], Tuple[Type[_M], ...]],
         data_type: Union[Type[_D], Tuple[Type[_D], ...]],
     ) -> None:
-        self._conn = conn
+        self._cache = cache
         self._section = section
         self._entry_name = entry_name
         self._meta_blob = meta_blob
@@ -70,10 +74,7 @@ class CacheEntry(Generic[_M, _D]):
     @property
     def data(self) -> _D:
         if not self._data_loaded:
-            row = self._conn.execute(
-                f"SELECT data FROM {self._section.value} WHERE entry_name = ?",
-                (self._entry_name,),
-            ).fetchone()
+            row = self._cache._fetch_data(self._section, self._entry_name)
             if row is None:
                 raise RuntimeError(f"Cache entry '{self._entry_name}' disappeared from DB")
             result = pickle.loads(row[0])
@@ -247,16 +248,50 @@ def build_cache_dir(base_path: Path) -> Path:
     )
 
 
+# Primary SQLite result codes for an unusable database file.
+_SQLITE_CORRUPT = 11
+_SQLITE_NOTADB = 26
+
+# Substring markers used to recognize corruption when no error code is available
+# (Python < 3.11) or when the error is raised by the sqlite3 module itself rather
+# than the engine (e.g. "Could not decode to UTF-8" on a corrupt TEXT column, which
+# carries no error code on any version). SQLite error strings are fixed and not
+# localized, so substring matching is safe.
+_CORRUPTION_MESSAGE_MARKERS = ("malformed", "not a database", "disk image", "corrupt", "decode")
+
+
+def _is_corruption(exc: sqlite3.DatabaseError) -> bool:
+    """Whether the error means the database file itself is corrupt/unusable.
+
+    A locked database, a closed connection (``ProgrammingError``) or a constraint
+    violation are *not* corruption and must not trigger a destructive rebuild.
+    """
+    code = getattr(exc, "sqlite_errorcode", None)  # available since Python 3.11
+    if code is not None:
+        return (code & 0xFF) in (_SQLITE_CORRUPT, _SQLITE_NOTADB)
+    message = str(exc).lower()
+    return any(marker in message for marker in _CORRUPTION_MESSAGE_MARKERS)
+
+
 class SqliteDataCache:
     """Cache backend using a single SQLite database with per-section tables.
 
     Each CacheSection gets its own table with entry_name as PK, plus meta and data
     BLOB columns. An app_version is stored in a metadata table; on version mismatch
     all tables are dropped and recreated.
+
+    All access to the single shared connection is serialized through a lock, and a
+    corrupt database (``sqlite3.DatabaseError``, e.g. "database disk image is
+    malformed") is detected and rebuilt from scratch instead of propagating to
+    callers.
     """
+
+    _logger = LoggingDescriptor()
 
     def __init__(self, cache_dir: Path, app_version: str = "") -> None:
         self.cache_dir = cache_dir
+        self._app_version = app_version
+        self._lock = threading.Lock()
 
         if not cache_dir.exists():
             cache_dir.mkdir(parents=True)
@@ -267,25 +302,84 @@ class SqliteDataCache:
 
         self._lock_fd = _acquire_shared_lock(cache_dir)
 
-        db_path = cache_dir / "cache.db"
-        self._conn = sqlite3.connect(str(db_path), check_same_thread=False)
+        try:
+            self._open()
+        except sqlite3.DatabaseError as e:
+            if not _is_corruption(e):
+                raise
+            self._rebuild()
+
+    def _open(self, *, in_memory: bool = False) -> None:
+        """Open the connection, configure it, and ensure the schema exists."""
+        self._conn = sqlite3.connect(":memory:" if in_memory else str(self.db_path), check_same_thread=False)
         self._conn.execute("PRAGMA journal_mode=WAL")
         self._conn.execute("PRAGMA synchronous=NORMAL")
         self._conn.execute("PRAGMA cache_size=-8000")
-        self._conn.execute("PRAGMA mmap_size=67108864")
+        self._conn.execute("PRAGMA busy_timeout=5000")
+        # Memory-mapped reads race with a concurrent writer extending the file on
+        # macOS/APFS and can persist a torn page ("database disk image is
+        # malformed"); keep mmap only where the unified page cache makes it safe.
+        self._conn.execute(f"PRAGMA mmap_size={0 if sys.platform == 'darwin' else 67108864}")
+        self._ensure_schema()
 
-        self._ensure_schema(app_version)
+    def _purge_db_files(self) -> None:
+        # Best-effort: on Windows another process (a second editor window) may hold
+        # cache.db open, so unlink can raise PermissionError. Failing to delete must
+        # not abort recovery - _rebuild falls back to an in-memory cache.
+        for suffix in ("", "-wal", "-shm"):
+            try:
+                (self.cache_dir / f"cache.db{suffix}").unlink(missing_ok=True)
+            except OSError:
+                pass
 
-    def _ensure_schema(self, app_version: str) -> None:
+    def _rebuild(self) -> None:
+        """Discard a corrupt database and reopen an empty one.
+
+        If the corrupt file cannot be removed or reopened (e.g. another process holds
+        it open), fall back to a transient in-memory database so the cache stays usable
+        for this session instead of taking down the language server.
+        """
+        self._logger.warning(lambda: f"Cache database {self.db_path} is corrupt, rebuilding it from scratch.")
+        conn = getattr(self, "_conn", None)
+        if conn is not None:
+            try:
+                conn.close()
+            except sqlite3.Error:
+                pass
+        self._purge_db_files()
+        try:
+            self._open()
+        except sqlite3.DatabaseError as e:
+            if not _is_corruption(e):
+                raise
+            self._logger.warning(
+                lambda: f"Could not rebuild cache database {self.db_path}; using a temporary in-memory cache."
+            )
+            self._open(in_memory=True)
+
+    def _run(self, operation: Callable[[], _R]) -> _R:
+        """Run a DB operation under the connection lock, rebuilding the cache once if it is corrupt."""
+        with self._lock:
+            try:
+                return operation()
+            except sqlite3.DatabaseError as e:
+                if not _is_corruption(e):
+                    raise
+                self._rebuild()
+                return operation()
+
+    def _ensure_schema(self) -> None:
         self._conn.execute("CREATE TABLE IF NOT EXISTS _meta (  key TEXT PRIMARY KEY,  value TEXT NOT NULL)")
 
         row = self._conn.execute("SELECT value FROM _meta WHERE key = 'app_version'").fetchone()
         stored_version = row[0] if row else None
 
-        if stored_version != app_version:
+        if stored_version != self._app_version:
             for table in _TABLE_NAMES:
                 self._conn.execute(f"DROP TABLE IF EXISTS {table}")
-            self._conn.execute("INSERT OR REPLACE INTO _meta (key, value) VALUES ('app_version', ?)", (app_version,))
+            self._conn.execute(
+                "INSERT OR REPLACE INTO _meta (key, value) VALUES ('app_version', ?)", (self._app_version,)
+            )
 
         for table in _TABLE_NAMES:
             self._conn.execute(
@@ -305,15 +399,25 @@ class SqliteDataCache:
         meta_type: Union[Type[_M], Tuple[Type[_M], ...]],
         data_type: Union[Type[_D], Tuple[Type[_D], ...]],
     ) -> Optional[CacheEntry[_M, _D]]:
-        row = self._conn.execute(
-            f"SELECT meta FROM {section.value} WHERE entry_name = ?",
-            (entry_name,),
-        ).fetchone()
+        row = self._run(
+            lambda: self._conn.execute(
+                f"SELECT meta FROM {section.value} WHERE entry_name = ?",
+                (entry_name,),
+            ).fetchone()
+        )
 
         if row is None:
             return None
 
-        return CacheEntry(self._conn, section, entry_name, row[0], meta_type, data_type)
+        return CacheEntry(self, section, entry_name, row[0], meta_type, data_type)
+
+    def _fetch_data(self, section: CacheSection, entry_name: str) -> Optional[Any]:
+        return self._run(
+            lambda: self._conn.execute(
+                f"SELECT data FROM {section.value} WHERE entry_name = ?",
+                (entry_name,),
+            ).fetchone()
+        )
 
     def save_entry(
         self,
@@ -324,19 +428,24 @@ class SqliteDataCache:
     ) -> None:
         meta_blob = pickle.dumps(meta, protocol=pickle.HIGHEST_PROTOCOL) if meta is not None else None
         data_blob = pickle.dumps(data, protocol=pickle.HIGHEST_PROTOCOL)
-        self._conn.execute(
-            f"INSERT INTO {section.value} (entry_name, meta, data)"
-            f" VALUES (?, ?, ?)"
-            f" ON CONFLICT(entry_name) DO UPDATE SET"
-            f" meta = excluded.meta, data = excluded.data, modified_at = CURRENT_TIMESTAMP",
-            (entry_name, meta_blob, data_blob),
-        )
-        self._conn.commit()
+
+        def op() -> None:
+            self._conn.execute(
+                f"INSERT INTO {section.value} (entry_name, meta, data)"
+                f" VALUES (?, ?, ?)"
+                f" ON CONFLICT(entry_name) DO UPDATE SET"
+                f" meta = excluded.meta, data = excluded.data, modified_at = CURRENT_TIMESTAMP",
+                (entry_name, meta_blob, data_blob),
+            )
+            self._conn.commit()
+
+        self._run(op)
 
     def close(self) -> None:
-        self._conn.close()
-        _release_lock(self._lock_fd)
-        self._lock_fd = None
+        with self._lock:
+            self._conn.close()
+            fd, self._lock_fd = self._lock_fd, None
+        _release_lock(fd)
 
     @property
     def db_path(self) -> Path:
@@ -344,17 +453,19 @@ class SqliteDataCache:
 
     @property
     def app_version(self) -> Optional[str]:
-        row = self._conn.execute("SELECT value FROM _meta WHERE key = 'app_version'").fetchone()
+        row = self._run(lambda: self._conn.execute("SELECT value FROM _meta WHERE key = 'app_version'").fetchone())
         return row[0] if row else None
 
     def get_section_stats(self, section: CacheSection) -> "SectionStats":
-        row = self._conn.execute(
-            f"SELECT COUNT(*),"
-            f" COALESCE(SUM(LENGTH(meta) + LENGTH(data)), 0),"
-            f" MIN(created_at),"
-            f" MAX(modified_at)"
-            f" FROM {section.value}",
-        ).fetchone()
+        row = self._run(
+            lambda: self._conn.execute(
+                f"SELECT COUNT(*),"
+                f" COALESCE(SUM(LENGTH(meta) + LENGTH(data)), 0),"
+                f" MIN(created_at),"
+                f" MAX(modified_at)"
+                f" FROM {section.value}",
+            ).fetchone()
+        )
         assert row is not None
         return SectionStats(
             section=section,
@@ -365,12 +476,14 @@ class SqliteDataCache:
         )
 
     def list_entries(self, section: CacheSection) -> List["EntryInfo"]:
-        rows = self._conn.execute(
-            f"SELECT entry_name, created_at, modified_at,"
-            f" LENGTH(meta), LENGTH(data)"
-            f" FROM {section.value}"
-            f" ORDER BY entry_name",
-        ).fetchall()
+        rows = self._run(
+            lambda: self._conn.execute(
+                f"SELECT entry_name, created_at, modified_at,"
+                f" LENGTH(meta), LENGTH(data)"
+                f" FROM {section.value}"
+                f" ORDER BY entry_name",
+            ).fetchall()
+        )
         return [
             EntryInfo(
                 entry_name=r[0],
@@ -383,17 +496,23 @@ class SqliteDataCache:
         ]
 
     def clear_section(self, section: CacheSection) -> int:
-        cursor = self._conn.execute(f"DELETE FROM {section.value}")
-        self._conn.commit()
-        return cursor.rowcount
+        def op() -> int:
+            cursor = self._conn.execute(f"DELETE FROM {section.value}")
+            self._conn.commit()
+            return cursor.rowcount
+
+        return self._run(op)
 
     def clear_all(self) -> int:
-        total = 0
-        for table in _TABLE_NAMES:
-            cursor = self._conn.execute(f"DELETE FROM {table}")
-            total += cursor.rowcount
-        self._conn.commit()
-        return total
+        def op() -> int:
+            total = 0
+            for table in _TABLE_NAMES:
+                cursor = self._conn.execute(f"DELETE FROM {table}")
+                total += cursor.rowcount
+            self._conn.commit()
+            return total
+
+        return self._run(op)
 
 
 @dataclass
