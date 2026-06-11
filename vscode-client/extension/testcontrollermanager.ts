@@ -587,12 +587,31 @@ export class TestControllerManager {
     }
     try {
       const config = vscode.workspace.getConfiguration(CONFIG_SECTION, folder);
-      const result = await this.getRobotCodeProfiles(folder, config.get("profiles", undefined));
+      const selectedProfiles = config.get<string[]>("profiles", []);
+      const result = await this.getRobotCodeProfiles(folder, selectedProfiles.length ? selectedProfiles : undefined);
 
-      if (result.profiles.length === 0 && result.messages) {
-        await vscode.window.showWarningMessage(result.messages.join("\n"));
-        return;
+      // Drop configured profiles that are no longer defined in the configuration so they don't
+      // linger as an unselectable, active selection. Skip this when the available profiles could
+      // not be determined (e.g. invalid environment) to avoid clearing a still-valid selection.
+      const couldNotDetermine = result.profiles.length === 0 && !result.messages?.length;
+      const availableNames = new Set(result.profiles.map((p) => p.name));
+      const removedProfiles = couldNotDetermine ? [] : selectedProfiles.filter((name) => !availableNames.has(name));
+      if (removedProfiles.length > 0) {
+        await config.update(
+          "profiles",
+          selectedProfiles.filter((name) => availableNames.has(name)),
+          vscode.ConfigurationTarget.WorkspaceFolder,
+        );
       }
+
+      const removedMessage =
+        removedProfiles.length === 0
+          ? undefined
+          : removedProfiles.length === 1
+            ? `The selected profile "${removedProfiles[0]}" was removed because it is no longer defined in the configuration.`
+            : `The selected profiles ${removedProfiles
+                .map((p) => `"${p}"`)
+                .join(", ")} were removed because they are no longer defined in the configuration.`;
 
       const options = result.profiles.map((p) => {
         return {
@@ -601,6 +620,18 @@ export class TestControllerManager {
           picked: p.selected,
         };
       });
+
+      if (options.length === 0) {
+        const baseMessage = result.messages?.length
+          ? result.messages.join("\n")
+          : "No configuration profiles available.";
+        await vscode.window.showWarningMessage(removedMessage ? `${removedMessage}\n${baseMessage}` : baseMessage);
+        return;
+      }
+
+      if (removedMessage) {
+        vscode.window.showWarningMessage(removedMessage);
+      }
 
       const profiles = await vscode.window.showQuickPick([...options], {
         title: `Select Configuration Profiles for folder "${folder.name}"`,
