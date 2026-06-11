@@ -303,6 +303,23 @@ class DocumentsCacheHelper:
 
         return self.get_general_model(document)
 
+    def get_uncached_model(self, document: TextDocument) -> ast.AST:
+        """Build a fresh model that is never cached on the document.
+
+        The cached model returned by `get_model` is shared between all features.
+        Consumers that mutate the model in place (e.g. the Robocop formatter) must
+        use this instead, otherwise the mutations corrupt the cached model and break
+        subsequent operations.
+        """
+        document_type = self.get_document_type(document)
+
+        if document_type == DocumentType.INIT:
+            return self.__get_init_model(document)
+        if document_type == DocumentType.RESOURCE:
+            return self.__get_resource_model(document)
+
+        return self.__get_general_model(document)
+
     def __get_model(
         self,
         document: TextDocument,

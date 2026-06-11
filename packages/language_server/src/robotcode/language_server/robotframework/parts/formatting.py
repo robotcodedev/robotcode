@@ -89,7 +89,7 @@ class RobotFormattingProtocolPart(RobotLanguageServerProtocolPart):
         runner = RobocopFormatter(config_manager)
         runner.config = config
 
-        model = self.parent.documents_cache.get_model(document)
+        model = self.parent.documents_cache.get_uncached_model(document)
         if self.parent.robocop_helper.robocop_version >= (8, 0):
             from robocop.source_file import SourceFile
 
