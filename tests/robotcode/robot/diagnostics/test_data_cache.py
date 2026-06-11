@@ -320,7 +320,10 @@ class TestCorruptionRecovery:
             def close(self) -> None:
                 pass
 
-        # Simulate the live connection turning corrupt mid-session.
+        # Simulate the live connection turning corrupt mid-session. Close the real one
+        # first: otherwise it keeps cache.db open and _rebuild's purge cannot delete the
+        # file on Windows (production always closes the real connection in _rebuild).
+        cache._conn.close()
         cache._conn = _BoomConnection()  # type: ignore[assignment]
 
         # The read must not raise: _run detects the error, rebuilds, and retries.
@@ -346,6 +349,8 @@ class TestCorruptionRecovery:
             def close(self) -> None:
                 pass
 
+        # Close the real connection first so the corrupt file is not held open on Windows.
+        cache._conn.close()
         cache._conn = _BoomConnection()  # type: ignore[assignment]
 
         # clear_all is the path the "Clear Cache" command hits; it must recover, not raise.
