@@ -2162,7 +2162,7 @@
     "@types/vscode-notebook-renderer": "^1.72.4",
     "@vscode/python-extension": "^1.0.6",
     "@vscode/vsce": "^3.9.1",
-    "esbuild": "^0.28.0",
+    "esbuild": "^0.28.1",
     "eslint": "^10.4.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.5",
