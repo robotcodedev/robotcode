@@ -64,7 +64,7 @@ replserver = ["robotcode-repl-server==2.6.0"]
 all = [
   "robotcode-debugger==2.6.0",
   "robotcode-language-server==2.6.0",
-  "robotcode-runner[html]==2.6.0",
+  "robotcode-runner==2.6.0",
   "robotcode-analyze==2.6.0",
   "robotcode-repl==2.6.0",
   "robotcode-repl-server==2.6.0",
