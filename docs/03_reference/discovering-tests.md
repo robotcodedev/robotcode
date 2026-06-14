@@ -241,7 +241,7 @@ The `--normalized` default matches Robot Framework's own tag-matching semantics:
 
 ## `files` — source files Robot would parse
 
-`files` lists every `.robot` and `.resource` file Robot Framework would even consider loading from the given paths (or the profile's default paths), honouring `.gitignore` / `.robotignore`.
+`files` lists every `.robot` and `.resource` file Robot Framework would even consider loading from the given paths (or the profile's default paths), honouring `.gitignore` / [`.robotignore`](./ignoring-files.md).
 
 ```bash
 robotcode discover files                          # respects profile paths
