@@ -2,6 +2,74 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [2.6.1](https://github.com/robotcodedev/robotcode/compare/v2.6.0..v2.6.1) - 2026-06-14
+
+### <!-- 1 -->Bug Fixes
+
+- **langserver:** Prevent inconsistent Robocop formatting ([e31ed32](https://github.com/robotcodedev/robotcode/commit/e31ed32fcf6c51b10aa76c56b1bea64d5f1f2ea0))
+
+  Formatting a file with Robocop repeatedly no longer oscillates between states (for example a blank line being added and removed before a section header on every other format). The formatter mutated the shared, cached document model in place; it now works on a fresh, uncached model so repeated formatting stays idempotent.
+
+- **robot:** Recover automatically from a corrupt cache database ([2ec7a9c](https://github.com/robotcodedev/robotcode/commit/2ec7a9c149eb1771ecf02832bafe409c252cbce3))
+
+  The workspace cache database could become corrupt ("database disk image
+  is malformed"). Once that happened nothing recovered: restarting the
+  language server kept failing while opening the cache, and "Clear Cache
+  and Restart Language Servers" failed too because it cleared entries
+  through the already-damaged database.
+
+  RobotCode now detects a corrupt cache database, discards it (including
+  its -wal/-shm sidecars) and rebuilds it from scratch, so the keyword
+  view, test discovery and the clear-cache command keep working without
+  any manual cleanup. If the file cannot be removed or reopened (for
+  example while another editor window holds it open), it falls back to a
+  temporary in-memory cache for the session instead of failing to start.
+
+  Access to the cache is now serialized so it stays consistent under the
+  language server's concurrent requests, and memory-mapped reads are
+  disabled on macOS, where they could leave a corrupt page behind.
+
+- **vscode:** Drop selected profiles that no longer exist in the config ([e3bad18](https://github.com/robotcodedev/robotcode/commit/e3bad18f24aaba6b4a71a696a390361ba1c5ce0e))
+
+  When a profile was selected and then removed from robot.toml — for
+  example after switching git branches — the selection stayed active.
+  This produced a "profile not found" error on every test run, and the
+  profile could not be deselected because the selection menu refused to
+  open when no profiles were left to choose from.
+
+  Now opening "Select Configuration Profiles" removes any selected
+  profile that is no longer defined in the configuration and shows a
+  message listing which profiles were removed. If the available profiles
+  cannot be determined (e.g. an invalid environment), the current
+  selection is left untouched.
+
+- Don't pull html-to-markdown into the 'all' extra ([6bf2a6d](https://github.com/robotcodedev/robotcode/commit/6bf2a6d1b41976683f50a36e21fac3ddf26ec12a))
+
+
+  Since version 2.0 html-to-markdown ships as a Rust extension with prebuilt wheels only for a limited set of platforms (manylinux x86_64/aarch64, macOS, win_amd64). On other targets such as 32-bit Raspberry Pi OS (armv7l) or Alpine/musllinux, pip falls back to a source build that needs a Rust toolchain and fails, which broke 'pip install robotcode[all]'.
+
+  html-to-markdown only improves HTML log conversion in the 'results' command and has a built-in stdlib fallback, so it is now opt-in via 'pip install robotcode-runner[html]'.
+
+
+### <!-- 2 -->Documentation
+
+- **ai-agents:** Foreground the debugger over the REPL ([0c40394](https://github.com/robotcodedev/robotcode/commit/0c40394d97b503ba05f7bb72d1a988c837ccb61f))
+
+  Make robot-debug the primary tool for working with a real test and
+  the REPL the narrower fallback for exploring when no test exists yet.
+  Add debugger examples, a debugger-first core-habit entry, a
+  troubleshooting item for chasing a failing test instead of debugging
+  it, and note that agent output capture and the plain backend apply to
+  robot-debug too.
+
+- Add reference page for excluding files with .robotignore ([d8990ec](https://github.com/robotcodedev/robotcode/commit/d8990ec5a4c8d1e8ec97b41548eeb9114b396007))
+
+
+  Documents the .robotignore file: gitignore-style syntax, how it relates to .gitignore (it replaces it rather than merging), nested files, what RobotCode skips by default, where it applies (discovery, analysis, and the language server), how to verify the result with `robotcode discover files`, and how to use it to speed up analysis on large projects.
+
+  Also links the new page from the discover `files` reference.
+
+
 ## [2.6.0](https://github.com/robotcodedev/robotcode/compare/v2.5.1..v2.6.0) - 2026-06-09
 
 ### <!-- 0 -->Features
