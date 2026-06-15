@@ -2,6 +2,28 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [2.6.2](https://github.com/robotcodedev/robotcode/compare/v2.6.1..v2.6.2) - 2026-06-15
+
+### <!-- 1 -->Bug Fixes
+
+- **vscode:** Refresh the Test Explorer after a language server restart ([0098190](https://github.com/robotcodedev/robotcode/commit/00981905c0d192eba07c7227d2dc80ef7cd00c16))
+
+  - test items and run buttons no longer vanish until a window reload after a restart
+  - a folder's tests are re-discovered when its language server restarts
+  - run profiles are rebuilt once per restart instead of on every state change
+  - a test run no longer hangs when a debug session fails to start
+  - cancelling a run stops only that run, and works while it is still starting
+  - a fixed error clears its decoration; stale diagnostics are cleared on an invalid environment
+  - per-folder refresh, so one folder no longer interferes with another
+
+
+
+### <!-- 2 -->Documentation
+
+- **news:** Cover v2.6.2 alongside v2.6.1 in the release notes ([5beabad](https://github.com/robotcodedev/robotcode/commit/5beabad67d847e5929f3d1fdccb6c74329d488cb))
+- **news:** Add v2.6.1 release notes ([3e1be81](https://github.com/robotcodedev/robotcode/commit/3e1be81d9b43d77a623acb3be5763c1a517e8381))
+
+
 ## [2.6.1](https://github.com/robotcodedev/robotcode/compare/v2.6.0..v2.6.1) - 2026-06-14
 
 ### <!-- 1 -->Bug Fixes
