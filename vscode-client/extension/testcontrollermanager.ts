@@ -8,6 +8,12 @@ import { escapeRobotGlobPatterns, filterAsync, Mutex, truncateAndReplaceNewlines
 import { CONFIG_SECTION } from "./config";
 import { Range, Diagnostic, DiagnosticSeverity } from "vscode-languageclient/node";
 
+const ROOT_TEST_ITEM_KEY = "__root__";
+
+function rootSnapshotKey(folder: vscode.WorkspaceFolder): string {
+  return `${ROOT_TEST_ITEM_KEY}:${folder.uri.toString()}`;
+}
+
 function arraysEqual<T>(a: T[] | undefined, b: T[] | undefined): boolean {
   if (a === b) return true;
   if (a === undefined || b === undefined) return false;
@@ -186,7 +192,7 @@ export class TestControllerManager {
   private readonly updateEditorsMutex = new Mutex();
   private readonly debugSessions = new Set<vscode.DebugSession>();
   private readonly didChangedTimer = new Map<string, DidChangeEntry>();
-  private refreshWorkspaceChangeTimer: DidChangeEntry | undefined;
+  private readonly refreshWorkspaceChangeTimer = new Map<string, DidChangeEntry>();
   private diagnosticCollection = vscode.languages.createDiagnosticCollection("robotCode discovery");
   private activeStepDecorationType: vscode.TextEditorDecorationType;
   showEditorRunDecorations = false;
@@ -197,9 +203,8 @@ export class TestControllerManager {
   private readonly testItemByUri = new Map<string, vscode.TestItem>();
   // Cache of the last set tag IDs per TestItem ID. Used for tag diffing in addOrUpdateTestItem.
   private readonly lastSetTags = new Map<string, string[]>();
-  // Deep snapshot of the last successfully processed children per TestItem ID
-  // (key "__root__" for the workspace top level). Used in refreshItem for the result
-  // compare — if the new children are structurally identical, no UI update is triggered.
+  // Snapshot of the last processed children per TestItem id (plus a per-folder
+  // "__root__:<uri>" key) for refreshItem's result compare.
   private readonly lastKnownChildren = new Map<string, RobotTestItem[] | undefined>();
   // CTS for the config-change refresh path. Cancelled on the next config change so an
   // in-flight refresh terminates before the next refreshWorkspace queues behind it on
@@ -260,22 +265,20 @@ export class TestControllerManager {
       this.activeStepDecorationType,
       this.languageClientsManager.onClientStateChanged(async (event) => {
         const folder = vscode.workspace.getWorkspaceFolder(event.uri);
-        if (folder) {
-          this.invalidateProfilesCache(folder);
-        }
         switch (event.state) {
           case ClientState.Running: {
-            // refresh()'s single-inflight handles cancellation of any predecessor.
-            await this.refresh();
+            await this.refreshWorkspace(folder);
             break;
           }
-          case ClientState.Stopped: {
-            if (folder) this.removeWorkspaceFolderItems(folder);
-
+          case ClientState.Refreshed: {
+            if (folder && !this.languageClientsManager.clients.has(folder.uri.toString())) {
+              await this.refreshWorkspace(folder);
+            }
+            if (folder) this.invalidateProfilesCache(folder);
+            await this.updateRunProfiles();
             break;
           }
         }
-        await this.updateRunProfiles();
       }),
       vscode.workspace.onDidChangeConfiguration(async (event) => {
         let testExplorerChanged = false;
@@ -687,16 +690,16 @@ export class TestControllerManager {
         this.testController.items.delete(item.id);
       }
     }
+
+    this.lastKnownChildren.delete(rootSnapshotKey(folder));
   }
 
   dispose(): void {
     this.didChangedTimer.forEach((entry) => entry.cancel());
     this.didChangedTimer.clear();
 
-    if (this.refreshWorkspaceChangeTimer) {
-      this.refreshWorkspaceChangeTimer.cancel();
-      this.refreshWorkspaceChangeTimer = undefined;
-    }
+    this.refreshWorkspaceChangeTimer.forEach((entry) => entry.cancel());
+    this.refreshWorkspaceChangeTimer.clear();
 
     this.robotItemIndex.clear();
     this.testItemByUri.clear();
@@ -902,6 +905,11 @@ export class TestControllerManager {
     token?: vscode.CancellationToken,
   ): Promise<RobotCodeDiscoverResult> {
     if (!(await this.languageClientsManager.isValidRobotEnvironmentInFolder(folder))) {
+      if (prune) {
+        this.diagnosticCollection.forEach((uri, _diagnostics, collection) => {
+          if (vscode.workspace.getWorkspaceFolder(uri) === folder) collection.delete(uri);
+        });
+      }
       return {};
     }
 
@@ -1013,7 +1021,9 @@ export class TestControllerManager {
         token,
       );
 
-      this.lastDiscoverResults.set(folder, result);
+      if (result?.items !== undefined) {
+        this.lastDiscoverResults.set(folder, result);
+      }
       // Index the freshly discovered subtree for O(1) findRobotItem lookups.
       this.indexRobotTree(result?.items);
 
@@ -1197,44 +1207,55 @@ export class TestControllerManager {
         item.busy = false;
       }
     } else {
-      const rootKey = "__root__";
+      const keptIds = new Set<string>();
+      const liveFolderKeys = new Set<string>();
 
-      // Phase 1: collect the new root children (re-discover if needed) without UI calls.
-      const newRootChildren: RobotTestItem[] = [];
       for (const folder of vscode.workspace.workspaceFolders ?? []) {
         if (token?.isCancellationRequested) return;
         if (!this.isTestExplorerEnabledForWorkspace(folder)) continue;
 
+        const folderKey = rootSnapshotKey(folder);
+        liveFolderKeys.add(folderKey);
+
         if (this.robotTestItems.get(folder) === undefined || !this.robotTestItems.get(folder)?.valid) {
           const items = await this.getTestsFromWorkspaceFolder(folder, token);
-          if (items === undefined) continue;
+          if (items === undefined) {
+            this.lastKnownChildren.delete(folderKey);
+            continue;
+          }
           this.robotTestItems.set(folder, new WorkspaceFolderEntry(true, items));
         }
-        const tests = this.robotTestItems.get(folder)?.items;
-        if (tests) {
-          for (const t of tests) newRootChildren.push(t);
+
+        const folderChildren = this.robotTestItems.get(folder)?.items;
+        if (folderChildren === undefined) {
+          this.lastKnownChildren.delete(folderKey);
+          continue;
+        }
+
+        if (robotItemListsEqual(this.lastKnownChildren.get(folderKey), folderChildren)) {
+          for (const t of folderChildren) keptIds.add(t.id);
+          continue;
+        }
+
+        for (const test of folderChildren) {
+          if (token?.isCancellationRequested) return;
+          const newItem = this.addOrUpdateTestItem(undefined, test);
+          // Recursion path from the workspace refresh → skip the per-document discover.
+          await this.refreshItem(newItem, token, true);
+          if (!(newItem.canResolveChildren && newItem.children.size === 0 && newItem.error === undefined)) {
+            keptIds.add(test.id);
+          }
+        }
+        this.lastKnownChildren.set(folderKey, this.snapshotChildren(folderChildren));
+      }
+
+      for (const key of [...this.lastKnownChildren.keys()]) {
+        if (key.startsWith(`${ROOT_TEST_ITEM_KEY}:`) && !liveFolderKeys.has(key)) {
+          this.lastKnownChildren.delete(key);
         }
       }
 
-      // Phase 2: result compare against the last snapshot — if identical, no UI update.
-      const lastKnown = this.lastKnownChildren.get(rootKey);
-      if (robotItemListsEqual(lastKnown, newRootChildren)) return;
-
-      // Phase 3: actual UI updates.
-      const addedIds = new Set<string>();
-      for (const test of newRootChildren) {
-        if (token?.isCancellationRequested) return;
-        addedIds.add(test.id);
-        const newItem = this.addOrUpdateTestItem(undefined, test);
-        // Recursion path from the workspace refresh → skip the per-document discover.
-        await this.refreshItem(newItem, token, true);
-        if (newItem.canResolveChildren && newItem.children.size === 0 && newItem.error === undefined) {
-          addedIds.delete(newItem.id);
-        }
-      }
-
-      this.removeNotAddedTestItems(undefined, addedIds);
-      this.lastKnownChildren.set(rootKey, this.snapshotChildren(newRootChildren));
+      this.removeNotAddedTestItems(undefined, keptIds);
     }
   }
 
@@ -1293,7 +1314,7 @@ export class TestControllerManager {
       testItem.description = newDescription;
     }
 
-    if (robotTestItem.error !== undefined && testItem.error !== robotTestItem.error) {
+    if (testItem.error !== robotTestItem.error) {
       testItem.error = robotTestItem.error;
     }
 
@@ -1337,6 +1358,7 @@ export class TestControllerManager {
       }
       this.lastSetTags.delete(i);
       this.robotItemIndex.delete(i);
+      this.lastKnownChildren.delete(i);
     });
 
     return itemsToRemove.size > 0;
@@ -1420,27 +1442,27 @@ export class TestControllerManager {
 
       if (this.didChangedTimer.has(uri.toString())) return;
 
-      if (this.refreshWorkspaceChangeTimer) {
-        this.refreshWorkspaceChangeTimer.cancel();
-        this.refreshWorkspaceChangeTimer = undefined;
-      }
+      const workspaceKey = workspace.uri.toString();
+      this.refreshWorkspaceChangeTimer.get(workspaceKey)?.cancel();
 
       const cancelationTokenSource = new vscode.CancellationTokenSource();
 
-      this.refreshWorkspaceChangeTimer = new DidChangeEntry(
-        setTimeout(() => {
-          this.refreshWorkspace(workspace, cancelationTokenSource.token).then(
-            () => undefined,
-            () => undefined,
-          );
-        }, TestControllerManager.DEBOUNCE_MS),
-        cancelationTokenSource,
+      this.refreshWorkspaceChangeTimer.set(
+        workspaceKey,
+        new DidChangeEntry(
+          setTimeout(() => {
+            this.refreshWorkspaceChangeTimer.delete(workspaceKey);
+            this.refreshWorkspace(workspace, cancelationTokenSource.token).then(
+              () => undefined,
+              () => undefined,
+            );
+          }, TestControllerManager.DEBOUNCE_MS),
+          cancelationTokenSource,
+        ),
       );
     } else {
-      if (this.refreshWorkspaceChangeTimer) {
-        this.refreshWorkspaceChangeTimer.cancel();
-        this.refreshWorkspaceChangeTimer = undefined;
-      }
+      this.refreshWorkspaceChangeTimer.forEach((entry) => entry.cancel());
+      this.refreshWorkspaceChangeTimer.clear();
 
       // refresh()'s single-inflight handles cancellation of any predecessor.
       this.refresh().then(
@@ -1524,17 +1546,23 @@ export class TestControllerManager {
     const testRun = this.testController.createTestRun(request, undefined);
     let run_started = false;
 
-    token.onCancellationRequested(async (_) => {
-      for (const e of this.testRunInfos.keys()) {
-        for (const session of this.debugSessions) {
-          if (session.configuration.runId === e) {
-            await vscode.debug.stopDebugging(session);
-          }
+    const myRunIds = new Set<string>();
+    let cancelled = false;
+    const stopMyRunSessions = async () => {
+      for (const session of this.debugSessions) {
+        if (myRunIds.has(session.configuration.runId)) {
+          await vscode.debug.stopDebugging(session);
         }
       }
+    };
+
+    token.onCancellationRequested(async (_) => {
+      cancelled = true;
+      await stopMyRunSessions();
     });
 
     for (const [folder, testItems] of included) {
+      if (cancelled) break;
       if (
         request.profile !== undefined &&
         request.profile.tag !== undefined &&
@@ -1543,6 +1571,7 @@ export class TestControllerManager {
         continue;
 
       const runId = TestControllerManager.nextRunId();
+      myRunIds.add(runId);
       this.testRunInfos.set(runId, new TestRunInfo(testRun));
 
       const options: vscode.DebugSessionOptions = {
@@ -1573,6 +1602,7 @@ export class TestControllerManager {
           profiles,
           testConfiguration,
         );
+        if (!started) this.testRunInfos.delete(runId);
         run_started = run_started || started;
       } else {
         const includedInWs = testItems
@@ -1643,7 +1673,13 @@ export class TestControllerManager {
           testConfiguration,
         );
 
+        if (!started) this.testRunInfos.delete(runId);
         run_started = run_started || started;
+      }
+
+      if (cancelled) {
+        await stopMyRunSessions();
+        break;
       }
     }
 
