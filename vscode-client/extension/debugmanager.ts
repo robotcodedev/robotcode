@@ -149,6 +149,10 @@ class RobotCodeDebugConfigurationProvider implements vscode.DebugConfigurationPr
         (debugConfiguration?.profiles as string[] | undefined) ??
         config.get<string[] | undefined>("profiles", undefined);
 
+      debugConfiguration.wrapper =
+        (debugConfiguration?.wrapper as string[] | undefined) ??
+        config.get<string[] | undefined>("debug.launchWrapper", undefined);
+
       debugConfiguration.outputDir =
         (debugConfiguration?.outputDir as string | undefined) ??
         config.get<string | undefined>("robot.outputDir", undefined);

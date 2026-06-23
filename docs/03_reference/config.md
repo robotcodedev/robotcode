@@ -921,6 +921,18 @@ name = "Robot"
 
 corresponds to the `-v --variable name:value *` option of _rebot_
 
+## extend-wrapper
+
+Type: `list[str | StringExpression] | None`
+
+Append extra entries to the `wrapper` command prefix.
+
+Examples:
+
+```toml
+extend-wrapper = ["--some-flag"]
+```
+
 ## extensions
 
 Type: `str | StringExpression | None`
@@ -4070,6 +4082,24 @@ name = "Robot"
 ```
 
 corresponds to the `-v --variable name:value *` option of _robot_
+
+## wrapper
+
+Type: `list[str | StringExpression] | None`
+
+Command prefix the test run is executed through (the actual
+`robotcode` command line is appended to it), e.g. to bring up the
+services, servers, mocks or session the tests need around them. For
+plain environment variables use `env` instead. The selected profile's
+`env` is applied first, so the wrapper can rely on it.
+
+Examples:
+
+```toml
+[profiles.integration]
+wrapper = ["./with-test-services.sh"]
+# or a ready-made tool, e.g. ["xvfb-run", "-a"] for headless UI tests
+```
 
 ## xunit
 

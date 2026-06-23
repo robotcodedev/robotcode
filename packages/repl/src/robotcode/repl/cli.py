@@ -9,6 +9,7 @@ from robotcode.plugin import Application, pass_application
 from robotcode.plugin._agent_detection import is_running_in_ai_agent
 from robotcode.plugin.click_helper.aliases import AliasedCommand
 from robotcode.plugin.click_helper.types import add_options
+from robotcode.plugin.click_helper.wrappable import wrappable
 from robotcode.runner.cli.robot import ROBOT_OPTIONS, ROBOT_VERSION_OPTIONS
 
 from .__version__ import __version__
@@ -379,6 +380,7 @@ DEBUG_OPTIONS = [
 ]
 
 
+@wrappable
 @click.command(cls=AliasedCommand, aliases=["shell"], add_help_option=True)
 @add_options(*REPL_BASE_OPTIONS)
 @add_options(*SHELL_OPTIONS)
@@ -468,6 +470,7 @@ def repl(
     )
 
 
+@wrappable
 @click.command(
     cls=AliasedCommand,
     aliases=["run-debug"],

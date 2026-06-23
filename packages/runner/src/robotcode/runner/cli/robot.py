@@ -15,6 +15,7 @@ from robotcode.core.utils.path import path_is_relative_to
 from robotcode.plugin import Application, pass_application
 from robotcode.plugin.click_helper.aliases import AliasedCommand
 from robotcode.plugin.click_helper.types import add_options
+from robotcode.plugin.click_helper.wrappable import wrappable
 from robotcode.robot.config.loader import load_robot_config_from_path
 from robotcode.robot.config.model import RobotBaseProfile
 from robotcode.robot.config.utils import get_config_files
@@ -293,6 +294,7 @@ def handle_robot_options(
     return root_folder, profile, cmd_options
 
 
+@wrappable
 @click.command(
     cls=AliasedCommand,
     aliases=["run"],

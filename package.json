@@ -853,6 +853,15 @@
             "description": "Specifies the default configuration to run or debug robot tests.",
             "scope": "resource"
           },
+          "robotcode.debug.launchWrapper": {
+            "type": "array",
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "markdownDescription": "Command prefix the test run is launched through, e.g. `[\"xvfb-run\", \"-a\"]` or a custom session script. Applies to running and debugging tests. Overrides the profile's `wrapper` from `robot.toml`.",
+            "scope": "resource"
+          },
           "robotcode.debug.attachPython": {
             "type": "boolean",
             "description": "Attach also the python debugger if a robot test starts.",
@@ -1619,6 +1628,14 @@
                 ],
                 "markdownDescription": "The `.robot` file or a folder containing `.robot` files to be launched.",
                 "default": "${file}"
+              },
+              "wrapper": {
+                "type": "array",
+                "default": [],
+                "items": {
+                  "type": "string"
+                },
+                "markdownDescription": "Command prefix the test run is launched through, e.g. `[\"xvfb-run\", \"-a\"]`. Overrides `robotcode.debug.launchWrapper` and the profile's `wrapper`."
               },
               "profiles": {
                 "type": "array",

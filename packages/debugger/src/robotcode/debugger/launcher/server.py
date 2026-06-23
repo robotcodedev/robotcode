@@ -11,6 +11,7 @@ from robotcode.core.types import ServerMode, TcpParams
 from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.jsonrpc2.protocol import rpc_method
 from robotcode.jsonrpc2.server import JsonRPCServer
+from robotcode.plugin.click_helper.wrappable import WRAPPER_APPLIED_ENV
 from robotcode.robot.utils import RF_VERSION
 
 from ..cli import DEBUGGER_DEFAULT_PORT, DEBUGPY_DEFAULT_PORT
@@ -133,6 +134,7 @@ class LauncherDebugAdapterProtocol(DebugAdapterProtocol):
         include: Optional[List[str]] = None,
         exclude: Optional[List[str]] = None,
         robotCodeArgs: Optional[List[str]] = None,  # noqa: N803
+        wrapper: Optional[List[str]] = None,
         arguments: Optional[LaunchRequestArguments] = None,
         *_args: Any,
         **_kwargs: Any,
@@ -239,6 +241,14 @@ class LauncherDebugAdapterProtocol(DebugAdapterProtocol):
             run_args.insert(0, "--")
 
         env = {k: ("" if v is None else str(v)) for k, v in env.items()} if env else {}
+
+        # A wrapper from the launch request (VS Code `robotcode.debug.launchWrapper`)
+        # takes precedence: prefix the run command with it and mark the environment
+        # so the spawned robotcode process does NOT re-wrap from its own profile or
+        # `--wrapper`.
+        if wrapper:
+            robotcode_run_args = [*wrapper, *robotcode_run_args]
+            env[WRAPPER_APPLIED_ENV] = "1"
 
         if console in ["integratedTerminal", "externalTerminal"]:
             await self.send_request_async(

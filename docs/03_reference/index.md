@@ -18,6 +18,8 @@ This reference provides a comprehensive resource for effectively using and confi
 
 - [**Command-line debugging**](robot-debug.md): A guide to the `robotcode robot-debug` command and the debugger attached to the `repl` shell — a command-line debugger for Robot Framework runs. Covers the ways to pause a run (line, keyword, embedded `Breakpoint`, exceptions, stop-on-entry), the debug command set (stepping, the call stack, inspecting and setting variables, breakpoint management, exception filters), and how it relates to the VS Code debugger.
 
+- [**Running Tests Through a Wrapper**](wrapper.md): How to run the test execution through a command prefix — for example inside an X11/Wayland session or under `xvfb-run` — via the `wrapper` profile option or the `--wrapper` CLI flag, with an IDE-only override in VS Code. Includes the contract for writing your own wrapper script and ready-to-adapt Bash skeletons.
+
 - [**Working with AI Agents**](ai-agents.md): How **RobotCode** lets AI coding agents (GitHub Copilot Chat, Claude Code, Codex, and other Open-Plugins-compatible tools) work through the project's own `robotcode` CLI instead of guessing. Covers the bundled VS Code chat plugin and its toggle, installing the plugin in other agents via the marketplace, what the agent is taught to do (discover, libdoc, REPL, results, analyze on the resolved project), and the CLI's AI-agent detection that keeps captured terminal output clean.
 
 Together, these sections provide the knowledge needed to fully customize `robotcode` for a flexible and efficient testing workflow.

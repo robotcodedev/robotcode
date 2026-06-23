@@ -4417,6 +4417,38 @@
             }
           }
         },
+        "extend-wrapper": {
+          "anyOf": [
+            {
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "$ref": "#/definitions/StringExpression"
+                  }
+                ]
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Append extra entries to the `wrapper` command prefix.\n\nExamples:\n```toml\nextend-wrapper = [\"--some-flag\"]\n```\n",
+          "examples": [
+            "extend-wrapper = [\"--some-flag\"]"
+          ],
+          "markdownDescription": "Append extra entries to the `wrapper` command prefix.\n\nExamples:\n```toml\nextend-wrapper = [\"--some-flag\"]\n```\n",
+          "title": "Extend Wrapper",
+          "x-taplo": {
+            "links": {
+              "key": "https://robotcode.io/03_reference/config#extend-wrapper"
+            }
+          }
+        },
         "extensions": {
           "anyOf": [
             {
@@ -6022,6 +6054,38 @@
             }
           }
         },
+        "wrapper": {
+          "anyOf": [
+            {
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "$ref": "#/definitions/StringExpression"
+                  }
+                ]
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Command prefix the test run is executed through (the actual\n`robotcode` command line is appended to it), e.g. to bring up the\nservices, servers, mocks or session the tests need around them. For\nplain environment variables use `env` instead. The selected\nprofile's `env` is applied first, so the wrapper can rely on it.\n\nExamples:\n```toml\n[profiles.integration]\nwrapper = [\"./with-test-services.sh\"]\n# or a ready-made tool, e.g. [\"xvfb-run\", \"-a\"] for headless UI tests\n```\n",
+          "examples": [
+            "[profiles.integration]\nwrapper = [\"./with-test-services.sh\"]\n# or a ready-made tool, e.g. [\"xvfb-run\", \"-a\"] for headless UI tests"
+          ],
+          "markdownDescription": "Command prefix the test run is executed through (the actual\n`robotcode` command line is appended to it), e.g. to bring up the\nservices, servers, mocks or session the tests need around them. For\nplain environment variables use `env` instead. The selected\nprofile's `env` is applied first, so the wrapper can rely on it.\n\nExamples:\n```toml\n[profiles.integration]\nwrapper = [\"./with-test-services.sh\"]\n# or a ready-made tool, e.g. [\"xvfb-run\", \"-a\"] for headless UI tests\n```\n",
+          "title": "Wrapper",
+          "x-taplo": {
+            "links": {
+              "key": "https://robotcode.io/03_reference/config#wrapper"
+            }
+          }
+        },
         "xunit": {
           "anyOf": [
             {
@@ -7527,6 +7591,38 @@
           "x-taplo": {
             "links": {
               "key": "https://robotcode.io/03_reference/config#profile-extend-variables"
+            }
+          }
+        },
+        "extend-wrapper": {
+          "anyOf": [
+            {
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "$ref": "#/definitions/StringExpression"
+                  }
+                ]
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Append extra entries to the `wrapper` command prefix.\n\nExamples:\n```toml\nextend-wrapper = [\"--some-flag\"]\n```\n",
+          "examples": [
+            "extend-wrapper = [\"--some-flag\"]"
+          ],
+          "markdownDescription": "Append extra entries to the `wrapper` command prefix.\n\nExamples:\n```toml\nextend-wrapper = [\"--some-flag\"]\n```\n",
+          "title": "Extend Wrapper",
+          "x-taplo": {
+            "links": {
+              "key": "https://robotcode.io/03_reference/config#profile-extend-wrapper"
             }
           }
         },
@@ -9165,6 +9261,38 @@
           "x-taplo": {
             "links": {
               "key": "https://robotcode.io/03_reference/config#profile-variables"
+            }
+          }
+        },
+        "wrapper": {
+          "anyOf": [
+            {
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "$ref": "#/definitions/StringExpression"
+                  }
+                ]
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Command prefix the test run is executed through (the actual\n`robotcode` command line is appended to it), e.g. to bring up the\nservices, servers, mocks or session the tests need around them. For\nplain environment variables use `env` instead. The selected\nprofile's `env` is applied first, so the wrapper can rely on it.\n\nExamples:\n```toml\n[profiles.integration]\nwrapper = [\"./with-test-services.sh\"]\n# or a ready-made tool, e.g. [\"xvfb-run\", \"-a\"] for headless UI tests\n```\n",
+          "examples": [
+            "[profiles.integration]\nwrapper = [\"./with-test-services.sh\"]\n# or a ready-made tool, e.g. [\"xvfb-run\", \"-a\"] for headless UI tests"
+          ],
+          "markdownDescription": "Command prefix the test run is executed through (the actual\n`robotcode` command line is appended to it), e.g. to bring up the\nservices, servers, mocks or session the tests need around them. For\nplain environment variables use `env` instead. The selected\nprofile's `env` is applied first, so the wrapper can rely on it.\n\nExamples:\n```toml\n[profiles.integration]\nwrapper = [\"./with-test-services.sh\"]\n# or a ready-made tool, e.g. [\"xvfb-run\", \"-a\"] for headless UI tests\n```\n",
+          "title": "Wrapper",
+          "x-taplo": {
+            "links": {
+              "key": "https://robotcode.io/03_reference/config#profile-wrapper"
             }
           }
         },

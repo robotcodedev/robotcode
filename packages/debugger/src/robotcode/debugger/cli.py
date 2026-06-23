@@ -9,6 +9,7 @@ from robotcode.plugin.click_helper.options import (
     server_options,
 )
 from robotcode.plugin.click_helper.types import AddressesPort, add_options
+from robotcode.plugin.click_helper.wrappable import wrappable
 
 from .__version__ import __version__
 
@@ -16,6 +17,7 @@ DEBUGGER_DEFAULT_PORT = 6612
 DEBUGPY_DEFAULT_PORT = 5678
 
 
+@wrappable
 @click.command(
     context_settings={"allow_extra_args": True, "ignore_unknown_options": True},
     add_help_option=True,

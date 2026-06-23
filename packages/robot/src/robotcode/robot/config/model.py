@@ -2912,6 +2912,23 @@ class RobotBaseProfile(CommonOptions, CommonExtendOptions, RobotOptions, RobotEx
             """
     )
 
+    wrapper: Optional[List[Union[str, StringExpression]]] = field(
+        description="""\
+            Command prefix the test run is executed through (the actual
+            `robotcode` command line is appended to it), e.g. to bring up the
+            services, servers, mocks or session the tests need around them. For
+            plain environment variables use `env` instead. The selected
+            profile's `env` is applied first, so the wrapper can rely on it.
+
+            Examples:
+            ```toml
+            [profiles.integration]
+            wrapper = ["./with-test-services.sh"]
+            # or a ready-made tool, e.g. ["xvfb-run", "-a"] for headless UI tests
+            ```
+            """,
+    )
+
     rebot: Optional[RebotProfile] = field(
         description="""\
             Options to be passed to _rebot_.
@@ -2977,6 +2994,18 @@ class RobotExtendBaseProfile(RobotBaseProfile):
             ```
             """,
         alias="extend-env",
+    )
+
+    extend_wrapper: Optional[List[Union[str, StringExpression]]] = field(
+        description="""\
+            Append extra entries to the `wrapper` command prefix.
+
+            Examples:
+            ```toml
+            extend-wrapper = ["--some-flag"]
+            ```
+            """,
+        alias="extend-wrapper",
     )
 
     extend_paths: Union[str, List[str], None] = field(

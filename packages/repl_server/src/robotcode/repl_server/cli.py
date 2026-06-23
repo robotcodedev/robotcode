@@ -14,6 +14,7 @@ from robotcode.plugin.click_helper.options import (
     server_options,
 )
 from robotcode.plugin.click_helper.types import AddressesPort, add_options
+from robotcode.plugin.click_helper.wrappable import wrappable
 from robotcode.repl.run import run_repl
 
 from .__version__ import __version__
@@ -83,6 +84,7 @@ def run_jsonrpc_server(
     run_jsonrpc_server_async(mode, port, bind, pipe_name, interpreter)
 
 
+@wrappable
 @click.command(
     context_settings={"allow_extra_args": True, "ignore_unknown_options": True},
     add_help_option=True,
