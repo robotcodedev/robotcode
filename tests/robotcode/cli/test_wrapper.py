@@ -11,6 +11,7 @@ skipped on Windows.
 
 import json
 import os
+import shlex
 import subprocess
 import sys
 from pathlib import Path
@@ -136,9 +137,12 @@ def test_no_wrapper_flag_disables_wrapping(project: Path) -> None:
 def test_cli_wrapper_overrides_the_profile_wrapper(project: Path) -> None:
     profile_wrapper = project / "wrap.py"
     cli_wrapper = _write_wrapper(project / "cliwrap.py")
+    # `--wrapper` is shlex-split, so shell-quote the parts (the interpreter path
+    # can contain spaces, e.g. macOS "Application Support").
+    wrapper_arg = f"{shlex.quote(sys.executable)} {shlex.quote(str(cli_wrapper))}"
     result = _run_robotcode(
         project,
-        ["-p", "x11", "--wrapper", f"{sys.executable} {cli_wrapper}", "run", "suite.robot"],
+        ["-p", "x11", "--wrapper", wrapper_arg, "run", "suite.robot"],
     )
     assert result.returncode == 0, result.stderr
     assert _calls(cli_wrapper) == ["xephyr"]
