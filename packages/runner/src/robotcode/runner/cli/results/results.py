@@ -1146,10 +1146,11 @@ def _make_diff_change(
 def _truncate(text: Optional[str], limit: int) -> Optional[str]:
     if not text:
         return None
-    first_line = text.splitlines()[0]
-    if limit and len(first_line) > limit:
-        return first_line[:limit].rstrip() + "…"
-    return first_line
+    if not limit:
+        return text
+    if len(text) > limit:
+        return text[:limit].rstrip() + "…"
+    return text
 
 
 def _resolve_profile(app: Application) -> Tuple[RobotBaseProfile, Optional[Path]]:
@@ -1529,11 +1530,11 @@ def _make_file_info(path: Path) -> ResultFileInfo:
 
 def _make_test_item(test: TestCase, *, message_chars: int) -> TestResultItem:
     msg = test.message or ""
-    first_line = msg.splitlines()[0] if msg else ""
-    truncated_msg = first_line
     full_msg: Optional[str] = None
-    if message_chars and len(first_line) > message_chars:
-        truncated_msg = first_line[:message_chars]
+    if message_chars and len(msg) > message_chars:
+        truncated_msg = msg[:message_chars]
+    else:
+        truncated_msg = msg
     if msg and (truncated_msg != msg):
         full_msg = msg
 
