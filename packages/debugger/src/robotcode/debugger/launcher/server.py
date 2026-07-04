@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import itertools
 import os
+import shlex
 import sys
 from pathlib import Path
 from typing import Any, Dict, List, Literal, Optional
@@ -11,7 +12,6 @@ from robotcode.core.types import ServerMode, TcpParams
 from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.jsonrpc2.protocol import rpc_method
 from robotcode.jsonrpc2.server import JsonRPCServer
-from robotcode.plugin.click_helper.wrappable import WRAPPER_APPLIED_ENV
 from robotcode.robot.utils import RF_VERSION
 
 from ..cli import DEBUGGER_DEFAULT_PORT, DEBUGPY_DEFAULT_PORT
@@ -42,6 +42,32 @@ from ..dap_types import (
 from ..default_capabilities import DFEAULT_CAPABILITIES
 from ..protocol import DebugAdapterProtocol
 from .client import DAPClient, DAPClientError
+
+
+def _build_robotcode_run_args(
+    python: str,
+    debugger_script: List[str],
+    profiles: Optional[List[str]],
+    paths: Optional[List[str]],
+    wrapper: Optional[List[str]],
+    robot_code_args: Optional[List[str]],
+) -> List[str]:
+    """Build the ``robotcode … debug`` command line.
+
+    A ``wrapper`` from the launch request (VS Code ``robotcode.debug.launchWrapper``)
+    is forwarded to robotcode as ``--wrapper``; robotcode applies it itself (and
+    ``--wrapper`` overrides the profile's ``wrapper``). Without one nothing is added
+    and robotcode resolves its profile ``wrapper`` alone.
+    """
+    return [
+        python,
+        *debugger_script,
+        *itertools.chain.from_iterable(["-p", p] for p in profiles or []),
+        *itertools.chain.from_iterable(["-dp", p] for p in paths or []),
+        *(["--wrapper", shlex.join(wrapper)] if wrapper else []),
+        *(robot_code_args or []),
+        "debug",
+    ]
 
 
 class OutputProtocol(asyncio.SubprocessProtocol):
@@ -147,14 +173,9 @@ class LauncherDebugAdapterProtocol(DebugAdapterProtocol):
 
         debugger_script = ["-m", "robotcode.cli"] if self.debugger_script is None else [str(Path(self.debugger_script))]
 
-        robotcode_run_args = [
-            python or sys.executable,
-            *debugger_script,
-            *itertools.chain.from_iterable(["-p", p] for p in profiles or []),
-            *itertools.chain.from_iterable(["-dp", p] for p in paths or []),
-            *(robotCodeArgs or []),
-            "debug",
-        ]
+        robotcode_run_args = _build_robotcode_run_args(
+            python or sys.executable, debugger_script, profiles, paths, wrapper, robotCodeArgs
+        )
 
         if no_debug:
             robotcode_run_args += ["--no-debug"]
@@ -241,14 +262,6 @@ class LauncherDebugAdapterProtocol(DebugAdapterProtocol):
             run_args.insert(0, "--")
 
         env = {k: ("" if v is None else str(v)) for k, v in env.items()} if env else {}
-
-        # A wrapper from the launch request (VS Code `robotcode.debug.launchWrapper`)
-        # takes precedence: prefix the run command with it and mark the environment
-        # so the spawned robotcode process does NOT re-wrap from its own profile or
-        # `--wrapper`.
-        if wrapper:
-            robotcode_run_args = [*wrapper, *robotcode_run_args]
-            env[WRAPPER_APPLIED_ENV] = "1"
 
         if console in ["integratedTerminal", "externalTerminal"]:
             await self.send_request_async(

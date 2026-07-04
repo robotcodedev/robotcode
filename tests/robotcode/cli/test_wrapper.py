@@ -42,6 +42,25 @@ def _write_wrapper(path: Path) -> Path:
     return path
 
 
+# A wrapper that records the command line it was handed (into "<path>.argv"),
+# then runs it — used to inspect how the re-exec reconstructed the invocation.
+_RECORDER_PY = (
+    "import os, sys\n"
+    "with open(__file__ + '.argv', 'w', encoding='utf-8') as f:\n"
+    "    f.write(' '.join(sys.argv[1:]))\n"
+    "os.execv(sys.argv[1], sys.argv[1:])\n"
+)
+
+
+def _write_recorder(path: Path) -> Path:
+    path.write_text(_RECORDER_PY, encoding="utf-8")
+    return path
+
+
+def _recorded_argv(recorder: Path) -> str:
+    return Path(str(recorder) + ".argv").read_text(encoding="utf-8")
+
+
 def _calls(wrapper: Path) -> List[str]:
     marker = Path(str(wrapper) + ".called")
     return marker.read_text(encoding="utf-8").splitlines() if marker.exists() else []
@@ -113,8 +132,8 @@ def test_wrappable_command_runs_through_the_profile_wrapper(project: Path) -> No
 
 @requires_posix_exec
 def test_guard_env_suppresses_wrapping(project: Path) -> None:
-    """When an outer layer (the VS Code launcher applying its DAP wrapper) has
-    already set ROBOTCODE_WRAPPER_APPLIED, the inner process must not wrap."""
+    """The re-exec sets ROBOTCODE_WRAPPER_APPLIED before replacing the process,
+    so a robotcode that already runs under a wrapper must not wrap again."""
     wrapper = project / "wrap.py"
     result = _run_robotcode(
         project,
@@ -155,3 +174,76 @@ def test_non_wrappable_command_is_not_wrapped(project: Path) -> None:
     # `discover` only parses files; it must never run through the wrapper.
     _run_robotcode(project, ["-p", "x11", "discover", "all", "suite.robot"])
     assert _calls(wrapper) == []
+
+
+@requires_posix_exec
+def test_reexec_goes_through_the_launcher_script(project: Path, tmp_path: Path) -> None:
+    """When robotcode was started through a bundled entry (`--launcher-script` /
+    the bundled `__main__`), the re-exec must reuse that entry — not
+    `python -m robotcode.cli`, which a bundled interpreter can't import."""
+    bundled_main = tmp_path / "bundled_main.py"  # stand-in for the bundled entry
+    bundled_main.write_text("from robotcode.cli import robotcode\n\nrobotcode()\n", encoding="utf-8")
+    recorder = _write_recorder(project / "record.py")
+
+    result = _run_robotcode(
+        project,
+        [
+            "--launcher-script",
+            str(bundled_main),
+            "--wrapper",
+            f"{shlex.quote(sys.executable)} {shlex.quote(str(recorder))}",
+            "-p",
+            "x11",
+            "run",
+            "suite.robot",
+        ],
+    )
+    assert result.returncode == 0, result.stderr
+    recorded = _recorded_argv(recorder)
+    assert str(bundled_main) in recorded  # re-exec went through the launcher script
+    assert "-m robotcode.cli" not in recorded
+
+
+@requires_posix_exec
+def test_direct_start_ignores_bundled_main_env(project: Path, tmp_path: Path) -> None:
+    """A directly started robotcode (no `--launcher-script`) must NOT be diverted
+    to the bundled copy just because ROBOTCODE_BUNDLED_ROBOTCODE_MAIN is set — the
+    extension sets that in every VS Code terminal."""
+    broken = tmp_path / "must_not_run.py"
+    broken.write_text("import sys\nsys.exit('the bundled entry must not be used here')\n", encoding="utf-8")
+    recorder = _write_recorder(project / "record.py")
+
+    result = _run_robotcode(
+        project,
+        ["--wrapper", f"{shlex.quote(sys.executable)} {shlex.quote(str(recorder))}", "-p", "x11", "run", "suite.robot"],
+        env={**os.environ, "ROBOTCODE_BUNDLED_ROBOTCODE_MAIN": str(broken)},
+    )
+    assert result.returncode == 0, result.stderr  # succeeded => the broken bundled entry was not used
+    recorded = _recorded_argv(recorder)
+    assert "-m robotcode.cli" in recorded  # used the direct module entry
+    assert str(broken) not in recorded
+
+
+@requires_posix_exec
+def test_wrapper_propagates_the_run_exit_code(project: Path) -> None:
+    """The wrapper must not swallow the run's exit code (contract rule #1)."""
+    (project / "fail.robot").write_text("*** Test Cases ***\nFails\n    Should Be Equal    1    2\n", encoding="utf-8")
+    result = _run_robotcode(project, ["-p", "x11", "run", "fail.robot"])
+    assert result.returncode != 0  # the failure propagated through the wrapper
+    assert _calls(project / "wrap.py") == ["xephyr"]  # and it did run through the wrapper
+
+
+# --- these paths return before any re-exec, so they run on every platform ----
+
+
+def test_wrapper_ignored_and_warns_on_non_wrappable_command(project: Path) -> None:
+    result = _run_robotcode(project, ["--wrapper", "xvfb-run", "discover", "all", "suite.robot"])
+    assert _calls(project / "wrap.py") == []  # discover never runs through the wrapper
+    assert "Ignoring --wrapper" in result.stderr
+
+
+def test_no_wrapper_overrides_wrapper_with_a_warning(project: Path) -> None:
+    result = _run_robotcode(project, ["-p", "x11", "--no-wrapper", "--wrapper", "xvfb-run", "run", "suite.robot"])
+    assert result.returncode == 0, result.stderr
+    assert _calls(project / "wrap.py") == []  # --no-wrapper wins, nothing is wrapped
+    assert "Ignoring --wrapper" in result.stderr

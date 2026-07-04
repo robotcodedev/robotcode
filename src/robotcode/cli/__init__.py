@@ -116,7 +116,17 @@ def _maybe_reexec_under_wrapper(
     else:
         return
 
-    command = [*wrapper, sys.executable, "-m", "robotcode.cli", *sys.argv[1:]]
+    # Rebuild the invocation the way this process was actually started, so the
+    # re-exec finds robotcode even when it runs from a bundled path (VS Code) and
+    # is not installed in the interpreter. `launcher_script` is set only when we
+    # were started through a bundled entry (its `__main__` sets it) or an explicit
+    # `--launcher-script`; otherwise robotcode is importable directly and
+    # `-m robotcode.cli` is correct. We deliberately do NOT consult the
+    # ROBOTCODE_BUNDLED_ROBOTCODE_MAIN env var: VS Code sets it in every terminal,
+    # so a directly started robotcode would be diverted to the bundled copy.
+    # Mirrors the debug launcher's `debugger_script` handling.
+    entry = [str(app.config.launcher_script)] if app.config.launcher_script else ["-m", "robotcode.cli"]
+    command = [*wrapper, sys.executable, *entry, *sys.argv[1:]]
     app.verbose(lambda: "Re-executing under wrapper: " + " ".join(command))
 
     os.environ[WRAPPER_APPLIED_ENV] = "1"
