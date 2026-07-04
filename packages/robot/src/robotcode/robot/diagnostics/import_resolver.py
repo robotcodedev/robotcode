@@ -59,6 +59,12 @@ class ResolvedImports:
     resources: Dict[str, ResourceEntry] = field(default_factory=dict)
     variables_imports: Dict[str, VariablesEntry] = field(default_factory=dict)
 
+    # Metadata of each resolved dependency, captured together with its doc at
+    # resolve time (keys: "lib:{import_name}", "res:{source}", "var:{import_name}").
+    # A None value means the dependency was resolved but no trustworthy meta
+    # exists — namespaces built from it must not be persisted.
+    dependency_metas: Dict[str, Optional[Any]] = field(default_factory=dict)
+
 
 class ImportResolver:
     """Resolves all imports for a Robot Framework file.
@@ -78,6 +84,7 @@ class ImportResolver:
 
     __slots__ = (
         "_base_dir",
+        "_dependency_metas",
         "_diagnostics",
         "_import_entries",
         "_imports_manager",
@@ -115,6 +122,7 @@ class ImportResolver:
         self._variables: Dict[str, Any] = {}
         self._variables_dirty = True
         self._source_hints: Dict[str, str] = {}
+        self._dependency_metas: Dict[str, Optional[Any]] = {}
 
     def resolve(self, imports: Iterable[Import], *, source_hints: Optional[Dict[str, str]] = None) -> ResolvedImports:
         """Resolve all imports and return the result."""
@@ -129,6 +137,7 @@ class ImportResolver:
             variables_imports=self._variables_imports,
             import_entries=self._import_entries,
             diagnostics=self._diagnostics,
+            dependency_metas=self._dependency_metas,
         )
 
     # ------------------------------------------------------------------
@@ -186,13 +195,14 @@ class ImportResolver:
         ):
             for library in DEFAULT_LIBRARIES:
                 try:
-                    library_doc = self._imports_manager.get_libdoc_for_library_import(
+                    library_doc, meta = self._imports_manager.get_libdoc_for_library_import_with_meta(
                         library,
                         (),
                         base_dir=self._base_dir,
                         sentinel=None,
                         variables=self._variables,
                     )
+                    self._dependency_metas[f"lib:{library}"] = meta
                     entry = LibraryEntry(
                         name=library_doc.name,
                         import_name=library,
@@ -312,13 +322,14 @@ class ImportResolver:
     def _import_library(self, imp: LibraryImport, base_dir: str, *, top_level: bool) -> None:
         assert imp.name is not None
 
-        library_doc = self._imports_manager.get_libdoc_for_library_import(
+        library_doc, meta = self._imports_manager.get_libdoc_for_library_import_with_meta(
             imp.name,
             imp.args,
             base_dir=base_dir,
             sentinel=self._sentinel,
             variables=self._variables,
         )
+        self._dependency_metas[f"lib:{imp.name}"] = meta
         entry = LibraryEntry(
             name=library_doc.name,
             import_name=imp.name,
@@ -407,13 +418,17 @@ class ImportResolver:
             if hint is not None and os.path.isfile(hint):
                 source_hint = hint
 
-        resource_doc = self._imports_manager.get_resource_doc_for_resource_import(
+        resource_doc, meta = self._imports_manager.get_resource_doc_for_resource_import_with_meta(
             imp.name,
             base_dir,
             sentinel=self._sentinel,
             variables=self._variables,
             source=source_hint,
         )
+        if resource_doc.source is not None:
+            # setdefault: on re-imports of the same resource the meta captured
+            # with the first (analyzed) doc wins.
+            self._dependency_metas.setdefault(f"res:{resource_doc.source}", meta)
         entry = ResourceEntry(
             name=resource_doc.name,
             import_name=imp.name,
@@ -535,13 +550,14 @@ class ImportResolver:
     def _import_variables(self, imp: VariablesImport, base_dir: str, *, top_level: bool) -> None:
         assert imp.name is not None
 
-        library_doc = self._imports_manager.get_libdoc_for_variables_import(
+        library_doc, meta = self._imports_manager.get_libdoc_for_variables_import_with_meta(
             imp.name,
             imp.args,
             base_dir=base_dir,
             sentinel=self._sentinel,
             variables=self._variables,
         )
+        self._dependency_metas[f"var:{imp.name}"] = meta
         entry = VariablesEntry(
             name=library_doc.name,
             import_name=imp.name,

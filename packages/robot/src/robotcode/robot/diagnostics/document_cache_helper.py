@@ -24,6 +24,7 @@ from robotcode.core.filewatcher import FileWatcherManagerBase
 from robotcode.core.text_document import TextDocument
 from robotcode.core.uri import Uri
 from robotcode.core.utils.logging import LoggingDescriptor
+from robotcode.core.utils.path import DiskInfo
 from robotcode.core.workspace import Workspace, WorkspaceFolder
 from robotcode.robot.diagnostics.diagnostics_modifier import (
     DiagnosticModifiersConfig,
@@ -56,6 +57,18 @@ from .workspace_config import (
 
 class UnknownFileTypeError(Exception):
     pass
+
+
+def _namespace_cache_key(source: str, document_type: Optional[DocumentType]) -> str:
+    """Disk-cache entry name for a namespace.
+
+    Includes the document type because the same file can be analyzed both as
+    a suite (GENERAL) and as an imported resource (RESOURCE) — the results
+    must not overwrite each other. "\\n" as separator is impossible in Windows
+    paths and never appears in real-world POSIX paths (where it is technically
+    legal); the key is an opaque entry name and is never parsed back.
+    """
+    return f"{source}\n{document_type.value if document_type is not None else ''}"
 
 
 class _CacheEntry:
@@ -438,11 +451,16 @@ class DocumentsCacheHelper:
         imports_manager = self.get_imports_manager(document)
         semantic_model_enabled = self._is_semantic_model_enabled(document)
 
+        # Capture the disk state before the model is parsed: this snapshot can
+        # only be older than the analyzed content, never newer, so anything
+        # persisted under it self-heals with a cache miss.
+        disk_info = document.disk_info
+
         # --- Try disk cache (cold-start acceleration) ---
         cache_namespaces = self.analysis_config.cache.cache_namespaces
-        if cache_namespaces and document.version is None:
+        if cache_namespaces and document.version is None and disk_info is not None:
             result = self._try_load_cached_namespace(
-                source, document, document_type, imports_manager, semantic_model_enabled
+                source, document, document_type, imports_manager, semantic_model_enabled, disk_info
             )
             if result is not None:
                 return result
@@ -457,6 +475,13 @@ class DocumentsCacheHelper:
         else:
             model = self.get_model(document)
 
+        # The document may have been re-read from disk while the model was
+        # parsed; the captured snapshot then no longer describes the parsed
+        # content and must not label anything written during the build (the
+        # builder writes RESOURCE cache entries under this snapshot).
+        if disk_info is not None and document.disk_info != disk_info:
+            disk_info = None
+
         languages, workspace_languages = self.build_languages_from_model(document, model)
         builder = NamespaceBuilder(
             imports_manager,
@@ -466,14 +491,20 @@ class DocumentsCacheHelper:
             document_type,
             languages,
             workspace_languages,
+            disk_info=disk_info,
         )
         builder.set_semantic_model_enabled(semantic_model_enabled)
 
         result = builder.build()
 
-        # Save to disk cache
-        if cache_namespaces:
-            self._save_namespace_to_cache(source, result, imports_manager, semantic_model_enabled)
+        # Save to disk cache — the re-checks in _namespace_is_cacheable catch
+        # a watcher re-read (disk_info) and a didOpen on another thread
+        # (version) that happened during the build.
+        if cache_namespaces and self._namespace_is_cacheable(document, disk_info):
+            assert disk_info is not None
+            self._save_namespace_to_cache(
+                source, document, document_type, result, imports_manager, disk_info, semantic_model_enabled
+            )
 
         # Update the folder-scoped reference index
         self.get_project_index(document).update_file(result.source, result)
@@ -491,6 +522,18 @@ class DocumentsCacheHelper:
         experimental_config = self.workspace.get_configuration(ExperimentalConfig, document.uri)
         return self.analysis_config.semantic_model or experimental_config.semantic_model
 
+    @staticmethod
+    def _namespace_is_cacheable(document: TextDocument, disk_info: Optional[DiskInfo]) -> bool:
+        """Whether a namespace built from this document may be persisted.
+
+        Only when the analyzed content is the on-disk state: not an editor
+        buffer (version), backed by a trusted snapshot, and the document still
+        holds exactly that snapshot.
+        """
+        return (
+            document.version is None and disk_info is not None and disk_info.trusted and document.disk_info == disk_info
+        )
+
     def _try_load_cached_namespace(
         self,
         source: str,
@@ -498,10 +541,14 @@ class DocumentsCacheHelper:
         document_type: Optional[DocumentType],
         imports_manager: ImportsManager,
         semantic_model_enabled: bool,
+        disk_info: DiskInfo,
     ) -> Optional[Namespace]:
         """Attempt to load a Namespace from the disk cache.
 
-        Returns None on cache miss or validation failure.
+        ``disk_info`` is the snapshot of the document content the namespace
+        will represent; the cached entry is validated against it, not against
+        the current disk state. Returns None on cache miss or validation
+        failure.
         """
         data_cache = imports_manager.data_cache
 
@@ -510,7 +557,9 @@ class DocumentsCacheHelper:
             return None
 
         try:
-            entry = data_cache.read_entry(CacheSection.NAMESPACE, source, NamespaceMetaData, NamespaceData)
+            entry = data_cache.read_entry(
+                CacheSection.NAMESPACE, _namespace_cache_key(source, document_type), NamespaceMetaData, NamespaceData
+            )
         except (SystemExit, KeyboardInterrupt):
             raise
         except BaseException as e:
@@ -536,7 +585,7 @@ class DocumentsCacheHelper:
             )
             return None
 
-        if not imports_manager.validate_namespace_meta(meta):
+        if not imports_manager.validate_namespace_meta(meta, disk_info):
             self._logger.debug(
                 lambda: f"Cache miss for {source}: cached entry is stale, re-analyzing",
                 context_name="cache",
@@ -588,19 +637,43 @@ class DocumentsCacheHelper:
     def _save_namespace_to_cache(
         self,
         source: str,
+        document: TextDocument,
+        document_type: Optional[DocumentType],
         namespace: Namespace,
         imports_manager: ImportsManager,
+        disk_info: DiskInfo,
         semantic_model_enabled: bool,
     ) -> None:
-        """Save a Namespace to the disk cache."""
+        """Save a Namespace to the disk cache.
+
+        ``disk_info`` must be the snapshot captured before the namespace was
+        built; the entry is skipped when the namespace's state is not fully
+        trustworthy or the document changed in the meantime.
+        """
         try:
             meta = imports_manager.build_namespace_meta(
-                source, namespace, semantic_model_enabled=semantic_model_enabled
+                source, namespace, disk_info, semantic_model_enabled=semantic_model_enabled
             )
+            if meta is None:
+                self._logger.debug(
+                    lambda: f"Skip caching namespace for {source}: state not trustworthy",
+                    context_name="cache",
+                )
+                return
+
             data = namespace.to_data()
 
+            # to_data() takes time — re-check that the document still holds
+            # exactly the content this namespace was built from.
+            if not self._namespace_is_cacheable(document, disk_info):
+                self._logger.debug(
+                    lambda: f"Skip caching namespace for {source}: document changed during save",
+                    context_name="cache",
+                )
+                return
+
             data_cache = imports_manager.data_cache
-            data_cache.save_entry(CacheSection.NAMESPACE, source, meta, data)
+            data_cache.save_entry(CacheSection.NAMESPACE, _namespace_cache_key(source, document_type), meta, data)
         except (SystemExit, KeyboardInterrupt):
             raise
         except BaseException as e:

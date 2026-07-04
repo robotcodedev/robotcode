@@ -2,6 +2,7 @@ import ast
 import multiprocessing as mp
 import os
 import threading
+import time
 import weakref
 from abc import ABC, abstractmethod
 from concurrent.futures import ProcessPoolExecutor, TimeoutError
@@ -42,7 +43,13 @@ from robotcode.core.uri import Uri
 from robotcode.core.utils.caching import SimpleLRUCache
 from robotcode.core.utils.glob_path import Pattern
 from robotcode.core.utils.logging import LoggingDescriptor
-from robotcode.core.utils.path import normalized_path, path_is_relative_to
+from robotcode.core.utils.path import (
+    DiskInfo,
+    disk_info_from_stat,
+    normalized_path,
+    path_is_relative_to,
+    probe_disk_info,
+)
 
 from ..__version__ import __version__
 from ..utils import RF_VERSION
@@ -272,14 +279,23 @@ class _LibrariesEntry(_ImportEntry):
         with self._lock:
             return self._lib_doc is not None
 
-    def get_libdoc(self) -> LibraryDoc:
+    def get_libdoc_with_meta(self) -> Tuple[LibraryDoc, Optional["LibraryMetaData"]]:
+        """Return the LibraryDoc together with the meta of the state it was built from.
+
+        Doc and meta are taken under the entry lock so they always belong to
+        the same state — reading ``get_libdoc()`` and ``meta`` separately can
+        interleave with an invalidation and pair a doc with a newer meta.
+        """
         with self._lock:
             if self._lib_doc is None:
                 self._update()
 
             assert self._lib_doc is not None
 
-            return self._lib_doc
+            return self._lib_doc, self._meta
+
+    def get_libdoc(self) -> LibraryDoc:
+        return self.get_libdoc_with_meta()[0]
 
 
 @dataclass(frozen=True, slots=True)
@@ -343,7 +359,11 @@ class _ResourcesEntry(_ImportEntry):
             )
 
         self._document = self.parent.documents_manager.get_or_open_document(self.source_path)
-        self._meta = ImportsManager.get_resource_meta(str(self.source_path))
+        # Bind the meta to the document's disk state instead of a fresh stat, so
+        # it describes exactly the content this entry's ResourceDoc is built
+        # from. A dirty/editor-open document yields no meta — its state must
+        # never be persisted.
+        self._meta = RobotFileMeta.from_document(self._document)
 
         if self._document._version is None:
             self.file_watchers.append(
@@ -390,15 +410,21 @@ class _ResourcesEntry(_ImportEntry):
     def _get_namespace(self) -> "Namespace":
         return self.parent.get_namespace_for_resource(self._get_document())
 
-    def get_resource_doc(self) -> ResourceDoc:
+    def get_resource_doc_with_meta(self) -> Tuple[ResourceDoc, Optional["RobotFileMeta"]]:
+        """Return the ResourceDoc together with the meta of the content it was built from.
+
+        Doc and meta are taken under the entry lock so they always belong to
+        the same state — reading ``get_libdoc()`` and ``meta`` separately can
+        interleave with an invalidation and pair a doc with a newer meta.
+        """
         with self._lock:
             if self._lib_doc is None:
                 self._lib_doc = self.parent.get_resource_doc_from_document(self._get_document())
 
-            return self._lib_doc
+            return self._lib_doc, self._meta
 
     def get_libdoc(self) -> ResourceDoc:
-        return self.get_resource_doc()
+        return self.get_resource_doc_with_meta()[0]
 
 
 @dataclass(frozen=True, slots=True)
@@ -495,14 +521,22 @@ class _VariablesEntry(_ImportEntry):
         with self._lock:
             return self._lib_doc is not None
 
-    def get_libdoc(self) -> VariablesDoc:
+    def get_libdoc_with_meta(self) -> Tuple[VariablesDoc, Optional["LibraryMetaData"]]:
+        """Return the VariablesDoc together with the meta of the state it was built from.
+
+        Doc and meta are taken under the entry lock so they always belong to
+        the same state (see ``_LibrariesEntry.get_libdoc_with_meta``).
+        """
         with self._lock:
             if self._lib_doc is None:
                 self._update()
 
             assert self._lib_doc is not None
 
-            return self._lib_doc
+            return self._lib_doc, self._meta
+
+    def get_libdoc(self) -> VariablesDoc:
+        return self.get_libdoc_with_meta()[0]
 
 
 @dataclass(slots=True)
@@ -513,7 +547,7 @@ class LibraryMetaData:
     submodule_search_locations: Optional[List[str]]
     by_path: bool
 
-    mtimes: Optional[Dict[str, int]] = None
+    file_infos: Optional[Dict[str, DiskInfo]] = None
 
     has_errors: bool = False
 
@@ -528,16 +562,34 @@ class LibraryMetaData:
 
         raise ValueError("Cannot determine cache key.")
 
+    @property
+    def trusted(self) -> bool:
+        return self.file_infos is None or all(info.trusted for info in self.file_infos.values())
 
-def _collect_library_mtimes(
+
+def _stat_library_file(path: str) -> os.stat_result:
+    # Follow symlinks so target changes behind an unchanged link are detected
+    # (editable installs); for a broken link fall back to the link's own state
+    # so a single dangling .py file doesn't make the whole library uncacheable.
+    try:
+        return os.stat(path)
+    except OSError:
+        return os.stat(path, follow_symlinks=False)
+
+
+def _collect_library_file_infos(
     origin: Optional[str],
     submodule_search_locations: Optional[List[str]],
-) -> Optional[Dict[str, int]]:
-    """Collect mtimes from origin and submodule_search_locations."""
-    mtimes: Dict[str, int] = {}
+) -> Optional[Dict[str, DiskInfo]]:
+    """Collect DiskInfo snapshots from origin and submodule_search_locations."""
+    file_infos: Dict[str, DiskInfo] = {}
+
+    # one capture moment for the whole collection, so all snapshots share the
+    # same racy-mtime reference point
+    now_ns = time.time_ns()
 
     if origin is not None:
-        mtimes[origin] = os.stat(origin, follow_symlinks=False).st_mtime_ns
+        file_infos[origin] = disk_info_from_stat(_stat_library_file(origin), now_ns)
 
     if submodule_search_locations:
         for loc in submodule_search_locations:
@@ -545,9 +597,9 @@ def _collect_library_mtimes(
                 for filename in filenames:
                     if filename.endswith(".py"):
                         filepath = os.path.join(dirpath, filename)
-                        mtimes[filepath] = os.stat(filepath, follow_symlinks=False).st_mtime_ns
+                        file_infos[filepath] = disk_info_from_stat(_stat_library_file(filepath), now_ns)
 
-    return mtimes or None
+    return file_infos or None
 
 
 def _matches_any_pattern(
@@ -564,7 +616,23 @@ def _matches_any_pattern(
 @dataclass(slots=True)
 class RobotFileMeta:
     source: str
-    mtime_ns: int
+    info: DiskInfo
+
+    @property
+    def trusted(self) -> bool:
+        return self.info.trusted
+
+    @classmethod
+    def from_document(cls, document: TextDocument) -> Optional["RobotFileMeta"]:
+        """Meta describing exactly the disk state the document's text was read from.
+
+        ``None`` when the document has no disk info, i.e. its text is not known
+        to match any on-disk state (editor buffer, read race).
+        """
+        info = document.disk_info
+        if info is None:
+            return None
+        return cls(str(normalized_path(document.uri.to_path())), info)
 
 
 @dataclass(slots=True)
@@ -576,7 +644,7 @@ class NamespaceMetaData:
     """
 
     source: str
-    source_mtime_ns: int
+    source_info: DiskInfo
     config_fingerprint: Any
     dependency_fingerprints: Dict[str, Any] = field(default_factory=dict)
     semantic_model_enabled: bool = False
@@ -761,101 +829,76 @@ class ImportsManager:
         """
         return self._config_fingerprint
 
-    def compute_dependency_fingerprints(self, namespace: "Namespace") -> Dict[str, Any]:
-        """Collect current metadata for all dependencies of a namespace.
-
-        Each value is the metadata object itself (LibraryMetaData, RobotFileMeta,
-        or an mtime int). Changes are detected via direct ``==`` comparison
-        against the saved metadata — no hashing needed.
-
-        Uses already-cached metadata from the internal import cache to avoid
-        expensive module resolution (find_library / get_module_spec).
-        Falls back to the full get_*_meta methods when no cached entry exists.
-        """
-        fingerprints: Dict[str, Any] = {}
-
-        for entry in namespace.libraries.values():
-            try:
-                lib_meta = self.get_cached_library_meta(entry.import_name, entry.args)
-                if lib_meta is None:
-                    lib_meta, _, _ = self.get_library_meta(entry.import_name)
-                if lib_meta is not None:
-                    fingerprints[f"lib:{entry.import_name}"] = lib_meta
-            except (SystemExit, KeyboardInterrupt):
-                raise
-            except BaseException:
-                pass
-
-        for entry in namespace.resources.values():
-            source = entry.library_doc.source
-            if source:
-                try:
-                    res_meta = self.get_cached_resource_meta(source)
-                    if res_meta is None:
-                        res_meta = self.get_resource_meta(source)
-                    if res_meta is not None:
-                        fingerprints[f"res:{source}"] = res_meta
-                    else:
-                        mtime = os.stat(source, follow_symlinks=False).st_mtime_ns
-                        fingerprints[f"res:{source}"] = mtime
-                except OSError:
-                    pass
-
-        for entry in namespace.variables_imports.values():
-            try:
-                var_meta = self.get_cached_variables_meta(entry.import_name, entry.args)
-                if var_meta is None:
-                    var_meta, _ = self.get_variables_meta(entry.import_name)
-                if var_meta is not None:
-                    fingerprints[f"var:{entry.import_name}"] = var_meta
-            except (SystemExit, KeyboardInterrupt):
-                raise
-            except BaseException:
-                pass
-
-        return fingerprints
+    @staticmethod
+    def _is_dependency_meta_trusted(value: Any) -> bool:
+        # fail closed: a meta type this dispatch does not know must never be
+        # persisted — silently treating it as trusted is the exact failure
+        # class the freshness system exists to prevent
+        return isinstance(value, (RobotFileMeta, LibraryMetaData)) and value.trusted
 
     def build_namespace_meta(
-        self, source: str, namespace: "Namespace", *, semantic_model_enabled: bool = False
-    ) -> NamespaceMetaData:
-        """Build a NamespaceMetaData for the given namespace and its dependencies."""
-        try:
-            source_mtime_ns = os.stat(source, follow_symlinks=False).st_mtime_ns
-        except OSError:
-            source_mtime_ns = 0
+        self,
+        source: str,
+        namespace: "Namespace",
+        disk_info: DiskInfo,
+        *,
+        semantic_model_enabled: bool = False,
+    ) -> Optional[NamespaceMetaData]:
+        """Build a NamespaceMetaData for the given namespace and its dependencies.
+
+        ``disk_info`` must be the snapshot of the content the namespace was
+        built from; the dependency fingerprints are the metas recorded during
+        import resolution. Returns ``None`` when any of that state is missing
+        or untrusted — such a namespace must not be persisted, because its
+        fingerprints could describe newer file states than the analyzed
+        content and would validate as fresh forever.
+        """
+        if not disk_info.trusted:
+            return None
+
+        dependency_metas = namespace.dependency_metas
+        if dependency_metas is None:
+            return None
+
+        for value in dependency_metas.values():
+            if value is None or not self._is_dependency_meta_trusted(value):
+                return None
 
         return NamespaceMetaData(
             source=source,
-            source_mtime_ns=source_mtime_ns,
+            source_info=disk_info,
             config_fingerprint=self.config_fingerprint,
-            dependency_fingerprints=self.compute_dependency_fingerprints(namespace),
+            dependency_fingerprints=dict(dependency_metas),
             semantic_model_enabled=semantic_model_enabled,
         )
 
-    def validate_namespace_meta(self, meta: NamespaceMetaData) -> bool:
-        """Check whether a cached NamespaceMetaData is still fresh.
+    def validate_namespace_meta(self, meta: NamespaceMetaData, source_disk_info: Optional[DiskInfo]) -> bool:
+        """Check whether a cached NamespaceMetaData is fresh for the given content.
 
         Performs a 2-level validation:
-        Level 1 (fast): source_mtime_ns, config_fingerprint
+        Level 1 (fast): source_disk_info, config_fingerprint
         Level 2 (dependency check): each dependency fingerprint
+
+        Validation is against the *effective* content: the source is compared
+        to the snapshot of the document the namespace would represent, and
+        resource dependencies are checked document-first — a dirty editor
+        buffer fails validation so the namespace is rebuilt against the buffer
+        instead of being served from disk state.
         """
         source = meta.source
 
         # Level 1: fast checks
-        try:
-            current_mtime = os.stat(source, follow_symlinks=False).st_mtime_ns
-        except OSError:
+        if source_disk_info is None:
             self._logger.debug(
-                lambda: f"Cache miss for {source}: source file no longer exists",
+                lambda: f"Cache miss for {source}: source has no trustworthy disk state",
                 context_name="cache",
             )
             return False
 
-        if meta.source_mtime_ns != current_mtime:
+        if meta.source_info != source_disk_info:
             self._logger.debug(
                 lambda: (
-                    f"Cache miss for {source}: source mtime changed"
-                    f" (cached={meta.source_mtime_ns}, current={current_mtime})"
+                    f"Cache miss for {source}: source changed (cached={meta.source_info}, current={source_disk_info})"
                 ),
                 context_name="cache",
             )
@@ -874,7 +917,7 @@ class ImportsManager:
             if key.startswith("lib:"):
                 lib_name = key[4:]
                 try:
-                    lib_meta = self.get_cached_library_meta(lib_name)
+                    lib_meta = self.get_cached_library_meta(lib_name, args=None)
                     if lib_meta is None:
                         lib_meta, _, _ = self.get_library_meta(lib_name, base_dir=base_dir)
                     if lib_meta is None or lib_meta != saved_value:
@@ -898,8 +941,15 @@ class ImportsManager:
             elif key.startswith("res:"):
                 res_source = key[4:]
                 try:
-                    res_meta = self.get_cached_resource_meta(res_source)
-                    if res_meta is None:
+                    # Document-first: an open document is the effective content
+                    # of this dependency. A dirty buffer (no disk snapshot)
+                    # must fail validation so dependents are rebuilt against
+                    # the buffer instead of being served from cached disk
+                    # state. Only unopened resources are probed on disk.
+                    res_document = self.documents_manager.get(Uri.from_path(res_source))
+                    if res_document is not None:
+                        res_meta = RobotFileMeta.from_document(res_document)
+                    else:
                         res_meta = self.get_resource_meta(res_source)
                     if res_meta is None or res_meta != saved_value:
                         self._logger.debug(
@@ -922,7 +972,7 @@ class ImportsManager:
             elif key.startswith("var:"):
                 var_name = key[4:]
                 try:
-                    var_meta = self.get_cached_variables_meta(var_name)
+                    var_meta = self.get_cached_variables_meta(var_name, args=None)
                     if var_meta is None:
                         var_meta, _ = self.get_variables_meta(var_name, base_dir=base_dir)
                     if var_meta is None or var_meta != saved_value:
@@ -952,13 +1002,24 @@ class ImportsManager:
     def get_resource_doc_from_document(self, document: TextDocument) -> ResourceDoc:
         source = str(document.uri.to_path())
 
-        if not self._is_document_loaded(source):
-            cached, _meta = self._get_model_doc_cached(source)
+        # Capture the meta before parsing, so it can only be older than the
+        # parsed content, never newer (stale metas cause a harmless cache
+        # miss, newer ones would poison the cache).
+        meta = RobotFileMeta.from_document(document)
+
+        if meta is not None and meta.trusted:
+            cached = self._get_model_doc_cached(source, meta)
             if cached is not None:
                 return cached
 
         model = self.document_cache_helper.get_resource_model(document)
-        return self.get_libdoc_from_model(model, source)
+
+        # The document may have been re-read from disk while parsing; in that
+        # case the model does not necessarily belong to the captured meta.
+        if meta is not None and document.disk_info != meta.info:
+            meta = None
+
+        return self.get_libdoc_from_model(model, source, meta)
 
     def clear_cache(self) -> None:
         count = self.data_cache.clear_all()
@@ -1302,7 +1363,7 @@ class ImportsManager:
                         import_name,
                         None,
                         True,
-                        mtimes=_collect_library_mtimes(import_name, None),
+                        file_infos=_collect_library_file_infos(import_name, None),
                     )
             else:
                 module_spec = self._get_module_spec_cached(import_name)
@@ -1313,7 +1374,9 @@ class ImportsManager:
                         module_spec.origin,
                         module_spec.submodule_search_locations,
                         False,
-                        mtimes=_collect_library_mtimes(module_spec.origin, module_spec.submodule_search_locations),
+                        file_infos=_collect_library_file_infos(
+                            module_spec.origin, module_spec.submodule_search_locations
+                        ),
                     )
 
             if result is not None:
@@ -1367,7 +1430,7 @@ class ImportsManager:
                         import_name,
                         None,
                         True,
-                        mtimes=_collect_library_mtimes(import_name, None),
+                        file_infos=_collect_library_file_infos(import_name, None),
                     )
             else:
                 module_spec = self._get_module_spec_cached(import_name)
@@ -1378,7 +1441,9 @@ class ImportsManager:
                         module_spec.origin,
                         module_spec.submodule_search_locations,
                         False,
-                        mtimes=_collect_library_mtimes(module_spec.origin, module_spec.submodule_search_locations),
+                        file_infos=_collect_library_file_infos(
+                            module_spec.origin, module_spec.submodule_search_locations
+                        ),
                     )
 
             if result is not None:
@@ -1399,36 +1464,44 @@ class ImportsManager:
 
         return None, name
 
-    def get_cached_library_meta(self, import_name: str, args: Tuple[Any, ...] = ()) -> Optional[LibraryMetaData]:
+    def get_cached_library_meta(
+        self, import_name: str, args: Optional[Tuple[Any, ...]] = ()
+    ) -> Optional[LibraryMetaData]:
         """Return already-computed LibraryMetaData from the internal cache, or None.
 
-        Matches by import name and args to find the correct entry, since
-        the same library with different args may produce different keywords.
+        Matches by import name and args to find the correct entry, since the
+        same library with different args may produce different keywords.
+        ``args=None`` matches by name only — the metadata describes the
+        library's module files and is the same regardless of the arguments.
         """
         with self._libaries_lock:
             for entry in self._libaries.values():
-                if entry.name == import_name and entry.args == args:
+                if entry.name != import_name:
+                    continue
+                if args is not None:
+                    if entry.args == args:
+                        return entry.meta
+                elif entry.meta is not None:
                     return entry.meta
         return None
 
-    def get_cached_resource_meta(self, source: str) -> Optional[RobotFileMeta]:
-        """Return already-computed RobotFileMeta from the internal cache, or None."""
-        entry_key = _ResourcesEntryKey(str(normalized_path(Path(source))))
-        with self._resources_lock:
-            entry = self._resources.get(entry_key)
-            if entry is not None:
-                return entry.meta
-        return None
-
-    def get_cached_variables_meta(self, import_name: str, args: Tuple[Any, ...] = ()) -> Optional[LibraryMetaData]:
+    def get_cached_variables_meta(
+        self, import_name: str, args: Optional[Tuple[Any, ...]] = ()
+    ) -> Optional[LibraryMetaData]:
         """Return already-computed LibraryMetaData for a variables import, or None.
 
         Matches by import name and args, since variable files can return
-        different content depending on the arguments.
+        different content depending on the arguments. ``args=None`` matches by
+        name only (see ``get_cached_library_meta``).
         """
         with self._variables_lock:
             for entry in self._variables.values():
-                if entry.name == import_name and entry.args == args:
+                if entry.name != import_name:
+                    continue
+                if args is not None:
+                    if entry.args == args:
+                        return entry.meta
+                elif entry.meta is not None:
                     return entry.meta
         return None
 
@@ -1601,7 +1674,12 @@ class ImportsManager:
     ) -> None:
         """Save an import result to the disk cache, or log skip if no meta."""
         try:
-            if meta is not None:
+            if meta is not None and not meta.trusted:
+                self._logger.debug(
+                    lambda: f"Skip caching {kind} {name}{args!r}: file state too fresh to trust",
+                    context_name="import",
+                )
+            elif meta is not None:
                 try:
                     self.data_cache.save_entry(section, meta.cache_key, meta, result)
                 except (SystemExit, KeyboardInterrupt):
@@ -1665,14 +1743,14 @@ class ImportsManager:
         return result, meta
 
     @_logger.call
-    def get_libdoc_for_library_import(
+    def get_libdoc_for_library_import_with_meta(
         self,
         name: str,
         args: Tuple[Any, ...],
         base_dir: str,
         sentinel: Any = None,
         variables: Optional[Dict[str, Any]] = None,
-    ) -> LibraryDoc:
+    ) -> Tuple[LibraryDoc, Optional[LibraryMetaData]]:
         with self._logger.measure_time(lambda: f"loading library {name}{args!r}", context_name="import"):
             source = self.find_library(name, base_dir, variables)
 
@@ -1704,36 +1782,45 @@ class ImportsManager:
                     fin.atexit = False  # type: ignore[misc]
                     entry.references.add(sentinel)
 
-            return entry.get_libdoc()
+            return entry.get_libdoc_with_meta()
 
-    def _is_document_loaded(self, source: str) -> bool:
-        doc = self.documents_manager.get(Uri.from_path(source))
-        return doc is not None and doc.version is not None
+    def get_libdoc_for_library_import(
+        self,
+        name: str,
+        args: Tuple[Any, ...],
+        base_dir: str,
+        sentinel: Any = None,
+        variables: Optional[Dict[str, Any]] = None,
+    ) -> LibraryDoc:
+        return self.get_libdoc_for_library_import_with_meta(name, args, base_dir, sentinel, variables)[0]
 
     @_logger.call
     def get_libdoc_from_model(
         self,
         model: ast.AST,
         source: str,
+        meta: Optional[RobotFileMeta] = None,
     ) -> ResourceDoc:
+        """Build (or load from cache) the ResourceDoc for a parsed model.
 
+        ``meta`` must describe the disk state of exactly the content the model
+        was parsed from; the disk cache is only consulted and written when such
+        a trusted meta is available. There is deliberately no fallback to a
+        fresh stat here — the file may have changed since the model's text was
+        read, and labeling old content with a newer state would make the cache
+        entry validate as fresh forever.
+        """
         entry = self._resource_libdoc_cache.get(model)
         if entry is not None and source in entry:
             return entry[source]
 
-        use_disk_cache = not self._is_document_loaded(source)
-
-        result: Optional[ResourceDoc] = None
-        meta: Optional[RobotFileMeta] = None
-        if use_disk_cache:
-            result, meta = self._get_model_doc_cached(source)
-        if result is None:
+        if meta is not None and meta.trusted:
+            result = self._get_model_doc_cached(source, meta)
+            if result is None:
+                result = get_model_doc(model=model, source=source)
+                self._save_model_doc_cache(source, result, meta)
+        else:
             result = get_model_doc(model=model, source=source)
-            if use_disk_cache:
-                if meta is None:
-                    meta = self.get_resource_meta(source)
-                if meta is not None:
-                    self._save_model_doc_cache(source, result, meta)
 
         if entry is None:
             entry = {}
@@ -1745,22 +1832,17 @@ class ImportsManager:
 
     @staticmethod
     def get_resource_meta(source: str) -> Optional[RobotFileMeta]:
-        try:
-            normalized = str(normalized_path(source))
-            mtime_ns = os.stat(normalized, follow_symlinks=False).st_mtime_ns
-            return RobotFileMeta(normalized, mtime_ns)
-        except OSError:
+        normalized = str(normalized_path(source))
+        info = probe_disk_info(normalized)
+        if info is None:
             return None
+        return RobotFileMeta(normalized, info)
 
-    def _get_model_doc_cached(self, source: str) -> Tuple[Optional[ResourceDoc], Optional["RobotFileMeta"]]:
-        meta = self.get_resource_meta(source)
-        if meta is None:
-            return None, None
-
+    def _get_model_doc_cached(self, source: str, meta: RobotFileMeta) -> Optional[ResourceDoc]:
         try:
             entry = self.data_cache.read_entry(CacheSection.RESOURCE, meta.source, RobotFileMeta, ResourceDoc)
             if entry is not None and entry.meta == meta:
-                return entry.data, meta
+                return entry.data
         except (SystemExit, KeyboardInterrupt):
             raise
         except BaseException as e:
@@ -1770,7 +1852,7 @@ class ImportsManager:
                 context_name="import",
             )
 
-        return None, meta
+        return None
 
     def _save_model_doc_cache(self, source: str, result: ResourceDoc, meta: "RobotFileMeta") -> None:
 
@@ -1833,7 +1915,7 @@ class ImportsManager:
         return result, meta
 
     @_logger.call
-    def get_libdoc_for_variables_import(
+    def get_libdoc_for_variables_import_with_meta(
         self,
         name: str,
         args: Tuple[Any, ...],
@@ -1842,7 +1924,7 @@ class ImportsManager:
         variables: Optional[Dict[str, Any]] = None,
         resolve_variables: bool = True,
         resolve_command_line_vars: bool = True,
-    ) -> VariablesDoc:
+    ) -> Tuple[VariablesDoc, Optional[LibraryMetaData]]:
         with self._logger.measure_time(lambda: f"getting libdoc for variables import {name}", context_name="import"):
             source = self.find_variables(name, base_dir, variables, resolve_variables, resolve_command_line_vars)
 
@@ -1879,7 +1961,27 @@ class ImportsManager:
                     fin = weakref.finalize(sentinel, self.__remove_variables_entry, entry_key, entry)
                     fin.atexit = False  # type: ignore[misc]
 
-            return entry.get_libdoc()
+            return entry.get_libdoc_with_meta()
+
+    def get_libdoc_for_variables_import(
+        self,
+        name: str,
+        args: Tuple[Any, ...],
+        base_dir: str,
+        sentinel: Any = None,
+        variables: Optional[Dict[str, Any]] = None,
+        resolve_variables: bool = True,
+        resolve_command_line_vars: bool = True,
+    ) -> VariablesDoc:
+        return self.get_libdoc_for_variables_import_with_meta(
+            name,
+            args,
+            base_dir,
+            sentinel,
+            variables,
+            resolve_variables,
+            resolve_command_line_vars,
+        )[0]
 
     @_logger.call
     def _get_entry_for_resource_import(
@@ -1929,6 +2031,20 @@ class ImportsManager:
 
             return namespace, libdoc
 
+    def get_resource_doc_for_resource_import_with_meta(
+        self,
+        name: str,
+        base_dir: str,
+        sentinel: Any = None,
+        variables: Optional[Dict[str, Any]] = None,
+        *,
+        source: Optional[str] = None,
+    ) -> Tuple[ResourceDoc, Optional[RobotFileMeta]]:
+        with self._logger.measure_time(lambda: f"getting resource doc for {name}", context_name="import"):
+            entry = self._get_entry_for_resource_import(name, base_dir, sentinel, variables, source=source)
+
+            return entry.get_resource_doc_with_meta()
+
     def get_resource_doc_for_resource_import(
         self,
         name: str,
@@ -1938,10 +2054,9 @@ class ImportsManager:
         *,
         source: Optional[str] = None,
     ) -> ResourceDoc:
-        with self._logger.measure_time(lambda: f"getting resource doc for {name}", context_name="import"):
-            entry = self._get_entry_for_resource_import(name, base_dir, sentinel, variables, source=source)
-
-            return entry.get_resource_doc()
+        return self.get_resource_doc_for_resource_import_with_meta(name, base_dir, sentinel, variables, source=source)[
+            0
+        ]
 
     def complete_library_import(
         self,

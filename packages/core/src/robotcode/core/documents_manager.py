@@ -9,6 +9,7 @@ from typing import (
     Iterator,
     List,
     Optional,
+    Tuple,
     Union,
 )
 
@@ -17,8 +18,11 @@ from .event import event
 from .language import LanguageDefinition, language_id_filter
 from .lsp.types import DocumentUri
 from .text_document import TextDocument
-from .uri import Uri
+from .uri import InvalidUriError, Uri
 from .utils.logging import LoggingDescriptor
+from .utils.path import DiskInfo, disk_info_from_stat
+
+_STAT_VERIFY_MAX_RETRIES: Final = 3
 
 
 class CantReadDocumentError(Exception):
@@ -58,6 +62,39 @@ class DocumentsManager:
 
         raise FileNotFoundError(str(uri))
 
+    def read_document_text_with_disk_info(
+        self, uri: Uri, language_id: Union[str, Callable[[Any], bool], None]
+    ) -> Tuple[str, Optional[DiskInfo]]:
+        """Read document text and capture a stat snapshot bound to that exact content.
+
+        Uses a stat → read → stat-verify protocol: when the file changes while it
+        is being read, the read is retried. Returns ``None`` as info when no
+        consistent snapshot could be captured (non-file URI, stat error, or the
+        file never settled) — such text must not be persisted to or validated
+        against a disk cache.
+        """
+        try:
+            path = uri.to_path()
+            st_before = os.stat(path)
+        except (InvalidUriError, OSError):
+            return self.read_document_text(uri, language_id), None
+
+        text = self.read_document_text(uri, language_id)
+
+        for _ in range(_STAT_VERIFY_MAX_RETRIES):
+            try:
+                st_after = os.stat(path)
+            except OSError:
+                return text, None
+
+            if (st_before.st_mtime_ns, st_before.st_size) == (st_after.st_mtime_ns, st_after.st_size):
+                return text, disk_info_from_stat(st_after)
+
+            st_before = st_after
+            text = self.read_document_text(uri, language_id)
+
+        return text, None
+
     def detect_language_id(self, path_or_uri: Union[str, "os.PathLike[Any]", Uri]) -> str:
         path = path_or_uri.to_path() if isinstance(path_or_uri, Uri) else Path(path_or_uri)
 
@@ -84,11 +121,13 @@ class DocumentsManager:
             return result
 
         try:
+            text, disk_info = self.read_document_text_with_disk_info(uri, language_id)
             return self._append_document(
                 document_uri=DocumentUri(uri),
                 language_id=language_id or self.detect_language_id(path),
-                text=self.read_document_text(uri, language_id),
+                text=text,
                 version=version,
+                disk_info=disk_info,
             )
         except (SystemExit, KeyboardInterrupt):
             raise
@@ -147,12 +186,14 @@ class DocumentsManager:
         text: str,
         language_id: Optional[str] = None,
         version: Optional[int] = None,
+        disk_info: Optional[DiskInfo] = None,
     ) -> TextDocument:
         result = TextDocument(
             document_uri=document_uri,
             language_id=language_id,
             text=text,
             version=version,
+            disk_info=disk_info,
         )
 
         result.cache_invalidate.add(self._on_document_cache_invalidate)
@@ -166,6 +207,7 @@ class DocumentsManager:
         language_id: str,
         text: str,
         version: Optional[int] = None,
+        disk_info: Optional[DiskInfo] = None,
     ) -> TextDocument:
         with self._lock:
             document = self._create_document(
@@ -173,6 +215,7 @@ class DocumentsManager:
                 language_id=language_id,
                 text=text,
                 version=version,
+                disk_info=disk_info,
             )
 
             self._documents[document_uri] = document

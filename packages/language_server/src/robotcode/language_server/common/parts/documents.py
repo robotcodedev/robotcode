@@ -85,11 +85,8 @@ class TextDocumentProtocolPart(LanguageServerProtocolPart, DocumentsManager):
                     self.close_document(document, True)
 
                 elif change.type == FileChangeType.CHANGED:
-                    document.apply_full_change(
-                        None,
-                        self.read_document_text(document.uri, language_id_filter(document)),
-                        save=True,
-                    )
+                    text, disk_info = self.read_document_text_with_disk_info(document.uri, language_id_filter(document))
+                    document.apply_full_change(None, text, save=True, disk_info=disk_info)
                     self.did_change(
                         self,
                         document,

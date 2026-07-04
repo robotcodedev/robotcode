@@ -7,22 +7,51 @@ and the disk cache save/load roundtrip via SqliteDataCache.
 import os
 import pickle
 import types
-from dataclasses import dataclass, field
+from dataclasses import dataclass, replace
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 from pytest_mock import MockerFixture
 
+from robotcode.core.utils.path import DiskInfo, normalized_path, probe_disk_info
 from robotcode.robot.diagnostics.data_cache import CacheSection, SqliteDataCache
-from robotcode.robot.diagnostics.imports_manager import ImportsManager, NamespaceMetaData
+from robotcode.robot.diagnostics.imports_manager import (
+    ImportsManager,
+    LibraryMetaData,
+    NamespaceMetaData,
+    RobotFileMeta,
+)
+
+
+def _shift_mtime(info: DiskInfo, delta_ns: int = -1) -> DiskInfo:
+    return replace(info, mtime_ns=info.mtime_ns + delta_ns)
+
+
+def _trusted_info(path: Union[str, Path]) -> DiskInfo:
+    """Current DiskInfo of *path*, forced trusted (tmp files are always fresh)."""
+    info = probe_disk_info(path)
+    assert info is not None
+    return replace(info, trusted=True)
+
+
+def _res_meta(path: Path) -> RobotFileMeta:
+    """Trusted RobotFileMeta for a real file, as the resolver would record it."""
+    return RobotFileMeta(str(normalized_path(path)), _trusted_info(path))
 
 
 @dataclass
 class _FakeMeta:
-    """Picklable stand-in for LibraryMetaData / RobotFileMeta in tests."""
+    """Picklable stand-in for dependency metadata in cache roundtrip tests.
+
+    Deliberately not a real meta type: build_namespace_meta must fail closed
+    for unknown types (see test_unknown_dependency_meta_type_yields_none).
+    """
 
     name: str = ""
-    mtimes: Dict[str, int] = field(default_factory=dict)
+
+
+def _lib_meta(mtime_ns: int) -> LibraryMetaData:
+    return LibraryMetaData("MyLib", None, "/mylib.py", None, True, file_infos={"/mylib.py": DiskInfo(mtime_ns, 1)})
 
 
 # ---------------------------------------------------------------------------
@@ -58,11 +87,12 @@ def _mock_imports_manager(
     im.config_fingerprint = im._config_fingerprint
     # Cached meta lookups return None by default (=> fall back to full get_*_meta)
     im.get_cached_library_meta.return_value = None
-    im.get_cached_resource_meta.return_value = None
     im.get_cached_variables_meta.return_value = None
+    # No documents are open (=> resource dependency checks probe the disk)
+    im.documents_manager.get.return_value = None
     # Bind real methods so unbound class calls work through the mock
     im.get_resource_meta = ImportsManager.get_resource_meta
-    im.compute_dependency_fingerprints = types.MethodType(ImportsManager.compute_dependency_fingerprints, im)
+    im._is_dependency_meta_trusted = ImportsManager._is_dependency_meta_trusted
     im.build_namespace_meta = types.MethodType(ImportsManager.build_namespace_meta, im)
     im.validate_namespace_meta = types.MethodType(ImportsManager.validate_namespace_meta, im)
     return im
@@ -71,41 +101,12 @@ def _mock_imports_manager(
 def _mock_namespace(
     mocker: MockerFixture,
     source: str = "/project/test.robot",
-    libraries: Optional[Dict[str, str]] = None,
-    resources: Optional[Dict[str, str]] = None,
-    variables_imports: Optional[Dict[str, str]] = None,
+    dependency_metas: Optional[Dict[str, Optional[Any]]] = None,
 ) -> Any:
-    """Create a mock Namespace with configurable dependency dicts."""
+    """Create a mock Namespace with the dependency metas recorded at resolve time."""
     ns = mocker.MagicMock()
     ns.source = source
-
-    lib_entries = {}
-    if libraries:
-        for name, lib_doc_source in libraries.items():
-            entry = mocker.MagicMock()
-            entry.import_name = name
-            entry.library_doc.source = lib_doc_source
-            lib_entries[name] = entry
-    ns.libraries = lib_entries
-
-    res_entries = {}
-    if resources:
-        for name, res_source in resources.items():
-            entry = mocker.MagicMock()
-            entry.import_name = name
-            entry.library_doc.source = res_source
-            res_entries[name] = entry
-    ns.resources = res_entries
-
-    var_entries = {}
-    if variables_imports:
-        for name, var_source in variables_imports.items():
-            entry = mocker.MagicMock()
-            entry.import_name = name
-            entry.library_doc.source = var_source
-            var_entries[name] = entry
-    ns.variables_imports = var_entries
-
+    ns.dependency_metas = dependency_metas if dependency_metas is not None else {}
     return ns
 
 
@@ -118,7 +119,7 @@ class TestNamespaceMetaData:
     def test_meta_pickle_roundtrip(self, mocker: MockerFixture) -> None:
         meta = NamespaceMetaData(
             source="/project/test.robot",
-            source_mtime_ns=123456789,
+            source_info=DiskInfo(123456789, 42),
             config_fingerprint=(("BROWSER", "chrome"),),
             dependency_fingerprints={
                 "lib:BuiltIn": _FakeMeta(name="BuiltIn"),
@@ -129,22 +130,27 @@ class TestNamespaceMetaData:
         assert restored == meta
 
     def test_meta_equality(self, mocker: MockerFixture) -> None:
-        meta1 = NamespaceMetaData("/a.robot", 100, ("fp",), {"k": "v"})
-        meta2 = NamespaceMetaData("/a.robot", 100, ("fp",), {"k": "v"})
+        meta1 = NamespaceMetaData("/a.robot", DiskInfo(100, 1), ("fp",), {"k": "v"})
+        meta2 = NamespaceMetaData("/a.robot", DiskInfo(100, 1), ("fp",), {"k": "v"})
         assert meta1 == meta2
 
     def test_meta_inequality_mtime(self, mocker: MockerFixture) -> None:
-        meta1 = NamespaceMetaData("/a.robot", 100, ())
-        meta2 = NamespaceMetaData("/a.robot", 200, ())
+        meta1 = NamespaceMetaData("/a.robot", DiskInfo(100, 1), ())
+        meta2 = NamespaceMetaData("/a.robot", DiskInfo(200, 1), ())
+        assert meta1 != meta2
+
+    def test_meta_inequality_size(self, mocker: MockerFixture) -> None:
+        meta1 = NamespaceMetaData("/a.robot", DiskInfo(100, 1), ())
+        meta2 = NamespaceMetaData("/a.robot", DiskInfo(100, 2), ())
         assert meta1 != meta2
 
     def test_meta_default_semantic_model_disabled(self, mocker: MockerFixture) -> None:
-        meta = NamespaceMetaData("/a.robot", 100, ())
+        meta = NamespaceMetaData("/a.robot", DiskInfo(100, 1), ())
         assert meta.semantic_model_enabled is False
 
     def test_meta_inequality_semantic_model_mode(self, mocker: MockerFixture) -> None:
-        meta1 = NamespaceMetaData("/a.robot", 100, (), semantic_model_enabled=False)
-        meta2 = NamespaceMetaData("/a.robot", 100, (), semantic_model_enabled=True)
+        meta1 = NamespaceMetaData("/a.robot", DiskInfo(100, 1), (), semantic_model_enabled=False)
+        meta2 = NamespaceMetaData("/a.robot", DiskInfo(100, 1), (), semantic_model_enabled=True)
         assert meta1 != meta2
 
 
@@ -186,69 +192,6 @@ class TestConfigFingerprint:
         assert isinstance(fp, tuple)
 
 
-class TestDependencyFingerprints:
-    def test_empty_namespace(self, mocker: MockerFixture) -> None:
-        ns = _mock_namespace(mocker)
-        im = _mock_imports_manager(mocker)
-        fps = ImportsManager.compute_dependency_fingerprints(im, ns)
-        assert fps == {}
-
-    def test_library_fingerprint(self, mocker: MockerFixture) -> None:
-        ns = _mock_namespace(mocker, libraries={"BuiltIn": "builtin.py"})
-        im = _mock_imports_manager(mocker)
-
-        fake_meta = _FakeMeta(name="BuiltIn")
-        im.get_library_meta.return_value = (fake_meta, "BuiltIn", False)
-
-        fps = ImportsManager.compute_dependency_fingerprints(im, ns)
-        assert "lib:BuiltIn" in fps
-        assert fps["lib:BuiltIn"] == fake_meta
-
-    def test_resource_fingerprint(self, tmp_path: Path, mocker: MockerFixture) -> None:
-        resource_file = tmp_path / "common.resource"
-        resource_file.write_text("*** Keywords ***\n")
-
-        ns = _mock_namespace(mocker, resources={"common.resource": str(resource_file)})
-        im = _mock_imports_manager(mocker)
-
-        fps = ImportsManager.compute_dependency_fingerprints(im, ns)
-        assert f"res:{resource_file}" in fps
-
-    def test_variables_fingerprint(self, mocker: MockerFixture) -> None:
-        ns = _mock_namespace(mocker, variables_imports={"vars.py": "vars.py"})
-        im = _mock_imports_manager(mocker)
-
-        fake_meta = _FakeMeta(name="vars")
-        im.get_variables_meta.return_value = (fake_meta, "vars.py")
-
-        fps = ImportsManager.compute_dependency_fingerprints(im, ns)
-        assert "var:vars.py" in fps
-        assert fps["var:vars.py"] == fake_meta
-
-    def test_library_meta_none_skipped(self, mocker: MockerFixture) -> None:
-        ns = _mock_namespace(mocker, libraries={"Unknown": "unknown.py"})
-        im = _mock_imports_manager(mocker)
-        im.get_library_meta.return_value = (None, "Unknown", False)
-
-        fps = ImportsManager.compute_dependency_fingerprints(im, ns)
-        assert "lib:Unknown" not in fps
-
-    def test_resource_missing_file_skipped(self, mocker: MockerFixture) -> None:
-        ns = _mock_namespace(mocker, resources={"missing": "/nonexistent/file.resource"})
-        im = _mock_imports_manager(mocker)
-
-        fps = ImportsManager.compute_dependency_fingerprints(im, ns)
-        assert len(fps) == 0
-
-    def test_library_meta_exception_skipped(self, mocker: MockerFixture) -> None:
-        ns = _mock_namespace(mocker, libraries={"Bad": "bad.py"})
-        im = _mock_imports_manager(mocker)
-        im.get_library_meta.side_effect = RuntimeError("cannot resolve")
-
-        fps = ImportsManager.compute_dependency_fingerprints(im, ns)
-        assert "lib:Bad" not in fps
-
-
 # ===========================================================================
 # 1e-f/1e-g: build_namespace_meta + validate_namespace_meta
 # ===========================================================================
@@ -258,13 +201,15 @@ class TestBuildNamespaceMeta:
     def test_builds_meta_with_correct_fields(self, tmp_path: Path, mocker: MockerFixture) -> None:
         source = tmp_path / "test.robot"
         source.write_text("*** Test Cases ***\n")
+        disk_info = _trusted_info(source)
 
         ns = _mock_namespace(mocker, source=str(source))
         im = _mock_imports_manager(mocker)
 
-        meta = ImportsManager.build_namespace_meta(im, str(source), ns)
+        meta = ImportsManager.build_namespace_meta(im, str(source), ns, disk_info)
+        assert meta is not None
         assert meta.source == str(source)
-        assert meta.source_mtime_ns > 0
+        assert meta.source_info == disk_info
         assert isinstance(meta.config_fingerprint, tuple)
         assert isinstance(meta.dependency_fingerprints, dict)
         assert meta.semantic_model_enabled is False
@@ -276,28 +221,92 @@ class TestBuildNamespaceMeta:
         ns = _mock_namespace(mocker, source=str(source))
         im = _mock_imports_manager(mocker)
 
-        meta = ImportsManager.build_namespace_meta(im, str(source), ns, semantic_model_enabled=True)
+        meta = ImportsManager.build_namespace_meta(
+            im, str(source), ns, _trusted_info(source), semantic_model_enabled=True
+        )
+        assert meta is not None
         assert meta.semantic_model_enabled is True
 
-    def test_source_set(self, tmp_path: Path, mocker: MockerFixture) -> None:
+    def test_uses_recorded_dependency_metas(self, tmp_path: Path, mocker: MockerFixture) -> None:
+        source = tmp_path / "test.robot"
+        source.write_text("")
+        recorded = _lib_meta(100)
+
+        ns = _mock_namespace(mocker, source=str(source), dependency_metas={"lib:MyLib": recorded})
+        im = _mock_imports_manager(mocker)
+
+        meta = ImportsManager.build_namespace_meta(im, str(source), ns, _trusted_info(source))
+        assert meta is not None
+        assert meta.dependency_fingerprints == {"lib:MyLib": recorded}
+
+    def test_unknown_dependency_meta_type_yields_none(self, tmp_path: Path, mocker: MockerFixture) -> None:
+        """Trust dispatch fails closed: unknown meta types must never be persisted."""
+        source = tmp_path / "test.robot"
+        source.write_text("")
+
+        ns = _mock_namespace(mocker, source=str(source), dependency_metas={"lib:MyLib": _FakeMeta(name="MyLib")})
+        im = _mock_imports_manager(mocker)
+
+        assert ImportsManager.build_namespace_meta(im, str(source), ns, _trusted_info(source)) is None
+
+    def test_untrusted_disk_info_yields_none(self, tmp_path: Path, mocker: MockerFixture) -> None:
         source = tmp_path / "test.robot"
         source.write_text("")
 
         ns = _mock_namespace(mocker, source=str(source))
         im = _mock_imports_manager(mocker)
 
-        meta = ImportsManager.build_namespace_meta(im, str(source), ns)
-        assert meta.source == str(source)  # source is set
+        untrusted = replace(_trusted_info(source), trusted=False)
+        assert ImportsManager.build_namespace_meta(im, str(source), ns, untrusted) is None
 
-    def test_missing_source_gets_zero_mtime(self, mocker: MockerFixture) -> None:
-        ns = _mock_namespace(mocker, source="/nonexistent/test.robot")
+    def test_missing_dependency_metas_yields_none(self, tmp_path: Path, mocker: MockerFixture) -> None:
+        source = tmp_path / "test.robot"
+        source.write_text("")
+
+        ns = _mock_namespace(mocker, source=str(source), dependency_metas=None)
+        ns.dependency_metas = None
         im = _mock_imports_manager(mocker)
 
-        meta = ImportsManager.build_namespace_meta(im, "/nonexistent/test.robot", ns)
-        assert meta.source_mtime_ns == 0
+        assert ImportsManager.build_namespace_meta(im, str(source), ns, _trusted_info(source)) is None
+
+    def test_none_dependency_meta_yields_none(self, tmp_path: Path, mocker: MockerFixture) -> None:
+        source = tmp_path / "test.robot"
+        source.write_text("")
+
+        ns = _mock_namespace(mocker, source=str(source), dependency_metas={"res:/dirty.resource": None})
+        im = _mock_imports_manager(mocker)
+
+        assert ImportsManager.build_namespace_meta(im, str(source), ns, _trusted_info(source)) is None
+
+    def test_untrusted_resource_meta_yields_none(self, tmp_path: Path, mocker: MockerFixture) -> None:
+        source = tmp_path / "test.robot"
+        source.write_text("")
+        res_meta = RobotFileMeta("/project/common.resource", DiskInfo(100, 17, trusted=False))
+
+        ns = _mock_namespace(mocker, source=str(source), dependency_metas={"res:/project/common.resource": res_meta})
+        im = _mock_imports_manager(mocker)
+
+        assert ImportsManager.build_namespace_meta(im, str(source), ns, _trusted_info(source)) is None
+
+    def test_untrusted_library_meta_yields_none(self, tmp_path: Path, mocker: MockerFixture) -> None:
+        source = tmp_path / "test.robot"
+        source.write_text("")
+        lib_meta = LibraryMetaData(
+            "MyLib", None, "/libs/mylib.py", None, True, file_infos={"/libs/mylib.py": DiskInfo(100, 17, trusted=False)}
+        )
+
+        ns = _mock_namespace(mocker, source=str(source), dependency_metas={"lib:MyLib": lib_meta})
+        im = _mock_imports_manager(mocker)
+
+        assert ImportsManager.build_namespace_meta(im, str(source), ns, _trusted_info(source)) is None
 
 
 class TestValidateNamespaceMeta:
+    def _build(self, im: Any, source: Path, ns: Any) -> NamespaceMetaData:
+        meta = ImportsManager.build_namespace_meta(im, str(source), ns, _trusted_info(source))
+        assert meta is not None
+        return meta
+
     def test_valid_meta_passes(self, tmp_path: Path, mocker: MockerFixture) -> None:
         source = tmp_path / "test.robot"
         source.write_text("*** Test Cases ***\n")
@@ -305,21 +314,19 @@ class TestValidateNamespaceMeta:
         ns = _mock_namespace(mocker, source=str(source))
         im = _mock_imports_manager(mocker)
 
-        meta = ImportsManager.build_namespace_meta(im, str(source), ns)
-        assert ImportsManager.validate_namespace_meta(im, meta) is True
+        meta = self._build(im, source, ns)
+        assert ImportsManager.validate_namespace_meta(im, meta, _trusted_info(source)) is True
 
-    def test_version_mismatch_fails(self, tmp_path: Path, mocker: MockerFixture) -> None:
-        """Version mismatch is now handled at DB level (app_version), not meta level.
-        This test verifies that mtime changes are detected instead."""
+    def test_no_source_disk_info_fails(self, tmp_path: Path, mocker: MockerFixture) -> None:
+        """A document without a disk snapshot (dirty buffer) must never load from cache."""
         source = tmp_path / "test.robot"
         source.write_text("")
 
         ns = _mock_namespace(mocker, source=str(source))
         im = _mock_imports_manager(mocker)
 
-        meta = ImportsManager.build_namespace_meta(im, str(source), ns)
-        meta.source_mtime_ns -= 1  # Simulate mtime change
-        assert ImportsManager.validate_namespace_meta(im, meta) is False
+        meta = self._build(im, source, ns)
+        assert ImportsManager.validate_namespace_meta(im, meta, None) is False
 
     def test_source_mtime_changed_fails(self, tmp_path: Path, mocker: MockerFixture) -> None:
         source = tmp_path / "test.robot"
@@ -328,25 +335,28 @@ class TestValidateNamespaceMeta:
         ns = _mock_namespace(mocker, source=str(source))
         im = _mock_imports_manager(mocker)
 
-        meta = ImportsManager.build_namespace_meta(im, str(source), ns)
+        meta = self._build(im, source, ns)
 
         # Simulate a file modification by shifting the stored mtime.
         # This is more reliable than writing the file again and hoping
         # the filesystem updates the mtime (Windows NTFS has coarse
         # resolution and can keep the same mtime for fast writes).
-        meta.source_mtime_ns -= 1
-        assert ImportsManager.validate_namespace_meta(im, meta) is False
+        meta.source_info = _shift_mtime(meta.source_info)
+        assert ImportsManager.validate_namespace_meta(im, meta, _trusted_info(source)) is False
 
-    def test_source_deleted_fails(self, tmp_path: Path, mocker: MockerFixture) -> None:
+    def test_source_size_changed_fails(self, tmp_path: Path, mocker: MockerFixture) -> None:
         source = tmp_path / "test.robot"
-        source.write_text("")
+        source.write_text("original")
 
         ns = _mock_namespace(mocker, source=str(source))
         im = _mock_imports_manager(mocker)
 
-        meta = ImportsManager.build_namespace_meta(im, str(source), ns)
-        source.unlink()
-        assert ImportsManager.validate_namespace_meta(im, meta) is False
+        meta = self._build(im, source, ns)
+
+        # Same mtime, different size — e.g. a rewrite within the same
+        # filesystem timestamp tick.
+        meta.source_info = replace(meta.source_info, size=meta.source_info.size + 1)
+        assert ImportsManager.validate_namespace_meta(im, meta, _trusted_info(source)) is False
 
     def test_config_fingerprint_changed_fails(self, tmp_path: Path, mocker: MockerFixture) -> None:
         source = tmp_path / "test.robot"
@@ -355,11 +365,11 @@ class TestValidateNamespaceMeta:
         ns = _mock_namespace(mocker, source=str(source))
         im = _mock_imports_manager(mocker, cmd_variables={"BROWSER": "chrome"})
 
-        meta = ImportsManager.build_namespace_meta(im, str(source), ns)
+        meta = self._build(im, source, ns)
 
         # Change the configuration
         im2 = _mock_imports_manager(mocker, cmd_variables={"BROWSER": "firefox"})
-        assert ImportsManager.validate_namespace_meta(im2, meta) is False
+        assert ImportsManager.validate_namespace_meta(im2, meta, _trusted_info(source)) is False
 
     def test_workspace_languages_changed_fails(self, tmp_path: Path, mocker: MockerFixture) -> None:
         source = tmp_path / "test.robot"
@@ -375,7 +385,7 @@ class TestValidateNamespaceMeta:
         )
         im.config_fingerprint = im._config_fingerprint
 
-        meta = ImportsManager.build_namespace_meta(im, str(source), ns)
+        meta = self._build(im, source, ns)
 
         # Validate with German workspace languages -> should fail
         im2 = _mock_imports_manager(mocker)
@@ -385,7 +395,7 @@ class TestValidateNamespaceMeta:
         )
         im2.config_fingerprint = im2._config_fingerprint
 
-        assert ImportsManager.validate_namespace_meta(im2, meta) is False
+        assert ImportsManager.validate_namespace_meta(im2, meta, _trusted_info(source)) is False
 
     def test_workspace_languages_unchanged_passes(self, tmp_path: Path, mocker: MockerFixture) -> None:
         source = tmp_path / "test.robot"
@@ -399,31 +409,42 @@ class TestValidateNamespaceMeta:
         im._config_fingerprint = (*im._config_fingerprint[:4], lang_fp)
         im.config_fingerprint = im._config_fingerprint
 
-        meta = ImportsManager.build_namespace_meta(im, str(source), ns)
+        meta = self._build(im, source, ns)
 
         # Validate with same languages -> should pass
         im2 = _mock_imports_manager(mocker)
         im2._config_fingerprint = (*im2._config_fingerprint[:4], lang_fp)
         im2.config_fingerprint = im2._config_fingerprint
 
-        assert ImportsManager.validate_namespace_meta(im2, meta) is True
+        assert ImportsManager.validate_namespace_meta(im2, meta, _trusted_info(source)) is True
 
     def test_library_dependency_changed_fails(self, tmp_path: Path, mocker: MockerFixture) -> None:
         source = tmp_path / "test.robot"
         source.write_text("")
 
-        ns = _mock_namespace(mocker, source=str(source), libraries={"MyLib": "mylib.py"})
+        ns = _mock_namespace(mocker, source=str(source), dependency_metas={"lib:MyLib": _lib_meta(100)})
         im = _mock_imports_manager(mocker)
 
-        im.get_library_meta.return_value = (_FakeMeta(name="MyLib", mtimes={"/mylib.py": 100}), "MyLib", False)
-
-        meta = ImportsManager.build_namespace_meta(im, str(source), ns)
+        meta = self._build(im, source, ns)
         assert "lib:MyLib" in meta.dependency_fingerprints
 
-        # Change library meta -> different hash
-        im.get_library_meta.return_value = (_FakeMeta(name="MyLib", mtimes={"/mylib.py": 200}), "MyLib", False)
+        # Library files changed on disk -> fresh meta differs
+        im.get_library_meta.return_value = (_lib_meta(200), "MyLib", False)
 
-        assert ImportsManager.validate_namespace_meta(im, meta) is False
+        assert ImportsManager.validate_namespace_meta(im, meta, _trusted_info(source)) is False
+
+    def test_library_dependency_unchanged_passes(self, tmp_path: Path, mocker: MockerFixture) -> None:
+        source = tmp_path / "test.robot"
+        source.write_text("")
+
+        ns = _mock_namespace(mocker, source=str(source), dependency_metas={"lib:MyLib": _lib_meta(100)})
+        im = _mock_imports_manager(mocker)
+
+        meta = self._build(im, source, ns)
+
+        im.get_library_meta.return_value = (_lib_meta(100), "MyLib", False)
+
+        assert ImportsManager.validate_namespace_meta(im, meta, _trusted_info(source)) is True
 
     def test_resource_dependency_changed_fails(self, tmp_path: Path, mocker: MockerFixture) -> None:
         source = tmp_path / "test.robot"
@@ -432,17 +453,19 @@ class TestValidateNamespaceMeta:
         res_file = tmp_path / "common.resource"
         res_file.write_text("*** Keywords ***\n")
 
-        ns = _mock_namespace(mocker, source=str(source), resources={"common": str(res_file)})
+        res_meta = _res_meta(res_file)
+        ns = _mock_namespace(mocker, source=str(source), dependency_metas={f"res:{res_meta.source}": res_meta})
         im = _mock_imports_manager(mocker)
 
-        meta = ImportsManager.build_namespace_meta(im, str(source), ns)
+        meta = self._build(im, source, ns)
 
         # Simulate resource file modification by shifting the stored mtime.
         # More reliable than writing the file again (Windows NTFS mtime
         # resolution can cause identical timestamps for fast writes).
-        res_key = f"res:{res_file}"
-        meta.dependency_fingerprints[res_key].mtime_ns -= 1
-        assert ImportsManager.validate_namespace_meta(im, meta) is False
+        res_key = f"res:{res_meta.source}"
+        fingerprint = meta.dependency_fingerprints[res_key]
+        meta.dependency_fingerprints[res_key] = replace(fingerprint, info=_shift_mtime(fingerprint.info))
+        assert ImportsManager.validate_namespace_meta(im, meta, _trusted_info(source)) is False
 
     def test_resource_dependency_deleted_fails(self, tmp_path: Path, mocker: MockerFixture) -> None:
         source = tmp_path / "test.robot"
@@ -451,12 +474,60 @@ class TestValidateNamespaceMeta:
         res_file = tmp_path / "common.resource"
         res_file.write_text("*** Keywords ***\n")
 
-        ns = _mock_namespace(mocker, source=str(source), resources={"common": str(res_file)})
+        res_meta = _res_meta(res_file)
+        ns = _mock_namespace(mocker, source=str(source), dependency_metas={f"res:{res_meta.source}": res_meta})
         im = _mock_imports_manager(mocker)
 
-        meta = ImportsManager.build_namespace_meta(im, str(source), ns)
+        meta = self._build(im, source, ns)
         res_file.unlink()
-        assert ImportsManager.validate_namespace_meta(im, meta) is False
+        assert ImportsManager.validate_namespace_meta(im, meta, _trusted_info(source)) is False
+
+    def test_dirty_open_resource_dependency_fails(self, tmp_path: Path, mocker: MockerFixture) -> None:
+        """A resource open in the editor with unsaved changes must fail validation,
+        so dependents are rebuilt against the buffer instead of served from disk state."""
+        source = tmp_path / "test.robot"
+        source.write_text("")
+
+        res_file = tmp_path / "common.resource"
+        res_file.write_text("*** Keywords ***\n")
+
+        res_meta = _res_meta(res_file)
+        ns = _mock_namespace(mocker, source=str(source), dependency_metas={f"res:{res_meta.source}": res_meta})
+        im = _mock_imports_manager(mocker)
+
+        meta = self._build(im, source, ns)
+
+        dirty_document = mocker.MagicMock()
+        dirty_document.disk_info = None
+        im.documents_manager.get.return_value = dirty_document
+
+        assert ImportsManager.validate_namespace_meta(im, meta, _trusted_info(source)) is False
+
+    def test_clean_open_resource_dependency_passes(self, tmp_path: Path, mocker: MockerFixture) -> None:
+        source = tmp_path / "test.robot"
+        source.write_text("")
+
+        res_file = tmp_path / "common.resource"
+        res_file.write_text("*** Keywords ***\n")
+
+        res_meta = _res_meta(res_file)
+        ns = _mock_namespace(mocker, source=str(source), dependency_metas={f"res:{res_meta.source}": res_meta})
+        im = _mock_imports_manager(mocker)
+
+        meta = self._build(im, source, ns)
+
+        from robotcode.core.text_document import TextDocument
+        from robotcode.core.uri import Uri
+
+        clean_document = TextDocument(
+            document_uri=str(Uri.from_path(res_file)),
+            text=res_file.read_text(),
+            language_id="robotframework",
+            disk_info=res_meta.info,
+        )
+        im.documents_manager.get.return_value = clean_document
+
+        assert ImportsManager.validate_namespace_meta(im, meta, _trusted_info(source)) is True
 
 
 # ===========================================================================
@@ -469,7 +540,7 @@ class TestNamespaceMetaCacheRoundtrip:
         cache = SqliteDataCache(tmp_path / "cache")
         meta = NamespaceMetaData(
             source="/project/test.robot",
-            source_mtime_ns=123456789,
+            source_info=DiskInfo(123456789, 42),
             config_fingerprint=(("BROWSER", "chrome"),),
             dependency_fingerprints={
                 "lib:BuiltIn": _FakeMeta(name="BuiltIn"),
@@ -489,8 +560,8 @@ class TestNamespaceMetaCacheRoundtrip:
 
     def test_different_sources_different_cache_entries(self, tmp_path: Path, mocker: MockerFixture) -> None:
         cache = SqliteDataCache(tmp_path / "cache")
-        meta1 = NamespaceMetaData("/dir1/a.robot", 100, ())
-        meta2 = NamespaceMetaData("/dir2/b.robot", 200, ())
+        meta1 = NamespaceMetaData("/dir1/a.robot", DiskInfo(100, 1), ())
+        meta2 = NamespaceMetaData("/dir2/b.robot", DiskInfo(200, 2), ())
 
         cache.save_entry(CacheSection.NAMESPACE, meta1.source, meta1, "data1")
         cache.save_entry(CacheSection.NAMESPACE, meta2.source, meta2, "data2")
@@ -504,3 +575,44 @@ class TestNamespaceMetaCacheRoundtrip:
         assert entry2.meta is not None
         assert entry1.meta.source == "/dir1/a.robot"
         assert entry2.meta.source == "/dir2/b.robot"
+
+
+# ===========================================================================
+# _save_import_cache: persist gate for library/variables metas
+# ===========================================================================
+
+
+class TestSaveImportCacheGate:
+    def _im(self, mocker: MockerFixture) -> Any:
+        im = mocker.MagicMock()
+        im._save_import_cache = types.MethodType(ImportsManager._save_import_cache, im)
+        return im
+
+    def _meta(self, trusted: bool) -> LibraryMetaData:
+        return LibraryMetaData(
+            "MyLib",
+            None,
+            "/libs/mylib.py",
+            None,
+            True,
+            file_infos={"/libs/mylib.py": DiskInfo(100, 17, trusted=trusted)},
+        )
+
+    def test_untrusted_file_infos_skip_persisting(self, mocker: MockerFixture) -> None:
+        im = self._im(mocker)
+
+        im._save_import_cache(
+            CacheSection.LIBRARY, self._meta(trusted=False), mocker.MagicMock(), "library", "MyLib", ()
+        )
+
+        im.data_cache.save_entry.assert_not_called()
+
+    def test_trusted_file_infos_are_persisted(self, mocker: MockerFixture) -> None:
+        im = self._im(mocker)
+        meta = self._meta(trusted=True)
+
+        im._save_import_cache(CacheSection.LIBRARY, meta, mocker.MagicMock(), "library", "MyLib", ())
+
+        save_args = im.data_cache.save_entry.call_args[0]
+        assert save_args[1] == meta.cache_key
+        assert save_args[2] is meta

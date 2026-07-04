@@ -1,3 +1,4 @@
+from fnmatch import fnmatch
 from pathlib import Path
 from typing import Optional, Tuple
 
@@ -78,6 +79,25 @@ def _format_bytes(n: int) -> str:
     if n < 1024 * 1024:
         return f"{n / 1024:.1f} KB"
     return f"{n / (1024 * 1024):.1f} MB"
+
+
+def _display_name(entry_name: str) -> str:
+    # Namespace entry names contain a newline separating source path and
+    # document type; keep the table/line output single-line.
+    return entry_name.replace("\n", " · ")
+
+
+def _entry_matches(entry_name: str, patterns: Tuple[str, ...]) -> bool:
+    """Whether an entry name matches any of the glob patterns.
+
+    Namespace entry names carry a "\\n<document type>" suffix; patterns are
+    matched against the full name and against the bare source path, so path
+    globs like '*/suite.robot' keep working for namespace entries.
+    """
+    if not patterns:
+        return True
+    source = entry_name.split("\n", 1)[0]
+    return any(fnmatch(entry_name, p) or fnmatch(source, p) for p in patterns)
 
 
 @click.group(
@@ -234,8 +254,6 @@ def cache_list(app: Application, sections: Tuple[str, ...], patterns: Tuple[str,
     Use --section to filter by specific cache sections.
     Use --pattern to filter entries by glob pattern.
     """
-    from fnmatch import fnmatch
-
     _, db = _resolve_cache(app, paths)
 
     if db is None:
@@ -246,16 +264,11 @@ def cache_list(app: Application, sections: Tuple[str, ...], patterns: Tuple[str,
         selected = _parse_sections(sections)
         target_sections = selected if selected else tuple(CacheSection)
 
-        def _matches(name: str) -> bool:
-            if not patterns:
-                return True
-            return any(fnmatch(name, p) for p in patterns)
-
         if app.config.output_format is None or app.config.output_format == OutputFormat.TEXT:
             if app.colored and app.has_rich:
                 lines: list[str] = []
                 for section in target_sections:
-                    entries = [e for e in db.list_entries(section) if _matches(e.entry_name)]
+                    entries = [e for e in db.list_entries(section) if _entry_matches(e.entry_name, patterns)]
                     if not entries:
                         continue
                     lines.append(f"### {section.name.lower()} ({len(entries)} entries)")
@@ -266,7 +279,7 @@ def cache_list(app: Application, sections: Tuple[str, ...], patterns: Tuple[str,
                         size = _format_bytes(entry.meta_bytes + entry.data_bytes)
                         created = entry.created_at or "—"
                         modified = entry.modified_at or "—"
-                        lines.append(f"| {entry.entry_name} | {size} | {created} | {modified} |")
+                        lines.append(f"| {_display_name(entry.entry_name)} | {size} | {created} | {modified} |")
                     lines.append("")
                 if lines:
                     app.echo_as_markdown("\n".join(lines))
@@ -275,7 +288,7 @@ def cache_list(app: Application, sections: Tuple[str, ...], patterns: Tuple[str,
             else:
                 found = False
                 for section in target_sections:
-                    entries = [e for e in db.list_entries(section) if _matches(e.entry_name)]
+                    entries = [e for e in db.list_entries(section) if _entry_matches(e.entry_name, patterns)]
                     if not entries:
                         continue
                     found = True
@@ -284,14 +297,16 @@ def cache_list(app: Application, sections: Tuple[str, ...], patterns: Tuple[str,
                         size = _format_bytes(entry.meta_bytes + entry.data_bytes)
                         created = entry.created_at or "—"
                         modified = entry.modified_at or "—"
-                        app.echo(f"  {entry.entry_name}  size={size}  created={created}  modified={modified}")
+                        app.echo(
+                            f"  {_display_name(entry.entry_name)}  size={size}  created={created}  modified={modified}"
+                        )
                     app.echo("")
                 if not found:
                     app.echo("No entries found.")
         else:
             result: dict[str, list[dict[str, object]]] = {}
             for section in target_sections:
-                entries = [e for e in db.list_entries(section) if _matches(e.entry_name)]
+                entries = [e for e in db.list_entries(section) if _entry_matches(e.entry_name, patterns)]
                 if entries:
                     result[section.name.lower()] = [
                         {

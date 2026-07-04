@@ -24,6 +24,7 @@ from robotcode.core.event import event
 from robotcode.core.lsp.types import DocumentUri, Position, Range
 from robotcode.core.uri import Uri
 from robotcode.core.utils.logging import LoggingDescriptor
+from robotcode.core.utils.path import DiskInfo
 
 
 def is_multibyte_char(char: str) -> bool:
@@ -108,6 +109,7 @@ class TextDocument:
         text: str,
         language_id: Optional[str] = None,
         version: Optional[int] = None,
+        disk_info: Optional[DiskInfo] = None,
     ) -> None:
         super().__init__()
 
@@ -119,6 +121,7 @@ class TextDocument:
         self._text = text
         self._orig_text = text
         self._orig_version = version
+        self._disk_info = disk_info
         self._lines: Optional[List[str]] = None
         self._cache: Dict[weakref.ref[Any], CacheEntry] = collections.defaultdict(CacheEntry)
         self._data_lock = RLock(name=f"Document.data_lock '{document_uri}'", default_timeout=120)
@@ -143,6 +146,16 @@ class TextDocument:
         with self._lock:
             return self._text
 
+    @property
+    def disk_info(self) -> Optional[DiskInfo]:
+        """Stat snapshot of the disk content this document's text was read from.
+
+        ``None`` means the text is not known to match any disk state (e.g. it
+        came from the editor or the file changed while it was being read).
+        """
+        with self._lock:
+            return self._disk_info
+
     def save(self, version: Optional[int], text: Optional[str]) -> None:
         self.apply_full_change(version, text, save=True)
 
@@ -158,7 +171,14 @@ class TextDocument:
             self._lines = None
 
     @_logger.call
-    def apply_full_change(self, version: Optional[int], text: Optional[str], *, save: bool = False) -> None:
+    def apply_full_change(
+        self,
+        version: Optional[int],
+        text: Optional[str],
+        *,
+        save: bool = False,
+        disk_info: Optional[DiskInfo] = None,
+    ) -> None:
         with self._cache_invalidating():
             if version is not None:
                 self._version = version
@@ -167,11 +187,14 @@ class TextDocument:
                 self._lines = None
             if save:
                 self._orig_text = self._text
+            if text is not None or save:
+                self._disk_info = disk_info
 
     @_logger.call
     def apply_incremental_change(self, version: Optional[int], range: Range, text: str) -> None:
         with self._cache_invalidating():
             try:
+                self._disk_info = None
                 if version is not None:
                     self._version = version
 
@@ -371,6 +394,7 @@ class TextDocument:
 
     def _clear(self) -> None:
         self._lines = None
+        self._disk_info = None
         self._invalidate_data()
 
     @_logger.call

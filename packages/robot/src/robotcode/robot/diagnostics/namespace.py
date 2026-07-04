@@ -26,7 +26,7 @@ from robotcode.core.lsp.types import (
 from robotcode.core.text_document import TextDocument
 from robotcode.core.uri import Uri
 from robotcode.core.utils.logging import LoggingDescriptor
-from robotcode.core.utils.path import FileId, file_id
+from robotcode.core.utils.path import DiskInfo, FileId, file_id, normalized_path
 
 from ..utils.stubs import Languages
 from ..utils.variables import (
@@ -47,7 +47,7 @@ from .entities import (
 )
 from .errors import DIAGNOSTICS_SOURCE_NAME
 from .import_resolver import ImportResolver
-from .imports_manager import ImportsManager
+from .imports_manager import ImportsManager, RobotFileMeta
 from .keyword_finder import KeywordFinder
 from .library_doc import (
     KeywordDoc,
@@ -184,6 +184,7 @@ class Namespace:
         finder: KeywordFinder,
         sentinel: object,
         semantic_model: Optional["SemanticModel"] = None,
+        dependency_metas: Optional[Dict[str, Optional[Any]]] = None,
     ) -> None:
         self.imports_manager = imports_manager
         self.source = source
@@ -211,6 +212,7 @@ class Namespace:
         self._finder: KeywordFinder = finder
         self._sentinel = sentinel  # prevent GC — ref-counted by imports_manager
         self._semantic_model = semantic_model
+        self._dependency_metas = dependency_metas
 
         # Lazy-computed caches
         self._namespaces: Optional[Dict[KeywordMatcher, List[LibraryEntry]]] = None
@@ -221,6 +223,15 @@ class Namespace:
         imports_manager.libraries_changed.add(self._on_libraries_changed)
         imports_manager.resources_changed.add(self._on_resources_changed)
         imports_manager.variables_changed.add(self._on_variables_changed)
+
+    @property
+    def dependency_metas(self) -> Optional[Dict[str, Optional[Any]]]:
+        """Metadata of the dependencies captured while this namespace was resolved.
+
+        ``None`` when the namespace was built by a path that did not record
+        them — such a namespace must never be persisted to the disk cache.
+        """
+        return self._dependency_metas
 
     @property
     def document(self) -> Optional[TextDocument]:
@@ -702,6 +713,7 @@ class Namespace:
             finder=finder,
             sentinel=sentinel,
             semantic_model=semantic_model,
+            dependency_metas=resolved.dependency_metas,
         )
 
 
@@ -723,6 +735,8 @@ class NamespaceBuilder:
         document_type: Optional[DocumentType] = None,
         languages: Optional[Languages] = None,
         workspace_languages: Optional[Languages] = None,
+        *,
+        disk_info: Optional[DiskInfo] = None,
     ) -> None:
         self._imports_manager = imports_manager
         self._model = model
@@ -732,6 +746,7 @@ class NamespaceBuilder:
         self._document_type = document_type
         self._languages = languages
         self._workspace_languages = workspace_languages
+        self._disk_info = disk_info
         self._enable_semantic_model = False
 
     def set_semantic_model_enabled(self, enabled: bool) -> None:
@@ -747,7 +762,12 @@ class NamespaceBuilder:
         from .semantic_analyzer.analyzer import SemanticAnalyzer
 
         with self._logger.measure_time(lambda: f"Build Namespace for {self._source}", context_name="import"):
-            library_doc = self._imports_manager.get_libdoc_from_model(self._model, self._source)
+            source_meta = (
+                RobotFileMeta(str(normalized_path(self._source)), self._disk_info)
+                if self._disk_info is not None
+                else None
+            )
+            library_doc = self._imports_manager.get_libdoc_from_model(self._model, self._source, source_meta)
             document_uri = (
                 self._document.document_uri if self._document is not None else str(Uri.from_path(self._source))
             )
@@ -839,4 +859,5 @@ class NamespaceBuilder:
                 finder=finder,
                 sentinel=sentinel,
                 semantic_model=analyzer_result.semantic_model,
+                dependency_metas=resolved.dependency_metas,
             )
