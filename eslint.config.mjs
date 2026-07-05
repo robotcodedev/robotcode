@@ -7,6 +7,9 @@ export default [
     ignores: [
       "**/.venv/",
       "**/node_modules/",
+      // Agent tooling checks out full repo copies (incl. tsconfigs) under .claude/worktrees/;
+      // linting them confuses typescript-eslint's root-dir resolution for the whole run.
+      "**/.claude/",
       "**/dist/",
       "**/out/",
       "**/coverage/",

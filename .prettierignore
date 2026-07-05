@@ -15,4 +15,7 @@ vscode.proposed.d.ts
 .pytest_cache/
 robotcode/
 
+# agent tooling checks out full repo copies here
+.claude/
+
 *.md
