@@ -54,7 +54,12 @@ import java.util.*
     
     var testItems: Array<RobotCodeTestItem> = arrayOf()
         private set
-    
+
+    // Whether the project's Robot Framework version supports `--parseinclude` (RF >= 6.1).
+    // A per-project environment fact, taken from the last full discover.
+    var supportsParseInclude: Boolean = false
+        private set
+
     init {
         EditorFactory.getInstance().eventMulticaster.addDocumentListener(this, this)
         VirtualFileManager.getInstance().addAsyncFileListener(this, this)
@@ -175,8 +180,8 @@ import java.util.*
                         "discover",
                         "--read-from-stdin",
                         "tests",
-                        *(if (testItem.needsParseInclude == true && testItem.relSource != null) arrayOf(
-                            "--needs-parse-include", escapeRobotGlob(testItem.relSource)
+                        *(if (supportsParseInclude && testItem.relSource != null) arrayOf(
+                            "-I", escapeRobotGlob(testItem.relSource)
                         )
                         else arrayOf<String>()),
                         "--suite",
@@ -221,11 +226,11 @@ import java.util.*
     fun refresh() {
         thisLogger().info("Refreshing test items")
         try {
-            testItems = ApplicationManager.getApplication().executeOnPooledThread<RobotCodeDiscoverResult> {
-                
+            val discoverResult = ApplicationManager.getApplication().executeOnPooledThread<RobotCodeDiscoverResult?> {
+
                 // TODO: Add support for configurable paths
                 val defaultPaths = arrayOf("-dp", ".")
-                
+
                 val cmdLine = try {
                     project.buildRobotCodeCommandLine(
                         arrayOf(*defaultPaths, "discover", "--read-from-stdin", "all"), format = "json"
@@ -234,9 +239,9 @@ import java.util.*
                     thisLogger().warn("Failed to build command line", e)
                     return@executeOnPooledThread null
                 }
-                
+
                 val openFiles = mutableMapOf<String, String>()
-                
+
                 ApplicationManager.getApplication().runReadAction {
                     FileEditorManagerEx.getInstanceEx(project).openFiles.forEach { file ->
                         FileDocumentManager.getInstance().getDocument(file)?.let { document ->
@@ -244,9 +249,9 @@ import java.util.*
                         }
                     }
                 }
-                
+
                 val openFilesAsString = Json.encodeToString(openFiles)
-                
+
                 val result = CapturingProcessHandler(cmdLine).apply {
                     process.outputStream.bufferedWriter().apply {
                         write(openFilesAsString)
@@ -254,17 +259,20 @@ import java.util.*
                         close()
                     }
                 }.runProcess()
-                
+
                 if (result.exitCode != 0) {
                     throw RuntimeException("Failed to discover test items: ${result.stderr}")
                 }
                 Json.decodeFromString<RobotCodeDiscoverResult>(result.stdout)
-            }.get()?.items ?: arrayOf()
+            }.get()
+            testItems = discoverResult?.items ?: arrayOf()
+            supportsParseInclude = discoverResult?.supportsParseInclude ?: false
         } catch (e: Exception) {
             thisLogger().warn("Failed to discover test items", e)
             testItems = arrayOf()
+            supportsParseInclude = false
         }
-        
+
         DaemonCodeAnalyzer.getInstance(project).restart()
     }
     

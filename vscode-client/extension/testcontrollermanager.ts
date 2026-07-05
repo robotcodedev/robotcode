@@ -51,7 +51,6 @@ interface RobotTestItem {
   uri?: string;
   relSource?: string;
   source?: string;
-  needsParseInclude?: boolean;
   children: RobotTestItem[] | undefined;
   name: string;
   longname: string;
@@ -65,6 +64,9 @@ interface RobotTestItem {
 interface RobotCodeDiscoverResult {
   items?: RobotTestItem[];
   diagnostics?: { [Key: string]: Diagnostic[] };
+  // True when the folder's Robot Framework version supports `--parseinclude` (RF >= 6.1).
+  // A per-folder environment fact, not a property of any single test item.
+  supportsParseInclude?: boolean;
 }
 
 interface RobotCodeProfileInfo {
@@ -171,6 +173,7 @@ class WorkspaceFolderEntry {
   public constructor(
     public valid: boolean,
     public readonly items: RobotTestItem[] | undefined,
+    public readonly supportsParseInclude: boolean = false,
   ) {}
 }
 
@@ -725,6 +728,14 @@ export class TestControllerManager {
     return this.robotItemIndex.get(item.id);
   }
 
+  // Resolves the discover `workspace` RobotTestItem for a folder directly from the per-folder
+  // discovery result. Do NOT go via findTestItemByUri here: the workspace item and its root suite
+  // share the folder URI, so the URI index cannot distinguish them (see #624 — a wrong resolution
+  // dropped `-I`/`-N` from the run command).
+  public findWorkspaceRobotItem(folder: vscode.WorkspaceFolder): RobotTestItem | undefined {
+    return this.robotTestItems.get(folder)?.items?.find((i) => i.type === RobotItemType.WORKSPACE);
+  }
+
   // Recursively walks a RobotTestItem subtree and calls cb for each item.
   private walkRobotTree(items: RobotTestItem[] | undefined, cb: (item: RobotTestItem) => void): void {
     if (!items) return;
@@ -1064,8 +1075,8 @@ export class TestControllerManager {
 
     if (!folder) return undefined;
 
-    const workspaceItem = this.findTestItemByUri(folder.uri.toString());
-    const robotWorkspaceItem = workspaceItem ? this.findRobotItem(workspaceItem) : undefined;
+    // Whether to pass `-I` is a per-folder environment fact, taken from the last workspace discover.
+    const supportsParseInclude = this.robotTestItems.get(folder)?.supportsParseInclude ?? false;
 
     try {
       const o: { [key: string]: string } = {};
@@ -1086,9 +1097,7 @@ export class TestControllerManager {
         folder,
         ["discover", "--read-from-stdin", "tests"],
         [
-          ...(robotWorkspaceItem?.needsParseInclude && testItem.relSource
-            ? ["-I", escapeRobotGlobPatterns(testItem.relSource)]
-            : []),
+          ...(supportsParseInclude && testItem.relSource ? ["-I", escapeRobotGlobPatterns(testItem.relSource)] : []),
           "--suite",
           escapeRobotGlobPatterns(testItem.longname),
         ],
@@ -1223,7 +1232,8 @@ export class TestControllerManager {
             this.lastKnownChildren.delete(folderKey);
             continue;
           }
-          this.robotTestItems.set(folder, new WorkspaceFolderEntry(true, items));
+          const supportsParseInclude = this.lastDiscoverResults.get(folder)?.supportsParseInclude ?? false;
+          this.robotTestItems.set(folder, new WorkspaceFolderEntry(true, items, supportsParseInclude));
         }
 
         const folderChildren = this.robotTestItems.get(folder)?.items;
@@ -1581,19 +1591,21 @@ export class TestControllerManager {
         options.noDebug = true;
       }
 
-      let workspaceItem = this.findTestItemByUri(folder.uri.toString());
-      const workspaceRobotItem = workspaceItem ? this.findRobotItem(workspaceItem) : undefined;
+      const workspaceRobotItem = this.findWorkspaceRobotItem(folder);
+      let workspaceItem = workspaceRobotItem ? this.findTestItemById(workspaceRobotItem.id) : undefined;
 
       if (workspaceRobotItem?.type == RobotItemType.WORKSPACE && workspaceRobotItem.children?.length) {
         workspaceItem = workspaceItem?.children.get(workspaceRobotItem.children[0].id);
       }
+
+      const supportsParseInclude = this.robotTestItems.get(folder)?.supportsParseInclude ?? false;
 
       if (testItems.length === 1 && testItems[0] === workspaceItem && excluded.size === 0) {
         const started = await DebugManager.runTests(
           folder,
           [],
           [],
-          workspaceRobotItem?.needsParseInclude ?? false,
+          supportsParseInclude,
           [],
           [],
           runId,
@@ -1663,7 +1675,7 @@ export class TestControllerManager {
           folder,
           Array.from(suites),
           Array.from(rel_sources),
-          workspaceRobotItem?.needsParseInclude ?? false,
+          supportsParseInclude,
           includedInWs,
           excludedInWs,
           runId,

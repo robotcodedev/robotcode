@@ -34,7 +34,6 @@ data class Position(val line: UInt, val character: UInt)
     val uri: String? = null,
     val relSource: String? = null,
     val source: String? = null,
-    val needsParseInclude: Boolean? = null,
     var children: Array<RobotCodeTestItem>? = null,
     val range: Range? = null,
     val error: String? = null,
@@ -46,8 +45,7 @@ data class Position(val line: UInt, val character: UInt)
         if (javaClass != other?.javaClass) return false
         
         other as RobotCodeTestItem
-        
-        if (needsParseInclude != other.needsParseInclude) return false
+
         if (type != other.type) return false
         if (id != other.id) return false
         if (name != other.name) return false
@@ -70,8 +68,7 @@ data class Position(val line: UInt, val character: UInt)
     }
     
     override fun hashCode(): Int {
-        var result = needsParseInclude?.hashCode() ?: 0
-        result = 31 * result + type.hashCode()
+        var result = type.hashCode()
         result = 31 * result + id.hashCode()
         result = 31 * result + name.hashCode()
         result = 31 * result + longname.hashCode()
@@ -100,26 +97,30 @@ data class Position(val line: UInt, val character: UInt)
 
 @Serializable data class RobotCodeDiscoverResult(
     val items: Array<RobotCodeTestItem>? = null,
-    val diagnostics: Map<String, JsonElement>? = null // TODO val diagnostics: { [Key: string]: Diagnostic[] };
+    val diagnostics: Map<String, JsonElement>? = null, // TODO val diagnostics: { [Key: string]: Diagnostic[] };
+    // True when the project's Robot Framework version supports `--parseinclude` (RF >= 6.1).
+    val supportsParseInclude: Boolean? = null
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
-        
+
         other as RobotCodeDiscoverResult
-        
+
         if (items != null) {
             if (other.items == null) return false
             if (!items.contentEquals(other.items)) return false
         } else if (other.items != null) return false
         if (diagnostics != other.diagnostics) return false
-        
+        if (supportsParseInclude != other.supportsParseInclude) return false
+
         return true
     }
-    
+
     override fun hashCode(): Int {
         var result = items?.contentHashCode() ?: 0
         result = 31 * result + (diagnostics?.hashCode() ?: 0)
+        result = 31 * result + (supportsParseInclude?.hashCode() ?: 0)
         return result
     }
 }

@@ -1,7 +1,7 @@
 """Data models emitted by `robotcode discover`.
 
 All models inherit from `CamelSnakeMixin` so the JSON output uses
-camelCase keys (`fullName`, `relSource`, `needsParseInclude`, …)
+camelCase keys (`fullName`, `relSource`, `supportsParseInclude`, …)
 consistent with the `results` family. Editor integrations and CI
 recipes rely on that shape.
 """
@@ -23,7 +23,6 @@ class TestItem(CamelSnakeMixin):
     uri: Optional[DocumentUri] = None
     rel_source: Optional[str] = None
     source: Optional[str] = None
-    needs_parse_include: bool = False
     children: Optional[List["TestItem"]] = None
     description: Optional[str] = None
     range: Optional[Range] = None
@@ -37,6 +36,7 @@ class ResultItem(CamelSnakeMixin):
     items: List[TestItem]
     diagnostics: Optional[Dict[str, List[Diagnostic]]] = None
     filters_applied: Optional[Dict[str, str]] = None
+    supports_parse_include: bool = False
 
 
 @dataclass

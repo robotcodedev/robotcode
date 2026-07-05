@@ -380,7 +380,7 @@ robotcode --format json discover tags --tests
 
 A few rules hold across every subcommand:
 
-- **camelCase keys.** `fullName`, `relSource`, `needsParseInclude`, etc.
+- **camelCase keys.** `fullName`, `relSource`, `supportsParseInclude`, etc.
 - **Optional fields are omitted, not `null`.** A `null` literal never appears. If a field has no value (a test with no tags, a suite with no children), the key is simply absent.
 - **Empty array ≠ missing field.** A field listed in the schema may be `[]` if the section "exists but is empty"; a field absent entirely means the section wasn't computed for this run. `// []` in jq smooths over the difference.
 - **Stability.** Fields are appended over time, never renamed or removed in place. Existing consumers keep working.
@@ -399,7 +399,6 @@ Every subcommand that returns tests/tasks/suites uses the same `TestItem` schema
   "uri": "file:///abs/path/test_login.robot",
   "relSource": "tests/login/test_login.robot",
   "source": "/abs/path/test_login.robot",
-  "needsParseInclude": true,
   "tags": ["smoke", "regression"],
   "range": {
     "start": { "line": 41, "character": 0 },
@@ -418,7 +417,6 @@ Field notes:
 - `id` is a stable identifier (`source;longname;lineno` for tests/tasks; `source;longname` for suites). Editor integrations use this to track which `TestItem` corresponds to which on-disk artefact across reloads.
 - `lineno` is 1-based; `range.start.line` / `range.end.line` are 0-based (LSP convention). Both refer to the same line of source.
 - `uri` is a `file://` URI of the source file — same format the Language Server Protocol uses.
-- `needsParseInclude` is true when re-parsing this item requires re-running Robot 6.1+'s include-resolution pass (resource-file `Library` imports with arguments).
 - `tags` are normalised (`Bug 1`, `bug_1`, `Bug1` all come through as `"bug1"`) and only present when the item has at least one tag.
 - `children` is the nested-tree field — present on `workspace` and `suite` items, absent on `test` / `task`.
 - `range` follows the LSP `Range` shape so editors can highlight the source span.
@@ -431,7 +429,8 @@ All four subcommands wrap their items in a `ResultItem`:
 {
   "items": [ /* TestItem(s) */ ],
   "diagnostics": { /* see below */ },
-  "filtersApplied": { "search": "Login" }
+  "filtersApplied": { "search": "Login" },
+  "supportsParseInclude": true
 }
 ```
 
@@ -442,6 +441,8 @@ Per subcommand:
 - **`suites`** — `items` is a flat list of `suite` entries (no children — drill into the source files separately if you want per-suite tests).
 
 `diagnostics` and `filtersApplied` are both optional and absent when empty / unused.
+
+`supportsParseInclude` is `true` when the project's Robot Framework version supports the `--parseinclude` (`-I`) option (RF ≥ 6.1). It is a property of the discovery environment, not of any single item, so it lives on the result envelope. Editor integrations use it to decide whether to pass `-I` when running a subset of tests. Omitted (treat as `false`) for RF < 6.1.
 
 ## `tags` JSON
 

@@ -54,6 +54,12 @@ from ..robot import ROBOT_OPTIONS, ROBOT_VERSION_OPTIONS, RobotFrameworkEx, hand
 from . import _render
 from ._models import Info, ResultItem, Statistics, TagsResult, TestItem
 
+# Robot Framework 6.1 introduced `--parseinclude`. Before that, the `--suite`
+# option implicitly restricted which files were parsed, so an explicit include
+# was neither available nor needed. Editors use this to decide whether to pass
+# `-I` when running a subset of tests.
+SUPPORTS_PARSE_INCLUDE = RF_VERSION >= (6, 1)
+
 DISCOVER_SEARCH_OPTIONS = [
     click.option(
         "--search",
@@ -252,7 +258,6 @@ class Collector(SuiteVisitor):
             uri=str(Uri.from_path(absolute_path)),
             source=str(absolute_path),
             rel_source=get_rel_source(absolute_path),
-            needs_parse_include=RF_VERSION >= (6, 1),
         )
         self._current = self.all
         self.suites: List[TestItem] = []
@@ -647,7 +652,10 @@ def all(
         else:
             app.print_data(
                 ResultItem(
-                    [collector.all], diagnostics, filters_applied=_filters_applied(search_substring, search_regex)
+                    [collector.all],
+                    diagnostics,
+                    filters_applied=_filters_applied(search_substring, search_regex),
+                    supports_parse_include=SUPPORTS_PARSE_INCLUDE,
                 ),
                 remove_defaults=True,
             )
@@ -694,6 +702,7 @@ def _test_or_tasks(
                     filtered,
                     diagnostics,
                     filters_applied=_filters_applied(search_substring, search_regex),
+                    supports_parse_include=SUPPORTS_PARSE_INCLUDE,
                 ),
                 remove_defaults=True,
             )
@@ -881,7 +890,10 @@ def suites(
         else:
             app.print_data(
                 ResultItem(
-                    collector.suites, diagnostics, filters_applied=_filters_applied(search_substring, search_regex)
+                    collector.suites,
+                    diagnostics,
+                    filters_applied=_filters_applied(search_substring, search_regex),
+                    supports_parse_include=SUPPORTS_PARSE_INCLUDE,
                 ),
                 remove_defaults=True,
             )

@@ -484,7 +484,7 @@ export class DebugManager {
     folder: vscode.WorkspaceFolder,
     suites: string[],
     rel_sources: string[],
-    needs_parse_include: boolean,
+    supports_parse_include: boolean,
     included: string[],
     excluded: string[],
     runId?: string,
@@ -497,7 +497,7 @@ export class DebugManager {
 
     const args = [];
 
-    if (needs_parse_include) {
+    if (supports_parse_include) {
       for (const s of rel_sources) {
         args.push("-I");
         args.push(escapeRobotGlobPatterns(s));
