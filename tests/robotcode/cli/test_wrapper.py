@@ -1,12 +1,10 @@
-"""Tests for the `wrapper` re-exec feature of the `robotcode` CLI.
+"""Tests for the `wrapper` re-run feature of the `robotcode` CLI.
 
-The actual re-exec uses ``os.execvp`` to replace the process, so these tests
-spawn ``robotcode`` in a real subprocess (the in-process ``CliRunner`` would
-have its own process replaced). The wrapper is a small cross-platform Python
-script that records its invocation and then ``execv``s the wrapped command.
-
-``os.execvp`` only has POSIX replace-semantics, so the subprocess tests are
-skipped on Windows.
+The re-run spawns robotcode again under the wrapper and waits for it, so these
+tests drive `robotcode` in a real subprocess (the in-process `CliRunner` would
+recurse into itself). The wrapper is a small cross-platform Python script that
+records its invocation and then runs the wrapped command. Everything is
+spawn-and-wait, so the tests run on every platform.
 """
 
 import json
@@ -21,19 +19,14 @@ import pytest
 
 from robotcode.plugin.click_helper.wrappable import is_wrappable
 
-requires_posix_exec = pytest.mark.skipif(
-    sys.platform == "win32",
-    reason="the wrapper feature re-executes via POSIX os.execvp; not supported on Windows",
-)
-
 # Records `SESSION_KIND` (to prove the profile env is applied *before* the
-# wrapper runs) into "<wrapper>.called", one line per invocation, then execs
-# the wrapped command (sys.argv[1:] = the python interpreter + robotcode args).
+# wrapper runs) into "<wrapper>.called", one line per invocation, then runs the
+# wrapped command (sys.argv[1:] = the python interpreter + robotcode args).
 _WRAPPER_PY = (
-    "import os, sys\n"
+    "import os, subprocess, sys\n"
     "with open(__file__ + '.called', 'a', encoding='utf-8') as f:\n"
     "    f.write(os.environ.get('SESSION_KIND', '<unset>') + '\\n')\n"
-    "os.execv(sys.argv[1], sys.argv[1:])\n"
+    "sys.exit(subprocess.run(sys.argv[1:]).returncode)\n"
 )
 
 
@@ -43,12 +36,12 @@ def _write_wrapper(path: Path) -> Path:
 
 
 # A wrapper that records the command line it was handed (into "<path>.argv"),
-# then runs it — used to inspect how the re-exec reconstructed the invocation.
+# then runs it — used to inspect how the re-run reconstructed the invocation.
 _RECORDER_PY = (
-    "import os, sys\n"
+    "import subprocess, sys\n"
     "with open(__file__ + '.argv', 'w', encoding='utf-8') as f:\n"
     "    f.write(' '.join(sys.argv[1:]))\n"
-    "os.execv(sys.argv[1], sys.argv[1:])\n"
+    "sys.exit(subprocess.run(sys.argv[1:]).returncode)\n"
 )
 
 
@@ -97,7 +90,7 @@ def project(tmp_path: Path) -> Path:
     return tmp_path
 
 
-# --- the @wrappable marker is on the right commands (pure, all platforms) ----
+# --- the @wrappable marker is on the right commands (no subprocess) ----------
 
 
 def test_execution_commands_are_marked_wrappable() -> None:
@@ -117,10 +110,9 @@ def test_non_execution_commands_are_not_wrappable() -> None:
         assert not is_wrappable(cmd), f"{cmd.name!r} should not be wrappable"
 
 
-# --- the re-exec behaviour (subprocess, POSIX only) --------------------------
+# --- the re-run behaviour (spawns robotcode in a subprocess) -----------------
 
 
-@requires_posix_exec
 def test_wrappable_command_runs_through_the_profile_wrapper(project: Path) -> None:
     wrapper = project / "wrap.py"
     result = _run_robotcode(project, ["-p", "x11", "run", "suite.robot"])
@@ -130,7 +122,6 @@ def test_wrappable_command_runs_through_the_profile_wrapper(project: Path) -> No
     assert _calls(wrapper) == ["xephyr"]
 
 
-@requires_posix_exec
 def test_guard_env_suppresses_wrapping(project: Path) -> None:
     """The re-exec sets ROBOTCODE_WRAPPER_APPLIED before replacing the process,
     so a robotcode that already runs under a wrapper must not wrap again."""
@@ -144,7 +135,6 @@ def test_guard_env_suppresses_wrapping(project: Path) -> None:
     assert _calls(wrapper) == []
 
 
-@requires_posix_exec
 def test_no_wrapper_flag_disables_wrapping(project: Path) -> None:
     wrapper = project / "wrap.py"
     result = _run_robotcode(project, ["-p", "x11", "--no-wrapper", "run", "suite.robot"])
@@ -152,7 +142,6 @@ def test_no_wrapper_flag_disables_wrapping(project: Path) -> None:
     assert _calls(wrapper) == []
 
 
-@requires_posix_exec
 def test_cli_wrapper_overrides_the_profile_wrapper(project: Path) -> None:
     profile_wrapper = project / "wrap.py"
     cli_wrapper = _write_wrapper(project / "cliwrap.py")
@@ -168,7 +157,6 @@ def test_cli_wrapper_overrides_the_profile_wrapper(project: Path) -> None:
     assert _calls(profile_wrapper) == []
 
 
-@requires_posix_exec
 def test_non_wrappable_command_is_not_wrapped(project: Path) -> None:
     wrapper = project / "wrap.py"
     # `discover` only parses files; it must never run through the wrapper.
@@ -176,7 +164,6 @@ def test_non_wrappable_command_is_not_wrapped(project: Path) -> None:
     assert _calls(wrapper) == []
 
 
-@requires_posix_exec
 def test_reexec_goes_through_the_launcher_script(project: Path, tmp_path: Path) -> None:
     """When robotcode was started through a bundled entry (`--launcher-script` /
     the bundled `__main__`), the re-exec must reuse that entry — not
@@ -204,7 +191,6 @@ def test_reexec_goes_through_the_launcher_script(project: Path, tmp_path: Path) 
     assert "-m robotcode.cli" not in recorded
 
 
-@requires_posix_exec
 def test_direct_start_ignores_bundled_main_env(project: Path, tmp_path: Path) -> None:
     """A directly started robotcode (no `--launcher-script`) must NOT be diverted
     to the bundled copy just because ROBOTCODE_BUNDLED_ROBOTCODE_MAIN is set — the
@@ -224,7 +210,6 @@ def test_direct_start_ignores_bundled_main_env(project: Path, tmp_path: Path) ->
     assert str(broken) not in recorded
 
 
-@requires_posix_exec
 def test_wrapper_propagates_the_run_exit_code(project: Path) -> None:
     """The wrapper must not swallow the run's exit code (contract rule #1)."""
     (project / "fail.robot").write_text("*** Test Cases ***\nFails\n    Should Be Equal    1    2\n", encoding="utf-8")
@@ -233,7 +218,7 @@ def test_wrapper_propagates_the_run_exit_code(project: Path) -> None:
     assert _calls(project / "wrap.py") == ["xephyr"]  # and it did run through the wrapper
 
 
-# --- these paths return before any re-exec, so they run on every platform ----
+# --- the wrapper is ignored or disabled, with a warning ----------------------
 
 
 def test_wrapper_ignored_and_warns_on_non_wrappable_command(project: Path) -> None:

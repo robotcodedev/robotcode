@@ -3,6 +3,7 @@ import logging
 import logging.config
 import os
 import shlex
+import subprocess
 import sys
 from pathlib import Path
 from typing import Any, List, Literal, Optional
@@ -127,10 +128,16 @@ def _maybe_reexec_under_wrapper(
     # Mirrors the debug launcher's `debugger_script` handling.
     entry = [str(app.config.launcher_script)] if app.config.launcher_script else ["-m", "robotcode.cli"]
     command = [*wrapper, sys.executable, *entry, *sys.argv[1:]]
-    app.verbose(lambda: "Re-executing under wrapper: " + " ".join(command))
+    app.verbose(lambda: "Running under wrapper: " + " ".join(command))
 
+    # Run robotcode again under the wrapper; the guard env stops the spawned
+    # robotcode from wrapping a second time. On POSIX we replace this process with
+    # execvp (no extra process); Windows has no such exec, so there we spawn the
+    # command, wait, and forward its exit code.
     os.environ[WRAPPER_APPLIED_ENV] = "1"
     try:
+        if sys.platform == "win32":
+            sys.exit(subprocess.run(command).returncode)
         os.execvp(command[0], command)
     except OSError as e:
         raise click.ClickException(f"Failed to execute wrapper command {wrapper!r}: {e}") from e

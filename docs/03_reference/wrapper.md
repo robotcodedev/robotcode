@@ -66,6 +66,15 @@ As noted above, a `wrapper` in your selected profile already applies in the edit
 
 This wraps tests you run or debug from the Test Explorer and takes precedence over the profile's `wrapper`. It is an **IDE-only override** — it has no effect on the command line.
 
+## How it runs on Linux/macOS vs. Windows
+
+The wrapper contract is the same everywhere, but RobotCode hands the run to the wrapper differently depending on the operating system, and the resulting process tree differs:
+
+- **Linux / macOS** — RobotCode **replaces itself** with the wrapper command (a POSIX `exec`). No extra process is left behind: the wrapper inherits RobotCode's process ID, stdio and signals directly. A shell wrapper can end with `exec "$@"` to replace itself with the run in turn, so signals and the exit code flow through on their own.
+- **Windows** — Windows has no way to replace a running process the way POSIX `exec` does. So RobotCode **starts the wrapper as a child process, waits for it, and forwards its exit code**. One extra RobotCode process stays in the tree just to wait. There is no `exec` here — a PowerShell wrapper simply runs the command as a child (`& $Command[0] …`) and waits, exactly as the example below does.
+
+Either way the rules you write the script against don't change: run the command in the **foreground**, pass **stdio** through, and **propagate the exit code**.
+
 ## Writing your own wrapper script
 
 A wrapper is just a command. RobotCode runs it with the arguments you configured first, and then appends the actual `robotcode` command line that has to run:
