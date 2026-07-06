@@ -24,7 +24,7 @@ from .pytest_regtestex import RegTestFixtureEx
 
 @pytest.mark.parametrize(
     ("test_document", "data"),
-    generate_tests_from_source_document(Path(Path(__file__).parent, "data/tests/signature_help.robot")),
+    list(generate_tests_from_source_document(Path(Path(__file__).parent, "data/tests/signature_help.robot"))),
     indirect=["test_document"],
     ids=generate_test_id,
     scope="module",

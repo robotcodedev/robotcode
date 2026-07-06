@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any, Iterable, Iterator, Tuple, Union
+from typing import Any, Iterable, List, Tuple, Union
 
 import pytest
 import yaml
@@ -25,10 +25,8 @@ from .pytest_regtestex import RegTestFixtureEx
 def prepend_protocol_data(
     protocol: Iterable[Any],
     data: Iterable[Union[Tuple[Any, Path, GeneratedTestData], Any]],
-) -> Iterator[Union[Tuple[Any, Path, GeneratedTestData], Any]]:
-    for p in protocol:
-        for d in data:
-            yield (p, *d)
+) -> List[Union[Tuple[Any, Path, GeneratedTestData], Any]]:
+    return [(p, *d) for p in protocol for d in data]
 
 
 def generate_foldingrange_test_id(params: Any) -> Any:

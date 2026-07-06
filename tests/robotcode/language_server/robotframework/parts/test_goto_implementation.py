@@ -44,7 +44,7 @@ def split(
 
 @pytest.mark.parametrize(
     ("test_document", "data"),
-    generate_tests_from_source_document(Path(Path(__file__).parent, "data/tests/goto.robot")),
+    list(generate_tests_from_source_document(Path(Path(__file__).parent, "data/tests/goto.robot"))),
     indirect=["test_document"],
     ids=generate_test_id,
     scope="module",

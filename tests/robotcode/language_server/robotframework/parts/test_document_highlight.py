@@ -19,7 +19,7 @@ from .pytest_regtestex import RegTestFixtureEx
 
 @pytest.mark.parametrize(
     ("test_document", "data"),
-    generate_tests_from_source_document(Path(Path(__file__).parent, "data/tests/document_highlight.robot")),
+    list(generate_tests_from_source_document(Path(Path(__file__).parent, "data/tests/document_highlight.robot"))),
     indirect=["test_document"],
     ids=generate_test_id,
     scope="module",
