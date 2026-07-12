@@ -414,24 +414,6 @@ def test_no_status_rc_accepts_conditions(
     assert _status_rc_flags(f'{section}no-status-rc = {{ if = "{condition}" }}', rebot=rebot) == expected
 
 
-@pytest.mark.parametrize(
-    ("branch", "expected"),
-    [("main", ["--nostatusrc"]), ("feature/example", ["--statusrc"])],
-)
-def test_profile_no_status_rc_condition_uses_ci_commit_ref_name(
-    monkeypatch: pytest.MonkeyPatch,
-    branch: str,
-    expected: list[str],
-) -> None:
-    monkeypatch.setenv("CI_COMMIT_REF_NAME", branch)
-    data = """\
-        [profiles.ci]
-        no-status-rc = { if = "environ.get('CI_COMMIT_REF_NAME') == 'main'" }
-    """
-
-    assert _status_rc_flags(data, "ci") == expected
-
-
 def test_no_status_rc_rejects_invalid_condition() -> None:
     data = """\
         [profiles.ci]

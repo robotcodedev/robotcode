@@ -559,12 +559,7 @@
           ],
           "markdownDescription": "Condition to evaluate. This must be a Python \"eval\" expression.\nFor security reasons, only certain expressions and functions are allowed.\n\nExamples:\n```toml\nif = \"re.match(r'^\\d+$', environ.get('TEST_VAR', ''))\"\nif = \"platform.system() == 'Linux'\"\n```\n\nsee also `expr` for allowed global names.\n",
           "title": "If",
-          "type": "string",
-          "x-taplo": {
-            "links": {
-              "key": "https://robotcode.io/03_reference/config#no-status-rc-if"
-            }
-          }
+          "type": "string"
         }
       },
       "required": [
