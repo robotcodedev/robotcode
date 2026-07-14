@@ -48,26 +48,26 @@ classifiers = [
   "Framework :: Robot Framework :: Tool",
 ]
 requires-python = ">=3.10"
-dependencies = ["robotcode-core==2.6.2", "robotcode-plugin==2.6.2", "robotcode-robot==2.6.2"]
+dependencies = ["robotcode-core==2.7.0", "robotcode-plugin==2.7.0", "robotcode-robot==2.7.0"]
 dynamic = ["version"]
 
 [project.optional-dependencies]
-debugger = ["robotcode-debugger==2.6.2"]
-languageserver = ["robotcode-language-server==2.6.2"]
-runner = ["robotcode-runner==2.6.2"]
-analyze = ["robotcode-analyze==2.6.2"]
+debugger = ["robotcode-debugger==2.7.0"]
+languageserver = ["robotcode-language-server==2.7.0"]
+runner = ["robotcode-runner==2.7.0"]
+analyze = ["robotcode-analyze==2.7.0"]
 yaml = ["PyYAML>=5.4"]
 lint = ["robotframework-robocop>=2.0.0"]
 rest = ["docutils"]
-repl = ["robotcode-repl==2.6.2"]
-replserver = ["robotcode-repl-server==2.6.2"]
+repl = ["robotcode-repl==2.7.0"]
+replserver = ["robotcode-repl-server==2.7.0"]
 all = [
-  "robotcode-debugger==2.6.2",
-  "robotcode-language-server==2.6.2",
-  "robotcode-runner==2.6.2",
-  "robotcode-analyze==2.6.2",
-  "robotcode-repl==2.6.2",
-  "robotcode-repl-server==2.6.2",
+  "robotcode-debugger==2.7.0",
+  "robotcode-language-server==2.7.0",
+  "robotcode-runner==2.7.0",
+  "robotcode-analyze==2.7.0",
+  "robotcode-repl==2.7.0",
+  "robotcode-repl-server==2.7.0",
   "PyYAML>=5.4",
   "robotframework-robocop>=6.0.0",
   "docutils"

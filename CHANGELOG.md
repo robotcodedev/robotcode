@@ -2,6 +2,112 @@
 
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
+## [2.7.0](https://github.com/robotcodedev/robotcode/compare/v2.6.2..v2.7.0) - 2026-07-14
+
+### <!-- 0 -->Features
+
+- **robot:** Make the analysis cache trustworthy under rapid file changes ([c998399](https://github.com/robotcodedev/robotcode/commit/c998399906355535cd3c2d60aaa3c071a37a410e))
+
+  Fast consecutive changes to several files could poison the analysis
+  cache: the editor and the CLI then reported errors that did not exist,
+  like missing keywords or unresolvable variables, until the affected
+  files were touched again. Cached results are now bound to exactly the
+  file state they were computed from, and unsaved editor content is
+  analyzed but never cached, so stale results can no longer stick.
+
+- **robotcode:** Run tests through a wrapper ([7aa84f6](https://github.com/robotcodedev/robotcode/commit/7aa84f6c08d17e95d981e67692763408d66c497c))
+
+  Run the test execution through a command of your choosing, so you can
+  prepare the environment a run needs - start the services, servers,
+  mocks or session the tests depend on, run the tests inside it, and tear
+  it down again afterwards. For anything that is only environment
+  variables, keep using robot.toml's [env].
+
+  Configure it per profile in robot.toml:
+
+      [profiles.integration]
+      wrapper = ["./with-test-services.sh"]
+
+  set it ad hoc with --wrapper (or the ROBOTCODE_WRAPPER env var), and
+  turn a configured wrapper off for one run with --no-wrapper. It applies
+  to every command that executes Robot Framework - run, debug, the REPL
+  and the notebook kernel - never to discovery, the language server or
+  libdoc.
+
+  Editors pick it up automatically because they run robotcode; the
+  VS Code setting robotcode.debug.launchWrapper can override it for the
+  IDE alone.
+
+
+
+### <!-- 1 -->Bug Fixes
+
+- **plugin:** Use compact JSON separators for json output format ([e882368](https://github.com/robotcodedev/robotcode/commit/e882368e52326233100dfe6ddbee3e77c84fbc38))
+
+  The compact flag was compared against OutputFormat.TEXT instead of
+  OutputFormat.JSON, so compact JSON output was never actually applied.
+
+- **robotcode:** Make the wrapper work on Windows ([7baa0ac](https://github.com/robotcodedev/robotcode/commit/7baa0ac9499c406bb47bbb8a16aaa9152bb1ef6f))
+
+  The wrapper re-run used os.execvp to replace the process, which only has
+  POSIX semantics; on Windows os.exec* spawns a new process and exits the
+  caller, so the exit code and stdout/stderr don't propagate. Keep execvp
+  on POSIX (clean, no extra process) and on Windows spawn the command,
+  wait, and forward its exit code. The subprocess tests, and their wrapper
+  scripts, use spawn-and-wait too, so they no longer skip on Windows.
+
+  Also document how running through a wrapper differs on Linux/macOS vs.
+  Windows, and why.
+
+- **robotcode:** Make the wrapper work in VS Code ([1180d9c](https://github.com/robotcodedev/robotcode/commit/1180d9cdc13e7dc313bc26c03c84ba663c8d34c7))
+
+  Running or debugging tests through a wrapper did not work from the
+  editor, where robotcode runs from a bundled path instead of being
+  installed in the interpreter. Two things are fixed:
+
+  - The debug launcher no longer applies the wrapper itself; it forwards a
+    launch.json wrapper to robotcode as --wrapper and lets robotcode apply
+    it (so a launch.json wrapper still overrides the profile's).
+
+  - When robotcode re-executes itself under the wrapper it re-runs through
+    the same entry it was started from (--launcher-script) instead of
+    python -m robotcode.cli, which the bundled interpreter cannot import.
+    ROBOTCODE_BUNDLED_ROBOTCODE_MAIN is deliberately not used for this: VS
+    Code sets it in every terminal, so it would divert a directly started
+    robotcode to the bundled copy.
+
+- **vscode:** Adapt to vscode-languageclient 10 type changes ([95f305a](https://github.com/robotcodedev/robotcode/commit/95f305ae6f402287f2cb0d2ac5028acc4695a69c))
+
+  Bumping vscode-languageclient to 10.1.0 broke the typecheck:
+  LanguageClient now requires a LogOutputChannel instead of a plain
+  OutputChannel, and Diagnostic.message can now be a MarkupContent
+  instead of just a string.
+
+- **vscode:** Restore -I and -N options when running tests ([c76b113](https://github.com/robotcodedev/robotcode/commit/c76b113936599446b9fdae20c6f9441f9a77be43))
+
+  Running a single test, a file, or any subset from the Test Explorer
+  again passes Robot Framework's parse-include (-I) and top-level suite
+  name (-N) options. Since 2.6.0 both were missing, so on Robot Framework
+  6.1+ the run parsed the whole workspace and surfaced parse errors from
+  unrelated files.
+
+  Robot Framework's --parseinclude support is now reported as a
+  per-project fact on the discovery result envelope. In the
+  `robotcode discover -f json` output this is the new
+  `supportsParseInclude` key on the result (replacing the previous
+  `needsParseInclude` key on each item).
+
+
+
+### <!-- 2 -->Documentation
+
+- **news:** Add v2.7.0 release notes ([033e12d](https://github.com/robotcodedev/robotcode/commit/033e12d90d8250513c5805113266996bae512680))
+
+  Announce the test-run wrapper, the trustworthy analysis cache, and the
+  restored -I/-N options for Test Explorer subset runs.
+
+
+
 ## [2.6.2](https://github.com/robotcodedev/robotcode/compare/v2.6.1..v2.6.2) - 2026-06-15
 
 ### <!-- 1 -->Bug Fixes
