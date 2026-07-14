@@ -349,7 +349,7 @@ class Application:
                 text = as_json(
                     data,
                     indent=format == OutputFormat.JSON_INDENT,
-                    compact=format == OutputFormat.TEXT,
+                    compact=format == OutputFormat.JSON,
                 )
             else:
                 text = str(data)
