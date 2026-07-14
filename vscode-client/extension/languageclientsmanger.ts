@@ -125,7 +125,7 @@ export class LanguageClientsManager {
   private _pythonValidPythonAndRobotEnvMutex = new Mutex();
 
   public readonly clients: Map<string, LanguageClient> = new Map();
-  public readonly outputChannels: Map<string, vscode.OutputChannel> = new Map();
+  public readonly outputChannels: Map<string, vscode.LogOutputChannel> = new Map();
 
   private _disposables: vscode.Disposable;
   public _pythonCanceledPythonAndRobotEnv = new WeakMap<vscode.WorkspaceFolder, boolean>();
@@ -590,7 +590,7 @@ export class LanguageClientsManager {
       }
 
       const name = `RobotCode Language Server for folder ${workspaceFolder.name}`;
-      const outputChannel = this.outputChannels.get(name) ?? vscode.window.createOutputChannel(name);
+      const outputChannel = this.outputChannels.get(name) ?? vscode.window.createOutputChannel(name, { log: true });
       this.outputChannels.set(name, outputChannel);
 
       let closeHandlerAction = CloseAction.DoNotRestart;

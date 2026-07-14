@@ -763,19 +763,17 @@ export class TestControllerManager {
   // been mutated in the meantime.
   private snapshotChildren(items: RobotTestItem[] | undefined): RobotTestItem[] | undefined {
     if (!items) return undefined;
-    return items.map(
-      (i): RobotTestItem => ({
-        id: i.id,
-        type: i.type,
-        name: i.name,
-        longname: i.longname,
-        description: i.description,
-        error: i.error,
-        tags: i.tags ? [...i.tags] : undefined,
-        range: i.range ? { start: { ...i.range.start }, end: { ...i.range.end } } : undefined,
-        children: this.snapshotChildren(i.children),
-      }),
-    );
+    return items.map((i): RobotTestItem => ({
+      id: i.id,
+      type: i.type,
+      name: i.name,
+      longname: i.longname,
+      description: i.description,
+      error: i.error,
+      tags: i.tags ? [...i.tags] : undefined,
+      range: i.range ? { start: { ...i.range.start }, end: { ...i.range.end } } : undefined,
+      children: this.snapshotChildren(i.children),
+    }));
   }
 
   // Threshold for burst coalescing: when this many per-file refreshes are pending at
@@ -974,7 +972,11 @@ export class TestControllerManager {
         this.diagnosticCollection.set(
           uri,
           diagnostics.map((v) => {
-            const r = new vscode.Diagnostic(toVsCodeRange(v.range), v.message, diagnosticsSeverityToVsCode(v.severity));
+            const r = new vscode.Diagnostic(
+              toVsCodeRange(v.range),
+              Diagnostic.getMessageString(v),
+              diagnosticsSeverityToVsCode(v.severity),
+            );
             r.source = v.source;
             r.code = v.code;
             return r;
