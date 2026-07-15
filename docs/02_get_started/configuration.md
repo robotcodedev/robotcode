@@ -216,7 +216,10 @@ and many more, see the [`robot.toml` reference](../03_reference/config.md) for a
 RobotCode loads configuration files in a specific sequence, with each file potentially overriding settings from previous ones:
 
 1. **Global user configuration**
-   - Located at `~/.robot.toml` (user's home directory)
+   - Located in the platform-specific user configuration directory as a `robot.toml` file:
+     - Linux: `~/.config/robotcode/robot.toml` (or `$XDG_CONFIG_HOME/robotcode/robot.toml`)
+     - macOS: `~/Library/Application Support/robotcode/robot.toml`
+     - Windows: `%LOCALAPPDATA%\robotcode\robot.toml`
    - Sets system-wide defaults
 
 2. **Project `pyproject.toml`**
