@@ -6,7 +6,6 @@ import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.command.CommandProcessor
 import com.intellij.openapi.editor.Caret
 import com.intellij.openapi.editor.Editor
-import com.intellij.openapi.editor.EditorBundle
 import com.intellij.openapi.editor.EditorModificationUtil
 import com.intellij.openapi.editor.actionSystem.EditorActionHandler
 import com.intellij.openapi.editor.actionSystem.EditorWriteActionHandler
@@ -14,6 +13,7 @@ import com.intellij.openapi.editor.actions.EditorActionUtil
 import com.intellij.openapi.editor.ex.util.EditorUIUtil
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.text.StringUtil
+import dev.robotcode.robotcode4ij.RobotCodeBundle
 import dev.robotcode.robotcode4ij.RobotResourceFileType
 import dev.robotcode.robotcode4ij.RobotSuiteFileType
 import dev.robotcode.robotcode4ij.configuration.RobotCodeCodeStyleSettings
@@ -36,7 +36,7 @@ class RobotCodeEditorTabActionHandler(val baseHandler: EditorActionHandler) : Ed
     
     override fun executeWriteAction(editor: Editor, caret: Caret?, dataContext: DataContext?) {
         CommandProcessor.getInstance().currentCommandGroupId = EditorActionUtil.EDIT_COMMAND_GROUP
-        CommandProcessor.getInstance().currentCommandName = EditorBundle.message("typing.command.name")
+        CommandProcessor.getInstance().currentCommandName = RobotCodeBundle.message("command.typing.name")
         val project = CommonDataKeys.PROJECT.getData(dataContext!!)
         insertTabAtCaret(editor, caret, project)
     }
