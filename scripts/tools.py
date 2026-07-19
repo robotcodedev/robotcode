@@ -1,81 +1,54 @@
 import os
-import re
+import subprocess
 from pathlib import Path
-from typing import NamedTuple, Optional
 
 from git.repo import Repo
 from semantic_version import Version
 
 
-class GitDescribeVersion(NamedTuple):
-    version: str
-    commits: Optional[str] = None
-    hash: Optional[str] = None
-
-
-def determine_version_bump(repo_path="."):
-    try:
-        repo = Repo(repo_path)
-        if repo.bare:
-            raise ValueError("Not a valid Git repository.")
-
-        tags = sorted(repo.tags, key=lambda t: t.commit.committed_date, reverse=True)
-        version_tags = [tag for tag in tags if tag.name.startswith("v")]
-        if not version_tags:
-            raise ValueError("No version tags found.")
-
-        last_tag = version_tags[0]
-        commits = repo.iter_commits(f"{last_tag.name}..HEAD")
-
-        ignored_types = ["chore", "style", "refactor", "test"]
-        patch_types = ["fix", "docs", "perf"]
-
-        minor_change = False
-        patch_change = False
-
-        for commit in commits:
-            message = commit.message.strip()
-
-            if any(re.match(rf"^{ignored_type}(\([^\)]+\))?:", message) for ignored_type in ignored_types):
-                continue
-
-            if "BREAKING CHANGE:" in message or re.match(r"^feat(\([^\)]+\))?!:", message):
-                return "major"
-
-            if re.match(r"^feat(\([^\)]+\))?:", message):
-                minor_change = True
-
-            if any(re.match(rf"^{patch_types}(\([^\)]+\))?:", message) for ignored_type in ignored_types):
-                patch_change = True
-
-        if minor_change:
-            return "minor"
-        if patch_change:
-            return "patch"
-        return None
-
-    except Exception as e:
-        raise RuntimeError(f"Error: {e}")
+def _run_commitizen(repo_path: Path, *args: str) -> str:
+    result = subprocess.run(
+        ["cz", *args],
+        cwd=repo_path,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    return result.stdout.strip()
 
 
 def get_current_version_from_git() -> Version:
     repo = Repo(Path.cwd())
+    if repo.bare or repo.working_tree_dir is None:
+        raise ValueError("Not a valid Git repository with a working tree.")
 
-    git_version = GitDescribeVersion(
-        *repo.git.describe("--tag", "--long", "--first-parent", "--match", "v[0-9]*").rsplit("-", 2)
+    repo_path = Path(repo.working_tree_dir)
+    current_version = _run_commitizen(repo_path, "version", "--project")
+    current_tag = _run_commitizen(repo_path, "version", "--project", "--tag")
+    commit_count = repo.git.rev_list(
+        "--count",
+        "--first-parent",
+        f"{current_tag}..HEAD",
     )
 
-    version = Version(git_version.version[1:])
-    if git_version.commits is not None and git_version.commits != "0":
-        next_version = determine_version_bump()
-        if next_version == "major":
-            version = version.next_major()
-        elif next_version == "minor":
-            version = version.next_minor()
-        elif next_version == "patch":
-            version = version.next_patch()
-        version.prerelease = ("dev", git_version.commits)
+    if commit_count == "0":
+        return Version(current_version)
 
+    next_version = _run_commitizen(
+        repo_path,
+        "--no-raise",
+        "NO_INCREMENT",
+        "bump",
+        "--get-next",
+        "--devrelease",
+        commit_count,
+        "--yes",
+    )
+    if next_version:
+        return Version(next_version)
+
+    version = Version(current_version)
+    version.prerelease = ("dev", commit_count)
     return version
 
 
