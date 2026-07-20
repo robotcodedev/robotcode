@@ -12,6 +12,7 @@ RobotCode is a multi-package Robot Framework toolkit.
 - VS Code extension: `vscode-client/`
 - IntelliJ plugin: `intellij-client/src/main/kotlin/`, with tests in `intellij-client/src/test/kotlin/`
 - Documentation: `docs/`
+- Planning & design notes (roadmaps, design rationale, ideas): `dev-docs/`
 - Maintenance scripts: `scripts/`
 
 ## Task Routing
@@ -27,6 +28,8 @@ RobotCode is a multi-package Robot Framework toolkit.
 	- Run Gradle commands from `intellij-client/`.
 - Docs:
 	- Owning paths: `docs/`, root Markdown files.
+- Planning & design notes (not user-facing):
+	- Owning path: `dev-docs/` — versioned roadmaps, design rationale, and idea collections (unlike the git-ignored `playground/`). It is reference/ideas, not a status tracker: progress for OpenSpec work under `openspec/` is tracked there, not in `dev-docs/`.
 - Generated or bundled outputs (do not edit by hand):
 	- Includes `bundled/libs/`, syntax files, schemas, and version files.
 	- Regenerate with the documented scripts and note the command used.
