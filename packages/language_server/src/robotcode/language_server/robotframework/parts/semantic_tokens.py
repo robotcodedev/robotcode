@@ -67,8 +67,13 @@ from robotcode.robot.diagnostics.library_doc import (
 )
 from robotcode.robot.diagnostics.model_helper import ModelHelper
 from robotcode.robot.diagnostics.namespace import Namespace
-from robotcode.robot.diagnostics.semantic_analyzer.enums import TokenKind
+from robotcode.robot.diagnostics.semantic_analyzer.enums import NodeKind, TokenKind, TokenModifier
 from robotcode.robot.diagnostics.semantic_analyzer.model import SemanticModel
+from robotcode.robot.diagnostics.semantic_analyzer.nodes import (
+    RunKeywordCallStatement,
+    SemanticStatement,
+    SemanticToken,
+)
 from robotcode.robot.utils import RF_VERSION
 from robotcode.robot.utils.ast import (
     cached_isinstance,
@@ -1034,14 +1039,26 @@ class SemanticTokenGenerator:
     creating and managing its own token mapper and keyword analyzer.
     """
 
-    # Mapping from SemanticModel TokenKind to LSP semantic token types.
-    # Used by collect_tokens_from_model() for the new model-based path.
-    _TOKEN_KIND_TO_SEM_TOKEN: Dict[TokenKind, Tuple[AnyTokenType, Optional[Set[AnyTokenModifier]]]] = {
+    # ------------------------------------------------------------------
+    # Model-based path (Tier 1): declarative rendering of the SemanticModel.
+    #
+    # After analysis every token carries its final render semantics (kind +
+    # modifiers), so rendering is: leaf descent -> static table lookup ->
+    # delta encoding, plus a small legacy-compat emission policy keyed only
+    # on TokenKind / NodeKind / TokenModifier (design D6/D7). No RF version
+    # checks, no tokenization, no statement-type semantics here.
+    # ------------------------------------------------------------------
+
+    _TOKEN_KIND_TO_SEM_TOKEN: ClassVar[Dict[TokenKind, Tuple[AnyTokenType, Optional[Set[AnyTokenModifier]]]]] = {
         TokenKind.KEYWORD: (RobotSemTokenTypes.KEYWORD, None),
+        TokenKind.KEYWORD_INNER: (RobotSemTokenTypes.KEYWORD_INNER, None),
         TokenKind.BDD_PREFIX: (RobotSemTokenTypes.BDD_PREFIX, None),
         TokenKind.NAMESPACE: (RobotSemTokenTypes.NAMESPACE, None),
         TokenKind.VARIABLE: (RobotSemTokenTypes.VARIABLE, None),
         TokenKind.VARIABLE_NOT_FOUND: (RobotSemTokenTypes.VARIABLE, None),
+        # Assign targets / VAR targets / FOR loop vars render as plain
+        # variables (atomic, including a trailing assign mark).
+        TokenKind.VARIABLE_NAME: (RobotSemTokenTypes.VARIABLE, None),
         TokenKind.VARIABLE_PREFIX: (RobotSemTokenTypes.VARIABLE_BEGIN, None),
         TokenKind.VARIABLE_OPEN_BRACE: (RobotSemTokenTypes.VARIABLE_BEGIN, None),
         TokenKind.VARIABLE_CLOSE_BRACE: (RobotSemTokenTypes.VARIABLE_END, None),
@@ -1066,14 +1083,27 @@ class SemanticTokenGenerator:
         TokenKind.ARGUMENT: (RobotSemTokenTypes.ARGUMENT, None),
         TokenKind.NAMED_ARGUMENT_NAME: (RobotSemTokenTypes.NAMED_ARGUMENT, None),
         TokenKind.NAMED_ARGUMENT_VALUE: (RobotSemTokenTypes.ARGUMENT, None),
+        TokenKind.PARAMETER: (SemanticTokenTypes.PARAMETER, None),
         TokenKind.CONTROL_FLOW: (RobotSemTokenTypes.CONTROL_FLOW, None),
         TokenKind.CONDITION: (RobotSemTokenTypes.ARGUMENT, None),
+        TokenKind.FOR_SEPARATOR: (RobotSemTokenTypes.FOR_SEPARATOR, None),
+        TokenKind.VAR_MARKER: (RobotSemTokenTypes.VAR, None),
+        TokenKind.OPTION: (RobotSemTokenTypes.CONTROL_FLOW, None),
+        TokenKind.OPTION_NAME: (RobotSemTokenTypes.VARIABLE, None),
+        TokenKind.OPTION_VALUE: (RobotSemTokenTypes.CONTROL_FLOW, None),
         TokenKind.TEST_NAME: (RobotSemTokenTypes.TESTCASE_NAME, {SemanticTokenModifiers.DECLARATION}),
         TokenKind.KEYWORD_NAME: (RobotSemTokenTypes.KEYWORD_NAME, {SemanticTokenModifiers.DECLARATION}),
-        TokenKind.VARIABLE_NAME: (RobotSemTokenTypes.VARIABLE, {SemanticTokenModifiers.DECLARATION}),
         TokenKind.SETTING_NAME: (RobotSemTokenTypes.SETTING, None),
-        TokenKind.IMPORT_NAME: (RobotSemTokenTypes.SETTING_IMPORT, None),
+        TokenKind.SETTING_IMPORT: (RobotSemTokenTypes.SETTING_IMPORT, None),
+        TokenKind.IMPORT_NAME: (RobotSemTokenTypes.NAMESPACE, None),
+        TokenKind.OPERATOR: (SemanticTokenTypes.OPERATOR, None),
         TokenKind.HEADER: (RobotSemTokenTypes.HEADER, None),
+        TokenKind.HEADER_SETTINGS: (RobotSemTokenTypes.HEADER_SETTINGS, None),
+        TokenKind.HEADER_VARIABLE: (RobotSemTokenTypes.HEADER_VARIABLE, None),
+        TokenKind.HEADER_TESTCASE: (RobotSemTokenTypes.HEADER_TESTCASE, None),
+        TokenKind.HEADER_TASK: (RobotSemTokenTypes.HEADER_TASK, None),
+        TokenKind.HEADER_KEYWORD: (RobotSemTokenTypes.HEADER_KEYWORD, None),
+        TokenKind.HEADER_COMMENT: (RobotSemTokenTypes.HEADER_COMMENT, None),
         TokenKind.SEPARATOR: (RobotSemTokenTypes.SEPARATOR, None),
         TokenKind.CONTINUATION: (RobotSemTokenTypes.CONTINUATION, None),
         TokenKind.COMMENT: (SemanticTokenTypes.COMMENT, None),
@@ -1081,6 +1111,59 @@ class SemanticTokenGenerator:
         TokenKind.CONFIG: (RobotSemTokenTypes.CONFIG, None),
         TokenKind.ERROR: (RobotSemTokenTypes.ERROR, None),
     }
+
+    _TOKEN_MODIFIER_TO_SEM: ClassVar[Dict[TokenModifier, AnyTokenModifier]] = {
+        TokenModifier.BUILTIN: RobotSemTokenModifiers.BUILTIN,
+        TokenModifier.EMBEDDED: RobotSemTokenModifiers.EMBEDDED,
+        TokenModifier.DECLARATION: SemanticTokenModifiers.DECLARATION,
+        TokenModifier.DOCUMENTATION: SemanticTokenModifiers.DOCUMENTATION,
+    }
+
+    # --- Legacy-compat emission policy (design D7) ---
+
+    # Variable-family tokens (and whole VAR/FOR options) render atomically:
+    # one token per occurrence, no descent into their sub-structure.
+    _ATOMIC_KINDS: ClassVar[FrozenSet[TokenKind]] = frozenset(
+        {
+            TokenKind.VARIABLE,
+            TokenKind.VARIABLE_NOT_FOUND,
+            TokenKind.VARIABLE_NAME,
+            TokenKind.OPTION,
+            TokenKind.OPTION_VALUE,
+        }
+    )
+    # Plain argument text is suppressed by the legacy path...
+    _ARGUMENT_TEXT_KINDS: ClassVar[FrozenSet[TokenKind]] = frozenset(
+        {
+            TokenKind.ARGUMENT,
+            TokenKind.TEXT_FRAGMENT,
+            TokenKind.TAG,
+            TokenKind.CONDITION,
+            TokenKind.NAMED_ARGUMENT_VALUE,
+            TokenKind.VARIABLE_DEFAULT_VALUE,
+            TokenKind.VARIABLE_PATTERN,
+        }
+    )
+    # ...except in template argument rows and metadata values...
+    # (TEMPLATE_KEYWORD: an unresolved template name keeps kind ARGUMENT and
+    # must still render, matching legacy.)
+    _YIELD_ARGUMENT_STMT_KINDS: ClassVar[FrozenSet[NodeKind]] = frozenset(
+        {NodeKind.TEMPLATE_DATA, NodeKind.SETTING_METADATA, NodeKind.TEMPLATE_KEYWORD}
+    )
+    # Comments only render on keyword-call / import statements (and inside
+    # invalid sections).
+    _COMMENT_STMT_KINDS: ClassVar[FrozenSet[NodeKind]] = frozenset(
+        {NodeKind.KEYWORD_CALL, NodeKind.SETUP, NodeKind.TEARDOWN, NodeKind.TEMPLATE_KEYWORD, NodeKind.IMPORT}
+    )
+    # Statements whose keyword name comes from a Token.NAME cell -- their
+    # BDD-prefix gap token renders as `argument` (the NAME cell's initial
+    # legacy mapping), not as a keyword.
+    _NAME_KEYWORD_STMT_KINDS: ClassVar[FrozenSet[NodeKind]] = frozenset(
+        {NodeKind.SETUP, NodeKind.TEARDOWN, NodeKind.TEMPLATE_KEYWORD}
+    )
+    _BDD_FOLLOW_KINDS: ClassVar[FrozenSet[TokenKind]] = frozenset(
+        {TokenKind.KEYWORD, TokenKind.KEYWORD_INNER, TokenKind.NAMESPACE, TokenKind.ARGUMENT}
+    )
 
     def __init__(self) -> None:
         """Initialize the generator with its own dependencies."""
@@ -1098,8 +1181,9 @@ class SemanticTokenGenerator:
         """Collect semantic tokens from the pre-built SemanticModel.
 
         This is the Tier 1 model-based path, used when the semantic model
-        feature flag is enabled. It maps SemanticModel TokenKind values
-        to LSP semantic token types via _TOKEN_KIND_TO_SEM_TOKEN.
+        feature flag is enabled. The model carries final render semantics,
+        so this is a declarative mapping (see the class-level tables) plus
+        UTF-16 delta encoding.
         """
         data: List[int] = []
         last_line = 0
@@ -1109,30 +1193,21 @@ class SemanticTokenGenerator:
         for stmt in semantic_model.statements:
             check_current_task_canceled()
 
-            for token in stmt.tokens:
-                if token.length == 0:
+            for info in self._iter_model_sem_tokens(stmt, semantic_model):
+                if info.length == 0:
                     continue
 
+                token_line_0 = info.lineno - 1
                 # Range filtering
-                token_line_0 = token.line - 1
-                if range is not None:
-                    if token_line_0 < range.start.line:
-                        continue
-                    if token_line_0 > range.end.line:
-                        break
-
-                sem_info = self._TOKEN_KIND_TO_SEM_TOKEN.get(token.kind)
-                if sem_info is None:
+                if range is not None and (token_line_0 < range.start.line or token_line_0 > range.end.line):
                     continue
-
-                sem_type, sem_mods = sem_info
 
                 # Convert to UTF-16 positions
                 token_range = range_to_utf16(
                     lines,
                     Range(
-                        start=Position(line=token_line_0, character=token.col_offset),
-                        end=Position(line=token_line_0, character=token.col_offset + token.length),
+                        start=Position(line=token_line_0, character=info.col_offset),
+                        end=Position(line=token_line_0, character=info.col_offset + info.length),
                     ),
                 )
 
@@ -1154,10 +1229,214 @@ class SemanticTokenGenerator:
                 last_line = current_line
 
                 data.append(token_length)
-                data.append(token_types.index(sem_type))
-                data.append(reduce(operator.or_, [2 ** token_modifiers.index(e) for e in sem_mods]) if sem_mods else 0)
+                data.append(token_types.index(info.sem_token_type))
+                data.append(
+                    reduce(operator.or_, [2 ** token_modifiers.index(e) for e in info.sem_modifiers])
+                    if info.sem_modifiers
+                    else 0
+                )
 
         return SemanticTokens(data=data)
+
+    def _emit_model_token(self, token: SemanticToken) -> Optional[SemTokenInfo]:
+        """Map one model token through the static kind / modifier tables."""
+        sem_info = self._TOKEN_KIND_TO_SEM_TOKEN.get(token.kind)
+        if sem_info is None:
+            return None
+        sem_type, static_mods = sem_info
+        sem_mods: Optional[Set[AnyTokenModifier]] = set(static_mods) if static_mods else None
+        if token.modifiers:
+            mapped = {self._TOKEN_MODIFIER_TO_SEM[m] for m in token.modifiers if m in self._TOKEN_MODIFIER_TO_SEM}
+            if mapped:
+                sem_mods = (sem_mods or set()) | mapped
+        return SemTokenInfo(token.line, token.col_offset, token.length, sem_type, sem_mods)
+
+    def _iter_model_sem_tokens(
+        self, stmt: SemanticStatement, model: SemanticModel, is_inner: bool = False
+    ) -> Iterator[SemTokenInfo]:
+        """Yield SemTokenInfo for one statement, matching the legacy output.
+
+        `is_inner` marks a Run Keyword inner call (its BDD gap token renders
+        as keywordCallInner).
+        """
+        # Documentation statements emit only their continuation markers
+        # (legacy renders neither the setting name nor the body).
+        if stmt.kind is NodeKind.SETTING_DOCUMENTATION:
+            for token in stmt.tokens:
+                if token.kind is TokenKind.CONTINUATION:
+                    yield SemTokenInfo(token.line, token.col_offset, token.length, RobotSemTokenTypes.CONTINUATION)
+            return
+
+        section = model.enclosing_section(stmt)
+        emit_comments = stmt.kind in self._COMMENT_STMT_KINDS or (
+            section is not None and section.kind is NodeKind.INVALID_SECTION
+        )
+
+        if cached_isinstance(stmt, RunKeywordCallStatement):
+            kw_doc = stmt.keyword_doc
+            # Legacy only decomposes the hardcoded BuiltIn run keywords;
+            # register-only run keywords render flat.
+            if kw_doc is not None and kw_doc.is_any_run_keyword():
+                yield from self._iter_run_keyword_sem_tokens(stmt, model, emit_comments, is_inner)
+                return
+
+        yield_arguments = stmt.kind in self._YIELD_ARGUMENT_STMT_KINDS
+
+        prev: Optional[SemanticToken] = None
+        for token in stmt.tokens:
+            gap = self._bdd_gap_token(stmt, prev, token, is_inner)
+            if gap is not None:
+                yield gap
+            yield from self._render_model_token(token, emit_comments, yield_arguments)
+            prev = token
+
+    def _bdd_gap_token(
+        self,
+        stmt: SemanticStatement,
+        prev: Optional[SemanticToken],
+        token: SemanticToken,
+        is_inner: bool,
+    ) -> Optional[SemTokenInfo]:
+        """Legacy quirk: a BDD prefix (`Given`/`When`/...) emits a length-1
+        keyword-typed token for the separator character between the prefix
+        word and the keyword name. The model folds that space into the prefix
+        offset, so it is synthesized here from adjacent leaf kinds."""
+        if (
+            prev is None
+            or prev.kind is not TokenKind.BDD_PREFIX
+            or token.kind not in self._BDD_FOLLOW_KINDS
+            or token.col_offset <= prev.col_offset + prev.length
+        ):
+            return None
+        if is_inner:
+            sem_type: AnyTokenType = RobotSemTokenTypes.KEYWORD_INNER
+        elif stmt.kind in self._NAME_KEYWORD_STMT_KINDS:
+            sem_type = RobotSemTokenTypes.ARGUMENT
+        else:
+            sem_type = RobotSemTokenTypes.KEYWORD
+        gap_col = prev.col_offset + prev.length
+        return SemTokenInfo(prev.line, gap_col, token.col_offset - gap_col, sem_type)
+
+    def _render_model_token(
+        self,
+        token: SemanticToken,
+        emit_comments: bool,
+        yield_arguments: bool,
+    ) -> Iterator[SemTokenInfo]:
+        """Render one SemanticToken (recursively descending into sub-tokens)
+        through the static tables and the declarative emission policy."""
+        kind = token.kind
+        mods = token.modifiers
+
+        # Atomic kinds render whole; their sub-structure stays model-only.
+        if kind in self._ATOMIC_KINDS:
+            info = self._emit_model_token(token)
+            if info is not None:
+                yield info
+            return
+
+        # Legacy quirk: `[Documentation]` / `Metadata` setting names render
+        # as nothing.
+        if kind is TokenKind.SETTING_NAME and mods and TokenModifier.DOCUMENTATION in mods:
+            return
+
+        # Legacy quirk: an embedded keyword name that does not match its own
+        # pattern (parent carries EMBEDDED, no sub-tokens) renders as nothing.
+        if (
+            kind in (TokenKind.KEYWORD, TokenKind.KEYWORD_INNER)
+            and mods
+            and TokenModifier.EMBEDDED in mods
+            and not token.sub_tokens
+        ):
+            return
+
+        # Leaf descent: emit the leaves instead of the parent.
+        if token.sub_tokens:
+            for sub in token.sub_tokens:
+                yield from self._render_model_token(sub, emit_comments, yield_arguments)
+            return
+
+        # Whitespace separators are never rendered.
+        if kind is TokenKind.SEPARATOR:
+            return
+
+        if kind is TokenKind.COMMENT:
+            if emit_comments:
+                yield SemTokenInfo(token.line, token.col_offset, token.length, SemanticTokenTypes.COMMENT)
+            return
+
+        # Plain argument text renders only in template rows / metadata values
+        # and for embedded-argument fragments.
+        if kind in self._ARGUMENT_TEXT_KINDS and not yield_arguments and not (mods and TokenModifier.EMBEDDED in mods):
+            return
+
+        info = self._emit_model_token(token)
+        if info is not None:
+            yield info
+
+    def _iter_run_keyword_sem_tokens(
+        self,
+        stmt: "RunKeywordCallStatement",
+        model: SemanticModel,
+        emit_comments: bool,
+        is_inner: bool,
+    ) -> Iterator[SemTokenInfo]:
+        """Render a Run Keyword variant, position-merging inner calls with the
+        outer token stream. Cells covered by an inner call render from the
+        inner (KEYWORD_INNER) decomposition; the remaining outer tokens (outer
+        keyword, condition, ELSE/AND control-flow cells) render from the outer
+        list. The merge is purely structural."""
+        inner_infos: List[SemTokenInfo] = []
+        covered: List[Tuple[Tuple[int, int], Tuple[int, int]]] = []
+        for inner in stmt.inner_calls:
+            span = self._statement_span(inner)
+            if span is not None:
+                covered.append(span)
+            inner_infos.extend(self._iter_model_sem_tokens(inner, model, is_inner=True))
+
+        outer_infos: List[SemTokenInfo] = []
+        prev: Optional[SemanticToken] = None
+        for token in stmt.tokens:
+            pos = (token.line, token.col_offset)
+            if any(start <= pos < end for start, end in covered):
+                prev = token
+                continue
+            gap = self._bdd_gap_token(stmt, prev, token, is_inner)
+            if gap is not None:
+                outer_infos.append(gap)
+            outer_infos.extend(self._render_model_token(token, emit_comments, False))
+            prev = token
+
+        merged = inner_infos + outer_infos
+        merged.sort(key=lambda i: (i.lineno, i.col_offset))
+        yield from merged
+
+    @staticmethod
+    def _statement_span(
+        stmt: SemanticStatement,
+    ) -> Optional[Tuple[Tuple[int, int], Tuple[int, int]]]:
+        """Source span (start, end) as (line, col) tuples over all tokens of a
+        statement, recursing into nested Run Keyword inner calls."""
+        start: Optional[Tuple[int, int]] = None
+        end: Optional[Tuple[int, int]] = None
+
+        def visit(s: SemanticStatement) -> None:
+            nonlocal start, end
+            for token in s.tokens:
+                lo = (token.line, token.col_offset)
+                hi = (token.line, token.col_offset + token.length)
+                if start is None or lo < start:
+                    start = lo
+                if end is None or hi > end:
+                    end = hi
+            if cached_isinstance(s, RunKeywordCallStatement):
+                for inner in s.inner_calls:
+                    visit(inner)
+
+        visit(stmt)
+        if start is None or end is None:
+            return None
+        return start, end
 
     def _get_tokens_after(self, tokens: List[Token], target_token: Token) -> List[Token]:
         """Get all tokens after target token efficiently.

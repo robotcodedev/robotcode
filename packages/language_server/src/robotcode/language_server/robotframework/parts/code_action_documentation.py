@@ -237,10 +237,13 @@ class RobotCodeActionDocumentationProtocolPart(RobotLanguageServerProtocolPart, 
 
         if stmt.import_type is ImportType.LIBRARY:
             arg_values: List[str] = []
+            seen_import_name = False
             for tok in stmt.tokens:
-                if tok.kind is TokenKind.CONTROL_FLOW:
-                    break  # WITH NAME — everything after is the alias
-                if tok.kind is TokenKind.ARGUMENT:
+                if tok.kind is TokenKind.IMPORT_NAME:
+                    seen_import_name = True
+                elif seen_import_name and tok.kind is TokenKind.SETTING_IMPORT:
+                    break  # WITH NAME / AS — everything after is the alias
+                elif tok.kind is TokenKind.ARGUMENT:
                     arg_values.append(tok.value)
             args: Tuple[str, ...] = tuple(arg_values)
         else:
@@ -251,17 +254,18 @@ class RobotCodeActionDocumentationProtocolPart(RobotLanguageServerProtocolPart, 
 
     @staticmethod
     def _cursor_on_keyword_reference(pos: Position, stmt: KeywordCallStatement) -> bool:
-        """Cursor is within the NAMESPACE / SEPARATOR / KEYWORD SemanticTokens
+        """Cursor is within the NAMESPACE / "." / KEYWORD SemanticTokens
         that make up the keyword reference (BDD prefix excluded). Mirrors
         the legacy `position.is_in_range(range_from_token(keyword_token))`
         after the BDD-prefix strip that
         `get_keyworddoc_and_token_from_position` does.
         """
-        return any(
-            pos in t.range
-            for t in stmt.tokens
-            if t.kind in (TokenKind.NAMESPACE, TokenKind.SEPARATOR, TokenKind.KEYWORD)
-        )
+        ref_toks = [t for t in stmt.tokens if t.kind in (TokenKind.NAMESPACE, TokenKind.KEYWORD)]
+        if not ref_toks:
+            return False
+        # Contiguous span from namespace start to keyword end also covers the
+        # "." operator between them.
+        return pos in Range(start=ref_toks[0].range.start, end=ref_toks[-1].range.end)
 
     def _build_keyword_action(
         self,

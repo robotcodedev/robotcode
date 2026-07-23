@@ -123,6 +123,8 @@ from ..import_resolver import ImportResolver, ResolvedImports
 from ..imports_manager import ImportsManager
 from ..keyword_finder import KeywordFinder
 from ..library_doc import (
+    BUILTIN_LIBRARY_NAME,
+    KeywordArgumentKind,
     KeywordDoc,
     KeywordMatcher,
     LibraryDoc,
@@ -131,7 +133,7 @@ from ..library_doc import (
 )
 from ..scope_tree import ScopeTreeBuilder
 from ..variable_scope import VariableScope
-from .enums import ForFlavor, ForZipMode, ImportType, NodeKind, OnLimitAction, TokenKind
+from .enums import ForFlavor, ForZipMode, ImportType, NodeKind, OnLimitAction, TokenKind, TokenModifier
 from .model import SemanticModel
 from .nodes import (
     DefinitionBlock,
@@ -301,6 +303,12 @@ class SemanticAnalyzer(Visitor):
 
         # RunKeywordCallStatement support: inner calls collected during _analyze_run_keyword
         self._last_inner_calls: list[KeywordCallStatement] = []
+
+        # Positions (line, col) of ELSE / ELSE IF / AND separator cells inside
+        # Run Keyword variants, recorded during run-keyword analysis. Token
+        # builders mark these ARGUMENT cells as CONTROL_FLOW. Positions are
+        # unique per file, so the set accumulates without per-statement resets.
+        self._rk_separator_positions: Set[Tuple[int, int]] = set()
 
         # Token-decomposition info populated by _analyze_keyword_call() for the
         # current keyword call. Visitors read these after the analysis call to
@@ -772,6 +780,64 @@ class SemanticAnalyzer(Visitor):
             )
             self._add_statement(stmt)
 
+    # --- Variables section rows ---
+
+    def visit_Variable(self, node: Variable) -> None:  # noqa: N802
+        """Variables-section row: the defining name renders atomically as a
+        variable; values get variable decomposition; `&{dict}` rows split
+        `key=value` items into named-argument sub-tokens (legacy behavior)."""
+        self._analyze_statement_variables(node)
+
+        name_token = node.get_token(Token.VARIABLE)
+        is_dict = bool(name_token is not None and name_token.value and name_token.value.startswith("&"))
+
+        def handle_argument(t: Token) -> List[SemanticToken]:
+            if is_dict:
+                return [self._build_dict_item_token(t)]
+            return [self._build_argument_semantic_token(t, keyword_doc=None)]
+
+        stmt = SemanticStatement(
+            kind=NodeKind.VARIABLE_DEF,
+            line_start=node.lineno,
+            line_end=node.end_lineno or node.lineno,
+            tokens=self._build_header_tokens(node, special={Token.ARGUMENT: handle_argument}),
+        )
+        self._add_statement(stmt)
+
+    def _build_dict_item_token(self, rf_token: Token) -> SemanticToken:
+        """`&{dict}` definition item: `key=value` splits into
+        NAMED_ARGUMENT_NAME + OPERATOR + NAMED_ARGUMENT_VALUE (with variable
+        decomposition on the value half)."""
+        value = rf_token.value
+        line = rf_token.lineno
+        col = rf_token.col_offset
+        name, item_value = split_from_equals(value)
+        if item_value is None:
+            return self._build_argument_semantic_token(rf_token, keyword_doc=None)
+        parent = SemanticToken(
+            kind=TokenKind.ARGUMENT,
+            value=value,
+            line=line,
+            col_offset=col,
+            length=len(value),
+        )
+        value_col = col + len(name) + 1
+        value_rf_token = Token(Token.ARGUMENT, item_value, line, value_col)
+        value_subs = self._argument_sub_tokens(value_rf_token) if item_value else None
+        parent.sub_tokens = [
+            SemanticToken(kind=TokenKind.NAMED_ARGUMENT_NAME, value=name, line=line, col_offset=col, length=len(name)),
+            SemanticToken(kind=TokenKind.OPERATOR, value="=", line=line, col_offset=col + len(name), length=1),
+            SemanticToken(
+                kind=TokenKind.NAMED_ARGUMENT_VALUE,
+                value=item_value,
+                line=line,
+                col_offset=value_col,
+                length=len(item_value),
+                sub_tokens=value_subs,
+            ),
+        ]
+        return parent
+
     # --- Generic statement visitor ---
 
     # Mapping from RF Token type to SemanticModel TokenKind.
@@ -784,7 +850,7 @@ class SemanticAnalyzer(Visitor):
         Token.CONTINUE: TokenKind.CONTROL_FLOW,
         Token.RETURN_STATEMENT: TokenKind.CONTROL_FLOW,
         Token.FOR: TokenKind.CONTROL_FLOW,
-        Token.FOR_SEPARATOR: TokenKind.CONTROL_FLOW,
+        Token.FOR_SEPARATOR: TokenKind.FOR_SEPARATOR,
         Token.IF: TokenKind.CONTROL_FLOW,
         Token.ELSE_IF: TokenKind.CONTROL_FLOW,
         Token.ELSE: TokenKind.CONTROL_FLOW,
@@ -811,15 +877,15 @@ class SemanticAnalyzer(Visitor):
         Token.CONTINUATION: TokenKind.CONTINUATION,
         Token.SEPARATOR: TokenKind.SEPARATOR,
         # Section headers
-        Token.TESTCASE_HEADER: TokenKind.HEADER,
-        Token.KEYWORD_HEADER: TokenKind.HEADER,
-        Token.SETTING_HEADER: TokenKind.HEADER,
-        Token.VARIABLE_HEADER: TokenKind.HEADER,
-        Token.COMMENT_HEADER: TokenKind.HEADER,
+        Token.TESTCASE_HEADER: TokenKind.HEADER_TESTCASE,
+        Token.KEYWORD_HEADER: TokenKind.HEADER_KEYWORD,
+        Token.SETTING_HEADER: TokenKind.HEADER_SETTINGS,
+        Token.VARIABLE_HEADER: TokenKind.HEADER_VARIABLE,
+        Token.COMMENT_HEADER: TokenKind.HEADER_COMMENT,
         # Import settings
-        Token.LIBRARY: TokenKind.SETTING_NAME,
-        Token.RESOURCE: TokenKind.SETTING_NAME,
-        Token.VARIABLES: TokenKind.SETTING_NAME,
+        Token.LIBRARY: TokenKind.SETTING_IMPORT,
+        Token.RESOURCE: TokenKind.SETTING_IMPORT,
+        Token.VARIABLES: TokenKind.SETTING_IMPORT,
         # Keyword / test settings
         Token.SETUP: TokenKind.SETTING_NAME,
         Token.TEARDOWN: TokenKind.SETTING_NAME,
@@ -839,7 +905,11 @@ class SemanticAnalyzer(Visitor):
         Token.TEST_TEARDOWN: TokenKind.SETTING_NAME,
         Token.TEST_TEMPLATE: TokenKind.SETTING_NAME,
         Token.TEST_TIMEOUT: TokenKind.SETTING_NAME,
-        Token.WITH_NAME: TokenKind.SETTING_NAME,
+        # `WITH NAME` import alias marker. On RF 7.0+ `Token.WITH_NAME` is the
+        # same string as `Token.AS`, so this entry also covers `AS` there
+        # (including `EXCEPT ... AS`, matching the legacy rendering); on
+        # RF < 7.0 `Token.AS` above keeps its CONTROL_FLOW mapping.
+        Token.WITH_NAME: TokenKind.SETTING_IMPORT,
         # Errors
         Token.ERROR: TokenKind.ERROR,
         Token.FATAL_ERROR: TokenKind.ERROR,
@@ -848,10 +918,13 @@ class SemanticAnalyzer(Visitor):
     # Version-conditional token mappings
     if RF_VERSION >= (6, 0):
         _RF_TOKEN_TO_TOKEN_KIND[Token.CONFIG] = TokenKind.CONFIG
-        _RF_TOKEN_TO_TOKEN_KIND[Token.TASK_HEADER] = TokenKind.HEADER
+        _RF_TOKEN_TO_TOKEN_KIND[Token.TASK_HEADER] = TokenKind.HEADER_TASK
         _RF_TOKEN_TO_TOKEN_KIND[Token.KEYWORD_TAGS] = TokenKind.SETTING_NAME
+    if RF_VERSION >= (6, 1):
+        # `Name` suite setting (RF 6.1+).
+        _RF_TOKEN_TO_TOKEN_KIND[Token.SUITE_NAME] = TokenKind.SETTING_NAME
     if RF_VERSION >= (7, 0):
-        _RF_TOKEN_TO_TOKEN_KIND[Token.VAR] = TokenKind.CONTROL_FLOW
+        _RF_TOKEN_TO_TOKEN_KIND[Token.VAR] = TokenKind.VAR_MARKER
     if RF_VERSION >= (7, 2):
         _RF_TOKEN_TO_TOKEN_KIND[Token.GROUP] = TokenKind.CONTROL_FLOW
 
@@ -864,8 +937,12 @@ class SemanticAnalyzer(Visitor):
     )
 
     def _build_tokens_from_node(self, node: Statement) -> list[SemanticToken]:
-        """Build SemanticToken list from an RF Statement node using the generic mapping."""
-        return self._build_header_tokens(node, special={})
+        """Build SemanticToken list from an RF Statement node using the generic
+        mapping. ARGUMENT tokens always get variable decomposition."""
+        return self._build_header_tokens(
+            node,
+            special={Token.ARGUMENT: lambda t: [self._build_argument_semantic_token(t, keyword_doc=None)]},
+        )
 
     def _build_header_tokens(
         self,
@@ -900,30 +977,147 @@ class SemanticAnalyzer(Visitor):
                 if extra is not None:
                     tokens.extend(extra)
                     continue
-            kind = self._RF_TOKEN_TO_TOKEN_KIND.get(rf_token.type)
-            if kind is None:
-                continue
-            tokens.append(
+            sem_token = self._map_generic_token(rf_token)
+            if sem_token is not None:
+                tokens.append(sem_token)
+        return tokens
+
+    def _map_generic_token(self, rf_token: Token) -> Optional[SemanticToken]:
+        """Map one RF token through `_RF_TOKEN_TO_TOKEN_KIND`, applying the
+        kind-specific build rules that must hold everywhere: bracket-setting
+        splits (`[Tags]` → `[` + name + `]`), documentation modifiers, and
+        definition-name variable splits. Central so every builder loop picks
+        up the same final render semantics."""
+        kind = self._RF_TOKEN_TO_TOKEN_KIND.get(rf_token.type)
+        if kind is None:
+            return None
+        if kind is TokenKind.SETTING_NAME:
+            return self._build_setting_name_token(rf_token)
+        if kind is TokenKind.TEST_NAME or kind is TokenKind.KEYWORD_NAME:
+            return self._build_definition_name_token(rf_token, kind)
+        return SemanticToken(
+            kind=kind,
+            value=rf_token.value,
+            line=rf_token.lineno,
+            col_offset=rf_token.col_offset,
+            length=len(rf_token.value),
+        )
+
+    def _build_setting_name_token(self, rf_token: Token) -> SemanticToken:
+        """Setting-name token: bracket settings (`[Tags]`, `[Setup]`, …) get
+        OPERATOR + SETTING_NAME + OPERATOR sub-tokens; `[Documentation]` /
+        `Metadata` names carry the DOCUMENTATION modifier."""
+        value = rf_token.value
+        line = rf_token.lineno
+        col = rf_token.col_offset
+        modifiers = (
+            frozenset({TokenModifier.DOCUMENTATION}) if rf_token.type in (Token.DOCUMENTATION, Token.METADATA) else None
+        )
+        token = SemanticToken(
+            kind=TokenKind.SETTING_NAME,
+            value=value,
+            line=line,
+            col_offset=col,
+            length=len(value),
+            modifiers=modifiers,
+        )
+        if len(value) >= 2 and value[0] == "[" and value[-1] == "]":
+            token.sub_tokens = [
+                SemanticToken(kind=TokenKind.OPERATOR, value="[", line=line, col_offset=col, length=1),
                 SemanticToken(
-                    kind=kind,
-                    value=rf_token.value,
-                    line=rf_token.lineno,
-                    col_offset=rf_token.col_offset,
-                    length=len(rf_token.value),
+                    kind=TokenKind.SETTING_NAME,
+                    value=value[1:-1],
+                    line=line,
+                    col_offset=col + 1,
+                    length=len(value) - 2,
+                ),
+                SemanticToken(kind=TokenKind.OPERATOR, value="]", line=line, col_offset=col + len(value) - 1, length=1),
+            ]
+        return token
+
+    def _build_definition_name_token(self, rf_token: Token, kind: TokenKind) -> SemanticToken:
+        """Definition-name token (test case / keyword name): embedded variables
+        split into name-kind fragments + VARIABLE sub-tokens."""
+        value = rf_token.value
+        line = rf_token.lineno
+        col = rf_token.col_offset
+        token = SemanticToken(kind=kind, value=value, line=line, col_offset=col, length=len(value))
+
+        identifiers = "$" if kind is TokenKind.KEYWORD_NAME else "$@&%"
+        try:
+            occurrences = list(
+                iter_variable_occurrences_from_token(
+                    rf_token, identifiers=identifiers, parse_type=False, ignore_errors=True
                 )
             )
-        return tokens
+        except (VariableError, InvalidVariableError):
+            occurrences = []
+        if not occurrences:
+            return token
+
+        sub_tokens: list[SemanticToken] = []
+        cursor = col
+        end_col = col + len(value)
+        for occ in occurrences:
+            if occ.col_offset < cursor:
+                continue
+            if occ.col_offset > cursor:
+                text_value = value[cursor - col : occ.col_offset - col]
+                if text_value:
+                    sub_tokens.append(
+                        SemanticToken(kind=kind, value=text_value, line=line, col_offset=cursor, length=len(text_value))
+                    )
+            sub_tokens.append(
+                SemanticToken(
+                    kind=TokenKind.VARIABLE,
+                    value=occ.value,
+                    line=line,
+                    col_offset=occ.col_offset,
+                    length=occ.length,
+                    sub_tokens=occ.semantic_sub_tokens,
+                )
+            )
+            cursor = occ.col_offset + occ.length
+        if cursor < end_col:
+            text_value = value[cursor - col :]
+            if text_value:
+                sub_tokens.append(
+                    SemanticToken(kind=kind, value=text_value, line=line, col_offset=cursor, length=len(text_value))
+                )
+        token.sub_tokens = sub_tokens
+        return token
+
+    @staticmethod
+    def _is_builtin_namespace(namespace: str) -> bool:
+        """True if the written namespace qualifier refers to the BuiltIn library
+        (KeywordMatcher-style normalization: case, spaces, underscores)."""
+        return namespace.replace(" ", "").replace("_", "").lower() == "builtin"
+
+    @staticmethod
+    def _builtin_keyword_modifiers(kw_doc: Optional[KeywordDoc]) -> Optional[frozenset[TokenModifier]]:
+        """BUILTIN modifier set if the resolved keyword lives in the BuiltIn library."""
+        if kw_doc is not None and kw_doc.libname == BUILTIN_LIBRARY_NAME:
+            return frozenset({TokenModifier.BUILTIN})
+        return None
 
     def _split_keyword_name_token(
         self,
         rf_token: Token,
         bdd_prefix: Optional[str],
         namespace: Optional[str],
+        kw_doc: Optional[KeywordDoc] = None,
+        inner: bool = False,
+        unresolved_as_argument: bool = False,
     ) -> list[SemanticToken]:
-        """Split a keyword-name RF Token into BDD_PREFIX + NAMESPACE + SEPARATOR + KEYWORD.
+        """Split a keyword-name RF Token into BDD_PREFIX + NAMESPACE + OPERATOR + KEYWORD.
 
         bdd_prefix may include a trailing space (RF reports e.g. "Given ").
         namespace is the qualifier *before* the dot (e.g. "BuiltIn" in "BuiltIn.Log").
+
+        The keyword part carries final render semantics: KEYWORD_INNER for
+        Run Keyword inner calls, the BUILTIN modifier for BuiltIn keywords,
+        embedded-argument splits (with the EMBEDDED modifier), and ARGUMENT
+        for unresolved template names (`unresolved_as_argument`).
         """
         line = rf_token.lineno
         col = rf_token.col_offset
@@ -956,12 +1150,13 @@ class SemanticAnalyzer(Visitor):
                     line=line,
                     col_offset=col,
                     length=ns_len,
+                    modifiers=(frozenset({TokenModifier.BUILTIN}) if self._is_builtin_namespace(namespace) else None),
                 )
             )
             col += ns_len
             out.append(
                 SemanticToken(
-                    kind=TokenKind.SEPARATOR,
+                    kind=TokenKind.OPERATOR,
                     value=".",
                     line=line,
                     col_offset=col,
@@ -972,16 +1167,156 @@ class SemanticAnalyzer(Visitor):
             value = value[ns_len + 1 :]
 
         if value:
-            out.append(
+            if kw_doc is None and unresolved_as_argument:
+                keyword_kind = TokenKind.ARGUMENT
+            elif inner:
+                keyword_kind = TokenKind.KEYWORD_INNER
+            else:
+                keyword_kind = TokenKind.KEYWORD
+            kw_mods = self._builtin_keyword_modifiers(kw_doc)
+
+            if kw_doc is not None and kw_doc.is_embedded and kw_doc.matcher.embedded_arguments:
+                out.append(self._build_embedded_keyword_token(value, line, col, kw_doc, keyword_kind, kw_mods))
+            else:
+                out.append(
+                    SemanticToken(
+                        kind=keyword_kind,
+                        value=value,
+                        line=line,
+                        col_offset=col,
+                        length=len(value),
+                        modifiers=kw_mods,
+                    )
+                )
+        return out
+
+    def _build_embedded_keyword_token(
+        self,
+        value: str,
+        line: int,
+        col: int,
+        kw_doc: KeywordDoc,
+        keyword_kind: TokenKind,
+        kw_mods: Optional[frozenset[TokenModifier]],
+    ) -> SemanticToken:
+        """Embedded-argument keyword name: one parent token whose sub-tokens are
+        the keyword-text fragments plus the embedded argument fragments (text
+        and variables, all carrying the EMBEDDED modifier).
+
+        If the written text does not match the keyword's own embedded pattern,
+        the parent carries the EMBEDDED modifier itself and gets no sub-tokens —
+        consumers can detect and treat that case explicitly.
+        """
+        parent = SemanticToken(
+            kind=keyword_kind,
+            value=value,
+            line=line,
+            col_offset=col,
+            length=len(value),
+            modifiers=kw_mods,
+        )
+
+        embedded = kw_doc.matcher.embedded_arguments
+        if embedded is None:
+            return parent
+        if RF_VERSION >= (7, 3):
+            m = embedded.name.fullmatch(value)
+        elif RF_VERSION >= (6, 0):
+            m = embedded.match(value)
+        else:
+            m = embedded.name.match(value)
+
+        if not m or m.lastindex is None:
+            parent.modifiers = frozenset((kw_mods or frozenset()) | {TokenModifier.EMBEDDED})
+            return parent
+
+        embedded_mods = frozenset({TokenModifier.EMBEDDED})
+        sub_tokens: list[SemanticToken] = []
+        start, end = m.span(0)
+        for i in range(1, m.lastindex + 1):
+            arg_start, arg_end = m.span(i)
+            if arg_start - start > 0:
+                sub_tokens.append(
+                    SemanticToken(
+                        kind=keyword_kind,
+                        value=value[start:arg_start],
+                        line=line,
+                        col_offset=col + start,
+                        length=arg_start - start,
+                        modifiers=kw_mods,
+                    )
+                )
+
+            arg_value = value[arg_start:arg_end]
+            arg_rf_token = Token(Token.ARGUMENT, arg_value, line, col + arg_start)
+            try:
+                occurrences = list(
+                    iter_variable_occurrences_from_token(
+                        arg_rf_token, identifiers="$@&%", parse_type=False, ignore_errors=True
+                    )
+                )
+            except (VariableError, InvalidVariableError):
+                occurrences = []
+            cursor = col + arg_start
+            arg_end_col = col + arg_end
+            for occ in occurrences:
+                if occ.col_offset < cursor:
+                    continue
+                if occ.col_offset > cursor:
+                    text_value = arg_value[cursor - (col + arg_start) : occ.col_offset - (col + arg_start)]
+                    if text_value:
+                        sub_tokens.append(
+                            SemanticToken(
+                                kind=TokenKind.ARGUMENT,
+                                value=text_value,
+                                line=line,
+                                col_offset=cursor,
+                                length=len(text_value),
+                                modifiers=embedded_mods,
+                            )
+                        )
+                sub_tokens.append(
+                    SemanticToken(
+                        kind=TokenKind.VARIABLE,
+                        value=occ.value,
+                        line=line,
+                        col_offset=occ.col_offset,
+                        length=occ.length,
+                        sub_tokens=occ.semantic_sub_tokens,
+                        modifiers=embedded_mods,
+                    )
+                )
+                cursor = occ.col_offset + occ.length
+            if cursor < arg_end_col:
+                text_value = arg_value[cursor - (col + arg_start) :]
+                if text_value:
+                    sub_tokens.append(
+                        SemanticToken(
+                            kind=TokenKind.ARGUMENT,
+                            value=text_value,
+                            line=line,
+                            col_offset=cursor,
+                            length=len(text_value),
+                            modifiers=embedded_mods,
+                        )
+                    )
+
+            start = arg_end + 1
+
+        if start < end:
+            sub_tokens.append(
                 SemanticToken(
-                    kind=TokenKind.KEYWORD,
-                    value=value,
+                    kind=keyword_kind,
+                    value=value[start:end],
                     line=line,
-                    col_offset=col,
-                    length=len(value),
+                    col_offset=col + start,
+                    length=end - start,
+                    modifiers=kw_mods,
                 )
             )
-        return out
+
+        parent.sub_tokens = sub_tokens
+        return parent
 
     @staticmethod
     def _named_argument_split(value: str, keyword_doc: Optional[KeywordDoc]) -> Optional[Tuple[str, str]]:
@@ -993,17 +1328,15 @@ class SemanticAnalyzer(Visitor):
         """
         if keyword_doc is None or not value:
             return None
-        eq_idx = value.find("=")
-        if eq_idx < 1:
+        name, split_value = split_from_equals(value)
+        if split_value is None or not name:
             return None
-        name = value[:eq_idx]
         # Skip if the name part itself contains a variable — that's positional.
         if "${" in name or "@{" in name or "&{" in name or "%{" in name:
             return None
-        arg_names = {arg.name for arg in keyword_doc.arguments if arg.name}
-        if name not in arg_names:
+        if not any(arg.kind == KeywordArgumentKind.VAR_NAMED or arg.name == name for arg in keyword_doc.arguments):
             return None
-        return name, value[eq_idx + 1 :]
+        return name, split_value
 
     def _build_argument_semantic_token(
         self, rf_token: Token, keyword_doc: Optional[KeywordDoc] = None
@@ -1065,6 +1398,13 @@ class SemanticAnalyzer(Visitor):
                     line=line,
                     col_offset=name_col,
                     length=len(name_part),
+                ),
+                SemanticToken(
+                    kind=TokenKind.OPERATOR,
+                    value="=",
+                    line=line,
+                    col_offset=name_col + len(name_part),
+                    length=1,
                 ),
                 value_token,
             ]
@@ -1141,9 +1481,11 @@ class SemanticAnalyzer(Visitor):
             arg_token.sub_tokens = sub_tokens
         return arg_token
 
-    def _argument_sub_tokens(self, rf_token: Token) -> Optional[list[SemanticToken]]:
-        """Variable sub-tokens (with TEXT_FRAGMENT for literal text) for an
-        ARGUMENT-like RF token. Returns None if the value contains no
+    def _argument_sub_tokens(
+        self, rf_token: Token, text_kind: TokenKind = TokenKind.TEXT_FRAGMENT
+    ) -> Optional[list[SemanticToken]]:
+        """Variable sub-tokens (with `text_kind` fragments for literal text) for
+        an ARGUMENT-like RF token. Returns None if the value contains no
         variables (caller should leave sub_tokens empty in that case).
         """
         line = rf_token.lineno
@@ -1177,7 +1519,7 @@ class SemanticAnalyzer(Visitor):
                 if text_value:
                     sub_tokens.append(
                         SemanticToken(
-                            kind=TokenKind.TEXT_FRAGMENT,
+                            kind=text_kind,
                             value=text_value,
                             line=line,
                             col_offset=cursor,
@@ -1202,7 +1544,7 @@ class SemanticAnalyzer(Visitor):
             if text_value:
                 sub_tokens.append(
                     SemanticToken(
-                        kind=TokenKind.TEXT_FRAGMENT,
+                        kind=text_kind,
                         value=text_value,
                         line=line,
                         col_offset=cursor,
@@ -1211,7 +1553,9 @@ class SemanticAnalyzer(Visitor):
                 )
         return sub_tokens
 
-    def _build_token_with_var_subtokens(self, rf_token: Token, kind: TokenKind) -> SemanticToken:
+    def _build_token_with_var_subtokens(
+        self, rf_token: Token, kind: TokenKind, text_kind: TokenKind = TokenKind.TEXT_FRAGMENT
+    ) -> SemanticToken:
         """Build a SemanticToken (any kind) with variable sub-tokens
         attached when the RF token contains variables. Used for CONDITION,
         VARIABLE_NAME-in-defining-context, TAG, and similar cases that
@@ -1224,7 +1568,7 @@ class SemanticAnalyzer(Visitor):
             col_offset=rf_token.col_offset,
             length=len(rf_token.value),
         )
-        sub = self._argument_sub_tokens(rf_token)
+        sub = self._argument_sub_tokens(rf_token, text_kind=text_kind)
         if sub:
             token.sub_tokens = sub
         return token
@@ -1265,21 +1609,12 @@ class SemanticAnalyzer(Visitor):
                 tokens.append(self._build_token_with_var_subtokens(rf_token, variable_kind))
                 continue
             if split_options and rf_token.type == Token.OPTION and rf_token.value and rf_token.col_offset is not None:
-                tokens.extend(self._split_option_token(rf_token))
-                continue
-            kind = self._RF_TOKEN_TO_TOKEN_KIND.get(rf_token.type)
-            if kind is None:
+                tokens.extend(self._split_option_token(rf_token, whole=True))
                 continue
             if rf_token.value and rf_token.col_offset is not None:
-                tokens.append(
-                    SemanticToken(
-                        kind=kind,
-                        value=rf_token.value,
-                        line=rf_token.lineno,
-                        col_offset=rf_token.col_offset,
-                        length=len(rf_token.value),
-                    )
-                )
+                sem_token = self._map_generic_token(rf_token)
+                if sem_token is not None:
+                    tokens.append(sem_token)
         return tokens
 
     @staticmethod
@@ -1293,10 +1628,14 @@ class SemanticAnalyzer(Visitor):
         name = value.split("=", 1)[0]
         return bool(name) and name in known_names
 
-    def _split_option_token(self, rf_token: Token) -> list[SemanticToken]:
-        """Split a Token.OPTION (`name=value`) into NAMED_ARGUMENT_NAME +
-        NAMED_ARGUMENT_VALUE sub-tokens with variable decomposition on
-        the value half. Falls back to a single ARGUMENT token if the
+    def _split_option_token(self, rf_token: Token, whole: bool = False) -> list[SemanticToken]:
+        """Split an option token (`name=value`) into OPTION_NAME + OPERATOR +
+        OPTION_VALUE tokens with variable decomposition on the value half.
+
+        With `whole=True` (VAR / FOR options) the triple becomes the
+        sub-tokens of a single OPTION parent token — legacy renders these
+        options as one control-flow cell, while WHILE / EXCEPT options render
+        as name + `=` + value. Falls back to a single ARGUMENT token if the
         value doesn't actually contain `=`.
         """
         value = rf_token.value or ""
@@ -1322,16 +1661,23 @@ class SemanticAnalyzer(Visitor):
         # `_argument_sub_tokens`.
         value_rf_token = Token(rf_token.type, value_part, line, value_col, rf_token.error)
         value_sub = self._argument_sub_tokens(value_rf_token) if value_part else None
-        return [
+        triple = [
             SemanticToken(
-                kind=TokenKind.NAMED_ARGUMENT_NAME,
+                kind=TokenKind.OPTION_NAME,
                 value=name_part,
                 line=line,
                 col_offset=col,
                 length=len(name_part),
             ),
             SemanticToken(
-                kind=TokenKind.NAMED_ARGUMENT_VALUE,
+                kind=TokenKind.OPERATOR,
+                value="=",
+                line=line,
+                col_offset=col + eq_idx,
+                length=1,
+            ),
+            SemanticToken(
+                kind=TokenKind.OPTION_VALUE,
                 value=value_part,
                 line=line,
                 col_offset=value_col,
@@ -1339,12 +1685,25 @@ class SemanticAnalyzer(Visitor):
                 sub_tokens=value_sub,
             ),
         ]
+        if whole:
+            return [
+                SemanticToken(
+                    kind=TokenKind.OPTION,
+                    value=value,
+                    line=line,
+                    col_offset=col,
+                    length=len(value),
+                    sub_tokens=triple,
+                )
+            ]
+        return triple
 
     def _build_keyword_call_tokens(
         self,
         node: Statement,
         keyword_token_type: str = Token.KEYWORD,
         keyword_doc: Optional[KeywordDoc] = None,
+        unresolved_as_argument: bool = False,
     ) -> list[SemanticToken]:
         """Build SemanticTokens for a keyword-executing statement.
 
@@ -1369,24 +1728,37 @@ class SemanticAnalyzer(Visitor):
             if rf_token.type in self._RF_SKIP_TOKENS:
                 continue
             if rf_token.type == keyword_token_type and rf_token.value:
-                tokens.extend(self._split_keyword_name_token(rf_token, bdd_prefix, namespace))
-                continue
-            if rf_token.type == Token.ARGUMENT and rf_token.value and rf_token.col_offset is not None:
-                tokens.append(self._build_argument_semantic_token(rf_token, keyword_doc=keyword_doc))
-                continue
-            token_kind = self._RF_TOKEN_TO_TOKEN_KIND.get(rf_token.type)
-            if token_kind is None:
-                continue
-            if rf_token.value and rf_token.col_offset is not None:
-                tokens.append(
-                    SemanticToken(
-                        kind=token_kind,
-                        value=rf_token.value,
-                        line=rf_token.lineno,
-                        col_offset=rf_token.col_offset,
-                        length=len(rf_token.value),
+                tokens.extend(
+                    self._split_keyword_name_token(
+                        rf_token,
+                        bdd_prefix,
+                        namespace,
+                        kw_doc=keyword_doc,
+                        unresolved_as_argument=unresolved_as_argument,
                     )
                 )
+                continue
+            if rf_token.type == Token.ARGUMENT and rf_token.value and rf_token.col_offset is not None:
+                # ELSE / ELSE IF / AND separator cells of Run Keyword variants
+                # belong to the outer run-keyword syntax — recorded during
+                # run-keyword analysis, rendered as control flow.
+                if (rf_token.lineno, rf_token.col_offset) in self._rk_separator_positions:
+                    tokens.append(
+                        SemanticToken(
+                            kind=TokenKind.CONTROL_FLOW,
+                            value=rf_token.value,
+                            line=rf_token.lineno,
+                            col_offset=rf_token.col_offset,
+                            length=len(rf_token.value),
+                        )
+                    )
+                    continue
+                tokens.append(self._build_argument_semantic_token(rf_token, keyword_doc=keyword_doc))
+                continue
+            if rf_token.value and rf_token.col_offset is not None:
+                sem_token = self._map_generic_token(rf_token)
+                if sem_token is not None:
+                    tokens.append(sem_token)
         return tokens
 
     def _node_kind_for_statement(self, node: Statement) -> NodeKind:
@@ -1913,10 +2285,25 @@ class SemanticAnalyzer(Visitor):
         # _analyze_keyword_call call set for *this* inner keyword.
         tokens: list[SemanticToken] = []
         if kw_token.value and kw_token.col_offset is not None:
-            tokens.extend(self._split_keyword_name_token(kw_token, self._last_bdd_prefix, self._last_kw_namespace))
+            tokens.extend(
+                self._split_keyword_name_token(
+                    kw_token, self._last_bdd_prefix, self._last_kw_namespace, kw_doc=kw_doc, inner=True
+                )
+            )
         if argument_tokens:
             for arg_t in argument_tokens:
                 if arg_t.value and arg_t.col_offset is not None:
+                    if (arg_t.lineno, arg_t.col_offset) in self._rk_separator_positions:
+                        tokens.append(
+                            SemanticToken(
+                                kind=TokenKind.CONTROL_FLOW,
+                                value=arg_t.value,
+                                line=arg_t.lineno,
+                                col_offset=arg_t.col_offset,
+                                length=len(arg_t.value),
+                            )
+                        )
+                        continue
                     tokens.append(self._build_argument_semantic_token(arg_t, keyword_doc=kw_doc))
 
         if nested_inner_calls:
@@ -2047,6 +2434,8 @@ class SemanticAnalyzer(Visitor):
                 t = argument_tokens[0]
                 argument_tokens = argument_tokens[1:]
                 if t.value == "AND":
+                    if t.col_offset is not None:
+                        self._rk_separator_positions.add((t.lineno, t.col_offset))
                     self._append_diagnostics(
                         range=range_from_token(t),
                         message=f"Incorrect use of {t.value}.",
@@ -2058,6 +2447,8 @@ class SemanticAnalyzer(Visitor):
                 and_token = next((e for e in argument_tokens if e.value == "AND"), None)
                 args = []
                 if and_token is not None:
+                    if and_token.col_offset is not None:
+                        self._rk_separator_positions.add((and_token.lineno, and_token.col_offset))
                     args = argument_tokens[: argument_tokens.index(and_token)]
                     argument_tokens = argument_tokens[argument_tokens.index(and_token) + 1 :]
                     has_and = True
@@ -2108,6 +2499,9 @@ class SemanticAnalyzer(Visitor):
 
             while argument_tokens:
                 if argument_tokens[0].value == "ELSE" and len(argument_tokens) > 1:
+                    else_token = argument_tokens[0]
+                    if else_token.col_offset is not None:
+                        self._rk_separator_positions.add((else_token.lineno, else_token.col_offset))
                     kwt = argument_tokens[1]
                     argument_tokens = argument_tokens[2:]
                     args = skip_args()
@@ -2122,6 +2516,9 @@ class SemanticAnalyzer(Visitor):
                     break
 
                 if argument_tokens[0].value == "ELSE IF" and len(argument_tokens) > 2:
+                    else_if_token = argument_tokens[0]
+                    if else_if_token.col_offset is not None:
+                        self._rk_separator_positions.add((else_if_token.lineno, else_if_token.col_offset))
                     kwt = argument_tokens[2]
                     argument_tokens = argument_tokens[3:]
                     args = skip_args()
@@ -2149,6 +2546,12 @@ class SemanticAnalyzer(Visitor):
         """Dispatcher: routes to the appropriate analysis layer."""
         if keyword_doc is None:
             return argument_tokens
+
+        # BuiltIn's run-keyword variants are authoritative in the hardcoded
+        # tables (condition counts, AND/ELSE splitting) — route them there
+        # first regardless of register/type-hint data.
+        if keyword_doc.is_any_run_keyword():
+            return self._analyze_hardcoded_run_keyword(keyword_doc, node, argument_tokens)
 
         strategy = get_keyword_argument_strategy(keyword_doc)
         if strategy is None:
@@ -2182,7 +2585,15 @@ class SemanticAnalyzer(Visitor):
 
     def visit_Fixture(self, node: Fixture) -> None:  # noqa: N802
         keyword_token = node.get_token(Token.NAME)
-        if keyword_token is not None and keyword_token.value and keyword_token.value.upper() not in ("", "NONE"):
+        # `NONE` / empty fixtures are not keyword calls, but the setting name
+        # (and a literal `NONE`) still need SemanticTokens for highlighting.
+        is_active = (
+            keyword_token is not None and keyword_token.value and keyword_token.value.upper() not in ("", "NONE")
+        )
+
+        kw_doc = None
+        inner_calls: List[KeywordCallStatement] = []
+        if is_active and keyword_token is not None:
             self._analyze_token_variables(keyword_token)
             self._visit_block_settings_statement(node)
 
@@ -2195,34 +2606,43 @@ class SemanticAnalyzer(Visitor):
             )
             inner_calls = self._last_inner_calls
 
-            tokens = self._build_keyword_call_tokens(node, keyword_token_type=Token.NAME, keyword_doc=kw_doc)
-            if inner_calls:
-                stmt: KeywordCallStatement = RunKeywordCallStatement(
-                    kind=NodeKind.SETUP,
-                    line_start=node.lineno,
-                    line_end=node.end_lineno or node.lineno,
-                    keyword_doc=kw_doc,
-                    lib_entry=self._last_lib_entry,
-                    tokens=tokens,
-                    inner_calls=inner_calls,
-                )
-            else:
-                stmt = KeywordCallStatement(
-                    kind=NodeKind.SETUP,
-                    line_start=node.lineno,
-                    line_end=node.end_lineno or node.lineno,
-                    keyword_doc=kw_doc,
-                    lib_entry=self._last_lib_entry,
-                    tokens=tokens,
-                )
-            self._add_statement(stmt)
+        tokens = self._build_keyword_call_tokens(node, keyword_token_type=Token.NAME, keyword_doc=kw_doc)
+        if not tokens:
+            return
+        if inner_calls:
+            stmt: KeywordCallStatement = RunKeywordCallStatement(
+                kind=NodeKind.SETUP,
+                line_start=node.lineno,
+                line_end=node.end_lineno or node.lineno,
+                keyword_doc=kw_doc,
+                lib_entry=self._last_lib_entry,
+                tokens=tokens,
+                inner_calls=inner_calls,
+            )
+        else:
+            stmt = KeywordCallStatement(
+                kind=NodeKind.SETUP,
+                line_start=node.lineno,
+                line_end=node.end_lineno or node.lineno,
+                keyword_doc=kw_doc,
+                lib_entry=self._last_lib_entry,
+                tokens=tokens,
+            )
+        self._add_statement(stmt)
 
     def visit_Teardown(self, node: Fixture) -> None:  # noqa: N802
         keyword_token = node.get_token(Token.NAME)
-        if keyword_token is not None and keyword_token.value and keyword_token.value.upper() not in ("", "NONE"):
+        is_active = (
+            keyword_token is not None and keyword_token.value and keyword_token.value.upper() not in ("", "NONE")
+        )
+
+        kw_doc = None
+        inner_calls: List[KeywordCallStatement] = []
+        if is_active and keyword_token is not None:
+            active_token = keyword_token
 
             def _handler() -> None:
-                self._analyze_token_variables(keyword_token)
+                self._analyze_token_variables(active_token)
                 self._analyze_statement_variables(node)
 
             if self._end_block_handlers is not None:
@@ -2237,27 +2657,29 @@ class SemanticAnalyzer(Visitor):
             )
             inner_calls = self._last_inner_calls
 
-            tokens = self._build_keyword_call_tokens(node, keyword_token_type=Token.NAME, keyword_doc=kw_doc)
-            if inner_calls:
-                stmt: KeywordCallStatement = RunKeywordCallStatement(
-                    kind=NodeKind.TEARDOWN,
-                    line_start=node.lineno,
-                    line_end=node.end_lineno or node.lineno,
-                    keyword_doc=kw_doc,
-                    lib_entry=self._last_lib_entry,
-                    tokens=tokens,
-                    inner_calls=inner_calls,
-                )
-            else:
-                stmt = KeywordCallStatement(
-                    kind=NodeKind.TEARDOWN,
-                    line_start=node.lineno,
-                    line_end=node.end_lineno or node.lineno,
-                    keyword_doc=kw_doc,
-                    lib_entry=self._last_lib_entry,
-                    tokens=tokens,
-                )
-            self._add_statement(stmt)
+        tokens = self._build_keyword_call_tokens(node, keyword_token_type=Token.NAME, keyword_doc=kw_doc)
+        if not tokens:
+            return
+        if inner_calls:
+            stmt: KeywordCallStatement = RunKeywordCallStatement(
+                kind=NodeKind.TEARDOWN,
+                line_start=node.lineno,
+                line_end=node.end_lineno or node.lineno,
+                keyword_doc=kw_doc,
+                lib_entry=self._last_lib_entry,
+                tokens=tokens,
+                inner_calls=inner_calls,
+            )
+        else:
+            stmt = KeywordCallStatement(
+                kind=NodeKind.TEARDOWN,
+                line_start=node.lineno,
+                line_end=node.end_lineno or node.lineno,
+                keyword_doc=kw_doc,
+                lib_entry=self._last_lib_entry,
+                tokens=tokens,
+            )
+        self._add_statement(stmt)
 
     # --- Template ---
 
@@ -2283,7 +2705,9 @@ class SemanticAnalyzer(Visitor):
             line_end=node.end_lineno or node.lineno,
             keyword_doc=kw_doc,
             lib_entry=self._last_lib_entry,
-            tokens=self._build_keyword_call_tokens(node, keyword_token_type=Token.NAME),
+            tokens=self._build_keyword_call_tokens(
+                node, keyword_token_type=Token.NAME, keyword_doc=kw_doc, unresolved_as_argument=True
+            ),
         )
         self._add_statement(stmt)
 
@@ -2308,7 +2732,9 @@ class SemanticAnalyzer(Visitor):
             line_end=node.end_lineno or node.lineno,
             keyword_doc=kw_doc,
             lib_entry=self._last_lib_entry,
-            tokens=self._build_keyword_call_tokens(node, keyword_token_type=Token.NAME),
+            tokens=self._build_keyword_call_tokens(
+                node, keyword_token_type=Token.NAME, keyword_doc=kw_doc, unresolved_as_argument=True
+            ),
         )
         self._add_statement(stmt)
 
@@ -2917,7 +3343,7 @@ class SemanticAnalyzer(Visitor):
         for tok in stmt.tokens:
             if tok.kind is TokenKind.VARIABLE_NAME:
                 parent.loop_variables.append(tok)
-            elif tok.kind is TokenKind.CONTROL_FLOW and tok.value in self._FOR_FLAVOR_LOOKUP:
+            elif tok.kind is TokenKind.FOR_SEPARATOR and tok.value in self._FOR_FLAVOR_LOOKUP:
                 parent.flavor = self._FOR_FLAVOR_LOOKUP[tok.value]
         # Options are stored as NAMED_ARGUMENT_NAME / NAMED_ARGUMENT_VALUE pairs.
         named_pairs = self._extract_named_pairs(stmt.tokens)
@@ -2930,18 +3356,27 @@ class SemanticAnalyzer(Visitor):
 
     @staticmethod
     def _extract_named_pairs(tokens: list[SemanticToken]) -> Dict[str, str]:
-        """Return a {name: value} dict for adjacent NAMED_ARGUMENT_NAME +
-        NAMED_ARGUMENT_VALUE token pairs.
+        """Return a {name: value} dict for option tokens: OPTION parents (with
+        OPTION_NAME / OPTION_VALUE sub-tokens) and direct OPTION_NAME /
+        OPTION_VALUE sequences.
         """
+
+        def iter_flat(toks: list[SemanticToken]) -> Iterator[SemanticToken]:
+            for t in toks:
+                if t.kind is TokenKind.OPTION and t.sub_tokens:
+                    yield from t.sub_tokens
+                else:
+                    yield t
+
         result: Dict[str, str] = {}
         pending_name: Optional[str] = None
-        for t in tokens:
-            if t.kind is TokenKind.NAMED_ARGUMENT_NAME:
+        for t in iter_flat(tokens):
+            if t.kind is TokenKind.OPTION_NAME:
                 pending_name = t.value
-            elif t.kind is TokenKind.NAMED_ARGUMENT_VALUE and pending_name is not None:
+            elif t.kind is TokenKind.OPTION_VALUE and pending_name is not None:
                 result[pending_name] = t.value
                 pending_name = None
-            else:
+            elif t.kind is not TokenKind.OPERATOR:
                 pending_name = None
         return result
 
@@ -2956,7 +3391,7 @@ class SemanticAnalyzer(Visitor):
 
         def handle_argument(t: Token) -> List[SemanticToken]:
             if self._looks_like_named_option(t.value, self._FOR_OPTION_NAMES):
-                return self._split_option_token(t)
+                return self._split_option_token(t, whole=True)
             return [self._build_argument_semantic_token(t, keyword_doc=None)]
 
         return self._build_header_tokens(
@@ -2964,7 +3399,7 @@ class SemanticAnalyzer(Visitor):
             special={
                 Token.VARIABLE: lambda t: [self._build_token_with_var_subtokens(t, TokenKind.VARIABLE_NAME)],
                 Token.ARGUMENT: handle_argument,
-                Token.OPTION: lambda t: self._split_option_token(t),
+                Token.OPTION: lambda t: self._split_option_token(t, whole=True),
             },
         )
 
@@ -3189,10 +3624,58 @@ class SemanticAnalyzer(Visitor):
             line_start=node.lineno,
             line_end=node.end_lineno or node.lineno,
             setting_name="Arguments",
-            # [Arguments] tokens are argument *definitions* (variable names).
-            tokens=self._build_setting_tokens(node, argument_kind=TokenKind.VARIABLE_NAME),
+            tokens=self._build_header_tokens(
+                node,
+                special={Token.ARGUMENT: lambda t: [self._build_argument_definition_token(t)]},
+            ),
         )
         self._add_statement(stmt)
+
+    def _build_argument_definition_token(self, rf_token: Token) -> SemanticToken:
+        """[Arguments] entry. Plain `${x}` definitions render as named
+        arguments in the legacy path (NAMED_ARGUMENT_NAME); `${x}=default`
+        splits into PARAMETER + OPERATOR + default-value fragments. The
+        argument *definitions* themselves are carried on the enclosing
+        definition's `local_variables`, not on these render tokens."""
+        value = rf_token.value
+        line = rf_token.lineno
+        col = rf_token.col_offset
+        name, default = split_from_equals(value)
+        if default is None:
+            return SemanticToken(
+                kind=TokenKind.NAMED_ARGUMENT_NAME,
+                value=value,
+                line=line,
+                col_offset=col,
+                length=len(value),
+            )
+        parent = SemanticToken(
+            kind=TokenKind.ARGUMENT,
+            value=value,
+            line=line,
+            col_offset=col,
+            length=len(value),
+        )
+        sub_tokens = [
+            SemanticToken(kind=TokenKind.PARAMETER, value=name, line=line, col_offset=col, length=len(name)),
+            SemanticToken(kind=TokenKind.OPERATOR, value="=", line=line, col_offset=col + len(name), length=1),
+        ]
+        if default:
+            default_col = col + len(name) + 1
+            default_rf_token = Token(Token.ARGUMENT, default, line, default_col)
+            default_subs = self._argument_sub_tokens(default_rf_token)
+            sub_tokens.append(
+                SemanticToken(
+                    kind=TokenKind.VARIABLE_DEFAULT_VALUE,
+                    value=default,
+                    line=line,
+                    col_offset=default_col,
+                    length=len(default),
+                    sub_tokens=default_subs,
+                )
+            )
+        parent.sub_tokens = sub_tokens
+        return parent
 
     def visit_KeywordTags(self, node: Statement) -> None:  # noqa: N802
         self._visit_settings_statement(node, DiagnosticSeverity.HINT)
@@ -3464,18 +3947,22 @@ class SemanticAnalyzer(Visitor):
             line_end=node.end_lineno or node.lineno,
             import_type=import_type_enum,
             import_name=name_token.value if name_token else None,
-            tokens=self._build_import_tokens(node),
+            tokens=self._build_import_tokens(node, init_keyword_doc=init_keyword_doc),
             lib_entry=matched_entry,
             init_keyword_doc=init_keyword_doc,
         )
         self._add_statement(stmt)
 
-    def _build_import_tokens(self, node: Statement) -> List[SemanticToken]:
-        """Import tokens: Token.LIBRARY/RESOURCE/VARIABLES stays SETTING_NAME;
-        first Token.NAME is the import path (IMPORT_NAME with variable
-        sub-tokens); Token.AS / Token.WITH_NAME ("WITH NAME") becomes
-        CONTROL_FLOW; the second Token.NAME is the alias; Token.ARGUMENT
-        carries library arguments with variable sub-tokens.
+    def _build_import_tokens(
+        self, node: Statement, init_keyword_doc: Optional[KeywordDoc] = None
+    ) -> List[SemanticToken]:
+        """Import tokens with final render semantics: the import word
+        (Library/Resource/Variables) and the "WITH NAME"/"AS" marker are
+        SETTING_IMPORT; the first Token.NAME is the import path (IMPORT_NAME
+        with NAMESPACE text fragments + variable sub-tokens); the alias after
+        the marker is NAMESPACE; Token.ARGUMENT carries import arguments —
+        `name=value` arguments matching the import's init signature split into
+        named-argument sub-tokens.
         """
         # Closure-state for first-vs-subsequent NAME differentiation.
         first_name_seen = [False]
@@ -3483,18 +3970,25 @@ class SemanticAnalyzer(Visitor):
         def handle_name(t: Token) -> List[SemanticToken]:
             if not first_name_seen[0]:
                 first_name_seen[0] = True
-                return [self._build_token_with_var_subtokens(t, TokenKind.IMPORT_NAME)]
-            # Alias after WITH NAME: treat as ARGUMENT
-            return [self._build_token_with_var_subtokens(t, TokenKind.ARGUMENT)]
-
-        def handle_as(t: Token) -> List[SemanticToken]:
-            # In the import context, "WITH NAME" / "AS" should render as
-            # CONTROL_FLOW (consistent with EXCEPT's AS rather than the generic
-            # mapping's SETTING_NAME). In RF 7.0+ both are the same Token.AS
-            # type; in RF < 7.0 Token.WITH_NAME is a distinct type string.
+                return [self._build_token_with_var_subtokens(t, TokenKind.IMPORT_NAME, text_kind=TokenKind.NAMESPACE)]
+            # Alias after WITH NAME / AS: a namespace name.
             return [
                 SemanticToken(
-                    kind=TokenKind.CONTROL_FLOW,
+                    kind=TokenKind.NAMESPACE,
+                    value=t.value,
+                    line=t.lineno,
+                    col_offset=t.col_offset,
+                    length=len(t.value),
+                )
+            ]
+
+        def handle_as(t: Token) -> List[SemanticToken]:
+            # "WITH NAME" / "AS" in the import context renders as a setting
+            # import. In RF 7.0+ both are the same Token.AS type; in RF < 7.0
+            # Token.WITH_NAME is a distinct type string.
+            return [
+                SemanticToken(
+                    kind=TokenKind.SETTING_IMPORT,
                     value=t.value,
                     line=t.lineno,
                     col_offset=t.col_offset,
@@ -3504,7 +3998,7 @@ class SemanticAnalyzer(Visitor):
 
         special: Dict[str, Callable[[Token], Optional[List[SemanticToken]]]] = {
             Token.NAME: handle_name,
-            Token.ARGUMENT: lambda t: [self._build_argument_semantic_token(t, keyword_doc=None)],
+            Token.ARGUMENT: lambda t: [self._build_argument_semantic_token(t, keyword_doc=init_keyword_doc)],
             Token.AS: handle_as,
         }
         # In RF < 7.0, `Token.WITH_NAME` is a distinct type ("WITH NAME"); in

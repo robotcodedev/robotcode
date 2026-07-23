@@ -34,6 +34,7 @@ from robotcode.language_server.robotframework.protocol import (
 )
 from robotcode.language_server.robotframework.server import RobotLanguageServer
 from robotcode.robot.diagnostics.workspace_config import RobotConfig
+from robotcode.robot.utils import get_robot_version
 
 from ..tools import generate_test_id_with_path
 
@@ -77,7 +78,11 @@ async def _make_protocol(
         )
     }
     if experimental_settings:
-        settings["robotcode.experimental"] = experimental_settings
+        # The workspace settings lookup navigates dot-split nested keys
+        # (section "robotcode.experimental" -> settings["robotcode"]["experimental"]),
+        # so the flag must be merged into the existing "robotcode" section as a
+        # nested dict, not stored under the literal dotted key.
+        settings[RobotCodeConfig.__config_section__]["experimental"] = experimental_settings
 
     protocol.workspace.settings = settings
     protocol._initialized(InitializedParams())
@@ -111,6 +116,17 @@ async def protocol_new() -> AsyncIterable[RobotLanguageServerProtocol]:
     logging.warning("Starting protocol_new (flag ON)")
     protocol = await _make_protocol(experimental_settings={"semantic_model": True})
     try:
+        # Vacuity guard: the entire value of this suite is "green means parity".
+        # If the flag never reaches the server, the model path stays inactive and
+        # both protocols compare legacy-against-legacy. Assert the model is actually
+        # populated for an opened document so a silent fallback can never masquerade
+        # as passing comparisons.
+        guard_doc = protocol.documents.get_or_open_document(_ROBOT_FILES[0], "robotframework")
+        guard_namespace = protocol.documents_cache.get_namespace(guard_doc)
+        assert guard_namespace.semantic_model is not None, (
+            "semantic model feature flag did not reach the server: "
+            "namespace.semantic_model is None on the flag-on protocol"
+        )
         yield protocol
     finally:
         protocol._shutdown()
@@ -121,8 +137,20 @@ _ROBOT_FILES = [
     *sorted(base_path.glob("versions/**/*.robot")),
 ]
 
-# Known parity gaps between old and new semantic tokens code paths.
-_XFAIL_FILES: dict[str, str] = {}
+# Reasoned parity deviations (design D5): permitted only where the model
+# output is more correct than the legacy path, version-scoped where needed.
+_XFAIL_FILES: dict[str, str] = {
+    # The legacy Fixture branch never hits its `break` when the fixture has no
+    # name token (empty `[Teardown]`) and yields every statement token twice,
+    # double-emitting the bracket-setting tokens with overlapping positions.
+    # The model renders them exactly once.
+    "setup_teardown.robot": "legacy double-emits all tokens of a fixture without a name (empty [Teardown])",
+}
+if get_robot_version() < (6, 1):
+    _XFAIL_FILES["sematic_tokenizing.robot"] = (
+        "model recognizes WHILE options (on_limit=, on_limit_message=) that RF < 6.1 "
+        "tokenizes as plain arguments; legacy suppresses them entirely"
+    )
 
 
 @pytest.fixture(scope="module", params=_ROBOT_FILES, ids=functools.partial(generate_test_id_with_path, base_path))

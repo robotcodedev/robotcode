@@ -263,11 +263,24 @@ def _cursor_past_keyword_name(stmt: KeywordCallStatement, position: Position) ->
     return position >= keyword_tok.range.extend(end_character=2).end
 
 
+def _with_name_marker(stmt: ImportStatement) -> Optional[SemanticToken]:
+    """The `WITH NAME` / `AS` alias marker: the SETTING_IMPORT token after the
+    import path (the import word itself is SETTING_IMPORT too, but precedes
+    the IMPORT_NAME token)."""
+    seen_import_name = False
+    for tok in stmt.tokens:
+        if tok.kind is TokenKind.IMPORT_NAME:
+            seen_import_name = True
+        elif seen_import_name and tok.kind is TokenKind.SETTING_IMPORT:
+            return tok
+    return None
+
+
 def _cursor_at_or_past_with_name(stmt: ImportStatement, position: Position) -> bool:
     """Cursor is at or past the WITH NAME marker on a Library import —
     past here means the user is on the alias, not on the library args,
     so signature help should be suppressed."""
-    with_name_tok = next((t for t in stmt.tokens if t.kind is TokenKind.CONTROL_FLOW), None)
+    with_name_tok = _with_name_marker(stmt)
     if with_name_tok is None:
         return False
     return position >= with_name_tok.range.start
@@ -288,9 +301,10 @@ def _import_arg_tokens(stmt: ImportStatement) -> List[SemanticToken]:
     """ARGUMENT SemanticTokens of an import statement up to (but excluding)
     the optional `WITH NAME` marker. Anything past WITH NAME is the alias
     and is not part of the init signature."""
+    marker = _with_name_marker(stmt)
     out: List[SemanticToken] = []
     for tok in stmt.tokens:
-        if tok.kind is TokenKind.CONTROL_FLOW:
+        if marker is not None and tok is marker:
             break
         if tok.kind is TokenKind.ARGUMENT:
             out.append(tok)

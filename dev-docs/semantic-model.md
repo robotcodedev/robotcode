@@ -2803,54 +2803,45 @@ def from_data(cls, data, ...):
 
 ## Impact on LSP Features
 
-### Semantic Tokens (HIGH impact)
+### Semantic Tokens (HIGH impact) — ✅ migrated & parity-verified (Tier 1)
 
 **Before:** ~1600 LOC with `KeywordTokenAnalyzer` (~400 LOC), 7+ `find_keyword()` calls, duplicated BDD/namespace/Run Keyword parsing.
 
-**After:** Iterate the model tree, map `TokenKind` → LSP `SemanticTokenType`.
+**After:** the model carries **final render semantics** — every `SemanticToken`
+has a fine-grained `TokenKind` (header kinds per section, `SETTING_IMPORT`,
+`OPERATOR`, `FOR_SEPARATOR`, `VAR_MARKER`, `OPTION`/`OPTION_NAME`/`OPTION_VALUE`,
+`PARAMETER`, `KEYWORD_INNER`, …) and pre-computed `modifiers`
+(`BUILTIN`/`EMBEDDED`/`DECLARATION`/`DOCUMENTATION`), all resolved by the
+analyzer at build time. `collect_tokens_from_model()` is a declarative mapper:
 
-```python
-for stmt in model.statements:
-    for token in stmt.tokens:
-        sem_type = TOKEN_KIND_TO_SEM_TYPE.get(token.kind)
-        if sem_type is None:
-            continue
+- leaf descent (`sub_tokens` recursively; variable-family kinds render atomically),
+- static tables `TokenKind → (LSP type, static modifiers)` and
+  `TokenModifier → LSP modifier`,
+- a small legacy-compat emission policy keyed only on TokenKind / NodeKind /
+  modifiers (separator/comment/argument-text suppression, documentation
+  statements, BDD-gap quirk, unmatched-embedded quirk),
+- structural position-merge of `RunKeywordCallStatement.inner_calls`,
+- UTF-16 delta encoding.
 
-        sem_mod = set()
-        if token.kind == TokenKind.KEYWORD and isinstance(stmt, KeywordCallStatement) and stmt.keyword_doc:
-            if stmt.keyword_doc.libname == "BuiltIn":
-                sem_mod.add(RobotSemTokenModifiers.BUILTIN)
+No `RF_VERSION` checks, no tokenization, no `find_keyword()`, and no
+statement-type semantics at render time — that was the concept rework of
+`semantic-model-tier1-completion` (design D6/D7) after the first
+implementation attempt showed that pure-renderer parity forces analyzer
+logic into the consumer.
 
-        if token.kind == TokenKind.VARIABLE:
-            var_def = model.find_variable(token.value, token.line)
-            if var_def is not None:
-                if isinstance(var_def, BuiltInVariableDefinition):
-                    sem_mod.add("builtin")
-                elif isinstance(var_def, LocalVariableDefinition):
-                    sem_mod.add("local")
+**Parity status (verified 2026-07-20):** the repaired non-vacuous
+`test_semantic_tokens_flag_parity.py` suite compares legacy vs. model output
+byte-for-byte over the full LSP test corpus on all 8 RF versions
+(5.0–7.4). All files pass except two reasoned xfails where the model is more
+correct than legacy:
 
-        yield SemTokenInfo(token.line, token.col_offset, token.length, sem_type, sem_mod)
+| File | Scope | Reason |
+| --- | --- | --- |
+| `setup_teardown.robot` | all versions | legacy double-emits every token of a fixture without a name (empty `[Teardown]`) |
+| `sematic_tokenizing.robot` | RF < 6.1 | model recognizes WHILE options (`on_limit=`, `on_limit_message=`) that older tokenizers demote to plain arguments; legacy suppresses them |
 
-        # Sub-tokens (recursively: variables inside arguments, variable structure parts)
-        if token.sub_tokens:
-            for sub in token.sub_tokens:
-                yield from generate_sub_token(sub)
-
-# Granular variable sub-parts map to LSP types for fine-grained highlighting:
-# VARIABLE_PREFIX      → RobotSemTokenTypes.VARIABLE_BEGIN  (or custom "variablePrefix")
-# VARIABLE_OPEN_BRACE  → RobotSemTokenTypes.VARIABLE_BEGIN
-# VARIABLE_CLOSE_BRACE → RobotSemTokenTypes.VARIABLE_END
-# VARIABLE_BASE        → RobotSemTokenTypes.VARIABLE (inherits modifiers from parent)
-# VARIABLE_TYPE_HINT   → SemanticTokenTypes.TYPE
-# VARIABLE_EXTENDED    → SemanticTokenTypes.PROPERTY
-# PYTHON_EXPRESSION    → SemanticTokenTypes.STRING (or custom)
-# PYTHON_VARIABLE_REF  → RobotSemTokenTypes.VARIABLE
-# TEXT_FRAGMENT         → SemanticTokenTypes.STRING
-# VARIABLE_INDEX_*     → RobotSemTokenTypes.VARIABLE_BEGIN / content / VARIABLE_END
-# VARIABLE_PATTERN     → SemanticTokenTypes.REGEXP
-```
-
-The entire `KeywordTokenAnalyzer` class and all `find_keyword()` fallback logic disappears.
+The legacy `KeywordTokenAnalyzer` path is still in place behind the flag
+(removal is the switchover/cleanup changes' job).
 
 ### Inlay Hints (HIGH impact) — ✅ migrated (Tier 2)
 
@@ -2906,7 +2897,7 @@ if isinstance(stmt, KeywordCallStatement):
 
 if isinstance(stmt, ImportStatement) and stmt.import_type in (LIBRARY, VARIABLES):
     # …`init_keyword_doc` instead of the libdoc lookup, WITH NAME guard
-    # via the CONTROL_FLOW SemanticToken.
+    # via the SETTING_IMPORT SemanticToken after the IMPORT_NAME.
 ```
 
 `_active_argument_from_semantic_tokens` is the SemanticToken-based
@@ -3100,8 +3091,10 @@ LSP-feature-side equivalence tests for the semantic-model migration live separat
 `tests/robotcode/language_server/robotframework/parts/`: `test_inlay_hint_model.py`,
 `test_signature_help_model.py`, `test_code_action_documentation_model.py`,
 `test_code_action_quick_fixes_model.py`, `test_code_action_refactor_model.py`, and
-`test_semantic_tokens_flag_parity.py` (dual-protocol flag OFF/ON comparison — **currently
-vacuous**, the flag never reaches the server; see the Tier 1 checklist item).
+`test_semantic_tokens_flag_parity.py` (dual-protocol flag OFF/ON comparison — repaired
+and guarded: the flag-on fixture asserts `namespace.semantic_model is not None`, so the
+suite can never silently degrade to legacy-vs-legacy again; green on all 8 RF versions
+with two reasoned xfails, see the Semantic Tokens section).
 
 **Test conventions (project-wide)**:
 - Mocks use `mocker: MockerFixture` (pytest-mock), never `unittest.mock.MagicMock` directly. `mocker.create_autospec(KeywordFinder, instance=True)` is preferred for typed mocks.

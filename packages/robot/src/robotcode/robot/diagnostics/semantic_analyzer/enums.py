@@ -93,10 +93,16 @@ class NodeKind(Enum):
 
 
 class TokenKind(Enum):
-    """What this token represents — already resolved."""
+    """What this token represents — already resolved.
+
+    Kinds are fine-grained enough that rendering is a static table lookup:
+    consumers never need Robot Framework version checks, token-value parsing,
+    or statement-type inspection to decide what a token is.
+    """
 
     # Keyword-related
     KEYWORD = "keyword"
+    KEYWORD_INNER = "keyword_inner"  # inner keyword name of a Run Keyword variant
     BDD_PREFIX = "bdd_prefix"
     NAMESPACE = "namespace"
 
@@ -137,10 +143,18 @@ class TokenKind(Enum):
     ARGUMENT = "argument"
     NAMED_ARGUMENT_NAME = "named_argument_name"
     NAMED_ARGUMENT_VALUE = "named_argument_value"
+    PARAMETER = "parameter"  # [Arguments] definition with a default value
 
     # Control flow
     CONTROL_FLOW = "control_flow"
     CONDITION = "condition"
+    FOR_SEPARATOR = "for_separator"  # IN / IN RANGE / IN ENUMERATE / IN ZIP
+    VAR_MARKER = "var_marker"  # the VAR word (RF 7.0+)
+
+    # Options (name=value cells on VAR / FOR / WHILE / EXCEPT)
+    OPTION = "option"  # whole name=value option (VAR / FOR)
+    OPTION_NAME = "option_name"  # option name half (WHILE / EXCEPT)
+    OPTION_VALUE = "option_value"  # option value half (WHILE / EXCEPT)
 
     # Definitions
     TEST_NAME = "test_name"
@@ -149,14 +163,36 @@ class TokenKind(Enum):
 
     # Structure
     SETTING_NAME = "setting_name"
+    SETTING_IMPORT = "setting_import"  # Library / Resource / Variables, WITH NAME / AS
     IMPORT_NAME = "import_name"
+    OPERATOR = "operator"  # "." in Namespace.Keyword, "=" in named args, "[" / "]"
     HEADER = "header"
+    HEADER_SETTINGS = "header_settings"
+    HEADER_VARIABLE = "header_variable"
+    HEADER_TESTCASE = "header_testcase"
+    HEADER_TASK = "header_task"
+    HEADER_KEYWORD = "header_keyword"
+    HEADER_COMMENT = "header_comment"
     SEPARATOR = "separator"
     CONTINUATION = "continuation"
     COMMENT = "comment"
     TAG = "tag"
     CONFIG = "config"
     ERROR = "error"
+
+
+class TokenModifier(Enum):
+    """Pre-computed semantic modifiers carried on a SemanticToken.
+
+    Filled by the SemanticAnalyzer from data it already holds (keyword docs,
+    embedded-argument matches, statement kind) — consumers map them to their
+    output format without any re-resolution.
+    """
+
+    BUILTIN = "builtin"
+    EMBEDDED = "embedded"
+    DECLARATION = "declaration"
+    DOCUMENTATION = "documentation"
 
 
 class ForFlavor(Enum):

@@ -614,7 +614,7 @@ Example
         stmts = _keyword_call_stmts(result)
         assert isinstance(stmts[0], RunKeywordCallStatement)
         inner = stmts[0].inner_calls[0]
-        kw_tokens = [t for t in inner.tokens if t.kind == TokenKind.KEYWORD]
+        kw_tokens = [t for t in inner.tokens if t.kind == TokenKind.KEYWORD_INNER]
         arg_tokens = [t for t in inner.tokens if t.kind == TokenKind.ARGUMENT]
         assert len(kw_tokens) == 1
         assert kw_tokens[0].value == "Log"
@@ -640,7 +640,7 @@ Example
         assert len(stmts[0].inner_calls) == 2
         for i, expected_arg in enumerate(["hello", "world"]):
             inner = stmts[0].inner_calls[i]
-            assert any(t.kind == TokenKind.KEYWORD and t.value == "Log" for t in inner.tokens)
+            assert any(t.kind == TokenKind.KEYWORD_INNER and t.value == "Log" for t in inner.tokens)
             assert any(t.kind == TokenKind.ARGUMENT and t.value == expected_arg for t in inner.tokens)
 
 

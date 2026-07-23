@@ -765,7 +765,7 @@ class TestSplitKeywordNameToken:
         analyzer = self._analyzer()
         rf_token = RfToken(RfToken.KEYWORD, "BuiltIn.Log", 3, 4)
         out = analyzer._split_keyword_name_token(rf_token, bdd_prefix=None, namespace="BuiltIn")
-        assert [t.kind for t in out] == [TokenKind.NAMESPACE, TokenKind.SEPARATOR, TokenKind.KEYWORD]
+        assert [t.kind for t in out] == [TokenKind.NAMESPACE, TokenKind.OPERATOR, TokenKind.KEYWORD]
         ns, sep, kw = out
         assert (ns.value, sep.value, kw.value) == ("BuiltIn", ".", "Log")
         # Positions are contiguous
@@ -796,7 +796,7 @@ class TestSplitKeywordNameToken:
         assert [t.kind for t in out] == [
             TokenKind.BDD_PREFIX,
             TokenKind.NAMESPACE,
-            TokenKind.SEPARATOR,
+            TokenKind.OPERATOR,
             TokenKind.KEYWORD,
         ]
         bdd, ns, sep, kw = out
@@ -859,9 +859,9 @@ My Test
         kinds = [t.kind for t in whiles[0].tokens]
         assert TokenKind.CONTROL_FLOW in kinds  # WHILE
         assert TokenKind.CONDITION in kinds
-        # Options split into NAMED_ARGUMENT_NAME + NAMED_ARGUMENT_VALUE pairs
-        names = [t for t in whiles[0].tokens if t.kind == TokenKind.NAMED_ARGUMENT_NAME]
-        values = [t for t in whiles[0].tokens if t.kind == TokenKind.NAMED_ARGUMENT_VALUE]
+        # Options split into OPTION_NAME + OPERATOR + OPTION_VALUE triples
+        names = [t for t in whiles[0].tokens if t.kind == TokenKind.OPTION_NAME]
+        values = [t for t in whiles[0].tokens if t.kind == TokenKind.OPTION_VALUE]
         assert len(names) == 2
         assert len(values) == 2
         assert {t.value for t in names} == {"limit", "on_limit"}
@@ -897,7 +897,13 @@ My Test
 """
         )
         fors = _statements_of_kind(result, NodeKind.FOR_HEADER)
-        names = [t for t in fors[0].tokens if t.kind == TokenKind.NAMED_ARGUMENT_NAME]
+        # FOR options are whole OPTION tokens (rendered as one control-flow
+        # cell); the name/value split lives in their sub-tokens.
+        options = [t for t in fors[0].tokens if t.kind == TokenKind.OPTION]
+        assert len(options) == 1
+        assert options[0].value == "start=1"
+        assert options[0].sub_tokens is not None
+        names = [t for t in options[0].sub_tokens if t.kind == TokenKind.OPTION_NAME]
         assert len(names) == 1
         assert names[0].value == "start"
 
@@ -916,10 +922,10 @@ My Test
         excepts = _statements_of_kind(result, NodeKind.EXCEPT_HEADER)
         assert len(excepts) == 1
         kinds = [t.kind for t in excepts[0].tokens]
-        # Pattern as ARGUMENT, type= split, AS as CONTROL_FLOW, AS variable as VARIABLE_NAME
+        # Pattern as ARGUMENT, type= split, AS variable as VARIABLE_NAME
         assert TokenKind.ARGUMENT in kinds  # ValueError pattern
-        assert TokenKind.NAMED_ARGUMENT_NAME in kinds  # type
-        assert TokenKind.NAMED_ARGUMENT_VALUE in kinds  # GLOB
+        assert TokenKind.OPTION_NAME in kinds  # type
+        assert TokenKind.OPTION_VALUE in kinds  # GLOB
         assert TokenKind.VARIABLE_NAME in kinds  # ${err}
         as_var = next(t for t in excepts[0].tokens if t.kind == TokenKind.VARIABLE_NAME)
         assert as_var.value == "${err}"
@@ -985,8 +991,17 @@ My Keyword
         )
         args_settings = _statements_of_kind(result, NodeKind.SETTING_ARGUMENTS)
         assert len(args_settings) == 1
-        names = [t for t in args_settings[0].tokens if t.kind == TokenKind.VARIABLE_NAME]
-        assert {n.value for n in names} == {"${name}", "${count}=5"}
+        # Plain definitions render as named arguments (legacy parity)...
+        plain = [t for t in args_settings[0].tokens if t.kind == TokenKind.NAMED_ARGUMENT_NAME]
+        assert {t.value for t in plain} == {"${name}"}
+        # ...definitions with defaults split into PARAMETER + OPERATOR + default.
+        with_default = next(
+            t for t in args_settings[0].tokens if t.kind == TokenKind.ARGUMENT and t.value == "${count}=5"
+        )
+        assert with_default.sub_tokens is not None
+        sub_kinds = [t.kind for t in with_default.sub_tokens]
+        assert TokenKind.PARAMETER in sub_kinds
+        assert TokenKind.OPERATOR in sub_kinds
 
     def test_timeout_setting(self, analyzer_factory: AnalyzerFactory) -> None:
         result = analyzer_factory(
@@ -1014,16 +1029,17 @@ Library    Collections    arg1    WITH NAME    coll
         imports = _statements_of_kind(result, NodeKind.IMPORT)
         assert len(imports) == 1
         kinds = [t.kind for t in imports[0].tokens]
-        assert TokenKind.SETTING_NAME in kinds  # "Library"
+        assert TokenKind.SETTING_IMPORT in kinds  # "Library" and "WITH NAME"
         assert TokenKind.IMPORT_NAME in kinds  # "Collections"
-        assert TokenKind.CONTROL_FLOW in kinds  # "WITH NAME"
+        setting_imports = [t for t in imports[0].tokens if t.kind == TokenKind.SETTING_IMPORT]
+        assert {t.value for t in setting_imports} == {"Library", "WITH NAME"}
         import_name = next(t for t in imports[0].tokens if t.kind == TokenKind.IMPORT_NAME)
         assert import_name.value == "Collections"
-        # Library args plus alias both end up as ARGUMENT
+        # Library args stay ARGUMENT; the alias is a namespace name.
         args = [t for t in imports[0].tokens if t.kind == TokenKind.ARGUMENT]
-        values = {t.value for t in args}
-        assert "arg1" in values
-        assert "coll" in values  # the alias
+        assert "arg1" in {t.value for t in args}
+        alias = next(t for t in imports[0].tokens if t.kind == TokenKind.NAMESPACE)
+        assert alias.value == "coll"
 
     def test_resource_import(self, analyzer_factory: AnalyzerFactory) -> None:
         result = analyzer_factory(

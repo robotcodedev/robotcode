@@ -28,11 +28,18 @@ For `RunKeywordCallStatement`, the model renderer SHALL render cells covered by 
 - **THEN** `Log` and `My KW` render as keyword tokens and `ELSE` as control flow, matching the legacy path's output exactly
 
 ### Requirement: Context modifiers match the legacy path
-The model renderer SHALL emit the same semantic-token modifiers as the legacy path (builtin keywords, builtin/local/environment variables, and the remaining legacy modifier inventory), derived from pre-resolved model data (`stmt.keyword_doc`, `model.find_variable()`).
+The model renderer SHALL emit the same semantic-token modifiers as the legacy path (builtin keywords/namespaces, embedded arguments, declarations). The modifiers SHALL be computed at analysis time and carried on the `SemanticToken` (`modifiers` field); the renderer maps them through a static table without any re-resolution.
 
 #### Scenario: BuiltIn keyword modifier
 - **WHEN** semantic tokens are collected via the model path for a `BuiltIn.Log` call
-- **THEN** the keyword token carries the same modifier bits as on the legacy path
+- **THEN** the keyword token carries the same modifier bits as on the legacy path, sourced from the pre-computed token modifiers
+
+### Requirement: The model renderer is a declarative mapper
+`collect_tokens_from_model()` SHALL contain no Robot Framework version checks, no tokenization or token-value parsing, and no statement-type-based semantic classification. All semantic decisions (token kinds, splits, modifiers, version differences) SHALL be resolved by the semantic analyzer at build time; the renderer maps `TokenKind`/`TokenModifier` through static tables plus a declarative emission policy keyed on `TokenKind`, `NodeKind`, and modifiers only.
+
+#### Scenario: Version-specific construct
+- **WHEN** a `.robot` file uses a version-specific construct (e.g. `*** Tasks ***`, `VAR`, `WITH NAME`/`AS`)
+- **THEN** the rendered output matches legacy on every supported RF version without the renderer consulting `RF_VERSION`
 
 ### Requirement: Full-corpus parity with documented exceptions only
 With the repaired suite, the model path's encoded token data SHALL equal the legacy path's for every `.robot` file in the LSP test data (including `versions/**`). Any deviation SHALL be a documented xfail naming the file and the reason, and is permitted only where the model output is demonstrably more correct than legacy.

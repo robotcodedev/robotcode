@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, List, Optional, Tuple
+from typing import TYPE_CHECKING, FrozenSet, List, Optional, Tuple
 
 from robotcode.core.lsp.types import Position, Range
 
@@ -10,6 +10,7 @@ from .enums import (
     NodeKind,
     OnLimitAction,
     TokenKind,
+    TokenModifier,
     VarScope,
 )
 
@@ -37,6 +38,11 @@ class SemanticToken:
     length: int
 
     sub_tokens: Optional[List["SemanticToken"]] = None
+
+    # Pre-computed semantic modifiers (builtin, embedded, declaration,
+    # documentation). Set by the analyzer from already-resolved data —
+    # consumers map these without re-resolution. None means "no modifiers".
+    modifiers: Optional[FrozenSet[TokenModifier]] = None
 
     # Pre-computed LSP `Range` covering this token. Built once in
     # `__post_init__` so consumers get the canonical (0-indexed) Range
