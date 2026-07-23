@@ -62,6 +62,10 @@ class RobotFrameworkLanguageProvider(LanguageProvider):
             self.diagnostics_context.diagnostics.document_collectors.add(self.collect_unused_keywords)
             self.diagnostics_context.diagnostics.document_collectors.add(self.collect_unused_variables)
 
+    @property
+    def document_cache(self) -> DocumentsCacheHelper:
+        return self._document_cache
+
     def _update_python_path(self) -> None:
         root_path = (
             self.diagnostics_context.workspace.root_uri.to_path()

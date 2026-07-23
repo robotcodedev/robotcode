@@ -5,6 +5,7 @@ from robotcode.plugin import Application, pass_application
 from .__version__ import __version__
 from .cache.cli import cache_group
 from .code.cli import code
+from .dump_model import dump_model
 
 
 @click.group(
@@ -26,3 +27,4 @@ def analyze(app: Application) -> None:
 
 analyze.add_command(cache_group)
 analyze.add_command(code)
+analyze.add_command(dump_model)
