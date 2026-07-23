@@ -1982,3 +1982,43 @@ My Test
         assert stmt is not None
         assert stmt.kind == NodeKind.COMMENT
         assert any(t.kind == TokenKind.COMMENT for t in stmt.tokens)
+
+
+class TestTokenCompleteness:
+    """The model keeps every RF token with text content — including SEPARATOR,
+    CONTINUATION, COMMENT, and EOL (layout data for future reconstruction /
+    visual-editor use). Only the virtual, empty-value EOS markers are dropped.
+    Concatenating all statement token values in position order MUST therefore
+    reproduce the source byte-exactly.
+    """
+
+    _TEXT = """\
+*** Settings ***
+# a standalone comment line
+Documentation    first line
+...              second line
+
+*** Test Cases ***
+Test One
+    Log    hello    # trailing comment
+
+    Log    world
+"""
+
+    def test_statement_tokens_reconstruct_source(self, analyzer_factory: AnalyzerFactory) -> None:
+        result = analyzer_factory(self._TEXT)
+        model = result.semantic_model
+        assert model is not None
+
+        pieces = sorted(
+            (token.line, token.col_offset, token.value) for stmt in model.statements for token in stmt.tokens
+        )
+        assert "".join(piece[2] for piece in pieces) == self._TEXT
+
+    def test_eol_tokens_present(self, analyzer_factory: AnalyzerFactory) -> None:
+        result = analyzer_factory(self._TEXT)
+        model = result.semantic_model
+        assert model is not None
+
+        eol_count = sum(1 for stmt in model.statements for t in stmt.tokens if t.kind == TokenKind.EOL)
+        assert eol_count == self._TEXT.count("\n")

@@ -8,7 +8,7 @@ statements:
   setting_name: null
   import_type: null
   import_name: null
-  token_count: 1
+  token_count: 2
 - type: ImportStatement
   kind: import
   line_start: 2
@@ -17,7 +17,7 @@ statements:
   setting_name: null
   import_type: LIBRARY
   import_name: Collections
-  token_count: 3
+  token_count: 4
 - type: SemanticStatement
   kind: empty_line
   line_start: 3
@@ -26,7 +26,7 @@ statements:
   setting_name: null
   import_type: null
   import_name: null
-  token_count: 0
+  token_count: 1
 - type: SemanticStatement
   kind: section_header
   line_start: 4
@@ -35,7 +35,7 @@ statements:
   setting_name: null
   import_type: null
   import_name: null
-  token_count: 1
+  token_count: 2
 - type: DefinitionStatement
   kind: test_case_def
   line_start: 5
@@ -44,7 +44,7 @@ statements:
   setting_name: null
   import_type: null
   import_name: null
-  token_count: 1
+  token_count: 2
 - type: SettingStatement
   kind: setting_tags
   line_start: 6
@@ -53,7 +53,7 @@ statements:
   setting_name: Tags
   import_type: null
   import_name: null
-  token_count: 6
+  token_count: 7
 - type: KeywordCallStatement
   kind: keyword_call
   line_start: 7
@@ -62,7 +62,7 @@ statements:
   setting_name: null
   import_type: null
   import_name: null
-  token_count: 6
+  token_count: 7
 - type: ForStatement
   kind: for_header
   line_start: 8
@@ -71,7 +71,7 @@ statements:
   setting_name: null
   import_type: null
   import_name: null
-  token_count: 10
+  token_count: 11
 - type: KeywordCallStatement
   kind: keyword_call
   line_start: 9
@@ -80,7 +80,7 @@ statements:
   setting_name: null
   import_type: null
   import_name: null
-  token_count: 4
+  token_count: 5
 - type: SemanticStatement
   kind: end
   line_start: 10
@@ -89,7 +89,7 @@ statements:
   setting_name: null
   import_type: null
   import_name: null
-  token_count: 2
+  token_count: 3
 diagnostic_count: 0
 diagnostics: []
 test_case_definitions:

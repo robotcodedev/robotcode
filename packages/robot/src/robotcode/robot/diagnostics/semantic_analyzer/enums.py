@@ -175,6 +175,7 @@ class TokenKind(Enum):
     HEADER_COMMENT = "header_comment"
     SEPARATOR = "separator"
     CONTINUATION = "continuation"
+    EOL = "eol"  # line break incl. preceding trailing whitespace — layout only, never rendered
     COMMENT = "comment"
     TAG = "tag"
     CONFIG = "config"

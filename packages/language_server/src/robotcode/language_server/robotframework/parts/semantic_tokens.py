@@ -1363,8 +1363,8 @@ class SemanticTokenGenerator:
                 yield from self._render_model_token(sub, emit_comments, yield_arguments)
             return
 
-        # Whitespace separators are never rendered.
-        if kind is TokenKind.SEPARATOR:
+        # Whitespace / line-structure tokens are never rendered.
+        if kind is TokenKind.SEPARATOR or kind is TokenKind.EOL:
             return
 
         if kind is TokenKind.COMMENT:

@@ -238,19 +238,20 @@ def _active_argument_from_semantic_tokens(
 
 
 def _cursor_within_line_extent(stmt: SemanticStatement, position: Position) -> bool:
-    """Cursor is at or before the rightmost SemanticToken end on its line
-    (with a +1 grace covering the EOL token that the SemanticModel filters
-    out). Mirrors the legacy `get_tokens_at_position()` returning empty
-    when the cursor is past every token of a node — signature help is
-    suppressed in that case."""
+    """Cursor is at or before the rightmost SemanticToken end on its line.
+    Mirrors the legacy `get_tokens_at_position()` returning empty when the
+    cursor is past every token of a node — signature help is suppressed in
+    that case. The model keeps the EOL token, so `rightmost` already covers
+    the line break; only a final line without EOL needs the +1 grace that
+    the newline character provides elsewhere."""
     line1 = position.line + 1  # SemanticToken.line is 1-indexed
-    rightmost = max(
-        (t.range.end.character for t in stmt.tokens if t.line == line1),
-        default=-1,
-    )
-    if rightmost < 0:
+    line_tokens = [t for t in stmt.tokens if t.line == line1]
+    if not line_tokens:
         return False
-    return position.character <= rightmost + 1
+    rightmost = max(t.range.end.character for t in line_tokens)
+    if not any(t.kind is TokenKind.EOL for t in line_tokens):
+        rightmost += 1
+    return position.character <= rightmost
 
 
 def _cursor_past_keyword_name(stmt: KeywordCallStatement, position: Position) -> bool:

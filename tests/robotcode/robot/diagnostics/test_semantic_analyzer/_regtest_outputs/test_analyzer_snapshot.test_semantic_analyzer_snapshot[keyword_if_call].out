@@ -8,7 +8,7 @@ statements:
   setting_name: null
   import_type: null
   import_name: null
-  token_count: 1
+  token_count: 2
 - type: DefinitionStatement
   kind: keyword_def
   line_start: 2
@@ -17,7 +17,7 @@ statements:
   setting_name: null
   import_type: null
   import_name: null
-  token_count: 1
+  token_count: 2
 - type: SettingStatement
   kind: setting_arguments
   line_start: 3
@@ -26,7 +26,7 @@ statements:
   setting_name: Arguments
   import_type: null
   import_name: null
-  token_count: 4
+  token_count: 5
 - type: IfStatement
   kind: if_header
   line_start: 4
@@ -35,7 +35,7 @@ statements:
   setting_name: null
   import_type: null
   import_name: null
-  token_count: 4
+  token_count: 5
 - type: KeywordCallStatement
   kind: keyword_call
   line_start: 5
@@ -44,7 +44,7 @@ statements:
   setting_name: null
   import_type: null
   import_name: null
-  token_count: 4
+  token_count: 5
 - type: SemanticStatement
   kind: end
   line_start: 6
@@ -53,7 +53,7 @@ statements:
   setting_name: null
   import_type: null
   import_name: null
-  token_count: 2
+  token_count: 3
 - type: SemanticStatement
   kind: empty_line
   line_start: 7
@@ -62,7 +62,7 @@ statements:
   setting_name: null
   import_type: null
   import_name: null
-  token_count: 0
+  token_count: 1
 - type: SemanticStatement
   kind: section_header
   line_start: 8
@@ -71,7 +71,7 @@ statements:
   setting_name: null
   import_type: null
   import_name: null
-  token_count: 1
+  token_count: 2
 - type: DefinitionStatement
   kind: test_case_def
   line_start: 9
@@ -80,7 +80,7 @@ statements:
   setting_name: null
   import_type: null
   import_name: null
-  token_count: 1
+  token_count: 2
 - type: KeywordCallStatement
   kind: keyword_call
   line_start: 10
@@ -89,7 +89,7 @@ statements:
   setting_name: null
   import_type: null
   import_name: null
-  token_count: 4
+  token_count: 5
 diagnostic_count: 0
 diagnostics: []
 test_case_definitions:

@@ -877,6 +877,7 @@ class SemanticAnalyzer(Visitor):
         # Structure
         Token.CONTINUATION: TokenKind.CONTINUATION,
         Token.SEPARATOR: TokenKind.SEPARATOR,
+        Token.EOL: TokenKind.EOL,
         # Section headers
         Token.TESTCASE_HEADER: TokenKind.HEADER_TESTCASE,
         Token.KEYWORD_HEADER: TokenKind.HEADER_KEYWORD,
@@ -929,14 +930,6 @@ class SemanticAnalyzer(Visitor):
     if RF_VERSION >= (7, 2):
         _RF_TOKEN_TO_TOKEN_KIND[Token.GROUP] = TokenKind.CONTROL_FLOW
 
-    # Tokens to skip — whitespace and line structure tokens
-    _RF_SKIP_TOKENS: frozenset[str] = frozenset(
-        {
-            Token.EOL,
-            Token.EOS,
-        }
-    )
-
     def _build_tokens_from_node(self, node: Statement) -> list[SemanticToken]:
         """Build SemanticToken list from an RF Statement node using the generic
         mapping. ARGUMENT tokens always get variable decomposition."""
@@ -953,12 +946,13 @@ class SemanticAnalyzer(Visitor):
         """Generic SemanticToken builder for header / statement nodes.
 
         Walks the statement's RF tokens once and:
-          1. Skips tokens listed in `_RF_SKIP_TOKENS`.
-          2. Skips tokens without a value or position.
-          3. For tokens whose `type` is in `special`, calls the handler and
+          1. Skips tokens without a value or position (this drops the
+             virtual `EOS` statement markers; `EOL` is kept as layout data
+             so the model stays reconstruction-complete).
+          2. For tokens whose `type` is in `special`, calls the handler and
              extends with its result (returning `None` from the handler means
              "fall through to the generic mapping").
-          4. Otherwise looks the type up in `_RF_TOKEN_TO_TOKEN_KIND` and
+          3. Otherwise looks the type up in `_RF_TOKEN_TO_TOKEN_KIND` and
              emits a single SemanticToken using the mapped TokenKind.
 
         Centralising this loop ensures every header builder picks up the
@@ -968,8 +962,6 @@ class SemanticAnalyzer(Visitor):
         """
         tokens: List[SemanticToken] = []
         for rf_token in node.tokens:
-            if rf_token.type in self._RF_SKIP_TOKENS:
-                continue
             if not rf_token.value or rf_token.col_offset is None:
                 continue
             handler = special.get(rf_token.type)
@@ -1616,8 +1608,6 @@ class SemanticAnalyzer(Visitor):
         """
         tokens: list[SemanticToken] = []
         for rf_token in node.tokens:
-            if rf_token.type in self._RF_SKIP_TOKENS:
-                continue
             if rf_token.type == Token.ARGUMENT and rf_token.value and rf_token.col_offset is not None:
                 if argument_kind is TokenKind.ARGUMENT:
                     tokens.append(self._build_argument_semantic_token(rf_token, keyword_doc=None))
@@ -1744,8 +1734,6 @@ class SemanticAnalyzer(Visitor):
 
         tokens: list[SemanticToken] = []
         for rf_token in node.tokens:
-            if rf_token.type in self._RF_SKIP_TOKENS:
-                continue
             if rf_token.type == keyword_token_type and rf_token.value:
                 tokens.extend(
                     self._split_keyword_name_token(
