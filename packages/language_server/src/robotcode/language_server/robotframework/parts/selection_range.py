@@ -14,13 +14,14 @@ from robotcode.robot.utils.ast import (
     range_from_token,
 )
 
+from .model_variables import find_model_variable_range_at
 from .protocol_part import RobotLanguageServerProtocolPart
 
 if TYPE_CHECKING:
     from ..protocol import RobotLanguageServerProtocol
 
 
-class RobotSelectionRangeProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
+class RobotSelectionRangeProtocolPart(RobotLanguageServerProtocolPart):
     _logger = LoggingDescriptor()
 
     def __init__(self, parent: "RobotLanguageServerProtocol") -> None:
@@ -32,6 +33,7 @@ class RobotSelectionRangeProtocolPart(RobotLanguageServerProtocolPart, ModelHelp
     @_logger.call
     def collect(self, sender: Any, document: TextDocument, positions: List[Position]) -> Optional[List[SelectionRange]]:
         namespace = self.parent.documents_cache.get_namespace(document)
+        semantic_model = namespace.semantic_model
 
         results: List[SelectionRange] = []
         for position in positions:
@@ -52,17 +54,27 @@ class RobotSelectionRangeProtocolPart(RobotLanguageServerProtocolPart, ModelHelp
                         token = tokens[-1]
                         if token is not None:
                             current_range = SelectionRange(range_from_token(token), current_range)
-                            for var_token, _ in self.iter_variables_from_token(
-                                token,
-                                namespace,
-                                position,
-                                return_not_found=True,
-                            ):
-                                var_token_range = range_from_token(var_token)
+                            if semantic_model is not None:
+                                # Model path: variable step from the model's
+                                # statement tokens; the structural node/token
+                                # walk above stays on the AST.
+                                var_range = find_model_variable_range_at(
+                                    semantic_model, position, range_from_token(token)
+                                )
+                                if var_range is not None:
+                                    current_range = SelectionRange(var_range, current_range)
+                            else:
+                                for var_token, _ in ModelHelper.iter_variables_from_token(
+                                    token,
+                                    namespace,
+                                    position,
+                                    return_not_found=True,
+                                ):
+                                    var_token_range = range_from_token(var_token)
 
-                                if position in var_token_range:
-                                    current_range = SelectionRange(var_token_range, current_range)
-                                    break
+                                    if position in var_token_range:
+                                        current_range = SelectionRange(var_token_range, current_range)
+                                        break
 
                 results.append(current_range)
 

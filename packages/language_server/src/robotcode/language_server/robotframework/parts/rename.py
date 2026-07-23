@@ -33,7 +33,6 @@ from robotcode.robot.diagnostics.entities import (
     VariableDefinitionType,
 )
 from robotcode.robot.diagnostics.library_doc import KeywordDoc
-from robotcode.robot.diagnostics.model_helper import ModelHelper
 
 from ...common.parts.rename import CantRenameError
 from .protocol_part import RobotLanguageServerProtocolPart
@@ -48,7 +47,7 @@ _PrepareRenameMethod = Callable[[ast.AST, TextDocument, Position], Optional[Prep
 _T = TypeVar("_T", bound=Callable[..., Any])
 
 
-class RobotRenameProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
+class RobotRenameProtocolPart(RobotLanguageServerProtocolPart):
     _logger = LoggingDescriptor()
 
     def __init__(self, parent: "RobotLanguageServerProtocol") -> None:

@@ -33,7 +33,6 @@ from robotcode.robot.diagnostics.library_doc import (
     KeywordDoc,
     LibraryDoc,
 )
-from robotcode.robot.diagnostics.model_helper import ModelHelper
 from robotcode.robot.diagnostics.namespace import Namespace
 from robotcode.robot.utils import RF_VERSION
 from robotcode.robot.utils.ast import (
@@ -55,7 +54,7 @@ _ReferencesMethod = Callable[
 ]
 
 
-class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
+class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart):
     _logger = LoggingDescriptor()
 
     def __init__(self, parent: "RobotLanguageServerProtocol") -> None:

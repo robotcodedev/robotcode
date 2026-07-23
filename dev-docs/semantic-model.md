@@ -3024,17 +3024,38 @@ these features work unchanged because they consume references, not the model dir
 
 ### Hover / References / Rename (GRADUAL migration — Tier 3)
 
-These use pre-computed reference dicts for their core lookup but **also** depend on
-`ModelHelper` via inheritance for keyword resolution at cursor position, definition
-lookup, or reference walking. They continue to work unchanged via the reference dicts
-but can be simplified in Tier 3 by replacing `ModelHelper` calls with direct model
-queries (`model.token_at()` → `model.find_variable()` / `stmt.keyword_doc`).
+These use pre-computed reference dicts for their core lookup. The dead
+`ModelHelper` mixin inheritance they still carried (zero member calls) was
+removed by `semantic-model-sidecar-cleanup`; the remaining Tier 3 work is the
+optional value-path migration (`model.token_at()` → `model.find_variable()` /
+`stmt.keyword_doc`).
 
 For variable hover and rename, `find_variable(name, line)` already does the
 heavy lifting via `enclosing_definition(line)`. Where the call site has a
 node in hand instead of a line (e.g. iterating `model.statements`), the new
 `SemanticModel.enclosing_definition_block(node)` saves a line-range scan
 and avoids ambiguity when multiple definitions overlap on one line.
+
+### Sidecar consumers (LOW impact) — ✅ resolved (`semantic-model-sidecar-cleanup`)
+
+Six LSP files outside the tier plan imported `ModelHelper`; all are resolved:
+
+- `http_server.py`, `keywords_treeview.py`, `hover.py`, `references.py`,
+  `rename.py`: dead mixin removed unconditionally (no call sites existed).
+- `code_lens.py`: `get_keyword_definition_at_line()` replaced by a local
+  `next()` over `namespace.library_doc.keywords.keywords`.
+- `selection_range.py`, `inline_value.py`, `debugging_utils.py`: standard
+  model branch + legacy fallback. The model path shares
+  `parts/model_variables.py` — a self-contained port of the
+  `iter_variables_from_token` / `iter_expression_variables_from_token`
+  candidate semantics over the model statements' tokens (kind-gated like the
+  legacy tokenizer type gate), resolving through `SemanticModel.find_variable()`
+  (now env-var-aware, with a raw `extended=False` mode and column-aware
+  visibility on defining lines) and reading bare-`$var` condition refs from
+  the pre-computed `PYTHON_VARIABLE_REF` sub-tokens the analyzer attaches to
+  `CONDITION` cells. Verified by the dual-protocol equivalence suites
+  `test_selection_range_model.py` and `test_inline_value_model.py`
+  (position-probed over the corpus, no xfails).
 
 ---
 

@@ -28,7 +28,6 @@ from robotcode.core.lsp.types import (
 from robotcode.core.text_document import TextDocument
 from robotcode.core.utils.logging import TRACE, LoggingDescriptor
 from robotcode.robot.diagnostics.entities import VariableDefinitionType
-from robotcode.robot.diagnostics.model_helper import ModelHelper
 from robotcode.robot.utils.ast import (
     get_nodes_at_position,
     range_from_node,
@@ -54,7 +53,7 @@ class MyRepr(reprlib.Repr):
 _my_repr = MyRepr()
 
 
-class RobotHoverProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
+class RobotHoverProtocolPart(RobotLanguageServerProtocolPart):
     _logger = LoggingDescriptor()
 
     def __init__(self, parent: "RobotLanguageServerProtocol") -> None:

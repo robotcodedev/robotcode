@@ -166,6 +166,7 @@ from .run_keyword import (
 from .variable_tokenizer import (
     _MATCH_EXTENDED,
     VariableOccurrence,
+    _build_python_expression_sub_tokens,
     iter_variable_occurrences_from_token,
     iter_variable_tokens_with_index_access,
 )
@@ -1571,6 +1572,24 @@ class SemanticAnalyzer(Visitor):
         sub = self._argument_sub_tokens(rf_token, text_kind=text_kind)
         if sub:
             token.sub_tokens = sub
+        return token
+
+    def _build_condition_token(self, rf_token: Token) -> SemanticToken:
+        """CONDITION token with variable sub-tokens plus PYTHON_VARIABLE_REF
+        sub-tokens for bare ``$var`` expression references (same tokenize scan
+        as `_iter_expression_variables_from_token`, so the positions match the
+        analysis results). The refs are model-only data for expression-aware
+        consumers (inline values, debug extraction); the semantic-token
+        renderer never emits them. ``${var}`` occurrences are unaffected: the
+        scan only matches ``$`` directly followed by a Python name.
+        """
+        token = self._build_token_with_var_subtokens(rf_token, TokenKind.CONDITION)
+        if rf_token.value and rf_token.col_offset is not None:
+            refs = _build_python_expression_sub_tokens(rf_token.value, rf_token.lineno, rf_token.col_offset)
+            if refs:
+                merged = list(token.sub_tokens or []) + refs
+                merged.sort(key=lambda t: t.col_offset)
+                token.sub_tokens = merged
         return token
 
     def _build_setting_tokens(
@@ -3261,7 +3280,7 @@ class SemanticAnalyzer(Visitor):
             node,
             special={
                 Token.ASSIGN: lambda t: [self._build_token_with_var_subtokens(t, TokenKind.VARIABLE_NAME)],
-                Token.ARGUMENT: lambda t: [self._build_token_with_var_subtokens(t, TokenKind.CONDITION)],
+                Token.ARGUMENT: lambda t: [self._build_condition_token(t)],
             },
         )
 
@@ -4071,7 +4090,7 @@ class SemanticAnalyzer(Visitor):
             if condition_seen[0] and self._looks_like_named_option(t.value, self._WHILE_OPTION_NAMES):
                 return self._split_option_token(t)
             condition_seen[0] = True
-            return [self._build_token_with_var_subtokens(t, TokenKind.CONDITION)]
+            return [self._build_condition_token(t)]
 
         return self._build_header_tokens(
             node,
@@ -4134,7 +4153,7 @@ class SemanticAnalyzer(Visitor):
         return self._build_header_tokens(
             node,
             special={
-                Token.ARGUMENT: lambda t: [self._build_token_with_var_subtokens(t, TokenKind.CONDITION)],
+                Token.ARGUMENT: lambda t: [self._build_condition_token(t)],
             },
         )
 

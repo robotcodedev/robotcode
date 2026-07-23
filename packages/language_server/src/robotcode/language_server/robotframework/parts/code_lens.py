@@ -8,7 +8,6 @@ from robotcode.core.text_document import TextDocument
 from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.language_server.robotframework.configuration import AnalysisConfig
 from robotcode.robot.diagnostics.library_doc import KeywordDoc
-from robotcode.robot.diagnostics.model_helper import ModelHelper
 from robotcode.robot.utils.ast import range_from_token
 from robotcode.robot.utils.visitor import Visitor
 
@@ -18,7 +17,7 @@ if TYPE_CHECKING:
     from ..protocol import RobotLanguageServerProtocol
 
 
-class RobotCodeLensProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
+class RobotCodeLensProtocolPart(RobotLanguageServerProtocolPart):
     _logger = LoggingDescriptor()
 
     def __init__(self, parent: "RobotLanguageServerProtocol") -> None:
@@ -73,7 +72,7 @@ class RobotCodeLensProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
         line = code_lens.data["line"]
 
         if self.parent.diagnostics.workspace_loaded_event.is_set():
-            kw_doc = self.get_keyword_definition_at_line(namespace.library_doc, line)
+            kw_doc = next((k for k in namespace.library_doc.keywords.keywords if k.line_no == line), None)
 
             if kw_doc is not None and not kw_doc.is_error_handler:
                 if not self.parent.robot_references.has_cached_keyword_references(

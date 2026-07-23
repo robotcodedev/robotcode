@@ -6,7 +6,6 @@ from robotcode.core.uri import Uri
 from robotcode.core.utils.dataclasses import CamelSnakeMixin
 from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.jsonrpc2.protocol import rpc_method
-from robotcode.robot.diagnostics.model_helper import ModelHelper
 
 from .protocol_part import RobotLanguageServerProtocolPart
 
@@ -72,7 +71,7 @@ class GetDocumentationUrl(CamelSnakeMixin):
     keyword_id: Optional[str] = None
 
 
-class RobotKeywordsTreeViewPart(RobotLanguageServerProtocolPart, ModelHelper):
+class RobotKeywordsTreeViewPart(RobotLanguageServerProtocolPart):
     _logger = LoggingDescriptor()
 
     def __init__(self, parent: "RobotLanguageServerProtocol") -> None:

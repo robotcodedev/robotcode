@@ -19,7 +19,6 @@ from robotcode.robot.diagnostics.library_doc import (
     get_library_doc,
     get_robot_library_html_doc_str,
 )
-from robotcode.robot.diagnostics.model_helper import ModelHelper
 
 from ..configuration import DocumentationServerConfig
 from .protocol_part import RobotLanguageServerProtocolPart
@@ -162,7 +161,7 @@ class DualStackServer(ThreadingHTTPServer):
         return super().server_bind()
 
 
-class HttpServerProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
+class HttpServerProtocolPart(RobotLanguageServerProtocolPart):
     _logger = LoggingDescriptor()
 
     def __init__(self, parent: "RobotLanguageServerProtocol") -> None:

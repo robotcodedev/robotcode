@@ -1,6 +1,15 @@
 # Spec: semantic-model-sidecar-consumers
 
-## ADDED Requirements
+## Purpose
+
+The six sidecar LSP features (code lens, selection range, inline value,
+debugging utils, keywords treeview, HTTP server) obtain analysis data without
+`ModelHelper` re-resolution where possible, and — for the three variable-based
+features — read pre-resolved SemanticModel data when the
+`robotcode.experimental.semanticModel` flag is active, with output parity
+between both paths.
+
+## Requirements
 
 ### Requirement: Dead ModelHelper inheritance is removed
 `http_server.py`, `keywords_treeview.py`, `hover.py`, `references.py`, and `rename.py` SHALL NOT inherit from or import `ModelHelper` (none of them calls a single member — the mixin is dead weight). `code_lens.py` SHALL NOT import `ModelHelper`; its keyword-definition lookup SHALL be a local query on `namespace.library_doc`. These removals SHALL be unconditional (no feature-flag branch).
@@ -29,14 +38,14 @@ The `SemanticAnalyzer` SHALL attach `PYTHON_VARIABLE_REF` sub-tokens for bare `$
 - **THEN** all parity assertions pass unchanged (no new xfails)
 
 ### Requirement: Selection range uses the model when available
-When `namespace.semantic_model` is set, `selection_range.py` SHALL derive variable selection ranges from pre-computed `VARIABLE` / `VARIABLE_NOT_FOUND` sub-tokens instead of calling `iter_variables_from_token()`. The structural node/token hierarchy MAY continue to come from the AST walk (it involves no resolution, and `SemanticNode` carries no column positions). When the model is absent, the legacy path SHALL be used unchanged.
+When `namespace.semantic_model` is set, `selection_range.py` SHALL derive variable selection ranges from the model (the shared model-path candidate extraction resolving through `SemanticModel.find_variable()`) instead of calling `iter_variables_from_token()`. The structural node/token hierarchy MAY continue to come from the AST walk (it involves no resolution, and `SemanticNode` carries no column positions). When the model is absent, the legacy path SHALL be used unchanged.
 
 #### Scenario: Identical selection ranges under both flag states
 - **WHEN** a selection-range request is issued at the same position in the same document once with `robotcode.experimental.semanticModel` off and once with it on
 - **THEN** both responses contain identical range hierarchies
 
 ### Requirement: Inline values and debug variable extraction use the model when available
-When `namespace.semantic_model` is set, `inline_value.py` and `debugging_utils.py` SHALL obtain `(range, VariableDefinition)` pairs from model sub-tokens (`VARIABLE`, `PYTHON_VARIABLE_REF`) plus `model.find_variable()` resolved at the debugger's stopped location (matching legacy visibility semantics), without calling any `ModelHelper` method on the model path. When the model is absent, the legacy path SHALL be used unchanged.
+When `namespace.semantic_model` is set, `inline_value.py` and `debugging_utils.py` SHALL obtain `(range, VariableDefinition)` pairs from the model — the shared candidate extraction (bare-`$var` condition refs from pre-computed `PYTHON_VARIABLE_REF` sub-tokens) plus `model.find_variable()` resolved at the debugger's stopped location (matching legacy visibility semantics, including column-aware visibility on defining lines) — without calling any `ModelHelper` method on the model path. When the model is absent, the legacy path SHALL be used unchanged.
 
 #### Scenario: Identical inline values under both flag states
 - **WHEN** inline values are computed for the same document and stopped location under both flag states

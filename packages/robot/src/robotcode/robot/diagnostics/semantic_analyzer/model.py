@@ -10,6 +10,7 @@ from .nodes import (
     SemanticStatement,
     SemanticToken,
 )
+from .variable_tokenizer import _MATCH_EXTENDED
 
 _SECTION_KINDS: FrozenSet[NodeKind] = frozenset(
     {
@@ -287,8 +288,10 @@ class SemanticModel:
         self,
         name: str,
         line: int,
+        col: Optional[int] = None,
         skip_commandline_variables: bool = False,
         skip_local_variables: bool = False,
+        extended: bool = True,
     ) -> Optional["VariableDefinition"]:
         """Position-aware variable lookup. Replaces ScopeTree.find_variable().
 
@@ -298,11 +301,39 @@ class SemanticModel:
         - ``${SPACE * 5}`` → strips `` * 5`` → looks up ``${SPACE}``
         - ``${{expr}}`` → inline Python expression, no variable lookup
 
+        ``extended=False`` disables the extended-syntax stripping — the raw
+        lookup the legacy resolution performs before its extended fallback.
+
+        When ``col`` is given, visibility on the *defining* line is
+        column-aware like the legacy scope tree: arguments become visible
+        after their defining cell, assign targets from the start of their
+        defining name.
+
         Search order:
-        1. Block-local variables (visible_from_line <= line) in enclosing definition
-        2. File-scope variables (command-line, own, imported, builtin)
+        1. Environment variables (``%{NAME}``, ``%{NAME=default}``)
+        2. Block-local variables (visible_from_line <= line) in enclosing definition
+        3. File-scope variables (command-line, own, imported, builtin)
         """
-        base_name = self._normalize_variable_name(name)
+        from ..entities import (
+            ArgumentDefinition,
+            EmbeddedArgumentDefinition,
+            EnvironmentVariableDefinition,
+        )
+
+        if name[:2] == "%{" and name[-1:] == "}":
+            var_name, _, default_value = name[2:-1].partition("=")
+            return EnvironmentVariableDefinition(
+                0,
+                0,
+                0,
+                0,
+                "",
+                f"%{{{var_name}}}",
+                None,
+                default_value=default_value or None,
+            )
+
+        base_name = self._normalize_variable_name(name, extended=extended)
         if base_name is None:
             return None
 
@@ -310,7 +341,22 @@ class SemanticModel:
             definition = self.enclosing_definition(line)
             if definition is not None:
                 for var_def, visible_from in reversed(definition.local_variables):
-                    if visible_from <= line and var_def.matcher.match(base_name):
+                    if visible_from > line:
+                        continue
+                    if col is not None and visible_from == line and var_def.line_no == line:
+                        if isinstance(var_def, ArgumentDefinition) and not isinstance(
+                            var_def, EmbeddedArgumentDefinition
+                        ):
+                            # Legacy registers `[Arguments]` definitions
+                            # visible from the end of their defining cell;
+                            # everything else (assigns, embedded arguments)
+                            # from the start of the defining name.
+                            boundary = self._defining_cell_end(var_def, line)
+                        else:
+                            boundary = var_def.col_offset or 0
+                        if col < boundary:
+                            continue
+                    if var_def.matcher == base_name:
                         return var_def
 
         if self.file_scope is not None:
@@ -322,8 +368,20 @@ class SemanticModel:
 
         return None
 
+    def _defining_cell_end(self, var_def: "VariableDefinition", line: int) -> int:
+        """End column of the statement cell containing a definition's name —
+        the column from which legacy makes an argument visible on its own
+        defining line."""
+        stmt = self.statement_at(line)
+        if stmt is not None and var_def.col_offset is not None:
+            for token in stmt.tokens:
+                if token.line == line and token.col_offset <= var_def.col_offset < token.col_offset + token.length:
+                    return token.col_offset + token.length
+        # Fallback: end of the stripped name plus its closing brace.
+        return (var_def.end_col_offset or 0) + 1
+
     @staticmethod
-    def _normalize_variable_name(name: str) -> Optional[str]:
+    def _normalize_variable_name(name: str, extended: bool = True) -> Optional[str]:
         """Strip Extended Syntax, Index Access, and Expression syntax
         to recover the base variable name for lookup.
 
@@ -344,13 +402,16 @@ class SemanticModel:
                 break
             base = base[:bracket_start]
 
-        # Strip extended syntax inside braces: ${obj.attr} → ${obj}
-        if base.startswith(("${", "@{", "&{", "%{")):
+        # Strip extended syntax inside braces: ${obj.attr} → ${obj}. Like the
+        # legacy matcher, extended syntax starts at the first character that is
+        # neither a word character nor whitespace — a space alone is part of
+        # the name (`${name with space}`).
+        if extended and base.startswith(("${", "@{", "&{", "%{")):
             inner = base[2:-1]
-            for i, ch in enumerate(inner):
-                if ch in ".[ ":
-                    prefix = base[:2]
-                    return f"{prefix}{inner[:i]}}}"
+            extended_match = _MATCH_EXTENDED.match(inner)
+            if extended_match is not None:
+                prefix = base[:2]
+                return f"{prefix}{extended_match.group(1).strip()}}}"
         return base
 
     def get_variables_at(

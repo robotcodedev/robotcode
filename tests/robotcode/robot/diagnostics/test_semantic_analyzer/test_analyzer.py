@@ -30,6 +30,7 @@ from robotcode.robot.diagnostics.semantic_analyzer.nodes import (
     KeywordCallStatement,
     SemanticBlock,
     SemanticStatement,
+    SemanticToken,
     WhileStatement,
 )
 from robotcode.robot.diagnostics.variable_scope import VariableScope
@@ -929,6 +930,97 @@ My Test
         assert TokenKind.VARIABLE_NAME in kinds  # ${err}
         as_var = next(t for t in excepts[0].tokens if t.kind == TokenKind.VARIABLE_NAME)
         assert as_var.value == "${err}"
+
+
+class TestConditionExpressionRefs:
+    """Bare `$var` expression references on CONDITION tokens are carried as
+    PYTHON_VARIABLE_REF sub-tokens — model-only data for inline values and
+    debug variable extraction; the semantic-token renderer never emits them."""
+
+    @staticmethod
+    def _condition_of(result: AnalyzerResult, kind: NodeKind) -> SemanticToken:
+        stmt = _statements_of_kind(result, kind)[0]
+        return next(t for t in stmt.tokens if t.kind == TokenKind.CONDITION)
+
+    def test_if_condition_bare_ref_has_exact_range(self, analyzer_factory: AnalyzerFactory) -> None:
+        result = analyzer_factory(
+            """\
+*** Test Cases ***
+My Test
+    IF    $x > 1
+        Log    ok
+    END
+"""
+        )
+        cond = self._condition_of(result, NodeKind.IF_HEADER)
+        assert cond.sub_tokens is not None
+        refs = [t for t in cond.sub_tokens if t.kind == TokenKind.PYTHON_VARIABLE_REF]
+        assert len(refs) == 1
+        assert (refs[0].value, refs[0].line, refs[0].col_offset, refs[0].length) == ("$x", 3, 10, 2)
+
+    def test_while_condition_bare_ref(self, analyzer_factory: AnalyzerFactory) -> None:
+        result = analyzer_factory(
+            """\
+*** Test Cases ***
+My Test
+    WHILE    $counter < 10
+        Log    loop
+    END
+"""
+        )
+        cond = self._condition_of(result, NodeKind.WHILE_HEADER)
+        assert cond.sub_tokens is not None
+        refs = [t for t in cond.sub_tokens if t.kind == TokenKind.PYTHON_VARIABLE_REF]
+        assert len(refs) == 1
+        assert (refs[0].value, refs[0].col_offset, refs[0].length) == ("$counter", 13, 8)
+
+    def test_inline_if_condition_bare_ref(self, analyzer_factory: AnalyzerFactory) -> None:
+        result = analyzer_factory(
+            """\
+*** Test Cases ***
+My Test
+    IF    $x > 0    Log    ok
+"""
+        )
+        cond = self._condition_of(result, NodeKind.INLINE_IF_HEADER)
+        assert cond.sub_tokens is not None
+        refs = [t for t in cond.sub_tokens if t.kind == TokenKind.PYTHON_VARIABLE_REF]
+        assert [r.value for r in refs] == ["$x"]
+
+    def test_braced_variable_produces_no_expression_ref(self, analyzer_factory: AnalyzerFactory) -> None:
+        result = analyzer_factory(
+            """\
+*** Test Cases ***
+My Test
+    IF    ${x} > 1
+        Log    ok
+    END
+"""
+        )
+        cond = self._condition_of(result, NodeKind.IF_HEADER)
+        assert cond.sub_tokens is not None
+        assert all(t.kind != TokenKind.PYTHON_VARIABLE_REF for t in cond.sub_tokens)
+        assert any(t.kind in (TokenKind.VARIABLE, TokenKind.VARIABLE_NOT_FOUND) for t in cond.sub_tokens)
+
+    def test_mixed_condition_keeps_both_ref_styles(self, analyzer_factory: AnalyzerFactory) -> None:
+        result = analyzer_factory(
+            """\
+*** Test Cases ***
+My Test
+    IF    $x > ${y}
+        Log    ok
+    END
+"""
+        )
+        cond = self._condition_of(result, NodeKind.IF_HEADER)
+        assert cond.sub_tokens is not None
+        refs = [t for t in cond.sub_tokens if t.kind == TokenKind.PYTHON_VARIABLE_REF]
+        braced = [t for t in cond.sub_tokens if t.kind in (TokenKind.VARIABLE, TokenKind.VARIABLE_NOT_FOUND)]
+        assert [(r.value, r.col_offset) for r in refs] == [("$x", 10)]
+        assert [b.value for b in braced] == ["${y}"]
+        # Sub-tokens stay position-sorted after the merge.
+        offsets = [t.col_offset for t in cond.sub_tokens]
+        assert offsets == sorted(offsets)
 
 
 class TestSettingTokens:

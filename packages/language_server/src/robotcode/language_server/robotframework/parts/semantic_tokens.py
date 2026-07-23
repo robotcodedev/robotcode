@@ -1132,6 +1132,10 @@ class SemanticTokenGenerator:
             TokenKind.OPTION_VALUE,
         }
     )
+    # Model-only kinds: carried for model consumers (inline values, debug
+    # variable extraction), never rendered — legacy highlights no bare-`$var`
+    # expression references.
+    _MODEL_ONLY_KINDS: ClassVar[FrozenSet[TokenKind]] = frozenset({TokenKind.PYTHON_VARIABLE_REF})
     # Plain argument text is suppressed by the legacy path...
     _ARGUMENT_TEXT_KINDS: ClassVar[FrozenSet[TokenKind]] = frozenset(
         {
@@ -1327,6 +1331,9 @@ class SemanticTokenGenerator:
         through the static tables and the declarative emission policy."""
         kind = token.kind
         mods = token.modifiers
+
+        if kind in self._MODEL_ONLY_KINDS:
+            return
 
         # Atomic kinds render whole; their sub-structure stays model-only.
         if kind in self._ATOMIC_KINDS:
