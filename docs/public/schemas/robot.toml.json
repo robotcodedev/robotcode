@@ -559,12 +559,7 @@
           ],
           "markdownDescription": "Condition to evaluate. This must be a Python \"eval\" expression.\nFor security reasons, only certain expressions and functions are allowed.\n\nExamples:\n```toml\nif = \"re.match(r'^\\d+$', environ.get('TEST_VAR', ''))\"\nif = \"platform.system() == 'Linux'\"\n```\n\nsee also `expr` for allowed global names.\n",
           "title": "If",
-          "type": "string",
-          "x-taplo": {
-            "links": {
-              "key": "https://robotcode.io/03_reference/config#profile-enabled-if"
-            }
-          }
+          "type": "string"
         }
       },
       "required": [
@@ -2168,15 +2163,19 @@
               ]
             },
             {
+              "$ref": "#/definitions/Condition"
+            },
+            {
               "type": "null"
             }
           ],
           "default": null,
-          "description": "Sets the return code to zero regardless of failures\nin test cases. Error codes are returned normally.\n\nExamples:\n\n```toml\n# always exit 0 regardless of failed tests\nno-status-rc = true\n```\n\ncorresponds to the `--nostatusrc` option of _robot_\n",
+          "description": "Sets the return code to zero regardless of failures\nin test cases. Error codes are returned normally.\n\nExamples:\n\n```toml\n# always exit 0 regardless of failed tests\nno-status-rc = true\n```\n\n```toml\n# decide from the current branch\nno-status-rc = { if = \"environ.get('CI_COMMIT_REF_NAME') == 'main'\" }\n```\n\ncorresponds to the `--nostatusrc` option of _robot_\n",
           "examples": [
-            "# always exit 0 regardless of failed tests\nno-status-rc = true"
+            "# always exit 0 regardless of failed tests\nno-status-rc = true",
+            "# decide from the current branch\nno-status-rc = { if = \"environ.get('CI_COMMIT_REF_NAME') == 'main'\" }"
           ],
-          "markdownDescription": "Sets the return code to zero regardless of failures\nin test cases. Error codes are returned normally.\n\nExamples:\n\n```toml\n# always exit 0 regardless of failed tests\nno-status-rc = true\n```\n\ncorresponds to the `--nostatusrc` option of _robot_\n",
+          "markdownDescription": "Sets the return code to zero regardless of failures\nin test cases. Error codes are returned normally.\n\nExamples:\n\n```toml\n# always exit 0 regardless of failed tests\nno-status-rc = true\n```\n\n```toml\n# decide from the current branch\nno-status-rc = { if = \"environ.get('CI_COMMIT_REF_NAME') == 'main'\" }\n```\n\ncorresponds to the `--nostatusrc` option of _robot_\n",
           "title": "No Status Rc",
           "x-taplo": {
             "links": {
@@ -4866,15 +4865,19 @@
               ]
             },
             {
+              "$ref": "#/definitions/Condition"
+            },
+            {
               "type": "null"
             }
           ],
           "default": null,
-          "description": "Sets the return code to zero regardless of failures\nin test cases. Error codes are returned normally.\n\nExamples:\n\n```toml\n# always exit 0 regardless of failed tests\nno-status-rc = true\n```\n\ncorresponds to the `--nostatusrc` option of _robot_\n",
+          "description": "Sets the return code to zero regardless of failures\nin test cases. Error codes are returned normally.\n\nExamples:\n\n```toml\n# always exit 0 regardless of failed tests\nno-status-rc = true\n```\n\n```toml\n# decide from the current branch\nno-status-rc = { if = \"environ.get('CI_COMMIT_REF_NAME') == 'main'\" }\n```\n\ncorresponds to the `--nostatusrc` option of _robot_\n",
           "examples": [
-            "# always exit 0 regardless of failed tests\nno-status-rc = true"
+            "# always exit 0 regardless of failed tests\nno-status-rc = true",
+            "# decide from the current branch\nno-status-rc = { if = \"environ.get('CI_COMMIT_REF_NAME') == 'main'\" }"
           ],
-          "markdownDescription": "Sets the return code to zero regardless of failures\nin test cases. Error codes are returned normally.\n\nExamples:\n\n```toml\n# always exit 0 regardless of failed tests\nno-status-rc = true\n```\n\ncorresponds to the `--nostatusrc` option of _robot_\n",
+          "markdownDescription": "Sets the return code to zero regardless of failures\nin test cases. Error codes are returned normally.\n\nExamples:\n\n```toml\n# always exit 0 regardless of failed tests\nno-status-rc = true\n```\n\n```toml\n# decide from the current branch\nno-status-rc = { if = \"environ.get('CI_COMMIT_REF_NAME') == 'main'\" }\n```\n\ncorresponds to the `--nostatusrc` option of _robot_\n",
           "title": "No Status Rc",
           "x-taplo": {
             "links": {
@@ -8107,15 +8110,19 @@
               ]
             },
             {
+              "$ref": "#/definitions/Condition"
+            },
+            {
               "type": "null"
             }
           ],
           "default": null,
-          "description": "Sets the return code to zero regardless of failures\nin test cases. Error codes are returned normally.\n\nExamples:\n\n```toml\n# always exit 0 regardless of failed tests\nno-status-rc = true\n```\n\ncorresponds to the `--nostatusrc` option of _robot_\n",
+          "description": "Sets the return code to zero regardless of failures\nin test cases. Error codes are returned normally.\n\nExamples:\n\n```toml\n# always exit 0 regardless of failed tests\nno-status-rc = true\n```\n\n```toml\n# decide from the current branch\nno-status-rc = { if = \"environ.get('CI_COMMIT_REF_NAME') == 'main'\" }\n```\n\ncorresponds to the `--nostatusrc` option of _robot_\n",
           "examples": [
-            "# always exit 0 regardless of failed tests\nno-status-rc = true"
+            "# always exit 0 regardless of failed tests\nno-status-rc = true",
+            "# decide from the current branch\nno-status-rc = { if = \"environ.get('CI_COMMIT_REF_NAME') == 'main'\" }"
           ],
-          "markdownDescription": "Sets the return code to zero regardless of failures\nin test cases. Error codes are returned normally.\n\nExamples:\n\n```toml\n# always exit 0 regardless of failed tests\nno-status-rc = true\n```\n\ncorresponds to the `--nostatusrc` option of _robot_\n",
+          "markdownDescription": "Sets the return code to zero regardless of failures\nin test cases. Error codes are returned normally.\n\nExamples:\n\n```toml\n# always exit 0 regardless of failed tests\nno-status-rc = true\n```\n\n```toml\n# decide from the current branch\nno-status-rc = { if = \"environ.get('CI_COMMIT_REF_NAME') == 'main'\" }\n```\n\ncorresponds to the `--nostatusrc` option of _robot_\n",
           "title": "No Status Rc",
           "x-taplo": {
             "links": {

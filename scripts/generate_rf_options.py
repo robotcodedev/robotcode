@@ -87,7 +87,7 @@ TOML_EXAMPLES: Dict[str, List[str]] = {
     # --- numeric options ---
     "--consolewidth": ["console-width = 100"],
     "--maxassignlength": ["max-assign-length = 200"],
-    "--maxerrorlines": ["max-error-lines = 40"],
+    "--maxerrorlines": ["max-error-lines = 40", 'max-error-lines = "NONE"'],
     "--suitestatlevel": ["suite-stat-level = 2"],
     # --- single-string options (paths, names, titles, timestamps) ---
     "--debugfile": ['debug-file = "debug.log"'],
@@ -161,6 +161,7 @@ TOML_EXAMPLES: Dict[str, List[str]] = {
     "--splitlog": ["split-log = true"],
     "--nostatusrc": [
         "# always exit 0 regardless of failed tests\nno-status-rc = true",
+        "# decide from the current branch\nno-status-rc = { if = \"environ.get('CI_COMMIT_REF_NAME') == 'main'\" }",
     ],
     "--timestampoutputs": ["timestamp-outputs = true"],
 }
@@ -345,6 +346,8 @@ def generate(
     ) -> str:
         if not option.get("param"):
             if is_flag:
+                if name == "no_status_rc":
+                    return "Union[bool, Flag, Condition, None]"
                 return "Union[bool, Flag, None]"
 
             return "Optional[bool]"
@@ -421,6 +424,9 @@ def generate(
                         output.append("        robot_is_flag=True,")
                         if not flag_default:
                             output.append(f"        robot_flag_default={flag_default},")
+                alias = name.replace("_", "-")
+                if alias != name:
+                    output.append(f'        alias="{alias}",')
                 output.append("    )")
 
         return result
@@ -548,6 +554,8 @@ generate(
     extra=True,
     tool="testdoc",
 )
+
+output.extend(["", ""])
 
 model_file = Path("packages/robot/src/robotcode/robot/config/model.py")
 original_lines = model_file.read_text().splitlines()
