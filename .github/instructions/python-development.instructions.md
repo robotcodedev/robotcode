@@ -49,6 +49,7 @@ To add a CLI command or tool config, implement a hook in `hooks.py`:
 ```python
 from robotcode.plugin import hookimpl
 
+
 @hookimpl
 def register_cli_commands() -> List[click.Command]:
     return [my_command]

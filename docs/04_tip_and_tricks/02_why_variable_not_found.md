@@ -326,14 +326,14 @@ For more complex scenarios, use Python variable files that RobotCode can analyze
 import os
 
 # These variables will be recognized by RobotCode
-BASE_URL = os.getenv('BASE_URL', 'https://api.test.example.com')
-API_KEY = os.getenv('API_KEY', 'test-api-key')
+BASE_URL = os.getenv("BASE_URL", "https://api.test.example.com")
+API_KEY = os.getenv("API_KEY", "test-api-key")
 
 # Dictionary variables for structured data
 DATABASE_CONFIG = {
-    'host': os.getenv('DB_HOST', 'localhost'),
-    'port': int(os.getenv('DB_PORT', '5432')),
-    'name': os.getenv('DB_NAME', 'testdb')
+    "host": os.getenv("DB_HOST", "localhost"),
+    "port": int(os.getenv("DB_PORT", "5432")),
+    "name": os.getenv("DB_NAME", "testdb"),
 }
 ```
 

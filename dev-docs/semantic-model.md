@@ -170,22 +170,22 @@ The `SemanticAnalyzer` exposes the **exact same 3-step lifecycle** as the
 ```python
 # Step 1: Construction — identical parameters
 analyzer = SemanticAnalyzer(
-    model=ast_model,         # ast.AST — parsed RF AST (File node)
-    source=source_path,      # str — file path on disk
-    document_uri=uri,        # str — LSP document URI
-    languages=languages,     # Optional[Languages] — RF ≥6 localization
+    model=ast_model,  # ast.AST — parsed RF AST (File node)
+    source=source_path,  # str — file path on disk
+    document_uri=uri,  # str — LSP document URI
+    languages=languages,  # Optional[Languages] — RF ≥6 localization
 )
 
 # Step 2: Import resolution — identical signature and return type
 resolved_imports: ResolvedImports = analyzer.resolve(
-    library_doc=library_doc,       # ResourceDoc
+    library_doc=library_doc,  # ResourceDoc
     imports_manager=imports_manager,  # ImportsManager
-    sentinel=sentinel,             # object (optional, for cycle detection)
+    sentinel=sentinel,  # object (optional, for cycle detection)
 )
 
 # Step 3: Analysis — identical signature, superset return type
 result: AnalyzerResult = analyzer.run(
-    finder=keyword_finder,   # KeywordFinder
+    finder=keyword_finder,  # KeywordFinder
 )
 # result contains ALL fields from NamespaceAnalyzer's AnalyzerResult
 # PLUS result.semantic_model: SemanticModel
@@ -197,17 +197,17 @@ exactly the same fields as today, plus `semantic_model: SemanticModel`:
 ```python
 @dataclass(slots=True, frozen=True)
 class AnalyzerResult:
-    diagnostics: List[Diagnostic]                              # unchanged
-    keyword_references: Dict[KeywordDoc, Set[Location]]        # unchanged
+    diagnostics: List[Diagnostic]  # unchanged
+    keyword_references: Dict[KeywordDoc, Set[Location]]  # unchanged
     variable_references: Dict[VariableDefinition, Set[Location]]  # unchanged
     local_variable_assignments: Dict[VariableDefinition, Set[Range]]  # unchanged
-    namespace_references: Dict[LibraryEntry, Set[Location]]    # unchanged
-    test_case_definitions: List[TestCaseDefinition]             # unchanged
-    keyword_tag_references: Dict[str, Set[Location]]           # unchanged
-    testcase_tag_references: Dict[str, Set[Location]]          # unchanged
-    metadata_references: Dict[str, Set[Location]]              # unchanged
-    scope_tree: ScopeTree                                       # transitional — removed in Phase 4
-    semantic_model: Optional[SemanticModel]                     # NEW
+    namespace_references: Dict[LibraryEntry, Set[Location]]  # unchanged
+    test_case_definitions: List[TestCaseDefinition]  # unchanged
+    keyword_tag_references: Dict[str, Set[Location]]  # unchanged
+    testcase_tag_references: Dict[str, Set[Location]]  # unchanged
+    metadata_references: Dict[str, Set[Location]]  # unchanged
+    scope_tree: ScopeTree  # transitional — removed in Phase 4
+    semantic_model: Optional[SemanticModel]  # NEW
 ```
 
 The `scope_tree` field is carried for source compatibility with the existing `Namespace`
@@ -1209,7 +1209,10 @@ class SemanticModel:
 
     @staticmethod
     def _collect_token_path(
-        token: SemanticToken, line: int, col: int, path: List[SemanticToken],
+        token: SemanticToken,
+        line: int,
+        col: int,
+        path: List[SemanticToken],
     ) -> None:
         """Recursively collect the token path from parent to deepest child."""
         if token.sub_tokens:
@@ -1299,7 +1302,9 @@ class SemanticModel:
         return chain
 
     def find_variable(
-        self, name: str, line: int,
+        self,
+        name: str,
+        line: int,
         skip_commandline_variables: bool = False,
         skip_local_variables: bool = False,
     ) -> Optional[VariableDefinition]:
@@ -1334,9 +1339,7 @@ class SemanticModel:
                         return var_def
 
         if self.file_scope is not None:
-            return self.file_scope.find(
-                base_name, skip_commandline=skip_commandline_variables
-            )
+            return self.file_scope.find(base_name, skip_commandline=skip_commandline_variables)
 
         return None
 
@@ -1376,16 +1379,16 @@ class SemanticModel:
         return base
 
     def get_variables_at(
-        self, line: int, skip_commandline_variables: bool = False,
+        self,
+        line: int,
+        skip_commandline_variables: bool = False,
     ) -> Dict[VariableMatcher, VariableDefinition]:
         """Get all available variables at a position. Replaces ScopeTree.get_variable_matchers()."""
         result: Dict[VariableMatcher, VariableDefinition] = {}
 
         # File-scope variables first (lower precedence)
         if self.file_scope is not None:
-            for var_def in self.file_scope.iter_all(
-                skip_commandline=skip_commandline_variables
-            ):
+            for var_def in self.file_scope.iter_all(skip_commandline=skip_commandline_variables):
                 result[var_def.matcher] = var_def
 
         # Block-local variables override (higher precedence)
@@ -1893,41 +1896,38 @@ SemanticToken(
     kind=TokenKind.ARGUMENT,
     value="Hello ${name}, you are ${age: int} years old",
     sub_tokens=[
-        SemanticToken(kind=TokenKind.TEXT_FRAGMENT, value="Hello ",
-                      line=1, col_offset=7, length=6),
-        SemanticToken(kind=TokenKind.VARIABLE, value="${name}",
-                      line=1, col_offset=13, length=7,
-                      sub_tokens=[
-                          SemanticToken(kind=TokenKind.VARIABLE_PREFIX, value="$",
-                                        line=1, col_offset=13, length=1),
-                          SemanticToken(kind=TokenKind.VARIABLE_OPEN_BRACE, value="{",
-                                        line=1, col_offset=14, length=1),
-                          SemanticToken(kind=TokenKind.VARIABLE_BASE, value="name",
-                                        line=1, col_offset=15, length=4),
-                          SemanticToken(kind=TokenKind.VARIABLE_CLOSE_BRACE, value="}",
-                                        line=1, col_offset=19, length=1),
-                      ]),
-        SemanticToken(kind=TokenKind.TEXT_FRAGMENT, value=", you are ",
-                      line=1, col_offset=20, length=10),
-        SemanticToken(kind=TokenKind.VARIABLE, value="${age: int}",
-                      line=1, col_offset=30, length=11,
-                      sub_tokens=[
-                          SemanticToken(kind=TokenKind.VARIABLE_PREFIX, value="$",
-                                        line=1, col_offset=30, length=1),
-                          SemanticToken(kind=TokenKind.VARIABLE_OPEN_BRACE, value="{",
-                                        line=1, col_offset=31, length=1),
-                          SemanticToken(kind=TokenKind.VARIABLE_BASE, value="age",
-                                        line=1, col_offset=32, length=3),
-                          SemanticToken(kind=TokenKind.VARIABLE_TYPE_SEPARATOR, value=": ",
-                                        line=1, col_offset=35, length=2),
-                          SemanticToken(kind=TokenKind.VARIABLE_TYPE_HINT, value="int",
-                                        line=1, col_offset=37, length=3),
-                          SemanticToken(kind=TokenKind.VARIABLE_CLOSE_BRACE, value="}",
-                                        line=1, col_offset=40, length=1),
-                      ]),
-        SemanticToken(kind=TokenKind.TEXT_FRAGMENT, value=" years old",
-                      line=1, col_offset=41, length=10),
-    ]
+        SemanticToken(kind=TokenKind.TEXT_FRAGMENT, value="Hello ", line=1, col_offset=7, length=6),
+        SemanticToken(
+            kind=TokenKind.VARIABLE,
+            value="${name}",
+            line=1,
+            col_offset=13,
+            length=7,
+            sub_tokens=[
+                SemanticToken(kind=TokenKind.VARIABLE_PREFIX, value="$", line=1, col_offset=13, length=1),
+                SemanticToken(kind=TokenKind.VARIABLE_OPEN_BRACE, value="{", line=1, col_offset=14, length=1),
+                SemanticToken(kind=TokenKind.VARIABLE_BASE, value="name", line=1, col_offset=15, length=4),
+                SemanticToken(kind=TokenKind.VARIABLE_CLOSE_BRACE, value="}", line=1, col_offset=19, length=1),
+            ],
+        ),
+        SemanticToken(kind=TokenKind.TEXT_FRAGMENT, value=", you are ", line=1, col_offset=20, length=10),
+        SemanticToken(
+            kind=TokenKind.VARIABLE,
+            value="${age: int}",
+            line=1,
+            col_offset=30,
+            length=11,
+            sub_tokens=[
+                SemanticToken(kind=TokenKind.VARIABLE_PREFIX, value="$", line=1, col_offset=30, length=1),
+                SemanticToken(kind=TokenKind.VARIABLE_OPEN_BRACE, value="{", line=1, col_offset=31, length=1),
+                SemanticToken(kind=TokenKind.VARIABLE_BASE, value="age", line=1, col_offset=32, length=3),
+                SemanticToken(kind=TokenKind.VARIABLE_TYPE_SEPARATOR, value=": ", line=1, col_offset=35, length=2),
+                SemanticToken(kind=TokenKind.VARIABLE_TYPE_HINT, value="int", line=1, col_offset=37, length=3),
+                SemanticToken(kind=TokenKind.VARIABLE_CLOSE_BRACE, value="}", line=1, col_offset=40, length=1),
+            ],
+        ),
+        SemanticToken(kind=TokenKind.TEXT_FRAGMENT, value=" years old", line=1, col_offset=41, length=10),
+    ],
 )
 ```
 
@@ -1938,27 +1938,24 @@ SemanticToken(
     kind=TokenKind.VARIABLE_NOT_FOUND,  # Cannot statically resolve — depends on ${env} value
     value="${config_${env}}",
     sub_tokens=[
-        SemanticToken(kind=TokenKind.VARIABLE_PREFIX, value="$",
-                      line=1, col_offset=0, length=1),
-        SemanticToken(kind=TokenKind.VARIABLE_OPEN_BRACE, value="{",
-                      line=1, col_offset=1, length=1),
-        SemanticToken(kind=TokenKind.TEXT_FRAGMENT, value="config_",
-                      line=1, col_offset=2, length=7),
-        SemanticToken(kind=TokenKind.VARIABLE, value="${env}",
-                      line=1, col_offset=9, length=6,
-                      sub_tokens=[
-                          SemanticToken(kind=TokenKind.VARIABLE_PREFIX, value="$",
-                                        line=1, col_offset=9, length=1),
-                          SemanticToken(kind=TokenKind.VARIABLE_OPEN_BRACE, value="{",
-                                        line=1, col_offset=10, length=1),
-                          SemanticToken(kind=TokenKind.VARIABLE_BASE, value="env",
-                                        line=1, col_offset=11, length=3),
-                          SemanticToken(kind=TokenKind.VARIABLE_CLOSE_BRACE, value="}",
-                                        line=1, col_offset=14, length=1),
-                      ]),
-        SemanticToken(kind=TokenKind.VARIABLE_CLOSE_BRACE, value="}",
-                      line=1, col_offset=15, length=1),
-    ]
+        SemanticToken(kind=TokenKind.VARIABLE_PREFIX, value="$", line=1, col_offset=0, length=1),
+        SemanticToken(kind=TokenKind.VARIABLE_OPEN_BRACE, value="{", line=1, col_offset=1, length=1),
+        SemanticToken(kind=TokenKind.TEXT_FRAGMENT, value="config_", line=1, col_offset=2, length=7),
+        SemanticToken(
+            kind=TokenKind.VARIABLE,
+            value="${env}",
+            line=1,
+            col_offset=9,
+            length=6,
+            sub_tokens=[
+                SemanticToken(kind=TokenKind.VARIABLE_PREFIX, value="$", line=1, col_offset=9, length=1),
+                SemanticToken(kind=TokenKind.VARIABLE_OPEN_BRACE, value="{", line=1, col_offset=10, length=1),
+                SemanticToken(kind=TokenKind.VARIABLE_BASE, value="env", line=1, col_offset=11, length=3),
+                SemanticToken(kind=TokenKind.VARIABLE_CLOSE_BRACE, value="}", line=1, col_offset=14, length=1),
+            ],
+        ),
+        SemanticToken(kind=TokenKind.VARIABLE_CLOSE_BRACE, value="}", line=1, col_offset=15, length=1),
+    ],
 )
 ```
 
@@ -1969,21 +1966,21 @@ SemanticToken(
     kind=TokenKind.VARIABLE,
     value='${{os.path.join($base, "sub")}}',
     sub_tokens=[
-        SemanticToken(kind=TokenKind.VARIABLE_PREFIX, value="$",
-                      line=1, col_offset=0, length=1),
-        SemanticToken(kind=TokenKind.VARIABLE_EXPRESSION_OPEN, value="{{",
-                      line=1, col_offset=1, length=2),
-        SemanticToken(kind=TokenKind.PYTHON_EXPRESSION,
-                      value='os.path.join($base, "sub")',
-                      line=1, col_offset=3, length=26,
-                      sub_tokens=[
-                          # Python tokenizer extracts $-prefixed variable references
-                          SemanticToken(kind=TokenKind.PYTHON_VARIABLE_REF, value="$base",
-                                        line=1, col_offset=16, length=5),
-                      ]),
-        SemanticToken(kind=TokenKind.VARIABLE_EXPRESSION_CLOSE, value="}}",
-                      line=1, col_offset=29, length=2),
-    ]
+        SemanticToken(kind=TokenKind.VARIABLE_PREFIX, value="$", line=1, col_offset=0, length=1),
+        SemanticToken(kind=TokenKind.VARIABLE_EXPRESSION_OPEN, value="{{", line=1, col_offset=1, length=2),
+        SemanticToken(
+            kind=TokenKind.PYTHON_EXPRESSION,
+            value='os.path.join($base, "sub")',
+            line=1,
+            col_offset=3,
+            length=26,
+            sub_tokens=[
+                # Python tokenizer extracts $-prefixed variable references
+                SemanticToken(kind=TokenKind.PYTHON_VARIABLE_REF, value="$base", line=1, col_offset=16, length=5),
+            ],
+        ),
+        SemanticToken(kind=TokenKind.VARIABLE_EXPRESSION_CLOSE, value="}}", line=1, col_offset=29, length=2),
+    ],
 )
 ```
 
@@ -1994,17 +1991,12 @@ SemanticToken(
     kind=TokenKind.VARIABLE,
     value="${obj.attribute.method()}",
     sub_tokens=[
-        SemanticToken(kind=TokenKind.VARIABLE_PREFIX, value="$",
-                      line=1, col_offset=0, length=1),
-        SemanticToken(kind=TokenKind.VARIABLE_OPEN_BRACE, value="{",
-                      line=1, col_offset=1, length=1),
-        SemanticToken(kind=TokenKind.VARIABLE_BASE, value="obj",
-                      line=1, col_offset=2, length=3),
-        SemanticToken(kind=TokenKind.VARIABLE_EXTENDED, value=".attribute.method()",
-                      line=1, col_offset=5, length=19),
-        SemanticToken(kind=TokenKind.VARIABLE_CLOSE_BRACE, value="}",
-                      line=1, col_offset=24, length=1),
-    ]
+        SemanticToken(kind=TokenKind.VARIABLE_PREFIX, value="$", line=1, col_offset=0, length=1),
+        SemanticToken(kind=TokenKind.VARIABLE_OPEN_BRACE, value="{", line=1, col_offset=1, length=1),
+        SemanticToken(kind=TokenKind.VARIABLE_BASE, value="obj", line=1, col_offset=2, length=3),
+        SemanticToken(kind=TokenKind.VARIABLE_EXTENDED, value=".attribute.method()", line=1, col_offset=5, length=19),
+        SemanticToken(kind=TokenKind.VARIABLE_CLOSE_BRACE, value="}", line=1, col_offset=24, length=1),
+    ],
 )
 ```
 
@@ -2076,16 +2068,21 @@ The `VariableMatch` from RF's `search_variable()` provides all raw data needed:
 
 ```python
 def _build_variable_sub_tokens(
-    self, match: VariableMatch, token: Token, var_def: Optional[VariableDefinition],
+    self,
+    match: VariableMatch,
+    token: Token,
+    var_def: Optional[VariableDefinition],
 ) -> List[SemanticToken]:
     """Decompose a VariableMatch into granular sub-tokens."""
     sub_tokens = []
     col = token.col_offset + match.start
 
     # 1. Prefix: $ @ & %
-    sub_tokens.append(SemanticToken(
-        kind=TokenKind.VARIABLE_PREFIX, value=match.identifier,
-        line=token.lineno, col_offset=col, length=1))
+    sub_tokens.append(
+        SemanticToken(
+            kind=TokenKind.VARIABLE_PREFIX, value=match.identifier, line=token.lineno, col_offset=col, length=1
+        )
+    )
     col += 1
 
     # 2. Check for inline Python (${{...}}) vs regular ({...})
@@ -2093,16 +2090,18 @@ def _build_variable_sub_tokens(
 
     if is_inline_python:
         # {{ opening
-        sub_tokens.append(SemanticToken(
-            kind=TokenKind.VARIABLE_EXPRESSION_OPEN, value="{{",
-            line=token.lineno, col_offset=col, length=2))
+        sub_tokens.append(
+            SemanticToken(
+                kind=TokenKind.VARIABLE_EXPRESSION_OPEN, value="{{", line=token.lineno, col_offset=col, length=2
+            )
+        )
         col += 2
 
         # Python expression body (strip outer { })
         expr_body = match.base[1:-1]
         expr_token = SemanticToken(
-            kind=TokenKind.PYTHON_EXPRESSION, value=expr_body,
-            line=token.lineno, col_offset=col, length=len(expr_body))
+            kind=TokenKind.PYTHON_EXPRESSION, value=expr_body, line=token.lineno, col_offset=col, length=len(expr_body)
+        )
 
         # Find $var references inside the expression
         expr_sub_tokens = self._extract_python_variable_refs(expr_body, token.lineno, col)
@@ -2113,14 +2112,16 @@ def _build_variable_sub_tokens(
         col += len(expr_body)
 
         # }} closing
-        sub_tokens.append(SemanticToken(
-            kind=TokenKind.VARIABLE_EXPRESSION_CLOSE, value="}}",
-            line=token.lineno, col_offset=col, length=2))
+        sub_tokens.append(
+            SemanticToken(
+                kind=TokenKind.VARIABLE_EXPRESSION_CLOSE, value="}}", line=token.lineno, col_offset=col, length=2
+            )
+        )
     else:
         # { opening
-        sub_tokens.append(SemanticToken(
-            kind=TokenKind.VARIABLE_OPEN_BRACE, value="{",
-            line=token.lineno, col_offset=col, length=1))
+        sub_tokens.append(
+            SemanticToken(kind=TokenKind.VARIABLE_OPEN_BRACE, value="{", line=token.lineno, col_offset=col, length=1)
+        )
         col += 1
 
         # Parse the base content: name, type hint, extended syntax, etc.
@@ -2129,9 +2130,9 @@ def _build_variable_sub_tokens(
         col += len(base)
 
         # } closing
-        sub_tokens.append(SemanticToken(
-            kind=TokenKind.VARIABLE_CLOSE_BRACE, value="}",
-            line=token.lineno, col_offset=col, length=1))
+        sub_tokens.append(
+            SemanticToken(kind=TokenKind.VARIABLE_CLOSE_BRACE, value="}", line=token.lineno, col_offset=col, length=1)
+        )
 
     # 3. Index access (from match.items)
     # Position tracked after the closing brace
@@ -2148,7 +2149,11 @@ def _build_variable_sub_tokens(
 
 ```python
 def _decompose_variable_base(
-    self, base: str, line: int, col: int, sub_tokens: List[SemanticToken],
+    self,
+    base: str,
+    line: int,
+    col: int,
+    sub_tokens: List[SemanticToken],
 ) -> None:
     """Parse the content between { and } into sub-tokens."""
 
@@ -2161,48 +2166,68 @@ def _decompose_variable_base(
     # Check for type hint (RF 7.0+): "name: type" or "name: type:pattern"
     if ": " in base:
         name_part, _, rest = base.partition(": ")
-        sub_tokens.append(SemanticToken(
-            kind=TokenKind.VARIABLE_BASE, value=name_part,
-            line=line, col_offset=col, length=len(name_part)))
+        sub_tokens.append(
+            SemanticToken(
+                kind=TokenKind.VARIABLE_BASE, value=name_part, line=line, col_offset=col, length=len(name_part)
+            )
+        )
         col += len(name_part)
-        sub_tokens.append(SemanticToken(
-            kind=TokenKind.VARIABLE_TYPE_SEPARATOR, value=": ",
-            line=line, col_offset=col, length=2))
+        sub_tokens.append(
+            SemanticToken(kind=TokenKind.VARIABLE_TYPE_SEPARATOR, value=": ", line=line, col_offset=col, length=2)
+        )
         col += 2
         # Check for pattern after type: "type:pattern"
         if ":" in rest:
             type_part, _, pattern_part = rest.partition(":")
-            sub_tokens.append(SemanticToken(
-                kind=TokenKind.VARIABLE_TYPE_HINT, value=type_part,
-                line=line, col_offset=col, length=len(type_part)))
+            sub_tokens.append(
+                SemanticToken(
+                    kind=TokenKind.VARIABLE_TYPE_HINT, value=type_part, line=line, col_offset=col, length=len(type_part)
+                )
+            )
             col += len(type_part)
-            sub_tokens.append(SemanticToken(
-                kind=TokenKind.VARIABLE_PATTERN_SEPARATOR, value=":",
-                line=line, col_offset=col, length=1))
+            sub_tokens.append(
+                SemanticToken(kind=TokenKind.VARIABLE_PATTERN_SEPARATOR, value=":", line=line, col_offset=col, length=1)
+            )
             col += 1
-            sub_tokens.append(SemanticToken(
-                kind=TokenKind.VARIABLE_PATTERN, value=pattern_part,
-                line=line, col_offset=col, length=len(pattern_part)))
+            sub_tokens.append(
+                SemanticToken(
+                    kind=TokenKind.VARIABLE_PATTERN,
+                    value=pattern_part,
+                    line=line,
+                    col_offset=col,
+                    length=len(pattern_part),
+                )
+            )
         else:
-            sub_tokens.append(SemanticToken(
-                kind=TokenKind.VARIABLE_TYPE_HINT, value=rest,
-                line=line, col_offset=col, length=len(rest)))
+            sub_tokens.append(
+                SemanticToken(
+                    kind=TokenKind.VARIABLE_TYPE_HINT, value=rest, line=line, col_offset=col, length=len(rest)
+                )
+            )
         return
 
     # Check for environment variable default: "NAME=default"
     if "=" in base:
         name_part, _, default_part = base.partition("=")
-        sub_tokens.append(SemanticToken(
-            kind=TokenKind.VARIABLE_BASE, value=name_part,
-            line=line, col_offset=col, length=len(name_part)))
+        sub_tokens.append(
+            SemanticToken(
+                kind=TokenKind.VARIABLE_BASE, value=name_part, line=line, col_offset=col, length=len(name_part)
+            )
+        )
         col += len(name_part)
-        sub_tokens.append(SemanticToken(
-            kind=TokenKind.VARIABLE_DEFAULT_SEPARATOR, value="=",
-            line=line, col_offset=col, length=1))
+        sub_tokens.append(
+            SemanticToken(kind=TokenKind.VARIABLE_DEFAULT_SEPARATOR, value="=", line=line, col_offset=col, length=1)
+        )
         col += 1
-        sub_tokens.append(SemanticToken(
-            kind=TokenKind.VARIABLE_DEFAULT_VALUE, value=default_part,
-            line=line, col_offset=col, length=len(default_part)))
+        sub_tokens.append(
+            SemanticToken(
+                kind=TokenKind.VARIABLE_DEFAULT_VALUE,
+                value=default_part,
+                line=line,
+                col_offset=col,
+                length=len(default_part),
+            )
+        )
         return
 
     # Check for extended variable syntax: "name.attr" or "name[key]" etc.
@@ -2210,19 +2235,23 @@ def _decompose_variable_base(
     if ext_match:
         name_part = ext_match.group(1)
         ext_part = ext_match.group(2)
-        sub_tokens.append(SemanticToken(
-            kind=TokenKind.VARIABLE_BASE, value=name_part,
-            line=line, col_offset=col, length=len(name_part)))
+        sub_tokens.append(
+            SemanticToken(
+                kind=TokenKind.VARIABLE_BASE, value=name_part, line=line, col_offset=col, length=len(name_part)
+            )
+        )
         col += len(name_part)
-        sub_tokens.append(SemanticToken(
-            kind=TokenKind.VARIABLE_EXTENDED, value=ext_part,
-            line=line, col_offset=col, length=len(ext_part)))
+        sub_tokens.append(
+            SemanticToken(
+                kind=TokenKind.VARIABLE_EXTENDED, value=ext_part, line=line, col_offset=col, length=len(ext_part)
+            )
+        )
         return
 
     # Simple variable name
-    sub_tokens.append(SemanticToken(
-        kind=TokenKind.VARIABLE_BASE, value=base,
-        line=line, col_offset=col, length=len(base)))
+    sub_tokens.append(
+        SemanticToken(kind=TokenKind.VARIABLE_BASE, value=base, line=line, col_offset=col, length=len(base))
+    )
 ```
 
 **`token_path_at()` usage example** (hover on type hint):
@@ -2254,7 +2283,8 @@ current statement before delegating to analysis methods that populate the token 
 def visit_KeywordCall(self, node: KeywordCall) -> None:
     stmt = KeywordCallStatement(
         kind=NodeKind.KEYWORD_CALL,
-        line_start=node.lineno, line_end=node.end_lineno,
+        line_start=node.lineno,
+        line_end=node.end_lineno,
     )
     self._current_statement = stmt
 
@@ -2262,6 +2292,7 @@ def visit_KeywordCall(self, node: KeywordCall) -> None:
 
     stmt.keyword_doc = resolved_keyword_doc
     self._model.statements.append(stmt)
+
 
 # Simple nodes without special fields use the base SemanticStatement via the
 # generic visit_Statement() fallback. _node_kind_for_statement() picks the
@@ -2273,7 +2304,8 @@ def visit_Statement(self, node: Statement) -> None:
     self._analyze_statement_variables(node)
     stmt = SemanticStatement(
         kind=self._node_kind_for_statement(node),
-        line_start=node.lineno, line_end=node.end_lineno or node.lineno,
+        line_start=node.lineno,
+        line_end=node.end_lineno or node.lineno,
         tokens=self._build_tokens_from_node(node),
     )
     self._add_statement(stmt)
@@ -2439,16 +2471,22 @@ RobotCode currently uses hardcoded name detection in `library_doc.py`:
 ```python
 # packages/robot/src/robotcode/robot/diagnostics/library_doc.py
 RUN_KEYWORD_NAMES = {
-    "runkeyword", "runkeywordandcontinueonfailure",
-    "runkeywordandexpecterror", "runkeywordandignoreerror",
-    "runkeywordandreturn", "runkeywordandreturnstatus",
-    "runkeywordandwarnonfailure", "runkeywordiftestfailed",
-    "runkeywordiftestpassed", "runkeywordiftimeoutoccurred",
-    "runkeywordifanycriterialfailed", "runkeywordifalltestspassed",
+    "runkeyword",
+    "runkeywordandcontinueonfailure",
+    "runkeywordandexpecterror",
+    "runkeywordandignoreerror",
+    "runkeywordandreturn",
+    "runkeywordandreturnstatus",
+    "runkeywordandwarnonfailure",
+    "runkeywordiftestfailed",
+    "runkeywordiftestpassed",
+    "runkeywordiftimeoutoccurred",
+    "runkeywordifanycriterialfailed",
+    "runkeywordifalltestspassed",
 }
 
 RUN_KEYWORD_WITH_CONDITION_NAMES = {
-    "runkeywordif": 1,           # 1 condition arg before keyword name
+    "runkeywordif": 1,  # 1 condition arg before keyword name
     "runkeywordunless": 1,
     "runkeywordandreturnif": 1,
     "runkeywordandexpecterror": 1,
@@ -2483,6 +2521,7 @@ are keyword arguments:
 ```python
 # robot/api/types.py (RF 7.4+)
 
+
 class KeywordName(str):
     """Name of a keyword executed by another keyword.
 
@@ -2490,6 +2529,7 @@ class KeywordName(str):
     a keyword name. External tools can recognize special arguments using these
     types and handle them adequately.
     """
+
 
 class KeywordArgument:
     """Argument of a keyword executed by another keyword.
@@ -2508,6 +2548,7 @@ class KeywordArgument:
 # robot/libraries/BuiltIn.py (RF 7.4+)
 from robot.api.types import KeywordArgument, KeywordName
 
+
 def run_keyword(self, name: KeywordName, /, *args: KeywordArgument) -> object: ...
 def run_keywords(self, *names_and_args: "KeywordName | KeywordArgument"): ...
 def run_keyword_if(self, condition: Expression, name: KeywordName, /, *args: KeywordArgument) -> object: ...
@@ -2519,6 +2560,7 @@ For example, a custom library:
 
 ```python
 from robot.api.types import KeywordName, KeywordArgument
+
 
 class MyLibrary:
     def execute_with_retry(self, times: int, name: KeywordName, *args: KeywordArgument):
@@ -2580,10 +2622,10 @@ This is implemented as two boolean flags on `ArgumentInfo` (not as new
 @dataclass
 class ArgumentInfo:
     name: str
-    kind: KeywordArgumentKind   # Python-level kind (positional, named, variadic)
+    kind: KeywordArgumentKind  # Python-level kind (positional, named, variadic)
     # ...
-    is_keyword_name: bool = False        # type annotation is KeywordName
-    is_keyword_argument: bool = False    # type annotation is KeywordArgument
+    is_keyword_name: bool = False  # type annotation is KeywordName
+    is_keyword_argument: bool = False  # type annotation is KeywordArgument
 ```
 
 Rationale: `KeywordArgumentKind` describes the Python-level argument kind, while

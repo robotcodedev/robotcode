@@ -320,7 +320,7 @@ class DiagnosticsProtocolPart(LanguageServerProtocolPart):
             if self._current_diagnostics_task is not None and not self._current_diagnostics_task.done():
                 self._current_diagnostics_task.cancel()
 
-    def _analyse_document(self, document: TextDocument) -> List[Union[DiagnosticsResult, None, BaseException]]:
+    def _analyse_document(self, document: TextDocument) -> List[Union[DiagnosticsResult, BaseException, None]]:
         return self.analyze(
             self,
             document,

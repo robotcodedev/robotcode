@@ -404,7 +404,7 @@ def test_bottom_toolbar_renders_signature_when_cursor_in_arg_cell(monkeypatch: p
 
     toolbar = backend_mod._bottom_toolbar()
     assert isinstance(toolbar, list)
-    styles = [s for s, _ in toolbar]
+    styles = [item[0] for item in toolbar]
     assert "class:rf.keyword" in styles
     assert "class:rf.toolbar.active-arg" in styles
 
@@ -450,7 +450,7 @@ def test_bottom_toolbar_highlights_named_arg_by_spec_position(monkeypatch: pytes
     toolbar = backend_mod._bottom_toolbar()
     assert toolbar is not None
     # Find which arg label carries `rf.toolbar.active-arg`.
-    active = [text for style, text in toolbar if style == "class:rf.toolbar.active-arg"]
+    active = [item[1] for item in toolbar if item[0] == "class:rf.toolbar.active-arg"]
     assert active == ["html"]
 
 
@@ -481,7 +481,7 @@ def test_bottom_toolbar_keeps_positional_idx_for_unknown_named_arg(monkeypatch: 
 
     toolbar = backend_mod._bottom_toolbar()
     assert toolbar is not None
-    active = [text for style, text in toolbar if style == "class:rf.toolbar.active-arg"]
+    active = [item[1] for item in toolbar if item[0] == "class:rf.toolbar.active-arg"]
     assert active == ["message"]
 
 

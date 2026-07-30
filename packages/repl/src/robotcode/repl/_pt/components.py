@@ -15,6 +15,7 @@ from prompt_toolkit.buffer import Buffer
 from prompt_toolkit.completion import CompleteEvent, Completer, Completion
 from prompt_toolkit.document import Document
 from prompt_toolkit.filters import has_completions
+from prompt_toolkit.formatted_text import StyleAndTextTuples
 from prompt_toolkit.history import FileHistory
 from prompt_toolkit.key_binding import KeyBindings, KeyPressEvent
 from prompt_toolkit.styles import Style
@@ -404,7 +405,7 @@ def _render_signature(name: str, spec: Any, active: int) -> List[Tuple[str, str]
     return parts
 
 
-def _bottom_toolbar() -> Optional[List[Tuple[str, str]]]:
+def _bottom_toolbar() -> Optional[StyleAndTextTuples]:
     """Bottom status line — keyword signature when the cursor sits in an
     argument cell, else nothing (the bar is hidden).
 
