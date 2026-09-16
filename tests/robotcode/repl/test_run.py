@@ -17,10 +17,12 @@ from pathlib import Path
 from typing import Any, Iterator, List, Optional, Union
 
 import pytest
+from robot.api import ExecutionResult
 from robot.conf import RobotSettings
 from robot.libraries.BuiltIn import BuiltIn
 from robot.running import Keyword
 
+from robotcode.core.utils.path import normalized_path
 from robotcode.plugin import Application
 from robotcode.repl.base_interpreter import BaseInterpreter
 from robotcode.repl.run import run_repl
@@ -45,10 +47,12 @@ class _PromptRecorder(BaseInterpreter):
         super().__init__()
         self.prompts = 0
         self.profile_marker: Any = None
+        self.suite_source: Any = None
 
     def get_input(self) -> Iterator[Optional[Keyword]]:
         self.prompts += 1
         self.profile_marker = BuiltIn().get_variable_value("${REPL_PROFILE_MARKER}")
+        self.suite_source = BuiltIn().get_variable_value("${SUITE SOURCE}")
         raise EOFError
 
     def log_message(
@@ -206,9 +210,6 @@ def test_run_repl_ignores_selection_filters_from_robot_options_env(
     _assert_prompt_reached_with_profile_applied(interpreter)
 
 
-@pytest.mark.skipif(
-    RF_VERSION < (6, 1), reason="writing output.xml from the REPL fails on RF < 6.1 (Path suite source)"
-)
 def test_run_repl_writes_log_and_report_despite_task_filter(
     project: Path, interpreter: _PromptRecorder, capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -370,3 +371,34 @@ def test_run_repl_ignores_profile_skip_teardown_on_exit(
     _assert_prompt_reached_with_profile_applied(interpreter)
     [settings] = robot_settings
     assert settings.skip_teardown_on_exit is False
+
+
+# Robot's own type for a parsed keyword's source: `str` before RF 6.1, `Path` since.
+_ROBOT_SOURCE_TYPE = str if RF_VERSION < (6, 1) else Path
+
+
+def test_run_repl_writes_output_files_with_the_repl_suite_source(
+    project: Path, interpreter: _PromptRecorder, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _run_repl_with_profile(
+        project, interpreter, "", capsys, output="output.xml", log="log.html", report="report.html", xunit="xunit.xml"
+    )
+
+    _assert_prompt_reached_with_profile_applied(interpreter)
+    expected = str(normalized_path(project / "__repl_internal__.robot"))
+    assert interpreter.suite_source == expected
+    results = project / "results"
+    for name in ("log.html", "report.html", "xunit.xml"):
+        assert (results / name).is_file()
+    assert str(ExecutionResult(str(results / "output.xml")).suite.source) == expected
+
+
+def test_input_keywords_carry_the_session_source_in_robots_type(tmp_path: Path) -> None:
+    interpreter = _PromptRecorder()
+    interpreter.source = normalized_path(tmp_path / "session.robot")
+
+    test, errors = interpreter.get_test_body_from_string("Log    hello")
+
+    assert not errors
+    assert isinstance(test.body[0].source, _ROBOT_SOURCE_TYPE)
+    assert str(test.body[0].source) == str(interpreter.source)

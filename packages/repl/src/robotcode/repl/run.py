@@ -117,7 +117,8 @@ def run_repl(
 
             with io.StringIO(REPL_SUITE) as suite_io:
                 model = get_model(suite_io, curdir=str(curdir).replace("\\", "\\\\"))
-                model.source = source
+                # RF < 6.1 expects a `str` suite source; RF 6.1+ converts it to a `Path` itself.
+                model.source = str(source)
 
                 suite = TestSuite.from_model(model)
                 suite.configure(**settings.suite_config)

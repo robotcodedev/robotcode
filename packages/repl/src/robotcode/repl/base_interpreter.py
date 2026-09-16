@@ -278,7 +278,8 @@ class BaseInterpreter(abc.ABC):
         with StringIO(suite_str) as source:
             model = get_model(source, curdir=str(self.curdir).replace("\\", "\\\\"))
 
-        model.source = self.source
+        # RF < 6.1 expects a `str` source; RF 6.1+ converts it to a `Path` itself.
+        model.source = str(self.source) if self.source is not None else None
 
         suite: TestSuite = TestSuite.from_model(model)
 
