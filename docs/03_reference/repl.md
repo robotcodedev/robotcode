@@ -384,6 +384,25 @@ https://staging.example.com
 
 You can also define variables inline via the `VAR` statement (RF 7+) or classic assignment.
 
+## Profiles and `robot.toml`
+
+`repl` reads `robot.toml` and the profiles selected with `-p/--profile` just like `robotcode robot`, so settings such as variables, `python-path`, or `output-dir` from the profile apply to the session:
+
+```bash
+robotcode -p dev repl
+```
+
+`output`, `log`, `report`, and `xunit` from the profile are not used; pass the REPL's own `-o/-l/-r/-x` flags to write them (see [Capturing the session as a Robot run](#capturing-the-session-as-a-robot-run)).
+
+The whole session runs as a single internal test. Settings that would deselect or skip that test, so the REPL wouldn't start, or turn the session into a dry run in which nothing you type is executed, are ignored:
+
+- test selection: `includes`, `excludes`, `suites`, `tests`, `tasks` (and their `extend-*` forms), `re-run-failed`, `re-run-failed-suites`
+- `dry-run`
+- `set-tag` (and `extend-set-tag`) — all tags it sets are dropped, not only reserved ones like `robot:skip`
+- `skip` (and `extend-skip`)
+
+`skip-on-failure` (and `extend-skip-on-failure`) and `skip-teardown-on-exit` are ignored as well. The same applies to the matching options passed via `args`, argument files, or `ROBOT_OPTIONS`.
+
 ## Running REPL scripts
 
 Pass one or more **REPL scripts** to execute their content before the prompt. Each is read as a **test-case body** — the same syntax as the prompt itself: just keyword calls and control structures, one entry per line. These scripts conventionally use the `.robotrepl` (or `.robotscript`) extension, which the RobotCode VS Code extension highlights as REPL input.

@@ -25,6 +25,25 @@ RobotCode REPL
     repl
 """
 
+# Options from robot.toml, `args`, argument files or ROBOT_OPTIONS that are meant for real
+# suites. Applied to REPL_SUITE they deselect or skip its only test, so the REPL never
+# starts, or turn the session into a dry run in which nothing typed is executed. The
+# other skip options are dropped along with them.
+_IGNORED_ROBOT_OPTIONS = (
+    "include",
+    "exclude",
+    "suite",
+    "test",
+    "task",
+    "rerunfailed",
+    "rerunfailedsuites",
+    "dryrun",
+    "settag",
+    "skip",
+    "skiponfailure",
+    "skipteardownonexit",
+)
+
 
 def run_repl(
     interpreter: BaseInterpreter,
@@ -70,6 +89,11 @@ def run_repl(
                 root_folder=root_folder,
                 orig_folder=orig_folder,
             ).parse_arguments((*cmd_options, *robot_options_and_args))
+
+            # Every key is dropped, but only options that are actually set (not e.g. `--nodryrun`) are reported.
+            ignored = [key for key in _IGNORED_ROBOT_OPTIONS if options.pop(key, None)]
+            if ignored:
+                app.verbose(f"Ignoring robot options in the REPL: {', '.join(ignored)}")
 
             interpreter.source = normalized_path(source) if source is not None else None
 
