@@ -251,7 +251,7 @@ Dot-prefixed commands (lines that start with `.<word>`) are handled by the REPL 
 | `.history [N]` | Show the last N entries (default 20), numbered. Available on the prompt-toolkit backend; plain backend has no history. |
 | `.history clear` | Truncate the in-memory history and the persistent history file. |
 | `.history del <N>` | Drop the single entry at index N from both. |
-| `.cwd` | Print the current working directory (where relative paths in imports resolve from). |
+| `.cwd` | Print the working directory of the REPL process — the project root. Relative file paths passed to keywords such as `File Should Exist` resolve against it; for `${CURDIR}` and relative imports see [`--source`](#source-run-the-session-as-if-it-lived-in-a-file). |
 | `.clear` | Erase the screen. |
 | `.save [-a] [-t NAME] <file>` | Export the session as a runnable `.robot` file (see below). |
 | `.exit` / `.quit` | Leave the REPL — equivalent to `Ctrl-D` on an empty prompt. |
@@ -443,19 +443,27 @@ robotcode results log -o ./tmp/output.xml
 
 Useful when you're prototyping a sequence of keywords and want to attach the resulting `log.html` to a bug report or an issue comment.
 
-## `--source` for working-directory context
+## `--source`: run the session as if it lived in a file
 
 ```bash
 robotcode repl --source ./tests/login_spike.robot
 ```
 
-`--source FILE` does **one** thing: it uses the parent directory of `FILE` as the REPL session's working directory. Relative paths in `Import Resource`, `Import Library`, file-based variables, etc. then resolve against that directory — handy when you're prototyping a snippet that will eventually live in a real test file and want the import paths to behave the same way.
+`--source FILE` makes the session behave as if the keywords you type were written in `FILE` — handy when you're prototyping a snippet that will eventually live in a real test file:
 
-The file itself is never read or written, so the path doesn't have to exist. If you only care about the directory, point at any (real or imagined) filename inside it:
+- `${CURDIR}` is the directory of `FILE`, so `Import Resource    ${CURDIR}/keywords.resource` finds the same file it would find from `FILE`.
+- On Robot Framework 7.4 and newer, bare relative paths in `Import Resource`, `Import Library`, and `Import Variables` resolve against that directory as well (see the [heads-up for older versions](#loading-libraries-and-resources)).
+- `${SUITE SOURCE}` and the suite source in `output.xml` are `FILE`.
+
+Without `--source`, the session behaves as if it lived in the directory you start the REPL from.
+
+A relative `FILE` is resolved against the directory you start the REPL from. The file itself is never read or written, so the path doesn't have to exist. If you only care about the directory, point at any (real or imagined) filename inside it:
 
 ```bash
 robotcode repl --source ./tests/_.robot
 ```
+
+`--source` doesn't change the working directory of the REPL process. Like `robotcode robot`, the REPL runs in the project root: the folder given with `robotcode --root`, otherwise the nearest folder — starting at the REPL scripts you pass, or at the directory you start the REPL from — that contains a `robot.toml`, `.robot.toml`, `pyproject.toml`, `.git`, or `.hg` (`--no-vcs` skips `.git` and `.hg`), or the start directory if there is none. Relative file paths passed to keywords such as `File Should Exist` resolve against it; `.cwd` prints it.
 
 ## Tracing executed keywords
 

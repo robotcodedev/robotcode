@@ -1193,9 +1193,11 @@ class ConsoleInterpreter(BaseInterpreter):
     def _cwd(self, arg: str) -> None:
         """Show the current working directory.
 
-        Print the current working directory — the base path that relative
-        `Import Resource`, `Import Library`, and file-based variable
-        references resolve against.
+        Print the working directory of the REPL process — the project root.
+        Relative file paths passed to keywords such as `File Should Exist`
+        resolve against it. `${CURDIR}` and, on Robot Framework 7.4 and newer,
+        relative imports use the directory of `--source` instead, or the
+        directory the REPL was started from if `--source` isn't given.
         """
         del arg
         if self.app is None:

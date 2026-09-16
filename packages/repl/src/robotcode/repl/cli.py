@@ -316,11 +316,11 @@ SHELL_OPTIONS = [
         "--source",
         type=click.Path(path_type=Path),
         metavar="FILE",
-        help="Use the parent directory of FILE as the REPL's working directory. "
-        "Relative paths inside `Import Resource`, `Import Library`, "
-        "file-based variables, etc. resolve against that directory. "
-        "The file itself is never read or written, so the path doesn't "
-        "need to exist.",
+        help="Run the session as if its keywords were written in FILE: `${CURDIR}` is the "
+        "directory of FILE, `${SUITE SOURCE}` is FILE and, on Robot Framework 7.4 and newer, "
+        "relative paths in `Import Resource`, `Import Library`, and `Import Variables` resolve "
+        "against that directory. A relative FILE is resolved against the directory the command "
+        "is started from. The file itself is never read or written, so the path doesn't need to exist.",
     ),
     click.argument(
         "files",
