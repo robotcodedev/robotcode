@@ -393,6 +393,22 @@ def test_run_repl_writes_output_files_with_the_repl_suite_source(
     assert str(ExecutionResult(str(results / "output.xml")).suite.source) == expected
 
 
+def test_run_repl_resolves_relative_source_against_the_start_directory(
+    project: Path, interpreter: _PromptRecorder, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    start_dir = project / "sub"
+    start_dir.mkdir()
+    monkeypatch.chdir(start_dir)
+
+    _run_repl_with_profile(project, interpreter, "", capsys, source=Path("fake.robot"))
+
+    _assert_prompt_reached_with_profile_applied(interpreter)
+    assert interpreter.suite_source == str(normalized_path(start_dir / "fake.robot"))
+    # What keywords typed at the prompt see: `${CURDIR}` and, on RF 7.4+, the base of relative imports.
+    assert interpreter.source == normalized_path(start_dir / "fake.robot")
+    assert interpreter.curdir == normalized_path(start_dir)
+
+
 def test_input_keywords_carry_the_session_source_in_robots_type(tmp_path: Path) -> None:
     interpreter = _PromptRecorder()
     interpreter.source = normalized_path(tmp_path / "session.robot")

@@ -75,13 +75,12 @@ def run_repl(
 
     root_folder, _profile, cmd_options = handle_robot_options(app, (*robot_options_and_args, *(str(f) for f in files)))
 
-    if source is None:
-        source = Path.cwd() / "__repl_internal__.robot"
+    # Resolved before `app.chdir`, so a relative `--source` is relative to where the
+    # REPL was started (like FILES), not to the project root.
+    source = normalized_path(source if source is not None else Path.cwd() / "__repl_internal__.robot")
 
     with app.chdir(root_folder) as orig_folder:
         try:
-            curdir = normalized_path(source).parent if source is not None else Path.cwd()
-
             options, _ = RobotFrameworkEx(
                 app,
                 ["."],
@@ -95,7 +94,7 @@ def run_repl(
             if ignored:
                 app.verbose(f"Ignoring robot options in the REPL: {', '.join(ignored)}")
 
-            interpreter.source = normalized_path(source) if source is not None else None
+            interpreter.source = source
 
             settings = RobotSettings(
                 options,
@@ -116,7 +115,7 @@ def run_repl(
                 sys.path = settings.pythonpath + sys.path
 
             with io.StringIO(REPL_SUITE) as suite_io:
-                model = get_model(suite_io, curdir=str(curdir).replace("\\", "\\\\"))
+                model = get_model(suite_io, curdir=str(source.parent).replace("\\", "\\\\"))
                 # RF < 6.1 expects a `str` suite source; RF 6.1+ converts it to a `Path` itself.
                 model.source = str(source)
 
