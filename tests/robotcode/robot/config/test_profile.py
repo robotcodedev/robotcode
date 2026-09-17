@@ -374,3 +374,57 @@ def test_type_that_wants_alist_should_throw_an_error() -> None:
             """
     with pytest.raises(TypeError, match=r".*Value '.*' must be of type.*"):
         load_robot_config_from_robot_toml_str(data)
+
+
+_STATUS_RC_FLAGS = {"--nostatusrc", "--statusrc"}
+
+
+def _status_rc_flags(data: str, *profiles: str, rebot: bool = False) -> list[str]:
+    config = load_robot_config_from_robot_toml_str(data)
+    options = config.rebot if rebot else config.combine_profiles(*profiles)
+    assert options is not None
+    return [arg for arg in options.evaluated().build_command_line() if arg in _STATUS_RC_FLAGS]
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        ("true", ["--nostatusrc"]),
+        ("false", ["--statusrc"]),
+        ('"on"', ["--nostatusrc"]),
+        ('"off"', ["--statusrc"]),
+        ('"default"', []),
+    ],
+)
+def test_no_status_rc_literals_keep_flag_semantics(value: str, expected: list[str]) -> None:
+    assert _status_rc_flags(f"no-status-rc = {value}") == expected
+
+
+@pytest.mark.parametrize(("section", "rebot"), [("", False), ("[rebot]\n", True)])
+@pytest.mark.parametrize(
+    ("condition", "expected"),
+    [("True", ["--nostatusrc"]), ("False", ["--statusrc"])],
+)
+def test_no_status_rc_accepts_conditions(
+    section: str,
+    rebot: bool,
+    condition: str,
+    expected: list[str],
+) -> None:
+    assert _status_rc_flags(f'{section}no-status-rc = {{ if = "{condition}" }}', rebot=rebot) == expected
+
+
+def test_no_status_rc_rejects_invalid_condition() -> None:
+    data = """\
+        [profiles.ci]
+        no-status-rc = { if = "environ.get('CI') = 'true'" }
+    """
+
+    with pytest.raises(
+        ValueError,
+        match=(
+            r"^Evaluation of 'no_status_rc' failed: EvaluationError: "
+            r"Evaluation of \"environ\.get\('CI'\) = 'true'\" failed: invalid syntax"
+        ),
+    ):
+        _status_rc_flags(data, "ci")

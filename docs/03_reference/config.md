@@ -1329,7 +1329,7 @@ corresponds to the `-N --name name` option of _robot_
 
 ## no-status-rc
 
-Type: `bool | Flag | None`
+Type: `bool | Flag | Condition | None`
 
 Sets the return code to zero regardless of failures
 in test cases. Error codes are returned normally.
@@ -1339,6 +1339,11 @@ Examples:
 ```toml
 # always exit 0 regardless of failed tests
 no-status-rc = true
+```
+
+```toml
+# decide from the current branch
+no-status-rc = { if = "environ.get('CI_COMMIT_REF_NAME') == 'main'" }
 ```
 
 corresponds to the `--nostatusrc` option of _robot_
@@ -2271,7 +2276,7 @@ corresponds to the `-N --name name` option of _robot_
 
 ## rebot.no-status-rc
 
-Type: `bool | Flag | None`
+Type: `bool | Flag | Condition | None`
 
 Sets the return code to zero regardless of failures
 in test cases. Error codes are returned normally.
@@ -2281,6 +2286,11 @@ Examples:
 ```toml
 # always exit 0 regardless of failed tests
 no-status-rc = true
+```
+
+```toml
+# decide from the current branch
+no-status-rc = { if = "environ.get('CI_COMMIT_REF_NAME') == 'main'" }
 ```
 
 corresponds to the `--nostatusrc` option of _robot_

@@ -682,7 +682,7 @@ class CommonOptions(RobotBaseOptions):
         robot_priority=500,
         robot_short_name="N",
     )
-    no_status_rc: Union[bool, Flag, None] = field(
+    no_status_rc: Union[bool, Flag, Condition, None] = field(
         description="""\
             Sets the return code to zero regardless of failures
             in test cases. Error codes are returned normally.
@@ -692,6 +692,11 @@ class CommonOptions(RobotBaseOptions):
             ```toml
             # always exit 0 regardless of failed tests
             no-status-rc = true
+            ```
+
+            ```toml
+            # decide from the current branch
+            no-status-rc = { if = "environ.get('CI_COMMIT_REF_NAME') == 'main'" }
             ```
 
             corresponds to the `--nostatusrc` option of _robot_

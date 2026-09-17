@@ -248,6 +248,16 @@ def _post_process_schema(
     if isinstance(root_ref, str) and root_ref.startswith("#/$defs/"):
         process_def(root_ref.rsplit("/", 1)[-1], "")
 
+    # Condition is shared by enabled, hidden, and conditional flag fields, so
+    # its nested key has no single context-independent documentation anchor.
+    condition_schema = defs.get("Condition")
+    if isinstance(condition_schema, dict):
+        condition_properties = condition_schema.get("properties")
+        if isinstance(condition_properties, dict):
+            condition_if = condition_properties.get("if")
+            if isinstance(condition_if, dict):
+                condition_if.pop("x-taplo", None)
+
 
 def _convert_to_draft7_schema(schema_dict: dict) -> None:
     """Convert generated schema to draft-07 compatible structure in-place."""
