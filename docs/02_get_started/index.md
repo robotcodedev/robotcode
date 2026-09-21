@@ -9,6 +9,17 @@ Let's explore how you can enhance your development experience with RobotCode - R
 - Robotframework version 5.0 and above
 - VSCode version 1.99 and above
 
+### Optional Python Packages
+
+Robot Framework needs additional Python packages for some documentation formats. They are optional in Robot Framework, so RobotCode neither depends on them nor ships them. If you need one of them, install it into the Python environment of your project, the same way you install Robot Framework itself, for example by adding it to the dependencies of your project.
+
+| Package | Needed for | Without it |
+|---|---|---|
+| [`docutils`](https://pypi.org/project/docutils/) | Libraries that write their documentation in reStructuredText (`ROBOT_LIBRARY_DOC_FORMAT = "reST"`), and everything else Robot Framework does with reStructuredText | RobotCode shows the documentation of such libraries as plain reStructuredText source instead of formatted text |
+| [`markdown`](https://pypi.org/project/Markdown/) (Python-Markdown) | The HTML documentation of libraries that write their documentation in Markdown: the documentation view in the editor and `robotcode libdoc`. Since Robot Framework 7.5 this includes the standard libraries such as `BuiltIn` and `Collections` | The documentation view shows Robot Framework's message that the `markdown` module is missing. Hover and completion are not affected |
+
+See the [Robot Framework User Guide](https://robotframework.org/robotframework/latest/RobotFrameworkUserGuide.html) for details about these formats.
+
 ## Tutorial Video
 
 If you prefer to watch a video tutorial, check out the following video that covers installing, setting up and using RobotCode in Visual Studio Code. Also check out the following video I gave at RoboCon 2024:

@@ -583,6 +583,7 @@
             {
               "enum": [
                 "ROBOT",
+                "MARKDOWN",
                 "HTML",
                 "TEXT",
                 "REST"
@@ -593,11 +594,11 @@
             }
           ],
           "default": null,
-          "description": "Specifies the source documentation format. Possible\nvalues are Robot Framework's documentation format,\nHTML, plain text, and reStructuredText. The default\nvalue can be specified in library source code and\nthe initial default value is ROBOT.\n\nExamples:\n\n```toml\ndoc-format = \"REST\"\n```\n\ncorresponds to the `-F --docformat ROBOT|HTML|TEXT|REST` option of _libdoc_\n",
+          "description": "Specifies the source documentation format. Possible\nvalues are Robot Framework's documentation format,\nMarkdown, HTML, plain text and reStructuredText.\nThe default value can be specified in library source\ncode and the initial default value is ROBOT. Markdown\nsupport is new in RF 7.5.\n\nExamples:\n\n```toml\ndoc-format = \"REST\"\n```\n\ncorresponds to the `-F --docformat ROBOT|MARKDOWN|HTML|TEXT|REST` option of _libdoc_\n",
           "examples": [
             "doc-format = \"REST\""
           ],
-          "markdownDescription": "Specifies the source documentation format. Possible\nvalues are Robot Framework's documentation format,\nHTML, plain text, and reStructuredText. The default\nvalue can be specified in library source code and\nthe initial default value is ROBOT.\n\nExamples:\n\n```toml\ndoc-format = \"REST\"\n```\n\ncorresponds to the `-F --docformat ROBOT|HTML|TEXT|REST` option of _libdoc_\n",
+          "markdownDescription": "Specifies the source documentation format. Possible\nvalues are Robot Framework's documentation format,\nMarkdown, HTML, plain text and reStructuredText.\nThe default value can be specified in library source\ncode and the initial default value is ROBOT. Markdown\nsupport is new in RF 7.5.\n\nExamples:\n\n```toml\ndoc-format = \"REST\"\n```\n\ncorresponds to the `-F --docformat ROBOT|MARKDOWN|HTML|TEXT|REST` option of _libdoc_\n",
           "title": "Doc Format",
           "x-taplo": {
             "links": {
@@ -644,7 +645,8 @@
                 "HTML",
                 "XML",
                 "JSON",
-                "LIBSPEC"
+                "LIBSPEC",
+                "MARKDOWN"
               ]
             },
             {
@@ -652,11 +654,11 @@
             }
           ],
           "default": null,
-          "description": "Specifies whether to generate an HTML output for\nhumans or a machine readable spec file in XML or JSON\nformat. The LIBSPEC format means XML spec with\ndocumentations converted to HTML. The default format\nis got from the output file extension.\n\nExamples:\n\n```toml\nformat = \"HTML\"\n```\n\ncorresponds to the `-f --format HTML|XML|JSON|LIBSPEC` option of _libdoc_\n",
+          "description": "Specifies whether to generate an HTML output for\nhumans, a machine readable spec file in XML or JSON\nformat, or a Markdown file. The LIBSPEC format means\nXML spec with documentations converted to HTML. The\ndefault format is got from the output file\nextension. MARKDOWN is new in RF 7.5.\n\nExamples:\n\n```toml\nformat = \"HTML\"\n```\n\ncorresponds to the `-f --format HTML|XML|JSON|LIBSPEC|MARKDOWN` option of _libdoc_\n",
           "examples": [
             "format = \"HTML\""
           ],
-          "markdownDescription": "Specifies whether to generate an HTML output for\nhumans or a machine readable spec file in XML or JSON\nformat. The LIBSPEC format means XML spec with\ndocumentations converted to HTML. The default format\nis got from the output file extension.\n\nExamples:\n\n```toml\nformat = \"HTML\"\n```\n\ncorresponds to the `-f --format HTML|XML|JSON|LIBSPEC` option of _libdoc_\n",
+          "markdownDescription": "Specifies whether to generate an HTML output for\nhumans, a machine readable spec file in XML or JSON\nformat, or a Markdown file. The LIBSPEC format means\nXML spec with documentations converted to HTML. The\ndefault format is got from the output file\nextension. MARKDOWN is new in RF 7.5.\n\nExamples:\n\n```toml\nformat = \"HTML\"\n```\n\ncorresponds to the `-f --format HTML|XML|JSON|LIBSPEC|MARKDOWN` option of _libdoc_\n",
           "title": "Format",
           "x-taplo": {
             "links": {
@@ -763,11 +765,11 @@
             }
           ],
           "default": null,
-          "description": "Specifies the documentation format used with XML and\nJSON spec files. RAW means preserving the original\ndocumentation format and HTML means converting\ndocumentation to HTML. The default is RAW with XML\nspec files and HTML with JSON specs and when using\nthe special LIBSPEC format.\n\nExamples:\n\n```toml\nspec-doc-format = \"HTML\"\n```\n\ncorresponds to the `-s --specdocformat RAW|HTML` option of _libdoc_\n",
+          "description": "Specifies the documentation format used with XML and\nJSON spec files. RAW means preserving the original\ndocumentation format and HTML means converting\ndocumentation to HTML. The default is RAW with XML\nspec files and HTML with JSON specs and when using\nthe special LIBSPEC format. Not applicable with HTML\nor MARKDOWN outputs.\n\nExamples:\n\n```toml\nspec-doc-format = \"HTML\"\n```\n\ncorresponds to the `-s --specdocformat RAW|HTML` option of _libdoc_\n",
           "examples": [
             "spec-doc-format = \"HTML\""
           ],
-          "markdownDescription": "Specifies the documentation format used with XML and\nJSON spec files. RAW means preserving the original\ndocumentation format and HTML means converting\ndocumentation to HTML. The default is RAW with XML\nspec files and HTML with JSON specs and when using\nthe special LIBSPEC format.\n\nExamples:\n\n```toml\nspec-doc-format = \"HTML\"\n```\n\ncorresponds to the `-s --specdocformat RAW|HTML` option of _libdoc_\n",
+          "markdownDescription": "Specifies the documentation format used with XML and\nJSON spec files. RAW means preserving the original\ndocumentation format and HTML means converting\ndocumentation to HTML. The default is RAW with XML\nspec files and HTML with JSON specs and when using\nthe special LIBSPEC format. Not applicable with HTML\nor MARKDOWN outputs.\n\nExamples:\n\n```toml\nspec-doc-format = \"HTML\"\n```\n\ncorresponds to the `-s --specdocformat RAW|HTML` option of _libdoc_\n",
           "title": "Spec Doc Format",
           "x-taplo": {
             "links": {
@@ -1391,12 +1393,12 @@
             }
           ],
           "default": null,
-          "description": "Appends entries to the --include option.\n\nSelect tests by tag. Similarly as name with --test,\ntag is case and space insensitive and it is possible\nto use patterns with `*`, `?` and `[]` as wildcards.\nTags and patterns can also be combined together with\n`AND`, `OR`, and `NOT` operators.\n\nExamples:\n\n```toml\n# match tests tagged \"foo\" or \"bar*\"\nextend-includes = [\"foo\", \"bar*\"]\n```\n\n```toml\n# tests with both \"foo\" and \"bar*\" tags\nextend-includes = [\"fooANDbar*\"]\n```\n\ncorresponds to the `-i --include tag *` option of _robot_\n",
+          "description": "Appends entries to the --include option.\n\nSelect tests by tag. Similarly as name with --test,\ntag is case and space insensitive and it is possible\nto use patterns with `*`, `?` and `[]` as wildcards.\nTags and patterns can also be combined together with\n`AND`, `OR`, and `NOT` operators.\n\nExamples:\n\n```toml\n# match tests tagged \"foo\" or \"bar*\"\nextend-includes = [\"foo\", \"bar*\"]\n```\n\n```toml\n# tests with both \"foo\" and \"bar*\" tags\nextend-includes = [\"foo AND bar*\"]\n```\n\ncorresponds to the `-i --include tag *` option of _robot_\n",
           "examples": [
             "# match tests tagged \"foo\" or \"bar*\"\nextend-includes = [\"foo\", \"bar*\"]",
-            "# tests with both \"foo\" and \"bar*\" tags\nextend-includes = [\"fooANDbar*\"]"
+            "# tests with both \"foo\" and \"bar*\" tags\nextend-includes = [\"foo AND bar*\"]"
           ],
-          "markdownDescription": "Appends entries to the --include option.\n\nSelect tests by tag. Similarly as name with --test,\ntag is case and space insensitive and it is possible\nto use patterns with `*`, `?` and `[]` as wildcards.\nTags and patterns can also be combined together with\n`AND`, `OR`, and `NOT` operators.\n\nExamples:\n\n```toml\n# match tests tagged \"foo\" or \"bar*\"\nextend-includes = [\"foo\", \"bar*\"]\n```\n\n```toml\n# tests with both \"foo\" and \"bar*\" tags\nextend-includes = [\"fooANDbar*\"]\n```\n\ncorresponds to the `-i --include tag *` option of _robot_\n",
+          "markdownDescription": "Appends entries to the --include option.\n\nSelect tests by tag. Similarly as name with --test,\ntag is case and space insensitive and it is possible\nto use patterns with `*`, `?` and `[]` as wildcards.\nTags and patterns can also be combined together with\n`AND`, `OR`, and `NOT` operators.\n\nExamples:\n\n```toml\n# match tests tagged \"foo\" or \"bar*\"\nextend-includes = [\"foo\", \"bar*\"]\n```\n\n```toml\n# tests with both \"foo\" and \"bar*\" tags\nextend-includes = [\"foo AND bar*\"]\n```\n\ncorresponds to the `-i --include tag *` option of _robot_\n",
           "title": "Extend Includes",
           "x-taplo": {
             "links": {
@@ -1572,12 +1574,12 @@
             }
           ],
           "default": null,
-          "description": "Appends entries to the --removekeywords option.\n\nRemove keyword data from the generated log file.\nKeywords containing warnings are not removed except\nin the `all` mode.\n\n**all:** remove data from all keywords\n\n**passed:** remove data only from keywords in passed\ntest cases and suites\n\n**for:** remove passed iterations from FOR loops\n\n**while:** remove passed iterations from WHILE loops\n\n**wuks:** remove all but the last failing keyword\ninside `BuiltIn.Wait Until Keyword Succeeds`\n\n**name:\\<pattern>:** remove data from keywords that match\nthe given pattern. The pattern is matched\nagainst the full name of the keyword (e.g.\n'MyLib.Keyword', 'resource.Second Keyword'),\nis case, space, and underscore insensitive,\nand may contain `*`, `?` and `[]` wildcards.\n\n\n\n**tag:\\<pattern>:** remove data from keywords that match\nthe given pattern. Tags are case and space\ninsensitive and patterns can contain `*`,\n`?` and `[]` wildcards. Tags and patterns\ncan also be combined together with `AND`,\n`OR`, and `NOT` operators.\n\nExamples:\n\n```toml\n# match by keyword name\nextend-remove-keywords = [\"name:Lib.HugeKw\", \"name:myresource.*\"]\n```\n\n```toml\n# match by tag pattern (same rules as --include)\nextend-remove-keywords = [\"foo\", \"fooANDbar*\"]\n```\n\ncorresponds to the `--removekeywords all|passed|for|wuks|name:<pattern>|tag:<pattern> *` option of _robot_\n",
+          "description": "Appends entries to the --removekeywords option.\n\nRemove keyword data from the generated log file.\nKeywords containing warnings are not removed except\nin the `all` mode.\n\n**all:** remove data from all keywords\n\n**passed:** remove data only from keywords in passed\ntest cases and suites\n\n**for:** remove passed iterations from FOR loops\n\n**while:** remove passed iterations from WHILE loops\n\n**wuks:** remove all but the last failing keyword\ninside `BuiltIn.Wait Until Keyword Succeeds`\n\n**name:\\<pattern>:** remove data from keywords that match\nthe given pattern. The pattern is matched\nagainst the full name of the keyword (e.g.\n'MyLib.Keyword', 'resource.Second Keyword'),\nis case, space, and underscore insensitive,\nand may contain `*`, `?` and `[]` wildcards.\n\n\n\n**tag:\\<pattern>:** remove data from keywords that match\nthe given pattern. Tags are case and space\ninsensitive and patterns can contain `*`,\n`?` and `[]` wildcards. Tags and patterns\ncan also be combined together with `AND`,\n`OR`, and `NOT` operators.\n\nExamples:\n\n```toml\n# match by keyword name\nextend-remove-keywords = [\"name:Lib.HugeKw\", \"name:myresource.*\"]\n```\n\n```toml\n# match by tag pattern (same rules as --include)\nextend-remove-keywords = [\"foo\", \"foo AND bar*\"]\n```\n\ncorresponds to the `--removekeywords all|passed|for|wuks|name:<pattern>|tag:<pattern> *` option of _robot_\n",
           "examples": [
             "# match by keyword name\nextend-remove-keywords = [\"name:Lib.HugeKw\", \"name:myresource.*\"]",
-            "# match by tag pattern (same rules as --include)\nextend-remove-keywords = [\"foo\", \"fooANDbar*\"]"
+            "# match by tag pattern (same rules as --include)\nextend-remove-keywords = [\"foo\", \"foo AND bar*\"]"
           ],
-          "markdownDescription": "Appends entries to the --removekeywords option.\n\nRemove keyword data from the generated log file.\nKeywords containing warnings are not removed except\nin the `all` mode.\n\n**all:** remove data from all keywords\n\n**passed:** remove data only from keywords in passed\ntest cases and suites\n\n**for:** remove passed iterations from FOR loops\n\n**while:** remove passed iterations from WHILE loops\n\n**wuks:** remove all but the last failing keyword\ninside `BuiltIn.Wait Until Keyword Succeeds`\n\n**name:\\<pattern>:** remove data from keywords that match\nthe given pattern. The pattern is matched\nagainst the full name of the keyword (e.g.\n'MyLib.Keyword', 'resource.Second Keyword'),\nis case, space, and underscore insensitive,\nand may contain `*`, `?` and `[]` wildcards.\n\n\n\n**tag:\\<pattern>:** remove data from keywords that match\nthe given pattern. Tags are case and space\ninsensitive and patterns can contain `*`,\n`?` and `[]` wildcards. Tags and patterns\ncan also be combined together with `AND`,\n`OR`, and `NOT` operators.\n\nExamples:\n\n```toml\n# match by keyword name\nextend-remove-keywords = [\"name:Lib.HugeKw\", \"name:myresource.*\"]\n```\n\n```toml\n# match by tag pattern (same rules as --include)\nextend-remove-keywords = [\"foo\", \"fooANDbar*\"]\n```\n\ncorresponds to the `--removekeywords all|passed|for|wuks|name:<pattern>|tag:<pattern> *` option of _robot_\n",
+          "markdownDescription": "Appends entries to the --removekeywords option.\n\nRemove keyword data from the generated log file.\nKeywords containing warnings are not removed except\nin the `all` mode.\n\n**all:** remove data from all keywords\n\n**passed:** remove data only from keywords in passed\ntest cases and suites\n\n**for:** remove passed iterations from FOR loops\n\n**while:** remove passed iterations from WHILE loops\n\n**wuks:** remove all but the last failing keyword\ninside `BuiltIn.Wait Until Keyword Succeeds`\n\n**name:\\<pattern>:** remove data from keywords that match\nthe given pattern. The pattern is matched\nagainst the full name of the keyword (e.g.\n'MyLib.Keyword', 'resource.Second Keyword'),\nis case, space, and underscore insensitive,\nand may contain `*`, `?` and `[]` wildcards.\n\n\n\n**tag:\\<pattern>:** remove data from keywords that match\nthe given pattern. Tags are case and space\ninsensitive and patterns can contain `*`,\n`?` and `[]` wildcards. Tags and patterns\ncan also be combined together with `AND`,\n`OR`, and `NOT` operators.\n\nExamples:\n\n```toml\n# match by keyword name\nextend-remove-keywords = [\"name:Lib.HugeKw\", \"name:myresource.*\"]\n```\n\n```toml\n# match by tag pattern (same rules as --include)\nextend-remove-keywords = [\"foo\", \"foo AND bar*\"]\n```\n\ncorresponds to the `--removekeywords all|passed|for|wuks|name:<pattern>|tag:<pattern> *` option of _robot_\n",
           "title": "Extend Remove Keywords",
           "x-taplo": {
             "links": {
@@ -1710,11 +1712,11 @@
             }
           ],
           "default": null,
-          "description": "Appends entries to the --tagstatcombine option.\n\nCreate combined statistics based on tags.\nThese statistics are added into `Statistics by Tag`.\nIf the optional `name` is not given, name of the\ncombined tag is got from the specified tags. Tags are\nmatched using the same rules as with --include.\n\nExamples:\n\n```toml\nextend-tag-stat-combine = [\"requirement-*\", { \"tag1ANDtag2\" = \"My_name\" }]\n```\n\ncorresponds to the `--tagstatcombine tags:name *` option of _robot_\n",
+          "description": "Appends entries to the --tagstatcombine option.\n\nCreate combined statistics based on tags.\nThese statistics are added into `Statistics by Tag`.\nIf the optional `name` is not given, name of the\ncombined tag is got from the specified tags. Tags are\nmatched using the same rules as with --include.\n\nExamples:\n\n```toml\nextend-tag-stat-combine = [\"requirement-*\", { \"tag1 AND tag2\" = \"My_name\" }]\n```\n\ncorresponds to the `--tagstatcombine tags:name *` option of _robot_\n",
           "examples": [
-            "extend-tag-stat-combine = [\"requirement-*\", { \"tag1ANDtag2\" = \"My_name\" }]"
+            "extend-tag-stat-combine = [\"requirement-*\", { \"tag1 AND tag2\" = \"My_name\" }]"
           ],
-          "markdownDescription": "Appends entries to the --tagstatcombine option.\n\nCreate combined statistics based on tags.\nThese statistics are added into `Statistics by Tag`.\nIf the optional `name` is not given, name of the\ncombined tag is got from the specified tags. Tags are\nmatched using the same rules as with --include.\n\nExamples:\n\n```toml\nextend-tag-stat-combine = [\"requirement-*\", { \"tag1ANDtag2\" = \"My_name\" }]\n```\n\ncorresponds to the `--tagstatcombine tags:name *` option of _robot_\n",
+          "markdownDescription": "Appends entries to the --tagstatcombine option.\n\nCreate combined statistics based on tags.\nThese statistics are added into `Statistics by Tag`.\nIf the optional `name` is not given, name of the\ncombined tag is got from the specified tags. Tags are\nmatched using the same rules as with --include.\n\nExamples:\n\n```toml\nextend-tag-stat-combine = [\"requirement-*\", { \"tag1 AND tag2\" = \"My_name\" }]\n```\n\ncorresponds to the `--tagstatcombine tags:name *` option of _robot_\n",
           "title": "Extend Tag Stat Combine",
           "x-taplo": {
             "links": {
@@ -1947,12 +1949,12 @@
             }
           ],
           "default": null,
-          "description": "Select tests by tag. Similarly as name with --test,\ntag is case and space insensitive and it is possible\nto use patterns with `*`, `?` and `[]` as wildcards.\nTags and patterns can also be combined together with\n`AND`, `OR`, and `NOT` operators.\n\nExamples:\n\n```toml\n# match tests tagged \"foo\" or \"bar*\"\nincludes = [\"foo\", \"bar*\"]\n```\n\n```toml\n# tests with both \"foo\" and \"bar*\" tags\nincludes = [\"fooANDbar*\"]\n```\n\ncorresponds to the `-i --include tag *` option of _robot_\n",
+          "description": "Select tests by tag. Similarly as name with --test,\ntag is case and space insensitive and it is possible\nto use patterns with `*`, `?` and `[]` as wildcards.\nTags and patterns can also be combined together with\n`AND`, `OR`, and `NOT` operators.\n\nExamples:\n\n```toml\n# match tests tagged \"foo\" or \"bar*\"\nincludes = [\"foo\", \"bar*\"]\n```\n\n```toml\n# tests with both \"foo\" and \"bar*\" tags\nincludes = [\"foo AND bar*\"]\n```\n\ncorresponds to the `-i --include tag *` option of _robot_\n",
           "examples": [
             "# match tests tagged \"foo\" or \"bar*\"\nincludes = [\"foo\", \"bar*\"]",
-            "# tests with both \"foo\" and \"bar*\" tags\nincludes = [\"fooANDbar*\"]"
+            "# tests with both \"foo\" and \"bar*\" tags\nincludes = [\"foo AND bar*\"]"
           ],
-          "markdownDescription": "Select tests by tag. Similarly as name with --test,\ntag is case and space insensitive and it is possible\nto use patterns with `*`, `?` and `[]` as wildcards.\nTags and patterns can also be combined together with\n`AND`, `OR`, and `NOT` operators.\n\nExamples:\n\n```toml\n# match tests tagged \"foo\" or \"bar*\"\nincludes = [\"foo\", \"bar*\"]\n```\n\n```toml\n# tests with both \"foo\" and \"bar*\" tags\nincludes = [\"fooANDbar*\"]\n```\n\ncorresponds to the `-i --include tag *` option of _robot_\n",
+          "markdownDescription": "Select tests by tag. Similarly as name with --test,\ntag is case and space insensitive and it is possible\nto use patterns with `*`, `?` and `[]` as wildcards.\nTags and patterns can also be combined together with\n`AND`, `OR`, and `NOT` operators.\n\nExamples:\n\n```toml\n# match tests tagged \"foo\" or \"bar*\"\nincludes = [\"foo\", \"bar*\"]\n```\n\n```toml\n# tests with both \"foo\" and \"bar*\" tags\nincludes = [\"foo AND bar*\"]\n```\n\ncorresponds to the `-i --include tag *` option of _robot_\n",
           "title": "Includes",
           "x-taplo": {
             "links": {
@@ -2396,12 +2398,12 @@
             }
           ],
           "default": null,
-          "description": "Remove keyword data from the generated log file.\nKeywords containing warnings are not removed except\nin the `all` mode.\n\n**all:** remove data from all keywords\n\n**passed:** remove data only from keywords in passed\ntest cases and suites\n\n**for:** remove passed iterations from FOR loops\n\n**while:** remove passed iterations from WHILE loops\n\n**wuks:** remove all but the last failing keyword\ninside `BuiltIn.Wait Until Keyword Succeeds`\n\n**name:\\<pattern>:** remove data from keywords that match\nthe given pattern. The pattern is matched\nagainst the full name of the keyword (e.g.\n'MyLib.Keyword', 'resource.Second Keyword'),\nis case, space, and underscore insensitive,\nand may contain `*`, `?` and `[]` wildcards.\n\n\n\n**tag:\\<pattern>:** remove data from keywords that match\nthe given pattern. Tags are case and space\ninsensitive and patterns can contain `*`,\n`?` and `[]` wildcards. Tags and patterns\ncan also be combined together with `AND`,\n`OR`, and `NOT` operators.\n\nExamples:\n\n```toml\n# match by keyword name\nremove-keywords = [\"name:Lib.HugeKw\", \"name:myresource.*\"]\n```\n\n```toml\n# match by tag pattern (same rules as --include)\nremove-keywords = [\"foo\", \"fooANDbar*\"]\n```\n\ncorresponds to the `--removekeywords all|passed|for|wuks|name:<pattern>|tag:<pattern> *` option of _robot_\n",
+          "description": "Remove keyword data from the generated log file.\nKeywords containing warnings are not removed except\nin the `all` mode.\n\n**all:** remove data from all keywords\n\n**passed:** remove data only from keywords in passed\ntest cases and suites\n\n**for:** remove passed iterations from FOR loops\n\n**while:** remove passed iterations from WHILE loops\n\n**wuks:** remove all but the last failing keyword\ninside `BuiltIn.Wait Until Keyword Succeeds`\n\n**name:\\<pattern>:** remove data from keywords that match\nthe given pattern. The pattern is matched\nagainst the full name of the keyword (e.g.\n'MyLib.Keyword', 'resource.Second Keyword'),\nis case, space, and underscore insensitive,\nand may contain `*`, `?` and `[]` wildcards.\n\n\n\n**tag:\\<pattern>:** remove data from keywords that match\nthe given pattern. Tags are case and space\ninsensitive and patterns can contain `*`,\n`?` and `[]` wildcards. Tags and patterns\ncan also be combined together with `AND`,\n`OR`, and `NOT` operators.\n\nExamples:\n\n```toml\n# match by keyword name\nremove-keywords = [\"name:Lib.HugeKw\", \"name:myresource.*\"]\n```\n\n```toml\n# match by tag pattern (same rules as --include)\nremove-keywords = [\"foo\", \"foo AND bar*\"]\n```\n\ncorresponds to the `--removekeywords all|passed|for|wuks|name:<pattern>|tag:<pattern> *` option of _robot_\n",
           "examples": [
             "# match by keyword name\nremove-keywords = [\"name:Lib.HugeKw\", \"name:myresource.*\"]",
-            "# match by tag pattern (same rules as --include)\nremove-keywords = [\"foo\", \"fooANDbar*\"]"
+            "# match by tag pattern (same rules as --include)\nremove-keywords = [\"foo\", \"foo AND bar*\"]"
           ],
-          "markdownDescription": "Remove keyword data from the generated log file.\nKeywords containing warnings are not removed except\nin the `all` mode.\n\n**all:** remove data from all keywords\n\n**passed:** remove data only from keywords in passed\ntest cases and suites\n\n**for:** remove passed iterations from FOR loops\n\n**while:** remove passed iterations from WHILE loops\n\n**wuks:** remove all but the last failing keyword\ninside `BuiltIn.Wait Until Keyword Succeeds`\n\n**name:\\<pattern>:** remove data from keywords that match\nthe given pattern. The pattern is matched\nagainst the full name of the keyword (e.g.\n'MyLib.Keyword', 'resource.Second Keyword'),\nis case, space, and underscore insensitive,\nand may contain `*`, `?` and `[]` wildcards.\n\n\n\n**tag:\\<pattern>:** remove data from keywords that match\nthe given pattern. Tags are case and space\ninsensitive and patterns can contain `*`,\n`?` and `[]` wildcards. Tags and patterns\ncan also be combined together with `AND`,\n`OR`, and `NOT` operators.\n\nExamples:\n\n```toml\n# match by keyword name\nremove-keywords = [\"name:Lib.HugeKw\", \"name:myresource.*\"]\n```\n\n```toml\n# match by tag pattern (same rules as --include)\nremove-keywords = [\"foo\", \"fooANDbar*\"]\n```\n\ncorresponds to the `--removekeywords all|passed|for|wuks|name:<pattern>|tag:<pattern> *` option of _robot_\n",
+          "markdownDescription": "Remove keyword data from the generated log file.\nKeywords containing warnings are not removed except\nin the `all` mode.\n\n**all:** remove data from all keywords\n\n**passed:** remove data only from keywords in passed\ntest cases and suites\n\n**for:** remove passed iterations from FOR loops\n\n**while:** remove passed iterations from WHILE loops\n\n**wuks:** remove all but the last failing keyword\ninside `BuiltIn.Wait Until Keyword Succeeds`\n\n**name:\\<pattern>:** remove data from keywords that match\nthe given pattern. The pattern is matched\nagainst the full name of the keyword (e.g.\n'MyLib.Keyword', 'resource.Second Keyword'),\nis case, space, and underscore insensitive,\nand may contain `*`, `?` and `[]` wildcards.\n\n\n\n**tag:\\<pattern>:** remove data from keywords that match\nthe given pattern. Tags are case and space\ninsensitive and patterns can contain `*`,\n`?` and `[]` wildcards. Tags and patterns\ncan also be combined together with `AND`,\n`OR`, and `NOT` operators.\n\nExamples:\n\n```toml\n# match by keyword name\nremove-keywords = [\"name:Lib.HugeKw\", \"name:myresource.*\"]\n```\n\n```toml\n# match by tag pattern (same rules as --include)\nremove-keywords = [\"foo\", \"foo AND bar*\"]\n```\n\ncorresponds to the `--removekeywords all|passed|for|wuks|name:<pattern>|tag:<pattern> *` option of _robot_\n",
           "title": "Remove Keywords",
           "x-taplo": {
             "links": {
@@ -2715,11 +2717,11 @@
             }
           ],
           "default": null,
-          "description": "Create combined statistics based on tags.\nThese statistics are added into `Statistics by Tag`.\nIf the optional `name` is not given, name of the\ncombined tag is got from the specified tags. Tags are\nmatched using the same rules as with --include.\n\nExamples:\n\n```toml\ntag-stat-combine = [\"requirement-*\", { \"tag1ANDtag2\" = \"My_name\" }]\n```\n\ncorresponds to the `--tagstatcombine tags:name *` option of _robot_\n",
+          "description": "Create combined statistics based on tags.\nThese statistics are added into `Statistics by Tag`.\nIf the optional `name` is not given, name of the\ncombined tag is got from the specified tags. Tags are\nmatched using the same rules as with --include.\n\nExamples:\n\n```toml\ntag-stat-combine = [\"requirement-*\", { \"tag1 AND tag2\" = \"My_name\" }]\n```\n\ncorresponds to the `--tagstatcombine tags:name *` option of _robot_\n",
           "examples": [
-            "tag-stat-combine = [\"requirement-*\", { \"tag1ANDtag2\" = \"My_name\" }]"
+            "tag-stat-combine = [\"requirement-*\", { \"tag1 AND tag2\" = \"My_name\" }]"
           ],
-          "markdownDescription": "Create combined statistics based on tags.\nThese statistics are added into `Statistics by Tag`.\nIf the optional `name` is not given, name of the\ncombined tag is got from the specified tags. Tags are\nmatched using the same rules as with --include.\n\nExamples:\n\n```toml\ntag-stat-combine = [\"requirement-*\", { \"tag1ANDtag2\" = \"My_name\" }]\n```\n\ncorresponds to the `--tagstatcombine tags:name *` option of _robot_\n",
+          "markdownDescription": "Create combined statistics based on tags.\nThese statistics are added into `Statistics by Tag`.\nIf the optional `name` is not given, name of the\ncombined tag is got from the specified tags. Tags are\nmatched using the same rules as with --include.\n\nExamples:\n\n```toml\ntag-stat-combine = [\"requirement-*\", { \"tag1 AND tag2\" = \"My_name\" }]\n```\n\ncorresponds to the `--tagstatcombine tags:name *` option of _robot_\n",
           "title": "Tag Stat Combine",
           "x-taplo": {
             "links": {
@@ -2981,10 +2983,12 @@
         "console": {
           "anyOf": [
             {
+              "type": "string"
+            },
+            {
               "enum": [
                 "verbose",
                 "dotted",
-                "skipped",
                 "quiet",
                 "none"
               ]
@@ -2994,11 +2998,12 @@
             }
           ],
           "default": null,
-          "description": "How to report execution on the console.\n\n**verbose:** report every suite and test (default)\n\n**dotted:** only show `.` for passed test, `s` for\nskipped tests, and `F` for failed tests\n\n**quiet:** no output except for errors and warnings\n\n**none:** no output whatsoever\n\nExamples:\n\n```toml\nconsole = \"dotted\"\n```\n\ncorresponds to the `--console type` option of _robot_\n",
+          "description": "How to report execution on the console.\nBuilt-in consoles:\n\n**verbose:** report every suite and test (default)\n\n**dotted:** only show `.` for passed test, `s`\nfor skipped and `F` for failed tests\n\n**quiet:** no output except for errors/warnings\n\n**none:** no output whatsoever\nOther values are interpreted as a custom\nconsole class or module. Argument format is\nthe same as with --listener.\n\nExamples:\n\n```toml\nconsole = \"dotted\"\n```\n\n```toml\n# custom console logger class or module (Robot Framework 7.5 or newer)\nconsole = \"path/to/MyConsole.py:arg\"\n```\n\ncorresponds to the `--console console` option of _robot_\n",
           "examples": [
-            "console = \"dotted\""
+            "console = \"dotted\"",
+            "# custom console logger class or module (Robot Framework 7.5 or newer)\nconsole = \"path/to/MyConsole.py:arg\""
           ],
-          "markdownDescription": "How to report execution on the console.\n\n**verbose:** report every suite and test (default)\n\n**dotted:** only show `.` for passed test, `s` for\nskipped tests, and `F` for failed tests\n\n**quiet:** no output except for errors and warnings\n\n**none:** no output whatsoever\n\nExamples:\n\n```toml\nconsole = \"dotted\"\n```\n\ncorresponds to the `--console type` option of _robot_\n",
+          "markdownDescription": "How to report execution on the console.\nBuilt-in consoles:\n\n**verbose:** report every suite and test (default)\n\n**dotted:** only show `.` for passed test, `s`\nfor skipped and `F` for failed tests\n\n**quiet:** no output except for errors/warnings\n\n**none:** no output whatsoever\nOther values are interpreted as a custom\nconsole class or module. Argument format is\nthe same as with --listener.\n\nExamples:\n\n```toml\nconsole = \"dotted\"\n```\n\n```toml\n# custom console logger class or module (Robot Framework 7.5 or newer)\nconsole = \"path/to/MyConsole.py:arg\"\n```\n\ncorresponds to the `--console console` option of _robot_\n",
           "title": "Console",
           "x-taplo": {
             "links": {
@@ -3593,12 +3598,12 @@
             }
           ],
           "default": null,
-          "description": "Appends entries to the --include option.\n\nSelect tests by tag. Similarly as name with --test,\ntag is case and space insensitive and it is possible\nto use patterns with `*`, `?` and `[]` as wildcards.\nTags and patterns can also be combined together with\n`AND`, `OR`, and `NOT` operators.\n\nExamples:\n\n```toml\n# match tests tagged \"foo\" or \"bar*\"\nextend-includes = [\"foo\", \"bar*\"]\n```\n\n```toml\n# tests with both \"foo\" and \"bar*\" tags\nextend-includes = [\"fooANDbar*\"]\n```\n\ncorresponds to the `-i --include tag *` option of _robot_\n",
+          "description": "Appends entries to the --include option.\n\nSelect tests by tag. Similarly as name with --test,\ntag is case and space insensitive and it is possible\nto use patterns with `*`, `?` and `[]` as wildcards.\nTags and patterns can also be combined together with\n`AND`, `OR`, and `NOT` operators.\n\nExamples:\n\n```toml\n# match tests tagged \"foo\" or \"bar*\"\nextend-includes = [\"foo\", \"bar*\"]\n```\n\n```toml\n# tests with both \"foo\" and \"bar*\" tags\nextend-includes = [\"foo AND bar*\"]\n```\n\ncorresponds to the `-i --include tag *` option of _robot_\n",
           "examples": [
             "# match tests tagged \"foo\" or \"bar*\"\nextend-includes = [\"foo\", \"bar*\"]",
-            "# tests with both \"foo\" and \"bar*\" tags\nextend-includes = [\"fooANDbar*\"]"
+            "# tests with both \"foo\" and \"bar*\" tags\nextend-includes = [\"foo AND bar*\"]"
           ],
-          "markdownDescription": "Appends entries to the --include option.\n\nSelect tests by tag. Similarly as name with --test,\ntag is case and space insensitive and it is possible\nto use patterns with `*`, `?` and `[]` as wildcards.\nTags and patterns can also be combined together with\n`AND`, `OR`, and `NOT` operators.\n\nExamples:\n\n```toml\n# match tests tagged \"foo\" or \"bar*\"\nextend-includes = [\"foo\", \"bar*\"]\n```\n\n```toml\n# tests with both \"foo\" and \"bar*\" tags\nextend-includes = [\"fooANDbar*\"]\n```\n\ncorresponds to the `-i --include tag *` option of _robot_\n",
+          "markdownDescription": "Appends entries to the --include option.\n\nSelect tests by tag. Similarly as name with --test,\ntag is case and space insensitive and it is possible\nto use patterns with `*`, `?` and `[]` as wildcards.\nTags and patterns can also be combined together with\n`AND`, `OR`, and `NOT` operators.\n\nExamples:\n\n```toml\n# match tests tagged \"foo\" or \"bar*\"\nextend-includes = [\"foo\", \"bar*\"]\n```\n\n```toml\n# tests with both \"foo\" and \"bar*\" tags\nextend-includes = [\"foo AND bar*\"]\n```\n\ncorresponds to the `-i --include tag *` option of _robot_\n",
           "title": "Extend Includes",
           "x-taplo": {
             "links": {
@@ -3626,11 +3631,11 @@
             }
           ],
           "default": null,
-          "description": "Appends entries to the --language option.\n\nActivate localization. `lang` can be a name or a code\nof a built-in language, or a path or a module name of\na custom language file.\n\nExamples:\n\n```toml\nextend-languages = [\"German\", \"Finnish\"]\n```\n\ncorresponds to the `--language lang *` option of _rebot_\n",
+          "description": "Appends entries to the --language option.\n\nActivate localization. `lang` can be a name or a code\nof a built-in language, or a path or a module name of\na custom language file.\n\nExamples:\n\n```toml\nextend-languages = [\"German\", \"Finnish\"]\n```\n\ncorresponds to the `--language lang *` option of _robot_\n",
           "examples": [
             "extend-languages = [\"German\", \"Finnish\"]"
           ],
-          "markdownDescription": "Appends entries to the --language option.\n\nActivate localization. `lang` can be a name or a code\nof a built-in language, or a path or a module name of\na custom language file.\n\nExamples:\n\n```toml\nextend-languages = [\"German\", \"Finnish\"]\n```\n\ncorresponds to the `--language lang *` option of _rebot_\n",
+          "markdownDescription": "Appends entries to the --language option.\n\nActivate localization. `lang` can be a name or a code\nof a built-in language, or a path or a module name of\na custom language file.\n\nExamples:\n\n```toml\nextend-languages = [\"German\", \"Finnish\"]\n```\n\ncorresponds to the `--language lang *` option of _robot_\n",
           "title": "Extend Languages",
           "x-taplo": {
             "links": {
@@ -3664,11 +3669,11 @@
             }
           ],
           "default": null,
-          "description": "Appends entries to the --listener option.\n\nClass or module for monitoring test execution.\nGets notifications e.g. when tests start and end.\nArguments to the listener class can be given after\nthe name using a colon or a semicolon as a separator.\n\nExamples:\n\n```toml\n[extend-listeners]\nMyListener = []\n\"path/to/Listener.py\" = [\"arg1\", \"arg2\"]\n```\n\ncorresponds to the `--listener listener *` option of _rebot_\n",
+          "description": "Appends entries to the --listener option.\n\nClass or module for monitoring test execution.\nGets notifications e.g. when tests start and end.\nArguments to the listener class can be given after\nthe name using a colon or a semicolon as a separator.\n\nExamples:\n\n```toml\n[extend-listeners]\nMyListener = []\n\"path/to/Listener.py\" = [\"arg1\", \"arg2\"]\n```\n\ncorresponds to the `--listener listener *` option of _robot_\n",
           "examples": [
             "[extend-listeners]\nMyListener = []\n\"path/to/Listener.py\" = [\"arg1\", \"arg2\"]"
           ],
-          "markdownDescription": "Appends entries to the --listener option.\n\nClass or module for monitoring test execution.\nGets notifications e.g. when tests start and end.\nArguments to the listener class can be given after\nthe name using a colon or a semicolon as a separator.\n\nExamples:\n\n```toml\n[extend-listeners]\nMyListener = []\n\"path/to/Listener.py\" = [\"arg1\", \"arg2\"]\n```\n\ncorresponds to the `--listener listener *` option of _rebot_\n",
+          "markdownDescription": "Appends entries to the --listener option.\n\nClass or module for monitoring test execution.\nGets notifications e.g. when tests start and end.\nArguments to the listener class can be given after\nthe name using a colon or a semicolon as a separator.\n\nExamples:\n\n```toml\n[extend-listeners]\nMyListener = []\n\"path/to/Listener.py\" = [\"arg1\", \"arg2\"]\n```\n\ncorresponds to the `--listener listener *` option of _robot_\n",
           "title": "Extend Listeners",
           "x-taplo": {
             "links": {
@@ -3769,11 +3774,11 @@
             }
           ],
           "default": null,
-          "description": "Appends entries to the --parser option.\n\nCustom parser class or module. Parser classes accept\narguments the same way as with --listener.\n\nExamples:\n\n```toml\n[extend-parsers]\nMyParser = []\n\"path/to/MyParser.py\" = [\"arg1\", \"arg2\"]\n```\n\ncorresponds to the `--parser parser *` option of _rebot_\n",
+          "description": "Appends entries to the --parser option.\n\nCustom parser class or module. Parser classes accept\narguments the same way as with --listener.\n\nExamples:\n\n```toml\n[extend-parsers]\nMyParser = []\n\"path/to/MyParser.py\" = [\"arg1\", \"arg2\"]\n```\n\ncorresponds to the `--parser parser *` option of _robot_\n",
           "examples": [
             "[extend-parsers]\nMyParser = []\n\"path/to/MyParser.py\" = [\"arg1\", \"arg2\"]"
           ],
-          "markdownDescription": "Appends entries to the --parser option.\n\nCustom parser class or module. Parser classes accept\narguments the same way as with --listener.\n\nExamples:\n\n```toml\n[extend-parsers]\nMyParser = []\n\"path/to/MyParser.py\" = [\"arg1\", \"arg2\"]\n```\n\ncorresponds to the `--parser parser *` option of _rebot_\n",
+          "markdownDescription": "Appends entries to the --parser option.\n\nCustom parser class or module. Parser classes accept\narguments the same way as with --listener.\n\nExamples:\n\n```toml\n[extend-parsers]\nMyParser = []\n\"path/to/MyParser.py\" = [\"arg1\", \"arg2\"]\n```\n\ncorresponds to the `--parser parser *` option of _robot_\n",
           "title": "Extend Parsers",
           "x-taplo": {
             "links": {
@@ -3873,11 +3878,11 @@
             }
           ],
           "default": null,
-          "description": "Appends entries to the --prerunmodifier option.\n\nClass to programmatically modify the suite\nstructure before execution. Accepts arguments the\nsame way as with --listener.\n\nExamples:\n\n```toml\n[extend-pre-run-modifiers]\nMyModifier = []\n\"path/to/Modifier.py\" = [\"arg1\"]\n```\n\ncorresponds to the `--prerunmodifier modifier *` option of _rebot_\n",
+          "description": "Appends entries to the --prerunmodifier option.\n\nClass to programmatically modify the suite\nstructure before execution. Accepts arguments the\nsame way as with --listener.\n\nExamples:\n\n```toml\n[extend-pre-run-modifiers]\nMyModifier = []\n\"path/to/Modifier.py\" = [\"arg1\"]\n```\n\ncorresponds to the `--prerunmodifier modifier *` option of _robot_\n",
           "examples": [
             "[extend-pre-run-modifiers]\nMyModifier = []\n\"path/to/Modifier.py\" = [\"arg1\"]"
           ],
-          "markdownDescription": "Appends entries to the --prerunmodifier option.\n\nClass to programmatically modify the suite\nstructure before execution. Accepts arguments the\nsame way as with --listener.\n\nExamples:\n\n```toml\n[extend-pre-run-modifiers]\nMyModifier = []\n\"path/to/Modifier.py\" = [\"arg1\"]\n```\n\ncorresponds to the `--prerunmodifier modifier *` option of _rebot_\n",
+          "markdownDescription": "Appends entries to the --prerunmodifier option.\n\nClass to programmatically modify the suite\nstructure before execution. Accepts arguments the\nsame way as with --listener.\n\nExamples:\n\n```toml\n[extend-pre-run-modifiers]\nMyModifier = []\n\"path/to/Modifier.py\" = [\"arg1\"]\n```\n\ncorresponds to the `--prerunmodifier modifier *` option of _robot_\n",
           "title": "Extend Pre Run Modifiers",
           "x-taplo": {
             "links": {
@@ -3973,12 +3978,12 @@
             }
           ],
           "default": null,
-          "description": "Appends entries to the --removekeywords option.\n\nRemove keyword data from the generated log file.\nKeywords containing warnings are not removed except\nin the `all` mode.\n\n**all:** remove data from all keywords\n\n**passed:** remove data only from keywords in passed\ntest cases and suites\n\n**for:** remove passed iterations from FOR loops\n\n**while:** remove passed iterations from WHILE loops\n\n**wuks:** remove all but the last failing keyword\ninside `BuiltIn.Wait Until Keyword Succeeds`\n\n**name:\\<pattern>:** remove data from keywords that match\nthe given pattern. The pattern is matched\nagainst the full name of the keyword (e.g.\n'MyLib.Keyword', 'resource.Second Keyword'),\nis case, space, and underscore insensitive,\nand may contain `*`, `?` and `[]` wildcards.\n\n\n\n**tag:\\<pattern>:** remove data from keywords that match\nthe given pattern. Tags are case and space\ninsensitive and patterns can contain `*`,\n`?` and `[]` wildcards. Tags and patterns\ncan also be combined together with `AND`,\n`OR`, and `NOT` operators.\n\nExamples:\n\n```toml\n# match by keyword name\nextend-remove-keywords = [\"name:Lib.HugeKw\", \"name:myresource.*\"]\n```\n\n```toml\n# match by tag pattern (same rules as --include)\nextend-remove-keywords = [\"foo\", \"fooANDbar*\"]\n```\n\ncorresponds to the `--removekeywords all|passed|for|wuks|name:<pattern>|tag:<pattern> *` option of _robot_\n",
+          "description": "Appends entries to the --removekeywords option.\n\nRemove keyword data from the generated log file.\nKeywords containing warnings are not removed except\nin the `all` mode.\n\n**all:** remove data from all keywords\n\n**passed:** remove data only from keywords in passed\ntest cases and suites\n\n**for:** remove passed iterations from FOR loops\n\n**while:** remove passed iterations from WHILE loops\n\n**wuks:** remove all but the last failing keyword\ninside `BuiltIn.Wait Until Keyword Succeeds`\n\n**name:\\<pattern>:** remove data from keywords that match\nthe given pattern. The pattern is matched\nagainst the full name of the keyword (e.g.\n'MyLib.Keyword', 'resource.Second Keyword'),\nis case, space, and underscore insensitive,\nand may contain `*`, `?` and `[]` wildcards.\n\n\n\n**tag:\\<pattern>:** remove data from keywords that match\nthe given pattern. Tags are case and space\ninsensitive and patterns can contain `*`,\n`?` and `[]` wildcards. Tags and patterns\ncan also be combined together with `AND`,\n`OR`, and `NOT` operators.\n\nExamples:\n\n```toml\n# match by keyword name\nextend-remove-keywords = [\"name:Lib.HugeKw\", \"name:myresource.*\"]\n```\n\n```toml\n# match by tag pattern (same rules as --include)\nextend-remove-keywords = [\"foo\", \"foo AND bar*\"]\n```\n\ncorresponds to the `--removekeywords all|passed|for|wuks|name:<pattern>|tag:<pattern> *` option of _robot_\n",
           "examples": [
             "# match by keyword name\nextend-remove-keywords = [\"name:Lib.HugeKw\", \"name:myresource.*\"]",
-            "# match by tag pattern (same rules as --include)\nextend-remove-keywords = [\"foo\", \"fooANDbar*\"]"
+            "# match by tag pattern (same rules as --include)\nextend-remove-keywords = [\"foo\", \"foo AND bar*\"]"
           ],
-          "markdownDescription": "Appends entries to the --removekeywords option.\n\nRemove keyword data from the generated log file.\nKeywords containing warnings are not removed except\nin the `all` mode.\n\n**all:** remove data from all keywords\n\n**passed:** remove data only from keywords in passed\ntest cases and suites\n\n**for:** remove passed iterations from FOR loops\n\n**while:** remove passed iterations from WHILE loops\n\n**wuks:** remove all but the last failing keyword\ninside `BuiltIn.Wait Until Keyword Succeeds`\n\n**name:\\<pattern>:** remove data from keywords that match\nthe given pattern. The pattern is matched\nagainst the full name of the keyword (e.g.\n'MyLib.Keyword', 'resource.Second Keyword'),\nis case, space, and underscore insensitive,\nand may contain `*`, `?` and `[]` wildcards.\n\n\n\n**tag:\\<pattern>:** remove data from keywords that match\nthe given pattern. Tags are case and space\ninsensitive and patterns can contain `*`,\n`?` and `[]` wildcards. Tags and patterns\ncan also be combined together with `AND`,\n`OR`, and `NOT` operators.\n\nExamples:\n\n```toml\n# match by keyword name\nextend-remove-keywords = [\"name:Lib.HugeKw\", \"name:myresource.*\"]\n```\n\n```toml\n# match by tag pattern (same rules as --include)\nextend-remove-keywords = [\"foo\", \"fooANDbar*\"]\n```\n\ncorresponds to the `--removekeywords all|passed|for|wuks|name:<pattern>|tag:<pattern> *` option of _robot_\n",
+          "markdownDescription": "Appends entries to the --removekeywords option.\n\nRemove keyword data from the generated log file.\nKeywords containing warnings are not removed except\nin the `all` mode.\n\n**all:** remove data from all keywords\n\n**passed:** remove data only from keywords in passed\ntest cases and suites\n\n**for:** remove passed iterations from FOR loops\n\n**while:** remove passed iterations from WHILE loops\n\n**wuks:** remove all but the last failing keyword\ninside `BuiltIn.Wait Until Keyword Succeeds`\n\n**name:\\<pattern>:** remove data from keywords that match\nthe given pattern. The pattern is matched\nagainst the full name of the keyword (e.g.\n'MyLib.Keyword', 'resource.Second Keyword'),\nis case, space, and underscore insensitive,\nand may contain `*`, `?` and `[]` wildcards.\n\n\n\n**tag:\\<pattern>:** remove data from keywords that match\nthe given pattern. Tags are case and space\ninsensitive and patterns can contain `*`,\n`?` and `[]` wildcards. Tags and patterns\ncan also be combined together with `AND`,\n`OR`, and `NOT` operators.\n\nExamples:\n\n```toml\n# match by keyword name\nextend-remove-keywords = [\"name:Lib.HugeKw\", \"name:myresource.*\"]\n```\n\n```toml\n# match by tag pattern (same rules as --include)\nextend-remove-keywords = [\"foo\", \"foo AND bar*\"]\n```\n\ncorresponds to the `--removekeywords all|passed|for|wuks|name:<pattern>|tag:<pattern> *` option of _robot_\n",
           "title": "Extend Remove Keywords",
           "x-taplo": {
             "links": {
@@ -4038,11 +4043,11 @@
             }
           ],
           "default": null,
-          "description": "Appends entries to the --skip option.\n\nTests having given tag will be skipped. Tag can be\na pattern.\n\nExamples:\n\n```toml\nextend-skip = [\"bug-*\", \"wip\"]\n```\n\ncorresponds to the `--skip tag *` option of _rebot_\n",
+          "description": "Appends entries to the --skip option.\n\nTests having given tag will be skipped. Tag can be\na pattern.\n\nExamples:\n\n```toml\nextend-skip = [\"bug-*\", \"wip\"]\n```\n\ncorresponds to the `--skip tag *` option of _robot_\n",
           "examples": [
             "extend-skip = [\"bug-*\", \"wip\"]"
           ],
-          "markdownDescription": "Appends entries to the --skip option.\n\nTests having given tag will be skipped. Tag can be\na pattern.\n\nExamples:\n\n```toml\nextend-skip = [\"bug-*\", \"wip\"]\n```\n\ncorresponds to the `--skip tag *` option of _rebot_\n",
+          "markdownDescription": "Appends entries to the --skip option.\n\nTests having given tag will be skipped. Tag can be\na pattern.\n\nExamples:\n\n```toml\nextend-skip = [\"bug-*\", \"wip\"]\n```\n\ncorresponds to the `--skip tag *` option of _robot_\n",
           "title": "Extend Skip",
           "x-taplo": {
             "links": {
@@ -4070,11 +4075,11 @@
             }
           ],
           "default": null,
-          "description": "Appends entries to the --skiponfailure option.\n\nTests having given tag will be skipped if they fail.\nTag can be a pattern\n\nExamples:\n\n```toml\nextend-skip-on-failure = [\"unstable\"]\n```\n\ncorresponds to the `--skiponfailure tag *` option of _rebot_\n",
+          "description": "Appends entries to the --skiponfailure option.\n\nTests having given tag will be skipped if they fail.\nTag can be a pattern\n\nExamples:\n\n```toml\nextend-skip-on-failure = [\"unstable\"]\n```\n\ncorresponds to the `--skiponfailure tag *` option of _robot_\n",
           "examples": [
             "extend-skip-on-failure = [\"unstable\"]"
           ],
-          "markdownDescription": "Appends entries to the --skiponfailure option.\n\nTests having given tag will be skipped if they fail.\nTag can be a pattern\n\nExamples:\n\n```toml\nextend-skip-on-failure = [\"unstable\"]\n```\n\ncorresponds to the `--skiponfailure tag *` option of _rebot_\n",
+          "markdownDescription": "Appends entries to the --skiponfailure option.\n\nTests having given tag will be skipped if they fail.\nTag can be a pattern\n\nExamples:\n\n```toml\nextend-skip-on-failure = [\"unstable\"]\n```\n\ncorresponds to the `--skiponfailure tag *` option of _robot_\n",
           "title": "Extend Skip On Failure",
           "x-taplo": {
             "links": {
@@ -4175,11 +4180,11 @@
             }
           ],
           "default": null,
-          "description": "Appends entries to the --tagstatcombine option.\n\nCreate combined statistics based on tags.\nThese statistics are added into `Statistics by Tag`.\nIf the optional `name` is not given, name of the\ncombined tag is got from the specified tags. Tags are\nmatched using the same rules as with --include.\n\nExamples:\n\n```toml\nextend-tag-stat-combine = [\"requirement-*\", { \"tag1ANDtag2\" = \"My_name\" }]\n```\n\ncorresponds to the `--tagstatcombine tags:name *` option of _robot_\n",
+          "description": "Appends entries to the --tagstatcombine option.\n\nCreate combined statistics based on tags.\nThese statistics are added into `Statistics by Tag`.\nIf the optional `name` is not given, name of the\ncombined tag is got from the specified tags. Tags are\nmatched using the same rules as with --include.\n\nExamples:\n\n```toml\nextend-tag-stat-combine = [\"requirement-*\", { \"tag1 AND tag2\" = \"My_name\" }]\n```\n\ncorresponds to the `--tagstatcombine tags:name *` option of _robot_\n",
           "examples": [
-            "extend-tag-stat-combine = [\"requirement-*\", { \"tag1ANDtag2\" = \"My_name\" }]"
+            "extend-tag-stat-combine = [\"requirement-*\", { \"tag1 AND tag2\" = \"My_name\" }]"
           ],
-          "markdownDescription": "Appends entries to the --tagstatcombine option.\n\nCreate combined statistics based on tags.\nThese statistics are added into `Statistics by Tag`.\nIf the optional `name` is not given, name of the\ncombined tag is got from the specified tags. Tags are\nmatched using the same rules as with --include.\n\nExamples:\n\n```toml\nextend-tag-stat-combine = [\"requirement-*\", { \"tag1ANDtag2\" = \"My_name\" }]\n```\n\ncorresponds to the `--tagstatcombine tags:name *` option of _robot_\n",
+          "markdownDescription": "Appends entries to the --tagstatcombine option.\n\nCreate combined statistics based on tags.\nThese statistics are added into `Statistics by Tag`.\nIf the optional `name` is not given, name of the\ncombined tag is got from the specified tags. Tags are\nmatched using the same rules as with --include.\n\nExamples:\n\n```toml\nextend-tag-stat-combine = [\"requirement-*\", { \"tag1 AND tag2\" = \"My_name\" }]\n```\n\ncorresponds to the `--tagstatcombine tags:name *` option of _robot_\n",
           "title": "Extend Tag Stat Combine",
           "x-taplo": {
             "links": {
@@ -4370,11 +4375,11 @@
             }
           ],
           "default": null,
-          "description": "Appends entries to the --variablefile option.\n\nPython or YAML file file to read variables from.\nPossible arguments to the variable file can be given\nafter the path using colon or semicolon as separator.\n\nExamples:\n\n```toml\nextend-variable-files = [\"path/vars.yaml\", \"environment.py:testing\"]\n```\n\ncorresponds to the `-V --variablefile path *` option of _rebot_\n",
+          "description": "Appends entries to the --variablefile option.\n\nPython or YAML file file to read variables from.\nPossible arguments to the variable file can be given\nafter the path using colon or semicolon as separator.\n\nExamples:\n\n```toml\nextend-variable-files = [\"path/vars.yaml\", \"environment.py:testing\"]\n```\n\ncorresponds to the `-V --variablefile path *` option of _robot_\n",
           "examples": [
             "extend-variable-files = [\"path/vars.yaml\", \"environment.py:testing\"]"
           ],
-          "markdownDescription": "Appends entries to the --variablefile option.\n\nPython or YAML file file to read variables from.\nPossible arguments to the variable file can be given\nafter the path using colon or semicolon as separator.\n\nExamples:\n\n```toml\nextend-variable-files = [\"path/vars.yaml\", \"environment.py:testing\"]\n```\n\ncorresponds to the `-V --variablefile path *` option of _rebot_\n",
+          "markdownDescription": "Appends entries to the --variablefile option.\n\nPython or YAML file file to read variables from.\nPossible arguments to the variable file can be given\nafter the path using colon or semicolon as separator.\n\nExamples:\n\n```toml\nextend-variable-files = [\"path/vars.yaml\", \"environment.py:testing\"]\n```\n\ncorresponds to the `-V --variablefile path *` option of _robot_\n",
           "title": "Extend Variable Files",
           "x-taplo": {
             "links": {
@@ -4405,11 +4410,11 @@
             }
           ],
           "default": null,
-          "description": "Appends entries to the --variable option.\n\nSet variables in the test data. Only scalar\nvariables with string value are supported and name is\ngiven without `${}`. See --variablefile for a more\npowerful variable setting mechanism.\n\nExamples:\n\n```toml\n# sets ${name} to \"Robot\"\n[extend-variables]\nname = \"Robot\"\n```\n\ncorresponds to the `-v --variable name:value *` option of _rebot_\n",
+          "description": "Appends entries to the --variable option.\n\nSet variables in the test data. Only scalar\nvariables with string value are supported and name is\ngiven without `${}`. See --variablefile for a more\npowerful variable setting mechanism.\n\nExamples:\n\n```toml\n# sets ${name} to \"Robot\"\n[extend-variables]\nname = \"Robot\"\n```\n\ncorresponds to the `-v --variable name:value *` option of _robot_\n",
           "examples": [
             "# sets ${name} to \"Robot\"\n[extend-variables]\nname = \"Robot\""
           ],
-          "markdownDescription": "Appends entries to the --variable option.\n\nSet variables in the test data. Only scalar\nvariables with string value are supported and name is\ngiven without `${}`. See --variablefile for a more\npowerful variable setting mechanism.\n\nExamples:\n\n```toml\n# sets ${name} to \"Robot\"\n[extend-variables]\nname = \"Robot\"\n```\n\ncorresponds to the `-v --variable name:value *` option of _rebot_\n",
+          "markdownDescription": "Appends entries to the --variable option.\n\nSet variables in the test data. Only scalar\nvariables with string value are supported and name is\ngiven without `${}`. See --variablefile for a more\npowerful variable setting mechanism.\n\nExamples:\n\n```toml\n# sets ${name} to \"Robot\"\n[extend-variables]\nname = \"Robot\"\n```\n\ncorresponds to the `-v --variable name:value *` option of _robot_\n",
           "title": "Extend Variables",
           "x-taplo": {
             "links": {
@@ -4537,12 +4542,12 @@
             }
           ],
           "default": null,
-          "description": "Select tests by tag. Similarly as name with --test,\ntag is case and space insensitive and it is possible\nto use patterns with `*`, `?` and `[]` as wildcards.\nTags and patterns can also be combined together with\n`AND`, `OR`, and `NOT` operators.\n\nExamples:\n\n```toml\n# match tests tagged \"foo\" or \"bar*\"\nincludes = [\"foo\", \"bar*\"]\n```\n\n```toml\n# tests with both \"foo\" and \"bar*\" tags\nincludes = [\"fooANDbar*\"]\n```\n\ncorresponds to the `-i --include tag *` option of _robot_\n",
+          "description": "Select tests by tag. Similarly as name with --test,\ntag is case and space insensitive and it is possible\nto use patterns with `*`, `?` and `[]` as wildcards.\nTags and patterns can also be combined together with\n`AND`, `OR`, and `NOT` operators.\n\nExamples:\n\n```toml\n# match tests tagged \"foo\" or \"bar*\"\nincludes = [\"foo\", \"bar*\"]\n```\n\n```toml\n# tests with both \"foo\" and \"bar*\" tags\nincludes = [\"foo AND bar*\"]\n```\n\ncorresponds to the `-i --include tag *` option of _robot_\n",
           "examples": [
             "# match tests tagged \"foo\" or \"bar*\"\nincludes = [\"foo\", \"bar*\"]",
-            "# tests with both \"foo\" and \"bar*\" tags\nincludes = [\"fooANDbar*\"]"
+            "# tests with both \"foo\" and \"bar*\" tags\nincludes = [\"foo AND bar*\"]"
           ],
-          "markdownDescription": "Select tests by tag. Similarly as name with --test,\ntag is case and space insensitive and it is possible\nto use patterns with `*`, `?` and `[]` as wildcards.\nTags and patterns can also be combined together with\n`AND`, `OR`, and `NOT` operators.\n\nExamples:\n\n```toml\n# match tests tagged \"foo\" or \"bar*\"\nincludes = [\"foo\", \"bar*\"]\n```\n\n```toml\n# tests with both \"foo\" and \"bar*\" tags\nincludes = [\"fooANDbar*\"]\n```\n\ncorresponds to the `-i --include tag *` option of _robot_\n",
+          "markdownDescription": "Select tests by tag. Similarly as name with --test,\ntag is case and space insensitive and it is possible\nto use patterns with `*`, `?` and `[]` as wildcards.\nTags and patterns can also be combined together with\n`AND`, `OR`, and `NOT` operators.\n\nExamples:\n\n```toml\n# match tests tagged \"foo\" or \"bar*\"\nincludes = [\"foo\", \"bar*\"]\n```\n\n```toml\n# tests with both \"foo\" and \"bar*\" tags\nincludes = [\"foo AND bar*\"]\n```\n\ncorresponds to the `-i --include tag *` option of _robot_\n",
           "title": "Includes",
           "x-taplo": {
             "links": {
@@ -5323,12 +5328,12 @@
             }
           ],
           "default": null,
-          "description": "Remove keyword data from the generated log file.\nKeywords containing warnings are not removed except\nin the `all` mode.\n\n**all:** remove data from all keywords\n\n**passed:** remove data only from keywords in passed\ntest cases and suites\n\n**for:** remove passed iterations from FOR loops\n\n**while:** remove passed iterations from WHILE loops\n\n**wuks:** remove all but the last failing keyword\ninside `BuiltIn.Wait Until Keyword Succeeds`\n\n**name:\\<pattern>:** remove data from keywords that match\nthe given pattern. The pattern is matched\nagainst the full name of the keyword (e.g.\n'MyLib.Keyword', 'resource.Second Keyword'),\nis case, space, and underscore insensitive,\nand may contain `*`, `?` and `[]` wildcards.\n\n\n\n**tag:\\<pattern>:** remove data from keywords that match\nthe given pattern. Tags are case and space\ninsensitive and patterns can contain `*`,\n`?` and `[]` wildcards. Tags and patterns\ncan also be combined together with `AND`,\n`OR`, and `NOT` operators.\n\nExamples:\n\n```toml\n# match by keyword name\nremove-keywords = [\"name:Lib.HugeKw\", \"name:myresource.*\"]\n```\n\n```toml\n# match by tag pattern (same rules as --include)\nremove-keywords = [\"foo\", \"fooANDbar*\"]\n```\n\ncorresponds to the `--removekeywords all|passed|for|wuks|name:<pattern>|tag:<pattern> *` option of _robot_\n",
+          "description": "Remove keyword data from the generated log file.\nKeywords containing warnings are not removed except\nin the `all` mode.\n\n**all:** remove data from all keywords\n\n**passed:** remove data only from keywords in passed\ntest cases and suites\n\n**for:** remove passed iterations from FOR loops\n\n**while:** remove passed iterations from WHILE loops\n\n**wuks:** remove all but the last failing keyword\ninside `BuiltIn.Wait Until Keyword Succeeds`\n\n**name:\\<pattern>:** remove data from keywords that match\nthe given pattern. The pattern is matched\nagainst the full name of the keyword (e.g.\n'MyLib.Keyword', 'resource.Second Keyword'),\nis case, space, and underscore insensitive,\nand may contain `*`, `?` and `[]` wildcards.\n\n\n\n**tag:\\<pattern>:** remove data from keywords that match\nthe given pattern. Tags are case and space\ninsensitive and patterns can contain `*`,\n`?` and `[]` wildcards. Tags and patterns\ncan also be combined together with `AND`,\n`OR`, and `NOT` operators.\n\nExamples:\n\n```toml\n# match by keyword name\nremove-keywords = [\"name:Lib.HugeKw\", \"name:myresource.*\"]\n```\n\n```toml\n# match by tag pattern (same rules as --include)\nremove-keywords = [\"foo\", \"foo AND bar*\"]\n```\n\ncorresponds to the `--removekeywords all|passed|for|wuks|name:<pattern>|tag:<pattern> *` option of _robot_\n",
           "examples": [
             "# match by keyword name\nremove-keywords = [\"name:Lib.HugeKw\", \"name:myresource.*\"]",
-            "# match by tag pattern (same rules as --include)\nremove-keywords = [\"foo\", \"fooANDbar*\"]"
+            "# match by tag pattern (same rules as --include)\nremove-keywords = [\"foo\", \"foo AND bar*\"]"
           ],
-          "markdownDescription": "Remove keyword data from the generated log file.\nKeywords containing warnings are not removed except\nin the `all` mode.\n\n**all:** remove data from all keywords\n\n**passed:** remove data only from keywords in passed\ntest cases and suites\n\n**for:** remove passed iterations from FOR loops\n\n**while:** remove passed iterations from WHILE loops\n\n**wuks:** remove all but the last failing keyword\ninside `BuiltIn.Wait Until Keyword Succeeds`\n\n**name:\\<pattern>:** remove data from keywords that match\nthe given pattern. The pattern is matched\nagainst the full name of the keyword (e.g.\n'MyLib.Keyword', 'resource.Second Keyword'),\nis case, space, and underscore insensitive,\nand may contain `*`, `?` and `[]` wildcards.\n\n\n\n**tag:\\<pattern>:** remove data from keywords that match\nthe given pattern. Tags are case and space\ninsensitive and patterns can contain `*`,\n`?` and `[]` wildcards. Tags and patterns\ncan also be combined together with `AND`,\n`OR`, and `NOT` operators.\n\nExamples:\n\n```toml\n# match by keyword name\nremove-keywords = [\"name:Lib.HugeKw\", \"name:myresource.*\"]\n```\n\n```toml\n# match by tag pattern (same rules as --include)\nremove-keywords = [\"foo\", \"fooANDbar*\"]\n```\n\ncorresponds to the `--removekeywords all|passed|for|wuks|name:<pattern>|tag:<pattern> *` option of _robot_\n",
+          "markdownDescription": "Remove keyword data from the generated log file.\nKeywords containing warnings are not removed except\nin the `all` mode.\n\n**all:** remove data from all keywords\n\n**passed:** remove data only from keywords in passed\ntest cases and suites\n\n**for:** remove passed iterations from FOR loops\n\n**while:** remove passed iterations from WHILE loops\n\n**wuks:** remove all but the last failing keyword\ninside `BuiltIn.Wait Until Keyword Succeeds`\n\n**name:\\<pattern>:** remove data from keywords that match\nthe given pattern. The pattern is matched\nagainst the full name of the keyword (e.g.\n'MyLib.Keyword', 'resource.Second Keyword'),\nis case, space, and underscore insensitive,\nand may contain `*`, `?` and `[]` wildcards.\n\n\n\n**tag:\\<pattern>:** remove data from keywords that match\nthe given pattern. Tags are case and space\ninsensitive and patterns can contain `*`,\n`?` and `[]` wildcards. Tags and patterns\ncan also be combined together with `AND`,\n`OR`, and `NOT` operators.\n\nExamples:\n\n```toml\n# match by keyword name\nremove-keywords = [\"name:Lib.HugeKw\", \"name:myresource.*\"]\n```\n\n```toml\n# match by tag pattern (same rules as --include)\nremove-keywords = [\"foo\", \"foo AND bar*\"]\n```\n\ncorresponds to the `--removekeywords all|passed|for|wuks|name:<pattern>|tag:<pattern> *` option of _robot_\n",
           "title": "Remove Keywords",
           "x-taplo": {
             "links": {
@@ -5739,11 +5744,11 @@
             }
           ],
           "default": null,
-          "description": "Create combined statistics based on tags.\nThese statistics are added into `Statistics by Tag`.\nIf the optional `name` is not given, name of the\ncombined tag is got from the specified tags. Tags are\nmatched using the same rules as with --include.\n\nExamples:\n\n```toml\ntag-stat-combine = [\"requirement-*\", { \"tag1ANDtag2\" = \"My_name\" }]\n```\n\ncorresponds to the `--tagstatcombine tags:name *` option of _robot_\n",
+          "description": "Create combined statistics based on tags.\nThese statistics are added into `Statistics by Tag`.\nIf the optional `name` is not given, name of the\ncombined tag is got from the specified tags. Tags are\nmatched using the same rules as with --include.\n\nExamples:\n\n```toml\ntag-stat-combine = [\"requirement-*\", { \"tag1 AND tag2\" = \"My_name\" }]\n```\n\ncorresponds to the `--tagstatcombine tags:name *` option of _robot_\n",
           "examples": [
-            "tag-stat-combine = [\"requirement-*\", { \"tag1ANDtag2\" = \"My_name\" }]"
+            "tag-stat-combine = [\"requirement-*\", { \"tag1 AND tag2\" = \"My_name\" }]"
           ],
-          "markdownDescription": "Create combined statistics based on tags.\nThese statistics are added into `Statistics by Tag`.\nIf the optional `name` is not given, name of the\ncombined tag is got from the specified tags. Tags are\nmatched using the same rules as with --include.\n\nExamples:\n\n```toml\ntag-stat-combine = [\"requirement-*\", { \"tag1ANDtag2\" = \"My_name\" }]\n```\n\ncorresponds to the `--tagstatcombine tags:name *` option of _robot_\n",
+          "markdownDescription": "Create combined statistics based on tags.\nThese statistics are added into `Statistics by Tag`.\nIf the optional `name` is not given, name of the\ncombined tag is got from the specified tags. Tags are\nmatched using the same rules as with --include.\n\nExamples:\n\n```toml\ntag-stat-combine = [\"requirement-*\", { \"tag1 AND tag2\" = \"My_name\" }]\n```\n\ncorresponds to the `--tagstatcombine tags:name *` option of _robot_\n",
           "title": "Tag Stat Combine",
           "x-taplo": {
             "links": {
@@ -6148,10 +6153,12 @@
         "console": {
           "anyOf": [
             {
+              "type": "string"
+            },
+            {
               "enum": [
                 "verbose",
                 "dotted",
-                "skipped",
                 "quiet",
                 "none"
               ]
@@ -6161,11 +6168,12 @@
             }
           ],
           "default": null,
-          "description": "How to report execution on the console.\n\n**verbose:** report every suite and test (default)\n\n**dotted:** only show `.` for passed test, `s` for\nskipped tests, and `F` for failed tests\n\n**quiet:** no output except for errors and warnings\n\n**none:** no output whatsoever\n\nExamples:\n\n```toml\nconsole = \"dotted\"\n```\n\ncorresponds to the `--console type` option of _robot_\n",
+          "description": "How to report execution on the console.\nBuilt-in consoles:\n\n**verbose:** report every suite and test (default)\n\n**dotted:** only show `.` for passed test, `s`\nfor skipped and `F` for failed tests\n\n**quiet:** no output except for errors/warnings\n\n**none:** no output whatsoever\nOther values are interpreted as a custom\nconsole class or module. Argument format is\nthe same as with --listener.\n\nExamples:\n\n```toml\nconsole = \"dotted\"\n```\n\n```toml\n# custom console logger class or module (Robot Framework 7.5 or newer)\nconsole = \"path/to/MyConsole.py:arg\"\n```\n\ncorresponds to the `--console console` option of _robot_\n",
           "examples": [
-            "console = \"dotted\""
+            "console = \"dotted\"",
+            "# custom console logger class or module (Robot Framework 7.5 or newer)\nconsole = \"path/to/MyConsole.py:arg\""
           ],
-          "markdownDescription": "How to report execution on the console.\n\n**verbose:** report every suite and test (default)\n\n**dotted:** only show `.` for passed test, `s` for\nskipped tests, and `F` for failed tests\n\n**quiet:** no output except for errors and warnings\n\n**none:** no output whatsoever\n\nExamples:\n\n```toml\nconsole = \"dotted\"\n```\n\ncorresponds to the `--console type` option of _robot_\n",
+          "markdownDescription": "How to report execution on the console.\nBuilt-in consoles:\n\n**verbose:** report every suite and test (default)\n\n**dotted:** only show `.` for passed test, `s`\nfor skipped and `F` for failed tests\n\n**quiet:** no output except for errors/warnings\n\n**none:** no output whatsoever\nOther values are interpreted as a custom\nconsole class or module. Argument format is\nthe same as with --listener.\n\nExamples:\n\n```toml\nconsole = \"dotted\"\n```\n\n```toml\n# custom console logger class or module (Robot Framework 7.5 or newer)\nconsole = \"path/to/MyConsole.py:arg\"\n```\n\ncorresponds to the `--console console` option of _robot_\n",
           "title": "Console",
           "x-taplo": {
             "links": {
@@ -6795,12 +6803,12 @@
             }
           ],
           "default": null,
-          "description": "Appends entries to the --include option.\n\nSelect tests by tag. Similarly as name with --test,\ntag is case and space insensitive and it is possible\nto use patterns with `*`, `?` and `[]` as wildcards.\nTags and patterns can also be combined together with\n`AND`, `OR`, and `NOT` operators.\n\nExamples:\n\n```toml\n# match tests tagged \"foo\" or \"bar*\"\nextend-includes = [\"foo\", \"bar*\"]\n```\n\n```toml\n# tests with both \"foo\" and \"bar*\" tags\nextend-includes = [\"fooANDbar*\"]\n```\n\ncorresponds to the `-i --include tag *` option of _robot_\n",
+          "description": "Appends entries to the --include option.\n\nSelect tests by tag. Similarly as name with --test,\ntag is case and space insensitive and it is possible\nto use patterns with `*`, `?` and `[]` as wildcards.\nTags and patterns can also be combined together with\n`AND`, `OR`, and `NOT` operators.\n\nExamples:\n\n```toml\n# match tests tagged \"foo\" or \"bar*\"\nextend-includes = [\"foo\", \"bar*\"]\n```\n\n```toml\n# tests with both \"foo\" and \"bar*\" tags\nextend-includes = [\"foo AND bar*\"]\n```\n\ncorresponds to the `-i --include tag *` option of _robot_\n",
           "examples": [
             "# match tests tagged \"foo\" or \"bar*\"\nextend-includes = [\"foo\", \"bar*\"]",
-            "# tests with both \"foo\" and \"bar*\" tags\nextend-includes = [\"fooANDbar*\"]"
+            "# tests with both \"foo\" and \"bar*\" tags\nextend-includes = [\"foo AND bar*\"]"
           ],
-          "markdownDescription": "Appends entries to the --include option.\n\nSelect tests by tag. Similarly as name with --test,\ntag is case and space insensitive and it is possible\nto use patterns with `*`, `?` and `[]` as wildcards.\nTags and patterns can also be combined together with\n`AND`, `OR`, and `NOT` operators.\n\nExamples:\n\n```toml\n# match tests tagged \"foo\" or \"bar*\"\nextend-includes = [\"foo\", \"bar*\"]\n```\n\n```toml\n# tests with both \"foo\" and \"bar*\" tags\nextend-includes = [\"fooANDbar*\"]\n```\n\ncorresponds to the `-i --include tag *` option of _robot_\n",
+          "markdownDescription": "Appends entries to the --include option.\n\nSelect tests by tag. Similarly as name with --test,\ntag is case and space insensitive and it is possible\nto use patterns with `*`, `?` and `[]` as wildcards.\nTags and patterns can also be combined together with\n`AND`, `OR`, and `NOT` operators.\n\nExamples:\n\n```toml\n# match tests tagged \"foo\" or \"bar*\"\nextend-includes = [\"foo\", \"bar*\"]\n```\n\n```toml\n# tests with both \"foo\" and \"bar*\" tags\nextend-includes = [\"foo AND bar*\"]\n```\n\ncorresponds to the `-i --include tag *` option of _robot_\n",
           "title": "Extend Includes",
           "x-taplo": {
             "links": {
@@ -6828,11 +6836,11 @@
             }
           ],
           "default": null,
-          "description": "Appends entries to the --language option.\n\nActivate localization. `lang` can be a name or a code\nof a built-in language, or a path or a module name of\na custom language file.\n\nExamples:\n\n```toml\nextend-languages = [\"German\", \"Finnish\"]\n```\n\ncorresponds to the `--language lang *` option of _rebot_\n",
+          "description": "Appends entries to the --language option.\n\nActivate localization. `lang` can be a name or a code\nof a built-in language, or a path or a module name of\na custom language file.\n\nExamples:\n\n```toml\nextend-languages = [\"German\", \"Finnish\"]\n```\n\ncorresponds to the `--language lang *` option of _robot_\n",
           "examples": [
             "extend-languages = [\"German\", \"Finnish\"]"
           ],
-          "markdownDescription": "Appends entries to the --language option.\n\nActivate localization. `lang` can be a name or a code\nof a built-in language, or a path or a module name of\na custom language file.\n\nExamples:\n\n```toml\nextend-languages = [\"German\", \"Finnish\"]\n```\n\ncorresponds to the `--language lang *` option of _rebot_\n",
+          "markdownDescription": "Appends entries to the --language option.\n\nActivate localization. `lang` can be a name or a code\nof a built-in language, or a path or a module name of\na custom language file.\n\nExamples:\n\n```toml\nextend-languages = [\"German\", \"Finnish\"]\n```\n\ncorresponds to the `--language lang *` option of _robot_\n",
           "title": "Extend Languages",
           "x-taplo": {
             "links": {
@@ -6866,11 +6874,11 @@
             }
           ],
           "default": null,
-          "description": "Appends entries to the --listener option.\n\nClass or module for monitoring test execution.\nGets notifications e.g. when tests start and end.\nArguments to the listener class can be given after\nthe name using a colon or a semicolon as a separator.\n\nExamples:\n\n```toml\n[extend-listeners]\nMyListener = []\n\"path/to/Listener.py\" = [\"arg1\", \"arg2\"]\n```\n\ncorresponds to the `--listener listener *` option of _rebot_\n",
+          "description": "Appends entries to the --listener option.\n\nClass or module for monitoring test execution.\nGets notifications e.g. when tests start and end.\nArguments to the listener class can be given after\nthe name using a colon or a semicolon as a separator.\n\nExamples:\n\n```toml\n[extend-listeners]\nMyListener = []\n\"path/to/Listener.py\" = [\"arg1\", \"arg2\"]\n```\n\ncorresponds to the `--listener listener *` option of _robot_\n",
           "examples": [
             "[extend-listeners]\nMyListener = []\n\"path/to/Listener.py\" = [\"arg1\", \"arg2\"]"
           ],
-          "markdownDescription": "Appends entries to the --listener option.\n\nClass or module for monitoring test execution.\nGets notifications e.g. when tests start and end.\nArguments to the listener class can be given after\nthe name using a colon or a semicolon as a separator.\n\nExamples:\n\n```toml\n[extend-listeners]\nMyListener = []\n\"path/to/Listener.py\" = [\"arg1\", \"arg2\"]\n```\n\ncorresponds to the `--listener listener *` option of _rebot_\n",
+          "markdownDescription": "Appends entries to the --listener option.\n\nClass or module for monitoring test execution.\nGets notifications e.g. when tests start and end.\nArguments to the listener class can be given after\nthe name using a colon or a semicolon as a separator.\n\nExamples:\n\n```toml\n[extend-listeners]\nMyListener = []\n\"path/to/Listener.py\" = [\"arg1\", \"arg2\"]\n```\n\ncorresponds to the `--listener listener *` option of _robot_\n",
           "title": "Extend Listeners",
           "x-taplo": {
             "links": {
@@ -6971,11 +6979,11 @@
             }
           ],
           "default": null,
-          "description": "Appends entries to the --parser option.\n\nCustom parser class or module. Parser classes accept\narguments the same way as with --listener.\n\nExamples:\n\n```toml\n[extend-parsers]\nMyParser = []\n\"path/to/MyParser.py\" = [\"arg1\", \"arg2\"]\n```\n\ncorresponds to the `--parser parser *` option of _rebot_\n",
+          "description": "Appends entries to the --parser option.\n\nCustom parser class or module. Parser classes accept\narguments the same way as with --listener.\n\nExamples:\n\n```toml\n[extend-parsers]\nMyParser = []\n\"path/to/MyParser.py\" = [\"arg1\", \"arg2\"]\n```\n\ncorresponds to the `--parser parser *` option of _robot_\n",
           "examples": [
             "[extend-parsers]\nMyParser = []\n\"path/to/MyParser.py\" = [\"arg1\", \"arg2\"]"
           ],
-          "markdownDescription": "Appends entries to the --parser option.\n\nCustom parser class or module. Parser classes accept\narguments the same way as with --listener.\n\nExamples:\n\n```toml\n[extend-parsers]\nMyParser = []\n\"path/to/MyParser.py\" = [\"arg1\", \"arg2\"]\n```\n\ncorresponds to the `--parser parser *` option of _rebot_\n",
+          "markdownDescription": "Appends entries to the --parser option.\n\nCustom parser class or module. Parser classes accept\narguments the same way as with --listener.\n\nExamples:\n\n```toml\n[extend-parsers]\nMyParser = []\n\"path/to/MyParser.py\" = [\"arg1\", \"arg2\"]\n```\n\ncorresponds to the `--parser parser *` option of _robot_\n",
           "title": "Extend Parsers",
           "x-taplo": {
             "links": {
@@ -7075,11 +7083,11 @@
             }
           ],
           "default": null,
-          "description": "Appends entries to the --prerunmodifier option.\n\nClass to programmatically modify the suite\nstructure before execution. Accepts arguments the\nsame way as with --listener.\n\nExamples:\n\n```toml\n[extend-pre-run-modifiers]\nMyModifier = []\n\"path/to/Modifier.py\" = [\"arg1\"]\n```\n\ncorresponds to the `--prerunmodifier modifier *` option of _rebot_\n",
+          "description": "Appends entries to the --prerunmodifier option.\n\nClass to programmatically modify the suite\nstructure before execution. Accepts arguments the\nsame way as with --listener.\n\nExamples:\n\n```toml\n[extend-pre-run-modifiers]\nMyModifier = []\n\"path/to/Modifier.py\" = [\"arg1\"]\n```\n\ncorresponds to the `--prerunmodifier modifier *` option of _robot_\n",
           "examples": [
             "[extend-pre-run-modifiers]\nMyModifier = []\n\"path/to/Modifier.py\" = [\"arg1\"]"
           ],
-          "markdownDescription": "Appends entries to the --prerunmodifier option.\n\nClass to programmatically modify the suite\nstructure before execution. Accepts arguments the\nsame way as with --listener.\n\nExamples:\n\n```toml\n[extend-pre-run-modifiers]\nMyModifier = []\n\"path/to/Modifier.py\" = [\"arg1\"]\n```\n\ncorresponds to the `--prerunmodifier modifier *` option of _rebot_\n",
+          "markdownDescription": "Appends entries to the --prerunmodifier option.\n\nClass to programmatically modify the suite\nstructure before execution. Accepts arguments the\nsame way as with --listener.\n\nExamples:\n\n```toml\n[extend-pre-run-modifiers]\nMyModifier = []\n\"path/to/Modifier.py\" = [\"arg1\"]\n```\n\ncorresponds to the `--prerunmodifier modifier *` option of _robot_\n",
           "title": "Extend Pre Run Modifiers",
           "x-taplo": {
             "links": {
@@ -7150,12 +7158,12 @@
             }
           ],
           "default": null,
-          "description": "Appends entries to the --removekeywords option.\n\nRemove keyword data from the generated log file.\nKeywords containing warnings are not removed except\nin the `all` mode.\n\n**all:** remove data from all keywords\n\n**passed:** remove data only from keywords in passed\ntest cases and suites\n\n**for:** remove passed iterations from FOR loops\n\n**while:** remove passed iterations from WHILE loops\n\n**wuks:** remove all but the last failing keyword\ninside `BuiltIn.Wait Until Keyword Succeeds`\n\n**name:\\<pattern>:** remove data from keywords that match\nthe given pattern. The pattern is matched\nagainst the full name of the keyword (e.g.\n'MyLib.Keyword', 'resource.Second Keyword'),\nis case, space, and underscore insensitive,\nand may contain `*`, `?` and `[]` wildcards.\n\n\n\n**tag:\\<pattern>:** remove data from keywords that match\nthe given pattern. Tags are case and space\ninsensitive and patterns can contain `*`,\n`?` and `[]` wildcards. Tags and patterns\ncan also be combined together with `AND`,\n`OR`, and `NOT` operators.\n\nExamples:\n\n```toml\n# match by keyword name\nextend-remove-keywords = [\"name:Lib.HugeKw\", \"name:myresource.*\"]\n```\n\n```toml\n# match by tag pattern (same rules as --include)\nextend-remove-keywords = [\"foo\", \"fooANDbar*\"]\n```\n\ncorresponds to the `--removekeywords all|passed|for|wuks|name:<pattern>|tag:<pattern> *` option of _robot_\n",
+          "description": "Appends entries to the --removekeywords option.\n\nRemove keyword data from the generated log file.\nKeywords containing warnings are not removed except\nin the `all` mode.\n\n**all:** remove data from all keywords\n\n**passed:** remove data only from keywords in passed\ntest cases and suites\n\n**for:** remove passed iterations from FOR loops\n\n**while:** remove passed iterations from WHILE loops\n\n**wuks:** remove all but the last failing keyword\ninside `BuiltIn.Wait Until Keyword Succeeds`\n\n**name:\\<pattern>:** remove data from keywords that match\nthe given pattern. The pattern is matched\nagainst the full name of the keyword (e.g.\n'MyLib.Keyword', 'resource.Second Keyword'),\nis case, space, and underscore insensitive,\nand may contain `*`, `?` and `[]` wildcards.\n\n\n\n**tag:\\<pattern>:** remove data from keywords that match\nthe given pattern. Tags are case and space\ninsensitive and patterns can contain `*`,\n`?` and `[]` wildcards. Tags and patterns\ncan also be combined together with `AND`,\n`OR`, and `NOT` operators.\n\nExamples:\n\n```toml\n# match by keyword name\nextend-remove-keywords = [\"name:Lib.HugeKw\", \"name:myresource.*\"]\n```\n\n```toml\n# match by tag pattern (same rules as --include)\nextend-remove-keywords = [\"foo\", \"foo AND bar*\"]\n```\n\ncorresponds to the `--removekeywords all|passed|for|wuks|name:<pattern>|tag:<pattern> *` option of _robot_\n",
           "examples": [
             "# match by keyword name\nextend-remove-keywords = [\"name:Lib.HugeKw\", \"name:myresource.*\"]",
-            "# match by tag pattern (same rules as --include)\nextend-remove-keywords = [\"foo\", \"fooANDbar*\"]"
+            "# match by tag pattern (same rules as --include)\nextend-remove-keywords = [\"foo\", \"foo AND bar*\"]"
           ],
-          "markdownDescription": "Appends entries to the --removekeywords option.\n\nRemove keyword data from the generated log file.\nKeywords containing warnings are not removed except\nin the `all` mode.\n\n**all:** remove data from all keywords\n\n**passed:** remove data only from keywords in passed\ntest cases and suites\n\n**for:** remove passed iterations from FOR loops\n\n**while:** remove passed iterations from WHILE loops\n\n**wuks:** remove all but the last failing keyword\ninside `BuiltIn.Wait Until Keyword Succeeds`\n\n**name:\\<pattern>:** remove data from keywords that match\nthe given pattern. The pattern is matched\nagainst the full name of the keyword (e.g.\n'MyLib.Keyword', 'resource.Second Keyword'),\nis case, space, and underscore insensitive,\nand may contain `*`, `?` and `[]` wildcards.\n\n\n\n**tag:\\<pattern>:** remove data from keywords that match\nthe given pattern. Tags are case and space\ninsensitive and patterns can contain `*`,\n`?` and `[]` wildcards. Tags and patterns\ncan also be combined together with `AND`,\n`OR`, and `NOT` operators.\n\nExamples:\n\n```toml\n# match by keyword name\nextend-remove-keywords = [\"name:Lib.HugeKw\", \"name:myresource.*\"]\n```\n\n```toml\n# match by tag pattern (same rules as --include)\nextend-remove-keywords = [\"foo\", \"fooANDbar*\"]\n```\n\ncorresponds to the `--removekeywords all|passed|for|wuks|name:<pattern>|tag:<pattern> *` option of _robot_\n",
+          "markdownDescription": "Appends entries to the --removekeywords option.\n\nRemove keyword data from the generated log file.\nKeywords containing warnings are not removed except\nin the `all` mode.\n\n**all:** remove data from all keywords\n\n**passed:** remove data only from keywords in passed\ntest cases and suites\n\n**for:** remove passed iterations from FOR loops\n\n**while:** remove passed iterations from WHILE loops\n\n**wuks:** remove all but the last failing keyword\ninside `BuiltIn.Wait Until Keyword Succeeds`\n\n**name:\\<pattern>:** remove data from keywords that match\nthe given pattern. The pattern is matched\nagainst the full name of the keyword (e.g.\n'MyLib.Keyword', 'resource.Second Keyword'),\nis case, space, and underscore insensitive,\nand may contain `*`, `?` and `[]` wildcards.\n\n\n\n**tag:\\<pattern>:** remove data from keywords that match\nthe given pattern. Tags are case and space\ninsensitive and patterns can contain `*`,\n`?` and `[]` wildcards. Tags and patterns\ncan also be combined together with `AND`,\n`OR`, and `NOT` operators.\n\nExamples:\n\n```toml\n# match by keyword name\nextend-remove-keywords = [\"name:Lib.HugeKw\", \"name:myresource.*\"]\n```\n\n```toml\n# match by tag pattern (same rules as --include)\nextend-remove-keywords = [\"foo\", \"foo AND bar*\"]\n```\n\ncorresponds to the `--removekeywords all|passed|for|wuks|name:<pattern>|tag:<pattern> *` option of _robot_\n",
           "title": "Extend Remove Keywords",
           "x-taplo": {
             "links": {
@@ -7215,11 +7223,11 @@
             }
           ],
           "default": null,
-          "description": "Appends entries to the --skip option.\n\nTests having given tag will be skipped. Tag can be\na pattern.\n\nExamples:\n\n```toml\nextend-skip = [\"bug-*\", \"wip\"]\n```\n\ncorresponds to the `--skip tag *` option of _rebot_\n",
+          "description": "Appends entries to the --skip option.\n\nTests having given tag will be skipped. Tag can be\na pattern.\n\nExamples:\n\n```toml\nextend-skip = [\"bug-*\", \"wip\"]\n```\n\ncorresponds to the `--skip tag *` option of _robot_\n",
           "examples": [
             "extend-skip = [\"bug-*\", \"wip\"]"
           ],
-          "markdownDescription": "Appends entries to the --skip option.\n\nTests having given tag will be skipped. Tag can be\na pattern.\n\nExamples:\n\n```toml\nextend-skip = [\"bug-*\", \"wip\"]\n```\n\ncorresponds to the `--skip tag *` option of _rebot_\n",
+          "markdownDescription": "Appends entries to the --skip option.\n\nTests having given tag will be skipped. Tag can be\na pattern.\n\nExamples:\n\n```toml\nextend-skip = [\"bug-*\", \"wip\"]\n```\n\ncorresponds to the `--skip tag *` option of _robot_\n",
           "title": "Extend Skip",
           "x-taplo": {
             "links": {
@@ -7247,11 +7255,11 @@
             }
           ],
           "default": null,
-          "description": "Appends entries to the --skiponfailure option.\n\nTests having given tag will be skipped if they fail.\nTag can be a pattern\n\nExamples:\n\n```toml\nextend-skip-on-failure = [\"unstable\"]\n```\n\ncorresponds to the `--skiponfailure tag *` option of _rebot_\n",
+          "description": "Appends entries to the --skiponfailure option.\n\nTests having given tag will be skipped if they fail.\nTag can be a pattern\n\nExamples:\n\n```toml\nextend-skip-on-failure = [\"unstable\"]\n```\n\ncorresponds to the `--skiponfailure tag *` option of _robot_\n",
           "examples": [
             "extend-skip-on-failure = [\"unstable\"]"
           ],
-          "markdownDescription": "Appends entries to the --skiponfailure option.\n\nTests having given tag will be skipped if they fail.\nTag can be a pattern\n\nExamples:\n\n```toml\nextend-skip-on-failure = [\"unstable\"]\n```\n\ncorresponds to the `--skiponfailure tag *` option of _rebot_\n",
+          "markdownDescription": "Appends entries to the --skiponfailure option.\n\nTests having given tag will be skipped if they fail.\nTag can be a pattern\n\nExamples:\n\n```toml\nextend-skip-on-failure = [\"unstable\"]\n```\n\ncorresponds to the `--skiponfailure tag *` option of _robot_\n",
           "title": "Extend Skip On Failure",
           "x-taplo": {
             "links": {
@@ -7352,11 +7360,11 @@
             }
           ],
           "default": null,
-          "description": "Appends entries to the --tagstatcombine option.\n\nCreate combined statistics based on tags.\nThese statistics are added into `Statistics by Tag`.\nIf the optional `name` is not given, name of the\ncombined tag is got from the specified tags. Tags are\nmatched using the same rules as with --include.\n\nExamples:\n\n```toml\nextend-tag-stat-combine = [\"requirement-*\", { \"tag1ANDtag2\" = \"My_name\" }]\n```\n\ncorresponds to the `--tagstatcombine tags:name *` option of _robot_\n",
+          "description": "Appends entries to the --tagstatcombine option.\n\nCreate combined statistics based on tags.\nThese statistics are added into `Statistics by Tag`.\nIf the optional `name` is not given, name of the\ncombined tag is got from the specified tags. Tags are\nmatched using the same rules as with --include.\n\nExamples:\n\n```toml\nextend-tag-stat-combine = [\"requirement-*\", { \"tag1 AND tag2\" = \"My_name\" }]\n```\n\ncorresponds to the `--tagstatcombine tags:name *` option of _robot_\n",
           "examples": [
-            "extend-tag-stat-combine = [\"requirement-*\", { \"tag1ANDtag2\" = \"My_name\" }]"
+            "extend-tag-stat-combine = [\"requirement-*\", { \"tag1 AND tag2\" = \"My_name\" }]"
           ],
-          "markdownDescription": "Appends entries to the --tagstatcombine option.\n\nCreate combined statistics based on tags.\nThese statistics are added into `Statistics by Tag`.\nIf the optional `name` is not given, name of the\ncombined tag is got from the specified tags. Tags are\nmatched using the same rules as with --include.\n\nExamples:\n\n```toml\nextend-tag-stat-combine = [\"requirement-*\", { \"tag1ANDtag2\" = \"My_name\" }]\n```\n\ncorresponds to the `--tagstatcombine tags:name *` option of _robot_\n",
+          "markdownDescription": "Appends entries to the --tagstatcombine option.\n\nCreate combined statistics based on tags.\nThese statistics are added into `Statistics by Tag`.\nIf the optional `name` is not given, name of the\ncombined tag is got from the specified tags. Tags are\nmatched using the same rules as with --include.\n\nExamples:\n\n```toml\nextend-tag-stat-combine = [\"requirement-*\", { \"tag1 AND tag2\" = \"My_name\" }]\n```\n\ncorresponds to the `--tagstatcombine tags:name *` option of _robot_\n",
           "title": "Extend Tag Stat Combine",
           "x-taplo": {
             "links": {
@@ -7547,11 +7555,11 @@
             }
           ],
           "default": null,
-          "description": "Appends entries to the --variablefile option.\n\nPython or YAML file file to read variables from.\nPossible arguments to the variable file can be given\nafter the path using colon or semicolon as separator.\n\nExamples:\n\n```toml\nextend-variable-files = [\"path/vars.yaml\", \"environment.py:testing\"]\n```\n\ncorresponds to the `-V --variablefile path *` option of _rebot_\n",
+          "description": "Appends entries to the --variablefile option.\n\nPython or YAML file file to read variables from.\nPossible arguments to the variable file can be given\nafter the path using colon or semicolon as separator.\n\nExamples:\n\n```toml\nextend-variable-files = [\"path/vars.yaml\", \"environment.py:testing\"]\n```\n\ncorresponds to the `-V --variablefile path *` option of _robot_\n",
           "examples": [
             "extend-variable-files = [\"path/vars.yaml\", \"environment.py:testing\"]"
           ],
-          "markdownDescription": "Appends entries to the --variablefile option.\n\nPython or YAML file file to read variables from.\nPossible arguments to the variable file can be given\nafter the path using colon or semicolon as separator.\n\nExamples:\n\n```toml\nextend-variable-files = [\"path/vars.yaml\", \"environment.py:testing\"]\n```\n\ncorresponds to the `-V --variablefile path *` option of _rebot_\n",
+          "markdownDescription": "Appends entries to the --variablefile option.\n\nPython or YAML file file to read variables from.\nPossible arguments to the variable file can be given\nafter the path using colon or semicolon as separator.\n\nExamples:\n\n```toml\nextend-variable-files = [\"path/vars.yaml\", \"environment.py:testing\"]\n```\n\ncorresponds to the `-V --variablefile path *` option of _robot_\n",
           "title": "Extend Variable Files",
           "x-taplo": {
             "links": {
@@ -7582,11 +7590,11 @@
             }
           ],
           "default": null,
-          "description": "Appends entries to the --variable option.\n\nSet variables in the test data. Only scalar\nvariables with string value are supported and name is\ngiven without `${}`. See --variablefile for a more\npowerful variable setting mechanism.\n\nExamples:\n\n```toml\n# sets ${name} to \"Robot\"\n[extend-variables]\nname = \"Robot\"\n```\n\ncorresponds to the `-v --variable name:value *` option of _rebot_\n",
+          "description": "Appends entries to the --variable option.\n\nSet variables in the test data. Only scalar\nvariables with string value are supported and name is\ngiven without `${}`. See --variablefile for a more\npowerful variable setting mechanism.\n\nExamples:\n\n```toml\n# sets ${name} to \"Robot\"\n[extend-variables]\nname = \"Robot\"\n```\n\ncorresponds to the `-v --variable name:value *` option of _robot_\n",
           "examples": [
             "# sets ${name} to \"Robot\"\n[extend-variables]\nname = \"Robot\""
           ],
-          "markdownDescription": "Appends entries to the --variable option.\n\nSet variables in the test data. Only scalar\nvariables with string value are supported and name is\ngiven without `${}`. See --variablefile for a more\npowerful variable setting mechanism.\n\nExamples:\n\n```toml\n# sets ${name} to \"Robot\"\n[extend-variables]\nname = \"Robot\"\n```\n\ncorresponds to the `-v --variable name:value *` option of _rebot_\n",
+          "markdownDescription": "Appends entries to the --variable option.\n\nSet variables in the test data. Only scalar\nvariables with string value are supported and name is\ngiven without `${}`. See --variablefile for a more\npowerful variable setting mechanism.\n\nExamples:\n\n```toml\n# sets ${name} to \"Robot\"\n[extend-variables]\nname = \"Robot\"\n```\n\ncorresponds to the `-v --variable name:value *` option of _robot_\n",
           "title": "Extend Variables",
           "x-taplo": {
             "links": {
@@ -7740,12 +7748,12 @@
             }
           ],
           "default": null,
-          "description": "Select tests by tag. Similarly as name with --test,\ntag is case and space insensitive and it is possible\nto use patterns with `*`, `?` and `[]` as wildcards.\nTags and patterns can also be combined together with\n`AND`, `OR`, and `NOT` operators.\n\nExamples:\n\n```toml\n# match tests tagged \"foo\" or \"bar*\"\nincludes = [\"foo\", \"bar*\"]\n```\n\n```toml\n# tests with both \"foo\" and \"bar*\" tags\nincludes = [\"fooANDbar*\"]\n```\n\ncorresponds to the `-i --include tag *` option of _robot_\n",
+          "description": "Select tests by tag. Similarly as name with --test,\ntag is case and space insensitive and it is possible\nto use patterns with `*`, `?` and `[]` as wildcards.\nTags and patterns can also be combined together with\n`AND`, `OR`, and `NOT` operators.\n\nExamples:\n\n```toml\n# match tests tagged \"foo\" or \"bar*\"\nincludes = [\"foo\", \"bar*\"]\n```\n\n```toml\n# tests with both \"foo\" and \"bar*\" tags\nincludes = [\"foo AND bar*\"]\n```\n\ncorresponds to the `-i --include tag *` option of _robot_\n",
           "examples": [
             "# match tests tagged \"foo\" or \"bar*\"\nincludes = [\"foo\", \"bar*\"]",
-            "# tests with both \"foo\" and \"bar*\" tags\nincludes = [\"fooANDbar*\"]"
+            "# tests with both \"foo\" and \"bar*\" tags\nincludes = [\"foo AND bar*\"]"
           ],
-          "markdownDescription": "Select tests by tag. Similarly as name with --test,\ntag is case and space insensitive and it is possible\nto use patterns with `*`, `?` and `[]` as wildcards.\nTags and patterns can also be combined together with\n`AND`, `OR`, and `NOT` operators.\n\nExamples:\n\n```toml\n# match tests tagged \"foo\" or \"bar*\"\nincludes = [\"foo\", \"bar*\"]\n```\n\n```toml\n# tests with both \"foo\" and \"bar*\" tags\nincludes = [\"fooANDbar*\"]\n```\n\ncorresponds to the `-i --include tag *` option of _robot_\n",
+          "markdownDescription": "Select tests by tag. Similarly as name with --test,\ntag is case and space insensitive and it is possible\nto use patterns with `*`, `?` and `[]` as wildcards.\nTags and patterns can also be combined together with\n`AND`, `OR`, and `NOT` operators.\n\nExamples:\n\n```toml\n# match tests tagged \"foo\" or \"bar*\"\nincludes = [\"foo\", \"bar*\"]\n```\n\n```toml\n# tests with both \"foo\" and \"bar*\" tags\nincludes = [\"foo AND bar*\"]\n```\n\ncorresponds to the `-i --include tag *` option of _robot_\n",
           "title": "Includes",
           "x-taplo": {
             "links": {
@@ -8558,12 +8566,12 @@
             }
           ],
           "default": null,
-          "description": "Remove keyword data from the generated log file.\nKeywords containing warnings are not removed except\nin the `all` mode.\n\n**all:** remove data from all keywords\n\n**passed:** remove data only from keywords in passed\ntest cases and suites\n\n**for:** remove passed iterations from FOR loops\n\n**while:** remove passed iterations from WHILE loops\n\n**wuks:** remove all but the last failing keyword\ninside `BuiltIn.Wait Until Keyword Succeeds`\n\n**name:\\<pattern>:** remove data from keywords that match\nthe given pattern. The pattern is matched\nagainst the full name of the keyword (e.g.\n'MyLib.Keyword', 'resource.Second Keyword'),\nis case, space, and underscore insensitive,\nand may contain `*`, `?` and `[]` wildcards.\n\n\n\n**tag:\\<pattern>:** remove data from keywords that match\nthe given pattern. Tags are case and space\ninsensitive and patterns can contain `*`,\n`?` and `[]` wildcards. Tags and patterns\ncan also be combined together with `AND`,\n`OR`, and `NOT` operators.\n\nExamples:\n\n```toml\n# match by keyword name\nremove-keywords = [\"name:Lib.HugeKw\", \"name:myresource.*\"]\n```\n\n```toml\n# match by tag pattern (same rules as --include)\nremove-keywords = [\"foo\", \"fooANDbar*\"]\n```\n\ncorresponds to the `--removekeywords all|passed|for|wuks|name:<pattern>|tag:<pattern> *` option of _robot_\n",
+          "description": "Remove keyword data from the generated log file.\nKeywords containing warnings are not removed except\nin the `all` mode.\n\n**all:** remove data from all keywords\n\n**passed:** remove data only from keywords in passed\ntest cases and suites\n\n**for:** remove passed iterations from FOR loops\n\n**while:** remove passed iterations from WHILE loops\n\n**wuks:** remove all but the last failing keyword\ninside `BuiltIn.Wait Until Keyword Succeeds`\n\n**name:\\<pattern>:** remove data from keywords that match\nthe given pattern. The pattern is matched\nagainst the full name of the keyword (e.g.\n'MyLib.Keyword', 'resource.Second Keyword'),\nis case, space, and underscore insensitive,\nand may contain `*`, `?` and `[]` wildcards.\n\n\n\n**tag:\\<pattern>:** remove data from keywords that match\nthe given pattern. Tags are case and space\ninsensitive and patterns can contain `*`,\n`?` and `[]` wildcards. Tags and patterns\ncan also be combined together with `AND`,\n`OR`, and `NOT` operators.\n\nExamples:\n\n```toml\n# match by keyword name\nremove-keywords = [\"name:Lib.HugeKw\", \"name:myresource.*\"]\n```\n\n```toml\n# match by tag pattern (same rules as --include)\nremove-keywords = [\"foo\", \"foo AND bar*\"]\n```\n\ncorresponds to the `--removekeywords all|passed|for|wuks|name:<pattern>|tag:<pattern> *` option of _robot_\n",
           "examples": [
             "# match by keyword name\nremove-keywords = [\"name:Lib.HugeKw\", \"name:myresource.*\"]",
-            "# match by tag pattern (same rules as --include)\nremove-keywords = [\"foo\", \"fooANDbar*\"]"
+            "# match by tag pattern (same rules as --include)\nremove-keywords = [\"foo\", \"foo AND bar*\"]"
           ],
-          "markdownDescription": "Remove keyword data from the generated log file.\nKeywords containing warnings are not removed except\nin the `all` mode.\n\n**all:** remove data from all keywords\n\n**passed:** remove data only from keywords in passed\ntest cases and suites\n\n**for:** remove passed iterations from FOR loops\n\n**while:** remove passed iterations from WHILE loops\n\n**wuks:** remove all but the last failing keyword\ninside `BuiltIn.Wait Until Keyword Succeeds`\n\n**name:\\<pattern>:** remove data from keywords that match\nthe given pattern. The pattern is matched\nagainst the full name of the keyword (e.g.\n'MyLib.Keyword', 'resource.Second Keyword'),\nis case, space, and underscore insensitive,\nand may contain `*`, `?` and `[]` wildcards.\n\n\n\n**tag:\\<pattern>:** remove data from keywords that match\nthe given pattern. Tags are case and space\ninsensitive and patterns can contain `*`,\n`?` and `[]` wildcards. Tags and patterns\ncan also be combined together with `AND`,\n`OR`, and `NOT` operators.\n\nExamples:\n\n```toml\n# match by keyword name\nremove-keywords = [\"name:Lib.HugeKw\", \"name:myresource.*\"]\n```\n\n```toml\n# match by tag pattern (same rules as --include)\nremove-keywords = [\"foo\", \"fooANDbar*\"]\n```\n\ncorresponds to the `--removekeywords all|passed|for|wuks|name:<pattern>|tag:<pattern> *` option of _robot_\n",
+          "markdownDescription": "Remove keyword data from the generated log file.\nKeywords containing warnings are not removed except\nin the `all` mode.\n\n**all:** remove data from all keywords\n\n**passed:** remove data only from keywords in passed\ntest cases and suites\n\n**for:** remove passed iterations from FOR loops\n\n**while:** remove passed iterations from WHILE loops\n\n**wuks:** remove all but the last failing keyword\ninside `BuiltIn.Wait Until Keyword Succeeds`\n\n**name:\\<pattern>:** remove data from keywords that match\nthe given pattern. The pattern is matched\nagainst the full name of the keyword (e.g.\n'MyLib.Keyword', 'resource.Second Keyword'),\nis case, space, and underscore insensitive,\nand may contain `*`, `?` and `[]` wildcards.\n\n\n\n**tag:\\<pattern>:** remove data from keywords that match\nthe given pattern. Tags are case and space\ninsensitive and patterns can contain `*`,\n`?` and `[]` wildcards. Tags and patterns\ncan also be combined together with `AND`,\n`OR`, and `NOT` operators.\n\nExamples:\n\n```toml\n# match by keyword name\nremove-keywords = [\"name:Lib.HugeKw\", \"name:myresource.*\"]\n```\n\n```toml\n# match by tag pattern (same rules as --include)\nremove-keywords = [\"foo\", \"foo AND bar*\"]\n```\n\ncorresponds to the `--removekeywords all|passed|for|wuks|name:<pattern>|tag:<pattern> *` option of _robot_\n",
           "title": "Remove Keywords",
           "x-taplo": {
             "links": {
@@ -8974,11 +8982,11 @@
             }
           ],
           "default": null,
-          "description": "Create combined statistics based on tags.\nThese statistics are added into `Statistics by Tag`.\nIf the optional `name` is not given, name of the\ncombined tag is got from the specified tags. Tags are\nmatched using the same rules as with --include.\n\nExamples:\n\n```toml\ntag-stat-combine = [\"requirement-*\", { \"tag1ANDtag2\" = \"My_name\" }]\n```\n\ncorresponds to the `--tagstatcombine tags:name *` option of _robot_\n",
+          "description": "Create combined statistics based on tags.\nThese statistics are added into `Statistics by Tag`.\nIf the optional `name` is not given, name of the\ncombined tag is got from the specified tags. Tags are\nmatched using the same rules as with --include.\n\nExamples:\n\n```toml\ntag-stat-combine = [\"requirement-*\", { \"tag1 AND tag2\" = \"My_name\" }]\n```\n\ncorresponds to the `--tagstatcombine tags:name *` option of _robot_\n",
           "examples": [
-            "tag-stat-combine = [\"requirement-*\", { \"tag1ANDtag2\" = \"My_name\" }]"
+            "tag-stat-combine = [\"requirement-*\", { \"tag1 AND tag2\" = \"My_name\" }]"
           ],
-          "markdownDescription": "Create combined statistics based on tags.\nThese statistics are added into `Statistics by Tag`.\nIf the optional `name` is not given, name of the\ncombined tag is got from the specified tags. Tags are\nmatched using the same rules as with --include.\n\nExamples:\n\n```toml\ntag-stat-combine = [\"requirement-*\", { \"tag1ANDtag2\" = \"My_name\" }]\n```\n\ncorresponds to the `--tagstatcombine tags:name *` option of _robot_\n",
+          "markdownDescription": "Create combined statistics based on tags.\nThese statistics are added into `Statistics by Tag`.\nIf the optional `name` is not given, name of the\ncombined tag is got from the specified tags. Tags are\nmatched using the same rules as with --include.\n\nExamples:\n\n```toml\ntag-stat-combine = [\"requirement-*\", { \"tag1 AND tag2\" = \"My_name\" }]\n```\n\ncorresponds to the `--tagstatcombine tags:name *` option of _robot_\n",
           "title": "Tag Stat Combine",
           "x-taplo": {
             "links": {
@@ -9489,12 +9497,12 @@
             }
           ],
           "default": null,
-          "description": "Appends entries to the --include option.\n\nInclude tests by tags.\n\nExamples:\n\n```toml\n# match tests tagged \"foo\" or \"bar*\"\nextend-includes = [\"foo\", \"bar*\"]\n```\n\n```toml\n# tests with both \"foo\" and \"bar*\" tags\nextend-includes = [\"fooANDbar*\"]\n```\n\ncorresponds to the `-i --include tag *` option of _testdoc_\n",
+          "description": "Appends entries to the --include option.\n\nInclude tests by tags.\n\nExamples:\n\n```toml\n# match tests tagged \"foo\" or \"bar*\"\nextend-includes = [\"foo\", \"bar*\"]\n```\n\n```toml\n# tests with both \"foo\" and \"bar*\" tags\nextend-includes = [\"foo AND bar*\"]\n```\n\ncorresponds to the `-i --include tag *` option of _testdoc_\n",
           "examples": [
             "# match tests tagged \"foo\" or \"bar*\"\nextend-includes = [\"foo\", \"bar*\"]",
-            "# tests with both \"foo\" and \"bar*\" tags\nextend-includes = [\"fooANDbar*\"]"
+            "# tests with both \"foo\" and \"bar*\" tags\nextend-includes = [\"foo AND bar*\"]"
           ],
-          "markdownDescription": "Appends entries to the --include option.\n\nInclude tests by tags.\n\nExamples:\n\n```toml\n# match tests tagged \"foo\" or \"bar*\"\nextend-includes = [\"foo\", \"bar*\"]\n```\n\n```toml\n# tests with both \"foo\" and \"bar*\" tags\nextend-includes = [\"fooANDbar*\"]\n```\n\ncorresponds to the `-i --include tag *` option of _testdoc_\n",
+          "markdownDescription": "Appends entries to the --include option.\n\nInclude tests by tags.\n\nExamples:\n\n```toml\n# match tests tagged \"foo\" or \"bar*\"\nextend-includes = [\"foo\", \"bar*\"]\n```\n\n```toml\n# tests with both \"foo\" and \"bar*\" tags\nextend-includes = [\"foo AND bar*\"]\n```\n\ncorresponds to the `-i --include tag *` option of _testdoc_\n",
           "title": "Extend Includes",
           "x-taplo": {
             "links": {
@@ -9653,12 +9661,12 @@
             }
           ],
           "default": null,
-          "description": "Include tests by tags.\n\nExamples:\n\n```toml\n# match tests tagged \"foo\" or \"bar*\"\nincludes = [\"foo\", \"bar*\"]\n```\n\n```toml\n# tests with both \"foo\" and \"bar*\" tags\nincludes = [\"fooANDbar*\"]\n```\n\ncorresponds to the `-i --include tag *` option of _testdoc_\n",
+          "description": "Include tests by tags.\n\nExamples:\n\n```toml\n# match tests tagged \"foo\" or \"bar*\"\nincludes = [\"foo\", \"bar*\"]\n```\n\n```toml\n# tests with both \"foo\" and \"bar*\" tags\nincludes = [\"foo AND bar*\"]\n```\n\ncorresponds to the `-i --include tag *` option of _testdoc_\n",
           "examples": [
             "# match tests tagged \"foo\" or \"bar*\"\nincludes = [\"foo\", \"bar*\"]",
-            "# tests with both \"foo\" and \"bar*\" tags\nincludes = [\"fooANDbar*\"]"
+            "# tests with both \"foo\" and \"bar*\" tags\nincludes = [\"foo AND bar*\"]"
           ],
-          "markdownDescription": "Include tests by tags.\n\nExamples:\n\n```toml\n# match tests tagged \"foo\" or \"bar*\"\nincludes = [\"foo\", \"bar*\"]\n```\n\n```toml\n# tests with both \"foo\" and \"bar*\" tags\nincludes = [\"fooANDbar*\"]\n```\n\ncorresponds to the `-i --include tag *` option of _testdoc_\n",
+          "markdownDescription": "Include tests by tags.\n\nExamples:\n\n```toml\n# match tests tagged \"foo\" or \"bar*\"\nincludes = [\"foo\", \"bar*\"]\n```\n\n```toml\n# tests with both \"foo\" and \"bar*\" tags\nincludes = [\"foo AND bar*\"]\n```\n\ncorresponds to the `-i --include tag *` option of _testdoc_\n",
           "title": "Includes",
           "x-taplo": {
             "links": {

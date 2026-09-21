@@ -10,7 +10,9 @@ import pytest
 import yaml
 
 from robotcode.robot.diagnostics.analyzer_result import AnalyzerResult
+from robotcode.robot.diagnostics.semantic_analyzer.enums import TokenKind
 from robotcode.robot.diagnostics.semantic_analyzer.nodes import DefinitionStatement
+from robotcode.robot.utils import RF_VERSION
 
 
 def _diagnostic_sort_key(item: Dict[str, Any]) -> tuple[List[int], str]:
@@ -176,5 +178,36 @@ def test_semantic_analyzer_snapshot(
     referenced_variables = _variable_reference_names(result)
     for name in expected_referenced_variables:
         assert name in referenced_variables
+
+    regtest.write(yaml.dump(_serialize_result(result), sort_keys=False))
+
+
+@pytest.mark.skipif(RF_VERSION < (7, 5), reason="`[Metadata]` in tests exists since RF 7.5")
+def test_semantic_analyzer_snapshot_test_metadata(
+    regtest: Any,
+    analyzer_factory: Callable[..., AnalyzerResult],
+) -> None:
+    result = analyzer_factory(
+        """\
+*** Test Cases ***
+With Metadata
+    [Metadata]    Issue    4409
+    Log    ${TEST_METADATA}
+"""
+    )
+
+    assert _statement_kind_sequence(result) == [
+        "section_header",
+        "test_case_def",
+        "setting_metadata",
+        "keyword_call",
+    ]
+
+    model = result.semantic_model
+    assert model is not None
+    metadata = model.statements[2]
+    assert [(t.kind, t.value) for t in metadata.tokens if t.kind == TokenKind.SETTING_NAME] == [
+        (TokenKind.SETTING_NAME, "[Metadata]")
+    ]
 
     regtest.write(yaml.dump(_serialize_result(result), sort_keys=False))

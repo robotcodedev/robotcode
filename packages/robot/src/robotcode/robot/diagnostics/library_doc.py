@@ -41,6 +41,7 @@ from robot.libdocpkg import LibraryDocumentation
 from robot.libdocpkg.htmlwriter import LibdocHtmlWriter
 from robot.libdocpkg.robotbuilder import KeywordDocBuilder
 from robot.libraries import STDLIBS
+from robot.model.tags import Tags as RobotTags
 from robot.output.logger import LOGGER
 from robot.output.loggerhelper import AbstractLogger
 from robot.parsing.lexer.tokens import Token
@@ -60,6 +61,7 @@ from robot.running.arguments.embedded import EmbeddedArguments
 from robot.running.builder.transformers import ResourceBuilder
 from robot.running.outputcapture import OutputCapturer
 from robot.running.runkwregister import RUN_KW_REGISTER
+from robot.utils.escaping import unescape
 from robot.utils.importer import Importer
 from robot.utils.robotpath import find_file as robot_find_file
 from robot.variables import Variables
@@ -120,6 +122,9 @@ if RF_VERSION >= (7, 4):
     from robot.api.types import KeywordArgument as _KeywordArgument
     from robot.api.types import KeywordName as _KeywordName
 
+if RF_VERSION >= (7, 5):
+    from robot.running.docstringparser import parse_docstring
+
 patch_variable_not_found()
 
 RUN_KEYWORD_NAMES = [
@@ -173,6 +178,7 @@ ROBOT_FILE_EXTENSION = ".robot"
 RESOURCE_FILE_EXTENSION = ".resource"
 REST_EXTENSIONS = {".rst", ".rest"}
 JSON_EXTENSIONS = {".json", ".rsrc"}
+MARKDOWN_EXTENSIONS = {".md", ".markdown"}
 
 ALLOWED_RESOURCE_FILE_EXTENSIONS = (
     {
@@ -184,6 +190,8 @@ ALLOWED_RESOURCE_FILE_EXTENSIONS = (
     if RF_VERSION >= (6, 1)
     else {ROBOT_FILE_EXTENSION, RESOURCE_FILE_EXTENSION, *REST_EXTENSIONS}
 )
+if RF_VERSION >= (7, 5):
+    ALLOWED_RESOURCE_FILE_EXTENSIONS |= MARKDOWN_EXTENSIONS
 
 ALLOWED_VARIABLES_FILE_EXTENSIONS = (
     {".py", ".yml", ".yaml", ".json"} if RF_VERSION >= (6, 1) else {".py", ".yml", ".yaml"}
@@ -1770,6 +1778,53 @@ class KeywordWrapper:
             return None
 
 
+if RF_VERSION >= (7, 5):
+    _RE_TRAILING_TAGS_LINE = re.compile(r"^tags:.*$", re.IGNORECASE)
+
+    def _remove_trailing_tags_line(doc: str) -> str:
+        doc = doc.rstrip()
+        lines = doc.splitlines()
+        if lines and _RE_TRAILING_TAGS_LINE.match(lines[-1]):
+            return "\n".join(lines[:-1]).rstrip()
+        return doc
+
+    def _get_doc_and_tags(kw_doc: Any, kw: Any, is_resource: bool) -> Tuple[str, List[str]]:
+        """Return the documentation text and the tags of a keyword.
+
+        Robot Framework 7.5 no longer splits the `Tags:` section off and no
+        longer unescapes resource keyword documentation in `KeywordDocBuilder`;
+        `update_docs()` does it, but it mutates the keyword, which may belong to
+        a running session. So the documentation is parsed here instead.
+
+        Google-style `Args:`/`Returns:`/`Raises:` sections stay in the text; in
+        that case only a trailing `Tags:` line is removed, as RF <= 7.4 did.
+        """
+        text = kw.doc or ""
+        if is_resource:
+            text = unescape(text)
+
+        # a `Tags:` line without a preceding empty row is reported as a warning
+        with LOGGER.cache_only:
+            info = parse_docstring(text, kw_doc.name)
+
+        tags = RobotTags(kw_doc.tags)
+        tags.add(info.tags, remove_negated=is_resource)
+
+        if kw.error:
+            doc = kw_doc.doc
+        elif info.args or info.returns or info.raises:
+            doc = _remove_trailing_tags_line(text)
+        else:
+            doc = info.doc
+
+        return doc, list(tags)
+
+else:
+
+    def _get_doc_and_tags(kw_doc: Any, kw: Any, is_resource: bool) -> Tuple[str, List[str]]:
+        return kw_doc.doc, list(kw_doc.tags)
+
+
 class MessageAndTraceback(NamedTuple):
     message: str
     traceback: List[SourceAndLineInfo]
@@ -2031,6 +2086,10 @@ def get_robot_library_html_doc_str(
     theme: Optional[str] = None,
 ) -> str:
     _update_env(working_dir)
+
+    if Path(name).suffix.lower() in MARKDOWN_EXTENSIONS:
+        # Robot Framework imports Markdown resource files since 7.5, but its Libdoc rejects them
+        raise DataError("Libdoc does not support Markdown resource files.")
 
     if Path(name).suffix.lower() in ALLOWED_RESOURCE_FILE_EXTENSIONS:
         name = find_file(name, working_dir, base_dir)
@@ -2325,15 +2384,18 @@ def get_library_doc_from_library(
 
             kw_source: str = source if source is not None else str(lib.source)
             init_wrappers = [KeywordWrapper(lib.init, kw_source)]
-            init_keywords = [(KeywordDocBuilder().build_keyword(k), k) for k in init_wrappers]
+            init_keywords = [
+                (kw_doc, k, _get(lambda: _get_doc_and_tags(kw_doc, k, False)))
+                for kw_doc, k in [(KeywordDocBuilder().build_keyword(k), k) for k in init_wrappers]
+            ]
             libdoc._set_inits(
                 KeywordStore(
                     keywords=[
                         KeywordDoc(
                             name=libdoc.name,
                             arguments=_get(lambda: [ArgumentInfo.from_robot(a) for a in kw[0].args]) or [],
-                            doc=_get(lambda: kw[0].doc) or "",
-                            tags=_get(lambda: list(kw[0].tags)) or [],
+                            doc=(kw[2][0] if kw[2] is not None else None) or "",
+                            tags=(kw[2][1] if kw[2] is not None else None) or [],
                             source=_get(lambda: kw[0].source) or "",
                             line_no=kw[0].lineno if kw[0].lineno is not None else -1,
                             col_offset=-1,
@@ -2389,7 +2451,10 @@ def get_library_doc_from_library(
 
                 return result
 
-            keyword_docs = [(KeywordDocBuilder().build_keyword(k), k) for k in keyword_wrappers]
+            keyword_docs = [
+                (kw_doc, k, _get(lambda: _get_doc_and_tags(kw_doc, k, False)))
+                for kw_doc, k in [(KeywordDocBuilder().build_keyword(k), k) for k in keyword_wrappers]
+            ]
             libdoc._set_keywords(
                 KeywordStore(
                     source=libdoc.name,
@@ -2398,8 +2463,8 @@ def get_library_doc_from_library(
                         KeywordDoc(
                             name=kw[0].name,
                             arguments=_get(lambda: [ArgumentInfo.from_robot(a) for a in kw[0].args]) or [],
-                            doc=_get(lambda: kw[0].doc) or "",
-                            tags=_get(lambda: list(kw[0].tags)) or [],
+                            doc=(kw[2][0] if kw[2] is not None else None) or "",
+                            tags=(kw[2][1] if kw[2] is not None else None) or [],
                             source=_get(lambda: kw[0].source) or "",
                             line_no=kw[0].lineno if kw[0].lineno is not None else -1,
                             col_offset=-1,
@@ -2425,12 +2490,8 @@ def get_library_doc_from_library(
                             ),
                             return_type=_get(
                                 lambda: (
-                                    (
-                                        str(kw[1].args.return_type)
-                                        if kw[1].args.return_type is not None
-                                        and kw[1].args.return_type is not type(None)
-                                        else None
-                                    )
+                                    # unset is `None` up to RF 7.4 and a falsy `TypeInfo` since RF 7.5
+                                    (str(kw[1].args.return_type) if kw[1].args.return_type else None)
                                     if RF_VERSION >= (7, 0)
                                     else None
                                 )
@@ -2446,6 +2507,9 @@ def get_library_doc_from_library(
                 def _yield_type_info(info: TypeInfo) -> Iterable[TypeInfo]:
                     if not info.is_union:
                         yield info
+                    # the nested types of a recursive type alias (RF >= 7.5) are not `TypeInfo`s
+                    if RF_VERSION >= (7, 5) and info.is_recursive:
+                        return
                     if info.nested and info.type is not Literal:
                         for nested in info.nested:
                             yield from _yield_type_info(nested)
@@ -2462,8 +2526,14 @@ def get_library_doc_from_library(
                                             type_info.type,
                                             custom_converters,
                                         )
-                                    else:
+                                    elif RF_VERSION < (7, 5):
                                         type_doc = RobotTypeDoc.for_type(type_info, custom_converters)
+                                    else:
+                                        type_doc = RobotTypeDoc.for_type(
+                                            type_info,
+                                            custom_converters,
+                                            libdoc.doc_format,
+                                        )
                                     if type_doc:
                                         kw.type_docs[arg.name][type_info.name] = type_doc.name
                                         type_docs.setdefault(type_doc, set()).add(kw.name)
@@ -3354,7 +3424,7 @@ def _build_resource_doc(
 
     libdoc = ResourceDoc(
         name=lib.name or "",
-        doc=lib.doc,
+        doc=unescape(lib.doc) if lib.doc else lib.doc,
         source=source,
         line_no=1,
         resource_imports=resource_imports if resource_imports is not None else [],
@@ -3369,8 +3439,8 @@ def _build_resource_doc(
                 KeywordDoc(
                     name=kw[0].name,
                     arguments=[ArgumentInfo.from_robot(a) for a in kw[0].args],
-                    doc=kw[0].doc,
-                    tags=list(kw[0].tags),
+                    doc=kw[2][0],
+                    tags=kw[2][1],
                     source=str(kw[0].source),
                     name_token=_get_keyword_name_token_from_line(keyword_name_nodes, kw[0].lineno),
                     line_no=kw[0].lineno if kw[0].lineno is not None else -1,
@@ -3391,8 +3461,11 @@ def _build_resource_doc(
                     argument_definitions=_get_argument_definitions_from_line(keywords_nodes, source, kw[0].lineno),
                 )
                 for kw in [
-                    (KeywordDocBuilder(resource=True).build_keyword(lw), lw)
-                    for lw in (lib.handlers if RF_VERSION < (7, 0) else lib.keywords)
+                    (kw_doc, lw, _get_doc_and_tags(kw_doc, lw, True))
+                    for kw_doc, lw in [
+                        (KeywordDocBuilder(resource=True).build_keyword(lw), lw)
+                        for lw in (lib.handlers if RF_VERSION < (7, 0) else lib.keywords)
+                    ]
                 ]
             ],
         )

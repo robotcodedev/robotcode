@@ -200,6 +200,9 @@ BUILTIN_VARIABLES = [
     "${OUTPUT_DIR}",
 ]
 
+if RF_VERSION >= (7, 5):
+    BUILTIN_VARIABLES.insert(BUILTIN_VARIABLES.index("${PREV_TEST_NAME}"), "&{TEST_METADATA}")
+
 
 @functools.lru_cache(maxsize=1024)
 def contains_variable(string: str, identifiers: str = "$@&") -> bool:

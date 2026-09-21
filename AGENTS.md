@@ -36,14 +36,14 @@ RobotCode is a multi-package Robot Framework toolkit.
 
 ## Common Commands
 
-Use `hatch run test:test` as the default test command. It runs the full Robot Framework matrix against the default Python and is fast enough for pre-commit. Reach for `devel:test` only when you suspect a Python-version-specific issue — it spins up 40 environments and is significantly slower.
+Use `hatch run test:test` as the default test command. It runs the full Robot Framework matrix against the default Python and is fast enough for pre-commit. Reach for `devel:test` only when you suspect a Python-version-specific issue — it spins up 45 environments and is significantly slower.
 
 - `hatch run test:test`
 	- Default: full Robot Framework matrix on the default Python.
 - `hatch run test.<rf-env>:test`
-	- Focused Robot Framework version. Available: `rf50`, `rf60`, `rf61`, `rf70`, `rf71`, `rf72`, `rf73`, `rf74`.
+	- Focused Robot Framework version. Available: `rf50`, `rf60`, `rf61`, `rf70`, `rf71`, `rf72`, `rf73`, `rf74`, `rf75`.
 - `hatch run devel:test`
-	- Full Python × Robot Framework matrix (5 × 8 = 40 envs). Slow; use only for Python-version-specific changes.
+	- Full Python × Robot Framework matrix (5 × 9 = 45 envs). Slow; use only for Python-version-specific changes.
 - `hatch run devel.<py-env>-<rf-env>:test`
 	- Focused Python × Robot Framework combination. Python envs: `py3.10`, `py3.11`, `py3.12`, `py3.13`, `py3.14`.
 - `hatch run lint:all`

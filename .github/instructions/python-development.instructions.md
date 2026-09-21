@@ -71,7 +71,7 @@ my_feature = "robotcode.my_package.hooks"
 - **Update snapshots:** `pytest --regtest2-reset`
 - **Specific matrix env:** `hatch run test.rf70.py311:test`
 - **Coverage:** `hatch run cov`
-- **Matrix:** Python 3.10–3.14 × Robot Framework 5.0–7.4
+- **Matrix:** Python 3.10–3.14 × Robot Framework 5.0–7.5
 - **Integration tests** in `tests/robotcode/` with real scenarios
 - **Snapshot testing** with pytest regtest2
 

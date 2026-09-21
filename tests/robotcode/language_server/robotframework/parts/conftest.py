@@ -3,7 +3,7 @@ import logging
 import shutil
 import threading
 from pathlib import Path
-from typing import Any, AsyncIterable, Iterator
+from typing import Any, AsyncIterable, Callable, Iterator, List
 
 import pytest
 
@@ -124,6 +124,29 @@ def test_document(request: pytest.FixtureRequest, protocol: RobotLanguageServerP
         yield document
     finally:
         del document
+
+
+@pytest.fixture
+def open_temp_document(protocol: RobotLanguageServerProtocol) -> Iterator[Callable[[Path], TextDocument]]:
+    """Callable: `(path) -> TextDocument` for files outside the test workspace.
+
+    The protocol is shared by the whole test session, so every document opened
+    from the file's directory (the file itself and what it imports) is closed
+    again. Otherwise it would show up in the results of later tests, e.g. in
+    the workspace symbols.
+    """
+    directories: List[Path] = []
+
+    def open_document(path: Path) -> TextDocument:
+        directories.append(path.parent)
+        return protocol.documents.get_or_open_document(path, "robotframework")
+
+    try:
+        yield open_document
+    finally:
+        for document in list(protocol.documents.documents):
+            if any(directory in document.uri.to_path().parents for directory in directories):
+                protocol.documents.close_document(document, real_close=True)
 
 
 @pytest.fixture

@@ -1,0 +1,46 @@
+statement_count: 4
+statements:
+- type: SemanticStatement
+  kind: section_header
+  line_start: 1
+  line_end: 1
+  name: null
+  setting_name: null
+  import_type: null
+  import_name: null
+  token_count: 2
+- type: DefinitionStatement
+  kind: test_case_def
+  line_start: 2
+  line_end: 4
+  name: With Metadata
+  setting_name: null
+  import_type: null
+  import_name: null
+  token_count: 2
+- type: SettingStatement
+  kind: setting_metadata
+  line_start: 3
+  line_end: 3
+  name: null
+  setting_name: Metadata
+  import_type: null
+  import_name: null
+  token_count: 7
+- type: KeywordCallStatement
+  kind: keyword_call
+  line_start: 4
+  line_end: 4
+  name: null
+  setting_name: null
+  import_type: null
+  import_name: null
+  token_count: 5
+diagnostic_count: 0
+diagnostics: []
+test_case_definitions:
+- With Metadata
+variable_references:
+- name: '&{TEST_METADATA}'
+  type: builtin variable
+  count: 1

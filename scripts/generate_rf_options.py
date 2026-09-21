@@ -36,7 +36,7 @@ TOML_EXAMPLES: Dict[str, List[str]] = {
     ],
     "--include": [
         '# match tests tagged "foo" or "bar*"\nincludes = ["foo", "bar*"]',
-        '# tests with both "foo" and "bar*" tags\nincludes = ["fooANDbar*"]',
+        '# tests with both "foo" and "bar*" tags\nincludes = ["foo AND bar*"]',
     ],
     "--listener": [
         '[listeners]\nMyListener = []\n"path/to/Listener.py" = ["arg1", "arg2"]',
@@ -54,7 +54,7 @@ TOML_EXAMPLES: Dict[str, List[str]] = {
     ],
     "--removekeywords": [
         '# match by keyword name\nremove-keywords = ["name:Lib.HugeKw", "name:myresource.*"]',
-        '# match by tag pattern (same rules as --include)\nremove-keywords = ["foo", "fooANDbar*"]',
+        '# match by tag pattern (same rules as --include)\nremove-keywords = ["foo", "foo AND bar*"]',
     ],
     "--reportbackground": [
         '# pass:fail:skip colours\nreport-background = "green:red:yellow"',
@@ -64,7 +64,7 @@ TOML_EXAMPLES: Dict[str, List[str]] = {
         '[tag-doc]\nmytag = "Example"\n"owner-*" = "Original author"',
     ],
     "--tagstatcombine": [
-        'tag-stat-combine = ["requirement-*", { "tag1ANDtag2" = "My_name" }]',
+        'tag-stat-combine = ["requirement-*", { "tag1 AND tag2" = "My_name" }]',
     ],
     "--tagstatlink": [
         '[tag-stat-link]\nmytag = "http://my.domain:Title"\n"bug-*" = "http://url/id=%1:Issue Tracker"',
@@ -76,7 +76,10 @@ TOML_EXAMPLES: Dict[str, List[str]] = {
         'variable-files = ["path/vars.yaml", "environment.py:testing"]',
     ],
     # --- literal/enum options (one-of values) ---
-    "--console": ['console = "dotted"'],
+    "--console": [
+        'console = "dotted"',
+        '# custom console logger class or module (Robot Framework 7.5 or newer)\nconsole = "path/to/MyConsole.py:arg"',
+    ],
     "--consolecolors": ['console-colors = "on"'],
     "--consolelinks": ['console-links = "off"'],
     "--consolemarkers": ['console-markers = "off"'],
@@ -87,7 +90,7 @@ TOML_EXAMPLES: Dict[str, List[str]] = {
     # --- numeric options ---
     "--consolewidth": ["console-width = 100"],
     "--maxassignlength": ["max-assign-length = 200"],
-    "--maxerrorlines": ["max-error-lines = 40"],
+    "--maxerrorlines": ["max-error-lines = 40", 'max-error-lines = "NONE"'],
     "--suitestatlevel": ["suite-stat-level = 2"],
     # --- single-string options (paths, names, titles, timestamps) ---
     "--debugfile": ['debug-file = "debug.log"'],
@@ -217,7 +220,7 @@ def apply_toml_examples(desc: str, long: str, base_kebab: str, extend: bool) -> 
 
 
 type_templates = {
-    "console": 'Literal["verbose", "dotted", "skipped", "quiet", "none"]',
+    "console": 'Union[str, Literal["verbose", "dotted", "quiet", "none"]]',
     "listeners": "Dict[str, List[Union[str, StringExpression]]]",
     "max_error_lines": 'Union[int, Literal["NONE"]]',
     "parsers": "Dict[str, List[Union[str, StringExpression]]]",
@@ -421,12 +424,27 @@ def generate(
                         output.append("        robot_is_flag=True,")
                         if not flag_default:
                             output.append(f"        robot_flag_default={flag_default},")
+                if "_" in name:
+                    output.append(f'        alias="{name.replace("_", "-")}",')
                 output.append("    )")
 
         return result
 
     return build_class_fields(output, cmd_options, extend=extra)
 
+
+# Robot Framework 7.5 moved the console options `ConsoleType`/`ConsoleTypeQuiet` from the
+# `robot`-only options to the options shared with `rebot`. They stay `robot`-only here,
+# because everything in `CommonOptions` is passed to `rebot` too and `rebot` of
+# Robot Framework < 7.5 does not know them.
+ROBOT_ONLY_OPTIONS = ("ConsoleType", "ConsoleTypeQuiet")
+
+all_robot_options: Dict[str, Any] = {**RobotSettings._cli_opts, **RobotSettings._extra_cli_opts}
+common_options = {k: v for k, v in RobotSettings._cli_opts.items() if k not in ROBOT_ONLY_OPTIONS}
+robot_options = {
+    **RobotSettings._extra_cli_opts,
+    **{k: all_robot_options[k] for k in ROBOT_ONLY_OPTIONS},
+}
 
 output = []
 
@@ -437,7 +455,7 @@ output.append("@dataclass")
 output.append("class CommonOptions(RobotBaseOptions):")
 output.append('    """Common options for all _robot_ commands."""')
 output.append("")
-extra_cmd_options = generate(output, ROBOT_USAGE, RobotSettings._cli_opts, None, extra=False)
+extra_cmd_options = generate(output, ROBOT_USAGE, common_options, None, extra=False)
 
 output.append("")
 output.append("")
@@ -445,7 +463,7 @@ output.append("@dataclass")
 output.append("class CommonExtendOptions(RobotBaseOptions):")
 output.append('    """Extra common options for all _robot_ commands."""')
 output.append("")
-generate(output, ROBOT_USAGE, RobotSettings._cli_opts, extra_cmd_options, extra=True)
+generate(output, ROBOT_USAGE, common_options, extra_cmd_options, extra=True)
 
 output.append("")
 output.append("")
@@ -453,7 +471,7 @@ output.append("@dataclass")
 output.append("class RobotOptions(RobotBaseOptions):")
 output.append('    """Options for _robot_ command."""')
 output.append("")
-extra_cmd_options = generate(output, ROBOT_USAGE, RobotSettings._extra_cli_opts, None, extra=False)
+extra_cmd_options = generate(output, ROBOT_USAGE, robot_options, None, extra=False)
 
 output.append("")
 output.append("")
@@ -461,14 +479,7 @@ output.append("@dataclass")
 output.append("class RobotExtendOptions(RobotBaseOptions):")
 output.append('    """Extra options for _robot_ command."""')
 output.append("")
-generate(
-    output,
-    ROBOT_USAGE,
-    RobotSettings._extra_cli_opts,
-    extra_cmd_options,
-    extra=True,
-    tool="rebot",
-)
+generate(output, ROBOT_USAGE, robot_options, extra_cmd_options, extra=True)
 
 output.append("")
 output.append("")

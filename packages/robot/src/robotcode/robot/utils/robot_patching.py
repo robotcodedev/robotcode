@@ -24,6 +24,10 @@ def patch_variable_not_found() -> None:
     suggestions, which is O(n*m) and extremely slow for large projects.
     RobotCode never uses the recommendation text, so we skip it.
 
+    Robot Framework 7.5 (#5644) no longer calls it when a variable finder
+    merely misses, but it still runs RecommendationFinder whenever a variable
+    really does not exist, so the patch stays on every version.
+
     Must be called after robot.variables is imported.
     """
     global _PATCHED

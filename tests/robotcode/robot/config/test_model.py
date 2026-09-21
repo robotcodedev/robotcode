@@ -1,4 +1,6 @@
-from typing import Any, Dict, List
+import json
+from pathlib import Path
+from typing import Any, Dict, List, get_type_hints
 
 import pytest
 
@@ -8,7 +10,7 @@ from robotcode.core.utils.dataclasses import (
     as_dict,
     from_dict,
 )
-from robotcode.robot.config.model import RobotConfig
+from robotcode.robot.config.model import LibDocProfile, RobotConfig
 
 
 @pytest.mark.parametrize(
@@ -70,3 +72,52 @@ def test_max_error_lines_accepts_int_and_none_string(value: Any, expected_args: 
 def test_max_error_lines_rejects_other_strings() -> None:
     with pytest.raises(NamedTypeError):
         from_dict({"max-error-lines": "foo"}, RobotConfig)
+
+
+@pytest.mark.parametrize(
+    ("value"),
+    [
+        ("dotted"),
+        ("MyConsole.py:arg"),
+    ],
+)
+def test_console_accepts_builtin_names_and_custom_consoles(value: str) -> None:
+    model = from_dict({"console": value}, RobotConfig)
+    assert model.console == value
+    assert model.build_command_line() == ["--console", value]
+
+
+def test_console_does_not_list_the_never_valid_skipped_value() -> None:
+    console_type = str(get_type_hints(RobotConfig)["console"])
+
+    assert "'dotted'" in console_type
+    assert "skipped" not in console_type
+
+
+def test_json_schema_does_not_list_skipped_as_console_value() -> None:
+    schema_file = Path(__file__).parents[4] / "docs" / "public" / "schemas" / "robot.toml.json"
+    schema = json.loads(schema_file.read_text(encoding="utf-8"))
+
+    for owner in ("RobotConfig", "RobotProfile"):
+        console = schema["definitions"][owner]["properties"]["console"]
+        assert {"type": "string"} in console["anyOf"]
+        assert "skipped" not in json.dumps(console["anyOf"])
+    for owner in ("RebotProfile",):
+        assert "console" not in schema["definitions"][owner]["properties"]
+
+
+@pytest.mark.parametrize(
+    ("data", "expected_args"),
+    [
+        # the command line uses the short option names: `-f` is `--format`, `-F` is `--docformat`
+        ({"format": "MARKDOWN"}, ["-f", "MARKDOWN"]),
+        ({"doc-format": "MARKDOWN"}, ["-F", "MARKDOWN"]),
+    ],
+)
+def test_libdoc_accepts_markdown_formats(data: Dict[str, Any], expected_args: List[str]) -> None:
+    model = from_dict(data, LibDocProfile)
+    assert model.build_command_line() == expected_args
+
+    config = from_dict({"libdoc": data}, RobotConfig)
+    assert config.libdoc is not None
+    assert config.libdoc.build_command_line() == expected_args

@@ -577,7 +577,7 @@ class CommonOptions(RobotBaseOptions):
 
             ```toml
             # tests with both "foo" and "bar*" tags
-            includes = ["fooANDbar*"]
+            includes = ["foo AND bar*"]
             ```
 
             corresponds to the `-i --include tag *` option of _robot_
@@ -828,7 +828,7 @@ class CommonOptions(RobotBaseOptions):
 
             ```toml
             # match by tag pattern (same rules as --include)
-            remove-keywords = ["foo", "fooANDbar*"]
+            remove-keywords = ["foo", "foo AND bar*"]
             ```
 
             corresponds to the `--removekeywords all|passed|for|wuks|name:<pattern>|tag:<pattern> *` option of _robot_
@@ -1024,7 +1024,7 @@ class CommonOptions(RobotBaseOptions):
             Examples:
 
             ```toml
-            tag-stat-combine = ["requirement-*", { "tag1ANDtag2" = "My_name" }]
+            tag-stat-combine = ["requirement-*", { "tag1 AND tag2" = "My_name" }]
             ```
 
             corresponds to the `--tagstatcombine tags:name *` option of _robot_
@@ -1264,7 +1264,7 @@ class CommonExtendOptions(RobotBaseOptions):
 
             ```toml
             # tests with both "foo" and "bar*" tags
-            extend-includes = ["fooANDbar*"]
+            extend-includes = ["foo AND bar*"]
             ```
 
             corresponds to the `-i --include tag *` option of _robot_
@@ -1400,7 +1400,7 @@ class CommonExtendOptions(RobotBaseOptions):
 
             ```toml
             # match by tag pattern (same rules as --include)
-            extend-remove-keywords = ["foo", "fooANDbar*"]
+            extend-remove-keywords = ["foo", "foo AND bar*"]
             ```
 
             corresponds to the `--removekeywords all|passed|for|wuks|name:<pattern>|tag:<pattern> *` option of _robot_
@@ -1480,7 +1480,7 @@ class CommonExtendOptions(RobotBaseOptions):
             Examples:
 
             ```toml
-            extend-tag-stat-combine = ["requirement-*", { "tag1ANDtag2" = "My_name" }]
+            extend-tag-stat-combine = ["requirement-*", { "tag1 AND tag2" = "My_name" }]
             ```
 
             corresponds to the `--tagstatcombine tags:name *` option of _robot_
@@ -1588,18 +1588,22 @@ class CommonExtendOptions(RobotBaseOptions):
 class RobotOptions(RobotBaseOptions):
     """Options for _robot_ command."""
 
-    console: Optional[Literal["verbose", "dotted", "skipped", "quiet", "none"]] = field(
+    console: Optional[Union[str, Literal["verbose", "dotted", "quiet", "none"]]] = field(
         description="""\
             How to report execution on the console.
+            Built-in consoles:
 
             **verbose:** report every suite and test (default)
 
-            **dotted:** only show `.` for passed test, `s` for
-            skipped tests, and `F` for failed tests
+            **dotted:** only show `.` for passed test, `s`
+            for skipped and `F` for failed tests
 
-            **quiet:** no output except for errors and warnings
+            **quiet:** no output except for errors/warnings
 
             **none:** no output whatsoever
+            Other values are interpreted as a custom
+            console class or module. Argument format is
+            the same as with --listener.
 
             Examples:
 
@@ -1607,7 +1611,12 @@ class RobotOptions(RobotBaseOptions):
             console = "dotted"
             ```
 
-            corresponds to the `--console type` option of _robot_
+            ```toml
+            # custom console logger class or module (Robot Framework 7.5 or newer)
+            console = "path/to/MyConsole.py:arg"
+            ```
+
+            corresponds to the `--console console` option of _robot_
             """,
         robot_name="console",
         robot_priority=500,
@@ -2142,7 +2151,7 @@ class RobotExtendOptions(RobotBaseOptions):
             extend-languages = ["German", "Finnish"]
             ```
 
-            corresponds to the `--language lang *` option of _rebot_
+            corresponds to the `--language lang *` option of _robot_
             """,
         alias="extend-languages",
     )
@@ -2163,7 +2172,7 @@ class RobotExtendOptions(RobotBaseOptions):
             "path/to/Listener.py" = ["arg1", "arg2"]
             ```
 
-            corresponds to the `--listener listener *` option of _rebot_
+            corresponds to the `--listener listener *` option of _robot_
             """,
         alias="extend-listeners",
     )
@@ -2182,7 +2191,7 @@ class RobotExtendOptions(RobotBaseOptions):
             "path/to/MyParser.py" = ["arg1", "arg2"]
             ```
 
-            corresponds to the `--parser parser *` option of _rebot_
+            corresponds to the `--parser parser *` option of _robot_
             """,
         alias="extend-parsers",
     )
@@ -2202,7 +2211,7 @@ class RobotExtendOptions(RobotBaseOptions):
             "path/to/Modifier.py" = ["arg1"]
             ```
 
-            corresponds to the `--prerunmodifier modifier *` option of _rebot_
+            corresponds to the `--prerunmodifier modifier *` option of _robot_
             """,
         alias="extend-pre-run-modifiers",
     )
@@ -2219,7 +2228,7 @@ class RobotExtendOptions(RobotBaseOptions):
             extend-skip = ["bug-*", "wip"]
             ```
 
-            corresponds to the `--skip tag *` option of _rebot_
+            corresponds to the `--skip tag *` option of _robot_
             """,
         alias="extend-skip",
     )
@@ -2236,7 +2245,7 @@ class RobotExtendOptions(RobotBaseOptions):
             extend-skip-on-failure = ["unstable"]
             ```
 
-            corresponds to the `--skiponfailure tag *` option of _rebot_
+            corresponds to the `--skiponfailure tag *` option of _robot_
             """,
         alias="extend-skip-on-failure",
     )
@@ -2257,7 +2266,7 @@ class RobotExtendOptions(RobotBaseOptions):
             name = "Robot"
             ```
 
-            corresponds to the `-v --variable name:value *` option of _rebot_
+            corresponds to the `-v --variable name:value *` option of _robot_
             """,
         alias="extend-variables",
     )
@@ -2275,7 +2284,7 @@ class RobotExtendOptions(RobotBaseOptions):
             extend-variable-files = ["path/vars.yaml", "environment.py:testing"]
             ```
 
-            corresponds to the `-V --variablefile path *` option of _rebot_
+            corresponds to the `-V --variablefile path *` option of _robot_
             """,
         alias="extend-variable-files",
     )
@@ -2417,13 +2426,14 @@ class RebotOptions(RobotBaseOptions):
 class LibDocOptions(RobotBaseOptions):
     """Options for _libdoc_ command."""
 
-    doc_format: Optional[Literal["ROBOT", "HTML", "TEXT", "REST"]] = field(
+    doc_format: Optional[Literal["ROBOT", "MARKDOWN", "HTML", "TEXT", "REST"]] = field(
         description="""\
             Specifies the source documentation format. Possible
             values are Robot Framework's documentation format,
-            HTML, plain text, and reStructuredText. The default
-            value can be specified in library source code and
-            the initial default value is ROBOT.
+            Markdown, HTML, plain text and reStructuredText.
+            The default value can be specified in library source
+            code and the initial default value is ROBOT. Markdown
+            support is new in RF 7.5.
 
             Examples:
 
@@ -2431,20 +2441,21 @@ class LibDocOptions(RobotBaseOptions):
             doc-format = "REST"
             ```
 
-            corresponds to the `-F --docformat ROBOT|HTML|TEXT|REST` option of _libdoc_
+            corresponds to the `-F --docformat ROBOT|MARKDOWN|HTML|TEXT|REST` option of _libdoc_
             """,
         robot_name="docformat",
         robot_priority=500,
         robot_short_name="F",
         alias="doc-format",
     )
-    format: Optional[Literal["HTML", "XML", "JSON", "LIBSPEC"]] = field(
+    format: Optional[Literal["HTML", "XML", "JSON", "LIBSPEC", "MARKDOWN"]] = field(
         description="""\
             Specifies whether to generate an HTML output for
-            humans or a machine readable spec file in XML or JSON
-            format. The LIBSPEC format means XML spec with
-            documentations converted to HTML. The default format
-            is got from the output file extension.
+            humans, a machine readable spec file in XML or JSON
+            format, or a Markdown file. The LIBSPEC format means
+            XML spec with documentations converted to HTML. The
+            default format is got from the output file
+            extension. MARKDOWN is new in RF 7.5.
 
             Examples:
 
@@ -2452,7 +2463,7 @@ class LibDocOptions(RobotBaseOptions):
             format = "HTML"
             ```
 
-            corresponds to the `-f --format HTML|XML|JSON|LIBSPEC` option of _libdoc_
+            corresponds to the `-f --format HTML|XML|JSON|LIBSPEC|MARKDOWN` option of _libdoc_
             """,
         robot_name="format",
         robot_priority=500,
@@ -2516,7 +2527,8 @@ class LibDocOptions(RobotBaseOptions):
             documentation format and HTML means converting
             documentation to HTML. The default is RAW with XML
             spec files and HTML with JSON specs and when using
-            the special LIBSPEC format.
+            the special LIBSPEC format. Not applicable with HTML
+            or MARKDOWN outputs.
 
             Examples:
 
@@ -2627,7 +2639,7 @@ class TestDocOptions(RobotBaseOptions):
 
             ```toml
             # tests with both "foo" and "bar*" tags
-            includes = ["fooANDbar*"]
+            includes = ["foo AND bar*"]
             ```
 
             corresponds to the `-i --include tag *` option of _testdoc_
@@ -2776,7 +2788,7 @@ class TestDocExtendOptions(RobotBaseOptions):
 
             ```toml
             # tests with both "foo" and "bar*" tags
-            extend-includes = ["fooANDbar*"]
+            extend-includes = ["foo AND bar*"]
             ```
 
             corresponds to the `-i --include tag *` option of _testdoc_

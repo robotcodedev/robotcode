@@ -5,6 +5,8 @@ from typing import Dict, List, Type, cast
 from robot.conf.languages import Language
 from robot.utils import normalize
 
+from robotcode.robot.utils import RF_VERSION
+
 
 def get_available_languages() -> "Dict[str, Type[Language]]":
     available = {}
@@ -72,6 +74,22 @@ for k in get_available_languages():
         v = lang.documentation_setting.lower()
         if v not in documentation_setting:
             documentation_setting.append(v)
+
+    # Terms deprecated by Robot Framework (7.5 or newer) are still accepted, so they
+    # stay in the grammar: `{deprecated term: (new term, version)}`.
+    if RF_VERSION >= (7, 5):
+        for old_term, (new_term, _) in lang.deprecations.items():
+            for attribute, terms in (
+                ("variables_header", variables_header),
+                ("settings_header", settings_header),
+                ("test_cases_header", test_cases_header),
+                ("tasks_header", tasks_header),
+                ("keywords_header", keywords_header),
+                ("comments_header", comments_header),
+                ("documentation_setting", documentation_setting),
+            ):
+                if getattr(lang, attribute) == new_term and old_term.lower() not in terms:
+                    terms.append(old_term.lower())
 
 template = Template(Path("syntaxes/robotframework.tmLanguage.template.json").read_text(encoding="utf-8"))
 

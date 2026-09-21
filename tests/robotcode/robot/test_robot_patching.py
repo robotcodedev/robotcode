@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib
+import importlib.util
 import sys
 
 import pytest
@@ -76,17 +77,29 @@ def test_fast_variable_not_found_no_did_you_mean() -> None:
 
 def test_original_variable_not_found_produces_recommendation() -> None:
     """Verify the original RF function DOES produce recommendations,
-    confirming the patch actually removes them."""
-    from functools import partial
+    confirming the patch actually removes them.
 
-    from robot.utils import RecommendationFinder, normalize
-    from robot.variables.notfound import _decorate_candidates
+    The public name is rebound by the patch as soon as `library_doc` is imported,
+    so the original is loaded from its file into a private module.
+    """
+    import robot.variables.notfound as patched_module
 
-    name = "${foobar}"
+    _ensure_modules_loaded()
+    patch_variable_not_found()
+    assert patched_module.variable_not_found is _fast_variable_not_found
+
+    origin = patched_module.__spec__.origin if patched_module.__spec__ is not None else None
+    assert origin is not None
+    spec = importlib.util.spec_from_file_location("_robotcode_test_original_notfound", origin)
+    assert spec is not None
+    assert spec.loader is not None
+    original_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(original_module)
+
     store = {"foobar": 1, "foobaz": 2, "something_else": 3}
-    candidates = _decorate_candidates(name[0], store)
-    normalizer = partial(normalize, ignore="$@&%{}_")
-    message = RecommendationFinder(normalizer).find_and_format(
-        name, candidates, message=f"Variable '{name}' not found."
-    )
+    with pytest.raises(VariableError) as exc_info:
+        original_module.variable_not_found("${fooba}", store)
+
+    message = str(exc_info.value)
     assert "Did you mean" in message
+    assert "${foobaz}" in message

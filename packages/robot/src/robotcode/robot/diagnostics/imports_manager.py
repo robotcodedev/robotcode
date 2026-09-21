@@ -95,6 +95,8 @@ RESOURCE_EXTENSIONS = (
     if RF_VERSION >= (6, 1)
     else {".resource", ".robot", ".txt", ".tsv", ".rst", ".rest"}
 )
+if RF_VERSION >= (7, 5):
+    RESOURCE_EXTENSIONS |= {".md", ".markdown"}
 REST_EXTENSIONS = (".rst", ".rest")
 
 

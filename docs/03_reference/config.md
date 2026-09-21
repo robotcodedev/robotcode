@@ -77,18 +77,22 @@ args = ["-t", "abc"]
 
 ## console
 
-Type: `Literal['verbose', 'dotted', 'skipped', 'quiet', 'none'] | None`
+Type: `str | Literal['verbose', 'dotted', 'quiet', 'none'] | None`
 
 How to report execution on the console.
+Built-in consoles:
 
 **verbose:** report every suite and test (default)
 
-**dotted:** only show `.` for passed test, `s` for
-skipped tests, and `F` for failed tests
+**dotted:** only show `.` for passed test, `s`
+for skipped and `F` for failed tests
 
-**quiet:** no output except for errors and warnings
+**quiet:** no output except for errors/warnings
 
 **none:** no output whatsoever
+Other values are interpreted as a custom
+console class or module. Argument format is
+the same as with --listener.
 
 Examples:
 
@@ -96,7 +100,12 @@ Examples:
 console = "dotted"
 ```
 
-corresponds to the `--console type` option of _robot_
+```toml
+# custom console logger class or module (Robot Framework 7.5 or newer)
+console = "path/to/MyConsole.py:arg"
+```
+
+corresponds to the `--console console` option of _robot_
 
 ## console-colors
 
@@ -439,7 +448,7 @@ extend-includes = ["foo", "bar*"]
 
 ```toml
 # tests with both "foo" and "bar*" tags
-extend-includes = ["fooANDbar*"]
+extend-includes = ["foo AND bar*"]
 ```
 
 corresponds to the `-i --include tag *` option of _robot_
@@ -460,7 +469,7 @@ Examples:
 extend-languages = ["German", "Finnish"]
 ```
 
-corresponds to the `--language lang *` option of _rebot_
+corresponds to the `--language lang *` option of _robot_
 
 ## extend-listeners
 
@@ -481,7 +490,7 @@ MyListener = []
 "path/to/Listener.py" = ["arg1", "arg2"]
 ```
 
-corresponds to the `--listener listener *` option of _rebot_
+corresponds to the `--listener listener *` option of _robot_
 
 ## extend-metadata
 
@@ -542,7 +551,7 @@ MyParser = []
 "path/to/MyParser.py" = ["arg1", "arg2"]
 ```
 
-corresponds to the `--parser parser *` option of _rebot_
+corresponds to the `--parser parser *` option of _robot_
 
 ## extend-paths
 
@@ -592,7 +601,7 @@ MyModifier = []
 "path/to/Modifier.py" = ["arg1"]
 ```
 
-corresponds to the `--prerunmodifier modifier *` option of _rebot_
+corresponds to the `--prerunmodifier modifier *` option of _robot_
 
 ## extend-profiles
 
@@ -668,7 +677,7 @@ extend-remove-keywords = ["name:Lib.HugeKw", "name:myresource.*"]
 
 ```toml
 # match by tag pattern (same rules as --include)
-extend-remove-keywords = ["foo", "fooANDbar*"]
+extend-remove-keywords = ["foo", "foo AND bar*"]
 ```
 
 corresponds to the `--removekeywords all|passed|for|wuks|name:<pattern>|tag:<pattern> *` option of _robot_
@@ -704,7 +713,7 @@ Examples:
 extend-skip = ["bug-*", "wip"]
 ```
 
-corresponds to the `--skip tag *` option of _rebot_
+corresponds to the `--skip tag *` option of _robot_
 
 ## extend-skip-on-failure
 
@@ -721,7 +730,7 @@ Examples:
 extend-skip-on-failure = ["unstable"]
 ```
 
-corresponds to the `--skiponfailure tag *` option of _rebot_
+corresponds to the `--skiponfailure tag *` option of _robot_
 
 ## extend-suites
 
@@ -782,7 +791,7 @@ matched using the same rules as with --include.
 Examples:
 
 ```toml
-extend-tag-stat-combine = ["requirement-*", { "tag1ANDtag2" = "My_name" }]
+extend-tag-stat-combine = ["requirement-*", { "tag1 AND tag2" = "My_name" }]
 ```
 
 corresponds to the `--tagstatcombine tags:name *` option of _robot_
@@ -898,7 +907,7 @@ Examples:
 extend-variable-files = ["path/vars.yaml", "environment.py:testing"]
 ```
 
-corresponds to the `-V --variablefile path *` option of _rebot_
+corresponds to the `-V --variablefile path *` option of _robot_
 
 ## extend-variables
 
@@ -919,7 +928,7 @@ Examples:
 name = "Robot"
 ```
 
-corresponds to the `-v --variable name:value *` option of _rebot_
+corresponds to the `-v --variable name:value *` option of _robot_
 
 ## extend-wrapper
 
@@ -928,7 +937,6 @@ Type: `list[str | StringExpression] | None`
 Append extra entries to the `wrapper` command prefix.
 
 Examples:
-
 ```toml
 extend-wrapper = ["--some-flag"]
 ```
@@ -1009,7 +1017,7 @@ includes = ["foo", "bar*"]
 
 ```toml
 # tests with both "foo" and "bar*" tags
-includes = ["fooANDbar*"]
+includes = ["foo AND bar*"]
 ```
 
 corresponds to the `-i --include tag *` option of _robot_
@@ -1053,13 +1061,14 @@ Options to be passed to _libdoc_.
 
 ## libdoc.doc-format
 
-Type: `Literal['ROBOT', 'HTML', 'TEXT', 'REST'] | None`
+Type: `Literal['ROBOT', 'MARKDOWN', 'HTML', 'TEXT', 'REST'] | None`
 
 Specifies the source documentation format. Possible
 values are Robot Framework's documentation format,
-HTML, plain text, and reStructuredText. The default
-value can be specified in library source code and
-the initial default value is ROBOT.
+Markdown, HTML, plain text and reStructuredText.
+The default value can be specified in library source
+code and the initial default value is ROBOT. Markdown
+support is new in RF 7.5.
 
 Examples:
 
@@ -1067,7 +1076,7 @@ Examples:
 doc-format = "REST"
 ```
 
-corresponds to the `-F --docformat ROBOT|HTML|TEXT|REST` option of _libdoc_
+corresponds to the `-F --docformat ROBOT|MARKDOWN|HTML|TEXT|REST` option of _libdoc_
 
 ## libdoc.extend-python-path
 
@@ -1088,13 +1097,14 @@ corresponds to the `-P --pythonpath path *` option of _libdoc_
 
 ## libdoc.format
 
-Type: `Literal['HTML', 'XML', 'JSON', 'LIBSPEC'] | None`
+Type: `Literal['HTML', 'XML', 'JSON', 'LIBSPEC', 'MARKDOWN'] | None`
 
 Specifies whether to generate an HTML output for
-humans or a machine readable spec file in XML or JSON
-format. The LIBSPEC format means XML spec with
-documentations converted to HTML. The default format
-is got from the output file extension.
+humans, a machine readable spec file in XML or JSON
+format, or a Markdown file. The LIBSPEC format means
+XML spec with documentations converted to HTML. The
+default format is got from the output file
+extension. MARKDOWN is new in RF 7.5.
 
 Examples:
 
@@ -1102,7 +1112,7 @@ Examples:
 format = "HTML"
 ```
 
-corresponds to the `-f --format HTML|XML|JSON|LIBSPEC` option of _libdoc_
+corresponds to the `-f --format HTML|XML|JSON|LIBSPEC|MARKDOWN` option of _libdoc_
 
 ## libdoc.name
 
@@ -1157,7 +1167,8 @@ JSON spec files. RAW means preserving the original
 documentation format and HTML means converting
 documentation to HTML. The default is RAW with XML
 spec files and HTML with JSON specs and when using
-the special LIBSPEC format.
+the special LIBSPEC format. Not applicable with HTML
+or MARKDOWN outputs.
 
 Examples:
 
@@ -1278,7 +1289,7 @@ corresponds to the `--maxassignlength characters` option of _robot_
 
 ## max-error-lines
 
-Type: `int | None`
+Type: `int | Literal['NONE'] | None`
 
 Maximum number of error message lines to show in
 report when tests fail. Default is 40, minimum is 10
@@ -1288,6 +1299,10 @@ Examples:
 
 ```toml
 max-error-lines = 40
+```
+
+```toml
+max-error-lines = "NONE"
 ```
 
 corresponds to the `--maxerrorlines lines` option of _robot_
@@ -1775,7 +1790,7 @@ extend-includes = ["foo", "bar*"]
 
 ```toml
 # tests with both "foo" and "bar*" tags
-extend-includes = ["fooANDbar*"]
+extend-includes = ["foo AND bar*"]
 ```
 
 corresponds to the `-i --include tag *` option of _robot_
@@ -1909,7 +1924,7 @@ extend-remove-keywords = ["name:Lib.HugeKw", "name:myresource.*"]
 
 ```toml
 # match by tag pattern (same rules as --include)
-extend-remove-keywords = ["foo", "fooANDbar*"]
+extend-remove-keywords = ["foo", "foo AND bar*"]
 ```
 
 corresponds to the `--removekeywords all|passed|for|wuks|name:<pattern>|tag:<pattern> *` option of _robot_
@@ -1989,7 +2004,7 @@ matched using the same rules as with --include.
 Examples:
 
 ```toml
-extend-tag-stat-combine = ["requirement-*", { "tag1ANDtag2" = "My_name" }]
+extend-tag-stat-combine = ["requirement-*", { "tag1 AND tag2" = "My_name" }]
 ```
 
 corresponds to the `--tagstatcombine tags:name *` option of _robot_
@@ -2140,7 +2155,7 @@ includes = ["foo", "bar*"]
 
 ```toml
 # tests with both "foo" and "bar*" tags
-includes = ["fooANDbar*"]
+includes = ["foo AND bar*"]
 ```
 
 corresponds to the `-i --include tag *` option of _robot_
@@ -2434,7 +2449,7 @@ remove-keywords = ["name:Lib.HugeKw", "name:myresource.*"]
 
 ```toml
 # match by tag pattern (same rules as --include)
-remove-keywords = ["foo", "fooANDbar*"]
+remove-keywords = ["foo", "foo AND bar*"]
 ```
 
 corresponds to the `--removekeywords all|passed|for|wuks|name:<pattern>|tag:<pattern> *` option of _robot_
@@ -2628,7 +2643,7 @@ matched using the same rules as with --include.
 Examples:
 
 ```toml
-tag-stat-combine = ["requirement-*", { "tag1ANDtag2" = "My_name" }]
+tag-stat-combine = ["requirement-*", { "tag1 AND tag2" = "My_name" }]
 ```
 
 corresponds to the `--tagstatcombine tags:name *` option of _robot_
@@ -2797,7 +2812,7 @@ remove-keywords = ["name:Lib.HugeKw", "name:myresource.*"]
 
 ```toml
 # match by tag pattern (same rules as --include)
-remove-keywords = ["foo", "fooANDbar*"]
+remove-keywords = ["foo", "foo AND bar*"]
 ```
 
 corresponds to the `--removekeywords all|passed|for|wuks|name:<pattern>|tag:<pattern> *` option of _robot_
@@ -3031,7 +3046,7 @@ matched using the same rules as with --include.
 Examples:
 
 ```toml
-tag-stat-combine = ["requirement-*", { "tag1ANDtag2" = "My_name" }]
+tag-stat-combine = ["requirement-*", { "tag1 AND tag2" = "My_name" }]
 ```
 
 corresponds to the `--tagstatcombine tags:name *` option of _robot_
@@ -3174,7 +3189,7 @@ extend-includes = ["foo", "bar*"]
 
 ```toml
 # tests with both "foo" and "bar*" tags
-extend-includes = ["fooANDbar*"]
+extend-includes = ["foo AND bar*"]
 ```
 
 corresponds to the `-i --include tag *` option of _testdoc_
@@ -3262,7 +3277,7 @@ includes = ["foo", "bar*"]
 
 ```toml
 # tests with both "foo" and "bar*" tags
-includes = ["fooANDbar*"]
+includes = ["foo AND bar*"]
 ```
 
 corresponds to the `-i --include tag *` option of _testdoc_
@@ -4090,11 +4105,10 @@ Type: `list[str | StringExpression] | None`
 Command prefix the test run is executed through (the actual
 `robotcode` command line is appended to it), e.g. to bring up the
 services, servers, mocks or session the tests need around them. For
-plain environment variables use `env` instead. The selected profile's
-`env` is applied first, so the wrapper can rely on it.
+plain environment variables use `env` instead. The selected
+profile's `env` is applied first, so the wrapper can rely on it.
 
 Examples:
-
 ```toml
 [profiles.integration]
 wrapper = ["./with-test-services.sh"]

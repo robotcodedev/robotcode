@@ -315,7 +315,7 @@ This runs the full test suite across all supported Robot Framework versions usin
 Run a single Robot Framework version:
 
 ```bash
-hatch run test.<rf-env>:test      # e.g. hatch run test.rf74:test
+hatch run test.<rf-env>:test      # e.g. hatch run test.rf75:test
 ```
 
 For running individual tests or test files interactively, use VS Code's built-in test runner (Testing tab in the sidebar) — it's the most convenient way to iterate on a single test or debug a failure.
@@ -324,7 +324,7 @@ For running individual tests or test files interactively, use VS Code's built-in
 
 ```bash
 hatch run devel:test                       # all combinations in the matrix
-hatch run devel.<py-env>-<rf-env>:test     # e.g. hatch run devel.py3.12-rf74:test
+hatch run devel.<py-env>-<rf-env>:test     # e.g. hatch run devel.py3.12-rf75:test
 ```
 
 Only use this when you suspect a Python-version-specific issue — it is significantly slower than `test:test`.
@@ -336,6 +336,21 @@ Run `hatch env show` to list every environment, including the `test.*` and `deve
 > [!NOTE]
 > `hatch run test` (without an env prefix) runs only in the `default` environment against the Robot Framework version pinned there — it does **not** cover the RF matrix. Use `hatch run test:test` for the full RF matrix, or `hatch run devel:test` for the full Python × RF matrix (slow).
 
+**Adding a new Robot Framework version to the matrix:**
+
+The language server regression tests compare against recorded outputs that are kept per Robot Framework version under `tests/robotcode/language_server/robotframework/parts/_regtest_outputs/rf<version>/`. After adding the new `rf<version>` entry to the `test` and `devel` matrices in `hatch.toml` and to the CI workflow, create its baselines from the previous version instead of recording them blindly, so that every behavioural difference gets looked at:
+
+```bash
+cd tests/robotcode/language_server/robotframework/parts/_regtest_outputs
+cp -r rf74 rf75                     # 1. copy the baselines of the previous version
+cd -
+hatch run test.rf75:test -- tests/robotcode/language_server/robotframework/parts   # 2. run against the copy
+# 3. review every regtest failure diff
+hatch run test.rf75:test-reset tests/robotcode/language_server/robotframework/parts   # 4. accept
+```
+
+In step 3, shifted `line:` values inside Robot Framework's own sources (`BuiltIn.py`, `Collections.py`, … in goto definition/implementation and references results) are expected. Anything else is either an intended change that you understand or a regression that has to be fixed before the baselines are accepted. Make the code changes for the new version first and reset last, so no bug gets frozen into the baselines. Afterwards `git status` must show only the new `rf<version>/` directory, and `hatch run test.rf<version>:test` must be green.
+
 #### Additional Development Commands
 
 These commands are mainly used by maintainers, but contributors may need some of them when working on specific features (e.g., syntax-highlighting changes require `generate-tmlanguage`).
@@ -346,8 +361,21 @@ These commands are mainly used by maintainers, but contributors may need some of
 - `hatch run lint:all` — Run all linting checks.
 
 **Code Generation:**
-- `hatch run generate-tmlanguage` — Regenerate VS Code syntax-highlighting files for Robot Framework.
+- `hatch run generate-tmlanguage` — Regenerate VS Code syntax-highlighting files for Robot Framework. **Do not run it blindly:** `syntaxes/robotframework.tmLanguage.json` was edited by hand in commit `6fad9b16` without updating `syntaxes/robotframework.tmLanguage.template.json`, so the generator and its template are out of sync with the committed grammar and a regeneration reverts those edits. Until the template is reconciled, edit the section-header and setting regexes by hand, in `robotframework.tmLanguage.json` and in the hand-maintained `robotframework-repl.tmLanguage.json`, which carries its own copy of them.
 - `hatch run create-json-schema` — Create JSON schema for `robot.toml` configuration validation.
+
+**Regenerating the `robot.toml` option model:**
+
+The options of `robot`, `rebot`, `libdoc` and `testdoc` in `packages/robot/src/robotcode/robot/config/model.py` (the region between `# start generated code` and `# end generated code`) are generated from the command line help of the installed Robot Framework. The JSON schema and the configuration reference are generated from the model. After a new Robot Framework release, run these commands from the repository root in this order, with the environment of the newest supported Robot Framework version:
+
+```bash
+hatch run test.rf75:python scripts/generate_rf_options.py          # rewrites the generated region of model.py
+hatch run lint:fix                                                 # formats the generated code
+hatch run create-json-schema                                       # docs/public/schemas/robot.toml.json
+hatch run robotcode config info desc > docs/03_reference/config.md # configuration reference
+```
+
+Review the diff: only the generated region of `model.py`, the schema and `config.md` may change, and no option class may gain or lose fields unintentionally. TOML examples and type overrides for single options are maintained in `scripts/generate_rf_options.py` (`TOML_EXAMPLES`, `type_templates`), not in `model.py`.
 
 **Build & Release:**
 - `hatch run build:install-bundled-editable` — Install bundled packages in editable mode.
