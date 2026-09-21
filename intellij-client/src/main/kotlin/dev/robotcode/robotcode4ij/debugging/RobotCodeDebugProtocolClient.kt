@@ -45,6 +45,7 @@ data class RobotExecutionAttributes(
     var starttime: String? = null,
     var endtime: String? = null,
     var tags: Array<String>? = null,
+    var metadata: Map<String, String>? = null,
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -67,6 +68,7 @@ data class RobotExecutionAttributes(
             if (other.tags == null) return false
             if (!tags.contentEquals(other.tags)) return false
         } else if (other.tags != null) return false
+        if (metadata != other.metadata) return false
         
         return true
     }
@@ -84,6 +86,7 @@ data class RobotExecutionAttributes(
         result = 31 * result + (starttime?.hashCode() ?: 0)
         result = 31 * result + (endtime?.hashCode() ?: 0)
         result = 31 * result + (tags?.contentHashCode() ?: 0)
+        result = 31 * result + (metadata?.hashCode() ?: 0)
         return result
     }
 }

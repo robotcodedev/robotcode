@@ -38,7 +38,8 @@ data class Position(val line: UInt, val character: UInt)
     val range: Range? = null,
     val error: String? = null,
     val tags: Array<String>? = null,
-    val rpa: Boolean? = null
+    val rpa: Boolean? = null,
+    val metadata: Map<String, String>? = null
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -63,6 +64,7 @@ data class Position(val line: UInt, val character: UInt)
             if (other.tags == null) return false
             if (!tags.contentEquals(other.tags)) return false
         } else if (other.tags != null) return false
+        if (metadata != other.metadata) return false
         
         return true
     }
@@ -79,6 +81,7 @@ data class Position(val line: UInt, val character: UInt)
         result = 31 * result + (range?.hashCode() ?: 0)
         result = 31 * result + (error?.hashCode() ?: 0)
         result = 31 * result + (tags?.contentHashCode() ?: 0)
+        result = 31 * result + (metadata?.hashCode() ?: 0)
         return result
     }
     
