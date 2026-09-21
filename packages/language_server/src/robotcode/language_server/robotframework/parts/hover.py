@@ -12,9 +12,10 @@ from typing import (
     cast,
 )
 
+from robot.model.metadata import Metadata as RobotMetadata
 from robot.parsing.lexer.tokens import Token
 from robot.parsing.model.blocks import TestCase, TestCaseSection
-from robot.parsing.model.statements import Documentation, Tags
+from robot.parsing.model.statements import Documentation, Metadata, Tags
 
 from robotcode.core.concurrent import check_current_task_canceled
 from robotcode.core.language import language_id
@@ -261,6 +262,10 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart):
 
         doc = next((e for e in test_case.body if isinstance(e, Documentation)), None)
         tags = next((e for e in test_case.body if isinstance(e, Tags)), None)
+        # Robot Framework's own mapping: names are case, space and underscore insensitive, the
+        # first spelling is kept, the last value wins and the entries are sorted by name.
+        # A `[Metadata]` setting with nothing after it is no metadata.
+        metadata = RobotMetadata((e.name, e.value) for e in test_case.body if isinstance(e, Metadata) and e.name)
 
         section = next((e for e in nodes if isinstance(e, TestCaseSection)), None)
         if section is not None and section.tasks:
@@ -275,6 +280,13 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart):
         if tags is not None:
             txt += "\n*Tags*: "
             txt += f"{', '.join(tags.values)}\n"
+
+        if metadata:
+            txt += "\n*Metadata*:\n"
+            for name, value in metadata.items():
+                # list items keep one line per entry, indented lines continue a multi-line value
+                value = value.replace("\n", "\n  ")
+                txt += f"- {name}: {value}\n"
 
         txt = namespace.imports_manager.replace_variables_scalar(
             txt,
