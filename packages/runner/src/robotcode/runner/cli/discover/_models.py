@@ -27,6 +27,7 @@ class TestItem(CamelSnakeMixin):
     description: Optional[str] = None
     range: Optional[Range] = None
     tags: Optional[List[str]] = None
+    metadata: Optional[Dict[str, str]] = None
     error: Optional[str] = None
     rpa: Optional[bool] = None
 

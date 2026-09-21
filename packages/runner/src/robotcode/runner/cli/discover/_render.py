@@ -25,6 +25,7 @@ from .._markdown import (
     filters_footer_md,
     highlight_md,
     md_escape,
+    metadata_md,
     path_paren,
 )
 from ._models import Info, Statistics, TestItem
@@ -301,6 +302,7 @@ def render_tests_or_tasks(
     *,
     selected_type: str,
     show_tags: bool,
+    show_metadata: bool = False,
     full_paths: bool,
     highlight: Optional[Callable[[str], str]] = None,
     search_substring: Optional[str] = None,
@@ -325,6 +327,8 @@ def render_tests_or_tasks(
             if show_tags and item.tags:
                 tags = ", ".join(f"`{_hi(str(tag), highlight)}`" for tag in sorted(item.tags))
                 lines.append(f"  - _Tags:_ {tags}")
+            if show_metadata and item.metadata:
+                lines.append(f"  - _Metadata:_ {metadata_md(item.metadata, highlight)}")
         body_md = "\n".join(lines)
 
     return _block_md(
@@ -401,6 +405,7 @@ def render_all(
     statistics: Statistics,
     *,
     show_tags: bool,
+    show_metadata: bool = False,
     full_paths: bool,
     highlight: Optional[Callable[[str], str]] = None,
     search_substring: Optional[str] = None,
@@ -412,7 +417,15 @@ def render_all(
     """The full discovery tree: workspace at depth 0, suites at
     increasing depth, tests/tasks as leaves with their line number."""
     tree_lines: List[str] = []
-    _emit_tree(root, tree_lines, depth=0, show_tags=show_tags, full_paths=full_paths, highlight=highlight)
+    _emit_tree(
+        root,
+        tree_lines,
+        depth=0,
+        show_tags=show_tags,
+        show_metadata=show_metadata,
+        full_paths=full_paths,
+        highlight=highlight,
+    )
     return _block_md(
         heading="All",
         body_md="\n".join(tree_lines),
@@ -432,6 +445,7 @@ def _emit_tree(
     *,
     depth: int,
     show_tags: bool,
+    show_metadata: bool,
     full_paths: bool,
     highlight: Optional[Callable[[str], str]] = None,
 ) -> None:
@@ -443,5 +457,15 @@ def _emit_tree(
     if is_leaf and show_tags and item.tags:
         tags = ", ".join(f"`{_hi(str(tag), highlight)}`" for tag in sorted(item.tags))
         out.append(f"{indent}  - _Tags:_ {tags}")
+    if is_leaf and show_metadata and item.metadata:
+        out.append(f"{indent}  - _Metadata:_ {metadata_md(item.metadata, highlight)}")
     for child in item.children or []:
-        _emit_tree(child, out, depth=depth + 1, show_tags=show_tags, full_paths=full_paths, highlight=highlight)
+        _emit_tree(
+            child,
+            out,
+            depth=depth + 1,
+            show_tags=show_tags,
+            show_metadata=show_metadata,
+            full_paths=full_paths,
+            highlight=highlight,
+        )

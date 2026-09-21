@@ -14,6 +14,7 @@ from robotcode.runner.cli._markdown import (
     md_escape,
     md_pipe,
     md_table,
+    metadata_md,
     path_paren,
     timing_suffix,
 )
@@ -217,3 +218,18 @@ def test_make_md_highlighter_invalid_regex_returns_none() -> None:
     """A bad regex falls back to no-highlight — the renderer just
     displays the unmatched text rather than blowing up."""
     assert make_md_highlighter(None, "[unclosed") is None
+
+
+# ---------------------------------------------------------------------------
+# metadata_md
+# ---------------------------------------------------------------------------
+
+
+def test_metadata_md_joins_pairs_and_the_lines_of_a_value() -> None:
+    assert metadata_md({"Issue": "4409", "Owner Team": "core"}) == "Issue: 4409, Owner Team: core"
+    assert metadata_md({"Description": "first line\nsecond line"}) == "Description: first line second line"
+
+
+def test_metadata_md_escapes_and_highlights_names_and_values() -> None:
+    highlight = make_md_highlighter("44", None)
+    assert metadata_md({"Is*sue": "4409"}, highlight) == r"Is\*sue: `44`09"

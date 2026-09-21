@@ -51,7 +51,7 @@ from robotcode.plugin.click_helper.types import add_options
 from robotcode.robot.config.loader import load_robot_config_from_path
 from robotcode.robot.config.model import RobotBaseProfile
 from robotcode.robot.config.utils import get_config_files
-from robotcode.robot.utils import RF_VERSION
+from robotcode.robot.utils import RF_VERSION, get_robot_version_str
 
 # RF 7+ body-item classes — visitor methods overriding `end_var`/`end_error`/
 # `end_group` need a type annotation that resolves on every matrix RF. The
@@ -63,7 +63,15 @@ from robotcode.robot.utils import RF_VERSION
 if TYPE_CHECKING:
     from robot.result import Error, Group, Var  # type: ignore[attr-defined,unused-ignore]
 
-from .._search import ByStatus, SearchMatcher, SearchModifier, make_search_matcher
+from .._search import (
+    SUPPORTS_TEST_METADATA,
+    ByStatus,
+    SearchMatcher,
+    SearchModifier,
+    get_test_metadata,
+    make_search_matcher,
+    named_metadata,
+)
 from . import _html, _render
 from ._models import (
     ArtifactRef,
@@ -199,7 +207,8 @@ SEARCH_OPTIONS = [
         help=(
             "Only include tests with at least one case-insensitive substring "
             "match against TEXT. Searches test name, full name, failure "
-            "message, documentation, template name, timeout, tags, the "
+            "message, documentation, template name, timeout, tags, test "
+            "metadata names and values, the "
             "parent suite's Documentation / Metadata, every executed "
             "keyword's name / arguments / [Documentation] / [Tags] / "
             "[Timeout] / failure message, and log messages. Mutually "
@@ -400,6 +409,14 @@ def summary(
     help="Append the tag list after each test.",
 )
 @click.option(
+    "--show-metadata/--no-show-metadata",
+    "show_metadata",
+    default=False,
+    show_default=True,
+    hidden=not SUPPORTS_TEST_METADATA,
+    help="Append the metadata after each test.",
+)
+@click.option(
     "--timing/--no-timing",
     "show_timing",
     default=True,
@@ -447,6 +464,7 @@ def show(
     message_chars: int,
     full_paths: bool,
     show_tags: bool,
+    show_metadata: bool,
     show_timing: bool,
     sort_field: Optional[str],
     reverse: bool,
@@ -537,6 +555,7 @@ def show(
                 _render.render_show(
                     data,
                     show_tags=show_tags,
+                    show_metadata=show_metadata,
                     full_paths=full_paths,
                     show_timing=show_timing,
                     sort_field=sort_field,
@@ -1246,6 +1265,24 @@ def _candidate_paths(*, search_root: Path, out_dir: Path, out_name: str) -> List
     return cands
 
 
+# Robot Framework < 7.5 fails with one of these messages on a result file
+# that carries test-level `[Metadata]`: the first for `output.xml`, the
+# second for `output.json` (RF 7.2-7.4).
+_TEST_METADATA_READ_ERRORS = (
+    "Incompatible child element 'meta' for 'test'",
+    "'robot.result.TestCase' object does not have attribute 'metadata'",
+)
+
+
+def _test_metadata_hint(error: str) -> str:
+    if not any(text in error for text in _TEST_METADATA_READ_ERRORS):
+        return ""
+    return (
+        "\nThe file was written by Robot Framework 7.5 or newer and contains test metadata; "
+        f"reading it requires Robot Framework 7.5+, got {get_robot_version_str()}."
+    )
+
+
 def _load_execution_result(path: Path) -> Result:
     if path.suffix.lower() == ".json" and RF_VERSION < (7, 0):
         raise click.ClickException(
@@ -1259,7 +1296,7 @@ def _load_execution_result(path: Path) -> Result:
     try:
         return ExecutionResult(str(path))
     except DataError as e:
-        raise click.ClickException(f"failed to parse {path}: {e}") from e
+        raise click.ClickException(f"failed to parse {path}: {e}{_test_metadata_hint(str(e))}") from e
     except Exception as e:
         raise click.ClickException(f"failed to parse {path}: {e}") from e
 
@@ -1549,6 +1586,7 @@ def _make_test_item(test: TestCase, *, message_chars: int) -> TestResultItem:
         message=truncated_msg,
         full_message=full_msg,
         tags=[normalize(str(t), ignore="_") for t in test.tags] if test.tags else None,
+        metadata=get_test_metadata(test) or None,
         elapsed_seconds=_elapsed_seconds(test),
         start_time=_iso(_start_time(test)),
         source=src_str,
@@ -1672,7 +1710,7 @@ class _LogCollector(ResultVisitor):
                     name=suite.name,
                     status=suite.status,
                     doc=suite.doc or None,
-                    metadata=dict(suite.metadata) if suite.metadata else None,
+                    metadata=named_metadata(suite.metadata) or None,
                     source=src_str,
                     rel_source=_rel_to_cwd(src_str),
                     elapsed_seconds=_elapsed_seconds(suite),
@@ -1707,6 +1745,7 @@ class _LogCollector(ResultVisitor):
                 elapsed_seconds=_elapsed_seconds(test),
                 start_time=_iso(_start_time(test)),
                 suite=parent_full_name,
+                metadata=get_test_metadata(test) or None,
             )
         )
 

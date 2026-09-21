@@ -81,7 +81,13 @@ If none of those produce a file, the command exits with a clear error (`Result f
 Both `output.xml` and `output.json` are supported; `robotcode results` picks the right parser automatically based on the file. (`output.json` is the RF 7.0+ opt-in format you get by passing `--output something.json` to `robotcode robot` or setting `output_format = "json"` in your profile.)
 
 ::: warning Result files with test metadata need Robot Framework 7.5 to read
-`robotcode results` reads result files with the Robot Framework version installed in your environment. A result file written by Robot Framework 7.5 or newer that contains test-level `[Metadata]` cannot be read by Robot Framework 7.4 or older — neither by `robotcode results` nor by `rebot`. The command then fails with `failed to parse <path>: … Incompatible child element 'meta' for 'test'.` Analyze such files in an environment with Robot Framework 7.5 or newer.
+`robotcode results` reads result files with the Robot Framework version installed in your environment. A result file written by Robot Framework 7.5 or newer that contains test-level `[Metadata]` cannot be read by Robot Framework 7.4 or older — neither by `robotcode results` nor by `rebot`. The command then fails with `failed to parse <path>: … Incompatible child element 'meta' for 'test'.` — for an `output.json` read with Robot Framework 7.2–7.4 the underlying error is `… 'robot.result.TestCase' object does not have attribute 'metadata'` instead. In both cases `robotcode results` adds a hint that names the cause and the installed version:
+
+```text
+The file was written by Robot Framework 7.5 or newer and contains test metadata; reading it requires Robot Framework 7.5+, got 7.4.2.
+```
+
+Analyze such files in an environment with Robot Framework 7.5 or newer.
 :::
 
 ## Output formats
@@ -176,6 +182,7 @@ robotcode results show --failed   # only failures (shorthand for --status fail)
 | `--top N` | Keep only the first `N` after sorting. The dropped count is reported as a footer line. |
 | `--message-chars N` | Truncate failure messages to `N` characters (default `120`). Use `0` to disable truncation. |
 | `--show-tags` | Render the test's tags in the output, in normalised form (`Bug 1`, `bug_1` and `Bug1` all show as `bug1`). |
+| `--show-metadata` | Render the test's `[Metadata]` (Robot Framework 7.5+) in the output, as one `Metadata:` line (`name: value, …`) under the test. Names keep the spelling from the source file; the lines of a multi-line value are joined with a space. With an older Robot Framework version installed, `--help` does not list the flag and passing it has no effect. |
 | `--timing / --no-timing` | Show / hide start time and elapsed. Default: shown. |
 | `--full-paths` | Absolute source paths instead of relative. |
 
@@ -221,6 +228,8 @@ robotcode results log                      # every test, every body item
 robotcode results log --failed             # only failed tests (shorthand for --status fail)
 robotcode results log --search "Timeout"   # only tests matching the search
 ```
+
+A test's `[Metadata]` (Robot Framework 7.5+) is printed directly under its header whenever present, as one `Metadata:` line (`name: value, …`) like `show --show-metadata` prints it — `log` needs no flag for it.
 
 ### Flag reference
 
@@ -483,6 +492,7 @@ Use `-bl` when you have a precise name to filter against (often pasted from the 
 - the test's `name` and full longname
 - the test's failure message
 - the test's tags
+- the test's `[Metadata]` names and values (Robot Framework 7.5+)
 - the test's `[Documentation]`, `[Template]` and `[Timeout]`
 - every keyword call's name, arguments and assignments within the test body
 - every executed keyword's `[Documentation]`, `[Tags]` and `[Timeout]` (taken from the keyword definition; result-tree only)
@@ -575,6 +585,7 @@ A few rules hold across every subcommand:
       "status": "FAIL",
       "message": "AssertionError: Expected 'Login failed' but got 'Internal error'",
       "tags": ["smoke"],
+      "metadata": { "Issue": "4409" },
       "elapsedSeconds": 0.234,
       "startTime": "2026-05-15T08:11:04",
       "source": "tests/login/test_login.robot",
@@ -588,7 +599,7 @@ A few rules hold across every subcommand:
 
 Field notes:
 
-- `failed` only appears when `--failed` was passed.
+- `failed` only appears when `--failed` was passed. Its entries have the same shape as the `tests[]` entries of [`show`](#show-json), including `metadata`.
 - `messagesCount` aggregates log messages by level (`TRACE` / `DEBUG` / `INFO` / `WARN` / `ERROR` / `FAIL`). Only levels with at least one message appear — empty buckets are omitted, not emitted as `0`.
 - `executionMessagesCount` (parser / discovery errors that fired outside of test execution) appears **only** when there were any.
 - `filtersApplied` (see [below](#filtersapplied)) appears when any filter was passed.
@@ -607,6 +618,7 @@ Field notes:
       "status": "FAIL",
       "message": "AssertionError: Expected 'Login failed' …",
       "tags": ["smoke", "regression"],
+      "metadata": { "Issue": "4409", "Owner Team": "core" },
       "elapsedSeconds": 0.234,
       "startTime": "2026-05-15T08:11:04",
       "source": "tests/login/test_login.robot",
@@ -624,6 +636,7 @@ Field notes:
 
 - `tests[]` is always present, possibly empty.
 - `tags` is always emitted for tests that have any (and absent for untagged tests), in normalised form (`Bug 1`, `bug_1`, `Bug1` all come through as `"bug1"`). The `--show-tags` flag in TEXT mode is render-only — it doesn't affect the JSON.
+- `metadata` is the test's `[Metadata]` as a name → value object. Names keep the spelling from the source file and values come through as recorded in the result file, the lines of a multi-line value joined with `\n`. An entry without a name — a `[Metadata]` setting with nothing after it, which Robot Framework writes to `output.json` but not to `output.xml` — is left out. The key is absent for tests without metadata; only result files written by Robot Framework 7.5 or newer contain test metadata. Like `--show-tags`, the `--show-metadata` flag is render-only.
 - `truncated` is the number of tests dropped by `--top N`; `0` when nothing was dropped.
 - The order of `tests[]` reflects `--sort` and `--reverse`.
 
@@ -643,7 +656,8 @@ Field notes:
       "lineno": 42,
       "elapsedSeconds": 0.234,
       "startTime": "2026-05-15T08:11:04",
-      "suite": "MyProject.Login"
+      "suite": "MyProject.Login",
+      "metadata": { "Issue": "4409", "Owner Team": "core" }
     }
   ],
   "suites": [
@@ -668,6 +682,7 @@ The `body` array of each test is a recursive tree of body items. Field notes:
 
 - `extractDir` / `extractedCount` appear only with `--extract DIR`.
 - `executionMessages` appears only with `--execution-messages`.
+- The per-test `metadata` is the test's `[Metadata]` (Robot Framework 7.5+) in the same shape as in [`show`](#show-json) and as the suite-level `metadata` below; absent for tests without metadata. It does not depend on any flag.
 - `suites` and the per-test `suite` cross-reference appear only with `--suite-info`. One `suites` entry per parent suite that has at least one surviving test, in traversal order. Empty `metadata` / `doc` are dropped.
 - Artefact entries carry `kind` (`"image"` | `"file"`), `src`, and — when extraction happened — `extractedTo` (absolute path of the written file). Failed extractions get a `skippedReason` instead (e.g. `"missing-source"`, `"target-traversal"`).
 

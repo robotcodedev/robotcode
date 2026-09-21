@@ -49,7 +49,7 @@ from robotcode.plugin.click_helper.types import add_options
 from robotcode.robot.utils import RF_VERSION
 
 from .._markdown import make_md_highlighter
-from .._search import SearchMatcher, make_search_matcher
+from .._search import SUPPORTS_TEST_METADATA, SearchMatcher, get_test_metadata, make_search_matcher
 from ..robot import ROBOT_OPTIONS, ROBOT_VERSION_OPTIONS, RobotFrameworkEx, handle_robot_options
 from . import _render
 from ._models import Info, ResultItem, Statistics, TagsResult, TestItem
@@ -69,8 +69,9 @@ DISCOVER_SEARCH_OPTIONS = [
         help=(
             "Only include items where TEXT case-insensitively matches the "
             "name, full name, source path, documentation, template name, "
-            "timeout, any tag (normalisation-aware), the parent suite's "
-            "Documentation / Metadata, or anything inside the test body "
+            "timeout, any tag (normalisation-aware), test metadata names and "
+            "values, the parent suite's Documentation / Metadata, or anything "
+            "inside the test body "
             "— keyword names, keyword arguments, assigned variables, "
             "FOR/WHILE/IF conditions, VAR/RETURN values, EXCEPT patterns, "
             "GROUP names. Mutually exclusive with `--search-regex`."
@@ -356,6 +357,7 @@ class Collector(SuiteVisitor):
                     end=Position(line=test.lineno - 1, character=0),
                 ),
                 tags=sorted(set(normalize(str(t), ignore="_") for t in test.tags)) if test.tags else None,
+                metadata=get_test_metadata(test) or None,
                 rpa=self._current.rpa,
             )
         except ValueError as e:
@@ -573,7 +575,7 @@ def handle_options(
 
 
 def _show_options(*, default: bool) -> List[Any]:
-    """The flags of `all`, `tests` and `tasks` that add the tags line in TEXT mode."""
+    """The flags of `all`, `tests` and `tasks` that add the tags and metadata lines in TEXT mode."""
     return [
         click.option(
             "--show-tags / --no-show-tags",
@@ -581,6 +583,15 @@ def _show_options(*, default: bool) -> List[Any]:
             default=default,
             show_default=True,
             help="Show the tags that are present.",
+        ),
+        click.option(
+            "--show-metadata / --no-show-metadata",
+            "show_metadata",
+            default=default,
+            show_default=True,
+            # test metadata exists since Robot Framework 7.5
+            hidden=not SUPPORTS_TEST_METADATA,
+            help="Show the metadata of tests and tasks.",
         ),
     ]
 
@@ -613,6 +624,7 @@ def all(
     app: Application,
     full_paths: bool,
     show_tags: bool,
+    show_metadata: bool,
     search_substring: Optional[str],
     search_regex: Optional[str],
     by_longname: Tuple[str, ...],
@@ -646,6 +658,7 @@ def all(
                     collector.all.children[0],
                     collector.statistics,
                     show_tags=show_tags,
+                    show_metadata=show_metadata,
                     full_paths=full_paths,
                     highlight=make_md_highlighter(search_substring, search_regex),
                     search_substring=search_substring,
@@ -673,6 +686,7 @@ def _test_or_tasks(
     app: Application,
     full_paths: bool,
     show_tags: bool,
+    show_metadata: bool,
     search_substring: Optional[str],
     search_regex: Optional[str],
     by_longname: Tuple[str, ...],
@@ -692,6 +706,7 @@ def _test_or_tasks(
                     collector.statistics,
                     selected_type=selected_type,
                     show_tags=show_tags,
+                    show_metadata=show_metadata,
                     full_paths=full_paths,
                     highlight=make_md_highlighter(search_substring, search_regex),
                     search_substring=search_substring,
@@ -735,6 +750,7 @@ def tests(
     app: Application,
     full_paths: bool,
     show_tags: bool,
+    show_metadata: bool,
     search_substring: Optional[str],
     search_regex: Optional[str],
     by_longname: Tuple[str, ...],
@@ -761,6 +777,7 @@ def tests(
         app,
         full_paths,
         show_tags,
+        show_metadata,
         search_substring,
         search_regex,
         by_longname,
@@ -789,6 +806,7 @@ def tasks(
     app: Application,
     full_paths: bool,
     show_tags: bool,
+    show_metadata: bool,
     search_substring: Optional[str],
     search_regex: Optional[str],
     by_longname: Tuple[str, ...],
@@ -814,6 +832,7 @@ def tasks(
         app,
         full_paths,
         show_tags,
+        show_metadata,
         search_substring,
         search_regex,
         by_longname,

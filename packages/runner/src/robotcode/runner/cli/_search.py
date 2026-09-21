@@ -12,7 +12,7 @@ The `--search` / `--search-regex` semantics live here so both `results` and
 
 import re
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Callable, Iterable, Optional
+from typing import TYPE_CHECKING, Callable, Dict, Iterable, Mapping, Optional
 
 import click
 from robot.api import SuiteVisitor
@@ -49,6 +49,35 @@ else:
 
     def _for_assignments(for_: For) -> Iterable[str]:
         return for_.variables  # type: ignore[attr-defined,no-any-return,unused-ignore]
+
+
+# RF 7.5 added `[Metadata]` to tests and tasks; `TestCase.metadata` does not
+# exist before. The `--show-metadata` flags of `discover` and `results show` are
+# hidden from the help on older versions (still accepted, without effect).
+SUPPORTS_TEST_METADATA = RF_VERSION >= (7, 5)
+
+
+def named_metadata(metadata: Mapping[str, str]) -> Dict[str, str]:
+    """The entries of a suite's or test's metadata that have a name.
+
+    A `Metadata` setting with nothing after it gives an entry with an empty
+    name and an empty value in Robot's model. That is no metadata: Robot
+    itself leaves it out of `output.xml` (but not out of `output.json`).
+    """
+    return {name: value for name, value in metadata.items() if name}
+
+
+# Shared by `discover` and `results` so both emit the same name → value
+# mapping (author's spelling, RF's order).
+if SUPPORTS_TEST_METADATA:
+
+    def get_test_metadata(test: ModelTestCase) -> Dict[str, str]:
+        return named_metadata(test.metadata)  # type: ignore[attr-defined,unused-ignore]
+
+else:
+
+    def get_test_metadata(test: ModelTestCase) -> Dict[str, str]:
+        return {}
 
 
 @dataclass(frozen=True)
@@ -297,6 +326,7 @@ class SearchModifier(SuiteVisitor):
     - name, full name, source path
     - documentation, template name (running model only), timeout setting
     - any of its tags (with Robot's tag normalisation)
+    - any of its `[Metadata]` names or values (Robot Framework 7.5+)
     - any keyword name, keyword argument, assigned variable, FOR/WHILE
       condition or VAR/RETURN/EXCEPT/GROUP element inside the test body,
       setup or teardown
@@ -332,6 +362,9 @@ class SearchModifier(SuiteVisitor):
             return True
         if any(self.matcher.tag(str(t)) for t in test.tags):
             return True
+        for name, value in get_test_metadata(test).items():
+            if self.matcher.general(name) or self.matcher.general(value):
+                return True
         if test.has_setup and self.matcher.matches_body([test.setup]):
             return True
         if test.has_teardown and self.matcher.matches_body([test.teardown]):

@@ -1,0 +1,74 @@
+{
+"generator":"Robot 7.5 (Python 3.14.7 on linux)",
+"generated":"2026-09-21T16:11:51.411489",
+"rpa":false,
+"suite":{
+"id":"s1",
+"tests":[{
+"id":"s1-t1",
+"body":[{
+"body":[{
+"type":"MESSAGE",
+"message":"hello",
+"level":"INFO",
+"timestamp":"2026-09-21T16:11:51.432472"
+}],
+"name":"Log",
+"owner":"BuiltIn",
+"args":["hello"],
+"status":"PASS",
+"start_time":"2026-09-21T16:11:51.431826",
+"elapsed_time":0.000750
+}],
+"name":"With Metadata",
+"metadata":{"Issue":"4409"},
+"lineno":2,
+"status":"PASS",
+"start_time":"2026-09-21T16:11:51.430750",
+"elapsed_time":0.002165
+},{
+"id":"s1-t2",
+"body":[{
+"body":[{
+"type":"MESSAGE",
+"message":"plain",
+"level":"INFO",
+"timestamp":"2026-09-21T16:11:51.433846"
+}],
+"name":"Log",
+"owner":"BuiltIn",
+"args":["plain"],
+"status":"PASS",
+"start_time":"2026-09-21T16:11:51.433483",
+"elapsed_time":0.000427
+}],
+"name":"Without Metadata",
+"lineno":6,
+"status":"PASS",
+"start_time":"2026-09-21T16:11:51.433153",
+"elapsed_time":0.000874
+}],
+"name":"Rf75 Test Metadata",
+"status":"PASS",
+"start_time":"2026-09-21T16:11:51.412559",
+"elapsed_time":0.021708
+},
+"statistics":{
+"total":{
+"label":"All Tests",
+"pass":2,
+"fail":0,
+"skip":0
+},
+"suites":[{
+"label":"Rf75 Test Metadata",
+"name":"Rf75 Test Metadata",
+"id":"s1",
+"pass":2,
+"fail":0,
+"skip":0
+}],
+"tags":[]
+},
+"errors":[]
+}

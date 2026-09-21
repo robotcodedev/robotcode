@@ -173,6 +173,18 @@ def parse_error_suite() -> Path:
 
 
 @pytest.fixture
+def metadata_suite() -> Path:
+    """Tests with `[Metadata]`, a Robot Framework 7.5+ setting."""
+    return SUITES_DIR / "metadata.robot"
+
+
+@pytest.fixture
+def metadata_tasks_suite() -> Path:
+    """Tasks with `[Metadata]`, a Robot Framework 7.5+ setting."""
+    return SUITES_DIR / "metadata_tasks.robot"
+
+
+@pytest.fixture
 def files_tree() -> Path:
     return SUITES_DIR / "files_tree"
 

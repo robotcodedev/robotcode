@@ -36,6 +36,9 @@ from robotcode.core.utils.version import Version
 from robotcode.robot.utils import RF_VERSION
 
 SUITES_DIR = Path(__file__).parent / "suites"
+# Hand-trimmed result files that are read as they are instead of being
+# generated with the installed Robot Framework.
+STATIC_DIR = Path(__file__).parent / "static"
 
 
 # ---------------------------------------------------------------------------
@@ -301,6 +304,16 @@ def statements_group_output(session_output_dir: Path) -> Path:
     if RF_VERSION < (7, 2):
         pytest.skip("statements_group.robot requires Robot Framework 7.2+")
     return _run_robot(SUITES_DIR / "statements_group.robot", session_output_dir, "statements_group")
+
+
+@pytest.fixture(scope="session")
+def metadata_output(session_output_dir: Path) -> Path:
+    """`output.xml` from the test-level `[Metadata]` suite (RF 7.5+).
+
+    Older Robot Framework versions reject the setting but still write an
+    `output.xml`, without any test metadata.
+    """
+    return _run_robot(SUITES_DIR / "test_metadata.robot", session_output_dir, "test_metadata")
 
 
 @pytest.fixture(scope="session")

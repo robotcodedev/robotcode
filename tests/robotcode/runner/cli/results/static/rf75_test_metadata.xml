@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<robot generator="Robot 7.5 (Python 3.14.7 on linux)" generated="2026-09-21T16:11:51.218679" rpa="false" schemaversion="5">
+<suite id="s1" name="Rf75 Test Metadata">
+<test id="s1-t1" name="With Metadata" line="2">
+<kw name="Log" owner="BuiltIn">
+<msg time="2026-09-21T16:11:51.245892" level="INFO">hello</msg>
+<arg>hello</arg>
+<status status="PASS" start="2026-09-21T16:11:51.245618" elapsed="0.000330"/>
+</kw>
+<meta name="Issue">4409</meta>
+<status status="PASS" start="2026-09-21T16:11:51.244901" elapsed="0.001145"/>
+</test>
+<test id="s1-t2" name="Without Metadata" line="6">
+<kw name="Log" owner="BuiltIn">
+<msg time="2026-09-21T16:11:51.246521" level="INFO">plain</msg>
+<arg>plain</arg>
+<status status="PASS" start="2026-09-21T16:11:51.246365" elapsed="0.000187"/>
+</kw>
+<status status="PASS" start="2026-09-21T16:11:51.246166" elapsed="0.000461"/>
+</test>
+<status status="PASS" start="2026-09-21T16:11:51.219349" elapsed="0.027613"/>
+</suite>
+<statistics>
+<total>
+<stat pass="2" fail="0" skip="0">All Tests</stat>
+</total>
+<tag>
+</tag>
+<suite>
+<stat name="Rf75 Test Metadata" id="s1" pass="2" fail="0" skip="0">Rf75 Test Metadata</stat>
+</suite>
+</statistics>
+<errors>
+</errors>
+</robot>

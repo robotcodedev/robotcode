@@ -2,6 +2,7 @@
 
 from pathlib import Path
 
+from ..rf_markers import needs_rf_75
 from ._helpers import assert_counts, get_field, strip_ansi
 from .conftest import CliRunner, JsonRunner
 
@@ -45,6 +46,21 @@ def test_summary_no_failed_field_by_default(json_result: JsonRunner, basic_outpu
     """Without `--failed`, the field is omitted (CamelSnakeMixin removes defaults)."""
     data = json_result("summary", output_path=basic_output)
     assert "failed" not in data
+
+
+@needs_rf_75
+def test_summary_failed_carries_test_metadata(json_result: JsonRunner, metadata_output: Path) -> None:
+    """`failed[].metadata` is the failed test's `[Metadata]` (Robot Framework 7.5+)."""
+    data = json_result("summary", "--failed", output_path=metadata_output)
+    failed = data["failed"]
+    assert [f["name"] for f in failed] == ["Failing With Metadata"]
+    assert failed[0]["metadata"] == {"Issue": "4411"}
+
+
+def test_summary_failed_without_metadata_has_no_metadata_key(json_result: JsonRunner, basic_output: Path) -> None:
+    data = json_result("summary", "--failed", output_path=basic_output)
+    assert data["failed"]
+    assert all("metadata" not in f for f in data["failed"])
 
 
 def test_summary_text_output_contains_counts(text_result: CliRunner, basic_output: Path) -> None:

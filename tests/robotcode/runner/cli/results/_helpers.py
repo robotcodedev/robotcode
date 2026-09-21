@@ -5,6 +5,19 @@ from typing import Any, Dict, Iterator, List, Optional
 
 _ANSI_RE = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
 
+# Expected `metadata` per test of `suites/test_metadata.robot` on Robot
+# Framework 7.5+. `Spaced Key` declares `Owner Team` before `Issue`; the
+# expected order is Robot's (sorted by normalised name), not the author's.
+TEST_METADATA_EXPECTED: Dict[str, Optional[Dict[str, str]]] = {
+    "Single Line": {"Issue": "4409"},
+    "Spaced Key": {"Issue": "4410", "Owner Team": "core"},
+    "Multi Line": {"Description": "first line\nsecond line"},
+    "Failing With Metadata": {"Issue": "4411"},
+    "No Metadata": None,
+    # a `[Metadata]` setting with nothing after it is no metadata
+    "Empty Setting": None,
+}
+
 
 def strip_ansi(s: str) -> str:
     """Remove ANSI escape sequences so text output can be asserted on."""

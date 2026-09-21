@@ -294,6 +294,19 @@ def highlight_md(text: str, highlight: Optional[Callable[[str], str]]) -> str:
     return highlight(text) if highlight else text
 
 
+def metadata_md(metadata: Dict[str, str], highlight: Optional[Callable[[str], str]] = None) -> str:
+    """Test metadata as `name: value, name: value`.
+
+    All pairs share one line, so the lines of a multi-line value are joined
+    with spaces.
+    """
+
+    def hi(text: str) -> str:
+        return highlight_md(md_escape(text), highlight)
+
+    return ", ".join(f"{hi(name)}: {hi(' '.join(value.splitlines()))}" for name, value in metadata.items())
+
+
 def make_md_highlighter(search_substring: Optional[str], search_regex: Optional[str]) -> Optional[Callable[[str], str]]:
     """Build a `text -> highlighted text` callback that wraps each
     regex/substring match in an inline-code span. Returns `None` when

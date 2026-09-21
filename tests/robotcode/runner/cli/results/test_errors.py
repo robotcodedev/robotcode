@@ -5,11 +5,25 @@ regex, wrong format) is reported as a non-zero exit code with a useful
 message on stderr — not a stack trace and not a silent zero.
 """
 
+import json
 from pathlib import Path
 
 import pytest
 
-from .conftest import CliRunner
+from robotcode.robot.utils import RF_VERSION
+
+from ..rf_markers import needs_rf_75
+from .conftest import STATIC_DIR, CliRunner, JsonRunner
+
+# Result files written by Robot Framework 7.5 with a `[Metadata]` setting on
+# the test `With Metadata`.
+_TEST_METADATA_XML = STATIC_DIR / "rf75_test_metadata.xml"
+_TEST_METADATA_JSON = STATIC_DIR / "rf75_test_metadata.json"
+
+_TEST_METADATA_HINT = (
+    "The file was written by Robot Framework 7.5 or newer and contains test metadata; "
+    "reading it requires Robot Framework 7.5+"
+)
 
 
 def test_missing_output_file_is_a_clear_error(robotcode_cli: CliRunner, tmp_path: Path) -> None:
@@ -70,3 +84,80 @@ def test_invalid_search_regex_is_rejected_uniformly(
     )
     assert result.returncode != 0
     assert "search-regex" in result.stderr.lower() or "invalid" in result.stderr.lower()
+
+
+# ---------------------------------------------------------------------------
+# Result files with test metadata (Robot Framework 7.5+) on older versions
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.skipif(RF_VERSION >= (7, 5), reason="Robot Framework 7.5+ reads test metadata")
+@pytest.mark.parametrize("subcommand", ["summary", "show", "log", "stats"])
+def test_xml_with_test_metadata_explains_needed_robot_version(subcommand: str, robotcode_cli: CliRunner) -> None:
+    """Robot's bare `Incompatible child element` error gets a hint naming
+    Robot Framework 7.5 and test metadata as the cause."""
+    result = robotcode_cli(["results", subcommand, "--output", str(_TEST_METADATA_XML)], expect_ok=False)
+    assert result.returncode != 0
+    combined = result.stderr + result.stdout
+    assert "Incompatible child element 'meta' for 'test'" in combined
+    assert _TEST_METADATA_HINT in combined
+
+
+@pytest.mark.skipif(
+    not ((7, 2) <= RF_VERSION < (7, 5)),
+    reason="only Robot Framework 7.2-7.4 fail at the test's `metadata` when reading the JSON file",
+)
+def test_json_with_test_metadata_explains_needed_robot_version(robotcode_cli: CliRunner) -> None:
+    result = robotcode_cli(["results", "show", "--output", str(_TEST_METADATA_JSON)], expect_ok=False)
+    assert result.returncode != 0
+    combined = result.stderr + result.stdout
+    assert "does not have attribute 'metadata'" in combined
+    assert _TEST_METADATA_HINT in combined
+
+
+def test_other_parse_errors_get_no_test_metadata_hint(robotcode_cli: CliRunner, tmp_path: Path) -> None:
+    broken = tmp_path / "broken.xml"
+    broken.write_text("<robot><suite>", encoding="utf-8")
+    result = robotcode_cli(["results", "show", "--output", str(broken)], expect_ok=False)
+    assert result.returncode != 0
+    combined = result.stderr + result.stdout
+    assert "failed to parse" in combined
+    assert "test metadata" not in combined
+
+
+@needs_rf_75
+def test_metadata_entry_without_a_name_is_no_metadata(
+    json_result: JsonRunner, text_result: CliRunner, tmp_path: Path
+) -> None:
+    """A `Metadata` setting with nothing after it is an entry with an empty
+    name and value. Robot leaves it out of `output.xml` but writes it to
+    `output.json`."""
+    data = json.loads(_TEST_METADATA_JSON.read_text(encoding="utf-8"))
+    data["suite"]["metadata"] = {"": ""}
+    data["suite"]["tests"][1]["metadata"] = {"": ""}
+    output = tmp_path / "output.json"
+    output.write_text(json.dumps(data), encoding="utf-8")
+
+    shown = json_result("show", output_path=output)
+    assert [(t["name"], t.get("metadata")) for t in shown["tests"]] == [
+        ("With Metadata", {"Issue": "4409"}),
+        ("Without Metadata", None),
+    ]
+
+    log = json_result("log", "--suite-info", output_path=output)
+    assert all("metadata" not in suite for suite in log["suites"])
+    assert [t.get("metadata") for t in log["tests"]] == [{"Issue": "4409"}, None]
+
+    text = text_result("log", "--suite-info", output_path=output).stdout
+    assert text.count("_Metadata:_") == 1
+    assert "- _:_" not in text
+
+
+@needs_rf_75
+@pytest.mark.parametrize("output_path", [_TEST_METADATA_XML, _TEST_METADATA_JSON], ids=["xml", "json"])
+def test_static_files_with_test_metadata_parse(output_path: Path, json_result: JsonRunner) -> None:
+    data = json_result("show", output_path=output_path)
+    assert [(t["name"], t.get("metadata")) for t in data["tests"]] == [
+        ("With Metadata", {"Issue": "4409"}),
+        ("Without Metadata", None),
+    ]

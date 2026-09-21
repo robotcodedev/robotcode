@@ -29,6 +29,7 @@ from .._markdown import (
     make_md_highlighter,
     md_escape,
     md_table,
+    metadata_md,
     path_paren,
     timing_suffix,
 )
@@ -51,7 +52,8 @@ from ._models import (
 # `show`); `LogTest` is the `log`-specific record carrying a body tree.
 # Both expose the fields the per-test renderers need (`full_name`,
 # `status`, `message`, `source`, `rel_source`, `lineno`, `elapsed_seconds`,
-# `start_time`), so we treat them interchangeably at the renderer level.
+# `start_time`, `metadata`), so we treat them interchangeably at the renderer
+# level.
 _TestLike = Union[TestResultItem, LogTest]
 
 _LEVEL_ORDER = {"TRACE": 0, "DEBUG": 1, "INFO": 2, "WARN": 3, "ERROR": 4, "FAIL": 5}
@@ -172,6 +174,7 @@ def render_show(
     data: ShowResult,
     *,
     show_tags: bool,
+    show_metadata: bool = False,
     full_paths: bool = False,
     show_timing: bool = False,
     sort_field: Optional[str] = None,
@@ -197,6 +200,8 @@ def render_show(
         if show_tags and t.tags:
             tags = ", ".join(highlight_md(md_escape(tag), highlight) for tag in t.tags)
             out.append(f"  - _Tags:_ {tags}")
+        if show_metadata and t.metadata:
+            out.append(f"  - _Metadata:_ {metadata_md(t.metadata, highlight)}")
 
     if data.truncated:
         out.append("")
@@ -490,6 +495,9 @@ def _test_header_md(
     head += _source_paren(t, full_paths=full_paths)
     head += f" {bold_status(t.status)}"
     head += timing_suffix(t.elapsed_seconds, t.start_time, show_timing=show_timing)
+    if t.metadata:
+        # a paragraph, not a list: a list would merge with the list of the test body below
+        head += f"\n\n_Metadata:_ {metadata_md(t.metadata, highlight)}"
     return head
 
 

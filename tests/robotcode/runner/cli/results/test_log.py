@@ -13,8 +13,8 @@ from typing import Any, Dict, List, Optional, Set
 
 import pytest
 
-from ..rf_markers import needs_rf_70, needs_rf_72
-from ._helpers import count_entries_of_type, find_test, iter_body, strip_ansi
+from ..rf_markers import needs_rf_70, needs_rf_72, needs_rf_75
+from ._helpers import TEST_METADATA_EXPECTED, count_entries_of_type, find_test, iter_body, strip_ansi
 from .conftest import CliRunner, JsonRunner
 
 # ---------------------------------------------------------------------------
@@ -523,6 +523,60 @@ def test_log_keyword_info_populates_setup_keywords(json_result: JsonRunner, keyw
     assert setup.get("doc") == "Helper keyword documentation token: KW_DOC_TOKEN_beta."
     assert setup.get("tags") == ["KWTagProbe"]
     assert setup.get("timeout") == "7 days"
+
+
+# ---------------------------------------------------------------------------
+# Test metadata (Robot Framework 7.5+): always in JSON, one line under the
+# test header in TEXT
+# ---------------------------------------------------------------------------
+
+
+@needs_rf_75
+def test_log_test_metadata_in_json(json_result: JsonRunner, metadata_output: Path) -> None:
+    """Same `metadata` object as `show`; omitted for a test without metadata."""
+    data = json_result("log", output_path=metadata_output)
+
+    assert [t["fullName"] for t in data["tests"]] == [f"Test Metadata.{name}" for name in TEST_METADATA_EXPECTED]
+    for t, wanted in zip(data["tests"], TEST_METADATA_EXPECTED.values()):
+        if wanted is None:
+            assert "metadata" not in t
+        else:
+            assert list(t["metadata"].items()) == list(wanted.items())
+
+
+def test_log_test_without_metadata_has_no_metadata_key(json_result: JsonRunner, basic_output: Path) -> None:
+    data = json_result("log", output_path=basic_output)
+    assert all("metadata" not in t for t in data["tests"])
+
+
+@needs_rf_75
+def test_log_text_renders_test_metadata_line(robotcode_cli: CliRunner, metadata_output: Path) -> None:
+    """TEXT renders the metadata as one line under the `### Test:` heading,
+    without a flag. It is a paragraph and not a list: a list would merge with
+    the list of the test body that follows."""
+    out = strip_ansi(robotcode_cli(["results", "log", "--output", str(metadata_output)]).stdout)
+    lines = out.splitlines()
+
+    header = next(i for i, line in enumerate(lines) if line.startswith("### Test: Test Metadata.Spaced Key"))
+    assert lines[header + 1 : header + 4] == ["", "_Metadata:_ Issue: 4410, Owner Team: core", ""]
+    assert lines[header + 4].startswith("- ")
+
+    # The lines of a multi-line value are joined, as in `show --show-metadata`.
+    header = next(i for i, line in enumerate(lines) if line.startswith("### Test: Test Metadata.Multi Line"))
+    assert lines[header + 1 : header + 4] == ["", "_Metadata:_ Description: first line second line", ""]
+
+    # A test without metadata goes straight from the heading to its body.
+    header = next(i for i, line in enumerate(lines) if line.startswith("### Test: Test Metadata.No Metadata"))
+    assert lines[header + 1] == ""
+    assert lines[header + 2].startswith("- **BuiltIn.Log** `none`")
+
+
+@needs_rf_75
+def test_log_search_highlights_test_metadata(robotcode_cli: CliRunner, metadata_output: Path) -> None:
+    out = strip_ansi(robotcode_cli(["results", "log", "--search", "4409", "--output", str(metadata_output)]).stdout)
+    assert "### Test: Test Metadata.Single Line" in out
+    assert "_Metadata:_ Issue: `4409`" in out.splitlines()
+    assert "### Test: Test Metadata.Spaced Key" not in out
 
 
 # ---------------------------------------------------------------------------

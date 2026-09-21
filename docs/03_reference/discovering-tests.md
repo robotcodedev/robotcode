@@ -134,10 +134,13 @@ Statistics:
 | Flag | Effect |
 |---|---|
 | `--show-tags / --no-show-tags` | Show or hide the `Tags:` line under each test/task. **Default: on.** |
+| `--show-metadata / --no-show-metadata` | Show or hide a `Metadata:` line (`name: value, …`) under each test/task that has `[Metadata]` (Robot Framework 7.5+). **Default: on.** |
 | `--full-paths / --no-full-paths` | Absolute source paths. Default: relative to cwd. |
 | `--search TEXT` / `--search-regex PATTERN` | Prune the tree to tests matching the pattern; surviving tests keep their full ancestor chain. See [Search](#search). |
 | `-bl NAME` / `-ebl NAME` | Include/exclude tests, tasks or suites by exact long name. See [Robot-native filters](#robot-native-filters). |
 | *any standard `robot` flag* | `--include`, `--exclude`, `--suite`, `--test`, `--variable`, `--pythonpath`, … passed through to the discovery pipeline. |
+
+A test or task that has `[Metadata]` is followed by one line listing all its entries (hide it with `--no-show-metadata`) — in the raw markdown output `- _Metadata:_ Issue: 4409, Owner Team: core`. Names keep the spelling from the source file; the lines of a multi-line value are joined with a space. Test metadata exists since Robot Framework 7.5; with an older version installed, `--help` does not list the flag and passing it has no effect. The same flag is available on `tests` and `tasks`, where it is off by default, like `--show-tags`.
 
 A diagnostics footer is added to TEXT output when parsing emits warnings or errors (deprecated section headers, duplicate test names, unparseable files). In JSON they land in the `diagnostics` field — see [diagnostics](#diagnostics).
 
@@ -148,6 +151,7 @@ A diagnostics footer is added to TEXT output when parsing emits warnings or erro
 ```bash
 robotcode discover tests
 robotcode discover tests --show-tags            # add a `Tags: ...` line per test
+robotcode discover tests --show-metadata        # add a `Metadata: ...` line per test (RF 7.5+)
 robotcode discover tests --include smoke        # filter by tag
 robotcode discover tests --search "Login"       # substring search
 robotcode discover tests path/to/suite.robot    # one suite only
@@ -166,6 +170,7 @@ Test: MyProject.Checkout.Empty Cart (tests/checkout/test_checkout.robot:8)
 | Flag | Effect |
 |---|---|
 | `--show-tags / --no-show-tags` | Include a `Tags:` line per test. **Default: off** (tests are always one-line in TEXT). |
+| `--show-metadata / --no-show-metadata` | Include a `Metadata:` line (`name: value, …`) per test that has `[Metadata]` (Robot Framework 7.5+). **Default: off.** |
 | `--full-paths / --no-full-paths` | Absolute source paths. |
 | `--search TEXT` / `--search-regex PATTERN` | Filter by name/source/body/tags. |
 | `-bl NAME` / `-ebl NAME` | Long-name include/exclude. |
@@ -322,6 +327,7 @@ The search applies across:
 - the test's `source` path
 - the test's `[Documentation]`, `[Template]` and `[Timeout]`
 - the test's tags (Robot's normalisation rules apply)
+- the test's `[Metadata]` names and values (Robot Framework 7.5+)
 - every keyword call's name, arguments and assigned variables inside the test body
 - FOR/WHILE/IF conditions, VAR/RETURN values, EXCEPT patterns, GROUP names
 - any ancestor suite's `Documentation` or `Metadata` — a hit on a suite-level field keeps every test underneath it
@@ -400,12 +406,12 @@ Every subcommand that returns tests/tasks/suites uses the same `TestItem` schema
   "relSource": "tests/login/test_login.robot",
   "source": "/abs/path/test_login.robot",
   "tags": ["smoke", "regression"],
+  "metadata": { "Issue": "4409", "Owner Team": "core" },
   "range": {
     "start": { "line": 41, "character": 0 },
     "end":   { "line": 41, "character": 0 }
   },
   "children": [ /* nested TestItems for type=suite/workspace */ ],
-  "description": "Test docstring (when set)",
   "error": "Parse error message (when this item failed to parse)",
   "rpa": false
 }
@@ -418,6 +424,8 @@ Field notes:
 - `lineno` is 1-based; `range.start.line` / `range.end.line` are 0-based (LSP convention). Both refer to the same line of source.
 - `uri` is a `file://` URI of the source file — same format the Language Server Protocol uses.
 - `tags` are normalised (`Bug 1`, `bug_1`, `Bug1` all come through as `"bug1"`) and only present when the item has at least one tag.
+- `metadata` is the `[Metadata]` of a test or task (Robot Framework 7.5+) as a name → value object. Names keep the spelling from the source file and values come through verbatim, the lines of a multi-line value joined with `\n`. A `[Metadata]` setting with nothing after it is no metadata and is left out. The key is absent when the test has no metadata and on Robot Framework versions older than 7.5; `suite` and `workspace` items never carry it. The `--show-metadata` flag is render-only for TEXT mode — it doesn't affect the JSON.
+- `description` is declared in the schema, but `discover` never sets it, so the key does not appear in the output. A test's `[Documentation]` is not part of the item.
 - `children` is the nested-tree field — present on `workspace` and `suite` items, absent on `test` / `task`.
 - `range` follows the LSP `Range` shape so editors can highlight the source span.
 

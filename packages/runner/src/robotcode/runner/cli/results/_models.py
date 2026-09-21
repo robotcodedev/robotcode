@@ -76,6 +76,7 @@ class TestResultItem(CamelSnakeMixin):
     message: str
     full_message: Optional[str] = None
     tags: Optional[List[str]] = None
+    metadata: Optional[Dict[str, str]] = None
     elapsed_seconds: Optional[float] = None
     start_time: Optional[str] = None
     source: Optional[str] = None
@@ -152,6 +153,9 @@ class LogTest(CamelSnakeMixin):
     # suite. Lets the TEXT renderer group tests under suite headers and
     # JSON consumers cross-reference `LogResult.suites`.
     suite: Optional[str] = None
+    # The test's `[Metadata]` (Robot Framework 7.5+), same shape as
+    # `LogSuite.metadata`.
+    metadata: Optional[Dict[str, str]] = None
 
 
 @dataclass

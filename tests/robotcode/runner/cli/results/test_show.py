@@ -2,7 +2,12 @@
 
 from pathlib import Path
 
-from ._helpers import find_test, get_field, strip_ansi
+import pytest
+
+from robotcode.robot.utils import RF_VERSION
+
+from ..rf_markers import needs_rf_75
+from ._helpers import TEST_METADATA_EXPECTED, find_test, get_field, strip_ansi
 from .conftest import CliRunner, JsonRunner
 
 # ---------------------------------------------------------------------------
@@ -229,6 +234,94 @@ def test_show_search_highlight_visible_in_text(text_result: CliRunner, basic_out
     assert "Failing" in plain
     # The match is wrapped in an inline-code span — the markdown highlight form.
     assert "`Failing`" in plain
+
+
+# ---------------------------------------------------------------------------
+# Test metadata (Robot Framework 7.5+)
+# ---------------------------------------------------------------------------
+
+
+@needs_rf_75
+def test_show_metadata_in_json(json_result: JsonRunner, metadata_output: Path) -> None:
+    """Names keep the author's spelling, multi-line values are joined with
+    `\\n`, and a test without metadata has no `metadata` key at all."""
+    data = json_result("show", output_path=metadata_output)
+
+    assert [t["name"] for t in data["tests"]] == list(TEST_METADATA_EXPECTED)
+    for t in data["tests"]:
+        wanted = TEST_METADATA_EXPECTED[t["name"]]
+        if wanted is None:
+            assert "metadata" not in t
+        else:
+            assert list(t["metadata"].items()) == list(wanted.items())
+
+
+@pytest.mark.skipif(RF_VERSION >= (7, 5), reason="Robot Framework < 7.5 has no test metadata")
+def test_show_no_metadata_key_on_older_robot(json_result: JsonRunner, metadata_output: Path) -> None:
+    data = json_result("show", output_path=metadata_output)
+
+    assert [t["name"] for t in data["tests"]] == list(TEST_METADATA_EXPECTED)
+    assert all("metadata" not in t for t in data["tests"])
+
+
+def test_show_help_offers_the_metadata_flag_only_where_test_metadata_exists(robotcode_cli: CliRunner) -> None:
+    out = robotcode_cli(["results", "show", "--help"]).stdout
+
+    assert "--show-tags / --no-show-tags" in out
+    assert "--tags" not in out
+    assert "--no-tags" not in out
+    assert ("--show-metadata / --no-show-metadata" in out) == (RF_VERSION >= (7, 5))
+
+
+def test_show_metadata_flag_does_not_change_json(json_result: JsonRunner, metadata_output: Path) -> None:
+    """`--show-metadata` is a TEXT renderer hint; JSON always carries the data.
+
+    Runs on every Robot Framework version: before 7.5 the flag is hidden
+    from the help but still accepted."""
+    default = json_result("show", output_path=metadata_output)
+    with_flag = json_result("show", "--show-metadata", output_path=metadata_output)
+    without_flag = json_result("show", "--no-show-metadata", output_path=metadata_output)
+    assert default == with_flag == without_flag
+
+
+@needs_rf_75
+def test_show_text_metadata_flag_controls_visibility(text_result: CliRunner, metadata_output: Path) -> None:
+    """In TEXT mode the `_Metadata:_` bullet appears only with `--show-metadata`,
+    and only under tests that have metadata."""
+    with_flag = strip_ansi(text_result("show", "--show-metadata", output_path=metadata_output).stdout)
+    default = strip_ansi(text_result("show", output_path=metadata_output).stdout)
+    without_flag = strip_ansi(text_result("show", "--no-show-metadata", output_path=metadata_output).stdout)
+
+    lines = with_flag.splitlines()
+    assert "  - _Metadata:_ Issue: 4410, Owner Team: core" in lines
+    # A multi-line value stays on the one bullet line.
+    assert "  - _Metadata:_ Description: first line second line" in lines
+    assert with_flag.count("_Metadata:_") == 4
+    assert "_Metadata:_" not in default
+    assert "_Metadata:_" not in without_flag
+
+
+@needs_rf_75
+def test_show_search_matches_metadata_value(json_result: JsonRunner, metadata_output: Path) -> None:
+    data = json_result("show", "--search", "4409", output_path=metadata_output)
+    assert [t["name"] for t in data["tests"]] == ["Single Line"]
+
+
+@needs_rf_75
+def test_show_search_matches_metadata_name(json_result: JsonRunner, metadata_output: Path) -> None:
+    """Names match literally and case-insensitively, without Robot's
+    metadata-key normalisation."""
+    data = json_result("show", "--search", "owner team", output_path=metadata_output)
+    assert [t["name"] for t in data["tests"]] == ["Spaced Key"]
+
+    data = json_result("show", "--search", "ownerteam", output_path=metadata_output)
+    assert data["tests"] == []
+
+
+@needs_rf_75
+def test_show_search_highlights_metadata_in_text(text_result: CliRunner, metadata_output: Path) -> None:
+    plain = strip_ansi(text_result("show", "--show-metadata", "--search", "4409", output_path=metadata_output).stdout)
+    assert "  - _Metadata:_ Issue: `4409`" in plain.splitlines()
 
 
 # ---------------------------------------------------------------------------
