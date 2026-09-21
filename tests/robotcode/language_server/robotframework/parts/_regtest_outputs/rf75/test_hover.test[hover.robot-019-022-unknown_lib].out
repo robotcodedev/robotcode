@@ -1,0 +1,15 @@
+data: !GeneratedTestData
+  character: 22
+  line: 19
+  name: unknown lib
+result: !Hover
+  contents:
+    kind: markdown
+    value: '### Library *UnknownLibrary*'
+  range:
+    end:
+      character: 29
+      line: 19
+    start:
+      character: 15
+      line: 19

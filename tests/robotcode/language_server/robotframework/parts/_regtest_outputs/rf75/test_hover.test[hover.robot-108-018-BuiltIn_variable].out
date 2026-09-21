@@ -1,0 +1,15 @@
+data: !GeneratedTestData
+  character: 18
+  line: 108
+  name: BuiltIn variable
+result: !Hover
+  contents:
+    kind: markdown
+    value: '### Builtin Variable `${CURDIR}`'
+  range:
+    end:
+      character: 19
+      line: 108
+    start:
+      character: 13
+      line: 108

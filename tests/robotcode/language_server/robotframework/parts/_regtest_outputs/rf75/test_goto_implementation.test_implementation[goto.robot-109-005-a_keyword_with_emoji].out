@@ -1,0 +1,28 @@
+data: !GeneratedTestData
+  character: 5
+  line: 109
+  name: a keyword with emoji
+result:
+- !LocationLink
+  origin_selection_range:
+    end:
+      character: 6
+      line: 109
+    start:
+      character: 4
+      line: 109
+  target_range:
+    end:
+      character: 2
+      line: 26
+    start:
+      character: 0
+      line: 26
+  target_selection_range:
+    end:
+      character: 2
+      line: 26
+    start:
+      character: 0
+      line: 26
+  target_uri: firstresource.resource

@@ -1,0 +1,28 @@
+data: !GeneratedTestData
+  character: 25
+  line: 136
+  name: expression in keyword
+result:
+- !LocationLink
+  origin_selection_range:
+    end:
+      character: 26
+      line: 136
+    start:
+      character: 25
+      line: 136
+  target_range:
+    end:
+      character: 3
+      line: 36
+    start:
+      character: 2
+      line: 36
+  target_selection_range:
+    end:
+      character: 3
+      line: 36
+    start:
+      character: 2
+      line: 36
+  target_uri: goto.robot

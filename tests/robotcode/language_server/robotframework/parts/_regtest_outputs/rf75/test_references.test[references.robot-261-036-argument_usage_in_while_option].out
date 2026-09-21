@@ -1,0 +1,23 @@
+data: !GeneratedTestData
+  character: 36
+  line: 261
+  name: argument usage in while option
+result:
+- !Location
+  range:
+    end:
+      character: 40
+      line: 258
+    start:
+      character: 33
+      line: 258
+  uri: tests/references.robot
+- !Location
+  range:
+    end:
+      character: 43
+      line: 261
+    start:
+      character: 36
+      line: 261
+  uri: tests/references.robot

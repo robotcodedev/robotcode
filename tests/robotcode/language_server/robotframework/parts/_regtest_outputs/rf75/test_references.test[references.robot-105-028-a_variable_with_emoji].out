@@ -1,0 +1,50 @@
+data: !GeneratedTestData
+  character: 28
+  line: 105
+  name: a variable with emoji
+result:
+- !Location
+  range:
+    end:
+      character: 4
+      line: 27
+    start:
+      character: 2
+      line: 27
+  uri: tests/references.robot
+- !Location
+  range:
+    end:
+      character: 15
+      line: 88
+    start:
+      character: 13
+      line: 88
+  uri: tests/references.robot
+- !Location
+  range:
+    end:
+      character: 28
+      line: 105
+    start:
+      character: 26
+      line: 105
+  uri: tests/references.robot
+- !Location
+  range:
+    end:
+      character: 47
+      line: 105
+    start:
+      character: 45
+      line: 105
+  uri: tests/references.robot
+- !Location
+  range:
+    end:
+      character: 53
+      line: 105
+    start:
+      character: 51
+      line: 105
+  uri: tests/references.robot

@@ -1,0 +1,12 @@
+data: !GeneratedTestData
+  character: 1
+  line: 63
+  name: complex else if start
+result:
+- !FoldingRange
+  collapsed_text: null
+  end_character: 12
+  end_line: 70
+  kind: if
+  start_character: 0
+  start_line: 63

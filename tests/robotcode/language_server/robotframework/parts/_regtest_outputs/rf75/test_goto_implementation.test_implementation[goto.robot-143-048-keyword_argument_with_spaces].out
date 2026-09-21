@@ -1,0 +1,28 @@
+data: !GeneratedTestData
+  character: 48
+  line: 143
+  name: keyword argument with spaces
+result:
+- !LocationLink
+  origin_selection_range:
+    end:
+      character: 59
+      line: 143
+    start:
+      character: 48
+      line: 143
+  target_range:
+    end:
+      character: 41
+      line: 23
+    start:
+      character: 27
+      line: 23
+  target_selection_range:
+    end:
+      character: 40
+      line: 23
+    start:
+      character: 29
+      line: 23
+  target_uri: firstresource.resource

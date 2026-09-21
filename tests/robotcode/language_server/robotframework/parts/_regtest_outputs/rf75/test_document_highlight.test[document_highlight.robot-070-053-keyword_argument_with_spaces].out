@@ -1,0 +1,14 @@
+data: !GeneratedTestData
+  character: 53
+  line: 70
+  name: keyword argument with spaces
+result:
+- !DocumentHighlight
+  kind: 2
+  range:
+    end:
+      character: 59
+      line: 70
+    start:
+      character: 48
+      line: 70

@@ -1,0 +1,68 @@
+data: !GeneratedTestData
+  character: 10
+  line: 102
+  name: variable in inline if expression
+result:
+- !DocumentHighlight
+  kind: 3
+  range:
+    end:
+      character: 3
+      line: 24
+    start:
+      character: 2
+      line: 24
+- !DocumentHighlight
+  kind: 2
+  range:
+    end:
+      character: 11
+      line: 86
+    start:
+      character: 10
+      line: 86
+- !DocumentHighlight
+  kind: 2
+  range:
+    end:
+      character: 10
+      line: 94
+    start:
+      character: 9
+      line: 94
+- !DocumentHighlight
+  kind: 2
+  range:
+    end:
+      character: 11
+      line: 102
+    start:
+      character: 10
+      line: 102
+- !DocumentHighlight
+  kind: 2
+  range:
+    end:
+      character: 10
+      line: 106
+    start:
+      character: 9
+      line: 106
+- !DocumentHighlight
+  kind: 2
+  range:
+    end:
+      character: 51
+      line: 164
+    start:
+      character: 50
+      line: 164
+- !DocumentHighlight
+  kind: 2
+  range:
+    end:
+      character: 51
+      line: 169
+    start:
+      character: 50
+      line: 169

@@ -1,0 +1,28 @@
+data: !GeneratedTestData
+  character: 19
+  line: 71
+  name: For Variable
+result:
+- !LocationLink
+  origin_selection_range:
+    end:
+      character: 20
+      line: 71
+    start:
+      character: 17
+      line: 71
+  target_range:
+    end:
+      character: 16
+      line: 68
+    start:
+      character: 13
+      line: 68
+  target_selection_range:
+    end:
+      character: 16
+      line: 68
+    start:
+      character: 13
+      line: 68
+  target_uri: goto.robot

@@ -1,0 +1,23 @@
+data: !GeneratedTestData
+  character: 29
+  line: 6
+  name: namespace reference with resource
+result:
+- !DocumentHighlight
+  kind: 1
+  range:
+    end:
+      character: 61
+      line: 6
+    start:
+      character: 16
+      line: 6
+- !DocumentHighlight
+  kind: 1
+  range:
+    end:
+      character: 17
+      line: 70
+    start:
+      character: 4
+      line: 70

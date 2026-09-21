@@ -1,0 +1,32 @@
+data: !GeneratedTestData
+  character: 4
+  line: 80
+  name: Embedded keyword with regex only numbers
+result:
+- !Location
+  range:
+    end:
+      character: 25
+      line: 77
+    start:
+      character: 4
+      line: 77
+  uri: tests/references.robot
+- !Location
+  range:
+    end:
+      character: 29
+      line: 80
+    start:
+      character: 4
+      line: 80
+  uri: tests/references.robot
+- !Location
+  range:
+    end:
+      character: 38
+      line: 125
+    start:
+      character: 0
+      line: 125
+  uri: tests/references.robot

@@ -1,0 +1,221 @@
+data: !GeneratedTestData
+  character: 5
+  line: 34
+  name: simple keyword call
+result:
+- !DocumentHighlight
+  kind: 1
+  range:
+    end:
+      character: 7
+      line: 34
+    start:
+      character: 4
+      line: 34
+- !DocumentHighlight
+  kind: 1
+  range:
+    end:
+      character: 7
+      line: 41
+    start:
+      character: 4
+      line: 41
+- !DocumentHighlight
+  kind: 1
+  range:
+    end:
+      character: 11
+      line: 88
+    start:
+      character: 8
+      line: 88
+- !DocumentHighlight
+  kind: 1
+  range:
+    end:
+      character: 11
+      line: 91
+    start:
+      character: 8
+      line: 91
+- !DocumentHighlight
+  kind: 1
+  range:
+    end:
+      character: 11
+      line: 96
+    start:
+      character: 8
+      line: 96
+- !DocumentHighlight
+  kind: 1
+  range:
+    end:
+      character: 11
+      line: 99
+    start:
+      character: 8
+      line: 99
+- !DocumentHighlight
+  kind: 1
+  range:
+    end:
+      character: 19
+      line: 102
+    start:
+      character: 16
+      line: 102
+- !DocumentHighlight
+  kind: 1
+  range:
+    end:
+      character: 51
+      line: 102
+    start:
+      character: 48
+      line: 102
+- !DocumentHighlight
+  kind: 1
+  range:
+    end:
+      character: 70
+      line: 102
+    start:
+      character: 67
+      line: 102
+- !DocumentHighlight
+  kind: 1
+  range:
+    end:
+      character: 17
+      line: 106
+    start:
+      character: 14
+      line: 106
+- !DocumentHighlight
+  kind: 1
+  range:
+    end:
+      character: 47
+      line: 106
+    start:
+      character: 44
+      line: 106
+- !DocumentHighlight
+  kind: 1
+  range:
+    end:
+      character: 66
+      line: 106
+    start:
+      character: 63
+      line: 106
+- !DocumentHighlight
+  kind: 1
+  range:
+    end:
+      character: 7
+      line: 116
+    start:
+      character: 4
+      line: 116
+- !DocumentHighlight
+  kind: 1
+  range:
+    end:
+      character: 7
+      line: 118
+    start:
+      character: 4
+      line: 118
+- !DocumentHighlight
+  kind: 1
+  range:
+    end:
+      character: 7
+      line: 126
+    start:
+      character: 4
+      line: 126
+- !DocumentHighlight
+  kind: 1
+  range:
+    end:
+      character: 7
+      line: 128
+    start:
+      character: 4
+      line: 128
+- !DocumentHighlight
+  kind: 1
+  range:
+    end:
+      character: 7
+      line: 136
+    start:
+      character: 4
+      line: 136
+- !DocumentHighlight
+  kind: 1
+  range:
+    end:
+      character: 7
+      line: 138
+    start:
+      character: 4
+      line: 138
+- !DocumentHighlight
+  kind: 1
+  range:
+    end:
+      character: 7
+      line: 140
+    start:
+      character: 4
+      line: 140
+- !DocumentHighlight
+  kind: 1
+  range:
+    end:
+      character: 7
+      line: 151
+    start:
+      character: 4
+      line: 151
+- !DocumentHighlight
+  kind: 1
+  range:
+    end:
+      character: 7
+      line: 165
+    start:
+      character: 4
+      line: 165
+- !DocumentHighlight
+  kind: 1
+  range:
+    end:
+      character: 7
+      line: 166
+    start:
+      character: 4
+      line: 166
+- !DocumentHighlight
+  kind: 1
+  range:
+    end:
+      character: 7
+      line: 178
+    start:
+      character: 4
+      line: 178
+- !DocumentHighlight
+  kind: 1
+  range:
+    end:
+      character: 7
+      line: 179
+    start:
+      character: 4
+      line: 179

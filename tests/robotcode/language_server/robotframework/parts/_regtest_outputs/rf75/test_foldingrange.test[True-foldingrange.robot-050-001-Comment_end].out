@@ -1,0 +1,12 @@
+data: !GeneratedTestData
+  character: 1
+  line: 50
+  name: Comment end
+result:
+- !FoldingRange
+  collapsed_text: null
+  end_character: null
+  end_line: 49
+  kind: comment
+  start_character: null
+  start_line: 43

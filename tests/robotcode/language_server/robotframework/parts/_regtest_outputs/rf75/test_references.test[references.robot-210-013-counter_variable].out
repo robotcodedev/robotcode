@@ -1,0 +1,41 @@
+data: !GeneratedTestData
+  character: 13
+  line: 210
+  name: counter variable
+result:
+- !Location
+  range:
+    end:
+      character: 20
+      line: 210
+    start:
+      character: 13
+      line: 210
+  uri: tests/references.robot
+- !Location
+  range:
+    end:
+      character: 35
+      line: 213
+    start:
+      character: 28
+      line: 213
+  uri: tests/references.robot
+- !Location
+  range:
+    end:
+      character: 24
+      line: 215
+    start:
+      character: 17
+      line: 215
+  uri: tests/references.robot
+- !Location
+  range:
+    end:
+      character: 38
+      line: 215
+    start:
+      character: 31
+      line: 215
+  uri: tests/references.robot

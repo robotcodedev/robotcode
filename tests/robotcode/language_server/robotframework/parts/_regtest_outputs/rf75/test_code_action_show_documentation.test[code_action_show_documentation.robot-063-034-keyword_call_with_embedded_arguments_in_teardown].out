@@ -1,0 +1,18 @@
+data: !GeneratedTestData
+  character: 34
+  line: 63
+  name: keyword call with embedded arguments in teardown
+result:
+- !CodeAction
+  command:
+    arguments:
+    - <removed>
+    command: robotcode.showDocumentation
+    title: Open Documentation
+  data: null
+  diagnostics: null
+  disabled: null
+  edit: null
+  is_preferred: null
+  kind: source
+  title: Open Documentation

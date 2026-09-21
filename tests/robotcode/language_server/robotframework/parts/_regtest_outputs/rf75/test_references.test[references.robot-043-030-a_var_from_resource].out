@@ -1,0 +1,41 @@
+data: !GeneratedTestData
+  character: 30
+  line: 43
+  name: a var from resource
+result:
+- !Location
+  range:
+    end:
+      character: 20
+      line: 4
+    start:
+      character: 2
+      line: 4
+  uri: resources/firstresource.resource
+- !Location
+  range:
+    end:
+      character: 31
+      line: 37
+    start:
+      character: 13
+      line: 37
+  uri: tests/code_action_show_documentation.robot
+- !Location
+  range:
+    end:
+      character: 31
+      line: 41
+    start:
+      character: 13
+      line: 41
+  uri: tests/document_highlight.robot
+- !Location
+  range:
+    end:
+      character: 31
+      line: 43
+    start:
+      character: 13
+      line: 43
+  uri: tests/references.robot

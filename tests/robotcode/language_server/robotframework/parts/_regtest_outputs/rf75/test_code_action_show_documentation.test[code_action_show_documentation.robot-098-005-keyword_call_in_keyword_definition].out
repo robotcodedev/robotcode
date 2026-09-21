@@ -1,0 +1,18 @@
+data: !GeneratedTestData
+  character: 5
+  line: 98
+  name: keyword call in keyword definition
+result:
+- !CodeAction
+  command:
+    arguments:
+    - <removed>
+    command: robotcode.showDocumentation
+    title: Open Documentation
+  data: null
+  diagnostics: null
+  disabled: null
+  edit: null
+  is_preferred: null
+  kind: source
+  title: Open Documentation

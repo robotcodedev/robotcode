@@ -1,0 +1,18 @@
+data: !GeneratedTestData
+  character: 46
+  line: 19
+  name: no param
+result: !SignatureHelp
+  active_parameter: 2
+  active_signature: 0
+  signatures:
+  - active_parameter: 2
+    documentation: null
+    label: '(i: int, b: bool, l: List[int] | None = ${None})'
+    parameters:
+    - documentation: null
+      label: 'i: int'
+    - documentation: null
+      label: 'b: bool'
+    - documentation: null
+      label: 'l: List[int] | None = ${None}'

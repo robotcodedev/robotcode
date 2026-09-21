@@ -1,0 +1,41 @@
+data: !GeneratedTestData
+  character: 13
+  line: 229
+  name: local variable assignment
+result:
+- !Location
+  range:
+    end:
+      character: 19
+      line: 226
+    start:
+      character: 13
+      line: 226
+  uri: tests/references.robot
+- !Location
+  range:
+    end:
+      character: 19
+      line: 229
+    start:
+      character: 13
+      line: 229
+  uri: tests/references.robot
+- !Location
+  range:
+    end:
+      character: 59
+      line: 229
+    start:
+      character: 53
+      line: 229
+  uri: tests/references.robot
+- !Location
+  range:
+    end:
+      character: 22
+      line: 231
+    start:
+      character: 16
+      line: 231
+  uri: tests/references.robot
