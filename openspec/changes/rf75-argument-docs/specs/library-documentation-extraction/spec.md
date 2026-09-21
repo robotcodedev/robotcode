@@ -6,7 +6,7 @@
 
 ### Requirement: Tags declared in documentation are extracted
 
-RobotCode SHALL treat tags declared in keyword documentation — the `Tags:` section of a Python keyword docstring and of a resource keyword's `[Documentation]` — as keyword tags, merged with tags declared via `[Tags]` or `robot_tags`. A keyword whose merged tags contain `robot:private` SHALL be private. In resource keywords a documentation tag written as `-name` SHALL remove `name` from the merged tags; in library keywords it SHALL be kept literally. The `Tags:` section SHALL NOT appear in the rendered documentation text. Tags and privacy SHALL be identical on every supported Robot Framework version.
+RobotCode SHALL treat tags declared in keyword documentation — the `Tags:` section of a Python keyword docstring and of a resource keyword's `[Documentation]` — as keyword tags, merged with tags declared via `[Tags]` or `robot_tags`. A keyword whose merged tags contain `robot:private` SHALL be private. In resource keywords a documentation tag written as `-name` SHALL remove `name` from the merged tags on Robot Framework ≥ 7.4 (the first version whose Libdoc does so; older versions keep it literally); in library keywords it SHALL be kept literally. The `Tags:` section SHALL NOT appear in the rendered documentation text, in any form the installed Robot Framework recognises (every `Tags:` section on RF ≥ 7.5, a trailing `Tags:` line on older versions). Tags and privacy SHALL be the ones Robot Framework's own Libdoc reports for the installed version, identical on RF 7.4 and RF 7.5.
 
 #### Scenario: Library keyword docstring with a Tags section
 - **WHEN** a Python keyword's docstring ends with `Tags: alpha, beta` and the library is documented on RF 7.4 and on RF 7.5
@@ -18,8 +18,8 @@ RobotCode SHALL treat tags declared in keyword documentation — the `Tags:` sec
 - **THEN** the keyword is private (hover marks it as private, and it is deprioritised when a non-private keyword with the same name exists)
 
 #### Scenario: Negated documentation tag in a resource keyword
-- **WHEN** a resource keyword has `[Tags]    keep    stay` and a `[Documentation]` ending with `Tags: -keep, other`
-- **THEN** the keyword's tags are `other` and `stay`
+- **WHEN** a resource keyword has `[Tags]    keep    stay` and a `[Documentation]` ending with `Tags: -keep, other` and is documented on RF 7.4 and on RF 7.5
+- **THEN** the keyword's tags are `other` and `stay` on both versions
 
 ## REMOVED Requirements
 
@@ -31,7 +31,7 @@ RobotCode SHALL treat tags declared in keyword documentation — the `Tags:` sec
 
 ### Requirement: Google-style sections become structured documentation
 
-On Robot Framework ≥ 7.5 RobotCode SHALL separate the `Args:`, `Returns:` and `Raises:` sections (with the section names Robot Framework accepts) from a keyword's documentation into per-argument descriptions, a return description and a list of raised exceptions with descriptions, for library keywords and for resource keywords, without modifying Robot Framework's objects. The remaining documentation text SHALL no longer contain those sections. On older versions the documentation text SHALL stay unchanged and the structured fields SHALL be empty. A description for an argument the keyword does not have SHALL NOT cause an error.
+On Robot Framework ≥ 7.5 RobotCode SHALL separate the `Args:`, `Returns:` and `Raises:` sections (with the section names Robot Framework accepts) from a keyword's documentation into per-argument descriptions, a return description and a list of raised exceptions with descriptions, for library keywords and for resource keywords, without modifying Robot Framework's objects. The remaining documentation text SHALL no longer contain those sections. On older versions the documentation text SHALL stay unchanged and the structured fields SHALL be empty. A description for an argument the keyword does not have (for example a name accepted through `**kwargs`) SHALL NOT cause an error and SHALL be kept with the argument descriptions.
 
 #### Scenario: Library keyword with Google-style sections
 - **WHEN** a Python keyword `paint(shade, *items)` documents `Args:` for `shade` and `*items`, `Returns:` and `Raises: ValueError` and the library is documented on RF 7.5

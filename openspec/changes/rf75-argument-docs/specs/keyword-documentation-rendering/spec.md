@@ -8,11 +8,11 @@ Defines how RobotCode renders keyword and library documentation across its surfa
 
 ### Requirement: Argument descriptions are rendered with the signature
 
-When a keyword has documented arguments, the rendered keyword documentation SHALL show, after the argument table, one entry per documented argument with its name and description; multi-line descriptions SHALL be preserved. When a return description exists it SHALL be shown with the return type (`**Return Type**: \`T\` — description`, or `**Returns**: description` without a type); raised exceptions SHALL be listed with their descriptions. Keywords whose documentation is not in Markdown format and has no argument, return or raises description SHALL render exactly as before.
+When a keyword has documented arguments, the rendered keyword documentation SHALL list every argument once, with its type, its default value and its description, as Robot Framework's Libdoc lists them, instead of showing the argument table and the descriptions separately; multi-line descriptions SHALL be preserved. A keyword without argument descriptions SHALL keep the argument table. When a return description exists it SHALL be shown with the return type (`**Return Type**: \`T\` — description`, or `**Returns**: description` without a type); raised exceptions SHALL be listed with their descriptions. Keywords whose documentation is not in Markdown format and has no argument, return or raises description SHALL render exactly as before.
 
 #### Scenario: Standard-library keyword on RF 7.5
 - **WHEN** the hover for `Log` (BuiltIn) is shown on RF 7.5
-- **THEN** the argument table is followed by entries such as `message`: "The message to log." and `level`: "The log level to use."
+- **THEN** the arguments are listed as entries such as `message`: `object` — "The message to log." and `level`: … = `INFO` — "The log level to use.", and no argument is named twice
 - **AND** the documentation text below contains no `Args:` block
 
 #### Scenario: Keyword with return and raises documentation
