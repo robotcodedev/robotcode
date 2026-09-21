@@ -64,14 +64,14 @@ robotcode results show --failed --skipped             # multiple statuses (OR)
 robotcode results show -i smoke -e wipANDnotready     # tag filters
 robotcode results show -s "MyProject.Login.*"         # suite glob
 robotcode results show --top 20                       # cap output
-robotcode results show --tags                         # append the tag list after each test
+robotcode results show --show-tags                    # append the tag list after each test
 robotcode results show --search AssertionError        # full-text search across all fields
 robotcode results show --sort elapsed --top 10        # sort by duration (longest first), cap to 10
 robotcode results show --sort status                  # FAIL → SKIP → PASS → NOT RUN
 robotcode results show -bl "MyProject.Login.Login Works"  # exact-match by full longname
 ```
 
-One line per test: status badge, full name, `(path:line)`, plus the first line of any failure/skip message. Reach for `show` over `summary --failed` when you need finer filters (combined status + tag + suite + search), a cap, tag info (`--tags`), or a specific sort order (`--sort name|suite|status|elapsed|start`). `--failed` / `--passed` / `--skipped` are additive shortcuts for `--status fail|pass|skip`.
+One line per test: status badge, full name, `(path:line)`, plus the first line of any failure/skip message. Reach for `show` over `summary --failed` when you need finer filters (combined status + tag + suite + search), a cap, tag info (`--show-tags`), or a specific sort order (`--sort name|suite|status|elapsed|start`). `--failed` / `--passed` / `--skipped` are additive shortcuts for `--status fail|pass|skip`.
 
 ## 4. `robotcode results log` — the report.html in plain text
 
