@@ -22,5 +22,6 @@ class AnalyzerResult:
     keyword_tag_references: Dict[str, Set[Location]]
     testcase_tag_references: Dict[str, Set[Location]]
     metadata_references: Dict[str, Set[Location]]
+    testcase_metadata_references: Dict[str, Set[Location]]
     scope_tree: ScopeTree
     semantic_model: Optional["SemanticModel"] = None

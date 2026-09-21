@@ -77,7 +77,7 @@ class NodeKind(Enum):
     SETTING_FORCE_TAGS = "setting_force_tags"  # Force Tags (deprecated)
     SETTING_TEST_TAGS = "setting_test_tags"  # Test Tags
     SETTING_DOCUMENTATION = "setting_documentation"  # [Documentation] / Documentation
-    SETTING_METADATA = "setting_metadata"  # Metadata
+    SETTING_METADATA = "setting_metadata"  # Metadata (suite-level) / [Metadata] (test-level, RF 7.5+)
     SETTING_TIMEOUT = "setting_timeout"  # [Timeout] / Test Timeout
     SETTING_ARGUMENTS = "setting_arguments"  # [Arguments]
     SETTING_SUITE_NAME = "setting_suite_name"  # Name (RF 7.0+)

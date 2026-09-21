@@ -54,6 +54,7 @@ def _ns(
     keyword_tag_references: Dict[str, Set[Location]] | None = None,
     testcase_tag_references: Dict[str, Set[Location]] | None = None,
     metadata_references: Dict[str, Set[Location]] | None = None,
+    testcase_metadata_references: Dict[str, Set[Location]] | None = None,
 ) -> Namespace:
     ns = mocker.create_autospec(Namespace, instance=True)
     ns.keyword_references = keyword_references or {}
@@ -62,6 +63,7 @@ def _ns(
     ns.keyword_tag_references = keyword_tag_references or {}
     ns.testcase_tag_references = testcase_tag_references or {}
     ns.metadata_references = metadata_references or {}
+    ns.testcase_metadata_references = testcase_metadata_references or {}
     return ns
 
 
@@ -119,11 +121,48 @@ class TestProjectIndexUpdateAndFind:
     def test_update_file_makes_metadata_findable(self, mocker: MockerFixture) -> None:
         idx = ProjectIndex()
         loc = _loc("file:///a.robot", 1)
-        ns = _ns(mocker, metadata_references={"Author": {loc}})
+        ns = _ns(mocker, metadata_references={"author": {loc}})
 
         idx.update_file("/a.robot", ns)
 
         assert idx.find_metadata_references("Author") == {loc}
+
+    def test_update_file_keeps_suite_and_testcase_metadata_separate(self, mocker: MockerFixture) -> None:
+        idx = ProjectIndex()
+        suite_loc = _loc("file:///a.robot", 1)
+        test_loc = _loc("file:///a.robot", 8)
+        ns = _ns(
+            mocker,
+            metadata_references={"author": {suite_loc}},
+            testcase_metadata_references={"issue": {test_loc}},
+        )
+
+        idx.update_file("/a.robot", ns)
+
+        assert idx.find_metadata_references("Author") == {suite_loc}
+        assert idx.find_testcase_metadata_references("Issue") == {test_loc}
+        assert idx.find_metadata_references("Issue") == set()
+        assert idx.find_testcase_metadata_references("Author") == set()
+
+    def test_metadata_is_found_by_any_spelling_of_its_name(self, mocker: MockerFixture) -> None:
+        """Robot Framework treats metadata names case, space and underscore
+        insensitively. The analyzers index the normalized name, the lookups
+        normalize what they are asked for."""
+        idx = ProjectIndex()
+        suite_loc = _loc("file:///a.robot", 1)
+        test_loc = _loc("file:///a.robot", 8)
+        ns = _ns(
+            mocker,
+            metadata_references={"ownerteam": {suite_loc}},
+            testcase_metadata_references={"issue": {test_loc}},
+        )
+
+        idx.update_file("/a.robot", ns)
+
+        for spelling in ("Owner Team", "owner_team", "OWNERTEAM", "ownerteam", "Owner\u00a0Team"):
+            assert idx.find_metadata_references(spelling) == {suite_loc}
+        for spelling in ("Issue", "issue", "IS SUE", "is_sue"):
+            assert idx.find_testcase_metadata_references(spelling) == {test_loc}
 
 
 class TestProjectIndexAggregation:
@@ -228,13 +267,15 @@ class TestProjectIndexRemoveFile:
         ns_loc = _loc("file:///a.robot", 3)
         tag_loc = _loc("file:///a.robot", 4)
         meta_loc = _loc("file:///a.robot", 5)
+        test_meta_loc = _loc("file:///a.robot", 6)
         ns = _ns(
             mocker,
             keyword_references={kw: {kw_loc}},
             variable_references={var: {var_loc}},
             namespace_references={entry: {ns_loc}},
             keyword_tag_references={"smoke": {tag_loc}},
-            metadata_references={"Author": {meta_loc}},
+            metadata_references={"author": {meta_loc}},
+            testcase_metadata_references={"issue": {test_meta_loc}},
         )
         idx.update_file("/a.robot", ns)
 
@@ -245,6 +286,7 @@ class TestProjectIndexRemoveFile:
         assert idx.find_namespace_references(entry) == set()
         assert idx.find_keyword_tag_references("smoke") == set()
         assert idx.find_metadata_references("Author") == set()
+        assert idx.find_testcase_metadata_references("Issue") == set()
 
 
 class TestProjectIndexReUpdate:
@@ -299,6 +341,15 @@ class TestProjectIndexClear:
         assert idx.find_variable_references(var) == set()
         assert idx.keyword_references == {}
         assert idx.variable_references == {}
+
+    def test_clear_empties_testcase_metadata(self, mocker: MockerFixture) -> None:
+        idx = ProjectIndex()
+        ns = _ns(mocker, testcase_metadata_references={"issue": {_loc("file:///a.robot", 8)}})
+        idx.update_file("/a.robot", ns)
+
+        idx.clear()
+
+        assert idx.find_testcase_metadata_references("Issue") == set()
 
 
 class TestProjectIndexProperties:

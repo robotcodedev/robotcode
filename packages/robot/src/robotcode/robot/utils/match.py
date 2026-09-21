@@ -1,5 +1,7 @@
 from functools import lru_cache
 
+from robot.utils import normalize as robot_normalize
+
 _transform_table = str.maketrans("", "", "_ ")
 
 _transform_table_namespace = str.maketrans("", "", " ")
@@ -8,6 +10,17 @@ _transform_table_namespace = str.maketrans("", "", " ")
 @lru_cache(maxsize=1024)
 def normalize(text: str) -> str:
     return text.translate(_transform_table).casefold()
+
+
+@lru_cache(maxsize=1024)
+def normalize_metadata_name(text: str) -> str:
+    """Normalize a metadata name exactly like Robot Framework's `Metadata` mapping does.
+
+    Robot Framework's own function is used on purpose: which characters count as
+    whitespace and how the case is folded differs from `normalize` above and
+    between Robot Framework versions.
+    """
+    return str(robot_normalize(text, ignore="_"))
 
 
 @lru_cache(maxsize=1024)

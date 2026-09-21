@@ -127,6 +127,7 @@ class NamespaceData:
     keyword_tag_references: Dict[str, Set[Location]] = field(default_factory=dict)
     testcase_tag_references: Dict[str, Set[Location]] = field(default_factory=dict)
     metadata_references: Dict[str, Set[Location]] = field(default_factory=dict)
+    testcase_metadata_references: Dict[str, Set[Location]] = field(default_factory=dict)
 
     # --- ScopeTree (local scopes only, file_scope is reconstructed) ---
     local_scopes: List[LocalScope] = field(default_factory=list)
@@ -180,6 +181,7 @@ class Namespace:
         keyword_tag_references: Dict[str, Set[Location]],
         testcase_tag_references: Dict[str, Set[Location]],
         metadata_references: Dict[str, Set[Location]],
+        testcase_metadata_references: Dict[str, Set[Location]],
         scope_tree: ScopeTree,
         finder: KeywordFinder,
         sentinel: object,
@@ -208,6 +210,7 @@ class Namespace:
         self._keyword_tag_references = keyword_tag_references
         self._testcase_tag_references = testcase_tag_references
         self._metadata_references = metadata_references
+        self._testcase_metadata_references = testcase_metadata_references
         self._scope_tree = scope_tree
         self._finder: KeywordFinder = finder
         self._sentinel = sentinel  # prevent GC — ref-counted by imports_manager
@@ -278,6 +281,10 @@ class Namespace:
     @property
     def metadata_references(self) -> Dict[str, Set[Location]]:
         return self._metadata_references
+
+    @property
+    def testcase_metadata_references(self) -> Dict[str, Set[Location]]:
+        return self._testcase_metadata_references
 
     @property
     def import_entries(self) -> Dict[Import, LibraryEntry]:
@@ -545,6 +552,7 @@ class Namespace:
             keyword_tag_references={k: set(v) for k, v in self._keyword_tag_references.items()},
             testcase_tag_references={k: set(v) for k, v in self._testcase_tag_references.items()},
             metadata_references={k: set(v) for k, v in self._metadata_references.items()},
+            testcase_metadata_references={k: set(v) for k, v in self._testcase_metadata_references.items()},
             local_scopes=list(self._scope_tree.local_scopes),
             resolved_resource_sources=resolved_res_sources,
             variable_definitions=all_var_defs,
@@ -709,6 +717,10 @@ class Namespace:
             keyword_tag_references={k: set(v) for k, v in data.keyword_tag_references.items()},
             testcase_tag_references={k: set(v) for k, v in data.testcase_tag_references.items()},
             metadata_references={k: set(v) for k, v in data.metadata_references.items()},
+            # Cache entries pickled before this field existed don't have the attribute.
+            testcase_metadata_references={
+                k: set(v) for k, v in getattr(data, "testcase_metadata_references", {}).items()
+            },
             scope_tree=scope_tree,
             finder=finder,
             sentinel=sentinel,
@@ -855,6 +867,7 @@ class NamespaceBuilder:
                 keyword_tag_references=analyzer_result.keyword_tag_references,
                 testcase_tag_references=analyzer_result.testcase_tag_references,
                 metadata_references=analyzer_result.metadata_references,
+                testcase_metadata_references=analyzer_result.testcase_metadata_references,
                 scope_tree=analyzer_result.scope_tree,
                 finder=finder,
                 sentinel=sentinel,

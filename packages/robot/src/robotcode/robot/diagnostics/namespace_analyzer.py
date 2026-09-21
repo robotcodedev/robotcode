@@ -53,7 +53,7 @@ from ..utils.ast import (
     strip_variable_token,
     tokenize_variables,
 )
-from ..utils.match import normalize
+from ..utils.match import normalize, normalize_metadata_name
 from ..utils.stubs import Languages
 from ..utils.variables import (
     BUILTIN_VARIABLES,
@@ -140,6 +140,7 @@ class NamespaceAnalyzer(Visitor):
         self._keyword_tag_references: Dict[str, Set[Location]] = defaultdict(set)
         self._testcase_tag_references: Dict[str, Set[Location]] = defaultdict(set)
         self._metadata_references: Dict[str, Set[Location]] = defaultdict(set)
+        self._testcase_metadata_references: Dict[str, Set[Location]] = defaultdict(set)
 
         # Phase 1+2 results (set by resolve())
         self._library_doc: ResourceDoc = cast(ResourceDoc, None)  # set by resolve()
@@ -238,6 +239,7 @@ class NamespaceAnalyzer(Visitor):
             self._keyword_tag_references,
             self._testcase_tag_references,
             self._metadata_references,
+            self._testcase_metadata_references,
             self._scope_builder.build(self._variable_scope),
         )
 
@@ -1746,7 +1748,12 @@ class NamespaceAnalyzer(Visitor):
         if hasattr(node, "name") and node.name:
             name_token = node.get_token(Token.NAME)
             if name_token is not None:
-                self._metadata_references[node.name].add(Location(self._document_uri, range_from_token(name_token)))
+                if any(isinstance(n, TestCase) for n in self._node_stack):
+                    refs = self._testcase_metadata_references
+                else:
+                    refs = self._metadata_references
+                # metadata names are case, space and underscore insensitive in Robot Framework
+                refs[normalize_metadata_name(node.name)].add(Location(self._document_uri, range_from_token(name_token)))
 
     def visit_Timeout(self, node: Statement) -> None:  # noqa: N802
         self._visit_block_settings_statement(node)

@@ -312,6 +312,9 @@ def _assert_full_parity(semantic_result: Any, namespace_result: Any) -> None:
     assert _tag_refs_signature(semantic_result.metadata_references) == _tag_refs_signature(
         namespace_result.metadata_references
     ), "metadata_references mismatch"
+    assert _tag_refs_signature(semantic_result.testcase_metadata_references) == _tag_refs_signature(
+        namespace_result.testcase_metadata_references
+    ), "testcase_metadata_references mismatch"
     assert _scope_tree_signature(semantic_result) == _scope_tree_signature(namespace_result), "scope_tree mismatch"
 
 
@@ -378,6 +381,36 @@ Try Test
 *** Test Cases ***
 Tagged Test
     [Tags]    smoke    regression
+    No Operation
+""",
+    "metadata": """\
+*** Settings ***
+Metadata    Author    somebody
+
+*** Test Cases ***
+Metadata Test
+    [Metadata]    Issue    4409
+    No Operation
+""",
+    "metadata_spellings": """\
+*** Settings ***
+Metadata    Owner Team    core
+Metadata    owner_team    platform
+Metadata    OWNERTEAM    all
+
+*** Test Cases ***
+Metadata Test
+    [Metadata]    Issue    4409
+    [Metadata]    IS_SUE    4410
+    No Operation
+""",
+    "metadata_without_name": """\
+*** Settings ***
+Metadata
+
+*** Test Cases ***
+Metadata Test
+    [Metadata]
     No Operation
 """,
     "variables_section": """\

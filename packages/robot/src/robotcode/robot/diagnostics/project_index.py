@@ -12,6 +12,7 @@ from typing import (
 
 from robotcode.core.lsp.types import Location
 
+from ..utils.match import normalize_metadata_name
 from .entities import LibraryEntry, VariableDefinition
 from .library_doc import KeywordDoc
 
@@ -32,6 +33,7 @@ class _FileRefs:
     keyword_tag_references: Dict[str, Set[Location]] = field(default_factory=dict)
     testcase_tag_references: Dict[str, Set[Location]] = field(default_factory=dict)
     metadata_references: Dict[str, Set[Location]] = field(default_factory=dict)
+    testcase_metadata_references: Dict[str, Set[Location]] = field(default_factory=dict)
 
 
 class ProjectIndex:
@@ -54,6 +56,7 @@ class ProjectIndex:
         self._keyword_tag_references: Dict[str, Set[Location]] = defaultdict(set)
         self._testcase_tag_references: Dict[str, Set[Location]] = defaultdict(set)
         self._metadata_references: Dict[str, Set[Location]] = defaultdict(set)
+        self._testcase_metadata_references: Dict[str, Set[Location]] = defaultdict(set)
 
         self._refs_by_file: Dict[str, _FileRefs] = {}
 
@@ -94,6 +97,11 @@ class ProjectIndex:
                 self._metadata_references,
                 file_refs.metadata_references,
             )
+            self._merge_refs(
+                namespace.testcase_metadata_references,
+                self._testcase_metadata_references,
+                file_refs.testcase_metadata_references,
+            )
 
             self._refs_by_file[source] = file_refs
 
@@ -113,6 +121,7 @@ class ProjectIndex:
         self._subtract_refs(file_refs.keyword_tag_references, self._keyword_tag_references)
         self._subtract_refs(file_refs.testcase_tag_references, self._testcase_tag_references)
         self._subtract_refs(file_refs.metadata_references, self._metadata_references)
+        self._subtract_refs(file_refs.testcase_metadata_references, self._testcase_metadata_references)
 
     @staticmethod
     def _merge_refs(
@@ -162,8 +171,14 @@ class ProjectIndex:
             return set(self._testcase_tag_references.get(tag, ()))
 
     def find_metadata_references(self, key: str) -> Set[Location]:
+        """References to a suite metadata name, in any spelling Robot Framework treats as the same name."""
         with self._lock:
-            return set(self._metadata_references.get(key, ()))
+            return set(self._metadata_references.get(normalize_metadata_name(key), ()))
+
+    def find_testcase_metadata_references(self, key: str) -> Set[Location]:
+        """References to a test metadata name, in any spelling Robot Framework treats as the same name."""
+        with self._lock:
+            return set(self._testcase_metadata_references.get(normalize_metadata_name(key), ()))
 
     @property
     def keyword_references(self) -> Dict[KeywordDoc, Set[Location]]:
@@ -188,4 +203,5 @@ class ProjectIndex:
             self._keyword_tag_references.clear()
             self._testcase_tag_references.clear()
             self._metadata_references.clear()
+            self._testcase_metadata_references.clear()
             self._refs_by_file.clear()

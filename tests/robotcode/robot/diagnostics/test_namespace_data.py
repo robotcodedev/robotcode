@@ -238,6 +238,7 @@ def _make_namespace(mocker: MockerFixture, semantic_model: Optional[SemanticMode
         keyword_tag_references={"smoke": {_loc("file:///project/test.robot", 4)}},
         testcase_tag_references={"regression": {_loc("file:///project/test.robot", 5)}},
         metadata_references={"Author": {_loc("file:///project/test.robot", 1)}},
+        testcase_metadata_references={"Issue": {_loc("file:///project/test.robot", 6)}},
         scope_tree=scope_tree,
         finder=finder,
         sentinel=_Sentinel(),
@@ -327,6 +328,10 @@ class TestToData:
 
         assert "Author" in data.metadata_references
         assert len(data.metadata_references["Author"]) == 1
+        assert "Issue" in data.testcase_metadata_references
+        assert len(data.testcase_metadata_references["Issue"]) == 1
+        assert "Issue" not in data.metadata_references
+        assert "Author" not in data.testcase_metadata_references
 
     def test_to_data_preserves_imports(self, mocker: MockerFixture) -> None:
         ns = _make_namespace(mocker)
@@ -454,6 +459,7 @@ class TestPickleRoundtrip:
         assert restored.keyword_tag_references == data.keyword_tag_references
         assert restored.testcase_tag_references == data.testcase_tag_references
         assert restored.metadata_references == data.metadata_references
+        assert restored.testcase_metadata_references == data.testcase_metadata_references
 
     def test_pickle_size_is_small(self, mocker: MockerFixture) -> None:
         ns = _make_namespace(mocker)
@@ -484,6 +490,7 @@ class TestPickleRoundtrip:
         assert restored.keyword_tag_references == data.keyword_tag_references
         assert restored.testcase_tag_references == data.testcase_tag_references
         assert restored.metadata_references == data.metadata_references
+        assert restored.testcase_metadata_references == data.testcase_metadata_references
         assert len(restored.diagnostics) == len(data.diagnostics)
         assert len(restored.imports) == len(data.imports)
         assert len(restored.test_case_definitions) == len(data.test_case_definitions)
@@ -521,6 +528,7 @@ class TestEmptyNamespace:
             keyword_tag_references={},
             testcase_tag_references={},
             metadata_references={},
+            testcase_metadata_references={},
             scope_tree=ScopeTree(VariableScope(), []),
             finder=mocker.create_autospec(KeywordFinder, instance=True),
             sentinel=_Sentinel(),
@@ -537,13 +545,20 @@ class TestEmptyNamespace:
         assert restored.source == "/empty.robot"
 
 
-def _make_roundtrip(mocker: MockerFixture) -> Tuple[Namespace, Namespace, NamespaceData]:
+def _make_roundtrip(
+    mocker: MockerFixture, *, stale_fields: Tuple[str, ...] = ()
+) -> Tuple[Namespace, Namespace, NamespaceData]:
     """Build a Namespace, serialize via to_data(), reconstruct via to_namespace().
+
+    `stale_fields` are removed from the data before reconstruction, like in a
+    cache entry that was pickled before these fields existed.
 
     Returns (original_namespace, restored_namespace, namespace_data).
     """
     ns = _make_namespace(mocker)
     data = ns.to_data()
+    for stale_field in stale_fields:
+        delattr(data, stale_field)
 
     # --- Set up mock resolved imports for to_namespace() ---
     # Libraries must contain keywords matching the original stable_ids
@@ -653,6 +668,12 @@ class TestToNamespaceRoundtrip:
         ns, restored, _ = _make_roundtrip(mocker)
         assert restored.keyword_tag_references == ns.keyword_tag_references
         assert restored.testcase_tag_references == ns.testcase_tag_references
+        assert restored.metadata_references == ns.metadata_references
+        assert restored.testcase_metadata_references == ns.testcase_metadata_references
+
+    def test_roundtrip_accepts_data_without_testcase_metadata_references(self, mocker: MockerFixture) -> None:
+        ns, restored, _ = _make_roundtrip(mocker, stale_fields=("testcase_metadata_references",))
+        assert restored.testcase_metadata_references == {}
         assert restored.metadata_references == ns.metadata_references
 
     def test_roundtrip_preserves_test_case_definitions(self, mocker: MockerFixture) -> None:
