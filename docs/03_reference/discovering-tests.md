@@ -133,7 +133,7 @@ Statistics:
 
 | Flag | Effect |
 |---|---|
-| `--tags / --no-tags` | Show or hide the `Tags:` line under each test/task. **Default: on.** |
+| `--show-tags / --no-show-tags` | Show or hide the `Tags:` line under each test/task. **Default: on.** |
 | `--full-paths / --no-full-paths` | Absolute source paths. Default: relative to cwd. |
 | `--search TEXT` / `--search-regex PATTERN` | Prune the tree to tests matching the pattern; surviving tests keep their full ancestor chain. See [Search](#search). |
 | `-bl NAME` / `-ebl NAME` | Include/exclude tests, tasks or suites by exact long name. See [Robot-native filters](#robot-native-filters). |
@@ -147,7 +147,7 @@ A diagnostics footer is added to TEXT output when parsing emits warnings or erro
 
 ```bash
 robotcode discover tests
-robotcode discover tests --tags                 # add a `Tags: ...` line per test
+robotcode discover tests --show-tags            # add a `Tags: ...` line per test
 robotcode discover tests --include smoke        # filter by tag
 robotcode discover tests --search "Login"       # substring search
 robotcode discover tests path/to/suite.robot    # one suite only
@@ -165,7 +165,7 @@ Test: MyProject.Checkout.Empty Cart (tests/checkout/test_checkout.robot:8)
 
 | Flag | Effect |
 |---|---|
-| `--tags / --no-tags` | Include a `Tags:` line per test. **Default: off** (tests are always one-line in TEXT). |
+| `--show-tags / --no-show-tags` | Include a `Tags:` line per test. **Default: off** (tests are always one-line in TEXT). |
 | `--full-paths / --no-full-paths` | Absolute source paths. |
 | `--search TEXT` / `--search-regex PATTERN` | Filter by name/source/body/tags. |
 | `-bl NAME` / `-ebl NAME` | Long-name include/exclude. |
@@ -179,7 +179,7 @@ Tasks defined with `*** Tasks ***` are intentionally **not** in this list — us
 
 ```bash
 robotcode discover tasks
-robotcode discover tasks --tags
+robotcode discover tasks --show-tags
 ```
 
 In a mixed-mode suite (rare — Robot doesn't recommend it), `tests` shows the `*** Test Cases ***` half and `tasks` shows the `*** Tasks ***` half. A project where the active `robot.toml` profile sets `rpa = true` puts everything under `tasks`.

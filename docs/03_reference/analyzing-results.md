@@ -175,7 +175,7 @@ robotcode results show --failed   # only failures (shorthand for --status fail)
 | `--reverse` | Reverse whatever `--sort` produced. |
 | `--top N` | Keep only the first `N` after sorting. The dropped count is reported as a footer line. |
 | `--message-chars N` | Truncate failure messages to `N` characters (default `120`). Use `0` to disable truncation. |
-| `--tags` | Render the test's tags in the output, in normalised form (`Bug 1`, `bug_1` and `Bug1` all show as `bug1`). |
+| `--show-tags` | Render the test's tags in the output, in normalised form (`Bug 1`, `bug_1` and `Bug1` all show as `bug1`). |
 | `--timing / --no-timing` | Show / hide start time and elapsed. Default: shown. |
 | `--full-paths` | Absolute source paths instead of relative. |
 
@@ -203,10 +203,10 @@ robotcode results show --include smoke --failed --sort elapsed
 robotcode results show --sort elapsed --top 10
 
 # Failing tests with full message (no truncation) and tags
-robotcode results show --failed --message-chars 0 --tags
+robotcode results show --failed --message-chars 0 --show-tags
 
 # Find tests by name match
-robotcode results show --search "TimeoutError" --tags
+robotcode results show --search "TimeoutError" --show-tags
 
 # All tests of one specific suite, in name order
 robotcode results show --suite "MyProject.Login" --sort name
@@ -623,7 +623,7 @@ Field notes:
 Field notes:
 
 - `tests[]` is always present, possibly empty.
-- `tags` is always emitted for tests that have any (and absent for untagged tests), in normalised form (`Bug 1`, `bug_1`, `Bug1` all come through as `"bug1"`). The `--tags` flag in TEXT mode is render-only — it doesn't affect the JSON.
+- `tags` is always emitted for tests that have any (and absent for untagged tests), in normalised form (`Bug 1`, `bug_1`, `Bug1` all come through as `"bug1"`). The `--show-tags` flag in TEXT mode is render-only — it doesn't affect the JSON.
 - `truncated` is the number of tests dropped by `--top N`; `0` when nothing was dropped.
 - The order of `tests[]` reflects `--sort` and `--reverse`.
 

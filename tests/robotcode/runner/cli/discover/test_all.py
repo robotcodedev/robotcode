@@ -52,12 +52,12 @@ def test_all_workspace_id_is_an_absolute_path(json_discover: JsonRunner, flat_su
 
 
 # ---------------------------------------------------------------------------
-# --tags / --no-tags
+# --show-tags / --no-show-tags
 # ---------------------------------------------------------------------------
 
 
 def test_all_json_includes_tag_field_for_tagged_tests(json_discover: JsonRunner, flat_suite: Path) -> None:
-    """JSON always carries the `tags` field on tests; `--tags` only
+    """JSON always carries the `tags` field on tests; `--show-tags` only
     affects the TEXT renderer."""
     data = json_discover("all", suite_path=flat_suite)
     tests_with_tags = [t for t in walk_test_items(data["items"][0]) if t.get("tags")]
@@ -65,9 +65,9 @@ def test_all_json_includes_tag_field_for_tagged_tests(json_discover: JsonRunner,
 
 
 def test_all_text_tags_flag_controls_tag_display(robotcode_cli: CliRunner, flat_suite: Path) -> None:
-    """`--tags` (default) prints a `Tags:` line per test; `--no-tags` doesn't."""
+    """`--show-tags` (default) prints a `Tags:` line per test; `--no-show-tags` doesn't."""
     with_tags = robotcode_cli(["discover", "all", str(flat_suite)])
-    no_tags = robotcode_cli(["discover", "all", "--no-tags", str(flat_suite)])
+    no_tags = robotcode_cli(["discover", "all", "--no-show-tags", str(flat_suite)])
     assert "Tags:" in with_tags.stdout
     assert "Tags:" not in no_tags.stdout
 

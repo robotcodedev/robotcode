@@ -393,7 +393,7 @@ def summary(
 )
 @FULL_PATHS_OPTION
 @click.option(
-    "--tags/--no-tags",
+    "--show-tags/--no-show-tags",
     "show_tags",
     default=False,
     show_default=True,
@@ -462,7 +462,7 @@ def show(
     ```
     robotcode results show
     robotcode results show --failed
-    robotcode results show --failed --skipped --tags
+    robotcode results show --failed --skipped --show-tags
     robotcode results show -i smoke -e wipANDnotready
     robotcode results show -s "MyProject.Login.*"
     robotcode results show --top 20

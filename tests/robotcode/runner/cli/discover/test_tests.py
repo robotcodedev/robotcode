@@ -40,19 +40,19 @@ def test_tests_in_mixed_dir_returns_only_tests(json_discover: JsonRunner, mixed_
 
 
 # ---------------------------------------------------------------------------
-# --tags
+# --show-tags
 # ---------------------------------------------------------------------------
 
 
 def test_tests_tags_field_present_when_test_has_tags(json_discover: JsonRunner, flat_suite: Path) -> None:
-    """Tag data is always carried in JSON (the `--tags` flag is a TEXT renderer hint)."""
+    """Tag data is always carried in JSON (the `--show-tags` flag is a TEXT renderer hint)."""
     data = json_discover("tests", suite_path=flat_suite)
     tagged = [t for t in data["items"] if t.get("tags")]
     assert tagged, "flat.robot has tagged tests"
 
 
 def test_tests_text_tags_flag_shows_tag_line(robotcode_cli: CliRunner, flat_suite: Path) -> None:
-    with_tags = robotcode_cli(["discover", "tests", "--tags", str(flat_suite)])
+    with_tags = robotcode_cli(["discover", "tests", "--show-tags", str(flat_suite)])
     without = robotcode_cli(["discover", "tests", str(flat_suite)])
     assert "Tags:" in with_tags.stdout
     assert "Tags:" not in without.stdout
@@ -109,9 +109,9 @@ def test_tests_text_lists_names_and_paths(robotcode_cli: CliRunner, flat_suite: 
 
 
 def test_tests_text_tags_emit_italic_label_sub_bullet(robotcode_cli: CliRunner, flat_suite: Path) -> None:
-    """`discover tests --tags` adds `- _Tags:_` italic-label sub-bullets
+    """`discover tests --show-tags` adds `- _Tags:_` italic-label sub-bullets
     beneath each test bullet (style convention: bold names, italic labels)."""
-    out = robotcode_cli(["discover", "tests", "--tags", str(flat_suite)]).stdout
+    out = robotcode_cli(["discover", "tests", "--show-tags", str(flat_suite)]).stdout
     assert "- _Tags:_" in out
     # Tag values are inline-code-spanned tokens.
     assert "`smoke`" in out

@@ -1085,9 +1085,9 @@ robotcode discover all [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
 
 
 **Options:**
-- `--tags / --no-tags`
+- `--show-tags / --no-show-tags`
 
-   Show the tags that are present.  [default: tags]
+   Show the tags that are present.  [default: show-tags]
 
 
 - `--version`
@@ -1348,9 +1348,9 @@ robotcode discover tasks [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
 
 
 **Options:**
-- `--tags / --no-tags`
+- `--show-tags / --no-show-tags`
 
-   Show the tags that are present.  [default: no-tags]
+   Show the tags that are present.  [default: no-show-tags]
 
 
 - `--full-paths / --no-full-paths`
@@ -1415,9 +1415,9 @@ robotcode discover tests [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
 
 
 **Options:**
-- `--tags / --no-tags`
+- `--show-tags / --no-show-tags`
 
-   Show the tags that are present.  [default: no-tags]
+   Show the tags that are present.  [default: no-show-tags]
 
 
 - `--full-paths / --no-full-paths`
@@ -2201,7 +2201,7 @@ Examples:
 ```
 robotcode results show
 robotcode results show --failed
-robotcode results show --failed --skipped --tags
+robotcode results show --failed --skipped --show-tags
 robotcode results show -i smoke -e wipANDnotready
 robotcode results show -s "MyProject.Login.*"
 robotcode results show --top 20
@@ -2296,9 +2296,9 @@ robotcode results show [OPTIONS]
    Show absolute source paths instead of paths relative to cwd.  [default: no-full-paths]
 
 
-- `--tags / --no-tags`
+- `--show-tags / --no-show-tags`
 
-   Append the tag list after each test.  [default: no-tags]
+   Append the tag list after each test.  [default: no-show-tags]
 
 
 - `--timing / --no-timing`

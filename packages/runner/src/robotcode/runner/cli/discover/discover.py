@@ -572,6 +572,19 @@ def handle_options(
         raise UnknownError("Unexpected error happened.")
 
 
+def _show_options(*, default: bool) -> List[Any]:
+    """The flags of `all`, `tests` and `tasks` that add the tags line in TEXT mode."""
+    return [
+        click.option(
+            "--show-tags / --no-show-tags",
+            "show_tags",
+            default=default,
+            show_default=True,
+            help="Show the tags that are present.",
+        ),
+    ]
+
+
 def _filters_applied(search_substring: Optional[str], search_regex: Optional[str]) -> Optional[Dict[str, str]]:
     if search_substring:
         return {"search": search_substring}
@@ -585,13 +598,7 @@ def _filters_applied(search_substring: Optional[str], search_regex: Optional[str
     add_help_option=True,
     epilog="Use `-- --help` to see `robot` help.",
 )
-@click.option(
-    "--tags / --no-tags",
-    "show_tags",
-    default=True,
-    show_default=True,
-    help="Show the tags that are present.",
-)
+@add_options(*_show_options(default=True))
 @add_options(*ROBOT_OPTIONS)
 @add_options(*DISCOVER_SEARCH_OPTIONS)
 @click.option(
@@ -713,13 +720,7 @@ def _test_or_tasks(
     add_help_option=True,
     epilog="Use `-- --help` to see `robot` help.",
 )
-@click.option(
-    "--tags / --no-tags",
-    "show_tags",
-    default=False,
-    show_default=True,
-    help="Show the tags that are present.",
-)
+@add_options(*_show_options(default=False))
 @click.option(
     "--full-paths / --no-full-paths",
     "full_paths",
@@ -773,13 +774,7 @@ def tests(
     add_help_option=True,
     epilog="Use `-- --help` to see `robot` help.",
 )
-@click.option(
-    "--tags / --no-tags",
-    "show_tags",
-    default=False,
-    show_default=True,
-    help="Show the tags that are present.",
-)
+@add_options(*_show_options(default=False))
 @click.option(
     "--full-paths / --no-full-paths",
     "full_paths",

@@ -42,7 +42,7 @@ def test_show_message_chars_truncates(json_result: JsonRunner, basic_output: Pat
 
 
 def test_show_tags_always_present_in_json(json_result: JsonRunner, basic_output: Path) -> None:
-    """JSON output always carries `tags`; `--tags` only affects TEXT rendering."""
+    """JSON output always carries `tags`; `--show-tags` only affects TEXT rendering."""
     data = json_result("show", output_path=basic_output)
     smoke_test = find_test(data["tests"], "Basic.Passing Test One")
     assert smoke_test is not None
@@ -60,9 +60,9 @@ def test_show_tags_emitted_in_normalised_form(json_result: JsonRunner, tagged_ou
 
 
 def test_show_text_tags_flag_controls_visibility(text_result: CliRunner, basic_output: Path) -> None:
-    """In TEXT mode the `smoke` tag appears only when `--tags` is set."""
+    """In TEXT mode the `smoke` tag appears only when `--show-tags` is set."""
     without = strip_ansi(text_result("show", output_path=basic_output).stdout)
-    with_tags = strip_ansi(text_result("show", "--tags", output_path=basic_output).stdout)
+    with_tags = strip_ansi(text_result("show", "--show-tags", output_path=basic_output).stdout)
     assert "smoke" not in without
     assert "smoke" in with_tags
 
@@ -124,7 +124,7 @@ def test_show_filter_chain_intersects(json_result: JsonRunner, tagged_output: Pa
         "smoke",
         "--status",
         "pass",
-        "--tags",
+        "--show-tags",
         output_path=tagged_output,
     )
     assert all("smoke" in (t.get("tags") or []) for t in data["tests"])
