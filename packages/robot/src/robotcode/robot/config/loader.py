@@ -1,7 +1,7 @@
 import sys
 from dataclasses import fields, is_dataclass
 from enum import Enum
-from pathlib import Path
+from pathlib import Path, PurePath
 from typing import Any, Callable, Dict, Optional, Sequence, Tuple, Type, TypeVar, Union
 
 from robotcode.core.utils.dataclasses import from_dict
@@ -213,6 +213,20 @@ def load_robot_config_from_path(
     )
 
 
+_TPath = TypeVar("_TPath", bound=PurePath)
+
+
+def _find_common_base(src_parents: Sequence[Sequence[_TPath]]) -> Optional[_TPath]:
+    """The deepest folder all sources have in common.
+
+    Sources on different drives (Windows) have nothing in common.
+    """
+    common = set.intersection(*(set(parents) for parents in src_parents))
+    if not common:
+        return None
+    return max(common, key=lambda path: path.parts)
+
+
 def find_project_root(
     *sources: Union[str, Path],
     root_folder: Optional[Path] = None,
@@ -228,10 +242,9 @@ def find_project_root(
 
     src_parents = [list(path.parents) + ([path] if path.is_dir() else []) for path in path_srcs]
 
-    common_base = max(
-        set.intersection(*(set(parents) for parents in src_parents)),
-        key=lambda path: path.parts,
-    )
+    common_base = _find_common_base(src_parents)
+    if common_base is None:
+        return None, DiscoverdBy.NOT_FOUND
 
     for directory in (common_base, *common_base.parents):
         if (directory / LOCAL_ROBOT_TOML).is_file():

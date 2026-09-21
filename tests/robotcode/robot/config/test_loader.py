@@ -1,11 +1,12 @@
 import os
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 from typing import Iterator, Tuple
 
 import pytest
 
 from robotcode.robot.config.loader import (
     DiscoverdBy,
+    _find_common_base,
     find_project_root,
     get_config_files_from_folder,
 )
@@ -140,3 +141,19 @@ def test_get_config_files_from_folder_should_work(temp_project: Path, files: Tup
 
     result = get_config_files_from_folder(temp_project)
     assert [r[0] for r in result] == expected
+
+
+def test_common_base_is_the_deepest_shared_folder() -> None:
+    first = PureWindowsPath("C:/project/tests/suite.robot")
+    second = PureWindowsPath("C:/project/results/output.xml")
+
+    assert _find_common_base([list(first.parents), list(second.parents)]) == PureWindowsPath("C:/project")
+
+
+def test_sources_on_different_drives_have_no_common_base() -> None:
+    """On Windows the working directory and e.g. the temp folder can be on
+    different drives, `robotcode libdoc MyLib D:\\out\\MyLib.html` must not fail."""
+    library = PureWindowsPath("D:/a/robotcode/Collections")
+    output = PureWindowsPath("C:/Users/runner/AppData/Local/Temp/Collections.md")
+
+    assert _find_common_base([list(library.parents), list(output.parents)]) is None
