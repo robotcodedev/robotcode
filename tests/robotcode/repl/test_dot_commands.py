@@ -251,7 +251,7 @@ def test_kw_routes_to_show_doc_override(monkeypatch: pytest.MonkeyPatch) -> None
 def test_doc_routes_to_show_doc_override(monkeypatch: pytest.MonkeyPatch) -> None:
     fake_doc = SimpleNamespace(
         name="Collections",
-        to_markdown=lambda only_doc=True, header_level=2: "## Library *Collections*",
+        to_markdown=lambda only_doc=True, header_level=2, link_resolver=None: "## Library *Collections*",
     )
     monkeypatch.setattr(
         "robotcode.repl.console_interpreter.lookup_library",
@@ -438,7 +438,7 @@ def test_kw_uses_diagnostics_to_markdown_when_owner_resolves(monkeypatch: pytest
     class _FakeKwDoc:
         name = "Log"
 
-        def to_markdown(self, header_level: int = 2) -> str:
+        def to_markdown(self, header_level: int = 2, *, link_resolver: Any = None) -> str:
             return f"## Keyword *Log* (header={header_level})\n### Arguments:\n…"
 
     class _FakeKwStore:
@@ -490,7 +490,7 @@ def test_doc_uses_diagnostics_to_markdown(monkeypatch: pytest.MonkeyPatch) -> No
     class _FakeLibDoc:
         name = "FakeLib"
 
-        def to_markdown(self, only_doc: bool = True, header_level: int = 2) -> str:
+        def to_markdown(self, only_doc: bool = True, header_level: int = 2, *, link_resolver: Any = None) -> str:
             # Spy on the call so the test sees we asked for the FULL
             # page (`only_doc=False`) and not just the intro.
             return f"## Library *FakeLib* (only_doc={only_doc}, header={header_level})"
@@ -512,7 +512,7 @@ def test_doc_resource_uses_resource_doc_renderer(monkeypatch: pytest.MonkeyPatch
     class _FakeResDoc:
         name = "MyResource"
 
-        def to_markdown(self, only_doc: bool = True, header_level: int = 2) -> str:
+        def to_markdown(self, only_doc: bool = True, header_level: int = 2, *, link_resolver: Any = None) -> str:
             return "## Resource *MyResource*\n\nA custom resource."
 
     monkeypatch.setattr("robotcode.repl.console_interpreter.lookup_library", lambda n: None)
@@ -670,3 +670,30 @@ def test_save_export_is_runnable_round_trip(tmp_path: Any) -> None:
     model = get_model(str(target))
     test_names = [getattr(item, "name", None) for section in model.sections for item in getattr(section, "body", [])]
     assert "RoundTrip" in test_names
+
+
+def test_runtime_keyword_page_separates_the_documentation_sections() -> None:
+    """The fallback page is built from the running keyword. Robot
+    Framework 7.5 no longer splits the documentation itself, so the
+    `Tags:` line and the `Args:`/`Returns:` sections are taken apart
+    here; older versions keep the sections in the text."""
+    from robot.model.tags import Tags
+
+    from robotcode.repl.console_interpreter import _render_runtime_keyword_md
+    from robotcode.robot.utils import RF_VERSION
+
+    doc = "Paints.\n\nArgs:\n    shade: The shade to use.\n\nReturns:\n    The painted items.\n\nTags: alpha"
+    kw = _fake_kw("Paint", doc=doc, args=None, tags=Tags(["beta"]), error=None, source=None)
+
+    page = _render_runtime_keyword_md(kw, "Paint")
+
+    if RF_VERSION >= (7, 5):
+        assert "- `shade`: The shade to use." in page
+        assert "**Returns**: The painted items." in page
+        assert "_Tags: alpha, beta_" in page
+        assert "Args:" not in page
+        assert "Tags: alpha\n" not in page
+    else:
+        # the running keyword already has its tags and its documentation without them
+        assert "_Tags: beta_" in page
+        assert "Args:" in page

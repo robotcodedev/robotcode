@@ -15,12 +15,33 @@ from robotcode.robot.diagnostics.library_doc import KeywordDoc, LibraryDoc, Type
 from robotcode.robot.utils import RF_VERSION
 
 ALIAS_LIBRARY = """\
+from enum import Enum
+from typing import TypedDict
+
+
+class Color(Enum):
+    RED = 1
+    GREEN = 2
+
+
+class Point(TypedDict):
+    x: int
+    y: int
+
+
 type ID = int
 type Tree = int | list[Tree]
 type Pair[T] = tuple[T, T]
+type Shade = Color
+type Coord = Point
+type Mixed = Color | int
 
 
 def use_id(id: ID):
+    pass
+
+
+def use_aliases(shade: Shade, coord: Coord, mixed: Mixed) -> Shade:
     pass
 
 
@@ -80,6 +101,50 @@ def test_type_aliases_do_not_break_type_documentation(tmp_path: Path) -> None:
 
     id_argument = _keywords(doc)["Use Id"].arguments[0]
     assert id_argument.types == ["ID"]
+
+
+@pytest.mark.skipif(
+    sys.version_info < (3, 12) or RF_VERSION < (7, 5),
+    reason="needs the `type` statement (Python 3.12) and type alias support (RF 7.5)",
+)
+def test_aliased_types_resolve_to_their_type_documentation(tmp_path: Path) -> None:
+    lib_file = tmp_path / "AliasLib.py"
+    lib_file.write_text(ALIAS_LIBRARY, encoding="utf-8")
+
+    doc = get_library_doc(str(lib_file))
+
+    assert doc.errors is None
+    keyword = _keywords(doc)["Use Aliases"]
+    shade, coord, mixed = keyword.arguments
+
+    # the alias is what the user sees, the type documentation is the one of the aliased type
+    assert shade.types == ["Shade"]
+    assert shade.type_docs == {"Color": "Color"}
+    assert coord.type_docs == {"Point": "Point"}
+    assert mixed.type_docs == {"Color": "Color", "int": "integer"}
+    assert keyword.return_type == "Shade"
+    assert keyword.return_type_docs == {"Color": "Color"}
+
+    color = doc.get_types_for_argument(shade)
+    assert [t.name for t in color] == ["Color"]
+    assert [m.name for m in color[0].members or []] == ["RED", "GREEN"]
+    assert [t.name for t in doc.get_types_for_argument(coord)] == ["Point"]
+    assert sorted(t.name for t in doc.get_types_for_argument(mixed)) == ["Color", "integer"]
+
+
+@pytest.mark.skipif(RF_VERSION < (6, 1), reason="type documentation is collected since RF 6.1")
+def test_standard_type_resolves_although_its_documentation_has_another_name(tmp_path: Path) -> None:
+    lib_file = tmp_path / "RobotFormatLib.py"
+    lib_file.write_text(ROBOT_FORMAT_LIBRARY, encoding="utf-8")
+
+    doc = get_library_doc(str(lib_file))
+
+    argument = _keywords(doc)["Use Integer"].arguments[0]
+    assert argument.types == ["int"]
+    assert argument.type_docs == {"int": "integer"}
+    # the lookup by type name alone does not find it
+    assert doc.get_types(argument.types) == []
+    assert [t.name for t in doc.get_types_for_argument(argument)] == ["integer"]
 
 
 @pytest.mark.skipif(RF_VERSION < (7, 5), reason="standard libraries are documented in Markdown since RF 7.5")

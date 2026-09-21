@@ -44,6 +44,8 @@ from prompt_toolkit.widgets import Frame
 from rich.console import Console
 from rich.markdown import Markdown
 
+from robotcode.robot.utils.markdown_docs import iter_headings, slugify
+
 
 def render_markdown_to_ansi(text: str, *, width: int = 80) -> str:
     """Render `text` as markdown via `rich`, capture to ANSI string.
@@ -198,12 +200,10 @@ _HELP_HINTS = (
     "[/]: back/forward · Shift+drag: select · q/Esc/Enter: close "
 )
 
-# Matches `## Title`, `### Subtitle`, etc. Group 1 keeps the raw
-# title (incl. emphasis markers) — the anchor slug preserves them
-# to match `to_markdown`'s auto-linker, while the rendered-line
+# Header titles keep their emphasis markers — the anchor slug preserves
+# them to match `to_markdown`'s auto-linker, while the rendered-line
 # lookup runs the title through `_strip_md_emphasis` because `rich`
 # consumes those markers when it paints.
-_HEADER_RE = re.compile(r"^#{1,6}\s+(.+?)\s*$", re.MULTILINE)
 
 _MD_EMPHASIS_RE = re.compile(r"[*_`]")
 
@@ -223,7 +223,7 @@ def _slugify_anchor(title: str) -> str:
     `*` survives in both the link target and the slug we generate
     here — comparison is symmetric.
     """
-    return title.lower().replace(" ", "-")
+    return slugify(title)
 
 
 def _build_anchor_to_line_map(md_source: str, rendered_plain: str) -> Dict[str, int]:
@@ -243,8 +243,8 @@ def _build_anchor_to_line_map(md_source: str, rendered_plain: str) -> Dict[str, 
     rendered_lines = rendered_plain.split("\n")
     result: Dict[str, int] = {}
     cursor = 0
-    for m in _HEADER_RE.finditer(md_source):
-        raw_title = m.group(1).strip()
+    # `iter_headings` skips `#` lines of fenced code blocks, which are no headings
+    for _, raw_title in iter_headings(md_source):
         slug = _slugify_anchor(raw_title)
         display = _strip_md_emphasis(raw_title)
         for j in range(cursor, len(rendered_lines)):

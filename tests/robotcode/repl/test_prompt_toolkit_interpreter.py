@@ -3,6 +3,7 @@ REPL interpreter. `ConsoleInterpreter` has its own coverage for plain mode.
 """
 
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any, List
 
 import pytest
@@ -113,6 +114,78 @@ def test_resolve_doc_link_decodes_kw_target(monkeypatch: pytest.MonkeyPatch) -> 
     monkeypatch.setattr(interp, "_keyword_doc", _fake_doc)
     assert interp._resolve_doc_link("kw:Collections.Append%20To%20List") == ("Append To List", "# Append To List")
     assert seen == ["Collections.Append To List"]
+
+
+def test_keyword_page_links_references_to_other_keywords(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """In a Markdown documented library `[Other Keyword]` refers to another
+    keyword. On the keyword page it becomes a `kw:` link the doc viewer
+    can follow, like the entries of the `.kw` list; a section of the
+    library introduction is not part of that page and stays inline code."""
+    from robotcode.robot.diagnostics.library_doc import get_library_doc
+
+    lib_file = tmp_path / "MdLib.py"
+    lib_file.write_text(
+        '''\
+"""Intro.
+
+# A section
+"""
+
+ROBOT_LIBRARY_DOC_FORMAT = "MARKDOWN"
+
+
+def do_something():
+    """See [Other Keyword] and [A section]."""
+
+
+def other_keyword():
+    """Another keyword."""
+''',
+        encoding="utf-8",
+    )
+    lib_doc = get_library_doc(str(lib_file))
+    keyword = next(kw for kw in lib_doc.keywords.keywords if kw.name == "Do Something")
+
+    monkeypatch.setattr(
+        "robotcode.repl.console_interpreter.lookup_keyword_owner",
+        lambda n: (SimpleNamespace(name="MdLib"), SimpleNamespace(name="Do Something"), False),
+    )
+    monkeypatch.setattr("robotcode.repl.console_interpreter._diagnostics_keyword_doc", lambda *a: keyword)
+
+    interp = PromptToolkitConsoleInterpreter(app=None)
+    found = interp._keyword_doc("Do Something")
+
+    assert found is not None
+    title, markdown = found
+    assert title == "Do Something"
+    assert "See [Other Keyword](kw:MdLib.Other%20Keyword) and `A section`." in markdown
+
+
+def test_keyword_page_of_the_plain_backend_shows_references_as_code(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from robotcode.repl.console_interpreter import ConsoleInterpreter
+    from robotcode.robot.diagnostics.library_doc import get_library_doc
+
+    lib_file = tmp_path / "MdPlainLib.py"
+    lib_file.write_text(
+        'ROBOT_LIBRARY_DOC_FORMAT = "MARKDOWN"\n\n\n'
+        'def do_something():\n    """See [Other Keyword]."""\n\n\n'
+        'def other_keyword():\n    """Another keyword."""\n',
+        encoding="utf-8",
+    )
+    lib_doc = get_library_doc(str(lib_file))
+    keyword = next(kw for kw in lib_doc.keywords.keywords if kw.name == "Do Something")
+    monkeypatch.setattr(
+        "robotcode.repl.console_interpreter.lookup_keyword_owner",
+        lambda n: (SimpleNamespace(name="MdPlainLib"), SimpleNamespace(name="Do Something"), False),
+    )
+    monkeypatch.setattr("robotcode.repl.console_interpreter._diagnostics_keyword_doc", lambda *a: keyword)
+
+    found = ConsoleInterpreter(app=None)._keyword_doc("Do Something")
+
+    assert found is not None
+    assert "See `Other Keyword`." in found[1]
 
 
 def test_resolve_doc_link_ignores_non_kw_targets() -> None:

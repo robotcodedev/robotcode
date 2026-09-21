@@ -312,6 +312,22 @@ def test_build_anchor_to_line_map_strips_emphasis_for_matching() -> None:
     assert mapping == {"library-*builtin*": 0}
 
 
+def test_build_anchor_to_line_map_covers_a_normalised_markdown_library() -> None:
+    """A Markdown documented library has its headings shifted one level
+    and a nested table of contents; every entry of that table must find
+    its heading, and a `#` line inside a fenced code block is no heading."""
+    from robotcode.repl._pt.doc_viewer import _build_anchor_to_line_map
+    from robotcode.robot.utils.markdown_docs import render_toc, shift_headings
+
+    md = shift_headings("# First section\n\n## Nested ##\n\n```robotframework\n# a comment\n```\n\n# Second section")
+    toc = render_toc(md)
+    assert toc == "- [First section](#first-section)\n  - [Nested](#nested)\n- [Second section](#second-section)"
+
+    rendered = "First section\n\nNested\n\n# a comment\n\nSecond section"
+    mapping = _build_anchor_to_line_map(md, rendered)
+    assert mapping == {"first-section": 0, "nested": 2, "second-section": 6}
+
+
 def test_tab_binding_gated_on_having_links() -> None:
     """`Tab` shouldn't claim the key on a doc with no extracted links —
     otherwise it'd swallow a no-op key event that the user might

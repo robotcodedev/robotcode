@@ -16,9 +16,11 @@ from urllib.parse import parse_qs, urlparse
 from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.core.utils.net import find_free_port
 from robotcode.robot.diagnostics.library_doc import (
+    LibraryDoc,
     get_library_doc,
     get_robot_library_html_doc_str,
 )
+from robotcode.robot.utils.markdown_docs import anchor_link_resolver
 
 from ..configuration import DocumentationServerConfig
 from .protocol_part import RobotLanguageServerProtocolPart
@@ -71,6 +73,19 @@ MARKDOWN_TEMPLATE = Template(
 )
 
 
+def library_doc_to_markdown_content(libdoc: LibraryDoc) -> str:
+    """The Markdown the documentation view renders for a library.
+
+    The page shows the whole library, so references to keywords and sections
+    in Markdown documentation become links to their headings.
+    """
+    tt = str.maketrans({"<": "&lt;", ">": "&gt;"})
+    markdown = libdoc.to_markdown(
+        add_signature=False, only_doc=False, header_level=0, link_resolver=anchor_link_resolver
+    )
+    return markdown.translate(tt)
+
+
 class LibDocRequestHandler(SimpleHTTPRequestHandler):
     _logger = LoggingDescriptor()
 
@@ -105,11 +120,7 @@ class LibDocRequestHandler(SimpleHTTPRequestHandler):
                         base_dir=basedir if basedir else ".",
                     )
 
-                    def calc_md() -> str:
-                        tt = str.maketrans({"<": "&lt;", ">": "&gt;"})
-                        return libdoc.to_markdown(add_signature=False, only_doc=False, header_level=0).translate(tt)
-
-                    data = MARKDOWN_TEMPLATE.substitute(content=calc_md(), name=name)
+                    data = MARKDOWN_TEMPLATE.substitute(content=library_doc_to_markdown_content(libdoc), name=name)
 
                     self.send_response(200)
                     self.send_header("Content-type", "text/html")

@@ -70,6 +70,24 @@ class DocLib:
 
     def plain(self):
         """Keyword without tags."""
+
+    def paint(self, shade, *items):
+        """Paints the items.
+
+        Args:
+            shade: The shade to use.
+                Continues on a second line.
+            *items: What to paint.
+            missing: Documents an argument the keyword does not have.
+
+        Returns:
+            The painted items.
+
+        Raises:
+            ValueError: If the shade is unknown.
+
+        More documentation.
+        """
 '''
 
 RESOURCE = """\
@@ -93,7 +111,18 @@ Hidden
     ...
     ...    Tags: robot:private
     No Operation
+
+Greet
+    [Documentation]    Greets somebody.
+    ...
+    ...    Args:
+    ...      ${name}: Who to greet.
+    [Arguments]    ${name}
+    Log    Hello ${name}
 """
+
+# Robot Framework separates the Google-style sections from the documentation since 7.5
+HAS_DOC_SECTIONS = RF_VERSION >= (7, 5)
 
 
 def _keywords(doc: LibraryDoc) -> Dict[str, KeywordDoc]:
@@ -133,7 +162,35 @@ def _assert_library_keywords(doc: LibraryDoc) -> None:
     assert keywords["Hidden"].is_private == (RF_VERSION >= (6, 0))
 
     assert keywords["With Args"].tags == ["gamma"]
-    assert keywords["With Args"].doc == "Keyword with a Google-style section.\n\nArgs:\n    value: The value to use."
+    if HAS_DOC_SECTIONS:
+        assert keywords["With Args"].doc == "Keyword with a Google-style section."
+        assert keywords["With Args"].arguments[0].doc == "The value to use."
+    else:
+        assert (
+            keywords["With Args"].doc == "Keyword with a Google-style section.\n\nArgs:\n    value: The value to use."
+        )
+        assert keywords["With Args"].arguments[0].doc == ""
+
+    paint = keywords["Paint"]
+    assert [a.name for a in paint.arguments] == ["shade", "items"]
+    if HAS_DOC_SECTIONS:
+        assert paint.doc == "Paints the items.\n\nMore documentation."
+        assert [a.doc for a in paint.arguments] == [
+            "The shade to use.\nContinues on a second line.",
+            "What to paint.",
+        ]
+        assert paint.return_doc == "The painted items."
+        assert paint.raises == [("ValueError", "If the shade is unknown.")]
+        # Libdoc fails such a keyword, here the documentation is kept
+        assert paint.extra_argument_docs == [("missing", "Documents an argument the keyword does not have.")]
+    else:
+        assert "Args:" in paint.doc
+        assert "Returns:" in paint.doc
+        assert "Raises:" in paint.doc
+        assert [a.doc for a in paint.arguments] == ["", ""]
+        assert paint.return_doc == ""
+        assert paint.raises is None
+        assert paint.extra_argument_docs is None
 
     assert keywords["Legacy"].tags == ["delta"]
     assert keywords["Legacy"].doc == "Keyword using the legacy layout."
@@ -163,6 +220,15 @@ def _assert_resource_keywords(doc: LibraryDoc) -> None:
     assert keywords["Hidden"].doc == "A private keyword."
     # `robot:private` exists since RF 6.0
     assert keywords["Hidden"].is_private == (RF_VERSION >= (6, 0))
+
+    greet = keywords["Greet"]
+    if HAS_DOC_SECTIONS:
+        assert greet.doc == "Greets somebody."
+        assert greet.arguments[0].doc == "Who to greet."
+    else:
+        assert greet.doc.startswith("Greets somebody.\n\nArgs:\n")
+        assert greet.doc.endswith("${name}: Who to greet.")
+        assert greet.arguments[0].doc == ""
 
 
 def test_library_doc_extracts_tags_from_documentation(tmp_path: Path, capfd: pytest.CaptureFixture[str]) -> None:
@@ -200,6 +266,9 @@ def test_library_from_instance_extracts_tags_and_leaves_keywords_untouched(
 
     _assert_library_keywords(doc)
     assert [(kw.name, kw.doc, list(kw.tags)) for kw in running_keywords] == before
+    if HAS_DOC_SECTIONS:
+        # the sections were not moved into the argument specification of the running keywords
+        assert not any(kw.args.docs or kw.args.return_doc or kw.args.raises for kw in running_keywords)
     captured = capfd.readouterr()
     assert captured.out == ""
     assert captured.err == ""
@@ -221,6 +290,8 @@ def test_resource_from_instance_extracts_tags_and_leaves_keywords_untouched(
     _assert_resource_keywords(doc)
     assert [(kw.name, kw.doc, list(kw.tags)) for kw in resource.keywords] == before
     assert resource.doc == resource_doc_before
+    if HAS_DOC_SECTIONS:
+        assert not any(kw.args.docs or kw.args.return_doc or kw.args.raises for kw in resource.keywords)
     captured = capfd.readouterr()
     assert captured.out == ""
     assert captured.err == ""

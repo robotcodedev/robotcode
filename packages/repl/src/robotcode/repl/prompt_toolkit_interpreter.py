@@ -28,6 +28,7 @@ from prompt_toolkit.history import History, InMemoryHistory
 from robot import result, running
 
 from robotcode.plugin import Application
+from robotcode.robot.utils.markdown_docs import REFERENCE_KEYWORD, LinkResolver
 
 from ._pt.components import (
     _DEFAULT_STYLE,
@@ -147,6 +148,17 @@ class PromptToolkitConsoleInterpreter(ConsoleInterpreter):
         Tab/Enter in the doc viewer then opens the keyword in place.
         """
         return f"- [{kw_name}](kw:{quote(f'{owner_name}.{kw_name}')})"
+
+    def _keyword_link_resolver(self, owner_name: str) -> Optional[LinkResolver]:
+        """References to other keywords of the same owner open that
+        keyword's page, like the entries of the `.kw` list."""
+
+        def resolve(kind: str, name: str) -> Optional[str]:
+            if kind == REFERENCE_KEYWORD:
+                return f"kw:{quote(f'{owner_name}.{name}')}"
+            return None
+
+        return resolve
 
     def _resolve_doc_link(self, target: str) -> Optional[Tuple[str, str]]:
         """Resolve a `kw:<owner.keyword>` doc-viewer link to a keyword

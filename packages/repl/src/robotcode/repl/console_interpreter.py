@@ -33,14 +33,17 @@ from robot.running.context import EXECUTION_CONTEXTS
 
 from robotcode.plugin import Application
 from robotcode.robot.diagnostics.library_doc import (
+    MARKDOWN_DOC_FORMAT,
     REST_DOC_FORMAT,
     ROBOT_DOC_FORMAT,
     LibraryDoc,
     convert_from_rest,
+    get_docstring_info,
     get_library_doc_from_library,
     get_resource_doc_from_resource,
 )
 from robotcode.robot.utils import get_robot_version_str
+from robotcode.robot.utils.markdown_docs import LinkResolver, anchor_link_resolver, normalize_markdown_doc
 from robotcode.robot.utils.markdownformatter import MarkDownFormatter
 
 from .__version__ import __version__
@@ -167,6 +170,8 @@ def _format_doc_to_md(text: str, doc_format: str) -> str:
         return MarkDownFormatter().format(text)
     if doc_format == REST_DOC_FORMAT:
         return convert_from_rest(text)
+    if doc_format == MARKDOWN_DOC_FORMAT:
+        return normalize_markdown_doc(text)
     return text
 
 
@@ -194,13 +199,18 @@ def _diagnostics_keyword_doc(owner: Any, is_resource: bool, kw_name: str) -> Opt
     return matches[0] if matches else None
 
 
-def _render_runtime_keyword_md(kw: Any, kw_name: str) -> str:
+def _render_runtime_keyword_md(kw: Any, kw_name: str, is_resource: bool = False) -> str:
     """Hand-built fallback keyword page for resources / dynamic libs.
 
     Used only when the diagnostics loader can't surface a `KeywordDoc`
     for this keyword. Renders name + signature + tags + doc + source
     in a shape close to what `KeywordDoc.to_markdown` produces.
     """
+    try:
+        # splits the `Tags:` and, with Robot Framework 7.5, the `Args:`/`Returns:`/`Raises:` sections off
+        info = get_docstring_info(kw, kw, is_resource)
+    except Exception:
+        info = None
     md: List[str] = [f"### {kw_name}", ""]
 
     spec = getattr(kw, "args", None) or getattr(kw, "arguments", None)
@@ -213,12 +223,22 @@ def _render_runtime_keyword_md(kw: Any, kw_name: str) -> str:
             md.append(f"`{kw_name}    {sig}`")
             md.append("")
 
-    tags = list(getattr(kw, "tags", None) or [])
+    if info is not None:
+        for name, description in (info.argument_docs or {}).items():
+            md.append(f"- `{name}`: {description}")
+        if info.return_doc:
+            md.extend(["", f"**Returns**: {info.return_doc}"])
+        for name, description in info.raises or []:
+            md.extend(["", f"**Raises** `{name}`: {description}"])
+        if info.argument_docs or info.return_doc or info.raises:
+            md.append("")
+
+    tags = info.tags if info is not None else list(getattr(kw, "tags", None) or [])
     if tags:
         md.append("_Tags: " + ", ".join(str(t) for t in tags) + "_")
         md.append("")
 
-    doc = getattr(kw, "doc", None) or ""
+    doc = (info.doc if info is not None else getattr(kw, "doc", None)) or ""
     if doc:
         md.append(_format_doc_to_md(doc, getattr(kw, "doc_format", ROBOT_DOC_FORMAT)))
 
@@ -1076,8 +1096,16 @@ class ConsoleInterpreter(BaseInterpreter):
         kw_name = getattr(runtime_kw, "name", name)
         diag_kw = _diagnostics_keyword_doc(owner, is_resource, kw_name)
         if diag_kw is not None:
-            return kw_name, diag_kw.to_markdown(header_level=1)
-        return kw_name, _render_runtime_keyword_md(runtime_kw, kw_name)
+            link_resolver = self._keyword_link_resolver(str(getattr(owner, "name", "")))
+            return kw_name, diag_kw.to_markdown(header_level=1, link_resolver=link_resolver)
+        return kw_name, _render_runtime_keyword_md(runtime_kw, kw_name, is_resource)
+
+    def _keyword_link_resolver(self, owner_name: str) -> Optional[LinkResolver]:
+        """Where references in a keyword page go. Nothing can be followed here,
+        so they stay inline code; the prompt_toolkit backend overrides this to
+        link to the pages of other keywords."""
+        del owner_name
+        return None
 
     def _list_keywords(self, pattern: Optional[str]) -> None:
         """List loaded keywords grouped by owner, optionally filtered by a
@@ -1149,7 +1177,10 @@ class ConsoleInterpreter(BaseInterpreter):
             self.app.echo(error or f"Could not load {arg!r}.")
             return
 
-        self.show_doc(lib_doc.name, lib_doc.to_markdown(only_doc=False, header_level=1))
+        self.show_doc(
+            lib_doc.name,
+            lib_doc.to_markdown(only_doc=False, header_level=1, link_resolver=anchor_link_resolver),
+        )
 
     def _resolve_doc_target(self, arg: str) -> Tuple[Optional[LibraryDoc], Optional[str]]:
         """Build the `LibraryDoc` for an imported library or resource.

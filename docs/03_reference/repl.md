@@ -258,6 +258,10 @@ Dot-prefixed commands (lines that start with `.<word>`) are handled by the REPL 
 
 `.kw` and `.doc` show the same documentation the editor displays on hover — full per-keyword pages with signature, argument table (types + defaults), tags, and docstring body. It's rendered as styled Markdown, so headings, lists, code blocks, tables, and inline emphasis show up formatted in any modern terminal.
 
+With Robot Framework 7.5 or newer, keywords that document their arguments in Google style (`Args:`, `Returns:`, `Raises:`, as the standard libraries do) show that documentation with the signature: the arguments are listed with their type, default value and description instead of the argument table, the description of the return value stands next to the return type, and the exceptions the keyword raises are listed.
+
+For libraries documented in Markdown, references such as `[Set Log Level]` are resolved. In `.doc` they are links to the keyword or section on the same page, in `.kw` they are links that open the documentation of that keyword (on the plain backend they are shown as inline code), and a `%TOC%` marker becomes a table of contents.
+
 #### The doc viewer
 
 `.help`, `.kw`, `.doc` (and `F1`, which is the keyboard shortcut for `.help`) open the rendered output in a fullscreen viewer (like `less`, `man`, or `vim`). Your prompt and scrollback are untouched: when you close the viewer the terminal snaps back to exactly where you were.

@@ -64,6 +64,7 @@ from robotcode.core.text_document import TextDocument
 from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.robot.diagnostics.entities import VariableDefinitionType
 from robotcode.robot.diagnostics.library_doc import (
+    ArgumentInfo,
     CompleteResultKind,
     KeywordArgumentKind,
     KeywordDoc,
@@ -2260,7 +2261,7 @@ class CompletionCollector(ModelHelper):
                 or has_name
             )
         ):
-            type_infos = keyword_doc.parent.get_types(kw_arguments[argument_index].types)
+            type_infos = keyword_doc.parent.get_types_for_argument(kw_arguments[argument_index])
             for i, type_info in enumerate(type_infos):
                 if type_info.name == "boolean":
                     if RF_VERSION >= (6, 0) and self.namespace.languages:
@@ -2449,6 +2450,18 @@ class CompletionCollector(ModelHelper):
                         - 1
                     )
 
+            def documentation_data(argument: ArgumentInfo) -> Optional[CompletionItemData]:
+                # the description of the argument and the documentation of its types, sent when the item is resolved
+                if (doc := keyword_doc.argument_to_markdown(argument)) is None:
+                    return None
+                cache_name = f"ARG{id(keyword_doc)}_{argument.name}"
+                self.parent.doc_cache[cache_name] = doc
+                return CompletionItemData(
+                    document_uri=str(self.document.uri),
+                    type=CompleteResultKind.DOC_CACHE.name,
+                    name=cache_name,
+                )
+
             result += [
                 CompletionItem(
                     label=f"{e.signature(False)}=",
@@ -2460,6 +2473,7 @@ class CompletionCollector(ModelHelper):
                     text_edit=TextEdit(range=completion_range, new_text=f"{e.name}="),
                     command=Command("", "editor.action.triggerSuggest", []),
                     preselect=True if i == preselected else None,
+                    data=documentation_data(e),
                 )
                 for i, e in enumerate(kw_arguments)
                 if e.name not in known_names

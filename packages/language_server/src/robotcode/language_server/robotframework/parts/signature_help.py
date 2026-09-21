@@ -90,6 +90,12 @@ def _named_arg_name(tok: SemanticToken) -> Optional[str]:
     return name_st.value if name_st is not None else None
 
 
+def _parameter_documentation(kw_doc: KeywordDoc, argument: ArgumentInfo) -> Optional[MarkupContent]:
+    """The description of the argument followed by the documentation of its types."""
+    value = kw_doc.argument_to_markdown(argument)
+    return MarkupContent(kind=MarkupKind.MARKDOWN, value=value) if value else None
+
+
 def _active_argument_from_semantic_tokens(
     arg_tokens: List[SemanticToken],
     kw_doc: KeywordDoc,
@@ -330,17 +336,7 @@ def _build_signature_help(
     signature = SignatureInformation(
         label=kw_doc.parameter_signature(),
         parameters=[
-            ParameterInformation(
-                label=p.signature(),
-                documentation=(
-                    MarkupContent(
-                        kind=MarkupKind.MARKDOWN,
-                        value="\n\n---\n\n".join(t.to_markdown() for t in kw_doc.parent.get_types(p.types)),
-                    )
-                    if p.types and kw_doc.parent is not None
-                    else None
-                ),
-            )
+            ParameterInformation(label=p.signature(), documentation=_parameter_documentation(kw_doc, p))
             for p in kw_arguments
         ],
         active_parameter=argument_index,
@@ -582,18 +578,8 @@ class RobotSignatureHelpProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
         signature = SignatureInformation(
             label=keyword_doc.parameter_signature(),
             parameters=[
-                ParameterInformation(
-                    label=p.signature(),
-                    documentation=(
-                        MarkupContent(
-                            kind=MarkupKind.MARKDOWN,
-                            value="\n\n---\n\n".join([t.to_markdown() for t in keyword_doc.parent.get_types(p.types)]),
-                        )
-                        if p.types and keyword_doc.parent is not None
-                        else None
-                    ),
-                )
-                for i, p in enumerate(kw_arguments)
+                ParameterInformation(label=p.signature(), documentation=_parameter_documentation(keyword_doc, p))
+                for p in kw_arguments
             ],
             active_parameter=argument_index,
             documentation=MarkupContent(kind=MarkupKind.MARKDOWN, value=keyword_doc.to_markdown(False)),

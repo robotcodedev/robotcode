@@ -15,7 +15,7 @@ from typing import Any, Callable, List, Optional
 import pytest
 from pytest_mock import MockerFixture
 
-from robotcode.core.lsp.types import Position, SignatureHelp
+from robotcode.core.lsp.types import MarkupContent, Position, SignatureHelp
 from robotcode.core.text_document import TextDocument
 from robotcode.language_server.robotframework.parts.signature_help import (
     RobotSignatureHelpProtocolPart,
@@ -794,3 +794,56 @@ def test_imports_legacy_and_model_paths_match(
         assert _normalize(legacy) == _normalize(model), (
             f"{name} @ ({line},{char}): legacy != model\n  legacy={_normalize(legacy)}\n  model ={_normalize(model)}"
         )
+
+
+# --------------------------------------------------------------------------
+# Parameter documentation: description of the argument + documentation of its
+# types, identical on both code paths.
+# --------------------------------------------------------------------------
+
+_DOCUMENTED_LIBRARY = '''\
+def use_integer(base: int, plain=None):
+    """Uses an integer.
+
+    Args:
+        base: The base of the number.
+    """
+'''
+
+
+def test_parameter_documentation_has_description_and_type_documentation(
+    tmp_path: Any,
+    analyzer_namespace_factory: Callable[..., tuple[Any, _ast.AST]],
+    signature_part_factory: Callable[..., RobotSignatureHelpProtocolPart],
+) -> None:
+    from robotcode.robot.diagnostics.library_doc import get_library_doc
+    from robotcode.robot.utils import RF_VERSION
+
+    lib_file = tmp_path / "DocumentedLib.py"
+    lib_file.write_text(_DOCUMENTED_LIBRARY, encoding="utf-8")
+    kw_doc = next(iter(get_library_doc(str(lib_file)).keywords.keywords))
+
+    text = "*** Test Cases ***\nT\n    Use Integer    1\n"
+    namespace, ast_model = analyzer_namespace_factory(text, {"Use Integer": kw_doc})
+    document = _make_text_document(text)
+    _attach_to_document(document, namespace, ast_model)
+    part = signature_part_factory()
+    position = Position(line=2, character=len("    Use Integer    1"))
+
+    legacy = part._collect_legacy(document, position, None)
+    model = part._collect_from_model(document, position, namespace, namespace.semantic_model)
+
+    for result in (legacy, model):
+        assert result is not None
+        assert result.signatures
+        base, plain = result.signatures[0].parameters or []
+
+        if RF_VERSION >= (6, 1):
+            # `int` is documented as `integer`, the lookup by type name alone did not find it
+            assert isinstance(base.documentation, MarkupContent)
+            assert "integer (Standard)" in base.documentation.value
+        if RF_VERSION >= (7, 5):
+            assert isinstance(base.documentation, MarkupContent)
+            assert base.documentation.value.startswith("The base of the number.\n\n---\n\n")
+        # nothing to say about an argument without description and type
+        assert plain.documentation is None
