@@ -13,27 +13,27 @@ See proposal.md. Facts that shape the approach (verified in the repository and t
 ## Goals / Non-Goals
 
 **Goals:**
-- `[rebot] console`/`quiet` configurable like every other option, generated from RF's help, safe on RF < 7.5.
+- `[rebot] console`/`quiet` configurable like every other option, generated from RF's help.
 - Keep `support-rf75`'s guarantee and RF's own semantics: top-level console settings are robot-only.
 
 **Non-Goals:**
 - Any change to how other shared options flow between top level and tool sections.
 - A `dotted` console for rebot (RF does not list it; as any string it still validates and RF 7.5 accepts it).
-- Warning-level notices on RF < 7.5 (verbose only, consistent with the existing console-links guard).
+- Any RobotCode-side version check for the two options: `rebot` of Robot Framework < 7.5 rejects them itself with a clear error, exactly like a mistyped option (maintainer decision; a guard that dropped them with a verbose note was implemented first and removed again).
 
 ## Decisions
 
-### D1: Top-level `console`/`quiet` are excluded from the rebot profile
+### D1: Top-level `console`/`quiet` are kept out of the rebot profile locally
 
-`BaseOptions.add_options` gets an opt-in `exclude: Container[str] = ()` parameter; `rebot.py` calls `rebot_options.add_options(profile, exclude=("console", "quiet"))` with a comment pointing at RF's `get_rebot_settings`. Alternatives: let them flow like `libdoc`'s `quiet` (breaks the `support-rf75` guarantee, forwards robot-only `dotted` or custom robot consoles to rebot, and would print the drop note for every RF < 7.5 user with a top-level console), or a local save/restore in `rebot.py` (works, but the generic parameter is three lines and testable in isolation). The default `()` keeps `libdoc`, `testdoc` and profile merging unchanged.
+`rebot.py` remembers the `[rebot]` values of `console` and `quiet` before `add_options(profile)` and puts them back afterwards (three lines, with a comment pointing at RF's `get_rebot_settings`). Without that, a top-level `console = "dotted"` — the first example in the configuration reference — would flow into `rebot` like every other shared option and make `robotcode rebot` fail on RF ≤ 7.4 (`option --console not a unique prefix`) for a setting the user never made for `rebot`; `support-rf75`'s scenario "Top-level console does not reach rebot" guards exactly that. A generic `exclude` parameter on `BaseOptions.add_options` was implemented first and removed by maintainer decision: no change to the shared model for a `rebot`-only concern.
 
 ### D2: Tool-aware generator overrides
 
 `type_templates` and `TOML_EXAMPLES` accept tool-prefixed keys (`"rebot:console"`, `"rebot:--console"`) looked up before the plain key; `get_type` and `apply_toml_examples` receive the `tool` that `generate()` already knows. `RebotOptions` is built from `RebotSettings._extra_cli_opts` plus `ConsoleType`/`ConsoleTypeQuiet` taken from `RebotSettings._cli_opts` when present (so the generator still runs under RF 7.4 for `support-rf75`'s diff check). The rebot `console` type becomes `Union[str, Literal["verbose", "quiet", "none"]]`; `quiet` is a flag like robot's. Nested per-tool dicts were considered and rejected as more code for the same effect.
 
-### D3: RF < 7.5 guard clears the fields
+### D3: No version guard
 
-Before `build_command_line`, on `RF_VERSION < (7, 5)` and any of the two fields set, `rebot.py` reports them via `app.verbose` and sets both to `None`. Clearing fields (rather than filtering the built argument list) also covers `quiet = false` (`--noquiet`, equally rejected by RF < 7.5) and keeps the verbose "Executing rebot with the following options" line accurate.
+`[rebot] console`/`quiet` are built into the command line on every Robot Framework version; `rebot` of Robot Framework < 7.5 rejects them with its own error (`option --console not a unique prefix`, `option --quiet not recognized`) and exit code 252, as it does for any option it does not know (before 7.1, where `--consolelinks` does not exist, `rebot` reads `--console` as the unique prefix of `--consolecolors` and rejects the value instead: `Invalid console color value 'quiet'`; the run fails either way). A guard that dropped the two fields with a verbose note on RF < 7.5 was implemented first and removed by maintainer decision: the setting is a deliberate one in the `[rebot]` section, and the error names it.
 
 ### D4: Regeneration and dry-run message
 
@@ -42,9 +42,8 @@ Model, schema and `config.md` are regenerated with the sequence `support-rf75` d
 ## Risks / Trade-offs
 
 - [Runs the generator; `support-rf75` must be applied first] → stated dependency; the generator refuses nothing by itself, so the task list starts with a check that `support-rf75` tasks 3.1–3.2 are done.
-- [`[rebot] console` on RF < 7.5 is only reported in verbose output] → consistent with the existing guard; the schema documents the RF version.
+- [`[rebot] console` on RF < 7.5 fails the run] → `rebot`'s own error names the option; the configuration reference shows the options only for the newest supported Robot Framework anyway.
 - [Schema advertises the options on every RF version] → same as all version-specific options.
-- [`exclude` is a new keyword on a widely used method] → default keeps behaviour; a unit test asserts exclusion is opt-in.
 - [Field order in `RebotOptions` changes (`console` first)] → affects `as_dict()`/`save()` key order only.
 
 ## Migration Plan
