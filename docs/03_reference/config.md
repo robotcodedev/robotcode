@@ -1586,6 +1586,35 @@ Type: `RebotProfile | None`
 
 Options to be passed to _rebot_.
 
+## rebot.console
+
+Type: `str | Literal['verbose', 'quiet', 'none'] | None`
+
+How to report on the console.
+Built-in consoles:
+
+**verbose:** show output file paths (default)
+
+**quiet:** no output except for errors/warnings
+
+**none:** no output whatsoever
+Other values are interpreted as a custom
+console class or module. Argument format is
+the same as with --listener.
+
+Examples:
+
+```toml
+console = "quiet"
+```
+
+```toml
+# custom console logger class or module
+console = "path/to/Console.py:arg"
+```
+
+corresponds to the `--console console` option of _rebot_
+
 ## rebot.console-colors
 
 Type: `Literal['auto', 'on', 'ansi', 'off'] | None`
@@ -2403,6 +2432,20 @@ python-path = ["libs/", "/opt/libs", "libraries.zip"]
 ```
 
 corresponds to the `-P --pythonpath path *` option of _robot_
+
+## rebot.quiet
+
+Type: `bool | Flag | None`
+
+Shortcut for `--console quiet`.
+
+Examples:
+
+```toml
+quiet = true
+```
+
+corresponds to the `--quiet` option of _rebot_
 
 ## rebot.remove-keywords
 

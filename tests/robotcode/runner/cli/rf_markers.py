@@ -19,5 +19,5 @@ needs_rf_72 = pytest.mark.skipif(
 )
 needs_rf_75 = pytest.mark.skipif(
     RF_VERSION < (7, 5),
-    reason="requires Robot Framework 7.5+ (test-level `[Metadata]`)",
+    reason="requires Robot Framework 7.5+ (test-level `[Metadata]`, `rebot --console`)",
 )

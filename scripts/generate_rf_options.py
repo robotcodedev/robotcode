@@ -25,6 +25,8 @@ OPTIONS_RE = re.compile(
 # the examples to use TOML syntax instead of CLI flags. The mapping below holds
 # one or more curated TOML snippets per long option; the generator drops the
 # original CLI examples and emits these snippets as ```toml fenced blocks.
+# A key prefixed with the tool (`rebot:--console`) wins over the plain key for
+# that tool only.
 TOML_EXAMPLES: Dict[str, List[str]] = {
     # --- options that already had CLI examples in Robot Framework's help ---
     "--doc": [
@@ -79,6 +81,10 @@ TOML_EXAMPLES: Dict[str, List[str]] = {
     "--console": [
         'console = "dotted"',
         '# custom console logger class or module (Robot Framework 7.5 or newer)\nconsole = "path/to/MyConsole.py:arg"',
+    ],
+    "rebot:--console": [
+        'console = "quiet"',
+        '# custom console logger class or module\nconsole = "path/to/Console.py:arg"',
     ],
     "--consolecolors": ['console-colors = "on"'],
     "--consolelinks": ['console-links = "off"'],
@@ -208,19 +214,31 @@ def format_field_decl(name: str, type_str: str) -> str:
     return one_line
 
 
-def apply_toml_examples(desc: str, long: str, base_kebab: str, extend: bool) -> str:
-    if long not in TOML_EXAMPLES:
+def lookup_for_tool(table: Dict[str, Any], key: str, tool: str) -> Optional[Any]:
+    """The entry for `key`, preferring the tool-specific `<tool>:<key>` entry."""
+    for k in (f"{tool}:{key}", key):
+        if k in table:
+            return table[k]
+    return None
+
+
+def apply_toml_examples(desc: str, long: str, base_kebab: str, extend: bool, tool: str) -> str:
+    snippets = lookup_for_tool(TOML_EXAMPLES, long, tool)
+    if snippets is None:
         return desc
     cleaned = EXAMPLES_BLOCK_RE.sub("", desc).rstrip()
-    snippets = TOML_EXAMPLES[long]
     if extend and base_kebab:
         snippets = [rewrite_for_extend(s, base_kebab) for s in snippets]
     blocks = "\n\n".join(f"```toml\n{snippet}\n```" for snippet in snippets)
     return f"{cleaned}\n\nExamples:\n\n{blocks}\n"
 
 
+# Keyed by field name; a key prefixed with the tool (`rebot:console`) wins over
+# the plain key for that tool only.
 type_templates = {
     "console": 'Union[str, Literal["verbose", "dotted", "quiet", "none"]]',
+    # `rebot --console` takes the built-in names as plain words, not as a `|` list
+    "rebot:console": 'Union[str, Literal["verbose", "quiet", "none"]]',
     "listeners": "Dict[str, List[Union[str, StringExpression]]]",
     "max_error_lines": 'Union[int, Literal["NONE"]]',
     "parsers": "Dict[str, List[Union[str, StringExpression]]]",
@@ -323,7 +341,7 @@ def generate(
             result = f"            Appends entries to the {v['long']} option.\n\n"
         else:
             result = ""
-        desc = apply_toml_examples(v["desc"], v["long"], base_kebab, extra)
+        desc = apply_toml_examples(v["desc"], v["long"], base_kebab, extra, tool)
         result += (
             "\n".join(f"            {line}".rstrip() for line in desc.splitlines()) + "\n\n"
             "            corresponds to the "
@@ -356,8 +374,9 @@ def generate(
         if extra:
             template_name = name.replace("extend_", "")
 
-        if template_name in type_templates:
-            return f"Optional[{type_templates[template_name]}]"
+        template = lookup_for_tool(type_templates, template_name, tool)
+        if template is not None:
+            return f"Optional[{template}]"
 
         base_type = "str" if value is None or isinstance(value, (tuple, list)) else type(value).__name__
 
@@ -434,9 +453,10 @@ def generate(
 
 
 # Robot Framework 7.5 moved the console options `ConsoleType`/`ConsoleTypeQuiet` from the
-# `robot`-only options to the options shared with `rebot`. They stay `robot`-only here,
-# because everything in `CommonOptions` is passed to `rebot` too and `rebot` of
-# Robot Framework < 7.5 does not know them.
+# `robot`-only options to the options shared with `rebot`. They are kept out of
+# `CommonOptions` here, because everything in there is passed to `rebot` too and `rebot`
+# of Robot Framework < 7.5 does not know them; `RobotOptions` and `RebotOptions` each
+# get their own copy, with the tool's own help text.
 ROBOT_ONLY_OPTIONS = ("ConsoleType", "ConsoleTypeQuiet")
 
 all_robot_options: Dict[str, Any] = {**RobotSettings._cli_opts, **RobotSettings._extra_cli_opts}
@@ -490,7 +510,11 @@ output.append("")
 extra_cmd_options = generate(
     output,
     REBOT_USAGE,
-    RebotSettings._extra_cli_opts,
+    {
+        **RebotSettings._extra_cli_opts,
+        # the console options of `rebot` exist since Robot Framework 7.5
+        **{k: RebotSettings._cli_opts[k] for k in ROBOT_ONLY_OPTIONS if k in RebotSettings._cli_opts},
+    },
     None,
     extra=False,
     tool="rebot",

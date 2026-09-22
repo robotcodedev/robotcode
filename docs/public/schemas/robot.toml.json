@@ -1094,6 +1094,36 @@
       "description": "Profile for _rebot_ command.",
       "markdownDescription": "Profile for _rebot_ command.",
       "properties": {
+        "console": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "enum": [
+                "verbose",
+                "quiet",
+                "none"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "How to report on the console.\nBuilt-in consoles:\n\n**verbose:** show output file paths (default)\n\n**quiet:** no output except for errors/warnings\n\n**none:** no output whatsoever\nOther values are interpreted as a custom\nconsole class or module. Argument format is\nthe same as with --listener.\n\nExamples:\n\n```toml\nconsole = \"quiet\"\n```\n\n```toml\n# custom console logger class or module\nconsole = \"path/to/Console.py:arg\"\n```\n\ncorresponds to the `--console console` option of _rebot_\n",
+          "examples": [
+            "console = \"quiet\"",
+            "# custom console logger class or module\nconsole = \"path/to/Console.py:arg\""
+          ],
+          "markdownDescription": "How to report on the console.\nBuilt-in consoles:\n\n**verbose:** show output file paths (default)\n\n**quiet:** no output except for errors/warnings\n\n**none:** no output whatsoever\nOther values are interpreted as a custom\nconsole class or module. Argument format is\nthe same as with --listener.\n\nExamples:\n\n```toml\nconsole = \"quiet\"\n```\n\n```toml\n# custom console logger class or module\nconsole = \"path/to/Console.py:arg\"\n```\n\ncorresponds to the `--console console` option of _rebot_\n",
+          "title": "Console",
+          "x-taplo": {
+            "links": {
+              "key": "https://robotcode.io/03_reference/config#rebot-console"
+            }
+          }
+        },
         "console-colors": {
           "anyOf": [
             {
@@ -2364,6 +2394,35 @@
           "x-taplo": {
             "links": {
               "key": "https://robotcode.io/03_reference/config#rebot-python-path"
+            }
+          }
+        },
+        "quiet": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "enum": [
+                "on",
+                "off",
+                "default"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Shortcut for `--console quiet`.\n\nExamples:\n\n```toml\nquiet = true\n```\n\ncorresponds to the `--quiet` option of _rebot_\n",
+          "examples": [
+            "quiet = true"
+          ],
+          "markdownDescription": "Shortcut for `--console quiet`.\n\nExamples:\n\n```toml\nquiet = true\n```\n\ncorresponds to the `--quiet` option of _rebot_\n",
+          "title": "Quiet",
+          "x-taplo": {
+            "links": {
+              "key": "https://robotcode.io/03_reference/config#rebot-quiet"
             }
           }
         },

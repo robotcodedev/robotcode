@@ -27,7 +27,7 @@ class RebotEx(Rebot):
             line_end = "\n"
             raise Information(
                 "Dry run, not executing any commands. "
-                f"Would execute libdoc with the following options and arguments:\n"
+                f"Would execute rebot with the following options and arguments:\n"
                 f"{line_end.join((*(f'{k} = {v!r}' for k, v in options.items()), *arguments))}"
             )
 
@@ -86,7 +86,12 @@ def rebot(app: Application, robot_options_and_args: Tuple[str, ...]) -> None:
         if rebot_options is None:
             rebot_options = RebotProfile()
 
+        # The top-level `console` and `quiet` are `robot` options, only the ones of the `[rebot]`
+        # section apply to `rebot` (Robot Framework itself does not carry them over either, see
+        # `RobotSettings.get_rebot_settings`).
+        console, quiet = rebot_options.console, rebot_options.quiet
         rebot_options.add_options(profile)
+        rebot_options.console, rebot_options.quiet = console, quiet
 
         try:
             options = rebot_options.build_command_line()

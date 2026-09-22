@@ -2294,6 +2294,36 @@ class RobotExtendOptions(RobotBaseOptions):
 class RebotOptions(RobotBaseOptions):
     """Options for _rebot_ command."""
 
+    console: Optional[Union[str, Literal["verbose", "quiet", "none"]]] = field(
+        description="""\
+            How to report on the console.
+            Built-in consoles:
+
+            **verbose:** show output file paths (default)
+
+            **quiet:** no output except for errors/warnings
+
+            **none:** no output whatsoever
+            Other values are interpreted as a custom
+            console class or module. Argument format is
+            the same as with --listener.
+
+            Examples:
+
+            ```toml
+            console = "quiet"
+            ```
+
+            ```toml
+            # custom console logger class or module
+            console = "path/to/Console.py:arg"
+            ```
+
+            corresponds to the `--console console` option of _rebot_
+            """,
+        robot_name="console",
+        robot_priority=500,
+    )
     end_time: Optional[Union[str, StringExpression]] = field(
         description="""\
             Same as --starttime but for end time. If both options
@@ -2396,6 +2426,22 @@ class RebotOptions(RobotBaseOptions):
         robot_priority=500,
         robot_is_flag=True,
         alias="process-empty-suite",
+    )
+    quiet: Union[bool, Flag, None] = field(
+        description="""\
+            Shortcut for `--console quiet`.
+
+            Examples:
+
+            ```toml
+            quiet = true
+            ```
+
+            corresponds to the `--quiet` option of _rebot_
+            """,
+        robot_name="quiet",
+        robot_priority=500,
+        robot_is_flag=True,
     )
     start_time: Optional[Union[str, StringExpression]] = field(
         description="""\

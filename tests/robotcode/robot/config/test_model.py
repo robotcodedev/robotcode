@@ -102,8 +102,32 @@ def test_json_schema_does_not_list_skipped_as_console_value() -> None:
         console = schema["definitions"][owner]["properties"]["console"]
         assert {"type": "string"} in console["anyOf"]
         assert "skipped" not in json.dumps(console["anyOf"])
-    for owner in ("RebotProfile",):
-        assert "console" not in schema["definitions"][owner]["properties"]
+    # `rebot --console` has no `dotted` console
+    console = schema["definitions"]["RebotProfile"]["properties"]["console"]
+    assert {"type": "string"} in console["anyOf"]
+    assert {"enum": ["verbose", "quiet", "none"]} in console["anyOf"]
+    assert "quiet" in schema["definitions"]["RebotProfile"]["properties"]
+
+
+@pytest.mark.parametrize("value", ["verbose", "quiet", "none", "MyConsole"])
+def test_rebot_console_accepts_builtin_names_and_custom_consoles(value: str) -> None:
+    model = from_dict({"rebot": {"console": value}}, RobotConfig)
+
+    assert model.rebot is not None
+    assert model.rebot.console == value
+    assert model.rebot.build_command_line() == ["--console", value]
+
+
+def test_rebot_quiet_builds_the_flag() -> None:
+    model = from_dict({"rebot": {"quiet": True}}, RobotConfig)
+
+    assert model.rebot is not None
+    assert model.rebot.build_command_line() == ["--quiet"]
+
+
+def test_rebot_console_rejects_non_strings() -> None:
+    with pytest.raises(NamedTypeError):
+        from_dict({"rebot": {"console": 1}}, RobotConfig)
 
 
 @pytest.mark.parametrize(

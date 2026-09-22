@@ -374,3 +374,19 @@ def test_type_that_wants_alist_should_throw_an_error() -> None:
             """
     with pytest.raises(TypeError, match=r".*Value '.*' must be of type.*"):
         load_robot_config_from_robot_toml_str(data)
+
+
+def test_rebot_options_are_read_from_the_rebot_section() -> None:
+    data = """\
+        console = "dotted"
+
+        [rebot]
+        console = "quiet"
+        quiet = true
+    """
+    config = load_robot_config_from_robot_toml_str(data)
+
+    assert config.console == "dotted"
+    assert config.rebot is not None
+    assert config.rebot.console == "quiet"
+    assert config.rebot.quiet is True
