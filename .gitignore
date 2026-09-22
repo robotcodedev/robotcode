@@ -339,7 +339,7 @@ bundled/libs
 # .agents
 .agents/
 skills-lock.json
-.claude
+#.claude
 
 # sarif files
 /**/*.sarif.json
