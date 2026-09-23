@@ -128,6 +128,8 @@ class NamespaceAnalyzer(Visitor):
 
         self._current_testcase_or_keyword_name: Optional[str] = None
         self._current_keyword_doc: Optional[KeywordDoc] = None
+        self._in_keyword = False
+        self._in_testcase = False
         self._test_template: Optional[TestTemplate] = None
         self._template: Optional[Template] = None
         self._node_stack: List[ast.AST] = []
@@ -1230,6 +1232,7 @@ class NamespaceAnalyzer(Visitor):
             )
 
         self._current_testcase_or_keyword_name = node.name
+        self._in_testcase = True
         old_variables = self._variables
         self._variables = self._variables.copy()
         self._end_block_handlers = []
@@ -1245,6 +1248,7 @@ class NamespaceAnalyzer(Visitor):
             self._end_block_handlers = None
             self._variables = old_variables
             self._current_testcase_or_keyword_name = None
+            self._in_testcase = False
             self._template = None
 
     def visit_TestCaseName(self, node: TestCaseName) -> None:  # noqa: N802
@@ -1295,6 +1299,7 @@ class NamespaceAnalyzer(Visitor):
             )
 
         self._current_testcase_or_keyword_name = node.name
+        self._in_keyword = True
         old_variables = self._variables
         self._variables = self._variables.copy()
         self._end_block_handlers = []
@@ -1317,6 +1322,7 @@ class NamespaceAnalyzer(Visitor):
             self._variables = old_variables
             self._current_testcase_or_keyword_name = None
             self._current_keyword_doc = None
+            self._in_keyword = False
 
     EMBEDDED_ARGUMENTS_MATCHER = re.compile("([^:]+): ([^:]+)(:(.*))?")
 
@@ -1748,7 +1754,7 @@ class NamespaceAnalyzer(Visitor):
         if hasattr(node, "name") and node.name:
             name_token = node.get_token(Token.NAME)
             if name_token is not None:
-                if any(isinstance(n, TestCase) for n in self._node_stack):
+                if self._in_testcase:
                     refs = self._testcase_metadata_references
                 else:
                     refs = self._metadata_references
@@ -1766,7 +1772,7 @@ class NamespaceAnalyzer(Visitor):
 
     def visit_Tags(self, node: Statement) -> None:  # noqa: N802
         self._visit_settings_statement(node, DiagnosticSeverity.HINT)
-        if any(isinstance(n, Keyword) for n in self._node_stack):
+        if self._in_keyword:
             self._collect_tag_references(node, self._keyword_tag_references)
         else:
             self._collect_tag_references(node, self._testcase_tag_references)

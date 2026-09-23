@@ -52,6 +52,7 @@ from robot.parsing.model.statements import (
     KeywordCall,
     KeywordName,
     LibraryImport,
+    Metadata,
     ResourceImport,
     Statement,
     Template,
@@ -260,6 +261,8 @@ class SemanticAnalyzer(Visitor):
 
         self._current_testcase_or_keyword_name: Optional[str] = None
         self._current_keyword_doc: Optional[KeywordDoc] = None
+        self._in_keyword = False
+        self._in_testcase = False
         self._test_template: Optional[TestTemplate] = None
         self._template: Optional[Template] = None
         self._node_stack: List[ast.AST] = []
@@ -2832,6 +2835,7 @@ class SemanticAnalyzer(Visitor):
             )
 
         self._current_testcase_or_keyword_name = node.name
+        self._in_testcase = True
         old_variables = self._variables
         self._variables = self._variables.copy()
         self._end_block_handlers = []
@@ -2884,6 +2888,7 @@ class SemanticAnalyzer(Visitor):
             self._end_block_handlers = None
             self._variables = old_variables
             self._current_testcase_or_keyword_name = None
+            self._in_testcase = False
             self._template = None
             self._current_definition = old_definition
             self._current_definition_block = old_definition_block
@@ -2936,6 +2941,7 @@ class SemanticAnalyzer(Visitor):
             )
 
         self._current_testcase_or_keyword_name = node.name
+        self._in_keyword = True
         old_variables = self._variables
         self._variables = self._variables.copy()
         self._end_block_handlers = []
@@ -2992,6 +2998,7 @@ class SemanticAnalyzer(Visitor):
             self._variables = old_variables
             self._current_testcase_or_keyword_name = None
             self._current_keyword_doc = None
+            self._in_keyword = False
             self._current_definition = old_definition
             self._current_definition_block = old_definition_block
 
@@ -3702,14 +3709,12 @@ class SemanticAnalyzer(Visitor):
     def visit_DocumentationOrMetadata(self, node: Statement) -> None:  # noqa: N802
         self._visit_settings_statement(node, DiagnosticSeverity.HINT)
 
-        # Distinguish Metadata from Documentation by class name (Metadata is a
-        # subclass of DocumentationOrMetadata that adds a `name` attribute).
-        is_metadata = type(node).__name__ == "Metadata"
+        is_metadata = isinstance(node, Metadata)
 
-        if is_metadata and hasattr(node, "name") and node.name:
+        if is_metadata and node.name:
             name_token = node.get_token(Token.NAME)
             if name_token is not None:
-                if any(isinstance(n, TestCase) for n in self._node_stack):
+                if self._in_testcase:
                     refs = self._testcase_metadata_references
                 else:
                     refs = self._metadata_references
@@ -3768,7 +3773,7 @@ class SemanticAnalyzer(Visitor):
 
     def visit_Tags(self, node: Statement) -> None:  # noqa: N802
         self._visit_settings_statement(node, DiagnosticSeverity.HINT)
-        if any(isinstance(n, Keyword) for n in self._node_stack):
+        if self._in_keyword:
             self._collect_tag_references(node, self._keyword_tag_references)
         else:
             self._collect_tag_references(node, self._testcase_tag_references)
