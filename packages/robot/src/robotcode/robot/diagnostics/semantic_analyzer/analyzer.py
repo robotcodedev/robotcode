@@ -46,6 +46,7 @@ from robot.parsing.model.statements import (
     Break,
     Comment,
     Continue,
+    Documentation,
     EmptyLine,
     End,
     Fixture,
@@ -105,6 +106,7 @@ from ...utils.variables import (
 )
 from ...utils.visitor import Visitor
 from ..analyzer_result import AnalyzerResult
+from ..diagnostic_rules import tags_row_without_empty_row
 from ..entities import (
     ArgumentDefinition,
     BuiltInVariableDefinition,
@@ -3720,6 +3722,19 @@ class SemanticAnalyzer(Visitor):
                     refs = self._metadata_references
                 # metadata names are case, space and underscore insensitive in Robot Framework
                 refs[normalize_metadata_name(node.name)].add(Location(self._document_uri, range_from_token(name_token)))
+
+        # Robot Framework 7.5 warns when a `Tags:` section of a keyword's documentation is not preceded by an empty row
+        if RF_VERSION >= (7, 5) and self._in_keyword and isinstance(node, Documentation):
+            tags_row = tags_row_without_empty_row(node)
+            if tags_row:
+                self._append_diagnostics(
+                    range=Range(start=range_from_token(tags_row[0]).start, end=range_from_token(tags_row[-1]).end),
+                    message=f"Invalid documentation in '{self._current_testcase_or_keyword_name}': "
+                    "Not having an empty row before 'Tags:' is deprecated.",
+                    severity=DiagnosticSeverity.WARNING,
+                    tags=[DiagnosticTag.DEPRECATED],
+                    code=Error.TAGS_WITHOUT_EMPTY_ROW,
+                )
 
         stmt = SettingStatement(
             kind=NodeKind.SETTING_METADATA if is_metadata else NodeKind.SETTING_DOCUMENTATION,

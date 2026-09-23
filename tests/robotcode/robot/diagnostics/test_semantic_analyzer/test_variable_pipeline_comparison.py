@@ -392,6 +392,19 @@ Metadata Test
     [Metadata]    Issue    4409
     No Operation
 """,
+    "tags_without_empty_row": """\
+*** Keywords ***
+Legacy Layout
+    [Documentation]    Does something.
+    ...    Tags: a, b
+    No Operation
+
+Correct Layout
+    [Documentation]    Does something.
+    ...
+    ...    Tags: a, b
+    No Operation
+""",
     "metadata_spellings": """\
 *** Settings ***
 Metadata    Owner Team    core

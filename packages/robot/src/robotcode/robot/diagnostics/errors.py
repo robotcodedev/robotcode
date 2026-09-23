@@ -32,6 +32,7 @@ class Error:
     DEPRECATED_HYPHEN_TAG = "DeprecatedHyphenTag"
     DEPRECATED_RETURN_SETTING = "DeprecatedReturnSetting"
     DEPRECATED_FORCE_TAG = "DeprecatedForceTag"
+    TAGS_WITHOUT_EMPTY_ROW = "TagsWithoutEmptyRow"
     IMPORT_REQUIRES_VALUE = "ImportRequiresValue"
     KEYWORD_ERROR = "KeywordError"
     MULTIPLE_KEYWORDS = "MultipleKeywords"
