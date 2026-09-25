@@ -479,7 +479,7 @@ def repl(
     epilog="Use `-- --help` to see `robot` help.",
 )
 @add_options(*REPL_BASE_OPTIONS)
-@add_options(*(ROBOT_OPTIONS - ROBOT_VERSION_OPTIONS))
+@add_options(*(option for option in ROBOT_OPTIONS if option not in ROBOT_VERSION_OPTIONS))
 @add_options(*DEBUG_OPTIONS)
 @click.option(
     "--stop-on-entry",

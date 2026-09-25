@@ -1095,9 +1095,9 @@ robotcode discover all [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
    Show the metadata of tests and tasks.  [default: show-metadata]
 
 
-- `--version`
+- `-bl, --by-longname TEXT *`
 
-   Show the version and exit.
+   Select tests/tasks or suites by longname.
 
 
 - `-ebl, --exclude-by-longname TEXT *`
@@ -1105,9 +1105,9 @@ robotcode discover all [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
    Excludes tests/tasks or suites by longname.
 
 
-- `-bl, --by-longname TEXT *`
+- `--version`
 
-   Select tests/tasks or suites by longname.
+   Show the version and exit.
 
 
 - `--search TEXT`
@@ -1214,9 +1214,9 @@ robotcode discover suites [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
 
 
 **Options:**
-- `--version`
+- `-bl, --by-longname TEXT *`
 
-   Show the version and exit.
+   Select tests/tasks or suites by longname.
 
 
 - `-ebl, --exclude-by-longname TEXT *`
@@ -1224,9 +1224,9 @@ robotcode discover suites [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
    Excludes tests/tasks or suites by longname.
 
 
-- `-bl, --by-longname TEXT *`
+- `--version`
 
-   Select tests/tasks or suites by longname.
+   Show the version and exit.
 
 
 - `--search TEXT`
@@ -1296,9 +1296,9 @@ robotcode discover tags [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
    Show full paths instead of relative.  [default: no-full-paths]
 
 
-- `--version`
+- `-bl, --by-longname TEXT *`
 
-   Show the version and exit.
+   Select tests/tasks or suites by longname.
 
 
 - `-ebl, --exclude-by-longname TEXT *`
@@ -1306,9 +1306,9 @@ robotcode discover tags [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
    Excludes tests/tasks or suites by longname.
 
 
-- `-bl, --by-longname TEXT *`
+- `--version`
 
-   Select tests/tasks or suites by longname.
+   Show the version and exit.
 
 
 - `--search TEXT`
@@ -1368,9 +1368,9 @@ robotcode discover tasks [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
    Show full paths instead of relative.  [default: no-full-paths]
 
 
-- `--version`
+- `-bl, --by-longname TEXT *`
 
-   Show the version and exit.
+   Select tests/tasks or suites by longname.
 
 
 - `-ebl, --exclude-by-longname TEXT *`
@@ -1378,9 +1378,9 @@ robotcode discover tasks [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
    Excludes tests/tasks or suites by longname.
 
 
-- `-bl, --by-longname TEXT *`
+- `--version`
 
-   Select tests/tasks or suites by longname.
+   Show the version and exit.
 
 
 - `--search TEXT`
@@ -1440,9 +1440,9 @@ robotcode discover tests [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
    Show full paths instead of relative.  [default: no-full-paths]
 
 
-- `--version`
+- `-bl, --by-longname TEXT *`
 
-   Show the version and exit.
+   Select tests/tasks or suites by longname.
 
 
 - `-ebl, --exclude-by-longname TEXT *`
@@ -1450,9 +1450,9 @@ robotcode discover tests [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
    Excludes tests/tasks or suites by longname.
 
 
-- `-bl, --by-longname TEXT *`
+- `--version`
 
-   Select tests/tasks or suites by longname.
+   Show the version and exit.
 
 
 - `--search TEXT`
@@ -2566,9 +2566,9 @@ robotcode robot [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
 
 
 **Options:**
-- `--version`
+- `-bl, --by-longname TEXT *`
 
-   Show the version and exit.
+   Select tests/tasks or suites by longname.
 
 
 - `-ebl, --exclude-by-longname TEXT *`
@@ -2576,9 +2576,9 @@ robotcode robot [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
    Excludes tests/tasks or suites by longname.
 
 
-- `-bl, --by-longname TEXT *`
+- `--version`
 
-   Select tests/tasks or suites by longname.
+   Show the version and exit.
 
 
 - `--help`
@@ -2621,14 +2621,14 @@ robotcode robot-debug [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
    Shorthand for `--backend=plain`. Disables all prompt enhancements — completion, syntax highlighting, candidate popup, auto-suggest, history file. The prompt becomes a bare `input()` call. Recommended for AI-agent invocations, automation pipelines, and any context where ANSI escapes or completion popups would interfere with stdin/stdout capture. Conflicts with `--backend=<other>`.
 
 
-- `-ebl, --exclude-by-longname TEXT *`
-
-   Excludes tests/tasks or suites by longname.
-
-
 - `-bl, --by-longname TEXT *`
 
    Select tests/tasks or suites by longname.
+
+
+- `-ebl, --exclude-by-longname TEXT *`
+
+   Excludes tests/tasks or suites by longname.
 
 
 - `--debugger-attached / --no-debugger-attached`
