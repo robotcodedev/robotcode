@@ -79,13 +79,15 @@ def generate(command: click.Command, depth: int = 2, parent_ctx: Optional[click.
         yield "**Commands:**"
         yield ""
 
-        sub_commands = command.list_commands(ctx)
-        if sub_commands:
-            for sub_command in sub_commands:
-                cmd = command.get_command(ctx, sub_command)
-                if cmd is None:
-                    continue
+        # like `--help`, leave out hidden commands
+        sub_commands: List[tuple[str, click.Command]] = []
+        for sub_command in command.list_commands(ctx):
+            cmd = command.get_command(ctx, sub_command)
+            if cmd is not None and not cmd.hidden:
+                sub_commands.append((sub_command, cmd))
 
+        if sub_commands:
+            for sub_command, cmd in sub_commands:
                 yield (f"- [`{sub_command}`](#{sub_command})")
                 yield ""
                 yield f"   {cmd.get_short_help_str(5000)}"
@@ -95,15 +97,7 @@ def generate(command: click.Command, depth: int = 2, parent_ctx: Optional[click.
 
         if isinstance(command, AliasedGroup):
             aliased_commands: List[tuple[str, AliasedCommand]] = []
-            for sub_command in sub_commands:
-                cmd = command.get_command(ctx, sub_command)
-
-                if cmd is None:
-                    continue
-
-                if cmd.hidden:
-                    continue
-
+            for sub_command, cmd in sub_commands:
                 if isinstance(cmd, AliasedCommand) and cmd.aliases:
                     sub_command = f"{', '.join(cmd.aliases)}"
                     aliased_commands.append((sub_command, cmd))
@@ -121,11 +115,7 @@ def generate(command: click.Command, depth: int = 2, parent_ctx: Optional[click.
                 yield ""
 
         if sub_commands:
-            for sub_command in sub_commands:
-                cmd = command.get_command(ctx, sub_command)
-                if cmd is None:
-                    continue
-
+            for _, cmd in sub_commands:
                 yield from generate(cmd, depth + 1, ctx)
 
             yield ""
