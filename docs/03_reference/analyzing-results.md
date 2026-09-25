@@ -81,10 +81,10 @@ If none of those produce a file, the command exits with a clear error (`Result f
 Both `output.xml` and `output.json` are supported; `robotcode results` picks the right parser automatically based on the file. (`output.json` is the RF 7.0+ opt-in format you get by passing `--output something.json` to `robotcode robot` or setting `output_format = "json"` in your profile.)
 
 ::: warning Result files with test metadata need Robot Framework 7.5 to read
-`robotcode results` reads result files with the Robot Framework version installed in your environment. A result file written by Robot Framework 7.5 or newer that contains test-level `[Metadata]` cannot be read by Robot Framework 7.4 or older — neither by `robotcode results` nor by `rebot`. The command then fails with `failed to parse <path>: … Incompatible child element 'meta' for 'test'.` — for an `output.json` read with Robot Framework 7.2–7.4 the underlying error is `… 'robot.result.TestCase' object does not have attribute 'metadata'` instead. In both cases `robotcode results` adds a hint that names the cause and the installed version:
+`robotcode results` reads result files with the Robot Framework version installed in your environment. A result file written by Robot Framework 7.5 or newer that contains test-level `[Metadata]` cannot be read by Robot Framework 7.4 or older — neither by `robotcode results` nor by `rebot`. The command then fails with `failed to parse <path>: … Incompatible child element 'meta' for 'test'.` — for an `output.json` read with Robot Framework 7.2–7.4 the underlying error is `… 'robot.result.TestCase' object does not have attribute 'metadata'` instead. In both cases `robotcode results` adds a hint that names the cause:
 
 ```text
-The file was written by Robot Framework 7.5 or newer and contains test metadata; reading it requires Robot Framework 7.5+, got 7.4.2.
+The file was written by Robot Framework 7.5 or newer and contains test metadata; reading it requires Robot Framework 7.5+.
 ```
 
 Analyze such files in an environment with Robot Framework 7.5 or newer.

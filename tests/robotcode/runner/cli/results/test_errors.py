@@ -22,7 +22,7 @@ _TEST_METADATA_JSON = STATIC_DIR / "rf75_test_metadata.json"
 
 _TEST_METADATA_HINT = (
     "The file was written by Robot Framework 7.5 or newer and contains test metadata; "
-    "reading it requires Robot Framework 7.5+"
+    "reading it requires Robot Framework 7.5+."
 )
 
 
@@ -84,6 +84,22 @@ def test_invalid_search_regex_is_rejected_uniformly(
     )
     assert result.returncode != 0
     assert "search-regex" in result.stderr.lower() or "invalid" in result.stderr.lower()
+
+
+# ---------------------------------------------------------------------------
+# JSON result files on Robot Framework older than 7.0
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.skipif(RF_VERSION >= (7, 0), reason="Robot Framework 7.0+ reads JSON result files")
+def test_json_on_old_robot_names_required_version(robotcode_cli: CliRunner, tmp_path: Path) -> None:
+    output = tmp_path / "output.json"
+    output.write_text("{}", encoding="utf-8")
+    result = robotcode_cli(["results", "show", "--output", str(output)], expect_ok=False)
+    assert result.returncode != 0
+    combined = result.stderr + result.stdout
+    assert "Reading JSON result files requires Robot Framework 7.0+ (file: " in combined
+    assert output.name in combined
 
 
 # ---------------------------------------------------------------------------

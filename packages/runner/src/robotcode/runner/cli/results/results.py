@@ -51,7 +51,7 @@ from robotcode.plugin.click_helper.types import add_options
 from robotcode.robot.config.loader import load_robot_config_from_path
 from robotcode.robot.config.model import RobotBaseProfile
 from robotcode.robot.config.utils import get_config_files
-from robotcode.robot.utils import RF_VERSION, get_robot_version_str
+from robotcode.robot.utils import RF_VERSION
 
 # RF 7+ body-item classes — visitor methods overriding `end_var`/`end_error`/
 # `end_group` need a type annotation that resolves on every matrix RF. The
@@ -1279,16 +1279,13 @@ def _test_metadata_hint(error: str) -> str:
         return ""
     return (
         "\nThe file was written by Robot Framework 7.5 or newer and contains test metadata; "
-        f"reading it requires Robot Framework 7.5+, got {get_robot_version_str()}."
+        "reading it requires Robot Framework 7.5+."
     )
 
 
 def _load_execution_result(path: Path) -> Result:
     if path.suffix.lower() == ".json" and RF_VERSION < (7, 0):
-        raise click.ClickException(
-            f"Reading JSON result files requires Robot Framework 7.0+; "
-            f"got {'.'.join(str(v) for v in RF_VERSION)} (file: {path})."
-        )
+        raise click.ClickException(f"Reading JSON result files requires Robot Framework 7.0+ (file: {path}).")
     try:
         from robot.api import ExecutionResult
     except ImportError as e:
