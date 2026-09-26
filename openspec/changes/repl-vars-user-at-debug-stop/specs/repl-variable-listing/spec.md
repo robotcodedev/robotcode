@@ -16,7 +16,7 @@ Defines what the `.vars` dot-command of `robotcode repl` and `robotcode robot-de
 
 ### Requirement: The user option hides built-in variables everywhere
 
-`.vars --user` SHALL hide Robot Framework's built-in variables — those named exactly like, or starting with, one of Robot Framework's reserved prefixes followed by `_` or a space (`SUITE`, `TEST`, `TASK`, `PREV`, `OUTPUT`, `LOG`, `REPORT`, `DEBUG_FILE`, `EXECDIR`, `TEMPDIR`, `CURDIR`, `OPTIONS`, `KEYWORD`, `SPACE`, …), and the constant built-ins `${/}`, `${:}`, `${\n}`, `${True}`, `${False}`, `${None}` and `${null}` — both at the normal prompt and in every scope of the listing at a debugger stop. Variables that merely start with a reserved word without the separator (`${TESTDATA}`) and the REPL's own result variable `${_}` SHALL be kept.
+`.vars --user` SHALL hide exactly the variables Robot Framework sets itself — `${TEMPDIR}`, `${EXECDIR}`, `&{OPTIONS}`, `${/}`, `${:}`, `${\n}`, `${SPACE}`, `${True}`, `${False}`, `${None}`, `${null}`, `${OUTPUT_DIR}`, `${OUTPUT_FILE}`, `${REPORT_FILE}`, `${LOG_FILE}`, `${DEBUG_FILE}`, `${LOG_LEVEL}`, `${PREV_TEST_NAME}`, `${PREV_TEST_STATUS}`, `${PREV_TEST_MESSAGE}`, `${SUITE_NAME}`, `${SUITE_SOURCE}`, `${SUITE_DOCUMENTATION}`, `&{SUITE_METADATA}`, `${SUITE_STATUS}`, `${SUITE_MESSAGE}`, `${TEST_NAME}`, `@{TEST_TAGS}`, `${TEST_DOCUMENTATION}`, `&{TEST_METADATA}`, `${TEST_STATUS}`, `${TEST_MESSAGE}`, `${KEYWORD_STATUS}` and `${KEYWORD_MESSAGE}` — and the REPL's own result variable `${_}`, with names compared the way Robot Framework compares variable names (ignoring case, spaces and underscores), both at the normal prompt and in every scope of the listing at a debugger stop. Every other variable SHALL be kept, including user variables whose names start like a built-in one (`${SUITE_VAR}`, `${TEST_USER}`, `${TESTDATA}`).
 
 #### Scenario: User option at a debugger stop
 - **WHEN** the run is stopped in a test with `${local}` assigned, the suite defines `${SUITE_VAR}`, and `.vars --user` is entered
@@ -32,5 +32,9 @@ Defines what the `.vars` dot-command of `robotcode repl` and `robotcode robot-de
 - **THEN** `${x}` is listed and `${/}`, `${True}`, `${None}` and `${SPACE}` are not
 
 #### Scenario: Look-alike names are kept
-- **WHEN** the test assigns `${TESTDATA}` and `.vars --user` is entered at a stop
-- **THEN** `${TESTDATA}` is listed
+- **WHEN** the test assigns `${TESTDATA}`, the suite defines `${SUITE_VAR}` and `.vars --user` is entered at a stop
+- **THEN** `${TESTDATA}` and `${SUITE_VAR}` are listed
+
+#### Scenario: Result variable is hidden
+- **WHEN** a keyword has been run at the prompt or at a stop, so the REPL has set `${_}`, and `.vars --user` is entered
+- **THEN** `${_}` is not listed, and `.vars` without the flag lists it
