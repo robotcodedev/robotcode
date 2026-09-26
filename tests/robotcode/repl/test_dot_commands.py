@@ -194,6 +194,9 @@ def test_dispatch_help_accepts_leading_dot_in_arg() -> None:
     blob = "\n".join(app.paged)
     assert ".vars" in blob
     assert "--user" in blob
+    assert "result variable `${_}`" in blob
+    assert "At a debug stop it filters" in blob
+    assert "Has no effect at a" not in blob
 
 
 def test_dispatch_help_unknown_command_reports_error() -> None:
@@ -343,16 +346,30 @@ def test_vars_lists_all_variables_by_default(monkeypatch: pytest.MonkeyPatch) ->
 
 
 def test_vars_user_flag_filters_robot_internals(monkeypatch: pytest.MonkeyPatch) -> None:
-    _patch_context(
-        monkeypatch,
-        _fake_namespace(variables={"${MY_VAR}": "hello", "${SUITE_NAME}": "x", "${TEST_NAME}": "y"}),
-    )
+    # Only the names Robot Framework sets itself and the REPL's `${_}` are hidden, compared
+    # like Robot compares variable names; user variables that merely start like one are kept.
+    kept = ["${MY_VAR}", "${SUITE_VAR}", "${TEST_USER}", "${TESTDATA}"]
+    hidden = [
+        "${_}",
+        "${SUITE_NAME}",
+        "${TEST_NAME}",
+        "${suite source}",
+        "@{TEST_TAGS}",
+        "&{OPTIONS}",
+        "${SPACE}",
+        "${/}",
+        "${:}",
+        "${\\n}",
+        "${True}",
+        "${False}",
+        "${None}",
+        "${null}",
+    ]
+    _patch_context(monkeypatch, _fake_namespace(variables={name: "x" for name in kept + hidden}))
     app = _StubApp()
     _make_interp(app)._dispatch_dot_command(".vars --user")
-    blob = "\n".join(app.messages)
-    assert "${MY_VAR}" in blob
-    assert "${SUITE_NAME}" not in blob
-    assert "${TEST_NAME}" not in blob
+    listed = [line.split()[0] for line in app.messages]
+    assert listed == kept
 
 
 def test_vars_truncates_long_reprs(monkeypatch: pytest.MonkeyPatch) -> None:

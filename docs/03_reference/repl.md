@@ -245,7 +245,7 @@ Dot-prefixed commands (lines that start with `.<word>`) are handled by the REPL 
 | ----- | ------ |
 | `.help [cmd]` | Without an argument: list all dot-commands. With an argument: detailed help (usage, flags, examples) for that command — e.g. `.help save`. Opens in the doc viewer (see below). |
 | `.imports` | Show loaded libraries and resource files with their source path and keyword count. |
-| `.vars [--user]` | Variables in the current scope, name + truncated `repr` of the value. `--user` filters out Robot's internal variables (`${OUTPUT_DIR}`, `${SUITE_NAME}`, …). |
+| `.vars [--user]` | Variables in the current scope, name + truncated `repr` of the value. `--user` hides the variables Robot Framework sets itself (`${OUTPUT_DIR}`, `${SUITE_NAME}`, `${True}`, …) and the result variable `${_}`. |
 | `.kw [name-or-text]` | Keyword documentation in the doc viewer — signature, argument table (types + defaults), tags, docstring body. Same renderer the editor's hover uses. Bare `.kw` lists all loaded keywords; with non-matching text it lists keywords whose name contains it. |
 | `.doc <name>` | Full library or resource documentation in the doc viewer — version + scope, introduction (with the auto-linked Table of Contents), every keyword with its own signature + arguments + body. Only libraries and resources the current session has **imported** can be shown, addressed by their namespace name (for a library imported with `AS` / `WITH NAME`, the alias; for a resource, the file name without extension). |
 | `.history [N]` | Show the last N entries (default 20), numbered. Available on the prompt-toolkit backend; plain backend has no history. |

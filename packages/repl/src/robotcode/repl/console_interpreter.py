@@ -30,6 +30,7 @@ import click
 from robot import result, running
 from robot.running import Keyword
 from robot.running.context import EXECUTION_CONTEXTS
+from robot.utils import normalize
 
 from robotcode.plugin import Application
 from robotcode.robot.diagnostics.library_doc import (
@@ -123,36 +124,58 @@ def dot_command(name: str, *aliases: str, group: str = "Session") -> Callable[[F
     return decorator
 
 
-# Variables that Robot itself sets in every suite — filtered out by
-# `.vars --user` so the listing focuses on what the user assigned.
-# Robot's built-in variables, matched by exact name or a `<PREFIX>_` / `<PREFIX> `
-# boundary (see `_is_robot_internal`) so a user variable like `${TESTDATA}` is NOT
-# mistaken for an internal one just because it starts with `TEST`.
-_ROBOT_INTERNAL_PREFIXES = (
-    "CURDIR",
-    "DEBUG_FILE",
-    "EXECDIR",
-    "FAILED",
-    "KEYWORD",
-    "LOG",
-    "OPTIONS",
-    "OUTPUT",
-    "PASSED",
-    "PREV",
-    "REPORT",
-    "ROBOT",
-    "SPACE",
-    "SUITE",
-    "TASK",
-    "TEMPDIR",
-    "TEST",
-    "TIMEOUT",
+# The variables Robot Framework sets itself, normalized the way Robot compares
+# variable names (case, spaces and underscores ignored). `.vars --user` hides
+# them so the listing focuses on what the session or the suite defined.
+# `${\n}` is a backslash followed by `n`.
+_ROBOT_BUILTIN_VARIABLES = frozenset(
+    normalize(name, ignore="_")
+    for name in (
+        "/",
+        ":",
+        "\\n",
+        "SPACE",
+        "True",
+        "False",
+        "None",
+        "null",
+        "TEMPDIR",
+        "EXECDIR",
+        "OPTIONS",
+        "OUTPUT_DIR",
+        "OUTPUT_FILE",
+        "REPORT_FILE",
+        "LOG_FILE",
+        "DEBUG_FILE",
+        "LOG_LEVEL",
+        "PREV_TEST_NAME",
+        "PREV_TEST_STATUS",
+        "PREV_TEST_MESSAGE",
+        "SUITE_NAME",
+        "SUITE_SOURCE",
+        "SUITE_DOCUMENTATION",
+        "SUITE_METADATA",
+        "SUITE_STATUS",
+        "SUITE_MESSAGE",
+        "TEST_NAME",
+        "TEST_TAGS",
+        "TEST_DOCUMENTATION",
+        "TEST_METADATA",
+        "TEST_STATUS",
+        "TEST_MESSAGE",
+        "KEYWORD_STATUS",
+        "KEYWORD_MESSAGE",
+    )
 )
 
 
-def _is_robot_internal(bare: str) -> bool:
-    """Whether a bare variable name is one of Robot's built-ins (boundary match)."""
-    return any(bare == p or bare.startswith((p + "_", p + " ")) for p in _ROBOT_INTERNAL_PREFIXES)
+def _is_robot_internal(name: str) -> bool:
+    """Whether a variable such as `${SUITE_NAME}` is one that Robot Framework sets itself,
+    or the REPL's result variable `${_}` (see `set_last_result`)."""
+    bare = name[2:-1] if len(name) > 2 and name[0] in "$@&%" and name[1] == "{" and name[-1] == "}" else name
+    normalized = normalize(bare, ignore="_")
+    # `${_}` normalizes to an empty name.
+    return not normalized or normalized in _ROBOT_BUILTIN_VARIABLES
 
 
 # Destructive commands that must never be reachable via prefix abbreviation — only
@@ -993,28 +1016,26 @@ class ConsoleInterpreter(BaseInterpreter):
 
         Options:
           --user   Hide Robot's built-in variables (`${SUITE_NAME}`,
-                   `${OUTPUT_DIR}`, `${TEMPDIR}`, …) so the listing focuses
-                   on what the user assigned in the session. Has no effect at a
-                   debug stop, where variables are grouped by scope instead.
+                   `${OUTPUT_DIR}`, `${TEMPDIR}`, `${True}`, …) and the
+                   result variable `${_}` so the listing focuses on what the
+                   session or the suite defined. At a debug stop it filters
+                   every scope of the listing.
         """
         if self.app is None:
             return
+        only_user = "--user" in arg.split()
         if self._stop is not None:
-            self._show_frame_scopes()
+            self._show_frame_scopes(only_user)
             return
         ctx = EXECUTION_CONTEXTS.current
         if ctx is None:
             self.app.echo("(no active context)")
             return
-        only_user = "--user" in arg.split()
 
         rows: List[Tuple[str, str]] = []
         for decorated, value in ctx.variables.as_dict().items():
             name = str(decorated)
-            bare = name
-            if len(name) > 2 and name[0] in "$@&%" and name[1] == "{" and name[-1] == "}":
-                bare = name[2:-1]
-            if only_user and _is_robot_internal(bare):
+            if only_user and _is_robot_internal(name):
                 continue
             try:
                 rep = repr(value)
@@ -1031,7 +1052,7 @@ class ConsoleInterpreter(BaseInterpreter):
         for name, rep in rows:
             self.app.echo(f"  {name:<{name_w}}  {rep}")
 
-    def _show_frame_scopes(self) -> None:
+    def _show_frame_scopes(self, only_user: bool) -> None:
         """`.vars` at a debug stop — the selected frame's scopes, via the controller."""
         scopes = self._controller.get_scopes(self._selected_frame()) if self._controller is not None else []
         if not scopes:
@@ -1039,9 +1060,10 @@ class ConsoleInterpreter(BaseInterpreter):
             return
         for scope in scopes:
             self._echo(f"{scope.name}:")
-            if not scope.variables:
+            variables = [v for v in scope.variables if not (only_user and _is_robot_internal(v.name))]
+            if not variables:
                 self._echo("    (none)")
-            for var in scope.variables:
+            for var in variables:
                 self._echo(f"    {var.name} = {var.value}")
 
     @dot_command("kw")

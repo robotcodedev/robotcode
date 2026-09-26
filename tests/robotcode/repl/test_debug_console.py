@@ -190,6 +190,44 @@ def test_up_then_vars_shows_enclosing_keyword_locals() -> None:
     assert "${SUITE_VAR} = 'sv'" in text
 
 
+USER_VARS_SUITE = """\
+*** Variables ***
+${SUITE_VAR}    sv
+
+*** Test Cases ***
+T
+    ${local}=    Set Variable    value
+    ${TESTDATA}=    Set Variable    data
+    Log    ${local}
+"""
+
+
+def test_vars_user_hides_robot_variables_in_every_scope() -> None:
+    # `Evaluate` at the stop sets the REPL's result variable `${_}`, which is hidden too.
+    messages = _run_debug(
+        USER_VARS_SUITE, ["Evaluate    1 + 2", ".vars --user", ".continue"], keyword_breakpoints=["Log"]
+    )
+    # The whole listing, so a variable a new Robot Framework version sets itself shows up here.
+    assert messages[messages.index("Local:") :] == [
+        "Local:",
+        "    (none)",
+        "Test:",
+        "    ${local} = 'value'",
+        "    ${TESTDATA} = 'data'",
+        "Suite:",
+        "    ${SUITE_VAR} = 'sv'",
+        "Global:",
+        "    (none)",
+    ]
+
+
+def test_vars_without_user_lists_robot_variables_at_a_stop() -> None:
+    messages = _run_debug(USER_VARS_SUITE, ["Evaluate    1 + 2", ".vars", ".continue"], keyword_breakpoints=["Log"])
+    text = "\n".join(messages)
+    for name in ("${TEST_NAME}", "${SUITE_NAME}", "${OUTPUT_DIR}", "&{OPTIONS}", "${True}", "${_}"):
+        assert name in text
+
+
 def test_evaluate_runs_keyword_in_paused_context() -> None:
     messages = _run_debug(STEP_SUITE, ["Set Variable    42", ".continue"], stop_on_entry=True)
     assert "=> '42'" in messages
