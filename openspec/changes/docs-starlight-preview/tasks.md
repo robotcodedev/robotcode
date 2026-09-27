@@ -29,7 +29,7 @@
 ## 5. Preview workflow, CI and isolation
 
 - [x] 5.1 Write `docs-next/README.md`, the preview section in `CONTRIBUTING.md` and the `docs-next` entries in `AGENTS.md` (D10); verify that the commands they name work from a fresh clone on Node 22
-- [x] 5.2 Add `.github/workflows/docs-next.yml` (build only, on changes to `docs/**`, `docs-next/**`, `syntaxes/robotframework.tmLanguage.json` and the workflow itself, Node 22, `ASTRO_TELEMETRY_DISABLED=1`) (D10); verify by running its steps locally (`npm ci` and `npm run build` in `docs-next/`) and, once pushed by the maintainer, by a green run
+- [x] 5.2 Add `.github/workflows/docs-next.yml` (build only, on changes to `docs/**`, `docs-next/**`, `syntaxes/robotframework.tmLanguage.json` and the workflow itself, Node 26, `ASTRO_TELEMETRY_DISABLED=1`) (D10); verify by running its steps locally (`npm ci` and `npm run build` in `docs-next/`) and, once pushed by the maintainer, by a green run
 - [x] 5.3 Add `docs-next/**` to `paths-ignore` of `build-test-package-publish.yml`, `docs-next/` to `.vscodeignore` and `**/docs-next/` to the ignores of `eslint.config.mjs` (D10); verify that `npx @vscode/vsce ls` lists no file under `docs-next/` and that `npm run lint` does not lint `docs-next/`
 - [x] 5.4 Add the page-map step and a `npm run docs-next:build` check to the documentation tasks of `doc-cli` (7.1), `library-keyword-set-declaration` (5.1) and `library-index` (8.1) (D10); verify with `openspec validate` for each of the three changes
 
