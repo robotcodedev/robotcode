@@ -805,6 +805,7 @@ for (const name of HERO_PICTURES) {
 
 writeLlmsIndex();
 selfCheck();
+checkPageLinks();
 
 for (const w of warnings) console.warn(`convert: warning: ${w}`);
 console.log(
@@ -875,6 +876,19 @@ function selfCheck() {
   if (problems.length) {
     fail(problems, "Add a conversion rule to docs-next/scripts/convert.mjs or use syntax both sites support.");
   }
+}
+
+// The link check of the build reads only the docs collection, not the pages in src/pages/ (the not-found page).
+function checkPageLinks() {
+  const known = new Set([...pages.values(), ...index].map((p) => route(p.id)));
+  const dir = path.join(ROOT, "src/pages");
+  const problems = [];
+  for (const file of fs.readdirSync(dir)) {
+    for (const [, href] of fs.readFileSync(path.join(dir, file), "utf8").matchAll(/href="(\/[^"#?]*)/g)) {
+      if (!known.has(href)) problems.push(`src/pages/${file}: link to a page that does not exist: ${href}`);
+    }
+  }
+  if (problems.length) fail(problems);
 }
 
 function findFiles(dir) {
