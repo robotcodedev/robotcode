@@ -151,7 +151,7 @@
 
 ## 8. Documentation and agent skill
 
-- [ ] 8.1 Only if Q3 is confirmed as recommended: write `docs/03_reference/library-entry-points.md` for library authors with the content of D12, including `pyproject.toml` examples and that RobotCode ranks declared entries first in import completion. Link it from the `robotcode doc` page and add it to the list in `docs/03_reference/index.md`. Verify with `npm run docs:build`.
+- [ ] 8.1 Only if Q3 is confirmed as recommended: write `docs/03_reference/library-entry-points.md` for library authors with the content of D12, including `pyproject.toml` examples and that RobotCode ranks declared entries first in import completion. Link it from the `robotcode doc` page and add it to the list in `docs/03_reference/index.md`. Add the page to the page map of `docs-next/scripts/convert.mjs` (explains a setup with narrative, so `guides/library-entry-points`, label "Library Entry Points", order 150, a one-sentence description; see `docs-next/README.md`). Verify with `npm run docs:build` and `npm run docs-next:build`.
 - [ ] 8.2 Extend the `robotcode doc` page of doc-cli with a section on the listing without targets:
   - what the groups contain;
   - that nothing is imported;

@@ -32,7 +32,7 @@ The site SHALL serve the home page at `/` and every other page at a descriptive 
 
 ### Requirement: Top navigation on every page
 
-Every page, including the home page, SHALL show a navigation bar with the entries Home, News, Documentation, Support & Contribute, Q&A (a link to the Q&A category of the GitHub Discussions) and a version menu labelled with the current RobotCode version that links to the changelog and the contributing guide. The entry of the area the current page belongs to SHALL be marked as current. On narrow viewports all entries SHALL remain reachable through a compact menu.
+Every page, including the home page, SHALL show a navigation bar with the entries News, Documentation, Support & Contribute, Q&A (a link to the Q&A category of the GitHub Discussions) and a version menu labelled with the current RobotCode version that links to the changelog and the contributing guide. The entry of the area the current page belongs to SHALL be marked as current. On narrow viewports all entries SHALL remain reachable through a compact menu. The site title in the header SHALL link to the home page.
 
 #### Scenario: Current area
 - **WHEN** a reader opens `/reference/cli/`, `/guides/repl/` or `/getting-started/vscode/`
@@ -48,7 +48,11 @@ Every page, including the home page, SHALL show a navigation bar with the entrie
 
 #### Scenario: Narrow viewport
 - **WHEN** a page is shown 390 pixels wide
-- **THEN** a compact menu offers Home, News, Documentation, Support & Contribute, Q&A, Changelog and Contributing
+- **THEN** a compact menu offers News, Documentation, Support & Contribute, Q&A, Changelog and Contributing
+
+#### Scenario: Back to the home page
+- **WHEN** a reader selects the site title in the header of any page
+- **THEN** the home page is shown
 
 ### Requirement: Area sidebar
 
