@@ -19,6 +19,8 @@ const projects = [
     entryPoints: ["./vscode-client/extension"],
     format: "cjs",
     platform: "node",
+    // The extension runs in the Node.js of VS Code's Electron, not in the one that builds it.
+    target: "node22",
     outfile: "out/extension.js",
     external: ["vscode"],
   },
