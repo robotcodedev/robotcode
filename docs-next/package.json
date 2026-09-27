@@ -24,11 +24,6 @@
     "starlight-links-validator": "~0.26.0",
     "starlight-llms-txt": "~0.12.0"
   },
-  "overrides": {
-    "starlight-blog": {
-      "@astrojs/mdx": "^8.0.0"
-    }
-  },
   "allowScripts": {
     "esbuild@0.28.2": true
   }
