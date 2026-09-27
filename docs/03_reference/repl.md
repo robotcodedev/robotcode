@@ -491,7 +491,7 @@ The same debugger that powers [`robotcode robot-debug`](robot-debug.md) is avail
 - `--debugger-attached` attaches from the start.
 - Passing a pause trigger (`--break`, a `--break-on-*` flag) attaches automatically, so `robotcode repl --break "Submit Login"` just works.
 
-Detaching is non-destructive: your breakpoints and `.catch` exception filters (see [Exception breakpoints](robot-debug.md#exception-breakpoints)) stay configured, so `.debug on` resumes with the same setup.
+Detaching is non-destructive: your breakpoints and `.catch` exception filters (see [Exception breakpoints](robot-debug.md#debug-commands) in the debug commands) stay configured, so `.debug on` resumes with the same setup.
 
 Attaching also arms the default uncaught-failure break, so an attached session pauses on *any* uncaught failure (a typo, a `Fail`), not just your breakpoint — add `--no-break-on-exception` to keep only the explicit breakpoint.
 
