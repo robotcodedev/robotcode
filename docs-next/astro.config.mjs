@@ -25,11 +25,20 @@ const llmsIndex = fs.readFileSync(new URL("./.generated/llms-index.md", import.m
 
 export default defineConfig({
   site: "https://robotcode.io",
+  image: {
+    // Sharp counts the pixels of all frames of an animated GIF; the two 1920×1080 screencasts of the home page
+    // exceed its default limit and would be copied unoptimized.
+    service: { entrypoint: "astro/assets/services/sharp", config: { limitInputPixels: false } },
+  },
   markdown: {
     // No typographic replacements: `--include` must not become an en dash.
     processor: satteri({ features: { headingAttributes: true, smartPunctuation: false } }),
   },
   vite: {
+    // Starlight imports js-yaml 4 with a default import. Astro's prerender build keeps that import external, so
+    // it would load js-yaml 5 of scripts/convert.mjs from node_modules/ and fail; bundled, it keeps Starlight's own
+    // copy (the same problem Astro solves for neotraverse, withastro/astro#17508).
+    environments: { prerender: { resolve: { noExternal: ["js-yaml"] } } },
     build: {
       rolldownOptions: {
         onwarn(warning, warn) {
