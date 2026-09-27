@@ -29,7 +29,7 @@ The documentation site is to move from VitePress 1.6.4, whose 1.x line gets no f
 
 ## Impact
 
-- New `docs-next/`: `package.json` and `package-lock.json` (`astro`, `@astrojs/starlight`, `@astrojs/markdown-satteri`, `sharp`, `starlight-blog`, `starlight-links-validator`, `starlight-llms-txt`, `lite-youtube-embed`, `js-yaml`, `github-slugger`), `astro.config.mjs`, `src/content.config.ts`, `scripts/convert.mjs` (page map and rules), `content/` (hand-written pages), `src/components/`, `src/styles/`, `README.md`, `.gitignore` (generated `src/content/docs/` and `src/assets/`, `dist/`, `.astro/`, `node_modules/`).
+- New `docs-next/`: `package.json` and `package-lock.json` (`astro`, `@astrojs/starlight`, `@astrojs/markdown-satteri`, `starlight-blog`, `starlight-links-validator`, `starlight-llms-txt`, `lite-youtube-embed`, `js-yaml`, `github-slugger`), `astro.config.mjs`, `src/content.config.ts`, `scripts/convert.mjs` (page map and rules), `content/` (hand-written pages), `src/components/`, `src/styles/`, `README.md`, `.gitignore` (generated `src/content/docs/` and `src/assets/`, `dist/`, `.astro/`, `node_modules/`).
 - New `.github/workflows/docs-next.yml` (build only). `.github/workflows/build-test-package-publish.yml` (`paths-ignore` gets `docs-next/**`), `.vscodeignore`, `eslint.config.mjs`, root `package.json` (scripts only), `CONTRIBUTING.md` (a short section on the preview), `AGENTS.md` (task routing and commands for `docs-next/`).
 - The documentation tasks of `doc-cli` (7.1), `library-keyword-set-declaration` (5.1) and `library-index` (8.1) get a page-map entry and a preview build check.
 - `docs/03_reference/repl.md` and `docs/03_reference/robot-debug.md`: the two broken anchor links.
