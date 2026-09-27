@@ -1,0 +1,36 @@
+/* RobotCode brand colours: teal / blue-green, as on the VitePress site (--vp-c-brand-*). */
+:root {
+  --sl-color-accent-low: #06343a;
+  --sl-color-accent: #138496;
+  --sl-color-accent-high: #b4e6ec;
+}
+
+:root[data-theme="light"] {
+  --sl-color-accent-low: #c7eef3;
+  --sl-color-accent: #0b7285;
+  --sl-color-accent-high: #063b43;
+}
+
+/* Home page: supporter logos in one row. */
+.rc-supporters p {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2rem;
+  align-items: center;
+}
+
+.rc-supporters img {
+  height: 3rem;
+  width: auto;
+}
+
+/* Keys ([[KEY]] and <kbd>) look like keys, as on the VitePress site. */
+.sl-markdown-content kbd {
+  display: inline-block;
+  padding: 0 0.375rem;
+  font-family: var(--__sl-font-mono);
+  vertical-align: middle;
+  background-color: var(--sl-color-gray-6);
+  border: 1px solid var(--sl-color-gray-5);
+  border-radius: 0.375rem;
+}

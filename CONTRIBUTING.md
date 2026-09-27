@@ -448,6 +448,13 @@ npm run docs:preview  # Preview production documentation build
 
 You can also run the equivalent commands from the `docs/` folder: `npm run dev`, `npm run build`, and `npm run preview`.
 
+#### Preview of the New Documentation Site
+
+The documentation site is moving to Astro + Starlight with a new structure. The preview in `docs-next/` is generated from `docs/` on every build and is not deployed; see [docs-next/README.md](docs-next/README.md) for how to run it (`npm run docs-next:install`, then `npm run docs-next:dev` or `npm run docs-next:build`, Node.js 22.12 or newer). Content is still edited in `docs/` only, with two additions:
+
+- A **new page** in `docs/` needs an entry in the page map of `docs-next/scripts/convert.mjs`, otherwise the preview build fails. Release posts named `news/YYYY-MM-DD-whats-new-vX.Y.Z.md` are mapped automatically.
+- Changes to the **home page** (`docs/index.md`) or the **overview pages** (`docs/03_reference/index.md`, `docs/04_tip_and_tricks/index.md`) must be mirrored in `docs-next/content/`, where the preview's own versions of these pages live.
+
 #### Documentation Standards
 
 - **Clear and concise:** Write for users of all skill levels

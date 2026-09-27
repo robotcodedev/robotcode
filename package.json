@@ -2157,7 +2157,11 @@
     "docs:install": "npm -C docs install",
     "docs:dev": "npm -w docs run dev",
     "docs:build": "npm -w docs run build",
-    "docs:preview": "npm -w docs run preview"
+    "docs:preview": "npm -w docs run preview",
+    "docs-next:install": "npm --prefix docs-next ci",
+    "docs-next:dev": "npm --prefix docs-next run dev",
+    "docs-next:build": "npm --prefix docs-next run build",
+    "docs-next:preview": "npm --prefix docs-next run preview"
   },
   "extensionDependencies": [
     "ms-python.python",

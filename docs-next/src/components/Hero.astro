@@ -1,0 +1,323 @@
+---
+// Starlight's Hero plus, on the home page, the RobotCode picture gallery and a random subline
+// (ported from RandomHeroImage.vue and RandomTagline.vue of the VitePress theme). The gallery is
+// passed to Starlight's Hero as the hero's HTML image, so Starlight's layout places it.
+import { getImage } from "astro:assets";
+import Default from "@astrojs/starlight/components/Hero.astro";
+
+// In display order; the files are copied to src/assets/hero/ by scripts/convert.mjs.
+const PICTURES = [
+  { file: "robotcode-toy-tray.png", alt: "RobotCode figurines on a tray" },
+  { file: "robotcode-vintage.png", alt: "Vintage RobotCode poster" },
+  { file: "robotcode-vintage-new.png", alt: "New vintage RobotCode artwork" },
+  { file: "robotcode-golf.png", alt: "RobotCode playing golf" },
+  { file: "robotcode-rock.png", alt: "RobotCode playing rock music" },
+  { file: "robotcode-soccer.png", alt: "RobotCode playing soccer" },
+  { file: "robotcode-max.png", alt: "Robert Code" },
+  { file: "robotcode-playmo.png", alt: "RobotCode Playmobil" },
+  { file: "robotcode-rise.png", alt: "Rise of the RobotCode" },
+];
+const SUBLINES = [
+  "Robot Framework testing — same intelligence in your editor, on the command line, and in your CI pipeline. From your first keyword to enterprise scale.",
+  "One workflow for the entire Robot Framework lifecycle — write tests in your editor, run them on the command line, ship them through CI.",
+  "Robot Framework testing across your editor, command line, and CI — with the same intelligence, the same configuration, from your first keyword to multi-team suites.",
+  "Modern Robot Framework tooling that meets you wherever you work — in your editor, on the command line, and in your CI pipeline.",
+];
+
+const route = Astro.locals.starlightRoute;
+const hero = route.entry.data.hero;
+
+if (route.id === "" && hero) {
+  const files = import.meta.glob<{ default: ImageMetadata }>("../assets/hero/*.png", { eager: true });
+  const pictures = await Promise.all(
+    PICTURES.map(async ({ file, alt }) => {
+      const source = files[`../assets/hero/${file}`]?.default;
+      if (!source) throw new Error(`Hero picture src/assets/hero/${file} is missing`);
+      const small = await getImage({ src: source, width: 400, densities: [1, 2] });
+      const large = await getImage({ src: source, width: 1024 });
+      return {
+        src: small.src,
+        srcset: small.srcSet.attribute,
+        width: small.attributes.width,
+        height: small.attributes.height,
+        large: large.src,
+        alt,
+      };
+    }),
+  );
+  const attr = (value: unknown) =>
+    String(value).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+  const first = pictures[0];
+  const gallery = `
+<rc-hero-gallery data-pictures="${attr(JSON.stringify(pictures))}">
+  <button type="button" class="rc-nav rc-prev" data-step="-1" aria-label="Show previous image">‹</button>
+  <button type="button" class="rc-picture" aria-label="Open image: ${attr(first.alt)}">
+    <img src="${first.src}" srcset="${first.srcset}" width="${first.width}" height="${first.height}" alt="${attr(first.alt)}" decoding="async" draggable="false">
+  </button>
+  <button type="button" class="rc-nav rc-next" data-step="1" aria-label="Show next image">›</button>
+  <dialog class="rc-lightbox" aria-label="${attr(first.alt)}">
+    <button type="button" class="rc-close" aria-label="Close image">×</button>
+    <button type="button" class="rc-nav rc-prev" data-step="-1" aria-label="Show previous image">‹</button>
+    <div class="rc-frame"><img src="${first.large}" alt="${attr(first.alt)}" decoding="async" draggable="false"></div>
+    <button type="button" class="rc-nav rc-next" data-step="1" aria-label="Show next image">›</button>
+  </dialog>
+</rc-hero-gallery>`;
+  const subline = `<p class="rc-subline" data-sublines="${attr(JSON.stringify(SUBLINES))}">${attr(SUBLINES[0])}</p>`;
+  // A copy, so the cached collection entry keeps its frontmatter.
+  route.entry = {
+    ...route.entry,
+    data: { ...route.entry.data, hero: { ...hero, image: { html: gallery }, tagline: `${hero.tagline ?? ""}${subline}` } },
+  };
+}
+---
+
+<Default><slot /></Default>
+
+<script>
+  type Picture = { src: string; srcset: string; large: string; alt: string };
+
+  const SWIPE_MIN_DISTANCE = 48;
+  const SWIPE_INTENT_DISTANCE = 10;
+  const SWIPE_DIRECTION_RATIO = 1.35;
+  const CLICK_SUPPRESSION_TIMEOUT_MS = 250;
+
+  class RcHeroGallery extends HTMLElement {
+    #pictures: Picture[] = [];
+    #index = 0;
+    #suppressNextClick = false;
+    #suppressTimeout: ReturnType<typeof setTimeout> | undefined;
+    #swipe: { pointerId: number; startX: number; startY: number; horizontal: boolean } | undefined;
+
+    connectedCallback() {
+      this.#pictures = JSON.parse(this.dataset.pictures ?? "[]");
+      const picture = this.querySelector<HTMLButtonElement>(".rc-picture")!;
+      const dialog = this.querySelector("dialog")!;
+
+      for (const button of this.querySelectorAll<HTMLButtonElement>("[data-step]")) {
+        button.addEventListener("click", (event) => {
+          event.stopPropagation();
+          this.#show(this.#index + Number(button.dataset.step));
+        });
+      }
+      picture.addEventListener("click", (event) => {
+        if (!this.#consumeSuppressedClick(event)) this.#open();
+      });
+      // A click anywhere outside the picture closes the enlarged view, like the close button.
+      dialog.addEventListener("click", (event) => {
+        if (!this.#consumeSuppressedClick(event)) dialog.close();
+      });
+      this.querySelector(".rc-frame")!.addEventListener("click", (event) => event.stopPropagation());
+      dialog.addEventListener("keydown", (event) => {
+        if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+          event.preventDefault();
+          this.#show(this.#index + (event.key === "ArrowLeft" ? -1 : 1));
+        }
+      });
+      dialog.addEventListener("close", () => (document.documentElement.style.overflow = ""));
+      for (const element of [picture, this.querySelector<HTMLElement>(".rc-frame")!]) this.#addSwipe(element);
+
+      this.#show(Math.floor(Math.random() * this.#pictures.length));
+    }
+
+    #show(index: number) {
+      const count = this.#pictures.length;
+      if (count === 0) return;
+      this.#index = (index + count) % count;
+      const { src, srcset, large, alt } = this.#pictures[this.#index];
+      const [small, big] = this.querySelectorAll("img");
+      Object.assign(small, { src, srcset, alt });
+      Object.assign(big, { src: large, alt });
+      this.querySelector(".rc-picture")!.setAttribute("aria-label", `Open image: ${alt}`);
+      this.querySelector("dialog")!.setAttribute("aria-label", alt);
+    }
+
+    #open() {
+      this.querySelector("dialog")!.showModal();
+      document.documentElement.style.overflow = "hidden";
+    }
+
+    #consumeSuppressedClick(event: Event) {
+      if (!this.#suppressNextClick) return false;
+      event.preventDefault();
+      event.stopPropagation();
+      this.#suppressNextClick = false;
+      return true;
+    }
+
+    #suppressClickOnce() {
+      this.#suppressNextClick = true;
+      clearTimeout(this.#suppressTimeout);
+      this.#suppressTimeout = setTimeout(() => (this.#suppressNextClick = false), CLICK_SUPPRESSION_TIMEOUT_MS);
+    }
+
+    #addSwipe(element: HTMLElement) {
+      element.addEventListener("pointerdown", (event) => {
+        if (!event.isPrimary || (event.pointerType === "mouse" && event.button !== 0)) return;
+        this.#swipe = { pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, horizontal: false };
+        element.setPointerCapture?.(event.pointerId);
+      });
+      element.addEventListener("pointermove", (event) => {
+        const swipe = this.#swipe;
+        if (!swipe || event.pointerId !== swipe.pointerId) return;
+        const dx = event.clientX - swipe.startX;
+        const dy = event.clientY - swipe.startY;
+        if (!swipe.horizontal && Math.abs(dx) >= SWIPE_INTENT_DISTANCE && Math.abs(dx) > Math.abs(dy) * SWIPE_DIRECTION_RATIO) {
+          swipe.horizontal = true;
+        }
+        if (swipe.horizontal) event.preventDefault();
+      });
+      element.addEventListener("pointerup", (event) => {
+        const swipe = this.#swipe;
+        if (!swipe || event.pointerId !== swipe.pointerId) return;
+        this.#swipe = undefined;
+        if (element.hasPointerCapture?.(event.pointerId)) element.releasePointerCapture(event.pointerId);
+        const dx = event.clientX - swipe.startX;
+        const dy = event.clientY - swipe.startY;
+        if (Math.abs(dx) < SWIPE_MIN_DISTANCE || Math.abs(dx) <= Math.abs(dy) * SWIPE_DIRECTION_RATIO) return;
+        event.preventDefault();
+        event.stopPropagation();
+        this.#suppressClickOnce();
+        this.#show(this.#index + (dx > 0 ? -1 : 1));
+      });
+      element.addEventListener("pointercancel", (event) => {
+        if (this.#swipe?.pointerId !== event.pointerId) return;
+        this.#swipe = undefined;
+        if (element.hasPointerCapture?.(event.pointerId)) element.releasePointerCapture(event.pointerId);
+      });
+    }
+  }
+  customElements.define("rc-hero-gallery", RcHeroGallery);
+
+  for (const subline of document.querySelectorAll<HTMLElement>(".rc-subline[data-sublines]")) {
+    const sublines: string[] = JSON.parse(subline.dataset.sublines ?? "[]");
+    if (sublines.length) subline.textContent = sublines[Math.floor(Math.random() * sublines.length)];
+  }
+</script>
+
+<style is:global>
+  rc-hero-gallery {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    padding: 0 2.75rem;
+  }
+
+  rc-hero-gallery .rc-picture {
+    display: flex;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    cursor: zoom-in;
+    line-height: 0;
+    touch-action: pan-y;
+  }
+
+  rc-hero-gallery .rc-picture img {
+    width: auto;
+    height: auto;
+    max-width: 100%;
+    max-height: 28rem;
+    border-radius: 1rem;
+    user-select: none;
+  }
+
+  rc-hero-gallery .rc-nav {
+    position: absolute;
+    top: 50%;
+    z-index: 2;
+    width: 2.4rem;
+    height: 2.4rem;
+    border: 1px solid var(--sl-color-hairline);
+    border-radius: 999px;
+    background: var(--sl-color-bg-nav);
+    color: var(--sl-color-white);
+    font-size: 1.5rem;
+    line-height: 1;
+    transform: translateY(-50%);
+    cursor: pointer;
+    transition: opacity 0.2s ease;
+  }
+
+  rc-hero-gallery .rc-prev {
+    inset-inline-start: 0.25rem;
+  }
+
+  rc-hero-gallery .rc-next {
+    inset-inline-end: 0.25rem;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    rc-hero-gallery > .rc-nav {
+      opacity: 0;
+    }
+
+    rc-hero-gallery:hover > .rc-nav,
+    rc-hero-gallery:focus-within > .rc-nav {
+      opacity: 1;
+    }
+  }
+
+  rc-hero-gallery .rc-lightbox {
+    width: 100vw;
+    max-width: none;
+    height: 100dvh;
+    max-height: none;
+    margin: 0;
+    padding: 1rem;
+    border: 0;
+    background: rgb(0 0 0 / 90%);
+    cursor: zoom-out;
+  }
+
+  rc-hero-gallery .rc-lightbox[open] {
+    display: grid;
+    place-items: center;
+  }
+
+  rc-hero-gallery .rc-lightbox::backdrop {
+    background: transparent;
+  }
+
+  rc-hero-gallery .rc-frame {
+    display: flex;
+    padding: 0.75rem;
+    border: 1px solid var(--sl-color-hairline);
+    border-radius: 0.75rem;
+    background: var(--sl-color-bg-nav);
+    box-shadow: 0 1.25rem 3.5rem rgb(0 0 0 / 60%);
+    cursor: default;
+    touch-action: pan-y;
+  }
+
+  rc-hero-gallery .rc-frame img {
+    display: block;
+    width: auto;
+    height: auto;
+    max-width: min(calc(100vw - 5rem), 1400px);
+    max-height: calc(100dvh - 5rem);
+    border-radius: 0.5rem;
+    user-select: none;
+  }
+
+  rc-hero-gallery .rc-close {
+    position: absolute;
+    top: 0.75rem;
+    inset-inline-end: 0.75rem;
+    width: 2.5rem;
+    height: 2.5rem;
+    border: 0;
+    border-radius: 999px;
+    background: rgb(255 255 255 / 92%);
+    color: #111;
+    font-size: 1.5rem;
+    line-height: 1;
+    cursor: pointer;
+  }
+
+  .hero .rc-subline {
+    margin-top: 0.75rem;
+    font-size: 0.8em;
+  }
+</style>

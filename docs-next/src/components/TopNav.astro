@@ -1,0 +1,204 @@
+---
+// Top navigation of every page, rendered by the Header override. The site title links to the home page.
+import { Icon } from "@astrojs/starlight/components";
+import { version } from "../../../package.json";
+
+interface Props {
+  variant: "full" | "compact";
+}
+
+const { variant } = Astro.props;
+const path = Astro.url.pathname;
+
+const items = [
+  { label: "News", href: "/news/", active: path.startsWith("/news") },
+  { label: "Documentation", href: "/getting-started/", active: /^\/(about|getting-started|guides|reference)(\/|$)/.test(path) },
+  { label: "Support & Contribute", href: "/contributing/", active: path.startsWith("/contributing") },
+  { label: "Q&A", href: "https://github.com/robotcodedev/robotcode/discussions/categories/q-a", external: true },
+];
+const versionLinks = [
+  { label: "Changelog", href: "https://github.com/robotcodedev/robotcode/blob/main/CHANGELOG.md" },
+  { label: "Contributing", href: "https://github.com/robotcodedev/robotcode/blob/main/CONTRIBUTING.md" },
+];
+---
+
+{
+  variant === "full" ? (
+    <nav class="rc-topnav" aria-label="Main">
+      <ul>
+        {items.map((i) => (
+          <li>
+            <a href={i.href} aria-current={i.active ? "page" : undefined}>
+              {i.label}
+              {i.external && <Icon name="external" size="0.8em" />}
+            </a>
+          </li>
+        ))}
+        <li class="rc-dropdown">
+          <button type="button" aria-haspopup="true">
+            v{version}
+            <Icon name="down-caret" size="1em" />
+          </button>
+          <ul class="rc-dropdown-menu">
+            {versionLinks.map((l) => (
+              <li>
+                <a href={l.href}>
+                  {l.label} <Icon name="external" size="0.8em" />
+                </a>
+              </li>
+            ))}
+          </ul>
+        </li>
+      </ul>
+    </nav>
+  ) : (
+    <details class="rc-compactnav">
+      <summary aria-label="Main menu">
+        Menu <Icon name="down-caret" size="1em" />
+      </summary>
+      <ul>
+        {items.map((i) => (
+          <li>
+            <a href={i.href} aria-current={i.active ? "page" : undefined}>
+              {i.label}
+              {i.external && <Icon name="external" size="0.8em" />}
+            </a>
+          </li>
+        ))}
+        <li class="rc-compactnav-sep">v{version}</li>
+        {versionLinks.map((l) => (
+          <li>
+            <a href={l.href}>
+              {l.label} <Icon name="external" size="0.8em" />
+            </a>
+          </li>
+        ))}
+      </ul>
+    </details>
+  )
+}
+
+<style>
+  .rc-topnav ul {
+    display: flex;
+    gap: 1.25rem;
+    align-items: center;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .rc-topnav a,
+  .rc-topnav button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    color: var(--sl-color-gray-2);
+    font-size: var(--sl-text-sm);
+    font-weight: 500;
+    text-decoration: none;
+    white-space: nowrap;
+    background: none;
+    border: 0;
+    padding: 0.25rem 0;
+    cursor: pointer;
+    font-family: inherit;
+  }
+
+  .rc-topnav a:hover,
+  .rc-topnav button:hover,
+  .rc-topnav a[aria-current="page"] {
+    color: var(--sl-color-text-accent);
+  }
+
+  .rc-dropdown {
+    position: relative;
+  }
+
+  .rc-dropdown-menu {
+    display: none !important;
+    position: absolute;
+    inset-inline-end: 0;
+    top: 100%;
+    flex-direction: column;
+    align-items: stretch !important;
+    gap: 0 !important;
+    min-width: 10rem;
+    padding: 0.5rem 0 !important;
+    background: var(--sl-color-bg-nav);
+    border: 1px solid var(--sl-color-hairline);
+    border-radius: 0.5rem;
+    box-shadow: var(--sl-shadow-md);
+    z-index: 10;
+  }
+
+  .rc-dropdown:hover .rc-dropdown-menu,
+  .rc-dropdown:focus-within .rc-dropdown-menu {
+    display: flex !important;
+  }
+
+  .rc-dropdown-menu a {
+    padding: 0.4rem 1rem;
+    width: 100%;
+  }
+
+  .rc-compactnav {
+    position: relative;
+  }
+
+  .rc-compactnav summary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    list-style: none;
+    cursor: pointer;
+    color: var(--sl-color-gray-2);
+    font-size: var(--sl-text-sm);
+    font-weight: 500;
+    padding: 0.25rem 0.5rem;
+    border: 1px solid var(--sl-color-gray-5);
+    border-radius: 0.5rem;
+  }
+
+  .rc-compactnav summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .rc-compactnav ul {
+    position: absolute;
+    inset-inline-end: 0;
+    top: calc(100% + 0.5rem);
+    list-style: none;
+    margin: 0;
+    padding: 0.5rem 0;
+    min-width: 13rem;
+    background: var(--sl-color-bg-nav);
+    border: 1px solid var(--sl-color-hairline);
+    border-radius: 0.5rem;
+    box-shadow: var(--sl-shadow-md);
+    z-index: 20;
+  }
+
+  .rc-compactnav a {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.5rem 1rem;
+    color: var(--sl-color-gray-2);
+    text-decoration: none;
+    font-size: var(--sl-text-sm);
+  }
+
+  .rc-compactnav a[aria-current="page"],
+  .rc-compactnav a:hover {
+    color: var(--sl-color-text-accent);
+  }
+
+  .rc-compactnav-sep {
+    margin-top: 0.5rem;
+    padding: 0.5rem 1rem 0.25rem;
+    border-top: 1px solid var(--sl-color-hairline);
+    color: var(--sl-color-gray-3);
+    font-size: var(--sl-text-xs);
+  }
+</style>

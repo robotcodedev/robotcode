@@ -1,0 +1,28 @@
+---
+// The not-found page. It is not part of the docs collection, so it does not end up in /llms-full.txt, and Astro
+// uses it for unknown paths in `astro dev` too. `disable404Route` in astro.config.mjs turns off Starlight's own.
+import StarlightPage from "@astrojs/starlight/components/StarlightPage.astro";
+---
+
+<StarlightPage
+  frontmatter={{
+    title: "Page not found",
+    description:
+      "This documentation keeps evolving, so pages can move: search for the topic or start from Getting Started, Guides, Reference or News.",
+    template: "splash",
+    editUrl: false,
+    lastUpdated: false,
+    pagefind: false,
+  }}
+>
+  <p>
+    This documentation keeps evolving, so pages and links can move and content can end up somewhere else. Use the
+    search at the top of the page to find the topic, or start from one of these pages:
+  </p>
+  <ul>
+    <li><a href="/getting-started/">Getting Started</a>: requirements and setting up RobotCode</li>
+    <li><a href="/guides/">Guides</a>: RobotCode's commands and project setup</li>
+    <li><a href="/reference/">Reference</a>: every command, option and <code>robot.toml</code> setting</li>
+    <li><a href="/news/">News</a>: release announcements</li>
+  </ul>
+</StarlightPage>

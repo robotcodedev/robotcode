@@ -19,6 +19,7 @@ export default [
       "**/.pytest_cache/",
       "**/site/",
       "**/docs/",
+      "**/docs-next/",
       "**/packages/",
       "**/js",
       "**/build/",

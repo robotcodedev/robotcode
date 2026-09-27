@@ -1,0 +1,23 @@
+---
+// Starlight's Footer plus the license line of the site.
+import Default from "@astrojs/starlight/components/Footer.astro";
+---
+
+<Default><slot /></Default>
+<p class="rc-license">
+  Released under the <a href="https://github.com/robotcodedev/robotcode/blob/main/LICENSE.txt">Apache-2.0</a>.
+  Copyright © 2022-present <a href="https://github.com/d-biehl">Daniel Biehl</a>
+</p>
+
+<style>
+  .rc-license {
+    margin-top: 1.5rem;
+    font-size: var(--sl-text-sm);
+    color: var(--sl-color-gray-3);
+    text-align: center;
+  }
+
+  .rc-license a {
+    color: var(--sl-color-text-accent);
+  }
+</style>

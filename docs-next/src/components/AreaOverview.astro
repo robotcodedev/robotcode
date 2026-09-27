@@ -1,0 +1,19 @@
+---
+// Link cards for every other page of an area, in sidebar order, from the pages' own title and description.
+import { getCollection } from "astro:content";
+import { CardGrid, LinkCard } from "@astrojs/starlight/components";
+
+interface Props {
+  area: string;
+}
+
+const { area } = Astro.props;
+const pages = (await getCollection("docs", ({ id }) => id.startsWith(`${area}/`))).sort(
+  (a, b) =>
+    (a.data.sidebar.order ?? Infinity) - (b.data.sidebar.order ?? Infinity) || a.data.title.localeCompare(b.data.title),
+);
+---
+
+<CardGrid>
+  {pages.map((page) => <LinkCard title={page.data.title} description={page.data.description} href={`/${page.id}/`} />)}
+</CardGrid>

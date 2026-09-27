@@ -1,0 +1,48 @@
+name: build docs-next preview
+
+# Builds the Starlight preview of the documentation site (docs-next/), which is generated from docs/.
+# Nothing is uploaded or deployed; the build fails on unmapped pages, unconverted syntax and broken links.
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "docs/**"
+      - "docs-next/**"
+      - ".github/workflows/docs-next.yml"
+
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "docs/**"
+      - "docs-next/**"
+      - ".github/workflows/docs-next.yml"
+
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      ASTRO_TELEMETRY_DISABLED: "1"
+    defaults:
+      run:
+        working-directory: docs-next
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: docs-next/package-lock.json
+      - name: Install dependencies
+        run: npm ci
+      - name: Build the preview
+        run: npm run build

@@ -11,6 +11,7 @@ on:
       - ".github/**"
       - "!.github/workflows/**"
       - "docs/**"
+      - "docs-next/**"
 
   pull_request:
     branches:

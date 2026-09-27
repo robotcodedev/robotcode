@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.astro/
+.generated/
+
+# Generated from ../docs by scripts/convert.mjs
+src/content/docs/
+src/assets/
+public/
