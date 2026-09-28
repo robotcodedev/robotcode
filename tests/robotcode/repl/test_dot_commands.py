@@ -271,13 +271,38 @@ def test_doc_routes_to_show_doc_override(monkeypatch: pytest.MonkeyPatch) -> Non
 
 
 def test_dispatch_exit_raises_eoferror() -> None:
+    interp = _make_interp(_StubApp())
     with pytest.raises(EOFError):
-        _make_interp(_StubApp())._dispatch_dot_command(".exit")
+        interp._dispatch_dot_command(".exit")
+    assert interp.exit_code is None  # no code: the session status decides
 
 
 def test_dispatch_quit_is_alias_for_exit() -> None:
     with pytest.raises(EOFError):
         _make_interp(_StubApp())._dispatch_dot_command(".quit")
+
+
+@pytest.mark.parametrize("code", [3, 0])
+@pytest.mark.parametrize("command", [".exit", ".quit"])
+def test_dispatch_exit_with_code_stores_it_and_raises_eoferror(command: str, code: int) -> None:
+    interp = _make_interp(_StubApp())
+    with pytest.raises(EOFError):
+        interp._dispatch_dot_command(f"{command} {code}")
+    assert interp.exit_code == code
+
+
+def test_dispatch_exit_with_invalid_code_prints_usage_and_continues() -> None:
+    app = _StubApp()
+    interp = _make_interp(app)
+    assert interp._dispatch_dot_command(".exit abc") is True  # consumed, no EOFError
+    assert "Usage: .exit [CODE]" in app.messages
+    assert interp.exit_code is None
+
+
+def test_dispatch_help_exit_documents_the_code() -> None:
+    app = _StubApp()
+    _make_interp(app)._dispatch_dot_command(".help exit")
+    assert ".exit [CODE]" in "\n".join(app.paged)
 
 
 def test_dispatch_clear_emits_ansi_sequence() -> None:

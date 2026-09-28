@@ -9,9 +9,11 @@ from typing import Any, Dict, List, Set
 
 import pytest
 from click.testing import CliRunner
+from robot.api import ExecutionResult
 
 from robotcode.plugin._agent_detection import _AGENT_ENV_VARS
 from robotcode.repl import cli as cli_mod
+from robotcode.repl.run import ReplResult
 
 
 @pytest.fixture(autouse=True)
@@ -27,8 +29,8 @@ def _scrub_agent_env(monkeypatch: pytest.MonkeyPatch) -> None:
 @pytest.fixture
 def capture_interpreter_kwargs(monkeypatch: pytest.MonkeyPatch) -> Dict[str, Any]:
     """Patch `_pick_interpreter` + `run_repl` so the test never enters a
-    real prompt loop. The dict the fixture returns receives the kwargs
-    the CLI passed to the factory — `backend` and friends."""
+    real prompt loop; the session ends cleanly. The dict the fixture returns
+    receives the kwargs the CLI passed to the factory — `backend` and friends."""
     captured: Dict[str, Any] = {}
 
     class _DummyInterpreter:
@@ -51,7 +53,7 @@ def capture_interpreter_kwargs(monkeypatch: pytest.MonkeyPatch) -> Dict[str, Any
         return _DummyInterpreter()
 
     monkeypatch.setattr(cli_mod, "_pick_interpreter", fake_pick)
-    monkeypatch.setattr(cli_mod, "run_repl", lambda **_: None)
+    monkeypatch.setattr(cli_mod, "run_repl", lambda **_: ReplResult(return_code=0, exit_code=None))
     # Simulate an interactive terminal so these tests exercise the auto/agent/
     # explicit backend logic rather than the non-TTY fallback (CliRunner's stdin
     # is itself non-interactive). The non-TTY path has its own test below.
@@ -533,15 +535,104 @@ def test_repl_shell_detached_by_default_does_not_break_on_failure(tmp_path: Path
     # detached, so a failing keyword does NOT drop into the `(rdb)` debugger —
     # an attached session would echo `* exception` / `(rdb)` into the output
     # (as the breakpoint test above shows for `* breakpoint`); here neither
-    # appears, and the session exits cleanly after the failure.
+    # appears, and the session ends without crashing after the failure. (Its
+    # exit code is the business of the exit-code tests below.)
     result = CliRunner().invoke(
         cli_mod.repl,
         ["--plain", "-d", str(tmp_path)],
         input="NotARealKeyword123\nLog    after\n\n",
     )
-    assert result.exit_code == 0, result.output
+    assert not isinstance(result.exception, Exception), result.output
     assert "* exception" not in result.output
     assert "(rdb)" not in result.output
+
+
+def test_repl_session_test_failure_adds_no_debugger_stop(project: Path) -> None:
+    # The session test fails only after the prompt loop has returned; that must not
+    # stop the debugger, even with `--break-on-failed-test`. `--no-break-on-exception`
+    # keeps the typed keyword itself from stopping.
+    result = CliRunner().invoke(
+        cli_mod.repl,
+        [
+            "--plain",
+            "--debugger-attached",
+            "--break-on-failed-test",
+            "--no-break-on-exception",
+            "-d",
+            str(project / "results"),
+            "-o",
+            "output.xml",
+        ],
+        input="Fail    boom\n",
+    )
+    assert not isinstance(result.exception, Exception), result.output
+    assert "* exception" not in result.output
+    assert "(rdb)" not in result.output
+    [test] = ExecutionResult(str(project / "results" / "output.xml")).suite.tests
+    assert test.status == "FAIL"
+
+
+# ---------------------------------------------------------------------------
+# Exit code: a code given to `.exit` wins, then `--statusrc`/`--nostatusrc`;
+# otherwise only a non-interactive session exits with its status.
+# ---------------------------------------------------------------------------
+
+_FAILING_INPUT = "Fail    boom\nLog    after\n"
+
+
+@pytest.mark.parametrize(
+    ("args", "robot_toml", "stdin", "interactive", "exit_code", "status"),
+    [
+        pytest.param([], "", _FAILING_INPUT, False, 1, "FAIL", id="piped-failure"),
+        pytest.param([], "", "Log    ok\n", False, 0, "PASS", id="piped-success"),
+        pytest.param([], "", _FAILING_INPUT, True, 0, "FAIL", id="terminal-failure"),
+        pytest.param(["{script}"], "", "", True, 1, "FAIL", id="script-on-terminal"),
+        pytest.param(["--inspect", "{script}"], "", "", True, 0, "FAIL", id="script-with-inspect-on-terminal"),
+        pytest.param(["--statusrc"], "", _FAILING_INPUT, True, 1, "FAIL", id="statusrc-on-terminal"),
+        pytest.param(["--nostatusrc"], "", _FAILING_INPUT, False, 0, "FAIL", id="nostatusrc-in-pipe"),
+        pytest.param([], "no-status-rc = true", _FAILING_INPUT, False, 0, "FAIL", id="no-status-rc-true-in-pipe"),
+        pytest.param([], "no-status-rc = false", _FAILING_INPUT, True, 0, "FAIL", id="no-status-rc-false-on-terminal"),
+        pytest.param(
+            ["--statusrc"], "no-status-rc = true", _FAILING_INPUT, False, 1, "FAIL", id="statusrc-beats-configuration"
+        ),
+        pytest.param([], "", ".exit 3\n", False, 3, "PASS", id="exit-with-code"),
+        pytest.param([], "", "Fail    boom\n.exit 0\n", False, 0, "FAIL", id="exit-0-after-piped-failure"),
+        pytest.param([], "", "Fail    boom\n.exit\n", False, 1, "FAIL", id="exit-after-piped-failure"),
+    ],
+)
+def test_repl_exit_code(
+    args: List[str],
+    robot_toml: str,
+    stdin: str,
+    interactive: bool,
+    exit_code: int,
+    status: str,
+    project: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    (project / "robot.toml").write_text(robot_toml, encoding="utf-8")
+    script = project / "session.robotrepl"
+    script.write_text("Fail    boom\n", encoding="utf-8")
+    monkeypatch.setattr(cli_mod, "_is_interactive_stdin", lambda: interactive)
+
+    # `--plain`: in a real terminal the `auto` backend would start prompt_toolkit.
+    result = CliRunner().invoke(
+        cli_mod.repl,
+        ["--plain", "-d", str(project / "results"), "-o", "output.xml", *(arg.format(script=script) for arg in args)],
+        input=stdin,
+    )
+
+    assert result.exit_code == exit_code, result.output
+    [test] = ExecutionResult(str(project / "results" / "output.xml")).suite.tests
+    assert test.status == status
+
+
+def test_repl_unsupported_profile_option_exits_with_data_error(project: Path) -> None:
+    (project / "robot.toml").write_text('args = ["--nonexistingoptionxyz"]\n', encoding="utf-8")
+
+    result = CliRunner().invoke(cli_mod.repl, ["--plain", "-d", str(project / "results")], input="Log    ok\n")
+
+    assert result.exit_code == 252, result.output
 
 
 def test_robot_debug_translates_debug_terminated(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

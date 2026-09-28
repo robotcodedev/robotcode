@@ -733,9 +733,14 @@ class ConsoleInterpreter(BaseInterpreter):
             return
         if not test.body:
             return
-        with self._controller.suppress_pausing(), self.forward_events(echo_messages=True):  # type: ignore[union-attr]
-            for kw in test.body:
-                self.set_last_result(self.run_keyword(kw))
+        # Keywords evaluated at a stop don't count for the session status.
+        record_failures, self.record_failures = self.record_failures, False
+        try:
+            with self._controller.suppress_pausing(), self.forward_events(echo_messages=True):  # type: ignore[union-attr]
+                for kw in test.body:
+                    self.set_last_result(self.run_keyword(kw))
+        finally:
+            self.record_failures = record_failures
         self._echo(f"=> {_repr.repr(self.last_result)}")
 
     # ------------------------------------------------------------------
@@ -1262,16 +1267,30 @@ class ConsoleInterpreter(BaseInterpreter):
 
     @dot_command("exit", "quit")
     def _exit(self, arg: str) -> None:
-        """Exit the REPL.
+        """Exit the REPL: .exit [CODE]
 
-        Leave the REPL. Equivalent to pressing Ctrl-D on an empty prompt.
+        Leave the REPL. Without CODE this is the same as pressing Ctrl-D on
+        an empty prompt. With CODE, `robotcode repl` exits with that exit code
+        instead of the one it derives from the session status.
         `.exit` and `.quit` are aliases. At a debug stop "exit" is ambiguous,
         so it points you at the resume/abort commands instead of leaving.
+
+        Usage:
+          .exit [CODE]
+
+        Examples:
+          .exit
+          .exit 3
         """
-        del arg
         if self._stop is not None:
             self._echo("at a debug stop — use .continue or .detach to resume, or .abort to quit the run")
             return
+        if arg:
+            try:
+                self.exit_code = int(arg)
+            except ValueError:
+                self._echo("Usage: .exit [CODE]")
+                return
         raise EOFError
 
     @dot_command("save")

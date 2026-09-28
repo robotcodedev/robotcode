@@ -17,7 +17,7 @@ from ._backends import BACKEND_CHOICES
 from ._debug import DebugController, DebugTerminated
 from .console_interpreter import _LINE_BREAK_RE, ConsoleInterpreter
 from .prompt_toolkit_interpreter import PromptToolkitConsoleInterpreter
-from .run import run_repl
+from .run import ReplResult, run_repl
 
 
 def _pick_interpreter(
@@ -105,6 +105,21 @@ def _is_interactive_stdin() -> bool:
         return sys.stdin.isatty()
     except (AttributeError, ValueError, OSError):
         return False
+
+
+def _session_exit_code(result: ReplResult, *, statusrc: Optional[bool], interactive: bool) -> int:
+    """The exit code of a `repl` session.
+
+    A code given to `.exit`/`.quit` wins. Otherwise Robot's return code, which
+    already honors `statusrc` from the configuration, is used when `--statusrc`/
+    `--nostatusrc` was given or the session is not interactive; an interactive
+    session exits with 0.
+    """
+    if result.exit_code is not None:
+        return result.exit_code
+    if statusrc is not None or not interactive:
+        return result.return_code
+    return 0
 
 
 def _resolve_backend(plain: bool, backend: str) -> str:
@@ -322,6 +337,15 @@ SHELL_OPTIONS = [
         "against that directory. A relative FILE is resolved against the directory the command "
         "is started from. The file itself is never read or written, so the path doesn't need to exist.",
     ),
+    click.option(
+        "--statusrc/--nostatusrc",
+        default=None,
+        help="Exit with 1 if a statement failed without being handled, otherwise 0, in any session "
+        "(`--statusrc`), or exit with 0 regardless of failures (`--nostatusrc`). Both override `no-status-rc` "
+        "from the configuration. Without either option only non-interactive sessions (piped input, or FILES "
+        "without `--inspect`) exit with 1 after such a failure, unless the configuration switches this off. "
+        "A code given to `.exit` takes precedence.",
+    ),
     click.argument(
         "files",
         type=click.Path(exists=True, dir_okay=False, path_type=Path),
@@ -403,6 +427,7 @@ def repl(
     log: Optional[str],
     xunit: Optional[str],
     source: Optional[Path],
+    statusrc: Optional[bool],
     files: Tuple[Path, ...],
     debugger_attached: Optional[bool],
     break_at: Tuple[str, ...],
@@ -441,6 +466,9 @@ def repl(
         no_history=no_history,
         backend=backend,
     )
+    # Only `repl` fails its session test on unhandled failures — not `robot-debug`,
+    # which builds its interpreter the same way.
+    interpreter.record_failures = True
     # The debugger stays wired for the whole interactive session and is torn down
     # with the interpreter when the session ends — so, unlike `robot`, there is no
     # per-run unregister here. `attached` decides whether it actually pauses.
@@ -454,7 +482,7 @@ def repl(
         break_on_failed_suite=break_on_failed_suite,
     )
 
-    run_repl(
+    result = run_repl(
         interpreter=interpreter,
         app=app,
         variable=variable,
@@ -467,7 +495,12 @@ def repl(
         xunit=xunit,
         source=source,
         files=files,
+        statusrc=statusrc,
     )
+
+    # Script files without `--inspect` end on their own, like piped input.
+    interactive = _is_interactive_stdin() and (not files or inspect)
+    app.exit(_session_exit_code(result, statusrc=statusrc, interactive=interactive))
 
 
 @wrappable

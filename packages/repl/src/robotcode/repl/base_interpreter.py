@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Iterator, List, Optional, Protocol, Tuple, Union, cast
 
 from robot.api import get_model
-from robot.errors import ExecutionStatus
+from robot.errors import ExecutionFailed, ExecutionPassed, ExecutionStatus
 from robot.output import LOGGER
 from robot.output import Message as OutputMessage
 from robot.result import Keyword as ResultKeyword
@@ -231,6 +231,19 @@ else:
             self.interpreter._notify_end_suite(data, result)
 
 
+# The interpreter whose prompt loop started last. `_maybe_trigger_repl` sets it when
+# the `repl` marker keyword starts; the marker's body takes it once the loop has returned.
+_active_interpreter: Optional["BaseInterpreter"] = None
+
+
+def take_active_interpreter() -> Optional["BaseInterpreter"]:
+    """Return the interpreter whose prompt loop started last and forget it, so a later
+    session in the same process never sees it."""
+    global _active_interpreter
+    interpreter, _active_interpreter = _active_interpreter, None
+    return interpreter
+
+
 class BaseInterpreter(abc.ABC):
     def __init__(self) -> None:
         _patch()
@@ -248,6 +261,13 @@ class BaseInterpreter(abc.ABC):
         # The interpreter's own start_keyword/end_keyword hooks stay the primary
         # consumer; observers run alongside them.
         self._observers: List["ExecutionObserver"] = []
+        # Unhandled failures of the prompt loop, recorded only while `record_failures`
+        # is set (by `robotcode repl`). The `repl` marker keyword fails the session test
+        # with them.
+        self.record_failures = False
+        self.failures: List[ExecutionFailed] = []
+        # The code given to `.exit`/`.quit`, None without one.
+        self.exit_code: Optional[int] = None
 
     @property
     def curdir(self) -> Path:
@@ -303,7 +323,15 @@ class BaseInterpreter(abc.ABC):
         except ExecutionStatus:
             raise
         except BaseException as e:
-            self.log_message(f"{type(e)}: {e}", "ERROR", timestamp=datetime.now())  # noqa: DTZ005
+            message = f"{type(e)}: {e}"
+            self.log_message(message, "ERROR", timestamp=datetime.now())  # noqa: DTZ005
+            self._record_failure(ExecutionFailed(message))
+
+    def _record_failure(self, error: ExecutionFailed) -> None:
+        if self.record_failures:
+            # Split like Robot Framework's body runner does, so the combined message
+            # numbers each failure.
+            self.failures.extend(error.get_errors())
 
     def interrupt(self) -> None:
         signal.raise_signal(signal.SIGINT)
@@ -322,10 +350,19 @@ class BaseInterpreter(abc.ABC):
                     break
                 except ExecutionInterrupted as e:
                     self.log_message(str(e), "ERROR", timestamp=datetime.now())  # noqa: DTZ005
-                except ExecutionStatus:
-                    pass
+                    self._record_failure(ExecutionFailed(str(e)))
+                except ExecutionPassed as e:
+                    # Failures continued before `Pass Execution` still fail a test in Robot Framework.
+                    if e.earlier_failures:
+                        self._record_failure(e.earlier_failures)
+                except ExecutionFailed as e:
+                    # As in Robot Framework, a skip counts as skipped even when failures
+                    # were continued before it.
+                    if not e.skip:
+                        self._record_failure(e)
                 except BaseException as e:
                     self.log_message(str(e), "ERROR", timestamp=datetime.now())  # noqa: DTZ005
+                    self._record_failure(ExecutionFailed(str(e)))
         finally:
             self._logger.enabled = False
 
@@ -445,6 +482,8 @@ class BaseInterpreter(abc.ABC):
         """
         if self._in_repl_run or not self._is_repl_marker(result):
             return False
+        global _active_interpreter
+        _active_interpreter = self
         self._in_repl_run = True
         try:
             self.run()

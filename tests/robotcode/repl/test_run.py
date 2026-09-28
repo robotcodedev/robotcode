@@ -7,7 +7,6 @@ running, so the REPL must ignore them. These tests drive the real `run_repl`
 with a stub interpreter in place of the console prompt.
 """
 
-import importlib
 import os
 import shutil
 import subprocess
@@ -24,14 +23,11 @@ from robot.running import Keyword
 
 from robotcode.core.utils.path import normalized_path
 from robotcode.plugin import Application
-from robotcode.repl.base_interpreter import BaseInterpreter
-from robotcode.repl.run import run_repl
-from robotcode.robot.config import utils as config_utils
+from robotcode.repl.base_interpreter import BaseInterpreter, take_active_interpreter
+from robotcode.repl.cli import _attach_debugger
+from robotcode.repl.console_interpreter import ConsoleInterpreter
+from robotcode.repl.run import ReplResult, run_repl
 from robotcode.robot.utils import RF_VERSION
-
-# `robotcode.runner.cli.robot` is shadowed by the re-exported click command, so
-# fetch the submodule itself to patch its global.
-_runner_robot = importlib.import_module("robotcode.runner.cli.robot")
 
 _PROFILE = "repl-filter"
 
@@ -70,19 +66,6 @@ class _PromptRecorder(BaseInterpreter):
 def interpreter() -> _PromptRecorder:
     # conftest unregisters its logger from Robot's global LOGGER after the test.
     return _PromptRecorder()
-
-
-@pytest.fixture
-def project(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    monkeypatch.chdir(tmp_path)
-    # `run_repl` prepends the profile's python-path to `sys.path`.
-    monkeypatch.setattr(sys, "path", list(sys.path))
-    # `handle_robot_options` stashes the app in a module global.
-    monkeypatch.setattr(_runner_robot, "_app", _runner_robot._app)
-    # Keep a developer's user-level robot.toml and ROBOT_OPTIONS out of the test.
-    monkeypatch.setattr(config_utils, "get_user_config_file", lambda *args, **kwargs: None)
-    monkeypatch.delenv("ROBOT_OPTIONS", raising=False)
-    return tmp_path
 
 
 @pytest.fixture(scope="module")
@@ -124,7 +107,7 @@ def _run_repl_with_profile(
     profile_settings: str,
     capsys: pytest.CaptureFixture[str],
     **run_repl_options: Any,
-) -> None:
+) -> ReplResult:
     (project / "robot.toml").write_text(
         f"[profiles.{_PROFILE}]\n{profile_settings}\n{_PROFILE_VARIABLE}", encoding="utf-8"
     )
@@ -133,7 +116,7 @@ def _run_repl_with_profile(
     app.config.profiles = [_PROFILE]
 
     try:
-        run_repl(interpreter=interpreter, app=app, outputdir=str(project / "results"), **run_repl_options)
+        return run_repl(interpreter=interpreter, app=app, outputdir=str(project / "results"), **run_repl_options)
     except SystemExit as e:
         pytest.fail(
             f"run_repl exited with code {e.code} (prompts opened: {interpreter.prompts}):\n{capsys.readouterr().err}"
@@ -336,8 +319,9 @@ def test_run_repl_ignores_profile_skip_on_failure(
     typing_interpreter: _TypedKeywordRecorder,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    # A keyword failing at the prompt doesn't fail the REPL test, so the option never
-    # changes its status. `${OPTIONS}` shows what the session runs with.
+    # The option would turn a failed session test into a skipped one (see
+    # `test_skip_on_failure_does_not_skip_a_failed_session`). `${OPTIONS}` shows what
+    # the session runs with.
     _run_repl_with_profile(project, typing_interpreter, profile_settings, capsys)
 
     _assert_typed_keyword_executed(typing_interpreter)
@@ -418,3 +402,243 @@ def test_input_keywords_carry_the_session_source_in_robots_type(tmp_path: Path) 
     assert not errors
     assert isinstance(test.body[0].source, _ROBOT_SOURCE_TYPE)
     assert str(test.body[0].source) == str(interpreter.source)
+
+
+# ---------------------------------------------------------------------------
+# Session status — `robotcode repl` records the unhandled failures of the
+# session, and the `repl` marker keyword fails the session test with them.
+# ---------------------------------------------------------------------------
+
+
+class _ScriptedSession(_PromptRecorder):
+    """Runs each of `inputs` as if typed at the prompt, then ends the session like
+    Ctrl-D. Records failures like `robotcode repl` unless told otherwise."""
+
+    def __init__(self, inputs: List[str], *, record_failures: bool = True) -> None:
+        super().__init__()
+        self.record_failures = record_failures
+        self._inputs = list(inputs)
+        self.logged: List[str] = []
+
+    def get_input(self) -> Iterator[Optional[Keyword]]:
+        self.prompts += 1
+        if not self._inputs:
+            raise EOFError
+        test, _ = self.get_test_body_from_string(self._inputs.pop(0))
+        yield from test.body
+
+    def log_message(
+        self, message: str, level: str, html: Union[str, bool] = False, timestamp: Union[datetime, str, None] = None
+    ) -> None:
+        self.logged.append(message)
+
+
+def _session_test(project: Path) -> Any:
+    [test] = ExecutionResult(str(project / "results" / "output.xml")).suite.tests
+    return test
+
+
+def test_failure_at_the_prompt_fails_the_session_test(project: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    session = _ScriptedSession(["Fail    boom", "Log    after"])
+
+    result = _run_repl_with_profile(
+        project, session, "", capsys, output="output.xml", log="log.html", report="report.html"
+    )
+
+    assert "after" in session.logged, "the session did not go on after the failure"
+    test = _session_test(project)
+    assert test.status == "FAIL"
+    assert "boom" in test.message
+    assert (project / "results" / "log.html").is_file()
+    assert (project / "results" / "report.html").is_file()
+    assert result == ReplResult(return_code=1, exit_code=None)
+
+
+@pytest.mark.parametrize(
+    ("statement", "message"),
+    [
+        pytest.param(
+            "FOR    ${x}    IN    @{nope}\n    Log    ${x}\nEND",
+            "Variable '@{nope}' not found.",
+            id="for-over-missing-variable",
+        ),
+        pytest.param(
+            "IF    True\n    Run Keyword And Continue On Failure    Fail    early\n    Pass Execution    done\nEND",
+            "early",
+            id="continued-failure-before-pass-execution",
+        ),
+    ],
+)
+def test_failing_control_structure_fails_the_session_test(
+    statement: str, message: str, project: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _run_repl_with_profile(project, _ScriptedSession([statement]), "", capsys, output="output.xml")
+
+    test = _session_test(project)
+    assert test.status == "FAIL"
+    assert test.message == message
+
+
+def test_several_failures_are_combined_in_the_session_test_message(
+    project: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _run_repl_with_profile(project, _ScriptedSession(["Fail    one", "Fail    two"]), "", capsys, output="output.xml")
+
+    assert _session_test(project).message == "Several failures occurred:\n\n1) one\n\n2) two"
+
+
+@pytest.mark.parametrize(
+    "statement",
+    [
+        pytest.param("TRY\n    Fail    handled\nEXCEPT\n    No Operation\nEND", id="try-except"),
+        pytest.param("Run Keyword And Expect Error    expected    Fail    expected", id="expect-error"),
+        pytest.param("Run Keyword And Ignore Error    Fail    ignored", id="ignore-error"),
+        pytest.param("Skip    skipped", id="skip"),
+        # Robot Framework marks such a test SKIP: the skip wins over the continued failure.
+        pytest.param(
+            "IF    True\n    Run Keyword And Continue On Failure    Fail    early\n    Skip    later\nEND",
+            id="continued-failure-before-skip",
+        ),
+        pytest.param("Pass Execution    passed", id="pass-execution"),
+    ],
+)
+def test_handled_failures_skip_and_pass_execution_keep_the_session_test_passing(
+    statement: str, project: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    session = _ScriptedSession([statement, "Log    after"])
+
+    result = _run_repl_with_profile(project, session, "", capsys, output="output.xml")
+
+    assert "after" in session.logged
+    assert _session_test(project).status == "PASS"
+    assert result.return_code == 0
+
+
+@pytest.mark.parametrize(
+    "profile_settings",
+    [
+        # `NOT tag` matches every test lacking the tag — including the untagged REPL
+        # test. (`*` matches no test without tags.)
+        pytest.param('skip-on-failure = ["NOT no-such-tag"]', id="skip-on-failure"),
+        pytest.param('args = ["--skiponfailure", "NOT no-such-tag"]', id="args"),
+    ],
+)
+def test_skip_on_failure_does_not_skip_a_failed_session(
+    profile_settings: str, project: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _run_repl_with_profile(project, _ScriptedSession(["Fail    boom"]), profile_settings, capsys, output="output.xml")
+
+    assert _session_test(project).status == "FAIL"
+
+
+def test_session_without_failure_recording_keeps_passing(project: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    # Like `robotcode repl-server`, which doesn't record failures.
+    session = _ScriptedSession(["Fail    boom"], record_failures=False)
+
+    result = _run_repl_with_profile(project, session, "", capsys, output="output.xml")
+
+    assert _session_test(project).status == "PASS"
+    assert result.return_code == 0
+
+
+def test_marker_keyword_forgets_the_session_interpreter(project: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    _run_repl_with_profile(project, _ScriptedSession(["Fail    boom"]), "", capsys)
+
+    # A later session in the same process must not see this one's failures.
+    assert take_active_interpreter() is None
+
+
+class _Reader:
+    """Scripted `read_line` for both the `>>>` and the `(rdb)` prompt — pops
+    queued lines, then signals EOF."""
+
+    def __init__(self, lines: List[str]) -> None:
+        self._lines = list(lines)
+
+    def __call__(self, prompt: str, **kwargs: Any) -> str:
+        if not self._lines:
+            raise EOFError
+        return self._lines.pop(0)
+
+
+def test_keyword_evaluated_at_a_debugger_stop_does_not_fail_the_session(
+    project: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    interpreter = ConsoleInterpreter(app=None)
+    interpreter.record_failures = True
+    # `Log    hi` stops at the keyword breakpoint; `Fail    boom` is evaluated at `(rdb)`.
+    interpreter.read_line = _Reader(["Log    hi", "Fail    boom", ".continue"])  # type: ignore[method-assign]
+    _attach_debugger(interpreter, break_at=("Log",))
+    app = Application()
+    app.config.root = project
+
+    run_repl(interpreter=interpreter, app=app, outputdir=str(project / "results"), output="output.xml")
+
+    assert _session_test(project).status == "PASS"
+    assert interpreter.failures == []
+
+
+# ---------------------------------------------------------------------------
+# `run_repl`'s result — Robot's return code and the code given to `.exit`.
+# ---------------------------------------------------------------------------
+
+
+def test_run_repl_returns_a_clean_result_for_a_passing_session(
+    project: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    result = _run_repl_with_profile(project, _ScriptedSession(["Log    ok"]), "", capsys)
+
+    assert result == ReplResult(return_code=0, exit_code=None)
+
+
+@pytest.mark.parametrize(
+    ("profile_settings", "robot_options", "statusrc", "return_code"),
+    [
+        pytest.param("", None, None, 1, id="default"),
+        pytest.param("no-status-rc = true", None, None, 0, id="no-status-rc-true"),
+        pytest.param("no-status-rc = false", None, None, 1, id="no-status-rc-false"),
+        pytest.param("", "--nostatusrc", None, 0, id="robot-options-nostatusrc"),
+        pytest.param("no-status-rc = true", None, True, 1, id="statusrc-beats-profile"),
+        pytest.param("", "--nostatusrc", True, 1, id="statusrc-beats-robot-options"),
+        pytest.param("", None, False, 0, id="nostatusrc"),
+    ],
+)
+def test_run_repl_return_code_honors_statusrc(
+    profile_settings: str,
+    robot_options: Optional[str],
+    statusrc: Optional[bool],
+    return_code: int,
+    project: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    if robot_options is not None:
+        monkeypatch.setenv("ROBOT_OPTIONS", robot_options)
+
+    result = _run_repl_with_profile(
+        project, _ScriptedSession(["Fail    boom"]), profile_settings, capsys, output="output.xml", statusrc=statusrc
+    )
+
+    assert result.return_code == return_code
+    # Only the return code changes — the session test still failed.
+    assert _session_test(project).status == "FAIL"
+
+
+class _ExitWithCode(_PromptRecorder):
+    """Ends the session at the first prompt like `.exit CODE`."""
+
+    def __init__(self, code: int) -> None:
+        super().__init__()
+        self._code = code
+
+    def get_input(self) -> Iterator[Optional[Keyword]]:
+        self.prompts += 1
+        self.exit_code = self._code
+        raise EOFError
+
+
+@pytest.mark.parametrize("code", [3, 0])
+def test_run_repl_returns_the_code_given_to_exit(code: int, project: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    result = _run_repl_with_profile(project, _ExitWithCode(code), "", capsys)
+
+    assert result == ReplResult(return_code=0, exit_code=code)

@@ -1,5 +1,6 @@
 import io
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional, Tuple
 
@@ -45,6 +46,17 @@ _IGNORED_ROBOT_OPTIONS = (
 )
 
 
+@dataclass
+class ReplResult:
+    """How a REPL session ended."""
+
+    # Robot Framework's return code for the session test: 1 when it failed, 0 when it
+    # passed or when `statusrc` is switched off.
+    return_code: int
+    # The code given to `.exit`/`.quit`, None without one.
+    exit_code: Optional[int]
+
+
 def run_repl(
     interpreter: BaseInterpreter,
     app: Application,
@@ -58,7 +70,8 @@ def run_repl(
     xunit: Optional[str] = None,
     source: Optional[Path] = None,
     files: Tuple[Path, ...] = (),
-) -> None:
+    statusrc: Optional[bool] = None,
+) -> ReplResult:
     robot_options_and_args: Tuple[str, ...] = ()
 
     if files:
@@ -72,6 +85,9 @@ def run_repl(
         robot_options_and_args += ("--pythonpath", pypath)
     if outputdir:
         robot_options_and_args += ("--outputdir", outputdir)
+    # Parsed after the configured options, so Robot's "last one wins" lets it override them.
+    if statusrc is not None:
+        robot_options_and_args += ("--statusrc" if statusrc else "--nostatusrc",)
 
     root_folder, _profile, cmd_options = handle_robot_options(app, (*robot_options_and_args, *(str(f) for f in files)))
 
@@ -133,3 +149,6 @@ def run_repl(
         except DataError as err:
             app.error(str(err))
             app.exit(DATA_ERROR)
+
+    # The prompt loop runs inside `suite.run`, so a code given to `.exit` is known by now.
+    return ReplResult(result.return_code, interpreter.exit_code)

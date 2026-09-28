@@ -569,6 +569,14 @@ def test_exit_at_stop_guides_instead_of_leaving() -> None:
     assert not any("EOFError" in m for m in messages)
 
 
+def test_exit_with_code_at_stop_stores_nothing() -> None:
+    # Refused at a stop, `.exit 3` must not leave a code behind for the session.
+    interpreters: List[ConsoleInterpreter] = []
+    messages = _run_debug(STEP_SUITE, [".exit 3", ".continue"], stop_on_entry=True, prepare=interpreters.append)
+    assert "at a debug stop" in "\n".join(messages)
+    assert interpreters[0].exit_code is None
+
+
 @pytest.mark.skipif(RF_VERSION < (7, 0), reason="result.name is only deprecated on Robot Framework >= 7")
 def test_repl_marker_check_does_not_read_deprecated_result_name() -> None:
     # The marker check runs on every body-item start, including control
