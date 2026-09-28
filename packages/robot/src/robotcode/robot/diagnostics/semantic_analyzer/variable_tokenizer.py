@@ -19,7 +19,7 @@ from robot.errors import VariableError
 from robot.parsing.lexer.tokens import Token
 
 from ...utils.ast import tokenize_variables
-from ...utils.variables import search_variable
+from ...utils.variables import contains_variable, search_variable
 from .enums import TokenKind
 from .nodes import SemanticToken
 
@@ -262,10 +262,11 @@ def normalize_variable_lookup_name(value: str, *, parse_type: bool = False) -> O
         # guard because the tail may contain nested variables (e.g.
         # ``${A + '${B}'}``) while the base name ``A`` is perfectly resolvable.
         # Skip when the extension starts with a variable identifier (``${``,
-        # ``@{`` etc.) — that indicates a **nested variable name** like
-        # ``${cfg_${env}}``, not an expression.
+        # ``@{`` etc.), or an environment variable name does — that indicates a
+        # **nested variable name** like ``${cfg_${env}}`` or ``%{%{name}}``,
+        # not an expression.
         extended_match = _MATCH_EXTENDED.match(inner)
-        if extended_match:
+        if extended_match and not (prefix == "%" and inner.startswith(("${", "@{", "&{", "%{"))):
             ext_part = extended_match.group(2)
             if not ext_part.startswith(("${", "@{", "&{", "%{")):
                 inner = extended_match.group(1)
@@ -466,8 +467,13 @@ def _decompose_variable_inner(
 
     # Environment variable default: %{NAME=default}
     if prefix_char == "%":
-        if "=" in inner:
-            eq_pos = inner.index("=")
+        # RF splits at the first '=' outside nested variables.
+        eq_pos = -1
+        for t in tokenize_variables(Token(Token.ARGUMENT, inner, line, 0), "$@&%", ignore_errors=True):
+            if t.type != Token.VARIABLE and "=" in t.value:
+                eq_pos = t.col_offset + t.value.index("=")
+                break
+        if eq_pos >= 0:
             base = inner[:eq_pos]
             default_val = inner[eq_pos + 1 :]
             tokens.append(
@@ -477,6 +483,7 @@ def _decompose_variable_inner(
                     line=line,
                     col_offset=col_offset,
                     length=len(base),
+                    sub_tokens=_decompose_env_variable_part(base, line, col_offset, TokenKind.VARIABLE_BASE),
                 )
             )
             tokens.append(
@@ -495,6 +502,9 @@ def _decompose_variable_inner(
                     line=line,
                     col_offset=col_offset + eq_pos + 1,
                     length=len(default_val),
+                    sub_tokens=_decompose_env_variable_part(
+                        default_val, line, col_offset + eq_pos + 1, TokenKind.VARIABLE_DEFAULT_VALUE
+                    ),
                 )
             )
             return tokens
@@ -505,6 +515,7 @@ def _decompose_variable_inner(
                 line=line,
                 col_offset=col_offset,
                 length=len(inner),
+                sub_tokens=_decompose_env_variable_part(inner, line, col_offset, TokenKind.VARIABLE_BASE),
             )
         )
         return tokens
@@ -712,6 +723,50 @@ def _decompose_nested_variable(
             )
         )
         pos = end + 1
+
+    return tokens
+
+
+def _decompose_env_variable_part(
+    value: str,
+    line: int,
+    col_offset: int,
+    text_kind: TokenKind,
+) -> Optional[List[SemanticToken]]:
+    """Decompose the name or default of ``%{NAME=default}`` if it contains variables.
+
+    E.g., ``pre${x}`` -> ``text_kind`` text + nested VARIABLE sub-tokens.
+    Uses RF's tokenizer, so escaped variables like ``\\${x}`` stay text.
+    """
+    if not contains_variable(value, "$@&%"):
+        return None
+
+    tokens: List[SemanticToken] = []
+    for t in iter_variable_tokens_with_index_access(
+        Token(Token.ARGUMENT, value, line, col_offset), "$@&%", ignore_errors=True
+    ):
+        if t.type == Token.VARIABLE:
+            nested_sub = build_variable_sub_tokens(t.value, line, t.col_offset)
+            tokens.append(
+                SemanticToken(
+                    kind=TokenKind.VARIABLE,
+                    value=t.value,
+                    line=line,
+                    col_offset=t.col_offset,
+                    length=len(t.value),
+                    sub_tokens=nested_sub if nested_sub else None,
+                )
+            )
+        else:
+            tokens.append(
+                SemanticToken(
+                    kind=text_kind,
+                    value=t.value,
+                    line=line,
+                    col_offset=t.col_offset,
+                    length=len(t.value),
+                )
+            )
 
     return tokens
 

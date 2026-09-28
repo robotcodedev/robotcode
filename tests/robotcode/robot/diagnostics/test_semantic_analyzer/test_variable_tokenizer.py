@@ -114,6 +114,38 @@ class TestVariableTypes:
         assert tokens[3].value == "="
         assert tokens[4].value == ""
 
+    def test_env_variable_with_nested_variables_in_name_and_default(self) -> None:
+        tokens = build_variable_sub_tokens("%{A_${x}=a${y}b}", 1, 0)
+        base, default = tokens[2], tokens[4]
+        assert (base.value, default.value) == ("A_${x}", "a${y}b")
+        assert base.sub_tokens is not None
+        assert [(t.kind, t.value, t.col_offset) for t in base.sub_tokens] == [
+            (TokenKind.VARIABLE_BASE, "A_", 2),
+            (TokenKind.VARIABLE, "${x}", 4),
+        ]
+        assert default.sub_tokens is not None
+        assert [(t.kind, t.value, t.col_offset) for t in default.sub_tokens] == [
+            (TokenKind.VARIABLE_DEFAULT_VALUE, "a", 9),
+            (TokenKind.VARIABLE, "${y}", 10),
+            (TokenKind.VARIABLE_DEFAULT_VALUE, "b", 14),
+        ]
+
+    def test_env_variable_splits_at_first_equals_outside_nested_variables(self) -> None:
+        tokens = build_variable_sub_tokens("%{A_%{B=1}=c}", 1, 0)
+        assert _values(tokens[2:5]) == ["A_%{B=1}", "=", "c"]
+
+    def test_env_variable_default_splits_index_access_from_nested_variable(self) -> None:
+        tokens = build_variable_sub_tokens("%{X=${y}[0]}", 1, 0)
+        default = tokens[4]
+        assert default.sub_tokens is not None
+        assert _kinds(default.sub_tokens) == [TokenKind.VARIABLE, TokenKind.VARIABLE_DEFAULT_VALUE]
+        assert _values(default.sub_tokens) == ["${y}", "[0]"]
+
+    def test_env_variable_escaped_nested_variable_stays_text(self) -> None:
+        tokens = build_variable_sub_tokens("%{X=\\${y}}", 1, 0)
+        assert tokens[4].value == "\\${y}"
+        assert tokens[4].sub_tokens is None
+
 
 # --- Type hints ---
 
@@ -449,6 +481,10 @@ class TestLookupNormalization:
     def test_nested_variable_returns_none(self) -> None:
         assert normalize_variable_lookup_name("${cfg_${env}}") is None
 
+    def test_leading_nested_variable_in_env_name_returns_none(self) -> None:
+        assert normalize_variable_lookup_name("%{%{name}}") is None
+        assert normalize_variable_lookup_name("%{${name}}") is None
+
     def test_inline_python_returns_none(self) -> None:
         assert normalize_variable_lookup_name("${{1 + 2}}") is None
 
@@ -488,6 +524,17 @@ class TestRelatedOccurrences:
         assert "${cfg_${env}}" in values
         assert "${env}" in values
         assert "${env}" in lookups
+
+    def test_env_nested_occurrences_are_extracted(self) -> None:
+        occ = build_variable_occurrence("%{A_${x}=%{B=${y}}}", 1, 0)
+        related = list(iter_related_occurrences(occ))
+
+        assert [r.value for r in related] == ["%{A_${x}=%{B=${y}}}", "${x}", "%{B=${y}}", "${y}"]
+        assert [r.col_offset for r in related] == [0, 4, 9, 13]
+
+    def test_escaped_env_nested_variable_is_not_extracted(self) -> None:
+        occ = build_variable_occurrence("%{X=\\${y}}", 1, 0)
+        assert [r.value for r in iter_related_occurrences(occ)] == ["%{X=\\${y}}"]
 
     def test_python_variable_refs_are_extracted(self) -> None:
         occ = build_variable_occurrence("${{$base + $other}}", 1, 0)

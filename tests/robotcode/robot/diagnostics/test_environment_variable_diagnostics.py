@@ -2,6 +2,9 @@
 
 Robot Framework resolves `%{NAME=default}` to the default when `NAME` is not set, and an empty
 default (`%{NAME=}`) is a default like any other: it resolves to an empty string.
+
+Variables nested in the name or the default are resolved before the lookup, so an undefined one
+fails even when `NAME` is set. An escaped `\\${var}` is not a variable.
 """
 
 from typing import Callable, List, Optional
@@ -23,6 +26,7 @@ from tests.robotcode.conftest import make_resource_doc, parse_robot
 
 SOURCE = "/test.robot"
 ENV_NAME = "ROBOTCODE_TEST_ENV_VAR"
+OTHER_ENV_NAME = "ROBOTCODE_TEST_OTHER_ENV_VAR"
 
 SUITE = """\
 *** Variables ***
@@ -62,6 +66,10 @@ def _env_diagnostics(result: AnalyzerResult) -> List[Diagnostic]:
     ]
 
 
+def _variable_diagnostics(result: AnalyzerResult) -> List[Diagnostic]:
+    return [d for d in result.diagnostics if d.code in (Error.VARIABLE_NOT_FOUND, Error.VARIABLE_NOT_REPLACED)]
+
+
 @pytest.mark.parametrize("var", [f"%{{{ENV_NAME}=}}", f"%{{{ENV_NAME}=abc}}"], ids=["empty default", "default"])
 def test_unset_variable_with_default_is_not_reported(
     analyze: Callable[[str], AnalyzerResult], monkeypatch: pytest.MonkeyPatch, var: str
@@ -93,6 +101,164 @@ def test_set_variable_without_default_is_not_reported(
     monkeypatch.setenv(ENV_NAME, "value")
 
     assert _env_diagnostics(analyze(SUITE.format(var=f"%{{{ENV_NAME}}}"))) == []
+
+
+@pytest.mark.parametrize(
+    ("var", "env_set"),
+    [
+        (f"%{{{ENV_NAME}_${{UNDEF}}}}", False),
+        (f"%{{{ENV_NAME}_${{UNDEF}}=}}", False),
+        (f"%{{{ENV_NAME}_${{UNDEF}}=abc}}", False),
+        (f"%{{{ENV_NAME}=${{UNDEF}}}}", False),
+        (f"%{{{ENV_NAME}=${{UNDEF}}}}", True),
+        (f"%{{{ENV_NAME}=%{{{OTHER_ENV_NAME}=${{UNDEF}}}}}}", False),
+        (f"%{{{ENV_NAME}=%{{{OTHER_ENV_NAME}=${{UNDEF}}}}}}", True),
+    ],
+    ids=[
+        "in name",
+        "in name with empty default",
+        "in name with default",
+        "in default",
+        "in default of set variable",
+        "in nested default",
+        "in nested default of set variable",
+    ],
+)
+def test_undefined_variable_nested_in_environment_variable_is_reported(
+    analyze: Callable[[str], AnalyzerResult], monkeypatch: pytest.MonkeyPatch, var: str, env_set: bool
+) -> None:
+    if env_set:
+        monkeypatch.setenv(ENV_NAME, "value")
+    else:
+        monkeypatch.delenv(ENV_NAME, raising=False)
+    monkeypatch.delenv(OTHER_ENV_NAME, raising=False)
+    offset = var.index("${UNDEF}") + 2
+
+    diagnostics = _variable_diagnostics(analyze(SUITE.format(var=var)))
+
+    assert [d.range.start for d in diagnostics] == [
+        Position(line=1, character=12 + offset),
+        Position(line=2, character=17 + offset),
+        Position(line=6, character=11 + offset),
+    ]
+    assert {d.code for d in diagnostics} == {Error.VARIABLE_NOT_FOUND}
+    assert {d.message for d in diagnostics} == {"Variable '${UNDEF}' not found."}
+
+
+@pytest.mark.parametrize("env_set", [False, True], ids=["unset", "set"])
+def test_unset_environment_variable_nested_in_default_is_reported(
+    analyze: Callable[[str], AnalyzerResult], monkeypatch: pytest.MonkeyPatch, env_set: bool
+) -> None:
+    if env_set:
+        monkeypatch.setenv(ENV_NAME, "value")
+    else:
+        monkeypatch.delenv(ENV_NAME, raising=False)
+    monkeypatch.delenv(OTHER_ENV_NAME, raising=False)
+    var = f"%{{{ENV_NAME}=%{{{OTHER_ENV_NAME}}}}}"
+    offset = var.index(OTHER_ENV_NAME)
+
+    diagnostics = _env_diagnostics(analyze(SUITE.format(var=var)))
+
+    assert [d.range.start for d in diagnostics] == [
+        Position(line=1, character=12 + offset),
+        Position(line=2, character=17 + offset),
+        Position(line=6, character=11 + offset),
+    ]
+    assert {d.code for d in diagnostics} == {Error.ENVIRONMENT_VARIABLE_NOT_FOUND}
+    assert {d.message for d in diagnostics} == {f"Environment variable '%{{{OTHER_ENV_NAME}}}' not found."}
+
+
+@pytest.mark.parametrize(
+    "var",
+    [f"%{{{ENV_NAME}=\\${{UNDEF}}}}", f"%{{{ENV_NAME}_\\${{UNDEF}}=abc}}", f"%{{{ENV_NAME}=%{{{OTHER_ENV_NAME}=}}}}"],
+    ids=["escaped in default", "escaped in name", "nested with default"],
+)
+def test_resolvable_environment_variable_with_nested_syntax_is_not_reported(
+    analyze: Callable[[str], AnalyzerResult], monkeypatch: pytest.MonkeyPatch, var: str
+) -> None:
+    monkeypatch.delenv(ENV_NAME, raising=False)
+    monkeypatch.delenv(OTHER_ENV_NAME, raising=False)
+
+    result = analyze(SUITE.format(var=var))
+
+    assert _variable_diagnostics(result) == []
+    assert _env_diagnostics(result) == []
+
+
+def test_variables_nested_in_environment_variable_are_referenced(
+    analyze: Callable[[str], AnalyzerResult], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv(ENV_NAME, raising=False)
+    in_name = f"%{{{ENV_NAME}_${{IN_NAME}}=abc}}"
+    in_default = f"%{{{ENV_NAME}=${{IN_DEFAULT}}}}"
+
+    result = analyze(
+        f"*** Variables ***\n${{IN_NAME}}    x\n${{IN_DEFAULT}}    y\n\n"
+        f"*** Test Cases ***\nTest\n    Log    {in_name}\n    Log    {in_default}\n"
+    )
+
+    assert _variable_diagnostics(result) == []
+    assert _env_diagnostics(result) == []
+    references = {
+        var.name: [(loc.range.start.line, loc.range.start.character) for loc in locations]
+        for var, locations in result.variable_references.items()
+        if var.name in ("${IN_NAME}", "${IN_DEFAULT}")
+    }
+    assert references == {
+        "${IN_NAME}": [(6, 11 + in_name.index("IN_NAME"))],
+        "${IN_DEFAULT}": [(7, 11 + in_default.index("IN_DEFAULT"))],
+    }
+
+
+def test_undefined_variable_nested_in_environment_variable_in_documentation_is_not_replaced(
+    analyze: Callable[[str], AnalyzerResult], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv(ENV_NAME, raising=False)
+    var = f"%{{{ENV_NAME}=${{UNDEF}}}}"
+
+    diagnostics = _variable_diagnostics(
+        analyze(f"*** Test Cases ***\nTest\n    [Documentation]    doc {var}\n    Log    x\n")
+    )
+
+    assert [d.range.start for d in diagnostics] == [Position(line=2, character=27 + var.index("UNDEF"))]
+    assert {d.code for d in diagnostics} == {Error.VARIABLE_NOT_REPLACED}
+    assert {d.message for d in diagnostics} == {"Variable '${UNDEF}' not replaced."}
+
+
+# In the following cases the NamespaceAnalyzer also reports the outer environment variable,
+# which Robot Framework does not, so they only run the SemanticAnalyzer.
+
+
+def test_environment_variable_with_undefined_variable_in_name_is_not_reported(
+    analyzer_factory: Callable[..., AnalyzerResult], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv(ENV_NAME, raising=False)
+
+    assert _env_diagnostics(analyzer_factory(SUITE.format(var=f"%{{{ENV_NAME}_${{UNDEF}}}}"))) == []
+
+
+def test_environment_variable_named_by_set_environment_variable_is_not_reported(
+    analyzer_factory: Callable[..., AnalyzerResult], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv(OTHER_ENV_NAME, ENV_NAME)
+    monkeypatch.setenv(ENV_NAME, "value")
+
+    assert _env_diagnostics(analyzer_factory(SUITE.format(var=f"%{{%{{{OTHER_ENV_NAME}}}}}"))) == []
+
+
+def test_environment_variable_named_by_unset_environment_variable_reports_only_the_nested_one(
+    analyzer_factory: Callable[..., AnalyzerResult], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv(OTHER_ENV_NAME, raising=False)
+
+    diagnostics = _env_diagnostics(analyzer_factory(SUITE.format(var=f"%{{%{{{OTHER_ENV_NAME}}}}}")))
+
+    assert [d.range.start for d in diagnostics] == [
+        Position(line=1, character=16),
+        Position(line=2, character=21),
+        Position(line=6, character=15),
+    ]
+    assert {d.message for d in diagnostics} == {f"Environment variable '%{{{OTHER_ENV_NAME}}}' not found."}
 
 
 def _namespace_analyzer_find(name: str) -> Optional[VariableDefinition]:

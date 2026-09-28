@@ -143,6 +143,28 @@ def test_split_variable_env_var_with_default() -> None:
     assert out[0] == ("class:rf.variable.brace", "%")
 
 
+def test_split_variable_env_var_with_nested_variables() -> None:
+    """`%{A_${x}=a${y}b}` → nested variables are unwrapped, the rest keeps the name/default styles."""
+    out = list(_split_variable("%{A_${x}=a${y}b}"))
+    assert out == [
+        ("class:rf.variable.brace", "%"),
+        ("class:rf.variable.brace", "{"),
+        ("class:rf.variable.name", "A_"),
+        ("class:rf.variable.brace", "$"),
+        ("class:rf.variable.brace", "{"),
+        ("class:rf.variable.name", "x"),
+        ("class:rf.variable.brace", "}"),
+        ("class:rf.variable.operator", "="),
+        ("class:rf.argument", "a"),
+        ("class:rf.variable.brace", "$"),
+        ("class:rf.variable.brace", "{"),
+        ("class:rf.variable.name", "y"),
+        ("class:rf.variable.brace", "}"),
+        ("class:rf.argument", "b"),
+        ("class:rf.variable.brace", "}"),
+    ]
+
+
 def test_split_variable_subscript_index_uses_brace_style() -> None:
     """`${dict}[key]` → variable + `[` `key` `]` as subscript sub-tokens."""
     out = list(_split_variable("${dict}[key]"))
