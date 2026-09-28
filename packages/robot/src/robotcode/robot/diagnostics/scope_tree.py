@@ -119,7 +119,7 @@ class ScopeTree:
     ) -> Optional[VariableDefinition]:
         """Find a variable by name at the given position."""
         if name[:2] == "%{" and name[-1] == "}":
-            var_name, _, default_value = name[2:-1].partition("=")
+            var_name, sep, default_value = name[2:-1].partition("=")
             return EnvironmentVariableDefinition(
                 0,
                 0,
@@ -128,7 +128,7 @@ class ScopeTree:
                 "",
                 f"%{{{var_name}}}",
                 None,
-                default_value=default_value or None,
+                default_value=default_value if sep else None,
             )
 
         try:

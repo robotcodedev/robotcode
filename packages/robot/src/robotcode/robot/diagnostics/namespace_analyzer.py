@@ -1921,7 +1921,7 @@ class NamespaceAnalyzer(Visitor):
 
     def _find_variable(self, name: str) -> Optional[VariableDefinition]:
         if name[:2] == "%{" and name[-1] == "}":
-            var_name, _, default_value = name[2:-1].partition("=")
+            var_name, sep, default_value = name[2:-1].partition("=")
             return EnvironmentVariableDefinition(
                 0,
                 0,
@@ -1930,7 +1930,7 @@ class NamespaceAnalyzer(Visitor):
                 "",
                 f"%{{{var_name}}}",
                 None,
-                default_value=default_value or None,
+                default_value=default_value if sep else None,
             )
 
         vars = (
