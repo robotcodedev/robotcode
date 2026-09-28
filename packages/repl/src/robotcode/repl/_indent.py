@@ -4,7 +4,8 @@ Pure-Python, deterministic, no Robot-runtime dependency. Used by:
 
 - `ConsoleInterpreter.get_input()` to pre-compute the indent string
   passed via `prefill=` to the next `read_line()` call (so the
-  continuation prompt seeds the user's cursor at the right column).
+  continuation prompt seeds the user's cursor at the right column),
+  and to spot a fresh input that starts with a continuation line.
 - `_pt.components` smart-Enter / Shift-Enter key bindings to decide
   whether the buffer still has an open block and what indent the
   inserted newline should carry.
@@ -80,3 +81,9 @@ def has_open_block(text: str) -> bool:
     block openers than closers — i.e. would not be a complete Robot
     statement if submitted as-is."""
     return _block_depth(text.splitlines()) > 0
+
+
+def starts_with_continuation(text: str) -> bool:
+    """True if the first line of `text` is a continuation line — its first
+    cell is Robot's ``...`` marker."""
+    return _first_cell(text.split("\n", 1)[0]) == "..."

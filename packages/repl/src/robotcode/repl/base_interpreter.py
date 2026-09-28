@@ -1,6 +1,7 @@
 import abc
 import contextlib
 import signal
+from dataclasses import dataclass
 from datetime import datetime
 from io import StringIO
 from pathlib import Path
@@ -10,6 +11,8 @@ from robot.api import get_model
 from robot.errors import ExecutionFailed, ExecutionPassed, ExecutionStatus
 from robot.output import LOGGER
 from robot.output import Message as OutputMessage
+from robot.parsing.lexer.tokens import Token
+from robot.parsing.model.blocks import For, If, Try, While
 from robot.result import Keyword as ResultKeyword
 from robot.running import Keyword, TestCase, TestSuite
 from robot.running.context import EXECUTION_CONTEXTS
@@ -107,6 +110,29 @@ else:
 
 def result_qualified_name(result: Any) -> Optional[str]:
     return _keyword_qualified_name(result) if isinstance(result, ResultKeyword) else None
+
+
+# Blocks that stay open until their END. Their branches (ELSE, EXCEPT, …) are blocks of
+# the same classes with another header and never get an END of their own.
+if RF_VERSION >= (7, 2):
+    from robot.parsing.model.blocks import Group
+
+    _END_BLOCKS: Tuple[Any, ...] = (For, While, If, Try, Group)
+    _BLOCK_OPENERS = frozenset({Token.FOR, Token.WHILE, Token.IF, Token.TRY, Token.GROUP})
+else:
+    _END_BLOCKS = (For, While, If, Try)
+    _BLOCK_OPENERS = frozenset({Token.FOR, Token.WHILE, Token.IF, Token.TRY})
+
+
+@dataclass
+class ReplInput:
+    """REPL input parsed as a test body by `BaseInterpreter.parse_input`."""
+
+    test: TestCase
+    # The parse errors of the input.
+    errors: List[str]
+    # True while a block of the input lacks its END, so more lines can complete it.
+    incomplete: bool
 
 
 if RF_VERSION < (7, 0):
@@ -289,7 +315,7 @@ class BaseInterpreter(abc.ABC):
 
         return []
 
-    def get_test_body_from_string(self, command: str) -> Tuple[TestCase, List[str]]:
+    def _parse_test_body(self, command: str) -> Tuple[Any, TestCase]:
         suite_str = (
             "*** Test Cases ***\nDummyTestCase423141592653589793\n  "
             + ("\n  ".join(command.split("\n")) if "\n" in command else command)
@@ -303,12 +329,39 @@ class BaseInterpreter(abc.ABC):
 
         suite: TestSuite = TestSuite.from_model(model)
 
+        return model, cast(TestCase, suite.tests[0])
+
+    def get_test_body_from_string(self, command: str) -> Tuple[TestCase, List[str]]:
+        model, test = self._parse_test_body(command)
+
         errors: List[str] = []
 
         for node in iter_nodes(model):
             errors.extend(self.check_for_errors(node))
 
-        return cast(TestCase, suite.tests[0]), errors
+        return test, errors
+
+    def parse_input(self, text: str) -> ReplInput:
+        """Parse REPL input as a test body without raising on errors.
+
+        Unlike `get_test_body_from_string`, whose `SyntaxError` for token errors
+        `repl_server` relies on, invalid statements are left to Robot Framework,
+        which fails them when execution reaches them.
+        """
+        model, test = self._parse_test_body(text)
+
+        errors: List[str] = []
+        incomplete = False
+
+        for node in iter_nodes(model):
+            try:
+                errors.extend(self.check_for_errors(node))
+            except SyntaxError as e:
+                errors.append(str(e))
+            if isinstance(node, _END_BLOCKS) and node.header.type in _BLOCK_OPENERS and node.end is None:
+                incomplete = True
+
+        return ReplInput(test=test, errors=errors, incomplete=incomplete)
 
     @abc.abstractmethod
     def get_input(self) -> Iterator[Optional[Keyword]]: ...

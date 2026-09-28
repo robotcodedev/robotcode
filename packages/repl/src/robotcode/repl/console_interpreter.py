@@ -24,10 +24,11 @@ import shlex
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable, Dict, Iterator, List, Optional, Set, Tuple, TypeVar, Union
+from typing import TYPE_CHECKING, Any, Callable, Dict, Iterator, List, Optional, Set, Tuple, TypeVar, Union, cast
 
 import click
 from robot import result, running
+from robot.errors import ExecutionFailed
 from robot.running import Keyword
 from robot.running.context import EXECUTION_CONTEXTS
 from robot.utils import normalize
@@ -43,13 +44,13 @@ from robotcode.robot.diagnostics.library_doc import (
     get_library_doc_from_library,
     get_resource_doc_from_resource,
 )
-from robotcode.robot.utils import get_robot_version_str
+from robotcode.robot.utils import RF_VERSION, get_robot_version_str
 from robotcode.robot.utils.markdown_docs import LinkResolver, anchor_link_resolver, normalize_markdown_doc
 from robotcode.robot.utils.markdownformatter import MarkDownFormatter
 
 from .__version__ import __version__
 from ._debug.types import Breakpoint, ResumeAction, StackFrame, StopEvent
-from ._indent import compute_indent
+from ._indent import compute_indent, starts_with_continuation
 from ._keyword_lookup import (
     _LIB_KEYWORDS_ATTR,
     iter_keyword_owners,
@@ -58,7 +59,7 @@ from ._keyword_lookup import (
     lookup_resource,
 )
 from ._session_export import render_robot_file
-from .base_interpreter import BaseInterpreter, is_true
+from .base_interpreter import BaseInterpreter, ReplInput, is_true
 
 if TYPE_CHECKING:
     from ._debug.controller import DebugController
@@ -94,6 +95,19 @@ _SETTING_IMPORT_ALIASES = {
     "resource": "Import Resource",
     "variables": "Import Variables",
 }
+
+# Robot Framework 5.0 fails an invalid TRY without logging why; later versions log it.
+if RF_VERSION < (6, 0):
+    from robot.running.model import Try as _RunningTry
+
+    def _unlogged_error(item: Any) -> Optional[str]:
+        return cast(Optional[str], item.error) if isinstance(item, _RunningTry) else None
+
+else:
+
+    def _unlogged_error(item: Any) -> Optional[str]:
+        return None
+
 
 # `.help` groups, in display order. A command's group is set on `@dot_command`.
 _GROUP_ORDER = ("Session", "Debugger")
@@ -346,6 +360,10 @@ class ConsoleInterpreter(BaseInterpreter):
         # REPL inputs that parsed cleanly — `.save` exports them as a
         # runnable `.robot` file. Each entry may be multi-line.
         self._session_lines: List[str] = []
+        # Set when the input ended inside an unfinished block: that block still
+        # runs, then the session ends without reading again — on a terminal, a
+        # read after Ctrl-D waits for more input instead of ending.
+        self._input_ended = False
 
         # Debug-frontend state. `_controller`/`_debug_completer` are wired by
         # `set_controller` when a debugger is attached; `_stop`/`_frame_no`/
@@ -781,6 +799,15 @@ class ConsoleInterpreter(BaseInterpreter):
                 if target is not None:
                     item.name = target
 
+    def _body_to_run(self, parsed: ReplInput) -> Iterator[Keyword]:
+        """The statements of `parsed` to run, with the setting-import aliases applied."""
+        self._alias_setting_imports(parsed.test)
+        for item in parsed.test.body:
+            error = _unlogged_error(item)
+            if error:
+                self.log_message(error, "FAIL")
+            yield item
+
     def get_input(self) -> Iterator[Optional[Keyword]]:
         if self.executed_files and not self.files and not self.inspect:
             raise EOFError
@@ -792,14 +819,12 @@ class ConsoleInterpreter(BaseInterpreter):
 
             text = file.read_text(encoding="utf-8")
 
-            test, errors = self.get_test_body_from_string(text)
-            if errors:
-                return
-
-            self._alias_setting_imports(test)
-            for kw in test.body:
-                yield kw
+            # Run like a test body: an invalid statement fails when execution reaches it.
+            yield from self._body_to_run(self.parse_input(text))
         else:
+            if self._input_ended:
+                raise EOFError
+
             lines: List[str] = []
             last_one = False
             while True:
@@ -828,26 +853,41 @@ class ConsoleInterpreter(BaseInterpreter):
                         last_one = False
                         continue
                     raise
+                except EOFError:
+                    if not lines:
+                        raise
+                    # Handle the unfinished block like after a final empty line, so
+                    # Robot Framework reports it, and end the session afterwards.
+                    self._input_ended = True
+                    text = ""
+                    # The report starts on a line of its own, not after the prompt.
+                    if prompt:
+                        self._echo("")
+
+                if not lines and starts_with_continuation(text):
+                    # At the start of an input there is nothing left to continue.
+                    message = "The line starting with '...' does not continue a statement, it starts a new input."
+                    self.log_message(message, "FAIL")
+                    raise ExecutionFailed(message)
 
                 lines.append(text)
 
-                test, errors = self.get_test_body_from_string("\n".join(lines))
+                parsed = self.parse_input("\n".join(lines))
 
                 if len(lines) > 1 and lines[-1] == "" and text == "":
                     last_one = True
 
-                if errors:
-                    if not last_one:
-                        continue
+                # Only an unfinished block waits for more lines; complete input runs
+                # even when it is invalid, so Robot Framework reports it.
+                if parsed.incomplete and not last_one:
+                    continue
 
-                # Record cleanly-parsed inputs for `.save`. Error-only
-                # inputs are skipped so the exported file stays runnable.
-                if test.body:
+                # Record cleanly-parsed inputs for `.save`. Inputs with errors
+                # are skipped so the exported file stays runnable.
+                if parsed.test.body and not parsed.errors:
                     self._session_lines.append("\n".join(lines))
 
-                self._alias_setting_imports(test)
-                for kw in test.body:
-                    yield kw
+                yield from self._body_to_run(parsed)
 
                 break
 
