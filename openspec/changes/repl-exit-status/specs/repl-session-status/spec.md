@@ -10,7 +10,7 @@ Defines the status of a `robotcode repl` session: the result of the session test
 
 The session test that `robotcode repl` writes to `output.xml`, `log.html` and `report.html` SHALL have status FAIL when at least one input statement — a keyword call or a control structure — failed during the session without being handled, and PASS otherwise. The test message SHALL be Robot Framework's combined failure message for the unhandled failures. This SHALL apply to interactive and non-interactive sessions alike, and the output files SHALL remain valid.
 
-A failure SHALL count as handled when it does not propagate to the REPL, for example inside `TRY`/`EXCEPT`, `Run Keyword And Expect Error` or `Run Keyword And Ignore Error`. `Skip` and `Pass Execution` SHALL NOT count as failures.
+A failure SHALL count as handled when it does not propagate to the REPL, for example inside `TRY`/`EXCEPT`, `Run Keyword And Expect Error` or `Run Keyword And Ignore Error`. `Skip` and `Pass Execution` SHALL NOT count as failures. As in Robot Framework, failures continued before `Pass Execution` SHALL count, while a statement that ends in `Skip` SHALL NOT count as a failure even when failures were continued before it. Statements evaluated at a debugger stop (the `(rdb)` prompt) SHALL NOT affect the session test status.
 
 #### Scenario: Failing keyword followed by successful input
 - **WHEN** `Fail    boom` and then `Log    after` are entered in a session run with `-o output.xml`
@@ -28,6 +28,18 @@ A failure SHALL count as handled when it does not propagate to the REPL, for exa
 
 #### Scenario: Skip and Pass Execution
 - **WHEN** a session contains `Skip` or `Pass Execution` and no other failures
+- **THEN** the session test has status PASS
+
+#### Scenario: Continued failure before Pass Execution
+- **WHEN** `IF    True`, `Run Keyword And Continue On Failure    Fail    early`, `Pass Execution    done` and `END` are entered in a session run with `-o output.xml`
+- **THEN** the session test in `output.xml` has status FAIL with a message containing `early`
+
+#### Scenario: Continued failure before Skip
+- **WHEN** `IF    True`, `Run Keyword And Continue On Failure    Fail    early`, `Skip    later` and `END` are entered and the session has no other failures
+- **THEN** the session test has status PASS
+
+#### Scenario: Evaluation at a debugger stop
+- **WHEN** the session stops at a breakpoint, a failing keyword is evaluated at the `(rdb)` prompt and the session has no other failures
 - **THEN** the session test has status PASS
 
 #### Scenario: Interactive session with a failure

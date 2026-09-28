@@ -30,5 +30,6 @@
 - `packages/repl/src/robotcode/repl/base_interpreter.py` (or a small helper module next to `_indent.py`): a parse entry point for REPL input that does not raise on token errors and reports whether the input is still unfinished; Robot Framework 5.0 handling for invalid `TRY` items. The existing `get_test_body_from_string`/`check_for_errors` behavior stays unchanged for `packages/repl_server`.
 - Tests: new `tests/robotcode/repl/test_input_errors.py`, plus updates in `test_multiline.py`/`test_setting_aliases.py` where their helpers are reused; full RF matrix via `hatch run test:test`.
 - Docs: `docs/03_reference/repl.md` ("Running REPL scripts", piped input) describes the failure behavior.
-- Agent skill: the continuation-line rule in `references/repl.md` of the upstream `robotframework-agent-plugins` skill, re-synced into `chat-plugins/` (one shared upstream edit together with `repl-exit-status`).
+- Agent skill: the continuation-line rule in `references/repl.md`, edited only in the upstream `robotframework-agent-plugins`, committed there and re-synced into `chat-plugins/`.
+- Sequencing: the code of this change and of `repl-exit-status` is implemented separately; the docs and skill tasks of both are done in one joint pass afterwards (one upstream skill edit, one re-sync).
 - Not affected: the notebook kernel (`robotcode repl-server`), the `(rdb)` debug prompt, which already reports parse errors. The exit code and session test status are defined by the separate change `repl-exit-status`; once both are in place, these failures count like any other failure.

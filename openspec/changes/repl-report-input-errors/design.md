@@ -65,6 +65,8 @@ Alternative considered: report-only at EOF (would need its own message path and 
 
 In the line-by-line branch, a fresh input whose first line starts with `...` (after optional whitespace) is not executed; the REPL reports a failure saying that the line does not continue a statement. Without this, D3 would turn the continuation of a rejected statement into an independent keyword call — for `IF    True    Log    A    ELSE` followed by `...    Log    B`, `B` would run although the condition is true. Continuation lines inside an unfinished block are unaffected because they are part of the buffered input. Script files are parsed as a whole and are not affected.
 
+The REPL logs the message at FAIL level and then raises `ExecutionFailed` with it from `get_input`, so the failure reaches the prompt loop the same way as a failing statement and `repl-exit-status` records it without a special case. Nothing is executed, so it is not a step in `output.xml`. Robot Framework has no equivalent to report: in a file, `...` always continues the previous row — the inline `IF` example above is one valid statement there that runs only `A` — so the case arises only from line-by-line execution (verified on RF 5.0 and 7.4).
+
 Alternative considered: keep reading after a complete-but-invalid single line in case a `...` line follows (not decidable without look-ahead on standard input).
 
 ### D6: Message for invalid TRY on Robot Framework 5.0
@@ -86,3 +88,5 @@ The recording condition becomes "body is not empty and there are no errors", mat
 ## Migration Plan
 
 No migration. Scripts that previously were skipped silently now run up to their first invalid statement and report it. Rollback is a revert of the change.
+
+Sequencing with `repl-exit-status` (user decision): the code of both changes is implemented one after the other; the documentation and agent-skill tasks of both are then done in one joint pass, with one upstream skill edit and one re-sync. Neither change is archived before that pass.
