@@ -1689,6 +1689,11 @@ robotcode repl [OPTIONS] [FILES]...
    Run the session as if its keywords were written in FILE: `${CURDIR}` is the directory of FILE, `${SUITE SOURCE}` is FILE and, on Robot Framework 7.4 and newer, relative paths in `Import Resource`, `Import Library`, and `Import Variables` resolve against that directory. A relative FILE is resolved against the directory the command is started from. The file itself is never read or written, so the path doesn't need to exist.
 
 
+- `--statusrc / --nostatusrc`
+
+   Exit with 1 if a statement failed without being handled, otherwise 0, in any session (`--statusrc`), or exit with 0 regardless of failures (`--nostatusrc`). Both override `no-status-rc` from the configuration. Without either option only non-interactive sessions (piped input, or FILES without `--inspect`) exit with 1 after such a failure, unless the configuration switches this off. A code given to `.exit` takes precedence.
+
+
 - `--debugger-attached / --no-debugger-attached`
 
    Whether the debugger is active. While detached nothing pauses — a failing keyword just prints its error and you stay at the prompt — but breakpoints and exception filters stay configured. Default: attached for `robot-debug`; for `repl` detached, unless a pause trigger (`--break`, a `--break-on-*` flag) is given. Toggle at runtime with `.debug on` / `.debug off`.

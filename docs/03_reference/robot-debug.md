@@ -197,7 +197,7 @@ The CLI flags set the *initial* filters — `--break-on-exception` ↔ `.catch u
 
 At a stop, `.exit` / `.quit` (which leave the *shell*) would be ambiguous, so they point you at `.continue` / `.detach` / `.abort` instead of quitting.
 
-`Ctrl-C` or `Ctrl-D` at the `(rdb)` prompt **resumes the run** — the same as `.continue`, not a kill — so use `.abort` when you actually want to stop it. Pressing Enter on an empty line does nothing and just re-prompts (unlike the shell's `>>>` prompt, where an empty line exits).
+`Ctrl-C` or `Ctrl-D` at the `(rdb)` prompt **resumes the run** — the same as `.continue`, not a kill — so use `.abort` when you actually want to stop it. Pressing Enter on an empty line does nothing and just re-prompts, as it does at the shell's `>>>` prompt.
 
 ## A debug session, end to end
 

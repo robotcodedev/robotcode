@@ -68,18 +68,22 @@ Two commands:
 | `robotcode repl` (alias `shell`) | The interactive shell described on this page. Every existing `robotcode repl …` invocation keeps working unchanged. The debugger starts **detached** — a failing keyword just prints its error and you stay at the prompt, and nothing pauses. Attach it with `.debug on` (or start with `--debugger-attached`, or pass `--break …`) to make breakpoints, an embedded `Breakpoint`, and failures pause into the `(rdb)` prompt. |
 | `robotcode robot-debug` (alias `run-debug`) | Runs a real `.robot` suite through the normal runner with the debugger attached. Takes the same arguments as [`robotcode robot`](cli.md#robot) plus the debugger trigger flags. See [Command-line debugging](robot-debug.md). |
 
-The shell-specific flags (`-v`, `-P`, `-d/-o/-l/-r/-x`, `--source`, `--inspect`, `--show-keywords`, and `.robotrepl` file arguments) live on `repl`. `robot-debug` instead accepts the full `robotcode robot` option set. The prompt/backend flags (`--backend`, `--plain`, `--no-history`) and the debugger triggers (`--break`, the `--break-on-*` exception flags, and — on `robot-debug` — `--stop-on-entry`) work on both.
+The shell-specific flags (`-v`, `-P`, `-d/-o/-l/-r/-x`, `--source`, `--inspect`, `--show-keywords`, `--statusrc/--nostatusrc`, and `.robotrepl` file arguments) live on `repl`. `robot-debug` instead accepts the full `robotcode robot` option set. The prompt/backend flags (`--backend`, `--plain`, `--no-history`) and the debugger triggers (`--break`, the `--break-on-*` exception flags, and — on `robot-debug` — `--stop-on-entry`) work on both.
 
 ## How the prompt works
 
 When stdin is a terminal, `repl` shows the standard Robot Framework prompts:
 
 - `>>> ` — primary prompt; type a single keyword line and press Enter to execute.
-- `... ` — continuation prompt; appears when you've started a multi-line construct (`FOR`, `WHILE`, `IF`, `TRY`) that's not closed yet.
+- `... ` — continuation prompt; appears while a multi-line construct you've started (`FOR`, `WHILE`, `IF`, `TRY`) has no `END` yet.
 
-To **exit** the prompt, press Enter on an empty `>>> ` line. `Ctrl-C` clears the current multi-line buffer (or exits if there's no buffer).
+Input that is complete runs right away — even when it's invalid. Robot Framework then reports the error the way it would in a test, for example `ELSE branch cannot be empty.`, and the next line starts a new input. An empty line at the `... ` prompt submits the unfinished block as it is, so Robot Framework reports what's missing, for example `FOR loop must have closing END.`
 
-When stdin is **not a terminal** (piped input, heredoc), prompts are suppressed and the REPL reads input until EOF. That makes it scriptable:
+A line that starts with the `...` continuation marker continues the line before it only inside an unfinished block. As the first line of a new input it has nothing to continue: the REPL reports a failure and doesn't run it.
+
+To **exit**, press `Ctrl-D` at the `>>> ` prompt or type `.exit` (or `.quit`). An empty line at `>>> ` does nothing but show the prompt again.
+
+When stdin is **not a terminal** (piped input, heredoc), prompts are suppressed and the REPL reads input until EOF. If the input ends inside an unfinished block, Robot Framework reports that block, and the session ends. That makes it scriptable — the exit code tells a script whether a statement failed (see [Exit code and session status](#exit-code-and-session-status)):
 
 ```bash
 # bash / zsh — heredoc, exits when EOF is reached
@@ -239,7 +243,7 @@ Available on both backends:
 
 ### REPL meta-commands
 
-Dot-prefixed commands (lines that start with `.<word>`) are handled by the REPL itself — they aren't keyword calls, test steps, or log entries. Robot syntax never starts with a dot, so there's no clash with real Robot lines.
+Dot-prefixed commands (lines that start with `.<word>`) are handled by the REPL itself — they aren't keyword calls, test steps, or log entries. Robot syntax never starts with a dot, so there's no clash with real Robot lines. They work at the prompt and in piped input, but not inside [REPL scripts](#running-repl-scripts), which contain only Robot Framework statements.
 
 | Command | Effect |
 | ----- | ------ |
@@ -254,7 +258,7 @@ Dot-prefixed commands (lines that start with `.<word>`) are handled by the REPL 
 | `.cwd` | Print the working directory of the REPL process — the project root. Relative file paths passed to keywords such as `File Should Exist` resolve against it; for `${CURDIR}` and relative imports see [`--source`](#source-run-the-session-as-if-it-lived-in-a-file). |
 | `.clear` | Erase the screen. |
 | `.save [-a] [-t NAME] <file>` | Export the session as a runnable `.robot` file (see below). |
-| `.exit` / `.quit` | Leave the REPL — equivalent to `Ctrl-D` on an empty prompt. |
+| `.exit [CODE]` / `.quit [CODE]` | Leave the REPL. Without `CODE` it's the same as `Ctrl-D` on an empty prompt; with `CODE`, `robotcode repl` exits with that exit code (see [Exit code and session status](#exit-code-and-session-status)). |
 
 `.kw` and `.doc` show the same documentation the editor displays on hover — full per-keyword pages with signature, argument table (types + defaults), tags, and docstring body. It's rendered as styled Markdown, so headings, lists, code blocks, tables, and inline emphasis show up formatted in any modern terminal.
 
@@ -407,6 +411,8 @@ The whole session runs as a single internal test. Settings that would deselect o
 
 `skip-on-failure` (and `extend-skip-on-failure`) and `skip-teardown-on-exit` are ignored as well. The same applies to the matching options passed via `args`, argument files, or `ROBOT_OPTIONS`.
 
+`no-status-rc` does apply: `no-status-rc = true` makes the REPL exit with `0` regardless of failures, as it does for `robotcode robot` (see [Exit code and session status](#exit-code-and-session-status)).
+
 ## Running REPL scripts
 
 Pass one or more **REPL scripts** to execute their content before the prompt. Each is read as a **test-case body** — the same syntax as the prompt itself: just keyword calls and control structures, one entry per line. These scripts conventionally use the `.robotrepl` (or `.robotscript`) extension, which the RobotCode VS Code extension highlights as REPL input.
@@ -420,6 +426,12 @@ robotcode repl --inspect setup.robotrepl        # execute, then drop into the pr
 ```
 
 With `--inspect`, the file runs the same way but, instead of exiting, leaves you at `>>>` with everything it set up still in scope — variables, plus any libraries or resources imported via `Import Library` / `Import Resource`. Handy for inspecting the state a long setup sequence produced without rerunning it each time.
+
+A script runs like the body of a test in `robot`. When a statement is invalid — a `FOR` without `END`, an `ELSE` with nothing in it, a `RETURN` outside a keyword — the statements before it run, it fails with Robot Framework's message when execution reaches it, and the rest of that file is skipped. Later files still run, and `--inspect` still opens the prompt afterwards. As in `robot`, an error in a branch that isn't executed, such as inside `IF    False`, isn't reported. On Robot Framework 5.0 and 6.0, errors that Robot Framework reports while parsing, such as a non-existing setting like `[Foo]`, are shown as errors and the rest of the file runs, again as with `robot`.
+
+Dot commands such as `.exit` aren't handled in a script — there they're ordinary statements and fail as unknown keywords.
+
+Without `--inspect`, running scripts is non-interactive: `robotcode repl` exits with `1` when a statement failed without being handled (see [Exit code and session status](#exit-code-and-session-status)).
 
 ## Capturing the session as a Robot run
 
@@ -437,7 +449,7 @@ By default, `repl` runs everything in-process and discards the report. The stand
 robotcode repl -d ./repl-output -o output.xml -l log.html
 ```
 
-After the session ends (you press Enter on an empty prompt or `EOF` arrives), the output files are written and you can feed them right back to `robotcode results`:
+After the session ends (`Ctrl-D`, the end of piped input, `.exit` / `.quit`, or the last script finishing without `--inspect`), the output files are written and you can feed them right back to `robotcode results`:
 
 ```bash
 robotcode repl -d ./tmp -o output.xml
@@ -446,6 +458,41 @@ robotcode results log -o ./tmp/output.xml
 ```
 
 Useful when you're prototyping a sequence of keywords and want to attach the resulting `log.html` to a bug report or an issue comment.
+
+## Exit code and session status
+
+The whole session runs as one test, and its status is **FAIL** as soon as a statement fails without being handled — in interactive and non-interactive sessions alike. In the output files you write with `-o`, `-l`, or `-r`, that test carries Robot Framework's failure message (`Several failures occurred: …` when there were more). What counts follows Robot Framework's rules:
+
+- A failure handled inside the statement — by `TRY` / `EXCEPT`, `Run Keyword And Expect Error`, or `Run Keyword And Ignore Error` — doesn't count.
+- `Skip` and `Pass Execution` don't count either. Failures continued with `Run Keyword And Continue On Failure` before a `Pass Execution` do count; a statement that ends with `Skip` doesn't, even after continued failures.
+
+Keywords you evaluate at the `(rdb)` prompt of a [debugger stop](#debugging-at-the-prompt) don't count at all.
+
+The **exit code** of `robotcode repl` depends on how the session runs:
+
+| Session | Exit code |
+| --- | --- |
+| **Non-interactive** — stdin is not a terminal (piped input, heredoc, redirected file), or script files run without `--inspect` | `1` if the session test failed, otherwise `0` |
+| **Interactive** — stdin is a terminal, and script files, if any, run with `--inspect` | `0` |
+
+So a piped check or a script in CI fails when a statement fails, while an interactive session that went through a few failed attempts still ends with `0`.
+
+To choose the behavior yourself:
+
+| Setting | Effect |
+| --- | --- |
+| `--statusrc` | Exit code from the session status in any session, interactive ones included. |
+| `--nostatusrc` | Exit code `0` regardless of failures, non-interactive sessions included. |
+| `no-status-rc = true` in `robot.toml`, or `--nostatusrc` in `ROBOT_OPTIONS` | Exit code `0` regardless of failures. `no-status-rc = false` leaves the rules above as they are. |
+| `.exit CODE` / `.quit CODE` | Ends the session with `CODE`; it takes precedence over everything else. |
+
+`--statusrc` and `--nostatusrc` on the `robotcode repl` command line win over the configuration. A profile you share with `robotcode robot` that sets `no-status-rc = true` makes the REPL exit with `0` too. A script that needs exit code `0` even when piped statements fail can pass `--nostatusrc`.
+
+Whether a session counts as interactive depends on whether stdin is a terminal. A terminal that doesn't identify itself as one, or automation that drives the REPL through a pseudo-terminal, gets the other rule — pass `--statusrc` or `--nostatusrc` to make it explicit.
+
+`.exit` without a code follows the rules above. `CODE` is passed to the operating system as it is; on Linux and macOS only its lowest 8 bits reach the caller, so `.exit 256` ends with `0`.
+
+Errors before the session starts keep Robot Framework's exit codes — for example `252` for an option in the configuration that the installed Robot Framework doesn't accept.
 
 ## `--source`: run the session as if it lived in a file
 
@@ -526,9 +573,9 @@ robotcode repl -v USER:alice -v PASS:s3cr3t
 # Prototype a keyword sequence and capture a log.html for review
 robotcode repl -d /tmp/probe -o output.xml -l log.html
 
-# CI smoke check — pipe a sequence through stdin, exit non-zero on failure
+# CI smoke check — piped input exits with 1 when a statement fails
 # bash / zsh
-printf 'Run Keyword And Expect Error    *    Fail    sanity\n' \
+printf 'Import Library    OperatingSystem\nFile Should Exist    ./config.yaml\n' \
   | robotcode repl
 
 # Validate a YAML/Python variable file loads correctly
@@ -540,8 +587,11 @@ robotcode repl --inspect ./scratch/setup_world.robotrepl
 ```
 
 ```powershell
-# CI smoke check on Windows / PowerShell
-'Run Keyword And Expect Error    *    Fail    sanity' | robotcode repl
+# CI smoke check on Windows / PowerShell — $LASTEXITCODE is 1 when a statement fails
+@'
+Import Library    OperatingSystem
+File Should Exist    ./config.yaml
+'@ | robotcode repl
 
 # Multi-line input through a here-string
 @'
