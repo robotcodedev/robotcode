@@ -44,6 +44,9 @@ jobs:
           node-version: 26
           cache: npm
           cache-dependency-path: docs-next/package-lock.json
+      - name: Update npm
+        # Node.js bundles an older npm; use the current one, as in local development.
+        run: npm install -g npm@latest
       - name: Install dependencies
         run: npm ci
       - name: Build the preview

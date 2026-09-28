@@ -96,6 +96,10 @@ jobs:
           cache: "npm"
           cache-dependency-path: package-lock.json
 
+      - name: Update npm
+        # Node.js bundles an older npm; use the current one, as in local development.
+        run: npm install -g npm@latest
+
       - name: install node modules
         run: npm install --include=dev
 
@@ -173,6 +177,10 @@ jobs:
           node-version: "26"
           cache: "npm"
           cache-dependency-path: package-lock.json
+
+      - name: Update npm
+        # Node.js bundles an older npm; use the current one, as in local development.
+        run: npm install -g npm@latest
 
       - name: Setup Java
         uses: actions/setup-java@v5
@@ -274,6 +282,10 @@ jobs:
           node-version: "26"
           cache: "npm"
           cache-dependency-path: package-lock.json
+
+      - name: Update npm
+        # Node.js bundles an older npm; use the current one, as in local development.
+        run: npm install -g npm@latest
 
       - name: install node modules
         run: npm install --include=dev

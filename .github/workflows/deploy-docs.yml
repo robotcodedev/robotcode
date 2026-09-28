@@ -43,6 +43,9 @@ jobs:
         with:
           node-version: 26
           cache: npm
+      - name: Update npm
+        # Node.js bundles an older npm; use the current one, as in local development.
+        run: npm install -g npm@latest
       - name: Setup Pages
         uses: actions/configure-pages@v6
       - name: Install dependencies
