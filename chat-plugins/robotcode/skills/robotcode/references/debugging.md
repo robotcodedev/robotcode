@@ -199,7 +199,7 @@ Pause on *failures* rather than locations. The CLI flags set the initial filters
 
 Two things that surprise people:
 
-- At the `(rdb)` prompt, **`Ctrl-C` / `Ctrl-D` resume the run** (like `.continue`) — they do **not** kill it. Use `.abort` to actually stop. (This is the opposite of the shell `>>>` prompt.)
+- At the `(rdb)` prompt, **`Ctrl-C` / `Ctrl-D` resume the run** (like `.continue`) — they do **not** kill it. Use `.abort` to actually stop. (At the shell `>>>` prompt, `Ctrl-D` exits instead.)
 - `.exit` / `.quit` are refused at a stop as ambiguous — use `.continue` / `.detach` / `.abort`.
 
 ## Driving the session from an agent
