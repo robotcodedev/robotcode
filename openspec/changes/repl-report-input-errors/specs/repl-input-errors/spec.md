@@ -8,7 +8,7 @@ Defines how `robotcode repl` handles input that does not parse — script files,
 
 ### Requirement: Script files with parse errors run like a test body
 
-When a script file passed to `robotcode repl` contains a statement that does not parse, the REPL SHALL execute the file like Robot Framework executes a test body: statements before the invalid statement SHALL run, the invalid statement SHALL fail with the message Robot Framework produces for it when execution reaches it, and the remaining statements of that file SHALL NOT run. The failure message SHALL be shown on the console in the same way as a failing keyword's message, on every supported Robot Framework version and regardless of whether the parser reports the problem as a token error or a node error. Errors inside branches that are not executed SHALL NOT be reported, as in `robot`.
+When a script file passed to `robotcode repl` contains a statement that does not parse, the REPL SHALL execute the file like Robot Framework executes a test body: statements before the invalid statement SHALL run, the invalid statement SHALL fail with the message Robot Framework produces for it when execution reaches it, and the remaining statements of that file SHALL NOT run. The failure message SHALL be shown on the console in the same way as a failing keyword's message, on every supported Robot Framework version and regardless of whether the parser reports the problem as a token error or a node error; errors that Robot Framework 5.0 and 6.0 do not turn into an executable statement are handled as described in the next requirement. Errors inside branches that are not executed SHALL NOT be reported, as in `robot`.
 
 #### Scenario: Unclosed block in a script
 - **WHEN** a script file contains `Log To Console    BEFORE`, followed by a `FOR` loop without `END`
@@ -50,6 +50,21 @@ When a script file passed to `robotcode repl` contains a statement that does not
 #### Scenario: Failure is recorded in output files
 - **WHEN** a script file with an unclosed `FOR` loop runs with `-o output.xml`
 - **THEN** `output.xml` is valid and contains the `FOR` loop as a failed step with the message `FOR loop must have closing END.`
+
+### Requirement: Parse errors without a statement on Robot Framework 5.0 and 6.0
+
+On Robot Framework 5.0 and 6.0, errors that Robot Framework reports only while parsing, because they do not produce an executable statement — such as a non-existing setting like `[Foo]` or a duplicate `[Tags]` setting — SHALL be shown as the error messages Robot Framework reports while parsing, before the input runs, and the other statements of the input SHALL run, as `robot` does. They SHALL NOT fail the REPL session test. On Robot Framework 6.1 and newer, the same errors SHALL fail where they are, like any other invalid statement.
+
+#### Scenario: Non-existing setting on Robot Framework 5.0 and 6.0
+- **WHEN** a script file containing `Log To Console    BEFORE`, `[Foo]    bar` and `Log To Console    AFTER` runs on Robot Framework 5.0 or 6.0
+- **THEN** the REPL shows the error `Non-existing setting 'Foo'.`
+- **AND** `BEFORE` and `AFTER` are printed
+
+#### Scenario: Non-existing setting on Robot Framework 6.1 and newer
+- **WHEN** the same script file runs on Robot Framework 6.1 or newer
+- **THEN** `BEFORE` is printed
+- **AND** the REPL reports the failure `Non-existing setting 'Foo'.`
+- **AND** `AFTER` is not printed
 
 ### Requirement: Unfinished input at the end of the input is reported
 

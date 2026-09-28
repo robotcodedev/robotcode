@@ -12,6 +12,7 @@
 - A line-by-line input that starts with a `...` continuation marker is reported as a failure instead of being executed as a keyword call of its own, so the continuation of a rejected statement (e.g. the `ELSE` part of an inline `IF`) never runs unconditionally.
 - On Robot Framework 6.1+, errors such as a top-level `RETURN` or a stray `END` in line-by-line input are reported as `[ FAIL ]` (and recorded in `output.xml`) instead of a bare `[ ERROR ]` line, and they no longer split an open block into separately executed parts.
 - An invalid `TRY` block also shows its message on Robot Framework 5.0, where Robot Framework itself fails it without logging a message.
+- On Robot Framework 5.0 and 6.0, parse errors that do not produce an executable statement, such as a non-existing test setting, are shown as errors and the rest of the input runs, as in `robot`.
 - Invalid input is no longer recorded for `.save`, so exported sessions stay runnable.
 
 ## Capabilities

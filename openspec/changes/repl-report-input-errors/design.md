@@ -41,6 +41,8 @@ Alternatives considered: pre-flight parsing that reports all errors with file an
 
 Add a helper (in `BaseInterpreter` or a small module next to `_indent.py`) that returns the test body, the collected error messages and an `incomplete` flag, and never raises on token errors. On RF 6.1+ the running model then contains an `Error` item that fails with `… is not allowed in this context.`; on RF 5.0/6.0 the node errors are already attached to the running items of the body.
 
+On RF 5.0/6.0 the token errors of a test body — setting errors such as a non-existing `[Foo]` or a duplicate `[Tags]` — produce no running item: `robot` reports them as parse errors (ERROR), runs the rest, and the test passes (verified on RF 5.0 and 6.0). The REPL does the same (user decision). Robot Framework prints these errors itself while the input is parsed, through the quiet console output the REPL session runs with, so the REPL adds no message of its own (user decision); the file and line in that message refer to the REPL's synthetic suite. They do not fail the session. From RF 6.1 on they are `Error` items that fail where they are, as in `robot`.
+
 `get_test_body_from_string` and `check_for_errors` stay as they are, because `repl_server` depends on the `SyntaxError` path for token errors; changing them would make notebook cells report token errors twice (cell error plus runtime failure).
 
 Alternative considered: changing the shared methods and adapting `repl_server` — rejected because the kernel must stay unchanged in this change.
@@ -55,7 +57,7 @@ Alternatives considered: the text heuristic `has_open_block` (treats inline `IF 
 
 ### D4: End of input with buffered lines behaves like a final empty line
 
-When `read_line` raises `EOFError` while `lines` is non-empty, `get_input` handles the buffer as if an empty line had been entered (parse, yield, Robot Framework reports the unfinished block) and remembers that EOF was reached, so the next `get_input` call raises `EOFError` without calling `read_line` again. The flag is required because on a TTY a second `input()` after Ctrl-D blocks instead of raising again (verified: without it a plain TTY session shows a new `>>>` prompt after Ctrl-D).
+When `read_line` raises `EOFError` while `lines` is non-empty, `get_input` handles the buffer as if an empty line had been entered (parse, yield, Robot Framework reports the unfinished block) and remembers that EOF was reached, so the next `get_input` call raises `EOFError` without calling `read_line` again. The flag is required because on a TTY a second `input()` after Ctrl-D blocks instead of raising again (verified: without it a plain TTY session shows a new `>>>` prompt after Ctrl-D). When a prompt was shown, `get_input` first echoes an empty line, as the `(rdb)` prompt does on EOF, so the report does not start right after the prompt that `input()` left the cursor on (user decision).
 
 This is the behavior a trailing empty line already has today, so piped input with or without a final empty line ends up the same. Because an unfinished block fails before its body runs, no half-typed body is executed on Ctrl-D.
 
