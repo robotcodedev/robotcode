@@ -45,7 +45,8 @@ from robot.result.executionerrors import ExecutionErrors
 from robot.result.model import BodyItem, StatusMixin
 from robot.utils import normalize
 
-from robotcode.modifiers import ByLongName, ExcludedByLongName
+from robotcode.modifiers import ByLongName, ByTestMetadata, ExcludedByLongName, ExcludedByTestMetadata
+from robotcode.modifiers.metadata_modifiers import MetadataPattern
 from robotcode.plugin import Application, OutputFormat, pass_application
 from robotcode.plugin.click_helper.types import add_options
 from robotcode.robot.config.loader import load_robot_config_from_path
@@ -63,8 +64,8 @@ from robotcode.robot.utils import RF_VERSION
 if TYPE_CHECKING:
     from robot.result import Error, Group, Var  # type: ignore[attr-defined,unused-ignore]
 
+from .._robot_version import RobotVersionOption
 from .._search import (
-    SUPPORTS_TEST_METADATA,
     ByStatus,
     SearchMatcher,
     SearchModifier,
@@ -150,6 +151,27 @@ RESULT_FILTER_OPTIONS = [
         multiple=True,
         metavar="NAME",
         help="Exclude tests/tasks or suites by long name (exact match).",
+    ),
+    click.option(
+        "-btm",
+        "--by-test-metadata",
+        "by_test_metadata",
+        multiple=True,
+        metavar="PATTERN",
+        # test metadata exists since Robot Framework 7.5
+        cls=RobotVersionOption,
+        since=(7, 5),
+        help="Select tests/tasks by their metadata, for example `Issue:4409 AND Author:Hans*`.",
+    ),
+    click.option(
+        "-ebtm",
+        "--exclude-by-test-metadata",
+        "exclude_by_test_metadata",
+        multiple=True,
+        metavar="PATTERN",
+        cls=RobotVersionOption,
+        since=(7, 5),
+        help="Exclude tests/tasks by their metadata. Same patterns as `--by-test-metadata`.",
     ),
 ]
 
@@ -297,6 +319,8 @@ def summary(
     test_globs: Tuple[str, ...],
     by_longname: Tuple[str, ...],
     exclude_by_longname: Tuple[str, ...],
+    by_test_metadata: Tuple[str, ...],
+    exclude_by_test_metadata: Tuple[str, ...],
     search_substring: Optional[str],
     search_regex: Optional[str],
     output_file: Optional[Path],
@@ -332,6 +356,8 @@ def summary(
             or test_globs
             or by_longname
             or exclude_by_longname
+            or by_test_metadata
+            or exclude_by_test_metadata
             or search_substring
             or search_regex
         )
@@ -346,6 +372,8 @@ def summary(
             exclude_by_longname,
             status_filters,
             matcher,
+            by_test_metadata=by_test_metadata,
+            exclude_by_test_metadata=exclude_by_test_metadata,
         )
         counts = _collect_counts(execution.suite)
         failed = _collect_failures(execution.suite) if show_failed else None
@@ -372,6 +400,8 @@ def summary(
                 exclude_by_longname,
                 search_substring,
                 search_regex,
+                by_test_metadata=by_test_metadata,
+                exclude_by_test_metadata=exclude_by_test_metadata,
             )
             if filters_active
             else None,
@@ -413,7 +443,9 @@ def summary(
     "show_metadata",
     default=False,
     show_default=True,
-    hidden=not SUPPORTS_TEST_METADATA,
+    # test metadata exists since Robot Framework 7.5
+    cls=RobotVersionOption,
+    since=(7, 5),
     help="Append the metadata after each test.",
 )
 @click.option(
@@ -454,6 +486,8 @@ def show(
     test_globs: Tuple[str, ...],
     by_longname: Tuple[str, ...],
     exclude_by_longname: Tuple[str, ...],
+    by_test_metadata: Tuple[str, ...],
+    exclude_by_test_metadata: Tuple[str, ...],
     shortcut_failed: bool,
     shortcut_passed: bool,
     shortcut_skipped: bool,
@@ -504,6 +538,8 @@ def show(
             exclude_by_longname,
             status_filters,
             matcher,
+            by_test_metadata=by_test_metadata,
+            exclude_by_test_metadata=exclude_by_test_metadata,
         )
 
         all_items = [_make_test_item(t, message_chars=message_chars) for t in _iter_all_tests(execution.suite)]
@@ -524,6 +560,8 @@ def show(
             or test_globs
             or by_longname
             or exclude_by_longname
+            or by_test_metadata
+            or exclude_by_test_metadata
             or search_substring
             or search_regex
         )
@@ -542,6 +580,8 @@ def show(
                 exclude_by_longname,
                 search_substring,
                 search_regex,
+                by_test_metadata=by_test_metadata,
+                exclude_by_test_metadata=exclude_by_test_metadata,
             )
             if filters_active
             else None,
@@ -672,6 +712,8 @@ def log(
     test_globs: Tuple[str, ...],
     by_longname: Tuple[str, ...],
     exclude_by_longname: Tuple[str, ...],
+    by_test_metadata: Tuple[str, ...],
+    exclude_by_test_metadata: Tuple[str, ...],
     shortcut_failed: bool,
     shortcut_passed: bool,
     shortcut_skipped: bool,
@@ -726,6 +768,8 @@ def log(
             exclude_by_longname,
             status_filters,
             matcher,
+            by_test_metadata=by_test_metadata,
+            exclude_by_test_metadata=exclude_by_test_metadata,
         )
 
         collector = _LogCollector(
@@ -757,6 +801,8 @@ def log(
             or test_globs
             or by_longname
             or exclude_by_longname
+            or by_test_metadata
+            or exclude_by_test_metadata
             or search_substring
             or search_regex
         )
@@ -780,6 +826,8 @@ def log(
                 exclude_by_longname,
                 search_substring,
                 search_regex,
+                by_test_metadata=by_test_metadata,
+                exclude_by_test_metadata=exclude_by_test_metadata,
             )
             if filters_active
             else None,
@@ -840,6 +888,8 @@ def stats(
     test_globs: Tuple[str, ...],
     by_longname: Tuple[str, ...],
     exclude_by_longname: Tuple[str, ...],
+    by_test_metadata: Tuple[str, ...],
+    exclude_by_test_metadata: Tuple[str, ...],
     shortcut_failed: bool,
     shortcut_passed: bool,
     shortcut_skipped: bool,
@@ -884,6 +934,8 @@ def stats(
             exclude_by_longname,
             status_filters,
             matcher,
+            by_test_metadata=by_test_metadata,
+            exclude_by_test_metadata=exclude_by_test_metadata,
         )
         tests = list(_iter_all_tests(execution.suite))
 
@@ -903,6 +955,8 @@ def stats(
             or test_globs
             or by_longname
             or exclude_by_longname
+            or by_test_metadata
+            or exclude_by_test_metadata
             or search_substring
             or search_regex
         )
@@ -919,6 +973,8 @@ def stats(
                 exclude_by_longname,
                 search_substring,
                 search_regex,
+                by_test_metadata=by_test_metadata,
+                exclude_by_test_metadata=exclude_by_test_metadata,
             )
             if filters_active
             else None,
@@ -1022,6 +1078,8 @@ def diff(
     test_globs: Tuple[str, ...],
     by_longname: Tuple[str, ...],
     exclude_by_longname: Tuple[str, ...],
+    by_test_metadata: Tuple[str, ...],
+    exclude_by_test_metadata: Tuple[str, ...],
     search_substring: Optional[str],
     search_regex: Optional[str],
     full_paths: bool,
@@ -1068,6 +1126,8 @@ def diff(
                 exclude_by_longname,
                 status_filters,
                 matcher,
+                by_test_metadata=by_test_metadata,
+                exclude_by_test_metadata=exclude_by_test_metadata,
             )
 
         baseline_tests = {_get_full_name(t): t for t in _iter_all_tests(baseline_exec.suite)}
@@ -1108,6 +1168,8 @@ def diff(
             or test_globs
             or by_longname
             or exclude_by_longname
+            or by_test_metadata
+            or exclude_by_test_metadata
             or search_substring
             or search_regex
         )
@@ -1129,6 +1191,8 @@ def diff(
                 exclude_by_longname,
                 search_substring,
                 search_regex,
+                by_test_metadata=by_test_metadata,
+                exclude_by_test_metadata=exclude_by_test_metadata,
             )
             if filters_active
             else None,
@@ -1404,16 +1468,21 @@ def _apply_tree_filters(
     exclude_by_longname: Tuple[str, ...] = (),
     status_filters: Tuple[str, ...] = (),
     matcher: Optional[SearchMatcher] = None,
+    by_test_metadata: Tuple[str, ...] = (),
+    exclude_by_test_metadata: Tuple[str, ...] = (),
 ) -> None:
     """Apply every filter to the result tree in-place.
 
     Delegates the standard Robot filters (`--include`/`--exclude`,
     `--suite`, `--test`) to `TestSuite.filter()`, then bundles the
-    project-specific filters (`-bl`/`-ebl`, `--status`, search) into a
-    single `ModelModifier` pass so subsequent code can iterate the
-    suite naturally — every surviving test has passed every filter.
+    project-specific filters (`-bl`/`-ebl`, `-btm`/`-ebtm`, `--status`,
+    search) into a single `ModelModifier` pass so subsequent code can
+    iterate the suite naturally — every surviving test has passed every
+    filter.
     """
     try:
+        test_metadata_patterns = [MetadataPattern(p) for p in by_test_metadata]
+        excluded_test_metadata_patterns = [MetadataPattern(p) for p in exclude_by_test_metadata]
         suite.filter(
             included_suites=list(suite_globs) or None,
             included_tests=list(test_globs) or None,
@@ -1428,6 +1497,10 @@ def _apply_tree_filters(
         modifiers.append(ByLongName(*by_longname))
     if exclude_by_longname:
         modifiers.append(ExcludedByLongName(*exclude_by_longname))
+    if test_metadata_patterns:
+        modifiers.append(ByTestMetadata(*test_metadata_patterns))
+    if excluded_test_metadata_patterns:
+        modifiers.append(ExcludedByTestMetadata(*excluded_test_metadata_patterns))
     if matcher is not None:
         modifiers.append(SearchModifier(matcher))
     if status_filters:
@@ -1469,6 +1542,8 @@ def _filters_dict(
     exclude_by_longname: Tuple[str, ...] = (),
     search_substring: Optional[str] = None,
     search_regex: Optional[str] = None,
+    by_test_metadata: Tuple[str, ...] = (),
+    exclude_by_test_metadata: Tuple[str, ...] = (),
 ) -> Dict[str, List[str]]:
     out: Dict[str, List[str]] = {}
     if status_filters:
@@ -1485,6 +1560,11 @@ def _filters_dict(
         out["by-longname"] = list(by_longname)
     if exclude_by_longname:
         out["exclude-by-longname"] = list(exclude_by_longname)
+    # Metadata patterns are echoed as given, unlike the canonicalised tag patterns.
+    if by_test_metadata:
+        out["by-test-metadata"] = list(by_test_metadata)
+    if exclude_by_test_metadata:
+        out["exclude-by-test-metadata"] = list(exclude_by_test_metadata)
     if search_substring:
         out["search"] = [search_substring]
     if search_regex:

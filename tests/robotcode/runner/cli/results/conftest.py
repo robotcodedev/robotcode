@@ -317,6 +317,12 @@ def metadata_output(session_output_dir: Path) -> Path:
 
 
 @pytest.fixture(scope="session")
+def metadata_variables_output(session_output_dir: Path) -> Path:
+    """`output.xml` from a suite whose `[Metadata]` value is a variable (RF 7.5+)."""
+    return _run_robot(SUITES_DIR / "metadata_variables.robot", session_output_dir, "metadata_variables")
+
+
+@pytest.fixture(scope="session")
 def artifacts_output(session_output_dir: Path) -> Path:
     """`output.xml` from the artifacts suite (embedded + external refs)."""
     return _run_robot(SUITES_DIR / "artifacts.robot", session_output_dir, "artifacts")

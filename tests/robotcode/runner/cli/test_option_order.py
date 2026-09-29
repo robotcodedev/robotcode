@@ -7,6 +7,10 @@ import pytest
 from click.testing import CliRunner
 
 from robotcode.cli import robotcode
+from robotcode.robot.utils import RF_VERSION
+
+# `--by-test-metadata`/`--exclude-by-test-metadata` are hidden before Robot Framework 7.5.
+_SHARED = ["-bl", "-ebl", "-btm", "-ebtm", "--version"] if RF_VERSION >= (7, 5) else ["-bl", "-ebl", "--version"]
 
 
 @pytest.mark.parametrize(
@@ -15,6 +19,8 @@ from robotcode.cli import robotcode
         ["robot"],
         ["robot-debug"],
         ["discover", "all"],
+        # hidden before Robot Framework 7.5, but its `--help` works everywhere
+        ["discover", "metadata"],
         ["discover", "suites"],
         ["discover", "tags"],
         ["discover", "tasks"],
@@ -27,4 +33,4 @@ def test_shared_robot_options_keep_their_order(command: List[str]) -> None:
     assert result.exit_code == 0, result.output
 
     flags = [line.split()[0].rstrip(",") for line in result.output.splitlines() if line.lstrip().startswith("-")]
-    assert [flag for flag in flags if flag in ("-bl", "-ebl", "--version")] == ["-bl", "-ebl", "--version"]
+    assert [flag for flag in flags if flag in ("-bl", "-ebl", "-btm", "-ebtm", "--version")] == _SHARED

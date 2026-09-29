@@ -79,6 +79,8 @@ def _invoke_runner(
     ctx: click.Context,
     by_longname: Tuple[str, ...],
     exclude_by_longname: Tuple[str, ...],
+    by_test_metadata: Tuple[str, ...],
+    exclude_by_test_metadata: Tuple[str, ...],
     robot_options_and_args: Tuple[str, ...],
 ) -> None:
     """Run the real suite via the normal `robotcode robot` runner."""
@@ -89,6 +91,10 @@ def _invoke_runner(
         forwarded += ["--by-longname", value]
     for value in exclude_by_longname:
         forwarded += ["--exclude-by-longname", value]
+    for value in by_test_metadata:
+        forwarded += ["--by-test-metadata", value]
+    for value in exclude_by_test_metadata:
+        forwarded += ["--exclude-by-test-metadata", value]
     forwarded += list(robot_options_and_args)
 
     robot_ctx = robot_command.make_context("robot", forwarded, parent=ctx)
@@ -528,6 +534,8 @@ def robot_debug(
     app: Application,
     by_longname: Tuple[str, ...],
     exclude_by_longname: Tuple[str, ...],
+    by_test_metadata: Tuple[str, ...],
+    exclude_by_test_metadata: Tuple[str, ...],
     robot_options_and_args: Tuple[str, ...],
     no_history: bool,
     backend: str,
@@ -573,7 +581,14 @@ def robot_debug(
     # default (or the user's `--console`), not forced.
     try:
         with interpreter.forward_events(echo_messages=False):
-            _invoke_runner(ctx, by_longname, exclude_by_longname, robot_options_and_args)
+            _invoke_runner(
+                ctx,
+                by_longname,
+                exclude_by_longname,
+                by_test_metadata,
+                exclude_by_test_metadata,
+                robot_options_and_args,
+            )
     except DebugTerminated:
         app.echo("Debugger: run terminated.")
     finally:

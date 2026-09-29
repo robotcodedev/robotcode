@@ -974,6 +974,10 @@ robotcode discover [OPTIONS] COMMAND [ARGS]...
 
    Shows some informations about the current *robot* environment.
 
+- [`metadata`](#metadata)
+
+   Discover the metadata of tests, tasks and suites with the selected configuration, profiles, options and arguments. *(Robot Framework 7.5+)*
+
 - [`suites`](#suites)
 
    Discover suites with the selected configuration, profiles, options and arguments.
@@ -1021,7 +1025,7 @@ robotcode discover all [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
 
 - `--show-metadata / --no-show-metadata`
 
-   Show the metadata of tests and tasks.  [default: show-metadata]
+   Show the metadata of tests and tasks. *(Robot Framework 7.5+)*  [default: show-metadata]
 
 
 - `-bl, --by-longname TEXT *`
@@ -1032,6 +1036,16 @@ robotcode discover all [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
 - `-ebl, --exclude-by-longname TEXT *`
 
    Excludes tests/tasks or suites by longname.
+
+
+- `-btm, --by-test-metadata PATTERN *`
+
+   Select tests/tasks by their metadata, for example `Issue:4409 AND Author:Hans*`. *(Robot Framework 7.5+)*
+
+
+- `-ebtm, --exclude-by-test-metadata PATTERN *`
+
+   Excludes tests/tasks by their metadata. Same patterns as `--by-test-metadata`. *(Robot Framework 7.5+)*
 
 
 - `--version`
@@ -1120,6 +1134,101 @@ robotcode discover info [OPTIONS]
    Show this message and exit.
 
 
+##### metadata
+
+*(Robot Framework 7.5+)*
+
+Discover the metadata of tests, tasks and suites with the selected
+configuration, profiles, options and arguments.
+
+Test and task metadata is what `--by-test-metadata` selects by; suite
+metadata, including `--metadata` given to Robot, is listed in its own
+section.
+
+Examples:
+```
+robotcode discover metadata
+robotcode discover metadata --values --tests
+robotcode --format json discover metadata
+```
+
+
+**Usage:**
+```text
+robotcode discover metadata [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
+```
+
+
+**Options:**
+- `--values / --no-values`
+
+   Show the values of each metadata name.  [default: no-values]
+
+
+- `--tests / --no-tests`
+
+   Show the tests that have the metadata.  [default: no-tests]
+
+
+- `--tasks / --no-tasks`
+
+   Show the tasks that have the metadata.  [default: no-tasks]
+
+
+- `--suites / --no-suites`
+
+   Show the suites that have the metadata.  [default: no-suites]
+
+
+- `--full-paths / --no-full-paths`
+
+   Show full paths instead of relative.  [default: no-full-paths]
+
+
+- `-bl, --by-longname TEXT *`
+
+   Select tests/tasks or suites by longname.
+
+
+- `-ebl, --exclude-by-longname TEXT *`
+
+   Excludes tests/tasks or suites by longname.
+
+
+- `-btm, --by-test-metadata PATTERN *`
+
+   Select tests/tasks by their metadata, for example `Issue:4409 AND Author:Hans*`. *(Robot Framework 7.5+)*
+
+
+- `-ebtm, --exclude-by-test-metadata PATTERN *`
+
+   Excludes tests/tasks by their metadata. Same patterns as `--by-test-metadata`. *(Robot Framework 7.5+)*
+
+
+- `--version`
+
+   Show the version and exit.
+
+
+- `--search TEXT`
+
+   Only include items where TEXT case-insensitively matches the name, full name, source path, documentation, template name, timeout, any tag (normalisation-aware), test metadata names and values, the parent suite's Documentation / Metadata, or anything inside the test body — keyword names, keyword arguments, assigned variables, FOR/WHILE/IF conditions, VAR/RETURN values, EXCEPT patterns, GROUP names. Mutually exclusive with `--search-regex`.
+
+
+- `--search-regex PATTERN`
+
+   Only include items where PATTERN (Python regex, case-sensitive — prefix with `(?i)` for case-insensitive) matches any of the same targets as `--search`. Mutually exclusive with `--search`.
+
+
+- `--help`
+
+   Show this message and exit.
+
+
+
+Use `-- --help` to see `robot` help.
+
+
 ##### suites
 
 Discover suites with the selected configuration, profiles, options and
@@ -1151,6 +1260,16 @@ robotcode discover suites [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
 - `-ebl, --exclude-by-longname TEXT *`
 
    Excludes tests/tasks or suites by longname.
+
+
+- `-btm, --by-test-metadata PATTERN *`
+
+   Select tests/tasks by their metadata, for example `Issue:4409 AND Author:Hans*`. *(Robot Framework 7.5+)*
+
+
+- `-ebtm, --exclude-by-test-metadata PATTERN *`
+
+   Excludes tests/tasks by their metadata. Same patterns as `--by-test-metadata`. *(Robot Framework 7.5+)*
 
 
 - `--version`
@@ -1235,6 +1354,16 @@ robotcode discover tags [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
    Excludes tests/tasks or suites by longname.
 
 
+- `-btm, --by-test-metadata PATTERN *`
+
+   Select tests/tasks by their metadata, for example `Issue:4409 AND Author:Hans*`. *(Robot Framework 7.5+)*
+
+
+- `-ebtm, --exclude-by-test-metadata PATTERN *`
+
+   Excludes tests/tasks by their metadata. Same patterns as `--by-test-metadata`. *(Robot Framework 7.5+)*
+
+
 - `--version`
 
    Show the version and exit.
@@ -1289,7 +1418,7 @@ robotcode discover tasks [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
 
 - `--show-metadata / --no-show-metadata`
 
-   Show the metadata of tests and tasks.  [default: no-show-metadata]
+   Show the metadata of tests and tasks. *(Robot Framework 7.5+)*  [default: no-show-metadata]
 
 
 - `--full-paths / --no-full-paths`
@@ -1305,6 +1434,16 @@ robotcode discover tasks [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
 - `-ebl, --exclude-by-longname TEXT *`
 
    Excludes tests/tasks or suites by longname.
+
+
+- `-btm, --by-test-metadata PATTERN *`
+
+   Select tests/tasks by their metadata, for example `Issue:4409 AND Author:Hans*`. *(Robot Framework 7.5+)*
+
+
+- `-ebtm, --exclude-by-test-metadata PATTERN *`
+
+   Excludes tests/tasks by their metadata. Same patterns as `--by-test-metadata`. *(Robot Framework 7.5+)*
 
 
 - `--version`
@@ -1361,7 +1500,7 @@ robotcode discover tests [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
 
 - `--show-metadata / --no-show-metadata`
 
-   Show the metadata of tests and tasks.  [default: no-show-metadata]
+   Show the metadata of tests and tasks. *(Robot Framework 7.5+)*  [default: no-show-metadata]
 
 
 - `--full-paths / --no-full-paths`
@@ -1377,6 +1516,16 @@ robotcode discover tests [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
 - `-ebl, --exclude-by-longname TEXT *`
 
    Excludes tests/tasks or suites by longname.
+
+
+- `-btm, --by-test-metadata PATTERN *`
+
+   Select tests/tasks by their metadata, for example `Issue:4409 AND Author:Hans*`. *(Robot Framework 7.5+)*
+
+
+- `-ebtm, --exclude-by-test-metadata PATTERN *`
+
+   Excludes tests/tasks by their metadata. Same patterns as `--by-test-metadata`. *(Robot Framework 7.5+)*
 
 
 - `--version`
@@ -1961,6 +2110,16 @@ robotcode results diff [OPTIONS] BASELINE [CURRENT]
    Exclude tests/tasks or suites by long name (exact match).
 
 
+- `-btm, --by-test-metadata PATTERN *`
+
+   Select tests/tasks by their metadata, for example `Issue:4409 AND Author:Hans*`. *(Robot Framework 7.5+)*
+
+
+- `-ebtm, --exclude-by-test-metadata PATTERN *`
+
+   Exclude tests/tasks by their metadata. Same patterns as `--by-test-metadata`. *(Robot Framework 7.5+)*
+
+
 - `--search TEXT`
 
    Only include tests with at least one case-insensitive substring match against TEXT. Searches test name, full name, failure message, documentation, template name, timeout, tags, test metadata names and values, the parent suite's Documentation / Metadata, every executed keyword's name / arguments / [Documentation] / [Tags] / [Timeout] / failure message, and log messages. Mutually exclusive with `--search-regex`.
@@ -2052,6 +2211,16 @@ robotcode results log [OPTIONS]
 - `-ebl, --exclude-by-longname NAME *`
 
    Exclude tests/tasks or suites by long name (exact match).
+
+
+- `-btm, --by-test-metadata PATTERN *`
+
+   Select tests/tasks by their metadata, for example `Issue:4409 AND Author:Hans*`. *(Robot Framework 7.5+)*
+
+
+- `-ebtm, --exclude-by-test-metadata PATTERN *`
+
+   Exclude tests/tasks by their metadata. Same patterns as `--by-test-metadata`. *(Robot Framework 7.5+)*
 
 
 - `--failed`
@@ -2200,6 +2369,16 @@ robotcode results show [OPTIONS]
    Exclude tests/tasks or suites by long name (exact match).
 
 
+- `-btm, --by-test-metadata PATTERN *`
+
+   Select tests/tasks by their metadata, for example `Issue:4409 AND Author:Hans*`. *(Robot Framework 7.5+)*
+
+
+- `-ebtm, --exclude-by-test-metadata PATTERN *`
+
+   Exclude tests/tasks by their metadata. Same patterns as `--by-test-metadata`. *(Robot Framework 7.5+)*
+
+
 - `--failed`
 
    Shortcut for `--status fail`. Additive with `--status` / `--passed` / `--skipped`.
@@ -2252,7 +2431,7 @@ robotcode results show [OPTIONS]
 
 - `--show-metadata / --no-show-metadata`
 
-   Append the metadata after each test.  [default: no-show-metadata]
+   Append the metadata after each test. *(Robot Framework 7.5+)*  [default: no-show-metadata]
 
 
 - `--timing / --no-timing`
@@ -2333,6 +2512,16 @@ robotcode results stats [OPTIONS]
 - `-ebl, --exclude-by-longname NAME *`
 
    Exclude tests/tasks or suites by long name (exact match).
+
+
+- `-btm, --by-test-metadata PATTERN *`
+
+   Select tests/tasks by their metadata, for example `Issue:4409 AND Author:Hans*`. *(Robot Framework 7.5+)*
+
+
+- `-ebtm, --exclude-by-test-metadata PATTERN *`
+
+   Exclude tests/tasks by their metadata. Same patterns as `--by-test-metadata`. *(Robot Framework 7.5+)*
 
 
 - `--failed`
@@ -2444,6 +2633,16 @@ robotcode results summary [OPTIONS]
    Exclude tests/tasks or suites by long name (exact match).
 
 
+- `-btm, --by-test-metadata PATTERN *`
+
+   Select tests/tasks by their metadata, for example `Issue:4409 AND Author:Hans*`. *(Robot Framework 7.5+)*
+
+
+- `-ebtm, --exclude-by-test-metadata PATTERN *`
+
+   Exclude tests/tasks by their metadata. Same patterns as `--by-test-metadata`. *(Robot Framework 7.5+)*
+
+
 - `--search TEXT`
 
    Only include tests with at least one case-insensitive substring match against TEXT. Searches test name, full name, failure message, documentation, template name, timeout, tags, test metadata names and values, the parent suite's Documentation / Metadata, every executed keyword's name / arguments / [Documentation] / [Tags] / [Timeout] / failure message, and log messages. Mutually exclusive with `--search-regex`.
@@ -2510,6 +2709,16 @@ robotcode robot [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
    Excludes tests/tasks or suites by longname.
 
 
+- `-btm, --by-test-metadata PATTERN *`
+
+   Select tests/tasks by their metadata, for example `Issue:4409 AND Author:Hans*`. *(Robot Framework 7.5+)*
+
+
+- `-ebtm, --exclude-by-test-metadata PATTERN *`
+
+   Excludes tests/tasks by their metadata. Same patterns as `--by-test-metadata`. *(Robot Framework 7.5+)*
+
+
 - `--version`
 
    Show the version and exit.
@@ -2563,6 +2772,16 @@ robotcode robot-debug [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
 - `-ebl, --exclude-by-longname TEXT *`
 
    Excludes tests/tasks or suites by longname.
+
+
+- `-btm, --by-test-metadata PATTERN *`
+
+   Select tests/tasks by their metadata, for example `Issue:4409 AND Author:Hans*`. *(Robot Framework 7.5+)*
+
+
+- `-ebtm, --exclude-by-test-metadata PATTERN *`
+
+   Excludes tests/tasks by their metadata. Same patterns as `--by-test-metadata`. *(Robot Framework 7.5+)*
 
 
 - `--debugger-attached / --no-debugger-attached`

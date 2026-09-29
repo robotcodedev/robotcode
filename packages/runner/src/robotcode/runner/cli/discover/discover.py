@@ -10,6 +10,7 @@ from typing import (
     Dict,
     Iterable,
     List,
+    Mapping,
     MutableMapping,
     Optional,
     Tuple,
@@ -39,6 +40,7 @@ from robotcode.core.uri import Uri
 from robotcode.core.utils.cli import show_hidden_arguments
 from robotcode.core.utils.dataclasses import from_json
 from robotcode.core.utils.path import normalized_path
+from robotcode.modifiers.metadata_modifiers import metadata_entries
 from robotcode.plugin import (
     Application,
     OutputFormat,
@@ -49,10 +51,16 @@ from robotcode.plugin.click_helper.types import add_options
 from robotcode.robot.utils import RF_VERSION
 
 from .._markdown import make_md_highlighter
-from .._search import SUPPORTS_TEST_METADATA, SearchMatcher, get_test_metadata, make_search_matcher
+from .._robot_version import RobotVersionCommand, RobotVersionOption
+from .._search import (
+    SearchMatcher,
+    get_test_metadata,
+    make_search_matcher,
+    named_metadata,
+)
 from ..robot import ROBOT_OPTIONS, ROBOT_VERSION_OPTIONS, RobotFrameworkEx, handle_robot_options
 from . import _render
-from ._models import Info, ResultItem, Statistics, TagsResult, TestItem
+from ._models import Info, MetadataResult, ResultItem, Statistics, TagsResult, TestItem
 
 # Robot Framework 6.1 introduced `--parseinclude`. Before that, the `--suite`
 # option implicitly restricted which files were parsed, so an explicit include
@@ -265,6 +273,8 @@ class Collector(SuiteVisitor):
         self.test_and_tasks: List[TestItem] = []
         self.tags: Dict[str, List[TestItem]] = defaultdict(list)
         self.normalized_tags: Dict[str, List[TestItem]] = defaultdict(list)
+        # Suite items carry no metadata; `discover metadata` lists it separately.
+        self.suite_metadata: List[Tuple[TestItem, Dict[str, str]]] = []
         self.statistics = Statistics()
         self._collected: List[MutableMapping[str, Any]] = [NormalizedDict(ignore="_")]
 
@@ -308,6 +318,9 @@ class Collector(SuiteVisitor):
             raise ValueError(f"Error while parsing suite {suite.source}: {e}") from e
 
         self.suites.append(item)
+        suite_metadata = named_metadata(suite.metadata)
+        if suite_metadata:
+            self.suite_metadata.append((item, suite_metadata))
 
         if self._current.children is None:
             self._current.children = []
@@ -479,6 +492,8 @@ def handle_options(
     exclude_by_longname: Tuple[str, ...],
     robot_options_and_args: Tuple[str, ...],
     search_matcher: Optional[SearchMatcher] = None,
+    by_test_metadata: Tuple[str, ...] = (),
+    exclude_by_test_metadata: Tuple[str, ...] = (),
 ) -> Tuple[TestSuite, Collector, Optional[Dict[str, List[Diagnostic]]]]:
     root_folder, profile, cmd_options = handle_robot_options(app, robot_options_and_args)
 
@@ -502,6 +517,8 @@ def handle_options(
                 by_longname,
                 exclude_by_longname,
                 search_matcher=search_matcher,
+                by_test_metadata=by_test_metadata,
+                exclude_by_test_metadata=exclude_by_test_metadata,
             ).parse_arguments((*cmd_options, "--runemptysuite", *robot_options_and_args))
 
             settings = RobotSettings(options)
@@ -590,7 +607,8 @@ def _show_options(*, default: bool) -> List[Any]:
             default=default,
             show_default=True,
             # test metadata exists since Robot Framework 7.5
-            hidden=not SUPPORTS_TEST_METADATA,
+            cls=RobotVersionOption,
+            since=(7, 5),
             help="Show the metadata of tests and tasks.",
         ),
     ]
@@ -629,6 +647,8 @@ def all(
     search_regex: Optional[str],
     by_longname: Tuple[str, ...],
     exclude_by_longname: Tuple[str, ...],
+    by_test_metadata: Tuple[str, ...],
+    exclude_by_test_metadata: Tuple[str, ...],
     robot_options_and_args: Tuple[str, ...],
 ) -> None:
     """\
@@ -648,7 +668,13 @@ def all(
 
     matcher = make_search_matcher(search_substring, search_regex)
     _suite, collector, diagnostics = handle_options(
-        app, by_longname, exclude_by_longname, robot_options_and_args, search_matcher=matcher
+        app,
+        by_longname,
+        exclude_by_longname,
+        robot_options_and_args,
+        search_matcher=matcher,
+        by_test_metadata=by_test_metadata,
+        exclude_by_test_metadata=exclude_by_test_metadata,
     )
 
     if collector.all.children:
@@ -691,11 +717,19 @@ def _test_or_tasks(
     search_regex: Optional[str],
     by_longname: Tuple[str, ...],
     exclude_by_longname: Tuple[str, ...],
+    by_test_metadata: Tuple[str, ...],
+    exclude_by_test_metadata: Tuple[str, ...],
     robot_options_and_args: Tuple[str, ...],
 ) -> None:
     matcher = make_search_matcher(search_substring, search_regex)
     _suite, collector, diagnostics = handle_options(
-        app, by_longname, exclude_by_longname, robot_options_and_args, search_matcher=matcher
+        app,
+        by_longname,
+        exclude_by_longname,
+        robot_options_and_args,
+        search_matcher=matcher,
+        by_test_metadata=by_test_metadata,
+        exclude_by_test_metadata=exclude_by_test_metadata,
     )
 
     if collector.all.children:
@@ -755,6 +789,8 @@ def tests(
     search_regex: Optional[str],
     by_longname: Tuple[str, ...],
     exclude_by_longname: Tuple[str, ...],
+    by_test_metadata: Tuple[str, ...],
+    exclude_by_test_metadata: Tuple[str, ...],
     robot_options_and_args: Tuple[str, ...],
 ) -> None:
     """\
@@ -782,6 +818,8 @@ def tests(
         search_regex,
         by_longname,
         exclude_by_longname,
+        by_test_metadata,
+        exclude_by_test_metadata,
         robot_options_and_args,
     )
 
@@ -811,6 +849,8 @@ def tasks(
     search_regex: Optional[str],
     by_longname: Tuple[str, ...],
     exclude_by_longname: Tuple[str, ...],
+    by_test_metadata: Tuple[str, ...],
+    exclude_by_test_metadata: Tuple[str, ...],
     robot_options_and_args: Tuple[str, ...],
 ) -> None:
     """\
@@ -837,6 +877,8 @@ def tasks(
         search_regex,
         by_longname,
         exclude_by_longname,
+        by_test_metadata,
+        exclude_by_test_metadata,
         robot_options_and_args,
     )
 
@@ -863,6 +905,8 @@ def suites(
     search_regex: Optional[str],
     by_longname: Tuple[str, ...],
     exclude_by_longname: Tuple[str, ...],
+    by_test_metadata: Tuple[str, ...],
+    exclude_by_test_metadata: Tuple[str, ...],
     robot_options_and_args: Tuple[str, ...],
 ) -> None:
     """\
@@ -882,7 +926,13 @@ def suites(
 
     matcher = make_search_matcher(search_substring, search_regex)
     _suite, collector, diagnostics = handle_options(
-        app, by_longname, exclude_by_longname, robot_options_and_args, search_matcher=matcher
+        app,
+        by_longname,
+        exclude_by_longname,
+        robot_options_and_args,
+        search_matcher=matcher,
+        by_test_metadata=by_test_metadata,
+        exclude_by_test_metadata=exclude_by_test_metadata,
     )
 
     if collector.all.children:
@@ -959,6 +1009,8 @@ def tags(
     search_regex: Optional[str],
     by_longname: Tuple[str, ...],
     exclude_by_longname: Tuple[str, ...],
+    by_test_metadata: Tuple[str, ...],
+    exclude_by_test_metadata: Tuple[str, ...],
     robot_options_and_args: Tuple[str, ...],
 ) -> None:
     """\
@@ -979,7 +1031,13 @@ def tags(
 
     matcher = make_search_matcher(search_substring, search_regex)
     _suite, collector, diagnostics = handle_options(
-        app, by_longname, exclude_by_longname, robot_options_and_args, search_matcher=matcher
+        app,
+        by_longname,
+        exclude_by_longname,
+        robot_options_and_args,
+        search_matcher=matcher,
+        by_test_metadata=by_test_metadata,
+        exclude_by_test_metadata=exclude_by_test_metadata,
     )
 
     if collector.all.children:
@@ -1005,6 +1063,149 @@ def tags(
             tags_data = collector.normalized_tags if normalized else collector.tags
             app.print_data(
                 TagsResult(tags_data, filters_applied=_filters_applied(search_substring, search_regex)),
+                remove_defaults=True,
+            )
+
+
+def _metadata_index(
+    items: Iterable[Tuple[TestItem, Optional[Mapping[str, str]]]],
+) -> Dict[str, Dict[str, List[TestItem]]]:
+    """name → value → items, built from the same entries `--by-test-metadata`
+    matches. Names and values that compare equal are one entry, shown in the
+    first spelling found; both are sorted by their normalised form."""
+    names: Dict[str, Tuple[str, Dict[str, Tuple[str, List[TestItem]]]]] = {}
+    for item, metadata in items:
+        for name, line in metadata_entries(metadata or {}):
+            _name, values = names.setdefault(normalize(name, ignore="_"), (name, {}))
+            _value, value_items = values.setdefault(normalize(line, ignore="_"), (line, []))
+            if not value_items or value_items[-1] is not item:
+                value_items.append(item)
+    return {
+        name: {value: value_items for _, (value, value_items) in sorted(values.items())}
+        for _, (name, values) in sorted(names.items())
+    }
+
+
+@discover.command(
+    context_settings={"allow_extra_args": True, "ignore_unknown_options": True},
+    add_help_option=True,
+    epilog="Use `-- --help` to see `robot` help.",
+    # test metadata exists since Robot Framework 7.5
+    cls=RobotVersionCommand,
+    since=(7, 5),
+)
+@click.option(
+    "--values / --no-values",
+    "show_values",
+    default=False,
+    show_default=True,
+    help="Show the values of each metadata name.",
+)
+@click.option(
+    "--tests / --no-tests",
+    "show_tests",
+    default=False,
+    show_default=True,
+    help="Show the tests that have the metadata.",
+)
+@click.option(
+    "--tasks / --no-tasks",
+    "show_tasks",
+    default=False,
+    show_default=True,
+    help="Show the tasks that have the metadata.",
+)
+@click.option(
+    "--suites / --no-suites",
+    "show_suites",
+    default=False,
+    show_default=True,
+    help="Show the suites that have the metadata.",
+)
+@click.option(
+    "--full-paths / --no-full-paths",
+    "full_paths",
+    default=False,
+    show_default=True,
+    help="Show full paths instead of relative.",
+)
+@add_options(*ROBOT_OPTIONS)
+@add_options(*DISCOVER_SEARCH_OPTIONS)
+@pass_application
+def metadata(
+    app: Application,
+    show_values: bool,
+    show_tests: bool,
+    show_tasks: bool,
+    show_suites: bool,
+    full_paths: bool,
+    search_substring: Optional[str],
+    search_regex: Optional[str],
+    by_longname: Tuple[str, ...],
+    exclude_by_longname: Tuple[str, ...],
+    by_test_metadata: Tuple[str, ...],
+    exclude_by_test_metadata: Tuple[str, ...],
+    robot_options_and_args: Tuple[str, ...],
+) -> None:
+    """\
+    Discover the metadata of tests, tasks and suites with the selected
+    configuration, profiles, options and arguments.
+
+    Test and task metadata is what `--by-test-metadata` selects by; suite
+    metadata, including `--metadata` given to Robot, is listed in its own
+    section.
+
+    \b
+    Examples:
+    ```
+    robotcode discover metadata
+    robotcode discover metadata --values --tests
+    robotcode --format json discover metadata
+    ```
+    """
+
+    matcher = make_search_matcher(search_substring, search_regex)
+    _suite, collector, diagnostics = handle_options(
+        app,
+        by_longname,
+        exclude_by_longname,
+        robot_options_and_args,
+        search_matcher=matcher,
+        by_test_metadata=by_test_metadata,
+        exclude_by_test_metadata=exclude_by_test_metadata,
+    )
+
+    if collector.all.children:
+        test_metadata = _metadata_index((item, item.metadata) for item in collector.test_and_tasks)
+        suite_metadata = _metadata_index(collector.suite_metadata)
+
+        if app.config.output_format is None or app.config.output_format == OutputFormat.TEXT:
+            app.echo_as_markdown(
+                _render.render_metadata(
+                    test_metadata,
+                    suite_metadata,
+                    collector.statistics,
+                    show_values=show_values,
+                    show_tests=show_tests,
+                    show_tasks=show_tasks,
+                    show_suites=show_suites,
+                    full_paths=full_paths,
+                    highlight=make_md_highlighter(search_substring, search_regex),
+                    search_substring=search_substring,
+                    search_regex=search_regex,
+                    diagnostics=diagnostics,
+                    show_diagnostics=app.show_diagnostics,
+                    root_folder=app.root_folder,
+                )
+            )
+
+        else:
+            app.print_data(
+                MetadataResult(
+                    test_metadata,
+                    suite_metadata,
+                    filters_applied=_filters_applied(search_substring, search_regex),
+                ),
                 remove_defaults=True,
             )
 

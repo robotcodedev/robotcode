@@ -3,12 +3,13 @@ import re
 import sys
 import textwrap
 from pathlib import Path
-from typing import Iterator, List, Optional
+from typing import Iterator, List, Optional, Union
 
 import click
 
 from robotcode.cli import robotcode
 from robotcode.plugin.click_helper.aliases import AliasedCommand, AliasedGroup
+from robotcode.runner.cli._robot_version import RobotVersionCommand, RobotVersionOption
 
 if __name__ == "__main__" and not __package__:
     file = Path(__file__).resolve()
@@ -23,11 +24,30 @@ if __name__ == "__main__" and not __package__:
     __package__ = "scripts"
 
 
+def robot_version_note(item: Union[click.Command, click.Parameter]) -> Optional[str]:
+    """`*(Robot Framework 7.5+)*` for a command or option that `--help` only
+    shows from that Robot Framework version on."""
+    if isinstance(item, (RobotVersionCommand, RobotVersionOption)):
+        return f"*(Robot Framework {item.since[0]}.{item.since[1]}+)*"
+    return None
+
+
+def short_help(command: click.Command) -> str:
+    note = robot_version_note(command)
+    help = command.get_short_help_str(5000)
+    return f"{help} {note}" if note else help
+
+
 def generate(command: click.Command, depth: int = 2, parent_ctx: Optional[click.Context] = None) -> Iterator[str]:
     ctx = click.Context(command, info_name=command.name, parent=parent_ctx, auto_envvar_prefix="ROBOTCODE")
 
     yield f"#{'#' * depth} {ctx.command.name}"
     yield ""
+
+    note = robot_version_note(command)
+    if note:
+        yield note
+        yield ""
 
     formatter = ctx.make_formatter()
     command.format_help_text(ctx, formatter)
@@ -59,6 +79,11 @@ def generate(command: click.Command, depth: int = 2, parent_ctx: Optional[click.
             if rv is not None:
                 o = " ".join(rv[0].splitlines())
                 d = " ".join(rv[1].splitlines())
+                note = robot_version_note(option)
+                if note:
+                    # before click's `  [default: …]`
+                    text, sep, extra = d.partition("  [")
+                    d = f"{text} {note}{sep}{extra}"
 
                 yield f"- `{o}`"
                 yield ""
@@ -90,7 +115,7 @@ def generate(command: click.Command, depth: int = 2, parent_ctx: Optional[click.
             for sub_command, cmd in sub_commands:
                 yield (f"- [`{sub_command}`](#{sub_command})")
                 yield ""
-                yield f"   {cmd.get_short_help_str(5000)}"
+                yield f"   {short_help(cmd)}"
                 yield ""
 
             yield ""
@@ -106,7 +131,7 @@ def generate(command: click.Command, depth: int = 2, parent_ctx: Optional[click.
                 yield "**Aliases:**"
                 yield ""
                 for sub_command, cmd in aliased_commands:
-                    help = cmd.get_short_help_str(5000)
+                    help = short_help(cmd)
 
                     yield f"- [`{sub_command}`](#{cmd.name})"
                     yield ""

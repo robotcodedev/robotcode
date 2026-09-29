@@ -52,8 +52,7 @@ else:
 
 
 # RF 7.5 added `[Metadata]` to tests and tasks; `TestCase.metadata` does not
-# exist before. The `--show-metadata` flags of `discover` and `results show` are
-# hidden from the help on older versions (still accepted, without effect).
+# exist before.
 SUPPORTS_TEST_METADATA = RF_VERSION >= (7, 5)
 
 

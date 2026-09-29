@@ -7,11 +7,13 @@ regressions where one subcommand silently stops honouring a filter that
 the others still respect.
 """
 
+import json
 from pathlib import Path
 from typing import Any, Dict
 
 import pytest
 
+from ..rf_markers import needs_rf_75
 from .conftest import JsonRunner
 
 
@@ -146,3 +148,61 @@ def test_no_filters_no_filters_applied_field(subcommand: str, json_result: JsonR
     """Without any filter, the `filtersApplied` key is omitted from JSON."""
     data = json_result(subcommand, output_path=basic_output)
     assert "filtersApplied" not in data
+
+
+# ---------------------------------------------------------------------------
+# -btm / -ebtm (test metadata, Robot Framework 7.5+)
+# ---------------------------------------------------------------------------
+
+
+@needs_rf_75
+@pytest.mark.parametrize("subcommand", SUBCOMMANDS)
+def test_filter_by_test_metadata_uniform(subcommand: str, json_result: JsonRunner, metadata_output: Path) -> None:
+    """`-btm Issue:4411` keeps only `Failing With Metadata`."""
+    data = json_result(subcommand, "-btm", "Issue:4411", output_path=metadata_output)
+    assert _effective_test_count(subcommand, data) == 1
+    assert data["filtersApplied"] == {"by-test-metadata": ["Issue:4411"]}
+
+
+@needs_rf_75
+def test_show_by_test_metadata(json_result: JsonRunner, metadata_output: Path) -> None:
+    data = json_result("show", "--by-test-metadata", "Issue:4411", output_path=metadata_output)
+    assert [test["name"] for test in data["tests"]] == ["Failing With Metadata"]
+
+
+@needs_rf_75
+def test_show_exclude_by_test_metadata(json_result: JsonRunner, metadata_output: Path) -> None:
+    data = json_result("show", "--exclude-by-test-metadata", "Issue:*", output_path=metadata_output)
+    assert [test["name"] for test in data["tests"]] == ["Multi Line", "No Metadata", "Empty Setting"]
+    assert data["filtersApplied"] == {"exclude-by-test-metadata": ["Issue:*"]}
+
+
+@needs_rf_75
+def test_diff_by_test_metadata(robotcode_cli: Any, metadata_output: Path, basic_output: Path) -> None:
+    """The filter applies to both result files: the basic suite has no metadata."""
+    result = robotcode_cli(
+        ["--format", "json", "results", "diff", str(metadata_output), str(basic_output), "-btm", "Issue:4411"]
+    )
+    data = json.loads(result.stdout)
+    assert [test["fullName"] for test in data.get("removed") or []] == ["Test Metadata.Failing With Metadata"]
+    assert not data.get("added")
+    assert data["filtersApplied"] == {"by-test-metadata": ["Issue:4411"]}
+
+
+@needs_rf_75
+def test_invalid_test_metadata_pattern_fails(json_result: JsonRunner, metadata_output: Path) -> None:
+    result = json_result("show", "-btm", "Issue", output_path=metadata_output, expect_ok=False)
+    assert result.returncode != 0
+    assert "invalid filter pattern" in result.stderr
+    assert "Invalid metadata pattern 'Issue'" in result.stderr
+
+
+@needs_rf_75
+def test_results_see_metadata_values_after_variable_replacement(
+    json_result: JsonRunner, metadata_variables_output: Path
+) -> None:
+    replaced = json_result("show", "-btm", "Build:42", output_path=metadata_variables_output)
+    assert [test["name"] for test in replaced["tests"]] == ["Build"]
+
+    unreplaced = json_result("show", "-btm", "Build:${BUILD}", output_path=metadata_variables_output)
+    assert unreplaced.get("tests", []) == []

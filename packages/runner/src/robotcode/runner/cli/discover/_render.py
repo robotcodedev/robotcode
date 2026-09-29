@@ -396,6 +396,88 @@ def render_tags(
 
 
 # ---------------------------------------------------------------------------
+# `discover metadata`
+# ---------------------------------------------------------------------------
+
+
+def _metadata_section_md(
+    index: Dict[str, Dict[str, List[TestItem]]],
+    *,
+    show_values: bool,
+    show_item: Callable[[TestItem], bool],
+    full_paths: bool,
+    highlight: Optional[Callable[[str], str]],
+) -> List[str]:
+    def item_md(item: TestItem) -> str:
+        paren = _item_paren(item, full_paths=full_paths, with_line=item.type != "suite")
+        return f"**{_hi(item.longname, highlight)}**{paren}"
+
+    lines: List[str] = []
+    for name, values in index.items():
+        lines.append(f"- **{_hi(name, highlight)}**")
+        if show_values:
+            for value, items in values.items():
+                lines.append(f"  - {_hi(value, highlight) if value else '_(no value)_'}")
+                lines.extend(f"    - {item_md(item)}" for item in items if show_item(item))
+        else:
+            # Each item once under its name, even when it has several values.
+            listed: List[TestItem] = []
+            for items in values.values():
+                listed.extend(item for item in items if show_item(item) and all(item is not i for i in listed))
+            lines.extend(f"  - {item_md(item)}" for item in listed)
+    return lines
+
+
+def render_metadata(
+    test_metadata: Dict[str, Dict[str, List[TestItem]]],
+    suite_metadata: Dict[str, Dict[str, List[TestItem]]],
+    statistics: Statistics,
+    *,
+    show_values: bool,
+    show_tests: bool,
+    show_tasks: bool,
+    show_suites: bool,
+    full_paths: bool,
+    highlight: Optional[Callable[[str], str]] = None,
+    search_substring: Optional[str] = None,
+    search_regex: Optional[str] = None,
+    diagnostics: Optional[Dict[str, List[Diagnostic]]] = None,
+    show_diagnostics: bool = False,
+    root_folder: Optional[Path] = None,
+) -> str:
+    def show_test_or_task(item: TestItem) -> bool:
+        if show_tests == show_tasks:
+            return show_tests
+        return item.type == ("test" if show_tests else "task")
+
+    parts: List[str] = []
+    for heading, index, show_item in (
+        ("Tests and Tasks", test_metadata, show_test_or_task),
+        ("Suites", suite_metadata, lambda _item: show_suites),
+    ):
+        if not index:
+            continue
+        if parts:
+            parts.append("")
+        parts += [f"## {heading}", ""]
+        parts += _metadata_section_md(
+            index, show_values=show_values, show_item=show_item, full_paths=full_paths, highlight=highlight
+        )
+
+    return _block_md(
+        heading="Metadata",
+        body_md="\n".join(parts) if parts else "_(no metadata matched)_",
+        statistics=statistics,
+        diagnostics=diagnostics,
+        show_diagnostics=show_diagnostics,
+        full_paths=full_paths,
+        root_folder=root_folder,
+        search_substring=search_substring,
+        search_regex=search_regex,
+    )
+
+
+# ---------------------------------------------------------------------------
 # `discover all` — workspace → suites → tests/tasks tree as nested list
 # ---------------------------------------------------------------------------
 

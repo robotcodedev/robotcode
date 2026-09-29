@@ -241,6 +241,20 @@ def test_robot_debug_forwards_args_to_runner(capture_robot_delegation: Dict[str,
     assert capture_robot_delegation["args"] == ["--by-longname", "Suite.Test", "tests/"]
 
 
+def test_robot_debug_forwards_test_metadata_selection(capture_robot_delegation: Dict[str, Any]) -> None:
+    result = CliRunner().invoke(
+        cli_mod.robot_debug, ["-btm", "Issue:4409", "-ebtm", "Owner:*", "tests/"], catch_exceptions=False
+    )
+    assert result.exit_code == 0, result.output
+    assert capture_robot_delegation["args"] == [
+        "--by-test-metadata",
+        "Issue:4409",
+        "--exclude-by-test-metadata",
+        "Owner:*",
+        "tests/",
+    ]
+
+
 # ---------------------------------------------------------------------------
 # debugger attach/detach: `repl` starts detached (unless a trigger or
 # `--debugger-attached` is given), `robot-debug` starts attached. Exception

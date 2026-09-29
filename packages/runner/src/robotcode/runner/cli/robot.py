@@ -12,6 +12,7 @@ from robot.version import get_full_version
 import robotcode.modifiers
 from robotcode.core.ignore_spec import DEFAULT_SPEC_RULES, GIT_IGNORE_FILE, ROBOT_IGNORE_FILE, IgnoreSpec
 from robotcode.core.utils.path import path_is_relative_to
+from robotcode.modifiers.metadata_modifiers import MetadataPattern
 from robotcode.plugin import Application, pass_application
 from robotcode.plugin.click_helper.aliases import AliasedCommand
 from robotcode.plugin.click_helper.types import add_options
@@ -22,6 +23,7 @@ from robotcode.robot.config.utils import get_config_files
 from robotcode.robot.utils import RF_VERSION
 
 from ..__version__ import __version__
+from ._robot_version import RobotVersionOption
 from ._search import SearchMatcher, SearchModifier
 
 _app: Optional[Application] = None
@@ -160,6 +162,8 @@ class RobotFrameworkEx(RobotFramework):
         by_longname: Tuple[str, ...] = (),
         exclude_by_longname: Tuple[str, ...] = (),
         search_matcher: Optional[SearchMatcher] = None,
+        by_test_metadata: Tuple[str, ...] = (),
+        exclude_by_test_metadata: Tuple[str, ...] = (),
     ) -> None:
         super().__init__()
         self.app = app
@@ -170,6 +174,8 @@ class RobotFrameworkEx(RobotFramework):
         self.by_longname = by_longname
         self.exclude_by_longname = exclude_by_longname
         self.search_matcher = search_matcher
+        self.by_test_metadata = by_test_metadata
+        self.exclude_by_test_metadata = exclude_by_test_metadata
 
     def parse_arguments(self, cli_args: Any) -> Any:
         try:
@@ -187,6 +193,11 @@ class RobotFrameworkEx(RobotFramework):
         if not arguments:
             arguments = self.paths
 
+        # Parsed before anything runs: an invalid pattern raises `DataError`,
+        # which Robot reports like an invalid option.
+        test_metadata_patterns = [MetadataPattern(p) for p in self.by_test_metadata]
+        excluded_test_metadata_patterns = [MetadataPattern(p) for p in self.exclude_by_test_metadata]
+
         if self.dry:
             line_end = "\n"
             raise Information(
@@ -203,6 +214,12 @@ class RobotFrameworkEx(RobotFramework):
 
         if self.exclude_by_longname:
             modifiers.append(robotcode.modifiers.ExcludedByLongName(*self.exclude_by_longname, root_name=root_name))
+
+        if test_metadata_patterns:
+            modifiers.append(robotcode.modifiers.ByTestMetadata(*test_metadata_patterns))
+
+        if excluded_test_metadata_patterns:
+            modifiers.append(robotcode.modifiers.ExcludedByTestMetadata(*excluded_test_metadata_patterns))
 
         if self.search_matcher is not None:
             modifiers.append(SearchModifier(self.search_matcher))
@@ -242,6 +259,27 @@ ROBOT_OPTIONS = [
         type=str,
         multiple=True,
         help="Excludes tests/tasks or suites by longname.",
+    ),
+    # test metadata exists since Robot Framework 7.5
+    click.option(
+        "--by-test-metadata",
+        "-btm",
+        cls=RobotVersionOption,
+        since=(7, 5),
+        type=str,
+        multiple=True,
+        metavar="PATTERN",
+        help="Select tests/tasks by their metadata, for example `Issue:4409 AND Author:Hans*`.",
+    ),
+    click.option(
+        "--exclude-by-test-metadata",
+        "-ebtm",
+        cls=RobotVersionOption,
+        since=(7, 5),
+        type=str,
+        multiple=True,
+        metavar="PATTERN",
+        help="Excludes tests/tasks by their metadata. Same patterns as `--by-test-metadata`.",
     ),
     *ROBOT_SIMPLE_OPTIONS,
 ]
@@ -308,6 +346,8 @@ def robot(
     app: Application,
     by_longname: Tuple[str, ...],
     exclude_by_longname: Tuple[str, ...],
+    by_test_metadata: Tuple[str, ...],
+    exclude_by_test_metadata: Tuple[str, ...],
     robot_options_and_args: Tuple[str, ...],
 ) -> None:
     """Runs `robot` with the selected configuration, profiles, options and arguments.
@@ -354,6 +394,8 @@ def robot(
                     orig_folder,
                     by_longname,
                     exclude_by_longname,
+                    by_test_metadata=by_test_metadata,
+                    exclude_by_test_metadata=exclude_by_test_metadata,
                 ).execute_cli((*cmd_options, *console_links_args, *robot_options_and_args), exit=False),
             )
         )

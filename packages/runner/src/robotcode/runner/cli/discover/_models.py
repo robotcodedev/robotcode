@@ -56,6 +56,15 @@ class TagsResult(CamelSnakeMixin):
 
 
 @dataclass
+class MetadataResult(CamelSnakeMixin):
+    """`discover metadata`: name → value → items, for tests/tasks and for suites."""
+
+    metadata: Dict[str, Dict[str, List[TestItem]]]
+    suite_metadata: Dict[str, Dict[str, List[TestItem]]]
+    filters_applied: Optional[Dict[str, str]] = None
+
+
+@dataclass
 class Info(CamelSnakeMixin):
     robot_version_string: str
     robot_env: Dict[str, str]
