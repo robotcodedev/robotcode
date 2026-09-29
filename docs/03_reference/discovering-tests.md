@@ -25,10 +25,11 @@ Typical things you can do with it:
 - get a tree view of every suite, sub-suite, test and task the active profile would discover
 - list just the tests (or just the tasks) one per line, with source paths and tags
 - list every distinct tag in the project with the tests it tags
+- list the metadata names and values in use — of tests and tasks (Robot Framework 7.5+) and of suites — with the items that carry them
 - list the source files Robot Framework would even consider parsing
 - check the Robot Framework version, Python version and environment the tooling is running under
 
-The seven subcommands share the same configuration, search, and output-format pipeline — once you've learned one the others follow:
+The eight subcommands share the same configuration, search, and output-format pipeline — once you've learned one the others follow:
 
 | Subcommand | Use it when you want to … |
 |---|---|
@@ -37,6 +38,7 @@ The seven subcommands share the same configuration, search, and output-format pi
 | [`tasks`](#tasks-flat-list-of-tasks) | … list tasks one per line (typed `task`, RPA mode) |
 | [`suites`](#suites-flat-list-of-suites) | … list suites only — no per-test rows |
 | [`tags`](#tags-tag--tests-dictionary) | … build a `tag → [tests]` index for triage or dashboards |
+| [`metadata`](#metadata-—-metadata-index) | … see which metadata names and values are in use, and where (Robot Framework 7.5+) |
 | [`files`](#files-source-files-robot-would-parse) | … list every `.robot` / `.resource` file Robot would even consider |
 | [`info`](#info-environment-and-version) | … check the active Robot / Python / RobotCode versions and environment |
 
@@ -61,6 +63,12 @@ robotcode discover tests --search Login
 
 # A tag → tests dictionary
 robotcode discover tags
+
+# Metadata names and values of tests and suites (Robot Framework 7.5+)
+robotcode discover metadata --values
+
+# Every test for issue 4409 (Robot Framework 7.5+)
+robotcode discover tests --by-test-metadata Issue:4409
 
 # Which source files would Robot even parse?
 robotcode discover files
@@ -244,6 +252,64 @@ regression
 
 The `--normalized` default matches Robot Framework's own tag-matching semantics: `--include "bug 1"` matches tests tagged `bug_1` or `BUG1`. Disable it (`--not-normalized`) when you want to **audit tag hygiene** — three distinct dict keys for `Bug 1` / `bug_1` / `BUG1` make accidental variants pop.
 
+## `metadata` — metadata index
+
+`metadata` builds an index of the metadata in the discovered suite tree, in two sections: the `[Metadata]` of tests and tasks (Robot Framework 7.5+), and the `Metadata` of suites, including metadata you give Robot with `--metadata NAME:VALUE`. The default TEXT output lists the names; `--values` adds the values of each name, and `--tests`, `--tasks` and `--suites` add the items that carry them.
+
+```bash
+robotcode discover metadata                     # the names in use
+robotcode discover metadata --values            # … with their values
+robotcode discover metadata --values --tests    # … and the tests under each value
+robotcode discover metadata -i smoke --values   # the metadata of the smoke subset
+```
+
+Sample output (`--values --tests --suites`, raw markdown):
+
+```markdown
+# Metadata
+
+## Tests and Tasks
+
+- **Author**
+  - Hans Müller
+    - **MyProject.Login.Bad Password** (`tests/login/test_login.robot:14`)
+- **Issue**
+  - 4409
+    - **MyProject.Login.Bad Password** (`tests/login/test_login.robot:14`)
+  - 4410
+    - **MyProject.Login.Good Password** (`tests/login/test_login.robot:22`)
+
+## Suites
+
+- **Version**
+  - 1.2
+    - **MyProject.Login** (`tests/login/test_login.robot`)
+```
+
+How the index is built:
+
+- The test section lists exactly the entries [`--by-test-metadata`](#selecting-by-test-metadata) matches: every line of a multi-line value is a value of its own, while the cells of one `[Metadata]` row stay one value. Every value it shows can be selected with `--by-test-metadata Name:Value`.
+- Suite metadata is shown in its own section, but not selectable: `--by-test-metadata` matches a test's own metadata only.
+- Names that Robot Framework treats as the same — case, spaces and underscores are ignored — are one name, shown in the first spelling found; values are grouped the same way. Names and values are sorted.
+- Values are shown as written; variables in them are not replaced.
+- Robot's filters, `-bl`/`-ebl`, `-btm`/`-ebtm` and `--search` narrow the discovered tests and suites first, as for [`tags`](#tags-—-tag-→-tests-dictionary). When nothing is left, the output says `(no metadata matched)`.
+
+::: info Robot Framework 7.5+
+Test metadata exists since Robot Framework 7.5. With an older version installed, `robotcode discover --help` does not list `metadata`; it can still be called and then lists only the suite metadata.
+:::
+
+### Flag reference
+
+| Flag | Effect |
+|---|---|
+| `--values / --no-values` | Add the values of each name. Default: off. |
+| `--tests / --no-tests` | Add the tests under each value, or under each name without `--values`. Default: off. |
+| `--tasks / --no-tasks` | Add the tasks, like `--tests`. Default: off. |
+| `--suites / --no-suites` | Add the suites under the values of the suite section. Default: off. |
+| `--full-paths` | Absolute source paths in the item rows. |
+| `--search TEXT` / `--search-regex PATTERN` | Filter the underlying tests first. |
+| `-bl` / `-ebl` / `-btm` / `-ebtm` / *any `robot` flag* | Pass-through. |
+
 ## `files` — source files Robot would parse
 
 `files` lists every `.robot` and `.resource` file Robot Framework would even consider loading from the given paths (or the profile's default paths), honouring `.gitignore` / [`.robotignore`](./ignoring-files.md).
@@ -306,6 +372,8 @@ Every `discover` subcommand (except `info` and `files`) passes through to Robot 
 | `-t / --test NAME` | Limit to tests whose name matches the glob (`--task` is the RPA alias). |
 | `-bl / --by-longname NAME` | Exact long-name include — no glob expansion. |
 | `-ebl / --exclude-by-longname NAME` | Exact long-name exclude. |
+| `-btm / --by-test-metadata PATTERN` | Tests/tasks whose `[Metadata]` matches the pattern (Robot Framework 7.5+) — see [Selecting by test metadata](#selecting-by-test-metadata). |
+| `-ebtm / --exclude-by-test-metadata PATTERN` | Exclusion side of `--by-test-metadata` (Robot Framework 7.5+). |
 | `--variable NAME:VALUE`, `--pythonpath PATH`, … | Anything else Robot accepts. |
 
 Filters compose — `--include smoke --exclude wip` means "smoke and not wip".
@@ -316,6 +384,73 @@ Filters compose — `--include smoke --exclude wip` means "smoke and not wip".
 - `-bl` / `-ebl` are **exact** matches against the full long name. They mirror `robotcode robot --by-longname` so you can hand the same names to `robot` and `discover`.
 
 Use `-bl` when you have a precise name (often pasted from a failure list or a build log); use `-s/-t` when you want pattern matching.
+
+## Selecting by test metadata
+
+`-btm/--by-test-metadata PATTERN` and `-ebtm/--exclude-by-test-metadata PATTERN` (Robot Framework 7.5+) select tests and tasks by their `[Metadata]`: the issue a test verifies, who wrote or reviewed it, and other data you keep there rather than in tags. Both are repeatable. Several `--by-test-metadata` patterns select the tests matching any of them, `--exclude-by-test-metadata` removes every test matching one, and both narrow every other selection (`--include`, `--suite`, `-bl`, `--search`, …). They work the same with `robotcode robot`, `robotcode robot-debug`, every `discover` subcommand and every [`results`](analyzing-results.md#filters) subcommand.
+
+```bash
+robotcode discover tests --by-test-metadata Issue:4409          # every test for issue 4409
+robotcode discover tests -btm "Author:Hans* OR Reviewer:Hans*"  # written or reviewed by Hans
+robotcode discover tests -btm "Author:Hans* NOT Reviewer:*"     # by Hans, not reviewed yet
+robotcode discover tests -ebtm "Owner:*"                        # tests without an owner
+robotcode robot -i smoke -btm Issue:4409                        # run the smoke tests for issue 4409
+```
+
+### Pattern rules
+
+A pattern is one or more terms `NAME:VALUE`, combined like a tag pattern:
+
+- A test is matched by its **entries**, `Name:Value`, one for every line of every metadata value. A term matches when it matches one of the entries.
+- `*`, `?` and `[…]` work as in tag patterns: `Issue:44*`, `*:4409` (4409 in any metadata), `Owner:*` (any `Owner`, also one without a value). For a literal `[`, write `[[]`.
+- Case, spaces and underscores are ignored on both sides, so names compare the way Robot Framework compares metadata names: `owner_team:core` matches `Owner Team: core`.
+- `AND`, `OR` and `NOT` combine terms. As in Robot's tag patterns, `AND` binds before `OR` and `NOT` last: `A OR B AND C` means `A OR (B AND C)`, and `A NOT B NOT C` matches when `A` matches and neither `B` nor `C` does. A pattern that starts with `NOT` matches every test that doesn't match the rest.
+- An operator is only a word of its own, in upper case with whitespace or the start or end of the pattern around it. So `Issue:CORE-123`, `Issue:ANDROID-5` and `Author:NORBERT` stay literal, while Robot Framework 7.5 would read the same text as a tag pattern as `Issue:C OR E-123` and so on.
+- To match an operator word inside a value, write it in lower case: `Title:rock and roll` matches `Rock AND Roll`.
+
+### Several values of one name
+
+Every line of a value is an entry of its own, so write several values of one name as continuation lines:
+
+```robotframework
+*** Test Cases ***
+Transfer Money
+    [Metadata]    Issue    4409
+    ...                    5769
+    Transfer    100    EUR
+```
+
+`Issue:4409` and `Issue:5769` both select this test. Several cells in one row (`[Metadata]    Issue    4409    5769`) stay one value: Robot Framework joins them keeping the separator of the source, so they can't be told apart from spaces inside a value. `Issue:4409` doesn't select such a test; `Issue:4409*` does.
+
+### What is matched
+
+- Only a test's own `[Metadata]`. A suite's `Metadata`, including metadata given with `--metadata`, is not part of its tests' entries; [`discover metadata`](#metadata-—-metadata-index) lists it in its own section.
+- The values as the model holds them. Variables are replaced only when a test runs, so `robot` and `discover` see `${BUILD}` in `[Metadata]    Build    ${BUILD}`, while [`results`](analyzing-results.md#filters) sees the value the run used — as with tags.
+
+### Invalid patterns
+
+A term without `:` (`Issue`) or an operator without a term on one side (`Issue:4409 AND`) makes the pattern invalid. The command fails with an error that names the pattern and doesn't run or list anything.
+
+### With plain `robot` and in `robot.toml`
+
+The selection is done by the pre-run modifiers `robotcode.modifiers.ByTestMetadata` and `robotcode.modifiers.ExcludedByTestMetadata` from the `robotcode-modifiers` package. They also work with plain `robot`; separate the pattern from the modifier name with `;`, because the pattern contains `:`:
+
+```bash
+robot --prerunmodifier "robotcode.modifiers.ByTestMetadata;Issue:4409" tests
+```
+
+In `robot.toml`, a profile selects by metadata through `pre-run-modifiers`; RobotCode uses `;` there on its own:
+
+```toml
+[profiles.issue-4409]
+pre-run-modifiers = { "robotcode.modifiers.ByTestMetadata" = ["Issue:4409"] }
+```
+
+Given an invalid pattern, the modifiers report the error and select no test. Robot Framework would otherwise skip a modifier it cannot create and run every test.
+
+::: info Robot Framework 7.5+
+Test metadata exists since Robot Framework 7.5. With an older version installed, `--help` does not list `--by-test-metadata` and `--exclude-by-test-metadata`. They are still accepted, but no test has metadata there: `--by-test-metadata` selects nothing and `--exclude-by-test-metadata` removes nothing.
+:::
 
 ## Search
 
@@ -470,6 +605,29 @@ Field notes:
 - Keys are tag names; normalised by default, original spellings preserved with `--not-normalized`.
 - Each value is an array of `TestItem` objects (the tests / tasks carrying that tag).
 - A test with `n` tags appears in `n` entries.
+
+## `metadata` JSON
+
+```json
+{
+  "metadata": {
+    "Issue": {
+      "4409": [ /* TestItems of the tests and tasks with this value */ ],
+      "4410": [ /* … */ ]
+    }
+  },
+  "suiteMetadata": {
+    "Version": { "1.2": [ /* suite TestItems */ ] }
+  }
+}
+```
+
+Field notes:
+
+- `metadata` holds the test and task metadata (Robot Framework 7.5+), `suiteMetadata` the suite metadata. Both are always objects, possibly empty `{}`; on Robot Framework versions older than 7.5, `metadata` is always `{}`.
+- Keys are names in the first spelling found. Below each name, every value — one per line of a multi-line value — maps to the items that have it; an item is listed once per value.
+- Items are [`TestItem`s](#testitem-—-the-common-shape). Suite items carry no `metadata` field. The JSON doesn't depend on `--values`, `--tests`, `--tasks` or `--suites`.
+- Every test for an issue: `robotcode -f json discover metadata | jq -r '.metadata.Issue["4409"][]?.longname'`.
 
 ## `files` JSON
 

@@ -454,6 +454,8 @@ Every subcommand accepts the same filter set. Filters combine with **AND** — e
 | `-t/--test GLOB` | Match against the test's full longname. Aliased as `--task`. Repeatable. |
 | `-bl/--by-longname NAME` | Exact longname match (no glob expansion). Repeatable. |
 | `-ebl/--exclude-by-longname NAME` | Exclusion variant of `--by-longname`. Repeatable. |
+| `-btm/--by-test-metadata PATTERN` | Tests whose `[Metadata]` matches the pattern (Robot Framework 7.5+, see [below](#test-metadata-btm-ebtm)). Repeatable. |
+| `-ebtm/--exclude-by-test-metadata PATTERN` | Exclusion variant of `--by-test-metadata` (Robot Framework 7.5+). Repeatable. |
 
 ### Tag-pattern syntax (`-i`/`-e`)
 
@@ -484,6 +486,22 @@ Quote globs in the shell — `--suite "*.Login.*"` and `--test "Test ?"` need qu
 - `-bl` / `-ebl` are **exact** matches against the full longname — no glob expansion. They mirror `robotcode robot --by-longname` so you can hand the same names to `robot` and `results`.
 
 Use `-bl` when you have a precise name to filter against (often pasted from the failure list); use `-s/-t` when you want pattern matching.
+
+### Test metadata (`-btm`/`-ebtm`)
+
+`-btm`/`-ebtm` (Robot Framework 7.5+) select by the test's `[Metadata]`, with the same pattern rules as `robotcode robot` and `discover`, described in [Selecting by test metadata](discovering-tests.md#selecting-by-test-metadata):
+
+```bash
+robotcode results show -btm Issue:4409                        # the results of every test for issue 4409
+robotcode results summary -btm "Author:Hans* OR Reviewer:Hans*"
+robotcode results stats --by tag -ebtm "Owner:*"              # tag statistics of the tests without an owner
+```
+
+A result file holds the values the run used: variables in a value are already replaced. `Build:42` matches a test with `[Metadata]    Build    ${BUILD}` that ran with `BUILD` set to 42, while `robot` and `discover` see `${BUILD}`. The patterns are echoed in [`filtersApplied`](#filtersapplied) as given, under `by-test-metadata` and `exclude-by-test-metadata`.
+
+::: info Robot Framework 7.5+
+Test metadata exists since Robot Framework 7.5. With an older version installed, `--help` does not list `--by-test-metadata` and `--exclude-by-test-metadata`; they are still accepted, but `--by-test-metadata` selects nothing and `--exclude-by-test-metadata` removes nothing.
+:::
 
 ## Search
 
