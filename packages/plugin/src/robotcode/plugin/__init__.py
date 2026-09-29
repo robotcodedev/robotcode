@@ -136,6 +136,7 @@ def _get_deep_markdown_cls() -> "type[Markdown]":
         TableHeaderElement,
         TableRowElement,
     )
+    from rich.segment import Segment
     from rich.text import Text
 
     class LeftHeading(Heading):
@@ -195,6 +196,25 @@ def _get_deep_markdown_cls() -> "type[Markdown]":
             parser = MarkdownIt().enable("strikethrough").enable("table")
             parser.options.maxNesting = 1000
             self.parsed = parser.parse(markup)
+
+        def __rich_console__(self, console: Console, options: ConsoleOptions) -> RenderResult:
+            # rich pads every line with spaces to the full console width. A
+            # pager that reserves columns (bat's line numbers and grid) wraps
+            # those full-width lines, and every wrapped remainder shows up
+            # as an empty line. Drop the padding unless it carries a
+            # background colour (code blocks draw a box with it).
+            for line in Segment.split_lines(cast(Iterable[Segment], super().__rich_console__(console, options))):
+                while line and not line[-1].control:
+                    text, style, _ = line[-1]
+                    if style is not None and style.bgcolor is not None:
+                        break
+                    text = text.rstrip(" ")
+                    if text:
+                        line[-1] = Segment(text, style)
+                        break
+                    line.pop()
+                yield from line
+                yield Segment.line()
 
     _deep_markdown_cls = DeepMarkdown
     return DeepMarkdown

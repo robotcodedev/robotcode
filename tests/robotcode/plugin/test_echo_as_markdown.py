@@ -1,6 +1,7 @@
 """Tests for `Application.echo_as_markdown` markdown rendering."""
 
 import io
+import re
 
 import pytest
 
@@ -66,3 +67,31 @@ def test_echo_as_markdown_renders_through_deep_markdown() -> None:
     from robotcode.plugin import Application
 
     assert "_get_deep_markdown_cls" in inspect.getsource(Application.echo_as_markdown)
+
+
+def test_deep_markdown_drops_trailing_padding() -> None:
+    """rich pads every rendered line to the console width. Pagers that
+    reserve columns (bat's gutter) wrap those lines and show the padding
+    as an empty line after every line, so the renderer strips it — but
+    keeps whitespace that carries a background, like a code block box."""
+    pytest.importorskip("rich")
+    from rich.console import Console
+
+    from robotcode.plugin import _get_deep_markdown_cls
+
+    md_text = "# Title\n\n- **item** with `code`\n\n```\nblock\n```\n"
+
+    console = Console(width=60, force_terminal=True, color_system="truecolor")
+    with console.capture() as capture:
+        console.print(_get_deep_markdown_cls()(md_text, justify="left", code_theme="default"))
+    lines = capture.get().splitlines()
+
+    assert any("Title" in line for line in lines)
+    assert any("block" in line for line in lines)
+    for line in lines:
+        plain = re.sub(r"\x1b\[[0-9;]*m", "", line)
+        if "\x1b[48;" in line:
+            # The code block box keeps its full width.
+            assert len(plain) == 60, repr(line)
+        else:
+            assert plain == plain.rstrip(), repr(line)
