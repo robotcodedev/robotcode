@@ -169,7 +169,7 @@ The package `robotcode-modifiers` SHALL provide the pre-run modifiers `robotcode
 
 ### Requirement: Metadata selection with older Robot Framework
 
-With Robot Framework older than 7.5 installed, `--by-test-metadata`, `--exclude-by-test-metadata` and `discover metadata` SHALL NOT be listed in `--help`. They SHALL still be accepted: no test has metadata there, so `--by-test-metadata` selects no test, `--exclude-by-test-metadata` removes none, and `discover metadata` lists only the suite metadata. On Robot Framework 7.5 and newer, the help of the two options and the description of `discover metadata` SHALL say that they need Robot Framework 7.5 or newer, so that the CLI reference generated from them carries the note as well.
+With Robot Framework older than 7.5 installed, `--by-test-metadata`, `--exclude-by-test-metadata` and `discover metadata` SHALL NOT be listed in `--help`. They SHALL still be accepted: no test has metadata there, so `--by-test-metadata` selects no test, `--exclude-by-test-metadata` removes none, and `discover metadata` lists only the suite metadata. The generated CLI reference SHALL mark them as needing Robot Framework 7.5, as the requirement of `cli-reference-generation` on version-dependent commands and options describes.
 
 #### Scenario: Help on RF 7.4
 - **WHEN** `robotcode robot --help`, `robotcode discover tests --help` and `robotcode results show --help` run on RF 7.4
@@ -180,10 +180,6 @@ With Robot Framework older than 7.5 installed, `--by-test-metadata`, `--exclude-
 - **WHEN** `robotcode discover tests --exclude-by-test-metadata "Issue:*"` runs on RF 7.4
 - **THEN** the same tests are listed as without the option
 - **AND** `robotcode discover tests --by-test-metadata "Issue:*"` lists no test
-
-#### Scenario: Version note in the help
-- **WHEN** `robotcode robot --help` and `robotcode discover metadata --help` run on RF 7.5
-- **THEN** the help of `--by-test-metadata` and `--exclude-by-test-metadata` and the description of `discover metadata` say that they need Robot Framework 7.5 or newer
 
 #### Scenario: Metadata index on RF 7.4
 - **WHEN** `robotcode discover metadata --values` runs on RF 7.4 on a suite with `Metadata    Version    1.0`

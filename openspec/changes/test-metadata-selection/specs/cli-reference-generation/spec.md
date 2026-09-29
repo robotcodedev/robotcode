@@ -1,5 +1,24 @@
 # Spec Delta
 
+## ADDED Requirements
+
+### Requirement: Version-dependent commands and options are marked
+
+A command or option that RobotCode offers only from a certain Robot Framework version on — hidden from `--help` with an older version installed — SHALL be marked with that version in the generated CLI reference, as `(Robot Framework 7.5+)`: an option in its description, a command in its entry of the command list and at the start of its section. Its `--help` SHALL NOT carry the note: there it is only shown when the installed version has it.
+
+#### Scenario: Version-dependent option
+- **WHEN** the CLI reference is generated on RF 7.5
+- **THEN** the descriptions of `--by-test-metadata` and `--exclude-by-test-metadata` in the sections of `robot`, `discover tests` and `results show`, and of `--show-metadata` in the sections of `discover all` and `results show`, are marked `(Robot Framework 7.5+)`
+- **AND** `--by-longname` is not marked
+
+#### Scenario: Version-dependent command
+- **WHEN** the CLI reference is generated on RF 7.5
+- **THEN** the entry of `metadata` in the command list of `discover` and the section of `discover metadata` are marked `(Robot Framework 7.5+)`
+
+#### Scenario: Help without the note
+- **WHEN** `robotcode robot --help` and `robotcode discover metadata --help` run on RF 7.5
+- **THEN** neither output mentions a Robot Framework version
+
 ## MODIFIED Requirements
 
 ### Requirement: Options appear in a fixed order
