@@ -97,6 +97,7 @@ const FEATURES: Feature[] = [
           name: "robot.toml",
           content: [
             'paths = ["tests"]',
+            'python-path = ["libraries"]',
             "",
             "[variables]",
             'BASE_URL = "http://localhost:8080"',
@@ -128,25 +129,26 @@ const FEATURES: Feature[] = [
       steps: [
         {
           kind: "command",
-          command: "robotcode discover tests",
+          command: "robotcode discover tests -i smoke",
           output: [
-            "- Tests.Cart.Add Item To Cart (tests/cart.robot:5)",
-            "- Tests.Login.Login Works (tests/login.robot:5)",
-            "- Tests.Login.Logout Works (tests/login.robot:10)",
+            "- Tests.Cart.Add Item To Cart (tests/cart.robot:13)",
+            "- Tests.Login.Login Works (tests/login.robot:9)",
+            "- Tests.Login.Logout Works (tests/login.robot:15)",
+            "- Tests.Orders.Order Coffee (tests/orders.robot:12)",
           ],
         },
         {
           kind: "command",
           command: "robotcode analyze code",
           output: [
-            "common.resource:30:5: [ERROR] KeywordNotFound: No keyword with name 'Submit Ordr' found.",
-            "Files: 4, Errors: 1, Warnings: 0, Infos: 0, Hints: 0",
+            "resources/orders.resource:28:5: [ERROR] KeywordNotFound: No keyword with name 'Submit Ordr' found.",
+            "Files: 8, Errors: 1, Warnings: 0, Infos: 0, Hints: 0",
           ],
         },
         {
           kind: "command",
           command: "robotcode results summary",
-          output: ["- Status: ❌ FAIL", "- Total: 3", "- Passed: 2", "- Failed: 1"],
+          output: ["- Status: ❌ FAIL", "- Total: 13", "- Passed: 12", "- Failed: 1"],
         },
       ],
     },
@@ -163,12 +165,16 @@ const FEATURES: Feature[] = [
       title: "Terminal",
       steps: [
         { kind: "command", command: "robotcode repl" },
-        { kind: "command", prompt: ">>>", command: "Import Resource    ${CURDIR}/common.resource" },
+        { kind: "command", prompt: ">>>", command: "Import Resource    ${CURDIR}/resources/orders.resource" },
         {
           kind: "command",
           prompt: ">>>",
           command: "${order}=    Create Order    coffee    quantity=2",
-          output: ["[ INFO ] Ordered 2 x coffee (express: False)", "[ INFO ] ${order} = order-4711"],
+          output: [
+            "[ INFO ] Ordered 2 x coffee (express: False)",
+            "[ INFO ] ${id} = order-4711",
+            "[ INFO ] ${order} = order-4711",
+          ],
         },
         { kind: "command", prompt: ">>>", command: "Should Start With    ${order}    order-" },
         { kind: "command", prompt: ">>>", command: ".save order.robot", output: ["Wrote order.robot (3 entries)"] },
@@ -179,8 +185,8 @@ const FEATURES: Feature[] = [
     icon: "laptop",
     title: "Multi-IDE, same core",
     html:
-      "One Robot Framework language server powers VS Code, JetBrains, Neovim, Sublime Text and any LSP-capable " +
-      "editor. Choose your IDE — capabilities stay aligned.",
+      "One Robot Framework language server powers VS Code, JetBrains, Neovim and any LSP-capable editor. Choose " +
+      "your IDE — capabilities stay aligned.",
     links: [["Set up your editor", "/getting-started/"]],
     panel: {
       kind: "image",
@@ -189,7 +195,7 @@ const FEATURES: Feature[] = [
       alt: "RobotCode diagnostics in Neovim",
       duration: 7,
       background: "#1e1e2e",
-      editors: ["VS Code", "JetBrains", "Neovim", "Sublime Text", "any LSP editor"],
+      editors: ["VS Code", "JetBrains", "Neovim", "any LSP editor"],
     },
   },
 ];
