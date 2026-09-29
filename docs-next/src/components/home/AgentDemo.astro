@@ -17,7 +17,7 @@ const SCENARIOS: { label: string; steps: Step[] }[] = [
         kind: "tool",
         command: "robotcode results summary --failed",
         output: [
-          "❌ FAIL Tests.Login.Login Works (tests/login.robot:9)",
+          "❌ FAIL Tests.Login.Login Works (tests/login.robot:11)",
           "  > Welcome back, alice! != Welcome back, Alice!",
         ],
       },
@@ -26,16 +26,17 @@ const SCENARIOS: { label: string; steps: Step[] }[] = [
         command: 'robotcode results log -bl "Tests.Login.Login Works"',
         output: [
           "- shop.Open Shop As  alice  ✅ PASS",
-          "  - VAR  ${greeting}  Welcome back, ${user}!  ✅ PASS",
-          "    [INFO] ${greeting} = Welcome back, alice!",
           "- shop.Welcome Message Should Be  Welcome back, Alice!  ❌ FAIL",
+          "  - ${greeting} = ShopLibrary.Greeting  ✅ PASS",
+          "    [INFO] ${greeting} = Welcome back, alice!",
+          "  - BuiltIn.Should Be Equal  ${greeting}  ${expected}  ❌ FAIL",
         ],
       },
       {
         kind: "agent",
         html:
-          "The login works — the greeting doesn't match. <code>Open Shop As</code> builds it from the user name " +
-          "<code>alice</code> as passed in, while the test expects <code>Alice</code>.",
+          "The login works — the greeting doesn't match: the shop greets with the login name <code>alice</code>, " +
+          "while the test expects <code>Alice</code>.",
       },
     ],
   },
@@ -47,11 +48,11 @@ const SCENARIOS: { label: string; steps: Step[] }[] = [
         kind: "tool",
         command: 'robotcode robot-debug -bl "Tests.Login.Login Works"',
         output: [
-          "* exception  BuiltIn.Should Be Equal  (resources/shop.resource:22)",
+          "* exception  BuiltIn.Should Be Equal  (resources/shop.resource:19)",
           "(rdb) .where",
-          "> #0  BuiltIn.Should Be Equal         resources/shop.resource:22",
-          "  #1  shop.Welcome Message Should Be  tests/login.robot:13",
-          "  #2  Login Works                     tests/login.robot:9",
+          "> #0  BuiltIn.Should Be Equal         resources/shop.resource:19",
+          "  #1  shop.Welcome Message Should Be  tests/login.robot:16",
+          "  #2  Login Works                     tests/login.robot:11",
           "(rdb) .print ${greeting}",
           "${greeting} = 'Welcome back, alice!'",
         ],
@@ -60,7 +61,7 @@ const SCENARIOS: { label: string; steps: Step[] }[] = [
         kind: "agent",
         html:
           "It stops in <code>Should Be Equal</code>, called by <code>Welcome Message Should Be</code> at " +
-          "login.robot:13. There, <code>${greeting}</code> is <code>Welcome back, alice!</code>.",
+          "login.robot:16. There, <code>${greeting}</code> is <code>Welcome back, alice!</code>.",
       },
     ],
   },
@@ -97,14 +98,14 @@ const SCENARIOS: { label: string; steps: Step[] }[] = [
         kind: "tool",
         command: "robotcode analyze code",
         output: [
-          "resources/orders.resource:28:5: [ERROR] KeywordNotFound: No keyword with name 'Submit Ordr' found.",
+          "resources/orders.resource:31:5: [ERROR] KeywordNotFound: No keyword with name 'Submit Ordr' found.",
           "Files: 8, Errors: 1, Warnings: 0, Infos: 0, Hints: 0",
         ],
       },
       {
         kind: "agent",
         html:
-          "One error: <code>Checkout</code> calls <code>Submit Ordr</code> in orders.resource:28 — a typo for " +
+          "One error: <code>Checkout</code> calls <code>Submit Ordr</code> in orders.resource:31 — a typo for " +
           "<code>Submit Order</code>. Shall I fix it?",
       },
     ],
@@ -117,12 +118,12 @@ const SCENARIOS: { label: string; steps: Step[] }[] = [
         kind: "tool",
         command: "robotcode -p ci robot -i smoke",
         output: [
-          "Add Item To Cart                     | PASS |",
-          "Login Works                          | FAIL |",
+          "Add Item To Cart :: A product added to the cart is in the cart.       | PASS |",
+          "Login Works :: A user who logs in is greeted by name.                 | FAIL |",
           "Welcome back, alice! != Welcome back, Alice!",
-          "Logout Works                         | PASS |",
-          "Order Coffee                         | PASS |",
-          "Tests :: Web shop acceptance tests   | FAIL |",
+          "Logout Works :: A user who logs out is no longer logged in.           | PASS |",
+          "Order Coffee :: An order for a product in stock is placed.            | PASS |",
+          "Tests :: Web shop acceptance tests                                    | FAIL |",
           "4 tests, 3 passed, 1 failed",
         ],
       },

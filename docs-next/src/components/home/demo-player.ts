@@ -8,17 +8,29 @@
 // The next panel starts when the progress bar of the current one has run out, so everything that holds the bar
 // (hovering, keyboard focus, the pause button, scrolling the demo out of view, the class "is-holding") holds the
 // demo. A video in a panel plays from the start whenever its panel is shown, and pauses while the panel is not shown,
-// the demo is paused or out of view. Without motion, the panels are only switched by hand, show all their steps at
-// once and play no video.
+// the demo is paused or out of view. A panel with slides ([data-demo-slide], one [data-demo-slide-tab] each) shows
+// them one after another, every data-slide-seconds seconds, from the first whenever it is shown, while the demo is
+// not held; the window title shows the data-title of the slide. Without motion, panels and slides are only switched
+// by hand, the panels show all their steps at once and play no video.
 class RcDemo extends HTMLElement {
   #index = 0;
   #panels: HTMLElement[] = [];
   #tabs: HTMLButtonElement[] = [];
+  #slide = 0;
+  #slideTimer: number | undefined;
 
   connectedCallback() {
     this.#panels = [...this.querySelectorAll<HTMLElement>("[data-demo-panel]")];
     this.#tabs = [...this.querySelectorAll<HTMLButtonElement>("[data-demo-tab]")];
     this.#tabs.forEach((tab, index) => tab.addEventListener("click", () => this.#show(index)));
+    for (const panel of this.#panels) {
+      panel.querySelectorAll("[data-demo-slide-tab]").forEach((tab, index) =>
+        tab.addEventListener("click", () => {
+          this.#showSlide(index);
+          this.#startSlides();
+        }),
+      );
+    }
     this.classList.add("is-ready");
 
     if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
@@ -59,12 +71,44 @@ class RcDemo extends HTMLElement {
     this.classList.remove("is-playing");
     this.#panels.forEach((panel, i) => panel.classList.toggle("is-active", i === index));
     this.#tabs.forEach((tab, i) => tab.setAttribute("aria-pressed", String(i === index)));
-    const title = this.querySelector("[data-demo-title]");
-    if (title) title.textContent = this.#panels[index].dataset.title ?? "";
+    this.#setTitle(this.#panels[index].dataset.title);
     // Restarts the step and progress animations, also when the same panel is selected again.
     void this.offsetWidth;
     this.classList.add("is-playing");
     this.#syncVideos(true);
+    this.#showSlide(0);
+    this.#startSlides();
+  }
+
+  #setTitle(text: string | undefined) {
+    const title = this.querySelector("[data-demo-title]");
+    if (title) title.textContent = text ?? "";
+  }
+
+  #showSlide(index: number) {
+    const panel = this.#panels[this.#index];
+    const slides = panel.querySelectorAll<HTMLElement>("[data-demo-slide]");
+    if (slides.length === 0) return;
+    this.#slide = index;
+    slides.forEach((slide, i) => slide.classList.toggle("is-current", i === index));
+    panel
+      .querySelectorAll("[data-demo-slide-tab]")
+      .forEach((tab, i) => tab.setAttribute("aria-pressed", String(i === index)));
+    this.#setTitle(slides[index].dataset.title);
+  }
+
+  #startSlides() {
+    clearInterval(this.#slideTimer);
+    const panel = this.#panels[this.#index];
+    const count = panel.querySelectorAll("[data-demo-slide]").length;
+    if (count === 0 || !this.classList.contains("is-armed")) return;
+    this.#slideTimer = window.setInterval(
+      () => {
+        const held = ["is-paused", "is-hidden", "is-holding"].some((name) => this.classList.contains(name));
+        if (!held && !this.matches(":hover")) this.#showSlide((this.#slide + 1) % count);
+      },
+      Number(panel.dataset.slideSeconds) * 1000,
+    );
   }
 
   #syncVideos(restart = false) {

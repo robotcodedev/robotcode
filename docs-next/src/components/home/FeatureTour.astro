@@ -2,13 +2,17 @@
 // The home page's feature overview: the features on one side, a window on the other that shows the selected one — a
 // screen recording, a screenshot or a terminal session — played one after another by <rc-demo> (see
 // demo-player.ts). The terminal sessions come from real runs of a small example project, abridged. The screen
-// recordings are MP4 versions of the GIFs in docs/images/, with the timing browsers give the GIFs.
+// recordings are MP4 versions of the GIFs in docs/images/, with the timing browsers give the GIFs; the Neovim
+// screenshots show that example project too.
 import { Icon } from "@astrojs/starlight/components";
 import { Image } from "astro:assets";
 import type { ComponentProps } from "astro/types";
 import PauseButton from "./PauseButton.astro";
 import autocomplete from "../../assets/screenshots/autocomplete1.mp4";
-import neovim from "../../assets/screenshots/neovim-mason-import-errors.png";
+import neovimCompletion from "../../assets/screenshots/neovim-completion.png";
+import neovimDiagnostics from "../../assets/screenshots/neovim-diagnostics.png";
+import neovimInlayHints from "../../assets/screenshots/neovim-inlayhints.png";
+import neovimReferences from "../../assets/screenshots/neovim-references.png";
 import runningTests from "../../assets/screenshots/running-tests.mp4";
 
 type TerminalStep =
@@ -16,15 +20,10 @@ type TerminalStep =
   | { kind: "file"; name: string; content: string[] };
 type Panel =
   | {
-      kind: "image";
-      title: string;
-      image: ImageMetadata;
-      alt: string;
-      // How long the panel stays, in seconds.
-      duration: number;
-      // The background around a picture that is lower than the window.
-      background: string;
-      editors?: string[];
+      kind: "series";
+      // Screenshots shown one after another, each for `seconds`; the window title names the editor of each.
+      slides: { editor: string; label: string; image: ImageMetadata; alt: string }[];
+      seconds: number;
     }
   | {
       kind: "video";
@@ -131,17 +130,17 @@ const FEATURES: Feature[] = [
           kind: "command",
           command: "robotcode discover tests -i smoke",
           output: [
-            "- Tests.Cart.Add Item To Cart (tests/cart.robot:13)",
-            "- Tests.Login.Login Works (tests/login.robot:9)",
-            "- Tests.Login.Logout Works (tests/login.robot:15)",
-            "- Tests.Orders.Order Coffee (tests/orders.robot:12)",
+            "- Tests.Cart.Add Item To Cart (tests/cart.robot:15)",
+            "- Tests.Login.Login Works (tests/login.robot:11)",
+            "- Tests.Login.Logout Works (tests/login.robot:18)",
+            "- Tests.Orders.Order Coffee (tests/orders.robot:14)",
           ],
         },
         {
           kind: "command",
           command: "robotcode analyze code",
           output: [
-            "resources/orders.resource:28:5: [ERROR] KeywordNotFound: No keyword with name 'Submit Ordr' found.",
+            "resources/orders.resource:31:5: [ERROR] KeywordNotFound: No keyword with name 'Submit Ordr' found.",
             "Files: 8, Errors: 1, Warnings: 0, Infos: 0, Hints: 0",
           ],
         },
@@ -189,13 +188,34 @@ const FEATURES: Feature[] = [
       "your IDE — capabilities stay aligned.",
     links: [["Set up your editor", "/getting-started/"]],
     panel: {
-      kind: "image",
-      title: "Neovim",
-      image: neovim,
-      alt: "RobotCode diagnostics in Neovim",
-      duration: 7,
-      background: "#1e1e2e",
-      editors: ["VS Code", "JetBrains", "Neovim", "any LSP editor"],
+      kind: "series",
+      seconds: 5,
+      slides: [
+        {
+          editor: "Neovim",
+          label: "Diagnostics",
+          image: neovimDiagnostics,
+          alt: "A misspelt keyword call and its diagnostic in Neovim",
+        },
+        {
+          editor: "Neovim",
+          label: "Completion",
+          image: neovimCompletion,
+          alt: "Completing a keyword call in Neovim",
+        },
+        {
+          editor: "Neovim",
+          label: "Inlay hints",
+          image: neovimInlayHints,
+          alt: "The argument names RobotCode shows next to the arguments in Neovim",
+        },
+        {
+          editor: "Neovim",
+          label: "References",
+          image: neovimReferences,
+          alt: "All calls of a keyword in the project, in Neovim's quickfix list",
+        },
+      ],
     },
   },
 ];
@@ -205,7 +225,15 @@ const STEP_DELAY = 1;
 const HOLD = 4;
 
 const duration = (panel: Panel) =>
-  panel.kind === "terminal" ? panel.steps.length * STEP_DELAY + HOLD : panel.duration;
+  panel.kind === "terminal"
+    ? panel.steps.length * STEP_DELAY + HOLD
+    : panel.kind === "series"
+      ? panel.slides.length * panel.seconds
+      : panel.duration;
+const title = (panel: Panel) => (panel.kind === "series" ? panel.slides[0].editor : panel.title);
+// A slide's button names the editor only when the series shows more than one.
+const slideLabel = (panel: Extract<Panel, { kind: "series" }>, slide: (typeof panel.slides)[number]) =>
+  new Set(panel.slides.map(({ editor }) => editor)).size > 1 ? `${slide.editor}: ${slide.label}` : slide.label;
 
 // Colours the section headers, keys and strings of the TOML file shown.
 const toml = (line: string) =>
@@ -251,39 +279,50 @@ const toml = (line: string) =>
   <figure class="rc-window rc-tour-window" data-llms-skip>
     <div class="rc-window-bar">
       <span class="rc-window-dots" aria-hidden="true"><i></i><i></i><i></i></span>
-      <span class="rc-window-title" data-demo-title>{FEATURES[0].panel.title}</span>
+      <span class="rc-window-title" data-demo-title>{title(FEATURES[0].panel)}</span>
       <PauseButton />
     </div>
     <div class="rc-demo-panels">
       {
-        FEATURES.map(({ title, panel }, index) => (
+        FEATURES.map(({ title: name, panel }, index) => (
           <div
             class:list={["rc-tour-panel", `rc-tour-${panel.kind}`, { "is-active": index === 0 }]}
             data-demo-panel
-            data-title={panel.title}
-            aria-label={title}
+            data-title={title(panel)}
+            data-slide-seconds={panel.kind === "series" ? panel.seconds : undefined}
+            aria-label={name}
           >
             {panel.kind === "video" ? (
               <button type="button" class="rc-tour-shot" aria-label={`Enlarge: ${panel.label}`}>
                 <video src={panel.src} width="1920" height="1080" muted loop playsinline preload="metadata" />
               </button>
-            ) : panel.kind === "image" ? (
+            ) : panel.kind === "series" ? (
               <>
-                <button
-                  type="button"
-                  class="rc-tour-shot"
-                  style={`background: ${panel.background}`}
-                  aria-label={`Enlarge: ${panel.alt}`}
-                >
-                  <Image src={panel.image} alt={panel.alt} />
-                </button>
-                {panel.editors && (
-                  <ul class="rc-tour-editors">
-                    {panel.editors.map((editor) => (
-                      <li>{editor}</li>
-                    ))}
-                  </ul>
-                )}
+                <div class="rc-tour-slides">
+                  {panel.slides.map((slide, slideIndex) => (
+                    <button
+                      type="button"
+                      class:list={["rc-tour-shot", { "is-current": slideIndex === 0 }]}
+                      data-demo-slide
+                      data-title={slide.editor}
+                      aria-label={`Enlarge: ${slide.alt}`}
+                    >
+                      <Image
+                        src={slide.image}
+                        alt={slide.alt}
+                        widths={[1036, slide.image.width]}
+                        sizes="(min-width: 60rem) 38rem, 100vw"
+                      />
+                    </button>
+                  ))}
+                </div>
+                <div class="rc-tour-slide-tabs">
+                  {panel.slides.map((slide, slideIndex) => (
+                    <button type="button" data-demo-slide-tab aria-pressed={slideIndex === 0 ? "true" : "false"}>
+                      {slideLabel(panel, slide)}
+                    </button>
+                  ))}
+                </div>
               </>
             ) : (
               <ol class="rc-term">
@@ -506,23 +545,46 @@ const toml = (line: string) =>
     box-shadow: 0 1.25rem 3.5rem rgb(0 0 0 / 60%);
   }
 
-  .rc-tour-editors {
+  /* A series of screenshots: all in one grid cell, the current one shown. */
+  .rc-tour-slides {
+    display: grid;
+    flex: 1;
+    background: #14161b;
+  }
+
+  .rc-tour-slides > .rc-tour-shot {
+    grid-area: 1 / 1;
+    visibility: hidden;
+  }
+
+  .rc-tour-slides > .is-current {
+    visibility: visible;
+  }
+
+  .rc-tour-slide-tabs {
     display: flex;
     flex-wrap: wrap;
     gap: 0.4rem;
     justify-content: center;
-    margin: 0;
-    padding: 0.9rem;
+    padding: 0.7rem;
     border-top: 1px solid var(--sl-color-hairline);
-    list-style: none;
   }
 
-  .rc-tour-editors li {
-    padding: 0.15rem 0.6rem;
-    border: 1px solid var(--rc-line-accent);
+  .rc-tour-slide-tabs button {
+    padding: 0.2rem 0.65rem;
+    border: 1px solid var(--sl-color-hairline);
     border-radius: 999px;
-    color: var(--sl-color-white);
+    background: transparent;
+    color: var(--sl-color-gray-2);
+    font: inherit;
     font-size: var(--sl-text-xs);
+    cursor: pointer;
+  }
+
+  .rc-tour-slide-tabs button:hover,
+  .rc-tour-slide-tabs button[aria-pressed="true"] {
+    border-color: var(--sl-color-accent);
+    color: var(--sl-color-white);
   }
 
   .rc-term {
