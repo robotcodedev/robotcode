@@ -2,180 +2,155 @@
 
 ## Purpose
 
-Defines how RobotCode opens the documentation of libraries, resource files and the current document in VS Code. This covers the navigation target computed for the documentation actions, the language server request that resolves a target the way the analysis does, the documentation browser panel with its layout, navigation, refresh and offline rendering, and its entry points in the Keywords tree view.
+Defines the Documentation Browser of the VS Code extension and how RobotCode opens documentation from the editor: the list of libraries, resource files and suite files, how their pages are generated, kept and refreshed, the page view, the documentation actions of the editor and the Keywords view, the import these actions document, and where Libdoc pages open.
 
 ## ADDED Requirements
 
-### Requirement: Documentation actions share one target
+### Requirement: Documentation actions in the editor
 
-For every position where a documentation action is offered, RobotCode SHALL compute one documentation target and offer two source actions from it:
-- "Open Documentation", which opens Robot Framework's Libdoc HTML;
-- "Open in Documentation Browser", which opens the documentation browser.
+Wherever RobotCode offers "Open Documentation", it SHALL also offer the source action "Show in Documentation Browser", under the same conditions:
+- on the name of a Library or Resource import;
+- on a keyword reference in a keyword call, setup, teardown or template;
+- on the name in a keyword definition header.
 
-The target SHALL be editor-neutral and consist of:
-- a kind: `library`, `resource` or `document`;
-- the import name and the import arguments as written;
-- the alias;
-- the base directory;
-- the URI of the context document, or of a workspace folder when no document is the context;
-- an optional anchor, with a kind of `keyword`, `section`, `type` or `init`, and a name.
+The offered actions and what they document SHALL be the same whether the semantic-model analysis path is enabled or not.
 
-Targets SHALL be computed for these positions:
-
-| Cursor position | Target |
-|---|---|
-| The name of a Library import | The library |
-| An argument of a Library import | The library, with an anchor on its importing section |
-| The name of a Resource import | The resource file |
-| A keyword reference in a keyword call, setup, teardown or template | The library or resource file that owns the keyword, with the keyword as anchor |
-| A keyword definition header | The current document, with that keyword as anchor |
-
-A keyword owned by the current document SHALL target the current document. Positions on Variables imports SHALL produce no documentation action. The actions SHALL be offered under the same conditions as "Open Documentation" before this change: import and keyword-reference positions only when source actions are requested, keyword references only for an empty selection, and definition headers without either restriction. The results SHALL be identical whether the semantic-model analysis path is enabled or not.
+"Show in Documentation Browser" SHALL add the library, resource file or suite file to the browser's list when it is not in the list yet, open the browser beside the editor, show that entry and, for a keyword position, show the page at that keyword.
 
 #### Scenario: Library import name
 - **WHEN** source actions are requested with the cursor on `Collections` in `Library    Collections`
-- **THEN** "Open Documentation" and "Open in Documentation Browser" are offered, both for the library `Collections` without anchor
+- **THEN** "Open Documentation" and "Show in Documentation Browser" are offered, both for the library `Collections`
 
-#### Scenario: Library import argument
-- **WHEN** source actions are requested with the cursor on `a_param=from hello` in `Library    alibrary    a_param=from hello    WITH NAME    lib_hello`
-- **THEN** both actions are offered for the library `alibrary` with the arguments `a_param=from hello`, the alias `lib_hello` and an anchor on the importing section
+#### Scenario: Keyword of a library that is not in the list
+- **WHEN** the list contains only `BuiltIn` and the user chooses "Show in Documentation Browser" on a call of `Remove From List`
+- **THEN** `Collections` is added to the list, and its page opens at `Remove From List`
 
-#### Scenario: Keyword of a library
-- **WHEN** source actions are requested with the cursor on `Log To Console` in a test
-- **THEN** both actions are offered for the library `BuiltIn` with the keyword anchor `Log To Console`
+#### Scenario: Keyword definition in a resource file
+- **WHEN** source actions are requested on the name in a keyword definition header of a `.resource` file
+- **THEN** both actions are offered, and "Show in Documentation Browser" shows that resource file at the keyword
 
-#### Scenario: Keyword definition header
-- **WHEN** source actions are requested with the cursor on the name in the header of a keyword defined in the current file
-- **THEN** both actions are offered for the current document with that keyword as anchor
-
-#### Scenario: Variables import
-- **WHEN** source actions are requested with the cursor on the name of a `Variables` import
-- **THEN** no documentation action is offered
+#### Scenario: Keyword definition in a suite file
+- **WHEN** source actions are requested on the name in a keyword definition header of a file with a `*** Test Cases ***` section
+- **THEN** both actions are offered, and "Show in Documentation Browser" shows that suite file at the keyword
 
 #### Scenario: Both analysis paths
-- **WHEN** the same positions are evaluated with the semantic-model flag on and off
-- **THEN** the offered actions and their targets are identical
+- **WHEN** the same positions are evaluated with the semantic-model analysis path enabled and disabled
+- **THEN** the offered actions and what they document are identical
 
-### Requirement: A target identifies the import the analysis used
+### Requirement: Documentation actions document the import the analysis used
 
-The base directory of a target SHALL be the directory of the file that contains the import: for a library or resource imported through a resource file, the directory of that resource file. For a default library such as `BuiltIn`, which has no import, it SHALL be the directory of the current document. For a keyword call, the target SHALL describe the import that the keyword was resolved through, with its arguments and alias; for a call with a library or resource prefix (`lib_var.A Library Keyword`), that is the import the prefix names. When the same library is imported twice with different arguments or aliases, a call through the second import's alias SHALL target the second import. "Open Documentation" SHALL use the same base directory and arguments. For an argument of a Library import, its URL SHALL point to the `Importing` section of the Libdoc page.
+The documentation actions of the editor and the Keywords view SHALL document the import through which the analysis resolved the name at the cursor:
+- Variables in the import name and arguments SHALL be replaced with the values the analysis knows; the arguments SHALL be passed as strings.
+- A relative path in the import SHALL be resolved against the directory of the file that contains the import, also when that file is a resource file imported by the current document, and `${CURDIR}` SHALL be that directory.
+- For a keyword call with a library or resource prefix (`lib_var.A Library Keyword`), the import SHALL be the one the prefix names. When the same library is imported twice with different arguments, a call through the second import's alias SHALL use the second import's arguments.
+- A library imported by module name, such as `BuiltIn` or `Collections`, SHALL be the same browser entry wherever it was shown from.
 
-#### Scenario: Library imported by relative path through a resource in another directory
-- **WHEN** a suite imports `sub/local.resource`, which imports `Library    ./local_lib.py` located next to it, and the documentation of a keyword from `local_lib.py` is opened from the suite
-- **THEN** the target's base directory is the directory of `local.resource`
-- **AND** both the documentation browser and the Libdoc page show `local_lib`
+#### Scenario: Resource imported through a resource in another directory
+- **WHEN** a suite imports `sub/local.resource`, which imports `deeper/nested.resource`, and documentation is opened on a call of a keyword of `nested.resource` in the suite
+- **THEN** "Open Documentation" and the Documentation Browser both show `nested.resource`
 
 #### Scenario: Second import of the same library
-- **WHEN** a suite imports `alibrary` twice, once with `a_param=from hello` and alias `lib_hello` and once with `a_param=${LIB_ARG}` and alias `lib_var`, and the documentation is opened on `lib_var.A Library Keyword`
-- **THEN** the target carries the arguments `a_param=${LIB_ARG}` and the alias `lib_var`
-- **AND** on `lib_hello.A Library Keyword` the target carries `a_param=from hello` and `lib_hello`, also when the analysis of the suite was restored from the cache
+- **WHEN** a suite imports `alibrary` with `a_param=from hello` as `lib_hello` and with `a_param=${LIB_ARG}` as `lib_var`, `${LIB_ARG}` is `from lib`, and documentation is opened on `lib_var.A Library Keyword`
+- **THEN** the documentation is generated with the argument `a_param=from lib`
+- **AND** on `lib_hello.A Library Keyword` it is generated with `a_param=from hello`, also when the analysis of the suite was restored from the cache
 
-#### Scenario: Two aliases with the same arguments
-- **WHEN** a suite imports `alibrary    a_param=x` twice, with the aliases `first` and `second`, and the documentation is opened on `second.A Library Keyword`
-- **THEN** the target carries the alias `second`
+#### Scenario: Module library from two directories
+- **WHEN** the user chooses "Show in Documentation Browser" on `Library    Collections` in two suites in different directories
+- **THEN** the list contains one `Collections` entry
 
-### Requirement: The documentation request resolves a target like the analysis
+### Requirement: The Keywords view opens documentation at the keyword
 
-The language server SHALL answer the request `robot/documentation/getDocument` with a documentation page for a target, or with no result when the target cannot be resolved. Resolution SHALL depend on the kind of target:
-- A library or resource target with a context document SHALL resolve to the documentation that the analysis of the context document holds for the import with the same name, arguments, alias and base directory, without loading the library again.
-- A target without such an import SHALL be resolved through the analysis's import handling, with the context document's variables when the context document is known, including the analysis cache and the configured load timeout. A target whose context is a workspace folder SHALL be resolved through that folder's import handling, with the configured variables only.
-- A `document` target SHALL resolve to the documentation of the context document as currently edited, including unsaved changes.
+Each import and keyword item of the Keywords view SHALL offer "Show in Documentation Browser", for the same import as the documentation actions of the editor. "Show Documentation" and "Show in Documentation Browser" on a keyword defined in the current document SHALL open the documentation at that keyword.
 
-A library or resource that could not be loaded SHALL still produce a page: it shows the load errors and whatever documentation is available. The page SHALL contain:
-- the canonical library documentation Markdown of the documentation, as defined by the capability `library-documentation-markdown`, unchanged;
-- its navigation outline;
-- for each keyword of the outline, its tags, its deprecation state, its short documentation and its source location when known;
-- the load errors with their source locations;
-- the outline entry that the target's anchor resolved to, if any.
+#### Scenario: Local keyword with "Show Documentation"
+- **WHEN** the user chooses "Show Documentation" on a keyword of the current file in the Keywords view
+- **THEN** the Libdoc page opens at that keyword
 
-#### Scenario: Library with import arguments
-- **WHEN** the browser opens `alibrary` with the arguments and base directory of an import in the current suite
-- **THEN** the page shows the keywords that the analysis reports for that import
-- **AND** the library is not loaded again when the analysis already holds its documentation
+#### Scenario: Library import item
+- **WHEN** the user chooses "Show in Documentation Browser" on the import item `lib_hello` of `alibrary`
+- **THEN** the browser shows `alibrary` generated with the argument `a_param=from hello`
 
-#### Scenario: Unsaved keyword in the current document
-- **WHEN** a keyword is added to the open file without saving, and the browser is opened on its definition header
-- **THEN** the page lists the new keyword and scrolls to it
+### Requirement: The browser keeps a list that the user manages
 
-#### Scenario: Library that fails to load
-- **WHEN** the browser opens a library whose import raises an error
-- **THEN** a page is shown with the error message and its source location in the importing section
+The Documentation Browser SHALL list `BuiltIn` and the entries the user added, and nothing else. `BuiltIn` SHALL always be in the list and SHALL NOT be removable. The user SHALL be able to add an entry by hand, as a library name with optional import arguments (`Name::arg1::arg2`) or as the path of a library, resource or suite file, and from the editor or the Keywords view. Adding an entry that is already in the list SHALL show the existing entry. The user SHALL be able to remove an entry. The list SHALL be kept across restarts of VS Code for the workspace, and SHALL NOT be written to settings or project files. In a workspace with several folders, each entry SHALL belong to one folder, and each folder SHALL have its own `BuiltIn` entry.
 
-#### Scenario: Workspace folder as context
-- **WHEN** the request names the library `Collections` with no arguments, the workspace folder's path as base directory and the workspace folder's URI as context
-- **THEN** the page shows the documentation of `Collections`
+#### Scenario: First use in a workspace
+- **WHEN** the browser is opened for the first time in a workspace
+- **THEN** the list contains only `BuiltIn`
 
-#### Scenario: Unknown context document
-- **WHEN** the request names a context document the language server does not know and the target is of kind `document`
-- **THEN** the request returns no result and the browser reports that the documentation is not available
+#### Scenario: Adding by hand
+- **WHEN** the user adds `alibrary::a_param=x`
+- **THEN** the list contains an entry for `alibrary`, generated with the argument `a_param=x`
+- **AND** the entry is still in the list after VS Code was restarted, and no settings file was changed
 
-### Requirement: Navigation uses semantic anchors
+#### Scenario: Removing an entry
+- **WHEN** the user removes an entry that was added before
+- **THEN** it is no longer in the list, while `BuiltIn` offers no removal
 
-A `keyword` anchor SHALL match the keyword whose name is equal after Robot Framework's normalization, ignoring case, spaces and underscores. For a keyword with embedded arguments, the anchor is the name as defined. When several keywords match, the first in page order SHALL be selected. A `section` anchor SHALL match a top-level section (Introduction, Importing, Keywords, Data types) or an introduction heading by title. A `type` anchor SHALL match a data type by name. An `init` anchor SHALL select the importing section. An anchor without a match, including a keyword that the canonical documentation leaves out as private, SHALL open the page at its top. Clicking an in-page link SHALL navigate within the page. Links with the `http`, `https` or `mailto` scheme SHALL open outside the editor. Other links SHALL do nothing. Keywords and load errors with a known source location SHALL offer to open that location in the editor. The browser SHALL keep a back/forward history of the pages and anchors shown.
+### Requirement: Pages are generated live and kept
 
-#### Scenario: Keyword anchor with different spelling
-- **WHEN** the browser opens `BuiltIn` with the keyword anchor `log_to_console`
-- **THEN** the page scrolls to `Log To Console`
+The page of an entry SHALL be what `robotcode doc lib` produces for the entry, run in the Python environment that RobotCode uses for the entry's workspace folder, with the folder's selected profiles, the settings `robotcode.robot.pythonPath`, `robotcode.robot.languages`, `robotcode.robot.variables`, `robotcode.robot.variableFiles` and `robotcode.robot.env`, and, for an entry added from the editor, the directory the import is resolved against. The last generated page of each entry SHALL be kept per workspace folder and Python environment, also across restarts. Opening an entry SHALL show its kept page at once, if there is one, generate the page again in the background, and update the view when the result differs. The user SHALL be able to refresh one entry and all entries. When a generation fails, the view SHALL show the error and keep the last good page.
 
-#### Scenario: Anchor without match
-- **WHEN** the anchor names a keyword the library does not have
-- **THEN** the page opens at the top
+#### Scenario: Kept page
+- **WHEN** the user opens an entry that was generated before
+- **THEN** the kept page is shown at once, and it is replaced when the new generation gives a different result
 
-#### Scenario: Reference link in Markdown documentation
-- **WHEN** the user clicks the link to `Set Log Level` in the documentation of `Log` on RF 7.5
-- **THEN** the page scrolls to `Set Log Level`, and back returns to `Log`
+#### Scenario: Profile variable in the import arguments
+- **WHEN** the entry `MyLib::${URL}` is generated and the profile selected in `robotcode.profiles` sets `URL`
+- **THEN** the page shows the library as initialised with the profile's value of `URL`
 
-#### Scenario: Go to source
-- **WHEN** the user chooses to open the source of a keyword defined in a resource file
-- **THEN** that file opens in the editor at the keyword's line
+#### Scenario: Language from the settings
+- **WHEN** `robotcode.robot.languages` is `["de"]`, `robot.toml` and the profiles set no languages, and the user adds a resource file with the headers `*** Einstellungen ***` and `*** Schlüsselwörter ***` and no `Language:` line, on Robot Framework 6.0 or newer
+- **THEN** the page lists the keywords of the file
 
-### Requirement: One browser panel beside the editor
+#### Scenario: Import arguments that fail
+- **WHEN** the library of an entry cannot be initialised with the entry's arguments, and a page of the entry was kept before
+- **THEN** the view shows the error together with the kept page
 
-The documentation browser SHALL be a single panel. Opening a target SHALL replace the panel's page. The panel SHALL open beside the active editor on first use and keep the focus in the editor. Its sidebar SHALL list:
-- the Introduction and its headings;
-- Importing, when the canonical documentation has that section;
-- Keywords, with their count and a filter on name and tags;
-- Data types, when the canonical documentation has that section;
-- the keyword tags, where choosing a tag filters the keywords.
+#### Scenario: Refresh all
+- **WHEN** the user chooses to refresh all entries
+- **THEN** every entry of the list is generated again
 
-The panel SHALL show a loading state while a request is running. A newer request SHALL supersede an older one. The panel SHALL offer a refresh action. A page for a `document` target SHALL also be refreshed automatically when that document changes while the panel is visible. Opening the same target again SHALL request the page again.
-
-#### Scenario: Opening a second target
-- **WHEN** the browser shows `BuiltIn` and the user opens the documentation of `Collections`
-- **THEN** the same panel shows `Collections`, and the editor keeps the focus
-
-#### Scenario: Filtering keywords
-- **WHEN** the user types `list` into the keyword filter of `Collections`
-- **THEN** only keywords whose names or tags contain `list` (ignoring case and spaces) remain in the sidebar, and the count reflects the filter
-
-#### Scenario: Editing the current document
-- **WHEN** the browser shows the current document and the user changes a keyword's documentation
-- **THEN** the page shows the changed documentation without a manual refresh
-
-### Requirement: The browser works offline and follows the VS Code theme
-
-The browser SHALL load its scripts and styles only from the extension. It SHALL NOT load anything from the network, except images that the documentation itself references. It SHALL use VS Code's theme colors and fonts, and it SHALL NOT need the optional Python-Markdown package. Only the browser's own scripts SHALL run: script content that the documentation contains SHALL NOT run.
-
-#### Scenario: No network
-- **WHEN** the browser opens `BuiltIn` on RF 7.5 without network access and without Python-Markdown installed
+#### Scenario: Markdown-documented library without Python-Markdown
+- **WHEN** the browser shows `BuiltIn` on Robot Framework 7.5 in an environment without the `markdown` package
 - **THEN** the full documentation is shown
 
-#### Scenario: Theme change
-- **WHEN** the user switches from a light to a dark color theme while the browser is open
-- **THEN** the page follows the new theme
+### Requirement: The page view
+
+The browser SHALL show, in the layout of Libdoc, a sidebar with the list, a search field and the keyword list of the selected entry, and next to it the page of the selected entry. The search SHALL keep the keywords whose name, documentation or tags contain the search text, ignoring case. Choosing a keyword in the keyword list SHALL show the page at that keyword. A link within the page, to a section, a keyword or a data type, SHALL show its target in the page. `http`, `https` and `mailto` links SHALL open outside the browser, and `vscode:` links SHALL be handled by VS Code as in its Markdown preview; `command:` links and all other links SHALL do nothing. Scripts, event handlers and forms contained in documentation SHALL NOT run. The browser SHALL load its own scripts and styles only from the extension, and SHALL follow the VS Code color theme. It SHALL work on desktop, in remote windows, and in VS Code for the Web with a remote extension host, for example a Codespace.
+
+#### Scenario: Search
+- **WHEN** the user types `dictionary` into the search field while `Collections` is selected
+- **THEN** only keywords whose name, documentation or tags contain `dictionary`, ignoring case, remain in the keyword list
+
+#### Scenario: Links in the introduction
+- **WHEN** the user clicks the entry `String representations` of the table of contents, or the link `Should Be Equal`, in the introduction of `BuiltIn` on Robot Framework 7.5
+- **THEN** the page scrolls to that section or keyword
+
+#### Scenario: Link to a data type
+- **WHEN** the user clicks the link `Element` in the documentation of `Parse Xml` of `XML` on Robot Framework 7.5
+- **THEN** the page scrolls to the heading of the data type `Element`
 
 #### Scenario: Script in documentation
 - **WHEN** a library documented in HTML format contains a `<script>` element
 - **THEN** the element is not executed
 
-### Requirement: Keywords tree view opens the browser
+#### Scenario: Theme change
+- **WHEN** the user switches from a light to a dark color theme while the browser is open
+- **THEN** the sidebar and the page follow the new theme
 
-Each import and keyword item in the Keywords tree view SHALL offer "Open in Documentation Browser". It SHALL use the same target as the documentation actions would for that import or keyword. "Show Documentation" and "Open in Documentation Browser" on a keyword defined in the current document SHALL navigate to that keyword.
+#### Scenario: Remote window
+- **WHEN** the browser is used in a window connected to WSL, SSH or a dev container
+- **THEN** it lists, generates and shows pages as in a local window
 
-#### Scenario: Local keyword in the tree view
-- **WHEN** the user chooses "Show Documentation" or "Open in Documentation Browser" on a keyword of the current file in the Keywords tree view
-- **THEN** the documentation opens at that keyword
+### Requirement: Libdoc pages open beside the editor
 
-#### Scenario: Library import in the tree view
-- **WHEN** the user chooses "Open in Documentation Browser" on the `alibrary` import item with alias `lib_hello`
-- **THEN** the browser shows `alibrary` as loaded with the arguments of that import
+When VS Code has its integrated browser, "Open Documentation", "Show Documentation" of the Keywords view and output files opened with `robotcode.run.openOutputTarget` set to `simpleBrowser` SHALL open in the integrated browser beside the editor. On VS Code 1.114 or later, a later page SHALL reuse the tab that shows a page of the same documentation server. Without the integrated browser they SHALL open in the Simple Browser as before.
+
+#### Scenario: Two documentation pages on desktop
+- **WHEN** the user runs "Open Documentation" on `Collections` and then on `BuiltIn` in desktop VS Code 1.114 or later
+- **THEN** `BuiltIn` is shown beside the editor, in the tab that showed `Collections`
+
+#### Scenario: VS Code for the Web
+- **WHEN** the user runs "Open Documentation" in a Codespace opened in VS Code for the Web
+- **THEN** the page opens in the Simple Browser, as before

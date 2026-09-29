@@ -2,228 +2,116 @@
 
 ## Context
 
-See proposal.md. Verified facts that shape the design:
+See proposal.md for the motivation. Verified facts that shape the design:
 
-- **Code action.** `RobotCodeActionDocumentationProtocolPart` (`parts/code_action_documentation.py`) has two collection paths:
-  - legacy: AST plus `ModelHelper`;
-  - model: `SemanticModel.statement_at`, `ImportStatement`, `KeywordCallStatement`, `DefinitionStatement`.
+- **Code action.** `RobotCodeActionDocumentationProtocolPart` (`parts/code_action_documentation.py`) collects on two paths: legacy, with the AST and `ModelHelper` (`_collect_legacy`, :78-155), and semantic model (`_collect_from_model`, :161-217). Both have three branches: import name, keyword reference, keyword definition header. The import and keyword branches require `CodeActionKind.SOURCE` in `context.only`, the keyword branch also an empty selection; the definition-header branch has no such check. All branches end in `build_url(name, args, document, namespace, target)` (:321-366):
+  - the base directory is `document.uri.to_path().parent` (:329), made relative to the workspace folder;
+  - name and arguments are resolved with `resolve_robot_variables(root_folder, <that relative directory>, command-line variables, namespace.get_resolvable_variables())` and `replace_string`, and errors are ignored (:338-352). `${CURDIR}` becomes the relative directory made absolute against the language server's working directory (`library_doc.py:2210`, verified);
+  - the arguments are joined with `::`, and the keyword name becomes the URL fragment.
+- **Owning import.** `_build_keyword_action` (:270-312) takes the first library or resource entry whose `library_doc == kw_doc.parent`, and the current document for its own keywords. `LibraryDoc.__eq__` ignores the import arguments (`library_doc.py:1547-1560`). On the semantic-model path, `KeywordCallStatement.lib_entry` is the entry of the call's namespace prefix and is set only for prefixed calls (`semantic_analyzer/nodes.py:132-134`); the legacy counterpart is `ModelHelper.get_namespace_info_from_keyword_token` (`model_helper.py:232-252`). A namespace restored from the cache re-links keyword references by `KeywordDoc.stable_id`, which contains no import arguments (`namespace.py:598-612`), so calls through two imports of the same library can point to one `KeywordDoc`.
+- **Imports.** Each `LibraryEntry` records `import_source`, the file that contains the import, and its raw `args` and `alias` (`entities.py:296-304`). Default libraries such as `BuiltIn` have no `import_source`. A library name is resolved against the base directory only when it is a path (`is_library_by_path`, `library_doc.py:1876-1877`, used at :2325-2326).
+- **Keywords view.** `robot/keywordsview/getDocumentationUrl` (`keywords_treeview.py:167-209`) finds the import or keyword by process-local `str(hash(...))` ids and calls `build_url`. Keywords under an import get the id `${importId}+${keywordId}` (`keywordsTreeViewProvider.ts:216-221`), the document's own keywords the bare id (:237-246), so `item.id?.split("+")[1]` (:127) drops them.
+- **Opening pages.** `robotcode.showDocumentation(url)` (`index.ts:105-121`) fills in the theme, applies `asExternalUri` and runs `simpleBrowser.api.open` beside the editor. Log and report files take the same command when `robotcode.run.openOutputTarget` is `simpleBrowser`, the default (`languageclientsmanger.ts:841-870`). In the VS Code source:
+  - since 1.113, `simpleBrowser.api.open` calls `workbench.action.browser.open` with the URL alone whenever that command exists, that is on desktop (`extensions/simple-browser/src/extension.ts`); the integrated browser then ignores `viewColumn` and `preserveFocus` and opens a new tab for each call. Before 1.110, or with `simpleBrowser.useIntegratedBrowser` off until 1.112, the Simple Browser reused its one panel (`extensions/simple-browser/src/simpleBrowserManager.ts`);
+  - `workbench.action.browser.open` also takes `{url, openToSide, reuseUrlFilter}`, `openToSide` since 1.109 and `reuseUrlFilter` since 1.114. A tab whose URL matches the filter's scheme, authority and path globs is navigated and revealed instead of opening a new one (`browserView/electron-browser/features/browserTabManagementFeatures.ts`). It is an internal command; the simple-browser extension detects it with `vscode.commands.getCommands(true)`.
 
-  Both handle three branches: import name, keyword reference, keyword definition header. The import and keyword branches are gated on `CodeActionKind.SOURCE` in `context.only`, the keyword branch additionally on an empty selection. The definition-header branch is not gated. All branches end in `build_url(name, args, document, namespace, target)`:
-  - The base directory is always `document.uri.to_path().parent`, made relative to the workspace folder.
-  - The name and arguments are resolved with `namespace.get_resolvable_variables()`; failures are ignored.
-  - The fragment is the raw keyword name.
-
-  `_build_keyword_action` finds the owning import with `next(v for v in namespace.libraries.values() if v.library_doc == kw_doc.parent)`. `LibraryDoc.__eq__` compares name, source, lines, version, type, scope, doc format and member name, but not the arguments. So the second import of the same library resolves to the first. In the model path, `KeywordCallStatement.lib_entry` holds the entry of the call's namespace prefix. It is restored from the namespace cache by `resolve_references`, keyed by import name, arguments and alias. The legacy counterpart is `ModelHelper.get_namespace_info_from_keyword_token`, which does the same prefix lookup. `KeywordDoc.stable_id` does not contain the import arguments, so on a restore from the namespace cache `kw_by_id` (`namespace.py`) maps the calls through both imports of the same library to one `KeywordDoc`.
-- **Imports.** `ImportResolver` passes `dirname(source)` as the base directory for the top level and `Path(resource.source).parent` for the imports of a resource (`_handle_imports`). Every `LibraryEntry`/`ResourceEntry` records `import_source` (the file that contains the import), raw `args` and `alias`. `DEFAULT_LIBRARIES` entries have no `import_source`. The `ImportsManager` keys loaded libraries by `(find_library source, resolve_args(args, variables))` (`get_libdoc_for_library_import_with_meta`). So different resolved arguments give distinct `LibraryDoc` objects. Resource entries of files open in the editor are built from the open document (`_ResourcesEntry._update` via `get_or_open_document`). `namespace.library_doc` is built from the current document's model, unsaved edits included.
-- **Libdoc HTML view.** `http_server.py` answers every `?name=` request in a newly spawned `ProcessPoolExecutor` with `get_robot_library_html_doc_str`. That calls Libdoc (`LibraryDocumentation`), which has no cache, rejects Markdown resource files, and on RF 5.0 rejects `.robot` suite files. Verified on 5.0.1: "Resource file with 'Test Cases' section is invalid."; 6.0.2 and 7.5 accept them. The Libdoc HTML page has `id="Importing"` on RF 5.0.1 and 7.5 (verified). The `type=md` branch is never requested by a client, and its `MARKDOWN_TEMPLATE` loads `marked` from jsdelivr.
-- **Keywords tree view.** `robot/keywordsview/getDocumentationUrl` identifies imports and keywords by process-local `str(hash(...))` ids and calls `build_url`. The client sends `item.id?.split("+")[1]` as the keyword id. For local keywords the id has no `+` (`keywordsTreeViewProvider.ts` builds `${importId}+${keywordId}` only for import children), so the anchor is lost.
-- **VS Code client.** `robotcode.showDocumentation(url)` is a client-only command that is not contributed in `package.json`. It opens `simpleBrowser.api.open` with `ViewColumn.Beside` and `preserveFocus: true`. No webview panel exists yet. `esbuild.mjs` bundles two projects: the extension, and the notebook renderer `rendererLog` (preact, CSS loaded as text). There is no test runner for TypeScript: `npm test` points at a missing `out/test/runTest.js`.
-- **Packages.** `robotcode-language-server` depends on `robotcode-robot`, `robotcode-analyze` and `robotcode`, but not on `robotcode-runner` or `robotcode-repl`; `analyze-config-in-robot` removes its dependency on `robotcode-analyze`, and this change uses nothing from that package. `doc-cli` places its canonical renderer in `robotcode-robot` (`packages/robot/src/robotcode/robot/diagnostics/documentation_markdown.py`, next to `library_doc.py`), so the language server can import it. Only `doc-cli`'s command and TUI depend on the open package question there.
-- **What this change uses from `doc-cli`** (capability `library-documentation-markdown`; module `robotcode.robot.diagnostics.documentation_markdown`, `doc-cli` design D1):
-  - `render_documentation(doc, *, keywords=None, import_args=(), project_root=None, document_links=None) -> DocumentationMarkdown`: the canonical Markdown of a `LibraryDoc` (library, resource including Markdown resources, or suite/resource document) in `DocumentationMarkdown.markdown`. Private keywords are left out. Load errors are part of its `Importing` section, and so are the notes on where the keywords come from once `library-loading-robustness` or `library-keyword-set-declaration` is applied (`doc-cli` D6);
-  - `DocumentationMarkdown.outline`: a list of `OutlineEntry(kind, name, level, anchor)`, one per heading in document order, with `kind` one of `document`, `section`, `init` (the `Importing` heading), `keyword`, `type`. Every in-document link points to one of these anchors. Headings are the ATX headings outside fenced code; Setext headings and headings inside raw HTML are not in the outline (`doc-cli` D5);
-  - `find_entry(outline, kind, name)`: the lookup of a keyword by its Robot Framework-normalized name, of a type by name and of a section by title (case- and space-insensitive), without computing anchors;
-  - `short_doc(keyword)`: the short documentation (first paragraph) of a keyword;
-  - the keyword order of the outline: sorted by `name.lower()`, private keywords skipped (`doc-cli` D3).
-
-  The anchor scheme itself is `doc-cli`'s decision (its Q1). This change only relies on "outline anchor = link target in the Markdown".
-- **Types.** RobotCode's `TypeDoc` has no source location, and RobotCode records data types only on RF ≥ 6.1 (`get_library_doc`, `RF_VERSION >= (6, 1)`).
+  The extension requires VS Code `^1.108.0` (`package.json:22`).
+- **Running the CLI.** `PythonManager.executeRobotCode` (`pythonmanger.ts:173-249`) spawns `<python> -u -X utf8 <bundled robotcode> [robotcode.extraArgs] [--format F] [--no-color] [--no-pager] [-p profile]… args` in the workspace folder. It parses stdout as JSON on exit code 0, rejects with stdout and stderr otherwise, writes stderr to the RobotCode output channel, and kills the process when its cancellation token fires. It passes no `env` (:203-207). Test discovery calls it with `robotcode.profiles`, `robotcode.robot.pythonPath` as `-P` and `robotcode.robot.languages` as `--language` (`testcontrollermanager.ts:925-960`).
+- **Extension state and build.** `workspaceState` is not used yet; `storageUri` is only passed on, to the language server and as `ROBOTCODE_CACHE_DIR` to terminals (`languageclientsmanger.ts:613`, `index.ts:223-225`). The extension has no `browser` entry in `package.json`, so it runs in a Node extension host, local or remote. `esbuild.mjs` bundles the extension and the notebook renderer `rendererLog` (preact); `node_modules` is not packaged (`.vscodeignore`), so all runtime packages are bundled. There is no TypeScript test runner: `npm test` points at a missing `out/test/runTest.js`.
+- **Webviews.** A webview gets its HTML as a string, so it needs no file or server and works in local and remote windows and in VS Code for the Web. In the VS Code source (`webview/browser/pre/index.html`, `mainThreadWebviews.ts`), the webview host scrolls to the element of a pure `#fragment` link. It opens `http`, `https`, `mailto`, `vscode` and `vscode-insider` links, and on desktop links of the product's own scheme, through VS Code's opener; `command:` links open only with `enableCommandUris`, and all other links do nothing. `enableForms` defaults to true when scripts are enabled. VS Code's Markdown preview renders with markdown-it and `html: true`, under a CSP that runs only its own nonce scripts.
+- **What this change uses from `doc-cli`.** `robotcode --format json doc lib TARGET`, with the options `-P`, `--language`, `-v`, `-V` and `--base-dir`. The repeatable `--language` adds a language to those of `robot.toml` and the profiles, and `doc` reads resource and suite files in these languages on RF 6.0 and newer (`doc-cli` D2, maintainer decision (2026-09-29)). `TARGET` is `Name[::arg…]` or the path of a library, resource or suite file; for a suite file, `doc lib` documents the keywords the file defines, as Libdoc does (maintainer decision). A suite initialization file such as `__init__.robot`, the target of a keyword definition there (D1), gets the type `SUITE` and the suite name of its directory on every RF version (`doc-cli` D2, maintainer decision (2026-09-29)). A relative path is resolved against `--base-dir`, which also sets `${CURDIR}` and defaults to the working directory. The JSON object holds `name`, `type` (`LIBRARY`, `RESOURCE` or `SUITE`), `version`, `scope`, `source`, `lineno`, `markdown` (the whole page), `keywords` (`name`, `anchor`, `args`, `short_doc`, `tags`, `doc`) and `types` (`name`, `anchor`). The headings of the page have GitHub-style slugs (github-slugger rules), and the links of the page point to them. Keyword and section references in documentation text are such links too: `doc lib` shows the page of the REPL's `.doc` (`doc-cli` requirement "Where the page is shown"), which renders it with `anchor_link_resolver` (`console_interpreter.py:1249`). Without the resolver, references in Markdown-format documentation stay inline code (with today's renderer, the RF 7.5 `BuiltIn` page has 185 `#` links with it and 17 without, verified). Data type references link to the heading of their type under `Data types`, whose anchor is the `anchor` of its `types` entry (`doc-cli` D4 and D6, maintainer decision), for example `[Element]` in `Parse Xml` of the RF 7.5 `XML` library (verified; inline code today). Failing import arguments, or a library or file that cannot be found or imported, end the command with an error and an exit code other than 0. Without the `markdown` package, `BuiltIn` of RF 7.5 still renders (verified with `get_library_doc` and `to_markdown`, the renderer `doc-cli` repairs).
 
 ## Goals / Non-Goals
 
 **Goals:**
-- One target computation for every documentation entry point in the language server, identical on both analysis paths.
-- The browser shows what the analysis sees: the same `LibraryDoc` object, arguments, alias and base directory, without a second load.
-- Page content that is exactly `doc-cli`'s canonical Markdown, so the CLI, the TUI and VS Code show the same text.
-- Anchor resolution in Python, so it is tested with pytest on the RF matrix.
+- One target computation for the code actions and the Keywords view, identical on both analysis paths, with the three bugs fixed.
+- The browser shows what `robotcode doc lib` produces for the same target, profiles and settings: no second renderer, no generation in the language server.
+- Small: one panel, one list, one cache file per entry, no new settings.
 
 **Non-Goals:**
-- IntelliJ. The target and the request are editor-neutral, so a later JCEF view can reuse them.
-- `command:` links in hovers or signature help (brief: optional later).
-- Restoring the panel after a window reload (`WebviewPanelSerializer`).
-- Replacing or removing "Open Documentation", the HTTP server or its unused `type=md` branch.
-- Variables imports, a command-palette library picker, and index groups (`library-index`).
-- Rendering Markdown to HTML in Python. That needs Python-Markdown, the optional dependency this change avoids.
+- Removing the HTTP server, or changing "Open Documentation" beyond the fixes and where it opens (maintainer decision).
+- IntelliJ.
+- Unsaved editor content and libraries whose keywords exist only in a running execution context (proposal, known limits).
+- Adding entries automatically, refreshing on file changes, back and forward navigation, restoring the panel after a window reload, `command:` links, typed import arguments.
 
 ## Decisions
 
-### D1: One target, computed once, two actions
+### D1: The language server computes one target
 
-`code_action_documentation.py` gets two `CamelSnakeMixin` dataclasses and one method per trigger kind, used by both collection paths:
-- `DocumentationTarget(kind, name, args, alias, base_dir, context, anchor)`;
-- `DocumentationAnchor(kind, name)`.
+`code_action_documentation.py` gets `DocumentationTarget(uri, name, args, base_dir, keyword)` (`CamelSnakeMixin`) and one computation per trigger, used by both collection paths and by the Keywords view:
 
-`context` is a URI: the document the target was computed in, or a workspace folder when no document is the context (the index entries of `library-index`, which open a name without an import). The client routes the request by it (D5).
+| Trigger | `name`, `args` | `base_dir` | `keyword` |
+|---|---|---|---|
+| Name of a Library or Resource import | the import at the cursor | the current document's directory | none |
+| Keyword reference | the owning import (below) | the directory of its `import_source`; the current document's directory without one | `kw_doc.name` |
+| Keyword definition header, or a keyword of the current document | the current document's file name | the current document's directory | the keyword's name |
 
-| Trigger | Target | Anchor |
-|---|---|---|
-| Library import name | `library`, raw `imp.name` | none |
-| Library import argument (new) | `library`, raw `imp.name` | `init` |
-| Resource import name | `resource`, raw `imp.name` | none |
-| Keyword reference | the owning entry (D3) | `keyword` with `kw_doc.name` |
-| Keyword definition header | `document`, name = file name | `keyword` with the header token value |
+- `uri` is the document the target was computed in. The extension takes the workspace folder from it.
+- `name` and `args` are resolved as `build_url` resolves them today, but with the absolute base directory, so `${CURDIR}` is that directory. `args` are strings.
+- `base_dir` is left out when the resolved name does not depend on it: a library name that is not a path, or an absolute path. So `BuiltIn` or `Collections` is the same target wherever it is used.
+- **Owning import**, the same rule on both paths: for a prefixed call, the prefix entry (`stmt.lib_entry`; on the legacy path `get_namespace_info_from_keyword_token` with the keyword token that `get_keyworddoc_and_token_from_position` returns), if its `library_doc == kw_doc.parent`; otherwise today's rule. The prefix entry is right also after a cache restore, where `stmt.keyword_doc` may belong to the other import; `==` accepts that. Calls without a prefix, resources and the current document keep today's rule.
 
-For library imports:
-- The raw arguments are the `ARGUMENT` tokens before `WITH NAME`/`AS`. This is the loop in `_import_action_from_model`, and `LibraryImport.args` on the legacy path.
-- The alias is `imp.alias` (legacy) or `ImportStatement.alias` (model).
-- A position on an `ARGUMENT` token is the new argument trigger.
+`collect` returns for each target:
+- "Open Documentation", unchanged: `robotcode.showDocumentation` with `build_url(target, document)`;
+- "Show in Documentation Browser" (`CodeActionKind.SOURCE`): `robotcode.showInDocumentationBrowser` with the target, in suite files too, whose keywords `robotcode doc` documents (Context).
 
-A keyword owned by the current document keeps today's rule (`namespace.library_doc == kw_doc.parent`) and becomes a `document` target. The branch gating is unchanged.
+The gating of the three branches stays. `build_url` only formats the URL: `basedir` is the target's base directory, or the current document's directory when there is none, made relative to the workspace folder as today.
 
-`collect` returns both actions for a target:
-- `CodeAction("Open Documentation", command=Command(..., "robotcode.showDocumentation", [build_url(target, …)]))`;
-- `CodeAction("Open in Documentation Browser", kind=SOURCE, command=Command(..., "robotcode.openDocumentationBrowser", [target]))`.
+`keywords_treeview.py` gets `robot/keywordsview/getDocumentationTarget` with the params of `getDocumentationUrl`. It returns the target for the import or keyword id, or `None` for an unknown id. `getDocumentationUrl` builds its URL from the same target.
 
-`build_url` takes a target. It keeps its variable resolution and its workspace-relative `basedir` and adds `#Importing` for an `init` anchor.
+### D2: Generation, list and cache in the extension
 
-Rejected:
-- Separate computations per action: both actions must point at the same import.
-- Encoding the target in the URL and parsing it on the client: the URL is specific to the HTTP server, and IntelliJ could not use it.
+`vscode-client/extension/documentationBrowser.ts` holds the list, the cache and the panel. The language server has no part in it (maintainer decision: no new generation path there).
 
-### D2: Base directory is the directory of the importing file
+- **Entry.** `{folder, target, baseDir?}`: the workspace folder URI, the text `Name` or `Name::arg1::arg2`, and the base directory from the language server, if any. This triple is the entry's key, so a target that is already in the list selects the existing entry. `BuiltIn` is an implicit entry of each folder and cannot be removed. An entry is labelled with the `name` of its last generated page, such as `Tests` for `tests/__init__.robot`, and shows its target text beside it; before its first page it shows only the target text. The added entries are stored in `workspaceState` (maintainer decision: private, not in settings). With several workspace folders, the sidebar groups the entries by folder.
+- **Generation.** `pythonManager.executeRobotCode(folder, args, profiles, "json", true, true, undefined, token, env)` runs `doc lib -P … --language … -v … -V … [--base-dir DIR] TARGET`: `-P` for each `robotcode.robot.pythonPath` entry, `--language` for each `robotcode.robot.languages` entry, `-v name:value` for each `robotcode.robot.variables` entry, `-V` for each `robotcode.robot.variableFiles` entry, and `--base-dir` when the entry has a base directory; `profiles` is the folder's `robotcode.profiles`. `executeRobotCode` gets an optional `env`, merged over `process.env`; the browser passes `robotcode.robot.env`. These are the settings the language server applies (maintainer decision (2026-09-29)). `doc` writes the `env` of `robot.toml` and the profiles over the process environment (`doc-cli` D2), so for a variable that `robotcode.robot.env` also sets, their value wins, as in a test run (`debugmanager.ts:138-142`); the language server lets the setting win (`protocol.py:239-241`, `document_cache_helper.py:692-694`). The language server adds `robotcode.robot.languages` to the languages of `robot.toml` and the profiles (`document_cache_helper.py:160-161`), as `--language` does in `doc`, and test discovery passes the setting as `--language` too (`testcontrollermanager.ts:951`). On RF 5.0, which has no languages, `doc` rejects a language with Robot Framework's `option --language not recognized` and fails (`doc-cli` D2, D3). So there a non-empty `robotcode.robot.languages` makes each generation fail, as it makes test discovery fail (verified). Each entry has at most one running generation: a new one cancels it, and so do removing the entry and closing the panel. "Refresh All" generates the entries one after another. Warnings on stderr of a successful run go to the RobotCode output channel, as for every `executeRobotCode` call.
+- **Cache.** The last good JSON of an entry is one file in `context.storageUri`: `documentation-browser/<sha256 of folder URI, Python command, target and base directory>.json`, written with `vscode.workspace.fs`. The Python command is `pythonManager.getPythonCommand(folder)`.
+- **Refresh** (maintainer decision). Selecting an entry shows its kept page at once and starts a generation. When the new JSON differs from the kept one, the view shows it and the file is rewritten. "Refresh" generates the selected entry again, "Refresh All" every entry. A failed generation shows its error message in the view and keeps the last good page.
+- **Commands.**
+  - `robotcode.openDocumentationBrowser`, in the command palette: opens the panel beside the editor.
+  - `robotcode.showInDocumentationBrowser(target)`, run by the code action and the Keywords view, not contributed: adds the entry to the folder of `target.uri` if it is missing, opens the panel, selects the entry and scrolls to `target.keyword`. The keyword is matched against `keywords[].name`, ignoring case, spaces and underscores; without a match the page opens at the top.
+  - "Add…" in the panel: an input box for `Name[::args]` or a path, relative to the workspace folder; with several folders a folder pick comes first.
 
-`base_dir` is the absolute `str(Path(entry.import_source).parent)` when `import_source` is set. For default libraries and imports of the current document, it is the current document's directory. This is the base directory the `ImportResolver` used for the load, so the target resolves to the same file. This fixes "Open Documentation" for libraries and resources that are imported by relative path through a resource in another directory. `build_url` still converts the path relative to the workspace folder.
+### D3: The webview
 
-Rejected: keeping the current document's directory. It is wrong whenever the import lives in another directory.
+One `WebviewPanel` of the view type `robotcode.documentationBrowser`, created with `ViewColumn.Beside` and `preserveFocus: true`. Options: `enableScripts: true`, `enableForms: false`, `enableFindWidget: true`, `localResourceRoots` limited to the extension's `out` directory, no `enableCommandUris`, no `retainContextWhenHidden`. The webview posts `ready` whenever it loads, also after it was hidden, and the extension answers with the current state.
 
-### D3: The owning import is the entry the keyword was resolved through
+The sources live in `vscode-client/documentationBrowser/`, with preact and their own `tsconfig.json`, like `rendererLog`. A third `esbuild.mjs` project bundles them to `out/documentationBrowser.js` and `out/documentationBrowser.css`, and the HTML links both files.
 
-The lookup rules, in order, the same on both paths:
-1. The entry of the call's namespace prefix (`lib_var` in `lib_var.A Library Keyword`), if its `library_doc == kw_doc.parent`. That is the check the semantic analyzer applies to the prefix entry. On the model path the entry is `stmt.lib_entry`. On the legacy path it comes from `ModelHelper.get_namespace_info_from_keyword_token(namespace, token)`, with the keyword token that `get_keyworddoc_and_token_from_position` returns.
-2. Otherwise, the first library entry whose `library_doc is kw_doc.parent`.
-3. Otherwise, the first library or resource entry whose `library_doc == kw_doc.parent`, which is today's rule.
+- **Layout** (maintainer decision: Libdoc layout in a webview, not the Markdown preview). The sidebar has the list with Add, Refresh, Refresh All and Remove, the search field, and the keyword list of the selected entry from `keywords`. The search keeps the keywords whose `name`, `doc` or `tags` contain the text, ignoring case. The page fills the rest.
+- **Rendering.** `markdown-it` with `html: true` renders `markdown`. HTML- and reStructuredText-format documentation reaches the Markdown as raw HTML, and VS Code's Markdown preview renders the same way (Context).
+- **Heading ids** (maintainer decision: from the JSON anchors). The level-3 headings under `Keywords` and under `Data types` take, in page order, the `anchor` of the `keywords` and of the `types` entries. `doc-cli` derives these anchors from exactly these headings (its D5), and links data type references to the same anchors (Context). So the keyword list, which scrolls to `keywords[].anchor`, the links to keywords and the links to data types find their heading. The other headings (the level-2 sections, the headings of the introduction, the parts of an entry) have no JSON anchor, but the page links to them on every RF version: its table of contents (`markdown_docs.py:113-127`, `library_doc.py:1798-1802`) and section references such as `[Controlling failure messages]` (`markdown_docs.py:63-66`, `library_doc.py:1731-1739`); the `BuiltIn` page has such links on RF 5.0 to 7.5 (verified). These headings get the id that `github-slugger` gives their text, the rule of `doc-cli`'s requirement "Anchors". One slugger takes all headings in page order, so a repeated title gets the number it has in `doc-cli`. `github-slugger` is needed only for these headings.
 
-Rule 1 covers qualified calls, including two imports with the same resolved arguments under different aliases and a model restored from the namespace cache, where `stmt.keyword_doc` may belong to the other import (see Context). Rule 2 covers unqualified calls: different resolved arguments give distinct `_LibrariesEntry` objects and therefore distinct `LibraryDoc` objects.
+  Rejected: `doc-cli` returning the anchors of all headings, from its `heading_anchors`, and the webview taking every id from the JSON. It saves `github-slugger`, but adds a field to the JSON contract that the maintainer decided on, and a heading that markdown-it sees and `heading_anchors` skips, such as a setext heading or one in a block quote, would shift every later id.
+- **Links.** The webview host scrolls to `#fragment` links and opens `http`, `https`, `mailto` and `vscode` links itself (Context), as in VS Code's Markdown preview, so the page script must not stop these clicks. `command:` links and all other links do nothing.
+- **Content security policy:** `default-src 'none'; script-src 'nonce-<nonce>'; style-src ${cspSource}; img-src ${cspSource} https: data:; font-src ${cspSource}`. Scripts and inline event handlers in documentation do not run, and forms are off.
+- **Theme.** Colors and fonts come only from the `--vscode-*` variables, so a theme switch restyles the view without a reload.
+- **Messages.** From the webview: `ready`, `select(id)`, `add`, `remove(id)`, `refresh(id?)` (without id: all). From the extension: `state` (the entries with their busy and error flags, and the selected id) and `page` (the selected entry's JSON, its error, and the anchor to scroll to).
 
-Rejected: identity alone. It returns the wrong import after a restore from the namespace cache on the model path, and the first alias for imports with the same resolved arguments.
+### D4: Libdoc pages open in the integrated browser
 
-### D4: The request `robot/documentation/getDocument`
+`robotcode.showDocumentation` (`index.ts:105-121`) checks `(await vscode.commands.getCommands(true)).includes("workbench.action.browser.open")`, as the simple-browser extension does (maintainer decision). If the command exists, it runs it with `{url, openToSide: true, reuseUrlFilter}`, where `url` is the external URL and the filter is `<scheme>://<authority>/**` of that URL. So every page of the documentation server, a library page or an output file, opens beside the editor in one reused tab, as the Simple Browser did (Context). Otherwise it calls `simpleBrowser.api.open` as today. `engines.vscode` stays `^1.108.0` (maintainer decision). The detection rule also applies on 1.109 to 1.113, which have the command but do not know the filter: there each page opens beside the editor in a new tab. On 1.109 this also replaces the Simple Browser, which VS Code still used by default there.
 
-This is a new part `parts/documentation_browser.py` (`RobotDocumentationBrowserProtocolPart`, registered as `robot_documentation_browser` in `protocol.py`). The request is `@rpc_method(name="robot/documentation/getDocument", param_type=GetDocumentParams, threaded=True)` with `{target}`. Resolution:
-1. `document`: `documents_cache.get_namespace(context_document).library_doc`. If the context document is unknown, the result is `None`.
-2. `library`/`resource` with a known context document: the context namespace's entry (`libraries` or `resources`) whose `import_name`, `args`, `alias` and D2 base directory equal the target's. Its `library_doc` is the object the analysis uses, with no load.
-3. Otherwise, the context's `ImportsManager`, or, when `context` is a workspace folder URI, that folder's (`get_imports_manager_for_workspace_folder`):
-   - `get_libdoc_for_library_import(name, tuple(args), base_dir, variables=namespace.get_resolvable_variables())`;
-   - or `get_resource_doc_for_resource_import(name, base_dir, variables=…)`.
+### D5: Tests
 
-   Without a context document, `variables` is left out, so only the manager's command-line and configured variables apply. This hits the in-memory and disk caches and honours `load-library-timeout`. An exception raised here (for example a resource or library path that does not exist, or, before `library-loading-robustness`, a load that timed out) becomes a `LibraryDoc` with the target's name and that error (`error_from_exception`), so a page with the error is shown.
-
-The response `DocumentationPage` contains:
-- `target`: the target as resolved;
-- `title`: the name, plus the alias if one is set;
-- `markdown`: `render_documentation(library_doc, import_args=target.args, project_root=<workspace folder path>).markdown`;
-- `outline`: its `OutlineEntry` list (kind, name, level, anchor), in document order;
-- `keywords`: one entry per `keyword` entry of the outline, taken from its `KeywordDoc`: `anchor`, `tags`, `deprecated`, `shortDoc` (`short_doc`), and `uri` (`Uri.from_path(source)`) and `line` when the source is known. The `KeywordDoc`s are paired with the outline's keyword entries in order, since both follow `doc-cli`'s keyword order. The sidebar's count, filter and tag list use these;
-- `errors`: every `LibraryDoc.errors` entry, with `message`, `typeName`, `uri` (`Uri.from_path(source)`) and `line`;
-- `anchorId`: the outline anchor that the target's anchor resolved to.
-
-Anchor resolution runs in Python, through `doc-cli`'s `find_entry(outline, kind, name)`:
-- `keyword`: the keyword name as Robot Framework matches it (case, spaces and underscores ignored); the first match in outline order wins. Private keywords are not in the canonical document, so their anchors resolve to nothing.
-- `section`: the fixed sections and the introduction headings by title, ignoring case and spaces; the title `Importing` selects the `init` entry.
-- `type`: the name.
-- `init`: the outline entry of kind `init`, or no anchor if the document has no `Importing` section.
-
-Source paths become URIs in the response, so the client needs no path handling.
-
-Rejected:
-- Resolving only through the `ImportsManager`: the `ImportResolver` resolves each import with the variables known at that import (`_refresh_variables` before every import), which the context namespace's final variables need not equal. So the context namespace's entry is the only exact match.
-- Extending `robot/keywordsview/getLibraryDocumentation`: it hard-codes `args=()` and `base_dir="."`, raises on errors, and serves the language-model tools that are being phased out.
-
-### D5: Panel and client command
-
-`vscode-client/extension/documentationBrowser.ts` registers the client command `robotcode.openDocumentationBrowser(target)`. Like `robotcode.showDocumentation`, it is not contributed to the command palette. It keeps one `WebviewPanel` of the view type `robotcode.documentationBrowser`:
-- It is created with `ViewColumn.Beside` and `preserveFocus: true`, and later revealed with `reveal(undefined, true)`.
-- Options: `enableScripts: true`, `enableFindWidget: true` for text search, `localResourceRoots` limited to the extension's `out` directory, no `retainContextWhenHidden`. The webview keeps the last page in `getState`/`setState`.
-
-The command sends `robot/documentation/getDocument` to the language client of `target.context`, using `getLanguageClientForResource` as the other requests do. It cancels the previous request, posts a loading state, then the page or a "documentation not available" message.
-
-Refresh:
-- the toolbar button, or opening the same target again, re-requests the page;
-- for a `document` target, a debounced (500 ms) `onDidChangeTextDocument` for the context URI re-requests while the panel is visible, keeping the current scroll position.
-
-The webview posts only these messages:
-- `open(target, anchorId)`: history navigation to another page;
-- `openExternal(url)`, allowed only for `http`/`https`/`mailto`;
-- `openSource(uri, line)`, allowed only for `file` URIs contained in the current page;
-- `refresh`.
-
-The extension validates each message before acting. `library-index` later adds one more message, `loadIndex(folderUri)`, for its index view (its D9).
-
-### D6: Webview rendering
-
-A third `esbuild.mjs` project bundles `vscode-client/documentationBrowser/` (preact, as `rendererLog` does; its own `tsconfig.json` for the typecheck plugin) to `out/documentationBrowser.js` and `.css`. The Markdown renderer is `markdown-it` with `html: true`, bundled from a new devDependency. `markdown-it` is the renderer of VS Code's Markdown preview, which renders whole documents as this panel does. `html: true` is needed because `LibraryDoc.to_markdown` passes HTML-format documentation through as raw HTML and turns reStructuredText into HTML with docutils.
-
-The page is built from one Markdown string and the outline:
-- The sidebar comes from `outline` and `keywords`.
-- The content pane renders `markdown`. The heading ids are taken from `outline` in order and set on markdown-it's ATX heading tokens (`heading_open` whose `markup` starts with `#`), the headings `doc-cli` puts into the outline (its D5). Headings in raw HTML documentation are no heading tokens, and Setext heading tokens get no id, so neither shifts the ids. The webview never computes slugs, so it does not depend on `doc-cli`'s anchor scheme.
-- Link clicks are intercepted: `#anchor` scrolls within the page and records history; external schemes go to `openExternal`; everything else is ignored.
-- The keyword filter matches names and tags, ignoring case and spaces. Choosing a tag sets the filter to that tag.
-- History entries are `(target, anchorId)` and live in webview state.
-
-Content security policy:
-- `default-src 'none'`;
-- `script-src 'nonce-…'`, the bundle only;
-- `style-src ${cspSource}`;
-- `img-src ${cspSource} https: data:`;
-- `font-src ${cspSource}`.
-
-Scripts and inline event handlers from documentation do not run. Colors and fonts come only from `--vscode-*` CSS variables; theme switches restyle without a reload.
-
-Rejected:
-- `marked` (VS Code's hover renderer, and the unused HTTP template's choice): it would work as well; one renderer is enough, and the preview's is chosen.
-- The internal command `markdown.api.render` of the built-in Markdown extension: not part of the documented extension API.
-- HTML rendered by the language server: needs Python-Markdown.
-- Computing heading slugs in the webview (for example with a markdown-it anchor plugin): couples the webview to the anchor scheme.
-- Rendering each keyword, type and section as a separate fragment: `doc-cli` defines one document and its outline, not fragments.
-
-### D7: Errors and the fallback marker
-
-The canonical Markdown already lists the load errors, with source and line, in its `Importing` section, which it has whenever there are errors (`library-documentation-markdown`). The panel adds a "go to source" link through `openSource` for each entry of `errors` with a `uri`, below the `Importing` heading.
-
-If `library-loading-robustness` is applied, its marker `LibraryDoc.loaded_without_arguments` is shown by the canonical Markdown as a note after the load errors (`doc-cli` D6), and so is the marker `LibraryDoc.runtime_only_args` of `library-keyword-set-declaration`. The markers and the load errors come from the same `LibraryDoc`, so this change needs no separate request or rendering for them.
-
-### D8: Keywords tree view
-
-`keywords_treeview.py` gets `robot/keywordsview/getDocumentationTarget` with the params of `getDocumentationUrl`. It returns the D1 target for the import or keyword id. `getDocumentationUrl` is reimplemented on top of the same target.
-
-`keywordsTreeViewProvider.ts`:
-- a new command `robotcode.keywordsTreeView.openInDocumentationBrowser`, contributed with `enablement` like "Show Documentation", in `view/item/context`;
-- the keyword-id helper `item.parent ? item.id?.split("+")[1] : item.id`, used by both commands.
-
-### D9: Tests
-
-- **Regression tests.** `test_code_action_show_documentation.py` also writes the target of the new action. The paths are written relative to the test data directory with `as_posix()`, so the baselines are identical on Linux, Windows and macOS. The URL argument stays `<removed>`. The baselines of rf50…rf75 are regenerated, and the diff is reviewed: it may only add the second action and its target.
-- **Parity.** `test_code_action_documentation_model.py` gets cases for the argument trigger and the two actions, and a model statement whose `keyword_doc` belongs to the other import of the same library (as after a restore from the namespace cache) but whose `lib_entry` is the prefix entry: the target is the prefix entry.
-- **New tests.** `test_documentation_browser.py` uses `open_temp_document` and `tmp_path`, so the shared data directory and other baselines stay untouched. It covers:
-  - the base directory for a library imported by relative path through a resource in a subdirectory;
-  - the second import through its alias, and two imports with the same arguments under different aliases (legacy and model paths);
-  - `getDocument` for a library with arguments, taken from the namespace entry without a new load (asserted by object identity with the entry's `library_doc`);
-  - a resource;
-  - a `document` target with unsaved text;
-  - a failing library with errors carrying URIs;
-  - anchor resolution (`log_to_console`, an unknown keyword, a private keyword, `init` with and without an importing section, a type, an introduction heading);
-  - an unknown context document;
-  - `getDocumentationTarget` for a local keyword.
-- **TypeScript.** There is no TypeScript test runner, and none is added. The TypeScript side is checked with `npm run lint`, `npm run compile` and a manual check list (task 5.3).
+- `test_code_action_show_documentation.py` writes the target of "Show in Documentation Browser"; `uri`, `baseDir` and a `name` that is an absolute path are written relative to the test data directory with `as_posix()`, so the baselines are the same on Linux, Windows and macOS. The URL stays `<removed>`. The data file is a suite; its definition headers and calls of its own keywords get the second action too, with the data file as the target. `lib_var.A Library Keyword` carries `a_param=from lib`, `lib_hello.A Library Keyword` `a_param=from hello`.
+- `test_code_action_documentation_model.py`: both actions and their targets are identical on both paths; a model statement whose `keyword_doc` belongs to the other import of the same library, while `lib_entry` is the prefix entry, targets the prefix entry.
+- A new `test_documentation_target.py` with `open_temp_document` and `tmp_path` covers the base directory through a resource in a subdirectory, `${CURDIR}`, libraries without base directory, keyword definitions in resource and suite files, and the targets of the Keywords view.
+- TypeScript: no test runner exists, and none is added. `npm run lint`, `npm run compile`, a throwaway Node script for the heading ids and `#` links, and the manual checks of task 5.3.
 
 ## Risks / Trade-offs
 
-- [The regression baselines of all RF versions change] → the diff is reviewed so that it contains only the new action.
-- [`doc-cli`'s implementation differs from its design] → task 1.1 checks the names of Context against the implemented module first. The webview depends only on "one outline entry per ATX heading, in order; links point to outline anchors".
-- [markdown-it and `doc-cli` disagree on what is an ATX heading, for example a `#` line inside an HTML block that `iter_headings` counts] → the ids after it would shift. The ids are set on markdown-it's ATX heading tokens, not on DOM headings, so raw HTML headings and Setext headings do not count; the manual check (task 5.3) covers an HTML-format, a reStructuredText-format and a Markdown library.
-- [Raw HTML in documentation (`html: true`)] → the CSP blocks scripts, inline handlers, frames and foreign styles. The language server already imports and runs the library's code to document it, so the webview adds no new trust boundary.
-- [A large page (BuiltIn) in webview state] → only one page is kept, and history entries hold targets, not pages.
-- [Auto-refresh of `document` targets while typing] → the refresh is debounced, runs only while the panel is visible, and only for `document` targets.
-- [An unqualified call that a search order resolves to one of two imports with identical resolved arguments] → the target carries the first import's alias. The documentation is identical.
-- [LSP clients without a handler, such as IntelliJ, show an action they cannot run] → the same as "Open Documentation" today; see the Open Questions.
+- [The regression baselines of all RF versions change] → the diff is reviewed; it may only add the second action and its target.
+- [The webview and `doc-cli` see different headings, for example a setext heading in documentation text, so a repeated title gets another number] → keyword and type headings take their ids from the JSON, so a difference can only break a section link, never the keyword list or a link to a keyword or data type. A throwaway script reports every `#` link without a target for `BuiltIn`, `Collections`, `XML`, a resource file and a suite file (task 4.3).
+- [Raw HTML from documentation (`html: true`)] → the CSP blocks scripts and inline event handlers, forms are off, and images load only from `https:` and `data:`. `robotcode doc` imports and runs the library anyway to document it.
+- [`workbench.action.browser.open` is an internal command and can change] → it is detected at run time, with the Simple Browser as fallback, as in the built-in simple-browser extension.
+- [Clients without VS Code's client commands, such as IntelliJ and Neovim, get a second action they cannot run] → only where they get "Open Documentation" today, which has the same problem.
+- [A library that hangs while it is imported keeps its generation running; `executeRobotCode` has no time limit] → the entry shows that it is busy; refreshing it, removing it or closing the panel ends the process.
 
 ## Migration Plan
 
-This change is additive. "Open Documentation" keeps its behaviour, apart from the corrected base directory and arguments and the new import-argument position. It must be applied after `doc-cli`, which provides `library-documentation-markdown`. `library-loading-robustness` is optional; if it is applied, the page shows its marker through the canonical Markdown (task 4.4 checks it). The change needs no data migration and no settings.
+Additive, with no new settings. Apply after `doc-cli`, and archive after it. "Open Documentation" keeps its URL format; only the base directory, the arguments of a second import and where the page opens change. Rollback: revert the change.
 
 ## Open Questions
 
-- **Payload shape vs. `doc-cli`'s JSON output.** If `doc-cli` adds a JSON output (its Q6), should `outline` and `keywords` use that serialization where they overlap? `outline` already embeds `doc-cli`'s `OutlineEntry`, whose field names are single words and serialize alike in both. Recommended: yes for `keywords` as well, where its fields overlap `doc-cli`'s `--list` entries (`name`, `anchor`, `short_doc`, `tags`). The language server adds `target`, `title`, `errors` and `anchorId`, and converts paths to URIs. The field case follows the LSP convention (camelCase via `CamelSnakeMixin`).
-- **Offer the new action only to clients that can run it?** Recommended default: no gating, the same as "Open Documentation" today. Revisit when IntelliJ gets a documentation view. The alternative is an `initializationOptions` flag sent by the VS Code client.
-- **Tree view inline button.** Recommended default: "Show Documentation" keeps the inline `$(book)` button, and "Open in Documentation Browser" is in the item context menu. The maintainer may swap them.
-- **Hover command link.** A `command:robotcode.openDocumentationBrowser?…` link in library and keyword hovers is possible, because the VS Code client trusts server Markdown (`languageclientsmanger.ts`, `markdown.isTrusted`). It would make hover output client-specific. Recommended: a later change.
+None. D3 decides the ids of the headings without a JSON anchor.
