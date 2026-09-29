@@ -4,7 +4,7 @@
 
 ### Requirement: Argument descriptions are rendered with the signature
 
-When a keyword has documented arguments, the rendered keyword documentation SHALL list every argument once, with its type, its default value and its description, as Robot Framework's Libdoc lists them, instead of showing the argument table and the descriptions separately; multi-line descriptions SHALL be preserved. A keyword without argument descriptions SHALL keep the argument table. When a return description exists it SHALL be shown with the return type (`**Return Type**: \`T\` — description`, or `**Returns**: description` without a type); raised exceptions SHALL be listed with their descriptions. Keywords whose documentation is not in Markdown format and has no argument, return or raises description SHALL render exactly as before, except for the corrections of the requirement "Robot-format tables and links convert to valid Markdown".
+When a keyword has documented arguments, the rendered keyword documentation SHALL list every argument once, with its type, its default value and its description, as Robot Framework's Libdoc lists them, instead of showing the argument table and the descriptions separately; multi-line descriptions SHALL be preserved. A keyword without argument descriptions SHALL keep the argument table. When a return description exists it SHALL be shown with the return type (`**Return Type**: \`T\` — description`, or `**Returns**: description` without a type); raised exceptions SHALL be listed with their descriptions. Outside the full-page documentation of `library-documentation-markdown`, keywords whose documentation is not in Markdown format and has no argument, return or raises description SHALL render exactly as before, except for the corrections of the requirement "Robot-format tables and links convert to valid Markdown".
 
 #### Scenario: Standard-library keyword on RF 7.5
 - **WHEN** the hover for `Log` (BuiltIn) is shown on RF 7.5
@@ -17,17 +17,46 @@ When a keyword has documented arguments, the rendered keyword documentation SHAL
 
 #### Scenario: Keyword without descriptions in a non-Markdown library
 - **WHEN** a keyword of a library documented in Robot, reStructuredText, HTML or plain-text format has no Google-style sections, or the installed Robot Framework is older than 7.5
-- **THEN** the rendered documentation is identical to the rendering before this change, apart from escaped `|` characters in Robot-format table cells and link targets without a `\#` escape
+- **THEN** its hover is identical to the hover before this change, apart from escaped `|` characters in Robot-format table cells and link targets without a `\#` escape
 
 #### Scenario: Markdown library on an older Robot Framework
 - **WHEN** a library declares `ROBOT_LIBRARY_DOC_FORMAT = "MARKDOWN"` and is documented on RF 7.4
 - **THEN** its documentation is normalised (reference links, headings, table of contents, admonitions) like on RF 7.5, without argument descriptions
 
+### Requirement: Markdown reference links are resolved
+
+In documentation declared as Markdown, reference-style links (`[Name]`, `[Name][]`, `[text][Name]`) whose target is a keyword of the same library, a type used by the library, a section of the library introduction or one of Libdoc's default targets (introduction, importing, keywords) SHALL NOT be rendered as literal brackets. In hover, signature help and completion, in the output of `robotcode doc keywords` and `robotcode doc keyword`, and in the `doc` and `short_doc` fields of the JSON output of `robotcode doc` they SHALL be rendered as inline code. In full-document views (REPL `.doc`, `robotcode doc lib` and `browse`, Markdown documentation view) they SHALL be rendered as in-document links, where a reference to a type links to the type's heading in the `Data types` section, by the requirement "Data types" of `library-documentation-markdown`. In the REPL keyword view they SHALL be rendered as navigable keyword links. Reference definitions declared in the library introduction SHALL be applied to keyword documentation. Links inside code spans and fenced code blocks, images and unknown targets SHALL be left unchanged. Matching SHALL ignore case and spaces, as Libdoc does.
+
+#### Scenario: Keyword reference in a hover
+- **WHEN** the hover for `Log` is shown on RF 7.5
+- **THEN** `[Set Log Level]` is rendered as `` `Set Log Level` `` and `[String representations]` as `` `String representations` ``
+
+#### Scenario: Keyword reference in a full-document view
+- **WHEN** `robotcode doc lib BuiltIn` is run on RF 7.5
+- **THEN** `[Set Log Level]` is rendered as the link `[Set Log Level](#set-log-level)`
+
+#### Scenario: Type reference in a full-document view
+- **WHEN** `robotcode doc lib OperatingSystem` is run on RF 7.5
+- **THEN** `[Secret]` in the argument description of `Set Environment Variable` is rendered as the link `[Secret](#secret-standard)` to the heading `Secret (Standard)` in the `Data types` section
+- **AND** `robotcode doc keyword OperatingSystem "Set Environment Variable"` renders it as `` `Secret` ``
+
+#### Scenario: Introduction-defined link in a keyword
+- **WHEN** a keyword documentation uses `[VAR syntax]` and the library introduction defines `[VAR syntax]: https://…`
+- **THEN** the keyword hover renders it as a link to that URL
+
+#### Scenario: Reference in the REPL keyword view
+- **WHEN** `.kw Log` is shown in the REPL on RF 7.5
+- **THEN** `[Set Log Level]` is a navigable link to that keyword's documentation
+
+#### Scenario: Brackets in code are untouched
+- **WHEN** a documentation contains `` `[Tags]` `` in a code span or `[1]` with a keyword-local definition
+- **THEN** they are rendered unchanged
+
 ## ADDED Requirements
 
 ### Requirement: Robot-format tables and links convert to valid Markdown
 
-When documentation in Robot Framework's format is converted to Markdown, on every surface and every supported Robot Framework version, a `|` inside the content of a table cell SHALL be escaped so that every table row keeps the number of cells Robot Framework gives it, and the target of a link converted from a Robot-format link or URL SHALL contain `#` instead of the escaped `\#`. Link texts and all other text SHALL be converted as before.
+When documentation in Robot Framework's format is converted to Markdown, on every surface and every supported Robot Framework version, a `|` inside the content of a table cell SHALL be escaped, so that every table row keeps the number of cells Robot Framework gives it. No link target SHALL contain the escaped `\#`: links converted from Robot-format links and URLs, and the links from backtick names to headings of the same documentation, SHALL be written with `#`. Link texts and all other text SHALL be converted as before, apart from the names in single backticks that the full page links (requirement "Names in Robot-format documentation" of `library-documentation-markdown`).
 
 #### Scenario: Pipe inside a table cell
 - **WHEN** the hover for `Should Match Regexp` (BuiltIn) is shown on RF 6.1
@@ -36,3 +65,24 @@ When documentation in Robot Framework's format is converted to Markdown, on ever
 #### Scenario: Link with a fragment
 - **WHEN** a Robot-format keyword documentation contains `[http://example.com/x.html#frag|docs]`
 - **THEN** the rendered documentation contains the link `[docs](http://example.com/x.html#frag)`
+
+#### Scenario: Library introduction on an older Robot Framework
+- **WHEN** the hover for a `BuiltIn` import is shown on RF 6.1
+- **THEN** it contains the links `[eval](http://docs.python.org/library/functions.html#eval)` and `[str](#str)`
+- **AND** no link target contains `\#`
+
+### Requirement: Library scope as Libdoc names it
+
+Library documentation SHALL show the scope of a library as Robot Framework's Libdoc names it: `GLOBAL`, `SUITE` or `TEST`, on every supported Robot Framework version.
+
+#### Scenario: Library hover on Robot Framework 7
+- **WHEN** the hover for a `Collections` import is shown on RF 7.5
+- **THEN** it shows the scope `GLOBAL`, not `Scope.GLOBAL`
+
+### Requirement: Links to headings use GitHub anchors
+
+Links to headings within library documentation, such as the table of contents that replaces `%TOC%` and the links from backtick names to headings, SHALL point to the anchor that GitHub gives the heading, by the rule of the requirement "Anchors" of `library-documentation-markdown`.
+
+#### Scenario: Library hover with a table of contents
+- **WHEN** the hover for a `DateTime` import is shown on RF 7.5
+- **THEN** its table of contents links `` `TODAY` and `NOW` `` to `#today-and-now`
