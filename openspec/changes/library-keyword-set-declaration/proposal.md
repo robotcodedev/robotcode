@@ -1,5 +1,7 @@
 # Proposal: library-keyword-set-declaration
 
+> **Status (2026-09-29): parked.** Maintainer decision: the change is kept for later and is not scheduled.
+
 ## Why
 
 RobotCode's disk cache keeps one documentation per library, whatever import arguments it was loaded with. Whichever variant is first stored without load errors is served for every other set of arguments, also after a restart. This is intended, and it stays the default.
@@ -22,15 +24,15 @@ Whether a library's keywords depend on its arguments cannot be detected. The dyn
   - `volatile`: the keywords depend on external state, such as a server, a process or the environment.
 - **Read without instantiating.** RobotCode reads the attribute with `getattr` from the imported class or module before the library is instantiated. Robot Framework reads `ROBOT_LIBRARY_SCOPE` from a library class the same way. Reading it never connects to a server or starts a process. Subclasses inherit it, which covers wrapper classes, and a value set on the instance in `__init__` is not considered. Third-party libraries benefit once they declare the attribute; until then, a subclass that sets it works.
 - **Undeclared libraries** keep today's behaviour: one disk entry per library, and the first variant stored without errors wins (maintainer decision).
-- **`args`: one disk entry per set of statically resolved import arguments.** "Statically resolved" is the resolution that `library-loading-robustness` adds for its duplicate-import check. It is the arguments as written, with every variable replaced whose value RobotCode knows. Those values come from:
+- **`args`: one disk entry per set of statically resolved import arguments.** "Statically resolved" is a resolution this change adds next to `resolve_args`, which the in-memory import cache uses for its keys. It is the arguments as written, with every variable replaced whose value RobotCode knows. Those values come from:
   - built-in variables such as `${CURDIR}`;
   - robot.toml, profile and command-line variables;
-  - the Variables section and variable files;
+  - the Variables section, imported resources and variable files;
   - environment variables of the analysing process.
 
   Built-ins that only have a value at runtime, such as `${OUTPUT DIR}` or `${SUITE NAME}`, are known, so they are never reported as not found, but they have no value here (maintainer decision). An argument that contains one keeps the variable, so it counts as a value only known at runtime. Everywhere else RobotCode keeps filling them with placeholder values, as today, including when it loads an undeclared library or a variable file.
 - **Default entry.** The first variant that loads without errors is also kept under the library's plain key as its default entry. This entry carries the declaration, so later lookups need no import. It is read again whenever the library's files change. Lookups without import arguments, from the keywords tree view and library-name completion, use this default entry.
-- **Values only known at runtime.** If an argument still contains a variable after resolution, including a runtime-only built-in, the library is not loaded with that argument. RobotCode uses the default entry and marks the documentation as coming from other arguments (maintainer decision: fall back rather than report an error). If there is no default entry yet, the library is loaded without arguments, as for any import whose arguments cannot be used (`library-loading-robustness`), and marked the same way.
+- **Values only known at runtime.** If an argument still contains a variable after resolution, including a runtime-only built-in, the library is not loaded with that argument. RobotCode uses the default entry and marks the documentation as coming from other arguments (maintainer decision: fall back rather than report an error). If there is no default entry yet, the library is loaded without arguments and marked the same way. This is not the visible fallback without arguments of `library-loading-robustness`: no load with the import's arguments is tried first, so its `LibraryLoadedWithoutArguments` information is not reported.
 - **`volatile`: never persisted.** The library is loaded live and kept in memory per argument set, as `ignored-libraries` does today. Namespaces that depend on it are not written to the namespace cache.
 - **User settings stay in charge.** `ignored-libraries` (no disk cache) and `ignore-arguments-for-library` (load with `()`) keep their meaning and override the declaration.
 - **Documentation for library authors** describes the attribute and its values.
@@ -41,7 +43,7 @@ Whether a library's keywords depend on its arguments cannot be detected. The dyn
   - whether an undeclared library whose arguments contain a runtime-only built-in should also skip the load with the placeholder value;
   - a "Reload library" action to refresh a stored entry that has become stale, for example after a `Remote` server changed its keywords.
 
-Builds on `library-loading-robustness`: each argument set of an `args` library is loaded separately, and each load needs the time limit to hold. The statically resolved arguments come from that change as well. Variable files that take arguments share the same one-entry disk cache, but they are out of scope here. It also comes after `analyze-config-in-robot`, because two of the setting descriptions it edits are in the module that change creates.
+Builds on `library-loading-robustness`: each argument set of an `args` library is loaded separately, and each load needs the time limit to hold. The tests reuse that change's test setup with a real `ImportsManager`. Variable files that take arguments share the same one-entry disk cache, but they are out of scope here. It also comes after `analyze-config-in-robot`, because two of the setting descriptions it edits are in the module that change creates.
 
 ## Capabilities
 
@@ -55,20 +57,20 @@ Builds on `library-loading-robustness`: each argument set of an `args` library i
 
 ## Impact
 
-- `packages/robot/src/robotcode/robot/diagnostics/library_doc.py`: `get_library_doc` reads the attribute between `_import_test_library` and `_get_test_library` and returns it with the `LibraryDoc`. For a declared library it checks the arguments with the resolution function that `library-loading-robustness` adds next to `resolve_args`, in which the runtime-only built-ins have no value. The `LibraryDoc` also carries the marker for documentation from other arguments.
+- `packages/robot/src/robotcode/robot/diagnostics/library_doc.py`: `_get_default_variables` takes the runtime-only built-ins from one module-level dict, and a new function next to `resolve_args` resolves import arguments statically, with no value for them. `get_library_doc` reads the attribute between `_import_test_library` and `_get_test_library` and returns it with the `LibraryDoc`. When the analysis asks for it, it checks the arguments of a declared library with the new function. Other callers of `get_library_doc`, such as `robotcode doc`, load as today. The `LibraryDoc` also carries the marker for documentation from other arguments.
 - `packages/robot/src/robotcode/robot/diagnostics/imports_manager.py`:
-  - `LibraryMetaData` / `cache_key` gain the args-keyed entries and the default entry;
-  - `get_libdoc_for_library_import_with_meta` takes the statically resolved arguments from the `ImportsManager` method of `library-loading-robustness`, adds them to the key of the in-memory entry, and passes them through `_LibrariesEntry` to `_get_library_libdoc`;
-  - `get_library_meta` / `_get_library_libdoc` read the stored declaration and skip the disk cache for `volatile`;
-  - the fallback when unresolved variables remain;
-  - building and validating the namespace cache meta.
-- `packages/robot/src/robotcode/robot/diagnostics/import_resolver.py`: the `lib:` dependency metas of the namespace cache.
+  - `LibraryMetaData` records the declaration, and each argument set gets its own key next to the plain `cache_key`;
+  - a new method returns the statically resolved arguments of an import; `get_libdoc_for_library_import_with_meta` adds them to the key of the in-memory entry and passes them through `_LibrariesEntry` to `_get_library_libdoc`;
+  - `_get_library_libdoc` reads the stored declaration, stores argument sets and the default entry, and falls back when unresolved variables remain; results of `volatile` libraries and of that fallback are never stored and get no meta, so the existing `None` gate of `build_namespace_meta` keeps namespaces that use them out of the namespace cache;
+  - a new `get_libdoc_for_library_name` for lookups by library name alone, which use the default entry.
+- `packages/robot/src/robotcode/robot/diagnostics/import_resolver.py` stays unchanged: the change relies on `library-loading-robustness` keeping an existing `None` dependency meta, which a test checks for the fallback.
 - `packages/language_server/src/robotcode/language_server/robotframework/parts/hover.py`: the marker in the library import hover. The same package's `keywords_treeview.py` and `completion.py`: lookups without arguments use the default entry.
 - Docs:
   - an author-facing page on the attribute, including how to use it with `Remote`;
   - the cache section of `docs/03_reference/analyzing-code.md`;
   - the descriptions of `ignored-libraries` / `ignore-arguments-for-library` in `packages/robot/src/robotcode/robot/config/analyze_config.py`, where `analyze-config-in-robot` moves the analysis part of the configuration model with `CacheConfig`, with `config.md` and the robot.toml JSON schema regenerated.
 - Tests on RF 5.0 to 7.5:
+  - the static resolution of import arguments, with `resolve_args` and the arguments of variable files unchanged;
   - a dynamic test library with `args`, with two variants served from the disk cache by a fresh `ImportsManager`;
   - a `volatile` library;
   - a wrapper subclass;
