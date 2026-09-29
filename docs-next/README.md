@@ -52,5 +52,6 @@ The home page and the overviews of Getting Started, Guides and Reference are wri
 - `scripts/convert.mjs`: page map and conversion from `docs/`
 - `content/`: hand-written pages
 - `src/pages/404.astro`: the not-found page
-- `src/components/`: the header with the top navigation, the home page gallery, the footer, the overview cards and the video embed
-- `src/styles/custom.css`: brand colours and small style additions
+- `src/components/`: the header with the top navigation, the home page hero with its gallery, the footer, the overview cards and the video embed
+- `src/components/home/`: the sections of the home page (feature tour, AI agents, latest news) and the player of their demos
+- `src/styles/custom.css`: brand colours and small style additions; `src/styles/home.css`: the layout of the home page

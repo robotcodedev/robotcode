@@ -1,0 +1,587 @@
+---
+// The home page's feature overview: the features on one side, a window on the other that shows the selected one — a
+// screen recording, a screenshot or a terminal session — played one after another by <rc-demo> (see
+// demo-player.ts). The terminal sessions come from real runs of a small example project, abridged. The screen
+// recordings are MP4 versions of the GIFs in docs/images/, with the timing browsers give the GIFs.
+import { Icon } from "@astrojs/starlight/components";
+import { Image } from "astro:assets";
+import type { ComponentProps } from "astro/types";
+import PauseButton from "./PauseButton.astro";
+import autocomplete from "../../assets/screenshots/autocomplete1.mp4";
+import neovim from "../../assets/screenshots/neovim-mason-import-errors.png";
+import runningTests from "../../assets/screenshots/running-tests.mp4";
+
+type TerminalStep =
+  | { kind: "command"; prompt?: string; command: string; output?: string[] }
+  | { kind: "file"; name: string; content: string[] };
+type Panel =
+  | {
+      kind: "image";
+      title: string;
+      image: ImageMetadata;
+      alt: string;
+      // How long the panel stays, in seconds.
+      duration: number;
+      // The background around a picture that is lower than the window.
+      background: string;
+      editors?: string[];
+    }
+  | {
+      kind: "video";
+      title: string;
+      // A 1920×1080 screen recording, played from the start whenever its panel is shown.
+      src: string;
+      label: string;
+      // The length of the recording, in seconds: the panel stays until it has played once.
+      duration: number;
+    }
+  | { kind: "terminal"; title: string; steps: TerminalStep[] };
+
+type Feature = {
+  icon: ComponentProps<typeof Icon>["name"];
+  title: string;
+  html: string;
+  links: [string, string][];
+  panel: Panel;
+};
+
+const FEATURES: Feature[] = [
+  {
+    icon: "magnifier",
+    title: "Code intelligence",
+    html:
+      "Context-aware completion for keywords (incl. embedded args), variables, libraries and resources. Hover " +
+      "docs, go-to-definition, find references, signature help, and live diagnostics — all powered by Robot " +
+      `Framework's own parser. Optional <a href="https://robocop.readthedocs.io">Robocop</a> integration adds ` +
+      "further linting and formatting checks on top.",
+    links: [["Learn more", "/about/"]],
+    panel: {
+      kind: "video",
+      title: "VS Code",
+      src: autocomplete,
+      label: "Code completions for keywords, arguments and variables in VS Code",
+      duration: 38.8,
+    },
+  },
+  {
+    icon: "rocket",
+    title: "Run, debug & test explorer",
+    html:
+      "Discover and run tests from the editor's test panel or the CLI. Set breakpoints, step through keywords, " +
+      "inspect variables via the Debug Adapter Protocol, and jump straight to failures.",
+    links: [
+      ["Get started with VS Code", "/getting-started/vscode/"],
+      ["Command-line debugging", "/guides/robot-debug/"],
+    ],
+    panel: {
+      kind: "video",
+      title: "VS Code",
+      src: runningTests,
+      label: "Running tests from the test explorer in VS Code",
+      duration: 12.2,
+    },
+  },
+  {
+    icon: "setting",
+    title: "One config everywhere",
+    html:
+      'A unified <a href="/reference/config/">robot.toml</a> with profiles for dev, staging, CI, OS-specific or ' +
+      "browser-specific setups. Editor, CLI and CI all read the same configuration — what works locally works in CI.",
+    links: [["Configure your project", "/getting-started/configuration/"]],
+    panel: {
+      kind: "terminal",
+      title: "Terminal",
+      steps: [
+        {
+          kind: "file",
+          name: "robot.toml",
+          content: [
+            'paths = ["tests"]',
+            "",
+            "[variables]",
+            'BASE_URL = "http://localhost:8080"',
+            'BROWSER = "chrome"',
+            "",
+            "[profiles.ci.variables]",
+            'BASE_URL = "https://staging.shop.example"',
+            'BROWSER = "headlesschrome"',
+          ],
+        },
+        {
+          kind: "command",
+          command: "robotcode -p ci profiles show",
+          output: ["[variables]", 'BASE_URL = "https://staging.shop.example"', 'BROWSER = "headlesschrome"'],
+        },
+      ],
+    },
+  },
+  {
+    icon: "seti:shell",
+    title: "Powerful CLI",
+    html:
+      "A complete command-line interface for running, discovering, analyzing and inspecting Robot Framework " +
+      "projects. Every command is project-aware, JSON-friendly, and CI-ready.",
+    links: [["CLI reference", "/reference/cli/"]],
+    panel: {
+      kind: "terminal",
+      title: "Terminal",
+      steps: [
+        {
+          kind: "command",
+          command: "robotcode discover tests",
+          output: [
+            "- Tests.Cart.Add Item To Cart (tests/cart.robot:5)",
+            "- Tests.Login.Login Works (tests/login.robot:5)",
+            "- Tests.Login.Logout Works (tests/login.robot:10)",
+          ],
+        },
+        {
+          kind: "command",
+          command: "robotcode analyze code",
+          output: [
+            "common.resource:30:5: [ERROR] KeywordNotFound: No keyword with name 'Submit Ordr' found.",
+            "Files: 4, Errors: 1, Warnings: 0, Infos: 0, Hints: 0",
+          ],
+        },
+        {
+          kind: "command",
+          command: "robotcode results summary",
+          output: ["- Status: ❌ FAIL", "- Total: 3", "- Passed: 2", "- Failed: 1"],
+        },
+      ],
+    },
+  },
+  {
+    icon: "document",
+    title: "Interactive REPL",
+    html:
+      "Try keywords interactively with <code>robotcode repl</code>. Great for experimentation, demos, and " +
+      "debugging snippets.",
+    links: [["REPL guide", "/guides/repl/"]],
+    panel: {
+      kind: "terminal",
+      title: "Terminal",
+      steps: [
+        { kind: "command", command: "robotcode repl" },
+        { kind: "command", prompt: ">>>", command: "Import Resource    ${CURDIR}/common.resource" },
+        {
+          kind: "command",
+          prompt: ">>>",
+          command: "${order}=    Create Order    coffee    quantity=2",
+          output: ["[ INFO ] Ordered 2 x coffee (express: False)", "[ INFO ] ${order} = order-4711"],
+        },
+        { kind: "command", prompt: ">>>", command: "Should Start With    ${order}    order-" },
+        { kind: "command", prompt: ">>>", command: ".save order.robot", output: ["Wrote order.robot (3 entries)"] },
+      ],
+    },
+  },
+  {
+    icon: "laptop",
+    title: "Multi-IDE, same core",
+    html:
+      "One Robot Framework language server powers VS Code, JetBrains, Neovim, Sublime Text and any LSP-capable " +
+      "editor. Choose your IDE — capabilities stay aligned.",
+    links: [["Set up your editor", "/getting-started/"]],
+    panel: {
+      kind: "image",
+      title: "Neovim",
+      image: neovim,
+      alt: "RobotCode diagnostics in Neovim",
+      duration: 7,
+      background: "#1e1e2e",
+      editors: ["VS Code", "JetBrains", "Neovim", "Sublime Text", "any LSP editor"],
+    },
+  },
+];
+
+// How long each terminal step takes to appear, and how long a terminal session stays after its last step, in seconds.
+const STEP_DELAY = 1;
+const HOLD = 4;
+
+const duration = (panel: Panel) =>
+  panel.kind === "terminal" ? panel.steps.length * STEP_DELAY + HOLD : panel.duration;
+
+// Colours the section headers, keys and strings of the TOML file shown.
+const toml = (line: string) =>
+  line
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/("[^"]*")/g, '<span class="rc-toml-string">$1</span>')
+    .replace(/^(\[[^\]]+\])$/, '<span class="rc-toml-section">$1</span>')
+    .replace(/^([\w-]+)(?= =)/, '<span class="rc-toml-key">$1</span>');
+---
+
+<rc-demo class="rc-tour not-content" style={`--step-delay: ${STEP_DELAY}s`}>
+  <ol class="rc-tour-list">
+    {
+      FEATURES.map(({ icon, title, html, links, panel }, index) => (
+        <li class="rc-tour-item">
+          <button
+            type="button"
+            data-demo-tab
+            aria-pressed={index === 0 ? "true" : "false"}
+            style={`--duration: ${duration(panel)}s`}
+          >
+            <Icon name={icon} class="rc-tour-icon" />
+            <span>{title}</span>
+            <span class="rc-demo-progress" aria-hidden="true" />
+          </button>
+          <div class="rc-tour-body">
+            <p set:html={html} />
+            <p class="rc-tour-links">
+              {links.map(([text, href], i) => (
+                <>
+                  {i > 0 && " · "}
+                  <a href={href}>{text}</a>
+                </>
+              ))}
+            </p>
+          </div>
+        </li>
+      ))
+    }
+  </ol>
+
+  <figure class="rc-window rc-tour-window" data-llms-skip>
+    <div class="rc-window-bar">
+      <span class="rc-window-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+      <span class="rc-window-title" data-demo-title>{FEATURES[0].panel.title}</span>
+      <PauseButton />
+    </div>
+    <div class="rc-demo-panels">
+      {
+        FEATURES.map(({ title, panel }, index) => (
+          <div
+            class:list={["rc-tour-panel", `rc-tour-${panel.kind}`, { "is-active": index === 0 }]}
+            data-demo-panel
+            data-title={panel.title}
+            aria-label={title}
+          >
+            {panel.kind === "video" ? (
+              <button type="button" class="rc-tour-shot" aria-label={`Enlarge: ${panel.label}`}>
+                <video src={panel.src} width="1920" height="1080" muted loop playsinline preload="metadata" />
+              </button>
+            ) : panel.kind === "image" ? (
+              <>
+                <button
+                  type="button"
+                  class="rc-tour-shot"
+                  style={`background: ${panel.background}`}
+                  aria-label={`Enlarge: ${panel.alt}`}
+                >
+                  <Image src={panel.image} alt={panel.alt} />
+                </button>
+                {panel.editors && (
+                  <ul class="rc-tour-editors">
+                    {panel.editors.map((editor) => (
+                      <li>{editor}</li>
+                    ))}
+                  </ul>
+                )}
+              </>
+            ) : (
+              <ol class="rc-term">
+                {panel.steps.map((step, stepIndex) => (
+                  <li class="rc-step" style={`--i: ${stepIndex}`}>
+                    {step.kind === "file" ? (
+                      <div class="rc-term-file">
+                        <span class="rc-term-filename">{step.name}</span>
+                        <pre set:html={step.content.map(toml).join("\n")} />
+                      </div>
+                    ) : (
+                      <>
+                        <div class="rc-term-command">
+                          <span class="rc-term-prompt">{step.prompt ?? "$"}</span>
+                          <code>{step.command}</code>
+                        </div>
+                        {step.output && <pre>{step.output.join("\n")}</pre>}
+                      </>
+                    )}
+                  </li>
+                ))}
+              </ol>
+            )}
+          </div>
+        ))
+      }
+    </div>
+  </figure>
+  <dialog class="rc-tour-lightbox" aria-label="Enlarged view">
+    <img alt="" hidden />
+    <video muted loop playsinline hidden></video>
+  </dialog>
+</rc-demo>
+
+<script>
+  import "./demo-player";
+
+  // A picture or recording opens enlarged, a recording where it is; a click anywhere or Escape closes it. The demo
+  // holds while it is open.
+  for (const tour of document.querySelectorAll(".rc-tour")) {
+    const dialog = tour.querySelector<HTMLDialogElement>(".rc-tour-lightbox")!;
+    const largeImage = dialog.querySelector("img")!;
+    const largeVideo = dialog.querySelector("video")!;
+    for (const shot of tour.querySelectorAll<HTMLButtonElement>(".rc-tour-shot")) {
+      shot.addEventListener("click", () => {
+        const image = shot.querySelector("img");
+        const video = shot.querySelector("video");
+        largeImage.hidden = !image;
+        largeVideo.hidden = !video;
+        if (image) Object.assign(largeImage, { src: image.currentSrc || image.src, alt: image.alt });
+        if (video) {
+          largeVideo.src = video.currentSrc || video.src;
+          largeVideo.currentTime = video.currentTime;
+          void largeVideo.play().catch(() => {});
+        }
+        dialog.showModal();
+        tour.classList.add("is-holding");
+      });
+    }
+    dialog.addEventListener("click", () => dialog.close());
+    dialog.addEventListener("close", () => {
+      largeVideo.pause();
+      tour.classList.remove("is-holding");
+    });
+  }
+</script>
+
+<style>
+  .rc-tour {
+    display: grid;
+    gap: 2rem;
+    align-items: start;
+  }
+
+  @media (min-width: 60rem) {
+    .rc-tour {
+      grid-template-columns: 5fr 7fr;
+      gap: 2.5rem;
+    }
+  }
+
+  /* On narrow screens the window comes first, so it stays next to the list of features. */
+  .rc-tour-window {
+    order: -1;
+    min-width: 0;
+  }
+
+  @media (min-width: 60rem) {
+    .rc-tour-window {
+      order: 0;
+    }
+  }
+
+  .rc-tour-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .rc-tour-item {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid var(--sl-color-hairline);
+    border-radius: 0.75rem;
+    background: var(--rc-surface);
+    transition: border-color 0.2s ease;
+  }
+
+  .rc-tour-item:has([aria-pressed="true"]) {
+    border-color: var(--rc-line-accent);
+  }
+
+  .rc-tour-item button {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    width: 100%;
+    padding: 0.8rem 1rem;
+    border: 0;
+    background: transparent;
+    color: var(--sl-color-white);
+    font: inherit;
+    font-weight: 600;
+    text-align: start;
+    cursor: pointer;
+  }
+
+  .rc-tour-item :global(.rc-tour-icon) {
+    flex: none;
+    padding: 0.35rem;
+    border-radius: 0.5rem;
+    background: var(--sl-color-accent-low);
+    color: var(--sl-color-accent-high);
+    box-sizing: content-box;
+  }
+
+  .rc-tour-body {
+    padding: 0 1rem 1rem 3.65rem;
+    color: var(--sl-color-gray-2);
+    font-size: var(--sl-text-sm);
+  }
+
+  .rc-tour-body p {
+    margin: 0;
+  }
+
+  .rc-tour-body :global(a) {
+    color: var(--sl-color-text-accent);
+  }
+
+  .rc-tour-body :global(code) {
+    font-family: var(--__sl-font-mono);
+    font-size: 0.9em;
+  }
+
+  .rc-tour-links {
+    margin-top: 0.6rem !important;
+  }
+
+  /* Once the player runs, only the selected feature shows its text. */
+  .is-ready .rc-tour-item:not(:has([aria-pressed="true"])) .rc-tour-body {
+    display: none;
+  }
+
+  .rc-tour-panel {
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* A picture is shown whole at the width of the window; the recordings, at 16:9, set the window's height. */
+  .rc-tour-shot {
+    flex: 1;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    border: 0;
+    cursor: zoom-in;
+  }
+
+  .rc-tour-shot :global(img),
+  .rc-tour-shot video {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  .rc-tour-video .rc-tour-shot {
+    background: #1e1e1e;
+  }
+
+  .rc-tour-lightbox {
+    width: 100vw;
+    max-width: none;
+    height: 100dvh;
+    max-height: none;
+    margin: 0;
+    padding: 1rem;
+    border: 0;
+    background: rgb(0 0 0 / 90%);
+    cursor: zoom-out;
+  }
+
+  .rc-tour-lightbox[open] {
+    display: grid;
+    place-items: center;
+  }
+
+  .rc-tour-lightbox::backdrop {
+    background: transparent;
+  }
+
+  .rc-tour-lightbox img,
+  .rc-tour-lightbox video {
+    max-width: min(calc(100vw - 2rem), 1920px);
+    max-height: calc(100dvh - 2rem);
+    border-radius: 0.5rem;
+    box-shadow: 0 1.25rem 3.5rem rgb(0 0 0 / 60%);
+  }
+
+  .rc-tour-editors {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    justify-content: center;
+    margin: 0;
+    padding: 0.9rem;
+    border-top: 1px solid var(--sl-color-hairline);
+    list-style: none;
+  }
+
+  .rc-tour-editors li {
+    padding: 0.15rem 0.6rem;
+    border: 1px solid var(--rc-line-accent);
+    border-radius: 999px;
+    color: var(--sl-color-white);
+    font-size: var(--sl-text-xs);
+  }
+
+  .rc-term {
+    display: flex;
+    flex-direction: column;
+    gap: 0.7rem;
+    margin: 0;
+    padding: 1.1rem;
+    list-style: none;
+    font-family: var(--__sl-font-mono);
+    font-size: 0.8rem;
+    line-height: 1.55;
+  }
+
+  .rc-term pre {
+    margin: 0.2rem 0 0;
+    padding: 0;
+    overflow-x: auto;
+    background: transparent;
+    color: var(--sl-color-gray-2);
+    font: inherit;
+  }
+
+  .rc-term-command {
+    display: flex;
+    gap: 0.6rem;
+    min-width: 0;
+  }
+
+  .rc-term-command code {
+    overflow-x: auto;
+    padding: 0;
+    background: transparent;
+    color: var(--sl-color-white);
+    font: inherit;
+    white-space: pre;
+  }
+
+  .rc-term-prompt {
+    flex: none;
+    color: var(--sl-color-text-accent);
+    font-weight: 600;
+  }
+
+  .rc-term-file {
+    padding: 0.6rem 0.75rem;
+    border: 1px solid var(--sl-color-hairline);
+    border-radius: 0.5rem;
+    background: var(--rc-surface);
+  }
+
+  .rc-term-filename {
+    color: var(--sl-color-gray-3);
+    font-size: var(--sl-text-xs);
+  }
+
+  .rc-term-file :global(.rc-toml-section) {
+    color: var(--sl-color-text-accent);
+  }
+
+  .rc-term-file :global(.rc-toml-key) {
+    color: var(--sl-color-white);
+  }
+
+  .rc-term-file :global(.rc-toml-string) {
+    color: var(--sl-color-green-high);
+  }
+</style>

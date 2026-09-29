@@ -1,0 +1,321 @@
+---
+// An AI agent answering questions about a Robot Framework project through robotcode, one scenario after another,
+// step by step (played by <rc-demo>, see demo-player.ts). The commands and their output come from real runs of a
+// small example project, abridged.
+import PauseButton from "./PauseButton.astro";
+
+type Step =
+  | { kind: "user" | "agent"; html: string }
+  | { kind: "tool"; command: string; output: string[] };
+
+const SCENARIOS: { label: string; steps: Step[] }[] = [
+  {
+    label: "Failures",
+    steps: [
+      { kind: "user", html: "Why did <code>Login Works</code> fail in last night's run?" },
+      {
+        kind: "tool",
+        command: "robotcode results summary --failed",
+        output: [
+          "❌ FAIL Tests.Login.Login Works (tests/login.robot:5)",
+          "  > Welcome back, alice! != Welcome back, Alice!",
+        ],
+      },
+      {
+        kind: "tool",
+        command: 'robotcode results log -bl "Tests.Login.Login Works"',
+        output: [
+          "- common.Open Shop As  alice  ✅ PASS",
+          "  - VAR  ${greeting}  Welcome back, ${user}!  ✅ PASS",
+          "- common.Welcome Message Should Be  Welcome back, Alice!  ❌ FAIL",
+        ],
+      },
+      {
+        kind: "agent",
+        html:
+          "The login works — the greeting doesn't match. <code>Open Shop As</code> builds it from the user name " +
+          "<code>alice</code> as passed in, while the test expects <code>Alice</code>.",
+      },
+    ],
+  },
+  {
+    label: "Debugging",
+    steps: [
+      { kind: "user", html: "Step through <code>Login Works</code> — what is <code>${greeting}</code> when it fails?" },
+      {
+        kind: "tool",
+        command: 'robotcode robot-debug -bl "Tests.Login.Login Works"',
+        output: [
+          "* exception  BuiltIn.Should Be Equal  (common.resource:14)",
+          "(rdb) .where",
+          "> #0  BuiltIn.Should Be Equal           common.resource:14",
+          "  #1  common.Welcome Message Should Be  tests/login.robot:8",
+          "  #2  Login Works                       tests/login.robot:5",
+          "(rdb) .print ${greeting}",
+          "${greeting} = 'Welcome back, alice!'",
+        ],
+      },
+      {
+        kind: "agent",
+        html:
+          "It stops in <code>Should Be Equal</code>, called by <code>Welcome Message Should Be</code> at " +
+          "login.robot:8. There, <code>${greeting}</code> is <code>Welcome back, alice!</code>.",
+      },
+    ],
+  },
+  {
+    label: "Keywords",
+    steps: [
+      { kind: "user", html: "What arguments does our <code>Create Order</code> keyword take?" },
+      {
+        kind: "tool",
+        command: 'robotcode libdoc common.resource show "Create Order"',
+        output: [
+          "### Create Order",
+          "#### Arguments",
+          "* `product`",
+          "* `quantity` (default: `1`)",
+          "* `express` (default: `${False}`)",
+          "#### Documentation",
+          "Creates an order for ``quantity`` items of ``product`` and returns its id.",
+        ],
+      },
+      {
+        kind: "agent",
+        html:
+          "<code>product</code> is required; <code>quantity</code> defaults to <code>1</code> and " +
+          "<code>express</code> to <code>${False}</code>. It returns the order id.",
+      },
+    ],
+  },
+  {
+    label: "Analysis",
+    steps: [
+      { kind: "user", html: "Check the project for problems before I push." },
+      {
+        kind: "tool",
+        command: "robotcode analyze code",
+        output: [
+          "common.resource:30:5: [ERROR] KeywordNotFound: No keyword with name 'Submit Ordr' found.",
+          "Files: 4, Errors: 1, Warnings: 0, Infos: 0, Hints: 0",
+        ],
+      },
+      {
+        kind: "agent",
+        html:
+          "One error: <code>Checkout</code> calls <code>Submit Ordr</code> in common.resource:30 — a typo for " +
+          "<code>Submit Order</code>. Shall I fix it?",
+      },
+    ],
+  },
+  {
+    label: "Running",
+    steps: [
+      { kind: "user", html: "Run the smoke tests with the <code>ci</code> profile." },
+      {
+        kind: "tool",
+        command: "robotcode -p ci robot -i smoke",
+        output: [
+          "Add Item To Cart                     | PASS |",
+          "Login Works                          | FAIL |",
+          "Welcome back, alice! != Welcome back, Alice!",
+          "Logout Works                         | PASS |",
+          "Tests :: Web shop acceptance tests   | FAIL |",
+          "3 tests, 2 passed, 1 failed",
+        ],
+      },
+      {
+        kind: "agent",
+        html:
+          "3 smoke tests ran with the <code>ci</code> profile: 2 passed, <code>Login Works</code> failed on the " +
+          "greeting.",
+      },
+    ],
+  },
+];
+
+// How long each step takes to appear, and how long a scenario stays after its last step, in seconds.
+const STEP_DELAY = 1.2;
+const HOLD = 5;
+---
+
+<rc-demo class="rc-agent-demo not-content" data-llms-skip style={`--step-delay: ${STEP_DELAY}s`}>
+  <figure class="rc-window">
+    <div class="rc-window-bar">
+      <span class="rc-window-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+      <span class="rc-window-title">AI agent · robotcode skill</span>
+      <PauseButton />
+    </div>
+    <div class="rc-demo-panels">
+      {
+        SCENARIOS.map(({ label, steps }, index) => (
+          <ol class:list={["rc-agent-log", { "is-active": index === 0 }]} data-demo-panel aria-label={label}>
+            {steps.map((step, stepIndex) => (
+              <li class={`rc-step rc-step-${step.kind}`} style={`--i: ${stepIndex}`}>
+                {step.kind === "tool" ? (
+                  <>
+                    <div class="rc-step-command">
+                      <span class="rc-step-label">Ran</span>
+                      <code>{step.command}</code>
+                    </div>
+                    <pre>{step.output.join("\n")}</pre>
+                  </>
+                ) : (
+                  <p set:html={step.html} />
+                )}
+              </li>
+            ))}
+          </ol>
+        ))
+      }
+    </div>
+  </figure>
+  <div class="rc-agent-tabs" role="group" aria-label="Examples">
+    {
+      SCENARIOS.map(({ label, steps }, index) => (
+        <button
+          type="button"
+          data-demo-tab
+          aria-pressed={index === 0 ? "true" : "false"}
+          style={`--duration: ${steps.length * STEP_DELAY + HOLD}s`}
+        >
+          {label}
+          <span class="rc-demo-progress" aria-hidden="true" />
+        </button>
+      ))
+    }
+  </div>
+  <p class="rc-agent-caption">Commands and output from real runs of an example project, abridged.</p>
+</rc-demo>
+
+<script>
+  import "./demo-player";
+</script>
+
+<style>
+  .rc-agent-demo {
+    display: block;
+    min-width: 0;
+  }
+
+  .rc-agent-log {
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+    margin: 0;
+    padding: 1.1rem;
+    list-style: none;
+    font-size: var(--sl-text-sm);
+  }
+
+  .rc-step p {
+    margin: 0;
+  }
+
+  .rc-step :global(code) {
+    padding: 0.05rem 0.3rem;
+    border-radius: 0.25rem;
+    background: var(--sl-color-gray-6);
+    font-family: var(--__sl-font-mono);
+    font-size: 0.9em;
+  }
+
+  .rc-step-user {
+    align-self: flex-end;
+    max-width: 85%;
+    padding: 0.55rem 0.85rem;
+    border-radius: 0.9rem 0.9rem 0.2rem 0.9rem;
+    background: var(--sl-color-accent);
+    color: var(--sl-color-black);
+  }
+
+  .rc-step-user :global(code) {
+    background: rgb(0 0 0 / 15%);
+  }
+
+  .rc-step-tool {
+    min-width: 0;
+    padding: 0.6rem 0.75rem;
+    border: 1px solid var(--sl-color-hairline);
+    border-radius: 0.6rem;
+    background: var(--rc-surface);
+  }
+
+  .rc-step-command {
+    display: flex;
+    gap: 0.5rem;
+    align-items: baseline;
+    min-width: 0;
+  }
+
+  .rc-step-command :global(code) {
+    overflow-x: auto;
+    white-space: pre;
+    background: transparent;
+    color: var(--sl-color-text-accent);
+  }
+
+  .rc-step-label {
+    flex: none;
+    padding: 0.05rem 0.4rem;
+    border-radius: 0.25rem;
+    background: var(--sl-color-accent-low);
+    color: var(--sl-color-accent-high);
+    font-size: var(--sl-text-xs);
+    font-weight: 600;
+  }
+
+  .rc-step pre {
+    margin: 0.5rem 0 0;
+    padding: 0;
+    overflow-x: auto;
+    background: transparent;
+    color: var(--sl-color-gray-2);
+    font-family: var(--__sl-font-mono);
+    font-size: 0.78rem;
+    line-height: 1.55;
+  }
+
+  .rc-step-agent {
+    padding-inline-start: 0.75rem;
+    border-inline-start: 3px solid var(--sl-color-accent);
+    color: var(--sl-color-white);
+  }
+
+  .rc-agent-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    justify-content: center;
+    margin-top: 0.9rem;
+  }
+
+  .rc-agent-tabs button {
+    position: relative;
+    overflow: hidden;
+    padding: 0.25rem 0.75rem;
+    border: 1px solid var(--sl-color-hairline);
+    border-radius: 999px;
+    background: var(--rc-surface);
+    color: var(--sl-color-gray-2);
+    font: inherit;
+    font-size: var(--sl-text-xs);
+    cursor: pointer;
+  }
+
+  .rc-agent-tabs button:hover {
+    border-color: var(--sl-color-accent);
+  }
+
+  .rc-agent-tabs button[aria-pressed="true"] {
+    border-color: var(--sl-color-accent);
+    color: var(--sl-color-white);
+  }
+
+  .rc-agent-caption {
+    margin: 0.6rem 0 0;
+    color: var(--sl-color-gray-3);
+    font-size: var(--sl-text-xs);
+    text-align: center;
+  }
+</style>

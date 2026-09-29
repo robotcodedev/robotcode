@@ -1,0 +1,248 @@
+/* Layout of the home page, the only page with a hero. */
+
+/* The hero glow and the bands reach past the content column; clip them at the viewport. */
+[data-has-hero] main {
+  overflow-x: clip;
+}
+
+/* Every section after the hero is a band across the full width, with its content in the column. The bands follow
+   each other without a gap and alternate between a tinted background, starting with the first one, so it stands
+   apart from the hero, and the page background. */
+[data-has-hero] .sl-markdown-content > .rc-band {
+  margin-block: 0;
+  margin-inline: calc(50% - 50vw);
+  padding: clamp(2rem, 4vw, 4rem) calc(50vw - 50%);
+}
+
+/* The first band follows the hero directly. */
+[data-has-hero] .sl-container > .sl-markdown-content {
+  margin-top: 0;
+}
+
+[data-has-hero] .sl-markdown-content > .rc-band:nth-child(odd of .rc-band) {
+  background: var(--rc-band-bg);
+}
+
+.rc-eyebrow {
+  margin: 0;
+  color: var(--sl-color-text-accent);
+  font-size: var(--sl-text-sm);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.rc-lead {
+  margin: 0;
+  color: var(--sl-color-gray-2);
+  font-size: var(--sl-text-lg);
+}
+
+[data-has-hero] .sl-markdown-content .level-h2 h2 {
+  font-size: clamp(var(--sl-text-2xl), calc(1rem + 2vw), var(--sl-text-4xl));
+}
+
+/* Two columns on wide screens: media and text. */
+.rc-split {
+  display: grid;
+  gap: 1.5rem 2.5rem;
+}
+
+@media (min-width: 60rem) {
+  .rc-split {
+    grid-template-columns: 7fr 5fr;
+    align-items: start;
+  }
+
+  .rc-split > * {
+    margin-top: 0 !important;
+  }
+}
+
+/* Open source: the project, sponsoring and supporters. */
+.rc-community-intro {
+  max-width: 46rem;
+  margin-inline: auto;
+  text-align: center;
+}
+
+.rc-community-intro > * {
+  margin-top: 0 !important;
+}
+
+.rc-community-intro .sl-heading-wrapper.level-h2 {
+  margin-block: 0.25rem 1rem !important;
+}
+
+.rc-community-intro p:not(.rc-eyebrow) {
+  color: var(--sl-color-gray-2);
+  font-size: var(--sl-text-lg);
+}
+
+.rc-community-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  justify-content: center;
+  margin-top: 1.75rem !important;
+}
+
+.rc-sponsor-grid {
+  display: grid;
+  gap: 2rem 3rem;
+  margin-top: 3.5rem !important;
+  padding-top: 2.5rem;
+  border-top: 1px solid var(--sl-color-hairline);
+}
+
+.rc-sponsor-grid h3 {
+  margin-top: 0;
+}
+
+@media (min-width: 60rem) {
+  .rc-sponsor-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .rc-sponsor-grid > * {
+    margin-top: 0 !important;
+  }
+}
+
+/* Demo windows (<rc-demo>, see src/components/home/demo-player.ts). */
+.rc-window {
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid var(--rc-line-accent);
+  border-radius: 0.9rem;
+  background: var(--rc-terminal-bg);
+  box-shadow: 0 1.5rem 4rem var(--rc-shadow);
+}
+
+.rc-window-bar {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.6rem 0.9rem;
+  border-bottom: 1px solid var(--sl-color-hairline);
+  color: var(--sl-color-gray-3);
+  font-size: var(--sl-text-xs);
+}
+
+.rc-window-dots {
+  display: inline-flex;
+  gap: 0.35rem;
+}
+
+.rc-window-dots i {
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: 50%;
+  background: var(--sl-color-gray-5);
+}
+
+.rc-window-title {
+  flex: 1;
+}
+
+.rc-window-pause {
+  display: flex;
+  padding: 0.2rem;
+  border: 0;
+  background: transparent;
+  color: var(--sl-color-gray-3);
+  cursor: pointer;
+}
+
+.rc-window-pause:hover {
+  color: var(--sl-color-white);
+}
+
+.rc-window-pause svg {
+  width: 0.75rem;
+  height: 0.75rem;
+  fill: currentColor;
+}
+
+.rc-window-pause[aria-pressed="true"] .rc-icon-pause,
+.rc-window-pause:not([aria-pressed="true"]) .rc-icon-play {
+  display: none;
+}
+
+/* All panels share one grid cell, so the window keeps the height of the tallest. */
+.rc-demo-panels {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+[data-demo-panel] {
+  grid-area: 1 / 1;
+  min-width: 0;
+  visibility: hidden;
+}
+
+[data-demo-panel].is-active {
+  visibility: visible;
+}
+
+.rc-demo-progress {
+  position: absolute;
+  inset-inline-start: 0;
+  inset-block-end: 0;
+  width: 0;
+  height: 2px;
+  background: var(--sl-color-accent);
+}
+
+/* Steps appear one by one: hidden once the player is armed (so a demo stays complete without it), shown while it
+   plays. */
+.is-armed .rc-step {
+  opacity: 0;
+  transform: translateY(0.5rem);
+}
+
+.is-armed.is-playing .is-active .rc-step {
+  animation: rc-step-in 0.45s ease forwards;
+  animation-delay: calc(var(--i) * var(--step-delay, 1.2s) + 0.2s);
+}
+
+.is-armed.is-playing [aria-pressed="true"] > .rc-demo-progress {
+  animation: rc-progress var(--duration) linear forwards;
+}
+
+/* Hovering or focusing a demo holds the current panel; scrolled out of view, it holds entirely. */
+.is-armed:hover .rc-demo-progress,
+.is-armed:has(:focus-visible) .rc-demo-progress,
+.is-armed.is-hidden .rc-demo-progress,
+.is-armed.is-hidden .rc-step {
+  animation-play-state: paused !important;
+}
+
+/* A component can hold its demo, e.g. while a picture of it is enlarged. */
+.is-armed.is-holding .rc-demo-progress {
+  animation-play-state: paused !important;
+}
+
+/* The pause button holds the demo and shows all steps of the current panel. */
+.is-armed.is-paused .rc-demo-progress {
+  animation-play-state: paused !important;
+}
+
+.is-armed.is-paused .rc-step {
+  animation: none !important;
+  opacity: 1;
+  transform: none;
+}
+
+@keyframes rc-step-in {
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes rc-progress {
+  to {
+    width: 100%;
+  }
+}

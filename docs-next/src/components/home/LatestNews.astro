@@ -1,0 +1,95 @@
+---
+// The newest news posts as a compact list, from starlight-blog's data. Where the page is rendered outside a request,
+// as for llms-full.txt, the blog data is missing and only the link to all news is rendered.
+interface Props {
+  count?: number;
+}
+
+const { count = 3 } = Astro.props;
+const posts = Astro.locals.starlightBlog?.posts.slice(0, count) ?? [];
+const date = new Intl.DateTimeFormat("en", { dateStyle: "medium" });
+---
+
+<div class="rc-news not-content">
+  <ul>
+    {
+      posts.map((post) => (
+        <li>
+          <a href={post.href}>
+            <time datetime={post.createdAt.toISOString()}>{date.format(post.createdAt)}</time>
+            <span class="rc-news-title">{post.entry.data.title}</span>
+            {post.entry.data.description && <span class="rc-news-description">{post.entry.data.description}</span>}
+          </a>
+        </li>
+      ))
+    }
+  </ul>
+  <a class="rc-news-all" href="/news/">All news →</a>
+</div>
+
+<style>
+  .rc-news ul {
+    margin: 0;
+    padding: 0;
+    border-top: 1px solid var(--sl-color-hairline);
+    list-style: none;
+  }
+
+  .rc-news li {
+    border-bottom: 1px solid var(--sl-color-hairline);
+  }
+
+  .rc-news li a {
+    display: grid;
+    grid-template-columns: 7rem minmax(0, 1fr);
+    gap: 0.15rem 1.5rem;
+    padding: 0.8rem 0.5rem;
+    color: inherit;
+    text-decoration: none;
+    transition: background-color 0.2s ease;
+  }
+
+  .rc-news li a:hover {
+    background: var(--rc-surface);
+  }
+
+  .rc-news time {
+    grid-row: span 2;
+    padding-top: 0.15rem;
+    color: var(--sl-color-text-accent);
+    font-size: var(--sl-text-xs);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .rc-news-title {
+    color: var(--sl-color-white);
+    font-weight: 600;
+  }
+
+  .rc-news-description {
+    overflow: hidden;
+    color: var(--sl-color-gray-3);
+    font-size: var(--sl-text-sm);
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .rc-news-all {
+    display: inline-block;
+    margin-top: 1rem;
+    color: var(--sl-color-text-accent);
+    font-size: var(--sl-text-sm);
+  }
+
+  @media (max-width: 40rem) {
+    .rc-news li a {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .rc-news time {
+      grid-row: auto;
+    }
+  }
+</style>

@@ -1,8 +1,9 @@
 ---
-// Starlight's Hero plus, on the home page, the RobotCode picture gallery and a random subline
-// (ported from RandomHeroImage.vue and RandomTagline.vue of the VitePress theme). The gallery is
-// passed to Starlight's Hero as the hero's HTML image, so Starlight's layout places it.
+// The home page gets RobotCode's own hero: the product name, the tagline with a random subline, the actions, a
+// pointer to the open-source section and the RobotCode picture gallery (ported from RandomHeroImage.vue and
+// RandomTagline.vue of the VitePress theme). Every other page with a hero gets Starlight's.
 import { getImage } from "astro:assets";
+import { Icon, LinkButton } from "@astrojs/starlight/components";
 import Default from "@astrojs/starlight/components/Hero.astro";
 
 // In display order; the files are copied to src/assets/hero/ by scripts/convert.mjs.
@@ -25,53 +26,96 @@ const SUBLINES = [
 ];
 
 const route = Astro.locals.starlightRoute;
-const hero = route.entry.data.hero;
+const { data } = route.entry;
+const isHome = route.id === "" && Boolean(data.hero);
+const { title = data.title, tagline, actions = [] } = data.hero ?? {};
 
-if (route.id === "" && hero) {
-  const files = import.meta.glob<{ default: ImageMetadata }>("../assets/hero/*.png", { eager: true });
-  const pictures = await Promise.all(
-    PICTURES.map(async ({ file, alt }) => {
-      const source = files[`../assets/hero/${file}`]?.default;
-      if (!source) throw new Error(`Hero picture src/assets/hero/${file} is missing`);
-      const small = await getImage({ src: source, width: 400, densities: [1, 2] });
-      const large = await getImage({ src: source, width: 1024 });
-      return {
-        src: small.src,
-        srcset: small.srcSet.attribute,
-        width: small.attributes.width,
-        height: small.attributes.height,
-        large: large.src,
-        alt,
-      };
-    }),
-  );
-  const attr = (value: unknown) =>
-    String(value).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
-  const first = pictures[0];
-  const gallery = `
-<rc-hero-gallery data-pictures="${attr(JSON.stringify(pictures))}">
-  <button type="button" class="rc-nav rc-prev" data-step="-1" aria-label="Show previous image">‹</button>
-  <button type="button" class="rc-picture" aria-label="Open image: ${attr(first.alt)}">
-    <img src="${first.src}" srcset="${first.srcset}" width="${first.width}" height="${first.height}" alt="${attr(first.alt)}" decoding="async" draggable="false">
-  </button>
-  <button type="button" class="rc-nav rc-next" data-step="1" aria-label="Show next image">›</button>
-  <dialog class="rc-lightbox" aria-label="${attr(first.alt)}">
-    <button type="button" class="rc-close" aria-label="Close image">×</button>
-    <button type="button" class="rc-nav rc-prev" data-step="-1" aria-label="Show previous image">‹</button>
-    <div class="rc-frame"><img src="${first.large}" alt="${attr(first.alt)}" decoding="async" draggable="false"></div>
-    <button type="button" class="rc-nav rc-next" data-step="1" aria-label="Show next image">›</button>
-  </dialog>
-</rc-hero-gallery>`;
-  const subline = `<p class="rc-subline" data-sublines="${attr(JSON.stringify(SUBLINES))}">${attr(SUBLINES[0])}</p>`;
-  // A copy, so the cached collection entry keeps its frontmatter.
-  route.entry = {
-    ...route.entry,
-    data: { ...route.entry.data, hero: { ...hero, image: { html: gallery }, tagline: `${hero.tagline ?? ""}${subline}` } },
-  };
-}
+const files = import.meta.glob<{ default: ImageMetadata }>("../assets/hero/*.png", { eager: true });
+const pictures = isHome
+  ? await Promise.all(
+      PICTURES.map(async ({ file, alt }) => {
+        const source = files[`../assets/hero/${file}`]?.default;
+        if (!source) throw new Error(`Hero picture src/assets/hero/${file} is missing`);
+        const small = await getImage({ src: source, width: 400, densities: [1, 2] });
+        const large = await getImage({ src: source, width: 1024 });
+        return {
+          src: small.src,
+          srcset: small.srcSet.attribute,
+          width: small.attributes.width,
+          height: small.attributes.height,
+          large: large.src,
+          alt,
+        };
+      }),
+    )
+  : [];
+const first = pictures[0];
 ---
 
-<Default><slot /></Default>
+{
+  isHome ? (
+    <div class="rc-hero">
+      <div class="rc-hero-copy">
+        <h1 id="_top" data-page-title>
+          {title}
+        </h1>
+        {tagline && <p class="rc-tagline">{tagline}</p>}
+        <p class="rc-subline" data-sublines={JSON.stringify(SUBLINES)}>
+          {SUBLINES[0]}
+        </p>
+        <div class="rc-actions">
+          {actions.map(({ attrs: { class: className, ...attrs } = {}, icon, link: href, text, variant }) => (
+            <LinkButton {href} {variant} icon={icon?.name} class:list={[className]} {...attrs}>
+              {text}
+              {icon?.html && <Fragment set:html={icon.html} />}
+            </LinkButton>
+          ))}
+        </div>
+        <a class="rc-hero-note" href="#open-source">
+          <Icon name="heart" />
+          Free and open source, built with the community
+        </a>
+      </div>
+      <rc-hero-gallery data-pictures={JSON.stringify(pictures)}>
+        <button type="button" class="rc-nav rc-prev" data-step="-1" aria-label="Show previous image">
+          ‹
+        </button>
+        <button type="button" class="rc-picture" aria-label={`Open image: ${first.alt}`}>
+          <img
+            src={first.src}
+            srcset={first.srcset}
+            width={first.width}
+            height={first.height}
+            alt={first.alt}
+            decoding="async"
+            draggable="false"
+          />
+        </button>
+        <button type="button" class="rc-nav rc-next" data-step="1" aria-label="Show next image">
+          ›
+        </button>
+        <dialog class="rc-lightbox" aria-label={first.alt}>
+          <button type="button" class="rc-close" aria-label="Close image">
+            ×
+          </button>
+          <button type="button" class="rc-nav rc-prev" data-step="-1" aria-label="Show previous image">
+            ‹
+          </button>
+          <div class="rc-frame">
+            <img src={first.large} alt={first.alt} decoding="async" draggable="false" />
+          </div>
+          <button type="button" class="rc-nav rc-next" data-step="1" aria-label="Show next image">
+            ›
+          </button>
+        </dialog>
+      </rc-hero-gallery>
+    </div>
+  ) : (
+    <Default>
+      <slot />
+    </Default>
+  )
+}
 
 <script>
   type Picture = { src: string; srcset: string; large: string; alt: string };
@@ -218,7 +262,7 @@ if (route.id === "" && hero) {
     width: auto;
     height: auto;
     max-width: 100%;
-    max-height: 28rem;
+    max-height: 24rem;
     border-radius: 1rem;
     user-select: none;
   }
@@ -316,8 +360,109 @@ if (route.id === "" && hero) {
     cursor: pointer;
   }
 
-  .hero .rc-subline {
-    margin-top: 0.75rem;
-    font-size: 0.8em;
+  .rc-hero {
+    position: relative;
+    isolation: isolate;
+    display: grid;
+    grid-template-columns: 100%;
+    gap: 2rem;
+    align-items: center;
+    padding-block: 1rem 2.5rem;
+  }
+
+  /* The hero's backdrop, a soft glow in the accent colour. */
+  .rc-hero::before {
+    content: "";
+    position: absolute;
+    inset: -8rem -50vw -6rem;
+    z-index: -1;
+    background: var(--rc-hero-bg);
+    /* Fades out towards the bottom, so the glow has no edge where the page continues. */
+    mask-image: linear-gradient(to bottom, #000 55%, transparent);
+    pointer-events: none;
+  }
+
+  .rc-hero-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    align-items: center;
+    text-align: center;
+  }
+
+  .rc-hero-copy > * {
+    max-width: 42rem;
+  }
+
+  .rc-hero h1 {
+    margin: 0;
+    font-size: clamp(var(--sl-text-4xl), calc(1rem + 6vw), 5rem);
+    font-weight: 800;
+    line-height: 1.05;
+    letter-spacing: -0.03em;
+    background: var(--rc-title-gradient);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .rc-hero .rc-tagline {
+    margin: 0;
+    font-size: clamp(var(--sl-text-xl), calc(0.5rem + 2vw), var(--sl-text-3xl));
+    font-weight: 600;
+    line-height: 1.2;
+    color: var(--sl-color-white);
+  }
+
+  .rc-hero .rc-subline {
+    margin: 0;
+    font-size: var(--sl-text-lg);
+    color: var(--sl-color-gray-2);
+  }
+
+  .rc-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem 1.5rem;
+    justify-content: center;
+    margin-top: 0.5rem;
+  }
+
+  .rc-hero-note {
+    display: inline-flex;
+    gap: 0.5rem;
+    align-items: center;
+    color: var(--sl-color-gray-2);
+    font-size: var(--sl-text-sm);
+    text-decoration: none;
+  }
+
+  .rc-hero-note:hover {
+    color: var(--sl-color-white);
+  }
+
+  .rc-hero-note svg {
+    color: #e5484d;
+  }
+
+  .rc-hero rc-hero-gallery .rc-picture img {
+    filter: drop-shadow(0 1.5rem 2.5rem var(--rc-shadow));
+  }
+
+  @media (min-width: 50rem) {
+    .rc-hero {
+      grid-template-columns: 7fr 5fr;
+      gap: 3%;
+      padding-block: clamp(1.5rem, calc(0.5rem + 4vmin), 4rem) clamp(1.5rem, 3vmin, 2.5rem);
+    }
+
+    .rc-hero-copy {
+      align-items: flex-start;
+      text-align: start;
+    }
+
+    .rc-actions {
+      justify-content: flex-start;
+    }
   }
 </style>

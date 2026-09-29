@@ -3,24 +3,53 @@
   --sl-color-accent-low: #06343a;
   --sl-color-accent: #138496;
   --sl-color-accent-high: #b4e6ec;
+
+  /* Surfaces and effects of the home page. */
+  --rc-surface: rgb(255 255 255 / 3%);
+  --rc-band-bg: color-mix(in srgb, var(--sl-color-accent) 7%, var(--sl-color-bg));
+  --rc-terminal-bg: #0f171a;
+  --rc-line-accent: color-mix(in srgb, var(--sl-color-accent) 45%, transparent);
+  --rc-shadow: rgb(0 0 0 / 45%);
+  --rc-title-gradient: linear-gradient(120deg, var(--sl-color-white) 35%, var(--sl-color-accent-high));
+  --rc-glow-strong: color-mix(in srgb, var(--sl-color-accent) 30%, transparent);
+  --rc-glow-soft: color-mix(in srgb, var(--sl-color-accent) 14%, transparent);
+  --rc-hero-bg:
+    radial-gradient(40rem 26rem at 72% 38%, var(--rc-glow-strong), transparent 70%),
+    radial-gradient(34rem 22rem at 18% 70%, var(--rc-glow-soft), transparent 70%);
 }
 
 :root[data-theme="light"] {
   --sl-color-accent-low: #c7eef3;
   --sl-color-accent: #0b7285;
   --sl-color-accent-high: #063b43;
+
+  --rc-surface: rgb(255 255 255 / 75%);
+  --rc-band-bg: color-mix(in srgb, var(--sl-color-accent) 5%, var(--sl-color-bg));
+  --rc-terminal-bg: #ffffff;
+  --rc-shadow: rgb(6 59 67 / 16%);
+  --rc-title-gradient: linear-gradient(120deg, var(--sl-color-white) 35%, var(--sl-color-accent));
 }
 
 /* Home page: supporter logos in one row. */
 .rc-supporters p {
   display: flex;
   flex-wrap: wrap;
-  gap: 2rem;
+  gap: 1rem;
   align-items: center;
 }
 
+/* On light tiles, so logos with dark lettering stay readable in the dark theme. */
+.rc-supporters a {
+  display: flex;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--sl-color-hairline);
+  border-radius: 0.75rem;
+  background: #fff;
+}
+
 .rc-supporters img {
-  height: 3rem;
+  height: 2.5rem;
   width: auto;
 }
 

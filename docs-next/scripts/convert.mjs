@@ -238,12 +238,13 @@ function releasePost(rel) {
   return m && { id: `news/v${m[1]}-${m[2]}-${m[3]}`, tags: ["release"], automatic: true };
 }
 
-// Static files served unchanged, and images of the hand-written pages (target in src/assets/ -> source in docs/).
+// Static files served unchanged, and images and screen recordings of the hand-written pages (target in src/assets/ ->
+// source in docs/).
 const PUBLIC_FILES = ["robotcode-logo.svg", "robotcode-logo-mini.png", "robotcode-logo.jpg", "schemas/robot.toml.json"];
 const HANDWRITTEN_ASSETS = {
   "robotcode-logo.svg": "public/robotcode-logo.svg",
-  "screenshots/autocomplete1.gif": "public/autocomplete1.gif",
-  "screenshots/running-tests.gif": "public/running_tests.gif",
+  "screenshots/autocomplete1.mp4": "images/autocomplete1.mp4",
+  "screenshots/running-tests.mp4": "images/running_tests.mp4",
   "logos/imbus.svg": "images/imbus-web-logo.svg",
   "logos/rf-foundation.svg": "images/RFFoundation.svg",
   "logos/jetbrains.svg": "images/jetbrains.svg",

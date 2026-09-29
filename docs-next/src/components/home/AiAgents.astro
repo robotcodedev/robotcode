@@ -1,0 +1,123 @@
+---
+// The home page's AI agent section: what the RobotCode skill makes an agent do, a demo, and a link to the setup guide.
+import { Icon, LinkButton } from "@astrojs/starlight/components";
+import AgentDemo from "./AgentDemo.astro";
+
+const HABITS = [
+  ["Discovers", "tests, tasks and tags with <code>discover</code> instead of grepping files"],
+  ["Looks up", "keywords in your installed libraries and resources with <code>libdoc</code>"],
+  ["Debugs", "a failing test at a real breakpoint with <code>robot-debug</code>"],
+  ["Reads", "finished runs with <code>results</code> instead of loading <code>output.xml</code> into the chat"],
+  ["Respects", "your <code>robot.toml</code> and profiles, just like the editor and the CLI"],
+];
+const AGENTS = ["GitHub Copilot", "Claude Code", "Codex", "Open Plugins agents"];
+---
+
+<section class="rc-band rc-ai not-content" aria-labelledby="ai-agents">
+  <div class="rc-ai-grid">
+    <div class="rc-ai-copy">
+      <h2 id="ai-agents">Turn your AI agent into a Robot Framework engineer</h2>
+      <p class="rc-lead">
+        The RobotCode skill teaches your agent to work through your project's own <code>robotcode</code> CLI — so it
+        sees your tests, keywords and results the way Robot Framework resolves them, instead of guessing from files.
+      </p>
+      <ul class="rc-habits">
+        {
+          HABITS.map(([verb, rest]) => (
+            <li>
+              <Icon name="approve-check-circle" class="rc-habit-icon" />
+              <span>
+                <strong>{verb}</strong> <Fragment set:html={rest} />
+              </span>
+            </li>
+          ))
+        }
+      </ul>
+      <div class="rc-agents">
+        <span>Works with</span>
+        <ul>
+          {AGENTS.map((agent) => <li class="rc-chip">{agent}</li>)}
+        </ul>
+      </div>
+      <div class="rc-ai-actions">
+        <LinkButton href="/guides/ai-agents/" icon="right-arrow">Set up your agent</LinkButton>
+      </div>
+    </div>
+    <AgentDemo />
+  </div>
+</section>
+
+<style>
+  .rc-ai-grid {
+    display: grid;
+    gap: 2.5rem;
+    align-items: center;
+  }
+
+  @media (min-width: 60rem) {
+    .rc-ai-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+
+  .rc-ai h2 {
+    margin: 0 0 1rem;
+    font-size: clamp(var(--sl-text-2xl), calc(1rem + 2vw), var(--sl-text-4xl));
+    line-height: 1.15;
+    color: var(--sl-color-white);
+  }
+
+  .rc-ai code {
+    font-family: var(--__sl-font-mono);
+    font-size: 0.9em;
+  }
+
+  .rc-habits {
+    display: grid;
+    gap: 0.6rem;
+    margin: 1.5rem 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .rc-habits li {
+    display: flex;
+    gap: 0.6rem;
+    align-items: flex-start;
+  }
+
+  .rc-habits :global(.rc-habit-icon) {
+    flex: none;
+    margin-top: 0.2rem;
+    color: var(--sl-color-accent-high);
+  }
+
+  .rc-habits strong {
+    color: var(--sl-color-white);
+  }
+
+  .rc-agents,
+  .rc-agents ul {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    color: var(--sl-color-gray-3);
+    font-size: var(--sl-text-sm);
+  }
+
+  .rc-chip {
+    padding: 0.2rem 0.65rem;
+    border: 1px solid var(--rc-line-accent);
+    border-radius: 999px;
+    background: var(--rc-surface);
+    color: var(--sl-color-white);
+  }
+
+  .rc-ai-actions {
+    margin-top: 2rem;
+  }
+</style>
