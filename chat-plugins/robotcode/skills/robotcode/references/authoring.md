@@ -26,6 +26,7 @@ robotcode libdoc resources/common.resource list  # keywords your own resource fi
 robotcode discover tests --search "<term>"        # is there already a similar test? where?
 robotcode discover suites                          # existing suite layout to slot into
 robotcode discover tags                            # the tag vocabulary already in use
+robotcode discover metadata --values               # the metadata names and values already in use (RF 7.5+)
 ```
 
 Resolve every keyword you intend to call against `libdoc` rather than from memory — it reflects the *installed* library version, the project's import arguments, and project-local resources. See *Documentation lookup priority* in [SKILL.md](../SKILL.md).

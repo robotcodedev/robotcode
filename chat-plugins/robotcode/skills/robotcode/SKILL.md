@@ -142,8 +142,10 @@ RobotCode also adds exact longname filters:
 
 - `-bl, --by-longname "Suite.Sub.Test"` — include by exact longname (a test, task, or whole suite).
 - `-ebl, --exclude-by-longname "Suite.Sub.Test"` — exclude by exact longname (test, task, or suite).
+- `-btm, --by-test-metadata "Issue:4409"` — include tests/tasks whose own `[Metadata]` matches (RF 7.5+). Terms `NAME:VALUE` with `*` / `?`, combined with `AND` / `OR` / `NOT` written as separate upper-case words: `"Author:Hans* NOT Reviewer:*"`, `"*:4409"`. Every line of a multi-line value is a value of its own.
+- `-ebtm, --exclude-by-test-metadata "Owner:*"` — exclude by the same patterns (RF 7.5+).
 
-Use longname filters when you copied a full name from `discover` or `results show` and want to avoid glob ambiguity.
+Use longname filters when you copied a full name from `discover` or `results show` and want to avoid glob ambiguity. Use the metadata filters for data a project keeps in `[Metadata]` rather than tags — "all tests for issue 4409" is `robotcode discover tests -btm Issue:4409`; `robotcode discover metadata --values` lists the names and values in use. Suite `Metadata` is listed there too, but only a test's own metadata is selectable.
 
 **To run or debug one specific test, task, or suite, select it by its longname (`-bl "<longname>"`) — never by passing the `.robot` file.** This holds for `robotcode robot` and `robotcode robot-debug` alike: pointing Robot at a single file makes it the top suite, so the parent suites' `__init__.robot` (suite setup/teardown, suite variables, tags, and timeouts) never runs and it behaves unlike a real run (and a file with several tests runs them all). Get the longname from `discover` or `results`. The one path form that's fine is a whole **directory** (it loads its `__init__.robot`) — never a single `.robot` file.
 
@@ -166,6 +168,7 @@ Use `robotcode discover` to inspect what the active profile would see without ex
 | Flat test or task lists | `robotcode discover tests`, `robotcode discover tasks` |
 | Suites only | `robotcode discover suites` |
 | Tags and tagged tests/tasks | `robotcode discover tags --tests` / `--tasks` |
+| Metadata names/values and what carries them (test metadata RF 7.5+) | `robotcode discover metadata --values --tests` / `--suites` |
 | Source files Robot would parse | `robotcode discover files` |
 
 Filter discovery like a run with Robot options (`-i`, `-e`, `-s`, `-t`, paths, variables). Add `--search TEXT` or `--search-regex PATTERN` to match names, paths, docs, tags, metadata, and test-body content. Use `--format json` when an integration needs the tree shape.

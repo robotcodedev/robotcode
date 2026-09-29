@@ -25,6 +25,7 @@ Five subcommands share a consistent option surface — auto-discovering the outp
 
 - Standard Robot filters: `-i <tag>` / `-e <tag>` / `-s <suite>` / `-t <test>` / `--status pass|fail|skip|not-run` (with `--failed` / `--passed` / `--skipped` as shortcuts on `show` / `log` / `stats`)
 - Longname-exact filters: `-bl <longname>` / `-ebl <longname>` — use these when you already have the test's full name (e.g. copied from a previous `show` output); no glob ambiguity. Available on all five subcommands
+- Test-metadata filters (RF 7.5+): `-btm <pattern>` / `-ebtm <pattern>` — select by the test's `[Metadata]` with the same patterns as `robotcode robot` and `discover` (`-btm Issue:4409` → the results of every test for issue 4409). A result file holds the values the run used, so variables in a value are already replaced there. Available on all five subcommands
 - Full-text search: `--search TEXT` / `--search-regex PATTERN` — searches across names, messages, tags, documentation, metadata, and keyword names/args/docs/messages
 - Output-file override: `-o PATH` (file or directory)
 
