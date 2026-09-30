@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Defines how RobotCode loads library and variable file imports for the analysis: the time limit and what happens when it expires, how a timed-out load is kept, and how a load without the import's arguments is made visible.
+Defines how RobotCode loads library and variable file imports for the analysis: the time limit and what happens when it expires, how a timed-out load is kept, how an import that ends early is reported, how loaded documentation is cached per set of import arguments, and how a load without the import's arguments is made visible.
 
 ## ADDED Requirements
 
