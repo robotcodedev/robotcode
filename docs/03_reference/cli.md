@@ -36,6 +36,7 @@ To accommodate these varied needs, `robotcode` is organized into separate packag
   - **Commands**:
     - `repl`: Launches an interactive Robot Framework shell where users can execute commands line-by-line, ideal for quick testing and experimentation.
     - `robot-debug`: Runs a real `.robot` suite with the command-line debugger attached, pausing at breakpoints to step through execution, inspect the call stack and variables, and run keywords in the paused context.
+    - `doc`: Shows the documentation of a library, resource file or suite file with the project's configuration, as Markdown in the terminal, in a file or as JSON, or in a terminal viewer. See [Browsing Library Documentation](browsing-documentation.md).
 
 - **`language-server` Package**:
   This package provides language server capabilities, supporting IDE integration for Robot Framework with real-time code insights. Compatible with editors that support the Language Server Protocol (LSP), such as Visual Studio Code, it enables enhanced productivity and convenience. It is most useful in local development environments where interactive IDE support aids in code writing and refactoring but is generally not needed in CI or production environments.
@@ -205,6 +206,10 @@ robotcode [OPTIONS] COMMAND [ARGS]...
 - [`discover`](#discover)
 
    Commands to discover informations about the current project.
+
+- [`doc`](#doc)
+
+   Show the documentation of a library, resource file or suite file.
 
 - [`language-server`](#language-server)
 
@@ -1550,6 +1555,291 @@ robotcode discover tests [OPTIONS] [ROBOT_OPTIONS_AND_ARGS]...
 
 
 Use `-- --help` to see `robot` help.
+
+
+
+
+#### doc
+
+Show the documentation of a library, resource file or suite file.
+
+TARGET is a library name, the path of a library, resource or suite file,
+with import arguments appended as in Libdoc: `Name::arg1::arg2`. It is
+loaded anew on every call, with the `robot.toml` configuration and the
+selected profiles.
+
+Examples:
+```
+robotcode doc lib Collections
+robotcode doc keywords Collections dictionary
+robotcode doc keyword BuiltIn "Should Be*"
+robotcode doc browse resources/common.resource
+robotcode --format json doc lib 'Remote::http://${HOST}:8270'
+```
+
+
+**Usage:**
+```text
+robotcode doc [OPTIONS] COMMAND [ARGS]...
+```
+
+
+**Options:**
+- `--help`
+
+   Show this message and exit.
+
+
+**Commands:**
+
+- [`browse`](#browse)
+
+   Browse the full documentation of TARGET in the terminal.
+
+- [`keyword`](#keyword)
+
+   Show the full documentation of keywords of TARGET.
+
+- [`keywords`](#keywords)
+
+   List the keywords of TARGET with their arguments and short documentation.
+
+- [`lib`](#lib)
+
+   Show the full documentation of TARGET.
+
+
+##### browse
+
+Browse the full documentation of TARGET in the terminal.
+
+Opens the documentation viewer of the REPL, with links, search and
+back/forward navigation. In AI-agent sessions, in pipes and without a
+terminal, the Markdown is printed instead, as `robotcode doc lib` prints it.
+
+Examples:
+```
+robotcode doc browse Collections
+robotcode doc browse resources/common.resource
+```
+
+
+**Usage:**
+```text
+robotcode doc browse [OPTIONS] TARGET
+```
+
+
+**Options:**
+- `-v, --variable name:value *`
+
+   Set variables in the test data. See `robot --variable` option.
+
+
+- `-V, --variablefile PATH *`
+
+   Python or YAML file to read variables from. See `robot --variablefile` option.
+
+
+- `-P, --pythonpath PATH *`
+
+   Additional locations where to search test libraries and other extensions when they are imported. See `robot --pythonpath` option.
+
+
+- `--language LANG *`
+
+   Activate localization in addition to the languages of the configuration. See `robot --language` option.
+
+
+- `--base-dir DIRECTORY`
+
+   The directory for `${CURDIR}` and relative paths in TARGET. Default: the current directory.
+
+
+- `--help`
+
+   Show this message and exit.
+
+
+##### keyword
+
+Show the full documentation of keywords of TARGET.
+
+A NAME selects the keywords whose name matches it exactly or as a pattern
+with `*` and `?`, and the keywords with embedded arguments that match it.
+Case, spaces and underscores are ignored. The data types that the arguments
+use follow the keywords.
+
+Examples:
+```
+robotcode doc keyword Collections "Get Match Count"
+robotcode doc keyword BuiltIn "Should Be*"
+robotcode doc keyword resources/common.resource "Open Chrome Browser"
+```
+
+
+**Usage:**
+```text
+robotcode doc keyword [OPTIONS] TARGET NAME...
+```
+
+
+**Options:**
+- `-v, --variable name:value *`
+
+   Set variables in the test data. See `robot --variable` option.
+
+
+- `-V, --variablefile PATH *`
+
+   Python or YAML file to read variables from. See `robot --variablefile` option.
+
+
+- `-P, --pythonpath PATH *`
+
+   Additional locations where to search test libraries and other extensions when they are imported. See `robot --pythonpath` option.
+
+
+- `--language LANG *`
+
+   Activate localization in addition to the languages of the configuration. See `robot --language` option.
+
+
+- `--base-dir DIRECTORY`
+
+   The directory for `${CURDIR}` and relative paths in TARGET. Default: the current directory.
+
+
+- `-o, --output FILE`
+
+   Write the Markdown to this file instead of the terminal.
+
+
+- `--help`
+
+   Show this message and exit.
+
+
+##### keywords
+
+List the keywords of TARGET with their arguments and short documentation.
+
+A PATTERN selects the keywords whose name contains it. `*` and `?` are
+wildcards; case, spaces and underscores are ignored. Several patterns select
+the keywords that match any of them.
+
+Examples:
+```
+robotcode doc keywords Collections
+robotcode doc keywords Collections dictionary
+robotcode doc keywords Collections "get*list"
+robotcode doc keywords Collections append insert
+robotcode doc keywords resources/common.resource --tag smoke
+```
+
+
+**Usage:**
+```text
+robotcode doc keywords [OPTIONS] TARGET [PATTERN]...
+```
+
+
+**Options:**
+- `--tag TAG *`
+
+   Only keywords with a tag that matches TAG. `*` and `?` are wildcards. Can be given more than once.
+
+
+- `-v, --variable name:value *`
+
+   Set variables in the test data. See `robot --variable` option.
+
+
+- `-V, --variablefile PATH *`
+
+   Python or YAML file to read variables from. See `robot --variablefile` option.
+
+
+- `-P, --pythonpath PATH *`
+
+   Additional locations where to search test libraries and other extensions when they are imported. See `robot --pythonpath` option.
+
+
+- `--language LANG *`
+
+   Activate localization in addition to the languages of the configuration. See `robot --language` option.
+
+
+- `--base-dir DIRECTORY`
+
+   The directory for `${CURDIR}` and relative paths in TARGET. Default: the current directory.
+
+
+- `-o, --output FILE`
+
+   Write the Markdown to this file instead of the terminal.
+
+
+- `--help`
+
+   Show this message and exit.
+
+
+##### lib
+
+Show the full documentation of TARGET.
+
+The page has the introduction, the importing arguments, an index and the
+documentation of every keyword, and the data types the keywords use.
+
+Examples:
+```
+robotcode doc lib Collections
+robotcode doc lib -o common.md resources/common.resource
+robotcode --format json doc lib 'MyLibrary::arg1'
+```
+
+
+**Usage:**
+```text
+robotcode doc lib [OPTIONS] TARGET
+```
+
+
+**Options:**
+- `-v, --variable name:value *`
+
+   Set variables in the test data. See `robot --variable` option.
+
+
+- `-V, --variablefile PATH *`
+
+   Python or YAML file to read variables from. See `robot --variablefile` option.
+
+
+- `-P, --pythonpath PATH *`
+
+   Additional locations where to search test libraries and other extensions when they are imported. See `robot --pythonpath` option.
+
+
+- `--language LANG *`
+
+   Activate localization in addition to the languages of the configuration. See `robot --language` option.
+
+
+- `--base-dir DIRECTORY`
+
+   The directory for `${CURDIR}` and relative paths in TARGET. Default: the current directory.
+
+
+- `-o, --output FILE`
+
+   Write the Markdown to this file instead of the terminal.
+
+
+- `--help`
+
+   Show this message and exit.
 
 
 

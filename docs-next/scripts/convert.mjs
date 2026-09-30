@@ -107,6 +107,13 @@ const PAGES = {
     description:
       "Debug Robot Framework suites in the terminal with robotcode robot-debug: break on a line, keyword or failure, step, and inspect the stack and variables.",
   },
+  "03_reference/browsing-documentation.md": {
+    id: "guides/browsing-documentation",
+    label: "Browsing Documentation",
+    order: 60,
+    description:
+      "Show the documentation of a library, resource file or suite file with robotcode doc, as Markdown, as JSON or in a terminal viewer, with the project's configuration.",
+  },
   "03_reference/wrapper.md": {
     id: "guides/wrapper",
     label: "Wrapper",
