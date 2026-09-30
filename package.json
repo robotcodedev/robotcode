@@ -660,6 +660,10 @@
         ]
       },
       {
+        "scopeName": "source.robotframework-markdown",
+        "path": "./syntaxes/robotframework-markdown.tmLanguage.json"
+      },
+      {
         "language": "robotframework-injection",
         "scopeName": "markdown.robotframework.codeblock",
         "path": "./syntaxes/codeblock_robotframework.tmLanguage.json",

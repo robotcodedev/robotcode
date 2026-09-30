@@ -145,6 +145,8 @@ val prepareSandboxConfig: PrepareSandboxTask.() -> Unit = {
         include("package.json", "language-configuration.json", "syntaxes/**/*", "bundled/**/*")
         exclude("**/bin")
         exclude("**/__pycache__")
+        // the Markdown code block injection is only used by VS Code
+        exclude("syntaxes/codeblock_robotframework.tmLanguage.json", "syntaxes/robotframework-markdown.tmLanguage.json")
         into("robotcode4ij/data")
     }
 }

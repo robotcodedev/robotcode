@@ -93,16 +93,41 @@ for k in get_available_languages():
 
 template = Template(Path("syntaxes/robotframework.tmLanguage.template.json").read_text(encoding="utf-8"))
 
-result = template.safe_substitute(
-    {
-        "variables_header": "|".join(variables_header),
-        "settings_header": "|".join(settings_header),
-        "test_cases_header": "|".join(test_cases_header),
-        "tasks_header": "|".join(tasks_header),
-        "keywords_header": "|".join(keywords_header),
-        "comments_header": "|".join(comments_header),
-        "documentation_setting": "|".join(documentation_setting),
-    }
-)
+headers = {
+    "variables_header": "|".join(variables_header),
+    "settings_header": "|".join(settings_header),
+    "test_cases_header": "|".join(test_cases_header),
+    "tasks_header": "|".join(tasks_header),
+    "keywords_header": "|".join(keywords_header),
+    "comments_header": "|".join(comments_header),
+    "documentation_setting": "|".join(documentation_setting),
+}
 
-Path("syntaxes/robotframework.tmLanguage.json").write_text(result, encoding="utf-8")
+# lines that continue a setting, test, task or keyword: `...` continuations, comments and empty lines
+continuation = r"(\\s*(\\.\\.\\.((( {2}| ?\\t)\\s*\\S.*)|(\\s*))?$))|(\\s*#.*$)|(\\s*$)"
+
+# Markdown lists and block quotes consume their prefix before the code block content is matched, so the
+# grammar for the Markdown code block injection also matches right after that prefix and continues blocks
+# with `while` rules. IntelliJ's TextMate implementation rejects that variable-length look-behind (Joni)
+# and overflows its stack on these `while` rules, so Robot Framework files get line anchors and `end` rules.
+for path, values in (
+    (
+        "syntaxes/robotframework.tmLanguage.json",
+        {
+            "scope_name": "source.robotframework",
+            "line_start": "^",
+            "line_start_indented": "^",
+            "block_continuation": f'"end": "^(?!{continuation})"',
+        },
+    ),
+    (
+        "syntaxes/robotframework-markdown.tmLanguage.json",
+        {
+            "scope_name": "source.robotframework-markdown",
+            "line_start": r"(?:^|\\G(?<=^[ \\t>]*))",
+            "line_start_indented": r"(?:^|\\G(?<=^[ \\t>]*)[ \\t]*)",
+            "block_continuation": rf'"while": "(?:^|\\G(?<=^[ \\t>]*))(?={continuation})"',
+        },
+    ),
+):
+    Path(path).write_text(template.safe_substitute(headers, **values), encoding="utf-8")
