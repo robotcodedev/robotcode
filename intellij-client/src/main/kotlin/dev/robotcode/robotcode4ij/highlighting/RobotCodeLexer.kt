@@ -31,15 +31,17 @@ import dev.robotcode.robotcode4ij.psi.VARIABLE_BEGIN
 import dev.robotcode.robotcode4ij.psi.VARIABLE_END
 import dev.robotcode.robotcode4ij.psi.VARIABLE_INDEX_BEGIN
 import dev.robotcode.robotcode4ij.psi.VARIABLE_INDEX_END
-import org.jetbrains.plugins.textmate.language.syntax.lexer.TextMateCachingSyntaxMatcher
 import org.jetbrains.plugins.textmate.language.syntax.lexer.TextMateLexerCore
 import org.jetbrains.plugins.textmate.language.syntax.lexer.TextMateScope
+import org.jetbrains.plugins.textmate.language.syntax.lexer.TextMateSyntaxMatcher
 import org.jetbrains.plugins.textmate.language.syntax.lexer.TextMateSyntaxMatcherImpl
 import org.jetbrains.plugins.textmate.language.syntax.lexer.TextmateToken
-import org.jetbrains.plugins.textmate.language.syntax.selector.TextMateSelectorCachingWeigher
+import org.jetbrains.plugins.textmate.language.syntax.lexer.caching
+import org.jetbrains.plugins.textmate.language.syntax.selector.TextMateSelectorWeigher
 import org.jetbrains.plugins.textmate.language.syntax.selector.TextMateSelectorWeigherImpl
-import org.jetbrains.plugins.textmate.regex.CachingRegexFactory
-import org.jetbrains.plugins.textmate.regex.RegexFactory
+import org.jetbrains.plugins.textmate.language.syntax.selector.caching
+import org.jetbrains.plugins.textmate.regex.CaffeineCachingRegexProvider
+import org.jetbrains.plugins.textmate.regex.RegexProvider
 import org.jetbrains.plugins.textmate.regex.RememberingLastMatchRegexFactory
 import java.util.*
 import kotlin.math.min
@@ -91,12 +93,14 @@ class RobotCodeLexer : LexerBase() {
                 "keyword.operator.continue.robotframework" to CONTINUATION,
             )
         }
+
+        // shared by all lexer instances, like the platform's TextMateSyntaxHighlighterFactory does
+        private val regexProvider: RegexProvider =
+            CaffeineCachingRegexProvider(RememberingLastMatchRegexFactory(JoniRegexFactory()))
+        private val weigher: TextMateSelectorWeigher = TextMateSelectorWeigherImpl().caching()
+        private val syntaxMatcher: TextMateSyntaxMatcher = TextMateSyntaxMatcherImpl(regexProvider, weigher).caching()
     }
-    
-    val regexFactory: RegexFactory = CachingRegexFactory(RememberingLastMatchRegexFactory(JoniRegexFactory()))
-    val weigher: TextMateSelectorCachingWeigher = TextMateSelectorCachingWeigher(TextMateSelectorWeigherImpl())
-    val syntaxMatcher: TextMateCachingSyntaxMatcher =
-        TextMateCachingSyntaxMatcher(TextMateSyntaxMatcherImpl(regexFactory, weigher))
+
     val lexer = TextMateLexerCore(
         TextMateBundleHolder.descriptor,
         syntaxMatcher,

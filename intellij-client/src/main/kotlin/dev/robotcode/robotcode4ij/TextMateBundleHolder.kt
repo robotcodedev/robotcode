@@ -22,8 +22,7 @@ object TextMateBundleHolder {
             
             val rootScopeName = builder.addSyntax(grammar.plist.value) ?: continue
             if (rootScopeName == "source.robotframework") {
-                val syntax = builder.build()
-                return@lazy TextMateLanguageDescriptor(rootScopeName, syntax.getSyntax(rootScopeName))
+                return@lazy builder.build().getLanguageDescriptor(rootScopeName)
             }
         }
         
