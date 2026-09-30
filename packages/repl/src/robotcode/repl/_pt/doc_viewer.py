@@ -44,7 +44,7 @@ from prompt_toolkit.widgets import Frame
 from rich.console import Console
 from rich.markdown import Markdown
 
-from robotcode.robot.utils.markdown_docs import iter_headings, slugify
+from robotcode.robot.utils.markdown_docs import heading_anchors
 
 
 def render_markdown_to_ansi(text: str, *, width: int = 80) -> str:
@@ -200,10 +200,8 @@ _HELP_HINTS = (
     "[/]: back/forward · Shift+drag: select · q/Esc/Enter: close "
 )
 
-# Header titles keep their emphasis markers — the anchor slug preserves
-# them to match `to_markdown`'s auto-linker, while the rendered-line
-# lookup runs the title through `_strip_md_emphasis` because `rich`
-# consumes those markers when it paints.
+# The rendered-line lookup runs a heading's title through `_strip_md_emphasis`
+# because `rich` consumes those markers when it paints.
 
 _MD_EMPHASIS_RE = re.compile(r"[*_`]")
 
@@ -211,19 +209,6 @@ _MD_EMPHASIS_RE = re.compile(r"[*_`]")
 def _strip_md_emphasis(text: str) -> str:
     """Drop `*`, `_`, `` ` `` markers — `rich` consumes them in rendering."""
     return _MD_EMPHASIS_RE.sub("", text)
-
-
-def _slugify_anchor(title: str) -> str:
-    """Convert a header title to its anchor slug.
-
-    Matches the convention `robotcode.robot.utils.markdownformatter` and
-    `LibraryDoc._link_inline_links` use: lowercase + spaces-to-dashes,
-    nothing else stripped. The auto-linker in `to_markdown` produces
-    refs like `[Library *BuiltIn*](\\#library-*builtin*)`, so the
-    `*` survives in both the link target and the slug we generate
-    here — comparison is symmetric.
-    """
-    return slugify(title)
 
 
 def _build_anchor_to_line_map(md_source: str, rendered_plain: str) -> Dict[str, int]:
@@ -243,13 +228,13 @@ def _build_anchor_to_line_map(md_source: str, rendered_plain: str) -> Dict[str, 
     rendered_lines = rendered_plain.split("\n")
     result: Dict[str, int] = {}
     cursor = 0
-    # `iter_headings` skips `#` lines of fenced code blocks, which are no headings
-    for _, raw_title in iter_headings(md_source):
-        slug = _slugify_anchor(raw_title)
+    # `heading_anchors` skips `#` lines of fenced code blocks, which are no headings,
+    # and numbers repeated anchors as the links of the page do
+    for _, raw_title, anchor in heading_anchors(md_source):
         display = _strip_md_emphasis(raw_title)
         for j in range(cursor, len(rendered_lines)):
             if rendered_lines[j].strip() == display:
-                result[slug] = j
+                result[anchor] = j
                 cursor = j + 1
                 break
     return result

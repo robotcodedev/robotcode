@@ -5,6 +5,16 @@ import re
 from abc import ABC, abstractmethod
 from typing import Any, Callable, Final, Iterator, List, Optional, Tuple
 
+from .markdown_docs import escape_link_text
+
+# Gets a name in single backticks of documentation in Robot Framework's format and
+# returns the target of a link to it, or `None` if it stays inline code.
+NameLinker = Callable[[str], Optional[str]]
+
+# a name in single backticks, not code in double backticks
+_RE_NAME: Final["re.Pattern[str]"] = re.compile(r"(?<!`)`([^`]+)`(?!`)")
+_RE_NAME_PLACEHOLDER: Final["re.Pattern[str]"] = re.compile("\ue000(\\d+)\ue001")
+
 
 class Formatter(ABC):
     _strip_lines = True
@@ -31,16 +41,21 @@ class Formatter(ABC):
 
 
 class MarkDownFormatter:
-    def __init__(self) -> None:
+    def __init__(self, name_linker: Optional[NameLinker] = None) -> None:
+        """`name_linker` turns names in single backticks into links, as Libdoc links them.
+
+        Headings and preformatted text keep their names.
+        """
         self._results: List[str] = []
+        line_formatter = _line_formatter if name_linker is None else LineFormatter(name_linker)
         self._formatters: List[Formatter] = [
-            TableFormatter(),
+            TableFormatter(line_formatter),
             PreformattedFormatter(),
-            ListFormatter(),
+            ListFormatter(line_formatter),
             HeaderFormatter(),
             RulerFormatter(),
         ]
-        self._formatters.append(ParagraphFormatter(self._formatters[:]))
+        self._formatters.append(ParagraphFormatter(self._formatters[:], line_formatter))
         self._current: Optional[Formatter] = None
 
     def format(self, text: str) -> str:
@@ -129,10 +144,14 @@ class LinkFormatter:
         return pre + self._get_link(url)
 
     def _get_image(self, src: str, title: Optional[str] = None) -> str:
-        return f"![{title or src}]({src})"
+        return f"![{title or src}]({self._unquote_hash(src)})"
 
     def _get_link(self, href: str, content: Optional[str] = None) -> str:
-        return f"[{content or href}]({href})"
+        return f"[{content or href}]({self._unquote_hash(href)})"
+
+    def _unquote_hash(self, target: str) -> str:
+        # `#` is escaped in the whole line before links are formatted, a link target needs it as it is
+        return target.replace("\\#", "#")
 
     def _quot(self, attr: str) -> str:
         return attr if '"' not in attr else attr.replace('"', "&quot;")
@@ -214,9 +233,10 @@ _                          # end of italic
         re.VERBOSE,
     )
 
-    def __init__(self) -> None:
+    def __init__(self, name_linker: Optional[NameLinker] = None) -> None:
         super().__init__()
 
+        self._name_linker = name_linker
         self._formatters: List[Tuple[str, Callable[[str], str]]] = [
             ("<", self._quote_lower_then),
             ("#", self._quote_hash),
@@ -227,10 +247,25 @@ _                          # end of italic
         ]
 
     def format(self, line: str) -> str:
+        links: List[str] = []
+        if self._name_linker is not None and "`" in line:
+            # before the other formatting, which makes ``code`` the same code span as a `name`
+            line = _RE_NAME.sub(lambda m: self._link_name(m, links), line)
         for marker, formatter in self._formatters:
             if marker in line:
                 line = formatter(line)
+        if links:
+            line = _RE_NAME_PLACEHOLDER.sub(lambda m: links[int(m.group(1))], line)
         return line
+
+    def _link_name(self, match: re.Match[str], links: List[str]) -> str:
+        assert self._name_linker is not None
+        target = self._name_linker(match.group(1))
+        if target is None:
+            return match.group(0)
+        # the link waits behind a placeholder, so the other formatting cannot change it
+        links.append(f"[{escape_link_text(match.group(1))}]({target})")
+        return f"\ue000{len(links) - 1}\ue001"
 
     def _quote_lower_then(self, line: str) -> str:
         return line.replace("<", "\\<")
@@ -261,25 +296,30 @@ class PreformattedFormatter(Formatter):
 
 
 class ParagraphFormatter(Formatter):
-    def __init__(self, other_formatters: List[Formatter]) -> None:
+    def __init__(self, other_formatters: List[Formatter], line_formatter: Optional[LineFormatter] = None) -> None:
         super().__init__()
         self._other_formatters = other_formatters
+        self._line_formatter = line_formatter or _line_formatter
 
     def _handles(self, line: str) -> bool:
         return not any(other.handles(line) for other in self._other_formatters)
 
     def format(self, lines: List[str]) -> str:
-        return _line_formatter.format(" ".join(lines)) + "\n\n"
+        return self._line_formatter.format(" ".join(lines)) + "\n\n"
 
 
 class ListFormatter(Formatter):
     _strip_lines = False
 
+    def __init__(self, line_formatter: Optional[LineFormatter] = None) -> None:
+        super().__init__()
+        self._line_formatter = line_formatter or _line_formatter
+
     def _handles(self, line: str) -> bool:
         return bool(line.strip().startswith("- ") or (line.startswith(" ") and self._lines))
 
     def format(self, lines: List[str]) -> str:
-        items = ["- %s" % _line_formatter.format(line) for line in self._combine_lines(lines)]
+        items = ["- %s" % self._line_formatter.format(line) for line in self._combine_lines(lines)]
         return "\n".join(items) + "\n\n"
 
     def _combine_lines(self, lines: List[str]) -> Iterator[str]:
@@ -308,7 +348,10 @@ class RulerFormatter(SingleLineFormatter):
 class TableFormatter(Formatter):
     _table_line: Final["re.Pattern[str]"] = re.compile(r"^\| (.* |)\|$")
     _line_splitter: Final["re.Pattern[str]"] = re.compile(r" \|(?= )")
-    _format_cell_content: Final[Callable[[str], str]] = _line_formatter.format
+
+    def __init__(self, line_formatter: Optional[LineFormatter] = None) -> None:
+        super().__init__()
+        self._line_formatter = line_formatter or _line_formatter
 
     def _handles(self, line: str) -> bool:
         return self._table_line.match(line) is not None
@@ -348,4 +391,6 @@ class TableFormatter(Formatter):
         if content.startswith("=") and content.endswith("="):
             content = content[1:-1]
 
-        return f" {_line_formatter.format(content).strip()} "
+        # a `|` left after the inline formatting would end the cell
+        formatted = self._line_formatter.format(content).strip().replace("|", "\\|")
+        return f" {formatted} "

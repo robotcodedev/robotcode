@@ -301,15 +301,35 @@ def test_build_anchor_to_line_map_matches_headers_in_order() -> None:
 
 def test_build_anchor_to_line_map_strips_emphasis_for_matching() -> None:
     """`## Library *BuiltIn*` in markdown renders to `Library BuiltIn`
-    in rich's output (asterisks consumed). The slug keeps the
-    asterisks (matches the auto-linker's behaviour); the line
-    lookup strips them so we still find the header."""
+    in rich's output (asterisks consumed). The anchor follows GitHub,
+    which drops the asterisks; the line lookup strips them too, so we
+    still find the header."""
     from robotcode.repl._pt.doc_viewer import _build_anchor_to_line_map
 
     md = "## Library *BuiltIn*\n\nIntro."
     rendered = "Library BuiltIn\n\nIntro."
     mapping = _build_anchor_to_line_map(md, rendered)
-    assert mapping == {"library-*builtin*": 0}
+    assert mapping == {"library-builtin": 0}
+
+
+def test_build_anchor_to_line_map_numbers_repeated_headings() -> None:
+    """Two headings with the same text get the anchors `x` and `x-1`,
+    each on its own line, as the links of the page number them."""
+    from robotcode.repl._pt.doc_viewer import _build_anchor_to_line_map
+
+    md = "## X\n\nOne.\n\n## X\n\nTwo."
+    rendered = "X\n\nOne.\n\nX\n\nTwo."
+    mapping = _build_anchor_to_line_map(md, rendered)
+    assert mapping == {"x": 0, "x-1": 4}
+
+
+def test_build_anchor_to_line_map_finds_a_heading_with_a_code_span() -> None:
+    from robotcode.repl._pt.doc_viewer import _build_anchor_to_line_map
+
+    md = "### Open `${browser}` Browser\n\nOpens it."
+    rendered = "Open ${browser} Browser\n\nOpens it."
+    mapping = _build_anchor_to_line_map(md, rendered)
+    assert mapping == {"open-browser-browser": 0}
 
 
 def test_build_anchor_to_line_map_covers_a_normalised_markdown_library() -> None:
@@ -352,6 +372,28 @@ def test_follow_current_link_jumps_to_anchor() -> None:
     viewer._current_link = 0
     viewer._follow_current_link()
     assert viewer._body_window.vertical_scroll == 7
+
+
+def test_keyword_index_link_of_a_library_page_jumps_and_goes_back() -> None:
+    """The `#get-match-count` link in the keyword index of the `Collections`
+    page jumps to that keyword's heading, and going back returns."""
+    from robotcode.robot.diagnostics.library_doc import get_library_doc
+    from robotcode.robot.utils.markdown_docs import anchor_link_resolver
+
+    page = get_library_doc("Collections").to_markdown(
+        only_doc=False, header_level=0, link_resolver=anchor_link_resolver
+    )
+    viewer = DocViewer()
+    viewer._load_document("Collections", page)
+
+    viewer._current_link = next(i for i, link in enumerate(viewer._links) if link[2] == "#get-match-count")
+    viewer._follow_current_link()
+
+    line = viewer._body_window.vertical_scroll
+    assert line > 0
+    assert viewer._plain.split("\n")[line].strip() == "Get Match Count"
+    assert viewer._go_back() is True
+    assert viewer._body_window.vertical_scroll == 0
 
 
 def test_load_document_scroll_to_opens_at_matching_line() -> None:

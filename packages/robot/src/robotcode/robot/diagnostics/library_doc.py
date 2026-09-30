@@ -63,6 +63,7 @@ from robot.running.builder.transformers import ResourceBuilder
 from robot.running.outputcapture import OutputCapturer
 from robot.running.runkwregister import RUN_KW_REGISTER
 from robot.utils.escaping import unescape
+from robot.utils.htmlformatters import HeaderFormatter as RobotHeaderFormatter
 from robot.utils.importer import Importer
 from robot.utils.robotpath import find_file as robot_find_file
 from robot.variables import Variables
@@ -86,13 +87,19 @@ from ..utils.markdown_docs import (
     REFERENCE_TYPE,
     LinkResolver,
     ReferenceTarget,
+    code_span_variables,
+    escape_link_text,
     extract_reference_definitions,
+    heading_anchors,
     iter_headings,
     normalize_markdown_doc,
     normalize_reference,
     replace_toc,
+    section_anchors,
+    shift_headings,
+    slugify,
 )
-from ..utils.markdownformatter import MarkDownFormatter
+from ..utils.markdownformatter import MarkDownFormatter, NameLinker
 from ..utils.match import normalize, normalize_namespace
 from ..utils.robot_patching import patch_variable_not_found
 from ..utils.variables import contains_variable, replace_curdir_in_variable_values, search_variable
@@ -213,8 +220,39 @@ ALLOWED_VARIABLES_FILE_EXTENSIONS = (
 ROBOT_DOC_FORMAT = "ROBOT"
 REST_DOC_FORMAT = "REST"
 MARKDOWN_DOC_FORMAT = "MARKDOWN"
+HTML_DOC_FORMAT = "HTML"
 
 _F = TypeVar("_F", bound=Callable[..., Any])
+
+
+def _page_heading_shift(doc_format: str, levels: int) -> Optional[Callable[[str], str]]:
+    """Moves the Markdown headings of documentation on the full page `levels` down.
+
+    Robot Framework's format and Markdown already start at level 2, plain text at
+    level 1. HTML and reStructuredText keep their HTML headings.
+    """
+    if doc_format in (REST_DOC_FORMAT, HTML_DOC_FORMAT):
+        return None
+    if doc_format not in (ROBOT_DOC_FORMAT, MARKDOWN_DOC_FORMAT):
+        levels += 1
+    return lambda doc: shift_headings(doc, levels)
+
+
+def _name_linker(
+    targets: Optional[Mapping[str, ReferenceTarget]], link_resolver: Optional[LinkResolver]
+) -> Optional[NameLinker]:
+    """Links the names in single backticks of documentation in Robot Framework's
+    format to the keyword, section or type they name, as Libdoc links them."""
+    if not targets or link_resolver is None:
+        return None
+
+    def link(name: str) -> Optional[str]:
+        target = targets.get(normalize_reference(name))
+        if target is None or target.kind == REFERENCE_LINK:
+            return None
+        return link_resolver(target.kind, target.name)
+
+    return link
 
 
 def convert_from_rest(text: str) -> str:
@@ -411,6 +449,7 @@ class TypeDoc:
         *,
         link_resolver: Optional[LinkResolver] = None,
         reference_targets: Optional[Mapping[str, ReferenceTarget]] = None,
+        modify_doc_handler: Optional[Callable[[str], str]] = None,
     ) -> str:
         result = ""
 
@@ -421,13 +460,15 @@ class TypeDoc:
             result += "\n\n"
 
             if self.doc_format == ROBOT_DOC_FORMAT:
-                result += MarkDownFormatter().format(self.doc)
+                doc = MarkDownFormatter().format(self.doc)
             elif self.doc_format == REST_DOC_FORMAT:
-                result += convert_from_rest(self.doc)
+                doc = convert_from_rest(self.doc)
             elif self.doc_format == MARKDOWN_DOC_FORMAT:
-                result += normalize_markdown_doc(self.doc, reference_targets, link_resolver)
+                doc = normalize_markdown_doc(self.doc, reference_targets, link_resolver)
             else:
-                result += self.doc
+                doc = self.doc
+
+            result += modify_doc_handler(doc) if modify_doc_handler is not None else doc
 
         if not only_doc:
             if self.members:
@@ -1003,22 +1044,33 @@ class KeywordDoc(SourceEntity):
 
             result += f"##{'#' * header_level} Documentation:\n"
 
-            doc: Optional[str] = None
-            if self.doc_format == ROBOT_DOC_FORMAT:
-                doc = MarkDownFormatter().format(self.doc)
-            elif self.doc_format == REST_DOC_FORMAT:
-                doc = convert_from_rest(self.doc)
-            elif self.doc_format == MARKDOWN_DOC_FORMAT:
-                doc = normalize_markdown_doc(self.doc, targets, link_resolver)
-            else:
-                doc = self.doc
-
-            if doc is not None:
-                if modify_doc_handler is not None:
-                    doc = modify_doc_handler(doc)
-                result += doc
+            doc = self.format_text(self.doc, link_resolver=link_resolver, reference_targets=targets)
+            if modify_doc_handler is not None:
+                doc = modify_doc_handler(doc)
+            result += doc
 
         return result
+
+    def format_text(
+        self,
+        text: str,
+        *,
+        link_resolver: Optional[LinkResolver] = None,
+        reference_targets: Optional[Mapping[str, ReferenceTarget]] = None,
+    ) -> str:
+        """Convert documentation text of this keyword to Markdown.
+
+        Without a `link_resolver`, references become inline code, as in the hover.
+        """
+        targets = reference_targets if reference_targets is not None else self._get_reference_targets()
+
+        if self.doc_format == ROBOT_DOC_FORMAT:
+            return MarkDownFormatter(_name_linker(targets, link_resolver)).format(text)
+        if self.doc_format == REST_DOC_FORMAT:
+            return convert_from_rest(text)
+        if self.doc_format == MARKDOWN_DOC_FORMAT:
+            return normalize_markdown_doc(text, targets, link_resolver)
+        return text
 
     def _get_reference_targets(self) -> Optional[Mapping[str, ReferenceTarget]]:
         """What reference links can point to, only documentation written in Markdown has them."""
@@ -1033,7 +1085,7 @@ class KeywordDoc(SourceEntity):
         targets: Optional[Mapping[str, ReferenceTarget]],
     ) -> str:
         if self.doc_format == ROBOT_DOC_FORMAT:
-            text = MarkDownFormatter().format(text)
+            text = MarkDownFormatter(_name_linker(targets, link_resolver)).format(text)
         elif self.doc_format == MARKDOWN_DOC_FORMAT:
             text = normalize_markdown_doc(text, targets, link_resolver)
         return re.sub(r"\n{3,}", "\n\n", text.strip())
@@ -1588,7 +1640,8 @@ class LibraryDoc:
         return self.get_types(argument.types)
 
     def get_reference_targets(self) -> Dict[str, ReferenceTarget]:
-        """What reference links (`[Name]`) in Markdown documentation of this library can point to.
+        """What reference links (`[Name]`) in Markdown documentation and names in
+        backticks in Robot Framework's format of this library can point to.
 
         The same targets in the same order of precedence as in Libdoc: the default
         sections, keywords and their types, then headings and reference
@@ -1621,6 +1674,12 @@ class LibraryDoc:
                 targets[reference] = ReferenceTarget(REFERENCE_LINK, reference, url)
             for _, title in iter_headings(self.doc):
                 add(title, REFERENCE_SECTION, title)
+        elif self.doc and self.doc_format == ROBOT_DOC_FORMAT:
+            headers = RobotHeaderFormatter()
+            for line in self.doc.splitlines():
+                match = headers.match(line.strip())
+                if match:
+                    add(match.group(2), REFERENCE_SECTION, match.group(2))
 
         return targets
 
@@ -1652,6 +1711,9 @@ class LibraryDoc:
         *,
         link_resolver: Optional[LinkResolver] = None,
     ) -> str:
+        if not only_doc:
+            return self._page_to_markdown(header_level, link_resolver)
+
         with io.StringIO(newline="\n") as result:
 
             def write_lines(*args: str) -> None:
@@ -1666,20 +1728,7 @@ class LibraryDoc:
                     )
                     write_lines(init_markdown, "", "---")
 
-            write_lines(
-                f"#{'#' * header_level} {(self.type.capitalize()) if self.type else 'Unknown'} *{self.name}*",
-                "",
-            )
-
-            if self.version or self.scope:
-                write_lines("|  |  |", "| :--- | :--- |")
-
-                if self.version:
-                    write_lines(f"| **Library Version:** | {self.version} |")
-                if self.scope:
-                    write_lines(f"| **Library Scope:** | {self.scope} |")
-
-                write_lines("", "")
+            result.write(self._get_title_markdown(header_level))
 
             if self.doc:
                 write_lines(f"##{'#' * header_level} Introduction", "")
@@ -1700,18 +1749,187 @@ class LibraryDoc:
                 else:
                     result.write(self.doc)
 
-            if not only_doc:
-                result.write(
-                    self._get_doc_for_keywords(
-                        header_level=header_level, link_resolver=link_resolver, reference_targets=targets
-                    )
-                )
-
             if self.doc_format == MARKDOWN_DOC_FORMAT:
                 # linking `names` in backticks to headings belongs to the Robot format
                 return result.getvalue()
 
             return self._link_inline_links(result.getvalue())
+
+    def _get_title_markdown(self, header_level: int) -> str:
+        result = f"#{'#' * header_level} {(self.type.capitalize()) if self.type else 'Unknown'} *{self.name}*\n\n"
+
+        if self.version or self.scope:
+            result += "|  |  |\n| :--- | :--- |\n"
+
+            if self.version:
+                result += f"| **Library Version:** | {self.version} |\n"
+            if self.scope:
+                result += f"| **Library Scope:** | {self.scope} |\n"
+
+            result += "\n\n"
+
+        return result
+
+    def get_page_keywords(self) -> List[KeywordDoc]:
+        """The keywords of the full page: ordered by name as Libdoc orders them, private keywords left out."""
+        return sorted(
+            (kw for kw in self.keywords.values() if not kw.is_private), key=lambda kw: (kw.name.lower(), kw.name)
+        )
+
+    def get_page_types(self) -> List[TypeDoc]:
+        """The data types of the full page, ordered by name as Libdoc orders them."""
+        return sorted(self.types, key=lambda t: (t.name.lower(), t.name))
+
+    def get_page_anchors(self, page: str, header_level: int = 0) -> Tuple[List[str], Dict[str, str]]:
+        """The anchors of the keyword headings of a full page, in the order of
+        `get_page_keywords`, and of its type headings, by type name.
+
+        Headings are matched by their title, so other headings in a section do
+        not shift them; a keyword whose heading is missing gets an empty anchor.
+        """
+        keyword_headings = iter(section_anchors(page, "Keywords", header_level + 2))
+        keyword_anchors = [
+            next((anchor for title, anchor in keyword_headings if title == kw.name), "")
+            for kw in self.get_page_keywords()
+        ]
+
+        type_anchors: Dict[str, str] = {}
+        type_headings = iter(section_anchors(page, "Data types", header_level + 2))
+        for type_doc in self.get_page_types():
+            title = f"{type_doc.name} ({type_doc.type})"
+            anchor = next((anchor for heading, anchor in type_headings if heading == title), None)
+            if anchor is not None:
+                type_anchors[type_doc.name] = anchor
+
+        return keyword_anchors, type_anchors
+
+    def _page_to_markdown(self, header_level: int, link_resolver: Optional[LinkResolver]) -> str:
+        """The full page of `robotcode doc lib`, the REPL's `.doc` and the documentation view."""
+        head, keywords, tail = self._get_page_parts(header_level, link_resolver)
+
+        # Only the assembled page knows its headings: an anchor can carry a number, and a
+        # private keyword or a section the page leaves out has no heading at all.
+        page = head + keywords + tail
+        keyword_anchors: Dict[str, str] = {}
+        for title, anchor in section_anchors(page, "Keywords", header_level + 2):
+            keyword_anchors.setdefault(normalize_reference(title), anchor)
+        # the headings of the introduction win over the page's own sections, as the targets of Libdoc do
+        section_anchors_by_title: Dict[str, str] = {}
+        introduction: Dict[str, str] = {}
+        in_introduction = False
+        for level, title, anchor in heading_anchors(page):
+            if level == header_level + 2:
+                in_introduction = title == "Introduction"
+                section_anchors_by_title.setdefault(normalize_reference(title), anchor)
+            elif level > header_level + 2 and in_introduction:
+                introduction.setdefault(normalize_reference(title), anchor)
+        section_anchors_by_title.update(introduction)
+        _, type_anchors = self.get_page_anchors(page, header_level)
+
+        def resolver(kind: str, name: str) -> Optional[str]:
+            if kind == REFERENCE_TYPE:
+                anchor = type_anchors.get(name)
+            else:
+                link = link_resolver(kind, name) if link_resolver is not None else None
+                if link is None or not link.startswith("#"):
+                    return link
+                anchors = keyword_anchors if kind == REFERENCE_KEYWORD else section_anchors_by_title
+                anchor = anchors.get(normalize_reference(name))
+            return f"#{anchor}" if anchor is not None else None
+
+        head, keywords, tail = self._get_page_parts(header_level, resolver)
+
+        page = head + keywords + tail
+        if keywords:
+            index_anchors, _ = self.get_page_anchors(page, header_level)
+            index = "\n".join(
+                f"- [{escape_link_text(kw.name)}](#{anchor})"
+                for kw, anchor in zip(self.get_page_keywords(), index_anchors)
+                if anchor
+            )
+            page = f"{head}{index}\n\n{keywords}{tail}"
+
+        if self.doc_format not in (REST_DOC_FORMAT, HTML_DOC_FORMAT):
+            page = code_span_variables(page)
+
+        return f"{page.rstrip()}\n"
+
+    def _get_page_parts(self, header_level: int, link_resolver: Optional[LinkResolver]) -> Tuple[str, str, str]:
+        """The page up to the keyword entries, the keyword entries, and the rest of the page."""
+        targets = self.get_reference_targets()
+        separator = "\n\n---\n\n"
+
+        head = self._get_title_markdown(header_level)
+        if self.doc:
+            head += f"##{'#' * header_level} Introduction\n\n"
+            head += self._get_page_introduction(header_level, link_resolver, targets).strip()
+
+        if any(v for v in self.inits.values() if v.arguments):
+            head = f"{head.rstrip()}{separator}##{'#' * header_level} Importing\n\n"
+            head += separator.join(
+                self._get_page_entry(kw, header_level, link_resolver, targets) for kw in self.inits.values()
+            )
+
+        keywords = ""
+        page_keywords = self.get_page_keywords()
+        if page_keywords:
+            head = f"{head.rstrip()}{separator}##{'#' * header_level} Keywords\n\n"
+            keywords = separator.join(
+                self._get_page_entry(kw, header_level, link_resolver, targets) for kw in page_keywords
+            )
+
+        tail = ""
+        if self.types:
+            if not keywords:
+                head = head.rstrip()
+            tail += f"{separator}##{'#' * header_level} Data types\n\n"
+            tail += separator.join(
+                t.to_markdown(
+                    header_level=header_level + 1,
+                    link_resolver=link_resolver,
+                    reference_targets=targets,
+                    # headings in the documentation sit below the type's `Documentation:`
+                    modify_doc_handler=_page_heading_shift(t.doc_format, header_level + 3),
+                ).strip()
+                for t in self.get_page_types()
+            )
+
+        return head.lstrip(), keywords, tail
+
+    def _get_page_introduction(
+        self, header_level: int, link_resolver: Optional[LinkResolver], targets: Mapping[str, ReferenceTarget]
+    ) -> str:
+        if self.doc_format == ROBOT_DOC_FORMAT:
+            doc = MarkDownFormatter(_name_linker(targets, link_resolver)).format(self.doc)
+            if "%TOC%" in doc:
+                doc = self._add_toc(doc, only_doc=False)
+        elif self.doc_format == REST_DOC_FORMAT:
+            doc = convert_from_rest(self.doc)
+        elif self.doc_format == MARKDOWN_DOC_FORMAT:
+            doc = normalize_markdown_doc(self.doc, targets, link_resolver)
+            doc = replace_toc(doc, self._get_toc_sections(only_doc=False))
+        else:
+            doc = self.doc
+
+        # the headings of the introduction sit below `Introduction`, its table of contents is already built
+        shift = _page_heading_shift(self.doc_format, header_level + 1)
+        return shift(doc) if shift is not None else doc
+
+    @staticmethod
+    def _get_page_entry(
+        kw: KeywordDoc,
+        header_level: int,
+        link_resolver: Optional[LinkResolver],
+        targets: Mapping[str, ReferenceTarget],
+    ) -> str:
+        return kw.to_markdown(
+            header_level=header_level + 2,
+            add_type=False,
+            # headings in the documentation sit below the keyword's `Documentation:`
+            modify_doc_handler=_page_heading_shift(kw.doc_format, header_level + 3),
+            link_resolver=link_resolver,
+            reference_targets=targets,
+        ).strip()
 
     @property
     def source_or_origin(self) -> Optional[str]:
@@ -1734,51 +1952,10 @@ class LibraryDoc:
 
         def repl(m: re.Match) -> str:  # type: ignore
             if m.group(2) in headers:
-                return f"[{m.group(2)!s}](\\#{str(m.group(2)).lower().replace(' ', '-')})"
+                return f"[{m.group(2)!s}](#{slugify(str(m.group(2)))})"
             return str(m.group(0))
 
         return str(RE_INLINE_LINK.sub(repl, text))
-
-    def _get_doc_for_keywords(
-        self,
-        header_level: int = 2,
-        link_resolver: Optional[LinkResolver] = None,
-        reference_targets: Optional[Mapping[str, ReferenceTarget]] = None,
-    ) -> str:
-        result = ""
-        if any(v for v in self.inits.values() if v.arguments):
-            result += "\n---\n\n"
-            result += f"\n##{'#' * header_level} Importing\n\n"
-
-            first = True
-
-            for kw in self.inits.values():
-                if not first:
-                    result += "\n---\n"
-                first = False
-
-                result += "\n" + kw.to_markdown(
-                    add_type=False, link_resolver=link_resolver, reference_targets=reference_targets
-                )
-
-        if self.keywords:
-            result += "\n---\n\n"
-            result += f"\n##{'#' * header_level} Keywords\n\n"
-
-            first = True
-
-            for kw in self.keywords.values():
-                if not first:
-                    result += "\n---\n"
-                first = False
-
-                result += "\n" + kw.to_markdown(
-                    header_level=header_level,
-                    add_type=False,
-                    link_resolver=link_resolver,
-                    reference_targets=reference_targets,
-                )
-        return result
 
     def _add_toc(self, doc: str, only_doc: bool = True) -> str:
         toc = self._create_toc(doc, only_doc)
@@ -1790,17 +1967,17 @@ class LibraryDoc:
         if not only_doc:
             if any(v for v in self.inits.values() if v.arguments):
                 entries.append("Importing")
-            if self.keywords:
+            if self.get_page_keywords():
                 entries.append("Keywords")
-            # TODO if self.data_types:
-            #    entries.append("Data types")
+            if self.types:
+                entries.append("Data types")
         return entries
 
     def _create_toc(self, doc: str, only_doc: bool = True) -> str:
         entries = re.findall(r"^##\s+(.+)", doc, flags=re.MULTILINE)
         entries.extend(self._get_toc_sections(only_doc))
 
-        return "\n".join(f"- [{entry}](#{entry.lower().replace(' ', '-')})" for entry in entries)
+        return "\n".join(f"- [{entry}](#{slugify(entry)})" for entry in entries)
 
 
 def var_repr(value: Any) -> str:
@@ -2550,6 +2727,18 @@ def get_library_doc(
     return libdoc
 
 
+if RF_VERSION >= (7, 0):
+
+    def _get_scope_name(lib: Any) -> str:
+        # the scope is an enum since RF 7.0, Libdoc shows its name
+        return str(lib.scope.name)
+
+else:
+
+    def _get_scope_name(lib: Any) -> str:
+        return str(lib.scope)
+
+
 def get_library_doc_from_library(
     lib: Any,
     name: str,
@@ -2586,7 +2775,7 @@ def get_library_doc_from_library(
         source=real_source,
         line_no=lib.lineno if lib is not None else -1,
         version=str(lib.version) if lib is not None else "",
-        scope=str(lib.scope) if lib is not None else ROBOT_DEFAULT_SCOPE,
+        scope=_get_scope_name(lib) if lib is not None else ROBOT_DEFAULT_SCOPE,
         doc_format=(str(lib.doc_format) or ROBOT_DOC_FORMAT) if lib is not None else ROBOT_DOC_FORMAT,
         module_spec=(
             module_spec

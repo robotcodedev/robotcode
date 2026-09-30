@@ -8,13 +8,19 @@ text. All functions are pure and leave fenced code blocks untouched.
 """
 
 import re
+import unicodedata
 from typing import Callable, Dict, Iterable, Iterator, List, Mapping, NamedTuple, Optional, Tuple
+
+from robot.variables.search import search_variable
 
 __all__ = [
     "LinkResolver",
     "ReferenceTarget",
     "anchor_link_resolver",
+    "code_span_variables",
+    "escape_link_text",
     "extract_reference_definitions",
+    "heading_anchors",
     "iter_headings",
     "normalize_admonitions",
     "normalize_markdown_doc",
@@ -22,6 +28,7 @@ __all__ = [
     "render_toc",
     "replace_toc",
     "resolve_reference_links",
+    "section_anchors",
     "shift_headings",
     "slugify",
 ]
@@ -48,23 +55,88 @@ class ReferenceTarget(NamedTuple):
 # or `None` if it is shown as inline code.
 LinkResolver = Callable[[str, str], Optional[str]]
 
-_RE_FENCE = re.compile(r"^ {0,3}(`{3,}|~{3,})")
+# indented more than three spaces a fence belongs to a list item
+_RE_FENCE = re.compile(r"^\s*(`{3,}|~{3,})")
 _RE_ATX_HEADING = re.compile(r"^( {0,3})(#{1,6})(?=\s|$)(.*)$")
 _RE_HEADING_TITLE = re.compile(r"^ {0,3}(#{1,6})\s+(.+?)(?:\s+#+)?\s*$")
 _RE_ADMONITION = re.compile(r"^(\s*(?:>\s*)+)\[!([A-Za-z]+)\][ \t]*(.*?)\s*$")
 _RE_DEFINITION = re.compile(r"^ {0,3}\[([^\]\n]+)\]:[ \t]*(\S+)")
 _RE_CODE_SPAN = re.compile(r"(`+)(?:(?!\1).)+?\1(?!`)")
 _RE_REFERENCE = re.compile(r"(?<![\\!\]])\[([^\[\]\n]+)\](?:\[([^\[\]\n]*)\])?(?![(\[])")
+_RE_LIST_ITEM = re.compile(r"^( {0,3})([-+*]|\d{1,9}[.)])(?: +|$)")
+# a heading or a thematic break ends its block, as a blank line does
+_RE_BLOCK_END = re.compile(r"^ {0,3}(?:#{1,6}(?:\s|$)|([-*_])(?: *\1){2,} *$)")
+_RE_HTML_BLOCK_START = re.compile(
+    r"^ {0,3}<(?:"
+    r"(!--|\?|!\[CDATA\[|![A-Za-z])"  # a comment, a processing instruction, CDATA or a declaration
+    r"|(pre|script|style|textarea)(?=[\s>]|$)"  # raw text, which may contain blank lines
+    r"|/?([A-Za-z][A-Za-z0-9-]*)(?=[\s/>]|$)"  # any other tag
+    r")",
+    re.IGNORECASE,
+)
+# an HTML block of another tag is a line with only a complete opening or closing tag
+_RE_HTML_TAG_LINE = re.compile(r"^ {0,3}(?:<[A-Za-z][A-Za-z0-9-]*(?:\s[^<>]*)?/?>|</[A-Za-z][A-Za-z0-9-]*\s*>)\s*$")
+# the tags that start an HTML block wherever they stand, as CommonMark lists them
+_HTML_BLOCK_TAGS = frozenset(
+    """address article aside base basefont blockquote body caption center col colgroup dd details dialog dir
+    div dl dt fieldset figcaption figure footer form frame frameset h1 h2 h3 h4 h5 h6 head header hr html
+    iframe legend li link main menu menuitem nav noframes ol optgroup option p param search section summary
+    table tbody td tfoot th thead title tr track ul""".split()
+)
+_HTML_BLOCK_SPECIAL_ENDS = {"!--": "-->", "?": "?>", "![cdata[": "]]>"}
+# code spans, link targets and inline HTML such as autolinks keep their text
+_RE_NO_TEXT = re.compile(r"(`+)(?:(?!\1).)+?\1(?!`)|\]\([^)]*\)|(?<!\\)<[A-Za-z/!?][^<>]*>")
+_RE_BACKTICKS = re.compile(r"`+")
+# the markup of a heading's text that GitHub leaves out of its anchor
+_RE_LINK_OR_IMAGE = re.compile(r"!?\[([^\]]*)\]\([^)]*\)")
+_RE_TAG = re.compile(r"</?[A-Za-z][^<>]*>")
+_RE_UNDERSCORE_EMPHASIS = re.compile(r"(?<![\w\\])(_{1,2})(?=\S)(.+?)(?<=\S)\1(?!\w)")
+
+
+def _is_slug_character(character: str) -> bool:
+    category = unicodedata.category(character)
+    return category[0] in "LM" or category in ("Nd", "Nl", "Pc") or character in "- "
+
+
+def _heading_text(title: str) -> str:
+    """The text of a heading as it is rendered: links and images by their text,
+    without HTML tags and emphasis markers. Code spans keep their content."""
+    result: List[str] = []
+    position = 0
+    for code in _RE_CODE_SPAN.finditer(title):
+        result.append(_strip_inline_markup(title[position : code.start()]))
+        result.append(code.group(0))
+        position = code.end()
+    result.append(_strip_inline_markup(title[position:]))
+    return "".join(result)
+
+
+def _strip_inline_markup(text: str) -> str:
+    text = _RE_LINK_OR_IMAGE.sub(r"\1", text)
+    text = _RE_TAG.sub("", text)
+    return _RE_UNDERSCORE_EMPHASIS.sub(r"\2", text)
 
 
 def slugify(title: str) -> str:
-    """The anchor of a heading: lower case, spaces replaced by dashes."""
-    return title.lower().replace(" ", "-")
+    """The anchor GitHub gives a heading, by github-slugger's rule applied to the
+    rendered text: lower case, characters other than letters, marks, digits, `_`,
+    `-` and spaces removed, each space replaced by a dash."""
+    return "".join(c for c in _heading_text(title).lower() if _is_slug_character(c)).replace(" ", "-")
+
+
+_RE_LINK_TEXT_SPECIAL = re.compile(r"([\\`*\[\]<])")
+
+
+def escape_link_text(text: str) -> str:
+    """Escape what would end or change the text of a Markdown link. Underscores stay,
+    variables such as `${a_b}` become inline code later and would show the escape."""
+    return _RE_LINK_TEXT_SPECIAL.sub(r"\\\1", text)
 
 
 def anchor_link_resolver(kind: str, name: str) -> Optional[str]:
     """A `LinkResolver` for pages that show a whole library: keywords and
-    sections have a heading there, types have none and stay inline code."""
+    sections have a heading there. The heading of a type can carry a number,
+    so only the page itself knows where types go, here they stay inline code."""
     return f"#{slugify(name)}" if kind in (REFERENCE_KEYWORD, REFERENCE_SECTION) else None
 
 
@@ -108,6 +180,36 @@ def iter_headings(text: str) -> Iterator[Tuple[int, str]]:
         match = None if in_code else _RE_HEADING_TITLE.match(line)
         if match:
             yield len(match.group(1)), match.group(2)
+
+
+def heading_anchors(text: str) -> List[Tuple[int, str, str]]:
+    """Level, title and anchor of every ATX heading, in document order.
+
+    A repeated anchor is numbered `-1`, `-2`, ... as GitHub numbers it.
+    """
+    occurrences: Dict[str, int] = {}
+    result: List[Tuple[int, str, str]] = []
+    for level, title in iter_headings(text):
+        slug = anchor = slugify(title)
+        while anchor in occurrences:
+            occurrences[slug] += 1
+            anchor = f"{slug}-{occurrences[slug]}"
+        occurrences[anchor] = 0
+        result.append((level, title, anchor))
+    return result
+
+
+def section_anchors(text: str, section: str, level: int = 2) -> List[Tuple[str, str]]:
+    """Title and anchor of the headings one level below the heading `section`
+    at `level`, up to the next heading at `level` or above."""
+    result: List[Tuple[str, str]] = []
+    in_section = False
+    for heading_level, title, anchor in heading_anchors(text):
+        if heading_level <= level:
+            in_section = heading_level == level and title == section
+        elif in_section and heading_level == level + 1:
+            result.append((title, anchor))
+    return result
 
 
 def render_toc(text: str, extra_entries: Iterable[str] = ()) -> str:
@@ -205,6 +307,134 @@ def resolve_reference_links(
 
     return "\n".join(
         line if in_code or _RE_DEFINITION.match(line) else resolve(line) for line, in_code in _iter_lines(text)
+    )
+
+
+def _html_block_end(line: str) -> Optional[str]:
+    """How the HTML block that `line` starts ends: with a marker, with a blank
+    line (`""`), or `None` if it starts none."""
+    match = _RE_HTML_BLOCK_START.match(line)
+    if match is None:
+        return None
+    special, raw, tag = match.groups()
+    if special:
+        return _HTML_BLOCK_SPECIAL_ENDS.get(special.lower(), ">")
+    if raw:
+        return f"</{raw.lower()}>"
+    if tag.lower() in _HTML_BLOCK_TAGS or _RE_HTML_TAG_LINE.match(line):
+        return ""
+    return None
+
+
+def _indentation(line: str) -> int:
+    expanded = line.expandtabs(4)
+    return len(expanded) - len(expanded.lstrip(" "))
+
+
+def _iter_text_lines(text: str) -> Iterator[Tuple[str, bool]]:
+    """Yield every line together with whether it is text, not part of a
+    fenced or indented code block or of an HTML block.
+
+    Lines indented below a list item continue it; code in a list item is
+    indented four columns more than its text.
+    """
+    block_ended = True
+    in_indented_code = False
+    html_end: Optional[str] = None
+    list_indent: Optional[int] = None
+    for line, in_code in _iter_lines(text):
+        blank = not line.strip()
+        if in_code:
+            in_indented_code = False
+            block_ended = True
+            yield line, False
+            continue
+        if html_end is not None:
+            # an HTML block ends with its end marker or, without one, with a blank line
+            if (html_end and html_end in line.lower()) or (not html_end and blank):
+                html_end = None
+                block_ended = True
+            yield line, False
+            continue
+        if blank:
+            block_ended = True
+            yield line, False
+            continue
+
+        indent = _indentation(line)
+        list_item = _RE_LIST_ITEM.match(line)
+        code_indent = 4 if list_indent is None else list_indent + 4
+        if (in_indented_code or block_ended) and not list_item and indent >= code_indent:
+            in_indented_code = True
+            block_ended = False
+            yield line, False
+            continue
+        in_indented_code = False
+
+        if list_item:
+            list_indent = len(list_item.group(0))
+        elif list_indent is not None and block_ended and indent < list_indent:
+            list_indent = None
+
+        if block_ended:
+            end = _html_block_end(line)
+            if end is not None:
+                html_end = None if end and end in line.lower()[line.index("<") + 1 :] else end
+                block_ended = html_end is None
+                yield line, False
+                continue
+
+        block_ended = bool(_RE_BLOCK_END.match(line))
+        yield line, True
+
+
+def _code_span(text: str) -> str:
+    """`text` as inline code, with a fence longer than any run of backticks in it."""
+    fence = "`" * (max((len(run) for run in _RE_BACKTICKS.findall(text)), default=0) + 1)
+    padding = " " if text.startswith("`") or text.endswith("`") else ""
+    return f"{fence}{padding}{text}{padding}{fence}"
+
+
+def _code_span_variables_in(text: str) -> str:
+    result: List[str] = []
+    while True:
+        match = search_variable(text, "$", ignore_errors=True)
+        if match.start < 0:
+            break
+        end = match.end
+        # variables that follow each other directly share one code span: `${TEMPDIR}${/}`
+        while (following := search_variable(text[end:], "$", ignore_errors=True)).start == 0:
+            end += following.end
+        result.append(text[: match.start] + _code_span(text[match.start : end]))
+        text = text[end:]
+    result.append(text)
+    return "".join(result)
+
+
+def code_span_variables(text: str) -> str:
+    """Write every scalar variable in text, such as `${name}` or `${name}[0]`,
+    as inline code, so that Markdown renderers with math support do not show
+    `${x} and ${y}` as a formula.
+
+    Code blocks, HTML blocks, code spans, link targets, inline HTML and
+    escaped variables (`\\${x}`) stay as they are.
+    """
+    if "${" not in text:
+        return text
+
+    def convert(line: str) -> str:
+        result: List[str] = []
+        position = 0
+        for match in _RE_NO_TEXT.finditer(line):
+            result.append(_code_span_variables_in(line[position : match.start()]))
+            result.append(match.group(0))
+            position = match.end()
+        result.append(_code_span_variables_in(line[position:]))
+        return "".join(result)
+
+    return "\n".join(
+        convert(line) if is_text and not _RE_DEFINITION.match(line) else line
+        for line, is_text in _iter_text_lines(text)
     )
 
 

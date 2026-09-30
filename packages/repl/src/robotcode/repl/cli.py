@@ -256,8 +256,8 @@ REPL_BASE_OPTIONS = [
     ),
 ]
 
-# `repl`-only options (interactive session setup + snippet files).
-SHELL_OPTIONS = [
+# Variables and the python path, shared by `repl` and `doc`.
+VARIABLE_AND_PATH_OPTIONS = [
     click.option(
         "-v",
         "--variable",
@@ -283,6 +283,11 @@ SHELL_OPTIONS = [
         help="Additional locations where to search test libraries"
         " and other extensions when they are imported. See `robot --pythonpath` option.",
     ),
+]
+
+# `repl`-only options (interactive session setup + snippet files).
+SHELL_OPTIONS = [
+    *VARIABLE_AND_PATH_OPTIONS,
     click.option(
         "-k",
         "--show-keywords",

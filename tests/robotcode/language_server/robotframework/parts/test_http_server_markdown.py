@@ -34,5 +34,5 @@ def test_references_link_to_the_headings_of_the_page(tmp_path: Path) -> None:
     assert "Intro, see [Set Log Level](#set-log-level) and [A section](#a-section)." in content
     assert "Logs, see [Set Log Level](#set-log-level)." in content
     # the headings the links point to
-    assert "\n## A section\n" in content
-    assert "\n# Set Log Level\n" in content
+    assert "\n### A section\n" in content
+    assert "\n### Set Log Level\n" in content

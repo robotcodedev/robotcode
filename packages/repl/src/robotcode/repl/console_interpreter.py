@@ -1246,7 +1246,7 @@ class ConsoleInterpreter(BaseInterpreter):
 
         self.show_doc(
             lib_doc.name,
-            lib_doc.to_markdown(only_doc=False, header_level=1, link_resolver=anchor_link_resolver),
+            lib_doc.to_markdown(only_doc=False, header_level=0, link_resolver=anchor_link_resolver),
         )
 
     def _resolve_doc_target(self, arg: str) -> Tuple[Optional[LibraryDoc], Optional[str]]:

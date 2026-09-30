@@ -2,10 +2,15 @@
 
 from typing import Optional
 
+import pytest
+
 from robotcode.robot.utils.markdown_docs import (
     ReferenceTarget,
     anchor_link_resolver,
+    code_span_variables,
+    escape_link_text,
     extract_reference_definitions,
+    heading_anchors,
     normalize_admonitions,
     normalize_markdown_doc,
     normalize_reference,
@@ -27,9 +32,39 @@ TARGETS = {
 }
 
 
-def test_slugify_matches_the_anchors_of_the_robot_format_rendering() -> None:
-    assert slugify("String representations") == "string-representations"
-    assert slugify("Library *BuiltIn*") == "library-*builtin*"
+def test_slugify_follows_github() -> None:
+    assert slugify("Should Be Equal") == "should-be-equal"
+    assert slugify("`TODAY` and `NOW`") == "today-and-now"
+    assert slugify("Open ${browser} Browser") == "open-browser-browser"
+    assert slugify("Größe prüfen") == "größe-prüfen"
+    assert slugify("a  b") == "a--b"
+    assert slugify("Evaluate (Python)") == "evaluate-python"
+    assert slugify("Library *BuiltIn*") == "library-builtin"
+    assert slugify("snake_case - dashed") == "snake_case---dashed"
+
+
+def test_slugify_uses_the_rendered_text_of_a_heading() -> None:
+    assert slugify("Kw *star* _under_") == "kw-star-under"
+    assert slugify("See [the docs](http://example.com/x_y) now") == "see-the-docs-now"
+    assert slugify("A <b>bold</b> word") == "a-bold-word"
+    assert slugify("`_x_` value") == "_x_-value"
+    assert slugify("Get_Value") == "get_value"
+
+
+def test_escape_link_text() -> None:
+    assert escape_link_text("Get [x] Item") == "Get \\[x\\] Item"
+    assert escape_link_text("Set ${a_b} To *c*") == "Set ${a_b} To \\*c\\*"
+
+
+def test_heading_anchors_number_repeated_anchors() -> None:
+    text = "# Get Length\n\n```\n# Get Length\n```\n\n## Get Length\n\n### Get Length 1\n\n## Get-Length"
+
+    assert heading_anchors(text) == [
+        (1, "Get Length", "get-length"),
+        (2, "Get Length", "get-length-1"),
+        (3, "Get Length 1", "get-length-1-1"),
+        (2, "Get-Length", "get-length-2"),
+    ]
 
 
 def test_shift_headings_moves_atx_headings_one_level_down() -> None:
@@ -154,3 +189,65 @@ def test_normalize_markdown_doc_applies_every_rule() -> None:
     )
     # without targets the references stay as they are
     assert "[Set Log Level]" in normalize_markdown_doc(text)
+
+
+def test_code_span_variables_writes_variables_in_text_as_code() -> None:
+    assert code_span_variables("Use ${x} and ${y}.") == "Use `${x}` and `${y}`."
+    assert code_span_variables("Item ${x}[0] and ${a${b}} stay whole.") == "Item `${x}[0]` and `${a${b}}` stay whole."
+    assert code_span_variables("### Set ${a} To ${b}") == "### Set `${a}` To `${b}`"
+    assert code_span_variables("- [Set ${a} To ${b}](#set-a-to-b)") == "- [Set `${a}` To `${b}`](#set-a-to-b)"
+
+
+def test_code_span_variables_leaves_code_html_links_and_escapes_alone() -> None:
+    unchanged = [
+        "Already `${x}` code.",
+        "```robotframework\nLog    ${x}\n```",
+        "Text.\n\n    Log    ${x}\n\n    Log    ${y}",
+        "<div>${x}</div>",
+        "<pre>\n${x}\n\n${y}\n</pre>",
+        "<!-- ${x}\n\n${y} -->",
+        'A [t](http://h/${x}) link and <a href="${x}">tag</a>.',
+        "[ref]: http://h/${x}",
+        "Escaped \\${x}.",
+        "A list @{list}, a dict &{dict} and $x.",
+    ]
+
+    for text in unchanged:
+        assert code_span_variables(text) == text
+
+
+def test_code_span_variables_after_code_and_html_blocks() -> None:
+    text = "```\n${x}\n```\n${y}\n\n<div>\n${x}\n</div>\n\nMore ${z}.\n\n    ${x}\nLazy ${y}."
+
+    assert code_span_variables(text) == (
+        "```\n${x}\n```\n`${y}`\n\n<div>\n${x}\n</div>\n\nMore `${z}`.\n\n    ${x}\nLazy `${y}`."
+    )
+
+
+def test_code_span_variables_joins_adjacent_variables() -> None:
+    assert code_span_variables("File ${TEMPDIR}${/}foo.txt here.") == "File `${TEMPDIR}${/}`foo.txt here."
+
+
+def test_code_span_variables_fences_a_variable_with_a_backtick() -> None:
+    assert code_span_variables("Odd ${a`b} name.") == "Odd ``${a`b}`` name."
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "#### Documentation:\n    Log    ${x}",
+        "1. Example:\n    ```robotframework\n    Log    ${x}\n    ```",
+        "- item\n\n        code ${x}",
+        "<div>\n${x}\n</div>",
+        "<pre>\n${x}\n\n${y}\n</pre>",
+    ],
+    ids=["code-after-heading", "fence-in-list", "code-in-list", "html-block", "pre-with-blank-line"],
+)
+def test_code_span_variables_leaves_blocks_alone(text: str) -> None:
+    assert code_span_variables(text) == text
+
+
+def test_code_span_variables_in_list_paragraphs_and_inline_html() -> None:
+    assert code_span_variables("- item\n\n    continued ${x}") == "- item\n\n    continued `${x}`"
+    assert code_span_variables("<b>Note:</b> ${x}") == "<b>Note:</b> `${x}`"
+    assert code_span_variables("```\n${x}\n```\nAfter ${y}") == "```\n${x}\n```\nAfter `${y}`"

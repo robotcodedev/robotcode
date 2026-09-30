@@ -544,7 +544,7 @@ def test_doc_uses_diagnostics_to_markdown(monkeypatch: pytest.MonkeyPatch) -> No
     )
     app = _StubApp()
     _make_interp(app)._dispatch_dot_command(".doc FakeLib")
-    assert app.paged == ["FakeLib\n=======\n\n## Library *FakeLib* (only_doc=False, header=1)"]
+    assert app.paged == ["FakeLib\n=======\n\n## Library *FakeLib* (only_doc=False, header=0)"]
 
 
 def test_doc_resource_uses_resource_doc_renderer(monkeypatch: pytest.MonkeyPatch) -> None:

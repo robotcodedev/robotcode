@@ -5,6 +5,7 @@ version, argument descriptions exist with Robot Framework 7.5 or newer, and
 everything else renders exactly as before.
 """
 
+import re
 from pathlib import Path
 from typing import Dict, Optional
 
@@ -54,7 +55,7 @@ ROBOT_FORMAT_LIBRARY_MARKDOWN = (
     "### Library *GoldenRobotLib*\n\n|  |  |\n| :--- | :--- |\n| **Library Scope:** | GLOBAL |\n\n\n"
     "#### Introduction\n\nA library documented in the Robot format.\n\n\n"
     "- [First section](#first-section)\n- [Second section](#second-section)\n\n\n"
-    "## First section\n\nUses [Second section](\\#second-section) and `Do Something`.\n\n\n"
+    "## First section\n\nUses [Second section](#second-section) and `Do Something`.\n\n\n"
     "### Nested\n\nText with **bold**.\n\n\n## Second section\n\nMore text.\n"
 )
 ROBOT_FORMAT_KEYWORD_MARKDOWN = (
@@ -137,19 +138,22 @@ def _keywords(doc: LibraryDoc) -> Dict[str, KeywordDoc]:
     return {kw.name: kw for kw in doc.keywords.keywords}
 
 
-def _without_version_specifics(markdown: str) -> str:
-    # the scope is an enum since RF 7.0
-    return markdown.replace("Scope.GLOBAL", "GLOBAL")
-
-
 def test_robot_format_library_renders_as_before(tmp_path: Path) -> None:
     lib_file = tmp_path / "GoldenRobotLib.py"
     lib_file.write_text(ROBOT_FORMAT_LIBRARY, encoding="utf-8")
 
     doc = get_library_doc(str(lib_file))
 
-    assert _without_version_specifics(doc.to_markdown()) == ROBOT_FORMAT_LIBRARY_MARKDOWN
+    assert doc.to_markdown() == ROBOT_FORMAT_LIBRARY_MARKDOWN
     assert _keywords(doc)["Do Something"].to_markdown() == ROBOT_FORMAT_KEYWORD_MARKDOWN
+
+
+def test_library_scope_is_named_as_libdoc_names_it() -> None:
+    doc = get_library_doc("Collections")
+
+    assert doc.scope == "GLOBAL"
+    # the hover of a library import
+    assert "| **Library Scope:** | GLOBAL |" in doc.to_markdown()
 
 
 def test_variables_file_renders_as_before(tmp_path: Path) -> None:
@@ -158,7 +162,7 @@ def test_variables_file_renders_as_before(tmp_path: Path) -> None:
 
     doc = get_variables_doc(str(variables_file))
 
-    assert _without_version_specifics(doc.to_markdown()) == VARIABLES_FILE_MARKDOWN
+    assert doc.to_markdown() == VARIABLES_FILE_MARKDOWN
 
 
 def test_markdown_library_is_normalised_on_every_robot_framework_version(tmp_path: Path) -> None:
@@ -168,7 +172,7 @@ def test_markdown_library_is_normalised_on_every_robot_framework_version(tmp_pat
     doc = get_library_doc(str(lib_file))
 
     assert doc.errors is None
-    assert _without_version_specifics(doc.to_markdown()) == MARKDOWN_LIBRARY_MARKDOWN
+    assert doc.to_markdown() == MARKDOWN_LIBRARY_MARKDOWN
     assert _keywords(doc)["Do Something"].to_markdown() == MARKDOWN_KEYWORD_MARKDOWN
     assert "[unknown] stays as it is." in _keywords(doc)["Other Keyword"].to_markdown()
 
@@ -417,3 +421,42 @@ def test_type_documentation_of_a_markdown_library_is_normalised(tmp_path: Path) 
     assert "The colors `Paint` accepts." in shade
     assert "> **Note**" in shade
     assert "- `RED`" in shade
+
+
+needs_robot_format_builtin = pytest.mark.skipif(
+    RF_VERSION >= (7, 5), reason="the standard libraries use the Robot format before RF 7.5"
+)
+
+
+def _unescaped_pipes(row: str) -> int:
+    return row.replace("\\|", "").count("|")
+
+
+@needs_robot_format_builtin
+def test_pipe_in_a_table_cell_of_should_match_regexp() -> None:
+    hover = _keywords(get_library_doc("BuiltIn"))["Should Match Regexp"].to_markdown()
+
+    lines = hover.splitlines()
+    row_index = next(i for i, line in enumerate(lines) if "(Foo" in line)
+    header_index = row_index
+    while lines[header_index - 1].startswith("|"):
+        header_index -= 1
+
+    assert "(Foo\\|Bar)" in lines[row_index]
+    assert _unescaped_pipes(lines[row_index]) == _unescaped_pipes(lines[header_index])
+
+
+@needs_robot_format_builtin
+def test_link_targets_of_the_builtin_import_hover() -> None:
+    hover = get_library_doc("BuiltIn").to_markdown()
+
+    assert "(http://docs.python.org/library/functions.html#eval)" in hover
+    assert "[str](#str)" in hover
+    assert not re.findall(r"\]\([^)]*\\#", hover)
+
+
+@needs_rf75
+def test_toc_of_the_datetime_import_hover_uses_github_anchors() -> None:
+    hover = get_library_doc("DateTime").to_markdown()
+
+    assert "[`TODAY` and `NOW`](#today-and-now)" in hover
