@@ -7,7 +7,7 @@ field.
 
 import pickle
 
-from robotcode.robot.diagnostics.library_doc import ArgumentInfo, KeywordArgumentKind, KeywordDoc
+from robotcode.robot.diagnostics.library_doc import ArgumentInfo, KeywordArgumentKind, KeywordDoc, LibraryDoc
 
 
 def _keyword() -> KeywordDoc:
@@ -77,3 +77,22 @@ def test_state_without_the_documentation_fields_yields_the_defaults() -> None:
     assert legacy.arguments[0].type_docs is None
     assert legacy.arguments[0].name == "shade"
     assert legacy.name == "Paint"
+
+
+def test_loaded_without_arguments_survives_a_pickle_round_trip() -> None:
+    doc = LibraryDoc(name="StrictLib", loaded_without_arguments=True)
+
+    loaded = pickle.loads(pickle.dumps(doc))
+
+    assert loaded.loaded_without_arguments is True
+
+
+def test_library_state_without_loaded_without_arguments_yields_a_falsy_value() -> None:
+    state = LibraryDoc(name="StrictLib", loaded_without_arguments=True).__getstate__()
+    del state["loaded_without_arguments"]
+
+    legacy = LibraryDoc.__new__(LibraryDoc)
+    legacy.__setstate__(state)
+
+    assert not legacy.loaded_without_arguments
+    assert legacy.name == "StrictLib"

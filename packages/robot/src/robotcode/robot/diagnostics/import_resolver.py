@@ -211,6 +211,15 @@ class ImportResolver:
                         alias=None,
                     )
                     self._libraries[entry.alias or entry.name or entry.import_name] = entry
+
+                    for err in library_doc.errors or []:
+                        self._append_diagnostics(
+                            range=Range.zero(),
+                            message=f"Can't import default library '{library}': {err.message}",
+                            severity=DiagnosticSeverity.ERROR,
+                            source="Robot",
+                            code=err.type_name,
+                        )
                 except (SystemExit, KeyboardInterrupt):
                     raise
                 except BaseException as e:
@@ -319,6 +328,13 @@ class ImportResolver:
     #  Type-specific import methods (like RF: _import_library etc.)
     # ------------------------------------------------------------------
 
+    def _record_dependency_meta(self, key: str, meta: Optional[Any]) -> None:
+        # A None meta keeps the namespace out of the namespace cache, so a later
+        # import of the same name (other arguments, alias) must not replace it.
+        if key in self._dependency_metas and self._dependency_metas[key] is None:
+            return
+        self._dependency_metas[key] = meta
+
     def _import_library(self, imp: LibraryImport, base_dir: str, *, top_level: bool) -> None:
         assert imp.name is not None
 
@@ -329,7 +345,7 @@ class ImportResolver:
             sentinel=self._sentinel,
             variables=self._variables,
         )
-        self._dependency_metas[f"lib:{imp.name}"] = meta
+        self._record_dependency_meta(f"lib:{imp.name}", meta)
         entry = LibraryEntry(
             name=library_doc.name,
             import_name=imp.name,
@@ -557,7 +573,7 @@ class ImportResolver:
             sentinel=self._sentinel,
             variables=self._variables,
         )
-        self._dependency_metas[f"var:{imp.name}"] = meta
+        self._record_dependency_meta(f"var:{imp.name}", meta)
         entry = VariablesEntry(
             name=library_doc.name,
             import_name=imp.name,
@@ -670,3 +686,15 @@ class ImportResolver:
                     source=DIAGNOSTICS_SOURCE_NAME,
                     code=err.type_name,
                 )
+
+        if entry.library_doc.loaded_without_arguments:
+            self._append_diagnostics(
+                range=imp.range,
+                message=(
+                    f"Keywords of library '{entry.library_doc.name}' come from loading it without arguments, "
+                    "because loading it with the import's arguments failed."
+                ),
+                severity=DiagnosticSeverity.INFORMATION,
+                source=DIAGNOSTICS_SOURCE_NAME,
+                code=Error.LIBRARY_LOADED_WITHOUT_ARGUMENTS,
+            )

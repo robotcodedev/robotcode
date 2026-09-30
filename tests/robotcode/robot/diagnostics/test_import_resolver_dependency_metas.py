@@ -178,3 +178,95 @@ class TestVariablesMetas:
         resolved = _resolve(mocker, im, [_var_import("vars.py")])
 
         assert resolved.dependency_metas["var:vars.py"] is meta
+
+
+def _lib_import_with(name: str, args: Any, alias: Optional[str] = None, line_no: int = 1) -> LibraryImport:
+    return LibraryImport(
+        line_no=line_no,
+        col_offset=0,
+        end_line_no=line_no,
+        end_col_offset=10,
+        source=_SOURCE,
+        name=name,
+        name_token=None,
+        args=args,
+        alias=alias,
+    )
+
+
+def _var_import_with(name: str, args: Any, line_no: int = 3) -> VariablesImport:
+    return VariablesImport(
+        line_no=line_no,
+        col_offset=0,
+        end_line_no=line_no,
+        end_col_offset=10,
+        source=_SOURCE,
+        name=name,
+        name_token=None,
+        args=args,
+    )
+
+
+class TestNoneMetaIsKept:
+    """A missing meta (for example a timed-out load) must keep the namespace out of the cache."""
+
+    def _manager_with_lib_metas(self, mocker: MockerFixture, metas: Any) -> Any:
+        im = _make_manager(mocker, lib_meta=mocker.MagicMock())
+        default = im.get_libdoc_for_library_import_with_meta.side_effect
+        pending = list(metas)
+        im.get_libdoc_for_library_import_with_meta.side_effect = lambda name, *args, **kwargs: (
+            (_lib_doc(mocker, name), pending.pop(0)) if name == "SlowLib" else default(name, *args, **kwargs)
+        )
+        return im
+
+    def test_library_meta_stays_none_when_a_later_import_of_the_name_has_one(self, mocker: MockerFixture) -> None:
+        im = self._manager_with_lib_metas(mocker, [None, mocker.MagicMock()])
+
+        resolved = _resolve(
+            mocker,
+            im,
+            [_lib_import_with("SlowLib", ("slow",)), _lib_import_with("SlowLib", ("fast",), "Fast", line_no=2)],
+        )
+
+        assert resolved.dependency_metas["lib:SlowLib"] is None
+
+    def test_library_meta_becomes_none_when_a_later_import_of_the_name_has_none(self, mocker: MockerFixture) -> None:
+        im = self._manager_with_lib_metas(mocker, [mocker.MagicMock(), None])
+
+        resolved = _resolve(
+            mocker,
+            im,
+            [_lib_import_with("SlowLib", ("fast",), "Fast"), _lib_import_with("SlowLib", ("slow",), line_no=2)],
+        )
+
+        assert resolved.dependency_metas["lib:SlowLib"] is None
+
+    def test_variables_meta_stays_none_when_a_later_import_of_the_name_has_one(self, mocker: MockerFixture) -> None:
+        im = _make_manager(mocker)
+        im.get_libdoc_for_variables_import_with_meta.side_effect = [
+            (_var_doc(mocker, "/project/vars.py"), None),
+            (_var_doc(mocker, "/project/vars.py"), mocker.MagicMock()),
+        ]
+
+        resolved = _resolve(
+            mocker,
+            im,
+            [_var_import_with("vars.py", ("slow",)), _var_import_with("vars.py", ("fast",), line_no=4)],
+        )
+
+        assert resolved.dependency_metas["var:vars.py"] is None
+
+    def test_variables_meta_becomes_none_when_a_later_import_of_the_name_has_none(self, mocker: MockerFixture) -> None:
+        im = _make_manager(mocker)
+        im.get_libdoc_for_variables_import_with_meta.side_effect = [
+            (_var_doc(mocker, "/project/vars.py"), mocker.MagicMock()),
+            (_var_doc(mocker, "/project/vars.py"), None),
+        ]
+
+        resolved = _resolve(
+            mocker,
+            im,
+            [_var_import_with("vars.py", ("fast",)), _var_import_with("vars.py", ("slow",), line_no=4)],
+        )
+
+        assert resolved.dependency_metas["var:vars.py"] is None

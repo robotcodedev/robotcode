@@ -1440,6 +1440,7 @@ class LibraryDoc:
     stdout: Optional[str] = field(default=None, compare=False)
     has_listener: Optional[bool] = None
     library_type: Optional[LibraryType] = None
+    loaded_without_arguments: bool = False
     _source_id: Optional[FileId] = field(default=None, init=False, compare=False, hash=False, repr=False)
     _hash_value: int = field(default=0, init=False, compare=False, hash=False, repr=False)
     _stable_id: str = field(default="", init=False, compare=False, hash=False, repr=False)
@@ -2491,6 +2492,7 @@ def get_library_doc(
             library_name = library_name_path.stem
 
         lib = None
+        loaded_without_arguments = False
         try:
             lib = _get_test_library(
                 libcode,
@@ -2527,6 +2529,7 @@ def get_library_doc(
                         _ = lib.get_instance()
                     else:
                         _ = lib.instance
+                    loaded_without_arguments = True
                 except (SystemExit, KeyboardInterrupt):
                     raise
                 except BaseException:
@@ -2540,6 +2543,7 @@ def get_library_doc(
             create_keywords=True,
             errors=errors,
         )
+        libdoc.loaded_without_arguments = loaded_without_arguments
 
     libdoc.stdout = std_capturer.getvalue()
 

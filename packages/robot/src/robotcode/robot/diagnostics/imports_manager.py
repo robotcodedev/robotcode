@@ -1,16 +1,19 @@
 import ast
 import multiprocessing as mp
 import os
+import sys
 import threading
 import time
 import weakref
 from abc import ABC, abstractmethod
-from concurrent.futures import ProcessPoolExecutor, TimeoutError
+from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass, field
+from multiprocessing.connection import Connection, wait
 from pathlib import Path
 from typing import (
     TYPE_CHECKING,
     Any,
+    Callable,
     Dict,
     List,
     Mapping,
@@ -61,9 +64,11 @@ from .entities import (
     CommandLineVariableDefinition,
     VariableDefinition,
 )
+from .errors import Error as DiagnosticError
 from .library_doc import (
     ROBOT_LIBRARY_PACKAGE,
     CompleteResult,
+    Error,
     LibraryDoc,
     ModuleSpec,
     ResourceDoc,
@@ -103,6 +108,41 @@ REST_EXTENSIONS = (".rst", ".rest")
 DEFAULT_LOAD_LIBRARY_TIMEOUT: int = 10
 ENV_LOAD_LIBRARY_TIMEOUT_VAR = "ROBOTCODE_LOAD_LIBRARY_TIMEOUT"
 COMPLETE_LIBRARY_IMPORT_TIMEOUT = COMPLETE_RESOURCE_IMPORT_TIMEOUT = COMPLETE_VARIABLES_IMPORT_TIMEOUT = 5
+# waiting on a pipe takes the timeout in milliseconds as a C int on POSIX
+MAX_LOAD_WAIT_SECONDS = 2_000_000
+
+
+class LoadTimeoutError(RuntimeError):
+    """Loading a library or variable file took longer than the load library timeout."""
+
+
+class LoadExitError(RuntimeError):
+    """The import of a library or variable file ended before it finished, e.g. through sys.exit()."""
+
+
+def _run_import_worker(connection: Connection, func: Callable[..., Any], func_args: Tuple[Any, ...]) -> None:
+    """Process target of `ImportsManager._run_in_subprocess`: sends `(ok, value)` back to the parent."""
+    try:
+        result: Tuple[bool, Any] = (True, func(*func_args))
+    except Exception as e:
+        # a SystemExit ends only the worker, the parent reports its exit code
+        result = (False, e)
+
+    connection.send(result)
+    connection.close()
+
+
+def _end_process(process: mp.process.BaseProcess) -> None:
+    if process.pid is None:
+        return
+
+    if process.is_alive():
+        process.terminate()
+        process.join(1)
+        if process.is_alive():
+            process.kill()
+
+    process.join()
 
 
 @dataclass(frozen=True, slots=True)
@@ -502,7 +542,7 @@ class _VariablesEntry(_ImportEntry):
             self.resolve_command_line_vars,
         )
 
-        if self._lib_doc is not None:
+        if self._lib_doc is not None and self._lib_doc.source:
             self.file_watchers.append(
                 self.parent.file_watcher_manager.add_file_watchers(
                     self.parent.did_change_watched_files,
@@ -563,6 +603,10 @@ class LibraryMetaData:
                 return self.name + (f".{self.member_name}" if self.member_name else "")
 
         raise ValueError("Cannot determine cache key.")
+
+    def cache_key_for_args(self, args: Tuple[Any, ...]) -> str:
+        # the documentation can depend on the import arguments, so each argument set gets its own entry
+        return f"{self.cache_key}\n{args!r}" if args else self.cache_key
 
     @property
     def trusted(self) -> bool:
@@ -1644,26 +1688,57 @@ class ImportsManager:
         A fresh process per import is intentional: libraries and variable files
         can pollute the interpreter (e.g. via sys.modules, global state, native
         extensions) and cannot be safely re-imported after on-disk changes.
+
+        The process is ended when the load library timeout expires, so a library
+        that blocks cannot hold up the caller beyond the timeout.
         """
-        executor = ProcessPoolExecutor(max_workers=1, mp_context=mp.get_context("spawn"))
+        context = mp.get_context("spawn")
+        receiver, sender = context.Pipe(duplex=False)
+        process = context.Process(target=_run_import_worker, args=(sender, func, func_args))
         try:
             try:
-                return executor.submit(func, *func_args).result(self.load_library_timeout)
-            except TimeoutError as e:
-                raise RuntimeError(
+                process.start()
+            finally:
+                # the worker keeps the sending end (on Windows once it has unpickled its arguments)
+                sender.close()
+
+            # the sentinel also reports a worker that ends before it has taken over the sending end
+            if not wait([receiver, process.sentinel], min(self.load_library_timeout, MAX_LOAD_WAIT_SECONDS)):
+                raise LoadTimeoutError(
                     f"{timeout_msg} "
                     f"timed out after {self.load_library_timeout} seconds. "
                     "The import may be slow or blocked. "
                     "If required, increase the timeout by setting the ROBOTCODE_LOAD_LIBRARY_TIMEOUT "
                     "environment variable."
+                )
+
+            try:
+                if not receiver.poll(0):
+                    # only the sentinel is ready: the worker ended before it took over the sending end
+                    raise EOFError
+                ok, value = receiver.recv()
+            except (EOFError, BrokenPipeError) as e:
+                process.join(1)
+                raise LoadExitError(
+                    f"{timeout_msg} failed: the import ended with exit code {process.exitcode} before it finished, "
+                    "for example through sys.exit() or a crash in the imported code."
                 ) from e
+
+            # give the worker the chance to end on its own, the finally block ends it otherwise
+            process.join(1)
+
+            if not ok:
+                raise value
+
+            return value
         except (SystemExit, KeyboardInterrupt):
             raise
         except BaseException as e:
             self._logger.exception(e)
             raise
         finally:
-            executor.shutdown(wait=True)
+            receiver.close()
+            _end_process(process)
 
     def _save_import_cache(
         self,
@@ -1674,7 +1749,7 @@ class ImportsManager:
         name: str,
         args: Tuple[Any, ...],
     ) -> None:
-        """Save an import result to the disk cache, or log skip if no meta."""
+        """Save an import result to the disk cache under its argument set, or log skip if no meta."""
         try:
             if meta is not None and not meta.trusted:
                 self._logger.debug(
@@ -1683,7 +1758,7 @@ class ImportsManager:
                 )
             elif meta is not None:
                 try:
-                    self.data_cache.save_entry(section, meta.cache_key, meta, result)
+                    self.data_cache.save_entry(section, meta.cache_key_for_args(args), meta, result)
                 except (SystemExit, KeyboardInterrupt):
                     raise
                 except BaseException as e:
@@ -1703,11 +1778,18 @@ class ImportsManager:
         base_dir: str,
         variables: Optional[Dict[str, Any]] = None,
     ) -> Tuple[LibraryDoc, Optional[LibraryMetaData]]:
-        meta, _source, ignore_arguments = self.get_library_meta(name, base_dir, variables)
+        meta, import_name, ignore_arguments = self.get_library_meta(name, base_dir, variables)
+        cache_args = (
+            ()
+            if ignore_arguments
+            else resolve_args(args, working_dir, base_dir, self.get_resolvable_command_line_variables(), variables)
+        )
 
         if meta is not None and not meta.has_errors:
             try:
-                entry = self.data_cache.read_entry(CacheSection.LIBRARY, meta.cache_key, LibraryMetaData, LibraryDoc)
+                entry = self.data_cache.read_entry(
+                    CacheSection.LIBRARY, meta.cache_key_for_args(cache_args), LibraryMetaData, LibraryDoc
+                )
                 if entry is not None and entry.meta is not None:
                     if entry.meta.has_errors:
                         self._logger.debug(
@@ -1724,23 +1806,47 @@ class ImportsManager:
 
         self._logger.debug(lambda: f"Load library in process {name}{args!r}", context_name="import")
 
-        result = self._run_in_subprocess(
-            get_library_doc,
-            (
-                name,
-                args if not ignore_arguments else (),
-                working_dir,
-                base_dir,
-                self.get_resolvable_command_line_variables(),
-                variables,
-            ),
-            f"Loading library {name!r} with args {args!r} (working_dir={working_dir!r}, base_dir={base_dir!r})",
-        )
+        try:
+            result = self._run_in_subprocess(
+                get_library_doc,
+                (
+                    name,
+                    args if not ignore_arguments else (),
+                    working_dir,
+                    base_dir,
+                    self.get_resolvable_command_line_variables(),
+                    variables,
+                ),
+                f"Loading library {name!r} with args {args!r}",
+            )
+        except (LoadTimeoutError, LoadExitError) as e:
+            # kept by the import entry until a file changes, but neither written to the disk cache
+            # nor usable as a namespace dependency
+            return (
+                LibraryDoc(
+                    name=name,
+                    source=(
+                        meta.origin if meta is not None else import_name if is_library_by_path(import_name) else None
+                    ),
+                    errors=[
+                        Error(
+                            message=str(e),
+                            type_name=(
+                                DiagnosticError.LIBRARY_TIMEOUT_ERROR
+                                if isinstance(e, LoadTimeoutError)
+                                else DiagnosticError.LIBRARY_EXIT_ERROR
+                            ),
+                        )
+                    ],
+                    python_path=list(sys.path),
+                ),
+                None,
+            )
 
         if meta is not None:
             meta.has_errors = bool(result.errors)
 
-        self._save_import_cache(CacheSection.LIBRARY, meta, result, "library", name, args)
+        self._save_import_cache(CacheSection.LIBRARY, meta, result, "library", name, cache_args)
 
         return result, meta
 
@@ -1879,7 +1985,7 @@ class ImportsManager:
         resolve_variables: bool = True,
         resolve_command_line_vars: bool = True,
     ) -> Tuple[VariablesDoc, Optional[LibraryMetaData]]:
-        meta, _source = self.get_variables_meta(
+        meta, import_name = self.get_variables_meta(
             name,
             base_dir,
             variables,
@@ -1890,7 +1996,7 @@ class ImportsManager:
         if meta is not None:
             try:
                 entry = self.data_cache.read_entry(
-                    CacheSection.VARIABLES, meta.cache_key, LibraryMetaData, VariablesDoc
+                    CacheSection.VARIABLES, meta.cache_key_for_args(args), LibraryMetaData, VariablesDoc
                 )
                 if entry is not None and entry.meta == meta:
                     return entry.data, meta
@@ -1899,18 +2005,40 @@ class ImportsManager:
             except BaseException as e:
                 self._logger.exception(e)
 
-        result = self._run_in_subprocess(
-            get_variables_doc,
-            (
-                name,
-                args,
-                working_dir,
-                base_dir,
-                self.get_resolvable_command_line_variables() if resolve_command_line_vars else None,
-                variables,
-            ),
-            f"Loading variables {name!r} with args {args!r} (working_dir={working_dir!r}, base_dir={base_dir!r})",
-        )
+        try:
+            result = self._run_in_subprocess(
+                get_variables_doc,
+                (
+                    name,
+                    args,
+                    working_dir,
+                    base_dir,
+                    self.get_resolvable_command_line_variables() if resolve_command_line_vars else None,
+                    variables,
+                ),
+                f"Loading variables {name!r} with args {args!r}",
+            )
+        except (LoadTimeoutError, LoadExitError) as e:
+            # see _get_library_libdoc
+            return (
+                VariablesDoc(
+                    name=name,
+                    source=(
+                        meta.origin if meta is not None else import_name if is_variables_by_path(import_name) else None
+                    ),
+                    errors=[
+                        Error(
+                            message=str(e),
+                            type_name=(
+                                DiagnosticError.VARIABLES_TIMEOUT_ERROR
+                                if isinstance(e, LoadTimeoutError)
+                                else DiagnosticError.VARIABLES_EXIT_ERROR
+                            ),
+                        )
+                    ],
+                ),
+                None,
+            )
 
         self._save_import_cache(CacheSection.VARIABLES, meta, result, "variables", name, args)
 
