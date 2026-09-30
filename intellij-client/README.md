@@ -57,7 +57,7 @@ With RobotCode, you can focus on building and testing your automation workflows 
 
 - Python 3.10 or newer
 - Robot Framework 5.0 or newer
-- PyCharm 2025.1 or newer
+- PyCharm 2026.1 or newer
 
 ## Getting Started
 

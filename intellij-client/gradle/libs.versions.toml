@@ -1,30 +1,13 @@
 [versions]
 # libraries
-annotations = "26.0.2"
-kotlinxSerialization = "1.7.3"
+kotlinxSerialization = "1.9.0"
 junit = "4.13.2"
-lsp4j = "0.21.1"
 
 # plugins
 changelog = "2.5.0"
-intelliJPlatForm = "2.13.1"
-kotlin = "2.2.21"
-kover = "0.9.4"
-
-[libraries.lsp4j]
-group = "org.eclipse.lsp4j"
-name = "org.eclipse.lsp4j"
-version.ref = "lsp4j"
-
-[libraries.lsp4jdebug]
-group = "org.eclipse.lsp4j"
-name = "org.eclipse.lsp4j.debug"
-version.ref = "lsp4j"
-
-[libraries.annotations]
-group = "org.jetbrains"
-name = "annotations"
-version.ref = "annotations"
+intelliJPlatForm = "2.19.0"
+kotlin = "2.4.20"
+kover = "0.9.11"
 
 [libraries.kotlinxSerialization]
 group = "org.jetbrains.kotlinx"

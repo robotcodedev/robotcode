@@ -167,21 +167,21 @@ tasks {
         dependsOn(patchChangelog)
     }
 
-    prepareSandbox(prepareSandboxConfig)
+    withType<PrepareSandboxTask>().configureEach(prepareSandboxConfig)
 }
 
 
 tasks.withType<KotlinCompile> {
     compilerOptions {
         jvmTarget.set(JvmTarget.JVM_21)
-        languageVersion.set(KotlinVersion.KOTLIN_2_1)
-        apiVersion.set(KotlinVersion.KOTLIN_2_1)
+        languageVersion.set(KotlinVersion.KOTLIN_2_3)
+        apiVersion.set(KotlinVersion.KOTLIN_2_3)
     }
 }
 
 // Configure UI tests plugin
 // Read more: https://github.com/JetBrains/intellij-ui-test-robot
-@Suppress("unused") val runIdeForUiTests by intellijPlatformTesting.runIde.registering {
+intellijPlatformTesting.runIde.register("runIdeForUiTests") {
     task {
         jvmArgumentProviders += CommandLineArgumentProvider {
             listOf(
@@ -193,31 +193,23 @@ tasks.withType<KotlinCompile> {
         }
     }
 
-    prepareSandboxTask(prepareSandboxConfig)
-
     plugins {
         robotServerPlugin(Constraints.LATEST_VERSION)
     }
 }
 
-@Suppress("unused") val runIdePyCharmProf by intellijPlatformTesting.runIde.registering {
+intellijPlatformTesting.runIde.register("runIdePyCharmProf") {
     type = IntelliJPlatformType.PyCharmProfessional
-
-    prepareSandboxTask(prepareSandboxConfig)
 }
 
-@Suppress("unused") val runIdePyCharmCommunityEAP by intellijPlatformTesting.runIde.registering {
+intellijPlatformTesting.runIde.register("runIdePyCharmCommunityEAP") {
     type = IntelliJPlatformType.PyCharmCommunity
     version = "LATEST-EAP-SNAPSHOT"
-
-    prepareSandboxTask(prepareSandboxConfig)
 }
 
-@Suppress("unused") val runIdeIntellijIdeaC by intellijPlatformTesting.runIde.registering {
+intellijPlatformTesting.runIde.register("runIdeIntellijIdeaC") {
     type = IntelliJPlatformType.IntellijIdeaCommunity
     plugins {
         plugin("PythonCore:261.22158.182")
     }
-
-    prepareSandboxTask(prepareSandboxConfig)
 }
