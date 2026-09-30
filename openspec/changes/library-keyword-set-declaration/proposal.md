@@ -1,6 +1,8 @@
 # Proposal: library-keyword-set-declaration
 
 > **Status (2026-09-29): parked.** Maintainer decision: the change is kept for later and is not scheduled.
+>
+> **Update (2026-09-30):** `library-loading-robustness` now keeps one disk cache entry per set of import arguments for every library and variable file (its D4, maintainer decision). The first-wins behaviour described below, the args-keyed entries and the default entry of this change, and with them the value `args`, no longer apply. What remains for a re-plan is `volatile` (keywords that depend on external state, such as a `Remote` server that changes its keywords under the same URL) and the handling of arguments whose values are only known at runtime.
 
 ## Why
 
