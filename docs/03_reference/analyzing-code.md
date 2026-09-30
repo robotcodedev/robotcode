@@ -71,7 +71,7 @@ The diagnostics are exactly those the language server produces. Among the most c
 - **`KeywordNotFound`** — a keyword call that resolves to nothing.
 - **`MultipleKeywords`** — an ambiguous keyword name matching several definitions.
 - **`VariableNotFound`** / **`VariableNotReplaced`** — references to variables that don't exist or can't be resolved statically.
-- **import diagnostics** — `LibraryAlreadyImported`, `ResourceAlreadyImported`, `ImportContainsErrors`, circular imports, …
+- **import diagnostics** — `LibraryAlreadyImported`, `ResourceAlreadyImported`, `ImportContainsErrors`, circular imports, `LibraryLoadedWithoutArguments` (information: the library could not be initialized with the import's arguments, so its keywords come from loading it without arguments), …
 - **deprecation warnings** — `DeprecatedReturnSetting`, `DeprecatedHeader`, `DeprecatedHyphenTag`, `TagsWithoutEmptyRow` (a `Tags:` section in a keyword's documentation without an empty row before it, Robot Framework 7.5+), …
 - **model errors** — empty tests/keywords, invalid headers, and other structural problems.
 
@@ -354,7 +354,7 @@ robotcode analyze code --output-format json | jq '.summary'
 
 ## Managing the analysis cache
 
-To speed up repeat analysis, RobotCode caches resolved library/variable imports (and, with `--cache-namespaces`, analyzed namespaces) on disk. The `analyze cache` subcommands let you inspect and clear it:
+To speed up repeat analysis, RobotCode caches resolved library/variable imports (and, with `--cache-namespaces`, analyzed namespaces) on disk. Library and variable file imports are cached per set of import arguments, so changing an import's arguments loads it again with the new ones. The `analyze cache` subcommands let you inspect and clear it:
 
 ```bash
 robotcode analyze cache info     # where the cache lives and how big it is
@@ -387,6 +387,8 @@ error = ["MultipleKeywords"]
 [tool.robotcode-analyze.cache]
 ignored-libraries = ["MyDynamicLibrary"]
 ```
+
+A library or variable file that takes longer than `load-library-timeout` seconds (default 10) to load is stopped, and its import reports the timeout (`LibraryTimeoutError` or `VariablesTimeoutError`). An import that ends before it finishes, for example through `sys.exit()`, reports `LibraryExitError` or `VariablesExitError`. RobotCode loads it again when a file in the library's directory, or the variable file itself, changes, or in a new session, for example after the language server restarts or on the next `analyze code` run.
 
 See the [`robot.toml` configuration reference](config.md) for the complete list of settings.
 
