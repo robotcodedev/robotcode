@@ -220,7 +220,7 @@ import java.util.*
             thisLogger().warn("Failed to discover test items", e)
         }
         
-        DaemonCodeAnalyzer.getInstance(project).restart()
+        DaemonCodeAnalyzer.getInstance(project).restart("RobotCode test items refreshed for $uri")
     }
     
     fun refresh() {
@@ -273,7 +273,7 @@ import java.util.*
             supportsParseInclude = false
         }
 
-        DaemonCodeAnalyzer.getInstance(project).restart()
+        DaemonCodeAnalyzer.getInstance(project).restart("RobotCode test items refreshed")
     }
     
     fun findTestItem(

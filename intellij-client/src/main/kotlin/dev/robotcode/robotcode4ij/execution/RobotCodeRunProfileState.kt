@@ -235,7 +235,7 @@ class RobotCodeRunProfileState(private val config: RobotCodeRunConfiguration, en
             }
             
             afterConfigurationDone.fire(Unit)
-            debugServer.attach(emptyMap<String, Object>())
+            debugServer.attach(emptyMap<String, Any>())
         }
     }
     
