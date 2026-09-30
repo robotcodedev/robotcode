@@ -32,16 +32,16 @@ class RobotCodeDebugProgramRunner : AsyncProgramRunner<RunnerSettings>() {
         return resolvedPromise(doExecute(state as RobotCodeRunProfileState, environment))
     }
     
-    private fun doExecute(state: RobotCodeRunProfileState, environment: ExecutionEnvironment): RunContentDescriptor {
+    private fun doExecute(state: RobotCodeRunProfileState, environment: ExecutionEnvironment): RunContentDescriptor? {
         val manager = XDebuggerManager.getInstance(environment.project)
-        val session = manager.startSession(environment, object : XDebugProcessStarter() {
+        val started = manager.newSessionBuilder(object : XDebugProcessStarter() {
             override fun start(session: XDebugSession): XDebugProcess {
                 val result = state.execute(environment.executor, this@RobotCodeDebugProgramRunner)
                 
                 return RobotCodeDebugProcess(session, result, state)
             }
-        })
+        }).environment(environment).startSession()
         
-        return session.runContentDescriptor
+        return started.runContentDescriptor
     }
 }
