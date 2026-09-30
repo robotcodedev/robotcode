@@ -17,7 +17,7 @@ The full-page documentation of a library, resource file or suite file SHALL cons
 - a level-2 `Keywords`, when there are keywords;
 - a level-2 `Data types`, when the keywords use documented types.
 
-Every keyword and every data type SHALL have a level-3 heading, with the parts of its entry (`Arguments:`, `Documentation:`, and the parts of a data type) as level-4 headings. Markdown headings inside the introduction SHALL start at level 3, one level below the level that the requirement "Markdown library introductions are normalised" of `keyword-documentation-rendering` gives them in other views. Markdown headings inside a keyword's documentation SHALL start at level 5. No Markdown heading SHALL be deeper than level 6. These levels do not apply to documentation in HTML or reStructuredText format, which keeps its HTML headings. Every `---` separator SHALL be preceded by a blank line, so that it never turns the text before it into a heading.
+Every keyword and every data type SHALL have a level-3 heading, with the parts of its entry (`Arguments:`, `Documentation:`, and the parts of a data type) as level-4 headings. Markdown headings inside the introduction SHALL start at level 3, one level below the level that the requirement "Markdown library introductions are normalised" of `keyword-documentation-rendering` gives them in other views. Markdown headings inside the documentation of a keyword or of a data type SHALL start at level 5. No Markdown heading SHALL be deeper than level 6. These levels do not apply to documentation in HTML or reStructuredText format, which keeps its HTML headings. Every `---` separator SHALL be preceded by a blank line, so that it never turns the text before it into a heading.
 
 #### Scenario: Markdown-documented standard library
 - **WHEN** the page of `Collections` is rendered on RF 7.5
@@ -38,6 +38,10 @@ Every keyword and every data type SHALL have a level-3 heading, with the parts o
 - **WHEN** the page of a library class whose `__init__(self, mode="a")` has a docstring is rendered
 - **THEN** a level-2 `Importing` between `Introduction` and `Keywords` shows the argument `mode` with its default `a` and the initializer's documentation
 - **AND** the initializer is not shown before the title
+
+#### Scenario: Heading in the documentation of a data type
+- **WHEN** the page of a library is rendered on RF 6.1 or newer whose keywords use the types `Alpha` and `Beta`, and the documentation of `Alpha` has the heading `= Usage =`
+- **THEN** `Usage` is a level-5 heading, `Data types` is still the last level-2 heading, and both types have their level-3 heading in it
 
 #### Scenario: Resource file
 - **WHEN** the page of a `.resource` file with a `Documentation` setting and keywords is rendered
@@ -65,7 +69,7 @@ Keywords SHALL be ordered by name, compared case-insensitively, as Libdoc orders
 
 ### Requirement: Keyword index
 
-The `Keywords` section SHALL start with an index: a list with one link per keyword, in the order of the keyword entries, each pointing to the heading of its keyword.
+The `Keywords` section SHALL start with an index: a list with one link per keyword, in the order of the keyword entries, each pointing to the heading of its keyword and showing its name, also when the name contains characters such as `[` and `]`.
 
 #### Scenario: Index of a library
 - **WHEN** the page of `Collections` is rendered
@@ -100,11 +104,23 @@ With Robot Framework 6.1 or newer, the `Data types` section SHALL document every
 
 ### Requirement: Names in Robot-format documentation
 
-In documentation in Robot Framework's format, a name in single backticks SHALL link to the heading it names, as Libdoc's HTML links it. This applies in the introduction and in the documentation of keywords, including the descriptions of arguments, return values and exceptions. The name can be a keyword, a section of the introduction, one of the default sections (introduction, importing, keywords) or a data type; data types are linked by the requirement "Data types". Names in headings and in preformatted text SHALL stay as they are. Argument names, the argument and return types of the `Arguments:` parts, and code in double backticks SHALL stay inline code, also when they equal the name of a keyword or a section, as they do for data types.
+In documentation in Robot Framework's format, a name in single backticks SHALL link to the heading it names, as Libdoc's HTML links it, also when the name wraps across two lines of a paragraph and whatever text comes before it on the line. The link SHALL point to the heading whose title is the name, also when another heading has the same anchor text. This applies in the introduction and in the documentation of keywords, including the descriptions of arguments, return values and exceptions. The name can be a keyword, a section of the introduction, one of the default sections (introduction, importing, keywords) or a data type; data types are linked by the requirement "Data types". Names in headings and in preformatted text SHALL stay as they are. Argument names, the argument and return types of the `Arguments:` parts, and code in double backticks SHALL stay inline code, also when they equal the name of a keyword or a section, as they do for data types.
 
 #### Scenario: Keyword and section names
 - **WHEN** the page of a library documented in Robot Framework's format is rendered, whose introduction has the section `= Section =` and whose keyword `Zeta Kw` is documented with `` `Alpha Kw` `` and `` `Section` ``
 - **THEN** these names are the links `[Alpha Kw](#alpha-kw)` and `[Section](#section)`
+
+#### Scenario: Brackets before a name
+- **WHEN** the page of `BuiltIn` is rendered on RF 6.1, whose `Remove Tags` documentation writes ``` ``[chars]`` ``` before `` `Glob patterns` ``
+- **THEN** `[chars]` is inline code and `Glob patterns` is the link `[Glob patterns](#glob-patterns)`
+
+#### Scenario: Name across two lines
+- **WHEN** the page of `BuiltIn` is rendered on RF 6.1, whose `Set Test Variable` documentation writes `` `Set`` at the end of a line and ``Task Variable` `` at the start of the next
+- **THEN** it links `Set Task Variable` to `#set-task-variable`
+
+#### Scenario: Names with the same anchor text
+- **WHEN** a library has the keywords `Get Value` and `Get-Value` and its documentation names `` `Get-Value` ``
+- **THEN** the name links to `#get-value-1`, the heading of `Get-Value`
 
 #### Scenario: Arguments and code named like sections
 - **WHEN** the page of `XML` is rendered on RF 6.1 or 7.4, whose introduction has sections named `text`, `tail` and `tag`
@@ -113,7 +129,7 @@ In documentation in Robot Framework's format, a name in single backticks SHALL l
 
 ### Requirement: Anchors
 
-Every heading of the page SHALL have the anchor GitHub gives it, following github-slugger's rule: lower case; characters other than letters, marks, digits, `_`, `-` and spaces removed; each space replaced by `-`; a repeated anchor numbered `-1`, `-2`, … in document order. Every link within the page, whose target starts with `#`, SHALL point to the anchor of one of its headings, and no link target SHALL contain `\#`.
+Every heading of the page SHALL have the anchor GitHub gives it, following github-slugger's rule applied to the text the heading shows: lower case; characters other than letters, marks, digits, `_`, `-` and spaces removed; each space replaced by `-`; a repeated anchor numbered `-1`, `-2`, … in document order. Every link within the page, whose target starts with `#`, SHALL point to the anchor of one of its headings, and no link target SHALL contain `\#`.
 
 #### Scenario: Section title with code
 - **WHEN** the page of `DateTime` is rendered on RF 7.5
@@ -127,13 +143,17 @@ Every heading of the page SHALL have the anchor GitHub gives it, following githu
 - **WHEN** the page of a resource with the keyword `Open ${browser} Browser` is rendered
 - **THEN** the anchor of its heading is `open-browser-browser`
 
+#### Scenario: Heading with emphasis and a link
+- **WHEN** a page has the heading `Kw *star* _under_` or `See [the docs](http://example.com) now`
+- **THEN** its anchor is `kw-star-under` or `see-the-docs-now`
+
 #### Scenario: Repeated heading text
 - **WHEN** a page has two headings with the same text
 - **THEN** the first gets the plain anchor and the second the anchor with `-1`
 
 ### Requirement: Variables in text are inline code
 
-In the page of a library, resource file or suite file documented in Robot Framework's format, in Markdown or as plain text, every scalar variable in text, such as `${name}` or `${name}[0]`, SHALL be written as inline code, so that Markdown renderers with math support do not show `${x} and ${y}` as a formula. Code spans, code blocks, HTML blocks and link targets SHALL stay as they are.
+In the page of a library, resource file or suite file documented in Robot Framework's format, in Markdown or as plain text, every scalar variable in text, such as `${name}` or `${name}[0]`, SHALL be written as inline code, so that Markdown renderers with math support do not show `${x} and ${y}` as a formula. Variables that follow each other directly SHALL form one code span. Code spans, code blocks, HTML blocks and link targets SHALL stay as they are.
 
 #### Scenario: Two variables in a sentence
 - **WHEN** the documentation of a resource keyword reads `Use ${x} and ${y}.`
@@ -142,6 +162,10 @@ In the page of a library, resource file or suite file documented in Robot Framew
 #### Scenario: Variable in a keyword name
 - **WHEN** the page of a resource with the keyword `Set ${a} To ${b}` is rendered
 - **THEN** its heading and its index entry show both variables as inline code
+
+#### Scenario: Variables side by side
+- **WHEN** the page of `OperatingSystem` is rendered on RF 6.1, whose `Remove Files` example writes `${TEMPDIR}${/}foo.txt`
+- **THEN** the page contains ``` `${TEMPDIR}${/}`foo.txt ```
 
 #### Scenario: Variable in code
 - **WHEN** a Robot-format documentation writes `${x}` as code (between double backticks) and again inside a preformatted block
