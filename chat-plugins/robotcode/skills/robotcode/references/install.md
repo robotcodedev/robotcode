@@ -33,7 +33,7 @@ Minimum for this skill is `robotcode[runner,analyze,repl]`:
 
 - `runner` — `robotcode robot` / `run` / `rebot` / `discover` / `libdoc` / `testdoc` / `results`
 - `analyze` — `robotcode analyze code` and `robotcode analyze cache`
-- `repl` — `robotcode repl` (interactive shell) **and** `robotcode robot-debug` / `run-debug` (the command-line debugger). Both ship in `repl` — the command-line debugger is **not** in the `debugger` extra below.
+- `repl` — `robotcode repl` (interactive shell), `robotcode doc` (library, resource and keyword documentation) **and** `robotcode robot-debug` / `run-debug` (the command-line debugger). Both ship in `repl` — the command-line debugger is **not** in the `debugger` extra below.
 
 Other available extras the user may want included:
 
@@ -93,7 +93,7 @@ Error: No such command 'analyze'.
 | --- | --- |
 | `robot` / `run` / `rebot` / `discover` / `libdoc` / `testdoc` / `results` | `runner` |
 | `analyze code` / `analyze cache` | `analyze` |
-| `repl` / `robot-debug` / `run-debug` | `repl` |
+| `repl` / `robot-debug` / `run-debug` / `doc` | `repl` |
 | `debug` (DAP server for editors) | `debugger` |
 | `repl-server` | `replserver` |
 

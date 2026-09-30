@@ -23,7 +23,7 @@ metadata:
 
 # robotcode CLI
 
-`robotcode` wraps the Robot Framework toolchain and respects the project's `robot.toml` / profile configuration. Use it instead of calling `robot`, `rebot`, or `libdoc` directly when the task should honor project paths, variables, profiles, and Python paths.
+`robotcode` wraps the Robot Framework toolchain and respects the project's `robot.toml` / profile configuration. Use it instead of calling `robot` or `rebot` directly, and `robotcode doc` instead of `libdoc` for keyword documentation, when the task should honor project paths, variables, profiles, and Python paths.
 
 RobotCode must run from the project's Python environment. Do not use isolated runners such as `uvx robotcode ...` or `pipx run robotcode ...` for real projects; they cannot see the project's libraries, resources, and local Python modules.
 
@@ -41,7 +41,7 @@ Decide what the user actually wants *before* reaching for a command — these in
 - **Analyze / lint the code** — *"find issues", "check my robot code", "any undefined keywords / wrong arguments?", "are there unused keywords or variables?".* Static analysis (errors, undefined keywords, wrong args, unresolved/unused variables), no run. See [references/analyze.md](references/analyze.md).
 - **Inventory / understand the project** — *"what tests/tasks/tags/suites exist?", "which tests or tasks have tag X?", "how big is this?".* See [Discovery](#discovery--whats-in-the-project).
 - **Configure the project** — *"set up robot.toml", "add a CI profile", "configure variables/paths", "what's my effective config?".* See [references/config.md](references/config.md).
-- **Look up a keyword or library** — *"what does X do?", "what args does it take?".* See [Documentation lookup priority](#documentation-lookup-priority).
+- **Look up a keyword or library** — *"what does X do?", "what args does it take?", "which keywords does this resource have?".* `robotcode doc keywords` / `robotcode doc keyword`; see [Documentation lookup priority](#documentation-lookup-priority).
 
 For **standalone exploration** ("watch me", "try …", "do it for me") prefer the REPL over writing a throwaway `.robot` file — a working session promotes into a test cheaply (`.save`), whereas a prematurely written test wastes effort, can't be watched, and tears its browser/connection down at the run's end. But the moment a **real test or suite** is in play — fixing it, stepping it, or asking *why it fails* — use the **debugger** (or read the recorded failure with [`results`](references/results.md) first), **not the REPL**, because only the debugger runs the test in its real context. In short: **the REPL is for trying things out; the debugger is for debugging a real test or task.**
 
@@ -57,13 +57,13 @@ Robot Framework does acceptance **testing** *and* **RPA** (robotic process autom
 
 For Robot Framework libraries, project resources, and keyword signatures, always query project-local RobotCode documentation first:
 
-1. `robotcode libdoc <LibraryOrResource> list`
-2. `robotcode libdoc <LibraryOrResource> show "<Keyword>"`
+1. `robotcode doc keywords <LibraryOrResource> [PATTERN]`
+2. `robotcode doc keyword <LibraryOrResource> "<Keyword>"`
 3. `robotcode repl` when behavior, locators, state, or keyword sequencing must be verified against the active project/application
 4. Existing project tests and resources
-5. External documentation sources such as Context7, official web docs, or web search only if `libdoc` cannot answer or the topic is outside the local Robot environment
+5. External documentation sources such as Context7, official web docs, or web search only if `robotcode doc` cannot answer or the topic is outside the local Robot environment
 
-This priority applies to Robot Framework, Browser Library, SeleniumLibrary, project-local `.resource` files, and any imported Robot library available in the project's environment. `libdoc` is the easiest and most accurate source because it uses the active Python environment, installed library versions, import arguments, Python path, and project-local resources. Do not start with Context7 or web documentation for Robot keyword arguments, keyword availability, or local resource documentation.
+This priority applies to Robot Framework, Browser Library, SeleniumLibrary, project-local `.resource` files, and any imported Robot library available in the project's environment. `robotcode doc` is the easiest and most accurate source because it uses the active Python environment, installed library versions, import arguments, variables, Python path, and project-local resources. Do not start with Context7 or web documentation for Robot keyword arguments, keyword availability, or local resource documentation.
 
 For non-obvious RobotCode CLI details that are not library/resource keyword documentation, fetch the RobotCode docs instead of guessing:
 
@@ -106,7 +106,7 @@ robotcode robot --profile ci tests/      # wrong: Robot sees --profile
 
 Use these often:
 
-- `-p, --profile <name>` — select a profile globally for `config`, `profiles`, `discover`, `analyze`, `results`, `libdoc`, and `robot`. **Repeatable** — pass it several times (`-p ci -p docker`) to merge profiles, and each `<name>` is a glob (`-p "ci*"` selects every matching profile). See [Configuration & profiles](#configuration--profiles) for merge order.
+- `-p, --profile <name>` — select a profile globally for `config`, `profiles`, `discover`, `analyze`, `results`, `doc`, and `robot`. **Repeatable** — pass it several times (`-p ci -p docker`) to merge profiles, and each `<name>` is a glob (`-p "ci*"` selects every matching profile). See [Configuration & profiles](#configuration--profiles) for merge order.
 - `-r, --root <dir>` — override project-root detection only when needed.
 - `--format {text|json|json-indent|toml}` — request structured output where supported (global; goes before the subcommand).
 - `-d, --dry` — print what would happen.
@@ -159,7 +159,7 @@ Use `robotcode discover` to inspect what the active profile would see without ex
 - **`robot.toml` / profiles** set the `paths` in scope, plus variables and name transforms that change suite and test names from what the file literally says.
 - **`-i/-e/-s/-t` filters and pre-run modifiers** add, remove, rename, or retag tests *before* execution — so a literal `[Tags]` line in a file is not necessarily the effective tag set, and a `*** Test Cases ***` entry may not survive into the run at all.
 
-`discover` performs that whole resolution with the project's installed Robot Framework and returns the real answer; grep cannot. (Same reasoning as preferring `libdoc` over reading library source.) When the user constrains by tag/suite/profile, pass the matching filters so the inventory reflects exactly that scope.
+`discover` performs that whole resolution with the project's installed Robot Framework and returns the real answer; grep cannot. (Same reasoning as preferring `robotcode doc` over reading library source.) When the user constrains by tag/suite/profile, pass the matching filters so the inventory reflects exactly that scope.
 
 | Goal | Command |
 | --- | --- |
@@ -181,16 +181,21 @@ Parse-time diagnostics are **off by default**. Add `--diagnostics` (e.g. `robotc
 
 Filter with `--severity` / `--code` (not `grep`), find dead code with `--collect-unused`, suppress with `# robotcode: ignore[CODE]` or `-mi`, and gate CI by masking severities out of the exit code. **[references/analyze.md](references/analyze.md)** is the full reference — every flag, the diagnostic codes, the suppression scopes, exit-code masking, machine-readable output, and the cache.
 
-## Library & keyword information — `libdoc`, `repl`
+## Library & keyword information — `doc`, `repl`
 
-Use `robotcode libdoc` for Robot Framework library, resource, and keyword documentation. Prefer it before generic documentation tools: it runs in the project environment, respects import arguments and Python paths, and can inspect project-local libraries and `.resource` files that external docs usually cannot see.
+Use `robotcode doc` for Robot Framework library, resource, and keyword documentation. Prefer it before generic documentation tools: it loads the target anew on every call in the project environment — with `robot.toml`, the selected profiles, variables, the Python path, and the import arguments you give — and can document project-local libraries, `.resource` files, and the keywords of suite files that external docs cannot see.
 
 ```bash
-robotcode libdoc BuiltIn list
-robotcode libdoc BuiltIn show "Should Be Equal"
-robotcode libdoc resources/common.resource list
-robotcode libdoc "MyLib::config.yaml::strict" show
+robotcode doc keywords BuiltIn                                         # every keyword: name, arguments, first paragraph of its doc
+robotcode doc keywords BuiltIn "should be"                             # names containing the pattern (* ? allowed, case/space/_ ignored)
+robotcode doc keyword BuiltIn "Should Be Equal"                        # full documentation, then the data types of its arguments
+robotcode doc keywords resources/common.resource                       # keywords a project resource file exports
+robotcode doc keyword resources/common.resource "Open Chrome Browser"  # a concrete call finds an embedded-argument keyword
+robotcode doc keywords "MyLib::config.yaml::strict"                    # import arguments as in Libdoc: Name::arg1::arg2
+robotcode -p dev doc keywords 'MyLib::${MODE}'                         # variables resolve from robot.toml, profiles and -v
 ```
+
+The output is Markdown. `robotcode doc lib <Target>` prints the whole documentation page — long, so prefer `keywords` to find a keyword and `keyword` to read it. `robotcode --format json doc keywords …` gives structured entries (`name`, `args`, `short_doc`, `tags`, `doc`). A target that cannot be imported, not initialised with the given arguments, or whose keywords cannot be read (such as `Remote` without a running server) prints nothing, reports Robot Framework's error on stderr and exits `1`: fix the target or its arguments rather than reading the library source. A keyword name without a match also exits `1` and suggests similar names. `robotcode doc browse` is a terminal viewer for humans; in an agent session it prints the page like `doc lib`.
 
 Use `robotcode repl` for interactive, step-by-step work inside the project configuration — trying out keywords/libraries, exploring against the live application, or developing a test case or keyword one line at a time and saving it. It runs as an **interactive terminal session you drive line by line** — send a statement, wait for the prompt, read it, then choose the next. Started without input it waits at the prompt forever, so never block on its exit; piped input or a script file without `--inspect` runs through and exits with `1` if a statement failed, which is the fallback for an agent that can't drive a terminal (see [references/repl.md](references/repl.md)). (To debug a *real* failing test, reach for `robotcode robot-debug`, not the REPL — see [references/debugging.md](references/debugging.md).) REPL input is not a `.robot` file: no section headers, no indentation, and imports are keyword calls — `Import Library    Collections` (the Settings-style `Library    Collections` works too, as a REPL alias). No agent-specific flags are needed — RobotCode auto-detects when it runs under an AI agent and drops to a plain, capture-safe backend on its own. For the full step-by-step exploration → validate → promote-into-tests workflow (dot commands, `.save`, clean shutdown), see [references/repl.md](references/repl.md).
 
@@ -275,7 +280,7 @@ For multi-step workflows, see [references/workflows.md](references/workflows.md)
 
 ## Gotchas — agent-correction notes
 
-- For Robot Framework library, resource, or keyword documentation, do not start with Context7, web search, or generic knowledge. Query project-local `robotcode libdoc` first; fall back to external documentation only when `libdoc` cannot answer or the topic is outside the local Robot environment.
+- For Robot Framework library, resource, or keyword documentation, do not start with Context7, web search, or generic knowledge. Query project-local `robotcode doc keywords` / `robotcode doc keyword` first; fall back to external documentation only when `robotcode doc` cannot answer or the topic is outside the local Robot environment.
 - Global options belong before the subcommand; otherwise Robot Framework may reject them.
 - `analyze code` and `robot` have different exit-code semantics.
 - **JSON from `analyze code` → `robotcode --format json analyze code`** (global `--format`, *before* the subcommand — same as `results` / `discover`).

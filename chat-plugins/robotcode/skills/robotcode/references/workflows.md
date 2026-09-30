@@ -48,7 +48,7 @@ When the user asks "why did `X` fail?", drill down to that specific test without
 
 3. **Resolve a confusing keyword** (only if the log surfaces one whose behaviour isn't obvious):
    ```bash
-   robotcode libdoc <Library> show "<Keyword Name>"
+   robotcode doc keyword <Library> "<Keyword Name>"
    ```
 
 4. **If the recorded log isn't enough, re-run under the debugger** to capture the *live* state at the failure. The recorded tree from step 2 is usually sufficient, but when you need a variable's value at a specific point, the live call stack, or to try keywords against the paused context, re-run the test under `robotcode robot-debug` and **step through it interactively**:

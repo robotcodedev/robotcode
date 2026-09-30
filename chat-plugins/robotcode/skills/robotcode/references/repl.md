@@ -9,7 +9,7 @@ The REPL serves **two distinct purposes** — use whichever fits the request:
 
 Do **not** default to writing a test file when the intent is purely exploratory. Start in the REPL, complete the task, report the result — and only write a test afterwards if the user then asks for one.
 
-Before guessing keyword arguments, inspect them with `robotcode libdoc <Library> list` and `robotcode libdoc <Library> show "<Keyword>"` (see the `libdoc` section in [SKILL.md](../SKILL.md)). Honor the existing `robot.toml` / `tests/*.robot` conventions.
+Before guessing keyword arguments, inspect them with `robotcode doc keywords <Library>` and `robotcode doc keyword <Library> "<Keyword>"` (see the `doc` section in [SKILL.md](../SKILL.md)). Honor the existing `robot.toml` / `tests/*.robot` conventions.
 
 ## Contents
 
@@ -92,7 +92,7 @@ Available at the `>>>` prompt (work in the plain agent backend too; `.help` list
 
 - `.vars [--user]` — list variables in scope with current values; `--user` hides Robot built-ins so only what you assigned shows.
 - `.imports` — show which libraries and resource files are currently loaded, with keyword counts and source paths.
-- `.kw [name-or-text]` — with a keyword name, full keyword documentation (signature, argument types, docstring, tags) without leaving the REPL; in-session alternative to `robotcode libdoc <Library> show "<Keyword>"`. Names resolve as in a suite (case/space/underscore-insensitive), including the explicit `Owner.Keyword` form (e.g. `.kw BuiltIn.Log`) to disambiguate when several imports share a keyword name. With **no argument** it lists every loaded keyword grouped by library/resource; with **partial text** that isn't an exact keyword it lists the matching keyword names — handy for discovery (`.kw click` to find every click keyword).
+- `.kw [name-or-text]` — with a keyword name, full keyword documentation (signature, argument types, docstring, tags) without leaving the REPL; in-session alternative to `robotcode doc keyword <Library> "<Keyword>"`. Names resolve as in a suite (case/space/underscore-insensitive), including the explicit `Owner.Keyword` form (e.g. `.kw BuiltIn.Log`) to disambiguate when several imports share a keyword name. With **no argument** it lists every loaded keyword grouped by library/resource; with **partial text** that isn't an exact keyword it lists the matching keyword names — handy for discovery (`.kw click` to find every click keyword).
 - `.doc <name>` — full documentation for an imported library or resource. Only what the session has imported is shown, addressed by its namespace name (a library imported with `AS` is found under the alias); a name that isn't loaded reports that instead of showing an empty page.
 - `.cwd` — print the working directory that relative imports/variable files resolve against.
 - `.clear` — clear the screen.

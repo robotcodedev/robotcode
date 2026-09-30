@@ -2,7 +2,7 @@
 
 Authoring tests, tasks, and reusable keywords with RobotCode follows a project-aware loop: **reuse** what already exists → **prototype** the uncertain parts live → **write** → **check statically before running** → **validate** — leaning on RobotCode's tooling at each step instead of guessing. This file covers that loop and the `robotcode` commands behind each step.
 
-It applies whenever the task is to write, create, or extend a `.robot`/`.resource` test, task, or keyword — as opposed to a one-off exploration ([repl.md](repl.md)) or running existing tests (workflow A in [workflows.md](workflows.md)). Robot Framework's own syntax is assumed knowledge (or look it up with `libdoc`).
+It applies whenever the task is to write, create, or extend a `.robot`/`.resource` test, task, or keyword — as opposed to a one-off exploration ([repl.md](repl.md)) or running existing tests (workflow A in [workflows.md](workflows.md)). Robot Framework's own syntax is assumed knowledge (or look up keywords with `robotcode doc`).
 
 ## Contents
 
@@ -20,16 +20,16 @@ It applies whenever the task is to write, create, or extend a `.robot`/`.resourc
 The single most common authoring mistake is writing a keyword (or a whole test) that already exists. Check first:
 
 ```bash
-robotcode libdoc <Library> list                 # keywords a library already provides
-robotcode libdoc <Library> show "<Keyword>"      # exact signature, args, defaults, docs
-robotcode libdoc resources/common.resource list  # keywords your own resource files export
+robotcode doc keywords <Library> [PATTERN]        # keywords a library already provides
+robotcode doc keyword <Library> "<Keyword>"       # exact signature, args, defaults, docs
+robotcode doc keywords resources/common.resource  # keywords your own resource files export
 robotcode discover tests --search "<term>"        # is there already a similar test? where?
 robotcode discover suites                          # existing suite layout to slot into
 robotcode discover tags                            # the tag vocabulary already in use
 robotcode discover metadata --values               # the metadata names and values already in use (RF 7.5+)
 ```
 
-Resolve every keyword you intend to call against `libdoc` rather than from memory — it reflects the *installed* library version, the project's import arguments, and project-local resources. See *Documentation lookup priority* in [SKILL.md](../SKILL.md).
+Resolve every keyword you intend to call against `robotcode doc` rather than from memory — it reflects the *installed* library version, the project's import arguments and variables, and project-local resources. See *Documentation lookup priority* in [SKILL.md](../SKILL.md).
 
 ## 2. Match the project's conventions
 
@@ -100,7 +100,7 @@ Item Should Exist
 Then verify the extraction with RobotCode:
 
 ```bash
-robotcode libdoc resources/items.resource show "Item Should Exist"  # your keyword now documents itself
+robotcode doc keyword resources/items.resource "Item Should Exist"  # your keyword now documents itself
 robotcode analyze code --collect-unused                              # spot keywords/variables nothing references
 ```
 
@@ -108,7 +108,7 @@ robotcode analyze code --collect-unused                              # spot keyw
 
 ## 8. Best practices
 
-- **Reuse before you write** (§1) — a `libdoc` / `discover` check up front prevents duplicate keywords and misplaced files.
+- **Reuse before you write** (§1) — a `doc` / `discover` check up front prevents duplicate keywords and misplaced files.
 - **Assert observable outcomes**, not just "no error" — check the resulting state after each meaningful step.
 - **Prefer stable identifiers** (primary keys, slugs, ISO codes, robust locators) over volatile ones (timestamps, generated UUIDs, list indices).
 - **Tag for selectability** so the test slots into the existing `-i` / `-e` scheme.
