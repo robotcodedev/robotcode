@@ -238,6 +238,36 @@ def _page_heading_shift(doc_format: str, levels: int) -> Optional[Callable[[str]
     return lambda doc: shift_headings(doc, levels)
 
 
+# A run of `#` after a space at the end of a keyword name would close its ATX heading: `### Use C #` shows "Use C".
+_RE_CLOSING_HASHES = re.compile(r"(\s)(#+)$")
+_RE_ESCAPED_CLOSING_HASHES = re.compile(r"(\s)\\(#+)$")
+
+
+def _heading_name(name: str) -> str:
+    """A keyword name as the title of its heading: a closing run of `#` escaped."""
+    return _RE_CLOSING_HASHES.sub(r"\1\\\2", name)
+
+
+def _heading_title_name(title: str) -> str:
+    """The keyword name of a heading title that `_heading_name` wrote."""
+    return _RE_ESCAPED_CLOSING_HASHES.sub(r"\1\2", title)
+
+
+def _match_heading_anchors(headings: List[Tuple[str, str]], titles: List[Set[str]]) -> List[str]:
+    """For each set of titles, in order, the anchor of the next heading that has one
+    of them, or an empty anchor. A missing heading leaves the following ones alone."""
+    anchors: List[str] = []
+    position = 0
+    for entry_titles in titles:
+        index = next((i for i in range(position, len(headings)) if headings[i][0] in entry_titles), None)
+        if index is None:
+            anchors.append("")
+        else:
+            anchors.append(headings[index][1])
+            position = index + 1
+    return anchors
+
+
 def _name_linker(
     targets: Optional[Mapping[str, ReferenceTarget]], link_resolver: Optional[LinkResolver]
 ) -> Optional[NameLinker]:
@@ -1184,7 +1214,7 @@ class KeywordDoc(SourceEntity):
             )
         else:
             if not self.is_initializer:
-                result = f"\n\n#{'#' * header_level} {self.name}\n"
+                result = f"\n\n#{'#' * header_level} {_heading_name(self.name)}\n"
             else:
                 result = ""
 
@@ -1787,21 +1817,19 @@ class LibraryDoc:
         Headings are matched by their title, so other headings in a section do
         not shift them; a keyword whose heading is missing gets an empty anchor.
         """
-        keyword_headings = iter(section_anchors(page, "Keywords", header_level + 2))
-        keyword_anchors = [
-            next((anchor for title, anchor in keyword_headings if title == kw.name), "")
-            for kw in self.get_page_keywords()
-        ]
+        keyword_anchors = _match_heading_anchors(
+            section_anchors(page, "Keywords", header_level + 2),
+            # the finished page writes the variables in a name as inline code
+            [{name, code_span_variables(name)} for name in (_heading_name(kw.name) for kw in self.get_page_keywords())],
+        )
 
-        type_anchors: Dict[str, str] = {}
-        type_headings = iter(section_anchors(page, "Data types", header_level + 2))
-        for type_doc in self.get_page_types():
-            title = f"{type_doc.name} ({type_doc.type})"
-            anchor = next((anchor for heading, anchor in type_headings if heading == title), None)
-            if anchor is not None:
-                type_anchors[type_doc.name] = anchor
+        page_types = self.get_page_types()
+        type_anchors = _match_heading_anchors(
+            section_anchors(page, "Data types", header_level + 2),
+            [{f"{type_doc.name} ({type_doc.type})"} for type_doc in page_types],
+        )
 
-        return keyword_anchors, type_anchors
+        return keyword_anchors, {t.name: anchor for t, anchor in zip(page_types, type_anchors) if anchor}
 
     def _page_to_markdown(self, header_level: int, link_resolver: Optional[LinkResolver]) -> str:
         """The full page of `robotcode doc lib`, the REPL's `.doc` and the documentation view."""
@@ -1812,7 +1840,7 @@ class LibraryDoc:
         page = head + keywords + tail
         keyword_anchors: Dict[str, str] = {}
         for title, anchor in section_anchors(page, "Keywords", header_level + 2):
-            keyword_anchors.setdefault(normalize_reference(title), anchor)
+            keyword_anchors.setdefault(normalize_reference(_heading_title_name(title)), anchor)
         # the headings of the introduction win over the page's own sections, as the targets of Libdoc do
         section_anchors_by_title: Dict[str, str] = {}
         introduction: Dict[str, str] = {}

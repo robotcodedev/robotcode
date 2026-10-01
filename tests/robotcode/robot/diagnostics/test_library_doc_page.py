@@ -139,11 +139,16 @@ def _robot_format_page(tmp_path: Path) -> Tuple[LibraryDoc, str]:
     return doc, _page(doc)
 
 
-def _resource_page(tmp_path: Path) -> str:
+def _resource(tmp_path: Path) -> Tuple[LibraryDoc, str]:
     resource_file = tmp_path / "page_resource.resource"
     resource_file.write_text(RESOURCE, encoding="utf-8")
     resource = ResourceFileBuilder(process_curdir=False).build(str(resource_file))
-    return _page(get_resource_doc_from_resource(resource, str(resource_file)))
+    doc = get_resource_doc_from_resource(resource, str(resource_file))
+    return doc, _page(doc)
+
+
+def _resource_page(tmp_path: Path) -> str:
+    return _resource(tmp_path)[1]
 
 
 def _typed_page(tmp_path: Path, name: str, markdown: bool, color_enum: bool = False) -> Tuple[LibraryDoc, str]:
@@ -290,6 +295,22 @@ class TestResourcePage:
         assert "\n### Set `${a}` To `${b}`\n" in page
         assert "- [Set `${a}` To `${b}`](#set-a-to-b)" in page
         assert _anchors(page)["Open `${browser}` Browser"] == "open-browser-browser"
+
+    def test_anchors_of_names_with_variables(self, tmp_path: Path) -> None:
+        doc, page = _resource(tmp_path)
+
+        headings = [anchor for _, anchor in section_anchors(page, "Keywords")]
+        assert doc.get_page_anchors(page)[0] == headings
+        assert "open-browser-browser" in headings
+
+    def test_a_missing_heading_leaves_the_other_anchors_alone(self, tmp_path: Path) -> None:
+        doc, page = _resource(tmp_path)
+
+        headings = [anchor for _, anchor in section_anchors(page, "Keywords")]
+        without_heading = page.replace("\n### Open `${browser}` Browser\n", "\n")
+        assert doc.get_page_anchors(without_heading)[0] == [
+            "" if anchor == "open-browser-browser" else anchor for anchor in headings
+        ]
 
 
 class TestLinksWithinThePage:
@@ -504,6 +525,32 @@ def _write_library(tmp_path: Path, name: str, source: str) -> LibraryDoc:
     lib_file = tmp_path / f"{name}.py"
     lib_file.write_text(source, encoding="utf-8")
     return get_library_doc(str(lib_file))
+
+
+TRAILING_HASH_LIBRARY = """\
+from robot.api.deco import keyword
+
+
+@keyword("Use C #")
+def use_c():
+    \"\"\"Compiles with `Other Keyword`.\"\"\"
+
+
+def other_keyword():
+    \"\"\"See `Use C #`.\"\"\"
+"""
+
+
+def test_keyword_name_that_ends_with_a_hash(tmp_path: Path) -> None:
+    """A closing run of `#` would end the ATX heading early, so it is escaped,
+    and the heading still gets the keyword's anchor."""
+    doc = _write_library(tmp_path, "PageHashLib", TRAILING_HASH_LIBRARY)
+    page = _page(doc)
+
+    anchors = dict(zip((kw.name for kw in doc.get_page_keywords()), doc.get_page_anchors(page)[0]))
+    assert "\n### Use C \\#\n" in page
+    assert anchors["Use C #"] == "use-c-"
+    assert ("Use C #", "#use-c-") in _links(page)
 
 
 class TestLinksAndLevelsInDetail:

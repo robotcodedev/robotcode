@@ -495,6 +495,15 @@ class TestJsonOutput:
         assert all("‍" not in entry["args"] and "\n" not in entry["short_doc"] for entry in keywords)
         assert all(set(entry) == {"name", "anchor"} for entry in data["types"])
 
+    def test_keyword_anchors_after_a_name_with_a_variable(self, doc_project: Project) -> None:
+        data = _json("doc", "lib", "resources/common.resource")
+
+        assert [(entry["name"], entry["anchor"]) for entry in data["keywords"]] == [
+            ("Open ${browser} Browser", "open-browser-browser"),
+            ("Other Kw", "other-kw"),
+            ("Smoke Kw", "smoke-kw"),
+        ]
+
     @pytest.mark.parametrize(
         ("target", "expected"),
         [
