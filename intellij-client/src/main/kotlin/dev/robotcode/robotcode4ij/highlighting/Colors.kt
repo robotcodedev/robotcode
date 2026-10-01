@@ -15,11 +15,11 @@ object Colors {
     val KEYWORD_NAME: TextAttributesKey =
         createTextAttributesKey("ROBOTFRAMEWORK_KEYWORD_NAME", DefaultLanguageHighlighterColors.FUNCTION_DECLARATION)
     val KEYWORD_CALL: TextAttributesKey =
-        createTextAttributesKey("ROBOTFRAMEWORK_KEYWORD_CALL", DefaultLanguageHighlighterColors.FUNCTION_CALL)
+        createTextAttributesKey("ROBOTFRAMEWORK_KEYWORD_CALL", DefaultLanguageHighlighterColors.FUNCTION_DECLARATION)
     val KEYWORD_CALL_INNER: TextAttributesKey =
-        createTextAttributesKey("ROBOTFRAMEWORK_KEYWORD_CALL_INNER", DefaultLanguageHighlighterColors.FUNCTION_CALL)
+        createTextAttributesKey("ROBOTFRAMEWORK_KEYWORD_CALL_INNER", KEYWORD_CALL)
     val NAME_CALL: TextAttributesKey =
-        createTextAttributesKey("ROBOTFRAMEWORK_NAME_CALL", DefaultLanguageHighlighterColors.FUNCTION_CALL)
+        createTextAttributesKey("ROBOTFRAMEWORK_NAME_CALL", KEYWORD_CALL)
     
     val SETTING: TextAttributesKey =
         createTextAttributesKey("ROBOTFRAMEWORK_SETTING", DefaultLanguageHighlighterColors.KEYWORD)
@@ -32,9 +32,9 @@ object Colors {
         createTextAttributesKey("ROBOTFRAMEWORK_VAR", DefaultLanguageHighlighterColors.KEYWORD)
     
     val VARIABLE: TextAttributesKey =
-        createTextAttributesKey("ROBOTFRAMEWORK_VARIABLE", DefaultLanguageHighlighterColors.GLOBAL_VARIABLE)
+        createTextAttributesKey("ROBOTFRAMEWORK_VARIABLE", DefaultLanguageHighlighterColors.INSTANCE_FIELD)
     val VARIABLE_EXPRESSION: TextAttributesKey =
-        createTextAttributesKey("ROBOTFRAMEWORK_VARIABLE_EXPRESSION", DefaultLanguageHighlighterColors.GLOBAL_VARIABLE)
+        createTextAttributesKey("ROBOTFRAMEWORK_VARIABLE_EXPRESSION", VARIABLE)
     
     val VARIABLE_BEGIN: TextAttributesKey =
         createTextAttributesKey("ROBOTFRAMEWORK_VARIABLE_BEGIN", DefaultLanguageHighlighterColors.BRACES)
@@ -57,7 +57,7 @@ object Colors {
     val ARGUMENT: TextAttributesKey =
         createTextAttributesKey("ROBOTFRAMEWORK_ARGUMENT", DefaultLanguageHighlighterColors.STRING)
     val EMBEDDED_ARGUMENT: TextAttributesKey =
-        createTextAttributesKey("ROBOTFRAMEWORK_EMBEDDED_ARGUMENT", DefaultLanguageHighlighterColors.STRING)
+        createTextAttributesKey("ROBOTFRAMEWORK_EMBEDDED_ARGUMENT", VARIABLE)
     val NAMED_ARGUMENT: TextAttributesKey =
         createTextAttributesKey("ROBOTFRAMEWORK_NAMED_ARGUMENT", DefaultLanguageHighlighterColors.PARAMETER)
     
@@ -71,7 +71,7 @@ object Colors {
         createTextAttributesKey("ROBOTFRAMEWORK_OPERATOR", DefaultLanguageHighlighterColors.OPERATION_SIGN)
     
     val BDD_PREFIX: TextAttributesKey =
-        createTextAttributesKey("ROBOTFRAMEWORK_BDD_PREFIX", DefaultLanguageHighlighterColors.METADATA)
+        createTextAttributesKey("ROBOTFRAMEWORK_BDD_PREFIX", DefaultLanguageHighlighterColors.KEYWORD)
     
     val CONTINUATION: TextAttributesKey =
         createTextAttributesKey("ROBOTFRAMEWORK_CONTINUATION", DefaultLanguageHighlighterColors.DOT)

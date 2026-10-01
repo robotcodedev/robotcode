@@ -83,7 +83,6 @@ class RobotCodeSyntaxHighlighter : SyntaxHighlighterBase() {
             "meta.embedded" to arrayOf(HighlighterColors.TEXT),
             "meta.preprocessor" to arrayOf(DefaultLanguageHighlighterColors.METADATA),
             "meta.section" to arrayOf(DefaultLanguageHighlighterColors.CLASS_NAME),
-            "entity.name.section" to arrayOf(DefaultLanguageHighlighterColors.CLASS_NAME),
             "meta.tag" to arrayOf(DefaultLanguageHighlighterColors.METADATA),
             "storage" to arrayOf(DefaultLanguageHighlighterColors.KEYWORD),
             "storage.type.method" to arrayOf(DefaultLanguageHighlighterColors.KEYWORD),
@@ -124,16 +123,14 @@ class RobotCodeSyntaxHighlighter : SyntaxHighlighterBase() {
         
         if (tokenType !is RobotTextMateElementType) return arrayOf(HighlighterColors.TEXT)
         
-        val result1 = mutableListOf<TextAttributesKey>()
-        
-        for (scope1 in (tokenType.scope.scopeName?.toString() ?: "").split(".")) {
-            for (scope2 in createSubstringSequence(scope1)) {
-                val result2 = textMateElementMap[scope2]
-                if (result2 != null) result1.addAll(result2)
+        // a token can carry several scope names, the last one is the innermost
+        val scopeNames = (tokenType.scope.scopeName?.toString() ?: "").split(' ').filter { it.isNotEmpty() }
+        for (scopeName in scopeNames.asReversed()) {
+            for (prefix in createSubstringSequence(scopeName)) {
+                val result1 = textMateElementMap[prefix]
+                if (result1 != null) return result1
             }
         }
-        
-        if (result1.isNotEmpty()) return result1.toTypedArray()
         
         return arrayOf(HighlighterColors.TEXT)
     }

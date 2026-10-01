@@ -82,10 +82,6 @@
 		<langCodeStyleSettingsProvider
 			implementation="dev.robotcode.robotcode4ij.configuration.RobotCodeLanguageCodeStyleSettingsProvider"/>
 
-		<additionalTextAttributes scheme="Darcula" file="colorSchemes/RobotDarculaColorScheme.xml"/>
-		<additionalTextAttributes scheme="Dark" file="colorSchemes/RobotDarculaColorScheme.xml"/>
-		<additionalTextAttributes scheme="Light" file="colorSchemes/RobotLightColorScheme.xml"/>
-
 		<runLineMarkerContributor language="robotframework" id="robotCodeRunLineMarkerContributor"
 								  implementationClass="dev.robotcode.robotcode4ij.execution.RobotCodeRunLineMarkerContributor"/>
 

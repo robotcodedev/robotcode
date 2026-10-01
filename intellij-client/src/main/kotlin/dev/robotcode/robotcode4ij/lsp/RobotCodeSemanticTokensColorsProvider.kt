@@ -1,10 +1,15 @@
 package dev.robotcode.robotcode4ij.lsp
 
 import com.intellij.openapi.diagnostic.thisLogger
+import com.intellij.openapi.editor.DefaultLanguageHighlighterColors
+import com.intellij.openapi.editor.HighlighterColors
+import com.intellij.openapi.editor.colors.EditorColorsManager
+import com.intellij.openapi.editor.colors.EditorColorsScheme
 import com.intellij.openapi.editor.colors.TextAttributesKey
 import com.intellij.psi.PsiFile
 import com.redhat.devtools.lsp4ij.features.semanticTokens.DefaultSemanticTokensColorsProvider
 import dev.robotcode.robotcode4ij.highlighting.Colors
+import java.util.concurrent.ConcurrentHashMap
 
 private val mapping by lazy {
     mapOf(
@@ -28,10 +33,9 @@ private val mapping by lazy {
         "keywordCallInner" to Colors.KEYWORD_CALL_INNER,
         "nameCall" to Colors.NAME_CALL,
         "argument" to Colors.ARGUMENT,
-        "embeddedArgument" to Colors.EMBEDDED_ARGUMENT,
-        "argument,embedded" to Colors.EMBEDDED_ARGUMENT,
         "namedArgument" to Colors.NAMED_ARGUMENT,
         "variable" to Colors.VARIABLE,
+        "variable,embedded" to Colors.EMBEDDED_ARGUMENT,
         "variableExpression" to Colors.VARIABLE_EXPRESSION,
         "variableBegin" to Colors.VARIABLE_BEGIN,
         "variableEnd" to Colors.VARIABLE_END,
@@ -40,8 +44,24 @@ private val mapping by lazy {
         "namespace" to Colors.NAMESPACE,
         "bddPrefix" to Colors.BDD_PREFIX,
         "continuation" to Colors.CONTINUATION,
+        "escape" to Colors.ESCAPE,
+        "config" to Colors.LINE_COMMENT,
         "error" to Colors.ERROR,
     )
+}
+
+private val reportedUnknownTokenTypes = ConcurrentHashMap.newKeySet<String>()
+
+/**
+ * Returns whether [scheme] defines anything for [key], directly or through one of its fallback keys.
+ * A key that only resolves to the plain text attributes would paint plain text over the grammar highlighting.
+ */
+internal fun isDefinedByScheme(key: TextAttributesKey, scheme: EditorColorsScheme): Boolean {
+    val attributes = scheme.getAttributes(key) ?: return false
+    if (attributes.isEmpty) return false
+    
+    return attributes != scheme.getAttributes(DefaultLanguageHighlighterColors.IDENTIFIER)
+        && attributes != scheme.getAttributes(HighlighterColors.TEXT)
 }
 
 class RobotCodeSemanticTokensColorsProvider : DefaultSemanticTokensColorsProvider() {
@@ -58,9 +78,14 @@ class RobotCodeSemanticTokensColorsProvider : DefaultSemanticTokensColorsProvide
             file
         )
         
-        return result ?: run {
-            thisLogger().warn("Unknown token type: $tokenType and modifiers: $tokenModifiers")
-            null
+        if (result == null) {
+            if (reportedUnknownTokenTypes.add(tokenType)) {
+                thisLogger().warn("Unknown token type: $tokenType")
+            }
+            return null
         }
+        
+        // like VS Code: only draw what the color scheme defines, otherwise keep the grammar highlighting
+        return if (isDefinedByScheme(result, EditorColorsManager.getInstance().globalScheme)) result else null
     }
 }

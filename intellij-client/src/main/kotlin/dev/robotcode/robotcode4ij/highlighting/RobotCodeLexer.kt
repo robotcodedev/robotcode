@@ -55,6 +55,7 @@ class RobotCodeLexer : LexerBase() {
                 "comment.block.robotframework" to COMMENT_BLOCK,
                 
                 "punctuation.definition.variable.begin.robotframework" to VARIABLE_BEGIN,
+                "punctuation.definition.variable.python.begin.robotframework" to VARIABLE_BEGIN,
                 "punctuation.definition.variable.end.robotframework" to VARIABLE_END,
                 "punctuation.definition.envvar.begin.robotframework" to ENVIRONMENT_VARIABLE_BEGIN,
                 "punctuation.definition.envvar.end.robotframework" to ENVIRONMENT_VARIABLE_END,
