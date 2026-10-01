@@ -159,5 +159,5 @@
 
 ## 7. Verification
 
-- [ ] 7.1 Run `hatch run lint:all` and `hatch run test:test` (RF 5.0–7.5) and confirm that both pass. Regression baselines may change only where the converter corrections, the scope name or the anchor rule predict it. Confirm that the CI matrix on Linux, Windows and macOS is green.
-- [ ] 7.2 Manually open the output of `robotcode doc lib -o builtin.md BuiltIn` and of `robotcode doc lib -o os.md OperatingSystem` on RF 7.5 in GitHub's Markdown preview and in VS Code's Markdown preview, with the built-in math support on. Confirm that no variable is shown as a formula, and that the table of contents, the keyword index and the reference links jump to their headings, including the `[Secret]` links of `OperatingSystem` to its data type.
+- [x] 7.1 Run `hatch run lint:all` and `hatch run test:test` (RF 5.0–7.5) and confirm that both pass. Regression baselines may change only where the converter corrections, the scope name or the anchor rule predict it. Confirm that the CI matrix on Linux, Windows and macOS is green.
+- [x] 7.2 Manually open the output of `robotcode doc lib -o builtin.md BuiltIn` and of `robotcode doc lib -o os.md OperatingSystem` on RF 7.5 in GitHub's Markdown preview and in VS Code's Markdown preview, with the built-in math support on. Confirm that no variable is shown as a formula, and that the table of contents, the keyword index and the reference links jump to their headings, including the `[Secret]` links of `OperatingSystem` to its data type.
