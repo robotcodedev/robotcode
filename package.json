@@ -293,7 +293,6 @@
         }
       }
     ],
-    "markdown.markdownItPlugins": true,
     "icons": {
       "robotcode-robot": {
         "description": "RobotFramework Icon",
