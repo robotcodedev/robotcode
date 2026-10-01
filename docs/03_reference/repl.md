@@ -283,10 +283,23 @@ For libraries documented in Markdown, references such as `[Set Log Level]` are r
 | `Tab` / `Shift-Tab` | Cycle through links in the current viewport |
 | `f` / `Enter` (on a focused link), mouse click | Follow link — `#anchor` scrolls to the section, `http(s)://` opens in your browser |
 | `[` / `]` | Browser-style back / forward through anchor follows |
+| `s` | Show the sidebar of a `.doc` page, or move the focus to it (see below) |
 | `Shift` + drag | Native terminal text selection (mouse capture is suspended while Shift is held) |
-| `q` / `Esc` / `Enter` (with no link focused) | Close the viewer |
+| `q` / `Esc` / `Enter` (with no link focused) | Close the viewer — while the sidebar stands beside the page, `Esc` hides it first |
 
 Search is case-insensitive substring. The current match is highlighted in reverse; `n`/`N` walk through all matches and scroll them into view. Link cycling skips back to the user's current scroll position if you've scrolled away, so `Tab` always lands on something you can see.
+
+On the page of `.doc`, `s` opens a sidebar with the outline of the page, as in Libdoc's HTML output: the sections of the introduction, `Importing`, every keyword and every data type, grouped under their section. The sidebar is hidden until you press `s`; `.help` and `.kw` have none. While the sidebar has the focus, these keys apply:
+
+| Key | Effect |
+| --- | ------ |
+| Typing | Filter the list: entries whose name contains the text, with `*` and `?` as wildcards, ignoring case, spaces and underscores — the rules of the patterns of [`robotcode doc keywords`](browsing-documentation.md#keywords-an-overview-of-the-keywords). A section stays listed while one of its entries matches. |
+| `↑` / `↓` | Select an entry |
+| Mouse wheel | Scroll the list, without changing the selection |
+| `Enter`, mouse click on an entry | Jump to its heading; `[` returns to where you were |
+| `Esc` | Hide the sidebar |
+
+In a terminal with at least 94 columns, the sidebar stands left of the page, which is rendered narrower; after a jump it stays open and the page gets the focus, and `s` moves the focus back to the sidebar. `Esc` on the page hides the sidebar, and only the next `Esc` closes the viewer. Showing or hiding it keeps the heading at the top of the page in place, but clears the back / forward history, as resizing the terminal does. In a narrower terminal, the sidebar lies over the left part of the page and closes after a jump.
 
 On the plain backend the doc-display commands still work — they print the rendered markdown through the pager with no colour, no fullscreen overlay. Useful in AI-agent sessions and headless environments where a fullscreen overlay would get in the way.
 

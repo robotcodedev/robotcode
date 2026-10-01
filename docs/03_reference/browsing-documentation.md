@@ -189,6 +189,11 @@ robotcode doc browse Collections
 
 `browse` opens the page of `lib` in the documentation viewer of the REPL. `Tab` moves through the links, `f` or `Enter` follows one, `[` and `]` go back and forward, and `/` searches; the REPL guide lists [all keys of the viewer](repl.md#the-doc-viewer). `q` closes it.
 
+`s` opens a sidebar with the outline of the page, as in Libdoc's HTML output: the sections of the introduction, `Importing`, every keyword and every data type. Typing filters the list with the rules of the [`keywords` patterns](#keywords-an-overview-of-the-keywords), `↑` and `↓` select an entry, the mouse wheel scrolls the list, `Enter` or a click jumps to the heading of the entry, and `Esc` hides the sidebar.
+
+- **In a terminal with at least 94 columns**, the sidebar stands left of the page, which is rendered narrower. It stays open after a jump, and `s` moves the focus back to it. `Esc` on the page hides the sidebar; only the next `Esc` closes the viewer.
+- **In a narrower terminal**, the sidebar lies over the left part of the page, which keeps its width, and closes after a jump.
+
 In AI-agent sessions, in a pipe and without a terminal, `browse` prints the page as `robotcode doc lib` does.
 
 ## When a target cannot be loaded
