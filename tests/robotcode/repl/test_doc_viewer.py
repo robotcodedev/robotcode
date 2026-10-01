@@ -374,6 +374,20 @@ def test_follow_current_link_jumps_to_anchor() -> None:
     assert viewer._body_window.vertical_scroll == 7
 
 
+def test_links_are_rendered_without_a_vt_console(monkeypatch: pytest.MonkeyPatch) -> None:
+    """On Windows without a console that supports VT sequences, `rich` assumes
+    a legacy console; the viewer's links must not depend on that."""
+    import rich.console
+
+    from robotcode.repl._pt.doc_viewer import render_markdown_for_viewer
+
+    monkeypatch.setattr(rich.console, "detect_legacy_windows", lambda: True)
+
+    _, links = render_markdown_for_viewer("See [Get Match Count](#get-match-count).")
+
+    assert [target for _, _, target in links] == ["#get-match-count"]
+
+
 def test_keyword_index_link_of_a_library_page_jumps_and_goes_back() -> None:
     """The `#get-match-count` link in the keyword index of the `Collections`
     page jumps to that keyword's heading, and going back returns."""

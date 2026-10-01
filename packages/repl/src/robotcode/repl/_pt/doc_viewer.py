@@ -85,7 +85,10 @@ def render_markdown_for_viewer(text: str, *, width: int = 80) -> Tuple[str, List
     """
     if not text:
         return "", []
-    console = Console(width=width, record=False, soft_wrap=False, force_terminal=True)
+    # The ANSI text goes to `_strip_osc8_hyperlinks` and prompt_toolkit, never to a console.
+    # On Windows without a console that supports VT sequences, such as in CI, `rich` would
+    # assume a legacy console and leave out the OSC 8 links.
+    console = Console(width=width, record=False, soft_wrap=False, force_terminal=True, legacy_windows=False)
     with console.capture() as cap:
         console.print(Markdown(text))
     return _strip_osc8_hyperlinks(cap.get())
