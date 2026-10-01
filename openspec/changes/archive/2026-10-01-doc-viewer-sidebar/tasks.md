@@ -24,5 +24,5 @@
 
 ## 5. Verification
 
-- [ ] 5.1 Run `hatch run lint:all` and `hatch run test:test` (RF 5.0–7.5) and confirm that both pass. Confirm that the CI matrix on Linux, Windows and macOS is green.
-- [ ] 5.2 Run `robotcode doc browse BuiltIn` in a terminal with at least 120 columns and in one with 80 columns: open the sidebar with `s`, filter for `should be`, jump to a keyword, go back with `[`, hide the sidebar with `Esc`, and in the wide terminal check that the heading at the top stays in place when the sidebar is shown and hidden.
+- [x] 5.1 Run `hatch run lint:all` and `hatch run test:test` (RF 5.0–7.5) and confirm that both pass. Confirm that the CI matrix on Linux, Windows and macOS is green.
+- [x] 5.2 Run `robotcode doc browse BuiltIn` in a terminal with at least 120 columns and in one with 80 columns: open the sidebar with `s`, filter for `should be`, jump to a keyword, go back with `[`, hide the sidebar with `Esc`, and in the wide terminal check that the heading at the top stays in place when the sidebar is shown and hidden.
