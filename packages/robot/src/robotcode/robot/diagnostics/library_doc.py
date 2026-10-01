@@ -98,6 +98,7 @@ from ..utils.markdown_docs import (
     section_anchors,
     shift_headings,
     slugify,
+    unique_reference_labels,
 )
 from ..utils.markdownformatter import MarkDownFormatter, NameLinker
 from ..utils.match import normalize, normalize_namespace
@@ -1886,16 +1887,21 @@ class LibraryDoc:
         """The page up to the keyword entries, the keyword entries, and the rest of the page."""
         targets = self.get_reference_targets()
         separator = "\n\n---\n\n"
+        # each documentation on the page keeps the URLs of its own reference definitions
+        labels: Dict[str, str] = {}
 
         head = self._get_title_markdown(header_level)
         if self.doc:
             head += f"##{'#' * header_level} Introduction\n\n"
-            head += self._get_page_introduction(header_level, link_resolver, targets).strip()
+            head += unique_reference_labels(
+                self._get_page_introduction(header_level, link_resolver, targets).strip(), labels
+            )
 
         if any(v for v in self.inits.values() if v.arguments):
             head = f"{head.rstrip()}{separator}##{'#' * header_level} Importing\n\n"
             head += separator.join(
-                self._get_page_entry(kw, header_level, link_resolver, targets) for kw in self.inits.values()
+                unique_reference_labels(self._get_page_entry(kw, header_level, link_resolver, targets), labels)
+                for kw in self.inits.values()
             )
 
         keywords = ""
@@ -1903,7 +1909,8 @@ class LibraryDoc:
         if page_keywords:
             head = f"{head.rstrip()}{separator}##{'#' * header_level} Keywords\n\n"
             keywords = separator.join(
-                self._get_page_entry(kw, header_level, link_resolver, targets) for kw in page_keywords
+                unique_reference_labels(self._get_page_entry(kw, header_level, link_resolver, targets), labels)
+                for kw in page_keywords
             )
 
         tail = ""
@@ -1912,13 +1919,16 @@ class LibraryDoc:
                 head = head.rstrip()
             tail += f"{separator}##{'#' * header_level} Data types\n\n"
             tail += separator.join(
-                t.to_markdown(
-                    header_level=header_level + 1,
-                    link_resolver=link_resolver,
-                    reference_targets=targets,
-                    # headings in the documentation sit below the type's `Documentation:`
-                    modify_doc_handler=_page_heading_shift(t.doc_format, header_level + 3),
-                ).strip()
+                unique_reference_labels(
+                    t.to_markdown(
+                        header_level=header_level + 1,
+                        link_resolver=link_resolver,
+                        reference_targets=targets,
+                        # headings in the documentation sit below the type's `Documentation:`
+                        modify_doc_handler=_page_heading_shift(t.doc_format, header_level + 3),
+                    ).strip(),
+                    labels,
+                )
                 for t in self.get_page_types()
             )
 

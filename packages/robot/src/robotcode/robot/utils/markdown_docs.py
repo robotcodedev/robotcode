@@ -31,6 +31,7 @@ __all__ = [
     "section_anchors",
     "shift_headings",
     "slugify",
+    "unique_reference_labels",
 ]
 
 REFERENCE_KEYWORD = "keyword"
@@ -61,8 +62,16 @@ _RE_ATX_HEADING = re.compile(r"^( {0,3})(#{1,6})(?=\s|$)(.*)$")
 _RE_HEADING_TITLE = re.compile(r"^ {0,3}(#{1,6})\s+(.+?)(?:\s+#+)?\s*$")
 _RE_ADMONITION = re.compile(r"^(\s*(?:>\s*)+)\[!([A-Za-z]+)\][ \t]*(.*?)\s*$")
 _RE_DEFINITION = re.compile(r"^ {0,3}\[([^\]\n]+)\]:[ \t]*(\S+)")
+# a whole line that is a reference definition, with an optional title; `[1]: Only on Linux.` is text
+_RE_FULL_DEFINITION = re.compile(
+    r"""^ {0,3}\[([^\]\n]+)\]:[ \t]*(<[^<>\n]*>|\S+)(?:[ \t]+(?:"[^"\n]*"|'[^'\n]*'|\([^()\n]*\)))?[ \t]*$"""
+)
 _RE_CODE_SPAN = re.compile(r"(`+)(?:(?!\1).)+?\1(?!`)")
 _RE_REFERENCE = re.compile(r"(?<![\\!\]])\[([^\[\]\n]+)\](?:\[([^\[\]\n]*)\])?(?![(\[])")
+# the label of `[text][label]`, also when the text starts on an earlier line; an escaped `\]` ends no text
+_RE_FULL_REFERENCE_LABEL = re.compile(r"(?<=(?<!\\)\])\[([^\[\]\n]+)\]")
+# `[label]` and `[label][]`, also as images
+_RE_SHORT_REFERENCE = re.compile(r"(?<!\\)(?<!(?<!\\)\])(!?)\[([^\[\]\n]+)\](?:\[\])?(?![(\[])")
 _RE_LIST_ITEM = re.compile(r"^( {0,3})([-+*]|\d{1,9}[.)])(?: +|$)")
 # a heading or a thematic break ends its block, as a blank line does
 _RE_BLOCK_END = re.compile(r"^ {0,3}(?:#{1,6}(?:\s|$)|([-*_])(?: *\1){2,} *$)")
@@ -257,6 +266,72 @@ def extract_reference_definitions(text: str) -> Dict[str, str]:
         for match in [_RE_DEFINITION.match(line)]
         if match
     }
+
+
+def unique_reference_labels(text: str, labels: Dict[str, str]) -> str:
+    """Rename the reference definitions of `text` whose label `labels` maps to
+    another URL, and the references to them, so that `text` can follow the texts
+    that defined `labels` on one page. The definitions of `text` are added to
+    `labels`, by normalized label.
+
+    A Markdown renderer takes the first definition of a label, so the second
+    `[1]: https://...` on a page would link to the URL of the first one.
+    """
+    own: Dict[str, str] = {}
+    for line, is_text in _iter_text_lines(text):
+        definition = _RE_FULL_DEFINITION.match(line) if is_text else None
+        if definition:
+            own.setdefault(normalize_reference(definition.group(1)), definition.group(2).strip("<>"))
+
+    renames: Dict[str, str] = {}
+    for label, url in own.items():
+        if labels.get(label, url) != url:
+            number = 2
+            while (new_label := f"{label}-{number}") in labels or new_label in own or new_label in renames.values():
+                number += 1
+            renames[label] = new_label
+    for label, url in own.items():
+        labels.setdefault(renames.get(label, label), url)
+    if not renames:
+        return text
+
+    def rename_full(match: "re.Match[str]") -> str:
+        label = renames.get(normalize_reference(match.group(1)))
+        return match.group(0) if label is None else f"[{label}]"
+
+    def rename_short(match: "re.Match[str]") -> str:
+        image, link_text = match.groups()
+        label = renames.get(normalize_reference(link_text))
+        return match.group(0) if label is None else f"{image}[{link_text}][{label}]"
+
+    def rename(part: str) -> str:
+        return _RE_SHORT_REFERENCE.sub(rename_short, _RE_FULL_REFERENCE_LABEL.sub(rename_full, part))
+
+    def rename_in(part: str) -> str:
+        # a variable keeps its item access: `${list}[1]` is no reference, it becomes inline code later
+        result: List[str] = []
+        while (variable := search_variable(part, "$", ignore_errors=True)).start >= 0:
+            result.append(rename(part[: variable.start]))
+            result.append(part[variable.start : variable.end])
+            part = part[variable.end :]
+        result.append(rename(part))
+        return "".join(result)
+
+    def convert(line: str) -> str:
+        definition = _RE_FULL_DEFINITION.match(line)
+        if definition:
+            label = renames.get(normalize_reference(definition.group(1)))
+            return line if label is None else f"{line[: definition.start(1)]}{label}{line[definition.end(1) :]}"
+        result: List[str] = []
+        position = 0
+        for match in _RE_NO_TEXT.finditer(line):
+            result.append(rename_in(line[position : match.start()]))
+            result.append(match.group(0))
+            position = match.end()
+        result.append(rename_in(line[position:]))
+        return "".join(result)
+
+    return "\n".join(convert(line) if is_text else line for line, is_text in _iter_text_lines(text))
 
 
 def resolve_reference_links(

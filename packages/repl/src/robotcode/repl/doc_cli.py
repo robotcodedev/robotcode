@@ -36,7 +36,7 @@ from robotcode.robot.diagnostics.library_doc import (
     resolve_robot_variables,
 )
 from robotcode.robot.utils import RF_VERSION
-from robotcode.robot.utils.markdown_docs import anchor_link_resolver
+from robotcode.robot.utils.markdown_docs import anchor_link_resolver, unique_reference_labels
 from robotcode.robot.utils.match import normalize
 from robotcode.robot.utils.variables import contains_variable
 from robotcode.runner.cli.robot import RobotFrameworkEx, handle_robot_options
@@ -589,7 +589,13 @@ def keyword(
                     type_docs.setdefault(type_doc.name, type_doc)
         parts = [kw.to_markdown() for kw in selected]
         parts.extend(type_docs[t].to_markdown(header_level=1) for t in sorted(type_docs, key=lambda t: (t.lower(), t)))
-        _write_markdown(app, "\n\n---\n\n".join(part.strip() for part in parts) + "\n", output)
+        # One document: a label that two parts define for other URLs would link both to the first URL.
+        labels: Dict[str, str] = {}
+        _write_markdown(
+            app,
+            "\n\n---\n\n".join(unique_reference_labels(part.strip(), labels) for part in parts) + "\n",
+            output,
+        )
 
     if missing:
         finder = RecommendationFinder(normalize)

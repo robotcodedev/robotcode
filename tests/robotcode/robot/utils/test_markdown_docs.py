@@ -19,6 +19,7 @@ from robotcode.robot.utils.markdown_docs import (
     resolve_reference_links,
     shift_headings,
     slugify,
+    unique_reference_labels,
 )
 
 TARGETS = {
@@ -172,6 +173,87 @@ def test_extract_reference_definitions() -> None:
         "varsyntax": "https://example.com/var",
         "other": "https://example.com/other",
     }
+
+
+def test_unique_reference_labels_renames_a_label_with_another_url() -> None:
+    labels = {"1": "https://example.com/first"}
+    text = "\n".join(
+        [
+            "See [the second",
+            "article][1], [1], [1][] and ![image][1].",
+            "`[1]` and [x](https://example.com/[1]) stay.",
+            "",
+            "[1]: https://example.com/second",
+            "",
+            "```",
+            "[1]",
+            "```",
+        ]
+    )
+
+    assert unique_reference_labels(text, labels) == "\n".join(
+        [
+            "See [the second",
+            "article][1-2], [1][1-2], [1][1-2] and ![image][1-2].",
+            "`[1]` and [x](https://example.com/[1]) stay.",
+            "",
+            "[1-2]: https://example.com/second",
+            "",
+            "```",
+            "[1]",
+            "```",
+        ]
+    )
+    assert labels == {"1": "https://example.com/first", "1-2": "https://example.com/second"}
+
+
+def test_unique_reference_labels_keeps_labels_that_need_no_other_name() -> None:
+    labels = {"1": "https://example.com/a", "1-2": "https://example.com/b"}
+    text = "[x][1], [y][Other] and [z][2]\n\n[1]: https://example.com/c\n[Other]: https://example.com/a\n[2]: x\n[2]: y"
+
+    assert unique_reference_labels(text, labels) == text.replace("[1]", "[1-3]")
+    assert labels == {
+        "1": "https://example.com/a",
+        "1-2": "https://example.com/b",
+        "1-3": "https://example.com/c",
+        "other": "https://example.com/a",
+        "2": "x",
+    }
+
+
+def test_unique_reference_labels_leaves_text_that_only_looks_like_a_definition() -> None:
+    labels = {"1": "Only"}
+    text = "Deletes the file [1].\n\n[1]: Needs administrator rights."
+
+    assert unique_reference_labels(text, labels) == text
+    assert labels == {"1": "Only"}
+
+
+def test_unique_reference_labels_takes_definitions_with_a_title() -> None:
+    labels = {"1": "https://example.com/first"}
+    text = '[a][1]\n\n[1]: <https://example.com/second> "The second"'
+
+    assert unique_reference_labels(text, labels) == '[a][1-2]\n\n[1-2]: <https://example.com/second> "The second"'
+
+
+def test_unique_reference_labels_leaves_item_access_and_escaped_brackets() -> None:
+    labels = {"1": "https://example.com/first"}
+    text = "\n".join(
+        [
+            "Uses ${list}[1], ${dict}[a][1] and \\[x\\][1], see [1].",
+            "",
+            "[1]: https://example.com/second",
+        ]
+    )
+
+    assert unique_reference_labels(text, labels) == "\n".join(
+        [
+            # after escaped brackets, `[1]` is a shortcut reference whose text stays `1`
+            "Uses ${list}[1], ${dict}[a][1] and \\[x\\][1][1-2], see [1][1-2].",
+            "",
+            "[1-2]: https://example.com/second",
+        ]
+    )
 
 
 def test_anchor_link_resolver_links_what_has_a_heading_on_a_library_page() -> None:

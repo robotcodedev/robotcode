@@ -585,7 +585,37 @@ class TestKeywordOverview:
         assert all("dictionary" in entry["name"].lower() for entry in data["keywords"])
 
 
+LABELS_LIB = """\
+ROBOT_LIBRARY_DOC_FORMAT = "MARKDOWN"
+
+
+def first_keyword():
+    \"\"\"See [the first article][1].
+
+    [1]: https://example.com/first
+    \"\"\"
+
+
+def second_keyword():
+    \"\"\"See [the second article][1].
+
+    [1]: https://example.com/second
+    \"\"\"
+"""
+
+
 class TestKeywordDocumentation:
+    def test_reference_labels_of_several_keywords(self, doc_project: Project) -> None:
+        """One document: a label that two keywords define for other URLs is renamed in the second one."""
+        name = _unique("LabelsLib")
+        _write(doc_project.root / "lib" / f"{name}.py", LABELS_LIB)
+
+        output = _ok("doc", "keyword", name, "First Keyword", "Second Keyword").stdout
+
+        assert "[the first article][1]" in output
+        assert "[the second article][1-2]" in output
+        assert "[1-2]: https://example.com/second" in output
+
     def test_exact_name(self, doc_project: Project) -> None:
         assert _documented(_ok("doc", "keyword", "Collections", "get_match_count").stdout) == ["Get Match Count"]
 

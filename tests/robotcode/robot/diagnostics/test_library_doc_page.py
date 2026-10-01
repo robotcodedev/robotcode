@@ -9,7 +9,7 @@ import subprocess
 import sys
 from itertools import pairwise
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, List, Set, Tuple
 
 import pytest
 from robot.running.builder import ResourceFileBuilder
@@ -638,3 +638,56 @@ class TestLinksAndLevelsInDetail:
     @needs_robot_format
     def test_variables_side_by_side_in_a_standard_library(self) -> None:
         assert "`${TEMPDIR}${/}`foo.txt" in _page(get_library_doc("OperatingSystem"))
+
+
+REFERENCE_LIBRARY = '''\
+ROBOT_LIBRARY_DOC_FORMAT = "MARKDOWN"
+
+
+def alpha():
+    """See [the first article][1].
+
+    [1]: https://example.com/first
+    """
+
+
+def beta():
+    """See [the second
+    article][1], [1] and [1][] again.
+
+    [1]: https://example.com/second
+    """
+
+
+def gamma():
+    """Also [the first article][1].
+
+    [1]: https://example.com/first
+    """
+'''
+
+
+class TestReferenceDefinitions:
+    def test_each_keyword_keeps_the_urls_of_its_definitions(self, tmp_path: Path) -> None:
+        page = _page(_write_library(tmp_path, "PageReferenceLib", REFERENCE_LIBRARY))
+
+        alpha = page.split("\n### Alpha\n", 1)[1].split("\n### ", 1)[0]
+        assert "[the first article][1]" in alpha
+        assert "[1]: https://example.com/first" in alpha
+        beta = page.split("\n### Beta\n", 1)[1].split("\n### ", 1)[0]
+        assert "article][1-2], [1][1-2] and [1][1-2] again." in beta
+        assert "[1-2]: https://example.com/second" in beta
+        # the same URL needs no other label
+        gamma = page.split("\n### Gamma\n", 1)[1]
+        assert "[the first article][1]" in gamma
+        assert "[1]: https://example.com/first" in gamma
+
+    @needs_rf75
+    def test_no_label_of_builtin_links_to_two_urls(self) -> None:
+        definitions = re.findall(r"^ {0,3}\[([^\]\n]+)\]:[ \t]*(\S+)", _page(get_library_doc("BuiltIn")), re.MULTILINE)
+
+        urls: Dict[str, Set[str]] = {}
+        for label, url in definitions:
+            urls.setdefault("".join(label.split()).lower(), set()).add(url)
+        assert definitions
+        assert all(len(found) == 1 for found in urls.values())
