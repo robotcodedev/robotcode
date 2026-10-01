@@ -7,11 +7,18 @@ we verify the rendering helper and the internal scroll math in
 isolation, plus the keybinding wiring on the standalone Application.
 """
 
-from typing import Any, List, Tuple
+from types import SimpleNamespace
+from typing import Any, Callable, List, Tuple
 
 import pytest
 
-from robotcode.repl._pt.doc_viewer import _SCROLL_TO_CONTEXT, DocViewer, _NavState, render_markdown_to_ansi
+from robotcode.repl._pt.doc_viewer import (
+    _SCROLL_TO_CONTEXT,
+    DocViewer,
+    _fragments_text,
+    _NavState,
+    render_markdown_to_ansi,
+)
 
 
 def test_render_markdown_to_ansi_empty_input_returns_empty() -> None:
@@ -221,6 +228,7 @@ def test_doc_viewer_registers_expected_keybindings() -> None:
         ("f",),  # follow focused link
         ("[",),  # back (browser-style)
         ("]",),  # forward
+        ("s",),  # show the sidebar
     }
     missing = expected - bound
     assert not missing, f"expected viewer key bindings missing: {missing}"
@@ -901,7 +909,7 @@ def test_back_after_content_follow_reloads_previous_document(monkeypatch: pytest
     focused link."""
     viewer = DocViewer()
     loaded: List[Tuple[str, str]] = []
-    monkeypatch.setattr(viewer, "_load_document", lambda title, md: loaded.append((title, md)))
+    monkeypatch.setattr(viewer, "_load_document", lambda title, md, **_kw: loaded.append((title, md)))
     # Currently on the keyword page, list page on the back stack.
     viewer._title = "Append To List"
     viewer._md_source = "# Append To List"
@@ -1036,3 +1044,375 @@ def test_search_buffer_esc_cancels_back_to_body() -> None:
     assert search_kb is not None
     esc_binding = next(b for b in search_kb.bindings if [str(k) for k in b.keys] == ["Keys.Escape"])
     assert esc_binding is not None
+
+
+# ---------------------------------------------------------------------------
+# Sidebar — the outline of a library page, its layout, keys and filter.
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture(scope="module")
+def collections_page() -> str:
+    from robotcode.robot.diagnostics.library_doc import get_library_doc
+    from robotcode.robot.utils.markdown_docs import anchor_link_resolver
+
+    return get_library_doc("Collections").to_markdown(
+        only_doc=False, header_level=0, link_resolver=anchor_link_resolver
+    )
+
+
+def _sized_viewer(columns: int) -> DocViewer:
+    from prompt_toolkit.data_structures import Size
+
+    viewer = DocViewer()
+    viewer._app.output = SimpleNamespace(get_size=lambda: Size(rows=40, columns=columns))  # type: ignore[assignment]
+    return viewer
+
+
+def _page_viewer(columns: int, page: str) -> DocViewer:
+    viewer = _sized_viewer(columns)
+    viewer._load_document("Collections", page, outline=True)
+    return viewer
+
+
+def _app_handler(viewer: DocViewer, key: str) -> Any:
+    kb = viewer._app.key_bindings
+    assert kb is not None
+    return next(b for b in kb.bindings if [str(k) for k in b.keys] == [key])
+
+
+def _sidebar_handler(viewer: DocViewer, key: str) -> Callable[[Any], object]:
+    kb = viewer._filter_window.content.get_key_bindings()
+    assert kb is not None
+    handler: Callable[[Any], object] = next(b for b in kb.bindings if [str(k) for k in b.keys] == [key]).handler
+    return handler
+
+
+def _event(viewer: DocViewer) -> Any:
+    return type("Ev", (), {"app": viewer._app})()
+
+
+def _top_line(viewer: DocViewer) -> str:
+    return viewer._plain.split("\n")[viewer._body_window.vertical_scroll].strip()
+
+
+def _listed_titles(viewer: DocViewer) -> List[str]:
+    return [viewer._outline[index].title for index in viewer._listed]
+
+
+def _selected_title(viewer: DocViewer) -> str:
+    return viewer._outline[viewer._listed[viewer._selected]].title
+
+
+def _normalized(text: str) -> str:
+    return text.lower().replace(" ", "").replace("_", "")
+
+
+class TestSidebarOutline:
+    def test_lists_the_sections_and_keywords_of_a_library_page(self, collections_page: str) -> None:
+        from robotcode.robot.diagnostics.library_doc import get_library_doc
+
+        viewer = _page_viewer(120, collections_page)
+
+        titles = [entry.title for entry in viewer._outline]
+        assert titles[0] == "Introduction"
+        start = titles.index("Keywords") + 1
+        end = next((i for i in range(start, len(titles)) if viewer._outline[i].level == 2), len(titles))
+        assert titles[start:end] == [kw.name for kw in get_library_doc("Collections").get_page_keywords()]
+        assert {entry.level for entry in viewer._outline[start:end]} == {3}
+
+    def test_leaves_out_other_heading_levels(self) -> None:
+        viewer = _sized_viewer(120)
+        viewer._load_document("T", "# Title\n\n## Section\n\n### Entry\n\n##### Detail\n\nText.", outline=True)
+
+        assert [(entry.level, entry.title) for entry in viewer._outline] == [(2, "Section"), (3, "Entry")]
+
+    def test_a_document_loaded_without_the_flag_has_none(self, collections_page: str) -> None:
+        viewer = _sized_viewer(120)
+        viewer._load_document("Collections", collections_page)
+
+        assert viewer._outline == []
+
+    def test_the_flag_belongs_to_the_document_in_the_history(self, collections_page: str) -> None:
+        viewer = _page_viewer(120, collections_page)
+
+        assert viewer._current_state().outline is True
+
+
+class TestSidebarLayout:
+    def test_hidden_at_the_start(self, collections_page: str) -> None:
+        viewer = _page_viewer(120, collections_page)
+
+        assert viewer._main_area() is viewer._body_window
+        assert viewer._last_body_width == 118
+
+    def test_beside_the_page_in_a_wide_terminal(self, collections_page: str) -> None:
+        viewer = _page_viewer(120, collections_page)
+
+        viewer._show_sidebar()
+
+        assert viewer._main_area() is viewer._sidebar_beside_area
+        assert viewer._last_body_width == 86
+
+    def test_over_the_page_in_a_narrow_terminal(self, collections_page: str) -> None:
+        viewer = _page_viewer(80, collections_page)
+
+        viewer._show_sidebar()
+
+        assert viewer._main_area() is viewer._sidebar_over_area
+        assert viewer._last_body_width == 78
+
+    def test_a_resize_to_a_narrow_terminal_hides_a_sidebar_without_the_focus(self, collections_page: str) -> None:
+        from prompt_toolkit.data_structures import Size
+
+        viewer = _page_viewer(120, collections_page)
+        viewer._show_sidebar()
+        viewer._app.layout.focus(viewer._body_window)
+
+        viewer._app.output = SimpleNamespace(get_size=lambda: Size(rows=40, columns=80))  # type: ignore[assignment]
+        viewer._check_resize()
+
+        assert viewer._sidebar_visible is False
+        assert viewer._last_body_width == 78
+
+
+class TestSidebarKeys:
+    def test_s_does_nothing_on_a_document_without_a_sidebar(self, collections_page: str) -> None:
+        viewer = _sized_viewer(120)
+        viewer._load_document("Collections", collections_page)
+
+        assert _app_handler(viewer, "s").filter() is False
+
+    def test_s_shows_the_sidebar_and_focuses_the_filter(self, collections_page: str) -> None:
+        viewer = _page_viewer(120, collections_page)
+        binding = _app_handler(viewer, "s")
+        assert binding.filter() is True
+
+        binding.handler(_event(viewer))
+
+        assert viewer._sidebar_visible is True
+        assert viewer._app.layout.current_window is viewer._filter_window
+        # Text goes into the filter field, not to the keys of the page.
+        assert _app_handler(viewer, "q").filter() is False
+
+    def test_the_heading_at_the_top_is_selected(self, collections_page: str) -> None:
+        viewer = _page_viewer(120, collections_page)
+        viewer._body_window.vertical_scroll = viewer._anchor_to_line["get-match-count"] + 2
+
+        viewer._show_sidebar()
+
+        assert _selected_title(viewer) == "Get Match Count"
+
+    def test_up_and_down_move_the_selection(self, collections_page: str) -> None:
+        viewer = _page_viewer(120, collections_page)
+        viewer._show_sidebar()
+
+        _sidebar_handler(viewer, "Keys.Up")(_event(viewer))
+        assert viewer._selected == 0
+        _sidebar_handler(viewer, "Keys.Down")(_event(viewer))
+        assert viewer._selected == 1
+        for _ in viewer._listed:
+            _sidebar_handler(viewer, "Keys.Down")(_event(viewer))
+        assert viewer._selected == len(viewer._listed) - 1
+
+    @pytest.mark.parametrize(("columns", "stays_visible"), [(120, True), (80, False)])
+    def test_enter_jumps_to_the_heading(self, collections_page: str, columns: int, stays_visible: bool) -> None:
+        viewer = _page_viewer(columns, collections_page)
+        viewer._show_sidebar()
+        viewer._filter_buffer.text = "Get Match Count"
+        width = viewer._last_body_width
+        assert _selected_title(viewer) == "Get Match Count"
+
+        _sidebar_handler(viewer, "Keys.ControlM")(_event(viewer))
+
+        assert _top_line(viewer) == "Get Match Count"
+        assert viewer._sidebar_visible is stays_visible
+        assert viewer._app.layout.current_window is viewer._body_window
+        assert viewer._last_body_width == width
+        assert viewer._go_back() is True
+        assert viewer._body_window.vertical_scroll == 0
+
+    def test_a_click_on_an_entry_jumps(self, collections_page: str) -> None:
+        viewer = _page_viewer(120, collections_page)
+        viewer._show_sidebar()
+        row = _listed_titles(viewer).index("Get Match Count")
+
+        result = viewer._make_outline_click_handler(row)(_click_event())
+
+        assert result is None
+        assert _top_line(viewer) == "Get Match Count"
+
+    def test_the_mouse_wheel_scrolls_the_list_without_changing_the_selection(self, collections_page: str) -> None:
+        from prompt_toolkit.data_structures import Point
+        from prompt_toolkit.layout.controls import FormattedTextControl
+        from prompt_toolkit.mouse_events import MouseButton, MouseEvent, MouseEventType
+
+        viewer = _page_viewer(120, collections_page)
+        viewer._show_sidebar()
+        handler = viewer._make_outline_click_handler(0)
+
+        # The entries leave the wheel to the list's window, which scrolls it ...
+        for event_type in (MouseEventType.SCROLL_DOWN, MouseEventType.SCROLL_UP):
+            event = MouseEvent(
+                position=Point(x=0, y=0), event_type=event_type, button=MouseButton.NONE, modifiers=frozenset()
+            )
+            assert handler(event) is NotImplemented
+        # ... and the list's cursor follows that scroll, not the selection, so
+        # prompt_toolkit doesn't scroll the selection back into view.
+        control = viewer._outline_window.content
+        assert isinstance(control, FormattedTextControl)
+        assert control.get_cursor_position is not None
+        viewer._outline_window.vertical_scroll = 20
+        assert control.get_cursor_position() == Point(x=0, y=20)
+        assert viewer._selected == 0
+
+    def test_moving_the_selection_scrolls_it_into_view(self, collections_page: str) -> None:
+        viewer = _page_viewer(120, collections_page)
+        viewer._show_sidebar()
+        viewer._outline_window.render_info = SimpleNamespace(window_height=10)  # type: ignore[assignment]
+
+        for _ in range(15):
+            _sidebar_handler(viewer, "Keys.Down")(_event(viewer))
+        assert viewer._selected == 15
+        assert viewer._outline_window.vertical_scroll == 6
+
+        # Scrolled away with the wheel: the next key brings the selection back.
+        viewer._outline_window.vertical_scroll = 0
+        _sidebar_handler(viewer, "Keys.Up")(_event(viewer))
+        assert viewer._selected == 14
+        assert viewer._outline_window.vertical_scroll == 5
+
+        viewer._filter_buffer.text = "dict"
+        assert viewer._outline_window.vertical_scroll == 0
+
+    def test_esc_hides_the_sidebar_without_jumping(self, collections_page: str) -> None:
+        viewer = _page_viewer(80, collections_page)
+        viewer._body_window.vertical_scroll = 25
+        viewer._show_sidebar()
+
+        _sidebar_handler(viewer, "Keys.Escape")(_event(viewer))
+
+        assert viewer._sidebar_visible is False
+        assert viewer._app.layout.current_window is viewer._body_window
+        assert viewer._body_window.vertical_scroll == 25
+        assert viewer._back_stack == []
+
+    def test_esc_on_the_page_hides_a_sidebar_beside_it_before_it_closes_the_viewer(self, collections_page: str) -> None:
+        viewer = _page_viewer(120, collections_page)
+        viewer._show_sidebar()
+        viewer._filter_buffer.text = "Get Match Count"
+        _sidebar_handler(viewer, "Keys.ControlM")(_event(viewer))
+        assert viewer._app.layout.current_window is viewer._body_window
+        assert "Esc: hide sidebar" in _fragments_text(viewer._compute_footer_text())
+        exited: List[bool] = []
+        event = SimpleNamespace(app=SimpleNamespace(exit=lambda: exited.append(True), invalidate=lambda: None))
+        escape = _app_handler(viewer, "Keys.Escape")
+        assert escape.filter() is True
+
+        escape.handler(event)
+
+        assert viewer._sidebar_visible is False
+        assert exited == []
+        assert _top_line(viewer) == "Get Match Count"
+        assert "Esc: hide sidebar" not in _fragments_text(viewer._compute_footer_text())
+
+        escape.handler(event)
+
+        assert exited == [True]
+
+    def test_footer_texts(self, collections_page: str) -> None:
+        viewer = _page_viewer(120, collections_page)
+        assert "s: sidebar" in _fragments_text(viewer._compute_footer_text())
+
+        viewer._show_sidebar()
+        assert "Esc: hide" in _fragments_text(viewer._compute_footer_text())
+
+        viewer._load_document("Collections", collections_page)
+        assert "s: sidebar" not in _fragments_text(viewer._compute_footer_text())
+
+
+class TestSidebarFilter:
+    def test_part_of_a_name(self, collections_page: str) -> None:
+        viewer = _page_viewer(120, collections_page)
+
+        viewer._filter_buffer.text = "dict"
+
+        titles = _listed_titles(viewer)
+        assert "Keywords" in titles
+        assert "Append To List" not in titles
+        level_3 = [viewer._outline[index].title for index in viewer._listed if viewer._outline[index].level == 3]
+        assert level_3
+        assert all("dict" in _normalized(title) for title in level_3)
+        # The selection skips the sections that are only listed for their entries.
+        first_match = next(i for i, title in enumerate(titles) if "dict" in _normalized(title))
+        assert viewer._selected == first_match
+
+    @pytest.mark.parametrize("text", ["get*list", "get_from_list"])
+    def test_wildcards_and_underscores(self, collections_page: str, text: str) -> None:
+        viewer = _page_viewer(120, collections_page)
+
+        viewer._filter_buffer.text = text
+
+        assert "Get From List" in _listed_titles(viewer)
+
+    def test_empty_filter_lists_everything(self, collections_page: str) -> None:
+        viewer = _page_viewer(120, collections_page)
+        viewer._filter_buffer.text = "dict"
+
+        viewer._filter_buffer.text = ""
+
+        assert viewer._listed == list(range(len(viewer._outline)))
+        assert viewer._selected == 0
+
+    def test_no_match(self, collections_page: str) -> None:
+        viewer = _page_viewer(120, collections_page)
+
+        viewer._filter_buffer.text = "no such keyword"
+
+        assert viewer._listed == []
+        assert viewer._selected == -1
+        assert _fragments_text(viewer._compute_outline_fragments()).strip() == "no matches"
+        _sidebar_handler(viewer, "Keys.ControlM")(_event(viewer))  # nothing to jump to
+        assert viewer._back_stack == []
+
+
+class TestSidebarReflow:
+    def test_the_heading_at_the_top_stays(self, collections_page: str) -> None:
+        viewer = _page_viewer(120, collections_page)
+        viewer._body_window.vertical_scroll = viewer._anchor_to_line["get-match-count"]
+
+        viewer._show_sidebar()
+        assert viewer._last_body_width == 86
+        assert _top_line(viewer) == "Get Match Count"
+
+        viewer._hide_sidebar()
+        assert viewer._last_body_width == 118
+        assert _top_line(viewer) == "Get Match Count"
+
+        viewer._show_sidebar()
+        assert _top_line(viewer) == "Get Match Count"
+
+    def test_the_search_runs_again_and_the_history_is_dropped(self, collections_page: str) -> None:
+        viewer = _page_viewer(120, collections_page)
+        viewer._execute_search("dictionary")
+        viewer._jump_to_anchor("get-match-count")
+        viewer._current_link = 0
+
+        viewer._show_sidebar()
+
+        assert viewer._matches
+        assert all(viewer._plain[start:end].lower() == "dictionary" for start, end in viewer._matches)
+        assert viewer._current_match == 0
+        assert viewer._back_stack == []
+        assert viewer._current_link == -1
+
+    def test_nothing_is_reflowed_over_the_page(self, collections_page: str) -> None:
+        viewer = _page_viewer(80, collections_page)
+        plain = viewer._plain
+        viewer._jump_to_anchor("get-match-count")
+
+        viewer._show_sidebar()
+        viewer._hide_sidebar()
+
+        assert viewer._plain is plain
+        assert len(viewer._back_stack) == 1

@@ -636,11 +636,13 @@ class TestKeywordDocumentation:
 
 class TestBrowse:
     @pytest.fixture
-    def viewer(self, monkeypatch: pytest.MonkeyPatch) -> List[Tuple[str, str]]:
-        calls: List[Tuple[str, str]] = []
+    def viewer(self, monkeypatch: pytest.MonkeyPatch) -> List[Tuple[str, str, bool]]:
+        calls: List[Tuple[str, str, bool]] = []
 
-        def run(self: DocViewer, title: str, markdown: str, *, scroll_to: Optional[str] = None) -> None:
-            calls.append((title, markdown))
+        def run(
+            self: DocViewer, title: str, markdown: str, *, scroll_to: Optional[str] = None, outline: bool = False
+        ) -> None:
+            calls.append((title, markdown, outline))
 
         monkeypatch.setattr(DocViewer, "run", run)
         monkeypatch.setattr(doc_cli, "_is_interactive_stdin", lambda: True)
@@ -648,27 +650,29 @@ class TestBrowse:
         monkeypatch.setattr(doc_cli, "is_running_in_ai_agent", lambda: False)
         return calls
 
-    def test_interactive_terminal(self, doc_project: Project, viewer: List[Tuple[str, str]]) -> None:
+    def test_interactive_terminal(self, doc_project: Project, viewer: List[Tuple[str, str, bool]]) -> None:
         result = _ok("doc", "browse", "Collections")
 
-        assert viewer == [("Collections", _page("Collections"))]
+        assert viewer == [("Collections", _page("Collections"), True)]
         assert result.stdout == ""
 
     def test_ai_agent_session(
-        self, doc_project: Project, viewer: List[Tuple[str, str]], monkeypatch: pytest.MonkeyPatch
+        self, doc_project: Project, viewer: List[Tuple[str, str, bool]], monkeypatch: pytest.MonkeyPatch
     ) -> None:
         monkeypatch.setattr(doc_cli, "is_running_in_ai_agent", lambda: True)
 
         assert _ok("doc", "browse", "Collections").stdout == _page("Collections")
         assert viewer == []
 
-    def test_pipe(self, doc_project: Project, viewer: List[Tuple[str, str]], monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_pipe(
+        self, doc_project: Project, viewer: List[Tuple[str, str, bool]], monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         monkeypatch.setattr(doc_cli, "_is_interactive_stdout", lambda: False)
 
         assert _ok("doc", "browse", "Collections").stdout == _page("Collections")
         assert viewer == []
 
-    def test_failing_load(self, doc_project: Project, viewer: List[Tuple[str, str]]) -> None:
+    def test_failing_load(self, doc_project: Project, viewer: List[Tuple[str, str, bool]]) -> None:
         assert _run("doc", "browse", "NoSuchLib").exit_code == 1
         assert viewer == []
 

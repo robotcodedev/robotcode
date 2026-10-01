@@ -19,6 +19,9 @@ Interactive features:
   matching section, ``http(s)://`` opens in the browser.
 - **Back/forward** (``[`` / ``]``): browser-style stack of anchor
   jumps within the doc.
+- **Sidebar** (``s``, library pages only): the level-2 and level-3
+  headings of the page with a filter field; side by side with the
+  page in a wide terminal, over it in a narrow one.
 - **Resize**: terminal width changes trigger a debounced reflow
   that re-renders the markdown at the new width; per-width
   snapshots are cached so re-resizes are instant.
@@ -36,13 +39,24 @@ from prompt_toolkit.filters import Condition
 from prompt_toolkit.formatted_text import ANSI, StyleAndTextTuples, to_formatted_text
 from prompt_toolkit.key_binding import KeyBindings, KeyPressEvent
 from prompt_toolkit.layout import Layout
-from prompt_toolkit.layout.containers import ConditionalContainer, HSplit, Window
+from prompt_toolkit.layout.containers import (
+    ConditionalContainer,
+    Container,
+    DynamicContainer,
+    Float,
+    FloatContainer,
+    HSplit,
+    VSplit,
+    Window,
+)
 from prompt_toolkit.layout.controls import BufferControl, FormattedTextControl
 from prompt_toolkit.mouse_events import MouseEvent, MouseEventType
 from prompt_toolkit.styles import Style
+from prompt_toolkit.utils import get_cwidth
 from prompt_toolkit.widgets import Frame
 from rich.console import Console
 from rich.markdown import Markdown
+from robot.utils import MultiMatcher
 
 from robotcode.robot.utils.markdown_docs import heading_anchors
 
@@ -157,6 +171,12 @@ _WRAP_GAP_TOLERANCE = 4
 # (mid-file, with a little preceding context) rather than jammed at the top edge.
 _SCROLL_TO_CONTEXT = 3
 
+# The sidebar's width, including its border to the page. It stands beside the
+# page when the page keeps at least `_MIN_PAGE_WIDTH_BESIDE_SIDEBAR` columns,
+# and lies over the page in a narrower terminal.
+_SIDEBAR_WIDTH = 32
+_MIN_PAGE_WIDTH_BESIDE_SIDEBAR = 60
+
 
 def _coalesce_link_spans(spans: List[Tuple[int, int, str]]) -> List[Tuple[int, int, str]]:
     """Merge adjacent spans that point to the same URL.
@@ -203,6 +223,19 @@ _HELP_HINTS = (
     "[/]: back/forward · Shift+drag: select · q/Esc/Enter: close "
 )
 
+_OUTLINE_HELP_HINTS = (
+    " j/k or ↑/↓ or wheel: scroll · s: sidebar · /: search · Tab or click: links · "
+    "[/]: back/forward · Shift+drag: select · q/Esc/Enter: close "
+)
+
+# While the sidebar stands beside the page, `Esc` on the page hides it first.
+_SIDEBAR_SHOWN_HELP_HINTS = (
+    " Esc: hide sidebar · s: focus sidebar · j/k or ↑/↓ or wheel: scroll · /: search · "
+    "Tab or click: links · [/]: back/forward · q/Enter: close "
+)
+
+_SIDEBAR_HINTS = " type: filter · ↑/↓: select · wheel: scroll · Enter or click: jump · Esc: hide "
+
 # The rendered-line lookup runs a heading's title through `_strip_md_emphasis`
 # because `rich` consumes those markers when it paints.
 
@@ -243,6 +276,36 @@ def _build_anchor_to_line_map(md_source: str, rendered_plain: str) -> Dict[str, 
     return result
 
 
+class _OutlineEntry(NamedTuple):
+    """One heading in the sidebar: its level (2 or 3), its title as the page shows it, and its anchor."""
+
+    level: int
+    title: str
+    anchor: str
+
+
+def _build_outline(md_source: str, anchor_to_line: Dict[str, int]) -> List[_OutlineEntry]:
+    """The level-2 and level-3 headings of ``md_source``, in document order.
+
+    Headings without a rendered line are left out, because the sidebar
+    jumps through the anchor map.
+    """
+    return [
+        _OutlineEntry(level, _strip_md_emphasis(title), anchor)
+        for level, title, anchor in heading_anchors(md_source)
+        if level in (2, 3) and anchor in anchor_to_line
+    ]
+
+
+def _fit(text: str, width: int) -> str:
+    """``text`` padded to ``width`` columns, or cut with `…` when it is longer."""
+    if get_cwidth(text) > width:
+        while get_cwidth(text) > width - 1:
+            text = text[:-1]
+        text += "…"
+    return text + " " * (width - get_cwidth(text))
+
+
 class _RenderSnapshot(NamedTuple):
     """Full set of derived data from one markdown render at a given width.
 
@@ -269,12 +332,14 @@ class _NavState(NamedTuple):
     and focused link. Carrying the source means a follow that loaded a
     *different* document — e.g. a keyword page opened from a list — can
     be reversed by reloading the previous document, not just scrolling.
+    `outline` tells whether that document has a sidebar.
     """
 
     title: str
     md_source: str
     scroll: int
     current_link: int
+    outline: bool = False
 
 
 # Viewer-only style entries. The host interpreter's `_DEFAULT_STYLE`
@@ -289,6 +354,10 @@ _VIEWER_STYLE = Style.from_dict(
         "doc.search.prompt": "fg:#5fafd7 bold",
         "doc.match": "reverse",
         "doc.match.current": "reverse bold",
+        "doc.sidebar.border": "fg:#7f7f7f",
+        "doc.sidebar.section": "bold",
+        "doc.sidebar.selected": "reverse",
+        "doc.sidebar.empty": "fg:#7f7f7f",
     }
 )
 
@@ -458,8 +527,8 @@ def _attach_link_handlers(
 class DocViewer:
     """Markdown viewer running as a separate fullscreen Application.
 
-    The layout (body Window + search bar + footer + Frame) is built
-    once at construction; `run(title, markdown)` swaps in the new
+    The layout (body Window + sidebar + search bar + footer + Frame) is
+    built once at construction; `run(title, markdown)` swaps in the new
     content, resets scroll + search state, and invokes
     `Application.run()`. The app is set to `full_screen=True` so
     prompt_toolkit switches to the terminal's alternate screen buffer
@@ -530,6 +599,15 @@ class DocViewer:
         self._resize_task: Optional[asyncio.TimerHandle] = None
         self._render_cache: Dict[int, _RenderSnapshot] = {}
 
+        # Sidebar state. Only a document loaded with `outline=True` has an
+        # outline. `_listed` holds the indices of the entries the filter
+        # lists, `_selected` the selected row of that list (-1 = none).
+        self._with_outline = False
+        self._outline: List[_OutlineEntry] = []
+        self._listed: List[int] = []
+        self._selected = -1
+        self._sidebar_visible = False
+
         # Pin the control's "cursor" to the top of the visible area so
         # `Window._scroll_without_linewrapping` doesn't clamp
         # `vertical_scroll` back to 0 — its do_scroll() resets the
@@ -579,12 +657,50 @@ class DocViewer:
         self._footer_control = FormattedTextControl(text=self._compute_footer_text)
         self._footer_window = Window(content=self._footer_control, height=1, style="class:doc.footer")
 
-        from prompt_toolkit.layout.containers import VSplit
+        # Sidebar — a filter field above the list of headings, with a
+        # border to the page. Like the body, the list pins its "cursor" to
+        # the top of the visible area, so the mouse wheel scrolls it freely;
+        # `_scroll_selection_into_view` keeps a moved selection visible.
+        self._filter_buffer = Buffer(multiline=False, on_text_changed=lambda _buf: self._apply_filter())
+        self._filter_window = Window(
+            content=BufferControl(buffer=self._filter_buffer, key_bindings=self._build_sidebar_bindings()),
+            height=1,
+        )
+        self._outline_window = Window(
+            content=FormattedTextControl(
+                text=self._compute_outline_fragments,
+                show_cursor=False,
+                get_cursor_position=lambda: Point(x=0, y=self._outline_window.vertical_scroll),
+            ),
+            always_hide_cursor=True,
+        )
+        filter_row = VSplit(
+            [
+                Window(content=FormattedTextControl([("class:doc.search.prompt", " Filter: ")]), width=9, height=1),
+                self._filter_window,
+            ]
+        )
+        self._sidebar = VSplit(
+            [
+                HSplit(
+                    [filter_row, Window(height=1, char="─", style="class:doc.sidebar.border"), self._outline_window]
+                ),
+                Window(width=1, char="│", style="class:doc.sidebar.border"),
+            ],
+            width=_SIDEBAR_WIDTH,
+        )
+        # The two places of a shown sidebar; `_main_area` picks one, or the
+        # body alone, so the layout only ever holds one of them.
+        self._sidebar_beside_area = VSplit([self._sidebar, self._body_window])
+        self._sidebar_over_area = FloatContainer(
+            content=self._body_window,
+            floats=[Float(content=self._sidebar, left=0, top=0, bottom=0, width=_SIDEBAR_WIDTH)],
+        )
 
         search_row = VSplit([self._search_prefix_window, self._search_window])
         frame_body = HSplit(
             [
-                self._body_window,
+                DynamicContainer(self._main_area),
                 ConditionalContainer(search_row, filter=Condition(lambda: self._in_search_mode)),
                 ConditionalContainer(self._footer_window, filter=Condition(lambda: not self._in_search_mode)),
             ]
@@ -614,18 +730,20 @@ class DocViewer:
         self._pending_scroll: Optional[str] = None
         self._app.after_render += self._apply_pending_scroll
 
-    def run(self, title: str, markdown: str, *, scroll_to: Optional[str] = None) -> None:
+    def run(self, title: str, markdown: str, *, scroll_to: Optional[str] = None, outline: bool = False) -> None:
         """Render ``markdown`` into the body and run the viewer fullscreen.
 
         Blocks until the user presses Esc / q / Enter. Uses the alt
         screen buffer, so the host prompt's terminal state survives
         the call untouched. ``scroll_to`` opens the viewer scrolled to the
         first rendered line containing that text (e.g. a marked source line).
+        ``outline`` gives the document a sidebar with its headings, for the
+        page of a library, resource file or suite file.
         """
         # A fresh top-level invocation starts with empty history.
         self._back_stack = []
         self._forward_stack = []
-        self._load_document(title, markdown, scroll_to=scroll_to)
+        self._load_document(title, markdown, scroll_to=scroll_to, outline=outline)
         # The pre-render scroll above gets reset by the first render; arm the
         # `after_render` hook to re-apply it once the body is really on screen.
         self._pending_scroll = scroll_to
@@ -641,21 +759,29 @@ class DocViewer:
                 self._resize_task.cancel()
                 self._resize_task = None
 
-    def _load_document(self, title: str, markdown: str, *, scroll_to: Optional[str] = None) -> None:
+    def _load_document(
+        self, title: str, markdown: str, *, scroll_to: Optional[str] = None, outline: bool = False
+    ) -> None:
         """Adopt ``markdown`` as the current document and reset per-doc
-        state (scroll, focused link, search). Leaves the back / forward
-        stacks alone so it can be reused for in-place link follows;
+        state (scroll, focused link, search, sidebar). Leaves the back /
+        forward stacks alone so it can be reused for in-place link follows;
         `run` clears them for a fresh top-level invocation. ``scroll_to``
         opens scrolled to the first rendered line containing that text.
+        ``outline`` gives the document a sidebar, hidden at first.
         """
         self._title = title
         self._md_source = markdown
         # New doc → all cached renders are for the OLD markdown. Wipe.
         self._render_cache = {}
-        size = self._app.output.get_size()
-        # Account for the frame border (1 char on each side = 2 chars).
-        body_width = max(size.columns - 2, 40)
-        self._render_at_width(body_width)
+        self._with_outline = outline
+        self._sidebar_visible = False
+        if self._sidebar_has_focus():
+            self._app.layout.focus(self._body_window)
+        self._render_at_width(self._body_width())
+
+        self._outline = _build_outline(markdown, self._anchor_to_line) if outline else []
+        self._filter_buffer.reset()
+        self._apply_filter()
 
         self._current_link = -1
         self._in_search_mode = False
@@ -694,13 +820,15 @@ class DocViewer:
 
     def _current_state(self) -> _NavState:
         """Snapshot the current document + position for the nav stacks."""
-        return _NavState(self._title, self._md_source, self._body_window.vertical_scroll, self._current_link)
+        return _NavState(
+            self._title, self._md_source, self._body_window.vertical_scroll, self._current_link, self._with_outline
+        )
 
     def _restore_state(self, state: _NavState) -> None:
         """Return to a `_NavState`, reloading its document first if the
         current one differs."""
         if state.md_source != self._md_source:
-            self._load_document(state.title, state.md_source)
+            self._load_document(state.title, state.md_source, outline=state.outline)
         self._body_window.vertical_scroll = state.scroll
         self._current_link = state.current_link
 
@@ -759,8 +887,17 @@ class DocViewer:
         """
         if not self._md_source:
             return
-        size = self._app.output.get_size()
-        body_width = max(size.columns - 2, 40)
+        # Over the page, the sidebar is only shown while it has the focus. After
+        # a resize that leaves no room beside the page while the page has the
+        # focus, it would cover the page, so it is hidden.
+        if (
+            self._sidebar_visible
+            and not self._sidebar_has_focus()
+            and not self._sidebar_beside(self._app.output.get_size().columns)
+        ):
+            self._sidebar_visible = False
+            self._app.invalidate()
+        body_width = self._body_width()
         if body_width == self._last_body_width:
             return
         if self._resize_task is not None:
@@ -809,6 +946,185 @@ class DocViewer:
         self._app.invalidate()
 
     # ------------------------------------------------------------------
+    # Sidebar.
+    # ------------------------------------------------------------------
+
+    def _sidebar_beside(self, columns: int) -> bool:
+        """Whether a shown sidebar stands beside the page in a terminal ``columns`` wide."""
+        return columns - 2 - _SIDEBAR_WIDTH >= _MIN_PAGE_WIDTH_BESIDE_SIDEBAR
+
+    def _body_width(self) -> int:
+        """The width the page is rendered at: the terminal's, less the frame
+        border (1 char on each side) and a sidebar beside the page."""
+        columns = self._app.output.get_size().columns
+        if self._sidebar_visible and self._sidebar_beside(columns):
+            return columns - 2 - _SIDEBAR_WIDTH
+        return max(columns - 2, 40)
+
+    def _sidebar_has_focus(self) -> bool:
+        return self._app.layout.current_window is self._filter_window
+
+    def _main_area(self) -> Container:
+        """The body, with the sidebar beside it or over it while it is shown."""
+        if not self._sidebar_visible:
+            return self._body_window
+        if self._sidebar_beside(self._app.output.get_size().columns):
+            return self._sidebar_beside_area
+        return self._sidebar_over_area
+
+    def _show_sidebar(self) -> None:
+        """Show the sidebar, select the heading at the top of the page and focus the filter field."""
+        if not self._sidebar_visible:
+            self._sidebar_visible = True
+            self._reflow_for_sidebar()
+        self._select_entry_at_top()
+        self._app.layout.focus(self._filter_window)
+
+    def _hide_sidebar(self) -> None:
+        self._sidebar_visible = False
+        self._app.layout.focus(self._body_window)
+        self._reflow_for_sidebar()
+
+    def _reflow_for_sidebar(self) -> None:
+        """Render the page at the width the sidebar leaves it.
+
+        Only beside the page does the sidebar change that width. Unlike a
+        resize, the position is kept by heading: the last heading at or
+        above the top line stays at the same distance from the top. The
+        search runs again on the new rendering; the history and the focused
+        link are dropped as on a resize, because they hold positions of the
+        old one.
+        """
+        body_width = self._body_width()
+        if body_width == self._last_body_width:
+            return
+        if self._resize_task is not None:
+            self._resize_task.cancel()
+            self._resize_task = None
+
+        top = self._body_window.vertical_scroll
+        heading: Optional[str] = None
+        heading_line = 0
+        for anchor, line in self._anchor_to_line.items():
+            if line > top:
+                break
+            heading, heading_line = anchor, line
+
+        self._render_at_width(body_width)
+
+        new_line = self._anchor_to_line.get(heading, heading_line) if heading is not None else 0
+        self._body_window.vertical_scroll = min(new_line + top - heading_line, self._plain.count("\n"))
+        self._current_link = -1
+        self._back_stack = []
+        self._forward_stack = []
+        self._matches = self._find_matches(self._search_query)
+        self._current_match = min(max(self._current_match, 0), len(self._matches) - 1)
+
+    def _select_entry_at_top(self) -> None:
+        """Select the listed entry of the last heading at or above the top line of the page."""
+        top = self._body_window.vertical_scroll
+        self._selected = 0 if self._listed else -1
+        for row, index in enumerate(self._listed):
+            line = self._anchor_to_line.get(self._outline[index].anchor)
+            if line is None:
+                continue
+            if line > top:
+                break
+            self._selected = row
+        self._scroll_selection_into_view()
+
+    def _apply_filter(self) -> None:
+        """List the entries that match the filter text, as the patterns of
+        `robotcode doc keywords` match: contains, `*` and `?`, case, spaces
+        and underscores ignored.
+
+        A level-2 entry stays listed while it or one of its level-3 entries
+        matches. The selection moves to the first entry that matches itself,
+        so it skips a level-2 entry that is only listed for its entries.
+        """
+        matcher = MultiMatcher([f"*{self._filter_buffer.text}*"], ignore="_")
+        matches = [matcher.match(entry.title) for entry in self._outline]
+        self._listed = []
+        for index, entry in enumerate(self._outline):
+            if entry.level == 2:
+                end = next(
+                    (i for i in range(index + 1, len(self._outline)) if self._outline[i].level == 2),
+                    len(self._outline),
+                )
+                listed = any(matches[index:end])
+            else:
+                listed = matches[index]
+            if listed:
+                self._listed.append(index)
+        self._selected = next((row for row, index in enumerate(self._listed) if matches[index]), -1)
+        self._outline_window.vertical_scroll = 0
+        self._scroll_selection_into_view()
+
+    def _jump_to_selected(self) -> None:
+        """Jump to the heading of the selected entry. Beside the page the
+        sidebar stays and the page gets the focus; over it the sidebar closes."""
+        if self._selected < 0:
+            return
+        self._jump_to_anchor(self._outline[self._listed[self._selected]].anchor)
+        if self._sidebar_beside(self._app.output.get_size().columns):
+            self._app.layout.focus(self._body_window)
+        else:
+            self._hide_sidebar()
+
+    def _compute_outline_fragments(self) -> StyleAndTextTuples:
+        """The listed entries, one per line, level-3 entries indented."""
+        if not self._listed:
+            return [("class:doc.sidebar.empty", " no matches")]
+        width = _SIDEBAR_WIDTH - 1
+        result: StyleAndTextTuples = []
+        for row, index in enumerate(self._listed):
+            entry = self._outline[index]
+            if row == self._selected:
+                style = "class:doc.sidebar.selected"
+            elif entry.level == 2:
+                style = "class:doc.sidebar.section"
+            else:
+                style = ""
+            if row:
+                result.append(("", "\n"))
+            text = _fit(" " + "  " * (entry.level - 2) + entry.title, width)
+            result.append((style, text, self._make_outline_click_handler(row)))
+        return result
+
+    def _make_outline_click_handler(self, row: int) -> Callable[[MouseEvent], object]:
+        """A click on an entry jumps like `Enter`. Other mouse events fall
+        through, so the wheel scrolls the list without changing the selection."""
+
+        def handler(event: MouseEvent) -> object:
+            if event.event_type != MouseEventType.MOUSE_UP:
+                return NotImplemented
+            self._selected = row
+            self._jump_to_selected()
+            return None
+
+        return handler
+
+    def _move_selection(self, delta: int) -> None:
+        """Move the selection by ``delta`` rows, within the listed entries."""
+        if self._listed:
+            self._selected = min(max(self._selected + delta, 0), len(self._listed) - 1)
+            self._scroll_selection_into_view()
+
+    def _scroll_selection_into_view(self) -> None:
+        """Scroll the list just enough to show the selected row."""
+        if self._selected < 0:
+            return
+        info = self._outline_window.render_info
+        # Before the sidebar's first render: the terminal's rows less the
+        # frame, the footer, the filter field and the line below it.
+        height = info.window_height if info is not None else max(1, self._app.output.get_size().rows - 5)
+        top = self._outline_window.vertical_scroll
+        if self._selected < top:
+            self._outline_window.vertical_scroll = self._selected
+        elif self._selected >= top + height:
+            self._outline_window.vertical_scroll = self._selected - height + 1
+
+    # ------------------------------------------------------------------
     # Body content + footer text — called on each render.
     # ------------------------------------------------------------------
 
@@ -848,12 +1164,19 @@ class DocViewer:
     def _compute_footer_text(self) -> StyleAndTextTuples:
         """Footer content depends on what's active:
 
+        - sidebar focused → the sidebar's keys
         - link focused → show the focused target so the user knows
           where ``f`` will take them
         - search with matches → show the query + match counter
         - search with no matches → friendly "no matches" line
-        - none of the above → the default key hints
+        - none of the above → the default key hints, with ``s`` on a
+          document with a sidebar
+
+        While the sidebar stands beside the page, the hints say that
+        ``Esc`` hides it before it closes the viewer.
         """
+        if self._sidebar_has_focus():
+            return [("class:doc.footer", _SIDEBAR_HINTS)]
         if self._current_link >= 0 and self._links:
             _start, _end, target = self._links[self._current_link]
             return [
@@ -861,7 +1184,10 @@ class DocViewer:
                 ("class:doc.footer.count", f"{self._current_link + 1}/{len(self._links)}"),
                 ("class:doc.footer", "  →  "),
                 ("class:doc.footer.count", target),
-                ("class:doc.footer", "  ·  f/Enter/click: follow  ·  Tab/Shift-Tab: next/prev  ·  q/Esc: close "),
+                (
+                    "class:doc.footer",
+                    f"  ·  f/Enter/click: follow  ·  Tab/Shift-Tab: next/prev  ·  {self._close_hint()} ",
+                ),
             ]
         if self._search_query and self._matches:
             return [
@@ -869,14 +1195,19 @@ class DocViewer:
                 ("class:doc.footer", self._search_query),
                 ("class:doc.footer", "  "),
                 ("class:doc.footer.count", f"[{self._current_match + 1}/{len(self._matches)}]"),
-                ("class:doc.footer", "  ·  n/N: next/prev  ·  /: new search  ·  q/Esc: close "),
+                ("class:doc.footer", f"  ·  n/N: next/prev  ·  /: new search  ·  {self._close_hint()} "),
             ]
         if self._search_query:
             return [
                 ("class:doc.footer.nomatch", f" /{self._search_query} — no matches "),
-                ("class:doc.footer", " ·  /: search  ·  q/Esc: close "),
+                ("class:doc.footer", f" ·  /: search  ·  {self._close_hint()} "),
             ]
-        return [("class:doc.footer", _HELP_HINTS)]
+        if self._sidebar_visible:
+            return [("class:doc.footer", _SIDEBAR_SHOWN_HELP_HINTS)]
+        return [("class:doc.footer", _OUTLINE_HELP_HINTS if self._outline else _HELP_HINTS)]
+
+    def _close_hint(self) -> str:
+        return "Esc: hide sidebar  ·  q: close" if self._sidebar_visible else "q/Esc: close"
 
     # ------------------------------------------------------------------
     # Search execution + navigation.
@@ -1008,15 +1339,7 @@ class DocViewer:
             return
         _start, _end, target = self._links[self._current_link]
         if target.startswith("#"):
-            line = self._anchor_to_line.get(target[1:])
-            if line is not None:
-                self._back_stack.append(self._current_state())
-                self._forward_stack.clear()
-                # `_max_scroll()` returns 0 before the first render —
-                # only clamp when we have real render_info, otherwise
-                # the jump always snaps to line 0.
-                max_scroll = self._max_scroll()
-                self._body_window.vertical_scroll = min(line, max_scroll) if max_scroll else line
+            self._jump_to_anchor(target[1:])
         elif target.startswith(("http://", "https://")):
             try:
                 webbrowser.open(target)
@@ -1028,6 +1351,20 @@ class DocViewer:
                 self._back_stack.append(self._current_state())
                 self._forward_stack.clear()
                 self._load_document(resolved[0], resolved[1])
+
+    def _jump_to_anchor(self, anchor: str) -> None:
+        """Scroll to the heading of ``anchor`` and push the current position
+        onto the back stack. No-op if the anchor has no rendered line."""
+        line = self._anchor_to_line.get(anchor)
+        if line is None:
+            return
+        self._back_stack.append(self._current_state())
+        self._forward_stack.clear()
+        # `_max_scroll()` returns 0 before the first render —
+        # only clamp when we have real render_info, otherwise
+        # the jump always snaps to line 0.
+        max_scroll = self._max_scroll()
+        self._body_window.vertical_scroll = min(line, max_scroll) if max_scroll else line
 
     def _go_back(self) -> bool:
         """Return to the previous position from the back stack.
@@ -1086,17 +1423,27 @@ class DocViewer:
     def _build_key_bindings(self) -> KeyBindings:
         kb = KeyBindings()
         # All viewer keys (scroll, close, search-open, n/N) are gated
-        # to "not in search mode" so they don't fire while the user is
-        # typing into the search bar.
-        not_searching = Condition(lambda: not self._in_search_mode)
+        # to "the page has the focus" so they don't fire while the user
+        # is typing into the search bar or the sidebar's filter field.
+        on_page = Condition(lambda: not self._in_search_mode and not self._sidebar_has_focus())
         has_matches = Condition(lambda: bool(self._matches))
 
-        @kb.add("escape", eager=True, filter=not_searching)
-        @kb.add("q", filter=not_searching)
+        @kb.add("q", filter=on_page)
         def _close(event: KeyPressEvent) -> None:
             event.app.exit()
 
-        @kb.add("enter", filter=not_searching)
+        @kb.add("escape", eager=True, filter=on_page)
+        def _escape(event: KeyPressEvent) -> None:
+            # `Esc` closes what lies on top first: a sidebar shown beside
+            # the page, then the viewer. (Over the page, the sidebar has
+            # the focus while it is shown, and its own `Esc` hides it.)
+            if self._sidebar_visible:
+                self._hide_sidebar()
+                event.app.invalidate()
+            else:
+                event.app.exit()
+
+        @kb.add("enter", filter=on_page)
         def _enter(event: KeyPressEvent) -> None:
             # With a link focused, follow it (same as `f`). Without
             # one, close the viewer — `q` / `Esc` do the same.
@@ -1106,58 +1453,58 @@ class DocViewer:
             else:
                 event.app.exit()
 
-        @kb.add("j", filter=not_searching)
-        @kb.add("down", filter=not_searching)
+        @kb.add("j", filter=on_page)
+        @kb.add("down", filter=on_page)
         def _down(event: KeyPressEvent) -> None:
             self._scroll_by(1)
             event.app.invalidate()
 
-        @kb.add("k", filter=not_searching)
-        @kb.add("up", filter=not_searching)
+        @kb.add("k", filter=on_page)
+        @kb.add("up", filter=on_page)
         def _up(event: KeyPressEvent) -> None:
             self._scroll_by(-1)
             event.app.invalidate()
 
-        @kb.add("pagedown", filter=not_searching)
-        @kb.add("c-d", filter=not_searching)
-        @kb.add(" ", filter=not_searching)
+        @kb.add("pagedown", filter=on_page)
+        @kb.add("c-d", filter=on_page)
+        @kb.add(" ", filter=on_page)
         def _page_down(event: KeyPressEvent) -> None:
             self._scroll_by(self._page_size())
             event.app.invalidate()
 
-        @kb.add("pageup", filter=not_searching)
-        @kb.add("c-u", filter=not_searching)
-        @kb.add("b", filter=not_searching)
+        @kb.add("pageup", filter=on_page)
+        @kb.add("c-u", filter=on_page)
+        @kb.add("b", filter=on_page)
         def _page_up(event: KeyPressEvent) -> None:
             self._scroll_by(-self._page_size())
             event.app.invalidate()
 
-        @kb.add("g", filter=not_searching)
-        @kb.add("home", filter=not_searching)
+        @kb.add("g", filter=on_page)
+        @kb.add("home", filter=on_page)
         def _to_top(event: KeyPressEvent) -> None:
             self._body_window.vertical_scroll = 0
             event.app.invalidate()
 
-        @kb.add("G", filter=not_searching)
-        @kb.add("end", filter=not_searching)
+        @kb.add("G", filter=on_page)
+        @kb.add("end", filter=on_page)
         def _to_bottom(event: KeyPressEvent) -> None:
             self._body_window.vertical_scroll = self._max_scroll()
             event.app.invalidate()
 
-        @kb.add("/", filter=not_searching)
+        @kb.add("/", filter=on_page)
         def _open_search(event: KeyPressEvent) -> None:
             self._search_buffer.reset()
             self._in_search_mode = True
             event.app.layout.focus(self._search_window)
             event.app.invalidate()
 
-        @kb.add("n", filter=not_searching & has_matches)
+        @kb.add("n", filter=on_page & has_matches)
         def _next_match(event: KeyPressEvent) -> None:
             self._current_match = (self._current_match + 1) % len(self._matches)
             self._scroll_to_current_match()
             event.app.invalidate()
 
-        @kb.add("N", filter=not_searching & has_matches)
+        @kb.add("N", filter=on_page & has_matches)
         def _prev_match(event: KeyPressEvent) -> None:
             self._current_match = (self._current_match - 1) % len(self._matches)
             self._scroll_to_current_match()
@@ -1172,7 +1519,7 @@ class DocViewer:
         # those keys on a doc that has no links.
         has_links = Condition(lambda: bool(self._links))
 
-        @kb.add("tab", filter=not_searching & has_links)
+        @kb.add("tab", filter=on_page & has_links)
         def _next_link(event: KeyPressEvent) -> None:
             # When the focused link is already on screen, advance to
             # the next one. When the user has scrolled away from it
@@ -1191,7 +1538,7 @@ class DocViewer:
             self._scroll_link_into_view(self._current_link)
             event.app.invalidate()
 
-        @kb.add("s-tab", filter=not_searching & has_links)
+        @kb.add("s-tab", filter=on_page & has_links)
         def _prev_link(event: KeyPressEvent) -> None:
             # Symmetric to Tab: when the focused link is on screen,
             # step backward; otherwise pick the last link at or
@@ -1210,7 +1557,7 @@ class DocViewer:
             self._scroll_link_into_view(self._current_link)
             event.app.invalidate()
 
-        @kb.add("f", filter=not_searching & has_links)
+        @kb.add("f", filter=on_page & has_links)
         def _follow(event: KeyPressEvent) -> None:
             self._follow_current_link()
             event.app.invalidate()
@@ -1223,15 +1570,25 @@ class DocViewer:
         has_back = Condition(lambda: bool(self._back_stack))
         has_forward = Condition(lambda: bool(self._forward_stack))
 
-        @kb.add("[", filter=not_searching & has_back)
+        @kb.add("[", filter=on_page & has_back)
         def _back(event: KeyPressEvent) -> None:
             if self._go_back():
                 event.app.invalidate()
 
-        @kb.add("]", filter=not_searching & has_forward)
+        @kb.add("]", filter=on_page & has_forward)
         def _forward(event: KeyPressEvent) -> None:
             if self._go_forward():
                 event.app.invalidate()
+
+        # ----- Sidebar ----------------------------------------------
+        # `s` shows the sidebar, or moves the focus to a shown one. Only
+        # documents loaded with `outline=True` have one.
+        has_outline = Condition(lambda: bool(self._outline))
+
+        @kb.add("s", filter=on_page & has_outline)
+        def _sidebar(event: KeyPressEvent) -> None:
+            self._show_sidebar()
+            event.app.invalidate()
 
         return kb
 
@@ -1244,6 +1601,31 @@ class DocViewer:
         def _cancel_search(event: KeyPressEvent) -> None:
             self._in_search_mode = False
             event.app.layout.focus(self._body_window)
+            event.app.invalidate()
+
+        return kb
+
+    def _build_sidebar_bindings(self) -> KeyBindings:
+        """Bindings attached to the sidebar's filter field — active only
+        when it has the focus. Every other key is filter text."""
+        kb = KeyBindings()
+
+        @kb.add("up")
+        def _previous_entry(event: KeyPressEvent) -> None:
+            self._move_selection(-1)
+
+        @kb.add("down")
+        def _next_entry(event: KeyPressEvent) -> None:
+            self._move_selection(1)
+
+        @kb.add("enter")
+        def _jump(event: KeyPressEvent) -> None:
+            self._jump_to_selected()
+            event.app.invalidate()
+
+        @kb.add("escape", eager=True)
+        def _hide(event: KeyPressEvent) -> None:
+            self._hide_sidebar()
             event.app.invalidate()
 
         return kb

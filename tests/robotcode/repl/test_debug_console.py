@@ -444,7 +444,7 @@ def test_help_lists_session_and_debugger_commands() -> None:
     app = _CaptureApp()
     interpreter = ConsoleInterpreter(app=app)
     shown: List[Tuple[str, str]] = []
-    interpreter.show_doc = lambda title, markdown, *, scroll_to=None: shown.append((title, markdown))  # type: ignore[method-assign]
+    interpreter.show_doc = lambda title, markdown, *, scroll_to=None, outline=False: shown.append((title, markdown))  # type: ignore[method-assign]
     try:
         interpreter._dispatch_dot_command(".help")
     finally:
@@ -531,7 +531,7 @@ def test_session_command_opens_doc_viewer_at_stop() -> None:
     shown: List[Tuple[str, str]] = []
 
     def _capture_show_doc(interp: ConsoleInterpreter) -> None:
-        interp.show_doc = lambda title, markdown, *, scroll_to=None: shown.append((title, markdown))  # type: ignore[method-assign]
+        interp.show_doc = lambda title, markdown, *, scroll_to=None, outline=False: shown.append((title, markdown))  # type: ignore[method-assign]
 
     _run_debug(STEP_SUITE, [".kw Log", ".continue"], stop_on_entry=True, prepare=_capture_show_doc)
     # title is exactly "Log" for the keyword page; the search-fallback would be
@@ -761,7 +761,7 @@ def test_source_opens_scrollable_viewer_when_available() -> None:
 
     def _enable_viewer(interp: ConsoleInterpreter) -> None:
         interp.has_scrollable_viewer = True
-        interp.show_doc = lambda title, markdown, *, scroll_to=None: shown.append(  # type: ignore[method-assign]
+        interp.show_doc = lambda title, markdown, *, scroll_to=None, outline=False: shown.append(  # type: ignore[method-assign]
             (title, markdown, scroll_to)
         )
 
@@ -787,7 +787,7 @@ def test_list_opens_scrollable_viewer_when_available() -> None:
 
     def _enable_viewer(interp: ConsoleInterpreter) -> None:
         interp.has_scrollable_viewer = True
-        interp.show_doc = lambda title, markdown, *, scroll_to=None: shown.append(  # type: ignore[method-assign]
+        interp.show_doc = lambda title, markdown, *, scroll_to=None, outline=False: shown.append(  # type: ignore[method-assign]
             (title, markdown, scroll_to)
         )
 
@@ -1142,7 +1142,7 @@ def test_help_lists_phase5_commands_and_shows_detail() -> None:
     app = _CaptureApp()
     interp = ConsoleInterpreter(app=app)
     shown: List[Tuple[str, str]] = []
-    interp.show_doc = lambda title, markdown, *, scroll_to=None: shown.append((title, markdown))  # type: ignore[method-assign]
+    interp.show_doc = lambda title, markdown, *, scroll_to=None, outline=False: shown.append((title, markdown))  # type: ignore[method-assign]
     try:
         interp._dispatch_dot_command(".help")
         interp._dispatch_dot_command(".help until")

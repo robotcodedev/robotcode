@@ -485,17 +485,18 @@ class ConsoleInterpreter(BaseInterpreter):
         del command_names, context_provider
         return None
 
-    def show_doc(self, title: str, markdown: str, *, scroll_to: Optional[str] = None) -> None:
+    def show_doc(self, title: str, markdown: str, *, scroll_to: Optional[str] = None, outline: bool = False) -> None:
         """Display markdown to the user.
 
         Plain mode pages the raw markdown source with colour off — the
         backend choice signals "low-fi terminal", so we don't surface
         rich-rendered markdown the user explicitly opted out of. The
         prompt_toolkit interpreter overrides this with the scrollable
-        doc-viewer Float. ``scroll_to`` is honoured only by that viewer;
-        the pager ignores it.
+        doc-viewer Float. ``scroll_to`` and ``outline`` (a sidebar with the
+        headings of a library page) are honoured only by that viewer; the
+        pager ignores them.
         """
-        del scroll_to  # only the scrollable viewer (prompt_toolkit) uses it
+        del scroll_to, outline  # only the scrollable viewer (prompt_toolkit) uses them
         body = f"{title}\n{'=' * len(title)}\n\n{markdown}"
         if self.app is not None:
             self.app.echo_via_pager(body, color=False)
@@ -1247,6 +1248,7 @@ class ConsoleInterpreter(BaseInterpreter):
         self.show_doc(
             lib_doc.name,
             lib_doc.to_markdown(only_doc=False, header_level=0, link_resolver=anchor_link_resolver),
+            outline=True,
         )
 
     def _resolve_doc_target(self, arg: str) -> Tuple[Optional[LibraryDoc], Optional[str]]:

@@ -127,7 +127,7 @@ class PromptToolkitConsoleInterpreter(ConsoleInterpreter):
     ) -> Optional[Any]:
         return _RobotCompleter(command_names=command_names, context_provider=context_provider)
 
-    def show_doc(self, title: str, markdown: str, *, scroll_to: Optional[str] = None) -> None:
+    def show_doc(self, title: str, markdown: str, *, scroll_to: Optional[str] = None, outline: bool = False) -> None:
         """Display ``markdown`` in the fullscreen doc viewer.
 
         Blocks until the user closes the viewer (Esc / q / Enter). The
@@ -136,8 +136,9 @@ class PromptToolkitConsoleInterpreter(ConsoleInterpreter):
         untouched. Safe to call from inside a dot-command handler that
         runs between two `read_line` invocations. ``scroll_to`` opens the
         viewer scrolled to the first rendered line containing that text.
+        ``outline`` gives the page of a library a sidebar with its headings.
         """
-        self._doc_viewer.run(title, markdown, scroll_to=scroll_to)
+        self._doc_viewer.run(title, markdown, scroll_to=scroll_to, outline=outline)
 
     def _keyword_list_entry(self, owner_name: str, kw_name: str) -> str:
         """Render a `.kw` list entry as a link into the keyword's page.

@@ -85,9 +85,11 @@ class _CapturingShowDocInterpreter(ConsoleInterpreter):
     def __init__(self, app: _StubApp) -> None:
         super().__init__(app=app)
         self.shown: List[Tuple[str, str]] = []
+        self.outlines: List[bool] = []
 
-    def show_doc(self, title: str, markdown: str, *, scroll_to: Optional[str] = None) -> None:
+    def show_doc(self, title: str, markdown: str, *, scroll_to: Optional[str] = None, outline: bool = False) -> None:
         self.shown.append((title, markdown))
+        self.outlines.append(outline)
 
 
 def _make_interp(
@@ -223,6 +225,7 @@ def test_help_routes_to_show_doc_override() -> None:
     assert title == "Dot-commands"
     assert ".help" in body
     assert "F1=help" in body
+    assert interp.outlines == [False]
 
 
 def test_help_with_arg_routes_to_show_doc_with_command_title() -> None:
@@ -249,6 +252,7 @@ def test_kw_routes_to_show_doc_override(monkeypatch: pytest.MonkeyPatch) -> None
     assert title == "Log"
     assert "Log" in body
     assert "Logs the given message" in body
+    assert interp.outlines == [False]
 
 
 def test_doc_routes_to_show_doc_override(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -268,6 +272,8 @@ def test_doc_routes_to_show_doc_override(monkeypatch: pytest.MonkeyPatch) -> Non
     title, body = interp.shown[0]
     assert title == "Collections"
     assert "Collections" in body
+    # The page of a library gets the sidebar in the viewer.
+    assert interp.outlines == [True]
 
 
 def test_dispatch_exit_raises_eoferror() -> None:

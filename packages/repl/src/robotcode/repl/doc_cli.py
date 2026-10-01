@@ -639,7 +639,7 @@ def browse(
     if _is_interactive_stdin() and _is_interactive_stdout() and not is_running_in_ai_agent():
         from ._pt.doc_viewer import DocViewer
 
-        DocViewer().run(library.name, page)
+        DocViewer().run(library.name, page, outline=True)
         return
 
     app.echo_as_markdown(page.rstrip("\n"))
