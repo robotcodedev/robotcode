@@ -41,7 +41,7 @@ Maintainer decision: both layouts, chosen by the width.
 - The sidebar is 32 columns wide, including a one-column border to the page. Longer entries end with `…`.
 - **Side by side** when `columns - 2 - 32 >= 60`, that is from 94 columns: the frame's body becomes a `VSplit` of the sidebar and the body window, and the body is rendered at `columns - 2 - 32`.
 - **On top** otherwise: the sidebar is a `Float` at the left edge of the body, over the page, which keeps `max(columns - 2, 40)`.
-- The mode is computed from the terminal width whenever the layout is drawn. A resize while the sidebar is shown switches the mode and reflows as any resize does.
+- The mode is computed from the terminal width whenever the layout is drawn. A resize while the sidebar is shown switches the mode and reflows as any resize does. A resize that leaves no room beside the page while the page has the focus hides the sidebar, because on top it would cover the page the user reads (found during implementation).
 
 A single helper computes the body width from the terminal width, the sidebar's visibility and the mode. `_load_document`, `_check_resize` and the toggle use it, instead of the two inline `max(columns - 2, 40)` today.
 
@@ -59,12 +59,13 @@ Rejected: only side by side, because below about 94 columns too little text woul
   - A jump uses the anchor jump of `_follow_current_link`: the current position goes onto the back stack and the forward stack is cleared, so `[` returns.
   - Side by side, the focus then moves to the page and the sidebar stays.
   - On top, the sidebar closes.
-- A mouse click on an entry jumps like `Enter`.
-- While the sidebar has the focus, the footer shows its keys (`type: filter · ↑/↓: select · Enter: jump · Esc: hide`). Otherwise the default hints of a library page add `s: sidebar`.
+- A mouse click on an entry jumps like `Enter`. The mouse wheel over the list scrolls the list and leaves the selection alone (maintainer decision, 2026-10-01). Like the body, the list pins prompt_toolkit's cursor to its top visible line, so prompt_toolkit's own wheel scrolling is not undone; when up, down, the filter or `s` move the selection, the sidebar scrolls the list just enough to show it.
+- On the page, `Esc` closes what lies on top first (maintainer decision, 2026-10-01): while the sidebar stands beside the page, `Esc` hides it, and only the next `Esc` closes the viewer. Before, `Esc` on the page always closed the viewer, so `Esc` after a jump, meant for the sidebar, closed the whole viewer. `q` still closes at once. Over the page, the sidebar has the focus while it is shown, and its own `Esc` hides it.
+- While the sidebar has the focus, the footer shows its keys (`type: filter · ↑/↓: select · wheel: scroll · Enter or click: jump · Esc: hide`). Otherwise the default hints of a library page add `s: sidebar`; while the sidebar stands beside the page, the hints name `Esc: hide sidebar` and `q` as the close key.
 
 ### D5: The filter matches like `robotcode doc keywords`
 
-The filter text is matched with Robot Framework's `MultiMatcher([f"*{text}*"], ignore="_")`, as `doc keywords` matches patterns (`doc-cli` D7): contains, `*` and `?`, case and spaces ignored, underscores ignored. A level-2 entry is listed while it matches or one of its level-3 entries does, so the grouping stays visible. After each change of the text, the selection moves to the first listed entry; an empty filter lists everything.
+The filter text is matched with Robot Framework's `MultiMatcher([f"*{text}*"], ignore="_")`, as `doc keywords` matches patterns (`doc-cli` D7): contains, `*` and `?`, case and spaces ignored, underscores ignored. A level-2 entry is listed while it matches or one of its level-3 entries does, so the grouping stays visible. After each change of the text, the selection moves to the first entry that matches itself, so it skips a level-2 entry that is only listed for its entries: `get match count` selects the keyword, not `Keywords` (found during implementation). An empty filter lists everything and selects the first entry.
 
 ### D6: Showing or hiding side by side keeps the heading at the top
 
@@ -77,7 +78,7 @@ Rejected: mapping the back/forward history to the new width. Every entry would h
 - [The first reflow after showing the sidebar side by side takes as long as rendering the page at a new width] → It happens once per width; the render cache serves the next toggles.
 - [Showing or hiding the sidebar side by side drops the back/forward history] → The same rule as a resize, and jumps made from the sidebar are recorded again. The heading at the top stays in place (D6).
 - [On top, the sidebar covers the left part of the page while it is open] → It closes after a jump and with `Esc`.
-- [A level-2 heading inside keyword or type documentation would appear as a section] → Keyword documentation starts at level 5 on the page (`doc-cli` D4). Type documentation keeps its own heading levels, so a heading in a type's documentation can appear in the outline, as it does in the page's heading structure.
+- [A level-2 heading inside keyword or type documentation would appear as a section] → Keyword and type documentation start at level 5 on the page (`doc-cli` D4 and its review corrections), so only the page's own sections, keywords and data types are entries.
 
 ## Migration Plan
 

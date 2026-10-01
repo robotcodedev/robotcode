@@ -24,7 +24,7 @@ When the documentation viewer shows the page of a library, resource file or suit
 
 ### Requirement: Filter while typing
 
-The sidebar SHALL have a filter field that has the focus while the sidebar is being used. Typing SHALL narrow the entries to those whose text contains the filter text, with `*` and `?` as wildcards and case, spaces and underscores ignored, as the patterns of `robotcode doc keywords` select keywords. A level-2 entry SHALL stay listed while it or one of its level-3 entries matches. An empty filter SHALL list every entry. The up and down keys SHALL move the selection through the listed entries.
+The sidebar SHALL have a filter field that has the focus while the sidebar is being used. Typing SHALL narrow the entries to those whose text contains the filter text, with `*` and `?` as wildcards and case, spaces and underscores ignored, as the patterns of `robotcode doc keywords` select keywords. A level-2 entry SHALL stay listed while it or one of its level-3 entries matches. An empty filter SHALL list every entry. The up and down keys SHALL move the selection through the listed entries, and the list SHALL scroll to show the selected entry. The mouse wheel over the list SHALL scroll the list without changing the selection.
 
 #### Scenario: Part of a name
 - **WHEN** the sidebar of the `Collections` page is open and `dict` is typed
@@ -53,11 +53,16 @@ The sidebar SHALL have a filter field that has the focus while the sidebar is be
 
 ### Requirement: Layout in wide and narrow terminals
 
-When the terminal is wide enough for the sidebar and at least 60 columns of page next to it, the sidebar SHALL stand left of the page, and the page SHALL be rendered in the remaining width. After a jump the sidebar SHALL stay visible and the focus SHALL move to the page; `s` SHALL move the focus back to the sidebar. When the sidebar is shown or hidden this way, the heading at the top of the page SHALL stay at the top. In a narrower terminal, the sidebar SHALL lie over the left part of the page, the page SHALL keep its width, and the sidebar SHALL close after a jump.
+When the terminal is wide enough for the sidebar and at least 60 columns of page next to it, the sidebar SHALL stand left of the page, and the page SHALL be rendered in the remaining width. After a jump the sidebar SHALL stay visible and the focus SHALL move to the page; `s` SHALL move the focus back to the sidebar. While the sidebar stands beside the page, `Esc` on the page SHALL hide the sidebar instead of closing the viewer; only a further `Esc` SHALL close the viewer. When the sidebar is shown or hidden this way, the heading at the top of the page SHALL stay at the top. In a narrower terminal, the sidebar SHALL lie over the left part of the page, the page SHALL keep its width, and the sidebar SHALL close after a jump.
 
 #### Scenario: Wide terminal
 - **WHEN** the sidebar of the `Collections` page is opened in a terminal with 120 columns and a keyword is chosen with `Enter`
 - **THEN** the sidebar stands left of the page and stays visible after the jump, and the page is rendered narrower than without the sidebar
+
+#### Scenario: Esc on the page beside the sidebar
+- **WHEN** a keyword of the `Collections` page was chosen in the sidebar in a terminal with 120 columns and `Esc` is pressed
+- **THEN** the sidebar is hidden and the viewer stays open
+- **AND** a further `Esc` closes the viewer
 
 #### Scenario: Position when showing and hiding
 - **WHEN** the page of `Collections` is scrolled to the heading `Get Match Count` in a terminal with 120 columns and the sidebar is shown and hidden again
