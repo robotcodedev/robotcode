@@ -428,7 +428,8 @@ class TestTypeLinks:
         page = _page(get_library_doc("OperatingSystem"))
 
         assert "[Secret](#secret-standard)" in page
-        assert "`str` | `Secret`" in page
+        # in the argument table the types are separated by an escaped `|`
+        assert "`str` \\| `Secret`" in page
 
 
 EDGE_LIBRARY = '''\

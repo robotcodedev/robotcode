@@ -1162,43 +1162,68 @@ class KeywordDoc(SourceEntity):
             return "⟶"
         return ""
 
-    def _get_argument_table(self, arguments: List[ArgumentInfo]) -> str:
-        result = "\n| | | | |"
-        result += "\n|:--|:--|:--|:--|"
+    def _description_cell(
+        self,
+        text: str,
+        link_resolver: Optional[LinkResolver],
+        targets: Optional[Mapping[str, ReferenceTarget]],
+    ) -> str:
+        """A description as the single line of a table cell.
+
+        The lines of a paragraph are joined with a space; a further paragraph,
+        a list item and each line of a code block start a new line in the cell.
+        """
+        cell_lines: List[str] = []
+        new_line = True
+        in_code = False
+        for raw_line in self._format_doc_fragment(text, link_resolver, targets).splitlines():
+            line = raw_line.strip()
+            if re.match(r"(`{3,}|~{3,})", line):
+                in_code = not in_code
+                new_line = True
+            elif not line:
+                new_line = True
+            elif in_code or new_line or re.match(r"([-+*]|\d+[.)])\s", line):
+                cell_lines.append(line)
+                new_line = False
+            else:
+                cell_lines[-1] += f" {line}"
+        # an unescaped `|` would end the cell, also inside a code span
+        return re.sub(r"(?<!\\)\|", r"\\|", "<br>".join(cell_lines))
+
+    def _get_argument_table(
+        self,
+        arguments: List[ArgumentInfo],
+        link_resolver: Optional[LinkResolver] = None,
+        targets: Optional[Mapping[str, ReferenceTarget]] = None,
+        with_descriptions: bool = False,
+    ) -> str:
+        """The arguments as a table; with descriptions, they get a fifth column."""
+        result = "\n| | | | | |" if with_descriptions else "\n| | | | |"
+        result += "\n|:--|:--|:--|:--|:--|" if with_descriptions else "\n|:--|:--|:--|:--|"
 
         escaped_pipe = " \\| "
 
         def escape_pipe(s: str) -> str:
             return s.replace("|", "\\|")
 
-        for a in arguments:
-            result += (
-                f"\n| `{self._get_argument_prefix(a)}{a.name!s}`"
-                f"| {': ' if a.types else ' '}"
-                f"{escaped_pipe.join(f'`{escape_pipe(s)}`' for s in a.types) if a.types else ''} "
-                f"| {'=' if a.default_value is not None else ''} "
-                f"| {f'`{a.default_value!s}`' if a.default_value else ''} |"
+        def row(name: str, types: Sequence[str], default_value: Optional[Any], description: str) -> str:
+            cells = (
+                f"\n| `{name}`"
+                f"| {': ' if types else ' '}"
+                f"{escaped_pipe.join(f'`{escape_pipe(s)}`' for s in types) if types else ''} "
+                f"| {'=' if default_value is not None else ''} "
+                f"| {f'`{default_value!s}`' if default_value else ''} |"
             )
-        return result
+            return f"{cells} {description} |" if with_descriptions else cells
 
-    def _get_argument_list(
-        self,
-        arguments: List[ArgumentInfo],
-        link_resolver: Optional[LinkResolver],
-        targets: Optional[Mapping[str, ReferenceTarget]],
-    ) -> str:
-        """Every argument once, with type, default value and description, like Libdoc lists them."""
-        result = ""
         for a in arguments:
-            result += f"\n- `{self._get_argument_prefix(a)}{a.name!s}`"
-            if a.types:
-                result += ": " + " | ".join(f"`{s}`" for s in a.types)
-            if a.default_value is not None:
-                result += " =" + (f" `{a.default_value!s}`" if a.default_value else "")
-            if a.doc:
-                result += f" — {self._format_description(a.doc, link_resolver, targets)}"
-        for name, description in self.extra_argument_docs or []:
-            result += f"\n- `{name}` — {self._format_description(description, link_resolver, targets)}"
+            description = self._description_cell(a.doc, link_resolver, targets) if with_descriptions and a.doc else ""
+            result += row(f"{self._get_argument_prefix(a)}{a.name!s}", a.types or (), a.default_value, description)
+        if with_descriptions:
+            # names the documentation describes without being arguments, like ones taken by `**kwargs`
+            for name, doc in self.extra_argument_docs or []:
+                result += row(name, (), None, self._description_cell(doc, link_resolver, targets))
         return result
 
     def _get_signature(
@@ -1229,10 +1254,7 @@ class KeywordDoc(SourceEntity):
         if self.arguments or has_descriptions:
             result += f"\n##{'#' * header_level} Arguments: \n"
 
-            if has_descriptions:
-                result += self._get_argument_list(arguments, link_resolver, targets)
-            else:
-                result += self._get_argument_table(arguments)
+            result += self._get_argument_table(arguments, link_resolver, targets, with_descriptions=has_descriptions)
 
         if self.return_type:
             if result:

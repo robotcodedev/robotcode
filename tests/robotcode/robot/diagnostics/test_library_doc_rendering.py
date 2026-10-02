@@ -202,13 +202,16 @@ def test_builtin_log_shows_argument_descriptions() -> None:
     log = _keywords(get_library_doc("BuiltIn"))["Log"].to_markdown()
 
     signature, documentation = log.split("#### Documentation:")
-    # every argument once, with type, default value and description, like Libdoc lists them
-    assert "\n- `message`: `object` — The message to log.\n- `level`: `Literal[" in signature
-    assert "'ERROR']` = `INFO` — The log level to use.\n" in signature
-    assert "|:--|" not in signature
-    # a description that continues on the next line stays one list item
-    assert "\n- `html`: `bool` = `${False}` — If true, the message is considered" in signature
-    assert " to be HTML and special\n  characters in messages like" in signature
+    # every argument once, in the argument table with a column for the descriptions
+    assert "\n| | | | | |\n|:--|:--|:--|:--|:--|\n" in signature
+    assert "\n| `message`| : `object` |  |  | The message to log. |\n| `level`| : `Literal[" in signature
+    assert "'ERROR']` | = | `INFO` | The log level to use. |\n" in signature
+    assert "\n- `" not in signature
+    # a description that continues on the next line is joined into its cell
+    assert (
+        "\n| `html`| : `bool` | = | `${False}` | If true, the message is considered to be HTML and special"
+        " characters in messages like"
+    ) in signature
     assert "Args:" not in documentation
     assert "`Set Log Level`" in documentation
     assert "[Set Log Level]" not in documentation
@@ -272,10 +275,15 @@ def count():
 
     paint = keywords["Paint"].to_markdown()
     assert (
-        "#### Arguments: \n\n- `shade` — The shade to use.\n- `*items` — What to paint:\n\n  - walls\n  - doors\n"
-        "- `missing` — Not an argument.\n"
+        "#### Arguments: \n\n| | | | | |\n|:--|:--|:--|:--|:--|\n"
+        "| `shade`|   |  |  | The shade to use. |\n"
+        # each list item starts a new line in the cell
+        "| `*items`|   |  |  | What to paint:<br>- walls<br>- doors |\n"
+        # documented without being an argument: a row of its own, without type and default
+        "| `missing`|   |  |  | Not an argument. |\n"
     ) in paint
-    assert "|:--|" not in paint
+    rows = [line for line in paint.splitlines() if line.startswith("| `")]
+    assert all(len(re.findall(r"(?<!\\)\|", row)) == 6 for row in rows)
     assert "\n\n**Return Type**: `int` — The number of painted items.\n" in paint
     assert "\n\n**Raises**: \n- `ValueError`: If the shade is unknown.\n" in paint
     assert paint.rstrip().endswith("#### Documentation:\nPaints the items.")
@@ -328,11 +336,12 @@ def test_typed_keyword_with_all_documentation_sections(tmp_path: Path) -> None:
     assert doc.errors is None
     assert paint.to_markdown() == (
         "### Keyword *Paint*\n\n#### Arguments: \n\n"
+        "| | | | | |\n|:--|:--|:--|:--|:--|\n"
         # the library uses the Robot format, which joins the lines of a paragraph
-        "- `shade`: `Color` — The shade to use. Continues on a second line.\n"
-        "- `*items`: `str` — What to paint.\n"
-        "- `**options`\n"
-        "- `timeout` — Accepted through the free named arguments.\n\n"
+        "| `shade`| : `Color` |  |  | The shade to use. Continues on a second line. |\n"
+        "| `*items`| : `str` |  |  | What to paint. |\n"
+        "| `**options`|   |  |  |  |\n"
+        "| `timeout`|   |  |  | Accepted through the free named arguments. |\n\n"
         "**Return Type**: `int` — The number of painted items.\n\n\n"
         "**Raises**: \n- `ValueError`: If nothing is given to paint.\n\n\n"
         "#### Documentation:\nPaints the items.\n\n"
@@ -380,12 +389,57 @@ def test_library_initializer_with_argument_descriptions(tmp_path: Path) -> None:
     if RF_VERSION >= (7, 5):
         assert init.arguments[0].doc == "How long to wait."
         assert init.doc == "Creates the library."
-        assert "- `timeout`: `int` = `${5}` — How long to wait." in library
+        assert "| `timeout`| : `int` | = | `${5}` | How long to wait. |" in library
         assert "Args:" not in library
     else:
         assert init.arguments[0].doc == ""
         assert "Args:" in init.doc
         assert "| `timeout`|" in library
+
+
+CELL_LIBRARY = '''\
+ROBOT_LIBRARY_DOC_FORMAT = "MARKDOWN"
+
+
+def run(pattern, script="x"):
+    """Runs a script.
+
+    Args:
+        pattern: Matches `a|b` or c|d.
+        script: The script, for example:
+
+            ```
+            first line
+              indented line
+            ```
+
+            Ends here.
+    """
+
+
+def plain(value, other=1):
+    """Has no argument descriptions."""
+'''
+
+
+@needs_rf75
+def test_description_cells_with_a_pipe_and_a_code_block(tmp_path: Path) -> None:
+    lib_file = tmp_path / "CellLib.py"
+    lib_file.write_text(CELL_LIBRARY, encoding="utf-8")
+    keywords = _keywords(get_library_doc(str(lib_file)))
+
+    run = keywords["Run"].to_markdown()
+    # a `|` is escaped, also inside a code span, so that the row keeps its cells
+    assert "\n| `pattern`|   |  |  | Matches `a\\|b` or c\\|d. |\n" in run
+    # each line of a code block starts a new line in the cell, the fences are left out
+    assert "\n| `script`|   | = | `x` | The script, for example:<br>first line<br>indented line<br>Ends here. |" in run
+
+    # a keyword without argument descriptions keeps the four-column table
+    plain = keywords["Plain"].to_markdown()
+    assert plain.startswith(
+        "### Keyword *Plain*\n\n#### Arguments: \n\n| | | | |\n|:--|:--|:--|:--|\n"
+        "| `value`|   |  |  |\n| `other`|   | = | `${1}` |\n\n"
+    )
 
 
 MARKDOWN_TYPE_LIBRARY = '''\
