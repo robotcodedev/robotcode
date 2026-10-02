@@ -2,36 +2,45 @@
 
 ## Why
 
-VS Code has only one full-page view of a library's documentation: Robot Framework's Libdoc HTML, served by the language server's HTTP server and opened by the source action "Open Documentation" and by "Show Documentation" in the Keywords view. There is no place that keeps the libraries a user works with and shows them next to the editor. On desktop, since VS Code 1.113, the Simple Browser hands every page to the integrated browser, which ignores the requested column and focus and opens a new tab for each call (VS Code source, `extensions/simple-browser/src/extension.ts`).
+VS Code has only one full-page view of a library's documentation: Robot Framework's Libdoc HTML, served by the language server's HTTP server and opened by the source action "Open Documentation" and by "Show Documentation" in the Keywords view. There is no view that keeps the documentation of the libraries a user works with open next to the code. On desktop, the Simple Browser hands every page to VS Code's integrated browser with the URL alone. So the requested column and focus are lost, and each call opens a new tab (VS Code source, `extensions/simple-browser/src/extension.ts`, unconditionally since 1.114).
 
 The target that "Open Documentation" computes has three verified bugs:
 - The base directory is always the current document's directory (`code_action_documentation.py:329`). A resource imported through a resource in another directory is not found: the page is a 404, "Resource 'deeper/nested.resource' does not exist."
-- The import that owns a keyword is found with `LibraryDoc ==` (`code_action_documentation.py:281-291`), which ignores the import arguments (`library_doc.py:1547-1560`). A call through the alias of a second import of the same library opens the documentation with the first import's arguments.
+- The import that owns a keyword is found with `LibraryDoc ==` (`code_action_documentation.py:281-291`), which ignores the import arguments (`library_doc.py:1616-1629`). A call through the alias of a second import of the same library opens the documentation with the first import's arguments.
 - In the Keywords view, the document's own keywords have ids without `+`, so `item.id?.split("+")[1]` (`keywordsTreeViewProvider.ts:127`) is `undefined` and the page opens without the keyword anchor.
 
-`doc-cli` adds `robotcode doc lib TARGET`, which generates the documentation of a library, resource file or suite file live and prints it as Markdown, or as JSON with the Markdown and a keyword list. A documentation browser in VS Code can show that output without a new generation path in the language server.
+`doc-cli` adds `robotcode doc lib TARGET`, which generates the documentation of a library, resource file or suite file live and prints it as Markdown, or as JSON with the Markdown and a keyword list. A documentation viewer in VS Code can show that output without a new generation path in the language server, and VS Code's built-in Markdown engine can render it.
 
 ## What Changes
 
-- **Documentation Browser.** A new webview panel beside the editor, laid out like Libdoc and styled with the VS Code theme:
-  - a sidebar with the list of libraries, resource files and suite files, a search field (keyword name, documentation and tags) and the keyword list of the selected entry; a click on a keyword jumps to it;
-  - the page of the selected entry, rendered from the `markdown` of `robotcode --format json doc lib`.
+- **Documentation Viewer.** An editor tab that shows the documentation of one library, resource file or suite file (maintainer decisions (2026-10-02)):
+  - a toolbar with back, forward, refresh, a pin button and a target field, which shows and takes what is documented: `Name`, `Name::arg1::arg2` or the path of a library, resource or suite file;
+  - on the left an outline of the page (its sections, keywords and data types, as in the sidebar of the REPL's documentation viewer) with a filter field;
+  - on the right the page, rendered by VS Code's built-in Markdown engine and styled like VS Code's Markdown preview;
+  - links, back and forward work as in a browser, also with the keyboard and the mouse's back and forward buttons, and Ctrl+F (Cmd+F on macOS) opens a find bar for the page.
 
-  The command "RobotCode: Open Documentation Browser" opens it. It works on desktop, in remote windows and in VS Code for the Web connected to a remote, such as a Codespace.
-- **A list the user manages.** `BuiltIn` is always in the list. The user adds entries by hand ("Add…" with `Name[::args]` or a path) or from the editor, refreshes one or all entries and removes entries. Nothing else is added automatically. The list is private to the workspace (maintainer decision: workspace state, not settings).
-- **Live generation with a cache.** Each page comes from `robotcode --format json doc lib TARGET`, run in the project's Python environment with the settings the language server applies (maintainer decision (2026-09-29)): the folder's profiles and the settings `robotcode.robot.pythonPath`, `languages`, `variables`, `variableFiles` and `env`. The last page of each entry is kept in the extension's workspace storage, per workspace folder and Python interpreter. Opening an entry shows the kept page at once, generates the page again in the background and updates the view when it changed. A failed generation shows the error and keeps the last good page.
-- **From the editor.** A new source action "Show in Documentation Browser" next to "Open Documentation", on Library and Resource import names, keyword calls and keyword definitions. It adds the library, resource file or suite file if it is missing and jumps to the keyword. Keywords defined in a suite file get the action too, because `robotcode doc` documents the keywords of suite files, as Libdoc does (maintainer decision). The Keywords view gets the same item action. The language server only computes the target: name, arguments, base directory and keyword.
-- **"Open Documentation" fixed.** The three bugs above are fixed for both actions and the Keywords view. "Open Documentation", "Show Documentation" and log and report files opened in the Simple Browser (`robotcode.run.openOutputTarget` = `simpleBrowser`) now open beside the editor in the integrated browser when VS Code has its command `workbench.action.browser.open`, and in the Simple Browser as today otherwise (maintainer decision: the command is detected at run time, and `engines.vscode` stays `^1.108.0`). From VS Code 1.114 on, these pages reuse one tab; on 1.109 to 1.113, which have the command without that option, each page opens in a new tab.
-- **Unchanged.** The language server's HTTP server and the Libdoc HTML of "Open Documentation" stay (maintainer decision: in dev containers, SSH and WSL windows the integrated browser runs on the local machine and cannot open `file://` URLs of the remote machine, only `http(s)` URLs; VS Code for the Web has no integrated browser). IntelliJ, hover and completion are not changed.
-- **Known limits.** Import arguments reach `robotcode doc` as strings through `Name::args`, so typed values such as `${True}` or lists arrive in their string form, as today. Libraries whose keywords exist only inside a running execution context cannot be documented live (`doc-cli`). Pages are generated from the saved files, so unsaved changes are not shown.
+  Several viewers can be open. The user arranges them like editors: in other editor groups, side by side, pinned, or in a window of their own. A viewer comes back after a reload of the window. "RobotCode: Open Documentation Viewer" opens a new viewer, and "RobotCode: Open Documentation Viewer in New Window" opens one in a new window. The viewer works on desktop, in remote windows and in VS Code for the Web connected to a remote, such as a Codespace.
+- **Live generation with a cache.** Each page comes from `robotcode --format json doc lib TARGET`, run in the project's Python environment with the settings the language server applies (maintainer decision (2026-09-29)): the folder's profiles and the settings `robotcode.robot.pythonPath`, `languages`, `variables`, `variableFiles` and `env`. The last page of a target is kept in the extension's workspace storage, per workspace folder and Python interpreter. Showing a target shows its kept page at once and generates it again in the background, once per session; the refresh button generates it again on request. A failed generation shows the error, above the kept page if there is one. The pages of the 50 most recently generated targets are kept.
+- **From the editor.** A new source action "Show in Documentation Viewer" next to "Open Documentation", on Library and Resource import names, keyword calls and keyword definitions. Keywords defined in a suite file get it too, because `robotcode doc` documents the keywords of suite files, as Libdoc does (maintainer decision). The Keywords view gets the same item action. The language server only computes the target: name, arguments, base directory and keyword.
 
-Depends on `doc-cli` (the command `robotcode doc lib`, its option `--language` and its JSON output) and is archived after it.
+  The action shows the documentation in the viewer pinned with its pin button, else in the viewer used last, else in a new viewer, and scrolls to the keyword (maintainer decision (2026-10-02)). A new viewer opens beside the active editor. With the new setting `robotcode.documentationViewer.openLocation` set to `active`, it opens in the active editor group instead.
+- **"Open Documentation" fixed.** The three bugs above are fixed for both actions and the Keywords view. "Open Documentation", "Show Documentation", and log and report files opened in the Simple Browser (`robotcode.run.openOutputTarget` = `simpleBrowser`), open beside the editor in the integrated browser on desktop and reuse one tab. In VS Code for the Web, which has no integrated browser, they open in the Simple Browser as today.
+- **Unchanged.** The language server's HTTP server and the Libdoc HTML of "Open Documentation" stay. The maintainer decided this because in dev containers, SSH and WSL windows the integrated browser runs on the local machine and cannot open `file://` URLs of the remote machine, only `http(s)` URLs, and VS Code for the Web has no integrated browser. IntelliJ, hover and completion are not changed.
+- **Known limits.**
+  - Import arguments reach `robotcode doc` as strings through `Name::args`, so typed values such as `${True}` or lists arrive in their string form, as today.
+  - Libraries whose keywords exist only inside a running execution context cannot be documented live (`doc-cli`).
+  - Pages are generated from the saved files, so unsaved changes are not shown.
+  - The page needs VS Code's built-in extension "Markdown Language Features". Without it, the viewer shows a notice and the page as plain Markdown.
+  - The user's Markdown settings and the markdown-it plugins of other extensions (line breaks, typographer, math) apply to the page. The viewer loads only the Markdown extension's own preview styles and runs no preview scripts, so math is not laid out as in the Markdown preview, and mermaid blocks stay source text.
+  - Autocompletion in the target field is not part of this change.
+
+Depends on `doc-cli` (archived: the command `robotcode doc lib`, its option `--language` and its JSON output) and on `vscode-minimum-1-127` (VS Code 1.127 or newer).
 
 ## Capabilities
 
 ### New Capabilities
 
-- `vscode-documentation-browser`: The Documentation Browser of the VS Code extension (list, generation, cache and refresh, page view), and how documentation is opened from the editor and the Keywords view, including the import that "Open Documentation" documents and where its pages open.
+- `vscode-documentation-viewer`: The Documentation Viewer of the VS Code extension: viewers, the target field, the page and its outline, navigation and find, generation, cache and refresh, and which viewer an action uses. Also how documentation is opened from the editor and the Keywords view, including the import that "Open Documentation" documents and where its pages open.
 
 ### Modified Capabilities
 
@@ -43,12 +52,17 @@ Depends on `doc-cli` (the command `robotcode doc lib`, its option `--language` a
   - `code_action_documentation.py`: a `DocumentationTarget` dataclass; one target computation for the legacy and the semantic-model path, with the base-directory and owning-import fixes; the second action; `build_url` built from the target;
   - `keywords_treeview.py`: the new request `robot/keywordsview/getDocumentationTarget`; `getDocumentationUrl` built on the same target.
 - VS Code, `vscode-client/`:
-  - new `extension/documentationBrowser.ts`: panel, list, cache, generation, and the commands `robotcode.openDocumentationBrowser` and `robotcode.showInDocumentationBrowser`;
-  - new webview sources in `documentationBrowser/`, bundled by a third project in `esbuild.mjs`;
+  - new `extension/documentationViewer.ts`: the viewers, their serializer, the default viewer, generation, cache, rendering through `markdown.api.render`, and the commands `robotcode.openDocumentationViewer`, `robotcode.openDocumentationViewerInNewWindow` and `robotcode.showInDocumentationViewer`;
+  - new webview sources in `documentationViewer/` (preact, with controls from vscode-elements), bundled by a third project in `esbuild.mjs`;
   - `extension/pythonmanger.ts`: an optional environment for `executeRobotCode`;
   - `extension/index.ts`: registration, and `robotcode.showDocumentation` opens the integrated browser when it exists;
   - `extension/keywordsTreeViewProvider.ts` and `extension/languageclientsmanger.ts`: the item action and the anchor fix;
-  - `package.json`: two commands and a menu entry; the new dependencies `markdown-it` and `github-slugger` (for the headings without a JSON anchor).
-- Tests: `test_code_action_show_documentation.py` (baselines rf50 to rf75 regenerated), `test_code_action_documentation_model.py`, and a new `test_documentation_target.py`. There is no TypeScript test setup; the browser is checked by hand.
-- Docs: a VS Code section on `docs/03_reference/browsing-documentation.md`, the page that `doc-cli` adds, and the Python-Markdown row of `docs/02_get_started/index.md`.
+  - `package.json`: three commands, menu entries in the Keywords view and the context menu of the active viewer's tab, the setting `robotcode.documentationViewer.openLocation`, the activation event `onWebviewPanel:robotcode.documentationViewer`, and the new devDependencies `@vscode-elements/elements` and `@vscode/codicons`.
+- Tests:
+  - `test_code_action_show_documentation.py`, with the baselines of RF 5.0 to 7.5 regenerated;
+  - `test_code_action_documentation_model.py`;
+  - a new `test_documentation_target.py`.
+
+  There is no TypeScript test setup. The viewer is checked with throwaway Node scripts, in an isolated VS Code and by hand.
+- Docs: a VS Code section on `docs/03_reference/browsing-documentation.md`, the page that `doc-cli` added, and the Python-Markdown row of `docs/02_get_started/index.md`.
 - No change to the HTTP server and its settings, the IntelliJ plugin, hover or completion.
