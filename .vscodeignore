@@ -50,9 +50,16 @@ coverage.xml
 # docs
 docs/
 docs-next/
+dev-docs/
+openspec/
+AI_POLICY.md
+SECURITY.md
 
 # others
 scripts/
+
+# frozen robot.toml schema that older versions load from GitHub
+etc/
 
 .robotcode_cache/
 
