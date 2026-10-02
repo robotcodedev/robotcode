@@ -7,6 +7,7 @@ from robotcode.core.utils.dataclasses import CamelSnakeMixin
 from robotcode.core.utils.logging import LoggingDescriptor
 from robotcode.jsonrpc2.protocol import rpc_method
 
+from .code_action_documentation import DocumentationTarget
 from .protocol_part import RobotLanguageServerProtocolPart
 
 if TYPE_CHECKING:
@@ -164,6 +165,57 @@ class RobotKeywordsTreeViewPart(RobotLanguageServerProtocolPart):
             for l in namespace.library_doc.keywords.values()
         ]
 
+    def _documentation_target(
+        self,
+        text_document: TextDocumentIdentifier,
+        import_id: Optional[str],
+        keyword_id: Optional[str],
+    ) -> Optional[DocumentationTarget]:
+        document = self.parent.documents.get(text_document.uri)
+        if document is None:
+            return None
+
+        namespace = self.parent.documents_cache.get_namespace(document)
+        documentation = self.parent.robot_code_action_documentation
+
+        keyword_name = None
+
+        if import_id is None:
+            if keyword_id is not None:
+                keyword = next((l for l in namespace.library_doc.keywords.values() if str(hash(l)) == keyword_id), None)
+                if keyword is not None:
+                    keyword_name = keyword.name
+
+            return documentation.document_target(document, namespace, keyword_name)
+
+        is_library = True
+        entry = next((l for l in namespace.libraries.values() if str(hash(l)) == import_id), None)
+        if entry is None:
+            is_library = False
+            entry = next((l for l in namespace.resources.values() if str(hash(l)) == import_id), None)
+
+        if entry is None:
+            return None
+
+        if keyword_id:
+            keyword = next((l for l in entry.library_doc.keywords.values() if str(hash(l)) == keyword_id), None)
+            if keyword is not None:
+                keyword_name = keyword.name
+
+        return documentation.entry_target(entry, is_library, document, namespace, keyword_name)
+
+    @rpc_method(name="robot/keywordsview/getDocumentationTarget", param_type=GetDocumentationUrl, threaded=True)
+    @_logger.call
+    def _get_documentation_target(
+        self,
+        text_document: TextDocumentIdentifier,
+        import_id: Optional[str] = None,
+        keyword_id: Optional[str] = None,
+        *args: Any,
+        **kwargs: Any,
+    ) -> Optional[DocumentationTarget]:
+        return self._documentation_target(text_document, import_id, keyword_id)
+
     @rpc_method(name="robot/keywordsview/getDocumentationUrl", param_type=GetDocumentationUrl, threaded=True)
     @_logger.call
     def _get_documentation_url(
@@ -174,39 +226,15 @@ class RobotKeywordsTreeViewPart(RobotLanguageServerProtocolPart):
         *args: Any,
         **kwargs: Any,
     ) -> Optional[str]:
+        target = self._documentation_target(text_document, import_id, keyword_id)
+        if target is None:
+            return None
+
         document = self.parent.documents.get(text_document.uri)
         if document is None:
             return None
 
-        namespace = self.parent.documents_cache.get_namespace(document)
-
-        keyword_name = None
-
-        if import_id is None:
-            if keyword_id is not None:
-                keyword = next((l for l in namespace.library_doc.keywords.values() if str(hash(l)) == keyword_id), None)
-                if keyword is not None:
-                    keyword_name = keyword.name
-
-            return self.parent.robot_code_action_documentation.build_url(
-                str(document.uri.to_path().name), (), document, namespace, keyword_name
-            )
-
-        entry = next((l for l in namespace.libraries.values() if str(hash(l)) == import_id), None)
-        if entry is None:
-            entry = next((l for l in namespace.resources.values() if str(hash(l)) == import_id), None)
-
-        if keyword_id and entry is not None:
-            keyword = next((l for l in entry.library_doc.keywords.values() if str(hash(l)) == keyword_id), None)
-            if keyword is not None:
-                keyword_name = keyword.name
-
-        if entry is not None:
-            return self.parent.robot_code_action_documentation.build_url(
-                entry.import_name, entry.args, document, namespace, keyword_name
-            )
-
-        return None
+        return self.parent.robot_code_action_documentation.build_url(target, document)
 
     @rpc_method(
         name="robot/keywordsview/getLibraryDocumentation", param_type=GetLibraryDocumentationParams, threaded=True

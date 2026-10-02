@@ -1,5 +1,6 @@
+import os
 from pathlib import Path
-from typing import Union
+from typing import Any, Dict, Union
 
 import pytest
 import yaml
@@ -14,6 +15,8 @@ from robotcode.core.lsp.types import (
     Range,
 )
 from robotcode.core.text_document import TextDocument
+from robotcode.core.uri import Uri
+from robotcode.language_server.robotframework.parts.code_action_documentation import DocumentationTarget
 from robotcode.language_server.robotframework.protocol import (
     RobotLanguageServerProtocol,
 )
@@ -24,6 +27,23 @@ from tests.robotcode.language_server.robotframework.tools import (
 )
 
 from .pytest_regtestex import RegTestFixtureEx
+
+DATA_PATH = Path(Path(__file__).absolute().parent, "data")
+
+
+def _relative(path: Path) -> str:
+    return Path(os.path.relpath(path, DATA_PATH)).as_posix()
+
+
+def _target(target: DocumentationTarget) -> Dict[str, Any]:
+    name = Path(target.name)
+    return {
+        "uri": _relative(Uri(target.uri).to_path()),
+        "name": _relative(name) if name.is_absolute() else target.name,
+        "args": target.args,
+        "baseDir": _relative(Path(target.base_dir)) if target.base_dir is not None else None,
+        "keyword": target.keyword,
+    }
 
 
 @pytest.mark.parametrize(
@@ -48,7 +68,11 @@ def test(
 ) -> None:
     def split(action: Union[Command, CodeAction]) -> Union[Command, CodeAction]:
         if isinstance(action, CodeAction) and action.command is not None and action.command.arguments:
-            action.command.arguments = ["<removed>"]
+            argument = action.command.arguments[0]
+            if isinstance(argument, DocumentationTarget):
+                action.command.arguments = [_target(argument)]
+            else:
+                action.command.arguments = ["<removed>"]
         return action
 
     result = protocol.robot_code_action_documentation.collect(

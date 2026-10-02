@@ -16,3 +16,37 @@ result:
   is_preferred: null
   kind: source
   title: Open Documentation
+- !CodeAction
+  command:
+    arguments:
+    - args: []
+      baseDir: null
+      keyword: null
+      name: resources/firstresource.resource
+      uri: tests/code_action_show_documentation.robot
+    command: robotcode.showInDocumentationViewer
+    title: Show in Documentation Viewer
+  data: null
+  diagnostics: null
+  disabled: null
+  edit: null
+  is_preferred: null
+  kind: source
+  title: Show in Documentation Viewer
+- !CodeAction
+  command:
+    arguments:
+    - args: []
+      baseDir: null
+      keyword: null
+      name: resources/firstresource.resource
+      uri: tests/code_action_show_documentation.robot
+    command: robotcode.showInNewDocumentationViewer
+    title: Show in New Documentation Viewer
+  data: null
+  diagnostics: null
+  disabled: null
+  edit: null
+  is_preferred: null
+  kind: source
+  title: Show in New Documentation Viewer

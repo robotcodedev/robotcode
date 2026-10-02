@@ -1,8 +1,9 @@
 """Equivalence tests for the SemanticModel-based code-action-documentation path.
 
 Verifies that `RobotCodeActionDocumentationProtocolPart._collect_from_model(...)`
-produces the same `[Open Documentation]` actions as the legacy
-`_collect_legacy(...)` path across the three relevant statement kinds:
+produces the same documentation actions (Open Documentation and the two viewer actions),
+with the same targets, as the legacy `_collect_legacy(...)` path across the
+three relevant statement kinds:
 - Library / Resource imports
 - KeywordCall / Fixture / Template / TestTemplate
 - KeywordName (definition headers)
@@ -12,7 +13,10 @@ factory, stub protocol part, parametrised equivalence cases.
 """
 
 import ast as _ast
-from typing import Any, Callable, List, Optional
+import urllib.parse
+from pathlib import Path
+from types import SimpleNamespace
+from typing import Any, Callable, List, Optional, Set, Tuple, cast
 
 import pytest
 from pytest_mock import MockerFixture
@@ -27,7 +31,10 @@ from robotcode.core.lsp.types import (
     Range,
 )
 from robotcode.core.text_document import TextDocument
+from robotcode.core.uri import Uri
+from robotcode.core.workspace import WorkspaceFolder
 from robotcode.language_server.robotframework.parts.code_action_documentation import (
+    DocumentationTarget,
     RobotCodeActionDocumentationProtocolPart,
 )
 from robotcode.robot.diagnostics.import_resolver import ResolvedImports
@@ -45,6 +52,7 @@ from robotcode.robot.diagnostics.semantic_analyzer.analyzer import (
     SemanticAnalyzer,
     _get_builtin_variables,
 )
+from robotcode.robot.diagnostics.semantic_analyzer.nodes import KeywordCallStatement
 from robotcode.robot.diagnostics.variable_scope import VariableScope
 from tests.robotcode.conftest import make_resource_doc, parse_robot
 
@@ -121,6 +129,7 @@ def _make_library_entry(
     entry.alias = alias
     entry.import_name = name
     entry.args = ()
+    entry.import_source = None
     entry.library_doc = mocker.MagicMock()
     entry.library_doc.name = name
     entry.library_doc.keywords = mocker.MagicMock()
@@ -128,7 +137,7 @@ def _make_library_entry(
     entry.library_doc.errors = []
     entry.library_doc.inits = []
     # Tie kw_docs back to the libdoc so `kw_doc.parent == lib.library_doc`
-    # works for `_build_keyword_action`'s lookup.
+    # works for `keyword_target`'s lookup.
     for kw in kw_docs:
         kw.parent = entry.library_doc
     return entry
@@ -407,6 +416,12 @@ def test_legacy_and_model_paths_match(
         assert _normalize(legacy) == _normalize(model), (
             f"{name} @ ({line},{char}): legacy != model\n  legacy={_normalize(legacy)}\n  model ={_normalize(model)}"
         )
+        if model is not None:
+            assert [a.title for a in model] == [
+                "Open Documentation",
+                "Show in Documentation Viewer",
+                "Show in New Documentation Viewer",
+            ]
 
 
 def test_keyword_call_with_selection_returns_none_in_both_paths(
@@ -687,3 +702,167 @@ def test_collect_dispatches_to_legacy_path_when_no_semantic_model(
 
     assert not spy_model.called
     assert spy_legacy.called
+
+
+# --------------------------------------------------------------------------
+# Owning import of a prefixed call
+# --------------------------------------------------------------------------
+
+
+def test_prefixed_call_targets_the_prefix_import_after_a_cache_restore(
+    mocker: MockerFixture,
+    analyzer_namespace_factory: Callable[..., tuple[Any, _ast.AST]],
+    code_action_part_factory: Callable[..., RobotCodeActionDocumentationProtocolPart],
+) -> None:
+    """A namespace restored from the cache links keyword references by their
+    stable id, which has no import arguments. So the `keyword_doc` of a call
+    through `lib_var` can belong to the import `lib_hello` of the same
+    library. The prefix entry decides the arguments of the target."""
+    text = "*** Test Cases ***\nT\n    lib_var.Arg Keyword\n"
+    kw_hello = _kw("Arg Keyword", libname="arglib")
+    kw_var = _kw("Arg Keyword", libname="arglib")
+    lib_hello = _make_library_entry(mocker, "arglib", [kw_hello], alias="lib_hello")
+    lib_var = _make_library_entry(mocker, "arglib", [kw_var], alias="lib_var")
+    lib_hello.args = ("a_param=from hello",)
+    lib_var.args = ("a_param=from lib",)
+    # `LibraryDoc ==` ignores the import arguments, so both imports compare equal.
+    lib_var.library_doc = lib_hello.library_doc
+    kw_var.parent = lib_hello.library_doc
+
+    namespace, ast_model = analyzer_namespace_factory(
+        text, {"Arg Keyword": kw_var}, libraries={"lib_hello": lib_hello, "lib_var": lib_var}
+    )
+    stmt = namespace.semantic_model.statement_at(3)
+    assert isinstance(stmt, KeywordCallStatement)
+    stmt.lib_entry = lib_var
+    stmt.keyword_doc = kw_hello
+
+    document = _make_text_document(text)
+    _attach_to_document(document, namespace, ast_model)
+
+    part = code_action_part_factory()
+    rng = Range(start=Position(line=2, character=12), end=Position(line=2, character=12))
+
+    legacy = part._collect_legacy(document, rng, _ctx(), namespace)
+    model = part._collect_from_model(document, rng, _ctx(), namespace, namespace.semantic_model)
+
+    assert model is not None
+    show = model[1]
+    assert isinstance(show, CodeAction)
+    assert show.command is not None
+    assert show.command.arguments is not None
+    target = show.command.arguments[0]
+    assert isinstance(target, DocumentationTarget)
+    assert (target.name, target.args, target.keyword) == ("arglib", ["a_param=from lib"], "Arg Keyword")
+    assert _normalize(legacy) == _normalize(model)
+
+
+# --------------------------------------------------------------------------
+# Owning import of a call without a prefix
+# --------------------------------------------------------------------------
+
+
+class _LibDoc:
+    """Stands in for a `LibraryDoc`, which compares equal for the imports of
+    one library with other arguments."""
+
+    def __init__(self, name: str, keywords: Set[str]) -> None:
+        self.name = name
+        self.keywords = keywords
+
+    def __eq__(self, other: object) -> bool:
+        return isinstance(other, _LibDoc) and other.name == self.name
+
+    def __hash__(self) -> int:
+        return hash(self.name)
+
+
+def _two_imports(
+    search_order: List[str], hello_keywords: Set[str], var_keywords: Set[str]
+) -> Tuple[Any, SimpleNamespace, SimpleNamespace]:
+    builtin = SimpleNamespace(name="BuiltIn", alias=None, library_doc=_LibDoc("BuiltIn", {"Log"}))
+    lib_hello = SimpleNamespace(name="arglib", alias="lib_hello", library_doc=_LibDoc("arglib", hello_keywords))
+    lib_var = SimpleNamespace(name="arglib", alias="lib_var", library_doc=_LibDoc("arglib", var_keywords))
+    namespace = SimpleNamespace(
+        libraries={"BuiltIn": builtin, "lib_hello": lib_hello, "lib_var": lib_var},
+        imports_manager=SimpleNamespace(global_library_search_order=search_order),
+    )
+    return namespace, lib_hello, lib_var
+
+
+def test_unprefixed_call_uses_the_import_the_finder_chose() -> None:
+    """In a live analysis each import has its own `LibraryDoc`, and the
+    keyword's parent is the one of the import the keyword finder chose."""
+    namespace, _, lib_var = _two_imports([], {"Arg Keyword"}, {"Arg Keyword"})
+    kw = SimpleNamespace(name="Arg Keyword", parent=lib_var.library_doc)
+
+    entry = RobotCodeActionDocumentationProtocolPart._library_entry(cast(Any, kw), cast(Any, namespace))
+
+    assert entry is cast(Any, lib_var)
+
+
+@pytest.mark.parametrize(
+    ("search_order", "hello_keywords", "expected"),
+    [
+        (["lib_var"], {"Arg Keyword"}, "lib_var"),
+        (["Unknown", "lib_hello"], {"Arg Keyword"}, "lib_hello"),
+        ([], {"Arg Keyword"}, "lib_hello"),
+        ([], {"Other Keyword"}, "lib_var"),
+    ],
+)
+def test_unprefixed_call_after_a_cache_restore(
+    search_order: List[str], hello_keywords: Set[str], expected: str
+) -> None:
+    """After a cache restore the keyword's parent is a third `LibraryDoc`,
+    equal to both imports. The import is then chosen as the keyword finder
+    chooses: among the imports with the keyword, the first one the search
+    order names, else the first one."""
+    namespace, _, _ = _two_imports(search_order, hello_keywords, {"Arg Keyword"})
+    kw = SimpleNamespace(name="Arg Keyword", parent=_LibDoc("arglib", {"Arg Keyword"}))
+
+    entry = RobotCodeActionDocumentationProtocolPart._library_entry(cast(Any, kw), cast(Any, namespace))
+
+    assert entry is namespace.libraries[expected]
+
+
+def test_unprefixed_call_of_a_library_imported_once() -> None:
+    namespace, _, _ = _two_imports([], set(), set())
+    kw = SimpleNamespace(name="Log", parent=_LibDoc("BuiltIn", {"Log"}))
+
+    entry = RobotCodeActionDocumentationProtocolPart._library_entry(cast(Any, kw), cast(Any, namespace))
+
+    assert entry is namespace.libraries["BuiltIn"]
+
+
+# --------------------------------------------------------------------------
+# URL of "Open Documentation"
+# --------------------------------------------------------------------------
+
+
+def test_url_basedir_of_a_nested_import_inside_the_workspace_folder(
+    tmp_path: Path,
+    code_action_part_factory: Callable[..., RobotCodeActionDocumentationProtocolPart],
+) -> None:
+    """Inside a workspace folder, `basedir` is the directory of the importing
+    resource, relative to the folder, not the directory of the document."""
+    part = code_action_part_factory()
+    cast(Any, part.parent).workspace.get_workspace_folder.return_value = WorkspaceFolder("ws", Uri.from_path(tmp_path))
+    document = TextDocument(
+        document_uri=str(Uri.from_path(tmp_path / "suite.robot")),
+        language_id="robotframework",
+        version=0,
+        text="",
+    )
+    target = DocumentationTarget(
+        uri=str(document.uri),
+        name="deeper/nested.resource",
+        base_dir=str(tmp_path / "sub"),
+        keyword="Nested Keyword",
+    )
+
+    url = part.build_url(target, document)
+
+    query = urllib.parse.parse_qs(urllib.parse.urlparse(url).query)
+    assert Path(query["basedir"][0]) == Path("sub")
+    assert query["name"] == ["deeper/nested.resource"]
+    assert url.endswith("#Nested Keyword")
