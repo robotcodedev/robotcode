@@ -60,7 +60,7 @@ See proposal.md for the motivation. These are the verified facts that shape the 
 
   Also:
   - Its preview styles are the extension's `markdown.previewStyles` contribution, `media/markdown.css` and `media/highlight.css`. `markdown.css` uses global element selectors: the font and padding of `html, body`, lists, tables, links and headings.
-  - Markdown tables with column alignment get `style` attributes, which a CSP without `'unsafe-inline'` blocks. The tables of doc-cli are left-aligned explicitly (`:---`), so each of their cells carries `style="text-align:left"`: measured, 6 blocked attributes on an RF 7.5 standard library page; counted with the harness, 3025 on RF 5.0 `BuiltIn`. Blocking them does not change the layout, because left alignment is the default.
+  - Markdown tables with column alignment get `style` attributes, which a CSP without `'unsafe-inline'` blocks. The tables of doc-cli are left-aligned explicitly (`:---`), so each of their cells carries `style="text-align:left"`: measured, 6 blocked attributes on an RF 7.5 standard library page; counted with the harness, 3025 on RF 5.0 `BuiltIn`. Blocking them does not change the layout, because left alignment is the default. Chromium reports the violation already while it parses such an attribute, also into an inert `<template>` or a `DOMParser` document (measured in 1.127 and 1.140).
 - **vscode-elements.** `@vscode-elements/elements` 2.5.1 is a set of lit-based web components under the MIT licence; its newest release is from 2026-02-21.
   - `vscode-textfield`, `vscode-toolbar-button` and `vscode-split-layout` render under a CSP without `'unsafe-inline'` (measured: no violation). `vscode-toolbar-container` and `vscode-progress-bar` set no `style` attributes either; the progress bar sets its width through the CSSOM (`stylePropertyMap`) (source, not measured).
   - Its `vscode-tree` has no Home, End or type-ahead. It swallows Escape and Alt+Arrow, and executes Alt+Left as Left. Once a nested item is active, it cannot be reached with Tab (measured in 1.140 with real key presses).
@@ -106,13 +106,18 @@ See proposal.md for the motivation. These are the verified facts that shape the 
 - `base_dir` is left out when the resolved name does not depend on it: a library name that is not a path, or an absolute path. So `BuiltIn` or `Collections` is the same target wherever it is used.
 - **Owning import**, the same rule on both paths:
   - For a prefixed call, it is the prefix entry, if that entry's `library_doc == kw_doc.parent`. On the semantic-model path the prefix entry is `stmt.lib_entry`; on the legacy path it comes from `get_namespace_info_from_keyword_token`, with the keyword token that `get_keyworddoc_and_token_from_position` returns.
-  - Otherwise, today's rule applies.
   - The prefix entry is right also after a cache restore, where `stmt.keyword_doc` may belong to the other import; `==` accepts that.
-  - Calls without a prefix, resources and the current document keep today's rule.
+  - For a library keyword called without a prefix, the candidates are the library entries whose `library_doc == kw_doc.parent`. With one candidate, it is that one. With several, the analysis decided between imports of the same library with other arguments, as the keyword finder does (`keyword_finder.py`, `_get_keyword_from_libraries`):
+    - in a live analysis each import has its own `LibraryDoc`, so it is the candidate whose `library_doc is kw_doc.parent`;
+    - after a cache restore that identity is lost, so it is the first candidate, among those whose keywords contain the name, that `namespace.imports_manager.global_library_search_order` names (`eq_namespace` with the alias or name), else the first of them (maintainer decision (2026-10-02)).
+  - Resources and the current document keep today's rule.
 
-`collect` returns two actions for each target:
+`collect` returns three actions for each target:
 - "Open Documentation", unchanged: `robotcode.showDocumentation` with `build_url(target, document)`;
-- "Show in Documentation Viewer" (`CodeActionKind.SOURCE`): `robotcode.showInDocumentationViewer` with the target. Suite files get it too, because `robotcode doc` documents their keywords (Context).
+- "Show in Documentation Viewer" (`CodeActionKind.SOURCE`): `robotcode.showInDocumentationViewer` with the target;
+- "Show in New Documentation Viewer" (`CodeActionKind.SOURCE`): `robotcode.showInNewDocumentationViewer` with the target (maintainer decision (2026-10-02)).
+
+Suite files get the viewer actions too, because `robotcode doc` documents their keywords (Context).
 
 The gating of the three branches stays. `build_url` only formats the URL. Its `basedir` is the target's base directory, or the current document's directory when there is none, made relative to the workspace folder as today.
 
@@ -125,30 +130,32 @@ The gating of the three branches stays. `build_url` only formats the URL. Its `b
 - **Target text.** A viewer shows exactly doc-cli's `TARGET`, so a typed target and a target from the language server are the same kind of text.
   - A D1 target is turned into typable text: if `base_dir/name` exists (`workspace.fs.stat`), the field shows that path relative to the workspace folder (POSIX separators), or absolute when it lies outside the folder; otherwise it shows the name. The arguments are appended with `::`.
   - So neither the viewer state nor the cache key carries a base directory, and `--base-dir` is never passed. A relative path resolves against the folder, where `executeRobotCode` runs.
-- **Workspace folder of a viewer.**
-  - From a code action or the Keywords view, it is `getWorkspaceFolder(target.uri)`.
+- **Workspace folder of a viewer** (maintainer decision (2026-10-02): the settings of the respective folder, shown and changeable in the viewer).
+  - From a code action or the Keywords view, it is `getWorkspaceFolder(target.uri)`: the folder of the document the action came from, also when the documented file lies in another folder. Its text is then an absolute path, which `doc lib` resolves in any folder.
   - From a command, it is the active editor's folder, else the only folder, else a folder pick.
-  - A typed absolute path inside another folder switches the viewer to that folder.
+  - A typed absolute path inside another folder switches the viewer to that folder. Only a target submitted in the field does: its `load` carries `typed: true`. Every other `load` of an entry, by back, forward, refresh, a restore or a `show`, keeps the entry's folder.
+  - In a workspace with more than one folder, the toolbar shows the folder's name on a `vscode-toolbar-button` with the codicon `root-folder`, before the pin button. Choosing it sends `pickFolder`; the extension shows `window.showWorkspaceFolderPick` and answers with `folder {folder}`. The page then adds an entry with the picked folder, the current text and anchor, and loads it. The extension sends the list of folders, `folders [{uri, name}]`, after each `ready` and on `workspace.onDidChangeWorkspaceFolders`; the button shows only while it has more than one entry. A folder that is gone from the workspace is shown with the last segment of its URI.
   - Without a folder, the commands show an error message, because `executeRobotCode` needs a `WorkspaceFolder` and `storageUri` is undefined.
-- **Generation.** `pythonManager.executeRobotCode(folder, args, profiles, "json", true, true, undefined, token, env)` runs `doc lib -P … --language … -v … -V … TARGET`:
+- **Generation.** `pythonManager.executeRobotCode(folder, args, profiles, "json", true, true, undefined, token, env)` runs `doc lib -P … --language … -v … -V … -- TARGET`:
   - `-P` for each `robotcode.robot.pythonPath` entry;
   - `--language` for each `robotcode.robot.languages` entry;
   - `-v name:value` for each `robotcode.robot.variables` entry;
-  - `-V` for each `robotcode.robot.variableFiles` entry.
+  - `-V` for each `robotcode.robot.variableFiles` entry;
+  - `--` before `TARGET`, so that click reads a target that starts with `-`, such as `-shared.resource`, as the target and not as options.
 
-  `profiles` is the folder's `robotcode.profiles`. `executeRobotCode` gets an optional `env`, merged over `process.env`, and the viewer passes `robotcode.robot.env`. These are the settings the language server applies (maintainer decision (2026-09-29)).
+  `profiles` is the folder's `robotcode.profiles`. `executeRobotCode` gets an optional `env`, merged over `process.env`, and the viewer passes `robotcode.robot.env`. On Windows, where environment names are case-insensitive, a name of `env` replaces an inherited variable of any case (as VS Code's `mergeEnvironments` does); otherwise Node keeps only one spelling, the first in sort order. These are the settings the language server applies (maintainer decision (2026-09-29)).
   - `doc` writes the `env` of `robot.toml` and the profiles over the process environment (`doc-cli` D2). So for a variable that `robotcode.robot.env` also sets, their value wins, as in a test run (`debugmanager.ts:138-142`); the language server instead lets the setting win (`protocol.py:239-241`, `document_cache_helper.py:692-694`).
   - The language server adds `robotcode.robot.languages` to the languages of `robot.toml` and the profiles (`document_cache_helper.py:160-161`), as `--language` does in `doc`. Test discovery passes the setting as `--language` too (`testcontrollermanager.ts:951`).
   - RF 5.0 has no languages, and `doc` rejects a language there with Robot Framework's `option --language not recognized` (`doc-cli` D2, D3). So on RF 5.0 a non-empty `robotcode.robot.languages` makes each generation fail, as it makes test discovery fail (verified).
 
   Warnings on stderr of a successful run go to the RobotCode output channel, as for every `executeRobotCode` call.
-- **Cache.** The last good JSON of a target is one file in `context.storageUri`: `documentation-viewer/<sha256 of folder URI, Python command and target text>.json`, written with `vscode.workspace.fs`. The Python command is `pythonManager.getPythonCommand(folder)`. The file is shared by all viewers and history entries. It is written after every successful generation, also when its JSON is unchanged. After each write, the files beyond the 50 with the newest modification time are deleted (maintainer decision (2026-10-02)).
+- **Cache.** The last good JSON of a target is one file in `context.storageUri`: `documentation-viewer/<sha256 of folder URI, Python command and generation>.json`, written with `vscode.workspace.fs`. The Python command is `pythonManager.getPythonCommand(folder)`. The generation is what the run depends on besides them: the `doc lib` arguments with the target text, the profiles, `robotcode.robot.env` and `robotcode.extraArgs`. So a target shown after the user selected another profile or changed one of these settings has another key and is generated again, and switching back finds the earlier page. The file is shared by all viewers and history entries. It is written after every successful generation, also when its JSON is unchanged. After each write, the files beyond the 50 with the newest modification time are deleted (maintainer decision (2026-10-02)).
 - **Refresh rule.**
   - When a viewer commits a target (from the field, from an action, by back or forward, or when it is restored), it shows the kept page at once. It then generates the target in the background, unless it was already generated in this session.
   - "This session" is the in-memory set of cache keys with a successful generation since the extension was activated. A failed or cancelled generation does not enter it, so committing the target again generates it again.
   - The viewer shows the new JSON only when it differs from the kept one.
   - The refresh button always generates.
-  - There is at most one running generation per cache key. All viewers that wait for it share it, and the process is killed when no viewer waits any more. A viewer stops waiting when it switches its target or is closed.
+  - There is at most one running generation per cache key. All viewers that wait for it share it, and the process is killed when no viewer waits any more. A viewer stops waiting when it switches its target or is closed. A `load` that is still on its way to a generation when its viewer is closed ends there: `onDidDispose` sets the viewer's `seq` to `NaN`, which fails every later check of the load.
 - **Errors.**
   - The rejection message of `executeRobotCode`, which joins stdout and stderr on a non-zero exit code (`pythonmanger.ts:242-246`), is shown in a preformatted block.
   - With a kept page, the error stands above the page.
@@ -169,15 +176,16 @@ The gating of the three branches stays. `build_url` only formats the URL. Its `b
   - `robotcode.openDocumentationViewer`, "RobotCode: Open Documentation Viewer", in the command palette. It opens a NEW viewer on `BuiltIn` of the folder, by the setting `robotcode.documentationViewer.openLocation` (R2), with `preserveFocus: false`. Its `show` asks the page to focus the target field and select its text.
   - `robotcode.openDocumentationViewerInNewWindow`, "RobotCode: Open Documentation Viewer in New Window", in the command palette and in the context menu of the active viewer's tab (when `activeWebviewPanelId == 'robotcode.documentationViewer'`).
     - It creates a new viewer in `ViewColumn.Active` with `preserveFocus: false`, whatever `openLocation` says, so that the new viewer is the active editor.
-    - It then runs `workbench.action.moveEditorToNewWindow`, which moves the active editor of the focused window, as Claude Code does (Context).
+    - It then runs `workbench.action.moveEditorToNewWindow`, which moves the active editor of the focused window, as Claude Code does (Context). The viewer's page then takes the focus in the new window (`focus`, D4).
     - The new viewer shows the current target of the viewer whose panel is active, else of the live viewer used last (R2), at the top of its page; without any viewer it shows `BuiltIn`. The extension knows each viewer's current target from its `load` messages, but not its scroll position, so the position is not copied.
     - VS Code does not tell the extension which tab was clicked: `activeWebviewPanelId` holds the view type of the active editor of a group, and a webview tab has no resource. So from the tab menu the clicked viewer is copied only when it is the active or the last used one.
     - No toolbar button (maintainer decision (2026-10-02)).
   - `robotcode.showInDocumentationViewer(target)`, not contributed, is run by the D1 code action and by the Keywords view's item action. It picks the viewer by the rules below and sends `show` with the target text and `target.keyword` (D4, Messages).
+  - `robotcode.showInNewDocumentationViewer(target)`, not contributed, is run by the second D1 viewer action and the Keywords view's second item action. It always creates a new viewer, as R2 creates one (by `openLocation`, set as used last), whatever is pinned, and sends the same `show`.
 - **Which viewer** (maintainer decision (2026-10-02): the last active one, plus a pin button):
   - R1. Navigation that starts inside a viewer stays in that viewer: links, outline, target field, back, forward and refresh.
   - R2. For `showInDocumentationViewer`, the extension tracks the live viewers. It adds them on create and on deserialize and removes them on dispose.
-    - It sets `lastActive` when it creates or reveals a viewer for an action or a command, on deserialize when `panel.active` is true, and whenever `onDidChangeViewState` reports `active`. The first two matter: a viewer created with `preserveFocus: true` reports `active` only once the user focuses it (Context), and a viewer revived as the active editor gets no change event. "Used last" means the latest `lastActive`.
+    - It sets `lastActive` when it creates or reveals a viewer for an action or a command, on deserialize when `panel.active` is true, and whenever `onDidChangeViewState` reports `active` and the panel is still active 300 ms later. When a window gets the focus back, VS Code activates its last active editor for a few milliseconds before the clicked one (measured in 1.127 and 1.140); without the delay, that viewer would count as used. The first two matter: a viewer created with `preserveFocus: true` reports `active` only once the user focuses it (Context), and a viewer revived as the active editor gets no change event. "Used last" means the latest `lastActive`.
     - Neither `Tab.isActive` nor `tabGroups.activeTabGroup` is used (Context).
 
     The target viewer is:
@@ -185,29 +193,31 @@ The gating of the three branches stays. `build_url` only formats the URL. Its `b
     - (b) else the live viewer with the latest `lastActive`;
     - (c) else a new viewer.
 
-    An existing viewer is brought forward with `panel.reveal(panel.viewColumn, true)`, in whichever window it is. A new viewer is created with `preserveFocus: true`. It opens in `ViewColumn.Beside`, where the editor keeps the focus, or in `ViewColumn.Active` when the setting `robotcode.documentationViewer.openLocation` (`beside`, the default, or `active`) is `active`. There it becomes the visible editor of the active group and covers the editor the action came from.
+    An existing viewer is brought forward with `panel.reveal(panel.viewColumn, true)`, in whichever window it is. A new viewer opens in `ViewColumn.Beside`, created with `preserveFocus: true`, so that the editor keeps the focus. When the setting `robotcode.documentationViewer.openLocation` (`beside`, the default, or `active`) is `active`, it opens in `ViewColumn.Active` without `preserveFocus`: there it becomes the visible editor of the active group, covers the editor the action came from, and its page takes the focus (`focus`, D4).
   - R3. The pin button is RobotCode's own toggle in the toolbar (codicons `pin` and `pinned`).
     - At most one viewer is pinned: pinning one unpins the others, and closing a pinned viewer releases the pin.
-    - The pin is kept in the viewer's state, so it survives moves and reloads. A hidden viewer has no page that could take `pin {pinned: false}`, and a restored viewer is unknown until its tab is shown (Context). So a viewer can report `pinned: true` in its `ready` while another live viewer already holds the pin. Then the extension keeps the existing pin and sends `pin {pinned: false}` to the reporting viewer.
+    - The pin is kept in the viewer's state, so it survives moves and reloads. A hidden viewer has no page that could take `pin {pinned: false}`, and a restored viewer is unknown until its tab is shown (Context). So a viewer can report `pinned: true` in its `ready` although another viewer was pinned after it.
+    - Each viewer therefore has an id in its state, and the extension keeps the id of the viewer pinned last in its workspace state. A viewer that reports `pinned: true` with another id gets `pin {pinned: false}`, whatever order the tabs are shown in after a reload.
     - VS Code's own sticky pin is independent of it, because no API maps a panel to its tab (Context).
-  - R4. A `show` for a viewer that is not ready (hidden, or reloading after a move) is kept as pending and sent after its next `ready`.
+  - R4. A `show` for a viewer that is not ready (hidden, or reloading after a move) is kept as pending and sent after its next `ready`. It is cleared by the first `load` whose folder and text, as the page sends them, are those of the show: the page has then taken it into its history, which it saved before it sent the `load`.
 
 ### D4: The webview
 
 The sources live in `vscode-client/documentationViewer/`, written with preact and with their own `tsconfig.json`, like `rendererLog`. A third `esbuild.mjs` project (platform `browser`, format `esm`, loader `.ttf: "file"`) bundles them into `out/documentationViewer/`.
 
 - **Layout.**
-  - The toolbar holds back, forward, the target field, refresh and the pin button, in that order. The buttons are `vscode-toolbar-button`s in a `vscode-toolbar-container`, and the field is a `vscode-textfield` that takes the remaining width.
+  - The toolbar holds back, forward, the target field, refresh, the workspace folder (D2, only with more than one folder) and the pin button, in that order. The buttons are `vscode-toolbar-button`s in a `vscode-toolbar-container`, and the field is a `vscode-textfield` that takes the remaining width. The folder button shows the folder's name, cut off with an ellipsis when it is long.
+  - A `vscode-toolbar-button` renders its `label` only as the `aria-label` of its inner button, so each button of the toolbar and the find bar also gets its label as `title`, which the host shows as the tooltip.
   - Below the toolbar, a `vscode-progress-bar` (`indeterminate`) shows while a generation runs.
   - The body is a `vscode-split-layout`. The start pane holds a filter field (`vscode-textfield`) over the outline. The end pane holds the page, a `<main class="markdown-body" tabindex="0">` that scrolls on its own.
-  - The split position is kept in the state. The initial position is 280 px, with a minimum of 160 px for the outline and 30 % for the page.
+  - The split position is kept in the state. The initial position is 280 px, with a minimum of 160 px for the outline and 30 % for the page. The outline pane has a fixed width (`fixed-pane="start"`), so a viewer that gets narrower keeps it and the minimums hold; when the viewer gets wider again, the saved position is applied again. The split layout ends a drag on its window's `mouseup`, which never comes when the button is released outside the webview, so the page ends such a drag at the next mouse move without a button.
   - The find bar overlays the top right of the page pane.
 - **Controls** (maintainer decision (2026-10-02)).
   - The text fields, toolbar, split layout and progress bar come from `@vscode-elements/elements`, at an exact version. Codicons come from `@vscode/codicons`, linked with the id `vscode-codicon-stylesheet` that `vscode-icon` expects.
-  - The outline is our own tree, not `vscode-tree` (Context). It follows the ARIA tree pattern (`role=tree`/`treeitem`/`group`, `aria-level`, `aria-expanded`, `aria-selected`, one roving tab stop) and uses the colours of `--vscode-list-*` and `--vscode-focusBorder`, with codicons for sections, keywords and types.
+  - The outline is our own tree, not `vscode-tree` (Context). It follows the ARIA tree pattern as a flat list of rows (`role=tree` with `treeitem` rows that carry `aria-level`, `aria-expanded` and `aria-selected`, one roving tab stop) and uses the colours of `--vscode-list-*` and `--vscode-focusBorder`, with codicons for sections, keywords and types. High contrast themes define no list selection colours in High Contrast Dark, so the selected row also gets a dotted outline in `--vscode-contrastActiveBorder`, a colour only high contrast themes define.
   - Its keys are the arrows, Home, End, Page Up and Page Down, Enter, and typing the start of a title. Combinations with Alt, Ctrl or Cmd are left alone.
-- **Rendering pass.** The webview parses `html` into an inert `<template>`. It drops a leading `span#markdown-mermaid` and removes all `style` attributes, which the CSP would block anyway (Context). Then it moves the content into `main`.
-  - The h3 headings under the h2 headings `Keywords` and `Data types` get the `keywords[].anchor` and `types[].anchor` values in page order, but only when the counts match. So the keyword and type targets hold even where VS Code's ids differ (Context).
+- **Rendering pass.** The webview removes all `style` attributes and inline event handler attributes (`on…`) from the text of `html`, which the CSP would block anyway, before anything parses it (Context); otherwise each would be reported as a CSP violation. The tag pattern of this pass allows no `<` or quote in tag and attribute names, so that it runs in linear time also on crafted documentation. It parses the rest into an inert `<template>`, drops a leading `span#markdown-mermaid` and the elements that would load, style or navigate outside the page (`script`, `style`, `link`, `meta`, `base`, `iframe`, `frame`, `frameset`, `object`, `embed`, `area`; a `<meta http-equiv="refresh">` in HTML documentation navigated the viewer away, and a click on an image map's `<area>` reaches neither our link handler nor the host's, which handles only `a`), removes the `style` and `on…` attributes the text pass did not catch, and moves the content into `main`.
+  - The h3 headings under the h2 headings `Keywords` and `Data types` get the non-empty `keywords[].anchor` and `types[].anchor` values in page order, but only when the counts match. So the keyword and type targets hold even where VS Code's ids differ (Context).
   - With `renderError`, the page area shows a notice that the built-in extension "Markdown Language Features" is needed, and the Markdown in a `<pre>` set through `textContent`.
 - **Styles.** `markdown.css` and `highlight.css` are linked from the `markdown.previewStyles` contribution of `vscode.markdown-language-features`: `getExtension(…).packageJSON.contributes` resolved against its `extensionUri`, and loaded with `asWebviewUri`.
   - The viewer's own CSS comes after them. It moves the page typography onto `main.markdown-body` and resets `html, body` (padding 0, full height, the UI font from `--vscode-font-family` and `--vscode-font-size`).
@@ -216,7 +226,8 @@ The sources live in `vscode-client/documentationViewer/`, written with preact an
 - **Outline and filter.**
   - The outline is built from the rendered page: every h2, and every h3 under it, in page order. That is the rule of the REPL's sidebar (`doc_viewer.py:287-297`).
   - Titles are the JSON `name` for keyword and type headings, and the heading text otherwise. Headings without an id, such as raw HTML headings, are left out.
-  - The filter uses the rules of `robotcode doc keywords` as the REPL applies them (`MultiMatcher([f"*{text}*"], ignore="_")`, `doc_viewer.py:1036-1061`): contains, `*`, `?` and `[…]`, ignoring case, spaces and underscores. The TypeScript port uses a Unicode RegExp, translates `[!…]` and a leading `]` as `fnmatch` does, and treats an invalid pattern as matching nothing.
+  - The filter uses the rules of `robotcode doc keywords` as the REPL applies them (`MultiMatcher([f"*{text}*"], ignore="_")`, `doc_viewer.py:1036-1061`): contains, `*`, `?` and `[…]`, ignoring case, spaces and underscores. The TypeScript port uses a Unicode RegExp, translates `[!…]` and a leading `]` as `fnmatch` does, and treats an invalid pattern as matching nothing. Between two stars, `fnmatch` puts an atomic group, so that a pattern with many stars cannot backtrack exponentially; JavaScript has none, so the port uses the emulation of Python 3.10's `fnmatch`, a lookahead with a capturing group and a backreference to it (`(?=(.*?x))\1`).
+  - The case folding of the port is upper-casing followed by lower-casing. For a few letters, such as the Greek final sigma, it differs from Python's `casefold`; that is accepted (maintainer decision (2026-10-02)).
   - An h2 stays while it or one of its entries matches. Entries that do not match are hidden, and branches are open while a filter is set.
   - Keys of the outline:
     - Up and Down move to the previous and next visible entry.
@@ -224,41 +235,47 @@ The sources live in `vscode-client/documentationViewer/`, written with preact an
     - Home and End move to the first and last visible entry, and Page Up and Page Down by one visible page of entries.
     - Enter chooses the focused entry.
     - Typing moves to the next visible entry whose title starts with the typed text.
-  - Choosing an entry scrolls the page to its heading and adds a history entry.
+  - Choosing an entry scrolls the page to its heading and adds a history entry, unless the current entry already shows that heading (Links and history).
+  - When the selection changes for another reason than the outline's own keys (a link, a `show`, back, forward, a new page), the outline scrolls the selected row into view, without taking the focus and without `scrollIntoView`. It does so on a change of the selection or of the sections, not of the filter, so that typing a filter does not jump.
   - With `renderError` there are no headings. The outline then lists a `Keywords` section with the `keywords[].name` entries and a `Data types` section with the `types[].name` entries of the message, and choosing such an entry only selects it.
 - **Links and history.**
-  - A history entry is `{folder, text, anchor?, scrollTop}`, with at most 50 entries per viewer.
-  - These add an entry: an outline entry, a link within the page, a target submitted in the field, and a `show` from an action or the Keywords view. Submitting the target that is already shown only refreshes it and adds no entry. Scrolling, filtering and background regeneration do not add one either. Adding an entry drops the forward entries.
-  - A `show` carries the keyword, not an anchor, because a target shown for the first time has no page yet. The webview resolves the keyword against the `keywords[].name` of the first `page` for that target, ignoring case, spaces and underscores. It stores the anchor in the history entry and scrolls to it; without a match, the page opens at the top.
-  - Back and forward restore an entry. When the target differs, they load it first. They restore `scrollTop` when the page is unchanged, and scroll to the anchor otherwise.
+  - A history entry is `{folder, text, anchor?, position?}`, with at most 50 entries per viewer. `position` is `{scrollTop, width, heading?}`: the offset, the width of the page it was measured at, and the heading at the top of the view. It is recorded while the page scrolls and before the viewer navigates.
+  - These add an entry: an outline entry, a link within the page, a target submitted in the field, a picked workspace folder, and a `show` from an action or the Keywords view. Submitting the target that is already shown only refreshes it and adds no entry, and an outline entry or link to the anchor of the current entry only scrolls to it. Scrolling, filtering and background regeneration do not add one either. Adding an entry drops the forward entries.
+  - A `show` carries the keyword, not an anchor, because a target shown for the first time has no page yet. The webview resolves the keyword against the `keywords[].name` of each `page` of its load, ignoring case, spaces and underscores, until one has it; it then stores the anchor in the history entry and scrolls to it. A kept page sent with `busy` may predate the keyword, so the keyword waits for the generated page of the same load. When a page without `busy` lacks it, the webview loads the entry once more with `refresh`, because the keyword may have been added since the page was generated in this session. When that page lacks it too, or the load ends with a `status` and no page, the keyword is dropped and the page stays at the top. Leaving the entry drops its keyword too.
+  - The webview numbers its loads from `Date.now()` at its start, not from 0. A page that is recreated (hidden and shown, moved) would otherwise reuse the numbers of its previous instance, and a load of that instance that is still waiting in the extension would pass the extension's `seq` check and answer the new page with its target.
+  - Back and forward restore an entry. When the target differs, they load it first. In a page of the same width they restore `scrollTop`; in a page of another width, such as after a move into a new window, they scroll to the recorded heading, because the offset would point elsewhere. An entry without a position, such as a new one, scrolls to its anchor or to the top.
   - A capture-phase `click` listener on `window` handles `a[href^="#"]` inside `main`:
     - it calls `preventDefault` and `stopPropagation`;
     - it looks the id up raw and then decoded, with a `decodeURIComponent` that cannot throw;
-    - it scrolls with `scrollIntoView`, adds an entry and selects the outline entry.
+    - it scrolls `main` to the heading, adds an entry and selects the outline entry. The page scrolls `main` and the outline itself: `scrollIntoView` would also scroll VS Code's frames around the page (measured: by 4 px, cutting off the toolbar).
   - Without `stopPropagation`, the host would scroll as well (Context). All other links are left to the host. Our own scrolling never uses a synthetic `click`.
 - **Keys and mouse.** There is one capture-phase `keydown` listener on `window` (Context). For each key it handles, it calls `preventDefault` and `stopPropagation`; `stopPropagation` keeps the key from VS Code.
   - Back is Alt+Left on Windows and Linux, and Cmd+[ on macOS.
   - Forward is Alt+Right, or Cmd+] on macOS.
-  - Ctrl+F (Cmd+F on macOS) opens the find bar, prefilled with a selection inside the page.
+  - Ctrl+F (Cmd+F on macOS) opens the find bar, prefilled with a selection inside the page. The key is `F` by `event.key` when that is a Latin letter, so that Dvorak and AZERTY keep their `F`; otherwise, as with a Cyrillic or Greek layout, it is the physical key (`event.code === "KeyF"`), as VS Code's own keybindings do.
   - Mouse buttons 3 and 4 go back and forward. Capture-phase `mousedown` and `mouseup` listeners call `preventDefault` for them.
   - All other keys go on to VS Code as usual. On Windows, Alt+Left and Alt+Right in a focused viewer therefore do not run VS Code's Go Back and Go Forward.
 - **Find bar** (maintainer decision (2026-10-02)).
   - It is a `vscode-textfield` with "n of m" and up, down and close buttons.
-  - It matches without regard to case on the text of `main`, also across inline elements. It marks the matches with the CSS Custom Highlight API (`CSS.highlights`), coloured with `--vscode-editor-findMatchHighlightBackground` and `--vscode-editor-findMatchBackground`, and scrolls the current match into view.
-  - Enter or F3 goes to the next match, Shift+Enter or Shift+F3 to the previous one, and Escape closes the bar. A new page re-runs the search.
+  - It matches without regard to case on the text of `main`, also across inline elements. Each run of whitespace in the search text matches any run of whitespace, because the Markdown keeps the line breaks of the documentation source as `\n` in the text, which the page shows as spaces (with `markdown.preview.breaks` off, the default). The text of different blocks (paragraphs, headings, list items, table cells and other block elements) is kept apart, so that a match never spans a heading and the paragraph after it.
+  - It marks the matches with the CSS Custom Highlight API (`CSS.highlights`), coloured with `--vscode-editor-findMatchHighlightBackground` and `--vscode-editor-findMatchBackground`, and scrolls the current match into view. High contrast themes define neither colour, so the matches are also underlined with `--vscode-editor-findMatchHighlightBorder` and `--vscode-editor-findMatchBorder`, which only they define.
+  - Enter or F3 goes to the next match, Shift+Enter or Shift+F3 to the previous one, and Escape closes the bar.
+  - A new page re-runs the search without moving the page, which the page has already positioned; the first match in view becomes the current one. Only the user's find actions scroll to a match.
   - The outline is not searched.
-- **Content security policy:** `default-src 'none'; script-src 'nonce-<nonce>'; style-src ${cspSource}; font-src ${cspSource}; img-src ${cspSource} https: data:; base-uri 'none'`. Scripts and inline event handlers in documentation do not run, and forms are off. The extension writes the HTML of the page with a new nonce for each load. `style` attributes are removed by the rendering pass, so the aligned columns of Markdown tables stay left-aligned without CSP violations.
+- **Content security policy:** `default-src 'none'; script-src 'nonce-<nonce>'; style-src ${cspSource}; font-src ${cspSource}; img-src ${cspSource} https: data:; base-uri 'none'`. Scripts and inline event handlers in documentation do not run, and forms are off. The extension writes the HTML of the page with a new nonce for each load. `style` attributes are removed by the rendering pass before the HTML is parsed, so the aligned columns of Markdown tables stay left-aligned without CSP violations.
 - **Messages.**
-  - From the webview: `ready {state?}` on every load; `load {seq, folder?, text, refresh}`; `pin {pinned}`.
+  - From the webview: `ready {state?}` on every load; `load {seq, folder?, text, refresh, typed?}`; `pin {pinned}`; `pickFolder`.
   - From the extension:
     - `page {seq, folder, text, meta {name, type, version, scope, source, lineno}, keywords [{name, anchor}], types [{name, anchor}], html | (renderError, markdown), error?, busy}`;
     - `status {seq, busy, error?}`;
     - `show {folder, text, keyword?, focusTarget?}`, where `focusTarget` asks the page to focus the target field and select its text (only from "Open Documentation Viewer");
-    - `pin {pinned}`, when another viewer holds the pin.
+    - `pin {pinned}`, when another viewer holds the pin;
+    - `folders {folders [{uri, name}]}`, after each `ready` and when the workspace folders change, and `folder {folder}`, the answer to `pickFolder` (D2);
+    - `focus`, after a `ready` while the panel is the active editor, and after the first `ready` of a viewer created without `preserveFocus` (in 1.140 its page can be ready before the panel is reported active): the focus VS Code gives a webview while its page loads does not stick (measured in a new window and with `openLocation` `active`), so the page focuses `main` unless something in it has the focus.
 
     The JSON `doc` of the keywords is not sent.
   - The webview ignores a `page` or `status` that is not its latest `seq`. The extension sets the title from `meta.name`.
-  - The state is `{v: 1, history, index, filter, split, collapsed, pinned}`, without HTML.
+  - The state is `{v: 1, id, history, index, filter, split, collapsed, pinned}`, without HTML. While the page scrolls, it is saved at once and then at most every 100 ms: a hidden page is gone at once, and a save from its `pagehide` no longer reaches VS Code (measured).
 
 ### D5: Libdoc pages open in the integrated browser
 
@@ -270,21 +287,28 @@ With VS Code 1.127 as the minimum, every desktop version knows `openToSide` and 
 
 ### D6: Tests
 
-- `test_code_action_show_documentation.py` writes the target of "Show in Documentation Viewer".
+- `test_code_action_show_documentation.py` writes the target of both viewer actions.
   - `uri`, `baseDir` and a `name` that is an absolute path are written relative to the test data directory with `as_posix()`, so the baselines are the same on Linux, Windows and macOS. The URL stays `<removed>`.
-  - The data file is a suite, so its definition headers and the calls of its own keywords get the second action too, with the data file as the target.
+  - The data file is a suite, so its definition headers and the calls of its own keywords get the viewer actions too, with the data file as the target.
   - `lib_var.A Library Keyword` carries `a_param=from lib`, and `lib_hello.A Library Keyword` carries `a_param=from hello`.
 - `test_code_action_documentation_model.py`: both actions and their targets are identical on both paths. A model statement whose `keyword_doc` belongs to the other import of the same library, while `lib_entry` is the prefix entry, targets the prefix entry.
-- A new `test_documentation_target.py` uses `open_temp_document` and `tmp_path`. It covers the base directory through a resource in a subdirectory, `${CURDIR}`, libraries without a base directory, keyword definitions in resource and suite files, and the targets of the Keywords view.
+- A new `test_documentation_target.py` uses `open_temp_document` and `tmp_path`. It covers the base directory through a resource in a subdirectory, `${CURDIR}`, libraries without a base directory, keyword definitions in resource and suite files, the targets of the Keywords view, and a call without a prefix that `globalLibrarySearchOrder` resolves to the second import of a library, live and after a cache restore. A unit test of `build_url` pins the `basedir` of a nested import inside a workspace folder, relative to the folder.
 - TypeScript: no test runner exists, and none is added. Checks are `npm run lint`, `npm run compile` and two throwaway Node scripts:
   - the filter port against Robot Framework's `MultiMatcher`;
   - the rendering pass against the output of VS Code's Markdown engine, for every `#` link and every JSON anchor. The script builds the engine from markdown-it with the options and the slugify of `extensions/markdown-language-features`, at 1.127.0 and at the current version.
 
   The runtime checks run in an isolated, headless VS Code at 1.127.0 and at the current version, plus the manual checks of task 5.3.
 
+### D7: Packaging
+
+The VSIX now bundles the webview with preact, `@vscode-elements/elements` and lit, and ships the codicon font. Their licences (MIT, BSD-3-Clause, CC-BY-4.0 for the font) ask for their notices, and so do the packages bundled into `extension.js` and `rendererLog.js` since before this change.
+- A production build of `esbuild.mjs` asks esbuild for the metafile of each project and then writes `out/ThirdPartyNotices.txt`: for each npm package with files in a bundle or among the copied assets, its name, version and licence, and the texts of its licence files from `node_modules` (maintainer decision (2026-10-02): generated at build time). vsce packages it with `out/`.
+- A production build empties `out/` first, because the bundles and assets of earlier builds, such as source maps of a development build, would otherwise be packaged too.
+- `.vscodeignore` leaves out local working folders that are not part of the extension: `.astro/`, `results/`, `.robocop_cache/` and `*.code-workspace`.
+
 ## Risks / Trade-offs
 
-- [The regression baselines of all RF versions change] → the diff is reviewed; it may only add the second action and its target.
+- [The regression baselines of all RF versions change] → the diff is reviewed; it may only add the two viewer actions and their target.
 - [Viewers are singleton editors: no split, no copy, no Reopen Closed Editor] → maintainer decision. "Open Documentation Viewer in New Window" gives a second viewer of the same target.
 - [Moving a viewer to another group or window, and hiding it, reloads its page] → history, position, filter, split and pin come back from the state and `ready`. A `show` waits as pending.
 - [Restored viewers behind other tabs are unknown until shown] → an action may open a new viewer although such a viewer exists. Accepted.
@@ -294,7 +318,8 @@ With VS Code 1.127 as the minimum, every desktop version knows `openToSide` and 
 - [On Windows, Alt+Left in a focused viewer shadows VS Code's Go Back] → intended: while a viewer has the focus, these keys navigate the viewer.
 - [HTML-format documentation with raw `<h2>`/`<h3>`] → such headings are left out of the outline. If they upset the counts, the anchor pass is skipped for that page and VS Code's ids stay.
 - [`workbench.action.browser.open` is an internal command and can change] → it is detected at run time, with the Simple Browser as fallback, as in the built-in simple-browser extension.
-- [Clients without VS Code's client commands, such as IntelliJ and Neovim, get a second action they cannot run] → only where they get "Open Documentation" today, which has the same problem.
+- [Clients without VS Code's client commands, such as IntelliJ and Neovim, get two actions they cannot run] → only where they get "Open Documentation" today, which has the same problem.
+- [In an untrusted workspace (Restricted Mode), the viewer runs `robotcode` with the workspace's settings, as the language server, test discovery and the REPL do] → RobotCode as a whole restricts nothing in Restricted Mode; an extension-wide change handles it (maintainer decision (2026-10-02)).
 - [A library that hangs while it is imported keeps its generation running, because `executeRobotCode` has no time limit] → the viewer shows that it is busy. Switching the target or closing the viewer ends the process.
 - [No TypeScript test runner] → throwaway scripts, the isolated VS Code and manual checks.
 

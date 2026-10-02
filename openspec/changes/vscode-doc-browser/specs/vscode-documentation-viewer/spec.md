@@ -4,6 +4,7 @@
 
 Defines the Documentation Viewer of the VS Code extension and how RobotCode opens documentation from the editor:
 - the viewers and how the user arranges them;
+- the workspace folder of a viewer;
 - the target field, and the page with its outline;
 - navigation and find;
 - how pages are generated, kept and refreshed;
@@ -15,18 +16,18 @@ Defines the Documentation Viewer of the VS Code extension and how RobotCode open
 
 ### Requirement: Documentation actions in the editor
 
-Wherever RobotCode offers "Open Documentation", it SHALL also offer the source action "Show in Documentation Viewer", under the same conditions:
+Wherever RobotCode offers "Open Documentation", it SHALL also offer the source actions "Show in Documentation Viewer" and "Show in New Documentation Viewer", under the same conditions:
 - on the name of a Library or Resource import;
 - on a keyword reference in a keyword call, setup, teardown or template;
 - on the name in a keyword definition header.
 
 The offered actions and what they document SHALL be the same whether the semantic-model analysis path is enabled or not.
 
-"Show in Documentation Viewer" SHALL show the documentation of that library, resource file or suite file in the viewer chosen by the requirement "Which viewer shows documentation from the editor". For a keyword position, it SHALL show the page at that keyword.
+"Show in Documentation Viewer" SHALL show the documentation of that library, resource file or suite file in the viewer chosen by the requirement "Which viewer shows documentation from the editor". "Show in New Documentation Viewer" SHALL show it in a new viewer. For a keyword position, both SHALL show the page at that keyword.
 
 #### Scenario: Library import name
 - **WHEN** source actions are requested with the cursor on `Collections` in `Library    Collections`
-- **THEN** "Open Documentation" and "Show in Documentation Viewer" are offered, both for the library `Collections`
+- **THEN** "Open Documentation", "Show in Documentation Viewer" and "Show in New Documentation Viewer" are offered, all for the library `Collections`
 
 #### Scenario: Keyword of a library
 - **WHEN** the user chooses "Show in Documentation Viewer" on a call of `Remove From List`
@@ -34,11 +35,11 @@ The offered actions and what they document SHALL be the same whether the semanti
 
 #### Scenario: Keyword definition in a resource file
 - **WHEN** source actions are requested on the name in a keyword definition header of a `.resource` file
-- **THEN** both actions are offered, and "Show in Documentation Viewer" shows that resource file at the keyword
+- **THEN** the three actions are offered, and "Show in Documentation Viewer" shows that resource file at the keyword
 
 #### Scenario: Keyword definition in a suite file
 - **WHEN** source actions are requested on the name in a keyword definition header of a file with a `*** Test Cases ***` section
-- **THEN** both actions are offered, and "Show in Documentation Viewer" shows that suite file at the keyword
+- **THEN** the three actions are offered, and "Show in Documentation Viewer" shows that suite file at the keyword
 
 #### Scenario: Both analysis paths
 - **WHEN** the same positions are evaluated with the semantic-model analysis path enabled and disabled
@@ -50,6 +51,7 @@ The documentation actions of the editor and the Keywords view SHALL document the
 - Variables in the import name and arguments SHALL be replaced with the values the analysis knows; the arguments SHALL be passed as strings.
 - A relative path in the import SHALL be resolved against the directory of the file that contains the import, also when that file is a resource file imported by the current document, and `${CURDIR}` SHALL be that directory.
 - For a keyword call with a library or resource prefix (`lib_var.A Library Keyword`), the import SHALL be the one the prefix names. When the same library is imported twice with different arguments, a call through the second import's alias SHALL use the second import's arguments.
+- For a keyword call without a prefix, the import SHALL be the one the analysis resolved the call to, also when the same library is imported twice with different arguments and the library search order or the keywords of the two imports decide.
 - A library imported by module name, such as `BuiltIn` or `Collections`, SHALL be shown with the same target wherever it was shown from.
 
 #### Scenario: Resource imported through a resource in another directory
@@ -62,13 +64,17 @@ The documentation actions of the editor and the Keywords view SHALL document the
 - **THEN** the viewer's target field shows `alibrary::a_param=from lib`, and the URL of "Open Documentation" carries `a_param=from lib`
 - **AND** on `lib_hello.A Library Keyword` they carry `a_param=from hello`, also when the analysis of the suite was restored from the cache
 
+#### Scenario: Call without a prefix decided by the search order
+- **WHEN** a suite imports `alibrary` as `lib_hello` and as `lib_var` as above, `robotcode.analysis.robot.globalLibrarySearchOrder` is `["lib_var"]`, and documentation is opened on a call of `A Library Keyword` without a prefix
+- **THEN** the viewer's target field shows `alibrary::a_param=from lib`, and the URL of "Open Documentation" carries `a_param=from lib`, also when the analysis of the suite was restored from the cache
+
 #### Scenario: Module library from two directories
 - **WHEN** the user chooses "Show in Documentation Viewer" on `Library    Collections` in two suites in different directories
 - **THEN** the viewer's target field shows `Collections` both times
 
 ### Requirement: The Keywords view opens documentation at the keyword
 
-Each import and keyword item of the Keywords view SHALL offer "Show in Documentation Viewer", for the same import as the documentation actions of the editor. "Show Documentation" and "Show in Documentation Viewer" on a keyword defined in the current document SHALL open the documentation at that keyword.
+Each import and keyword item of the Keywords view SHALL offer "Show in Documentation Viewer" and "Show in New Documentation Viewer", for the same import as the documentation actions of the editor. "Show Documentation" and both viewer actions on a keyword defined in the current document SHALL open the documentation at that keyword.
 
 #### Scenario: Local keyword with "Show Documentation"
 - **WHEN** the user chooses "Show Documentation" on a keyword of the current file in the Keywords view
@@ -116,9 +122,36 @@ Both commands SHALL be in the command palette. The second command SHALL also be 
 - **WHEN** the user runs "Open Documentation Viewer in New Window" while a viewer that shows `BuiltIn` is active
 - **THEN** a new window opens with a second viewer that shows `BuiltIn`, and the first viewer stays
 
+### Requirement: The workspace folder of a viewer
+
+Each viewer SHALL belong to one workspace folder. Its pages SHALL be generated for that folder, as the requirement "Pages are generated live and kept" describes.
+- A viewer that shows documentation for an action of the editor or the Keywords view SHALL belong to the folder of the document the action came from, also when the documented file lies in another workspace folder.
+- Entering an absolute path in the target field that lies in another workspace folder SHALL switch the viewer to that folder.
+- In a workspace with more than one folder, the toolbar SHALL show the name of the viewer's folder before the pin button. Choosing it SHALL let the user pick another workspace folder; the viewer SHALL then show its current target for the picked folder, as a new history entry. In a workspace with one folder, the toolbar SHALL show no folder.
+
+#### Scenario: Folder in a multi-root workspace
+- **WHEN** a workspace has the folders `tests` and `shared`, and a viewer of `tests` shows `Collections`
+- **THEN** the toolbar shows `tests` before the pin button
+
+#### Scenario: Picking another folder
+- **WHEN** the user chooses the folder in the toolbar of that viewer and picks `shared`
+- **THEN** the viewer shows `Collections`, generated with the Python environment, profiles and settings of `shared`, and the toolbar shows `shared`
+- **AND** back shows `Collections` of `tests` again
+
+#### Scenario: Documented file in another folder
+- **WHEN** `tests/suite.robot` imports `../shared/common.resource`, and the user chooses "Show in Documentation Viewer" on a call of a keyword of `common.resource`
+- **THEN** the viewer belongs to `tests` and shows `common.resource` at that keyword
+- **AND** after the user enters `BuiltIn`, switches to another editor tab in the same group and back, the viewer still shows `BuiltIn`, and back returns to `common.resource`
+
+#### Scenario: One folder
+- **WHEN** the workspace has one folder
+- **THEN** the toolbar of a viewer shows no folder
+
 ### Requirement: The target field
 
-The toolbar of a viewer SHALL have a target field. It SHALL show what the viewer documents, as `Name`, `Name::arg1::arg2` or the path of a library, resource or suite file, relative to the viewer's workspace folder or absolute. Entering another target SHALL show its documentation in the same tab, which takes the new name as its title. Entering the target that is already shown SHALL refresh it.
+The toolbar of a viewer SHALL have a target field. It SHALL show what the viewer documents, as `Name`, `Name::arg1::arg2` or the path of a library, resource or suite file, relative to the viewer's workspace folder or absolute. Entering another target SHALL show its documentation in the same tab, which takes the new name as its title. Entering the target that is already shown SHALL refresh it. A target that starts with `-`, such as the file `-shared.resource`, SHALL be shown like any other target.
+
+The buttons of the toolbar and of the find bar SHALL show their names as tooltips.
 
 When the documentation of an entered target cannot be generated, the viewer SHALL show the error. If no page of that target was kept before, it SHALL also show a way to retry. The field SHALL keep the entered text, and back SHALL return to the previous page.
 
@@ -134,6 +167,10 @@ When the documentation of an entered target cannot be generated, the viewer SHAL
 - **WHEN** the user enters the name of a library that does not exist
 - **THEN** the page area shows the error and a retry button, the field keeps the entered name, and back returns to the previous page
 
+#### Scenario: Target that starts with a dash
+- **WHEN** the workspace folder contains the resource file `-shared.resource`, and the user enters `-shared.resource`
+- **THEN** the viewer shows the keywords of that file
+
 ### Requirement: The page and its outline
 
 A viewer SHALL show the page that `robotcode doc lib` produces for its target. The page SHALL be rendered by VS Code's built-in Markdown support, styled like VS Code's Markdown preview, and SHALL follow the colour theme.
@@ -141,6 +178,7 @@ A viewer SHALL show the page that `robotcode doc lib` produces for its target. T
 Next to the page, the viewer SHALL show an outline: its sections, keywords and data types, as the level-2 and level-3 headings, like the sidebar of the REPL's documentation viewer.
 - **Filter field.** It SHALL keep the entries whose titles match the filter text by the pattern rules of `robotcode doc keywords`: contains, `*`, `?` and `[…]`/`[!…]`, ignoring case, spaces and underscores. An invalid pattern SHALL match nothing. A section SHALL stay while it or one of its entries matches.
 - **Choosing an entry** SHALL show the page at its heading.
+- **Selection.** The entry of the heading the page was shown at SHALL be selected, also in high contrast themes. When the page is shown at another heading, by a link, an action, back or forward, the outline SHALL scroll that entry into view.
 - **Keyboard.**
   - Up and Down SHALL move the focus to the previous and next visible entry.
   - Right SHALL expand a collapsed section or move to its first entry. Left SHALL collapse an expanded section or move to the entry's section.
@@ -155,7 +193,7 @@ Next to the page, the viewer SHALL show an outline: its sections, keywords and d
 - `vscode:` and `vscode-insider:` links, and on desktop links of the product's own URL scheme, SHALL be handled by VS Code.
 - `command:` links and links of other schemes SHALL do nothing.
 
-**Content.** Scripts, event handlers and forms contained in documentation SHALL NOT run.
+**Content.** Scripts, event handlers and forms contained in documentation SHALL NOT run, and nothing in it SHALL navigate the viewer away from its page.
 
 **Without Markdown support.** When VS Code's built-in Markdown support is disabled, the viewer SHALL show a notice and the page as plain Markdown text. The outline SHALL then list the keywords and data types; choosing one of them is not required to scroll or to add a history entry.
 
@@ -190,6 +228,14 @@ The viewer SHALL work on desktop, in remote windows, and in VS Code for the Web 
 - **WHEN** a library documented in HTML format contains a `<script>` element
 - **THEN** the element is not executed
 
+#### Scenario: Image map in documentation
+- **WHEN** a library documented in HTML format contains an image map with an `<area href="https://example.com">`, and the user clicks the area
+- **THEN** the viewer still shows the page
+
+#### Scenario: Outline follows a link
+- **WHEN** the user clicks the link `Should Be Equal` in the introduction of `BuiltIn`
+- **THEN** the outline selects `Should Be Equal` and scrolls it into view
+
 #### Scenario: Theme change
 - **WHEN** the user switches from a light to a dark colour theme while a viewer is open
 - **THEN** the toolbar, the outline and the page follow the new theme
@@ -204,7 +250,7 @@ The viewer SHALL work on desktop, in remote windows, and in VS Code for the Web 
 
 ### Requirement: Back, forward and find
 
-A viewer SHALL keep a history of what it showed. Choosing an outline entry, following a link within the page, entering a target, and documentation shown by an action from the editor or the Keywords view SHALL each add an entry. Entering the target that is already shown SHALL only refresh it.
+A viewer SHALL keep a history of what it showed. Choosing an outline entry, following a link within the page, entering a target, picking another workspace folder, and documentation shown by an action from the editor or the Keywords view SHALL each add an entry. Entering the target that is already shown SHALL only refresh it. Choosing the outline entry, or following a link, to the heading the current entry shows SHALL only show that heading again.
 
 **Back and forward** SHALL be offered:
 - as toolbar buttons;
@@ -213,7 +259,9 @@ A viewer SHALL keep a history of what it showed. Choosing an outline entry, foll
 
 While the viewer has the focus, these keys SHALL act only on the viewer.
 
-**Find.** Ctrl+F, or Cmd+F on macOS, SHALL open a find bar that searches only the page. It SHALL show the number of matches and which one is current. Enter SHALL go to the next match and Shift+Enter to the previous one.
+**Find.** Ctrl+F, or Cmd+F on macOS, SHALL open a find bar that searches only the page, also while a keyboard layout without Latin letters is active. It SHALL show the number of matches and which one is current, and mark the matches, also in high contrast themes. Enter SHALL go to the next match and Shift+Enter to the previous one.
+- It SHALL match the text as the page displays it: whitespace in the search text SHALL match any whitespace within a paragraph, heading, list item or table cell, such as a line break of the documentation source.
+- While the find bar is open, a page that the viewer shows SHALL open where it would open without the find bar; the bar searches it again, and the first match in view becomes the current one.
 
 #### Scenario: Back with the keyboard
 - **WHEN** the user follows the link `Should Be Equal` in the introduction of `BuiltIn` and then presses Alt+Left in the viewer
@@ -228,12 +276,26 @@ While the viewer has the focus, these keys SHALL act only on the viewer.
 - **THEN** the find bar shows the number of matches in the page, without the entries of the outline
 - **AND** Enter scrolls the page to the next match
 
+#### Scenario: Phrase across a line break
+- **WHEN** the user searches `automatically and thus` in a viewer that shows `BuiltIn` on Robot Framework 7.5, whose documentation breaks the line between `and` and `thus`
+- **THEN** the find bar shows a match
+
+#### Scenario: Find bar open during a show
+- **WHEN** the find bar of a viewer that shows `BuiltIn` is open with `list`, and the user chooses "Show in Documentation Viewer" on a call of `Append To List`
+- **THEN** the viewer shows `Collections` at `Append To List`
+
+#### Scenario: Same heading again
+- **WHEN** the page shows `Should Be Equal` after the user chose it in the outline, and the user chooses it again
+- **THEN** no history entry is added, and back returns to the entry before it
+
 ### Requirement: Which viewer shows documentation from the editor
 
 "Show in Documentation Viewer" and the item action of the Keywords view SHALL choose the viewer in this order:
 1. the viewer the user pinned with the viewer's pin button, if it is open;
 2. otherwise the viewer used last: the one that was active last, or that such an action or a command opened or brought forward last, whichever happened later;
 3. otherwise a new viewer.
+
+"Show in New Documentation Viewer" and the second item action of the Keywords view SHALL always open a new viewer, also when a viewer is pinned; the new viewer is then the viewer used last.
 
 At most one viewer SHALL be pinned; pinning one SHALL unpin the others. After a reload of the window, a restored viewer SHALL count for this choice only once its tab has been shown. A new viewer SHALL open beside the active editor, where the editor keeps the focus. When the setting `robotcode.documentationViewer.openLocation` is `active`, it SHALL open in the active editor group instead. A viewer in another window SHALL be brought to the front there. Navigation within a viewer SHALL stay in that viewer.
 
@@ -261,15 +323,21 @@ At most one viewer SHALL be pinned; pinning one SHALL unpin the others. After a 
 - **WHEN** the viewer that was active last was moved into a window of its own, and the user chooses "Show in Documentation Viewer" in the main window
 - **THEN** that viewer shows the documentation, and its window comes to the front
 
+#### Scenario: Show in a new viewer
+- **WHEN** a pinned viewer shows `XML`, and the user chooses "Show in New Documentation Viewer" on `Library    Collections`
+- **THEN** a new viewer opens beside the editor and shows `Collections`, the pinned viewer still shows `XML`, and a following "Show in Documentation Viewer" still uses the pinned viewer
+
 ### Requirement: Pages are generated live and kept
 
 The page of a target SHALL be what `robotcode doc lib` produces for it, run in the Python environment that RobotCode uses for the viewer's workspace folder. It SHALL be run with:
 - the folder's selected profiles;
-- the settings `robotcode.robot.pythonPath`, `robotcode.robot.languages`, `robotcode.robot.variables`, `robotcode.robot.variableFiles` and `robotcode.robot.env`.
+- the folder's settings `robotcode.robot.pythonPath`, `robotcode.robot.languages`, `robotcode.robot.variables`, `robotcode.robot.variableFiles` and `robotcode.robot.env`.
 
-The last generated page of each target SHALL be kept per workspace folder and Python environment, also across restarts; at least the pages of the 50 most recently generated targets SHALL be kept.
+The last generated page of each target SHALL be kept per workspace folder, Python environment, selected profiles and these settings, also across restarts; at least the pages of the 50 most recently generated targets SHALL be kept.
 
 Showing a target SHALL show its kept page at once, if there is one. It SHALL generate the page again in the background once per session, and update the view when the result differs. The refresh button SHALL generate it again. When a generation fails, the viewer SHALL show the error, above the kept page if there is one.
+
+When documentation is shown at a keyword that the page does not have, for example a keyword added since the page was generated, the viewer SHALL generate the page again, once, and show it at the keyword if the new page has it.
 
 #### Scenario: Kept page
 - **WHEN** the user shows a target that was generated in an earlier session
@@ -278,6 +346,14 @@ Showing a target SHALL show its kept page at once, if there is one. It SHALL gen
 #### Scenario: Profile variable in the import arguments
 - **WHEN** a library `ArgLib` offers the keyword `Mode B Keyword` only when it is initialised with `b`, the profile selected in `robotcode.profiles` sets the variable `MODE` to `b`, and the target `ArgLib::${MODE}` is shown
 - **THEN** the page lists `Mode B Keyword`
+
+#### Scenario: Another profile selected in the same session
+- **WHEN** a viewer showed `ArgLib::${MODE}` while the selected profile set `MODE` to `a`, the user then selects a profile that sets `MODE` to `b`, and a viewer shows `ArgLib::${MODE}` again
+- **THEN** the page lists `Mode B Keyword`
+
+#### Scenario: Keyword added since the page was generated
+- **WHEN** a resource file was shown in this session, the user then adds the keyword `New Keyword` to it and saves it, and chooses "Show in Documentation Viewer" on a call of `New Keyword`
+- **THEN** the viewer shows the resource file at `New Keyword`
 
 #### Scenario: Language from the settings
 - **WHEN** `robotcode.robot.languages` is `["de"]`, `robot.toml` and the profiles set no languages, and the user shows a resource file with the headers `*** Einstellungen ***` and `*** Schlüsselwörter ***` and no `Language:` line, on Robot Framework 6.0 or newer
