@@ -64,7 +64,7 @@ For the complete feature reference, see the [official documentation](https://rob
 - Robot Framework 5.0 or newer
 
 **Editor / IDE — any LSP-capable editor works.** For the dedicated extensions you need one of:
-- Visual Studio Code 1.108.0 or newer
+- Visual Studio Code 1.127.0 or newer
 - PyCharm / IntelliJ IDEA 2026.1 or newer
 
 Other editors (Neovim, Sublime Text, Helix, Emacs, …) connect to the language server via the `languageserver` extra from PyPI — see [Command Line and Other Editors](#command-line-and-other-editors) below.

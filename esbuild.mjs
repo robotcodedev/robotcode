@@ -20,7 +20,7 @@ const projects = [
     format: "cjs",
     platform: "node",
     // The extension runs in the Node.js of VS Code's Electron, not in the one that builds it.
-    target: "node22",
+    target: "node24",
     outfile: "out/extension.js",
     external: ["vscode"],
   },

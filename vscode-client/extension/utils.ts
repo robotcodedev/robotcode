@@ -83,22 +83,22 @@ export class WeakValueMap<K, V extends object> implements Map<K, V> {
     return this.map.size;
   }
 
-  [Symbol.iterator](): IterableIterator<[K, V]> {
+  [Symbol.iterator](): MapIterator<[K, V]> {
     return this.entries();
   }
 
-  *entries(): IterableIterator<[K, V]> {
+  *entries(): MapIterator<[K, V]> {
     for (const [key, value] of this.map) {
       const v = value.deref();
       if (v !== undefined) yield [key, v];
     }
   }
 
-  keys(): IterableIterator<K> {
+  keys(): MapIterator<K> {
     return this.map.keys();
   }
 
-  *values(): IterableIterator<V> {
+  *values(): MapIterator<V> {
     for (const value of this.map.values()) {
       const v = value.deref();
       if (v !== undefined) yield v;
@@ -166,28 +166,28 @@ export class WeakValueSet<V extends object> implements Set<V> {
     return this.set.size;
   }
 
-  *entries(): IterableIterator<[V, V]> {
+  *entries(): SetIterator<[V, V]> {
     for (const value of this.set) {
       const v = value.deref();
       if (v !== undefined) yield [v, v];
     }
   }
 
-  *keys(): IterableIterator<V> {
+  *keys(): SetIterator<V> {
     for (const value of this.set) {
       const v = value.deref();
       if (v !== undefined) yield v;
     }
   }
 
-  *values(): IterableIterator<V> {
+  *values(): SetIterator<V> {
     for (const value of this.set) {
       const v = value.deref();
       if (v !== undefined) yield v;
     }
   }
 
-  [Symbol.iterator](): IterableIterator<V> {
+  [Symbol.iterator](): SetIterator<V> {
     return this.values();
   }
 

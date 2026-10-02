@@ -7,7 +7,7 @@ Let's explore how you can enhance your development experience with RobotCode - R
 
 - Python 3.10 or above
 - Robotframework version 5.0 and above
-- VSCode version 1.99 and above
+- VSCode version 1.127 and above
 
 ### Optional Python Packages
 
