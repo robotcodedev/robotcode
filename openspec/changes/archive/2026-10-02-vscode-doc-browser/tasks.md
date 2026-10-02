@@ -136,7 +136,7 @@
   - "Open Documentation", which still shows Libdoc HTML through the language server and now opens beside the editor in the integrated browser.
 
   In the Python-Markdown row of `docs/02_get_started/index.md`, write "Open Documentation" instead of "the documentation view" in both columns, and add that `robotcode doc` and the Documentation Viewer do not need the package. Verify with `npm run docs:build`.
-- [ ] 5.2 Run `hatch run lint:all`, `hatch run test:test`, `npm run lint` and `npm run compile`, and confirm that all pass. The CI run on Linux, Windows and macOS must be green for the new tests: no hard-coded paths or separators, paths compared as `Path`.
+- [x] 5.2 Run `hatch run lint:all`, `hatch run test:test`, `npm run lint` and `npm run compile`, and confirm that all pass. The CI run on Linux, Windows and macOS must be green for the new tests: no hard-coded paths or separators, paths compared as `Path`.
 - [x] 5.3 Check at run time.
 
   **In the isolated, headless VS Code harness**, once in VS Code 1.127.0 (downloaded into the scratchpad) and once in the installed version, never with the `code` CLI or the user's profile, with RF 7.5 and the default analysis path.
