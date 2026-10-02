@@ -90,3 +90,9 @@ AGENTS.md
 
 # sarif files
 /**/*.sarif.json
+
+# local working folders
+.astro/
+results/
+.robocop_cache/
+*.code-workspace
