@@ -219,3 +219,82 @@ Other load errors, such as a keyword of a library that cannot be created or an e
 ## Libraries that need a running test
 
 A library whose keywords only exist while Robot Framework runs — for example, one that calls `BuiltIn().get_variable_value(...)` in `get_keyword_names` — cannot be documented this way: the command aborts with the library's error, as Libdoc does. Import the library in the [REPL](repl.md) or stop in it with [`robot-debug`](robot-debug.md), and use `.doc <library>` there, which shows the documentation of the loaded library.
+
+## VS Code
+
+The RobotCode extension for VS Code shows the same documentation in the **Documentation Viewer**, an editor tab. The viewer runs `robotcode doc lib` for you and renders the page with VS Code's built-in Markdown support, styled like VS Code's Markdown preview.
+
+### Opening a viewer
+
+- **RobotCode: Open Documentation Viewer** in the command palette opens a new viewer on `BuiltIn`. Its target field has the focus, so you can type the target you want.
+- **Show in Documentation Viewer** is a source action (right-click → *Source Action…*) next to *Open Documentation*. It is offered on the name of a `Library` or `Resource` import, on a keyword in a keyword call, setup, teardown or template, and on the name of a keyword definition. It shows the library, resource file or suite file and scrolls to the keyword.
+- **Show in New Documentation Viewer**, offered next to it, shows the same in a new viewer, for example to keep two libraries side by side.
+- In the **Keywords** view, the context menu of an import or keyword has both actions too, also for the keywords of the current file.
+- **RobotCode: Open Documentation Viewer in New Window**, in the command palette and in the context menu of a viewer's tab, opens a second viewer in a new window, with the target of the active viewer, or else of the viewer you used last, or `BuiltIn` without any viewer. From a tab's context menu it also copies the active viewer, which need not be the viewer whose tab you clicked.
+
+### The target field
+
+The field in the toolbar shows what the viewer documents and takes a new target, as the [targets](#targets) of `robotcode doc`: `Name`, `Name::arg1::arg2`, or the path of a library, resource or suite file, relative to the workspace folder or absolute. `Enter` shows it in the same tab, which takes the name of the library or file as its title. Entering the target that is shown generates it again.
+
+### Workspace folders
+
+Each viewer belongs to a workspace folder: its pages are generated with the Python environment, the profiles and the settings of that folder. A viewer that shows documentation for an action from the editor or the Keywords view belongs to the folder of the file the action came from, also when the documented file lies in another folder. Typing an absolute path that lies in another folder switches the viewer to that folder.
+
+In a workspace with more than one folder, the toolbar shows the name of the viewer's folder before the pin button. Click it to pick another folder; the viewer then shows its target for that folder, and back returns to the folder before.
+
+### Outline and filter
+
+The outline on the left lists the sections of the page, its keywords and its data types. Clicking an entry or pressing `Enter` shows its heading.
+
+- `↑` and `↓` move through the entries, `→` and `←` open and close a section, `Home`, `End`, `Page Up` and `Page Down` move by more, and typing jumps to the next entry whose title starts with what you typed.
+- The filter field above the outline keeps the entries whose titles match, with the rules of the [`keywords` patterns](#keywords-an-overview-of-the-keywords): contains, `*`, `?` and `[…]`, ignoring case, spaces and underscores. A section stays while it or one of its entries matches.
+
+### Links, back and forward
+
+Links to sections, keywords and data types move within the page. `http`, `https` and `mailto` links open outside VS Code.
+
+Back and forward work as in a browser: with the buttons in the toolbar, with `Alt+←` and `Alt+→` (`Cmd+[` and `Cmd+]` on macOS) while the viewer has the focus, and with the back and forward buttons of the mouse. On Windows, `Alt+←` and `Alt+→` in a viewer navigate the viewer instead of VS Code's editor history.
+
+### Find
+
+`Ctrl+F` (`Cmd+F` on macOS) opens a find bar for the page, which shows the number of matches and the current one. `Enter` or `F3` goes to the next match, `Shift+Enter` or `Shift+F3` to the previous one, and `Esc` closes the bar. The outline is not searched.
+
+A space in the search text matches any white space, also where the documentation breaks a line within a paragraph. While the bar is open, a page you go to opens where it would without it, and the first match in view becomes the current one.
+
+### Arranging viewers
+
+Several viewers can be open at the same time. You arrange them like editors: drag them into other editor groups or side by side, pin their tabs, or move one into a window of its own with VS Code's *Move Editor into New Window*. A viewer keeps its target, position, history and filter when its tab is hidden, when it is moved, and after a reload of the window. A viewer cannot be split or copied, and *Reopen Closed Editor* does not bring a closed viewer back.
+
+### Which viewer an action uses
+
+*Show in Documentation Viewer* uses:
+
+1. the viewer you pinned with the pin button in its toolbar;
+2. otherwise the viewer you used last;
+3. otherwise a new viewer, beside the active editor, so that the focus stays in the editor.
+
+*Show in New Documentation Viewer* always opens a new viewer, also when a viewer is pinned; the new viewer is then the viewer used last. Only one viewer can be pinned at a time. With the setting `robotcode.documentationViewer.openLocation` set to `active`, a new viewer opens in the active editor group instead. Links, the outline, the target field, back and forward always stay in their own viewer.
+
+### What a page is generated with
+
+The viewer runs `robotcode --format json doc lib TARGET` in the Python environment that RobotCode uses for the workspace folder, with:
+
+- the profiles of `robotcode.profiles`;
+- `robotcode.robot.pythonPath`, `robotcode.robot.languages`, `robotcode.robot.variables` and `robotcode.robot.variableFiles`, passed as `-P`, `--language`, `-v` and `-V`;
+- the environment variables of `robotcode.robot.env`.
+
+For an import of another file, such as a resource file that imports a resource file of its own, *Show in Documentation Viewer* resolves the import against the directory of the file that contains it, as Robot Framework does.
+
+The last page of each target is kept in VS Code's storage for the workspace, per workspace folder, Python environment, profiles and the settings above, also across restarts; the pages of the 50 most recently generated targets are kept. So a target that you show after you selected another profile or changed one of these settings is generated again. Showing a target shows its kept page at once and generates it again in the background, once per session. The refresh button in the toolbar generates it again whenever you want. When an action shows a keyword that the page does not have yet, such as a keyword you just added, the viewer generates the page again. When the generation fails, the viewer shows the error, above the kept page if there is one, or with a *Retry* button.
+
+### Limits
+
+- Import arguments are passed to `robotcode doc` as text, so typed values such as `${True}` or lists arrive in their string form.
+- Pages are generated from the saved files; unsaved changes in an editor are not shown.
+- Libraries whose keywords exist only while a test runs cannot be documented; see [Libraries that need a running test](#libraries-that-need-a-running-test).
+- The page needs VS Code's built-in extension *Markdown Language Features*. Without it, the viewer shows a notice and the page as plain Markdown text.
+- Your Markdown settings, such as `markdown.preview.breaks`, and the Markdown plugins of other extensions apply to the page. Mathematical formulas are not laid out as in the Markdown preview, and mermaid diagrams stay source text.
+
+### Open Documentation
+
+The source action *Open Documentation*, and *Show Documentation* in the Keywords view, still show Robot Framework's Libdoc HTML, served by the language server. In desktop VS Code these pages open beside the editor in VS Code's integrated browser, which reuses one tab for them. In VS Code for the Web, which has no integrated browser, they open in the Simple Browser.
