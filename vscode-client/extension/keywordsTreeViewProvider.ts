@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { LanguageClientsManager, SUPPORTED_LANGUAGES } from "./languageclientsmanger";
+import { DocumentationTarget, LanguageClientsManager, SUPPORTED_LANGUAGES } from "./languageclientsmanger";
 import { TreeItemCollapsibleState, TreeItemLabel } from "vscode";
 import { Mutex } from "./utils";
 
@@ -43,6 +43,11 @@ class KeywordItem extends ItemBase {
     //   //arguments: [(label as string) + "\t"],
     // };
   }
+}
+
+// Keywords of an import have the id `${importId}+${keywordId}`, the document's own keywords the bare id.
+function keywordId(item: KeywordItem): string | undefined {
+  return item.parent ? item.id?.split("+")[1] : item.id;
 }
 
 class ImportItem extends ItemBase {
@@ -124,8 +129,7 @@ export class KeywordsTreeViewProvider
 
         if (item instanceof KeywordItem) {
           if (item.document === undefined) return;
-          const item_id = item.id?.split("+")[1];
-          url = await this.languageClientsManager.getDocumentionUrl(item.document, item.parent?.id, item_id);
+          url = await this.languageClientsManager.getDocumentionUrl(item.document, item.parent?.id, keywordId(item));
         } else if (item instanceof ImportItem) {
           if (item.document === undefined) return;
 
@@ -136,6 +140,14 @@ export class KeywordsTreeViewProvider
           await vscode.commands.executeCommand("robotcode.showDocumentation", url);
         }
       }),
+      vscode.commands.registerCommand(
+        "robotcode.keywordsTreeView.showInDocumentationViewer",
+        async (item: vscode.TreeItem) => this.showInViewer(item, "robotcode.showInDocumentationViewer"),
+      ),
+      vscode.commands.registerCommand(
+        "robotcode.keywordsTreeView.showInNewDocumentationViewer",
+        async (item: vscode.TreeItem) => this.showInViewer(item, "robotcode.showInNewDocumentationViewer"),
+      ),
     );
 
     this.refresh().then(
@@ -143,6 +155,27 @@ export class KeywordsTreeViewProvider
       () => undefined,
     );
   }
+  private async showInViewer(item: vscode.TreeItem, command: string): Promise<void> {
+    let target: DocumentationTarget | undefined = undefined;
+
+    if (item instanceof KeywordItem) {
+      if (item.document === undefined) return;
+      target = await this.languageClientsManager.getDocumentationTarget(
+        item.document,
+        item.parent?.id,
+        keywordId(item),
+      );
+    } else if (item instanceof ImportItem) {
+      if (item.document === undefined) return;
+
+      target = await this.languageClientsManager.getDocumentationTarget(item.document, item.id);
+    }
+
+    if (target) {
+      await vscode.commands.executeCommand(command, target);
+    }
+  }
+
   readonly dropMimeTypes: readonly string[] = [];
   readonly dragMimeTypes: readonly string[] = ["text/plain"];
 

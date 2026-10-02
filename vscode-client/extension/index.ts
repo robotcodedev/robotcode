@@ -8,6 +8,7 @@ import { LanguageToolsManager } from "./languageToolsManager";
 import { LanguageModelToolsManager } from "./languageModelToolsManager";
 import { ChatPluginsManager } from "./chatPluginsManager";
 import { NotebookManager } from "./notebook";
+import { DocumentationViewerManager } from "./documentationViewer";
 import path from "path";
 
 class TerminalLink extends vscode.TerminalLink {
@@ -102,22 +103,30 @@ export async function activateAsync(context: vscode.ExtensionContext): Promise<v
     new LanguageModelToolsManager(context, languageClientManger, outputChannel),
     new ChatPluginsManager(context, outputChannel),
     new NotebookManager(context, pythonManager, languageClientManger, outputChannel),
+    new DocumentationViewerManager(context, pythonManager),
     vscode.commands.registerCommand("robotcode.showDocumentation", async (url: string) => {
       if (url.indexOf("&theme=%24%7Btheme%7D") > 0) {
         url = url.replace("%24%7Btheme%7D", getDocTheme());
       }
       const uri = vscode.Uri.parse(url);
       const external_uri = await vscode.env.asExternalUri(uri);
+      const target = external_uri.with({ path: uri.path, fragment: uri.fragment, query: uri.query });
 
-      await vscode.commands.executeCommand(
-        "simpleBrowser.api.open",
-        external_uri.with({ path: uri.path, fragment: uri.fragment, query: uri.query }).toString(true),
-        {
-          preserveFocus: true,
-          viewColumn: vscode.ViewColumn.Beside,
-          preview: true,
-        },
-      );
+      // Desktop VS Code has an integrated browser, VS Code for the Web has not.
+      if ((await vscode.commands.getCommands(true)).includes("workbench.action.browser.open")) {
+        await vscode.commands.executeCommand("workbench.action.browser.open", {
+          url: target.toString(true),
+          openToSide: true,
+          reuseUrlFilter: `${target.scheme}://${target.authority}/**`,
+        });
+        return;
+      }
+
+      await vscode.commands.executeCommand("simpleBrowser.api.open", target.toString(true), {
+        preserveFocus: true,
+        viewColumn: vscode.ViewColumn.Beside,
+        preview: true,
+      });
     }),
     vscode.commands.registerCommand(
       "_robotcode.codeActionShowDocumentSelectAndRename",

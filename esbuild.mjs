@@ -35,6 +35,21 @@ const projects = [
       ".css": "text",
     },
   },
+  {
+    // The page of the Documentation Viewer; codicon.css is linked by the page, as vscode-elements expects.
+    entryPoints: [
+      "./vscode-client/documentationViewer",
+      "./vscode-client/documentationViewer/viewer.css",
+      "./node_modules/@vscode/codicons/dist/codicon.css",
+    ],
+    format: "esm",
+    platform: "browser",
+    outdir: "out/documentationViewer",
+    entryNames: "[name]",
+    loader: {
+      ".ttf": "file",
+    },
+  },
 ];
 
 /**

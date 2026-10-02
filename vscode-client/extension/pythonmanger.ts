@@ -7,6 +7,19 @@ import { PythonExtension, ActiveEnvironmentPathChangeEvent } from "@vscode/pytho
 const UNKNOWN = "unknown";
 const CUSTOM = "custom";
 
+// Environment names are case-insensitive on Windows, where Node would keep only one spelling of a name, the first in
+// sort order; a name of `env` replaces an inherited variable of any case there.
+function mergeEnvironment(env: { [key: string]: string }): NodeJS.ProcessEnv {
+  const result = { ...process.env };
+  if (process.platform === "win32") {
+    const names = new Set(Object.keys(env).map((name) => name.toUpperCase()));
+    for (const name of Object.keys(result)) {
+      if (names.has(name.toUpperCase())) delete result[name];
+    }
+  }
+  return Object.assign(result, env);
+}
+
 export interface ActivePythonEnvironmentChangedEvent {
   readonly resource: vscode.WorkspaceFolder | undefined;
 }
@@ -179,6 +192,7 @@ export class PythonManager {
     noPager?: boolean,
     stdioData?: string,
     token?: vscode.CancellationToken,
+    env?: { [key: string]: string },
   ): Promise<unknown> {
     const { pythonCommand, final_args } = await this.buildRobotCodeCommand(
       folder,
@@ -191,6 +205,8 @@ export class PythonManager {
 
     this.outputChannel.appendLine(`executeRobotCode: ${pythonCommand} ${final_args.join(" ")}`);
 
+    const processEnv = env !== undefined ? mergeEnvironment(env) : undefined;
+
     return new Promise((resolve, reject) => {
       const abortController = new AbortController();
 
@@ -202,6 +218,7 @@ export class PythonManager {
 
       const process = spawn(pythonCommand, final_args, {
         cwd: folder.uri.fsPath,
+        env: processEnv,
 
         signal,
       });

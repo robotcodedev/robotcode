@@ -1,0 +1,27 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "module": "ESNext",
+    "target": "ES2022",
+    "moduleResolution": "bundler",
+    "allowJs": false,
+    "outDir": "../../out/documentationViewer",
+    "rootDir": ".",
+    "lib": [
+      "ES7",
+      "DOM",
+      "DOM.Iterable",
+      "ES2018",
+      "ES2019",
+      "ES2020",
+      "ES2021",
+      "ES2022",
+    ],
+    "forceConsistentCasingInFileNames": true,
+    "jsx": "react-jsx",
+    "jsxImportSource": "preact",
+  },
+  "exclude": [
+    ".vscode-test",
+  ]
+}

@@ -1,0 +1,241 @@
+/* Layout of the Documentation Viewer. It comes after the Markdown preview's styles, which style `html, body`
+   for a page of their own; here the page is `main.markdown-body`. */
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  font-family: var(--vscode-font-family);
+  font-size: var(--vscode-font-size);
+  line-height: normal;
+}
+
+#root {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.toolbar {
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--vscode-editorGroupHeader-tabsBorder, var(--vscode-panel-border, transparent));
+}
+
+.toolbar .target {
+  flex: 1;
+  min-width: 80px;
+}
+
+.toolbar .folder-name {
+  display: inline-block;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+vscode-toolbar-button[aria-disabled="true"] {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+.progress {
+  height: 2px;
+  position: relative;
+}
+
+.body {
+  flex: 1;
+  min-height: 0;
+  border: none;
+}
+
+.side {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.side .filter {
+  width: auto;
+  margin: 6px 8px;
+}
+
+.outline {
+  flex: 1;
+  overflow: auto;
+  padding-bottom: 8px;
+}
+
+.outline .row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 22px;
+  padding-right: 8px;
+  cursor: pointer;
+  white-space: nowrap;
+  outline: none;
+}
+
+.outline .row.level-1 {
+  padding-left: 4px;
+}
+
+.outline .row.level-2 {
+  padding-left: 28px;
+}
+
+.outline .row .label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.outline .twistie {
+  width: 16px;
+  flex: none;
+}
+
+.outline .row:hover {
+  background-color: var(--vscode-list-hoverBackground);
+  color: var(--vscode-list-hoverForeground);
+}
+
+.outline .row.selected {
+  background-color: var(--vscode-list-inactiveSelectionBackground);
+  color: var(--vscode-list-inactiveSelectionForeground);
+}
+
+.outline:focus-within .row.selected {
+  background-color: var(--vscode-list-activeSelectionBackground);
+  color: var(--vscode-list-activeSelectionForeground);
+}
+
+/* High Contrast Dark has no list selection colours; only high contrast themes define this border colour, so the
+   outline is invalid and left out elsewhere. */
+.outline .row.selected:not(:focus-visible) {
+  outline: 1px dotted var(--vscode-contrastActiveBorder);
+  outline-offset: -1px;
+}
+
+.outline .row:focus-visible {
+  outline: 1px solid var(--vscode-list-focusOutline, var(--vscode-focusBorder));
+  outline-offset: -1px;
+}
+
+.content {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+main.markdown-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  box-sizing: border-box;
+  padding: 1em 26px;
+  font-family: var(
+    --markdown-font-family,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe WPC",
+    "Segoe UI",
+    system-ui,
+    "Ubuntu",
+    "Droid Sans",
+    sans-serif
+  );
+  font-size: var(--markdown-font-size, 14px);
+  line-height: var(--markdown-line-height, 22px);
+  word-wrap: break-word;
+  outline: none;
+}
+
+.notice {
+  margin-bottom: 1em;
+  padding: 8px 12px;
+  border-left: 4px solid var(--vscode-editorWarning-foreground);
+  background-color: var(--vscode-textBlockQuote-background);
+}
+
+.raw-markdown {
+  white-space: pre-wrap;
+}
+
+.error {
+  margin: 0;
+  padding: 8px 12px;
+  max-height: 30%;
+  overflow: auto;
+  white-space: pre-wrap;
+  font-family: var(--vscode-editor-font-family);
+  color: var(--vscode-errorForeground);
+  background-color: var(--vscode-inputValidation-errorBackground, transparent);
+  border-bottom: 1px solid var(--vscode-inputValidation-errorBorder, transparent);
+}
+
+.failure {
+  padding: 16px;
+}
+
+.failure .error {
+  max-height: none;
+  margin-bottom: 12px;
+}
+
+.retry {
+  padding: 4px 12px;
+  border: 1px solid var(--vscode-button-border, transparent);
+  border-radius: 2px;
+  color: var(--vscode-button-foreground);
+  background-color: var(--vscode-button-background);
+  font-family: var(--vscode-font-family);
+  cursor: pointer;
+}
+
+.retry:hover {
+  background-color: var(--vscode-button-hoverBackground);
+}
+
+.find {
+  position: absolute;
+  top: 0;
+  right: 16px;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+  color: var(--vscode-editorWidget-foreground);
+  background-color: var(--vscode-editorWidget-background);
+  border: 1px solid var(--vscode-editorWidget-border, transparent);
+  box-shadow: 0 0 8px 2px var(--vscode-widget-shadow);
+}
+
+.find vscode-textfield {
+  width: 200px;
+}
+
+.find .count {
+  min-width: 72px;
+  padding: 0 6px;
+  text-align: center;
+  font-size: 12px;
+}
+
+/* High contrast themes have no find match backgrounds, but borders, which only they define. A highlight takes no
+   border, so the matches are underlined in those colours. */
+::highlight(documentation-find) {
+  background-color: var(--vscode-editor-findMatchHighlightBackground);
+  text-decoration: underline dotted 1px var(--vscode-editor-findMatchHighlightBorder);
+}
+
+::highlight(documentation-find-current) {
+  background-color: var(--vscode-editor-findMatchBackground);
+  text-decoration: underline solid 2px var(--vscode-editor-findMatchBorder);
+}

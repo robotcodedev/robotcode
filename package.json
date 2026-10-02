@@ -72,7 +72,8 @@
     "onLanguageModelTool:robot-get_library_documentation",
     "onLanguageModelTool:robot-get_keyword_documentation",
     "onLanguageModelTool:robot-get_file_imports",
-    "onLanguageModelTool:robot-get_environment_details"
+    "onLanguageModelTool:robot-get_environment_details",
+    "onWebviewPanel:robotcode.documentationViewer"
   ],
   "galleryBanner": {
     "theme": "dark",
@@ -1284,6 +1285,19 @@
             "type": "boolean",
             "default": false,
             "description": "Starts the internal HTTP server only if needed."
+          },
+          "robotcode.documentationViewer.openLocation": {
+            "type": "string",
+            "enum": [
+              "beside",
+              "active"
+            ],
+            "enumDescriptions": [
+              "Opens a new viewer beside the active editor. With \"Show in Documentation Viewer\" and \"Show in New Documentation Viewer\", the editor keeps the focus.",
+              "Opens a new viewer in the active editor group."
+            ],
+            "default": "beside",
+            "markdownDescription": "Where a new Documentation Viewer opens, from \"Show in Documentation Viewer\" and \"Show in New Documentation Viewer\" (in the editor and in the Keywords view) and from \"RobotCode: Open Documentation Viewer\"."
           }
         }
       },
@@ -1413,6 +1427,28 @@
         "icon": "$(book)"
       },
       {
+        "title": "Show in Documentation Viewer",
+        "command": "robotcode.keywordsTreeView.showInDocumentationViewer",
+        "enablement": "resourceLangId == robotframework && view == robotcode.keywordsTreeView"
+      },
+      {
+        "title": "Show in New Documentation Viewer",
+        "command": "robotcode.keywordsTreeView.showInNewDocumentationViewer",
+        "enablement": "resourceLangId == robotframework && view == robotcode.keywordsTreeView"
+      },
+      {
+        "title": "Open Documentation Viewer",
+        "category": "RobotCode",
+        "command": "robotcode.openDocumentationViewer",
+        "icon": "$(book)"
+      },
+      {
+        "title": "Open Documentation Viewer in New Window",
+        "category": "RobotCode",
+        "command": "robotcode.openDocumentationViewerInNewWindow",
+        "icon": "$(empty-window)"
+      },
+      {
         "title": "New Robot Framework File",
         "shortTitle": "Robot Framework File",
         "category": "RobotCode",
@@ -1513,6 +1549,20 @@
         {
           "command": "robotcode.keywordsTreeView.showDocumentation",
           "when": "view == robotcode.keywordsTreeView"
+        },
+        {
+          "command": "robotcode.keywordsTreeView.showInDocumentationViewer",
+          "when": "view == robotcode.keywordsTreeView"
+        },
+        {
+          "command": "robotcode.keywordsTreeView.showInNewDocumentationViewer",
+          "when": "view == robotcode.keywordsTreeView"
+        }
+      ],
+      "editor/title/context": [
+        {
+          "command": "robotcode.openDocumentationViewerInNewWindow",
+          "when": "activeWebviewPanelId == 'robotcode.documentationViewer'"
         }
       ],
       "file/newFile": [
@@ -2184,6 +2234,8 @@
     "@types/node": "^24.19.1",
     "@types/vscode": "^1.127.0",
     "@types/vscode-notebook-renderer": "^1.72.4",
+    "@vscode-elements/elements": "2.5.1",
+    "@vscode/codicons": "^0.0.45",
     "@vscode/python-extension": "^1.0.6",
     "@vscode/vsce": "^4.0.0",
     "esbuild": "^0.28.1",

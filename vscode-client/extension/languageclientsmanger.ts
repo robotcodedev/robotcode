@@ -64,6 +64,14 @@ export interface DocumentImport {
   keywords?: Keyword[];
 }
 
+export interface DocumentationTarget {
+  uri: string;
+  name: string;
+  args: string[];
+  baseDir?: string;
+  keyword?: string;
+}
+
 export interface EvaluatableExpression {
   range: Range;
   expression?: string;
@@ -1060,6 +1068,29 @@ export class LanguageClientsManager {
     return (
       (await client.sendRequest<string | undefined>(
         "robot/keywordsview/getDocumentationUrl",
+        {
+          textDocument: { uri: document.uri.toString() },
+          importId: importId,
+          keywordId: keywordId,
+        },
+        token ?? new vscode.CancellationTokenSource().token,
+      )) ?? undefined
+    );
+  }
+
+  public async getDocumentationTarget(
+    document: vscode.TextDocument,
+    importId?: string | undefined,
+    keywordId?: string | undefined,
+    token?: vscode.CancellationToken | undefined,
+  ): Promise<DocumentationTarget | undefined> {
+    const client = await this.getLanguageClientForResource(document.uri);
+
+    if (!client) return undefined;
+
+    return (
+      (await client.sendRequest<DocumentationTarget | undefined>(
+        "robot/keywordsview/getDocumentationTarget",
         {
           textDocument: { uri: document.uri.toString() },
           importId: importId,
