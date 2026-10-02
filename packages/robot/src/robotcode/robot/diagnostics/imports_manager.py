@@ -1887,7 +1887,7 @@ class ImportsManager:
 
                 if not entry.ignore_reference and sentinel is not None and sentinel not in entry.references:
                     fin = weakref.finalize(sentinel, self.__remove_library_entry, entry_key, entry)
-                    fin.atexit = False  # type: ignore[misc]
+                    fin.atexit = False
                     entry.references.add(sentinel)
 
             return entry.get_libdoc_with_meta()
@@ -2089,7 +2089,7 @@ class ImportsManager:
                 if sentinel is not None and sentinel not in entry.references:
                     entry.references.add(sentinel)
                     fin = weakref.finalize(sentinel, self.__remove_variables_entry, entry_key, entry)
-                    fin.atexit = False  # type: ignore[misc]
+                    fin.atexit = False
 
             return entry.get_libdoc_with_meta()
 
@@ -2137,7 +2137,7 @@ class ImportsManager:
             if sentinel is not None and sentinel not in entry.references:
                 entry.references.add(sentinel)
                 fin = weakref.finalize(sentinel, self.__remove_resource_entry, entry_key, entry)
-                fin.atexit = False  # type: ignore[misc]
+                fin.atexit = False
 
         return entry
 
