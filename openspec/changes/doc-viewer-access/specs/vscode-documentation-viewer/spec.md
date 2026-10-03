@@ -13,11 +13,11 @@ The offered actions and what they document SHALL be the same whether the semanti
 
 "Show in Documentation Viewer" SHALL show the documentation of that library, resource file or suite file in the viewer chosen by the requirement "Which viewer shows documentation from the editor". "Show in New Documentation Viewer" SHALL show it in a new viewer. For a keyword position, both SHALL show the page at that keyword. "Open Documentation (deprecated)" SHALL open the Libdoc page, at the keyword for a keyword position.
 
-"Show in Documentation Viewer" SHALL be the preferred source action; the other two SHALL NOT. While the editor of a Robot Framework file has the focus, Shift+F1 (⇧F1 on macOS) SHALL run the preferred source action at the cursor, without a menu, and the source action menu SHALL show the key next to "Show in Documentation Viewer". Where the cursor offers no documentation, the key SHALL open nothing, and VS Code SHALL report that no preferred source action is available.
+"Show in Documentation Viewer" SHALL be the preferred source action; the other two SHALL NOT. RobotCode SHALL NOT define a key binding for the source actions. A key that the user binds to VS Code's command `editor.action.sourceAction` with the arguments `{"kind": "source", "preferred": true, "apply": "first"}` SHALL run "Show in Documentation Viewer" at the cursor, without a menu; where the cursor offers no documentation, it SHALL open nothing, and VS Code SHALL report that no preferred source action is available.
 
 #### Scenario: Library import name
 - **WHEN** source actions are requested with the cursor on `Collections` in `Library    Collections`
-- **THEN** the menu lists "Show in Documentation Viewer" with Shift+F1, "Show in New Documentation Viewer" and "Open Documentation (deprecated)", in this order, all for the library `Collections`
+- **THEN** the menu lists "Show in Documentation Viewer", "Show in New Documentation Viewer" and "Open Documentation (deprecated)", in this order, all for the library `Collections`
 
 #### Scenario: Keyword of a library
 - **WHEN** the user chooses "Show in Documentation Viewer" on a call of `Remove From List`
@@ -39,13 +39,17 @@ The offered actions and what they document SHALL be the same whether the semanti
 - **WHEN** the user chooses "Open Documentation (deprecated)" on a call of `Remove From List`
 - **THEN** the Libdoc page of `Collections` opens at `Remove From List`
 
-#### Scenario: Key on a keyword
-- **WHEN** the cursor is on a call of `Remove From List` and the user presses Shift+F1
+#### Scenario: Own key on a keyword
+- **WHEN** the user has bound a key to `editor.action.sourceAction` with the arguments `{"kind": "source", "preferred": true, "apply": "first"}`, the cursor is on a call of `Remove From List`, and the user presses that key
 - **THEN** a viewer shows `Collections` at `Remove From List`, no menu is shown, and the editor keeps the focus
 
-#### Scenario: Key without documentation
-- **WHEN** the cursor is in a comment and the user presses Shift+F1
+#### Scenario: Own key without documentation
+- **WHEN** the cursor is in a comment and the user presses that key
 - **THEN** no viewer opens or changes, and VS Code reports that no preferred source action is available
+
+#### Scenario: No key of RobotCode
+- **WHEN** the cursor is on a call of `Remove From List` and the user presses Shift+F1 without a binding of their own
+- **THEN** no viewer opens
 
 ### Requirement: Documentation actions document the import the analysis used
 
@@ -55,6 +59,12 @@ The documentation actions of the editor and the Keywords view, and the links of 
 - For a keyword call with a library or resource prefix (`lib_var.A Library Keyword`), the import SHALL be the one the prefix names. When the same library is imported twice with different arguments, a call through the second import's alias SHALL use the second import's arguments.
 - For a keyword call without a prefix, the import SHALL be the one the analysis resolved the call to, also when the same library is imported twice with different arguments and the library search order or the keywords of the two imports decide.
 - A library imported by module name, such as `BuiltIn` or `Collections`, SHALL be shown with the same target wherever it was shown from.
+- A library that the analysis loaded without the import's arguments, because loading it with them failed, SHALL be shown without arguments, as hover, completion and signature help show it.
+
+#### Scenario: Library whose arguments fail
+- **WHEN** a suite imports `alibrary` with `port=80x`, and `port` of `alibrary` takes an integer, so the analysis loads `alibrary` without arguments
+- **AND** the user clicks the link to `A Library Keyword` in the hover of the import, or chooses "Show in Documentation Viewer" on the import
+- **THEN** the viewer's target field shows `alibrary` without arguments, and the viewer shows its page instead of the error of `alibrary::port=80x`
 
 #### Scenario: Resource imported through a resource in another directory
 - **WHEN** a suite imports `sub/local.resource`, which imports `deeper/nested.resource`, and documentation is opened on a call of a keyword of `nested.resource` in the suite
