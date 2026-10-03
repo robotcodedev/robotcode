@@ -11,12 +11,15 @@
 - [ ] 2.2 Variable hover: VARIABLE / VARIABLE_NOT_FOUND / VARIABLE_BASE / PYTHON_VARIABLE_REF → `model.find_variable()` + existing value-resolution rendering (reuse `_my_repr`, `imports_manager.resolve_variable`)
 - [ ] 2.3 Keyword hover: KEYWORD leaf → enclosing statement `keyword_doc` (legacy precedence: variable beats keyword when both match)
 - [ ] 2.3a Inner-call hover: when the position falls on an ARGUMENT of a `RunKeywordCallStatement`, search `inner_calls` recursively for a KEYWORD token covering the position and hover that inner call's `keyword_doc` (legacy shows the inner doc via `keyword_references`); add `Run Keyword If` positions to the test data if missing
+- [ ] 2.3b Inline-IF hover: a keyword in the body of an inline IF, which `token_path_at()` does not find because its call is a statement of its own on the line, resolves to that call's `keyword_doc` (D5); add inline IF positions to the test data if missing
+- [ ] 2.3c Add the model lookup of D5 (the keyword call whose keyword reference covers a position: the statement of the line, the other statements of an inline IF line, `inner_calls` recursively) and use it for 2.3a and 2.3b
 - [ ] 2.4 Namespace/import hover: NAMESPACE → `stmt.lib_entry` / `ImportStatement.lib_entry`; IMPORT_NAME → import hover content
 - [ ] 2.5 Definition hover: TEST_NAME / KEYWORD_NAME tokens replace the `hover_TestCase` AST handler on the model path
+- [ ] 2.6 Documentation target: `_target_at_from_model` in `code_action_documentation.py` uses the lookup of 2.3c, so a keyword in an inline IF body or in Run Keyword arguments gets the documentation source actions and the link in the heading of its hover on the model path too; test the targets on both paths for an inline IF, `Run Keyword` and a nested `Run Keyword If`, and remove the known-gap note from `doc-viewer-access` (`design.md`, Risks) or its archived copy
 
 ## 3. Parity tests
 
-- [ ] 3.1 Add `test_hover_model.py`: dual-protocol (flag OFF/ON) comparison of full hover responses over all hover test positions; document any xfail with reason
+- [ ] 3.1 Add `test_hover_model.py`: dual-protocol (flag OFF/ON) comparison of full hover responses over all hover test positions, also with viewer links on for keywords in an inline IF body and in Run Keyword arguments; document any xfail with reason
 - [ ] 3.2 Run existing hover regtest suite under both flag states; `hatch run test:test` green
 
 ## 4. Granularity audit

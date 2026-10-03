@@ -17,6 +17,18 @@ When `namespace.semantic_model` is set, hover SHALL resolve the symbol under the
 - **WHEN** the cursor is on a position where the legacy path produces no hover (e.g. a separator)
 - **THEN** the model path also produces no hover
 
+### Requirement: Keywords in inline IF bodies and Run Keyword arguments resolve on the model path
+When `namespace.semantic_model` is set, a keyword in the body of an inline IF and a keyword in the arguments of a Run Keyword variant SHALL resolve as on the legacy path. Hover SHALL show its documentation with the same range. The documentation target of the position SHALL be that keyword with the import that defines it; the documentation source actions and, with viewer links, the link in the heading of the hover come from that target.
+
+#### Scenario: Keyword in an inline IF
+- **WHEN** the model path is active and the cursor is on `Log` in `IF    ${TRUE}    Log    a    ELSE    No Operation`
+- **THEN** hover shows the documentation of `Log` with the same range as the legacy path
+- **AND** the documentation source actions are offered for `BuiltIn` at `Log`, and with viewer links the heading of the hover links there, as on the legacy path
+
+#### Scenario: Keyword in the arguments of Run Keyword
+- **WHEN** the model path is active and the cursor is on `Log` in `Run Keyword    Log    hi`
+- **THEN** hover, documentation source actions and the link of the heading are those of `Log`, as on the legacy path
+
 ### Requirement: Hover output parity between flag states
 For every hover position covered by the existing hover test suites, the response (markdown contents and range) SHALL be identical whether `robotcode.experimental.semanticModel` is off or on. Documented xfails are permitted only where the legacy output is demonstrably wrong, following the existing parity-exception precedent.
 

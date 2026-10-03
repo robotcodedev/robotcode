@@ -14,7 +14,7 @@ The SemanticModel provides `token_path_at(line, col)` (outermost → innermost t
 - First production consumer of `token_path_at()`; run the granularity audit on that basis.
 
 **Non-Goals:**
-- No new hover content (scope/visibility info, inner-call hover, tag hover — Ideas Collection, later changes).
+- No new hover content (scope/visibility info, tag hover — Ideas Collection, later changes). Resolving keywords in inner calls and inline IF bodies is parity, not new content (D2, D5).
 - No changes to references.py / rename.py (audit showed they need none).
 - No TokenKind merges that alter any consumer's output.
 
@@ -32,6 +32,7 @@ The path gives both the leaf (e.g. `VARIABLE_BASE`) and its parents (`VARIABLE` 
 |---|---|
 | KEYWORD | enclosing statement's `keyword_doc` |
 | ARGUMENT within a `RunKeywordCallStatement` | **inner-call resolution required**: legacy hover shows the *inner* keyword's doc (its range is in `keyword_references`). The outer statement's `tokens` carry inner keyword cells only as ARGUMENT; the structured KEYWORD tokens live on `inner_calls[*].tokens`, which `token_path_at()` does **not** see. The dispatch must therefore search `stmt.inner_calls` recursively for a KEYWORD token covering the position and use that inner call's `keyword_doc` |
+| KEYWORD of a call in the body of an inline IF | **separate statement**: the call is a `KeywordCallStatement` of its own on the line. `statement_at()` returns the `InlineIfStatement`, and `token_path_at()` finds no token at the keyword (checked 2026-10-03 with `IF    ${TRUE}    Log    a    ELSE    No Operation`). The dispatch must take the call of the line whose keyword reference covers the position (D5) |
 | NAMESPACE | `stmt.lib_entry` (KeywordCall) or `ImportStatement.lib_entry` |
 | VARIABLE / VARIABLE_NOT_FOUND / VARIABLE_BASE / PYTHON_VARIABLE_REF | `model.find_variable()` + existing value-resolution rendering |
 | TEST_NAME / KEYWORD_NAME | definition documentation (replaces `hover_TestCase` AST handler) |
@@ -47,6 +48,16 @@ The model path must reproduce legacy hover byte-for-byte (markdown contents and 
 ### D4: Granularity audit is evidence-based and behavior-neutral
 
 Method: for each of the 28+ variable-related TokenKinds, grep/record which consumer branches on it (Tier 1 `_TOKEN_KIND_TO_SEM_TOKEN` map, signature help, code actions, inlay hints, new hover dispatch). Output: keep/merge table appended to the design doc. Merge only kinds with **zero** consumers and identical LSP mapping; every merge must keep `test_semantic_tokens_flag_parity.py` (in its **repaired**, non-vacuous form — prerequisite from `semantic-model-tier1-completion`) and all analyzer snapshots green. If in doubt, keep the kind — the audit's job is documentation first, deletion second.
+
+### D5: One lookup for the keyword call at a position, for hover and documentation target
+
+Two kinds of calls are not the statement that `statement_at()` returns for their line: the calls in the body of an inline IF (statements of their own on the line, D2) and the inner calls of a Run Keyword variant (`inner_calls`, D2). One lookup returns the `KeywordCallStatement` whose keyword reference (NAMESPACE, `.`, KEYWORD tokens) covers a position: the statement of the line, the other statements of an inline IF line, and the inner calls, searched recursively.
+
+Two consumers use it:
+- the hover dispatch (D2);
+- `_target_at_from_model` in `code_action_documentation.py`. It answers today only for the statement of the line, so on the model path a keyword in an inline IF body or in Run Keyword arguments has no documentation source actions and no link in the heading of its hover. The legacy path has both (checked 2026-10-03 in VS Code; `doc-viewer-access` records it as a known gap).
+
+`statement_at()` keeps one statement per line, so the lookup needs the other statements of a line: a per-line list built in `build_index()`, or a scan of `statements` if that measures cheap. The method belongs to the model, because both consumers need the same answer.
 
 ## Risks / Trade-offs
 
