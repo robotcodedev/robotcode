@@ -12,8 +12,11 @@ export interface HistoryEntry {
   folder: string;
   text: string;
   anchor?: string;
-  // The keyword of a `show`, until a page of the target resolves it to `anchor`.
+  // The place of a `show`, until a page of the target resolves it to `anchor`: a keyword, a data type, or a
+  // fragment as the page's own links name a place.
   keyword?: string;
+  dataType?: string;
+  fragment?: string;
   position?: ScrollPosition;
 }
 
@@ -70,6 +73,8 @@ export interface ShowMessage {
   folder: string;
   text: string;
   keyword?: string;
+  anchor?: string;
+  dataType?: string;
   focusTarget?: boolean;
 }
 
@@ -107,7 +112,9 @@ export type ViewerMessage =
   // `typed`: entered in the target field; only then does an absolute path switch to the folder it lies in.
   | { type: "load"; seq: number; folder?: string; text: string; refresh: boolean; typed?: boolean }
   | PinMessage
-  | { type: "pickFolder" };
+  | { type: "pickFolder" }
+  // The page of the load `seq`, as a Markdown document.
+  | { type: "openMarkdown"; seq: number };
 
 const api = acquireVsCodeApi();
 

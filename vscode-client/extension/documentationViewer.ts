@@ -49,6 +49,8 @@ interface ShowMessage {
   folder: string;
   text: string;
   keyword?: string;
+  anchor?: string;
+  dataType?: string;
   focusTarget?: boolean;
 }
 
@@ -56,7 +58,8 @@ type ViewerMessage =
   | { type: "ready"; state?: ViewerState }
   | { type: "load"; seq: number; folder?: string; text: string; refresh: boolean; typed?: boolean }
   | { type: "pin"; pinned: boolean }
-  | { type: "pickFolder" };
+  | { type: "pickFolder" }
+  | { type: "openMarkdown"; seq: number };
 
 // What a generation depends on besides the folder and the Python command.
 interface GenerationCommand {
@@ -85,6 +88,8 @@ class Viewer {
   seq = -1;
   key: string | undefined;
   current: HistoryEntry | undefined;
+  // The Markdown of the page sent last, for "Open as Markdown": the page itself only has its HTML.
+  lastPage: { seq: number; markdown: string } | undefined;
 
   constructor(
     readonly panel: vscode.WebviewPanel,
@@ -217,6 +222,7 @@ async function sendPage(
   }
   if (viewer.seq !== seq || viewer.disposed) return;
 
+  viewer.lastPage = { seq, markdown: json.markdown };
   viewer.panel.title = json.name;
   viewer.post({
     type: "page",
@@ -236,6 +242,22 @@ async function sendPage(
     ...(renderError === undefined ? { html } : { renderError, markdown: json.markdown }),
     busy,
   });
+}
+
+async function openMarkdown(viewer: Viewer, seq: number): Promise<void> {
+  // Only the page of the load on screen; a page of another load is never opened.
+  const page = viewer.lastPage;
+  if (viewer.disposed || page === undefined || page.seq !== seq) return;
+
+  // Read before the first `await`: the getter throws once the panel is disposed. It counts the groups of all
+  // windows, so a viewer in a window of its own gets the document in that window.
+  const viewColumn = viewer.panel.viewColumn ?? vscode.ViewColumn.Active;
+  try {
+    const document = await vscode.workspace.openTextDocument({ language: "markdown", content: page.markdown });
+    await vscode.window.showTextDocument(document, { viewColumn });
+  } catch (error) {
+    void vscode.window.showErrorMessage(`Cannot open the page as Markdown: ${errorMessage(error)}`);
+  }
 }
 
 async function resolveFolder(
@@ -335,7 +357,14 @@ export class DocumentationViewerManager implements vscode.Disposable {
       viewer = this.createViewer(column, column !== vscode.ViewColumn.Active, folder, text);
     }
 
-    viewer.show({ type: "show", folder: folder.uri.toString(), text, keyword: target.keyword });
+    viewer.show({
+      type: "show",
+      folder: folder.uri.toString(),
+      text,
+      keyword: target.keyword,
+      anchor: target.anchor,
+      dataType: target.dataType,
+    });
   }
 
   private lastUsedViewer(): Viewer | undefined {
@@ -479,6 +508,9 @@ export class DocumentationViewerManager implements vscode.Disposable {
           .then((folder) => {
             if (folder !== undefined) viewer.post({ type: "folder", folder: folder.uri.toString() });
           });
+        break;
+      case "openMarkdown":
+        void openMarkdown(viewer, message.seq);
         break;
       case "pin":
         if (message.pinned) {

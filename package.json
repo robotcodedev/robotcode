@@ -1421,15 +1421,15 @@
         "icon": "$(insert)"
       },
       {
-        "title": "Show Documentation",
+        "title": "Show Documentation (deprecated)",
         "command": "robotcode.keywordsTreeView.showDocumentation",
-        "enablement": "resourceLangId == robotframework && view == robotcode.keywordsTreeView",
-        "icon": "$(book)"
+        "enablement": "resourceLangId == robotframework && view == robotcode.keywordsTreeView"
       },
       {
         "title": "Show in Documentation Viewer",
         "command": "robotcode.keywordsTreeView.showInDocumentationViewer",
-        "enablement": "resourceLangId == robotframework && view == robotcode.keywordsTreeView"
+        "enablement": "resourceLangId == robotframework && view == robotcode.keywordsTreeView",
+        "icon": "$(book)"
       },
       {
         "title": "Show in New Documentation Viewer",
@@ -1542,21 +1542,24 @@
           "group": "inline"
         },
         {
-          "command": "robotcode.keywordsTreeView.showDocumentation",
+          "command": "robotcode.keywordsTreeView.showInDocumentationViewer",
           "when": "view == robotcode.keywordsTreeView",
           "group": "inline"
         },
         {
-          "command": "robotcode.keywordsTreeView.showDocumentation",
-          "when": "view == robotcode.keywordsTreeView"
-        },
-        {
           "command": "robotcode.keywordsTreeView.showInDocumentationViewer",
-          "when": "view == robotcode.keywordsTreeView"
+          "when": "view == robotcode.keywordsTreeView",
+          "group": "documentation@1"
         },
         {
           "command": "robotcode.keywordsTreeView.showInNewDocumentationViewer",
-          "when": "view == robotcode.keywordsTreeView"
+          "when": "view == robotcode.keywordsTreeView",
+          "group": "documentation@2"
+        },
+        {
+          "command": "robotcode.keywordsTreeView.showDocumentation",
+          "when": "view == robotcode.keywordsTreeView",
+          "group": "documentation@3"
         }
       ],
       "editor/title/context": [

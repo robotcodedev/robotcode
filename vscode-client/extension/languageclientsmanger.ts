@@ -70,6 +70,10 @@ export interface DocumentationTarget {
   args: string[];
   baseDir?: string;
   keyword?: string;
+  // A place on the page as the page's own links name it, without the `#`.
+  anchor?: string;
+  // The name of the documentation of a data type.
+  dataType?: string;
 }
 
 export interface EvaluatableExpression {
@@ -622,6 +626,7 @@ export class LanguageClientsManager {
           globalStorageUri: this.extensionContext?.globalStorageUri?.toString(),
           pythonPath: config.get<string[]>("robot.pythonPath", []),
           env: config.get<object>("robot.env", []),
+          documentationViewerLinks: true,
           settings: { robotcode: config },
         },
         initializationFailedHandler: (error: ResponseError<InitializeError> | Error | undefined) => {
@@ -657,7 +662,8 @@ export class LanguageClientsManager {
         outputChannel,
         outputChannelName: name,
         markdown: {
-          isTrusted: true,
+          // Only the links to the Documentation Viewer run; a command link of a library's documentation does not.
+          isTrusted: { enabledCommands: ["robotcode.showInDocumentationViewer"] },
           supportHtml: true,
         },
         progressOnInitialization: true,

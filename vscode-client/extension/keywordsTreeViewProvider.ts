@@ -337,7 +337,8 @@ export class KeywordsTreeViewProvider
 function toMarkdown(value: string | undefined): vscode.MarkdownString | undefined {
   const doc = value ? new vscode.MarkdownString(value) : undefined;
   if (doc) {
-    doc.isTrusted = true;
+    // Only the links to the Documentation Viewer run; a command link of a library's documentation does not.
+    doc.isTrusted = { enabledCommands: ["robotcode.showInDocumentationViewer"] };
     doc.supportHtml = true;
   }
   return doc;

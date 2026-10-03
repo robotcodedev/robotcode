@@ -31,6 +31,16 @@ function normalizeName(name: string): string {
   return name.replace(/[\s_]/gu, "").toLowerCase();
 }
 
+function isWaiting(entry: HistoryEntry): boolean {
+  return entry.keyword !== undefined || entry.dataType !== undefined || entry.fragment !== undefined;
+}
+
+function stopWaiting(entry: HistoryEntry): void {
+  delete entry.keyword;
+  delete entry.dataType;
+  delete entry.fragment;
+}
+
 function newId(): string {
   return typeof crypto.randomUUID === "function"
     ? crypto.randomUUID()
@@ -62,8 +72,8 @@ export class Controller {
   // Not from 0: a recreated page would reuse the numbers of its previous instance, and a load of that instance that
   // is still waiting in the extension would answer this page.
   private _seq = Date.now();
-  // The entry whose keyword was not on its page and that was loaded again for it.
-  private _keywordRefresh: HistoryEntry | undefined;
+  // The entry whose place was not on its page and that was loaded again for it.
+  private _placeRefresh: HistoryEntry | undefined;
   // The load for which a generation ran: its page without `busy` is the generated one.
   private _generatedSeq = -1;
   private _loading = -1;
@@ -163,6 +173,11 @@ export class Controller {
   refresh(): void {
     const entry = this.entry;
     if (entry !== undefined) this.load(entry, true);
+  }
+
+  openMarkdown(): void {
+    // The toolbar button has no `disabled`: without a page, Enter or Space on it opens nothing.
+    if (this.page !== undefined) post({ type: "openMarkdown", seq: this.page.seq });
   }
 
   back(): void {
@@ -308,11 +323,11 @@ export class Controller {
     this.save();
   }
 
-  // Before the viewer leaves the current entry: its position, and no keyword that is still waiting for a page.
+  // Before the viewer leaves the current entry: its position, and no place that is still waiting for a page.
   private leave(): void {
     this.recordPosition();
     const entry = this.entry;
-    if (entry?.keyword !== undefined) delete entry.keyword;
+    if (entry !== undefined) stopWaiting(entry);
   }
 
   private navigate(entry: HistoryEntry, typed = false): void {
@@ -324,8 +339,7 @@ export class Controller {
     const entry = this.entry;
     if (entry === undefined) return;
     // The heading the current entry shows is only shown again.
-    if (entry.anchor !== id || entry.keyword !== undefined)
-      this.push({ folder: entry.folder, text: entry.text, anchor: id });
+    if (entry.anchor !== id || isWaiting(entry)) this.push({ folder: entry.folder, text: entry.text, anchor: id });
     this.reveal(id);
     this.changed();
   }
@@ -402,10 +416,10 @@ export class Controller {
         if (message.busy) this._generatedSeq = message.seq;
         this.busy = message.busy;
         this.error = message.error;
-        // The load ended without a page that has the keyword of its show.
+        // The load ended without a page that has the place of its show.
         const entry = this.entry;
-        if (!message.busy && entry?.keyword !== undefined) {
-          delete entry.keyword;
+        if (!message.busy && entry !== undefined && isWaiting(entry)) {
+          stopWaiting(entry);
           this.save();
         }
         this.changed();
@@ -435,7 +449,13 @@ export class Controller {
   }
 
   private onShow(show: ShowMessage): void {
-    this.navigate({ folder: show.folder, text: show.text, keyword: show.keyword });
+    this.navigate({
+      folder: show.folder,
+      text: show.text,
+      keyword: show.keyword,
+      dataType: show.dataType,
+      fragment: show.anchor,
+    });
     if (show.focusTarget) this.focusTarget++;
     this.changed();
   }
@@ -463,16 +483,15 @@ export class Controller {
 
     let refresh = false;
     if (entry !== undefined) {
-      if (entry.keyword !== undefined) {
-        // The keyword of a `show` waits for a page that has it: a kept page may be older than the keyword. A kept
-        // page that is not generated again, because that happened earlier in this session, is generated once more.
-        const keyword = normalizeName(entry.keyword);
-        const anchor = page.keywords.find((k) => normalizeName(k.name) === keyword)?.anchor;
+      if (isWaiting(entry)) {
+        // The place of a `show` waits for a page that has it: a kept page may be older than the place. A kept page
+        // that is not generated again, because that happened earlier in this session, is generated once more.
+        const anchor = this.placeAnchor(entry, page);
         if (anchor !== undefined) {
           entry.anchor = anchor;
-          delete entry.keyword;
+          stopWaiting(entry);
         } else if (!page.busy) {
-          if (this._generatedSeq === page.seq || this._keywordRefresh === entry) delete entry.keyword;
+          if (this._generatedSeq === page.seq || this._placeRefresh === entry) stopWaiting(entry);
           else refresh = true;
         }
         this.reveal(anchor);
@@ -492,9 +511,21 @@ export class Controller {
     this.changed();
 
     if (refresh && entry !== undefined) {
-      this._keywordRefresh = entry;
+      this._placeRefresh = entry;
       this.load(entry, true);
     }
+  }
+
+  // The anchor of the place an entry waits for, if the rendered page has it. The server cannot know the anchor of a
+  // data type: the page numbers it when another heading has the same title.
+  private placeAnchor(entry: HistoryEntry, page: PageMessage): string | undefined {
+    if (entry.keyword !== undefined) {
+      const keyword = normalizeName(entry.keyword);
+      return page.keywords.find((k) => normalizeName(k.name) === keyword)?.anchor;
+    }
+    if (entry.dataType !== undefined) return page.types.find((t) => t.name === entry.dataType)?.anchor;
+    if (entry.fragment !== undefined) return findHeading(this._main, entry.fragment)?.id;
+    return undefined;
   }
 
   private readonly onClick = (event: MouseEvent): void => {
@@ -661,6 +692,13 @@ export function App({ controller }: { controller: Controller }): JSX.Element {
           }}
         />
         <vscode-toolbar-button icon="refresh" label="Refresh" title="Refresh" onClick={() => controller.refresh()} />
+        <vscode-toolbar-button
+          icon="markdown"
+          label="Open as Markdown"
+          title="Open as Markdown"
+          aria-disabled={page === undefined}
+          onClick={() => controller.openMarkdown()}
+        />
         {folderName !== undefined && (
           <vscode-toolbar-button
             class="folder"
