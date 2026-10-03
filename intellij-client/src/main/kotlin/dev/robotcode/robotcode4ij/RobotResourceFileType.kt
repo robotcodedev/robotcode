@@ -7,6 +7,6 @@ object RobotResourceFileType : LanguageFileType(RobotFrameworkLanguage), OSFileI
     override fun getName() = "ROBOT_FRAMEWORK_RESOURCE"
     override fun getDisplayName() = "Robot Framework Resource"
     override fun getDescription() = "Robot Framework resource files"
-    override fun getDefaultExtension() = "robot"
+    override fun getDefaultExtension() = "resource"
     override fun getIcon() = RobotIcons.Resource
 }
