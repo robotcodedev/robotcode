@@ -16,7 +16,7 @@ Robot Framework needs additional Python packages for some documentation formats.
 | Package | Needed for | Without it |
 |---|---|---|
 | [`docutils`](https://pypi.org/project/docutils/) | Libraries that write their documentation in reStructuredText (`ROBOT_LIBRARY_DOC_FORMAT = "reST"`), and everything else Robot Framework does with reStructuredText | RobotCode shows the documentation of such libraries as plain reStructuredText source instead of formatted text |
-| [`markdown`](https://pypi.org/project/Markdown/) (Python-Markdown) | The HTML documentation of libraries that write their documentation in Markdown: "Open Documentation" in the editor and `robotcode libdoc`. Since Robot Framework 7.5 this includes the standard libraries such as `BuiltIn` and `Collections`. `robotcode doc` and the Documentation Viewer do not need it | "Open Documentation" shows Robot Framework's message that the `markdown` module is missing. Hover and completion are not affected |
+| [`markdown`](https://pypi.org/project/Markdown/) (Python-Markdown) | The HTML documentation of libraries that write their documentation in Markdown: "Open Documentation (deprecated)" in the editor, "Show Documentation (deprecated)" in the Keywords view and `robotcode libdoc`. Since Robot Framework 7.5 this includes the standard libraries such as `BuiltIn` and `Collections`. `robotcode doc` and the Documentation Viewer do not need it | "Open Documentation (deprecated)" shows Robot Framework's message that the `markdown` module is missing. Hover and completion are not affected |
 
 See the [Robot Framework User Guide](https://robotframework.org/robotframework/latest/RobotFrameworkUserGuide.html) for details about these formats.
 

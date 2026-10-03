@@ -114,7 +114,7 @@ The page of `lib` has:
 - `Keywords`, starting with an index that links to every keyword, followed by the keywords ordered by name as Libdoc orders them; keywords tagged `robot:private` are left out;
 - `Data types`, the types the keywords use, with Robot Framework 6.1 or newer.
 
-The headings get the anchors GitHub gives them, so the index, the table of contents and the links from one keyword to another work in GitHub's and in VS Code's Markdown preview. References to data types in the documentation link to their entry under `Data types`. Robot Framework variables in the text, such as `${name}`, are written as inline code, so that Markdown renderers with math support do not show them as formulas; documentation written in HTML or reStructuredText stays as it is.
+The headings get the anchors GitHub gives them, so the index, the table of contents and the links from one keyword to another work in GitHub's and in VS Code's Markdown preview. References to data types in the documentation link to their entry under `Data types`, and so do the types in the argument tables and the return types, such as `int` to `integer (Standard)`; the rest of a type, such as brackets, the values of a `Literal` and types without an entry, stays inline code. Robot Framework variables in the text, such as `${name}`, are written as inline code, so that Markdown renderers with math support do not show them as formulas; documentation written in HTML or reStructuredText stays as it is.
 
 ### JSON
 
@@ -227,10 +227,45 @@ The RobotCode extension for VS Code shows the same documentation in the **Docume
 ### Opening a viewer
 
 - **RobotCode: Open Documentation Viewer** in the command palette opens a new viewer on `BuiltIn`. Its target field has the focus, so you can type the target you want.
-- **Show in Documentation Viewer** is a source action (right-click → *Source Action…*) next to *Open Documentation*. It is offered on the name of a `Library` or `Resource` import, on a keyword in a keyword call, setup, teardown or template, and on the name of a keyword definition. It shows the library, resource file or suite file and scrolls to the keyword.
+- **Show in Documentation Viewer** is the first source action (right-click → *Source Action…*). It is offered on the name of a `Library` or `Resource` import, on a keyword in a keyword call, setup, teardown or template, and on the name of a keyword definition. It shows the library, resource file or suite file and scrolls to the keyword. It is the preferred source action, so a key of your own can run it without the menu, see [A key for the source actions](#a-key-for-the-source-actions).
 - **Show in New Documentation Viewer**, offered next to it, shows the same in a new viewer, for example to keep two libraries side by side.
-- In the **Keywords** view, the context menu of an import or keyword has both actions too, also for the keywords of the current file.
+- In the **Keywords** view, the book button of an import or keyword shows it in the Documentation Viewer, and its context menu has both actions, also for the keywords of the current file.
+- The **links in documentation** that RobotCode shows in a hover, in the details of a completion item, in signature help and in the tooltips of the Keywords view open the viewer, see [Links in hovers and tooltips](#links-in-hovers-and-tooltips).
 - **RobotCode: Open Documentation Viewer in New Window**, in the command palette and in the context menu of a viewer's tab, opens a second viewer in a new window, with the target of the active viewer, or else of the viewer you used last, or `BuiltIn` without any viewer. From a tab's context menu it also copies the active viewer, which need not be the viewer whose tab you clicked.
+
+### A key for the source actions
+
+VS Code has no key for its *Source Action…* menu, and RobotCode does not define one. You can bind VS Code's command `editor.action.sourceAction` to a key in your keyboard shortcuts (*Preferences: Open Keyboard Shortcuts (JSON)*). This binding shows the menu with `Ctrl+Shift+.`, one key more than `Ctrl+.` for *Quick Fix*:
+
+```json
+{
+  "key": "ctrl+shift+.",
+  "command": "editor.action.sourceAction",
+  "when": "editorTextFocus"
+}
+```
+
+VS Code also uses `Ctrl+Shift+.`, for example for *Focus and Select Breadcrumbs* and, in an editor, for *Replace with Next Value*; while an editor has the focus, your binding takes their place.
+
+To run *Show in Documentation Viewer* at once, without the menu, give the binding these arguments. *Show in Documentation Viewer* is the preferred source action, and the menu then shows your key next to it:
+
+```json
+"args": { "kind": "source", "preferred": true, "apply": "first" }
+```
+
+Where the cursor offers no documentation, for example in a comment, VS Code then reports that no preferred source action is available.
+
+### Links in hovers and tooltips
+
+In a hover, in the details of a completion item, in signature help and in the tooltips of the Keywords view, the documentation links into the viewer:
+
+- The heading, such as `Keyword Log` or `Library Collections`, shows the library, resource file or suite file, at the keyword for a keyword. On the alias of an import and on the prefix of a keyword call, such as `Collections` in `Collections.Append To List`, it shows the page of that import from its start.
+- The names of keywords, data types and sections of the same library or file, the types in the argument table and the return type show the page at that keyword, data type or section. Names of other libraries and private keywords stay inline code, as on the page.
+- Links to a place in the documentation itself, such as the entries of a table of contents, show the page at that place.
+
+The links show the documentation of the import that the analysis used, also for the second import of a library with other arguments, and in the viewer that [*Show in Documentation Viewer*](#which-viewer-an-action-uses) uses. When the arguments of an import fail and RobotCode loads the library without them (`LibraryLoadedWithoutArguments`), the links and *Show in Documentation Viewer* on that import show the library without arguments, as the hover does. The hovers of a Variables import, of a call that matches several keywords, of a variable and of a test case have no links, and links to a place in their documentation are text. When the links would make documentation longer than VS Code shows, only its heading is a link.
+
+`command:` links written in the documentation of a library do nothing; only the links to the viewer run.
 
 ### The target field
 
@@ -267,7 +302,7 @@ Several viewers can be open at the same time. You arrange them like editors: dra
 
 ### Which viewer an action uses
 
-*Show in Documentation Viewer* uses:
+*Show in Documentation Viewer*, the links in hovers and tooltips and the book button of the Keywords view use:
 
 1. the viewer you pinned with the pin button in its toolbar;
 2. otherwise the viewer you used last;
@@ -283,9 +318,13 @@ The viewer runs `robotcode --format json doc lib TARGET` in the Python environme
 - `robotcode.robot.pythonPath`, `robotcode.robot.languages`, `robotcode.robot.variables` and `robotcode.robot.variableFiles`, passed as `-P`, `--language`, `-v` and `-V`;
 - the environment variables of `robotcode.robot.env`.
 
-For an import of another file, such as a resource file that imports a resource file of its own, *Show in Documentation Viewer* resolves the import against the directory of the file that contains it, as Robot Framework does.
+For an import of another file, such as a resource file that imports a resource file of its own, *Show in Documentation Viewer*, the links and the book button resolve the import against the directory of the file that contains it, as Robot Framework does.
 
-The last page of each target is kept in VS Code's storage for the workspace, per workspace folder, Python environment, profiles and the settings above, also across restarts; the pages of the 50 most recently generated targets are kept. So a target that you show after you selected another profile or changed one of these settings is generated again. Showing a target shows its kept page at once and generates it again in the background, once per session. The refresh button in the toolbar generates it again whenever you want. When an action shows a keyword that the page does not have yet, such as a keyword you just added, the viewer generates the page again. When the generation fails, the viewer shows the error, above the kept page if there is one, or with a *Retry* button.
+The last page of each target is kept in VS Code's storage for the workspace, per workspace folder, Python environment, profiles and the settings above, also across restarts; the pages of the 50 most recently generated targets are kept. So a target that you show after you selected another profile or changed one of these settings is generated again. Showing a target shows its kept page at once and generates it again in the background, once per session. The refresh button in the toolbar generates it again whenever you want. When an action or a link shows a keyword, a data type or a place that the page does not have yet, such as a keyword you just added, the viewer generates the page again, and shows it from its start if the new page does not have it either. When the generation fails, the viewer shows the error, above the kept page if there is one, or with a *Retry* button.
+
+### Open as Markdown
+
+*Open as Markdown*, the button after the refresh button in the toolbar, opens the Markdown of the page the viewer shows, as `robotcode doc lib` writes it, as a new untitled document in the viewer's editor group. You can copy from it, or save it; saving asks for a file name. The viewer keeps its target, position and history. While the viewer shows no page, for example while the first page of a target is generated, the button is disabled.
 
 ### Limits
 
@@ -295,6 +334,6 @@ The last page of each target is kept in VS Code's storage for the workspace, per
 - The page needs VS Code's built-in extension *Markdown Language Features*. Without it, the viewer shows a notice and the page as plain Markdown text.
 - Your Markdown settings, such as `markdown.preview.breaks`, and the Markdown plugins of other extensions apply to the page. Mathematical formulas are not laid out as in the Markdown preview, and mermaid diagrams stay source text.
 
-### Open Documentation
+### Open Documentation (deprecated)
 
-The source action *Open Documentation*, and *Show Documentation* in the Keywords view, still show Robot Framework's Libdoc HTML, served by the language server. In desktop VS Code these pages open beside the editor in VS Code's integrated browser, which reuses one tab for them. In VS Code for the Web, which has no integrated browser, they open in the Simple Browser.
+The source action *Open Documentation (deprecated)* and *Show Documentation (deprecated)* in the context menu of the Keywords view are deprecated in favour of the Documentation Viewer. They still show Robot Framework's Libdoc HTML, served by the language server. In desktop VS Code these pages open beside the editor in VS Code's integrated browser, which reuses one tab for them. In VS Code for the Web, which has no integrated browser, they open in the Simple Browser.
