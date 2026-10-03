@@ -112,6 +112,12 @@ def test_normalize_admonitions_leaves_other_block_quotes_alone() -> None:
     assert normalize_admonitions(text) == text
 
 
+def test_normalize_admonitions_leaves_code_alone() -> None:
+    text = "> ```markdown\n> > [!TIP]\n> ```\n\nText.\n\n    > [!TIP]"
+
+    assert normalize_admonitions(text) == text
+
+
 def test_reference_links_become_inline_code_by_default() -> None:
     text = "See [Set Log Level], [set loglevel][] and [the levels][Set Log Level] or [Color]."
 
@@ -165,6 +171,30 @@ def test_references_that_must_stay_unchanged() -> None:
     )
 
     assert resolve_reference_links(text, TARGETS) == text
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Example:\n\n    [Set Log Level]    DEBUG",
+        "<div>\n[Color]\n</div>",
+        "> ```robotframework\n> [Set Log Level]    DEBUG\n> ```",
+        "> Example:\n>\n>     [Set Log Level]    DEBUG",
+        "> > ```\n> > list[Color]\n> > ```",
+        "> A quote\n>\n    [Color]",
+    ],
+    ids=["indented-code", "html-block", "fence-in-quote", "code-in-quote", "nested-quote", "code-after-quote"],
+)
+def test_references_in_code_and_html_blocks_stay_unchanged(text: str) -> None:
+    assert resolve_reference_links(text, TARGETS, lambda kind, name: "#link") == text
+
+
+def test_references_in_block_quotes_around_code() -> None:
+    text = "> ```\n> [Color]\n> ```\n> See [Color].\n\n> A quote\n    continued with [Color]"
+
+    assert resolve_reference_links(text, TARGETS) == (
+        "> ```\n> [Color]\n> ```\n> See `Color`.\n\n> A quote\n    continued with `Color`"
+    )
 
 
 def test_extract_reference_definitions() -> None:
@@ -305,6 +335,7 @@ def test_code_span_variables_after_code_and_html_blocks() -> None:
     assert code_span_variables(text) == (
         "```\n${x}\n```\n`${y}`\n\n<div>\n${x}\n</div>\n\nMore `${z}`.\n\n    ${x}\nLazy `${y}`."
     )
+    assert code_span_variables("> ```\n> ${x}\n> ```\n> After ${y}") == "> ```\n> ${x}\n> ```\n> After `${y}`"
 
 
 def test_code_span_variables_joins_adjacent_variables() -> None:
@@ -323,8 +354,18 @@ def test_code_span_variables_fences_a_variable_with_a_backtick() -> None:
         "- item\n\n        code ${x}",
         "<div>\n${x}\n</div>",
         "<pre>\n${x}\n\n${y}\n</pre>",
+        "> ```robotframework\n> Log    ${x}\n> ```",
+        "> Example:\n>\n>     Log    ${x}",
     ],
-    ids=["code-after-heading", "fence-in-list", "code-in-list", "html-block", "pre-with-blank-line"],
+    ids=[
+        "code-after-heading",
+        "fence-in-list",
+        "code-in-list",
+        "html-block",
+        "pre-with-blank-line",
+        "fence-in-quote",
+        "code-in-quote",
+    ],
 )
 def test_code_span_variables_leaves_blocks_alone(text: str) -> None:
     assert code_span_variables(text) == text
@@ -418,6 +459,7 @@ def test_replace_anchor_links_html(text: str, expected: str) -> None:
         "Code `that wraps\n[usage](#usage)` over two lines.",
         "```\n[usage](#usage)\n```",
         "> ```\n> [usage](#usage)\n> ```",
+        "> Text.\n>\n>     [usage](#usage)",
         "Text.\n\n    [usage](#usage)",
         # a blank line ends the paragraph, so this is no link
         "See [the usage\n\nsection](#usage).",

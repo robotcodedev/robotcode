@@ -78,6 +78,8 @@ _RE_SHORT_REFERENCE = re.compile(r"(?<!\\)(?<!(?<!\\)\])(!?)\[([^\[\]\n]+)\](?:\
 _RE_LIST_ITEM = re.compile(r"^( {0,3})([-+*]|\d{1,9}[.)])(?: +|$)")
 # a heading or a thematic break ends its block, as a blank line does
 _RE_BLOCK_END = re.compile(r"^ {0,3}(?:#{1,6}(?:\s|$)|([-*_])(?: *\1){2,} *$)")
+# the marker of a block quote and the space after it
+_RE_QUOTE_MARKER = re.compile(r" {0,3}>[ \t]?")
 _RE_HTML_BLOCK_START = re.compile(
     r"^ {0,3}<(?:"
     r"(!--|\?|!\[CDATA\[|![A-Za-z])"  # a comment, a processing instruction, CDATA or a declaration
@@ -159,8 +161,12 @@ def normalize_reference(name: str) -> str:
 
 def _iter_lines(text: str) -> Iterator[Tuple[str, bool]]:
     """Yield every line together with whether it belongs to a fenced code block."""
+    return _iter_fenced(text.splitlines())
+
+
+def _iter_fenced(lines: Iterable[str]) -> Iterator[Tuple[str, bool]]:
     fence: Optional[str] = None
-    for line in text.splitlines():
+    for line in lines:
         match = _RE_FENCE.match(line)
         if fence is None:
             if match:
@@ -252,8 +258,8 @@ def normalize_admonitions(text: str) -> str:
     Neither the editors nor the REPL render GitHub style admonitions.
     """
     result: List[str] = []
-    for line, in_code in _iter_lines(text):
-        match = None if in_code else _RE_ADMONITION.match(line)
+    for line, is_text in _iter_text_lines(text):
+        match = _RE_ADMONITION.match(line) if is_text else None
         if match:
             prefix, kind, title = match.groups()
             result.append(f"{prefix}**{kind.capitalize()}**")
@@ -351,9 +357,9 @@ def resolve_reference_links(
 
     `targets` is keyed by the normalized name. A reference definition links
     to its URL, another target gets a link if `link_resolver` returns one for
-    it, everything else becomes inline code. Code, images, escaped brackets,
-    inline links, names defined in `text` itself and unknown names stay as
-    they are.
+    it, everything else becomes inline code. Code, also in block quotes, HTML
+    blocks, images, escaped brackets, inline links, names defined in `text`
+    itself and unknown names stay as they are.
     """
     if "[" not in text or not targets:
         return text
@@ -389,7 +395,8 @@ def resolve_reference_links(
         return "".join(result)
 
     return "\n".join(
-        line if in_code or _RE_DEFINITION.match(line) else resolve(line) for line, in_code in _iter_lines(text)
+        resolve(line) if is_text and not _RE_DEFINITION.match(line) else line
+        for line, is_text in _iter_text_lines(text)
     )
 
 
@@ -425,38 +432,63 @@ def _iter_line_kinds(text: str) -> Iterator[Tuple[str, str]]:
     fenced or indented code block, or a line of an HTML block.
 
     Lines indented below a list item continue it; code in a list item is
-    indented four columns more than its text.
+    indented four columns more than its text. A line of a block quote has the
+    kind of its content, so code in a quote is code.
     """
+    lines = text.splitlines()
+    return zip(lines, _line_kinds(lines))
+
+
+def _line_kinds(lines: List[str]) -> Iterator[str]:
     block_ended = True
     in_indented_code = False
     html_end: Optional[str] = None
     list_indent: Optional[int] = None
-    for line, in_code in _iter_lines(text):
+    quote_end = 0
+    for index, (line, in_code) in enumerate(_iter_fenced(lines)):
+        if index < quote_end:
+            continue
         blank = not line.strip()
         if in_code:
             in_indented_code = False
             block_ended = True
-            yield line, _LINE_CODE
+            yield _LINE_CODE
             continue
         if html_end is not None:
             # an HTML block ends with its end marker or, without one, with a blank line
             if (html_end and html_end in line.lower()) or (not html_end and blank):
                 html_end = None
                 block_ended = True
-            yield line, _LINE_HTML
+            yield _LINE_HTML
             continue
         if blank:
             block_ended = True
-            yield line, _LINE_BLANK
+            yield _LINE_BLANK
             continue
 
         indent = _indentation(line)
+        if _RE_QUOTE_MARKER.match(line):
+            if list_indent is not None and block_ended and indent < list_indent:
+                list_indent = None
+            # the content of a block quote is a document of its own, as CommonMark parses it
+            content: List[str] = []
+            quote_end = index
+            while quote_end < len(lines) and (marker := _RE_QUOTE_MARKER.match(lines[quote_end])):
+                content.append(lines[quote_end][marker.end() :])
+                quote_end += 1
+            kinds = list(_line_kinds(content))
+            yield from kinds
+            in_indented_code = False
+            # a paragraph at the end of the quote continues on the next line also without `>`, as text
+            block_ended = kinds[-1] != _LINE_TEXT or bool(_RE_BLOCK_END.match(content[-1]))
+            continue
+
         list_item = _RE_LIST_ITEM.match(line)
         code_indent = 4 if list_indent is None else list_indent + 4
         if (in_indented_code or block_ended) and not list_item and indent >= code_indent:
             in_indented_code = True
             block_ended = False
-            yield line, _LINE_CODE
+            yield _LINE_CODE
             continue
         in_indented_code = False
 
@@ -470,11 +502,11 @@ def _iter_line_kinds(text: str) -> Iterator[Tuple[str, str]]:
             if end is not None:
                 html_end = None if end and end in line.lower()[line.index("<") + 1 :] else end
                 block_ended = html_end is None
-                yield line, _LINE_HTML
+                yield _LINE_HTML
                 continue
 
         block_ended = bool(_RE_BLOCK_END.match(line))
-        yield line, _LINE_TEXT
+        yield _LINE_TEXT
 
 
 def _iter_text_lines(text: str) -> Iterator[Tuple[str, bool]]:
@@ -584,7 +616,6 @@ _RE_ANCHOR_HREF = re.compile(
 )
 _RE_TITLE_ATTRIBUTE = re.compile(r"\stitle\s*=", re.IGNORECASE)
 _RE_MARKDOWN_ESCAPE = re.compile(r"\\([!-/:-@\[-`{-~])")
-_RE_QUOTE_PREFIX = re.compile(r"^ {0,3}>(?:[ \t]?>)*[ \t]?")
 
 
 def _anchor(destination: str) -> str:
@@ -645,7 +676,6 @@ def replace_anchor_links(text: str, href: Callable[[str], Optional[str]], title:
     result: List[str] = []
     paragraph: List[str] = []
     definitions_allowed = True
-    quote_fence: Optional[str] = None
 
     def flush() -> None:
         if paragraph:
@@ -660,27 +690,7 @@ def replace_anchor_links(text: str, href: Callable[[str], Optional[str]], title:
                 raw_line = _RE_OPENING_TAG.sub(lambda m: replace_tag(m.group(0)), raw_line)
             result.append(raw_line)
             definitions_allowed = True
-            quote_fence = None
             continue
-
-        # fenced code inside a block quote
-        quote = _RE_QUOTE_PREFIX.match(line)
-        if quote is None:
-            if quote_fence is not None:
-                quote_fence = None
-                definitions_allowed = True
-        else:
-            fence = _RE_FENCE.match(line[quote.end() :])
-            if quote_fence is not None or fence is not None:
-                flush()
-                result.append(raw_line)
-                if quote_fence is None and fence is not None:
-                    quote_fence = fence.group(1)
-                elif fence is not None and quote_fence is not None:
-                    if fence.group(1)[0] == quote_fence[0] and len(fence.group(1)) >= len(quote_fence):
-                        quote_fence = None
-                        definitions_allowed = True
-                continue
 
         if definitions_allowed:
             definition = _RE_ANCHOR_DEFINITION.match(line)
