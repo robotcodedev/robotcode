@@ -8,14 +8,14 @@ result:
     arguments:
     - <removed>
     command: robotcode.showDocumentation
-    title: Open Documentation
+    title: Open Documentation (deprecated)
   data: null
   diagnostics: null
   disabled: null
   edit: null
   is_preferred: null
   kind: source
-  title: Open Documentation
+  title: Open Documentation (deprecated)
 - !CodeAction
   command:
     arguments:
@@ -30,7 +30,7 @@ result:
   diagnostics: null
   disabled: null
   edit: null
-  is_preferred: null
+  is_preferred: true
   kind: source
   title: Show in Documentation Viewer
 - !CodeAction

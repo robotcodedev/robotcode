@@ -210,6 +210,7 @@ def signature_part_factory(
             self._parent_mock = mocker.MagicMock()
             self._parent_mock.documents_cache.get_namespace.side_effect = lambda doc: doc.__test_namespace__
             self._parent_mock.documents_cache.get_model.side_effect = lambda doc, *args, **kwargs: doc.__test_ast__
+            self._parent_mock.robot_initialization_options.documentation_viewer_links = False
 
         @property
         def parent(self) -> Any:

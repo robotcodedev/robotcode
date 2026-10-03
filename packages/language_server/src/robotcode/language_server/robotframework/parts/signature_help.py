@@ -48,10 +48,17 @@ from robotcode.robot.utils.ast import (
     get_tokens_at_position,
     range_from_token,
 )
+from robotcode.robot.utils.markdown_docs import LinkResolver
 
 from ...common.decorators import (
     retrigger_characters,
     trigger_characters,
+)
+from .code_action_documentation import (
+    DocumentationTarget,
+    documentation_link_resolver,
+    keyword_reference_targets,
+    link_documentation,
 )
 from .protocol_part import RobotLanguageServerProtocolPart
 
@@ -90,10 +97,56 @@ def _named_arg_name(tok: SemanticToken) -> Optional[str]:
     return name_st.value if name_st is not None else None
 
 
-def _parameter_documentation(kw_doc: KeywordDoc, argument: ArgumentInfo) -> Optional[MarkupContent]:
-    """The description of the argument followed by the documentation of its types."""
-    value = kw_doc.argument_to_markdown(argument)
-    return MarkupContent(kind=MarkupKind.MARKDOWN, value=value) if value else None
+def _signature_help(
+    kw_doc: KeywordDoc,
+    kw_arguments: List[ArgumentInfo],
+    argument_index: int,
+    links: bool,
+    target: Optional[DocumentationTarget],
+    link_resolver: Optional[LinkResolver] = None,
+) -> SignatureHelp:
+    """The signature of `kw_doc` with the parameter at `argument_index` active.
+
+    With `links`, the documentation links into the Documentation Viewer, to the
+    page of `target`, with `link_resolver` or else the resolver of the keyword's library.
+    """
+    # once for the documentation of the keyword and of every parameter
+    targets = keyword_reference_targets(kw_doc, links)
+    if links and link_resolver is None and target is not None and kw_doc.parent is not None:
+        link_resolver = documentation_link_resolver(target, kw_doc.parent)
+
+    def documentation(render: Callable[[Optional[LinkResolver]], str]) -> str:
+        if not links:
+            return render(None)
+        return link_documentation(render, target, kw_doc.parent, heading=False, link_resolver=link_resolver)
+
+    def parameter_documentation(argument: ArgumentInfo) -> Optional[MarkupContent]:
+        """The description of the argument followed by the documentation of its types."""
+        value = documentation(
+            lambda link_resolver: (
+                kw_doc.argument_to_markdown(argument, link_resolver=link_resolver, reference_targets=targets) or ""
+            )
+        )
+        return MarkupContent(kind=MarkupKind.MARKDOWN, value=value) if value else None
+
+    signature = SignatureInformation(
+        label=kw_doc.parameter_signature(),
+        parameters=[
+            ParameterInformation(label=p.signature(), documentation=parameter_documentation(p)) for p in kw_arguments
+        ],
+        active_parameter=argument_index,
+        documentation=MarkupContent(
+            kind=MarkupKind.MARKDOWN,
+            value=documentation(
+                lambda link_resolver: kw_doc.to_markdown(False, link_resolver=link_resolver, reference_targets=targets)
+            ),
+        ),
+    )
+    return SignatureHelp(
+        signatures=[signature],
+        active_signature=0,
+        active_parameter=argument_index,
+    )
 
 
 def _active_argument_from_semantic_tokens(
@@ -322,6 +375,9 @@ def _build_signature_help(
     kw_doc: KeywordDoc,
     arg_tokens: List[SemanticToken],
     position: Position,
+    links: bool = False,
+    target: Optional[DocumentationTarget] = None,
+    link_resolver: Optional[LinkResolver] = None,
 ) -> Optional[SignatureHelp]:
     """SemanticModel-based replacement for `_get_signature_help`.
 
@@ -333,20 +389,7 @@ def _build_signature_help(
     if not kw_arguments:
         return None
 
-    signature = SignatureInformation(
-        label=kw_doc.parameter_signature(),
-        parameters=[
-            ParameterInformation(label=p.signature(), documentation=_parameter_documentation(kw_doc, p))
-            for p in kw_arguments
-        ],
-        active_parameter=argument_index,
-        documentation=MarkupContent(kind=MarkupKind.MARKDOWN, value=kw_doc.to_markdown(False)),
-    )
-    return SignatureHelp(
-        signatures=[signature],
-        active_signature=0,
-        active_parameter=argument_index,
-    )
+    return _signature_help(kw_doc, kw_arguments, argument_index, links, target, link_resolver)
 
 
 class RobotSignatureHelpProtocolPart(RobotLanguageServerProtocolPart, ModelHelper):
@@ -396,6 +439,10 @@ class RobotSignatureHelpProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
 
         return self._collect_legacy(document, position, context)
 
+    @property
+    def _links(self) -> bool:
+        return self.parent.robot_initialization_options.documentation_viewer_links
+
     def _collect_legacy(
         self,
         document: TextDocument,
@@ -437,13 +484,13 @@ class RobotSignatureHelpProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
             return None
 
         if isinstance(stmt, KeywordCallStatement):
-            return self._keyword_call_signature_help(stmt, position)
+            return self._keyword_call_signature_help(stmt, position, document, namespace)
 
         if isinstance(stmt, ImportStatement) and stmt.import_type in (
             ImportType.LIBRARY,
             ImportType.VARIABLES,
         ):
-            return self._import_signature_help(stmt, position)
+            return self._import_signature_help(stmt, position, document, namespace)
 
         return None
 
@@ -459,6 +506,8 @@ class RobotSignatureHelpProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
         self,
         stmt: KeywordCallStatement,
         position: Position,
+        document: TextDocument,
+        namespace: Namespace,
     ) -> Optional[SignatureHelp]:
         if stmt.kind not in self._SUPPORTED_KEYWORD_CALL_KINDS:
             return None
@@ -479,12 +528,21 @@ class RobotSignatureHelpProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
             return None
 
         arg_tokens = [t for t in stmt.tokens if t.kind is TokenKind.ARGUMENT]
-        return _build_signature_help(kw_doc, arg_tokens, position)
+        links = self._links
+        target = (
+            self.parent.robot_code_action_documentation.keyword_target(kw_doc, stmt.lib_entry, document, namespace)
+            if links
+            else None
+        )
+        link_resolver = self._link_resolver(document, namespace, target, kw_doc)
+        return _build_signature_help(kw_doc, arg_tokens, position, links, target, link_resolver)
 
     def _import_signature_help(
         self,
         stmt: ImportStatement,
         position: Position,
+        document: TextDocument,
+        namespace: Namespace,
     ) -> Optional[SignatureHelp]:
         kw_doc = stmt.init_keyword_doc
         if kw_doc is None:
@@ -501,7 +559,22 @@ class RobotSignatureHelpProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
         if _cursor_at_or_past_with_name(stmt, position):
             return None
 
-        return _build_signature_help(kw_doc, _import_arg_tokens(stmt), position)
+        arg_tokens = _import_arg_tokens(stmt)
+        links = self._links
+        # a Variables import has no page in the Documentation Viewer
+        target = (
+            self.parent.robot_code_action_documentation.import_target(
+                stmt.import_name or "",
+                [t.value for t in arg_tokens],
+                True,
+                document,
+                namespace,
+                stmt.lib_entry.library_doc if stmt.lib_entry is not None else None,
+            )
+            if links and stmt.import_type is ImportType.LIBRARY
+            else None
+        )
+        return _build_signature_help(kw_doc, arg_tokens, position, links, target)
 
     def _signature_help_KeywordCall_or_Fixture(  # noqa: N802
         self,
@@ -560,7 +633,26 @@ class RobotSignatureHelpProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
             # TODO
             pass
 
-        return self._get_signature_help(keyword_doc, kw_node.tokens, token_at_position, position)
+        target = None
+        if self._links:
+            prefix_entry, _ = self.get_namespace_info_from_keyword_token(namespace, keyword_token)
+            target = self.parent.robot_code_action_documentation.keyword_target(
+                keyword_doc, prefix_entry, document, namespace
+            )
+        link_resolver = self._link_resolver(document, namespace, target, keyword_doc)
+
+        return self._get_signature_help(keyword_doc, kw_node.tokens, token_at_position, position, target, link_resolver)
+
+    def _link_resolver(
+        self,
+        document: TextDocument,
+        namespace: Namespace,
+        target: Optional[DocumentationTarget],
+        kw_doc: KeywordDoc,
+    ) -> Optional[LinkResolver]:
+        if target is None or kw_doc.parent is None:
+            return None
+        return self.parent.robot_code_action_documentation.link_resolver(document, namespace, target, kw_doc.parent)
 
     def _get_signature_help(
         self,
@@ -568,6 +660,8 @@ class RobotSignatureHelpProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
         tokens: Sequence[Token],
         token_at_position: Token,
         position: Position,
+        target: Optional[DocumentationTarget],
+        link_resolver: Optional[LinkResolver] = None,
     ) -> Optional[SignatureHelp]:
         argument_index, kw_arguments, _ = self.get_argument_info_at_position(
             keyword_doc, tokens, token_at_position, position
@@ -575,21 +669,7 @@ class RobotSignatureHelpProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
         if kw_arguments is None:
             return None
 
-        signature = SignatureInformation(
-            label=keyword_doc.parameter_signature(),
-            parameters=[
-                ParameterInformation(label=p.signature(), documentation=_parameter_documentation(keyword_doc, p))
-                for p in kw_arguments
-            ],
-            active_parameter=argument_index,
-            documentation=MarkupContent(kind=MarkupKind.MARKDOWN, value=keyword_doc.to_markdown(False)),
-        )
-
-        return SignatureHelp(
-            signatures=[signature],
-            active_signature=0,
-            active_parameter=argument_index,
-        )
+        return _signature_help(keyword_doc, kw_arguments, argument_index, self._links, target, link_resolver)
 
     def signature_help_KeywordCall(  # noqa: N802
         self,
@@ -637,10 +717,13 @@ class RobotSignatureHelpProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
             return None
 
         lib_doc: Optional[LibraryDoc] = None
+        import_doc: Optional[LibraryDoc] = None
         try:
             namespace = self.parent.documents_cache.get_namespace(document)
 
-            lib_doc = namespace.get_imported_library_libdoc(library_node.name, library_node.args, library_node.alias)
+            lib_doc = import_doc = namespace.get_imported_library_libdoc(
+                library_node.name, library_node.args, library_node.alias
+            )
 
             if lib_doc is None or lib_doc.errors:
                 lib_doc = namespace.imports_manager.get_libdoc_for_library_import(
@@ -680,8 +763,15 @@ class RobotSignatureHelpProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
             if with_name_token is None
             else library_node.tokens[: library_node.tokens.index(with_name_token)]
         )
+        target = (
+            self.parent.robot_code_action_documentation.import_target(
+                library_node.name, library_node.args, True, document, namespace, import_doc
+            )
+            if self._links
+            else None
+        )
         for kw_doc in lib_doc.inits:
-            return self._get_signature_help(kw_doc, tokens, token_at_position, position)
+            return self._get_signature_help(kw_doc, tokens, token_at_position, position, target)
 
         return None
 
@@ -739,7 +829,8 @@ class RobotSignatureHelpProtocolPart(RobotLanguageServerProtocolPart, ModelHelpe
         if not lib_doc.inits:
             return None
 
+        # a Variables import has no page in the Documentation Viewer
         for kw_doc in lib_doc.inits:
-            return self._get_signature_help(kw_doc, variables_node.tokens, token_at_position, position)
+            return self._get_signature_help(kw_doc, variables_node.tokens, token_at_position, position, None)
 
         return None

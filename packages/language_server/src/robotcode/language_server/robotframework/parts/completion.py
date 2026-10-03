@@ -69,6 +69,7 @@ from robotcode.robot.diagnostics.library_doc import (
     KeywordArgumentKind,
     KeywordDoc,
     KeywordMatcher,
+    LibraryDoc,
 )
 from robotcode.robot.diagnostics.model_helper import ModelHelper
 from robotcode.robot.diagnostics.namespace import DocumentType, Namespace
@@ -81,9 +82,11 @@ from robotcode.robot.utils.ast import (
     whitespace_at_begin_of_token,
     whitespace_from_begin_of_token,
 )
+from robotcode.robot.utils.markdown_docs import LinkResolver
 
 from ...common.decorators import trigger_characters
 from ..configuration import CompletionConfig
+from .code_action_documentation import DocumentationTarget, keyword_reference_targets, link_documentation
 from .protocol_part import RobotLanguageServerProtocolPart
 
 if RF_VERSION >= (6, 1):
@@ -95,6 +98,7 @@ else:
 
 if TYPE_CHECKING:
     from ..protocol import RobotLanguageServerProtocol
+    from .code_action_documentation import RobotCodeActionDocumentationProtocolPart
 
 if RF_VERSION < (7, 0):
     from robot.variables.search import VariableIterator
@@ -320,6 +324,14 @@ class CompletionItemImportData(CompletionItemData):
     id: str
 
 
+# a file of a Variables import is resolved like a library, but has no page in the Documentation Viewer
+VARIABLES_IMPORT = "VARIABLES"
+
+
+class CompletionItemVariablesImportData(CompletionItemData):
+    import_type: str
+
+
 class CompletionCollector(ModelHelper):
     _logger = LoggingDescriptor()
 
@@ -410,18 +422,25 @@ class CompletionCollector(ModelHelper):
                     ]:
                         if (lib_id := data.get("id", None)) is not None:
                             try:
-                                lib_doc = next(
+                                lib_entry = next(
                                     (
-                                        ld.library_doc
+                                        ld
                                         for ld in self.namespace.libraries.values()
                                         if str(id(ld.library_doc)) == lib_id
                                     ),
                                     None,
                                 )
-                                if lib_doc is not None:
+                                if lib_entry is not None:
+                                    entry = lib_entry
                                     completion_item.documentation = MarkupContent(
                                         kind=MarkupKind.MARKDOWN,
-                                        value=lib_doc.to_markdown(False),
+                                        value=self._documentation(
+                                            lambda r: entry.library_doc.to_markdown(False, link_resolver=r),
+                                            lambda: self._code_action_documentation.entry_target(
+                                                entry, True, document, self.namespace
+                                            ),
+                                            entry.library_doc,
+                                        ),
                                     )
 
                             except (
@@ -445,9 +464,22 @@ class CompletionCollector(ModelHelper):
                                 )
 
                                 if lib_doc is not None:
+                                    library_doc = lib_doc
+                                    library_name = name
+                                    is_variables = cast(Dict[str, Any], data).get("import_type") == VARIABLES_IMPORT
                                     completion_item.documentation = MarkupContent(
                                         kind=MarkupKind.MARKDOWN,
-                                        value=lib_doc.to_markdown(False),
+                                        value=self._documentation(
+                                            lambda r: library_doc.to_markdown(False, link_resolver=r),
+                                            lambda: (
+                                                None
+                                                if is_variables
+                                                else self._code_action_documentation.import_target(
+                                                    library_name, (), True, document, self.namespace
+                                                )
+                                            ),
+                                            library_doc,
+                                        ),
                                     )
 
                             except (SystemExit, KeyboardInterrupt):
@@ -458,19 +490,26 @@ class CompletionCollector(ModelHelper):
                     elif comp_type == CompleteResultKind.RESOURCE.name:
                         if (res_id := data.get("id", None)) is not None:
                             try:
-                                lib_doc = next(
+                                res_entry = next(
                                     (
-                                        ld.library_doc
+                                        ld
                                         for ld in self.namespace.resources.values()
                                         if str(id(ld.library_doc)) == res_id
                                     ),
                                     None,
                                 )
 
-                                if lib_doc is not None:
+                                if res_entry is not None:
+                                    resource_entry = res_entry
                                     completion_item.documentation = MarkupContent(
                                         kind=MarkupKind.MARKDOWN,
-                                        value=lib_doc.to_markdown(False),
+                                        value=self._documentation(
+                                            lambda r: resource_entry.library_doc.to_markdown(False, link_resolver=r),
+                                            lambda: self._code_action_documentation.entry_target(
+                                                resource_entry, False, document, self.namespace
+                                            ),
+                                            resource_entry.library_doc,
+                                        ),
                                     )
 
                             except (
@@ -494,9 +533,17 @@ class CompletionCollector(ModelHelper):
                                 )
 
                                 if lib_doc is not None:
+                                    resource_doc = lib_doc
+                                    resource_name = name
                                     completion_item.documentation = MarkupContent(
                                         kind=MarkupKind.MARKDOWN,
-                                        value=lib_doc.to_markdown(False),
+                                        value=self._documentation(
+                                            lambda r: resource_doc.to_markdown(False, link_resolver=r),
+                                            lambda: self._code_action_documentation.import_target(
+                                                resource_name, (), False, document, self.namespace
+                                            ),
+                                            resource_doc,
+                                        ),
                                     )
 
                             except (SystemExit, KeyboardInterrupt):
@@ -513,9 +560,19 @@ class CompletionCollector(ModelHelper):
                                 )
 
                                 if kw_doc is not None:
+                                    keyword_doc = kw_doc
                                     completion_item.documentation = MarkupContent(
                                         kind=MarkupKind.MARKDOWN,
-                                        value=kw_doc.to_markdown(),
+                                        value=self._documentation(
+                                            lambda r: keyword_doc.to_markdown(
+                                                link_resolver=r,
+                                                reference_targets=keyword_reference_targets(keyword_doc, r is not None),
+                                            ),
+                                            lambda: self._code_action_documentation.keyword_target(
+                                                keyword_doc, None, document, self.namespace
+                                            ),
+                                            keyword_doc.parent,
+                                        ),
                                     )
 
                             except (
@@ -532,6 +589,37 @@ class CompletionCollector(ModelHelper):
                                 completion_item.documentation = MarkupContent(kind=MarkupKind.MARKDOWN, value=doc)
 
         return completion_item
+
+    @property
+    def _links(self) -> bool:
+        return self.parent.parent.robot_initialization_options.documentation_viewer_links
+
+    @property
+    def _code_action_documentation(self) -> "RobotCodeActionDocumentationProtocolPart":
+        return self.parent.parent.robot_code_action_documentation
+
+    def _documentation(
+        self,
+        render: Callable[[Optional[LinkResolver]], str],
+        target: Callable[[], Optional[DocumentationTarget]],
+        library_doc: Optional[LibraryDoc],
+        *,
+        heading: bool = True,
+    ) -> str:
+        """The documentation of an item; with links, linked into the Documentation Viewer at the page of `target`."""
+        if not self._links:
+            return render(None)
+        documentation_target = target()
+        link_resolver = (
+            self._code_action_documentation.link_resolver(
+                self.document, self.namespace, documentation_target, library_doc
+            )
+            if documentation_target is not None and library_doc is not None
+            else None
+        )
+        return link_documentation(
+            render, documentation_target, library_doc, heading=heading, link_resolver=link_resolver
+        )
 
     def create_headers_completion_items(self, range: Optional[Range]) -> List[CompletionItem]:
         doc_type = self.parent.parent.documents_cache.get_document_type(self.document)
@@ -1784,6 +1872,13 @@ class CompletionCollector(ModelHelper):
                             kw_node.tokens[name_token_index:],
                             token_at_position,
                             position,
+                            (
+                                self._code_action_documentation.import_target(
+                                    import_node.name, import_node.args, True, self.document, self.namespace, libdoc
+                                )
+                                if self._links
+                                else None
+                            ),
                         )
 
             except (SystemExit, KeyboardInterrupt, CancelledError):
@@ -2057,10 +2152,11 @@ class CompletionCollector(ModelHelper):
                     sort_text=f"030_{e.label}",
                     insert_text_format=InsertTextFormat.PLAIN_TEXT,
                     text_edit=TextEdit(range=r, new_text=e.label) if r is not None else None,
-                    data=CompletionItemData(
+                    data=CompletionItemVariablesImportData(
                         document_uri=str(self.document.uri),
                         type=e.kind.name,
                         name=((first_part) if first_part is not None else "") + e.label,
+                        import_type=VARIABLES_IMPORT,
                     ),
                 )
                 for e in complete_list
@@ -2176,11 +2272,19 @@ class CompletionCollector(ModelHelper):
 
         keyword_token_index = kw_node.tokens.index(keyword_token)
 
+        target = None
+        if self._links:
+            prefix_entry, _ = self.get_namespace_info_from_keyword_token(self.namespace, keyword_doc_and_token[1])
+            target = self._code_action_documentation.keyword_target(
+                keyword_doc, prefix_entry, self.document, self.namespace
+            )
+
         return self._complete_keyword_arguments_at_position(
             keyword_doc,
             kw_node.tokens[keyword_token_index:],
             token_at_position,
             position,
+            target,
         )
 
     TRUE_STRINGS = {"TRUE", "YES", "ON", "1"}
@@ -2192,9 +2296,14 @@ class CompletionCollector(ModelHelper):
         tokens: Tuple[Token, ...],
         token_at_position: Token,
         position: Position,
+        target: Optional[DocumentationTarget] = None,
     ) -> Optional[List[CompletionItem]]:
         if keyword_doc.is_any_run_keyword():
             return None
+
+        def type_documentation(markdown: str) -> str:
+            # the documentation of a type links no names, only its links to a place in the documentation
+            return self._documentation(lambda _: markdown, lambda: target, None, heading=False)
 
         (
             argument_index,
@@ -2288,7 +2397,7 @@ class CompletionCollector(ModelHelper):
                     for i, b_snippet in enumerate(bool_snippets):
                         if b_snippet[0]:
                             cache_name = f"BOOL{id(type_info)}_{i}"
-                            self.parent.doc_cache[cache_name] = type_info.to_markdown()
+                            self.parent.doc_cache[cache_name] = type_documentation(type_info.to_markdown())
                             result.append(
                                 CompletionItem(
                                     label=b_snippet[0],
@@ -2313,7 +2422,9 @@ class CompletionCollector(ModelHelper):
                             label="None",
                             kind=CompletionItemKind.CONSTANT,
                             detail=f"{type_info.name}",
-                            documentation=MarkupContent(MarkupKind.MARKDOWN, type_info.to_markdown()),
+                            documentation=MarkupContent(
+                                MarkupKind.MARKDOWN, type_documentation(type_info.to_markdown())
+                            ),
                             sort_text="50_000_None",
                             insert_text_format=InsertTextFormat.PLAIN_TEXT,
                             text_edit=TextEdit(range=completion_range, new_text="None"),
@@ -2324,7 +2435,9 @@ class CompletionCollector(ModelHelper):
                             label="${None}",
                             kind=CompletionItemKind.VARIABLE,
                             detail=f"{type_info.name}",
-                            documentation=MarkupContent(MarkupKind.MARKDOWN, type_info.to_markdown()),
+                            documentation=MarkupContent(
+                                MarkupKind.MARKDOWN, type_documentation(type_info.to_markdown())
+                            ),
                             sort_text="50_001_None",
                             insert_text_format=InsertTextFormat.PLAIN_TEXT,
                             text_edit=TextEdit(range=completion_range, new_text="${None}"),
@@ -2333,7 +2446,7 @@ class CompletionCollector(ModelHelper):
                 if type_info.members:
                     for member_index, member in enumerate(type_info.members):
                         cache_name = f"TYPE_MEMBER{id(type_info)}_{member_index}"
-                        self.parent.doc_cache[cache_name] = (
+                        self.parent.doc_cache[cache_name] = type_documentation(
                             f"```python\n{member.name} = {member.value}\n```"
                             "\n\n---"
                             f"\n{type_info.to_markdown(only_doc=True)}"
@@ -2376,7 +2489,7 @@ class CompletionCollector(ModelHelper):
                     ]
                     for i, snippet in enumerate(snippets):
                         cache_name = f"TYPE_ITEMS{id(type_info)}_{i}"
-                        self.parent.doc_cache[cache_name] = type_info.to_markdown()
+                        self.parent.doc_cache[cache_name] = type_documentation(type_info.to_markdown())
                         if snippet:
                             result.append(
                                 CompletionItem(
@@ -2450,9 +2563,20 @@ class CompletionCollector(ModelHelper):
                         - 1
                     )
 
+            # once for all arguments of the keyword
+            targets = keyword_reference_targets(keyword_doc, self._links)
+
             def documentation_data(argument: ArgumentInfo) -> Optional[CompletionItemData]:
                 # the description of the argument and the documentation of its types, sent when the item is resolved
-                if (doc := keyword_doc.argument_to_markdown(argument)) is None:
+                doc = self._documentation(
+                    lambda r: (
+                        keyword_doc.argument_to_markdown(argument, link_resolver=r, reference_targets=targets) or ""
+                    ),
+                    lambda: target,
+                    keyword_doc.parent,
+                    heading=False,
+                )
+                if not doc:
                     return None
                 cache_name = f"ARG{id(keyword_doc)}_{argument.name}"
                 self.parent.doc_cache[cache_name] = doc

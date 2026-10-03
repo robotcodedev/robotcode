@@ -28,14 +28,24 @@ from robotcode.core.lsp.types import (
 )
 from robotcode.core.text_document import TextDocument
 from robotcode.core.utils.logging import TRACE, LoggingDescriptor
-from robotcode.robot.diagnostics.entities import VariableDefinitionType
+from robotcode.robot.diagnostics.entities import (
+    LibraryEntry,
+    ResourceEntry,
+    VariableDefinitionType,
+    VariablesEntry,
+)
+from robotcode.robot.diagnostics.library_doc import KeywordDoc
+from robotcode.robot.diagnostics.namespace import Namespace
 from robotcode.robot.utils.ast import (
     get_nodes_at_position,
     range_from_node,
     range_from_token,
 )
+from robotcode.robot.utils.markdown_docs import LinkResolver, replace_anchor_links
 from robotcode.robot.utils.markdownformatter import MarkDownFormatter
+from robotcode.robot.utils.variables import contains_variable
 
+from .code_action_documentation import DocumentationTarget, keyword_reference_targets, link_documentation
 from .protocol_part import RobotLanguageServerProtocolPart
 
 if TYPE_CHECKING:
@@ -176,7 +186,7 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart):
 
         all_kw_refs = namespace.keyword_references
         if all_kw_refs:
-            result: List[Tuple[Range, str]] = []
+            result: List[Tuple[Range, KeywordDoc]] = []
 
             for kw, kw_refs in all_kw_refs.items():
                 check_current_task_canceled()
@@ -191,23 +201,20 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart):
                 )
 
                 if found_range is not None:
-                    if kw.libtype == "RESOURCE":
-                        txt = kw.to_markdown(
-                            modify_doc_handler=lambda t: namespace.imports_manager.replace_variables_scalar(
-                                t,
-                                str(document.uri.to_path().parent),
-                                namespace.get_resolvable_variables(),
-                                ignore_errors=True,
-                            )
-                        )
-                    else:
-                        txt = kw.to_markdown()
-
-                    result.append((found_range, txt))
+                    result.append((found_range, kw))
             if result:
                 r = result[0][0]
                 if all(r == i[0] for i in result):
-                    doc = "\n\n---\n\n".join(i[1] for i in result)
+                    links = self.parent.robot_initialization_options.documentation_viewer_links
+                    # a call that matches several keywords has no target
+                    target = (
+                        self.parent.robot_code_action_documentation.target_at(document, Range(position, position))
+                        if links and len(result) == 1
+                        else None
+                    )
+                    doc = "\n\n---\n\n".join(
+                        self._keyword_markdown(i[1], document, namespace, links, target) for i in result
+                    )
 
                     return Hover(
                         contents=MarkupContent(kind=MarkupKind.MARKDOWN, value=doc),
@@ -236,12 +243,72 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart):
                     return Hover(
                         contents=MarkupContent(
                             kind=MarkupKind.MARKDOWN,
-                            value=ns.library_doc.to_markdown(),
+                            value=self._namespace_markdown(ns, document, namespace, position),
                         ),
                         range=found_range,
                     )
 
         return None
+
+    def _keyword_markdown(
+        self,
+        kw: KeywordDoc,
+        document: TextDocument,
+        namespace: Namespace,
+        links: bool,
+        target: Optional[DocumentationTarget],
+    ) -> str:
+        modify_doc_handler: Optional[Callable[[str], str]] = None
+        if kw.libtype == "RESOURCE":
+
+            def modify_doc_handler(t: str) -> str:
+                # without a variable, the replacement only doubles each backslash, which breaks escaped link texts
+                if links and not contains_variable(t, "$@&%"):
+                    return t
+                return cast(
+                    str,
+                    namespace.imports_manager.replace_variables_scalar(
+                        t,
+                        str(document.uri.to_path().parent),
+                        namespace.get_resolvable_variables(),
+                        ignore_errors=True,
+                    ),
+                )
+
+        def render(link_resolver: Optional[LinkResolver]) -> str:
+            return kw.to_markdown(
+                modify_doc_handler=modify_doc_handler,
+                link_resolver=link_resolver,
+                reference_targets=keyword_reference_targets(kw, link_resolver is not None),
+            )
+
+        if not links:
+            return render(None)
+        link_resolver = (
+            self.parent.robot_code_action_documentation.link_resolver(document, namespace, target, kw.parent)
+            if target is not None and kw.parent is not None
+            else None
+        )
+        return link_documentation(render, target, kw.parent, link_resolver=link_resolver)
+
+    def _namespace_markdown(
+        self, ns: LibraryEntry, document: TextDocument, namespace: Namespace, position: Position
+    ) -> str:
+        if not self.parent.robot_initialization_options.documentation_viewer_links:
+            return ns.library_doc.to_markdown()
+
+        target: Optional[DocumentationTarget] = None
+        if not isinstance(ns, VariablesEntry):
+            documentation = self.parent.robot_code_action_documentation
+            # on an import name the target of the source actions, which knows the import's own
+            # arguments; on an alias or a prefix the page of the hovered import
+            target = documentation.target_at(document, Range(position, position))
+            if target is None or target.keyword is not None:
+                target = documentation.entry_target(ns, not isinstance(ns, ResourceEntry), document, namespace)
+
+        return link_documentation(
+            lambda link_resolver: ns.library_doc.to_markdown(link_resolver=link_resolver), target, ns.library_doc
+        )
 
     def hover_TestCase(  # noqa: N802
         self,
@@ -294,7 +361,11 @@ class RobotHoverProtocolPart(RobotLanguageServerProtocolPart):
             namespace.get_resolvable_variables(),
             ignore_errors=True,
         )
+        txt = MarkDownFormatter().format(txt)
+        if self.parent.robot_initialization_options.documentation_viewer_links:
+            # a test case has no page, links to a place in its documentation would open nothing
+            txt = replace_anchor_links(txt, lambda anchor: None)
         return Hover(
-            contents=MarkupContent(kind=MarkupKind.MARKDOWN, value=MarkDownFormatter().format(txt)),
+            contents=MarkupContent(kind=MarkupKind.MARKDOWN, value=txt),
             range=range_from_token(name_token),
         )

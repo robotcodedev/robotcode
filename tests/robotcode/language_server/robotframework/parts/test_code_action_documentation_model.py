@@ -1,8 +1,9 @@
 """Equivalence tests for the SemanticModel-based code-action-documentation path.
 
-Verifies that `RobotCodeActionDocumentationProtocolPart._collect_from_model(...)`
-produces the same documentation actions (Open Documentation and the two viewer actions),
-with the same targets, as the legacy `_collect_legacy(...)` path across the
+Verifies that `RobotCodeActionDocumentationProtocolPart._target_at_from_model(...)`
+finds the same documentation target as the legacy `_target_at_legacy(...)` path, and that
+`collect` builds the same documentation actions (the two viewer actions and "Open
+Documentation (deprecated)") from it on both paths, across the
 three relevant statement kinds:
 - Library / Resource imports
 - KeywordCall / Fixture / Template / TestTemplate
@@ -13,6 +14,7 @@ factory, stub protocol part, parametrised equivalence cases.
 """
 
 import ast as _ast
+import dataclasses
 import urllib.parse
 from pathlib import Path
 from types import SimpleNamespace
@@ -44,6 +46,7 @@ from robotcode.robot.diagnostics.library_doc import (
     ArgumentInfo,
     KeywordArgumentKind,
     KeywordDoc,
+    resolve_robot_variables,
 )
 from robotcode.robot.diagnostics.library_doc import (
     ArgumentSpec as RobotArgumentSpec,
@@ -135,6 +138,7 @@ def _make_library_entry(
     entry.library_doc.keywords = mocker.MagicMock()
     entry.library_doc.keywords.keywords = kw_docs
     entry.library_doc.errors = []
+    entry.library_doc.loaded_without_arguments = False
     entry.library_doc.inits = []
     # Tie kw_docs back to the libdoc so `kw_doc.parent == lib.library_doc`
     # works for `keyword_target`'s lookup.
@@ -265,6 +269,7 @@ def _normalize(actions: Optional[List[Any]]) -> Any:
                 {
                     "title": a.title,
                     "kind": a.kind,
+                    "is_preferred": a.is_preferred,
                     "command_name": a.command.command if a.command else None,
                     "command_args": list(a.command.arguments) if a.command and a.command.arguments else None,
                 }
@@ -274,12 +279,33 @@ def _normalize(actions: Optional[List[Any]]) -> Any:
     return out
 
 
+def _fields(target: Optional[DocumentationTarget]) -> Any:
+    return None if target is None else dataclasses.asdict(target)
+
+
 def _ctx() -> CodeActionContext:
     return CodeActionContext(
         diagnostics=[],
         only=[CodeActionKind.SOURCE.value],
         trigger_kind=CodeActionTriggerKind.INVOKED,
     )
+
+
+def _collect_on_both_paths(
+    part: RobotCodeActionDocumentationProtocolPart,
+    document: TextDocument,
+    rng: Range,
+    namespace: Any,
+    ctx: CodeActionContext,
+) -> Tuple[Any, Any]:
+    """`collect` without and with the semantic model of `namespace`."""
+    semantic_model = namespace.semantic_model
+    namespace.semantic_model = None
+    try:
+        legacy = part.collect(part, document, rng, ctx)
+    finally:
+        namespace.semantic_model = semantic_model
+    return legacy, part.collect(part, document, rng, ctx)
 
 
 # --------------------------------------------------------------------------
@@ -410,18 +436,24 @@ def test_legacy_and_model_paths_match(
     for line, char in positions:
         rng = Range(start=Position(line=line, character=char), end=Position(line=line, character=char))
 
-        legacy = part._collect_legacy(document, rng, _ctx(), namespace)
-        model = part._collect_from_model(document, rng, _ctx(), namespace, namespace.semantic_model)
+        legacy = part._target_at_legacy(document, rng, namespace)
+        model = part._target_at_from_model(document, rng, namespace, namespace.semantic_model)
 
-        assert _normalize(legacy) == _normalize(model), (
-            f"{name} @ ({line},{char}): legacy != model\n  legacy={_normalize(legacy)}\n  model ={_normalize(model)}"
+        assert _fields(legacy) == _fields(model), (
+            f"{name} @ ({line},{char}): legacy != model\n  legacy={_fields(legacy)}\n  model ={_fields(model)}"
         )
-        if model is not None:
-            assert [a.title for a in model] == [
-                "Open Documentation",
-                "Show in Documentation Viewer",
-                "Show in New Documentation Viewer",
+
+        legacy_actions, model_actions = _collect_on_both_paths(part, document, rng, namespace, _ctx())
+        assert _normalize(legacy_actions) == _normalize(model_actions)
+        if model is None:
+            assert model_actions is None
+        else:
+            assert [(a.title, a.is_preferred) for a in model_actions if isinstance(a, CodeAction)] == [
+                ("Show in Documentation Viewer", True),
+                ("Show in New Documentation Viewer", None),
+                ("Open Documentation (deprecated)", None),
             ]
+            assert len(model_actions) == 3
 
 
 def test_keyword_call_with_selection_returns_none_in_both_paths(
@@ -438,17 +470,15 @@ def test_keyword_call_with_selection_returns_none_in_both_paths(
     part = code_action_part_factory()
     rng = Range(start=Position(line=2, character=4), end=Position(line=2, character=7))  # selecting "Log"
 
-    legacy = part._collect_legacy(document, rng, _ctx(), namespace)
-    model = part._collect_from_model(document, rng, _ctx(), namespace, namespace.semantic_model)
+    legacy = part._target_at_legacy(document, rng, namespace)
+    model = part._target_at_from_model(document, rng, namespace, namespace.semantic_model)
     assert legacy is None
     assert model is None
 
 
 # --------------------------------------------------------------------------
-# CodeActionContext.only variations: the three branches react differently.
-# Library/Resource: gated at branch entry. KeywordCall: gated before output.
-# KeywordName: NOT gated at all (always returns the action). The model
-# path must mirror that asymmetry exactly.
+# CodeActionContext.only variations: `collect` offers the actions only when
+# the request asks for source actions, on all three branches and both paths.
 # --------------------------------------------------------------------------
 
 
@@ -494,8 +524,7 @@ def _ctx_with(only: Optional[List[str]]) -> CodeActionContext:
             ("*** Test Cases ***\nT\n    Log    hi\n", (2, 5)),
             [CodeActionKind.REFACTOR.value],
         ),
-        # KeywordName: NO context.only check in legacy → both paths return
-        # the action regardless.
+        # KeywordName: SOURCE absent → both paths return None.
         (
             "keyword_definition_context_only_none",
             ("*** Keywords ***\nMy Keyword\n    Log    hi\n", (1, 3)),
@@ -515,8 +544,7 @@ def test_context_only_gating_matches(
     analyzer_namespace_factory: Callable[..., tuple[Any, _ast.AST]],
     code_action_part_factory: Callable[..., RobotCodeActionDocumentationProtocolPart],
 ) -> None:
-    """The three legacy branches gate on `context.only` differently. The
-    model path must reproduce each branch's gating exactly."""
+    """No branch offers the actions when the request does not ask for source actions."""
     text, (line, char) = text_and_position
     namespace, ast_model = analyzer_namespace_factory(text, {"Log": _kw("Log", args=[_arg("message")])})
     document = _make_text_document(text)
@@ -524,14 +552,9 @@ def test_context_only_gating_matches(
 
     part = code_action_part_factory()
     rng = Range(start=Position(line=line, character=char), end=Position(line=line, character=char))
-    ctx = _ctx_with(context_only)
 
-    legacy = part._collect_legacy(document, rng, ctx, namespace)
-    model = part._collect_from_model(document, rng, ctx, namespace, namespace.semantic_model)
-
-    assert _normalize(legacy) == _normalize(model), (
-        f"{scenario}: legacy != model\n  legacy={_normalize(legacy)}\n  model ={_normalize(model)}"
-    )
+    assert part.target_at(document, rng) is not None, scenario
+    assert _collect_on_both_paths(part, document, rng, namespace, _ctx_with(context_only)) == (None, None), scenario
 
 
 # --------------------------------------------------------------------------
@@ -544,7 +567,7 @@ def test_variables_import_returns_none_in_both_paths(
     analyzer_namespace_factory: Callable[..., tuple[Any, _ast.AST]],
     code_action_part_factory: Callable[..., RobotCodeActionDocumentationProtocolPart],
 ) -> None:
-    """Legacy `_collect_legacy` only matches `LibraryImport` / `ResourceImport`
+    """Legacy `_target_at_legacy` only matches `LibraryImport` / `ResourceImport`
     — `VariablesImport` falls through. The model path must do the same."""
     text = "*** Settings ***\nVariables    vars.py\n*** Test Cases ***\nT\n    Log    hi\n"
     namespace, ast_model = analyzer_namespace_factory(text, {"Log": _kw("Log", args=[_arg("message")])})
@@ -554,8 +577,8 @@ def test_variables_import_returns_none_in_both_paths(
     part = code_action_part_factory()
     rng = Range(start=Position(line=1, character=14), end=Position(line=1, character=14))
 
-    legacy = part._collect_legacy(document, rng, _ctx(), namespace)
-    model = part._collect_from_model(document, rng, _ctx(), namespace, namespace.semantic_model)
+    legacy = part._target_at_legacy(document, rng, namespace)
+    model = part._target_at_from_model(document, rng, namespace, namespace.semantic_model)
 
     assert legacy is None
     assert model is None
@@ -576,8 +599,8 @@ def test_unresolved_keyword_call_returns_none_in_both_paths(
     part = code_action_part_factory()
     rng = Range(start=Position(line=2, character=4), end=Position(line=2, character=4))
 
-    legacy = part._collect_legacy(document, rng, _ctx(), namespace)
-    model = part._collect_from_model(document, rng, _ctx(), namespace, namespace.semantic_model)
+    legacy = part._target_at_legacy(document, rng, namespace)
+    model = part._target_at_from_model(document, rng, namespace, namespace.semantic_model)
 
     assert legacy is None
     assert model is None
@@ -603,10 +626,11 @@ def test_library_import_with_name_alias_cursor_on_lib_name(
     # Cursor on "Collections" (the library name itself, not the alias).
     rng = Range(start=Position(line=1, character=14), end=Position(line=1, character=14))
 
-    legacy = part._collect_legacy(document, rng, _ctx(), namespace)
-    model = part._collect_from_model(document, rng, _ctx(), namespace, namespace.semantic_model)
+    legacy = part._target_at_legacy(document, rng, namespace)
+    model = part._target_at_from_model(document, rng, namespace, namespace.semantic_model)
 
-    assert _normalize(legacy) == _normalize(model)
+    assert model is not None
+    assert _fields(legacy) == _fields(model)
 
 
 def test_keyword_definition_with_embedded_args_cursor_on_name(
@@ -626,10 +650,11 @@ def test_keyword_definition_with_embedded_args_cursor_on_name(
 
     for char in (0, 4, 12, 25):
         rng = Range(start=Position(line=1, character=char), end=Position(line=1, character=char))
-        legacy = part._collect_legacy(document, rng, _ctx(), namespace)
-        model = part._collect_from_model(document, rng, _ctx(), namespace, namespace.semantic_model)
-        assert _normalize(legacy) == _normalize(model), (
-            f"embedded-args keyword @ char={char}: legacy={_normalize(legacy)}, model={_normalize(model)}"
+        legacy = part._target_at_legacy(document, rng, namespace)
+        model = part._target_at_from_model(document, rng, namespace, namespace.semantic_model)
+        assert model is not None
+        assert _fields(legacy) == _fields(model), (
+            f"embedded-args keyword @ char={char}: legacy={_fields(legacy)}, model={_fields(model)}"
         )
 
 
@@ -650,10 +675,11 @@ def test_resource_import_cursor_on_name(
         end=Position(line=1, character=14),
     )
 
-    legacy = part._collect_legacy(document, rng, _ctx(), namespace)
-    model = part._collect_from_model(document, rng, _ctx(), namespace, namespace.semantic_model)
+    legacy = part._target_at_legacy(document, rng, namespace)
+    model = part._target_at_from_model(document, rng, namespace, namespace.semantic_model)
 
-    assert _normalize(legacy) == _normalize(model)
+    assert model is not None
+    assert _fields(legacy) == _fields(model)
 
 
 # --------------------------------------------------------------------------
@@ -672,8 +698,8 @@ def test_collect_dispatches_to_model_path_when_semantic_model_available(
     _attach_to_document(document, namespace, ast_model)
 
     part = code_action_part_factory()
-    spy_model = mocker.spy(part, "_collect_from_model")
-    spy_legacy = mocker.spy(part, "_collect_legacy")
+    spy_model = mocker.spy(part, "_target_at_from_model")
+    spy_legacy = mocker.spy(part, "_target_at_legacy")
 
     rng = Range(start=Position(line=2, character=4), end=Position(line=2, character=4))
     part.collect(part, document, rng, _ctx())
@@ -694,8 +720,8 @@ def test_collect_dispatches_to_legacy_path_when_no_semantic_model(
     _attach_to_document(document, namespace, ast_model)
 
     part = code_action_part_factory()
-    spy_model = mocker.spy(part, "_collect_from_model")
-    spy_legacy = mocker.spy(part, "_collect_legacy")
+    spy_model = mocker.spy(part, "_target_at_from_model")
+    spy_legacy = mocker.spy(part, "_target_at_legacy")
 
     rng = Range(start=Position(line=2, character=4), end=Position(line=2, character=4))
     part.collect(part, document, rng, _ctx())
@@ -743,18 +769,25 @@ def test_prefixed_call_targets_the_prefix_import_after_a_cache_restore(
     part = code_action_part_factory()
     rng = Range(start=Position(line=2, character=12), end=Position(line=2, character=12))
 
-    legacy = part._collect_legacy(document, rng, _ctx(), namespace)
-    model = part._collect_from_model(document, rng, _ctx(), namespace, namespace.semantic_model)
+    legacy = part._target_at_legacy(document, rng, namespace)
+    model = part._target_at_from_model(document, rng, namespace, namespace.semantic_model)
 
     assert model is not None
-    show = model[1]
+    assert (model.name, model.args, model.keyword) == ("arglib", ["a_param=from lib"], "Arg Keyword")
+    assert _fields(legacy) == _fields(model)
+
+    actions = part.collect(part, document, rng, _ctx())
+    assert actions is not None
+    show = next(
+        a
+        for a in actions
+        if isinstance(a, CodeAction)
+        and a.command is not None
+        and a.command.command == "robotcode.showInDocumentationViewer"
+    )
     assert isinstance(show, CodeAction)
     assert show.command is not None
-    assert show.command.arguments is not None
-    target = show.command.arguments[0]
-    assert isinstance(target, DocumentationTarget)
-    assert (target.name, target.args, target.keyword) == ("arglib", ["a_param=from lib"], "Arg Keyword")
-    assert _normalize(legacy) == _normalize(model)
+    assert show.command.arguments == [model]
 
 
 # --------------------------------------------------------------------------
@@ -835,7 +868,7 @@ def test_unprefixed_call_of_a_library_imported_once() -> None:
 
 
 # --------------------------------------------------------------------------
-# URL of "Open Documentation"
+# URL of "Open Documentation (deprecated)"
 # --------------------------------------------------------------------------
 
 
@@ -866,3 +899,75 @@ def test_url_basedir_of_a_nested_import_inside_the_workspace_folder(
     assert Path(query["basedir"][0]) == Path("sub")
     assert query["name"] == ["deeper/nested.resource"]
     assert url.endswith("#Nested Keyword")
+
+
+# --------------------------------------------------------------------------
+# Variables of an import are resolved only when it contains some
+# --------------------------------------------------------------------------
+
+_MODULE = "robotcode.language_server.robotframework.parts.code_action_documentation"
+
+
+def _import_document_and_namespace(mocker: MockerFixture, tmp_path: Path) -> Tuple[TextDocument, Any]:
+    document = TextDocument(
+        document_uri=str(Uri.from_path(tmp_path / "suite.robot")),
+        language_id="robotframework",
+        version=0,
+        text="",
+    )
+    namespace = mocker.MagicMock()
+    namespace.imports_manager.root_folder = tmp_path
+    namespace.imports_manager.get_resolvable_command_line_variables.return_value = {}
+    namespace.get_resolvable_variables.return_value = {}
+    return document, namespace
+
+
+@pytest.mark.parametrize(
+    ("name", "args", "is_library", "resolves"),
+    [
+        ("./arglib.py", ("a_param=from hello",), True, False),
+        ("./arglib.py", ("a_param=${LIB_ARG}",), True, True),
+        ("${CURDIR}/x.resource", (), False, True),
+        ("%{VAR}/x.resource", (), False, True),
+    ],
+)
+def test_variables_are_resolved_only_for_an_import_that_contains_some(
+    mocker: MockerFixture,
+    tmp_path: Path,
+    code_action_part_factory: Callable[..., RobotCodeActionDocumentationProtocolPart],
+    name: str,
+    args: Tuple[str, ...],
+    is_library: bool,
+    resolves: bool,
+) -> None:
+    document, namespace = _import_document_and_namespace(mocker, tmp_path)
+    resolve = mocker.patch(f"{_MODULE}.resolve_robot_variables", wraps=resolve_robot_variables)
+
+    code_action_part_factory().import_target(name, args, is_library, document, namespace)
+
+    assert resolve.called is resolves
+
+
+@pytest.mark.parametrize(
+    ("name", "expected"),
+    [
+        (r"C:\\libs\\my.py", r"C:\libs\my.py"),
+        (r"lib\ name.py", "lib name.py"),
+    ],
+)
+def test_import_without_variables_gives_the_same_target_without_resolving(
+    mocker: MockerFixture,
+    tmp_path: Path,
+    code_action_part_factory: Callable[..., RobotCodeActionDocumentationProtocolPart],
+    name: str,
+    expected: str,
+) -> None:
+    document, namespace = _import_document_and_namespace(mocker, tmp_path)
+    part = code_action_part_factory()
+
+    fast = part.import_target(name, (), True, document, namespace)
+    mocker.patch(f"{_MODULE}.contains_variable", return_value=True)
+    resolved = part.import_target(name, (), True, document, namespace)
+
+    assert fast.name == expected
+    assert _fields(fast) == _fields(resolved)

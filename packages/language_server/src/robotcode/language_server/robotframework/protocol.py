@@ -89,6 +89,7 @@ class RobotInitializationOptions(CamelSnakeMixin):
     global_storage_uri: Optional[str] = None
     python_path: List[str] = field(default_factory=list)
     env: Dict[str, str] = field(default_factory=dict)
+    documentation_viewer_links: bool = False
 
 
 @symbol_information_label("robotframework")

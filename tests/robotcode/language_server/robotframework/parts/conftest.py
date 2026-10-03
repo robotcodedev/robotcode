@@ -146,6 +146,8 @@ def open_temp_document(protocol: RobotLanguageServerProtocol) -> Iterator[Callab
     finally:
         for document in list(protocol.documents.documents):
             if any(directory in document.uri.to_path().parents for directory in directories):
+                # an analyzed document stays in the reference index, also after it is closed
+                protocol.documents_cache.get_project_index(document).remove_file(str(document.uri.to_path()))
                 protocol.documents.close_document(document, real_close=True)
 
 
