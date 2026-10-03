@@ -1883,7 +1883,12 @@ class NamespaceAnalyzer(Visitor):
             for v in entries.values():
                 if v.import_source == self._source and v.import_range == range_from_token(name_token):
                     for k in self._namespace_references:
-                        if type(k) is type(v) and k.library_doc.source_or_origin == v.library_doc.source_or_origin:
+                        # the same library imported again, also with other arguments; two classes of one module differ
+                        if (
+                            type(k) is type(v)
+                            and k.library_doc.source_or_origin == v.library_doc.source_or_origin
+                            and k.library_doc.name == v.library_doc.name
+                        ):
                             self._namespace_references[k].add(Location(self._document_uri, v.import_range))
                             break
                     else:

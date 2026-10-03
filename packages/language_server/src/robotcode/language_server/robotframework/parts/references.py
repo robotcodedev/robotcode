@@ -334,6 +334,7 @@ class RobotReferencesProtocolPart(RobotLanguageServerProtocolPart):
             if (
                 lib_entry.import_source == str(doc.uri.to_path())
                 and lib_entry.library_doc.source_or_origin == library_doc.source_or_origin
+                and lib_entry.library_doc.name == library_doc.name
             ):
                 result.append(Location(str(doc.uri), lib_entry.import_range))
 
