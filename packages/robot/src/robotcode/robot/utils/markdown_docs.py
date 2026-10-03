@@ -7,6 +7,7 @@ show Markdown as it is, so the same things are resolved here on the Markdown
 text. All functions are pure and leave fenced code blocks untouched.
 """
 
+import html
 import re
 import unicodedata
 from typing import Callable, Dict, Iterable, Iterator, List, Mapping, NamedTuple, Optional, Tuple
@@ -17,6 +18,7 @@ __all__ = [
     "LinkResolver",
     "ReferenceTarget",
     "anchor_link_resolver",
+    "code_span",
     "code_span_variables",
     "escape_link_text",
     "extract_reference_definitions",
@@ -26,6 +28,7 @@ __all__ = [
     "normalize_markdown_doc",
     "normalize_reference",
     "render_toc",
+    "replace_anchor_links",
     "replace_toc",
     "resolve_reference_links",
     "section_anchors",
@@ -226,7 +229,12 @@ def render_toc(text: str, extra_entries: Iterable[str] = ()) -> str:
     entries = [(level - 2, title) for level, title in iter_headings(text) if level in (2, 3)]
     entries.extend((0, entry) for entry in extra_entries)
 
-    return "\n".join(f"{'  ' * level}- [{title}](#{slugify(title)})" for level, title in entries)
+    return "\n".join(f"{'  ' * level}- [{_without_links(title)}](#{slugify(title)})" for level, title in entries)
+
+
+def _without_links(title: str) -> str:
+    """A heading with its links and images as their text: a link cannot be in the text of a link."""
+    return _RE_LINK_OR_IMAGE.sub(lambda m: m.group(1), title)
 
 
 def replace_toc(text: str, extra_entries: Iterable[str] = ()) -> str:
@@ -406,9 +414,15 @@ def _indentation(line: str) -> int:
     return len(expanded) - len(expanded.lstrip(" "))
 
 
-def _iter_text_lines(text: str) -> Iterator[Tuple[str, bool]]:
-    """Yield every line together with whether it is text, not part of a
-    fenced or indented code block or of an HTML block.
+_LINE_TEXT = "text"
+_LINE_BLANK = "blank"
+_LINE_CODE = "code"
+_LINE_HTML = "html"
+
+
+def _iter_line_kinds(text: str) -> Iterator[Tuple[str, str]]:
+    """Yield every line together with its kind: text, a blank line, a line of a
+    fenced or indented code block, or a line of an HTML block.
 
     Lines indented below a list item continue it; code in a list item is
     indented four columns more than its text.
@@ -422,18 +436,18 @@ def _iter_text_lines(text: str) -> Iterator[Tuple[str, bool]]:
         if in_code:
             in_indented_code = False
             block_ended = True
-            yield line, False
+            yield line, _LINE_CODE
             continue
         if html_end is not None:
             # an HTML block ends with its end marker or, without one, with a blank line
             if (html_end and html_end in line.lower()) or (not html_end and blank):
                 html_end = None
                 block_ended = True
-            yield line, False
+            yield line, _LINE_HTML
             continue
         if blank:
             block_ended = True
-            yield line, False
+            yield line, _LINE_BLANK
             continue
 
         indent = _indentation(line)
@@ -442,7 +456,7 @@ def _iter_text_lines(text: str) -> Iterator[Tuple[str, bool]]:
         if (in_indented_code or block_ended) and not list_item and indent >= code_indent:
             in_indented_code = True
             block_ended = False
-            yield line, False
+            yield line, _LINE_CODE
             continue
         in_indented_code = False
 
@@ -456,14 +470,21 @@ def _iter_text_lines(text: str) -> Iterator[Tuple[str, bool]]:
             if end is not None:
                 html_end = None if end and end in line.lower()[line.index("<") + 1 :] else end
                 block_ended = html_end is None
-                yield line, False
+                yield line, _LINE_HTML
                 continue
 
         block_ended = bool(_RE_BLOCK_END.match(line))
-        yield line, True
+        yield line, _LINE_TEXT
 
 
-def _code_span(text: str) -> str:
+def _iter_text_lines(text: str) -> Iterator[Tuple[str, bool]]:
+    """Yield every line together with whether it is text, not part of a
+    fenced or indented code block or of an HTML block."""
+    for line, kind in _iter_line_kinds(text):
+        yield line, kind == _LINE_TEXT
+
+
+def code_span(text: str) -> str:
     """`text` as inline code, with a fence longer than any run of backticks in it."""
     fence = "`" * (max((len(run) for run in _RE_BACKTICKS.findall(text)), default=0) + 1)
     padding = " " if text.startswith("`") or text.endswith("`") else ""
@@ -480,7 +501,7 @@ def _code_span_variables_in(text: str) -> str:
         # variables that follow each other directly share one code span: `${TEMPDIR}${/}`
         while (following := search_variable(text[end:], "$", ignore_errors=True)).start == 0:
             end += following.end
-        result.append(text[: match.start] + _code_span(text[match.start : end]))
+        result.append(text[: match.start] + code_span(text[match.start : end]))
         text = text[end:]
     result.append(text)
     return "".join(result)
@@ -527,3 +548,171 @@ def normalize_markdown_doc(
     if targets:
         text = resolve_reference_links(text, targets, link_resolver)
     return text
+
+
+# where a link goes to a place in the documentation itself, also in the forms `\#` and `\\#`
+# that the conversion of the Robot format and the replacement of variables in resource files leave
+_ANCHOR_DESTINATION = r"(?:<(?P<pointy>\\{0,2}#[^<>\n]*)>|(?P<bare>\\{0,2}#[^\s()<>]*))"
+_LINK_TITLE = r"""(?P<title>[ \t]+(?:"[^"\n]*"|'[^'\n]*'|\([^()\n]*\)))?"""
+_RE_ANCHOR_HINT = re.compile(r"\]\(<?\\{0,2}#|\]:[ \t]*<?\\{0,2}#|href\s*=", re.IGNORECASE)
+# the text of a link may contain code spans and brackets one level deep, as entries of a table of contents do,
+# and go on over the lines of its paragraph
+_LINK_TEXT = r"(?:[^\[\]\\`]|\\.|`[^`]*`|\[(?:[^\[\]\\]|\\.)*\])*"
+# an opening HTML tag as CommonMark recognizes one
+_HTML_OPEN_TAG = (
+    r"<[A-Za-z][A-Za-z0-9-]*"
+    r"""(?:\s+[A-Za-z_:][A-Za-z0-9_.:-]*(?:\s*=\s*(?:[^\s"'=<>`]+|'[^']*'|"[^"]*"))?)*"""
+    r"\s*/?>"
+)
+_RE_ANCHOR_INLINE = re.compile(
+    # a code span starts and ends with a whole run of backticks of the same length
+    r"(?P<code>(?<![\\`])(`+)(?!`).+?(?<!`)\2(?!`))"
+    r"|(?P<link>(?<![!\\])\[(?P<text>" + _LINK_TEXT + r")\]\(" + _ANCHOR_DESTINATION + _LINK_TITLE + r"[ \t]*\))"
+    # an escaped `\<` is text
+    r"|(?P<tag>(?<!\\)" + _HTML_OPEN_TAG + r")",
+    re.DOTALL,
+)
+_RE_ANCHOR_DEFINITION = re.compile(
+    r"^(?P<label> {0,3}\[[^\[\]\n]+\]:)[ \t]*" + _ANCHOR_DESTINATION + _LINK_TITLE + r"[ \t]*$"
+)
+_RE_OPENING_TAG = re.compile(_HTML_OPEN_TAG)
+_RE_TABLE_ROW = re.compile(r"^ {0,3}\|")
+_RE_ANCHOR_HREF = re.compile(
+    r"""(?P<space>\s)href\s*=\s*"""
+    r"""(?:"(?P<double>\\{0,2}#[^"]*)"|'(?P<single>\\{0,2}#[^']*)'|(?P<unquoted>\\{0,2}#[^\s"'=<>`]*))""",
+    re.IGNORECASE,
+)
+_RE_TITLE_ATTRIBUTE = re.compile(r"\stitle\s*=", re.IGNORECASE)
+_RE_MARKDOWN_ESCAPE = re.compile(r"\\([!-/:-@\[-`{-~])")
+_RE_QUOTE_PREFIX = re.compile(r"^ {0,3}>(?:[ \t]?>)*[ \t]?")
+
+
+def _anchor(destination: str) -> str:
+    """The anchor of a destination such as `#name`, without Markdown escapes and HTML entities."""
+    return html.unescape(_RE_MARKDOWN_ESCAPE.sub(r"\1", destination.lstrip("\\")[1:]))
+
+
+def replace_anchor_links(text: str, href: Callable[[str], Optional[str]], title: Optional[str] = None) -> str:
+    """Give the links of `text` to a place in the documentation itself (`#anchor`) a new destination.
+
+    `href` gets the anchor, without Markdown escapes and HTML entities, and
+    returns the new destination; `None` replaces the link by its text. Inline
+    links, reference definitions and the `href` of HTML tags are rewritten. A
+    link without a title gets `title`. Code, images, links whose destination
+    has spaces and reference definitions inside a paragraph stay as they are.
+    """
+    if "#" not in text or not _RE_ANCHOR_HINT.search(text):
+        return text
+
+    changed = False
+
+    def link_title(existing: Optional[str]) -> str:
+        if existing:
+            return existing
+        return f' "{title}"' if title is not None else ""
+
+    def destination_of(match: "re.Match[str]") -> str:
+        pointy = match.group("pointy")
+        return str(pointy if pointy is not None else match.group("bare"))
+
+    def replace_tag(tag: str) -> str:
+        nonlocal changed
+        match = _RE_ANCHOR_HREF.search(tag)
+        if match is None:
+            return tag
+        changed = True
+        destination = next(match.group(n) for n in ("double", "single", "unquoted") if match.group(n) is not None)
+        new_href = href(_anchor(destination))
+        attributes = ""
+        if new_href is not None:
+            attributes = f'{match.group("space")}href="{html.escape(new_href)}"'
+            if title is not None and not _RE_TITLE_ATTRIBUTE.search(tag):
+                attributes += f' title="{html.escape(title)}"'
+        return f"{tag[: match.start()]}{attributes}{tag[match.end() :]}"
+
+    def replace_inline(match: "re.Match[str]") -> str:
+        nonlocal changed
+        if match.group("tag") is not None:
+            return replace_tag(match.group("tag"))
+        if match.group("link") is None:
+            return match.group(0)
+        changed = True
+        new_href = href(_anchor(destination_of(match)))
+        if new_href is None:
+            return str(match.group("text"))
+        return f"[{match.group('text')}]({new_href}{link_title(match.group('title'))})"
+
+    result: List[str] = []
+    paragraph: List[str] = []
+    definitions_allowed = True
+    quote_fence: Optional[str] = None
+
+    def flush() -> None:
+        if paragraph:
+            # code spans can continue on the next line of a paragraph
+            result.append(_RE_ANCHOR_INLINE.sub(replace_inline, "".join(paragraph)))
+            paragraph.clear()
+
+    for raw_line, (line, kind) in zip(text.splitlines(keepends=True), _iter_line_kinds(text)):
+        if kind != _LINE_TEXT:
+            flush()
+            if kind == _LINE_HTML:
+                raw_line = _RE_OPENING_TAG.sub(lambda m: replace_tag(m.group(0)), raw_line)
+            result.append(raw_line)
+            definitions_allowed = True
+            quote_fence = None
+            continue
+
+        # fenced code inside a block quote
+        quote = _RE_QUOTE_PREFIX.match(line)
+        if quote is None:
+            if quote_fence is not None:
+                quote_fence = None
+                definitions_allowed = True
+        else:
+            fence = _RE_FENCE.match(line[quote.end() :])
+            if quote_fence is not None or fence is not None:
+                flush()
+                result.append(raw_line)
+                if quote_fence is None and fence is not None:
+                    quote_fence = fence.group(1)
+                elif fence is not None and quote_fence is not None:
+                    if fence.group(1)[0] == quote_fence[0] and len(fence.group(1)) >= len(quote_fence):
+                        quote_fence = None
+                        definitions_allowed = True
+                continue
+
+        if definitions_allowed:
+            definition = _RE_ANCHOR_DEFINITION.match(line)
+            if definition is not None:
+                flush()
+                changed = True
+                new_href = href(_anchor(destination_of(definition)))
+                # without a destination, a definition goes away and its references stay text
+                if new_href is not None:
+                    new_definition = f"{definition.group('label')} {new_href}{link_title(definition.group('title'))}"
+                    result.append(new_definition + raw_line[len(line) :])
+                continue
+            if _RE_FULL_DEFINITION.match(line):
+                flush()
+                result.append(raw_line)
+                continue
+
+        if _RE_TABLE_ROW.match(line):
+            # a code span ends in the row of its table
+            flush()
+            result.append(_RE_ANCHOR_INLINE.sub(replace_inline, raw_line))
+            definitions_allowed = False
+            continue
+
+        if _RE_BLOCK_END.match(line):
+            flush()
+            result.append(_RE_ANCHOR_INLINE.sub(replace_inline, raw_line))
+            definitions_allowed = True
+            continue
+
+        paragraph.append(raw_line)
+        definitions_allowed = False
+
+    flush()
+    return "".join(result) if changed else text

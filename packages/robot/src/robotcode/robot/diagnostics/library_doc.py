@@ -87,6 +87,7 @@ from ..utils.markdown_docs import (
     REFERENCE_TYPE,
     LinkResolver,
     ReferenceTarget,
+    code_span,
     code_span_variables,
     escape_link_text,
     extract_reference_definitions,
@@ -267,6 +268,103 @@ def _match_heading_anchors(headings: List[Tuple[str, str]], titles: List[Set[str
             anchors.append(headings[index][1])
             position = index + 1
     return anchors
+
+
+_TYPE_NAME = "name"
+_TYPE_UNION = "union"
+_TYPE_OTHER = "other"
+_RE_TYPE_TOKEN = re.compile(
+    r"""(?P<union>\s*\|\s*)|(?P<quoted>'(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*")|(?P<name>[^\s\[\],|'"]+)|(?P<other>.)""",
+    re.DOTALL,
+)
+
+
+def _type_tokens(type_string: str) -> List[Tuple[str, str]]:
+    """The parts of a type as names, union separators and other parts; the
+    content of `Literal[...]` is one part, its values are no names."""
+    tokens: List[Tuple[str, str]] = []
+    position = 0
+    while position < len(type_string):
+        match = cast("re.Match[str]", _RE_TYPE_TOKEN.match(type_string, position))
+        position = match.end()
+        name = match.group("name")
+        if match.group("union") is not None:
+            tokens.append((_TYPE_UNION, match.group(0)))
+        elif name is None:
+            tokens.append((_TYPE_OTHER, match.group(0)))
+        else:
+            tokens.append((_TYPE_NAME, name))
+            if name.rsplit(".", 1)[-1] == "Literal" and type_string.startswith("[", position):
+                end = _literal_end(type_string, position)
+                tokens.append((_TYPE_OTHER, type_string[position:end]))
+                position = end
+    return tokens
+
+
+def _literal_end(type_string: str, start: int) -> int:
+    """The end of the brackets of a `Literal` that start at `start`, after the closing bracket."""
+    depth = 0
+    quote: Optional[str] = None
+    position = start
+    while position < len(type_string):
+        character = type_string[position]
+        if quote is not None:
+            if character == "\\":
+                position += 1
+            elif character == quote:
+                quote = None
+        elif character in "'\"":
+            quote = character
+        elif character == "[":
+            depth += 1
+        elif character == "]":
+            depth -= 1
+            if depth == 0:
+                return position + 1
+        position += 1
+    return position
+
+
+def _type_markdown(
+    type_string: str,
+    type_docs: Optional[Mapping[str, str]],
+    link_resolver: Optional[LinkResolver],
+    in_table: bool,
+) -> str:
+    """A type as inline code, in which each name that Libdoc maps to a documented
+    type links to it, if `link_resolver` gives a link for that type.
+
+    Union members stay separated by `|`. Without such a link, the type is written as before.
+    """
+    plain = type_string.replace("|", "\\|") if in_table else type_string
+    if not type_docs or link_resolver is None:
+        return f"`{plain}`"
+
+    parts: List[str] = []
+    code = ""
+    linked = False
+
+    def add_code() -> None:
+        nonlocal code
+        if code:
+            parts.append(code_span(code.replace("|", "\\|") if in_table else code))
+            code = ""
+
+    for kind, token in _type_tokens(type_string):
+        if kind == _TYPE_UNION:
+            add_code()
+            parts.append(" \\| " if in_table else " | ")
+            continue
+        link = link_resolver(REFERENCE_TYPE, type_docs[token]) if kind == _TYPE_NAME and token in type_docs else None
+        if link is None:
+            code += token
+        else:
+            add_code()
+            parts.append(f"[{code_span(token)}]({link})")
+            linked = True
+    add_code()
+
+    return "".join(parts) if linked else f"`{plain}`"
 
 
 def _name_linker(
@@ -1064,7 +1162,7 @@ class KeywordDoc(SourceEntity):
         result = ""
 
         # a library that renders all of its keywords builds the targets once
-        targets = reference_targets if reference_targets is not None else self._get_reference_targets()
+        targets = reference_targets if reference_targets is not None else self.get_reference_targets()
 
         if add_signature:
             result += self._get_signature(header_level, add_type, link_resolver, targets)
@@ -1093,7 +1191,7 @@ class KeywordDoc(SourceEntity):
 
         Without a `link_resolver`, references become inline code, as in the hover.
         """
-        targets = reference_targets if reference_targets is not None else self._get_reference_targets()
+        targets = reference_targets if reference_targets is not None else self.get_reference_targets()
 
         if self.doc_format == ROBOT_DOC_FORMAT:
             return MarkDownFormatter(_name_linker(targets, link_resolver)).format(text)
@@ -1103,7 +1201,7 @@ class KeywordDoc(SourceEntity):
             return normalize_markdown_doc(text, targets, link_resolver)
         return text
 
-    def _get_reference_targets(self) -> Optional[Mapping[str, ReferenceTarget]]:
+    def get_reference_targets(self) -> Optional[Mapping[str, ReferenceTarget]]:
         """What reference links can point to, only documentation written in Markdown has them."""
         if self.parent is None or not self.doc_format == MARKDOWN_DOC_FORMAT:
             return None
@@ -1122,10 +1220,15 @@ class KeywordDoc(SourceEntity):
         return re.sub(r"\n{3,}", "\n\n", text.strip())
 
     def argument_to_markdown(
-        self, argument: ArgumentInfo, *, link_resolver: Optional[LinkResolver] = None
+        self,
+        argument: ArgumentInfo,
+        *,
+        link_resolver: Optional[LinkResolver] = None,
+        reference_targets: Optional[Mapping[str, ReferenceTarget]] = None,
     ) -> Optional[str]:
         """The description of an argument followed by the documentation of its types."""
-        targets = self._get_reference_targets()
+        # a caller that renders several arguments of a keyword builds the targets once
+        targets = reference_targets if reference_targets is not None else self.get_reference_targets()
         parts: List[str] = []
         if argument.doc:
             parts.append(self._format_doc_fragment(argument.doc, link_resolver, targets))
@@ -1204,14 +1307,18 @@ class KeywordDoc(SourceEntity):
 
         escaped_pipe = " \\| "
 
-        def escape_pipe(s: str) -> str:
-            return s.replace("|", "\\|")
-
-        def row(name: str, types: Sequence[str], default_value: Optional[Any], description: str) -> str:
+        def row(
+            name: str,
+            types: Sequence[str],
+            type_docs: Optional[Mapping[str, str]],
+            default_value: Optional[Any],
+            description: str,
+        ) -> str:
+            type_cell = escaped_pipe.join(_type_markdown(s, type_docs, link_resolver, True) for s in types)
             cells = (
                 f"\n| `{name}`"
                 f"| {': ' if types else ' '}"
-                f"{escaped_pipe.join(f'`{escape_pipe(s)}`' for s in types) if types else ''} "
+                f"{type_cell} "
                 f"| {'=' if default_value is not None else ''} "
                 f"| {f'`{default_value!s}`' if default_value else ''} |"
             )
@@ -1219,11 +1326,13 @@ class KeywordDoc(SourceEntity):
 
         for a in arguments:
             description = self._description_cell(a.doc, link_resolver, targets) if with_descriptions and a.doc else ""
-            result += row(f"{self._get_argument_prefix(a)}{a.name!s}", a.types or (), a.default_value, description)
+            result += row(
+                f"{self._get_argument_prefix(a)}{a.name!s}", a.types or (), a.type_docs, a.default_value, description
+            )
         if with_descriptions:
             # names the documentation describes without being arguments, like ones taken by `**kwargs`
             for name, doc in self.extra_argument_docs or []:
-                result += row(name, (), None, self._description_cell(doc, link_resolver, targets))
+                result += row(name, (), None, None, self._description_cell(doc, link_resolver, targets))
         return result
 
     def _get_signature(
@@ -1260,7 +1369,9 @@ class KeywordDoc(SourceEntity):
             if result:
                 result += "\n\n"
 
-            result += f"**Return Type**: `{self.return_type}`"
+            result += (
+                f"**Return Type**: {_type_markdown(self.return_type, self.return_type_docs, link_resolver, False)}"
+            )
             if self.return_doc:
                 result += f" — {self._format_description(self.return_doc, link_resolver, targets)}"
             result += "\n"
@@ -1725,16 +1836,19 @@ class LibraryDoc:
         if self.doc and self.doc_format == MARKDOWN_DOC_FORMAT:
             for reference, url in extract_reference_definitions(self.doc).items():
                 targets[reference] = ReferenceTarget(REFERENCE_LINK, reference, url)
-            for _, title in iter_headings(self.doc):
-                add(title, REFERENCE_SECTION, title)
-        elif self.doc and self.doc_format == ROBOT_DOC_FORMAT:
-            headers = RobotHeaderFormatter()
-            for line in self.doc.splitlines():
-                match = headers.match(line.strip())
-                if match:
-                    add(match.group(2), REFERENCE_SECTION, match.group(2))
+        for title in self.get_introduction_headings():
+            add(title, REFERENCE_SECTION, title)
 
         return targets
+
+    def get_introduction_headings(self) -> List[str]:
+        """The titles of the headings of the introduction that references can name."""
+        if self.doc and self.doc_format == MARKDOWN_DOC_FORMAT:
+            return [title for _, title in iter_headings(self.doc)]
+        if self.doc and self.doc_format == ROBOT_DOC_FORMAT:
+            headers = RobotHeaderFormatter()
+            return [match.group(2) for line in self.doc.splitlines() if (match := headers.match(line.strip()))]
+        return []
 
     @property
     def is_deprecated(self) -> bool:
@@ -1772,7 +1886,12 @@ class LibraryDoc:
             def write_lines(*args: str) -> None:
                 result.writelines(i + "\n" for i in args)
 
-            targets = self.get_reference_targets() if self.doc_format == MARKDOWN_DOC_FORMAT else None
+            # with a link resolver, the names of every format link, as on the full page
+            targets = (
+                self.get_reference_targets()
+                if link_resolver is not None or self.doc_format == MARKDOWN_DOC_FORMAT
+                else None
+            )
 
             if add_signature and any(v for v in self.inits.values() if v.arguments):
                 for i in self.inits.values():
@@ -1787,7 +1906,7 @@ class LibraryDoc:
                 write_lines(f"##{'#' * header_level} Introduction", "")
 
                 if self.doc_format == ROBOT_DOC_FORMAT:
-                    doc = MarkDownFormatter().format(self.doc)
+                    doc = MarkDownFormatter(_name_linker(targets, link_resolver)).format(self.doc)
 
                     if "%TOC%" in doc:
                         doc = self._add_toc(doc, only_doc)
@@ -1802,8 +1921,9 @@ class LibraryDoc:
                 else:
                     result.write(self.doc)
 
-            if self.doc_format == MARKDOWN_DOC_FORMAT:
-                # linking `names` in backticks to headings belongs to the Robot format
+            # linking `names` in backticks to headings belongs to the Robot format; with a link resolver,
+            # the names are linked already, and this would link the code of type links once more
+            if self.doc_format == MARKDOWN_DOC_FORMAT or link_resolver is not None:
                 return result.getvalue()
 
             return self._link_inline_links(result.getvalue())

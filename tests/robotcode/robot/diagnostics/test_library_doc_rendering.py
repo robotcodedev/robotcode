@@ -514,3 +514,47 @@ def test_toc_of_the_datetime_import_hover_uses_github_anchors() -> None:
     hover = get_library_doc("DateTime").to_markdown()
 
     assert "[`TODAY` and `NOW`](#today-and-now)" in hover
+
+
+@pytest.mark.parametrize("library", ["BuiltIn", "XML", "OperatingSystem"])
+def test_argument_to_markdown_with_the_reference_targets_of_its_keyword(library: str) -> None:
+    """Signature help and completion compute the targets once for all arguments of a keyword."""
+    for kw in get_library_doc(library).keywords.values():
+        targets = kw.get_reference_targets()
+        for argument in kw.arguments:
+            assert kw.argument_to_markdown(argument, reference_targets=targets) == kw.argument_to_markdown(argument)
+
+
+MODE_LIBRARY = '''\
+from enum import Enum
+
+
+class Mode(Enum):
+    """The modes."""
+
+    FAST = 1
+
+
+class ModeLib:
+    """A library with modes.
+
+    = Mode =
+
+    How the modes work.
+    """
+
+    def __init__(self, mode: Mode = Mode.FAST):
+        pass
+'''
+
+
+@pytest.mark.skipif(RF_VERSION < (6, 1), reason="type documentation is collected since RF 6.1")
+def test_library_hover_with_a_link_resolver_links_types_once(tmp_path: Path) -> None:
+    """A section of the introduction named like a type does not link the code of the type link again."""
+    (tmp_path / "ModeLib.py").write_text(MODE_LIBRARY, encoding="utf-8")
+    lib = get_library_doc(str(tmp_path / "ModeLib.py"))
+
+    hover = lib.to_markdown(link_resolver=lambda kind, name: f"{kind}:{name}")
+
+    assert "[`Mode`](type:Mode)" in hover
+    assert "[[" not in hover

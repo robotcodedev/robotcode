@@ -15,6 +15,7 @@ from robotcode.robot.utils.markdown_docs import (
     normalize_markdown_doc,
     normalize_reference,
     render_toc,
+    replace_anchor_links,
     replace_toc,
     resolve_reference_links,
     shift_headings,
@@ -333,3 +334,180 @@ def test_code_span_variables_in_list_paragraphs_and_inline_html() -> None:
     assert code_span_variables("- item\n\n    continued ${x}") == "- item\n\n    continued `${x}`"
     assert code_span_variables("<b>Note:</b> ${x}") == "<b>Note:</b> `${x}`"
     assert code_span_variables("```\n${x}\n```\nAfter ${y}") == "```\n${x}\n```\nAfter `${y}`"
+
+
+def _viewer(anchor: str) -> Optional[str]:
+    return f"command:show?{anchor}"
+
+
+def _no_link(anchor: str) -> Optional[str]:
+    return None
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("See [usage](#usage).", 'See [usage](command:show?usage "Viewer").'),
+        ("See [usage](<#usage>).", 'See [usage](command:show?usage "Viewer").'),
+        ('See [usage](#usage "How to").', 'See [usage](command:show?usage "How to").'),
+        ("See [usage](#usage 'How to').", "See [usage](command:show?usage 'How to')."),
+        ("- [Two words](#two-words)", '- [Two words](command:show?two-words "Viewer")'),
+        ("[top](#)", '[top](command:show? "Viewer")'),
+        # the forms that the Robot format and the replacement of variables leave
+        (
+            "[usage](\\#usage) and [tail](\\\\#tail)",
+            '[usage](command:show?usage "Viewer") and [tail](command:show?tail "Viewer")',
+        ),
+        # escapes and entities are no part of the anchor
+        ("[a](#a\\_b) [c](#c&amp;d)", '[a](command:show?a_b "Viewer") [c](command:show?c&d "Viewer")'),
+        ("[`code` text](#code-text)", '[`code` text](command:show?code-text "Viewer")'),
+        (
+            "[link](https://example.com/#frag) [top](#)",
+            '[link](https://example.com/#frag) [top](command:show? "Viewer")',
+        ),
+        # the text of a link goes on over the lines of its paragraph, also in a block quote
+        ("See [the usage\nsection](#usage).", 'See [the usage\nsection](command:show?usage "Viewer").'),
+        ("> See [the usage\n> section](#usage).", '> See [the usage\n> section](command:show?usage "Viewer").'),
+    ],
+)
+def test_replace_anchor_links_inline(text: str, expected: str) -> None:
+    assert replace_anchor_links(text, _viewer, "Viewer") == expected
+
+
+def test_replace_anchor_links_reference_definitions() -> None:
+    text = 'See [usage] and [more].\n\n[usage]: #usage\n[more]: <#more> "More"\n[web]: https://example.com\n'
+
+    assert replace_anchor_links(text, _viewer, "Viewer") == (
+        'See [usage] and [more].\n\n[usage]: command:show?usage "Viewer"\n[more]: command:show?more "More"\n'
+        "[web]: https://example.com\n"
+    )
+    # without a destination, the definition goes away
+    assert replace_anchor_links(text, _no_link) == "See [usage] and [more].\n\n[web]: https://example.com\n"
+
+
+def test_replace_anchor_links_definition_inside_a_paragraph_is_text() -> None:
+    text = "A paragraph\n[usage]: #usage\n\n# Heading\n[after]: #heading\n"
+
+    assert replace_anchor_links(text, _viewer) == (
+        "A paragraph\n[usage]: #usage\n\n# Heading\n[after]: command:show?heading\n"
+    )
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ('<a href="#usage">usage</a>', '<a href="command:show?usage" title="Viewer">usage</a>'),
+        ("<a href='#usage'>usage</a>", '<a href="command:show?usage" title="Viewer">usage</a>'),
+        ("<a href=#usage>usage</a>", '<a href="command:show?usage" title="Viewer">usage</a>'),
+        ('<a title="How to" href="#usage">usage</a>', '<a title="How to" href="command:show?usage">usage</a>'),
+        (
+            '<p>See <a href="#usage">usage</a>.</p>\n',
+            '<p>See <a href="command:show?usage" title="Viewer">usage</a>.</p>\n',
+        ),
+        ('<a href="https://example.com/#usage">usage</a>', '<a href="https://example.com/#usage">usage</a>'),
+    ],
+)
+def test_replace_anchor_links_html(text: str, expected: str) -> None:
+    assert replace_anchor_links(text, _viewer, "Viewer") == expected
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Code `[usage](#usage)` and ``[x](#x)``.",
+        "Code `that wraps\n[usage](#usage)` over two lines.",
+        "```\n[usage](#usage)\n```",
+        "> ```\n> [usage](#usage)\n> ```",
+        "Text.\n\n    [usage](#usage)",
+        # a blank line ends the paragraph, so this is no link
+        "See [the usage\n\nsection](#usage).",
+        "An image ![logo](#logo).",
+        "Robot's [Multi Word](#Multi Word) link.",
+        "Escaped \\[usage](#usage) bracket.",
+    ],
+)
+def test_replace_anchor_links_leaves_code_images_and_other_text_alone(text: str) -> None:
+    assert replace_anchor_links(text, _viewer, "Viewer") == text
+
+
+def test_replace_anchor_links_after_code_in_a_block_quote() -> None:
+    text = "> ```\n> [code](#code)\n> ```\n> See [usage](#usage).\n"
+
+    assert replace_anchor_links(text, _viewer) == "> ```\n> [code](#code)\n> ```\n> See [usage](command:show?usage).\n"
+
+
+def test_replace_anchor_links_without_destination_leaves_the_text() -> None:
+    text = 'See [usage](#usage), <a href="#more">more</a> and [web](https://example.com).'
+
+    assert replace_anchor_links(text, _no_link) == "See usage, <a>more</a> and [web](https://example.com)."
+    assert replace_anchor_links("See [the\nusage](#usage) and <a href=#more>more</a>.", _no_link) == (
+        "See the\nusage and <a>more</a>."
+    )
+
+
+def test_replace_anchor_links_returns_text_without_anchor_links_unchanged() -> None:
+    text = 'A <a href="https://example.com">link</a>\r\nand text.\r\n'
+
+    assert replace_anchor_links(text, _viewer) is text
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        # Robot Framework's format escapes `<`, so this is text
+        (
+            'Clicks the element \\<a href="#top">Back to top\\</a> of the page.',
+            'Clicks the element \\<a href="#top">Back to top\\</a> of the page.',
+        ),
+        # no tag starts at an escaped `\<` or a `<` that CommonMark does not take as a tag
+        (
+            "Passes if a\\<b holds, see [usage](#usage) for details -> otherwise fails.",
+            "Passes if a\\<b holds, see [usage](command:show?usage) for details -> otherwise fails.",
+        ),
+        (
+            "Passes if a<b holds, see [usage](#usage) for details -> otherwise fails.",
+            "Passes if a<b holds, see [usage](command:show?usage) for details -> otherwise fails.",
+        ),
+    ],
+)
+def test_replace_anchor_links_only_in_html_tags(text: str, expected: str) -> None:
+    assert replace_anchor_links(text, _viewer) == expected
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("- [Usage [beta]](#usage-beta)", "- [Usage [beta]](command:show?usage-beta)"),
+        ("[Using `dict[str, Any]` arguments](#using)", "[Using `dict[str, Any]` arguments](command:show?using)"),
+        # an escaped bracket ends no link text
+        ("[a\\](#x)", "[a\\](#x)"),
+    ],
+)
+def test_replace_anchor_links_link_text_with_brackets_and_code(text: str, expected: str) -> None:
+    assert replace_anchor_links(text, _viewer) == expected
+
+
+def test_replace_anchor_links_code_spans_end_in_their_table_row() -> None:
+    text = "| `quote`| : `str` | = | ``` |\n| `other`| : `str` | | see [usage](#usage) |\n"
+
+    assert replace_anchor_links(text, _viewer) == (
+        "| `quote`| : `str` | = | ``` |\n| `other`| : `str` | | see [usage](command:show?usage) |\n"
+    )
+
+
+def test_replace_anchor_links_after_a_long_run_of_backticks() -> None:
+    text = "x " + "`" * 200 + " y" * 5000 + " see [usage](#usage)."
+
+    assert replace_anchor_links(text, _viewer).endswith(" see [usage](command:show?usage).")
+
+
+def test_replace_anchor_links_after_many_open_brackets_over_lines() -> None:
+    text = "[a\n" * 20000 + "see [usage](#usage)."
+
+    assert replace_anchor_links(text, _viewer).endswith("see [usage](command:show?usage).")
+
+
+def test_render_toc_writes_links_of_a_heading_as_their_text() -> None:
+    assert render_toc("## Using [Do Thing](#do-thing)\n### Plain") == (
+        "- [Using Do Thing](#using-do-thing)\n  - [Plain](#plain)"
+    )

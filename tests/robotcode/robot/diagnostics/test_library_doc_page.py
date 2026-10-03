@@ -28,6 +28,7 @@ from robotcode.robot.utils.markdown_docs import (
 )
 
 needs_types = pytest.mark.skipif(RF_VERSION < (6, 1), reason="type documentation is collected since RF 6.1")
+needs_return_types = pytest.mark.skipif(RF_VERSION < (7, 0), reason="return types are documented since RF 7.0")
 needs_private = pytest.mark.skipif(RF_VERSION < (6, 0), reason="robot:private exists since RF 6.0")
 needs_rf75 = pytest.mark.skipif(RF_VERSION < (7, 5), reason="standard libraries use Markdown since RF 7.5")
 needs_robot_format = pytest.mark.skipif(
@@ -363,15 +364,20 @@ class TestLinksWithinThePage:
     @needs_robot_format
     @pytest.mark.parametrize("library", ["BuiltIn", "XML"])
     def test_arguments_are_not_linked(self, library: str) -> None:
-        page = _page(get_library_doc(library))
+        doc = get_library_doc(library)
+        page = _page(doc)
+        type_anchors = set(doc.get_page_anchors(page)[1].values())
 
         in_arguments = False
-        linked = []
+        linked: List[Tuple[str, str]] = []
         for line in page.splitlines():
             if line.startswith("#"):
                 in_arguments = line.startswith("#### Arguments")
-            elif in_arguments and "](#" in line:
-                linked.append(line)
+            elif in_arguments:
+                # only the types link, to their data types
+                linked.extend(
+                    link for link in _links(line) if not (link[0].startswith("`") and link[1][1:] in type_anchors)
+                )
         assert linked == []
 
     @needs_robot_format
@@ -395,10 +401,14 @@ class TestTypeLinks:
 
         assert _anchors(page)["Color (Enum)"] == "color-enum"
         assert "Paints `color` in [Color](#color-enum)." in page
-        # the argument name, the argument and return types and the code stay inline code
-        assert page.count("](#color-enum)") == 1
-        assert "`shade`" in page
-        assert "`color`" in page
+        # the types link to their data types, the argument names and the code stay inline code
+        assert "| `shade`| : [`Color`](#color-enum) |" in page
+        assert "| `color`| : [`str`](#string-standard) |" in page
+        if RF_VERSION >= (7, 0):
+            assert "**Return Type**: [`Color`](#color-enum)" in page
+        assert page.count("](#color-enum)") == (3 if RF_VERSION >= (7, 0) else 2)
+        assert "[`shade`]" not in page
+        assert "[`color`]" not in page
 
         paint = next(kw for kw in doc.keywords.keywords if kw.name == "Paint")
         assert "`Color`" in paint.to_markdown()
@@ -414,6 +424,8 @@ class TestTypeLinks:
         assert anchors["Color (Enum)"] == "color-enum-1"
         assert "[Color](#color-enum-1)" in page
         assert "[Color](#color-enum)" not in page
+        assert "| `shade`| : [`Color`](#color-enum-1) |" in page
+        assert "[`Color`](#color-enum)" not in page
 
     @pytest.mark.skipif(RF_VERSION[:2] != (7, 4), reason="XML has the type Source and the Robot format on RF 7.4")
     def test_xml_source_type_is_not_linked_from_arguments_or_code(self) -> None:
@@ -421,7 +433,24 @@ class TestTypeLinks:
         page = _page(doc)
 
         assert doc.get_page_anchors(page)[1]["Source"] == "source-custom"
-        assert "](#source-custom)" not in page
+        # only the argument types link to it, not the argument `source` or ``source`` in the documentation
+        assert page.count("](#source-custom)") == page.count("[`Source`](#source-custom)") > 0
+
+    @pytest.mark.skipif(RF_VERSION < (7, 4), reason="XML documents the types Source and Element since RF 7.4")
+    def test_types_of_xml(self) -> None:
+        page = _page(get_library_doc("XML"))
+        parse_xml = page.split("\n### Parse Xml\n", 1)[1].split("\n---\n", 1)[0]
+
+        assert "| `source`| : [`Source`](#source-custom) |" in parse_xml
+        assert "| `keep_clark_notation`| : [`bool`](#boolean-standard) |" in parse_xml
+        assert "**Return Type**: [`Element`](#element-custom)" in parse_xml
+
+    @needs_rf75
+    def test_type_without_documentation_stays_code(self) -> None:
+        page = _page(get_library_doc("BuiltIn"))
+        should_contain = page.split("\n### Should Contain\n", 1)[1].split("\n---\n", 1)[0]
+
+        assert "| `container`| : `Collection` |" in should_contain
 
     @needs_rf75
     def test_secret_references_of_operating_system(self) -> None:
@@ -429,7 +458,51 @@ class TestTypeLinks:
 
         assert "[Secret](#secret-standard)" in page
         # in the argument table the types are separated by an escaped `|`
-        assert "`str` \\| `Secret`" in page
+        assert "[`str`](#string-standard) \\| [`Secret`](#secret-standard)" in page
+
+
+NESTED_TYPES_LIBRARY = '''\
+from typing import Literal, Optional
+
+
+def nested(values: list[int], limit: Optional[int] = None, mode: Literal["a", "b|c"] = "a") -> dict[str, list[int]]:
+    """Takes nested types."""
+'''
+
+
+@needs_return_types
+def test_nested_types_unions_and_literals(tmp_path: Path) -> None:
+    lib_file = tmp_path / "PageNestedTypesLib.py"
+    lib_file.write_text(NESTED_TYPES_LIBRARY, encoding="utf-8")
+    doc = get_library_doc(str(lib_file))
+    assert doc.errors is None
+    page = _page(doc)
+    types = doc.get_page_anchors(page)[1]
+
+    def link(name: str, type_name: str) -> str:
+        return f"[`{name}`](#{types[type_name]})"
+
+    assert f"| `values`| : {link('list', 'list')}`[`{link('int', 'integer')}`]` |" in page
+    assert f"| `limit`| : {link('int', 'integer')} \\| {link('None', 'None')} |" in page
+    # the values of a literal are no names, the `|` in one stays inside the code
+    assert f"| `mode`| : {link('Literal', 'Literal')}`['a', 'b\\|c']` |" in page
+    assert (
+        f"**Return Type**: {link('dict', 'dictionary')}`[`{link('str', 'string')}`, `"
+        f"{link('list', 'list')}`[`{link('int', 'integer')}`]]`"
+    ) in page
+
+    table = [line for line in page.splitlines() if line.startswith(("| `", "| | ", "|:--"))]
+    assert len(table) == 5
+    assert {len(re.findall(r"(?<!\\)\|", line)) for line in table} == {5}
+
+
+@pytest.mark.skipif(RF_VERSION >= (6, 1), reason="type documentation is collected since RF 6.1")
+def test_types_without_type_documentation_are_not_linked(tmp_path: Path) -> None:
+    _, page = _typed_page(tmp_path, "PageNoTypeDocsLib", markdown=False)
+
+    assert "| `shade`| : `Color` |" in page
+    assert "| `color`| : `str` |" in page
+    assert "[`" not in page
 
 
 EDGE_LIBRARY = '''\
