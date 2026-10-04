@@ -25,6 +25,6 @@ Robot Framework code in Markdown stays without colors in VS Code's Markdown prev
 
 - `package.json`: the contribution `markdown.markdownItPlugins` and the dependency `shiki`.
 - `vscode-client/extension/`: a new module with the plugin, and `activate` returns `extendMarkdownIt`.
-- The extension bundle grows by about 120 KB for Shiki's core and JavaScript engine, plus 126 KB for the grammar (measured with esbuild, minified).
+- The minified extension bundle grows by 167 KB (596,743 to 763,511 bytes) for Shiki's core and JavaScript engine. The grammar is read from `syntaxes/`, which the extension already ships.
 - `docs/03_reference/browsing-documentation.md`: one sentence on the highlighting.
 - The Markdown editor, hovers, the documentation site and IntelliJ do not change.

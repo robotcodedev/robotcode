@@ -14,7 +14,7 @@ See proposal.md for the problem. Verified facts:
 - **RobotCode's activation.**
   - `activate` returns `displayProgress(activateAsync(context))` and no exports ([index.ts:247](../../../vscode-client/extension/index.ts)).
   - `activateAsync` awaits nothing at its top level; its awaits are in callbacks.
-  - `refresh()` starts language clients only for workspace folders with Robot Framework files or with open Robot Framework documents ([languageclientsmanger.ts:788](../../../vscode-client/extension/languageclientsmanger.ts)).
+  - `refresh()` starts language clients for workspace folders with open Robot Framework documents ([languageclientsmanger.ts:788](../../../vscode-client/extension/languageclientsmanger.ts)). It also searches each folder for Robot Framework files, but its glob ends with one `}` too many (`**/*.{…}}}`), so the search finds none (runtime check).
   - `package.json` declares `ms-python.python` and `ms-python.debugpy` as `extensionDependencies`; VS Code activates them before RobotCode.
 - **Editor and documentation site.**
   - The Markdown editor highlights fences named `robot` or `robotframework` with the injection grammar `syntaxes/codeblock_robotframework.tmLanguage.json`; this change does not touch it.
@@ -53,7 +53,7 @@ Alternatives considered:
 
 ### D2: Shiki with its JavaScript engine, created on first use
 
-The plugin creates a Shiki highlighter with `createHighlighterCoreSync`, the JavaScript regex engine and the grammar from `syntaxes/robotframework.tmLanguage.json`, bundled into the extension. It creates it the first time a Robot Framework block is highlighted, so activation does not pay for it, and keeps it for the session. Only `shiki/core` and `shiki/engine/javascript` are imported, so none of Shiki's bundled grammars and themes go into the bundle.
+The plugin creates a Shiki highlighter with `createHighlighterCoreSync`, the JavaScript regex engine and the grammar `syntaxes/robotframework.tmLanguage.json`, which it reads from the extension folder. The extension ships the file for the editor anyway, so it is not bundled a second time. It creates it the first time a Robot Framework block is highlighted, so activation does not pay for it, and keeps it for the session. Only `shiki/core` and `shiki/engine/javascript` are imported, so none of Shiki's bundled grammars and themes go into the bundle.
 
 Alternatives considered:
 - `vscode-textmate` with `vscode-oniguruma`, the libraries of VS Code's editor. They load WebAssembly and the grammar asynchronously, while markdown-it's `highlight` is synchronous, so blocks would stay plain until loading finished. They give no HTML either.
@@ -94,10 +94,10 @@ Screenshots go to the maintainer. The class of each construct in D3 is read from
 
 ## Risks / Trade-offs
 
-- [The first Markdown preview in a workspace without Robot Framework files activates RobotCode, and through `extensionDependencies` the Python extension and the Python debugger, and shows "loading ..." in the status bar] → no language server starts (D4). In workspaces with Robot Framework files RobotCode is active anyway. The cost is noted in the docs only if the runtime check shows a noticeable delay.
+- [The first Markdown preview in a workspace without Robot Framework files activates RobotCode, and through `extensionDependencies` the Python extension and the Python debugger, and shows "loading ..." in the status bar] → no language server starts (D4). In workspaces with Robot Framework files RobotCode is active anyway. Measured with the Python extension 2026.6.0, the first preview of a window takes about 0.9 s instead of 0.3 s; later previews take no longer. The docs do not mention it.
 - [The grammar without semantic tokens shows its limits, such as `%{HOME}    level` as one variable] → the documentation site shows the same today. They are fixed in a change of their own (Non-Goals).
 - [A grammar change that the JavaScript engine cannot translate would throw in strict mode] → the plugin catches the error, logs it once and leaves Robot Framework blocks plain. The engine comparison of Context can be repeated whenever the grammar changes.
-- [The bundle grows by about 250 KB] → small next to the bundled Python libraries of the extension.
+- [The minified bundle grows by 167 KB] → small next to the bundled Python libraries of the extension.
 
 ## Migration Plan
 
