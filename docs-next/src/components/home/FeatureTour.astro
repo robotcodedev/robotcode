@@ -1,14 +1,12 @@
 ---
 // The home page's feature overview: the features on one side, a window on the other that shows the selected one — a
 // screen recording, a screenshot or a terminal session — played one after another by <rc-demo> (see
-// demo-player.ts). The terminal sessions come from real runs of a small example project, abridged. The screen
-// recordings are MP4 versions of the GIFs in docs/images/, with the timing browsers give the GIFs; the editor
-// screenshots show that example project too.
+// demo-player.ts). The terminal sessions come from real runs of a small example project, abridged; the screen
+// recordings and the editor screenshots show that example project too.
 import { Icon } from "@astrojs/starlight/components";
 import { Image } from "astro:assets";
 import type { ComponentProps } from "astro/types";
 import PauseButton from "./PauseButton.astro";
-import autocomplete from "../../assets/screenshots/autocomplete1.mp4";
 import neovimCompletion from "../../assets/screenshots/neovim-completion.png";
 import neovimDiagnostics from "../../assets/screenshots/neovim-diagnostics.png";
 import neovimInlayHints from "../../assets/screenshots/neovim-inlayhints.png";
@@ -18,27 +16,35 @@ import pycharmDiagnostics from "../../assets/screenshots/pycharm-diagnostics.png
 import pycharmHover from "../../assets/screenshots/pycharm-hover.png";
 import pycharmInlayHints from "../../assets/screenshots/pycharm-inlayhints.png";
 import pycharmReferences from "../../assets/screenshots/pycharm-references.png";
-import runningTests from "../../assets/screenshots/running-tests.mp4";
+import vscodeCodeIntelligence from "../../assets/screenshots/vscode-code-intelligence.mp4";
 import vscodeCompletion from "../../assets/screenshots/vscode-completion.png";
+import vscodeDebug from "../../assets/screenshots/vscode-debug.mp4";
 import vscodeDiagnostics from "../../assets/screenshots/vscode-diagnostics.png";
 import vscodeHover from "../../assets/screenshots/vscode-hover.png";
 import vscodeInlayHints from "../../assets/screenshots/vscode-inlayhints.png";
 import vscodeReferences from "../../assets/screenshots/vscode-references.png";
+import vscodeRunTests from "../../assets/screenshots/vscode-run-tests.mp4";
 
 type TerminalStep =
   | { kind: "command"; prompt?: string; command: string; output?: string[] }
   | { kind: "file"; name: string; content: string[] };
+// A slide of a series: a screenshot, or a 2072×1182 screen recording with its length in seconds.
+type Slide = { editor: string; label: string; alt: string } & (
+  | { image: ImageMetadata }
+  | { video: string; duration: number }
+);
 type Panel =
   | {
       kind: "series";
-      // Screenshots shown one after another, each for `seconds`; the window title names the editor of each.
-      slides: { editor: string; label: string; image: ImageMetadata; alt: string }[];
-      seconds: number;
+      // Slides shown one after another, a screenshot for `seconds`, a recording until it has played once; the
+      // window title names the editor and the label of each.
+      slides: Slide[];
+      seconds?: number;
     }
   | {
       kind: "video";
       title: string;
-      // A 1920×1080 screen recording, played from the start whenever its panel is shown.
+      // A 2072×1182 screen recording, played from the start whenever its panel is shown.
       src: string;
       label: string;
       // The length of the recording, in seconds: the panel stays until it has played once.
@@ -67,9 +73,9 @@ const FEATURES: Feature[] = [
     panel: {
       kind: "video",
       title: "VS Code",
-      src: autocomplete,
-      label: "Code completions for keywords, arguments and variables in VS Code",
-      duration: 38.8,
+      src: vscodeCodeIntelligence,
+      label: "Writing a test in VS Code with completion, signature help, a hover and a quick fix",
+      duration: 40.1,
     },
   },
   {
@@ -83,11 +89,23 @@ const FEATURES: Feature[] = [
       ["Command-line debugging", "/guides/robot-debug/"],
     ],
     panel: {
-      kind: "video",
-      title: "VS Code",
-      src: runningTests,
-      label: "Running tests from the test explorer in VS Code",
-      duration: 12.2,
+      kind: "series",
+      slides: [
+        {
+          editor: "VS Code",
+          label: "Test Explorer",
+          video: vscodeRunTests,
+          duration: 11.1,
+          alt: "Running all tests from the test explorer in VS Code, with the failure shown in the editor",
+        },
+        {
+          editor: "VS Code",
+          label: "Debugging",
+          video: vscodeDebug,
+          duration: 36.1,
+          alt: "Debugging a test in VS Code: a breakpoint, Step Into and Step Over, and the variables as they change",
+        },
+      ],
     },
   },
   {
@@ -297,9 +315,12 @@ const duration = (panel: Panel) =>
   panel.kind === "terminal"
     ? panel.steps.length * STEP_DELAY + HOLD
     : panel.kind === "series"
-      ? panel.slides.length * panel.seconds
+      ? panel.slides.reduce((sum, slide) => sum + slideSeconds(panel, slide), 0)
       : panel.duration;
-type Slide = Extract<Panel, { kind: "series" }>["slides"][number];
+type Series = Extract<Panel, { kind: "series" }>;
+const slideSeconds = (panel: Series, slide: Slide) => ("video" in slide ? slide.duration : (panel.seconds ?? 0));
+// A series that shows each feature in several editors sets its dots apart by feature.
+const grouped = (panel: Series) => new Set(panel.slides.map(({ label }) => label)).size < panel.slides.length;
 // A slide's window title names the editor and what it shows; the slide's dot carries the same name.
 const slideTitle = (slide: Slide) => `${slide.editor} · ${slide.label}`;
 const title = (panel: Panel) => (panel.kind === "series" ? slideTitle(panel.slides[0]) : panel.title);
@@ -358,12 +379,11 @@ const toml = (line: string) =>
             class:list={["rc-tour-panel", `rc-tour-${panel.kind}`, { "is-active": index === 0 }]}
             data-demo-panel
             data-title={title(panel)}
-            data-slide-seconds={panel.kind === "series" ? panel.seconds : undefined}
             aria-label={name}
           >
             {panel.kind === "video" ? (
               <button type="button" class="rc-tour-shot" aria-label={`Enlarge: ${panel.label}`}>
-                <video src={panel.src} width="1920" height="1080" muted loop playsinline preload="metadata" />
+                <video src={panel.src} width="2072" height="1182" muted loop playsinline preload="metadata" />
               </button>
             ) : panel.kind === "series" ? (
               <>
@@ -374,14 +394,19 @@ const toml = (line: string) =>
                       class:list={["rc-tour-shot", { "is-current": slideIndex === 0 }]}
                       data-demo-slide
                       data-title={slideTitle(slide)}
+                      data-slide-seconds={slideSeconds(panel, slide)}
                       aria-label={`Enlarge: ${slide.alt}`}
                     >
-                      <Image
-                        src={slide.image}
-                        alt={slide.alt}
-                        widths={[1036, slide.image.width]}
-                        sizes="(min-width: 60rem) 38rem, 100vw"
-                      />
+                      {"video" in slide ? (
+                        <video src={slide.video} width="2072" height="1182" muted loop playsinline preload="metadata" />
+                      ) : (
+                        <Image
+                          src={slide.image}
+                          alt={slide.alt}
+                          widths={[1036, slide.image.width]}
+                          sizes="(min-width: 60rem) 38rem, 100vw"
+                        />
+                      )}
                     </button>
                   ))}
                 </div>
@@ -389,7 +414,10 @@ const toml = (line: string) =>
                   {panel.slides.map((slide, slideIndex) => (
                     <button
                       type="button"
-                      class:list={{ "is-group-start": slideIndex > 0 && slide.label !== panel.slides[slideIndex - 1].label }}
+                      class:list={{
+                        "is-group-start":
+                          grouped(panel) && slideIndex > 0 && slide.label !== panel.slides[slideIndex - 1].label,
+                      }}
                       data-demo-slide-tab
                       aria-pressed={slideIndex === 0 ? "true" : "false"}
                       aria-label={slideTitle(slide)}
@@ -569,7 +597,7 @@ const toml = (line: string) =>
     flex-direction: column;
   }
 
-  /* A picture is shown whole at the width of the window; the recordings, at 16:9, set the window's height. */
+  /* Screenshots and recordings, all 2072×1182, are shown whole at the width of the window. */
   .rc-tour-shot {
     flex: 1;
     display: grid;

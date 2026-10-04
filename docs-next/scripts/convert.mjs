@@ -250,8 +250,9 @@ function releasePost(rel) {
 const PUBLIC_FILES = ["robotcode-logo.svg", "robotcode-logo-mini.png", "robotcode-logo.jpg", "schemas/robot.toml.json"];
 const HANDWRITTEN_ASSETS = {
   "robotcode-logo.svg": "public/robotcode-logo.svg",
-  "screenshots/autocomplete1.mp4": "images/autocomplete1.mp4",
-  "screenshots/running-tests.mp4": "images/running_tests.mp4",
+  "screenshots/vscode-code-intelligence.mp4": "images/vscode-code-intelligence.mp4",
+  "screenshots/vscode-run-tests.mp4": "images/vscode-run-tests.mp4",
+  "screenshots/vscode-debug.mp4": "images/vscode-debug.mp4",
   "screenshots/neovim-diagnostics.png": "images/neovim-diagnostics.png",
   "screenshots/neovim-completion.png": "images/neovim-completion.png",
   "screenshots/neovim-inlayhints.png": "images/neovim-inlayhints.png",

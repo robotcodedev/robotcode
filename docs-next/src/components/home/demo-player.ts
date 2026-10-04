@@ -9,8 +9,9 @@
 // (hovering, keyboard focus, the pause button, scrolling the demo out of view, the class "is-holding") holds the
 // demo. A video in a panel plays from the start whenever its panel is shown, and pauses while the panel is not shown,
 // the demo is paused or out of view. A panel with slides ([data-demo-slide], one [data-demo-slide-tab] each) shows
-// them one after another, every data-slide-seconds seconds, from the first whenever it is shown, while the demo is
-// not held; the window title shows the data-title of the slide. Without motion, panels and slides are only switched
+// them one after another, each for its data-slide-seconds, from the first whenever it is shown, while the demo is
+// not held; the last slide stays until the panel changes. A video in a slide plays only while its slide is shown, from
+// the start. The window title shows the data-title of the slide. Without motion, panels and slides are only switched
 // by hand, the panels show all their steps at once and play no video.
 class RcDemo extends HTMLElement {
   #index = 0;
@@ -18,6 +19,9 @@ class RcDemo extends HTMLElement {
   #tabs: HTMLButtonElement[] = [];
   #slide = 0;
   #slideTimer: number | undefined;
+  // Whether a panel has been shown: the demo starts with the first one when it first comes into view, unless a panel
+  // was chosen before.
+  #started = false;
 
   connectedCallback() {
     this.#panels = [...this.querySelectorAll<HTMLElement>("[data-demo-panel]")];
@@ -51,12 +55,10 @@ class RcDemo extends HTMLElement {
         this.#show((this.#index + 1) % this.#tabs.length);
       });
     }
-    let started = false;
     new IntersectionObserver(
       ([entry]) => {
         this.classList.toggle("is-hidden", !entry.isIntersecting);
-        if (entry.isIntersecting && !started) {
-          started = true;
+        if (entry.isIntersecting && !this.#started) {
           this.#show(0);
         } else {
           this.#syncVideos();
@@ -67,6 +69,7 @@ class RcDemo extends HTMLElement {
   }
 
   #show(index: number) {
+    this.#started = true;
     this.#index = index;
     this.classList.remove("is-playing");
     this.#panels.forEach((panel, i) => panel.classList.toggle("is-active", i === index));
@@ -95,20 +98,24 @@ class RcDemo extends HTMLElement {
       .querySelectorAll("[data-demo-slide-tab]")
       .forEach((tab, i) => tab.setAttribute("aria-pressed", String(i === index)));
     this.#setTitle(slides[index].dataset.title);
+    this.#syncVideos(true);
   }
 
   #startSlides() {
-    clearInterval(this.#slideTimer);
-    const panel = this.#panels[this.#index];
-    const count = panel.querySelectorAll("[data-demo-slide]").length;
-    if (count === 0 || !this.classList.contains("is-armed")) return;
-    this.#slideTimer = window.setInterval(
-      () => {
+    clearTimeout(this.#slideTimer);
+    const slides = this.#panels[this.#index].querySelectorAll<HTMLElement>("[data-demo-slide]");
+    if (slides.length === 0 || !this.classList.contains("is-armed")) return;
+    // While the demo is held, the slide's time is up only once the hold ends.
+    const next = (seconds: number) => {
+      this.#slideTimer = window.setTimeout(() => {
         const held = ["is-paused", "is-hidden", "is-holding"].some((name) => this.classList.contains(name));
-        if (!held && !this.matches(":hover")) this.#showSlide((this.#slide + 1) % count);
-      },
-      Number(panel.dataset.slideSeconds) * 1000,
-    );
+        if (held || this.matches(":hover")) return next(0.5);
+        if (this.#slide + 1 === slides.length) return;
+        this.#showSlide(this.#slide + 1);
+        next(Number(slides[this.#slide].dataset.slideSeconds));
+      }, seconds * 1000);
+    };
+    next(Number(slides[this.#slide].dataset.slideSeconds));
   }
 
   #syncVideos(restart = false) {
@@ -118,7 +125,8 @@ class RcDemo extends HTMLElement {
       this.classList.contains("is-hidden");
     this.#panels.forEach((panel, i) => {
       for (const video of panel.querySelectorAll("video")) {
-        if (i !== this.#index || hold) {
+        const slide = video.closest("[data-demo-slide]");
+        if (i !== this.#index || hold || (slide && !slide.classList.contains("is-current"))) {
           video.pause();
           continue;
         }
