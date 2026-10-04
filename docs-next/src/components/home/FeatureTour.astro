@@ -544,7 +544,8 @@ const toml = (line: string) =>
     box-shadow: 0 1.25rem 3.5rem rgb(0 0 0 / 60%);
   }
 
-  /* A series of screenshots: all in one grid cell, the current one shown. */
+  /* A series of screenshots: all in one grid cell. Only the others are hidden; the current one inherits the visibility
+     of its panel, so it stays hidden while another panel is shown. */
   .rc-tour-slides {
     display: grid;
     flex: 1;
@@ -553,11 +554,10 @@ const toml = (line: string) =>
 
   .rc-tour-slides > .rc-tour-shot {
     grid-area: 1 / 1;
-    visibility: hidden;
   }
 
-  .rc-tour-slides > .is-current {
-    visibility: visible;
+  .rc-tour-slides > .rc-tour-shot:not(.is-current) {
+    visibility: hidden;
   }
 
   .rc-tour-slide-tabs {
