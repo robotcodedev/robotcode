@@ -1,14 +1,66 @@
 ---
-// The home page's AI agent section: what the RobotCode skill makes an agent do, a demo, and a link to the setup guide.
+// The home page's AI agent section: what an agent can do with the RobotCode skill, a demo, and a link to the setup
+// guide. The abilities follow the modes of the skill (chat-plugins/robotcode/skills/robotcode/SKILL.md).
 import { Icon, LinkButton } from "@astrojs/starlight/components";
+import type { ComponentProps } from "astro/types";
 import AgentDemo from "./AgentDemo.astro";
 
-const HABITS = [
-  ["Discovers", "tests, tasks and tags with <code>discover</code> instead of grepping files"],
-  ["Looks up", "keywords in your installed libraries and resources with <code>libdoc</code>"],
-  ["Debugs", "a failing test at a real breakpoint with <code>robot-debug</code>"],
-  ["Reads", "finished runs with <code>results</code> instead of loading <code>output.xml</code> into the chat"],
-  ["Respects", "your <code>robot.toml</code> and profiles, just like the editor and the CLI"],
+const ABILITIES: { icon: ComponentProps<typeof Icon>["name"]; title: string; html: string }[] = [
+  {
+    icon: "pencil",
+    title: "Writes tests from your requirements",
+    html:
+      "Learns the libraries you use, tries keywords and locators live in the REPL, then writes the test and runs " +
+      "it.",
+  },
+  {
+    icon: "error",
+    title: "Finds out why a test failed",
+    html:
+      "From the results of the last run, a CI artifact or a colleague's run, without running everything again or " +
+      "loading <code>output.xml</code> into the chat.",
+  },
+  {
+    icon: "puzzle",
+    title: "Debugs at a real breakpoint",
+    html: "Pauses the real run where it fails, reads the call stack and the variables, and tries keywords right there.",
+  },
+  {
+    icon: "list-format",
+    title: "Knows your project",
+    html:
+      "Which tests, tasks, tags and suites exist, and which tests cover a requirement, resolved the way Robot " +
+      "Framework does instead of by grepping files.",
+  },
+  {
+    icon: "open-book",
+    title: "Explains libraries and keywords",
+    html: "From the versions installed in your environment, including your own resources and Python libraries.",
+  },
+  {
+    icon: "rocket",
+    title: "Runs exactly what you ask for",
+    html: "A single test, a tag or a suite, with the profile for staging, CI or another browser.",
+  },
+  {
+    icon: "approve-check-circle",
+    title: "Keeps the code clean",
+    html:
+      "Finds unknown keywords, wrong arguments, unresolved variables and unused code before anything runs, and " +
+      "fixes them.",
+  },
+  {
+    icon: "analytics",
+    title: "Compares runs",
+    html: "What fails for the first time, what passes again, and statistics by tag or suite.",
+  },
+  {
+    icon: "setting",
+    title: "Sets up your configuration",
+    html:
+      "Profiles, variables and paths in <code>robot.toml</code>, written from each setting's documentation and " +
+      "checked against the effective configuration.",
+  },
 ];
 const AGENTS = ["GitHub Copilot", "Claude Code", "Codex", "Open Plugins agents"];
 ---
@@ -19,20 +71,9 @@ const AGENTS = ["GitHub Copilot", "Claude Code", "Codex", "Open Plugins agents"]
       <h2 id="ai-agents">Turn your AI agent into a Robot Framework engineer</h2>
       <p class="rc-lead">
         The RobotCode skill teaches your agent to work through your project's own <code>robotcode</code> CLI — so it
-        sees your tests, keywords and results the way Robot Framework resolves them, instead of guessing from files.
+        sees your tests, keywords and results the way Robot Framework resolves them, with the profiles of your
+        project's <code>robot.toml</code>, instead of guessing from files. For tests and RPA tasks alike.
       </p>
-      <ul class="rc-habits">
-        {
-          HABITS.map(([verb, rest]) => (
-            <li>
-              <Icon name="approve-check-circle" class="rc-habit-icon" />
-              <span>
-                <strong>{verb}</strong> <Fragment set:html={rest} />
-              </span>
-            </li>
-          ))
-        }
-      </ul>
       <div class="rc-agents">
         <span>Works with</span>
         <ul>
@@ -45,6 +86,17 @@ const AGENTS = ["GitHub Copilot", "Claude Code", "Codex", "Open Plugins agents"]
     </div>
     <AgentDemo />
   </div>
+  <ul class="rc-abilities">
+    {
+      ABILITIES.map(({ icon, title, html }) => (
+        <li>
+          <Icon name={icon} size="1.25rem" class="rc-ability-icon" />
+          <strong>{title}</strong>
+          <span set:html={html} />
+        </li>
+      ))
+    }
+  </ul>
 </section>
 
 <style>
@@ -72,28 +124,47 @@ const AGENTS = ["GitHub Copilot", "Claude Code", "Codex", "Open Plugins agents"]
     font-size: 0.9em;
   }
 
-  .rc-habits {
+  .rc-abilities {
     display: grid;
-    gap: 0.6rem;
-    margin: 1.5rem 0;
+    grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
+    gap: 1.75rem 2rem;
+    margin: 3.5rem 0 0;
     padding: 0;
     list-style: none;
   }
 
-  .rc-habits li {
-    display: flex;
-    gap: 0.6rem;
-    align-items: flex-start;
+  .rc-abilities li {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0.3rem 0.85rem;
+    align-content: start;
   }
 
-  .rc-habits :global(.rc-habit-icon) {
-    flex: none;
-    margin-top: 0.2rem;
+  .rc-abilities :global(.rc-ability-icon) {
+    grid-row: span 2;
+    padding: 0.45rem;
+    border-radius: 0.5rem;
+    background: var(--sl-color-accent-low);
     color: var(--sl-color-accent-high);
+    box-sizing: content-box;
   }
 
-  .rc-habits strong {
+  .rc-abilities strong {
     color: var(--sl-color-white);
+  }
+
+  .rc-abilities span {
+    color: var(--sl-color-gray-2);
+    font-size: var(--sl-text-sm);
+  }
+
+  .rc-abilities :global(code) {
+    font-family: var(--__sl-font-mono);
+    font-size: 0.9em;
+  }
+
+  .rc-agents {
+    margin-top: 1.75rem !important;
   }
 
   .rc-agents,

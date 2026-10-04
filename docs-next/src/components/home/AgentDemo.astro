@@ -1,21 +1,257 @@
 ---
-// An AI agent answering questions about a Robot Framework project through robotcode, one scenario after another,
-// step by step (played by <rc-demo>, see demo-player.ts). The commands and their output come from real runs of a
-// small example project, abridged.
+// An AI agent working on a Robot Framework project through robotcode, one scenario after another, step by step
+// (played by <rc-demo>, see demo-player.ts); a long scenario scrolls along as it plays. The commands, files and their
+// output come from real runs of a small example project, abridged.
 import PauseButton from "./PauseButton.astro";
 
+// A tool step ran a command, or read, wrote or edited a file (`label`, default "Ran"); `target` is the command or the
+// file, and the output of an edit is its diff.
 type Step =
   | { kind: "user" | "agent"; html: string }
-  | { kind: "tool"; command: string; output: string[] };
+  | { kind: "tool"; label?: "Ran" | "Read" | "Wrote" | "Edited"; target: string; output: string[] };
 
 const SCENARIOS: { label: string; steps: Step[] }[] = [
   {
-    label: "Failures",
+    label: "From a requirement",
+    steps: [
+      {
+        kind: "user",
+        html:
+          "I want to test our web shop with the Browser library, but I've never used it. How do I open a page, " +
+          "type into a field and check a text?",
+      },
+      {
+        kind: "tool",
+        target: 'robotcode doc keywords Browser "new page" "fill text" "keyboard key" "get text"',
+        output: [
+          "- Fill Text (selector: str, txt: str, force: bool = ${False})",
+          "  — Clears and fills the given txt into the text field found by selector.",
+          "- Get Text (selector: str, assertion_operator: …, assertion_expected: …, …)",
+          "  — Returns text attribute of the element found by selector.",
+          "- Keyboard Key (action: KeyAction, key: str, …)",
+          "  — Press a keyboard key on the virtual keyboard or set a key up or down.",
+          "- New Page (url: str | None = ${None}, wait_until: PageLoadStates = load)",
+          "  — Open a new Page.",
+        ],
+      },
+      {
+        kind: "agent",
+        html:
+          "Open the shop with <code>New Page</code>, type with <code>Fill Text</code> and press Enter with " +
+          "<code>Keyboard Key</code>. <code>Get Text</code> reads a text and, given an operator, checks it too: " +
+          "<code>Get Text    selector    ==    expected</code>.",
+      },
+      { kind: "user", html: "Great. Then write a test for <code>requirements/SHOP-110.md</code>." },
+      {
+        kind: "tool",
+        label: "Read",
+        target: "requirements/SHOP-110.md",
+        output: [
+          "# SHOP-110: Search products",
+          '1. The start page has a search field labelled "Search products".',
+          "2. When I type a text and press Enter, the shop lists every product whose name",
+          "   contains the text, with its price.",
+          "3. The search ignores upper and lower case.",
+          '4. When no product matches, the shop shows "No products found".',
+        ],
+      },
+      {
+        kind: "tool",
+        target: "robotcode repl",
+        output: [
+          ">>> Import Library    Browser",
+          ">>> New Page    ${BASE_URL}",
+          "[ INFO ] Successfully initialized new page object and opened url: http://localhost:8080",
+          '>>> Fill Text    css=input[aria-label="Search products"]    COFF',
+          "[ INFO ] Fills the text 'COFF' in the given field.",
+          ">>> Keyboard Key    press    Enter",
+          ">>> Get Text    css=.product .name",
+          "[ INFO ] Text: ['coffee']",
+        ],
+      },
+      {
+        kind: "tool",
+        label: "Wrote",
+        target: "tests/web_search.robot",
+        output: [
+          "*** Test Cases ***",
+          "Search Lists Every Matching Product",
+          "    [Metadata]    Requirement    SHOP-110",
+          "    Search Products For    e",
+          "    Get Element Count    css=.product    ==    3",
+          "Search Ignores Case",
+          "    …",
+          "Search Without A Match Shows A Message",
+          "    …",
+          "*** Keywords ***",
+          "Search Products For",
+          '    Fill Text    css=input[aria-label="Search products"]    ${text}',
+          "    Keyboard Key    press    Enter",
+        ],
+      },
+      {
+        kind: "tool",
+        target: 'robotcode robot -bl "Tests.Web Search"',
+        output: [
+          "Search Lists Every Matching Product       | PASS |",
+          "Search Ignores Case                       | PASS |",
+          "Search Without A Match Shows A Message    | PASS |",
+          "3 tests, 3 passed, 0 failed",
+        ],
+      },
+      {
+        kind: "agent",
+        html:
+          "Done: <code>tests/web_search.robot</code> tests criteria 2 to 4 of SHOP-110, each test marked with the " +
+          "requirement, and finds the search field by the label of criterion 1. All three tests pass.",
+      },
+      { kind: "user", html: "Add one of them to the smoke tests." },
+      {
+        kind: "tool",
+        label: "Edited",
+        target: "tests/web_search.robot",
+        output: [
+          " Search Ignores Case",
+          "     [Documentation]    Upper and lower case do not matter.",
+          "     [Metadata]    Requirement    SHOP-110",
+          "+    [Tags]    smoke",
+        ],
+      },
+      {
+        kind: "tool",
+        target: "robotcode discover tests -i smoke",
+        output: [
+          "- Tests.Cart.Add Item To Cart (tests/cart.robot:15)",
+          "- Tests.Login.Login Works (tests/login.robot:11)",
+          "- Tests.Login.Logout Works (tests/login.robot:18)",
+          "- Tests.Orders.Order Coffee (tests/orders.robot:14)",
+          "- Tests.Web Search.Search Ignores Case (tests/web_search.robot:19)",
+        ],
+      },
+      {
+        kind: "agent",
+        html: "<code>Search Ignores Case</code> is tagged <code>smoke</code> now; the smoke test has five tests.",
+      },
+    ],
+  },
+  {
+    label: "Smoke tests",
+    steps: [
+      { kind: "user", html: "Which tests are in our smoke test?" },
+      {
+        kind: "tool",
+        target: "robotcode discover tests -i smoke",
+        output: [
+          "- Tests.Cart.Add Item To Cart (tests/cart.robot:15)",
+          "- Tests.Login.Login Works (tests/login.robot:11)",
+          "- Tests.Login.Logout Works (tests/login.robot:18)",
+          "- Tests.Orders.Order Coffee (tests/orders.robot:14)",
+          "Suites: 4, Suites with tests: 3, Tests: 4",
+        ],
+      },
+      {
+        kind: "agent",
+        html:
+          "Four tests are tagged <code>smoke</code>: <code>Add Item To Cart</code>, <code>Login Works</code>, " +
+          "<code>Logout Works</code> and <code>Order Coffee</code>. The search has none yet.",
+      },
+      { kind: "user", html: "Run them against staging." },
+      {
+        kind: "tool",
+        target: "robotcode profiles list",
+        output: [
+          "| Name | Description           |",
+          "|:-----|:----------------------|",
+          "| ci   | Staging shop          |",
+          "| dev  | Local shop in Firefox |",
+        ],
+      },
+      {
+        kind: "tool",
+        target: "robotcode -p ci robot -i smoke",
+        output: [
+          "Add Item To Cart                     | PASS |",
+          "Login Works                          | FAIL |",
+          "Welcome back, alice! != Welcome back, Alice!",
+          "Logout Works                         | PASS |",
+          "Order Coffee                         | PASS |",
+          "Tests :: Web shop acceptance tests   | FAIL |",
+          "4 tests, 3 passed, 1 failed",
+        ],
+      },
+      {
+        kind: "agent",
+        html:
+          "The <code>ci</code> profile points to the staging shop. There, 3 tests passed and " +
+          "<code>Login Works</code> failed: <code>Welcome back, alice! != Welcome back, Alice!</code>. Shall I " +
+          "look into it?",
+      },
+    ],
+  },
+  {
+    label: "Coverage",
+    steps: [
+      { kind: "user", html: "Which tests cover the cart requirements SHOP-201 to SHOP-203?" },
+      {
+        kind: "tool",
+        target: 'robotcode discover tests -btm "Requirement:SHOP-20?" --show-metadata',
+        output: [
+          "- Tests.Cart.Add Item To Cart (tests/cart.robot:15)",
+          "  - Metadata: Requirement: SHOP-201",
+          "- Tests.Cart.Remove Item From Cart (tests/cart.robot:22)",
+          "  - Metadata: Requirement: SHOP-202",
+          "- Tests.Cart.Cart Total Adds Up (tests/cart.robot:29)",
+          "  - Metadata: Requirement: SHOP-203, Risk: high",
+        ],
+      },
+      {
+        kind: "agent",
+        html:
+          "Each requirement has one test, all in <code>tests/cart.robot</code>: <code>Add Item To Cart</code> " +
+          "(SHOP-201), <code>Remove Item From Cart</code> (SHOP-202) and <code>Cart Total Adds Up</code> " +
+          "(SHOP-203), which is marked as high risk.",
+      },
+      { kind: "user", html: "Which tests are marked as high risk?" },
+      {
+        kind: "tool",
+        target: 'robotcode discover tests -btm "Risk:high" --show-metadata',
+        output: [
+          "- Tests.Cart.Cart Total Adds Up (tests/cart.robot:29)",
+          "  - Metadata: Requirement: SHOP-203, Risk: high",
+          "- Tests.Login.Login With A Wrong Password Fails (tests/login.robot:26)",
+          "  - Metadata: Requirement: SHOP-103, Risk: high",
+          "- Tests.Orders.Sold Out Product Cannot Be Ordered (tests/orders.robot:27)",
+          "  - Metadata: Requirement: SHOP-303, Risk: high",
+        ],
+      },
+      {
+        kind: "agent",
+        html:
+          "Three, one each in cart, login and orders: <code>Cart Total Adds Up</code>, " +
+          "<code>Login With A Wrong Password Fails</code> and <code>Sold Out Product Cannot Be Ordered</code>.",
+      },
+      { kind: "user", html: "Does every requirement in <code>requirements/</code> have a test?" },
+      { kind: "tool", target: "ls requirements", output: ["SHOP-110.md"] },
+      {
+        kind: "tool",
+        target: 'robotcode discover tests -btm "Requirement:SHOP-110"',
+        output: ["(no tests matched)"],
+      },
+      {
+        kind: "agent",
+        html:
+          "No. <code>requirements/</code> holds one requirement, SHOP-110 (Search products), and no test is marked " +
+          "with it yet. Shall I write one?",
+      },
+    ],
+  },
+  {
+    label: "A failing test",
     steps: [
       { kind: "user", html: "Why did <code>Login Works</code> fail in last night's run?" },
       {
         kind: "tool",
-        command: "robotcode results summary --failed",
+        target: "robotcode results summary --failed",
         output: [
           "❌ FAIL Tests.Login.Login Works (tests/login.robot:11)",
           "  > Welcome back, alice! != Welcome back, Alice!",
@@ -23,7 +259,7 @@ const SCENARIOS: { label: string; steps: Step[] }[] = [
       },
       {
         kind: "tool",
-        command: 'robotcode results log -bl "Tests.Login.Login Works"',
+        target: 'robotcode results log -bl "Tests.Login.Login Works"',
         output: [
           "- shop.Open Shop As  alice  ✅ PASS",
           "- shop.Welcome Message Should Be  Welcome back, Alice!  ❌ FAIL",
@@ -38,15 +274,10 @@ const SCENARIOS: { label: string; steps: Step[] }[] = [
           "The login works — the greeting doesn't match: the shop greets with the login name <code>alice</code>, " +
           "while the test expects <code>Alice</code>.",
       },
-    ],
-  },
-  {
-    label: "Debugging",
-    steps: [
-      { kind: "user", html: "Step through <code>Login Works</code> — what is <code>${greeting}</code> when it fails?" },
+      { kind: "user", html: "Show me in the debugger what the shop returns there." },
       {
         kind: "tool",
-        command: 'robotcode robot-debug -bl "Tests.Login.Login Works"',
+        target: 'robotcode robot-debug -bl "Tests.Login.Login Works"',
         output: [
           "* exception  BuiltIn.Should Be Equal  (resources/shop.resource:19)",
           "(rdb) .where",
@@ -63,6 +294,85 @@ const SCENARIOS: { label: string; steps: Step[] }[] = [
           "It stops in <code>Should Be Equal</code>, called by <code>Welcome Message Should Be</code> at " +
           "login.robot:16. There, <code>${greeting}</code> is <code>Welcome back, alice!</code>.",
       },
+      { kind: "user", html: "The test is right, Alice is the display name. Fix the shop." },
+      {
+        kind: "tool",
+        label: "Edited",
+        target: "libraries/ShopLibrary.py",
+        output: [
+          '-        return f"Welcome back, {self._user}!"',
+          '+        return f"Welcome back, {self._user.capitalize()}!"',
+        ],
+      },
+      {
+        kind: "tool",
+        target: 'robotcode robot -bl "Tests.Login.Login Works"',
+        output: ["Login Works                          | PASS |", "1 test, 1 passed, 0 failed"],
+      },
+      {
+        kind: "agent",
+        html: "Fixed: <code>Greeting</code> now capitalizes the user name, and <code>Login Works</code> passes.",
+      },
+    ],
+  },
+  {
+    label: "Browsers",
+    steps: [
+      { kind: "user", html: "Can the Browser library run our web tests in Firefox?" },
+      {
+        kind: "tool",
+        target: 'robotcode doc keyword Browser "New Browser"',
+        output: [
+          "### Keyword New Browser",
+          "| browser  | : SupportedBrowsers | = | chromium | Opens the specified browser. …",
+          "| headless | : bool              | = | ${True}  | Set to False if you want a GUI. …",
+          "…",
+          "### SupportedBrowsers (Enum)",
+          "| chromium | Google Chrome, Microsoft Edge (since 2020), Opera |",
+          "| firefox  | Mozilla Firefox |",
+          "| webkit   | Apple Safari, Mail, AppStore on MacOS and iOS |",
+          "Since Playwright comes with a pack of builtin binaries for all browsers, no additional",
+          "drivers e.g. geckodriver are needed.",
+        ],
+      },
+      {
+        kind: "agent",
+        html:
+          "Yes: <code>New Browser    firefox</code>, or <code>webkit</code>. No driver needed, only the browser " +
+          "itself, once: <code>rfbrowser init firefox</code>. Your <code>dev</code> profile already sets " +
+          "<code>BROWSER</code> to <code>firefox</code>.",
+      },
+      { kind: "user", html: "Then run the web tests in Firefox." },
+      {
+        kind: "tool",
+        label: "Edited",
+        target: "tests/web_search.robot",
+        output: [
+          "-Suite Setup      New Page    ${BASE_URL}",
+          "+Suite Setup      Open The Shop",
+          "…",
+          "+Open The Shop",
+          "+    [Documentation]    Opens the shop in the browser of the selected profile.",
+          "+    New Browser    ${BROWSER}",
+          "+    New Page    ${BASE_URL}",
+        ],
+      },
+      {
+        kind: "tool",
+        target: 'robotcode -p dev robot -bl "Tests.Web Search"',
+        output: [
+          "Search Lists Every Matching Product       | PASS |",
+          "Search Ignores Case                       | PASS |",
+          "Search Without A Match Shows A Message    | PASS |",
+          "3 tests, 3 passed, 0 failed",
+        ],
+      },
+      {
+        kind: "agent",
+        html:
+          "The suite now opens <code>New Browser    ${BROWSER}</code>; with <code>-p dev</code> that is Firefox, and " +
+          "all three tests pass. Without a profile they keep running in Chromium.",
+      },
     ],
   },
   {
@@ -71,15 +381,11 @@ const SCENARIOS: { label: string; steps: Step[] }[] = [
       { kind: "user", html: "What arguments does our <code>Create Order</code> keyword take?" },
       {
         kind: "tool",
-        command: 'robotcode libdoc resources/orders.resource show "Create Order"',
+        target: 'robotcode doc keywords resources/orders.resource "create order"',
         output: [
-          "### Create Order",
-          "#### Arguments",
-          "* `product`",
-          "* `quantity` (default: `1`)",
-          "* `express` (default: `${False}`)",
-          "#### Documentation",
-          "Creates an order for ``quantity`` items of ``product`` and returns its id.",
+          "# Resource orders",
+          "- Create Order (product, quantity = 1, express = ${False})",
+          "  — Creates an order for quantity items of product and returns its id.",
         ],
       },
       {
@@ -87,6 +393,57 @@ const SCENARIOS: { label: string; steps: Step[] }[] = [
         html:
           "<code>product</code> is required; <code>quantity</code> defaults to <code>1</code> and " +
           "<code>express</code> to <code>${False}</code>. It returns the order id.",
+      },
+      { kind: "user", html: "And what does it do to place the order?" },
+      {
+        kind: "tool",
+        label: "Read",
+        target: "resources/orders.resource",
+        output: [
+          "Create Order",
+          "    [Arguments]    ${product}    ${quantity}=1    ${express}=${False}",
+          "    Log    Ordered ${quantity} x ${product} (express: ${express})",
+          "    ${id}=    Place Order    ${product}    ${quantity}    ${express}",
+          "    RETURN    ${id}",
+        ],
+      },
+      {
+        kind: "tool",
+        target: 'robotcode doc keywords ShopLibrary "place order"',
+        output: [
+          "# Library ShopLibrary",
+          "- Place Order (product: str, quantity: int = ${1}, express: bool = ${False})",
+          "  — Places an order and returns its id. Fails if product is out of stock.",
+        ],
+      },
+      {
+        kind: "agent",
+        html:
+          "It logs the order and calls <code>Place Order</code> from <code>ShopLibrary</code>, a Python library: " +
+          "<code>quantity</code> is converted to an <code>int</code>, <code>express</code> to a <code>bool</code>, " +
+          "and it fails if the product is out of stock.",
+      },
+      { kind: "user", html: "Try it out — what happens with a product that is sold out?" },
+      {
+        kind: "tool",
+        target: "robotcode repl",
+        output: [
+          ">>> Import Resource    ${CURDIR}/resources/orders.resource",
+          ">>> ${order}=    Create Order    coffee    quantity=2",
+          "[ INFO ] Ordered 2 x coffee (express: False)",
+          "[ INFO ] ${id} = order-4711",
+          "[ INFO ] ${order} = order-4711",
+          ">>> Create Order    mug",
+          "[ INFO ] Ordered 1 x mug (express: False)",
+          "[ FAIL ] mug is out of stock",
+        ],
+      },
+      {
+        kind: "agent",
+        html:
+          "Coffee is ordered as <code>order-4711</code>. The mug is sold out, so <code>Create Order</code> fails " +
+          "with <code>mug is out of stock</code>, which is what <code>Sold Out Product Cannot Be Ordered</code> " +
+          "expects.",
       },
     ],
   },
@@ -96,7 +453,7 @@ const SCENARIOS: { label: string; steps: Step[] }[] = [
       { kind: "user", html: "Check the project for problems before I push." },
       {
         kind: "tool",
-        command: "robotcode analyze code",
+        target: "robotcode analyze code",
         output: [
           "resources/orders.resource:31:5: [ERROR] KeywordNotFound: No keyword with name 'Submit Ordr' found.",
           "Files: 8, Errors: 1, Warnings: 0, Infos: 0, Hints: 0",
@@ -108,41 +465,71 @@ const SCENARIOS: { label: string; steps: Step[] }[] = [
           "One error: <code>Checkout</code> calls <code>Submit Ordr</code> in orders.resource:31 — a typo for " +
           "<code>Submit Order</code>. Shall I fix it?",
       },
-    ],
-  },
-  {
-    label: "Running",
-    steps: [
-      { kind: "user", html: "Run the smoke tests with the <code>ci</code> profile." },
+      { kind: "user", html: "Yes, please." },
       {
         kind: "tool",
-        command: "robotcode -p ci robot -i smoke",
+        label: "Edited",
+        target: "resources/orders.resource",
+        output: ["-    Submit Ordr    ${order}", "+    Submit Order    ${order}"],
+      },
+      {
+        kind: "tool",
+        target: "robotcode analyze code",
+        output: ["Files: 8, Errors: 0, Warnings: 0, Infos: 0, Hints: 0"],
+      },
+      { kind: "agent", html: "Fixed, the project has no errors now." },
+      { kind: "user", html: "Is there anything we don't use anymore?" },
+      {
+        kind: "tool",
+        target: "robotcode analyze code --collect-unused",
         output: [
-          "Add Item To Cart :: A product added to the cart is in the cart.       | PASS |",
-          "Login Works :: A user who logs in is greeted by name.                 | FAIL |",
-          "Welcome back, alice! != Welcome back, Alice!",
-          "Logout Works :: A user who logs out is no longer logged in.           | PASS |",
-          "Order Coffee :: An order for a product in stock is placed.            | PASS |",
-          "Tests :: Web shop acceptance tests                                    | FAIL |",
-          "4 tests, 3 passed, 1 failed",
+          "resources/orders.resource:28:1: [WARNING] KeywordNotUsed: Keyword 'Checkout' is not used.",
+          "Files: 8, Errors: 0, Warnings: 1, Infos: 0, Hints: 0",
         ],
       },
       {
         kind: "agent",
         html:
-          "4 smoke tests ran with the <code>ci</code> profile: 3 passed, <code>Login Works</code> failed on the " +
-          "greeting.",
+          "Only <code>Checkout</code> (orders.resource:28): no test calls it, which is also why the typo never " +
+          "failed a run. Remove it, or add a test that checks out?",
       },
     ],
   },
 ];
 
-// How long each step takes to appear, and how long a scenario stays after its last step, in seconds.
-const STEP_DELAY = 1.2;
+// When each step of a scenario appears, in seconds: every step stays long enough to be read before the next one.
+const READ_MIN = 1.2;
+const READ_MAX = 4;
+const CHARS_PER_SECOND = 80;
+// How long a scenario stays after its last step, in seconds.
 const HOLD = 5;
+
+const readingTime = (step: Step) => {
+  const text = step.kind === "tool" ? [step.target, ...step.output].join(" ") : step.html.replace(/<[^>]+>/g, "");
+  return Math.min(READ_MAX, Math.max(READ_MIN, 0.6 + text.length / CHARS_PER_SECOND));
+};
+const starts = (steps: Step[]) => {
+  let time = 0;
+  return steps.map((step) => {
+    const start = time;
+    time += readingTime(step);
+    return Math.round(start * 10) / 10;
+  });
+};
+const duration = (steps: Step[]) => starts(steps).at(-1)! + HOLD;
+
+// The output of a tool step as HTML; the lines of an edit's diff are marked as added or removed.
+const escape = (text: string) => text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+const outputHtml = (step: Extract<Step, { kind: "tool" }>) =>
+  step.output
+    .map((line) => {
+      const diff = step.label === "Edited" && { "+": "rc-diff-add", "-": "rc-diff-del" }[line[0]];
+      return diff ? `<span class="${diff}">${escape(line)}</span>` : escape(line);
+    })
+    .join("\n");
 ---
 
-<rc-demo class="rc-agent-demo not-content" data-llms-skip style={`--step-delay: ${STEP_DELAY}s`}>
+<rc-demo class="rc-agent-demo not-content" data-llms-skip style="--step-delay: 1s">
   <figure class="rc-window">
     <div class="rc-window-bar">
       <span class="rc-window-dots" aria-hidden="true"><i></i><i></i><i></i></span>
@@ -154,14 +541,14 @@ const HOLD = 5;
         SCENARIOS.map(({ label, steps }, index) => (
           <ol class:list={["rc-agent-log", { "is-active": index === 0 }]} data-demo-panel aria-label={label}>
             {steps.map((step, stepIndex) => (
-              <li class={`rc-step rc-step-${step.kind}`} style={`--i: ${stepIndex}`}>
+              <li class={`rc-step rc-step-${step.kind}`} style={`--i: ${starts(steps)[stepIndex]}`}>
                 {step.kind === "tool" ? (
                   <>
                     <div class="rc-step-command">
-                      <span class="rc-step-label">Ran</span>
-                      <code>{step.command}</code>
+                      <span class="rc-step-label">{step.label ?? "Ran"}</span>
+                      <code>{step.target}</code>
                     </div>
-                    <pre>{step.output.join("\n")}</pre>
+                    <pre set:html={outputHtml(step)} />
                   </>
                 ) : (
                   <p set:html={step.html} />
@@ -180,7 +567,7 @@ const HOLD = 5;
           type="button"
           data-demo-tab
           aria-pressed={index === 0 ? "true" : "false"}
-          style={`--duration: ${steps.length * STEP_DELAY + HOLD}s`}
+          style={`--duration: ${duration(steps)}s`}
         >
           {label}
           <span class="rc-demo-progress" aria-hidden="true" />
@@ -193,6 +580,16 @@ const HOLD = 5;
 
 <script>
   import "./demo-player";
+
+  // A step that appears is scrolled into the log, so a long scenario follows its newest step.
+  for (const log of document.querySelectorAll<HTMLElement>(".rc-agent-log")) {
+    log.addEventListener("animationstart", (event) => {
+      const step = (event.target as HTMLElement).closest<HTMLElement>(".rc-step");
+      if (!step) return;
+      const top = Math.max(0, step.offsetTop + step.offsetHeight - log.clientHeight + 16);
+      log.scrollTo({ top, behavior: "smooth" });
+    });
+  }
 </script>
 
 <style>
@@ -201,14 +598,20 @@ const HOLD = 5;
     min-width: 0;
   }
 
+  /* The log has a fixed height; a longer scenario scrolls. */
   .rc-agent-log {
+    position: relative;
     display: flex;
     flex-direction: column;
     gap: 0.9rem;
+    height: 28rem;
     margin: 0;
     padding: 1.1rem;
+    overflow-y: auto;
     list-style: none;
     font-size: var(--sl-text-sm);
+    scrollbar-width: thin;
+    scrollbar-color: var(--sl-color-gray-5) transparent;
   }
 
   .rc-step p {
@@ -277,6 +680,14 @@ const HOLD = 5;
     font-family: var(--__sl-font-mono);
     font-size: 0.78rem;
     line-height: 1.55;
+  }
+
+  .rc-step :global(.rc-diff-add) {
+    color: var(--sl-color-green-high);
+  }
+
+  .rc-step :global(.rc-diff-del) {
+    color: var(--sl-color-red-high);
   }
 
   .rc-step-agent {
