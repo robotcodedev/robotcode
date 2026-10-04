@@ -64,7 +64,7 @@
   - `docs/02_get_started/index.md`: the Python-Markdown row names "Open Documentation (deprecated)" and "Show Documentation (deprecated)".
 
   Verify with `npm run docs:build`.
-- [ ] 7.2 Run `hatch run lint:all`, `hatch run test:test`, `npm run lint` and `npm run compile`, and confirm that all pass. The CI run on Linux, Windows and macOS must be green for the new tests: no hard-coded paths or separators.
+- [x] 7.2 Run `hatch run lint:all`, `hatch run test:test`, `npm run lint` and `npm run compile`, and confirm that all pass. The CI run on Linux, Windows and macOS must be green for the new tests: no hard-coded paths or separators. (CI run 37147588908 on 04d9ca9a, 139 jobs, green.)
 - [x] 7.3 Check at run time in the isolated VS Code harness, on VS Code 1.127 and the installed version:
   - the source action menu on `Library    Collections` lists "Show in Documentation Viewer", "Show in New Documentation Viewer" and "Open Documentation (deprecated)", in this order; "Open Documentation (deprecated)" still opens the Libdoc page;
   - with the bindings of the documentation in `keybindings.json`: Ctrl+Shift+. shows the menu; the binding with the arguments of the preferred action, on a keyword call, an import name and a keyword definition name, shows the viewer at the right place without a menu, the editor keeps the focus, and the menu shows that key next to "Show in Documentation Viewer"; in a comment VS Code reports that no preferred source action is available; Shift+F1 without a binding opens nothing;
