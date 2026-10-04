@@ -2,7 +2,7 @@
 // The home page's feature overview: the features on one side, a window on the other that shows the selected one — a
 // screen recording, a screenshot or a terminal session — played one after another by <rc-demo> (see
 // demo-player.ts). The terminal sessions come from real runs of a small example project, abridged. The screen
-// recordings are MP4 versions of the GIFs in docs/images/, with the timing browsers give the GIFs; the Neovim
+// recordings are MP4 versions of the GIFs in docs/images/, with the timing browsers give the GIFs; the editor
 // screenshots show that example project too.
 import { Icon } from "@astrojs/starlight/components";
 import { Image } from "astro:assets";
@@ -13,7 +13,17 @@ import neovimCompletion from "../../assets/screenshots/neovim-completion.png";
 import neovimDiagnostics from "../../assets/screenshots/neovim-diagnostics.png";
 import neovimInlayHints from "../../assets/screenshots/neovim-inlayhints.png";
 import neovimReferences from "../../assets/screenshots/neovim-references.png";
+import pycharmCompletion from "../../assets/screenshots/pycharm-completion.png";
+import pycharmDiagnostics from "../../assets/screenshots/pycharm-diagnostics.png";
+import pycharmHover from "../../assets/screenshots/pycharm-hover.png";
+import pycharmInlayHints from "../../assets/screenshots/pycharm-inlayhints.png";
+import pycharmReferences from "../../assets/screenshots/pycharm-references.png";
 import runningTests from "../../assets/screenshots/running-tests.mp4";
+import vscodeCompletion from "../../assets/screenshots/vscode-completion.png";
+import vscodeDiagnostics from "../../assets/screenshots/vscode-diagnostics.png";
+import vscodeHover from "../../assets/screenshots/vscode-hover.png";
+import vscodeInlayHints from "../../assets/screenshots/vscode-inlayhints.png";
+import vscodeReferences from "../../assets/screenshots/vscode-references.png";
 
 type TerminalStep =
   | { kind: "command"; prompt?: string; command: string; output?: string[] }
@@ -188,13 +198,37 @@ const FEATURES: Feature[] = [
     links: [["Set up your editor", "/getting-started/"]],
     panel: {
       kind: "series",
-      seconds: 5,
+      seconds: 3,
       slides: [
+        {
+          editor: "VS Code",
+          label: "Diagnostics",
+          image: vscodeDiagnostics,
+          alt: "A misspelt keyword call and its diagnostic in VS Code",
+        },
+        {
+          editor: "PyCharm",
+          label: "Diagnostics",
+          image: pycharmDiagnostics,
+          alt: "A misspelt keyword call and its diagnostic in PyCharm",
+        },
         {
           editor: "Neovim",
           label: "Diagnostics",
           image: neovimDiagnostics,
           alt: "A misspelt keyword call and its diagnostic in Neovim",
+        },
+        {
+          editor: "VS Code",
+          label: "Completion",
+          image: vscodeCompletion,
+          alt: "Completing a keyword call in VS Code, with the documentation of the selected keyword",
+        },
+        {
+          editor: "PyCharm",
+          label: "Completion",
+          image: pycharmCompletion,
+          alt: "Completing a keyword call in PyCharm",
         },
         {
           editor: "Neovim",
@@ -203,16 +237,52 @@ const FEATURES: Feature[] = [
           alt: "Completing a keyword call in Neovim",
         },
         {
+          editor: "VS Code",
+          label: "Inlay hints",
+          image: vscodeInlayHints,
+          alt: "The argument names and namespaces RobotCode shows next to the keyword calls in VS Code",
+        },
+        {
+          editor: "PyCharm",
+          label: "Inlay hints",
+          image: pycharmInlayHints,
+          alt: "The argument names and namespaces RobotCode shows next to the keyword calls in PyCharm",
+        },
+        {
           editor: "Neovim",
           label: "Inlay hints",
           image: neovimInlayHints,
           alt: "The argument names RobotCode shows next to the arguments in Neovim",
         },
         {
+          editor: "VS Code",
+          label: "References",
+          image: vscodeReferences,
+          alt: "All calls of a keyword in the project, in VS Code's Peek References view",
+        },
+        {
+          editor: "PyCharm",
+          label: "References",
+          image: pycharmReferences,
+          alt: "All calls of a keyword in the project, in PyCharm's Show Usages popup",
+        },
+        {
           editor: "Neovim",
           label: "References",
           image: neovimReferences,
           alt: "All calls of a keyword in the project, in Neovim's quickfix list",
+        },
+        {
+          editor: "VS Code",
+          label: "Documentation",
+          image: vscodeHover,
+          alt: "The documentation of a keyword, with its arguments, in a VS Code hover",
+        },
+        {
+          editor: "PyCharm",
+          label: "Documentation",
+          image: pycharmHover,
+          alt: "The documentation of a keyword, with its arguments, in PyCharm's Quick Documentation",
         },
       ],
     },
@@ -229,10 +299,10 @@ const duration = (panel: Panel) =>
     : panel.kind === "series"
       ? panel.slides.length * panel.seconds
       : panel.duration;
-const title = (panel: Panel) => (panel.kind === "series" ? panel.slides[0].editor : panel.title);
-// A slide's button names the editor only when the series shows more than one.
-const slideLabel = (panel: Extract<Panel, { kind: "series" }>, slide: (typeof panel.slides)[number]) =>
-  new Set(panel.slides.map(({ editor }) => editor)).size > 1 ? `${slide.editor}: ${slide.label}` : slide.label;
+type Slide = Extract<Panel, { kind: "series" }>["slides"][number];
+// A slide's window title names the editor and what it shows; the slide's dot carries the same name.
+const slideTitle = (slide: Slide) => `${slide.editor} · ${slide.label}`;
+const title = (panel: Panel) => (panel.kind === "series" ? slideTitle(panel.slides[0]) : panel.title);
 
 // Colours the section headers, keys and strings of the TOML file shown.
 const toml = (line: string) =>
@@ -303,7 +373,7 @@ const toml = (line: string) =>
                       type="button"
                       class:list={["rc-tour-shot", { "is-current": slideIndex === 0 }]}
                       data-demo-slide
-                      data-title={slide.editor}
+                      data-title={slideTitle(slide)}
                       aria-label={`Enlarge: ${slide.alt}`}
                     >
                       <Image
@@ -317,9 +387,14 @@ const toml = (line: string) =>
                 </div>
                 <div class="rc-tour-slide-tabs">
                   {panel.slides.map((slide, slideIndex) => (
-                    <button type="button" data-demo-slide-tab aria-pressed={slideIndex === 0 ? "true" : "false"}>
-                      {slideLabel(panel, slide)}
-                    </button>
+                    <button
+                      type="button"
+                      class:list={{ "is-group-start": slideIndex > 0 && slide.label !== panel.slides[slideIndex - 1].label }}
+                      data-demo-slide-tab
+                      aria-pressed={slideIndex === 0 ? "true" : "false"}
+                      aria-label={slideTitle(slide)}
+                      title={slideTitle(slide)}
+                    ></button>
                   ))}
                 </div>
               </>
@@ -545,7 +620,8 @@ const toml = (line: string) =>
   }
 
   /* A series of screenshots: all in one grid cell. Only the others are hidden; the current one inherits the visibility
-     of its panel, so it stays hidden while another panel is shown. */
+     of its panel, so it stays hidden while another panel is shown. While the demo plays, the current screenshot fades
+     in on top of the previous one, which is hidden once it is covered. */
   .rc-tour-slides {
     display: grid;
     flex: 1;
@@ -556,34 +632,68 @@ const toml = (line: string) =>
     grid-area: 1 / 1;
   }
 
+  .rc-tour-slides > .is-current {
+    z-index: 1;
+  }
+
   .rc-tour-slides > .rc-tour-shot:not(.is-current) {
+    opacity: 0;
     visibility: hidden;
   }
 
+  .is-armed .rc-tour-slides > .is-current {
+    transition: opacity 0.6s ease;
+  }
+
+  .is-armed .rc-tour-slides > .rc-tour-shot:not(.is-current) {
+    transition:
+      opacity 0s 0.6s,
+      visibility 0s 0.6s;
+  }
+
+  /* One dot per slide, a little apart where the next feature starts; the current one is drawn wider. */
   .rc-tour-slide-tabs {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.4rem;
     justify-content: center;
-    padding: 0.7rem;
+    padding: 0.55rem;
     border-top: 1px solid var(--sl-color-hairline);
   }
 
   .rc-tour-slide-tabs button {
-    padding: 0.2rem 0.65rem;
-    border: 1px solid var(--sl-color-hairline);
+    display: grid;
+    place-items: center;
+    width: 1.4rem;
+    height: 1.4rem;
+    padding: 0;
+    border: 0;
     border-radius: 999px;
-    background: transparent;
-    color: var(--sl-color-gray-2);
-    font: inherit;
-    font-size: var(--sl-text-xs);
+    background: none;
     cursor: pointer;
   }
 
-  .rc-tour-slide-tabs button:hover,
-  .rc-tour-slide-tabs button[aria-pressed="true"] {
-    border-color: var(--sl-color-accent);
-    color: var(--sl-color-white);
+  .rc-tour-slide-tabs .is-group-start {
+    margin-left: 0.5rem;
+  }
+
+  .rc-tour-slide-tabs button::before {
+    content: "";
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 999px;
+    background: var(--sl-color-gray-5);
+    transition:
+      width 0.2s,
+      background-color 0.2s;
+  }
+
+  .rc-tour-slide-tabs button:hover::before {
+    background: var(--sl-color-gray-3);
+  }
+
+  .rc-tour-slide-tabs button[aria-pressed="true"]::before {
+    width: 1.15rem;
+    background: var(--sl-color-accent);
   }
 
   .rc-term {
