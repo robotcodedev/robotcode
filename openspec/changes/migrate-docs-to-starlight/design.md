@@ -68,7 +68,7 @@ The documentation paths in the artifacts of the in-flight changes not yet applie
 
 ### D8: Screen recordings as MP4
 
-Every animated GIF a page shows becomes an MP4 once, during the switch: the two recordings of the About page (`autocomplete1.gif`, `running_tests.gif`) and the three of Getting Started (`python-create-env.gif`, `robotcode-add-to-workspace.gif`, `robotcode-first-test-case.gif`). The video keeps the timing browsers give the GIF: a frame delay of 10 ms or less plays as 100 ms, so `autocomplete1.gif`, encoded as 10.6 s, runs 38.8 s on the site. The pages show a recording as a muted video in a loop, like the GIF, importing the file (so they are `.mdx`). The MP4s replace the GIFs in `src/assets/screenshots/`; the single-frame GIFs `with_customization.gif` and `without_customization.gif` stay images. The home page's two recordings exist as MP4 in `docs/images/` since the preview; they move with the other files of the home page (D1 step 2).
+Every animated GIF a page shows becomes an MP4 once, during the switch: the two recordings of the About page (`autocomplete1.gif`, `running_tests.gif`) and the three of Getting Started (`python-create-env.gif`, `robotcode-add-to-workspace.gif`, `robotcode-first-test-case.gif`). The video keeps the timing browsers give the GIF: a frame delay of 10 ms or less plays as 100 ms, so `autocomplete1.gif`, encoded as 10.6 s, runs 38.8 s on the site. The pages show a recording as a muted video in a loop, like the GIF, importing the file (so they are `.mdx`). The MP4s replace the GIFs in `src/assets/screenshots/`; the single-frame GIFs `with_customization.gif` and `without_customization.gif` stay images. The home page has its own recordings of the example project, `vscode-code-intelligence.mp4`, `vscode-run-tests.mp4` and `vscode-debug.mp4` in `docs/images/` since the preview; they move with the other files of the home page (D1 step 2).
 
 The conversion runs once, so no script is kept. Per GIF: read the frame delays with `ffprobe -v error -select_streams v:0 -show_entries frame=duration_time -of csv=p=0 <gif>`, count every delay of 0.01 s or less as 0.1 s, extract the frames with `ffmpeg -i <gif> -fps_mode passthrough frames/%05d.png`, write an ffmpeg concat list with each frame and its delay (`file '<png>'` / `duration <s>`, the last frame once more at the end), and encode with `ffmpeg -f concat -safe 0 -i list.txt -fps_mode vfr -an -c:v libx264 -preset veryslow -crf 24 -pix_fmt yuv420p -movflags +faststart <mp4>`. For the home page this made 1.5 MB of `autocomplete1.gif`'s 5.0 MB and 356 KB of `running_tests.gif`'s 875 KB, with sharp text.
 
@@ -81,14 +81,14 @@ Rejected: keeping the GIFs — five times the size, and a GIF cannot start over 
 - [All pages show the switch date as their last change, since Starlight does not follow renames.] → Accepted; dates become meaningful with the next edit of each page.
 - [Starlight 0.x breaking minors now affect the published site.] → Pinned minors; the copied `Header.astro` is diffed against upstream on upgrades.
 - [The docs workspace adds about 375 packages to the root lockfile, which three CI jobs of `build-test-package-publish.yml` install too.] → Accepted; they run on Node 26, which Astro supports.
-- [The home page's demos show `robotcode doc` and `robotcode discover --by-test-metadata`, which no release ships as of 2026-10-04.] → The switch goes live only with a release that ships both (task 1.1).
+- [The home page's demos show `robotcode doc` and `robotcode discover --by-test-metadata`, which no release ships as of 2026-10-04.] → The switch goes live together with the release that ships both.
 - [A later release changes the output of a command the demos show.] → The demo text is adapted by hand, like a documentation or news page; the example project behind it is not part of the repository.
 
 ## Migration Plan
 
-1. Confirm `docs-starlight-preview` is applied, the preview is accepted and the release the switch goes live with ships the commands the home page demos show.
+1. Confirm `docs-starlight-preview` is applied and the preview is accepted.
 2. Switch `docs/` (D1), adapt and run the generators and the schema generator (D2, D3), configure DocSearch (D4).
 3. Update the skill, links, process docs and the other changes' paths (D5, D6); adapt the workflows and remove the preview's entries (D7).
-4. `npm run docs:build` without link errors, visual review, merge, deploy manually, update the DocSearch crawler and recrawl.
+4. `npm run docs:build` without link errors, visual review, merge with the release that ships `robotcode doc` and `robotcode discover --by-test-metadata`, deploy manually, update the DocSearch crawler and recrawl.
 
 Rollback: revert the commit and run the deploy workflow manually; the previous site is deployed again, and the crawler configuration is switched back.

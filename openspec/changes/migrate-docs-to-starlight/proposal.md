@@ -28,7 +28,7 @@ Astro with Starlight is actively released (39 stable Starlight releases in the l
 
 ## Impact
 
-- Depends on `docs-starlight-preview`, which must be applied and archived first, and goes live only with a RobotCode release that ships the commands the home page demos show (`robotcode doc`, `robotcode discover --by-test-metadata`).
+- Depends on `docs-starlight-preview`, which must be applied and archived first, and goes live together with the RobotCode release that ships the commands the home page demos show (`robotcode doc`, `robotcode discover --by-test-metadata`).
 - `docs/`: replaced by the Starlight project of the preview (`astro.config.mjs`, `src/content.config.ts`, `src/content/docs/`, `src/assets/`, `src/components/`, `src/styles/`, `public/` with `CNAME`, favicons, Open Graph image and `schemas/robot.toml.json`); `docs/package.json` gets the Astro dependencies plus `@astrojs/starlight-docsearch`; root `package-lock.json` changes; `docs-next/` removed.
 - `scripts/create_cmdline_doc.py`, `scripts/create_robot_toml_json_schema.py` (`base_url`, link paths of profile settings and nested keys), new `scripts/create_config_doc.py`, `hatch.toml`, `.gitignore` (`docs/.astro/`).
 - `.github/workflows/deploy-docs.yml` (artifact `docs/dist`, telemetry off; it uses Node 26); `.github/workflows/docs-next.yml` removed; `build-test-package-publish.yml`, `.vscodeignore`, `eslint.config.mjs` and the root `package.json` lose their `docs-next` entries. The three jobs of `build-test-package-publish.yml` that run `npm install` then install the docs workspace too; they run on Node 26, which Astro supports.

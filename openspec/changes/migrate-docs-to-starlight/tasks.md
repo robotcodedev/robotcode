@@ -2,7 +2,7 @@
 
 ## 1. Prerequisites
 
-- [ ] 1.1 Confirm that `docs-starlight-preview` is applied and archived (`openspec/specs/documentation-site/spec.md` exists) that the maintainer has accepted the preview, and that the RobotCode release the switch goes live with ships the commands the home page demos show (`robotcode doc`, `robotcode discover --by-test-metadata`); verify `npm run docs-next:build` succeeds without link errors on the current `main`
+- [ ] 1.1 Confirm that `docs-starlight-preview` is applied and archived (`openspec/specs/documentation-site/spec.md` exists) and that the maintainer has accepted the preview; verify `npm run docs-next:build` succeeds without link errors on the current `main`
 
 ## 2. Switch `docs/`
 
@@ -40,5 +40,5 @@
 
 ## 8. Go-live
 
-- [ ] 8.1 After the maintainer has committed and merged the switch to `main`, verify that `git log --follow` of a moved page shows its history before the switch; run `deploy-docs.yml` manually with `deploy: true`; verify that `https://robotcode.io/getting-started/`, `https://robotcode.io/reference/config/`, `https://robotcode.io/news/rss.xml` and `https://robotcode.io/llms-full.txt` respond, that `https://robotcode.io/03_reference/config` returns the not-found page, that `https://robotcode.io/news/` shows the newest post first, and that the edit link and last-change date of `https://robotcode.io/getting-started/neovim/` point to `docs/src/content/docs/getting-started/neovim.mdx` and its last commit
+- [ ] 8.1 After the maintainer has committed the switch and merged it to `main` with the release that ships `robotcode doc` and `robotcode discover --by-test-metadata`, verify that `git log --follow` of a moved page shows its history before the switch; run `deploy-docs.yml` manually with `deploy: true`; verify that `https://robotcode.io/getting-started/`, `https://robotcode.io/reference/config/`, `https://robotcode.io/news/rss.xml` and `https://robotcode.io/llms-full.txt` respond, that `https://robotcode.io/03_reference/config` returns the not-found page, that `https://robotcode.io/news/` shows the newest post first, and that the edit link and last-change date of `https://robotcode.io/getting-started/neovim/` point to `docs/src/content/docs/getting-started/neovim.mdx` and its last commit
 - [ ] 8.2 Switch the Algolia DocSearch crawler configuration to the Starlight page structure and the new URLs and recrawl (D4); verify that a search for `console-colors` on the live site returns `/reference/config/#console-colors` and that no result points to an old path
