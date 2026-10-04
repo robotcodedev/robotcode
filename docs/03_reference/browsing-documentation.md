@@ -222,7 +222,7 @@ A library whose keywords only exist while Robot Framework runs — for example, 
 
 ## VS Code
 
-The RobotCode extension for VS Code shows the same documentation in the **Documentation Viewer**, an editor tab. The viewer runs `robotcode doc lib` for you and renders the page with VS Code's built-in Markdown support, styled like VS Code's Markdown preview.
+The RobotCode extension for VS Code shows the same documentation in the **Documentation Viewer**, an editor tab. The viewer runs `robotcode doc lib` for you and renders the page with VS Code's built-in Markdown support, styled like VS Code's Markdown preview. Code blocks marked `robotframework` or `robot` are highlighted as Robot Framework code, in the viewer and in the Markdown preview of any Markdown file.
 
 ### Opening a viewer
 
