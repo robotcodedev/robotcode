@@ -1,0 +1,34 @@
+# Tasks
+
+## 1. Diagnostic levels
+
+- [ ] 1.1 In `lsp/features/RobotDiagnosticsFeature.kt`, map `DiagnosticSeverity.Information` to `HighlightSeverity.WEAK_WARNING` and keep `Hint` at `HighlightSeverity.INFORMATION`. Verify with a JUnit test that Error, Warning, Information, Hint and a missing severity map to ERROR, WARNING, WEAK_WARNING, INFORMATION and ERROR.
+
+## 2. Stored settings and settings tree
+
+- [ ] 2.1 Extend the shared state `RobotCodeProjectConfiguration` with the values of the three pages: diagnostic mode, progress mode, find unused references, references code lens, the five modifier lists, global library search order, library load timeout (0 = not set), cache location, the three cache lists, exclude patterns (default: VS Code's seven), semantic model, and the four Robocop values (configuration file stored as an absolute path). Verify with JUnit tests that a `robotcodeSettings.xml` fragment without these options yields the defaults and keeps the Editing values, that every value round-trips through the XML serializer, and that an emptied exclude-pattern list is still empty after a reload.
+- [ ] 2.2 Copy the new values into the settings tree in the mapper: `analysis`, `analysis.diagnosticModifiers`, `analysis.robot` (`loadLibraryTimeout` only when set), `analysis.cache`, `workspace.excludePatterns`, `experimental.semanticModel` and `robocop` (`configFile` only when set). Verify with JUnit tests that the JSON has an integer timeout, the exact enum strings for all three enums, lists without blank entries, an absolute `configFile`, and no `loadLibraryTimeout` or `configFile` when they are not set; the default tree still equals the expected default JSON.
+
+## 3. Initialization options
+
+- [ ] 3.1 Add a function next to the mapper that builds the initialization options: `storageUri` as the file URI of `Project.getProjectDataPath("robotcode")`, `pythonPath` and `env` from the tree's `robot` section, and `settings` as the tree; no `documentationViewerLinks` and no `globalStorageUri`. Return it from `RobotCodeLanguageServer.getInitializationOptions`. Verify with a light platform test that `storageUri` is a `file:` URI that resolves to the project's data folder, that `settings` equals the tree `createSettings()` returns, and that `pythonPath` and `env` are an empty list and an empty object for default settings.
+
+## 4. Settings pages
+
+- [ ] 4.1 Add the Diagnostics page (`dev.robotcode.robotcode4ij.projectsettings.diagnostics`): group "Diagnostics" with diagnostic mode, progress mode and find unused references; group "Diagnostic modifiers" with the five lists as expandable text fields. Register it in `plugin.xml` as a child `projectConfigurable` of `dev.robotcode.robotcode4ij.projectsettings` with the same `nonDefaultProject` value as the Editing page, and handle the default project in `apply()` as the Editing page does. Verify in task 5.2 that the page appears below "Robot Framework" and that its values reach the server.
+- [ ] 4.2 Add the Analysis page (`dev.robotcode.robotcode4ij.projectsettings.analysis`) with the groups References, Libraries, Cache, Workspace and Experimental; the library load timeout accepts 1 to 3600 or an empty field and shows an error otherwise. Register it like 4.1. Verify with a JUnit test of the timeout parser (empty, 0, 1, 3600, 3601, text) and in task 5.2.
+- [ ] 4.3 Add the Robocop page (`dev.robotcode.robotcode4ij.projectsettings.robocop`) with the four settings; the configuration file uses a `TextFieldWithBrowseButton` with `FileChooserDescriptorFactory.singleFile()`, resolves a relative input against the project folder, and shows an error for a file that does not exist. Register it like 4.1. Verify with a JUnit test of the path resolution and the missing-file check, and in task 5.2.
+- [ ] 4.4 Write the labels and comments of the three pages in `messages/RobotCode.properties`, as plain text without markdown: the lists that are added to `[tool.robotcode-analyze]` in `robot.toml`, the timeout replacing `robot.toml`'s, `.gitignore` syntax for exclude patterns, the cache location trade-off (the project folder is the one `robotcode analyze` uses), the pointer to Clear Cache and Restart for the cache lists, how information and hint diagnostics are shown, and that switching Robocop off does not switch off formatting. Verify that every new key is used and that no text contains markdown syntax.
+- [ ] 4.5 Let the Diagnostics, Analysis, Robocop and Editing pages request the restart through the debounced `restartAll()` instead of restarting in `apply()`. Verify in task 5.2 that changing two pages and pressing OK restarts the server once.
+
+## 5. Verification
+
+- [ ] 5.1 Run `./gradlew test buildPlugin verifyPlugin` in `intellij-client/` and verify that all three pass without new deprecation, experimental or internal-API findings.
+- [ ] 5.2 Check in the headless PyCharm harness, in one session, with the harness test project plus a `generated/other.robot` that calls a project keyword, Robocop installed in the SDK, and an LSP trace and the process log switched on:
+  - `initialize` carries `storageUri` (a folder below the IDE system directory), `pythonPath`, `env` and `settings`; no `<project>/.robotcode_cache` appears, the cache files appear below the storage folder, and cache writes start no indexing of project files (Q7/Q41);
+  - with the cache location "Project folder" and Apply, the cache appears in `<project>/.robotcode_cache`;
+  - `KeywordNotFound` in the ignore list removes the mark of an unknown keyword; a code in the information list shows a weak warning listed in the Problems view; a code in the hint list is not listed and shows its message on hover (Q4);
+  - find unused references marks an unused keyword; the references code lens shows "N references" (Q10); with diagnostic mode "Workspace", a file that is not open and contains an error is marked as a problem file in the Project view;
+  - `generated/` in the exclude patterns removes `generated/other.robot` from Find Usages;
+  - switching Robocop off removes Robocop's diagnostics; a configuration file that ignores a rule removes that rule's diagnostics;
+  - changing the Analysis and the Robocop page and pressing OK restarts the server once (process log), and `idea.log` gets no new SEVERE entries from RobotCode.

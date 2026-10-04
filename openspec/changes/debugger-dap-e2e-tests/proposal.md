@@ -12,11 +12,16 @@ Driving the server with a scripted client for the RF 7.5 check showed both how m
 - When the client connection is lost while the run is stopped, the run stays paused until a new client connects and continues it — which works — but if none does, the process waits forever, does not react to `SIGTERM` and keeps its port; only `SIGKILL` ends it.
 - After `disconnect` without `terminateDebuggee` the run continues as intended, but every synced event still waits 15 seconds for an acknowledgement nobody sends: a two-keyword test needed 46 seconds to finish.
 
+Planning the IntelliJ debugger work (2026-10-04) found two more defects in the variables view, by reading the code:
+
+- `variables` with the filter `named` ignores `start`: it numbers the entries from `start` but always returns the dictionary from its first entry, so a client that pages through a large dictionary gets the same entries again.
+- `setVariable` always assigns in the innermost variable scope of the paused run, whichever scope or frame the variable reference belongs to. Setting a variable in the `Suite` or `Global` scope, or in an outer keyword frame, changes a local variable instead.
+
 ## What Changes
 
 - A pytest harness under `tests/robotcode/debugger/` that starts `robotcode debug --tcp 127.0.0.1:<free port>` as a subprocess on a suite written to `tmp_path`, connects a DAP client that acknowledges synced events, and drives complete debug sessions with timeouts and guaranteed process cleanup, on every Robot Framework version of the matrix and on Linux, Windows and macOS.
 - End-to-end scenarios: session lifecycle including the `robot/sync` handshake, line / conditional / hit-count breakpoints and log points, stack trace, scopes and variables, `evaluate` in the watch, hover and repl contexts including running a keyword, `setVariable`, `completions`, `next` / `stepIn` into a resource keyword / `stepOut` / `continue` / `pause`, the four exception filters, a test timeout expiring while stopped, the `robotStarted`/`robotEnded`/`robotExited`/`terminated` events with the exit code, and `terminate` / `disconnect` / connection loss.
-- The five defects above are fixed, each with its scenario as the acceptance test: `failed_test` is honoured, plain `filters` are honoured, a hit condition stops on the requested hit, and a client that detaches or simply vanishes neither stalls nor blocks the run: the run carries on at full speed and the server stays open, so a new client can attach to it (re-attaching already works today and gets tests).
+- The seven defects above are fixed, each with its scenario as the acceptance test: `failed_test` is honoured, plain `filters` are honoured, a hit condition stops on the requested hit, `named` paging honours `start`, `setVariable` assigns in the scope and frame of the variable, and a client that detaches or simply vanishes neither stalls nor blocks the run: the run carries on at full speed and the server stays open, so a new client can attach to it (re-attaching already works today and gets tests).
 - The `robot/sync` handshake — part of the contract every RobotCode debug client has to implement, and written down nowhere today — is captured in the spec and in the docstrings of the server methods that implement it.
 
 ## Capabilities
@@ -32,8 +37,8 @@ Driving the server with a scripted client for the RF 7.5 check showed both how m
 ## Impact
 
 - New `tests/robotcode/debugger/conftest.py` (server subprocess fixture, DAP client fixture, suite builder) and test modules per scenario group; small fixture suites generated into `tmp_path`.
-- `packages/debugger/src/robotcode/debugger/debugger.py`: exception-filter ids and `filters` handling, hit-condition comparison. `packages/debugger/src/robotcode/debugger/server.py`: no sync wait without an attached client, connection loss handled like a detach.
-- User-visible: the "Failed Test" exception breakpoint and hit-count breakpoints start working in VS Code and IntelliJ; a debug client that vanishes during a paused session no longer leaves a server process behind that waits forever; the run finishes on its own unless a new client attaches.
+- `packages/debugger/src/robotcode/debugger/debugger.py`: exception-filter ids and `filters` handling, hit-condition comparison, `named` paging, the scope `setVariable` assigns in. `packages/debugger/src/robotcode/debugger/server.py`: no sync wait without an attached client, connection loss handled like a detach.
+- User-visible: the "Failed Test" exception breakpoint and hit-count breakpoints start working in VS Code and IntelliJ; large dictionaries can be paged, and Set Value works in every scope; a debug client that vanishes during a paused session no longer leaves a server process behind that waits forever; the run finishes on its own unless a new client attaches.
 - CI time: about seven debug sessions of roughly two seconds each per RF environment.
 - No change to the VS Code or IntelliJ clients, the launcher, or `robot-debug`.
 - Related: `support-rf75` (its manual debugger check, task 5.5, becomes largely automated once this lands) and `markdown-suites` / `embedded-suites-debugging` (breakpoint line mapping will need exactly this harness).

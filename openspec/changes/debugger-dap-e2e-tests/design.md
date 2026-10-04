@@ -54,6 +54,8 @@ The test client is `robotcode.debugger.launcher.client.DAPClient` driven through
 2. `filters` are turned into entries exactly like `filterOptions` without a condition; ids from both lists are validated against the ids declared in `default_capabilities.py` so the two cannot drift apart again.
 3. The hit-condition comparison becomes `==` (stop on the requested hit), keeping the existing integer-only syntax; richer DAP hit expressions (`>= 3`, `% 2`) are out of scope.
 4. and 5. See D6.
+6. `named` paging skips the first `start` entries and returns at most `count`, like `indexed` paging already does.
+7. `setVariable` resolves the reference to its frame and scope and assigns there: global, suite and test references through Robot Framework's scope setters for those scopes, a local reference in the variables of its own frame instead of the innermost scope. Children of lists and dictionaries stay read-only, as today.
 
 ### D4: Few, grouped sessions; version-neutral assertions
 

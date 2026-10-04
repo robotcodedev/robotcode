@@ -8,7 +8,7 @@ Defines the behaviour a Debug Adapter Protocol client can rely on when debugging
 
 ### Requirement: Session lifecycle
 
-`robotcode debug` SHALL accept a DAP client over TCP, answer `initialize` with its capabilities, accept `attach` and `configurationDone` in either order, send `initialized` after `attach`, start the Robot Framework run once `configurationDone` has arrived, report the run's end with `robotExited` (carrying Robot Framework's return code), `terminated` and `exited`, in that order, and end its process once the client has disconnected.
+`robotcode debug` SHALL accept a DAP client over TCP, answer `initialize` with its capabilities, accept `attach` and `configurationDone` in either order, send `initialized` right after it has handled `initialize`, without waiting for `attach`, start the Robot Framework run once `configurationDone` has arrived, report the run's end with `robotExited` (carrying Robot Framework's return code), `terminated` and `exited`, in that order, and end its process once the client has disconnected.
 
 #### Scenario: Run without breakpoints
 - **WHEN** a client attaches, sends `configurationDone` without setting breakpoints, and the suite has one passing and one failing test
@@ -49,7 +49,7 @@ Line breakpoints set with `setBreakpoints` SHALL be reported as verified and SHA
 
 ### Requirement: Stack, scopes and variables reflect the execution state
 
-At a stop, `stackTrace` SHALL list the keyword frames, the test and one frame per suite level from innermost to outermost with their source locations. `scopes` SHALL offer `Local`, `Suite` and `Global` for a frame directly in a test body, where `Local` holds the test's variables, and `Local`, `Test`, `Suite` and `Global` for a frame inside a user keyword called from a test. `variables` SHALL return the variables of a scope with their values, expandable for lists and dictionaries. `setVariable` SHALL evaluate the given value as a Python expression, after replacing Robot Framework variables in it, and assign the result for the rest of the run.
+At a stop, `stackTrace` SHALL list the keyword frames, the test and one frame per suite level from innermost to outermost with their source locations. `scopes` SHALL offer `Local`, `Suite` and `Global` for a frame directly in a test body, where `Local` holds the test's variables, and `Local`, `Test`, `Suite` and `Global` for a frame inside a user keyword called from a test. `variables` SHALL return the variables of a scope with their values, expandable for lists and dictionaries; with the filter `named` or `indexed` it SHALL return the entries from `start` on, at most `count` of them. `setVariable` SHALL evaluate the given value as a Python expression, after replacing Robot Framework variables in it, and assign the result for the rest of the run in the scope and frame that the variable reference belongs to.
 
 #### Scenario: Frames inside a resource keyword
 - **WHEN** a directory is run and execution is stopped inside a user keyword from a resource file called by a test
@@ -66,6 +66,14 @@ At a stop, `stackTrace` SHALL list the keyword frames, the test and one frame pe
 #### Scenario: Set variable
 - **WHEN** the client sets `${local}` to the value `'changed'` and continues
 - **THEN** the following `Log    ${local}` logs `changed`
+
+#### Scenario: Set a suite variable from inside a keyword
+- **WHEN** the run is stopped inside a user keyword and the client sets `${SUITE_VAR}` through the `Suite` scope to `'changed'` and continues
+- **THEN** a `Log    ${SUITE_VAR}` in the next test of the suite logs `changed`
+
+#### Scenario: Paging a dictionary
+- **WHEN** the client requests the entries of a dictionary variable with five entries with the filter `named`, `start` 2 and `count` 2
+- **THEN** the response holds the third and the fourth entry
 
 ### Requirement: Stepping
 

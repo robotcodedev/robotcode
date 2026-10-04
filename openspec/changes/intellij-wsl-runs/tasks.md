@@ -1,0 +1,32 @@
+# Tasks
+
+## 1. The run state on the WSL target
+
+- [ ] 1.1 Let `buildPythonExecution` refuse only remote interpreters that are not of the WSL kind, and remove the refusal of WSL runs from the run path; a WSL interpreter goes through the environment state like every other. Verify with light platform tests: a WSL test SDK with a usable state gives an execution; a fake Docker-like remote SDK still fails with "not supported yet"; a WSL test SDK whose state is "distribution not installed" fails with that message.
+- [ ] 1.2 Where the validation before a run exists, let its error for remote interpreters use the same test as `buildPythonExecution`, so that it no longer applies to the WSL kind. Verify with a light platform test that a WSL test SDK with a usable state gives no validation error and a fake Docker-like remote SDK still gives the error.
+- [ ] 1.3 Add the `bundled` folder as an upload root with a temporary target path to the target request, resolve the script path below it with `getTargetPath`, and pass every path argument (the paths of a "Files and folders" target and any option that takes a path) as a value resolved with `getTargetPath`. Keep building the argument list a pure function that takes the path resolver. Verify with JUnit 4 tests: with a fake resolver that prefixes `/target`, the script and the target's paths are resolved and test names are not; with the identity resolver the list equals the local list of the run-configuration base.
+- [ ] 1.4 Register a `TargetPortBinding` for the run's port on the request; in `createProcessHandler`, read the binding's resolved local endpoint from the `TargetEnvironment` and hand host and port to the handshake, and keep returning the plugin's process handler for every target. Verify with JUnit 4 tests: with a fake environment that resolves the binding to `127.0.0.1:50123`, the handshake gets that endpoint; a light platform test with a prepared `LocalTargetEnvironment` resolves to `127.0.0.1:<port>`; the handler is the plugin's handler for a fake non-local environment.
+
+## 2. Debugger connection and locations
+
+- [ ] 2.1 Build the debugger's `pathMappings` from the path table of the WSL language server change: one pair per root with `localRoot` in the IDE's Windows form and `remoteRoot` the distribution's path, ordered by descending length of `remoteRoot`; send them with `attach` for WSL runs and none for local runs. Verify with JUnit 4 tests: `/mnt/c/` comes before `/`; a `\\wsl$\` project keeps `\\wsl$\` in `localRoot`; against a fake DAP server, `attach` of a WSL run carries the pairs and `attach` of a local run carries no `pathMappings`.
+- [ ] 2.2 Add a test in `tests/robotcode/debugger/test_path_mappings.py` that pins how the debugger applies such pairs: with `localRoot` `\\wsl.localhost\Ubuntu\` for `/` and `C:\` for `/mnt/c/`, in this order, `map_path_to_client` maps `/home/u/p/a.robot` to `\\wsl.localhost\Ubuntu\home\u\p\a.robot` and `/mnt/c/w/a.robot` to `C:\w\a.robot`, and the result equals a breakpoint path written as `\\WSL.localhost\Ubuntu\home\u\p\a.robot`. The test runs where the debuggee side is POSIX and is skipped on Windows with that reason. Verify with `hatch run test:test` and `hatch run lint:all`.
+- [ ] 2.3 Give the protocol client the mapper's distribution-to-IDE direction for a WSL run (identity for local runs) and translate the path fields of every Robot event before the signal fires: the event `source`, `attributes.source`, the sources of failed keywords and log messages, and the output, log and report files of `robotExited`; leave ids unchanged. Verify with JUnit 4 tests, one per field, that ids stay as sent, and that the converter's location URL for a translated event of a test equals the run marker's URL built from that test's mapped discovery source.
+
+- [ ] 2.4 Extract the parsing of a location URL in `RobotSMTestLocator` into a pure function that returns path and line, and fix it if a UNC path loses its leading double slash. Verify with JUnit 4 tests that run on Linux: location URLs built with `newLocalFileUrl` from `\\wsl.localhost\Ubuntu\home\u\p\a.robot`, `C:\work\p\a.robot` and `/home/u/p/a.robot` give back `//wsl.localhost/Ubuntu/home/u/p/a.robot`, `C:/work/p/a.robot` and `/home/u/p/a.robot` with the encoded line.
+
+## 3. Verification
+
+- [ ] 3.1 Run `./gradlew test buildPlugin verifyPlugin` in `intellij-client/` and verify that all three pass without new deprecation or internal-API findings.
+- [ ] 3.2 Check in the headless PyCharm harness (section 12 of the analysis notes, Linux, local interpreter only) that local runs did not change: the process log shows the same robotcode command line as before this change for a gutter Run; Debug stops at `sample.robot:15` with frames and variables, and the DAP log shows `attach` without `pathMappings`; double-clicking a test in the results tree opens it; the gutter shows the result states; Stop while paused writes `log.html` and `report.html`; a fake remote test SDK is still refused; idea.log gets no SEVERE entry from RobotCode.
+- [ ] 3.3 Hand the maintainer this check list for Windows with WSL 2 (no Windows machine is available here), with the setup of the WSL language server change's check list:
+  - a gutter Run of one test in the project inside WSL runs only that test; the results tree shows it, a double-click opens it, and the gutter shows the result states;
+  - a "Files and folders" configuration with `tests/other.robot`; an environment variable `FOO=bar` logged with `Log    %{FOO}`;
+  - Debug with breakpoints in a suite and in a resource file: the frames open the files below `\\wsl.localhost\Ubuntu\`; Step Over, Step Into, Step Out, Run to Cursor and evaluating `${var}` work;
+  - Stop while paused writes `log.html` and `report.html`; Stop during `Sleep    30s` in Run mode ends the run with outputs; afterwards `ps -ef` inside WSL shows no robot or robotcode process, also after a second Stop (Kill);
+  - Debug in mirrored networking mode; no Windows firewall prompt at any Debug start;
+  - a project in `C:\work\robot-project`: Run and Debug work, and frames and the results tree open files below `C:\work\robot-project`;
+  - two runs at the same time with "Allow multiple instances" both complete;
+  - write down the script path that `ps -ef` shows inside WSL (drive mount or a copy) and the time from Run to the first test result, compared with the language server's start;
+  - a Docker or SSH interpreter, if available, is still refused with "not supported yet";
+  - idea.log has no SEVERE entry from RobotCode.

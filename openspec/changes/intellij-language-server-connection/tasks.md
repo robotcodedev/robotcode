@@ -1,0 +1,32 @@
+# Tasks
+
+## 1. Connection to the language server
+
+- [ ] 1.1 Add the connect step in `lsp/`: a listener with backlog 1 bound to `127.0.0.1`, an `accept()` loop with a short socket timeout that checks a passed-in liveness function between tries, a `CannotStartProcessException` that names the exit code when the process is gone, a 60-second limit after which a passed-in "end process" callback runs and the start fails with a "did not connect in time" message, and closing the listener after a successful connect. Verify with JUnit 4 tests: the listener's address is `127.0.0.1`; a client that connects gets a socket and the listener is closed afterwards; a fake process that has exited with code 3 fails the step with a message containing 3; with a short test limit, a process that stays alive without connecting fails the step and the callback has run.
+- [ ] 1.2 Use the connect step in `RobotCodeLanguageServer.start()`, build the command line only there, through a function the provider receives so that tests can pass their own, and remove the command line from the constructor. Verify with a light platform test that creating the provider runs no environment check and starts no process, and in task 4.2 that the server still starts.
+- [ ] 1.3 Make `stop()` wait up to two seconds for the process to end, then close the client socket and the listener null-safely and call the base `stop()`; a second call does nothing. Verify with light platform tests: `stop()` on a provider that never started, called twice, throws nothing; a provider that receives the test JVM's own `java -version` as its command line (a process that exits without connecting) fails `start()` with a message that names its exit code, and `stop()` afterwards throws nothing.
+- [ ] 1.4 Remove the provider's own stderr handler, keep the handlers LSP4IJ registers through `addLogErrorHandler`, and forward the lines of the stdout pipe to them on a pooled thread until the pipe ends. Verify with a JUnit 4 test of the line forwarding: 200 KB of lines from an input stream all reach the sink, and the forwarding returns at the end of the stream.
+
+## 2. Python 3.10 in both clients
+
+- [ ] 2.1 Change the IntelliJ probe to `import sys; print(sys.version_info[:2] >= (3, 10))`, move the four interpreter texts into `messages/RobotCode.properties` (read through `RobotCodeBundle`), each naming "Python 3.10 or newer with Robot Framework 5.0 or newer", and let the run error use the text of the failed result. Verify with JUnit 4 tests that map probe results to verdicts (output `True` is accepted, `False` and a non-zero exit code are "older than Python 3.10") and that every interpreter text contains the requirement; run the probe with a Python 3.10 interpreter (prints `True`) and with a Python 3.9 interpreter from `uv python install 3.9` (prints `False`).
+- [ ] 2.2 In VS Code, change `_pythonVersionScript` in `vscode-client/extension/pythonmanger.ts` to the same `>= (3, 10)` comparison and the picker title for an old Python in `languageclientsmanger.ts` to say that Python 3.10 or newer is required. Verify with `npm run lint` and `npm run compile`, and by running the new probe string with the Python 3.9 and 3.10 interpreters from task 2.1.
+
+## 3. Restart actions and restart manager
+
+- [ ] 3.1 Give `RobotCodeRestartManager` the injected `CoroutineScope` as a constructor parameter instead of its own scope, keep restarts on a dispatcher limited to one thread, and check `project.isDisposed` again after the debounce delay. Verify in task 4.2 that closing the project right after saving robot.toml starts no check, server or discovery for it, and by a code check that no `CoroutineScope(...)` is created in the restart manager any more.
+- [ ] 3.2 Let Restart RobotCode Language Server call `restartAll(reset = true)` on the debounced path, and add `update()` with `ActionUpdateThread.BGT` that enables the action only with a project. Verify with a light platform test that the action is disabled for an event without a project and enabled with one, and in task 4.2 that Restart picks up a newly installed Robot Framework.
+- [ ] 3.3 Let Clear Cache and Restart launch a coroutine on the language server manager's injected scope inside `withBackgroundProgress`: send `robot/cache/clear` with a time limit only when LSP4IJ reports the server as started, log a failure or timeout as a warning, then call `restartAll(reset = true)`; remove `runBlocking` and the unchecked cast. Add the same `update()` as in 3.2. Verify with the same enablement test as in 3.2 and in task 4.2 with the server stopped and running.
+
+## 4. Verification
+
+- [ ] 4.1 Run `./gradlew test buildPlugin verifyPlugin` in `intellij-client/` and verify that all three pass without new deprecation or internal-API findings.
+- [ ] 4.2 Check the behaviour in the headless PyCharm harness (section 12 of the analysis notes), with the LSP trace listener, the process log and the EDT heartbeat:
+  - while the server runs, `ss -tnp` shows its connection to the IDE on `127.0.0.1`, and `ss -ltnp` shows no listener of the IDE for it;
+  - with `default-profiles = "doesnotexist"` in robot.toml, the error line appears only in Language Servers | RobotCode | Logs, and idea.log gets no new SEVERE entry;
+  - with an SDK whose interpreter is a wrapper script that delegates to the real Python but exits with code 3 for `language-server`, the start error names exit code 3; three Restarts then log no exception and leave no thread in `accept` (thread dump);
+  - a suite importing a library that prints 200 KB at import: the output shows in the RobotCode logs, and completion in the suite still works;
+  - with a Python 3.9 SDK, a Robot file shows the message with "Python 3.10 or newer with Robot Framework 5.0 or newer", and the process log shows no `language-server` process;
+  - with an SDK without Robot Framework, `pip install robotframework` from a terminal followed by Restart starts the server and the run markers appear; Clear Cache and Restart with the server stopped logs no exception and restarts it; the longest EDT gap stays below 100 ms during both;
+  - a Restart with a running server records no "Socket closed" error in the trace;
+  - saving robot.toml and closing the project within half a second starts nothing for that project, and idea.log gets no new SEVERE entry from RobotCode.
