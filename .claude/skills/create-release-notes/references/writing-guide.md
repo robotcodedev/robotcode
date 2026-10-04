@@ -2,6 +2,8 @@
 
 A release post is an announcement. The changelog records every change; the post curates. In Michael Lynch's words, release notes "should be exhaustive while release announcements should curate the changes to include only the most impactful ones". A list of commits with headings is release notes, not an announcement.
 
+The post is about the highlights. The documentation describes each feature in detail, so the post says in a sentence or two what a change gives the user and links the documentation for the rest. It does not describe again what the documentation already explains.
+
 News is written as an inverted pyramid: the most important facts come first, and the details follow in decreasing order of importance. Readers can stop at any point and still have the story. Many readers of a release post only read the first paragraph, so that paragraph has to carry the news on its own.
 
 ## Anatomy of a Post
@@ -78,6 +80,10 @@ Right after the lede comes one sentence for readers who don't know RobotCode. Ba
 
 After "Highlights of this release:" come three to five bullets. Each has the form `[Feature](#anchor): what the reader can do`, in one sentence, and links to its chapter. Choose the bullets by user impact: features in the editor before tools for power users. Breaking changes are not highlights; they have their own chapter right below.
 
+## Changes Users See
+
+A commit body says how the code changed. The post says what changes for the user, and the two are not always the same. Before you announce something, check that users see a difference: in the code and, for the VS Code extension, in what VS Code itself already does. The commit that added the Documentation Viewer said that log and report files "now open beside the editor in VS Code's integrated browser". The extension had switched from the Simple Browser to the integrated browser, but on desktop VS Code's Simple Browser already forwards to the integrated browser, so users saw no difference worth announcing. The line was cut.
+
 ## Ordering
 
 - Weigh the audience: VS Code users first, then PyCharm and IntelliJ users, then command-line power users.
@@ -93,7 +99,7 @@ After "Highlights of this release:" come three to five bullets. Each has the for
 One bullet per change. A bold lead sentence says what changed; the rest says what happens and what to do. Order the bullets by the number of affected users.
 
 > - **The VS Code extension needs VS Code 1.127 or newer.** Older VS Code versions keep the newest **RobotCode** release they can install.
-> - **The IntelliJ plugin needs PyCharm or IntelliJ IDEA 2026.1 or newer.** It is built for the 2026.1 platform and uses LSP4IJ 0.21.0. Older IDE versions no longer receive plugin updates.
+> - **The IntelliJ plugin needs PyCharm or IntelliJ IDEA 2026.1 or newer.** Older IDE versions no longer receive plugin updates.
 > - **`--tags` is now `--show-tags`.** … The old name is no longer accepted, so update any scripts that use it.
 
 ### Support for a New Robot Framework Version
@@ -112,9 +118,14 @@ The chapter is called "Robot Framework X.Y Support". It opens with what RobotCod
 
 ### Editor Features and the IDE Chapter
 
-A feature chapter says what the user can do now, how to open or use it (commands, menus, views), and links the guide for details. The chapter for PyCharm and IntelliJ IDEA uses bullets with a bold lead sentence:
+A feature chapter says what the user can do now, how to open or use it (commands, menus, views), and links the guide for details.
 
-> - **Colors come from the active color scheme.** Variables and keyword calls get the colors your scheme defines for fields and function declarations instead of plain text, …
+- When a change shows up in several places, name the one most users know; it stands for the rest. "A click on a link in a **hover**" replaced a list of hovers, completion details, signature help and the tooltips of the Keywords view.
+- When a new feature replaces an old one, say that the old one is deprecated in favour of the new one and keeps working, and nothing more about it. In v2.8.0, the fixes to *Open Documentation* were cut once it was deprecated.
+
+The chapter for PyCharm and IntelliJ IDEA uses bullets with a bold lead sentence:
+
+> - **Colors come from the active color scheme.** Variables, keyword calls, operators and numbers get colors from your scheme instead of plain text, …
 
 ### Power-User Tools
 
@@ -141,4 +152,5 @@ Experimental or internal work that users can opt into. One paragraph, last befor
 - No hype: no "excited", "proud", "ultimate" or "powerful", and no exclamation marks. Address the reader as "you".
 - A heading names what the user gets: "Richer Keyword Documentation", "More Robust Library Loading".
 - Give a reason only if a commit, the code or the docs back it.
+- Use an example only if it is real and shows the point. "Its heading, such as `Keyword Log`" was cut: readers take `Keyword Log` for a keyword, but the keyword is `Log`, and its documentation has no links. An example taken from the docs needs the same check. If no example fits, write the sentence without one.
 - Write plain English, one idea per sentence where possible.

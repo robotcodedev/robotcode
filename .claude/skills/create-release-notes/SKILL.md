@@ -8,7 +8,7 @@ argument-hint: "[optional release date or focus area]"
 
 Write the news post that announces the next RobotCode release, or update its draft when more commits land before the release.
 
-The post is an announcement, not a changelog. `CHANGELOG.md` lists every change. The post picks what matters to users, says it in their terms and puts the most important things first. Most of the work is choosing, ordering and cutting, not summarizing every commit.
+The post is an announcement, not a changelog. `CHANGELOG.md` lists every change. The post picks what matters to users, says it in their terms and puts the most important things first. The documentation explains the details; the post links to it instead of repeating them. Most of the work is choosing, ordering and cutting, not summarizing every commit.
 
 ## Scope
 
@@ -57,6 +57,7 @@ Readers want to know three things: what will I notice, what can I do now, and do
 
 4. **Choose what goes in.**
     - Include what users notice or must act on: new features, fixes of released behavior, breaking changes, new minimum versions, required installation steps.
+    - Check that users actually see a difference. A commit body says how the code changed, which is not always what users notice; see "Changes Users See" in the writing guide.
     - Leave out internal refactors, CI and tooling, work on the documentation site itself (build, theme, preview), OpenSpec planning, dependency bumps and synced vendored files. Also leave out fixes for features added after the last tag; those bugs never reached users. A correction of the documentation that closes an issue is a fix and goes into Bug Fixes.
     - Leave out cosmetic changes that don't change how anything works, such as new translations of section headers. A fix of visibly wrong output, such as empty lines when output is paged, is not cosmetic; it gets a line in Editor and CLI Polish. If you think a cosmetic change matters to users, ask.
     - Give a deprecation of a rarely used feature one sentence, last in its list, never a section of its own.
