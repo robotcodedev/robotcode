@@ -9,6 +9,7 @@ import { LanguageModelToolsManager } from "./languageModelToolsManager";
 import { ChatPluginsManager } from "./chatPluginsManager";
 import { NotebookManager } from "./notebook";
 import { DocumentationViewerManager } from "./documentationViewer";
+import { createExtendMarkdownIt } from "./markdownHighlighting";
 import path from "path";
 
 class TerminalLink extends vscode.TerminalLink {
@@ -36,7 +37,12 @@ function getDocTheme(): string {
   }
 }
 
-export async function activateAsync(context: vscode.ExtensionContext): Promise<void> {
+interface RobotCodeExports {
+  // the markdown-it plugin that VS Code's Markdown extension asks for, see `markdown.markdownItPlugins`
+  extendMarkdownIt: ReturnType<typeof createExtendMarkdownIt>;
+}
+
+export async function activateAsync(context: vscode.ExtensionContext): Promise<RobotCodeExports> {
   const outputChannel = vscode.window.createOutputChannel("RobotCode");
 
   outputChannel.appendLine("Activate RobotCode Extension.");
@@ -234,6 +240,13 @@ export async function activateAsync(context: vscode.ExtensionContext): Promise<v
   }
 
   languageClientManger.refresh();
+
+  return {
+    extendMarkdownIt: createExtendMarkdownIt(
+      context.asAbsolutePath(path.join("syntaxes", "robotframework.tmLanguage.json")),
+      outputChannel,
+    ),
+  };
 }
 
 function displayProgress<R>(promise: Promise<R>): Thenable<R> {
@@ -244,7 +257,7 @@ function displayProgress<R>(promise: Promise<R>): Thenable<R> {
   return vscode.window.withProgress(progressOptions, () => promise);
 }
 
-export async function activate(context: vscode.ExtensionContext): Promise<void> {
+export async function activate(context: vscode.ExtensionContext): Promise<RobotCodeExports> {
   return displayProgress(activateAsync(context));
 }
 
